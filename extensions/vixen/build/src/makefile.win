@@ -21,7 +21,11 @@ DEPTH=..\..\..\..
 MODULE=vixen
 
 LIBNAME = .\$(OBJDIR)\vixen
-DLL = $(LIBNAME).dll
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB = $(LIBNAME).lib
+!else
+DLL = $(DLLNAME).dll
+!endif
 
 ################################################################################
 ## library
@@ -40,7 +44,11 @@ LLIBS=						      \
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-
+!endif

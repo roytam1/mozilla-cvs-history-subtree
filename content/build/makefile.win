@@ -37,10 +37,15 @@ CPP_OBJS=				\
 
 EXPORTS=nsContentCID.h
 
-
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE = LIB
+LIBRARY_NAME = gkcontent
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE = DLL
 DLLNAME = gkcontent
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -82,6 +87,17 @@ LLIBS=					\
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: gbdate.h $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+
+clobber::
+	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
+	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+	rm -f gbdate.h
+
+!else
 install:: gbdate.h $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
@@ -90,8 +106,9 @@ clobber::
 	rm -f $(DIST)\bin\components\$(DLLNAME).dll
 	rm -f $(DIST)\lib\$(DLLNAME).lib
 	rm -f gbdate.h
+!endif
 
 gbdate.h:: gbdate.pl
-  $(PERL) gbdate.pl > gbdate.h
+	$(PERL) gbdate.pl > gbdate.h
 
 

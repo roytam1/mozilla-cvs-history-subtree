@@ -24,7 +24,9 @@ DEPTH=..\..
 
 
 DIRS = windows \
+!if !defined(MOZ_STATIC_COMPONENT_LIBS)
        registry \
+!endif
        $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -57,20 +57,32 @@ LLIBS= $(LIBNSPR)  \
 !endif
 	$(NULL)
 
-LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
-LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY= .\$(OBJDIR)\$(LIBRARY_NAME).lib
+#LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+!else
 MAKE_OBJ_TYPE=DLL
+!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=nspng$(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY_1NAME=nspng$(LIBRARY_SUFFIX)
+PDBFILE=$(LIBRARY_NAME).pdb
+MAPFILE=$(LIBRARY_NAME).map
+DEFFILE=nspng.def
+!else
 DLLNAME=nspng
 DLL1NAME=nspng
 PDBFILE=$(DLLNAME).pdb
 MAPFILE=$(DLLNAME).map
 DEFFILE=nspng.def
+!endif
 
 
 #//------------------------------------------------------------------------
@@ -79,9 +91,13 @@ DEFFILE=nspng.def
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib 
+MAPFILE= $(LIBRARY_NAME).map
+!else
 DLL=.\$(OBJDIR)\$(DLLNAME).dll 
 MAPFILE= $(DLLNAME).map
-
+!endif
 
 
 MODULE=img 
@@ -99,7 +115,13 @@ CPP_OBJS= \
 
 include <$(DEPTH)\config\rules.mak> 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+    $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
+    $(MAKE_INSTALL) $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+!endif
 

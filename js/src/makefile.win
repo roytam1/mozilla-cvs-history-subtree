@@ -57,6 +57,15 @@ DIRS = $(DIRS) xpconnect
 #//
 #//------------------------------------------------------------------------
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME		= js$(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY_1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
+PDBFILE		= $(LIBRARY_NAME).pdb
+MAPFILE		= $(LIBRARY_NAME).map
+RESFILE		= js$(MOZ_BITS)40.res
+LIB		=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE	= LIB
+!else
 DLLNAME		= js$(MOZ_BITS)$(VERSION_NUMBER)
 DLL1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE		= $(DLLNAME).pdb
@@ -64,6 +73,7 @@ MAPFILE		= $(DLLNAME).map
 RESFILE		= js$(MOZ_BITS)40.res
 DLL		=.\$(OBJDIR)\$(DLLNAME).dll
 MAKE_OBJ_TYPE	= DLL
+!endif
 
 !if "$(MOZ_BITS)" != "16"
 LINCS = -I$(PUBLIC)\layout \
@@ -73,9 +83,9 @@ LINCS = -I$(PUBLIC)\layout \
 
 !if "$(MOZ_BITS)" == "16"
 !ifdef NSPR20
-DEFFILE		= $(DLL1NAME).def
+DEFFILE		= $(LIBRARY_1NAME).def
 !else
-DEFFILE		= $(DLLNAME).def
+DEFFILE		= $(LIBRARY_NAME).def
 !endif
 !endif
 
@@ -198,9 +208,15 @@ $(FDLIBM_LIBRARY):
     @cd $(MAKEDIR) 
 !endif
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+export:: INSTALL_FILES $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin
+!else
 export:: INSTALL_FILES $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+!endif
 
 #//------------------------------------------------------------------------
 #//

@@ -24,7 +24,12 @@ include <$(DEPTH)/config/config.mak>
 
 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+DEFINES=-DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS
+!else
 DEFINES=-DWIN32_LEAN_AND_MEAN
+!endif
+
 MODULE=raptor 
 
 CPPSRCS=                                \
@@ -70,8 +75,9 @@ LINCS=-I$(PUBLIC)\raptor                \
 !ifdef MOZ_FULLCIRCLE
       -I$(MOZ_TOOLS)\include            \
 !endif
+#      -I..\browser 
+      -I..\..\xpinstall\cleanup   \
       $(NULL)
-#      -I..\browser
 
 MAKE_OBJ_TYPE = EXE
 PROGRAM = .\$(OBJDIR)\mozilla.exe
@@ -100,6 +106,124 @@ LFLAGS= $(LFLAGS) /subsystem:windows
 !endif
 
 # These are the libraries we need to link with to create the exe
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LLIBS=                          \
+$(DIST)\lib\nsldap32v40.lib \
+$(DIST)\lib\nspr4.lib \
+$(DIST)\lib\plc4.lib \
+$(DIST)\lib\plds4.lib \
+#    $(DIST)\bin\DebugRobot.lib	\
+    $(DIST)\bin\gkgfxwin.lib	\
+    $(DIST)\bin\gkwidget.lib	\
+    $(DIST)\bin\img3250.lib	\
+    $(DIST)\bin\jpeg3250.lib	\
+    $(DIST)\bin\js3250.lib	\
+    $(DIST)\bin\components\jsdom.lib	\
+    $(DIST)\bin\jsj3250.lib	\
+    $(DIST)\bin\mozreg.lib	\
+    $(DIST)\bin\msgbsutl.lib	\
+    $(DIST)\bin\nsreg.lib	\
+    $(DIST)\bin\xpcom.lib	\
+    $(DIST)\bin\xpistub.lib	\
+    $(DIST)\bin\zlib.lib	\
+    $(DIST)\bin\components\AcctIdl.lib	\
+    $(DIST)\bin\components\absyncsv.lib	\
+    $(DIST)\bin\components\accessibility.lib	\
+    $(DIST)\bin\components\addrbook.lib	\
+    $(DIST)\bin\components\appcomps.lib	\
+    $(DIST)\bin\components\appshell.lib	\
+    $(DIST)\bin\components\caps.lib	\
+    $(DIST)\bin\components\chardet.lib	\
+    $(DIST)\bin\components\chardetc.lib	\
+    $(DIST)\bin\components\chardetnativeTest.lib	\
+    $(DIST)\bin\components\chrome.lib	\
+    $(DIST)\bin\components\cookie.lib	\
+    $(DIST)\bin\components\docshell.lib	\
+    $(DIST)\bin\components\editor.lib	\
+    $(DIST)\bin\components\embedcomponents.lib	\
+    $(DIST)\bin\components\emitter.lib	\
+    $(DIST)\bin\components\evntloop.lib	\
+    $(DIST)\bin\components\gfx2.lib	\
+    $(DIST)\bin\components\gkcontent.lib	\
+    $(DIST)\bin\components\gklayout.lib	\
+    $(DIST)\bin\components\gkparser.lib	\
+    $(DIST)\bin\components\gkplugin.lib	\
+    $(DIST)\bin\components\gkview.lib	\
+    $(DIST)\bin\components\imggif.lib	\
+    $(DIST)\bin\components\imgjpeg.lib	\
+    $(DIST)\bin\components\imglib2.lib	\
+    $(DIST)\bin\components\imgpng.lib	\
+    $(DIST)\bin\components\imgppm.lib	\
+    $(DIST)\bin\components\impEudra.lib	\
+    $(DIST)\bin\components\impOutlk.lib	\
+    $(DIST)\bin\components\impText.lib	\
+    $(DIST)\bin\components\import.lib	\
+    $(DIST)\bin\components\importOE.lib	\
+    $(DIST)\bin\components\intlcmpt.lib	\
+    $(DIST)\bin\components\jar50.lib	\
+    $(DIST)\bin\components\jsloader.lib	\
+    $(DIST)\bin\components\jsurl.lib	\
+    $(DIST)\bin\components\lwbrk.lib	\
+    $(DIST)\bin\components\mime.lib	\
+    $(DIST)\bin\components\mork.lib	\
+    $(DIST)\bin\components\mozbrwsr.lib	\
+    $(DIST)\bin\components\mozfind.lib	\
+    $(DIST)\bin\components\mozldap.lib	\
+    $(DIST)\bin\components\mozucth.lib	\
+    $(DIST)\bin\components\mozxfer.lib	\
+    $(DIST)\bin\components\msgbase.lib	\
+    $(DIST)\bin\components\msgcompo.lib	\
+    $(DIST)\bin\components\msgdb.lib	\
+    $(DIST)\bin\components\msgimap.lib	\
+    $(DIST)\bin\components\msglocal.lib	\
+    $(DIST)\bin\components\msgnews.lib	\
+    $(DIST)\bin\components\nativapp.lib	\
+    $(DIST)\bin\components\necko.lib	\
+    $(DIST)\bin\components\necko2.lib	\
+    $(DIST)\bin\components\nkcache.lib	\
+#    $(DIST)\bin\components\nsgif.lib	\
+    $(DIST)\bin\components\nsgif3250.lib	\
+#    $(DIST)\bin\components\nsjpg.lib	\
+    $(DIST)\bin\components\nsjpg3250.lib	\
+    $(DIST)\bin\components\nslocale.lib	\
+#    $(DIST)\bin\components\nsmng.lib	\
+    $(DIST)\bin\components\nsmng3250.lib	\
+#    $(DIST)\bin\components\nspng.lib	\
+    $(DIST)\bin\components\nspng3250.lib	\
+    $(DIST)\bin\components\nsprefm.lib	\
+    $(DIST)\bin\components\oji.lib	\
+    $(DIST)\bin\components\profile.lib	\
+    $(DIST)\bin\components\rdf.lib	\
+    $(DIST)\bin\components\regviewr.lib	\
+#    $(DIST)\bin\components\sample.lib	\
+    $(DIST)\bin\components\shistory.lib	\
+#    $(DIST)\bin\components\signed.lib	\
+    $(DIST)\bin\components\smime.lib	\
+    $(DIST)\bin\components\strres.lib	\
+    $(DIST)\bin\components\txmgr.lib	\
+    $(DIST)\bin\components\txtsvc.lib	\
+    $(DIST)\bin\components\ucharuti.lib	\
+    $(DIST)\bin\components\uconv.lib	\
+    $(DIST)\bin\components\ucvcn.lib	\
+    $(DIST)\bin\components\ucvibm.lib	\
+    $(DIST)\bin\components\ucvja.lib	\
+    $(DIST)\bin\components\ucvko.lib	\
+    $(DIST)\bin\components\ucvlatin.lib	\
+    $(DIST)\bin\components\ucvtw.lib	\
+    $(DIST)\bin\components\ucvtw2.lib	\
+    $(DIST)\bin\components\urildr.lib	\
+    $(DIST)\bin\components\vcard.lib	\
+    $(DIST)\bin\components\wallet.lib	\
+    $(DIST)\bin\components\webbrwsr.lib	\
+    $(DIST)\bin\components\wlltvwrs.lib	\
+    $(DIST)\bin\components\xmlextras.lib	\
+    $(DIST)\bin\components\xpacct32.lib	\
+    $(DIST)\bin\components\xpc3250.lib	\
+    $(DIST)\bin\components\xpinstal.lib	\
+    $(DIST)\bin\components\xppref32.lib	\
+ $(LIBNSPR)                     \
+ $(NULL)
+!else
 LLIBS=                          \
  $(DIST)\lib\xpcom.lib          \
  $(DIST)\lib\js3250.lib          \
@@ -113,6 +237,14 @@ LLIBS=                          \
 !endif
  $(LIBNSPR)                     \
  $(NULL)
+!endif
+
+#!ifdef GC_LEAK_DETECTOR
+# $(DIST)\lib\boehm.lib \
+#!endif
+#!ifdef MOZ_FULLCIRCLE
+# $(MOZ_TOOLS)\lib\fulls32.lib \
+#!endif
  
 WIN_LIBS=                      \
  shell32.lib                 \

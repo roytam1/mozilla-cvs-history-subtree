@@ -20,8 +20,12 @@
 DEPTH=..\..\..\..
 MODULE=inspector
 
-LIBNAME = .\$(OBJDIR)\inspector
-DLL = $(LIBNAME).dll
+LIBRARY_NAME = .\$(OBJDIR)\inspector
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB = $(LIBRARY_NAME).lib
+!else
+DLL = $(LIBRARY_NAME).dll
+!endif
 
 ################################################################################
 ## library
@@ -44,7 +48,12 @@ LLIBS=						      \
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIBRARY_NAME).$(LIB_SUFFIX) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIBRARY_NAME).$(LIB_SUFFIX) $(DIST)\lib
+!else
 install:: $(DLL)
-	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-
+	$(MAKE_INSTALL)  $(LIBRARY_NAME).$(DLL_SUFFIX) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIBRARY_NAME).$(LIB_SUFFIX) $(DIST)\lib
+!endif

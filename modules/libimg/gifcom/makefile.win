@@ -55,17 +55,26 @@ LLIBS= $(LIBNSPR)  \
 !endif
 	$(NULL)
 
-LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
-LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY= .\$(OBJDIR)\$(LIBRARY_NAME).lib
+#LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+!else
 MAKE_OBJ_TYPE=DLL
+!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=nsgif$(MOZ_BITS)$(VERSION_NUMBER)
+LIBRARY_1NAME=nsgif
+!else
 DLLNAME=nsgif
 DLL1NAME=nsgif
+!endif
 PDBFILE=$(DLLNAME).pdb
 MAPFILE=$(DLLNAME).map
 DEFFILE=nsgif.def
@@ -77,9 +86,13 @@ DEFFILE=nsgif.def
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib 
+MAPFILE= $(LIBRARY_NAME).map
+!else
 DLL=.\$(OBJDIR)\$(DLLNAME).dll 
 MAPFILE= $(DLLNAME).map
-
+!endif
 
 
 MODULE=img 
@@ -92,7 +105,13 @@ CPP_OBJS=   .\$(OBJDIR)\nsGIFModule.obj .\$(OBJDIR)\nsGIFDecoder.obj \
 
 include <$(DEPTH)\config\rules.mak> 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+    $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
+    $(MAKE_INSTALL) $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+!endif
 

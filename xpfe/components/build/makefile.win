@@ -22,9 +22,15 @@
 DEPTH=..\..\..
 MODULE=appcomps
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+LIBRARY_NAME=appcomps
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE=DLL
 DLLNAME=appcomps
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN
 
@@ -68,6 +74,15 @@ INCS = $(INCS)                                       \
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+
+clobber::
+    $(RM) $(DIST)\bin\components\$(LIBRARY_NAME).lib
+	$(RM) $(DIST)\lib\$(LIBRARY_NAME).lib 
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
@@ -75,3 +90,4 @@ install:: $(DLL)
 clobber::
     $(RM) $(DIST)\bin\components\$(DLLNAME).dll
 	$(RM) $(DIST)\lib\$(DLLNAME).lib 
+!endif

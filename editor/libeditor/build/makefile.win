@@ -42,7 +42,11 @@ CPP_OBJS =                                 \
            .\$(OBJDIR)\nsTextEditorReg.obj \
            $(NULL)
 
-DLLNAME       = texteditor
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME       = texteditor
+!else
+DLLNAME            = texteditor
+!endif
 
 !else
 
@@ -63,7 +67,7 @@ ENABLE_EDITOR_API_LOG=1
 DEFINES = -DENABLE_EDITOR_API_LOG $(DEFINES)
 !endif
 
-DLLNAME       = editor
+LIBRARY_NAME       = editor
 
 !endif
 
@@ -73,8 +77,13 @@ LINCS =                      \
         -I..\text\src        \
         $(NULL)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE = LIB
+LIB           = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE = DLL
 DLL           = .\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 LCFLAGS =            \
           $(LCFLAGS) \
@@ -114,18 +123,35 @@ LLIBS =                                  \
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+build:: $(LIB)
+!else
 build:: $(DLL)
+!endif
 
 !if !defined(MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+	set MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY=1
+	nmake -f makefile.win build
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 	set MOZ_BUILD_PLAINTEXT_EDITOR_CORE_ONLY=1
 	nmake -f makefile.win build
+!endif
 
 clobber::
-	rm -f $(DIST)\bin\$(DLLNAME).dll
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+	rm -f $(DIST)\bin\$(LIBRARY_NAME).lib
+	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+!else
+	rm -f $(DIST)\bin\$(DLLNAME).lib
 	rm -f $(DIST)\lib\$(DLLNAME).lib
+!endif
 
 !endif

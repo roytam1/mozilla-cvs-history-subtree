@@ -24,7 +24,11 @@ MODULE = necko
 DEPTH=..\..\..
 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE	= LIB
+!else
 MAKE_OBJ_TYPE	= DLL
+!endif
 
 include <$(DEPTH)/config/config.mak>
 

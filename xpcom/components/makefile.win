@@ -62,7 +62,11 @@ LINCS =                    \
         -I..\io       \
 	$(NULL)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT
+!else
 LCFLAGS = -DUSE_NSREG -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
+!endif
 
 CPP_OBJS =                                 \
         .\$(OBJDIR)\nsComponentManager.obj \

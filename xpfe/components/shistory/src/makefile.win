@@ -35,9 +35,15 @@ CPP_OBJS=                               \
  .\$(OBJDIR)\nsSHistory.obj             \
  $(NULL)
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+LIBRARY_NAME = shistory
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE=DLL
 DLLNAME = shistory
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 LCFLAGS = \
         $(LCFLAGS) \
@@ -52,6 +58,11 @@ LLIBS=                          \
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
+!endif
 

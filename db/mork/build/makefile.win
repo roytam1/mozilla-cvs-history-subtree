@@ -33,8 +33,8 @@ EXPORTS=					\
 ################################################################################
 ## library
 
-LIBNAME = .\$(OBJDIR)\mork
-DLL = $(LIBNAME).dll
+LIBRARY_NAME = mork
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
 
 CPP_OBJS=									\
 			.\$(OBJDIR)\nsMorkFactory.obj	\
@@ -48,7 +48,7 @@ LLIBS=								\
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
 

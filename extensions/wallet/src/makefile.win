@@ -22,9 +22,14 @@
 DEPTH=..\..\..
 include <$(DEPTH)/config/config.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
 LIBRARY_NAME=wallet
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 DLLNAME=wallet
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
+
 CPP_OBJS= .\$(OBJDIR)\wallet.obj		\
 	.\$(OBJDIR)\singsign.obj		\
 	.\$(OBJDIR)\nsPassword.obj		\
@@ -76,9 +81,13 @@ install:: $(LIBRARY)
 	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 
 clobber::
+!ifdef MOZ_STATIC_COMPONENT_LIBS
 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
+!else
 	rm -f $(DIST)\bin\components\$(DLLNAME).dll
 	rm -f $(DIST)\lib\$(DLLNAME).lib
+!endif
 	rm -f $(DIST)\bin\defaults\wallet\DistinguishedSchema.tbl
 	rm -f $(DIST)\bin\defaults\wallet\FieldSchema.tbl
 	rm -f $(DIST)\bin\defaults\wallet\VcardSchema.tbl
@@ -87,8 +96,15 @@ clobber::
 	rm -f $(DIST)\bin\defaults\wallet\PositionalSchema.tbl
 	rm -f $(DIST)\bin\defaults\wallet\StateSchema.tbl
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+		$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+		$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+!else
 install:: $(DLL)
-		$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+		$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\bin\components
+		$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+!endif
 		$(MAKE_INSTALL) DistinguishedSchema.tbl $(DIST)\bin\defaults\wallet
 		$(MAKE_INSTALL) FieldSchema.tbl $(DIST)\bin\defaults\wallet
 		$(MAKE_INSTALL) VcardSchema.tbl $(DIST)\bin\defaults\wallet

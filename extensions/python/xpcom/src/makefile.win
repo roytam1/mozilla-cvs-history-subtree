@@ -25,13 +25,21 @@ DIRS =             \
 DEPTH=..\..\..\..
 include <$(DEPTH)/config/config.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
 LIBRARY_NAME=_xpcom
+!ifdef MOZ_DEBUG
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME)_d.pyd
+!else
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).pyd
+!endif
+!else
 DLLNAME=_xpcom
 !ifdef MOZ_DEBUG
 DLL=.\$(OBJDIR)\$(DLLNAME)_d.pyd
 !else
 DLL=.\$(OBJDIR)\$(DLLNAME).pyd
 !endif
+!endif 
 
 CPP_OBJS= \
 	.\$(OBJDIR)\ErrorUtils.obj \
@@ -103,5 +111,10 @@ include <$(DEPTH)\config\rules.mak>
 #clobber::
 #    echo write me
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+		$(MAKE_INSTALL) $(LIB) $(DIST)\bin\Python\xpcom\.
+!else
 install:: $(DLL)
 		$(MAKE_INSTALL) $(DLL) $(DIST)\bin\Python\xpcom\.
+!endif

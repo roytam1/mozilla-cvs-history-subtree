@@ -19,9 +19,15 @@ DEPTH=..\..\..\..
 
 MODULE=impEudra
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+LIBRARY_NAME=$(MODULE)
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE=DLL
 DLLNAME=$(MODULE)
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 
 CPP_OBJS=\
@@ -43,6 +49,10 @@ LLIBS=\
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+        $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
+!else
 install:: $(DLL)
         $(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
-
+!endif

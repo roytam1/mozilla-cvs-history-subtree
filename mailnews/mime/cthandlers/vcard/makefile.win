@@ -68,7 +68,11 @@ OBJS=						\
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=$(MODULE)
+!else
 DLLNAME=$(MODULE)
+!endif
 PDBFILE=$(MODULE).pdb
 MAPFILE=$(MODULE).map
 DEFFILE=$(MODULE).def
@@ -80,7 +84,11 @@ DEFFILE=$(MODULE).def
 #//
 #//------------------------------------------------------------------------
 #
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -109,8 +117,16 @@ LLIBS=							\
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
 
 clobber::
+	rm -f $(DIST)\bin\$(LIBRARY_NAME)
+!else
+install:: $(DLL)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+ 
+clobber::
 	rm -f $(DIST)\bin\$(DLLNAME)
+!endif

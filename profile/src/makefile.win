@@ -37,12 +37,21 @@ include <$(DEPTH)\config\config.mak>
 #//
 #//------------------------------------------------------------------------
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME     = profile
+LIBRARY_1NAME    = xprofile
+PDBFILE     = $(LIBRARY_NAME).pdb
+MAPFILE     = $(LIBRARY_NAME).map
+LIB     =.\$(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE   = LIB
+!else
 DLLNAME     = profile
 DLL1NAME    = xprofile
 PDBFILE     = $(DLLNAME).pdb
 MAPFILE     = $(DLLNAME).map
 DLL     =.\$(OBJDIR)\$(DLLNAME).dll
 MAKE_OBJ_TYPE   = DLL
+!endif
 
 LINCS = -I$(PUBLIC)/js \
     -I$(PUBLIC)/profile \
@@ -99,7 +108,11 @@ OBJS =                          \
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 LIBRARY=.\$(OBJDIR)\$(LIBNAME).lib
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -108,6 +121,12 @@ LIBRARY=.\$(OBJDIR)\$(LIBNAME).lib
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)   
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+!else
 install:: $(DLL)   
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+!endif

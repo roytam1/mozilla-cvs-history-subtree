@@ -51,8 +51,13 @@ EXPORTS=                \
 ################################################################################
 ## library
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME = msgbsutl
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 LIBNAME = .\$(OBJDIR)\msgbsutl
 DLL = $(LIBNAME).dll
+!endif
 
 DEFINES=-D_IMPL_NS_MSG_BASE
 
@@ -90,6 +95,12 @@ LLIBS=								\
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
 	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+!endif

@@ -23,11 +23,17 @@ DEPTH = ..\..\..
 include <$(DEPTH)/config/config.mak>
 
 MODULE = nkcache
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=nkcache
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE=LIB
+!else
 DLLNAME=nkcache
-
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
-
 MAKE_OBJ_TYPE=DLL
+!endif
+
+
 
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 
@@ -59,11 +65,20 @@ LLIBS	= \
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+
+clobber::
+        $(RM) $(DIST)\bin\components\$(LIBRARY_NAME).lib
+	$(RM) $(DIST)\lib\$(LIBRARY_NAME).lib 
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 
-
 clobber::
-        $(RM) $(DIST)\bin\components\$(DLLNAME).dll
+  $(RM) $(DIST)\bin\components\$(DLLNAME).dll
 	$(RM) $(DIST)\lib\$(DLLNAME).lib 
+!endif

@@ -21,10 +21,19 @@ include <$(DEPTH)/config/config.mak>
 !ifndef MAKE_OBJ_TYPE
 MAKE_OBJ_TYPE=EXE
 !endif
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+!else
 MAKE_OBJ_TYPE=DLL
+!endif
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=oji
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 DLLNAME=oji
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -129,9 +138,15 @@ PUBLIC_HEADER_DIR=$(PUBLIC)\win16
 #    $(MAKE_INSTALL) $(EXPORTS) $(PUBLIC_HEADER_DIR)
 
 !ifdef MOZ_OJI
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install::  $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).$(LIB_SUFFIX) $(DIST)\bin\components
+!else
 install::  $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).$(DLL_SUFFIX) $(DIST)\bin\components
+!endif
 
 clobber::
     $(RM_R) _jri

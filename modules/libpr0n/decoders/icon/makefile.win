@@ -29,8 +29,13 @@ DIR=win
 MODULE			= imgicon
 LIBRARY_NAME	= imgicon
 XPIDL_MODULE	= imgicon
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB			= $(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE	= LIB
+!else
 DLL			= $(OBJDIR)\$(LIBRARY_NAME).dll
 MAKE_OBJ_TYPE	= DLL
+!endif
 
 XPIDLSRCS	= \
 		.\nsIIconURI.idl \
@@ -60,10 +65,20 @@ INCS = $(INCS)                                         \
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).dll $(DIST)\bin\components
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
 
 clobber::
-	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).dll
+	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+!else
+install:: $(DLL)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).dll $(DIST)\bin\components
+ 	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
+ 
+clobber::
+	rm -f $(DIST)\bin\components\$(LIBRARY_NAME).dll
+ 	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+!endif

@@ -20,8 +20,13 @@
 DEPTH=..\..\..
 MODULE=msgbase 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME = msgbase
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 LIBNAME = .\$(OBJDIR)\msgbase
 DLL = $(LIBNAME).dll
+!endif
 
 ################################################################################
 ## exports
@@ -53,7 +58,12 @@ LLIBS=										\
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
 	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
-
+!endif

@@ -36,12 +36,21 @@ include <$(DEPTH)/config/config.mak>
 #//
 #//------------------------------------------------------------------------
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME		= mozucth
+LIBRARY_1NAME	= mozucth
+PDBFILE		= $(LIBRARY_NAME).pdb
+MAPFILE		= $(LIBRARY_NAME).map
+LIB		=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE	= LIB
+!else
 DLLNAME		= mozucth
 DLL1NAME	= mozucth
 PDBFILE		= $(DLLNAME).pdb
 MAPFILE		= $(DLLNAME).map
 DLL		=.\$(OBJDIR)\$(DLLNAME).dll
 MAKE_OBJ_TYPE	= DLL
+!endif
 
 LINCS = \
 	-I$(PUBLIC)/xpcom \
@@ -75,7 +84,11 @@ OBJS =							\
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 LIBRARY=.\$(OBJDIR)\$(LIBNAME).lib
+!endif
 
 #//------------------------------------------------------------------------
 #//
@@ -84,8 +97,16 @@ LIBRARY=.\$(OBJDIR)\$(LIBNAME).lib
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
 
 clobber::
+    rm -f $(DIST)\bin\components\$(LIBRARY_NAME).lib
+!else
+install:: $(DLL)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+ 
+clobber::
     rm -f $(DIST)\bin\components\$(DLLNAME).dll
+!endif

@@ -34,9 +34,15 @@
 
 DEPTH=..\..\..\..\..
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE	= LIB
+LIBRARY_NAME		= xpctest
+LIB		=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE	= DLL
 DLLNAME		= xpctest
 DLL		=.\$(OBJDIR)\$(DLLNAME).dll
+!endif
 
 MODULE=xpconnect
 
@@ -82,6 +88,15 @@ LLIBS=	$(LLIBS)	\
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+#	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+
+clobber::
+#	rm -f $(DIST)\lib\$(DLLNAME).lib
+	rm -f $(DIST)\bin\$(LIBRARY_NAME).lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
 #	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
@@ -89,3 +104,4 @@ install:: $(DLL)
 clobber::
 #	rm -f $(DIST)\lib\$(DLLNAME).lib
 	rm -f $(DIST)\bin\$(DLLNAME).dll
+!endif

@@ -27,15 +27,27 @@ DEPTH=..\..
 
 include <$(DEPTH)/config/config.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE = LIB
+!else
 MAKE_OBJ_TYPE = DLL
+!endif
 MODULE=xpinstal
+LIBRARY_NAME=xpinstal
 XPIDL_MODULE=xpinstall
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 DLL=.\$(OBJDIR)\$(MODULE).dll
+!endif
 
 DEFINES=-D_IMPL_NS_DOM -DWIN32_LEAN_AND_MEAN
 
+INCLUDES=-I..\cleanup
+
 LCFLAGS =          \
+	$(INCLUDES) \
         $(LCFLAGS) \
         $(DEFINES) \
         $(NULL)
@@ -95,11 +107,20 @@ WIN_LIBS=                                       \
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(MODULE).lib $(DIST)\lib
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(MODULE).dll $(DIST)\bin\components
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+    $(MAKE_INSTALL) $(LIB) $(DIST)\lib
+    $(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
 
 clobber::
         $(RM) $(DIST)\lib\$(MODULE).lib
+        $(RM) $(DIST)\bin\components\$(MODULE).lib
+!else
+install:: $(DLL)
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(MODULE).lib $(DIST)\lib
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(MODULE).dll $(DIST)\bin\components
+ 
+clobber::
+        $(RM) $(DIST)\lib\$(MODULE).lib
         $(RM) $(DIST)\bin\components\$(MODULE).dll
-
+!endif

@@ -21,7 +21,11 @@
 
 DEPTH=..
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+DIRS=appshell browser components global communicator
+!else
 DIRS=appshell bootstrap browser components global communicator
+!endif
 
 include <$(DEPTH)\config\rules.mak>
 

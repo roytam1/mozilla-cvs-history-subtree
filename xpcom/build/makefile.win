@@ -26,8 +26,15 @@ MODULE = xpcom
 
 include <$(DEPTH)\config\config.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+LIBRARY_NAME = xpcom
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
+MAKE_OBJ_TYPE=DLL
 LIBNAME = .\$(OBJDIR)\xpcom
 DLL = $(LIBNAME).dll
+!endif
 
 # if we ever add a .def file for x86 we need to deal with this.
 !if "$(CPU)" == "ALPHA"
@@ -90,6 +97,12 @@ WIN_LIBS =                             \
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) $(LIB) $(DIST)\bin
+	$(MAKE_INSTALL) $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
 	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+!endif

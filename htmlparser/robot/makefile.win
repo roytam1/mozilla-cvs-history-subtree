@@ -21,7 +21,15 @@
 
 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE	= LIB
+LIBRARY_NAME = DebugRobot
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 MAKE_OBJ_TYPE	= DLL
+LIBNAME = .\$(OBJDIR)\DebugRobot
+DLL = $(LIBNAME).dll
+!endif
 
 DEPTH=..\..
 
@@ -35,9 +43,6 @@ LLIBS=				\
  $(DIST)\lib\netlib.lib \
 !endif
  $(NULL)
-
-LIBNAME = .\$(OBJDIR)\DebugRobot
-DLL = $(LIBNAME).dll
 
 CPPSRCS=			\
  nsRobotSink.cpp		\
@@ -55,6 +60,12 @@ LINCS=-I$(XPDIST)\public\xpcom -I$(XPDIST)\public\raptor  -I$(XPDIST)\public\net
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL) $(LIB) $(DIST)\bin
+	$(MAKE_INSTALL) $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
 	$(MAKE_INSTALL) $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+!endif

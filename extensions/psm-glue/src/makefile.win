@@ -27,11 +27,19 @@ MODULE = psmglue
 DEPTH=..\..\..
 IGNORE_MANIFEST=1
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME  = psmglue
+PDBFILE       = $(LIBRARY_NAME).pdb
+MAPFILE       = $(LIBRARY_NAME).map
+LIB           = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+MAKE_OBJ_TYPE = LIB
+!else
 DLLNAME       = psmglue
 PDBFILE       = $(DLLNAME).pdb
 MAPFILE       = $(DLLNAME).map
 DLL           = .\$(OBJDIR)\$(DLLNAME).dll
 MAKE_OBJ_TYPE = DLL
+!endif
 
 include <$(DEPTH)/config/config.mak>
 
@@ -72,5 +80,10 @@ OBJS = \
 
 include <$(DEPTH)\config\rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin\components
+!else
 install:: $(DLL)
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+!endif

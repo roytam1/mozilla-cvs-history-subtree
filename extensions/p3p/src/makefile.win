@@ -25,9 +25,13 @@ include <$(DEPTH)/config/config.mak>
 
 
 MODULE       = p3p
+!ifdef MOZ_STATIC_COMPONENT_LIBS
 LIBRARY_NAME = p3p
+LIB          = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
 DLLNAME      = p3p
 DLL          = .\$(OBJDIR)\$(DLLNAME).dll
+!endif
 IS_COMPONENT = 1
 
 REQUIRES     = p3p xpcom
@@ -99,12 +103,20 @@ LCFLAGS      =     \
 include <$(DEPTH)\config\rules.mak>
 
 clobber::
+!ifdef MOZ_STATIC_COMPONENT_LIBS
 		rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+		rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+		rm -f $(DIST)\bin\components\$(LIBRART_NAME).lib
+!else
 		rm -f $(DIST)\lib\$(DLLNAME).lib
 		rm -f $(DIST)\bin\components\$(DLLNAME).dll
+		rm -f $(DIST)\bin\components\$(DLLNAME).lib
+!endif
 
-install:: $(LIBRARY)
-		$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
-
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+		$(MAKE_INSTALL) $(LIB) $(DIST)\bin\components
+!else
 install:: $(DLL)
-		$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin\components
+		$(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
+!endif

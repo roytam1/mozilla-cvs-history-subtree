@@ -36,13 +36,21 @@ OBJS = .\$(OBJDIR)\npevents.obj
 JDIRS = .
 
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE=LIB
+!else
 MAKE_OBJ_TYPE=DLL
+!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIBRARY_NAME=npevents.lib
+!else
 DLLNAME=npevents.dll
+!endif
 PDBFILE=npevents.pdb
 MAPFILE=npevents.map
 
@@ -53,7 +61,11 @@ MAPFILE=npevents.map
 #//
 #//------------------------------------------------------------------------
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+LIB=.\$(OBJDIR)\$(LIBRARY_NAME)
+!else
 DLL=.\$(OBJDIR)\$(DLLNAME)
+!endif
 MAPFILE= npevents.map
 
 
@@ -80,5 +92,10 @@ LINCS=$(LINCS) -I$(PUBLIC)\plugin -I$(PUBLIC)\xpcom -I$(PUBLIC)\java -I$(PUBLIC)
 LCFLAGS = $(LCFLAGS) -DNEW_PLUGIN_STREAM_API
 !endif
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+        $(MAKE_INSTALL) $(OBJDIR)\npevents.lib $(DIST)\bin\components
+!else
 install:: $(DLL)
         $(MAKE_INSTALL) $(OBJDIR)\npevents.dll $(DIST)\bin\components
+!endif

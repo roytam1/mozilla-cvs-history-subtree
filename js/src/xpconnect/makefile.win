@@ -36,7 +36,10 @@ DIRS=public idl src \
 !if !defined(DISABLE_TESTS)
      tests \
 !endif
-     shell loader \
+!if !defined(MOZ_STATIC_COMPONENT_LIBS)
+     shell \
+!endif
+    loader \
 !if defined(XPC_TOOLS_SUPPORT)
      tools
 !endif

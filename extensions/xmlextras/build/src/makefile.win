@@ -20,8 +20,15 @@
 DEPTH=..\..\..\..
 MODULE=xmlextras
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+MAKE_OBJ_TYPE = LIB
+LIBRARY_NAME = xmlextras
+LIB = .\$(OBJDIR)\$(LIBRARY_NAME).lib
+!else
+MAKE_OBJ_TYPE = DLL
 LIBNAME = .\$(OBJDIR)\xmlextras
 DLL = $(LIBNAME).dll
+!endif
 
 ################################################################################
 ## library
@@ -53,6 +60,12 @@ LCFLAGS = \
 
 include <$(DEPTH)/config/rules.mak>
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+install:: $(LIB)
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\bin\components
+	$(MAKE_INSTALL)  $(LIB) $(DIST)\lib
+!else
 install:: $(DLL)
 	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
 	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+!endif
