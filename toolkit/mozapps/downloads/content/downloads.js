@@ -58,6 +58,17 @@ function onDownloadCancel(aEvent)
 
   setRDFProperty(aEvent.target.id, "DownloadAnimated", "false");
 
+  // XXXben - 
+  // If we got here because we resumed the download, we weren't using a temp file
+  // because we used saveURL instead. (this is because the proper download mechanism
+  // employed by the helper app service isn't fully accessible yet... should be fixed...
+  // talk to bz...)
+  // the upshot is we have to delete the file if it exists. 
+  var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+  f.initWithPath(aEvent.target.id);
+  if (f.exists()) 
+    f.remove(true);
+
   gDownloadViewController.onCommandUpdate();
 }
 
@@ -105,20 +116,27 @@ function onDownloadShow(aEvent)
 
 function onDownloadOpen(aEvent)
 {
-  if (aEvent.target.localName == "download") {
-    var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
-    f.initWithPath(aEvent.target.id);
+  var download = aEvent.target;
+  if (download.localName == "download") {
+    if (download.openable) {
+      var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+      f.initWithPath(aEvent.target.id);
 
-    if (f.exists()) {
-      // XXXben security check!  
-      f.launch();
+      dump("*** f = " + f.path + "\n");
+      if (f.exists()) {
+        // XXXben security check!  
+        f.launch();
+      }
+    }
+    else if(download.canceledOrFailed) {
+      // If the user canceled this download, double clicking tries again. 
+      fireEventForElement(download, "retry")
     }
   }
 }
 
 function onDownloadOpenWith(aEvent)
 {
-  
 }
 
 function onDownloadProperties(aEvent)
@@ -142,6 +160,32 @@ function setRDFProperty(aID, aProperty, aValue)
     db.Assert(res, propertyArc, rdf.GetLiteral(aValue), true);
 }
 
+function getRDFProperty(aID, aProperty)
+{
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+
+  var db = gDownloadManager.datasource;
+  var propertyArc = rdf.GetResource(NC_NS + aProperty);
+  
+  var res = rdf.GetResource(aID);
+  var node = db.GetTarget(res, propertyArc, true);
+  try {
+    node = node.QueryInterface(Components.interfaces.nsIRDFLiteral);
+    return node.Value;
+  }
+  catch (e) {
+    try {
+      node = node.QueryInterface(Components.interfaces.nsIRDFInt);
+      return node.Value;
+    }
+    catch (e) {
+      node = node.QueryInterface(Components.interfaces.nsIRDFResource);
+      return node.Value;
+    }
+  }
+  return "";
+}
+
 function onDownloadAnimated(aEvent)
 {
   gDownloadViewController.onCommandUpdate();    
@@ -151,7 +195,12 @@ function onDownloadAnimated(aEvent)
 
 function onDownloadRetry(aEvent)
 {
-
+  var download = aEvent.target;
+  if (download.localName == "download") {
+    var src = getRDFProperty(download.id, "URL");
+    saveURL(src, download.getAttribute("target"), null, true, true);
+  }
+  
   gDownloadViewController.onCommandUpdate();
 }
 
@@ -163,15 +212,16 @@ function Startup()
   const dlmgrIID = Components.interfaces.nsIDownloadManager;
   gDownloadManager = Components.classes[dlmgrContractID].getService(dlmgrIID);
 
-  gDownloadsView.addEventListener("download-cancel",  onDownloadCancel,   false);
-  gDownloadsView.addEventListener("download-pause",   onDownloadPause,    false);
-  gDownloadsView.addEventListener("download-resume",  onDownloadResume,   false);
-  gDownloadsView.addEventListener("download-remove",  onDownloadRemove,   false);
-  gDownloadsView.addEventListener("download-show",    onDownloadShow,     false);
-  gDownloadsView.addEventListener("download-open",    onDownloadOpen,     false);
-  gDownloadsView.addEventListener("download-retry",   onDownloadRetry,    false);
-  gDownloadsView.addEventListener("download-animated",onDownloadAnimated, false);
-  gDownloadsView.addEventListener("dblclick",         onDownloadOpen,     false);
+  gDownloadsView.addEventListener("download-cancel",      onDownloadCancel,     false);
+  gDownloadsView.addEventListener("download-pause",       onDownloadPause,      false);
+  gDownloadsView.addEventListener("download-resume",      onDownloadResume,     false);
+  gDownloadsView.addEventListener("download-remove",      onDownloadRemove,     false);
+  gDownloadsView.addEventListener("download-show",        onDownloadShow,       false);
+  gDownloadsView.addEventListener("download-open",        onDownloadOpen,       false);
+  gDownloadsView.addEventListener("download-retry",       onDownloadRetry,      false);
+  gDownloadsView.addEventListener("download-animated",    onDownloadAnimated,   false);
+  gDownloadsView.addEventListener("download-properties",  onDownloadProperties, false);
+  gDownloadsView.addEventListener("dblclick",             onDownloadOpen,       false);
   
   gDownloadsView.controllers.appendController(gDownloadViewController);
 
@@ -221,7 +271,7 @@ function saveStatusMessages()
 
 var gContextMenus = [ 
   ["menuitem_pause", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"],
-  ["menuitem_open", "menuitem_openWith", "menuitem_show", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_open", "menuitem_show", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_resume", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"]

@@ -38,6 +38,14 @@ function Startup()
   pathField.value = window.arguments[0];
   sourceField.value = source;
   
+  var dl = window.opener.gDownloadManager.getDownload(window.arguments[0]);
+  if (dl) {
+    document.getElementById("dateEndedRow").hidden = true;
+    document.getElementById("dateEndedSeparator").hidden = true;
+  }
+  
+  document.documentElement.getButton("accept").label = document.documentElement.getAttribute("acceptbuttontext");
+  
   document.documentElement.getButton("accept").focus();
 }
   

@@ -66,6 +66,38 @@
         ]]>
         </body>
       </method>
+      <property name="openable">
+        <getter>
+        <![CDATA[
+          return this.getAttribute("state") == "1";
+        ]]>
+        </getter>
+      </property>
+      <property name="inProgress">
+        <getter>
+        <![CDATA[
+          var state = this.getAttribute("state");
+          return state == "-1" || state == "0" || state == "4";
+        ]]>
+        </getter>
+      </property>
+      <property name="removable">
+        <getter>
+        <![CDATA[
+          var state = this.getAttribute("state");
+          return state == "1" || state == "2" || state == "3";
+        ]]>
+        </getter>
+      </property>
+      <property name="canceledOrFailed">
+        <getter>
+        <![CDATA[
+          var state = this.getAttribute("state");
+          return state == "2" || state == "3";
+        ]]>
+        </getter>
+      </property>
+      
       <constructor>
       <![CDATA[
         // This is a hack to circumvent the template builder, which eats every character
@@ -98,7 +130,7 @@
   
   <binding id="download-downloading" extends="chrome://mozapps/content/downloads/download.xml#download-base">
     <content>
-      <xul:hbox flex="1" class="downloadContentBox" xbl:inherits="animated">
+      <xul:hbox flex="1" class="downloadContentBox" xbl:inherits="animated,animated-temp">
 #ifdef XP_WIN
         <xul:vbox pack="start">
           <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>

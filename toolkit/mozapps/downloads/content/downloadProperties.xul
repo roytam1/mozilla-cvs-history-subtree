@@ -1,8 +1,8 @@
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?> 
-<?xml-stylesheet href="chrome://browser/skin/downloads/downloadmanager.css"?>
+<?xml-stylesheet href="chrome://mozapps/skin/downloads/downloads.css"?>
 
 <!DOCTYPE window [
-<!ENTITY % downloadPropertiesDTD SYSTEM "chrome://browser/locale/downloads/downloadProperties.dtd">
+<!ENTITY % downloadPropertiesDTD SYSTEM "chrome://mozapps/locale/downloads/downloadProperties.dtd">
 %downloadPropertiesDTD;
 ]>
 
@@ -11,11 +11,10 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&window.title;"
         onload="Startup();"
-        width="400"
-        height="170"
-        buttons="accept">
+        style="width: 30em;"
+        buttons="accept" acceptbuttontext="&acceptButton.label;">
 
-  <script type="application/x-javascript" src="chrome://browser/content/downloads/downloadProperties.js"/>
+  <script type="application/x-javascript" src="chrome://mozapps/content/downloads/downloadProperties.js"/>
 
   <grid flex="1">
     <columns>
@@ -29,27 +28,29 @@
         </hbox>
         <textbox id="source" readonly="true"/>
       </row>
-      <spacer flex="1"/>
+      <separator class="thin"/>
       <row align="center">
         <hbox pack="end">
           <label value="&path.label;" class="bold"/>
         </hbox>
         <textbox id="path" readonly="true"/>
       </row>
-      <spacer flex="1"/>
+      <separator class="thin"/>
       <row align="center">
         <hbox pack="end">
           <label value="&dateStarted.label;" class="bold"/>          
         </hbox>        
-        <hbox flex="1">
-          <label id="dateStarted"/>
-          <spacer flex="1"/>
+        <label id="dateStarted"/>
+      </row>
+      <separator class="thin" id="dateEndedSeparator"/>
+      <row align="center" id="dateEndedRow">
+        <hbox pack="end">
           <label value="&dateEnded.label;" class="bold"/>
-          <label id="dateEnded"/>
         </hbox>
+        <label id="dateEnded"/>
       </row>
     </rows>
   </grid>
-  <separator class="groove"/>
+  <separator/>
 </dialog>
     
