@@ -534,6 +534,15 @@ nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
   return NS_OK;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// IE PASSWORDS AND FORM DATA - PRIMER
+//
+// Internet Explorer 4.0 and up store sensitive form data (saved through form
+// autocomplete) and saved passwords in a special area of the Registry called
+// the Protected Storage System. The data IE stores in the Protected Storage 
+// System is located under:
+//
+// HKEY_CURRENT_USER\Software\Microsoft\Protected Storage System Provider\//   <USER_ID>\Data\<IE_PSS_GUID>\<IE_PSS_GUID>\//// <USER_ID> is a long string that uniquely identifies the current user// <IE_PSS_GUID> is a GUID that identifies a subsection of the Protected Storage// System specific to MSIE. This GUID is defined below ("IEPStoreGUID").//// Data is stored in the Protected Strage System ("PStore") in the following// format:// // <IE_PStore_Key> \//                  fieldName1:StringData \ ItemData = <REG_BINARY>//                  fieldName2:StringData \ ItemData = <REG_BINARY>//                  http://foo.com/login.php:StringData \ ItemData = <REG_BINARY>//                  ... etc ...// // Each key represents either the identifier of a web page text field that // data was saved from (e.g. <input name="fieldName1">), or a URL that a login// (username + password) was saved at (e.g. "http://foo.com/login.php")//// Data is stored for each of these cases in the following format://// for both types of data, the Value ItemData is REG_BINARY data format encrypted with // a 3DES cipher. //// for FormData: the decrypted data is in the form://                  value1\0value2\0value3\0value4 ...// for Signons:  the decrypted data is in the form://                  username\0password//// We cannot read the PStore directly by using Registry functions because the // keys have limited read access such that only System process can read from them.// In order to read from the PStore we need to use Microsoft's undocumented PStore// API(*). //// (* Sparse documentation became available as of the January 2004 MSDN Library//    release)//// The PStore API lets us read decrypted data from the PStore. Encryption does not// appear to be strong.// // Details on how each type of data is read from the PStore and migrated appropriately// is discussed in more detail below.
 typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore**, DWORD, DWORD, DWORD);
 
 typedef struct {
