@@ -359,7 +359,14 @@ int testURL(const char* i_pURL)
 		nsICoolURL* pURL = CreateURL(i_pURL);
 		pURL->DebugString(&temp);
 		cout << temp <<endl;
-		pURL->Release();
+		
+        nsIInputStream* is = 0;
+        if (NS_OK == pURL->GetStream(&is))
+        {
+            ReadStreamSynchronously(is);
+        }
+
+        pURL->Release();
 		return 0;
 	}
 

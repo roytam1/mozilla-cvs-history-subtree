@@ -124,10 +124,28 @@ nsURL::ExtractPortFrom(int start, int length)
     delete[] port;
 }
 
-nsresult nsURL::OpenStream(nsIInputStream* *o_InputStream)
+nsresult nsURL::GetStream(nsIInputStream* *o_InputStream)
 {
-    NS_PRECONDITION( (0 != m_URL), "OpenStream called on empty url!");
-    return NS_OK;
+    NS_PRECONDITION( (0 != m_URL), "GetStream called on empty url!");
+	nsresult result = NS_OK; // change to failure
+	//OpenProtocolInstance and request the input stream
+	nsIProtocolInstance* pi = 0;
+	result = OpenProtocolInstance(&pi);
+	if (NS_OK != result)
+		return result;
+ 	return pi->GetInputStream(o_InputStream);		
+}
+
+nsresult nsURL::OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance)
+{
+    char* scheme =0;
+    GetScheme(&scheme);
+    if (0 == scheme)
+        return -1; // return error to indicate bad url
+    // Here we should check with the registry/protocol manager for a
+    // protocol instance that can handle this url. 
+    // TODO this is where mscott's code will hook in. 
+    return -1;
 }
 
 // This code will need thorough testing. A lot of this has to do with 
@@ -421,12 +439,12 @@ nsURL::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     
     static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
-    if (aIID.Equals(NS_ICOOLURL_IID)) {
+    if (aIID.Equals(nsICoolURL::IID())) {
         *aInstancePtr = (void*) ((nsICoolURL*)this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
-    if (aIID.Equals(NS_IURI_IID)) {
+    if (aIID.Equals(nsIURI::IID())) {
         *aInstancePtr = (void*) ((nsIURI*)this);
         NS_ADDREF_THIS();
         return NS_OK;

@@ -86,33 +86,21 @@ public:
 
     //Functions from nsICoolURL.h 
     /* 
-        Note: The OpenStream function also opens a connection using 
+        Note: The GetStream function also opens a connection using 
         the available information in the URL. This is the same as 
         calling OpenInputStream on the connection returned from 
-        OpenConnection.
+        OpenProtocolInstance.
     */
-    NS_METHOD           OpenStream(nsIInputStream* *o_InputStream);
-
-    /*
-        The GetDocument function BLOCKS till the data is made available
-        or an error condition is encountered. The return type is the overall
-        success status which depends on the protocol implementation. 
-        Its just a convenience function that internally sets up a temp stream in 
-        memory and buffers everything. Note that this mechanism strips off
-        the headers and only the raw data is copied to the passed string.
-
-        TODO - return status? 
-    */
-    NS_METHOD           GetDocument(const char* *o_Data);
+    NS_METHOD           GetStream(nsIInputStream* *o_InputStream);
 
     /* 
-        The OpenConnection method sets up the connection as decided by the 
+        The OpenProtocolInstance method sets up the connection as decided by the 
         protocol implementation. This may then be used to get various 
         connection specific details like the input and the output streams 
         associated with the connection, or the header information by querying
         on the connection type which will be protocol specific.
     */
-    //NS_METHOD          OpenConnection(nsIConnection* o_Connection);
+    NS_METHOD          OpenProtocolInstance(nsIProtocolInstance* *o_ProtocolInstance);
 
 
     //Other utility functions
