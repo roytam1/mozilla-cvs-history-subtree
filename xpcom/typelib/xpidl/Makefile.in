@@ -34,7 +34,7 @@ CSRCS = \
 
 # Compile directly against the static lib, so we can use xpidl during the build
 # without the shared library path being set.
-LIBS = $(DIST)/lib/libxpcomxpt.a $(LIBIDL_LIBS)
+LIBS = $(DIST)/lib/libxpt.a $(LIBIDL_LIBS)
 
 include $(topsrcdir)/config/rules.mk
 

@@ -29,7 +29,7 @@ CSRCS		= xpt_dump.c xpt_link.c
 
 # Compile directly against the static lib, so we can use the tools
 # during the build without the shared library path being set.
-LIBS		= $(DIST)/lib/libxpcomxpt.a
+LIBS		= $(DIST)/lib/libxpt.a
 
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled
 # when libxpt changes.
