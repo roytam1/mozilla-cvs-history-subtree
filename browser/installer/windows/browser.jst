@@ -336,6 +336,10 @@ function upgradeCleanup()
   deleteThisFile("Program",     "defaults/pref/xpinstall.js");
   deleteThisFolder("Program",   "defaults/profile/US");
   
+  // These files are related to app patches and will interfere with the 
+  // UA/app version strings if we do not remove them. 
+  deleteThisFile("Program",	    "defaults/pref/bug259708.js");
+  
   // Now clean up Uninstall entries that may be laying around in the
   // registry for older versions of the software that we're overwriting/
   // upgrading...
