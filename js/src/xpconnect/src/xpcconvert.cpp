@@ -219,7 +219,7 @@ AddXPCOMUCStringFinalizer()
     sXPCOMUCStringFinalizerIndex =
         JS_AddExternalStringFinalizer(FinalizeXPCOMUCString);
 
-    if (sXPCOMUCStringFinalizerIndex == -1)
+    if(sXPCOMUCStringFinalizerIndex == -1)
     {        
         return JS_FALSE;
     }
@@ -1056,7 +1056,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
         XPCWrappedNative* wrapper;
         nsresult rv;
 #ifdef XPC_IDISPATCH_SUPPORT
-        if (iid->Equals(NSID_IDISPATCH))
+        if(iid->Equals(NSID_IDISPATCH))
             rv = XPCWrappedNative::IDispatchGetNewOrUsed(ccx, src, xpcscope,
                                                         iface, &wrapper);
         else

@@ -224,7 +224,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
         {
             FILE* oldFileHandle = js_DumpGCHeap;
             js_DumpGCHeap = stdout;
-            js_ForceGC(ccx);
+            js_GC(ccx);
             js_DumpGCHeap = oldFileHandle;
         }
 #endif
@@ -403,12 +403,12 @@ nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
     // See if we were looking up info on IDispatch, if so, return our
     // specialized interface info
 #ifdef XPC_IDISPATCH_SUPPORT
-    if (NS_FAILED(rv))
+    if(NS_FAILED(rv))
     {
-        if (aIID->Equals(NSID_IDISPATCH))
+        if(aIID->Equals(NSID_IDISPATCH))
         {
             *info = new IDispatchInfo();
-            if (*info)
+            if(*info)
             {
                 NS_ADDREF(*info);
                 rv = NS_OK;
@@ -426,12 +426,12 @@ nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
     // See if we were looking up info on IDispatch, if so, return our
     // specialized interface info
 #ifdef XPC_IDISPATCH_SUPPORT
-    if (NS_FAILED(rv))
+    if(NS_FAILED(rv))
     {
-        if (strcmp(name, IDISPATCH_NAME) == 0)
+        if(strcmp(name, IDISPATCH_NAME) == 0)
         {
             *info = new IDispatchInfo();
-            if (*info)
+            if(*info)
             {
                 NS_ADDREF(*info);
                 rv = NS_OK;
@@ -482,7 +482,7 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 
 #ifdef XPC_IDISPATCH_SUPPORT
     // Add IDispatch support objects
-    if (IsIDispatchSupported())
+    if(IsIDispatchSupported())
     {
         IDispObject::IDispatchRegisterCOMObject(ccx, aGlobalJSObj);
     }

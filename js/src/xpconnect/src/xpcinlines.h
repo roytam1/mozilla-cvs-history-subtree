@@ -576,7 +576,7 @@ inline
 void XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObj)                
 {
 #ifdef XPC_IDISPATCH_SUPPORT
-    if (IsIDispatch())
+    if(IsIDispatch())
     {
         SetIDispatchJSObject(JSObj);
     }

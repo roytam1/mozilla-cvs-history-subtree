@@ -328,7 +328,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
             if(JSVAL_IS_STRING(idval) &&
                nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))))
             {
-                if ((iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
+                if((iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
                     nsnull != (to = wrapperToReflectInterfaceNames->
                                         FindTearOff(ccx, iface2, JS_TRUE)) &&
                     nsnull != (jso = to->GetJSObject()))
@@ -381,7 +381,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
 #ifdef XPC_IDISPATCH_SUPPORT
         // Check to see if there's an IDispatch tearoff     
-        if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() &&
+        if(nsXPConnect::GetXPConnect()->IsIDispatchSupported() &&
                 wrapperToReflectInterfaceNames && 
                 (iface = XPCNativeInterface::GetNewOrUsed(ccx, "IDispatch")) != nsnull &&
                 (to = wrapperToReflectInterfaceNames->FindTearOff(ccx,
@@ -452,7 +452,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         propFlags &= ~JSPROP_ENUMERATE;
 
     jsval funval;
-    if (member)
+    if(member)
     {
         if(!member->GetValue(ccx, iface, &funval))
             return JS_FALSE;
@@ -460,7 +460,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 #ifdef XPC_IDISPATCH_SUPPORT
     else
     {
-        if (!IDispatchMember->GetValue(ccx, iface, &funval))
+        if(!IDispatchMember->GetValue(ccx, iface, &funval))
             return JS_FALSE;
     }
 #endif
@@ -649,21 +649,21 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
         }
     }
 #ifdef XPC_IDISPATCH_SUPPORT
-    if (nsXPConnect::GetXPConnect()->IsIDispatchSupported())
+    if(nsXPConnect::GetXPConnect()->IsIDispatchSupported())
     {
         XPCNativeInterface* iface = XPCNativeInterface::GetNewOrUsed(ccx, &NSID_IDISPATCH);
-        if (iface)
+        if(iface)
         {
             XPCWrappedNativeTearOff* tearoff = wrapper->FindTearOff(ccx, iface);
-            if (tearoff)
+            if(tearoff)
             {
                 IDispatchInterface* pInfo = tearoff->GetIDispatchInfo();
                 PRUint32 members = pInfo->GetMemberCount();
-                for (PRUint32 index = 0; index < members; ++index)
+                for(PRUint32 index = 0; index < members; ++index)
                 {
                     IDispatchInterface::Member & member = pInfo->GetMember(index);
                     jsval name = member.GetName();
-                    if (!xpc_ForcePropertyResolve(cx, obj, name))
+                    if(!xpc_ForcePropertyResolve(cx, obj, name))
                         return JS_FALSE;
                 }
             }

@@ -459,7 +459,7 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
     }
 
 #ifdef XPC_IDISPATCH_SUPPORT
-    else if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
+    else if(nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
     {
         nsXPCWrappedJS* root = self->GetRootWrapper();
 
