@@ -39,7 +39,6 @@ components/offlineStartup.js
 components/mdn-service.js
 components/libsmimestb.so
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Chrome Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -49,8 +48,6 @@ chrome/en-US-mail.jar
 ;;this maybe incorrect but we use win because of 
 ;;a static installed-chrome.txt
 chrome/en-unix.jar
-;;chrome/en-unix.jar
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Default Profile Settings
@@ -62,11 +59,11 @@ greprefs/*
 defaults/messenger/mailViews.dat
 defaults/profile/localstore.rdf
 defaults/profile/mimeTypes.rdf
-defaults/profile/extensions/*
+defaults/profile/extensions/Extensions.rdf
+defaults/profile/extensions/installed-extensions.txt
 defaults/profile/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
 defaults/profile/US/localstore.rdf
 defaults/profile/US/mimeTypes.rdf
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; App extensions to Mail
