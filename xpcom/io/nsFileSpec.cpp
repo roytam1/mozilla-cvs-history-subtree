@@ -1400,7 +1400,7 @@ NS_FileSpecToIFile(nsFileSpec* fileSpec, nsILocalFile* *result)
 
 #if defined(XP_MAC) || defined(RHAPSODY)
     {
-        FSSpec spec  = file->GetFSSpec();
+        FSSpec spec = fileSpec->GetFSSpec();
         nsCOMPtr<nsILocalFileMac> psmAppMacFile = do_QueryInterface(file, &rv);
         if (NS_FAILED(rv)) return rv;
         rv = psmAppMacFile->InitWithFSSpec(&spec);
