@@ -66,7 +66,6 @@ class nsIPresShell;
 class nsIPref;
 class nsStyleContext;
 class nsIAtom;
-class nsString;
 class nsIEventStateManager;
 class nsIURI;
 class nsILookAndFeel;
