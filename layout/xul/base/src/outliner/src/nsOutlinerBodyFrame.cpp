@@ -1737,6 +1737,8 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
 
           // Line up line with the parent image.
           x = currX + imageSize.width / 2;
+          if (((imageSize.width / 2) / 15) % 2 != 0)
+            x -= 15;
 
           // Paint full vertical line only if we have next sibling.
           PRBool hasNextSibling;
