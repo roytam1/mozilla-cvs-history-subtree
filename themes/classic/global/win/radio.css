@@ -53,7 +53,7 @@ radio {
 /* ..... focused state ..... */
 
 radio[focused="true"] > .radio-label-box {
-  border: 1px dotted ThreeDDarkShadow;
+  
 }
 
 /* ..... disabled state ..... */
