@@ -184,6 +184,7 @@
 #include "nsIDOMEntityReference.h"
 #include "nsIDOMNotation.h"
 #include "nsIDOMMouseEvent.h"
+#include "nsIDOMPopupBlockedEvent.h"
 #include "nsIDOMMutationEvent.h"
 #include "nsIDOMDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
@@ -899,6 +900,8 @@ jsval nsDOMClassInfo::sOnscroll_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sScrollIntoView_id  = JSVAL_VOID;
 jsval nsDOMClassInfo::sScrollX_id         = JSVAL_VOID;
 jsval nsDOMClassInfo::sScrollY_id         = JSVAL_VOID;
+jsval nsDOMClassInfo::sScrollMaxX_id      = JSVAL_VOID;
+jsval nsDOMClassInfo::sScrollMaxY_id      = JSVAL_VOID;
 jsval nsDOMClassInfo::sOpen_id            = JSVAL_VOID;
 jsval nsDOMClassInfo::sItem_id            = JSVAL_VOID;
 jsval nsDOMClassInfo::sEnumerate_id       = JSVAL_VOID;
@@ -998,6 +1001,8 @@ nsDOMClassInfo::DefineStaticJSVals(JSContext *cx)
   SET_JSVAL_TO_STRING(sScrollIntoView_id,  cx, "scrollIntoView");
   SET_JSVAL_TO_STRING(sScrollX_id,         cx, "scrollX");
   SET_JSVAL_TO_STRING(sScrollY_id,         cx, "scrollY");
+  SET_JSVAL_TO_STRING(sScrollMaxX_id,      cx, "scrollMaxX");
+  SET_JSVAL_TO_STRING(sScrollMaxY_id,      cx, "scrollMaxY");
   SET_JSVAL_TO_STRING(sOpen_id,            cx, "open");
   SET_JSVAL_TO_STRING(sItem_id,            cx, "item");
   SET_JSVAL_TO_STRING(sEnumerate_id,       cx, "enumerateProperties");
@@ -1468,6 +1473,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMKeyEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMMouseEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMPopupBlockedEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSUIEvent)
   DOM_CLASSINFO_MAP_END
 
@@ -2859,6 +2865,8 @@ nsDOMClassInfo::ShutDown()
   sScrollIntoView_id  = JSVAL_VOID;
   sScrollX_id         = JSVAL_VOID;
   sScrollY_id         = JSVAL_VOID;
+  sScrollMaxX_id      = JSVAL_VOID;
+  sScrollMaxY_id      = JSVAL_VOID;
   sOpen_id            = JSVAL_VOID;
   sItem_id            = JSVAL_VOID;
   sEnumerate_id       = JSVAL_VOID;

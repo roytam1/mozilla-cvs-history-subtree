@@ -138,7 +138,7 @@ MOZ_BUILD_ROOT=`pwd`
 dnl Default to MSVC for win32
 dnl ==============================================================
 case "$target" in
-*-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
+*-cygwin*|*-mingw*|*-msvc*|*-mks*)
     MAKE_VERSION=3.79
     if test -z "$CC"; then CC=cl; fi
     if test -z "$CXX"; then CXX=cl; fi
@@ -305,7 +305,7 @@ fi
 dnl Special win32 checks
 dnl ========================================================
 case "$target" in
-*-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
+*-cygwin*|*-mingw*|*-msvc*|*-mks*)
     if test "$GCC" != "yes"; then
         # Check to see if we are really running in a msvc environemnt
         _WIN32_MSVC=1
@@ -750,7 +750,7 @@ case "$host" in
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
     ;;
 
-*cygwin*|*mingw*|*mksnt*|*msvc*)
+*cygwin*|*mingw*|*mks*|*msvc*)
     if test -n "$_WIN32_MSVC"; then
         HOST_CFLAGS="$HOST_CFLAGS -TC -nologo"
     fi
@@ -947,8 +947,6 @@ case "$target" in
     ;;
 
 *-*linux*)
-    AC_DEFINE(_POSIX_SOURCE)
-    AC_DEFINE(_SVID_SOURCE)
     TARGET_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
     MOZ_DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb,
                                       # and that combo is not yet good at
@@ -961,7 +959,7 @@ case "$target" in
     	CFLAGS="$CFLAGS -mieee"
     	CXXFLAGS="$CXXFLAGS -mieee"
     ;;
-    i?86)
+    i*86)
     	USE_ELF_DYNSTR_GC=1
         MOZ_ENABLE_OLD_ABI_COMPAT_WRAPPERS=1
     ;;
@@ -972,7 +970,7 @@ case "$target" in
     esac
     ;;
 
-*-mingw*|*-cygwin*|*-msvc*|*-mksnt*)
+*-mingw*|*-cygwin*|*-msvc*|*-mks*)
     CYGWIN_WRAPPER="sh ${srcdir}/build/cygwin-wrapper"
     if test "`echo ${srcdir} | grep -c ^/ 2>/dev/null`" = 0; then
         _pwd=`pwd`
@@ -1126,7 +1124,7 @@ case "$target" in
     LIBIDL_LIBS="${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6.lib ${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
 
     case "$target" in
-    i?86-*)
+    i*86-*)
     	AC_DEFINE(_X86_)
 	;;
     alpha-*)
@@ -1189,7 +1187,7 @@ case "$target" in
 	;;
 	esac
 	case "${host_cpu}" in
-	i?86)
+	i*86)
 	USE_ELF_DYNSTR_GC=1
 	;;
 	esac
@@ -1264,6 +1262,7 @@ case "$target" in
         IMPLIB='emximp -o'
         FILTER='emxexp -o'
         MOZ_DEBUG_FLAGS="-g -fno-inline"
+        MOZ_OPTIMIZE_FLAGS="-O -s"
         MOZ_OPTIMIZE_LDFLAGS="-Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
         MOZ_WIDGET_TOOLKIT_LDFLAGS='-lwdgt$(MOZ_WIDGET_TOOLKIT)'
         MOZ_GFX_TOOLKIT_LDFLAGS='-lgfx_$(MOZ_WIDGET_TOOLKIT)'
@@ -1482,7 +1481,7 @@ case "$target" in
 *-openvms*)
     NO_LD_ARCHIVE_FLAGS=
     ;;
-*-msvc*|*-mksnt*|*-mingw*|*-cygwin*)
+*-msvc*|*-mks*|*-mingw*|*-cygwin*)
     if test -z "$GNU_CC"; then
         NO_LD_ARCHIVE_FLAGS=
     fi
@@ -1540,7 +1539,7 @@ case "$target" in
           AC_MSG_RESULT(no)
         fi
         ;;
-    *-cygwin*|*-mingw*|*-mksnt|*-msvc)
+    *-cygwin*|*-mingw*|*-mks*|*-msvc)
         if test -n "$GNU_CC"; then
            MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS='-Wl,--version-script,$(BUILD_TOOLS)/gnu-ld-scripts/components-version-script'
         fi
@@ -2252,7 +2251,7 @@ if test "$ac_cv_func_gnu_get_libc_version" = "yes"; then
 fi
 
 case $target_os in
-    os2*|msvc*|mksnt*|cygwin*|mingw*)
+    os2*|msvc*|mks*|cygwin*|mingw*)
         ;;
     *)
     
@@ -3274,6 +3273,17 @@ if test "$MOZ_PHOENIX"; then
 fi
 
 AC_SUBST(MOZ_PHOENIX)
+
+dnl ========================================================
+dnl = Thunderbird
+dnl ========================================================
+if test "$MOZ_THUNDERBIRD"; then
+   AC_DEFINE(MOZ_THUNDERBIRD)
+   MOZ_XUL_APP=1
+   AC_DEFINE(MOZ_XUL_APP)
+fi
+
+AC_SUBST(MOZ_THUNDERBIRD)
 AC_SUBST(MOZ_XUL_APP)
 
 dnl ========================================================
@@ -3383,7 +3393,7 @@ MOZ_ARG_ENABLE_BOOL(crypto,
     MOZ_PSM=1,
     MOZ_PSM= )
 case $target in
-*-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
+*-cygwin*|*-mingw*|*-msvc*|*-mks*)
     if test -n "$MOZ_PSM" -a ! -e "$AS_BIN"; then
         AC_MSG_ERROR([Building crypto support requires a valid version of the standalone assembler, ml.exe.])
     fi
@@ -3600,7 +3610,7 @@ dnl Image decoders
 dnl ========================================================
 MOZ_IMG_DECODERS_DEFAULT="ppm png gif jpeg bmp mng xbm"
 case "$target_os" in
-cygwin*|mingw*|msvc*|mksnt*|os2*)
+cygwin*|mingw*|msvc*|mks*|os2*)
     MOZ_IMG_DECODERS_DEFAULT="$MOZ_IMG_DECODERS_DEFAULT icon"
     ;;
 esac
@@ -3691,7 +3701,7 @@ dnl ========================================================
 dnl Installer
 dnl ========================================================
 case "$target_os" in
-    aix*|solaris*|linux*|msvc*|mksnt*|cygwin*|mingw*|os2*)
+    aix*|solaris*|linux*|msvc*|mks*|cygwin*|mingw*|os2*)
         MOZ_INSTALLER=1
         ;;
 esac
@@ -3712,7 +3722,7 @@ dnl ========================================================
 MOZ_NO_ACTIVEX_SUPPORT=1
 
 case "$target_os" in
-    msvc*|mksnt*|cygwin*|mingw*)
+    msvc*|mks*|cygwin*|mingw*)
         MOZ_NO_ACTIVEX_SUPPORT=
         ;;
 esac
@@ -3855,7 +3865,7 @@ MOZ_DEBUG_ENABLE_DEFS="-DDEBUG -D_DEBUG"
     beos*)
         MOZ_DEBUG_ENABLE_DEFS="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_${USER}"
         ;;
-    msvc*|mksnt*|cygwin*|mingw*|os2*)
+    msvc*|mks*|cygwin*|mingw*|os2*)
         MOZ_DEBUG_ENABLE_DEFS="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
@@ -4632,7 +4642,7 @@ MOZ_ARG_ENABLE_STRING(meta-components,
   [ MOZ_META_COMPONENTS=`echo $enableval | sed 's/,/ /g'` ] )
 
 if test -n "$MOZ_STATIC_COMPONENTS" && test -n "$MOZ_META_COMPONENTS"; then
-    AC_MSG_ERROR([Simultaneous use of static-components & meta-components is not supported.])
+    AC_MSG_ERROR([Simultaneous use of meta-module-components & meta-components is not supported.])
 fi
 
 case "$target" in
@@ -4698,7 +4708,7 @@ fi
 dnl Check for GLib and libIDL.
 dnl ========================================================
 case "$target_os" in
-msvc*|mksnt*|cygwin*|mingw*)
+msvc*|mks*|cygwin*|mingw*)
     SKIP_IDL_CHECK="yes"
     ;;
 *)
@@ -4713,16 +4723,18 @@ MOZ_ARG_WITHOUT_BOOL(libIDL,
 
 if test "$SKIP_IDL_CHECK" = "no"
 then
+    _LIBIDL_FOUND=
     if test "$MOZ_ENABLE_GTK2"; then
-        PKG_CHECK_MODULES(LIBIDL, libIDL-2.0 >= 0.8.0,,_LIBIDL_NOT_FOUND=1)
-    else
-        AM_PATH_LIBIDL($LIBIDL_VERSION,,_LIBIDL_NOT_FOUND=1)
+        PKG_CHECK_MODULES(LIBIDL, libIDL-2.0 >= 0.8.0,_LIBIDL_FOUND=1)
+    fi
+    if test -z "$_LIBIDL_FOUND"; then
+        AM_PATH_LIBIDL($LIBIDL_VERSION,_LIBIDL_FOUND=1)
     fi
     dnl
     dnl If we don't have a libIDL config program & not cross-compiling, 
     dnl     look for orbit-config instead.
     dnl
-    if test -n "$_LIBIDL_NOT_FOUND" && test -z "$CROSS_COMPILE"; then
+    if test -z "$_LIBIDL_FOUND" && test -z "$CROSS_COMPILE"; then
         AC_PATH_PROGS(ORBIT_CONFIG, $ORBIT_CONFIG orbit-config)
         if test -n "$ORBIT_CONFIG"; then
         	_ORBIT_CFLAGS=`${ORBIT_CONFIG} client --cflags`
@@ -4732,10 +4744,10 @@ then
             LIBIDL_CFLAGS="$_ORBIT_INC_PATH"
             LIBIDL_LIBS="$_ORBIT_LIB_PATH -lIDL -lglib"
             LIBIDL_CONFIG=
-            _LIBIDL_NOT_FOUND=
+            _LIBIDL_FOUND=1
         fi
     fi
-    if test -n "$_LIBIDL_NOT_FOUND"; then
+    if test -z "$_LIBIDL_FOUND"; then
         AC_MSG_ERROR([libIDL not found.
         libIDL $LIBIDL_VERSION or higher is required.])
     fi
@@ -4785,7 +4797,7 @@ if test "$MOZ_SVG_RENDERER_LIBART"; then
     dnl answer should be anyway
     MOZ_LIBART_CFLAGS='-I${DIST}/include/libart_lgpl'
     case "$target_os" in
-    msvc*|mksnt*|cygwin*|mingw*)
+    msvc*|mks*|cygwin*|mingw*)
         MOZ_LIBART_LIBS='$(DIST)/lib/$(LIB_PREFIX)moz_art_lgpl.$(LIB_SUFFIX)' 
         ;;
     beos*)
@@ -5188,7 +5200,7 @@ AC_SUBST(LIBS_PATH)
 
 my_srcdir=$srcdir
 case "$target_os" in
-msvc*|mksnt*|cygwin*|mingw*)
+msvc*|mks*|cygwin*|mingw*)
     my_srcdir=`cygpath -w ${srcdir} | sed  's|\\\\|/|g'`
     my_perl=$_WIN32_PERL
     ;;
@@ -5221,7 +5233,16 @@ dnl ========================================================
 #ifndef _MOZILLA_CONFIG_H_
 #define _MOZILLA_CONFIG_H_
 EOF
-  sort confdefs.h >> $_CONFIG_TMP
+
+_EGREP_PATTERN='^#define ('
+if test -n "$_NON_GLOBAL_ACDEFINES"; then
+    for f in $_NON_GLOBAL_ACDEFINES; do
+        _EGREP_PATTERN="${_EGREP_PATTERN}$f|"
+    done
+fi
+_EGREP_PATTERN="${_EGREP_PATTERN}dummy_never_defined)"
+ 
+  sort confdefs.h | egrep -v "$_EGREP_PATTERN" >> $_CONFIG_TMP
 
   cat >> $_CONFIG_TMP <<\EOF
 
