@@ -549,9 +549,8 @@ var BookmarksMenuDNDObserver = {
       clearTimeout(this.loadTimer);
       if (aTarget == aDragSession.sourceNode)
         return;
-      //XXX Hack: see bug 139645
-      var thisHack = this;
-      this.loadTimer=setTimeout(function () {thisHack.onDragLoadTarget(targetToBeLoaded)}, this.springLoadedMenuDelay);
+      var This = this;
+      this.loadTimer=setTimeout(function () {This.onDragLoadTarget(targetToBeLoaded)}, This.springLoadedMenuDelay);
     } else {
       var now = new Date().getTime();
       this.loadTimer  = now;
@@ -563,10 +562,10 @@ var BookmarksMenuDNDObserver = {
   {
     if (this.isPlatformNotSupported)
       return;
-    var thisHack = this;
+    var This = this;
     if (this.isTimerSupported) {
       clearTimeout(this.closeTimer)
-      this.closeTimer=setTimeout(function () {thisHack.onDragCloseTarget()}, this.springLoadedMenuDelay);
+      this.closeTimer=setTimeout(function () {This.onDragCloseTarget()}, This.springLoadedMenuDelay);
     } else {
       var now = new Date().getTime();
       this.closeTimer  = now;
@@ -581,7 +580,7 @@ var BookmarksMenuDNDObserver = {
       // The if statement in the function has been introduced to deal with rare but reproducible
       // missing Exit events.
       if (aDragSession.sourceNode.localName != "menuitem" && aDragSession.sourceNode.localName != "menu")
-        setTimeout(function () { if (thisHack.mCurrentDragOverTarget) {thisHack.onDragRemoveFeedBack(thisHack.mCurrentDragOverTarget); thisHack.mCurrentDragOverTarget=null} thisHack.loadTimer=null; thisHack.onDragCloseTarget() }, 0);
+        setTimeout(function () { if (This.mCurrentDragOverTarget) {This.onDragRemoveFeedBack(This.mCurrentDragOverTarget); This.mCurrentDragOverTarget=null} This.loadTimer=null; This.onDragCloseTarget() }, 0);
     }
   },
 
