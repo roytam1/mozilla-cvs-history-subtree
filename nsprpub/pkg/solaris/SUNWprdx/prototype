@@ -1,0 +1,87 @@
+#
+# Copyright 2002 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident  "$Id$"
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#!search <pathname pathname ...>        # where to find pkg objects
+#!include <filename>                    # include another 'prototype' file
+#!default <mode> <owner> <group>        # default used if not specified on entry
+#!<param>=<value>                       # puts parameter in pkg environment
+
+# packaging files
+i copyright
+i pkginfo
+i depend
+#
+# source locations relative to .h 0644 root bine prototype file
+#
+# SUNWprdx
+#
+d none usr 0755 root sys
+d none usr/include 0755 root bin
+s none usr/include/mps/64=sparcv9
+d none usr/include/mps/sparcv9 0755 root bin
+d none usr/include/mps/sparcv9/private 0755 root bin
+f none usr/include/mps/sparcv9/private/pprio.h 0644 root bin
+f none usr/include/mps/sparcv9/private/pprthred.h 0644 root bin
+f none usr/include/mps/sparcv9/private/prpriv.h 0644 root bin
+d none usr/include/mps/sparcv9/obsolete 0755 root bin
+f none usr/include/mps/sparcv9/obsolete/pralarm.h 0644 root bin
+f none usr/include/mps/sparcv9/obsolete/probslet.h 0644 root bin
+f none usr/include/mps/sparcv9/obsolete/protypes.h 0644 root bin
+f none usr/include/mps/sparcv9/obsolete/prsem.h 0644 root bin
+f none usr/include/mps/sparcv9/prcpucfg.h 0644 root bin
+f none usr/include/mps/sparcv9/nspr.h 0644 root bin
+f none usr/include/mps/sparcv9/pratom.h 0644 root bin
+f none usr/include/mps/sparcv9/prbit.h 0644 root bin
+f none usr/include/mps/sparcv9/prclist.h 0644 root bin
+f none usr/include/mps/sparcv9/prcmon.h 0644 root bin
+f none usr/include/mps/sparcv9/prcountr.h 0644 root bin
+f none usr/include/mps/sparcv9/prcvar.h 0644 root bin
+f none usr/include/mps/sparcv9/prdtoa.h 0644 root bin
+f none usr/include/mps/sparcv9/prenv.h 0644 root bin
+f none usr/include/mps/sparcv9/prerr.h 0644 root bin
+f none usr/include/mps/sparcv9/prerror.h 0644 root bin
+f none usr/include/mps/sparcv9/prinet.h 0644 root bin
+f none usr/include/mps/sparcv9/prinit.h 0644 root bin
+f none usr/include/mps/sparcv9/prinrval.h 0644 root bin
+f none usr/include/mps/sparcv9/prio.h 0644 root bin
+f none usr/include/mps/sparcv9/pripcsem.h 0644 root bin
+f none usr/include/mps/sparcv9/prlink.h 0644 root bin
+f none usr/include/mps/sparcv9/prlock.h 0644 root bin
+f none usr/include/mps/sparcv9/prlog.h 0644 root bin
+f none usr/include/mps/sparcv9/prlong.h 0644 root bin
+f none usr/include/mps/sparcv9/prmem.h 0644 root bin
+f none usr/include/mps/sparcv9/prmon.h 0644 root bin
+f none usr/include/mps/sparcv9/prmwait.h 0644 root bin
+f none usr/include/mps/sparcv9/prnetdb.h 0644 root bin
+f none usr/include/mps/sparcv9/prolock.h 0644 root bin
+f none usr/include/mps/sparcv9/prpdce.h 0644 root bin
+f none usr/include/mps/sparcv9/prprf.h 0644 root bin
+f none usr/include/mps/sparcv9/prproces.h 0644 root bin
+f none usr/include/mps/sparcv9/prrng.h 0644 root bin
+f none usr/include/mps/sparcv9/prrwlock.h 0644 root bin
+f none usr/include/mps/sparcv9/prshm.h 0644 root bin
+f none usr/include/mps/sparcv9/prshma.h 0644 root bin
+f none usr/include/mps/sparcv9/prsystem.h 0644 root bin
+f none usr/include/mps/sparcv9/prthread.h 0644 root bin
+f none usr/include/mps/sparcv9/prtime.h 0644 root bin
+f none usr/include/mps/sparcv9/prtpool.h 0644 root bin
+f none usr/include/mps/sparcv9/prtrace.h 0644 root bin
+f none usr/include/mps/sparcv9/prtypes.h 0644 root bin
+f none usr/include/mps/sparcv9/prvrsion.h 0644 root bin
+f none usr/include/mps/sparcv9/prwin16.h 0644 root bin
+f none usr/include/mps/sparcv9/plarenas.h 0644 root bin
+f none usr/include/mps/sparcv9/plarena.h 0644 root bin
+f none usr/include/mps/sparcv9/plbase64.h 0644 root bin
+f none usr/include/mps/sparcv9/plerror.h 0644 root bin
+f none usr/include/mps/sparcv9/plgetopt.h 0644 root bin
+f none usr/include/mps/sparcv9/plhash.h 0644 root bin
+f none usr/include/mps/sparcv9/plresolv.h 0644 root bin
+f none usr/include/mps/sparcv9/plstr.h 0644 root bin

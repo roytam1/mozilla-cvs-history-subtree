@@ -12,6 +12,9 @@ VPATH	    = @srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
+abs_dist_libdir := $(shell (cd $(dist_libdir);pwd))
+abs_dist_includedir := $(shell (cd $(dist_includedir);pwd))
+
 %: %.ksh
 	$(RM) $@
 	cp $< $@
@@ -19,20 +22,26 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 ifeq ($(USE_64), 1)
 DIRS = \
-	SUNWprx
+	SUNWprx \
+	SUNWprdx
 else
 DIRS = \
-	SUNWpr
+	SUNWpr \
+	SUNWprd
 endif
 
 PROTO = \
 	$(ROOT) \
 	$(ROOT)/usr \
 	$(ROOT)/usr/lib \
-	$(ROOT)/usr/lib/mps
+	$(ROOT)/usr/lib/mps \
+	$(ROOT)/usr/lib/mps/secv1 \
+	$(ROOT)/usr/include \
+	$(ROOT)/usr/include/mps
 
 ifdef USE_64
-PROTO += $(ROOT)/usr/lib/mps/sparcv9
+PROTO += $(ROOT)/usr/lib/mps/secv1/sparcv9 \
+	$(ROOT)/usr/include/mps/sparcv9
 endif
 
 include $(srcdir)/Makefile.com
@@ -52,9 +61,13 @@ $(ROOT) $(ROOT)/%:
 	mkdir -p $@
 
 ifdef USE_64
-$(ROOT)/usr/lib/mps/sparcv9:
-	$(LN) -sf ../../../../$(dist_libdir) $@
+$(ROOT)/usr/lib/mps/secv1/sparcv9: $(ROOT)/usr/lib
+	$(LN) -sf $(abs_dist_libdir) $@
+$(ROOT)/usr/include/mps/sparcv9: $(ROOT)/usr/include
+	$(LN) -sf $(abs_dist_includedir) $@
 else
-$(ROOT)/usr/lib/mps:
-	$(LN) -sf ../../../$(dist_libdir) $@
+$(ROOT)/usr/lib/mps/secv1: $(ROOT)/usr/lib
+	$(LN) -sf $(abs_dist_libdir) $@
+$(ROOT)/usr/include/mps: $(ROOT)/usr/include
+	$(LN) -sf $(abs_dist_includedir) $@
 endif
