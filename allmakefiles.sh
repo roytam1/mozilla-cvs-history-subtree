@@ -471,7 +471,6 @@ rdf/base/public/Makefile
 rdf/base/src/Makefile
 rdf/chrome/Makefile
 rdf/chrome/build/Makefile
-rdf/chrome/public/Makefile
 rdf/chrome/src/Makefile
 rdf/chrome/tools/Makefile
 rdf/chrome/tools/chromereg/Makefile
@@ -620,6 +619,7 @@ xpinstall/Makefile
 xpinstall/packager/Makefile
 xpinstall/packager/unix/Makefile
 xpinstall/packager/windows/Makefile
+xpinstall/packager/os2/Makefile
 xpinstall/public/Makefile
 xpinstall/res/Makefile
 xpinstall/src/Makefile
@@ -628,7 +628,6 @@ xpinstall/wizard/libxpnet/Makefile
 xpinstall/wizard/libxpnet/src/Makefile
 xpinstall/wizard/libxpnet/test/Makefile
 xpinstall/wizard/unix/src2/Makefile
-xpinstall/wizard/windows/builder/Makefile
 xpinstall/wizard/windows/nsinstall/Makefile
 xpinstall/wizard/windows/nsztool/Makefile
 xpinstall/wizard/windows/uninstall/Makefile
@@ -883,7 +882,6 @@ browser/components/sidebar/src/Makefile
 
 MAKEFILES_xulapp="
 chrome/Makefile
-chrome/public/Makefile
 chrome/src/Makefile
 chrome/tools/Makefile
 chrome/tools/chromereg/Makefile
