@@ -110,7 +110,8 @@ public:
     kOpSetTextProperty     = 3010,
     kOpRemoveTextProperty  = 3011,
     kOpHTMLPaste           = 3012,
-    kOpLoadHTML            = 3013
+    kOpLoadHTML            = 3013,
+    kOpResetTextProperties = 3014
   };
 
   enum ResizingRequestID
@@ -150,6 +151,28 @@ public:
   NS_IMETHOD ParseStyleAttrIntoCSSRule(const nsAString& aString,
                                        nsIDOMCSSStyleRule **_retval); 
 
+  NS_IMETHOD AddDefaultProperty(nsIAtom *aProperty, 
+                                const nsAString & aAttribute, 
+                                const nsAString & aValue);
+
+  NS_IMETHOD RemoveDefaultProperty(nsIAtom *aProperty, 
+                                   const nsAString & aAttribute, 
+                                   const nsAString & aValue);
+
+  NS_IMETHOD RemoveAllDefaultProperties();
+
+  NS_IMETHOD AddAlternateProperty(nsIAtom *aProperty, 
+                                const nsAString & aAttribute, 
+                                const nsAString & aValue);
+
+  NS_IMETHOD RemoveAlternateProperty(nsIAtom *aProperty, 
+                                   const nsAString & aAttribute, 
+                                   const nsAString & aValue);
+
+  NS_IMETHOD RemoveAllAlternateProperties();
+
+  NS_IMETHOD SetPastePolicy(PRInt32 aPolicy);
+  
   NS_IMETHOD SetCSSInlineProperty(nsIAtom *aProperty, 
                              const nsAString & aAttribute, 
                              const nsAString & aValue);
@@ -185,7 +208,8 @@ public:
                                              const nsAString & aFlavor,
                                              nsIDOMNode *aDestinationNode,
                                              PRInt32 aDestinationOffset,
-                                             PRBool aDeleteSelection);
+                                             PRBool aDeleteSelection,
+                                             PRBool aRemoveExistingStyle);
 
   NS_IMETHOD LoadHTML(const nsAString &aInputString);
   NS_IMETHOD LoadHTMLWithCharset(const nsAString& aInputString,

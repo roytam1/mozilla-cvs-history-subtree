@@ -72,6 +72,57 @@ static PRBool gNoisy = PR_FALSE;
 static const PRBool gNoisy = PR_FALSE;
 #endif
 
+
+NS_IMETHODIMP nsHTMLEditor::AddDefaultProperty(nsIAtom *aProperty, 
+                              const nsAString & aAttribute, 
+                              const nsAString & aValue)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveDefaultProperty(nsIAtom *aProperty, 
+                                 const nsAString & aAttribute, 
+                                 const nsAString & aValue)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveAllDefaultProperties()
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::AddAlternateProperty(nsIAtom *aProperty, 
+                              const nsAString & aAttribute, 
+                              const nsAString & aValue)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveAlternateProperty(nsIAtom *aProperty, 
+                                 const nsAString & aAttribute, 
+                                 const nsAString & aValue)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::RemoveAllAlternateProperties()
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsHTMLEditor::SetPastePolicy(PRInt32 aPolicy)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 // Add the CSS style corresponding to the HTML inline style defined
 // by aProperty aAttribute and aValue to the selection
 NS_IMETHODIMP nsHTMLEditor::SetCSSInlineProperty(nsIAtom *aProperty, 

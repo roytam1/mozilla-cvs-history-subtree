@@ -99,7 +99,6 @@ export::
 		$(MAKE) -C $(topsrcdir)/security/coreconf $(DEFAULT_GMAKE_FLAGS) clean ; \
 		$(MAKE) -C $(topsrcdir)/security/nss/lib $(DEFAULT_GMAKE_FLAGS) clean ; \
 		$(MAKE) -C $(topsrcdir)/security/nss/cmd/lib $(DEFAULT_GMAKE_FLAGS) clean ; \
-		$(MAKE) -C $(topsrcdir)/security/nss/cmd/shlibsign $(DEFAULT_GMAKE_FLAGS) clean ; \
 	fi
 
 dependclean export::
@@ -118,10 +117,8 @@ else
 endif
 	$(MAKE) -C $(topsrcdir)/security/nss/lib $(DEFAULT_GMAKE_FLAGS)
 	$(MAKE) -C $(topsrcdir)/security/nss/cmd/lib $(DEFAULT_GMAKE_FLAGS)
-	$(MAKE) -C $(topsrcdir)/security/nss/cmd/shlibsign $(DEFAULT_GMAKE_FLAGS)
 ifndef DISABLE_DIST_GRE
 	$(INSTALL) -m 755 $(DIST)/lib/$(LOADABLE_ROOT_MODULE) $(GRE_DIST)
-	$(INSTALL) -m 644 $(DIST)/lib/$(SOFTOKEN3_CHK) $(GRE_DIST)
 	$(INSTALL) -m 755 $(DIST)/lib/$(SOFTOKEN3_LIB) $(GRE_DIST)
 	$(INSTALL) -m 755 $(DIST)/lib/$(NSS3_LIB) $(GRE_DIST)
 	$(INSTALL) -m 755 $(DIST)/lib/$(SSL3_LIB) $(GRE_DIST)
@@ -135,7 +132,6 @@ endif
 endif
 ifndef _SKIP_OLD_GRE_INSTALL
 	$(INSTALL) -m 755 $(DIST)/lib/$(LOADABLE_ROOT_MODULE) $(DIST)/bin
-	$(INSTALL) -m 644 $(DIST)/lib/$(SOFTOKEN3_CHK) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(SOFTOKEN3_LIB) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(NSS3_LIB) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(SSL3_LIB) $(DIST)/bin
@@ -155,7 +151,6 @@ endif
 
 install::
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(LOADABLE_ROOT_MODULE) $(DESTDIR)$(mozappdir)
-	$(SYSINSTALL) -m 644 $(DIST)/lib/$(SOFTOKEN3_CHK) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(SOFTOKEN3_LIB) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(NSS3_LIB) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(SSL3_LIB) $(DESTDIR)$(mozappdir)
@@ -181,4 +176,3 @@ endif
 	$(MAKE) -C $(topsrcdir)/security/coreconf $(DEFAULT_GMAKE_FLAGS) clean
 	$(MAKE) -C $(topsrcdir)/security/nss/lib $(DEFAULT_GMAKE_FLAGS) clean
 	$(MAKE) -C $(topsrcdir)/security/nss/cmd/lib $(DEFAULT_GMAKE_FLAGS) clean
-	$(MAKE) -C $(topsrcdir)/security/nss/cmd/shlibsign $(DEFAULT_GMAKE_FLAGS) clean
