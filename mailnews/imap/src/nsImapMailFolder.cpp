@@ -5883,8 +5883,8 @@ NS_IMETHODIMP nsImapMailFolder::RenameSubFolders(nsIMsgWindow *msgWindow, nsIMsg
        child->RenameSubFolders(msgWindow, msgFolder);
      }
      rv = aEnumerator->Next();
-
   }
+
   return rv;
 }
 
