@@ -1479,7 +1479,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       info->id = thisKey;
       info->bits = m_flags.GetAt(numSoFar);
       info->len = actualFieldLen;
-      info->pad = -1;
+      //info->pad = 0;
 
       pTemp += sizeof(EntryInfo);
 
