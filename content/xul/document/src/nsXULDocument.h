@@ -402,6 +402,9 @@ public:
         return NS_OK;
     }
 
+    static nsresult
+    AbortFastLoads();
+
 protected:
     // Implementation methods
     friend nsresult
@@ -440,7 +443,6 @@ protected:
 
     nsresult StartFastLoad();
     nsresult EndFastLoad();
-    static nsresult AbortFastLoads();
 
     static nsIFastLoadService*  gFastLoadService;
     static nsIFile*             gFastLoadFile;

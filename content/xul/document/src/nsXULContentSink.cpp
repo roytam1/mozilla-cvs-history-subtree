@@ -1556,6 +1556,16 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
         if (! script)
             return NS_ERROR_OUT_OF_MEMORY;
 
+        // If there is a SRC attribute...
+        if (! src.IsEmpty()) {
+            // Use the SRC attribute value to load the URL
+            rv = NS_NewURI(getter_AddRefs(script->mSrcURI), src, mDocumentURL);
+            if (NS_FAILED(rv)) {
+                delete script;
+                return rv;
+            }
+        }
+
         // XXXbe temporary, until we serialize/deserialize everything from the
         //       nsXULPrototypeDocument on down...
         nsCOMPtr<nsIFastLoadService> fastLoadService;
@@ -1574,39 +1584,27 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
             globalObject->GetContext(getter_AddRefs(scriptContext));
             NS_ASSERTION(scriptContext != nsnull, "no prototype script context!");
 
-            // XXXbe we must create the script's src URI object before we
-            // deserialize the one that was serialized for this script, just
-            // to select the mux!  We also must create the URI in case of a
-            // relative URI in the src attribute value.
+            // Keep track of FastLoad failure via rv2, so we can AbortFastLoads
+            // if things look bad.
             nsresult rv2 = NS_OK;
-            nsCOMPtr<nsIURI> srcURI;
-            if (! src.IsEmpty()) {
-                rv2 = NS_NewURI(getter_AddRefs(srcURI), src, mDocumentURL);
-                if (NS_SUCCEEDED(rv2)) {
-                    const char* srcspec = NS_ConvertUCS2toUTF8(src).get();
-                    rv2 = fastLoadService->StartMuxedDocument(srcURI, srcspec);
-                    if (NS_SUCCEEDED(rv2))
-                        rv2 = fastLoadService->SelectMuxedDocument(srcURI);
-                }
+            if (script->mSrcURI) {
+                nsXPIDLCString spec;
+                script->mSrcURI->GetSpec(getter_Copies(spec));
+                rv2 = fastLoadService->StartMuxedDocument(script->mSrcURI, spec);
+                if (NS_SUCCEEDED(rv2))
+                    rv2 = fastLoadService->SelectMuxedDocument(script->mSrcURI);
             }
 
-            // XXXbe we should serialize everything, including line-number...
-            rv = script->Deserialize(objectInput, scriptContext);
+            // Don't reflect errors into rv: mJSObject will be null after any
+            // error, which suffices to cause the script to be reloaded (from
+            // the src= URI, if any) and recompiled.
+            if (NS_SUCCEEDED(rv2))
+                rv2 = script->Deserialize(objectInput, scriptContext);
 
-            if (! src.IsEmpty() && NS_SUCCEEDED(rv2))
-                rv2 = fastLoadService->EndMuxedDocument(srcURI);
-            // XXXbe if (NS_FAILED(rv2)) AbortFastLoads...
-        } else {
-            // If there is a SRC attribute...
-            if (! src.IsEmpty()) {
-                // Use the SRC attribute value to load the URL
-                rv = NS_NewURI(getter_AddRefs(script->mSrcURI), src,
-                               mDocumentURL);
-            }
-        }
-        if (NS_FAILED(rv)) {
-            delete script;
-            return rv;
+            if (NS_SUCCEEDED(rv2) && script->mSrcURI)
+                rv2 = fastLoadService->EndMuxedDocument(script->mSrcURI);
+            if (NS_FAILED(rv2))
+                nsXULDocument::AbortFastLoads();
         }
 
         nsVoidArray* children;

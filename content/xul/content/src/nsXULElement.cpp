@@ -4490,7 +4490,6 @@ nsXULElement::Command()
     PRInt32 numShells = doc->GetNumberOfShells();
     nsCOMPtr<nsIPresShell> shell;
     nsCOMPtr<nsIPresContext> context;
-    PRBool isButton = NodeInfo()->Equals(NS_LITERAL_STRING("button"));
 
     for (PRInt32 i=0; i<numShells; i++) {
       doc->GetShellAt(i, getter_AddRefs(shell));
@@ -4835,9 +4834,13 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mJSObject,
                  "script source still loading when serializing?!");
     
+#if 0
+    // XXXbe redundant while we're still parsing XUL instead of deserializing it
+    // XXXbe also, we should serialize mType and mLineNo first.
     rv = NS_WriteOptionalCompoundObject(aStream, mSrcURI, NS_GET_IID(nsIURI),
                                         PR_TRUE);
     if (NS_FAILED(rv)) return rv;
+#endif
 
     JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
                                         aContext->GetNativeContext());
@@ -4894,8 +4897,12 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
     NS_ASSERTION(!mSrcLoading || mSrcLoadWaiters != nsnull || !mJSObject,
                  "prototype script not well-initialized when deserializing?!");
     
+#if 0
+    // XXXbe redundant while we're still parsing XUL instead of deserializing it
+    // XXXbe also, we should deserialize mType and mLineNo first.
     rv = NS_ReadOptionalObject(aStream, PR_TRUE, getter_AddRefs(mSrcURI));
     if (NS_FAILED(rv)) return rv;
+#endif
 
     PRUint32 size;
     rv = aStream->Read32(&size);

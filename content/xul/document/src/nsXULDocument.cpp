@@ -4372,7 +4372,7 @@ const char XUL_FASTLOAD_FILE_BASENAME[] = "XUL";
 // number as we flesh out the FastLoad file to include more and more data
 // induced by the master prototype document.
 
-#define XUL_FASTLOAD_FILE_VERSION       (0xfeedbeef - 1)
+#define XUL_FASTLOAD_FILE_VERSION       (0xfeedbeef - 2)
 
 #define XUL_SERIALIZATION_BUFFER_SIZE   (64 * 1024)
 #define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)
