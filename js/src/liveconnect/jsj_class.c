@@ -494,7 +494,7 @@ reflect_java_methods_and_fields(JSContext *cx,
 
     success = JS_TRUE;  /* optimism */
 
-#ifdef JSJ_THREAD_SAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(java_reflect_monitor);
 #endif
 
@@ -529,7 +529,7 @@ reflect_java_methods_and_fields(JSContext *cx,
     }
 
 done:
-#ifdef JSJ_THREAD_SAFE
+#ifdef JSJ_THREADSAFE
     PR_ExitMonitor(java_reflect_monitor);
 #endif
     return success;
