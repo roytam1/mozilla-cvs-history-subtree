@@ -49,8 +49,6 @@ protected:
   virtual void InitNative(nsIWidget *aParent, const nsAString& aTitle,
                           PRInt16 aMode) = 0;
 
-private:
-
   nsIWidget *DOMWindowToWidget(nsIDOMWindow *dw);
 };
 

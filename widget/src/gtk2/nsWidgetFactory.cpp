@@ -48,9 +48,22 @@
 #include "nsHTMLFormatConverter.h"
 #include "nsClipboard.h"
 #include "nsDragService.h"
+#include "nsFilePicker.h"
 #include "nsSound.h"
 #include "nsBidiKeyboard.h"
 #include "nsNativeKeyBindings.h"
+
+#include "nsIComponentRegistrar.h"
+#include "nsComponentManagerUtils.h"
+#include "nsAutoPtr.h"
+#include <gtk/gtk.h>
+
+/* from nsFilePicker.js */
+#define XULFILEPICKER_CID \
+  { 0x54ae32f8, 0x1dd2, 0x11b2, \
+    { 0xa2, 0x09, 0xdf, 0x7c, 0x50, 0x53, 0x70, 0xf8} }
+static NS_DEFINE_CID(kXULFilePickerCID, XULFILEPICKER_CID);
+static NS_DEFINE_CID(kNativeFilePickerCID, NS_FILEPICKER_CID);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsChildWindow)
@@ -109,6 +122,34 @@ nsNativeKeyBindingsTextAreaConstructor(nsISupports *aOuter, REFNSIID aIID,
                                           eKeyBindings_TextArea);
 }
 
+static NS_IMETHODIMP
+nsFilePickerConstructor(nsISupports *aOuter, REFNSIID aIID,
+                        void **aResult)
+{
+  *aResult = nsnull;
+  if (aOuter != nsnull) {
+    return NS_ERROR_NO_AGGREGATION;
+  }
+
+  nsCOMPtr<nsIFilePicker> picker;
+  PRBool enabled = PR_FALSE;
+
+  /* need pref fu */
+
+  if (enabled && gtk_check_version(2,4,0) == NULL) {
+    picker = new nsFilePicker;
+  } else {
+    picker = do_CreateInstance(kXULFilePickerCID);
+  }
+
+  if (!picker) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  return picker->QueryInterface(aIID, aResult);
+}
+
+
 static const nsModuleComponentInfo components[] =
 {
     { "Gtk2 Window",
@@ -127,6 +168,10 @@ static const nsModuleComponentInfo components[] =
       NS_LOOKANDFEEL_CID,
       "@mozilla.org/widget/lookandfeel;1",
       nsLookAndFeelConstructor },
+    { "Gtk2 File Picker",
+      NS_FILEPICKER_CID,
+      "@mozilla.org/filepicker;1",
+      nsFilePickerConstructor },
     { "Gtk2 Sound",
       NS_SOUND_CID,
       "@mozilla.org/sound;1",
@@ -176,6 +221,7 @@ static const nsModuleComponentInfo components[] =
 PR_STATIC_CALLBACK(void)
 nsWidgetGtk2ModuleDtor(nsIModule *aSelf)
 {
+  nsFilePicker::Shutdown();
   nsWindow::ReleaseGlobals();
   nsAppShell::ReleaseGlobals();
 }
