@@ -38,17 +38,28 @@
 #include "nsISupports.h"
 #include "jni.h"        // standard JVM API
 
-////////////////////////////////////////////////////////////////////////////////
-// LiveConnect Plugin Instance Peer Interface
-// Browsers that support JNI-based LiveConnect implement this subclass of
-// plugin instance peer. 
-
+/**
+ * The nsILiveConnectPluginInstancePeer interface is implemented by browsers
+ * that support LiveConnect, i.e. scriptability via JavaScript. Note that this
+ * LiveConnect interface is now JNI-based (since 5.0).
+ *
+ * To obtain: QueryInterface on nsIPluginInstancePeer
+ */
 class nsILiveConnectPluginInstancePeer : public nsISupports {
 public:
 
-    // (New JNI-based entry point, roughly corresponds to NPN_GetJavaPeer.)
-    NS_IMETHOD_(jobject)
-    GetJavaPeer(void) = 0;
+    /**
+     * Returns a JNI reference to the Java peer object associated with the
+     * plugin instance. This object is an instance of the class specified
+     * by nsIJRILiveConnectPlugin::GetJavaClass.
+     *
+     * (New JNI-based entry point, roughly corresponds to NPN_GetJavaPeer.)
+     *
+     * @param resultingJavaPeer - a resulting reference to the Java instance
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    GetJavaPeer(jobject *resultingJavaPeer) = 0;
 
 };
 

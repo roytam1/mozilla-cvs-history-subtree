@@ -2269,7 +2269,9 @@ npn_getJavaClass(np_handle* handle)
         nsILiveConnectPlugin* lcPlugin;
         if (userPluginClass->QueryInterface(kLiveConnectPluginIID,
                                             (void**)&lcPlugin) != NS_NOINTERFACE) {
-            jclass clazz = lcPlugin->GetJavaClass();
+            jclass clazz;
+            nsresult err = lcPlugin->GetJavaClass(&clazz);
+            PR_ASSERT(err == NS_OK);
 
             // Remember, QueryInterface increments the ref count;
             // since we're done with it in this scope, release it.
@@ -2938,7 +2940,8 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
                 peerStream->SetUserStream(userStream);
                 pstream->pdata = peerStream;
 
-                stype = userStream->GetStreamType();
+                nsresult err = userStream->GetStreamType((nsStreamType*)&stype);
+                PR_ASSERT(err == NS_OK);
             }
             else {
                 /* XXX where's the error go? */

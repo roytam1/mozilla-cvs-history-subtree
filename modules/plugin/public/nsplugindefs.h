@@ -192,17 +192,15 @@ enum nsPluginType {
 };
 
 // XXX this can go away now
-enum NPStreamType {
-    NPStreamType_Normal = 1,
-    NPStreamType_Seek,
-    NPStreamType_AsFile,
-    NPStreamType_AsFileOnly
+enum nsStreamType {
+    nsStreamType_Normal = 1,
+    nsStreamType_Seek,
+    nsStreamType_AsFile,
+    nsStreamType_AsFileOnly
 };
 
-#define NP_STREAM_MAXREADY	(((unsigned)(~0)<<1)>>1)
-
 /*
- * The type of a NPWindow - it specifies the type of the data structure
+ * The type of a nsPluginWindow - it specifies the type of the data structure
  * returned in the window field.
  */
 enum nsPluginWindowType {
@@ -270,10 +268,10 @@ struct nsPluginEmbedPrint {
 };
 
 struct nsPluginPrint {
-    nsPluginType      mode;     /* NP_FULL or nsPluginType_Embedded */
+    nsPluginType      mode;     /* nsPluginType_Full or nsPluginType_Embedded */
     union
     {
-        nsPluginFullPrint     fullPrint;	/* if mode is NP_FULL */
+        nsPluginFullPrint     fullPrint;	/* if mode is nsPluginType_Full */
         nsPluginEmbedPrint    embedPrint;	/* if mode is nsPluginType_Embedded */
     } print;
 };

@@ -45,24 +45,29 @@ public:
 
     /**
      * Puts up a wait cursor.
+     *
+     * @result - NS_OK if this operation was successful
      */
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     BeginWaitCursor(void) = 0;
 
     /**
      * Restores the previous (non-wait) cursor.
+     *
+     * @result - NS_OK if this operation was successful
      */
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     EndWaitCursor(void) = 0;
 
     /**
      * Returns true if a URL protocol (e.g. "http") is supported.
      *
      * @param protocol - the protocol name
-     * @result true if the protocol is supported
+     * @param result - true if the protocol is supported
+     * @result - NS_OK if this operation was successful
      */
-    NS_IMETHOD_(PRBool)
-    SupportsURLProtocol(const char* protocol) = 0;
+    NS_IMETHOD
+    SupportsURLProtocol(const char* protocol, PRBool *result) = 0;
 
     /**
      * This method may be called by the plugin to indicate that an error 
@@ -71,34 +76,85 @@ public:
      * state.
      *
      * @param plugin - the plugin whose status is changing
-     * @param error - the the error value
+     * @param errorStatus - the the error status value
+     * @result - NS_OK if this operation was successful
      */
-    NS_IMETHOD_(void)
-    NotifyStatusChange(nsIPlugin* plugin, nsresult error) = 0;
+    NS_IMETHOD
+    NotifyStatusChange(nsIPlugin* plugin, nsresult errorStatus) = 0;
     
     ////////////////////////////////////////////////////////////////////////////
     // New top-level window handling calls for Mac:
     
+    /**
+     * Registers a top-level window with the browser. Events received by that
+     * window will be dispatched to the event handler specified.
+     * 
+     * @param handler - the event handler for the window
+     * @param window - the platform window reference
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     RegisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window) = 0;
     
+    /**
+     * Unregisters a top-level window with the browser. The handler and window pair
+     * should be the same as that specified to RegisterWindow.
+     *
+     * @param handler - the event handler for the window
+     * @param window - the platform window reference
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window) = 0;
 
-	// Menu ID allocation calls for Mac:
-    NS_IMETHOD_(PRInt16)
-	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu) = 0;
+	/**
+     * Allocates a new menu ID (for the Mac).
+     *
+     * @param handler - the event handler for the window
+     * @param isSubmenu - whether this is a sub-menu ID or not
+     * @param result - the resulting menu ID
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu, PRInt16 *result) = 0;
 
-	NS_IMETHOD
-	ReleaseMenuID(nsIEventHandler* handler, PRInt16 menuID) = 0;
+	/**
+     * Deallocates a menu ID (for the Mac).
+     *
+     * @param handler - the event handler for the window
+     * @param menuID - the menu ID
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+	DeallocateMenuID(nsIEventHandler* handler, PRInt16 menuID) = 0;
 
-	// On the mac (and most likely win16), network activity can
-    // only occur on the main thread. Therefore, we provide a hook
-    // here for the case that the main thread needs to tickle itself.
-    // In this case, we make sure that we give up the monitor so that
-    // the tickle code can notify it without freezing.
-    NS_IMETHOD_(PRBool)
-    Tickle(void) = 0;
+	/**
+	 * Indicates whether this event handler has allocated the given menu ID.
+     *
+     * @param handler - the event handler for the window
+     * @param menuID - the menu ID
+     * @param result - returns PR_TRUE if the menu ID is allocated
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID, PRBool *result);
+
+	/**
+     * This operation causes the next browser event to be processed. This is
+     * handy for implement nested event loops where some other activity must
+     * be performed each time around the loop. 
+     *
+     * On the Mac (and most likely on Win16), network activity can only occur on
+     * the main thread. Therefore, we provide a hook here for the case that the
+     * main thread needs to process events while waiting for network activity to
+     * complete.
+     *
+     * @param result - a boolean indicating whether an event was processed on the
+     * main thread. If not on the main browser thread, PR_FALSE is returned.
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    ProcessNextEvent(PRBool *result) = 0;
 
 };
 

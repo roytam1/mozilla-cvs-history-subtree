@@ -37,81 +37,123 @@
 #include "nsplugindefs.h"
 #include "nsISupports.h"
 
-////////////////////////////////////////////////////////////////////////////////
-// Plugin Manager Interface
-// This interface defines the minimum set of functionality that a plugin
-// manager will support if it implements plugins. Plugin implementations can
-// QueryInterface to determine if a plugin manager implements more specific 
-// APIs for the plugin to use.
+/**
+ * These arguments are passed to nsIPluginManager::GetURL and can be used to
+ * perform both GET and POST http requests. If no post data or post headers are
+ * specified, then a GET request is sent.
+ *
+ * @param version - the version of this struct
+ * @param url - the URL to fetch
+ * @param target - the target window into which to load the URL
+ * @param notifyData - when present, URLNotify is called passing the notifyData back
+ *   to the client. When NULL, this call behaves like NPN_GetURL.
+ * @param altHost - an IP-address string that will be used instead of the host
+ *   specified in the URL. This is used to prevent DNS-spoofing attacks.
+ *   Can be defaulted to NULL meaning use the host in the URL.
+ * @param referrer - the referring URL (may be NULL)
+ * @param forceJSEnabled - forces JavaScript to be enabled for 'javascript:' URLs,
+ *   even if the user currently has JavaScript disabled (usually specify PR_FALSE) 
+ * @param postData - the data to POST. NULL specifies that there is not post
+ *   data
+ * @param postDataLength - the length of postData (if non-NULL)
+ * @param postHeaders - the headers to POST. NULL specifies that there are no
+ *   post headers
+ * @param postHeadersLength - the length of postHeaders (if non-NULL)
+ * @param postFile - whether the postData specifies the name of a file to 
+ *   post instead of data. The file will be deleted afterwards.
+ */
+struct nsURLInfo {
+    PRUint32    version;
+    const char* url;
+    const char* target;
+    void*       notifyData;
+    const char* altHost;
+    const char* referrer;
+    PRBool      forceJSEnabled;
+    const char* postData;
+    PRUint32    postDataLength;
+    const char* postHeaders;
+    PRUint32    postHeadersLength;
+    PRBool      postFile;
+    // other fields may be added here for version numbers beyond 0x00010000
+};
 
+/**
+ * nsURLInfo_Version is the current version number for the nsURLInfo 
+ * struct specified above.
+ */
+#define nsURLInfo_Version       0x00010000
+
+/**
+ * The nsIPluginManager interface defines the minimum set of functionality that
+ * the browser will support if it allows plugins. Plugins can call QueryInterface
+ * to determine if a plugin manager implements more specific APIs or other 
+ * browser interfaces for the plugin to use.
+ */
 class nsIPluginManager : public nsISupports {
 public:
 
-    // (Corresponds to NPN_ReloadPlugins.)
-    NS_IMETHOD_(void)
+    /**
+     * Causes the plugins directory to be searched again for new plugin 
+     * libraries.
+     *
+     * (Corresponds to NPN_ReloadPlugins.)
+     *
+     * @param reloadPages - indicates whether currently visible pages should 
+     * also be reloaded
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
     ReloadPlugins(PRBool reloadPages) = 0;
 
-    // (Corresponds to NPN_MemAlloc.)
-    NS_IMETHOD_(void*)
-    MemAlloc(PRUint32 size) = 0;
+    /**
+     * Returns the user agent string for the browser. 
+     *
+     * (Corresponds to NPN_UserAgent.)
+     *
+     * @param resultingAgentString - the resulting user agent string
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    UserAgent(const char* *resultingAgentString) = 0;
 
-    // (Corresponds to NPN_MemFree.)
-    NS_IMETHOD_(void)
-    MemFree(void* ptr) = 0;
-
-    // (Corresponds to NPN_MemFlush.)
-    NS_IMETHOD_(PRUint32)
-    MemFlush(PRUint32 size) = 0;
-
-    // (Corresponds to NPN_UserAgent.)
-    NS_IMETHOD_(const char*)
-    UserAgent(void) = 0;
-
-    // (Corresponds to NPN_GetValue.)
+    /**
+     * Returns the value of a variable associated with the plugin manager.
+     *
+     * (Corresponds to NPN_GetValue.)
+     *
+     * @param variable - the plugin manager variable to get
+     * @param value - the address of where to store the resulting value
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     GetValue(nsPluginManagerVariable variable, void *value) = 0;
 
-    // (Corresponds to NPN_SetValue.)
+    /**
+     * Sets the value of a variable associated with the plugin manager.
+     *
+     * (Corresponds to NPN_SetValue.)
+     *
+     * @param variable - the plugin manager variable to get
+     * @param value - the address of the value to store
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     SetValue(nsPluginManagerVariable variable, void *value) = 0;
 
-    // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
-    //   notifyData: When present, URLNotify is called passing the notifyData back
-    //          to the client. When NULL, this call behaves like NPN_GetURL.
-    // New arguments:
-    //   peer:  A plugin instance peer. The peer's window will be used to display
-    //          progress information. If NULL, the load happens in the background.
-    //   altHost: An IP-address string that will be used instead of the host
-    //          specified in the URL. This is used to prevent DNS-spoofing attacks.
-    //          Can be defaulted to NULL meaning use the host in the URL.
-    //   referrer: 
-    //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
-    //          even if the user currently has JavaScript disabled. 
+    /**
+     * Fetches a URL.
+     *
+     * (Corresponds to NPN_GetURL NPN_GetURLNotify, NPN_PostURL and
+     * NPN_PostURLNotify.)
+     *
+     * @param peer - a plugin instance peer. The peer's window will be used to 
+     * display progress information. If NULL, the load happens in the background.
+     * @param urlInfo - the URL information to GET or POST
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
-    GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData = NULL,
-           const char* altHost = NULL, const char* referrer = NULL,
-           PRBool forceJSEnabled = PR_FALSE) = 0;
-
-    // (Corresponds to NPN_PostURL and NPN_PostURLNotify.)
-    //   notifyData: When present, URLNotify is called passing the notifyData back
-    //          to the client. When NULL, this call behaves like NPN_GetURL.
-    // New arguments:
-    //   peer:  A plugin instance peer. The peer's window will be used to display
-    //          progress information. If NULL, the load happens in the background.
-    //   altHost: An IP-address string that will be used instead of the host
-    //          specified in the URL. This is used to prevent DNS-spoofing attacks.
-    //          Can be defaulted to NULL meaning use the host in the URL.
-    //   referrer: 
-    //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
-    //          even if the user currently has JavaScript disabled. 
-    //   postHeaders: A string containing post headers.
-    //   postHeadersLength: The length of the post headers string.
-    NS_IMETHOD
-    PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
-            const char* buf, PRBool file, void* notifyData = NULL,
-            const char* altHost = NULL, const char* referrer = NULL,
-            PRBool forceJSEnabled = PR_FALSE,
-            PRUint32 postHeadersLength = 0, const char* postHeaders = NULL) = 0;
+    FetchURL(nsISupports* peer, nsURLInfo* urlInfo) = 0;
 
 };
 

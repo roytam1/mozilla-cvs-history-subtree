@@ -44,15 +44,15 @@ class nsIWindowlessPluginInstancePeer : public nsISupports {
 public:
 
     // (Corresponds to NPN_InvalidateRect.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     InvalidateRect(nsPluginRect *invalidRect) = 0;
 
     // (Corresponds to NPN_InvalidateRegion.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     InvalidateRegion(nsPluginRegion invalidRegion) = 0;
 
     // (Corresponds to NPN_ForceRedraw.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ForceRedraw(void) = 0;
 
 };

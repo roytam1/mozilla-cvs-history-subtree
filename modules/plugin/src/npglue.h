@@ -288,24 +288,12 @@ public:
     // from nsIPluginManager:
 
     // (Corresponds to NPN_ReloadPlugins.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ReloadPlugins(PRBool reloadPages);
 
-    // (Corresponds to NPN_MemAlloc.)
-    NS_IMETHOD_(void*)
-    MemAlloc(PRUint32 size);
-
-    // (Corresponds to NPN_MemFree.)
-    NS_IMETHOD_(void)
-    MemFree(void* ptr);
-
-    // (Corresponds to NPN_MemFlush.)
-    NS_IMETHOD_(PRUint32)
-    MemFlush(PRUint32 size);
-
     // (Corresponds to NPN_UserAgent.)
-    NS_IMETHOD_(const char*)
-    UserAgent(void);
+    NS_IMETHOD
+    UserAgent(const char* *result);
 
     // (Corresponds to NPN_GetValue.)
     NS_IMETHOD
@@ -317,33 +305,25 @@ public:
 
     // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
     NS_IMETHOD
-    GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData, 
-           const char* altHost, const char* referer, PRBool forceJSEnabled);
-
-    // (Corresponds to NPN_PostURL and NPN_PostURLNotify.)
-    NS_IMETHOD
-    PostURL(nsISupports* peer, const char* url, const char* target,
-            PRUint32 len, const char* buf, PRBool file, void* notifyData, 
-            const char* altHost, const char* referer, PRBool forceJSEnabled,
-            PRUint32 postHeadersLength, const char* postHeaders);
+    FetchURL(nsISupports* peer, nsURLInfo* urlInfo);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginManager2:
 
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     BeginWaitCursor(void);
 
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     EndWaitCursor(void);
 
-    NS_IMETHOD_(PRBool)
-    SupportsURLProtocol(const char* protocol);
+    NS_IMETHOD
+    SupportsURLProtocol(const char* protocol, PRBool *result);
 
     // This method may be called by the plugin to indicate that an error has
     // occurred, e.g. that the plugin has failed or is shutting down spontaneously.
     // This allows the browser to clean up any plugin-specific state.
-    NS_IMETHOD_(void)
-    NotifyStatusChange(nsIPlugin* plugin, nsresult error);
+    NS_IMETHOD
+    NotifyStatusChange(nsIPlugin* plugin, nsresult errorStatus);
     
     ////////////////////////////////////////////////////////////////////////////
     // New top-level window handling calls for Mac:
@@ -355,25 +335,25 @@ public:
     UnregisterWindow(nsIEventHandler* handler, nsPluginPlatformWindowRef window);
 
 	// Menu ID allocation calls for Mac:
-    NS_IMETHOD_(PRInt16)
-	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu);
+    NS_IMETHOD
+	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu, PRInt16 *result);
 
-	NS_IMETHOD
-	ReleaseMenuID(nsIEventHandler* handler, PRInt16 menuID);
+    NS_IMETHOD
+	DeallocateMenuID(nsIEventHandler* handler, PRInt16 menuID);
 
 	/**
 	 * Indicates whether this event handler has allocated the given menu ID.
 	 */
-    PRBool
-    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID);
+    NS_IMETHOD
+    HasAllocatedMenuID(nsIEventHandler* handler, PRInt16 menuID, PRBool *result);
 
 	// On the mac (and most likely win16), network activity can
     // only occur on the main thread. Therefore, we provide a hook
     // here for the case that the main thread needs to tickle itself.
     // In this case, we make sure that we give up the monitor so that
     // the tickle code can notify it without freezing.
-    NS_IMETHOD_(PRBool)
-    Tickle(void);
+    NS_IMETHOD
+    ProcessNextEvent(PRBool *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
@@ -407,14 +387,14 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIFileUtilities:
     
-    NS_IMETHOD_(const char*)
-    GetProgramPath(void);
+    NS_IMETHOD
+    GetProgramPath(const char* *result);
 
-    NS_IMETHOD_(const char*)
-    GetTempDirPath(void);
+    NS_IMETHOD
+    GetTempDirPath(const char* *result);
 
-    NS_IMETHOD_(nsresult)
-    NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen);
+    NS_IMETHOD
+    NewTempFileName(const char* prefix, PRUint32 bufLen, char* resultBuf);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsFileUtilities specific methods:
@@ -446,41 +426,41 @@ public:
     // from nsIPluginInstancePeer:
 
     // (Corresponds to NPP_New's MIMEType argument.)
-    NS_IMETHOD_(nsMIMEType)
-    GetMIMEType(void);
+    NS_IMETHOD
+    GetMIMEType(nsMIMEType *result);
 
     // (Corresponds to NPP_New's mode argument.)
-    NS_IMETHOD_(nsPluginType)
-    GetMode(void);
+    NS_IMETHOD
+    GetMode(nsPluginType *result);
 
     // (Corresponds to NPN_NewStream.)
     NS_IMETHOD
     NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result);
 
     // (Corresponds to NPN_Status.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ShowStatus(const char* message);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIJRILiveConnectPluginInstancePeer:
 
     // (Corresponds to NPN_GetJavaPeer.)
-    NS_IMETHOD_(jobject)
-    GetJavaPeer(void);
+    NS_IMETHOD
+    GetJavaPeer(jobject *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIWindowlessPluginInstancePeer:
 
     // (Corresponds to NPN_InvalidateRect.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     InvalidateRect(nsPluginRect *invalidRect);
 
     // (Corresponds to NPN_InvalidateRegion.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     InvalidateRegion(nsPluginRegion invalidRegion);
 
     // (Corresponds to NPN_ForceRedraw.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ForceRedraw(void);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -534,21 +514,21 @@ public:
 
     // Get the value for the named attribute.  Returns null
     // if the attribute was not set.
-    NS_IMETHOD_(const char*)
-    GetAttribute(const char* name);
+    NS_IMETHOD
+    GetAttribute(const char* name, const char* *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginTagInfo2:
 
     // Get the type of the HTML tag that was used ot instantiate this
     // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
-    NS_IMETHOD_(nsPluginTagType) 
-    GetTagType(void);
+    NS_IMETHOD
+    GetTagType(nsPluginTagType *result);
 
     // Get the complete text of the HTML tag that was
     // used to instantiate this plugin
-    NS_IMETHOD_(const char *)
-    GetTagText(void);
+    NS_IMETHOD
+    GetTagText(const char * *result);
 
     // Get a ptr to the paired list of parameter names and values,
     // returns the length of the array.
@@ -559,36 +539,36 @@ public:
 
     // Get the value for the named parameter.  Returns null
     // if the parameter was not set.
-    NS_IMETHOD_(const char*)
-    GetParameter(const char* name);
+    NS_IMETHOD
+    GetParameter(const char* name, const char* *result);
     
-    NS_IMETHOD_(const char*)
-    GetDocumentBase(void);
+    NS_IMETHOD
+    GetDocumentBase(const char* *result);
     
     // Return an encoding whose name is specified in:
     // http://java.sun.com/products/jdk/1.1/docs/guide/intl/intl.doc.html#25303
-    NS_IMETHOD_(const char*)
-    GetDocumentEncoding(void);
+    NS_IMETHOD
+    GetDocumentEncoding(const char* *result);
     
-    NS_IMETHOD_(const char*)
-    GetAlignment(void);
+    NS_IMETHOD
+    GetAlignment(const char* *result);
     
-    NS_IMETHOD_(PRUint32)
-    GetWidth(void);
+    NS_IMETHOD
+    GetWidth(PRUint32 *result);
     
-    NS_IMETHOD_(PRUint32)
-    GetHeight(void);
+    NS_IMETHOD
+    GetHeight(PRUint32 *result);
     
-    NS_IMETHOD_(PRUint32)
-    GetBorderVertSpace(void);
+    NS_IMETHOD
+    GetBorderVertSpace(PRUint32 *result);
     
-    NS_IMETHOD_(PRUint32)
-    GetBorderHorizSpace(void);
+    NS_IMETHOD
+    GetBorderHorizSpace(PRUint32 *result);
 
     // Returns a unique id for the current document on which the
     // plugin is displayed.
-    NS_IMETHOD_(PRUint32)
-    GetUniqueID(void);
+    NS_IMETHOD
+    GetUniqueID(PRUint32 *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginTagInfo specific methods:
@@ -663,43 +643,43 @@ public:
     // from nsIPluginStreamPeer:
 
     // (Corresponds to NPStream's url field.)
-    NS_IMETHOD_(const char*)
-    GetURL(void);
+    NS_IMETHOD
+    GetURL(const char* *result);
 
     // (Corresponds to NPStream's end field.)
-    NS_IMETHOD_(PRUint32)
-    GetEnd(void);
+    NS_IMETHOD
+    GetEnd(PRUint32 *result);
 
     // (Corresponds to NPStream's lastmodified field.)
-    NS_IMETHOD_(PRUint32)
-    GetLastModified(void);
+    NS_IMETHOD
+    GetLastModified(PRUint32 *result);
 
     // (Corresponds to NPStream's notifyData field.)
-    NS_IMETHOD_(void*)
-    GetNotifyData(void);
+    NS_IMETHOD
+    GetNotifyData(void* *result);
 
     // (Corresponds to NPP_DestroyStream's reason argument.)
-    NS_IMETHOD_(nsPluginReason)
-    GetReason(void);
+    NS_IMETHOD
+    GetReason(nsPluginReason *result);
 
     // (Corresponds to NPP_NewStream's MIMEType argument.)
-    NS_IMETHOD_(nsMIMEType)
-    GetMIMEType(void);
+    NS_IMETHOD
+    GetMIMEType(nsMIMEType *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginStreamPeer2:
 
-    NS_IMETHOD_(PRUint32)
-    GetContentLength(void);
+    NS_IMETHOD
+    GetContentLength(PRUint32 *result);
 
-    NS_IMETHOD_(PRUint32)
-    GetHeaderFieldCount(void);
+    NS_IMETHOD
+    GetHeaderFieldCount(PRUint32 *result);
 
-    NS_IMETHOD_(const char*)
-    GetHeaderFieldKey(PRUint32 index);
+    NS_IMETHOD
+    GetHeaderFieldKey(PRUint32 index, const char* *result);
 
-    NS_IMETHOD_(const char*)
-    GetHeaderField(PRUint32 index);
+    NS_IMETHOD
+    GetHeaderField(PRUint32 index, const char* *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsISeekablePluginStreamPeer:

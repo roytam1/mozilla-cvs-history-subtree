@@ -55,10 +55,16 @@ public:
     NS_IMETHOD
     GetAttributes(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
 
-    // Get the value for the named attribute.  Returns NULL
-    // if the attribute was not set.
-    NS_IMETHOD_(const char*)
-    GetAttribute(const char* name) = 0;
+    /**
+     * Gets the value for the named attribute.
+     *
+     * @param name - the name of the attribute to find
+     * @param result - the resulting attribute
+     * @result - NS_OK if this operation was successful, NS_ERROR_FAILURE if
+     * the desired attribute could not be found
+     */
+    NS_IMETHOD
+    GetAttribute(const char* name, const char* *result) = 0;
 
 };
 

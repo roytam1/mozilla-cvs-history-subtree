@@ -40,51 +40,130 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Interface
 
-// (Corresponds to NPP object.)
+/**
+ * The nsIPluginInstance interface is the minimum interface plugin developers
+ * need to support in order to implement a plugin instance. The plugin manager
+ * may QueryInterface for more specific types, e.g. nsILiveConnectPluginInstance. 
+ *
+ * (Corresponds to NPP object.)
+ *
+ * The old NPP_Destroy call has been factored into two plugin instance 
+ * methods:
+ *
+ * Stop -- called when the plugin instance is to be stopped (e.g. by 
+ * displaying another plugin manager window, causing the page containing 
+ * the plugin to become removed from the display).
+ *
+ * Destroy -- called once, before the plugin instance peer is to be 
+ * destroyed. This method is used to destroy the plugin instance.
+ */
 class nsIPluginInstance : public nsIEventHandler {
 public:
 
+    /**
+     * Initializes a newly created plugin instance, passing to it the plugin
+     * instance peer which it should use for all communication back to the browser.
+     * 
+     * @param peer - the corresponding plugin instance peer
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     Initialize(nsIPluginInstancePeer* peer) = 0;
 
-    // Required backpointer to the peer.
-    NS_IMETHOD_(nsIPluginInstancePeer*)
-    GetPeer(void) = 0;
+    /**
+     * Returns a reference back to the plugin instance peer. This method is
+     * used whenever the browser needs to obtain the peer back from a plugin
+     * instance. The implementation of this method should be sure to increment
+     * the reference count on the peer by calling AddRef.
+     *
+     * @param resultingPeer - the resulting plugin instance peer
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    GetPeer(nsIPluginInstancePeer* *resultingPeer) = 0;
 
-    // See comment for nsIPlugin::CreateInstance, above.
+    /**
+     * Called to instruct the plugin instance to start. This will be called after
+     * the plugin is first created and initialized, and may be called after the
+     * plugin is stopped (via the Stop method) if the plugin instance is returned
+     * to in the browser window's history.
+     *
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     Start(void) = 0;
 
-    // The old NPP_Destroy call has been factored into two plugin instance 
-    // methods:
-    //
-    // Stop -- called when the plugin instance is to be stopped (e.g. by 
-    // displaying another plugin manager window, causing the page containing 
-    // the plugin to become removed from the display).
-    //
-    // Destroy -- called once, before the plugin instance peer is to be 
-    // destroyed. This method is used to destroy the plugin instance.
-
+    /**
+     * Called to instruct the plugin instance to stop, thereby suspending its state.
+     * This method will be called whenever the browser window goes on to display
+     * another page and the page containing the plugin goes into the window's history
+     * list.
+     *
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     Stop(void) = 0;
 
+    /**
+     * Called to instruct the plugin instance to destroy itself. This is called when
+     * it become no longer possible to return to the plugin instance, either because 
+     * the browser window's history list of pages is being trimmed, or because the
+     * window containing this page in the history is being closed.
+     *
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     Destroy(void) = 0;
 
-    // (Corresponds to NPP_SetWindow.)
+    /**
+     * Called when the window containing the plugin instance changes.
+     *
+     * (Corresponds to NPP_SetWindow.)
+     *
+     * @param window - the plugin window structure
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     SetWindow(nsPluginWindow* window) = 0;
 
-    // (Corresponds to NPP_NewStream.)
+    /**
+     * Called when a new plugin stream must be constructed in order for the plugin
+     * instance to receive a stream of data from the browser. 
+     *
+     * (Corresponds to NPP_NewStream.)
+     *
+     * @param peer - the plugin stream peer, representing information about the
+     * incoming stream, and stream-specific callbacks into the browser
+     * @param result - the resulting plugin stream
+     * @result - NS_OK if this operation was successful
+     */
     NS_IMETHOD
     NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result) = 0;
 
-    // (Corresponds to NPP_Print.)
-    NS_IMETHOD_(void)
+    /**
+     * Called to instruct the plugin instance to print itself to a printer.
+     *
+     * (Corresponds to NPP_Print.)
+     *
+     * @param platformPrint - platform-specific printing information
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
     Print(nsPluginPrint* platformPrint) = 0;
 
-    // (Corresponds to NPP_URLNotify.)
-    NS_IMETHOD_(void)
+    /**
+     * Called to notify the plugin instance that a URL request has been
+     * completed. (See nsIPluginManager::GetURL and nsIPluginManager::PostURL).
+     *
+     * (Corresponds to NPP_URLNotify.)
+     *
+     * @param url - the requested URL
+     * @param target - the target window name
+     * @param reason - the reason for completion
+     * @param notifyData - the notify data supplied to GetURL or PostURL
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
     URLNotify(const char* url, const char* target,
               nsPluginReason reason, void* notifyData) = 0;
 
