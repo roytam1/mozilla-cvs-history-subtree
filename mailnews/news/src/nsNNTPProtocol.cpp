@@ -26,6 +26,7 @@
 #include "nsIOutputStream.h"
 #include "nsIInputStream.h"
 #include "nsFileStream.h"
+#include "nsIAllocator.h"
 
 #include "nsCOMPtr.h"
 
@@ -808,7 +809,7 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
   m_nextState = SEND_FIRST_NNTP_COMMAND;
 
  FAIL:
-  nsCRT::free(group);
+  nsAllocator::Free(group);
   PR_FREEIF (commandSpecificData);
 
   if (NS_FAILED(rv))
@@ -826,7 +827,7 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 		  m_nextState = NNTP_RESPONSE; 
 	  }
 
-	  rv = LoadUrl(aURL);
+	  rv = nsMsgProtocol::LoadUrl(aURL, aConsumer);
   }
 
   return rv;
@@ -890,6 +891,7 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup,
 {
 	PRInt32 status = 0;
 	PRInt32 port = 0;
+	char *fullPath = 0;
 	char *group = 0;
     char *message_id = 0;
     char *command_specific_data = 0;
@@ -897,7 +899,13 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup,
 	char * s = 0;
 
 	// get the file path part and store it as the group...
-	aURL->GetPath(&group);
+	aURL->GetPath(&fullPath);
+	if (fullPath && *fullPath == '/')
+		group = PL_strdup(fullPath+1); 
+	else
+		group = PL_strdup(fullPath);
+
+	nsAllocator::Free(fullPath);
 
 	nsUnescape (group);
 
@@ -1917,9 +1925,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
 			printf("load this url to display the error message: %s\n", error_path_url);
 #endif
 			printf ("mscott fix me...as part of necko...we don't have stream converters hooked up...");
-#ifdef NO_NECKO_CONVERTERS
-			m_displayConsumer->LoadURL(nsAutoString(error_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReload, 0);
-#endif
+			m_displayConsumer->LoadURL(nsAutoString(error_path_url).GetUnicode(), nsnull, PR_TRUE);
 			
 			PR_FREEIF(error_path_url);
 		}
@@ -2128,11 +2134,7 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
 #ifdef DEBUG_NEWS
 			printf("load this url to display the message: %s\n", article_path_url);
 #endif
-
-			printf ("mscott fix me...as part of necko...we don't have stream converters hooked up...");
-#ifdef NO_NECKO_CONVERTERS
-			m_displayConsumer->LoadURL(nsAutoString(article_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
-#endif			
+			m_displayConsumer->LoadURL(nsAutoString(article_path_url).GetUnicode(), nsnull, PR_TRUE);			
 			PR_FREEIF(article_path_url);
 		}
 
