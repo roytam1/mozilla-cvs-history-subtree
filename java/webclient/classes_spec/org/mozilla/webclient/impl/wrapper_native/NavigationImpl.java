@@ -82,11 +82,16 @@ public void loadURL(String absoluteURL)
 {
     ParameterCheck.nonNull(absoluteURL);
     getWrapperFactory().verifyInitialized();
-    Assert.assert_it(-1 != getNativeBrowserControl());
-    
-    synchronized(getBrowserControl()) {
-        nativeLoadURL(getNativeBrowserControl(), absoluteURL);
-    }
+    final int bc = getNativeBrowserControl();
+    final String url = new String(absoluteURL);
+    Assert.assert_it(-1 != bc);
+
+    Runnable loadURL = new Runnable() {
+      public void run() {
+          NavigationImpl.this.nativeLoadURL(bc, url);
+      }
+    };
+    getNativeEventThread().pushRunnable(loadURL);
 }
 
 public void loadFromStream(InputStream stream, String uri,

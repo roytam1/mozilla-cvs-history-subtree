@@ -63,6 +63,12 @@ public class EventRegistrationImpl extends ImplObjectNative implements EventRegi
 
  */
 
+// PENDING: Currently we rely on NativeEventThread logic to maintain the
+// list of listeners to add and to add them in a threadsafe manner.  In
+// webclient 2.0, we're going to maintain the list of listeners ourself,
+// in this class, and use the Runnable trick to make sure they get added
+// on the right thread.
+
 private NativeEventThread nativeEventThread = null;
 
 //
@@ -121,7 +127,7 @@ public void addDocumentLoadListener(DocumentLoadListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.addListener(listenerWrapper);
+        // PENDING nativeEventThread.addListener(listenerWrapper);
     }
 }
 
@@ -141,7 +147,7 @@ public void removeDocumentLoadListener(DocumentLoadListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.removeListener(listenerWrapper);
+        // PENDING nativeEventThread.removeListener(listenerWrapper);
     }
 }
 
@@ -174,7 +180,7 @@ public void addMouseListener(MouseListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.addListener(listenerWrapper);
+        // PENDING nativeEventThread.addListener(listenerWrapper);
     }
 }
 
@@ -202,7 +208,7 @@ public void removeMouseListener(MouseListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.removeListener(listenerWrapper);
+        // PENDING nativeEventThread.removeListener(listenerWrapper);
     }
 }
 
@@ -222,7 +228,7 @@ public void addNewWindowListener(NewWindowListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.addListener(listenerWrapper);
+        // PENDING nativeEventThread.addListener(listenerWrapper);
     }
 }
 
@@ -242,7 +248,7 @@ public void removeNewWindowListener(NewWindowListener listener)
     }
 
     synchronized(getBrowserControl()) {
-        nativeEventThread.removeListener(listenerWrapper);
+        // PENDING nativeEventThread.removeListener(listenerWrapper);
     }
 }
 
