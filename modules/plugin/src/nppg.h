@@ -44,9 +44,9 @@ extern void 			FE_FreeEmbedSessionData(MWContext *context, NPEmbeddedApp* pApp);
 #ifdef XP_MAC
 extern void 			FE_PluginProgress(MWContext *context, const char *message);
 extern void 			FE_ResetRefreshURLTimer(MWContext *context);
-extern void				FE_RegisterWindow(void* plugin, void* window);
-extern void				FE_UnregisterWindow(void* plugin, void* window);
-extern SInt16			FE_AllocateMenuID(void *plugin, XP_Bool isSubmenu);
+extern void				FE_RegisterWindow(struct nsIEventHandler* handler, void* window);
+extern void				FE_UnregisterWindow(struct nsIEventHandler*, void* window);
+// extern SInt16			FE_AllocateMenuID(void *plugin, XP_Bool isSubmenu);
 #endif
 
 #ifdef XP_UNIX
