@@ -48,13 +48,11 @@ C_OBJS=.\$(OBJDIR)\png.obj .\$(OBJDIR)\pngerror.obj \
     .\$(OBJDIR)\pngset.obj .\$(OBJDIR)\pngtrans.obj \
     .\$(OBJDIR)\pngwio.obj .\$(OBJDIR)\pngwrite.obj \
     .\$(OBJDIR)\pngwtran.obj .\$(OBJDIR)\pngrtran.obj \
-    .\$(OBJDIR)\pngwutil.obj .\$(OBJDIR)\pngvcrd.obj
+    .\$(OBJDIR)\pngwutil.obj 
 !if "$(MOZ_BITS)" != "16"
 LINCS=-I$(XPDIST)\public\util -I$(XPDIST)\public\nspr \
     -I$(XPDIST)\public\zlib 
 !endif
-
-DEFINES = -DPNG_USE_PNGVCRD $(DEFINES)
 
 include <$(DEPTH)\config\rules.mak>
 
