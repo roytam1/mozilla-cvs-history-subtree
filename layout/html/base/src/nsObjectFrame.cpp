@@ -896,7 +896,7 @@ nsObjectFrame::MakeAbsoluteURL(nsIURI* *aFullURI,
   rv = mInstanceOwner->GetDocument(getter_AddRefs(document));
 
   //trim leading and trailing whitespace
-  aSrc.Trim("\b\t\r\n ", PR_TRUE, PR_TRUE, PR_FALSE);
+  aSrc.Trim(" \n\r\t\b", PR_TRUE, PR_TRUE, PR_FALSE);
 
   // get document charset
   nsAutoString originCharset;
@@ -2976,9 +2976,10 @@ nsresult nsPluginInstanceOwner::EnsureCachedAttrParamArrays()
       * myval " may be interpreted as "myval"). Authors
       * should not declare attribute values with
       * leading or trailing white space.''
+      * However, do not trim consecutive spaces as in bug 122119
       */            
-     name.CompressWhitespace();  // XXX right function?
-     value.CompressWhitespace();
+     name.Trim(" \n\r\t\b", PR_TRUE, PR_TRUE, PR_FALSE);
+     value.Trim(" \n\r\t\b", PR_TRUE, PR_TRUE, PR_FALSE);
      mCachedAttrParamNames [mNumCachedAttrs + 1 + c] = ToNewUTF8String(name);
      mCachedAttrParamValues[mNumCachedAttrs + 1 + c] = ToNewUTF8String(value);
      c++;                                                      // rules!
