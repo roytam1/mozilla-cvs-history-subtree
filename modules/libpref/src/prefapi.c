@@ -2061,6 +2061,7 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 		
 	if (m_AutoAdminLib) {
 		get_ldap_attributes = (ldap_func)
+#ifdef NSPR
 			PR_FindSymbol(
 #ifndef XP_WIN16
 			"pref_get_ldap_attributes"
@@ -2077,6 +2078,7 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 			MAKEINTRESOURCE(1)
 #endif
 			);
+#endif /* NSPR */
 	}
 	if (get_ldap_attributes == NULL) {
 		/* This indicates the AutoAdmin dll was not found. */
