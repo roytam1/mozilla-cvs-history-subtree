@@ -27,16 +27,16 @@ viewer:Essential Files:zlib.shlb
 
 [browser] 
 viewer:Mozilla 
-viewer:Mozilla Addressbook 
-viewer:Mozilla Editor 
-viewer:Mozilla Installer
-viewer:Mozilla Message Compose 
-viewer:Mozilla Messenger 
-viewer:Mozilla Preferences 
+; viewer:Mozilla Addressbook 
+; viewer:Mozilla Editor 
+viewer:Mozilla Installer,viewer:Mozilla Profile Migration
+; viewer:Mozilla Message Compose 
+; viewer:Mozilla Messenger 
+; viewer:Mozilla Preferences 
 viewer:Mozilla Profile Manager
-viewer:Mozilla Profile Wizard
-viewer:Mozilla Select Profile
-viewer:NSPR Logging
+; viewer:Mozilla Profile Wizard
+; viewer:Mozilla Select Profile
+; viewer:NSPR Logging
 viewer:Plugins:*
 
 viewer:Essential Files:gfx.shlb 
