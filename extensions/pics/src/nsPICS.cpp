@@ -33,6 +33,7 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 #include "nsCOMPtr.h"
+#include "nsIStreamContentInfo.h"
 #include "nsIParser.h"
 #include "nsParserCIID.h"
 #include "nsIHTMLContentSink.h"
@@ -147,11 +148,11 @@ public:
 
    // nsIDocumentLoaderObserver
   NS_IMETHOD OnStartDocumentLoad(nsIDocumentLoader* loader, nsIURI* aURL, const char* aCommand);
-  NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus);
-  NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* channel);
-  NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, PRUint32 aProgress, PRUint32 aProgressMax);
-  NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsString& aMsg);
-  NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIChannel* channel, nsresult aStatus);
+  NS_IMETHOD OnEndDocumentLoad(nsIDocumentLoader* loader, nsIRequest *request, nsresult aStatus);
+  NS_IMETHOD OnStartURLLoad(nsIDocumentLoader* loader, nsIRequest *request);
+  NS_IMETHOD OnProgressURLLoad(nsIDocumentLoader* loader, nsIRequest *request, PRUint32 aProgress, PRUint32 aProgressMax);
+  NS_IMETHOD OnStatusURLLoad(nsIDocumentLoader* loader, nsIRequest *request, nsString& aMsg);
+  NS_IMETHOD OnEndURLLoad(nsIDocumentLoader* loader, nsIRequest *request, nsresult aStatus);
 //  NS_IMETHOD OnConnectionsComplete();
 
 
@@ -696,7 +697,7 @@ nsPICS::OnStartDocumentLoad(nsIDocumentLoader* loader,
 
 NS_IMETHODIMP
 nsPICS::OnEndDocumentLoad(nsIDocumentLoader* loader, 
-                          nsIChannel* channel, 
+                          nsIRequest *request, 
                           nsresult aStatus)
 {
   nsresult rv = NS_OK;
@@ -719,16 +720,21 @@ nsPICS::OnEndDocumentLoad(nsIDocumentLoader* loader,
 }
 
 NS_IMETHODIMP
-nsPICS::OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* channel)
+nsPICS::OnStartURLLoad(nsIDocumentLoader* loader, nsIRequest *request)
 {
   nsresult rv = NS_OK;
+
+  nsCOMPtr<nsIChannel> channel;
+  request->GetParent(getter_AddRefs(channel));
 
   nsCOMPtr<nsIURI> aURL;
   rv = channel->GetURI(getter_AddRefs(aURL));
   if (NS_FAILED(rv)) return rv;
 
+  nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
+
   char* aContentType;
-  rv = channel->GetContentType(&aContentType);
+  rv = contentInfo->GetContentType(&aContentType);
   if (NS_FAILED(rv)) return rv;
 
   if(!mPICSRatingsEnabled)
@@ -798,7 +804,7 @@ nsPICS::OnStartURLLoad(nsIDocumentLoader* loader, nsIChannel* channel)
 
 NS_IMETHODIMP
 nsPICS::OnProgressURLLoad(nsIDocumentLoader* loader, 
-                          nsIChannel* channel, 
+                          nsIRequest *request, 
                           PRUint32 aProgress, 
                           PRUint32 aProgressMax)
 {
@@ -809,7 +815,7 @@ nsPICS::OnProgressURLLoad(nsIDocumentLoader* loader,
 
 NS_IMETHODIMP
 nsPICS::OnStatusURLLoad(nsIDocumentLoader* loader, 
-                        nsIChannel* channel, 
+                        nsIRequest *request, 
                         nsString& aMsg)
 {
   if(!mPICSRatingsEnabled)
@@ -819,10 +825,13 @@ nsPICS::OnStatusURLLoad(nsIDocumentLoader* loader,
 
 NS_IMETHODIMP
 nsPICS::OnEndURLLoad(nsIDocumentLoader* loader, 
-                     nsIChannel* channel, 
+                     nsIRequest *request, 
                      nsresult aStatus)
 {
   nsresult rv;
+
+  nsCOMPtr<nsIChannel> channel;
+  request->GetParent(getter_AddRefs(channel));
 
   nsCOMPtr<nsIURI> aURL;
   rv = channel->GetURI(getter_AddRefs(aURL));

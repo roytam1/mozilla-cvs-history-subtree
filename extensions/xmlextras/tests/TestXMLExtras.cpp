@@ -91,7 +91,7 @@ int main (int argc, char* argv[])
                          nsnull );
 
         if (NS_SUCCEEDED( rv )) {
-          rv = pChannel->OpenInputStream( getter_AddRefs( pInputStream ) );
+          rv = pChannel->OpenInputStream( 0, -1, getter_AddRefs( pInputStream ) );
 
           if (NS_SUCCEEDED( rv )) {
             rv = pInputStream->Available(&uiContentLength );
