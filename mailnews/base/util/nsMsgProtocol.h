@@ -43,7 +43,7 @@ public:
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
 	
-	NS_IMETHOD OnDataAvailable(nsISupports *ctxt, nsIBufferInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnDataAvailable(nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
 
 	NS_IMETHOD OnStartBinding(nsISupports *ctxt);
 
@@ -84,7 +84,7 @@ protected:
 	// ProcessProtocolState - This is the function that gets churned by calls to OnDataAvailable. 
 	// As data arrives on the socket, OnDataAvailable calls ProcessProtocolState.
 	
-	virtual nsresult ProcessProtocolState(nsIURI * url, nsIBufferInputStream * inputStream, 
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
 									      PRUint32 sourceOffset, PRUint32 length) = 0;
 
 	// SendData -- Writes the data contained in dataBuffer into the current output stream. 
