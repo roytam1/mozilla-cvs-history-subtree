@@ -59,7 +59,7 @@ CSRCS		= autokr.c \
 		  kinsokuf.c \
 		  $(NULL)
 
-REQUIRES	= i18n dbm nspr img util layer pref js cstream
+REQUIRES	= i18n dbm nspr img util layer pref js cstream network
 
 CSRCS		+= doc_ccc.c fe_ccc.c intlcomp.c mime2fun.c
 

@@ -24,7 +24,7 @@ CSRCS		= pa_amp.c pa_hash.c pa_hook.c pa_mdl.c pa_parse.c
 
 EXPORTS		= pa_parse.h pa_tags.h pa_amp.h
 
-REQUIRES	= nspr dbm img util layer js hook lay style cstream
+REQUIRES	= nspr dbm img util layer js hook lay style cstream network
 
 include $(DEPTH)/config/rules.mk
 
