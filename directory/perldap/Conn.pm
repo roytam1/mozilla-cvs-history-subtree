@@ -63,11 +63,12 @@ sub new
       $self->{"bindpasswd"} = $hash->{"pswd"} if defined($hash->{"pswd"});
       $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
       $self->{"version"} = $hash->{"vers"} || LDAP_VERSION3;
+      $self->{"usenspr"} = $hash->{"nspr"} if defined($hash->{"nspr"});
     }
   else
     {
       my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth,
-          $version) = @_;
+          $version, $nspr) = @_;
 
       $self->{"host"} = $host if defined($host);
       $self->{"port"} = $port if defined($port);
@@ -75,6 +76,7 @@ sub new
       $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
       $self->{"certdb"} = $certdb if defined($certdb);
       $self->{"version"} = $version || LDAP_VERSION3;
+      $self->{"usenspr"} = $nspr if defined($nspr);
     }
 
   # Anonymous bind is the default...
@@ -139,7 +141,11 @@ sub init
   return 0 unless $ld;
   $self->{"ld"} = $ld;
 
-  $self->{"usenspr"} = 0;
+  if (defined($self->{"usenspr"})) {
+    $ret = prldap_install_routines($self->{"ld"}, $self->{"usenspr"});
+    return 0 unless ($ret == LDAP_SUCCESS);
+  }
+
   $self->setVersion($self->{"version"});
   $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
@@ -528,8 +534,7 @@ sub close
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
-
-  undef $self->{"ld"};
+  undef $self->{"ld"} if defined($self->{"ld"});
 
   return 1;
 }
@@ -576,6 +581,7 @@ sub add
       foreach $key (@{$entry->{"_oc_order_"}})
 	{
 	  next if (($key eq "dn") || ($key =~ /^_.+_$/));
+          next if $entry->{"_${key}_deleted_"};
 	  $ent{$key} = { "ab" => $entry->{$key} };
 	  $gotcha++;
 	  $entry->attrClean($key);
@@ -823,20 +829,23 @@ sub getVersion
 # the LDAP * handle (ld)
 sub installNSPR
 {
-  my ($self, $shared) = @_;
+  my $arg = shift;
   my $ret;
 
-  $shared = 0 unless defined($shared) || $shared eq '';
-  $ret = prldap_install_routines($self->{"ld"}, $shared);
-
-  if ($ret == LDAP_SUCCESS)
+  if (ref($arg))
     {
-      $self->{"usenspr"} = 1;
-      return 1;
+      my $shared = shift || 0;
+
+      $arg->close();
+      $arg->{"usenspr"} = $shared;
+      $arg->init();
+    }
+  else
+    {
+      $ret = prldap_install_routines(0, $arg || 0);
     }
 
-  $self->{"usenspr"} = 0;
-  return 0;
+  return  ($ret == LDAP_SUCCESS);
 }
 
 
@@ -849,7 +858,7 @@ sub setNSPRTimeout
   my ($self, $timeout) = @_;
   my $ret;
 
-  return 0 unless defined($self->{"usenspr"}) && $self->{"usenspr"};
+  return 0 unless defined($self->{"usenspr"});
   $ret = prldap_set_session_option($self->{"ld"}, $timeout,
                                    PRLDAP_OPT_IO_MAX_TIMEOUT);
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -1185,8 +1194,9 @@ attributes to return from the entry.  Note that this does not support the
 
 =item B<close>
 
-Close the LDAP connection, and clean up the object. If you don't call this
-directly, the destructor for the object instance will do the job for you.
+Close the LDAP connection, and clean up the object. If you don't
+call this directly, the destructor for the object instance will do the job
+for you.
 
 =item B<compare>
 

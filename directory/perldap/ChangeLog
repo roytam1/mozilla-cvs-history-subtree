@@ -1,3 +1,16 @@
+2004-10-28  Leif Hedstrom  <leif@ogre.com>
+
+	* Entry.pm (attrModified): Removed some dead code.
+
+	* Conn.pm (add): Fixed so we don't try to add attributes that have been
+	deleted (From Donaldo).
+
+2004-10-19  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm (new): Add NSPR option.
+	(installNSPR): Try to fix the problem by rebinding if this is called.
+	(installNSPR): Now works as a class (static) method.
+
 2004-10-17  Leif Hedstrom  <leif@ogre.com>
 
 	* Conn.pm (close): Removed $ret, it was always 1 anyways.

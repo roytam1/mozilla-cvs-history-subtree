@@ -268,9 +268,6 @@ sub attrModified
   $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
     unless defined($self->{"_${attr}_save_"});
   $self->{"_${attr}_modified_"} = 1;
-  delete $self->{"_${attr}_deleted_"}
-    if defined($self->{"_${attr}_deleted_"});
-
 
   return 1;
 }
