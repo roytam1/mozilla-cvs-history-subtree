@@ -292,6 +292,12 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
   NS_ENSURE_SUCCESS(rv, PR_FALSE);
   regFile->AppendNative(aAppName);
   regFile->AppendNative(NS_LITERAL_CSTRING("Application Registry"));
+#elif defined(XP_OS2)
+  rv = dirService->Get(NS_OS2_HOME_DIR, NS_GET_IID(nsILocalFile),
+                       getter_AddRefs(regFile));
+  NS_ENSURE_SUCCESS(rv, PR_FALSE);
+  regFile->AppendNative(aAppName);
+  regFile->AppendNative(NS_LITERAL_CSTRING("registry.dat"));
 #else
   rv = dirService->Get(NS_UNIX_HOME_DIR, NS_GET_IID(nsILocalFile),
                        getter_AddRefs(regFile));
