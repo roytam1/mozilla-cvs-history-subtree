@@ -31,11 +31,7 @@ include $(NSPR_TREE)/config/rules.mk
 include         ../../../build.mk
 
 ifeq ($(HAVE_CCONF), 1)
-SRCS		= iutil-lock.c \
-		  utf.c \
-		  string.c \
-		  getdn.c \
-		  log.c
+SRCS		= iutil-lock.c
 else
 SRCS		= iutil-lock.c
 endif
