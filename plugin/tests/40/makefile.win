@@ -57,5 +57,5 @@ install:: $(DLL)
 #//
 #//------------------------------------------------------------------------
 copy:
-        $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME) $(NSTOMOZ_DEPTH)\cmd\winfe\mkfiles32\x86dbg\plugins\nsjvm\
+        $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME) $(DEPTH)\cmd\winfe\mkfiles32\x86dbg\plugins
 
