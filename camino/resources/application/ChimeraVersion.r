@@ -51,14 +51,14 @@
 // Version Numbers //
 
 #define     VERSION_MAJOR           0
-#define     VERSION_MINOR           0x60    // revision & fix in BCD
-#define     VERSION_KIND            beta    // alpha, beta, or final
+#define     VERSION_MINOR           0x81    // revision & fix in BCD
+#define     VERSION_KIND            final    // alpha, beta, or final
 #define     VERSION_MICRO           0       // internal stage: alpha or beta number
 
 
 // Version Strings (Finder's Get Info dialog box) //
 
-#define     VERSION_STRING          "0.8"
+#define     VERSION_STRING          "0.8.1"
 
 #define     COPYRIGHT_STRING        "© 1998-2004 The Mozilla Foundation"
 #define     GETINFO_VERSION         VERSION_STRING ", " COPYRIGHT_STRING
