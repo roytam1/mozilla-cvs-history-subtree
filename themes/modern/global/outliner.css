@@ -36,9 +36,17 @@ outlinerbody {
 }
 
 
-.outlinercell-header, 
-.outlinercell-inset-header, 
-.outlinercell-header-image { 
+outlinercol { 
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  padding: 0px 0px 1px 2px;
+  white-space: nowrap;
+  vertical-align: middle;
+} 
+
+.outlinercol-header,
+.outlinercol-inset-header, 
+.outlinercol-image { 
   border-left: 1px solid #EDEDED !important;
   border-top: 1px solid #EDEDED !important;
   border-right: 1px solid #6E7070 !important;
@@ -48,8 +56,8 @@ outlinerbody {
   color: #000000;
 }
 
-.outlinercell-header-box,
-.outlinercell-header-image-box {
+.outlinercol-box,
+.outlinercol-image-box {
   border-left: 1px solid #C2D0D0;
   border-top: 1px solid #C2D0D0;
   border-right: 1px solid #A4ACAC;
@@ -57,49 +65,49 @@ outlinerbody {
   vertical-align: middle;
 }  
 
-.outlinercell-header-box {
+.outlinercol-box {
   padding: 0px 4px 0px 4px;
 }
 
-.outlinercell-header-image-box {
+.outlinercol-image-box {
   padding: 0px 1px 0px 1px;
 }
   
-.outlinercell-header:hover:active,
-.outlinercell-header-image:hover:active,
-.outlinercell-inset-header:hover:active {
+.outlinercol-header:hover:active,
+.outlinercol-image:hover:active,
+.outlinercol-inset-header:hover:active {
   border: 1px solid #A4ACAC !important;
 }
 
-.outlinercell-header:hover:active > .outlinercell-header-box,
-.outlinercell-inset-header:hover:active > .outlinercell-header-box,
-.outlinercell-header-image:hover:active > .outlinercell-header-image-box {
+.outlinercol-header:hover:active > .outlinercol-box,
+.outlinercol-inset-header:hover:active > .outlinercol-box,
+.outlinercol-image:hover:active > .outlinercol-image-box {
   border-top: 1px solid transparent;
   border-right: none;
   border-bottom: none;
   border-left: 1px solid transparent;
 }
   
-.outlinercell-header:hover:active > .outlinercell-header-box,
-.outlinercell-inset-header:hover:active > .outlinercell-header-box {
+.outlinercol-header:hover:active > .outlinercol-box,
+.outlinercol-inset-header:hover:active > .outlinercol-box {
   padding: 1px 4px 0px 5px;
 }
 
-.outlinercell-header-image:hover:active > .outlinercell-header-image-box {
+.outlinercol-image:hover:active > .outlinercol-image-box {
   padding: 1px 1px 0px 2px;
 }
 
 
 /* outliner header with sort direction indicators */
 
-.outliner-header-sortdirection {
+.outlinercol-sortdirection {
   list-style-image: none;
 }
 
-.sortDirectionIndicator[sortDirection="ascending"] > .outlinercell-header-box > .outliner-header-sortdirection {
+.sortDirectionIndicator[sortDirection="ascending"] > .outlinercol-box > .outlinercol-sortdirection {
   list-style-image: url("chrome://global/skin/sortAscending.gif");
 }
 
-.sortDirectionIndicator[sortDirection="descending"] > .outlinercell-header-box > .outliner-header-sortdirection {
+.sortDirectionIndicator[sortDirection="descending"] > .outlinercol-box > .outlinercol-sortdirection {
   list-style-image: url("chrome://global/skin/sortDescending.gif");
 }
