@@ -26,7 +26,7 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 
-#define NS_MOZICONURI_CID					                   \
+#define NS_MOZICONURI_CID                            \
 {                                                    \
     0x43a88e0e,                                      \
     0x2d37,                                          \
@@ -38,6 +38,7 @@ class nsMozIconURI : public nsIMozIconURI
 {
 public:    
   NS_DECL_ISUPPORTS
+  NS_DECL_NSISERIALIZABLE
   NS_DECL_NSIURI
   NS_DECL_NSIMOZICONURI
 
