@@ -26,7 +26,6 @@
 #include "nsIMsgWindow.h"
 #include "nsIMsgStatusFeedback.h"
 #include "nsITransactionManager.h"
-#include "nsIMessageView.h"
 #include "nsIMsgFolder.h"
 #include "nsIDocShell.h"
 #include "nsIURIContentListener.h"
