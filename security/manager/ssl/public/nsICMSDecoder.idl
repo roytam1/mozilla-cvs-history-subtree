@@ -61,6 +61,8 @@ interface nsICMSMessage : nsISupports
   void getSignerEmailAddress(out string aEmail);
   void verifySignature();
   void verifyDetachedSignature();
+  void CreateEncrypted();
+  void CreateSigned();
 };
 
 /**
@@ -85,6 +87,7 @@ interface nsICMSEncoder : nsISupports
   void start();
   void update();
   void finish();
+  void encode(in nsICMSMessage aMsg);
 };
 
 /**
@@ -94,6 +97,7 @@ interface nsICMSEncoder : nsISupports
 %{C++
 #define NS_CMSDECODER_CONTRACTID "@mozilla.org/nsCMSDecoder;1"
 #define NS_CMSENCODER_CONTRACTID "@mozilla.org/nsCMSEncoder;1"
+
 #define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
 #define NS_HASH_CONTRACTID "@mozilla.org/nsHash;1"
 %}
