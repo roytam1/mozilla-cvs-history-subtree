@@ -2658,7 +2658,6 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
     {
       nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(j);
       nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
-      nsCOMPtr<nsIDOMNode> origCurNode = curNode;
 
       NS_ENSURE_TRUE(curNode, NS_ERROR_FAILURE);
       NS_ENSURE_TRUE(curNode != fragmentAsNode, NS_ERROR_FAILURE);
@@ -2726,7 +2725,7 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
       }
       if (bDidInsert)
       {
-        res = GetNodeLocation(origCurNode, &parentNode, &offsetOfNewNode);
+        res = GetNodeLocation(lastInsertNode, &parentNode, &offsetOfNewNode);
         NS_ENSURE_SUCCESS(res, res);
         offsetOfNewNode++;
       }
