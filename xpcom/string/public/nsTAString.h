@@ -265,12 +265,6 @@ class nsTAString_CharT
          * of the string library and the internal use may at some point
          * be replaced as well.
          *
-         * Should this really be a public operation?
-         *
-         * Additionally, your implementation of |SetLength| need not
-         * satisfy (2) if and only if you override the |do_...| routines
-         * to not need this facility.
-         *
          * This distinction makes me think the two different uses should
          * be split into two distinct functions.
          */
@@ -282,6 +276,7 @@ class nsTAString_CharT
          */
       void Truncate( size_type aNewLength=0 )
         {
+          NS_ASSERTION(aNewLength <= Length(), "Truncate cannot make string longer");
           SetLength(aNewLength);
         }
 

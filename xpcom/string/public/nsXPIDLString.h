@@ -39,8 +39,8 @@
 #ifndef nsXPIDLString_h___
 #define nsXPIDLString_h___
 
-#ifndef nsSharableString_h___
-#include "nsSharableString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
 
 #endif /* !defined(nsXPIDLString_h___) */

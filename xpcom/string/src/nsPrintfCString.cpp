@@ -41,6 +41,13 @@
 #include "prprf.h"
 
 
+// though these classes define a fixed buffer, they do not set the F_FIXED
+// flag.  this is because they are not intended to be modified after they have
+// been constructed.  we could change this but it would require adding a new
+// class to the hierarchy, one that both this class and nsCAutoString would
+// inherit from.  for now, we populate the fixed buffer, and then let the
+// nsCString code treat the buffer as if it were a dependent buffer.
+
 nsPrintfCString::nsPrintfCString( const char_type* format, ... )
   : string_type(mLocalBuffer, 0, F_TERMINATED)
   {

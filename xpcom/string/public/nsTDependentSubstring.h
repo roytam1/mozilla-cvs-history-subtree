@@ -80,7 +80,7 @@ class nsTDependentSubstring_CharT : public nsTSubstring_CharT
 
     private:
         // NOT USED
-      void operator=( const self_type& ) {}        // we're immutable, you can't assign into a substring
+      void operator=( const self_type& );        // we're immutable, you can't assign into a substring
   };
 
 inline

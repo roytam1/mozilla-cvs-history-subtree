@@ -156,13 +156,13 @@ class NS_LossyConvertUTF16toASCII : public nsCAutoString
 
       NS_LossyConvertUTF16toASCII( const PRUnichar* aString, PRUint32 aLength )
         {
-          LossyCopyUTF16toASCII(nsDependentSubstring(aString, aString + aLength), *this);
+          LossyAppendUTF16toASCII(Substring(aString, aString + aLength), *this);
         }
 
       explicit
       NS_LossyConvertUTF16toASCII( const nsAString& aString )
         {
-          LossyCopyUTF16toASCII(aString, *this);
+          LossyAppendUTF16toASCII(aString, *this);
         }
 
     private:
@@ -182,13 +182,13 @@ class NS_ConvertASCIItoUTF16 : public nsAutoString
 
       NS_ConvertASCIItoUTF16( const char* aCString, PRUint32 aLength )
         {
-          CopyASCIItoUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
+          AppendASCIItoUTF16(Substring(aCString, aCString + aLength), *this);
         }
 
       explicit
       NS_ConvertASCIItoUTF16( const nsACString& aCString )
         {
-          CopyASCIItoUTF16(aCString, *this);
+          AppendASCIItoUTF16(aCString, *this);
         }
 
     private:
@@ -206,18 +206,18 @@ class NS_ConvertUTF16toUTF8 : public nsCAutoString
       explicit
       NS_ConvertUTF16toUTF8( const PRUnichar* aString )
         {
-          CopyUTF16toUTF8(aString, *this);
+          AppendUTF16toUTF8(aString, *this);
         }
 
       NS_ConvertUTF16toUTF8( const PRUnichar* aString, PRUint32 aLength )
         {
-          CopyUTF16toUTF8(nsDependentSubstring(aString, aString + aLength), *this);
+          AppendUTF16toUTF8(Substring(aString, aString + aLength), *this);
         }
 
       explicit
       NS_ConvertUTF16toUTF8( const nsAString& aString )
         {
-          CopyUTF16toUTF8(aString, *this);
+          AppendUTF16toUTF8(aString, *this);
         }
 
     private:
@@ -232,21 +232,22 @@ class NS_ConvertUTF8toUTF16 : public nsAutoString
       explicit
       NS_ConvertUTF8toUTF16( const char* aCString )
         {
-          CopyUTF8toUTF16(aCString, *this);
+          AppendUTF8toUTF16(aCString, *this);
         }
 
       NS_ConvertUTF8toUTF16( const char* aCString, PRUint32 aLength )
         {
-          CopyUTF8toUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
+          AppendUTF8toUTF16(Substring(aCString, aCString + aLength), *this);
         }
 
       explicit
       NS_ConvertUTF8toUTF16( const nsACString& aCString )
         {
-          CopyUTF8toUTF16(aCString, *this);
+          AppendUTF8toUTF16(aCString, *this);
         }
 
     private:
+        // NOT TO BE IMPLEMENTED
       NS_ConvertUTF8toUTF16( PRUnichar );
   };
 

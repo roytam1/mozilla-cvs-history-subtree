@@ -32,12 +32,9 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= string
 
 EXPORTS		=				\
-		nsAFlatString.h			\
-		nsASingleFragmentString.h	\
 		nsAString.h			\
 		nsAlgorithm.h			\
 		nsCharTraits.h			\
-		nsDependentConcatenation.h	\
 		nsDependentString.h		\
 		nsDependentSubstring.h		\
 		nsLiteralString.h		\
@@ -45,7 +42,6 @@ EXPORTS		=				\
 		nsPrintfCString.h		\
 		nsPromiseFlatString.h		\
 		nsReadableUtils.h		\
-		nsSharableString.h		\
 		nsString.h			\
 		nsStringFwd.h			\
 		nsStringIterator.h		\

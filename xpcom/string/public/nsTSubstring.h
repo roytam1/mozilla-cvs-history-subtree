@@ -162,8 +162,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
 
       char_type CharAt( index_type i ) const
         {
-          NS_ASSERTION((mFlags & F_TERMINATED) ? i <= mLength : i < mLength,
-              "index exceeds allowable range");
+          NS_ASSERTION(i < mLength, "index exceeds allowable range");
           return mData[i];
         }
 

@@ -21,8 +21,8 @@
  *   Scott Collins <scc@mozilla.org> (original author)
  */
 
-#ifndef nsTStringIterator_h___
-#define nsTStringIterator_h___
+#ifndef nsStringIterator_h___
+#define nsStringIterator_h___
 
 #ifndef nsCharTraits_h___
 #include "nsCharTraits.h"
@@ -156,8 +156,7 @@ class nsReadingIterator
             {
               difference_type step = NS_MIN(n, size_forward());
 
-              NS_ASSERTION(step>0, "Infinite loop: can't advance a reading iterator beyond the end of a string");
-                // perhaps I should |break| if |!step|?
+              NS_ASSERTION(step>0, "can't advance a reading iterator beyond the end of a string");
 
               mPosition += step;
             }
@@ -165,8 +164,7 @@ class nsReadingIterator
             {
               difference_type step = NS_MAX(n, -size_backward());
 
-              NS_ASSERTION(step<0, "Infinite loop: can't advance (backward) a reading iterator beyond the end of a string");
-                // perhaps I should |break| if |!step|?
+              NS_ASSERTION(step<0, "can't advance (backward) a reading iterator beyond the end of a string");
 
               mPosition += step;
             }
@@ -294,8 +292,7 @@ class nsWritingIterator
             {
               difference_type step = NS_MIN(n, size_forward());
 
-              NS_ASSERTION(step>0, "Infinite loop: can't advance a writing iterator beyond the end of a string");
-                // perhaps I should |break| if |!step|?
+              NS_ASSERTION(step>0, "can't advance a writing iterator beyond the end of a string");
 
               mPosition += step;
             }
@@ -303,8 +300,7 @@ class nsWritingIterator
             {
               difference_type step = NS_MAX(n, -size_backward());
 
-              NS_ASSERTION(step<0, "Infinite loop: can't advance (backward) a writing iterator beyond the end of a string");
-                // perhaps I should |break| if |!step|?
+              NS_ASSERTION(step<0, "can't advance (backward) a writing iterator beyond the end of a string");
 
               mPosition += step;
             }
@@ -359,4 +355,4 @@ operator!=( const nsWritingIterator<CharT>& lhs, const nsWritingIterator<CharT>&
     return lhs.get() != rhs.get();
   }
 
-#endif /* !defined(nsTStringIterator_h___) */
+#endif /* !defined(nsStringIterator_h___) */

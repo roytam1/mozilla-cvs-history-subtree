@@ -93,6 +93,7 @@ class nsTString_CharT : public nsTSubstring_CharT
           Assign(readable);
         }
 
+
         // |operator=| does not inherit, so we must define our own
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
@@ -101,10 +102,33 @@ class nsTString_CharT : public nsTSubstring_CharT
       self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
 
-        // returns null-terminated string
+
+        /**
+         * returns the null-terminated string
+         */
+
       const char_type* get() const
         {
           return mData;
+        }
+
+
+        /**
+         * returns character at specified index.
+         *         
+         * NOTE: unlike nsTSubstring::CharAt, this function allows you to index
+         *       the null terminator character.
+         */
+
+      const char_type CharAt( index_type i ) const
+        {
+          NS_ASSERTION(i <= mLength, "index exceeds allowable range");
+          return mData[i];
+        }
+
+      char_type operator[]( index_type i ) const
+        {
+          return CharAt(i);
         }
 
 

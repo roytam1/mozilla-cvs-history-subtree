@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsString.h"
-#include "nsString2.h"
 #include "nsCharTraits.h"
 
 #define nsAString_external nsAString_external_

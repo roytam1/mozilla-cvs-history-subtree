@@ -252,15 +252,9 @@ NS_COM void ToUpperCase( nsACString& );
 
 NS_COM void ToLowerCase( nsACString& );
 
-NS_COM void ToUpperCase( nsASingleFragmentCString& );
+NS_COM void ToUpperCase( nsCSubstring& );
 
-NS_COM void ToLowerCase( nsASingleFragmentCString& );
-
-/*
-NS_COM void ToUpperCase( nsCString& );
-
-NS_COM void ToLowerCase( nsCString& );
-*/
+NS_COM void ToLowerCase( nsCSubstring& );
 
   /**
    * Converts case from string aSource to aDest.

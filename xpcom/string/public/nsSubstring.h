@@ -43,7 +43,7 @@
 #include "nsAString.h"
 #endif
 
-static const PRInt32 kNotFound = -1;
+#define kNotFound -1
 
 
   // declare nsSubstring
