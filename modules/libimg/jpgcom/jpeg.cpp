@@ -64,10 +64,8 @@ PR_END_EXTERN_C
 /* Normal JFIF markers can't have more bytes than this. */
 #define MAX_JPEG_MARKER_LENGTH  (((PRUint32)1 << 16) - 1)
 
-#if defined(XP_MAC) /* Mac needs this, but it breaks Tru64 Unix - bug 50782 */
 int il_debug;
 PRLogModuleInfo *il_log_module = NULL;
-#endif
 
 /*
  * States that the jpeg decoder might be in
