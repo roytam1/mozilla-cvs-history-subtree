@@ -133,6 +133,10 @@ NS_IMETHODIMP nsWindow::Destroy()
      		gtk_widget_destroy(mShell);
     	mShell = nsnull;
     }
+    if (mSuperWin) {
+      gdk_superwin_destroy(mSuperWin);
+      mSuperWin = 0;
+    }
   }
 
   return NS_OK;
