@@ -120,6 +120,7 @@ public:
     wsRDFInsertElementAtEvent(WebShellInitContext *yourInitContext, 
                               PRUint32 yourParentRDFNode, 
                               PRUint32 yourChildRDFNode, 
+                              void *yourChildProperties,
                               PRUint32 yourChildIndex);
     void * handleEvent(void);
 
@@ -127,7 +128,23 @@ protected:
     WebShellInitContext *mInitContext;
     PRUint32 mParentRDFNode;
     PRUint32 mChildRDFNode;
+    void *mChildPropsJobject;
     PRUint32 mChildIndex;
+};
+
+class wsRDFNewFolderEvent : public nsActionEvent {
+public:
+    wsRDFNewFolderEvent(WebShellInitContext* yourInitContext, 
+                        PRUint32 yourParentRDFNode, 
+                        void *yourChildPropsJobject,
+                        PRUint32 *yourRetVal);
+    void * handleEvent(void);
+
+protected:
+    WebShellInitContext *mInitContext;
+    PRUint32 mParentRDFNode;
+    void *mChildPropsJobject;
+    PRUint32 *mRetVal;
 };
 
 class wsRDFHasMoreElementsEvent : public nsActionEvent {

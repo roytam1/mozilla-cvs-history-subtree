@@ -34,16 +34,20 @@
 #include "RDFActionEvents.h"
 
 #include "rdf_util.h"
-#include "jni_util.h"
+#include "ns_util.h"
 #include "ns_globals.h"
 
 #include "prlog.h"
 
 #include "nsIComponentManager.h"
+#include "nsISupportsArray.h"
 
 #include "nsRDFCID.h" // for NS_RDFCONTAINER_CID
 
+#include "wsRDFObserver.h"
+
 static NS_DEFINE_CID(kRDFContainerCID, NS_RDFCONTAINER_CID);
+static NS_DEFINE_CID(kSupportsArrayCID, NS_SUPPORTSARRAY_CID);
 
 //
 // Local function prototypes
@@ -102,12 +106,10 @@ wsNewRDFNodeEvent::handleEvent ()
     }
     nsresult rv;
     nsCOMPtr<nsIRDFResource> newNode;
-	nsCAutoString uri("NC:BookmarksRoot");
+	nsCAutoString uri(mUrlString);
     JNIEnv *env = (JNIEnv*) JNU_GetEnv(gVm, JNI_VERSION);
     
-    const char *url = mUrlString;
-	uri.Append("#$");
-	uri.Append(url);
+    // PENDING(edburns): does this leak? 
     PRUnichar *uriUni = uri.ToNewUnicode();
     
     rv = gRDF->GetUnicodeResource(uriUni, getter_AddRefs(newNode));
@@ -374,12 +376,14 @@ wsRDFToStringEvent::handleEvent ()
 } // handleEvent()
 
 wsRDFInsertElementAtEvent::wsRDFInsertElementAtEvent(WebShellInitContext* yourInitContext, 
-                                                     PRUint32 yourParentRDFNode, 
-                                                     PRUint32 yourChildRDFNode, 
+                                                     PRUint32 yourParentRDFNode,
+                                                     PRUint32 yourChildRDFNode,
+                                                     void *yourChildProperties,
                                                      PRUint32 yourChildIndex) :
         nsActionEvent(),
         mInitContext(yourInitContext), mParentRDFNode(yourParentRDFNode),
-        mChildRDFNode(yourChildRDFNode), mChildIndex(yourChildIndex)
+        mChildRDFNode(yourChildRDFNode), 
+        mChildPropsJobject(yourChildProperties), mChildIndex(yourChildIndex)
 {
 }
 
@@ -393,14 +397,30 @@ wsRDFInsertElementAtEvent::handleEvent ()
     nsCOMPtr<nsIRDFResource> parent = (nsIRDFResource *) mParentRDFNode;
     nsCOMPtr<nsIRDFResource> newChild = (nsIRDFResource *) mChildRDFNode;
     nsCOMPtr<nsIRDFContainer> container;
+    nsCOMPtr<nsIRDFLiteral> nameLiteral;
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+
+    jstring name;
+    const jchar *nameJchar;
+    
+    jstring url;
+    const jchar *urlJchar;
+
+    jobject childProps = (jobject) mChildPropsJobject;
+    PR_ASSERT(childProps);
+
     nsresult rv;
     PRBool isContainer;
     
     rv = gRDFCU->IsContainer(gBookmarksDataSource, parent, 
                              &isContainer);
+
+    // PENDING(edburns): I don't think we can throw exceptions from
+    // here, no?
     if (NS_FAILED(rv)) {
-        ::util_ThrowExceptionToJava(env, "Exception: nativeNewRDFNode: RDFResource is not a container.");
-        return (void *) NS_ERROR_UNEXPECTED;
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: RDFResource is not a container.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
     }
 
     PR_ASSERT(gComponentManager);
@@ -411,23 +431,271 @@ wsRDFInsertElementAtEvent::handleEvent ()
                                            NS_GET_IID(nsIRDFContainer),
                                            getter_AddRefs(container));
     if (NS_FAILED(rv)) {
-        ::util_ThrowExceptionToJava(env, "Exception: nativeNewRDFNode: can't create container.");
-        return (void *) NS_ERROR_UNEXPECTED;
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't create container.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
     }
     rv = container->Init(gBookmarksDataSource, parent);
     if (NS_FAILED(rv)) {
-        ::util_ThrowExceptionToJava(env, "Exception: nativeNewRDFNode: can't create container.");
-        return (void *) NS_ERROR_UNEXPECTED;
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't create container.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
     }
 
-    rv = container->InsertElementAt(newChild, mChildIndex, PR_TRUE);
+    // pull the info from the properties object and add it to the new
+    // node.
+    if (nsnull == (name = (jstring) ::util_GetFromPropertiesObject(env, 
+                                                                   childProps,
+                                                                   BM_NAME_VALUE,
+                                                                   (jobject)
+                                                                   &(mInitContext->shareContext)))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+    
+    if (nsnull == (nameJchar = ::util_GetStringChars(env, name))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+    
+    if (nsnull == (url = (jstring) ::util_GetFromPropertiesObject(env, childProps,
+                                                                  BM_URL_VALUE,
+                                                                  (jobject)
+                                                                  &(mInitContext->shareContext)))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+    
+    if (nsnull == (urlJchar = ::util_GetStringChars(env, url))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+    // if we get here, we have valid nameJchar and urlJchar strings.
+
+    // create literals for the name and url
+    rv = gRDF->GetLiteral((const PRUnichar *) nameJchar,
+                          getter_AddRefs(nameLiteral));
     if (NS_FAILED(rv)) {
-        ::util_ThrowExceptionToJava(env, "Exception: nativeNewRDFNode: can't insert element into parent container.");
-        return (void *) NS_ERROR_UNEXPECTED;
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't arguments nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
     }
 
-    return (void *) NS_OK;
+    rv = gRDF->GetLiteral((const PRUnichar *) urlJchar,
+                          getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't create arguments nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+
+    // now Assert them to add the to the newChild
+    rv = gBookmarksDataSource->Assert(newChild, kNC_Name, nameLiteral, 
+                                      PR_TRUE);
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't add name literal to new node.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+
+    // + 1 because for some reason the 1 is the first, not 0.
+    rv = container->InsertElementAt(newChild, mChildIndex + 1, PR_TRUE);
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't insert element into parent container.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RIEAEHE_CLEANUP;
+    }
+
+ RIEAEHE_CLEANUP:
+    ::util_ReleaseStringChars(env, name, nameJchar);
+    ::util_ReleaseStringChars(env, url, urlJchar);
+
+    return (void *) rv;
 } // handleEvent()
+
+wsRDFNewFolderEvent::wsRDFNewFolderEvent(WebShellInitContext* yourInitContext, 
+                                         PRUint32 yourParentRDFNode, 
+                                         void *yourChildPropsJobject,
+                                         PRUint32 *yourRetVal) :
+    nsActionEvent(),
+    mInitContext(yourInitContext), mParentRDFNode(yourParentRDFNode),
+    mChildPropsJobject(yourChildPropsJobject), mRetVal(yourRetVal)
+{
+}
+
+/**
+
+ * The adding of bookmark folders is done through the RDF DoCommand
+ * interface.  The DoCommand interface creates the nsIRDFResource on
+ * your behalf.  We use an nsIRDFObserver to obtain the created resource
+ * as the DoCommand executes.
+
+ */
+
+void *
+wsRDFNewFolderEvent::handleEvent ()
+{
+    if (!mInitContext) {
+        return (void *) NS_ERROR_UNEXPECTED;
+    }
+    PR_ASSERT(gComponentManager);
+    PR_ASSERT(mRetVal);
+    *mRetVal = -1;
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    nsCOMPtr<nsIRDFResource> parent = (nsIRDFResource *) mParentRDFNode;
+    nsCOMPtr<nsIRDFResource> newChildFromObserver;
+    nsCOMPtr<nsISupportsArray> selectionArray;
+    nsCOMPtr<nsISupportsArray> argumentsArray;
+    nsCOMPtr<nsIRDFLiteral> nameLiteral;
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    nsresult rv = NS_ERROR_UNEXPECTED;
+    PRBool isContainer;
+    nsCOMPtr<nsIRDFObserver> o = new wsRDFObserver();
+    wsRDFObserver *wsO = nsnull;
+    
+    jstring name;
+    const jchar *nameJchar;
+    
+    jstring url;
+    const jchar *urlJchar;
+    
+    jobject childProps = (jobject) mChildPropsJobject;
+    PR_ASSERT(childProps);
+    
+    
+    rv = gRDFCU->IsContainer(gBookmarksDataSource, parent, 
+                             &isContainer);
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeNewFolder: RDFResource is not a container.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    
+    // pull out the necessary keys from the properties table
+    if (nsnull == (name = (jstring) ::util_GetFromPropertiesObject(env, 
+                                                                   childProps,
+                                                                   BM_NAME_VALUE,
+                                                                   (jobject)
+                                                                   &(mInitContext->shareContext)))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    
+    if (nsnull == (nameJchar = ::util_GetStringChars(env, name))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+
+    if (nsnull == (url = (jstring) ::util_GetFromPropertiesObject(env, childProps,
+                                                                BM_URL_VALUE,
+                                                                (jobject)
+                                                                &(mInitContext->shareContext)))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    
+    if (nsnull == (urlJchar = ::util_GetStringChars(env, url))) {
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    // if we get here, we have valid nameJchar and urlJchar strings.
+    
+    // use the magic "command interface" as in bookmarks.js
+    // http://lxr.mozilla.org/mozilla/source/xpfe/components/bookmarks/resources/bookmarks.js#1190
+    
+    // set up selection nsISupportsArray
+    rv = gComponentManager->CreateInstance(kSupportsArrayCID,
+                                           nsnull,
+                                           NS_GET_IID(nsISupportsArray),
+                                           getter_AddRefs(selectionArray));
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeNewFolder: can't create selection nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    
+    // set up arguments nsISupportsArray
+    rv = gComponentManager->CreateInstance(kSupportsArrayCID,
+                                           nsnull,
+                                           NS_GET_IID(nsISupportsArray),
+                                           getter_AddRefs(argumentsArray));
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeNewFolder: can't create arguments nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    // get various arguments (parent, name)
+    // kNC_parent
+    // kNC_Name
+    // kNC_URL
+
+    // add parent into selection array
+    selectionArray->AppendElement(parent);
+    
+    // add multiple arguments into arguments array
+    argumentsArray->AppendElement(kNC_parent);
+    argumentsArray->AppendElement(parent);
+    
+    rv = gRDF->GetLiteral((const PRUnichar *) nameJchar,
+                          getter_AddRefs(nameLiteral));
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeNewFolder: can't arguments nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    argumentsArray->AppendElement(kNC_Name);
+    argumentsArray->AppendElement(nameLiteral);
+    
+    rv = gRDF->GetLiteral((const PRUnichar *) urlJchar,
+                          getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeNewFolder: can't create arguments nsISupportsArray.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+    argumentsArray->AppendElement(kNC_URL);
+    argumentsArray->AppendElement(urlLiteral);
+    
+    // at this point, selectionArray contains the parent
+    // and argumentsArray contains arcs and literals for the name and the 
+    // url of the node to be inserted.
+    
+    if (o) {
+        gBookmarksDataSource->AddObserver(o);
+    }
+    
+    // find out if it's a folder
+    if (nsnull != ::util_GetFromPropertiesObject(env, childProps, 
+                                                 BM_IS_FOLDER_VALUE, (jobject)
+                                                 &(mInitContext->shareContext))){
+        // do the command
+        rv = gBookmarksDataSource->DoCommand(selectionArray, 
+                                             kNewFolderCommand, 
+                                             argumentsArray);
+    }
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeInsertElementAt: can't execute bookmarks command to add folder.");
+        rv = NS_ERROR_UNEXPECTED;
+        goto RNFEHE_CLEANUP;
+    }
+
+    if (o) {
+        gBookmarksDataSource->RemoveObserver(o);
+        wsO = (wsRDFObserver *) o.get();
+        newChildFromObserver = wsO->getFolder();
+        if (newChildFromObserver) {
+            *mRetVal = (PRUint32) newChildFromObserver.get();
+            ((nsISupports *)*mRetVal)->AddRef();
+        }
+    }
+
+ RNFEHE_CLEANUP:
+    ::util_ReleaseStringChars(env, name, nameJchar);
+    ::util_ReleaseStringChars(env, url, urlJchar);
+
+    return (void *) rv;
+} // handleEvent()
+
 
 wsRDFHasMoreElementsEvent::wsRDFHasMoreElementsEvent(WebShellInitContext* yourInitContext,
                                                      PRUint32 yourNativeRDFNode,

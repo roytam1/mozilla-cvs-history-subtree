@@ -30,9 +30,8 @@ import org.mozilla.webclient.Bookmarks;
 import org.mozilla.webclient.BookmarkEntry;
 import org.mozilla.webclient.UnimplementedException;
 
-import java.util.Properties;
-
 import javax.swing.tree.MutableTreeNode;
+import java.util.Properties;
 
 public class BookmarkEntryImpl extends RDFTreeNode implements BookmarkEntry
 {
@@ -51,9 +50,6 @@ public class BookmarkEntryImpl extends RDFTreeNode implements BookmarkEntry
 // Attribute Instance Variables
 
 // Relationship Instance Variables
-
-Properties properties = null;
-
 
 //
 // Constructors and Initializers    
@@ -114,17 +110,12 @@ public void setUserObject(Object object)
 
 public Properties getProperties()
 {
-    if ((null == properties) &&
-        (null == (properties = new Properties()))) {
-        throw new IllegalStateException("Can't create properties table");
-    }
-    
-    return properties;
+    return super.getProperties();
 }
 
 public boolean isFolder()
 {
-    return nativeIsContainer(nativeWebShell, getNativeRDFNode());
+    return super.isFolder();
 }
 
 // ----VERTIGO_TEST_START

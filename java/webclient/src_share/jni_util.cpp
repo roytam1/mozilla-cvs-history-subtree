@@ -67,6 +67,14 @@ jobject TRUE_VALUE;
 jobject FALSE_VALUE;
 jobject ONE_VALUE;
 jobject TWO_VALUE;
+jobject BM_ADD_DATE_VALUE;
+jobject BM_LAST_MODIFIED_DATE_VALUE;
+jobject BM_LAST_VISIT_DATE_VALUE;
+jobject BM_NAME_VALUE;
+jobject BM_URL_VALUE;
+jobject BM_DESCRIPTION_VALUE;
+jobject BM_IS_FOLDER_VALUE;
+
 
 jstring DOCUMENT_LOAD_LISTENER_CLASSNAME;
 jstring MOUSE_LISTENER_CLASSNAME;
@@ -193,6 +201,48 @@ jboolean util_InitStringConstants(JNIEnv *env)
     if (nsnull == (TWO_VALUE = 
                    ::util_NewGlobalRef(env, (jobject)
                                        ::util_NewStringUTF(env, "2")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_ADD_DATE_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_ADD_DATE)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_LAST_MODIFIED_DATE_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_LAST_MODIFIED_DATE)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_LAST_VISIT_DATE_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_LAST_VISIT_DATE)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_NAME_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_NAME)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_URL_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_URL)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_DESCRIPTION_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_DESCRIPTION)))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BM_IS_FOLDER_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           BM_IS_FOLDER)))) {
         return JNI_FALSE;
     }
     if (nsnull == (DOCUMENT_LOAD_LISTENER_CLASSNAME = (jstring)

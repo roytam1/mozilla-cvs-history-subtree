@@ -49,6 +49,7 @@ OBJS =                              \
     .\$(OBJDIR)\RDFEnumeration.obj  \
     .\$(OBJDIR)\RDFTreeNode.obj  \
     .\$(OBJDIR)\RDFActionEvents.obj  \
+    .\$(OBJDIR)\wsRDFObserver.obj  \
     .\$(OBJDIR)\ISupportsPeer.obj  \
     $(NULL)
 

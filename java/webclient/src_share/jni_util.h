@@ -82,6 +82,14 @@ extern jobject TRUE_VALUE;
 extern jobject FALSE_VALUE;
 extern jobject ONE_VALUE;
 extern jobject TWO_VALUE;
+extern jobject BM_ADD_DATE_VALUE;
+extern jobject BM_LAST_MODIFIED_DATE_VALUE;
+extern jobject BM_LAST_VISIT_DATE_VALUE;
+extern jobject BM_NAME_VALUE;
+extern jobject BM_URL_VALUE;
+extern jobject BM_DESCRIPTION_VALUE;
+extern jobject BM_IS_FOLDER_VALUE;
+
 
 /**
 
@@ -169,6 +177,15 @@ typedef enum {
   MOUSE_OUT_EVENT_MASK,
   NUMBER_OF_DOM_MOUSE_LISTENER_MASK_NAMES
 } DOM_MOUSE_LISTENER_EVENT_MASK_NAMES;
+
+// BookmarkEntry string constants, must coincide with java
+#define BM_ADD_DATE "AddDate"
+#define BM_LAST_MODIFIED_DATE "LastModifiedDate"
+#define BM_LAST_VISIT_DATE "LastVisitDate"
+#define BM_NAME "Name"
+#define BM_URL "URL"
+#define BM_DESCRIPTION "Description"
+#define BM_IS_FOLDER "IsFolder"
 
 extern jlong DocumentLoader_maskValues [NUMBER_OF_DOCUMENT_LOADER_MASK_NAMES];
 extern char *DocumentLoader_maskNames [NUMBER_OF_DOCUMENT_LOADER_MASK_NAMES + 1];

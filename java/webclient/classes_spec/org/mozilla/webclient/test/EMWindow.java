@@ -90,6 +90,7 @@ private PasswordDialog           passDialog = null;
     private MenuItem backMenuItem;
     private MenuItem forwardMenuItem;
     private HistoryActionListener historyActionListener = null;
+    private Menu                bookmarksMenu;
     private Label          statusLabel;
     private String currentURL;
 
@@ -161,6 +162,20 @@ private PasswordDialog           passDialog = null;
           historyMenu.add(forwardMenuItem);
           menuBar.add(historyMenu);
 
+        bookmarksMenu = new Menu("Bookmarks");
+          MenuItem addBookmark = new MenuItem("Add Current Page");
+          addBookmark.addActionListener(this);
+          bookmarksMenu.add(addBookmark);
+
+          addBookmark = new MenuItem("Add Current Page In New Folder");
+          addBookmark.addActionListener(this);
+          bookmarksMenu.add(addBookmark);
+
+          MenuItem manageBookmarks = new MenuItem("Manage Bookmarks...");
+          manageBookmarks.addActionListener(this);
+          bookmarksMenu.add(manageBookmarks);
+          menuBar.add(bookmarksMenu);
+
         Menu streamMenu = new Menu("Stream");
           MenuItem streamFromFile = new MenuItem("Load Stream From File...");
           streamFromFile.addActionListener(this);
@@ -198,8 +213,7 @@ private PasswordDialog           passDialog = null;
         stopButton.setEnabled(false);
 		refreshButton = makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
         refreshButton.setEnabled(false);
-        makeItem(buttonsPanel, "Bookmarks",    4, 0, 1, 1, 0.0, 0.0);
-        //makeItem(buttonsPanel, "DOMViewer",    5, 1, 1, 1, 0.0, 0.0);
+        //makeItem(buttonsPanel, "DOMViewer",    6, 1, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
@@ -300,6 +314,7 @@ private PasswordDialog           passDialog = null;
             System.out.println("debug: edburns: got Bookmarks instance");
 
             bookmarksTree = bookmarks.getBookmarks();
+
             /*********
 
             TreeNode bookmarksRoot = (TreeNode) bookmarksTree.getRoot();
@@ -328,11 +343,8 @@ private PasswordDialog           passDialog = null;
             *****/
 
             /**********
-            BookmarkEntry folder = bookmarks.newBookmarkFolder("newFolder");
 
-            bookmarks.addBookmark(null, folder);
 
-            BookmarkEntry entry = bookmarks.newBookmarkEntry("http://yoyo.com");
             System.out.println("debug: edburns: got new entry");
 
             Properties entryProps = entry.getProperties();
@@ -429,7 +441,25 @@ public void actionPerformed (ActionEvent evt)
         else if (command.equals("Refresh")) {
             navigation.refresh(Navigation.LOAD_NORMAL);
         }
-        else if (command.equals("Bookmarks")) {
+        else if (command.equals("Add Current Page")) {
+            if (null == bookmarksTree) {
+                bookmarksTree = bookmarks.getBookmarks();
+            }
+            BookmarkEntry entry = 
+                bookmarks.newBookmarkEntry(urlField.getText());
+            bookmarks.addBookmark(null, entry);
+        }        
+        else if (command.equals("Add Current Page In New Folder")) {
+            if (null == bookmarksTree) {
+                bookmarksTree = bookmarks.getBookmarks();
+            }
+            BookmarkEntry folder = bookmarks.newBookmarkFolder("newFolder");
+            bookmarks.addBookmark(null, folder);
+            BookmarkEntry entry = 
+                bookmarks.newBookmarkEntry(urlField.getText());
+            bookmarks.addBookmark(folder, entry);
+        }        
+        else if (command.equals("Manage Bookmarks...")) {
             if (null == bookmarksTree) {
                 bookmarksTree = bookmarks.getBookmarks();
             }
