@@ -19,7 +19,9 @@
 #ifndef nsINetService_h___
 #define nsINetService_h___
 
+#include "nscore.h"
 #include "nsISupports.h"
+#include "nsIURL.h"
 #include "nsIStreamNotification.h"
 
  /* XXX: This should be moved to ns/xpcom/src/nserror.h */
@@ -48,7 +50,7 @@ struct nsINetService : public nsISupports
      *                  URL loading.  This parameter cannot be NULL.
      * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
      */ 
-    NS_IMETHOD OpenStream(const char *aUrl, 
+    NS_IMETHOD OpenStream(nsIURL *aUrl, 
                           nsIStreamNotification *aConsumer) = 0;
 
     /**
@@ -62,7 +64,7 @@ struct nsINetService : public nsISupports
      *                      created for this URL load.
      * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
      */
-    NS_IMETHOD OpenBlockingStream(const char *aUrl, 
+    NS_IMETHOD OpenBlockingStream(nsIURL *aUrl, 
                                   nsIStreamNotification *aConsumer,
                                   nsIInputStream **aNewStream) = 0;
 };
@@ -72,7 +74,7 @@ struct nsINetService : public nsISupports
  * Create an instance of the INetService
  *
  */
-extern "C" /* NS_BASE */ nsresult NS_NewINetService(nsINetService** aInstancePtrResult,
-                                                    nsISupports* aOuter);
+extern "C" NS_NET nsresult NS_NewINetService(nsINetService** aInstancePtrResult,
+                                             nsISupports* aOuter);
 
 #endif /* nsINetService_h___ */

@@ -216,7 +216,10 @@ void stub_complete(NET_StreamClass *stream)
 
     TRACEMSG(("+++ stream complete.\n"));
 
+    /* Close the stream and remove it from the ConnectionInfo... */
     pConn->pNetStream->Close();
+    pConn->pNetStream->Release();
+    pConn->pNetStream = NULL;
 
     /* Notify the Data Consumer that the Binding has completed... */
     if (pConn->pConsumer) {
@@ -225,11 +228,9 @@ void stub_complete(NET_StreamClass *stream)
         pConn->pConsumer = NULL;
     }
 
-    /* Free the nsConnectionInfo object hanging off of the data_object */
-    pConn->pNetStream->Release();
-    pConn->pNetStream = NULL;
-    pConn->Release();
+    /* Release the nsConnectionInfo object hanging off of the data_object */
     stream->data_object = NULL;
+    pConn->Release();
 }
 
 void stub_abort(NET_StreamClass *stream, int status)
@@ -238,7 +239,10 @@ void stub_abort(NET_StreamClass *stream, int status)
 
     TRACEMSG(("+++ stream abort.  Status = %d\n", status));
 
+    /* Close the stream and remove it from the ConnectionInfo... */
     pConn->pNetStream->Close();
+    pConn->pNetStream->Release();
+    pConn->pNetStream = NULL;
 
     /* Notify the Data Consumer that the Binding has completed... */
     /* 
@@ -252,10 +256,8 @@ void stub_abort(NET_StreamClass *stream, int status)
     }
 
     /* Free the nsConnectionInfo object hanging off of the data_object */
-    pConn->pNetStream->Release();
-    pConn->pNetStream = NULL;
-    pConn->Release();
     stream->data_object = NULL;
+    pConn->Release();
 }
 
 int stub_put_block(NET_StreamClass *stream, const char *buffer, int32 length)
@@ -324,13 +326,18 @@ NET_StreamBuilder  (FO_Present_Types format_out,
             stream->is_write_ready = stub_is_write_ready;
 
             /* 
-             * Create a stream_connection struct to hold the information
-             * about the connection progress...
-             * 
-             * Remember to AddRef() the objects because we are storing 
-             * references to them...
+             * Retrieve the nsConnectionInfo object from the fe_data field
+             * of the URL_Struct...
              */
             pConn = (nsConnectionInfo *)URL_s->fe_data;
+
+            /*
+             * If the URL address has been rewritten by netlib then update
+             * the cached info in the URL object...
+             */
+            if ((URL_s->address_modified) && (NULL != pConn->pURL)) {
+                pConn->pURL->Set(NET_URLStruct_Address(URL_s));
+            }
 
             /* 
              * Create an Async stream unless a blocking stream is already
@@ -345,9 +352,9 @@ NET_StreamBuilder  (FO_Present_Types format_out,
                 pConn->pNetStream->AddRef();
             }
 
-            /* Hang the stream_connection off of the NET_StreamClass */
-            stream->data_object = pConn;
+            /* Hang the nsConnectionInfo off of the NET_StreamClass */
             pConn->AddRef();
+            stream->data_object = pConn;
 
             /* Notify the data consumer that Binding is beginning...*/
             /* XXX: check result to terminate connection if necessary */

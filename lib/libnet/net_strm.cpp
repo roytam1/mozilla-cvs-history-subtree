@@ -34,11 +34,27 @@ NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
 
 
 
-nsConnectionInfo::nsConnectionInfo(nsNetlibStream *pStream, 
-                                   nsIStreamNotification *pNotify)
+nsConnectionInfo::nsConnectionInfo(nsIURL *aURL,
+                                   nsNetlibStream *aStream, 
+                                   nsIStreamNotification *aNotify)
 {
-    pNetStream = pStream;
-    pConsumer  = pNotify;
+    NS_INIT_REFCNT();
+
+    pURL       = aURL;
+    pNetStream = aStream;
+    pConsumer  = aNotify;
+
+    if (NULL != pURL) {
+        pURL->AddRef();
+    }
+
+    if (NULL != pNetStream) {
+        pNetStream->AddRef();
+    }
+
+    if (NULL != pConsumer) {
+        pConsumer->AddRef();
+}
 }
 
 
@@ -49,6 +65,20 @@ nsConnectionInfo::~nsConnectionInfo()
 {
     TRACEMSG(("nsConnectionInfo is being destroyed...\n"));
 
+    if (NULL != pURL) {
+        pURL->Release();
+    }
+
+    if (NULL != pNetStream) {
+        pNetStream->Close();
+        pNetStream->Release();
+    }
+
+    if (NULL != pConsumer) {
+        pConsumer->Release();
+    }
+
+    pURL       = NULL;
     pNetStream = NULL;
     pConsumer  = NULL;
 }

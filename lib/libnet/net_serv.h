@@ -30,13 +30,13 @@ public:
     nsNetlibService();
 
     /* Implementation of the nsINetService interface */
-    NS_IMETHOD OpenStream(const char *aUrl, nsIStreamNotification *aConsumer);
-    NS_IMETHOD OpenBlockingStream(const char *aUrl, 
+    NS_IMETHOD OpenStream(nsIURL *aUrl, nsIStreamNotification *aConsumer);
+    NS_IMETHOD OpenBlockingStream(nsIURL *aUrl, 
                                   nsIStreamNotification *aConsumer,
                                   nsIInputStream **aNewStream);
 
 protected:
-    ~nsNetlibService();
+    virtual ~nsNetlibService();
 
 private:
     /* XXX: This is temporary until bamwrap.cpp is removed... */

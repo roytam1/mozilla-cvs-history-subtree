@@ -20,6 +20,7 @@
 #define net_strm_h___
 
 #include "nspr.h"
+#include "nsIURL.h"
 #include "nsIInputStream.h"
 #include "nsIStreamNotification.h"
 
@@ -33,12 +34,15 @@ class nsConnectionInfo : public nsISupports
 public:
     NS_DECL_ISUPPORTS
 
-    nsConnectionInfo(nsNetlibStream *pStream, nsIStreamNotification *pNotify);
+    nsConnectionInfo(nsIURL *aURL, 
+                     nsNetlibStream *aStream, 
+                     nsIStreamNotification *aNotify);
 
 protected:
     virtual ~nsConnectionInfo();
 
 public:
+    nsIURL                *pURL;
     nsNetlibStream        *pNetStream;
     nsIStreamNotification *pConsumer;
 };

@@ -57,34 +57,34 @@ nsNetlibService::~nsNetlibService()
 {
     TRACEMSG(("nsNetlibService is being destroyed...\n"));
 
-    if (NULL == m_stubContext) {
+    if (NULL != m_stubContext) {
         free_stub_context((MWContext *)m_stubContext);
+        m_stubContext = NULL;
     }
 
     NET_ShutdownNetLib();
 }
 
 
-NS_IMETHODIMP nsNetlibService::OpenStream(const char *aUrl, 
+NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl, 
                                           nsIStreamNotification *aConsumer)
 {
     URL_Struct *URL_s;
     nsConnectionInfo *pConn;
 
-    /* Create a new dummy context for the URL load... */
-    if ((NULL == m_stubContext) || (NULL == aConsumer)) {
+    if ((NULL == aConsumer) || (NULL == aUrl)) {
         return NS_FALSE;
     }
 
     /* Create the nsConnectionInfo object... */
-    pConn = new nsConnectionInfo(NULL, aConsumer);
+    pConn = new nsConnectionInfo(aUrl, NULL, aConsumer);
     if (NULL == pConn) {
         return NS_FALSE;
     }
     pConn->AddRef();
 
     /* Create the URLStruct... */
-    URL_s = NET_CreateURLStruct(aUrl, NET_NORMAL_RELOAD);
+    URL_s = NET_CreateURLStruct(aUrl->GetSpec(), NET_NORMAL_RELOAD);
     if (NULL == URL_s) {
         pConn->Release();
         return NS_FALSE;
@@ -113,43 +113,50 @@ NS_IMETHODIMP nsNetlibService::OpenStream(const char *aUrl,
 
     /* Remember, the URL_s may have been freed ! */
 
+    aUrl->Set(NET_URLStruct_Address(URL_s));
+
     return NS_OK;
 }
 
 
-NS_IMETHODIMP nsNetlibService::OpenBlockingStream(const char *aUrl, 
+NS_IMETHODIMP nsNetlibService::OpenBlockingStream(nsIURL *aUrl, 
                                               nsIStreamNotification *aConsumer,
                                               nsIInputStream **aNewStream)
 {
     URL_Struct *URL_s;
     nsConnectionInfo *pConn;
+    nsNetlibStream *pBlockingStream;
 
-    if (NULL != aNewStream) {
-        *aNewStream = NULL;
+    if (NULL == aNewStream) {
+        return NS_FALSE;
+    }
+
+    if (NULL != aUrl) {
+        /* Create the blocking stream... */
+        pBlockingStream = new nsBlockingStream();
+        if (NULL == pBlockingStream) {
+            goto loser;
+        }
+        /*
+         * AddRef the new stream in anticipation of returning it... This will
+         * keep it alive :-)
+         */
+        pBlockingStream->AddRef();
 
         /* Create the nsConnectionInfo object... */
-        pConn = new nsConnectionInfo(NULL, aConsumer);
+        pConn = new nsConnectionInfo(aUrl, pBlockingStream, aConsumer);
         if (NULL == pConn) {
-            return NS_FALSE;
+            pBlockingStream->Release();
+            goto loser;
         }
         pConn->AddRef();
 
-        /* Create the blocking stream... */
-        pConn->pNetStream = new nsBlockingStream();
-        if (NULL == pConn->pNetStream) {
-            pConn->Release();
-        }
-        pConn->pNetStream->AddRef();
-
-        *aNewStream = pConn->pNetStream;
-        pConn->pNetStream->AddRef();
-
         /* Create the URLStruct... */
-        URL_s = NET_CreateURLStruct(aUrl, NET_NORMAL_RELOAD);
+        URL_s = NET_CreateURLStruct(aUrl->GetSpec(), NET_NORMAL_RELOAD);
         if (NULL == URL_s) {
-            pConn->pNetStream->Release();
+            pBlockingStream->Release();
             pConn->Release();
-            return NS_FALSE;
+            goto loser;
         }
 
         /* 
@@ -176,9 +183,12 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(const char *aUrl,
 
         /* Remember, the URL_s may have been freed ! */
 
+        *aNewStream = pBlockingStream;
         return NS_OK;
     }
 
+loser:
+    *aNewStream = NULL;
     return NS_FALSE;
 }
 
@@ -187,8 +197,8 @@ extern "C" {
 /*
  * Factory for creating instance of the NetlibService...
  */
-/* NS_BASE */ nsresult NS_NewINetService(nsINetService** aInstancePtrResult,
-                                         nsISupports* aOuter)
+NS_NET nsresult NS_NewINetService(nsINetService** aInstancePtrResult,
+                                  nsISupports* aOuter)
 {
     static nsNetlibService *pNetlib = NULL;
 
@@ -222,13 +232,13 @@ static void bam_exit_routine(URL_Struct *URL_s, int status, MWContext *window_id
     if (NULL != URL_s) {
         nsConnectionInfo *pConn = (nsConnectionInfo *)URL_s->fe_data;
 
-/*        printf("+++ Finished loading %s\n", URL_s->address); */
+        printf("+++ Finished loading %s\n", URL_s->address);
         PR_ASSERT(pConn);
 
         /* Release the ConnectionInfo object held in the URL_Struct. */
         if (pConn) {
             /* 
-             * Normally, the stream is destroyed when the connection has been
+             * Normally, the stream is closed when the connection has been
              * completed.  However, if the URL exit proc was called directly
              * by NET_GetURL(...), then the stream may still be around...
              */
@@ -245,8 +255,9 @@ static void bam_exit_routine(URL_Struct *URL_s, int status, MWContext *window_id
                 pConn->pConsumer = NULL;
             }
 
-            pConn->Release();
+            /* Release the nsConnectionInfo object hanging off of the fe_data */
             URL_s->fe_data = NULL;
+            pConn->Release();
         }
 
         /* Delete the URL_Struct... */
