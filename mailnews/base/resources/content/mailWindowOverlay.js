@@ -28,6 +28,8 @@ function file_init()
    but if you return false to oncreate then
    the popup menu will not display which is not a good thing.
  */
+
+  document.commandDispatcher.updateCommands('create-menu-file');
 }
 
 function file_attachments()
@@ -51,84 +53,104 @@ function file_attachments()
     return true;
 }
 
+function InitEditMessagesMenu()
+{
+  document.commandDispatcher.updateCommands('create-menu-edit');
+}
+
+function InitSearchMessagesMenu()
+{
+  document.commandDispatcher.updateCommands('create-menu-search');
+}
+
+function InitGoMessagesMenu()
+{
+  document.commandDispatcher.updateCommands('create-menu-go');
+}
+
 function view_init()
 {
-    var message_menuitem=document.getElementById('menu_showMessage');
+  var message_menuitem=document.getElementById('menu_showMessage');
 
-    if (message_menuitem)
-    {
-        var message_menuitem_hidden = message_menuitem.getAttribute("hidden");
-        if(message_menuitem_hidden != "true"){
-            message_menuitem.setAttribute('checked',!IsThreadAndMessagePaneSplitterCollapsed());
-        }
-    }
-    var threadColumn = document.getElementById('ThreadColumnHeader');
-    var thread_menuitem=document.getElementById('menu_showThreads');
-    if (threadColumn && thread_menuitem){
-        thread_menuitem.setAttribute('checked',threadColumn.getAttribute('currentView')=='threaded');
-    }
+  if (message_menuitem)
+  {
+      var message_menuitem_hidden = message_menuitem.getAttribute("hidden");
+      if(message_menuitem_hidden != "true"){
+          message_menuitem.setAttribute('checked',!IsThreadAndMessagePaneSplitterCollapsed());
+      }
+  }
+  var threadColumn = document.getElementById('ThreadColumnHeader');
+  var thread_menuitem=document.getElementById('menu_showThreads');
+  if (threadColumn && thread_menuitem){
+      thread_menuitem.setAttribute('checked',threadColumn.getAttribute('currentView')=='threaded');
+  }
+
+  document.commandDispatcher.updateCommands('create-menu-view');
 }
 
 function InitViewMessagesMenu()
 {
-    var allMenuItem = document.getElementById("viewAllMessagesMenuItem");
-    var hidden = allMenuItem.getAttribute("hidden") == "true";
-    if(allMenuItem && !hidden)
-        allMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowAllThreads);
+  var allMenuItem = document.getElementById("viewAllMessagesMenuItem");
+  var hidden = allMenuItem.getAttribute("hidden") == "true";
+  if(allMenuItem && !hidden)
+      allMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowAllThreads);
 
-    var unreadMenuItem = document.getElementById("viewUnreadMessagesMenuItem");
-    hidden = unreadMenuItem.getAttribute("hidden") == "true";
-    if(unreadMenuItem && !hidden)
-        unreadMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowThreadsWithUnread);
+  var unreadMenuItem = document.getElementById("viewUnreadMessagesMenuItem");
+  hidden = unreadMenuItem.getAttribute("hidden") == "true";
+  if(unreadMenuItem && !hidden)
+      unreadMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowThreadsWithUnread);
 
+  document.commandDispatcher.updateCommands('create-menu-view');
 }
 
 function InitMessageMenu()
 {
-    var aMessage = GetFirstSelectedMessage();
-    var isNews = false;
-    if(aMessage) {
-        isNews = IsNewsMessage(aMessage);
-    }
+  var aMessage = GetFirstSelectedMessage();
+  var isNews = false;
+  if(aMessage) {
+      isNews = IsNewsMessage(aMessage);
+  }
 
-    //We show reply to Newsgroups only for news messages.
-    var replyNewsgroupMenuItem = document.getElementById("replyNewsgroupMainMenu");
-    if(replyNewsgroupMenuItem)
-    {
-        replyNewsgroupMenuItem.setAttribute("hidden", isNews ? "" : "true");
-    }
+  //We show reply to Newsgroups only for news messages.
+  var replyNewsgroupMenuItem = document.getElementById("replyNewsgroupMainMenu");
+  if(replyNewsgroupMenuItem)
+  {
+      replyNewsgroupMenuItem.setAttribute("hidden", isNews ? "" : "true");
+  }
 
-    //For mail messages we say reply. For news we say ReplyToSender.
-    var replyMenuItem = document.getElementById("replyMainMenu");
-    if(replyMenuItem)
-    {
-        replyMenuItem.setAttribute("hidden", !isNews ? "" : "true");
-    }
+  //For mail messages we say reply. For news we say ReplyToSender.
+  var replyMenuItem = document.getElementById("replyMainMenu");
+  if(replyMenuItem)
+  {
+      replyMenuItem.setAttribute("hidden", !isNews ? "" : "true");
+  }
 
-    var replySenderMenuItem = document.getElementById("replySenderMainMenu");
-    if(replySenderMenuItem)
-    {
-        replySenderMenuItem.setAttribute("hidden", isNews ? "" : "true");
-    }
+  var replySenderMenuItem = document.getElementById("replySenderMainMenu");
+  if(replySenderMenuItem)
+  {
+      replySenderMenuItem.setAttribute("hidden", isNews ? "" : "true");
+  }
 
-    // we only kill and watch threads for news
-    var killThreadMenuItem = document.getElementById("killThread");
-    if (killThreadMenuItem) {
-        killThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
-    }
-    var watchThreadMenuItem = document.getElementById("watchThread");
-    if (watchThreadMenuItem) {
-        watchThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
-    }
+  // we only kill and watch threads for news
+  var killThreadMenuItem = document.getElementById("killThread");
+  if (killThreadMenuItem) {
+      killThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
+  }
+  var watchThreadMenuItem = document.getElementById("watchThread");
+  if (watchThreadMenuItem) {
+      watchThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
+  }
 
-    //disable the move and copy menus only if there are no messages selected.
-    var moveMenu = document.getElementById("moveMenu");
-    if(moveMenu)
-        moveMenu.setAttribute("disabled", !aMessage);
+  //disable the move and copy menus only if there are no messages selected.
+  var moveMenu = document.getElementById("moveMenu");
+  if(moveMenu)
+      moveMenu.setAttribute("disabled", !aMessage);
 
-    var copyMenu = document.getElementById("copyMenu");
-    if(copyMenu)
-        copyMenu.setAttribute("disabled", !aMessage);
+  var copyMenu = document.getElementById("copyMenu");
+  if(copyMenu)
+      copyMenu.setAttribute("disabled", !aMessage);
+
+  document.commandDispatcher.updateCommands('create-menu-message');
 }
 
 function IsNewsMessage(messageUri)
@@ -430,7 +452,6 @@ function MsgReplyToAllMessage(event)
   var loadedFolder = GetLoadedMsgFolder();
   var messageArray = GetSelectedMessages();
 
-  dump("\nMsgReplyToAllMessage from XUL\n");
   if (event && event.shiftKey)
     ComposeMessage(msgComposeType.ReplyAll, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
   else
@@ -439,7 +460,6 @@ function MsgReplyToAllMessage(event)
 
 function MsgForwardMessage(event)
 {
-  dump("\nMsgForwardMessage from XUL\n");
   var forwardType = 0;
   try {
       forwardType = pref.GetIntPref("mail.forward_message_mode");

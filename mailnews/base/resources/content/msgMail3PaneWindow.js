@@ -206,11 +206,25 @@ function HandleDeleteOrMoveMsgCompleted(folder)
         else
           gNextMessageViewIndexAfterDelete = -1;
       }
-      outlinerSelection.clearSelection(); /* clear selection in either case  */
+      
+      // if we are about to set the selection with a new element then DON'T clear
+      // the selection then add the next message to select. This just generates
+      // an extra round of command updating notifications that we are trying to
+      // optimize away.
       if (gNextMessageViewIndexAfterDelete != -1) {
         outlinerSelection.select(gNextMessageViewIndexAfterDelete);
+        // since gNextMessageViewIndexAfterDelete probably has the same value
+        // as the last index we had selected, the outliner isn't generating a new
+        // selectionChanged notification for the outliner view. So we aren't loading the 
+        // next message. to fix this, force the selection changed update.
+        var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+        if (outlinerView)
+          outlinerView.selectionChanged();
         EnsureRowInThreadOutlinerIsVisible(gNextMessageViewIndexAfterDelete); 
       }
+      else
+        outlinerSelection.clearSelection(); /* clear selection in either case  */
+
 			gNextMessageViewIndexAfterDelete = -1;
 		}
 /*

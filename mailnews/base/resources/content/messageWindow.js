@@ -304,7 +304,7 @@ function ClearMessageSelection()
 {
 	gCurrentMessageUri = null;
 	gCurrentFolderUri = null;
-	CommandUpdate_Mail();
+  document.commandDispatcher.updateCommands('mail-toolbar');	
 }
 
 function GetCompositeDataSource(command)
@@ -357,13 +357,15 @@ var MessageWindowController =
       case "cmd_watchThread":
 			case "button_delete":
 			case "cmd_shiftDelete":
+      case "button_print":
 			case "cmd_print":
 			case "cmd_saveAsFile":
 			case "cmd_saveAsTemplate":
 			case "cmd_viewPageSource":
 			case "cmd_reload":
 			case "cmd_getNewMessages":
-                        case "cmd_getMsgsForAuthAccounts":
+      case "button_getNewMessages":
+      case "cmd_getMsgsForAuthAccounts":
 			case "cmd_getNextNMessages":
 			case "cmd_find":
 			case "cmd_findAgain":
@@ -371,6 +373,7 @@ var MessageWindowController =
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
 			case "cmd_markAsFlagged":
+      case "button_file":
 			case "cmd_file":
       case "cmd_downloadFlagged":
       case "cmd_toggleWorkOffline":
@@ -408,6 +411,7 @@ var MessageWindowController =
 			case "button_delete":
 			case "cmd_shiftDelete":
 			case "cmd_print":
+      case "button_print":
 			case "cmd_saveAsFile":
 			case "cmd_saveAsTemplate":
 			case "cmd_viewPageSource":
@@ -418,6 +422,7 @@ var MessageWindowController =
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
 			case "cmd_markAsFlagged":
+      case "button_file":
 			case "cmd_file":
 				if ( command == "cmd_delete")
 				{
@@ -430,7 +435,8 @@ var MessageWindowController =
 				}
 				return ( gCurrentMessageUri != null);
 			case "cmd_getNewMessages":
-                        case "cmd_getMsgsForAuthAccounts":
+      case "button_getNewMessages":
+      case "cmd_getMsgsForAuthAccounts":
 				return IsGetNewMessagesEnabled();
 			case "cmd_getNextNMessages":
 				return IsGetNextNMessagesEnabled();
@@ -450,9 +456,9 @@ var MessageWindowController =
 			case "cmd_getNewMessages":
 				MsgGetMessage();
 				break;
-                        case "cmd_getMsgsForAuthAccounts":
-                                MsgGetMessagesForAllAuthenticatedAccounts();
-                                break;
+      case "cmd_getMsgsForAuthAccounts":
+        MsgGetMessagesForAllAuthenticatedAccounts();
+        break;
 			case "cmd_getNextNMessages":
 				MsgGetNextNMessages();
 				break;
@@ -539,46 +545,6 @@ var MessageWindowController =
 	{
 	}
 };
-
-
-function CommandUpdate_Mail()
-{
-	goUpdateCommand('cmd_reply');
-	goUpdateCommand('cmd_replySender');
-	goUpdateCommand('cmd_replyGroup');
-	goUpdateCommand('cmd_replyall');
-	goUpdateCommand('cmd_forward');
-	goUpdateCommand('cmd_forwardInline');
-	goUpdateCommand('cmd_forwardAttachment');
-	goUpdateCommand('button_reply');
-	goUpdateCommand('button_replyall');
-	goUpdateCommand('button_forward');
-	goUpdateCommand('cmd_editAsNew');
-	goUpdateCommand('cmd_delete');
-	goUpdateCommand('cmd_killThread');
-	goUpdateCommand('cmd_watchThread');
-	goUpdateCommand('button_delete');
-	goUpdateCommand('cmd_shiftDelete');
-	goUpdateCommand('cmd_print');
-	goUpdateCommand('cmd_saveAsFile');
-	goUpdateCommand('cmd_saveAsTemplate');
-	goUpdateCommand('cmd_viewPageSource');
-	goUpdateCommand('cmd_reload');
-	goUpdateCommand('cmd_getNewMessages');
-        goUpdateCommand('cmd_getMsgsForAuthAccounts');
-	goUpdateCommand('cmd_getNextNMessages');
-	goUpdateCommand('cmd_find');
-	goUpdateCommand('cmd_findAgain');
-	goUpdateCommand('cmd_markAsRead');
-	goUpdateCommand('cmd_markThreadAsRead');
-	goUpdateCommand('cmd_markAllRead');
-	goUpdateCommand('cmd_markAsFlagged');
-  goUpdateCommand('cmd_downloadFlagged');
-  goUpdateCommand('cmd_downloadSelected');
-  goUpdateCommand('cmd_toggleWorkOffline');
-	goUpdateCommand('cmd_file');
-
-}
 
 function SetupCommandUpdateHandlers()
 {
