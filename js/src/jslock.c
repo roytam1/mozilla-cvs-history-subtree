@@ -188,7 +188,7 @@ js_AtomicAdd(jsword *p, jsword i)
     AtomicAddBody(p,i);
 }
 
-JS_INLINE jsword
+static JS_INLINE jsword
 js_AtomicSet(jsword *p, jsword n)
 {
     jsword o;
@@ -395,7 +395,7 @@ deleteListOfFatlocks(JSFatLock *m)
 
 static JSFatLockTable _fl_table;
 
-JSFatLock *
+static JSFatLock *
 allocateFatlock()
 {
   JSFatLock *m;
@@ -420,7 +420,7 @@ allocateFatlock()
   return m;
 }
 
-void
+static void
 deallocateFatlock(JSFatLock *m)
 {
   if (m == NULL)
@@ -511,7 +511,7 @@ js_InitContextForLocking(JSContext *cx)
 
   */
 
-int
+static int
 emptyFatlock(JSThinLock *p)
 {
     JSFatLock *fl;
@@ -660,7 +660,7 @@ js_UnlockRuntime(JSRuntime *rt)
     JS_UNLOCK0(p,me);
 }
 
-JS_INLINE void
+static JS_INLINE void
 js_LockScope1(JSContext *cx, JSScope *scope, jsword me)
 {
     JSThinLock *p;
