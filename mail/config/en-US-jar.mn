@@ -101,7 +101,7 @@ locale/en-US/editor/EdConvertToTable.dtd,                 en-US/locale/en-US/edi
 #################################################################################################
 # US
 #################################################################################################
-locale/US/messenger-region,                               US/locale/US/messenger-region
+locale/en-US/messenger-region,                            US/locale/US/messenger-region
 locale/global-region,                                     en-US/locale/global-region
 
 #################################################################################################
