@@ -12,13 +12,12 @@ if (verifyDiskSpace(fProgram, srDest))
         getFolder(fProgram,"Components"),
         "");
 
-    var fChat = getFolder(fProgram,"chrome/packages/chatzilla");
-    addDirectory("",
-             "viewer/chrome/packages/chatzilla", // jar source folder 
-             fChat,                           // target folder
-             "");                             // target subdir 
+    addFile("Chatzilla Chrome",
+            "bin/chrome/chatzilla.jar", // jar source folder 
+            getFolder("Chrome"),        // target folder
+            "");                        // target subdir 
 
-    registerChrome(PACKAGE | DELAYED_CHROME, fChat);
+    registerChrome(PACKAGE | DELAYED_CHROME, getFolder("Chrome","chatzilla.jar"));
 
     if (err==SUCCESS)
         performInstall(); 
