@@ -157,11 +157,6 @@ NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
-# as used in clients/tools/Makefile.client
-# temporary location for Linux 7.1 build
-#LIBNLS_INCLUDES_LOC = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
-#LIBNLS_LIB_LOC	    = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
-# regular location
 ifdef RELEASE_TREE
 LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
