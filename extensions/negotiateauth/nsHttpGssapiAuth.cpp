@@ -578,7 +578,7 @@ nsHttpGssapiAuth::MatchesBaseURI(const nsCSubstring &matchScheme,
 
     // XXX this does not work for IPv6-literals
     const char *hostEnd = strchr(hostStart, ':');
-    if (hostEnd) {
+    if (hostEnd && hostEnd <= baseEnd) {
         // the given port must match the parsed port exactly
         int port = atoi(hostEnd + 1);
         if (matchPort != (PRInt32) port)
@@ -594,8 +594,8 @@ nsHttpGssapiAuth::MatchesBaseURI(const nsCSubstring &matchScheme,
 
     PRUint32 hostLen = hostEnd - hostStart;
 
-    // now, allow host to be a subdomain of matchHost
-    if (matchHost.Length() > hostLen)
+    // matchHost must either equal host or be a subdomain of host
+    if (matchHost.Length() < hostLen)
         return PR_FALSE;
 
     const char *end = matchHost.EndReading();
