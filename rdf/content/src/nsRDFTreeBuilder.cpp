@@ -1415,5 +1415,7 @@ RDFTreeBuilderImpl::CreateResourceElement(PRInt32 aNameSpaceID,
     if (NS_FAILED(rv = result->SetAttribute(kNameSpaceID_RDF, kIdAtom, uri, PR_FALSE)))
         return rv;
 
+    *aResult = result;
+    NS_ADDREF(*aResult);
     return NS_OK;
 }
