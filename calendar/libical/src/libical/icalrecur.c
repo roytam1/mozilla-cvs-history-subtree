@@ -155,6 +155,10 @@ typedef long intptr_t;
 #include <assert.h>
 #include <stddef.h> /* For offsetof() macro */
 
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
 #include "pvl.h"
 
 /** This is the last year we will go up to, since 32-bit time_t values
