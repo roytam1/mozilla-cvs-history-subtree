@@ -83,8 +83,6 @@ public:
   virtual  PRBool OnPaint(nsPaintEvent &event);
   PRBool   OnKey(nsKeyEvent &aEvent);
   virtual  PRBool OnScroll(nsScrollbarEvent & aEvent, PRUint32 cPos);
-  // in nsWidget now
-  //    virtual  PRBool OnResize(nsSizeEvent &aEvent);
 
   static void SuperWinFilter(GdkSuperWin *superwin, XEvent *event, gpointer p);
 
@@ -127,7 +125,6 @@ protected:
   PRBool      mVisible;
   PRBool      mDisplayed;
   PRBool      mIsDestroyingWindow;
-  PRBool      mIsTooSmall;
 
   // XXX Temporary, should not be caching the font
   nsFont *    mFont;
