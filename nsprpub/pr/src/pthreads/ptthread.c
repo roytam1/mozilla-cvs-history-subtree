@@ -158,16 +158,6 @@ static void *_pt_root(void *arg)
 
     /* unhook the thread from the runtime */
     PR_Lock(pt_book.ml);
-    if (thred->state & PT_THREAD_SYSTEM)
-        pt_book.system -= 1;
-    else if (--pt_book.user == pt_book.this_many)
-        PR_NotifyAllCondVar(pt_book.cv);
-    thred->prev->next = thred->next;
-    if (NULL == thred->next)
-        pt_book.last = thred->prev;
-    else
-        thred->next->prev = thred->prev;
-
     /*
      * At this moment, PR_CreateThread() may not have set thred->id yet.
      * It is safe for a detached thread to free thred only after
@@ -178,6 +168,16 @@ static void *_pt_root(void *arg)
         while (!thred->okToDelete)
             PR_WaitCondVar(pt_book.cv, PR_INTERVAL_NO_TIMEOUT);
     }
+
+    if (thred->state & PT_THREAD_SYSTEM)
+        pt_book.system -= 1;
+    else if (--pt_book.user == pt_book.this_many)
+        PR_NotifyAllCondVar(pt_book.cv);
+    thred->prev->next = thred->next;
+    if (NULL == thred->next)
+        pt_book.last = thred->prev;
+    else
+        thred->next->prev = thred->prev;
     PR_Unlock(pt_book.ml);
 
     /*
