@@ -1320,10 +1320,10 @@ nsFormFrame::GetContentType(char* aPathName, char** aContentType)
   if (aPathName && *aPathName) {
     // Get file extension and mimetype from that.g936
     char* fileExt = &aPathName[nsCRT::strlen(aPathName)-1];
-    while (fileExt && (*fileExt != '.')) {
+    while ((fileExt >= aPathName) && (*fileExt != '.')) {
       fileExt--;
     }
-    if (fileExt) {
+    if ((fileExt >= aPathName) && (*fileExt == '.')) {
       nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID, &rv));
       if (NS_FAILED(rv)) return rv;
       if (NS_SUCCEEDED(MIMEService->GetTypeFromExtension(++fileExt, aContentType)))
