@@ -56,6 +56,7 @@
 #include "nsMsgComposeStringBundle.h"
 #include "nsMsgCompUtils.h"
 #include "prcmon.h"
+#include "nsIImapIncomingServer.h"
 #include "nsIMsgImapMailFolder.h"
 #include "nsIEventQueueService.h"
 #include "nsMsgSimulateError.h"
@@ -458,9 +459,11 @@ LocateMessageFolder(nsIMsgIdentity   *userIdentity,
       {
         nsCOMPtr<nsIMsgFolder> rootMsgFolder;
         server->GetRootMsgFolder(getter_AddRefs(rootMsgFolder));
-        nsCOMPtr<nsIEnumerator> subFolders;
         if (rootMsgFolder)
-          return rootMsgFolder->GetChildWithURI(aFolderURI, PR_TRUE, PR_FALSE, msgFolder);
+        {
+          nsCOMPtr<nsIImapIncomingServer> imapServer = do_QueryInterface(server);
+          return rootMsgFolder->GetChildWithURI(aFolderURI, PR_TRUE, imapServer == nsnull /*caseInsensitive*/, msgFolder);
+        }
         else
           return NS_MSG_ERROR_FOLDER_MISSING;
       }
