@@ -57,13 +57,16 @@ namespace ByteCode {
         LoadConstantTrueOp,     //                     --> <true value object>
         LoadConstantFalseOp,    //                     --> <false value object>
         LoadConstantNullOp,     //                     --> <null value object>
-        LoadConstantNumberOp,   // <poolindex>
+        LoadConstantNumberOp,   // <poolindex>         --> <Number value object>
+        LoadConstantStringOp,   // <poolindex>         --> <String value object>
 
+        LoadThisOp,             //                     --> <this object>
+        
         LoadFunctionOp,         // <pointer>        XXX !!! XXX
         LoadTypeOp,             // <pointer>        XXX !!! XXX
 
 
-        InvokeOp,               // <argCount>          <args> <invokor> --> <result>
+        InvokeOp,               // <argCount>          <function> <args>  --> <result>
 
         GetTypeOp,              //                     <object> --> <type of object>
 
@@ -86,27 +89,35 @@ namespace ByteCode {
 
     
         // for instance members
-        GetFieldOp,             // <slot>              <base> --> <slot> <invokor>
-        SetFieldOp,             // <slot>              <base> --> <slot> <invokor>
+        GetFieldOp,             // <slot>              <base> --> <object>
+        SetFieldOp,             // <slot>              <object> <base>  --> 
 
         // for instance methods
-        GetMethodOp,            // <slot>              <base> --> <invokor>
+        GetMethodOp,            // <slot>              <base> --> <function> <base> 
 
         // for argumentz
         GetArgOp,               // <index>             --> <object>
         SetArgOp,               // <index>             --> <object>
 
         // for local variables in the immediate scope
-        GetLocalVarOp,          // <index>             --> <invokor>
-        SetLocalVarOp,          // <index>             --> <invokor>
+        GetLocalVarOp,          // <index>             --> <object>
+        SetLocalVarOp,          // <index>             --> <object>
 
         // for local variables in the nth closure scope
-        GetClosureVarOp,        // <depth>, <index>    --> <invokor>
-        SetClosureVarOp,        // <depth>, <index>    --> <invokor>
+        GetClosureVarOp,        // <depth>, <index>    --> <object>
+        SetClosureVarOp,        // <depth>, <index>    --> <object>
 
-        // for all other names
-        GetNameOp,              // <poolindex>         --> <invokor>
-        SetNameOp,              // <poolindex>         --> <invokor>
+        // for properties
+        GetPropertyOp,          // <poolindex>         <base> --> <object>
+        SetPropertyOp,          // <poolindex>         <object> <base> -->
+
+        // for all generic names 
+        GetNameOp,              // <poolindex>         --> <object>
+        SetNameOp,              // <poolindex>         --> <object>
+
+        
+        PushScopeOp,            // <pointer>        XXX !!! XXX
+        PopScopeOp,             // <pointer>        XXX !!! XXX
 
 
     } ByteCodeOp;
@@ -117,9 +128,9 @@ namespace ByteCode {
             
         ByteCodeModule(ByteCodeGen *bcg);
 
-        uint32 getLong(int index) const      { return *((uint32 *)&mCodeBase[index]); }
-        String getString(int index) const    { return String(&mStringPoolContents.at(index)); }
-        float64 getNumber(int index) const   { return mNumberPoolContents.at(index); }
+        uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
+        const String *getString(int index) const    { return &mStringPoolContents[index]; }
+        float64 getNumber(int index) const          { return mNumberPoolContents[index]; }
 
 
         uint32 mLocalsCount;        // number of local vars to allocate space for
@@ -127,8 +138,8 @@ namespace ByteCode {
         uint8 *mCodeBase;
         uint32 mLength;
 
-        std::vector<char16> mStringPoolContents;
-        std::vector<float64> mNumberPoolContents;
+        String *mStringPoolContents;
+        float64 *mNumberPoolContents;
 
     };
     Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm);
@@ -138,19 +149,23 @@ namespace ByteCode {
     class ByteCodeGen {
     public:
 
-        ByteCodeGen() : mBuffer(new CodeBuffer) { }
+        ByteCodeGen(ScopeChain *scopeChain) 
+            : mBuffer(new CodeBuffer), mScopeChain(scopeChain) { }
 
-        ByteCodeModule *genCodeForStatement(StmtNode *p);
-        void genExpr(ExprNode *p);
+        ByteCodeModule *genCodeForScript(StmtNode *p);
+        ByteCodeModule *genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
+        void genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc);
+        JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
 
         typedef std::vector<uint8> CodeBuffer;
 
-        std::stack<CodeBuffer *> grumpy;
+//        std::stack<CodeBuffer *> grumpy;
 
         // this is the current code buffer
         CodeBuffer *mBuffer;
-
+        ScopeChain *mScopeChain;
+/*
         void pushOnGrumpy()
         {
             grumpy.push(mBuffer);
@@ -162,7 +177,7 @@ namespace ByteCode {
             mBuffer = grumpy.top();
             grumpy.pop();
         }
-
+*/
 
         void addByte(uint8 v)      { mBuffer->push_back(v); }
         void addPointer(void *v)   { addLong((uint32)v); }
@@ -170,7 +185,7 @@ namespace ByteCode {
             { mBuffer->insert(mBuffer->end(), (uint8 *)&v, (uint8 *)(&v) + sizeof(uint32)); }
 
 
-        std::vector<char16> mStringPoolContents;
+        std::vector<String> mStringPoolContents;
         typedef std::map<String, uint32, std::less<String> > StringPool;
         StringPool mStringPool;
 
@@ -179,13 +194,14 @@ namespace ByteCode {
         NumberPool mNumberPool;
 
 
-        void addNumber(float64 f)
+        void addNumberRef(float64 f)
         {
             NumberPool::iterator i = mNumberPool.find(f);
             if (i != mNumberPool.end())
                 addLong(i->second);
             else {
-                addLong(mNumberPool.size());
+                addLong(mNumberPoolContents.size());
+                mNumberPool[f] = mNumberPoolContents.size();
                 mNumberPoolContents.push_back(f);
             }
         }
@@ -198,12 +214,11 @@ namespace ByteCode {
                 addLong(i->second);
             else {
                 addLong(mStringPoolContents.size());
-                mStringPoolContents.insert(mStringPoolContents.end(), str.begin(), str.end());
-                mStringPoolContents.push_back(0);
+                mStringPool[str] = mStringPoolContents.size();
+                mStringPoolContents.push_back(str);
             }
         }
 
-        ScopeChain mScopeChain;
 
     };
 

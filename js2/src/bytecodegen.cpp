@@ -57,13 +57,13 @@ Activation::Activation(JSValue *locals, JSValue *argBase, uint8 *pc, ByteCodeMod
 }
 
 
-void AccessorReference::emitCodeSequence(ByteCodeGen *bcg) 
+void AccessorReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 { 
     bcg->addByte(InvokeOp); 
     bcg->addPointer(mFunction);
 }
 
-void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg) 
+void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetLocalVarOp);
@@ -72,7 +72,7 @@ void LocalVarReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void ParameterReference::emitCodeSequence(ByteCodeGen *bcg) 
+void ParameterReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetArgOp);
@@ -81,7 +81,7 @@ void ParameterReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg) 
+void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetClosureVarOp);
@@ -91,7 +91,17 @@ void ClosureVarReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void FieldReference::emitCodeSequence(ByteCodeGen *bcg) 
+void FieldReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    if (mIsStatic) {
+        bcg->addByte(LoadTypeOp);
+        bcg->addPointer(mClass);
+    }
+    else
+        bcg->addByte(LoadThisOp);
+}
+
+void FieldReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetFieldOp);
@@ -100,17 +110,17 @@ void FieldReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
-void MethodReference::emitCodeSequence(ByteCodeGen *bcg) 
+void MethodReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex); 
 }
 
-void FunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
+void FunctionReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
 }
 
-void NameReference::emitCodeSequence(ByteCodeGen *bcg) 
+void NameReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetNameOp);
@@ -119,12 +129,21 @@ void NameReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addStringRef(mName); 
 }
 
-void ValueReference::emitCodeSequence(ByteCodeGen *bcg) 
+void ValueReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
 {
     if (mAccess == Read)
         bcg->addByte(GetNameOp);
     else
         bcg->addByte(SetNameOp);
+    bcg->addStringRef(mName); 
+}
+
+void PropertyReference::emitCodeSequence(ByteCodeGen *bcg, bool hasBase) 
+{
+    if (mAccess == Read)
+        bcg->addByte(GetPropertyOp);
+    else
+        bcg->addByte(SetPropertyOp);
     bcg->addStringRef(mName); 
 }
 
@@ -141,26 +160,109 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mLength = bcg->mBuffer->size();
     mCodeBase = new uint8[mLength];
     memcpy(mCodeBase, bcg->mBuffer->begin(), mLength);
-    mStringPoolContents = bcg->mStringPoolContents;
-    mNumberPoolContents = bcg->mNumberPoolContents;
-    mLocalsCount = bcg->mScopeChain.countVars();
+    mStringPoolContents = new String[bcg->mStringPoolContents.size()];
+
+    int index = 0;
+    for (std::vector<String>::iterator s_i = bcg->mStringPoolContents.begin(),
+            s_end = bcg->mStringPoolContents.end(); (s_i != s_end); s_i++, index++)
+        mStringPoolContents[index] = *s_i;
+
+    mNumberPoolContents = new float64[bcg->mNumberPoolContents.size()];
+    index = 0;
+    for (std::vector<float64>::iterator f_i = bcg->mNumberPoolContents.begin(),
+            f_end = bcg->mNumberPoolContents.end(); (f_i != f_end); f_i++, index++)
+        mNumberPoolContents[index] = *f_i;
+
+    mLocalsCount = bcg->mScopeChain->countVars();
 }
 
-ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p)
+void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc)
+{
+    mScopeChain->addScope(fnc->mParameterBarrel);
+    mScopeChain->addScope(fnc);
+    // OPT - no need to push the parameter and function
+    // scopes if the function doesn't contain any 'eval'
+    // calls, all other references to the variables mapped
+    // inside these scopes will have been turned into
+    // localVar references.
+    addByte(PushScopeOp);
+    addPointer(fnc->mParameterBarrel);
+    addByte(PushScopeOp);   
+    addPointer(fnc);
+
+    genCodeForStatement(f->function.body, NULL);
+    
+    // OPT - see above
+    addByte(PopScopeOp);
+    addByte(PopScopeOp);
+    
+    fnc->mByteCode = new ByteCodeModule(this);        
+
+    mScopeChain->popScope();
+    mScopeChain->popScope();
+}
+
+
+// the distinction is that top-level functions don't have to
+// be closures - (they really are since the global/package scope is
+// on the scope chain anyway). The code for the function has
+// already been generated (it's a compile time constant)
+ByteCodeModule *ByteCodeGen::genCodeForScript(StmtNode *p)
+{
+    if (p->getKind() == StmtNode::Function) {
+        return NULL;
+    }
+    else
+        return genCodeForStatement(p, NULL);
+}
+
+
+ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 {
     switch (p->getKind()) {
+    case StmtNode::Class:
+        {
+            ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
+            ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
+            IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
+
+            JSValue v = mScopeChain->getValue(className->name);
+            ASSERT(v.isType());
+            JSType *thisClass = v.type;
+            mScopeChain->addScope(thisClass->mStatics);
+            mScopeChain->addScope(thisClass);
+            ByteCodeGen bcg(mScopeChain);       // this will capture the initializations
+            if (classStmt->body) {
+                StmtNode* s = classStmt->body->statements;
+                while (s) {
+                    bcg.genCodeForStatement(s, static_cg);
+                    s = s->next;
+                }
+            }
+            mScopeChain->popScope();
+            mScopeChain->popScope();
+        }
+        break;
     case StmtNode::Var:
         {
             VariableStmtNode *vs = static_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
+            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     if (v->initializer) {
                         IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                        Reference *ref = mScopeChain.getName(i->name, Write);
+                        Reference *ref = mScopeChain->getName(i->name, Write);
                         ASSERT(ref);    // must have been added previously by processDeclarations
-                        genExpr(v->initializer);
-                        ref->emitCodeSequence(this);
+                        if (isStatic && (static_cg != NULL)) {
+                            static_cg->genExpr(v->initializer);
+                            ref->emitCodeSequence(static_cg);
+                        }
+                        else {
+                            genExpr(v->initializer);
+                            ref->emitCodeSequence(this);
+                        }
+                        delete ref;
                     }
                 }
                 v = v->next;
@@ -170,35 +272,14 @@ ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            if (f->function.name->getKind() == ExprNode::identifier) {
-                const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                Reference *ref = mScopeChain.getName(name, Write);
-                ASSERT(ref);
+            ASSERT(f->function.name->getKind() == ExprNode::identifier);
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
 
-                mScopeChain.addScope(new ParameterBarrel());                
-
-                VariableBinding *v = f->function.parameters;
-                while (v) {
-                    if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                        JSType *pType = mScopeChain.extractType(v->type);
-                        IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                        mScopeChain.defineVariable(i->name, pType);
-                    }
-                    v = v->next;
-                }
-                
-                mScopeChain.addScope(new Activation());                
-                pushOnGrumpy();
-                mScopeChain.processDeclarations(f->function.body);
-                ByteCodeModule *bcm = genCodeForStatement(f->function.body);
-                popOffGrumpy();
-                mScopeChain.popScope();
-                mScopeChain.popScope();
-
-                addByte(LoadFunctionOp);
-                addPointer(new JSFunction(bcm));
-                ref->emitCodeSequence(this);
-            }
+            JSValue v = mScopeChain->getValue(name);
+            ASSERT(v.isFunction());
+            JSFunction *fnc = v.function;
+            ByteCodeGen bcg(mScopeChain);
+            bcg.genCodeForFunction(f, fnc);
         }
         break;
     case StmtNode::block:
@@ -206,7 +287,7 @@ ByteCodeModule *ByteCodeGen::genCodeForStatement(StmtNode *p)
             BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
-                genCodeForStatement(s);
+                genCodeForStatement(s, static_cg);
                 s = s->next;
             }            
         }
@@ -235,10 +316,45 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
     case ExprNode::identifier:
         {
             const StringAtom &name = static_cast<IdentifierExprNode *>(p)->name;
-            Reference *ref = mScopeChain.getName(name, acc);
+            Reference *ref = mScopeChain->getName(name, acc);            
             if (ref == NULL)
                 ref = new NameReference(name, acc);
+            ref->emitImplicitLoad(this);
             return ref;
+        }
+    case ExprNode::dot:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            
+            JSType *lType = NULL;
+            // optimize for ClassName.identifier
+            if (b->op1->getKind() == ExprNode::identifier) {
+                const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
+                Reference *ref = mScopeChain->getName(name, Read);
+                if (ref && (ref->mType == Type_Type)) {
+                    JSValue v = mScopeChain->getValue(name);
+                    ASSERT(v.isType());
+                    if (v.type->mStatics) {
+                        lType = v.type->mStatics;
+                        genExpr(b->op1);
+                    }
+                }
+                if (ref) delete ref;
+            }
+
+            if (lType == NULL)
+                lType = genExpr(b->op1);    // generate code for leftside of dot
+            if (b->op2->getKind() != ExprNode::identifier) {
+                // this is where we handle n.q::id
+            }
+            else {
+                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
+                Reference *ref = lType->genReference(fieldName, acc, 0);
+                if (ref == NULL)
+                    ref = new PropertyReference(fieldName, acc);
+                return ref;
+            }
+
         }
     default:
         NOT_REACHED("Bad genReference op");
@@ -247,22 +363,26 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
 }
 
 
-void ByteCodeGen::genExpr(ExprNode *p)
+JSType *ByteCodeGen::genExpr(ExprNode *p)
 {
     switch (p->getKind()) {
     case ExprNode::True:
         addByte(LoadConstantTrueOp);
-        break;
+        return Boolean_Type;
     case ExprNode::False:
         addByte(LoadConstantFalseOp);
-        break;
+        return Boolean_Type;
     case ExprNode::Null:
         addByte(LoadConstantNullOp);
-        break;
+        return Object_Type;
     case ExprNode::number :
         addByte(LoadConstantNumberOp);
-        addNumber((static_cast<NumberExprNode *>(p))->value);
-        break;
+        addNumberRef((static_cast<NumberExprNode *>(p))->value);
+        return Number_Type;
+    case ExprNode::string :
+        addByte(LoadConstantStringOp);
+        addStringRef((static_cast<StringExprNode *>(p))->str);
+        return String_Type;
     case ExprNode::add:
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
@@ -270,28 +390,38 @@ void ByteCodeGen::genExpr(ExprNode *p)
             genExpr(b->op2);
             addByte(DoOperatorOp);
             addByte(Plus);
+            return Object_Type;
         }
-        break;
     case ExprNode::assignment:
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
             genExpr(b->op2);
             ref->emitCodeSequence(this);
+            delete ref;
+            return Object_Type;
         }
-        break;
     case ExprNode::identifier:
         {
             Reference *ref = genReference(p, Read);
-            ref->emitCodeSequence(this);
+            ref->emitCodeSequence(this, false);
+            JSType *type = ref->mType;
+            delete ref;
+            return type;
         }
-        break;
+    case ExprNode::dot:
+        {
+            Reference *ref = genReference(p, Read);
+            ref->emitCodeSequence(this);
+            JSType *type = ref->mType;
+            delete ref;
+            return type;
+        }
     case ExprNode::New:
         {
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
 
-            genExpr(i->op);
-            addByte(GetTypeOp);
+            JSType *type = genExpr(i->op);
 
             ExprPairList *p = i->pairs;
             while (p) {
@@ -299,11 +429,13 @@ void ByteCodeGen::genExpr(ExprNode *p)
                 p = p->next;
             }
             addByte(NewObjectOp);
+            return type;
         }
-        break;
     case ExprNode::call:
         {
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            Reference *ref = genReference(i->op, Read);
+            ref->emitCodeSequence(this);
 
             ExprPairList *p = i->pairs;
             uint32 argCount = 0;
@@ -313,15 +445,18 @@ void ByteCodeGen::genExpr(ExprNode *p)
                 p = p->next;
             }
 
-            Reference *ref = genReference(i->op, Read);
-            ref->emitCodeSequence(this);
-
             addByte(InvokeOp);
+            if (ref->needsThis())
+                argCount++;
             addLong(argCount);
 
+
+            JSType *type = ref->mType;
+            delete ref;
+            return type;
         }
-        break;
     }
+    return NULL;
 }
 
 Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
@@ -357,21 +492,61 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
             f << "SetArg " << bcm.getLong(i + 1) << "\n";
             i += 5;
             break;
+        case GetFieldOp:
+            f << "GetField " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;
+        case GetMethodOp:
+            f << "GetMethod " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;            
+        case SetFieldOp:
+            f << "SetField " << bcm.getLong(i + 1) << "\n";
+            i += 5;
+            break;
         case GetNameOp:
-            f << "GetName " << bcm.getString(bcm.getLong(i + 1)) << "\n";
+            f << "GetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
             i += 5;
             break;
         case SetNameOp:
-            f << "SetName " << bcm.getString(bcm.getLong(i + 1)) << "\n";
+            f << "SetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+            i += 5;
+            break;
+        case GetPropertyOp:
+            f << "GetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+            i += 5;
+            break;
+        case SetPropertyOp:
+            f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
             i += 5;
             break;
         case LoadConstantNumberOp:
             f << "LoadConstantNumber " << bcm.getNumber(bcm.getLong(i + 1)) << "\n";
             i += 5;
             break;
+        case LoadConstantStringOp:
+            f << "LoadConstantString " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+            i += 5;
+            break;
         case LoadFunctionOp:
             printFormat(f, "LoadFunction 0x%X\n", bcm.getLong(i + 1));
             i += 5;
+            break;
+        case PushScopeOp:
+            printFormat(f, "PushScope 0x%X\n", bcm.getLong(i + 1));
+            i += 5;
+            break;
+        case PopScopeOp:
+            f << "PopScope\n";
+            i++;
+            break;
+        case NewObjectOp:
+            f << "NewObject\n";
+            i++;
+            break;
+        case LoadThisOp:
+            f << "LoadThis\n";
+            i++;
             break;
         default:
             printFormat(f, "Unknown Opcode 0x%X\n", bcm.mCodeBase[i]);

@@ -49,7 +49,8 @@ namespace JavaScript
         enum Kind {
             syntaxError,
             stackOverflow,
-            runtimeError
+            runtimeError,
+            referenceError
         };
         
         Kind kind;         // The exception's kind

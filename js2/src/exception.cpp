@@ -45,8 +45,9 @@ namespace JavaScript
 
     static const char *const kindStrings[] = {
         "Syntax error",                         // syntaxError
-        "Stack overflow"                        // stackOverflow
-        "Runtime error"                         // runtimeError
+        "Stack overflow",                       // stackOverflow
+        "Runtime error",                        // runtimeError
+        "Reference error"                       // referenceError
     };
     
 // Return a null-terminated string describing the exception's kind.
