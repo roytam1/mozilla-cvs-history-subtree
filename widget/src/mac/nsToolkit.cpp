@@ -31,14 +31,11 @@
 #include "nsIEventQueue.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
-#include "nsIImageManager.h"
 #include "nsGfxCIID.h"
 
 // Class IDs...
 static NS_DEFINE_CID(kEventQueueCID,  NS_EVENTQUEUE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID,  NS_EVENTQUEUESERVICE_CID);
-
-static NS_DEFINE_IID(kImageManagerCID, NS_IMAGEMANAGER_CID);
 
 static nsMacNSPREventQueueHandler*  gEventQueueHandler = nsnull;
 
@@ -350,11 +347,8 @@ void nsMacMemoryCushion::RepeatAction(const EventRecord &aMacEvent)
     // NS_ASSERTION(0, "Failed to recallocate memory buffer. Flushing caches");
     // until imglib implements nsIMemoryPressureObserver (bug 46337)
     // manually flush the imglib cache here
-    nsCOMPtr<nsIImageManager> imageManager = do_GetService(kImageManagerCID);
-    if (imageManager)
-    {
-      imageManager->FlushCache(1);    // flush everything
-    }
+    
+    // XXX imagelib should do this.. or the cache.  certainly shouldn't be here.
   }
 
   if (!RecoverMemoryReserve(kMemoryReserveSize))
