@@ -30,6 +30,7 @@ PTH_USER_CSRCS =          \
 	pthreads_user.c \
 	$(NULL)
 
+ifndef USE_AUTOCONF
 IRIX_CSRCS =	 \
 	irix.c	 \
 	$(NULL)
@@ -117,11 +118,6 @@ DGUX_CSRCS = \
 QNX_CSRCS = \
 	qnx.c \
 	$(NULL)
-
-
-ifeq ($(PTHREADS_USER),1)
-CSRCS += $(PTH_USER_CSRCS)
-endif
 
 ifeq ($(OS_ARCH),IRIX)
 CSRCS += $(IRIX_CSRCS)
@@ -227,6 +223,17 @@ endif
 
 ifeq ($(OS_ARCH)$(OS_RELEASE),BSD_OS2.1)
     ASFILES = os_BSD_386_2.s
+endif
+
+else # USE_AUTOCONF
+
+CSRCS	+= $(PR_MD_CSRCS)
+ASFILES += $(PR_MD_ASFILES)
+
+endif # !USE_AUTOCONF
+
+ifeq ($(PTHREADS_USER),1)
+CSRCS += $(PTH_USER_CSRCS)
 endif
 
 OBJS += $(addprefix md/unix/$(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX)))  \
