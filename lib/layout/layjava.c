@@ -21,7 +21,9 @@
 #include "pa_parse.h"
 #include "layout.h"
 #include "laylayer.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "laystyle.h"
 #include "layers.h"
 #include "np.h"

@@ -91,7 +91,7 @@ BOOL bIsGold = FALSE;
 // Full Circle stuff - see http://www.fullsoft.com for more info
 #include "fullsoft.h"
 
-#ifdef JAVA
+#if defined(OJI) || defined(JAVA)
 	// don't include java.h here because the Win16 compiler won't be able to handle this file
 	void WFE_LJ_StartupJava(void);
 	void WFE_LJ_StartDebugger(void);

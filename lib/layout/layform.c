@@ -22,7 +22,9 @@
 #include "shist.h"
 #include "pa_parse.h"
 #include "layout.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "laylayer.h"
 #include "libevent.h"
 #include "libimg.h"             /* Image Library public API. */

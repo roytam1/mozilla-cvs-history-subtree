@@ -38,7 +38,9 @@
 
 #include "jri.h"
 #include "jriext.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "prefapi.h"
 #include "libi18n.h"
 #include "intl_csi.h"

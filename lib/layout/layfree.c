@@ -21,7 +21,9 @@
 #ifdef EDITOR
 #include "edt.h"
 #endif
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "layers.h"
 #include "pa_parse.h"
 

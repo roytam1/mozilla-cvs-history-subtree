@@ -22,7 +22,9 @@
 #include "layout.h"
 #include "laylayer.h"
 #include "glhist.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "libi18n.h"
 #include "edt.h"
 #include "laystyle.h"

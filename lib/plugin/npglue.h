@@ -34,7 +34,9 @@ extern "C" {
 #include "gui.h"			/* For XP_AppCodeName */
 #include "merrors.h"
 #include "xpgetstr.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "nppriv.h"
 #include "shist.h"
 

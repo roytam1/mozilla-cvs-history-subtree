@@ -37,7 +37,9 @@
 #include "plgindll.h"
 #include "np.h"
 #include "helper.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "edt.h"
 #include "npglue.h"
 

@@ -121,10 +121,15 @@ LCFLAGS=$(LCFLAGS) -DSTAND_ALONE_JAVA
 
 !if defined(MOZ_JAVA)
 MOZ_JAVA_FLAG=-DJAVA
+!if defined(MOZ_OJI)
+!error You can't define both MOZ_JAVA and MOZ_OJI anymore. 
+!endif
+JAVA_OR_OJI=1
 !endif
 
 !if defined(MOZ_OJI)
 LCFLAGS=$(LCFLAGS) -DOJI
+JAVA_OR_OJI=1
 !endif
 
 # Perhaps we should add MOZ_LITENESS_FLAGS to 16 bit build

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -35,7 +35,9 @@
 #include "zig.h"
 #include "jri.h"
 #include "jsjava.h"
+#ifdef JAVA
 #include "java.h"
+#endif
 #include "jsobj.h"
 #include "jsatom.h"
 #include "jsscope.h"
@@ -672,7 +674,11 @@ LM_NewJSPrincipals(URL_Struct *archive, char *id, const char *codebase)
             }
             XP_FREEIF(unixPath);
 #else
+#ifdef OJI      // XXX hack
+            zip = NULL;
+#else
             zip = zip_open(fn);
+#endif
 #endif
             XP_FREE(fn);
         }
@@ -743,8 +749,10 @@ destroyJSPrincipals(JSContext *cx, JSPrincipals *principals)
         XP_FREEIF(data->name);
         XP_FREEIF(data->untransformed);
         XP_FREEIF(data->transformed);
+#ifndef OJI      // XXX hack
         if (data->zip)
             zip_close(data->zip);
+#endif
         if (data->needUnlock)
             NET_ChangeCacheFileLock(data->url_struct, FALSE);
         if (data->url_struct)
@@ -1081,7 +1089,11 @@ lm_CheckContainerAccess(JSContext *cx, JSObject *obj, MochaDecoder *decoder,
          * We have signed scripts. Must check that the object principals are
          * a subset of the the subject principals.
          */
+#ifdef OJI      // XXX hack
+        env = NULL;
+#else
         env = LJ_JSJ_CurrentEnv(cx);
+#endif
         if (env == NULL) {
             return JS_FALSE;
         }
@@ -1100,14 +1112,16 @@ lm_CheckContainerAccess(JSContext *cx, JSObject *obj, MochaDecoder *decoder,
             return JS_TRUE;
         }
         fn = lm_GetSubjectOriginURL(cx);
-	if (!fn)
-	    return JS_FALSE;
+        if (!fn)
+            return JS_FALSE;
+#ifndef OJI     // XXX hack
         if (subjPrincipals && principals) {
             PrintToConsole("Principals of script: ");
             printPrincipalsToConsole(cx, subjPrincipals);
             PrintToConsole("Principals of signed container: ");
             printPrincipalsToConsole(cx, principals);
         }
+#endif
         JS_ReportError(cx, container_error_message, fn);
         return JS_FALSE;
     }
@@ -1632,9 +1646,11 @@ LM_ExtractFromPrincipalsArchive(JSPrincipals *principals, char *name,
                                 uint *length)
 {
     JSPrincipalsData *data = (JSPrincipalsData *) principals;
-    char *result;
+    char *result = NULL;
 
+#ifndef OJI      // XXX hack
     result = LJ_LoadFromZipFile(data->zip, name);
+#endif
     *length = result ? XP_STRLEN(result) : 0;
 
     return result;
@@ -2007,17 +2023,21 @@ LM_RegisterPrincipals(MochaDecoder *decoder, JSPrincipals *principals,
              * Intersect principals and container principals,
              * modifying the container principals.
              */
+#ifndef OJI     // XXX hack
             PrintToConsole("Intersecting principals ");
             printPrincipalsToConsole(cx, containerPrincipals);
             PrintToConsole("with ");
             printPrincipalsToConsole(cx, principals);
+#endif
             if (!intersectPrincipals(decoder, containerPrincipals,
                                      principals))
             {
                 return NULL;
             }
+#ifndef OJI     // XXX hack
             PrintToConsole("yielding ");
             printPrincipalsToConsole(cx, containerPrincipals);
+#endif
         } else {
             /*
              * Store the disjoint set of principals in the

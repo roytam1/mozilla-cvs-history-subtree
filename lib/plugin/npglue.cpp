@@ -2313,7 +2313,11 @@ np_IsLiveConnected(np_handle* handle)
         }
     }
     else {
+#ifdef JAVA
         return npn_getJavaClass(handle) != NULL;
+#else
+        return FALSE;
+#endif
     }
 }
 
@@ -2406,7 +2410,7 @@ np_UnloadPluginClass(np_handle *handle)
 	/* only called when we truly want to dispose the plugin class */
 	XP_ASSERT(handle && handle->refs == 0);
 
-#ifdef JAVA 
+#ifdef JAVA
     if (handle->userPlugin == NULL && handle->f && handle->f->javaClass != NULL) {
 		/* Don't get the environment unless there is a Java class,
 		   because this would cause the java runtime to start up. */
@@ -2429,6 +2433,7 @@ np_UnloadPluginClass(np_handle *handle)
 PR_IMPLEMENT(void)
 NPL_SetPluginWindow(void *data)
 {
+#ifdef JAVA
 	 JRIEnv * env = NULL;
 	 np_instance *instance = (np_instance *) data;
      struct netscape_javascript_JSObject *mochaWindow = NULL;
@@ -2436,7 +2441,6 @@ NPL_SetPluginWindow(void *data)
 	 if (instance && instance->cx)
 		mochaWindow = LJ_GetMochaWindow(instance->cx);
 
-#ifdef JAVA
 	 env = LJ_EnsureJavaEnv(PR_CurrentThread());
 
 	 if (mochaWindow){
@@ -2655,8 +2659,10 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
             // The problem is that by deferring the jvm startup, we cause it to 
             // happen later on the wrong thread. 
             np_IsLiveConnected(handle)
+#elif defined(JAVA)
+            npn_getJavaClass(handle)
 #else
-            npn_getJavaClass(handle)           
+            FALSE
 #endif
             ) { /*  for liveconnected plugins only */
             ET_SetPluginWindow(cx, (void *)instance);
