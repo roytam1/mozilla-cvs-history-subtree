@@ -49,7 +49,7 @@ endif
 LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX)
 
 ifeq ($(OS_TARGET),WINCE)
-LIBS += $(NSPR_LIBS) wince_console.lib
+LIBS += $(NSPR_LIBS) $(DIST)/lib/consolece_s.lib
 endif
 
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled

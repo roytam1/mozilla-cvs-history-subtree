@@ -220,7 +220,7 @@ ifeq ($(OS_ARCH),WINNT)
 ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= /SUBSYSTEM:CONSOLE
 else # WINCE
-OS_LIBS += wince_console.lib
+OS_LIBS += $(DIST)/lib/consolece_s.lib
 endif # WINCE
 endif
 else # MOZ_WINCONSOLE

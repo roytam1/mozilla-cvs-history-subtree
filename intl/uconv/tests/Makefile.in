@@ -61,7 +61,7 @@ LIBS		+= \
 		$(NULL)
 
 ifeq ($(OS_TARGET),WINCE)
-OS_LIBS += wince_console.lib
+OS_LIBS += $(DIST)/lib/consolece_s.lib
 endif # WINCE
 
 # needed for mac linux

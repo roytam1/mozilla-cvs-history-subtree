@@ -80,7 +80,7 @@ OS_LIBS		+= \
 		$(NULL)
 else
 OS_LIBS		+= \
-		wince_console.lib \
+		$(DIST)/lib/consolece_s.lib \
 		$(NULL)
 endif # WINCE
 

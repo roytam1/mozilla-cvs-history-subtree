@@ -41,7 +41,7 @@
 #include <stdarg.h>
 
 #if defined(WINCE)
-#include "wince_missing.h"
+#include "moz_shunt_ppc2002.h"
 #endif /* WINCE */
 
 extern char szAppName[];

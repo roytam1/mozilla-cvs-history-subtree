@@ -88,6 +88,17 @@ endif
 endif
 
 #
+# WinCE wants an extra include directory so that some shunt/native headers
+#  are provided by us.
+# We also want to link with something already there, the shunt lib, so
+#  make sure we have the search path.
+#
+ifeq (,$(filter-out WINCE,$(OS_TARGET)))
+INCLUDES += -I$(dist_prefix)/include
+LDFLAGS += -L$(dist_libdir)
+endif
+
+#
 # This makefile contains rules for building the following kinds of
 # libraries:
 # - LIBRARY: a static (archival) library

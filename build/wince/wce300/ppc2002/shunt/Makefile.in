@@ -1,0 +1,73 @@
+#
+# The contents of this file are subject to the Mozilla Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#
+# The Original Code is mozilla.org code.
+#
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 2003 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s): 
+#	Garrett Arch Blythe	Jan 28, 2003
+#
+
+DEPTH		= ../../../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+DIRS		= \
+		include \
+		$(NULL)
+
+MODULE		= moz_shunt_ppc2002
+LIBRARY_NAME	= moz_shunt_ppc2002
+FORCE_SHARED_LIB	= 1
+
+CPPSRCS		= \
+		a2w.cpp \
+		assert.cpp \
+		direct.cpp \
+		errno.cpp \
+		io.cpp \
+		mbstring.cpp \
+		moz_shunt_ppc2002.cpp \
+		process.cpp \
+		signal.cpp \
+		stat.cpp \
+		stdio.cpp \
+		stdlib.cpp \
+		string.cpp \
+		time.cpp \
+		w2a.cpp \
+		win32.cpp \
+		win32A.cpp \
+		win32W.cpp \
+		$(NULL)
+
+DEFINES		+= \
+		-DMOZ_SHUNT_PPC2002_EXPORTS \
+        $(NULL)
+
+#
+# Custom OS_LIBS for this one particular DLL.
+#
+OS_LIBS		= \
+		corelibc.lib \
+        coredll.lib \
+        winsock.lib \
+		$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+

@@ -821,6 +821,15 @@ if [ "$MACOSX" ]; then
 "
 fi
 
+if [ "$OS_TARGET" = "WINCE" ]; then
+    MAKEFILES_pocketpc2002="
+        build/wince/utils/console/Makefile
+        build/wince/wce300/ppc2002/shunt/Makefile
+        build/wince/wce300/ppc2002/shunt/include/Makefile
+        build/wince/wce300/ppc2002/shunt/include/sys/Makefile
+"
+fi
+
 if [ "$MOZ_MAIL_NEWS" ]; then
     if [ -f ${srcdir}/mailnews/makefiles ]; then
         MAKEFILES_mailnews=`cat ${srcdir}/mailnews/makefiles`
@@ -1187,6 +1196,7 @@ $MAKEFILES_mpfilelocprovider
 $MAKEFILES_oji
 $MAKEFILES_plugin
 $MAKEFILES_netwerk
+$MAKEFILES_pocketpc2002
 $MAKEFILES_profile
 $MAKEFILES_rdf
 $MAKEFILES_static_components

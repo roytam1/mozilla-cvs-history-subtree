@@ -39,7 +39,7 @@
 
 #if defined(WINCE)
 //  Get this mess out of the way for our special wince build.
-#include "wince_missing.h"
+#include "moz_shunt_ppc2002.h"
 #undef GetClassName
 #endif
 

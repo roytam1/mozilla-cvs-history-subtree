@@ -984,7 +984,7 @@ case "$target" in
         CFLAGS="$CFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
         CXXFLAGS="$CXXFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
         if test "$OS_TARGET" = "WINCE"; then
-            LIBS="$LIBS corelibc.lib coredll.lib winsock.lib wince_missing.lib"
+            LIBS="$LIBS corelibc.lib coredll.lib winsock.lib \$(DIST)/lib/moz_shunt_ppc2002.lib"
             LDFLAGS="$LDFLAGS -SUBSYSTEM:WINDOWSCE,3.00 -INCREMENTAL:NO -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib"
             if test "$TARGETCPU" = "ARM"; then
                 LDFLAGS="$LDFLAGS -MACHINE:ARM"

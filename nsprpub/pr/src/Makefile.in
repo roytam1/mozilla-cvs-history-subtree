@@ -312,6 +312,10 @@ ECHO = echo
 INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 TINC = $(OBJDIR)/_pr_bld.h
 
+ifeq ($(OS_TARGET),WINCE)
+INCLUDES += -I$(dist_prefix)/include
+endif
+
 ifeq ($(OS_TARGET),OS2)
 PROD = nspr$(MOD_MAJOR_VERSION).$(DLL_SUFFIX)
 else

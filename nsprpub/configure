@@ -3791,7 +3791,7 @@ EOF
         fi
 
         if test "$OS_TARGET" = "WINCE"; then
-            DLL_LIBS="corelibc.lib coredll.lib winsock.lib wince_missing.lib"
+            DLL_LIBS="corelibc.lib coredll.lib winsock.lib $dist_libdir/moz_shunt_ppc2002.lib"
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then

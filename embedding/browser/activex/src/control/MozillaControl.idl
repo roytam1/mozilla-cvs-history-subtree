@@ -51,7 +51,7 @@ import "docobj.idl";
 
 #include <exdispid.h>
 #if defined(WINCE)
-#include <wince_missing_exdispid.h>
+#include <moz_shunt_ppc2002_exdispid.h>
 #endif /* WINCE */
 
 [

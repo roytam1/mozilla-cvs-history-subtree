@@ -101,6 +101,13 @@ tier_0_dirs = \
 	include \
 	$(NULL)
 
+ifeq ($(OS_TARGET),WINCE)
+tier_0_dirs	+= 	\
+			build/wince/utils/console \
+			build/wince/wce300/ppc2002/shunt \
+			$(NULL)
+endif # WINCE
+
 #
 # tier 1 -  3rd party individual libraries
 #
@@ -223,7 +230,9 @@ endif
 tier_9_dirs	+= xpfe
 
 ifneq ($(OS_TARGET),WINCE)
-tier_9_dirs	+= xpinstall
+tier_9_dirs	+= 	\
+			xpinstall \
+			$(NULL)
 endif # WINCE
 
 ifdef MOZ_LEAKY

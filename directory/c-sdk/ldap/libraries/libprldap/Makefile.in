@@ -100,7 +100,7 @@ endif
 
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WINCE)
-EXTRA_LIBS =corelibc.lib coredll.lib wince_console.lib wince_missing.lib
+EXTRA_LIBS =corelibc.lib coredll.lib $(DIST)/lib/consolece_s.lib $(DIST)/lib/moz_shunt_ppc2002.lib
 else
 EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
             comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \

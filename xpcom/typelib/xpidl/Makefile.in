@@ -67,7 +67,7 @@ LIBS		= $(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
 EXTRA_DEPS	= $(wildcard $(DIST)/lib/$(LIB_PREFIX)xpt.*)
 
 ifeq ($(OS_TARGET),WINCE)
-LIBS += $(NSPR_LIBS) wince_console.lib
+LIBS += $(NSPR_LIBS) $(DIST)/lib/consolece_s.lib
 endif
 
 ifdef CROSS_COMPILE
