@@ -445,6 +445,7 @@ NS_IMETHODIMP
 nsToolkitProfileService::SetStartOffline(PRBool aValue)
 {
     mStartOffline = aValue;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
