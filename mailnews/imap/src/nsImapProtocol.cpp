@@ -443,7 +443,7 @@ void
 nsImapProtocol::SetupSinkProxy()
 {
   nsresult res = NS_ERROR_FAILURE;
-  NS_ASSERTION(!m_imapMiscellaneousSink, "shouldn't be non-null here");
+//  NS_ASSERTION(!m_imapMiscellaneousSink, "shouldn't be non-null here");
 
   if (m_runningUrl)
   {
