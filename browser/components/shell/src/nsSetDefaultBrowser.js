@@ -39,8 +39,7 @@
  *
  * This component handles the startup command line argument of the form:
  *   -setDefaultBrowser
- * by making the current executable the "default browser."  It accomplishes
- * that via use of the nsIWindowsHooks interface (see implementation below).
+ * by making the current executable the "default browser."
  */
 
 function nsSetDefaultBrowser() {
