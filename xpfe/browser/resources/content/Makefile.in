@@ -26,6 +26,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifndef MOZ_XUL_APP
 ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 DIRS		= win
 else
@@ -35,6 +36,7 @@ else
 DIRS		= unix
 endif
 endif
+endif # MOZ_XUL_APP
 
 include $(topsrcdir)/config/rules.mk
 

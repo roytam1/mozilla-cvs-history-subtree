@@ -80,7 +80,7 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(chromeType, cf, "locale/communicator/");
     registerChrome(chromeType, pf, localeName + "communicator-platform/");
     registerChrome(chromeType, cf, "locale/navigator/");
-    registerChrome(chromeType, pf, localeName + "navigator-platform/");    
+    registerChrome(chromeType, cf, "locale/navigator-platform/");    
 
     err = performInstall(); 
     logComment("performInstall() returned: " + err);

@@ -29,6 +29,15 @@ comm.jar:
         content/navigator/viewPartialSource.xul        (resources/content/viewPartialSource.xul)
         content/navigator/mailNavigatorOverlay.xul     (resources/content/mailNavigatorOverlay.xul)
         content/navigator/searchconfig.properties      (resources/content/searchconfig.properties)
+#ifdef MOZ_XUL_APP
+        content/navigator-platform/contents.rdf                        (resources/content/contents-platform.rdf)
+        content/navigator-platform/win/platformNavigationBindings.xul  (resources/content/win/platformNavigationBindings.xul)
+        content/navigator-platform/win/platformMailOverlay.xul         (resources/content/win/platformMailOverlay.xul)
+        content/navigator-platform/mac/platformNavigationBindings.xul  (resources/content/mac/platformNavigationBindings.xul)
+        content/navigator-platform/mac/platformMailOverlay.xul         (resources/content/mac/platformMailOverlay.xul)
+        content/navigator-platform/unix/platformNavigationBindings.xul (resources/content/unix/platformNavigationBindings.xul)
+        content/navigator-platform/unix/platformMailOverlay.xul        (resources/content/unix/platformMailOverlay.xul)
+#endif
 
 #ifndef MOZ_XUL_APP
 en-US.jar:

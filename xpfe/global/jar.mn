@@ -122,6 +122,7 @@ US.jar:
     locale/US/global-region/region.properties       (resources/locale/en-US/region.properties)
     locale/US/global-region/builtinURLs.rdf         (resources/locale/en-US/builtinURLs.rdf) 
 
+#ifndef MOZ_XUL_APP
 en-win.jar:
 *   locale/en-US/global-platform/contents.rdf 		(resources/locale/en-US/win/contents-platform.rdf)
     locale/en-US/global-platform/platformDialogOverlay.dtd (resources/locale/en-US/win/platformDialogOverlay.dtd)
@@ -140,4 +141,4 @@ en-mac.jar:
     locale/en-US/global-platform/platformDialogOverlay.dtd (resources/locale/en-US/mac/platformDialogOverlay.dtd)
     locale/en-US/global-platform/platformKeys.properties   (resources/locale/en-US/mac/platformKeys.properties)
     locale/en-US/global-platform/wizard.properties         (resources/locale/en-US/mac/wizard.properties)
- 
+#endif
