@@ -624,6 +624,20 @@ BEGIN
 //	MENUITEM SEPARATOR
 //leave#endif
     END
+    
+    POPUP "&Privacy"
+    BEGIN
+	MENUITEM "&Enter Anonymous Mode",       ID_PRIVACY_ANONYMOUS
+	MENUITEM "&Make Receipt",               ID_PRIVACY_RECEIPT
+	MENUITEM SEPARATOR
+	MENUITEM "Display Privacy &Policy",     ID_PRIVACY_DISPLAY_POLICY
+	MENUITEM "Display &Cookies",            ID_PRIVACY_DISPLAY_COOKIES
+	MENUITEM "Display &Signons",            ID_PRIVACY_DISPLAY_SIGNONS
+	MENUITEM "Display &Receipts",           ID_PRIVACY_DISPLAY_RECEIPTS
+	MENUITEM SEPARATOR
+	MENUITEM "&Tutorial",                   ID_PRIVACY_DISPLAY_TUTORIAL
+    END
+
 #ifndef MOZ_COMMUNICATOR_NAME
     POPUP "&Window"
 #else
