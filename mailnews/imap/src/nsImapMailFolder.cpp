@@ -7741,6 +7741,26 @@ nsImapMailFolder::PlaybackCoalescedOperations()
 }
 
 NS_IMETHODIMP
+nsImapMailFolder::SetJunkScoreForMessages(nsISupportsArray *aMessages, const char *aJunkScore)
+{
+  NS_ENSURE_ARG(aMessages);
+
+  nsresult rv = nsMsgDBFolder::SetJunkScoreForMessages(aMessages, aJunkScore);
+  if (NS_SUCCEEDED(rv))
+  {
+    nsCAutoString messageIds;
+    nsMsgKeyArray keys;
+    nsresult rv = BuildIdsAndKeyArray(aMessages, messageIds, keys);
+    NS_ENSURE_SUCCESS(rv, rv);
+    StoreCustomKeywords(nsnull, aJunkScore, "", keys.GetArray(), 
+      keys.GetSize(), nsnull);
+    if (mDatabase)
+      mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
 nsImapMailFolder::OnMessageClassified(const char *aMsgURI, nsMsgJunkStatus aClassification)
 {
   nsXPIDLCString spamFolderURI;

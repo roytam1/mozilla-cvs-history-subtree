@@ -461,4 +461,5 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
   // associate an identity with a particular newsgroup, or for IMAP shared folders in
   // the other users namespace, you might want to create a delegated identity
   readonly attribute nsIMsgIdentity customIdentity;
+  void setJunkScoreForMessages(in nsISupportsArray aMessages, in string aJunkScore);
 };
