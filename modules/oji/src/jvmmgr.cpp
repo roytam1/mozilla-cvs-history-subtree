@@ -141,7 +141,7 @@ JVM_ShowConsole(void)
 {
     nsIJVMConsole* console = GetConsole();
     if (console) {
-        console->ShowConsole();
+        console->Show();
         console->Release();
     }
 }
@@ -153,7 +153,7 @@ JVM_HideConsole(void)
     if (status == nsJVMStatus_Running) {
         nsIJVMConsole* console = GetConsole();
         if (console) {
-            console->HideConsole();
+            console->Hide();
             console->Release();
         }
     }
@@ -167,7 +167,7 @@ JVM_IsConsoleVisible(void)
     if (status == nsJVMStatus_Running) {
         nsIJVMConsole* console = GetConsole();
         if (console) {
-            nsresult err = console->IsConsoleVisible(&result);
+            nsresult err = console->IsVisible(&result);
             PR_ASSERT(err != NS_OK ? result == PR_FALSE : PR_TRUE);
             console->Release();
         }

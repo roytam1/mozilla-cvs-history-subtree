@@ -561,12 +561,15 @@ nsJVMFactory::LockFactory(PRBool aLock)
 
 static NS_DEFINE_CID(kJVMManagerCID, NS_JVMMANAGER_CID);
 
-extern "C" void
+extern "C" nsresult
 jvm_RegisterJVMMgr(void)
 {
-    nsRepository::RegisterFactory(kJVMManagerCID,
-                                  new nsJVMFactory(),
-                                  PR_TRUE);
+    nsJVMFactory* fact = new nsJVMFactory();
+    if (fact == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+    fact->AddRef();
+    return nsRepository::RegisterFactory(kJVMManagerCID, fact, PR_TRUE);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -88,13 +88,6 @@ public:
     NS_IMETHOD
     GetJavaWrapper(JNIEnv* jenv, jint obj, jobject *jobj) = 0;
 
-#if 0    // still trying to decide on this
-    // nsIPrincipals is a array of pointers to principals associated with this
-    // java object trying to run a JS script.
-    NS_IMETHOD
-    GetPrincipalArray(JNIEnv *pJNIEnv, PRInt32 frameIndex, nsIPrincipal ***principalArray, PRInt32 *length) = 0;
-#endif
-
     // Find or create a JNIEnv for the current thread.
     // Returns NULL if an error occurs.
     NS_IMETHOD_(nsrefcnt)
@@ -117,6 +110,7 @@ public:
 	 */
 	NS_IMETHOD
 	SpendTime(PRUint32 timeMillis) = 0;
+
 };
 
 #define NS_IJVMPLUGIN_IID                            \
