@@ -124,6 +124,7 @@ struct JSAtomState {
     JSAtom              *toSourceAtom;
     JSAtom              *toStringAtom;
     JSAtom              *valueOfAtom;
+    JSAtom              *evalAtom;
 
 #ifdef JS_THREADSAFE
     JSThinLock          lock;

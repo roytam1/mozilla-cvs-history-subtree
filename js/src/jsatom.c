@@ -238,6 +238,7 @@ js_InitAtomState(JSContext *cx, JSAtomState *state)
     FROB(toSourceAtom,            js_toSource_str);
     FROB(toStringAtom,            js_toString_str);
     FROB(valueOfAtom,             js_valueOf_str);
+    FROB(evalAtom,                js_eval_str);
 
 #undef FROB
 
