@@ -368,6 +368,7 @@ sub removeValue
   my ($self, $attr, $val, $norm) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2],
 				    $_[$[ + 3]);
   my ($i) = 0;
+  my ($attrval);
   local $_;
 
   return 0 unless (defined($val) && ($val ne ""));
@@ -378,9 +379,9 @@ sub removeValue
   @{$self->{"_${attr}_save_"}} = @{$self->{$attr}} unless
     defined($self->{"_${attr}_save_"});
 
-  foreach (@{$self->{$attr}})
+  foreach $attrval (@{$self->{$attr}})
     {
-      $_ = normalizeDN($_) if (defined($norm) && $norm);
+      $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
       if ($_ eq $val)
 	{
 	  splice(@{$self->{$attr}}, $i, 1);
@@ -425,6 +426,7 @@ sub addValue
   my ($self) = shift;
   my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
 				     $_[$[ + 3]);
+  my ($attrval);
   local $_;
 
   return 0 unless (defined($val) && ($val ne ""));
@@ -435,9 +437,9 @@ sub addValue
       my ($nval) = $val;
 
       $nval = normalizeDN($val) if (defined($norm) && $norm);
-      foreach (@{$self->{$attr}})
+      foreach $attrval (@{$self->{$attr}})
         {
-	  $_ = normalizeDN($_) if (defined($norm) && $norm);
+	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
           return 0 if ($_ eq $nval);
         }
     }
@@ -484,7 +486,7 @@ sub addDNValue
 {
   my ($self) = shift;
   my ($attr, $val, $force, $norm) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2],
-				     $_[$[ + 2]);
+				     $_[$[ + 3]);
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
   return $self->addValue($attr, $val, $force, 1);
@@ -520,6 +522,8 @@ sub setValue
 sub hasValue
 {
   my ($self, $attr, $val, $nocase, $norm) = @_;
+  my ($attrval);
+  local $_;
 
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
@@ -528,17 +532,17 @@ sub hasValue
   $val = normalizeDN($val) if (defined($norm) && $norm);
   if ($nocase)
     {
-      foreach (@{$self->{$attr}})
+      foreach $attrval (@{$self->{$attr}})
 	{
-	  $_ = normalizeDN($_) if (defined($norm) && $norm);
+	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
 	  return 1 if /^\Q$val\E$/i;
 	}
     }
   else
     {
-      foreach (@{$self->{$attr}})
+      foreach $attrval (@{$self->{$attr}})
 	{
-	  $_ = normalizeDN($_) if (defined($norm) && $norm);
+	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
 	  return 1 if /^\Q$val\E$/;
 	}
     }
@@ -566,6 +570,7 @@ sub hasDNValue
 sub matchValue
 {
   my ($self, $attr, $reg, $nocase, $norm) = @_;
+  my ($attrval);
 
   return 0 unless (defined($reg) && ($reg ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
@@ -573,17 +578,17 @@ sub matchValue
 
   if ($nocase)
     {
-      foreach (@{$self->{$attr}})
+      foreach $attrval (@{$self->{$attr}})
 	{
-	  $_ = normalizeDN($_);
+	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
 	  return 1 if /$reg/i;
 	}
     }
   else
     {
-      foreach (@{$self->{$attr}})
+      foreach $attrval (@{$self->{$attr}})
 	{
-	  $_ = normalizeDN($_) if (defined($norm) && $norm);
+	  $_ = ((defined($norm) && $norm) ? normalizeDN($attrval) : $attrval);
 	  return 1 if /$reg/;
 	}
     }
@@ -638,14 +643,11 @@ sub getDN
 sub size
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
-  my (@val);
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
-  # This is ugly, can't we optimize this?
-  @val = @{$self->{$attr}};
-  return $#val + 1;
+  return scalar(@{$self->{$attr}});
 }
 
 
