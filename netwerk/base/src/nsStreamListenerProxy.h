@@ -32,6 +32,11 @@ public:
         mListenerStatus = status;
     }
 
+    nsresult GetListenerStatus()
+    {
+        return mListenerStatus;
+    }
+
     PRUint32 GetPendingCount();
 
 protected:

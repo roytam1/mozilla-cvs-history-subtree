@@ -116,9 +116,15 @@ nsOnDataAvailableEvent::HandleEvent()
     nsStreamListenerProxy *listenerProxy =
         NS_STATIC_CAST(nsStreamListenerProxy *, mProxy);
 
+    if (NS_FAILED(listenerProxy->GetListenerStatus())) {
+        LOG(("HandleEvent -- Discarding event [listener status = %x]\n",
+            listenerProxy->GetListenerStatus()));
+        return NS_ERROR_FAILURE;
+    }
+
     nsCOMPtr<nsIStreamListener> listener = listenerProxy->GetListener();
     if (!listener) {
-        LOG(("Already called OnStopRequest (listener is NULL)\n"));
+        LOG(("HandleEvent -- Already called OnStopRequest (listener is NULL)\n"));
         return NS_ERROR_FAILURE;
     }
 
@@ -170,7 +176,7 @@ nsOnDataAvailableEvent::HandleEvent()
         listenerProxy->SetListenerStatus(rv);
     }
     else
-        LOG(("not calling OnDataAvailable"));
+        LOG(("HandleEvent -- not calling OnDataAvailable"));
     return NS_OK;
 }
 
