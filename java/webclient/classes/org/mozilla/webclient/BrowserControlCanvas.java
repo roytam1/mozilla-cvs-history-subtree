@@ -46,7 +46,9 @@ import java.awt.*;
 
  * @version $Id$
 
- * @see	org.mozilla.webclient.Win32BrowserControlCanvas
+ * @see	org.mozilla.webclient.win32.Win32BrowserControlCanvas
+
+ * @see	org.mozilla.webclient.motif.MotifBrowserControlCanvas
 
  */
 
