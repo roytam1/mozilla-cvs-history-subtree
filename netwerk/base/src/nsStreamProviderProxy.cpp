@@ -7,9 +7,6 @@
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
 
-#define GET_PROVIDER_PROXY(p) \
-    ((nsStreamProviderProxy *) (nsIStreamObserverProxy *) p)
-
 nsStreamProviderProxy::nsStreamProviderProxy()
     : mProviderStatus(NS_OK)
 { }
@@ -25,7 +22,7 @@ nsStreamProviderProxy::~nsStreamProviderProxy()
 class nsOnProvideDataEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnProvideDataEvent(nsIStreamObserverProxy *aProxy,
+    nsOnProvideDataEvent(nsStreamProxyBase *aProxy,
                          nsIChannel *aChannel,
                          nsISupports *aContext,
                          nsIOutputStream *aSink,
@@ -57,7 +54,8 @@ nsOnProvideDataEvent::HandleEvent()
 {
     PRINTF("HandleEvent -- OnProvideData [event=%x]", this);
 
-    nsStreamProviderProxy *providerProxy = GET_PROVIDER_PROXY(mProxy);
+    nsStreamProviderProxy *providerProxy = 
+        NS_STATIC_CAST(nsStreamProviderProxy *, mProxy);
 
     nsIStreamProvider *provider = providerProxy->GetProvider();
     if (!provider) {
@@ -106,7 +104,7 @@ nsOnProvideDataEvent::HandleEvent()
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED2(nsStreamProviderProxy,
-                             nsStreamObserverProxy,
+                             nsStreamProxyBase,
                              nsIStreamProviderProxy,
                              nsIStreamProvider)
 
@@ -119,7 +117,7 @@ NS_IMETHODIMP
 nsStreamProviderProxy::OnStartRequest(nsIChannel *aChannel,
                                       nsISupports *aContext)
 {
-    return nsStreamObserverProxy::OnStartRequest(aChannel, aContext);
+    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
 }
 
 NS_IMETHODIMP
@@ -134,8 +132,8 @@ nsStreamProviderProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamObserverProxy::OnStopRequest(aChannel, aContext,
-                                                aStatus, aStatusText);
+    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
+                                            aStatus, aStatusText);
 }
 
 //
@@ -207,7 +205,7 @@ nsStreamProviderProxy::OnProvideData(nsIChannel *aChannel,
     if (!ev)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    rv = ev->FireEvent(mEventQueue);
+    rv = ev->FireEvent(GetEventQueue());
     if (NS_FAILED(rv)) {
         delete ev;
         return rv;
@@ -226,8 +224,8 @@ nsStreamProviderProxy::Init(nsIStreamProvider *aProvider,
                             PRUint32 aBufferSegmentSize,
                             PRUint32 aBufferMaxSize)
 {
-    NS_PRECONDITION(mReceiver == 0, "Listener already set");
-    NS_PRECONDITION(mEventQueue == 0, "Event queue already set");
+    NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
+    NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
     //
     // Create the pipe
@@ -246,5 +244,6 @@ nsStreamProviderProxy::Init(nsIStreamProvider *aProvider,
                              PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
-    return nsStreamObserverProxy::Init(aProvider, aEventQ);
+    SetReceiver(aProvider);
+    return SetEventQueue(aEventQ);
 }

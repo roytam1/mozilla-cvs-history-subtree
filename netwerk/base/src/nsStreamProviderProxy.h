@@ -6,7 +6,7 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 
-class nsStreamProviderProxy : public nsStreamObserverProxy
+class nsStreamProviderProxy : public nsStreamProxyBase
                             , public nsIStreamProviderProxy
 {
 public:

@@ -10,9 +10,6 @@
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
 
-#define GET_LISTENER_PROXY(p) \
-    ((nsStreamListenerProxy *) (nsIStreamObserverProxy *) p)
-
 #ifdef DEBUG
 //
 //----------------------------------------------------------------------------
@@ -119,7 +116,7 @@ nsStreamListenerProxy::~nsStreamListenerProxy()
 class nsOnDataAvailableEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnDataAvailableEvent(nsIStreamObserverProxy *aProxy,
+    nsOnDataAvailableEvent(nsStreamProxyBase *aProxy,
                            nsIChannel *aChannel,
                            nsISupports *aContext,
                            nsIInputStream *aSource,
@@ -151,7 +148,8 @@ nsOnDataAvailableEvent::HandleEvent()
 {
     PRINTF("HandleEvent -- OnDataAvailable [event=%x]", this);
 
-    nsStreamListenerProxy *listenerProxy = GET_LISTENER_PROXY(mProxy);
+    nsStreamListenerProxy *listenerProxy =
+        NS_STATIC_CAST(nsStreamListenerProxy *, mProxy);
 
     nsIStreamListener *listener = listenerProxy->GetListener();
     if (!listener) {
@@ -178,15 +176,6 @@ nsOnDataAvailableEvent::HandleEvent()
                     mOffset, mCount, avail);FLUSH();
         }
 #endif
-
-        //
-        // If we are the only event at the moment and the pipe has extra data...
-        // feed that to the client...
-        //
-        //if (listenerProxy->mChannelToResume && (avail > mCount)) {
-        //    NS_WARNING("pipe contains unread data");
-        //    mCount = avail; // this is potentially very bad
-        //}
 
         // Give the listener a chance to read some data.
         rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, mCount);
@@ -226,7 +215,7 @@ nsOnDataAvailableEvent::HandleEvent()
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED3(nsStreamListenerProxy,
-                             nsStreamObserverProxy,
+                             nsStreamProxyBase,
                              nsIStreamListenerProxy,
                              nsIStreamListener,
                              nsIInputStreamObserver)
@@ -241,7 +230,7 @@ nsStreamListenerProxy::OnStartRequest(nsIChannel *aChannel,
                                       nsISupports *aContext)
 {
 
-    return nsStreamObserverProxy::OnStartRequest(aChannel, aContext);
+    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
 }
 
 NS_IMETHODIMP
@@ -256,8 +245,8 @@ nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamObserverProxy::OnStopRequest(aChannel, aContext,
-                                                aStatus, aStatusText);
+    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
+                                            aStatus, aStatusText);
 }
 
 //
@@ -304,21 +293,13 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     // inside the "C" monitor ensures that the resume will follow the
     // suspend.
     //
-    PRUint32 count, bytesWritten=0;
-    rv = mPipeIn->Available(&count);
-    if (NS_FAILED(rv)) return rv;
+    PRUint32 bytesWritten=0;
 
-    if (count == 0) {
-        PRINTF("Writing to the pipe...\n");FLUSH();
-        rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
+    PRINTF("Writing to the pipe...\n");FLUSH();
+    rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
-        PRINTF("mPipeOut->WriteFrom(aSource) [rv=%x aCount=%u bytesWritten=%u]\n",
-                rv, aCount, bytesWritten);FLUSH();
-    }
-    else {
-        PRINTF("Already %u bytes in the pipe\n", count);
-        rv = NS_BASE_STREAM_WOULD_BLOCK;
-    }
+    PRINTF("mPipeOut->WriteFrom(aSource) [rv=%x aCount=%u bytesWritten=%u]\n",
+            rv, aCount, bytesWritten);FLUSH();
 
     if (NS_FAILED(rv)) {
         if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
@@ -347,7 +328,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
                                    aOffset, bytesWritten);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
-    rv = ev->FireEvent(mEventQueue);
+    rv = ev->FireEvent(GetEventQueue());
     if (NS_FAILED(rv)) {
         delete ev;
         return rv;
@@ -366,8 +347,8 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
                             PRUint32 aBufferSegmentSize,
                             PRUint32 aBufferMaxSize)
 {
-    NS_PRECONDITION(mReceiver == 0, "Listener already set");
-    NS_PRECONDITION(mEventQueue == 0, "Event queue already set");
+    NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
+    NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
     mLMonitor = nsAutoMonitor::NewMonitor("ListenerStatus");
     if (!mLMonitor) return NS_ERROR_OUT_OF_MEMORY;
@@ -397,15 +378,8 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
         return rv;
     }
 
-    nsCOMPtr<nsIInputStreamObserver> ob;
-    rv = mPipeIn->GetObserver(getter_AddRefs(ob));
-    if (NS_FAILED(rv)) {
-        PRINTF("GetObserver failed: rv=%x\n", rv);
-        return rv;
-    }
-    PRINTF("this=%x, observer=%x\n", this, ob.get());
-
-    return nsStreamObserverProxy::Init(aListener, aEventQ);
+    SetReceiver(aListener);
+    return SetEventQueue(aEventQ);
 }
 
 //
