@@ -30,7 +30,7 @@ sub InitVars {
     $Make = 'gmake'; # Must be GNU make
     $MakeOverrides = '';
     $mail = '/bin/mail';
-    $CVS = 'cvs -z3';
+    $CVS = 'cvs -q -z3';
     $CVSCO = 'co -P';
 
     # Set these proper values for your tinderbox server
