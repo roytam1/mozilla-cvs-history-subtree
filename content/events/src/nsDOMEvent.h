@@ -167,6 +167,8 @@ public:
   NS_IMETHOD    IsDispatchStopped(PRBool* aIsDispatchStopped);
   NS_IMETHOD    GetInternalNSEvent(nsEvent** aNSEvent);
   NS_IMETHOD    HasOriginalTarget(PRBool* aResult);
+  NS_IMETHOD    IsTrustedEvent(PRBool* aResult);
+  NS_IMETHOD    SetTrusted(PRBool aTrusted);
 
   NS_IMETHOD    IsHandled(PRBool* aHandled);
   NS_IMETHOD    SetHandled(PRBool aHandled);
@@ -211,6 +213,7 @@ protected:
 
   nsEvent* mEvent;
   PRBool mEventIsInternal;
+  PRPackedBool mEventIsTrusted;
   nsIPresContext* mPresContext;
   nsIDOMEventTarget* mTarget;
   nsIDOMEventTarget* mCurrentTarget;

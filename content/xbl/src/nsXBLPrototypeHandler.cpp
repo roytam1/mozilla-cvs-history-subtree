@@ -201,6 +201,17 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   mHandlerElement->GetTag(*getter_AddRefs(tag));
   PRBool isXULKey = (tag.get() == nsXULAtoms::key);
 
+  //XUL handlers shouldn't be triggered by non-trusted events.
+  if (isXULKey) {
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(aEvent);
+    if (privateEvent) {
+      PRBool trustedEvent;
+      privateEvent->IsTrustedEvent(&trustedEvent);
+      if (!trustedEvent)
+        return NS_OK;
+    }
+  }
+    
   PRBool isReceiverCommandElement = PR_FALSE;
   nsCOMPtr<nsIContent> content(do_QueryInterface(aReceiver));
   if (isXULKey && content && content.get() != mHandlerElement)
