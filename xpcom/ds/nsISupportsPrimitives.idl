@@ -32,24 +32,24 @@
 [scriptable, uuid(d0d4b136-1dd1-11b2-9371-f0727ef827c0)]
 interface nsISupportsPrimitive : nsISupports
 {
-    const unsigned short PRIMITIVE_TYPE_ID         = 1;
-    const unsigned short PRIMITIVE_TYPE_STRING     = 2;
-    const unsigned short PRIMITIVE_TYPE_WSTRING    = 3;
-    const unsigned short PRIMITIVE_TYPE_PRBOOL     = 4;
-    const unsigned short PRIMITIVE_TYPE_PRUINT8    = 5;
-    const unsigned short PRIMITIVE_TYPE_PRUINT16   = 6;
-    const unsigned short PRIMITIVE_TYPE_PRUINT32   = 7;
-    const unsigned short PRIMITIVE_TYPE_PRUINT64   = 8;
-    const unsigned short PRIMITIVE_TYPE_PRTIME     = 9;
-    const unsigned short PRIMITIVE_TYPE_CHAR       = 10;
-    const unsigned short PRIMITIVE_TYPE_PRINT16    = 11;
-    const unsigned short PRIMITIVE_TYPE_PRINT32    = 12;
-    const unsigned short PRIMITIVE_TYPE_PRINT64    = 13;
-    const unsigned short PRIMITIVE_TYPE_FLOAT      = 14;
-    const unsigned short PRIMITIVE_TYPE_DOUBLE     = 15;
-    const unsigned short PRIMITIVE_TYPE_VOID       = 16;
+    const unsigned short TYPE_ID         = 1;
+    const unsigned short TYPE_STRING     = 2;
+    const unsigned short TYPE_WSTRING    = 3;
+    const unsigned short TYPE_PRBOOL     = 4;
+    const unsigned short TYPE_PRUINT8    = 5;
+    const unsigned short TYPE_PRUINT16   = 6;
+    const unsigned short TYPE_PRUINT32   = 7;
+    const unsigned short TYPE_PRUINT64   = 8;
+    const unsigned short TYPE_PRTIME     = 9;
+    const unsigned short TYPE_CHAR       = 10;
+    const unsigned short TYPE_PRINT16    = 11;
+    const unsigned short TYPE_PRINT32    = 12;
+    const unsigned short TYPE_PRINT64    = 13;
+    const unsigned short TYPE_FLOAT      = 14;
+    const unsigned short TYPE_DOUBLE     = 15;
+    const unsigned short TYPE_VOID       = 16;
 
-    readonly attribute unsigned short primitiveType;
+    readonly attribute unsigned short type;
 };
 
 [scriptable, uuid(d18290a0-4a1c-11d3-9890-006008962422)]
