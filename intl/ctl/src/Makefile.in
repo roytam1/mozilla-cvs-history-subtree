@@ -18,9 +18,7 @@
 # by Red Hat Software. Portions created by Redhat are Copyright (C) 
 # 1999 Red Hat Software.
 # 
-# Contributor(s):
-#   Prabhat Hegde (prabhat.hegde@sun.com)
-#
+# Contributor(s): 
 
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
@@ -45,24 +43,20 @@ EXTRA_DSO_LIBS	= mozpango
 CPPSRCS		= \
 	nsULE.cpp \
 	nsUnicodeToTIS620.cpp \
-	nsUnicodeToSunIndic.cpp \
 	nsCtlLEModule.cpp \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
+CFLAGS		+= -DUSE_NSREG
+
 LOCAL_INCLUDES += -I$(srcdir)/pangoLite
 
-ifdef MOZ_ENABLE_GTK2
-  CXXFLAGS        += $(MOZ_GTK2_CFLAGS)
-  EXTRA_DSO_LDOPTS += $(MOZ_GTK2_LIBS)
-else
-  CXXFLAGS  += $(GLIB_CFLAGS)
-  EXTRA_DSO_LDOPTS += $(GLIB_GMODULE_LIBS)
-endif
+CXXFLAGS  += $(GLIB_CFLAGS)
 
 EXTRA_DSO_LDOPTS += \
 	$(MOZ_COMPONENT_LIBS) \
 	-L$(DIST)/lib \
 	$(EXTRA_DSO_LIBS) \
+	$(GLIB_GMODULE_LIBS) \
 	$(NULL)

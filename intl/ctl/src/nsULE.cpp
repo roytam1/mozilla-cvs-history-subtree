@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  * XPCTL : nsULE.cpp
  *
- * The contents of this file are subject to the Mozilla Public
+ * The contents of this file are subject to the Mozilla Public	
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
  * the License at http://www.mozilla.org/MPL/
@@ -20,8 +20,7 @@
  * by Red Hat Software. Portions created by Redhat are Copyright (C) 
  * 1999 Red Hat Software.
  * 
- * Contributor(s):
- *   Prabhat Hegde (prabhat.hegde@sun.com)
+ * Contributor(s): 
  */
 
 #include "nsULE.h"
@@ -31,14 +30,6 @@
 #include "pango-glyph.h"
 #include "pango-modules.h"
 #include "pango-utils.h"
-
-/* 
- * To Do: (Last Updated by prabhat - 08/24/02)
- * A> Extend shapers to support ASCII + Script
- * B> Eliminate Separate Script
- * C> Look at improving the speed of cursor handling logic
- *
-*/
 
 #define CLEAN_RUN \
   aPtr = aRun.head; \
@@ -90,14 +81,14 @@ nsULE::GetShaper(const PRUnichar *inBuf,
 }
 
 PRInt32
-nsULE::ScriptsByRun(const PRUnichar *aSrcBuf, 
-                      PRInt32         aSrcLen, 
-                      textRunList     *aRunList)
+nsULE::SeparateScript(const PRUnichar* aSrcBuf, 
+                      PRInt32 aSrcLen, 
+                      textRunList *aRunList)
 {
   int              ct = 0, start = 0;
-  PRBool           sameCtlRun = PR_FALSE;
+  PRBool           isCtl = PR_FALSE;
   struct textRun   *tmpChunk;
-  PangoEngineShape *curEngine = NULL, *prevEngine = NULL;
+  PangoEngineShape *aEngine = NULL;
   PangoMap         *aMap = NULL;
   guint            engine_type_id = 0, render_type_id = 0;
 
@@ -117,27 +108,26 @@ nsULE::ScriptsByRun(const PRUnichar *aSrcBuf,
     
     tmpChunk->start = &aSrcBuf[ct];
     start = ct;
-    curEngine = (PangoEngineShape*)
+    aEngine = (PangoEngineShape*)
       pango_map_get_engine(aMap, (PRUint32)aSrcBuf[ct]);
-    sameCtlRun = (curEngine != NULL);
-    prevEngine = curEngine;
+    isCtl = (aEngine != NULL);
 
-    if (sameCtlRun) {
-      while (sameCtlRun && ct < aSrcLen) {
-        curEngine = (PangoEngineShape*)
+    if (isCtl) {
+      while (isCtl && ct < aSrcLen) {
+        aEngine = (PangoEngineShape*)
           pango_map_get_engine(aMap, (PRUint32)aSrcBuf[ct]);
-        sameCtlRun = ((curEngine != NULL) && (curEngine == prevEngine));
-        if (sameCtlRun)
+        isCtl = (aEngine != NULL);
+        if (isCtl)
           ct++;
       }
       tmpChunk->isOther = PR_FALSE;
     }
     else {
-      while (!sameCtlRun && ct < aSrcLen) {
-        curEngine = (PangoEngineShape*)
+      while (!isCtl && ct < aSrcLen) {
+        aEngine = (PangoEngineShape*)
           pango_map_get_engine(aMap, (PRUint32)aSrcBuf[ct]);
-        sameCtlRun = (curEngine != NULL);       
-        if (!sameCtlRun)
+        isCtl = (aEngine != NULL);       
+        if (!isCtl)
           ct++;
       }
       tmpChunk->isOther = PR_TRUE;
@@ -148,42 +138,23 @@ nsULE::ScriptsByRun(const PRUnichar *aSrcBuf,
   return (PRInt32)aRunList->numRuns;
 }
 
-// Default font encoding by code-range
-// At the moment pangoLite only supports 2 shapers/scripts
-const char*
-nsULE::GetDefaultFont(const PRUnichar aString)
-{
-  if ((aString >= 0x0e01) && (aString <= 0x0e5b))
-    return "tis620-2";
-  else if ((aString >= 0x0901) && (aString <= 0x0970))
-    return "sun.unicode.india-0";
-  else
-    return "iso8859-1";
-           
-}
-
-// Analysis needs to have valid direction
+// Analysis needs to have valid direction and font charset
 PRInt32
-nsULE::GetCtlData(const PRUnichar  *aString,
-                  PRUint32         aLength,
-                  PangoGlyphString *aGlyphs,
-                  const char       *fontCharset)
+nsULE::GetRawCtlData(const PRUnichar  *aString,
+                     PRUint32         aLength,
+                     PangoGlyphString *aGlyphs)
 {
   PangoEngineShape *aShaper = GetShaper(aString, aLength, (const char*)NULL);
   PangoAnalysis    aAnalysis;  
 
   aAnalysis.shape_engine = aShaper;
   aAnalysis.aDir = PANGO_DIRECTION_LTR;
-  
-  // Maybe find a better way to handle font encodings
-  if (fontCharset == NULL)
-    aAnalysis.fontCharset = strdup(GetDefaultFont(aString[0]));
-  else
-    aAnalysis.fontCharset = strdup(fontCharset);
+  // In future fontCharset hard-coding should be removed
+  aAnalysis.fontCharset = strdup("tis620-2");
 
-  if (aShaper != NULL) {
+  if (aShaper != NULL) {    
     aShaper->script_shape(aAnalysis.fontCharset, aString, aLength,
-                          &aAnalysis, aGlyphs);
+                          &aAnalysis, aGlyphs);    
     nsMemory::Free(aAnalysis.fontCharset);
   }
   else {
@@ -200,21 +171,27 @@ nsULE::GetPresentationForm(const PRUnichar *aString,
                            char            *aGlyphs,
                            PRSize          *aOutLength)
 {
+  PangoEngineShape *aShaper = GetShaper(aString, aLength, (const char*)NULL);
+  PangoAnalysis    aAnalysis;
   PangoGlyphString *tmpGlyphs = pango_glyph_string_new();
+  int              aSize = 0;
 
-  GetCtlData(aString, aLength, tmpGlyphs, fontCharset);
-    
-  if (tmpGlyphs->num_glyphs > 0) {
-    guint i = 0, glyphCt = 0;
-    for (i = 0; i < tmpGlyphs->num_glyphs; i++, glyphCt++) {
-      if (tmpGlyphs->glyphs[i].glyph > 0xFF) {
-        aGlyphs[glyphCt]=(unsigned char)((tmpGlyphs->glyphs[i].glyph & 0xFF00) >> 8);
-        glyphCt++;
-      }
-      aGlyphs[glyphCt]=(unsigned char)(tmpGlyphs->glyphs[i].glyph & 0x00FF);
+  aAnalysis.shape_engine = aShaper;
+  aAnalysis.aDir = PANGO_DIRECTION_LTR;
+  aAnalysis.fontCharset = (char*)fontCharset;
+
+  if (aShaper != NULL) {        
+    aShaper->script_shape(fontCharset, aString, aLength,
+                          &aAnalysis, tmpGlyphs);    
+    if (tmpGlyphs->num_glyphs > 0) {
+      // Note : Does NOT handle 2 byte fonts
+      aSize = tmpGlyphs->num_glyphs;
+      // if (*aOutLength < aSize)
+      //    trouble
+      for (int i = 0; i < aSize; i++)       
+        aGlyphs[i] = tmpGlyphs->glyphs[i].glyph & 0xFF;
     }
- 
-    *aOutLength = (PRSize)glyphCt;
+    *aOutLength = (PRSize)aSize;
   }
   else {
     /* No Shaper - Copy Input to output */
@@ -244,7 +221,7 @@ nsULE::NextCluster(const PRUnichar *aString,
   }
 
   aRun.numRuns = 0;
-  ScriptsByRun(aString, aLength, &aRun);
+  SeparateScript(aString, aLength, &aRun);
 
   aPtr = aRun.head;
   for (int i=0; (i < aRun.numRuns); i++) {
@@ -270,7 +247,7 @@ nsULE::NextCluster(const PRUnichar *aString,
         PRInt32 j, startCt, beg, end, numCur;
         
         startCt=aStrCt;
-        GetCtlData(aPtr->start, runLen, aGlyphData);
+        GetRawCtlData(aPtr->start, runLen, aGlyphData);
         
         numCur=beg=0;
         for (j=0; j<aGlyphData->num_glyphs; j++) {
@@ -319,7 +296,7 @@ nsULE::PrevCluster(const PRUnichar *aString,
   }
 
   aRun.numRuns=0;
-  ScriptsByRun(aString, aLength, &aRun);
+  SeparateScript(aString, aLength, &aRun);
 
   // Get the index of current cluster  
   aPtr=aRun.head;
@@ -337,7 +314,7 @@ nsULE::PrevCluster(const PRUnichar *aString,
       }
       else { /* Move back a cluster */
         startCt=aStrCt;
-        GetCtlData(aPtr->start, runLen, aGlyphData); 
+        GetRawCtlData(aPtr->start, runLen, aGlyphData); 
 
         glyphct=aGlyphData->num_glyphs-1;
         while (glyphct > 0) {
@@ -363,7 +340,7 @@ nsULE::PrevCluster(const PRUnichar *aString,
         PRInt32 j,beg,end,numPrev,numCur;
 
         startCt=aStrCt;
-        GetCtlData(aPtr->start, runLen, aGlyphData);
+        GetRawCtlData(aPtr->start, runLen, aGlyphData);
         
         numPrev=numCur=beg=0;
         for (j=1; j<aGlyphData->num_glyphs; j++) {
@@ -409,7 +386,7 @@ nsULE::GetRangeOfCluster(const PRUnichar *aString,
 
   *aStart = *aEnd = 0;
   aRun.numRuns=0;
-  ScriptsByRun(aString, aLength, &aRun);
+  SeparateScript(aString, aLength, &aRun);
 
   // Get the index of current cluster  
   aPtr=aRun.head;
@@ -428,7 +405,7 @@ nsULE::GetRangeOfCluster(const PRUnichar *aString,
         PRInt32 beg,end,numCur;
 
         startCt=aStrCt;
-        GetCtlData(aPtr->start, runLen, aGlyphData);
+        GetRawCtlData(aPtr->start, runLen, aGlyphData);
         
         numCur=beg=0;
         for (j=1; j<aGlyphData->num_glyphs; j++) {
