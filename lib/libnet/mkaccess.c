@@ -82,6 +82,8 @@ extern int MK_ACCESS_END_OF_SESSION;
  * on separate lists, but both lists consist of net_AuthStruct's.
  */
 
+HG73943
+
 PRIVATE XP_List * net_auth_list = NULL;
 PRIVATE XP_List * net_proxy_auth_list = NULL;
 
@@ -105,17 +107,20 @@ typedef enum _net_AuthType {
     AUTH_INVALID   = 0,
     AUTH_BASIC     = 1
 #ifdef SIMPLE_MD5
-	, AUTH_SIMPLEMD5 = 2		/* Much better than "Basic" */
+	HG72621
 #endif /* SIMPLE_MD5 */
     ,AUTH_FORTEZZA  = 3
 } net_AuthType;
 
 
 /*
- * This struct describes both Basic and SimpleMD5 authentication stuff,
+ * This struct describes both Basic  authentication stuff,
  * for both HTTP servers and proxies.
  *
  */
+HG10828
+
+
 typedef struct _net_AuthStruct {
     net_AuthType	auth_type;
     char *			path;			/* For normal authentication only */
@@ -124,15 +129,9 @@ typedef struct _net_AuthStruct {
 	char *			password;		/* Not too cryptic either */
 	char *			auth_string;	/* Storage for latest Authorization str */
 	char *			realm;			/* For all auth schemes */
-#ifdef SIMPLE_MD5
-    char *			domain;			/* SimpleMD5 only */
-    char *			nonce;			/* SimpleMD5 only */
-    char *			opaque;			/* SimpleMD5 only */
-    XP_Bool			oldNonce;		/* SimpleMD5 only */
-	int				oldNonce_retries;
-#endif
+    HG82727
     char *                      challenge;
-    char *                      certChain;
+    HG26250
     char *                      signature;
     char *                      clientRan;
     XP_Bool                     oldChallenge;
@@ -168,6 +167,7 @@ net_CheckForAuthorization(char * address, Bool exact_match)
 			    return(auth_s);
 		  }
       }
+	HG25262
    
     return(NULL);
 }
@@ -185,6 +185,7 @@ NET_AuthorizationRequired(char * address)
 
 	rv = net_CheckForAuthorization(address, FALSE);
 
+	HG17993
 	if(last_slash)
 		*last_slash = '/';
 
@@ -254,7 +255,7 @@ net_free_auth_struct(net_AuthStruct *auth)
     FREE(auth->realm);
     /*FORTEZZA related stuff   */
     FREEIF(auth->challenge);
-    FREEIF(auth->certChain);
+    HG26763
     FREEIF(auth->signature);
     FREEIF(auth->clientRan);
     /*End FORTEZZA related stuff*/
@@ -314,6 +315,8 @@ separate_http_key(char *key, char **address, char **realm)
 {
 	char *tab;
 
+	HG72294
+		
 	*address = NULL;
 	*realm = NULL;
 
@@ -409,6 +412,7 @@ net_initialize_http_access()
 	
 	PC_RegisterDataInterpretFunc(HTTP_PW_MODULE_NAME, 	
 				     net_http_password_data_interp);
+	HG21522
 }
 
 /* returns false if the user wishes to cancel authorization
@@ -455,6 +459,7 @@ NET_AskForAuthString(MWContext *context,
 	 	 * authentication
 	 	 */
 		authenticate_header_value = XP_StripLine(authenticate);
+		HG03937
 
 #define COMPUSERVE_HEADER_NAME "Remote-Passphrase"
 
@@ -477,6 +482,7 @@ NET_AskForAuthString(MWContext *context,
 					 HTTP_BASIC_AUTH_TOKEN, 
 					 sizeof(HTTP_BASIC_AUTH_TOKEN) - 1))
 		{
+			HG21632
 			/* unsupported auth type */
 			return(NET_AUTH_FAILED_DISPLAY_DOCUMENT);		
 		}
@@ -553,6 +559,7 @@ NET_AskForAuthString(MWContext *context,
 		 * In this case we want to just retry the connection
 		 * since it will probably succede now.
 		 */
+		HG22220
 		XP_FREEIF(host);
 		XP_FREEIF(new_address);
 		XP_FREEIF(username);
@@ -762,6 +769,7 @@ NET_AskForAuthString(MWContext *context,
 		return(NET_RETRY_WITH_AUTH);
 	  }
 
+	HG38932
 	NET_UUEncode((unsigned char *)u_pass_string, (unsigned char*) auth_string, len);
 
 	FREE(u_pass_string);
@@ -847,7 +855,7 @@ typedef struct _net_CookieStruct {
     char * cookie;
 	time_t expires;
 	time_t last_accessed;
-	Bool   secure;      /* only send for https connections */
+	HG26237
 	Bool   is_domain;   /* is it a domain instead of an absolute host? */
 } net_CookieStruct;
 
@@ -1089,6 +1097,7 @@ NET_SetCookieBehaviorPref(NET_CookieBehaviorEnum x)
 {
 	net_CookieBehavior = x;
 
+	HG83330
 	if(net_CookieBehavior == NET_DontUse)
 		XP_FileRemove("", xpHTTPCookie);
 }
@@ -1194,7 +1203,7 @@ NET_GetCookie(MWContext * context, char * address)
     XP_List * list_ptr;
     net_CookieStruct * cookie_s;
 	Bool first=TRUE;
-	Bool secure_path=FALSE;
+	HG26748
 	time_t cur_time = time(NULL);
 	int host_length;
 	int domain_length;
@@ -1207,8 +1216,7 @@ NET_GetCookie(MWContext * context, char * address)
 	if(NET_GetCookieBehaviorPref() == NET_DontUse)
 		return NULL;
 
-	if(!strncasecomp(address, "https", 5))
-		secure_path = TRUE;
+	HG98476
 
 	/* search for all cookies
 	 */
@@ -1239,6 +1247,7 @@ NET_GetCookie(MWContext * context, char * address)
 								&host[host_length - domain_length], 
 								domain_length))
 			  {
+				HG20476
 				/* no match. FAIL 
 				 */
 				continue;
@@ -1263,8 +1272,7 @@ NET_GetCookie(MWContext * context, char * address)
 			/* if the cookie is secure and the path isn't
 			 * dont send it
 			 */
-			if(cookie_s->secure && !secure_path)
-				continue;  /* back to top of while */
+			HG83764
 			
 			/* check for expired cookies
 			 */
@@ -1341,7 +1349,7 @@ net_IntSetCookieString(MWContext * context,
 	char *cur_host = NET_ParseURL(cur_url, GET_HOST_PART);
 	char *semi_colon, *ptr, *equal;
 	const char *script_name;
-	XP_Bool set_secure=FALSE, is_domain=FALSE, ask=FALSE, accept=FALSE;
+	XP_Bool HG83744 is_domain=FALSE, ask=FALSE, accept=FALSE;
 	MWContextType type;
 
 	if(!context) {
@@ -1368,6 +1376,7 @@ net_IntSetCookieString(MWContext * context,
 		return;
 	}
 
+	HG87358
 	/* terminate at any carriage return or linefeed */
 	for(ptr=set_cookie_header; *ptr; ptr++)
 		if(*ptr == LF || *ptr == CR) {
@@ -1388,8 +1397,7 @@ net_IntSetCookieString(MWContext * context,
 
 		/* there must be some attributes. (hopefully)
 		 */
-		if(strcasestr(semi_colon, "secure"))
-			set_secure = TRUE;
+		HG83476
 
 		/* look for the path attribute
 		 */
@@ -1573,7 +1581,7 @@ net_IntSetCookieString(MWContext * context,
         cd->cookie_from_header = cookie_from_header;
         cd->expires = expires;
         cd->url = cur_url;
-        cd->secure = set_secure;
+        HG84777
         cd->domain = is_domain;
         cd->prompt = NET_GetCookieWarningPref();
         cd->preference = NET_GetCookieBehaviorPref();
@@ -1608,8 +1616,7 @@ net_IntSetCookieString(MWContext * context,
 			  if( cd->domain != is_domain )
 				  /* lets hope the luser remembered to change the domain field */
 				  is_domain = cd->domain;
-			  if( cd->secure != set_secure )
-				  set_secure = cd->secure;
+			  HG27398
 			}
 			switch( result ) {
 				case JSCF_reject:
@@ -1714,7 +1721,7 @@ net_IntSetCookieString(MWContext * context,
         prev_cookie->path = path_from_header;
         prev_cookie->host = host_from_header;
         prev_cookie->name = name_from_header;
-        prev_cookie->secure = set_secure;
+        HG83263
         prev_cookie->is_domain = is_domain;
 		prev_cookie->last_accessed = time(NULL);
       }	else {
@@ -1741,7 +1748,7 @@ net_IntSetCookieString(MWContext * context,
         prev_cookie->path    = path_from_header;
         prev_cookie->host    = host_from_header;
         prev_cookie->expires = expires;
-        prev_cookie->secure  = set_secure;
+        HG22730
         prev_cookie->is_domain = is_domain;
 		prev_cookie->last_accessed = time(NULL);
 
@@ -2010,9 +2017,7 @@ NET_SaveCookies(char * filename)
 		XP_FileWrite(cookie_s->path, -1, fp);
 		XP_FileWrite("\t", 1, fp);
 
-		if(cookie_s->secure)
-		    XP_FileWrite("TRUE", -1, fp);
-		else
+		HG74640
 		    XP_FileWrite("FALSE", -1, fp);
 		XP_FileWrite("\t", 1, fp);
 
@@ -2059,7 +2064,7 @@ NET_ReadCookies(char * filename)
 	size_t new_len;
     XP_File fp;
 	char buffer[LINE_BUFFER_SIZE];
-	char *host, *is_domain, *path, *secure, *expires, *name, *cookie;
+	char *host, *is_domain, *path, *xxx *expires, *name, *cookie;
 	Bool added_to_list;
 
     if(!(fp = XP_FileOpen(filename, xpHTTPCookie, XP_FILE_READ)))
@@ -2070,7 +2075,7 @@ NET_ReadCookies(char * filename)
 
     /* format is:
      *
-     * host \t is_domain \t path \t secure \t expires \t name \t cookie
+     * host \t is_domain \t path \t xxx \t expires \t name \t cookie
      *
 	 * if this format isn't respected we move onto the next line in the file.
      * is_domain is TRUE or FALSE	-- defaulting to FALSE
@@ -2099,10 +2104,10 @@ NET_ReadCookies(char * filename)
 		if(*path == CR || *path == LF || *path == 0)
 			continue;
 
-		if( !(secure = XP_STRCHR(path, '\t')) )
+		if( !(xxx = XP_STRCHR(path, '\t')) )
 			continue;
-		*secure++ = '\0';
-		if(*secure == CR || *secure == LF || *secure == 0)
+		*xxx++ = '\0';
+		if(*xxx == CR || *xxx == LF || *xxx == 0)
 			continue;
 
 		if( !(expires = XP_STRCHR(secure, '\t')) )
@@ -2144,10 +2149,7 @@ NET_ReadCookies(char * filename)
         StrAllocCopy(new_cookie->path, path);
         StrAllocCopy(new_cookie->host, host);
         new_cookie->expires = atol(expires);
-		if(!XP_STRCMP(secure, "FALSE"))
-        	new_cookie->secure = FALSE;
-		else
-        	new_cookie->secure = TRUE;
+		HG87365
         if(!XP_STRCMP(is_domain, "TRUE"))
         	new_cookie->is_domain = TRUE;
         else
@@ -2198,9 +2200,10 @@ NET_ReadCookies(char * filename)
  * Figure out the authentication scheme used; currently supported:
  *
  *		* Basic
- *		* SimpleMD5
  *
  */
+ HG73632
+
 PRIVATE net_AuthType
 net_auth_type(char *name)
 {
@@ -2210,8 +2213,7 @@ net_auth_type(char *name)
 		if (!strncasecomp(name, "basic", 5))
 			return AUTH_BASIC;
 #ifdef SIMPLE_MD5
-		else if (!strncasecomp(name, "simplemd5", 9))
-			return AUTH_SIMPLEMD5;
+		HG29383
 #endif
 		/*FORTEZZA checks*/
 		else if (!strncasecomp(name, "fortezzaproxy", 13))
@@ -2355,7 +2357,7 @@ net_parse_authenticate_line(char *auth, net_AuthStruct *ret)
 	/*Another FORTEZZA addition*/
 	if (!ret->oldChallenge)
 		ret->oldChallenge_retries = 0;
-	/*End FPRTEZZA  addition   */
+	/*End FORTEZZA  addition   */
     return ret;
 }
 
