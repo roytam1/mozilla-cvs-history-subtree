@@ -2529,7 +2529,7 @@ struct SelectorMatchesData {
   SelectorMatchesData(nsIPresContext* aPresContext, nsIContent* aContent, 
                   nsIRuleWalker* aRuleWalker, nsCompatibility* aCompat = nsnull);
   
-  ~SelectorMatchesData() 
+  virtual ~SelectorMatchesData() 
   {
     MOZ_COUNT_DTOR(SelectorMatchesData);
 
@@ -2550,6 +2550,7 @@ struct SelectorMatchesData {
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
+    this->~SelectorMatchesData();
     aContext->FreeToShell(sizeof(SelectorMatchesData), this);
   };
 
