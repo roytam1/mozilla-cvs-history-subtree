@@ -32,10 +32,10 @@ MOZ_TOP=mozilla
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
-#NSPR_CO_TAG=SeaMonkey_M17_BRANCH
-#PSM_CO_TAG=SeaMonkey_M17_BRANCH
-#LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
+MOZ_BRANCH=CONRAD_DYN_PROFILE_BRANCH
+NSPR_CO_TAG=CONRAD_DYN_PROFILE_BRANCH
+PSM_CO_TAG=CONRAD_DYN_PROFILE_BRANCH
+LDAPCSDK_CO_TAG=CONRAD_DYN_PROFILE_BRANCH
 
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
