@@ -188,7 +188,7 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
 #define DEBUG_TrackNewWrapper(wrapper) ((void)0)
 #define DEBUG_TrackDeleteWrapper(wrapper) ((void)0)
 #define DEBUG_TrackWrapperCall(wrapper, mode) ((void)0)
-#define DEBUG_TrackShutdown(wrapper) ((void)0)
+#define DEBUG_TrackShutdownWrapper(wrapper) ((void)0)
 #endif
 
 /***************************************************************************/
