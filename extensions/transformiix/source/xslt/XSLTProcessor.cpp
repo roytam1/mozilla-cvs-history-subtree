@@ -1069,7 +1069,7 @@ void XSLTProcessor::processAction
 #ifdef MOZ_XSL
                         // XXX (pvdb) Check if we need to set a new default namespace?
                         String nameSpaceURI;
-                        ps->getNameSpaceURI(name, nameSpaceURI);
+                        ps->getResultNameSpaceURI(name, nameSpaceURI);
                         // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
                         if (ps->getOutputFormat()->isHTMLOutput()) {
                             name.toLowerCase();
@@ -1318,7 +1318,7 @@ void XSLTProcessor::processAction
                 }
 
                 String nameSpaceURI;
-                ps->getNameSpaceURI(nodeName, nameSpaceURI);
+                ps->getResultNameSpaceURI(nodeName, nameSpaceURI);
                 // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
                 if (ps->getOutputFormat()->isHTMLOutput()) {
                     nodeName.toLowerCase();
