@@ -1670,6 +1670,10 @@ nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
             rv = openCacheMap();
             if (NS_FAILED(rv)) return rv;
         }
+        if (!mCacheMap->IsDirty()) {
+            mCacheMap->IsDirty() = PR_TRUE;
+            rv = mCacheMap->WriteHeader(mCacheStream);
+        }
         rv = mCacheMap->WriteBucket(mCacheStream, mCacheMap->GetBucketIndex(record));
     }
     
