@@ -79,13 +79,10 @@ JSType *Attribute_Type;
 JSType *NamedArgument_Type;
 JSArrayType *Array_Type;
 
-Attribute *NullAttribute;
-
 
 Attribute *Context::executeAttributes(ExprNode *attr)
 {
-    if (attr == NULL)
-        return NullAttribute;
+    ASSERT(attr);
 
     ByteCodeGen bcg(this, mScopeChain);
     ByteCodeModule *bcm = bcg.genCodeForExpression(attr);
@@ -285,15 +282,15 @@ Reference *JSObject::genReference(bool hasBase, const String& name, NamespaceLis
         switch (prop->mFlag) {
         case ValuePointer:
             if (hasBase)
-                return new PropertyReference(name, acc, prop->mType);
+                return new PropertyReference(name, acc, prop->mType, prop->mAttributes);
             else
                 return new NameReference(name, acc);
         case FunctionPair:
             if (acc == Read)
-                return new GetterFunctionReference(prop->mData.fPair.getterF);
+                return new GetterFunctionReference(prop->mData.fPair.getterF, prop->mAttributes);
             else {
                 JSFunction *f = prop->mData.fPair.setterF;
-                return new SetterFunctionReference(f, f->getArgType(0));
+                return new SetterFunctionReference(f, f->getArgType(0), prop->mAttributes);
             }
         default:
             NOT_REACHED("bad storage kind");
@@ -684,7 +681,7 @@ Reference *ParameterBarrel::genReference(bool hasBase, const String& name, Names
     if (hasProperty(name, names, acc, &i)) {
         Property *prop = PROPERTY(i);
         ASSERT(prop->mFlag == Slot);
-        return new ParameterReference(prop->mData.index, acc, prop->mType);
+        return new ParameterReference(prop->mData.index, acc, prop->mType, prop->mAttributes);
     }
     NOT_REACHED("bad genRef call");
     return NULL;
@@ -876,6 +873,7 @@ void ScopeChain::collectNames(StmtNode *p)
         {
             FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
             m_cx->setAttributeValue(f, Property::Virtual);
+            f->attributeValue->mTrueFlags |= Property::Const;
 
             bool isStatic = (f->attributeValue->mTrueFlags & Property::Static) == Property::Static;
             bool isConstructor = (f->attributeValue->mTrueFlags & Property::Constructor) == Property::Constructor;
@@ -1193,25 +1191,25 @@ Reference *JSType::genReference(bool hasBase, const String& name, NamespaceList 
         switch (prop->mFlag) {
         case FunctionPair:
             if (acc == Read)
-                return new GetterFunctionReference(prop->mData.fPair.getterF);
+                return new GetterFunctionReference(prop->mData.fPair.getterF, prop->mAttributes);
             else {
                 JSFunction *f = prop->mData.fPair.setterF;
-                return new SetterFunctionReference(f, f->getArgType(0));
+                return new SetterFunctionReference(f, f->getArgType(0), prop->mAttributes);
             }
         case ValuePointer:
-            return new StaticFieldReference(name, acc, this, prop->mType);
+            return new StaticFieldReference(name, acc, this, prop->mType, prop->mAttributes);
 
         case IndexPair:
             if (acc == Read)
-                return new GetterMethodReference(prop->mData.iPair.getterI, this, prop->mType);
+                return new GetterMethodReference(prop->mData.iPair.getterI, this, prop->mType, prop->mAttributes);
             else {
                 JSFunction *f = mMethods[prop->mData.iPair.setterI];
-                return new SetterMethodReference(prop->mData.iPair.setterI, this, f->getArgType(0));
+                return new SetterMethodReference(prop->mData.iPair.setterI, this, f->getArgType(0), prop->mAttributes);
             }
         case Slot:
-            return new FieldReference(prop->mData.index, acc, prop->mType);
+            return new FieldReference(prop->mData.index, acc, prop->mType, prop->mAttributes);
         case Method:
-            return new MethodReference(prop->mData.index, this, prop->mType);
+            return new MethodReference(prop->mData.index, this, prop->mType, prop->mAttributes);
         default:
             NOT_REACHED("bad storage kind");
             return NULL;
@@ -1287,8 +1285,8 @@ void JSType::setSuperType(JSType *super)
 
 void Activation::defineTempVariable(Reference *&readRef, Reference *&writeRef, JSType *type)
 {
-    readRef = new LocalVarReference(mVariableCount, Read, type);
-    writeRef = new LocalVarReference(mVariableCount, Write, type);
+    readRef = new LocalVarReference(mVariableCount, Read, type, Property::NoAttribute);
+    writeRef = new LocalVarReference(mVariableCount, Write, type, Property::NoAttribute);
     mVariableCount++;
 }
 
@@ -1301,13 +1299,13 @@ Reference *Activation::genReference(bool hasBase, const String& name, NamespaceL
 
         switch (prop->mFlag) {
         case FunctionPair:
-            return (acc == Read) ? new AccessorReference(prop->mData.fPair.getterF)
-                                 : new AccessorReference(prop->mData.fPair.setterF);
+            return (acc == Read) ? new AccessorReference(prop->mData.fPair.getterF, prop->mAttributes)
+                                 : new AccessorReference(prop->mData.fPair.setterF, prop->mAttributes);
         case Slot:
             if (depth)
-                return new ClosureVarReference(depth, prop->mData.index, acc, prop->mType);
+                return new ClosureVarReference(depth, prop->mData.index, acc, prop->mType, prop->mAttributes);
             else
-                return new LocalVarReference(prop->mData.index, acc, prop->mType);
+                return new LocalVarReference(prop->mData.index, acc, prop->mType, prop->mAttributes);
 
         case ValuePointer:
             return new NameReference(name, acc);
@@ -1914,8 +1912,8 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
       mStackMax(0),
       mLocals(NULL),
       mArgumentBase(NULL),
-      mGlobal(global), 
-      mReader(NULL)
+      mReader(NULL),
+      mGlobal(global) 
 
 {
     initOperatorTable();
@@ -1957,6 +1955,7 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
         { "public",         Property::Public,           Property::Private },
         { "private",        Property::Private,          Property::Public },
         { "final",          Property::Final,            Property::Virtual | Property::Abstract },
+        { "const",          Property::Const,            0 },
     };
     
     for (uint32 i = 0; i < (sizeof(attribute_init) / sizeof(Attribute_Init)); i++) {
@@ -1966,8 +1965,6 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
 
     JSFunction *x = new JSFunction(ExtendAttribute_Invoke, Attribute_Type);
     getGlobalObject()->defineVariable(this, widenCString("extend"), (NamespaceList *)(NULL), Attribute_Type, JSValue(x));
-
-    NullAttribute = new Attribute(0, 0);
 
 }
 

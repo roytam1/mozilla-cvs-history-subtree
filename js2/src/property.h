@@ -90,22 +90,24 @@ namespace JS2Runtime {
         }
         
         enum {      
-                Indexable   = 0x0001, 
-                Static      = 0x0002,
-                Dynamic     = 0x0004,
-                Constructor = 0x0008,
-                Operator    = 0x0010,
-                Prototype   = 0x0020,
-                Extend      = 0x0040,
-                Virtual     = 0x0080,
-                True        = 0x0100,
-                Abstract    = 0x0200,
-                Override    = 0x0400,
-                MayOverride = 0x0800,
-                Enumerable  = 0x1000, 
-                Public      = 0x2000, 
-                Private     = 0x4000, 
-                Final       = 0x8000
+                NoAttribute = 0x00000000,
+                Indexable   = 0x00000001, 
+                Static      = 0x00000002,
+                Dynamic     = 0x00000004,
+                Constructor = 0x00000008,
+                Operator    = 0x00000010,
+                Prototype   = 0x00000020,
+                Extend      = 0x00000040,
+                Virtual     = 0x00000080,
+                True        = 0x00000100,
+                Abstract    = 0x00000200,
+                Override    = 0x00000400,
+                MayOverride = 0x00000800,
+                Enumerable  = 0x00001000, 
+                Public      = 0x00002000, 
+                Private     = 0x00004000, 
+                Final       = 0x00008000,
+                Const       = 0x00010000
         };
 
         

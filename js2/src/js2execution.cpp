@@ -1659,7 +1659,7 @@ static JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
             if (r1.isType())
                 return JSValue(r1.type == r2.type);
             if (r1.isFunction())
-                return JSValue(r1.function == r2.function);
+                return JSValue(r1.function->isEqual(r2.function));
             NOT_REACHED("unhandled type");
             return kFalseValue;
         }

@@ -284,8 +284,9 @@ XXX ...couldn't get this to work...
         
     class Reference {
     public:
-        Reference(JSType *type) : mType(type) { }
+        Reference(JSType *type, PropertyAttribute attr) : mType(type), mAttr(attr) { }
         JSType *mType;
+        PropertyAttribute mAttr;
 
 #ifdef DEBUG
         void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("Reference", s, t); return t; }
@@ -318,13 +319,15 @@ XXX ...couldn't get this to work...
 
         // generate code sequence for delete operator
         virtual void emitDelete(ByteCodeGen *bcg);
+
+        bool isConst()                                      { return ((mAttr & Property::Const) == Property::Const); }
     };
 
     // a getter/setter function from an activation
     // the function is known directly
     class AccessorReference : public Reference {
     public:
-        AccessorReference(JSFunction *f);
+        AccessorReference(JSFunction *f, PropertyAttribute attr);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
     };
@@ -332,8 +335,8 @@ XXX ...couldn't get this to work...
     // in the current activation
     class LocalVarReference : public Reference {
     public:
-        LocalVarReference(uint32 index, Access acc, JSType *type)
-            : Reference(type), mAccess(acc), mIndex(index) { }
+        LocalVarReference(uint32 index, Access acc, JSType *type, PropertyAttribute attr)
+            : Reference(type, attr), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -342,16 +345,16 @@ XXX ...couldn't get this to work...
     // execution stack
     class ClosureVarReference : public LocalVarReference {
     public:
-        ClosureVarReference(uint32 depth, uint32 index, Access acc, JSType *type) 
-                        : LocalVarReference(index, acc, type), mDepth(depth) { }
+        ClosureVarReference(uint32 depth, uint32 index, Access acc, JSType *type, PropertyAttribute attr) 
+                        : LocalVarReference(index, acc, type, attr), mDepth(depth) { }
         uint32 mDepth;
         void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a member field in an instance
     class FieldReference : public Reference {
     public:
-        FieldReference(uint32 index, Access acc, JSType *type) 
-            : Reference(type), mAccess(acc), mIndex(index) { }
+        FieldReference(uint32 index, Access acc, JSType *type, PropertyAttribute attr) 
+            : Reference(type, attr), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -361,8 +364,8 @@ XXX ...couldn't get this to work...
     // a static field
     class StaticFieldReference : public Reference {
     public:
-        StaticFieldReference(const String& name, Access acc, JSType *baseClass, JSType *type) 
-            : Reference(type), mAccess(acc), mName(name), mClass(baseClass) { }
+        StaticFieldReference(const String& name, Access acc, JSType *baseClass, JSType *type, PropertyAttribute attr) 
+            : Reference(type, attr), mAccess(acc), mName(name), mClass(baseClass) { }
         Access mAccess;
         const String& mName;
         JSType *mClass;
@@ -374,8 +377,8 @@ XXX ...couldn't get this to work...
     // a member function in a vtable
     class MethodReference : public Reference {
     public:
-        MethodReference(uint32 index, JSType *baseClass, JSType *type) 
-            : Reference(type), mIndex(index), mClass(baseClass) { }
+        MethodReference(uint32 index, JSType *baseClass, JSType *type, PropertyAttribute attr) 
+            : Reference(type, attr), mIndex(index), mClass(baseClass) { }
         uint32 mIndex;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -386,14 +389,14 @@ XXX ...couldn't get this to work...
     };
     class GetterMethodReference : public MethodReference {
     public:
-        GetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
-            : MethodReference(index, baseClass, type) { }
+        GetterMethodReference(uint32 index, JSType *baseClass, JSType *type, PropertyAttribute attr)
+            : MethodReference(index, baseClass, type, attr) { }
         void emitCodeSequence(ByteCodeGen *bcg);
     };
     class SetterMethodReference : public MethodReference {
     public:
-        SetterMethodReference(uint32 index, JSType *baseClass, JSType *type)
-            : MethodReference(index, baseClass, type) { }
+        SetterMethodReference(uint32 index, JSType *baseClass, JSType *type, PropertyAttribute attr)
+            : MethodReference(index, baseClass, type, attr) { }
         void emitCodeSequence(ByteCodeGen *bcg);
         bool emitPreAssignment(ByteCodeGen *bcg);
     };
@@ -401,21 +404,21 @@ XXX ...couldn't get this to work...
     // a function
     class FunctionReference : public Reference {
     public:
-        FunctionReference(JSFunction *f);
+        FunctionReference(JSFunction *f, PropertyAttribute attr);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a getter function
     class GetterFunctionReference : public Reference {
     public:
-        GetterFunctionReference(JSFunction *f);
+        GetterFunctionReference(JSFunction *f, PropertyAttribute attr);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
     };
     // a setter function
     class SetterFunctionReference : public Reference {
     public:
-        SetterFunctionReference(JSFunction *f, JSType *type);
+        SetterFunctionReference(JSFunction *f, JSType *type, PropertyAttribute attr);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
@@ -424,8 +427,8 @@ XXX ...couldn't get this to work...
     // the "we don't know any field by that name".
     class PropertyReference : public Reference {
     public:
-        PropertyReference(const String& name, Access acc, JSType *type)
-            : Reference(type), mAccess(acc), mName(name) { }
+        PropertyReference(const String& name, Access acc, JSType *type, PropertyAttribute attr)
+            : Reference(type, attr), mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -438,8 +441,8 @@ XXX ...couldn't get this to work...
     // a parameter slot (they can't have getter/setter, right?)
     class ParameterReference : public Reference {
     public:
-        ParameterReference(uint32 index, Access acc, JSType *type) 
-            : Reference(type), mAccess(acc), mIndex(index) { }
+        ParameterReference(uint32 index, Access acc, JSType *type, PropertyAttribute attr) 
+            : Reference(type, attr), mAccess(acc), mIndex(index) { }
         Access mAccess;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -450,7 +453,7 @@ XXX ...couldn't get this to work...
     class NameReference : public Reference {
     public:
         NameReference(const String& name, Access acc)
-            : Reference(Object_Type), mAccess(acc), mName(name) { }
+            : Reference(Object_Type, 0), mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -461,7 +464,7 @@ XXX ...couldn't get this to work...
     class ElementReference : public Reference {
     public:
         ElementReference(Access acc, int32 depth)
-            : Reference(Object_Type), mAccess(acc), mDepth(depth) { }
+            : Reference(Object_Type, 0), mAccess(acc), mDepth(depth) { }
         Access mAccess;
         int32 mDepth;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -922,6 +925,14 @@ XXX ...couldn't get this to work...
         {
             JSObject::defineMethod(cx, name, attr, f);
         }
+
+        // return the class on the top of the stack (or NULL if there
+        // isn't one there).
+        JSType *topClass()
+        {
+            return NULL;;
+        }
+        
         
         // saved values from a previous execution
         JSValue *mLocals;
@@ -1055,7 +1066,7 @@ XXX ...couldn't get this to work...
 
         // return the class on the top of the stack (or NULL if there
         // isn't one there).
-        JSType *topClass()
+        virtual JSType *topClass()
         {
             JSObject *obj = mScopeStack.back();
             return obj->topClass();
@@ -1233,6 +1244,8 @@ XXX ...couldn't get this to work...
                                                 { ASSERT(mHasRestParameter); return mArguments[(mRequiredArgs + mOptionalArgs)].mName; }
         virtual JSType *getRestParameterType()  { ASSERT(mHasRestParameter); return mArguments[(mRequiredArgs + mOptionalArgs)].mType; }
 
+        virtual JSFunction *getFunction()       { return this; }
+        bool isEqual(JSFunction *f)             { return (getFunction() == f->getFunction()); }
 
         ParameterBarrel *mParameterBarrel;
         Activation mActivation;                 // not used during execution  (XXX so maybe we should handle it differently, hmmm?)
@@ -1299,6 +1312,8 @@ XXX ...couldn't get this to work...
                                         { mFunction->setProperty(cx, name, names, v); }
         bool hasProperty(const String &name, NamespaceList *names, Access acc, PropertyIterator *p)
                                         { return mFunction->hasProperty(name, names, acc, p); }
+
+        JSFunction *getFunction()       { return mFunction; }
 
     };
 
@@ -1620,23 +1635,23 @@ XXX ...couldn't get this to work...
     
     
     
-    inline AccessorReference::AccessorReference(JSFunction *f)
-        : Reference(f->getResultType()), mFunction(f) 
+    inline AccessorReference::AccessorReference(JSFunction *f, PropertyAttribute attr)
+        : Reference(f->getResultType(), attr), mFunction(f) 
     {
     }
   
-    inline FunctionReference::FunctionReference(JSFunction *f) 
-            : Reference(f->getResultType()), mFunction(f)
+    inline FunctionReference::FunctionReference(JSFunction *f, PropertyAttribute attr) 
+            : Reference(f->getResultType(), attr), mFunction(f)
     {
     }
 
-    inline GetterFunctionReference::GetterFunctionReference(JSFunction *f) 
-            : Reference(f->getResultType()), mFunction(f)
+    inline GetterFunctionReference::GetterFunctionReference(JSFunction *f, PropertyAttribute attr) 
+            : Reference(f->getResultType(), attr), mFunction(f)
     {
     }
 
-    inline SetterFunctionReference::SetterFunctionReference(JSFunction *f, JSType *type) 
-            : Reference(type), mFunction(f)
+    inline SetterFunctionReference::SetterFunctionReference(JSFunction *f, JSType *type, PropertyAttribute attr) 
+            : Reference(type, attr), mFunction(f)
     {
     }
 

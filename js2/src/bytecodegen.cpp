@@ -1383,9 +1383,9 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 NamespaceList *oldNS = mNamespaceList;
                 mNamespaceList = new NamespaceList(&qualifierName, mNamespaceList);
 
-                Reference *ref = lType->genReference(true, fieldName, mNamespaceList, acc, 0);
+                Reference *ref = lType->genReference(true, fieldName, mNamespaceList, acc, Property::NoAttribute);
                 if (ref == NULL)
-                    ref = new PropertyReference(fieldName, acc, Object_Type);
+                    ref = new PropertyReference(fieldName, acc, Object_Type, 0);
 
                 delete mNamespaceList;
                 mNamespaceList = oldNS;
@@ -1397,7 +1397,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
                 Reference *ref = lType->genReference(true, fieldName, CURRENT_ATTR, acc, 0);
                 if (ref == NULL)
-                    ref = new PropertyReference(fieldName, acc, Object_Type);
+                    ref = new PropertyReference(fieldName, acc, Object_Type, Property::NoAttribute);
                 return ref;
             }
 
@@ -1464,10 +1464,10 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
                 const StringAtom &fieldName = checked_cast<IdentifierExprNode *>(b->op2)->name;
                 readRef = lType->genReference(true, fieldName, CURRENT_ATTR, Read, 0);
                 if (readRef == NULL)
-                    readRef = new PropertyReference(fieldName, Read, Object_Type);
+                    readRef = new PropertyReference(fieldName, Read, Object_Type, Property::NoAttribute);
                 writeRef = lType->genReference(true, fieldName, CURRENT_ATTR, Write, 0);
                 if (writeRef == NULL)
-                    writeRef = new PropertyReference(fieldName, Write, Object_Type);
+                    writeRef = new PropertyReference(fieldName, Write, Object_Type, Property::NoAttribute);
             }
         }
         break;
@@ -1952,6 +1952,9 @@ BinaryOpEquals:
             Reference *ref = genReference(b->op1, Write);
             if (ref == NULL)
                 m_cx->reportError(Exception::semanticError, "incomprehensible assignment designate (and error message)", p->pos);
+            if (ref->isConst())
+                m_cx->reportError(Exception::semanticError, "assignment to const not allowed", p->pos);
+
             ref->emitPreAssignment(this);
             genExpr(b->op2);
 
@@ -1976,7 +1979,11 @@ BinaryOpEquals:
     case ExprNode::This:
         {
             addOp(LoadThisOp);
-            return Object_Type; // XXX find class we're in for methods
+            JSType *theClass = mScopeChain->topClass();
+            if (theClass)
+                return theClass;
+            else    // XXX need to be able to detect illegal references to 'this' in non-prototype, non-member functions
+                return Object_Type;
         }
     case ExprNode::dot:
         {
