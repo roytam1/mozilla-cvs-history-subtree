@@ -88,6 +88,19 @@ using namespace std;
 #if TARGET_RT_MAC_MACHO
 // ### This is used to hack around a bug in JavaEmbedding inside Cocoa windows. ###
 const SInt32 kTitleBarHeight = 22;
+static SInt32 getContentOffset(WindowRef window)
+{
+    // Allow for the fact that the content region may not start right below the title bar.
+    Rect structBounds, contentBounds;
+    // Rect titleBarBounds;
+    GetWindowBounds(window, kWindowStructureRgn, &structBounds);
+    GetWindowBounds(window, kWindowContentRgn, &contentBounds);
+    // GetWindowBounds(window, kWindowTitleBarWidgetsRgn, &titleBarBounds);
+    int delta = contentBounds.top - structBounds.top;
+    if (delta < 0) delta = -delta;
+    delta -= kTitleBarHeight; // Should be (titleBarBounds.bottom - titleBarBounds.top); but it's giving an err.
+    return delta;
+}
 #else
 const SInt32 kTitleBarHeight = 0;
 #endif
@@ -348,7 +361,6 @@ static void addObjectAttributes(nsIPluginTagInfo* tagInfo, string& attributes)
     PRUint16 count;
     const char* const* names;
     const char* const* values;
-    const char kClassID[] = "classid";
     const char kJavaPrefix[] = "java:";
     const size_t kJavaPrefixSize = sizeof(kJavaPrefix) - 1;
     if (tagInfo->GetAttributes(count, names, values) == NS_OK) {
@@ -1393,18 +1405,22 @@ void MRJContext::resume(Boolean inFront)
 
 void MRJContext::mouseClick(const EventRecord* event)
 {
-    // won't Carbon events just take care of everything?
+    WindowRef window = GetWindowFromPort(mPluginPort);
     LocalPort port(mPluginPort);
     port.Enter();
 
     Point localWhere = event->where;
     ::GlobalToLocal(&localWhere);
 
+#if TARGET_RT_MAC_MACHO
     // XXX Adjust the coordinates for Cocoa.
-    localWhere.v -= kTitleBarHeight;
-    
-    ::HandleControlClick(mAppletControl, localWhere,
-                         event->modifiers, NULL);
+    SInt32 contentOffset = getContentOffset(window);
+    localWhere.v += contentOffset;
+#else
+    SInt32 contentOffset = 0;
+#endif
+
+    ::HandleControlClick(mAppletControl, localWhere, event->modifiers, NULL);
 
     localWhere = event->where;
     
@@ -1413,8 +1429,7 @@ void MRJContext::mouseClick(const EventRecord* event)
     do {
         UInt32 modifiers;
         Point oldWhere = localWhere;
-        OSStatus status = ::TrackMouseLocationWithOptions(NULL, kTrackMouseLocationOptionDontConsumeMouseUp,
-                                                          kEventDurationForever, &localWhere, &modifiers, &trackingResult);
+        OSStatus status = ::TrackMouseLocationWithOptions(NULL, kTrackMouseLocationOptionDontConsumeMouseUp, kEventDurationForever, &localWhere, &modifiers, &trackingResult);
         if (trackingResult == kMouseTrackingMouseDragged) {
             // send appropriate carbon event.
             EventRef carbonEvent;
@@ -1423,7 +1438,7 @@ void MRJContext::mouseClick(const EventRecord* event)
             if (status == noErr) {
                 // -->     kEventParamMouseLocation    typeHIPoint
                 ::LocalToGlobal(&localWhere);
-                HIPoint where = { event->where.h, event->where.v - kTitleBarHeight };
+                HIPoint where = { event->where.h, event->where.v + contentOffset };
                 SetEventParameter(carbonEvent, kEventParamMouseLocation, typeHIPoint,
                                   sizeof(where), &where);
                 // -->     kEventParamMouseDelta       typeHIPoint (X Only)
@@ -1443,7 +1458,7 @@ void MRJContext::mouseClick(const EventRecord* event)
                                   sizeof(clickCount), &clickCount);
 
                 // Need to send this mouse up event to the window the Java control lives in.
-                status = SendEventToWindow(carbonEvent, GetWindowFromPort(mPluginPort));
+                status = SendEventToWindow(carbonEvent, window);
                 ReleaseEvent(carbonEvent);
             }
         }
@@ -1457,12 +1472,20 @@ void MRJContext::mouseClick(const EventRecord* event)
 
 void MRJContext::mouseRelease(const EventRecord* event)
 {
+    WindowRef window = GetWindowFromPort(mPluginPort);
     EventRef carbonEvent;
     OSStatus err = CreateEvent(NULL, kEventClassMouse, kEventMouseUp,
                                event->when, kEventAttributeNone, &carbonEvent);
+#if TARGET_RT_MAC_MACHO
+    // XXX Adjust the coordinates for Cocoa.
+    SInt32 contentOffset = getContentOffset(window);
+#else
+    SInt32 contentOffset = 0;
+#endif
+
     if (err == noErr) {
         // -->     kEventParamMouseLocation    typeHIPoint
-        HIPoint where = { event->where.h, event->where.v - kTitleBarHeight };
+        HIPoint where = { event->where.h, event->where.v + contentOffset };
         SetEventParameter(carbonEvent, kEventParamMouseLocation, typeHIPoint,
                           sizeof(where), &where);
         // -->     kEventParamKeyModifiers     typeUInt32
@@ -1479,7 +1502,7 @@ void MRJContext::mouseRelease(const EventRecord* event)
                           sizeof(clickCount), &clickCount);
 
         // Need to send this mouse up event to the window the Java control lives in.
-        err = SendEventToWindow(carbonEvent, GetWindowFromPort(mPluginPort));
+        err = SendEventToWindow(carbonEvent, window);
         ReleaseEvent(carbonEvent);
     }
 }
