@@ -67,8 +67,6 @@ public:
   nsBoxLayoutState(nsIPresShell* aShell) NS_HIDDEN;
   nsBoxLayoutState(const nsBoxLayoutState& aState) NS_HIDDEN;
 
-  NS_HIDDEN_(void) HandleReflow(nsIBox* aRootBox);
-
   nsPresContext* PresContext() { return mPresContext; }
   nsIPresShell*   PresShell() { return mPresContext->PresShell(); }
 
@@ -91,10 +89,6 @@ public:
   { return PresShell()->AllocateStackMemory(aSize, aResult); }
 
 private:
-  //void DirtyAllChildren(nsBoxLayoutState& aState, nsIBox* aBox);
-  NS_HIDDEN_(void) Unwind(nsReflowPath* aReflowPath, nsIBox* aRootBox);
-  NS_HIDDEN_(nsIBox*) GetBoxForFrame(nsIFrame* aFrame, PRBool& aIsAdaptor);
-
   nsCOMPtr<nsPresContext> mPresContext;
   const nsHTMLReflowState* mReflowState;
   nsSize mScrolledBlockSizeConstraint;
