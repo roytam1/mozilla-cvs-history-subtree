@@ -458,7 +458,8 @@ function cmgr_listnames (partialName, flags)
     for (var c in cmds)
         cmdNames.push (cmds[c].name);
 
-    return cmdNames.sort();
+    cmdNames.sort();
+    return cmdNames;
 }
 
 /**

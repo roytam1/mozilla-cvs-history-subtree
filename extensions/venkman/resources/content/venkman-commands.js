@@ -545,7 +545,14 @@ function cmdCommands (e)
 {
     display (MSG_TIP1_HELP);
     display (MSG_TIP2_HELP);
+
     var names = console.commandManager.listNames(e.pattern, CMD_CONSOLE);
+    if (!names.length)
+    {
+        display (getMsg(MSN_NO_CMDMATCH, e.pattern), MT_ERROR);
+        return true;
+    }
+
     names = names.join(MSG_COMMASP);
     
     if (e.pattern)
@@ -794,7 +801,8 @@ function cmdFindFrame (e)
 {
     var jsdFrame = console.frames[e.frameIndex];
 
-    displayFrame (jsdFrame, e.frameIndex, true);
+    if ("isInteractive" in e && e.isInteractive)
+        displayFrame (jsdFrame, e.frameIndex, true);
 
     if (jsdFrame.isNative)
         return true;

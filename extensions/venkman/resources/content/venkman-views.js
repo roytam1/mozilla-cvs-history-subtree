@@ -1623,9 +1623,11 @@ function ss_tabcomplete (e)
         var partialCommand = v.substring(startPos, firstSpace).toLowerCase();
         var cmds = console.commandManager.listNames(partialCommand, CMD_CONSOLE);
 
-        if (!cmds)
+        if (cmds.length == 0)
+        {
             /* partial didn't match a thing */
             display (getMsg(MSN_NO_CMDMATCH, partialCommand), MT_ERROR);
+        }
         else if (cmds.length == 1)
         {
             /* partial matched exactly one command */
