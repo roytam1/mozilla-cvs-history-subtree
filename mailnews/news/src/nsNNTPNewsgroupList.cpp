@@ -746,30 +746,19 @@ nsNNTPNewsgroupList::FinishXOVERLINE(int status, int *newstatus)
 	/* If any XOVER lines from the last time failed to come in, mark those
 	 messages as read. */
 
-	if (status >= 0 && m_lastProcessedNumber < m_lastMsgNumber) 
-	{
+	if (status >= 0 && m_lastProcessedNumber < m_lastMsgNumber) {
 		m_set->AddRange(m_lastProcessedNumber + 1, m_lastMsgNumber);
 	}
 
-	if (m_newsDB)
-	{
-#ifdef DEBUG_NEWS
-        printf("committing summary file changes\n");
-#endif
+	if (m_newsDB) {
 		m_newsDB->Commit(nsMsgDBCommitType::kSessionCommit);
 		m_newsDB->Close(PR_TRUE);
 		m_newsDB = nsnull;
 	}
 
-
 	k = &m_knownArts;
 
-	if (!k) {
-		return NS_ERROR_NULL_POINTER;
-	}
-
-
-	if (k->set) 
+	if (k && k->set) 
 	{
 		PRInt32 n = k->set->FirstNonMember();
 		if (n < k->first_possible || n > k->last_possible) 
@@ -787,6 +776,9 @@ nsNNTPNewsgroupList::FinishXOVERLINE(int status, int *newstatus)
 		// which interrupts this url right before it was going to finish and causes FinishXOver
 		// to get called again.
         m_finishingXover = PR_TRUE;
+
+        printf("XXX setting m_runningURL to nsnull\n");
+        m_runningURL = nsnull;
 
 		if (m_lastMsgNumber > 0) {
             nsAutoString firstStr;

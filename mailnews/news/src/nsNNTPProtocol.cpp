@@ -506,11 +506,11 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
     nsMsgProtocol::InitFromURI(aURL);
 
     nsXPIDLCString userName;
-    nsXPIDLCString hostName;
-
-    rv = m_url->GetHost(getter_Copies(hostName));
-    NS_ENSURE_SUCCESS(rv,rv);
     rv = m_url->GetPreHost(getter_Copies(userName));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsXPIDLCString hostName;
+    rv = m_url->GetHost(getter_Copies(hostName));
     NS_ENSURE_SUCCESS(rv,rv);
 
     nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
@@ -1780,7 +1780,6 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 		
 		if (NS_SUCCEEDED(rv) && ((const char *)newsgroupName) && (m_key != nsMsgKey_None)) {
 		    PR_LOG(NNTP,PR_LOG_ALWAYS,("current group = %s, desired group = %s",(const char *)m_currentGroup, (const char *)newsgroupName));
-
             // if the current group is the desired group, we can just issue the ARTICLE command
             // if not, we have to do a GROUP first
 			if (!PL_strcmp((const char *)m_currentGroup, (const char *)newsgroupName))
@@ -3174,6 +3173,7 @@ PRInt32 nsNNTPProtocol::BeginReadXover()
 		   &m_firstPossibleArticle, 
 		   &m_lastPossibleArticle);
 
+    CleanupNewsgroupList();
     m_newsgroupList = do_CreateInstance(NS_NNTPNEWSGROUPLIST_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return -1;
 
@@ -3387,16 +3387,15 @@ PRInt32 nsNNTPProtocol::ReadXover(nsIInputStream * inputStream, PRUint32 length)
 PRInt32 nsNNTPProtocol::ProcessXover()
 {
     nsresult rv;
-	PRInt32 status = 0;
 
     /* xover_parse_state stored in MSG_Pane cd->pane */
     NS_ASSERTION(m_newsgroupList, "yikes");
     if (!m_newsgroupList) return -1;
 
+	PRInt32 status = 0;
     rv = m_newsgroupList->FinishXOVERLINE(0,&status);
-	if (NS_SUCCEEDED(rv) && status < 0) return status;
-
     m_newsgroupList = nsnull;
+	if (NS_SUCCEEDED(rv) && status < 0) return status;
 
 	m_nextState = NEWS_DONE;
 
@@ -5076,22 +5075,7 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
 				break;
 	        case NEWS_DONE:
 				m_nextState = NEWS_FREE;
-
-#if 0   // mscott 01/04/99. This should be temporary until I figure out what to do with this code.....
-			  if (cd->stream)
-				COMPLETE_STREAM;
-
-	            cd->next_state = NEWS_FREE;
-                /* set the connection unbusy
-     	         */
-    		    cd->control_con->busy = PR_FALSE;
-                NET_TotalNumberOfOpenConnections--;
-
-				NET_ClearReadSelect(ce->window_id, cd->control_con->csock);
-				NET_RefreshCacheFileExpiration(ce->URL_s);
-#endif
 	            break;
-
 			case NEWS_POST_DONE:
 				NNTP_LOG_NOTE("NEWS_POST_DONE");
 				mailnewsurl->SetUrlState(PR_FALSE, NS_OK);
@@ -5101,80 +5085,23 @@ nsresult nsNNTPProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inp
 				NNTP_LOG_NOTE("NEWS_ERROR");
 				mailnewsurl->SetUrlState(PR_FALSE, NS_ERROR_FAILURE);
 				m_nextState = NEWS_FREE;
-#if 0   // mscott 01/04/99. This should be temporary until I figure out what to do with this code.....
-	            if(cd->stream)
-		             ABORT_STREAM(status);
-
-    	        /* set the connection unbusy
-     	         */
-    		    cd->control_con->busy = PR_FALSE;
-                NET_TotalNumberOfOpenConnections--;
-
-				if(cd->control_con->csock != NULL)
-				  {
-					NET_ClearReadSelect(ce->window_id, cd->control_con->csock);
-				  }
-#endif
 	            break;
-
 	        case NNTP_ERROR:
-#if 0   // mscott 01/04/99. This should be temporary until I figure out what to do with this code.....
-	            if(cd->stream)
-				  {
-		            ABORT_STREAM(status);
-					cd->stream=0;
-				  }
-    
-				if(cd->control_con && cd->control_con->csock != NULL)
-				  {
-					NNTP_LOG_NOTE(("Clearing read and connect select on socket %d",
-															cd->control_con->csock));
-					NET_ClearConnectSelect(ce->window_id, cd->control_con->csock);
-					NET_ClearReadSelect(ce->window_id, cd->control_con->csock);
-#ifdef XP_WIN
-					if(cd->calling_netlib_all_the_time)
-					{
-						cd->calling_netlib_all_the_time = PR_FALSE;
-						NET_ClearCallNetlibAllTheTime(ce->window_id,"mknews");
-					}
-#endif /* XP_WIN */
-
-#if defined(XP_WIN) || (defined(XP_UNIX)&&defined(UNIX_ASYNC_DNS))
-                    NET_ClearDNSSelect(ce->window_id, cd->control_con->csock);
-#endif /* XP_WIN || XP_UNIX */
-				    net_nntp_close (cd->control_con, status);  /* close the
-																  socket */ 
-					NET_TotalNumberOfOpenConnections--;
-					ce->socket = NULL;
-				  }
-#endif // mscott's temporary #if 0...
                 /* check if this connection came from the cache or if it was
                  * a new connection.  If it was not new lets start it over
 				 * again.  But only if we didn't have any successful protocol
 				 * dialog at all.
                  */
-
-				// mscott: I've removed the code that used to be here because it involved connection
-				// management which should now be handled by the netlib module.
-
-        // bienvenu: netlib never did handle connection caching, so we need to resurrect this code :-(
-        if (m_nntpServer)
-          m_nntpServer->RemoveConnection(this);
+                if (m_nntpServer)
+                    m_nntpServer->RemoveConnection(this);
 
 				m_nextState = NEWS_FREE;
 				break;
-    
             case NEWS_FREE:
-				// mscott: we really haven't worked out how we are going to 
-				// keep the news connection open. We probably want a news connection
-				// cache so we aren't creating new connections to process each request...
-				// but until that time, we always want to properly shutdown the connection
-
-
-        m_connectionBusy = PR_FALSE;
-        mailnewsurl->SetUrlState(PR_FALSE, NS_OK);
-        m_lastActiveTimeStamp = PR_Now(); // remmeber when we last used this connection.
-        return CleanupAfterRunningUrl();
+                m_connectionBusy = PR_FALSE;
+                mailnewsurl->SetUrlState(PR_FALSE, NS_OK);
+                m_lastActiveTimeStamp = PR_Now(); // remmeber when we last used this connection.
+                return CleanupAfterRunningUrl();
 			case NEWS_FINISHED:
 				return NS_OK;
 				break;
@@ -5201,7 +5128,8 @@ NS_IMETHODIMP nsNNTPProtocol::CloseConnection()
   SendData(nsnull, NNTP_CMD_QUIT); // this will cause OnStopRequest get called, which will call CloseSocket()
   
   // break some cycles
-  m_newsgroupList = nsnull;
+  CleanupNewsgroupList();
+
   m_nntpServer = nsnull;
   m_newsFolder = nsnull;
   
@@ -5214,6 +5142,17 @@ NS_IMETHODIMP nsNNTPProtocol::CloseConnection()
   return NS_OK;
 }
 
+nsresult nsNNTPProtocol::CleanupNewsgroupList()
+{
+    nsresult rv;
+    if (!m_newsgroupList) return NS_OK;
+	PRInt32 status = 0;
+    rv = m_newsgroupList->FinishXOVERLINE(0,&status);
+    m_newsgroupList = nsnull;
+    NS_ASSERTION(NS_SUCCEEDED(rv), "FinishXOVERLINE failed");
+    return rv;
+}
+
 nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
 {
   /* do we need to know if we're parsing xover to call finish xover?  */
@@ -5224,7 +5163,7 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
      exit so that it can free its data. */
   
   nsresult rv = NS_OK;
-
+  PR_LOG(NNTP,PR_LOG_ALWAYS,("CleanupAfterRunningUrl()"));
 
   m_connectionBusy = PR_FALSE;
   // send StopRequest notification after we've cleaned up the protocol
@@ -5235,13 +5174,8 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
 
 	if (m_loadGroup)
 		m_loadGroup->RemoveChannel(NS_STATIC_CAST(nsIChannel *, this), nsnull, NS_OK, nsnull);
-	if (m_newsgroupList)
-	{
-		int status;
-        rv = m_newsgroupList->FinishXOVERLINE(0,&status);
-		NS_ASSERTION(NS_SUCCEEDED(rv), "FinishXOVERLINE failed");
-        m_newsgroupList = nsnull;
-	}
+
+    CleanupNewsgroupList();
 
   // clear out mem cache entry so we're not holding onto it.
   if (m_runningURL)
@@ -5276,6 +5210,7 @@ nsresult nsNNTPProtocol::CleanupAfterRunningUrl()
     m_loadGroup = nsnull;
     mCallbacks = nsnull;
   }
+ 
   return NS_OK;
 }
 

@@ -404,6 +404,7 @@ private:
     nsMsgKey m_key;
 
     nsresult SetCurrentGroup(); /* sets m_currentGroup.  should be called after doing a successful GROUP command */
+    nsresult CleanupNewsgroupList(); /* cleans up m_newsgroupList, and set it to null */
 };
 
 NS_BEGIN_EXTERN_C

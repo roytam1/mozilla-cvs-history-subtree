@@ -336,10 +336,6 @@ nsNntpService::DecomposeNewsURI(const char *uri, nsIMsgFolder **folder, nsMsgKey
 {
   nsresult rv;
 
-#ifdef DEBUG_seth
-  printf("XXX DecomposeNewsURI(%s)\n",uri);
-#endif
-
   if (nsCRT::strncmp(uri, kNewsMessageRootURI, kNewsMessageRootURILen) == 0) {
     rv = DecomposeNewsMessageURI(uri, folder, aMsgKey);
     NS_ENSURE_SUCCESS(rv,rv);

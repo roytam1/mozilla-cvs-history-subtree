@@ -478,9 +478,7 @@ nsNntpIncomingServer::CreateProtocolInstance(nsINNTPProtocol ** aNntpConnection,
 	nsNNTPProtocol * protocolInstance = new nsNNTPProtocol(url, aMsgWindow);
   if (!protocolInstance)
     return NS_ERROR_OUT_OF_MEMORY;
-//	nsresult rv = nsComponentManager::CreateInstance(kImapProtocolCID, nsnull,
-//                                            NS_GET_IID(nsINntpProtocol),
-//                                            (void **) &protocolInstance);
+
   nsresult rv = protocolInstance->QueryInterface(NS_GET_IID(nsINNTPProtocol), (void **) aNntpConnection);
 	// take the protocol instance and add it to the connectionCache
 	if (NS_SUCCEEDED(rv) && *aNntpConnection)
