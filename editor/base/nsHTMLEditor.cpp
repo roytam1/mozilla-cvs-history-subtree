@@ -152,6 +152,12 @@ static PRBool IsNamedAnchorNode(nsIDOMNode *aNode)
 
 
 nsHTMLEditor::nsHTMLEditor()
+: nsEditor()
+, mTypeInState(nsnull)
+, mRules(nsnull)
+, mIsComposing(PR_FALSE)
+, mMaxTextLength(-1)
+, mWrapColumn(0)
 {
 // Done in nsEditor
 // NS_INIT_REFCNT();
@@ -2409,6 +2415,19 @@ nsHTMLEditor::GetDocumentLength(PRInt32 *aCount)
   }
   return result;
 }
+
+NS_IMETHODIMP nsHTMLEditor::SetMaxTextLength(PRInt32 aMaxTextLength)
+{
+  mMaxTextLength = aMaxTextLength;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsHTMLEditor::GetMaxTextLength(PRInt32& aMaxTextLength)
+{
+  aMaxTextLength = mMaxTextLength;
+  return NS_OK;
+}
+
 
 #ifdef XP_MAC
 #pragma mark -

@@ -61,6 +61,8 @@ public:
   /* ------------ nsIHighLevelHTMLEditor methods -------------- */
 
   NS_IMETHOD GetDocumentLength(PRInt32 *aCount);
+  NS_IMETHOD SetMaxTextLength(PRInt32 aMaxTextLength);
+  NS_IMETHOD GetMaxTextLength(PRInt32& aMaxTextLength);
 
 
   NS_IMETHOD SetInlineProperty(nsIAtom *aProperty, 
