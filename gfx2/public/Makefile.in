@@ -40,6 +40,7 @@ XPIDLSRCS	= \
 		nsIDrawable.idl \
 		nsIFilePicker.idl \
 		nsIFontMetrics.idl \
+		nsIFormatConverter.idl \
 		nsIGUIEventListener.idl \
 		nsIImage.idl \
 		nsIPixmap.idl \
@@ -60,9 +61,10 @@ XPIDLSRCS	= \
 		$(NULL)
 
 EXPORTS		= \
+		nsGUIEvent.h \
+		nsPoint.h \
 		nsRect.h \
 		nsSize.h \
-		nsPoint.h \
 		nsUnitConverters.h \
 		$(NULL)
 
