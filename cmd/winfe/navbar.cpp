@@ -190,25 +190,25 @@ void CNavTitleBar::OnPaint( )
 	// Read in all the properties
 	if (!m_View) return;
 	
-	HT_Resource top = HT_TopNode(m_View);
+	HT_Resource topNode = HT_TopNode(m_View);
 	void* data;
 	PRBool foundData = FALSE;
 	
 	// Foreground color
-	HT_GetNodeData(top, gNavCenter->titleBarFGColor, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(topNode, gNavCenter->titleBarFGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_ForegroundColor);
 	else m_ForegroundColor = RGB(255,255,255);
 
 	// background color
-	HT_GetNodeData(top, gNavCenter->titleBarBGColor, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(topNode, gNavCenter->titleBarBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_BackgroundColor);
 	else m_BackgroundColor = RGB(0,0,0);
 
 	// Background image URL
 	m_BackgroundImageURL = "";
-	HT_GetNodeData(top, gNavCenter->titleBarBGURL, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(topNode, gNavCenter->titleBarBGURL, HT_COLUMN_STRING, &data);
 	if (data)
 		m_BackgroundImageURL = (char*)data;
 	m_pBackgroundImage = NULL; // Clear out the BG image.
@@ -288,13 +288,75 @@ void CNavTitleBar::OnPaint( )
 	// Draw the close box at the edge of the bar.
 	CNSNavFrame* navFrameParent = (CNSNavFrame*)GetParentFrame();
 	if (XP_IsNavCenterDocked(navFrameParent->GetHTPane()))
-*/	{
+	{*/
 	
-		int left = rect.right - NAVBAR_CLOSEBOX - 5;
-		int right = left + NAVBAR_CLOSEBOX;
-		int top = rect.top + (rect.Height() - NAVBAR_CLOSEBOX)/2;
-		int bottom = top + NAVBAR_CLOSEBOX;
+	int left = rect.right - NAVBAR_CLOSEBOX - 5;
+	int right = left + NAVBAR_CLOSEBOX;
+	int top = rect.top + (rect.Height() - NAVBAR_CLOSEBOX)/2;
+	int bottom = top + NAVBAR_CLOSEBOX;
+	
+	CRDFImage* pImage = LookupImage("http://www.shadowland.org/images/closebox.gif", NULL);
 
+	int imageWidth = 16;
+	int imageHeight = 15;
+	COLORREF bkColor = m_BackgroundColor;
+
+	HDC hDC = dc.m_hDC;
+	if (pImage && pImage->FrameLoaded()) 
+	{
+		// Now we draw this bad boy.
+		if (pImage->m_BadImage) 
+		{ 
+			// display broken icon.
+			HDC tempDC = ::CreateCompatibleDC(hDC);
+			HBITMAP hOldBmp = (HBITMAP)::SelectObject(tempDC,  CRDFImage::m_hBadImageBitmap);
+			::StretchBlt(hDC, 
+					 left, top,
+					 imageWidth, imageHeight, 
+					 tempDC, 0, 0, 
+					 imageWidth, imageHeight, SRCCOPY);
+			::SelectObject(tempDC, hOldBmp);
+			::DeleteDC(tempDC);
+		}
+		else if (pImage->bits ) 
+		{
+			// Center the image. 
+			long width = pImage->bmpInfo->bmiHeader.biWidth;
+			long height = pImage->bmpInfo->bmiHeader.biHeight;
+			int xoffset = (imageWidth-width)/2;
+			int yoffset = (imageHeight-height)/2;
+			if (xoffset < 0) xoffset = 0;
+			if (yoffset < 0) yoffset = 0;
+			if (width > imageWidth) width = imageWidth;
+			if (height > imageHeight) height = imageHeight;
+
+			HPALETTE hPal = WFE_GetUIPalette(NULL);
+			HPALETTE hOldPal = ::SelectPalette(hDC, hPal, TRUE);
+
+			::RealizePalette(hDC);
+			
+			if (pImage->maskbits) 
+			{
+				WFE_StretchDIBitsWithMask(hDC, TRUE, NULL,
+					left+xoffset, top+xoffset,
+					width, height,
+					0, 0, width, height,
+					pImage->bits, pImage->bmpInfo,
+					pImage->maskbits, FALSE, bkColor);
+			}
+			else 
+			{
+				::StretchDIBits(hDC,
+					left+xoffset, top+xoffset,
+					width, height,
+					0, 0, width, height, pImage->bits, pImage->bmpInfo, DIB_RGB_COLORS,
+					SRCCOPY);
+			}
+
+			::SelectPalette(hDC, hOldPal, TRUE);
+		}
+	}
+/*
 		CRect edgeRect(left, top, right, bottom);
 		CBrush* closeBoxBrush = CBrush::FromHandle(sysInfo.m_hbrBtnFace);
 		dc.FillRect(&edgeRect, closeBoxBrush);
@@ -355,9 +417,12 @@ void CNavTitleBar::OnLButtonDown (UINT nFlags, CPoint point )
 	CRect edgeRect(left, top, right, bottom);
 	if (edgeRect.PtInRect(point))
 	{
+		// Destroy the window.
+		GetParentFrame()->DestroyWindow();
+
 		// Collapse the view
-		if (m_pSelectorButton)
-			m_pSelectorButton->OnAction();
+		/*if (m_pSelectorButton)
+			m_pSelectorButton->OnAction();*/
 	}
 	else
 	{

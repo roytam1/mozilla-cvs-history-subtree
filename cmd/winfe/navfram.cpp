@@ -311,6 +311,7 @@ CNSNavFrame* CNSNavFrame::CreateFramedRDFViewFromResource(CWnd* pParent, int xPo
 	
 	CRDFOutliner* pOutliner = (CRDFOutliner*)(pNavFrame->GetContentView()->GetOutlinerParent()->GetOutliner());
 	pOutliner->SetIsPopup(TRUE);
+	//pOutliner->SetFocus();
 
 	return pNavFrame;
 }
