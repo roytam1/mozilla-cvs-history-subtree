@@ -601,7 +601,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    if (tmp) *tmp = '\0';
 	    tmp = strchr(pbuf,'\r');
 	    if (tmp) *tmp = '\0';
-	    passwd = pbuf;
+	    passwd = strdup(pbuf);
 	}
 #else
 #if defined(SOLARIS)
