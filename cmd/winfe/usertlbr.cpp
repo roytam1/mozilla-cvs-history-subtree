@@ -186,7 +186,8 @@ void CLinkToolbarButton::OnAction(void)
 			ASSERT(pCX != NULL);
 			if (pCX != NULL)
 			{
-				pCX->NormalGetUrl((LPTSTR)HT_GetNodeURL(m_Node));
+				if (!HT_Launch(m_Node, pCX->GetContext()))
+					pCX->NormalGetUrl((LPTSTR)HT_GetNodeURL(m_Node));
 			}
 	}
 }
@@ -386,7 +387,8 @@ BOOL CLinkToolbarButton::OnCommand(UINT wParam, LONG lParam)
 			ASSERT(pCX != NULL);
 			if (pCX != NULL)
 			{
-				pCX->NormalGetUrl((LPTSTR)HT_GetNodeURL(theNode));
+				if (!HT_Launch(theNode, pCX->GetContext()))
+					pCX->NormalGetUrl((LPTSTR)HT_GetNodeURL(theNode));
 			}
 		}
 	}
