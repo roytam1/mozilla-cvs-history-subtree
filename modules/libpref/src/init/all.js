@@ -38,12 +38,13 @@
 // SYNTAX HINTS:  dashes are delimiters.  Use underscores instead.
 //  The first character after a period must be alphabetic.
 
+# not the real all.js.  see mozilla/mailnews/app/profile/all.js
+
 pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search=");
 
 pref("keyword.URL", "http://keyword.netscape.com/keyword/");
 pref("keyword.enabled", false);
-// moved from navigator.properties, see bugscape bug 20611 
-pref("general.useragent.locale", "chrome://messenger/locale/messenger.properties");
+pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
 pref("general.useragent.misc", "rv:1.0.2");
 
 pref("general.startup.browser",             true);
@@ -568,8 +569,7 @@ pref("intl.charsetmenu.browser.more2",      "chrome://navigator/locale/navigator
 pref("intl.charsetmenu.browser.more3",      "chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.more4",      "chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.more5",      "chrome://navigator/locale/navigator.properties");
-// moved from navigator.properties, see bugscape bug 20611 
-pref("intl.charsetmenu.mailedit",           "chrome://messenger/locale/messenger.properties");
+pref("intl.charsetmenu.mailedit",           "chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.cache",      "");
 pref("intl.charsetmenu.mailview.cache",     "");
 pref("intl.charsetmenu.composer.cache",     "");
