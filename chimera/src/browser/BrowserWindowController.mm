@@ -816,26 +816,26 @@ static NSArray* sToolbarDefaults = nil;
 - (IBAction)goToLocationFromToolbarURLField:(id)sender
 {
   // trim off any whitespace around url
-  NSMutableString *theURL = [[NSMutableString alloc] initWithString:[sender stringValue]];
-  CFStringTrimWhitespace((CFMutableStringRef)theURL);
+  NSString *theURL = [[sender stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
   [self loadURL:theURL referrer:nil activate:YES];
     
   // global history needs to know the user typed this url so it can present it
   // in autocomplete. We use the URI fixup service to strip whitespace and remove
   // invalid protocols, etc.
-  if ( mGlobalHistory && mURIFixer ) {
-    nsCOMPtr<nsIURI> fixedURI;
+  if ( mGlobalHistory && mURIFixer && [theURL length] > 0)
+  {
     nsAutoString url;
     [theURL assignTo_nsAString:url];
+
+    nsCOMPtr<nsIURI> fixedURI;
     mURIFixer->CreateFixupURI(url.get(), 0, getter_AddRefs(fixedURI));
-    if ( fixedURI ) {
+    if (fixedURI)
+    {
       nsCAutoString spec;
       fixedURI->GetSpec(spec);
       mGlobalHistory->MarkPageAsTyped(spec.get());
     }
   }
-  
-  [theURL release];
 }
 
 - (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
