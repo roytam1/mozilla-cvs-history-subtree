@@ -151,6 +151,8 @@ nsHttpPipeline::nsHttpPipeline()
 {
     memset(mTransactionQ,     0, sizeof(PRUint32) * NS_HTTP_MAX_PIPELINED_REQUESTS);
     memset(mTransactionFlags, 0, sizeof(PRUint32) * NS_HTTP_MAX_PIPELINED_REQUESTS);
+
+    NS_INIT_ISUPPORTS();
 }
 
 nsHttpPipeline::~nsHttpPipeline()
