@@ -215,6 +215,12 @@ nsNativeScrollbar::UpdateContentPosition(PRUint32 inNewPos)
   if ( inNewPos == mValue || !mContent )   // break any possible recursion
     return;
   
+  // guarantee |inNewPos| is in the range of [0, mMaxValue] so it's correctly unsigned
+  if ( (PRInt32)inNewPos < 0 )
+    inNewPos = 0;
+  else if ( inNewPos > mMaxValue )
+    inNewPos = mMaxValue;
+    
   // convert the int to a string
   char buffer[20];
   sprintf(buffer, "%d", inNewPos);
@@ -297,7 +303,7 @@ nsNativeScrollbar::SetPosition(PRUint32 aPos)
     [mView setFloatValue:(mValue / (float)mMaxValue)];
   else
     [mView setFloatValue:0.0];
-    
+
   return NS_OK;
 }
 
