@@ -541,9 +541,11 @@ nsSocketTransport::CompleteAsyncRead()
     mSelectFlags &= ~PR_POLL_READ;
     mBytesExpected = -1;
 
-    mReadRequest->OnStop();
-    NS_RELEASE(mReadRequest);
+    nsSocketReadRequest *readRequest = mReadRequest;
     mReadRequest = nsnull;
+
+    readRequest->OnStop();
+    NS_RELEASE(readRequest);
 
     mSocketRef--;
 }
@@ -560,9 +562,11 @@ nsSocketTransport::CompleteAsyncWrite()
 
     mSelectFlags &= ~PR_POLL_WRITE;
 
-    mWriteRequest->OnStop();
-    NS_RELEASE(mWriteRequest);
+    nsSocketWriteRequest *writeRequest = mWriteRequest;
     mWriteRequest = nsnull;
+
+    writeRequest->OnStop();
+    NS_RELEASE(writeRequest);
 
     mSocketRef--;
 }
@@ -1382,6 +1386,8 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
     // If the lookup failed, set the status...
     if (NS_FAILED(aStatus))
         mStatus = aStatus;
+    else if (PR_IsNetAddrType(&mNetAddress, PR_IpAddrAny))
+        mStatus = NS_ERROR_ABORT;
 
     // Start processing the transport again - if necessary...
     if (GetFlag(eSocketDNS_Wait)) {

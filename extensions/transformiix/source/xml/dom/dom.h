@@ -16,13 +16,12 @@
  * Peter Van der Beken
  *    -- original author
  *
- * $Id$
  */
 
 #ifndef __TX_DOM_WRAPPER__
 #define __TX_DOM_WRAPPER__
 
-#ifndef MOZ_XSL
+#ifdef TX_EXE
 #include "standalone/dom.h"
 #else
 #include "mozImpl/mozilladom.h"
