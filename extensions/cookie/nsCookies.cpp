@@ -1322,14 +1322,10 @@ cookie_SetCookieString(char * curURL, nsIPrompt *aPrompter, const char * setCook
     }
   }
   if(!path_from_header) {
-    /* Strip down everything after the last slash to get the path,
-     * ignoring slashes in the query string part.
+    /* 
+     * ignore slashes in the query string part.
      */
     char * iter = PL_strchr(cur_path.get(), '?');
-    if(iter) {
-      *iter = '\0';
-    }
-    iter = PL_strrchr(cur_path.get(), '/');
     if(iter) {
       *iter = '\0';
     }
