@@ -1191,7 +1191,7 @@ PRBool nsImapProtocol::ProcessCurrentURL()
   if (!anotherUrlRun)
       m_imapServerSink = null_nsCOMPtr();
   
-  if (GetConnectionStatus() < 0)
+  if (GetConnectionStatus() < 0 || !GetServerStateParser().Connected())
   {
     nsCOMPtr<nsIImapIncomingServer> imapServer  = do_QueryReferent(m_server, &rv);
     if (NS_SUCCEEDED(rv))
@@ -1840,8 +1840,8 @@ void nsImapProtocol::ProcessSelectedStateURL()
               if (urlOKToFetchByParts &&
                 allowedToBreakApart && 
                 !GetShouldFetchAllParts() &&
-                GetServerStateParser().ServerHasIMAP4Rev1Capability() &&
-                  !mimePartSelectorDetected)  // if a ?part=, don't do BS.
+                GetServerStateParser().ServerHasIMAP4Rev1Capability()  &&
+                  !mimePartSelectorDetected )  // if a ?part=, don't do BS.
               {
                 // OK, we're doing bodystructure
 
@@ -3156,6 +3156,7 @@ void nsImapProtocol::ProcessMailboxUpdate(PRBool handlePossibleUndo)
       FolderHeaderDump(msgIdList, msgCount);
       PR_FREEIF( msgIdList);
     }
+    HeaderFetchCompleted();
       // this might be bogus, how are we going to do pane notification and stuff when we fetch bodies without
       // headers!
   }
@@ -3184,9 +3185,6 @@ void nsImapProtocol::UpdatedMailboxSpec(nsImapMailboxSpec *aSpec)
 void nsImapProtocol::FolderHeaderDump(PRUint32 *msgUids, PRUint32 msgCount)
 {
   FolderMsgDump(msgUids, msgCount, kHeadersRFC822andUid);
-  
-    if (GetServerStateParser().NumberOfMessages())
-        HeaderFetchCompleted();
 }
 
 void nsImapProtocol::FolderMsgDump(PRUint32 *msgUids, PRUint32 msgCount, nsIMAPeFetchFields fields)
@@ -3308,7 +3306,7 @@ void nsImapProtocol::FolderMsgDumpLoop(PRUint32 *msgUids, PRUint32 msgCount, nsI
     msgCountLeft -= msgsToDownload;
 
     }
-  while (msgCountLeft > 0);
+  while (msgCountLeft > 0 && !DeathSignalReceived());
 }     
     
 
@@ -6839,6 +6837,7 @@ nsImapMockChannel::nsImapMockChannel()
   m_channelContext = nsnull;
   m_cancelStatus = NS_OK;
   mLoadFlags = 0;
+  mChannelClosed = PR_FALSE;
 }
 
 nsImapMockChannel::~nsImapMockChannel()
@@ -6850,6 +6849,8 @@ NS_IMETHODIMP nsImapMockChannel::Close()
   m_channelListener = null_nsCOMPtr();
   mCacheRequest = null_nsCOMPtr();
   m_url = null_nsCOMPtr();
+
+  mChannelClosed = PR_TRUE;
   return NS_OK;
 }
 
@@ -6951,6 +6952,13 @@ NS_IMETHODIMP
 nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCacheAccessMode access, nsresult status)
 {
   nsresult rv = NS_OK;
+
+  // make sure we didn't close the channel before the async call back came in...
+  // hmmm....if we had write access and we canceled this mock channel then I wonder if we should
+  // be invalidating the cache entry before kicking out...
+  if (mChannelClosed) return NS_OK;
+
+  NS_ENSURE_ARG(m_url); // kick out if m_url is null for some reason. 
 
   if (NS_SUCCEEDED(status)) 
   {

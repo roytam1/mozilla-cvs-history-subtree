@@ -482,7 +482,7 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
                               unsigned long defaultMechanismFlags,
                               unsigned long cipherEnableFlags) {
     SECMODModule *module;
-    SECStatus result = SECFailure;
+    SECStatus result;
     int s,i;
     PK11SlotInfo* slot;
 
@@ -502,8 +502,12 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
 
     if (module->dllName != NULL) {
         if (module->dllName[0] != 0) {
-            result = SECMOD_AddModule(module);
-            if (result == SECSuccess) {
+           SECStatus rv = SECMOD_AddModule(module);
+            if (rv != SECSuccess) {
+                /* SECFailure: failed to add module, corrupt or missing module etc. */
+                /* SECBlock: a module with the same name already exists */
+                return rv;
+            } else { /* successfully added module */
                 /* turn on SSL cipher enable flags */
                 module->ssl[0] = cipherEnableFlags;
 
@@ -540,7 +544,7 @@ SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
         }
     }
     SECMOD_DestroyModule(module);
-    return result;
+    return SECFailure;
 }
 
 /* Public & Internal(Security Library)  representation of

@@ -235,7 +235,8 @@ public:
   NS_IMETHOD_(void) Notify(nsITimer *timer);
   
   // nsICSSLoaderObserver
-  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);
+  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet,
+                              PRBool aNotify) { return NS_OK; };
 
   // nsIDocumentObserver
   NS_IMETHOD BeginUpdate(nsIDocument *aDocument);
@@ -275,12 +276,12 @@ public:
                             nsIContent* aChild,
                             PRInt32 aIndexInContainer) { return NS_OK; }
   NS_IMETHOD StyleSheetAdded(nsIDocument *aDocument,
-                             nsIStyleSheet* aStyleSheet) { return NS_OK; }
+                             nsIStyleSheet* aStyleSheet);
   NS_IMETHOD StyleSheetRemoved(nsIDocument *aDocument,
-                               nsIStyleSheet* aStyleSheet) { return NS_OK; }
+                               nsIStyleSheet* aStyleSheet);
   NS_IMETHOD StyleSheetDisabledStateChanged(nsIDocument *aDocument,
                                         nsIStyleSheet* aStyleSheet,
-                                        PRBool aDisabled) { return NS_OK; }
+                                        PRBool aDisabled);
   NS_IMETHOD StyleRuleChanged(nsIDocument *aDocument,
                               nsIStyleSheet* aStyleSheet,
                               nsIStyleRule* aStyleRule,
@@ -340,7 +341,9 @@ public:
   nsString* mTitle;
   nsString  mUnicodeXferBuf;
 
-  PRBool mLayoutStarted;
+  PRPackedBool mLayoutStarted;
+  PRPackedBool mIsDemotingContainer;
+
   PRInt32 mInScript;
   PRInt32 mInNotification;
   nsIDOMHTMLFormElement* mCurrentForm;
@@ -1517,6 +1520,8 @@ SetDocumentInChildrenOf(nsIContent* aContent,
 nsresult
 SinkContext::DemoteContainer(const nsIParserNode& aNode)
 {
+  mSink->mIsDemotingContainer = PR_TRUE;
+
   nsresult result = NS_OK;
   nsHTMLTag nodeType = nsHTMLTag(aNode.GetNodeType());
   
@@ -1548,7 +1553,7 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
         sync = PR_TRUE;
       }
       // Otherwise just append the container to the parent without
-      // notification (it the container hasn't already been appended)
+      // notification (if the container hasn't already been appended)
       else if (!(mStack[stackPos].mFlags & APPENDED)) {
         mSink->mInNotification++;
         parent->AppendChildTo(container, PR_FALSE, PR_FALSE);
@@ -1670,7 +1675,9 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
       UpdateChildCounts();
     }
   }
-  
+
+  mSink->mIsDemotingContainer = PR_FALSE;
+
   return result;
 }
 
@@ -2785,6 +2792,19 @@ HTMLContentSink::OpenHead(const nsIParserNode& aNode)
   SINK_TRACE_NODE(SINK_TRACE_CALLS,
                   "HTMLContentSink::OpenHead", aNode, 0, this);
   nsresult rv = NS_OK;
+
+  // Flush everything in the current context so that we don't have
+  // to worry about insertions resulting in inconsistent frame creation.
+  //
+  // Try to do this only if needed (costly), i.e., only if we are sure
+  // we are changing contexts from some other context to the head.
+  //
+  // PERF: This call causes approximately a 2% slowdown in page load time
+  // according to jrgm's page load tests, but seems to be a necessary evil
+  if (mCurrentContext && (mCurrentContext != mHeadContext)) {
+    mCurrentContext->FlushTags(PR_TRUE);
+  }
+
   if (nsnull == mHeadContext) {
     mHeadContext = new SinkContext(this);
     if (nsnull == mHeadContext) {
@@ -3929,22 +3949,6 @@ HTMLContentSink::ProcessLink(nsIHTMLContent* aElement, const nsAReadableString& 
   return result;
 }
 
-NS_IMETHODIMP
-HTMLContentSink::StyleSheetLoaded(nsICSSStyleSheet* aSheet, 
-                                  PRBool aDidNotify)
-{
-  // If there was a notification done for this style sheet, we know
-  // that frames have been created for all content seen so far
-  // (processing of a new style sheet causes recreation of the frame
-  // model).  As a result, all contexts should update their notion of
-  // how much frame creation has happened.
-  if (aDidNotify) {
-    UpdateAllContexts();
-  }
-
-  return NS_OK;
-}
-
 nsresult
 HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
                                   const nsString& aHref, const nsString& aRel,
@@ -4375,7 +4379,8 @@ HTMLContentSink::BeginUpdate(nsIDocument *aDocument)
   // notification to occur. Since this could result in frame
   // creation, make sure we've flushed everything before we
   // continue
-  if (mInScript && !mInNotification && mCurrentContext) {
+  if (mInScript && !mInNotification && mCurrentContext &&
+      !mIsDemotingContainer) {
     result = mCurrentContext->FlushTags(PR_TRUE);
   }
 
@@ -4394,6 +4399,40 @@ HTMLContentSink::EndUpdate(nsIDocument *aDocument)
     UpdateAllContexts();
   }
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+HTMLContentSink::StyleSheetAdded(nsIDocument *aDocument,
+                                 nsIStyleSheet* aStyleSheet)
+{
+  // Processing of a new style sheet causes recreation of the frame
+  // model. As a result, all contexts should update their notion of
+  // how much frame creation has happened.
+  UpdateAllContexts();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+HTMLContentSink::StyleSheetRemoved(nsIDocument *aDocument,
+                                   nsIStyleSheet* aStyleSheet)
+{
+  // Removing a style sheet causes recreation of the frame model.
+  // As a result, all contexts should update their notion of how
+  // much frame creation has happened.
+  UpdateAllContexts();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+HTMLContentSink::StyleSheetDisabledStateChanged(nsIDocument *aDocument,
+                                                nsIStyleSheet* aStyleSheet,
+                                                PRBool aDisabled)
+{
+  // Disabling/enabling a style sheet causes recreation of the frame
+  // model. As a result, all contexts should update their notion of
+  // how much frame creation has happened.
+  UpdateAllContexts();
   return NS_OK;
 }
 
@@ -4660,8 +4699,6 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
     src.StripWhitespace();
 
     if (!mInsideNoXXXTag && NS_SUCCEEDED(rv) && src.IsEmpty()) {
-      PRInt32 i, count = aNode.GetAttributeCount();
-
       nsAutoString title; 
       nsAutoString type; 
       nsAutoString media; 

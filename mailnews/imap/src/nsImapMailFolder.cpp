@@ -612,17 +612,6 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   // don't run select if we're already running a url/select...
   if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
   {
-    // check if we should download message bodies because it's the inbox and 
-    // the server is specified as one where where we download msg bodies automatically.
-    if (mFlags & MSG_FOLDER_FLAG_INBOX)
-    {
-      nsCOMPtr<nsIImapIncomingServer> imapServer;
-      nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
-
-      if (NS_SUCCEEDED(rv) && imapServer)
-        imapServer->GetDownloadBodiesOnGetNewMail(&m_downloadingFolderForOfflineUse);
-    }
-
     nsCOMPtr <nsIEventQueue> eventQ;
     NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &rv); 
     if (NS_SUCCEEDED(rv) && pEventQService)
@@ -732,7 +721,14 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
         nsCAutoString uri (mURI);
         parentName.Right(leafName, leafName.Length() - folderStart - 1);
         parentName.Truncate(folderStart);
-        path += parentName;
+
+	// the parentName might be too long or have some illegal chars
+        // so we make it safe
+        nsCAutoString safeParentName;
+        safeParentName.AssignWithConversion(parentName);
+        NS_MsgHashIfNecessary(safeParentName);
+        path += safeParentName;
+
         rv = CreateDirectoryForFolder(path);
         if (NS_FAILED(rv)) return rv;
         uri.Append('/');
@@ -759,22 +755,13 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
   rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
   if (NS_SUCCEEDED(rv) && mailDBFactory)
   {
-        nsCOMPtr<nsIMsgDatabase> unusedDB;
+    nsCOMPtr<nsIMsgDatabase> unusedDB;
     nsCOMPtr <nsIFileSpec> dbFileSpec;
 
-    nsXPIDLCString uniqueLeafName;
-    nsCAutoString proposedDBName(folderName);
-    proposedDBName += ".msf";
+    // warning, path will be changed
+    rv = CreateFileSpecForDB(folderName, path, getter_AddRefs(dbFileSpec));
+    NS_ENSURE_SUCCESS(rv,rv);
 
-    rv = CreatePlatformLeafNameForDisk(proposedDBName, path, getter_Copies(uniqueLeafName));
-
-    // take off the ".msf" on the end.
-    proposedDBName = uniqueLeafName;
-    proposedDBName.Truncate(proposedDBName.Length() - 4);
-
-    path.SetLeafName(proposedDBName);
-
-    NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
     rv = mailDBFactory->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
 
         if (NS_SUCCEEDED(rv) && unusedDB)
@@ -2276,20 +2263,6 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
 //      NotifyFetchAnyNeededBodies(aSpec->connection, mailDB);
 //      IMAP_BodyIdMonitor(adoptedBoxSpec->connection, PR_FALSE);
     }
-    if (aProtocol)
-    {
-      if (m_downloadingFolderForOfflineUse)
-      {
-        nsMsgKeyArray keysToDownload;
-        GetBodysToDownload(&keysToDownload);
-        if (keysToDownload.GetSize() > 0)
-          SetNotifyDownloadedLines(PR_TRUE); // ### TODO need to clear this when we've finished
-
-        aProtocol->NotifyBodysToDownload(keysToDownload.GetArray(), keysToDownload.GetSize());
-      }
-      else
-        aProtocol->NotifyBodysToDownload(NULL, 0/*keysToFetch.GetSize() */);
-    }
   }
 
   return rv;
@@ -3246,20 +3219,13 @@ NS_IMETHODIMP nsImapMailFolder::DownloadAllForOffline(nsIUrlListener *listener, 
 
     GetDatabase(msgWindow);
     m_downloadingFolderForOfflineUse = PR_TRUE;
-    GetBodysToDownload(&msgsToDownload);
-    if (msgsToDownload.GetSize() == 0)
-    {
-      if (listener)
-        listener->OnStopRunningUrl(nsnull, NS_OK);
-      return NS_OK;
-    }
-    rv = AllocateUidStringFromKeys(msgsToDownload.GetArray(), msgsToDownload.GetSize(), messageIdsToDownload);
-    NS_ENSURE_SUCCESS(rv, rv);
 
-    SetNotifyDownloadedLines(PR_TRUE); // ### TODO need to clear this when we've finished
-     NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
+    SetNotifyDownloadedLines(PR_TRUE); 
+    NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
     if (NS_FAILED(rv)) return rv;
-    rv = imapService->DownloadMessagesForOffline(messageIdsToDownload, this, listener, msgWindow);
+    // selecting the folder with m_downloadingFolderForOfflineUse true will cause
+    // us to fetch any message bodies we don't have.
+    rv = imapService->SelectFolder(m_eventQueue, this, listener, msgWindow, nsnull);
     if (NS_SUCCEEDED(rv))
       m_urlRunning = PR_TRUE;
   }
@@ -4243,7 +4209,39 @@ nsImapMailFolder::HeaderFetchCompleted(nsIImapProtocol* aProtocol)
     delete m_moveCoalescer;
     m_moveCoalescer = nsnull;
   }
-    return NS_OK;
+  if (aProtocol)
+  {
+    // check if we should download message bodies because it's the inbox and 
+    // the server is specified as one where where we download msg bodies automatically.
+    PRBool autoDownloadNewHeaders = PR_FALSE;
+    if (mFlags & MSG_FOLDER_FLAG_INBOX)
+    {
+      nsCOMPtr<nsIImapIncomingServer> imapServer;
+      nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
+
+      if (NS_SUCCEEDED(rv) && imapServer)
+        imapServer->GetDownloadBodiesOnGetNewMail(&autoDownloadNewHeaders);
+      // this isn't quite right - we only want to download bodies for new headers
+      // but we don't know what the new headers are. We could query the inbox db
+      // for new messages, if the above filter playback actually moves the filtered
+      // messages before we get to this code.
+      if (autoDownloadNewHeaders)
+        m_downloadingFolderForOfflineUse = PR_TRUE;
+    }
+
+    if (m_downloadingFolderForOfflineUse)
+    {
+      nsMsgKeyArray keysToDownload;
+      GetBodysToDownload(&keysToDownload);
+      if (keysToDownload.GetSize() > 0)
+        SetNotifyDownloadedLines(PR_TRUE);
+
+      aProtocol->NotifyBodysToDownload(keysToDownload.GetArray(), keysToDownload.GetSize());
+    }
+    else
+      aProtocol->NotifyBodysToDownload(NULL, 0/*keysToFetch.GetSize() */);
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -5130,6 +5128,8 @@ nsImapMailFolder::CopyFileMessage(nsIFileSpec* fileSpec,
                                             PR_TRUE, isDraftOrTemplate,
                                             urlListener, nsnull,
                                             copySupport);
+    if (NS_FAILED(rv))
+      ClearCopyState(rv);
 
     return rv;
 }
@@ -5488,20 +5488,13 @@ NS_IMETHODIMP nsImapMailFolder::RenameClient( nsIMsgFolder *msgFolder, const cha
       nsCOMPtr<nsIMsgDatabase> unusedDB;
       nsCOMPtr <nsIFileSpec> dbFileSpec;
 
-      nsXPIDLCString uniqueLeafName;
-      nsCAutoString proposedDBName(newLeafName.ToNewCString());
-	  //nsCAutoString proposedDBName(folderName);
-      proposedDBName += ".msf";
+      nsCAutoString proposedDBName;
+      proposedDBName.AssignWithConversion(newLeafName);
 
-      rv = CreatePlatformLeafNameForDisk(proposedDBName, path, getter_Copies(uniqueLeafName));
+      // warning, path will be changed
+      rv = CreateFileSpecForDB(proposedDBName.get(), path, getter_AddRefs(dbFileSpec));
+      NS_ENSURE_SUCCESS(rv,rv);
 
-      // take off the ".msf" on the end.
-      proposedDBName = uniqueLeafName;
-      proposedDBName.Truncate(proposedDBName.Length() - 4);
-
-      path.SetLeafName(proposedDBName);
-
-      NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
       // it's OK to use Open and not OpenFolderDB here, since we don't use the DB.
       rv = mailDBFactory->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
 

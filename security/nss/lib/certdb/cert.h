@@ -614,7 +614,7 @@ CERT_ImportCAChain (SECItem *certs, int numcerts, SECCertUsage certUsage);
 **	"f" is the callback function
 **	"arg" is the callback argument
 */
-typedef SECStatus (PR_CALLBACK *CERTImportCertificateFunc)
+typedef SECStatus (*CERTImportCertificateFunc)
    (void *arg, SECItem **certs, int numcerts);
 
 extern SECStatus
