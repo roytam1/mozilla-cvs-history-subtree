@@ -140,6 +140,9 @@ nsresult nsDeviceContextPh :: Init( nsNativeDeviceContext aContext, nsIDeviceCon
 	mWidthFloat = w;
 	mHeightFloat = h;
 
+	/* Call Base Class */
+	DeviceContextImpl::CommonInit( );
+
 	return NS_OK;
 	}
 
@@ -217,9 +220,6 @@ void nsDeviceContextPh :: CommonInit( nsNativeDeviceContext aDC ) {
   /* Revisit: the scroll bar sizes is a gross guess based on Phab */
   mScrollbarHeight = 17;
   mScrollbarWidth  = 17;
-  
-  /* Call Base Class */
-  DeviceContextImpl::CommonInit( );
 	}
 
 NS_IMETHODIMP nsDeviceContextPh :: CreateRenderingContext( nsIRenderingContext *&aContext ) {
