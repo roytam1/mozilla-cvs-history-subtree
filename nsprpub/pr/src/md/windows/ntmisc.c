@@ -353,8 +353,8 @@ PRProcess * _PR_CreateWindowsProcess(
     BOOL retVal;
     char *cmdLine = NULL;
     char *envBlock = NULL;
-    char **newEnvp = NULL;
-    const char *cwd = NULL; /* current working directory */
+    char **newEnvp;
+    char *cwd = NULL; /* current working directory */
     PRProcess *proc = NULL;
 
     proc = PR_NEW(PRProcess);
@@ -368,37 +368,19 @@ PRProcess * _PR_CreateWindowsProcess(
         goto errorExit;
     }
 
-    /*
-     * If attr->fdInheritBuffer is not NULL, we need to insert
-     * it into the envp array, so envp cannot be NULL.
-     */
-    if ((envp == NULL) && attr && attr->fdInheritBuffer) {
-        envp = environ;
-    }
-
-    if (envp != NULL) {
-        int idx;
-        int numEnv;
-        int newEnvpSize;
-
-        numEnv = 0;
+    if (envp == NULL) {
+        newEnvp = NULL;
+    } else {
+        int i;
+        int numEnv = 0;
         while (envp[numEnv]) {
             numEnv++;
         }
-        newEnvpSize = numEnv + 1;  /* terminating null pointer */
-        if (attr && attr->fdInheritBuffer) {
-            newEnvpSize++;
+        newEnvp = (char **) PR_MALLOC((numEnv+1) * sizeof(char *));
+        for (i = 0; i <= numEnv; i++) {
+            newEnvp[i] = envp[i];
         }
-        newEnvp = (char **) PR_MALLOC(newEnvpSize * sizeof(char *));
-        for (idx = 0; idx < numEnv; idx++) {
-            newEnvp[idx] = envp[idx];
-        }
-        if (attr && attr->fdInheritBuffer) {
-            newEnvp[idx++] = attr->fdInheritBuffer;
-        }
-        newEnvp[idx] = NULL;
-        qsort((void *) newEnvp, (size_t) (newEnvpSize - 1),
-                sizeof(char *), compare);
+        qsort((void *) newEnvp, (size_t) numEnv, sizeof(char *), compare);
     }
     if (assembleEnvBlock(newEnvp, &envBlock) == -1) {
         PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
@@ -466,9 +448,6 @@ PRProcess * _PR_CreateWindowsProcess(
     proc->md.id = procInfo.dwProcessId;
 
     PR_DELETE(cmdLine);
-    if (newEnvp) {
-        PR_DELETE(newEnvp);
-    }
     if (envBlock) {
         PR_DELETE(envBlock);
     }
@@ -477,9 +456,6 @@ PRProcess * _PR_CreateWindowsProcess(
 errorExit:
     if (cmdLine) {
         PR_DELETE(cmdLine);
-    }
-    if (newEnvp) {
-        PR_DELETE(newEnvp);
     }
     if (envBlock) {
         PR_DELETE(envBlock);

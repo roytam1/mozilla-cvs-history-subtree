@@ -34,9 +34,7 @@ CSRCS = \
 	prcountr.c \
 	prdtoa.c   \
 	prenv.c    \
-	prerr.c  \
 	prerror.c  \
-	prerrortable.c  \
 	prinit.c   \
 	prinrval.c \
 	prlog2.c   \
@@ -62,9 +60,6 @@ $(OBJDIR)/prdtoa.o:
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(filter-out -O, $(CFLAGS)) prdtoa.c
 endif
-
-build_prerr : prerr.et
-	perl compile-et.pl prerr.et
 
 export:: $(TARGETS)
 

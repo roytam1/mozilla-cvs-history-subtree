@@ -33,9 +33,6 @@ PR_IMPLEMENT(PROrderedLock *)
         const char *name
 )
 {
-#ifdef XP_MAC
-#pragma unused( order, name )
-#endif
     PR_ASSERT(!"Not implemented"); /* Not implemented yet */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
@@ -47,9 +44,6 @@ PR_IMPLEMENT(void)
         PROrderedLock *lock 
 )
 {
-#ifdef XP_MAC
-#pragma unused( lock )
-#endif
     PR_ASSERT(!"Not implemented"); /* Not implemented yet */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
 } /*  end PR_DestroyOrderedLock() */
@@ -60,9 +54,6 @@ PR_IMPLEMENT(void)
         PROrderedLock *lock 
 )
 {
-#ifdef XP_MAC
-#pragma unused( lock )
-#endif
     PR_ASSERT(!"Not implemented"); /* Not implemented yet */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
 } /*  end PR_LockOrderedLock() */
@@ -73,9 +64,6 @@ PR_IMPLEMENT(PRStatus)
         PROrderedLock *lock 
 )
 {
-#ifdef XP_MAC
-#pragma unused( lock )
-#endif
     PR_ASSERT(!"Not implemented"); /* Not implemented yet */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return PR_FAILURE;
@@ -87,6 +75,17 @@ PR_IMPLEMENT(PRStatus)
 **  
 */
 
-/* Some compilers don't like an empty compilation unit. */
-static int dummy = 0;
 #endif /* defined(FORCE_NSPR_ORDERED_LOCK */
+
+
+
+
+
+
+
+
+
+
+
+
+

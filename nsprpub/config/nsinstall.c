@@ -43,56 +43,23 @@
 
 #define HAVE_LCHOWN
 
-#if defined(AIX) || defined(BSDI) || defined(HPUX) || defined(LINUX) \
-    || defined(SUNOS4) || defined(SCO) || defined(UNIXWARE) \
-    || defined(RHAPSODY) || defined(NEXTSTEP) || defined(QNX) \
-    || defined(BEOS)
+#if defined(AIX) || defined(BSDI) || defined(HPUX) || defined(LINUX) || defined(SUNOS4) || defined(SCO) || defined(UNIXWARE) || defined(RHAPSODY)
 #undef HAVE_LCHOWN
-#endif
-
-#define HAVE_FCHMOD
-
-#if defined(BEOS)
-#undef HAVE_FCHMOD
 #endif
 
 /*
  * Does getcwd() take NULL as the first argument and malloc
  * the result buffer?
  */
-#if !defined(RHAPSODY) && !defined(NEXTSTEP)
+#if !defined(RHAPSODY)
 #define GETCWD_CAN_MALLOC
 #endif
-
-#ifdef NEXTSTEP
-#include <bsd/libc.h>
-
-/*
-** balazs.pataki@sztaki.hu: The getcwd is broken in NEXTSTEP (returns 0),
-** when called on a mounted fs. Did anyone notice this? Here's an ugly
-** workaround ...
-*/
-#define getcwd(b,s)   my_getcwd(b,s)
-
-static char *
-my_getcwd (char *buf, size_t size)
-{
-    FILE *pwd = popen("pwd", "r");
-    char *result = fgets(buf, size, pwd);
-
-    if (result) {
-        buf[strlen(buf)-1] = '\0';
-    }
-    pclose (pwd);
-    return buf;
-}
-#endif /* NEXTSTEP */
 
 #ifdef LINUX
 #include <getopt.h>
 #endif
 
-#if defined(SCO) || defined(UNIXWARE) || defined(SNI) || defined(NCR) || defined(NEC) || defined(NEXTSTEP)
+#if defined(SCO) || defined(UNIXWARE) || defined(SNI) || defined(NCR) || defined(NEC)
 #if !defined(S_ISLNK) && defined(S_IFLNK)
 #define S_ISLNK(a)	(((a) & S_IFMT) == S_IFLNK)
 #endif
@@ -100,10 +67,6 @@ my_getcwd (char *buf, size_t size)
 
 #if defined(SNI)
 extern int fchmod(int fildes, mode_t mode);
-#endif
-
-#ifdef QNX
-#define d_ino d_stat.st_ino
 #endif
 
 static void
@@ -364,11 +327,7 @@ main(int argc, char **argv)
 		if (utime(toname, &utb) < 0)
 		    fail("cannot set times of %s", toname);
 	    }
-#ifdef HAVE_FCHMOD
 	    if (fchmod(tofd, mode) < 0)
-#else
-	    if (chmod(toname, mode) < 0)
-#endif
 		fail("cannot change mode of %s", toname);
 	    if ((owner || group) && fchown(tofd, uid, gid) < 0)
 		fail("cannot change owner of %s", toname);
@@ -441,7 +400,7 @@ getcomponent(char *path, char *name)
     return path;
 }
 
-#ifdef UNIXWARE_READDIR_BUFFER_TOO_SMALL
+#ifdef UNIXWARE
 /* Sigh.  The static buffer in Unixware's readdir is too small. */
 struct dirent * readdir(DIR *d)
 {

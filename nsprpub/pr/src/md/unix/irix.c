@@ -831,7 +831,7 @@ _MD_CleanupBeforeExit(void)
      }
 }
 
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 extern void __sgi_prda_procmask(int);
 #endif
 
@@ -871,7 +871,7 @@ _MD_InitThread(PRThread *thread, PRBool wakeup_parent)
 		thread->md.id = getpid();
         setblockproccnt(thread->md.id, 0);
 		_MD_SET_SPROC_PID(getpid());	
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 		/*
 		 * enable user-level processing of sigprocmask(); this is an
 		 * undocumented feature available in Irix 6.2, 6.3, 6.4 and 6.5
@@ -1442,7 +1442,7 @@ void _MD_IrixInit()
     PRThread *me = _PR_MD_CURRENT_THREAD();
 	int rv;
 
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 	/*
 	 * enable user-level processing of sigprocmask(); this is an undocumented
 	 * feature available in Irix 6.2, 6.3, 6.4 and 6.5
@@ -1463,7 +1463,7 @@ void _MD_IrixInit()
      * Change the name of the core file from core to core.pid,
      * This is inherited by the sprocs created by this process
      */
-#ifdef PR_COREPID
+#ifndef IRIX5_3
     prctl(PR_COREPID, 0, 1);
 #endif
     /*
@@ -1532,7 +1532,7 @@ void _MD_IrixInit()
 /************** code and such for NSPR 2.0's interval times ***************/
 /**************************************************************************/
 
-#define PR_PSEC_PER_SEC 1000000000000ULL  /* 10^12 */
+#define PR_CLOCK_GRANULARITY 10000UL
 
 #ifndef SGI_CYCLECNTR_SIZE
 #define SGI_CYCLECNTR_SIZE      165     /* Size user needs to use to read CC */
@@ -1546,7 +1546,6 @@ static PRUint32 pr_clock_shift = 0;
 static PRIntervalTime pr_ticks = 0;
 static PRUint32 pr_clock_granularity = 1;
 static PRUint32 pr_previous = 0, pr_residual = 0;
-static PRUint32 pr_ticks_per_second = 0;
 
 extern PRIntervalTime _PR_UNIX_GetInterval(void);
 extern PRIntervalTime _PR_UNIX_TicksPerSecond(void);
@@ -1606,21 +1605,16 @@ static void _MD_IrixIntervalInit()
             pr_clock_granularity = pr_clock_granularity << 1;
         }
         pr_clock_mask = pr_clock_granularity - 1;  /* to make a mask out of it */
-        pr_ticks_per_second = PR_PSEC_PER_SEC
-                / ((PRUint64)pr_clock_granularity * (PRUint64)cycleval);
             
         iotimer_addr = (void*)
             ((__psunsigned_t)iotimer_addr + (phys_addr & poffmask));
     }
-    else
-    {
-        pr_ticks_per_second = _PR_UNIX_TicksPerSecond();
-    }
+
 }  /* _MD_IrixIntervalInit */
 
 PRIntervalTime _MD_IrixIntervalPerSec()
 {
-    return pr_ticks_per_second;
+    return pr_clock_granularity;
 }
 
 PRIntervalTime _MD_IrixGetInterval()
@@ -1655,6 +1649,8 @@ PRIntervalTime _MD_IrixGetInterval()
          * rates, and it's expensive to acqurie.
          */
         pr_ticks = _PR_UNIX_GetInterval();
+        PR_ASSERT(PR_CLOCK_GRANULARITY > _PR_UNIX_TicksPerSecond());
+        pr_ticks *= (PR_CLOCK_GRANULARITY / _PR_UNIX_TicksPerSecond());
     }
     return pr_ticks;
 }  /* _MD_IrixGetInterval */

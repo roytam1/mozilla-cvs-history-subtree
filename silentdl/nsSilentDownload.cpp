@@ -1,3 +1,4 @@
+
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
@@ -145,19 +146,19 @@ GetSilentDownloadDirectory(char* directory)
 }
 
 static void 
-GetSilentDownloadDefaults(PRBool* enabled, PRInt32 *bytes_range, PRInt32 *interval)
+GetSilentDownloadDefaults(XP_Bool* enabled, PRInt32 *bytes_range, PRInt32 *interval)
 {
-    PREF_GetBoolPref( "SilentDownload.enabled", (XP_Bool*)enabled);
+    PREF_GetBoolPref( "SilentDownload.enabled", enabled);
     if (!enabled)
         return;
 
    
-    if (PREF_OK != PREF_GetIntPref("SilentDownload.range", (int32*)*bytes_range)) 
+    if (PREF_OK != PREF_GetIntPref("SilentDownload.range", (long*)*bytes_range)) 
     {
         *bytes_range = 3000;
     }
 
-    if (PREF_OK != PREF_GetIntPref("SilentDownload.interval", (int32*)*interval)) 
+    if (PREF_OK != PREF_GetIntPref("SilentDownload.interval", (long*)*interval)) 
     {
         *interval = 10000;
     }
@@ -1424,22 +1425,22 @@ nsSilentDownloadListener::SetSilentDownloadInfo(nsIDOMSilentDownloadTask* con)
 ////////////////////////////////////////////////////////////////////////////////
 
 extern "C" NS_EXPORT PRBool
-NSCanUnload(nsISupports* serviceMgr)
+NSCanUnload(void)
 {
     return PRBool (gInstanceCnt == 0 && gLockCnt == 0);
 }
 
 extern "C" NS_EXPORT nsresult
-NSRegisterSelf(nsISupports* serviceMgr, const char *path)
+NSRegisterSelf(const char *path)
 {
     printf("*** SilentDownload is being registered\n");
-    nsRepository::RegisterComponent(kSilentDownloadCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
-    nsRepository::RegisterComponent(kSilentDownloadTaskCID, NULL, NULL, path, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kSilentDownloadCID, path, PR_TRUE, PR_TRUE);
+    nsRepository::RegisterFactory(kSilentDownloadTaskCID, path, PR_TRUE, PR_TRUE);
     return NS_OK;
 }
 
 extern "C" NS_EXPORT nsresult
-NSUnregisterSelf(nsISupports* serviceMgr, const char *path)
+NSUnregisterSelf(const char *path)
 {
     printf("*** SilentDownload is being unregistered\n");
     
@@ -1452,11 +1453,7 @@ NSUnregisterSelf(nsISupports* serviceMgr, const char *path)
 
 
 extern "C" NS_EXPORT nsresult
-NSGetFactory(nsISupports* serviceMgr,
-             const nsCID &aClass,
-             const char *aClassName,
-             const char *aProgID,
-             nsIFactory **aFactory)
+NSGetFactory(const nsCID &aClass, nsISupports* serviceMgr, nsIFactory **aFactory)
 {
 
     if (aFactory == NULL)

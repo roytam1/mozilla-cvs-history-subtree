@@ -27,14 +27,6 @@ ifeq ($(USE_PTHREADS), 1)
 	DIRS += pthreads
 endif
 
-ifeq ($(USE_BTHREADS), 1)
-	DIRS += bthreads
-endif
-
-ifeq ($(USE_CPLUS), 1)
-	DIRS += cplus
-endif
-
 #
 # Define platform-dependent OS_LIBS
 #
@@ -83,7 +75,7 @@ endif
 # On AIX, we override malloc in non-pthread versions.  On AIX 4.2 or
 # above, this requires that we use the rtl-enabled version of libc.a.
 ifeq ($(OS_ARCH),AIX)
-ifneq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+ifneq ($(OS_RELEASE),4.1)
 ifneq ($(USE_PTHREADS),1)
 BUILD_AIX_RTL_LIBC = 1
 AIX_RTL_LIBC	= $(OBJDIR)/libc.a
@@ -105,9 +97,9 @@ endif
 
 ifeq ($(OS_ARCH),Linux)
 ifeq ($(USE_PTHREADS), 1)
-OS_LIBS		= -lpthread -ldl -lc
+OS_LIBS		= -L/lib -lpthread -ldl -lc
 else
-OS_LIBS		= -ldl -lc
+OS_LIBS		= -L/lib -ldl -lc
 endif
 endif
 
@@ -139,7 +131,7 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifeq ($(OS_TARGET),OS2)
-# We define this in os2.mk.
+OS_LIBS		= so32dll.lib tcp32dll.lib
 else
 ifneq ($(OS_TARGET),WIN16)
 OS_LIBS		= wsock32.lib winmm.lib
@@ -165,7 +157,6 @@ OBJS = \
     io/$(OBJDIR)/prscanf.$(OBJ_SUFFIX) \
     io/$(OBJDIR)/prstdio.$(OBJ_SUFFIX) \
     threads/$(OBJDIR)/prcmon.$(OBJ_SUFFIX) \
-	threads/$(OBJDIR)/prrwlock.$(OBJ_SUFFIX) \
 	threads/$(OBJDIR)/prtpd.$(OBJ_SUFFIX) \
     linking/$(OBJDIR)/prlink.$(OBJ_SUFFIX) \
     malloc/$(OBJDIR)/prmalloc.$(OBJ_SUFFIX) \
@@ -177,9 +168,7 @@ OBJS = \
     misc/$(OBJDIR)/prcountr.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prdtoa.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prenv.$(OBJ_SUFFIX) \
-    misc/$(OBJDIR)/prerr.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prerror.$(OBJ_SUFFIX) \
-    misc/$(OBJDIR)/prerrortable.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prinit.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prinrval.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prlog2.$(OBJ_SUFFIX) \
@@ -202,10 +191,7 @@ OBJS += \
     io/$(OBJDIR)/prdir.$(OBJ_SUFFIX) \
     io/$(OBJDIR)/prfile.$(OBJ_SUFFIX) \
     io/$(OBJDIR)/prio.$(OBJ_SUFFIX) \
-    io/$(OBJDIR)/prsocket.$(OBJ_SUFFIX)
-
-ifndef USE_BTHREADS
-OBJS += \
+    io/$(OBJDIR)/prsocket.$(OBJ_SUFFIX) \
 	threads/$(OBJDIR)/prcthr.$(OBJ_SUFFIX) \
 	threads/$(OBJDIR)/prdump.$(OBJ_SUFFIX) \
 	threads/$(OBJDIR)/prmon.$(OBJ_SUFFIX) \
@@ -217,24 +203,9 @@ OBJS += \
 	threads/combined/$(OBJDIR)/pruthr.$(OBJ_SUFFIX)
 endif
 
-endif
 
 ifeq ($(USE_IPV6), 1)
 OBJS += io/$(OBJDIR)/pripv6.$(OBJ_SUFFIX)
-endif
-
-ifeq ($(USE_CPLUS), 1)
-OBJS += \
-	cplus/$(OBJDIR)/rcbase.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rccv.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcfileio.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcinrval.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcio.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rclock.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcnetdb.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcnetio.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rcthread.$(OBJ_SUFFIX) \
-	cplus/$(OBJDIR)/rctime.$(OBJ_SUFFIX)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
@@ -286,7 +257,7 @@ OBJS +=	md/windows/$(OBJDIR)/w95io.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/w32poll.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/w95dllmain.$(OBJ_SUFFIX)
 else
-ifeq ($(OS_TARGET),OS2)
+ifeq ($(OS_TARGET), OS2)
 OBJS +=	md/os2/$(OBJDIR)/os2io.$(OBJ_SUFFIX) \
 	md/os2/$(OBJDIR)/os2sock.$(OBJ_SUFFIX) \
 	md/os2/$(OBJDIR)/os2thred.$(OBJ_SUFFIX) \
@@ -313,11 +284,12 @@ endif
 
 else
 
-ifeq ($(OS_ARCH), BeOS)
-	include md/beos/objs.mk
-	include bthreads/objs.mk
+	THREAD_DIR=threads/combined/$(OBJDIR)
+
+ifeq ($(OS_ARCH), MAC)
+	MD_DIR = md/mac/$(OBJDIR)
 else
-	# Unix
+	MD_DIR = md/unix/$(OBJDIR)
 	include md/unix/objs.mk
 endif
 
@@ -341,21 +313,13 @@ endif
 ECHO = echo
 INCLUDES = -I$(DIST)/include
 TINC = $(OBJDIR)/_pr_bld.h
-ifeq ($(OS_TARGET),OS2)
-PROD = nspr$(MOD_VERSION).$(DLL_SUFFIX)
-else
 PROD = libnspr$(MOD_VERSION).$(DLL_SUFFIX)
-endif
 NOW = $(MOD_DEPTH)/config/$(OBJDIR)/now
 SH_DATE = $(shell date)
 SH_NOW = $(shell $(NOW))
 
 ifeq ($(OS_ARCH), WINNT)
-ifeq ($(OS_TARGET),OS2)
-        SUF =
-else
 	SUF = i64
-endif
 else
 	SUF = LL
 endif
@@ -365,19 +329,13 @@ $(TINC):
 	@$(ECHO) '#define _BUILD_STRING "$(SH_DATE)"' > $(TINC)
 	@if test ! -z "$(SH_NOW)"; then \
 	    $(ECHO) '#define _BUILD_TIME $(SH_NOW)$(SUF)' >> $(TINC); \
-	else \
-	    true; \
 	fi
 	@$(ECHO) '#define _PRODUCTION "$(PROD)"' >> $(TINC)
 
 
 $(OBJDIR)/prvrsion.$(OBJ_SUFFIX): $(TINC)
 ifeq ($(OS_ARCH), WINNT)
-ifdef XP_OS2_EMX
-	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
-else
 	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
-endif
 else
 	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
 endif

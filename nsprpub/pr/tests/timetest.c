@@ -25,6 +25,9 @@
 ***********************************************************************/
 /* Used to get the command line option */
 #include "plgetopt.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "prinit.h"
 #include "prtime.h"
@@ -36,7 +39,12 @@
 
 #ifdef XP_MAC
 #include "prlog.h"
-#include "macstdlibextras.h"
+int fprintf(FILE *stream, const char *fmt, ...)
+{
+PR_LogPrint(fmt);
+return 0;
+}
+#define printf PR_LogPrint
 extern void SetupMacPrintfLog(char *logFile);
 #endif
 
@@ -188,8 +196,7 @@ int main(int argc, char** argv)
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
 
 #ifdef XP_MAC
-	/* Set up the console */
-	InitializeSIOUX(true);
+	SetupMacPrintfLog("timetest.log");
 	debug_mode = PR_TRUE;
 #endif
     /* Testing zero PRTime (the epoch) */
@@ -746,16 +753,6 @@ int main(int argc, char** argv)
 	    }
         }
     }
-
-#ifdef XP_MAC
-	if (1)
-	{
-		char dummyChar;
-		
-		printf("Press return to exit\n\n");
-		scanf("%c", &dummyChar);
-	}
-#endif
 
 	if (failed_already) return 1;
 	else return 0;

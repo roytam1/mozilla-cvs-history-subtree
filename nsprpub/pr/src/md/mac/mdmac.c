@@ -38,6 +38,12 @@
 
 #include "primpl.h"
 #include "prgc.h"
+#include "MacMemAllocator.h"
+
+enum {
+	kGarbageCollectionEmergencyFundSize = 16 * 1024,
+	kGarbageCollectionMemTightFundSize	= 48 * 1024
+};
 
 enum {
 	uppExitToShellProcInfo 				= kPascalStackBased,

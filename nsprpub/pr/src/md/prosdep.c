@@ -28,9 +28,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif 
-#ifdef XP_BEOS
-#include <OS.h>
-#endif
 
 PRInt32 _pr_pageShift;
 PRInt32 _pr_pageSize;
@@ -45,8 +42,7 @@ static void GetPageSize(void)
     /* Get page size */
 #ifdef XP_UNIX
 #if defined SUNOS4 || defined LINUX || defined BSDI || defined AIX \
-        || defined FREEBSD || defined NETBSD || defined OPENBSD \
-        || defined RHAPSODY || defined NEXTSTEP
+	|| defined FREEBSD || defined NETBSD || defined OPENBSD || defined RHAPSODY
     _pr_pageSize = getpagesize();
 #elif defined(HPUX)
     /* I have no idea. Don't get me started. --Rob */
@@ -59,10 +55,6 @@ static void GetPageSize(void)
 #ifdef XP_MAC
     _pr_pageSize = 4096;
 #endif /* XP_MAC */
-
-#ifdef XP_BEOS
-    _pr_pageSize = B_PAGE_SIZE;
-#endif
 
 #ifdef XP_PC
 #ifdef _WIN32

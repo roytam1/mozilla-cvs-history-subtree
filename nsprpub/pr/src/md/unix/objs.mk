@@ -86,10 +86,6 @@ RHAPSODY_CSRCS = \
 	rhapsody.c \
 	$(NULL)
 
-NEXTSTEP_CSRCS = \
-	nextstep.c \
-	$(NULL)
-
 NEC_CSRCS = \
 	nec.c \
 	$(NULL)
@@ -108,10 +104,6 @@ SCOOS_CSRCS = \
 
 DGUX_CSRCS = \
 	dgux.c \
-	$(NULL)
-
-QNX_CSRCS = \
-	qnx.c \
 	$(NULL)
 
 
@@ -164,9 +156,6 @@ endif
 ifeq ($(OS_ARCH),Rhapsody)
 CSRCS += $(RHAPSODY_CSRCS)
 endif
-ifeq ($(OS_ARCH),NEXTSTEP)
-CSRCS += $(NEXTSTEP_CSRCS)
-endif
 ifeq ($(OS_ARCH),NEC)
 CSRCS += $(NEC_CSRCS)
 endif
@@ -181,9 +170,6 @@ CSRCS += $(SCOOS_CSRCS)
 endif
 ifeq ($(OS_ARCH),DGUX)
 CSRCS += $(DGUX_CSRCS)
-endif
-ifeq ($(OS_ARCH),QNX)
-CSRCS += $(QNX_CSRCS)
 endif
  
 #
@@ -209,9 +195,7 @@ ifeq ($(OS_ARCH),SunOS)
 endif
 
 ifeq ($(OS_ARCH), SINIX)
-    ifeq ($(CPU_ARCH),mips)
-        ASFILES   = os_ReliantUNIX.s
-    endif
+    ASFILES   = os_ReliantUNIX.s
 endif
 
 ifeq ($(OS_ARCH), IRIX)

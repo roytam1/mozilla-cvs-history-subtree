@@ -17,19 +17,19 @@
 #
 
 # allmakefiles.sh - List of all makefiles. 
-#   Appends the list of makefiles to the variable, MAKEFILES.
+#   This script outputs the list to the standard output.
 #   There is no need to rerun autoconf after adding makefiles.
 #   You only need to run configure.
 #
 #   Unused makefiles may be commented out with '#'.
 #   ('#' must be the first character on the line).
 
-# add_makefiles - Shell function to add makefiles to MAKEFILES
+# add_makefiles - Shell function to write non-commented lines to stdout
 add_makefiles() {
   while read line; do
     case $line in
       \#*|dnl*) ;;
-      *) MAKEFILES="$MAKEFILES $line" ;;
+      *) echo $line ;;
     esac
   done
 }
@@ -71,14 +71,10 @@ dom/src/jsurl/Makefile
 dom/tools/Makefile
 editor/Makefile
 editor/public/Makefile
-expat/Makefile
-expat/xmlparse/Makefile
-expat/xmltok/Makefile
 gfx/Makefile
 gfx/public/Makefile
 gfx/src/Makefile
 gfx/src/gtk/Makefile
-gfx/src/ps/Makefile
 gfx/src/motif/Makefile
 gfx/src/rhapsody/Makefile
 gfx/tests/Makefile
@@ -238,9 +234,6 @@ rdf/Makefile
 rdf/base/Makefile
 rdf/base/public/Makefile
 rdf/base/src/Makefile
-rdf/util/Makefile
-rdf/util/public/Makefile
-rdf/util/src/Makefile
 rdf/build/Makefile
 rdf/content/Makefile
 rdf/content/public/Makefile
@@ -292,7 +285,6 @@ xpcom/libxpt/public/Makefile
 xpcom/libxpt/src/Makefile
 xpcom/libxpt/tests/Makefile
 xpcom/libxpt/tools/Makefile
-xpcom/idl/Makefile
 silentdl/Makefile
 xpfe/Makefile
 xpfe/AppCores/Makefile
@@ -329,5 +321,54 @@ END_EDITOR_MAKEFILES
 fi
 
 if [ "$MOZ_MAIL_NEWS" ]; then
-  add_makefiles < mailnews/makefiles
+  add_makefiles <<END_MAILNEWS_MAKEFILES
+network/protocol/certld/Makefile
+network/protocol/imap4/Makefile
+network/protocol/mailbox/Makefile
+network/protocol/nntp/Makefile
+network/protocol/pop3/Makefile
+network/protocol/smtp/Makefile
+mailnews/Makefile
+mailnews/base/Makefile
+mailnews/base/public/Makefile
+mailnews/base/src/Makefile
+mailnews/base/build/Makefile
+mailnews/base/tests/Makefile
+mailnews/db/Makefile
+mailnews/db/mdb/Makefile
+mailnews/db/mdb/public/Makefile
+mailnews/db/msgdb/Makefile
+mailnews/db/msgdb/public/Makefile
+mailnews/db/msgdb/src/Makefile
+mailnews/local/Makefile
+mailnews/local/public/Makefile
+mailnews/local/src/Makefile
+mailnews/local/tests/Makefile
+mailnews/local/tests/pop3/Makefile
+mailnews/local/tests/mailbox/Makefile
+mailnews/imap/Makefile
+mailnews/imap/public/Makefile
+mailnews/imap/src/Makefile
+mailnews/news/Makefile
+mailnews/news/public/Makefile
+mailnews/news/src/Makefile
+mailnews/news/tests/Makefile
+mailnews/mime/Makefile
+mailnews/mime/public/Makefile
+mailnews/mime/src/Makefile
+mailnews/compose/Makefile
+mailnews/compose/public/Makefile
+mailnews/compose/src/Makefile
+mailnews/compose/tests/Makefile
+mailnews/compose/tests/smtp/Makefile
+mailnews/compose/tests/compose/Makefile
+mailnews/ui/Makefile
+mailnews/ui/messenger/Makefile
+mailnews/ui/messenger/public/Makefile
+mailnews/ui/messenger/src/Makefile
+mailnews/ui/messenger/resources/Makefile
+mailnews/ui/compose/Makefile
+mailnews/ui/ab/Makefile
+mailnews/public/Makefile
+END_MAILNEWS_MAKEFILES
 fi

@@ -110,7 +110,11 @@ endif
 
 # AIX
 ifeq ($(OS_ARCH),AIX)
-LDOPTS += -blibpath:$(PWD)/$(DIST)/lib:/usr/lib:/lib
+ifeq ($(CLASSIC_NSPR),1)
+LDOPTS += -blibpath:.:$(PWD)/$(DIST)/lib:/usr/lpp/xlC/lib:/usr/lib:/lib
+else
+LDOPTS += -blibpath:.:$(PWD)/$(DIST)/lib:/usr/lib/threads:/usr/lpp/xlC/lib:/usr/lib:/lib
+endif
 ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
 LIBPR = -lnspr$(NSPR_VERSION)_shr
 LIBPLC = -lplc$(NSPR_VERSION)_shr

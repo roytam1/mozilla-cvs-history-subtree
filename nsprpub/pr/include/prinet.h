@@ -40,30 +40,19 @@
 #ifndef prinet_h__
 #define prinet_h__
 
-#if defined(XP_UNIX) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_UNIX) || defined(XP_OS2)
 
 #include <sys/types.h>
 #include <sys/socket.h>		/* AF_INET */
 #include <netinet/in.h>         /* INADDR_ANY, ..., ntohl(), ... */
 #ifdef XP_OS2
 #include <sys/ioctl.h>
-#endif
-#ifdef XP_UNIX
-#ifdef AIX
-/*
- * On AIX 4.3, the header <arpa/inet.h> refers to struct
- * ether_addr and struct sockaddr_dl that are not declared.
- * The following struct declarations eliminate the compiler
- * warnings.
- */
-struct ether_addr;
-struct sockaddr_dl;
-#endif /* AIX */
+#else
 #include <arpa/inet.h>
-#endif /* XP_UNIX */
+#endif
 #include <netdb.h>
 
-#if defined(FREEBSD) || defined(BSDI) || defined(QNX)
+#if defined(FREEBSD) || defined(BSDI)
 #include <rpc/types.h> /* the only place that defines INADDR_LOOPBACK */
 #endif
 

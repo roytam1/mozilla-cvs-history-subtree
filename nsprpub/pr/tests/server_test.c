@@ -38,6 +38,7 @@
 ***********************************************************************/
 /* Used to get the command line option */
 #include "plgetopt.h"
+#include "prttools.h"
 
 #include "nspr.h"
 #include "pprthred.h"
@@ -46,10 +47,6 @@
 
 #define PORT 15004
 #define STACKSIZE 0
-
-#define PASS 0
-#define FAIL 1
-static int debug_mode = 0;
 
 static int _iterations = 1000;
 static int _clients = 1;
@@ -94,7 +91,7 @@ PRCondVar *ServerStateCV;
 ***********************************************************************/
 
 
-static void Test_Result (int result)
+static Test_Result (int result)
 {
 	switch (result)
 	{
@@ -103,6 +100,9 @@ static void Test_Result (int result)
 			break;
 		case FAIL:
 			printf ("FAIL\n");
+			break;
+		case NOSTATUS:
+			printf ("NOSTATUS\n");
 			break;
 		default:
 			break;
@@ -265,9 +265,9 @@ ServerSetup(void)
     }
 
     memset(&serverAddr, 0, sizeof(PRNetAddr));
-    serverAddr.inet.family = PR_AF_INET;
+    serverAddr.inet.family = AF_INET;
     serverAddr.inet.port = PR_htons(PORT);
-    serverAddr.inet.ip = PR_htonl(PR_INADDR_ANY);
+    serverAddr.inet.ip = PR_htonl(INADDR_ANY);
 
     if ( PR_Bind(listenSocket, &serverAddr) == PR_FAILURE) {
         if (debug_mode) printf("\tServer error binding to server address: OS error %d\n",
@@ -361,9 +361,9 @@ ClientThreadFunc(void *unused)
         if (debug_mode) printf("\tClient could not malloc space!?\n");
 
     memset(&serverAddr, 0, sizeof(PRNetAddr));
-    serverAddr.inet.family = PR_AF_INET;
+    serverAddr.inet.family = AF_INET;
     serverAddr.inet.port = PR_htons(PORT);
-    serverAddr.inet.ip = PR_htonl(PR_INADDR_LOOPBACK);
+    serverAddr.inet.ip = PR_htonl(INADDR_LOOPBACK);
 
     while(numRequests > 0) {
 
@@ -598,6 +598,8 @@ main(int argc, char **argv)
 	}
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
     PR_STDIO_INIT();
+
+    PR_SetThreadRecycleMode(64);
 
     ServerStateCVLock = PR_NewLock();
     ServerStateCV = PR_NewCondVar(ServerStateCVLock);

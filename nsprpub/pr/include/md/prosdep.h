@@ -80,9 +80,6 @@ PR_BEGIN_EXTERN_C
 #elif defined(RHAPSODY)
 #include "md/_rhapsody.h"
 
-#elif defined(NEXTSTEP)
-#include "md/_nextstep.h"
-
 #elif defined(SOLARIS)
 #include "md/_solaris.h"
 
@@ -110,9 +107,6 @@ PR_BEGIN_EXTERN_C
 #elif defined(DGUX)
 #include "md/_dgux.h"
 
-#elif defined(QNX)
-#include "md/_qnx.h"
-
 #else
 #error unknown Unix flavor
 
@@ -121,14 +115,9 @@ PR_BEGIN_EXTERN_C
 #include "md/_unixos.h"
 #include "md/_unix_errors.h"
 
-#elif defined(XP_BEOS)
-
-#include "md/_beos.h"
-#include "md/_unix_errors.h"
-
 #else
 
-#error "The platform is not BeOS, Unix, Windows, or Mac"
+#error "The platform is not Unix, Windows, or Mac"
 
 #endif
 

@@ -38,80 +38,19 @@
 #ifdef SOLARIS
 #include <sys/filio.h>  /* to pick up FIONREAD */
 #endif
-#ifdef _PR_POLL_AVAILABLE
-#include <poll.h>
+/* Linux (except glibc) and FreeBSD don't have poll */
+#if !(defined(LINUX) && !(defined(__GLIBC__) && __GLIBC__ >= 2)) \
+    && !defined(FREEBSD)
+#include <sys/poll.h>
 #endif
 #ifdef AIX
 /* To pick up sysconf() */
 #include <unistd.h>
-#include <dlfcn.h>  /* for dlopen */
 #else
 /* To pick up getrlimit() etc. */
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
-
-/*
- * The send_file() system call is available in AIX 4.3.2 or later.
- * If this file is compiled on an older AIX system, it attempts to
- * look up the send_file symbol at run time to determine whether
- * we can use the faster PR_TransmitFile implementation based on
- * send_file().  On AIX 4.3.2 or later, we can safely skip this
- * runtime function dispatching and just use the send_file based
- * implementation.
- */
-#ifdef AIX
-#ifdef SF_CLOSE
-#define HAVE_SEND_FILE
-#endif
-
-#ifdef HAVE_SEND_FILE
-
-#define AIX_SEND_FILE(a, b, c) send_file(a, b, c)
-
-#else /* HAVE_SEND_FILE */
-
-/*
- * The following definitions match those in <sys/socket.h>
- * on AIX 4.3.2.
- */
-
-/*
- * Structure for the send_file() system call
- */
-struct sf_parms {
-    /* --------- header parms ---------- */
-    void      *header_data;         /* Input/Output. Points to header buf */
-    uint_t    header_length;        /* Input/Output. Length of the header */
-    /* --------- file parms ------------ */
-    int       file_descriptor;      /* Input. File descriptor of the file */
-    unsigned long long file_size;   /* Output. Size of the file */
-    unsigned long long file_offset; /* Input/Output. Starting offset */
-    long long file_bytes;           /* Input/Output. no. of bytes to send */
-    /* --------- trailer parms --------- */
-    void      *trailer_data;        /* Input/Output. Points to trailer buf */
-    uint_t    trailer_length;       /* Input/Output. Length of the trailer */
-    /* --------- return info ----------- */
-    unsigned long long bytes_sent;  /* Output. no. of bytes sent */
-};
-
-/*
- * Flags for the send_file() system call
- */
-#define SF_CLOSE        0x00000001      /* close the socket after completion */
-#define SF_REUSE        0x00000002      /* reuse socket. not supported */
-#define SF_DONT_CACHE   0x00000004      /* don't apply network buffer cache */
-#define SF_SYNC_CACHE   0x00000008      /* sync/update network buffer cache */
-
-/*
- * prototype: size_t send_file(int *, struct sf_parms *, uint_t);
- */
-static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
-
-#define AIX_SEND_FILE(a, b, c) (*pt_aix_sendfile_fptr)(a, b, c)
-
-#endif /* HAVE_SEND_FILE */
-#endif /* AIX */
 
 #include "primpl.h"
 
@@ -123,7 +62,7 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
 #if defined(SOLARIS)
 #define _PRSockOptVal_t char *
 #elif defined(IRIX) || defined(OSF1) || defined(AIX) || defined(HPUX) \
-    || defined(LINUX) || defined(FREEBSD) || defined(BSDI)
+    || defined(LINUX) || defined(FREEBSD)
 #define _PRSockOptVal_t void *
 #else
 #error "Cannot determine architecture"
@@ -136,8 +75,7 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
 #elif defined(IRIX) || (defined(AIX) && !defined(AIX4_1)) \
     || defined(OSF1) || defined(SOLARIS) \
     || defined(HPUX10_30) || defined(HPUX11) || defined(LINUX) \
-    || defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
-    || defined(BSDI)
+    || defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD)
 #define _PRSelectFdSetArg_t fd_set *
 #else
 #error "Cannot determine architecture"
@@ -145,6 +83,7 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
 
 static PRFileDesc *pt_SetMethods(PRIntn osfd, PRDescType type);
 
+static pthread_condattr_t _pt_cvar_attr;
 static PRLock *_pr_flock_lock;  /* For PR_LockFile() etc. */
 static PRLock *_pr_rename_lock;  /* For PR_Rename() */
 
@@ -199,8 +138,7 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
 #if (defined(LINUX) && defined(__GLIBC__) && __GLIBC__ >= 2 \
     && !defined(__alpha))
 typedef socklen_t pt_SockLen;
-#elif (defined(AIX) && !defined(AIX4_1)) \
-    || (defined(LINUX) && defined(__alpha))
+#elif defined(AIX) || (defined(LINUX) && defined(__alpha))
 typedef PRSize pt_SockLen;
 #else
 typedef PRIntn pt_SockLen;
@@ -1106,31 +1044,6 @@ static PRBool pt_recvfrom_cont(pt_Continuation *op, PRInt16 revents)
         PR_FALSE : PR_TRUE;
 }  /* pt_recvfrom_cont */
 
-#ifdef AIX
-static PRBool pt_aix_transmitfile_cont(pt_Continuation *op, PRInt16 revents)
-{
-    struct sf_parms *sf_struct = (struct sf_parms *) op->arg2.buffer;
-    int rv;
-
-    rv = AIX_SEND_FILE(&op->arg1.osfd, sf_struct, op->arg4.flags);
-    op->syserrno = errno;
-
-    if (rv != -1) {
-        op->result.code += sf_struct->bytes_sent;
-    } else if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN) {
-        op->result.code = -1;
-    } else {
-        return PR_FALSE;
-    }
-
-    if (rv == 1) {    /* more data to send */
-        return PR_FALSE;
-    }
-
-    return PR_TRUE;
-}
-#endif  /* AIX */
-
 #ifdef HPUX11
 static PRBool pt_hpux_transmitfile_cont(pt_Continuation *op, PRInt16 revents)
 {
@@ -1140,11 +1053,10 @@ static PRBool pt_hpux_transmitfile_cont(pt_Continuation *op, PRInt16 revents)
     count = sendfile(op->arg1.osfd, op->filedesc, op->arg3.offset, 0,
             hdtrl, op->arg4.flags);
     PR_ASSERT(count <= op->nbytes_to_send);
-    op->syserrno = errno;
 
     if (count != -1) {
         op->result.code += count;
-    } else if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN) {
+    } else if (errno != EWOULDBLOCK && errno != EAGAIN) {
         op->result.code = -1;
     } else {
         return PR_FALSE;
@@ -1182,6 +1094,9 @@ void _PR_InitIO()
     memset(&pt_debug, 0, sizeof(PTDebug));
     pt_debug.timeStarted = PR_Now();
 #endif
+
+    rv = PTHREAD_CONDATTR_INIT(&_pt_cvar_attr); 
+    PR_ASSERT(0 == rv);
 
     pt_tq.thread = NULL;
 
@@ -1338,7 +1253,7 @@ static PRInt32 pt_Write(PRFileDesc *fd, const void *buf, PRInt32 amount)
 }  /* pt_Write */
 
 static PRInt32 pt_Writev(
-    PRFileDesc *fd, const PRIOVec *iov, PRInt32 iov_len, PRIntervalTime timeout)
+    PRFileDesc *fd, PRIOVec *iov, PRInt32 iov_len, PRIntervalTime timeout)
 {
     PRIntn iov_index = 0;
     PRBool fNeedContinue = PR_FALSE;
@@ -1351,7 +1266,7 @@ static PRInt32 pt_Writev(
      * Only if we have to continue the operation do we have to
      * make a copy that we can modify.
      */
-    rv = bytes = writev(fd->secret->md.osfd, (const struct iovec*)iov, iov_len);
+    rv = bytes = writev(fd->secret->md.osfd, (struct iovec*)iov, iov_len);
     syserrno = errno;
 
     /*
@@ -1530,23 +1445,11 @@ static PRStatus pt_Connect(
     PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime timeout)
 {
     PRIntn rv = -1, syserrno;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
+    PRSize addr_len = PR_NETADDR_SIZE(addr);
 
     if (pt_TestAbort()) return PR_FAILURE;
 
-    PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
-    rv = connect(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
-#else
     rv = connect(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
-#endif
     syserrno = errno;
     if ((-1 == rv) && (EINPROGRESS == syserrno) && (!fd->secret->nonblocking))
     {
@@ -1555,11 +1458,7 @@ static PRStatus pt_Connect(
         {
             pt_Continuation op;
             op.arg1.osfd = fd->secret->md.osfd;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-            op.arg2.buffer = (void*)&addrCopy;
-#else
             op.arg2.buffer = (void*)addr;
-#endif
             op.arg3.amount = addr_len;
             op.timeout = timeout;
             op.function = pt_connect_cont;
@@ -1641,10 +1540,13 @@ static PRFileDesc* pt_Accept(
         }
     }
 #ifdef _PR_HAVE_SOCKADDR_LEN
-    /* ignore the sa_len field of struct sockaddr */
+    /* mask off the first byte of struct sockaddr (the length field) */
     if (addr)
     {
-        addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+        *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+        addr->raw.family = ntohs(addr->raw.family);
+#endif
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
     newfd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP);
@@ -1665,10 +1567,6 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
 {
     PRIntn rv;
     PRInt32 one = 1;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
 
     if (pt_TestAbort()) return PR_FAILURE;
 
@@ -1695,15 +1593,7 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
         }
     }
 
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
-    rv = bind(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
-#else
-    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
-#endif
+    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addr, PR_NETADDR_SIZE(addr));
 
     if (rv == -1) {
         pt_MapError(_PR_MD_MAP_BIND_ERROR, errno);
@@ -1872,27 +1762,13 @@ static PRInt32 pt_SendTo(
 {
     PRInt32 syserrno, bytes = -1;
     PRBool fNeedContinue = PR_FALSE;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
 
     if (pt_TestAbort()) return bytes;
 
     PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
     bytes = sendto(
         fd->secret->md.osfd, buf, amount, flags,
-        (struct sockaddr*)&addrCopy, addr_len);
-#else
-    bytes = sendto(
-        fd->secret->md.osfd, buf, amount, flags,
-        (struct sockaddr*)addr, addr_len);
-#endif
+        (struct sockaddr*)addr, PR_NETADDR_SIZE(addr));
     syserrno = errno;
     if ( (bytes == -1) && (syserrno == EWOULDBLOCK || syserrno == EAGAIN)
         && (!fd->secret->nonblocking) )
@@ -1907,11 +1783,7 @@ static PRInt32 pt_SendTo(
         op.arg2.buffer = (void*)buf;
         op.arg3.amount = amount;
         op.arg4.flags = flags;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-        op.arg5.addr = (PRNetAddr*)&addrCopy;
-#else
         op.arg5.addr = (PRNetAddr*)addr;
-#endif
         op.timeout = timeout;
         op.result.code = 0;  /* initialize the number sent */
         op.function = pt_sendto_cont;
@@ -1962,10 +1834,13 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
 #ifdef _PR_HAVE_SOCKADDR_LEN
     if (bytes >= 0)
     {
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
@@ -1973,112 +1848,6 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
         pt_MapError(_PR_MD_MAP_RECVFROM_ERROR, syserrno);
     return bytes;
 }  /* pt_RecvFrom */
-
-#ifdef AIX
-#ifndef HAVE_SEND_FILE
-static pthread_once_t pt_aix_sendfile_once_block = PTHREAD_ONCE_INIT;
-
-static void pt_aix_sendfile_init_routine(void)
-{
-    void *handle = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
-    pt_aix_sendfile_fptr = (ssize_t (*)()) dlsym(handle, "send_file");
-    dlclose(handle);
-}
-
-/* 
- * pt_AIXDispatchTransmitFile
- */
-static PRInt32 pt_AIXDispatchTransmitFile(PRFileDesc *sd, PRFileDesc *fd,
-      const void *headers, PRInt32 hlen, PRTransmitFileFlags flags,
-      PRIntervalTime timeout)
-{
-    int rv;
-
-    rv = pthread_once(&pt_aix_sendfile_once_block,
-            pt_aix_sendfile_init_routine);
-    PR_ASSERT(0 == rv);
-    if (pt_aix_sendfile_fptr) {
-        return pt_AIXTransmitFile(sd, fd, headers, hlen, flags, timeout);
-    } else {
-        return _PR_UnixTransmitFile(sd, fd, headers, hlen, flags, timeout);
-    }
-}
-#endif /* !HAVE_SEND_FILE */
-
-/*
- * pt_AIXTransmitFile
- *
- *    Send file fd across socket sd. If headers is non-NULL, 'hlen'
- *    bytes of headers is sent before sending the file.
- *
- *    PR_TRANSMITFILE_CLOSE_SOCKET flag - close socket after sending file
- *    
- *    return number of bytes sent or -1 on error
- *
- *      This implementation takes advantage of the send_file() system
- *      call available in AIX 4.3.2.
- */
-
-static PRInt32 pt_AIXTransmitFile(PRFileDesc *sd, PRFileDesc *fd, 
-        const void *headers, PRInt32 hlen, PRTransmitFileFlags flags,
-        PRIntervalTime timeout)
-{
-    struct sf_parms sf_struct;
-    uint_t send_flags;
-    ssize_t rv;
-    int syserrno;
-    PRInt32 count;
-
-    sf_struct.header_data = (void *) headers;  /* cast away the 'const' */
-    sf_struct.header_length = hlen;
-    sf_struct.file_descriptor = fd->secret->md.osfd;
-    sf_struct.file_size = 0;
-    sf_struct.file_offset = 0;
-    sf_struct.file_bytes = -1;
-    sf_struct.trailer_data = NULL;
-    sf_struct.trailer_length = 0;
-    sf_struct.bytes_sent = 0;
-
-    send_flags = 0;
-
-    do {
-        rv = AIX_SEND_FILE(&sd->secret->md.osfd, &sf_struct, send_flags);
-    } while (rv == -1 && (syserrno = errno) == EINTR);
-
-    if (rv == -1) {
-        if (syserrno == EAGAIN || syserrno == EWOULDBLOCK) {
-            count = 0; /* Not a real error.  Need to continue. */
-        } else {
-            count = -1;
-        }
-    } else {
-        count = sf_struct.bytes_sent;
-    }
-
-    if ((rv == 1) || ((rv == -1) && (count == 0))) {
-        pt_Continuation op;
-
-        op.arg1.osfd = sd->secret->md.osfd;
-        op.arg2.buffer = &sf_struct;
-        op.arg4.flags = send_flags;
-        op.result.code = count;
-        op.timeout = timeout;
-        op.function = pt_aix_transmitfile_cont;
-        op.event = POLLOUT | POLLPRI;
-        count = pt_Continue(&op);
-        syserrno = op.syserrno;
-    }
-
-    if (count == -1) {
-        _MD_aix_map_sendfile_error(syserrno);
-        return -1;
-    }
-    if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
-        PR_Close(sd);
-    }
-    return count;
-}
-#endif /* AIX */
 
 #ifdef HPUX11
 /*
@@ -2162,7 +1931,7 @@ static PRInt32 pt_HPUXTransmitFile(PRFileDesc *sd, PRFileDesc *fd,
 
     if (count == -1) {
         _MD_hpux_map_sendfile_error(syserrno);
-        return -1;
+    return -1;
     }
     if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
         PR_Close(sd);
@@ -2185,12 +1954,6 @@ static PRInt32 pt_TransmitFile(
 
 #ifdef HPUX11
     return pt_HPUXTransmitFile(sd, fd, headers, hlen, flags, timeout);
-#elif defined(AIX)
-#ifdef HAVE_SEND_FILE
-    return pt_AIXTransmitFile(sd, fd, headers, hlen, flags, timeout);
-#else
-    return pt_AIXDispatchTransmitFile(sd, fd, headers, hlen, flags, timeout);
-#endif /* HAVE_SEND_FILE */
 #else
     return _PR_UnixTransmitFile(sd, fd, headers, hlen, flags, timeout);
 #endif
@@ -2253,10 +2016,13 @@ static PRStatus pt_GetSockName(PRFileDesc *fd, PRNetAddr *addr)
         return PR_FAILURE;
     } else {
 #ifdef _PR_HAVE_SOCKADDR_LEN
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
@@ -2280,10 +2046,13 @@ static PRStatus pt_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
         return PR_FAILURE;
     } else {
 #ifdef _PR_HAVE_SOCKADDR_LEN
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
@@ -2652,8 +2421,6 @@ static PRIOMethods _pr_file_methods = {
     (PRGetpeernameFN)_PR_InvalidStatus,    
     (PRGetsockoptFN)_PR_InvalidStatus,    
     (PRSetsockoptFN)_PR_InvalidStatus,    
-    (PRGetsocketoptionFN)_PR_InvalidStatus,
-    (PRSetsocketoptionFN)_PR_InvalidStatus
 };
 
 static PRIOMethods _pr_tcp_methods = {
@@ -2728,7 +2495,7 @@ static PRIOMethods _pr_udp_methods = {
 
 #if defined(HPUX) || defined(OSF1) || defined(SOLARIS) || defined (IRIX) \
     || defined(AIX) || defined(LINUX) || defined(FREEBSD) || defined(NETBSD) \
-    || defined(OPENBSD) || defined(BSDI)
+    || defined(OPENBSD)
 #define _PR_FCNTL_FLAGS O_NONBLOCK
 #else
 #error "Can't determine architecture"
@@ -2744,9 +2511,6 @@ static PRFileDesc *pt_SetMethods(PRIntn osfd, PRDescType type)
     {
         fd->secret->md.osfd = osfd;
         fd->secret->state = _PR_FILEDESC_OPEN;
-        /* By default, a Unix fd is not closed on exec. */
-        PR_ASSERT(0 == fcntl(osfd, F_GETFD, 0));
-        fd->secret->inheritable = PR_TRUE;
         switch (type)
         {
             case PR_DESC_FILE:
@@ -2811,9 +2575,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_AllocFileDesc(
         fcntl(osfd, F_SETFL, flags | _PR_FCNTL_FLAGS);
     }
     fd->secret->state = _PR_FILEDESC_OPEN;
-    /* By default, a Unix fd is not closed on exec. */
-    PR_ASSERT(0 == fcntl(osfd, F_GETFD, 0));
-    fd->secret->inheritable = PR_TRUE;
     return fd;
     
 failed:
@@ -3080,25 +2841,14 @@ PR_IMPLEMENT(PRInt32) PR_Poll(
     if (0 == npds) PR_Sleep(timeout);
     else
     {
-#define STACK_POLL_DESC_COUNT 4
-        struct pollfd stack_syspoll[STACK_POLL_DESC_COUNT];
-        struct pollfd *syspoll;
         PRIntn index, msecs;
-
-        if (npds <= STACK_POLL_DESC_COUNT)
+        struct pollfd *syspoll = NULL;
+        syspoll = (struct pollfd*)PR_MALLOC(npds * sizeof(struct pollfd));
+        if (NULL == syspoll)
         {
-            syspoll = stack_syspoll;
+            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+            return -1;
         }
-        else
-        {
-            syspoll = (struct pollfd*)PR_MALLOC(npds * sizeof(struct pollfd));
-            if (NULL == syspoll)
-            {
-                PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-                return -1;
-            }
-        }
-
         for (index = 0; index < npds; ++index)
         {
             PRInt16 in_flags_read = 0, in_flags_write = 0;
@@ -3296,8 +3046,8 @@ retry:
             }
         }
 
-        if (syspoll != stack_syspoll)
-            PR_DELETE(syspoll);
+        PR_DELETE(syspoll);
+
     }
     return ready;
 
@@ -3446,64 +3196,27 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
     return PR_SUCCESS;
 }
 
-/*
-** Set the inheritance attribute of a file descriptor.
-*/
-PR_IMPLEMENT(PRStatus) PR_SetFDInheritable(
-    PRFileDesc *fd,
-    PRBool inheritable)
-{
-    /*
-     * Only a non-layered, NSPR file descriptor can be inherited
-     * by a child process.
-     */
-    if (fd->identity != PR_NSPR_IO_LAYER)
-    {
-        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-        return PR_FAILURE;
-    }
-    if (fd->secret->inheritable != inheritable)
-    {
-        if (fcntl(fd->secret->md.osfd, F_SETFD,
-        inheritable ? 0 : FD_CLOEXEC) == -1)
-        {
-            return PR_FAILURE;
-        }
-        fd->secret->inheritable = inheritable;
-    }
-    return PR_SUCCESS;
-}
-
 /*****************************************************************************/
 /***************************** I/O friends methods ***************************/
 /*****************************************************************************/
 
 PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
 {
-    PRFileDesc *fd;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-    fd = pt_SetMethods(osfd, PR_DESC_FILE);
+    PRFileDesc *fd = pt_SetMethods(osfd, PR_DESC_FILE);
     if (NULL == fd) close(osfd);
     return fd;
 }  /* PR_ImportFile */
 
 PR_IMPLEMENT(PRFileDesc*) PR_ImportTCPSocket(PRInt32 osfd)
 {
-    PRFileDesc *fd;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-    fd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP);
+    PRFileDesc *fd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP);
     if (NULL == fd) close(osfd);
     return fd;
 }  /* PR_ImportTCPSocket */
 
 PR_IMPLEMENT(PRFileDesc*) PR_ImportUDPSocket(PRInt32 osfd)
 {
-    PRFileDesc *fd;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-    fd = pt_SetMethods(osfd, PR_DESC_SOCKET_UDP);
+    PRFileDesc *fd = pt_SetMethods(osfd, PR_DESC_SOCKET_UDP);
     if (NULL != fd) close(osfd);
     return fd;
 }  /* PR_ImportUDPSocket */

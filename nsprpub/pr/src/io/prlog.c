@@ -30,10 +30,7 @@
  * This can lead to infinite recursion.
  */
 static PRLock *_pr_logLock;
-#if defined(_PR_PTHREADS) || defined(_PR_BTHREADS)
-#define _PR_LOCK_LOG() PR_Lock(_pr_logLock);
-#define _PR_UNLOCK_LOG() PR_Unlock(_pr_logLock);
-#elif defined(_PR_GLOBAL_THREADS_ONLY)
+#if (defined(_PR_PTHREADS) || defined(_PR_GLOBAL_THREADS_ONLY))
 #define _PR_LOCK_LOG() { _PR_LOCK_LOCK(_pr_logLock)
 #define _PR_UNLOCK_LOG() _PR_LOCK_UNLOCK(_pr_logLock); }
 #else
@@ -55,7 +52,7 @@ static PRLock *_pr_logLock;
 
 #endif
 
-#if defined(XP_PC) && !defined(XP_OS2_VACPP)
+#ifdef XP_PC
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
@@ -199,7 +196,7 @@ void _PR_InitLog(void)
                     }
                     lm = lm->next;
                 }
-                if (( PR_FALSE == skip_modcheck) && (NULL == lm)) {
+                if (NULL == lm) {
 #ifdef XP_PC
                     char* str = PR_smprintf("Unrecognized NSPR_LOG_MODULE: %s=%d\n",
                                             module, level);
@@ -271,6 +268,8 @@ static void _PR_SetLogModuleLevel( PRLogModuleInfo *lm )
         PRIntn evlen = strlen(ev), pos = 0;
         while (pos < evlen) {
             PRIntn level = 1, count = 0, delta = 0;
+            PRLogModuleInfo *lm = logModules;
+            PRBool skip_modcheck;
 
             count = sscanf(&ev[pos], "%64[A-Za-z0-9]%n:%d%n",
                            module, &delta, &level, &delta);
@@ -281,14 +280,19 @@ static void _PR_SetLogModuleLevel( PRLogModuleInfo *lm )
             ** If count == 2, then we got module and level. If count
             ** == 1, then level defaults to 1 (module enabled).
             */
-            if (lm != NULL)
+            skip_modcheck = (0 == strcasecmp (module, "all")) ? PR_TRUE : PR_FALSE;
+            while (lm != NULL) 
             {
-                if ((strcasecmp(module, "all") == 0)
-                    || (strcasecmp(module, lm->name) == 0))
+                if (skip_modcheck) 
+                    lm->level = (PRLogModuleLevel)level;
+                else if (strcasecmp(module, lm->name) == 0) 
                 {
                     lm->level = (PRLogModuleLevel)level;
+                    break;
                 }
+                lm = lm->next;
             }
+            /*found:*/
             count = sscanf(&ev[pos], " , %n", &delta);
             pos += delta;
             if (count == -1) break;
@@ -396,8 +400,6 @@ PR_IMPLEMENT(void) PR_LogPrint(const char *fmt, ...)
               * pointer, but a structure; so you can't easily print it...
               */
                      me ? &(me->id): 0L, me);
-#elif defined(_PR_BTHREADS)
-		     me, me);
 #else
                      me ? me->id : 0L, me);
 #endif
@@ -467,7 +469,7 @@ PR_IMPLEMENT(void) PR_Assert(const char *s, const char *file, PRIntn ln)
 {
 #ifdef PR_LOGGING
     PR_LogPrint("Assertion failure: %s, at %s:%d\n", s, file, ln);
-#if defined(XP_UNIX) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_UNIX) || defined(XP_OS2)
     fprintf(stderr, "Assertion failure: %s, at %s:%d\n", s, file, ln);
 #endif
 #ifdef XP_MAC

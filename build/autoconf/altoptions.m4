@@ -29,7 +29,6 @@ dnl MOZ_ARG_ENABLE_BOOL_OR_STRING( NAME, HELP, IF-YES, IF-NO, IF-SET[, ELSE]]])
 dnl MOZ_ARG_WITH_BOOL(             NAME, HELP, IF-YES [, IF-NO [, ELSE])
 dnl MOZ_ARG_WITHOUT_BOOL(          NAME, HELP, IF-NO [, IF-YES [, ELSE])
 dnl MOZ_ARG_WITH_STRING(           NAME, HELP, IF-SET [, ELSE])
-dnl MOZ_ARG_HEADER(Comment)
 dnl MOZ_READ_MYCONFIG() - Read in 'myconfig.sh' file
 
 
@@ -87,18 +86,24 @@ dnl MOZ_ARG_WITH_STRING(NAME, HELP, IF-SET [, ELSE])
 AC_DEFUN(MOZ_ARG_WITH_STRING,
 [AC_ARG_WITH([$1], [$2], [$3], [$4])])
 
-dnl MOZ_ARG_HEADER(Comment)
-dnl This is used by webconfig to group options
-define(MOZ_ARG_HEADER, [# $1])
+
 
 dnl MOZ_READ_MYCONFIG() - Read in 'myconfig.sh' file
-AC_DEFUN(MOZ_READ_MOZCONFIG,
+AC_DEFUN(MOZ_READ_MYCONFIG,
 [AC_REQUIRE([AC_INIT_BINSH])dnl
-# Read in 'mozconfig.sh' script to set the initial options.
-# See the load-mozconfig.sh script for more details.
-TOPSRCDIR=`dirname [$]0`
-PATH="$TOPSRCDIR/build/autoconf:$PATH"
-. load-mozconfig.sh])
+# Read in 'myconfig.sh' script to set the initial options.
+# See the load-myconfig.sh script for more details.
+_topsrcdir=`dirname [$]0`
+_load_myconfig=$_topsrcdir/build/autoconf/load-myconfig.sh
+if test "$MOZ_MYCONFIG"; then
+  . $_load_myconfig
+elif test -f myconfig.sh; then
+   MOZ_MYCONFIG=myconfig.sh
+   . $_load_myconfig
+elif test -f $_topsrcdir/myconfig.sh; then
+   MOZ_MYCONFIG=$_topsrcdir/myconfig.sh
+   . $_load_myconfig
+fi])
 
 dnl This gets inserted at the top of the configure script
-MOZ_READ_MOZCONFIG
+MOZ_READ_MYCONFIG

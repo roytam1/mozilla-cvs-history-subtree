@@ -31,10 +31,6 @@
 #include <pthread.h>
 #endif
 
-#if defined(_PR_BTHREADS)
-#include <kernel/OS.h>
-#endif
-
 #ifdef WINNT
 /* Need to force service-pack 3 extensions to be defined by
 ** setting _WIN32_WINNT to NT 4.0 for winsock.h, winbase.h, winnt.h.
@@ -158,7 +154,6 @@ struct _PT_Notified
 #define PT_THREAD_GCABLE    0x20    /* thread is garbage collectible */
 #define PT_THREAD_SUSPENDED 0x40    /* thread has been suspended */
 #define PT_THREAD_FOREIGN   0x80    /* thread is not one of ours */
-#define PT_THREAD_BOUND     0x100    /* a bound-global thread */
 
 /* 
 ** Possible values for thread's suspend field
@@ -726,9 +721,6 @@ PR_EXTERN(void) _PR_MD_WAKEUP_CPUS();
 
 /* Interrupts related */
 
-PR_EXTERN(void) _PR_MD_START_INTERRUPTS(void);
-#define    _PR_MD_START_INTERRUPTS _MD_START_INTERRUPTS
-
 PR_EXTERN(void) _PR_MD_STOP_INTERRUPTS(void);
 #define    _PR_MD_STOP_INTERRUPTS _MD_STOP_INTERRUPTS
 
@@ -794,9 +786,6 @@ extern void _PR_MD_EXIT(PRIntn status);
 #define    _PR_MD_EXIT _MD_EXIT
 
 /* Locks related */
-
-PR_EXTERN(void) _PR_MD_INIT_LOCKS(void);
-#define    _PR_MD_INIT_LOCKS _MD_INIT_LOCKS
 
 PR_EXTERN(PRStatus) _PR_MD_NEW_LOCK(_MDLock *md);
 #define    _PR_MD_NEW_LOCK _MD_NEW_LOCK
@@ -932,6 +921,9 @@ extern PRThread* _PR_MD_CREATE_USER_THREAD(
 #define    _PR_MD_CREATE_USER_THREAD _MD_CREATE_USER_THREAD
 #endif
 
+extern void _PR_MD_INIT_PRIMORDIAL_THREAD(PRThread *thread);
+#define _PR_MD_INIT_PRIMORDIAL_THREAD _MD_INIT_PRIMORDIAL_THREAD
+
 extern PRStatus _PR_MD_CREATE_THREAD(
                         PRThread *thread, 
                         void (*start) (void *), 
@@ -974,9 +966,6 @@ extern PRInt32 _PR_MD_CLOSE_DIR(_MDDir *md);
 #define    _PR_MD_CLOSE_DIR _MD_CLOSE_DIR
 
 /* I/O related */
-extern void _PR_MD_INIT_FILEDESC(PRFileDesc *fd);
-#define    _PR_MD_INIT_FILEDESC _MD_INIT_FILEDESC
-
 extern void _PR_MD_MAKE_NONBLOCK(PRFileDesc *fd);
 #define    _PR_MD_MAKE_NONBLOCK _MD_MAKE_NONBLOCK
 
@@ -994,7 +983,7 @@ extern PRInt32 _PR_MD_WRITE(PRFileDesc *fd, const void *buf, PRInt32 amount);
 #define    _PR_MD_WRITE _MD_WRITE
 
 extern PRInt32 _PR_MD_WRITEV(
-    PRFileDesc *fd, const struct PRIOVec *iov,
+    PRFileDesc *fd, struct PRIOVec *iov,
     PRInt32 iov_size, PRIntervalTime timeout);
 #define    _PR_MD_WRITEV _MD_WRITEV
 
@@ -1134,9 +1123,6 @@ extern PRInt32 _PR_MD_PR_POLL(PRPollDesc *pds, PRIntn npds,
                                                                                         PRIntervalTime timeout);
 #define    _PR_MD_PR_POLL _MD_PR_POLL
 
-extern PRStatus _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable);
-#define    _PR_MD_SET_FD_INHERITABLE _MD_SET_FD_INHERITABLE
-
 
 #define _PR_PROCESS_TIMEOUT_INTERRUPT_ERRORS(me) \
         if (_PR_PENDING_INTERRUPT(me)) { \
@@ -1146,8 +1132,12 @@ extern PRStatus _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable);
                 PR_SetError(PR_IO_TIMEOUT_ERROR, 0); \
         }                                                        
                 
-extern void *_PR_MD_GET_SP(PRThread *thread);
+#ifndef NO_NSPR_10_SUPPORT
+
+PR_EXTERN(void *) _PR_MD_GET_SP(PRThread *thread);
 #define    _PR_MD_GET_SP _MD_GET_SP
+
+#endif /* NO_NSPR_10_SUPPORT */
 
 #endif /* defined(_PR_PTHREADS) */
 
@@ -1220,23 +1210,25 @@ extern PRStatus _PR_MapOptionName(
 extern void _PR_InitThreads(
     PRThreadType type, PRThreadPriority priority, PRUintn maxPTDs);
 
+PR_EXTERN(void) _PR_MD_START_INTERRUPTS(void);
+#define    _PR_MD_START_INTERRUPTS _MD_START_INTERRUPTS
+
+PR_EXTERN(void) _PR_MD_INIT_LOCKS(void);
+#define    _PR_MD_INIT_LOCKS _MD_INIT_LOCKS
+
 struct PRLock {
 #if defined(_PR_PTHREADS)
     pthread_mutex_t mutex;          /* the underlying lock */
     _PT_Notified notified;          /* array of conditions notified */
     pthread_t owner;                /* current lock owner */
-#elif defined(_PR_BTHREADS)
-    sem_id	semaphoreID;	    /* the underlying lock */
-    int32	benaphoreCount;	    /* number of people in lock */
-    thread_id	owner;		    /* current lock owner */
-#else /* not pthreads or Be threads */
+#else  /* defined(_PR_PTHREADS) */
     PRCList links;                  /* linkage for PRThread.lockList */
     struct PRThread *owner;         /* current lock owner */
     PRCList waitQ;                  /* list of threads waiting for lock */
     PRThreadPriority priority;      /* priority of lock */ 
     PRThreadPriority boostPriority; /* boosted priority of lock owner */
     _MDLock ilock;                  /* Internal Lock to protect user-level fields */
-#endif
+#endif /* defined(_PR_PTHREADS) */
 };
 
 extern void _PR_InitLocks(void);
@@ -1246,14 +1238,11 @@ struct PRCondVar {
 #if defined(_PR_PTHREADS)
     pthread_cond_t cv;          /* underlying pthreads condition */
     PRInt32 notify_pending;     /* CV has destroy pending notification */
-#elif defined(_PR_BTHREADS)
-    sem_id	isem;		/* Semaphore used to lock threadQ */
-    int32	benaphoreCount; /* Number of people in lock */
-#else /* not pthreads or Be threads */
+#else  /* defined(_PR_PTHREADS) */
     PRCList condQ;              /* Condition variable wait Q */
     _MDLock ilock;              /* Internal Lock to protect condQ */
     _MDCVar md;
-#endif
+#endif /* defined(_PR_PTHREADS) */
 };
 
 /************************************************************************/
@@ -1273,10 +1262,6 @@ struct PRMonitor {
 /************************************************************************/
 
 struct PRSemaphore {
-#if defined(_PR_BTHREADS)
-    sem_id  sem;
-    int32   benaphoreCount;
-#else
     PRCondVar *cvar;        /* associated lock and condition variable queue */
     PRUintn count;            /* the value of the counting semaphore */
     PRUint32 waiters;            /* threads waiting on the semaphore */
@@ -1284,7 +1269,6 @@ struct PRSemaphore {
 #else  /* defined(_PR_PTHREADS) */
     _MDSemaphore md;
 #endif /* defined(_PR_PTHREADS) */
-#endif /* defined(_PR_BTHREADS) */
 };
 
 PR_EXTERN(void) _PR_InitSem(void);
@@ -1357,13 +1341,7 @@ struct PRThread {
     pthread_mutex_t suspendResumeMutex;
     pthread_cond_t suspendResumeCV;
 #endif
-#elif defined(_PR_BTHREADS)
-    PRUint32 flags;
-    _MDThread md;
-    PRBool io_pending;
-    PRInt32 io_fd;
-    PRBool io_suspended;
-#else /* not pthreads or Be threads */
+#else /* defined(_PR_PTHREADS) */
     _MDLock threadLock;             /* Lock to protect thread state variables.
                                      * Protects the following fields:
                                      *     state
@@ -1428,7 +1406,7 @@ struct PRThread {
     PRBool io_suspended;
 
     _MDThread md;
-#endif
+#endif /* defined(_PR_PTHREADS) */
 };
 
 struct PRProcessAttr {
@@ -1436,9 +1414,6 @@ struct PRProcessAttr {
     PRFileDesc *stdoutFd;
     PRFileDesc *stderrFd;
     char *currentDirectory;
-    char *fdInheritBuffer;
-    PRSize fdInheritBufferSize;
-    PRSize fdInheritBufferUsed;
 };
 
 struct PRProcess {
@@ -1456,7 +1431,6 @@ struct PRFileMap {
 struct PRFilePrivate {
     PRInt32 state;
     PRBool nonblocking;
-    PRBool inheritable;
     PRFileDesc *next;
     PRIntn lockCount;
     _MDFileDesc md;
@@ -1562,8 +1536,6 @@ extern PRBool _pr_ipv6_enabled;  /* defined in prnetdb.c */
         && !defined(_PR_PTHREADS) && !defined(_PR_GLOBAL_THREADS_ONLY) \
         && !defined(PURIFY) \
         && !defined(RHAPSODY) \
-        && !defined(NEXTSTEP) \
-        && !defined(QNX) \
         && !(defined (UNIXWARE) && defined (USE_SVR4_THREADS))
 #define _PR_OVERRIDE_MALLOC
 #endif
@@ -1705,23 +1677,6 @@ PR_EXTERN(PRInt32) _PR_MD_GET_SOCKET_ERROR(void);
 /* Get name of current host */
 extern PRStatus _PR_MD_GETHOSTNAME(char *name, PRUint32 namelen);
 #define    _PR_MD_GETHOSTNAME _MD_GETHOSTNAME
-
-#ifdef XP_BEOS
-
-extern PRLock *_connectLock;
-
-typedef struct _ConnectListNode {
-	PRInt32		osfd;
-	PRNetAddr	addr;
-	PRUint32	addrlen;
-	PRIntervalTime	timeout;
-} ConnectListNode;
-
-extern ConnectListNode connectList[64];
-
-extern PRUint32 connectCount;
-
-#endif /* XP_BEOS */
 
 PR_END_EXTERN_C
 

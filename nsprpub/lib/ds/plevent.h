@@ -175,8 +175,6 @@ and to ensure that no more events will be delivered for that owner.
 #include <windef.h>
 #elif defined(WIN16)
 #include <windows.h>
-#elif defined(XP_OS2)
-#include <os2.h>
 #endif
 
 PR_BEGIN_EXTERN_C
@@ -195,70 +193,6 @@ typedef struct PLEventQueue PLEventQueue;
 */
 PR_EXTERN(PLEventQueue*)
 PL_CreateEventQueue(char* name, PRThread* handlerThread);
-
-
-/* -----------------------------------------------------------------------
-** FUNCTION: PL_CreateNativeEventQueue()
-** 
-** DESCRIPTION:
-** PL_CreateNativeEventQueue() creates an event queue that
-** uses platform specific notify mechanisms.
-** 
-** For Unix, the platform specific notify mechanism provides
-** an FD that may be extracted using the function
-** PL_GetEventQueueSelectFD(). The FD returned may be used in
-** a select() function call.
-** 
-** For Windows, the platform specific notify mechanism
-** provides an event receiver window that is called by
-** Windows to process the event using the windows message
-** pump engine.
-** 
-** INPUTS: 
-**  name:   A name, as a diagnostic aid.
-** 
-**  handlerThread: A pointer to the PRThread structure for
-** the thread that will "handle" events posted to this event
-** queue.
-**
-** RETURNS: 
-** A pointer to a PLEventQueue structure or NULL.
-** 
-*/
-PR_EXTERN(PLEventQueue *) 
-    PL_CreateNativeEventQueue(
-        char *name, 
-        PRThread *handlerThread
-    );
-
-/* -----------------------------------------------------------------------
-** FUNCTION: PL_CreateMonitoredEventQueue()
-** 
-** DESCRIPTION:
-** PL_CreateMonitoredEventQueue() creates an event queue. No
-** platform specific notify mechanism is created with the
-** event queue.
-** 
-** Users of this type of event queue must explicitly poll the
-** event queue to retreive and process events.
-** 
-** 
-** INPUTS: 
-**  name:   A name, as a diagnostic aid.
-** 
-**  handlerThread: A pointer to the PRThread structure for
-** the thread that will "handle" events posted to this event
-** queue.
-**
-** RETURNS: 
-** A pointer to a PLEventQueue structure or NULL.
-** 
-*/
-PR_EXTERN(PLEventQueue *) 
-    PL_CreateMonitoredEventQueue(
-        char *name,
-        PRThread *handlerThread
-    );
 
 /*
 ** Destroys an event queue.
@@ -439,7 +373,7 @@ PL_DestroyEvent(PLEvent* self);
 PR_EXTERN(void)
 PL_DequeueEvent(PLEvent* self, PLEventQueue* queue);
 
-#if defined(_WIN32) || defined(WIN16) || defined(XP_OS2)
+#if defined(_WIN32) || defined(WIN16)
 PR_EXTERN(HWND)
 PR_GetEventReceiverWindow();
 #endif
@@ -461,40 +395,14 @@ struct PLEvent {
 /******************************************************************************/
 
 /*
-** Returns the event queue associated with the main thread.
-**
+** Returns the event queue associated with the main thread. Note that
+** the event queue is now created by NSPR.
 */
 #ifdef XP_PC
 PR_EXTERN(PLEventQueue *)
-    PL_GetMainEventQueue(void);
-/*
-** Initializes the main event queue.
-*/
+PL_GetMainEventQueue(void);
 PR_EXTERN(void)
-    PL_InitializeEventsLib(char *name);
-
-/* -----------------------------------------------------------------------
-** FUNCTION: PL_GetNativeEventReceiverWindow()
-** 
-** DESCRIPTION:
-** PL_GetNativeEventReceiverWindow() returns the windows
-** handle of the event receiver window associated with the
-** referenced PLEventQueue argument.
-** 
-** INPUTS: 
-**  PLEventQueue pointer
-**
-** RETURNS:
-**  event receiver window handle.
-** 
-** RESTRICTIONS: MS-Windows ONLY.
-** 
-*/
-PR_EXTERN(HWND) 
-    PL_GetNativeEventReceiverWindow( 
-        PLEventQueue *eqp 
-    );
-
+PL_InitializeEventsLib(char *name);
 #endif /* XP_PC */
 
 PR_END_EXTERN_C

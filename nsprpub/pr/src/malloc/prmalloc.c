@@ -84,6 +84,7 @@ static int malloc_event;
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <memory.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>

@@ -34,6 +34,7 @@
 ***********************************************************************/
 /* Used to get the command line option */
 #include "plgetopt.h"
+#include "prttools.h"
 
 #include <stdio.h>
 #include "nspr.h"
@@ -56,13 +57,6 @@ typedef struct threadInfo {
     PRInt32   *alive;
 } threadInfo;
 
-PRIntn failed_already = 0;
-PRIntn debug_mode = 0;
-
-#define	LOCAL_SCOPE_STRING			"LOCAL scope"
-#define	GLOBAL_SCOPE_STRING			"GLOBAL scope"
-#define	GLOBAL_BOUND_SCOPE_STRING	"GLOBAL_BOUND scope"
-
 void 
 thread_main(void *_info)
 {
@@ -72,35 +66,12 @@ thread_main(void *_info)
     PRFileDesc *listenSock = NULL;
     PRFileDesc *clientSock;
     PRStatus rv;
-	PRThreadScope tscope;
-	char *scope_str;
-
  
-	if (debug_mode)
-    	printf("thread %d is alive\n", info->id);
-	tscope = PR_GetThreadScope(PR_GetCurrentThread());
-
-	switch(tscope) {
-		case PR_LOCAL_THREAD:
-			scope_str = LOCAL_SCOPE_STRING;
-			break;
-		case PR_GLOBAL_THREAD:
-			scope_str = GLOBAL_SCOPE_STRING;
-			break;
-		case PR_GLOBAL_BOUND_THREAD:
-			scope_str = GLOBAL_BOUND_SCOPE_STRING;
-			break;
-		default:
-			PR_ASSERT(!"Invalid thread scope");
-			break;
-	}
-	printf("thread id %d, scope %s\n", info->id, scope_str);
+    printf("thread %d is alive\n", info->id);
 
     listenSock = PR_NewTCPSocket();
     if (!listenSock) {
-		if (debug_mode)
-        	printf("unable to create listen socket\n");
-		failed_already=1;
+        printf("unable to create listen socket\n");
         goto dead;
     }
   
@@ -109,57 +80,41 @@ thread_main(void *_info)
     listenAddr.inet.ip = PR_htonl(PR_INADDR_ANY);
     rv = PR_Bind(listenSock, &listenAddr);
     if (rv == PR_FAILURE) {
-		if (debug_mode)
-        	printf("unable to bind\n");
-		failed_already=1;
+        printf("unable to bind\n");
         goto dead;
     }
 
     rv = PR_Listen(listenSock, 4);
     if (rv == PR_FAILURE) {
-		if (debug_mode)
-        	printf("unable to listen\n");
-		failed_already=1;
+        printf("unable to listen\n");
         goto dead;
     }
 
-	if (debug_mode)
-    	printf("thread %d going into accept for %d seconds\n", 
-        	info->id, info->accept_timeout + info->id);
+    printf("thread %d going into accept for %d seconds\n", 
+        info->id, info->accept_timeout + info->id);
 
     clientSock = PR_Accept(listenSock, &clientAddr, PR_SecondsToInterval(info->accept_timeout +info->id));
 
     if (clientSock == NULL) {
-        if (PR_GetError() == PR_IO_TIMEOUT_ERROR) {
-			if (debug_mode) {	
-            	printf("PR_Accept() timeout worked!\n"); 
-				printf("TEST PASSED! PR_Accept() returned error %d\n",
-							PR_IO_TIMEOUT_ERROR);
-			}
-    	} else {
-			if (debug_mode)
-            	printf("TEST FAILED! PR_Accept() returned error %d\n",
-														PR_GetError());
-			failed_already=1;
-		}
+        if (PR_GetError() == PR_IO_TIMEOUT_ERROR)
+            printf("PR_Accept() timeout worked!\n");
+        else
+            printf("TEST FAILED! PR_Accept() returned error %d\n", PR_GetError());
     } else {
-		if (debug_mode)
-        	printf ("TEST FAILED! PR_Accept() succeeded?\n");
-		failed_already=1;
-		PR_Close(clientSock);
+        printf ("TEST FAILED! PR_Accept() succeeded?\n");
+	PR_Close(clientSock);
     }
 
 dead:
     if (listenSock) {
-		PR_Close(listenSock);
+	PR_Close(listenSock);
     }
     PR_Lock(info->dead_lock);
     (*info->alive)--;
     PR_NotifyCondVar(info->dead_cv);
     PR_Unlock(info->dead_lock);
 
-	if (debug_mode)
-    	printf("thread %d is dead\n", info->id);
+    printf("thread %d is dead\n", info->id);
 }
 
 void
@@ -171,8 +126,7 @@ thread_test(PRThreadScope scope, PRInt32 num_threads)
     PRCondVar *dead_cv;
     PRInt32 alive;
 
-	if (debug_mode)
-    	printf("IO Timeout test started with %d threads\n", num_threads);
+    printf("IO Timeout test started with %d threads\n", num_threads);
 
     dead_lock = PR_NewLock();
     dead_cv = PR_NewCondVar(dead_lock);
@@ -196,10 +150,6 @@ thread_test(PRThreadScope scope, PRInt32 num_threads)
                                0);
 
         if (!thr) {
-        	printf("Failed to create thread, error = %d(%d)\n",
-											PR_GetError(), PR_GetOSError());
-			failed_already=1;
-
             PR_Lock(dead_lock);
             alive--;
             PR_Unlock(dead_lock);
@@ -208,8 +158,7 @@ thread_test(PRThreadScope scope, PRInt32 num_threads)
 
     PR_Lock(dead_lock);
     while(alive) {
-		if (debug_mode)
-        	printf("main loop awake; alive = %d\n", alive);
+        printf("main loop awake; alive = %d\n", alive);
         PR_WaitCondVar(dead_cv, PR_INTERVAL_NO_TIMEOUT);
     }
     PR_Unlock(dead_lock);
@@ -257,19 +206,12 @@ int main(int argc, char **argv)
 	debug_mode = 1;
 #endif
 
-    printf("test with global bound thread\n");
-    thread_test(PR_GLOBAL_BOUND_THREAD, num_threads);
-
-    printf("test with local thread\n");
+    printf("user level test\n");
     thread_test(PR_LOCAL_THREAD, num_threads);
 
-    printf("test with global thread\n");
+    printf("kernel level test\n");
     thread_test(PR_GLOBAL_THREAD, num_threads);
 
     PR_Cleanup();
-
-	if (failed_already)
-		return 1;
-	else
-    	return 0;
+    return 0;
 }

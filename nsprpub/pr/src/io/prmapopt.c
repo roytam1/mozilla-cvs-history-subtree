@@ -36,11 +36,6 @@
 
 #include "primpl.h"
 
-#if defined(NEXTSTEP)
-/* NEXTSTEP is special: this must come before netinet/tcp.h. */
-#include <netinet/in_systm.h>  /* n_short, n_long, n_time */
-#endif
-
 #if defined(XP_UNIX) || defined(OS2)
 #include <netinet/tcp.h>  /* TCP_NODELAY, TCP_MAXSEG */
 #endif
@@ -70,7 +65,6 @@ PRStatus PR_CALLBACK _PR_SocketGetSocketOption(PRFileDesc *fd, PRSocketOptionDat
         {
             case PR_SockOpt_Linger:
             {
-#if !defined(XP_BEOS)
                 struct linger linger;
                 length = sizeof(linger);
                 rv = _PR_MD_GETSOCKOPT(
@@ -84,10 +78,6 @@ PRStatus PR_CALLBACK _PR_SocketGetSocketOption(PRFileDesc *fd, PRSocketOptionDat
                         PR_SecondsToInterval(linger.l_linger);
                 }
                 break;
-#else
-                PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-                return PR_FAILURE;
-#endif
             }
             case PR_SockOpt_Reuseaddr:
             case PR_SockOpt_Keepalive:
@@ -227,17 +217,12 @@ PRStatus PR_CALLBACK _PR_SocketSetSocketOption(PRFileDesc *fd, const PRSocketOpt
         {
             case PR_SockOpt_Linger:
             {
-#if !defined(XP_BEOS)
                 struct linger linger;
                 linger.l_onoff = data->value.linger.polarity;
                 linger.l_linger = PR_IntervalToSeconds(data->value.linger.linger);
                 rv = _PR_MD_SETSOCKOPT(
                     fd, level, name, (char*)&linger, sizeof(linger));
                 break;
-#else
-                PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-                return PR_FAILURE;
-#endif
             }
             case PR_SockOpt_Reuseaddr:
             case PR_SockOpt_Keepalive:
@@ -360,14 +345,8 @@ PRStatus PR_CALLBACK _PR_SocketSetSocketOption(PRFileDesc *fd, const PRSocketOpt
 #error "SO_LINGER is not defined"
 #endif
 
-/*
- * Some platforms, such as NCR 2.03, don't have TCP_NODELAY defined
- * in <netinet/tcp.h>
- */
-#if !defined(NCR)
 #if !defined(TCP_NODELAY)
 #error "TCP_NODELAY is not defined"
-#endif
 #endif
 
 /*
@@ -375,18 +354,6 @@ PRStatus PR_CALLBACK _PR_SocketSetSocketOption(PRFileDesc *fd, const PRSocketOpt
  * a valid socket option.
  */
 #define _PR_NO_SUCH_SOCKOPT -1
-
-#ifndef SO_KEEPALIVE
-#define SO_KEEPALIVE        _PR_NO_SUCH_SOCKOPT
-#endif
-
-#ifndef SO_SNDBUF
-#define SO_SNDBUF           _PR_NO_SUCH_SOCKOPT
-#endif
-
-#ifndef SO_RCVBUF
-#define SO_RCVBUF           _PR_NO_SUCH_SOCKOPT
-#endif
 
 #ifndef IP_MULTICAST_IF                 /* set/get IP multicast interface   */
 #define IP_MULTICAST_IF     _PR_NO_SUCH_SOCKOPT
@@ -414,10 +381,6 @@ PRStatus PR_CALLBACK _PR_SocketSetSocketOption(PRFileDesc *fd, const PRSocketOpt
 
 #ifndef IP_TOS                          /* set/get IP Type Of Service       */
 #define IP_TOS              _PR_NO_SUCH_SOCKOPT
-#endif
-
-#ifndef TCP_NODELAY                     /* don't delay to coalesce data     */
-#define TCP_NODELAY         _PR_NO_SUCH_SOCKOPT
 #endif
 
 #ifndef TCP_MAXSEG                      /* maxumum segment size for tcp     */

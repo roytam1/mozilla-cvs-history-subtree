@@ -51,36 +51,21 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
             && (addr->raw.family != AF_UNIX)
 #endif
             && (PR_NETADDR_SIZE(addr) != addr_len)) {
-        /*
-         * The accept(), getsockname(), etc. calls on some platforms
-         * do not set the actual socket address length on return.
-         * In this case, we verifiy addr_len is still the value we
-         * passed in (i.e., sizeof(PRNetAddr)).
-         */
-#if defined(QNX)
-        if (sizeof(PRNetAddr) != addr_len) {
-            return PR_FALSE;
-        } else {
-            return PR_TRUE;
-        }
-#else
         return PR_FALSE;
-#endif
     }
     return PR_TRUE;
 }
 
 #endif /* DEBUG */
 
-static PRInt32 PR_CALLBACK SocketWritev(PRFileDesc *fd, const PRIOVec *iov,
-PRInt32 iov_size, PRIntervalTime timeout)
+static PRInt32 PR_CALLBACK SocketWritev(PRFileDesc *fd, PRIOVec *iov, PRInt32 iov_size,
+PRIntervalTime timeout)
 {
 	PRThread *me = _PR_MD_CURRENT_THREAD();
 	int w = 0;
-	const PRIOVec *tmp_iov;
+	PRIOVec *tmp_iov = NULL;
 #define LOCAL_MAXIOV    8
 	PRIOVec local_iov[LOCAL_MAXIOV];
-	PRIOVec *iov_copy = NULL;
 	int tmp_out;
 	int index, iov_cnt;
 	int count=0, sz = 0;    /* 'count' is the return value. */
@@ -132,32 +117,29 @@ PRInt32 iov_size, PRIntervalTime timeout)
 				 * are few enough iov's.
 				 */
 				if (iov_size - index <= LOCAL_MAXIOV)
-					iov_copy = local_iov;
-				else if ((iov_copy = (PRIOVec *) PR_CALLOC((iov_size - index) *
-					sizeof *iov_copy)) == NULL) {
+					tmp_iov = local_iov;
+				else if ((tmp_iov = (PRIOVec *) PR_CALLOC((iov_size - index) *
+					sizeof *tmp_iov)) == NULL) {
 					PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
 					return -1;
 				}
-				tmp_iov = iov_copy;
 			}
 
-			PR_ASSERT(tmp_iov == iov_copy);
-
 			/* fill in the first partial read */
-			iov_copy[0].iov_base = &(((char *)iov[index].iov_base)[tmp_out]);
-			iov_copy[0].iov_len = iov[index].iov_len - tmp_out;
+			tmp_iov[0].iov_base = &(((char *)iov[index].iov_base)[tmp_out]);
+			tmp_iov[0].iov_len = iov[index].iov_len - tmp_out;
 			index++;
 
 			/* copy the remaining vectors */
 			for (iov_cnt=1; index<iov_size; iov_cnt++, index++) {
-				iov_copy[iov_cnt].iov_base = iov[index].iov_base;
-				iov_copy[iov_cnt].iov_len = iov[index].iov_len;
+				tmp_iov[iov_cnt].iov_base = iov[index].iov_base;
+				tmp_iov[iov_cnt].iov_len = iov[index].iov_len;
 			}
 		}
 	}
 
-	if (iov_copy != local_iov)
-		PR_DELETE(iov_copy);
+	if (tmp_iov != iov && tmp_iov != local_iov)
+		PR_DELETE(tmp_iov);
 	return count;
 }
 
@@ -167,7 +149,6 @@ PR_IMPLEMENT(PRFileDesc *) PR_ImportTCPSocket(PRInt32 osfd)
 {
 PRFileDesc *fd;
 
-	if (!_pr_initialized) _PR_ImplicitInitialization();
 	fd = PR_AllocFileDesc(osfd, PR_GetTCPMethods());
 	if (fd != NULL)
 		_PR_MD_MAKE_NONBLOCK(fd);
@@ -180,7 +161,6 @@ PR_IMPLEMENT(PRFileDesc *) PR_ImportUDPSocket(PRInt32 osfd)
 {
 PRFileDesc *fd;
 
-	if (!_pr_initialized) _PR_ImplicitInitialization();
 	fd = PR_AllocFileDesc(osfd, PR_GetUDPMethods());
 	if (fd != NULL)
 		_PR_MD_MAKE_NONBLOCK(fd);
@@ -295,16 +275,6 @@ PR_IMPLEMENT(PRStatus) PR_GetConnectStatus(const PRPollDesc *pd)
 	else     
 		return PR_SUCCESS;
 
-#elif defined(XP_BEOS)
-
-    err = _MD_beos_get_nonblocking_connect_error(bottom);
-    if( err != 0 ) {
-	_PR_MD_MAP_CONNECT_ERROR(err);
-	return PR_FAILURE;
-    }
-    else
-	return PR_SUCCESS;
-
 #else
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return PR_FAILURE;
@@ -349,15 +319,8 @@ PRIntervalTime timeout)
 	}
 
 	fd2->secret->nonblocking = fd->secret->nonblocking;
-	fd2->secret->inheritable = fd->secret->inheritable;
 #ifdef WINNT
-	if (!fd2->secret->nonblocking && !fd2->secret->inheritable) {
-		/*
-		 * The new socket has been associated with an I/O
-		 * completion port.  There is no going back.
-		 */
-		fd2->secret->md.io_model_committed = PR_TRUE;
-	}
+	fd2->secret->md.io_model_committed = PR_TRUE;
 	PR_ASSERT(al == PR_NETADDR_SIZE(addr));
 	fd2->secret->md.accepted_socket = PR_TRUE;
 	memcpy(&fd2->secret->md.peer_addr, addr, al);
@@ -443,11 +406,7 @@ static PRStatus PR_CALLBACK SocketBind(PRFileDesc *fd, const PRNetAddr *addr)
 
 #ifdef HAVE_SOCKET_REUSEADDR
 	if ( setsockopt (fd->secret->md.osfd, (int)SOL_SOCKET, SO_REUSEADDR, 
-#ifdef XP_OS2_VACPP
-	    (char *)&one, sizeof(one) ) < 0) {
-#else
 	    (const void *)&one, sizeof(one) ) < 0) {
-#endif
 		return PR_FAILURE;
 	}
 #endif
@@ -922,7 +881,6 @@ static PRStatus PR_CALLBACK SocketGetSockOpt(
     {
         if (PR_SockOpt_Linger == optname)
         {
-#if !defined(XP_BEOS)
             struct linger linger;
             PRInt32 len = sizeof(linger);
             rv = _PR_MD_GETSOCKOPT(
@@ -935,10 +893,6 @@ static PRStatus PR_CALLBACK SocketGetSockOpt(
                     linger.l_linger);
                 *optlen = sizeof(PRLinger);
             }
-#else
-            PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-            return PR_FAILURE;
-#endif
         }
         else
         {
@@ -988,17 +942,12 @@ static PRStatus PR_CALLBACK SocketSetSockOpt(
     {
         if (PR_SockOpt_Linger == optname)
         {
-#if !defined(XP_BEOS)
             struct linger linger;
             linger.l_onoff = ((PRLinger*)(optval))->polarity ? 1 : 0;
             linger.l_linger = PR_IntervalToSeconds(
                 ((PRLinger*)(optval))->linger);
             rv = _PR_MD_SETSOCKOPT(
                 fd, level, name, (char *) &linger, sizeof(linger));
-#else
-            PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-            return PR_FAILURE;
-#endif
         }
         else
         {
@@ -1012,9 +961,6 @@ static PRStatus PR_CALLBACK SocketSetSockOpt(
 static PRInt16 PR_CALLBACK SocketPoll(
     PRFileDesc *fd, PRInt16 in_flags, PRInt16 *out_flags)
 {
-#ifdef XP_MAC
-#pragma unused( fd, in_flags )
-#endif
     *out_flags = 0;
     return in_flags;
 }  /* SocketPoll */
@@ -1121,11 +1067,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 	/* "Keep-alive" packets are specific to TCP. */
 	if (domain == AF_INET && type == SOCK_STREAM) {
 		if (setsockopt(osfd, (int)SOL_SOCKET, SO_KEEPALIVE,
-#ifdef XP_OS2_VACPP
-            (char *)&one, sizeof(one) ) < 0) {
-#else
 		    (const void *) &one, sizeof(one) ) < 0) {
-#endif
 			_PR_MD_CLOSE_SOCKET(osfd);
 			return 0;
 		}
@@ -1198,100 +1140,7 @@ PR_IMPLEMENT(PRStatus) PR_NewTCPSocketPair(PRFileDesc *f[])
 	_PR_MD_MAKE_NONBLOCK(f[0]);
 	_PR_MD_MAKE_NONBLOCK(f[1]);
 	return PR_SUCCESS;
-#elif defined(WINNT)
-    /*
-     * A socket pair is often used for interprocess communication,
-     * so we need to make sure neither socket is associated with
-     * the I/O completion port; otherwise it can't be used by a
-     * child process.
-     *
-     * The default implementation below cannot be used for NT
-     * because PR_Accept would have associated the I/O completion
-     * port with the listening and accepted sockets.
-     */
-    SOCKET listenSock;
-    SOCKET osfd[2];
-    struct sockaddr_in selfAddr;
-    int addrLen;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-
-    osfd[0] = osfd[1] = INVALID_SOCKET;
-    listenSock = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenSock == INVALID_SOCKET) {
-        goto failed;
-    }
-    selfAddr.sin_family = AF_INET;
-    selfAddr.sin_port = 0;
-    selfAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addrLen = sizeof(selfAddr);
-    if (bind(listenSock, (struct sockaddr *) &selfAddr,
-            addrLen) == SOCKET_ERROR) {
-        goto failed;
-    }
-    if (getsockname(listenSock, (struct sockaddr *) &selfAddr,
-            &addrLen) == SOCKET_ERROR) {
-        goto failed;
-    }
-    if (listen(listenSock, 5) == SOCKET_ERROR) {
-        goto failed;
-    }
-    osfd[0] = socket(AF_INET, SOCK_STREAM, 0);
-    if (osfd[0] == INVALID_SOCKET) {
-        goto failed;
-    }
-    selfAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-    /*
-     * Only a thread is used to do the connect and accept.
-     * I am relying on the fact that connect returns
-     * successfully as soon as the connect request is put
-     * into the listen queue (but before accept is called).
-     * This is the behavior of the BSD socket code.  If
-     * connect does not return until accept is called, we
-     * will need to create another thread to call connect.
-     */
-    if (connect(osfd[0], (struct sockaddr *) &selfAddr,
-            addrLen) == SOCKET_ERROR) {
-        goto failed;
-    }
-    osfd[1] = accept(listenSock, NULL, NULL);
-    if (osfd[1] == INVALID_SOCKET) {
-        goto failed;
-    }
-    closesocket(listenSock);
-
-    f[0] = PR_AllocFileDesc(osfd[0], PR_GetTCPMethods());
-    if (!f[0]) {
-        closesocket(osfd[0]);
-        closesocket(osfd[1]);
-        /* PR_AllocFileDesc() has invoked PR_SetError(). */
-        return PR_FAILURE;
-    }
-    f[1] = PR_AllocFileDesc(osfd[1], PR_GetTCPMethods());
-    if (!f[1]) {
-        PR_Close(f[0]);
-        closesocket(osfd[1]);
-        /* PR_AllocFileDesc() has invoked PR_SetError(). */
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
-
-failed:
-    if (listenSock != INVALID_SOCKET) {
-        closesocket(listenSock);
-    }
-    if (osfd[0] != INVALID_SOCKET) {
-        closesocket(osfd[0]);
-    }
-    if (osfd[1] != INVALID_SOCKET) {
-        closesocket(osfd[1]);
-    }
-    return PR_FAILURE;
-#else /* not Unix or NT */
-    /*
-     * default implementation
-     */
+#else /* XP_UNIX */
     PRFileDesc *listenSock;
     PRNetAddr selfAddr;
     PRUint16 port;
@@ -1346,7 +1195,7 @@ failed:
         PR_Close(f[0]);
     }
     return PR_FAILURE;
-#endif
+#endif /* XP_UNIX */
 }
 
 PR_IMPLEMENT(PRInt32)

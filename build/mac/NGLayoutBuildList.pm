@@ -176,27 +176,13 @@ sub BuildDist()
     InstallFromManifest(":mozilla:nsprpub:lib:msgc:include:MANIFEST",				"$distdirectory:nspr:");
 
 	#INTL
-	#UCONV
 	InstallFromManifest(":mozilla:intl:uconv:public:MANIFEST",						"$distdirectory:uconv:");
 	InstallFromManifest(":mozilla:intl:uconv:ucvlatin:MANIFEST",					"$distdirectory:uconv:");
 	InstallFromManifest(":mozilla:intl:uconv:ucvja:MANIFEST",						"$distdirectory:uconv:");
 	InstallFromManifest(":mozilla:intl:uconv:ucvja2:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvtw:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvtw2:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvcn:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvko:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvth:MANIFEST",						"$distdirectory:uconv:");
-#	InstallFromManifest(":mozilla:intl:uconv:ucvvt:MANIFEST",						"$distdirectory:uconv:");
 
-
-	#UNICHARUTIL
 	InstallFromManifest(":mozilla:intl:unicharutil:public:MANIFEST",				"$distdirectory:unicharutil");
-
-	#LOCALE
 	InstallFromManifest(":mozilla:intl:locale:public:MANIFEST",						"$distdirectory:locale:");
-
-	#LWBRK
-	InstallFromManifest(":mozilla:intl:lwbrk:public:MANIFEST",						"$distdirectory:lwbrk:");
 
 	#STRRES
 	InstallFromManifest(":mozilla:intl:strres:public:MANIFEST",						"$distdirectory:strres:");
@@ -209,8 +195,7 @@ sub BuildDist()
 
 	#XPCOM
     InstallFromManifest(":mozilla:xpcom:public:MANIFEST",							"$distdirectory:xpcom:");
-	InstallFromManifest(":mozilla:xpcom:src:MANIFEST",								"$distdirectory:xpcom:");
-	
+
 	#ZLIB
     InstallFromManifest(":mozilla:modules:zlib:src:MANIFEST",						"$distdirectory:zlib:");
 
@@ -329,13 +314,9 @@ sub BuildDist()
 
 	#HTMLPARSER
    InstallFromManifest(":mozilla:htmlparser:src:MANIFEST",							"$distdirectory:htmlparser:");
-
-   #EXPAT
-   InstallFromManifest(":mozilla:expat:xmlparse:MANIFEST",							"$distdirectory:expat:");
-      
+   
     #RDF
     InstallFromManifest(":mozilla:rdf:base:public:MANIFEST",						"$distdirectory:rdf:");
-    InstallFromManifest(":mozilla:rdf:util:public:MANIFEST",						"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:content:public:MANIFEST",						"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:datasource:public:MANIFEST",					"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:build:MANIFEST",								"$distdirectory:rdf:");
@@ -385,8 +366,10 @@ sub BuildStubs()
 	#//
 	#// Clean projects
 	#//
+	BuildProjectClean(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp",	"Stubs");
 	BuildProjectClean(":mozilla:lib:mac:NSStdLib:NSStdLib.mcp",              	"Stubs");
 	BuildProjectClean(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",				"Stubs");
+#	BuildProjectClean(":mozilla:cmd:macfe:projects:client:Client.mcp",    		"Stubs");
 }
 
 
@@ -459,22 +442,20 @@ sub BuildCommonProjects()
 	
 	BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntime$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
-	BuildProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",			"MoreFiles.o");
+	BuildOneProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",		"MoreFiles$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
-	BuildProject(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp",		"MemAllocator$D.o");
+	BuildOneProject(":mozilla:nsprpub:macbuild:NSPR20PPC.mcp",					"NSPR20$D.shlb", "NSPR20.toc", 1, $main::ALIAS_SYM_FILES);
+
+	BuildOneProject(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp",		"MemAllocator$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:lib:mac:NSStdLib:NSStdLib.mcp",					"NSStdLib$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
-	BuildOneProject(":mozilla:nsprpub:macbuild:NSPR20PPC.mcp",					"NSPR20$D.shlb", "NSPR20.toc", 1, $main::ALIAS_SYM_FILES);
-	
 	BuildOneProject(":mozilla:jpeg:macbuild:JPEG.mcp",							"JPEG$D.shlb", "JPEG.toc", 1, $main::ALIAS_SYM_FILES);
-
-	BuildOneProject(":mozilla:modules:libreg:macbuild:libreg.mcp",				"libreg$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"xpcom$D.shlb", "xpcom.toc", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:js:macbuild:JavaScript.mcp",						"JavaScript$D.shlb", "JavaScript.toc", 1, $main::ALIAS_SYM_FILES);
-	
+
 	BuildOneProject(":mozilla:js:macbuild:LiveConnect.mcp",						"LiveConnect$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:modules:zlib:macbuild:zlib.mcp",					"zlib$D.shlb", "zlib.toc", 1, $main::ALIAS_SYM_FILES);
@@ -487,35 +468,23 @@ sub BuildCommonProjects()
 
 	BuildOneProject(":mozilla:base:macbuild:base.mcp",							"base$D.shlb", "base.toc", 1, $main::ALIAS_SYM_FILES);
 
-	# International projects
 	BuildOneProject(":mozilla:intl:uconv:macbuild:uconv.mcp",					"uconv$D.shlb", "uconv.toc", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvlatin.mcp",				"ucvlatin$D.shlb", "uconvlatin.toc", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvja.mcp",					"ucvja$D.shlb", "ucvja.toc", 1, $main::ALIAS_SYM_FILES);
-
-	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvja2.mcp",					"ucvja2$D.shlb", "ucvja2.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#// Have not enable yet... place holder
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvtw.mcp",					"ucvtw$D.shlb", "ucvtw.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvtw2.mcp",					"ucvtw2$D.shlb", "ucvtw2.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvcn.mcp",					"ucvcn$D.shlb", "ucvcn.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvko.mcp",					"ucvko$D.shlb", "ucvko.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvvt.mcp",					"ucvvt$D.shlb", "ucvvt.toc", 1, $main::ALIAS_SYM_FILES);
-				
-#	BuildOneProject(":mozilla:intl:uconv:macbuild:ucvth.mcp",					"ucvth$D.shlb", "ucvth.toc", 1, $main::ALIAS_SYM_FILES);
-				
+		
 	BuildOneProject(":mozilla:intl:unicharutil:macbuild:unicharutil.mcp",		"unicharutil$D.shlb", "unicharutil.toc", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:intl:locale:macbuild:locale.mcp",					"nslocale$D.shlb", "nslocale.toc", 1, $main::ALIAS_SYM_FILES);
 	
-	BuildOneProject(":mozilla:intl:lwbrk:macbuild:lwbrk.mcp",					"lwbrk$D.shlb", "lwbrk.toc", 1, $main::ALIAS_SYM_FILES);
-	
+
     BuildOneProject(":mozilla:intl:strres:macbuild:strres.mcp",					"strres$D.shlb", "strres.toc", 1, $main::ALIAS_SYM_FILES);
+
+
+
+#// removing powerplant - long live powerplant
+#	BuildOneProject(":mozilla:lib:mac:PowerPlant:PowerPlant.mcp",				"PowerPlant$D.shlb", "", 1, $main::ALIAS_SYM_FILES);
 
 	BuildOneProject(":mozilla:modules:libutil:macbuild:libutil.mcp",			"libutil$D.shlb", "libutil.toc", 1, $main::ALIAS_SYM_FILES);
 

@@ -16,15 +16,6 @@
  * Reserved.
  */
 
-#ifdef XP_BEOS
-#include <stdio.h>
-int main()
-{
-    printf( "BeOS does not support IPv6\n" );
-    return 0;
-}
-#else
-
 #include "prio.h"
 #include "prenv.h"
 #include "prmem.h"
@@ -133,7 +124,7 @@ PRIntn main(PRIntn argc, char **argv)
 
     if (version)
     {
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_UNIX)
 #define NSPR_LIB "nspr21"
 #elif defined(WIN32)
 #define NSPR_LIB "libnspr21"
@@ -222,7 +213,6 @@ PRIntn main(PRIntn argc, char **argv)
         {
             PRIntn index = 0;
             PRNetAddr address;
-            memset(&address, 0, sizeof(PRNetAddr));
             PR_fprintf(err, "success .. enumerating results\n");
             do
             {
@@ -249,5 +239,3 @@ PRIntn main(PRIntn argc, char **argv)
 
     return (failed) ? 1 : 0;
 }
-
-#endif /* XP_BEOS */

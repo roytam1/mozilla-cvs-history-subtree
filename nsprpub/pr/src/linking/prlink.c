@@ -20,10 +20,6 @@
 
 #include <string.h>
 
-#ifdef XP_BEOS
-#include <image.h>
-#endif
-
 #ifdef XP_MAC
 #include <CodeFragments.h>
 #include <TextUtils.h>
@@ -34,14 +30,9 @@
 #ifdef XP_UNIX
 #ifdef USE_DLFCN
 #include <dlfcn.h>
-#ifdef LINUX
-#define  _PR_DLOPEN_FLAGS RTLD_NOW
-#else
-#define  _PR_DLOPEN_FLAGS RTLD_LAZY
-#endif /* LINUX */
 #elif defined(USE_HPSHL)
 #include <dl.h>
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
 #include <mach-o/dyld.h>
 #endif
 
@@ -54,8 +45,7 @@
 /*
  * On these platforms, symbols have a leading '_'.
  */
-#if defined(SUNOS4) || defined(RHAPSODY) || defined(NEXTSTEP) \
-    || defined(OPENBSD) || defined(WIN16)
+#if defined(SUNOS4) || defined(RHAPSODY) || defined(WIN16)
 #define NEED_LEADING_UNDERSCORE
 #endif
 
@@ -81,16 +71,12 @@ struct PRLibrary {
 #ifdef XP_UNIX
 #if defined(USE_HPSHL)
     shl_t                       dlh;
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     NSModule                    dlh;
 #else
     void*                       dlh;
 #endif 
 #endif 
-
-#ifdef XP_BEOS
-    void*			dlh;
-#endif
 };
 
 static PRLibrary *pr_loadmap;
@@ -169,7 +155,7 @@ void _PR_InitLinker(void)
 #elif defined(XP_UNIX)
 #ifdef HAVE_DLL
 #ifdef USE_DLFCN
-    h = dlopen(0, _PR_DLOPEN_FLAGS );
+    h = dlopen(0, RTLD_LAZY);
     if (!h) {
         char *error;
         
@@ -184,7 +170,7 @@ void _PR_InitLinker(void)
 #elif defined(USE_HPSHL)
     h = NULL;
     /* don't abort with this NULL */
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     h = NULL; /* XXXX  toshok */
 #else
 #error no dll strategy
@@ -297,8 +283,8 @@ PR_GetLibraryPath()
     }
 #endif
 
-#if defined(XP_UNIX) || defined(XP_BEOS)
-#if defined(USE_DLFCN) || defined(USE_MACH_DYLD) || defined(XP_BEOS)
+#ifdef XP_UNIX
+#if defined USE_DLFCN || defined RHAPSODY
     {
     char *home;
     char *local;
@@ -306,17 +292,10 @@ PR_GetLibraryPath()
     char * mozilla_home=NULL;
     int len;
 
-#ifdef XP_BEOS
-    ev = getenv("LIBRARY_PATH");
-    if (!ev) {
-	ev = "%A/lib:/boot/home/config/lib:/boot/beos/system/lib";
-    }
-#else
     ev = getenv("LD_LIBRARY_PATH");
     if (!ev) {
         ev = "/usr/lib:/lib";
     }
-#endif
     home = getenv("HOME");
 
     /*
@@ -333,11 +312,7 @@ PR_GetLibraryPath()
       len += strlen(mozilla_home) + 5 ;  /* +5 for initial : and trailing "/lib" */
     }
 
-#ifdef XP_BEOS
-    local = ":~/config/netscape/lib" PR_LINKER_ARCH;
-#else
     local = ":/usr/local/netscape/lib/" PR_LINKER_ARCH;
-#endif
     len += strlen(local);        /* already got the : */
     p = (char*) PR_MALLOC(len+50);
     if (p) {
@@ -400,14 +375,14 @@ PR_GetLibraryName(const char *path, const char *lib)
 #ifdef XP_MAC
     fullname = PR_smprintf("%s%s", path, lib);
 #endif
-#if defined(XP_UNIX) || defined(XP_BEOS)
+#ifdef XP_UNIX
     if (strstr(lib, PR_DLL_SUFFIX) == NULL)
     {
         fullname = PR_smprintf("%s/lib%s%s", path, lib, PR_DLL_SUFFIX);
     } else {
         fullname = PR_smprintf("%s/%s", path, lib);
     }
-#endif /* XP_UNIX || XP_BEOS */
+#endif /* XP_UNIX */
     return fullname;
 }
 
@@ -472,9 +447,11 @@ PR_LoadLibrary(const char *name)
 
 #ifdef XP_OS2  /* Why isn't all this stuff in MD code?! */
     {
+        NODL_PROC *pfn;
         HMODULE h;
         UCHAR pszError[_MAX_PATH];
         ULONG ulRc = NO_ERROR;
+        int first_try = 1;
 
         retry:
               ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
@@ -559,17 +536,7 @@ PR_LoadLibrary(const char *name)
         
         PStrFromCStr(name, pName);
     
-        /*
-         * beard: NSGetSharedLibrary was so broken that I just decided to
-         * use GetSharedLibrary for now.  This will need to change for
-         * plugins, but those should go in the Extensions folder anyhow.
-         */
-#if 0
         err = NSGetSharedLibrary(pName, &connectionID, &main);
-#else
-        err = GetSharedLibrary(pName, kCompiledCFragArch, kReferenceCFrag,
-                &connectionID, &main, errName);
-#endif
         if (err != noErr)
             goto unlock;    
         
@@ -596,7 +563,6 @@ PR_LoadLibrary(const char *name)
         CInfoPBRec pb;
         FSSpec fileSpec;
         PRUint32 index;
-        Boolean tempUnusedBool;
 
         /* Copy the name: we'll change it */
         cMacPath = strdup(name);    
@@ -648,12 +614,6 @@ PR_LoadLibrary(const char *name)
             goto unlock;
         fileSpec.parID = pb.dirInfo.ioDrDirID;
 
-        /* Resolve an alias if this was one */
-        err = ResolveAliasFile(&fileSpec, true, &tempUnusedBool,
-                &tempUnusedBool);
-        if (err != noErr)
-            goto unlock;
-
         /* Finally, try to load the library */
         err = GetDiskFragment(&fileSpec, 0, kCFragGoesToEOF, fileSpec.name, 
                         kLoadCFrag, &connectionID, &main, errName);
@@ -674,33 +634,14 @@ PR_LoadLibrary(const char *name)
     }
 #endif
 
-#ifdef XP_BEOS
-    {
-	image_id h = load_add_on( name );
-
-	if( h == B_ERROR || h <= 0 ) {
-
-	    h = 0;
-	    result = NULL;
-	    PR_DELETE( lm );
-	    lm = NULL;
-	    goto unlock;
-	}
-	lm->name = strdup(name);
-	lm->dlh = (void*)h;
-	lm->next = pr_loadmap;
-	pr_loadmap = lm;
-    }
-#endif
-
 #ifdef XP_UNIX
 #ifdef HAVE_DLL
     {
 #if defined(USE_DLFCN)
-    void *h = dlopen(name, _PR_DLOPEN_FLAGS );
+    void *h = dlopen(name, RTLD_LAZY);
 #elif defined(USE_HPSHL)
     shl_t h = shl_load(name, BIND_DEFERRED | DYNAMIC_PATH, 0L);
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     NSObjectFileImage ofi;
     NSModule h = NULL;
     if (NSCreateObjectFileImageFromFile(name, &ofi)
@@ -767,18 +708,13 @@ PR_UnloadLibrary(PRLibrary *lib)
         lib->name, lib->refCount));
     goto done;
     }
-
-#ifdef XP_BEOS
-    unload_add_on( (image_id) lib->dlh );
-#endif
-
 #ifdef XP_UNIX
 #ifdef HAVE_DLL
 #ifdef USE_DLFCN
     result = dlclose(lib->dlh);
 #elif defined(USE_HPSHL)
     result = shl_unload(lib->dlh);
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     result = NSUnLinkModule(lib->dlh, FALSE);
 #else
 #error Configuration error
@@ -857,14 +793,14 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
         ** If the symbol was not found in the static table then check if
         ** the symbol was exported in the DLL... Win16 only!!
         */
-#if !defined(WIN16) && !defined(XP_BEOS)
+#if !defined(WIN16)
         PR_SetError(PR_FIND_SYMBOL_ERROR, 0);
         return (void*)NULL;
 #endif
     }
     
 #ifdef XP_OS2
-    DosQueryProcAddr(lm->dlh, 0, (PSZ) name, (PFN *) &f);
+    DosQueryProcAddr(lm->dlh, 0, name, (PFN *) &f);
 #endif  /* XP_OS2 */
 
 #if defined(WIN32) || defined(WIN16)
@@ -883,13 +819,6 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     }
 #endif /* XP_MAC */
 
-#ifdef XP_BEOS
-    if( B_NO_ERROR != get_image_symbol( (image_id)lm->dlh, name, B_SYMBOL_TYPE_TEXT, &f ) ) {
-
-	f = NULL;
-    }
-#endif
-
 #ifdef XP_UNIX
 #ifdef HAVE_DLL
 #ifdef USE_DLFCN
@@ -898,7 +827,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
     if (shl_findsym(&lm->dlh, name, TYPE_PROCEDURE, &f) == -1) {
         f = NULL;
     }
-#elif defined(USE_MACH_DYLD)
+#elif defined(RHAPSODY)
     f = NSAddressOfSymbol(NSLookupAndBindSymbol(name));
 #endif
 #endif /* HAVE_DLL */

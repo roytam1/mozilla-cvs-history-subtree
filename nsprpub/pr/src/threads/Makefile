@@ -24,11 +24,7 @@ include $(MOD_DEPTH)/config/config.mk
 ifdef USE_PTHREADS
     DIRS =
 else
-ifdef USE_BTHREADS
-    DIRS =
-else
     DIRS = combined
-endif
 endif
 
 # Disable optimization of the nspr on SunOS4.1.3
@@ -41,14 +37,6 @@ endif
 ifdef USE_PTHREADS
 CSRCS = \
 	prcmon.c \
-	prrwlock.c   \
-	prtpd.c \
-	$(NULL)
-else
-ifdef USE_BTHREADS
-CSRCS = \
-	prcmon.c \
-	prrwlock.c   \
 	prtpd.c \
 	$(NULL)
 else
@@ -57,11 +45,9 @@ CSRCS =	\
 	prdump.c  \
 	prmon.c   \
 	prsem.c   \
-	prrwlock.c   \
 	prcthr.c \
 	prtpd.c \
 	$(NULL)
-endif
 endif
 
 TARGETS	= $(OBJS)

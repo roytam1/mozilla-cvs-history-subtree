@@ -65,7 +65,7 @@ static long _server_data = (8*1024);
 static long _threads_max = 10, _threads = 10;
 #else
 static long _server_data = (128*1024);
-static long _threads_max = 10, _threads = 10;
+static long _threads_max = 100, _threads = 100;
 #endif
 
 static int verbose=0;
@@ -154,7 +154,7 @@ _server_thread(void *arg_id)
 
 	memset(&sa, 0 , sizeof(sa));
 	sa.inet.family = PR_AF_INET;
-	sa.inet.port = PR_htons(PORT_BASE + *id);
+	sa.inet.port = PORT_BASE + *id;
 	sa.inet.ip = PR_htonl(PR_INADDR_ANY);
 
 	if ( PR_Bind(sock, &sa) < 0) {
@@ -199,7 +199,7 @@ _server_thread(void *arg_id)
 			goto done;
 		}
 #ifdef DEBUG
-	fprintf(stdout, "server thread %d got connection %d\n", *id, newsock);
+	fprintf(stdout, "server thread %d got connection\n", *id, newsock);
 #endif
 
 
@@ -432,12 +432,12 @@ static void Measure(void (*func)(void), const char *msg)
 
 main(int argc, char **argv)
 {
-#if defined(XP_UNIX) || defined(XP_OS2_EMX)
+#ifdef XP_UNIX
 	int opt;
 	extern char *optarg;
 #endif
 
-#if defined(XP_UNIX) || defined(XP_OS2_EMX)
+#ifdef XP_UNIX
 	while ( (opt = getopt(argc, argv, "c:s:i:t:v")) != EOF) {
 		switch(opt) {
 			case 'i':

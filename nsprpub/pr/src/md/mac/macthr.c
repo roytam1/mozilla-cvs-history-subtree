@@ -85,7 +85,7 @@ void _MD_FreeSegment(PRSegment *seg)
 	PR_ASSERT((seg->flags & _PR_SEG_VM) == 0);
 
 	if (seg->vaddr != NULL)
-		free(seg->vaddr);
+		DisposePtr((Ptr)(seg->vaddr));
 }
 
 

@@ -372,9 +372,6 @@ PR_IMPLEMENT(PRThread*) PR_CreateThreadBound(PRThreadType type,
 PR_IMPLEMENT(PRThread*) PR_AttachThreadGCAble(
     PRThreadType type, PRThreadPriority priority, PRThreadStack *stack)
 {
-#ifdef XP_MAC
-#pragma unused (type, priority, stack)
-#endif
     /* $$$$ not sure how to finese this one */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
@@ -398,15 +395,11 @@ PR_IMPLEMENT(void) PR_ClearThreadGCAble()
 
 PR_IMPLEMENT(PRThreadScope) PR_GetThreadScope(const PRThread *thread)
 {
-#ifdef XP_MAC
-#pragma unused( thread )
-#endif
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-    if (_PR_IS_NATIVE_THREAD(thread)) {
-    	return (thread->flags & _PR_BOUND_THREAD) ? PR_GLOBAL_BOUND_THREAD :
-										PR_GLOBAL_THREAD;
-    } else
+    if (_PR_IS_NATIVE_THREAD(thread))
+        return PR_GLOBAL_THREAD;
+    else
         return PR_LOCAL_THREAD;
 }
 

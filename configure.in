@@ -15,15 +15,10 @@ dnl Seawood, <cls@seawood.org>.  Portions created by Christopher Seawood
 dnl are Copyright (C) 1998 Christopher Seawood.  All Rights Reserved.
 dnl
 dnl Contributors:
-dnl Jamie Zawinski <jwz@jwz.org>
-dnl    gettimeofday args check
-dnl
+dnl Jamie Zawinski <jwz@jwz.org>	gettimeofday args check
 dnl Christopher Blizzard <blizzard@appliedtheory.com>
-dnl    gnomefe update & enable-pthreads
-dnl
-dnl Ramiro Estrugo <ramiro@netscape.com>
-dnl    X11 makedepend support
-dnl    Insure support.
+dnl					gnomefe update & enable-pthreads
+dnl Ramiro Estrugo <ramiro@netscape.com>	X11 makedepend support
 dnl
 dnl Process this file with autoconf to produce a configure script.
 dnl ========================================================
@@ -48,8 +43,9 @@ dnl unset d
 
 dnl Build optimized by default
 dnl ========================================================
-CFLAGS="${CFLAGS=-O}"
-CXXFLAGS="${CXXFLAGS=-O}"
+OPTIMIZE_CFLAGS="${OPTIMIZE_CFLAGS=-O}"
+CFLAGS="${CFLAGS}"
+CXXFLAGS="${CXXFLAGS}"
 
 dnl Set the version number of the libs included with mozilla
 dnl ========================================================
@@ -119,7 +115,7 @@ MKSHLIB='$(LD) $(DSO_LDOPTS)'
 DSO_LDOPTS='-shared -h $(@:$(OBJDIR)/%.$(DLL_SUFFIX)=%.$(DLL_SUFFIX))'
 DSO_CFLAGS='-KPIC'
 
-dnl gcc can come with its own linker so it is better to use the pass-thru calls
+dnl gcc can come with its own linker so its better to use the pass-thru calls
 dnl MKSHLIB_FORCE_ALL is used to force the linker to include all object
 dnl files present in an archive. MKSHLIB_UNFORCE_ALL reverts the linker to
 dnl normal behavior.
@@ -136,19 +132,8 @@ dnl now the exceptions
 dnl ========================================================
 case "$target" in
 *-*-aix*)
-	DLL_SUFFIX="so"
-	MKSHLIB_FORCE_ALL=''
-	MKSHLIB_UNFORCE_ALL=''
-	if [ test "$GNU_CC" != 1 ]; then
-		AIX_DEFINES='-D_THREAD_SAFE -D_REENTRANT -DPIC'
-		AIX_CFLAGS='-brtl -O -qtune=604 -qlanglvl=extended -qflag=w:w'
-		DSO_LDOPTS='-ldl -bM:SRE -brtl -berok -bexpall -bnoentry -L$(DIST)/lib'
-		DSO_CFLAGS='$(AIX_DEFINES) $(AIX_CFLAGS)'
-	fi
-dnl MKSHLIB='$(LD) $(DSO_LDOPTS)'
-	MKSHLIB='/usr/ibmcxx/bin/makeC++SharedLib_r -p1 -brtl -berok --'
-	;;
-
+    DSO_CFLAGS=
+    ;;
 *-*-solaris*) 
     AC_DEFINE(BROKEN_QSORT)
     if test -z "$GNU_CC"; then
@@ -262,15 +247,7 @@ AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
 AC_CHECK_HEADERS(fcntl.h limits.h malloc.h paths.h strings.h unistd.h)
 AC_CHECK_HEADERS(sys/bittypes.h sys/file.h sys/ioctl.h sys/time.h)
-AC_CHECK_HEADERS(getopt.h ioctl.h filio.h systeminfo.h)
-
-case $target in
-*-aix4.3*)
-	;;
-*)
-	AC_CHECK_HEADERS(sys/cdefs.h)
-	;;
-esac
+AC_CHECK_HEADERS(getopt.h ioctl.h sys/cdefs.h filio.h systeminfo.h)
 
 dnl Checks for libraries.
 dnl ========================================================
@@ -381,7 +358,7 @@ else
   AC_MSG_RESULT(no)
 fi  
 
-dnl Put your C++ language/feature checks below
+dnl Checks for c++ features
 dnl Is there a way to make AC_TRY_COMPILE use CXX instead of CC?
 _SAVE_CC=$CC
 CC=$CXX
@@ -401,8 +378,12 @@ if test $ac_ios_binary = true ; then
 else
   AC_MSG_RESULT(no)
 fi  
+CC=$_SAVE_CC
 
-
+dnl Checks for c++ features
+dnl Is there a way to make AC_TRY_COMPILE use CXX instead of CC?
+_SAVE_CC=$CC
+CC=$CXX
 AC_MSG_CHECKING(for ios::bin)
 AC_CACHE_VAL(ac_cv_ios_bin,
  [AC_TRY_COMPILE([#include <iostream.h>]
@@ -419,93 +400,7 @@ if test $ac_ios_bin = true ; then
 else
   AC_MSG_RESULT(no)
 fi  
-
-AC_CACHE_CHECK(for namespaces,
-               ac_cv_cpp_namespaces,
-               [AC_TRY_COMPILE(namespace X {},
-                               using namespace X;,
-                               ac_cv_cpp_namespaces=yes,
-                               ac_cv_cpp_namespaces=no)])
-if test $ac_cv_cpp_namespaces = yes ; then
-   AC_DEFINE(HAVE_CPP_NAMESPACES)
-fi
-
-
-AC_CACHE_CHECK(for C++ \"bool\" keyword,
-               ac_cv_cpp_bool,
-               [AC_TRY_COMPILE(bool b;,
-                               b = true;,
-                               ac_cv_cpp_bool=yes,
-                               ac_cv_cpp_bool=no)])
-if test $ac_cv_cpp_bool = no ; then
-   AC_DEFINE(NEEDS_bool)
-fi
-
-
-AC_CACHE_CHECK(for C++ \"explicit\" keyword,
-               ac_cv_cpp_explicit,
-               [AC_TRY_COMPILE(class X {
-                               public: explicit X(int i) : i_(i) {}
-                               private: int i_;
-                               };,
-                               X x(3);,
-                               ac_cv_cpp_explicit=yes,
-                               ac_cv_cpp_explicit=no)])
-if test $ac_cv_cpp_explicit = yes ; then
-   AC_DEFINE(HAVE_CPP_EXPLICIT)
-fi
-
-AC_CACHE_CHECK(for C++ \"exceptions\",
-               ac_cv_cpp_exceptions,
-               [AC_TRY_COMPILE(class X { public: X() {} };
-                               static void F() { throw X(); },
-                               try { F(); } catch(X & e) { },
-                               ac_cv_cpp_exceptions=yes,
-                               ac_cv_cpp_exceptions=no)])
-if test $ac_cv_cpp_exceptions = yes ; then
-   AC_DEFINE(HAVE_CPP_EXCEPTIONS)
-fi
-
-AC_CACHE_CHECK(for C++ \"using\" keyword,
-               ac_cv_cpp_using,
-               [AC_TRY_COMPILE(class X { public: int go() {return 3;} };
-                               class Y : public X {
-                                 private: using X::go;
-                               };,
-                               X x; Y y;,
-                               ac_cv_cpp_using=yes,
-                               ac_cv_cpp_using=no)])
-if test $ac_cv_cpp_using = yes ; then
-   AC_DEFINE(HAVE_CPP_USING)
-fi
-
-AC_CACHE_CHECK(for C++ reinterpret_cast,
-               ac_cv_cpp_reinterpret_cast,
-               [AC_TRY_COMPILE(struct X { int i; };
-                               struct Y { int i; };,
-                               X x; Y*y = reinterpret_cast<Y*>(&x);,
-                               ac_cv_cpp_reinterpret_cast=yes,
-                               ac_cv_cpp_reinterpret_cast=no)])
-if test $ac_cv_cpp_reinterpret_cast = yes ; then
-   AC_DEFINE(HAVE_CPP_NEW_CASTS)
-fi
-
-dnl note that this one is reversed - if the test fails, then
-dnl we require implementations of unused methods
-AC_CACHE_CHECK(if C++ requires implementation of unused methods,
-               ac_cv_cpp_unused_required,
-               [AC_TRY_COMPILE(class X {private: void never_called();};,
-                               X x;,
-                               ac_cv_cpp_unused_required=no,
-                               ac_cv_cpp_unused_requires=yes)])
-if test $ac_cv_cpp_unused_required = yes ; then
-   AC_DEFINE(NEED_CPP_UNUSED_IMPLEMENTATIONS)
-fi
-    
 CC=$_SAVE_CC
-
-dnl End of C++ language/feature checks
-
 
 dnl Check cc for  -include flag support (command-line include files)
 dnl Assume that cxx has the feature if cc has it.
@@ -576,54 +471,23 @@ dnl   AC_MSG_RESULT(no)
 dnl fi  
 dnl CFLAGS=$_SAVE_CFLAGS
 
+dnl Make pedantic a flag for now since the builds currently choke on it.
+MOZ_ARG_ENABLE_BOOL(pedantic,
+[  --enable-pedantic       Issue all warnings demanded by strict ANSI C ],
+  WARNINGS_CFLAGS="${WARNINGS_CFLAGS} -pedantic")
+
 
 # Mozilla specific options
 # ========================================================
 dnl The macros used for command line options
 dnl are defined in build/autoconf/altoptions.m4.
 
-MOZ_ARG_HEADER(Components and Features)
-
-MOZ_ARG_DISABLE_BOOL(async-dns,
-[  --disable-async-dns     Disable separate dns thread],
-  NO_UNIX_ASYNC_DNS=1)
-
-MOZ_ARG_ENABLE_BOOL(editor,
-[  --enable-editor         Enable editor],
-  MOZ_EDITOR=1)
-
-dnl This will be part of the address book
-dnl MOZ_ARG_ENABLE_BOOL(ldap,
-dnl [  --enable-ldap           Enable LDAP directory access],
-dnl [ MOZ_LDAP=1 NO_UNIX_LDAP= ],
-dnl [ NO_UNIX_LDAP=1 ])
-
-MOZ_ARG_ENABLE_BOOL(mailnews,
-[  --enable-mailnews       Enable Mail & News],
-  MOZ_MAIL_NEWS=1)
-
-dnl build mozilla/nsprpub by default
-MOZ_BUILD_NSPR=1
-
-MOZ_ARG_DISABLE_BOOL(build-nspr,
-[  --disable-build-nspr    Dont build mozilla/nsprpub],
-  MOZ_BUILD_NSPR= )
-
-dnl Note: This conflicts with --disable-shared
-MOZ_ARG_ENABLE_BOOL(oji,
-[  --enable-oji            Enable use of Open JVM Interface],
-  [MOZ_OJI=1 FULL_STATIC_BUILD= NO_SHARED_LIB=])
-
-MOZ_ARG_ENABLE_BOOL(tests,
-[  --enable-tests          Enable test stubs],
-  ENABLE_TESTS=1)
-
 dnl nglayout only supports building with one toolkit
 dnl so ignore everything after the first,
 dnl nglayout only supports building with one toolkit
 dnl so ignore everything after the first ,
 MOZ_ARG_ENABLE_STRING(toolkit,
-[  --enable-toolkit=\$val   Enable \$val fe (defaults to gtk)],
+[  --enable-toolkit=\$val	  enable \$val fe (defaults to gtk)],
 dnl [Toolkit must be either "gtk" or "Motif" (except on Rhapsody.)],
 [ 
   res=`echo $target_os| grep -c "^Rhapsody"`;
@@ -643,81 +507,78 @@ if test "$MOZ_TOOLKIT" = "USE_DEFAULT"; then
   fi
 fi
 
-dnl build mozilla/xpfe by default
-MOZ_BUILD_XPFE=1
+AC_DEFINE_UNQUOTED(MOZ_DLL_SUFFIX, $DLL_SUFFIX)
 
-MOZ_ARG_DISABLE_BOOL(build-xpfe,
-[  --disable-build-xpfe    Dont build mozilla/xpfe],
-  MOZ_BUILD_XPFE= )
+MOZ_ARG_DISABLE_BOOL(shared,
+[  --disable-shared        disable building of internal shared libs],
+  NO_SHARED_LIB=1)
 
+MOZ_ARG_DISABLE_BOOL(static,
+[  --disable-static        disable building of internal static libs (broken)],
+  NO_STATIC_LIB=1)
 
-MOZ_ARG_HEADER(Compiler Options)
+MOZ_ARG_ENABLE_BOOL(xterm-updates,
+[  --enable-xterm-updates  Update XTERM titles with current command.],
+  MOZ_UPDATE_XTERM=1)
 
-MOZ_ARG_DISABLE_BOOL(asserts,
-[  --disable-asserts       Disable asserts during debugging],
-  UNIX_SKIP_ASSERTS=1)
+MOZ_ARG_ENABLE_BOOL(crypto,
+[  --enable-crypto	  enable use of SSL (untested)],
+  MOZ_SECURITY=1)
+
+MOZ_ARG_ENABLE_BOOL(netcast,
+[  --enable-netcast          enable use of netcast (untested)],
+  MOZ_NETCAST=1)
+
+MOZ_ARG_ENABLE_BOOL(java,
+[  --enable-java           enable use of java applets (untested)],
+dnl [ Note: setting this will also unset FULL_STATIC_BUILD and NO_SHARED_LIB],
+  [MOZ_JAVA=1 FULL_STATIC_BUILD= NO_SHARED_LIB=])
+
+MOZ_ARG_ENABLE_BOOL(oji,
+[  --enable-oji            enable use of Open JVM Interface],
+dnl [ Note: setting this will also unset FULL_STATIC_BUILD and NO_SHARED_LIB],
+  [MOZ_OJI=1 FULL_STATIC_BUILD= NO_SHARED_LIB=])
 
 MOZ_ARG_ENABLE_BOOL_OR_STRING(debug,
-[  --enable-debug          Enable debug symbols],
-  [ MOZ_DEBUG=1 CFLAGS="$CFLAGS -g" ],
+[  --enable-debug	  enable debug symbols],
+  [ MOZ_DEBUG=1 OPTIMIZE_CFLAGS="-g" ],
   [],
   [MOZ_DEBUG_MODULES=`echo $enableval | sed 's|,| |g'` ])
 
-MOZ_ARG_ENABLE_BOOL(md,
-[  --enable-md             Use compiler-based dependencies ],
-    [  COMPILER_DEPEND=1
-       DEPEND_CFLAGS='-Wp,-MMD,$(*D)/.deps/$(*F).pp' ]
-)
-
-dnl Make pedantic a flag for now since the builds currently choke on it.
-MOZ_ARG_ENABLE_BOOL(pedantic,
-[  --enable-pedantic       Issue all warnings demanded by strict ANSI C ],
-  WARNINGS_CFLAGS="${WARNINGS_CFLAGS} -pedantic")
-
-dnl Note: This should not be disabled if --enable-oji is set
-MOZ_ARG_DISABLE_BOOL(shared,
-[  --disable-shared        Disable building of internal shared libs],
-  NO_SHARED_LIB=1)
-
-
-MOZ_ARG_HEADER(Profiling and Instrumenting)
-
 MOZ_ARG_ENABLE_BOOL(gprof,
-[  --enable-gprof          Enable gprof symbols],
+[  --enable-gprof	  enable gprof symbols],
   [ GPROF_CFLAGS="-pg" ])
 
-MOZ_ARG_ENABLE_BOOL(insure,
-[  --enable-insure         Enable insure++ instrumentation (linux only)],
-  [ MOZ_INSURE="insure" MOZ_INSURIFYING=1 MOZ_INSURE_DIRS="mozilla" MOZ_INSURE_EXCLUDE_DIRS="mozilla/config" ])
-
-MOZ_ARG_WITH_STRING(insure-dirs,
-[  --with-insure-dirs=\$dirs Dirs to instrument ],
-  MOZ_INSURE_DIRS=$withval )
-
-MOZ_ARG_WITH_STRING(insure-exclude-dirs,
-[  --with-insure-exclude-dirs=\$dirs Dirs to not instrument ],
-  MOZ_INSURE_EXCLUDE_DIRS="mozilla/config $withval" )
-
 MOZ_ARG_ENABLE_BOOL(profile,
-[  --enable-profile        Enable profiling (solaris only)],
+[  --enable-profile        enable profiling (solaris only)],
   MOZILLA_GPROF=1)
 
-MOZ_ARG_ENABLE_BOOL(wrap-malloc,
-[  --enable-wrap-malloc    Wrap malloc calls (gnu linker only) (default=no) ],
-  [ if test "$GNU_CC" = 1; then
-      WRAP_MALLOC_CFLAGS="${LDFLAGS} -Wl,--wrap -Wl,malloc -Wl,--wrap -Wl,free -Wl,--wrap -Wl,realloc -Wl,--wrap -Wl,__builtin_new -Wl,--wrap -Wl,__builtin_vec_new -Wl,--wrap -Wl,__builtin_delete -Wl,--wrap -Wl,__builtin_vec_delete -Wl,--wrap -Wl,PR_Free -Wl,--wrap -Wl,PR_Malloc -Wl,--wrap -Wl,PR_Calloc -Wl,--wrap -Wl,PR_Realloc"
-      MKSHLIB='$(CXX) $(DSO_LDOPTS) $(WRAP_MALLOC_CFLAGS)'
-    fi])
+MOZ_ARG_ENABLE_BOOL(mailnews,
+[  --enable-mailnews       enable Mail & News (broken)],
+  MOZ_MAIL_NEWS=1)
 
-MOZ_ARG_WITH_STRING(wrap-malloc,
-[  --with-wrap-malloc-=\$dir Location of malloc wrapper library],
-  WRAP_MALLOC_LIB=$withval)
+MOZ_ARG_ENABLE_BOOL(ldap,
+[  --enable-ldap           enable LDAP directory access],
+  MOZ_LDAP=1)
 
+MOZ_ARG_ENABLE_BOOL(editor,
+[  --enable-editor         enable editor],
+  MOZ_EDITOR=1)
 
-MOZ_ARG_HEADER(Misc. Options)
+MOZ_ARG_DISABLE_BOOL(asserts,
+[  --disable-asserts       disable asserts during debugging],
+  UNIX_SKIP_ASSERTS=1)
+
+MOZ_ARG_DISABLE_BOOL(async-dns,
+[  --disable-async-dns     disable separate dns thread],
+  NO_UNIX_ASYNC_DNS=1)
+
+MOZ_ARG_ENABLE_BOOL(tests,
+[  --enable-tests          enable test stubs],
+  ENABLE_TESTS=1)
 
 MOZ_ARG_ENABLE_STRING(homedir,
-[  --enable-homedir=\$val   Set the homedir to \$val],
+[  --enable-homedir=\$val   set the homedir to \$val],
 dnl [ Location of the mozilla user directory (default is ~/.mozilla).],
   [res=`echo $enableval | grep -c "\/"`
   if [ test $res != 0 ]; then
@@ -727,65 +588,45 @@ dnl [ Location of the mozilla user directory (default is ~/.mozilla).],
   fi], 
   AC_DEFINE(MOZ_USER_DIR,".mozilla") )
 
-MOZ_ARG_ENABLE_BOOL(idltool,
-[  --enable-idltool        Build idl tool (default=no) ],
-  MOZ_IDL_TOOL=1)
-
-MOZ_ARG_ENABLE_BOOL(xterm-updates,
-[  --enable-xterm-updates  Update XTERM titles with current command.],
-  MOZ_UPDATE_XTERM=1)
-
-MOZ_ARG_ENABLE_BOOL(js-stubs,
-[  --enable-js-stubs       Use XPIDL JavaScript Stubs.],
-  AC_DEFINE(XPIDL_JS_STUBS))
-
-MOZ_ARG_HEADER(Untested or Broken Options)
-
-MOZ_ARG_ENABLE_BOOL(crypto,
-[  --enable-crypto         Enable use of SSL (untested)],
-  MOZ_SECURITY=1)
-
-dnl Netcaster is dead
-dnl MOZ_ARG_ENABLE_BOOL(netcast,
-dnl [  --enable-netcast        Enable use of netcast (untested)],
-dnl  MOZ_NETCAST=1)
-
-dnl Note: This needs to come after --disable-shared
-MOZ_ARG_ENABLE_BOOL(java,
-[  --enable-java           Enable use of java applets (untested)],
-  [MOZ_JAVA=1 FULL_STATIC_BUILD= NO_SHARED_LIB=])
+MOZ_ARG_ENABLE_BOOL(smart-mail,
+[  --enable-smart-mail     enable HTML/RDF-based client-side mail (untested)],
+  MOZ_SMART_MAIL=1)
 
 MOZ_ARG_ENABLE_BOOL(mail-compose,
-[  --enable-mail-compose   Enable old Messenger mail composer ],
+[  --enable-mail-compose   enable old Messenger mail composer ],
   [ MOZ_MAIL_COMPOSE=1 MOZ_EDITOR=1 ])
 
-dnl The new mail app is "smart-mail"
-dnl MOZ_ARG_ENABLE_BOOL(smart-mail,
-dnl [  --enable-smart-mail     Enable HTML/RDF-based client-side mail (untested)],
-dnl  MOZ_SMART_MAIL=1)
+MOZ_ARG_ENABLE_BOOL(ldap,
+[  --enable-ldap           enable ldap ],
+  NO_UNIX_LDAP=,
+  NO_UNIX_LDAP=1)
 
-MOZ_ARG_DISABLE_BOOL(static,
-[  --disable-static        Disable building of internal static libs (broken)],
-  NO_STATIC_LIB=1)
+MOZ_ARG_ENABLE_BOOL(idltool,
+[  --enable-idltool        build idl tool (default=no) ],
+  MOZ_IDL_TOOL=1)
 
+MOZ_ARG_ENABLE_BOOL(wrap-malloc,
+[  --enable-wrap-malloc    wrap malloc calls (gnu linker only) (default=no) ],
+  [ if test "$GNU_CC" = 1; then
+      WRAP_MALLOC_CFLAGS="${LDFLAGS} -Wl,--wrap -Wl,malloc -Wl,--wrap -Wl,free -Wl,--wrap -Wl,realloc -Wl,--wrap -Wl,__builtin_new -Wl,--wrap -Wl,__builtin_vec_new -Wl,--wrap -Wl,__builtin_delete -Wl,--wrap -Wl,__builtin_vec_delete -Wl,--wrap -Wl,PR_Free -Wl,--wrap -Wl,PR_Malloc -Wl,--wrap -Wl,PR_Calloc -Wl,--wrap -Wl,PR_Realloc"
+      MKSHLIB='$(CXX) $(DSO_LDOPTS) $(WRAP_MALLOC_CFLAGS)'
+    fi])
+
+MOZ_ARG_WITH_STRING(wrap-malloc,
+[  --with-wrap-malloc-=\$dir location of malloc wrapper library],
+  WRAP_MALLOC_LIB=$withval)
 
 AC_SUBST(MOZ_TOOLKIT)
 AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(MOZ_SECURITY)
-dnl AC_SUBST(MOZ_NETCAST)
+AC_SUBST(MOZ_NETCAST)
 AC_SUBST(MOZ_JAVA)
 AC_SUBST(MOZ_OJI)
 AC_SUBST(MOZ_DEBUG)
 AC_SUBST(MOZ_DEBUG_MODULES)
 AC_SUBST(MOZILLA_GPROF)
-AC_SUBST(MOZ_INSURE)
-AC_SUBST(MOZ_INSURE_DIRS)
-AC_SUBST(MOZ_INSURE_EXCLUDE_DIRS)
-AC_SUBST(MOZ_INSURIFYING)
 AC_SUBST(MOZ_MAIL_NEWS)
-AC_SUBST(MOZ_BUILD_XPFE)
-AC_SUBST(MOZ_BUILD_NSPR)
-dnl AC_SUBST(MOZ_LDAP)
+AC_SUBST(MOZ_LDAP)
 AC_SUBST(MOZ_EDITOR)
 AC_SUBST(UNIX_SKIP_ASSERTS)
 AC_SUBST(NO_UNIX_ASYNC_DNS)
@@ -793,13 +634,12 @@ AC_SUBST(NO_SHARED_LIB)
 AC_SUBST(NO_STATIC_LIB)
 AC_SUBST(ENABLE_TESTS)
 AC_SUBST(MOZ_USER_DIR)
-dnl AC_SUBST(MOZ_SMART_MAIL)
+AC_SUBST(MOZ_SMART_MAIL)
 AC_SUBST(MOZ_DOM)
 AC_SUBST(MOZ_MAIL_COMPOSE)
 AC_SUBST(FULL_STATIC_BUILD)
 AC_SUBST(NO_UNIX_LDAP)
 AC_SUBST(MOZ_IDL_TOOL)
-AC_SUBST(COMPILER_DEPEND)
 
 
 dnl Checks for X libraries.
@@ -1203,11 +1043,7 @@ dnl End of nspr tests
 dnl ========================================================
 
 dnl Echo the CFLAGS to remove extra whitespace.
-CFLAGS=`echo \
-	$WARNINGS_CFLAGS \
-	$GPROF_CFLAGS \
-	$DEPEND_CFLAGS \
-	$CFLAGS`
+CFLAGS=`echo $WARNINGS_CFLAGS $OPTIMIZE_CFLAGS $GPROF_CFLAGS $CFLAGS`
 
 dnl Support for X11 makedepend, if found on the system
 dnl ========================================================
@@ -1239,7 +1075,6 @@ AC_SUBST(MKSHLIB_FORCE_ALL)
 AC_SUBST(MKSHLIB_UNFORCE_ALL)
 AC_SUBST(DSO_CFLAGS)
 AC_SUBST(DSO_LDOPTS)
-AC_DEFINE_UNQUOTED(MOZ_DLL_SUFFIX, $DLL_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
 
 if test "$USING_HCC"; then
@@ -1308,15 +1143,6 @@ if test "$MOZ_EDITOR"; then
   AC_DEFINE(NGEDITOR)
 fi
 
-# Used for LD_LIBRARY_PATH of run_viewer target
-LIBS_PATH=
-for lib_arg in $NSPR_LIBS $TK_LIBS; do
-  case $lib_arg in
-    -L* ) LIBS_PATH="${LIBS_PATH:+$LIBS_PATH:}"`expr $lib_arg : "-L\(.*\)"` ;;
-      * ) ;;
-  esac
-done
-AC_SUBST(LIBS_PATH)
 
 dnl Spit out some output
 dnl ========================================================
@@ -1350,8 +1176,7 @@ done
 
 # Load the list of Makefiles to generate.
 #   To add new Makefiles, edit allmakefiles.sh.
-#   allmakefiles.sh sets the variable, MAKEFILES.
 _topsrcdir=`dirname [$]0`
-. $_topsrcdir/allmakefiles.sh
+MAKEFILES=`$_topsrcdir/allmakefiles.sh`
 
 AC_OUTPUT($MAKEFILES)

@@ -17,10 +17,6 @@
  */
 
 #if defined(_PR_PTHREADS)
-
-/* Some compilers don't like an empty source file. */
-static int dummy = 0;
-
 #else  /* defined(_PR_PTHREADS) */
 
 #include "primpl.h"

@@ -176,9 +176,10 @@ struct _MDFileDesc {
                                  * for this osfd has been committed and
                                  * cannot be changed.  The osfd has been
                                  * either associated with the io
-                                 * completion port or made nonblocking. */
-    PRBool sync_file_io;        /* Use synchronous file I/O on the osfd
-                                 * (a file handle) */
+                                 * completion port or made nonblocking.
+                                 * This is only used for sockets, not
+                                 * for files. */
+    PRBool nonoverlapped;
     PRBool accepted_socket;     /* Is this an accepted socket (on the
                                  * server side)? */
     PRNetAddr peer_addr;        /* If this is an accepted socket, cache
@@ -227,7 +228,6 @@ extern PRInt32 _PR_MD_CLOSE(PRInt32 osfd, PRBool socket);
 #define _MD_GET_SOCKET_ERROR()    WSAGetLastError()
 #define _MD_SET_SOCKET_ERROR(_err) WSASetLastError(_err)
 
-#define _MD_INIT_FILEDESC(fd)
 #define _MD_MAKE_NONBLOCK             _PR_MD_MAKE_NONBLOCK
 #define _MD_SHUTDOWN                  _PR_MD_SHUTDOWN
 #define _MD_LISTEN                    _PR_MD_LISTEN
@@ -240,11 +240,8 @@ extern PRInt32 _PR_MD_CLOSE(PRInt32 osfd, PRBool socket);
 #define _MD_GETSOCKOPT                _PR_MD_GETSOCKOPT
 #define _MD_SETSOCKOPT                _PR_MD_SETSOCKOPT
 #define _MD_SELECT                    select
-extern int _PR_NTFiberSafeSelect(int, fd_set *, fd_set *, fd_set *,
-    const struct timeval *);
 #define _MD_FSYNC                     _PR_MD_FSYNC
 #define _MD_SOCKETAVAILABLE           _PR_MD_SOCKETAVAILABLE
-#define _MD_SET_FD_INHERITABLE        _PR_MD_SET_FD_INHERITABLE
 
 #define _MD_INIT_ATOMIC()
 #if defined(_M_IX86) || defined(_X86_)
@@ -304,6 +301,7 @@ extern int _PR_NTFiberSafeSelect(int, fd_set *, fd_set *, fd_set *,
 #define _MD_DEFAULT_STACK_SIZE            0
 #define _MD_INIT_THREAD             _PR_MD_INIT_THREAD
 #define _MD_INIT_ATTACHED_THREAD    _PR_MD_INIT_THREAD
+#define _MD_INIT_PRIMORDIAL_THREAD  _PR_MD_INIT_PRIMORDIAL_THREAD
 #define _MD_CREATE_THREAD           _PR_MD_CREATE_THREAD
 #define _MD_YIELD                   _PR_MD_YIELD
 #define _MD_SET_PRIORITY            _PR_MD_SET_PRIORITY

@@ -134,21 +134,13 @@ typedef struct in6_addr PRIPv6Addr;
 union PRNetAddr {
     struct {
         PRUint16 family;                /* address family (0x00ff maskable) */
-#ifdef XP_BEOS
-        char data[10];                  /* Be has a smaller structure */
-#else
         char data[14];                  /* raw address data */
-#endif
     } raw;
     struct {
         PRUint16 family;                /* address family (AF_INET) */
         PRUint16 port;                  /* port number */
         PRUint32 ip;                    /* The actual 32 bits of address */
-#ifdef XP_BEOS
-        char pad[4];                    /* Be has a smaller structure */
-#else
         char pad[8];
-#endif
     } inet;
 #if defined(_PR_INET6)
     struct {
@@ -315,7 +307,7 @@ typedef PRInt64 (PR_CALLBACK *PRSeek64FN)(PRFileDesc *fd, PRInt64 offset, PRSeek
 typedef PRStatus (PR_CALLBACK *PRFileInfoFN)(PRFileDesc *fd, PRFileInfo *info);
 typedef PRStatus (PR_CALLBACK *PRFileInfo64FN)(PRFileDesc *fd, PRFileInfo64 *info);
 typedef PRInt32 (PR_CALLBACK *PRWritevFN)(
-    PRFileDesc *fd, const PRIOVec *iov, PRInt32 size, PRIntervalTime timeout);
+    PRFileDesc *fd, PRIOVec *iov, PRInt32 size, PRIntervalTime timeout);
 typedef PRStatus (PR_CALLBACK *PRConnectFN)(
     PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime timeout);
 typedef PRFileDesc* (PR_CALLBACK *PRAcceptFN) (
@@ -674,7 +666,7 @@ PR_EXTERN(PRInt32) PR_Write(PRFileDesc *fd,const void *buf,PRInt32 amount);
  * INPUTS:
  *     PRFileDesc *fd
  *         Pointer that points to a PRFileDesc object for a socket.
- *     const PRIOVec *iov
+ *     PRIOVec *iov
  *         An array of PRIOVec.  PRIOVec is a struct with the following
  *         two fields:
  *             char *iov_base;
@@ -697,7 +689,7 @@ PR_EXTERN(PRInt32) PR_Write(PRFileDesc *fd,const void *buf,PRInt32 amount);
 #define PR_MAX_IOVECTOR_SIZE 16   /* 'size' must be <= */
 
 PR_EXTERN(PRInt32) PR_Writev(
-    PRFileDesc *fd, const PRIOVec *iov, PRInt32 size, PRIntervalTime timeout);
+    PRFileDesc *fd, PRIOVec *iov, PRInt32 size, PRIntervalTime timeout);
 
 /*
  ***************************************************************************
@@ -1513,55 +1505,6 @@ PR_EXTERN(PRStatus)	PR_GetSocketOption(
 
 PR_EXTERN(PRStatus)	PR_SetSocketOption(
     PRFileDesc *fd, const PRSocketOptionData *data);
-
-/*
- *********************************************************************
- *
- * File descriptor inheritance
- *
- *********************************************************************
- */
-
-/*
- ************************************************************************
- * FUNCTION: PR_SetFDInheritable
- * DESCRIPTION:
- *    Set the inheritance attribute of a file descriptor.
- *
- * INPUTS:
- *     PRFileDesc *fd
- *       Points to a PRFileDesc object.
- *     PRBool inheritable
- *       If PR_TRUE, the file descriptor fd is set to be inheritable
- *       by a child process.  If PR_FALSE, the file descriptor is set
- *       to be not inheritable by a child process.
- * RETURN: PRStatus
- *     Upon successful completion, PR_SetFDInheritable returns PR_SUCCESS.  
- *     Otherwise, it returns PR_FAILURE.  Further failure information can 
- *     be obtained by calling PR_GetError().
- *************************************************************************
- */
-PR_EXTERN(PRStatus) PR_SetFDInheritable(
-    PRFileDesc *fd,
-    PRBool inheritable);
-
-/*
- ************************************************************************
- * FUNCTION: PR_GetInheritedFD
- * DESCRIPTION:
- *    Get an inherited file descriptor with the specified name.
- *
- * INPUTS:
- *     const char *name
- *       The name of the inherited file descriptor.
- * RETURN: PRFileDesc *
- *     Upon successful completion, PR_GetInheritedFD returns the
- *     inherited file descriptor with the specified name.  Otherwise,  
- *     it returns NULL.  Further failure information can be obtained
- *     by calling PR_GetError().
- *************************************************************************
- */
-PR_EXTERN(PRFileDesc *) PR_GetInheritedFD(const char *name);
 
 /*
  *********************************************************************

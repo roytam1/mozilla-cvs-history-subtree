@@ -82,8 +82,6 @@ int main()
         printf("FAIL\n");
         exit(1);
     }
-	printf("Elapsed time: %u ms, expected time: %u ms\n",
-               LONG_TIMEOUT, elapsed_ms);
     printf("PASS\n");
     return 0;
 }

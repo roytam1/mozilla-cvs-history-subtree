@@ -104,8 +104,8 @@ PR_BEGIN_EXTERN_C
 ** 
 ** After compiling and linking you application, set the environment:
 ** 
-** set NSPR_LOG_MODULES=gizmo:5
-** set NSPR_LOG_FILE=logfile.txt
+** SET NSPR_LOGMODULES=gizmo:5
+** SET NSPR_LOG_FILE=logfile.txt
 ** 
 ** When you execute your application, the string "Log this! 1" will be
 ** written to the file "logfile.txt".

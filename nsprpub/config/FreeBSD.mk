@@ -33,7 +33,7 @@ OS_CFLAGS		= $(DSO_CFLAGS) $(OS_REL_CFLAGS) -ansi -Wall -pipe -DFREEBSD -DHAVE_S
 ifeq ($(USE_PTHREADS),1)
 IMPL_STRATEGY		= _PTH
 OS_LIBS			= -lc_r
-DEFINES			+= -D_THREAD_SAFE
+DEFINES			+= -D_THREAD_SAFE -D_PR_NEED_FAKE_POLL
 else
 IMPL_STRATEGY		= _EMU
 OS_LIBS			= -lc
@@ -42,13 +42,7 @@ endif
 
 ARCH			= freebsd
 
-MOZ_OBJFORMAT          := $(shell test -x /usr/bin/objformat && /usr/bin/objformat || echo aout)
-
-ifeq ($(MOZ_OBJFORMAT),elf)
-DLL_SUFFIX		= so
-else
 DLL_SUFFIX		= so.1.0
-endif
 
 DSO_CFLAGS		= -fPIC
 DSO_LDOPTS		= -Bshareable

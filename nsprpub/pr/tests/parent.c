@@ -19,6 +19,7 @@
 /*
 ** file:        parent.c
 ** description: test the process machinery
+**              see also child.c
 */
 
 #include "prmem.h"
@@ -30,13 +31,9 @@
 typedef struct Child
 {
     const char *name;
-    char **argv;
     PRProcess *process;
     PRProcessAttr *attr;
 } Child;
-
-/* for the default test 'cvar -c 2000' */
-static char *default_argv[] = {"cvar", "-c", "2000", NULL};
 
 static void PrintUsage(void)
 {
@@ -54,33 +51,30 @@ PRIntn main (PRIntn argc, char **argv)
 
     if (1 == argc)
     {
-        /* no command-line arguments: run the default test */
-        child->argv = default_argv;
-    }
-    else
-    {
-        argv += 1;  /* don't care about our program name */
-        while (*argv != NULL && argv[0][0] == '-')
-        {
-            if (argv[0][1] == 'd')
-                debug = PR_GetSpecialFD(PR_StandardError);
-            else
-            {
-                PrintUsage();
-                return 2;  /* not sufficient */
-            }
-            argv += 1;
-        }
-        child->argv = argv;
+        PrintUsage();
+        return 2;
     }
 
-    if (NULL == *child->argv)
+    argv += 1;  /* don't care about our program name */
+    while (argv[0][0] == '-')
+    {
+        if (argv[0][1] == 'd')
+            debug = PR_GetSpecialFD(PR_StandardError);
+        else
+        {
+            PrintUsage();
+            return 2;  /* not sufficient */
+        }
+        argv += 1;
+    }
+
+    if (NULL == *argv)
     {
         PrintUsage();
         return 2;
     }
 
-    child->name = *child->argv;
+    child->name = *argv;
     if (NULL != debug) PR_fprintf(debug, "Forking %s\n", child->name);
 
     child->attr = PR_NewProcessAttr();
@@ -93,7 +87,7 @@ PRIntn main (PRIntn argc, char **argv)
 
     t_start = PR_IntervalNow();
     child->process = PR_CreateProcess(
-        child->name, child->argv, NULL, child->attr);
+        child->name, argv, NULL, child->attr);
     t_elapsed = (PRIntervalTime) (PR_IntervalNow() - t_start);
 
     test_status = (NULL == child->process) ? 1 : 0;

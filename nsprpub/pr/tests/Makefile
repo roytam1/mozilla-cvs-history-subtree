@@ -38,7 +38,6 @@ endif
 
 CSRCS =             \
 	accept.c		\
-	acceptread.c	\
 	alarm.c			\
 	atomic.c		\
 	attach.c		\
@@ -88,38 +87,28 @@ CSRCS =             \
 	op_nofil.c		\
 	parent.c    	\
 	perf.c    		\
-	pipeping.c		\
-	pipepong.c		\
-	pipeself.c		\
 	poll_er.c		\
 	poll_nm.c		\
 	poll_to.c		\
 	pollable.c		\
-	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
 	priotest.c		\
 	provider.c		\
-	prpoll.c		\
 	ranfile.c       \
-	rwlocktest.c    \
 	sel_spd.c  		\
 	selct_er.c	    \
 	selct_nm.c	    \
 	selct_to.c	    \
 	select2.c  		\
 	sem.c 	  		\
-	server_test.c	\
 	servr_kk.c		\
 	servr_ku.c		\
 	servr_uk.c		\
-	servr_uu.c		\
 	short_thread.c	\
 	sigpipe.c		\
 	socket.c		\
 	sockopt.c		\
-	sockping.c		\
-	sockpong.c		\
 	sprintf.c		\
 	sproc_ch.c	    \
 	sproc_p.c	    \
@@ -143,14 +132,6 @@ CSRCS =             \
 	writev.c        \
 	xnotify.c       \
 	$(NULL)
-
-ifeq ($(OS_TARGET),OS2)
-CSRCS +=            \
-	sleep.c			\
-	stat.c		    \
-	yield.c         \
-	$(NULL)
-endif
 
 ifeq ($(OS_ARCH), WINNT)
 PROG_SUFFIX = .exe
@@ -176,20 +157,13 @@ ifeq ($(OS_TARGET), WIN16)
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
 else
 ifeq ($(OS_TARGET), OS2)
-ifdef XP_OS2_VACPP
-  LDOPTS =
+  LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
-else
-  LDOPTS = -Zlinker /PM:VIO
-endif
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
   LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
   LIBPLC= $(DIST)/lib/libplc$(MOD_VERSION).$(LIB_SUFFIX)
-  ifdef PROFILE                                                                              
-    LDOPTS += -PROFILE -MAP                                                                  
-  endif # profile
 endif
 endif
 endif
@@ -225,7 +199,7 @@ ifeq ($(OS_ARCH), OSF1)
     endif
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
-    ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
+    ifeq ($(OS_RELEASE), V3.2)
         LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).a
         LIBPLC = $(DIST)/lib/libplc$(MOD_VERSION).a
         EXTRA_LIBS = -lc_r
@@ -243,7 +217,11 @@ endif
 
 # AIX
 ifeq ($(OS_ARCH),AIX)
-    LDOPTS += -blibpath:$(PWD)/$(DIST)/lib:/usr/lib:/lib
+    ifeq ($(CLASSIC_NSPR),1)
+        LDOPTS += -blibpath:.:$(PWD)/$(DIST)/lib:/usr/lpp/xlC/lib:/usr/lib:/lib
+    else
+        LDOPTS += -blibpath:.:$(PWD)/$(DIST)/lib:/usr/lib/threads:/usr/lpp/xlC/lib:/usr/lib:/lib
+    endif
     ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
         LIBPR = -lnspr$(MOD_VERSION)_shr
         LIBPLC = -lplc$(MOD_VERSION)_shr
@@ -303,12 +281,6 @@ ifeq ($(OS_ARCH), NCR)
     export LD_RUN_PATH = $(PWD)/$(DIST)/lib
 endif
 
-ifeq ($(OS_ARCH), NEXTSTEP)
-# balazs.pataki@sztaki.hu: linkage is done in a different pass in the `tests'
-# modeul, so we have to pass the `-posix' flag by "hand" to `ld'
-LDOPTS += -posix
-endif
-
 ifeq ($(OS_ARCH), NEWS-OS)
 # This hardcodes in the executable programs the directory to find
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
@@ -360,9 +332,7 @@ LDOPTS += -Xlinker -R $(PWD)/$(DIST)/lib
 endif
 
 ifeq ($(OS_ARCH),BSD_OS)
-ifneq ($(OS_RELEASE),1.1)
 EXTRA_LIBS = -ldl
-endif
 endif
 
 ifeq ($(USE_PTHREADS),1)
@@ -375,11 +345,7 @@ else
     ifeq ($(OS_ARCH)$(basename $(OS_RELEASE)),HP-UXB.10)
     LIBPTHREAD = -ldce
     else
-      ifeq ($(OS_ARCH),BSD_OS)
-      LIBPTHREAD =
-      else
-      LIBPTHREAD = -lpthread
-      endif
+    LIBPTHREAD = -lpthread
     endif
   endif
 endif
@@ -427,7 +393,7 @@ else
 ifeq ($(USE_PTHREADS), 1)
 $(OBJDIR)/attach: $(OBJDIR)/attach.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
-	$(CC) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) -o $@
 endif
 
 
@@ -451,7 +417,7 @@ ifeq ($(OS_TARGET),WIN16)
 	wlink @w16link.
 else
 ifeq ($(OS_TARGET),OS2)
-	$(LINK) $(EXEFLAGS) $(LDOPTS) $< $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
+	$(LINK) $(LDOPTS) $< $(LIBPLC) $(LIBPR) so32dll.lib tcp32dll.lib -MAP:$(@:.exe=.map) -out:$@
 else
 	link $(LDOPTS) $< $(LIBPLC) $(LIBPR) wsock32.lib -out:$@
 endif
@@ -469,9 +435,9 @@ clean::
 
 ifeq ($(USE_PTHREADS), 1)
 $(OBJDIR)/foreign: $(OBJDIR)/foreign.o
-	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(EXTRA_LIBS) $(LIBPTHREAD) -o $@
 $(OBJDIR)/provider: $(OBJDIR)/provider.o
-	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(EXTRA_LIBS) $(LIBPTHREAD) -o $@
 endif
 
 #

@@ -22,7 +22,7 @@
 #include <fcntl.h>
 
 #ifdef XP_UNIX
-#if defined(AIX) || defined(QNX)
+#ifdef AIX
 /* To pick up sysconf */
 #include <unistd.h>
 #else
@@ -105,9 +105,6 @@ static PRInt32 PR_CALLBACK FileSeek(PRFileDesc *fd, PRInt32 offset, PRSeekWhence
 
 static PRInt64 PR_CALLBACK FileSeek64(PRFileDesc *fd, PRInt64 offset, PRSeekWhence whence)
 {
-#ifdef XP_MAC
-#pragma unused( fd, offset, whence )
-#endif
     PRInt64 result;
 
     result = _PR_MD_LSEEK64(fd, offset, whence);
@@ -135,9 +132,6 @@ static PRInt32 PR_CALLBACK FileAvailable(PRFileDesc *fd)
 
 static PRInt64 PR_CALLBACK FileAvailable64(PRFileDesc *fd)
 {
-#ifdef XP_MAC
-#pragma unused( fd )
-#endif
     PRInt64 result, cur, end;
     PRInt64 minus_one;
 
@@ -168,9 +162,6 @@ static PRStatus PR_CALLBACK FileInfo(PRFileDesc *fd, PRFileInfo *info)
 
 static PRStatus PR_CALLBACK FileInfo64(PRFileDesc *fd, PRFileInfo64 *info)
 {
-#ifdef XP_MAC
-#pragma unused( fd, info )
-#endif
     /* $$$$ NOT YET IMPLEMENTED */
 	PRInt32 rv;
 
@@ -211,9 +202,6 @@ static PRStatus PR_CALLBACK FileClose(PRFileDesc *fd)
 static PRInt16 PR_CALLBACK FilePoll(
     PRFileDesc *fd, PRInt16 in_flags, PRInt16 *out_flags)
 {
-#ifdef XP_MAC
-#pragma unused( fd, in_flags )
-#endif
     *out_flags = 0;
     return in_flags;
 }  /* FilePoll */
@@ -248,7 +236,7 @@ static PRIOMethods _pr_fileMethods = {
     (PRGetsockoptFN)_PR_InvalidStatus,	
     (PRSetsockoptFN)_PR_InvalidStatus,	
     (PRGetsocketoptionFN)_PR_InvalidStatus,	
-    (PRSetsocketoptionFN)_PR_InvalidStatus
+    (PRSetsocketoptionFN)_PR_InvalidStatus,	
 };
 
 PR_IMPLEMENT(const PRIOMethods*) PR_GetFileMethods(void)
@@ -261,13 +249,13 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
     PRInt32 osfd;
     PRFileDesc *fd = 0;
 
-    if (!_pr_initialized) _PR_ImplicitInitialization();
+	if (!_pr_initialized) _PR_ImplicitInitialization();
 
     /* Map pr open flags and mode to os specific flags */
 
     osfd = _PR_MD_OPEN(name, flags, mode);
     if (osfd != -1) {
-        fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
+	fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
         if (!fd) {
             (void) _PR_MD_CLOSE_FILE(osfd);
         }
@@ -277,7 +265,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
 
 PRInt32 PR_GetSysfdTableMax(void)
 {
-#if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
+#if defined(XP_UNIX) && !defined(AIX)
     struct rlimit rlim;
 
     if ( getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
@@ -286,7 +274,7 @@ PRInt32 PR_GetSysfdTableMax(void)
     }
 
     return rlim.rlim_max;
-#elif defined(AIX) || defined(NEXTSTEP) || defined(QNX)
+#elif defined(AIX)
     return sysconf(_SC_OPEN_MAX);
 #elif defined(WIN32) || defined(OS2)
     /*
@@ -296,7 +284,7 @@ PRInt32 PR_GetSysfdTableMax(void)
     return 16384;
 #elif defined (WIN16)
     return FOPEN_MAX;
-#elif defined (XP_MAC) || defined(XP_BEOS)
+#elif defined (XP_MAC)
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
    return -1;
 #else
@@ -306,7 +294,7 @@ PRInt32 PR_GetSysfdTableMax(void)
 
 PRInt32 PR_SetSysfdTableSize(int table_size)
 {
-#if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
+#if defined(XP_UNIX) && !defined(AIX)
     struct rlimit rlim;
     PRInt32 tableMax = PR_GetSysfdTableMax();
 
@@ -330,9 +318,7 @@ PRInt32 PR_SetSysfdTableSize(int table_size)
     }
 
     return rlim.rlim_cur;
-#elif defined(AIX) || defined(NEXTSTEP) || defined(QNX) \
-        || defined(WIN32) || defined(WIN16) || defined(OS2) \
-        || defined(XP_BEOS)
+#elif defined(AIX) || defined(WIN32) || defined(WIN16) || defined(OS2)
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return -1;
 #elif defined (XP_MAC)
@@ -368,9 +354,6 @@ PR_IMPLEMENT(PRStatus) PR_GetFileInfo(const char *fn, PRFileInfo *info)
 
 PR_IMPLEMENT(PRStatus) PR_GetFileInfo64(const char *fn, PRFileInfo64 *info)
 {
-#ifdef XP_MAC
-#pragma unused (fn, info)
-#endif
     PRInt32 rv;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
@@ -410,8 +393,6 @@ PRInt32 rv;
 PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
 {
     PRFileDesc *fd = NULL;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
 
     fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
     if( !fd ) {
@@ -548,11 +529,9 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
         return PR_FAILURE;
     }
 #ifdef WINNT
-    (*readPipe)->secret->md.sync_file_io = PR_TRUE;
-    (*writePipe)->secret->md.sync_file_io = PR_TRUE;
+    (*readPipe)->secret->md.nonoverlapped = PR_TRUE;
+    (*writePipe)->secret->md.nonoverlapped = PR_TRUE;
 #endif
-    (*readPipe)->secret->inheritable = PR_TRUE;
-    (*writePipe)->secret->inheritable = PR_TRUE;
     return PR_SUCCESS;
 #elif defined(XP_UNIX)
     int pipefd[2];

@@ -368,6 +368,8 @@ void _PR_NativeRunThread(void *arg)
     while(1) {
         thread->state = _PR_RUNNING;
 
+        if ( !_PR_IS_NATIVE_THREAD(thread)) _PR_MD_SET_INTSOFF(0);
+
         /*
          * Add to list of active threads
          */
@@ -1088,15 +1090,10 @@ PR_IMPLEMENT(PRThread*) _PR_CreateThread(PRThreadType type,
         me = _PR_MD_CURRENT_THREAD();
 
 #if    defined(_PR_GLOBAL_THREADS_ONLY)
-	/*
-	 * can create global threads only
-	 */
-    if (scope == PR_LOCAL_THREAD)
-    	scope = PR_GLOBAL_THREAD;
+    scope = PR_GLOBAL_THREAD;
 #endif
 
-    native = (((scope == PR_GLOBAL_THREAD)|| (scope == PR_GLOBAL_BOUND_THREAD))
-							&& _PR_IS_NATIVE_THREAD_SUPPORTED());
+    native = ((scope == PR_GLOBAL_THREAD) && _PR_IS_NATIVE_THREAD_SUPPORTED());
 
     _PR_ADJUST_STACKSIZE(stackSize);
 
@@ -1432,9 +1429,6 @@ PRThread* _PRI_AttachThread(PRThreadType type,
 PR_IMPLEMENT(PRThread*) PR_AttachThread(PRThreadType type,
     PRThreadPriority priority, PRThreadStack *stack)
 {
-#ifdef XP_MAC
-#pragma unused( type, priority, stack )
-#endif
     return PR_GetCurrentThread();
 }
 

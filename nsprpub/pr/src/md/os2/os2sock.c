@@ -28,10 +28,6 @@
 
 #include "primpl.h"
 
-#ifdef XP_OS2_EMX
-    #include <sys/time.h> /* For timeval. */
-#endif
-
 void
 _PR_MD_INIT_IO()
 {
@@ -211,7 +207,7 @@ _PR_MD_CONNECT(PRFileDesc *fd, const PRNetAddr *addr, PRUint32 addrlen,
     if ((rv = connect(osfd, (struct sockaddr *) addr, addrlen)) == -1) 
     {
         err = sock_errno();
-        if ((!fd->secret->nonblocking) && ((err == EINPROGRESS) || (err == EWOULDBLOCK)))
+        if ((!fd->secret->nonblocking) && (err == EINPROGRESS) || (err == EWOULDBLOCK))
         {
 #ifdef BSD_SELECT
            if (timeout == PR_INTERVAL_NO_TIMEOUT)
@@ -295,6 +291,7 @@ PRInt32
 _PR_MD_BIND(PRFileDesc *fd, const PRNetAddr *addr, PRUint32 addrlen)
 {
     PRInt32 rv;
+    int one = 1;
 
     rv = bind(fd->secret->md.osfd, (struct sockaddr*) &(addr->inet), addrlen);
 
@@ -665,7 +662,7 @@ _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
 }
 
 PRInt32
-_PR_MD_WRITEV(PRFileDesc *fd, const PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
+_PR_MD_WRITEV(PRFileDesc *fd, PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
 {
     int index;
     int sent = 0;

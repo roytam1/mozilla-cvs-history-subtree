@@ -44,8 +44,6 @@ endif
 
 ARCH			= netbsd
 
-DLL_SUFFIX		= so.1.0
-
 DSO_CFLAGS		= -fPIC
 DSO_LDFLAGS		=
 DSO_LDOPTS		= -Bshareable
@@ -57,10 +55,6 @@ DSO_LDOPTS		= -shared
 endif
 ifeq ($(OS_TEST),pmax)  
 DSO_LDOPTS		= -shared
-endif
-
-ifdef LIBRUNPATH
-DSO_LDOPTS		+= -R$(LIBRUNPATH)
 endif
 
 MKSHLIB			= $(LD) $(DSO_LDOPTS)

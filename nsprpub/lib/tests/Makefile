@@ -21,17 +21,12 @@ MOD_DEPTH = ../..
 
 include $(MOD_DEPTH)/config/config.mk
 
-ifeq ($(OS_ARCH), WINNT)
-DIRS = windows
-endif
-
 ifeq ($(OS_TARGET), WIN16)
 OS_CFLAGS = $(OS_EXE_CFLAGS)
 endif
 
 CSRCS = \
 	string.c \
-	event.c \
 	base64t.c
 
 ifeq ($(OS_ARCH), WINNT)
@@ -51,18 +46,15 @@ INCLUDES = -I$(DIST)/include
 LDOPTS = -L$(DIST)/lib
 LIBPR = -lnspr$(MOD_VERSION)
 LIBPLC = -lplc$(MOD_VERSION)
-LIBPLDS = -lplds$(MOD_VERSION)
 
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
-  LIBPLDS= $(DIST)/lib/plds$(MOD_VERSION).lib
 else
 LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
 LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
 LIBPLC= $(DIST)/lib/libplc$(MOD_VERSION).$(LIB_SUFFIX)
-LIBPLDS= $(DIST)/lib/libplds$(MOD_VERSION).$(LIB_SUFFIX)
 endif
 endif
 
@@ -72,17 +64,6 @@ endif
 
 ifeq ($(OS_ARCH), IRIX)
 LDOPTS += -rpath $(PWD)/$(DIST)/lib
-endif
-
-ifeq ($(OS_ARCH), Linux)
-    ifeq ($(OS_RELEASE), 1.2)
-        EXTRA_LIBS = -ldl
-    else
-        LDOPTS += -Xlinker -rpath $(PWD)/$(DIST)/lib
-        ifeq ($(USE_PTHREADS),1)
-            EXTRA_LIBS = -lpthread
-        endif
-    endif
 endif
 
 ifeq ($(OS_ARCH), OSF1)
@@ -95,7 +76,7 @@ endif
 
 # AIX
 ifeq ($(OS_ARCH),AIX)
-LDOPTS += -blibpath:$(PWD)/$(DIST)/lib:/usr/lib:/lib
+LDOPTS += -blibpath:.:$(PWD)/$(DIST)/lib:/usr/lib/threads:/usr/lpp/xlC/lib:/usr/lib:/lib                                        
 LIBPR = -lnspr$(MOD_VERSION)_shr
 LIBPLC = -lplc$(MOD_VERSION)_shr
 endif
@@ -194,10 +175,10 @@ ifeq ($(OS_TARGET),WIN16)
 	echo winsock.lib     >>w16link
 	wlink @w16link.
 else
-	link $(LDOPTS) $< $(LIBPLC) $(LIBPLDS) $(LIBPR) wsock32.lib -out:$@
+	link $(LDOPTS) $< $(LIBPR) $(LIBPLC) wsock32.lib -out:$@
 endif
 else
-	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPLDS) $(LIBPR) $(EXTRA_LIBS) -o $@
+	$(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPR) $(LIBPLC) $(EXTRA_LIBS) -o $@
 endif
 
 endif

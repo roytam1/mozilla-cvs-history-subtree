@@ -71,8 +71,7 @@ typedef enum PRThreadType {
 
 typedef enum PRThreadScope {
     PR_LOCAL_THREAD,
-    PR_GLOBAL_THREAD,
-    PR_GLOBAL_BOUND_THREAD
+    PR_GLOBAL_THREAD
 } PRThreadScope;
 
 typedef enum PRThreadState {

@@ -285,6 +285,10 @@ static PRThread* _PR_CreateThread(
     PR_ASSERT(0 == rv);
 #endif /* !defined(_PR_DCETHREADS) */
 
+#if defined(IRIX)
+    if ((32 * 1024) > stackSize) stackSize = (32 * 1024);  /* IRIX minimum */
+    else
+#endif
     if (0 == stackSize) stackSize = (64 * 1024);  /* default == 64K */
     /*
      * Linux doesn't have pthread_attr_setstacksize.
@@ -311,8 +315,6 @@ static PRThread* _PR_CreateThread(
             thred->state |= PT_THREAD_DETACHED;
         if (PR_GLOBAL_THREAD == scope)
             thred->state |= PT_THREAD_GLOBAL;
-        if (PR_GLOBAL_BOUND_THREAD == scope)
-            thred->state |= (PT_THREAD_GLOBAL | PT_THREAD_BOUND);
         if (PR_SYSTEM_THREAD == type)
             thred->state |= PT_THREAD_SYSTEM;
 
@@ -341,14 +343,6 @@ static PRThread* _PR_CreateThread(
         else pt_book.user += 1;
         PR_Unlock(pt_book.ml);
 
-        if (thred->state & PT_THREAD_BOUND) {
-			/*
-			 * should a Posix feature test be used here?
-			 */
-#ifdef PTHREAD_SCOPE_SYSTEM
-    		rv = pthread_attr_setscope(&tattr, PTHREAD_SCOPE_SYSTEM);
-#endif
-		}
         /*
          * We pass a pointer to a local copy (instead of thred->id)
          * to pthread_create() because who knows what wacky things
@@ -364,10 +358,8 @@ static PRThread* _PR_CreateThread(
             PR_LOG(_pr_thread_lm, PR_LOG_MIN,
                 ("_PR_CreateThread: no thread scheduling privilege"));
             /* Try creating the thread again without setting priority. */
-#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
             rv = pthread_attr_setinheritsched(&tattr, PTHREAD_INHERIT_SCHED);
             PR_ASSERT(0 == rv);
-#endif
             rv = PTHREAD_CREATE(&id, tattr, _pt_root, thred);
         }
 #endif
@@ -484,10 +476,6 @@ PR_IMPLEMENT(PRStatus) PR_JoinThread(PRThread *thred)
         PR_ASSERT(rv == 0 && result == NULL);
         if (0 == rv)
         {
-#ifdef _PR_DCETHREADS
-            rv = pthread_detach(&id);
-            PR_ASSERT(0 == rv);
-#endif
             _pt_thread_death(thred);
         }
         else
@@ -528,8 +516,7 @@ PR_IMPLEMENT(PRThread*) PR_GetCurrentThread()
 
 PR_IMPLEMENT(PRThreadScope) PR_GetThreadScope(const PRThread *thred)
 {
-    return (thred->state & PT_THREAD_BOUND) ?
-        PR_GLOBAL_BOUND_THREAD : PR_GLOBAL_THREAD;
+    return PR_GLOBAL_THREAD;
 }  /* PR_GetThreadScope() */
 
 PR_IMPLEMENT(PRThreadType) PR_GetThreadType(const PRThread *thred)
@@ -749,17 +736,6 @@ void _PR_InitThreads(
 {
     int rv;
     PRThread *thred;
-
-#ifdef _PR_NEED_PTHREAD_INIT
-    /*
-     * On BSD/OS (3.1 and 4.0), the pthread subsystem is lazily
-     * initialized, but pthread_self() fails to initialize
-     * pthreads and hence returns a null thread ID if invoked
-     * by the primordial thread before any other pthread call.
-     * So we explicitly initialize pthreads here.
-     */
-    pthread_init();
-#endif
 
 #if defined(_PR_DCETHREADS) || defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
     /*
@@ -1125,8 +1101,7 @@ static void suspend_signal_handler(PRIntn sig)
 	pthread_cond_signal(&me->suspendResumeCV);
 	while (me->suspend & PT_THREAD_SUSPENDED)
 	{
-#if !defined(FREEBSD) && !defined(NETBSD) && !defined(OPENBSD) \
-    && !defined(BSDI)  /*XXX*/
+#if !defined(FREEBSD) && !defined(NETBSD) && !defined(OPENBSD)  /*XXX*/
         PRIntn rv;
 	    sigwait(&sigwait_set, &rv);
 #endif

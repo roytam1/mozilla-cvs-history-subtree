@@ -34,7 +34,7 @@ endif
 # Temporary workaround to disable the generation of
 # library build time because now.c uses the 'long long'
 # data type that's not available on some platforms.
-ifeq (,$(filter-out NEC NEXTSTEP QNX SCOOS UNIXWARE,$(OS_ARCH)))
+ifeq (,$(filter-out NEC SCOOS UNIXWARE,$(OS_ARCH)))
 DEFINES += -DOMIT_LIB_BUILD_TIME
 endif
 
@@ -61,15 +61,6 @@ ifeq ($(OS_ARCH), HP-UX)
     endif
 endif
 
-ifdef XP_OS2_EMX
-XCFLAGS = $(OS_EXE_CFLAGS)
-XLDOPTS = -Zlinker /PM:VIO
-endif
-
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-OS_CFLAGS = $(OS_EXE_CFLAGS)
-endif
-
 include $(MOD_DEPTH)/config/rules.mk
 
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
@@ -83,15 +74,12 @@ endif
 
 # Redefine MAKE_OBJDIR for just this directory
 define MAKE_OBJDIR
-if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); else true; fi
+if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
 endef
 
 export:: $(TARGETS)
 
 $(OBJDIR)/%$(PROG_SUFFIX): $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
-ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(LINK) $(EXEFLAGS) $<
-else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) -o $@
-endif
+
