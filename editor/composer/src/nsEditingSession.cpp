@@ -340,8 +340,10 @@ nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow)
 {
   nsresult rv;
 
-  rv = mStateMaintainer->SetEditor(nsnull);
-  if (NS_FAILED(rv)) return rv;  
+  if (mStateMaintainer) {
+    rv = mStateMaintainer->SetEditor(nsnull);
+    if (NS_FAILED(rv)) return rv;
+  }
   
   // null out the editor on the controller
   rv = SetEditorOnControllers(aWindow, nsnull);
