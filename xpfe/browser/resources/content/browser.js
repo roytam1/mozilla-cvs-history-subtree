@@ -252,7 +252,7 @@ function BrowserPrintPreview()
       Components.interfaces.nsIWebBrowserPrint);     
     if (webBrowserPrint) {
       gPrintSettings = GetPrintSettings();
-      webBrowserPrint.printPreview(gPrintSettings, null);
+      webBrowserPrint.printPreview(gPrintSettings, null, null);
     }
 
     // show the toolbar after we go into print preview mode so
@@ -288,7 +288,7 @@ function BrowserPrintSetup()
           psService.savePrintSettingsToPrefs(gPrintSettings, false, gPrintSettings.kInitSaveNativeData);
         }
         if (webBrowserPrint.doingPrintPreview) {
-          webBrowserPrint.printPreview(gPrintSettings, null);
+          webBrowserPrint.printPreview(gPrintSettings, null, null);
         }
       }
     }
