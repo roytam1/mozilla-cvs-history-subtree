@@ -64,9 +64,9 @@ protected:
                             nsINodeInfo* ni,
                             nsIContent** aResult);
 
-  nsXTFSVGVisualWrapper(nsIXTFSVGVisual* xtfElement);
+  nsXTFSVGVisualWrapper(nsINodeInfo* ni, nsIXTFSVGVisual* xtfElement);
   virtual ~nsXTFSVGVisualWrapper();
-  nsresult Init(nsINodeInfo*ni);
+  nsresult Init();
   
 public:
   // nsISupports interface
@@ -116,29 +116,34 @@ private:
 //----------------------------------------------------------------------
 // implementation:
 
-nsXTFSVGVisualWrapper::nsXTFSVGVisualWrapper(nsIXTFSVGVisual* xtfElement)
-    : mXTFElement(xtfElement)
+nsXTFSVGVisualWrapper::nsXTFSVGVisualWrapper(nsINodeInfo* aNodeInfo,
+                                             nsIXTFSVGVisual* xtfElement)
+    : nsXTFSVGVisualWrapperBase(aNodeInfo), mXTFElement(xtfElement)
 {
 #ifdef DEBUG
   printf("nsXTFSVGVisualWrapper CTOR\n");
 #endif
+  NS_ASSERTION(mXTFElement, "xtfElement is null");
 }
 
 nsresult
-nsXTFSVGVisualWrapper::Init(nsINodeInfo* ni)
+nsXTFSVGVisualWrapper::Init()
 {
-  nsresult rv = nsXTFSVGVisualWrapperBase::Init(ni);
-
   // pass a weak wrapper (non base object ref-counted), so that
   // our mXTFElement can safely addref/release.
   nsISupports *weakWrapper=nsnull;
   NS_NewXTFWeakTearoff(NS_GET_IID(nsIXTFSVGVisualWrapper),
                        (nsIXTFSVGVisualWrapper*)this,
                        &weakWrapper);
+  if (!weakWrapper) {
+    NS_ERROR("could not construct weak wrapper");
+    return NS_ERROR_FAILURE;
+  }
+  
   mXTFElement->OnCreated((nsIXTFSVGVisualWrapper*)weakWrapper);
   weakWrapper->Release();
   
-  return rv;
+  return NS_OK;
 }
 
 nsXTFSVGVisualWrapper::~nsXTFSVGVisualWrapper()
@@ -156,23 +161,25 @@ NS_NewXTFSVGVisualWrapper(nsIXTFSVGVisual* xtfElement,
                           nsINodeInfo* ni,
                           nsIContent** aResult)
 {
-  NS_PRECONDITION(aResult != nsnull, "null ptr");
-  if (!aResult)
-    return NS_ERROR_NULL_POINTER;
+  *aResult = nsnull;
 
   if (!xtfElement) {
     NS_ERROR("can't construct an xtf wrapper without an xtf element");
     return NS_ERROR_FAILURE;
   }
   
-  nsXTFSVGVisualWrapper* result = new nsXTFSVGVisualWrapper(xtfElement);
-  if (! result)
+  nsXTFSVGVisualWrapper* result = new nsXTFSVGVisualWrapper(ni, xtfElement);
+  if (!result)
     return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(result);
 
-  // XXX this might fail.
-  result->Init(ni);
+  nsresult rv = result->Init();
+
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(result);
+    return rv;
+  }
 
   *aResult = result;
   return NS_OK;

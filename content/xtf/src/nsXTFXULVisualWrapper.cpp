@@ -47,6 +47,7 @@
 #include "nsIXTFXULVisualWrapper.h"
 //XXX get rid of this:
 #include "nsSVGAtoms.h"
+#include "nsISupportsArray.h"
 
 typedef nsXMLElement nsXTFXULVisualWrapperBase;
 
@@ -63,9 +64,9 @@ protected:
                             nsINodeInfo* ni,
                             nsIContent** aResult);
 
-  nsXTFXULVisualWrapper(nsIXTFXULVisual* xtfElement);
+  nsXTFXULVisualWrapper(nsINodeInfo* ni, nsIXTFXULVisual* xtfElement);
   virtual ~nsXTFXULVisualWrapper();
-  nsresult Init(nsINodeInfo*ni);
+  nsresult Init();
   
 public:
   // nsISupports interface
@@ -115,29 +116,34 @@ private:
 //----------------------------------------------------------------------
 // implementation:
 
-nsXTFXULVisualWrapper::nsXTFXULVisualWrapper(nsIXTFXULVisual* xtfElement)
-    : mXTFElement(xtfElement)
+nsXTFXULVisualWrapper::nsXTFXULVisualWrapper(nsINodeInfo* aNodeInfo,
+                                             nsIXTFXULVisual* xtfElement)
+    : nsXTFXULVisualWrapperBase(aNodeInfo), mXTFElement(xtfElement)
 {
 #ifdef DEBUG
   printf("nsXTFXULVisualWrapper CTOR\n");
 #endif
+  NS_ASSERTION(mXTFElement, "xtfElement is null");  
 }
 
 nsresult
-nsXTFXULVisualWrapper::Init(nsINodeInfo* ni)
+nsXTFXULVisualWrapper::Init()
 {
-  nsresult rv = nsXTFXULVisualWrapperBase::Init(ni);
-
   // pass a weak wrapper (non base object ref-counted), so that
   // our mXTFElement can safely addref/release.
   nsISupports *weakWrapper=nsnull;
   NS_NewXTFWeakTearoff(NS_GET_IID(nsIXTFXULVisualWrapper),
                        (nsIXTFXULVisualWrapper*)this,
                        &weakWrapper);
+  if (!weakWrapper) {
+    NS_ERROR("could not construct weak wrapper");
+    return NS_ERROR_FAILURE;
+  }
+
   mXTFElement->OnCreated((nsIXTFXULVisualWrapper*)weakWrapper);
   weakWrapper->Release();
   
-  return rv;
+  return NS_OK;
 }
 
 nsXTFXULVisualWrapper::~nsXTFXULVisualWrapper()
@@ -155,24 +161,26 @@ NS_NewXTFXULVisualWrapper(nsIXTFXULVisual* xtfElement,
                           nsINodeInfo* ni,
                           nsIContent** aResult)
 {
-  NS_PRECONDITION(aResult != nsnull, "null ptr");
-  if (!aResult)
-    return NS_ERROR_NULL_POINTER;
+  *aResult = nsnull;
 
   if (!xtfElement) {
     NS_ERROR("can't construct an xtf wrapper without an xtf element");
     return NS_ERROR_FAILURE;
   }
   
-  nsXTFXULVisualWrapper* result = new nsXTFXULVisualWrapper(xtfElement);
-  if (! result)
+  nsXTFXULVisualWrapper* result = new nsXTFXULVisualWrapper(ni, xtfElement);
+  if (!result)
     return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(result);
 
-  // XXX this might fail.
-  result->Init(ni);
+  nsresult rv = result->Init();
 
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(result);
+    return rv;
+  }
+  
   *aResult = result;
   return NS_OK;
 }
@@ -386,9 +394,10 @@ NS_IMETHODIMP
 nsXTFXULVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
                                             nsISupportsArray& aAnonymousItems)
 {
-  nsCOMPtr<nsISupportsArray> arr;
-  mXTFElement->GetVisualContent(getter_AddRefs(arr));
-  aAnonymousItems.AppendElements(arr);
+  nsCOMPtr<nsIDOMElement> element;
+  mXTFElement->GetVisualContent(getter_AddRefs(element));
+  
+  aAnonymousItems.AppendElement(element);
   
 //   NS_ASSERTION(mDocument, "no document; cannot create anonymous content");
 

@@ -61,9 +61,10 @@ protected:
                             nsINodeInfo* ni,
                             nsIContent** aResult);
 
-  nsXTFGenericElementWrapper(nsIXTFGenericElement* xtfElement);
+  nsXTFGenericElementWrapper(nsINodeInfo* aNodeInfo, nsIXTFGenericElement* xtfElement);
   virtual ~nsXTFGenericElementWrapper();
-  nsresult Init(nsINodeInfo*ni);
+
+  nsresult Init();
   
 public:
   // nsISupports interface
@@ -102,29 +103,34 @@ private:
 //----------------------------------------------------------------------
 // implementation:
 
-nsXTFGenericElementWrapper::nsXTFGenericElementWrapper(nsIXTFGenericElement* xtfElement)
-    : mXTFElement(xtfElement)
+nsXTFGenericElementWrapper::nsXTFGenericElementWrapper(nsINodeInfo* aNodeInfo,
+                                                       nsIXTFGenericElement* xtfElement)
+    : nsXTFGenericElementWrapperBase(aNodeInfo), mXTFElement(xtfElement)
 {
 #ifdef DEBUG
   printf("nsXTFGenericElementWrapper CTOR\n");
 #endif
+  NS_ASSERTION(mXTFElement, "xtfElement is null");
 }
 
 nsresult
-nsXTFGenericElementWrapper::Init(nsINodeInfo* ni)
+nsXTFGenericElementWrapper::Init()
 {
-  nsresult rv = nsXTFGenericElementWrapperBase::Init(ni);
-
   // pass a weak wrapper (non base object ref-counted), so that
   // our mXTFElement can safely addref/release.
   nsISupports *weakWrapper=nsnull;
   NS_NewXTFWeakTearoff(NS_GET_IID(nsIXTFGenericElementWrapper),
                        (nsIXTFGenericElementWrapper*)this,
                        &weakWrapper);
+  if (!weakWrapper) {
+    NS_ERROR("could not construct weak wrapper");
+    return NS_ERROR_FAILURE;
+  }
+  
   mXTFElement->OnCreated((nsIXTFGenericElementWrapper*)weakWrapper);
   weakWrapper->Release();
   
-  return rv;
+  return NS_OK;
 }
 
 nsXTFGenericElementWrapper::~nsXTFGenericElementWrapper()
@@ -142,24 +148,26 @@ NS_NewXTFGenericElementWrapper(nsIXTFGenericElement* xtfElement,
                                nsINodeInfo* ni,
                                nsIContent** aResult)
 {
-  NS_PRECONDITION(aResult != nsnull, "null ptr");
-  if (!aResult)
-    return NS_ERROR_NULL_POINTER;
-
+  *aResult = nsnull;
+  
   if (!xtfElement) {
     NS_ERROR("can't construct an xtf wrapper without an xtf element");
     return NS_ERROR_FAILURE;
   }
   
-  nsXTFGenericElementWrapper* result = new nsXTFGenericElementWrapper(xtfElement);
-  if (! result)
+  nsXTFGenericElementWrapper* result = new nsXTFGenericElementWrapper(ni, xtfElement);
+  if (!result)
     return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(result);
 
-  // XXX this might fail.
-  result->Init(ni);
+  nsresult rv = result->Init();
 
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(result);
+    return rv;
+  }
+  
   *aResult = result;
   return NS_OK;
 }
