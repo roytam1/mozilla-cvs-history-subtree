@@ -74,7 +74,7 @@ DIRS=                   \
 	rdf				\
     schedulr	\
 	xml	\
-	oji
+	oji     \
 !ifdef MOZ_CALENDAR
     calendar \
 !endif
