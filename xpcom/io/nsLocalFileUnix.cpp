@@ -81,12 +81,10 @@ nsDirEnumeratorUnix : public nsISimpleEnumerator
     nsDirEnumeratorUnix();
     virtual ~nsDirEnumeratorUnix();
 
-    static NS_METHOD Create(nsISupports* outer, const nsIID& aIID,
-                            void* *aInstancePtr);
-
     // nsISupports interface
     NS_DECL_ISUPPORTS
     
+    // nsISimpleEnumerator interface
     NS_DECL_NSISIMPLEENUMERATOR
 
     NS_IMETHOD Init(nsIFile *parent, PRBool ignored);
@@ -145,16 +143,15 @@ nsDirEnumeratorUnix::GetNext(nsISupports **_retval)
         return NS_OK;
     }
 
-    nsILocalFile *file = new nsLocalFile();
+    nsCOMPtr<nsILocalFile> file = new nsLocalFile();
     if (!file)
         return NS_ERROR_OUT_OF_MEMORY;
 
     if (NS_FAILED(rv = file->InitWithPath(mParentPath)) ||
-        NS_FAILED(rv = file->SetLeafName(mEntry->d_name))) {
-        NS_RELEASE(file);
+        NS_FAILED(rv = file->Append(mEntry->d_name))) {
         return rv;
     }
-    *_retval = NS_STATIC_CAST(nsISupports *, file);
+    *_retval = file;
     NS_ADDREF(*_retval);
     return GetNextEntry();
 }
@@ -434,7 +431,8 @@ nsLocalFile::SetLeafName(const char *aLeafName)
     char *leafName;
     if (NS_FAILED(rv = GetLeafNameRaw((const char**)&leafName)))
 	return rv;
-    char* newPath;
+    char* newPath = (char *)nsAllocator::Alloc(strlen(mPath) +
+                                               strlen(aLeafName) + 2);
     *leafName = 0;
     
     strcpy(newPath, mPath);
@@ -793,7 +791,41 @@ nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
 {
     NS_ENSURE_ARG(inFile);
     NS_ENSURE_ARG_POINTER(_retval);
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+    nsXPIDLCString inPath;
+    nsresult rv;
+
+    if (NS_FAILED(rv = inFile->GetPath(getter_Copies(inPath))))
+        return rv;
+    
+    ssize_t inLen = strlen(inPath);
+
+    /* remove trailing slashes */
+    while (((const char *)mPath)[inLen - 1] == '/')
+        inLen--;
+
+    /* 
+     * See if the given path is a prefix of our path, but make sure that
+     * we don't treat /foo as a parent of /foobar/thing.
+     */
+    if (strncmp(inPath, mPath, inLen) || ((const char *)mPath)[inLen] == '/') {
+        *_retval = PR_FALSE;
+        return NS_OK;
+    }
+    if (recur) {
+        /* good enough -- don't need to check for direct parentage */
+        *_retval = PR_TRUE;
+        return NS_OK;
+    }
+
+    const char *parentEnd = strrchr(mPath, '/');
+    if (inLen == (parentEnd - (const char *)mPath)) {
+        *_retval = PR_TRUE;
+        return NS_OK;
+    }
+
+    *_retval = PR_FALSE;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -843,9 +875,8 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator **entries)
     }
 
     /* QI needed? */
-    *entries = dir;
-    NS_ADDREF(*entries);
-    return NS_OK;
+    return dir->QueryInterface(NS_GET_IID(nsISimpleEnumerator),
+                               (void **)entries);
 }
 
 NS_IMETHODIMP

@@ -41,7 +41,7 @@ interface nsILocalFile : nsIFile
     /**
      * initWithPath
      *
-     * This function will initialize the nsIFile object.  Any
+     * This function will initialize the nsILocalFile object.  Any
      * internal state information will be reset.  
      *
      *  NOTE:  This function has a known bug on the macintosh and
@@ -67,7 +67,7 @@ interface nsILocalFile : nsIFile
 
 %{C++
 
-#define NS_LOCAL_FILE_PROGID "component://netscape/file/local"
+#define NS_LOCAL_FILE_PROGID "component://mozilla/file/local"
 #define NS_LOCAL_FILE_CLASSNAME "Local File Specification"
 
 extern NS_COM nsresult
