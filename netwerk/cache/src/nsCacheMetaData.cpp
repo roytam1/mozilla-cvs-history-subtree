@@ -23,6 +23,7 @@
 
 #include "nsCacheMetaData.h"
 #include "nsString.h"
+#include "nsICacheEntryDescriptor.h"
 
 
 /*
@@ -194,6 +195,15 @@ nsCacheMetaData::UnflattenMetaData(char * data, PRUint32 size)
     return rv;
 }
 
+
+nsresult
+nsCacheMetaData::VisitElements(nsICacheMetaDataVisitor * visitor)
+{
+    (void) PL_DHashTableEnumerate(&table, VisitElements, visitor);
+    return NS_OK;
+}
+
+
 /*
  *  hash table operation callback functions
  */
@@ -296,4 +306,22 @@ nsCacheMetaData::FreeElements(PLDHashTable *table,
     delete entry->key;
     delete entry->value;
     return PL_DHASH_NEXT;
+}
+
+
+PLDHashOperator PR_CALLBACK
+nsCacheMetaData::VisitElements(PLDHashTable *table,
+                              PLDHashEntryHdr *hdr,
+                              PRUint32 number,
+                              void *arg)
+{
+    nsCacheMetaDataHashTableEntry *entry   = (nsCacheMetaDataHashTableEntry *)hdr;
+    nsICacheMetaDataVisitor       *visitor = (nsICacheMetaDataVisitor *)arg;
+    const char * key   = entry->key   ? entry->key->get()   : nsnull;
+    const char * value = entry->value ? entry->value->get() : nsnull;
+    
+    PRBool keepGoing;
+    nsresult rv = visitor->VisitMetaDataElement(key, value, &keepGoing);
+
+    return NS_SUCCEEDED(rv) && keepGoing ? PL_DHASH_NEXT : PL_DHASH_STOP;
 }

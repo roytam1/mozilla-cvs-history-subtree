@@ -116,6 +116,18 @@ nsCacheEntry::SetMetaDataElement( const nsAReadableCString& key,
 
 
 nsresult
+nsCacheEntry::VisitMetaDataElements( nsICacheMetaDataVisitor * visitor)
+{
+    NS_ENSURE_ARG_POINTER(visitor);
+
+    if (mMetaData)
+        mMetaData->VisitElements(visitor);
+
+    return NS_OK;
+}
+
+
+nsresult
 nsCacheEntry::FlattenMetaData(char ** data, PRUint32 * size)
 {
     NS_ENSURE_ARG_POINTER(size);

@@ -201,6 +201,8 @@ nsCacheService::Init()
     if (mCacheServiceLock)
         return NS_ERROR_ALREADY_INITIALIZED;
 
+    CACHE_LOG_INIT();
+
     mCacheServiceLock = PR_NewLock();
     if (mCacheServiceLock == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -274,6 +276,7 @@ nsCacheService::Shutdown()
 #if DEBUG
         printf("### beging nsCacheService::Shutdown()\n");
 #endif
+        LogCacheStatistics();
 
         // Clear entries
         ClearDoomList();
@@ -1048,3 +1051,24 @@ NS_IMETHODIMP nsCacheService::Observe(nsISupports *aSubject, const PRUnichar *aT
     return Shutdown();
 }
 
+#if defined(PR_LOGGING)
+void
+nsCacheService::LogCacheStatistics()
+{
+    PRUint32 hitPercentage = (PRUint32)((((double)mCacheHits) /
+        ((double)(mCacheHits + mCacheMisses))) * 100);
+    CACHE_LOG_ALWAYS(("\nCache Service Statistics:\n\n"));
+    CACHE_LOG_ALWAYS(("    TotalEntries   = %d\n", mTotalEntries));
+    CACHE_LOG_ALWAYS(("    Cache Hits     = %d\n", mCacheHits));
+    CACHE_LOG_ALWAYS(("    Cache Misses   = %d\n", mCacheMisses));
+    CACHE_LOG_ALWAYS(("    Cache Hit %%    = %d%%\n", hitPercentage));
+    CACHE_LOG_ALWAYS(("    Max Key Length = %d\n", mMaxKeyLength));
+    CACHE_LOG_ALWAYS(("    Max Meta Size  = %d\n", mMaxMetaSize));
+    CACHE_LOG_ALWAYS(("    Max Data Size  = %d\n", mMaxDataSize));
+    CACHE_LOG_ALWAYS(("\n"));
+    CACHE_LOG_ALWAYS(("    Deactivate Failures         = %d\n", mDeactivateFailures));
+    CACHE_LOG_ALWAYS(("    Deactivated Unbound Entries = %d\n", mDeactivatedUnboundEntries));
+    
+
+}
+#endif

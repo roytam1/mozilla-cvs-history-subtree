@@ -95,8 +95,10 @@ public:
     nsresult SetMetaDataElement( const nsAReadableCString&  key,
                                  const nsAReadableCString&  value);
 
-    nsresult FlattenMetaData(char ** data, PRUint32 * size);
-    nsresult UnflattenMetaData(char * data, PRUint32 size);
+    nsresult VisitMetaDataElements( nsICacheMetaDataVisitor * visitor);
+
+    nsresult FlattenMetaData( char ** data,  PRUint32 * size);
+    nsresult UnflattenMetaData( char * data, PRUint32   size);
 
     PRUint32 MetaDataSize()                       { return mMetaSize;}
 
