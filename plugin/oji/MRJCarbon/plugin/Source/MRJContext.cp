@@ -143,6 +143,11 @@ MRJContext::MRJContext(MRJSession* session, MRJPluginInstance* instance)
     ::SetRect((Rect*)&mCachedClipRect, 0, 0, 0, 0);
     mPluginClipping =::NewEmptyRgn();
     mPluginPort = getEmptyPort();
+
+#if TARGET_RT_MAC_MACHO
+    long version;
+    mIsRunningJaguar = (::Gestalt(gestaltSystemVersion, &version) == noErr && (version >= 0x00001020));
+#endif
 }
 
 MRJContext::~MRJContext()
@@ -1815,10 +1820,13 @@ void MRJContext::synchronizeVisibility()
             int clipWidth = (mCachedClipRect.right - mCachedClipRect.left);
             int clipHeight = (mCachedClipRect.bottom - mCachedClipRect.top);
 
-            // XXX Adjust the coordinates for Cocoa.
-            posY -= kTitleBarHeight;
-            clipY -= kTitleBarHeight;
-
+#if TARGET_RT_MAC_MACHO
+            // XXX Adjust the coordinates for pre OS 10.2 Cocoa.
+            if (!mIsRunningJaguar) {
+                posY -= kTitleBarHeight;
+                clipY -= kTitleBarHeight;
+            }
+#endif
             status = ::SizeJavaControl(env, mAppletControl, mPluginWindow->width, mPluginWindow->height);
             status = ::MoveAndClipJavaControl(env, mAppletControl, posX, posY,
                                               clipX, clipY, clipWidth, clipHeight);

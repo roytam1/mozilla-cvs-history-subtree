@@ -176,6 +176,9 @@ private:
     Boolean					    mIsActive;
 	Boolean                     mIsFocused;
 	Boolean                     mIsVisible;
+#if TARGET_RT_MAC_MACHO
+    Boolean                     mIsRunningJaguar;
+#endif
 	nsPluginPoint               mCachedOrigin;
 	nsPluginRect                mCachedClipRect;
 	RgnHandle				    mPluginClipping;
