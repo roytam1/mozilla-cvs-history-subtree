@@ -70,6 +70,7 @@
     <command id="cmd_bm_refreshlivemark"           oncommand="goDoCommand('cmd_bm_refreshlivemark');"/>
     <command id="cmd_bm_rename"                    oncommand="goDoCommand('cmd_bm_rename');"/>
     <command id="cmd_bm_moveBookmark"              oncommand="goDoCommand('cmd_bm_moveBookmark');"/>
+    <command id="cmd_bm_sortbyname"                oncommand="goDoCommand('cmd_bm_sortbyname');"/>
 
 #ifndef XP_MACOSX
     <command id="cmd_handleBackspace"  oncommand="BrowserHandleBackspace();" />

@@ -327,6 +327,7 @@ var BookmarksCommand = {
                   "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
+                  "bm_sortbyname", "bm_separator",
                   "bm_properties"];
       break;
     case "IEFavoriteFolder":
@@ -800,6 +801,67 @@ var BookmarksCommand = {
         BMDS.Unassert(rsrc, exp, oldtgt);
       }
     }
+  },
+
+  sortByName: function (aSelection)
+  {
+    if (aSelection.length != 1 ||
+        BookmarksUtils.resolveType (aSelection.item[0]) != "Folder")
+      return;
+
+    var toSort = [];
+    RDFC.Init(BMDS, aSelection.item[0]);
+    var folderContents = RDFC.GetElements();
+    while (folderContents.hasMoreElements()) {
+        var rsrc = folderContents.getNext().QueryInterface(kRDFRSCIID);
+        var rtype = BookmarksUtils.resolveType(rsrc);
+        if (rtype == "BookmarkSeparator")
+          continue;
+        toSort.push(rsrc);
+    }
+
+    const kName = RDF.GetResource(NC_NS+"Name");
+
+    var localeService = Components.classes["@mozilla.org/intl/nslocaleservice;1"]
+                                  .getService(Components.interfaces.nsILocaleService);
+    var collationFactory = Components.classes["@mozilla.org/intl/collation-factory;1"]
+                                     .getService(Components.interfaces.nsICollationFactory);
+    var collation = collationFactory.CreateCollation(localeService.getApplicationLocale());
+
+    toSort.sort (function (a, b) {
+                   var atype = BookmarksUtils.resolveType(a);
+                   var btype = BookmarksUtils.resolveType(b);
+
+                   // folders above bookmarks
+                   if (atype == "Folder" && btype != "Folder")
+                     return -1;
+                   if (btype == "Folder" && atype != "Folder")
+                     return 1;
+
+                   // then sort by name
+                   var aname = BMDS.GetTarget(a, kName, true).QueryInterface(kRDFLITIID).Value;
+                   var bname = BMDS.GetTarget(b, kName, true).QueryInterface(kRDFLITIID).Value;
+
+                   return collation.compareString(0, aname, bname);
+                 });
+
+    // we now have the resources here sorted by name
+    BMDS.beginUpdateBatch();
+
+    RDFC.Init(BMDS, aSelection.item[0]);
+
+    // remove existing elements
+    var folderContents = RDFC.GetElements();
+    while (folderContents.hasMoreElements()) {
+      RDFC.RemoveElement (folderContents.getNext(), false);
+    }
+
+    // and add our elements back
+    for (var i = 0; i < toSort.length; i++) {
+      RDFC.InsertElementAt (toSort[i], i+1, true);
+    }
+
+    BMDS.endUpdateBatch();
   }
 
 }
@@ -840,6 +902,7 @@ var BookmarksController = {
     case "cmd_bm_export":
     case "cmd_bm_movebookmark":
     case "cmd_bm_refreshlivemark":
+    case "cmd_bm_sortbyname":
       isCommandSupported = true;
       break;
     default:
@@ -946,6 +1009,11 @@ var BookmarksController = {
           return false;
       }
       return length > 0;
+    case "cmd_bm_sortbyname":
+      if (length != 1 ||
+          aSelection.type[0] != "Folder")
+        return false;
+      return true;
     default:
       return false;
     }
@@ -1022,6 +1090,9 @@ var BookmarksController = {
     case "cmd_bm_refreshlivemark":
       BookmarksCommand.refreshLivemark(aSelection);
       break;
+    case "cmd_bm_sortbyname":
+      BookmarksCommand.sortByName(aSelection);
+      break;
     default: 
       dump("Bookmark command "+aCommand+" not handled!\n");
     }
@@ -1034,7 +1105,7 @@ var BookmarksController = {
                     "cmd_undo", "cmd_redo", "cmd_bm_properties", "cmd_bm_rename", 
                     "cmd_copy", "cmd_paste", "cmd_cut", "cmd_delete",
                     "cmd_bm_setpersonaltoolbarfolder", "cmd_bm_movebookmark",
-                    "cmd_bm_openfolder", "cmd_bm_managefolder", "cmd_bm_refreshlivemark"];
+                    "cmd_bm_openfolder", "cmd_bm_managefolder", "cmd_bm_refreshlivemark", "cmd_bm_sortbyname"];
     for (var i = 0; i < commands.length; ++i) {
       var enabled = this.isCommandEnabled(commands[i], aSelection, aTarget);
       var commandNode = document.getElementById(commands[i]);
