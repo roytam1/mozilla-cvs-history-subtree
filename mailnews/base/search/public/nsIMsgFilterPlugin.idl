@@ -38,25 +38,38 @@ interface nsIMsgFilterHitNotify;
 interface nsIMsgWindow;
 interface nsIMsgDBHdr;
 
+/**
+ * This interface is very much under development, and is not yet stable.
+ */
+
 [scriptable, uuid(e2e56690-a676-11d6-80c9-00008646b737)]
 interface nsIMsgFilterPlugin : nsISupports
 {
     /**
-     * Ensure the plugin has been initialized.  May be called more
-     * than once; calls subsequent to the first one should should
-     * simply return.
+     * Initialize the plugin object.
      * 
-     * @arg aServerPrefsKey     The preferences key for the server
-     *                          this object will be used with.
+     * @param aServerPrefsKey     The preferences key for the server
+     *                            this object will be used with.
      */
     void init(in ACString aServerPrefsKey);
 
     /**
      * Filter a message by headers.
      *
-     * @param aHeaders  Array of header strings.  Note that these are in raw,
-     *                  8-bit form, in violation of XPCOMs |string| typing
-     *                  rules.  Oh well.
+     * @param aMsgHdr       Can be used to set properties on the header of the
+     *                      message (e.g. for attaching a score to it).
+     *
+     * @param aHeaders      Array of header strings.  Note that these are in
+     *                      raw, 8-bit form, in violation of XPCOMs |string|
+     *                      typing rules.  Hopefully someday arrays of 
+     *                      nsACString will be supported by XPCOM.
+     *
+     * @param aCount        Number of elements in aHeaders.
+     *
+     * @param aListener     Used to perform actions, such as moving to another
+     *                      folder.
+     *
+     * @param aMsgWindow    Passed back to the listener.
      */
     void filterMsgByHeaders(in nsIMsgDBHdr aMsgHdr, in unsigned long aCount,
                             [array, size_is(aCount)] in string aHeaders,
