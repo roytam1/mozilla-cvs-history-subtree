@@ -421,3 +421,9 @@ bin/defaults/pref/inspector.js
 bin/res/inspector/viewer-registry.rdf
 bin/res/inspector/search-registry.rdf
 bin/chrome/icons/default/winInspectorMain*.xpm
+
+[spellcheck]
+bin/components/libmyspell.so
+bin/components/libspellchecker.so
+bin/components/spellchecker.xpt
+bin/components/myspell/*
