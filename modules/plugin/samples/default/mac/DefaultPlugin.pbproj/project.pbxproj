@@ -9,6 +9,7 @@
 			buildStyles = (
 				4F9091AC011F3BD104CA0E50,
 				4F9091AD011F3BD104CA0E50,
+				F50EB520038ABFA401A9666E,
 			);
 			isa = PBXProject;
 			mainGroup = 089C166AFE841209C02AAC07;
@@ -250,6 +251,16 @@
 //F52
 //F53
 //F54
+		F50EB520038ABFA401A9666E = {
+			buildRules = (
+			);
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+			};
+			isa = PBXBuildStyle;
+			name = DeploymentSymbols;
+		};
 		F51A400C0299CD65012FC976 = {
 			isa = PBXFileReference;
 			name = "libstdc++.a";
