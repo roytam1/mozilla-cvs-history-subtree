@@ -445,6 +445,11 @@ ifdef MOZ_OJI
 error You can't define both MOZ_JAVA and MOZ_OJI anymore. 
 endif
 JAVA_OR_OJI	= 1
+JAVA_OR_NSJVM	= 1
+endif
+
+ifdef NSJVM
+JAVA_OR_NSJVM	= 1
 endif
 
 ifdef MOZ_OJI
@@ -452,7 +457,7 @@ DEFINES		+= -DOJI
 JAVA_OR_OJI	= 1
 endif
 
-ifdef JAVA_OR_OJI
+ifdef JAVA_OR_NSJVM	# XXX fix -- su can't depend on java
 MOZ_SMARTUPDATE = 1
 endif
 

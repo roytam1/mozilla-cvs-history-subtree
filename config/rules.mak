@@ -43,7 +43,7 @@ JDK_STUB_DIR=_stubs
 !endif
 
 !if !defined(JMC_GEN_DIR)
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 JMC_GEN_DIR=_jmc
 !else
 JMC_GEN_DIR=$(LOCAL_JMC_SUBDIR)
@@ -235,7 +235,7 @@ $(TMPDIR):
 	-mkdir $(TMPDIR)
 
 !ifdef JDIRS
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 #//------------------------------------------------------------------------
 #//
 #// Rule to recursively make all subdirectories specified by the JDIRS target
@@ -278,7 +278,7 @@ $(JDIRS)::
 clobber::
     -for %g in ($(JDIRS)) do $(RM_R) $(XPDIST:/=\)/classes/%g
 
-!endif # JAVA_OR_OJI
+!endif # JAVA_OR_NSJVM
 !endif # JDIRS
 
 !if defined(INSTALL_FILE_LIST) && defined(INSTALL_DIR)
@@ -481,7 +481,7 @@ include <$(DEPTH)/config/java.inc>
 #// JSRCS   .java files to be compiled (.java extension included)
 #//
 #//------------------------------------------------------------------------
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 !if defined(JSRCS)
 
 JSRCS_DEPS = $(JAVA_DESTPATH) $(JAVA_DESTPATH)\$(PACKAGE) $(TMPDIR)
@@ -529,7 +529,7 @@ export:: $(JMCSRCDIR)
 clobber::
     -for %f in ($(JMC_EXPORT)) do $(RM) $(JMCSRCDIR:/=\)\%f.class
 !endif # JMC_EXPORT
-!endif # JAVA_OR_OJI
+!endif # JAVA_OR_NSJVM
 
 #//------------------------------------------------------------------------
 #//
@@ -539,7 +539,7 @@ clobber::
 #//         Generated .h and .c files go to JMC_GEN_DIR
 #//
 #//------------------------------------------------------------------------
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 
 !if defined(JMC_GEN)
 export:: $(JMC_HEADERS)
@@ -563,7 +563,7 @@ export:: $(JMC_STUBS) $(OBJDIR) $(JMC_OBJS)
 
 !endif # CCJMC
 !endif # JMC_GEN
-!endif # JAVA_OR_OJI
+!endif # JAVA_OR_NSJVM
 
 
 #//------------------------------------------------------------------------
@@ -584,7 +584,7 @@ clobber::
 #//------------------------------------------------------------------------
 #//  These rules must follow all lines that define the macros they use
 #//------------------------------------------------------------------------
-!if defined(JAVA_OR_OJI)
+!if defined(JAVA_OR_NSJVM)
 GARBAGE	= $(JMC_GEN_DIR) $(JMC_HEADERS) $(JMC_STUBS) \
 	  $(JDK_STUB_DIR) $(JRI_GEN_DIR) $(JDK_GEN_DIR)
 !ifdef REGENERATE

@@ -16,7 +16,7 @@
 DEPTH=..
 
 DIRS=src \
-!ifndef MOZ_OJI
+!ifdef MOZ_JAVA
   	jsj \
 !endif
 $(NULL)

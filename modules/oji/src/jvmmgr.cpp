@@ -606,11 +606,13 @@ nsJVMMgr::GetJavaErrorString(JRIEnv* env)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#if !defined(XP_MAC)
-static NS_DEFINE_IID(kIJRIPluginIID, NS_IJRIPLUGIN_IID);        // XXX change later to JNI
+#ifdef MOZ_SMARTUPDATE
+
+static NS_DEFINE_IID(kIJRIPluginIID, NS_IJRIPLUGIN_IID);
 
 // Should be in a header; must solve build-order problem first
 extern "C" void SU_Initialize(JRIEnv * env);
+
 #endif
 
 nsJVMStatus
@@ -650,28 +652,7 @@ nsJVMMgr::StartupJVM(void)
 
     nsresult err = fJVM->StartupJVM(&initargs);
     if (err == NS_OK) {
-#if defined(XP_MAC)
-		// On the MacOS, MRJ uses JNI exclusively.
-        nsIJVMPlugin* jniJVM;
-        if (fJVM->QueryInterface(kIJVMPluginIID, (void**)&jniJVM) == NS_OK) {
-            JNIEnv* env;
-            nsresult err = jniJVM->GetJNIEnv(&env);
-            if (err == NS_OK) {
-                if (env->ExceptionOccurred()) {
-                    env->ExceptionDescribe();
-                    env->ExceptionClear();
-                }
-                jniJVM->ReleaseJNIEnv(env);
-            }
-            fStatus = nsJVMStatus_Running;
-            jniJVM->Release();
-        }
-        else {
-            // Non-JNI JVM -- bail.
-            jvm->Release();
-            return ShutdownJVM();
-        }
-#else
+#ifdef MOZ_SMARTUPDATE
         nsIJRIPlugin* jriJVM;
         if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
             JRIEnv* env;

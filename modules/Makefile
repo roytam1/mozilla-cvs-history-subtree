@@ -51,9 +51,9 @@ endif
 
 ifdef EDITOR
 
-ifdef JAVA_OR_OJI
+ifdef JAVA_OR_NSJVM
 DIRS            += edtplug
-endif # JAVA_OR_OJI
+endif # JAVA_OR_NSJVM
 
 DIRS		+= spellchk
 endif # EDITOR

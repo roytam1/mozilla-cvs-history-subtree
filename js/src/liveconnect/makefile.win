@@ -55,7 +55,7 @@ MAKE_OBJ_TYPE	= DLL
 DEFFILE		= $(DLLNAME).def
 !endif
 
-!ifdef JAVA_OR_OJI
+!ifdef JAVA_OR_NSJVM
 LLIBS=$(LIBNSPR) $(DIST)\lib\jrt$(MOZ_BITS)$(VERSION_NUMBER).lib \
 	$(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib
 !else

@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -15,14 +15,15 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+
+/*******************************************************************************
+ * Java Runtime Interface - Machine Dependent Types
+ ******************************************************************************/
+ 
 #ifndef JRI_MD_H
 #define JRI_MD_H
 
 #include <assert.h>
-
-#ifdef XP_MAC
-#include "jni.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -99,7 +100,7 @@ extern "C" {
 #	endif
 
 /* Mac */
-#elif macintosh || Macintosh || THINK_C
+#elif defined (macintosh) || Macintosh || THINK_C
 #	if defined(__MWERKS__)				/* Metrowerks */
 #		if !__option(enumsalwaysint)
 #			error You need to define 'Enums Always Int' for your project.
@@ -125,7 +126,7 @@ extern "C" {
 
 /* Unix or else */
 #else
-#   define JRI_PUBLIC_API(ResultType)	    ResultType
+#	define JRI_PUBLIC_API(ResultType)		ResultType
 #   define JRI_PUBLIC_VAR(VarType)          VarType
 #   define JRI_PUBLIC_VAR_EXP(VarType)		JRI_PUBLIC_VAR(VarType)
 #   define JRI_PUBLIC_VAR_IMP(VarType)		JRI_PUBLIC_VAR(VarType)
@@ -149,18 +150,17 @@ typedef double			jdouble;
 typedef juint			jsize;
 #endif
 
+/* moved from jni.h -- Sun's new jni.h doesn't have this anymore */
+typedef struct _jobject *jref;
+
 typedef unsigned char	jbool;
-#ifndef XP_MAC
 typedef char			jbyte;
-#endif
 #ifdef IS_64 /* XXX ok for alpha, but not right on all 64-bit architectures */
 typedef unsigned int	juint;
 typedef int				jint;
 #else
 typedef unsigned long	juint;
-#ifndef XP_MAC
 typedef long			jint;
-#endif
 #endif
 
 /*******************************************************************************
@@ -175,21 +175,30 @@ typedef long			jint;
 
 #ifdef HAVE_LONG_LONG
 
-#if !(defined(WIN32) || defined(_WIN32))
-typedef long long			jlong;
-typedef unsigned long long	julong;
+#ifdef OSF1
 
-#define jlong_MAXINT		0x7fffffffffffffffLL
-#define jlong_MININT		0x8000000000000000LL
-#define jlong_ZERO			0x0LL
+/* long is default 64-bit on OSF1, -std1 does not allow long long */
+typedef long                  jlong;
+typedef unsigned long         julong;
+#define jlong_MAXINT          0x7fffffffffffffffL
+#define jlong_MININT          0x8000000000000000L
+#define jlong_ZERO            0x0L
+
+#elif (defined(WIN32) || defined(_WIN32))
+
+typedef LONGLONG              jlong;
+typedef DWORDLONG             julong;
+#define jlong_MAXINT          0x7fffffffffffffffi64
+#define jlong_MININT          0x8000000000000000i64
+#define jlong_ZERO            0x0i64
 
 #else
-typedef LONGLONG			jlong;
-typedef DWORDLONG			julong;
 
-#define jlong_MAXINT		0x7fffffffffffffffi64
-#define jlong_MININT		0x8000000000000000i64
-#define jlong_ZERO			0x0i64
+typedef long long             jlong;
+typedef unsigned long long    julong;
+#define jlong_MAXINT          0x7fffffffffffffffLL
+#define jlong_MININT          0x8000000000000000LL
+#define jlong_ZERO            0x0LL
 
 #endif
 
@@ -234,7 +243,6 @@ typedef DWORDLONG			julong;
 
 #else  /* !HAVE_LONG_LONG */
 
-#ifndef XP_MAC
 typedef struct {
 #ifdef IS_LITTLE_ENDIAN
     juint lo, hi;
@@ -242,7 +250,6 @@ typedef struct {
     juint hi, lo;
 #endif
 } jlong;
-#endif /* XP_MAC */
 typedef jlong				julong;
 
 extern jlong jlong_MAXINT, jlong_MININT, jlong_ZERO;

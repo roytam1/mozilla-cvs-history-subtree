@@ -215,6 +215,29 @@ char * nsPrincipal::getVendor(void)
   }
 }
 
+// XXX copyied from ns/lib/libjar/zig.h
+#ifndef ZIG_C_COMPANY
+#define ZIG_C_COMPANY   1
+#endif
+#ifndef ZIG_C_CA
+#define ZIG_C_CA        2
+#endif
+#ifndef ZIG_C_SERIAL
+#define ZIG_C_SERIAL    3
+#endif
+#ifndef ZIG_C_EXPIRES
+#define ZIG_C_EXPIRES   4
+#endif
+#ifndef ZIG_C_NICKNAME
+#define ZIG_C_NICKNAME  5
+#endif
+#ifndef ZIG_C_FP
+#define ZIG_C_FP        6
+#endif
+#ifndef ZIG_C_JAVA
+#define ZIG_C_JAVA      100
+#endif
+
 char * nsPrincipal::getCompanyName(void)
 {
   if (itsCompanyName == NULL)
