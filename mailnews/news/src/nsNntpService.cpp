@@ -156,7 +156,22 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCAutoString uri;
-  // we do all this because...
+  //
+  // if we are copying, we need the uri to be a news://host/group#key uri
+  // so that we can get back to the nsIMsgDBHdr.
+  //
+  // if we are displaying (or printing), we want the news://host/message-id url
+  // we keep the original uri around, for cancelling and so we can get to the
+  // articles by doing GROUP and then ARTICLE <n>.
+  //
+  // using news://host/message-id has an extra benefit.
+  // we'll use that to look up in the cahce, so if 
+  // you are reading a message that you've already read, you
+  // (from a cross post) it would be in your cache.
+  // 
+  // if we used news://host/group#key, we would not have that behaviour
+  //
+  // XXX fix it so copy operations check the memory cache
   if (mCopyingOperation) {
     uri = aMessageURI;
   }
