@@ -12,7 +12,7 @@
 <!-- LOCALIZATION NOTE myNetscape.url : DONT_TRANSLATE -->
 <!ENTITY myNetscape.url "http://my.netscape.com">
 <!-- LOCALIZATION NOTE defaultHomepage.url : DONT_TRANSLATE -->
-<!ENTITY defaultHomepage.url "www.mozilla.org" >
+<!ENTITY defaultHomepage.url "www.mozilla.org/projects/seamonkey/release-notes/m11.html" >
 
 <!ENTITY browserCmd.label					"New Navigator Window">
 <!-- LOCALIZATION NOTE browserCmd.accesskey: DONT_TRANSLATE -->
