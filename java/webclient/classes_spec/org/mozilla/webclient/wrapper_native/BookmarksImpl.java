@@ -31,7 +31,6 @@ import org.mozilla.util.ParameterCheck;
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.Bookmarks;
 import org.mozilla.webclient.BookmarkEntry;
-import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
 import javax.swing.tree.TreeModel;
@@ -152,7 +151,8 @@ public TreeModel getBookmarks() throws IllegalStateException
             throw new IllegalStateException("BookmarksImpl.getBookmarks(): Can't get bookmarks from native browser.");
         }
         // if we can't create a root, or we can't create a tree
-        if ((null == (root = new BookmarkEntryImpl(nativeBookmarks, null))) || 
+        if ((null == (root = new BookmarkEntryImpl(nativeWebShell, 
+						   nativeBookmarks, null))) || 
             (null == (bookmarksTree = new DefaultTreeModel(root)))) {
             throw new IllegalStateException("BookmarksImpl.getBookmarks(): Can't create RDFTreeModel.");
         }
@@ -177,8 +177,9 @@ public BookmarkEntry newBookmarkEntry(String url)
     int newNode;
 
     System.out.println("debug: edburns: BookmarksImpl.newBookmarkEntry: url:" + url);
-    if (-1 != (newNode = nativeNewRDFNode(url, false))) {
-        result = new BookmarkEntryImpl(newNode, null);
+    if (-1 != (newNode = nativeNewRDFNode(nativeWebShell, url, false))) {
+        result = new BookmarkEntryImpl(nativeWebShell,
+                                       newNode, null);
         // use put instead of setProperty for jdk1.1.x compatibility.
         result.getProperties().put(BookmarkEntry.URL, url);
     }
@@ -194,8 +195,8 @@ public BookmarkEntry newBookmarkFolder(String name)
     int newNode;
 
     System.out.println("debug: edburns: BookmarksImpl.newBookmarkFolder: name:" + name);
-    if (-1 != (newNode = nativeNewRDFNode(name, true))) {
-        result = new BookmarkEntryImpl(newNode, null);
+    if (-1 != (newNode = nativeNewRDFNode(nativeWebShell, name, true))) {
+        result = new BookmarkEntryImpl(nativeWebShell, newNode, null);
         result.getProperties().put(BookmarkEntry.NAME, name);
     }
     
@@ -214,7 +215,8 @@ private native int nativeGetBookmarks(int webShellPtr);
 
  */
 
-private native int nativeNewRDFNode(String url, boolean isFolder);
+private native int nativeNewRDFNode(int webShellPtr, String url, 
+                                    boolean isFolder);
 
 // ----VERTIGO_TEST_START
 

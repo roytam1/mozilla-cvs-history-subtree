@@ -59,9 +59,10 @@ Properties properties = null;
 // Constructors and Initializers    
 //
 
-protected BookmarkEntryImpl(int nativeNode, RDFTreeNode yourParent)
+protected BookmarkEntryImpl(int nativeWebShell, int nativeNode, 
+                            RDFTreeNode yourParent)
 {
-    super(nativeNode, yourParent);
+    super(nativeWebShell, nativeNode, yourParent);
 }
 
 //
@@ -76,10 +77,10 @@ protected BookmarkEntryImpl(int nativeNode, RDFTreeNode yourParent)
 // Abstract Method Implementations
 //
 
-protected RDFTreeNode newRDFTreeNode(int nativeNode, 
+protected RDFTreeNode newRDFTreeNode(int nativeWebShell, int nativeNode, 
                                      RDFTreeNode yourParent)
 {
-    return new BookmarkEntryImpl(nativeNode, yourParent);
+    return new BookmarkEntryImpl(nativeWebShell, nativeNode, yourParent);
 }
 
 //
@@ -123,7 +124,7 @@ public Properties getProperties()
 
 public boolean isFolder()
 {
-    return nativeIsContainer(getNativeRDFNode());
+    return nativeIsContainer(nativeWebShell, getNativeRDFNode());
 }
 
 // ----VERTIGO_TEST_START
