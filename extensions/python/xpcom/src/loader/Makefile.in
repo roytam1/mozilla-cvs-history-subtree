@@ -41,23 +41,18 @@ DEPTH=../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
+PYTHON_INCLUDES = @MOZ_PYTHON_INCLUDES@
+PYTHON_LIBS = @MOZ_PYTHON_LIBS@
+PYTHON_VER_DOTTED = @MOZ_PYTHON_VER_DOTTED@
 
 include $(DEPTH)/config/autoconf.mk
 
-ifdef MOZ_DEBUG
-PYTHON_DEBUG_SUFFIX=_d
-else
-PYTHON_DEBUG_SUFFIX=
-endif
-
-MODULE		= pyloader
-LIBRARY_NAME	= pyloader$(PYTHON_DEBUG_SUFFIX)
+LIBRARY_NAME	= pyloader
 IS_COMPONENT	= 1
-#MODULE_NAME	= 
 REQUIRES	= xpcom string $(NULL)
 
-LOCAL_INCLUDES = -I$(PYTHON_SRC)/Include -I$(PYTHON_SRC)/PC
-EXTRA_LIBS += /libpath:$(PYTHON_SRC)/PCBuild
+LOCAL_INCLUDES = $(PYTHON_INCLUDES)
+EXTRA_LIBS += $(PYTHON_LIBS)
 
 CPPSRCS		=		   \
 		pyloader.cpp	   \
@@ -66,6 +61,7 @@ CPPSRCS		=		   \
 include $(topsrcdir)/config/config.mk
 
 include $(topsrcdir)/config/rules.mk
+CXXFLAGS += -DPYTHON_SO=\"libpython$(PYTHON_VER_DOTTED).so\"
 EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
 
 clobber::
