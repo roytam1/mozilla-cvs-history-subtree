@@ -47,7 +47,7 @@
     |GetReadableFragment()|.
    */
 
-class nsPromiseConcatenation
+class NS_COM nsPromiseConcatenation
     : public nsAPromiseString
   {
     public:
@@ -124,7 +124,7 @@ class nsPromiseConcatenation
       PRUint32            mFragmentIdentifierMask;
   };
 
-class nsPromiseCConcatenation
+class NS_COM nsPromiseCConcatenation
     : public nsAPromiseCString
   {
     public:
