@@ -205,7 +205,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
   gCurrentLoadingFolderViewType = viewType;
   gCurrentLoadingFolderSortType = sortType;
   gCurrentLoadingFolderSortOrder = sortOrder;
-  if(msgfolder.manyHeadersToDownload)
+  if(msgfolder.manyHeadersToDownload || msgfolder.server.redirectorType == "aol")
   {
     gRerootOnFolderLoad = true;
     try
