@@ -52,6 +52,7 @@
 #include "jsstring.h"
 #include "jsarray.h"
 #include "jsmath.h"
+#include "hash.h"
 
 #include "fdlibm_ns.h"
 
@@ -61,87 +62,8 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &name)
-{
-    Lexer operatorLexer(mWorld, name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
-    const Token &t = operatorLexer.get(false);  // XXX what's correct for preferRegExp parameter ???
 
-    // ***** Please don't use a lexer to do this.  There are a couple of problems here:
-    // 1.  A lexer will skip spaces, etc.  We want to check for an exact string match here.
-    // 2.  The above code doesn't check that the operator isn't followed by anything else.
-    // A better implementation would be to look up the string in a hash table prepopulated with operators.
-    // This could be the same hash table used for interning identifiers or a different one.
-    ASSERT(false);
 
-    switch (t.getKind()) {
-    case Token::complement:
-        return JS2Runtime::Complement;
-    case Token::increment:
-        return JS2Runtime::Increment;
-    case Token::decrement:
-        return JS2Runtime::Decrement;
-    case Token::times:
-        return JS2Runtime::Multiply;
-    case Token::divide:
-        return JS2Runtime::Divide;
-    case Token::modulo:
-        return JS2Runtime::Remainder;
-    case Token::leftShift:
-        return JS2Runtime::ShiftLeft;
-    case Token::rightShift:
-        return JS2Runtime::ShiftRight;
-    case Token::logicalRightShift:
-        return JS2Runtime::UShiftRight;
-    case Token::lessThan:
-        return JS2Runtime::Less;
-    case Token::lessThanOrEqual:
-        return JS2Runtime::LessEqual;
-    case Token::In:
-        return JS2Runtime::In;
-    case Token::equal:
-        return JS2Runtime::Equal;
-    case Token::identical:
-        return JS2Runtime::SpittingImage;
-    case Token::bitwiseAnd:
-        return JS2Runtime::BitAnd;
-    case Token::bitwiseXor:
-        return JS2Runtime::BitXor;
-    case Token::bitwiseOr:
-        return JS2Runtime::BitOr;
-    case Token::New:
-        return JS2Runtime::New;
-
-    default:
-        NOT_REACHED("Illegal operator name");
-
-    case Token::plus:
-        if (parameterCount == 1)
-            return JS2Runtime::Posate;
-        else
-            return JS2Runtime::Plus;
-    case Token::minus:
-        if (parameterCount == 1)
-            return JS2Runtime::Negate;
-        else
-            return JS2Runtime::Minus;
-
-    case Token::openParenthesis:
-        return JS2Runtime::Call;
-        
-    case Token::openBracket:
-        {
-            operatorLexer.get(false);   // the closeBracket
-            const Token &t3 = operatorLexer.get(false);
-            if (t3.getKind() == Token::equal)
-                return JS2Runtime::IndexEqual;
-            else
-                return JS2Runtime::Index;
-        }
-        
-    case Token::Delete:
-        return JS2Runtime::DeleteIndex;
-    }
-}
 
 inline char narrow(char16 ch) { return char(ch); }
 
@@ -238,19 +160,6 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     }
 }
 
-/*
-JSFunction *Context::getOperator(Operator which, JSType *t1, JSType *t2)
-{
-    for (OperatorList::iterator oi = mOperatorTable[which].begin(),
-                end = mOperatorTable[which].end();
-                    (oi != end); oi++) 
-        if ( ((*oi)->mType1 == t1) && ((*oi)->mType2 == t2) )
-            return (*oi)->mImp;
-
-    NOT_REACHED("operator gone missing");
-    return NULL;
-}
-*/
 
 // Invokes either the native or bytecode implementation. Causes another interpreter loop
 // to begin execution, and does nothing to clean up the incoming arguments (which need
@@ -490,7 +399,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         target = targetValue->function;
                         if (target->hasBoundThis())   // then we use it instead of the expressed version
                             mThis = target->getThisValue();
+                        if (target->isConstructor())
+                            mThis = kNullValue;       // invoking a constructor function, give it a NULL 'this' to chew on
                     }
+                    
+                    // expectedArgCount = total # specified parameters - required & optional
+                    // hasOptionalArguments() 
+                    // getRequiredArgumentCount()
+                    //
                     
                     uint32 expectedArgCount = target->getExpectedArgs();
                     JSValue *argBase = NULL;
@@ -514,7 +430,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             JSValue v = getValue(i + argStart);
                             uint32 index = i;
                             if (v.isObject() && (v.object->mType == NamedArgument_Type)) {
-                                NamedArgument *arg = (NamedArgument *)(v.object);
+                                NamedArgument *arg = static_cast<NamedArgument *>(v.object);
                                 index = target->findParameterName(arg->mName);
                                 if (index == (uint32)(-1))
                                     reportError(Exception::referenceError, "Way iffy parameter name");
@@ -530,31 +446,42 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     else {
                         ASSERT(stackSize() > argCount);
                         argBase = getBase(stackSize() - argCount);
-                    }
 
-                    // IF there are optional parameters for this target
-                    // AND those parameters are un-satisfied
-                    // THEN invoke the initializers from the target to get the appropriate
-                    // values.
-/*
-                    if (    target->hasOptionalArguments()
-                            && 
-                
-*/
-
-
-                    if (!target->isNative()) {
+                        if (target->isChecked()) {
+                            if (argCount < target->getRequiredArgumentCount())
+                                reportError(Exception::referenceError, "Insufficient quantity of arguments");
+                            
+                            if (argCount > expectedArgCount)    // XXX are we supposed to check this ??
+                                reportError(Exception::referenceError, "Oversufficient quantity of arguments");
+                        }
 
                         // we didn't know the target function at compile time
                         // and so we couldn't allocate space for these
                         // 'missing' arguments.
                         if (expectedArgCount > argCount)
                             assureStackSpace(expectedArgCount - argCount);
-                                                
-                        for (uint32 i = argCount; i < expectedArgCount; i++) {
-                            pushValue(kUndefinedValue);
-                            cleanUp++;
+
+                        if (target->hasOptionalArguments()) {
+                            // call the initializers for each not-supplied argument
+                            for (uint32 i = argCount; i < expectedArgCount; i++) {
+                                // be better to jump to a 'fall-thru' entry-point that
+                                // handles this?
+                       //         invokeInitializer(target->getArgumentInitializer(i));
+                       //         pushValue( XXX );
+                                cleanUp++;
+                            }
                         }
+                        else {
+                            for (uint32 i = argCount; i < expectedArgCount; i++) {
+                                pushValue(kUndefinedValue);
+                                cleanUp++;
+                            }
+                        }
+                    }
+
+
+
+                    if (!target->isNative()) {
                         mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - (cleanUp + 1),
                                                                     mScopeChain,
                                                                     mArgumentBase, oldThis,
@@ -1163,28 +1090,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     pushValue(JSValue(new JSBoundFunction(base.object->mType->mMethods[index], base.object)));
                 }
                 break;
-            case GetStaticMethodOp:
-                {
-                    JSValue base = popValue();
-                    ASSERT(dynamic_cast<JSType *>(base.object));
-                    uint32 index = *((uint32 *)pc);
-                    pc += sizeof(uint32);
-                    JSType *classP = (JSType *)(base.object);
-                    ASSERT(classP->mStatics);
-                    pushValue(JSValue(classP->mStatics->mMethods[index]));
-                }
-                break;
-            case GetStaticMethodRefOp:
-                {
-                    JSValue base = popValue();
-                    ASSERT(dynamic_cast<JSType *>(base.object));
-                    uint32 index = *((uint32 *)pc);
-                    pc += sizeof(uint32);
-                    JSType *classP = (JSType *)(base.object);
-                    ASSERT(classP->mStatics);
-                    pushValue(JSValue(new JSBoundFunction(classP->mStatics->mMethods[index], base.object)));
-                }
-                break;
             case GetFieldOp:
                 {
                     JSValue base = popValue();
@@ -1202,41 +1107,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     ((JSInstance *)(base.object))->mInstanceValues[index] = v;
-                    pushValue(v);
-                }
-                break;
-            case GetStaticFieldOp:
-                {
-                    JSType *classP;
-                    JSValue base = popValue();
-                    // the base is either an instance object OR a type object
-                    if (base.isType())
-                        classP = base.type;
-                    else {
-                        ASSERT(base.isObject());
-                        classP = base.object->mType;
-                    }
-                    ASSERT(classP->mStatics);
-                    uint32 index = *((uint32 *)pc);
-                    pc += sizeof(uint32);
-                    pushValue(classP->mStatics->mInstanceValues[index]);
-                }
-                break;
-            case SetStaticFieldOp:
-                {
-                    JSType *classP;
-                    JSValue v = popValue();
-                    JSValue base = popValue();
-                    if (base.isType())
-                        classP = base.type;
-                    else {
-                        ASSERT(base.isObject());
-                        classP = base.object->mType;
-                    }
-                    ASSERT(classP->mStatics);
-                    uint32 index = *((uint32 *)pc);
-                    pc += sizeof(uint32);
-                    classP->mStatics->mInstanceValues[index] = v;
                     pushValue(v);
                 }
                 break;
@@ -1341,65 +1211,40 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 break;
             case JuxtaposeOp:
                 {
-                    JSValue a2 = popValue();
-                    JSValue a1 = popValue();
+                    JSValue v2 = popValue();
+                    JSValue v1 = popValue();
 
-                    ASSERT(a1.isObject() && (a1.object->getType() == Attribute_Type));
-                    ASSERT(a2.isObject() && (a2.object->getType() == Attribute_Type));
+                    ASSERT(v1.isObject() && (v1.object->getType() == Attribute_Type));
+                    ASSERT(v2.isObject() && (v2.object->getType() == Attribute_Type));
 
-                    a1.object->getProperty(this, widenCString("trueFlags"), NULL);
-                    JSValue f = popValue();
-                    ASSERT(f.isNumber());
-                    uint32 a1TrueFlags = (uint32)(f.f64);
+                    Attribute *a1 = static_cast<Attribute *>(v1.object);
+                    Attribute *a2 = static_cast<Attribute *>(v2.object);
 
-                    a1.object->getProperty(this, widenCString("falseFlags"), NULL);
-                    f = popValue();
-                    ASSERT(f.isNumber());
-                    uint32 a1FalseFlags = (uint32)(f.f64);
-
-                    a2.object->getProperty(this, widenCString("trueFlags"), NULL);
-                    f = popValue();
-                    ASSERT(f.isNumber());
-                    uint32 a2TrueFlags = (uint32)(f.f64);
-
-                    a2.object->getProperty(this, widenCString("falseFlags"), NULL);
-                    f = popValue();
-                    ASSERT(f.isNumber());
-                    uint32 a2FalseFlags = (uint32)(f.f64);
-
-                    if ((a1TrueFlags & a2FalseFlags) != 0)
+                    if ((a1->mTrueFlags & a2->mFalseFlags) != 0)
                         reportError(Exception::semanticError, "Mismatched attributes"); // XXX could supply more detail
-                    if ((a1FalseFlags & a2TrueFlags) != 0)
+                    if ((a1->mFalseFlags & a2->mTrueFlags) != 0)
                         reportError(Exception::semanticError, "Mismatched attributes");
 
-                    a1.object->getProperty(this, widenCString("names"), NULL);
-                    JSValue a1names = popValue();
-                    ASSERT(a1names.isObject() && (a1names.object->getType() == Array_Type));
-
-                    a2.object->getProperty(this, widenCString("names"), NULL);
-                    JSValue a2names = popValue();
-                    ASSERT(a2names.isObject() && (a2names.object->getType() == Array_Type));
-                    
-                    JSValue xNames = Array_concat(this, a1names, &a1names, 1);
                     
                     // Now build the result attribute and set it's values
-                    JSInstance *x = Attribute_Type->newInstance(this);
-                    x->setProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1TrueFlags | a2TrueFlags)));
-                    x->setProperty(this, widenCString("falseFlags"), (NamespaceList *)(NULL), JSValue((float64)(a1FalseFlags | a2FalseFlags)));
-                    x->setProperty(this, widenCString("names"), (NamespaceList *)(NULL), xNames);
-                    
-                    PropertyIterator it;
-                    if (a1.object->hasProperty(widenCString("extendArg"), (NamespaceList *)(NULL), Read, &it)) {
-                        JSValue v = a1.object->getPropertyValue(it);
-                        x->setProperty(this, widenCString("extendArg"), (NamespaceList *)(NULL), v);
-                    }
-                    else {
-                        if (a2.object->hasProperty(widenCString("extendArg"), (NamespaceList *)(NULL), Read, &it)) {
-                            JSValue v = a1.object->getPropertyValue(it);
-                            x->setProperty(this, widenCString("extendArg"), (NamespaceList *)(NULL), v);
-                        }
-                    }
+                    Attribute *x = new Attribute(a1->mTrueFlags | a2->mTrueFlags, a1->mFalseFlags | a2->mFalseFlags);
 
+                    NamespaceList *t = a1->mNamespaceList;
+                    while (t) {
+                        x->mNamespaceList = new NamespaceList(&t->mName, x->mNamespaceList);
+                        t = t->mNext;
+                    }
+                    t = a2->mNamespaceList;
+                    while (t) {
+                        x->mNamespaceList = new NamespaceList(&t->mName, x->mNamespaceList);
+                        t = t->mNext;
+                    }
+                    if (a1->mExtendArgument)
+                        x->mExtendArgument = a1->mExtendArgument;
+                    else
+                        if (a2->mExtendArgument)
+                            x->mExtendArgument = a2->mExtendArgument;
+                    
                     pushValue(JSValue(x));
                 }
                 break;

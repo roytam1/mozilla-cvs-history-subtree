@@ -155,4 +155,20 @@ test++;
 if (sw(2) != "02d") badTest += test + " ";
 
 
+class A { static var x = 2; var y; }
+class B extends A { static var i = 4; var j; }
+
+test++;
+if (A.x != 2) badTest += test + " ";
+
+test++;
+if (B.x != 2) badTest += test + " ";
+
+test++;
+if (B.i != 4) badTest += test + " ";
+
+
+
+
+
 if (badTest == 0) print("still sane") else print("gone off the deep end at test #" + badTest);

@@ -137,6 +137,7 @@ namespace JS2Runtime {
 #define PROPERTY_VALUEPOINTER(it)   ((it)->second->first->mData.vp)
 #define PROPERTY_INDEX(it)          ((it)->second->first->mData.index)
 #define PROPERTY_NAME(it)           ((it)->first)
+#define PROPERTY_TYPE(it)           ((it)->second->first->mType)
 #define PROPERTY_GETTERF(it)        ((it)->second->first->mData.fPair.getterF)
 #define PROPERTY_SETTERF(it)        ((it)->second->first->mData.fPair.setterF)
 #define PROPERTY_GETTERI(it)        ((it)->second->first->mData.iPair.getterI)

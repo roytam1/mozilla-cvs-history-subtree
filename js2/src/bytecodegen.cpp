@@ -106,6 +106,7 @@ void StaticFieldReference::emitImplicitLoad(ByteCodeGen *bcg)
     bcg->addPointer(mClass);
 }
 
+
 void FieldReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
     bcg->addOp(LoadThisOp);
@@ -120,14 +121,16 @@ void FieldReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addLong(mIndex); 
 }
 
+
 void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     if (mAccess == Read)
-        bcg->addOp(GetStaticFieldOp);
+        bcg->addOp(GetPropertyOp);
     else
-        bcg->addOp(SetStaticFieldOp);
-    bcg->addLong(mIndex); 
+        bcg->addOp(SetPropertyOp);
+    bcg->addStringRef(mName); 
 }
+
 
 void MethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
@@ -169,55 +172,10 @@ bool SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg)
     return true;
 }
 
-
-
-void StaticFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addOp(GetStaticMethodRefOp);
-    bcg->addLong(mIndex); 
-}
-
-void StaticFunctionReference::emitInvokeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addOp(GetStaticMethodOp);
-    bcg->addLong(mIndex); 
-}
-
-void StaticGetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addOp(GetStaticMethodOp);
-    bcg->addLong(mIndex); 
-    bcg->addOpAdjustDepth(InvokeOp, 0);
-    bcg->addLong(0);
-    bcg->addByte(NoThis);
-}
-
-void StaticSetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addOpAdjustDepth(InvokeOp, 0);
-    bcg->addLong(1);
-    bcg->addByte(NoThis);
-}
-
-bool StaticSetterMethodReference::emitPreAssignment(ByteCodeGen *bcg) 
-{
-    bcg->addOp(GetStaticMethodOp);
-    bcg->addLong(mIndex);
-    return true;
-}
-
-
-
 void FunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
 {
     bcg->addOp(LoadFunctionOp);
     bcg->addPointer(mFunction);
-}
-
-void ConstructorReference::emitCodeSequence(ByteCodeGen *bcg) 
-{
-    bcg->addOp(GetStaticMethodOp);
-    bcg->addLong(mIndex); 
 }
 
 void GetterFunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -267,7 +225,7 @@ void NameReference::emitDelete(ByteCodeGen *bcg)
 
 void PropertyReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
-    bcg->addOp(LoadGlobalObjectOp);
+    bcg->addOp(LoadThisOp);
 }
 
 void PropertyReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -352,12 +310,8 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { -1,       "Pop", },
 { 0,        "GetField", },
 { -1,       "SetField", },
-{ 0,        "GetStaticField", },
-{ -1,       "SetStaticField", },
 { 1,        "GetMethod", },
 { 0,        "GetMethodRef", },
-{ 0,        "GetStaticMethod", },
-{ 0,        "GetStaticMethodRef", },
 { 1,        "GetArg", },
 { 0,        "SetArg", },
 { 1,        "GetLocalVar", },
@@ -698,7 +652,6 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             ClassStmtNode *classStmt = checked_cast<ClassStmtNode *>(p);
             JSType *thisClass = classStmt->mType;
 
-            mScopeChain->addScope(thisClass->mStatics);
             mScopeChain->addScope(thisClass);
             if (classStmt->body) {
                 ByteCodeGen static_cg(m_cx, mScopeChain);       // this will capture the static initializations
@@ -725,7 +678,6 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 thisClass->setInstanceInitializer(m_cx, f);
             }
             mScopeChain->popScope();
-            mScopeChain->popScope();
         }
         break;
     case StmtNode::Const:
@@ -733,8 +685,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         {
             VariableStmtNode *vs = checked_cast<VariableStmtNode *>(p);
             VariableBinding *v = vs->bindings;
-//            bool isStatic = hasAttribute(vs->attributes, Token::Static);
-            bool isStatic = (vs->attributeFlags & Property::Static) == Property::Static;
+            bool isStatic = (vs->attributeValue->mTrueFlags & Property::Static) == Property::Static;
             while (v)  {
                 Reference *ref = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
                 ASSERT(ref);    // must have been added previously by collectNames
@@ -779,8 +730,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
-//            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
-            bool isConstructor = (f->attributeFlags & Property::Constructor) == Property::Constructor;
+            bool isConstructor = (f->attributeValue->mTrueFlags & Property::Constructor) == Property::Constructor;
             JSFunction *fnc = f->mFunction;
 
             ASSERT(f->function.name);
@@ -1350,14 +1300,12 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             // (which loads the static instance) and the name 
             // lookup can then proceed against the static type.
             //
-            // Note that we're depending on this to discover when
-            // a class constructor is being invoked (and hence needs
-            // a newInstanceOp). 
+
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = checked_cast<IdentifierExprNode *>(b->op1)->name;
                 JSValue v = mScopeChain->getCompileTimeValue(name, NULL);
-                if (v.isType() && v.type->mStatics) {
-                    lType = v.type->mStatics;
+                if (v.isType()) {
+                    lType = v.type;
                     genExpr(b->op1);
                 }
             }
@@ -1440,8 +1388,8 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = checked_cast<IdentifierExprNode *>(b->op1)->name;
                 JSValue v = mScopeChain->getCompileTimeValue(name, NULL);
-                if (v.isType() && v.type->mStatics) {
-                    lType = v.type->mStatics;
+                if (v.isType()) {
+                    lType = v.type;
                     genExpr(b->op1);
                 }
             }
@@ -2332,12 +2280,8 @@ uint32 printInstruction(Formatter &f, uint32 i, const ByteCodeModule& bcm)
     case SetArgOp:
     case GetMethodOp:
     case GetMethodRefOp:
-    case GetStaticMethodOp:
-    case GetStaticMethodRefOp:
     case GetFieldOp:
     case SetFieldOp:
-    case GetStaticFieldOp:
-    case SetStaticFieldOp:
     case NewInstanceOp:
         f << bcm.getLong(i);
         i += 4;

@@ -248,11 +248,11 @@ int main(int argc, char **argv)
     JSObject *globalObject;
     Context cx(&globalObject, world, a, Pragma::js2);
 
-    globalObject->defineVariable(&cx, widenCString("load"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, load, NULL)));
-    globalObject->defineVariable(&cx, widenCString("print"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, print, NULL)));
-    globalObject->defineVariable(&cx, widenCString("debug"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, debug, NULL)));
-    globalObject->defineVariable(&cx, widenCString("trace"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, trace, NULL)));
-    globalObject->defineVariable(&cx, widenCString("dikdik"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, dikdik, NULL)));
+    globalObject->defineVariable(widenCString("load"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, load, NULL)));
+    globalObject->defineVariable(widenCString("print"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, print, NULL)));
+    globalObject->defineVariable(widenCString("debug"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, debug, NULL)));
+    globalObject->defineVariable(widenCString("trace"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, trace, NULL)));
+    globalObject->defineVariable(widenCString("dikdik"), (NamespaceList *)(NULL), NULL, JSValue(new JSFunction(&cx, dikdik, NULL)));
 
     bool doInteractive = true;
     int result = 0;

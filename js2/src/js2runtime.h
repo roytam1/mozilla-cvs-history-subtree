@@ -117,10 +117,6 @@ static const double two31 = 2147483648.0;
     extern JSType *Attribute_Type;      // used to define 'prototype' 'static' etc & Namespace values
     extern JSType *NamedArgument_Type;
 
-/*
-    bool hasAttribute(ExprNode *attributes, Token::Kind tokenKind, IdentifierExprNode **attrArg = NULL);
-    bool hasAttribute(ExprNode *attributes, const StringAtom &name, IdentifierExprNode **attrArg = NULL);
-*/
 
     String *numberToString(float64 number);
     float64 stringToNumber(const String *string);
@@ -264,6 +260,8 @@ static const double two31 = 2147483648.0;
         OperatorCount
     } Operator;
     
+    typedef std::map<const String, JS2Runtime::Operator> OperatorMap;
+    extern OperatorMap operatorMap;
         
     class Reference {
     public:
@@ -344,37 +342,14 @@ static const double two31 = 2147483648.0;
     // a static field
     class StaticFieldReference : public Reference {
     public:
-        StaticFieldReference(uint32 index, Access acc, JSType *baseClass, JSType *type) 
-            : Reference(type), mAccess(acc), mIndex(index), mClass(baseClass) { }
+        StaticFieldReference(const String& name, Access acc, JSType *baseClass, JSType *type) 
+            : Reference(type), mAccess(acc), mName(name), mClass(baseClass) { }
         Access mAccess;
-        uint32 mIndex;
+        const String& mName;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
         int32 baseExpressionDepth() { return 1; }
-    };
-    // a static function
-    class StaticFunctionReference : public Reference {
-    public:
-        StaticFunctionReference(uint32 index, JSType *type)
-            : Reference(type), mIndex(index) { }
-        uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg);
-        void emitInvokeSequence(ByteCodeGen *bcg);
-        int32 baseExpressionDepth() { return 1; }
-    };
-    class StaticGetterMethodReference : public StaticFunctionReference {
-    public:
-        StaticGetterMethodReference(uint32 index, JSType *type)
-            : StaticFunctionReference(index, type) { }
-        void emitCodeSequence(ByteCodeGen *bcg);
-    };
-    class StaticSetterMethodReference : public StaticFunctionReference {
-    public:
-        StaticSetterMethodReference(uint32 index, JSType *type)
-            : StaticFunctionReference(index, type) { }
-        void emitCodeSequence(ByteCodeGen *bcg);
-        bool emitPreAssignment(ByteCodeGen *bcg);
     };
     // a member function in a vtable
     class MethodReference : public Reference {
@@ -409,17 +384,6 @@ static const double two31 = 2147483648.0;
         FunctionReference(JSFunction *f);
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
-    };
-    // a constructor
-    class ConstructorReference : public Reference {
-    public:
-        ConstructorReference(uint32 index, JSType *baseClass)
-            : Reference(baseClass), mIndex(index) { }
-        uint32 mIndex;
-        void emitCodeSequence(ByteCodeGen *bcg);
-        bool needsThis() { return false; }          // i.e. there is no 'this' specified by the
-                                                    // the call sequence (it's a static function)
-        int32 baseExpressionDepth() { return 1; }
     };
     // a getter function
     class GetterFunctionReference : public Reference {
@@ -546,39 +510,41 @@ static const double two31 = 2147483648.0;
 
 
         // add a property
-        virtual Property *defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type);
-        virtual Property *defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type);
+        virtual Property *defineVariable(const String &name, AttributeStmtNode *attr, JSType *type);
+        virtual Property *defineVariable(const String &name, NamespaceList *names, JSType *type);
 
-        virtual Property *defineStaticVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type)
+        virtual Property *defineStaticVariable(const String &name, AttributeStmtNode *attr, JSType *type)
         {
-            return defineVariable(cx, name, attr, type);    // XXX or error?
+            return JSObject::defineVariable(name, attr, type);   
+            // XXX or error?  (Note that this implementation is invoked by JSType::defineStaticXXXX
+            // - the question is, is static var X (etc) at global scope an error?
         }
         // add a method property
-        virtual void defineMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineVariable(cx, name, attr, Function_Type, JSValue(f));
+            defineVariable(name, attr, Function_Type, JSValue(f));
         }
-        virtual void defineStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineVariable(cx, name, attr, Function_Type, JSValue(f));    // XXX or error?
+            JSObject::defineVariable(name, attr, Function_Type, JSValue(f));    // XXX or error?
         }
-        virtual void defineConstructor(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineConstructor(const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineVariable(cx, name, attr, Function_Type, JSValue(f));    // XXX or error?
+            JSObject::defineVariable(name, attr, Function_Type, JSValue(f));    // XXX or error?
         }
-        virtual void defineStaticGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineGetterMethod(cx, name, attr, f);    // XXX or error?
+            JSObject::defineGetterMethod(name, attr, f);    // XXX or error?
         }
-        virtual void defineStaticSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        virtual void defineStaticSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
-            defineSetterMethod(cx, name, attr, f);    // XXX or error?
+            JSObject::defineSetterMethod(name, attr, f);    // XXX or error?
         }
-        virtual void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
-        virtual void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        virtual void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
+        virtual void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
 
-        virtual Property *defineVariable(Context *cx, const String &name, AttributeStmtNode *attr, JSType *type, JSValue v);
-        virtual Property *defineVariable(Context *cx, const String &name, NamespaceList *names, JSType *type, JSValue v);
+        virtual Property *defineVariable(const String &name, AttributeStmtNode *attr, JSType *type, JSValue v);
+        virtual Property *defineVariable(const String &name, NamespaceList *names, JSType *type, JSValue v);
         
         virtual Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
 
@@ -670,7 +636,16 @@ static const double two31 = 2147483648.0;
 
     class ScopeChain;
 
-    class JSType : public JSInstance {
+
+
+
+
+
+
+
+
+
+    class JSType : public JSObject {
     public:        
         JSType(Context *cx, const String &name, JSType *super);
         JSType(Context *cx, JSType *xClass);     // used for constructing the static component type
@@ -692,71 +667,27 @@ static const double two31 = 2147483648.0;
 
         // construct a new (empty) instance of this class
         virtual JSInstance *newInstance(Context *cx);
-    
-        
-        // static helpers
+           
 
-        void defineConstructor(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f);
-
-        void defineStaticMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
-        {
-            ASSERT(mStatics);
-            mStatics->defineMethod(cx, name, attr, f);
-        }
-
-        Property *defineStaticVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSValue v)
-        {
-            ASSERT(mStatics);
-            return mStatics->defineVariable(cx, name, attr, Function_Type, v);
-        }
-
-        Property *defineStaticVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type)
-        {
-            ASSERT(mStatics);
-            return mStatics->defineVariable(cx, name, attr, type);
-        }
-
-        bool hasStatic(const String& name, NamespaceList *names, Access acc)
-        {
-            ASSERT(mStatics);
-            PropertyIterator i;
-            return mStatics->hasProperty(name, names, acc, &i);
-        }
-        
-        void defineStaticGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
-        {
-            ASSERT(mStatics);
-            mStatics->defineGetterMethod(cx, name, attr, f);
-        }
-        
-        void defineStaticSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
-        {
-            ASSERT(mStatics);
-            mStatics->defineSetterMethod(cx, name, attr, f);
-        }
-
-        //
-
-
-        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type);
+        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type);
 
 
    // XXX
    // XXX why doesn't the virtual function in JSObject get found?
    // XXX
-        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
+        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
         {
-            return JSObject::defineVariable(cx, name, attr, type, v);
+            return JSObject::defineVariable(name, attr, type, v);
         }
 
 
 
 
-        void defineMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f);
+        void defineMethod(const String& name, AttributeStmtNode *attr, JSFunction *f);
         
-        void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
 
-        void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
 
         void defineUnaryOperator(Operator which, JSFunction *f)
         {
@@ -768,16 +699,19 @@ static const double two31 = 2147483648.0;
             return mUnaryOperators[which];
         }
 
-        void setDefaultConstructor(Context *cx, JSFunction *f)
+        void setDefaultConstructor(JSFunction *f)
         {
-            defineConstructor(cx, mClassName, NULL, f);    // XXX attr?
+            defineConstructor(mClassName, NULL, f);    // XXX attr?
         }
 
-        void addMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
-        void addStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void addMethod(const String &name, AttributeStmtNode *attr, JSFunction *f);
+        void addStaticMethod( const String &name, AttributeStmtNode *attr, JSFunction *f);
 
         // return true if 'other' is on the chain of supertypes
         bool derivesFrom(JSType *other);
+
+        virtual void getProperty(Context *cx, const String &name, NamespaceList *names);
+        virtual void setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v);
 
         virtual JSValue getPropertyValue(PropertyIterator &i);
 
@@ -785,19 +719,7 @@ static const double two31 = 2147483648.0;
 
         virtual Reference *genReference(const String& name, NamespaceList *names, Access acc, uint32 depth);
 
-        // constructor functions are added as static methods
-        // XXX is it worth just having a default constructor 
-        // pointer in the class?
-        JSFunction *getDefaultConstructor()
-        {
-            ASSERT(mStatics);
-            for (PropertyIterator i = mStatics->mProperties.lower_bound(mClassName), 
-                            end = mStatics->mProperties.upper_bound(mClassName); (i != end); i++) {
-                if (PROPERTY_KIND(i) == Constructor)
-                    return mStatics->mMethods[PROPERTY_INDEX(i)];
-            }
-            return NULL;
-        }
+        JSFunction *getDefaultConstructor();
 
         JSValue getUninitializedValue()    { return mUninitializedValue; }
 
@@ -807,7 +729,6 @@ static const double two31 = 2147483648.0;
         virtual bool isDynamic() { return mIsDynamic; }
 
         JSType          *mSuperType;        // NULL implies that this is the base Object
-        JSType          *mStatics;          // NULL implies that this is the static component
 
         uint32          mVariableCount;
         JSInstance      *mInitialInstance;
@@ -1025,60 +946,60 @@ static const double two31 = 2147483648.0;
         }
 
         // add a new name to the current scope
-        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type)
+        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(cx, name, attr, type);
+            return top->defineVariable(name, attr, type);
         }
-        Property *defineVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
+        Property *defineVariable(const String& name, AttributeStmtNode *attr, JSType *type, JSValue v)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(cx, name, attr, type, v);
+            return top->defineVariable(name, attr, type, v);
         }
-        Property *defineStaticVariable(Context *cx, const String& name, AttributeStmtNode *attr, JSType *type)
+        Property *defineStaticVariable(const String& name, AttributeStmtNode *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            return top->defineStaticVariable(cx, name, attr, type);
+            return top->defineStaticVariable(name, attr, type);
         }
-        void defineMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineMethod(const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineMethod(cx, name, attr, f);
+            top->defineMethod(name, attr, f);
         }   
-        void defineStaticMethod(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticMethod(const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticMethod(cx, name, attr, f);
+            top->defineStaticMethod(name, attr, f);
         }   
-        void defineConstructor(Context *cx, const String& name, AttributeStmtNode *attr, JSFunction *f)
+        void defineConstructor(const String& name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineConstructor(cx, name, attr, f);
+            top->defineConstructor(name, attr, f);
         }   
-        void defineGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineGetterMethod(cx, name, attr, f);
+            top->defineGetterMethod(name, attr, f);
         }
-        void defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
-            top->defineSetterMethod(cx, name, attr, f);
+            top->defineSetterMethod(name, attr, f);
         }
-        void defineStaticGetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticGetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticGetterMethod(cx, name, attr, f);
+            top->defineStaticGetterMethod(name, attr, f);
         }
-        void defineStaticSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+        void defineStaticSetterMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            top->defineStaticSetterMethod(cx, name, attr, f);
+            top->defineStaticSetterMethod(name, attr, f);
         }
         void defineUnaryOperator(Operator which, JSFunction *f)
         {
@@ -1222,9 +1143,11 @@ static const double two31 = 2147483648.0;
                         mCode(NULL), 
                         mResultType(resultType), 
                         mExpectedArgs(argCount),
+                        mOptionalArgs(0),
                         mArguments(NULL),
                         mScopeChain(NULL), 
                         mIsPrototype(false),
+                        mIsConstructor(false),
                         mClass(NULL)
         {
             if (scopeChain) {
@@ -1241,9 +1164,11 @@ static const double two31 = 2147483648.0;
                         mCode(code), 
                         mResultType(resultType), 
                         mExpectedArgs(0),
+                        mOptionalArgs(0),
                         mArguments(NULL),
                         mScopeChain(NULL),
                         mIsPrototype(false),
+                        mIsConstructor(false),
                         mClass(NULL)
         {
             mPrototype = Function_Type->mPrototypeObject;
@@ -1265,12 +1190,14 @@ static const double two31 = 2147483648.0;
                                                 { ASSERT(mArguments && (index < mExpectedArgs)); mArguments[index].mInitializer = offset; }
 
         void setIsPrototype(bool i)             { mIsPrototype = i; }
+        void setIsConstructor(bool i)           { mIsConstructor = i; }
         void setFunctionName(const String &n)   { mFunctionName = n; }
         void setClass(JSType *c)                { mClass = c; }
 
         virtual bool hasBoundThis()             { return false; }
         virtual bool isNative()                 { return (mCode != NULL); }
         virtual bool isPrototype()              { return mIsPrototype; }
+        virtual bool isConstructor()            { return mIsConstructor; }
         virtual ByteCodeModule *getByteCode()   { ASSERT(!isNative()); return mByteCode; }
         virtual NativeCode *getNativeCode()     { ASSERT(isNative()); return mCode; }
 
@@ -1282,6 +1209,10 @@ static const double two31 = 2147483648.0;
         virtual JSType *getClass()              { return mClass; }
         virtual String &getFunctionName()       { return mFunctionName; }
         virtual uint32 findParameterName(const String *name);
+        virtual uint32 getRequiredArgumentCount()   { return mExpectedArgs; }
+        virtual bool hasOptionalArguments()     { return (mOptionalArgs > 0); }
+        virtual bool isChecked()                { return false; }
+
 
         ParameterBarrel *mParameterBarrel;
         Activation mActivation;                 // not used during execution  (XXX so maybe we should handle it differently, hmmm?)
@@ -1291,9 +1222,11 @@ static const double two31 = 2147483648.0;
         NativeCode *mCode;
         JSType *mResultType;
         uint32 mExpectedArgs;
+        uint32 mOptionalArgs;
         ArgumentData *mArguments;
         ScopeChain *mScopeChain;
         bool mIsPrototype;                      // set for functions with prototype attribute
+        bool mIsConstructor;
         JSType *mClass;                         // pointer to owning class if this function is a method
         String mFunctionName;
     };
@@ -1311,6 +1244,7 @@ static const double two31 = 2147483648.0;
         bool hasBoundThis()             { return true; }
         bool isNative()                 { return mFunction->isNative(); }
         bool isPrototype()              { return mFunction->isPrototype(); }
+        bool isConstructor()            { return mFunction->isConstructor(); }
         ByteCodeModule *getByteCode()   { return mFunction->getByteCode(); }
         NativeCode *getNativeCode()     { return mFunction->getNativeCode(); }
 
@@ -1323,6 +1257,11 @@ static const double two31 = 2147483648.0;
         String &getFunctionName()       { return mFunction->getFunctionName(); }
         uint32 findParameterName(const String *name)
                                         { return mFunction->findParameterName(name); } 
+        virtual uint32 getRequiredArgumentCount()   
+                                        { return mFunction->getRequiredArgumentCount(); }
+        virtual bool hasOptionalArguments()
+                                        { return mFunction->hasOptionalArguments(); }
+        virtual bool isChecked()        { return mFunction->isChecked(); }
 
         void getProperty(Context *cx, const String &name, NamespaceList *names) 
                                         { mFunction->getProperty(cx, name, names); }
@@ -1359,6 +1298,11 @@ static const double two31 = 2147483648.0;
 
     };
 
+
+
+
+
+    class Attribute;
 
     
     class Context {
@@ -1417,7 +1361,6 @@ static const double two31 = 2147483648.0;
         void initOperators();
         void initAttributeValue(char *name, uint32 trueFlags, uint32 falseFlags);
         
-        JSInstance *executeAttributes(ExprNode *attr);
 
         void defineOperator(Operator which, JSType *t1, JSType *t2, JSFunction *imp)
         {
@@ -1425,15 +1368,14 @@ static const double two31 = 2147483648.0;
             mOperatorTable[which].push_back(op);
         }
 
+
+        
         // compiles attribute expression into an attribute object
         // which is stored back into the statement node.
         void setAttributeValue(AttributeStmtNode *s);
+        Attribute *executeAttributes(ExprNode *attr);
 
-        NamespaceList *buildNamespaceList(AttributeStmtNode *attr);
 
-        // extracts the argument to an extend attribute
-        JSType *getExtendArg(JSObject *attributeValue);
-        JSArrayInstance *getNamesArray(JSObject *attributeValue);
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
         JSValue mapValueToType(JSValue v, JSType *t);
@@ -1624,6 +1566,19 @@ static const double two31 = 2147483648.0;
     };
     
     
+    class Attribute : public JSObject {
+    public:
+        Attribute(PropertyAttribute t, PropertyAttribute f)
+            : JSObject(Attribute_Type), mTrueFlags(t), mFalseFlags(f), mExtendArgument(NULL), mNamespaceList(NULL) { }
+
+        PropertyAttribute mTrueFlags;
+        PropertyAttribute mFalseFlags;
+
+        JSType *mExtendArgument;
+        NamespaceList *mNamespaceList;
+    };
+    
+    
     
     
     
@@ -1651,14 +1606,14 @@ static const double two31 = 2147483648.0;
     {
     }
 
-    inline void JSType::addStaticMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+    inline void JSType::addStaticMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
     {
-        defineStaticMethod(cx, name, attr, f);
+        defineStaticMethod(name, attr, f);
     }
 
-    inline void JSType::addMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
+    inline void JSType::addMethod(const String &name, AttributeStmtNode *attr, JSFunction *f)
     {
-        defineMethod(cx, name, attr, f);
+        defineMethod(name, attr, f);
     }
 
 

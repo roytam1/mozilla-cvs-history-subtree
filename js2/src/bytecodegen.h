@@ -118,15 +118,9 @@ PopOp,                  //                          <object> -->
 // for instance members
 GetFieldOp,             // <slot>                   <base> --> <object>
 SetFieldOp,             // <slot>                   <base> <object> --> <object>
-// for static members
-GetStaticFieldOp,       // <slot>                   <base> --> <object>
-SetStaticFieldOp,       // <slot>                   <base> <object> --> <object>
 // for instance methods
 GetMethodOp,            // <slot>                   <base> --> <base> <function>
 GetMethodRefOp,         // <slot>                   <base> --> <bound function> 
-// for static methods
-GetStaticMethodOp,      // <slot>                   <base> --> <function>
-GetStaticMethodRefOp,   // <slot>                   <base> --> <bound function> 
 // for argumentz
 GetArgOp,               // <index>                  --> <object>
 SetArgOp,               // <index>                  <object> --> <object>
