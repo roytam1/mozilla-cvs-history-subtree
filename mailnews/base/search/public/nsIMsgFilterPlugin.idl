@@ -36,6 +36,7 @@
 
 interface nsIMsgFilterHitNotify;
 interface nsIMsgWindow;
+interface nsIMsgDBHdr;
 
 [scriptable, uuid(e2e56690-a676-11d6-80c9-00008646b737)]
 interface nsIMsgFilterPlugin : nsISupports
@@ -54,7 +55,7 @@ interface nsIMsgFilterPlugin : nsISupports
      *                  8-bit form, in violation of XPCOMs |string| typing
      *                  rules.  Oh well.
      */
-    void filterMsgByHeaders(in unsigned long aCount,
+    void filterMsgByHeaders(in nsIMsgDBHdr aMsgHdr, in unsigned long aCount,
                             [array, size_is(aCount)] in string aHeaders,
                             in nsIMsgFilterHitNotify aListener,
                             in nsIMsgWindow aMsgWindow);

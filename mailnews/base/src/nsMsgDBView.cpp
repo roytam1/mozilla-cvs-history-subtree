@@ -1417,8 +1417,16 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, n
       rv = FetchAuthor(msgHdr, getter_Copies(valueText));
     else if (aColID[1] == 'i') // size
       rv = FetchSize(msgHdr, getter_Copies(valueText));
-    else
+    else if (aColID[1] == 't') // status
       rv = FetchStatus(m_flags[aRow], getter_Copies(valueText));
+    else if (aColID[1] == 'c') // score
+    {
+      nsXPIDLCString cStrScore;
+      msgHdr->GetStringProperty("score", getter_Copies(cStrScore));
+      CopyASCIItoUCS2(cStrScore, aValue);
+      break;
+    }
+
     aValue.Assign(valueText);
     break;
   case 'd':  // date
@@ -2591,6 +2599,7 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
         case nsMsgViewSortType::byUnread:
         case nsMsgViewSortType::byStatus:
         case nsMsgViewSortType::byLabel:
+        case nsMsgViewSortType::byScore:
             *pFieldType = kU32;
             *pMaxLen = sizeof(PRUint32);
             break;
@@ -2711,6 +2720,13 @@ nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sor
         if (NS_SUCCEEDED(rv)) 
             *result = !isRead;
         break;
+    case nsMsgViewSortType::byScore:
+      {
+        nsXPIDLCString scoreStr;
+        rv = msgHdr->GetStringProperty("score", getter_Copies(scoreStr));
+        *result = (!scoreStr.IsEmpty()) ? atoi(scoreStr.get()) : 0;
+      }
+      break;
     case nsMsgViewSortType::byId:
         // handled by caller, since caller knows the key
     default:

@@ -2662,11 +2662,11 @@ NS_IMETHODIMP nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
                 PRUint32 i=0; 
                 const char *hPtr;
                 for (hPtr = headers; hPtr < headers + headersSize; 
-                     hPtr = strchr(hPtr, 0) + 1) {
+                     hPtr = strchr(hPtr, 0) + sizeof(MSG_LINEBREAK) - 1) {
                     bogusXpcomHdrsArray[i++] = hPtr;
                 }
 
-                rv = filterPlugin->FilterMsgByHeaders(i, bogusXpcomHdrsArray,
+                rv = filterPlugin->FilterMsgByHeaders(newMsgHdr, i, bogusXpcomHdrsArray,
                                                       this, msgWindow);
             }
 
