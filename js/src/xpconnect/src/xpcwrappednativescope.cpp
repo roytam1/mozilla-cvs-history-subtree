@@ -66,7 +66,7 @@ XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 {
     NS_ASSERTION(!mComponents && aComponents, "bad");
     mComponents = aComponents;
-    NS_ADDREF(mComponents);
+    NS_IF_ADDREF(mComponents);
 }
 
 void 

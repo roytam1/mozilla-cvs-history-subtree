@@ -113,6 +113,10 @@ nsXPConnect::~nsXPConnect()
     // if people try to create components during shutdown. 
     // http://bugzilla.mozilla.org/show_bug.cgi?id=37058
     //
+    // Also, we just plain need the context stack for at least the current 
+    // thread to be in place. Unfortunately, this will leak stuff on the 
+    // stacks' safeJSContexts. But, this is a shutdown leak only.
+
     XPCPerThreadData::CleanupAllThreads();
 
     // shutdown the logging system
