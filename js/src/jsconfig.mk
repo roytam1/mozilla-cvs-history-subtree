@@ -61,7 +61,7 @@ ifeq ($(OS_ARCH), WINNT)
  SHIP_LIBS = jsj.dll js32.dll libnspr21.dll
 endif
 ifeq ($(OS_ARCH), HP-UX)
- SHIP_LIBS = jsj.so js32.so libnspr21.sl
+ SHIP_LIBS = jsj.so libjs.so libnspr21.sl
 endif
 SHIP_LIBS := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
