@@ -123,6 +123,8 @@ public:
   virtual void PopPopupControlState(PopupControlState state) const = 0;
   virtual PopupControlState GetPopupControlState() const = 0;
   virtual OpenAllowValue GetOpenAllow(const nsAString &aName) = 0;
+
+  virtual PRBool IsHandlingResizeEvent() const = 0;
 };
 
 

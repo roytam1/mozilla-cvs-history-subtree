@@ -206,6 +206,7 @@ public:
   virtual NS_HIDDEN_(void) PopPopupControlState(PopupControlState state) const;
   virtual NS_HIDDEN_(PopupControlState) GetPopupControlState() const;
   virtual NS_HIDDEN_(OpenAllowValue) GetOpenAllow(const nsAString &aName);
+  virtual NS_HIDDEN_(PRBool) IsHandlingResizeEvent() const;
 
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
@@ -330,6 +331,7 @@ protected:
   PRPackedBool                  mIsClosed;
   PRPackedBool                  mOpenerWasCleared;
   PRPackedBool                  mIsPopupSpam;
+  PRPackedBool                  mIsHandlingResizeEvent;
   nsString                      mStatus;
   nsString                      mDefaultStatus;
 
