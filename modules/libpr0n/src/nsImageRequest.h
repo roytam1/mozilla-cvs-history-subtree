@@ -44,6 +44,14 @@
     {0x8c, 0xdf, 0xef, 0xfb, 0x70, 0xd1, 0xea, 0x71} \
 }
 
+
+enum {
+  onStartDecode = 0x1,
+  onStartContainer = 0x2,
+  onStopContainer = 0x4,
+  onStopDecode = 0x8
+};
+
 class nsImageRequest : public nsIImageRequest,
                        public nsPIImageRequest,
                        public nsIImageDecoderObserver, 
@@ -71,4 +79,5 @@ private:
 
   PRBool mProcessing;
   PRUint32 mStatus;
+  PRUint32 mState;
 };

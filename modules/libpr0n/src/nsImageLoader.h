@@ -24,6 +24,7 @@
 #include "nsIImageLoader.h"
 #include "nsIThreadPool.h"
 #include "nsCOMPtr.h"
+#include "nsHashtable.h"
 
 #define NS_IMAGELOADER_CID \
 { /* 9f6a0d2e-1dd1-11b2-a5b8-951f13c846f7 */         \
@@ -44,4 +45,6 @@ public:
 
 private:
   nsCOMPtr<nsIThreadPool> mThreadPool;
+
+  nsSupportsHashtable mRequests;
 };

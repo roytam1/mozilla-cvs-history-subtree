@@ -36,10 +36,12 @@
 
 #include "nsString.h"
 
+#include "nsIChannel.h"
+
 #include "nspr.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsImageRequestProxy, nsIImageRequest, nsPIImageRequestProxy,
-                              nsIImageDecoderObserver)
+NS_IMPL_ISUPPORTS3(nsImageRequestProxy, nsIImageRequest, nsPIImageRequestProxy,
+                   nsIImageDecoderObserver)
 
 nsImageRequestProxy::nsImageRequestProxy()
 {
@@ -51,7 +53,7 @@ nsImageRequestProxy::~nsImageRequestProxy()
 {
   /* destructor code */
   nsCOMPtr<nsPIImageRequest> pr(do_QueryInterface(mOwner));
-  pr->RemoveObserver(this, NS_OK);
+  pr->RemoveObserver(this, NS_ERROR_FAILURE); // XXX bogus result value
 }
 
 

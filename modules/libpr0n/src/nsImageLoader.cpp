@@ -36,7 +36,38 @@
 #include "nsPIImageRequest.h"
 #include "nsPIImageRequestProxy.h"
 
+#include "nsXPIDLString.h"
+
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
+
+
+
+class nsIURIKey : public nsHashKey {
+protected:
+  nsCOMPtr<nsIURI> mKey;
+
+public:
+  nsIURIKey(nsIURI* key) : mKey(key) {}
+  ~nsIURIKey(void) {}
+
+  PRUint32 HashCode(void) const {
+    nsXPIDLCString spec;
+    mKey->GetSpec(getter_Copies(spec));
+    return (PRUint32) PL_HashString(spec);
+  }
+
+  PRBool Equals(const nsHashKey *aKey) const {
+    PRBool eq;
+    mKey->Equals( ((nsIURIKey*) aKey)->mKey, &eq );
+    return eq;
+  }
+
+  nsHashKey *Clone(void) const {
+    return new nsIURIKey(mKey);
+  }
+};
+
+
 
 nsImageLoader::nsImageLoader()
 {
@@ -48,6 +79,7 @@ nsImageLoader::~nsImageLoader()
 {
   /* destructor code */
 }
+
 
 //#define IMAGE_THREADPOOL 1
 
@@ -65,19 +97,34 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
   }
 #endif
 
-  nsCOMPtr<nsIIOService> ioserv(do_GetService("@mozilla.org/network/io-service;1"));
-  if (!ioserv) return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIChannel> newChannel;
-  ioserv->NewChannelFromURI(aURI, getter_AddRefs(newChannel));
-  if (!newChannel) return NS_ERROR_FAILURE;
 
-  newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
+  nsCOMPtr<nsPIImageRequest> imgRequest;
 
-  // XXX look at the progid
-  nsCOMPtr<nsPIImageRequest> imgRequest(do_CreateInstance("@mozilla.org/image/request/real;1"));
-  imgRequest->Init(newChannel);
+  nsIURIKey key(aURI);
+  nsISupports *sup = mRequests.Get(&key);
+  if (sup) {
+    imgRequest = do_QueryInterface(sup);
+    NS_RELEASE(sup);
+  } else {
 
+    nsCOMPtr<nsIIOService> ioserv(do_GetService("@mozilla.org/network/io-service;1"));
+    if (!ioserv) return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIChannel> newChannel;
+    ioserv->NewChannelFromURI(aURI, getter_AddRefs(newChannel));
+    if (!newChannel) return NS_ERROR_FAILURE;
+
+    newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
+
+    imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
+    imgRequest->Init(newChannel);
+
+    mRequests.Put(&key, imgRequest);
+
+    nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
+    newChannel->AsyncRead(streamList, cx);  // XXX are we calling this too early?
+  }
 
   nsCOMPtr<nsPIImageRequestProxy> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
   proxyRequest->Init(imgRequest, aObserver, cx); // init adds itself to imgRequest's list of observers
@@ -86,9 +133,6 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 #ifdef IMAGE_THREADPOOL
   nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));
   mThreadPool->DispatchRequest(run);
-#else
-  nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
-  newChannel->AsyncRead(streamList, cx);
 #endif
 
   nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
