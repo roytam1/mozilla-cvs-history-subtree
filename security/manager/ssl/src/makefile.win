@@ -57,6 +57,7 @@ LINCS = $(LINCS)     \
 
 
 SUB_LIBRARIES   = \
+    $(DIST)/lib/smime.lib \
     $(DIST)/lib/crmf.lib \
     $(DIST)/lib/ssl.lib \
     $(DIST)/lib/nss.lib \
@@ -98,6 +99,7 @@ OBJS = \
     .\$(OBJDIR)\nsNSSASN1Object.obj \
     .\$(OBJDIR)\nsCrypto.obj \
     .\$(OBJDIR)\nsPKCS11Slot.obj \
+    .\$(OBJDIR)\nsCMSMessage.obj \
     .\$(OBJDIR)\nsKeygenThread.obj \
     $(NULL)
 
