@@ -66,6 +66,7 @@
 #include "nsIWebShellServices.h"
 #include "nsIDocumentLoader.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIXPConnect.h"
 #include "nsContentList.h"
 #include "nsDOMError.h"
 #include "nsICodebasePrincipal.h"
@@ -2255,28 +2256,117 @@ nsresult
 nsHTMLDocument::WriteCommon(const nsAReadableString& aText,
                             PRBool aNewlineTerminate)
 {
-  nsresult result = NS_OK;
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
 
-  if (nsnull == mParser) {
-    result = Open();
-    if (NS_FAILED(result)) {
-      return result;
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  if (xpc) {
+    rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  nsXPIDLCString spec;
+
+  if (mDocumentURL) {
+    rv = mDocumentURL->GetSpec(getter_Copies(spec));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  if (!mDocumentURL || nsCRT::strcasecmp(spec, "about:blank") == 0) {
+    // The current document's URL and principal are empty or "about:blank".
+    // By writing to this document, the script acquires responsibility for the
+    // document for security purposes. Thus a document.write of a script tag
+    // ends up producing a script with the same principals as the script
+    // that performed the write.
+    nsCOMPtr<nsIScriptSecurityManager> secMan =
+      do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIPrincipal> subject;
+    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subject));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subject));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (subject) {
+      nsCOMPtr<nsICodebasePrincipal> codebase = do_QueryInterface(subject);
+      if (codebase) {
+        nsCOMPtr<nsIURI> subjectURI;
+        rv = codebase->GetURI(getter_AddRefs(subjectURI));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        NS_IF_RELEASE(mDocumentURL);
+        mDocumentURL = subjectURI;
+        NS_ADDREF(mDocumentURL);
+
+        NS_IF_RELEASE(mPrincipal);
+        mPrincipal = subject;
+        NS_ADDREF(mPrincipal);
+      }
     }
   }
-  
-  nsAutoString str(aText);
+
+  const nsAReadableString *text_to_write = &aText;
+  nsAutoString string_buffer;
+
+  if (ncc) {
+    // We're called from C++, concatenate the extra arguments into
+    // string_buffer
+    PRUint32 i, argc;
+
+    ncc->GetArgc(&argc);
+
+    if (argc > 1) {
+      string_buffer.Assign(aText);
+      text_to_write = &string_buffer;
+
+      JSContext *cx = nsnull;
+      rv = ncc->GetJSContext(&cx);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      jsval *argv = nsnull;
+      ncc->GetArgvPtr(&argv);
+      NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
+
+      for (i = 1; i < argc; i++) {
+
+        JSString *str = JS_ValueToString(cx, argv[i]);
+        NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+        string_buffer.Append(NS_REINTERPRET_CAST(const PRUnichar *,
+                                                 ::JS_GetStringChars(str)),
+                             ::JS_GetStringLength(str));
+      }
+    }
+  }
+
+  if (!mParser) {
+    rv = Open();
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+  }
+
 
   if (aNewlineTerminate) {
-    str.AppendWithConversion('\n');
+    if (string_buffer.IsEmpty()) {
+      string_buffer.Assign(aText);
+    }
+
+    text_to_write = &string_buffer;
+
+    string_buffer.Append((PRUnichar)'\n');
   }
 
   mWriteLevel++;
-  result = mParser->Parse(str, NS_GENERATE_PARSER_KEY(), 
-                          NS_ConvertASCIItoUCS2("text/html"), PR_FALSE, 
-                          (!mIsWriting || (mWriteLevel > 1)));
+  rv = mParser->Parse(*text_to_write, NS_GENERATE_PARSER_KEY(),
+                      NS_ConvertASCIItoUCS2("text/html"), PR_FALSE,
+                      (!mIsWriting || (mWriteLevel > 1)));
   mWriteLevel--;
-  
-  return result;
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -2290,92 +2380,6 @@ nsHTMLDocument::Writeln(const nsAReadableString& aText)
 {
   return WriteCommon(aText, PR_TRUE);
 }
-
-#if 0 // merge this into WriteCommon!!!
-
-nsresult
-nsHTMLDocument::ScriptWriteCommon(JSContext *cx, 
-                                  jsval *argv, 
-                                  PRUint32 argc,
-                                  PRBool aNewlineTerminate)
-{
-  nsresult result = NS_OK;
-
-  nsXPIDLCString spec;
-  if (!mDocumentURL ||
-      (NS_SUCCEEDED(mDocumentURL->GetSpec(getter_Copies(spec))) &&
-       nsCRT::strcasecmp(spec, "about:blank") == 0)) 
-  {
-    // The current document's URL and principal are empty or "about:blank".
-    // By writing to this document, the script acquires responsibility for the
-    // document for security purposes. Thus a document.write of a script tag
-    // ends up producing a script with the same principals as the script
-    // that performed the write.
-    nsIScriptContext *context = (nsIScriptContext*)JS_GetContextPrivate(cx);
-    JSObject* obj;
-    if (NS_FAILED(GetScriptObject(context, (void**)&obj))) 
-      return NS_ERROR_FAILURE;
-    nsIScriptSecurityManager *sm = nsJSUtils::nsGetSecurityManager(cx, nsnull);
-    if (!sm)
-      return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIPrincipal> subject;
-    if (NS_FAILED(sm->GetSubjectPrincipal(getter_AddRefs(subject))))
-      return NS_ERROR_FAILURE;
-    if (subject) {
-      nsCOMPtr<nsICodebasePrincipal> codebase = do_QueryInterface(subject);
-      if (codebase) {
-        nsCOMPtr<nsIURI> subjectURI;
-        if (NS_FAILED(codebase->GetURI(getter_AddRefs(subjectURI))))
-          return NS_ERROR_FAILURE;
-
-        NS_IF_RELEASE(mDocumentURL);
-        mDocumentURL = subjectURI;
-        NS_ADDREF(mDocumentURL);
-
-        NS_IF_RELEASE(mPrincipal);
-        mPrincipal = subject;
-        NS_ADDREF(mPrincipal);
-      }
-    }
-  }
-
-  if (!mParser) {
-    nsCOMPtr<nsIDOMDocument> doc;
-
-    result = Open(getter_AddRefs(doc));
-    if (NS_FAILED(result)) {
-      return result;
-    }
-  }
-
-  if (argc > 0) {
-    PRUint32 index;
-    nsAutoString str;
-
-    for (index = 0; index < argc; index++) {
-      JSString *jsstring = JS_ValueToString(cx, argv[index]);
-      
-      if (jsstring) {
-        str.Append(NS_REINTERPRET_CAST(const PRUnichar*,
-                                       JS_GetStringChars(jsstring)),
-                   JS_GetStringLength(jsstring));
-      }
-    }
-
-    if (aNewlineTerminate) {
-      str.AppendWithConversion('\n');
-    }
-
-    mWriteLevel++;
-    result = mParser->Parse(str, NS_GENERATE_PARSER_KEY(), 
-                            NS_ConvertASCIItoUCS2("text/html"), PR_FALSE, 
-                            (!mIsWriting || (mWriteLevel > 1)));
-    mWriteLevel--;
-  }
-  
-  return result;
-}
-#endif
 
 nsIContent *
 nsHTMLDocument::MatchId(nsIContent *aContent, const nsAReadableString& aId)
@@ -2613,7 +2617,7 @@ nsHTMLDocument::GetHeight(PRInt32* aHeight)
   return result;
 }
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsHTMLDocument::GetAlinkColor(nsAWritableString& aAlinkColor)
 {
   nsresult result = NS_OK;
@@ -2637,7 +2641,7 @@ nsHTMLDocument::GetAlinkColor(nsAWritableString& aAlinkColor)
   return NS_OK;
 }
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsHTMLDocument::SetAlinkColor(const nsAReadableString& aAlinkColor)
 {
   nsresult result = NS_OK;
