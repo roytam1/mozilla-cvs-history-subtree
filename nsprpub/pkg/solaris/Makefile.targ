@@ -1,5 +1,5 @@
 #
-# Copyright 2002 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #ident	"$Id$"
@@ -8,15 +8,7 @@
 pkginfo: pkginfo.tmpl ../awk_pkginfo
 	$(RM) $@; nawk -f ../awk_pkginfo $< > $@
 
-# we need to copy prototype_sparc to current too find copyright in current
-prototype:  $(srcdir)/prototype_com $(srcdir)/prototype_$(MACH)
-	cat $(srcdir)/prototype_$(MACH) |  sed -e \
-'/^!include[ 	][ 	]*prototype_com/ r ./prototype_com' \
--e 's/^!include[ 	][ 	]*prototype_com//g' >prototype
-
-
-
-pkg: $(PKGARCHIVE) prototype
+pkg: $(PKGARCHIVE) prototype_$(MACH)
 	cp $(srcdir)/prototype_com .
 	cp $(srcdir)/prototype_$(MACH) .
 	cp $(srcdir)/depend .
@@ -27,12 +19,6 @@ $(PKGARCHIVE):
 
 $(DATAFILES): %: $(srcdir)/../common_files/%
 	$(RM) $@; cp $(srcdir)/../common_files/$@ $@
-
-#$(MACHDATAFILES): %: $(srcdir)/../common_files/%_$(MACH)
-#	$(RM) $@; cp $(srcdir)/../common_files/$@_$(MACH) $@
-#
-#$(MACHDATAFILES): %: $(srcdir)/%_$(MACH)
-#	$(RM) $@; cp $(srcdir)/$@_$(MACH) $@
 
 clobber clean::
 	-$(RM) $(CLOBBERFILES) $(CLEANFILES)
