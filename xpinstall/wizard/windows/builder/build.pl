@@ -71,10 +71,11 @@ if(-d "$cwdDist\\stage")
 }
 
 mkdir("$cwdDist\\stage", 775);
-system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $cwdDist\\stage -f $cwdPackager\\packages-win -o dos -v");
+system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $cwdDist\\stage -f $cwdPackager\\packages-win -o dos -debug 2 -v  >$cwdDist\\stage\\packager.log");
+# use this for debug system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $cwdDist\\stage -f $cwdPackager\\packages-win -o dos  -v  >$cwdDist\\stage\\packager.log");
 
 chdir("$cwdPackager\\windows");
-if(system("perl makeall.pl $ver $cwdDist\\stage $cwdDistWin\\install -aurl $inXpiURL -rurl $inRedirIniURL"))
+if(system("perl makeall.pl $ver $cwdDist\\stage $cwdDistWin\\install -aurl $inXpiURL -rurl $inRedirIniURL >$cwdDist\\stage\\install.log"))
 {
   print "\n Error: perl makeall.pl $ver $cwdDist\\stage $cwdDistWin\\install $inXpiURL $inRedirIniURL\n";
   exit(1);

@@ -102,32 +102,19 @@ else
 }
 print "The display version is: $versionMain\n";
 $versionLanguage               = "en";
-$ENV{WIZ_nameCompany}          = "mozilla.org";
-$ENV{WIZ_nameProduct}          = "Mozilla";
-$ENV{WIZ_nameProductNoVersion} = "Mozilla";
-$ENV{WIZ_fileMainExe}          = "Mozilla.exe";
-$ENV{WIZ_fileUninstall}        = $seuFileNameSpecific;
-$ENV{WIZ_fileUninstallZip}     = $seuzFileNameSpecific;
-# The following variables are for displaying version info in the 
-# the installer.
-$ENV{WIZ_userAgent}            = "$versionMain ($versionLanguage)";
-$ENV{WIZ_userAgentShort}       = "$versionMain";
-$ENV{WIZ_xpinstallVersion}     = "$versionMain";
 
-
-
-#Shit, we never submitted the LocalOptions function, did we?
+# Beonex settings
 
 $seiFileNameGeneric   = "nsinstall.exe";
-$seiFileNameSpecific  = "beonex-comm-0.8-dev-1-win32-installer.exe";
-$seiFileNameSpecificStub  = "beonex-comm-0.8-dev-1-win32-stub-installer.exe";
-$seuFileNameSpecific  = "BeonexComm08Uninstall.exe";
-$seuzFileNameSpecific = "BeonexComm08Uninstall.zip";
+$seiFileNameSpecific  = "beonex-comm-0.8.1-stable-1-win32-installer.exe";
+$seiFileNameSpecificStub  = "beonex-comm-0.8.1-stable-1-win32-stub-installer.exe";
+$seuFileNameSpecific  = "BeonexComm0.8.1Uninstall.exe";
+$seuzFileNameSpecific = "BeonexComm0.8.1Uninstall.zip";
 
 # set environment vars for use by other .pl scripts called from this script.
-$ENV{WIZ_userAgent}            = "0.8 (en)";
-$ENV{WIZ_userAgentShort}       = "0.8";
-$ENV{WIZ_xpinstallVersion}     = "0.8";
+$ENV{WIZ_userAgent}            = "0.8.1 (en)";
+$ENV{WIZ_userAgentShort}       = "0.8.1";
+$ENV{WIZ_xpinstallVersion}     = "0.8.1";
 $ENV{WIZ_nameCompany}          = "Beonex";
 $ENV{WIZ_nameProduct}          = "Beonex Communicator";
 $ENV{WIZ_fileMainExe}          = "beonex-comm.exe";
@@ -154,8 +141,7 @@ if(!(-d "$inStagePath"))
                    "deflenus",
                    "langenus",
                    "regus",
-                   "venkman",
-                   "inspector");
+                   "spellchecker");
 
 if(VerifyComponents()) # return value of 0 means no errors encountered
 {
@@ -535,7 +521,7 @@ sub MakeUninstallIniFile
 sub MakeJsFile
 {
   my($mComponent) = @_;
-
+  print "\n Making .js $mComponent";
   # Make .js file
   if(system("perl makejs.pl $mComponent.jst $inDefaultVersion $gLocalTmpStage\\$mComponent"))
   {

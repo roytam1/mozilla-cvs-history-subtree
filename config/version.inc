@@ -54,12 +54,13 @@ _RC_STRING = $(_RC_STRING) -DEBUG 1
 !if defined(MOZILLA_OFFICIAL) || defined(BUILD_OFFICIAL)
 _RC_STRING = $(_RC_STRING) -OFFICIAL 1
 !endif
+!if defined(RCINCLUDE)
+_RC_STRING = -RCINCLUDE $(RCINCLUDE) $(_RC_STRING)
+!endif
 !if defined(MODULE)
 _RC_STRING = $(_RC_STRING) -MODNAME $(MODULE)
 !endif
-!if defined(RCINCLUDE)
-_RC_STRING = $(_RC_STRING) -RCINCLUDE $(RCINCLUDE)
-!endif
+
 
 RESFILE=$(OBJDIR)\module.res
 RCFILE=$(OBJDIR)\module.rc

@@ -73,7 +73,7 @@ CPP_OBJS=                               \
 
 MAKE_OBJ_TYPE = EXE
 PROGRAM = .\$(OBJDIR)\beonex-comm.exe
-RCINCLUDE = splash.rc
+RCINCLUDE = "splash.rc"
 
 LCFLAGS = \
         $(LCFLAGS) \

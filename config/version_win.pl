@@ -42,7 +42,7 @@ use Getopt::Std;
 
 #Creates version resource file
 
-#Paramaters are passed on the command line:
+#Parameters are passed on the command line:
 
 #Example: -PBI=blah -DEBUG=1
 
@@ -112,6 +112,10 @@ if (!defined($objdir)) {$objdir=".";}
 if (!defined($srcdir)) {$srcdir=".";}
 if (!defined($topsrcdir)) {$topsrcdir=".";}
 if (!defined($bits)) {$bits="";}
+
+print "RCINCLUDE = ",$rcinclude,"\n";
+print "object = ",$objdir,"\n";
+print "module = ", $module,"\n";
 my $mfversion = "Personal";
 my $mpversion = "Personal";
 my $fileflags = "VS_FF_PRIVATEBUILD";
@@ -151,12 +155,15 @@ my $override_module;
 my $override_copyright;
 my $override_trademarks;
 my $override_filename;
+my $override_product;
+
 if (open(VERFILE, "<$srcdir/module.ver")) 
 {
-
+    print "opening module.ver\n";
 	my ($a,$b) = getNextEntry();
 	while (defined($a))
 	{
+	        print "a = ",$a," b = ",$b,"\n";
 		if ($a eq "WIN32_MODULE_COMMENT") { $override_comment = $b; }
 		if ($a eq "WIN32_MODULE_DESCRIPTION") { $override_description = $b; }
 		if ($a eq "WIN32_MODULE_FILEVERSION") { $override_fileversion = $b; }
@@ -166,6 +173,7 @@ if (open(VERFILE, "<$srcdir/module.ver"))
 		if ($a eq "WIN32_MODULE_COPYRIGHT") { $override_copyright = $b; }
 		if ($a eq "WIN32_MODULE_TRADEMARKS") { $override_trademarks = $b; }
 		if ($a eq "WIN32_MODULE_ORIGINAL_FILENAME") { $override_filename = $b; }
+		if ($a eq "WIN32_MODULE_PRODUCT") { $override_product = $b; }
 		($a,$b) = getNextEntry();
 	}
 	close(VERFILE)
@@ -238,7 +246,7 @@ my $fileversion = $productversion;
 my $copyright = "License: MPL 1.1/GPL 2.0/LGPL 2.1";
 my $company = "Mozilla, Netscape";
 my $trademarks = "Mozilla, Netscape";
-
+my $product = "Mozilla";
 
 
 if (defined($override_comment)){$comment=$override_comment;}
@@ -250,6 +258,7 @@ if (defined($override_module)){$module=$override_module;}
 if (defined($override_copyright)){$copyright=$override_company;}
 if (defined($override_trademarks)){$trademarks=$override_trademarks;}
 if (defined($override_filename)){$binary=$override_filename;}
+if (defined($override_product)){$product=$override_product;}
 
 
 #Override section
@@ -393,7 +402,7 @@ print RCFILE qq{
 };
 }
 print RCFILE qq{
-            VALUE "ProductName", "Mozilla"
+            VALUE "ProductName", "$product"
         END
     END
     BLOCK "VarFileInfo"

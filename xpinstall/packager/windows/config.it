@@ -205,7 +205,7 @@ C8=Component US region pack
 ; this component can easily remove it.
 ;C10=Component DOM Inspector
 ;C11=Component QFA
-C12=Component Spellcheck
+C12=Component Spellchecker
 
 [Setup Type2]
 ;*** LOCALIZE ME BABY ***
@@ -232,7 +232,7 @@ C8=Component US region pack
 ; this component can easily remove it.
 ;C10=Component DOM Inspector
 ;C11=Component QFA
-C12=Component Spellcheck
+C12=Component Spellchecker
 
 
 
@@ -723,16 +723,19 @@ $InstallSizeArchive$:inspector.xpi
 Attributes=SELECTED|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\Chrome\inspector.jar
 
-[Component Spellcheck]
+[Component Spellchecker]
 Description Short=Spellchecker
 ;*** LOCALIZE ME BABY ***
 Description Long=to check the spelling of your emails and webpages
-Archive=spellcheck.xpi
-$InstallSize$:spellcheck
+Archive=spellchecker.xpi
+$InstallSize$:spellchecker
 $InstallSizeSystem$
-$InstallSizeArchive$:spellcheck.xpi
+$InstallSizeArchive$:spellchecker.xpi
 Attributes=SELECTED|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\components\libspellchecker.dll
+Force Upgrade File0=[SETUP PATH]\components\spellchecker.dll
+Force Upgrade File1=[SETUP PATH]\components\myspell.dll
+Force Upgrade File2=[SETUP PATH]\components\myspell\en-US.aff
+Force Upgrade File3=[SETUP PATH]\components\myspell\en-US.dic
 
 [Component US English Profile Defaults]
 Description Short=US English profile defaults
