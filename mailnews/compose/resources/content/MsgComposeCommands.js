@@ -2187,7 +2187,7 @@ function LoadIdentity(startup)
     }
 
     // Initialize our security options
-    initSecuritySettings();
+    // initSecuritySettings();
 }
 
 function setupAutocomplete()
@@ -2365,53 +2365,4 @@ function DisplaySaveFolderDlg(folderURI)
 
   }//if
   return;
-}
-
-function encryptMessage()
-{
-    if (gCurrentIdentity.encryptionCertName == null) {
-        alert(gComposeMsgsBundle.getString("chooseEncryptionCertMsg"));
-        document.getElementById("menu_securityEncryptAlways").removeAttribute("checked");
-        return;
-    }
-
-    var msgCompFields = msgCompose.compFields;
-    if (msgCompFields) {
-        if (msgCompFields.alwaysEncryptMessage) {
-            msgCompFields.alwaysEncryptMessage = false;
-        } else {
-            msgCompFields.alwaysEncryptMessage = true;
-        }
-    }
-}
-
-function signMessage()
-{
-    if (gCurrentIdentity.signingCertName == null) {
-        alert(gComposeMsgsBundle.getString("chooseSigningCertMsg"));
-        document.getElementById("menu_securitySign").removeAttribute("checked");
-        return;
-    }
-
-    var msgCompFields = msgCompose.compFields;
-    if (msgCompFields) {
-        if (msgCompFields.signMessage) {
-            msgCompFields.signMessage = false;
-        } else {
-            msgCompFields.signMessage = true;
-        }
-    }
-}
-
-function initSecuritySettings()
-{
-    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", gCurrentIdentity.alwaysEncryptMessage);
-    document.getElementById("menu_securitySign").setAttribute("checked", gCurrentIdentity.signMessage);
-}
-
-function setSecuritySettings()
-{
-    var msgCompFields = msgCompose.compFields;
-    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", msgCompFields.alwaysEncryptMessage);
-    document.getElementById("menu_securitySign").setAttribute("checked", msgCompFields.signMessage);
 }

@@ -268,8 +268,8 @@
         </menupopup>
       </menu>
   
-      <menu label="&optionsMenu.label;" accesskey="&optionsMenu.accesskey;">
-        <menupopup> 
+      <menu id="optionsMenu" label="&optionsMenu.label;" accesskey="&optionsMenu.accesskey;">
+        <menupopup id="optionsMenuPopup"> 
           <menuitem label="&selectAddressCmd.label;" accesskey="&selectAddressCmd.accesskey;" command="cmd_selectAddress"/>
           <menuitem label="&checkSpellingCmd.label;" id="menu_checkspelling" accesskey="&checkSpellingCmd.accesskey;" key="key_checkspelling" command="cmd_spelling"/>
           <!--menuitem label="&quoteOrigCmd.label;" accesskey="&quoteOrigCmd.accesskey;" command="cmd_quoteMessage"/-->  
@@ -344,15 +344,6 @@
               </rule>
             </template>
           </menu>     
-
-          <menuseparator/>
-          <menu label="&securityMenu.label;">
-            <menupopup onpopupshowing="setSecuritySettings()">
-            <menuitem id="menu_securityEncryptIfPossible" type="checkbox" label="&menu_securityEncryptIfPossible.label;" disabled="true"/>
-            <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="encryptMessage()"/>
-            <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="signMessage()"/>
-            </menupopup>
-          </menu>
 
           <!--menuseparator/>
           <menuitem label="&addSignatureCmd.label;" disabled="true" oncommand=""/>      
