@@ -2113,6 +2113,15 @@ function stylesheetSwitch(forDocument, title) {
 
 function applyTheme(themeName)
 {
+//XXX should fix this the right way
+var commonDialogs = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1","nsICommonDialogs");
+var bundle = srGetStrBundle("chrome://communicator/locale/pref/prefutilities.properties");
+var dialogTitle = bundle.GetStringFromName("applythemetitle");
+var msg = bundle.GetStringFromName("applytheme");
+
+if (!commonDialogs.Confirm(window, dialogTitle, msg))
+  return false;
+
 try {
   var chromeRegistry = Components.classes["@mozilla.org/chrome/chrome-registry;1"].getService();
   if ( chromeRegistry )
