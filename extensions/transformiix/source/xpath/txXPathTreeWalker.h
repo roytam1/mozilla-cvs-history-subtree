@@ -78,6 +78,7 @@ public:
 class txXPathTreeWalker
 {
 public:
+    txXPathTreeWalker(const txXPathTreeWalker& aOther);
     txXPathTreeWalker(const txXPathNode& aNode);
     ~txXPathTreeWalker();
 
@@ -85,34 +86,28 @@ public:
     PRBool getLocalName(nsIAtom** aLocalName) const;
     PRInt32 getNamespaceID() const;
     PRUint16 getNodeType() const;
+    void getNodeValue(nsAString& aResult) const;
+    PRBool getNodeName(nsAString& aName) const;
 
     PRBool moveTo(const txXPathTreeWalker& aWalker)
     {
         setTo(mPosition, aWalker.mPosition);
+#ifndef TX_EXE
+        mCurrentIndex = aWalker.mCurrentIndex;
+        mDescendants.Clear();
+#endif
         return PR_TRUE;
     }
 
     PRBool moveToDOMParent();
+    PRBool moveToParent();
     PRBool moveToElementById(const nsAString& aID);
     PRBool moveToFirstAttribute();
+    PRBool moveToNextAttribute();
     PRBool moveToFirstChild();
-    PRBool moveToFirstDescendant();
-    PRBool moveToFirstFollowing();
-    PRBool moveToFirstFollowingSibling();
-    PRBool moveToFirstPreceding();
-    /**
-     * used for xsl:number
-     *  works like preceding "-or-" ancestor-or-self axes
-     */
-    PRBool moveToFirstPrecedingInDocOrder();
-    PRBool moveToFirstPrecedingSibling();
-    PRBool moveToNextDescendant();
-    PRBool moveToNextFollowing();
-    PRBool moveToNextPreceding();
-    PRBool moveToNextPrecedingInDocOrder();
+    PRBool moveToLastChild();
     PRBool moveToNextSibling();
     PRBool moveToPreviousSibling();
-    PRBool moveToParent();
 
     PRBool isOnNode(const txXPathNode& aNode) const;
 
@@ -122,18 +117,14 @@ public:
 
 private:
 #ifdef TX_EXE
-    PRBool moveToPreceding(NodeDefinition* aNode);
     txXPathNode mPosition;
-    PRUint32 mLevel;
 #else
-    void moveToLastDescendant(nsIContent* aDescendant,
-                              PRUint32 aDescendantIndex);
-    PRBool moveToSibling(PRBool aForward);
     PRBool moveToValidAttribute(PRUint32 aStartIndex);
+    PRBool moveToSibling(PRInt32 aDir);
 
     txXPathNode mPosition;
     PRUint32 mCurrentIndex;
-    nsAutoPtr<txUint32Array> mDescendants;
+    txUint32Array mDescendants;
 #endif
 };
 
@@ -181,8 +172,8 @@ public:
     static txXPathNode* createXPathNode(nsIDOMNode* aNode);
     static txXPathNode* createXPathNode(nsIDOMDocument* aDocument);
     static nsresult getNode(const txXPathNode& aNode, nsIDOMNode** aResult);
-    static nsresult getContent(const txXPathNode& aNode, nsIContent** aResult);
-    static nsresult getDocument(const txXPathNode& aNode, nsIDocument** aResult);
+    static nsIContent* getContent(const txXPathNode& aNode);
+    static nsIDocument* getDocument(const txXPathNode& aNode);
 };
 
 #endif
@@ -216,6 +207,18 @@ inline PRUint16
 txXPathTreeWalker::getNodeType() const
 {
     return txXPathNodeUtils::getNodeType(mPosition);
+}
+
+inline void
+txXPathTreeWalker::getNodeValue(nsAString& aResult) const
+{
+    txXPathNodeUtils::getNodeValue(mPosition, aResult);
+}
+
+inline PRBool
+txXPathTreeWalker::getNodeName(nsAString& aName) const
+{
+    return txXPathNodeUtils::getNodeName(mPosition, aName);
 }
 
 inline PRBool

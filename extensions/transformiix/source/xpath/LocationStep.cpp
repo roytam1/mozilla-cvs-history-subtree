@@ -85,8 +85,7 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                 if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                     nodes->append(walker.getCurrentPosition());
                 }
-            } while (walker.moveToNextSibling());
-
+            } while (walker.moveToNextAttribute());
             break;
         }
         case DESCENDANT_OR_SELF_AXIS:
@@ -98,44 +97,45 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         }
         case DESCENDANT_AXIS:
         {
-            if (!walker.moveToFirstDescendant()) {
-                break;
-            }
-
-            do {
-                if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
-                    nodes->append(walker.getCurrentPosition());
-                }
-            } while (walker.moveToNextDescendant());
-
+            fromDescendants(walker.getCurrentPosition(), aContext, nodes);
             break;
         }
         case FOLLOWING_AXIS:
         {
-            if (!walker.moveToFirstFollowing()) {
-                break;
+            if (walker.getNodeType() == txXPathNodeType::ATTRIBUTE_NODE) {
+                walker.moveToParent();
+                fromDescendants(walker.getCurrentPosition(), aContext, nodes);
             }
-
-            do {
+            PRBool cont = PR_TRUE;
+            while (!walker.moveToNextSibling()) {
+                if (!walker.moveToParent()) {
+                    cont = PR_FALSE;
+                    break;
+                }
+            }
+            while (cont) {
                 if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                     nodes->append(walker.getCurrentPosition());
                 }
-            } while (walker.moveToNextFollowing());
 
+                fromDescendants(walker.getCurrentPosition(), aContext, nodes);
+
+                while (!walker.moveToNextSibling()) {
+                    if (!walker.moveToParent()) {
+                        cont = PR_FALSE;
+                        break;
+                    }
+                }
+            }
             break;
         }
         case FOLLOWING_SIBLING_AXIS:
         {
-            if (!walker.moveToFirstFollowingSibling()) {
-                break;
-            }
-
-            do {
+            while (walker.moveToNextSibling()) {
                 if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                     nodes->append(walker.getCurrentPosition());
                 }
-            } while (walker.moveToNextSibling());
-
+            }
             break;
         }
         case NAMESPACE_AXIS: //-- not yet implemented
@@ -156,32 +156,38 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         {
             nodes->setReverse();
 
-            if (!walker.moveToFirstPreceding()) {
-                break;
+            PRBool cont = PR_TRUE;
+            while (!walker.moveToPreviousSibling()) {
+                if (!walker.moveToParent()) {
+                    cont = PR_FALSE;
+                    break;
+                }
             }
+            while (cont) {
+                fromDescendantsRev(walker.getCurrentPosition(), aContext, nodes);
 
-            do {
                 if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                     nodes->append(walker.getCurrentPosition());
                 }
-            } while (walker.moveToNextPreceding());
 
+                while (!walker.moveToPreviousSibling()) {
+                    if (!walker.moveToParent()) {
+                        cont = PR_FALSE;
+                        break;
+                    }
+                }
+            }
             break;
         }
         case PRECEDING_SIBLING_AXIS:
         {
             nodes->setReverse();
 
-            if (!walker.moveToFirstPrecedingSibling()) {
-                break;
-            }
-
-            do {
+            while (walker.moveToPreviousSibling()) {
                 if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                     nodes->append(walker.getCurrentPosition());
                 }
-            } while (walker.moveToPreviousSibling());
-
+            }
             break;
         }
         case SELF_AXIS:
@@ -202,7 +208,6 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                     nodes->append(walker.getCurrentPosition());
                 }
             } while (walker.moveToNextSibling());
-
             break;
         }
     }
@@ -215,10 +220,47 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
     nodes->unsetReverse();
 
-    *aResult = nodes;
-    NS_ADDREF(*aResult);
+    NS_ADDREF(*aResult = nodes);
 
     return NS_OK;
+}
+
+void LocationStep::fromDescendants(const txXPathNode& aNode,
+                                   txIMatchContext* cs,
+                                   txNodeSet* nodes)
+{
+    txXPathTreeWalker walker(aNode);
+    if (!walker.moveToFirstChild()) {
+        return;
+    }
+
+    do {
+        const txXPathNode& child = walker.getCurrentPosition();
+        if (mNodeTest->matches(child, cs)) {
+            nodes->append(child);
+        }
+        fromDescendants(child, cs, nodes);
+    } while (walker.moveToNextSibling());
+}
+
+void LocationStep::fromDescendantsRev(const txXPathNode& aNode,
+                                      txIMatchContext* cs,
+                                      txNodeSet* nodes)
+{
+    txXPathTreeWalker walker(aNode);
+    if (!walker.moveToLastChild()) {
+        return;
+    }
+
+    do {
+        const txXPathNode& child = walker.getCurrentPosition();
+        fromDescendantsRev(child, cs, nodes);
+
+        if (mNodeTest->matches(child, cs)) {
+            nodes->append(child);
+        }
+
+    } while (walker.moveToPreviousSibling());
 }
 
 /**

@@ -308,28 +308,6 @@ PRBool txXSLKey::addKey(nsAutoPtr<txPattern> aMatch, nsAutoPtr<Expr> aUse)
     return PR_TRUE;
 }
 
-nsresult
-txXSLKey::indexNodeAndAtts(const txXPathNode& aNode,
-                           txKeyValueHashKey& aKey,
-                           txKeyValueHash& aKeyValueHash,
-                           txExecutionState& aEs)
-{
-    nsresult rv = testNode(aNode, aKey, aKeyValueHash, aEs);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // check if the nodes attributes match
-    txXPathTreeWalker walker(aNode);
-    PRBool hasAttributes = walker.moveToFirstAttribute();
-    while (hasAttributes) {
-        testNode(walker.getCurrentPosition(), aKey, aKeyValueHash, aEs);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        hasAttributes = walker.moveToNextSibling();
-    }
-
-    return NS_OK;
-}
-
 /**
  * Indexes a document and adds it to the hash of key values
  * @param aDocument     Document to index and add
@@ -358,21 +336,27 @@ nsresult txXSLKey::indexTree(const txXPathNode& aNode,
                              txKeyValueHash& aKeyValueHash,
                              txExecutionState& aEs)
 {
-    txXPathTreeWalker walker(aNode);
-
-    nsresult rv = indexNodeAndAtts(walker.getCurrentPosition(), aKey,
-                                   aKeyValueHash, aEs);
+    nsresult rv = testNode(aNode, aKey, aKeyValueHash, aEs);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    PRBool hasDescendant = walker.moveToFirstDescendant();
-    while (hasDescendant) {
-        rv = indexNodeAndAtts(walker.getCurrentPosition(), aKey,
-                              aKeyValueHash, aEs);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        hasDescendant = walker.moveToNextDescendant();
+    txXPathTreeWalker walker(aNode);
+    if (walker.moveToFirstAttribute()) {
+        do {
+            rv = testNode(walker.getCurrentPosition(), aKey, aKeyValueHash,
+                          aEs);
+            NS_ENSURE_SUCCESS(rv, rv);
+        } while (walker.moveToNextAttribute());
+        walker.moveToParent();
     }
-    
+
+    if (walker.moveToFirstChild()) {
+        do {
+            rv = indexTree(walker.getCurrentPosition(), aKey, aKeyValueHash,
+                           aEs);
+            NS_ENSURE_SUCCESS(rv, rv);
+        } while (walker.moveToNextSibling());
+    }
+
     return NS_OK;
 }
 

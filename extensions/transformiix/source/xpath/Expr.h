@@ -363,6 +363,11 @@ public:
     TX_DECL_EXPR;
 
 private:
+    void fromDescendants(const txXPathNode& aNode, txIMatchContext* cs,
+                         txNodeSet* nodes);
+    void fromDescendantsRev(const txXPathNode& aNode, txIMatchContext* cs,
+                            txNodeSet* nodes);
+
     nsAutoPtr<txNodeTest> mNodeTest;
     LocationStepType mAxisIdentifier;
 };

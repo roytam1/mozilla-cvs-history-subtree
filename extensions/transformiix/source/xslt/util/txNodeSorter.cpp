@@ -249,7 +249,6 @@ txNodeSorter::compareNodes(const void* aIndexA, const void* aIndexB,
     SortData* sortData = NS_STATIC_CAST(SortData*, aSortData);
     NS_ENSURE_SUCCESS(sortData->mRv, -1);
 
-    nsresult rv = NS_OK;
     txListIterator iter(&sortData->mNodeSorter->mSortKeys);
     PRUint32 indexA = *NS_STATIC_CAST(const PRUint32*, aIndexA);
     PRUint32 indexB = *NS_STATIC_CAST(const PRUint32*, aIndexB);

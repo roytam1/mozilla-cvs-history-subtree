@@ -274,14 +274,9 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
         PRInt32 value = 0;
         MBool matchedFrom = MB_FALSE;
 
-        if (countPattern->matches(currNode, aContext)) {
-            ++value;
-        }
-
         txXPathTreeWalker walker(currNode);
-        PRBool hasPreceding = walker.moveToFirstPrecedingInDocOrder();
-        while (hasPreceding) {
-            if (aFromPattern &&
+        do {
+            if (aFromPattern && !walker.isOnNode(currNode) &&
                 aFromPattern->matches(walker.getCurrentPosition(), aContext)) {
                 matchedFrom = MB_TRUE;
                 break;
@@ -291,8 +286,7 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
                 ++value;
             }
 
-            hasPreceding = walker.moveToNextPrecedingInDocOrder();
-        }
+        } while (getPrevInDocumentOrder(walker));
 
         // Spec says to only count nodes that follows the first node that
         // matches the from pattern. So so if none did then we shouldn't
@@ -463,6 +457,17 @@ txXSLTNumber::getSiblingCount(const txXPathTreeWalker& aWalker,
     return value;
 }
 
+PRBool
+txXSLTNumber::getPrevInDocumentOrder(txXPathTreeWalker& aWalker)
+{
+    if (aWalker.moveToPreviousSibling()) {
+        while (aWalker.moveToLastChild()) {
+            // do nothing
+        }
+        return PR_TRUE;
+    }
+    return aWalker.moveToParent();
+}
 
 #define TX_CHAR_RANGE(ch, a, b) if (ch < a) return MB_FALSE; \
     if (ch <= b) return MB_TRUE

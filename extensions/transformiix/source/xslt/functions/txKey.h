@@ -150,11 +150,6 @@ public:
                            txExecutionState& aEs);
 
 private:
-    nsresult indexNodeAndAtts(const txXPathNode& aNode,
-                              txKeyValueHashKey& aKey,
-                              txKeyValueHash& aKeyValueHash,
-                              txExecutionState& aEs);
-
     /**
      * Recursively searches a node, its attributes and its subtree for
      * nodes matching any of the keys match-patterns.

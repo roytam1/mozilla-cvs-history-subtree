@@ -44,8 +44,13 @@
 #include "nsString.h"
 #include "XMLUtils.h"
 
+txXPathTreeWalker::txXPathTreeWalker(const txXPathTreeWalker& aOther)
+    : mPosition(aOther.mPosition)
+{
+}
+
 txXPathTreeWalker::txXPathTreeWalker(const txXPathNode& aNode)
-    : mPosition(aNode), mLevel(0)
+    : mPosition(aNode)
 {
 }
 
@@ -100,223 +105,10 @@ txXPathTreeWalker::moveToFirstAttribute()
 }
 
 PRBool
-txXPathTreeWalker::moveToFirstChild()
+txXPathTreeWalker::moveToNextAttribute()
 {
-    if (!INNER->firstChild) {
-        return PR_FALSE;
-    }
-
-    INNER = INNER->firstChild;
-
-    return PR_TRUE;
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstDescendant()
-{
-    mLevel = 0;
-    return moveToFirstChild();
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstFollowing()
-{
-    if (INNER->nodeType == Node::DOCUMENT_NODE) {
-        return PR_FALSE;
-    }
-
-    NodeDefinition* node = INNER;
-    if (INNER->nodeType == Node::ATTRIBUTE_NODE) {
-        node = NS_STATIC_CAST(NodeDefinition*, INNER->getXPathParent());
-        if (node->firstChild) {
-            INNER = node->firstChild;
-            return PR_TRUE;
-        }
-    }
-
-    // Now walk up the parent chain to find the first ancestor that has a
-    // following sibling.
-    while (node) {
-        // First check if content has any following siblings
-        if (node->nextSibling) {
-            INNER = node->nextSibling;
-            return PR_TRUE;
-        }
-        node = node->parentNode;
-    }
-
-    return PR_FALSE;
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstFollowingSibling()
-{
-    if (INNER->nodeType == Node::DOCUMENT_NODE ||
-        INNER->nodeType == Node::ATTRIBUTE_NODE ||
-        !INNER->nextSibling) {
-        return PR_FALSE;
-    }
-
-    INNER = INNER->nextSibling;
-
-    return PR_TRUE;
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstPreceding()
-{
-    if (INNER->nodeType == Node::DOCUMENT_NODE) {
-        return PR_FALSE;
-    }
-
-    NodeDefinition* node = INNER;
-    if (INNER->nodeType == Node::ATTRIBUTE_NODE) {
-        node = NS_STATIC_CAST(NodeDefinition*, node->getXPathParent());
-    }
-
-    mLevel = 0;
-
-    return moveToPreceding(node);
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
-{
-    return moveToNextPrecedingInDocOrder();
-}
-
-PRBool
-txXPathTreeWalker::moveToFirstPrecedingSibling()
-{
-    if (INNER->nodeType == Node::DOCUMENT_NODE ||
-        INNER->nodeType == Node::ATTRIBUTE_NODE ||
-        !INNER->previousSibling) {
-        return PR_FALSE;
-    }
-
-    INNER = INNER->previousSibling;
-
-    return PR_TRUE;
-}
-
-PRBool
-txXPathTreeWalker::moveToNextDescendant()
-{
-    NS_ASSERTION(INNER->nodeType != Node::DOCUMENT_NODE ||
-                 INNER->nodeType != Node::ATTRIBUTE_NODE,
-                 "Wrong type, maybe you called moveToNextDescendant without "
-                 "moveToFirstDescendant first?");
-
-    if (moveToFirstChild()) {
-        ++mLevel;
-        return PR_TRUE;
-    }
-    NodeDefinition* node = INNER;
-    while (!node->nextSibling && mLevel) {
-        --mLevel;
-        if (!node->parentNode) {
-            return PR_FALSE;
-        }
-        node = node->parentNode;
-    }
-    if (node->nextSibling) {
-        INNER = node->nextSibling;
-        return PR_TRUE;
-    }
-    return PR_FALSE;
-}
-
-PRBool
-txXPathTreeWalker::moveToNextFollowing()
-{
-    NS_ASSERTION(INNER->nodeType != Node::DOCUMENT_NODE ||
-                 INNER->nodeType != Node::ATTRIBUTE_NODE,
-                 "Wrong type, maybe you called moveToNextFollowing without "
-                 "moveToFirstFollowing first?");
-
-    // try descendants, as this is not starting with self
-    if (moveToFirstChild()) {
-        return PR_TRUE;
-    }
-    // find the first nextSibling of an ancestor-or-self
-    NodeDefinition* node = INNER;
-    do {
-        if (node->nextSibling) {
-            INNER = node->nextSibling;
-            return PR_TRUE;
-        }
-        node = node->parentNode;
-    } while (node && node->nodeType != Node::DOCUMENT_NODE);
-
-    return PR_FALSE;
-}
-
-PRBool
-txXPathTreeWalker::moveToNextPreceding()
-{
-    NS_ASSERTION(INNER->nodeType != Node::DOCUMENT_NODE ||
-                 INNER->nodeType != Node::ATTRIBUTE_NODE,
-                 "Wrong type, maybe you called moveToNextPreceding without "
-                 "moveToFirstPreceding first?");
-
-    NodeDefinition* node = INNER;
-    return moveToPreceding(node);
-}
-
-PRBool
-txXPathTreeWalker::moveToPreceding(NodeDefinition* aNode)
-{
-    while (aNode) {
-        if (aNode->previousSibling) {
-            aNode = aNode->previousSibling;
-            while (aNode->lastChild) {
-                aNode = aNode->lastChild;
-                ++mLevel;
-            }
-            INNER = aNode;
-            return PR_TRUE;
-        }
-        aNode = aNode->parentNode;
-        if (mLevel) {
-            --mLevel;
-            INNER = aNode;
-            return PR_TRUE;
-        }
-    }        
-
-    return PR_FALSE;
-}
-
-PRBool
-txXPathTreeWalker::moveToNextPrecedingInDocOrder()
-{
-    // Almost the same as moveToNextPreceding, just include ancestors as well.
-    NS_ASSERTION(INNER->nodeType != Node::ATTRIBUTE_NODE, 
-                 "Attributes are excluded");
-    NodeDefinition* node = INNER;
-    if (!node->previousSibling) {
-        return moveToParent();
-    }
-    node = node->previousSibling;
-    while (node->lastChild) {
-        node = node->lastChild;
-    }
-    INNER = node;
-    return PR_TRUE;
-}
-
-PRBool
-txXPathTreeWalker::moveToNextSibling()
-{
-    if (INNER->nodeType == Node::DOCUMENT_NODE) {
-        return PR_FALSE;
-    }
-
+    // XXX an assertion should be enough here with the current code
     if (INNER->nodeType != Node::ATTRIBUTE_NODE) {
-        if (INNER->nextSibling) {
-            INNER = INNER->nextSibling;
-            return PR_TRUE;
-        }
         return PR_FALSE;
     }
 
@@ -324,7 +116,7 @@ txXPathTreeWalker::moveToNextSibling()
     NamedNodeMap* attrs = element->getAttributes();
     // find the ListItem for the current Attr
     NodeListDefinition::ListItem* item = attrs->firstItem;
-    while (item && item->node != INNER) {
+    while (item->node != INNER) {
         item = item->next;
     }
     NS_ASSERTION(item, "Attr not attribute of it's owner?");
@@ -339,16 +131,57 @@ txXPathTreeWalker::moveToNextSibling()
     }
 
     INNER = NS_STATIC_CAST(NodeDefinition*, item->node);
-    return PR_TRUE;
 
+    return PR_TRUE;
+}
+
+PRBool
+txXPathTreeWalker::moveToFirstChild()
+{
+    // XXX do we need to check if this is an attribute?
+    if (!INNER->firstChild) {
+        return PR_FALSE;
+    }
+
+    INNER = INNER->firstChild;
+
+    return PR_TRUE;
+}
+
+PRBool
+txXPathTreeWalker::moveToLastChild()
+{
+    // XXX do we need to check if this is an attribute?
+    if (!INNER->lastChild) {
+        return PR_FALSE;
+    }
+
+    INNER = INNER->lastChild;
+
+    return PR_TRUE;
+}
+
+PRBool
+txXPathTreeWalker::moveToNextSibling()
+{
+    // XXX are the doc and attribute checks needed?
+    if (INNER->nodeType == Node::DOCUMENT_NODE ||
+        INNER->nodeType == Node::ATTRIBUTE_NODE ||
+        !INNER->nextSibling) {
+        return PR_FALSE;
+    }
+
+    INNER = INNER->nextSibling;
+
+    return PR_TRUE;
 }
 
 PRBool
 txXPathTreeWalker::moveToPreviousSibling()
 {
-    NS_ASSERTION(INNER->nodeType != Node::ATTRIBUTE_NODE,
-                 "reversed attribute axis does not exist");
+    // XXX are the doc and attribute checks needed?
     if (INNER->nodeType == Node::DOCUMENT_NODE ||
+        INNER->nodeType == Node::ATTRIBUTE_NODE ||
         !INNER->previousSibling) {
         return PR_FALSE;
     }

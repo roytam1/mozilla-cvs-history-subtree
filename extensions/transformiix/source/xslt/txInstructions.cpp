@@ -319,19 +319,19 @@ txCopyBase::copyNode(const txXPathNode& aNode, txExecutionState& aEs)
 
             // Copy attributes
             txXPathTreeWalker walker(aNode);
-            PRBool hasAttribute = walker.moveToFirstAttribute();
-            while (hasAttribute) {
-                nsAutoString nodeName, nodeValue;
-                txXPathNodeUtils::getNodeName(walker.getCurrentPosition(), nodeName);
-                txXPathNodeUtils::getNodeValue(walker.getCurrentPosition(), nodeValue);
-                aEs.mResultHandler->attribute(nodeName,
-                                              txXPathNodeUtils::getNamespaceID(walker.getCurrentPosition()),
-                                              nodeValue);
-                hasAttribute = walker.moveToNextSibling();
+            if (walker.moveToFirstAttribute()) {
+                do {
+                    nsAutoString nodeName, nodeValue;
+                    walker.getNodeName(nodeName);
+                    walker.getNodeValue(nodeValue);
+                    aEs.mResultHandler->attribute(nodeName,
+                                                  walker.getNamespaceID(),
+                                                  nodeValue);
+                } while (walker.moveToNextAttribute());
+                walker.moveToParent();
             }
 
             // Copy children
-            walker.moveTo(aNode);
             PRBool hasChild = walker.moveToFirstChild();
             while (hasChild) {
                 copyNode(walker.getCurrentPosition(), aEs);

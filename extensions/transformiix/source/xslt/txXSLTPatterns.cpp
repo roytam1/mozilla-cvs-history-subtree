@@ -357,8 +357,7 @@ MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
         return PR_FALSE;
     }
 #else
-    nsCOMPtr<nsIContent> content;
-    txXPathNativeNode::getContent(aNode, getter_AddRefs(content));
+    nsIContent* content = txXPathNativeNode::getContent(aNode);
     NS_ASSERTION(content, "a Element without nsIContent");
     if (!content) {
         return MB_FALSE;
@@ -470,6 +469,7 @@ MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext
         return MB_FALSE;
 
     txXPathTreeWalker walker(aNode);
+    // XXX isn't this wrong when mIsAttr is set
     if (!walker.moveToDOMParent() && !mIsAttr)
         return MB_FALSE;
     if (isEmpty()) {
@@ -505,7 +505,8 @@ MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext
         if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
             nodes->append(walker.getCurrentPosition());
         }
-        hasNext = walker.moveToNextSibling();
+        hasNext = mIsAttr ? walker.moveToNextAttribute() :
+                            walker.moveToNextSibling();
     }
 
     txListIterator iter(&predicates);
