@@ -3547,6 +3547,7 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
       nsCOMPtr<nsIPluginWidget> pluginWidget = do_QueryInterface(mWidget);
       if (pluginWidget && NS_SUCCEEDED(pluginWidget->StartDrawPlugin()))
       {
+        EventRecord macEvent;
         EventRecord* event = (EventRecord*)anEvent.nativeMsg;
         if ((event == NULL) || (event->what == nullEvent)  || 
             (anEvent.message == NS_FOCUS_EVENT_START)      || 
@@ -3554,7 +3555,6 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
             (anEvent.message == NS_MOUSE_MOVE)             ||
             (anEvent.message == NS_MOUSE_ENTER))
         {
-            EventRecord macEvent;
             GUItoMacEvent(anEvent, macEvent);
             event = &macEvent;
         }
