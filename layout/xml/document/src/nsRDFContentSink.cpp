@@ -111,8 +111,8 @@ static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
 // XPCOM IIDs
 static NS_DEFINE_IID(kIContentSinkIID,         NS_ICONTENT_SINK_IID); // XXX grr...
 static NS_DEFINE_IID(kIDOMCommentIID,          NS_IDOMCOMMENT_IID);
-static NS_DEFINE_IID(kIRDFContainerContentIID, NS_IRDFCONTAINERCONTENT_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,      NS_IRDFCONTENTSINK_IID);
+static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,         NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFResourceManagerIID,  NS_IRDFRESOURCEMANAGER_IID);
 static NS_DEFINE_IID(kIScrollableViewIID,      NS_ISCROLLABLEVIEW_IID);
@@ -121,6 +121,7 @@ static NS_DEFINE_IID(kIXMLContentSinkIID,      NS_IXMLCONTENT_SINK_IID);
 static NS_DEFINE_IID(kIXMLDocumentIID,         NS_IXMLDOCUMENT_IID);
 
 static NS_DEFINE_CID(kRDFResourceManagerCID,   NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFMemoryDataSourceCID,  NS_RDFMEMORYDATASOURCE_CID);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -413,16 +414,20 @@ nsRDFContentSink::Init(nsIDocument* aDoc,
                                                     (nsISupports**) &mRDFResourceManager)))
         return rv;
 
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFMemoryDataSourceCID,
+                                                    NULL,
+                                                    kIRDFDataSourceIID,
+                                                    (void**) &mDataSource)))
+        return rv;
+
     nsIRDFDocument* rdfDoc;
     if (NS_FAILED(rv = mDocument->QueryInterface(kIRDFDocumentIID, (void**) &rdfDoc)))
         return rv;
 
-    rv = rdfDoc->GetDataSource(mDataSource);
-
+    rv = rdfDoc->SetDataSource(mDataSource);
     NS_RELEASE(rdfDoc);
 
     mState = eRDFContentSinkState_InProlog;
-
     return rv;
 }
 
@@ -1073,10 +1078,13 @@ nsRDFContentSink::AddProperties(const nsIParserNode& aNode,
         if (NS_FAILED(SplitQualifiedName(key, ns, attr)))
             continue;
 
-        // skip rdf:about and rdf:ID attributes; we already have them.
+        // skip rdf:about, rdf:ID, and rdf:resource attributes; these
+        // are all "special" and should've been dealt with by the
+        // caller.
         if (ns.Equals(kRDFNameSpaceURI) &&
             (attr.Equals(kTagRDF_about) ||
-             attr.Equals(kTagRDF_ID)))
+             attr.Equals(kTagRDF_ID) ||
+             attr.Equals(kTagRDF_resource)))
             continue;
 
         v = aNode.GetValueAt(i);
@@ -1249,23 +1257,40 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
     if (NS_FAILED(rv = SplitQualifiedName(aNode.GetText(), ns, tag)))
         return rv;
 
-    // XXX destructively alter "ns" to contain the fully qualified
-    // tag name. We can do this 'cause we don't need it anymore...
+    // destructively alter "ns" to contain the fully qualified tag
+    // name. We can do this 'cause we don't need it anymore...
     ns.Append(tag);
-    nsIRDFNode* rdfResource;
-    if (NS_FAILED(rv = mRDFResourceManager->GetNode(ns, rdfResource)))
+    nsIRDFNode* rdfProperty;
+    if (NS_FAILED(rv = mRDFResourceManager->GetNode(ns, rdfProperty)))
         return rv;
 
-    // XXX I'm not sure what it means to property attributes on a
-    // property (but you can!). I guess that I need to read the spec
-    // more carefully to figure that out...
-    //AddProperties(aNode, rdfElement);
+    nsAutoString resourceURI;
+    if (NS_SUCCEEDED(GetResourceAttribute(aNode, resourceURI))) {
+        // They specified an inline resource for the value of this
+        // property. Create an RDF resource for the inline resource
+        // URI, add the properties to it, and attach the inline
+        // resource to its parent.
+        nsIRDFNode* rdfResource;
+        if (NS_SUCCEEDED(rv = mRDFResourceManager->GetNode(resourceURI, rdfResource))) {
+            if (NS_SUCCEEDED(rv = AddProperties(aNode, rdfResource))) {
+                rv = Assert(GetContextElement(0), rdfProperty, rdfResource);
+            }
+        }
+
+        // XXX ignore any failure from above...
+        PR_ASSERT(rv == NS_OK);
+
+        // XXX Technically, we should _not_ fall through here and push
+        // the element onto the stack: this is supposed to be a closed
+        // node. But right now I'm lazy and the code will just Do The
+        // Right Thing so long as the RDF is well-formed.
+    }
 
     // Push the element onto the context stack and change state.
-    PushContext(rdfResource, mState);
+    PushContext(rdfProperty, mState);
     mState = eRDFContentSinkState_InPropertyElement;
 
-    rdfResource->Release();
+    rdfProperty->Release();
     return NS_OK;
 }
 

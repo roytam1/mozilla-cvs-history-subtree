@@ -28,6 +28,7 @@
 #include "nsWellFormedDTD.h"
 
 #include "nsRDFCID.h"
+#include "nsIRDFDataBase.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 
@@ -38,9 +39,9 @@ static NS_DEFINE_IID(kIParserIID,        NS_IPARSER_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,   NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIWebShellIID,      NS_IWEB_SHELL_IID);
 static NS_DEFINE_IID(kIXMLDocumentIID,   NS_IXMLDOCUMENT_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID, NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIRDFDataBaseIID,   NS_IRDFDATABASE_IID);
 
-static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFSimpleDataBaseCID,   NS_RDFSIMPLEDATABASE_CID);
 
 struct NameSpaceStruct {
     nsIAtom* mPrefix;
@@ -58,12 +59,9 @@ NS_NewRDFDocument(nsIDocument** aInstancePtrResult)
 
 nsRDFDocument::nsRDFDocument()
     : mParser(NULL),
-      mNameSpaces(NULL)
+      mNameSpaces(NULL),
+      mDB(NULL)
 {
-    nsRepository::CreateInstance(kRDFMemoryDataSourceCID,
-                                 NULL,
-                                 kIRDFDataSourceIID,
-                                 (void**) &mDataSource);
 }
 
 nsRDFDocument::~nsRDFDocument()
@@ -83,7 +81,7 @@ nsRDFDocument::~nsRDFDocument()
         delete mNameSpaces;
         mNameSpaces = NULL;
     }
-    NS_IF_RELEASE(mDataSource);
+    NS_IF_RELEASE(mDB);
 }
 
 NS_IMETHODIMP 
@@ -290,14 +288,31 @@ nsRDFDocument::AppendToEpilog(nsIContent* aContent)
 // nsIRDFDocument interface
 
 NS_IMETHODIMP
-nsRDFDocument::GetDataSource(nsIRDFDataSource*& result)
+nsRDFDocument::GetDataBase(nsIRDFDataBase*& result)
 {
-    if (! mDataSource)
+    if (! mDB)
         return NS_ERROR_NOT_INITIALIZED;
 
-    result = mDataSource;
+    result = mDB;
     result->AddRef();
     return NS_OK;
 }
 
 
+NS_IMETHODIMP
+nsRDFDocument::SetDataSource(nsIRDFDataSource* ds)
+{
+    NS_IF_RELEASE(mDB);
+
+    nsresult rv;
+    rv = nsRepository::CreateInstance(kRDFSimpleDataBaseCID,
+                                      NULL,
+                                      kIRDFDataBaseIID,
+                                      (void**) &mDB);
+
+    if (NS_FAILED(rv))
+        return rv;
+
+    rv = mDB->AddDataSource(ds);
+    return rv;
+}

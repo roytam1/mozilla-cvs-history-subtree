@@ -63,12 +63,13 @@ public:
   NS_IMETHOD AppendToEpilog(nsIContent* aContent);
 
   // nsIRDFDocument interface
-  NS_IMETHOD GetDataSource(nsIRDFDataSource*& result);
+  NS_IMETHOD GetDataBase(nsIRDFDataBase*& result);
+  NS_IMETHOD SetDataSource(nsIRDFDataSource* ds);
 
 protected:
-  nsVoidArray*      mNameSpaces;
-  nsIParser*        mParser;
-  nsIRDFDataSource* mDataSource;
+  nsVoidArray*    mNameSpaces;
+  nsIParser*      mParser;
+  nsIRDFDataBase* mDB;
 };
 
 

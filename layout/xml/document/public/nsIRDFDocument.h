@@ -23,6 +23,7 @@
 #include "nsIXMLDocument.h"
 
 class nsString;
+class nsIRDFDataBase;
 class nsIRDFDataSource;
 class nsIRDFNode;
 
@@ -35,7 +36,9 @@ class nsIRDFNode;
  */
 class nsIRDFDocument : public nsIXMLDocument {
 public:
-  NS_IMETHOD GetDataSource(nsIRDFDataSource*& rResource) = 0;
+  NS_IMETHOD GetDataBase(nsIRDFDataBase*& rDataBase) = 0;
+
+  NS_IMETHOD SetDataSource(nsIRDFDataSource* aDataSource) = 0;
 };
 
 #endif // nsIRDFDocument_h___
