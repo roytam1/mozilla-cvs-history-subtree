@@ -159,13 +159,34 @@ nsCmdLineService::Initialize(int aArgc, char ** aArgv)
         continue;
 	    }
       else {
+
+        // if this argument begins with mailto: then it needs to incorporate all subsequent arguments
+        // that come after it since mailto urls can have arbitrary unencoded spaces
+        if (!nsCRT::strncasecmp(aArgv[i], "mailto:", 7)) {
+          nsCAutoString mailtoUrl;
+
+          mailtoUrl += aArgv[i++];
+
+          for (; i < aArgc; i++)
+          {
+            mailtoUrl += " "; // we have to put the spaces separating the arguments back
+            mailtoUrl += aArgv[i];
+          } 
+
+          mArgValueList.AppendElement(NS_REINTERPRET_CAST(void*, ToNewCString(mailtoUrl)));
+          mArgCount++;
+
+          // i should now == aArgc so we should naturally fall out of our outer for loop
+
+        } else if (i == (aArgc-1)) {
         /* The next argument does not start with '-'. This 
 	     * could be value to the previous option 
 	     */
-	      if (i == (aArgc-1)) {
+
 	       /* This is the last argument and a URL 
             * Append a PR_TRUE for the previous option in the value array
             */
+           
            //mArgValueList.AppendElement((void *)PL_strdup("1"));
 	         //mArgCount++;
 
