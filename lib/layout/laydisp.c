@@ -24,7 +24,7 @@
 #include "layers.h"
 
 #define IL_CLIENT               /* XXXM12N Defined by Image Library clients */
-#include "libimg.h"             /* Image Library public API. */
+//#include "libimg.h"             /* Image Library public API. */
 
 #ifdef PROFILE
 #pragma profile on

@@ -767,7 +767,7 @@ void CTapeFSPublish::Complete(XP_Bool bSuccess,
         }
 
         // Not NULL-terminated.
-        XP_Bool *addCRLF = (XP_Bool *)XP_ALLOC((numFilesToPost) * sizeof(XP_Bool));
+        PRBool *addCRLF = (PRBool *)XP_ALLOC((numFilesToPost) * sizeof(PRBool));
         if (!addCRLF) {
             XP_ASSERT(0);
             XP_FREE(filesToPost);
@@ -788,7 +788,7 @@ void CTapeFSPublish::Complete(XP_Bool bSuccess,
 
               // Only first file is treated as text, rest are whatever netlib decides.
 	      // well actually only if it's not a pre-encrypted file!
-              addCRLF[m] = (n == 0) && !IsFirstBinary(); 
+              addCRLF[m] = PRBool((n == 0) && !IsFirstBinary()); 
               m--;
             }
         }        
