@@ -203,7 +203,7 @@ DTWIDGETS_LIB		= $(DIST)/lib/libDtWidgets.a
 XFE_WIDGETS_LIB		= $(DIST)/lib/libXfeWidgets.a
 XFE_WIDGETS_BM_LIB	= $(DIST)/lib/libXfeBm.a
 
-DYNAMIC_SYMBOLS_F	= -r dyanmic # default
+DYNAMIC_SYMBOLS_F	= -rdynamic # default
 ifeq ($(OS_ARCH),SunOS) 
 ifdef NS_USE_NATIVE
 DYNAMIC_SYMBOLS_F	= -Bdynamic
@@ -290,6 +290,7 @@ BASIC_LIBS	+= \
 BASIC_LIBS_2	= \
 		  $(DIST)/lib/lib$(LITE_PREFIX)xp.a \
 		  $(DIST)/lib/libdbm.a \
+                  $(DIST)/lib/libcaps.a \
 		  $(NULL)
 
 ifdef MOZ_MAIL_NEWS
