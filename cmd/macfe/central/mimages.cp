@@ -28,6 +28,10 @@
 #include "miconutils.h"
 #include "il_util.h"
 #include "il_icons.h"
+/*	ebb - begin */
+#include "xp_file_mac.h"
+#include "icc_profile_types.h"
+/*	ebb - end */
 #include "CBrowserContext.h"
 #include "CBrowserWindow.h" // for CBrowserWindow::ClipOutPopdown()
 #include "CIconContext.h"
@@ -117,6 +121,14 @@ static void UnlockPixmapBuffer ( IL_Pixmap * pixmap );
 static CIconHandle GetIconHandle ( jint iconID );
 static IL_GroupContext * CreateImageGroupContext ( MWContext * context );
 
+/*	ebb - begin */
+// These are really for the future, when we determine how to associate
+// displays with contexts.  For now, the System profile is used for each
+// *color* color space in the global array.
+// static	GDHandle	GetPreferredDisplayDevice ( MWContext * context );
+// static	void*		GetICCProfileRefForContext ( MWContext * context );
+static	void*		GetProfileByDisplayID ( int32	id );
+/*	ebb - end */
 
 /*
  * Globals
@@ -504,6 +516,385 @@ _IMGCB_GetIconDimensions(struct IMGCB* /*self*/, jint /*op*/, void* a, int* widt
 		CIconList::ReturnIcon ( ic );
 	}
 }
+
+/*	ebb - begin */
+/*	******************************************************************************
+	OpenICCProfileFromMem
+	
+	Desc:		This is the most common way of 'opening' an icc profile,
+				which really means loading it's table of contents and
+				indexing its tags.  If the passed memory doesn't contain
+				a valid profile, we'll retun NULL.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_OpenICCProfileFromMem(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								unsigned char*	profile_data )
+{
+	MWContext *	context = (MWContext *) a;
+	CMError					err = noErr;
+	CMProfileLocation		profLoc;
+	CMProfileRef			prof = NULL;
+
+	profLoc.locType = cmPtrBasedProfile;
+	profLoc.u.ptrLoc.p = (char*) profile_data;
+	err = CMOpenProfile(&prof, &profLoc);
+
+	PR_ASSERT(err==noErr);
+
+	if (err != noErr)
+		prof = NULL;
+		
+	return ((void*) prof);
+}
+
+/*	******************************************************************************
+	OpenICCProfileFromDisk
+	
+	Desc:		This is the most efficient (in terms of memory) way of 'opening'
+	 			an icc profile, vs. having ColorSync create an in-memory copy
+	 			of some of the contents.  The filename param must contain a full
+	 			path name, wehich will be converted internally to a Mac FSSpec.
+				If the resulting FSSpec isn't valid or the file doesn't contain
+				a valid profile, we'll retun NULL.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_OpenICCProfileFromDisk(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								char*			filename )
+{
+	#define					kPossibleModes	2
+	MWContext *	context = (MWContext *) a;
+	CMError					err = noErr;
+	CMProfileLocation		profLoc;
+	CMProfileRef			prof = NULL;
+	XP_FileType				modes[kPossibleModes] = {xpURL,xpCache};
+	FSSpec					spec;
+	int						mode = 0;
+	
+	/*
+		We may get call with a REAL cache file or one
+		that is really a local file faked as a cache file.
+	*/
+	while (mode < kPossibleModes)
+	{
+		err = (OSErr) XP_FileSpec( filename, modes[mode], &spec );
+		mode++;
+		if (err == noErr)
+			break;
+	}
+	
+	/*
+		If we exited the loop above with no error,
+		we should be apble to open this puppy.
+	*/
+	if (err == noErr)
+	{
+		profLoc.locType = cmFileBasedProfile;
+		profLoc.u.fileLoc.spec = spec;
+		err = CMOpenProfile(&prof, &profLoc);
+	}
+
+	PR_ASSERT(err==noErr);
+	
+	if (err != noErr)
+		prof = NULL;
+		
+	return ((void*) prof);
+}
+
+/*	******************************************************************************
+	CloneICCProfileRef
+	
+	Desc:		If more than one 'client' wants to have a profile open, the
+				profile reference can be cloned, rather than having two
+				separate instances of the profile's data loaded in memory.
+				ColorSync bumps an internal reference count and will only
+				actually close the profile when it reaches zero.
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_CloneICCProfileRef(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			profile_ref )
+{
+	MWContext *	context = (MWContext *) a;
+	CMError		err;
+	
+	if (profile_ref)
+		err = CMCloneProfileRef((CMProfileRef) profile_ref);
+}
+
+/*	******************************************************************************
+	CloneICCProfileRef
+	
+	Desc:		Releases the internal memory allocated when a profile is opened.
+				ColorSync will close the profile when there are no more clients
+				referencing the opened profile.				
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_CloseICCProfileRef(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			profile_ref )
+{
+	MWContext *	context = (MWContext *) a;
+	CMError		err;
+	
+	if (profile_ref)
+		err = CMCloseProfile((CMProfileRef) profile_ref);
+}
+
+/*	******************************************************************************
+	SetupICCColorMatching
+	
+	Desc:		Given two profiles, a color matching session can be established
+				which moves colors from one device space (specified in the
+				profile) to another.  This is done by moving the colors through
+				a device independent space, the instructions on how to do this
+				inherent in the profile.
+				
+				ColorSync supports the specification of a special "system space"
+				by accepting NULL in either the source or dest profile ref
+				(but not both).  In this case - we require the caller to pass a
+				special value "kICCProfileRef_SystemProfile" to designate this.
+				
+				If a color matching session can be established (may fail due to
+				memory requirements, components not being installed, bad profile
+				references, etc)  it is returned to the caller - who then may
+				close the profile references if no more matching sessions using
+				them are required.
+*/
+JMC_PUBLIC_API(void*)
+_IMGCB_SetupICCColorMatching(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								void*			src_profile_ref,
+								void*			dst_profile_ref )
+{
+	MWContext *				context = (MWContext *) a;
+	CMError					err = noErr;
+	CMWorldRef				cw = NULL;
+	CMAppleProfileHeader	header;
+	uint32					header_flags;
+	int32					src_profile_val = (int32) src_profile_ref;
+	int32					dst_profile_val = (int32) dst_profile_ref;
+	
+	/* Don't match if the profiles are the same */
+	if (src_profile_val == dst_profile_val)
+		return NULL;
+	/*
+		For the time being, ColorSync headers and APIs are not
+		exposed beyond Mac.  This will change soon, but for now
+		we are faced with the following dilemna:
+		If the caller wants to set up matching to one of several
+		displays on the user's system, there is no XP code to handle
+		this.  With the advent of ColorSync XP there will be.
+		Until then, the convention is as follows:
+		Callers pass special "profile references" to us to denote
+		whether they want the "default" (System) display profile,
+		or profiles associated with any given display, or default
+		profiles by color space (in this case RGB only). We look
+		for these special profile references, and convert them to the
+		real profile references as necessary.
+		ebb - 08/20/98
+	*/
+	
+	/* Translate dest profile if ID instead of reference */
+	if (src_profile_val <= kICCProfileRefConstants)
+	{
+		switch (src_profile_val)
+		{
+			case	kICCProfileRef_NoProfile:
+				/* Not legal, just return NULL. */
+				err = cmProfileError;
+				break;
+			case	kICCProfileRef_SystemProfile:
+				/* ColorSync accepts zero for System Profile */
+				src_profile_ref = NULL;
+				break;
+			case	kICCProfileRef_DefaultProfile:
+				/* Use the default profile for this color space: RGB */
+#if GENERATINGPOWERPC
+				if (CMGetDefaultProfileBySpace != NULL)
+					err = CMGetDefaultProfileBySpace((OSType)'RGB ',
+							(CMProfileRef*) &src_profile_ref);
+#else
+#error 			This ONLY WORKS FOR PPC!
+#endif
+				break;
+			default:
+				/* This is a display ID.  Attempt to translate to a profile ref. */
+				src_profile_ref = GetProfileByDisplayID(src_profile_val);
+				if (src_profile_ref == NULL)
+					err = cmProfileError;
+				break;
+		}
+	}
+	
+	/* Same translation for dest profile */
+	if (dst_profile_val <= kICCProfileRefConstants)
+	{
+		switch(dst_profile_val)
+		{
+			case	kICCProfileRef_NoProfile:
+				/* Not legal, just return NULL. */
+				err = cmProfileError;
+				break;
+			case	kICCProfileRef_SystemProfile:
+				/*
+					ColorSync accepts zero for System Profile,
+					BUT - we can't allow BOTH to be the System profile.
+					We have checked for this above.
+				*/
+				dst_profile_ref = NULL;
+				break;
+			case	kICCProfileRef_DefaultProfile:
+				/* Use the default profile for this color space: RGB */
+#if GENERATINGPOWERPC
+				if (CMGetDefaultProfileBySpace != NULL)
+					err = CMGetDefaultProfileBySpace((OSType)'RGB ',
+							(CMProfileRef*) &dst_profile_ref);
+#else
+#error 			This ONLY WORKS FOR PPC!
+#endif
+				break;
+			default:
+				/* This is a display ID.  Attempt to translate to a profile ref. */
+				dst_profile_ref = GetProfileByDisplayID(dst_profile_val);
+				if (dst_profile_ref == NULL)
+					err = cmProfileError;
+				break;
+		}
+	}
+	
+	/*
+		Set flags in the source profile header,
+		telling ColorSync not to do gamut checking,
+		and also make sure we're not doing high-quality.
+		This will reduce memory requirements.
+	*/
+	if (err == noErr && src_profile_ref != NULL)
+	{
+		err = CMGetProfileHeader((CMProfileRef) src_profile_ref, &header) ;
+		if (err == noErr)
+		{
+			header_flags = header.cm2.flags;
+			header_flags &= ~cmQualityMask;			/* bits 16-17 = 0 then normal quality */
+			header_flags |= cmGamutCheckingMask;	/* bit 19 = 1 then no gamut checking  */
+			header.cm2.flags = header_flags;
+			err = CMSetProfileHeader((CMProfileRef) src_profile_ref, &header);
+		}
+	}
+	
+	/* Finally, call ColorSync to set up a Color World */
+	if (err == noErr)
+		err = NCWNewColorWorld(&cw,	(CMProfileRef) src_profile_ref,
+									(CMProfileRef) dst_profile_ref );
+
+	PR_ASSERT(err==noErr);
+	return ((void*) cw);
+
+}
+
+/*	******************************************************************************
+	ColorMatchRGBPixels
+	
+	Desc:		This is the pixel matching interface.  It is NOT generalized,
+				rather it expects the following:
+				
+			¥	pixels are in RGB 888 format (8 bits per channel - 24 bits total)
+			¥	pixels are in a consecutive buffer - no padding at intervals
+			
+				This happens to be the way the imagelib sends pixels to the
+				front end for display.  If in the future this changes we can
+				generalize the interface or create new entrypoints. 			
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_ColorMatchRGBPixels(	struct IMGCB*	/*self*/,
+							jint			/*op*/,
+							void*			a,
+							void*			color_world,
+							const uint8*	pixels,
+							int				column_pixels )
+/*							uint32			rows ) */
+{
+	MWContext *	context = (MWContext *) a;
+	CMError		err = noErr;
+	CMBitmap	bitmap;
+	
+	PR_ASSERT(color_world);
+	if (color_world == NULL)
+		return;
+	/*
+		The browser is very specific about putting EVERYTHING
+		in RGB24 space first, during it's pass through the
+		color converters in libimg.  We assume this is the
+		data format.  In the future, we can add parameters
+		to this API if that ever changes.  ebb - 08/20/98
+	*/
+	bitmap.image		= (char *) pixels;
+	bitmap.width		= column_pixels;
+	bitmap.height		= 1 /* rows */ ;
+	bitmap.rowBytes		= column_pixels * 3;
+	bitmap.pixelSize	= 3;
+	bitmap.space		= cmRGB24Space;
+	bitmap.user1		= 0;
+	bitmap.user2		= 0;
+	
+	err = CWMatchBitmap((CMWorldRef) color_world,	/* Matching session - previously established
+													   via _IMGCB_SetupICCColorMatching */
+						&bitmap,					/* Input pixels */
+						(CMBitmapCallBackUPP) NULL,	/* Progress Proc */
+						NULL,						/* RefCon for Progress Proc */
+						(CMBitmap*) NULL);			/* Match in place */
+
+	PR_ASSERT(err==noErr);
+}
+
+/*	******************************************************************************
+	DisposeICCColorMatching
+	
+	Desc:		Releases the memory (may be upwards of 200K) used by a color
+				matching session - previously created by SetupICCColorMatching.
+				
+*/
+JMC_PUBLIC_API(void)
+_IMGCB_DisposeICCColorMatching(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a,
+								void* color_world )
+{
+	MWContext *	context = (MWContext *) a;
+	
+	PR_ASSERT(color_world);
+	CWDisposeColorWorld((CMWorldRef) color_world);
+}
+
+/*	******************************************************************************
+	IsColorSyncAvailable
+	
+	Desc:		This simply looks for the existence of a known symbol - which
+				will have been resolved by CFM at load time.  If we find it
+				we return TRUE.
+				
+*/
+JMC_PUBLIC_API(jbool)
+_IMGCB_IsColorSyncAvailable(	struct IMGCB*	/*self*/,
+								jint			/*op*/,
+								void*			a )
+{
+	MWContext *	context = (MWContext *) a;
+
+#if GENERATINGPOWERPC
+	return (CMCloneProfileRef != NULL);
+#else
+#error This ONLY WORKS FOR PPC!
+#endif
+}
+/*	ebb - end */
 
 #pragma mark --- PUBLIC FUNCTIONS ---
 
@@ -1851,6 +2242,26 @@ static void SetColorSpaceTransparentColor ( IL_ColorSpace * color_space, Uint8 r
 		map->green = green;
 		map->blue = blue;
 		}
+}
+
+static void* GetProfileByDisplayID ( int32	id )
+{
+	/*
+		We need a way to map IDs to displays.
+		AVID could be used, except they are not
+		distinguishable from ptr values, or at
+		least that's what we're told.  If we were
+		to simply use the convention that 1 is the
+		first device in the device list, 2 is the
+		second, etc. we'd probably do fine.
+		I know that there is a legitimate argument
+		against this because displays are hot-swappable.
+		So, for now, we are disallowing display IDs,
+		but in the future (when we have more time to
+		settle on a workable scheme) we'll enable them.
+		ebb - 08/20/89
+	*/
+	return NULL;
 }
 
 static OSErr CreatePictureGWorld ( IL_Pixmap * image, IL_Pixmap * mask, PictureGWorldState * state )
