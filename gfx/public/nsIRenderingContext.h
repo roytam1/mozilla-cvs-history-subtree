@@ -74,7 +74,7 @@ typedef enum
 typedef enum
 {
   nsPenMode_kNone   = 0,
-  nsPenMode_kInvert = 1,
+  nsPenMode_kInvert = 1
 } nsPenMode;
 
 // IID for the nsIRenderingContext interface
