@@ -40,6 +40,10 @@
 #include <ctype.h> /* for tolower */
 #include <stdlib.h>   /* for malloc, free */
 #include <string.h> /* for strcasecmp */
+#ifdef WIN32
+#define snprintf	_snprintf
+#define strcasecmp	stricmp
+#endif
 
 #ifdef DMALLOC
 #include "dmalloc.h"
@@ -278,8 +282,12 @@ int sspm_is_mime_header(char *line)
     }
 
     for(i = 0; mime_headers[i] != 0; i++){
+#ifndef WIN32
 	if(strcasecmp(name, mime_headers[i]) == 0)
-	    return 1;
+#else
+	if(stricmp(name, mime_headers[i]) == 0)
+#endif
+		return 1;
     }
     
     return 0;

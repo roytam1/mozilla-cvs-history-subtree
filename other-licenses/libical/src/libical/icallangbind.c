@@ -25,6 +25,10 @@
 #include <malloc.h>
 #include <string.h>
 
+#ifdef WIN32
+#define snprintf	_snprintf
+#define strcasecmp	stricmp
+#endif
 int* icallangbind_new_array(int size){
     int* p = (int*)malloc(size*sizeof(int));
     return p; /* Caller handles failures */

@@ -43,6 +43,10 @@
 #include <assert.h>
 #include <stdio.h> /* for fprintf */
 
+#ifndef win32
+#include <string.h>
+#endif
+
 #define MAX_TMP 1024
 
 struct icalcomponent_impl 

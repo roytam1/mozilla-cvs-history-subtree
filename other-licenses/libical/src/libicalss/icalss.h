@@ -28,6 +28,9 @@
 
 #ifndef ICALGAUGE_H
 #define ICALGAUGE_H
+#ifdef WIN32
+#define mode_t int
+#endif
 
 typedef void icalgauge;
 

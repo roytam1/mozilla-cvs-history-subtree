@@ -43,6 +43,7 @@
 #include <stdlib.h>
 /*#include "icalheapset.h"*/
 /*#include "icalmysqlset.h"*/
+#include <string.h>
 
 #define ICALSET_ID "set "
 

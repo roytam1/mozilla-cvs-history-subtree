@@ -32,9 +32,13 @@
 #include "ical.h"
 #include "icalset.h"
 #include "icalgauge.h"
+#ifndef WIN32
 #include <sys/types.h> /* For open() flags and mode */
 #include <sys/stat.h> /* For open() flags and mode */
 #include <fcntl.h> /* For open() flags and mode */
+#else
+#define mode_t int
+#endif
 
 extern int icalfileset_safe_saves;
 

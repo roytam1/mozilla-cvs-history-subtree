@@ -26,8 +26,11 @@
 #ifndef ICALMEMORY_H
 #define ICALMEMORY_H
 
+#ifndef WIN32
 #include <sys/types.h> /* for size_t */
-
+#else
+#include <stddef.h>
+#endif
 
 /* Tmp buffers are managed by ical. References can be returned to the
    caller, although the caller will not own the memory. */

@@ -30,6 +30,7 @@
 #endif
 
 #include "icalerror.h"
+#include <string.h>
 
 icalerrorenum icalerrno;
 

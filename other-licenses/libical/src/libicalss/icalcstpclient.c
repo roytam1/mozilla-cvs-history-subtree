@@ -32,8 +32,10 @@
 #include "pvl.h" 
 
 #include <sys/types.h> /* For send(), others */
+#ifndef WIN32
 #include <sys/socket.h>  /* For send(), others. */
 #include <unistd.h> /* For alarm */
+#endif
 #include <errno.h>
 #include <stdlib.h> /* for malloc */
 #include <string.h>
