@@ -673,24 +673,14 @@ cookie_pathOK(const char* cookiePath, const char* currentPath) {
     return PR_FALSE;
   }
 
-  // determine length of each, excluding trailing slash if present
-  int cookiePathLen = PL_strlen(cookiePath);
-  int currentPathLen = PL_strlen(currentPath);
-  if (cookiePathLen && cookiePath[cookiePathLen-1] == '/') {
-    cookiePathLen--;
-  }
-  if (currentPathLen && currentPath[currentPathLen-1] == '/') {
-    currentPathLen--;
-  }
+  // determine length of each, excluding anything past last slash
+  char * pos = PL_strrchr(cookiePath, '/');
+  int cookiePathLen = pos ? pos+1-cookiePath : 0;
+  pos = PL_strrchr(currentPath, '/');
+  int currentPathLen = pos ? pos+1-currentPath : 0;
 
-  // test for equality case
-  if (currentPathLen == cookiePathLen &&
-      !PL_strncmp(currentPath, cookiePath, currentPathLen)) {
-    return PR_TRUE;
-  }
-
-  // test for subpath case
-  return (currentPathLen > cookiePathLen && (currentPath[cookiePathLen] == '/') &&
+  // test for subpath
+  return (currentPathLen >= cookiePathLen &&
           !PL_strncmp(currentPath, cookiePath, cookiePathLen));
 }
 
