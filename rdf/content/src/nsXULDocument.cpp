@@ -4886,7 +4886,9 @@ nsXULDocument::ExecuteScript(JSObject* aScriptObject)
     // Execute the precompiled script with the given version
     nsresult rv;
 
+#ifndef DEBUG_warren
     NS_ASSERTION(mScriptGlobalObject != nsnull, "no script global object");
+#endif
     if (! mScriptGlobalObject)
         return NS_ERROR_UNEXPECTED;
 
