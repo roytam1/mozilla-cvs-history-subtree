@@ -1,0 +1,106 @@
+Beonex Communicator 0.8
+
+
+Description
+===========
+
+Beonex Communicator is based on Mozilla, i.e. is a sibling of Netscape 6.
+Beonex Communicator contains
+
+ * Navigator - web-browser
+ * Mailnews - email/news client
+ * Composer - web page editor
+
+More info at <http://www.beonex.com/communicator>.
+
+This version bases on the source code of the Mozilla 1.0 branch.
+
+
+Installation
+============
+
+   1. Requirements
+
+          * OS: Windows 95, 98, ME, NT 4.0, 2000 or XP
+          * Processor: min. Pentium 233
+          * RAM: 64 MB, 128 MB recommended
+          * HD: 25 MB
+
+   2. Legal notes
+
+             Beonex Communicator is Open-Source under the MPL.
+             See file license.txt and Help|About Beonex within Communicator.
+
+   3. Verify file
+
+            If you want to verify that the zipfile has not been tampered
+            and you have PGP or another OpenPGP-compliant program installed,
+            you can download the signature of this file at
+            <http://www.beonex.com/communicator/version/0.8/install/win32/download.html>.
+            The key can be found at <http://www.beonex.com/about/contacts>.
+
+   4. Run Installer
+
+         1. Start the file you downloaded
+            (or the contained Setup.exe, if you downloaded the zip-file).
+         2. Follow the instructions.
+
+   5. Start Beonex Communicator
+
+            e.g. via Start|Programs|Beonex|Communicator
+
+   6. Install additional packages
+
+            via the add-on page
+            <http://www.beonex.com/communicator/version/0.8/add-ons>, e.g.
+          * Java
+          * Flash
+          * German user-interface
+
+   7. Mailing list
+
+            Subscribe to the announce mailing list
+            <http://www.beonex.com/support/announce/mailinglist>. Strongly
+            recommended for security updates.
+
+   8. Get support
+
+            Tell your manager about our support options
+            <http://www.beonex.com/communicator/support>.
+
+   9. Have fun!
+
+
+Release-notes
+=============
+
+Last-minute information about bugs, changes etc. can be found at
+<http://www.beonex.com/communicator/version/0.8/release-notes>.
+
+
+Updates
+=======
+
+While this release should not expire, it is strongly recommended that you use
+the latest version. This is important for your own security (there may be
+security holes we don't know about at the moment).
+
+Check the Beonex Communicator Website <http://www.beonex.com/communicator>,
+if there are newer releases. To keep up-to-date, subscribe to the
+announce mailing list <http://www.beonex.com/support/announce/mailinglist>.
+
+
+Questions
+=========
+
+If you have questions, please read the release-notes and documentation first.
+If there are still open questions, go to the support page
+<http://www.beonex.com/communicator/support>.
+
+
+Distributor
+===========
+
+Ben Bucksch
+Beonex
+<http://www.beonex.com>
