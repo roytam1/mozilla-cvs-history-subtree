@@ -68,7 +68,7 @@ public:
   NS_IMETHOD HasDirectory(nsIAbDirectory *aDirectory, PRBool *aHasDirectory) ;
   NS_IMETHOD DeleteCards(nsISupportsArray *aCardList) ;
   NS_IMETHOD DeleteDirectory(nsIAbDirectory *aDirectory) ;
-  NS_IMETHOD AddCard(nsIAbCard *aData);
+  NS_IMETHOD AddCard(nsIAbCard *aData, nsIAbCard **addedCard);
   NS_IMETHOD DropCard(nsIAbCard *aData, PRBool needToCopyCard);
   NS_IMETHOD AddMailList(nsIAbDirectory *aMailList) ;
   NS_IMETHOD EditMailListToDatabase(const char *aUri, nsIAbCard *listCard) ;

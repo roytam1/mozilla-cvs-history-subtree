@@ -264,7 +264,7 @@ NS_IMETHODIMP nsAbDirProperty::AddMailList(nsIAbDirectory *list)
 NS_IMETHODIMP nsAbDirProperty::EditMailListToDatabase(const char *uri, nsIAbCard *listCard)
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
-NS_IMETHODIMP nsAbDirProperty::AddCard(nsIAbCard *childCard)
+NS_IMETHODIMP nsAbDirProperty::AddCard(nsIAbCard *childCard, nsIAbCard **addedCard)
 { return NS_ERROR_NOT_IMPLEMENTED; }
 
 NS_IMETHODIMP nsAbDirProperty::DropCard(nsIAbCard *childCard, PRBool needToCopyCard)

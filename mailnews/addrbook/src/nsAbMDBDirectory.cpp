@@ -761,7 +761,7 @@ NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
 	return rv;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card)
+NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card, nsIAbCard **addedCard)
 {
 	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
@@ -773,28 +773,33 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card)
 	if (NS_FAILED(rv) || !mDatabase)
 		return NS_ERROR_FAILURE;
 
-	nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv));
-	if (NS_FAILED(rv) || !dbcard)
-	{
+  nsCOMPtr<nsIAbCard> newCard;
+  nsCOMPtr<nsIAbMDBCard> dbcard;
+    
+  dbcard = do_QueryInterface(card, &rv);
+	if (NS_FAILED(rv) || !dbcard) {
     dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
 	  NS_ENSURE_SUCCESS(rv,rv);
 
-		nsCOMPtr<nsIAbCard> newcard = do_QueryInterface(dbcard, &rv);
+		newCard = do_QueryInterface(dbcard, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    rv = newcard->Copy(card);
+    rv = newCard->Copy(card);
     NS_ENSURE_SUCCESS(rv,rv);
-
-		card = newcard;
 	}
+  else {
+    newCard = card;
+  }
 	
 	dbcard->SetAbDatabase (mDatabase);
 	if (mIsMailingList == 1)
-		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, card, PR_TRUE);
+		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, PR_TRUE);
 	else
-		mDatabase->CreateNewCardAndAddToDB(card, PR_TRUE);
+		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE);
 	mDatabase->Commit(kLargeCommit);
 
+  *addedCard = newCard;
+  NS_IF_ADDREF(*addedCard);
 	return NS_OK;
 }
 

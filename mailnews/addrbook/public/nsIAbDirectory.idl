@@ -101,7 +101,11 @@ interface nsIAbDirectory : nsISupports {
 	// Check if directory contains directory
 	boolean hasDirectory(in nsIAbDirectory dir);
 
-	void addCard(in nsIAbCard card);
+    /**
+	 * return value is the card that got added
+	 */
+	nsIAbCard addCard(in nsIAbCard card);
+
 	void dropCard(in nsIAbCard card, in boolean needToCopyCard);
 
     /**

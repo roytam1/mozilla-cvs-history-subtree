@@ -361,7 +361,7 @@ NS_IMETHODIMP nsAbOutlookDirectory::DeleteDirectory(nsIAbDirectory *aDirectory)
     return retCode ;
 }
 
-NS_IMETHODIMP nsAbOutlookDirectory::AddCard(nsIAbCard *aData) 
+NS_IMETHODIMP nsAbOutlookDirectory::AddCard(nsIAbCard *aData, nsIAbCard **addedCard)
 {
     if (mIsQueryURI)
       return NS_ERROR_NOT_IMPLEMENTED;
@@ -371,28 +371,28 @@ NS_IMETHODIMP nsAbOutlookDirectory::AddCard(nsIAbCard *aData)
     nsresult retCode = NS_OK ;
     PRBool hasCard = PR_FALSE ;
     
-    // DID I DO THIS RIGHT?
-    nsIAbCard **card = nsnull;
-
     retCode = HasCard(aData, &hasCard) ;
     NS_ENSURE_SUCCESS(retCode, retCode) ;
     if (hasCard) {
-        PRINTF(("Has card.\n")) ;
+        PRINTF(("Has card.\n"));
+        *addedCard = aData;
+        NS_IF_ADDREF(*addedCard);
         return NS_OK ; 
     }
-    retCode = CreateCard(aData, card) ;
+    retCode = CreateCard(aData, addedCard) ;
     NS_ENSURE_SUCCESS(retCode, retCode) ;
-    nsVoidKey newKey (NS_STATIC_CAST(void *, *card)) ;
+    nsVoidKey newKey (NS_STATIC_CAST(void *, *addedCard)) ;
     
-    mCardList.Put(&newKey, *card) ;
-    if (m_IsMailList) { m_AddressList->AppendElement(*card) ; }
-    NotifyItemAddition(*card) ;
+    mCardList.Put(&newKey, *addedCard) ;
+    if (m_IsMailList) { m_AddressList->AppendElement(*addedCard) ; }
+    NotifyItemAddition(*addedCard) ;
     return retCode ;
 }
 
 NS_IMETHODIMP nsAbOutlookDirectory::DropCard(nsIAbCard *aData, PRBool needToCopyCard)
 {
-    return AddCard(aData) ;
+    nsCOMPtr <nsIAbCard> addedCard;
+    return AddCard(aData, getter_AddRefs(addedCard));
 }
 
 NS_IMETHODIMP nsAbOutlookDirectory::AddMailList(nsIAbDirectory *aMailList)

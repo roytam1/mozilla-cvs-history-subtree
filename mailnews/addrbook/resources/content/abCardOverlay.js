@@ -219,10 +219,12 @@ function NewCardOKButton()
       SetCardValues(editCard.card, document);
 
       var directory = GetDirectoryFromURI(uri);
-      directory.addCard(editCard.card);
-
-      // XXX fix me, editCard.card needs to be a mdbcard for
-      // saving screenname to work.
+  
+      // replace editCard.card with the card we added
+      // so that save listeners can get / set attributes on
+      // the card that got created.
+      var addedCard = directory.addCard(editCard.card);
+      editCard.card = addedCard;
       NotifySaveListeners();
     }
   }

@@ -413,8 +413,9 @@ nsresult nsAbAddressCollecter::AddCardToCollectedAddressBook(nsIAbCard *card)
 
 	nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(res, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
-	
-	rv = directory->AddCard(card);
+
+  nsCOMPtr <nsIAbCard> addedCard;
+	rv = directory->AddCard(card, getter_AddRefs(addedCard));
   NS_ENSURE_SUCCESS(rv,rv);
 	return rv;
 }
