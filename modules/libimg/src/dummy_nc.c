@@ -24,10 +24,82 @@
 #include "il_strm.h"
 #include "if.h"
 
+PR_BEGIN_EXTERN_C
+extern int MK_OUT_OF_MEMORY;
+PR_END_EXTERN_C
+
 typedef struct dum_TitleObsClosure {
     MWContext *context;
     XP_ObserverList obs_list;
 } dum_TitleObsClosure;
+
+static NS_DEFINE_IID(kINetContextIID, IL_INETCONTEXT_IID);
+static NS_DEFINE_IID(kIURLIID, IL_IURL_IID);
+
+class NetContextImpl : public ilINetContext
+{
+public:
+    NetContextImpl(MWContext *aContext, NET_ReloadMethod aReloadMethod);
+    ~NetContextImpl();
+
+    int operator==(NetContextImpl& aNetContext) const;
+
+    NS_DECL_ISUPPORTS
+    
+    virtual ilINetContext* Clone();
+    
+    virtual NET_ReloadMethod GetReloadPolicy();
+    
+    virtual void AddReferer(ilIURL *aUrl);
+    
+    virtual void Interrupt();
+    
+    virtual ilIURL* CreateURL(const char *aUrl, 
+			      NET_ReloadMethod aReloadMethod);
+    
+    virtual PRBool IsLocalFileURL(char *aAddress);
+    
+    virtual PRBool IsURLInMemCache(ilIURL *aUrl);
+    
+    virtual PRBool IsURLInDiskCache(ilIURL *aUrl);
+    
+    virtual int GetURL (ilIURL * aUrl, NET_ReloadMethod aLoadMethod,
+			ilINetReader *aReader);
+
+private:
+    MWContext *mContext;                             
+    NET_ReloadMethod mReloadPolicy;
+};
+
+class URLImpl : public ilIURL {
+public:
+    URLImpl();
+    URLImpl(URL_Struct *urls);
+    ~URLImpl();
+
+    nsresult Init(const char *aURL, NET_ReloadMethod aReloadMethod);
+
+    NS_DECL_ISUPPORTS
+
+    virtual void SetReader(ilINetReader *aReader);
+
+    virtual ilINetReader *GetReader();
+
+    virtual int GetContentLength();
+    
+    virtual const char* GetAddress();
+    
+    virtual time_t GetExpires();
+    
+    virtual void SetBackgroundLoad(PRBool aBgload);
+
+    URL_Struct *GetURLStruct() { return mURLS; }
+
+private:
+    ilINetReader *mReader;
+    URL_Struct *mURLS;
+};
+
 
 extern void
 lo_view_title( MWContext *context, char *title_str );
@@ -35,50 +107,75 @@ lo_view_title( MWContext *context, char *title_str );
 extern PRBool
 il_load_image(OPAQUE_CONTEXT *cx, char *image_url, NET_ReloadMethod cache_reload_policy);
 
+NetContextImpl::NetContextImpl(MWContext *aContext, 
+			       NET_ReloadMethod aReloadPolicy)
+{
+    mContext = aContext;
+    aReloadPolicy = mReloadPolicy;
+}
+
+NetContextImpl::~NetContextImpl()
+{
+}
+
 
 IL_NetContext *
 IL_NewDummyNetContext(MWContext *context, NET_ReloadMethod cache_reload_policy)
 {
-    IL_NetContext *net_cx;
+    ilINetContext *cx = new NetContextImpl(context, cache_reload_policy);
 
-    net_cx = XP_NEW_ZAP(IL_NetContext);
-    if (!net_cx)
-        return NULL;
-
-    net_cx->cx = context;
-    net_cx->cache_reload_policy = cache_reload_policy;
-
-    return net_cx;
+    if (cx != NULL) {
+        NS_ADDREF(cx);
+    }
+    
+    return (IL_NetContext *)cx;
 }
 
 void
 IL_DestroyDummyNetContext(IL_NetContext *net_cx)
 {
-    XP_FREE(net_cx);
+    ilINetContext *cx = (ilINetContext *)net_cx;
+
+    if (cx != NULL) {
+        NS_RELEASE(cx);
+    }
 }
 
-IL_NetContext *
-IL_CloneDummyNetContext(IL_NetContext *net_cx)
+NS_IMPL_ISUPPORTS(NetContextImpl, kINetContextIID)
+
+int 
+NetContextImpl::operator==(NetContextImpl& aNetContext) const
 {
-    return IL_NewDummyNetContext((MWContext *)net_cx->cx,
-                                 net_cx->cache_reload_policy);
+   return ((mContext == aNetContext.mContext) &&
+	   (mReloadPolicy == aNetContext.mReloadPolicy));
+}
+
+ilINetContext *
+NetContextImpl::Clone()
+{
+    return (ilINetContext *)IL_NewDummyNetContext(mContext, mReloadPolicy);
+}
+
+NET_ReloadMethod
+NetContextImpl::GetReloadPolicy()
+{
+    return mReloadPolicy;
 }
 
 #include "shist.h"              /* For use with IL_AddReferer */
 #include "structs.h"            /* For use with IL_AddReferer */
 
 void
-IL_AddReferer(IL_NetContext *net_cx, URL_Struct *urls) 
+NetContextImpl::AddReferer(ilIURL *url) 
 {
-    MWContext *cx = net_cx->cx;
-    History_entry *he = SHIST_GetCurrent (&cx->hist);
+    History_entry *he = SHIST_GetCurrent (&mContext->hist);
+    URL_Struct *urls = ((URLImpl *)url)->GetURLStruct();
 
-    if (urls->referer)
-        XP_FREE (urls->referer);
+    PR_FREEIF (urls->referer);
     if (he && he->address)
-        urls->referer = XP_STRDUP (he->origin_url 
-                                   ? he->origin_url 
-                                   : he->address);
+        urls->referer = PL_strdup (he->origin_url 
+				   ? he->origin_url 
+				   : he->address);
     else
         urls->referer = 0;
 }
@@ -101,7 +198,7 @@ dum_TitleObserver(XP_Observable observerable, XP_ObservableMsg msg,
             /* Remove ourself from the observer callback list. */
             XP_RemoveObserver(title_obs_closure->obs_list, dum_TitleObserver,
                               title_obs_closure);
-            XP_FREE(title_obs_closure);
+            PR_FREEIF(title_obs_closure);
             break;
 
         default:        
@@ -126,7 +223,7 @@ dum_NewTitleObserverList(MWContext *context)
     }
 
     /* Closure data for the image observer. */
-    title_obs_closure = XP_NEW_ZAP(dum_TitleObsClosure);
+    title_obs_closure = PR_NEWZAP(dum_TitleObsClosure);
     if (!title_obs_closure) {
         XP_DisposeObserverList(title_obs_list);
         return NULL;
@@ -140,7 +237,7 @@ dum_NewTitleObserverList(MWContext *context)
         XP_DisposeObserverList(title_obs_list);
         XP_RemoveObserver(title_obs_closure->obs_list, dum_TitleObserver,
             title_obs_closure );
-        XP_FREE(title_obs_closure);
+        PR_FREEIF(title_obs_closure);
         return NULL;
     }
 
@@ -180,7 +277,7 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
        in the transparent area with a solid color.  For all other transparent
        images, we force the creation of a mask by passing in NULL. */
     if (cx->type == MWContextPostScript) {
-        trans_pixel = XP_NEW_ZAP(IL_IRGB);
+        trans_pixel = PR_NEWZAP(IL_IRGB);
         if (trans_pixel)
             trans_pixel->red = trans_pixel->green = trans_pixel->blue = 0xff;
     }
@@ -192,14 +289,14 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
     }
 
     /* Fetch the image. */
-	image_req = IL_GetImage(image_url, cx->img_cx, obs_list, trans_pixel, 0, 0, 0, net_cx);
+	image_req = IL_GetImage(image_url, cx->img_cx, obs_list, trans_pixel, 0, 0, 0, (ilINetContext *)net_cx);
 	if (!image_req) {
 		ret_val = PR_FALSE;
 	}
 
     /* Destroy the transparent pixel if this is a PostScript context. */
     if ((cx->type == MWContextPostScript) && trans_pixel)
-        XP_FREE(trans_pixel);
+        PR_FREEIF(trans_pixel);
 
     /* The Image Library clones the dummy Net Context, so it safe to destroy
        it. */
@@ -207,3 +304,196 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
 
 	return ret_val;
 }
+
+ilIURL *
+NetContextImpl::CreateURL(const char *url, NET_ReloadMethod reload_method)
+{
+    URLImpl *iurl;
+    
+    iurl = new URLImpl();
+    if (iurl == NULL) {
+	return NULL;
+    }
+
+    if (iurl->Init(url, reload_method) != NS_OK) {
+        delete iurl;
+	return NULL;
+    }
+
+    NS_ADDREF(iurl);
+
+    return (ilIURL *)iurl;
+}
+
+void 
+NetContextImpl::Interrupt()
+{
+    if (mContext != NULL) {
+        NET_InterruptWindow(mContext);
+    }
+}
+
+PRBool
+NetContextImpl::IsLocalFileURL(char *address)
+{
+    return (PRBool)NET_IsLocalFileURL(address);
+}
+
+PRBool
+NetContextImpl::IsURLInMemCache(ilIURL *aURL)
+{
+    if (aURL != NULL) {
+        return (PRBool)NET_IsURLInMemCache(((URLImpl *)aURL)->GetURLStruct());
+    }
+    else {
+        return PR_FALSE;
+    }
+}
+
+PRBool
+NetContextImpl::IsURLInDiskCache(ilIURL *aURL)
+{
+    if (aURL != NULL) {
+        return (PRBool)NET_IsURLInDiskCache(((URLImpl *)aURL)->GetURLStruct());
+    }
+    else {
+        return PR_FALSE;
+    }
+}
+
+static void
+il_netgeturldone(URL_Struct *URL_s, int status, OPAQUE_CONTEXT *cx)
+{
+    ilIURL *iurl = (ilIURL *)URL_s->fe_data;
+    ilINetReader *reader;
+
+    if (iurl != NULL) {
+        reader = iurl->GetReader();
+        if (reader != NULL) {
+	    NS_RELEASE(reader);
+	    reader->NetRequestDone(iurl, status);
+	}
+    }
+
+    /* for mac */
+    if (status == MK_OUT_OF_MEMORY)
+       NET_InterruptWindow((MWContext *)cx);
+}
+
+int
+NetContextImpl::GetURL (ilIURL *aURL,
+			NET_ReloadMethod aLoadMethod,
+			ilINetReader *aReader)
+{ 
+    URL_Struct *urls = ((URLImpl *)aURL)->GetURLStruct();
+    FO_Present_Types type = (aLoadMethod == NET_CACHE_ONLY_RELOAD) ?
+                     FO_ONLY_FROM_CACHE_AND_INTERNAL_IMAGE :
+                     FO_CACHE_AND_INTERNAL_IMAGE;
+    aURL->SetReader(aReader);
+
+    return NET_GetURL (urls, type, mContext, 
+		       (Net_GetUrlExitFunc*)&il_netgeturldone);
+}
+
+
+URLImpl::URLImpl()
+{
+}
+
+URLImpl::URLImpl(URL_Struct *urls)
+{
+    mURLS = urls;
+    urls->fe_data = this;
+}
+
+URLImpl::~URLImpl()
+{
+    if (mURLS != NULL) {
+        NET_FreeURLStruct(mURLS);
+    }
+    
+    if (mReader != NULL) {
+        NS_RELEASE(mReader);
+    }
+}
+
+ilIURL *
+IL_CreateIURL(URL_Struct *urls)
+{
+    ilIURL *iurl = new URLImpl(urls);
+    NS_ADDREF(iurl);
+    
+    return iurl;
+}
+
+NS_IMPL_ISUPPORTS(URLImpl, kIURLIID)
+
+nsresult 
+URLImpl::Init(const char *url, NET_ReloadMethod reload_method)
+{
+    mURLS = NET_CreateURLStruct(url, reload_method);
+    if (mURLS == NULL) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    mURLS->fe_data = this;
+
+    return NS_OK;
+}
+
+void 
+URLImpl::SetReader(ilINetReader *aReader)
+{
+    NS_ADDREF(aReader);
+    mReader = aReader;
+}
+
+ilINetReader *
+URLImpl::GetReader()
+{
+    NS_ADDREF(mReader);  
+    return mReader;
+}
+ 
+int
+URLImpl::GetContentLength()
+{
+    if (mURLS) {
+        return mURLS->content_length;
+    }
+    else {
+        return 0;
+    }
+}
+
+const char *
+URLImpl::GetAddress()
+{
+    if (mURLS) {
+        return (const char *)mURLS->address;
+    }
+    else {
+        return NULL;
+    }
+}
+
+time_t
+URLImpl::GetExpires()
+{
+    if (mURLS) {
+        return mURLS->expires;
+    }
+    else {
+        return 0;
+    }
+}
+
+void
+URLImpl::SetBackgroundLoad(PRBool bgload)
+{
+    if (mURLS) {
+        mURLS->load_background = bgload;
+    }
+}
+
+

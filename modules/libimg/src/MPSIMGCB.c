@@ -24,7 +24,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "xp_mem.h"
+#include "prmem.h"
 
 /* Include the implementation-specific header: */
 #include "PPSIMGCB.h"
@@ -107,7 +107,7 @@ JMC_PUBLIC_API(void)
 _PSIMGCB_finalize(struct PSIMGCB* self, jint op, JMCException* *exc)
 {
 	/* Override this method and add your own finalization here. */
-	XP_FREEIF(self);
+	PR_FREEIF(self);
 }
 #endif
 
@@ -140,7 +140,7 @@ const struct PSIMGCBInterface PSIMGCBVtable = {
 JMC_PUBLIC_API(PSIMGCB*)
 PSIMGCBFactory_Create(JMCException* *exception)
 {
-	PSIMGCBImplHeader* impl = (PSIMGCBImplHeader*)XP_NEW_ZAP(PSIMGCBImpl);
+	PSIMGCBImplHeader* impl = (PSIMGCBImplHeader*)PR_NEWZAP(PSIMGCBImpl);
 	PSIMGCB* self;
 	if (impl == NULL) {
 		JMC_EXCEPTION(exception, JMCEXCEPTION_OUT_OF_MEMORY);
@@ -151,7 +151,7 @@ PSIMGCBFactory_Create(JMCException* *exception)
 	impl->refcount = 1;
 	_PSIMGCB_init(self, exception);
 	if (JMC_EXCEPTION_RETURNED(exception)) {
-		XP_FREE(impl);
+		PR_FREEIF(impl);
 		return NULL;
 	}
 	return self;

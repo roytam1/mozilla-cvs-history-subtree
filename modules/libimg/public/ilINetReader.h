@@ -16,33 +16,39 @@
  * Reserved.
  */
 
-/* This is a dummy Net Context which the Image Library uses for network
-   operations in lieu of an MWContext.  It will be replaced by a true
-   Net Context when the Network Library is modularized. */
+#ifndef ilINetReader_h___
+#define ilINetReader_h___
 
-#ifndef _DUMMY_NC_H
-#define _DUMMY_NC_H
+#include <stdio.h>
+#include "nsISupports.h"
+#include "ntypes.h"
 
-#include "prtypes.h"
-#include "net.h"
+// IID for the ilINetReader interface
+#define IL_INETREADER_IID    \
+{ 0xbe324220, 0xb416, 0x11d1,  \
+{ 0x9b, 0xc3, 0x00, 0x60, 0x08, 0x8c, 0xa6, 0xb3 } }
 
-#include "ilINetContext.h"
-#include "ilIURL.h"
+class ilIURL;
 
-typedef void* IL_NetContext;
 
-PR_BEGIN_EXTERN_C
+class ilINetReader : public nsISupports {
+public:
 
-extern IL_NetContext *
-IL_NewDummyNetContext(MWContext *context,
-                      NET_ReloadMethod cache_reload_policy);
+  virtual unsigned int WriteReady()=0;
+  
+  virtual int FirstWrite(const unsigned char *str, int32 len)=0;
 
-extern void
-IL_DestroyDummyNetContext(IL_NetContext *net_cx);
+  virtual int Write(const unsigned char *str, int32 len)=0;
 
-extern ilIURL *
-IL_CreateIURL(URL_Struct *urls);
+  virtual void StreamAbort(int status)=0;
 
-PR_END_EXTERN_C
+  virtual void StreamComplete(PRBool is_multipart)=0;
 
-#endif /* _DUMMY_NC_H */
+  virtual void NetRequestDone(ilIURL *urls, int status)=0;
+  
+  virtual PRBool StreamCreated(ilIURL *urls, int type)=0;
+  
+  virtual PRBool IsMulti()=0;
+};
+
+#endif

@@ -27,11 +27,15 @@
 #include "if.h"
 #include "il_strm.h"            /* For OPAQUE_CONTEXT. */
 
-extern int MK_OUT_OF_MEMORY;
+#ifdef STANDALONE_IMAGE_LIB
+#include "ilISystemServices.h"
+#endif /* STANDALONE_IMAGE_LIB */
 
 /* for XP_GetString() */
 #include "xpgetstr.h"
 
+PR_BEGIN_EXTERN_C
+extern int MK_OUT_OF_MEMORY;
 extern int XP_MSG_IMAGE_NOT_FOUND;
 extern int XP_MSG_XBIT_COLOR;	
 extern int XP_MSG_1BIT_MONO;
@@ -52,12 +56,18 @@ extern int XP_MSG_TRANSPARENCY;
 extern int XP_MSG_COMMENT;	
 extern int XP_MSG_UNKNOWN;	
 extern int XP_MSG_COMPRESS_REMOVE;	
+PR_END_EXTERN_C
 
 static uint32 image_cache_size;
 
 #ifndef M12N                    /* XXXM12N Cache trace: cleanup/eliminate. */
 static int il_cache_trace = FALSE; /* XXXM12N Clean up/eliminate */
 #endif
+
+PRLogModuleInfo *il_log_module = NULL;
+#ifdef STANDALONE_IMAGE_LIB
+ilISystemServices *il_ss = NULL;
+#endif /* STANDALONE_IMAGE_LIB */
 
 /* simple list, in use order */
 struct il_cache_struct {
@@ -76,7 +86,7 @@ il_add_container_to_context(IL_GroupContext *img_cx, il_container *ic)
 {
     il_container_list *ic_list;
     
-    ic_list = XP_NEW_ZAP(il_container_list);
+    ic_list = PR_NEWZAP(il_container_list);
 	if (!ic_list)
         return PR_FALSE;
 
@@ -98,7 +108,7 @@ il_remove_container_from_context(IL_GroupContext *img_cx, il_container *ic)
     
 	if (current->ic == ic) {
 		img_cx->container_list = current->next;
-        XP_FREE(current);
+        PR_FREEIF(current);
         return PR_TRUE;
     }
 	else {
@@ -106,7 +116,7 @@ il_remove_container_from_context(IL_GroupContext *img_cx, il_container *ic)
             next = current->next;
 			if (next && (next->ic == ic)) {
 				current->next = next->next;
-                XP_FREE(next);
+                PR_FREEIF(next);
                 return PR_TRUE;
 			}
         }
@@ -132,7 +142,7 @@ il_add_client_context(IL_GroupContext *img_cx, il_container *ic)
         /* If the client image context doesn't already belong to the
            container's client context list, then add it to the beginning
            of the list. */
-        current = XP_NEW_ZAP(il_context_list);
+        current = PR_NEWZAP(il_context_list);
         if (!current)
             return PR_FALSE;
         current->img_cx = img_cx;
@@ -146,7 +156,7 @@ il_add_client_context(IL_GroupContext *img_cx, il_container *ic)
            containers in the context.  Observer notification takes place
            if the image group previously had no actively loading images. */
         if (IMAGE_CONTAINER_ACTIVE(ic) && !ic->is_looping) {
-            XP_ASSERT(!ic->is_aborted);
+            PR_ASSERT(!ic->is_aborted);
             if (!img_cx->num_loading)
                 il_group_notify(img_cx, IL_STARTED_LOADING);
             img_cx->num_loading++;
@@ -162,7 +172,7 @@ il_add_client_context(IL_GroupContext *img_cx, il_container *ic)
         }
 
 #ifdef DEBUG_GROUP_OBSERVER
-        XP_TRACE(("5 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+        ILTRACE(1,("5 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                   img_cx, img_cx->num_containers, img_cx->num_loading,
                   img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -188,7 +198,7 @@ il_remove_client_context(IL_GroupContext *img_cx, il_container *ic)
 
     if (current->img_cx == img_cx) {
         ic->img_cx_list = current->next;
-        XP_FREE(current);
+        PR_FREEIF(current);
         deleted_element = PR_TRUE;
     }
     else {
@@ -196,7 +206,7 @@ il_remove_client_context(IL_GroupContext *img_cx, il_container *ic)
             next = current->next;
             if (next && (next->img_cx == img_cx)) {
                 current->next = next->next;
-                XP_FREE(next);
+                PR_FREEIF(next);
                 deleted_element = PR_TRUE;
                 break;
             }
@@ -232,7 +242,7 @@ il_remove_client_context(IL_GroupContext *img_cx, il_container *ic)
         }
 
 #ifdef DEBUG_GROUP_OBSERVER
-        XP_TRACE(("6 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
+        ILTRACE(1,("6 img_cx=%x total=%d loading=%d looping=%d aborted=%d",
                   img_cx, img_cx->num_containers, img_cx->num_loading,
                   img_cx->num_looping, img_cx->num_aborted));
 #endif /* DEBUG_GROUP_OBSERVER */
@@ -254,7 +264,7 @@ il_image_match(il_container *ic,          /* Candidate for match. */
                int req_width,             /* Target image width. */
                int req_height)            /* Target image height. */
 {
-    PRBool ic_sized = (ic->state >= IC_SIZED);
+    PRBool ic_sized = (PRBool)(ic->state >= IC_SIZED);
     NI_PixmapHeader *img_header = &ic->image->header;
     IL_IRGB *img_trans_pixel = img_header->transparent_pixel;
 
@@ -359,7 +369,7 @@ il_find_in_cache(IL_DisplayType display_type,
                  int req_height)
 {
 	il_container *ic=0;
-	XP_ASSERT(hash);
+	PR_ASSERT(hash);
 	for (ic=il_cache.head; ic; ic=ic->next)
 	{
 		if (ic->hash != hash)
@@ -374,6 +384,7 @@ il_find_in_cache(IL_DisplayType display_type,
         return ic;
 	}
 
+#ifndef STANDALONE_IMAGE_LIB
 #ifndef M12N                    /* XXXM12N Cache trace: cleanup/eliminate. */
     if (il_cache_trace) {
         char buffer[1024];
@@ -391,6 +402,7 @@ il_find_in_cache(IL_DisplayType display_type,
             FE_Alert(alert_context, buffer);
     }
 #endif /* M12N */
+#endif /* STANDALONE_IMAGE_LIB */
     
     return NULL;
 }
@@ -410,7 +422,11 @@ il_get_container(IL_GroupContext *img_cx,
 {
     uint32 urlhash, hash;
     il_container *ic;
+#ifndef STANDALONE_IMAGE_LIB
     JMCException *exc = NULL;
+#else
+	void *exc = NULL;
+#endif
 
     urlhash = hash = il_hash(image_url);
 
@@ -441,9 +457,11 @@ il_get_container(IL_GroupContext *img_cx,
 
         else if ((FORCE_RELOAD(cache_reload_policy) && !ic->forced) ||
 				 (cache_reload_policy != NET_CACHE_ONLY_RELOAD &&
-				  ic->expires && (time(NULL) > ic->expires)) ||
-				 (NET_URL_Type(ic->url_address) == MOCHA_TYPE_URL))
-        {
+				  ic->expires && (time(NULL) > ic->expires))
+#ifndef STANDALONE_IMAGE_LIB
+				  || (NET_URL_Type(ic->url_address) == MOCHA_TYPE_URL)
+#endif /* STANDALONE_IMAGE_LIB */
+        ) {
             /* Get rid of the old copy of the image that we're replacing. */
             if (!ic->is_in_use) 
             {
@@ -461,21 +479,21 @@ il_get_container(IL_GroupContext *img_cx,
 
     /* There's no existing matching container.  Make a new one. */
     if (!ic) {
-		ic = XP_NEW_ZAP(il_container);
+		ic = PR_NEWZAP(il_container);
         if (!ic)
             return NULL;
 
         /* Allocate the source image header. */
-		if (!(ic->src_header = XP_NEW_ZAP(NI_PixmapHeader))) {
-            XP_FREE(ic);
+		if (!(ic->src_header = PR_NEWZAP(NI_PixmapHeader))) {
+            PR_FREEIF(ic);
             return NULL;
         }
 
         /* Allocate the source image's colorspace.  The fields will be
            filled in by the image decoder. */
-        if (!(ic->src_header->color_space = XP_NEW_ZAP(IL_ColorSpace))) {
-            XP_FREE(ic->src_header);
-            XP_FREE(ic);
+        if (!(ic->src_header->color_space = PR_NEWZAP(IL_ColorSpace))) {
+            PR_FREEIF(ic->src_header);
+            PR_FREEIF(ic);
             return NULL;
         }
         IL_AddRefToColorSpace(ic->src_header->color_space);
@@ -483,10 +501,10 @@ il_get_container(IL_GroupContext *img_cx,
         /* Allocate the destination image structure.  A destination mask
            structure will be allocated later if the image is determined to
            be transparent and no background_color has been provided. */
-		if (!(ic->image = XP_NEW_ZAP(IL_Pixmap))) {
+		if (!(ic->image = PR_NEWZAP(IL_Pixmap))) {
             IL_ReleaseColorSpace(ic->src_header->color_space);
-            XP_FREE(ic->src_header);
-            XP_FREE(ic);
+            PR_FREEIF(ic->src_header);
+            PR_FREEIF(ic);
             return NULL;
         }
         
@@ -498,12 +516,12 @@ il_get_container(IL_GroupContext *img_cx,
 
         /* Save the requested background color in the container. */
         if (background_color) {
-            if (!(ic->background_color = XP_NEW_ZAP(IL_IRGB))) {
-                XP_FREE(ic->image);
+            if (!(ic->background_color = PR_NEWZAP(IL_IRGB))) {
+                PR_FREEIF(ic->image);
                 IL_ReleaseColorSpace(ic->src_header->color_space);
                 IL_ReleaseColorSpace(ic->image->header.color_space);
-                XP_FREE(ic->src_header);
-                XP_FREE(ic);
+                PR_FREEIF(ic->src_header);
+                PR_FREEIF(ic);
                 return NULL;
             }
             XP_MEMCPY(ic->background_color, background_color, sizeof(IL_IRGB));
@@ -516,7 +534,7 @@ il_get_container(IL_GroupContext *img_cx,
 
         ic->hash = hash;
         ic->urlhash = urlhash;
-        ic->url_address = XP_STRDUP(image_url);
+        ic->url_address = PL_strdup(image_url);
 		ic->is_url_loading = PR_FALSE;
         ic->dest_width  = req_width;
         ic->dest_height = req_height;
@@ -533,20 +551,24 @@ il_get_container(IL_GroupContext *img_cx,
            interface and increment its reference count.  The reference count
            is decremented when the container is destroyed. */
         ic->img_cb = img_cx->img_cb;
+#ifdef STANDALONE_IMAGE_LIB
+        NS_ADDREF(ic->img_cb);
+#else
         IMGCBIF_addRef(ic->img_cb, &exc);
 
         if (exc) {
             JMC_DELETE_EXCEPTION(&exc); /* XXXM12N Should really return
                                            exception */
-            if (ic->background_color)
-                XP_FREE(ic->background_color);
-            XP_FREE(ic->image);
+
+            PR_FREEIF(ic->background_color);
+            PR_FREEIF(ic->image);
             IL_ReleaseColorSpace(ic->src_header->color_space);
             IL_ReleaseColorSpace(ic->image->header.color_space);
-            XP_FREE(ic->src_header);
-            XP_FREE(ic);
+            PR_FREEIF(ic->src_header);
+            PR_FREEIF(ic);
             return NULL;
         }
+#endif /* STANDALONE_IMAGE_LIB */
     }
     
 	il_addtocache(ic);
@@ -565,9 +587,8 @@ il_scour_container(il_container *ic)
 
 	/* reset a bunch of stuff */
 	ic->url    = NULL;
-	ic->stream = NULL;
     if (ic->net_cx)
-        IL_DestroyDummyNetContext(ic->net_cx);
+        NS_RELEASE(ic->net_cx);
 	ic->net_cx     = NULL;
 
 	ic->forced                  = FALSE;
@@ -581,9 +602,13 @@ il_scour_container(il_container *ic)
 void
 il_delete_container(il_container *ic)
 {
+#ifndef STANDALONE_IMAGE_LIB
     JMCException *exc = NULL;
+#else
+	void *exc = NULL;
+#endif
 
-    XP_ASSERT(ic);
+    PR_ASSERT(ic);
     if (ic) {
         ILTRACE(2,("il: delete ic=0x%08x", ic));
 
@@ -597,17 +622,15 @@ il_delete_container(il_container *ic)
             return;
         }
         
-        XP_ASSERT(ic->clients == NULL);
+        PR_ASSERT(ic->clients == NULL);
 		il_scour_container(ic);
 
-        if (ic->background_color){
-            XP_FREE(ic->background_color);
-        }
 
-        if (ic->src_header->transparent_pixel)
-            XP_FREE(ic->src_header->transparent_pixel);
+        PR_FREEIF(ic->background_color);
+
+        PR_FREEIF(ic->src_header->transparent_pixel);
         IL_ReleaseColorSpace(ic->src_header->color_space);
-        XP_FREE(ic->src_header);
+        PR_FREEIF(ic->src_header);
 
 		/* delete the image */
         if (!(ic->image || ic->mask))
@@ -615,44 +638,55 @@ il_delete_container(il_container *ic)
         il_destroy_pixmap(ic->img_cb, ic->image);
         if (ic->mask)
             il_destroy_pixmap(ic->img_cb, ic->mask);
+#ifdef STANDALONE_IMAGE_LIB
+        NS_RELEASE(ic->img_cb);
+#else
         IMGCBIF_release(ic->img_cb, &exc);
         if (exc) {
             JMC_DELETE_EXCEPTION(&exc); /* XXXM12N Should really return
                                            exception */
         }
+#endif /* STANDALONE_IMAGE_LIB */
 
         FREE_IF_NOT_NULL(ic->comment);
         FREE_IF_NOT_NULL(ic->url_address);
         FREE_IF_NOT_NULL(ic->fetch_url);
 		
-        XP_FREE(ic);
+        PR_FREEIF(ic);
 	}
 }
 
 
 /* Destroy an IL_Pixmap. */
 void
+#ifdef STANDALONE_IMAGE_LIB
+il_destroy_pixmap(ilIImageRenderer *img_cb, IL_Pixmap *pixmap) 
+#else
 il_destroy_pixmap(IMGCBIF *img_cb, IL_Pixmap *pixmap) 
+#endif /* STANDALONE_IMAGE_LIB */
 {
     NI_PixmapHeader *header = &pixmap->header;
 
     /* Free the pixmap's bits, as well as the client_data. */
+#ifdef STANDALONE_IMAGE_LIB
+    img_cb->DestroyPixmap(NULL, pixmap);
+#else
     IMGCBIF_DestroyPixmap(img_cb, NULL, pixmap);
+#endif /* STANDALONE_IMAGE_LIB */
 
     /* Release memory used by the header. */
     IL_ReleaseColorSpace(header->color_space);
-    if (header->transparent_pixel)
-        XP_FREE(header->transparent_pixel);
+    PR_FREEIF(header->transparent_pixel);
 
     /* Release the IL_Pixmap. */
-    XP_FREE(pixmap);
+    PR_FREEIF(pixmap);
 }
 
 
 static char *
 il_visual_info(il_container *ic)
 {
-	char *msg = (char *)XP_CALLOC(1, 50);
+	char *msg = (char *)PR_Calloc(1, 50);
     NI_PixmapHeader *img_header = &ic->image->header;
 
     if (!msg)
@@ -680,7 +714,7 @@ il_visual_info(il_container *ic)
             break;
 
         default:
-            XP_ASSERT(0);
+            PR_ASSERT(0);
             *msg=0;
             break;
 		}
@@ -748,7 +782,7 @@ il_HTML_image_info(il_container *ic, int long_form, int show_comment)
         if (visual_info) {
             ADD_CELL(XP_GetString(XP_MSG_COLOR), visual_info);
                                                              /* #### i18n */
-            XP_FREE(visual_info);
+            PR_FREEIF(visual_info);
         }
         
         if (img_header->color_space->cmap.map)
@@ -785,7 +819,7 @@ il_HTML_image_info(il_container *ic, int long_form, int show_comment)
     return output;
 }
 
-char *
+IL_IMPLEMENT(char *)
 IL_HTMLImageInfo(char *url_address)
 {
     il_container *ic;
@@ -815,11 +849,12 @@ IL_HTMLImageInfo(char *url_address)
     StrAllocCat(output, url_address);
     StrAllocCat(output, "\"></A>\n");
 
-    XP_FREE(il_msg);
+    PR_FREEIF(il_msg);
 
     return output;
 }
 
+#ifndef STANDALONE_IMAGE_LIB
 /*
  * Create an HTML stream and generate HTML describing
  * the image cache.  Use "about:memory-cache" URL to acess.
@@ -837,19 +872,19 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
 	Bool long_form = FALSE;
 	int status;
 
-	if(strcasestr(urls->address, "?long"))
+	if(PL_strcasestr(urls->address, "?long"))
 		long_form = TRUE;
 #ifndef M12N                    /* XXXM12N Cache trace: cleanup/eliminate. */
-	else if(strcasestr(urls->address, "?traceon"))
+	else if(PL_strcasestr(urls->address, "?traceon"))
 		il_cache_trace = TRUE;
-	else if(strcasestr(urls->address, "?traceoff"))
+	else if(PL_strcasestr(urls->address, "?traceoff"))
 		il_cache_trace = FALSE;
 #endif /* M12N */
 
 	StrAllocCopy(urls->content_type, TEXT_HTML);
 	format_out = CLEAR_CACHE_BIT(format_out);
 
-	stream = NET_StreamBuilder(format_out, urls, cx);
+	stream = NET_StreamBuilder(format_out, urls, (MWContext *)cx);
 	if (!stream)
 		return 0;
 
@@ -861,7 +896,7 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
 {                                                                           \
     status = (*stream->put_block)(stream,						\
                                   part ? part : "Unknown",					\
-                                  part ? XP_STRLEN(part) : 7);				\
+                                  part ? PL_strlen(part) : 7);				\
     if (status < 0)															\
         goto END;                                                           \
 }
@@ -871,7 +906,7 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
      * layout will be causing cache state to be modified even as we're
      * trying to display it.
      */
-    XP_STRCPY(buffer,
+    PL_strcpy(buffer,
               "<TITLE>Information about the Netscape image cache</TITLE>\n");
     PUT_PART(buffer);
                                   
@@ -910,7 +945,7 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
             
             /* Sanity check */
             if (l)
-                XP_ASSERT(ic->prev == l);
+                PR_ASSERT(ic->prev == l);
             l = ic;
 
             /* Don't display uninteresting images */
@@ -923,20 +958,20 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
 
             /* Emit DocInfo link to URL */
             address = ic->url_address;
-            XP_STRCPY(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
-            XP_STRCAT(buffer, address);
-            XP_STRCAT(buffer, ">");
+            PL_strcpy(buffer, "<A TARGET=Internal_URL_Info HREF=about:");
+            PL_strcat(buffer, address);
+            PL_strcat(buffer, ">");
             escaped = NET_EscapeHTML(address);
-            XP_STRCAT(buffer, escaped);
-            XP_FREE(escaped);
-            XP_STRCAT(buffer, "</A>");
+            PL_strcat(buffer, escaped);
+            PR_FREEIF(escaped);
+            PL_strcat(buffer, "</A>");
             ADD_CELL("URL:", buffer);
             
             /* Rest of image info (size, colors, depth, etc.) */
             img_info = il_HTML_image_info(ic, long_form, FALSE);
             if (img_info) {
                 StrAllocCat(output, img_info);
-                XP_FREE(img_info);
+                PR_FREEIF(img_info);
             }
             
             StrAllocCat(output, "</TABLE><P>\n");
@@ -948,16 +983,16 @@ IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, IL_URL *urls,
         
   END:
      
-    if (output)
-        XP_FREE(output);
+    PR_FREEIF(output);
      
 	if(status < 0)
 		(*stream->abort)(stream, status);
 	else
-		(*stream->complete)(stream);
+		(*stream->complete)((NET_StreamClass *)stream);
 
 	return 1;
 }
+#endif
 
 il_container *
 il_removefromcache(il_container *ic)
@@ -965,11 +1000,11 @@ il_removefromcache(il_container *ic)
     int32 image_bytes;
     NI_PixmapHeader *img_header = &ic->image->header;
 
-	XP_ASSERT(ic); 
+	PR_ASSERT(ic); 
 	if (ic)
 	{
 		ILTRACE(2,("il: remove ic=0x%08x from cache\n", ic));
-        XP_ASSERT(ic->next || ic->prev || (il_cache.head == il_cache.tail));
+        PR_ASSERT(ic->next || ic->prev || (il_cache.head == il_cache.tail));
 
         /* Remove entry from doubly-linked list. */
 		if (il_cache.head == ic)
@@ -988,14 +1023,14 @@ il_removefromcache(il_container *ic)
         image_bytes = ((int32) img_header->widthBytes) * img_header->height;
 
 /* this assert gets triggered all the time. Take it out or fix it */
-/*        XP_ASSERT (il_cache.bytes >= (int32)image_bytes); */
+/*        PR_ASSERT (il_cache.bytes >= (int32)image_bytes); */
 
         if (il_cache.bytes <  (int32)image_bytes)
             il_cache.bytes = 0;
         else        
             il_cache.bytes -= image_bytes;
 		il_cache.items--;
-        XP_ASSERT(il_cache.items >= 0);
+        PR_ASSERT(il_cache.items >= 0);
 	}
 	return ic;
 }
@@ -1004,7 +1039,7 @@ void
 il_adjust_cache_fullness(int32 bytes)
 {
     il_cache.bytes += bytes;
-    XP_ASSERT(il_cache.bytes >= 0);
+    PR_ASSERT(il_cache.bytes >= 0);
 
     /* Safety net - This should never happen. */
     if (il_cache.bytes < 0)
@@ -1024,7 +1059,7 @@ il_addtocache(il_container *ic)
     NI_PixmapHeader *img_header = &ic->image->header;
 
 	ILTRACE(2,("il:    add ic=0x%08x to cache\n", ic));
-    XP_ASSERT(!ic->prev && !ic->next);
+    PR_ASSERT(!ic->prev && !ic->next);
 
     /* Thread onto doubly-linked list, kept in LRU order */
     ic->prev = NULL;
@@ -1032,7 +1067,7 @@ il_addtocache(il_container *ic)
 	if (il_cache.head)
 		il_cache.head->prev = ic;
     else {
-        XP_ASSERT(il_cache.tail == NULL);
+        PR_ASSERT(il_cache.tail == NULL);
         il_cache.tail = ic;
     }
     il_cache.head = ic;
@@ -1046,7 +1081,7 @@ il_addtocache(il_container *ic)
 
 /* Set limit on approximate size, in bytes, of all pixmap storage used
    by the imagelib.  */
-void
+IL_IMPLEMENT(void)
 IL_SetCacheSize(uint32 new_size)
 {
 	image_cache_size = new_size;
@@ -1065,7 +1100,7 @@ il_reduce_image_cache_size_to(uint32 new_size)
     }
 }
 
-uint32
+IL_IMPLEMENT(uint32)
 IL_ShrinkCache(void)
 {
 	il_container *ic;
@@ -1075,7 +1110,8 @@ IL_ShrinkCache(void)
 	{
 		if (ic->is_in_use)
             continue;
-        
+
+#ifndef STANDALONE_IMAGE_LIB        
 #ifndef M12N                    /* XXXM12N Cache trace: cleanup/eliminate. */
         if (il_cache_trace) {
             char buffer[1024];
@@ -1091,6 +1127,7 @@ IL_ShrinkCache(void)
                 FE_Alert(alert_context, buffer);
         }
 #endif /* M12N */
+#endif /* STANDALONE_IMAGE_LIB */
         il_removefromcache(ic);
         il_delete_container(ic);
         break;
@@ -1099,7 +1136,8 @@ IL_ShrinkCache(void)
     return il_cache.bytes;
 }
 
-uint32 IL_GetCacheSize()
+IL_IMPLEMENT(uint32)
+IL_GetCacheSize()
 {	
 	return il_cache.bytes;
 }
@@ -1109,7 +1147,7 @@ uint32 IL_GetCacheSize()
    cache.  The memory won't be released if the image is still in use
    by one or more clients.  XXX - Can we get rid of this call ?  Why
    the hell do we need this ? */
-void
+IL_IMPLEMENT(void)
 IL_UnCache(IL_Pixmap *pixmap)
 {
 	il_container *ic;
@@ -1133,7 +1171,7 @@ IL_UnCache(IL_Pixmap *pixmap)
 
 /* Free num_bytes of memory by flushing the Least Recently Used (LRU) images
    from the image cache. */
-void
+IL_IMPLEMENT(void)
 IL_FreeMemory(IL_GroupContext *image_context, uint32 num_bytes)
 {
     /* XXXM12N Implement me. */
@@ -1173,7 +1211,7 @@ static PRBool
 il_delete_client(il_container *ic, IL_ImageReq *image_req)
 {
     IL_GroupContext *img_cx;
-    IL_NetContext *net_cx;
+    ilINetContext *net_cx;
     IL_ImageReq *current_req;
     IL_ImageReq *prev_req = NULL;
 
@@ -1202,7 +1240,7 @@ il_delete_client(il_container *ic, IL_ImageReq *image_req)
     
     img_cx = current_req->img_cx;
     net_cx = current_req->net_cx;   /* This is destroyed below. */
-    XP_FREE(current_req);           /* Delete the image request. */
+    PR_FREEIF(current_req);           /* Delete the image request. */
 
     /* Decrement the number of unique images for the given image request's
        image context, but be careful to do this only when there are no other
@@ -1230,15 +1268,16 @@ il_delete_client(il_container *ic, IL_ImageReq *image_req)
                  ic->img_cx = ic->clients->img_cx;
             /* The container's net context may be about to become invalid, so
                give the container a different one which is known to be valid. */
-             if (ic->net_cx && !XP_MEMCMP(ic->net_cx, net_cx, sizeof(IL_NetContext))) {
-                 IL_DestroyDummyNetContext(ic->net_cx);
-                 ic->net_cx = IL_CloneDummyNetContext(ic->clients->net_cx);
+             if (ic->net_cx == net_cx)
+             {
+                 NS_RELEASE(ic->net_cx);
+                 ic->net_cx = ic->clients->net_cx->Clone();
              }
         } 
     }
 
 	/* Destroy the net context for the client we just destroyed. */
-    IL_DestroyDummyNetContext(net_cx);
+    NS_RELEASE(net_cx);
 
     ILTRACE(3, ("il: delete_client ic=0x%08x, image_req =0x%08x\n", ic,
                 image_req));
@@ -1263,9 +1302,21 @@ il_delete_all_clients(il_container *ic)
    = Initialize internal state
    = Scan image plug-in directory
    = Register individual image decoders with the netlib */
-int
+IL_IMPLEMENT(int)
+#ifdef STANDALONE_IMAGE_LIB
+IL_Init(ilISystemServices *ss)
+#else
 IL_Init()
+#endif /* STANDALONE_IMAGE_LIB */
 {
+    if (il_log_module == NULL) {
+        il_log_module = PR_NewLogModule("IMGLIB");
+    }
+
+#ifdef STANDALONE_IMAGE_LIB
+    il_ss = ss;
+#endif /* STANDALONE_IMAGE_LIB */
+
     /* XXXM12N - finish me. */
     return TRUE;
 }
@@ -1279,7 +1330,7 @@ IL_Init()
  
    XXX - Actually, right now it just frees the cached images.  There are still
          a couple of other places that leaks need to be fixed. */
-void
+IL_IMPLEMENT(void)
 IL_Shutdown()
 {
     il_container *ic, *ic_next;
@@ -1291,7 +1342,7 @@ IL_Shutdown()
         il_delete_container(ic);
     }
 
-    XP_ASSERT(il_cache.bytes == 0);
+    PR_ASSERT(il_cache.bytes == 0);
 }
 
 /* Release a reference to an image lib request.  If there are no other
@@ -1300,7 +1351,7 @@ IL_Shutdown()
    if the last client is removed, the container can be reclaimed,
    either by storing it in the cache or throwing it away.
 */
-void
+IL_IMPLEMENT(void)
 IL_DestroyImage(IL_ImageReq *image_req)
 {
     IL_GroupContext *img_cx;
@@ -1329,20 +1380,20 @@ IL_DestroyImage(IL_ImageReq *image_req)
     if (!ic){
 	/* editing icons don't have ic's but need to be freed */	
 	if( image_req->net_cx )
-		IL_DestroyDummyNetContext( image_req->net_cx );
-	XP_FREE( image_req );
+		NS_RELEASE( image_req->net_cx );
+	PR_FREEIF( image_req );
         return;
     }
 
     ic_list = img_cx->container_list;
     ILTRACE(1, ("il: IL_DestoyImage: ic = 0x%08x\n", ic));
-    XP_ASSERT(ic_list);
+    PR_ASSERT(ic_list);
     if (!ic_list)
         return;
 
     /* Delete the image request from the container's list of clients. */
     client_deleted = il_delete_client(ic, image_req);
-    XP_ASSERT(client_deleted);
+    PR_ASSERT(client_deleted);
     
     /* The image container can't be deleted until all clients are done. */
     if (ic->clients)
@@ -1357,17 +1408,19 @@ IL_DestroyImage(IL_ImageReq *image_req)
 
     il_image_abort(ic);
     
-    XP_ASSERT(img_cx->num_containers >= 0);
+    PR_ASSERT(img_cx->num_containers >= 0);
     if (!img_cx->num_containers) {
-        XP_ASSERT(!img_cx->container_list);
+        PR_ASSERT(!img_cx->container_list);
         img_cx->container_list = 0;
         img_cx->num_loading = 0;
         img_cx->num_aborted = 0;
     }
 
     if ((ic->state != IC_COMPLETE) || ic->multi ||
-        ic->rendered_with_custom_palette ||
-        (NET_URL_Type(ic->url_address) == MOCHA_TYPE_URL)
+        ic->rendered_with_custom_palette
+#ifndef STANDALONE_IMAGE_LIB
+         || (NET_URL_Type(ic->url_address) == MOCHA_TYPE_URL)
+#endif /* STANDALONE_IMAGE_LIB */
         ) {
         il_removefromcache(ic);
         il_delete_container(ic);
@@ -1390,7 +1443,7 @@ IL_DestroyImage(IL_ImageReq *image_req)
 /* This routine is a "safety net", in case layout didn't free up all the
  * images on a page.  It assumes layout made a mistake and frees them anyway.
  */
-void
+IL_IMPLEMENT(void)
 IL_DestroyImageGroup(IL_GroupContext *img_cx)
 {
     IL_ImageReq *image_req, *next_req;
@@ -1401,7 +1454,7 @@ IL_DestroyImageGroup(IL_GroupContext *img_cx)
         return;
 	
     if (img_cx->num_containers > 0) {
-        XP_ASSERT(img_cx->container_list);
+        PR_ASSERT(img_cx->container_list);
 
 		for (ic_list = img_cx->container_list; ic_list;
              ic_list = ic_list_next) {
@@ -1415,8 +1468,8 @@ IL_DestroyImageGroup(IL_GroupContext *img_cx)
                     IL_DestroyImage(image_req);
             }
         }
-        XP_ASSERT(img_cx->num_containers == 0);
-        XP_ASSERT(img_cx->container_list == NULL);
+        PR_ASSERT(img_cx->num_containers == 0);
+        PR_ASSERT(img_cx->container_list == NULL);
     }
   
     ILTRACE(1, ("il: IL_DestroyImageGroup\n"));

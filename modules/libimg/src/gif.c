@@ -58,16 +58,16 @@ mailing address.
 
 */
 
-/*
-#include "xp.h"
-*/
-
 #include "if.h"
 #include "il.h"
-#include "xp_mem.h"
+#include "prmem.h"
 
 #include "merrors.h"
+#ifdef STANDALONE_IMAGE_LIB
+#include "xpcompat.h"
+#else
 #include "xp_core.h"
+#endif /* STANDALONE_IMAGE_LIB */
 
 #define HOWMANY(x, r)     (((x) + ((r) - 1)) / (r))
 #define ROUNDUP(x, r)     (HOWMANY(x, r) * (r))
@@ -77,7 +77,9 @@ mailing address.
 #    define MAX(x, y)	(((x) > (y)) ? (x) : (y))
 #endif
 
+PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
+PR_END_EXTERN_C
 
 #ifdef PROFILE
 #    pragma profile on
@@ -245,7 +247,7 @@ output_row(gif_struct *gs)
             row_shift = 0;
             break;
         default:
-            XP_ABORT(("Illegal interlace pass"));
+            ILTRACE(0,("Illegal interlace pass"));
             break;
         }
 
@@ -331,7 +333,7 @@ output_row(gif_struct *gs)
 				    break;
 
 			    default:
-				    XP_ASSERT(0);
+				    PR_ASSERT(0);
 		    }
         }while(gs->irow > gs->height - 1);
 	}
@@ -497,7 +499,7 @@ il_gif_init(il_container *ic)
 	gif_struct *gs;
     NI_ColorSpace *src_color_space = ic->src_header->color_space;
 
-	gs = XP_NEW_ZAP(gif_struct);
+	gs = PR_NEWZAP(gif_struct);
 	if (gs) 
 	{
 		ic->ds = gs;
@@ -521,7 +523,7 @@ il_gif_init_transparency(il_container *ic, int index)
     IL_IRGB *img_trans_pixel;
     
     if (!src_trans_pixel) {
-        src_trans_pixel = XP_NEW_ZAP(IL_IRGB);
+        src_trans_pixel = PR_NEWZAP(IL_IRGB);
         if (!src_trans_pixel)
             return FALSE;
         ic->src_header->transparent_pixel = src_trans_pixel;
@@ -553,7 +555,7 @@ il_gif_destroy_transparency(il_container *ic)
     
     if (src_header->transparent_pixel) {
         /* Destroy the source image's transparent pixel. */
-        XP_FREE(src_header->transparent_pixel);
+        PR_FREEIF(src_header->transparent_pixel);
         src_header->transparent_pixel = NULL;
 
         /* Destroy the destination image's transparent pixel. */
@@ -581,7 +583,7 @@ il_gif_compute_percentage_complete(int row, il_container *ic)
     case 4: percent_done = 50 + percent_height / 2;
         break;
     default:
-        XP_ABORT(("Illegal interlace pass"));
+        ILTRACE(0,("Illegal interlace pass"));
         break;
     }
 
@@ -636,7 +638,7 @@ gif_delay_time_callback(void *closure)
 {
 	gif_struct *gs = (gif_struct *)closure;
 
-    XP_ASSERT(gs->state == gif_delay);
+    PR_ASSERT(gs->state == gif_delay);
 
     gs->delay_timeout = NULL;
 
@@ -662,16 +664,16 @@ static int
 gif_clear_screen(gif_struct *gs)
 {
     uint erase_width, erase_height, erase_x_offset, erase_y_offset;
-    XP_Bool erase;
+    PRBool erase;
     il_container *ic = gs->ic;
 
-    erase = FALSE;
+    erase = PR_FALSE;
     if (gs->images_decoded == 0)
     {
         if ((gs->width  != gs->screen_width) ||
             (gs->height != gs->screen_height))
         {
-            erase = TRUE;
+            erase = PR_TRUE;
             erase_width  = gs->screen_width;
             erase_height = gs->screen_height;
             erase_x_offset = erase_y_offset = 0;
@@ -681,7 +683,7 @@ gif_clear_screen(gif_struct *gs)
     {
         if (gs->last_disposal_method == DISPOSE_OVERWRITE_BGCOLOR)
         {
-            erase = TRUE;
+            erase = PR_TRUE;
             erase_width    = gs->last_width;
             erase_height   = gs->last_height;
             erase_x_offset = gs->last_x_offset;
@@ -754,10 +756,10 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 
     /* If this assert fires, chances are the netlib flubbed and
        continued to send data after the image stream was closed. */
-    XP_ASSERT(gs);
+    PR_ASSERT(gs);
     if (!gs) {
 #ifdef DEBUG
-        XP_TRACE(("Netlib Error - imagelib image stream is closed\n"));
+        ILTRACE(1,("Netlib Error - imagelib image stream is closed\n"));
 #endif
         return MK_IMAGE_LOSSAGE;
     }
@@ -765,7 +767,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
     /* If this assert fires, some upstream data provider ignored the
        zero return value from il_gif_write_ready() which says not to
        send any more data to this stream until the delay timeout fires. */
-    XP_ASSERT ((len == 0) || (gs->gathered < MAX_READ_AHEAD));
+    PR_ASSERT ((len == 0) || (gs->gathered < MAX_READ_AHEAD));
     if (!((len == 0) || (gs->gathered < MAX_READ_AHEAD)))
         return MK_INTERRUPTED;
     
@@ -793,7 +795,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             cmap->map = gs->is_local_colormap_defined ?
                 gs->local_colormap : gs->global_colormap;
 
-            XP_ASSERT(cmap->map);
+            PR_ASSERT(cmap->map);
             if (!cmap->map)
                 return MK_IMAGE_LOSSAGE;
 
@@ -823,11 +825,11 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             gs->datum = gs->bits = 0;
 
 			if (!gs->prefix)		
-                gs->prefix = (uint16 *)XP_CALLOC(sizeof(uint16), MAX_BITS);
+                gs->prefix = (uint16 *)PR_Calloc(sizeof(uint16), MAX_BITS);
             if (!gs->suffix)
-                gs->suffix = ( uint8 *)XP_CALLOC(sizeof(uint8),  MAX_BITS);
+                gs->suffix = ( uint8 *)PR_Calloc(sizeof(uint8),  MAX_BITS);
             if (!gs->stack)
-                gs->stack  = ( uint8 *)XP_CALLOC(sizeof(uint8),  MAX_BITS);
+                gs->stack  = ( uint8 *)PR_Calloc(sizeof(uint8),  MAX_BITS);
 					
             if( !gs->prefix || !gs->suffix || !gs->stack)
             {
@@ -946,7 +948,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             IL_RGB* map;
             int i;
 
-            if(!(map = (IL_RGB*)XP_CALLOC(gs->global_colormap_size,
+            if(!(map = (IL_RGB*)PR_Calloc(gs->global_colormap_size,
                                           sizeof(IL_RGB))))
             {
                 ILTRACE(0,("il:gif: MEM map"));
@@ -1196,8 +1198,8 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             /* than the screen size, we need to reallocate buffers.     */
             if (gs->screen_width < width) {
 
-				gs->rgbrow = (uint8*)XP_REALLOC(gs->rgbrow, 3 * width);
-				gs->rowbuf = (uint8*)XP_REALLOC(gs->rowbuf, width);
+				gs->rgbrow = (uint8*)PR_REALLOC(gs->rgbrow, 3 * width);
+				gs->rowbuf = (uint8*)PR_REALLOC(gs->rowbuf, width);
 			
 				gs->screen_width = width;
 				if(gs->screen_height < gs->height )
@@ -1220,8 +1222,16 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 						gs->state = gif_error;
 					break;
 				}
+#ifdef STANDALONE_IMAGE_LIB
+                ic->img_cx->img_cb->NewPixmap(ic->img_cx->dpy_cx,
+                                              ic->dest_width, 
+											  ic->dest_height, 
+											  ic->image, 
+											  ic->mask);
+#else
 				IMGCBIF_NewPixmap(ic->img_cx->img_cb, ic->img_cx->dpy_cx, ic->dest_width,
                       		ic->dest_height, ic->image, ic->mask);
+#endif /* STANDALONE_IMAGE_LIB */
     
 				if((!ic->scalerow)||(!ic->image->bits)||(ic->mask && !ic->mask->bits)){
 					gs->state=gif_oom;
@@ -1230,10 +1240,10 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 	    }
         else{
 			if (!gs->rgbrow)
-				gs->rgbrow = (uint8*)XP_ALLOC(3 * gs->screen_width);
+				gs->rgbrow = (uint8*)PR_MALLOC(3 * gs->screen_width);
 
 			if (!gs->rowbuf)
-				gs->rowbuf = (uint8*)XP_ALLOC(gs->screen_width);
+				gs->rowbuf = (uint8*)PR_MALLOC(gs->screen_width);
 	    }
 
             if (!gs->rowbuf || !gs->rgbrow)
@@ -1307,7 +1317,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
                 if ((num_colors > gs->local_colormap_size) &&
                     gs->local_colormap)
                 {
-                    XP_FREE(gs->local_colormap);
+                    PR_FREEIF(gs->local_colormap);
                     gs->local_colormap = NULL;
                 }
                 gs->local_colormap_size = num_colors;
@@ -1343,7 +1353,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
             map = gs->local_colormap;
             if (!map) 
             {
-                map = gs->local_colormap = (IL_RGB*)XP_CALLOC(
+                map = gs->local_colormap = (IL_RGB*)PR_Calloc(
                     gs->local_colormap_size, sizeof(IL_RGB));
 
                 if(!map)
@@ -1496,7 +1506,7 @@ il_gif_write(il_container *ic, const uint8 *buf, int32 len)
 
         default: 
             ILTRACE(0,("il:gif: unknown state"));
-            XP_ASSERT(0);
+            PR_ASSERT(0);
             break;
 		}
 	}
@@ -1542,19 +1552,13 @@ il_gif_abort(il_container *ic)
             gs->delay_timeout = NULL;
         }
     
-		if (gs->rowbuf) 
-			XP_FREE(gs->rowbuf);
-		if (gs->rgbrow) 
-			XP_FREE(gs->rgbrow);
-		if (gs->prefix)
-			XP_FREE(gs->prefix);
-		if (gs->suffix)
-			XP_FREE(gs->suffix);
-		if (gs->stack)
-			XP_FREE(gs->stack);
+        PR_FREEIF(gs->rowbuf);
+        PR_FREEIF(gs->rgbrow);
+        PR_FREEIF(gs->prefix);
+        PR_FREEIF(gs->suffix);
+        PR_FREEIF(gs->stack);
 
-        if (gs->hold)
-            XP_FREE(gs->hold);
+        PR_FREEIF(gs->hold);
 
         /* Free the colormap that is not in use.  The other one, if
          * present, will be freed when the image container is
@@ -1562,17 +1566,17 @@ il_gif_abort(il_container *ic)
          */
         if (gs->is_local_colormap_defined) {
             if (gs->global_colormap) {
-                XP_FREE(gs->global_colormap);
+                PR_FREEIF(gs->global_colormap);
                 gs->global_colormap = NULL;
             }
         } else {
             if (gs->local_colormap) {
-                XP_FREE(gs->local_colormap);
+                PR_FREEIF(gs->local_colormap);
                 gs->local_colormap = NULL;
             }
         }
 
-		XP_FREE(gs);
+		PR_FREEIF(gs);
 
 		ic->ds = 0;
 	}

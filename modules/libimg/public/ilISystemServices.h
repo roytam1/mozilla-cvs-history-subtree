@@ -16,33 +16,26 @@
  * Reserved.
  */
 
-/* This is a dummy Net Context which the Image Library uses for network
-   operations in lieu of an MWContext.  It will be replaced by a true
-   Net Context when the Network Library is modularized. */
+#ifndef ilISystemServices_h___
+#define ilISystemServices_h___
 
-#ifndef _DUMMY_NC_H
-#define _DUMMY_NC_H
+#include <stdio.h>
+#include "nsISupports.h"
 
-#include "prtypes.h"
-#include "net.h"
+// IID for the ilISystemServices interface
+#define IL_ISYSTEMSERVICES_IID    \
+{ 0xc14659e0, 0xb9fe, 0x11d1,     \
+{ 0x9b, 0xc3, 0x00, 0x60, 0x08, 0x8c, 0xa6, 0xb3 } }
 
-#include "ilINetContext.h"
-#include "ilIURL.h"
+typedef void (*ilTimeoutCallbackFunction) (void * closure);
 
-typedef void* IL_NetContext;
+class ilISystemServices : public nsISupports {
+public:
 
-PR_BEGIN_EXTERN_C
+  virtual void * SetTimeout(ilTimeoutCallbackFunction aFunc, 
+			  void * aClosure, PRUint32 aMsecs)=0;
 
-extern IL_NetContext *
-IL_NewDummyNetContext(MWContext *context,
-                      NET_ReloadMethod cache_reload_policy);
+  virtual void ClearTimeout(void *aTimerID)=0;
+};
 
-extern void
-IL_DestroyDummyNetContext(IL_NetContext *net_cx);
-
-extern ilIURL *
-IL_CreateIURL(URL_Struct *urls);
-
-PR_END_EXTERN_C
-
-#endif /* _DUMMY_NC_H */
+#endif
