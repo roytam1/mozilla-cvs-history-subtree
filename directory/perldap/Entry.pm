@@ -348,7 +348,7 @@ sub rename
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValue($new, @{$self->{$old}});
+  $self->setValue($new, @{$self->{$old}}) || return 0;
   $self->remove($old);
 
   return 1;
@@ -367,7 +367,7 @@ sub copy
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValue($new, @{$self->{$old}});
+  $self->setValue($new, @{$self->{$old}}) || return 0;
 
   return 1;
 }

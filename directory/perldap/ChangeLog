@@ -1,10 +1,17 @@
 1999-08-06  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy 
 
+	* Conn.pm (browse): Added this function, to make it easy to browse
+	an entry.
+	(compare): Compare an attribute value against a DN/entry, without
+	having to do the search.
+
 	* Entry.pm (removeValue): Fixed loop bug.
 	(addValue): Dito.
 	(hasValue): Dito.
 	(matchValue): Fixed loop bug, and also missing normalization in
 	half of the case statement.
+	(rename): Added this new method, to rename attributes.
+	(copy): Added, to copy attributes.
 
 	* Merged v1.2.3 with v1.3 branch.
 
