@@ -1479,23 +1479,30 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
     mDocument->SetScriptGlobalObject(global);
     global->SetNewDocument(aDocument, PR_TRUE);
 
-    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(global));
+    nsCOMPtr<nsIDocShellTreeItem> tree_item(do_GetInterface(mContainer));
 
-    if (win) {
-      nsCOMPtr<nsIDOMDocument> dom_doc;
-      win->GetDocument(getter_AddRefs(dom_doc));
+    if (tree_item) {
+      nsCOMPtr<nsIDocShellTreeItem> parent;
 
-      nsCOMPtr<nsIDocument> parent_doc(do_QueryInterface(dom_doc));
+      tree_item->GetParent(getter_AddRefs(parent));
 
-      NS_ENSURE_TRUE(parent_doc, NS_ERROR_UNEXPECTED);
+      nsCOMPtr<nsIDOMWindowInternal> parent_win(do_GetInterface(parent));
+      nsCOMPtr<nsIDOMWindowInternal> win(do_GetInterface(mContainer));
 
-      nsCOMPtr<nsIDOMElement> frame_element;
-      win->GetFrameElement(getter_AddRefs(frame_element));
+      if (win && parent_win) {
+        nsCOMPtr<nsIDOMDocument> dom_doc;
+        parent_win->GetDocument(getter_AddRefs(dom_doc));
 
-      nsCOMPtr<nsIContent> content(do_QueryInterface(frame_element));
-      NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
+        nsCOMPtr<nsIDocument> parent_doc(do_QueryInterface(dom_doc));
+        NS_ENSURE_TRUE(parent_doc, NS_ERROR_UNEXPECTED);
 
-      parent_doc->SetSubDocumentFor(content, mDocument);
+        nsCOMPtr<nsIDOMElement> frame_element;
+        win->GetFrameElement(getter_AddRefs(frame_element));
+
+        nsCOMPtr<nsIContent> content(do_QueryInterface(frame_element));
+
+        parent_doc->SetSubDocumentFor(content, mDocument);
+      }
     }
   }
 

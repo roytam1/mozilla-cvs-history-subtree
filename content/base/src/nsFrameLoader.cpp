@@ -448,7 +448,7 @@ nsFrameLoader::EnsureDocShell()
     PRInt32 parentType;
     parentAsItem->GetItemType(&parentType);
 
-    nsAutoString value, valuePiece;
+    nsAutoString value;
     PRBool isContent;
 
     isContent = PR_FALSE;
