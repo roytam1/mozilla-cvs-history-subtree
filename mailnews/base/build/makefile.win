@@ -38,8 +38,9 @@ LLIBS=								\
 			$(DIST)\lib\plc3.lib			\
 			$(DIST)\lib\msgbaseutil.lib		\
 			$(DIST)\lib\msgbase_s.lib		\
-			$(DIST)\lib\raptorgfxwin.lib    	\
-			$(LIBNSPR)				\
+			$(DIST)\lib\msgsearch_s.lib		\
+			$(DIST)\lib\raptorgfxwin.lib    \
+			$(LIBNSPR)						\
 			$(NULL)
 
 MISCDEP=$(LLIBS)
