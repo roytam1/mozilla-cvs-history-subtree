@@ -262,7 +262,7 @@ ns4xPlugin::SetValue(nsPluginVariable variable, void *value)
 nsresult
 ns4xPlugin::GetJavaClass(jclass *resultingClass)
 {
-  *resultingClass = fCallbacks.javaClass;
+//  *resultingClass = fCallbacks.javaClass; // XXX removed to fix build psl
   return NS_OK;
 }
 
