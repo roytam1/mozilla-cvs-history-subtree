@@ -29,8 +29,8 @@ DIRS=   typelib        \
         threads        \
         reflect        \
         proxy          \
-        tools          \
         build          \
+        tools          \
 	$(NULL)
 
 ifdef ENABLE_TESTS
