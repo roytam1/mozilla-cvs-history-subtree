@@ -144,6 +144,9 @@ interface nsIX509CertDB : nsISupports {
                                      in unsigned long type,
                                      in nsIInterfaceRequestor ctx);
 
+  [noscript] void importEmailCertificate(in charPtr data,
+                                     in unsigned long length,
+                                     in nsIInterfaceRequestor ctx);
   /*
    * importCertificate
    *

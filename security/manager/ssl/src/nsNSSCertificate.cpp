@@ -2783,6 +2783,63 @@ nsNSSCertificateDB::ImportCertificates(char * data, PRUint32 length,
   return nsrv;
 }
 
+/*
+ *  [noscript] void importEmailCertificates(in charPtr data, in unsigned long length,
+ *                                     in nsIInterfaceRequestor ctx);
+ */
+NS_IMETHODIMP
+nsNSSCertificateDB::ImportEmailCertificate(char * data, PRUint32 length, 
+                                       nsIInterfaceRequestor *ctx)
+
+{
+  SECStatus srv = SECFailure;
+  nsresult nsrv = NS_OK;
+  CERTCertificate * cert;
+  SECItem **rawCerts;
+  int numcerts;
+  int i;
+ 
+  PRArenaPool *arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+  if (!arena)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  CERTDERCerts *certCollection = getCertsFromPackage(arena, data, length);
+  if (!certCollection) {
+    PORT_FreeArena(arena, PR_FALSE);
+    return NS_ERROR_FAILURE;
+  }
+  cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), certCollection->rawCerts,
+                          (char *)NULL, PR_FALSE, PR_TRUE);
+  if (!cert) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+  numcerts = certCollection->numcerts;
+  rawCerts = (SECItem **) PORT_Alloc(sizeof(SECItem *) * numcerts);
+  if ( !rawCerts ) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+
+  for ( i = 0; i < numcerts; i++ ) {
+    rawCerts[i] = &certCollection->rawCerts[i];
+  }
+ 
+  srv = CERT_ImportCerts(CERT_GetDefaultCertDB(), certUsageEmailSigner,
+             numcerts, rawCerts, NULL, PR_TRUE, PR_FALSE,
+             NULL);
+  if ( srv != SECSuccess ) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+  srv = CERT_SaveSMimeProfile(cert, NULL, NULL);
+  PORT_Free(rawCerts);
+loser:
+  if (arena) 
+    PORT_FreeArena(arena, PR_TRUE);
+  return nsrv;
+}
+
 char *
 default_nickname(CERTCertificate *cert, nsIInterfaceRequestor* ctx)
 {   

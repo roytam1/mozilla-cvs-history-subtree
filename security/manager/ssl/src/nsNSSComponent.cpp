@@ -1083,11 +1083,11 @@ PSMContentDownloader::OnStopRequest(nsIRequest* request,
 
   switch (mType) {
   case PSMContentDownloader::X509_CA_CERT:
-  case PSMContentDownloader::X509_EMAIL_CERT:
     return certdb->ImportCertificates(mByteData, mBufferOffset, mType, ctx); 
   case PSMContentDownloader::X509_USER_CERT:
     return certdb->ImportUserCertificate(mByteData, mBufferOffset, ctx);
-    break;
+  case PSMContentDownloader::X509_EMAIL_CERT:
+    return certdb->ImportEmailCertificate(mByteData, mBufferOffset, ctx); 
   case PSMContentDownloader::PKCS7_CRL:
     return certdb->ImportCrl(mByteData, mBufferOffset, mURI, SEC_CRL_TYPE);
   default:
