@@ -52,7 +52,7 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+MOZ_CO_TAG = IBMBIDI_20000809_BRANCH
 NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
 PSM_CO_TAG = SECURITY_CLIENT_BRANCH
 LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
