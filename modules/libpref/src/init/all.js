@@ -192,6 +192,7 @@ pref("capability.policy.default.history.item.read", "UniversalBrowserRead");
 pref("capability.policy.default.navigator.preference.read", "UniversalPreferencesRead");
 pref("capability.policy.default.navigator.preference.write", "UniversalPreferencesWrite");
 pref("capability.policy.default.windowinternal.location.write", "allAccess");
+pref("capability.policy.default.windowinternal.opendialog", "noAccess");
 
 
 localDefPref("ghist.expires.pos",          4);
