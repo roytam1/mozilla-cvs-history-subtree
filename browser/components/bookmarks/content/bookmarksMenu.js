@@ -168,15 +168,36 @@ var BookmarksMenu = {
   createContextMenu: function (aEvent)
   {
     var target = document.popupNode;
-    if (!this.isBTBookmark(target.id))
+    var targettype = BookmarksUtils.resolveType(target.id);
+
+    if (targettype == "ImmutableFolder") {
+      // no context; see bug#... (popups getting stuck because "open"
+      // attribute doesn't get removed)
+      this.removeAttribute("open");
       return false;
+    }
+
+    if (!this.isBTBookmark(target.id)) {
+      this.removeAttribute("open");
+      return false;
+    }
+
     var bt = document.getElementById("bookmarks-ptf");
     bt.focus(); // buttons in the bt have -moz-user-focus: ignore
 
     this._selection   = this.getBTSelection(target);
     this._orientation = this.getBTOrientation(aEvent, target);
-    this._target      = this.getBTTarget(target, this._orientation);
-    BookmarksCommand.createContextMenu(aEvent, this._selection);
+    if (targettype != "ImmutableBookmark")
+      this._target = this.getBTTarget(target, this._orientation);
+
+    // walk up the tree until we find a database node
+    var p = target;
+    while (p && !p.database)
+      p = p.parentNode;
+    if (p)
+      this._db = p.database;
+
+    BookmarksCommand.createContextMenu(aEvent, this._selection, this._db);
     this.onCommandUpdate();
     aEvent.target.addEventListener("mousemove", BookmarksMenuController.onMouseMove, false);
     return true;
@@ -303,6 +324,8 @@ var BookmarksMenu = {
             type == "Folder"                ||
             type == "PersonalToolbarFolder" ||
             type == "Livemark"              ||
+            type == "ImmutableBookmark"     ||
+            type == "ImmutableFolder"       ||
             aURI == "bookmarks-ptf")
   },
 
@@ -464,12 +487,13 @@ var BookmarksMenuController = {
 
     var selection = BookmarksMenu._selection;
     var target    = BookmarksMenu._target;
+    var db        = BookmarksMenu._db;
     switch (aCommand) {
     case "cmd_bm_expandfolder":
       BookmarksMenu.expandBTFolder();
       break;
     default:
-      BookmarksController.doCommand(aCommand, selection, target);
+      BookmarksController.doCommand(aCommand, selection, target, db);
     }
   },
 

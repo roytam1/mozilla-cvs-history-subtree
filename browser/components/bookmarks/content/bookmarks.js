@@ -185,7 +185,7 @@ var BookmarksCommand = {
   /////////////////////////////////////////////////////////////////////////////
   // Fill a context menu popup with menuitems that are appropriate for the current
   // selection.
-  createContextMenu: function (aEvent, aSelection)
+  createContextMenu: function (aEvent, aSelection, aDS)
   {
     var popup = aEvent.target;
     // clear out the old context menu contents (if any)
@@ -194,7 +194,7 @@ var BookmarksCommand = {
         
     var commonCommands = [];
     for (var i = 0; i < aSelection.length; ++i) {
-      var commands = this.getCommands(aSelection.item[i], aSelection.parent[i]);
+      var commands = this.getCommands(aSelection.item[i], aSelection.parent[i], aDS);
       if (!commands) {
         aEvent.preventDefault();
         return;
@@ -266,15 +266,15 @@ var BookmarksCommand = {
   /////////////////////////////////////////////////////////////////////////////
   // For a given URI (a unique identifier of a resource in the graph) return 
   // an enumeration of applicable commands for that URI. 
-  getCommands: function (aNodeID, aParent)
+  getCommands: function (aNodeID, aParent, aDS)
   {
-    var type = BookmarksUtils.resolveType(aNodeID);
+    var type = BookmarksUtils.resolveType(aNodeID, aDS);
     if (!type)
       return null;
 
     var ptype = null;
     if (aParent) {
-      ptype = BookmarksUtils.resolveType(aParent);
+      ptype = BookmarksUtils.resolveType(aParent, aDS);
       if (ptype == "Livemark") {
         type = "LivemarkBookmark";
       }
@@ -341,6 +341,9 @@ var BookmarksCommand = {
     case "LivemarkBookmark":
       commands = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab", "bm_separator",
                   "copy"];
+      break;
+    case "ImmutableBookmark":
+      commands = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab"];
       break;
     default: 
       commands = [];
@@ -424,7 +427,6 @@ var BookmarksCommand = {
 
   copyBookmark: function (aSelection)
   {
-
     const kSuppArrayContractID = "@mozilla.org/supports-array;1";
     const kSuppArrayIID = Components.interfaces.nsISupportsArray;
     var itemArray = Components.classes[kSuppArrayContractID].createInstance(kSuppArrayIID);
@@ -538,7 +540,7 @@ var BookmarksCommand = {
         var item = aSelection.item[i];
         saveURL(item.Value, BookmarksUtils.getProperty(item, "Name"), null, true);
       }
-      else if (type == "Bookmark" || type == "") {
+      else if (type == "Bookmark" || type == "ImmutableBookmark") {
         var webPanel = BMDS.GetTarget(aSelection.item[i],
                                       RDF.GetResource(NC_NS + "WebPanel"),
                                       true);
@@ -869,7 +871,8 @@ var BookmarksController = {
       return true;
     case "cmd_bm_openfolder":
       for (i=0; i<length; ++i) {
-        if (aSelection.type[i] == ""         ||
+        if (aSelection.type[i] == "ImmutableBookmark" ||
+            aSelection.type[i] == "ImmutableFolder" ||
             aSelection.type[i] == "Bookmark" ||
             aSelection.type[i] == "BookmarkSeparator")
           return false;
@@ -914,7 +917,7 @@ var BookmarksController = {
     }
   },
 
-  doCommand: function (aCommand, aSelection, aTarget)
+  doCommand: function (aCommand, aSelection, aTarget, aDS)
   {
     switch (aCommand) {
     case "cmd_undo":
@@ -926,16 +929,16 @@ var BookmarksController = {
       BookmarksCommand.redoBookmarkTransaction();
       break;
     case "cmd_bm_open":
-      BookmarksCommand.openBookmark(aSelection, "current");
+      BookmarksCommand.openBookmark(aSelection, "current", aDS);
       break;
     case "cmd_bm_openinnewwindow":
-      BookmarksCommand.openBookmark(aSelection, "window");
+      BookmarksCommand.openBookmark(aSelection, "window", aDS);
       break;
     case "cmd_bm_openinnewtab":
-      BookmarksCommand.openBookmark(aSelection, "tab");
+      BookmarksCommand.openBookmark(aSelection, "tab", aDS);
       break;
     case "cmd_bm_openfolder":
-      BookmarksCommand.openBookmark(aSelection, "current");
+      BookmarksCommand.openBookmark(aSelection, "current", aDS);
       break;
     case "cmd_bm_managefolder":
       BookmarksCommand.manageFolder(aSelection);
@@ -1098,15 +1101,24 @@ var BookmarksUtils = {
 
   /////////////////////////////////////////////////////////////////////////////
   // Determine the rdf:type property for the given resource.
-  resolveType: function (aResource)
+  resolveType: function (aResource, aDS)
   {
-    var type = this.getProperty(aResource, RDF_NS+"type");
+    var type = this.getProperty(aResource, RDF_NS+"type", aDS);
     if (type != "")
       type = type.split("#")[1];
     if (type == "Folder") {
       if (aResource == BMSVC.getBookmarksToolbarFolder())
         type = "PersonalToolbarFolder";
     }
+
+    if (type == "") {
+      // we're not sure what type it is.  figure out if it's a container.
+      var child = this.getProperty(aResource, NC_NS+"child", aDS);
+      if (child || RDFCU.IsContainer(aDS?aDS:BMDS, RDF.GetResource(aResource)))
+        return "ImmutableFolder";
+      return "ImmutableBookmark";
+    }
+
     return type;
   },
 
@@ -1134,10 +1146,7 @@ var BookmarksUtils = {
       if (item.Value == "NC:BookmarksRoot") {
         isImmutable = true;
       }
-      else if (type != "" && // XXXpch: ugly ugly ugly temporary hack, 
-                             // getsynthesizeType says a bookmark is not a
-                             // bookmark when it's not a child of sth.
-               type != "Bookmark" && type != "BookmarkSeparator" && 
+      else if (type != "Bookmark" && type != "BookmarkSeparator" && 
                type != "Folder"   && type != "PersonalToolbarFolder" &&
                type != "Livemark")
         isImmutable = true;
@@ -1475,6 +1484,15 @@ BookmarkTransaction.prototype = {
   RDFC        : null,
   BMDS        : null,
 
+  QueryInterface: function (aUID)
+  {
+    if (!iid.equals(Components.interfaces.nsITransaction) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+
+    return this;
+  },
+
   beginUpdateBatch: function()
   {
     if (this.item.length > this.BATCH_LIMIT) {
@@ -1489,7 +1507,6 @@ BookmarkTransaction.prototype = {
     }
   },
   merge               : function (aTxn)   {return false},
-  QueryInterface      : function (aUID)   {return this},
   getHelperForLanguage: function (aCount) {return null},
   getInterfaces       : function (aCount) {return null},
   canCreateWrapper    : function (aIID)   {return "AllAccess"}

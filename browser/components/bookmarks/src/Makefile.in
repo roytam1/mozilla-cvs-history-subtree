@@ -49,6 +49,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= nsBookmarksService.cpp \
 		  nsBookmarksFeedHandler.cpp \
+		  nsForwardProxyDataSource.cpp \
 		  $(NULL)
 
 #EXTRA_COMPONENTS = nsBookmarkProtocolHandler.js

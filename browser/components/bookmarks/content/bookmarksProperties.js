@@ -271,6 +271,12 @@ function Commit()
       newValue = RDF.GetLiteral(newValue);
 
     changed |= updateAttribute(gProperties[i], oldValue, newValue);
+
+    if (gFields[i] == "url" && oldValue.Value != newValue.Value) {
+      // if the URL was updated, clear out the favicon
+      var icon = BMDS.GetTarget(gResource, RDF.GetResource(NC_NS+"Icon"), true);
+      if (icon) BMDS.Unassert(gResource, RDF.GetResource(NC_NS+"Icon"), icon);
+    }
   }
 
   // Update bookmark schedule if necessary;

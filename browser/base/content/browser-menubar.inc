@@ -312,6 +312,7 @@
                   datasources="rdf:bookmarks rdf:files rdf:localsearch" 
                   ref="NC:BookmarksRoot" flags="dont-test-empty"
                   template='bookmarks-template'
+                  infer="forward-proxy"
                   onpopupshowing="BookmarksMenu.onShowMenu(event.target)"
                   onpopuphidden="BookmarksMenu.onHideMenu(event.target)"
                   oncommand="BookmarksMenu.loadBookmark(event, event.target, this.database)"

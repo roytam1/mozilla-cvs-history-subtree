@@ -77,6 +77,7 @@
 #include "nsINameSpace.h"
 #include "nsINameSpaceManager.h"
 #include "nsIRDFCompositeDataSource.h"
+#include "nsIRDFInferDataSource.h"
 #include "nsIRDFContainerUtils.h" 
 #include "nsIXULDocument.h"
 #include "nsIXULTemplateBuilder.h"
@@ -150,6 +151,7 @@ PRLogModuleInfo* gXULTemplateLog;
 
 nsXULTemplateBuilder::nsXULTemplateBuilder(void)
     : mDB(nsnull),
+      mCompDB(nsnull),
       mRoot(nsnull),
       mUpdateBatchNest(0),
       mRulesCompiled(PR_FALSE),
@@ -222,7 +224,7 @@ nsXULTemplateBuilder::GetRoot(nsIDOMElement** aResult)
 NS_IMETHODIMP
 nsXULTemplateBuilder::GetDatabase(nsIRDFCompositeDataSource** aResult)
 {
-    NS_IF_ADDREF(*aResult = mDB.get());
+    NS_IF_ADDREF(*aResult = mCompDB.get());
     return NS_OK;
 }
 
@@ -250,7 +252,7 @@ nsXULTemplateBuilder::Refresh()
     nsresult rv;
 
     nsCOMPtr<nsISimpleEnumerator> dslist;
-    rv = mDB->GetDataSources(getter_AddRefs(dslist));
+    rv = mCompDB->GetDataSources(getter_AddRefs(dslist));
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRBool hasMore;
@@ -349,6 +351,7 @@ nsXULTemplateBuilder::DocumentWillBeDestroyed(nsIDocument *aDocument)
     if (mDB) {
         mDB->RemoveObserver(this);
         mDB = nsnull;
+        mCompDB = nsnull;
     }
 
     mRoot = nsnull;
@@ -670,9 +673,9 @@ nsXULTemplateBuilder::LoadDataSources(nsIDocument* doc)
     }
 
     // create a database for the builder
-    mDB = do_CreateInstance(NS_RDF_DATASOURCE_CONTRACTID_PREFIX "composite-datasource");
+    mCompDB = do_CreateInstance(NS_RDF_DATASOURCE_CONTRACTID_PREFIX "composite-datasource");
 
-    if (! mDB) {
+    if (! mCompDB) {
         NS_ERROR("unable to construct new composite data source");
         return NS_ERROR_UNEXPECTED;
     }
@@ -681,12 +684,12 @@ nsXULTemplateBuilder::LoadDataSources(nsIDocument* doc)
 	nsAutoString coalesce;
 	mRoot->GetAttr(kNameSpaceID_None, nsXULAtoms::coalesceduplicatearcs, coalesce);
     if (coalesce == NS_LITERAL_STRING("false"))
-		mDB->SetCoalesceDuplicateArcs(PR_FALSE);
+		mCompDB->SetCoalesceDuplicateArcs(PR_FALSE);
 
     nsAutoString allowneg;
     mRoot->GetAttr(kNameSpaceID_None, nsXULAtoms::allownegativeassertions, allowneg);
     if (allowneg == NS_LITERAL_STRING("false"))
-		mDB->SetAllowNegativeAssertions(PR_FALSE);
+		mCompDB->SetAllowNegativeAssertions(PR_FALSE);
 
     // Grab the doc's principal...
     nsIPrincipal *docPrincipal = doc->GetPrincipal();
@@ -705,7 +708,7 @@ nsXULTemplateBuilder::LoadDataSources(nsIDocument* doc)
         nsCOMPtr<nsIRDFDataSource> localstore;
         rv = gRDFService->GetDataSource("rdf:local-store", getter_AddRefs(localstore));
         if (NS_SUCCEEDED(rv)) {
-            rv = mDB->AddDataSource(localstore);
+            rv = mCompDB->AddDataSource(localstore);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add local store to db");
             if (NS_FAILED(rv)) return rv;
         }
@@ -792,8 +795,27 @@ nsXULTemplateBuilder::LoadDataSources(nsIDocument* doc)
             continue;
         }
 
-        mDB->AddDataSource(ds);
+        mCompDB->AddDataSource(ds);
     }
+
+    // check if we were given an inference engine type
+    nsAutoString infer;
+    mRoot->GetAttr(kNameSpaceID_None, nsXULAtoms::infer, infer);
+    if (!infer.IsEmpty()) {
+        nsCString inferContractID(NS_RDF_INFER_DATASOURCE_CONTRACTID_PREFIX);
+        AppendUTF16toUTF8(infer, inferContractID);
+        nsCOMPtr<nsIRDFInferDataSource> inferDB = do_CreateInstance(inferContractID.get());
+
+        if (inferDB) {
+            inferDB->SetBaseDataSource(mCompDB);
+            mDB = do_QueryInterface(inferDB);
+        } else {
+            NS_WARNING("failed to construct inference engine specified on template");
+        }
+    }
+
+    if (!mDB)
+        mDB = mCompDB;
 
     nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(doc);
     if (xuldoc)

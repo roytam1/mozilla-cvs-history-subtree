@@ -177,6 +177,8 @@ protected:
 
     nsresult GetLastModifiedFolders(nsISimpleEnumerator **aResult);
 
+    nsresult UpdateBookmarkForwardProxy(nsIRDFResource* aBookmarkResource);
+
     nsresult UpdateLivemarkChildren(nsIRDFResource* aSource);
 
     void SaveToBackup();
