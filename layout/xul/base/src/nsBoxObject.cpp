@@ -54,6 +54,7 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIView.h"
 #include "nsIWidget.h"
+#include "nsIDOMNSDocument.h"
 #include "nsIDOMXULElement.h"
 #include "nsIFrame.h"
 
@@ -155,6 +156,13 @@ nsBoxObject::SetDocument(nsIDocument* aDocument)
 NS_IMETHODIMP
 nsBoxObject::InvalidatePresentationStuff()
 {
+  // Remove the box object for this element from the document's
+  // hash so that the next request for one creates a new one 
+  // that has mPresShell etc set. 
+  nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(mPresShell->GetDocument()));
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mContent));
+  nsDoc->SetBoxObjectFor(element, nsnull);
+
   mPresShell = nsnull;
 
   return NS_OK;
