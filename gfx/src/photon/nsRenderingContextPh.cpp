@@ -526,6 +526,8 @@ NS_IMETHODIMP nsRenderingContextPh :: FillRect( nscoord aX, nscoord aY, nscoord 
 	h = aHeight;
 	
 	mTranMatrix->TransformCoord( &x, &y, &w, &h );
+
+/* ATENTIE */ PhDCSetCurrent( mSurfaceDC );
 	
 	UpdateGC();
 	PgSetStrokeColorCx( mGC, mCurrentColor );
