@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #ifndef __nsILookAndFeel
@@ -21,6 +25,10 @@
 #include "nsISupports.h"
 #include "nsColor.h"
 #include "nsFont.h"
+
+#ifdef NS_DEBUG
+#include "nsSize.h"
+#endif
 
 
 // {21B51DE1-21A3-11d2-B6E0-00805F8A2676}
@@ -119,6 +127,33 @@ public:
   NS_IMETHOD GetColor(const nsColorID aID, nscolor &aColor) = 0;
   NS_IMETHOD GetMetric(const nsMetricID aID, PRInt32 & aMetric) = 0;
   NS_IMETHOD GetMetric(const nsMetricFloatID aID, float & aMetric) = 0;
+
+
+#ifdef NS_DEBUG
+  typedef enum {
+    eMetricSize_TextField = 0,
+    eMetricSize_TextArea  = 1,
+    eMetricSize_ListBox   = 2,
+    eMetricSize_ComboBox  = 3,
+    eMetricSize_Radio     = 4,
+    eMetricSize_CheckBox  = 5,
+    eMetricSize_Button    = 6
+  } nsMetricNavWidgetID;
+
+  typedef enum {
+    eMetricSize_Courier   = 0,
+    eMetricSize_SansSerif = 1
+  } nsMetricNavFontID;
+
+  // This method returns the actual (or nearest estimate) 
+  // of the Navigator size for a given form control for a given font
+  // and font size. This is used in NavQuirks mode to see how closely
+  // we match its size
+  NS_IMETHOD GetNavSize(const nsMetricNavWidgetID aWidgetID,
+                        const nsMetricNavFontID   aFontID, 
+                        const PRInt32             aFontSize, 
+                        nsSize &aSize) = 0;
+#endif
 };
 
 #define nsLAF nsILookAndFeel

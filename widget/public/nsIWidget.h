@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #ifndef nsIWidget_h__
@@ -133,30 +137,30 @@ enum nsBorderStyle
  */
 
 enum nsCursor {   ///(normal cursor,       usually rendered as an arrow)
-  eCursor_standard, 
-  ///(system is busy,      usually rendered as a hourglass or watch)
-  eCursor_wait, 
-  ///(Selecting something, usually rendered as an IBeam)
-  eCursor_select, 
-  ///(can hyper-link,      usually rendered as a human hand)
-  eCursor_hyperlink, 
-  ///(west/east sizing,    usually rendered as ->||<-)
-  eCursor_sizeWE,
-  ///(north/south sizing,  usually rendered as sizeWE rotated 90 degrees)
-  eCursor_sizeNS,
-  eCursor_arrow_north,
-  eCursor_arrow_north_plus,
-  eCursor_arrow_south,
-  eCursor_arrow_south_plus,
-  eCursor_arrow_west,
-  eCursor_arrow_west_plus,
-  eCursor_arrow_east,
-  eCursor_arrow_east_plus,
-  eCursor_crosshair,
-  //Don't know what 'move' cursor should be.  See CSS2.
-  eCursor_move,
-  eCursor_help
-}; 
+                eCursor_standard, 
+                  ///(system is busy,      usually rendered as a hourglass or watch)
+                eCursor_wait, 
+                  ///(Selecting something, usually rendered as an IBeam)
+                eCursor_select, 
+                  ///(can hyper-link,      usually rendered as a human hand)
+                eCursor_hyperlink, 
+                  ///(west/east sizing,    usually rendered as ->||<-)
+                eCursor_sizeWE,
+                  ///(north/south sizing,  usually rendered as sizeWE rotated 90 degrees)
+                eCursor_sizeNS,
+                eCursor_arrow_north,
+                eCursor_arrow_north_plus,
+                eCursor_arrow_south,
+                eCursor_arrow_south_plus,
+                eCursor_arrow_west,
+                eCursor_arrow_west_plus,
+                eCursor_arrow_east,
+                eCursor_arrow_east_plus,
+                eCursor_crosshair,
+                //Don't know what 'move' cursor should be.  See CSS2.
+                eCursor_move,
+                eCursor_help
+                }; 
 
 
 /**
@@ -262,6 +266,13 @@ class nsIWidget : public nsISupports {
     //@}
 
     /**
+     * Close and destroy the internal native window. 
+     * This method does not delete the widget.
+     */
+
+    NS_IMETHOD Destroy(void) = 0;
+
+    /**
      * Return the parent Widget of this Widget or nsnull if this is a 
      * top level window
      *
@@ -288,10 +299,10 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD Show(PRBool aState) = 0;
 
     /**
-     * Make the window modal 
+     * Make the window modal
      *
      */
-    NS_IMETHOD SetModal(void) = 0;
+    NS_IMETHOD SetModal(PRBool aModal) = 0;
 
     /**
      * Returns whether the window is visible
@@ -542,13 +553,24 @@ class nsIWidget : public nsISupports {
 
     NS_IMETHOD Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect) = 0;
 
+    /**
+     * Scroll an area of this widget.
+     *
+     * @param aRect source rectangle to scroll in the widget
+     * @param aDx x offset from the source
+     * @param aDy y offset from the source
+     *
+     */
+
+    NS_IMETHOD ScrollRect(nsRect &aSrcRect, PRInt32 aDx, PRInt32 aDy) = 0;
+
     /** 
      * Internal methods
      */
 
     //@{
-    NS_IMETHOD AddChild(nsIWidget* aChild) = 0;
-    NS_IMETHOD RemoveChild(nsIWidget* aChild) = 0;
+    virtual void AddChild(nsIWidget* aChild) = 0;
+    virtual void RemoveChild(nsIWidget* aChild) = 0;
     virtual void* GetNativeData(PRUint32 aDataType) = 0;
     virtual void FreeNativeData(void * data, PRUint32 aDataType) = 0;//~~~
     virtual nsIRenderingContext* GetRenderingContext() = 0;
@@ -684,6 +706,20 @@ class nsIWidget : public nsISupports {
 	 *
 	 */
     NS_IMETHOD CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent) = 0;
+
+  /**
+   *   Determine whether a given event should be processed assuming we are
+   * the currently active modal window.
+   *   Note that the exact semantics of this method are platform-dependent.
+   * The Macintosh, for instance, cares deeply that this method do exactly
+   * as advertised. Gtk, for instance, handles modality in a completely
+   * different fashion and does little if anything with this method.
+   * @param aRealEvent event is real or a null placeholder (Macintosh)
+   * @param aEvent void pointer to native event structure
+   * @param aForWindow return value. PR_TRUE iff event should be processed.
+   */
+  NS_IMETHOD ModalEventFilter(PRBool aRealEvent, void *aEvent, PRBool *aForWindow) = 0;
+
 };
 
 #endif // nsIWidget_h__

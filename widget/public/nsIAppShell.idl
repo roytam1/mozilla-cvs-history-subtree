@@ -26,6 +26,7 @@
 
 native int(int);
 [ptr] native nsDispatchListener(nsDispatchListener);
+[ptr] native nsIEventQueue(nsIEventQueue);
 [ptr] native UndefinednsIWidget(nsIWidget);
 [ref] native PRBoolRef(PRBool);
 [ref] native voidStarRef(void *);
@@ -82,14 +83,13 @@ interface nsIAppShell : nsISupports
   void Spindown();
 
  /**
-  * Push event queue onto current thread and begin processing events from it
+  * An event queue has been created or destroyed. Hook or unhook it from
+  * your system, as necessary.
+  * @param aQueue the queue in question
+  * @param aListen PR_TRUE for a new queue wanting hooking up. PR_FALSE
+  *                for a queue wanting to be unhooked.
   */
-  void PushThreadEventQueue();
-
- /**
-  * Pop event queue from current thread's stack
-  */
-  void PopThreadEventQueue();
+  void ListenToEventQueue(in nsIEventQueue aQueue, in PRBool aListen);
 
  /**
   * After event dispatch execute app specific code
@@ -114,13 +114,6 @@ interface nsIAppShell : nsISupports
    */
 
   void Exit();
-
-  /**
-   * Determines whether a given event should be processed assuming the given
-   * widget is a currently active modal window
-   */
-  void EventIsForModalWindow(in PRBool aRealEvent, in voidStar aEvent, in UndefinednsIWidget aWidget,
-                             out PRBool aForWindow);
 
 };
 

@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #ifndef nsGUIEvent_h__
@@ -107,18 +111,15 @@ struct nsScrollbarEvent : public nsGUIEvent {
 
 
 struct nsInputEvent : public nsGUIEvent {
-                /// PR_TRUE indicates the shift key in down
+                /// PR_TRUE indicates the shift key is down
     PRBool          isShift;        
-                /// PR_TRUE indicates the control key in down
+                /// PR_TRUE indicates the control key is down
     PRBool          isControl;      
-                /// PR_TRUE indicates the alt key in down
+                /// PR_TRUE indicates the alt key is down
     PRBool          isAlt;          
-#ifdef XP_MAC
-                /// PR_TRUE indicates the command key in down
-                /// For now, it's only used in Widget: not for export
-                /// in nsIDOMEvent.h or nsJSEvent.cpp (later maybe)
-    PRBool          isCommand;          
-#endif
+                /// PR_TRUE indicates the meta key is down
+                /// (or, on Mac, the Command key)
+    PRBool          isMeta;
 };
 
 /**
@@ -128,6 +129,9 @@ struct nsInputEvent : public nsGUIEvent {
 struct nsMouseEvent : public nsInputEvent {
                 /// The number of mouse clicks
     PRUint32        clickCount;          
+                /// Special return code for MOUSE_ACTIVATE to signal
+                /// if the target accepts activation (1), or denies it (0)
+    PRBool          acceptActivation;           
 };
 
 /**
@@ -139,6 +143,8 @@ struct nsKeyEvent : public nsInputEvent {
     PRUint32        keyCode;   
                 /// OS translated Unicode char
     PRUint32        charCode;
+                // indicates whether the event signifies a printable character
+    PRBool          isChar;
 };
 
 /**
@@ -165,6 +171,7 @@ struct nsTextEvent : public nsInputEvent {
 	nsTextEventReply	theReply;
 	PRUint32			rangeCount;
 	nsTextRangeArray	rangeArray;
+  PRBool          isChar;
 };
 
 struct nsCompositionEvent : public nsInputEvent {
@@ -240,6 +247,10 @@ enum nsDragDropEventStatus {
 #define NS_GOTFOCUS                     (NS_WINDOW_START + 3)
 // Widget lost focus
 #define NS_LOSTFOCUS                    (NS_WINDOW_START + 4)
+// Widget got activated
+#define NS_ACTIVATE                     (NS_WINDOW_START + 5)
+// Widget got deactivated
+#define NS_DEACTIVATE                   (NS_WINDOW_START + 6)
 // Widget needs to be repainted
 #define NS_PAINT                        (NS_WINDOW_START + 30)
 // Key is pressed within a window
@@ -266,6 +277,9 @@ enum nsDragDropEventStatus {
 // directly to a mouse click or a key press.
 #define NS_CONTROL_CHANGE                (NS_WINDOW_START + 39)
 
+// Indicates the display has changed depth
+#define NS_DISPLAYCHANGED                (NS_WINDOW_START + 40)
+
 
 #define NS_MOUSE_MESSAGE_START          300
 #define NS_MOUSE_MOVE                   (NS_MOUSE_MESSAGE_START)
@@ -283,6 +297,7 @@ enum nsDragDropEventStatus {
 #define NS_MOUSE_LEFT_CLICK             (NS_MOUSE_MESSAGE_START + 27)
 #define NS_MOUSE_MIDDLE_CLICK           (NS_MOUSE_MESSAGE_START + 28)
 #define NS_MOUSE_RIGHT_CLICK            (NS_MOUSE_MESSAGE_START + 29)
+#define NS_MOUSE_ACTIVATE               (NS_MOUSE_MESSAGE_START + 30)
 
 #define NS_SCROLLBAR_MESSAGE_START      1000
 #define NS_SCROLLBAR_POS                (NS_SCROLLBAR_MESSAGE_START)

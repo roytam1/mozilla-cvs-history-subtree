@@ -45,22 +45,16 @@
 // forward declarations
 class   nsIAppShell;
 class   nsIToolkit;
-class   nsFont;
-class   nsIToolkit;
 class   nsIRenderingContext;
 class   nsIEnumerator;
 class   nsIDeviceContext;
 struct  nsRect;
 struct  nsFont;
-class   nsIMenuBar;
 class   nsIEventListener;
 class   nsIRollupListener;
 %}
 
-[ptr] native nsWidgetInitData(nsWidgetInitData);
-
 [ptr] native nsGUIEvent(nsGUIEvent);
-[ptr] native nsIMenuBar(nsIMenuBar);
 [ptr] native nsIMouseListener(nsIMouseListener);
 [ptr] native nsIEventListener(nsIEventListener);
 [ptr] native nsIMenuListener(nsIMenuListener);
@@ -80,8 +74,6 @@ native nsEventStatus(nsEventStatus);
 native PR_CALLBACK(PR_CALLBACKK);
 native EVENT_CALLBACK(EVENT_CALLBACK);
 
-typedef long nsBorderStyle;
-typedef long nsWindowType;
 typedef long nsCursor;
 
 
@@ -93,34 +85,28 @@ typedef long nsCursor;
 typedef voidStar nsNativeWidget;
 
 
-
-
 %{ C++
+typedef nsEventStatus (*PR_CALLBACK EVENT_CALLBACK)(nsGUIEvent *event);
+
+
 /**
  * Basic struct for widget initialization data.
  * @see Create member function of nsIWidget
  */
 
-struct nsWidgetInitData {
-  nsWidgetInitData()
-  : clipChildren(PR_FALSE), clipSiblings(PR_FALSE),
-      mWindowType(3),
-      mBorderStyle(-1)
-  {
-  }
+  struct nsWidgetInitData {
+    nsWidgetInitData()
+      : clipChildren(PR_FALSE), clipSiblings(PR_FALSE)
+      //      mWindowType(eWindowType_child),
+      //      mBorderStyle(eBorderStyle_default)
+    {
+    }
 
-  // when painting exclude area occupied by child windows and sibling windows
-  PRPackedBool clipChildren, clipSiblings;
-  nsWindowType mWindowType;
-  nsBorderStyle mBorderStyle;
-};
-
-%}
-
-
-
-%{ C++
-typedef nsEventStatus (*PR_CALLBACK EVENT_CALLBACK)(nsGUIEvent *event);
+    // when painting exclude area occupied by child windows and sibling windows
+    PRPackedBool  clipChildren, clipSiblings;
+    //    nsWindowType mWindowType;
+    //    nsBorderStyle mBorderStyle;
+  };
 %}
 
 
@@ -141,50 +127,6 @@ interface nsIWidget : nsISupports
   const short NS_NATIVE_OFFSETY           = 7;
   const short NS_NATIVE_PLUGIN_PORT       = 8;
   const short NS_NATIVE_SCREEN            = 9;
-
-
-  /*
-   * types of windows
-   */
-  const long eWindowType_toplevel = 0;
-  const long eWindowType_dialog = 1;
-  const long eWindowType_popup = 2;
-  const long eWindowType_child = 3; 
-
-  
-  /*
-   * Border styles
-   */
-  // no border, titlebar, etc.. opposite of all
-  const long eBorderStyle_none     = 0;
-
-  // all window decorations
-  const long eBorderStyle_all      = 1 << 0;
-
-  // enables the border on the window.  these are only for decoration and are not resize hadles
-  const long eBorderStyle_border   = 1 << 1;
-
-  // enables the resize handles for the window.  if this is set, border is implied to also be set
-  const long eBorderStyle_resizeh  = 1 << 2;
-
-  // enables the titlebar for the window
-  const long eBorderStyle_title    = 1 << 3;
-
-  // enables the window menu button on the title bar.  this being on should force the title bar to display
-  const long eBorderStyle_menu     = 1 << 4;
-
-  // enables the minimize button so the user can minimize the window.
-  //   turned off for tranient windows since they can not be minimized seperate from their parent
-  const long eBorderStyle_minimize = 1 << 5;
-
-  // enables the maxmize button so the user can maximize the window
-  const long eBorderStyle_maximize = 1 << 6;
-
-  // show the close button
-  const long eBorderStyle_close    = 1 << 7;
-
-  // whatever the OS wants... i.e. don't do anything
-  const long eBorderStyle_default  = -1;
 
 
   /**
@@ -218,7 +160,7 @@ interface nsIWidget : nsISupports
 
 
   /**
-   * Create and initialize a widget. 
+   * initialize a widget
    *
    * The widget represents a window that can be drawn into. It also is the 
    * base class for user-interface widgets such as buttons and text boxes.
@@ -235,95 +177,22 @@ interface nsIWidget : nsISupports
    * calling code must handle paint messages and clear the background 
    * itself. 
    *
-   * @param     parent or null if it's a top level window
-   * @param     aRect     the widget dimension
-   * @param     aHandleEventFunction the event handler callback function
-   * @param     aContext
-   * @param     aAppShell the parent application shell. If nsnull,
-   *                      the parent window's application shell will be used.
-   * @param     aToolkit
-   * @param     aInitData data that is used for widget initialization
+   * @param     aAppShell      the parent application shell. If nsnull,
+   *                           the parent window's application shell will be used.
+   * @param     aToolkit       toolkit
+   * @param     aContext       device context
+   * @param     aEventFunction the event handler callback function
    *
    */
-  void Create(in nsIWidget         aParent,
-              [const] in nsRectRef aRect,
-              in EVENT_CALLBACK    aHandleEventFunction,
-              in nsIDeviceContext  aContext,
-              in nsIAppShell       aAppShell,
-              in nsIToolkit        aToolkit,
-              in nsWidgetInitData  aInitData);
-
+  void initWidget(in nsIAppShell      aAppShell,
+                  in nsIToolkit       aToolkit,
+                  in nsIDeviceContext aContext,
+                  in EVENT_CALLBACK   aEventFunction);
+              
   /**
-   * Create and initialize a widget with a native window parent
-   *
-   * The widget represents a window that can be drawn into. It also is the 
-   * base class for user-interface widgets such as buttons and text boxes.
-   *
-   * All the arguments can be NULL in which case a top level window
-   * with size 0 is created. The event callback function has to be
-   * provided only if the caller wants to deal with the events this
-   * widget receives.  The event callback is basically a preprocess
-   * hook called synchronously. The return value determines whether
-   * the event goes to the default window procedure or it is hidden
-   * to the os. The assumption is that if the event handler returns
-   * false the widget does not see the event.
-   *
-   * @param     aParent   native window.
-   * @param     aRect     the widget dimension
-   * @param     aHandleEventFunction the event handler callback function
+   * Get some kind of native data
    */
-  void CreateWithNativeParent(in nsNativeWidget    aParent,
-                              [const] in nsRectRef aRect,
-                              in EVENT_CALLBACK    aHandleEventFunction,
-                              in nsIDeviceContext  aContext,
-                              in nsIAppShell       aAppShell,
-                              in nsIToolkit        aToolkit,
-                              in nsWidgetInitData  aInitData);
-
-
-  /**
-   * Get the window type which was set in nsWidgetInitData during Create()
-   */
-  readonly attribute nsWindowType WindowType;
-
-  /**
-   * Get the border style which was set in nsWidgetInitData during Create()
-   */
-  readonly attribute nsBorderStyle BorderStyle;
-
-  /**
-   * Accessor functions to get and set the client data associated with the
-   * widget.
-   */
-  attribute voidStar ClientData;
-
-  /**
-   * Return the parent Widget of this Widget or nsnull if this is a 
-   * top level window
-   *
-   * @return the parent widget or nsnull if it does not have a parent
-   *
-   */
-  readonly attribute nsIWidget Parent;
-  
-  /**
-   * Show or hide this widget
-   * XXX Replaced Show() and IsVisible()
-   * @param aState PR_TRUE to show the Widget, PR_FALSE to hide it
-   *
-   */
-  attribute PRBool Visibility;
-
-
-  void GetNativeData(in PRUint32 aDataType, out voidStar aData);
-
-  /**
-   * Make the window modal 
-   *
-   * 
-   *
-   */
-  void SetModal();
+  voidStar getNativeData(in PRUint32 aDataType);
 
   /**
    * Move this widget.
@@ -332,7 +201,7 @@ interface nsIWidget : nsISupports
    * @param aY the new y position expressed in the parent's coordinate system
    *
    **/
-  void Move(in PRInt32 aX, in PRInt32 aY);
+  void move(in PRInt32 aX, in PRInt32 aY);
 
   /**
    * Resize this widget. 
@@ -342,7 +211,7 @@ interface nsIWidget : nsISupports
    * @param aRepaint whether the widget should be repainted
    *
    */
-  void Resize(in PRInt32 aWidth,
+  void resize(in PRInt32 aWidth,
               in PRInt32 aHeight,
               in PRBool  aRepaint);
 
@@ -356,7 +225,7 @@ interface nsIWidget : nsISupports
    * @param aRepaint whether the widget should be repainted if the size changes
    *
    */
-  void MoveResize(in PRInt32 aX,
+  void moveResize(in PRInt32 aX,
                   in PRInt32 aY,
                   in PRInt32 aWidth,
                   in PRInt32 aHeight,
@@ -368,12 +237,10 @@ interface nsIWidget : nsISupports
    * @param aState PR_TRUE to enable the Widget, PR_FALSE to disable it.
    *
    */
-  void Enable(in PRBool aState);
+  void enable(in PRBool aState);
 
-  /**
-   * Give focus to this widget.
-   */
-  void SetFocus();
+
+  // XXX GO AWAY
 
   /**
    * Get this widget's outside dimensions relative to it's parent widget
@@ -384,8 +251,10 @@ interface nsIWidget : nsISupports
   //  readonly attribute nsRect Bounds;
 
   // this is really out..
-  void GetBounds(in nsRectRef aRect);
+  void getBounds(in nsRectRef aRect);
 
+
+  // XXX keep this, but make it ints
   /**
    * Get this widget's client area dimensions, if the window has a 3D border appearance
    * this returns the area inside the border, The x and y are always zero
@@ -396,59 +265,26 @@ interface nsIWidget : nsISupports
   //  readonly attribute nsRect ClientBounds;
 
   // this is really out..
-  void GetClientBounds(in nsRectRef aRect);
+  void getClientBounds(in nsRectRef aRect);
 
+
+
+  // Is this still used?
   /**
-   * Gets the width and height of the borders
-   * @param aWidth the width of the border
-   * @param aHeight the height of the border
+   * Returns the preferred width and height for the widget
    *
    */
-  void GetBorderSize(out PRInt32 aWidth, out PRInt32 aHeight);
-
+  void getPreferredSize(out PRInt32 aWidth,
+                        out PRInt32 aHeight);
+  
   /**
-   * Get the nsIToolkit
-   */
-  readonly attribute nsIToolkit Toolkit;
-
-  /**
-   * Get and Set the widget's z-index.
-   */
-  attribute PRInt32 ZIndex;
-
-  /**
-   * Set/Get the foreground color for this widget
-   *
-   * @param aColor the new foreground color
+   * Set the preferred width and height for the widget
    *
    */
-  attribute nscolor ForegroundColor;
+  void setPreferredSize(in PRInt32 aWidth, in PRInt32 aHeight);
 
 
-  /**
-   * Set/Get the background color for this widget
-   *
-   * @param aColor the new background color
-   *
-   */
-  attribute nscolor BackgroundColor;
 
-
-  /**
-   * Set/Get the font for this widget 
-   *
-   * @param aFont font to display. See nsFont for allowable fonts
-   */
-  attribute nsFont Font;
-
-
-  /**
-   * Set/Get the cursor for this widget
-   *
-   * @param aCursor the new cursor for this widget
-   */
-
-  attribute nsCursor Cursor;
 
   /**
    * Invalidate the widget and repaint it.
@@ -456,7 +292,7 @@ interface nsIWidget : nsISupports
    * @param aIsSynchronouse PR_TRUE then repaint synchronously. If PR_FALSE repaint later.
    * @see #Update()
    */
-  void Invalidate(in PRBool aIsSynchronous);
+  void invalidate(in PRBool aIsSynchronous);
 
   /**
    * Invalidate a specified rect for a widget and repaints it.
@@ -464,7 +300,7 @@ interface nsIWidget : nsISupports
    * @param aIsSynchronouse PR_TRUE then repaint synchronously. If PR_FALSE repaint later.
    * @see #Update()
    */
-  void InvalidateRect([const] in nsRect aRect, in PRBool aIsSynchronous);
+  void invalidateRect([const] in nsRect aRect, in PRBool aIsSynchronous);
 
   /**
    * Invalidate a specified rect for a widget and repaints it.
@@ -473,78 +309,15 @@ interface nsIWidget : nsISupports
    * @see #Update()
    */
   //  void InvalidateRegion([const] in nsIScriptableRegion aRegion, in PRBool aIsSynchronous);
-  void InvalidateRegion([const] in nsIRegion aRegion, in PRBool aIsSynchronous);
+  void invalidateRegion([const] in nsIRegion aRegion, in PRBool aIsSynchronous);
+
   /**
    * Force a synchronous repaint of the window if there are dirty rects.
    *
    * @see Invalidate()
    */
-  void Update();
+  void update();
 
-  /**
-   * Adds a mouse listener to this widget
-   * Any existing mouse listener is replaced
-   *
-   * @param aListener mouse listener to add to this widget.
-   */
-  void AddMouseListener(in nsIMouseListener aListener);
-
-  /**
-   * Adds an event listener to this widget
-   * Any existing event listener is replaced
-   *
-   * @param aListener event listener to add to this widget.
-   */
-  void AddEventListener(in nsIEventListener aListener);
-
-  /**
-   * Adds a menu listener to this widget
-   * Any existing menu listener is replaced
-   *
-   * @param aListener menu listener to add to this widget.
-   */
-  void AddMenuListener(in nsIMenuListener aListener);
-    
-  /**
-   * Set the color map for this widget
-   *
-   * @param aColorMap color map for displaying this widget
-   *
-   */
-  attribute nsColorMap ColorMap;
-
-  /**
-   * Scroll this widget.
-   *
-   * @param aDx amount to scroll along the x-axis
-   * @param aDy amount to scroll along the y-axis.
-   * @param aClipRect clipping rectangle to limit the scroll to.
-   *
-   */
-  void Scroll(in PRInt32 aDx, in PRInt32 aDy, in nsRect aClipRect);
-
-  /**
-   * Set the widget's title.
-   * Must be called after Create.
-   *
-   * @param aTitle string displayed as the title of the widget
-   */
-  void SetTitle(in string aTitle);
-
-  /**
-   * Set the widget's MenuBar.
-   * Must be called after Create.
-   *
-   * @param aMenuBar the menubar
-   */
-  void SetMenuBar(in nsIMenuBar aMenuBar);
-
-  /**
-   * Set the widget's MenuBar's visibility
-   *
-   * @param aShow PR_TRUE to show, PR_FALSE to hide
-   */
-  void ShowMenuBar(in PRBool aShow);
 
   /**
    * Convert from this widget coordinates to screen coordinates.
@@ -552,7 +325,7 @@ interface nsIWidget : nsISupports
    * @param  aOldRect  widget coordinates stored in the x,y members
    * @param  aNewRect  screen coordinates stored in the x,y members
    */
-  void WidgetToScreen([const] in nsRect aOldRect, out nsRect aNewRect);
+  void widgetToScreen([const] in nsRect aOldRect, out nsRect aNewRect);
 
   /**
    * Convert from screen coordinates to this widget's coordinates.
@@ -560,82 +333,165 @@ interface nsIWidget : nsISupports
    * @param  aOldRect  screen coordinates stored in the x,y members
    * @param  aNewRect  widget's coordinates stored in the x,y members
    */
-  void ScreenToWidget([const] in nsRect aOldRect, out nsRect aNewRect);
+  void screenToWidget([const] in nsRect aOldRect, out nsRect aNewRect);
 
-  /**
-   * When adjustments are to made to a whole set of child widgets, call this
-   * before resizing/positioning the child windows to minimize repaints. Must
-   * be followed by EndResizingChildren() after child windows have been
-   * adjusted.
-   *
-   */
-  void BeginResizingChildren();
-
-  /**
-   * Call this when finished adjusting child windows. Must be preceded by
-   * BeginResizingChildren().
-   *
-   */
-  void EndResizingChildren();
+  // is this used?
+  void convertToDeviceCoordinates(inout nscoord aX, inout nscoord aY);
 
 
-  /**
-   * Returns the preferred width and height for the widget
-   *
-   */
-  void GetPreferredSize(out PRInt32 aWidth,
-                        out PRInt32 aHeight);
-  
-  /**
-   * Set the preferred width and height for the widget
-   *
-   */
-  void SetPreferredSize(in PRInt32 aWidth, in PRInt32 aHeight);
-
-  /**
-   * Dispatches and event to the widget
-   *
-   */
-  void DispatchEvent(in nsGUIEvent event, in nsEventStatusRef aStatus);
-
+  // can this go away?
   /**
    * For printing and lightweight widgets
    *
    */
-  void Paint(in nsIRenderingContext aRenderingContext,
+  void paint(in nsIRenderingContext aRenderingContext,
              [const] in nsRect aDirtyRect);
   
+
+
   /**
    * Enables the dropping of files to a widget (XXX this is temporary)
    *
    */
-  void EnableDragDrop(in PRBool aEnable);
-   
-  void ConvertToDeviceCoordinates(inout nscoord aX, inout nscoord aY);
+  void enableDragDrop(in PRBool aEnable);
+
+
 
   /**
    * Enables/Disables system mouse capture.
    * @param aCapture PR_TRUE enables mouse capture, PR_FALSE disables mouse capture 
    *
    */
-  void CaptureMouse(in PRBool aCapture);
+  void captureMouse(in PRBool aCapture);
 
-	/**
-	 * Enables/Disables system capture of any and all events that would cause a
-	 * dropdown to be rolled up, This method ignores the aConsumeRollupEvent 
+  /**
+   * Enables/Disables system capture of any and all events that would cause a
+   * dropdown to be rolled up, This method ignores the aConsumeRollupEvent 
    * parameter when aDoCapture is FALSE
-	 * @param aCapture PR_TRUE enables capture, PR_FALSE disables capture 
-	 * @param aConsumeRollupEvent PR_TRUE consumes the rollup event, PR_FALSE dispatches rollup event
-	 *
-	 */
-  void CaptureRollupEvents(in nsIRollupListener aListener, in PRBool aDoCapture, in PRBool aConsumeRollupEvent);
+   * @param aCapture PR_TRUE enables capture, PR_FALSE disables capture 
+   * @param aConsumeRollupEvent PR_TRUE consumes the rollup event, PR_FALSE dispatches rollup event
+   *
+   */
+  void captureRollupEvents(in nsIRollupListener aListener, in PRBool aDoCapture, in PRBool aConsumeRollupEvent);
+
+
+
+  /**
+   * Adds a mouse listener to this widget
+   * Any existing mouse listener is replaced
+   *
+   * @param aListener mouse listener to add to this widget.
+   */
+  void addMouseListener(in nsIMouseListener aListener);
+
+  /**
+   * Adds an event listener to this widget
+   * Any existing event listener is replaced
+   *
+   * @param aListener event listener to add to this widget.
+   */
+  void addEventListener(in nsIEventListener aListener);
+
+  /**
+   * Adds a menu listener to this widget
+   * Any existing menu listener is replaced
+   *
+   * @param aListener menu listener to add to this widget.
+   */
+  void addMenuListener(in nsIMenuListener aListener);
+
+
+  // is this an internal method?
+  /**
+   * Dispatches and event to the widget
+   *
+   */
+  void dispatchEvent(in nsGUIEvent event, in nsEventStatusRef aStatus);
 
 
   /** 
    * Internal methods
    */
-  void AddChild(in nsIWidget aChild);
-  void RemoveChild(in nsIWidget aChild);
+  void addChild(in nsIWidget aChild);
+  void removeChild(in nsIWidget aChild);
+
+  /* ATTRIBUTES */
+
+
+  /**
+   * Device Context used to do printing... probably shouldn't be here
+   */
+  readonly attribute nsIDeviceContext deviceContext;
+
+  /* attributes */
+
+  /**
+   * Get the AppShell
+   */
+  readonly attribute nsIAppShell appShell;
+
+  /**
+   * Get the nsIToolkit
+   */
+  readonly attribute nsIToolkit toolkit;
+
+  /**
+   * callback for the event
+   */
+  [noscript] readonly attribute EVENT_CALLBACK eventFunction;
+
+
+  /* things that MUST be set AFTER the widget is created */
+
+  /**
+   * Get and Set the widget's z-index.
+   */
+  attribute PRInt32 zIndex;
+
+  /**
+   * Set/Get the foreground color for this widget
+   *
+   * @param aColor the new foreground color
+   *
+   */
+  attribute nscolor foregroundColor;
+
+  /**
+   * Set/Get the background color for this widget
+   *
+   * @param aColor the new background color
+   *
+   */
+  attribute nscolor backgroundColor;
+
+  /**
+   * Set/Get the font for this widget 
+   *
+   * @param aFont font to display. See nsFont for allowable fonts
+   */
+  attribute nsFont font;
+
+  /**
+   * Set/Get the cursor for this widget
+   *
+   * @param aCursor the new cursor for this widget
+   */
+
+  attribute nsCursor cursor;
+
+  /**
+   * Set the color map for this widget
+   *
+   * @param aColorMap color map for displaying this widget
+   *
+   */
+  attribute nsColorMap colorMap;
+
+  /**
+   * Accessor functions to get and set the client data associated with the
+   * widget.
+   */
+  attribute voidStar clientData;
 
   /**
    * Return an nsEnumerator over the children of this widget.
@@ -644,5 +500,57 @@ interface nsIWidget : nsISupports
    * have any children
    *
    */
-  void GetChildren(out nsIEnumerator aChildren);
+  readonly attribute nsIEnumerator children;
+
+%{ C++
+  /* backwards compat stuff */
+  NS_IMETHOD Show(PRBool aShow) = 0;
+
+  NS_IMETHOD IsVisible(PRBool & aState) = 0;
+  NS_IMETHOD Resize(PRInt32 aX,
+                    PRInt32 aY,
+                    PRInt32 aWidth,
+                    PRInt32 aHeight,
+                    PRBool  aRepaint) = 0;
+
+  virtual nscolor GetForegroundColor(void) = 0;
+  virtual nscolor GetBackgroundColor(void) = 0;
+
+  NS_IMETHOD SetFont(const nsFont &aFont) = 0;
+  virtual nsIFontMetrics* GetFont(void) = 0;
+
+  NS_IMETHOD Invalidate(const nsRect & aRect, PRBool aIsSynchronous) = 0;
+  NS_IMETHOD SetTitle(const nsString& aTitle) = 0;
+  NS_IMETHOD GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight) = 0;
+
+  virtual nsIWidget* GetParent(void) = 0;
+
+  virtual nsIEnumerator*  GetChildren(void) = 0;
+
+  virtual void* GetNativeData(PRUint32 aDataType) = 0;
+  virtual void FreeNativeData(void * data, PRUint32 aDataType) = 0;
+  virtual nsIRenderingContext* GetRenderingContext() = 0;
+  virtual nsIDeviceContext* GetDeviceContext() = 0;
+  virtual nsIAppShell *GetAppShell() = 0;
+  virtual nsIToolkit* GetToolkit() = 0;    
+
+  /* the big ugly ones */
+  NS_IMETHOD Create(nsIWidget        *aParent,
+                    const nsRect     &aRect,
+                    EVENT_CALLBACK   aHandleEventFunction,
+                    nsIDeviceContext *aContext,
+                    nsIAppShell      *aAppShell = nsnull,
+                    nsIToolkit       *aToolkit = nsnull,
+                    nsWidgetInitData *aInitData = nsnull) = 0;
+  NS_IMETHOD Create(nsNativeWidget aParent,
+                    const nsRect     &aRect,
+                    EVENT_CALLBACK   aHandleEventFunction,
+                    nsIDeviceContext *aContext,
+                    nsIAppShell      *aAppShell = nsnull,
+                    nsIToolkit       *aToolkit = nsnull,
+                    nsWidgetInitData *aInitData = nsnull) = 0;
+
+%}
+
 };
+
