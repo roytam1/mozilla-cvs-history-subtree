@@ -1406,11 +1406,9 @@ PR_IMPLEMENT(PRUint16) PR_htons(PRUint16 n) { return htons(n); }
 PR_IMPLEMENT(PRUint32) PR_htonl(PRUint32 n) { return htonl(n); }
 PR_IMPLEMENT(PRUint64) PR_ntohll(PRUint64 n)
 {
-    /*
-    ** There is currently no attempt to optimize out depending
-    ** on the host' byte order. That would be easy enough to
-    ** do.
-    */
+#ifdef IS_BIG_ENDIAN
+    return n;
+#else
     PRUint64 tmp;
     PRUint32 hi, lo;
     LL_L2UI(lo, n);
@@ -1418,20 +1416,19 @@ PR_IMPLEMENT(PRUint64) PR_ntohll(PRUint64 n)
     LL_L2UI(hi, tmp);
     hi = PR_ntohl(hi);
     lo = PR_ntohl(lo);
-    LL_UI2L(n, hi);
+    LL_UI2L(n, lo);
     LL_SHL(n, n, 32);
-    LL_UI2L(tmp, lo);
+    LL_UI2L(tmp, hi);
     LL_ADD(n, n, tmp);
     return n;
+#endif
 }  /* ntohll */
 
 PR_IMPLEMENT(PRUint64) PR_htonll(PRUint64 n)
 {
-    /*
-    ** There is currently no attempt to optomize out depending
-    ** on the host' byte order. That would be easy enough to
-    ** do.
-    */
+#ifdef IS_BIG_ENDIAN
+    return n;
+#else
     PRUint64 tmp;
     PRUint32 hi, lo;
     LL_L2UI(lo, n);
@@ -1439,9 +1436,10 @@ PR_IMPLEMENT(PRUint64) PR_htonll(PRUint64 n)
     LL_L2UI(hi, tmp);
     hi = htonl(hi);
     lo = htonl(lo);
-    LL_UI2L(n, hi);
+    LL_UI2L(n, lo);
     LL_SHL(n, n, 32);
-    LL_UI2L(tmp, lo);
+    LL_UI2L(tmp, hi);
     LL_ADD(n, n, tmp);
     return n;
+#endif
 }  /* htonll */
