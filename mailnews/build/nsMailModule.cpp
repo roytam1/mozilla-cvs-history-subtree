@@ -597,7 +597,7 @@ RegisterCommandLineHandlers(nsIComponentManager* compMgr, nsIFile* path,
 
 static NS_METHOD
 UnregisterCommandLineHandlers(nsIComponentManager* compMgr, nsIFile* path,
-                              const char *location, const char *type,
+                              const char *location,
                               const nsModuleComponentInfo *info)
 {
   nsCOMPtr<nsICategoryManager> catMan (do_GetService(NS_CATEGORYMANAGER_CONTRACTID));
