@@ -50,3 +50,5 @@ EXPORTS
         MAPIDetails
         MAPIResolveName
         MAPIFreeBuffer
+        MAPIGetNetscapeVersion
+
