@@ -2494,22 +2494,7 @@ char *net_generate_auth_string(URL_Struct *url_s,
 #endif /* SIMPLE_MD5 */
 		/* Handle the FORTEZZA case        */
 	        case AUTH_FORTEZZA:
-		  if (auth_s->signature && auth_s->challenge && 
-		      auth_s->certChain && auth_s->clientRan) {
-		          int len;
-
-			  FREEIF(auth_s->auth_string);
-			  auth_s->auth_string = NULL;
-
-			  len = XP_STRLEN(auth_s->signature) + XP_STRLEN(auth_s->challenge)
-			        + XP_STRLEN(auth_s->certChain) + XP_STRLEN(auth_s->clientRan) + 100;
-			  auth_s->auth_string = (char *)XP_ALLOC(len);
-			  if (auth_s->auth_string) {
-				sprintf(auth_s->auth_string,"signature=\"%s\" challenge=\"%s\" "
-					"clientRan=\"%s\" certChain=\"%s\"",auth_s->signature,
-					auth_s->challenge, auth_s->clientRan, auth_s->certChain);
-			  }
-		  }
+	       		HG26251
 		  break;
 		/* Done Handling the FORTEZZA case */
     }
@@ -2642,11 +2627,7 @@ NET_AskForProxyAuth(MWContext * context,
     
     if (prev->auth_type == AUTH_FORTEZZA) {
 		SECStatus rv;
-		rv = SECNAV_ComputeFortezzaProxyChallengeResponse(context,
-														  prev->challenge,
-														  &prev->signature,
-														  &prev->clientRan,
-														  &prev->certChain);
+		rv = HG26252
 		if ( rv != SECSuccess ) {
 			return(FALSE);
 		}
@@ -2865,7 +2846,7 @@ cur_entry->status = (*stream->put_block)(stream,			\
 		BRCRLF;
 
 		HEADING(XP_GetString(MK_ACCESS_SECURE));
-		if(cookie->secure)
+		if(HG26253)
 			XP_STRCPY(buffer, "Yes");
 		else
 			XP_STRCPY(buffer, "No");

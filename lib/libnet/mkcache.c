@@ -1588,8 +1588,8 @@ NET_CacheConverter (FO_Present_Types format_out,
     TRACEMSG(("cache: want_to_cache is %s", want_to_cache ? "TRUE" : "FALSE"));
 
 	if(want_to_cache 
-	   && (!HG73896 
-			|| strncasecomp(URL_s->address, "https:", 6))
+	   && (HG73896 
+			strncasecomp(URL_s->address, "https:", 6))
 	   && !URL_s->dont_cache
 	   && (net_MaxDiskCacheSize > 0 || URL_s->must_cache)
 	   && net_OpenCacheFatDB() /* make sure database is open */

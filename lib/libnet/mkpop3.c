@@ -2740,7 +2740,7 @@ net_ProcessPop3 (ActiveEntry *ce)
                                          	"POP3",
                                          	POP3_PORT,
                                          	&ce->socket,
-                                         	FALSE,
+                                         	HG09439
                                          	&cd->tcp_con_data,
                                          	ce->window_id,
                                          	&ce->URL_s->error_msg,

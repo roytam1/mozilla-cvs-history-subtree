@@ -3173,9 +3173,8 @@ net_do_cancel (ActiveEntry *ce)
 
   fields = MSG_CreateCompositionFields(from, 0, 0, 0, 0, 0, newsgroups,
 									   0, 0, subject, id, other_random_headers,
-									   0, 0, news_url,
-									   FALSE, /* encrypt_p */
-									   FALSE  /* sign_p */
+									   0, 0, news_url
+									   HG66664
 									   );
   if (!fields)
   {
@@ -4732,7 +4731,7 @@ net_ProcessNews (ActiveEntry *ce)
 						"NNTP", 
 						(HG28287 NEWS_PORT), 
 						&ce->socket, 
-						(HG22999), 
+						HG22999 
 						&cd->tcp_con_data, 
 						ce->window_id,
 						&ce->URL_s->error_msg,
