@@ -58,19 +58,11 @@ DIRS = classes
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
+EXPORT_LIBRARY=1
 LIBRARY_NAME=jsj$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE=$(LIBRARY_NAME).pdb
 MAPFILE		= $(LIBRARY_NAME).map
 LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAKE_OBJ_TYPE	= LIB
-!else
-DLLNAME=jsj$(MOZ_BITS)$(VERSION_NUMBER)
-PDBFILE=$(DLLNAME).pdb
-MAPFILE		= $(DLLNAME).map
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-MAKE_OBJ_TYPE	= DLL
-!endif
 
 !if "$(MOZ_BITS)" == "16"
 DEFFILE		= $(LIBRARY_NAME).def
@@ -174,16 +166,6 @@ LINCS=$(LINCS) -I$(JNI_GEN_DIR) \
 include <$(DEPTH)/config/rules.mak>
 
 export::  INSTALL_FILES
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install::  $(LIB)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\bin
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(LIBRARY_NAME).lib $(DIST)\lib
-!else
-install::  $(DLL)
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
 
 ####
 # this bit of extreme scariness came from the js/src makefile

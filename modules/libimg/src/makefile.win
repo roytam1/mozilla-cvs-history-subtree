@@ -33,8 +33,6 @@ LOCAL_JMC_SUBDIR = .
 !endif
 
 
-#LIBRARY_NAME = img$(MOZ_BITS)
-
 #
 # Make sure we have MOZILLA_CLIENT defined so we get the
 #   proper JS includes
@@ -57,20 +55,11 @@ LLIBS= $(LIBNSPR)  \
 
 
 
-#LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
-#LIBRARY_SUFFIX = $(MOZ_BITS)$(VERSION_NUMBER)
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-MAKE_OBJ_TYPE=LIB
-!else
-MAKE_OBJ_TYPE=DLL
-!endif
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
 LIBRARY_NAME=img$(MOZ_BITS)$(VERSION_NUMBER)
 LIBRARY_1NAME=img$(MOZ_BITS)$(VERSION_NUMBER)
 PDBFILE=$(LIBRARY_NAME).pdb
@@ -78,16 +67,8 @@ MAPFILE=$(LIBRARY_NAME).map
 !if "$(MOZ_BITS)" == "16"
 DEFFILE=$(LIBRARY_1NAME).def
 !endif
-!else
-DLLNAME=img$(MOZ_BITS)$(VERSION_NUMBER)
-DLL1NAME=img$(MOZ_BITS)$(VERSION_NUMBER)
-PDBFILE=$(DLLNAME).pdb
-MAPFILE=$(DLLNAME).map
-!if "$(MOZ_BITS)" == "16"
-DEFFILE=$(DLL1NAME).def
-!endif
-!endif
 
+EXPORT_LIBRARY=1
 
 
 #//------------------------------------------------------------------------
@@ -96,19 +77,10 @@ DEFFILE=$(DLL1NAME).def
 #// (these must be defined before the common makefiles are included)
 #//
 #//------------------------------------------------------------------------
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-LIB=.\$(OBJDIR)\$(LIBRARY_NAME).lib
-MAPFILE= $(LIBRARY_NAME).map
-!else
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
-MAPFILE= $(DLLNAME).map
-!endif
-
 
 MODULE=img 
 DEPTH=..\..\.. 
 LOCAL_INCLUDES=-I../public_com -I.   
-#LIBRARY_NAME=img 
 
 ### 
 CPPSRCS=color.cpp colormap.cpp dither.cpp if.cpp ilclient.cpp il_util.cpp \
@@ -137,14 +109,3 @@ LINCS= -I$(XPDIST)\public\nspr  -I$(XPDIST)\public\jpeg \
 
 
 include <$(DEPTH)\config\rules.mak> 
-
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-    $(MAKE_INSTALL) $(LIB) $(DIST)\bin
-    $(MAKE_INSTALL) $(LIB) $(DIST)\lib
-!else
-install:: $(DLL)
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
-    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
-!endif
-
