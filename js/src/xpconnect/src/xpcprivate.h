@@ -846,7 +846,7 @@ private:
 
 /***************************************************************************/
 
-class nsXPCJSObjectHolder : public nsIXPConnectJSObjectHolder
+class XPCJSObjectHolder : public nsIXPConnectJSObjectHolder
 {
 public:
     // all the interface method declarations...
@@ -856,13 +856,13 @@ public:
     // non-interface implementation
 
 public:
-    static nsXPCJSObjectHolder* newHolder(JSContext* cx, JSObject* obj);
+    static XPCJSObjectHolder* newHolder(JSContext* cx, JSObject* obj);
 
-    virtual ~nsXPCJSObjectHolder();
+    virtual ~XPCJSObjectHolder();
 
 private:
-    nsXPCJSObjectHolder(JSContext* cx, JSObject* obj);
-    nsXPCJSObjectHolder(); // not implemented
+    XPCJSObjectHolder(JSContext* cx, JSObject* obj);
+    XPCJSObjectHolder(); // not implemented
 
     JSRuntime* mRuntime;
     JSObject* mJSObj;

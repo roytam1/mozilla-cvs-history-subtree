@@ -1481,3 +1481,38 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
 
 /***************************************************************************/
 /***************************************************************************/
+/***************************************************************************/
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(XPCJSObjectHolder, nsIXPConnectJSObjectHolder)
+
+NS_IMETHODIMP
+XPCJSObjectHolder::GetJSObject(JSObject** aJSObj)
+{
+    NS_PRECONDITION(aJSObj, "bad param");
+    NS_PRECONDITION(mJSObj, "bad object state");
+    *aJSObj = mJSObj;
+    return NS_OK;
+}
+
+XPCJSObjectHolder::XPCJSObjectHolder(JSContext* cx, JSObject* obj)
+    : mRuntime(JS_GetRuntime(cx)), mJSObj(obj)
+{
+    NS_INIT_REFCNT();
+    JS_AddNamedRoot(cx, &mJSObj, "XPCJSObjectHolder::mJSObj");
+}
+
+XPCJSObjectHolder::~XPCJSObjectHolder()
+{
+    JS_RemoveRootRT(mRuntime, &mJSObj);
+}
+
+XPCJSObjectHolder* 
+XPCJSObjectHolder::newHolder(JSContext* cx, JSObject* obj)
+{
+    if(!cx || !obj)
+    {
+        NS_ASSERTION(0, "bad param");
+        return nsnull;
+    }
+    return new XPCJSObjectHolder(cx, obj);        
+}

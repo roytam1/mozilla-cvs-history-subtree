@@ -879,7 +879,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
                 if(aJSObj)
                 {
                     nsIXPConnectJSObjectHolder* holder =
-                        nsXPCJSObjectHolder::newHolder(cx, aJSObj);
+                        XPCJSObjectHolder::newHolder(cx, aJSObj);
                     if(holder)
                     {
                         NS_ADDREF(holder);
