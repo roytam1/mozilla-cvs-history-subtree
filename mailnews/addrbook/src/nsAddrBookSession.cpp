@@ -259,4 +259,21 @@ NS_IMETHODIMP nsAddrBookSession::GenerateNameFromCard(nsIAbCard *card, PRInt32 g
   return NS_OK;
 }
 
+NS_IMETHODIMP nsAddrBookSession::GeneratePhoneticNameFromCard(nsIAbCard *card, PRBool lastNameFirst, PRUnichar **aName)
+{
+  nsresult rv;
 
+  nsXPIDLString firstName;
+  nsXPIDLString lastName;
+  
+  rv = card->GetPhoneticFirstName(getter_Copies(firstName));
+  NS_ENSURE_SUCCESS(rv, rv);       
+
+  rv = card->GetPhoneticLastName(getter_Copies(lastName));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  if (lastNameFirst)
+    *aName = ToNewUnicode(lastName + firstName);
+  else
+    *aName = ToNewUnicode(firstName + lastName);
+}

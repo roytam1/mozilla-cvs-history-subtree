@@ -241,6 +241,13 @@ Contributor(s):
                                   id="cmd_SortByCompany"
                                   accesskey="&Company.accesskey;"
                                   oncommand="SortResultPane('Company');" name="sortas" type="radio" checked="true"/>
+            <!-- LOCALIZATION NOTE: BEIGN -->
+            <!-- Follwing section may be commented out for non Japanese builds. -->
+            <menuitem label="&_PhoneticName.label;"
+                                  id="cmd_SortBy_PhoneticName"
+                                  accesskey="&_PhoneticName.accesskey;"
+                                  oncommand="SortResultPane('_PhoneticName');" name="sortas" type="radio" checked="true"/>
+            <!-- LOCALIZATION NOTE: END -->
             <menuitem label="&NickName.label;"
                                   id="cmd_SortByNickName"
                                   accesskey="&NickName.accesskey;"
