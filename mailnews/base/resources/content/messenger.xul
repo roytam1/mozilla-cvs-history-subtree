@@ -26,14 +26,12 @@ Rights Reserved.
 
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
-<?xul-overlay href="chrome://messenger/content/platformMailnewsOverlay.xul"?>
 
 <!-- collapsed in, for performance
-
 threadPane.xul, folderPane.xul -> messenger.xul
 threadPane.css, threadPaneLabels.css, folderPane.css -> mailWindow1.css
 folderpane.dtd, threadpane.dtd -> messenger.dtd
-
+platformMailnewsOverlay.xul
 -->
 
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
@@ -126,7 +124,7 @@ folderpane.dtd, threadpane.dtd -> messenger.dtd
 <keyset id="mailKeys">
   <key id="showHideSidebar"/>
   <keyset id="tasksKeys"/>
-</keyset>
+</keyset>	
 
 <popup id="threadPaneContext"/>
 <popup id="folderPaneContext"/>

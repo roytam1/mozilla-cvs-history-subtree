@@ -44,9 +44,11 @@ Rights Reserved.
 <script src="chrome://messenger/content/commandglue.js"/>
 <script src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/findUtils.js"/>
+
 <!-- stand alone mail, no bookmarking
 <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
 -->
+
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="bundle_offlinePrompts" src="chrome://messenger/locale/offline.properties"/>
@@ -283,7 +285,8 @@ Rights Reserved.
   <key id="key_copy"/>
   <key id="key_paste"/>
   <key id="key_delete" oncommand="goDoCommand('cmd_delete');" shift="false"/>
-  <key id="cmd_shiftDelete" oncommand="goDoCommand('cmd_shiftDelete')"/>
+  <!-- collapsed in from platformMailnewsOverlay.xul, stand alone mail is win32 only right now -->
+  <key id="cmd_shiftDelete" oncommand="goDoCommand('cmd_shiftDelete')" keycode="VK_DELETE"  xulkey="false" modifiers="shift"/>
   <key id="key_selectAll"/>
   <key id="key_selectThread" key="&selectThreadCmd.key;"             oncommand="goDoCommand('cmd_selectThread');" modifiers="accel, shift"/>
   
