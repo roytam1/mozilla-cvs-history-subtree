@@ -117,6 +117,7 @@ endif
 	$(NSINSTALL) $(INCDIR)/ldap-deprecated.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-to-be-deprecated.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap_ssl.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldappr.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/srchpref.h $(INSTDIR)/include
 
 ifeq ($(PKG_PRIVATE_HDRS),1)
