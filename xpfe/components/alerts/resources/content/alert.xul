@@ -30,7 +30,7 @@ Rights Reserved.
   
   <script type="application/x-javascript" src="chrome://communicator/content/alerts/alert.js"/>
   <hbox class="alertBox" flex="1" align="start">
-    <image id="alertImage" autostretch="never" src="chrome://messenger/skin/icons/mast-mail.gif"/>
+    <image id="alertImage" autostretch="never"/>
     <vbox flex="1">
       <label id="alertTitleLabel" class="alertTitle plain">*</label>
       <label id="alertTextLabel" class="alertText plain" flex="1" onclick="onAlertClick();">*</label>
