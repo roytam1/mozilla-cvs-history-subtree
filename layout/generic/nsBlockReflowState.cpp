@@ -98,17 +98,9 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
   mPresContext = aPresContext;
   mNextInFlow = NS_STATIC_CAST(nsBlockFrame*, mBlock->GetNextInFlow());
 
-  // Compute content area width (the content area is inside the border
-  // and padding)
-  if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth) {
-    mContentArea.width = aReflowState.mComputedWidth;
-  }
-  else {
-    mContentArea.width = aReflowState.availableWidth -
-                         borderPadding.left - borderPadding.right;
-    if (mContentArea.width < 0)
-      mContentArea.width = 0;
-  }
+  NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aReflowState.mComputedWidth,
+               "no unconstrained widths should be present anymore");
+  mContentArea.width = aReflowState.mComputedWidth;
 
   // Compute content area height. Unlike the width, if we have a
   // specified style height we ignore it since extra content is
@@ -808,23 +800,17 @@ nsBlockReflowState::FlowAndPlaceFloat(nsFloatCache*   aFloatCache,
   }
   else {
     isLeftFloat = PR_FALSE;
-    if (NS_UNCONSTRAINEDSIZE != mAvailSpaceRect.width) {
-      if (prevInFlow) {
-        region.x = prevRect.x;
-      }
-      else if (!keepFloatOnSameLine) {
-        region.x = mAvailSpaceRect.XMost() - region.width;
-      } 
-      else {
-        // this is the IE quirk (see few lines above)
-        // the table is keept in the same line: don't let it overlap the previous float 
-        region.x = mAvailSpaceRect.x;
-      }
+    NS_ASSERTION(mAvailSpaceRect.width != NS_UNCONSTRAINEDSIZE,
+                 "no unconstrained widths anymore");
+    if (prevInFlow) {
+      region.x = prevRect.x;
     }
+    else if (!keepFloatOnSameLine) {
+      region.x = mAvailSpaceRect.XMost() - region.width;
+    } 
     else {
-      // For unconstrained reflows, pretend that a right float is
-      // instead a left float.  This will make us end up with the
-      // correct unconstrained width, and we'll place it later.
+      // this is the IE quirk (see few lines above)
+      // the table is keept in the same line: don't let it overlap the previous float 
       region.x = mAvailSpaceRect.x;
     }
   }
