@@ -63,10 +63,6 @@ public:
 
     ~nsReflowPath();
 
-    // Find or create a child of this node corresponding to forFrame.
-    // XXX better name
-    nsReflowPath *EnsureChild(nsIFrame *aFrame);
-
     class iterator
     {
     protected:
