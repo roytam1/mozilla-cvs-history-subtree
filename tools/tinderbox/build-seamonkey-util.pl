@@ -1126,8 +1126,8 @@ sub get_profile_dir {
     } else {
         # *nix
         if ($Settings::VendorName) {
-          $profile_dir = "$build_dir/.".lc($Settings::VendorName)."/".lc($Settings::ProductName)."/$Settings::MozProfileName";
-          ($profile_dir) = <$profile_dir*>;
+          $profile_dir = "$build_dir/.".lc($Settings::VendorName)."/".lc($Settings::ProductName)."/";
+          ($profile_dir) = <$profile_dir . "*" . $Settings::MozProfileName . "*">;
         }
         else {
           $profile_dir = "$build_dir/.".lc($Settings::ProductName)."/";
