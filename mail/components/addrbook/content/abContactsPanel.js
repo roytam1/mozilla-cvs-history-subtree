@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+var gAddressBookBundle;
+
 function GetAbViewListener()
 {
   // the ab panel doesn't care if the total changes, or if the selection changes
@@ -142,6 +144,7 @@ function LoadPreviouslySelectedAB()
 function AbPanelLoad() 
 {
   InitCommonJS();
+  gAddressBookBundle = document.getElementById("bundle_addressBook");
 
   LoadPreviouslySelectedAB();
 
