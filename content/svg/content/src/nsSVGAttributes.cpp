@@ -550,12 +550,12 @@ nsSVGAttributes::UpdateContentStyleRule()
     return;
   }
   
-  nsCOMPtr<nsIURI> baseURL;
+  nsIURI* baseURL;
   {
     NS_ASSERTION(mContent, "null owner");
     nsCOMPtr<nsIDocument> document = mContent->GetDocument();
     NS_ASSERTION(document, "null document");
-    document->GetBaseURL(getter_AddRefs(baseURL));
+    baseURL = document->GetBaseURL();
   }
 
   nsCOMPtr<nsICSSParser> parser;
