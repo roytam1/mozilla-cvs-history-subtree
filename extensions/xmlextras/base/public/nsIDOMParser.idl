@@ -51,19 +51,30 @@ interface nsIURI;
  * asynchronous (callback-based) loading.
  */
 
-[scriptable, uuid(d347c6c0-5129-11d4-9a54-000064657374)]
+[scriptable, uuid(4f45513e-55e5-411c-a844-e899057026c1)]
 interface nsIDOMParser : nsISupports {
 
   /**
    * The string passed in is parsed into a DOM document.
    *
-   * @param str The string to be parsed
-   * @param contentType The content type of the string - either text/xml
-   *                    or text/html
+   * @param str The UTF16 string to be parsed
+   * @param contentType The content type of the string (see parseFromStream)
    * @returns The DOM document created as a result of parsing the 
    *          string
    */
   nsIDOMDocument parseFromString(in wstring str, in string contentType);
+
+  /**
+   * The buffer is parsed into a DOM document.
+   * The charset is determined from the xml entity decl.
+   *
+   * @param buf The octet array data to be parsed
+   * @param bufLen Length (in bytes) of the data
+   * @param contentType The content type of the data (see parseFromStream)
+   * @returns The DOM document created as a result of parsing the 
+   *          string
+   */
+  nsIDOMDocument parseFromBuffer([const,array,size_is(bufLen)] in octet buf, in PRUint32 bufLen, in string contentType);
 
   /**
    * The byte stream passed in is parsed into a DOM document.
@@ -73,13 +84,15 @@ interface nsIDOMParser : nsISupports {
    * @param stream The byte stream whose contents are parsed
    * @param charset The character set that was used to encode the byte
    *                stream. NULL if not specified.
-   * @param contentType The content type of the string - either text/xml
-   *                    or text/html
+   * @param contentLength The number of bytes in the input stream.
+   * @param contentType The content type of the string - either text/xml,
+   *                    application/xml, or application/xhtml+xml.
+   *                    Must not be NULL.
    * @returns The DOM document created as a result of parsing the 
    *          stream
    */
   nsIDOMDocument parseFromStream(in nsIInputStream stream, 
-                                 in string charset, 
+                                 in string charset,
                                  in long contentLength,
                                  in string contentType);
 
