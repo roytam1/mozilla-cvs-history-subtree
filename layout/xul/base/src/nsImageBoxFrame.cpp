@@ -139,7 +139,7 @@ nsImageBoxFrame::AttributeChanged(nsIPresContext* aPresContext,
   return NS_OK;
 }
 
-nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell)
+nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mIntrinsicSize(0,0)
 {
   mSizeFrozen = PR_FALSE;
 	mHasImage = PR_FALSE;
@@ -162,8 +162,9 @@ NS_METHOD
 nsImageBoxFrame::Destroy(nsIPresContext* aPresContext)
 {
   // Release image loader first so that it's refcnt can go to zero
-#ifndef USE_IMG2
-  mImageRequest->Cancel(NS_ERROR_FAILURE);
+#ifdef USE_IMG2
+  if (mImageRequest)
+    mImageRequest->Cancel(NS_ERROR_FAILURE);
 #else
   mImageLoader.StopAllLoadImages(aPresContext);
 #endif
@@ -186,19 +187,8 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
   // Always set the image loader's base URL, because someone may
   // decide to change a button _without_ an image to have an image
   // later.
-  nsIURI* baseURL = nsnull;
-  nsIHTMLContent* htmlContent;
-  if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
-    htmlContent->GetBaseURL(baseURL);
-    NS_RELEASE(htmlContent);
-  }
-  else {
-    nsIDocument* doc;
-    if (NS_SUCCEEDED(mContent->GetDocument(doc))) {
-      doc->GetBaseURL(baseURL);
-      NS_RELEASE(doc);
-    }
-  }
+  nsCOMPtr<nsIURI> baseURL;
+  GetBaseURI(getter_AddRefs(baseURL));
 
   // Initialize the image loader. Make sure the source is correct so
   // that UpdateAttributes doesn't double start an image load.
@@ -209,6 +199,7 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
   }
 
 #ifdef USE_IMG2
+
   nsImgListener *listener;
   NS_NEWXPCOM(listener, nsImgListener);
   NS_ADDREF(listener);
@@ -216,17 +207,20 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
   listener->QueryInterface(NS_GET_IID(nsIImageDecoderObserver), getter_AddRefs(mListener));
   NS_RELEASE(listener);
 
-  nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
-  if (NS_FAILED(rv))
-    return rv;
 
-  nsCOMPtr<nsIURI> srcURI;
-  NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
-  il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  if (mHasImage) {
+    nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+    if (NS_FAILED(rv))
+      return rv;
+
+    nsCOMPtr<nsIURI> srcURI;
+    NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
+    il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  }
+#else
+  if (mHasImage)
+    mImageLoader.Init(this, UpdateImageFrame, nsnull, baseURL, src);
 #endif
-
-  mImageLoader.Init(this, UpdateImageFrame, nsnull, baseURL, src);
-  NS_IF_RELEASE(baseURL);
 
   PRBool a,b;
   UpdateAttributes(aPresContext, nsnull, a, b);
@@ -268,6 +262,44 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
 {
   aResize = PR_FALSE;
 
+#ifdef USE_IMG2
+  // XXX we should get the old url and compare with this one
+
+  // get the new image src
+  nsAutoString src;
+  GetImageSource(src);
+
+   // see if the images are different
+  //if (!oldSrc.Equals(src)) {      
+
+    if (!src.IsEmpty()) {
+      mSizeFrozen = PR_FALSE;
+      mHasImage = PR_TRUE;
+
+      if (mImageRequest)
+        mImageRequest->Cancel(NS_ERROR_FAILURE);
+
+      nsresult rv;
+      nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+      if (NS_FAILED(rv))
+        mHasImage = PR_FALSE;
+      else {
+        nsCOMPtr<nsIURI> baseURI;
+        GetBaseURI(getter_AddRefs(baseURI));
+        nsCOMPtr<nsIURI> srcURI;
+        NS_NewURI(getter_AddRefs(srcURI), src, baseURI);
+        il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+      }
+
+    } else {
+      mSizeFrozen = PR_TRUE;
+      mHasImage = PR_FALSE;
+    }
+    aResize = PR_TRUE;
+
+//  }
+
+#else
   // see if the source changed
   // get the old image src
   nsAutoString oldSrc;
@@ -292,6 +324,7 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
 
     aResize = PR_TRUE;
   }
+#endif
 }
 
 NS_IMETHODIMP
@@ -395,10 +428,16 @@ nsImageBoxFrame::GetImageSize(nsIPresContext* aPresContext)
       return;
 	  } else {
       // Ask the image loader for the *intrinsic* image size
+#ifdef USE_IMG2
+      if (mIntrinsicSize.width != 0 && mIntrinsicSize.height != 0) {
+        desiredSize.width = mIntrinsicSize.width;
+        desiredSize.height = mIntrinsicSize.height;
+      } else {
+#else
       mImageLoader.GetDesiredSize(aPresContext, nsnull, desiredSize);
-
       if (desiredSize.width == 1 || desiredSize.height == 1)
       {
+#endif
         mImageSize.width = kDefaultSizeInTwips;
         mImageSize.height = kDefaultSizeInTwips;
         return;
@@ -484,6 +523,29 @@ nsImageBoxFrame::GetFrameName(nsString& aResult) const
 
 
 
+void
+nsImageBoxFrame::GetBaseURI(nsIURI **uri)
+{
+  nsresult rv;
+  nsCOMPtr<nsIURI> baseURI;
+  nsCOMPtr<nsIHTMLContent> htmlContent(do_QueryInterface(mContent, &rv));
+  if (NS_SUCCEEDED(rv)) {
+    htmlContent->GetBaseURL(*getter_AddRefs(baseURI));
+  }
+  else {
+    nsCOMPtr<nsIDocument> doc;
+    rv = mContent->GetDocument(*getter_AddRefs(doc));
+    if (NS_SUCCEEDED(rv)) {
+      doc->GetBaseURL(*getter_AddRefs(baseURI));
+    }
+  }
+  *uri = baseURI;
+  NS_IF_ADDREF(*uri);
+}
+
+
+
+
 #ifdef USE_IMG2
 
 NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(nsIImageRequest *request, nsIPresContext *aPresContext)
@@ -506,7 +568,7 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(nsIImageRequest *request, nsIPre
   float p2t;
   aPresContext->GetPixelsToTwips(&p2t);
 
-  mImageSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+  mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
   nsBoxLayoutState state(aPresContext);
   this->MarkDirty(state);

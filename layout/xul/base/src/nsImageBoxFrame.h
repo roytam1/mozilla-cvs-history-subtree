@@ -128,6 +128,8 @@ protected:
 
   void GetImageSource(nsString& aResult);
 
+  void GetBaseURI(nsIURI **uri);
+
   virtual void GetImageSize(nsIPresContext* aPresContext);
 
 private:
@@ -135,6 +137,8 @@ private:
 #ifdef USE_IMG2
   nsCOMPtr<nsIImageRequest> mImageRequest;
   nsCOMPtr<nsIImageDecoderObserver> mListener;
+
+  nsSize mIntrinsicSize;
 #endif
 
   nsHTMLImageLoader mImageLoader;
