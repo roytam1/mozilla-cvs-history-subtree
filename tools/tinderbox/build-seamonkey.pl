@@ -240,7 +240,7 @@ sub BuildIt {
         close LOG;
         chdir $build_dir;
         
-        mail_build_finished_message($start_time, $build_status)
+        mail_build_finished_message($start_time, $build_status, $logfile)
           if $Settings::ReportStatus;
 
         $exit_early++ if $Settings::BuildOnce;
@@ -403,7 +403,7 @@ sub PrintEnv {
     foreach my $key (sort keys %ENV) {
         print_log "$key=$ENV{$key}\n";
     }
-    if (-e $ENV{MOZCONFIG}) {
+    if (defined $ENV{MOZCONFIG} and -e $ENV{MOZCONFIG}) {
         print_log "-->mozconfig<----------------------------------------\n";
         open CONFIG, "$ENV{MOZCONFIG}";
         print_log $_ while <CONFIG>;
