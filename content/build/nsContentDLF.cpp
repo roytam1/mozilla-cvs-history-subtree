@@ -86,6 +86,7 @@ static char* gXMLTypes[] = {
 #ifdef MOZ_SVG
 static char* gSVGTypes[] = {
   "image/svg+xml",
+  "image/svg+xml; x-view-type=view-source",
   0
 };
 #endif
@@ -550,6 +551,14 @@ nsContentDLF::RegisterDocumentFactories(nsIComponentManager* aCompMgr,
     rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, aLocation, aType, gXMLTypes);
     if (NS_FAILED(rv))
       break;
+#ifdef MOZ_SVG
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, aLocation, aType, gSVGTypes);
+    if (NS_FAILED(rv))
+      break;
+    rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, aLocation, aType, gSVGTypes);
+    if (NS_FAILED(rv))
+      break;
+#endif
     rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, aLocation, aType, gImageTypes);
     if (NS_FAILED(rv))
       break;
