@@ -33,6 +33,6 @@ typedef gfx_color           nscolor;
 //typedef nsRect2             nsRect;
 //typedef nsSize2             nsSize2;
 #else
-#include <nsCoord.h>
+#include "nsCoord.h"
 #endif
 
