@@ -130,6 +130,10 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*           aPresContext,
   parentReflowState = &aParentReflowState;
   frame = aFrame;
 
+  // If the parent is dirty, then the child is as well.
+  frame->AddStateBits(parentReflowState->frame->GetStateBits() &
+                      NS_FRAME_IS_DIRTY);
+
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
