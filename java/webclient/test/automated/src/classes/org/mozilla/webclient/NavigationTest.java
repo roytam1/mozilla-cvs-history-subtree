@@ -63,6 +63,7 @@ public class NavigationTest extends WebclientTestCase {
 
     public void testNavigation() throws Exception {
 	BrowserControl firstBrowserControl = null;
+	EndDocumentSelectionVerifier listener = null;
 	Selection selection = null;
 	BrowserControlFactory.setAppData(getBrowserBinDir());
 	firstBrowserControl = BrowserControlFactory.newBrowserControl();
@@ -98,7 +99,7 @@ public class NavigationTest extends WebclientTestCase {
 	NavigationTest.keepWaiting = true;
 	
 	System.out.println("Loading url: " + testPage.toURL().toString());
-	eventRegistration.addDocumentLoadListener(new EndDocumentSelectionVerifier() {
+	eventRegistration.addDocumentLoadListener(listener = new EndDocumentSelectionVerifier() {
 		public void doEndCheck() {
 		    currentPage.selectAll();
 		    Selection selection = currentPage.getSelection();
@@ -114,8 +115,7 @@ public class NavigationTest extends WebclientTestCase {
 	while (NavigationTest.keepWaiting) {
 	    Thread.currentThread().sleep(1000);
 	}
-
-	/*******************
+	eventRegistration.removeDocumentLoadListener(listener);
 
 	NavigationTest.keepWaiting = true;
 	//
@@ -123,7 +123,7 @@ public class NavigationTest extends WebclientTestCase {
 	//
 	RandomHTMLInputStream rhis = new RandomHTMLInputStream(10, false);
 	
-	eventRegistration.addDocumentLoadListener(new EndDocumentSelectionVerifier() {
+	eventRegistration.addDocumentLoadListener(listener = new EndDocumentSelectionVerifier() {
 		public void doEndCheck() {
 		    currentPage.selectAll();
 		    Selection selection = currentPage.getSelection();
@@ -140,6 +140,7 @@ public class NavigationTest extends WebclientTestCase {
 	while (NavigationTest.keepWaiting) {
 	    Thread.currentThread().sleep(1000);
 	}
+	eventRegistration.removeDocumentLoadListener(listener);
 	
 	//
 	// try loading from a FileInputStream
@@ -147,7 +148,7 @@ public class NavigationTest extends WebclientTestCase {
 	NavigationTest.keepWaiting = true;
 
 	FileInputStream fis = new FileInputStream(testPage);
-	eventRegistration.addDocumentLoadListener(new EndDocumentSelectionVerifier() {
+	eventRegistration.addDocumentLoadListener(listener = new EndDocumentSelectionVerifier() {
 		public void doEndCheck() {
 		    currentPage.selectAll();
 		    Selection selection = currentPage.getSelection();
@@ -163,7 +164,7 @@ public class NavigationTest extends WebclientTestCase {
 	while (NavigationTest.keepWaiting) {
 	    Thread.currentThread().sleep(1000);
 	}
-	*******************/
+	eventRegistration.removeDocumentLoadListener(listener);
 
 	frame.setVisible(false);
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
@@ -176,7 +177,6 @@ public class NavigationTest extends WebclientTestCase {
 	    if (event instanceof DocumentLoadEvent) {
 		switch ((int) event.getType()) {
 		case ((int) DocumentLoadEvent.END_DOCUMENT_LOAD_EVENT_MASK):
-		    NavigationTest.eventRegistration.removeDocumentLoadListener(this);
 		    doEndCheck();
 		    break;
 		}
