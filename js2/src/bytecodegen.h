@@ -66,7 +66,7 @@ namespace ByteCode {
         LoadTypeOp,             // <pointer>        XXX !!! XXX
 
 
-        InvokeOp,               // <argCount>          <function> <args>  --> <result>
+        InvokeOp,               // <argCount>          <function> <args>  --> [<result>]
 
         GetTypeOp,              //                     <object> --> <type of object>
 
@@ -78,9 +78,10 @@ namespace ByteCode {
         PushStringOp,           // <poolindex>         --> <Object(index)>
         PushTypeOp,             // <poolindex>
 
-        ReturnOp,               //                     <object> -->
+        ReturnOp,               //                     
 
-        NewObjectOp,            //                     <args> <type> --> <object>
+        GetConstructorOp,       //                     <type> --> <function> <type>
+        NewObjectOp,            //                     <type> --> <object>
 
 
         JcondOp,                // <target>            <object> -->
@@ -154,7 +155,7 @@ namespace ByteCode {
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
-        void genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc);
+        void genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor);
         JSType *genExpr(ExprNode *p);
         Reference *genReference(ExprNode *p, Access acc);
 

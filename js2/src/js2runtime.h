@@ -481,7 +481,7 @@ namespace JS2Runtime {
         }
         virtual void setStaticValue(Property& prop, JSValue v)
         {
-            setValue(prop, v);
+            setValue(prop, v);      // XXX or should this be an error ? 
         }
         virtual JSValue getValue(Property& prop)
         {
@@ -490,7 +490,7 @@ namespace JS2Runtime {
         }
         virtual JSValue getStaticValue(Property& prop)
         {
-            return getValue(prop);
+            return getValue(prop);  // XXX or should this be an error ?
         }
 
         virtual Reference *genReference(const String& name, Access acc, uint32 depth)
@@ -513,7 +513,7 @@ namespace JS2Runtime {
         virtual bool hasLocalVars()     { return false; }
         virtual uint32 localVarCount()  { return 0; }
 
-        
+        // debug only        
         void printProperties(Formatter &f) const
         {
             for (PropertyMap::const_iterator i = mProperties.begin(), end = mProperties.end(); (i != end); i++) 
@@ -612,10 +612,18 @@ namespace JS2Runtime {
     class JSType : public JSInstance {
     public:
         
+        JSType(const StringAtom &name, JSType *super) : JSInstance(NULL),
+                                            mSuperType(super), 
+                                            mStatics(NULL), 
+                                            mVariableCount(0),
+                                            mClassName(name)
+        {
+        }
+
         JSType(JSType *super) : JSInstance(NULL),
-                                    mSuperType(super), 
-                                    mStatics(NULL), 
-                                    mVariableCount(0)
+                                            mSuperType(super), 
+                                            mStatics(NULL), 
+                                            mVariableCount(0)
         {
         }
 
@@ -705,6 +713,7 @@ namespace JS2Runtime {
         void setValue(Property& prop, JSValue v)
         {
             switch (prop.mFlag) {
+            case Constructor:
             case Method:
                 ASSERT(v.isFunction());
                 mMethods[prop.mData.index] = v.function;
@@ -718,6 +727,7 @@ namespace JS2Runtime {
         JSValue getValue(Property& prop)
         {
             switch (prop.mFlag) {
+            case Constructor:
             case Method:
                 return JSValue(mMethods[prop.mData.index]);
             default:
@@ -743,6 +753,7 @@ namespace JS2Runtime {
                 case Slot:
                     return new FieldReference(prop.mData.index, acc, this, prop.mType, (mStatics == NULL));
                 case Method:
+                case Constructor:
                     return new MethodReference(prop.mData.index, this, prop.mType);
                 default:
                     NOT_REACHED("bad storage kind");
@@ -752,6 +763,22 @@ namespace JS2Runtime {
             // walk the supertype chain
             if (mSuperType)
                 return mSuperType->genReference(name, acc, depth);
+            return NULL;
+        }
+
+        // constructor functions are added as static methods
+        // XXX is it worth just having a default constructor 
+        // pointer in the class?
+        JSFunction *getDefaultConstructor()
+        {
+            ASSERT(mStatics);
+            for (PropertyIterator i = mStatics->mProperties.begin(), 
+                            end = mStatics->mProperties.end(); (i != end); i++) {
+                if ((PROPERTY_KIND(i) == Constructor)
+                        && (PROPERTY_NAME(i).compare(mClassName) == 0)) {
+                    return mStatics->mMethods[PROPERTY_INDEX(i)];
+                }
+            }
             return NULL;
         }
 
@@ -781,7 +808,8 @@ namespace JS2Runtime {
                 for (PropertyIterator i = mProperties.begin(), 
                             end = mProperties.end();
                             (i != end); i++) {            
-                    if (PROPERTY_KIND(i) == Method)
+                    if ((PROPERTY_KIND(i) == Method) 
+                            || (PROPERTY_KIND(i) == Constructor))
                         PROPERTY_INDEX(i) += super_vTableCount;
                 }
                 mMethods.insert(mMethods.begin(), 
@@ -800,7 +828,9 @@ namespace JS2Runtime {
 
         // the 'vtable'
         MethodList      mMethods;
-        
+        String          mClassName;
+
+
         void printSlotsNStuff(Formatter& f) const;
 
     };
@@ -991,6 +1021,15 @@ namespace JS2Runtime {
             return NULL;
         }
 
+        // return the class on the top of the stack (or NULL if there
+        // isn't one there).
+        // XXX would it be better to have addScopeClass() and track when the
+        // top scope is a class rather than require RTTI just for this.
+        JSType *topClass()
+        {
+            return dynamic_cast<JSType *>(mScopeStack.back());
+        }
+
         // a compile time request to get the value for a name
         // (i.e. we're accessing a constant value)
         JSValue getValue(const String& name)
@@ -1169,7 +1208,7 @@ namespace JS2Runtime {
 
         void buildRuntime(StmtNode *p);
         void buildRuntimeForStmt(StmtNode *p);
-        void processDeclarations(StmtNode *p);
+//        void processDeclarations(StmtNode *p);
 
         
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
@@ -1182,7 +1221,7 @@ namespace JS2Runtime {
         // Extract the operator from the string literal function name
         // - requires the paramter count in order to distinguish
         // between unary and binary operators.
-        Operator getOperator(uint32 parameterCount, String &name);
+        Operator getOperator(uint32 parameterCount, const String &name);
 
         // Get the type of the nth parameter.
         JSType *getParameterType(FunctionDefinition &function, int index);
@@ -1258,6 +1297,7 @@ namespace JS2Runtime {
             case FunctionPair:
                 cx->switchToFunction(prop.mData.fPair.getF);
                 return true;
+            case Constructor:
             case Method:
                 cx->mStack.push_back(JSValue(mType->mMethods[prop.mData.index]));
                 return false;
@@ -1287,6 +1327,7 @@ namespace JS2Runtime {
             case FunctionPair:
                 cx->switchToFunction(prop.mData.fPair.getF);
                 return true;
+            case Constructor:
             case Method:
                 cx->mStack.push_back(JSValue(mType->mMethods[prop.mData.index]));
                 return false;
@@ -1358,6 +1399,7 @@ namespace JS2Runtime {
 
 
     bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind);
+    bool hasAttribute(const IdentifierList* identifiers, StringAtom &name);
 
 }
 }

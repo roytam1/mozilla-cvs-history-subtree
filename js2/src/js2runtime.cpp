@@ -68,7 +68,7 @@ bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
     return false;
 }
 
-static bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
+bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
 {
     while (identifiers) {
         if (identifiers->name == name)
@@ -181,7 +181,7 @@ JS2Runtime::Operator simpleLookup[ExprNode::kindsEnd] = {
 };
 
 
-JS2Runtime::Operator Context::getOperator(uint32 parameterCount, String &name)
+JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &name)
 {
     Lexer operatorLexer(mWorld, name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
     const Token &t = operatorLexer.get(false);  // XXX what's correct for preferRegExp parameter ???
@@ -316,8 +316,8 @@ void Context::buildRuntime(StmtNode *p)
 {
     mScopeChain.addScope(mGlobal);
     while (p) {
-        mScopeChain.processDeclarations(p);         // adds declarations for each top-level entity in p
-        buildRuntimeForStmt(p);                     // adds definitions as they exist for ditto
+        mScopeChain.processDeclarations(p);   // adds declarations for each top-level entity in p
+        buildRuntimeForStmt(p);               // adds definitions as they exist for ditto
         p = p->next;
     }
     mScopeChain.popScope();
@@ -507,6 +507,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     }
                 }
                 break;
+            case GetConstructorOp:
+                {
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    ASSERT(v.isType());
+                    mStack.push_back(JSValue(v.type->getDefaultConstructor()));
+                    mStack.push_back(v);    // keep type on top of stack
+                }
+                break;
             case NewObjectOp:
                 {
                     JSValue v = mStack.back();
@@ -619,8 +628,9 @@ void ScopeChain::processDeclarations(StmtNode *p)
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
             ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
             IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
-            JSType *thisClass = new JSType(NULL);
-            p->prop = defineVariable(className->name, Type_Type, JSValue(thisClass));
+            const StringAtom& name = className->name;
+            JSType *thisClass = new JSType(name, NULL);
+            p->prop = defineVariable(name, Type_Type, JSValue(thisClass));
         }
         break;
     case StmtNode::block:
@@ -664,10 +674,17 @@ void ScopeChain::processDeclarations(StmtNode *p)
             else {
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                    if (isStatic)
+                    if (topClass() && (topClass()->mClassName.compare(name) == 0))
+                        isConstructor = true;
+                    if (isConstructor) {
                         p->prop = defineStaticMethod(name, NULL);
+                        PROPERTY_KIND(p->prop) = Constructor;
+                    }
                     else
-                        p->prop = defineMethod(name, NULL);
+                        if (isStatic)
+                            p->prop = defineStaticMethod(name, NULL);
+                        else
+                            p->prop = defineMethod(name, NULL);
                 }
             }
         }
@@ -709,8 +726,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
             if (isOperator) {
                 ASSERT(f->function.name->getKind() == ExprNode::string);
-                Operator op = getOperator(getParameterCount(f->function),
-                                                (static_cast<StringExprNode *>(f->function.name))->str);
+                const String& name = static_cast<StringExprNode *>(f->function.name)->str;
+                Operator op = getOperator(getParameterCount(f->function), name);
                 // if it's a unary operator, it just gets added 
                 // as a method with a special name. Binary operators
                 // get added to the Context's operator table.
@@ -720,7 +737,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             else {
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                    if (isStatic)
+                    if (mScopeChain.topClass() 
+                                && (mScopeChain.topClass()->mClassName.compare(name) == 0))
+                        isConstructor = true;
+                    if (isStatic || isConstructor)
                         mScopeChain.setStaticValue(prop, JSValue(fnc));
                     else
                         mScopeChain.setValue(prop, JSValue(fnc));
@@ -1195,6 +1215,7 @@ Formatter& operator<<(Formatter& f, const Property& prop)
     case FunctionPair : f << "FunctionPair\n"; break;
     case IndexPair : f << "IndexPair\n"; break;
     case Slot : f << "Slot\n"; break;
+    case Constructor : f << "Constructor\n"; break;
     case Method : f << "Method\n"; break;
     }
     return f;
@@ -1211,6 +1232,7 @@ Formatter& operator<<(Formatter& f, const JSInstance& obj)
         case Slot : f << "Slot #" << prop.mData.index 
                          << " --> " << obj.mInstanceValues[prop.mData.index] << "\n"; break;
         case Method : f << "Method #" << prop.mData.index << "\n"; break;
+        case Constructor : f << "Constructor #" << prop.mData.index << "\n"; break;
         }
     }
     return f;

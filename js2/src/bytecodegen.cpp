@@ -178,7 +178,7 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mLocalsCount = bcg->mScopeChain->countVars();
 }
 
-void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc)
+void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor)
 {
     mScopeChain->addScope(fnc->mParameterBarrel);
     mScopeChain->addScope(fnc);
@@ -193,10 +193,14 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc)
     addPointer(fnc);
 
     genCodeForStatement(f->function.body, NULL);
-    
+
     // OPT - see above
     addByte(PopScopeOp);
     addByte(PopScopeOp);
+    if (isConstructor) {
+        addByte(LoadThisOp);
+        addByte(ReturnOp);
+    }
     
     fnc->mByteCode = new ByteCodeModule(this);        
 
@@ -270,9 +274,16 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
             bool isStatic = hasAttribute(f->attributes, Token::Static);
+            bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
+
+            ASSERT(f->function.name->getKind() == ExprNode::identifier);
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
+            if (mScopeChain->topClass() 
+                        && (mScopeChain->topClass()->mClassName.compare(name) == 0))
+                isConstructor = true;
 
             JSValue v;    
-            if (isStatic)
+            if (isStatic || isConstructor)
                 v = mScopeChain->getStaticValue(PROPERTY(p->prop));
             else
                 v = mScopeChain->getValue(PROPERTY(p->prop));
@@ -280,7 +291,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             JSFunction *fnc = v.function;
 
             ByteCodeGen bcg(mScopeChain);
-            bcg.genCodeForFunction(f, fnc);
+            bcg.genCodeForFunction(f, fnc, isConstructor);
         }
         break;
     case StmtNode::block:
@@ -419,16 +430,21 @@ JSType *ByteCodeGen::genExpr(ExprNode *p)
         }
     case ExprNode::New:
         {
+            // if we can get the type, this is an invocation of
+            // whichever default constructor matches
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
-
             JSType *type = genExpr(i->op);
+            addByte(GetConstructorOp);
+            addByte(NewObjectOp);
 
             ExprPairList *p = i->pairs;
+            uint32 argCount = 1;        // 'this' object on stack already
             while (p) {
                 genExpr(p->value);
                 p = p->next;
             }
-            addByte(NewObjectOp);
+            addByte(InvokeOp);
+            addLong(argCount);
             return type;
         }
     case ExprNode::call:
@@ -538,6 +554,10 @@ Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
             break;
         case PopScopeOp:
             f << "PopScope\n";
+            i++;
+            break;
+        case GetConstructorOp:
+            f << "GetConstructor\n";
             i++;
             break;
         case NewObjectOp:
