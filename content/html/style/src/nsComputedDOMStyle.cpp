@@ -341,7 +341,7 @@ nsComputedDOMStyle::GetPropertyCSSValue(const nsAReadableString& aPropertyName,
   nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
 
   switch (prop) {
-    case eCSSProperty_behavior :
+    case eCSSProperty_binding :
       rv = GetBehavior(frame, *getter_AddRefs(val)); break;
     case eCSSProperty_display :
       rv = GetDisplay(frame, *getter_AddRefs(val)); break;
@@ -551,12 +551,12 @@ nsComputedDOMStyle::GetBehavior(nsIFrame *aFrame,
   nsROCSSPrimitiveValue *val = GetROCSSPrimitiveValue();
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
-  const nsStyleUserInterface* ui = nsnull;
+  const nsStyleDisplay* display = nsnull;
 
-  GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)ui, aFrame);
+  GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display, aFrame);
 
-  if (ui) {
-    val->SetString(ui->mBehavior);
+  if (display) {
+    val->SetString(display->mBinding);
   }
   else {
     val->SetString("");

@@ -513,6 +513,7 @@ struct nsStyleDisplay : public nsStyleStruct {
   PRUint8 mExplicitDirection ;  // [reset] see nsStyleConsts.h NS_STYLE_DIRECTION_*
 #endif
   PRUint8 mDisplay;             // [reset] see nsStyleConsts.h NS_STYLE_DISPLAY_*
+  nsString  mBinding;           // [reset] absolute url string
   PRUint8 mFloats;              // [reset] see nsStyleConsts.h NS_STYLE_FLOAT_*
   PRUint8 mBreakType;           // [reset] see nsStyleConsts.h NS_STYLE_CLEAR_*
   PRPackedBool mBreakBefore;    // [reset] 
@@ -793,8 +794,7 @@ struct nsStyleUserInterface: public nsStyleStruct {
   PRUint8   mUserFocus;       // [inherited] (auto-select)
   PRUnichar mKeyEquivalent;   // [reset] XXX what type should this be?
   PRUint8   mResizer;         // [reset]
-  nsString  mBehavior;        // [reset] absolute url string
-
+  
   float mOpacity;                       // [inherited] percentage
   
   // These properties are treated as inherited.  See bugzilla bug 51113.  This is

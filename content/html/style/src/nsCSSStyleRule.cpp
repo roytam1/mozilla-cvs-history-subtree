@@ -2328,6 +2328,17 @@ MapDeclarationDisplayInto(nsICSSDeclaration* aDeclaration,
         display->mDisplay = parentDisplay->mDisplay;
       }
 
+      // binding: url, none, inherit
+      if (eCSSUnit_URL == ourDisplay->mBinding.GetUnit()) {
+        ourDisplay->mBinding.GetStringValue(display->mBinding);
+      }
+      else if (eCSSUnit_None == ourDisplay->mBinding.GetUnit()) {
+        display->mBinding.Truncate();
+      }
+      else if (eCSSUnit_Inherit == ourDisplay->mBinding.GetUnit()) {
+        display->mBinding = parentDisplay->mBinding;
+      }
+
       // direction: enum, inherit
       if (eCSSUnit_Enumerated == ourDisplay->mDirection.GetUnit()) {
         display->mDirection = ourDisplay->mDirection.GetIntValue();
@@ -2731,17 +2742,6 @@ MapDeclarationUIInto(nsICSSDeclaration* aDeclaration,
       }
       else if (eCSSUnit_Inherit == ourUI->mUserSelect.GetUnit()) {
         ui->mUserSelect = parentUI->mUserSelect;
-      }
-
-      // behavior: url, none
-      if (eCSSUnit_URL == ourUI->mBehavior.GetUnit()) {
-        ourUI->mBehavior.GetStringValue(ui->mBehavior);
-      }
-      else if (eCSSUnit_None == ourUI->mBehavior.GetUnit()) {
-        ui->mBehavior.Truncate();
-      }
-      else if (eCSSUnit_Inherit == ourUI->mBehavior.GetUnit()) {
-        ui->mBehavior = parentUI->mBehavior;
       }
 
       // key-equivalent: none, enum XXX, inherit

@@ -209,6 +209,7 @@ void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* 
     mVisible = NS_STYLE_VISIBILITY_VISIBLE;
   }
   mDisplay = NS_STYLE_DISPLAY_INLINE;
+  mBinding.SetLength(0);
   mFloats = NS_STYLE_FLOAT_NONE;
   mBreakType = NS_STYLE_CLEAR_NONE;
   mBreakBefore = PR_FALSE;
@@ -228,6 +229,7 @@ void StyleDisplayImpl::SetFrom(const nsStyleDisplay& aSource)
   mExplicitDirection = aSource.mExplicitDirection;
 #endif // IBMBIDI
   mDisplay = aSource.mDisplay;
+  mBinding = aSource.mBinding;
   mFloats = aSource.mFloats;
   mBreakType = aSource.mBreakType;
   mBreakBefore = aSource.mBreakBefore;
@@ -246,6 +248,7 @@ void StyleDisplayImpl::CopyTo(nsStyleDisplay& aDest) const
   aDest.mExplicitDirection = mExplicitDirection;
 #endif // IBMBIDI
   aDest.mDisplay = mDisplay;
+  aDest.mBinding = mBinding;
   aDest.mFloats = mFloats;
   aDest.mBreakType = mBreakType;
   aDest.mBreakBefore = mBreakBefore;
@@ -259,6 +262,9 @@ void StyleDisplayImpl::CopyTo(nsStyleDisplay& aDest) const
 
 PRInt32 StyleDisplayImpl::CalcDifference(const StyleDisplayImpl& aOther) const
 {
+  if (mBinding != aOther.mBinding)
+    return NS_STYLE_HINT_FRAMECHANGE;
+
   if ((mDisplay == aOther.mDisplay) &&
       (mFloats == aOther.mFloats) &&
       (mOverflow == aOther.mOverflow)) {
@@ -501,7 +507,6 @@ void StyleUserInterfaceImpl::ResetFrom(const nsStyleUserInterface* aParent, nsIP
   mUserSelect = NS_STYLE_USER_SELECT_AUTO;
   mKeyEquivalent = PRUnichar(0); // XXX what type should this be?
   mResizer = NS_STYLE_RESIZER_AUTO;
-  mBehavior.SetLength(0);
 }
 
 void StyleUserInterfaceImpl::SetFrom(const nsStyleUserInterface& aSource)
@@ -513,8 +518,7 @@ void StyleUserInterfaceImpl::SetFrom(const nsStyleUserInterface& aSource)
   mUserSelect = aSource.mUserSelect;
   mKeyEquivalent = aSource.mKeyEquivalent;
   mResizer = aSource.mResizer;
-  mBehavior = aSource.mBehavior;
-
+  
   mCursor = aSource.mCursor;
   mCursorImage = aSource.mCursorImage;
   mOpacity = aSource.mOpacity;
@@ -529,8 +533,7 @@ void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
   aDest.mUserSelect = mUserSelect;
   aDest.mKeyEquivalent = mKeyEquivalent;
   aDest.mResizer = mResizer;
-  aDest.mBehavior = mBehavior;
-
+  
   aDest.mCursor = mCursor;
   aDest.mCursorImage = mCursorImage;
   aDest.mOpacity = mOpacity;
@@ -538,9 +541,6 @@ void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
 
 PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOther) const
 {
-  if (mBehavior != aOther.mBehavior)
-    return NS_STYLE_HINT_FRAMECHANGE;
-
   if ((mCursor != aOther.mCursor) ||
       (mCursorImage != aOther.mCursorImage) ||
       (mOpacity != aOther.mOpacity))
@@ -1571,170 +1571,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     mNextSibling->SizeOf(aSizeOfHandler, localSize);
   }
 }
-
-#ifdef DEBUG
-static void IndentBy(FILE* out, PRInt32 aIndent) {
-  while (--aIndent >= 0) fputs("  ", out);
-}
-// virtual 
-void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent)
-{
-  nsAutoString str;
-
-  // FONT
-  IndentBy(out,aIndent);
- // fprintf(out, "<font %s %s %d />\n", 
- //         NS_ConvertUCS2toUTF8(GETSCDATA(Font).mFont.name).get(),
-  //        NS_ConvertUCS2toUTF8(GETSCDATA(Font).mFixedFont.name).get(),
-  //        GETSCDATA(Font).mFlags);
-
-  // COLOR
-  /*IndentBy(out,aIndent);
-  fprintf(out, "<color data=\"%ld %d %d %d %ld %ld %ld %s %d %s %f\"/>\n", 
-    (long)GETSCDATA(Color).mColor,
-    (int)GETSCDATA(Color).mBackgroundAttachment,
-    (int)GETSCDATA(Color).mBackgroundFlags,
-    (int)GETSCDATA(Color).mBackgroundRepeat,
-    (long)GETSCDATA(Color).mBackgroundColor,
-    (long)GETSCDATA(Color).mBackgroundXPosition,
-    (long)GETSCDATA(Color).mBackgroundYPosition,
-    NS_ConvertUCS2toUTF8(GETSCDATA(Color).mBackgroundImage).get(),
-    (int)GETSCDATA(Color).mCursor,
-    NS_ConvertUCS2toUTF8(GETSCDATA(Color).mCursorImage).get(),
-    GETSCDATA(Color).mOpacity);
-
-  // SPACING (ie. margin, padding, border, outline)
-  IndentBy(out,aIndent);
-  fprintf(out, "<spacing data=\"");
-
-  GETSCDATA(Margin).mMargin.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Padding).mPadding.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Border).mBorder.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Border).mBorderRadius.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Outline).mOutlineRadius.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Outline).mOutlineWidth.ToString(str);
-  fprintf(out, "%s", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "%d", (int)GETSCDATA(Border).mFloatEdge);
-  fprintf(out, "\" />\n");
-
-
-  // LIST
-  IndentBy(out,aIndent);
-  fprintf(out, "<list data=\"%d %d %s\" />\n",
-    (int)GETSCDATA(List).mListStyleType,
-    (int)GETSCDATA(List).mListStyleType,
-    NS_ConvertUCS2toUTF8(GETSCDATA(List).mListStyleImage).get());
-
-  // POSITION
-  IndentBy(out,aIndent);
-  fprintf(out, "<position data=\"%d ", (int)GETSCDATA(Position).mPosition);
-  GETSCDATA(Position).mOffset.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mMinWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mMaxWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mMinHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Position).mMaxHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "%d ", (int)GETSCDATA(Position).mBoxSizing);
-  GETSCDATA(Position).mZIndex.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "\" />\n");
-*/
-
-  // TEXT
-  IndentBy(out,aIndent);
-  fprintf(out, "<text data=\"%d %d %d %d ",
-    (int)GETSCDATA(Text).mTextAlign,
-    (int)GETSCDATA(Text).mTextTransform,
-    (int)GETSCDATA(Text).mWhiteSpace);
-  GETSCDATA(Text).mLetterSpacing.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Text).mLineHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Text).mTextIndent.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Text).mWordSpacing.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Text).mVerticalAlign.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "\" />\n");
-  
-  // DISPLAY
-  IndentBy(out,aIndent);
-  fprintf(out, "<display data=\"%d %d %d %d %d %d %d %d %d %ld %ld %ld %ld\" />\n",
-    (int)GETSCDATA(Display).mDirection,
-    (int)GETSCDATA(Display).mDisplay,
-    (int)GETSCDATA(Display).mFloats,
-    (int)GETSCDATA(Display).mBreakType,
-    (int)GETSCDATA(Display).mBreakBefore,
-    (int)GETSCDATA(Display).mBreakAfter,
-    (int)GETSCDATA(Display).mVisible,
-    (int)GETSCDATA(Display).mOverflow,
-    (int)GETSCDATA(Display).mClipFlags,
-    (long)GETSCDATA(Display).mClip.x,
-    (long)GETSCDATA(Display).mClip.y,
-    (long)GETSCDATA(Display).mClip.width,
-    (long)GETSCDATA(Display).mClip.height
-    );
-  
-  // TABLE
-  /*IndentBy(out,aIndent);
-  fprintf(out, "<table data=\"%d %d %d %d ",
-    (int)GETSCDATA(Table).mLayoutStrategy,
-    (int)GETSCDATA(Table).mFrame,
-    (int)GETSCDATA(Table).mRules,
-    (int)GETSCDATA(Table).mBorderCollapse);
-  GETSCDATA(Table).mBorderSpacingX.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Table).mBorderSpacingY.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "%d %d %ld %ld ",
-    (int)GETSCDATA(Table).mCaptionSide,
-    (int)GETSCDATA(Table).mEmptyCells,
-    (long)GETSCDATA(Table).mCols,
-    (long)GETSCDATA(Table).mSpan);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "\" />\n");
-  */
-
-  // CONTENT
-  IndentBy(out,aIndent);
-  fprintf(out, "<content data=\"%ld %ld %ld %ld ",
-    (long)GETSCDATA(Content).ContentCount(),
-    (long)GETSCDATA(Content).CounterIncrementCount(),
-    (long)GETSCDATA(Content).CounterResetCount(),
-    (long)GETSCDATA(Content).QuotesCount());
-  // XXX: iterate over the content, counters and quotes...
-  GETSCDATA(Content).mMarkerOffset.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  fprintf(out, "\" />\n");
-
-  // UI
-  IndentBy(out,aIndent);
-  fprintf(out, "<UI data=\"%d %d %d %d %d %d %s\" />\n",
-    (int)GETSCDATA(UserInterface).mUserInput,
-    (int)GETSCDATA(UserInterface).mUserModify,
-    (int)GETSCDATA(UserInterface).mUserSelect,
-    (int)GETSCDATA(UserInterface).mUserFocus,
-    (int)GETSCDATA(UserInterface).mKeyEquivalent,
-    (int)GETSCDATA(UserInterface).mResizer,
-    NS_ConvertUCS2toUTF8(GETSCDATA(UserInterface).mBehavior).get());
-
-}
-#endif
 
 // Overloaded new operator. Initializes the memory to 0 and relies on an arena
 // (which comes from the presShell) to perform the allocation.

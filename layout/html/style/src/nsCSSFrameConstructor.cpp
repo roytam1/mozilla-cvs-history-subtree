@@ -3367,11 +3367,11 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
                                        PR_FALSE,
                                        getter_AddRefs(styleContext));
 
-  const nsStyleUserInterface* ui= (const nsStyleUserInterface*)
-        styleContext->GetStyleData(eStyleStruct_UserInterface);
+  const nsStyleDisplay*  display = (const nsStyleDisplay*)
+        styleContext->GetStyleData(eStyleStruct_Display);
 
   // Ensure that our XBL bindings are installed.
-  if (!ui->mBehavior.IsEmpty()) {
+  if (!display->mBinding.IsEmpty()) {
     // Get the XBL loader.
     nsresult rv;
     NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
@@ -3380,7 +3380,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
     PRBool resolveStyle;
     nsCOMPtr<nsIXBLBinding> binding;
-    rv = xblService->LoadBindings(aDocElement, ui->mBehavior, PR_FALSE, getter_AddRefs(binding), &resolveStyle);
+    rv = xblService->LoadBindings(aDocElement, display->mBinding, PR_FALSE, getter_AddRefs(binding), &resolveStyle);
     if (NS_FAILED(rv))
       return NS_OK; // Binding will load asynchronously.
 
@@ -3400,8 +3400,6 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     }
   }
 
-  const nsStyleDisplay* display = 
-    (const nsStyleDisplay*)styleContext->GetStyleData(eStyleStruct_Display);
   const nsStyleBackground* bg = 
     (const nsStyleBackground*)styleContext->GetStyleData(eStyleStruct_Background);
 
@@ -7167,11 +7165,11 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
   nsCOMPtr<nsIXBLBinding> binding;
   if (!aXBLBaseTag)
   {
-    const nsStyleUserInterface* ui= (const nsStyleUserInterface*)
-        aStyleContext->GetStyleData(eStyleStruct_UserInterface);
+    const nsStyleDisplay*  display = (const nsStyleDisplay*)
+        styleContext->GetStyleData(eStyleStruct_Display);
 
     // Ensure that our XBL bindings are installed.
-    if (!ui->mBehavior.IsEmpty()) {
+    if (!display->mBinding.IsEmpty()) {
       // Get the XBL loader.
       nsresult rv;
       NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
@@ -7180,7 +7178,7 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
 
       // Load the bindings.
       PRBool resolveStyle;
-      rv = xblService->LoadBindings(aContent, ui->mBehavior, PR_FALSE, getter_AddRefs(binding), &resolveStyle);
+      rv = xblService->LoadBindings(aContent, display->mBinding, PR_FALSE, getter_AddRefs(binding), &resolveStyle);
       if (NS_FAILED(rv))
         return NS_OK;
 

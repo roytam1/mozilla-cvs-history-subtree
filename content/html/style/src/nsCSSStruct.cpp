@@ -349,6 +349,7 @@ nsCSSDisplay::nsCSSDisplay(void)
 nsCSSDisplay::nsCSSDisplay(const nsCSSDisplay& aCopy)
   : mDirection(aCopy.mDirection),
     mDisplay(aCopy.mDisplay),
+    mBinding(aCopy.mBinding),
     mFloat(aCopy.mFloat),
     mClear(aCopy.mClear),
     mClip(nsnull),
@@ -378,6 +379,7 @@ void nsCSSDisplay::List(FILE* out, PRInt32 aIndent) const
 
   mDirection.AppendToString(buffer, eCSSProperty_direction);
   mDisplay.AppendToString(buffer, eCSSProperty_display);
+  mBinding.AppendToString(buffer, eCSSProperty_binding);
   mFloat.AppendToString(buffer, eCSSProperty_float);
   mClear.AppendToString(buffer, eCSSProperty_clear);
   mVisibility.AppendToString(buffer, eCSSProperty_visibility);
@@ -857,7 +859,6 @@ nsCSSUserInterface::nsCSSUserInterface(const nsCSSUserInterface& aCopy)
     mKeyEquivalent(nsnull),
     mUserFocus(aCopy.mUserFocus),
     mResizer(aCopy.mResizer),
-    mBehavior(aCopy.mBehavior),
     mOpacity(aCopy.mOpacity)
 {
   MOZ_COUNT_CTOR(nsCSSUserInterface);
@@ -893,8 +894,7 @@ void nsCSSUserInterface::List(FILE* out, PRInt32 aIndent) const
   }
   mUserFocus.AppendToString(buffer, eCSSProperty_user_focus);
   mResizer.AppendToString(buffer, eCSSProperty_resizer);
-  mBehavior.AppendToString(buffer, eCSSProperty_behavior);
-
+  
   nsCSSValueList*  cursor = mCursor;
   while (nsnull != cursor) {
     cursor->mValue.AppendToString(buffer, eCSSProperty_cursor);
@@ -1380,6 +1380,7 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_float:
     case eCSSProperty_clear:
     case eCSSProperty_display:
+    case eCSSProperty_binding:
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
     case eCSSProperty_overflow:
@@ -1391,6 +1392,9 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
           case eCSSProperty_direction:  mDisplay->mDirection = aValue;  break;
           case eCSSProperty_visibility: mDisplay->mVisibility = aValue; break;
           case eCSSProperty_overflow:   mDisplay->mOverflow = aValue;   break;
+          case eCSSProperty_binding:         
+            mDisplay->mBinding = aValue;      
+            break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -1711,7 +1715,6 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_key_equivalent:
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
-    case eCSSProperty_behavior:
     case eCSSProperty_cursor:
     case eCSSProperty_opacity:
       CSS_ENSURE(UserInterface) {
@@ -1727,9 +1730,6 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
             break;
           case eCSSProperty_user_focus:       mUserInterface->mUserFocus = aValue;      break;
           case eCSSProperty_resizer:          mUserInterface->mResizer = aValue;        break;
-          case eCSSProperty_behavior:         
-            mUserInterface->mBehavior = aValue;      
-            break;
           case eCSSProperty_cursor:
             CSS_ENSURE_DATA(mUserInterface->mCursor, nsCSSValueList) {
               mUserInterface->mCursor->mValue = aValue;
@@ -2053,6 +2053,7 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
         // nsCSSDisplay
       case eCSSProperty_direction:
       case eCSSProperty_display:
+      case eCSSProperty_binding:
       case eCSSProperty_float:
       case eCSSProperty_clear:
       case eCSSProperty_overflow:
@@ -2062,6 +2063,7 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
             switch (aProperty) {
               CSS_CASE_IMPORTANT(eCSSProperty_direction,  mDisplay->mDirection);
               CSS_CASE_IMPORTANT(eCSSProperty_display,    mDisplay->mDisplay);
+              CSS_CASE_IMPORTANT(eCSSProperty_binding,   mDisplay->mBinding);
               CSS_CASE_IMPORTANT(eCSSProperty_float,      mDisplay->mFloat);
               CSS_CASE_IMPORTANT(eCSSProperty_clear,      mDisplay->mClear);
               CSS_CASE_IMPORTANT(eCSSProperty_overflow,   mDisplay->mOverflow);
@@ -2449,7 +2451,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_user_select:
       case eCSSProperty_user_focus:
       case eCSSProperty_resizer:
-      case eCSSProperty_behavior:
         if (nsnull != mUserInterface) {
           CSS_ENSURE_IMPORTANT(UserInterface) {
             switch (aProperty) {
@@ -2458,7 +2459,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
               CSS_CASE_IMPORTANT(eCSSProperty_user_select,  mUserInterface->mUserSelect);
               CSS_CASE_IMPORTANT(eCSSProperty_user_focus,   mUserInterface->mUserFocus);
               CSS_CASE_IMPORTANT(eCSSProperty_resizer,      mUserInterface->mResizer);
-              CSS_CASE_IMPORTANT(eCSSProperty_behavior,     mUserInterface->mBehavior);
               CSS_CASE_IMPORTANT(eCSSProperty_opacity,      mUserInterface->mOpacity);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
@@ -2816,6 +2816,7 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_float:
     case eCSSProperty_clear:
     case eCSSProperty_display:
+    case eCSSProperty_binding:
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
     case eCSSProperty_overflow:
@@ -2824,6 +2825,9 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
           case eCSSProperty_float:      mDisplay->mFloat.Reset();      break;
           case eCSSProperty_clear:      mDisplay->mClear.Reset();      break;
           case eCSSProperty_display:    mDisplay->mDisplay.Reset();    break;
+          case eCSSProperty_binding:         
+            mDisplay->mBinding.Reset();      
+            break;
           case eCSSProperty_direction:  mDisplay->mDirection.Reset();  break;
           case eCSSProperty_visibility: mDisplay->mVisibility.Reset(); break;
           case eCSSProperty_overflow:   mDisplay->mOverflow.Reset();   break;
@@ -3147,7 +3151,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_key_equivalent:
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
-    case eCSSProperty_behavior:
     case eCSSProperty_cursor:
     case eCSSProperty_opacity:
       CSS_CHECK(UserInterface) {
@@ -3163,9 +3166,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
             break;
           case eCSSProperty_user_focus:       mUserInterface->mUserFocus.Reset();      break;
           case eCSSProperty_resizer:          mUserInterface->mResizer.Reset();        break;
-          case eCSSProperty_behavior:         
-            mUserInterface->mBehavior.Reset();      
-            break;
           case eCSSProperty_cursor:
             CSS_CHECK_DATA(mUserInterface->mCursor, nsCSSValueList) {
               mUserInterface->mCursor->mValue.Reset();
@@ -3525,6 +3525,7 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_float:
     case eCSSProperty_clear:
     case eCSSProperty_display:
+    case eCSSProperty_binding:
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
     case eCSSProperty_overflow:
@@ -3533,6 +3534,9 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
           case eCSSProperty_float:      aValue = mDisplay->mFloat;      break;
           case eCSSProperty_clear:      aValue = mDisplay->mClear;      break;
           case eCSSProperty_display:    aValue = mDisplay->mDisplay;    break;
+          case eCSSProperty_binding:         
+            aValue = mDisplay->mBinding;        
+            break;
           case eCSSProperty_direction:  aValue = mDisplay->mDirection;  break;
           case eCSSProperty_visibility: aValue = mDisplay->mVisibility; break;
           case eCSSProperty_overflow:   aValue = mDisplay->mOverflow;   break;
@@ -3884,7 +3888,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_key_equivalent:
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
-    case eCSSProperty_behavior:
     case eCSSProperty_cursor:
     case eCSSProperty_opacity:
       if (nsnull != mUserInterface) {
@@ -3899,9 +3902,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
             break;
           case eCSSProperty_user_focus:       aValue = mUserInterface->mUserFocus;       break;
           case eCSSProperty_resizer:          aValue = mUserInterface->mResizer;         break;
-          case eCSSProperty_behavior:         
-            aValue = mUserInterface->mBehavior;        
-            break;
           case eCSSProperty_cursor:
             if (nsnull != mUserInterface->mCursor) {
               aValue = mUserInterface->mCursor->mValue;

@@ -3376,7 +3376,7 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
   case eCSSProperty_background_y_position:
     return ParseVariant(aErrorCode, aValue, VARIANT_HKLP,
                         kBackgroundXYPositionKTable);
-  case eCSSProperty_behavior:
+  case eCSSProperty_binding:
     return ParseVariant(aErrorCode, aValue, VARIANT_HUO, nsnull);
   case eCSSProperty_border_collapse:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,

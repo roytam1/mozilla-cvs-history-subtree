@@ -200,6 +200,7 @@ struct nsCSSDisplay : public nsCSSStruct  {
 
   nsCSSValue mDirection;
   nsCSSValue mDisplay;
+  nsCSSValue mBinding;
   nsCSSValue mFloat;
   nsCSSValue mClear;
   nsCSSRect* mClip;
@@ -360,8 +361,7 @@ struct nsCSSUserInterface : public nsCSSStruct  { // NEW
   nsCSSValueList* mKeyEquivalent;
   nsCSSValue      mUserFocus;
   nsCSSValue      mResizer;
-  nsCSSValue      mBehavior;
-
+  
   nsCSSValueList* mCursor;
   nsCSSValue      mOpacity;
 };
