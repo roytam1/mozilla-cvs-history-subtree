@@ -388,11 +388,8 @@ void          fe_EditorTableCellSetData(MWContext*, EDT_TableCellData*);
 void          fe_EditorDisplayTablesSet(MWContext* context, Boolean display);
 Boolean       fe_EditorDisplayTablesGet(MWContext* context);
 
-/*
- *    Tables dialogs.
- */
-void          fe_EditorTableCreateDialogDo(MWContext*);
-void          fe_EditorTablePropertiesDialogDo(MWContext*, fe_EditorPropertiesDialogType);
+void fe_EditorTablePropertiesDialogDo(MWContext*, fe_EditorPropertiesDialogType);
+void fe_EditorTableCreateDialogDo(MWContext*);
 
 Boolean       fe_EditorCheckUnsaved(MWContext* context);
 void          fe_EditorDisplaySource(MWContext* context);
