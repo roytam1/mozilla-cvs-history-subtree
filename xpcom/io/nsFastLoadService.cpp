@@ -90,6 +90,7 @@ nsFastLoadService::SetInputStream(nsIInputStream* aSrcStream,
                                   PRUint32 *aCheckSum)
 {
     nsresult rv;
+    nsAutoLock lock(mLock);
 
     rv = NS_NewFastLoadFileReader(getter_AddRefs(mObjectInputStream),
                                   aSrcStream);
@@ -108,6 +109,7 @@ NS_IMETHODIMP
 nsFastLoadService::SetOutputStream(nsIOutputStream* aDestStream)
 {
     nsresult rv;
+    nsAutoLock lock(mLock);
 
     rv = NS_NewFastLoadFileWriter(getter_AddRefs(mObjectOutputStream),
                                   aDestStream);
@@ -120,6 +122,7 @@ nsFastLoadService::SetOutputStream(nsIOutputStream* aDestStream)
 NS_IMETHODIMP
 nsFastLoadService::AppendDependency(const char* aFileName)
 {
+    nsAutoLock lock(mLock);
     if (!mObjectOutputStream)
         return NS_OK;
 
@@ -135,6 +138,8 @@ NS_IMETHODIMP
 nsFastLoadService::MaxDependencyModifiedTime(PRTime *aTime)
 {
     *aTime = LL_ZERO;
+
+    nsAutoLock lock(mLock);
     if (!mObjectOutputStream)
         return NS_OK;
 
