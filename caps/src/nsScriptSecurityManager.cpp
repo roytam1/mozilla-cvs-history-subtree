@@ -37,6 +37,9 @@ NS_IMPL_ISUPPORTS(nsScriptSecurityManager, kIScriptSecurityManagerIID);
 static nsString gUnknownOriginStr("[unknown origin]");
 static nsString gFileUrlPrefix("file:");
 
+static char accessErrorMessage[] = 
+    "access disallowed from scripts at %s to documents at another domain";
+
 nsScriptSecurityManager::nsScriptSecurityManager(void)
 {
   NS_INIT_REFCNT();
@@ -50,13 +53,15 @@ nsScriptSecurityManager::~nsScriptSecurityManager(void)
 nsScriptSecurityManager *
 nsScriptSecurityManager::GetScriptSecurityManager()
 {
-	static nsScriptSecurityManager * ssecMan = NULL;
-	if(!ssecMan) ssecMan = new nsScriptSecurityManager();
-	return ssecMan;
+    static nsScriptSecurityManager * ssecMan = NULL;
+    if (!ssecMan) 
+        ssecMan = new nsScriptSecurityManager();
+    return ssecMan;
 }
 
 NS_IMETHODIMP 
-nsScriptSecurityManager::NewJSPrincipals(nsIURI * aURL, nsString * aName, nsIPrincipal * * result)
+nsScriptSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString *aName, 
+                                         nsIPrincipal **result)
 {
 //  nsJSPrincipalsData * pdata;
   PRBool needUnlock = PR_FALSE;
@@ -93,46 +98,33 @@ nsScriptSecurityManager::NewJSPrincipals(nsIURI * aURL, nsString * aName, nsIPri
     }
   }
 #endif 
-  //Allocate and fill the nsJSPrincipalsData struct
-//  pdata = PR_NEWZAP(nsJSPrincipalsData);
-//  if (pdata == nsnull) return NS_ERROR_FAILURE;
-  nsresult rv;
-  char * codebaseStr = NULL;
-  rv = this->GetOriginFromSourceURL(aURL,& codebaseStr);
-  if (rv != NS_OK) return rv;
-  if (!codebaseStr) {
-//    PR_Free(pdata);
-    return NS_ERROR_FAILURE;
-  }
-//  pdata->principals.codebase = PL_strdup(codebaseStr);
-//  if (pdata->principals.codebase == nsnull) {
-//    PR_Free(pdata);
-//    return NS_ERROR_FAILURE;
-//  }
-//  if (aName) pdata->name = aName ? aName->ToNewCString() : nsnull;
-//  pdata->principals.destroy = DestroyJSPrincipals;
-//  pdata->principals.getPrincipalArray = GetPrincipalArray;
-//  pdata->principals.globalPrivilegesEnabled = GlobalPrivilegesEnabled;
-//  pdata->url = aURL;
-//  NS_IF_ADDREF(aURL);
-//  pdata->needUnlock = needUnlock;
-  NS_WITH_SERVICE(nsIPrincipalManager, prinMan,NS_PRINCIPALMANAGER_PROGID,&rv);
-  if (NS_SUCCEEDED(rv)) rv = prinMan->CreateCodebasePrincipal(codebaseStr, aURL, result);
-  return rv;
+    nsresult rv;
+    char *codebaseStr = NULL;
+    if (!NS_SUCCEEDED(rv = GetOriginFromSourceURL(aURL, &codebaseStr))) 
+        return rv;
+    if (!codebaseStr) {
+        return NS_ERROR_FAILURE;
+    }
+    NS_WITH_SERVICE(nsIPrincipalManager, prinMan, NS_PRINCIPALMANAGER_PROGID, &rv);
+    if (NS_SUCCEEDED(rv)) 
+        rv = prinMan->CreateCodebasePrincipal(codebaseStr, aURL, result);
+    return rv;
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj, const char* aProp, PRBool* aResult)
+nsScriptSecurityManager::CheckScriptAccess(nsIScriptContext *aContext, 
+                                           void *aObj, const char *aProp, 
+                                           PRBool *aResult)
 {
   *aResult = PR_FALSE;
   JSContext* cx = (JSContext*)aContext->GetNativeContext();
-  PRInt32 secLevel = this->CheckForPrivilege(cx, (char*)aProp, nsnull);
+  PRInt32 secLevel = CheckForPrivilege(cx, (char *) aProp, nsnull);
   switch (secLevel) {
     case SCRIPT_SECURITY_ALL_ACCESS:
       *aResult = PR_TRUE;
       return NS_OK;
     case SCRIPT_SECURITY_SAME_DOMAIN_ACCESS:
-      return this->CheckPermissions(cx, (JSObject*)aObj, eJSTarget_Max, aResult);
+      return CheckPermissions(cx, (JSObject *) aObj, eJSTarget_Max, aResult);
     default:
       // Default is no access
       *aResult = PR_FALSE;
@@ -182,107 +174,133 @@ nsScriptSecurityManager::GetSubjectOriginURL(JSContext *aCx, char * * aOrigin)
    * Not called from either JS or Java. We must be called
    * from the interpreter. Get the origin from the decoder.
    */
+  // NB TODO: Does this ever happen? 
   return this->GetObjectOriginURL(aCx, ::JS_GetGlobalObject(aCx), aOrigin);
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, char * * aOrigin)
+nsScriptSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, 
+                                            char **aOrigin)
 {
   nsresult rv;
   JSObject *parent;
-  while (parent = ::JS_GetParent(aCx, aObj)) aObj = parent;
-  nsIPrincipal * prin;
-  if((rv = this->GetContainerPrincipals(aCx, aObj, & prin)) != NS_OK) return rv;
-  nsICodebasePrincipal * cbprin;
-  if((rv = prin->QueryInterface(NS_GET_IID(nsICodebasePrincipal),(void * *)& cbprin)) != NS_OK) return rv;
-  cbprin->GetURLString(aOrigin);
-  return (* aOrigin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  while (parent = ::JS_GetParent(aCx, aObj)) 
+      aObj = parent;
+  nsIPrincipal *prin;
+  if (!NS_SUCCEEDED(rv = GetContainerPrincipals(aCx, aObj, & prin)))
+      return rv;
+  nsICodebasePrincipal *cbprin;
+  rv = prin->QueryInterface(NS_GET_IID(nsICodebasePrincipal), (void **) &cbprin);
+  if (!NS_SUCCEEDED(rv))
+      return rv;
+  if (!NS_SUCCEEDED(rv = cbprin->GetURLString(aOrigin)))
+      return rv;
+  return (*aOrigin) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::GetOriginFromSourceURL(nsIURI * url, char * * result)
+nsScriptSecurityManager::GetOriginFromSourceURL(nsIURI *url, char **result)
 {
-  char * tempChars;// = ParseURL(aSourceURL, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART);
-  url->GetScheme(& tempChars);
-  nsString * buffer = new nsString(tempChars);
-  buffer->Append("://");
-  url->GetHost(& tempChars);
-  buffer->Append(tempChars);
-  url->GetPath(& tempChars);
-  buffer->Append(tempChars);
-  * result = (buffer->Length() == 0 || buffer->EqualsIgnoreCase(gUnknownOriginStr)) 
-            ? nsnull : buffer->ToNewCString();
-  delete buffer;
-  return * result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+    char *tempChars;
+    nsresult rv;
+    if (!NS_SUCCEEDED(rv = url->GetScheme(&tempChars)))
+        return rv;
+    nsAutoString buffer(tempChars);
+    // NB TODO: what about file: urls and about:blank?
+    buffer.Append("://");
+    if (!NS_SUCCEEDED(rv = url->GetHost(&tempChars)))
+        return rv;
+    buffer.Append(tempChars);
+    if (!NS_SUCCEEDED(rv = url->GetPath(&tempChars)))
+        return rv;
+    buffer.Append(tempChars);
+    if (buffer.Length() == 0 || buffer.EqualsIgnoreCase(gUnknownOriginStr))
+        return NS_ERROR_FAILURE;
+    *result = buffer.ToNewCString();
+    return *result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 PRInt32 
-nsScriptSecurityManager::CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code)
+nsScriptSecurityManager::CheckForPrivilege(JSContext *cx, char *prop_name, 
+                                           int priv_code)
 {
-  char * tmp_prop_name;
-  if(prop_name == NULL) return SCRIPT_SECURITY_NO_ACCESS;
-  tmp_prop_name = this->AddSecPolicyPrefix(cx, prop_name);
-  if(tmp_prop_name == NULL) return SCRIPT_SECURITY_NO_ACCESS;
-  PRInt32 secLevel = SCRIPT_SECURITY_NO_ACCESS;
-  nsIPref * mPrefs;
-  nsServiceManager::GetService(kPrefServiceCID,NS_GET_IID(nsIPref), (nsISupports**)&mPrefs);
-  if (NS_OK == mPrefs->GetIntPref(tmp_prop_name, &secLevel)) {
-    PR_FREEIF(tmp_prop_name);
-    return secLevel;
-  }
-  PR_FREEIF(tmp_prop_name);
-  return SCRIPT_SECURITY_ALL_ACCESS;
-}
-
-NS_IMETHODIMP
-nsScriptSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aTarget, PRBool* aReturn)
-{
-  char * subjectOrigin = nsnull, * objectOrigin = nsnull;
-  nsresult rv = this->GetSubjectOriginURL(aCx,& subjectOrigin);
-  if (rv != NS_OK) return rv;
-  /*
-  * Hold onto reference to the running decoder's principals
-  * in case a call to GetObjectOriginURL ends up
-  * dropping a reference due to an origin changing
-  * underneath us.
-  */
-  rv = this->GetObjectOriginURL(aCx, aObj, &objectOrigin);
-  if (rv != NS_OK || !subjectOrigin || !objectOrigin) {
-      *aReturn = PR_FALSE;
-      return NS_OK;;
-  }
-  /* Now see whether the origin methods and servers match. */
-  if (this->SameOrigins(aCx, subjectOrigin, objectOrigin)) {
-      * aReturn = PR_TRUE;
-      return NS_OK;
-  }
-  /*
-  * If we failed the origin tests it still might be the case that we
-  *   are a signed script and have permissions to do this operation.
-  * Check for that here
-  */
-  if (aTarget != eJSTarget_Max) {
-    PRBool canAccess;
-    this->CanAccessTarget(aCx, aTarget, &canAccess);
-    if (canAccess) {
-      *aReturn = PR_TRUE;
-      return NS_OK;
+    if (prop_name == nsnull) 
+        return SCRIPT_SECURITY_NO_ACCESS;
+    char *tmp_prop_name = AddSecPolicyPrefix(cx, prop_name);
+    if (tmp_prop_name == nsnull) 
+        return SCRIPT_SECURITY_NO_ACCESS;
+    PRInt32 secLevel = SCRIPT_SECURITY_NO_ACCESS;
+    nsIPref *mPrefs;
+    nsServiceManager::GetService(kPrefServiceCID, NS_GET_IID(nsIPref), 
+        (nsISupports**) &mPrefs);
+    if (NS_OK == mPrefs->GetIntPref(tmp_prop_name, &secLevel)) {
+        PR_FREEIF(tmp_prop_name);
+        return secLevel;
     }
-  }
-
-  JS_ReportError(aCx, "Access error message", subjectOrigin);
-  * aReturn = PR_FALSE;
-  return NS_OK;
+    // If no preference is defined for this property, allow access. 
+    // This violates the rule of a safe default, but means we don't have
+    // to specify the large majority of unchecked properties, only the
+    // minority of checked ones.
+    PR_FREEIF(tmp_prop_name);
+    return SCRIPT_SECURITY_ALL_ACCESS;
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container, nsIPrincipal * * result)
+nsScriptSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, 
+                                          PRInt16 aTarget, PRBool* aReturn)
+{
+    char *subjectOrigin = nsnull;
+    char *objectOrigin = nsnull;
+    nsresult rv = GetSubjectOriginURL(aCx, &subjectOrigin);
+    if (!NS_SUCCEEDED(rv))
+        return rv;
+    /*
+    ** Hold onto reference to the running decoder's principals
+    ** in case a call to GetObjectOriginURL ends up
+    ** dropping a reference due to an origin changing
+    ** underneath us.
+    */
+    rv = GetObjectOriginURL(aCx, aObj, &objectOrigin);
+    if (rv != NS_OK || !subjectOrigin || !objectOrigin) {
+        *aReturn = PR_FALSE;
+        return NS_OK;
+    }
+    /* Now see whether the origin methods and servers match. */
+    if (this->SameOrigins(aCx, subjectOrigin, objectOrigin)) {
+        * aReturn = PR_TRUE;
+        return NS_OK;
+    }
+    /*
+    ** If we failed the origin tests it still might be the case that we
+    **   are a signed script and have permissions to do this operation.
+    ** Check for that here
+    */
+    if (aTarget != eJSTarget_Max) {
+        PRBool canAccess;
+        this->CanAccessTarget(aCx, aTarget, &canAccess);
+        if (canAccess) {
+            *aReturn = PR_TRUE;
+            return NS_OK;
+        }
+    }
+    
+    JS_ReportError(aCx, accessErrorMessage, subjectOrigin);
+    *aReturn = PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetContainerPrincipals(JSContext *aCx, 
+                                                JSObject *container, 
+                                                nsIPrincipal **result)
 {
   nsresult rv;
-  * result = nsnull;
+  *result = nsnull;
+
   // Need to check that the origin hasn't changed underneath us
-  char * originUrl = this->FindOriginURL(aCx, container);
-  if (!originUrl) return NS_ERROR_FAILURE;
+  char *originUrl = FindOriginURL(aCx, container);
+  if (!originUrl) 
+      return NS_ERROR_FAILURE;
   nsISupports * tmp;
   nsIScriptGlobalObjectData * globalData;
   tmp = (nsISupports *)JS_GetPrivate(aCx, container);
@@ -414,8 +432,9 @@ nsScriptSecurityManager::FindOriginURL(JSContext * aCx, JSObject * aGlobal)
     return urlString.ToNewCString();
   }
   NS_IF_RELEASE(globalData);
-  //NORRIS WHAT IS THIS?
-  nsAutoString urlString;
+
+  // return an empty string
+  nsAutoString urlString("");
   return urlString.ToNewCString();
 }
 
