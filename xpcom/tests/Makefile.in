@@ -34,6 +34,7 @@ endif
 
 REQUIRES	= \
 		  string \
+		  embedstring \
 		  $(NULL)
 
 CPPSRCS		= \
