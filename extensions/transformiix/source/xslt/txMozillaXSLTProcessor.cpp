@@ -266,46 +266,41 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     Document xslDocument(styleDOMDocument);
 
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
-    {
-        // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument);
+    // Create a new ProcessorState. Must be done after creating the documents
+    // so that C++ will ensure that it is destroyed before the documents.
+    ProcessorState ps(&sourceDocument, &xslDocument);
 
-        // XXX Need to add error observers
+    // XXX Need to add error observers
 
-        // Set current txIEvalContext
-        txSingleNodeContext evalContext(&sourceDocument, &ps);
-        ps.setEvalContext(&evalContext);
+    // Set current txIEvalContext
+    txSingleNodeContext evalContext(&sourceDocument, &ps);
+    ps.setEvalContext(&evalContext);
 
-        // Index templates and process top level xslt elements
-        nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
-        nsresult rv;
-        if (styleDoc) {
-            rv = txXSLTProcessor::processStylesheet(&xslDocument,
-                                                    &mVariables, &ps);
-        }
-        else {
-            nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
-            NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
-            Element* element = xslDocument.createElement(styleElem);
-            NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = txXSLTProcessor::processTopLevel(element, &mVariables,
-                                                  &ps);
-        }
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument,
-                                             aObserver);
-        ps.mOutputHandlerFactory = &handlerFactory;
-        
-        // Process root of XML source document
-        txXSLTProcessor::transform(&ps);
-        
-        ps.mOutputHandler->getOutputDocument(aOutputDoc);
+    // Index templates and process top level xslt elements
+    nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
+    nsresult rv;
+    if (styleDoc) {
+        rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                &mVariables, &ps);
     }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
+    else {
+        nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
+        NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
+        Element* element = xslDocument.createElement(styleElem);
+        NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
+        rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                              &ps);
+    }
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument,
+                                         aObserver);
+    ps.mOutputHandlerFactory = &handlerFactory;
+
+    // Process root of XML source document
+    txXSLTProcessor::transform(&ps);
+
+    ps.mOutputHandler->getOutputDocument(aOutputDoc);
 
     return NS_OK;
 }
@@ -358,45 +353,40 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     }
     Document xslDocument(styleDOMDocument);
 
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
-    {
-        // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument);
+    // Create a new ProcessorState. Must be done after creating the documents
+    // so that C++ will ensure that it is destroyed before the documents.
+    ProcessorState ps(&sourceDocument, &xslDocument);
 
-        // XXX Need to add error observers
+    // XXX Need to add error observers
 
-        // Set current txIEvalContext
-        txSingleNodeContext evalContext(&sourceDocument, &ps);
-        ps.setEvalContext(&evalContext);
+    // Set current txIEvalContext
+    txSingleNodeContext evalContext(&sourceDocument, &ps);
+    ps.setEvalContext(&evalContext);
 
-        // Index templates and process top level xslt elements
-        nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
-        nsresult rv;
-        if (styleDoc) {
-            rv = txXSLTProcessor::processStylesheet(&xslDocument,
-                                                    &mVariables, &ps);
-        }
-        else {
-            nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
-            NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
-            Element* element = xslDocument.createElement(styleElem);
-            NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = txXSLTProcessor::processTopLevel(element, &mVariables,
-                                                  &ps);
-        }
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, nsnull);
-        ps.mOutputHandlerFactory = &handlerFactory;
-        
-        // Process root of XML source document
-        txXSLTProcessor::transform(&ps);
-        
-        ps.mOutputHandler->getOutputDocument(aResult);
+    // Index templates and process top level xslt elements
+    nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
+    nsresult rv;
+    if (styleDoc) {
+        rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                &mVariables, &ps);
     }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
+    else {
+        nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
+        NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
+        Element* element = xslDocument.createElement(styleElem);
+        NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
+        rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                              &ps);
+    }
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, nsnull);
+    ps.mOutputHandlerFactory = &handlerFactory;
+
+    // Process root of XML source document
+    txXSLTProcessor::transform(&ps);
+
+    ps.mOutputHandler->getOutputDocument(aResult);
 
     return NS_OK;
 }
@@ -435,46 +425,41 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     }
     Document xslDocument(styleDOMDocument);
 
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
-    {
-        // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument);
+    // Create a new ProcessorState. Must be done after creating the documents
+    // so that C++ will ensure that it is destroyed before the documents.
+    ProcessorState ps(&sourceDocument, &xslDocument);
 
-        // XXX Need to add error observers
+    // XXX Need to add error observers
 
-        // Set current txIEvalContext
-        txSingleNodeContext evalContext(&sourceDocument, &ps);
-        ps.setEvalContext(&evalContext);
+    // Set current txIEvalContext
+    txSingleNodeContext evalContext(&sourceDocument, &ps);
+    ps.setEvalContext(&evalContext);
 
-        // Index templates and process top level xslt elements
-        nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
-        nsresult rv;
-        if (styleDoc) {
-            rv = txXSLTProcessor::processStylesheet(&xslDocument,
-                                                    &mVariables, &ps);
-        }
-        else {
-            nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
-            NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
-            Element* element = xslDocument.createElement(styleElem);
-            NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = txXSLTProcessor::processTopLevel(element, &mVariables,
-                                                  &ps);
-        }
-        NS_ENSURE_SUCCESS(rv, rv);
-        
-        rv = aOutput->CreateDocumentFragment(aResult);
-        NS_ENSURE_SUCCESS(rv, rv);
-        txToFragmentHandlerFactory handlerFactory(*aResult);
-        ps.mOutputHandlerFactory = &handlerFactory;
-        
-        
-        // Process root of XML source document
-        txXSLTProcessor::transform(&ps);
+    // Index templates and process top level xslt elements
+    nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
+    nsresult rv;
+    if (styleDoc) {
+        rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                &mVariables, &ps);
     }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
+    else {
+        nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
+        NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
+        Element* element = xslDocument.createElement(styleElem);
+        NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
+        rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                              &ps);
+    }
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aOutput->CreateDocumentFragment(aResult);
+    NS_ENSURE_SUCCESS(rv, rv);
+    txToFragmentHandlerFactory handlerFactory(*aResult);
+    ps.mOutputHandlerFactory = &handlerFactory;
+
+
+    // Process root of XML source document
+    txXSLTProcessor::transform(&ps);
 
     return NS_OK;
 }
