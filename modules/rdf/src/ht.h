@@ -323,6 +323,7 @@ void				ht_SetPassword(HT_Resource node, char *password);
 PRBool				ht_hasPassword(HT_Resource node);
 PRBool				ht_checkPassword(HT_Resource node, PRBool alwaysCheck);
 HT_DropAction			dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);
+HT_DropAction			dropOnSmartURL(HT_Resource dropTarget, char *objTitle, PRBool justAction);
 HT_DropAction			dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);
 void				Win32FileCopyMove(HT_Resource dropTarget, HT_Resource dropObject);
 HT_DropAction			copyMoveRDFLink (HT_Resource dropTarget, HT_Resource dropObject);
