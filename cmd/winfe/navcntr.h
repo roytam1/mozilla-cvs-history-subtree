@@ -101,8 +101,10 @@ public:
 	int Create(CWnd *pParent, int nToolbarStyle, CSize noviceButtonSize, CSize advancedButtonSize,
 			   LPCTSTR pButtonText, LPCTSTR pToolTipText, 
 			   LPCTSTR pStatusText,
-			   CSize bitmapSize, int nMaxTextChars, int nMinTextChars, 
+			   CSize bitmapSize, int nMaxTextChars, int nMinTextChars,
 			   HT_Resource pNode, DWORD dwButtonStyle = 0, CView* view = NULL, CPaneCX* pane = NULL);
+
+	BOOL foundOnRDFToolbar() { return FALSE; }	// buttons sit on a selector bar and not on a toolbar
 
 	void SetDepressed(BOOL b) { m_bDepressed = b; Invalidate(); }
 

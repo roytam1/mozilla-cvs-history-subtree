@@ -52,8 +52,8 @@ class CRDFToolbarButtonDropTarget : public CRDFToolbarButtonDropTargetBase
 
 #define CRDFToolbarButtonBase CDragableToolbarButton
 
-class CRDFToolbarButton: public CRDFToolbarButtonBase, public CCustomImageObject {
-
+class CRDFToolbarButton: public CRDFToolbarButtonBase, public CCustomImageObject 
+{
 protected:
 	HT_Resource m_Node;				// The resource corresponding to the RDF node
 	BOOKMARKITEM m_bookmark;
@@ -65,6 +65,8 @@ protected:
 	BOOL m_bShouldShowRMMenu;		// Set to TRUE by default.  Quickfile/Breadcrumbs set it to FALSE.
 
 	CRDFCommandMap m_MenuCommandMap;	// Command map for back-end generated right mouse menu commands.
+	
+	int m_nActualBitmapHeight;		// The actual bitmap's height.
 
 public:
 	CRDFToolbarButton();
@@ -79,6 +81,10 @@ public:
     int GetRow() { return currentRow; }
     void SetRow(int i) { currentRow = i; }
 
+	BOOL foundOnRDFToolbar() { return TRUE; } // RDF Buttons must ALWAYS reside on RDF toolbars.  (Derived
+											  // classes could have different behavior, but base-class buttons
+											  // make the assumption that they sit on an RDF toolbar.
+
 	virtual void OnAction(void);
 	virtual CSize GetButtonSizeFromChars(CString s, int c);
     virtual CSize GetMinimalButtonSize();
@@ -86,6 +92,8 @@ public:
 
 	virtual BOOL UseLargeIcons() { return FALSE; }
 	virtual void UpdateIconInfo() { DetermineIconType(m_Node, UseLargeIcons()); }
+
+	virtual void DrawButtonBitmap(HDC hDC, CRect rcImg);
 
 	virtual void FillInOleDataSource(COleDataSource *pDataSource);
 
@@ -220,6 +228,9 @@ public:
 
 	void SetDragButton(CRDFToolbarButton* pButton) { m_pDragButton = pButton; }
 	CRDFToolbarButton* GetDragButton() { return m_pDragButton; }
+
+	void SetRowHeight(int i) { m_nRowHeight = i; }
+	int GetRowHeight() { return m_nRowHeight; }
 
 protected:
     // Helper function used in conjunction with LayoutButtons

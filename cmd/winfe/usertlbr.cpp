@@ -136,7 +136,6 @@ int CRDFToolbarButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButt
 								CSize bitmapSize, int nMaxTextChars, int nMinTextChars, BOOKMARKITEM bookmark,
 								HT_Resource pNode, DWORD dwButtonStyle )
 {
-	
 	m_bookmark = bookmark;
 
 	char *protocol = NULL;
@@ -281,22 +280,26 @@ void CRDFToolbarButton::EditTextChanged(char *pText)
 		delete []pText;
 	}
     RemoveTextEdit();
-
-	((CRDFToolbar*)GetParent())->LayoutButtons(-1);
+	
+	if (foundOnRDFToolbar())
+		((CRDFToolbar*)GetParent())->LayoutButtons(-1);
 }
 
 void CRDFToolbarButton::DrawPicturesAndTextMode(HDC hDC, CRect rect)
 {
-	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
-	void* data;
-	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
-	if (data)
+	if (foundOnRDFToolbar())
 	{
-		CString position((char*)data);
-		if (position == "top")
+		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+		void* data;
+		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+		if (data)
 		{
-			DrawBitmapOnTop(hDC, rect);
-			return;
+			CString position((char*)data);
+			if (position == "top")
+			{
+				DrawBitmapOnTop(hDC, rect);
+				return;
+			}
 		}
 	}
 	
@@ -305,16 +308,19 @@ void CRDFToolbarButton::DrawPicturesAndTextMode(HDC hDC, CRect rect)
 
 void CRDFToolbarButton::DrawPicturesMode(HDC hDC, CRect rect)
 {
-	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
-	void* data;
-	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
-	if (data)
+	if (foundOnRDFToolbar())
 	{
-		CString position((char*)data);
-		if (position == "top")
+		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+		void* data;
+		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+		if (data)
 		{
-			DrawBitmapOnTop(hDC, rect);
-			return;
+			CString position((char*)data);
+			if (position == "top")
+			{
+				DrawBitmapOnTop(hDC, rect);
+				return;
+			}
 		}
 	}
 
@@ -330,15 +336,18 @@ CSize CRDFToolbarButton::GetButtonSizeFromChars(CString s, int c)
 {
     if(m_nToolbarStyle != TB_TEXT)
 	{
-		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
-		void* data;
-		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
-		if (data)
+		if (foundOnRDFToolbar())
 		{
-			CString position((char*)data);
-			if (position == "top")
+			CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+			void* data;
+			HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+			if (data)
 			{
-				return GetBitmapOnTopSize(s, c);
+				CString position((char*)data);
+				if (position == "top")
+				{
+					return GetBitmapOnTopSize(s, c);
+				}
 			}
 		}
 		return(GetBitmapOnSideSize(s, c));
@@ -349,16 +358,19 @@ CSize CRDFToolbarButton::GetButtonSizeFromChars(CString s, int c)
 
 void CRDFToolbarButton::GetPicturesAndTextModeTextRect(CRect &rect)
 {
-	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
-	void* data;
-	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
-	if (data)
+	if (foundOnRDFToolbar())
 	{
-		CString position((char*)data);
-		if (position == "top")
+		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+		void* data;
+		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+		if (data)
 		{
-			GetBitmapOnTopTextRect(rect);
-			return;
+			CString position((char*)data);
+			if (position == "top")
+			{
+				GetBitmapOnTopTextRect(rect);
+				return;
+			}
 		}
 	}
 
@@ -367,16 +379,19 @@ void CRDFToolbarButton::GetPicturesAndTextModeTextRect(CRect &rect)
 
 void CRDFToolbarButton::GetPicturesModeTextRect(CRect &rect)
 {
-	CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
-	void* data;
-	HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
-	if (data)
+	if (foundOnRDFToolbar())
 	{
-		CString position((char*)data);
-		if (position == "top")
+		CRDFToolbar* theToolbar = (CRDFToolbar*)GetParent();
+		void* data;
+		HT_GetNodeData(HT_TopNode(theToolbar->GetHTView()), gNavCenter->toolbarBitmapPosition, HT_COLUMN_STRING, &data);
+		if (data)
 		{
-			GetBitmapOnTopTextRect(rect);
-			return;
+			CString position((char*)data);
+			if (position == "top")
+			{
+				GetBitmapOnTopTextRect(rect);
+				return;
+			}
 		}
 	}
 
@@ -746,10 +761,39 @@ void CRDFToolbarButton::LoadComplete(HT_Resource r)
 
 void CRDFToolbarButton::DrawCustomIcon(HDC hDC, int x, int y)
 {
-	int size = UseLargeIcons() ? 23 : 16;
-	DrawArbitraryURL(m_Node, x, y, size, size, hDC, 
+	CRDFImage* pCustomImage = DrawArbitraryURL(m_Node, x, y, m_bitmapSize.cx, m_bitmapSize.cy, hDC, 
 					m_bDepressed ? (::GetSysColor(COLOR_BTNSHADOW)) :  (::GetSysColor(COLOR_BTNFACE)), 
 					 this, UseLargeIcons());
+	
+	if (foundOnRDFToolbar() && pCustomImage->FrameSuccessfullyLoaded())
+	{
+		CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
+				
+		// Adjust the toolbar button's width and height.
+		long width = pCustomImage->bmpInfo->bmiHeader.biWidth;
+		long height = pCustomImage->bmpInfo->bmiHeader.biHeight;
+		
+		if (width > m_bitmapSize.cx || height > m_bitmapSize.cy)
+		{
+			SetBitmapSize(CSize(width, height));
+
+			CSize buttonSize = GetMinimalButtonSize(); // Only care about height.
+	
+			// Grow the toolbar if necessary.
+			if (buttonSize.cy > pToolbar->GetRowHeight())
+			{
+				pToolbar->SetRowHeight(buttonSize.cy);
+				pToolbar->LayoutButtons(-1);
+				GetParentFrame()->RecalcLayout();
+			}
+			else
+			{
+				// We're too small.  Need to adjust our bitmap height.
+				int diff = pToolbar->GetRowHeight() - buttonSize.cy;
+				SetBitmapSize(CSize(width, height + diff));
+			}
+		}
+	}
 }
 
 
@@ -759,7 +803,120 @@ void CRDFToolbarButton::DrawLocalIcon(HDC hDC, int x, int y)
 		DrawLocalFileIcon(m_Node, x, y, hDC);
 }
 
+void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
+{
+	UpdateIconInfo();
+	if(m_hBmpImg != NULL)
+	{
+		// Create a scratch DC and select our bitmap into it.
+		HDC pBmpDC  = ::CreateCompatibleDC(hDC);
+		HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
 
+		CBitmap BmpImg;
+
+		CPoint ptDst;
+
+		HINSTANCE hInst = AfxGetResourceHandle();
+
+
+		HBITMAP hBmpImg;
+
+		hBmpImg = m_hBmpImg;
+
+		HBITMAP hOldBmp = (HBITMAP)::SelectObject(pBmpDC, hBmpImg);
+		HPALETTE hOldPal = ::SelectPalette(pBmpDC, WFE_GetUIPalette(NULL), TRUE);
+		::RealizePalette(pBmpDC);
+		// Get the image dimensions
+		CSize sizeImg;
+		BITMAP bmp;
+
+		::GetObject(hBmpImg, sizeof(bmp), &bmp);
+		sizeImg.cx = bmp.bmWidth;
+		sizeImg.cy = bmp.bmHeight;
+
+		// Center the image within the button	
+		ptDst.x = (rcImg.Width() >= m_bitmapSize.cx) ?
+			rcImg.left + (((rcImg.Width() - m_bitmapSize.cx) + 1) / 2) : 0;
+		
+		int realBitmapHeight;
+		if(m_nIconType == LOCAL_FILE)
+		{
+			realBitmapHeight = 16;
+		}
+		else if (m_nIconType == ARBITRARY_URL)
+		{
+			realBitmapHeight = m_bitmapSize.cy;
+		}
+		else realBitmapHeight = 17; // Height of personal toolbar button bitmaps.
+
+		ptDst.y = (rcImg.Height() >= realBitmapHeight) ?
+			rcImg.top + (((rcImg.Height() - realBitmapHeight) + 1) / 2) : 0;
+
+		// If we're in the checked state, shift the image one pixel
+		if (m_eState == eBUTTON_CHECKED || (m_eState == eBUTTON_UP && m_nChecked == 1))
+		{
+			ptDst.x += 1;
+			ptDst.y += 1;
+		}
+	
+		// Call the handy transparent blit function to paint the bitmap over
+		// whatever colors exist.
+		
+		CPoint bitmapStart;
+
+		BTN_STATE eState = m_eState;
+
+		if(m_eState == eBUTTON_CHECKED)
+			// A checked button has same bitmap as the normal state with no mouse-over
+			eState = eNORMAL;
+		else if(m_eState == eBUTTON_UP && m_nChecked == 2)
+			// if we are in the mouse over mode, but indeterminate we want our bitmap to have a disabled look
+			eState = eDISABLED;
+
+        if(m_bIsResourceID)
+			bitmapStart = CPoint(m_nBitmapIndex * m_bitmapSize.cx, m_bEnabled ? realBitmapHeight * eState : realBitmapHeight);
+
+		if(m_bIsResourceID)  
+		{
+			
+			if(m_nIconType == LOCAL_FILE)
+			{
+				DrawLocalIcon(hDC, ptDst.x, ptDst.y);
+			}
+			else if (m_nIconType == ARBITRARY_URL)
+			{
+				DrawCustomIcon(hDC, ptDst.x, ptDst.y);
+			}
+			else       
+                ::BitBlt(hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight, 
+					 pBmpDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+		}
+		else
+		{
+			CSize destSize;
+
+			if(sizeImg.cx > sizeImg.cy)
+			{
+				destSize.cx = m_bitmapSize.cx;
+				destSize.cy = (int)(realBitmapHeight * ((double)sizeImg.cy / sizeImg.cx));
+			}
+			else
+			{
+				destSize.cx = (int)(m_bitmapSize.cx * ((double)sizeImg.cx/ sizeImg.cy));
+				destSize.cy = m_bitmapSize.cy;
+			}
+			StretchBlt(hDC, ptDst.x, ptDst.y, destSize.cx, destSize.cy,
+						pBmpDC, 0, 0, sizeImg.cx, sizeImg.cy, SRCCOPY);
+		}
+
+		// Cleanup
+
+		::SelectObject(pBmpDC, hOldBmp);
+		::SelectPalette(pBmpDC, hOldPal, TRUE);
+		::DeleteDC(pBmpDC);
+
+	}
+}
 ///////////////////////////////////////////////////////////////////////////
 //							Class CRDFToolbarDropTarget
 ///////////////////////////////////////////////////////////////////////////
@@ -885,6 +1042,8 @@ static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event 
 	}
 	else if (whatHappened == HT_EVENT_VIEW_DELETED)
 	{
+		CRDFToolbar* pToolbar = (CRDFToolbar*)HT_GetViewFEData(theView);
+		delete pToolbar;
 	}
 	else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED && HT_TopNode(theView) == n)
 	{
@@ -1059,8 +1218,7 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	pButton->Create(this, theApp.m_pToolbarStyle, CSize(60,42), CSize(85, 25), csAmpersandString,
 					bookmark.szText, bookmark.szAnchor, CSize(23,17), 
 					m_nMaxToolbarButtonChars, m_nMinToolbarButtonChars, bookmark,
-					item,
-                    (HT_IsContainer(item) ? TB_HAS_DRAGABLE_MENU | TB_HAS_IMMEDIATE_MENU : 0));
+					item, (HT_IsContainer(item) ? TB_HAS_DRAGABLE_MENU | TB_HAS_IMMEDIATE_MENU : 0));
 		
 	if(HT_IsContainer(item))
 	{
@@ -1270,8 +1428,14 @@ void CRDFToolbar::LayoutButtons(int nIndex)
             nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
         }
 
+		if (buttonSize.cy < m_nRowHeight)
+		{
+			CSize size = pButton->GetBitmapSize();
+			pButton->SetBitmapSize(CSize(size.cx, size.cy + (m_nRowHeight - buttonSize.cy)));
+		}
+
 		pButton->MoveWindow(nStartX, nStartY,
-									  buttonSize.cx, buttonSize.cy);
+									  buttonSize.cx, m_nRowHeight);
 
 		nStartX += buttonSize.cx + SPACE_BETWEEN_BUTTONS;
 	}
@@ -1389,8 +1553,14 @@ void CRDFToolbar::WidthChanged(int animWidth)
             nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
         }
 
+		if (buttonSize.cy < m_nRowHeight)
+		{
+			CSize size = pButton->GetBitmapSize();
+			pButton->SetBitmapSize(CSize(size.cx, size.cy + (m_nRowHeight - buttonSize.cy)));
+		}
+
 		pButton->MoveWindow(nStartX, nStartY,
-									  buttonSize.cx, buttonSize.cy);
+									  buttonSize.cx, m_nRowHeight);
 
 		nStartX += buttonSize.cx + SPACE_BETWEEN_BUTTONS;
 	}
