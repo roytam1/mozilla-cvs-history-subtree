@@ -66,8 +66,24 @@ nsIWidget *nsBaseFilePicker::DOMWindowToWidget(nsIDOMWindow *dw)
   if (sgo) {
     nsCOMPtr<nsIBaseWindow> baseWin(do_QueryInterface(sgo->GetDocShell()));
 
-    if (baseWin) {
+    while (!widget && baseWin) {
       baseWin->GetParentWidget(getter_AddRefs(widget));
+      if (!widget) {
+        nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(baseWin));
+        if (!docShellAsItem)
+          return nsnull;
+
+        nsCOMPtr<nsIDocShellTreeItem> parent;
+        docShellAsItem->GetSameTypeParent(getter_AddRefs(parent));
+        if (!parent)
+          return nsnull;
+
+        sgo = do_GetInterface(parent);
+        if (!sgo)
+          return nsnull;
+
+        baseWin = do_QueryInterface(sgo->GetDocShell());
+      }
     }
   }
 
