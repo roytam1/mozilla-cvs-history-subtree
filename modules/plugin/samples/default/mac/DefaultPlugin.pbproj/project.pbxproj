@@ -31,6 +31,7 @@
 		};
 		089C1671FE841209C02AAC07 = {
 			children = (
+				F5A7D3AB036E359F01A96660,
 				08EA7FFBFE8413EDC02AAC07,
 				F51A400C0299CD65012FC976,
 			);
@@ -48,7 +49,7 @@
 				F5BFB5E8029AD01B01000102,
 			);
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = "";
+				FRAMEWORK_SEARCH_PATHS = "\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreFoundation.framework\"";
 				HEADER_SEARCH_PATHS = "../../../../../dist/sdk/xpcom/include ../../../../../dist/include/caps ../../../../../dist/include/java ../../../../../dist/include/js ../../../../../dist/include/nspr ../../../../../dist/include/nspr/obsolete ../../../../../dist/include/oji ../../../../../dist/include/plugin ../../../../../dist/include/xpcom ../../../../../dist/include/xpconnect /Developer/Headers/FlatCarbon";
 				LIBRARY_SEARCH_PATHS = /usr/lib;
 				OTHER_CFLAGS = "-DXP_MACOSX=1 -DNO_X11=1 -DUSE_SYSTEM_CONSOLE=1";
@@ -122,6 +123,7 @@
 			files = (
 				08EA7FFCFE8413EDC02AAC07,
 				F51A400D0299CD65012FC976,
+				F5A7D695036E35A001A96660,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -137,7 +139,6 @@
 		089C167CFE841241C02AAC07 = {
 			children = (
 				089C167DFE841241C02AAC07,
-				F59D147302AC371D01000104,
 				F5E0C34D036A12DF01A96660,
 			);
 			isa = PBXGroup;
@@ -150,7 +151,8 @@
 			);
 			isa = PBXVariantGroup;
 			name = InfoPlist.strings;
-			refType = 4;
+			path = "";
+			refType = 2;
 		};
 		089C167EFE841241C02AAC07 = {
 			fileEncoding = 10;
@@ -261,7 +263,7 @@
 			};
 		};
 		F59D147102AC328B01000104 = {
-			buildArgumentsString = $ACTION;
+			buildArgumentsString = "$ACTION resources";
 			buildPhases = (
 			);
 			buildSettings = {
@@ -288,10 +290,17 @@
 			isa = PBXTargetDependency;
 			target = F59D147102AC328B01000104;
 		};
-		F59D147302AC371D01000104 = {
-			isa = PBXFileReference;
-			path = Makefile;
-			refType = 2;
+		F5A7D3AB036E359F01A96660 = {
+			isa = PBXFrameworkReference;
+			name = CoreFoundation.framework;
+			path = /System/Library/Frameworks/CoreFoundation.framework;
+			refType = 0;
+		};
+		F5A7D695036E35A001A96660 = {
+			fileRef = F5A7D3AB036E359F01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 		F5BFB5E8029AD01B01000102 = {
 			buildActionMask = 2147483647;
@@ -305,7 +314,7 @@
 		F5E0C34D036A12DF01A96660 = {
 			isa = PBXFileReference;
 			path = _NullPlugin.rsrc;
-			refType = 4;
+			refType = 2;
 		};
 		F5E0C34E036A12DF01A96660 = {
 			fileRef = F5E0C34D036A12DF01A96660;
@@ -316,7 +325,7 @@
 		F5E0C34F036A130901A96660 = {
 			isa = PBXFileReference;
 			path = NullPlugin.cpp;
-			refType = 4;
+			refType = 2;
 		};
 		F5E0C350036A130901A96660 = {
 			fileRef = F5E0C34F036A130901A96660;
@@ -327,7 +336,7 @@
 		F5E0C351036A130E01A96660 = {
 			isa = PBXFileReference;
 			path = npmac.cpp;
-			refType = 4;
+			refType = 2;
 		};
 		F5E0C352036A130E01A96660 = {
 			fileRef = F5E0C351036A130E01A96660;
