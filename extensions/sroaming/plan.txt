@@ -1,13 +1,15 @@
 - conflict
   - listing transfer
-    - FTP: downloaded file is empty v
-    - save login from listing transfer for main transfer v
+    - FTP: downloaded file is empty (fixed?)
+    - save login from listing transfer for main transfer (fixed?)
     - progress feedback and error reporting
-  - some files failed (see XXX)
+  - some files failed (see XXX - update: eh, where was that?)
   - fix dialog
-  - resize dialog for new listing.xml entry
+    - column headings
+    - width
+    - resize for new listing.xml entry
 - Bugs
-  - trunk: upload
+  - trunk: upload - netlib offline because of dyn. profile change feature
     - ftp: offline
     - http: not initialized
   - overwriting local files, if login is incorrect?
@@ -26,14 +28,12 @@
     solution: prevent dialog closure (even if cancel pressed) until we're done.
 
 Later:
-- don't transfer files that didn't change (server = local)
-  (actually happens in RL?)
 - nsiprogresseventsink comment
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
+- alert() -> nsiprompt
 - remove printfs
-- rewrite dialog
 - XXXs
 
 Enhance
@@ -42,7 +42,10 @@ Enhance
   - LDAP (already done by Sun? :-) )
   - IMAP
 - password encrypt
+- rewrite progress dialog
 - no upload at switch profile
+- don't transfer files that didn't change (server = local)
+  (actually happens in RL?)
 
 roaming urls
  <ftp://user@ftp-server//path/to/dir/>
