@@ -17,3 +17,4 @@ nsIEnumerator.h
 nscore.h
 nsIBaseStream.h
 nsIOutputStream.h
+nsVector.h
