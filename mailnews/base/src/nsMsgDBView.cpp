@@ -648,7 +648,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     // calc max possible size needed for all the rest
     PRUint32 maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
 
-    PRUint32 maxBlockSize = (uint32) 0xf000L;
+    PRUint32 maxBlockSize = (PRUint32) 0xf000L;
     PRUint32 allocSize = PR_MIN(maxBlockSize, maxSize);
     char *pTemp = (char *) PR_Malloc(allocSize);
     NS_ASSERTION(pTemp, "out of memory, can't sort");
@@ -800,7 +800,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     FreeAll(&ptrs);
 
     m_sortValid = PR_TRUE;
-    //m_messageDB->SetSortInfo(sortType, sortOrder);
+    //m_db->SetSortInfo(sortType, sortOrder);
 
     // last but not least, invalidate the entire view
     if (mOutliner)
@@ -830,7 +830,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *th
 	// unread message in the thread. Sometimes, that will be wrong, however, so
 	// let's skip it until we're sure it's neccessary.
 //	(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) 
-//		? threadHdr->GetFirstUnreadKey(m_messageDB) : threadHdr->GetChildAt(0);
+//		? threadHdr->GetFirstUnreadKey(m_db) : threadHdr->GetChildAt(0);
   PRUint32 numThreadChildren;
   threadHdr->GetNumChildren(&numThreadChildren);
 	while (retIndex == nsMsgViewIndex_None && childIndex < numThreadChildren)
@@ -899,14 +899,15 @@ nsMsgKey nsMsgDBView::GetKeyOfFirstMsgInThread(nsMsgKey key)
 {
 	nsCOMPtr <nsIMsgThread> pThread;
 	nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  nsresult rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
-  NS_ENSURE_SUCCESS(rv, rv);
-  m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+    nsresult rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+    NS_ENSURE_SUCCESS(rv, rv);
 	nsMsgKey	firstKeyInThread = nsMsgKey_None;
 
-	if (pThread == nsnull)
+	NS_ASSERTION(pThread, "error getting msg from thread");
+	if (!pThread)
 	{
-		NS_ASSERTION(PR_FALSE, "error getting msg from thread");
 		return firstKeyInThread;
 	}
 	// ### dmb UnreadOnly - this is wrong.
@@ -943,14 +944,14 @@ nsMsgViewIndex	nsMsgDBView::FindKey(nsMsgKey key, PRBool expand)
 	return retIndex;
 }
 
-nsresult		nsMsgDBView::GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount)
+nsresult nsMsgDBView::GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount)
 {
 	nsresult rv = NS_MSG_MESSAGE_NOT_FOUND;
 	nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(msgHdr));
-  NS_ENSURE_SUCCESS(rv, rv);
+    rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
 	nsCOMPtr <nsIMsgThread> pThread;
-  rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
 	if (NS_SUCCEEDED(rv) && pThread != nsnull)
     rv = pThread->GetNumChildren(pThreadCount);
 	return rv;
@@ -1273,21 +1274,524 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
     return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgViewIndex startIndex, nsMsgKey *selection, PRUint32 numSelected, nsMsgKey *resultId, nsMsgViewIndex *resultIndex, nsMsgViewIndex *pThreadIndex, nsIMsgFolder **resultFolderInfo)
+nsresult nsMsgDBView::MarkThreadOfMsgRead(nsMsgKey msgId, nsMsgViewIndex msgIndex, nsMsgKeyArray &idsMarkedRead, PRBool bRead)
 {
-    NS_ENSURE_ARG_POINTER(selection);
-    NS_ENSURE_ARG_POINTER(resultId);
-    NS_ENSURE_ARG_POINTER(resultIndex);
-    NS_ENSURE_ARG_POINTER(pThreadIndex);
-    NS_ENSURE_ARG_POINTER(resultFolderInfo);
+    nsCOMPtr <nsIMsgThread> threadHdr;
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    nsresult rv;
 
+    rv = m_db->GetMsgHdrForKey(msgId, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsMsgViewIndex threadIndex;
+
+    NS_ASSERTION(threadHdr, "threadHdr is null");
+    if (!threadHdr) {
+        return NS_MSG_MESSAGE_NOT_FOUND;
+    }
+    nsCOMPtr <nsIMsgDBHdr> firstHdr;
+    threadHdr->GetChildAt(0, getter_AddRefs(firstHdr));
+    nsMsgKey firstHdrId;
+    firstHdr->GetMessageKey(&firstHdrId);
+    if (msgId != firstHdrId)
+        threadIndex = GetIndexOfFirstDisplayedKeyInThread(threadHdr);
+    else
+        threadIndex = msgIndex;
+    rv = MarkThreadRead(threadHdr, threadIndex, idsMarkedRead, bRead);
+    return rv;
+}
+
+nsresult nsMsgDBView::MarkThreadRead(nsIMsgThread *threadHdr, nsMsgViewIndex threadIndex, nsMsgKeyArray &idsMarkedRead, PRBool bRead)
+{
+    PRBool threadElided = PR_TRUE;
+    if (threadIndex != nsMsgViewIndex_None)
+        threadElided = (m_flags.GetAt(threadIndex) & MSG_FLAG_ELIDED);
+
+    PRUint32 numChildren;
+    threadHdr->GetNumChildren(&numChildren);
+    for (PRInt32 childIndex = 0; childIndex < (PRInt32) numChildren ; childIndex++) {
+        nsCOMPtr <nsIMsgDBHdr> msgHdr;
+        threadHdr->GetChildHdrAt(childIndex, getter_AddRefs(msgHdr));
+        NS_ASSERTION(msgHdr, "msgHdr is null");
+        if (!msgHdr) {
+            continue;
+        }
+
+        PRBool isRead;
+
+        nsMsgKey hdrMsgId;
+        msgHdr->GetMessageKey(&hdrMsgId);
+        m_db->IsRead(hdrMsgId, &isRead);
+
+        if (isRead != bRead) {
+            m_db->MarkHdrRead(msgHdr, bRead, nsnull);
+            // insert at the front.  should we insert at the end?
+            idsMarkedRead.InsertAt(0, hdrMsgId);
+        }
+    }
+
+    if (bRead) {
+        printf("fix this\n");
+        //threadHdr->SetNumNewChildren(0);
+    }
+    else {
+        PRUint32 numChildren;
+        threadHdr->GetNumChildren(&numChildren);
+        printf("fix this\n");
+        //threadHdr->SetNumNewChildren(numChildren);
+    }
     return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::NavigateStatus(nsMsgNavigationTypeValue command, nsMsgViewIndex index, nsMsgKey *selection, PRUint32 numSelected, PRBool *_retval)
+// Starting from startIndex, performs the passed in navigation, including
+// any marking read needed, and returns the resultId and resultIndex of the
+// destination of the navigation. If there are no more unread in the view,
+// it returns a resultId of nsMsgKey_None and an resultIndex of nsMsgViewIndex_None.
+NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgViewIndex startIndex, nsMsgKey *selection, PRUint32 numSelected, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap, nsIMsgFolder **resultFolderInfo)
+{
+    NS_ENSURE_ARG_POINTER(selection);
+    NS_ENSURE_ARG_POINTER(pResultKey);
+    NS_ENSURE_ARG_POINTER(pResultIndex);
+    NS_ENSURE_ARG_POINTER(pThreadIndex);
+    NS_ENSURE_ARG_POINTER(resultFolderInfo);
+
+    nsresult rv = NS_OK;
+    nsMsgKey resultThreadKey;
+    nsMsgViewIndex curIndex;
+    nsMsgViewIndex lastIndex = (GetSize() > 0) ? (nsMsgViewIndex) GetSize() - 1 : nsMsgViewIndex_None;
+    nsMsgViewIndex threadIndex = nsMsgViewIndex_None;
+
+    switch (motion) {
+        case nsMsgNavigationType::firstMessage:
+            if (GetSize() > 0) {
+                *pResultIndex = 0;
+                *pResultKey = m_keys.GetAt(0);
+            }
+            else {
+                *pResultIndex = nsMsgViewIndex_None;
+                *pResultKey = nsMsgKey_None;
+            }
+            break;
+        case nsMsgNavigationType::nextMessage:
+            // return same index and id on next on last message
+            *pResultIndex = PR_MIN(startIndex + 1, lastIndex);
+            *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::previousMessage:
+            *pResultIndex = (startIndex > 0) ? startIndex - 1 : 0;
+            *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::lastMessage:
+            *pResultIndex = lastIndex;
+            *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::firstFlagged:
+            rv = FindFirstFlagged(pResultIndex);
+            if (IsValidIndex(*pResultIndex))
+                *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::nextFlagged:
+            rv = FindNextFlagged(startIndex + 1, pResultIndex);
+            if (IsValidIndex(*pResultIndex))
+                *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::previousFlagged:
+            rv = FindPrevFlagged(startIndex, pResultIndex);
+            if (IsValidIndex(*pResultIndex))
+                *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::firstNew:
+            rv = FindFirstNew(pResultIndex);
+            if (IsValidIndex(*pResultIndex))
+                *pResultKey = m_keys.GetAt(*pResultIndex);
+            break;
+        case nsMsgNavigationType::firstUnreadMessage:
+            startIndex = nsMsgViewIndex_None;        // note fall thru - is this motion ever used?
+        case nsMsgNavigationType::nextUnreadMessage:
+            for (curIndex = (startIndex == nsMsgViewIndex_None) ? 0 : startIndex; curIndex <= lastIndex && lastIndex != nsMsgViewIndex_None; curIndex++) {
+                PRUint32 flags = m_flags.GetAt(curIndex);
+
+                // don't return start index since navigate should move
+                if (!(flags & MSG_FLAG_READ) && (curIndex != startIndex)) {
+                    *pResultIndex = curIndex;
+                    *pResultKey = m_keys.GetAt(*pResultIndex);
+                    break;
+                }
+                // check for collapsed thread with new children
+                if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
+                    nsCOMPtr <nsIMsgThread> threadHdr;
+                    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+                    rv = m_db->GetMsgHdrForKey(m_keys.GetAt(curIndex), getter_AddRefs(msgHdr));
+                    NS_ENSURE_SUCCESS(rv, rv);
+                    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+                    NS_ENSURE_SUCCESS(rv, rv);
+
+                    NS_ASSERTION(threadHdr, "threadHdr is null");
+                    if (!threadHdr) {
+                        continue;
+                    }
+                    PRUint32 numUnreadChildren;
+                    threadHdr->GetNumUnreadChildren(&numUnreadChildren);
+                    if (numUnreadChildren > 0) {
+                        PRUint32 numExpanded;
+                        ExpandByIndex(curIndex, &numExpanded);
+                        lastIndex += numExpanded;
+                        if (pThreadIndex)
+                            *pThreadIndex = curIndex;
+                    }
+                }
+            }
+            if (curIndex > lastIndex) {
+                // wrap around by starting at index 0.
+                if (wrap) {
+                    nsMsgKey startKey = GetAt(startIndex);
+
+                    rv = ViewNavigate(nsMsgNavigationType::nextUnreadMessage, nsMsgViewIndex_None, selection, numSelected, pResultKey, pResultIndex, pThreadIndex, PR_FALSE, resultFolderInfo);
+                    if (*pResultKey == startKey) {   
+                        // wrapped around and found start message!
+                        *pResultIndex = nsMsgViewIndex_None;
+                        *pResultKey = nsMsgKey_None;
+                    }
+                }
+                else {
+                    *pResultIndex = nsMsgViewIndex_None;
+                    *pResultKey = nsMsgKey_None;
+                }
+            }
+            break;
+        case nsMsgNavigationType::previousUnreadMessage:
+            rv = FindPrevUnread(m_keys.GetAt(startIndex), pResultKey,
+                                &resultThreadKey);
+            if (NS_SUCCEEDED(rv)) {
+                *pResultIndex = FindViewIndex(*pResultKey);
+                if (*pResultKey != resultThreadKey && m_sortType == nsMsgViewSortType::byThread) {
+                    threadIndex  = ThreadIndexOfMsg(*pResultKey, nsMsgViewIndex_None);
+                    if (*pResultIndex == nsMsgViewIndex_None) {
+                        nsCOMPtr <nsIMsgThread> threadHdr;
+                        nsCOMPtr <nsIMsgDBHdr> msgHdr;
+                        rv = m_db->GetMsgHdrForKey(*pResultKey, getter_AddRefs(msgHdr));
+                        NS_ENSURE_SUCCESS(rv, rv);
+                        rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+                        NS_ENSURE_SUCCESS(rv, rv);
+
+                        NS_ASSERTION(threadHdr, "threadHdr is null");
+                        if (threadHdr) {
+                            break;
+                        }
+                        PRUint32 numUnreadChildren;
+                        threadHdr->GetNumUnreadChildren(&numUnreadChildren);
+                        if (numUnreadChildren > 0) {
+                            PRUint32 numExpanded;
+                            ExpandByIndex(threadIndex, &numExpanded);
+                        }
+                        *pResultIndex = FindViewIndex(*pResultKey);
+                    }
+                }
+                if (pThreadIndex)
+                    *pThreadIndex = threadIndex;
+            }
+            break;
+        case nsMsgNavigationType::lastUnreadMessage:
+            break;
+        case nsMsgNavigationType::nextUnreadThread:
+            {
+                nsMsgKeyArray idsMarkedRead;
+
+                if (startIndex == nsMsgViewIndex_None) {
+                    NS_ASSERTION(0,"startIndex == nsMsgViewIndex_None");
+                    break;
+                }
+                rv = MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
+                if (NS_SUCCEEDED(rv)) 
+                    return ViewNavigate(nsMsgNavigationType::nextUnreadMessage, startIndex, selection, numSelected, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+                break;
+            }
+        case nsMsgNavigationType::toggleThreadKilled:
+            {
+                PRBool resultKilled;
+
+                if (startIndex == nsMsgViewIndex_None) {
+                    NS_ASSERTION(0,"startIndex == nsMsgViewIndex_None");
+                    break;
+                }
+                threadIndex = ThreadIndexOfMsg(GetAt(startIndex), startIndex);
+                ToggleIgnored(&startIndex, 1, &resultKilled);
+                if (resultKilled) {
+                    if (threadIndex != nsMsgViewIndex_None)
+                        CollapseByIndex(threadIndex, nsnull);
+                    return ViewNavigate(nsMsgNavigationType::nextUnreadThread, threadIndex, selection, numSelected, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+                }
+                else {
+                    *pResultIndex = startIndex;
+                    *pResultKey = m_keys.GetAt(*pResultIndex);
+                    return NS_OK;
+                }
+            }
+        case nsMsgNavigationType::laterMessage:
+            if (startIndex == nsMsgViewIndex_None) {
+                NS_ASSERTION(0, "unexpected");
+                break;
+            }
+            m_db->MarkLater(m_keys.GetAt(startIndex), 0);
+            return ViewNavigate(nsMsgNavigationType::nextUnreadMessage, startIndex, selection, numSelected, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+        default:
+            NS_ASSERTION(0, "unsupported motion");
+            break;
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::NavigateStatus(nsMsgNavigationTypeValue motion, nsMsgViewIndex index, nsMsgKey *selection, PRUint32 numSelected, PRBool *_retval)
 {
     NS_ENSURE_ARG_POINTER(selection);
     NS_ENSURE_ARG_POINTER(_retval);
 
+    PRBool enable = PR_FALSE;
+    nsresult rv = NS_ERROR_FAILURE;
+    nsMsgKey resultKey = nsMsgKey_None;
+    nsMsgViewIndex resultIndex = nsMsgViewIndex_None;
+
+    // warning - we no longer validate index up front because fe passes in -1 for no
+    // selection, so if you use index, be sure to validate it before using it
+    // as an array index.
+    switch (motion) {
+        case nsMsgNavigationType::firstMessage:
+        case nsMsgNavigationType::lastMessage:
+            if (GetSize() > 0)
+                enable = PR_TRUE;
+            break;
+        case nsMsgNavigationType::nextMessage:
+            if (IsValidIndex(index) && index < (nsMsgViewIndex) GetSize() - 1)
+                enable = PR_TRUE;
+            break;
+        case nsMsgNavigationType::previousMessage:
+            if (IsValidIndex(index) && index != 0 && GetSize() > 1)
+                enable = PR_TRUE;
+            break;
+        case nsMsgNavigationType::firstFlagged:
+            rv = FindFirstFlagged(&resultIndex);
+            enable = (NS_SUCCEEDED(rv) && resultIndex != nsMsgViewIndex_None);
+            break;
+        case nsMsgNavigationType::nextFlagged:
+            rv = FindNextFlagged(index + 1, &resultIndex);
+            enable = (NS_SUCCEEDED(rv) && resultIndex != nsMsgViewIndex_None);
+            break;
+        case nsMsgNavigationType::previousFlagged:
+            if (IsValidIndex(index) && index != 0)
+                rv = FindPrevFlagged(index, &resultIndex);
+            enable = (NS_SUCCEEDED(rv) && resultIndex != nsMsgViewIndex_None);
+            break;
+        case nsMsgNavigationType::firstNew:
+            rv = FindFirstNew(&resultIndex);
+            enable = (NS_SUCCEEDED(rv) && resultIndex != nsMsgViewIndex_None);
+            break;
+        case nsMsgNavigationType::laterMessage:
+            enable = GetSize() > 0;
+            break;
+        case nsMsgNavigationType::readMore:
+            enable = PR_TRUE;  // for now, always true.
+            break;
+        case nsMsgNavigationType::nextFolder:
+        case nsMsgNavigationType::nextUnreadThread:
+        case nsMsgNavigationType::nextUnreadMessage:
+        case nsMsgNavigationType::toggleThreadKilled:
+            enable = PR_TRUE;  // always enabled
+            break;
+        case nsMsgNavigationType::previousUnreadMessage:
+            if (IsValidIndex(index)) {
+                nsMsgKey threadId;
+                rv = FindPrevUnread(m_keys.GetAt(index), &resultKey, &threadId);
+                enable = (resultKey != nsMsgKey_None);
+            }
+            break;
+        default:
+            NS_ASSERTION(0,"unexpected");
+            break;
+    }
+
+    *_retval = enable;
     return NS_OK;
+}
+
+// Note that these routines do NOT expand collapsed threads! This mimics the old behaviour,
+// but it's also because we don't remember whether a thread contains a flagged message the
+// same way we remember if a thread contains new messages. It would be painful to dive down
+// into each collapsed thread to update navigate status.
+// We could cache this info, but it would still be expensive the first time this status needs
+// to get updated.
+nsresult nsMsgDBView::FindNextFlagged(nsMsgViewIndex startIndex, nsMsgViewIndex *pResultIndex)
+{
+    nsMsgViewIndex lastIndex = (nsMsgViewIndex) GetSize() - 1;
+    nsMsgViewIndex curIndex;
+
+    *pResultIndex = nsMsgViewIndex_None;
+
+    if (GetSize() > 0) {
+        for (curIndex = startIndex; curIndex <= lastIndex; curIndex++) {
+            PRUint32 flags = m_flags.GetAt(curIndex);
+            if (flags & MSG_FLAG_MARKED) {
+                *pResultIndex = curIndex;
+                break;
+            }
+        }
+    }
+
+    return NS_OK;
+}
+
+nsresult nsMsgDBView::FindFirstNew(nsMsgViewIndex *pResultIndex)
+{
+    if (m_db) {
+        nsMsgKey firstNewKey;
+        m_db->GetFirstNew(&firstNewKey);
+        if (pResultIndex)
+            *pResultIndex = FindKey(firstNewKey, PR_TRUE);
+    }
+    return NS_OK;
+}
+
+// Generic routine to find next unread id. It doesn't do an expand of a
+// thread with new messages, so it can't return a view index.
+nsresult nsMsgDBView::FindNextUnread(nsMsgKey startId, nsMsgKey *pResultKey,
+                                     nsMsgKey *resultThreadId)
+{
+    nsMsgViewIndex startIndex = FindViewIndex(startId);
+    nsMsgViewIndex curIndex = startIndex;
+    nsMsgViewIndex lastIndex = (nsMsgViewIndex) GetSize() - 1;
+    nsresult rv = NS_OK;
+
+    if (startIndex == nsMsgViewIndex_None)
+        return NS_MSG_MESSAGE_NOT_FOUND;
+
+    *pResultKey = nsMsgKey_None;
+    if (resultThreadId)
+        *resultThreadId = nsMsgKey_None;
+
+    for (; curIndex <= lastIndex && (*pResultKey == nsMsgKey_None); curIndex++) {
+        char    flags = m_flags.GetAt(curIndex);
+
+        if (!(flags & MSG_FLAG_READ) && (curIndex != startIndex)) {
+            *pResultKey = m_keys.GetAt(curIndex);
+            break;
+        }
+        // check for collapsed thread with new children
+        if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
+            nsMsgKey threadId = m_keys.GetAt(curIndex);
+            printf("fix this\n");
+            //rv = m_db->GetUnreadKeyInThread(threadId, pResultKey, resultThreadId);
+            if (NS_SUCCEEDED(rv) && (*pResultKey != nsMsgKey_None))
+                break;
+        }
+    }
+    // found unread message but we don't know the thread
+    if (*pResultKey != nsMsgKey_None && resultThreadId && *resultThreadId == nsMsgKey_None) {
+        printf("fix this\n");
+        //*resultThreadId = m_db->GetThreadIdForMsgId(*pResultKey);
+    }
+    return rv;
+}
+
+
+nsresult nsMsgDBView::FindPrevUnread(nsMsgKey startKey, nsMsgKey *pResultKey,
+                                     nsMsgKey *resultThreadId)
+{
+    nsMsgViewIndex startIndex = FindViewIndex(startKey);
+    nsMsgViewIndex curIndex = startIndex;
+    nsresult rv = NS_MSG_MESSAGE_NOT_FOUND;
+
+    if (startIndex == nsMsgViewIndex_None)
+        return NS_MSG_MESSAGE_NOT_FOUND;
+
+    *pResultKey = nsMsgKey_None;
+    if (resultThreadId)
+        *resultThreadId = nsMsgKey_None;
+
+    for (; (int) curIndex >= 0 && (*pResultKey == nsMsgKey_None); curIndex--) {
+        PRUint32 flags = m_flags.GetAt(curIndex);
+
+        if (curIndex != startIndex && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
+            nsMsgKey threadId = m_keys.GetAt(curIndex);
+            printf("fix this\n");
+            //rv = m_db->GetUnreadKeyInThread(threadId, pResultKey, resultThreadId);
+            if (NS_SUCCEEDED(rv) && (*pResultKey != nsMsgKey_None))
+                break;
+        }
+        if (!(flags & MSG_FLAG_READ) && (curIndex != startIndex)) {
+            *pResultKey = m_keys.GetAt(curIndex);
+            rv = NS_OK;
+            break;
+        }
+    }
+    // found unread message but we don't know the thread
+    if (*pResultKey != nsMsgKey_None && resultThreadId && *resultThreadId == nsMsgKey_None) {
+        printf("fix this\n");
+        //*resultThreadId = m_db->GetThreadIdForMsgId(*pResultKey);
+    }
+    return rv;
+}
+
+nsresult nsMsgDBView::FindFirstFlagged(nsMsgViewIndex *pResultIndex)
+{
+    return FindNextFlagged(0, pResultIndex);
+}
+
+nsresult nsMsgDBView::FindPrevFlagged(nsMsgViewIndex startIndex, nsMsgViewIndex *pResultIndex)
+{
+    nsMsgViewIndex curIndex;
+
+    *pResultIndex = nsMsgViewIndex_None;
+
+    if (GetSize() > 0 && IsValidIndex(startIndex)) {
+        curIndex = startIndex;
+        do {
+            if (curIndex != 0)
+                curIndex--;
+
+            PRUint32 flags = m_flags.GetAt(curIndex);
+            if (flags & MSG_FLAG_MARKED) {
+                *pResultIndex = curIndex;
+                break;
+            }
+        }
+        while (curIndex != 0);
+    }
+    return NS_OK;
+}
+
+PRBool nsMsgDBView::IsValidIndex(nsMsgViewIndex index)
+{
+    return (index < (nsMsgViewIndex) m_keys.GetSize());
+}
+
+nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState)
+{
+#if 0
+    MsgERR      err;
+    NeoThreadMessageHdr *thread = NULL;
+
+    if (numIndices == 1)
+    {
+        MsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, &thread);
+        if (thread)
+        {
+            err = ToggleThreadIgnored(thread, threadIndex);
+            if (resultToggleState)
+                *resultToggleState = (thread->GetFlags() & kIgnored) ? TRUE : FALSE;
+            thread->unrefer();
+        }
+    }
+    else
+    {
+        if (numIndices > 1)
+            XP_QSORT (indices, numIndices, sizeof(MSG_ViewIndex), MSG_Pane::CompareViewIndices);
+        for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
+        {
+            MsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, &thread);
+        }
+    }
+    return NS_OK;
+#endif
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
