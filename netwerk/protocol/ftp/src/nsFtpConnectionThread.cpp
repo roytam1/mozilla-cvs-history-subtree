@@ -1959,7 +1959,7 @@ nsFtpState::Init(nsIFTPChannel* aChannel,
     NS_WITH_SERVICE(nsICacheService, serv, kCacheServiceCID, &rv);
     if (NS_SUCCEEDED(rv)) {
         (void) serv->CreateSession("FTP Directory Listings",
-                                    nsICache::STORE_ON_DISK,  //FIX this should be disk cache
+                                    nsICache::STORE_IN_MEMORY,
                                     PR_TRUE,
                                     getter_AddRefs(mCacheSession));
     }
@@ -1974,12 +1974,13 @@ nsFtpState::Connect()
     nsresult rv;
 
 #ifdef MOZ_NEW_CACHE
-    nsXPIDLCString urlStr;
-    rv = mURL->GetSpec(getter_Copies(urlStr));
-    if (NS_FAILED(rv)) return rv;
-
     //FIX: SYNC call.  Should make this async!!!
     if (mCacheSession) {
+
+        nsXPIDLCString urlStr;
+        rv = mURL->GetSpec(getter_Copies(urlStr));
+        if (NS_FAILED(rv)) return rv;
+
         rv = mCacheSession->OpenCacheEntry(urlStr,
                                            nsICache::ACCESS_READ_WRITE,
                                            getter_AddRefs(mCacheEntry));
