@@ -29,9 +29,7 @@ DIRS=$(DIRS) nsinstall \
              nsztool   \
 !endif
              uninstall \
-!if !defined(MOZ_STATIC_COMPONENT_LIBS)
              setup     \
-!endif
              setuprsc  \
              ren8dot3  \
              ds32      \
