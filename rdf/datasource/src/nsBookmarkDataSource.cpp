@@ -1017,25 +1017,29 @@ BookmarkDataSourceImpl::ReadBookmarks(void)
 		nsCOMPtr<nsIRDFResource>	ieFolder;
 		if (NS_SUCCEEDED(rv = rdf_CreateAnonymousResource(kURINC_IEFavoritesRoot, getter_AddRefs(ieFolder))))
 		{
-			if (NS_SUCCEEDED(rv = rdf_MakeSeq(mInner, ieFolder)))
+			NS_WITH_SERVICE(nsIRDFContainerUtils, rdfc, kRDFContainerUtilsCID, &rv);
+			if (NS_SUCCEEDED(rv))
 			{
-				if (NS_SUCCEEDED(rv = mInner->Assert(ieFolder, kRDF_type, kNC_Folder, PR_TRUE)))
+				if (NS_SUCCEEDED(rv = rdfc->MakeSeq(mInner, ieFolder, nsnull)))
 				{
-					BookmarkParser parser;
-					parser.Init(&ieStream, this);
-					parser.Parse(ieFolder);
-					
-					nsCOMPtr<nsIRDFLiteral>	ieTitleLiteral;
-					if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(ieTitle, getter_AddRefs(ieTitleLiteral))))
+					if (NS_SUCCEEDED(rv = mInner->Assert(ieFolder, kRDF_type, kNC_Folder, PR_TRUE)))
 					{
-						rv = mInner->Assert(ieFolder, kNC_Name, ieTitleLiteral, PR_TRUE);
-					}
+						BookmarkParser parser;
+						parser.Init(&ieStream, this);
+						parser.Parse(ieFolder);
+						
+						nsCOMPtr<nsIRDFLiteral>	ieTitleLiteral;
+						if (NS_SUCCEEDED(rv = gRDFService->GetLiteral(ieTitle, getter_AddRefs(ieTitleLiteral))))
+						{
+							rv = mInner->Assert(ieFolder, kNC_Name, ieTitleLiteral, PR_TRUE);
+						}
 
-                    nsCOMPtr<nsIRDFContainer> container;
-                    rv = NS_NewRDFContainer(mInner, kNC_BookmarksRoot, getter_AddRefs(container));
-                    if (NS_SUCCEEDED(rv)) {
-                        rv = container->AppendElement(ieFolder);
-                    }
+	                    nsCOMPtr<nsIRDFContainer> container;
+	                    rv = NS_NewRDFContainer(mInner, kNC_BookmarksRoot, getter_AddRefs(container));
+	                    if (NS_SUCCEEDED(rv)) {
+	                        rv = container->AppendElement(ieFolder);
+	                    }
+					}
 				}
 			}
 		}
