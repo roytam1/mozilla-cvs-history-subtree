@@ -2647,7 +2647,7 @@ namespace JavaScript
 
             // Output the integer part of value with the digits in reverse order.
         char *pInt = p;                 // Pointer to the beginning of the integer part of the string
-        double valueInt = floor(value); // value truncated to an integer
+        double valueInt = fd::floor(value); // value truncated to an integer
         uint32 digit;
         if (valueInt <= 4294967295.0) {
             uint32 n = (uint32)valueInt;

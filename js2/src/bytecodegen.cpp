@@ -1716,6 +1716,22 @@ BinaryOpEquals:
             }
         }
         break;
+    case ExprNode::Instanceof:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            genExpr(b->op1);
+            genExpr(b->op2);
+            addByte(InstanceOfOp);
+        }
+        break;
+    case ExprNode::at:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            genExpr(b->op1);
+            genExpr(b->op2);
+            addByte(AtOp);
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1927,6 +1943,14 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         break;
     case TypeOfOp:
         f << "TypeOf\n";
+        i++;
+        break;
+    case InstanceOfOp:
+        f << "InstanceOf\n";
+        i++;
+        break;
+    case AtOp:
+        f << "At\n";
         i++;
         break;
     case LoadThisOp:

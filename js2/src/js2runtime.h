@@ -97,12 +97,13 @@ static const double two31 = 2147483648.0;
     class JSFunction;
     class JSType;
     class JSArrayType;
+    class JSStringType;
     class Context;
 
 
     extern JSType *Object_Type;         // the base type for all types
     extern JSType *Number_Type;
-    extern JSType *String_Type;
+    extern JSStringType *String_Type;
     extern JSType *Type_Type;           // the type for variables that are types 
                                         // (e.g. the property 'C' from class C...
                                         // has this type).
@@ -695,7 +696,7 @@ static const double two31 = 2147483648.0;
     inline JSType *JSValue::getType() {
         switch (tag) {
         case f64_tag: return Number_Type;
-        case string_tag: return String_Type;
+        case string_tag: return (JSType *)String_Type;
         case object_tag: return object->getType();
         case undefined_tag: return Void_Type;
         case null_tag: return Object_Type;
@@ -1027,7 +1028,7 @@ static const double two31 = 2147483648.0;
 
     class JSArrayInstance : public JSInstance {
     public:
-        JSArrayInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { }
+        JSArrayInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
 
         // XXX maybe could have implemented length as a getter/setter pair?
         bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
@@ -1041,6 +1042,28 @@ static const double two31 = 2147483648.0;
     class JSArrayType : public JSType {
     public:
         JSArrayType(Context *cx, const String &name, JSType *super) 
+            : JSType(cx, name, super)
+        {
+        }
+
+        JSInstance *newInstance(Context *cx);
+
+    };
+
+    class JSStringInstance : public JSInstance {
+    public:
+        JSStringInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
+
+        bool getProperty(Context *cx, const String &name, IdentifierList *attr);
+
+
+        uint32 mLength;
+
+    };
+
+    class JSStringType : public JSType {
+    public:
+        JSStringType(Context *cx, const String &name, JSType *super) 
             : JSType(cx, name, super)
         {
         }
@@ -1722,6 +1745,17 @@ static const double two31 = 2147483648.0;
         return false;
     }
 
+    inline bool JSStringInstance::getProperty(Context *cx, const String &name, IdentifierList *attr)
+    {
+        if (name.compare(widenCString("length")) == 0) {
+            cx->mStack.push_back(JSValue((float64)mLength));
+            return true;
+        }
+        else
+            return JSInstance::getProperty(cx, name, attr);
+    }
+
+
     inline FunctionReference::FunctionReference(JSFunction *f) 
             : Reference(f->mResultType), mFunction(f)
     {
@@ -1820,6 +1854,13 @@ static const double two31 = 2147483648.0;
     inline JSInstance *JSArrayType::newInstance(Context *cx)
     {
         JSInstance *result = new JSArrayInstance(cx, this);
+        result->mPrototype = mPrototype;
+        return result;
+    }
+
+    inline JSInstance *JSStringType::newInstance(Context *cx)
+    {
+        JSInstance *result = new JSStringInstance(cx, this);
         result->mPrototype = mPrototype;
         return result;
     }

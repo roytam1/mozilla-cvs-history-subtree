@@ -93,6 +93,8 @@ namespace ByteCode {
         NewObjectOp,            //                     --> <object>
         NewInstanceOp,          //                     <type> --> <object> <type>
         TypeOfOp,               //                     <object> --> <string>
+        InstanceOfOp,           //                     <object> <object> --> <boolean>
+        AtOp,                   //                     <object> <type> --> <object>
 
         ToBooleanOp,            //                     <object> --> <boolean>
 

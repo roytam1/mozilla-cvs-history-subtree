@@ -61,7 +61,7 @@ using namespace ByteCode;
 //
 JSType *Object_Type = NULL;
 JSType *Number_Type;
-JSType *String_Type;
+JSStringType *String_Type;
 JSType *Boolean_Type;
 JSType *Type_Type;
 JSType *Void_Type;
@@ -632,6 +632,54 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mStack.push_back(JSValue(new String(widenCString("function"))));
                     else
                         mStack.push_back(JSValue(new String(widenCString("object"))));
+                }
+                break;
+            case AtOp:
+                {
+                    JSValue t = mStack.back();
+                    mStack.pop_back();
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    if (t.isType()) {
+                        if (v.isObject() 
+                                && (v.object->getType() == t.type))
+                            mStack.push_back(v);
+                        else
+                            mStack.push_back(kNullValue);   // XXX or throw an exception if 
+                                                            // NULL is not a member of type t
+                    }
+                    else
+                        throw Exception(Exception::typeError, "As needs type");
+                }
+                break;
+            case InstanceOfOp:
+                {
+                    JSValue t = mStack.back();
+                    mStack.pop_back();
+                    JSValue v = mStack.back();
+                    mStack.pop_back();
+                    if (t.isType()) {
+                        if (v.isNull())
+                            if (t.type == Object_Type)
+                                mStack.push_back(kTrueValue);
+                            else
+                                mStack.push_back(kFalseValue);
+                        else
+                            if (v.isObject() 
+                                    && ((v.object->getType() == t.type)
+                                        || (v.object->getType()->derivesFrom(t.type))))
+                                mStack.push_back(kTrueValue);
+                            else
+                                mStack.push_back(kFalseValue);
+                    }
+                    else {
+                        if (t.isObject() && t.isFunction()) {                            
+                            // XXX prove that t->function["prototype"] is on t.object->mPrototype chain
+                            mStack.push_back(kTrueValue);
+                        }
+                        else
+                            throw Exception(Exception::typeError, "InstanceOf needs object");
+                    }
                 }
                 break;
             case GetNameOp:
@@ -1487,7 +1535,7 @@ JSValue objectRemainder(Context *cx, JSValue *thisValue, JSValue *argv, uint32 a
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue(fmod(r1.toNumber(cx).f64, r2.toNumber(cx).f64));
+    return JSValue(fd::fmod(r1.toNumber(cx).f64, r2.toNumber(cx).f64));
 }
 
 
@@ -1711,10 +1759,14 @@ JSValue String_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint3
 {
     ASSERT(thisValue->isObject());
     JSObject *thisObj = thisValue->object;
+    ASSERT(dynamic_cast<JSStringInstance *>(thisObj));
+    JSStringInstance *strInst = (JSStringInstance *)thisObj;
+
     if (argc > 0)
         thisObj->mPrivate = (void *)(new String(*argv[0].toString(cx).string));
     else
         thisObj->mPrivate = (void *)(new String(widenCString("")));
+    strInst->mLength = ((String *)(thisObj->mPrivate))->size();
     return *thisValue;
 }
 
@@ -1848,15 +1900,6 @@ step11:
 
 }
 
-JSValue String_length(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
-{
-    ASSERT(thisValue->isObject());
-    JSObject *thisObj = thisValue->object;
-    uint32 length = ((String *)(thisObj->mPrivate))->size();
-    return JSValue((float64)length);
-}
-
-
 JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
@@ -1883,9 +1926,55 @@ JSValue Array_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint32
 
 JSValue Array_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kUndefinedValue;
+    ASSERT(thisValue->isObject());
+    JSObject *thisObj = thisValue->object;
+    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
+    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
+
+    if (arrInst->mLength == 0)
+        return JSValue(new String(widenCString("")));
+    else {
+        String *s = new String();
+        for (uint32 i = 0; i < arrInst->mLength; i++) {
+            String *id = numberToString(i);
+            arrInst->getProperty(cx, *id, NULL);
+            JSValue result = cx->mStack.back();
+            cx->mStack.pop_back();
+            s->append(*result.toString(cx).string);
+            if (i < (arrInst->mLength - 1))
+                s->append(widenCString(","));
+        }
+        return JSValue(s);
+    }
+    
 }
 
+JSValue Array_toSource(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(thisValue->isObject());
+    JSObject *thisObj = thisValue->object;
+    ASSERT(dynamic_cast<JSArrayInstance *>(thisObj));
+    JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
+
+    if (arrInst->mLength == 0)
+        return JSValue(new String(widenCString("[]")));
+    else {
+        String *s = new String(widenCString("["));
+        for (uint32 i = 0; i < arrInst->mLength; i++) {
+            String *id = numberToString(i);
+            arrInst->getProperty(cx, *id, NULL);
+            JSValue result = cx->mStack.back();
+            cx->mStack.pop_back();
+            if (!result.isUndefined())
+                s->append(*result.toString(cx).string);
+            if (i < (arrInst->mLength - 1))
+                s->append(widenCString(", "));
+        }
+        s->append(widenCString("]"));
+        return JSValue(s);
+    }
+    
+}
 
 JSValue Array_push(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2231,7 +2320,7 @@ JSValue JSValue::valueToInt32(Context *cx, JSValue& value)
     }
     if ((d == 0.0) || !JSDOUBLE_IS_FINITE(d) )
         return JSValue((float64)0);
-    d = fmod(d, two32);
+    d = fd::fmod(d, two32);
     d = (d >= 0) ? d : d + two32;
     if (d >= two31)
 	return JSValue((float64)(d - two32));
@@ -2265,9 +2354,9 @@ JSValue JSValue::valueToUInt32(Context *cx, JSValue& value)
     if ((d == 0.0) || !JSDOUBLE_IS_FINITE(d))
         return JSValue((float64)0);
     bool neg = (d < 0);
-    d = floor(neg ? -d : d);
+    d = fd::floor(neg ? -d : d);
     d = neg ? -d : d;
-    d = fmod(d, two32);
+    d = fd::fmod(d, two32);
     d = (d >= 0) ? d : d + two32;
     return JSValue((float64)d);
 }
@@ -2366,31 +2455,45 @@ JSValue Math_abs(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
     if (argc == 0)
         return kNaNValue;
     else
-        return JSValue(fabs(argv[0].toNumber(cx).f64));
+        return JSValue(fd::fabs(argv[0].toNumber(cx).f64));
 }
 JSValue Math_acos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return fd::acos(argv[0].toNumber(cx).f64);
 }
 JSValue Math_asin(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return fd::asin(argv[0].toNumber(cx).f64);
 }
 JSValue Math_atan(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return fd::atan(argv[0].toNumber(cx).f64);
 }
 JSValue Math_atan2(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc <= 1)
+        return kNaNValue;
+    float64 y = argv[0].toNumber(cx).f64;
+    float64 x = argv[1].toNumber(cx).f64;
+    return fd::atan2(y, x);
 }
 JSValue Math_ceil(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return fd::ceil(argv[0].toNumber(cx).f64);
 }
 JSValue Math_cos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return fd::cos(argv[0].toNumber(cx).f64);
 }
 JSValue Math_exp(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2398,7 +2501,10 @@ JSValue Math_exp(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 }
 JSValue Math_floor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    else
+        return JSValue(fd::floor(argv[0].toNumber(cx).f64));
 }
 JSValue Math_log(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2452,7 +2558,7 @@ void Context::initBuiltins()
 
     Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
     Number_Type  = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
-    String_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
+    String_Type  = new JSStringType(this, widenCString(builtInClasses[2].name), Object_Type);
     Array_Type   = new JSArrayType(this, widenCString(builtInClasses[3].name), Object_Type);
     Boolean_Type = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
     Void_Type    = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
@@ -2460,18 +2566,20 @@ void Context::initBuiltins()
     ProtoFunDef objectProtos[] = 
     {
         { "toString", String_Type, Object_toString },
+        { "toSource", String_Type, Object_toString },
         { NULL }
     };
     ProtoFunDef numberProtos[] = 
     {
         { "toString", String_Type, Number_toString },
+        { "toSource", String_Type, Number_toString },
         { NULL }
     };
     ProtoFunDef stringProtos[] = 
     {
         { "toString",       String_Type, String_toString },
+        { "toSource",       String_Type, String_toString },
         { "split",          Array_Type,  String_split },
-        { "length",         Number_Type, String_length },
         { "toUpperCase",    String_Type, String_toUpperCase },
         { "toLowerCase",    String_Type, String_toLowerCase },
         { NULL }
@@ -2479,6 +2587,7 @@ void Context::initBuiltins()
     ProtoFunDef arrayProtos[] = 
     {
         { "toString", String_Type, Array_toString },
+        { "toSource", String_Type, Array_toSource },
         { "push",     Number_Type, Array_push },
         { "pop",      Object_Type, Array_pop },
         { NULL }
@@ -2486,6 +2595,7 @@ void Context::initBuiltins()
     ProtoFunDef booleanProtos[] = 
     {
         { "toString", String_Type, Boolean_toString },
+        { "toSource", String_Type, Boolean_toString },
         { NULL }
     };
 
