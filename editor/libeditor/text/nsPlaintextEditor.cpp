@@ -398,7 +398,8 @@ printf("nsTextEditor.cpp: failed to get TextEvent Listener\n");
   }
 
   // get a drag listener
-  result = NS_NewEditorDragListener(getter_AddRefs(mDragListenerP), this);
+  nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShellWeak);
+  result = NS_NewEditorDragListener(getter_AddRefs(mDragListenerP), presShell, this);
   if (NS_FAILED(result)) {
     HandleEventListenerError();
     return result;
@@ -1966,7 +1967,8 @@ nsPlaintextEditor::SetCompositionString(const nsAString& aCompositionString, nsI
     mIMEBufferLength = aCompositionString.Length();
 
     ps->GetCaret(getter_AddRefs(caretP));
-    caretP->SetCaretDOMSelection(selection);
+    if (caretP)
+      caretP->SetCaretDOMSelection(selection);
 
     // second part of 23558 fix:
     if (aCompositionString.IsEmpty()) 

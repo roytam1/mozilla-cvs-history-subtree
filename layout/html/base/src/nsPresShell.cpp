@@ -1172,7 +1172,7 @@ public:
   // caret handling
   NS_IMETHOD GetCaret(nsICaret **aOutCaret);
   NS_IMETHOD SetCaretEnabled(PRBool aInEnable);
-  NS_IMETHOD SetCaretWidth(PRInt16 twips);
+  NS_IMETHOD SetCaretWidth(PRInt16 aPixels);
   NS_IMETHOD SetCaretReadOnly(PRBool aReadOnly);
   NS_IMETHOD GetCaretEnabled(PRBool *aOutEnabled);
 
@@ -1804,6 +1804,11 @@ PresShell::Destroy()
   if (mPaintSuppressionTimer) {
     mPaintSuppressionTimer->Cancel();
     mPaintSuppressionTimer = nsnull;
+  }
+
+  if (mCaret) {
+    mCaret->Terminate();
+    mCaret = nsnull;
   }
 
   // release our pref style sheet, if we have one still
@@ -2758,7 +2763,8 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
 
   // notice that we ignore the result
   NotifyReflowObservers(NS_PRESSHELL_INITIAL_REFLOW);
-  mCaret->EraseCaret();
+  if (mCaret)
+    mCaret->EraseCaret();
   //StCaretHider  caretHider(mCaret);			// stack-based class hides caret until dtor.
   
   WillCauseReflow();
@@ -2934,7 +2940,8 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
   NotifyReflowObservers(NS_PRESSHELL_RESIZE_REFLOW);
   mViewManager->CacheWidgetChanges(PR_TRUE);
 
-  mCaret->EraseCaret();
+  if (mCaret)
+    mCaret->EraseCaret();
   //StCaretHider  caretHider(mCaret);			// stack-based class hides caret until dtor.
   WillCauseReflow();
 
@@ -3191,18 +3198,21 @@ NS_IMETHODIMP PresShell::SetCaretEnabled(PRBool aInEnable)
 
 NS_IMETHODIMP PresShell::SetCaretWidth(PRInt16 pixels)
 {
-  return mCaret->SetCaretWidth(pixels);
+  if (mCaret)
+    return mCaret->SetCaretWidth(pixels);
+  return NS_OK;
 }
 
 NS_IMETHODIMP PresShell::SetCaretReadOnly(PRBool aReadOnly)
 {
-  return mCaret->SetCaretReadOnly(aReadOnly);
-  return NS_ERROR_FAILURE;
+  if (mCaret)
+    return mCaret->SetCaretReadOnly(aReadOnly);
+  return NS_OK;
 }
 
 NS_IMETHODIMP PresShell::GetCaretEnabled(PRBool *aOutEnabled)
 {
-  if (!aOutEnabled) { return NS_ERROR_INVALID_ARG; }
+  NS_ENSURE_ARG_POINTER(aOutEnabled);
   *aOutEnabled = mCaretEnabled;
   return NS_OK;
 }
@@ -5849,7 +5859,8 @@ PresShell::Paint(nsIView              *aView,
      
   if (nsnull != frame)
   {
-    mCaret->EraseCaret();
+    if (mCaret)
+      mCaret->EraseCaret();
     //StCaretHider  caretHider(mCaret);			// stack-based class hides caret until dtor.
 
     // If the frame is absolutely positioned, then the 'clip' property
