@@ -33,7 +33,7 @@ interface nsICacheListener : nsISupports
      * Called when the requested access (or appropriate subset) is
      * acquired.  The status parameter equals NS_OK on success.
      */
-    void onChannelAvailable(in nsICacheChannel channel,
-                            in unsigned long   accessFlagsGranted,
-                            in nsresult        status);
+    void onTransportAvailable(in nsICacheTransport  transport,
+                              in unsigned long      accessFlagsGranted,
+                              in nsresult           status);
 };
