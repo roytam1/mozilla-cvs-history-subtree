@@ -68,10 +68,10 @@ BINREL_DIST=$(XPDIST)\WIN954.0_DBG.OBJD
 !endif
 !endif
 
-!ifdef NO_SECURITY
-HASHLIBS=$(DIST)\lib\secfreenav32.lib
-!else
+!ifdef MOZ_SECURITY
 HASHLIBS=$(BINREL_DIST)\lib\hash.lib $(BINREL_DIST)\lib\secutil.lib 
+!else
+HASHLIBS=$(DIST)\lib\secfreenav32.lib
 !endif
 
 !if ("$(MOZ_BITS)" == "16" ) 
