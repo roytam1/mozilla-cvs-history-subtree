@@ -66,6 +66,25 @@ var contentAreaDNDObserver = {
             // than looking for specific elements
             htmlstring = privateSelection.toStringWithFormat("text/html", 128+256, 0);
             titlestring = privateSelection.toStringWithFormat("text/plain", 0, 0);
+
+            // add a url to a image, make it draggable to another browser window
+            //  the url is extracted from the htmlstring (if not nil)
+            if (!urlstring && htmlstring )
+              {
+                var local_name = draggedNode.localName;
+                if (local_name)
+                  local_name.toUpperCase();
+                if (local_name == 'IMG')
+                  {
+                    var urlReg = /src=\"(http[^\"]+)\"/i ;
+                    if (urlReg.test(htmlstring))
+                      {
+                        urlstring = RegExp.$1;
+                        isAnchor = true;
+                      }
+                  }
+              }
+
           } else {
             titlestring = domselection.toString();
           }
