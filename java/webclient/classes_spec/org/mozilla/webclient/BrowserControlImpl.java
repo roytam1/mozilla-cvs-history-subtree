@@ -30,8 +30,8 @@ import org.mozilla.util.ParameterCheck;
 import org.mozilla.util.Utilities;
 
 
-
-class BrowserControlImpl extends Object implements BrowserControl
+// PENDING(edburns); move this inside impl package
+public class BrowserControlImpl extends Object implements BrowserControl
 {
 //
 // Protected Constants
@@ -145,8 +145,8 @@ void delete()
 //
 // Class methods
 //
-
-static void appInitialize(String myBrowserType, String verifiedBinDirAbsolutePath) throws Exception 
+// PENDING(edburns): make this package private again
+public static void appInitialize(String myBrowserType, String verifiedBinDirAbsolutePath) throws Exception 
 {
     browserType = myBrowserType;
     if (null == wrapperFactory) {
@@ -157,7 +157,8 @@ static void appInitialize(String myBrowserType, String verifiedBinDirAbsolutePat
     wrapperFactory.initialize(verifiedBinDirAbsolutePath);
 }
 
-static void appTerminate() throws Exception
+// PENDING(edburns): make this package private again
+public static void appTerminate() throws Exception
 {
     Assert.assert_it(null != wrapperFactory);
 

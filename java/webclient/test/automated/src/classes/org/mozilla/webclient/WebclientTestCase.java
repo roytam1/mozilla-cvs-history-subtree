@@ -133,6 +133,16 @@ protected void verifyLogModuleValueIsAtLeastN(String logModuleName, int n)
 	
 }
 
+protected void verifyBinDirSet()
+{
+    assertTrue("BROWSER_BIN_DIR is not set",
+	       null != System.getProperty("BROWSER_BIN_DIR"));
+}
+
+protected String getBrowserBinDir() {
+    return System.getProperty("BROWSER_BIN_DIR");
+}
+
 /**
 
 * assertTrue that NSPR_LOG_FILE is set.
@@ -162,6 +172,7 @@ protected void verifyPreconditions()
     // make sure we have at least PR_LOG_DEBUG set
     verifyLogModuleValueIsAtLeastN(WEBCLIENTSTUB_LOG_MODULE, 4);
     verifyLogModuleValueIsAtLeastN(WEBCLIENT_LOG_MODULE, 4);
+    verifyBinDirSet();
     if (sendOutputToFile()) {
 	verifyOutputFileIsSet();
     }

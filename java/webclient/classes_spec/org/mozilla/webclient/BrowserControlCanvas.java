@@ -114,7 +114,8 @@ protected BrowserControlCanvas ()
 	
 } // BrowserControlCanvas() ctor
 
-protected void initialize(BrowserControl controlImpl)
+// PENDING(edburns): make this protected again
+public void initialize(BrowserControl controlImpl)
 {
     ParameterCheck.nonNull(controlImpl);
     webShell = controlImpl;
