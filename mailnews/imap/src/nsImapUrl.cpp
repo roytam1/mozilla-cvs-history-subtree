@@ -387,7 +387,7 @@ NS_IMETHODIMP nsImapUrl::CreateListOfMessageIdsString(char ** aResult)
 NS_IMETHODIMP nsImapUrl::GetCommand(char **result)
 {
   NS_ENSURE_ARG_POINTER(result);
-  *result = strdup(m_command.get());
+  *result = nsCRT::strdup(m_command.get());
   return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
@@ -395,14 +395,14 @@ NS_IMETHODIMP nsImapUrl::GetCommand(char **result)
 NS_IMETHODIMP nsImapUrl::GetCustomAttributeToFetch(char **result)
 {
   NS_ENSURE_ARG_POINTER(result);
-  *result = strdup(m_msgFetchAttribute.get());
+  *result = nsCRT::strdup(m_msgFetchAttribute.get());
   return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP nsImapUrl::GetCustomAttributeResult(char **result)
 {
   NS_ENSURE_ARG_POINTER(result);
-  *result = strdup(m_customAttributeResult.get());
+  *result = nsCRT::strdup(m_customAttributeResult.get());
   return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 

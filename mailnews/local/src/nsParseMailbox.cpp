@@ -776,7 +776,7 @@ NS_IMETHODIMP nsParseMailMessageState::GetHeaders(char ** pHeaders)
     curHeader += headerLen + 1;
     headerPos += headerLen + 1;
   }
-  *pHeaders = strdup(crlfHeaders.get());
+  *pHeaders = nsCRT::strdup(crlfHeaders.get());
   return NS_OK;
 }
 
