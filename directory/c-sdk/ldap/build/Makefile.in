@@ -17,7 +17,7 @@ $(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))
 $(TARGETS): $(OBJS) 
 	@$(MAKE_OBJDIR)                                                           
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+	$(LINK) /OUT:$@ $(OBJS) $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
 endif

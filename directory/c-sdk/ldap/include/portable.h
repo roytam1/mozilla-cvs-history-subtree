@@ -300,7 +300,7 @@ extern char *strdup();
 #define	BSD_TIME	1	/* for servers/slapd/log.h */
 #endif /* sunos4 || osf */
 
-#if !defined(_WINDOWS) && !defined(macintosh)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
 #include <netinet/in.h>
 #include <arpa/inet.h>	/* for inet_addr() */
 #endif

@@ -30,6 +30,11 @@ DEFS		= $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(KERBEROS) $(AFSKERBEROS) \
 		  $(SLAPD_BACKENDS) $(LDBMBACKEND) $(LDBMINCLUDE) $(PHONETIC)
 
 include ../../build/autoconf.mk
+
+ifeq ($(OS_ARCH),OS2)
+OBJS = $(REALOBJS:.o=.obj)
+endif
+
 include $(NSPR_TREE)/config/rules.mk
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
@@ -38,6 +43,10 @@ DEFINES		+= $(DEFS)
 
 ifeq ($(OS_ARCH),AIX)
 DSO_LDOPTS      += -lc_r
+endif
+
+ifeq ($(OS_ARCH),OS2)
+INCLUDES  += -I$(DIST)/include
 endif
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
@@ -76,9 +85,20 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
+ifeq ($(OS_ARCH),OS2)
+install:: $(TARGETS)
+	$(INSTALL) -m 444 $(TARGETS) $(DIST)/lib
+ifdef SHARED_LIBRARY
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/bin
+endif
+
+else  # !os2
+
 install::	$(LIBRARY) $(SHARED_LIBRARY)
 	$(INSTALL) -m 444 $(LIBRARY) $(DIST)/lib
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
 endif
+
+endif # os2

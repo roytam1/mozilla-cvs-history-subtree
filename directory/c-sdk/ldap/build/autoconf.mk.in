@@ -49,3 +49,9 @@ MOD_DEPTH	= $(DEPTH)
 include $(DEPTH)/nsprpub/config/autoconf.mk
 VPATH		= $(srcdir)
 DIST		= $(DEPTH)/dist
+
+# BIN_SUFFIX not getting defined for os/2
+ifeq ($(OS_ARCH),OS2)
+BIN_SUFFIX = .exe
+LINK = -ilink
+endif

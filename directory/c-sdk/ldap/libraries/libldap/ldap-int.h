@@ -37,14 +37,14 @@
 # include <windows.h>
 #elif defined(macintosh)
 #include "ldap-macos.h"
-#elif defined(XP_OS2)
-#include <os2sock.h>
 #else /* _WINDOWS */
 # include <sys/time.h>
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
+#ifndef XP_OS2
 # include <arpa/inet.h>
+#endif
 # include <netdb.h>
 #if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX)
 # include <sys/select.h>

@@ -226,7 +226,11 @@ nsldapi_connect_to_host( LDAP *ld, Sockbuf *sb, char *host,
 #ifdef _WINDOWS
 				err = ioctlsocket( s, FIONBIO, &iostatus );
 #else
+#ifdef XP_OS2
+				err = ioctl( s, FIONBIO, (caddr_t)&iostatus, sizeof(iostatus) );
+#else
 				err = ioctl( s, FIONBIO, (caddr_t)&iostatus );
+#endif
 #endif /* _WINDOWS */
 			} else {
 #ifdef _WINDOWS

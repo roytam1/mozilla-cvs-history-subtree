@@ -27,9 +27,7 @@
 extern "C" {
 #endif
 
-#if defined( XP_OS2 ) 
-#include "os2sock.h"
-#elif defined (WIN32) || defined (_WIN32) || defined( _CONSOLE ) 
+#if defined (WIN32) || defined (_WIN32) || defined( _CONSOLE ) 
 #include <windows.h>
 #  if defined( _WINDOWS )
 #  include <winsock.h>
@@ -54,6 +52,17 @@ extern "C" {
 #ifdef _AIX
 #include <sys/select.h>
 #endif /* _AIX */
+
+#ifdef XP_OS2
+#include <sys/select.h>
+#endif
+#ifdef XP_OS2_EMX
+/*
+ * EMX-specific tweaks:
+ *    o Use stricmp instead of strcmpi.
+ */
+#define strcmpi stricmp
+#endif
 
 #include "lber.h"
 
