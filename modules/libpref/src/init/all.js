@@ -40,6 +40,9 @@
 
 pref("startup.homepage_override_url","chrome://navigator-region/locale/region.properties");
 pref("browser.chromeURL","chrome://navigator/content/navigator.xul");
+pref("xpinstall.dialog.confirm", "chrome://communicator/content/xpinstall/institems.xul");
+pref("xpinstall.dialog.progress", "chrome://communicator/content/xpinstall/xpistatus.xul");
+pref("xpinstall.dialog.progress.type", "");
 
 pref("keyword.URL", "http://keyword.netscape.com/keyword/");
 pref("keyword.enabled", false);

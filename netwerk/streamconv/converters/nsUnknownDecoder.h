@@ -73,7 +73,7 @@ public:
 protected:
   virtual ~nsUnknownDecoder();
 
-  void DetermineContentType(nsIRequest* aRequest);
+  virtual void DetermineContentType(nsIRequest* aRequest);
   nsresult FireListenerNotifications(nsIRequest* request, nsISupports *aCtxt);
 
 protected:
@@ -138,6 +138,26 @@ protected:
 
 };
 
+#define NS_BINARYDETECTOR_CID                        \
+{ /* a2027ec6-ba0d-4c72-805d-148233f5f33c */         \
+    0xa2027ec6,                                      \
+    0xba0d,                                          \
+    0x4c72,                                          \
+    {0x80, 0x5d, 0x14, 0x82, 0x33, 0xf5, 0xf3, 0x3c} \
+}
+
+class nsBinaryDetector : public nsUnknownDecoder
+{
+public:
+  nsBinaryDetector()
+  {}
+
+protected:
+  virtual ~nsBinaryDetector()
+  {}
+  
+  virtual void DetermineContentType(nsIRequest* aRequest);
+};
 
 #endif /* nsUnknownDecoder_h__ */
 

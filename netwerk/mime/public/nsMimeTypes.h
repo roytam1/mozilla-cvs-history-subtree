@@ -64,6 +64,7 @@
 #define APPLICATION_ZIP                     "application/zip"
 #define APPLICATION_HTTP_INDEX_FORMAT       "application/http-index-format"
 #define APPLICATION_JAVASCRIPT              "application/x-javascript"
+#define APPLICATION_MAYBE_BINARY            "application/x-vnd.mozilla.maybe-binary"
 #define APPLICATION_NETSCAPE_REVOCATION     "application/x-netscape-revocation"
 #define APPLICATION_NS_PROXY_AUTOCONFIG     "application/x-ns-proxy-autoconfig"
 #define APPLICATION_NS_JAVASCRIPT_AUTOCONFIG        "application/x-javascript-config"
