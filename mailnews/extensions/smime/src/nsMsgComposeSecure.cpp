@@ -213,7 +213,6 @@ nsMsgComposeSecure::~nsMsgComposeSecure()
 	  MIME_EncoderDestroy (mCryptoEncoderData, PR_TRUE);
   }
 
-  // XXX Free the 'certs' array. Fix Me XXX //
   PR_FREEIF(mMultipartSignedBoundary);
 }
 
