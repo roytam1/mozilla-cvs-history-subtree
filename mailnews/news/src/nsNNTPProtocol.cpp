@@ -2979,7 +2979,7 @@ PRInt32 nsNNTPProtocol::ProcessNewsgroups(nsIInputStream * inputStream, PRUint32
                 rv = m_nntpServer->FindGroup((const char *)groupName, getter_AddRefs(m_newsFolder));
                 NS_ASSERTION(NS_SUCCEEDED(rv), "FindGroup failed");
 				m_nextState = NNTP_LIST_XACTIVE;
-				PR_LOG(NNTP,PR_LOG_ALWAYS,("listing xactive for %s", groupName));
+				PR_LOG(NNTP,PR_LOG_ALWAYS,("listing xactive for %s", (const char *)groupName));
 				PR_FREEIF(line);
 				return 0;
 		  }
@@ -4679,7 +4679,7 @@ PRInt32 nsNNTPProtocol::ListXActiveResponse(nsIInputStream * inputStream, PRUint
                     (old_newsFolder.get() != m_newsFolder.get()))
                 /* make sure we're not stuck on the same group */
                 {
-					PR_LOG(NNTP,PR_LOG_ALWAYS,("listing xactive for %s", groupName));
+					PR_LOG(NNTP,PR_LOG_ALWAYS,("listing xactive for %s", (const char *)groupName));
 					m_nextState = NNTP_LIST_XACTIVE;
 			        ClearFlag(NNTP_PAUSE_FOR_READ); 
 					PR_FREEIF(line);
