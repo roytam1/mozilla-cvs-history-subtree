@@ -1186,7 +1186,6 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
   return rv;
 }
 
-/* void getCommandStatus (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices, out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p); */
 NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, PRBool *selectable_p, nsMsgViewCommandCheckStateValue *selected_p)
 {
   nsUInt32Array selection;
@@ -1548,45 +1547,6 @@ nsresult nsMsgDBView::ReverseSort()
         // are in threaded mode, so m_levels are all the same.
     }
 
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgDBView::DumpView()
-{
-    PRUint32 i,j;
-    nsresult rv;
-    PRUint32 num = GetSize();
-    printf("[row]\t(key,flag,level,subject)\n");
-    for (i = 0; i < num; i++) {
-        PRUint32 flags = m_flags.GetAt(i);
-        PRUint32 level = m_levels.GetAt(i);
-        printf("[%d]\t",i);
-        if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0) {
-            if (flags | MSG_FLAG_ELIDED) {
-                printf("+");
-            }
-            else {
-                printf("-");
-            }
-            for (j=0;j<level;j++) {
-                printf(".");
-            }
-        }
-        
-        nsMsgKey key = m_keys.GetAt(i);
-        nsCOMPtr <nsIMsgDBHdr> msgHdr;
-        rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
-        NS_ENSURE_SUCCESS(rv,rv);
-
-        nsXPIDLCString subject;
-        nsXPIDLCString author;
-        rv = msgHdr->GetSubject(getter_Copies(subject));
-        NS_ENSURE_SUCCESS(rv,rv);
-        rv = msgHdr->GetAuthor(getter_Copies(author));
-        NS_ENSURE_SUCCESS(rv,rv);
-        printf("(%d,%d,%d,%s,%s)\n",key,flags,level,(const char *)subject,(const char *)author);
-    }
-    printf("\n");
     return NS_OK;
 }
 

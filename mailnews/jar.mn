@@ -94,8 +94,6 @@ messenger.jar:
     content/messenger/shareglue.js                                             (base/resources/content/shareglue.js)
     content/messenger/subscribe.xul                                            (base/resources/content/subscribe.xul)
     content/messenger/subscribe.js                                             (base/resources/content/subscribe.js)
-    content/messenger/dbviewtest.xul                                           (base/resources/content/dbviewtest.xul)
-    content/messenger/dbviewtest.js                                            (base/resources/content/dbviewtest.js)
     content/messenger/sidebar-messenger.rdf                                    (base/resources/content/sidebar-messenger.rdf)
     content/messenger/newFolderDialog.xul                                      (base/resources/content/newFolderDialog.xul)
     content/messenger/newFolderDialog.js                                       (base/resources/content/newFolderDialog.js)
