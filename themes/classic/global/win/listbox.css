@@ -51,12 +51,12 @@ listbox:focus > listitem[selected="true"][current="true"] {
 }
 
 listitem[selected="true"] {
-  background-color: #A2CFF9;
+  background-color: #FFCC00;
   color: #000000;
 }
 
 listbox:focus > listitem[selected="true"] {
-  background-color: #A2CFF9;
+  background-color: #FFCC00;
   color: #FFFFFF;
 }
 
@@ -70,7 +70,7 @@ listheader {
   -moz-border-bottom-colors: #000000 #02669E;
   -moz-border-left-colors: #000000 #86AEFE;
   background-color: #3398CC;
-  color: #000000;
+  color: #FFFFFF;
   padding: 0 4px;
 }
 

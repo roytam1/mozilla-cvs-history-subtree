@@ -37,51 +37,51 @@
 }
 
 #button-newcard {
-  -moz-image-region: rect(0px 23px 21px 0px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
 }
 
 #button-newcard:hover {
-  -moz-image-region: rect(0px 46px 21px 23px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
 } 
 
 #button-newcard:hover:active {
-  -moz-image-region: rect(0px 69px 21px 46px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
 }
 
 #button-newcard[disabled] {
-  -moz-image-region: rect(0px 92px 21px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
 } 
 
 #button-newlist {
-  -moz-image-region: rect(21px 46px 42px 23px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
 }
 
 #button-newlist:hover {
-  -moz-image-region: rect(21px 23px 42px 0px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
 } 
 
 #button-newlist:hover:active {
-  -moz-image-region: rect(21px 69px 42px 46px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
 }
 
 #button-newlist[disabled] {
-  -moz-image-region: rect(21px 92px 42px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
 } 
 
 #button-editcard {
-  -moz-image-region: rect(42px 23px 63px 0px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-normal.gif");
 }
 
 #button-editcard:hover {
-  -moz-image-region: rect(42px 46px 63px 23px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-hover.gif");
 } 
 
 #button-editcard:hover:active {
-  -moz-image-region: rect(42px 69px 63px 46px);
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-select.gif");
 }
 
 #button-editcard[disabled] {
-  -moz-image-region: rect(42px 92px 63px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/addressbook/icons/addbk-disabled.gif");
 } 
 
 #button-delete {
@@ -235,7 +235,11 @@ html|p {
 /* ::::: Search Bar  ::::: */
 
 #searchBox {
-  background: #3398cc;
-  border-top: 1px solid ThreeDHighlight;
-  border-bottom: 1px solid ThreeDShadow;
+  background: url("chrome://messenger/skin/icons/search-bg.gif") repeat-x #75BAD9;
+  padding: 3px;
+  border: 2px solid;
+  -moz-border-top-colors: #A7C6FF #7894A2;
+  -moz-border-bottom-colors: #C9F4FF #75BAD9;
+  -moz-border-left-colors: #434240 #CBCDFF;
+  border-right: none;
 }

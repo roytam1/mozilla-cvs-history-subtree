@@ -49,15 +49,15 @@ treechildren:-moz-tree-row {
 }
 
 treechildren:-moz-tree-row(selected) {
-  background-color: #A2CFF9;
+  background-color: #FFCC00;
 }
 
 treechildren:-moz-tree-row(selected, focus) {
-  background-color: #A2CFF9;
+  background-color: #FFCC00;
 }
 
 treechildren:-moz-tree-row(current, focus) {
-  border: 1px dotted #528ABA;
+  border: 1px dotted #EBA800;
 }
 
 /* ::::: tree cells ::::: */
@@ -86,11 +86,11 @@ treechildren:-moz-tree-line {
 }
 
 treechildren:-moz-tree-line(selected) {
-  border: 1px solid #A2CFF9;
+  border: 1px solid #FFCC00;
 }
 
 treechildren:-moz-tree-line(selected, focus) {
-  border: 1px solid #A2CFF9;
+  border: 1px solid #FFCC00;
 }
 
 
@@ -139,7 +139,7 @@ treecolpicker {
   -moz-border-bottom-colors: #000000 #02669E;
   -moz-border-left-colors: #000000 #86AEFE;
   background-color: #3398CC;
-  color: #000000;
+  color: #FFFFFF;
   padding: 0px 4px;
 }
 

@@ -86,13 +86,13 @@ toolbarbutton[disabled="true"][open="true"] {
 /* ..... checked state ..... */
 
 toolbarbutton[checked="true"] {
-  -moz-border-top-colors: ThreeDLightShadow ThreeDShadow !important;
-  -moz-border-right-colors: ThreeDLightShadow ThreeDHighlight !important;
-  -moz-border-bottom-colors: ThreeDLightShadow ThreeDHighlight !important;
-  -moz-border-left-colors: ThreeDLightShadow ThreeDShadow !important;
-  padding: 2px !important;
-  background-color: ThreeDHighlight !important;
-  color: ButtonText !important;
+  -moz-border-top-colors: #000000 #02669E;
+  -moz-border-right-colors: #000000 #86AEFE;
+  -moz-border-bottom-colors: #000000 #86AEFE;
+  -moz-border-left-colors: #000000 #02669E;
+  padding: 3px 1px 1px 3px;
+  background-image: url("chrome://global/skin/toolbar/prtb-bg-checked.gif");
+  color: #FFFFFF;
 }
     
 /* ::::: toolbarbutton menu ::::: */
