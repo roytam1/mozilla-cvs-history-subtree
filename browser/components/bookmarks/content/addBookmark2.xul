@@ -49,11 +49,11 @@
 
   <separator id="nameseparator" class="thin"/>
   
-  <hbox align="start">
     <grid flex="1">
       <columns>
         <column/>
         <column flex="1"/>
+        <column/>
       </columns>
       <rows>
         <row align="center">
@@ -74,6 +74,9 @@
               </rule>
             </template>
           </menulist>
+          <button id="expander" class="down" oncommand="expandTree();"
+                   tooltiptextdown="&expanderDown.tooltip;"
+                   tooltiptextup="&expanderUp.tooltip;"/>
         </row>
         <row>
           <spacer/>
@@ -82,10 +85,6 @@
         </row>
       </rows>
     </grid>
-    <button id="expander" class="down" oncommand="expandTree();"
-            tooltiptextdown="&expanderDown.tooltip;"
-            tooltiptextup="&expanderUp.tooltip;"/>
-  </hbox>
 
   <separator class="thin"/>
 
