@@ -54,11 +54,8 @@ NS_DEFINE_IID(kIImgDCallbkIID, NS_IIMGDCALLBK_IID);
 
 ImgDCallbk::~ImgDCallbk()
 {
-#if 0
-    /* XXX kipp sez: this is never right to do! instead
-       il_delete_container should be used */
-    if(ilContainer) delete ilContainer;
-#endif
+    if(ilContainer) 
+        il_delete_container(ilContainer);
 }
 
 NS_IMPL_ISUPPORTS(ImgDCallbk, kIImgDCallbkIID)
