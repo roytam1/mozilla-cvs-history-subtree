@@ -1272,7 +1272,6 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
 }
 
 static const char kProfileManagerURL[] = "chrome://mozapps/content/profile/profileSelection.xul";
-// static const char kProfileManagerURL[] = "chrome://browser/content/empty.xul";
 
 static nsresult
 ShowProfileManager(nsIToolkitProfileService* aProfileSvc,
@@ -1425,6 +1424,23 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
   nsCOMPtr<nsIToolkitProfileService> profileSvc;
   rv = NS_NewToolkitProfileService(getter_AddRefs(profileSvc));
   NS_ENSURE_SUCCESS(rv, rv);
+
+  ar = CheckArg("createprofile", &arg);
+  if (ar == ARG_BAD) {
+    PR_fprintf(PR_STDERR, "Error: argument -createprofile requires a profile name\n");
+    return NS_ERROR_FAILURE;
+  }
+  if (ar) {
+    nsCOMPtr<nsIToolkitProfile> profile;
+    rv = profileSvc->CreateProfile(nsnull, nsDependentCString(arg),
+                                   getter_AddRefs(profile));
+    if (NS_SUCCEEDED(rv)) {
+      rv = NS_ERROR_ABORT;
+      PR_fprintf(PR_STDERR, "Success: created profile '%s'\n", arg);
+    }
+    profileSvc->Flush();
+    return rv;
+  }
 
   PRUint32 count;
   rv = profileSvc->GetProfileCount(&count);
@@ -1685,7 +1701,8 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
 
   nsCOMPtr<nsIProfileLock> profileLock;
   rv = SelectProfile(getter_AddRefs(profileLock), nativeApp);
-  if (rv == NS_ERROR_LAUNCHED_CHILD_PROCESS) return 0;
+  if (rv == NS_ERROR_LAUNCHED_CHILD_PROCESS ||
+      rv == NS_ERROR_ABORT) return 0;
   if (NS_FAILED(rv)) return 1;
 
   nsCOMPtr<nsILocalFile> lf;
