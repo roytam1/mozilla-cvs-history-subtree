@@ -673,13 +673,24 @@ int main()
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
-	// IMAP Service goes here?
-    nsComponentManager::RegisterComponent(kImapUrlCID, nsnull, nsnull,
-                                          MSGIMAP_DLL, PR_FALSE, PR_FALSE);
+	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
+	
+	result = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
 
-    nsComponentManager::RegisterComponent(kImapProtocolCID, nsnull, nsnull,
-                                          MSGIMAP_DLL, PR_FALSE, PR_FALSE);
+	// make sure prefs get initialized and loaded..
+	// mscott - this is just a bad bad bad hack right now until prefs
+	// has the ability to take nsnull as a parameter. Once that happens,
+	// prefs will do the work of figuring out which prefs file to load...
+	NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &result); 
+    if (NS_FAILED(result) || (prefs == nsnull)) {
+        exit(result);
+    }
+	prefs->StartUp();
+    if (NS_FAILED(prefs->ReadUserPrefs()))
+    {
+      printf("Failed on reading user prefs!\n");
+      exit(-1);
+    }
 
 	// Create the Event Queue for the test app thread...a standin for the ui thread
 	NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &result); 
