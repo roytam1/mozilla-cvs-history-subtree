@@ -34,20 +34,23 @@
 ##
 ## Command Line Flags Supported:
 ##
-##  -l | --is-lesstif:				Prints True/False if usign lesstif.
+##  -l | --is-lesstif:				Print True/False if usign lesstif.
 ##
-##  -v | --print-version:			Prints XmVERSION.
-##  -r | --print-revision:			Prints XmREVISION.
-##  -u | --print-update-level:		Prints XmUPDATE_LEVEL.
-##  -s | --print-version-string:	Prints XmVERSION_STRING.
+##  -v | --print-version:			Print XmVERSION.
+##  -r | --print-revision:			Print XmREVISION.
+##  -u | --print-update-level:		Print XmUPDATE_LEVEL.
+##  -s | --print-version-string:	Print XmVERSION_STRING.
 ##
-##  -id | --print-include-dir:		Prints dir dir of motif includes.
-##  -sd | --print-static-dir:		Prints dir dir of motif static libs.
-##  -dd | --print-dynamic-dir:		Prints dir dir of motif dynamic libs.
+##  -id | --print-include-dir:		Print dir of motif includes.
+##  -sd | --print-static-dir:		Print dir of motif static libs.
+##  -dd | --print-dynamic-dir:		Print dir of motif dynamic libs.
 ##
-##  -if | --print-include-flags:	Prints cc flags needed to build motif apps.
-##  -sf | --print-static-flags:		Prints ld flags for linking statically.
-##  -df | --print-dynamic-flags:	Prints ld flags for linking dynamically.
+##  -sl | --print-static-lib:		Print static lib.
+##  -dl | --print-dynamic-lib:		Print dynamic lib.
+##
+##  -if | --print-include-flags:	Print cc flags needed to build motif apps.
+##  -sf | --print-static-flags:		Print ld flags for linking statically.
+##  -df | --print-dynamic-flags:	Print ld flags for linking dynamically.
 ##
 ##  -de | --dynamic-ext:			Set extension used on dynamic libs.
 ##  -se | --static-ext:				Set extension used on static libs.
@@ -86,6 +89,9 @@ XM_PRINT_INCLUDE_DIR=False
 XM_PRINT_STATIC_DIR=False
 XM_PRINT_DYNAMIC_DIR=False
 
+XM_PRINT_STATIC_LIB=False
+XM_PRINT_DYNAMIC_LIB=False
+
 XM_PRINT_INCLUDE_FLAGS=False
 XM_PRINT_STATIC_FLAGS=False
 XM_PRINT_DYNAMIC_FLAGS=False
@@ -95,48 +101,51 @@ XM_PRINT_EVERYTHING=False
 ##
 ## Stuff we need to figure out
 ##
-XM_VERSION_RESULT=
-XM_REVISION_RESULT=
-XM_UPDATE_RESULT=
-XM_VERSION_REVISION_RESULT=
-XM_VERSION_REVISION_UPDATE_RESULT=
-XM_VERSION_STRING_RESULT=
-XM_IS_LESSTIF_RESULT=
+XM_VERSION_RESULT=unknown
+XM_REVISION_RESULT=unknown
+XM_UPDATE_RESULT=unknown
+XM_VERSION_REVISION_RESULT=unknown
+XM_VERSION_REVISION_UPDATE_RESULT=unknown
+XM_VERSION_STRING_RESULT=unknown
+XM_IS_LESSTIF_RESULT=unknown
 
-XM_INCLUDE_DIR=
-XM_LIB_DIR=
+XM_INCLUDE_DIR=unknown
+XM_LIB_DIR=unknown
 
-XM_STATIC_LIB=
-XM_DYNAMIC_LIB=
+XM_STATIC_LIB=unknown
+XM_DYNAMIC_LIB=unknown
 
-XM_STATIC_DIR=
-XM_DYNAMIC_DIR=
+XM_STATIC_DIR=unknown
+XM_DYNAMIC_DIR=unknown
 
-XM_INCLUDE_FLAGS=not_found
-XM_STATIC_FLAGS=not_found
-XM_DYNAMIC_FLAGS=not_found
+XM_INCLUDE_FLAGS=unknown
+XM_STATIC_FLAGS=unknown
+XM_DYNAMIC_FLAGS=unknown
 
 function test_motif_usage()
 {
 echo
 echo "Usage:   `basename $0` [options]"
 echo
-echo "  -l,  --is-lesstif:            Prints {True,False} if using lesstif."
+echo "  -l,  --is-lesstif:            Print {True,False} if using lesstif."
 echo
-echo "  -v,  --print-version:         Prints XmVERSION."
-echo "  -r,  --print-revision:        Prints XmREVISION."
-echo "  -u,  --print-update-level:    Prints XmUPDATE_LEVEL."
-echo "  -s,  --print-version-string:  Prints XmVERSION_STRING."
+echo "  -v,  --print-version:         Print XmVERSION."
+echo "  -r,  --print-revision:        Print XmREVISION."
+echo "  -u,  --print-update-level:    Print XmUPDATE_LEVEL."
+echo "  -s,  --print-version-string:  Print XmVERSION_STRING."
 echo
-echo "  -id, --print-include-dir:     Prints dir of motif includes."
-echo "  -sd, --print-static-dir:      Prints dir of motif static libs."
-echo "  -dd, --print-dynamic-dir:     Prints dir of motif dynamic libs."
+echo "  -id, --print-include-dir:     Print dir of motif includes."
+echo "  -sd, --print-static-dir:      Print dir of motif static libs."
+echo "  -dd, --print-dynamic-dir:     Print dir of motif dynamic libs."
 echo
-echo "  -if, --print-include-flags:   Prints cc flags needed to compile."
-echo "  -sf, --print-static-flags:    Prints ld flags for linking statically."
-echo "  -df, --print-dynamic-flags:   Prints ld flags for linking dynamically."
+echo "  -sl, --print-static-lib:      Print static lib."
+echo "  -dl  --print-dynamic-lib:     Print dynamic lib."
 echo
-echo "  -e, --print-everything:       Prints everything that is known."
+echo "  -if, --print-include-flags:   Print cc flags needed to compile."
+echo "  -sf, --print-static-flags:    Print ld flags for linking statically."
+echo "  -df, --print-dynamic-flags:   Print ld flags for linking dynamically."
+echo
+echo "  -e,  --print-everything:      Print everything that is known."
 echo
 echo "  -de, --dynamic-ext:           Set extension used on dynamic libs."
 echo "  -se, --static-ext:            Set extension used on static libs."
@@ -194,6 +203,16 @@ while [ "$*" ]; do
         -dd | --print-dynamic-dir)
             shift
             XM_PRINT_DYNAMIC_DIR=True
+            ;;
+
+        -sl | --print-static-lib)
+            shift
+            XM_PRINT_STATIC_LIB=True
+            ;;
+
+        -dl | --print-dynamic-lib)
+            shift
+            XM_PRINT_DYNAMIC_LIB=True
             ;;
 
         -if | --print-include-flags)
@@ -491,6 +510,30 @@ fi
 if [ "$XM_PRINT_STATIC_DIR" = "True" ]
 then
 	echo $XM_STATIC_DIR
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -dl | --print-dynamic-lib
+##
+if [ "$XM_PRINT_DYNAMIC_LIB" = "True" ]
+then
+	echo $XM_DYNAMIC_LIB
+
+	xm_cleanup
+
+	exit 0
+fi
+
+##
+## -sl | --print-static-lib
+##
+if [ "$XM_PRINT_STATIC_LIB" = "True" ]
+then
+	echo $XM_STATIC_LIB
 
 	xm_cleanup
 

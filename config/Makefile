@@ -78,6 +78,10 @@ endif
 #
 ifeq ($(OS_ARCH),Linux)
 
+XM_VER_SCRIPT=$(DEPTH)/config/xmversion.sh
+
+GLIBC_VER_SCRIPT=$(DEPTH)/config/glibcversion.sh
+
 export:: motif.mk
 
 motif.mk:
@@ -88,7 +92,7 @@ motif.mk:
 ## Test whether -lBrokenLocale is needed.  Locale support is broken
 ## when using motif (any version) with gnu libc2.  
 ##
-ifeq ($(shell $(DEPTH)/config/glibcversion.sh),2)
+ifeq ($(shell $(GLIBC_VER_SCRIPT)),2)
 	@echo "MOZ_XFE_LINUX_BROKEN_LOCALE_FLAGS = -lBrokenLocale" >> $@
 endif
 
@@ -96,7 +100,7 @@ endif
 ## Test whether -lXp is needed.   The -lXp (Print Shell Extensions)
 ## are needed only with motif 2.1.
 ##
-ifeq ($(shell $(DEPTH)/config/xmversion.sh),2.1)
+ifeq ($(shell $(XM_VER_SCRIPT)),2.1)
 	@echo "MOZ_XFE_MOTIF_PRINT_SHELL_FLAGS = -lXp" >> $@
 endif
 
@@ -105,11 +109,33 @@ endif
 ## we can turn on the file selection hack which only works with motif
 ## (not lesstif)
 ##
-ifneq ($(shell $(DEPTH)/config/xmversion.sh -l),True)
+ifneq ($(shell $(XM_VER_SCRIPT) -l),True)
 	@echo "MOZ_XFE_USE_WINNING_FILE_SELECTION = 1" >> $@
 endif
 
+##
+## Set the include flags
+##
+	@echo "MOZ_XFE_MOTIF_INCLUDE_CFLAGS = `$(XM_VER_SCRIPT) -if`" >> $@
+
+##
+## Determine if we have static motif libs and set static flags.
+##
+ifneq ($(shell $(XM_VER_SCRIPT) -sl),unknown)
+	@echo "MOZ_XFE_MOTIF_HAVE_STATIC_LIB = 1" >> $@
+	@echo "MOZ_XFE_MOTIF_STATIC_LFLAGS = `$(XM_VER_SCRIPT) -sf`" >> $@
 endif
+
+##
+## Determine if we have dynamic motif libs and set dynamic flags.
+##
+ifneq ($(shell $(XM_VER_SCRIPT) -dl),unknown)
+	@echo "MOZ_XFE_MOTIF_HAVE_DYNAMIC_LIB = 1" >> $@
+	@echo "MOZ_XFE_MOTIF_DYNAMIC_LFLAGS = `$(XM_VER_SCRIPT) -df`" >> $@
+endif
+
+endif
+
 
 # Redefine MAKE_OBJDIR for just this directory
 define MAKE_OBJDIR
