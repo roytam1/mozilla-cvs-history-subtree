@@ -37,7 +37,6 @@
 #endif
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
-#include "nsTime.h"
 
 class nsIDNSListener;
 class nsDNSLookup;
@@ -68,7 +67,6 @@ protected:
     static nsrefcnt             gRefcnt;
 
 protected:
-    nsInt64             mExpirationInterval;
     nsCOMPtr<nsIThread> mThread;
     nsresult            mState;
     PRMonitor*          mMonitor;

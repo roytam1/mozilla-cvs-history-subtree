@@ -32,6 +32,7 @@
 #include "netCore.h"
 #include "nsAutoLock.h"
 #include "nsIStreamObserver.h"
+#include "nsTime.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -113,6 +114,7 @@ public:
     ~nsDNSLookup(void);
 
     nsresult            Init(const char * hostName);
+    void                Reset(void);
     const char *        HostName()  { return mHostName; }
     nsHostEnt*          HostEntry() { return &mHostEntry; }
     PRBool              IsComplete() { return mComplete; }
@@ -125,25 +127,22 @@ public:
     static PRBool       CompletedEntry(nsHashKey *aKey, void *aData, void* closure);
     static PRBool       DeleteEntry(nsHashKey *aKey, void *aData, void* closure);
     PRBool              IsExpired() { 
+#ifdef xDEBUG
         char buf[256];
         PRExplodedTime et;
 
-        PR_ExplodeTime(mTimestamp, PR_LocalTimeParameters, &et);
+        PR_ExplodeTime(mExpires, PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        printf("\nDNS %s lookup %s\n", mHostName, buf);
-
-        PR_ExplodeTime(mTimestamp + nsDNSService::gService->mExpirationInterval,
-                       PR_LocalTimeParameters, &et);
-        PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        printf("expires %s\n", buf);
+        fprintf(stderr, "\nDNS %s expires %s\n", mHostName, buf);
 
         PR_ExplodeTime(nsTime(), PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        printf("now %s ==> %s\n", buf,
-               mTimestamp + nsDNSService::gService->mExpirationInterval < nsTime()
-               ? "expired" : "valid");
-
-        return mTimestamp + nsDNSService::gService->mExpirationInterval < nsTime();
+        fprintf(stderr, "now %s ==> %s\n", buf,
+                mExpires < nsTime()
+                ? "expired" : "valid");
+        fflush(stderr);
+#endif
+        return mExpires < nsTime();
     }
 
     friend class nsDNSService;
@@ -155,7 +154,7 @@ protected:
     nsHostEnt                   mHostEntry;
     nsresult                    mStatus;
     PRBool                      mComplete;
-    nsTime                      mTimestamp;
+    nsTime                      mExpires;
 
     // Platform specific portions
 #if defined(XP_MAC)
@@ -248,8 +247,8 @@ nsDNSRequest::FireStop(nsresult status)
                                      status);
     NS_ASSERTION(NS_SUCCEEDED(rv), "OnStopLookup failed");
 
-    mUserListener = nsnull;
-    mUserContext = nsnull;
+    mUserListener = null_nsCOMPtr();
+    mUserContext = null_nsCOMPtr();
     return NS_OK;
 }
 
@@ -264,6 +263,12 @@ NS_IMETHODIMP
 nsDNSRequest::Cancel(void)
 {
     if (mUserListener) {
+        // Hold onto a reference to ourself because if we decide to remove
+        // this request from the mRequests list, it could be the last 
+        // reference, causing ourself to be deleted. We need to live until
+        // this method completes:
+        nsCOMPtr<nsIRequest> req = this;
+
         (void)mLookup->Suspend(this);
         return FireStop(NS_BINDING_ABORTED);
     }
@@ -273,16 +278,30 @@ nsDNSRequest::Cancel(void)
 NS_IMETHODIMP
 nsDNSRequest::Suspend(void)
 {
-    if (mSuspendCount++ == 0)
+    if (mSuspendCount++ == 0) {
+        // Hold onto a reference to ourself because if we decide to remove
+        // this request from the mRequests list, it could be the last 
+        // reference, causing ourself to be deleted. We need to live until
+        // this method completes:
+        nsCOMPtr<nsIRequest> req = this;
+
         return mLookup->Suspend(this);
+    }
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDNSRequest::Resume(void)
 {
-    if (--mSuspendCount == 0)
+    if (--mSuspendCount == 0) {
+        // Hold onto a reference to ourself because if we decide to remove
+        // this request from the mRequests list, it could be the last 
+        // reference, causing ourself to be deleted. We need to live until
+        // this method completes:
+        nsCOMPtr<nsIRequest> req = this;
+
         return mLookup->Resume(this);
+    }
     return NS_OK;
 }
 
@@ -294,7 +313,7 @@ nsDNSLookup::nsDNSLookup()
     : mHostName(nsnull),
       mStatus(NS_OK),
       mComplete(PR_FALSE),
-      mTimestamp(0)
+      mExpires(0)
 {
 }
 
@@ -314,8 +333,6 @@ nsDNSLookup::Init(const char * hostName)
     // Initialize result holders
     mHostEntry.bufLen = PR_NETDB_BUF_SIZE;
     mHostEntry.bufPtr = mHostEntry.buffer;
-    mComplete = PR_FALSE;
-    mStatus = NS_OK;
 
     // Platform specific initializations
 #if defined(XP_MAC)
@@ -323,7 +340,17 @@ nsDNSLookup::Init(const char * hostName)
     mLookupElement.lookup = this;
 #endif
 
+    Reset();
     return NS_OK;
+}
+
+void
+nsDNSLookup::Reset(void)
+{
+    mComplete = PR_FALSE;
+    mStatus = NS_OK;
+    mExpires = 0;
+//    fprintf(stderr, "DNS reset for %s\n", mHostName);
 }
 
 nsDNSLookup::~nsDNSLookup(void)
@@ -484,6 +511,9 @@ nsDNSLookup::InitiateLookup(nsDNSService* dnsService)
     return rv;
 }
 
+#define EXPIRATION_INTERVAL  (15*60*1000000)         // 15 min worth of microseconds
+//#define EXPIRATION_INTERVAL  (30*1000000)         // 30 sec worth of microseconds
+
 nsresult
 nsDNSLookup::CompletedLookup(nsresult status)
 {
@@ -491,7 +521,7 @@ nsDNSLookup::CompletedLookup(nsresult status)
     nsAutoCMonitor mon(this);
 
     mStatus = status;
-    mTimestamp = nsTime();      // now
+    mExpires = nsTime() + nsInt64(EXPIRATION_INTERVAL);      // now + 15 minutes
     mComplete = PR_TRUE;
 
     while (PR_TRUE) {
@@ -499,12 +529,19 @@ nsDNSLookup::CompletedLookup(nsresult status)
         if (req == nsnull) break;
 
         rv = mRequests->RemoveElementAt(0) ? NS_OK : NS_ERROR_FAILURE;  // XXX this method incorrectly returns a bool
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv)) {
+            NS_RELEASE(req);
+            return rv;
+        }
 
         // We can't be holding the lock around the OnFound/OnStopLookup
         // callbacks:
+        mon.Exit();
         rv = req->FireStop(mStatus);
-        NS_RELEASE(req);
+        mon.Enter();
+        nsrefcnt c;
+        NS_RELEASE2(req, c);
+        NS_ASSERTION(c == 0, "failed to delete request");
         if (NS_FAILED(rv)) return rv;
     }
     return NS_OK;
@@ -537,6 +574,7 @@ nsDNSLookup::Resume(nsDNSRequest* req)
 {
     nsresult rv;
     if (mComplete && !IsExpired()) {
+//        fprintf(stderr, "\nDNS cache hit for %s\n", mHostName);
         rv = req->FireStop(mStatus);
         return rv;
     }
@@ -553,7 +591,11 @@ nsDNSLookup::Resume(nsDNSRequest* req)
     if (reqCount == 1) {
         // if this was the first request, then we need to kick off
         // the lookup
+//        fprintf(stderr, "\nDNS cache miss for %s\n", mHostName);
         rv = InitiateLookup(nsDNSService::gService);
+    }
+    else {
+//        fprintf(stderr, "DNS consolidating lookup for %s\n", mHostName);
     }
     return rv;
 }
@@ -672,22 +714,9 @@ nsDNSLookup::DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
     return PR_TRUE;     // keep iterating
 }
 
-static PRExplodedTime gExpirationDuration = { 
-    0,  // usec
-    0,  // sec
-    15, // min
-    0,  // hours
-    0,  // mdays
-    0,  // months
-    0,  // years
-    0,  // wdays
-    0   // ydays
-};
-
 nsDNSService::nsDNSService()
     : mState(NS_OK),
       mMonitor(nsnull),
-      mExpirationInterval(PR_ImplodeTime(&gExpirationDuration)),
       mLookups(nsnull, nsnull, nsDNSLookup::DeleteEntry, nsnull)
 {
     NS_INIT_REFCNT();
@@ -960,10 +989,8 @@ nsDNSService::GetLookupEntry(const char* hostName,
         nsAutoCMonitor mon(lookup);
 
         if (lookup->mComplete && lookup->IsExpired()) {
-            rv = lookup->Init(lookup->HostName());
-            if (NS_FAILED(rv)) return rv;
+            lookup->Reset();
         }
-        
         *result = lookup;
         return NS_OK;
     }
