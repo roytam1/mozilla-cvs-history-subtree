@@ -90,6 +90,9 @@ ifdef NS_TRACE_MALLOC
 EXTRA_LIBS	+= -ltracemalloc
 endif
 
+ifdef MOZ_PERF_METRICS
+EXTRA_LIBS	+= -lmozutil_s
+endif
 
 EXTRA_LIBS	+= $(MOZ_JS_LIBS)
 EXTRA_LIBS	+= $(MOZ_COMPONENT_LIBS)
