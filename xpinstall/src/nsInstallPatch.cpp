@@ -32,7 +32,9 @@
 #include "xp_file.h" /* for XP_PlatformFileToURL */
 
 
-
+#ifdef XP_MAC
+#include "PatchableAppleSingle.h"
+#endif
 
 #define BUFSIZE     32768
 #define OPSIZE      1
@@ -311,8 +313,9 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 
 	DIFFDATA	*dd;
 	PRInt32		status		= GDIFF_ERR_MEM;
-	char *		tmpurl		= NULL;
-	char *		realfile	= PL_strdup(nsprPath(sourceFile)); // needs to be sourceFile!!!
+	char 		*tmpurl		= NULL;
+	char 		*realfile	= PL_strdup(nsprPath(sourceFile)); // needs to be sourceFile!!!
+	nsFileSpec  OutFileSpec = sourceFile;
 
 	dd = (DIFFDATA *)PR_Calloc( 1, sizeof(DIFFDATA));
 	if (dd != NULL)
@@ -357,69 +360,36 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
                 status = GDIFF_ERR_MEM;
         }
 #endif
+#endif
 
 #ifdef XP_MAC
 
 		if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
 		{
-			FSSpec 	srcFSSpec, tmpFSSpec;
-			char	*srcMacPath, *tmpMacPath;		
-		
-			/* We need a tmp file so that we can AppleSingle the src file */
-			tmpurl 		= WH_TempName( xpURL, NULL );
+           // create a tmp file, so that we can AppleSingle the src file
+           nsSpecialSystemDirectory tempMacPath(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+           nsString srcName = sourceFile.GetLeafName();
+           tempMacPath += srcName;
+           tempMacPath.MakeUnique();
+           nsFileSpec *tempMacFile = new nsFileSpec(tempMacPath);
+           
+           // get FSSepec
+           FSSpec sourceSpec = sourceFile.GetFSSpec();
+           FSSpec tempSpec = tempMacFile->GetFSSpec();
         
-			/* Put the source file into a mac file path */
-			tmpMacPath	= WH_FileName( tmpurl, xpURL );
-			
-			/* Get the mac filepath for srcMacPath */
-			srcMacPath 	= WH_FileName( srcfile, srctype );
-			
-			/* bail if we did not get our files! */
-			if ( tmpMacPath == NULL || srcMacPath == NULL) 
-			{
-        		XP_FREEIF( srcMacPath );
-	   			XP_FREEIF( tmpMacPath );
-	   			
-	   			goto cleanup;
-			}
-                
-			/* Get the source FSSpec */
-			status = FSpLocationFromFullPath(strlen(srcMacPath), srcMacPath, &srcFSSpec);
-			if (status != noErr) 
-			{
-        		XP_FREEIF( srcMacPath );
-	   			XP_FREEIF( tmpMacPath );
-
-        		goto cleanup;
-			}
-        
-        
-			/* Get the temporary FSSpec.  THis is where the encoded file will go */
-			status = FSpLocationFromFullPath(strlen(tmpMacPath), tmpMacPath, &tmpFSSpec);
-			if (status != noErr && status != fnfErr) 
-			{
-        		XP_FREEIF( srcMacPath );
-	   			XP_FREEIF( tmpMacPath );
-
-        		goto cleanup;
-			}
-        
-		   /* Encode! */
-			status = PAS_EncodeFile(&srcFSSpec, &tmpFSSpec);
+		   // Encode! 
+		   // Encode src file, and put into temp file
+			status = PAS_EncodeFile(&sourceSpec, &tempSpec);   
 				
 			if (status == noErr)
 			{
-				/* set */
+				// set
                 PL_strfree(realfile);
-				realfile 		= tmpurl;
-				realtype 		= xpURL;
+				realfile = PL_strdup(nsprPath(*tempMacFile));
 			}
-			
-			XP_FREEIF( srcMacPath );
-   			XP_FREEIF( tmpMacPath );
 		}
 #endif 
-#endif
+
 
 
 		if (status != GDIFF_OK)
@@ -443,12 +413,10 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
         }
         
 
-		nsFileSpec newName = sourceFile;
-		newName.SetLeafName(newFileName);
-		newName.MakeUnique();
-		nsFileSpec *newOutFileSpec = new nsFileSpec(newName); 
+		OutFileSpec.SetLeafName(newFileName);
+		OutFileSpec.MakeUnique();
 
-        char *outFile = PL_strdup(nsprPath(*newOutFileSpec));
+        char *outFile = PL_strdup(nsprPath(OutFileSpec));
 
 		// apply patch to the source file
 		dd->fSrc = PR_Open ( realfile, PR_RDONLY, 0666);
@@ -473,7 +441,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 
             if (status == GDIFF_OK)
             {
-                *newFile = newOutFileSpec;
+                *newFile = &OutFileSpec;
                 if ( outFile != nsnull)
                     PL_strfree( outFile );
             }
@@ -489,94 +457,45 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 #ifdef XP_MAC
 	if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
 	{
-		FSSpec 	outFSSpec;
-		char	*outMacPath;
-		
-		char*	anotherURL;
-		char*	anotherURLMacPath;
-		FSSpec	anotherFSSpec;
-		
-		Str63	fileName;
-		
-		
-		/* We need a temp file so that we can decode somewhere */
-		anotherURL 	= WH_TempName( xpURL, NULL );
-		
-		/* Get the mac file path for anotherURL */
-		anotherURLMacPath	= WH_FileName( anotherURL, xpURL );
-		
-		/* Get the mac file path for outfile */
-		outMacPath 	= WH_FileName( outfile, outtype );
-
-		if ( anotherURLMacPath == NULL || outMacPath == NULL) 
-        {
-        	status = mFulErr;
-		   	goto macPostProcessCleanup;
-        }
-			
-			
-		/* Get the out FSSpec.  This is where the decoded will end up */
-
-		status = FSpLocationFromFullPath(strlen(outMacPath), outMacPath, &outFSSpec);
-       
-        if (status != noErr) 
-        {
-		   	goto macPostProcessCleanup;
-        }
-			
-        /* Get the anotherURL FSSpec.  This is where the decoded will first be placed */
-
-        status = FSpLocationFromFullPath(strlen(anotherURLMacPath), anotherURLMacPath, &anotherFSSpec);
-        if (status != noErr && status != fnfErr)
-		{
-		   	goto macPostProcessCleanup;
-        }
-			
-		/* Close the out file so that we can read it */
-			
-		XP_FileClose( dd->fOut );
+        // create another file, so that we can decode somewhere
+        nsSpecialSystemDirectory anotherName(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+        nsString outName = OutFileSpec.GetLeafName();
+        anotherName += outName;
+        anotherName.MakeUnique();
+        nsFileSpec *anotherMacFile = new nsFileSpec(anotherName); 
+	
+		// Close the out file so that we can read it 		
+		PR_Close( dd->fOut );
 		dd->fOut = NULL;
+		
+		// get FSSpec
+		FSSpec outSpec = OutFileSpec.GetFSSpec();
+		FSSpec anotherSpec = anotherMacFile->GetFSSpec();
 
-		status =  PAS_DecodeFile(&outFSSpec, &anotherFSSpec);
-		if (status != noErr)
-		{
-		   	goto macPostProcessCleanup;
-        }
-			
-		/* Delete the outfile so that we can replace */				
-		XP_FileRemove( outfile, outtype );
-		
-			
-		/* get the name of the file */
-		BlockMove(outFSSpec.name, fileName, sizeof(Str63) );
-
-		/* We want the parent */
-		outFSSpec.name[0] = 0;
-		
-		/* Copy the output of the decodef to the outfile location passed to us */
-		status = FSpFileCopy(&anotherFSSpec, &outFSSpec, fileName, NULL, 0,true);
-		
-		if (status != noErr)
-		{
-		   	goto macPostProcessCleanup;
-        }
-       
-       
-macPostProcessCleanup:       
-       
-		XP_FREEIF( outMacPath );
-		XP_FREEIF( anotherURLMacPath );
-			
-		if(anotherURL) 
-		{
-			XP_FileRemove( anotherURL, xpURL );
-			XP_FREEIF( anotherURL );
-		}
-		
+		status =  PAS_DecodeFile(&outSpec, &anotherSpec);
 		if (status != noErr)
 		{
 		   	goto cleanup;
         }
+			
+/* FIX:  does this still apply?
+		// Delete the outfile so that we can replace 
+		XP_FileRemove( outfile, outtype );	
+			
+		// get the name of the file 
+		BlockMove(outFSSpec.name, fileName, sizeof(Str63) );
+
+		// We want the parent 
+		outFSSpec.name[0] = 0;
+		
+		// Copy the output of the decodef to the outfile location passed to us 
+		status = FSpFileCopy(&anotherFSSpec, &outFSSpec, fileName, NULL, 0,true);
+*/		
+		if (status != noErr)
+		{
+		   	goto cleanup;
+        }     
+       
 	}
 	
 #endif 
