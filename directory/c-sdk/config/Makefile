@@ -48,11 +48,15 @@ DIST_GARBAGE	=
 
 include $(topsrcdir)/config/config.mk
 
-CSRCS	= nsinstall.c now.c
+ifndef MOZILLA_CLIENT
+CSRCS	= nsinstall.c 
+endif
+
+CSRCS	+= now.c
 
 PLSRCS	= nfspwd.pl
 
-ifneq (,$(filter WINNT OS2,$(OS_ARCH)))
+ifneq (,$(CROSS_COMPILE)$(filter WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
 else
 PROG_SUFFIX =
@@ -92,9 +96,9 @@ ifeq ($(OS_ARCH), OpenVMS)
     XLDOPTS += $(LDFLAGS)
 endif
 
-ifdef XP_OS2_EMX
+ifeq ($(MOZ_OS2_TOOLS),EMX)
 XCFLAGS = $(OS_EXE_CFLAGS)
-XLDOPTS = -Zlinker /PM:VIO
+XLDOPTS = -Zomf -Zlinker /PM:VIO
 endif
 
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -114,7 +118,9 @@ endif
 
 OUTOPTION = -o # end of the line
 ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
+ifndef NS_USE_GCC
 OUTOPTION = /Fe
+endif
 endif
 
 # Redefine MAKE_OBJDIR for just this directory
