@@ -821,6 +821,7 @@ LRESULT CALLBACK DlgProcSelectComponents(HWND hDlg, UINT msg, WPARAM wParam, LON
       if(GetClientRect(hDlg, &rDlg))
         SetWindowPos(hDlg, HWND_TOP, (dwScreenX/2)-(rDlg.right/2), (dwScreenY/2)-(rDlg.bottom/2), 0, 0, SWP_NOSIZE);
 
+#ifdef XXX_SSU
       /* update the disk space available info in the dialog.  GetDiskSpaceAvailable()
          returns value in kbytes */
       ullDSBuf = GetDiskSpaceAvailable(sgProduct.szPath);
@@ -831,6 +832,7 @@ LRESULT CALLBACK DlgProcSelectComponents(HWND hDlg, UINT msg, WPARAM wParam, LON
       lstrcat(szBuf, tchBuffer);
       lstrcat(szBuf, " K");
       SetDlgItemText(hDlg, IDC_STATIC_DRIVE_SPACE_AVAILABLE, szBuf);
+#endif
 
       OldListBoxWndProc = SubclassWindow(hwndLBComponents, (WNDPROC)NewListBoxWndProc);
       break;
@@ -888,7 +890,7 @@ LRESULT CALLBACK DlgProcSelectComponents(HWND hDlg, UINT msg, WPARAM wParam, LON
                    NULL);
 
         siCTemp = SiCNodeGetObject(lpdis->itemID, FALSE);
-        _ui64toa(siCTemp->ullInstallSize, tchBuffer, 10);
+        _ui64toa(siCTemp->ullInstallSizeArchive, tchBuffer, 10);
         lstrcat(tchBuffer, " K");
 
         /* calculate clipping region.  The region being the entire listbox window */
@@ -932,12 +934,12 @@ LRESULT CALLBACK DlgProcSelectComponents(HWND hDlg, UINT msg, WPARAM wParam, LON
 
       /* update the disk space required info in the dialog.  It is already
          in Kilobytes */
-      ullDSBuf = GetDiskSpaceRequired(DSR_DESTINATION);
+      ullDSBuf = GetDiskSpaceRequired(DSR_DOWNLOAD_SIZE);
       _ui64toa(ullDSBuf, tchBuffer, 10);
-      ParsePath(sgProduct.szPath, szBuf, sizeof(szBuf), PP_ROOT_ONLY);
-      RemoveBackSlash(szBuf);
-      lstrcat(szBuf, " - ");
-      lstrcat(szBuf, tchBuffer);
+//      ParsePath(sgProduct.szPath, szBuf, sizeof(szBuf), PP_ROOT_ONLY);
+//      RemoveBackSlash(szBuf);
+//      lstrcat(szBuf, " - ");
+      lstrcpy(szBuf, tchBuffer);
       lstrcat(szBuf, " K");
       
       SetDlgItemText(hDlg, IDC_STATIC_DRIVE_SPACE_REQUIRED, szBuf);
