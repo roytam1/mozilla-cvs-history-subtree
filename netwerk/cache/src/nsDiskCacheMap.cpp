@@ -25,8 +25,11 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 
+#include <string.h>
+
 nsDiskCacheMap::nsDiskCacheMap()
 {
+    ::memset(&mBuckets, 0, sizeof(mBuckets));
 }
 
 nsDiskCacheMap::~nsDiskCacheMap()
@@ -76,6 +79,15 @@ nsresult nsDiskCacheMap::Read(nsIInputStream* input)
 
 nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
 {
+    nsresult rv;
+    PRUint32 count;
+    
+    // write the header.
+    mHeader.Swap();
+    rv = output->Write((char*)&mHeader, sizeof(mHeader), &count);
+    mHeader.Unswap();
+    if (NS_FAILED(rv)) return rv;
+
     // swap all of the active records.
     for (int b = 0; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
@@ -87,9 +99,8 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
         }
     }
     
-    // XXX need a header, etc.
-    PRUint32 count;
-    nsresult rv = output->Write((char*)&mBuckets, sizeof(mBuckets), &count);
+    // write the buckets.
+    rv = output->Write((char*)&mBuckets, sizeof(mBuckets), &count);
 
     // unswap all of the active records.
     for (int b = 0; b < kBucketsPerTable; ++b) {
