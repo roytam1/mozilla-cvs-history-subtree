@@ -781,8 +781,8 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
 }
 
 #ifdef MOZ_UNICODE
-/* ================ UCS2 Interfaces ================================ */
-PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUCS2(
+/* ================ UTF16 Interfaces ================================ */
+PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUTF16(
     const PRUnichar *name, PRIntn flags, PRIntn mode)
 { 
     PRInt32 osfd;
@@ -794,7 +794,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUCS2(
     if (!_pr_initialized) _PR_ImplicitInitialization();
   
     /* Map pr open flags and mode to os specific flags */
-    osfd = _PR_MD_OPEN_FILE_UCS2(name, flags, mode);
+    osfd = _PR_MD_OPEN_FILE_UTF16(name, flags, mode);
     if (osfd != -1) {
         fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
         if (!fd) {
@@ -809,5 +809,5 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUCS2(
     return fd;
 }
  
-/* ================ UCS2 Interfaces ================================ */
+/* ================ UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */

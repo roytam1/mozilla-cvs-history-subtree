@@ -4787,32 +4787,32 @@ retry:
 #endif /* defined(_PR_PTHREADS) */
 
 #ifdef MOZ_UNICODE 
-/* ================ UCS2 Interfaces ================================ */
-PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUCS2(
+/* ================ UTF16 Interfaces ================================ */
+PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUTF16(
     const PRUnichar *name, PRIntn flags, PRIntn mode)
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
 }
 
-PR_IMPLEMENT(PRStatus) PR_CloseDirUCS2(PRDir *dir)
+PR_IMPLEMENT(PRStatus) PR_CloseDirUTF16(PRDir *dir)
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return PR_FAILURE;
 }
 
-PR_IMPLEMENT(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name)
+PR_IMPLEMENT(PRDirUTF16*) PR_OpenDirUTF16(const PRUnichar *name)
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
 }
 
-PR_IMPLEMENT(PRDirEntryUCS2*) PR_ReadDirUCS2(PRDirUCS2 *dir, PRDirFlags flags)
+PR_IMPLEMENT(PRDirEntryUTF16*) PR_ReadDirUTF16(PRDirUTF16 *dir, PRDirFlags flags)
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
 }
-/* ================ UCS2 Interfaces ================================ */
+/* ================ UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */
 
 /* ptio.c */

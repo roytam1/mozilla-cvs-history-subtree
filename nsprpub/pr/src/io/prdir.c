@@ -112,16 +112,16 @@ PRInt32 rv;
 
 #ifdef MOZ_UNICODE
 /*
- *  UCS2 Interface
+ *  UTF16 Interface
  */
-PR_IMPLEMENT(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name)
+PR_IMPLEMENT(PRDirUTF16*) PR_OpenDirUTF16(const PRUnichar *name)
 { 
-    PRDirUCS2 *dir;
+    PRDirUTF16 *dir;
     PRStatus sts;
 
-    dir = PR_NEW(PRDirUCS2);
+    dir = PR_NEW(PRDirUTF16);
     if (dir) {
-        sts = _PR_MD_OPEN_DIR_UCS2(&dir->md,name);
+        sts = _PR_MD_OPEN_DIR_UTF16(&dir->md,name);
         if (sts != PR_SUCCESS) {
             PR_DELETE(dir);
             return NULL;
@@ -132,23 +132,23 @@ PR_IMPLEMENT(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name)
     return dir;
 }  
  
-PR_IMPLEMENT(PRDirEntryUCS2*) PR_ReadDirUCS2(PRDirUCS2 *dir, PRDirFlags flags)
+PR_IMPLEMENT(PRDirEntryUTF16*) PR_ReadDirUTF16(PRDirUTF16 *dir, PRDirFlags flags)
 { 
     /*
-     * _MD_READ_DIR_UCS2 return a PRUnichar* to the name; allocation in
+     * _MD_READ_DIR_UTF16 return a PRUnichar* to the name; allocation in
      * machine-dependent code
      */
-    PRUnichar* name = _PR_MD_READ_DIR_UCS2(&dir->md, flags);
+    PRUnichar* name = _PR_MD_READ_DIR_UTF16(&dir->md, flags);
     dir->d.name = name;
     return name ? &dir->d : NULL;
 } 
  
-PR_IMPLEMENT(PRStatus) PR_CloseDirUCS2(PRDirUCS2 *dir)
+PR_IMPLEMENT(PRStatus) PR_CloseDirUTF16(PRDirUTF16 *dir)
 { 
     PRInt32 rv; 
 
     if (dir) {
-        rv = _PR_MD_CLOSE_DIR_UCS2(&dir->md);
+        rv = _PR_MD_CLOSE_DIR_UTF16(&dir->md);
         PR_DELETE(dir);
         if (rv < 0)
 	    return PR_FAILURE;

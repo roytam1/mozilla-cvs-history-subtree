@@ -53,8 +53,8 @@ PR_BEGIN_EXTERN_C
 typedef struct PRDir            PRDir;
 typedef struct PRDirEntry       PRDirEntry;
 #ifdef MOZ_UNICODE
-typedef struct PRDirUCS2        PRDirUCS2;
-typedef struct PRDirEntryUCS2   PRDirEntryUCS2;
+typedef struct PRDirUTF16       PRDirUTF16;
+typedef struct PRDirEntryUTF16  PRDirEntryUTF16;
 #endif /* MOZ_UNICODE */
 typedef struct PRFileDesc       PRFileDesc;
 typedef struct PRFileInfo       PRFileInfo;
@@ -658,7 +658,7 @@ NSPR_API(PRFileDesc*) PR_OpenFile(
 /*
  * EXPERIMENTAL: This function may be removed in a future release.
  */
-NSPR_API(PRFileDesc*) PR_OpenFileUCS2(
+NSPR_API(PRFileDesc*) PR_OpenFileUTF16(
     const PRUnichar *name, PRIntn flags, PRIntn mode);
 #endif /* MOZ_UNICODE */
 
@@ -997,8 +997,8 @@ struct PRDirEntry {
 };
 
 #ifdef MOZ_UNICODE
-struct PRDirEntryUCS2 {
-    const PRUnichar *name;   /* name of entry in UCS2, relative to
+struct PRDirEntryUTF16 {
+    const PRUnichar *name;   /* name of entry in UTF16, relative to
                               * directory name */
 };
 #endif /* MOZ_UNICODE */
@@ -1033,7 +1033,7 @@ NSPR_API(PRDir*) PR_OpenDir(const char *name);
 /*
  * EXPERIMENTAL: This function may be removed in a future release.
  */
-NSPR_API(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name);
+NSPR_API(PRDirUTF16*) PR_OpenDirUTF16(const PRUnichar *name);
 #endif /* MOZ_UNICODE */
 
 /*
@@ -1073,7 +1073,7 @@ NSPR_API(PRDirEntry*) PR_ReadDir(PRDir *dir, PRDirFlags flags);
 /*
  * EXPERIMENTAL: This function may be removed in a future release.
  */
-NSPR_API(PRDirEntryUCS2*) PR_ReadDirUCS2(PRDirUCS2 *dir, PRDirFlags flags);
+NSPR_API(PRDirEntryUTF16*) PR_ReadDirUTF16(PRDirUTF16 *dir, PRDirFlags flags);
 #endif /* MOZ_UNICODE */
 
 /*
@@ -1099,7 +1099,7 @@ NSPR_API(PRStatus) PR_CloseDir(PRDir *dir);
 /*
  * EXPERIMENTAL: This function may be removed in a future release.
  */
-NSPR_API(PRStatus) PR_CloseDirUCS2(PRDirUCS2 *dir);
+NSPR_API(PRStatus) PR_CloseDirUTF16(PRDirUTF16 *dir);
 #endif /* MOZ_UNICODE */
 
 /*

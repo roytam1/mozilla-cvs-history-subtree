@@ -1093,7 +1093,7 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 }
 
 #ifdef MOZ_UNICODE
-/* ================ UCS2 Interfaces ================================ */
+/* ================ UTF16 Interfaces ================================ */
 void FlipSlashesW(PRUnichar *cp, int len)
 {
     while (--len >= 0) {
@@ -1105,7 +1105,7 @@ void FlipSlashesW(PRUnichar *cp, int len)
 } /* end FlipSlashesW() */
 
 PRInt32
-_PR_MD_OPEN_FILE_UCS2(const PRUnichar *name, PRIntn osflags, int mode)
+_PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, int mode)
 {
     HANDLE file;
     PRInt32 access = 0;
@@ -1166,7 +1166,7 @@ _PR_MD_OPEN_FILE_UCS2(const PRUnichar *name, PRIntn osflags, int mode)
 }
  
 PRStatus
-_PR_MD_OPEN_DIR_UCS2(_MDDirUCS2 *d, const PRUnichar *name)
+_PR_MD_OPEN_DIR_UTF16(_MDDirUTF16 *d, const PRUnichar *name)
 {
     PRUnichar filename[ MAX_PATH ];
     int len;
@@ -1200,7 +1200,7 @@ _PR_MD_OPEN_DIR_UCS2(_MDDirUCS2 *d, const PRUnichar *name)
 }
 
 PRUnichar *
-_PR_MD_READ_DIR_UCS2(_MDDirUCS2 *d, PRIntn flags)
+_PR_MD_READ_DIR_UTF16(_MDDirUTF16 *d, PRIntn flags)
 {
     PRInt32 err;
     BOOL rv;
@@ -1239,7 +1239,7 @@ _PR_MD_READ_DIR_UCS2(_MDDirUCS2 *d, PRIntn flags)
 }
  
 PRStatus
-_PR_MD_CLOSE_DIR_UCS2(_MDDirUCS2 *d)
+_PR_MD_CLOSE_DIR_UTF16(_MDDirUTF16 *d)
 {
     if ( d ) {
         if (FindClose(d->d_hdl)) {
@@ -1254,5 +1254,5 @@ _PR_MD_CLOSE_DIR_UCS2(_MDDirUCS2 *d)
     return PR_FAILURE;
 }
 
-/* ================ end of UCS2 Interfaces ================================ */
+/* ================ end of UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */
