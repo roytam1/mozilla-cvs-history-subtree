@@ -14,7 +14,6 @@
 
 @objfiles = ();
 @symbols = ();
-%unique_symbols =();
 $debug = 0;
 
 #Step 1: Get command line options
@@ -23,7 +22,7 @@ $output_file = $ARGV[1];
 UsageAndExit() if (scalar(@ARGV) != 2);
 
 # Step 2: Open output file for output
-#open (SYMB_LIST, ">$output_file") or die("Can't open \"$output_file\" for writing.\n");
+open (SYMB_LIST, ">$output_file") or die("Can't open \"$output_file\" for writing.\n");
 
 # Step 3: Read input file to determine list of all obj / lib files
 # needed to link the executable
@@ -31,12 +30,11 @@ GetObjFileList($input_file, \@objfiles);
 
 # Step 4: Run NM on every single obj / lib file
 # to get the complelete list of global functions
-CallNM(\@objfiles, \@symbols, \%unique_symbols);
+CallNM(\@objfiles, \@symbols);
 
 # Step 5: Put all the symbols in output file
-foreach (sort(keys(%unique_symbols))) {
+foreach (@symbols) {
 	print SYMB_LIST ("$_\n");
-	print ("$_\n");
 }
 
 
@@ -55,12 +53,12 @@ sub UsageAndExit {
 sub CallNM {
 	my($objfiles) = $_[0];
 	my($symbols) = $_[1];
-	my($unique) = $_[2];
-	my($num_symbols) = 0;
-	my($num_unique) = 0;
+	my(%unique) = ();
+
 	foreach (@{$objfiles}) {
 		my($file) = $_;
 		my(@results) = ();
+
 		# if such file exists, call nm 
 		# otherwise, print a warning
 		if (-f $file) {
@@ -69,18 +67,18 @@ sub CallNM {
 			@results = `nm --demangle -g $file`;
 			foreach (@results) {
 				my($symbol) = ExtractFunctionSymbol($_);
-				$symbol = FilterUnwantedPrefix($symbol);
 				if ($symbol ne "") {
-					push(@{$symbols}, ($symbol)); 
-					if (!exists(${$unique}{$symbol})) {
-						${$unique}{$symbol} = $symbol;
-						$num_unique++;
-					}
-					$num_symbols++;
+					$unique{$symbol} = "exists";
 				}
 			}	
 		}
 	}
+
+	foreach (sort(keys(%unique))) {
+		$symbol = FilterUnwantedPrefix($_);
+		push(@{$symbols}, ($symbol)); 
+	}
+		
 }
 
 sub IsObjFile {
