@@ -152,10 +152,17 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
       {
          case eReflowReason_Incremental: 
          {
-             // ok if the target was not a box. Then unwind it down 
-            UnWind(mReflowState->path, aRootBox);
-            mType = Dirty;
-            break;  
+           // Unwind the reflow command, updating dirty bits as
+           // appropriate.
+           // XXXwaterson according to evaughan's prior comment here,
+           // the target ought not to be a box frame. This makes some
+           // of the logic in `Unwind' confusing.
+           PRBool clearDirtyBits =
+             (mReflowState->path->mReflowCommand == nsnull);
+
+           Unwind(mReflowState->path, aRootBox, clearDirtyBits);
+           mType = Dirty;
+           break;  
          }
 
          case eReflowReason_Dirty: 
@@ -186,15 +193,15 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
 
 
 void
-nsBoxLayoutState::UnWind(nsReflowPath* aReflowPath, nsIBox* aBox)
+nsBoxLayoutState::Unwind(nsReflowPath* aReflowPath, nsIBox* aBox, PRBool aClearDirtyBits)
 {
-  // if incremental unwind the chain
+  // If incremental, unwind the reflow path, updating dirty bits
+  // appropriately.
   nsReflowPath::iterator iter = aReflowPath->FirstChild();
   nsReflowPath::iterator end = aReflowPath->EndChildren();
 
   for ( ; iter != end; ++iter) {
-    // get the box for the given incrementalChild. If adaptor is true then
-    // it is some wrapped HTML frame.
+    // Get the box for the given frame.
     PRBool isAdaptor = PR_FALSE;
     nsIBox* ibox = GetBoxForFrame(*iter, isAdaptor);
     if (! ibox) {
@@ -204,20 +211,51 @@ nsBoxLayoutState::UnWind(nsReflowPath* aReflowPath, nsIBox* aBox)
 
     nsFrameState state;
     (*iter)->GetFrameState(&state);
-    state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
-    (*iter)->SetFrameState(state);
 
-    // Is the box frame the target?
-    nsHTMLReflowCommand *command = iter.get()->mReflowCommand;
-    if (command) {
-      nsFrameState boxState;
+    // Unconditionally clear the dirty-children bit if no box above us
+    // has been targeted.
+    if (aClearDirtyBits) {
+      state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
+      (*iter)->SetFrameState(state);
+    }
+
+    if (isAdaptor) {
+      // The target is inside an html block. Mark the box's frame as
+      // dirty so we don't post a dirty reflow and optimize the reflow
+      // away.
+      // XXXwaterson I don't really understand why aBox->GetFrame
+      // returns a frame that is != *iter, but it does. Furthermore, I
+      // don't really get the bit-twiddling below.
       nsIFrame* frame;
       aBox->GetFrame(&frame);
-      frame->GetFrameState(&boxState);
 
-      boxState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+      frame->GetFrameState(&state);
+      state |= NS_FRAME_HAS_DIRTY_CHILDREN;
+      frame->SetFrameState(state);
 
-      frame->SetFrameState(boxState);
+      (*iter)->GetFrameState(&state);
+      state &= ~NS_FRAME_IS_DIRTY;
+      (*iter)->SetFrameState(state);
+
+      // Mark the adaptor dirty.
+      ibox->MarkDirty(*this);      
+        
+      // We are done and we did not coelesce.
+      continue;
+    }
+
+    // Is the box frame the target?
+    // XXXwaterson according to the evaughan's previous comments in
+    // HandleReflow, it ought to never be. Yet here we are.
+    nsHTMLReflowCommand *command = iter.get()->mReflowCommand;
+    if (command) {
+      // XXXwaterson isn't (frame == *iter)?
+      nsIFrame* frame;
+      aBox->GetFrame(&frame);
+
+      frame->GetFrameState(&state);
+      state |= NS_FRAME_HAS_DIRTY_CHILDREN;
+      frame->SetFrameState(state);
 
       // The target is a box. Mark it dirty, generating a new reflow
       // command targeted at us and coelesce out this one.
@@ -238,88 +276,27 @@ nsBoxLayoutState::UnWind(nsReflowPath* aReflowPath, nsIBox* aBox)
         nsIBox* parent;
         ibox->GetParentBox(&parent);
         if (parent) {
-          nsFrameState parentState;
           nsIFrame* parentFrame;
           parent->GetFrame(&parentFrame);
-          parentFrame->GetFrameState(&parentState);
-          parentState |= NS_FRAME_IS_DIRTY;
-          parentFrame->SetFrameState(parentState);
+          parentFrame->GetFrameState(&state);
+          state |= NS_FRAME_IS_DIRTY;
+          parentFrame->SetFrameState(state);
         }
 
       }
-      else {
+      else
         ibox->MarkDirty(*this);      
-      }
-    }
-    else if (isAdaptor) {      // was the child html?
-      // The target is deep inside html: we will have to honor this
-      // one. Mark us as dirty so we don't post a dirty reflow
-      state = 0;
-      nsIFrame* frame;
-      aBox->GetFrame(&frame);
-      frame->GetFrameState(&state);
-      state |= NS_FRAME_HAS_DIRTY_CHILDREN;
-      frame->SetFrameState(state);
 
-      (*iter)->GetFrameState(&state);
-      state &= ~NS_FRAME_IS_DIRTY;
-      (*iter)->SetFrameState(state);
+      // Since we're the target of the reflow, don't clear any dirty
+      // bits below this box, as they're still significant and ought
+      // not be coalesced away.
+      aClearDirtyBits = PR_FALSE;
+    }
 
-      // mark the adaptor dirty
-      ibox->MarkDirty(*this);      
-        
-      // we are done and we did not coelesce
-    }
-    else {
-      // Recursively unwind the reflow tree.
-      UnWind(iter.get(), ibox);
-    }
+    // Recursively unwind the reflow path.
+    Unwind(iter.get(), ibox, aClearDirtyBits);
   }
 }
-
-/*
-void
-nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
-{
-    
-  nsFrameState state;
-  nsIFrame* frame;
-  aBox->GetFrame(&frame);
-  frame->GetFrameState(&state);
-  state |= NS_FRAME_HAS_DIRTY_CHILDREN;
-  frame->SetFrameState(state);
-
-  // if incremental unwindow the chain
-  nsIFrame* incrementalChild = nsnull;
-
-  while(1)
-  {
-    aCommand->GetNext(incrementalChild, PR_FALSE);
-    if (incrementalChild == nsnull)
-      break;
-
-    nsIFrame* target = nsnull;
-    aCommand->GetTarget(target);
-
-    PRBool isAdaptor = PR_FALSE;
-    nsIBox* ibox = GetBoxForFrame(incrementalChild, isAdaptor);
-    if (ibox) {
-      if (incrementalChild == target || isAdaptor) {
-         ibox->MarkDirty(*this);
-         if (isAdaptor)
-           break;
-      } else 
-         ibox->MarkDirtyChildren(*this);
-      
-    } else {
-      break;
-    }
-  
-    aCommand->GetNext(incrementalChild);
-  }
-  
-}
-*/
 
 nsIBox*
 nsBoxLayoutState::GetBoxForFrame(nsIFrame* aFrame, PRBool& aIsAdaptor)
