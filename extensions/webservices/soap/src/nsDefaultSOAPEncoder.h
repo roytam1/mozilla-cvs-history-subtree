@@ -39,13 +39,13 @@ protected:
   static nsresult MakeNamespacePrefix(nsIDOMElement* aScope,
 		                      nsAReadableString & aURI,
 				      nsAWritableString & aPrefix);
-  static nsresult EncodeValue(
+  static nsresult EncodeSimpleValue(
 	                              const nsAReadableString & aValue, 
 				      const nsAReadableString & aNamespaceURI, 
 				      const nsAReadableString & aName, 
 				      const nsAReadableString & aSchemaNamespaceURI, 
 				      const nsAReadableString & aSchemaType, 
-				      nsIDOMNode* aDestination);
+				      nsIDOMElement* aDestination);
 #if 0
   nsresult StartEmptyMessage(nsISOAPMessage* message);
   nsresult EncodeParameter(nsISOAPParameter* parameter,

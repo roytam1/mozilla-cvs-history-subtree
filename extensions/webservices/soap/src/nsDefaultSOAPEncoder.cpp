@@ -78,12 +78,6 @@ DECLARE_ENCODER(Long)
 DECLARE_ENCODER(Int)
 DECLARE_ENCODER(Short)
 DECLARE_ENCODER(Byte)
-DECLARE_ENCODER(Array)
-DECLARE_ENCODER(Struct)
-DECLARE_ENCODER(Literal)
-DECLARE_ENCODER(Null)
-DECLARE_ENCODER(Void)
-DECLARE_ENCODER(Unknown)
 
 NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPEncodingRegistry* registry)
 {
@@ -95,24 +89,18 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPEncodingRegistry* re
   REGISTER_ENCODER(Int)
   REGISTER_ENCODER(Short)
   REGISTER_ENCODER(Byte)
-  REGISTER_ENCODER(Array)
-  REGISTER_ENCODER(Struct)
-  REGISTER_ENCODER(Literal)
-  REGISTER_ENCODER(Null)
-  REGISTER_ENCODER(Void)
-  REGISTER_ENCODER(Unknown)
   return NS_OK;
 }
 //  Here is the implementation of the encoders.
 
-NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
+NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeSimpleValue(
 		                          const nsAReadableString & aValue, 
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  
 					  const nsAReadableString & aSchemaNamespaceURI, 
 					  const nsAReadableString & aSchemaType, 
-					  nsIDOMNode* aDestination)
+					  nsIDOMElement* aDestination)
 {
   nsCOMPtr<nsIDOMDocument>document;
   nsresult rc = aDestination->GetOwnerDocument(getter_AddRefs(document));
@@ -150,7 +138,7 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -162,7 +150,7 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   PRUnichar* pointer;
   rc = object->GetData(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsAutoString string(pointer);
+  nsAutoString string(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   if (aSchemaType) {
@@ -175,7 +163,7 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kStringSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaType,
@@ -191,7 +179,7 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination, 
+					  nsIDOMElement* aDestination, 
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -213,7 +201,7 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kBooleanSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kBooleanSchemaNamespaceURI;
   }
-  return EncodeValue(b ? kOne : kZero, 
+  return EncodeSimpleValue(b ? kOne : kZero, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -229,7 +217,7 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -242,7 +230,7 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -253,7 +241,7 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kDoubleSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kDoubleSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -269,7 +257,7 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -282,7 +270,7 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -293,7 +281,7 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kFloatSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kFloatSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -309,7 +297,7 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -322,7 +310,7 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -333,7 +321,7 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kLongSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kLongSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -349,7 +337,7 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -362,7 +350,7 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -373,7 +361,7 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kIntSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kIntSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -389,7 +377,7 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -402,7 +390,7 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -413,7 +401,7 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kShortSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kShortSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -429,7 +417,7 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMNode* aDestination,
+					  nsIDOMElement* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
   nsresult rc;
@@ -442,7 +430,7 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsAutoString string;
-  string.AssignWithConversion(pointer);
+  string.AssignWithConversion(pointer);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -453,7 +441,7 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     schemaType = nsSOAPUtils::kByteSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kByteSchemaNamespaceURI;
   }
-  return EncodeValue(string, 
+  return EncodeSimpleValue(string, 
 		       aNamespaceURI,
 		       aName,
 		       schemaNamespaceURI,
@@ -462,15 +450,10 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 }
 
 /*
-String
-Boolean
-Double
-Float
 Long
 Int
 Short
 Byte
-Array
 Struct
 Literal
 Null
@@ -480,12 +463,45 @@ Unknown
 
 NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPEncodingRegistry* aEncodings,
 					    const nsAReadableString & aEncodingStyleURI, 
-		                            nsIDOMNode *aSource, 
+		                            nsIDOMElement *aSource, 
 					    nsISchemaType *aSchemaType,
 					    nsISOAPAttachments* aAttachments,
 					    nsISOAPParameter **_retval)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISOAPParameter> p = new nsSOAPParameter();
+  p->SetAsString(value);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBooleanEncoder::Decode(nsISOAPEncodingRegistry* aEncodings,
+					    const nsAReadableString & aEncodingStyleURI, 
+		                            nsIDOMElement *aSource, 
+					    nsISchemaType *aSchemaType,
+					    nsISOAPAttachments* aAttachments,
+					    nsISOAPParameter **_retval)
+{
+  nsAutoString value;
+  nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
+  if (NS_FAILED(rc)) return rc;
+  bool b;
+  if (value.Equals(nsSOAPUtils::kTrue)
+    || value.Equals(nsSOAPUtils::kTrueA)) {
+    b = PR_TRUE;
+  } else if (value.Equals(nsSOAPUtils::kFalse)
+    || value.Equals(nsSOAPUtils::kFalseA)) {
+    b = PR_FALSE;
+  } else return NS_ERROR_ILLEGAL_VALUE;
+
+  nsCOMPtr<nsISOAPParameter> p = new nsSOAPParameter();
+  p->SetAsBoolean(b);
+  *_retval = p;
+  NS_ADDREF(*_retval);
+  return NS_OK;
 }
 
 #if 0

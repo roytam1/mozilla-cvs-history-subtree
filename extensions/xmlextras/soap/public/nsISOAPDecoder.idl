@@ -24,7 +24,7 @@
 
 interface nsISchemaType;
 interface nsISOAPEncodingRegistry;
-interface nsIDOMNode;
+interface nsIDOMElement;
 interface nsISOAPParameter;
 interface nsISOAPAttachments;
 
@@ -56,7 +56,7 @@ interface nsISOAPDecoder : nsISupports {
 nsISOAPParameter decode(
     in nsISOAPEncodingRegistry aEncodings, 
     in AString aEncodingStyleURI, 
-    in nsIDOMNode aSource, 
+    in nsIDOMElement aSource, 
     in nsISchemaType aSchemaType,
     in nsISOAPAttachments aAttachments);
 };

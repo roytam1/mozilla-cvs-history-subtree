@@ -40,7 +40,7 @@ public:
                                    nsIDOMElement** aElement);
   static void GetNextSiblingElement(nsIDOMElement* aStart, 
                                     nsIDOMElement** aElement);
-  static void GetElementTextContent(nsIDOMElement* aElement, 
+  static nsresult GetElementTextContent(nsIDOMElement* aElement, 
                                     nsAWritableString& aText);
   static PRBool HasChildElements(nsIDOMElement* aElement);
 
@@ -130,6 +130,10 @@ public:
   static const nsString kXMLNamespaceURI;
   static const nsString kXMLNamespacePrefix;
   static const nsString kXMLPrefix;
+  static const nsString kTrue;
+  static const nsString kFalse;
+  static const nsString kTrueA;
+  static const nsString kFalseA;
 };
 
 #endif

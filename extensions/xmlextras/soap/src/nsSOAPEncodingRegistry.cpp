@@ -125,7 +125,7 @@ nsresult nsSOAPEncodingRegistry::QueryBySchemaType(const nsAReadableString & aEn
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPEncodingRegistry::Encode(nsISOAPEncodingRegistry *aEncodings, const nsAReadableString & aEncodingStyleURI, nsISOAPParameter *aSource, nsAReadableString & aNamespaceURI, nsAReadableString & aName, nsISchemaType *aSchemaType, nsIDOMNode* aDestination, nsISOAPAttachments* aAttachments)
+NS_IMETHODIMP nsSOAPEncodingRegistry::Encode(nsISOAPEncodingRegistry *aEncodings, const nsAReadableString & aEncodingStyleURI, nsISOAPParameter *aSource, nsAReadableString & aNamespaceURI, nsAReadableString & aName, nsISchemaType *aSchemaType, nsIDOMElement* aDestination, nsISOAPAttachments* aAttachments)
 {
   nsAutoString nativeType;
   nsresult rc = aSource->GetType(nativeType);
@@ -145,7 +145,7 @@ NS_IMETHODIMP nsSOAPEncodingRegistry::Encode(nsISOAPEncodingRegistry *aEncodings
   return encoder->Encode(aEncodings, aEncodingStyleURI, aSource, aNamespaceURI, aName, aSchemaType, aDestination, aAttachments);
 }
 
-NS_IMETHODIMP nsSOAPEncodingRegistry::Decode(nsISOAPEncodingRegistry *aEncodings, const nsAReadableString & aEncodingStyleURI, nsIDOMNode *aSource, nsISchemaType* aSchemaType, nsISOAPAttachments* aAttachments, nsISOAPParameter **_retval)
+NS_IMETHODIMP nsSOAPEncodingRegistry::Decode(nsISOAPEncodingRegistry *aEncodings, const nsAReadableString & aEncodingStyleURI, nsIDOMElement *aSource, nsISchemaType* aSchemaType, nsISOAPAttachments* aAttachments, nsISOAPParameter **_retval)
 {
   *_retval = nsnull;
   nsCOMPtr<nsISOAPDecoder> decoder;

@@ -100,6 +100,12 @@ NS_NAMED_LITERAL_STRING(kXMLNamespaceURI, "htp://www.w3.org/XML/1998/namespace")
 NS_NAMED_LITERAL_STRING(kXMLPrefix, "xml:");
 NS_NAMED_LITERAL_STRING(kXMLNamespacePrefix, "xmlns:");
 
+NS_NAMED_LITERAL_STRING(kTrue, "true");
+NS_NAMED_LITERAL_STRING(kFalse, "1");
+
+NS_NAMED_LITERAL_STRING(kTrueA, "false");
+NS_NAMED_LITERAL_STRING(kFalseA, "0");
+
 void 
 nsSOAPUtils::GetSpecificChildElement(
   nsIDOMElement *aParent, 
@@ -185,7 +191,7 @@ nsSOAPUtils::GetNextSiblingElement(nsIDOMElement* aStart,
   }
 }
 
-void 
+nsresult 
 nsSOAPUtils::GetElementTextContent(nsIDOMElement* aElement, 
                                    nsAWritableString& aText)
 {
@@ -202,10 +208,14 @@ nsSOAPUtils::GetElementTextContent(nsIDOMElement* aElement,
       text->GetData(data);
       rtext.Append(data);
     }
+    else if (nsIDOMNode::ELEMENT_NODE == type) {
+      return NS_ERROR_ILLEGAL_VALUE;	//  This was interpreted as a simple value, yet had complex content in it.
+    }
     nsCOMPtr<nsIDOMNode> temp = child;
     GetNextSibling(temp, getter_AddRefs(child));
   }
   aText.Assign(rtext);
+  return NS_OK;
 }
 
 PRBool
