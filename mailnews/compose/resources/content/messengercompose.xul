@@ -371,7 +371,6 @@
       <!--menu id="debugMenu"/-->
       <menu id="tasksMenu"/>
       <menu id="windowMenu"/>
-      <menu id="menu_Help"/>
     </menubar>
 
     <toolbar class="toolbar-primary chromeclass-toolbar" id="composeToolbar" persist="collapsed" grippytooltiptext="&mailToolbar.tooltip;">
