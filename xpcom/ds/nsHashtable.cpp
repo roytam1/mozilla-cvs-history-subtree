@@ -78,6 +78,17 @@ static PR_CALLBACK PRIntn _hashEnumerate(PLHashEntry *he, PRIntn i, void *arg)
     HT_ENUMERATE_STOP;
 }
 
+//
+// HashKey 
+//
+nsHashKey::nsHashKey(void)
+{
+}
+
+nsHashKey::~nsHashKey(void)
+{
+}
+
 nsHashtable::nsHashtable(PRUint32 aInitSize) {
   hashtable = PL_NewHashTable(aInitSize,
                               _hashValue,

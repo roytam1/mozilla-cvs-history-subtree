@@ -22,8 +22,11 @@
 #include "plhash.h"
 #include "nsCom.h"
 
-class nsHashKey {
+class NS_COM nsHashKey {
+protected:
+  nsHashKey(void);
 public:
+  virtual ~nsHashKey(void);
   virtual PRUint32 HashValue(void) const = 0;
   virtual PRBool Equals(const nsHashKey *aKey) const = 0;
   virtual nsHashKey *Clone(void) const = 0;
