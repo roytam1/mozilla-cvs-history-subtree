@@ -217,7 +217,8 @@ nsSVGAttribute::GetNamespaceURI(nsAString& aNamespaceURI)
 NS_IMETHODIMP
 nsSVGAttribute::GetPrefix(nsAString& aPrefix)
 {
-  return mNodeInfo->GetPrefix(aPrefix);
+  mNodeInfo->GetPrefix(aPrefix);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -245,7 +246,8 @@ nsSVGAttribute::SetPrefix(const nsAString& aPrefix)
 NS_IMETHODIMP
 nsSVGAttribute::GetLocalName(nsAString& aLocalName)
 {
-  return mNodeInfo->GetLocalName(aLocalName);
+  mNodeInfo->GetLocalName(aLocalName);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -616,8 +618,7 @@ nsSVGAttributes::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     if ((aNameSpaceID == kNameSpaceID_Unknown ||
          attr->GetNodeInfo()->NamespaceEquals(aNameSpaceID)) &&
         (attr->GetNodeInfo()->Equals(aName))) {
-      // AddRefs
-      *aPrefix = attr->GetNodeInfo()->GetPrefixAtom().get();
+      NS_IF_ADDREF(*aPrefix = attr->GetNodeInfo()->GetPrefixAtom());
       attr->GetValue()->GetValueString(aResult);
       if (!aResult.IsEmpty()) {
         rv = NS_CONTENT_ATTR_HAS_VALUE;
@@ -671,8 +672,8 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
     }
   }
 
-  PRInt32 nameSpaceID = aNodeInfo->GetNamespaceID();
-  nsCOMPtr<nsIAtom> name = aNodeInfo->GetNameAtom();
+  PRInt32 nameSpaceID = aNodeInfo->NamespaceID();
+  nsIAtom *name = aNodeInfo->NameAtom();
 
 #ifdef DEBUG
 //   {
@@ -887,11 +888,9 @@ nsSVGAttributes::GetAttrNameAt(PRInt32 aIndex,
 {
   nsSVGAttribute* attr = ElementAt(aIndex);
   if (attr) {
-    *aNameSpaceID = attr->GetNodeInfo()->GetNamespaceID();
-    // AddRefs
-    *aName = attr->GetNodeInfo()->GetNameAtom().get();
-    // AddRefs
-    *aPrefix = attr->GetNodeInfo()->GetPrefixAtom().get();
+    *aNameSpaceID = attr->GetNodeInfo()->NamespaceID();
+    NS_ADDREF(*aName = attr->GetNodeInfo()->NameAtom());
+    NS_IF_ADDREF(*aPrefix = attr->GetNodeInfo()->GetPrefixAtom());
 
     return NS_OK;
   }
@@ -913,12 +912,10 @@ nsSVGAttributes::AddMappedSVGValue(nsIAtom* name, nsISupports* value,
   NS_ASSERTION(mContent,"no owner content");
   if (!mContent) return NS_ERROR_FAILURE;
   
-  nsCOMPtr<nsINodeInfoManager> nimgr;
-  mContent->GetNodeInfo()->GetNodeInfoManager(getter_AddRefs(nimgr));
-  NS_ENSURE_TRUE(nimgr, NS_ERROR_FAILURE);
-
   nsCOMPtr<nsINodeInfo> ni;
-  nimgr->GetNodeInfo(name, nsnull, namespaceID, getter_AddRefs(ni));
+  mContent->GetNodeInfo()->NodeInfoManager()->GetNodeInfo(name, nsnull,
+                                                          namespaceID,
+                                                          getter_AddRefs(ni));
   NS_ENSURE_TRUE(ni, NS_ERROR_FAILURE);
 
   nsSVGAttribute* attrib = nsnull;
