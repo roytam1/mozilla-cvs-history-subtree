@@ -160,7 +160,7 @@ getVolume(int16 volNum, PRBool afpVols)
 	driveType = GetDriveType(str);
 	if (driveType != DRIVE_UNKNOWN && driveType != DRIVE_NO_ROOT_DIR)
 	{
-		url = PR_smprintf("file:///%c:/", volNum + 'A');
+		url = PR_smprintf("file:///%c|/", volNum + 'A');
 	}
 #endif
 
