@@ -39,16 +39,30 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Interface
 
+/**
+ * The nsIEventHandler interface provides the callback to handle events.
+ * It is implemented by the plugin, and is the superclass for nsIPluginInstance.
+ */
 class nsIEventHandler : public nsISupports {
 public:
 
-    // (Corresponds to NPP_HandleEvent.)
-    // Note that for Unix and Mac the nsPluginEvent structure is different
-    // from the old NPEvent structure -- it's no longer the native event
-    // record, but is instead a struct. This was done for future extensibility,
-    // and so that the Mac could receive the window argument too. For Windows
-    // and OS2, it's always been a struct, so there's no change for them.
-    NS_IMETHOD_(PRInt16)
+    /**
+     * Handles an event. An nsIEventHandler can also get registered with with
+     * nsIPluginManager2::RegisterWindow and will be called whenever an event
+     * comes in for that window.
+     *
+     * Note that for Unix and Mac the nsPluginEvent structure is different
+     * from the old NPEvent structure -- it's no longer the native event
+     * record, but is instead a struct. This was done for future extensibility,
+     * and so that the Mac could receive the window argument too. For Windows
+     * and OS2, it's always been a struct, so there's no change for them.
+     *
+     * (Corresponds to NPP_HandleEvent.)
+     *
+     * @param event - the event to be handled
+     * @result - NS_OK if the event was handled
+     */
+    NS_IMETHOD
     HandleEvent(nsPluginEvent* event) = 0;
 
 };

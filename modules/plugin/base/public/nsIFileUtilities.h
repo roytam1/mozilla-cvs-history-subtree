@@ -41,23 +41,41 @@
 // File Utilities Interface
 // This interface reflects operations only available in Communicator 5.0.
 
+/**
+ * The nsIFileUtilities interface provides access to random file operations.
+ * To obtain: QueryInterface on nsIPluginManager.
+ */
 class nsIFileUtilities : public nsISupports {
 public:
-
-    // QueryInterface on nsIPluginManager to get this.
     
     /**
      * Returns the name of the browser executable program.
-     * @returns 
+     *
+     * @param result - the returned path to the program
+     * @result - NS_OK if this operation was successful
      */
-    NS_IMETHOD_(const char*)
-    GetProgramPath(void) = 0;
-
-    NS_IMETHOD_(const char*)
-    GetTempDirPath(void) = 0;
-
     NS_IMETHOD
-    NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen) = 0;
+    GetProgramPath(const char* *result) = 0;
+
+    /**
+     * Returns the name of the temporary directory.
+     *
+     * @param result - the returned path to the temp directory
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    GetTempDirPath(const char* *result) = 0;
+
+    /**
+     * Returns a unique temporary file name.
+     *
+     * @param prefix - a string to prefix to the temporary file name
+     * @param bufLen - the length of the resultBuf to receive the data
+     * @param resultBuf - the returned temp file name
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    NewTempFileName(const char* prefix, PRUint32 bufLen, char* resultBuf) = 0;
 
 };
 

@@ -226,7 +226,7 @@ struct nsPluginPort;
 typedef HRGN            nsPluginRegion;
 typedef HWND            nsPluginPlatformWindowRef;
 
-#elif defined(XP_MAC)
+#elif defined(XP_UNIX)
 
 struct nsPluginPort;
 typedef Region          nsPluginRegion;

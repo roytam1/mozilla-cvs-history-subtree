@@ -48,19 +48,30 @@
 // Warning: Don't use this anymore, unless you're sure that you have to!
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "jri.h"        // ancient
+#include "jri.h"
 
-////////////////////////////////////////////////////////////////////////////////
-// JRILiveConnect Plugin Instance Peer Interface
-// Browsers that support JRI-based LiveConnect implement this subclass of
-// plugin instance peer. 
-
+/**
+ * The nsIJRILiveConnectPluginInstancePeer interface is implemented by browsers
+ * that support JRI-based LiveConnect. Note that for 5.0, LiveConnect support
+ * has become JNI-based, so this interface is effectively deprecated.
+ *
+ * To obtain: QueryInterface on nsIPluginInstancePeer
+ */
 class nsIJRILiveConnectPluginInstancePeer : public nsISupports {
 public:
 
-    // (Corresponds to NPN_GetJavaPeer.)
-    NS_IMETHOD_(jref)
-    GetJavaPeer(void) = 0;
+    /**
+     * Returns a JRI reference to the Java peer object associated with the
+     * plugin instance. This object is an instance of the class specified
+     * by nsIJRILiveConnectPlugin::GetJavaClass.
+     *
+     * (Corresponds to NPN_GetJavaPeer.)
+     *
+     * @param resultingJavaPeer - a resulting reference to the Java instance
+     * @result - NS_OK if this operation was successful
+     */
+    NS_IMETHOD
+    GetJavaPeer(jref *resultingJavaPeer) = 0;
 
 };
 
