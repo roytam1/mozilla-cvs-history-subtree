@@ -80,7 +80,7 @@ $(INCLUDEDIR):	FORCE
 	$(NSINSTALL) -D $(INCLUDEDIR)
 
 
-$(INCLUDEDIR)/ldap-standard.h:	ldap-standard-tmpl.h
+$(INCLUDEDIR)/ldap-standard.h:	ldap-standard-tmpl.h $(INCLUDEDIR)
 	$(PERL) $(srcdir)/../build/replace.pl \
 			LDAP_VENDOR_NAME="$(VENDOR_NAME)" \
 			LDAP_VENDOR_VERSION="$(VENDOR_VERSION)" \
