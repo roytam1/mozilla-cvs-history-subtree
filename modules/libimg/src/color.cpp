@@ -44,7 +44,7 @@
 
 #include "if.h"
 #include "nsQuickSort.h"
-#include "xp_mcom.h" //for XP_RANDOM
+#include "xp_str.h" //for XP_RANDOM
 
 #ifdef PROFILE
 #pragma profile on

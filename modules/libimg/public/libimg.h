@@ -32,7 +32,9 @@
 #include "prtypes.h"
 #include "il_types.h"
 
+#if 0
 #include "dummy_nc.h"
+#endif
 
 #include "ilISystemServices.h"
 #include "ilIImageRenderer.h"
