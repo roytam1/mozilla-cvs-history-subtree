@@ -48,6 +48,8 @@ static const int DRAG_ICON_HEIGHT = 15;
 
 static const int BOOKMARKS_TEXT_LEFT = 10;
 
+static const int URLBAR_HEIGHT = 23;
+
 BEGIN_MESSAGE_MAP(CURLBar, CURLBarBase) 
     //{{AFX_MSG_MAP(CURLBar)
 	ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, OnUpdateEditCopy)
@@ -1052,8 +1054,8 @@ CSize CURLBarButton::GetButtonSizeFromChars(CString s, int c)
 		CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
 		int rowWidth = pToolbar->GetRowWidth();
 		if (percent)
-			return CSize((width/100.0) * rowWidth, 27);
-		else return CSize(width, 27);
+			return CSize((width/100.0) * rowWidth, URLBAR_HEIGHT);
+		else return CSize(width, URLBAR_HEIGHT);
 	}
 
 	return CSize(0,0); // Must be on an RDF toolbar to make any sense at all.
@@ -1123,9 +1125,9 @@ void CURLBarButton::OnSize(UINT nType, int x, int y)
 		pDC->DrawText(text, -1, &textRect, DT_CENTER | DT_EXTERNALLEADING | DT_CALCRECT);
 		ReleaseDC(pDC);
 
-		int startY = (rect.Height() - 27)/2;
+		int startY = (rect.Height() - URLBAR_HEIGHT)/2;
 		m_pURLBar->MoveWindow(textRect.right, startY, rect.Width() - textRect.Width() - 3, 
-								27);
+								URLBAR_HEIGHT);
 	}
 }
 
