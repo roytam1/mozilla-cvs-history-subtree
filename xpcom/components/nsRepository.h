@@ -47,11 +47,9 @@ class nsIServiceManager;
 extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aClass,
                                            nsISupports* serviceMgr,
                                            nsIFactory **aFactory);
-extern "C" NS_EXPORT PRBool   NSCanUnload(PRBool force);
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* serviceMgr,
-                                             const char *fullpath);
-extern "C" NS_EXPORT nsresult NSUnregisterSelf(nsISupports* serviceMgr,      
-                                               const char *fullpath);
+extern "C" NS_EXPORT PRBool   NSCanUnload();
+extern "C" NS_EXPORT nsresult NSRegisterSelf(const char *fullpath);
+extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *fullpath);
 
 /*
  * Dynamic library export function types
@@ -61,9 +59,8 @@ typedef nsresult (*nsFactoryProc)(const nsCID &aCLass,
                                   nsISupports* serviceMgr,
                                   nsIFactory **aFactory);
 typedef PRBool (*nsCanUnloadProc)(void);
-typedef nsresult (*nsRegisterProc)(nsISupports* serviceMgr, const char *path);
-typedef nsresult (*nsUnregisterProc)(nsISupports* serviceMgr,
-									 const char *path);
+typedef nsresult (*nsRegisterProc)(const char *path);
+typedef nsresult (*nsUnregisterProc)(const char *path);
 
 /*
  * Support types
