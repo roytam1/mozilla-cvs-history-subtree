@@ -166,6 +166,7 @@ struct RENode {
 typedef struct CompilerState {
     JSContext       *context;
     const jschar    *cpbegin;
+    const jschar    *cpend;
     const jschar    *cp;
     uintN           flags;
     uintN           parenCount;
@@ -191,7 +192,7 @@ NewRENode(CompilerState *state, REOp op, void *kid)
     ren->kid = kid;
     return ren;
 }
-
+#define DEBUG_notme
 #ifdef DEBUG
 
 #include <stdio.h>
@@ -487,7 +488,7 @@ ParseRegExp(CompilerState *state)
     if (!ren)
 	return NULL;
     cp = state->cp;
-    if (*cp == '|') {
+    if ((cp < state->cpend) && (*cp == '|')) {
 	kid = ren;
 	ren = NewRENode(state, REOP_ALT, kid);
 	if (!ren)
@@ -513,7 +514,7 @@ ParseRegExp(CompilerState *state)
 	    ren2->flags = (kid->flags & (RENODE_ANCHORED | RENODE_NONEMPTY))
 			  | RENODE_ISNEXT;
 	    ren1 = ren2;
-	} while (*cp == '|');
+	} while ((cp < state->cpend) && (*cp == '|'));
     }
     return ren;
 }
@@ -535,8 +536,10 @@ ParseAltern(CompilerState *state)
 	return NULL;
     flags = 0;
     cp = state->cp;
+//    /* (balance: */
+//    while ((c = *cp) != 0 && c != '|' && c != ')') {
     /* (balance: */
-    while ((c = *cp) != 0 && c != '|' && c != ')') {
+    while ((cp < state->cpend) && (c = *cp) != '|' && c != ')') {
 	ren2 = ParseItem(state);
 	if (!ren2)
 	    return NULL;
@@ -578,46 +581,47 @@ ParseItem(CompilerState *state)
     REOp op;
 
     cp = state->cp;
-    switch (*cp) {
-      case '^':
-	state->cp = cp + 1;
-	ren = NewRENode(state, REOP_BOL, NULL);
-	return ren;
+    if (cp < state->cpend)
+        switch (*cp) {
+          case '^':
+	    state->cp = cp + 1;
+	    ren = NewRENode(state, REOP_BOL, NULL);
+	    return ren;
 
-      case '$':
-	state->cp = cp + 1;
-	return NewRENode(state,
-			 (cp == state->cpbegin ||
-			  ((cp[-1] == '(' || cp[-1] == '|') && /*balance)*/
-			   (cp - 1 == state->cpbegin || cp[-2] != '\\')))
-			 ? REOP_EOLONLY
-			 : REOP_EOL,
-			 NULL);
+          case '$':
+	    state->cp = cp + 1;
+	    return NewRENode(state,
+			     (cp == state->cpbegin ||
+			      ((cp[-1] == '(' || cp[-1] == '|') && /*balance)*/
+			       (cp - 1 == state->cpbegin || cp[-2] != '\\')))
+			     ? REOP_EOLONLY
+			     : REOP_EOL,
+			     NULL);
 
-      case '\\':
-	switch (*++cp) {
-	  case 'b':
-	    op = REOP_WBDRY;
-	    break;
-	  case 'B':
-	    op = REOP_WNONBDRY;
-	    break;
-	  default:
-	    return ParseQuantAtom(state);
-	}
+          case '\\':
+	    switch (*++cp) {
+	      case 'b':
+	        op = REOP_WBDRY;
+	        break;
+	      case 'B':
+	        op = REOP_WNONBDRY;
+	        break;
+	      default:
+	        return ParseQuantAtom(state);
+	    }
 
-	/*
-	 * Word boundaries and non-boundaries are flagged as non-empty so they
-	 * will be prefixed by an anchoring node.
-	 */
-	state->cp = cp + 1;
-	ren = NewRENode(state, op, NULL);
-	if (ren)
-	    ren->flags |= RENODE_NONEMPTY;
-	return ren;
+	    /*
+	     * Word boundaries and non-boundaries are flagged as non-empty so they
+	     * will be prefixed by an anchoring node.
+	     */
+	    state->cp = cp + 1;
+	    ren = NewRENode(state, op, NULL);
+	    if (ren)
+	        ren->flags |= RENODE_NONEMPTY;
+	    return ren;
 
-      default:;
-    }
+          default:;
+        }
     return ParseQuantAtom(state);
 }
 
@@ -645,105 +649,106 @@ ParseQuantAtom(CompilerState *state)
 
     cp = state->cp;
 loop:
-    switch (*cp) {
-      case '{':
-	c = *++cp;
-	if (!JS7_ISDEC(c)) {
-	    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				 JSMSG_BAD_QUANTIFIER, state->cp);
-	    return NULL;
-	}
-	min = (uint32)JS7_UNDEC(c);
-	for (c = *++cp; JS7_ISDEC(c); c = *++cp) {
-	    min = 10 * min + (uint32)JS7_UNDEC(c);
-	    if (min >> 16) {
-		JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				     JSMSG_MIN_TOO_BIG, state->cp);
-		return NULL;
+    if (cp < state->cpend)
+        switch (*cp) {
+          case '{':
+	    c = *++cp;
+	    if (!JS7_ISDEC(c)) {
+	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				     JSMSG_BAD_QUANTIFIER, state->cp);
+	        return NULL;
 	    }
-	}
-	if (*cp == ',') {
-	    up = ++cp;
-	    if (JS7_ISDEC(*cp)) {
-		max = (uint32)JS7_UNDEC(*cp);
-		for (c = *++cp; JS7_ISDEC(c); c = *++cp) {
-		    max = 10 * max + (uint32)JS7_UNDEC(c);
-		    if (max >> 16) {
-			JS_ReportErrorNumber(state->context,
-					     js_GetErrorMessage, NULL,
-					     JSMSG_MAX_TOO_BIG, up);
-			return NULL;
-		    }
-		}
-		if (max == 0)
-		    goto zero_quant;
-		if (min > max) {
-		    JS_ReportErrorNumber(state->context,
-					 js_GetErrorMessage, NULL,
-					 JSMSG_OUT_OF_ORDER, up);
+	    min = (uint32)JS7_UNDEC(c);
+	    for (c = *++cp; JS7_ISDEC(c); c = *++cp) {
+	        min = 10 * min + (uint32)JS7_UNDEC(c);
+	        if (min >> 16) {
+		    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				         JSMSG_MIN_TOO_BIG, state->cp);
 		    return NULL;
-		}
+	        }
+	    }
+	    if (*cp == ',') {
+	        up = ++cp;
+	        if (JS7_ISDEC(*cp)) {
+		    max = (uint32)JS7_UNDEC(*cp);
+		    for (c = *++cp; JS7_ISDEC(c); c = *++cp) {
+		        max = 10 * max + (uint32)JS7_UNDEC(c);
+		        if (max >> 16) {
+			    JS_ReportErrorNumber(state->context,
+					         js_GetErrorMessage, NULL,
+					         JSMSG_MAX_TOO_BIG, up);
+			    return NULL;
+		        }
+		    }
+		    if (max == 0)
+		        goto zero_quant;
+		    if (min > max) {
+		        JS_ReportErrorNumber(state->context,
+					     js_GetErrorMessage, NULL,
+					     JSMSG_OUT_OF_ORDER, up);
+		        return NULL;
+		    }
+	        } else {
+		    /* 0 means no upper bound. */
+		    max = 0;
+	        }
 	    } else {
-		/* 0 means no upper bound. */
-		max = 0;
+	        /* Exactly n times. */
+	        if (min == 0) {
+          zero_quant:
+		    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				         JSMSG_ZERO_QUANTIFIER, state->cp);
+		    return NULL;
+	        }
+	        max = min;
 	    }
-	} else {
-	    /* Exactly n times. */
-	    if (min == 0) {
-      zero_quant:
-		JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				     JSMSG_ZERO_QUANTIFIER, state->cp);
-		return NULL;
+	    if (*cp != '}') {
+	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				     JSMSG_UNTERM_QUANTIFIER, state->cp);
+	        return NULL;
 	    }
-	    max = min;
-	}
-	if (*cp != '}') {
-	    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				 JSMSG_UNTERM_QUANTIFIER, state->cp);
-	    return NULL;
-	}
-	cp++;
+	    cp++;
 
-	ren2 = NewRENode(state, REOP_QUANT, ren);
-	if (!ren2)
-	    return NULL;
-	if (min > 0 && (ren->flags & RENODE_NONEMPTY))
-	    ren2->flags |= RENODE_NONEMPTY;
-	ren2->u.range.min = (uint16)min;
-	ren2->u.range.max = (uint16)max;
-	ren = ren2;
-	goto loop;
+	    ren2 = NewRENode(state, REOP_QUANT, ren);
+	    if (!ren2)
+	        return NULL;
+	    if (min > 0 && (ren->flags & RENODE_NONEMPTY))
+	        ren2->flags |= RENODE_NONEMPTY;
+	    ren2->u.range.min = (uint16)min;
+	    ren2->u.range.max = (uint16)max;
+	    ren = ren2;
+	    goto loop;
 
-      case '*':
-	if (!(ren->flags & RENODE_NONEMPTY)) {
-	    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				 JSMSG_EMPTY_BEFORE_STAR);
-	    return NULL;
-	}
-	cp++;
-	ren = NewRENode(state, REOP_STAR, ren);
-	goto loop;
+          case '*':
+	    if (!(ren->flags & RENODE_NONEMPTY)) {
+	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				     JSMSG_EMPTY_BEFORE_STAR);
+	        return NULL;
+	    }
+	    cp++;
+	    ren = NewRENode(state, REOP_STAR, ren);
+	    goto loop;
 
-      case '+':
-	if (!(ren->flags & RENODE_NONEMPTY)) {
-	    JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				 JSMSG_EMPTY_BEFORE_PLUS);
-	    return NULL;
-	}
-	cp++;
-	ren2 = NewRENode(state, REOP_PLUS, ren);
-	if (!ren2)
-	    return NULL;
-	if (ren->flags & RENODE_NONEMPTY)
-	    ren2->flags |= RENODE_NONEMPTY;
-	ren = ren2;
-	goto loop;
+          case '+':
+	    if (!(ren->flags & RENODE_NONEMPTY)) {
+	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
+				     JSMSG_EMPTY_BEFORE_PLUS);
+	        return NULL;
+	    }
+	    cp++;
+	    ren2 = NewRENode(state, REOP_PLUS, ren);
+	    if (!ren2)
+	        return NULL;
+	    if (ren->flags & RENODE_NONEMPTY)
+	        ren2->flags |= RENODE_NONEMPTY;
+	    ren = ren2;
+	    goto loop;
 
-      case '?':
-	cp++;
-	ren = NewRENode(state, REOP_OPT, ren);
-	goto loop;
-    }
+          case '?':
+	    cp++;
+	    ren = NewRENode(state, REOP_OPT, ren);
+	    goto loop;
+        }
 
     state->cp = cp;
     return ren;
@@ -796,12 +801,18 @@ ParseAtom(CompilerState *state)
     jschar c;
 
     cp = ocp = state->cp;
+       /* handle /|a/ by returning an empty node for the leftside */
+   if ((cp == state->cpend) || (*cp == '|'))
+        return NewRENode(state, REOP_EMPTY, NULL);
+
     switch (*cp) {
-      /* handle /|a/ by returning an empty node for the leftside */
+#if 0
+        /* handle /|a/ by returning an empty node for the leftside */
       case '|':
       case 0:
 	ren = NewRENode(state, REOP_EMPTY, NULL);
 	break;
+#endif
 
       case '(':
 	num = state->parenCount++;	/* \1 is numbered 0, etc. */
@@ -1962,6 +1973,7 @@ js_NewRegExp(JSContext *cx, JSString *str, uintN flags)
 
     state.context = cx;
     state.cpbegin = state.cp = str->chars;
+    state.cpend = state.cp + str->length;
     state.flags = flags;
     state.parenCount = 0;
     state.progLength = 0;
