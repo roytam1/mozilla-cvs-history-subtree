@@ -460,7 +460,7 @@ static const double two31 = 2147483648.0;
     class ElementReference : public Reference {
     public:
         ElementReference(Access acc, int32 depth)
-            : mAccess(acc), mDepth(depth), Reference(Object_Type) { }
+            : Reference(Object_Type), mAccess(acc), mDepth(depth) { }
         Access mAccess;
         int32 mDepth;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -482,7 +482,8 @@ static const double two31 = 2147483648.0;
     public:
     // The generic Javascript object. Every JS2 object is one of these
         JSObject(JSType *type = Object_Type) : mType(type), mPrivate(NULL), mPrototype(NULL) { }
-
+        
+        virtual ~JSObject() { } // keeping gcc happy
         
         // every object has a type
         JSType        *mType;
@@ -618,6 +619,8 @@ static const double two31 = 2147483648.0;
         JSInstance(Context *cx, JSType *type) 
             : JSObject(type), mInstanceValues(NULL) { if (type) initInstance(cx, type); }
 
+        virtual ~JSInstance() { } // keeping gcc happy
+
         void initInstance(Context *cx, JSType *type);
 
         void getProperty(Context *cx, const String &name, AttributeList *attr);
@@ -646,8 +649,7 @@ static const double two31 = 2147483648.0;
     class ScopeChain;
 
     class JSType : public JSInstance {
-    public:
-        
+    public:        
         JSType(Context *cx, const String &name, JSType *super) 
             : JSInstance(cx, Type_Type),
                     mSuperType(super), 
@@ -675,6 +677,8 @@ static const double two31 = 2147483648.0;
             for (uint32 i = 0; i < OperatorCount; i++)
                 mUnaryOperators[i] = NULL;
         }
+
+        virtual ~JSType() { } // keeping gcc happy
 
         void setStaticInitializer(Context *cx, JSFunction *f);
         void setInstanceInitializer(Context *cx, JSFunction *f);
@@ -805,10 +809,10 @@ static const double two31 = 2147483648.0;
         virtual bool isDynamic() { return mIsDynamic; }
 
         JSType          *mSuperType;        // NULL implies that this is the base Object
+        JSType          *mStatics;          // NULL implies that this is the static component
 
         uint32          mVariableCount;
         JSInstance      *mInitialInstance;
-        JSType          *mStatics;          // NULL implies that this is the static component
     
         // the 'vtable'
         MethodList      mMethods;
@@ -828,6 +832,7 @@ static const double two31 = 2147483648.0;
     class JSArrayInstance : public JSInstance {
     public:
         JSArrayInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
+        virtual ~JSArrayInstance() { } // keeping gcc happy
 
         // XXX maybe could have implemented length as a getter/setter pair?
         void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
@@ -844,6 +849,7 @@ static const double two31 = 2147483648.0;
             : JSType(cx, name, super)
         {
         }
+        virtual ~JSArrayType() { } // keeping gcc happy
 
         JSInstance *newInstance(Context *cx);
 
@@ -852,6 +858,7 @@ static const double two31 = 2147483648.0;
     class JSStringInstance : public JSInstance {
     public:
         JSStringInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
+        virtual ~JSStringInstance() { } // keeping gcc happy
 
         void getProperty(Context *cx, const String &name, AttributeList *attr);
 
@@ -866,6 +873,7 @@ static const double two31 = 2147483648.0;
             : JSType(cx, name, super)
         {
         }
+        virtual ~JSStringType() { } // keeping gcc happy
 
         JSInstance *newInstance(Context *cx);
 
@@ -882,6 +890,7 @@ static const double two31 = 2147483648.0;
         ParameterBarrel(Context *cx) : JSType(cx, NULL) 
         {
         }
+        virtual ~ParameterBarrel() { } // keeping gcc happy
 
         Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
         {
@@ -939,6 +948,7 @@ static const double two31 = 2147483648.0;
                         mPC(pc), 
                         mModule(module)  { }
 
+        virtual ~Activation() { } // keeping gcc happy
 
         
         // saved values from a previous execution
@@ -1167,17 +1177,15 @@ static const double two31 = 2147483648.0;
     public:
         typedef JSValue (NativeCode)(Context *cx, const JSValue &thisValue, JSValue argv[], uint32 argc);
 
-        JSFunction(Context *cx, JSType *resultType,
-                         uint32 argCount, ScopeChain *scopeChain) 
-
-                    : mByteCode(NULL), 
-                        mCode(NULL), 
-                        mResultType(resultType), 
+        JSFunction(Context *cx, JSType *resultType, uint32 argCount, ScopeChain *scopeChain) 
+                    : JSObject(Function_Type), 
                         mParameterBarrel(NULL),
                         mActivation(cx),
+                        mByteCode(NULL), 
+                        mCode(NULL), 
+                        mResultType(resultType), 
                         mExpectedArgs(argCount),
                         mScopeChain(NULL), 
-                        JSObject(Function_Type),
                         mIsPrototype(false),
                         mClass(NULL)
         {
@@ -1188,20 +1196,22 @@ static const double two31 = 2147483648.0;
         }
         
         JSFunction(Context *cx, NativeCode *code, JSType *resultType) 
-                    : mByteCode(NULL), 
-                        mCode(code), 
-                        mResultType(resultType), 
+                    : JSObject(Function_Type), 
                         mParameterBarrel(NULL),
                         mActivation(cx),
+                        mByteCode(NULL), 
+                        mCode(code), 
+                        mResultType(resultType), 
                         mExpectedArgs(0),
                         mScopeChain(NULL),
-                        JSObject(Function_Type),
                         mIsPrototype(false),
                         mClass(NULL)
         {
             mPrototype = Function_Type->mPrototype;
         }
 
+        ~JSFunction() { }  // keeping gcc happy
+        
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
         void setResultType(JSType *r)           { mResultType = r; }
         void setExpectedArgs(uint32 e)          { mExpectedArgs = e; }
@@ -1224,6 +1234,7 @@ static const double two31 = 2147483648.0;
 
         ParameterBarrel *mParameterBarrel;
         Activation mActivation;                 // not used during execution  (XXX so maybe we should handle it differently, hmmm?)
+
     private:
         ByteCodeModule *mByteCode;
         NativeCode *mCode;
@@ -1242,6 +1253,8 @@ static const double two31 = 2147483648.0;
     public:
         JSBoundFunction(JSFunction *f, JSObject *thisObj)
             : mFunction(f), mThis(thisObj) { }
+
+        ~JSBoundFunction() { }  // keeping gcc happy
 
         bool hasBoundThis()             { return true; }
         bool isNative()                 { return mFunction->isNative(); }

@@ -559,7 +559,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
 
 #ifdef DEBUG
     if (f.name && (f.name->getKind() == ExprNode::identifier)) {
-        const StringAtom& name = (static_cast<IdentifierExprNode *>(f.name))->name;
+//      const StringAtom& name = (static_cast<IdentifierExprNode *>(f.name))->name;
 //      stdOut << "gencode for " << name << "\n";
     }
 #endif
@@ -1042,7 +1042,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 s = s->next;
             }
             addOp(JumpOp);
-            if (defaultLabel != -1)
+            if (defaultLabel != (uint32)(-1))
                 addFixup(defaultLabel);
             else
                 addFixup(breakLabel);          
@@ -1358,11 +1358,9 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             }
 
         }
-/*
     default:
         NOT_REACHED("Invalid l-value");      // XXX should be a semantic error
         return NULL;
-*/
     }
     return NULL;
 }
@@ -2141,6 +2139,7 @@ BinaryOpEquals:
             UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
             JSType *uType = genExpr(u->op);
             addByte(ClassOp);
+            return uType;
         }
         break;
     default:

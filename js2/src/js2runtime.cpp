@@ -531,7 +531,6 @@ void ScopeChain::setNameValue(const String& name, AttributeList *attr, Context *
 {
     PropertyIterator i;
     JSObject *top = *mScopeStack.rbegin();
-    Reference *ref = NULL;
     JSValue v = cx->topValue();
     if (top->hasProperty(name, attr, Write, &i)) {
         if (PROPERTY_KIND(i) == ValuePointer) {

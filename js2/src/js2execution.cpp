@@ -700,7 +700,8 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     JSValue t = popValue();
                     JSValue v = popValue();
-                    if (t.isObject() && t.isFunction()) {                            
+                    if (t.isObject() && t.isFunction()) {
+                        NOT_REACHED("implement me");
                         // XXX prove that t->function["prototype"] is on t.object->mPrototype chain
                         pushValue(kTrueValue);
                     }

@@ -244,15 +244,15 @@ JSValue String_indexOf(Context *cx, const JSValue& thisValue, JSValue *argv, uin
     int32 pos = 0;
 
     if (argc > 1) {
-        pos = argv[1].toInt32(cx).f64;
+        pos = (int32)(argv[1].toInt32(cx).f64);
         if (pos < 0)
             pos = 0;
         else
-            if (pos >= str->size()) 
+            if ((uint32)pos >= str->size()) 
                 pos = str->size();
     }
     pos = str->find(*searchStr, pos);
-    if (pos == String::npos)
+    if ((uint32)pos == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
@@ -275,12 +275,12 @@ JSValue String_lastIndexOf(Context *cx, const JSValue& thisValue, JSValue *argv,
             if (pos < 0) 
                 pos = 0;
             else
-                if (pos >= str->size()) 
+                if ((uint32)pos >= str->size()) 
                     pos = str->size();
         }
     }
     pos = str->rfind(*searchStr, pos);
-    if (pos == String::npos)
+    if ((uint32)pos == String::npos)
         return JSValue(-1.0);
     return JSValue((float64)pos);
 }
@@ -329,7 +329,7 @@ JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
             start = 0;
     }
     else {
-        if (start >= sourceLength)
+        if ((uint32)start >= sourceLength)
             start = sourceLength;
     }
     if (end < 0) {
@@ -338,7 +338,7 @@ JSValue String_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
             end = 0;
     }
     else {
-        if (end >= sourceLength)
+        if ((uint32)end >= sourceLength)
             end = sourceLength;
     }    
     if (start > end)
@@ -358,13 +358,13 @@ JSValue String_substring(Context *cx, const JSValue& thisValue, JSValue *argv, u
     if (start < 0)
         start = 0;
     else {
-        if (start >= sourceLength)
+        if ((uint32)start >= sourceLength)
             start = sourceLength;
     }
     if (end < 0)
         end = 0;
     else {
-        if (end >= sourceLength)
+        if ((uint32)end >= sourceLength)
             end = sourceLength;
     }
 

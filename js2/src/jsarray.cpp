@@ -333,7 +333,7 @@ JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = (uint32)(result.toUInt32(cx).f64);    
+    int32 length = (int32)(result.toUInt32(cx).f64);    
 
     int32 start, end;
     if (argc < 1) 
@@ -346,7 +346,7 @@ JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
                 start = 0;
         }
         else {
-            if (start >= length)
+            if ((uint32)start >= length)    // cast ok since > 0
                 start = length;
         }
     }
@@ -360,7 +360,7 @@ JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
                 end = 0;
         }
         else {
-            if (end >= length)
+            if ((uint32)end >= length)
                 end = length;
         }
     }
@@ -407,17 +407,17 @@ JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
                 start = 0;
         }
         else {
-            if (start >= length)
+            if ((uint32)start >= length)
                 start = length;
         }
 
         int32 deleteCount = (int32)(argv[1].toInt32(cx).f64);
         if (deleteCount < 0)
             deleteCount = 0;
-        if (deleteCount >= (length - start))
+        if ((uint32)deleteCount >= (length - start))
             deleteCount = length - start;
         
-        for (k = 0; k < deleteCount; k++) {
+        for (k = 0; k < (uint32)deleteCount; k++) {
             String *id1 = numberToString(start + k);
             PropertyIterator it;
             if (thisObj->hasOwnProperty(*id1, CURRENT_ATTR, Read, &it)) {
@@ -429,7 +429,7 @@ JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
         A->setProperty(cx, widenCString("length"), CURRENT_ATTR, JSValue((float64)deleteCount) );
 
         uint32 newItemCount = argc - 2;
-        if (newItemCount < deleteCount) {
+        if (newItemCount < (uint32)deleteCount) {
             for (k = start; k < (length - deleteCount); k++) {
                 String *id1 = numberToString(k + deleteCount);
                 String *id2 = numberToString(k + newItemCount);
@@ -447,8 +447,8 @@ JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint3
             }
         }
         else {
-            if (newItemCount > deleteCount) {
-                for (k = length - deleteCount; k > start; k--) {
+            if (newItemCount > (uint32)deleteCount) {
+                for (k = length - deleteCount; k > (uint32)start; k--) {
                     String *id1 = numberToString(k + deleteCount - 1);
                     String *id2 = numberToString(k + newItemCount - 1);
                     PropertyIterator it;
