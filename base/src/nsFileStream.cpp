@@ -22,10 +22,10 @@
 
 #include "nsFileStream.h"
 
-#if 0
+
 #include <string.h>
 #include <stdio.h>
-#endif
+
 
 //========================================================================================
 //          nsInputStream
