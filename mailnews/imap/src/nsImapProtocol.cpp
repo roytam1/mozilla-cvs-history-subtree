@@ -6648,7 +6648,16 @@ nsImapCacheStreamListener::OnDataAvailable(nsIChannel * aChannel, nsISupports * 
   return mListener->OnDataAvailable(mChannelToUse, aCtxt, aInStream, aSourceOffset, aCount);
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsImapMockChannel, nsIImapMockChannel, nsIChannel)
+NS_IMPL_THREADSAFE_ADDREF(nsImapMockChannel)
+NS_IMPL_THREADSAFE_RELEASE(nsImapMockChannel)
+
+NS_INTERFACE_MAP_BEGIN(nsImapMockChannel)
+   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIImapMockChannel)
+   NS_INTERFACE_MAP_ENTRY(nsIImapMockChannel)
+   NS_INTERFACE_MAP_ENTRY(nsIChannel)
+   NS_INTERFACE_MAP_ENTRY(nsIRequest)
+NS_INTERFACE_MAP_END_THREADSAFE
+
 
 nsImapMockChannel::nsImapMockChannel()
 {
