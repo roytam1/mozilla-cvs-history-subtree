@@ -514,10 +514,6 @@ protected:
                                              const nsString& aContextStr,
                                              const nsString& aInfoStr);
   nsresult   StripFormattingNodes(nsIDOMNode *aNode);
-  nsresult   GetPasteNodeParent(nsIDOMNode *aNode, 
-                                nsIDOMNode *aFragAsNode,
-                                nsIDOMNode *aContextLeaf,
-                                nsCOMPtr<nsIDOMNode> *outParentNode);
 
   /** simple utility to handle any error with event listener allocation or registration */
   void HandleEventListenerError();

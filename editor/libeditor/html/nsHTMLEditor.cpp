@@ -2490,6 +2490,7 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
   // if we have context info, create a fragment for that too
   nsCOMPtr<nsIDOMDocumentFragment> contextfrag;
   nsCOMPtr<nsIDOMNode> contextLeaf;
+  PRInt32 contextDepth = 0;
   if (aContextStr.Length())
   {
     res = nsrange->CreateContextualFragment(aContextStr,
@@ -2499,22 +2500,37 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
     res = StripFormattingNodes(contextAsNode);
     NS_ENSURE_SUCCESS(res, res);
     // cache the deepest leaf in the context
-    nsCOMPtr<nsIDOMNode> tmp = contextAsNode;
+    nsCOMPtr<nsIDOMNode> junk, child, tmp = contextAsNode;
     while (tmp)
     {
+      contextDepth++;
       contextLeaf = tmp;
       contextLeaf->GetFirstChild(getter_AddRefs(tmp));
     }
+    // unite the two trees
+    contextLeaf->AppendChild(fragmentAsNode, getter_AddRefs(junk));
+    fragmentAsNode = contextAsNode;
+    // no longer have fragmentAsNode in tree
+    contextDepth--;
   }
   
   // get the infoString contents
   nsAutoString numstr1, numstr2;
-  PRInt32 err, sep, rangeStartHint, rangeEndHint;
-  sep = aInfoStr.FindChar((PRUnichar)',');
-  aInfoStr.Left(numstr1, sep);
-  aInfoStr.Mid(numstr2, sep+1, -1);
-  rangeStartHint = numstr1.ToInteger(&err);
-  rangeEndHint   = numstr2.ToInteger(&err);
+  PRInt32 rangeStartHint, rangeEndHint;
+  if (aInfoStr.Length())
+  {
+    PRInt32 err, sep;
+    sep = aInfoStr.FindChar((PRUnichar)',');
+    aInfoStr.Left(numstr1, sep);
+    aInfoStr.Mid(numstr2, sep+1, -1);
+    rangeStartHint = numstr1.ToInteger(&err) + contextDepth;
+    rangeEndHint   = numstr2.ToInteger(&err) + contextDepth;
+  }
+  else
+  {
+    rangeStartHint = contextDepth;
+    rangeEndHint = contextDepth;
+  }
 
   // make a list of what nodes in docFrag we need to move
   
@@ -2634,7 +2650,7 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
     }
 
     // Loop over the node list and paste the nodes:
-    nsCOMPtr<nsIDOMNode> lastInsertNode;
+    nsCOMPtr<nsIDOMNode> lastInsertNode, insertedContextParent;
     PRBool bDidInsert = PR_FALSE;
     PRUint32 listCount, j;
     nodeList->Count(&listCount);
@@ -2647,6 +2663,14 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
       NS_ENSURE_TRUE(curNode, NS_ERROR_FAILURE);
       NS_ENSURE_TRUE(curNode != fragmentAsNode, NS_ERROR_FAILURE);
       NS_ENSURE_TRUE(!nsHTMLEditUtils::IsBody(curNode), NS_ERROR_FAILURE);
+      
+      if (insertedContextParent)
+      {
+        // if we had to insert something higher up in the paste heirarchy, we want to 
+        // skip any further paste nodes that descend from that.  Else we will paste twice.
+        if (nsHTMLEditUtils::IsDescendantOf(curNode, insertedContextParent))
+          continue;
+      }
       
       // give the user a hand on table element insertion.  if they have
       // a table or table row on the clipboard, and are trying to insert
@@ -2675,39 +2699,23 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
         if (NS_SUCCEEDED(res)) 
         {
           bDidInsert = PR_TRUE;
-          // a little tricky here.  We might be inserting below an inserted parent,
-          // in which case the parent is still last for purposes of setting selection
-          // after we are done.
-          if (!lastInsertNode || !nsHTMLEditUtils::IsDescendantOf(curNode, lastInsertNode))
-            lastInsertNode = curNode;
+          lastInsertNode = curNode;
         }
           
         // assume failure means no legal parent in the document heirarchy.
         // try again with the parent of curNode in the paste heirarchy.
-        nsCOMPtr<nsIDOMNode> parent, tmp;
+        nsCOMPtr<nsIDOMNode> parent;
         while (NS_FAILED(res) && curNode)
         {
-          res = GetPasteNodeParent(curNode, fragmentAsNode, contextLeaf, &parent);
-          if (NS_SUCCEEDED(res) && parent && !nsHTMLEditUtils::IsBody(parent))
+          curNode->GetParentNode(getter_AddRefs(parent));
+          if (parent && !nsHTMLEditUtils::IsBody(parent))
           {
-            parent->CloneNode(PR_FALSE,getter_AddRefs(tmp));
-            NS_ENSURE_TRUE(tmp, NS_ERROR_FAILURE);
-            
-            res = InsertNodeAtPoint(tmp, parentNode, offsetOfNewNode, PR_TRUE);
+            res = InsertNodeAtPoint(parent, parentNode, offsetOfNewNode, PR_TRUE);
             if (NS_SUCCEEDED(res)) 
             {
               bDidInsert = PR_TRUE;
-              // a little tricky here.  We might be inserting below an inserted parent,
-              // in which case the parent is still last for purposes of setting selection
-              // after we are done.
-              if (!lastInsertNode || !nsHTMLEditUtils::IsDescendantOf(tmp, lastInsertNode))
-                lastInsertNode = tmp;
-              res = InsertNodeAtPoint(curNode, tmp, 0, PR_TRUE);
-              // if this failed then we have a paste heirarchy that is
-              // not compatible with our dtd.  This is where we should add
-              // some smarts to fix up common invalid html we allow in the
-              // browser.  for now just stop trying to paste this node.
-              if (NS_FAILED(res)) break;
+              insertedContextParent = parent;
+              lastInsertNode = parent;
             }
             else 
             {
@@ -2776,36 +2784,6 @@ nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
     }
   }
   return res;
-}
-
-nsresult
-nsHTMLEditor::GetPasteNodeParent(nsIDOMNode *aNode, 
-                                 nsIDOMNode *aFragAsNode,
-                                 nsIDOMNode *aContextLeaf,
-                                 nsCOMPtr<nsIDOMNode> *outParentNode)
-{
-  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
-  NS_ENSURE_TRUE(aFragAsNode, NS_ERROR_NULL_POINTER);
-  NS_ENSURE_TRUE(outParentNode, NS_ERROR_NULL_POINTER);
-  if (aNode == aFragAsNode)
-  {
-    if (aContextLeaf) 
-      *outParentNode = aContextLeaf;
-    else 
-      *outParentNode = nsnull;
-    return NS_OK;
-  }
-  nsresult res = aNode->GetParentNode(getter_AddRefs(*outParentNode));
-  NS_ENSURE_SUCCESS(res, res);
-  if (outParentNode->get() == aFragAsNode)
-  {
-    if (aContextLeaf) 
-      *outParentNode = aContextLeaf;
-    else 
-      *outParentNode = nsnull;
-    return NS_OK;
-  }
-  return NS_OK;
 }
 
 // This is mostly like InsertHTMLWithCharset, 
@@ -6583,6 +6561,13 @@ nsHTMLEditor::TagCanContainTag(const nsString &aParentTag, const nsString &aChil
     if (aChildTag.EqualsWithConversion("ol") ||
         aChildTag.EqualsWithConversion("ul") ) 
       return PR_TRUE;
+  }
+
+  if ( aParentTag.EqualsWithConversion("li") )
+  {
+    // list items cant contain list items
+    if (aChildTag.EqualsWithConversion("li") ) 
+      return PR_FALSE;
   }
 
 /*  
