@@ -939,7 +939,8 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
 
   nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
 
-  nsCAutoString buffer, title, url;
+  nsCAutoString buffer, url;
+  nsAutoString title;
   PRTime lastVisitDate;
   PRBool moreData = PR_FALSE;
 
@@ -953,7 +954,7 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
 
     switch (state) {
     case TITLE:
-      title = buffer;
+      CopyUTF8toUTF16(buffer, title);
       state = URL;
       break;
     case URL:
@@ -970,8 +971,10 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
       LL_I2L(million, PR_USEC_PER_SEC);
       LL_MUL(lastVisitDate, temp, million);
 
-      nsAutoString titleStr; titleStr.AssignWithConversion(title);
-      hist->AddPageWithDetails(url.get(), titleStr.get(), lastVisitDate);
+      nsCOMPtr<nsIURI> uri;
+      NS_NewURI(getter_AddRefs(uri), url);
+      if (uri)
+        hist->AddPageWithDetails(uri, title.get(), lastVisitDate);
       
       state = TITLE;
       break;

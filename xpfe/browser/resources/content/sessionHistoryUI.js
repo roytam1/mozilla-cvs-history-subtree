@@ -264,7 +264,7 @@ function addToUrlbarHistory()
          if (url.indexOf(" ") == -1) {
            var fixedUpURI = gURIFixup.createFixupURI(url, 0);
            if (!fixedUpURI.schemeIs("data"))
-             gGlobalHistory.markPageAsTyped(fixedUpURI.spec);
+             gGlobalHistory.markPageAsTyped(fixedUpURI);
          }
        }
        catch(ex) {
