@@ -1258,7 +1258,8 @@ function delayedStartup()
       var promptTitle = shellBundle.getString("setDefaultBrowserTitle");
       var promptMessage = shellBundle.getFormattedString("setDefaultBrowserMessage", 
                                                          [brandShortName]);
-      var checkboxLabel = shellBundle.getString("setDefaultBrowserDontAsk");
+      var checkboxLabel = shellBundle.getFormattedString("setDefaultBrowserDontAsk",
+                                                         [brandShortName]);
       const IPS = Components.interfaces.nsIPromptService;
       var ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                                                 .getService(IPS);
