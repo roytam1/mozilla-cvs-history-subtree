@@ -114,11 +114,7 @@ ifeq ($(PACKAGE_BUILD),)
 	@echo $(PERL) ../src_share/runem.pl org.mozilla.webclient.test.EmbeddedMozilla $(DEPTH) "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
 	chmod 755 runem
 else
-	@echo +++ Commercial Packaging - Creating runem. Used to run test
-	rm -f runem
-	@echo #!/bin/sh > runem
-	@echo perl runem.pl org.mozilla.webclient.test.EmbeddedMozilla "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
-	chmod 755 runem
+	@echo +++ Commercial Packaging - Copying runem_solaris. Used to run test
 	if test ! -d $(PACKAGE_EXAMPLE) ; then mkdir $(PACKAGE_EXAMPLE) ; else true ; fi ;
 	cp $(topsrcdir)/dist/bin/libwebclientstub.so $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/libwebclient.so $(PACKAGE_LIB)/libwebclient.so.$(VERSION_NUMBER)
@@ -154,9 +150,8 @@ else
 	if test ! -d $(PACKAGE_LIB)/libplugletjni.so ; then ln -s libplugletjni.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libplugletjni.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libpluglet.so ; then ln -s libpluglet.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libpluglet.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libjavadom.so ; then ln -s libjavadom.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libjavadom.so ; else true ; fi ;
-	if test ! -d $(PACKAGE_EXAMPLE)/runem ; then cp $(topsrcdir)/java/webclient/src_moz/runem $(PACKAGE_EXAMPLE)/runem ; else true ; fi ;
-	if test ! -d $(PACKAGE_EXAMPLE)/runem.pl ; then cp $(topsrcdir)/java/webclient/src_share/runem_commercial.pl $(PACKAGE_EXAMPLE)/runem.pl ; else true ; fi ;
-	chmod 755 $(PACKAGE_EXAMPLE)/runem.pl
+	if test ! -d $(PACKAGE_EXAMPLE)/runem ; then cp $(topsrcdir)/java/webclient/src_share/runem_solaris $(PACKAGE_EXAMPLE)/runem ; else true ; fi ;
+	chmod 755 $(PACKAGE_EXAMPLE)/runem
 	cp $(topsrcdir)/java/README.commercial $(PACKAGE_DIR)/README
 endif # PACKAGE_BUILD
 endif # BAL_INTERFACE
