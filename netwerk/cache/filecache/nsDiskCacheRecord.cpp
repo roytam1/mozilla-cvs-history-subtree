@@ -89,7 +89,9 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length)
   memcpy(mKey, key, length) ;
 
   // get RecordID
+  // FUR!! Another disk access ?  If called from GetCachedData, ID is already known
   mDB->GetID(key, length, &mRecordID) ;
+  // FUR - check for GetID failure
 
   // setup the file name
   nsCOMPtr<nsIFileSpec> dbFolder ;
@@ -101,9 +103,12 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length)
 
   // dir is a hash result of mRecordID%32, hope it's enough 
   char filename[9], dirName[3] ;
+  
+  // FUR!! - should the format string be "%.02x".  How does this work !?
   PR_snprintf(dirName, 3, "%.2x", (((PRUint32)mRecordID) % 32)) ;
   mFile->AppendRelativeUnixPath(dirName) ;
 
+  // FUR!! - should the format string be "%.08x".  How does this work !?
   PR_snprintf(filename, 9, "%.8x", mRecordID) ;
   mFile->AppendRelativeUnixPath(filename) ;
 
@@ -195,6 +200,8 @@ nsDiskCacheRecord::SetMetaData(PRUint32 length, const char* data)
 
   // write through into mDB
   rv = mDB->Put(mRecordID, mInfo, mInfoSize) ;
+
+  // FUR - mInfo leaking ?
   return rv ;
 }
 

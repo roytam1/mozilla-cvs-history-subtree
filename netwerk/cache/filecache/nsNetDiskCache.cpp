@@ -72,6 +72,25 @@ nsNetDiskCache::~nsNetDiskCache()
 
   NS_IF_RELEASE(m_DB) ;
 
+  // FUR!!
+  // You shouldn't rely on the value of m_BaseDirNum to diagnose whether or not
+  // a cache corruption has occurred since it's possible that the app does not
+  // shut down cleanly and a corrupted cache has still not been cleaned up from
+  // a previous session.  My suggestion is that you pick a different scheme for
+  // renaming the dirs, e.g. rename them as "trash*" and remove all directories
+  // with this name pattern on shutdown.
+
+  // FUR
+  // I think that, eventually, we also want a distinguished key in the DB which
+  // means "clean cache shutdown".  You clear this flag when the db is first
+  // opened and set it just before the db is closed.  If the db wasn't shutdown
+  // cleanly in a prior session, i.e. because the app crashed, on startup you
+  // scan all the individual files in directories and look for "orphans",
+  // i.e. cache files which don't have corresponding entries in the db.  That's
+  // also when storage-in-use and number of entries would be recomputed.
+  //
+  // We don't necessarily need all this functionality immediately, though.
+
   if(m_BaseDirNum > 32)
     RemoveDirs(32) ;
 }
@@ -81,12 +100,18 @@ nsNetDiskCache::Init(void)
 {
   nsresult rv ;
 
-  // FUR!! - I really don't think prefs belong here, since that breaks modularity.
-  //         It presupposes that the file cache code is embedded in the browser or some
-  //         other application that uses the prefs, i.e. the code might be used in a standalone
-  //         cache manipulation tool or, someday, in server code.
-  //         Pref reading belongs at a higher level, 
-  //         either in the application itself or possibly the I/O manager.
+  // FUR!!
+  // I really don't think prefs belong here, since that breaks modularity.  It
+  // presupposes that the file cache code is embedded in the browser or some
+  // other application that uses the prefs, i.e. the code might be used in a
+  // standalone cache manipulation tool or, someday, in server code.  Pref
+  // reading belongs at a higher level, either in the application itself or
+  // possibly the I/O manager.
+
+
+  // Also, Init() needs to be lazy, since folder name is not set on startup,
+  // i.e. need a call to MaybeInit() at the beginning of every public method
+
   NS_WITH_SERVICE(nsIPref, pref, kPrefCID, &rv) ;
   if (NS_FAILED(rv)) 
     NS_ERROR("Failed to get globle preference!\n") ;
@@ -167,6 +192,7 @@ nsNetDiskCache::InitDB(void)
   }
 
   NS_NewFileSpec(getter_AddRefs(m_DBFile)) ;
+  // FUR - check for NS_NewFileSpec failure
   rv = m_DBFile->FromFileSpec(m_pDiskCacheFolder) ;
   if(NS_FAILED(rv))
     return rv ;
@@ -226,6 +252,7 @@ nsNetDiskCache::Contains(const char* key, PRUint32 length, PRBool *_retval)
 
   PRInt32 id = 0 ;
   m_DB->GetID(key, length, &id) ;
+  // FUR - Check for GetID failure ?
 
   void* info = 0 ;
   PRUint32 info_size = 0 ;
@@ -256,6 +283,7 @@ nsNetDiskCache::GetCachedNetData(const char* key, PRUint32 length, nsINetDataCac
 
   PRInt32 id = 0 ;
   m_DB->GetID(key, length, &id) ;
+  // FUR - Check for GetID failure ?
 
   // construct an empty record
   nsDiskCacheRecord* newRecord = new nsDiskCacheRecord(m_DB, this) ;
@@ -279,6 +307,8 @@ nsNetDiskCache::GetCachedNetData(const char* key, PRUint32 length, nsINetDataCac
 
     nsresult r1 ;
     r1 = newRecord->RetrieveInfo(info, info_size) ;
+
+    // FUR!! need to release and return error if RetrieveInfo() fails
     if(NS_SUCCEEDED(rv)) 
       return NS_OK ;
     else 
@@ -418,6 +448,13 @@ nsNetDiskCache::GetStorageInUse(PRUint32 *aStorageInUse)
 {
   PRUint32 total_size = m_StorageInUse, len = 0 ;
 
+  // FUR!!
+  // GetStorageInUse() can be called hundreds of times per second, i.e. every
+  // time a buffer of data is written to the cache, so we can't afford to stat
+  // the db file on every call.  I would suggest caching the size of the db and
+  // invalidating that cached value every time a record is written to the db,
+  // or even every ten written records.
+
   // add the size of the db.
   m_DBFile->GetFileSize(&len) ;
   total_size += len ;
@@ -478,10 +515,13 @@ nsNetDiskCache::SetDiskCacheFolder(nsIFileSpec * aDiskCacheFolder)
     m_pDiskCacheFolder = aDiskCacheFolder ;
 
     // should we do this? 
+    // FUR - no
     nsresult rv = RemoveAll() ;
     return rv ;
   }
   else 
+    // FUR
+    // Need to blow away old cache, build new one
     return NS_OK ;
 }
 
@@ -500,17 +540,27 @@ nsNetDiskCache::CreateDir(nsIFileSpec* dir_spec)
     return NS_OK ;
 
   dir_spec->GetParent(getter_AddRefs(p_spec)) ;
+  // FUR - check return value
   p_spec->Exists(&does_exist) ;
   if(!does_exist) {
     CreateDir(p_spec) ;
     dir_spec->CreateDir() ;
+    // FUR - check return value
   }
   else {
     dir_spec->CreateDir() ;
+    // FUR - check return value
   }
   
   return NS_OK ;
 }
+
+// FUR!!
+// We can't afford to make a *separate* pass over the whole db on every
+// startup, just to figure out m_NumEntries and m_StorageInUse.  (This is a
+// several second operation on a large db).  We'll likely need to store
+// distinguished keys in the db that contain these values and update them
+// incrementally, except when failure to shut down the db cleanly is detected.
 
 // this will walk through db and update m_NumEntries and m_StorageInUse
 NS_IMETHODIMP
@@ -599,7 +649,8 @@ nsNetDiskCache::DBRecovery(void)
   // remove corrupted db file
   rv = m_DB->Shutdown() ;
   
-  // You shouldn't return if this fails.  Corruption might prevent clean shutdown
+  // FUR!!
+  // You shouldn't return if this fails.  Otherwise, it might prevent db deletion
   if(NS_FAILED(rv))
     return rv ;
 

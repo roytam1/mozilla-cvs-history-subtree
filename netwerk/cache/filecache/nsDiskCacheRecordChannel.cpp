@@ -110,6 +110,24 @@ nsDiskCacheRecordChannel::~nsDiskCacheRecordChannel()
   mRecord->mNumChannels-- ;
 }
 
+// FUR!!
+//
+//  I know that I gave conflicting advice on the issue of file
+//  transport versus file protocol handler, but I thought that the
+//  last word was that we would use the raw transport, when I wrote:
+//
+//   > I just thought of an argument for the other side of the coin, i.e. the
+//   > benefit of *not* reusing the file protocol handler: On the Mac, it's
+//   > expensive to convert from a string URL to an nsFileSpec, because the Mac
+//   > is brain-dead and scans every directory on the path to the file.  It's
+//   > cheaper to create a nsFileSpec for a cache file by combining a single,
+//   > static nsFileSpec that corresponds to the cache directory with the
+//   > relative path to the cache file (using nsFileSpec's operator +).  This
+//   > operation is optimized on the Mac to avoid the scanning operation.
+//
+//  The Mac guys will eat us alive if we do path string to nsFileSpec
+//  conversions for every cache file we open.
+
 nsresult 
 nsDiskCacheRecordChannel::Init(void) 
 {
@@ -340,5 +358,6 @@ nsDiskCacheRecordChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
 NS_IMETHODIMP
 nsDiskCacheRecordChannel::GetOriginalURI(nsIURI* *aURI)
 {
+  // FUR - might need to implement this - not sure
   return NS_ERROR_NOT_IMPLEMENTED ;
 }
