@@ -1088,8 +1088,13 @@ nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
   mPresContext->GetTwipsToPixels(&t2p);
   nscoord rowHeightAsPixels = NSToCoordRound((float)mRowHeight*t2p);
 
+  // See if we have a background image.  If we do, then we cannot blit.
+  const nsStyleColor* myColor = (const nsStyleColor*)
+      mStyleContext->GetStyleData(eStyleStruct_Color);
+  PRBool hasBackground = myColor->mBackgroundImage.Length() > 0;
+
   PRInt32 absDelta = delta > 0 ? delta : -delta;
-  if (absDelta*mRowHeight >= mRect.height)
+  if (hasBackground || absDelta*mRowHeight >= mRect.height)
     Invalidate();
   else if (mOutlinerWidget)
     mOutlinerWidget->Scroll(0, -delta*rowHeightAsPixels, nsnull);
