@@ -100,23 +100,42 @@ NS_IMETHODIMP nsEditorBoxObject::Init(nsIContent* aContent, nsIPresShell* aPresS
   
   NS_ASSERTION(!mEditorShell, "Double init of nsEditorBoxObject");
   
+/*
   mEditorShell = do_CreateInstance("@mozilla.org/editor/editorshell;1");
   if (!mEditorShell) return NS_ERROR_OUT_OF_MEMORY;
 
   rv = mEditorShell->Init();
   if (NS_FAILED(rv)) return rv;
-  
+*/  
   return NS_OK;
 }
 
 
+#if 0
 NS_IMETHODIMP nsEditorBoxObject::GetEditorShell(nsIEditorShell** aResult)
 {
+/*
   NS_ASSERTION(mEditorShell, "Editor box object not initted");
 
   *aResult = mEditorShell;
   NS_IF_ADDREF(*aResult);
-  return NS_OK;
+*/
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+#endif
+
+NS_IMETHODIMP nsEditorBoxObject::GetDocShell(nsIDocShell * *aResult)
+{
+  *aResult = nsnull;
+  if (!mPresShell)
+    return NS_OK;
+
+  nsCOMPtr<nsISupports> subShell;
+  mPresShell->GetSubShellFor(mContent, getter_AddRefs(subShell));
+  if(!subShell)
+    return NS_OK;
+
+  return CallQueryInterface(subShell, aResult); //Addref happens here.
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////
