@@ -346,7 +346,7 @@ sub SetupPath {
     }
 
     if ($Settings::OS eq 'Darwin') {
-        $ENV{PATH} = "/bin:/usr/bin:$ENV{PATH}";
+        $ENV{PATH} = "/bin:/usr/bin:/sw/bin:$ENV{PATH}";
         $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
         $Settings::Compiler = 'cc';
         $Settings::mail = '/usr/bin/mail';
