@@ -796,8 +796,12 @@ NPP_HandleEvent(NPP instance, void* event)
 		return eventHandled;
 		
 	nsIPluginInstance* pluginInstance = (nsIPluginInstance*) instance->pdata;
-	if( pluginInstance )
-		eventHandled = (int16) pluginInstance->HandleEvent((nsPluginEvent*) event );
+	if (pluginInstance) {
+        PRBool handled;
+		nsresult err = pluginInstance->HandleEvent((nsPluginEvent*)event, &handled);
+        if (err) return FALSE;
+        eventHandled = (handled == PR_TRUE);
+    }
 	
 	return eventHandled;
 }
