@@ -42,7 +42,7 @@
  */
 
 #include "XSLTProcessor.h"
-#ifdef MOZILLA
+#ifdef MOZ_XSL
 #include "nsIObserverService.h"
 #endif
 
@@ -68,7 +68,7 @@ const String XSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
 **/
 XSLTProcessor::XSLTProcessor() {
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
     NS_INIT_ISUPPORTS();
 #endif
 
@@ -118,7 +118,7 @@ XSLTProcessor::~XSLTProcessor() {
     //-- currently does nothing, but added for future use
 } //-- ~XSLTProcessor
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
 NS_IMPL_ISUPPORTS1(XSLTProcessor, nsIDocumentTransformer)
 #endif
 
@@ -129,7 +129,7 @@ void XSLTProcessor::addErrorObserver(ErrorObserver& errorObserver) {
     errorObservers.add(&errorObserver);
 } //-- addErrorObserver
 
-#ifndef MOZILLA
+#ifndef MOZ_XSL
 void XSLTProcessor::print
     (Document& document, OutputFormat* format, ostream& out)
 {
@@ -177,7 +177,7 @@ String& XSLTProcessor::getAppVersion() {
     return appVersion;
 } //-- getAppVersion
 
-#ifndef MOZILLA
+#ifndef MOZ_XSL
 /**
  * Parses all XML Stylesheet PIs associated with the
  * given XML document. If any stylesheet PIs are found with
@@ -568,7 +568,7 @@ Document* XSLTProcessor::process
     return result;
 } //-- process
 
-#ifndef MOZILLA
+#ifndef MOZ_XSL
 /**
  * Processes the given XML Document using the given XSL document
  * and prints the results to the given ostream argument
@@ -686,7 +686,7 @@ void XSLTProcessor::process
     delete xslDoc;
 } //-- process
 
-#endif // ifndef MOZILLA
+#endif // ifndef MOZ_XSL
 
   //-------------------/
  //- Private Methods -/
@@ -1065,7 +1065,7 @@ void XSLTProcessor::processAction
                     Element* element = 0;
                     //-- check name validity
                     if ( XMLUtils::isValidQName(name)) {
-#ifdef MOZILLA
+#ifdef MOZ_XSL
                         // XXX (pvdb) Check if we need to set a new default namespace?
                         String nameSpaceURI;
                         ps->getNameSpaceURI(name, nameSpaceURI);
@@ -1303,7 +1303,7 @@ void XSLTProcessor::processAction
             }
             //-- literal
             default:
-#ifdef MOZILLA
+#ifdef MOZ_XSL
                 // Find out if we have a new default namespace
                 MBool newDefaultNS = MB_FALSE;
                 String nsURI = actionElement->getAttribute(XMLUtils::XMLNS);
@@ -1363,7 +1363,7 @@ void XSLTProcessor::processAction
                     processAction(node, nl->item(i),ps);
                 }
                 ps->getNodeStack()->pop();
-#ifdef MOZILLA
+#ifdef MOZ_XSL
                 if ( newDefaultNS ) {
                     ps->getDefaultNSURIStack()->pop();
                 }
@@ -1621,7 +1621,7 @@ void XSLTProcessor::xslCopy(Node* node, Element* action, ProcessorState* ps) {
         {
             Element* element = (Element*)node;
             String nodeName = element->getNodeName();
-#ifdef MOZILLA
+#ifdef MOZ_XSL
             // Find out if we have a new default namespace
             MBool newDefaultNS = MB_FALSE;
             String nsURI = element->getAttribute(XMLUtils::XMLNS);
@@ -1649,7 +1649,7 @@ void XSLTProcessor::xslCopy(Node* node, Element* action, ProcessorState* ps) {
             //-- process template
             processTemplate(node, action, ps);
             ps->getNodeStack()->pop();
-#ifdef MOZILLA
+#ifdef MOZ_XSL
             if ( newDefaultNS ) {
                 ps->getDefaultNSURIStack()->pop();
             }
@@ -1704,7 +1704,7 @@ void XSLTProcessor::xslCopyOf(ExprResult* exprResult, ProcessorState* ps) {
     }
 } //-- xslCopyOf
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
 NS_IMETHODIMP
 XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
                                nsIDOMElement* aStyleDOM,

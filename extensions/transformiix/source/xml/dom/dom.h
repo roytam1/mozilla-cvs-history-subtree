@@ -19,7 +19,7 @@
  * $Id$
  */
 
-#ifndef MOZILLA
+#ifndef MOZ_XSL
 #include "standalone/dom.h"
 #else
 #include "mozImpl/mozilladom.h"

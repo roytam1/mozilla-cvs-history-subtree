@@ -39,7 +39,7 @@
 #include <iostream.h>
 #include <fstream.h>
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
 #include "nsIURL.h"

@@ -119,7 +119,7 @@ istream* URIUtils::getInputStream
 **/
 void URIUtils::getDocumentBase(String& href, String& dest) {
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
     String docBase("");
     nsCOMPtr<nsIURI> pURL;
     nsresult result = NS_OK;
@@ -176,7 +176,7 @@ void URIUtils::getDocumentBase(String& href, String& dest) {
 void URIUtils::resolveHref(String& href, String& documentBase, String& dest) {
 
 
-#ifdef MOZILLA
+#ifdef MOZ_XSL
     nsCOMPtr<nsIURI> pURL;
     nsresult result = NS_OK;
 
