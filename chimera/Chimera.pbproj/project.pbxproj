@@ -550,6 +550,7 @@
 				F5F94B920332532801026D5D,
 				F5B34B05034A50C901A80166,
 				F529788E0371820B01026DCE,
+				F53D36BE037843C201A80166,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -688,6 +689,7 @@
 				F5F94B930332532801026D5D,
 				F5B34B15034A605401A80166,
 				F529788F0371820B01026DCE,
+				F53D36BB037843B801A80166,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2310,6 +2312,7 @@
 				F5B950BC030C83B601A96654,
 				F5BF71450231B8BC010001CA,
 				F53C1CD6032FF3B301A96654,
+				F53D36BD037843C201A80166,
 			);
 			isa = PBXGroup;
 			name = Headers;
@@ -3314,6 +3317,42 @@
 		};
 		F53C1CDB032FF3B301A96654 = {
 			fileRef = F53C1CD7032FF3B301A96654;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F53D36BA037843B801A80166 = {
+			isa = PBXFileReference;
+			name = BookmarksMenu.mm;
+			path = src/bookmarks/BookmarksMenu.mm;
+			refType = 4;
+		};
+		F53D36BB037843B801A80166 = {
+			fileRef = F53D36BA037843B801A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F53D36BC037843B801A80166 = {
+			fileRef = F53D36BA037843B801A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F53D36BD037843C201A80166 = {
+			isa = PBXFileReference;
+			name = BookmarksMenu.h;
+			path = src/bookmarks/BookmarksMenu.h;
+			refType = 4;
+		};
+		F53D36BE037843C201A80166 = {
+			fileRef = F53D36BD037843C201A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F53D36BF037843C201A80166 = {
+			fileRef = F53D36BD037843C201A80166;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -5798,6 +5837,7 @@
 			children = (
 				F507BA4C0213AFF701D93544,
 				F5A3669502CCFAF601DC3354,
+				F53D36BA037843B801A80166,
 				F57074B6026BA85F01A80166,
 				F57074BA026BFD0101A80166,
 				F53E012C02AEE93601A967F3,
@@ -6856,6 +6896,7 @@
 				F5F94B940332532801026D5D,
 				F5B34B06034A50C901A80166,
 				F529788C0371820B01026DCE,
+				F53D36BF037843C201A80166,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7006,6 +7047,7 @@
 				F5F94B950332532901026D5D,
 				F5A30033034B8B1A01A96660,
 				F529788D0371820B01026DCE,
+				F53D36BC037843B801A80166,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
