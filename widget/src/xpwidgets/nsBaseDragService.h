@@ -48,7 +48,8 @@
 class nsIDOMNode;
 class nsIFrame;
 class nsIPresContext;
-
+class nsILocalFile;
+class nsIURI;
 
 /**
  * XP DragService wrapper base class
@@ -73,6 +74,10 @@ protected:
   virtual void GetFrameFromNode ( nsIDOMNode* inNode, nsIFrame** outFrame,
                                    nsIPresContext** outContext ) ;
 
+  // this uses the nsIURI to get the filename
+  virtual nsresult CreateFileInDirectory(nsIURI* inSourceURI, nsILocalFile* inParentDir, nsILocalFile** outFile);
+  virtual nsresult SaveURIToFile(nsIURI* inURI, nsILocalFile* inFile);
+  
   nsCOMPtr<nsISupportsArray> mTransArray;
   PRBool             mCanDrop;
   PRBool             mDoingDrag;

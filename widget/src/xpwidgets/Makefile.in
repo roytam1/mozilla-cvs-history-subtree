@@ -40,6 +40,7 @@ REQUIRES	= xpcom \
 		  htmlparser \
 		  uconv \
 		  unicharutil \
+		  webbrowserpersist \
 		  $(NULL)
 
 DEFINES		+= -D_IMPL_NS_WIDGET -DUSE_TLS_FOR_TOOLKIT

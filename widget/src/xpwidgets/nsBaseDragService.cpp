@@ -52,6 +52,13 @@
 #include "nsIDOMNode.h"
 #include "nsIPresContext.h"
 
+// file downloading stuff
+#include "nsNetUtil.h"
+#include "nsEscape.h"
+#include "nsIURL.h"
+#include "nsIFile.h"
+#include "nsIWebBrowserPersist.h"
+
 
 NS_IMPL_ADDREF(nsBaseDragService)
 NS_IMPL_RELEASE(nsBaseDragService)
@@ -274,3 +281,68 @@ nsBaseDragService :: GetFrameFromNode ( nsIDOMNode* inNode, nsIFrame** outFrame,
   }
   
 } // GetFrameFromNode
+
+
+nsresult
+nsBaseDragService::CreateFileInDirectory(nsIURI* inSourceURI, nsILocalFile* inParentDir, nsILocalFile** outFile)
+{
+  NS_ENSURE_ARG(inSourceURI);
+  NS_ENSURE_ARG(inParentDir);
+  NS_ENSURE_ARG_POINTER(outFile);
+  
+  *outFile = nsnull;
+  
+  nsresult rv;
+  
+  nsCOMPtr<nsIFile> clonedFile;
+  rv = inParentDir->Clone(getter_AddRefs(clonedFile));
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsILocalFile> destFile = do_QueryInterface(clonedFile);
+  if (!destFile) return NS_ERROR_NO_INTERFACE;
+  
+  nsCOMPtr<nsIURL> sourceURL = do_QueryInterface(inSourceURI);
+  if (!sourceURL) return NS_ERROR_NO_INTERFACE;
+
+  nsCAutoString fileName; // escaped, UTF-8
+  sourceURL->GetFileName(fileName);
+
+  if (fileName.IsEmpty())
+    return NS_ERROR_FAILURE;    // this is an error; the URL must point to a file
+
+  NS_UnescapeURL(fileName);
+  NS_ConvertUTF8toUCS2 wideFileName(fileName);
+  
+  // make the name safe for the filesystem
+  wideFileName.ReplaceChar(PRUnichar('/'), PRUnichar('_'));
+  wideFileName.ReplaceChar(PRUnichar('\\'), PRUnichar('_'));
+  wideFileName.ReplaceChar(PRUnichar(':'), PRUnichar('_'));   // for mac
+  
+  rv = destFile->Append(wideFileName);
+  if (NS_FAILED(rv))  return rv;
+    
+  rv = destFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+  if (NS_FAILED(rv))  return rv;
+
+  *outFile = destFile.get();
+  NS_ADDREF(*outFile);
+  return NS_OK;
+}
+
+// SaveURIToFile
+// used on platforms where it's possible to drag items (e.g. images)
+// into the file system
+nsresult
+nsBaseDragService::SaveURIToFile(nsIURI* inURI, nsILocalFile* inFile)
+{
+  nsresult rv;
+  // we rely on the fact that the WPB is refcounted by the channel etc,
+  // so we don't keep a ref to it. It will die when finished.
+  nsCOMPtr<nsIWebBrowserPersist> persist = do_CreateInstance("@mozilla.org/embedding/browser/nsWebBrowserPersist;1", &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsISupports> fileAsSupports = do_QueryInterface(inFile);
+  rv = persist->SaveURI(inURI, nsnull, fileAsSupports);  
+  return rv;
+}
+
