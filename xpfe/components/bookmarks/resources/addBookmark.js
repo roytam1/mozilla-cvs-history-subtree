@@ -287,10 +287,12 @@ function getNormalizedURL(url)
 }
 
 var gBookmarksShell = null;
-function createNewFolder ()
+function createNewFolder()
 {
   var bookmarksView = document.getElementById("bookmarks-view");
-  bookmarksView.createNewFolder();
+  var resource = bookmarksView.treeBuilder.getResourceAtIndex(bookmarksView.currentIndex);
+  var target = BookmarksUtils.getTargetFromFolder(resource);
+  BookmarksCommand.createNewFolder(target);
 }
 
 var gOldNameValue = "";
