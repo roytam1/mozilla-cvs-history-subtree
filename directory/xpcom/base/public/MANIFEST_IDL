@@ -1,5 +1,0 @@
-nsILDAPConnection.idl
-nsILDAPOperation.idl
-nsILDAPMessage.idl
-nsILDAPURL.idl
-nsILDAPMessageListener.idl
