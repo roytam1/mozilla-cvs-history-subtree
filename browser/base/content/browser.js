@@ -2638,6 +2638,7 @@ nsBrowserStatusHandler.prototype =
     this.statusMeter     = document.getElementById("statusbar-icon");
     this.stopCommand     = document.getElementById("Browser:Stop");
     this.statusTextField = document.getElementById("statusbar-display");
+    this.securityButton  = document.getElementById("security-button");
     this.urlBar          = document.getElementById("urlbar");
 
     // Initialize the security button's state and tooltip text
@@ -2652,6 +2653,7 @@ nsBrowserStatusHandler.prototype =
     this.statusMeter     = null;
     this.stopCommand     = null;
     this.statusTextField = null;
+    this.securityButton  = null;
     this.urlBar          = null;
     this.statusText      = null;
   },
@@ -2867,25 +2869,33 @@ nsBrowserStatusHandler.prototype =
 
     switch (aState) {
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_HIGH:
+        this.securityButton.setAttribute("level", "high");
         this.urlBar.setAttribute("level", "high");
         break;
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_LOW:
+        this.securityButton.setAttribute("level", "low");
         this.urlBar.setAttribute("level", "low");
         break;
       case wpl.STATE_IS_BROKEN:
+        this.securityButton.setAttribute("level", "broken");
         this.urlBar.setAttribute("level", "broken");
         break;
       case wpl.STATE_IS_INSECURE:
       default:
+        this.securityButton.removeAttribute("level");
         this.urlBar.removeAttribute("level");
         break;
     }
 
     var securityUI = gBrowser.securityUI;
-    if (securityUI)
+    if (securityUI) {
+      this.securityButton.setAttribute("tooltiptext", securityUI.tooltipText);
       this.urlBar.setAttribute("infotext", securityUI.tooltipText);
-    else
+    }
+    else {
+      this.securityButton.setAttribute("tooltiptext", securityUI.tooltipText);
       this.urlBar.removeAttribute("infotext");
+    }
   },
 
   startDocumentLoad : function(aRequest)

@@ -85,6 +85,8 @@ pref("update.severity", 0);
 // The number of extension/theme/etc updates available
 pref("update.extensions.count", 0);
 
+pref("xpinstall.whitelist.add", "mozilla.org");
+
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UTF-8&oe=UTF-8&sourceid=firefox&q=");
 
