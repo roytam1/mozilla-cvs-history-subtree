@@ -76,9 +76,6 @@
            datasources="rdf:internetsearch" ref="NC:SearchEngineRoot" 
            oncommand="return SearchBarPopupCommand(event);"
            onpopupshowing="SearchBarPopupShowing(event);">
-      <menuitem id="__PhoenixFindInPage" class="menuitem-iconic"
-                label="&findOnSearchBarCmd.label;"/>
-      <menuseparator/>
       <template>
         <menuitem type="checkbox"
                   uri="..." value="..."

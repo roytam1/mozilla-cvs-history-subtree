@@ -54,7 +54,7 @@
           this.ISEARCHDS = this.RDF.GetDataSource("rdf:internetsearch");
 
           var engine = this.currentEngine;
-          if (!engine)
+          if (engine == "__PhoenixFindInPage" || !engine)
             this.currentEngine = this.getDefaultEngine();
           else {
             var rEngine = this.RDF.GetResource(engine);
@@ -64,8 +64,9 @@
               // from forgetting the defaut.
               var file = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
               file.initWithPath(unescape(engine.substr("engine://".length)));
-              if (!file.exists())
-                this.currentEngine = "__PhoenixFindInPage";
+              // XXXblake what to do now?
+              // if (!file.exists())
+              //   this.currentEngine = "__PhoenixFindInPage";
             }
           }
         ]]></body>
@@ -81,12 +82,6 @@
             return;
 
           this.setAttribute("searchengine", val);
-
-          if (val == "__PhoenixFindInPage") {
-            this.setAttribute("autocompletesearchparam", "__PhoenixFindInPage");
-            this.firstChild.removeAttribute("src");
-            return;
-          }
 
           this.setAttribute("autocompletesearchparam", "q");
           const kNC_Icon = this.RDF.GetResource("http://home.netscape.com/NC-rdf#Icon");
@@ -138,26 +133,22 @@
                                        .getService(Components.interfaces.nsIFormHistory);
             gFormHistory.addEntry(this.getAttribute("autocompletesearchparam"), this.value);
           }
-          if (this.currentEngine != "__PhoenixFindInPage") {
-            var ISEARCHSVC = Components.classes["@mozilla.org/rdf/datasource;1?name=internetsearch"]
-                                       .getService(Components.interfaces.nsIInternetSearchService);
-            var searchURL = ISEARCHSVC.GetInternetSearchURL(this.currentEngine,
-                                         this.value? encodeURIComponent(this.value):"", 
-                                         0, 0, {value:0});
-#           if the search box is empty, let''s load the host
-            if (!this.value) {
-              var uri = Components.classes['@mozilla.org/network/standard-url;1']
-                                  .createInstance(Components.interfaces.nsIURI);
-              uri.spec = searchURL;
-              searchURL = uri.host;
-              if (!searchURL)
-                return;
-            }
-            gURLBar.value = searchURL; //pch: ugly!
-            BrowserLoadURL(this.mEnterEvent); // from autocomplete.xml
-          } else {
-            quickFindInPage(this.value);
+          var ISEARCHSVC = Components.classes["@mozilla.org/rdf/datasource;1?name=internetsearch"]
+                                     .getService(Components.interfaces.nsIInternetSearchService);
+          var searchURL = ISEARCHSVC.GetInternetSearchURL(this.currentEngine,
+                                       this.value? encodeURIComponent(this.value):"", 
+                                       0, 0, {value:0});
+#         if the search box is empty, let''s load the host
+          if (!this.value) {
+            var uri = Components.classes['@mozilla.org/network/standard-url;1']
+                                .createInstance(Components.interfaces.nsIURI);
+            uri.spec = searchURL;
+            searchURL = uri.host;
+            if (!searchURL)
+              return;
           }
+          gURLBar.value = searchURL; //pch: ugly!
+          BrowserLoadURL(this.mEnterEvent); // from autocomplete.xml
         ]]></body>
       </method>
 
@@ -171,8 +162,6 @@
           if (currentEngine && currentEngine != "__PhoenixFindInPage") {
             var searchEngineMenuitem = document.getElementById(currentEngine);
             var newEngine = searchEngineMenuitem.previousSibling;
-            if (!newEngine.id)
-              newEngine = {id: "__PhoenixFindInPage"}
             this.currentEngine = newEngine.id;
           }
           event.preventDefault();
@@ -186,11 +175,7 @@
           if (!currentEngine)
             return;
           var searchEngineMenuitem = document.getElementById(currentEngine);
-          var newEngine;
-          if (currentEngine == "__PhoenixFindInPage") {
-            newEngine = searchEngineMenuitem.nextSibling.nextSibling.nextSibling;
-          } else {
-            newEngine = searchEngineMenuitem.nextSibling;
+          var newEngine = searchEngineMenuitem.nextSibling;
           }
           if (newEngine)
             this.currentEngine = newEngine.id;

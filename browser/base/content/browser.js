@@ -1847,7 +1847,6 @@ function SearchBarPopupShowing(aEvent)
   
 function SearchBarPopupCommand(aEvent)
 {
-
   if (!aEvent.target.id)
     return;  
 
