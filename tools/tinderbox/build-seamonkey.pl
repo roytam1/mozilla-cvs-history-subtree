@@ -751,7 +751,7 @@ sub RunBloatTest {
 	  print LOG $cmd;
 	  exec ($cmd);
 	} else {
-	  print LOG "ERROR: bloaturls.txt does not exist.";
+	  print LOG "ERROR: bloaturls.txt does not exist.\n";
 	}
 
     close STDOUT;
