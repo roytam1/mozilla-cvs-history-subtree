@@ -111,6 +111,8 @@ EXTRA_LIBS =
 endif
 endif #!USE_AUTOCONF
 
+GARBAGE += $(TINC)
+
 include $(topsrcdir)/config/rules.mk
 
 #
