@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   David Bienvenu <bienvenu@netscape.com>
+ *   David Bienvenu <bienvenu@nventure.com>
  *   Jeff Tsai <jefft@netscape.com>
  *   Scott MacGregor <mscott@netscape.com>
  *   Seth Spitzer <sspitzer@netscape.com>
@@ -1764,6 +1764,9 @@ NS_IMETHODIMP nsImapIncomingServer::DiscoveryDone()
   if(NS_FAILED(rv))
     return rv;
   
+  PRBool usingSubscription = PR_TRUE;
+  GetUsingSubscription(&usingSubscription);
+
   rv = GetUnverifiedFolders(unverifiedFolders, &numUnverifiedFolders);
   if (numUnverifiedFolders > 0)
   {
@@ -1778,7 +1781,7 @@ NS_IMETHODIMP nsImapIncomingServer::DiscoveryDone()
       nsCOMPtr<nsIMsgFolder> currentFolder = do_QueryInterface(element, &rv);
       if (NS_FAILED(rv))
         continue;
-      if ((NS_SUCCEEDED(currentImapFolder->GetExplicitlyVerify(&explicitlyVerify)) && explicitlyVerify) ||
+      if ((!usingSubscription || (NS_SUCCEEDED(currentImapFolder->GetExplicitlyVerify(&explicitlyVerify)) && explicitlyVerify)) ||
         ((NS_SUCCEEDED(currentFolder->GetHasSubFolders(&hasSubFolders)) && hasSubFolders)
         && !NoDescendentsAreVerified(currentFolder)))
       {
@@ -3604,7 +3607,7 @@ nsImapIncomingServer::GetNewMessagesForNonInboxFolders(nsIMsgFolder *aFolder,
       (void) aFolder->GetIsServer(&isServer);
       nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(aFolder);
       if (imapFolder && !isServer)
-        imapFolder->UpdateStatus(nsnull, aWindow);
+        imapFolder->UpdateStatus(nsnull, nsnull /* aWindow - null window will prevent alerts */);
     }
     else
     {
