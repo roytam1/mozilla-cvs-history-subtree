@@ -95,8 +95,8 @@ function OnLoadNewCard()
 
   GetCardValues(editCard.card, document);
 
-  //// FIX ME - looks like we need to focus on both the text field and the tab widget
-  //// probably need to do the same in the addressing widget
+  // FIX ME - looks like we need to focus on both the text field and the tab widget
+  // probably need to do the same in the addressing widget
 
   // focus on first name
   var firstName = document.getElementById('FirstName');
@@ -278,7 +278,6 @@ function GetCardValues(cardproperty, doc)
     doc.getElementById('Notes').value = cardproperty.notes;
   }
 }
-
 
 // Move the data from the dialog to the cardproperty to be stored in the database
 function SetCardValues(cardproperty, doc)
