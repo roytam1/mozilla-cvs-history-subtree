@@ -291,4 +291,38 @@ PRBool URIUtils::CanCallerAccess(nsIDOMNode *aNode)
     return NS_SUCCEEDED(rv);
 }
 
+// static
+void
+URIUtils::ResetWithSource(nsIDocument *aNewDoc, nsIDOMNode *aSourceNode)
+{
+    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
+    if (!aSourceNode) {
+        aNewDoc->Reset(nsnull, nsnull);
+        return;
+    }
+    aSourceNode->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    if (!sourceDOMDocument) {
+        sourceDOMDocument = do_QueryInterface(aSourceNode);
+    }
+    nsCOMPtr<nsIDocument> sourceDoc = do_QueryInterface(sourceDOMDocument);
+
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    nsCOMPtr<nsIChannel> channel;
+    sourceDoc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+    nsCOMPtr<nsIIOService> serv = do_GetService(NS_IOSERVICE_CONTRACTID);
+    if (serv) {
+        // Create a temporary channel to get nsIDocument->Reset to
+        // do the right thing. We want the output document to get
+        // much of the input document's characteristics.
+        nsCOMPtr<nsIURI> docURL;
+        sourceDoc->GetDocumentURL(getter_AddRefs(docURL));
+        serv->NewChannelFromURI(docURL, getter_AddRefs(channel));
+    }
+    aNewDoc->Reset(channel, loadGroup);
+    nsCOMPtr<nsIURI> baseURL;
+    sourceDoc->GetBaseURL(*getter_AddRefs(baseURL));
+    aNewDoc->SetBaseURL(baseURL);
+
+}
+
 #endif /* TX_EXE */
