@@ -413,7 +413,13 @@ nsDocShell::LoadURI(nsIURI* aURI, nsIDocShellLoadInfo* aLoadInfo, PRUint32 aLoad
       if (parent) {
         parent->GetChildSHEntry(mChildOffset, getter_AddRefs(shEntry));
         if (shEntry) {
-          loadType = LOAD_HISTORY;
+           //Get the proper loadType from the SHEntry.
+              PRUint32   lt;
+           shEntry->GetLoadType(&lt);
+           // Convert the DocShellInfoLoadType returned by the 
+           // previous function to loadType
+           loadType = ConvertDocShellLoadInfoToLoadType((nsDocShellInfoLoadType)lt);
+         
         }
       }
     }
@@ -1213,10 +1219,18 @@ nsDocShell::GetChildSHEntry(PRInt32 aChildOffset, nsISHEntry ** aResult)
   // the progress of loading a document too...
   //
   if (LSHE) {
-    nsCOMPtr<nsISHContainer> container(do_QueryInterface(LSHE));
-    if (container) {
-      rv = container->GetChildAt(aChildOffset, aResult);
-    }
+      /* Get the parent's Load Type so that it can be set on the child too.
+       * By default give a loadHistory value
+       */
+      PRUint32 loadType = nsIDocShellLoadInfo::loadHistory;
+      LSHE->GetLoadType(&loadType);
+      nsCOMPtr<nsISHContainer> container(do_QueryInterface(LSHE));
+      if (container) {
+         rv = container->GetChildAt(aChildOffset, aResult);
+         if (*aResult) {
+            (*aResult)->SetLoadType(loadType);
+                }
+         }
   }
   return rv;
 }
@@ -2539,6 +2553,12 @@ nsDocShell::OnStateChange(nsIWebProgress *aProgress, nsIRequest *aRequest,
 {
 
   if ((aStateFlags & STATE_STOP) && (aStateFlags & STATE_IS_NETWORK)) {
+    /* Be defensive about this load type. It may have got set to 
+     * something else(reloadNormal or reloadBypass) depending on how this
+     * page got loaded. Reset the loadtype to default value loadHistory
+     */
+       if (LSHE)
+         LSHE->SetLoadType(nsIDocShellLoadInfo::loadHistory);
     LSHE = nsnull;
   }
   return NS_OK;
