@@ -10,7 +10,6 @@ const NS_JUNKMAIL_CID =
 var headerTestsByName = {};
 var rawbodyRegexpTestsByName = {};
 var gPrefs;
-var gTargetFolder;
 var gMimeConverterService;
 
 // types of tests
@@ -243,26 +242,26 @@ const parseConfigLine = {
 // I think I'm gonna propose that nsIMsgFilter get split into two interfaces
 // for cleaniness.
 //
-function dummyFilter() {}
+function dummyFilter(aTargetFolderURI) {
+    this.targetFolderURI = aTargetFolderURI;
+}
 
 dummyFilter.prototype = 
 {
+    targetFolderURI: "",
+
     get action() {
         return Components.interfaces.nsMsgFilterAction.MoveToFolder;
     },
 
     get actionTargetFolderUri() {
-        return gTargetFolder;
+        return this.targetFolderURI;
     }
 }
-
-var df = new dummyFilter();
 
 function nsJunkmail() {}
 
 nsJunkmail.prototype = {
-
-    logStream: {},
 
     init: function(aServerPrefsKey) {
 
@@ -280,7 +279,14 @@ nsJunkmail.prototype = {
 
         // XXX needs to be a complex pref, actually.
         //
-        gTargetFolder = gPrefs.getCharPref("mail.junkmail.target_spam_folder");
+        // gPrefs.getCharPref("mail.server." + aServerPrefsKey + ".target_spam_folder")
+        this.dummyFilterObj = new dummyFilter (
+            gPrefs.getCharPref("mail.server." + aServerPrefsKey + ".type")
+            + "://" + 
+            gPrefs.getCharPref("mail.server." + aServerPrefsKey + ".userName")
+            + "@"  + 
+            gPrefs.getCharPref("mail.server." + aServerPrefsKey + ".hostname")
+            + "/Junk Mail");
 
         // the logfile is called "junklog.txt" in the server directory
         // XXX needs to a complex pref
@@ -305,8 +311,10 @@ nsJunkmail.prototype = {
         const PR_RDWR = 0x04;           // open for reading and writing
         const PR_CREATE_FILE = 0x08;    // create if not there
         const PR_APPEND = 0x10;         // append to any existing file
+
         this.logStream.init(logFile, PR_RDWR | PR_CREATE_FILE | PR_APPEND,
-                            420, 0);
+                            420,        // -rw-r--r--
+                            0);
 
         var spamAssassinRulesPath = 
             gPrefs.getCharPref("mail.junkmail.spamassassin_rules_dir");
@@ -620,7 +628,7 @@ nsJunkmail.prototype = {
         //
         aMsgHdr.setStringProperty("score", msgScore);
         if (msgScore >= 3.1) {
-            aListener.applyFilterHit(df, aMsgWindow);
+            aListener.applyFilterHit(this.dummyFilterObj, aMsgWindow);
         }
 
         return;
