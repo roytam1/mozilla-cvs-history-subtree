@@ -45,6 +45,11 @@ public:
   virtual int GetOwnerId()=0;
 
   virtual void SetOwnerId(int)=0;
+
+/*	ebb - begin */
+  virtual URL_Struct *GetURLStruct()=0;
+  virtual void SetContentType(char* type)=0;
+/*	ebb - end */
 };
 
 #endif
