@@ -125,6 +125,7 @@ protected:
   PRUint32          mWrapColumn;
   PRUint32          mStartDepth;
   PRUint32          mEndDepth;
+  PRBool            mHaltRangeHint;  
   nsVoidArray       mCommonAncestors;
 
   PRBool (* mIncludeInContextFP)(nsIDOMNode *aNode);
@@ -181,6 +182,7 @@ nsDocumentEncoder::nsDocumentEncoder()
   mWrapColumn = 72;
   mStartDepth = 0;
   mEndDepth = 0;
+  mHaltRangeHint = PR_FALSE;
 }
 
 nsDocumentEncoder::~nsDocumentEncoder()
@@ -571,8 +573,14 @@ nsDocumentEncoder::SerializeRangeNodes(nsIDOMRange* aRange,
       }
       else
       {
-        if (nodeBefore) mStartDepth++;
-        if (nodeAfter) mEndDepth++;
+        if (IncludeInContext_HTML(aNode))
+        {
+          // halt the incrementing of mStartDepth/mEndDepth.  This is
+          // so paste client will include this node in paste.
+          mHaltRangeHint = PR_TRUE;
+        }
+        if (nodeBefore && !mHaltRangeHint) mStartDepth++;
+        if (nodeAfter && !mHaltRangeHint) mEndDepth++;
         
         rv = SerializeNodeStart(aNode, 0, -1, aString);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1032,7 +1040,18 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
     if (IsTextNode(aNode))  
     {
       // if not at beginning of text node, we are done
-      if (offset >  0) return NS_OK;
+      if (offset >  0) 
+      {
+        // unless everything before us in just whitespace.  NOTE: we need a more
+        // general solution that truly detects all cases of non-significant
+        // whitesace with no false alarms.
+        nsCOMPtr<nsIDOMCharacterData> nodeAsText = do_QueryInterface(aNode);
+        nsAutoString text;
+        nodeAsText->SubstringData(0, offset, text);
+        text.CompressWhitespace();
+        if (text.Length())
+          return NS_OK;
+      }
       // else
       rv = GetNodeLocation(aNode, &parent, &offset);
       NS_ENSURE_SUCCESS(rv, rv);
@@ -1077,8 +1096,18 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
       // if not at end of text node, we are done
       PRUint32 len;
       GetLengthOfDOMNode(aNode, len);
-      if (offset < (PRInt32)len) return NS_OK;
-      // else
+      if (offset < (PRInt32)len)
+      {
+        // unless everything after us in just whitespace.  NOTE: we need a more
+        // general solution that truly detects all cases of non-significant
+        // whitesace with no false alarms.
+        nsCOMPtr<nsIDOMCharacterData> nodeAsText = do_QueryInterface(aNode);
+        nsAutoString text;
+        nodeAsText->SubstringData(offset, len-offset, text);
+        text.CompressWhitespace();
+        if (text.Length())
+          return NS_OK;
+      }
       rv = GetNodeLocation(aNode, &parent, &offset);
       NS_ENSURE_SUCCESS(rv, rv);
     }
