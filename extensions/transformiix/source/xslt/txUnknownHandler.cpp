@@ -106,17 +106,18 @@ void txUnknownHandler::endDocument()
     // This is an unusual case, no output method has been set and we
     // didn't create a document element. Switching to XML output mode
     // anyway.
+    txOutputFormat* format = mProcessorState->getOutputFormat();
     txOutputXMLEventHandler* outputHandler =
-        mProcessorState->getOutputHandler(eTextOutput);
+        mProcessorState->getOutputHandler(eXMLOutput);
     NS_ASSERTION(outputHandler, "Out of memory, dropping output!");
     if (!outputHandler) {
         return;
     }
-    mFormat->mMethod = eXMLOutput;
+    format->mMethod = eXMLOutput;
     txStreamXMLEventHandler* streamHandler = 
         (txStreamXMLEventHandler*)outputHandler;
     streamHandler->setOutputStream(mOut);
-    streamHandler->setOutputFormat(mFormat);
+    streamHandler->setOutputFormat(format);
     flush(streamHandler);
     streamHandler->endDocument();
     delete outputHandler;

@@ -153,7 +153,7 @@ public:
      */
     MBool hasDisableOutputEscaping()
     {
-        return MB_FALSE;
+        return MB_TRUE;
     }
 
     /*
@@ -206,7 +206,11 @@ private:
 
     PRUint32 mTotal, mMax;
     ostream* mOut;
-    txOutputFormat* mFormat;
+    /*
+     * XXX we shouldn't hold to the ProcessorState, as we're supposed
+     * to live without it. But as a standalone handler, we don't.
+     * The right fix may need a txOutputFormat here.
+     */
     ProcessorState* mProcessorState;
     txOutputTransaction** mArray;
 
