@@ -93,11 +93,6 @@ public:
   void SetLayoutReason(eBoxLayoutReason aReason) { mType = aReason; }
   const nsHTMLReflowState* GetReflowState() { return mReflowState; }
 
-  static NS_HIDDEN_(void*) Allocate(size_t sz, nsIPresShell* aPresShell);
-  static NS_HIDDEN_(void) Free(void* aPtr, size_t sz);
-  static NS_HIDDEN_(void) RecycleFreedMemory(nsIPresShell* aPresShell,
-                                             void* mem);
-
   nsresult PushStackMemory() { return PresShell()->PushStackMemory(); }
   nsresult PopStackMemory()  { return PresShell()->PopStackMemory(); }
   nsresult AllocateStackMemory(size_t aSize, void** aResult)

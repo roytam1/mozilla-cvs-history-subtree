@@ -252,38 +252,3 @@ nsBoxLayoutState::DirtyAllChildren(nsBoxLayoutState& aState, nsIBox* aBox)
     }
 }
 */
-
-void* 
-nsBoxLayoutState::Allocate(size_t sz, nsIPresShell* aPresShell)
-{
-  // Check the recycle list first.
-  void* result = aPresShell->AllocateFrame(sz);
-  
-  if (result) {
-    memset(result, 0, sz);
-  }
-
-  return result;
-}
-
-// Overridden to prevent the global delete from being called, since the memory
-// came out of an nsIArena instead of the global delete operator's heap.
-void 
-nsBoxLayoutState::Free(void* aPtr, size_t sz)
-{
-  // Don't let the memory be freed, since it will be recycled
-  // instead. Don't call the global operator delete.
-
-  // Stash the size of the object in the first four bytes of the
-  // freed up memory.  The Destroy method can then use this information
-  // to recycle the object.
-  size_t* szPtr = (size_t*)aPtr;
-  *szPtr = sz;
-}
-
-void
-nsBoxLayoutState::RecycleFreedMemory(nsIPresShell* aShell, void* aMem)
-{
-  size_t* sz = (size_t*)aMem;
-  aShell->FreeFrame(*sz, aMem);
-}
