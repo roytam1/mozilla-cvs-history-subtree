@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Jan Varga (varga@utcru.sk)
+ *   Hakan Waara (hwaara@chello.se)
  */
 
 /* This is where functions related to the 3 pane window are kept */
@@ -23,7 +27,7 @@
 
 var showPerformance = false;
 
-var gFolderTree; 
+var gFolderOutliner; 
 var gThreadOutliner;
 var gMessagePane;
 var gMessagePaneFrame;
@@ -539,9 +543,7 @@ function AddToSession()
 
 function InitPanes()
 {
-	var folderTree = GetFolderTree();
-	if(folderTree)
-		OnLoadFolderPane(folderTree);
+    OnLoadFolderPane();
 		
 	SetupCommandUpdateHandlers();
 }
@@ -558,9 +560,8 @@ function InitializeDataSources()
 	SetupMoveCopyMenus('threadPaneContext-copyMenu', accountManagerDataSource, folderDataSource);
 }
 
-function OnLoadFolderPane(folderTree)
+function OnLoadFolderPane()
 {
-    gFolderTree = folderTree;
 	SortFolderPane('FolderColumn', 'http://home.netscape.com/NC-rdf#FolderTreeName');
 
 	//Add folderDataSource and accountManagerDataSource to folderPane
@@ -570,15 +571,14 @@ function OnLoadFolderPane(folderTree)
 
 	database.AddDataSource(accountManagerDataSource);
     database.AddDataSource(folderDataSource);
-	folderTree.setAttribute('ref', 'msgaccounts:/');
+    var folderOutliner = GetFolderOutliner();
+    folderOutliner.outlinerBoxObject.outlinerBody.setAttribute("ref", "msgaccounts:/");
 }
 
 function GetFolderDatasource()
 {
-    var folderTree = GetFolderTree();
-    var db = folderTree.database;
-    if (!db) return false;
-    return db;
+    var folderOutliner = GetFolderOutliner();
+    return folderOutliner.outlinerBoxObject.outlinerBody.database;
 }
 
 function OnLoadThreadPane(threadTree)
@@ -587,13 +587,11 @@ function OnLoadThreadPane(threadTree)
 }
 
 /* Functions for accessing particular parts of the window*/
-function GetFolderTree()
+function GetFolderOutliner()
 {
-    if (gFolderTree) return gFolderTree;
-    
-	var folderTree = document.getElementById('folderTree');
-    gFolderTree = folderTree;
-	return folderTree;
+    if (! gFolderOutliner)
+        gFolderOutliner = document.getElementById("folderOutliner");
+    return gFolderOutliner;
 }
 
 function GetMessagePane()
