@@ -232,7 +232,6 @@ nsBrowserStatusHandler.prototype =
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
     var location = aLocation.spec;
-    domWindow = aWebProgress.DOMWindow;
 
     if (this.hideAboutBlank) {
       this.hideAboutBlank = false;
@@ -242,12 +241,9 @@ nsBrowserStatusHandler.prototype =
 
     // We should probably not do this if the value has changed since the user
     // searched
-    // Update urlbar only if a new page was loaded on the primary content area
-    // Do not update urlbar if there was a subframe navigation
-    if (domWindow == domWindow.top) {
-      this.urlBar.value = location;
-      SetPageProxyState("valid");
-    }
+    this.urlBar.value = location;
+    SetPageProxyState("valid");
+    
     UpdateBackForwardButtons();
   },
 

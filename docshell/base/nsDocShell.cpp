@@ -258,7 +258,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 //*****************************************************************************   
 NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
 {
-   NS_ENSURE_ARG_POINTER(aSink);
+    NS_ENSURE_ARG_POINTER(aSink);
 
     if (aIID.Equals(NS_GET_IID(nsIURIContentListener)) &&
         NS_SUCCEEDED(EnsureContentListener())) {
@@ -3737,9 +3737,6 @@ nsDocShell::CreateContentViewer(const char *aContentType,
         if (currentLoadGroup)
             currentLoadGroup->RemoveRequest(request, nsnull, NS_OK);
 
-        // Update the notification callbacks, so that progress and
-        // status information are sent to the right docshell...
-        aOpenedChannel->SetNotificationCallbacks(this);
     }
 
     NS_ENSURE_SUCCESS(Embed(viewer, "", (nsISupports *) nsnull),
@@ -3912,8 +3909,6 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
             // Suppress the command dispatcher.
             focusController->SetSuppressFocus(PR_TRUE,
                                               "Win32-Only Link Traversal Issue");
-            // Remove focus from the element that has it
-            focusController->SetFocusedElement(nsnull);
         }
     }
 
@@ -3958,9 +3953,11 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
 
     // See the book I wrote above regarding why the focus controller is 
     // being used here.  -- hyatt
-    if (focusController)
+    if (focusController) {
+        focusController->SetFocusedElement(nsnull);
         focusController->SetSuppressFocus(PR_FALSE,
                                           "Win32-Only Link Traversal Issue");
+    }
 
     mContentViewer = aNewViewer;
 
@@ -5115,44 +5112,12 @@ void
 nsDocShell::SetCurrentURI(nsIURI * aURI)
 {
     mCurrentURI = aURI;         //This assignment addrefs
-    PRBool isRoot = PR_FALSE;   // Is this the root docshell
-    PRBool  isSubFrame=PR_FALSE;  // Is this a subframe navigation?
 
-    if (!mLoadCookie)
-      return; 
-
-    nsCOMPtr<nsIDocumentLoader> loader(do_GetInterface(mLoadCookie)); 
-    nsCOMPtr<nsIWebProgress> webProgress(do_QueryInterface(mLoadCookie));
-    nsCOMPtr<nsIDocShellTreeItem> root;
-
-    GetSameTypeRootTreeItem(getter_AddRefs(root));
-    if (root.get() == NS_STATIC_CAST(nsIDocShellTreeItem *, this)) 
-    {
-        // This is the root docshell
-        isRoot = PR_TRUE;
-    }
-    if (LSHE) {
-      nsCOMPtr<nsIHistoryEntry> historyEntry(do_QueryInterface(LSHE));
-      
-      // Check if this is a subframe navigation
-      if (historyEntry) {
-        historyEntry->GetIsSubFrame(&isSubFrame);
-      }
-    }
- 
-    if (!isSubFrame && !isRoot) {
-      /* 
-       * We don't want to send OnLocationChange notifications when
-       * a subframe is being loaded for the first time, while
-       * visiting a frameset page
-       */
-      return;
-    }
-    
+    nsCOMPtr<nsIDocumentLoader> loader(do_GetInterface(mLoadCookie));
 
     NS_ASSERTION(loader, "No document loader");
     if (loader) {
-        loader->FireOnLocationChange(webProgress, nsnull, aURI);
+        loader->FireOnLocationChange(nsnull, nsnull, aURI);
     }
 }
 

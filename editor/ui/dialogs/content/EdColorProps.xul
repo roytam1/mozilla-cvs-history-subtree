@@ -44,7 +44,6 @@
 
   <spring id="location" offsetY="50" persist="offsetX offsetY"/>
   <broadcaster id="args" value=""/>
-  <keyset id="dialogKeys"/>
   <popupset id="aTooltipSet" />
 
   <titledbox orient="vertical" autostretch="never">

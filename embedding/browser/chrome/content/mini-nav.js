@@ -86,11 +86,7 @@ nsBrowserStatusHandler.prototype =
 
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
-    domWindow = aWebProgress.DOMWindow;
-    // Update urlbar only if there was a load on the root docshell
-    if (domWindow == domWindow.top) {
-      this.urlBar.value = location;
-    }
+    this.urlBar.value = aLocation.spec;
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
