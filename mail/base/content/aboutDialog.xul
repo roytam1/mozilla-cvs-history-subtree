@@ -65,6 +65,7 @@
         button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
         gSelectedPage = 0;
         button.addEventListener("command", switchPage, false);
+        document.documentElement.getButton("accept").focus();
       }
       
       function uninit(aEvent)
