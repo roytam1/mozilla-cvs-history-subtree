@@ -239,54 +239,21 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                     (*jEnv)->GetObjectField(jEnv, java_exception, 
                                             njJSException_wrappedException);
 
-                /* All this just to get a class descriptor. Go figure.*/
-                js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_obj);
-                java_wrapper = JS_GetPrivate(cx, js_obj); 
-                class_descriptor = java_wrapper->class_descriptor; 
-
-                /* Convert native JS values back to native types. */
-                switch(wrapped_exception_type) {
-                case JSTYPE_NUMBER:
-                    if (!jsj_ConvertJavaObjectToJSNumber(cx, jEnv,
-                                                         class_descriptor,
-                                                         java_obj, 
-                                                         &js_exception)) {
-                        goto do_report;
-                    }
-                    break;
-                case JSTYPE_BOOLEAN:
-                    if (!jsj_ConvertJavaObjectToJSBoolean(cx, jEnv,
-                                                          class_descriptor,
-                                                          java_obj, 
-                                                          &js_exception)) {
-                        goto do_report;
-                    }
-                    break;
-                case JSTYPE_STRING:
-                    if (!jsj_ConvertJavaObjectToJSString(cx, jEnv,
-                                                         class_descriptor,
-                                                         java_obj, 
-                                                         &js_exception)) {
-                        goto do_report;
-                    }
-                    break;
-                case JSTYPE_VOID:
-                case JSTYPE_OBJECT:
-                case JSTYPE_FUNCTION:
-                case JSTYPE_LIMIT:
-                default:
-                    if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
-                                                        &js_exception)) {
-                        goto do_report;
-                    }
-                }
+                if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
+                                                        &js_exception)) 
+                    goto do_report;
+                
+            } else {
+                if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
+                                                    &js_exception))
+                    goto do_report;
             }
+            
         /* Check for internal exception */
         } else {
             if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
-                                                &js_exception)) {
+                                                &js_exception))
                 goto do_report;
-            }
         }
         
         /* Set pending JS exception and clear the java exception. */

@@ -433,12 +433,8 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     if (JS_IsExceptionPending(cx)) {
         if (!JS_GetPendingException(cx, &pending_exception))
             goto out_of_memory;
-        
-        /* Find out whether this jsval represents a native type. 
-         * Right now we use JSTYPE_LIMIT as the flag denoting the 
-         * error_as_exception condition, since JSTYPE_LIMIT isn't used for
-         * much elsewhere. Should we add another JSTYPE specifically 
-         * for errors? - coop 11/06/1998 */
+
+        /* Find out the JSTYPE of this jsval. */
         primitive_type = JS_TypeOfValue(cx, pending_exception);
         
         /* Convert jsval exception to a java object and then use it to
