@@ -57,7 +57,7 @@ INCLUDES = $(LOCAL_INCLUDES)
 
 EXTRA_LIBS=
 
-REQUIRES= network 
+REQUIRES= network ldap imap4url
 EXPORTS= mkmailbx.h
 
 # use LINCS on win32 for now since REQUIRES seems to be broken
@@ -72,6 +72,8 @@ LINCS= \
     -I$(PUBLIC)\security	\
     -I$(PUBLIC)\netcache	\
     -I$(PUBLIC)\network \
+    -I$(PUBLIC)\ldap \
+    -I$(PUBLIC)\imap4url \
     -I$(PUBLIC)\mimetype \
 #!endif
 

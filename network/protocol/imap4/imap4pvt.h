@@ -33,6 +33,7 @@
 #include "imaphier.h"
 #include "idarray.h"
 #include "ptrarray.h"
+#include "mktcp.h"
 
 
 #define IMAP4_PORT 143  /* the iana port for imap4 */

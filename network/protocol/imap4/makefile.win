@@ -70,7 +70,7 @@ INCLUDES = $(LOCAL_INCLUDES)
 
 EXTRA_LIBS=
 
-REQUIRES= network nspr2 security 
+REQUIRES= ldap network nspr2 security 
 EXPORTS= imap4pvt.h imap4url.h imapbody.h imaphier.h mkimap4.h
 
 # use LINCS on win32 for now since REQUIRES seems to be broken
@@ -85,7 +85,9 @@ LINCS= \
     -I$(PUBLIC)\security	\
     -I$(PUBLIC)\netcache	\
     -I$(PUBLIC)\network \
+    -I$(DEPTH)\lib\libmsg \
     -I$(PUBLIC)\mimetype \
+    -I$(PUBLIC)\ldap \
 #!endif
 
 include <$(DEPTH)\config\rules.mak> 

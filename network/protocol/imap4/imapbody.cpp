@@ -30,6 +30,7 @@
 #include "xp_hash.h"
 #include "mime.h"	// for IMAP_EXTERNAL_CONTENT_HEADER
 #include "prlog.h"
+#include "mktcp.h"
 
 extern "C"
 {

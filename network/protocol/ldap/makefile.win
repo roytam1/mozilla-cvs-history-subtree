@@ -57,7 +57,7 @@ INCLUDES = $(LOCAL_INCLUDES)
 
 EXTRA_LIBS=
 
-REQUIRES= network 
+REQUIRES= progress network ldap
 EXPORTS= mkldap.h
 
 # use LINCS on win32 for now since REQUIRES seems to be broken
@@ -72,6 +72,9 @@ LINCS= \
     -I$(PUBLIC)\security	\
     -I$(PUBLIC)\netcache	\
     -I$(PUBLIC)\network \
+    -I$(PUBLIC)\ldap \
+    -I$(PUBLIC)\progress \
+    -I$(DEPTH)\lib\libmsg \
     -I$(PUBLIC)\mimetype \
 #!endif
 

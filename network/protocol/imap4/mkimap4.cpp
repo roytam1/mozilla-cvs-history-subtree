@@ -34,6 +34,16 @@
 #include "prlog.h"
 #include "libi18n.h"
 #include "prtime.h"
+#include "netutils.h"
+#include "nslocks.h"
+
+#ifdef NSPR20
+#ifdef XP_MAC
+#include "prpriv.h"             /* for NewNamedMonitor */
+#else
+#include "private/prpriv.h"
+#endif
+#endif /* NSPR20 */
 
 #define MAX_NEW_IMAP_FOLDER_COUNT 50
 #define IMAP_DB_HEADERS "From To Cc Subject Date Priority X-Priority Message-ID References Newsgroups"
