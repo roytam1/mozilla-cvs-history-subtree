@@ -902,9 +902,9 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 		dragRect.left = resizeRect.right;
 		dragRect.right = dragRect.left + DRAGWIDTH;
 
-		if (IsTreeVisible())
+		//if (IsTreeVisible())
 			lpLayout->rect.left = resizeRect.right + DRAGWIDTH;
-		else lpLayout->rect.left = resizeRect.right;
+		//else lpLayout->rect.left = resizeRect.right;
 
 		m_DragWnd->SetRect(dragRect);
 		m_DockWidth = resizeRect.Width();
