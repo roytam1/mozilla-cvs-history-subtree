@@ -4372,7 +4372,7 @@ const char XUL_FASTLOAD_FILE_BASENAME[] = "XUL";
 // number as we flesh out the FastLoad file to include more and more data
 // induced by the master prototype document.
 
-#define XUL_FASTLOAD_FILE_VERSION       0xfeedbeef
+#define XUL_FASTLOAD_FILE_VERSION       (0xfeedbeef - 1)
 
 #define XUL_SERIALIZATION_BUFFER_SIZE   (64 * 1024)
 #define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)
@@ -5482,10 +5482,35 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
     scriptProto->mSrcLoading = PR_FALSE;
 
     if (NS_SUCCEEDED(aStatus)) {
+        // If the including XUL document is a FastLoad document, and we're
+        // compiling an out-of-line script (one with src=...), then we must
+        // be writing a new FastLoad file.  (If we were reading a FastLoad
+        // file, XULContentSinkImpl::OpenScript (nsXULContentSink.cpp) would
+        // have already deserialized a non-null script->mJSObject, causing
+        // control flow from the top of LoadScript not to reach here.)
+        //
+        // Start and Select the .js document in the FastLoad multiplexor
+        // before serializing script data under scriptProto->Compile, and
+        // End muxing afterward.
+        nsCOMPtr<nsIURI> uri = scriptProto->mSrcURI;
+        if (mIsFastLoad) {
+            nsXPIDLCString urispec;
+            uri->GetSpec(getter_Copies(urispec));
+            rv = gFastLoadService->StartMuxedDocument(uri, urispec);
+            if (NS_SUCCEEDED(rv))
+                gFastLoadService->SelectMuxedDocument(uri);
+        }
+
         nsString stringStr; stringStr.AssignWithConversion(string, stringLen);
-        rv = scriptProto->Compile(stringStr.get(), stringLen,
-                                  scriptProto->mSrcURI, 1,
-                                  this, mMasterPrototype);
+        rv = scriptProto->Compile(stringStr.get(), stringLen, uri, 1, this,
+                                  mMasterPrototype);
+
+        // End muxing the .js file into the FastLoad file.  We don't Abort
+        // the FastLoad process here, when writing, as we do when reading.
+        // XXXbe maybe we should...
+        if (mIsFastLoad)
+            gFastLoadService->EndMuxedDocument(uri);
+
         aStatus = rv;
         if (NS_SUCCEEDED(rv) && scriptProto->mJSObject) {
             rv = ExecuteScript(scriptProto->mJSObject);

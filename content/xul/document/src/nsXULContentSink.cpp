@@ -1574,11 +1574,31 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
             globalObject->GetContext(getter_AddRefs(scriptContext));
             NS_ASSERTION(scriptContext != nsnull, "no prototype script context!");
 
+            // XXXbe If we want to pass a genuine nsIURI* to StartMuxedDocument,
+            // we must create the script's src URI object before we deserialize
+            // the one that was serialized for this script, just to select the
+            // mux!  Instead, let's cheat, by taking advantage of the nature of
+            // StartMuxedDocument's nsISupports* first formal parameter: pass
+            // this content sink instead.  The nsISupports* formal is used only
+            // as a ref-counted hash key; it's never QI'd to nsIURI or another
+            // interface type.
+            nsresult rv2 = NS_OK;
+            nsISupports* srcKey = NS_STATIC_CAST(nsISupports*, this);
+            if (! src.IsEmpty()) {
+                rv2 = fastLoadService->StartMuxedDocument(srcKey, NS_ConvertUCS2toUTF8(src).get());
+                if (NS_SUCCEEDED(rv2))
+                    rv2 = fastLoadService->SelectMuxedDocument(srcKey);
+            }
+
             // XXXbe we should serialize everything, including line-number...
             rv = script->Deserialize(objectInput, scriptContext);
+
+            if (! src.IsEmpty() && NS_SUCCEEDED(rv2))
+                rv2 = fastLoadService->EndMuxedDocument(srcKey);
+            // XXXbe if (NS_FAILED(rv2)) AbortFastLoads...
         } else {
             // If there is a SRC attribute...
-            if (src.Length() > 0) {
+            if (! src.IsEmpty()) {
                 // Use the SRC attribute value to load the URL
                 rv = NS_NewURI(getter_AddRefs(script->mSrcURI), src,
                                mDocumentURL);
