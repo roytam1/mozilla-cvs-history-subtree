@@ -145,7 +145,6 @@ typedef enum
   BrowserWrapper* mBrowserView;
 
   BOOL mMoveReentrant;
-  NSModalSession mModalSession;
 
   BOOL mShouldAutosave;
   BOOL mShouldLoadHomePage;
@@ -252,8 +251,6 @@ typedef enum
 - (IBAction)reload:(id)aSender;
 - (IBAction)stop:(id)aSender;
 - (IBAction)home:(id)aSender;
-
--(void)enterModalSession;
 
 -(void)openNewWindowWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG;
 -(void)openNewWindowWithGroup: (nsIDOMElement*)aFolderElement loadInBackground: (BOOL)aLoadInBG;

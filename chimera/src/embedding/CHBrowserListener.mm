@@ -383,13 +383,10 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
   return NS_OK;
 }
 
-#define BRING_FOCUSED_WINDOWS_TO_FG 1
-
 /* void setFocus (); */
 NS_IMETHODIMP 
 CHBrowserListener::SetFocus()
 {
-#if BRING_FOCUSED_WINDOWS_TO_FG
   NSWindow* window = [mView window];
   if (!window) 
     return NS_ERROR_FAILURE;
@@ -397,9 +394,15 @@ CHBrowserListener::SetFocus()
   // if we're already the keyWindow, we certainly don't need to do it again. This
   // ends up fixing a problem where we try to bring ourselves to the front while we're
   // in the process of miniaturizing the window
-  if ( window != [NSApp keyWindow] )
-    [window makeKeyAndOrderFront:window];
-#endif
+  if ([window isVisible] && (window != [NSApp keyWindow]))
+  {
+    BOOL suppressed = NO;
+    if ([window respondsToSelector:@selector(suppressMakeKeyFront)])
+      suppressed = [window suppressMakeKeyFront];
+  
+    if (!suppressed)
+      [window makeKeyAndOrderFront:window];
+  }
 
   return NS_OK;
 }
@@ -419,7 +422,7 @@ CHBrowserListener::GetVisibility(PRBool *aVisibility)
     return NS_ERROR_FAILURE;
   }
 
-  *aVisibility = [window isMiniaturized];
+  *aVisibility = [window isVisible];
 
   return NS_OK;
 }
@@ -431,17 +434,22 @@ CHBrowserListener::SetVisibility(PRBool aVisibility)
   if (!window)
     return NS_ERROR_FAILURE;
 
-#if 0
-// if the user wants a window miniaturized, damnit, it's gonna stay that
-// way until they decide to deminiaturize it themselves. there's no reason
-// why a window needs to pop out of the dock just because it's done loading
-// and wants to set focus.
-  if (aVisibility)
-    [window deminiaturize:window];
-  else
-    [window miniaturize:window];
-#endif
-
+  // we rely on this callback to show gecko-created windows
+  if (aVisibility)	// showing
+  {
+    BOOL suppressed = NO;
+    if ([window respondsToSelector:@selector(suppressMakeKeyFront)])
+      suppressed = [window suppressMakeKeyFront];
+    
+    if (![window isVisible] && !suppressed)
+      [window makeKeyAndOrderFront:nil];
+  }
+  else						// hiding
+  {
+    if ([window isVisible])
+      [window orderOut:nil];
+  }
+  
   return NS_OK;
 }
 

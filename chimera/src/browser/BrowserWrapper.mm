@@ -640,12 +640,14 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
         return nil;
     }
   }
-  
+
   BrowserWindowController* controller = [[BrowserWindowController alloc] initWithWindowNibName: @"BrowserWindow"];
   [controller setChromeMask: aMask];
   [controller disableAutosave]; // The Web page opened this window, so we don't ever use its settings.
   [controller disableLoadPage]; // don't load about:blank initially since this is a script-opened window
-  [controller enterModalSession];
+  
+  [controller window];		// force window load. The window gets made visible by CHBrowserListener::SetVisibility
+  
   [[controller getBrowserWrapper] setPendingActive: YES];
   return [[controller getBrowserWrapper] getBrowserView];
 }

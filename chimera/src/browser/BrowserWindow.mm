@@ -45,9 +45,6 @@ static const int kEscapeKeyCode = 53;
 
 - (void)dealloc
 {
-#if DEBUG
-  NSLog(@"BrowserWindow dealloc");
-#endif
   [super dealloc];
 }
 
@@ -70,5 +67,16 @@ static const int kEscapeKeyCode = 53;
   else
     [super sendEvent:theEvent];
 }
+
+- (BOOL)suppressMakeKeyFront
+{
+  return mSuppressMakeKeyFront;
+}
+
+- (BOOL)setSuppressMakeKeyFront:(BOOL)inSuppress
+{
+	mSuppressMakeKeyFront = inSuppress;
+}
+
 
 @end

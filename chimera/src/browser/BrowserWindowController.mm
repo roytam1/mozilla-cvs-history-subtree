@@ -143,25 +143,6 @@ static NSArray* sToolbarDefaults = nil;
 
 @implementation BrowserWindowController
 
-//
-// enterModalSession
-//
-// We have to load the window synchronously so windows coming from a JS
-// window.open() can be inspected or modified inline in JS. The way we
-// force this is by pretending we're a modal dialog just up to the point
-// where we finish creating the window. 
-//
-// This is icky, and there are several bugs that are caused by this hack
-// (bugzilla 159410, 159661)
-//
--(void)enterModalSession
-{
-    mModalSession = [NSApp beginModalSessionForWindow: [self window]];
-    [NSApp runModalSession: mModalSession];
-    [NSApp endModalSession: mModalSession];
-    mModalSession = nil;
-}
-
 
 - (BOOL)isResponderGeckoView:(NSResponder*) responder
 {
@@ -374,9 +355,6 @@ static NSArray* sToolbarDefaults = nil;
     if (NSEqualSizes(oldFrame.size, [[self window] frame].size))
       mustResizeChrome = YES;
     
-    if (mModalSession)
-      [NSApp stopModal];
-      
     mInitialized = YES;
 
     mDrawerCachedFrame = NO;
@@ -1316,12 +1294,17 @@ static NSArray* sToolbarDefaults = nil;
   // Autosave our dimensions before we open a new window.  That ensures the size ends up matching.
   [self autosaveWindowFrame];
 
-  BrowserWindowController* browser = [[BrowserWindowController alloc] initWithWindowNibName: @"BrowserWindow"];
+  BrowserWindowController* browser = [[BrowserWindowController alloc] initWithWindowNibName: @"BrowserWindow"];  
   [browser loadURL: aURLSpec referrer:aReferrer activate:!aLoadInBG];
+  
   if (aLoadInBG)
+  {
+    [[browser window] setSuppressMakeKeyFront:YES];	// prevent gecko focus bringing the window to the front
     [[browser window] orderWindow: NSWindowBelow relativeTo: [[self window] windowNumber]];
+    [[browser window] setSuppressMakeKeyFront:NO];
+  }
   else
-    [browser enterModalSession];
+    [browser showWindow:self];
 }
 
 -(void)openNewWindowWithGroup: (nsIDOMElement*)aFolderElement loadInBackground: (BOOL)aLoadInBG
@@ -1332,9 +1315,13 @@ static NSArray* sToolbarDefaults = nil;
   // Tell the Tab Browser in the newly created window to load the group
   BrowserWindowController* browser = [[BrowserWindowController alloc] initWithWindowNibName: @"BrowserWindow"];
   if (aLoadInBG)
+  {
+    [[browser window] setSuppressMakeKeyFront:YES];	// prevent gecko focus bringing the window to the front
     [[browser window] orderWindow: NSWindowBelow relativeTo: [[self window] windowNumber]];
+    [[browser window] setSuppressMakeKeyFront:NO];
+  }
   else
-    [browser enterModalSession];
+    [browser showWindow:self];
 
   id tabBrowser = [browser getTabBrowser];
   [mSidebarBookmarksDataSource openBookmarkGroup: tabBrowser groupElement: aFolderElement];
