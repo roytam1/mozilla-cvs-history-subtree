@@ -45,7 +45,7 @@
 /* XXX Breaks the HTML rules below (.moz-class stuff), at least on Linux.
    "html|.class" doesn't work.
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
-@namespace html url("http://www.w3.org/1999/xhtml"); 
+@namespace html url("http://www.w3.org/1999/xhtml");
 */
 
 window {
@@ -151,20 +151,19 @@ span.moz-txt-formfeed {
 }
 
 .moz-vcard-title-property {
-} 
+}
 
 .moz-vcard-badge {
   height: 30px;
   width: 30px;
   background-color: transparent;
   display: block;
-  background-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
-  -moz-image-region: rect(0px 30px 30px 0px);
+  background-image: url("chrome://messenger/skin/addressbook/icons/abcard-large.png");
 }
 
 .moz-vcard-badge:hover {
   -moz-image-region: rect(30px 30px 60px 0px);
-} 
+}
 
 .moz-vcard-badge:focus {
   -moz-outline: none;

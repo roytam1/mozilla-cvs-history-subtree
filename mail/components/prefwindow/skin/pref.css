@@ -39,7 +39,7 @@
 
 @import url("chrome://messenger/skin/");
 
-.listBox 
+.listBox
 {
   -moz-appearance: listbox;
   margin: 2px 4px;
@@ -105,16 +105,16 @@
   -moz-image-region: rect(0px, 96px, 32px, 64px)
 }
 
-#fonts {
-  -moz-image-region: rect(0px, 128px, 32px, 96px)
+#attachments {
+  -moz-image-region: rect(0px 128px 32px 96px);
 }
 
-#attachments {
-  -moz-image-region: rect(0px 160px 32px 128px);
+#fonts {
+  -moz-image-region: rect(0px, 160px, 32px, 128px)
 }
 
 #advanced {
-  -moz-image-region: rect(0px, 256px, 32px, 224px)
+  -moz-image-region: rect(0px, 192px, 32px, 160px)
 }
 
 .indent {
@@ -128,17 +128,17 @@
 
 /* :::::: layout preference icons ::::: */
 
-.mailPaneConfigIcon 
+.mailPaneConfigIcon
 {
   list-style-image : url("chrome://messenger/skin/icons/mailPaneConfig.png");
 }
 
-#classic 
+#classic
 {
   -moz-image-region: rect(0px, 26px, 32px, 0px)
 }
 
-#wide 
+#wide
 {
   -moz-image-region: rect(0px, 52px, 32px, 26px)
 }
@@ -150,12 +150,12 @@
 
 /** advanced panel settings **/
 
-.settingsBox 
+.settingsBox
 {
   margin: 5px;
   padding: 5px;
 }
 
-expander { 
+expander {
   margin: 2px;
 }
