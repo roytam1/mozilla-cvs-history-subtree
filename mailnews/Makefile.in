@@ -28,6 +28,10 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= public base db/msgdb news local mime compose imap addrbook import absync extensions
 
+ifdef MOZ_MINOTAUR
+DIRS		+= app
+endif
+
 ifeq ($(OS_ARCH),WINNT)
 DIRS		+= mapi
 endif
