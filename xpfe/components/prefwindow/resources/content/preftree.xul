@@ -64,55 +64,6 @@
         </treeitem>
       </treechildren>
     </treeitem>
-    <!-- XXX remove this when overlays.rdf works for navigator -->
-    <treeitem container="true" id="navigator">
-      <treerow>
-        <treecell url="chrome://communicator/content/pref/pref-navigator.xul" label="&navigator.label;"/> 
-      </treerow>
-      <treechildren>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-history.xul" label="&history.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-languages.xul" label="&languages.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-applications.xul" label="&applications.label;"/> 
-          </treerow>  
-        </treeitem> 
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-smart_browsing.xul" label="&smartBrowse.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-search.xul" label="&search.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-tabs.xul" label="&tabWindows.label;"/>
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-download.xul" label="&download.label;"/>
-          </treerow>
-        </treeitem>
-        <!-- Taking out Policies panel b/c bug 44121
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://communicator/content/pref/pref-policies.xul" label="&policies.label;"/>
-          </treerow>
-        </treeitem> -->
-      </treechildren>
-    </treeitem>
     
     <!-- Security and Privacy items -->
     <treeitem container="true" id="securityItem">
