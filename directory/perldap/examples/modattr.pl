@@ -37,7 +37,6 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 #
 $APPNAM	= "modattr";
 $USAGE	= "$APPNAM [-dnvW] -b base -h host -D bind -w pswd -P cert attr=value filter";
-$AUTHOR	= "Leif Hedstrom <leif\@netscape.com>";
 
 
 #############################################################################
