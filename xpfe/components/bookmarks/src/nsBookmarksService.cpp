@@ -1784,9 +1784,11 @@ nsBookmarksService::Init()
     // if the user has more than one profile: always include the profile name
     // otherwise, include the profile name only if it is not named 'default'
     // the profile "default" is not localizable and arises when there is no ns4.x install
-    nsCOMPtr<nsIProfile> profileService(do_GetService(NS_PROFILE_CONTRACTID,&rv));
-    nsXPIDLString        currentProfileName;
     nsresult             useProfile;
+    nsCOMPtr<nsIProfile> profileService(do_GetService(NS_PROFILE_CONTRACTID,&useProfile));
+    if (NS_SUCCEEDED(useProfile))
+    {
+        nsXPIDLString        currentProfileName;
 
     useProfile = profileService->GetCurrentProfile(getter_Copies(currentProfileName));
     if (NS_SUCCEEDED(useProfile))
@@ -1803,6 +1805,7 @@ nsBookmarksService::Init()
                 ToLowerCase(currentProfileName);
                 if (currentProfileName.Equals(NS_LITERAL_STRING("default")))
                     useProfile = NS_ERROR_FAILURE;
+                }
             }
         }
     }
