@@ -62,6 +62,7 @@ REQUIRES		= netcast parse js dbm nspr security htmldlgs ldap softupdt \
 EXPORTS			= \
 			  nsIStreamNotification.h \
 			  nsINetService.h \
+			  nsIURL.h \
 			  $(NULL)
 
 include $(DEPTH)/config/config.mk
