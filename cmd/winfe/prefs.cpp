@@ -1738,6 +1738,8 @@ CreateMailNewsCategory(MWContext *pContext, LPSPECIFYPROPERTYPAGEOBJECTS *pCateg
 				if (SUCCEEDED(pMailNews->QueryInterface(IID_ISpecifyPropertyPageObjects, (LPVOID *)pCategory)))
 					bResult = TRUE;
 			}
+			else
+				bResult = FALSE;
 		}
 	}
 	
@@ -1873,6 +1875,8 @@ CreateAppearancesCategory(int nCharsetId, LPSPECIFYPROPERTYPAGEOBJECTS *pCategor
 				if (SUCCEEDED(pAppearance->QueryInterface(IID_ISpecifyPropertyPageObjects, (LPVOID *)pCategory)))
 					bResult = TRUE;
 			}
+			else
+				bResult = FALSE;
 		}
 	}
 
@@ -1913,6 +1917,8 @@ CreateBrowserCategory(MWContext *pContext, LPSPECIFYPROPERTYPAGEOBJECTS *pCatego
 				if (SUCCEEDED(pBrowser->QueryInterface(IID_ISpecifyPropertyPageObjects, (LPVOID *)pCategory)))
 					bResult = TRUE;
 			}
+			else
+				bResult = FALSE;
 		}
 	}
 
@@ -1982,6 +1988,8 @@ CreateOfflineCategory(LPSPECIFYPROPERTYPAGEOBJECTS *pCategory)
 				if (SUCCEEDED(pOffline->QueryInterface(IID_ISpecifyPropertyPageObjects, (LPVOID *)pCategory)))
 					bResult = TRUE;
 			}
+			else
+				bResult = FALSE;
 		}
 	}
 
