@@ -35,18 +35,23 @@ ifdef NS_TRACE_MALLOC
 REQUIRES	+= tracemalloc
 endif
 
-CPPSRCS		= \
-		TestGtkEmbed.cpp \
+CPPSRCS		= TestGtkEmbed.cpp
+
+ifdef ENABLE_TESTS
+CPPSRCS         += \
 		TestGtkEmbedNotebook.cpp \
 		TestGtkEmbedSocket.cpp \
 		TestGtkEmbedChild.cpp
+endif
 
 SIMPLE_PROGRAMS = $(CPPSRCS:.cpp=)
 
 # ENABLE_GNOME=1
 
 ifdef ENABLE_GNOME
+ifdef ENABLE_TESTS
 CPPSRCS	       += TestGtkEmbedMDI.cpp
+endif
 endif
 
 ifdef MOZ_ENABLE_GTK
