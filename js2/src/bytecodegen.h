@@ -54,6 +54,7 @@ namespace ByteCode {
 
     typedef enum {
 
+        LoadConstantUndefinedOp,//                   --> <undefined value object>
         LoadConstantTrueOp,     //                     --> <true value object>
         LoadConstantFalseOp,    //                     --> <false value object>
         LoadConstantNullOp,     //                     --> <null value object>
@@ -90,6 +91,7 @@ namespace ByteCode {
         JumpTrueOp,             // <target>            <object> -->
         JumpOp,                 // <target>            
 
+        LogicalXorOp,           //                     <object> <object> --> <object> 
         LogicalNotOp,           //                     <object> --> <object>
         SwapOp,                 //                     <object1> <object2> --> <object2> <object1>
         DupOp,                  //                     <object> --> <object> <object>

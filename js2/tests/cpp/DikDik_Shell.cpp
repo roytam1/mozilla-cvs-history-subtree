@@ -146,7 +146,7 @@ static void readEvalPrint(FILE *in, World &world)
             } else {
                 StmtNode *parsedStatements = p.parseProgram();
 		ASSERT(p.lexer.peek(true).hasKind(Token::end));
-#ifdef DUMP_PROGRAM                    
+                if (cx.mDebugFlag)
                 {
                     PrettyPrinter f(stdOut, 30);
                     {
@@ -156,10 +156,8 @@ static void readEvalPrint(FILE *in, World &world)
 	                    StmtNode::printStatements(f, parsedStatements);
                     }
                     f.end();
-
+        	    stdOut << '\n';
                 }
-        	stdOut << '\n';
-#endif
 #ifdef INTERPRET_INPUT
 		// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements

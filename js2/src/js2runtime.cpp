@@ -373,7 +373,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
     while (pc != endPC) {
         try {
             if (mDebugFlag) {
-                stdOut << "                                           ";
+                printFormat(stdOut, "                                  %d        ", mStack.size());
                 printInstruction(stdOut, (pc - mCurModule->mCodeBase), *mCurModule);
             }
             switch ((ByteCodeOp)(*pc++)) {
@@ -408,6 +408,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.pop_back();
                     mStack.push_back(v1);
                     mStack.push_back(v2);
+                }
+                break;
+            case LogicalXorOp:
+                {
+                    JSValue v2 = mStack.back();
+                    mStack.pop_back();
+                    JSValue v1 = mStack.back();
+                    mStack.pop_back();
+                    bool bv1 = v1.toBoolean(this).boolean;
+                    bool bv2 = v2.toBoolean(this).boolean;
+                    if (bv1)
+                        if (bv2)
+                            mStack.push_back(kFalseValue);
+                        else
+                            mStack.push_back(v1);
+                    else
+                        if (bv2)
+                            mStack.push_back(v2);
+                        else
+                            mStack.push_back(kFalseValue);
                 }
                 break;
             case LogicalNotOp:
@@ -541,6 +561,9 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.push_back(JSValue(mCurModule->getNumber(index)));
                 }
                 break;
+            case LoadConstantUndefinedOp:
+                mStack.push_back(kUndefinedValue);
+                break;
             case LoadConstantTrueOp:
                 mStack.push_back(kTrueValue);
                 break;
@@ -604,6 +627,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     if (obj->setProperty(this, name, CURRENT_ATTR, v) ) {
                         // need to invoke
                     }
+                    mStack.push_back(v);
                 }
                 break;
             case DoUnaryOp:
@@ -879,6 +903,12 @@ void ScopeChain::collectNames(StmtNode *p)
             }            
         }
         break;
+    case StmtNode::For:
+        {
+            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            if (f->initializer) collectNames(f->initializer);
+        }
+        break;
     case StmtNode::Const:
     case StmtNode::Var:
         {
@@ -1014,6 +1044,22 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
 void Context::buildRuntimeForStmt(StmtNode *p)
 {
     switch (p->getKind()) {
+    case StmtNode::block:
+        {
+            BlockStmtNode *b = static_cast<BlockStmtNode *>(p);
+            StmtNode *s = b->statements;
+            while (s) {
+                buildRuntimeForStmt(s);
+                s = s->next;
+            }            
+        }
+        break;
+    case StmtNode::For:
+        {
+            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            if (f->initializer) buildRuntimeForStmt(f->initializer);
+        }
+        break;
     case StmtNode::Var:
     case StmtNode::Const:
         {
@@ -1083,7 +1129,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     ASSERT(false);
             }
 
-            fnc->mParameterBarrel = new ParameterBarrel();
+            fnc->mParameterBarrel = new ParameterBarrel((mScopeChain.topClass() != NULL) 
+                                                            && !(isStatic || isConstructor));
             mScopeChain.addScope(fnc->mParameterBarrel);
             VariableBinding *v = f->function.parameters;
             while (v) {

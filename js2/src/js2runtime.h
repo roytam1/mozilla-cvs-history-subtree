@@ -1056,7 +1056,11 @@ namespace JS2Runtime {
     class ParameterBarrel : public JSType {
     public:
 
-        ParameterBarrel() : JSType(NULL) { }
+        ParameterBarrel(bool isInstanceMethod) : JSType(NULL) 
+        {
+            if (isInstanceMethod)
+                ++mVariableCount;   // reserve arg 0 as 'this'
+        }
 
         Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
         {
@@ -1452,6 +1456,12 @@ namespace JS2Runtime {
         {
             if (Object_Type == NULL) {
                 Object_Type = new JSType(NULL);
+
+                global->defineVariable(widenCString("undefined"), NULL, Void_Type, kUndefinedValue);
+                global->defineVariable(widenCString("NaN"), NULL, Void_Type, kNaNValue);
+                global->defineVariable(widenCString("Infinity"), NULL, Void_Type, kPositiveInfinity);
+
+                
                 global->defineVariable(widenCString("Object"), NULL, Type_Type, JSValue(Object_Type));
 
                 Number_Type = new JSType(widenCString("Number"), Object_Type);
@@ -1581,7 +1591,6 @@ namespace JS2Runtime {
     inline bool LocalVarReference::setValue(Context *cx)
     {
         cx->mLocals[mIndex] = cx->mStack.back();
-        cx->mStack.pop_back();
         return false;
     }
 
@@ -1599,7 +1608,6 @@ namespace JS2Runtime {
     inline bool ValueReference::setValue(Context *cx)
     {
         mBase->setProperty(mName, NULL, cx->mStack.back());
-        cx->mStack.pop_back();
         return false;
     }
 

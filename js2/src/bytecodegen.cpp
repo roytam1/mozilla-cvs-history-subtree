@@ -319,15 +319,22 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
     }
 
     genCodeForStatement(f->function.body, NULL);
+    
 
     // OPT - see above
     addByte(PopScopeOp);
     addByte(PopScopeOp);
-    if (isConstructor) {
+    
+    if (isConstructor) {        // the codegen model depends on all constructors returning the 'this'
         addByte(LoadThisOp);
         addByte(ReturnOp);
     }
-    
+    else {
+        // if there is no return statement, add one
+        // XXX obviously there are better things that can be done    
+        addByte(LoadConstantUndefinedOp);
+        addByte(ReturnOp);
+    }
     fnc->mByteCode = new ByteCodeModule(this);        
 
     mScopeChain->popScope();
@@ -390,6 +397,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                             ref->emitCodeSequence(this);
                         }
                         delete ref;
+                        addByte(PopOp);
                     }
                 }
                 v = v->next;
@@ -474,6 +482,56 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             genExpr(w->expr);
             addByte(JumpTrueOp);
             addFixup(labelAtTopOfBlock);
+            setLabel(breakLabel);
+        }
+        break;
+    case StmtNode::DoWhile:
+        {
+            UnaryStmtNode *d = static_cast<UnaryStmtNode *>(p);
+            uint32 breakLabel = getLabel(Label::BreakLabel);
+            uint32 labelAtTopOfBlock = getLabel();
+            uint32 labelAtTestCondition = getLabel(Label::ContinueLabel); 
+            setLabel(labelAtTopOfBlock);
+
+            mLabelStack.push_back(breakLabel);
+            mLabelStack.push_back(labelAtTestCondition);
+            genCodeForStatement(d->stmt, static_cg);
+            mLabelStack.pop_back();
+            mLabelStack.pop_back();
+
+            setLabel(labelAtTestCondition);
+            genExpr(d->expr);
+            addByte(JumpTrueOp);
+            addFixup(labelAtTopOfBlock);
+            setLabel(breakLabel);
+        }
+        break;
+    case StmtNode::For:
+        {
+            ForStmtNode *f = static_cast<ForStmtNode *>(p);
+            uint32 breakLabel = getLabel(Label::BreakLabel);
+            uint32 labelAtTopOfBlock = getLabel();
+            uint32 labelAtIncrement = getLabel(Label::ContinueLabel); 
+            uint32 labelAtTestCondition = getLabel(); 
+
+            if (f->initializer) 
+                genCodeForStatement(f->initializer, static_cg);
+            addByte(JumpOp);
+            addFixup(labelAtTestCondition);
+
+            setLabel(labelAtTopOfBlock);
+            genCodeForStatement(f->stmt, static_cg);
+
+            setLabel(labelAtIncrement);
+            if (f->expr3) genExpr(f->expr3);
+
+            setLabel(labelAtTestCondition);
+            if (f->expr2) {
+                genExpr(f->expr2);
+                addByte(JumpTrueOp);
+                addFixup(labelAtTopOfBlock);
+            }
+
             setLabel(breakLabel);
         }
         break;
@@ -900,6 +958,153 @@ PostXcrement:
             return Object_Type;
         }
 
+    case ExprNode::addEquals:
+        op = Plus;
+        goto BinaryOpEquals;
+    case ExprNode::subtractEquals:
+        op = Minus;
+        goto BinaryOpEquals;
+    case ExprNode::multiplyEquals:
+        op = Multiply;
+        goto BinaryOpEquals;
+    case ExprNode::divideEquals:
+        op = Divide;
+        goto BinaryOpEquals;
+    case ExprNode::moduloEquals:
+        op = Remainder;
+        goto BinaryOpEquals;
+    case ExprNode::leftShiftEquals:
+        op = ShiftLeft;
+        goto BinaryOpEquals;
+    case ExprNode::rightShiftEquals:
+        op = ShiftRight;
+        goto BinaryOpEquals;
+    case ExprNode::logicalRightShiftEquals:
+        op = UShiftRight;
+        goto BinaryOpEquals;
+    case ExprNode::bitwiseAndEquals:
+        op = BitAnd;
+        goto BinaryOpEquals;
+    case ExprNode::bitwiseXorEquals:
+        op = BitXor;
+        goto BinaryOpEquals;
+    case ExprNode::bitwiseOrEquals:
+        op = BitOr;
+        goto BinaryOpEquals;
+
+BinaryOpEquals:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            Reference *readRef;
+            Reference *writeRef;
+            genReferencePair(b->op1, readRef, writeRef);
+
+            if (readRef->hasBaseExpression())
+                addByte(DupOp);         // duplicate the base expression
+            readRef->emitCodeSequence(this);
+            genExpr(b->op2);
+            addByte(DoOperatorOp);
+            addByte(op);
+            writeRef->emitCodeSequence(this);
+            return Object_Type;
+        }
+
+
+    case ExprNode::logicalAndEquals:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            Reference *readRef;
+            Reference *writeRef;
+            genReferencePair(b->op1, readRef, writeRef);
+
+            if (readRef->hasBaseExpression())
+                addByte(DupOp);         // duplicate the base expression
+
+            uint32 labelAfterSecondExpr = getLabel();
+            readRef->emitCodeSequence(this);
+            addByte(DupOp);
+            addByte(JumpFalseOp);
+            addFixup(labelAfterSecondExpr);
+            addByte(PopOp);
+            genExpr(b->op2);
+            setLabel(labelAfterSecondExpr);    
+            writeRef->emitCodeSequence(this);
+            return Object_Type;
+        }
+
+    case ExprNode::logicalOrEquals:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            Reference *readRef;
+            Reference *writeRef;
+            genReferencePair(b->op1, readRef, writeRef);
+
+            if (readRef->hasBaseExpression())
+                addByte(DupOp);         // duplicate the base expression
+
+            uint32 labelAfterSecondExpr = getLabel();
+            readRef->emitCodeSequence(this);
+            addByte(DupOp);
+            addByte(JumpTrueOp);
+            addFixup(labelAfterSecondExpr);
+            addByte(PopOp);
+            genExpr(b->op2);
+            setLabel(labelAfterSecondExpr);    
+            writeRef->emitCodeSequence(this);
+            return Object_Type;
+        }
+
+    case ExprNode::logicalXorEquals:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            Reference *readRef;
+            Reference *writeRef;
+            genReferencePair(b->op1, readRef, writeRef);
+
+            if (readRef->hasBaseExpression())
+                addByte(DupOp);         // duplicate the base expression
+            readRef->emitCodeSequence(this);
+            genExpr(b->op2);
+            addByte(LogicalXorOp);
+            writeRef->emitCodeSequence(this);
+            return Object_Type;
+        }
+
+    case ExprNode::logicalAnd:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            uint32 labelAfterSecondExpr = getLabel();
+            genExpr(b->op1);
+            addByte(DupOp);
+            addByte(JumpFalseOp);
+            addFixup(labelAfterSecondExpr);
+            addByte(PopOp);
+            genExpr(b->op2);
+            setLabel(labelAfterSecondExpr);            
+            return Object_Type;
+        }
+    case ExprNode::logicalXor:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            genExpr(b->op1);
+            genExpr(b->op2);
+            addByte(LogicalXorOp);
+            return Object_Type;
+        }
+    case ExprNode::logicalOr:
+        {
+            BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
+            uint32 labelAfterSecondExpr = getLabel();
+            genExpr(b->op1);
+            addByte(DupOp);
+            addByte(JumpTrueOp);
+            addFixup(labelAfterSecondExpr);
+            addByte(PopOp);
+            genExpr(b->op2);
+            setLabel(labelAfterSecondExpr);            
+            return Object_Type;
+        }
+        
     case ExprNode::logicalNot:
         {
             UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
@@ -1018,6 +1223,10 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         f << "DupInsert\n";
         i++;
         break;
+    case LogicalXorOp:
+        f << "LogicalXor\n";
+        i++;
+        break;
     case LogicalNotOp:
         f << "LogicalNot\n";
         i++;
@@ -1109,6 +1318,10 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case SetPropertyOp:
         f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
         i += 5;
+        break;
+    case LoadConstantUndefinedOp:
+        f << "LoadConstantUndefined\n";
+        i++;
         break;
     case LoadConstantTrueOp:
         f << "LoadConstantTrue\n";
