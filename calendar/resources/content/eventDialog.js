@@ -131,8 +131,8 @@ function loadCalendarEventDialog()
       titleDataItem = document.getElementById( "data-event-title-edit" );
    }
    
-   var titleString = titleDataItem.getAttribute( "value" );
-   document.getElementById("calendar-new-eventwindow").setAttribute("title", titleString);
+   document.getElementById("calendar-new-eventwindow").removeAttribute("title");
+   document.title = titleDataItem.getAttribute( "value" );
 
    // fill in fields from the event
    gStartDate.setTime( gEvent.start.getTime() );

@@ -130,7 +130,8 @@ function loadCalendarServerDialog()
    // CofC - calendar coloring change
    document.getElementById("calendar-color").color = gCalendarObject.color;
 
-   document.getElementById( "calendar-local-serverwindow" ).setAttribute( "title", titleDataItem.getAttribute( "value" ) );
+   document.getElementById( "calendar-local-serverwindow" ).removeAttribute( "title");
+   document.title = titleDataItem.getAttribute( "value" );
 
    document.getElementById( "server-name-textbox" ).value = gCalendarObject.name;
 
