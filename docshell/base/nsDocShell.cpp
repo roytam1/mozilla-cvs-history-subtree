@@ -4765,6 +4765,10 @@ nsresult nsDocShell::DoChannelLoad(nsIChannel * aChannel,
         loadFlags |= nsIRequest::LOAD_BYPASS_CACHE;
         break;
 
+    case LOAD_NORMAL_BYPASS_CACHE_AND_HISTORY:
+      loadFlags |= nsIRequest::LOAD_BYPASS_CACHE;
+      break;
+
     case LOAD_NORMAL:
     case LOAD_LINK:
         // Set cache checking flags
