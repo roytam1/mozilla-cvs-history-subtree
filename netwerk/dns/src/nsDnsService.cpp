@@ -902,7 +902,9 @@ NS_IMETHODIMP
 nsDNSService::Init()
 {
     nsresult rv     = NS_OK;
+#if defined(XP_WIN)
 	PRStatus status = PR_SUCCESS;
+#endif
 
     NS_ASSERTION(mDNSServiceLock == nsnull, "nsDNSService not shut down");
     if (mDNSServiceLock)  return NS_ERROR_ALREADY_INITIALIZED;
