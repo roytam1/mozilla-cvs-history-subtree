@@ -377,7 +377,13 @@ nsresult nsMailboxUrl::ParseUrl()
 		delete m_filePath;
 	GetFilePath(getter_Copies(m_file));
 	ParseSearchPart();
-	m_filePath = new nsFileSpec(nsFilePath(nsUnescape((char *) (const char *)m_file)));
+  // ### fix me.
+  // this hack is to avoid asserting on every local message loaded because the security manager
+  // is creating an empty "mailbox://" uri for every message.
+  if (nsCRT::strlen(m_file) < 2)
+    m_filePath = nsnull;
+  else
+	  m_filePath = new nsFileSpec(nsFilePath(nsUnescape((char *) (const char *)m_file)));
   return NS_OK;
 }
 
