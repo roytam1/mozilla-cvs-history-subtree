@@ -1676,7 +1676,14 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 	if (lastWidgetHit)
 	{
 		Point macPoint = aOSEvent.where;
+	
+		WindowRef wind = reinterpret_cast<WindowRef>(mTopLevelWidget->GetNativeData(NS_NATIVE_DISPLAY));
+		nsGraphicsUtils::SafeSetPortWindowPort(wind);
+		{
+			StOriginSetter  originSetter(wind);
 		::GlobalToLocal(&macPoint);
+		}
+	
 		PRBool inWidgetHit = lastWidgetHit->PointInWidget(macPoint);
 		if (sMouseInWidgetHit != inWidgetHit)
 		{
