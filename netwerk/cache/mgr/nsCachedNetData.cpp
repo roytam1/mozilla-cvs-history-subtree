@@ -38,6 +38,8 @@
 #include "nsCRT.h"
 #include "nsString.h"
 
+extern PRBool gCacheManagerNeedToEvict;
+extern nsCacheManager* gCacheManager;
 // Version of the cache record meta-data format.  If this version doesn't match
 // the one in the database, an error is signaled when the record is read.
 #define CACHE_MANAGER_VERSION 1
@@ -1157,7 +1159,9 @@ public:
     
         mCacheEntry->ClearFlag(nsCachedNetData::VESTIGIAL);
         mCacheEntry->ClearFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
-				
+        
+        gCacheManager->LimitDiskCacheSize(gCacheManagerNeedToEvict);
+
         if (mCacheStream )
             mCacheStream->Close();
         // Tell any stream-as-file observers that the file has been completely written
