@@ -229,7 +229,6 @@ protected:
 nsSVGGDIPlusGlyphGeometry::nsSVGGDIPlusGlyphGeometry()
     : mStroke(nsnull), mHitTestRegion(nsnull)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusGlyphGeometry::~nsSVGGDIPlusGlyphGeometry()

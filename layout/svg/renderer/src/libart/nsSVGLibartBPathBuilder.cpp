@@ -79,7 +79,6 @@ nsSVGLibartBPathBuilder::nsSVGLibartBPathBuilder(ArtBpath** dest)
       mBPathSize(0),
       mBPathEnd(0)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsresult

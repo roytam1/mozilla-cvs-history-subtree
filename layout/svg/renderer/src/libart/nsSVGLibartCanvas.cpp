@@ -83,7 +83,6 @@ private:
 
 nsSVGLibartCanvas::nsSVGLibartCanvas()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartCanvas::~nsSVGLibartCanvas()

@@ -105,7 +105,6 @@ private:
 nsSVGGDIPlusPathGeometry::nsSVGGDIPlusPathGeometry()
     : mPath(nsnull), mFill(nsnull), mStroke(nsnull), mHitTestRegion(nsnull)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusPathGeometry::~nsSVGGDIPlusPathGeometry()

@@ -140,7 +140,6 @@ private:
 nsSVGGDIPlusGlyphMetrics::nsSVGGDIPlusGlyphMetrics(nsISVGGlyphMetricsSource *src)
     : mRectNeedsUpdate(PR_TRUE), mFont(nsnull), mSource(src)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusGlyphMetrics::~nsSVGGDIPlusGlyphMetrics()

@@ -99,7 +99,6 @@ protected:
 nsSVGLibartPathGeometry::nsSVGLibartPathGeometry()
     : mVPath(nsnull)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartPathGeometry::~nsSVGLibartPathGeometry()

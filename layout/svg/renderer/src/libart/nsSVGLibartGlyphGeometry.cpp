@@ -74,7 +74,6 @@ public:
 
 nsSVGLibartGlyphGeometry::nsSVGLibartGlyphGeometry()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartGlyphGeometry::~nsSVGLibartGlyphGeometry()

@@ -67,7 +67,6 @@ private:
 
 nsSVGRendererLibart::nsSVGRendererLibart()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGRendererLibart::~nsSVGRendererLibart()

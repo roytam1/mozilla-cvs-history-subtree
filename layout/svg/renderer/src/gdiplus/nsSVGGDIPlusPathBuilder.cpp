@@ -148,7 +148,6 @@ nsSVGGDIPlusPathBuilder::nsSVGGDIPlusPathBuilder(nsISVGPathGeometrySource *src,
                                                  GraphicsPath* dest)
     : mSource(src), mPath(dest)
 {
-  NS_INIT_ISUPPORTS();
   PRUint16 fillrule;
   mSource->GetFillRule(&fillrule);
   mPath->SetFillMode(fillrule==nsISVGGeometrySource::FILL_RULE_NONZERO ?

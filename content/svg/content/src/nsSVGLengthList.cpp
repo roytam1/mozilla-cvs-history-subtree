@@ -102,7 +102,6 @@ protected:
 
 nsSVGLengthList::nsSVGLengthList()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLengthList::~nsSVGLengthList()

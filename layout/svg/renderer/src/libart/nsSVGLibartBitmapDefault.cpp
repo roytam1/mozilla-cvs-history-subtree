@@ -97,7 +97,6 @@ private:
 nsSVGLibartBitmapDefault::nsSVGLibartBitmapDefault()
     : mLocked(PR_FALSE)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartBitmapDefault::~nsSVGLibartBitmapDefault()

@@ -108,7 +108,6 @@ NS_NewSVGViewportAxis(nsISVGViewportAxis **result, nsIDOMSVGNumber* scale,
 
 nsSVGViewportAxis::nsSVGViewportAxis()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 
@@ -261,7 +260,6 @@ NS_NewSVGViewportRect(nsISVGViewportRect **result,
 
 nsSVGViewportRect::nsSVGViewportRect()
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGViewportRect::~nsSVGViewportRect()

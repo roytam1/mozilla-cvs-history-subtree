@@ -77,7 +77,6 @@ private:
 
 nsSVGLibartGlyphMetrics::nsSVGLibartGlyphMetrics(nsISVGGlyphMetricsSource *src)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartGlyphMetrics::~nsSVGLibartGlyphMetrics()

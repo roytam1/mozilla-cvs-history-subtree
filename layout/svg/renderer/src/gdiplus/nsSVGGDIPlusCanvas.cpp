@@ -96,7 +96,6 @@ nsSVGGDIPlusCanvas::nsSVGGDIPlusCanvas()
       , mOffscreenBitmap(nsnull), mOffscreenGraphics(nsnull), mOffscreenHDC(nsnull)
 #endif
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusCanvas::~nsSVGGDIPlusCanvas()

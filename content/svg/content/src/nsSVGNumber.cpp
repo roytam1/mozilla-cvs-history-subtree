@@ -83,7 +83,6 @@ NS_NewSVGNumber(nsIDOMSVGNumber** result, float val)
 nsSVGNumber::nsSVGNumber(float val)
     : mValue(val)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 //----------------------------------------------------------------------

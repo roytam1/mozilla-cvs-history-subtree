@@ -108,7 +108,6 @@ nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(RectF& rect)
     : mRegion(rect)
 #endif
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(const GraphicsPath* path)
@@ -116,7 +115,6 @@ nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(const GraphicsPath* path)
     : mRegion(path)
 #endif
 {
-  NS_INIT_ISUPPORTS();
 #ifdef NS_SVG_GDIPLUS_RENDERER_USE_RECT_REGIONS
   path->GetBounds(&mRect);
 #endif
@@ -124,7 +122,6 @@ nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(const GraphicsPath* path)
 
 nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(const nsSVGGDIPlusRegion& other)
 {
-  NS_INIT_ISUPPORTS();
   
 #ifdef NS_SVG_GDIPLUS_RENDERER_USE_RECT_REGIONS
   mRect.X = other.GetRect()->X;
@@ -143,7 +140,6 @@ nsSVGGDIPlusRegion::nsSVGGDIPlusRegion(const Region* other
 #endif
                                       )
 {
-  NS_INIT_ISUPPORTS();
   
 #ifdef NS_SVG_GDIPLUS_RENDERER_USE_RECT_REGIONS
   other->GetBounds(&mRect, graphics);

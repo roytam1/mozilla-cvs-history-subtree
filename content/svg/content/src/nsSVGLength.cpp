@@ -145,7 +145,6 @@ nsSVGLength::nsSVGLength(float value,
 
 nsSVGLength::nsSVGLength(const nsAString &value)
 {
-  NS_INIT_ISUPPORTS();
   SetValueAsString(value);
 }
 

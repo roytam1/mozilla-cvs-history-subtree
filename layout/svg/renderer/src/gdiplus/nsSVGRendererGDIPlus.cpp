@@ -77,7 +77,6 @@ private:
 
 nsSVGRendererGDIPlus::nsSVGRendererGDIPlus()
 {
-  NS_INIT_ISUPPORTS();
   GdiplusStartupInput gdiplusStartupInput;
   GdiplusStartup(&gdiplusToken, &gdiplusStartupInput,&gdiplusStartupOutput);
 }

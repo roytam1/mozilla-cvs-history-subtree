@@ -97,7 +97,6 @@ VMRectInvalidator::VMRectInvalidator(nsIViewManager* vm, nsIView* view,
                                      int twipsPerPx)
     : mViewManager(vm), mView(view), mTwipsPerPx(twipsPerPx)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 already_AddRefed<nsISVGRectangleSink>

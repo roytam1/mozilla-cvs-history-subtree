@@ -78,20 +78,17 @@ private:
 
 nsSVGLibartRegion::nsSVGLibartRegion(ArtIRect *rect)
 {
-  NS_INIT_ISUPPORTS();
   mUta = art_uta_from_irect(rect);
 }
 
 nsSVGLibartRegion::nsSVGLibartRegion(ArtSVP* path)
 {
-  NS_INIT_ISUPPORTS();
   mUta = path ? art_uta_from_svp(path) : nsnull;  
 }
 
 nsSVGLibartRegion::nsSVGLibartRegion(ArtUta* uta)
     : mUta(uta)
 {
-  NS_INIT_ISUPPORTS();
 }
 
 nsSVGLibartRegion::~nsSVGLibartRegion()
