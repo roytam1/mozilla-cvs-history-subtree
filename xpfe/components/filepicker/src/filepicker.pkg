@@ -1,0 +1,6 @@
+[xpfe-browser browser mail]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+dist/bin/components/nsFilePicker.js
+!xpt dist/bin/components/filepicker.xpt
