@@ -26,6 +26,7 @@
 #if defined(MOZILLA_CLIENT) || defined(LIBNET_SMTP)
 #if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 
+#include "mkextcac.h"
 #include "mkgeturl.h"
 #include "mksmtp.h"
 #include "mime.h"
