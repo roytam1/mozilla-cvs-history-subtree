@@ -161,9 +161,9 @@ const kSaveAsType_Text = 2;       // Save document, converting to plain text.
 // - A linked document using Save Link As...
 // - A linked document using Alt-click Save Link As...
 //
-function saveURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache, aSkipPrompt)
+function saveURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache, aSkipPrompt, aReferrer)
 {
-  saveInternal(aURL, null, aFileName, aFilePickerTitleKey, aShouldBypassCache, aSkipPrompt);
+  saveInternal(aURL, null, aFileName, aFilePickerTitleKey, aShouldBypassCache, aSkipPrompt, aReferrer);
 }
 
 function saveDocument(aDocument, aSkipPrompt)
@@ -178,7 +178,8 @@ function saveDocument(aDocument, aSkipPrompt)
 
 function saveInternal(aURL, aDocument, 
                       aFileName, aFilePickerTitleKey,
-                      aShouldBypassCache, aSkipPrompt)
+                      aShouldBypassCache, aSkipPrompt,
+                      aReferrer)
 {
   if (aSkipPrompt == undefined)
     aSkipPrompt = false;
@@ -189,7 +190,8 @@ function saveInternal(aURL, aDocument,
     filePickerTitle: aFilePickerTitleKey,
     document: aDocument,
     bypassCache: aShouldBypassCache,
-    window: window
+    window: window,
+    referrer: aReferrer
   };
   var sniffer = new nsHeaderSniffer(aURL, foundHeaderInfo, data, aSkipPrompt);
 }
@@ -298,7 +300,8 @@ function foundHeaderInfo(aSniffer, aData, aSkipPrompt)
                          persistArgs.contentType, encodingFlags, kWrapColumn);
   } else {
     dl.init(source, persistArgs.target, null, null, null, persist);
-    persist.saveURI(source, null, getReferrer(document), persistArgs.postData, null, persistArgs.target);
+    var referrer = aData.referrer || getReferrer(document)
+    persist.saveURI(source, null, referrer, persistArgs.postData, null, persistArgs.target);
   }
 }
 
