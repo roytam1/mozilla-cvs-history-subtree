@@ -1,0 +1,60 @@
+<?xml version="1.0"?> 
+<?xml-stylesheet href="xul.css" type="text/css"?> 
+
+<!-- <!DOCTYPE window> -->
+
+<window xmlns:html="http://www.w3.org/TR/REC-html40"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+<data>
+<broadcaster id="wasCanceled" type="string" value="false"/>
+</data>
+
+<html:script>
+	function cancelInstall() 
+    {
+        var cancelVar = document.getElementById("wasCanceled");
+        cancelVar.setAttribute("value","true");
+    }
+
+
+</html:script>
+
+
+
+<html:center>
+
+<html:table style="width:100%;">
+<html:tr>
+    <html:td align="center">
+        XPInstall
+    </html:td>
+</html:tr>
+
+<html:tr>
+    <html:td align="center">
+        <html:span id="dialog.status">
+            XXXXXXXXXXXXXXXXX 
+        </html:span>
+    </html:td>
+</html:tr>
+
+<html:tr>
+    <html:td align="center">
+        <progressmeter id="meter" mode="undetermined">                  
+        </progressmeter>
+    </html:td>
+</html:tr>
+
+<html:tr>
+    <html:td align="center">
+        <html:button id="dialog.cancel" onclick="cancelInstall()" height="12" style="font-family:sans-serif;font-size:2.5mm">
+            Cancel
+        </html:button>
+    </html:td>
+</html:tr>
+
+
+</html:table>
+</html:center>
+</window>
