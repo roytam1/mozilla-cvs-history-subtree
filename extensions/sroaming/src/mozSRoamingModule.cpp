@@ -45,8 +45,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(mozSRoaming)
 static const nsModuleComponentInfo components[] =
 {
   { "Session Roaming",
-    MOZ_SROAMING_CID, 
-    MOZ_SROAMING_CONTRACTID, 
+    NS_SESSIONROAMING_CID,
+    NS_SESSIONROAMING_CONTRACTID,
     mozSRoamingConstructor },
 };
 

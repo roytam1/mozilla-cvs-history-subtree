@@ -43,7 +43,7 @@
 #define _MOZSROAMING_H_
 
 
-#include "mozISRoaming.h"
+#include "nsISessionRoaming.h"
 #include "nsCOMPtr.h"
 #include "nsISupports.h"
 #include "nsIRegistry.h"
@@ -54,11 +54,11 @@
 
 class mozSRoamingProtocol;
 
-class mozSRoaming: public mozISRoaming
+class mozSRoaming: public nsISessionRoaming
 {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_MOZISROAMING
+    NS_DECL_NSISESSIONROAMING
 
     mozSRoaming();
     virtual ~mozSRoaming();

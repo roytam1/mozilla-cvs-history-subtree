@@ -41,10 +41,6 @@
 #include "nsILocalFile.h"
 #include "nsXPIDLString.h"
 
-// IID and CIDs of all the services needed
-static NS_DEFINE_CID(kSRoamingCID, MOZ_SROAMING_CID);
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-
 #define kRegTreeCopy (NS_LITERAL_STRING("Copy"))
 #define kRegKeyRemote (NS_LITERAL_STRING("RemoteDir"))
 

@@ -53,10 +53,6 @@
 #include "nsIWindowWatcher.h"
 #include "plstr.h"
 
-// IID and CIDs of all the services needed
-static NS_DEFINE_CID(kSRoamingCID, MOZ_SROAMING_CID);
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
-
 #define kRegTreeProfile (NS_LITERAL_STRING("Profiles"))
 
 #define kRegTreeRoaming (NS_LITERAL_STRING("Roaming"))
@@ -70,7 +66,7 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
 
 NS_IMPL_ISUPPORTS1(mozSRoaming,
-                   mozISRoaming)
+                   nsISessionRoaming)
 
 mozSRoaming::mozSRoaming()
     : mFiles(10)

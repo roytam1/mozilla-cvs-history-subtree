@@ -50,8 +50,6 @@
 #include "plstr.h"
 
 // IID and CIDs of all the services needed
-static NS_DEFINE_CID(kSRoamingCID, MOZ_SROAMING_CID);
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #define kRegTreeStream (NS_LITERAL_STRING("Stream"))
