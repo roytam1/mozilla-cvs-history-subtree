@@ -73,6 +73,10 @@ ifdef BUILD_DEBUG_GC
 DEFINES		+= -DDEBUG_GC
 endif
 
+ifdef USE_AUTOCONF
+DIST_GARBAGE += Makefile
+endif
+
 GARBAGE		+= $(DEPENDENCIES) core $(wildcard core.[0-9]*)
 
 DEFINES += -DFORCE_PR_LOG
