@@ -50,16 +50,6 @@ treechildren::-moz-tree-image(FilenameColumn, file) {
   -moz-image-region: rect(16px, 16px, 32px, 0px);
 }
 
-/* ::::: focus rules ::::: */
-
-#directoryTree > treerows > .tree-bodybox {
-  border: 1px solid transparent;
-}
-
-#directoryTree:focus > treerows > .tree-bodybox {
-  border-color: #000000;
-}
-
 /* ::::: button items ::::: */
 
 .up-button {

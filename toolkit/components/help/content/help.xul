@@ -73,6 +73,10 @@
         <key id="key_textZoomReduce" key="&textZoomReduceCmd.commandkey;"
             command="cmd_textZoomReduce" modifiers="accel"/>
         <key id="key_toggleSidebar" keycode="VK_F9" command="Help:ToggleSidebar"/>
+        <key id="key_viewNextHelpPanel" keycode="VK_TAB" 
+             oncommand="showRelativePanel(true);" modifiers="control"/>
+        <key id="key_viewPrevHelpPanel" keycode="VK_TAB" 
+             oncommand="showRelativePanel(false);" modifiers="control,shift"/>
     </keyset>
     <stringbundle id="bundle_viewZoom"/>
     <stringbundle id="findBundle"
@@ -146,11 +150,13 @@
             <vbox id="helpsidebar-box" persist="width">
 
                 <!-- glossary panel -->
-                <button id="help-glossary-btn"
+                <toolbarbutton id="help-glossary-btn"
                     class="box-texttab texttab-sidebar"
                     label="&glossarytab.label;"
-                    oncommand="showPanel('help-glossary')"/>
-                <tree id="help-glossary-panel" flex="1" hidecolumnpicker="true"
+                    oncommand="showPanel('help-glossary')"
+                    accesskey="&glossarytab.accesskey;"/>
+                <tree id="help-glossary-panel" class="focusring"
+                        flex="1" hidecolumnpicker="true"
                         hidden="true" datasources="rdf:null"
                         containment="http://home.netscape.com/NC-rdf#subheadings"
                         ref="urn:root" flags="dont-build-content"
@@ -188,11 +194,13 @@
                     </treecols>
                 </tree>
 
-                <button id="help-index-btn" class="box-texttab texttab-sidebar"
+                <toolbarbutton id="help-index-btn" class="box-texttab texttab-sidebar"
                     label="&indextab.label;"
-                    oncommand="showPanel('help-index');expandAllIndexEntries();"/>
+                    oncommand="showPanel('help-index');expandAllIndexEntries();"
+                    accesskey="&indextab.accesskey;"/>
 
-                <tree id="help-index-panel" flex="1" datasources="rdf:null"
+                <tree id="help-index-panel" class="focusring"
+                        flex="1" datasources="rdf:null"
                         hidecolumnpicker="true" hidden="true"
                         containment="http://home.netscape.com/NC-rdf#subheadings"
                         ref="urn:root"
@@ -232,9 +240,10 @@
                     </treecols>
                 </tree>
 
-                <button id="help-search-btn" class="box-texttab texttab-sidebar"
+                <toolbarbutton id="help-search-btn" class="box-texttab texttab-sidebar"
                     label="&searchtab.label;"
-                    oncommand="showPanel('help-search')"/>
+                    oncommand="showPanel('help-search')"
+                    accesskey="&searchtab.accesskey;"/>
 
                 <vbox id="help-search-panel" hidden="true" flex="1">
                     <hbox align="center">
@@ -247,7 +256,7 @@
                             label="&gobtn.label;" oncommand="doFind()"
                             flex="0"/>
                     </hbox>
-                    <tree id="help-search-tree"
+                    <tree id="help-search-tree" class="focusring"
                             flex="1" hidecolumnpicker="true"
                             datasources="rdf:null"
                             containment="http://home.netscape.com/NC-rdf#child"
@@ -288,10 +297,12 @@
                     </tree>
                 </vbox>
 
-                <button id="help-toc-btn" class="box-texttab texttab-sidebar"
+                <toolbarbutton id="help-toc-btn" class="box-texttab texttab-sidebar"
                     label="&toctab.label;"
-                    oncommand="showPanel('help-toc')"/>
-                <tree id="help-toc-panel" flex="1"  hidecolumnpicker="true"
+                    oncommand="showPanel('help-toc')"
+                    accesskey="&toctab.accesskey;"/>
+                <tree id="help-toc-panel" class="focusring" 
+                        flex="1"  hidecolumnpicker="true"
                         datasources="rdf:null"
                         containment="http://home.netscape.com/NC-rdf#subheadings"
                         ref="urn:root" flags="dont-build-content"
