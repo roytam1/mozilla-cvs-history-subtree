@@ -38,6 +38,7 @@ CPPSRCS	= 				\
 		nsSOAPMessage.cpp	\
 		nsSOAPParameter.cpp	\
 		nsSOAPResponse.cpp	\
+		nsSOAPStruct.cpp	\
 		nsSOAPUtils.cpp		\
 		nsSOAPType.cpp		\
 		nsSOAPTypeRegistry.cpp		\
