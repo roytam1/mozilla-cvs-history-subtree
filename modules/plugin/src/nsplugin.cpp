@@ -480,17 +480,15 @@ NPL_InstallProcessNextEventProc(NPL_ProcessNextEventProc proc, void* data)
 }
 
 NS_METHOD
-nsPluginManager::ProcessNextEvent(PRBool *result)
+nsPluginManager::ProcessNextEvent(PRBool *bEventHandled)
 {
 #ifdef XP_MAC
-	// beard:  what is this result supposed to indicate?
-	*result = PR_TRUE;
-	nsresult status = NS_OK;
 	if (npl_ProcessNextEventProc != NULL)
-		status = npl_ProcessNextEventProc(npl_ProcessNextEventData);
-	return status;
+  		*bEventHandled = npl_ProcessNextEventProc(npl_ProcessNextEventData);
+	return NS_OK;
 #else 
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *bEventHandled = PR_TRUE;
+    return NS_OK;
 #endif
 }
 

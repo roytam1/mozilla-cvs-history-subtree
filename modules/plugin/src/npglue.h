@@ -353,7 +353,7 @@ public:
     // In this case, we make sure that we give up the monitor so that
     // the tickle code can notify it without freezing.
     NS_IMETHOD
-    ProcessNextEvent(PRBool *result);
+    ProcessNextEvent(PRBool *bEventHandled);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
