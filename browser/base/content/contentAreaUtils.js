@@ -88,11 +88,17 @@ function urlSecurityCheck(url, doc)
   // URL Loading Security Check
   var focusedWindow = doc.commandDispatcher.focusedWindow;
   var sourceURL = getContentFrameURI(focusedWindow);
+  var sourceURI = Components.classes["@mozilla.org/network/standard-url;1"]
+                            .createInstance(Components.interfaces.nsIURI);
+  sourceURI.spec = sourceURL;
+  var destURI = Components.classes["@mozilla.org/network/standard-url;1"]
+                          .createInstance(Components.interfaces.nsIURI);
+  destURI.spec = url;
   const nsIScriptSecurityManager = Components.interfaces.nsIScriptSecurityManager;
   var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
                          .getService(nsIScriptSecurityManager);
   try {
-    secMan.checkLoadURIStr(sourceURL, url, nsIScriptSecurityManager.STANDARD);
+    secMan.checkLoadURI(sourceURI, destURI, nsIScriptSecurityManager.STANDARD);
   } catch (e) {
     throw "Load of " + url + " denied.";
   }
