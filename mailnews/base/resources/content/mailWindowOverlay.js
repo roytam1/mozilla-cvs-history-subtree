@@ -655,9 +655,10 @@ function MsgOpenSelectedMessages()
 {
   var selectedMessages = GetSelectedMessages();
   var numMessages = selectedMessages.length;
+  var folderUri = gDBView.msgFolder.URI;
 
   for (var i = 0; i < numMessages; i++) {
-    MsgOpenNewWindowForMessage(selectedMessages[i], null);
+    MsgOpenNewWindowForMessage(selectedMessages[i], folderUri);
   }
 }
 
@@ -668,9 +669,8 @@ function MsgOpenNewWindowForMessage(messageUri, folderUri)
     }
 
     if (!folderUri) {
-        dump("fix this, need a way to turn messageUri into a msg folder from JS\n");
-        var folder = null; 
-        folderUri = folder.URI;
+        dump("need to fix this, need a way to turn messageUri into a msg folder from JS, or fix the caller to pass in the folder uri\n");
+        return;
     }
 
     if (messageUri && folderUri) {
