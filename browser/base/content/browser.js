@@ -5586,7 +5586,20 @@ function missingPluginInstaller(){
 missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
   var tabbrowser = getBrowser();
   var missingPluginsArray = new Object;
-  missingPluginsArray[aEvent.target.type] = {mimetype: aEvent.target.type, pluginsPage: aEvent.target.getAttribute("pluginspage")};
+
+  var tagMimetype;
+  var pluginsPage;
+  if (aEvent.target.localName.toLowerCase() == "applet") {
+    tagMimetype = "application/x-java-vm";
+  } else if (aEvent.target.localName.toLowerCase() == "object") {
+    tagMimetype = aEvent.target.type;
+    pluginsPage = aEvent.target.getAttribute("codebase");
+  } else {
+    tagMimetype = aEvent.target.type;
+    pluginsPage = aEvent.target.getAttribute("pluginspage");
+  }
+
+  missingPluginsArray[tagMimetype] = {mimetype: tagMimetype, pluginsPage: pluginsPage};
 
   if (missingPluginsArray) {
     window.openDialog("chrome://mozapps/content/plugins/pluginInstallerWizard.xul",
