@@ -197,7 +197,7 @@ NS_INTERFACE_MAP_BEGIN(nsDocLoaderImpl)
    NS_INTERFACE_MAP_ENTRY(nsIWebProgress)
    NS_INTERFACE_MAP_ENTRY(nsIProgressEventSink)   
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
-   NS_INTERFACE_MAP_ENTRY(nsIHTTPEventSink)
+   NS_INTERFACE_MAP_ENTRY(nsIHttpEventSink)
    NS_INTERFACE_MAP_ENTRY(nsISecurityEventSink)
 NS_INTERFACE_MAP_END
 
@@ -1471,13 +1471,8 @@ void nsDocLoaderImpl::CalculateMaxProgress(PRInt32 *aMax)
   *aMax = max;
 }
 
-NS_IMETHODIMP nsDocLoaderImpl::OnHeadersAvailable(nsISupports * aContext)
-{
-  // right now I don't think we need to do anything special for this case...
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsISupports * aContext, nsIURI * aNewLocation)
+NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsIHttpChannel * aHttpChannel,
+                                          nsIChannel * aNewChannel)
 {
   // we have a problem in that this method doesn't give us enough information about
   // the url being redirected. We need to know if the url is the document url or some other
@@ -1485,12 +1480,12 @@ NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsISupports * aContext, nsIURI * aNewL
   // we end up setting the url bar location to a redirected image url when we didn't want to.
   // for now, we'll make the implementation empty.
 
- if (aContext)
+ if (aHttpChannel)
  {
    PRInt32 stateFlags = nsIWebProgressListener::STATE_REDIRECTING |
                         nsIWebProgressListener::STATE_IS_REQUEST |
                         nsIWebProgressListener::STATE_IS_NETWORK;
-   nsCOMPtr<nsIRequest> request (do_QueryInterface(aContext));
+   nsCOMPtr<nsIRequest> request (do_QueryInterface((nsISupports *) aHttpChannel));
    // if the current channel == the document channel (then we must be getting a redirect on the
    // actual document and not a part in the document so be sure to set the state is document flag
    // and to reset mDocumentRequest...
@@ -1504,6 +1499,30 @@ NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsISupports * aContext, nsIURI * aNewL
  }
 
  return NS_OK;
+}
+
+NS_IMETHODIMP nsDocLoaderImpl::OnAuthenticate(nsIHttpChannel * aHttpChannel,
+                                              const char * aHost,
+                                              PRInt32 aPort,
+                                              PRBool aIsProxy,
+                                              const char * aRealm,
+                                              char ** aUsername,
+                                              char ** aPassword)
+{
+  NS_NOTREACHED("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsDocLoaderImpl::OnAuthenticationFailed(nsIHttpChannel * aHttpChannel,
+                                                      const char * aHost,
+                                                      PRInt32 aPort,
+                                                      PRBool aIsProxy,
+                                                      const char * aRealm,
+                                                      const char * aUsername,
+                                                      const char * aPassword)
+{
+  NS_NOTREACHED("not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
