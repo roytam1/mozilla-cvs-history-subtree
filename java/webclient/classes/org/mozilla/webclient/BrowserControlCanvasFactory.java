@@ -86,10 +86,10 @@ public static BrowserControlCanvas newBrowserControlCanvas()
             Class.forName("sun.awt.windows.WDrawingSurfaceInfo");
         
         if (win32DrawingSurfaceInfoClass != null) {
-            className = "org.mozilla.webclient.win32.Win32MozWebShellCanvas";
+            className = "org.mozilla.webclient.win32.Win32BrowserControlCanvas";
         }
     } catch (Exception e) {
-        className = null;
+        // Do nothing????
     }
 
     try {
@@ -100,7 +100,7 @@ public static BrowserControlCanvas newBrowserControlCanvas()
             className = "org.mozilla.webclient.motif.MotifBrowserControlCanvas";
         }
     } catch (Exception e) {
-        className = null;
+        // Do nothing????
     }
 
     if (className != null) {
