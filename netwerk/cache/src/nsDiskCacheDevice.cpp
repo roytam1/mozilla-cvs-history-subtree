@@ -24,8 +24,10 @@
 
 #include <limits.h>
 
+#include "nsANSIFileStreams.h"
 #include "nsDiskCacheDevice.h"
 #include "nsDiskCacheEntry.h"
+#include "nsDiskCacheMap.h"
 #include "nsCacheService.h"
 #include "nsCache.h"
 
@@ -42,8 +44,6 @@
 #include "nsIPref.h"
 
 static const char DISK_CACHE_DEVICE_ID[] = { "disk" };
-
-static FILE* openFileStream(nsIFile* file, const char* mode);
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -354,6 +354,30 @@ struct MetaDataHeader {
             mMetaDataSize(0)
     {
     }
+    
+    void Swap()
+    {
+        mHeaderSize = ::PR_htonl(mHeaderSize);
+        mFetchCount = ::PR_htonl(mFetchCount);
+        mLastFetched = ::PR_htonl(mLastFetched);
+        mLastModified = ::PR_htonl(mLastModified);
+        mExpirationTime = ::PR_htonl(mExpirationTime);
+        mDataSize = ::PR_htonl(mDataSize);
+        mKeySize = ::PR_htonl(mKeySize);
+        mMetaDataSize = ::PR_htonl(mMetaDataSize);
+    }
+    
+    void Unswap()
+    {
+        mHeaderSize = ::PR_ntohl(mHeaderSize);
+        mFetchCount = ::PR_ntohl(mFetchCount);
+        mLastFetched = ::PR_ntohl(mLastFetched);
+        mLastModified = ::PR_ntohl(mLastModified);
+        mExpirationTime = ::PR_ntohl(mExpirationTime);
+        mDataSize = ::PR_ntohl(mDataSize);
+        mKeySize = ::PR_ntohl(mKeySize);
+        mMetaDataSize = ::PR_ntohl(mMetaDataSize);
+    }
 };
 
 struct MetaDataFile : MetaDataHeader {
@@ -386,69 +410,25 @@ struct MetaDataFile : MetaDataHeader {
         return entry->FlattenMetaData(&mMetaData, &mMetaDataSize);
     }
 
-    nsresult Write(nsIOutputStream* output);
     nsresult Read(nsIInputStream* input);
+    nsresult Write(nsIOutputStream* output);
 };
-
-#define WRITE_LONG_(item) \
-    PR_BEGIN_MACRO \
-        n = PR_htonl(item); \
-        rv = output->Write((char*)&n, sizeof(n), &count); \
-        if (NS_FAILED(rv)) return rv; \
-    PR_END_MACRO
-
-#define READ_LONG_(item) \
-    PR_BEGIN_MACRO \
-        rv = input->Read((char*)&n, sizeof(n), &count); \
-        if (NS_FAILED(rv)) return rv; \
-        item = PR_ntohl(n); \
-    PR_END_MACRO
-
-nsresult MetaDataFile::Write(nsIOutputStream* output)
-{
-    nsresult rv;
-    PRUint32 n, count;
-    
-    WRITE_LONG_(mHeaderSize);
-    WRITE_LONG_(mFetchCount);
-    WRITE_LONG_(mLastFetched);
-    WRITE_LONG_(mLastModified);
-    WRITE_LONG_(mExpirationTime);
-    WRITE_LONG_(mDataSize);
-    WRITE_LONG_(mKeySize);
-    WRITE_LONG_(mMetaDataSize);
-    
-    // write the key to the file.
-    rv = output->Write(mKey, mKeySize, &count);
-    if (NS_FAILED(rv)) return rv;
-    
-    // write the flattened metadata to the file.
-    if (mMetaDataSize) {
-        rv = output->Write(mMetaData, mMetaDataSize, &count);
-        if (NS_FAILED(rv)) return rv;
-    }
-    
-    return NS_OK;
-}
 
 nsresult MetaDataFile::Read(nsIInputStream* input)
 {
     nsresult rv;
-    PRUint32 n, count;
+    PRUint32 count;
     
-    // read the header size used by this file.
-    READ_LONG_(mHeaderSize);
+    // read in the file header.
+    rv = input->Read((char*)&mHeaderSize, sizeof(MetaDataHeader), &count);
+    if (NS_FAILED(rv)) return rv;
+    Unswap();
+    
+    // make sure it is self-consistent.
     if (mHeaderSize != sizeof(MetaDataHeader)) {
-        NS_ERROR("### CACHE FORMAT CHANGED!!! PLEASE DELETE YOUR CACHE DIRECTORY!!! ###");
+        NS_ERROR("### CACHE FORMAT CHANGED!!! PLEASE DELETE YOUR NewCache DIRECTORY!!! ###");
         return NS_ERROR_ILLEGAL_VALUE;
     }
-    READ_LONG_(mFetchCount);
-    READ_LONG_(mLastFetched);
-    READ_LONG_(mLastModified);
-    READ_LONG_(mExpirationTime);
-    READ_LONG_(mDataSize);
-    READ_LONG_(mKeySize);
-    READ_LONG_(mMetaDataSize);
 
     // read in the key.
     delete[] mKey;
@@ -464,6 +444,30 @@ nsresult MetaDataFile::Read(nsIInputStream* input)
         mMetaData = new char[mMetaDataSize];
         if (!mMetaData) return NS_ERROR_OUT_OF_MEMORY;
         rv = input->Read(mMetaData, mMetaDataSize, &count);
+        if (NS_FAILED(rv)) return rv;
+    }
+    
+    return NS_OK;
+}
+
+nsresult MetaDataFile::Write(nsIOutputStream* output)
+{
+    nsresult rv;
+    PRUint32 count;
+    
+    // write the header to the file.
+    Swap();
+    rv = output->Write((char*)&mHeaderSize, sizeof(MetaDataHeader), &count);
+    Unswap();
+    if (NS_FAILED(rv)) return rv;
+    
+    // write the key to the file.
+    rv = output->Write(mKey, mKeySize, &count);
+    if (NS_FAILED(rv)) return rv;
+    
+    // write the flattened metadata to the file.
+    if (mMetaDataSize) {
+        rv = output->Write(mMetaData, mMetaDataSize, &count);
         if (NS_FAILED(rv)) return rv;
     }
     
@@ -554,7 +558,7 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
-    :   mCacheCapacity(0), mCacheSize(0)
+    :   mCacheCapacity(0), mCacheSize(0), mCacheMap(nsnull)
 {
 }
 
@@ -571,6 +575,8 @@ nsDiskCacheDevice::~nsDiskCacheDevice()
 
     // XXX write out persistent information about the cache.
     writeCacheInfo();
+
+    delete mCacheMap;
 
     // XXX release the reference to the cached file transport service.
     gFileTransportService = nsnull;
@@ -912,6 +918,55 @@ nsresult nsDiskCacheDevice::getTransportForFile(nsIFile* file, nsCacheAccessMode
         break;
     }
     return gFileTransportService->CreateTransport(file, ioFlags, PR_IRUSR | PR_IWUSR, result);
+}
+
+static FILE* openFileStream(nsIFile* file, const char* mode)
+{
+    FILE* stream = nsnull;
+    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file);
+    if (localFile) {
+        nsresult rv = localFile->OpenANSIFileDesc(mode, &stream);
+        if (NS_FAILED(rv)) return nsnull;
+    }
+    return stream;
+}
+
+nsresult nsDiskCacheDevice::openInputStream(nsIFile * file, nsIInputStream ** result)
+{
+    FILE* stream = openFileStream(file, "rb");
+    if (stream) {
+        nsCOMPtr<nsIInputStream> input(new nsANSIInputStream(stream));
+        if (!input) {
+            ::fclose(stream);
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        NS_ADDREF(*result = input);
+        return NS_OK;
+    } else {
+        nsCOMPtr<nsITransport> transport;
+        nsresult rv = getTransportForFile(file, nsICache::ACCESS_READ, getter_AddRefs(transport));
+        if (NS_FAILED(rv)) return rv;
+        return transport->OpenInputStream(0, ULONG_MAX, 0, result);
+    }
+}
+
+nsresult nsDiskCacheDevice::openOutputStream(nsIFile * file, nsIOutputStream ** result)
+{
+    FILE* stream = openFileStream(file, "wb");
+    if (stream) {
+        nsCOMPtr<nsIOutputStream> output(new nsANSIOutputStream(stream));
+        if (!output) {
+            ::fclose(stream);
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        NS_ADDREF(*result = output);
+        return NS_OK;
+    } else {
+        nsCOMPtr<nsITransport> transport;
+        nsresult rv = getTransportForFile(file, nsICache::ACCESS_WRITE, getter_AddRefs(transport));
+        if (NS_FAILED(rv)) return rv;
+        return transport->OpenOutputStream(0, ULONG_MAX, 0, result);
+    }
 }
 
 inline PRBool isMetaDataFile(const char* name)
@@ -1371,17 +1426,6 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     return NS_OK;
 }
 
-static FILE* openFileStream(nsIFile* file, const char* mode)
-{
-    FILE* stream = nsnull;
-    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file);
-    if (localFile) {
-        nsresult rv = localFile->OpenANSIFileDesc(mode, &stream);
-        if (NS_FAILED(rv)) return nsnull;
-    }
-    return stream;
-}
-
 nsresult nsDiskCacheDevice::writeCacheInfo()
 {
     nsCOMPtr<nsIFile> infoFile;
@@ -1393,21 +1437,12 @@ nsresult nsDiskCacheDevice::writeCacheInfo()
     
     PRUint32 cacheSize = PR_htonl(mCacheSize);
 
-    FILE* stream = openFileStream(infoFile, "wb");
-    if (stream) {
-        fwrite(&cacheSize, sizeof(cacheSize), 1, stream);
-        fclose(stream);
-    } else {
-        nsCOMPtr<nsITransport> transport;
-        rv = getTransportForFile(infoFile, nsICache::ACCESS_WRITE, getter_AddRefs(transport));
-        if (NS_FAILED(rv)) return rv;
-        nsCOMPtr<nsIOutputStream> output;
-        rv = transport->OpenOutputStream(0, ULONG_MAX, 0, getter_AddRefs(output));
-        if (NS_FAILED(rv)) return rv;
-        PRUint32 count = sizeof(cacheSize);
-        rv = output->Write((char*)&cacheSize, count, &count);
-        rv = output->Close();
-    }
+    nsCOMPtr<nsIOutputStream> output;
+    rv = openOutputStream(infoFile, getter_AddRefs(output));
+    if (NS_FAILED(rv)) return rv;
+    PRUint32 count = sizeof(cacheSize);
+    rv = output->Write((char*)&cacheSize, count, &count);
+    rv = output->Close();
     
     return NS_OK;
 }
@@ -1423,21 +1458,13 @@ nsresult nsDiskCacheDevice::readCacheInfo()
 
     PRUint32 cacheSize = 0;
     
-    FILE* stream = openFileStream(infoFile, "rb");
-    if (stream) {
-        fread(&cacheSize, sizeof(mCacheSize), 1, stream);
-        fclose(stream);
-    } else {
-        nsCOMPtr<nsITransport> transport;
-        rv = getTransportForFile(infoFile, nsICache::ACCESS_READ, getter_AddRefs(transport));
-        if (NS_FAILED(rv)) return rv;
-        nsCOMPtr<nsIInputStream> input;
-        rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
-        if (NS_FAILED(rv)) return rv;
-        PRUint32 count = sizeof(cacheSize);
-        rv = input->Read((char*)&cacheSize, count, &count);
-        rv = input->Close();
-    }
+    nsCOMPtr<nsIInputStream> input;
+    rv = openInputStream(infoFile, getter_AddRefs(input));
+    if (NS_FAILED(rv)) return rv;
+    PRUint32 count = sizeof(cacheSize);
+    rv = input->Read((char*)&cacheSize, count, &count);
+    rv = input->Close();
+
     mCacheSize = PR_ntohl(cacheSize);
     return NS_OK;
 }
