@@ -26,7 +26,7 @@
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
 <?xul-overlay href="chrome://editor/content/editorOverlay.xul"?>
-
+<?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 <?xml-stylesheet href="chrome://messenger/skin/" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/messengercompose/messengercompose.css" type="text/css"?> 
 
