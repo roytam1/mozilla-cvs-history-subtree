@@ -34,6 +34,10 @@ const nsAtomService_CONTRACTID = "@mozilla.org/atom-service;1";
 
 var gDateService = null;
 
+const sortType_name = 1;
+const sortType_size = 2;
+const sortType_date = 3;
+
 function nsFileView() {
   this.mShowHiddenFiles = false;
   this.mDirectoryFilter = false;
@@ -42,6 +46,8 @@ function nsFileView() {
   this.mCurrentFilter = ".*";
   this.mSelectionCallback = null;
   this.mOutliner = null;
+  this.mReverseSort = false;
+  this.mSortType = sortType_name;
 
   if (!gDateService) {
     gDateService = Components.classes[nsScriptableDateFormat_CONTRACTID]
@@ -57,6 +63,75 @@ function nsFileView() {
 function numMatchingChars(str1, str2) {
   for (var i = 0; ((i < Math.min(str1.length, str2.length)) && (str1[i] == str2[i])); i++);
   return i;
+}
+
+function sortFilename(a, b) {
+  /* directories always come before files */
+  var aDirectory = a[0].isDirectory();
+  var bDirectory = b[0].isDirectory();
+
+  if (aDirectory && !bDirectory) {
+    return -1;
+  } else if (!aDirectory && bDirectory) {
+    return 1;
+  }
+
+  var aName = a[0].unicodeLeafName;
+  var bName = b[0].unicodeLeafName;
+
+  if (aName < bName) {
+    return -1;
+  } else if (aName > bName) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+function sortSize(a, b) {
+  /* directories always come before files */
+  var aDirectory = a[0].isDirectory();
+  var bDirectory = b[0].isDirectory();
+
+  if (aDirectory && !bDirectory) {
+    return -1;
+  } else if (!aDirectory && bDirectory) {
+    return 1;
+  }
+
+  var aSize = a[0].fileSize;
+  var bSize = b[0].fileSize;
+
+  if (aSize < bSize) {
+    return -1;
+  } else if (aSize > bSize) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+function sortDate(a, b) {
+  /* directories always come before files */
+  var aDirectory = a[0].isDirectory();
+  var bDirectory = b[0].isDirectory();
+
+  if (aDirectory && !bDirectory) {
+    return -1;
+  } else if (!aDirectory && bDirectory) {
+    return 1;
+  }
+
+  var aDate = a[0].lastModificationDate;
+  var bDate = b[0].lastModificationDate;
+
+  if (aDate < bDate) {
+    return -1;
+  } else if (aDate > bDate) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 nsFileView.prototype = {
@@ -197,8 +272,9 @@ nsFileView.prototype = {
   /* void performActionOnCell(in wstring action, in long row, in wstring colID); */
   performActionOnCell: function(action, row, colID) { },
 
-  /* private methods */
+  /* private attributes */
 
+  /* attribute boolean showHiddenFiles */
   set showHiddenFiles(s) {
     this.mShowHiddenFiles = s;
     this.filterFiles();
@@ -206,12 +282,46 @@ nsFileView.prototype = {
 
   get showHiddenFiles() { return this.mShowHiddenFiles; },
 
+  /* attribute boolean showOnlyDirectories */
   set showOnlyDirectories(s) {
     this.mDirectoryFilter = s;
     this.filterFiles();
   },
 
   get showOnlyDirectories() { return this.mDirectoryFilter; },
+
+  /* readonly attribute short sortType */
+  set sortType(s) { throw "readonly property"; },
+  get sortType() { return this.mSortType; },
+
+  /* readonly attribute boolean reverseSort */
+  set reverseSort(s) { throw "readonly property"; },
+  get reverseSort() { return this.mReverseSort; },
+
+  /* private methods */
+  sort: function(sortType, reverseSort) {
+    this.mSortType = sortType;
+    this.mReverseSort = reverseSort;
+
+    var compareFunc;
+
+    switch (sortType) {
+    case sortType_name:
+      compareFunc = sortFilename;
+      break;
+    case sortType_size:
+      compareFunc = sortSize;
+      break;
+    case sortType_date:
+      compareFunc = sortDate;
+      break;
+    default:
+      throw("Unsupported sort type " + sortType);
+      break;
+    }
+
+    this.mFilteredList.sort(compareFunc);
+  },
 
   setDirectory: function(directory) {
     this.mDirectoryPath = directory;

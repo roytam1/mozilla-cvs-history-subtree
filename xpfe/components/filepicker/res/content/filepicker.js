@@ -43,7 +43,7 @@ var okButton;
 
 var gFilePickerBundle;
 
-function onLoad() {
+function filepickerLoad() {
   gFilePickerBundle = document.getElementById("bundle_filepicker");
 
   dirHistory = new Array();
@@ -286,7 +286,7 @@ function onCancel()
 function onClick(e) {
   var t = e.originalTarget;
   if (t.localName == "outlinercol") {
-    HandleColumnClick(t.id);
+    handleColumnClick(t.id);
   } else if (e.detail == 2 && t.localName == "outlinerbody") {
     var file = outlinerView.getSelectedFile();
     if (file) {
@@ -303,6 +303,71 @@ function onClick(e) {
       }
     }
   }
+}
+
+function convertColumnIDtoSortType(columnID) {
+  var sortKey;
+  
+  switch (columnID) {
+  case "FilenameColumn":
+    sortKey = sortType_name;
+    break;
+  case "FileSizeColumn":
+    sortKey = sortType_size;
+    break;
+  case "LastModifiedColumn":
+    sortKey = sortType_date;
+    break;
+  default:
+    dump("unsupported sort column: " + columnID + "\n");
+    sortKey = 0;
+    break;
+  }
+  
+  return sortKey;
+}
+
+function handleColumnClick(columnID) {
+  var sortType = convertColumnIDtoSortType(columnID);
+  if (outlinerView.sortType == sortType) {
+    // reverse the current sort
+    outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort);
+  } else {
+    outlinerView.sort(sortType, false);
+  }
+  
+  // set the sort indicator on the column we are sorted by
+  var sortedColumn = document.getElementById(columnID);
+  if (outlinerView.reverseSort) {
+    sortedColumn.setAttribute("sortDirection", "descending");
+  } else {
+    sortedColumn.setAttribute("sortDirection", "ascending");
+  }
+  
+  // remove the sort indicator from the rest of the columns
+  var currCol = document.getElementById("directoryOutliner").firstChild;
+  while (currCol) {
+    while (currCol && currCol.localName != "outlinercol")
+      currCol = currCol.nextSibling;
+    if (currCol) {
+      if (currCol != sortedColumn) {
+        currCol.removeAttribute("sortDirection");
+      }
+      currCol = currCol.nextSibling;
+    }
+  }
+}
+
+function updateSortIndicators(foo, bar) {
+}
+
+function reverseSort() {
+  outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort);
+  updateSortIndicators(outlinerView.sortType, outlinerView.reverseSort);
+}
+
+function doSort(sortType) {
+  outlinerView.sort(sortType, false);
 }
 
 function onKeypress(e) {
