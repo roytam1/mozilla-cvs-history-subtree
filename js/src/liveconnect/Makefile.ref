@@ -24,7 +24,7 @@ ifdef JS_THREADSAFE
 OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr21.so
 endif
 
-INCLUDES   += -I. -I.. -I$(JDK)/include
+INCLUDES   += -I. -I..
 
 #
 # XCFLAGS may be set in the environment or on the gmake command line
