@@ -89,14 +89,20 @@ public static void initialize () throws Exception
 {
 	if (!initialized) {
 		instance = new BrowserControlMozillaShim();
-		
+
+        // PENDING(mark): Try loading the native library in your own implemntation specfic canvas
+        // class (ie. Win32BrowserControlCanvas or MotifBrowserControlCanvas.
+        // The Unix port needs this. If this is a problem, let me know ASAP.
+        // - Mark
+		/*
 		try {
 			System.loadLibrary("webclient");
 		}
 		catch (java.lang.UnsatisfiedLinkError e) {
 			throw new Exception("Unable to open native webclient library");
 		}
-		
+		*/
+
 		instance.nativeInitialize();
 		initialized = true;
 	}

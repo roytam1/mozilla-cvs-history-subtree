@@ -9,11 +9,6 @@
  * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
  * the License for the specific language governing rights and limitations
  * under the License.
- *
- * 
- * The Initial Developer of the Original Code is Sun Microsystems,
- * Inc. Portions created by Sun are Copyright (C) 1997, 1998, 1999 Sun
- * Microsystems, Inc. All Rights Reserved.
  */
 
 package org.mozilla.webclient;
@@ -63,7 +58,7 @@ public class BrowserControlCanvasFactory extends Object
 
 public BrowserControlCanvasFactory()
 {
-	Assert.assert(false, "This class shouldn't be constructed.");
+    Assert.assert(false, "This class shouldn't be constructed.");
 }
 
 //
@@ -72,24 +67,56 @@ public BrowserControlCanvasFactory()
 
 public static BrowserControlCanvas newBrowserControlCanvas()
 {
-	BrowserControlCanvas result = null;
+    Class browserControlCanvasClass = null;
+    String className = null;
+    
+    BrowserControlCanvas result = null;
+    // PENDING(edburns): do some magic to determine the right kind of
+    // MozWebShellCanvas to instantiate
 
-	// PENDING(edburns): do some magic to determine the right kind of
-	// BrowserControlCanvas to instantiate
-
-	Class browserControlCanvasClass = null;
-	String className = "org.mozilla.webclient.Win32BrowserControlCanvas";
+    // How about this:
+    // I try loading sun.awt.windows.WDrawingSurfaceInfo. If it doesn't
+    // load, then I try loading sun.awt.motif.MDrawingSufaceInfo. If
+    // none loads, then I return a error message.
+    // If you think up of a better way, let me know.
+    // -- Mark
 
     try {
-        if (null != (browserControlCanvasClass = Class.forName(className))) {
-			result = (BrowserControlCanvas) browserControlCanvasClass.newInstance();
-		}
-	}
-    catch (Exception e) {
-        System.out.println(e.getMessage());
+        Class win32DrawingSurfaceInfoClass = 
+            Class.forName("sun.awt.windows.WDrawingSurfaceInfo");
+        
+        if (win32DrawingSurfaceInfoClass != null) {
+            className = "org.mozilla.webclient.win32.Win32MozWebShellCanvas";
+        }
+    } catch (Exception e) {
+        className = null;
+    }
+
+    try {
+        Class motifDrawingSurfaceInfoClass = 
+            Class.forName("sun.awt.motif.MDrawingSurfaceInfo");
+        
+        if (motifDrawingSurfaceInfoClass != null) {
+            className = "org.mozilla.webclient.motif.MotifBrowserControlCanvas";
+        }
+    } catch (Exception e) {
+        className = null;
+    }
+
+    if (className != null) {
+        try {
+            if (null != (browserControlCanvasClass = Class.forName(className))) {
+                result = (BrowserControlCanvas) browserControlCanvasClass.newInstance();
+            }
+        } catch (Exception e) {
+            System.out.println("Got Exception: " + e.getMessage());
+            e.printStackTrace();
+        }
+    } else {
+        System.out.println("Could not determine WebShellCanvas class to load\n");
     }
 	
-	return result;
+    return result;
 }
 
 //
@@ -104,6 +131,7 @@ public static BrowserControlCanvas newBrowserControlCanvas()
 
 public static void main(String [] args)
 {
+    System.out.println("doing asserts");
     Assert.setEnabled(true);
     Log.setApplicationName("BrowserControlCanvasFactory");
     Log.setApplicationVersion("0.0");
@@ -116,4 +144,4 @@ public static void main(String [] args)
 
 // ----UNIT_TEST_END
 
-} // end of class BrowserControlCanvasFactory
+} // end of class BrowserControl!CanvasFactory
