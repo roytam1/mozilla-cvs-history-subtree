@@ -23,8 +23,9 @@ Rights Reserved.
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/smime/msgReadSMIMEOverlay.css" type="text/css"?> 
 
+<!-- no charset overlay, blah
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/viewZoomOverlay.xul"?>
+-->
 <?xul-overlay href="chrome://messenger/content/mailWindowExtrasOverlay.xul"?>
 
 <!DOCTYPE window [
@@ -36,6 +37,10 @@ Rights Reserved.
 %brandDTD;
 <!ENTITY % smimeDTD SYSTEM "chrome://messenger-smime/locale/msgReadSMIMEOverlay.dtd" >
 %smimeDTD;
+<!ENTITY % tasksDTD SYSTEM "chrome://communicator/locale/tasksOverlay.dtd" >
+%tasksDTD;
+<!ENTITY % mailTasksOverlayDTD SYSTEM "chrome://messenger/locale/mailTasksOverlay.dtd" >
+%mailTasksOverlayDTD;
 ]>  
 
 <overlay
@@ -47,19 +52,87 @@ Rights Reserved.
 <script src="chrome://messenger/content/commandglue.js"/>
 <script src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/findUtils.js"/>
-
-<!-- stand alone mail, no bookmarking
-<script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
+<!-- no zoom
+<script type="application/x-javascript" src="chrome://communicator/content/viewZoomOverlay.js"/>
 -->
-
 <script type="application/x-javascript" src="chrome://messenger-smime/content/msgReadSMIMEOverlay.js"/>
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    // uses "toOpenWindowByType" function provided by utilityOverlay.js
+    // which is included by most clients. 
+    function toMessengerWindow()
+      {
+        var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefBranch);
+        var windowDoc = "chrome://messenger/content/messenger.xul";
+        try
+          {
+            var layoutType = pref.getIntPref("mail.pane_config");
+            windowDoc = !layoutType ? "chrome://messenger/content/messenger.xul" : 
+                                          "chrome://messenger/content/mail3PaneWindowVertLayout.xul";
+          }
+        catch(ex)
+          {
+          }
+        toOpenWindowByType("mail:3pane", windowDoc);
+      }
+    
+    function toAddressBook() 
+      {
+        toOpenWindowByType("mail:addressbook", "chrome://messenger/content/addressbook/addressbook.xul");
+      }
+    
+    function toNewsgroups() 
+      {
+        dump ("Sorry, command not implemented.\n");
+      }
+
+    function toImport()
+      {
+        window.openDialog("chrome://messenger/content/importDialog.xul","importDialog","chrome, modal, titlebar", {importType: "addressbook"});
+      }
+      
+    function MsgSearchMessages()
+    {
+        var preselectedFolder = null;
+        if ("GetFirstSelectedMsgFolder" in window)
+          preselectedFolder = GetFirstSelectedMsgFolder();
+        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
+        var searchWindow = windowManagerInterface.getMostRecentWindow("mailnews:search");
+    
+        if (searchWindow)
+            searchWindow.focus();
+        else
+            window.openDialog("chrome://messenger/content/SearchDialog.xul", "", 
+                              "chrome,resizable,status,centerscreen,dialog=no", { folder: preselectedFolder });
+    }
+
+    function MsgSearchAddresses()
+    {
+        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
+        var abSearchWindow = windowManagerInterface.getMostRecentWindow("mailnews:absearch");
+    
+        if (abSearchWindow)
+            abSearchWindow.focus();
+        else
+            window.openDialog("chrome://messenger/content/ABSearchDialog.xul", "", 
+                              "chrome,resizable,status,centerscreen,dialog=no", {directory: null});
+    }      
+
+  ]]>
+  </script>     
 
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="bundle_offlinePrompts" src="chrome://messenger/locale/offline.properties"/>
-  <stringbundle id="bundle_viewZoom"/>
   <stringbundle id="findBundle" src="chrome://global/locale/finddialog.properties"/>
   <stringbundle id="bundle_read_smime" src="chrome://messenger-smime/locale/msgReadSMIMEOverlay.properties"/>
+<!-- no zoom
+  <stringbundle id="bundle_viewZoom" src="chrome://communicator/locale/viewZoomOverlay.properties"/>
+-->
 </stringbundleset>
  
 <!-- Performance optimization...we include utilityOverlay.xul which defines some command sets
@@ -77,6 +150,13 @@ Rights Reserved.
             commandupdater="true"
             events="create-menu-edit"
             oncommandupdate="goUpdateSelectEditMenuItems()"/>
+
+
+<commandset id="tasksCommands">
+    <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+    <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
+    <command id="cmd_searchMsgs" oncommand="MsgSearchMessages();"/>
+</commandset>
 
 <!-- End command set merging -->
 
@@ -136,8 +216,15 @@ Rights Reserved.
    <command id="cmd_viewWatchedThreadsWithUnread" oncommand="goDoCommand('cmd_viewWatchedThreadsWithUnread')" disabled="true"/>
    <command id="cmd_viewIgnoredThreads" oncommand="goDoCommand('cmd_viewIgnoredThreads')" disabled="true"/>
    <command id="cmd_sortByThread" oncommand="goDoCommand('cmd_sortByThread')" disabled="true"/>
-   <commandset id="viewZoomCommands"/>
 </commandset>
+
+<!-- no zoom
+   <commandset id="viewZoomCommands">
+    <command id="cmd_textZoomReduce"  oncommand="ZoomManager.prototype.getInstance().reduce();"/>
+    <command id="cmd_textZoomEnlarge" oncommand="ZoomManager.prototype.getInstance().enlarge();"/>
+    <command id="cmd_textZoomReset"   oncommand="ZoomManager.prototype.getInstance().reset();"/>
+  </commandset>
+-->
 
 <commandset id="mailEditMenuItems"
             commandupdater="true"
@@ -276,6 +363,23 @@ Rights Reserved.
     <command id="cmd_label5" oncommand="goDoCommand('cmd_label5');" disabled="true"/>
 </commandset>
 
+<!-- no zoom
+  <keyset id="viewZoomKeys">
+    <key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   command="cmd_textZoomReduce"  modifiers="accel"/>
+    <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"  command="cmd_textZoomEnlarge" modifiers="accel"/>
+    <key                          key="&textZoomEnlargeCmd.commandkey;"  command="cmd_textZoomEnlarge" modifiers="accel,shift"/>
+    <key                          key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
+    <key                          key="&textZoomResetCmd.commandkey;"    command="cmd_textZoomReset"   modifiers="accel"/>
+  </keyset>
+-->
+
+  <keyset id="tasksKeys">
+    <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+    <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
+    <key id="key_searchMail" key="&searchMailCmd.key;" command="cmd_searchMsgs" modifiers="accel, shift"/>
+  </keyset>
+
+
 <keyset id="mailKeys">
     <key id="space" key=" " oncommand="SpaceHit()"/>
 
@@ -325,8 +429,7 @@ Rights Reserved.
   <key id="key_find" key="&findCmd.key;"  oncommand="goDoCommand('cmd_find')" modifiers="accel"/>
   <key id="key_findAgain" key="&findAgainCmd.key;"   oncommand="goDoCommand('cmd_findAgain')" modifiers="accel"/>
   <key id="key_stop" keycode="VK_ESCAPE" command="cmd_stop"/>
-  <keyset id="viewZoomKeys"/>
-
+ 
   <!-- Tab/F6 Keys -->
   <key keycode="VK_TAB" oncommand="SwitchPaneFocus(event);" modifiers="control,shift"/>
   <key keycode="VK_TAB" oncommand="SwitchPaneFocus(event);" modifiers="control"/>
@@ -1125,10 +1228,22 @@ Rights Reserved.
       <menuitem id="stopMenuitem" label="&stopCmd.label;" accesskey="&stopCmd.accesskey;" key="key_stop" disabled="true" command="cmd_stop"/>
       <menuitem label="&reloadCmd.label;" accesskey="&reloadCmd.accesskey;" observes="cmd_reload"/>
       <menuseparator/>
-      <!-- overlayed from viewZoomOverlay.xul -->
-      <menu id="menu_textZoom"/>
+
+<!-- no zoom
+  <menu id="menu_textZoom" accesskey="&textZoomMenu.accesskey;">
+    <menupopup id="menu_textZoomPopup" onpopupshowing="updateTextZoomMenu();">
+      <menuitem key="key_textZoomReduce"  label="&textZoomReduceCmd.label;"  accesskey="&textZoomReduceCmd.accesskey;" command="cmd_textZoomReduce"/>
+      <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;" command="cmd_textZoomEnlarge"/>
+      <menuseparator/>
+      <menuseparator id="menu_textZoomInsertBefore"/>
+      <menuitem id="menu_textZoomOther" type="radio" name="textZoom" accesskey="&textZoomOtherCmd.accesskey;" oncommand="setTextZoomOther();"/>
+    </menupopup>
+  </menu>
+-->
+<!-- no charset
       <menu id="mailviewCharsetMenu" />
       <menuseparator/>
+-->
       <menuitem id="pageSourceMenuItem" label="&pageSourceCmd.label;" key="key_viewPageSource" accesskey="&pageSourceCmd.accesskey;" observes="cmd_viewPageSource"/>
       <menuitem label="&menu_securityStatus.label;" 
         accesskey="&menu_securityStatus.accesskey;" observes="cmd_viewSecurityStatus"/>
@@ -1392,7 +1507,7 @@ Rights Reserved.
   </menupopup>
 </menu>
 
-<menu id="tasksMenu">
+<menu id="tasksMenu"  label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
   <menupopup id="taskPopup">
     <menuitem label="&searchMailCmd.label;" key="key_searchMail" accesskey="&searchMailCmd.accesskey;" command="cmd_searchMsgs"/>
     <menuitem label="&filtersCmd.label;"
@@ -1402,7 +1517,27 @@ Rights Reserved.
     <menuseparator/>
   </menupopup>
 </menu>
-<menu id="windowMenu"/>
+
+      <menu id="windowMenu" label="&windowMenu.label;" accesskey="&windowMenu.accesskey;"
+            datasources="rdf:window-mediator" ref="NC:WindowMediatorRoot"
+            onpopupshown="checkFocusedWindow();">
+        <template>
+          <rule>
+            <menupopup>
+              <menuitem uri="rdf:*" label="rdf:http://home.netscape.com/NC-rdf#KeyIndex rdf:http://home.netscape.com/NC-rdf#Name" type="radio"
+                        oncommand="ShowWindowFromResource(event.target)" accesskey="rdf:http://home.netscape.com/NC-rdf#KeyIndex"/>
+            </menupopup>
+          </rule>
+        </template>
+        <menupopup id="windowPopup">
+          <menuitem label="&navigatorCmd.label;" accesskey="&navigatorCmd.accesskey;" key="key_navigator" command="Tasks:Navigator" id="tasksMenuNavigator" class="menuitem-iconic icon-navigator16"/>
+          <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" insertafter="tasksMenuNavigator" class="menuitem-iconic icon-mail16 menu-iconic"/>
+          <menuitem id="tasksMenuEditor" insertafter="tasksMenuMail"/>
+          <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" insertafter="tasksMenuEditor" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+          <menuseparator id="sep-window-list"/>
+        </menupopup>
+      </menu>
+
 <menu id="menu_Help"/>
 <spacer flex="100%"/>
 </menubar>
@@ -1550,7 +1685,16 @@ Rights Reserved.
 
 <statusbar class="chromeclass-status" id="status-bar"> 
   <hbox insertbefore="unreadMessageCount" flex="1">
-    <statusbarpanel id="component-bar"/>
+  <statusbarpanel id="component-bar" persist="collapsed">
+    <toolbarbutton class="taskbutton" id="mini-nav" oncommand="toNavigator();" 
+                   tooltiptext="&taskNavigator.tooltip;"/>
+    <toolbarbutton class="taskbutton" id="mini-mail" oncommand="toMessengerWindow()" 
+            position="2" tooltiptext="&taskMessenger.tooltip;"/>
+    <toolbarbutton id="mini-comp" insertafter="mini-mail"/>
+    <toolbarbutton class="taskbutton" id="mini-addr" oncommand="toAddressBook();"
+            insertafter="mini-comp" tooltiptext="&taskAddressBook.tooltip;"/>
+  </statusbarpanel> 
+
     <statusbarpanel id="statusText" label="&statusText.label;" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0" oncommand="dumpProgress()"/>
@@ -1567,5 +1711,13 @@ Rights Reserved.
   </hbox>
 </statusbar> 
 
+<!--
+  
+  <menupopup id="searchMenu">
+    <menuitem label="&searchMailCmd.label;" key="key_searchMail" accesskey="&searchMailCmd.accesskey;" command="cmd_searchMsgs" position="2"/>
+    <menuitem label="&searchAddressesCmd.label;" accesskey="&searchAddressesCmd.accesskey;" oncommand="MsgSearchAddresses(null)" position="3"/>
+  </menupopup>
+
+-->
 
 </overlay>

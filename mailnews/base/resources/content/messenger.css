@@ -49,23 +49,7 @@ mail-headerfield {
   -moz-binding: url("chrome://messenger/content/mailWidgets.xml#mail-headerfield");
 }
 
-searchattribute {
-  -moz-binding: url("chrome://messenger/content/mailWidgets.xml#searchattribute");
-}
-
-searchoperator {
-  -moz-binding: url("chrome://messenger/content/mailWidgets.xml#searchoperator");
-}
-
-searchvalue {
-  display: -moz-deck;
-  -moz-binding: url("chrome://messenger/content/mailWidgets.xml#searchvalue");
-}
-
-searchterm {
-  -moz-binding: url("chrome://messenger/content/mailWidgets.xml#searchterm");
-}
-
 dummy.usesMailWidgets {
   -moz-binding: url("chrome://messenger/content/mailWidgets.xml#dummy");
 }
+

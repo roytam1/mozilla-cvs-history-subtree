@@ -23,6 +23,7 @@ Rights Reserved.
 <?xml-stylesheet href="chrome://messenger/skin/threadPaneExtras.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/folderPaneExtras.css" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/fakeAccount.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
@@ -45,14 +46,16 @@ platformMailnewsOverlay.xul
 
 <!-- we used to get this from sidebarOverlay.xul -->
 <?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?> 
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
+
 
 <!DOCTYPE window [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
 %brandDTD;
 <!ENTITY % messengerDTD SYSTEM "chrome://messenger/locale/messenger.dtd" >
 %messengerDTD;
+<!ENTITY % tasksDTD SYSTEM "chrome://communicator/locale/tasksOverlay.dtd" >
+%tasksDTD;
 ]>
 
 <window id="messengerWindow"
@@ -92,6 +95,7 @@ platformMailnewsOverlay.xul
 <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/threadPane.js"/>
+<script type="application/x-javascript" src="chrome://communicator/content/tasksOverlay.js"/>
 
 <commandset id="mailCommands">
   <commandset id="mailFileMenuItems"/>
@@ -113,9 +117,12 @@ platformMailnewsOverlay.xul
         commandupdater="true"
         events="focus"
         oncommandupdate="FocusRingUpdate_Mail()"/>
-  <commandset id="tasksCommands"/>
-  <command id="toggleSidebar"/>
+<commandset id="tasksCommands">
+  <command id="Tasks:Navigator" oncommand="toNavigator();"/>
 </commandset>
+</commandset>
+
+
 
 <broadcasterset id="mailBroadcasters">
   <!-- File Menu -->
@@ -124,8 +131,9 @@ platformMailnewsOverlay.xul
 </broadcasterset>
 
 <keyset id="mailKeys">
-  <key id="showHideSidebar"/>
-  <keyset id="tasksKeys"/>
+  <keyset id="tasksKeys">
+    <key id="key_navigator"    key="&navigatorCmd.commandkey;"   command="Tasks:Navigator" modifiers="accel"/>
+  </keyset>
 </keyset>	
 
 <popup id="threadPaneContext"/>

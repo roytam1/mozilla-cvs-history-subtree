@@ -1,18 +1,22 @@
 <?xml version="1.0"?>
 
+<!--
 <?xul-overlay href="chrome://communicator/content/platformCommunicatorOverlay.xul"?>
+-->
 
 <!DOCTYPE window [
-
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
 %brandDTD;
 <!ENTITY % globalRegionDTD SYSTEM "chrome://global-region/locale/region.dtd">
 %globalRegionDTD;
 <!ENTITY % utilityDTD SYSTEM "chrome://communicator/locale/utilityOverlay.dtd">
 %utilityDTD;
-
+<!ENTITY % platformDTD SYSTEM "chrome://communicator-platform/locale/platformCommunicatorOverlay.dtd">
+%platformDTD;
+<!ENTITY % helpMenuDTD SYSTEM "chrome://help/locale/helpMenuOverlay.dtd">
+%helpMenuDTD;
 ]>
-
+  
 <overlay id="utilityOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
@@ -22,7 +26,9 @@
           src="chrome://communicator/content/utilityOverlay.js"/>
   <script type="application/x-javascript"
           src="chrome://communicator/content/builtinURLs.js"/>
-
+  
+  <script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
+ 
   <!-- online/offline status indicators -->   
   <broadcaster id="Communicator:WorkMode"
                label="&offlineGoOfflineCmd.label;"
@@ -91,6 +97,12 @@
        key="&newNavigatorCmd.key;"
        command="cmd_newNavigator"
        modifiers="accel"/>
+  
+  <key id="key_close"  key="&closeCmd.key;" command="cmd_close" modifiers="accel"/>
+  <key id="key_closeWindow"  key="&closeCmd.key;" command="cmd_closeWindow" modifiers="accel,shift"/>
+  <key id="key_redo"  key="&redoCmd.key;" command="cmd_redo" modifiers="accel"/>
+  <key id="key_delete" keycode="VK_DELETE" command="cmd_delete"/>
+  <key id="key_quit"  key="&quitApplicationCmd.key;" command="cmd_quit" modifiers="accel"/>
 
   <!-- Edit Menu -->
   <menu id="menu_Edit"
@@ -171,6 +183,8 @@
               events="clipboard"
               oncommandupdate="goUpdatePasteMenuItems()"/>
 
+  <command id="cmd_quit" oncommand="goQuitApplication()"/>
+
   <command id="cmd_copyLink"
            oncommand="goDoCommand('cmd_copyLink')"
            disabled="false"/>
@@ -230,6 +244,12 @@
         label="&helpMenu.label;"
         accesskey="&helpMenu.accesskey;">
     <menupopup id="helpPopup">
+
+      <menuitem label="&helpContents.label;" 
+       accesskey="&helpContents.accesskey;" 
+       id="help"
+       oncommand="openHelp();" />   
+
       <menuitem accesskey="&releaseCmd.accesskey;"
                 label="&releaseCmd.label;"
                 id="releaseUrl"
@@ -251,6 +271,16 @@
     </menupopup>
   </menu>
         
+  <!-- close -->
+  <menuitem id="menu_close" label="&closeCmd.label;" key="key_close" accesskey="&closeCmd.accesskey;" command="cmd_close"/>
+
+  <!-- quit -->
+  <menupopup id="menu_FilePopup">
+    <menuseparator id="menu_FileQuitSeparator"/>
+    <menuitem label="&quitApplicationCmd.label;" id="menu_FileQuitItem"
+              key="key_quit" accesskey="&quitApplicationCmd.accesskey;" command="cmd_quit"/>
+  </menupopup>
+
  <!-- Toolbar boxes -->
  <hbox id="toolbar_button_box"
        flex="100%"/>
