@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *  Seth Spitzer <sspitzer@netscape.com>
- *   Pierre Phaneuf <pp@ludusdesign.com>
+ *  Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -55,19 +55,17 @@
   
 NS_IMPL_ISUPPORTS1(nsAbAddressCollecter, nsIAbAddressCollecter)
 
-static const char *PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT = "mail.collect_email_address_enable_size_limit";
-static const char *PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT = "mail.collect_email_address_size_limit";
+#define PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT "mail.collect_email_address_enable_size_limit"
+#define PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT "mail.collect_email_address_size_limit"
 
 static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID);
 
 nsAbAddressCollecter::nsAbAddressCollecter()
 {
 	NS_INIT_REFCNT();
-	maxCABsize = -1;
-	sizeLimitEnabled = -1;
 
-	//set up the pref callbacks:
-	setupPrefs();
+	m_maxCABsize = -1;
+	m_sizeLimitEnabled = PR_FALSE;
 }
 
 nsAbAddressCollecter::~nsAbAddressCollecter()
@@ -101,24 +99,8 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 {
 	nsresult rv;
 
-
 	nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
   NS_ENSURE_SUCCESS(rv, rv);
-
-	if(sizeLimitEnabled == -1){
-		rv = pPref->GetBoolPref(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, &sizeLimitEnabled);
-		if (!NS_SUCCEEDED(rv))
-			return rv;
-	}
-
-	//maxCABsize = 20;
-	if(sizeLimitEnabled && maxCABsize == -1){
-		PRInt32 max = 0;
-    rv = pPref->GetIntPref(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, &max);
-		if (!NS_SUCCEEDED(rv))
-			return rv;
-		maxCABsize = max;
-	}
 
 	if (!m_historyAB)
 	{
@@ -184,13 +166,12 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 				}
 				else //address is already in the CAB
 				{
-					if(sizeLimitEnabled) 
+					if (m_sizeLimitEnabled) 
 					{
             // there has to be a better way to do this, perhaps with
-						//remove card from ab, and
-						m_historyAB->DeleteCard( existingCard, PR_TRUE /* notify */);
+						m_historyAB->DeleteCard(existingCard, PR_TRUE /* notify */);
 						SetNamesForCard(existingCard, curName);
-						//append it to the bottom.
+						// append it to the bottom.
             rv = AddCardToCollectedAddressBook(existingCard);
             NS_ENSURE_SUCCESS(rv,rv);
 					}
@@ -201,15 +182,15 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 					}
 				}
 
-				if(sizeLimitEnabled) 
+				if (m_sizeLimitEnabled) 
 				{
 					PRUint32 count = 0;
 					rv = m_historyAB->GetCardCount( &count );
 
-					if( count > (PRUint32)maxCABsize )
-						rv = m_historyAB->RemoveExtraCardsInCab(count, maxCABsize);
+					if( count > (PRUint32)m_maxCABsize )
+						rv = m_historyAB->RemoveExtraCardsInCab(count, m_maxCABsize);
 
-				} //if sizeLimitEnabled
+				} //if m_sizeLimitEnabled
 			}
 			curName += strlen(curName) + 1;
 			curAddress += strlen(curAddress) + 1;
@@ -290,6 +271,7 @@ nsresult nsAbAddressCollecter::IsDomainExcluded(const char *address, nsIPref *pP
 		char *rest = NS_CONST_CAST(char*,(const char*)excludedDomainList);
 		nsCAutoString str;
 
+    // XXX this leaks
 		token = nsCRT::strtok(rest, ",", &rest);
 		while (token && *token) 
 		{
@@ -338,7 +320,7 @@ nsresult nsAbAddressCollecter::SetNamesForCard(nsIAbCard *senderCard, const char
 	return rv;
 }
 
-nsresult nsAbAddressCollecter::SplitFullName (const char *fullName, char **firstName, char **lastName)
+nsresult nsAbAddressCollecter::SplitFullName(const char *fullName, char **firstName, char **lastName)
 {
     if (fullName)
     {
@@ -372,42 +354,45 @@ nsresult nsAbAddressCollecter::SplitFullName (const char *fullName, char **first
 }
 
 int PR_CALLBACK 
-nsAbAddressCollecter::collectEmailAddressEnableSizeLimitPrefChanged(const char *newpref, void *data){
+nsAbAddressCollecter::collectEmailAddressEnableSizeLimitPrefChanged(const char *newpref, void *data)
+{
 	nsresult rv;
 	nsAbAddressCollecter *adCol = (nsAbAddressCollecter *) data;
 	nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
-	if(NS_FAILED(pPref->GetBoolPref(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, &adCol->sizeLimitEnabled))){
-		adCol->sizeLimitEnabled = PR_TRUE;
+	if(NS_FAILED(pPref->GetBoolPref(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, &adCol->m_sizeLimitEnabled))){
+		adCol->m_sizeLimitEnabled = PR_TRUE;
 	}
-
-	
 	return 0;
 }
 
 int PR_CALLBACK 
-nsAbAddressCollecter::collectEmailAddressSizeLimitPrefChanged(const char *newpref, void *data){
+nsAbAddressCollecter::collectEmailAddressSizeLimitPrefChanged(const char *newpref, void *data)
+{
 	nsresult rv;
-	PRInt32 max = 0;
 	nsAbAddressCollecter *adCol = (nsAbAddressCollecter *) data;
 	nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
-	if(NS_FAILED(pPref->GetIntPref(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, &max))){
-		adCol->maxCABsize = 0;
-	} else 
-		adCol->maxCABsize = max;
-
+	if(NS_FAILED(pPref->GetIntPref(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, &adCol->m_maxCABsize))){
+		adCol->m_maxCABsize = 0;
+	}
 	return 0;
 }
 
-void nsAbAddressCollecter::setupPrefs(void){
+nsresult nsAbAddressCollecter::Init(void)
+{
 	nsresult rv;
 	nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
-
-	if (NS_FAILED(rv)) 
-		return;
-
+	NS_ENSURE_SUCCESS(rv,rv);
+  
 	pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, collectEmailAddressEnableSizeLimitPrefChanged, this);
 	pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, collectEmailAddressSizeLimitPrefChanged, this);
 
+  rv = pPref->GetBoolPref(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, &m_sizeLimitEnabled);
+	NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = pPref->GetIntPref(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, &m_maxCABsize);
+	NS_ENSURE_SUCCESS(rv,rv);
+
+  return NS_OK;
 }
 
 nsresult nsAbAddressCollecter::AddCardToCollectedAddressBook(nsIAbCard *card)

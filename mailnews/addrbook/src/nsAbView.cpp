@@ -876,21 +876,33 @@ nsresult nsAbView::RemoveCardAndSelectNextCard(nsISupports *item)
   if (card) {
     PRInt32 index = FindIndexForCard(card);
     if (index != CARD_NOT_FOUND) {
+      PRBool selectNextCard = PR_FALSE;
+      if (mOutlinerSelection) {
+        PRInt32 selectedIndex;
+        // XXX make sure it works if nothing selected
+        mOutlinerSelection->GetCurrentIndex(&selectedIndex);
+        if (index == selectedIndex)
+          selectNextCard = PR_TRUE;
+      }
+
       rv = RemoveCardAt(index);
       NS_ENSURE_SUCCESS(rv,rv);
 
-      if (mOutliner)
+      if (mOutliner) {
         rv = mOutliner->RowCountChanged(index, -1);
-      NS_ENSURE_SUCCESS(rv,rv);
+        NS_ENSURE_SUCCESS(rv,rv);
+      }
 
-      PRInt32 count = mCards.Count();
-      if (count && mOutlinerSelection) {
-        // if we deleted the last card, adjust so we select the new "last" card
-        if (index >= (count - 1)) {
-          index = count -1;
+      if (selectNextCard) {
+        PRInt32 count = mCards.Count();
+        if (count && mOutlinerSelection) {
+          // if we deleted the last card, adjust so we select the new "last" card
+          if (index >= (count - 1)) {
+            index = count -1;
+          }
+          mOutlinerSelection->SetCurrentIndex(index);
+          mOutlinerSelection->RangedSelect(index, index, PR_FALSE /* augment */);
         }
-        mOutlinerSelection->SetCurrentIndex(index);
-        mOutlinerSelection->RangedSelect(index, index, PR_FALSE /* augment */);
       }
     }
   }

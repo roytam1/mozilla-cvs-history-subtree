@@ -61,17 +61,18 @@ public:
 	nsresult IsDomainExcluded(const char *address, nsIPref *pPref, PRBool *bExclude);
 	nsresult SetNamesForCard(nsIAbCard *senderCard, const char *fullName);
 	nsresult SplitFullName (const char *fullName, char **firstName, char **lastName);
+  nsresult Init();
+
 private:
 	static int PR_CALLBACK collectEmailAddressEnableSizeLimitPrefChanged(const char *newpref, void *data);
 	static int PR_CALLBACK collectEmailAddressSizeLimitPrefChanged(const char *newpref, void *data);
-	void setupPrefs(void);
-  nsresult AddCardToCollectedAddressBook(nsIAbCard *card);
+	nsresult AddCardToCollectedAddressBook(nsIAbCard *card);
 
 protected:
 	nsCOMPtr <nsIAddrDatabase> m_historyAB;
 	nsCOMPtr <nsIAbDirectory> m_historyDirectory;
-	PRInt32 maxCABsize;
-	PRInt32 sizeLimitEnabled;
+	PRInt32 m_maxCABsize;
+	PRBool m_sizeLimitEnabled;
 
 };
 

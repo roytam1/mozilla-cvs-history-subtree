@@ -245,6 +245,7 @@ NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
   nsresult rv;
 
   if (this == card) {
+    printf("equals = ptr vs ptr\n");
     *result = PR_TRUE;
     return NS_OK;
   }
@@ -259,7 +260,8 @@ NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
   PRUint32 dbRowID;
   rv = mdbcard->GetDbRowID(&dbRowID);
   NS_ENSURE_SUCCESS(rv,rv);
-
+  
+  printf("equals = %d,%d and %d,%d\n",m_dbTableID,dbTableID,m_dbRowID,dbRowID);
   *result = ((m_dbTableID == dbTableID) && (m_dbRowID == dbRowID));
   return NS_OK;
 }
