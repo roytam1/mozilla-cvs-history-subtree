@@ -103,10 +103,8 @@ function highlightCurrentProfile()
 function AddItem( aChildren, aProfileObject )
 {
   var kids    = document.getElementById(aChildren);
-  var listitem = document.createElement("menuitems");
+  var listitem = document.createElement("menuitem");
   listitem.setAttribute("label", aProfileObject.mName );
-  //listitem.setAttribute("rowMigrate",  aProfileObject.mMigrated );
-  //listitem.setAttribute("class", "listitem-iconic");
   listitem.setAttribute("profile_name", aProfileObject.mName );
   listitem.setAttribute("rowName", aProfileObject.mName );
   listitem.setAttribute("id", ( "profileName_" + aProfileObject.mName ) );
@@ -145,7 +143,7 @@ function loadElements()
 
       var migrated = Registry.getString( node.key, "migrated" );
 
-      AddItem( "profiles", new Profile( node.name, migrated ) );
+      AddItem( "profilesPopup", new Profile( node.name, migrated ) );
 
       regEnum.next();
     }
