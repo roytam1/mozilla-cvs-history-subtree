@@ -32,6 +32,10 @@
 
 PR_BEGIN_EXTERN_C
  
+    /* General mapped functions which resolve to a bunch of internal calls. */
+    extern void             Cache_Init(void);
+    extern void             Cache_Shutdown(void);
+
     /* Cache Manager stub functions
        Does not include some functions not required in the current 
        design like AddModule etc... If you need to these functions, try

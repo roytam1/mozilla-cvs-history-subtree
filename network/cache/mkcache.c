@@ -48,6 +48,10 @@
 #include "mkmemcac.h"
 #include "merrors.h"
 
+#ifdef NU_CACHE
+#include "CacheStubs.h"
+#endif
+
 #ifdef PROFILE
 #pragma profile on
 #endif
@@ -1238,7 +1242,7 @@ NET_InterruptMemoryCache (ActiveEntry * cur_entry)
 	return(-1);
 }
 
-#endif /* MEMORY_CACHE */
+#endif /* MEMORY_CACHE */ /* TODO - Gagan */
 
 /* set the size of the Disk cache.
  * Set it to 0 if you want cacheing turned off
@@ -1249,7 +1253,9 @@ NET_SetDiskCacheSize(int32 new_size)
 {
 	if(new_size < 0)
 		new_size = 0;
-
+#ifdef NU_CACHE
+    DiskModule_SetSize(new_size);
+#else
     net_MaxDiskCacheSize = new_size;
 
 	/* open it if it's not open already */
@@ -1262,7 +1268,7 @@ NET_SetDiskCacheSize(int32 new_size)
 	  {
 		net_RemoveAllDiskCacheObjects();
 	  }
-
+#endif
 
     return;
 }
@@ -2644,7 +2650,11 @@ NET_ReadCacheFAT(char * cachefatfile, XP_Bool stat_files)
 PUBLIC void
 NET_CacheInit(void)
 {
-	 NET_ReadCacheFAT("", TRUE);
+#ifdef NU_CACHE
+    Cache_Init();
+#else
+    NET_ReadCacheFAT("", TRUE);
+#endif
 }
 
 /* unload the disk cache FAT list to disk
@@ -2678,6 +2688,10 @@ NET_WriteCacheFAT(char *filename, XP_Bool final_call)
 MODULE_PRIVATE void
 NET_CleanupCache (char * filename)
 {
+#ifdef NU_CACHE
+    Cache_Shutdown();
+    return;
+#else
 	net_StoreDiskCacheSize();
 
 	if(!cache_database)
@@ -2693,6 +2707,7 @@ NET_CleanupCache (char * filename)
 	CACHE_CloseAllOpenSARCache();
 
 	return;
+#endif
 }
 
 /* returns the number of files currently in the

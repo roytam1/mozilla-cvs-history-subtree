@@ -81,6 +81,9 @@ public:
     void                Next(nsCacheModule*);
 
     virtual
+        PRBool          ReduceSizeTo(PRUint32 i_NewSize);
+
+    virtual
         PRBool          Remove(const char* i_url) = 0;
 
     virtual
@@ -93,6 +96,7 @@ public:
         PRBool          Revalidate(void) = 0;
 
     const PRUint32      Size(void) const;
+    virtual
     void                Size(const PRUint32 i_size);
 
     PRUint32            SizeInUse(void) const;

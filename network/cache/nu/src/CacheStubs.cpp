@@ -24,8 +24,21 @@
 #include "nsDiskModule.h"
 #include "nsMemModule.h"
 #include "nsCacheTrace.h"
+#include "prlog.h"
 
 #define CACHEMGR nsCacheManager::GetInstance()
+
+void
+Cache_Init(void)
+{
+    PR_ASSERT(0);
+}
+
+void 
+Cache_Shutdown(void)
+{
+    PR_ASSERT(0);
+}
 
 /* CacheManager functions */
 PRBool

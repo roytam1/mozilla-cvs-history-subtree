@@ -38,7 +38,8 @@
     if (!m_pDB)     \
     {               \
         nsDiskModule* pThis = (nsDiskModule*) this; \
-        PR_ASSERT(pThis->InitDB());    \
+        PRBool res = pThis->InitDB();   \
+        PR_ASSERT(res);                 \
     }
 
 //
@@ -210,6 +211,12 @@ PRBool nsDiskModule::InitDB(void)
     return PR_TRUE;
 }
 
+PRBool nsDiskModule::ReduceSizeTo(const PRUint32 i_NewSize)
+{
+    //TODO
+    return PR_TRUE;
+}
+
 PRBool nsDiskModule::Remove(const char* i_url)
 {
     CHECK_INIT;
@@ -233,3 +240,17 @@ PRBool nsDiskModule::Revalidate(void)
     return PR_FALSE;
 }
 
+void nsDiskModule::Size(const PRUint32 i_size)
+{
+    m_Size = size;
+    if (m_Size >0)
+    {
+        ReduceSizeTo(i_Size);
+    }
+    else
+    {
+        RemoveAll();
+    }
+}
+
+#undef CHECK_INIT

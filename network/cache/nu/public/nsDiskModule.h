@@ -46,9 +46,16 @@ public:
     nsCacheObject*  GetObject(const PRUint32 i_index) const;
     nsCacheObject*  GetObject(const char* i_url) const;
 
+    PRBool          ReduceSizeTo(PRUint32 i_NewSize);
+
     PRBool          Remove(const char* i_url);
     PRBool          Remove(const PRUint32 i_index);
-    
+
+    PRBool          RemoveAll(void);
+
+    // To do cleanup set size to zero. Else initialize disk cache
+    void            Size(const PRUint32 i_size);
+
     PRBool          Revalidate(void);
 
 private:
