@@ -1570,13 +1570,12 @@ PRIVATE void
 cookie_SetCookieString(char * curURL, char * setCookieHeader, time_t timeToExpire) {
   cookie_CookieStruct * prev_cookie;
   char *path_from_header=NULL, *host_from_header=NULL;
-  char *host_from_header2=NULL;
   char *name_from_header=NULL, *cookie_from_header=NULL;
   time_t expires=0;
   char *cur_path = cookie_ParseURL(curURL, GET_PATH_PART);
   char *cur_host = cookie_ParseURL(curURL, GET_HOST_PART);
   char *semi_colon, *ptr, *equal;
-  PRBool xxx=PR_FALSE, isDomain=PR_FALSE, acceptIt=PR_FALSE;
+  PRBool xxx=PR_FALSE, isDomain=PR_FALSE;
   PRBool bCookieAdded;
   PRBool pref_scd = PR_FALSE;
 
@@ -2166,7 +2165,7 @@ permission_Load() {
       permissionIndex = nextPermissionIndex;
 
       PRInt32 type = 0;
-      PRInt32 index = 0;
+      PRUint32 index = 0;
 
       if (permissionString.Length() == 0) {
         continue; /* empty permission entry -- should never happen */
@@ -2191,8 +2190,7 @@ permission_Load() {
         }
       } else {
         if (permissionString != "") {
-          nsresult rv =
-            permission_Add(host.ToNewCString(), permission, type, PR_FALSE);
+          rv = permission_Add(host.ToNewCString(), permission, type, PR_FALSE);
           if (NS_FAILED(rv)) {
             permission_UnlockList();
             strm.close();
