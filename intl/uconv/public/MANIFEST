@@ -1,9 +1,0 @@
-nsICharsetAlias.h
-nsICharsetConverterInfo.h
-nsICharsetConverterManager.h
-nsIPlatformCharset.h
-nsIUnicodeDecodeUtil.h
-nsIUnicodeDecoder.h
-nsIUnicodeEncodeHelper.h
-nsIUnicodeEncoder.h
-uconvutil.h
