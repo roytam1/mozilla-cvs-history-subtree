@@ -1,3 +1,7 @@
+# xxxbsmedberg At some point later in life, we should really unify these xpinstall
+# files.
+
+#if OS_ARCH==WINNT
 [xpi-bootstrap]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/xpcom.jst
 
@@ -36,6 +40,9 @@
 [xpfe-editor-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/editor.jst
 
+[spellcheck-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/common/windows.t @topsrcdir@/xpinstall/packager/windows/spellcheck.jst
+
 #else
 #if OS_ARCH==OS2
 [gre-xpi]
@@ -59,8 +66,64 @@
 [xpfe-editor-xpi]
 !preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/editor.jst
 
+[spellcheck-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/os2/spellcheck.jst
+
 #else
-[xpi-bootstrap gre-xpi xpfe-browser-xpi xpfe-lang-enUS-xpi xpfe-locale-US-xpi xpfe-default-US-xpi xpfe-mailnews-xpi xpfe-editor-xpi]
-!error No XPI package definitions available for this platform!
+#if OS_ARCH==Darwin
+[gre-xpi]
+!error GRE not implemented on Mac yet!
+
+[xpfe-browser-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/browser.jst
+
+[xpfe-lang-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/langenus.jst
+
+[xpfe-locale-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/regus.jst
+
+[xpfe-default-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/deflenus.jst
+
+[xpfe-mailnews-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/mail.jst
+
+[xpfe-editor-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/editor.jst
+
+[spellcheck-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/mac/spellcheck.jst
+
+#else
+
+# For all other platforms, we're just going to assume stuff and use the linux
+# XPI definitions. Linux/GTK is the only tested configuration, because it's the
+# only platform with a working stub installer.
+[gre-xpi]
+!error GRE not implemented on *nix yet!
+
+[xpfe-browser-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/browser.jst
+
+[xpfe-lang-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/langenus.jst
+
+[xpfe-locale-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/regus.jst
+
+[xpfe-default-US-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/deflenus.jst
+
+[xpfe-mailnews-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/mail.jst
+
+[xpfe-editor-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/editor.jst
+
+[spellcheck-enUS-xpi]
+!preprocess xpiroot/install.js -E -Fsubstitution @topsrcdir@/xpinstall/packager/common/share.t @topsrcdir@/xpinstall/packager/unix/spellcheck.jst
+
+#endif
 #endif
 #endif
