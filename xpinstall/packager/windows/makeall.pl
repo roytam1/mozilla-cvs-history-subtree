@@ -50,7 +50,7 @@ $inStagePath          = $ARGV[2];
 $inDistPath           = $ARGV[3];
 $seiFileNameGeneric   = "nsinstall.exe";
 $seiFileNameSpecific  = "mozilla-win32-installer.exe";
-$userAgent            = "5.0b1 [en]";
+$userAgent            = "5.0b1 (en)";
 
 # Check for existance of staging path
 if(!(-e "$inStagePath"))
