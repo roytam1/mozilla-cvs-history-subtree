@@ -32,6 +32,7 @@ REQUIRES	= xpcom string caps dom js widget layout xpconnect necko
 
 CPPSRCS	= 				\
 		nsSOAPMessage.cpp	\
+		nsSOAPResponse.cpp	\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a

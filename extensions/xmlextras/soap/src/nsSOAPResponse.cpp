@@ -29,146 +29,50 @@
 #include "nsIComponentManager.h"
 #include "nsMemory.h"
 
-nsSOAPResponse::nsSOAPResponse(nsIDOMDocument* aEnvelopeDocument)
+
+nsSOAPResponse::nsSOAPResponse()
 {
   NS_INIT_ISUPPORTS();
-  mStatus = 0;
-  mEnvelopeDocument = aEnvelopeDocument;
-  if (mEnvelopeDocument) {
-    nsCOMPtr<nsIDOMElement> element;
-    mEnvelopeDocument->GetDocumentElement(getter_AddRefs(element));
-    if (!element) return;
-
-    nsAutoString ns, name;
-    element->GetNamespaceURI(ns);
-    element->GetLocalName(name);
-    
-    if (ns.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kSOAPEnvURI)) &&
-        name.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kEnvelopeTagName))) {
-      mEnvelopeElement = element;
-      nsSOAPUtils::GetFirstChildElement(mEnvelopeElement, 
-                                        getter_AddRefs(element));
-      if (!element) return;
-      
-      element->GetNamespaceURI(ns);
-      element->GetLocalName(name);
-      
-      if (ns.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kSOAPEnvURI)) &&
-          name.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kHeaderTagName))) {
-        mHeaderElement = element;
-          
-        nsSOAPUtils::GetNextSiblingElement(mHeaderElement,
-                                           getter_AddRefs(element));
-        if (!element) return;
-        
-        element->GetNamespaceURI(ns);
-        element->GetLocalName(name);
-      }
-      
-      if (ns.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kSOAPEnvURI)) &&
-          name.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kBodyTagName))) {
-        mBodyElement = element;
-        
-        nsSOAPUtils::GetFirstChildElement(mBodyElement, 
-                                          getter_AddRefs(element));
-        if (!element) return;
-
-        element->GetNamespaceURI(ns);
-        element->GetLocalName(name);
-
-        // XXX This assumes that the first body entry is either a fault
-        // or a result and that the two are mutually exclusive 
-        if (ns.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kSOAPEnvURI)) &&
-            name.Equals(NS_ConvertASCIItoUCS2(nsSOAPUtils::kFaultTagName))) {
-          mFaultElement = element;
-        }
-        else {
-          mResultElement = element;
-        }
-      }
-    }
-  }
+  /* member initializers and constructor code */
 }
 
 nsSOAPResponse::~nsSOAPResponse()
 {
+  /* destructor code */
 }
 
-NS_IMPL_ISUPPORTS2(nsSOAPResponse, nsISOAPResponse, nsISecurityCheckedComponent)
+NS_IMPL_ISUPPORTS3(nsSOAPResponse, nsISOAPMessage, nsISOAPResponse, nsISecurityCheckedComponent)
 
-/* readonly attribute nsIDOMElement envelope; */
-NS_IMETHODIMP nsSOAPResponse::GetEnvelope(nsIDOMElement * *aEnvelope)
+/* attribute nsISOAPMessage respondingTo; */
+NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
 {
-  NS_ENSURE_ARG_POINTER(aEnvelope);
-  *aEnvelope = mEnvelopeElement;
-  NS_IF_ADDREF(*aEnvelope);
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-/* readonly attribute nsIDOMElement header; */
-NS_IMETHODIMP nsSOAPResponse::GetHeader(nsIDOMElement * *aHeader)
+NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
 {
-  NS_ENSURE_ARG_POINTER(aHeader);
-  *aHeader = mHeaderElement;
-  NS_IF_ADDREF(*aHeader);
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* readonly attribute nsIDOMElement body; */
-NS_IMETHODIMP nsSOAPResponse::GetBody(nsIDOMElement * *aBody)
+/* readonly attribute boolean generatedFault; */
+NS_IMETHODIMP nsSOAPResponse::GetGeneratedFault(PRBool *aGeneratedFault)
 {
-  NS_ENSURE_ARG_POINTER(aBody);
-  *aBody = mBodyElement;
-  NS_IF_ADDREF(*aBody);
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* readonly attribute unsigned long status; */
-NS_IMETHODIMP
-nsSOAPResponse::GetStatus(PRUint32 *aStatus)
+/* readonly attribute nsISOAPFault fault; */
+NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 {
-  NS_ENSURE_ARG_POINTER(aStatus);
-
-  *aStatus = mStatus;
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-nsSOAPResponse::SetStatus(PRUint32 aStatus)
+/* readonly attribute nsISOAPParameter returnValue; */
+NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
 {
-  mStatus = aStatus;
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
+#if 0
 
-/* readonly attribute string targetObjectURI; */
-NS_IMETHODIMP nsSOAPResponse::GetTargetObjectURI(char * *aTargetObjectURI)
-{
-  NS_ENSURE_ARG_POINTER(aTargetObjectURI);
-  *aTargetObjectURI = nsnull;
-  if (mResultElement) {
-    nsAutoString ns;
-    mResultElement->GetNamespaceURI(ns);
-    if (ns.Length() > 0) {
-      *aTargetObjectURI = ns.ToNewCString();
-    }
-  }
-  return NS_OK;
-}
-
-/* readonly attribute string methodName; */
-NS_IMETHODIMP nsSOAPResponse::GetMethodName(char * *aMethodName)
-{
-  NS_ENSURE_ARG_POINTER(aMethodName);
-  *aMethodName = nsnull;
-  if (mResultElement) {
-    nsAutoString localName;
-    mResultElement->GetLocalName(localName);
-    if (localName.Length() > 0) {
-      *aMethodName = localName.ToNewCString();
-    }
-  }
-  return NS_OK;
-}
+unmarshalling needs work
 
 /* boolean generatedFault (); */
 NS_IMETHODIMP nsSOAPResponse::GeneratedFault(PRBool *_retval)
@@ -247,6 +151,8 @@ NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
 
   return NS_OK;
 }
+
+#endif
 
 static const char* kAllAccess = "AllAccess";
 

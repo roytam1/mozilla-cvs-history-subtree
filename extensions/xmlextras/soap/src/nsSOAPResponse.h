@@ -23,6 +23,7 @@
 #ifndef nsSOAPResponse_h__
 #define nsSOAPResponse_h__
 
+#include "nsAWritableString.h"
 #include "nsISOAPResponse.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMDocument.h"
@@ -33,10 +34,10 @@ class nsSOAPResponse : public nsISOAPResponse,
                        public nsISecurityCheckedComponent
 {
 public:
-  nsSOAPResponse(nsIDOMDocument* aEnvelopeDocument);
-  virtual ~nsSOAPResponse();
-
   NS_DECL_ISUPPORTS
+
+  // nsISOAPResponse
+  NS_FORWARD_NSISOAPMESSAGE(nsISOAPMessage::)
 
   // nsISOAPResponse
   NS_DECL_NSISOAPRESPONSE
@@ -44,16 +45,8 @@ public:
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
-  NS_IMETHOD SetStatus(PRUint32 aStatus);
-
-protected:
-  nsCOMPtr<nsIDOMDocument> mEnvelopeDocument;
-  nsCOMPtr<nsIDOMElement> mEnvelopeElement;
-  nsCOMPtr<nsIDOMElement> mHeaderElement;
-  nsCOMPtr<nsIDOMElement> mBodyElement;
-  nsCOMPtr<nsIDOMElement> mResultElement;
-  nsCOMPtr<nsIDOMElement> mFaultElement;
-  PRUint32 mStatus;
+  nsSOAPResponse();
+  virtual ~nsSOAPResponse();
 };
 
 #endif
