@@ -81,7 +81,7 @@
   <!-- toolbar buttons customization -->
   <groupbox flex="1" id="prefShowButtons" orient="horizontal">
     <caption label="&toolbarIntro.label;"/>
-    <vbox>
+    <vbox id="prefShowButtonsbox0">
 
               <checkbox id="bookmarksButton"
                         label="&bookmarksButton.label;"

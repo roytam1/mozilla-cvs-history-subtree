@@ -795,7 +795,14 @@ function sidebar_overlay_destruct() {
     panels.database.RemoveObserver(panel_observer);
 }
 
+var gBusyOpeningDefault = false;
 function sidebar_open_default_panel(wait, tries) {
+
+  // check for making function reentrant
+  if (gBusyOpeningDefault)
+    return;
+  gBusyOpeningDefault = true;
+
   var panels = document.getElementById('sidebar-panels');
 
   debug("sidebar_open_default_panel("+wait+","+tries+")");
@@ -805,12 +812,15 @@ function sidebar_open_default_panel(wait, tries) {
     if (tries < 3) {
       // No children yet, try again later
       setTimeout('sidebar_open_default_panel('+(wait*2)+','+(tries+1)+')',wait);
+      gBusyOpeningDefault = false;
       return;
     } else {
       sidebar_fixup_datasource();
     }
   }
+  SidebarRebuild();
   sidebarObj.panels.refresh();
+  gBusyOpeningDefault = false;
 }
 
 //////////////////////////////////////////////////////////////
@@ -1111,10 +1121,12 @@ function SidebarExpandCollapse() {
     debug("Expanding the sidebar");
     sidebar_splitter.removeAttribute('state');
     sidebar_box.removeAttribute('collapsed');
+    SidebarSetButtonOpen(true);
   } else {
     debug("Collapsing the sidebar");
     sidebar_splitter.setAttribute('state', 'collapsed');
     sidebar_box.setAttribute('collapsed', 'true');
+    SidebarSetButtonOpen(false);
   }
 }
 
@@ -1157,6 +1169,7 @@ function SidebarShowHide() {
     sidebar_overlay_init();
     sidebar_menu_item.setAttribute('checked', 'true');
     tabs_menu.removeAttribute('hidden');
+    SidebarSetButtonOpen(true);
   } else {
     debug("Hiding the sidebar");
     var hide_everything = sidebar_panels_splitter.getAttribute('hidden') == 'true';
@@ -1171,6 +1184,7 @@ function SidebarShowHide() {
     sidebar_panels_splitter_box.setAttribute('collapsed', 'true');
     sidebar_menu_item.setAttribute('checked', 'false');
     tabs_menu.setAttribute('hidden', 'true');
+    SidebarSetButtonOpen(false);
   }
   // Immediately save persistent values
   document.persist('sidebar-title-box', 'hidden');
@@ -1452,6 +1466,10 @@ function persist_width() {
   // XXX Mini hack. Persist isn't working too well. Force the persist,
   // but wait until the width change has commited.
   setTimeout("document.persist('sidebar-box', 'width');",100);
+
+  var is_collapsed = document.getElementById('sidebar-box').
+                       getAttribute('collapsed') == 'true';
+  SidebarSetButtonOpen(!is_collapsed);
 }
 
 function SidebarFinishClick() {
@@ -1462,13 +1480,26 @@ function SidebarFinishClick() {
   // the sidebar-box gets the newly dragged width.
   setTimeout("persist_width()",100);
 
-  var is_collapsed = document.getElementById('sidebar-box').getAttribute('collapsed') == 'true' ? true : false;
+  var is_collapsed = document.getElementById('sidebar-box').getAttribute('collapsed') == 'true';
   debug("collapsed: " + is_collapsed);
   if (is_collapsed != sidebarObj.collapsed) {
     if (gMustInit)
       sidebar_overlay_init();
     sidebarObj.panels.refresh();
   }
+}
+
+function SidebarSetButtonOpen(aSidebarNowOpen)
+{
+  // change state so toolbar icon can be updated
+  var pt = document.getElementById("PersonalToolbar");
+  pt.setAttribute("prefixopen", aSidebarNowOpen);
+  
+  // set tooltip for toolbar icon
+  var header = document.getElementById("sidebar-title-box");
+  var tooltip = header.getAttribute(aSidebarNowOpen ? 
+                "tooltipclose" : "tooltipopen");
+  pt.setAttribute("prefixtooltip", tooltip);
 }
 
 function SidebarInitContextMenu(aMenu, aPopupNode)
