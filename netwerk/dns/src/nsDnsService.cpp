@@ -1313,6 +1313,7 @@ nsDNSService::Lookup(const char*     hostName,
 
         nsDNSLookup * lookup = FindOrCreateLookup(hostName);
         if (!lookup) return NS_ERROR_OUT_OF_MEMORY;
+        NS_ADDREF(lookup);  // keep it around for life of this method.
 
         request = new nsDNSRequest(lookup, userListener, userContext);
         if (!request) {
@@ -1321,7 +1322,6 @@ nsDNSService::Lookup(const char*     hostName,
         }
         NS_ADDREF(request); // for caller
 
-        NS_ADDREF(lookup);  // keep it around for life of this method.
         rv = lookup->EnqueueRequest(request);    // releases and re-acquires dns lock
         if (NS_FAILED(rv))  goto exit;
 
@@ -1334,11 +1334,12 @@ nsDNSService::Lookup(const char*     hostName,
         }
 
 exit:
-        NS_RELEASE(lookup); // it's either on the pending queue, or we're done with it
         if (lookup->IsNew())  EvictLookup(lookup);
+        NS_RELEASE(lookup); // it's either on the pending queue, or we're done with it
     }
 
     if (NS_SUCCEEDED(rv))  *result = request;    
+    else NS_IF_RELEASE(request);
     return rv;
 }
 
