@@ -29,7 +29,7 @@ interface nsISOAPDecoder;
 interface nsISOAPMessage;
 interface nsIVariant;
 interface nsISOAPAttachments;
-interface nsISchemaLoader;
+interface nsISchemaCollection;
 
 /**
  * This interface keeps track of all the known types and how
@@ -57,7 +57,7 @@ interface nsISOAPEncoding : nsISupports {
  *   specified styleURI, or null if the spefied alternative encoding
  *   does not exist and it was not requested that it be created.
  */
-  nsISOAPEncoding getAlternativeEncoding(
+  nsISOAPEncoding getStyle(
     in AString aStyleURI,
     in boolean aCreateIf);
 
@@ -119,7 +119,7 @@ interface nsISOAPEncoding : nsISupports {
 
   attribute nsISOAPDecoder defaultDecoder;
 
-  attribute nsISchemaLoader schemaLoader;
+  attribute nsISchemaCollection schemaCollection;
 
 /**
  * Encode the source variant

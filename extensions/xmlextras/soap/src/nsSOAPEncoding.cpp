@@ -54,7 +54,7 @@ nsSOAPEncodingRegistry::~nsSOAPEncodingRegistry()
   delete mEncodings;
 }
 
-nsresult nsSOAPEncodingRegistry::GetAlternativeEncoding(const nsAString& aStyleURI, PRBool aCreateIf, nsISOAPEncoding* * aEncoding)
+nsresult nsSOAPEncodingRegistry::GetStyle(const nsAString& aStyleURI, PRBool aCreateIf, nsISOAPEncoding* * aEncoding)
 {
   NS_SOAP_ENSURE_ARG_STRING(aStyleURI);
   NS_ENSURE_ARG_POINTER(aEncoding);
@@ -69,23 +69,23 @@ nsresult nsSOAPEncodingRegistry::GetAlternativeEncoding(const nsAString& aStyleU
   }
   return NS_OK;
 }
-nsresult nsSOAPEncodingRegistry::SetSchemaLoader(nsISchemaLoader* aSchemaLoader)
+nsresult nsSOAPEncodingRegistry::SetSchemaCollection(nsISchemaCollection* aSchemaCollection)
 {
-  NS_ENSURE_ARG(aSchemaLoader);
-  mSchemaLoader = aSchemaLoader;
+  NS_ENSURE_ARG(aSchemaCollection);
+  mSchemaCollection = aSchemaCollection;
   return NS_OK;
 }
-nsresult nsSOAPEncodingRegistry::GetSchemaLoader(nsISchemaLoader** aSchemaLoader)
+nsresult nsSOAPEncodingRegistry::GetSchemaCollection(nsISchemaCollection** aSchemaCollection)
 {
-  NS_ENSURE_ARG_POINTER(aSchemaLoader);
-  if (!mSchemaLoader) {
+  NS_ENSURE_ARG_POINTER(aSchemaCollection);
+  if (!mSchemaCollection) {
     nsresult rv;
-    mSchemaLoader = do_CreateInstance(NS_SCHEMALOADER_CONTRACTID, &rv);
+    mSchemaCollection = do_CreateInstance(NS_SCHEMALOADER_CONTRACTID, &rv);
     if (NS_FAILED(rv))
       return rv;
   }
-  *aSchemaLoader = mSchemaLoader;
-  NS_ADDREF(*aSchemaLoader);
+  *aSchemaCollection = mSchemaCollection;
+  NS_ADDREF(*aSchemaCollection);
   return NS_OK;
 }
 
@@ -202,12 +202,12 @@ NS_IMETHODIMP nsSOAPEncoding::GetStyleURI(nsAString & aStyleURI)
   return NS_OK;
 }
 
-/* nsISOAPEncoding getAlternativeEncoding (in AString aStyleURI, in boolean aCreateIf); */
-NS_IMETHODIMP nsSOAPEncoding::GetAlternativeEncoding(const nsAString & aStyleURI, PRBool aCreateIf, nsISOAPEncoding **_retval)
+/* nsISOAPEncoding getStyle (in AString aStyleURI, in boolean aCreateIf); */
+NS_IMETHODIMP nsSOAPEncoding::GetStyle(const nsAString & aStyleURI, PRBool aCreateIf, nsISOAPEncoding **_retval)
 {
   NS_SOAP_ENSURE_ARG_STRING(aStyleURI);
   NS_ENSURE_ARG_POINTER(_retval);
-  return mRegistry->GetAlternativeEncoding(aStyleURI, aCreateIf, _retval);
+  return mRegistry->GetStyle(aStyleURI, aCreateIf, _retval);
 }
 
 /* nsISOAPEncoder setEncoder (in AString aSchemaNamespaceURI, in AString aSchemaType, in nsISOAPEncoder aEncoder); */
@@ -311,17 +311,6 @@ NS_IMETHODIMP nsSOAPEncoding::Decode(nsIDOMElement *aSource, nsISchemaType *aSch
   }
   *_retval = nsnull;
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* attribute nsISchemaLoader schemaLoader; */
-NS_IMETHODIMP nsSOAPEncoding::GetSchemaLoader(nsISchemaLoader * *aSchemaLoader)
-{
-  NS_ENSURE_ARG_POINTER(aSchemaLoader);
-  return mRegistry->GetSchemaLoader(aSchemaLoader);
-}
-NS_IMETHODIMP nsSOAPEncoding::SetSchemaLoader(nsISchemaLoader * aSchemaLoader)
-{
-  return mRegistry->SetSchemaLoader(aSchemaLoader);
 }
 
 /* attribute nsISOAPEncoder defaultEncoder; */

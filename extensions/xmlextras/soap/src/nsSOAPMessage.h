@@ -33,7 +33,6 @@
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 #include "nsIVariant.h"
-#include "nsISchemaLoader.h"
 
 class nsSOAPMessage : public nsISOAPMessage, 
   public nsISecurityCheckedComponent,

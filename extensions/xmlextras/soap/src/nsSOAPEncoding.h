@@ -31,7 +31,7 @@
 #include "nsISOAPDecoder.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
-#include "nsISchemaLoader.h"
+#include "nsISchema.h"
 
 class nsSOAPEncoding;
 
@@ -46,7 +46,7 @@ public:
   virtual ~nsSOAPEncodingRegistry();
 protected:
   nsSupportsHashtable* mEncodings;
-  nsCOMPtr<nsISchemaLoader> mSchemaLoader;
+  nsCOMPtr<nsISchemaCollection> mSchemaCollection;
 };
 
 class nsSOAPEncoding : public nsISOAPEncoding,
