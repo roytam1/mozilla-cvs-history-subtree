@@ -7,13 +7,13 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/psm,   
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
+mozilla/nsprpub,        FOLDER_OUTLINER_20010531_BRANCH
+mozilla/security/nss,   FOLDER_OUTLINER_20010531_BRANCH
+mozilla/security/psm,  FOLDER_OUTLINER_20010531_BRANCH
+mozilla/security/manager, FOLDER_OUTLINER_20010531_BRANCH
+mozilla/accessible, FOLDER_OUTLINER_20010531_BRANCH
+DirectorySDKSourceC,    FOLDER_OUTLINER_20010531_BRANCH
 mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/gfx2, FOLDER_OUTLINER_20010531_BRANCH
+mozilla/modules/libpr0n, FOLDER_OUTLINER_20010531_BRANCH
+SeaMonkeyAll, FOLDER_OUTLINER_20010531_BRANCH
