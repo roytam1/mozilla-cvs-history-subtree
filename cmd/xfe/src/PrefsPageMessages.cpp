@@ -145,7 +145,7 @@ Widget XFE_PrefsPageMessages::createReplyFrame (Widget parent,
     // create the widgets
     i=0;
 
-    // we need this crap because XmLists are stupid
+    // we need this because XmLists don't know thier own visuals, etc
     Visual *v=0;
     Colormap cmap=0;
     Cardinal depth=0;

@@ -147,7 +147,7 @@ Widget XFE_PrefsPageAddress::createMessageFrame(Widget parent,
     message_label =
         XmCreateLabelGadget(message_frame, "messageLabel",av,ac);
 
-    // we need this crap because XmLists are stupid
+    // we need this because XmLists don't know thier own visuals, etc
     Visual *v=0;
     Colormap cmap=0;
     Cardinal depth=0;

@@ -113,7 +113,7 @@ XFE_PrefsPageNServer::createServerListFrame(Widget parent,
         XmCreateLabelGadget(frame, "serverLabel",av,ac);
 
     
-    // we need this crap because XmLists are stupid
+    // we need this because XmLists don't know thier own visuals, etc
     Visual *v=0;
     Colormap cmap=0;
     Cardinal depth=0;
