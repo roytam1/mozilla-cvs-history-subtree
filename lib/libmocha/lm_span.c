@@ -427,7 +427,10 @@ span_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   char *font_family, *font_weight, *font_slant;
   int32 font_size;
 
-  XP_ASSERT(JSVAL_IS_INT(id));
+  if (!JSVAL_IS_INT(id)) {
+    return JS_TRUE;
+  }
+
   slot = JSVAL_TO_INT(id);
 
   span = JS_GetInstancePrivate(cx, obj, &lm_span_class, NULL);
