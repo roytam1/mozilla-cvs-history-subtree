@@ -1,8 +1,0 @@
-dist
-Makefile
-config.log
-config.cache
-config.status
-.client-defs.mk
-myconfig.sh
-config-defs.h
