@@ -56,14 +56,16 @@
 class nsMdbTableEnumerator : public nsISimpleEnumerator
 {
 protected:
-  nsIMdbEnv*   mEnv;
-  nsIMdbTable* mTable;
-
-  nsIMdbTableRowCursor* mCursor;
-  nsIMdbRow*            mCurrent;
-
   nsMdbTableEnumerator();
   virtual ~nsMdbTableEnumerator();
+
+  nsIMdbEnv*   mEnv;
+
+private:
+  // subclasses should not tweak these
+  nsIMdbTable* mTable;
+  nsIMdbTableRowCursor* mCursor;
+  nsIMdbRow*            mCurrent;
 
 public:
   // nsISupports methods
@@ -254,6 +256,7 @@ protected:
   mdb_column kToken_VisitCountColumn;
   mdb_column kToken_NameColumn;
   mdb_column kToken_HostnameColumn;
+  mdb_column kToken_HiddenColumn;
 
   //
   // AddPage-oriented stuff
@@ -316,6 +319,7 @@ protected:
   {
   protected:
     mdb_column mURLColumn;
+    mdb_column mHiddenColumn;
     mdb_column mSelectColumn;
     void*      mSelectValue;
     PRInt32    mSelectValueLen;
@@ -324,10 +328,12 @@ protected:
 
   public:
     URLEnumerator(mdb_column aURLColumn,
+                  mdb_column aHiddenColumn,
                   mdb_column aSelectColumn = mdb_column(0),
                   void* aSelectValue = nsnull,
                   PRInt32 aSelectValueLen = 0) :
       mURLColumn(aURLColumn),
+      mHiddenColumn(aHiddenColumn),
       mSelectColumn(aSelectColumn),
       mSelectValue(aSelectValue),
       mSelectValueLen(aSelectValueLen)
@@ -343,8 +349,10 @@ protected:
   {
   public:
     SearchEnumerator(searchQuery *aQuery,
+                     mdb_column aHiddenColumn,
                      nsGlobalHistory *aHistory) :
       mQuery(aQuery),
+      mHiddenColumn(aHiddenColumn),
       mHistory(aHistory)
     {}
 
@@ -352,6 +360,7 @@ protected:
 
   protected:
     searchQuery *mQuery;
+    mdb_column mHiddenColumn;
     nsGlobalHistory *mHistory;
     nsHashtable mUniqueRows;
     
@@ -370,6 +379,7 @@ protected:
   protected:
     nsGlobalHistory* mHistory;
     mdb_column mURLColumn;
+    mdb_column mHiddenColumn;
     mdb_column mCommentColumn;
     AutocompleteExclude* mExclude;
     const nsAReadableString& mSelectValue;
@@ -380,11 +390,13 @@ protected:
     AutoCompleteEnumerator(nsGlobalHistory* aHistory,
                            mdb_column aURLColumn,
                            mdb_column aCommentColumn,
+                           mdb_column aHiddenColumn,
                            const nsAReadableString& aSelectValue,
                            AutocompleteExclude* aExclude) :
       mHistory(aHistory),
       mURLColumn(aURLColumn),
       mCommentColumn(aCommentColumn),
+      mHiddenColumn(aHiddenColumn),
       mSelectValue(aSelectValue),
       mExclude(aExclude) {}
 
