@@ -448,6 +448,44 @@ static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
 }
 
 
+/*
+ *  Part of this is borrowed from the LDAP C-SDK, we need our own free method
+ *  here, since we use Perl memory allocation macros. This used to cause
+ *  serious problems on Windows/NT and ActiveState Perl for instance...
+ */
+void
+LDAP_CALL
+ldap_mods_free_perl(LDAPMod **mods, int freemods)
+{
+  int	i;
+
+  if (! mods)
+    return;
+
+  for (i = 0; mods[i] != NULL; i++)
+    {
+      if (mods[i]->mod_op & LDAP_MOD_BVALUES)
+	{
+	  if (mods[i]->mod_bvalues != NULL)
+	    {
+	      ber_bvecfree(mods[i]->mod_bvalues);
+	    }
+	}
+      else if (mods[i]->mod_values != NULL)
+	{
+	  Safefree(mods[i]->mod_values);
+	}
+      if (mods[i]->mod_type != NULL)
+	{
+	  Safefree(mods[i]->mod_type);
+	}
+      Safefree((char *) mods[i]);
+    }
+
+  if (freemods)
+    Safefree((char *) mods);
+}
+
 
 MODULE = Mozilla::LDAP::API		PACKAGE = Mozilla::LDAP::API
 PROTOTYPES: ENABLE
@@ -481,7 +519,7 @@ ldap_add(ld,dn,attrs)
 	CLEANUP:
 	
 	if (attrs)
-	  ldap_mods_free(attrs, 1);
+	  ldap_mods_free_perl(attrs, 1);
 
 #ifdef LDAPV3
 
@@ -498,7 +536,7 @@ ldap_add_ext(ld,dn,attrs,serverctrls,clientctrls,msgidp)
 	msgidp
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free(attrs, 1);
+	  ldap_mods_free_perl(attrs, 1);
 
 int
 ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
@@ -509,7 +547,7 @@ ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
 	LDAPControl **	clientctrls
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free(attrs, 1);
+	  ldap_mods_free_perl(attrs, 1);
 
 #endif
 
@@ -520,7 +558,7 @@ ldap_add_s(ld,dn,attrs)
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
 	CLEANUP:
 	if (attrs)
-	  ldap_mods_free(attrs, 1);
+	  ldap_mods_free_perl(attrs, 1);
 
 void
 ldap_ber_free(ber,freebuf)
@@ -1038,7 +1076,7 @@ ldap_modify(ld,dn,mods)
 	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free(mods, 1);
+	  ldap_mods_free_perl(mods, 1);
 
 #ifdef LDAPV3
 
@@ -1055,7 +1093,7 @@ ldap_modify_ext(ld,dn,mods,serverctrls,clientctrls,msgidp)
 	msgidp
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free(mods, 1);
+	  ldap_mods_free_perl(mods, 1);
 
 int
 ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
@@ -1066,7 +1104,7 @@ ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
 	LDAPControl **	clientctrls
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free(mods, 1);
+	  ldap_mods_free_perl(mods, 1);
 
 #endif
 
@@ -1074,10 +1112,10 @@ int
 ldap_modify_s(ld,dn,mods)
 	LDAP *		ld
 	const char *	dn
-	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
+	LDAPMod **	mods = hash2mod($arg, 0, "$func_name");
 	CLEANUP:
 	if (mods)
-	  ldap_mods_free(mods, 1);
+	  ldap_mods_free_perl(mods, 1);
 
 int
 ldap_modrdn(ld,dn,newrdn)
