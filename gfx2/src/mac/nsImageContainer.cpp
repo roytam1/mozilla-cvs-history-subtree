@@ -50,6 +50,8 @@ NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, nsIImageCo
 
   mSize.SizeTo(aWidth, aHeight);
 
+  mObserver = aObserver;
+
   return NS_OK;
 }
 
