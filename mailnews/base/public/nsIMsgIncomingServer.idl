@@ -297,6 +297,7 @@ interface nsIMsgIncomingServer : nsISupports {
 
   /* used for setting up the search UI */
   readonly attribute nsMsgSearchScopeValue searchScope;
+
 };
 
 %{C++
