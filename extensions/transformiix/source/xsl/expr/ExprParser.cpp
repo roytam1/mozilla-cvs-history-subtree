@@ -20,6 +20,9 @@
  * Contributor(s):
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
+ * Olivier Gerardin, ogerardin@vo.lu
+ *   -- fixed a bug in CreateExpr (@xxx=/yyy was parsed as
+ *      @xxx=@xxx/yyy)
  *
  * $Id$
  */
@@ -307,6 +310,7 @@ Expr*  ExprParser::createExpr(ExprLexer& lexer) {
                 }
                 exprs.push(expr);
                 ops.push(tok);
+                expr = 0; // OG, prevent reuse of expr
                 break;
             }
             default:
@@ -316,9 +320,14 @@ Expr*  ExprParser::createExpr(ExprLexer& lexer) {
         }
     }
 
+    // make sure expr != 0, will this happen?
+    if (( expr == 0 ) && (!exprs.empty()))
+        expr = (Expr*) exprs.pop();
+
     while (!exprs.empty() ) {
         expr = createBinaryExpr((Expr*)exprs.pop(), expr, (Token*)ops.pop());
     }
+
     return expr;
 
 } //-- createExpr
@@ -559,9 +568,12 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
 
     parsePredicates(lstep, lexer);
 
-    String foo;
-    lstep->toString(foo);
-    //cout << "returning LocationStep: "<< foo <<endl;
+    //<debug>
+    //String tmp;
+    //lstep->toString(tmp);
+    //cout << "returning LocationStep: "<< tmp <<endl;
+    //</debug>
+
     return lstep;
 } //-- createLocationPath
 
