@@ -1285,7 +1285,14 @@ nsTextFrame::ContentChanged(nsIPresContext* aPresContext,
     nsTextFrame*  textFrame = this;
     while (textFrame) {
       textFrame->mState |= NS_FRAME_IS_DIRTY;
-      textFrame = (nsTextFrame*)textFrame->mNextInFlow;
+#ifdef IBMBIDI
+      nsIFrame* nextBidi;
+      textFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &nextBidi);
+      if (nextBidi)
+        textFrame = (nsTextFrame*)nextBidi;
+      else
+#endif
+        textFrame = (nsTextFrame*)textFrame->mNextInFlow;
     }
   }
 
@@ -1514,7 +1521,6 @@ nsTextFrame::PrepareUnicodeText(nsTextTransformer& aTX,
     }
     dstOffset += wordLen;
   }
-
 #ifdef DEBUG
   if (aIndexBuffer) {
     NS_ASSERTION(indexp <= aIndexBuffer->mBuffer + aIndexBuffer->mBufferLen,
@@ -1539,6 +1545,17 @@ nsTextFrame::PrepareUnicodeText(nsTextTransformer& aTX,
       }
     }
   }
+
+#ifdef IBMBIDI
+  // Simon try
+  indexp = aIndexBuffer ? aIndexBuffer->mBuffer : nsnull;
+  if (indexp && (mContentOffset > 0) && (0 == textLength)) {
+    PRInt32 i = mContentLength;
+    while (--i >= 0) {
+      *indexp++ = mContentOffset;
+    }
+  }
+#endif
 
   if (aIndexBuffer) {
     PRInt32* ip = aIndexBuffer->mBuffer;
@@ -3236,7 +3253,13 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
     NS_ASSERTION(0, "invalid offset passed to GetPointFromOffset");
     inOffset = mContentLength;
   }
-
+#ifdef IBMBIDI
+  void *level;
+  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+  if (((PRUint8)level & 1) && (inOffset <= textLength))
+      // if inOffset > textLength, no need for Bidi processing: who cares in which direction we measure the whole content?
+    inOffset = textLength - inOffset;
+#endif
   while (inOffset >=0 && ip[inOffset] < mContentOffset) //buffer has shrunk
     inOffset --;
   nscoord width = mRect.width;
@@ -3248,28 +3271,6 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
   }
   else
   {
-#ifdef IBMBIDI
-    void *level;
-    GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
-    if (((PRUint8)level & 1) && (inOffset <= textLength))
-      // if inOffset > textLength, no need for Bidi processing: who cares in which direction we measure the whole content?
-    {
-      PRInt32 bidiOffset = textLength - inOffset;
-      if (ts.mSmallCaps || (0 != ts.mWordSpacing) || (0 != ts.mLetterSpacing) || ts.mJustifying)
-      {
-        GetWidth(*inRendContext, ts,
-                 paintBuffer.mBuffer + inOffset, ip[bidiOffset]-mContentOffset,
-                 &width);
-      }
-      else
-      {
-        if (bidiOffset >=0)
-          inRendContext->GetWidth(paintBuffer.mBuffer + inOffset, ip[bidiOffset]-mContentOffset,width);
-      }
-    }
-    else
-    {
-#endif
     if (ts.mSmallCaps || (0 != ts.mWordSpacing) || (0 != ts.mLetterSpacing) || ts.mJustifying)
     {
       GetWidth(*inRendContext, ts,
@@ -3281,9 +3282,6 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
       if (inOffset >=0)
         inRendContext->GetWidth(paintBuffer.mBuffer, ip[inOffset]-mContentOffset,width);
     }
-#ifdef IBMBIDI
-    }
-#endif
     if (inOffset > textLength && (TEXT_TRIMMED_WS & mState)){
       //
       // Offset must be after a space that has
@@ -3363,6 +3361,7 @@ nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
 {
 #ifdef IBMBIDI
   void *level;
+  
   GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
   PRBool isOddLevel = ((PRUint8)level & 1);
   if ((eSelectCharacter == aPos->mAmount)
@@ -4697,7 +4696,7 @@ nsTextFrame::Reflow(nsIPresContext* aPresContext,
   // has actually changed...
   if (eReflowReason_Incremental == aReflowState.reason ||
       eReflowReason_Dirty == aReflowState.reason) {
-    Invalidate(aPresContext, mRect);
+      Invalidate(aPresContext, mRect);
   }
 
   // For future resize reflows we would like to avoid measuring the text.

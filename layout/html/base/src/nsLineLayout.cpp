@@ -877,7 +877,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
           }
         }
         else if (type == nsIReflowCommand::ReflowDirty &&
-                 (state & NS_FRAME_IS_DIRTY)) {          
+                 (state & NS_FRAME_IS_DIRTY)) {
           reason = eReflowReason_Dirty;
         }
       }
@@ -2767,7 +2767,11 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         pfd->mFrame->SetRect(mPresContext, pfd->mBounds);
         pfd = pfd->mNext;
       }
+#ifdef IBMBIDI
+      aLineBounds.x += dx;
+#else
       aLineBounds.width += dx;
+#endif
     }
 #ifndef IBMBIDI
     if ((NS_STYLE_DIRECTION_RTL == psd->mDirection) &&

@@ -96,6 +96,10 @@ class nsIReflowCallback;
 #define VERIFY_REFLOW_INCLUDE_SPACE_MANAGER 0x40
 #define VERIFY_REFLOW_DURING_RESIZE_REFLOW  0x80
 
+#ifdef IBMBIDI // Constant for Set/Get CursorBidiLevel
+#define BIDI_LEVEL_UNDEFINED 0x80
+#endif
+
 // for PostAttributeChanged
 enum nsAttributeChangeType {
   eChangeType_Set = 0,       // Set attribute
@@ -450,6 +454,23 @@ public:
   NS_IMETHOD ClearTotals() = 0;
   NS_IMETHOD DumpReflows() = 0;
   NS_IMETHOD CountReflows(const char * aName, PRUint32 aType) = 0;
+#endif
+
+#ifdef IBMBIDI
+  /**
+   * SetCursorBidiLevel will set the Bidi embedding level for the cursor. 0-63
+   */
+  NS_IMETHOD SetCursorBidiLevel(PRUint8 aLevel) = 0;
+
+  /**
+   * GetCursorBidiLevel will get the Bidi embedding level for the cursor. 0-63
+   */
+  NS_IMETHOD GetCursorBidiLevel(PRUint8 *aOutLevel) = 0;
+
+  /**
+   * UndefineCursorBidiLevel will set the Bidi embedding level for the cursor to an out-of-range value
+   */
+  NS_IMETHOD UndefineCursorBidiLevel(void) = 0;
 #endif
 
 };

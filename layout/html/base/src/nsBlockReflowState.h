@@ -5026,7 +5026,18 @@ nsBlockFrame::PostPlaceLine(nsBlockReflowState& aState,
   }
 
   // Update xmost
+#ifdef IBMBIDI
+  nscoord xmost;
+  const nsStyleDisplay* display;
+  GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+  if (NS_STYLE_DIRECTION_RTL == display->mDirection)
+    xmost = aLine->mBounds.width;
+  else
+    xmost = aLine->mBounds.XMost();
+#else
   nscoord xmost = aLine->mBounds.XMost();
+#endif
 #ifdef DEBUG
   if (CRAZY_WIDTH(xmost)) {
     ListTag(stdout);

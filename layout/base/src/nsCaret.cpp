@@ -538,93 +538,87 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 					// NS_STYLE_DIRECTION_LTR : LTR or Default
 					// NS_STYLE_DIRECTION_RTL
 					// NS_STYLE_DIRECTION_INHERIT
+          nsCOMPtr<nsIPresContext> presContext;
+          err = presShell->GetPresContext(getter_AddRefs(presContext));
+            
+          PRBool bidiEnabled = PR_FALSE;
+          if (presContext)
+            presContext->BidiEnabled(bidiEnabled);
 
-          nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mPresShell);
-          if (selCon)
+          if (bidiEnabled)
           {
-            nsCOMPtr<nsIPresContext> presContext;
-            err = presShell->GetPresContext(getter_AddRefs(presContext));
-            
-            PRBool bidiEnabled = PR_FALSE;
-            if (presContext)
-              presContext->BidiEnabled(bidiEnabled);
-            
-            if (bidiEnabled)
+            presShell->GetCursorBidiLevel(&bidiLevel);
+            if (bidiLevel & BIDI_LEVEL_UNDEFINED)
             {
-
-              selCon->GetCursorBidiLevel(&bidiLevel);
-              if (bidiLevel & nsISelectionController::BIDI_LEVEL_UNDEFINED)
+              // There has been a reflow, so we reset the cursor Bidi level to the level of the current frame
+              if (!presContext) // Use the style default
+                bidiLevel = display->mDirection;
+              else
               {
-                // There has been a reflow, so we reset the cursor Bidi level to the level of the current frame
-                if (!presContext) // Use the style default
-                  bidiLevel = display->mDirection;
-                else
-                {
-                  void *level;
-                  theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel, &level);
-                  bidiLevel = (PRUint8)level;
-                  selCon->SetCursorBidiLevel(bidiLevel);
-                }
+                void *level;
+                theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel, &level);
+                bidiLevel = (PRUint8)level;
+                presShell->SetCursorBidiLevel(bidiLevel);
               }
+            }
 
-              PRInt32 start;
-              PRInt32 end;
-              nsIFrame* frameBefore;
-              nsIFrame* frameAfter;
-              PRUint8 levelBefore;     // Bidi level of the character before the caret
-              PRUint8 levelAfter;      // Bidi level of the character after the caret
+            PRInt32 start;
+            PRInt32 end;
+            nsIFrame* frameBefore;
+            nsIFrame* frameAfter;
+            PRUint8 levelBefore;     // Bidi level of the character before the caret
+            PRUint8 levelAfter;      // Bidi level of the character after the caret
 
-              theFrame->GetOffsets(start, end);
+            theFrame->GetOffsets(start, end);
 
-              if (start == theFrameOffset || end == theFrameOffset)
+            if (start == theFrameOffset || end == theFrameOffset)
+            {
+              /* Boundary condition, we need to know the Bidi levels of the characters before and after the cursor */
+              if (NS_SUCCEEDED(frameSelection->GetPrevNextBidiLevels(presContext, contentNode, contentOffset,
+                &frameBefore, &frameAfter,
+                &levelBefore, &levelAfter)))
               {
-                /* Boundary condition, we need to know the Bidi levels of the characters before and after the cursor */
-                if (NS_SUCCEEDED(frameSelection->GetPrevNextBidiLevels(presContext, contentNode, contentOffset,
-                  &frameBefore, &frameAfter,
-                  &levelBefore, &levelAfter)))
+                if (levelBefore != levelAfter)
                 {
-                  if (levelBefore != levelAfter)
+                  bidiLevel = PR_MAX(bidiLevel, PR_MIN(levelBefore, levelAfter));                                 // rule c3
+                  bidiLevel = PR_MIN(bidiLevel, PR_MAX(levelBefore, levelAfter));                                 // rule c4
+                  if (bidiLevel == levelBefore                                                                    // rule c1
+                      || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelBefore) & 1)    // rule c5
+                      || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelBefore) & 1))   // rule c9
                   {
-                    bidiLevel = PR_MAX(bidiLevel, PR_MIN(levelBefore, levelAfter));                                 // rule c3
-                    bidiLevel = PR_MIN(bidiLevel, PR_MAX(levelBefore, levelAfter));                                 // rule c4
-                    if (bidiLevel == levelBefore                                                                    // rule c1
-                        || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelBefore) & 1)    // rule c5
-                        || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelBefore) & 1))   // rule c9
+                    if (theFrame != frameBefore)
                     {
-                      if (theFrame != frameBefore)
+                      if (frameBefore) // if there is a frameBefore, move into it, setting HINTLEFT to make sure we stay there
                       {
-                        if (frameBefore) // if there is a frameBefore, move into it, setting HINTLEFT to make sure we stay there
-                        {
-                          theFrame = frameBefore;
-                          theFrame->GetOffsets(start, end);
-                          theFrameOffset = end;
-                          domSelection->SetHint(PR_FALSE);
-                        }
-                        else // if there is no frameBefore, we must be at the beginning of the line
-                          // so we stay with the current frame and just set HINTRIGHT
-                        {
-                          domSelection->SetHint(PR_TRUE);
-                        }
+                        theFrame = frameBefore;
+                        theFrame->GetOffsets(start, end);
+                        theFrameOffset = end;
+                        domSelection->SetHint(PR_FALSE);
+                      }
+                      else // if there is no frameBefore, we must be at the beginning of the line
+                        // so we stay with the current frame and just set HINTRIGHT
+                      {
+                        domSelection->SetHint(PR_TRUE);
                       }
                     }
-                    else if (bidiLevel == levelAfter                                                                   // rule c2
-                             || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelAfter) & 1)   // rule c6  
-                             || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelAfter) & 1))  // rule c10
+                  }
+                  else if (bidiLevel == levelAfter                                                                   // rule c2
+                           || bidiLevel > levelBefore && bidiLevel < levelAfter && !((bidiLevel ^ levelAfter) & 1)   // rule c6  
+                           || bidiLevel < levelBefore && bidiLevel > levelAfter && !((bidiLevel ^ levelAfter) & 1))  // rule c10
+                  {
+                    if (theFrame != frameAfter)
                     {
-                      if (theFrame != frameAfter)
+                      if (frameAfter) // if there is a frameAfter, move into it, setting HINTRIGHT to make sure we stay there
                       {
-                        if (frameAfter) // if there is a frameAfter, move into it, setting HINTRIGHT to make sure we stay there
-                        {
-                          theFrame = frameAfter;
-                          theFrame->GetOffsets(start, end);
-                          theFrameOffset = start;
-                          domSelection->SetHint(PR_TRUE);
-                        }
-                        else  // if there is no frameAfter, we must be at the end of the line
-                          // so we stay with the current frame and just set HINTLEFT
-                        {
-                          domSelection->SetHint(PR_FALSE);
-                        }
+                        theFrame = frameAfter;
+                        theFrame->GetOffsets(start, end);
+                        theFrameOffset = start;
+                        domSelection->SetHint(PR_TRUE);
+                      }
+                      else  // if there is no frameAfter, we must be at the end of the line
+                        // so we stay with the current frame and just set HINTLEFT
+                      {
+                        domSelection->SetHint(PR_FALSE);
                       }
                     }
                   }
@@ -818,19 +812,14 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
     {
       nsRect hookRect;
       PRBool bidiLevel=PR_FALSE;
-
-      nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mPresShell);
-      if (selCon)
-      {
-        if (mBidiKeyboard)
-          mBidiKeyboard->IsLangRTL(&bidiLevel);
-        // If keyboard language is RTL, draw the hook on the left; if LTR, to the right
-        hookRect.SetRect(caretRect.x + caretRect.width * ((bidiLevel) ? -1 : 1), 
-                         caretRect.y + caretRect.width,
-                         caretRect.width,
-                         caretRect.width);
-        mHookRect = hookRect;
-      }
+      if (mBidiKeyboard)
+        mBidiKeyboard->IsLangRTL(&bidiLevel);
+      // If keyboard language is RTL, draw the hook on the left; if LTR, to the right
+      hookRect.SetRect(caretRect.x + caretRect.width * ((bidiLevel) ? -1 : 1), 
+                       caretRect.y + caretRect.width,
+                       caretRect.width,
+                       caretRect.width);
+      mHookRect = hookRect;
     }
 #endif //IBMBIDI
 		mCaretRect = caretRect;

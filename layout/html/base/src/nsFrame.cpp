@@ -2049,7 +2049,17 @@ nsFrame::Invalidate(nsIPresContext* aPresContext,
   
     GetOffsetFromView(aPresContext, offset, &view);
     NS_ASSERTION(nsnull != view, "no view");
-    rect += offset;
+#ifdef IBMBIDI
+    const nsStyleDisplay* display;
+    GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+    if (display->mDirection == NS_STYLE_DIRECTION_RTL) {
+      rect.x -= offset.x;
+      rect.y += offset.y;
+      rect.width += offset.x;
+    }
+    else
+#endif
+      rect += offset;
     view->GetViewManager(viewManager);
     viewManager->UpdateView(view, rect, flags);
   }
@@ -3382,7 +3392,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
 #ifdef IBMBIDI // Simon
   if (aPos->mAmount != eSelectNoAmount)
   {
-    void *level;
+    void* level;
     newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
     if (aPos->mDirection == eDirNext)
       aPos->mStartOffset = ((PRUint8)level & 1) ? -1 : 0;

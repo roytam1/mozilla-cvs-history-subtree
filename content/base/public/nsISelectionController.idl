@@ -57,8 +57,6 @@ interface nsISelectionController : nsISupports
    const short SELECTION_ON = 2;
    const short SELECTION_DISABLED = 3;
 
-   const short BIDI_LEVEL_UNDEFINED = 0x80;
-
    /**
    * SetDisplaySelection will set the display mode for the selection. OFF,ON,DISABLED
    */
@@ -226,23 +224,6 @@ interface nsISelectionController : nsISupports
    *  @param aReturnBool   boolean returned TRUE if visible FALSE if not
    */
     boolean checkVisibility(in nsIDOMNode node, in short startOffset, in short endOffset);
-
-    /**
-     * SetCursorBidiLevel will set the Bidi embedding level for the cursor. 0-63
-     */
-     void    setCursorBidiLevel(in PRUint8 level);
-    
-    /**
-     * GetCursorBidiLevel will get the Bidi embedding level for the cursor. 0-63
-     */
-     PRUint8 getCursorBidiLevel();
-    
-    /**
-     * UndefineCursorBidiLevel will set the Bidi embedding level for the cursor to an out-of-range value
-     */
-     void    undefineCursorBidiLevel();
-
-
 };
 %{ C++
    #define NS_ISELECTIONCONTROLLER_CID \

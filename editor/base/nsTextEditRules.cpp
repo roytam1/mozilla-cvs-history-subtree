@@ -40,6 +40,10 @@
 #include "nsEditorUtils.h"
 #include "EditTxn.h"
 #include "TypeInState.h"
+#ifdef IBMBIDI
+#include "nsIPresContext.h"
+#include "nsIFrameSelection.h"
+#endif // IBMBIDI
 
 static NS_DEFINE_CID(kContentIteratorCID,   NS_CONTENTITERATOR_CID);
 static NS_DEFINE_IID(kRangeCID, NS_RANGE_CID);
@@ -212,6 +216,21 @@ nsTextEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
     
     // create moz-br and adjust selection if needed
     res = AdjustSelection(selection, aDirection);
+#ifdef IBMBIDI
+    /* After inserting text the cursor Bidi level must be set to the level of the inserted text.
+     * This is difficult, because we cannot know what the level is until after the Bidi algorithm
+     * is applied to the whole paragraph.
+     *
+     * So we set the cursor Bidi level to UNDEFINED here, and the caret code will set it correctly later
+     */
+    if (action == nsEditor::kOpInsertText) {
+      nsCOMPtr<nsIPresShell> shell;
+      mEditor->GetPresShell(getter_AddRefs(shell));
+      if (shell) {
+        shell->UndefineCursorBidiLevel();
+      }
+    }
+#endif
   }
   return res;
 }
@@ -836,6 +855,64 @@ nsTextEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
     *aCancel = PR_TRUE;
     return NS_OK;
   }
+#ifdef IBMBIDI // Test for distance between caret and text that will be deleted
+  nsCOMPtr<nsIDOMNode> node;
+  PRInt32 offset;
+
+  nsresult res = mEditor->GetStartNodeAndOffset(aSelection, &node, &offset);
+  if (NS_FAILED(res)) return res;
+  if (!node) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIPresShell> shell;
+  mEditor->GetPresShell(getter_AddRefs(shell));
+  if (shell)
+  {
+    nsCOMPtr<nsIPresContext> context;
+    shell->GetPresContext(getter_AddRefs(context));
+    if (context)
+    {
+      PRBool bidiEnabled;
+      context->BidiEnabled(bidiEnabled);
+      if (bidiEnabled)
+      {
+        nsCOMPtr<nsIFrameSelection> frameSelection;
+        shell->GetFrameSelection(getter_AddRefs(frameSelection));
+        if (frameSelection)
+        {
+          nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+          if (content)
+          {
+            nsIFrame *deleteInFrame;
+            PRInt32 frameOffset;
+
+            shell->GetPrimaryFrameFor(content, &deleteInFrame);
+            if (deleteInFrame)
+            {
+              PRUint8 currentCursorLevel;
+              PRUint8 frameLevel;
+              void *value;
+
+              res = deleteInFrame->GetChildFrameContainingOffset(offset, nsIEditor::eNext==aCollapsedAction, &frameOffset, &deleteInFrame);
+              if NS_SUCCEEDED(res)
+              {
+                shell->GetCursorBidiLevel(&currentCursorLevel);
+                nsIAtom* embeddingLevel = NS_NewAtom("EmbeddingLevel");
+                deleteInFrame->GetBidiProperty(context, embeddingLevel, &value);
+                frameLevel = (PRUint8)value;
+                shell->SetCursorBidiLevel(frameLevel);
+                if (currentCursorLevel != frameLevel)
+                {
+                  *aCancel = PR_TRUE;
+                  return NS_OK;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+#endif // IBMBIDI
+
   if (mFlags & nsIHTMLEditor::eEditorPasswordMask)
   {
     // manage the password buffer

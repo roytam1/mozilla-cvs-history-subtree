@@ -30,7 +30,9 @@ NS_IMPL_ISUPPORTS(nsBidiKeyboard, NS_IBIDIKEYBOARD_IID)
 nsBidiKeyboard::nsBidiKeyboard() : nsIBidiKeyboard()
 {
   NS_INIT_REFCNT();
+#ifdef IBMBIDI
   mDefaultsSet = PR_FALSE;
+#endif
 }
 
 nsBidiKeyboard::~nsBidiKeyboard()

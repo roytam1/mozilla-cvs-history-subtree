@@ -201,18 +201,23 @@ nsHTMLEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
     nsCOMPtr<nsISelectionController> selCon;
     mEditor->GetSelectionController(getter_AddRefs(selCon));
     if (selCon) {
-#ifdef IBMBIDI
-      if (action == nsEditor::kOpInsertText)
-        /* After inserting text the cursor Bidi level must be set to the level of the inserted text.
-         * This is difficult, because we cannot know what the level is until after the Bidi algorithm
-         * is applied to the whole paragraph.
-         *
-         * So we set the cursor Bidi level to UNDEFINED here, and the caret code will set it correctly later
-         */
-        selCon->UndefineCursorBidiLevel();
-#endif
       selCon->SetCaretEnabled(PR_TRUE);
     }
+#ifdef IBMBIDI
+    /* After inserting text the cursor Bidi level must be set to the level of the inserted text.
+     * This is difficult, because we cannot know what the level is until after the Bidi algorithm
+     * is applied to the whole paragraph.
+     *
+     * So we set the cursor Bidi level to UNDEFINED here, and the caret code will set it correctly later
+     */
+    if (action == nsEditor::kOpInsertText) {
+      nsCOMPtr<nsIPresShell> shell;
+      mEditor->GetPresShell(getter_AddRefs(shell));
+      if (shell) {
+        shell->UndefineCursorBidiLevel();
+      }
+    }
+#endif
   }
 
   return res;
@@ -983,52 +988,47 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
       if (NS_FAILED(res)) return res;
 
 #ifdef IBMBIDI // Test for distance between caret and text that will be deleted
-      nsCOMPtr<nsISelectionController> selCon;
-      mEditor->GetSelectionController(getter_AddRefs(selCon));
-      if (selCon)
+      nsCOMPtr<nsIPresShell> shell;
+      mEditor->GetPresShell(getter_AddRefs(shell));
+      if (shell)
       {
-        nsCOMPtr<nsIPresShell> shell;
-        mEditor->GetPresShell(getter_AddRefs(shell));
-        if (shell)
+        nsCOMPtr<nsIPresContext> context;
+        shell->GetPresContext(getter_AddRefs(context));
+        if (context)
         {
-          nsCOMPtr<nsIPresContext> context;
-          shell->GetPresContext(getter_AddRefs(context));
-          if (context)
+          PRBool bidiEnabled;
+          context->BidiEnabled(bidiEnabled);
+          if (bidiEnabled)
           {
-            PRBool bidiEnabled;
-            context->BidiEnabled(bidiEnabled);
-            if (bidiEnabled)
+            nsCOMPtr<nsIFrameSelection> frameSelection;
+            shell->GetFrameSelection(getter_AddRefs(frameSelection));
+            if (frameSelection)
             {
-              nsCOMPtr<nsIFrameSelection> frameSelection;
-              shell->GetFrameSelection(getter_AddRefs(frameSelection));
-              if (frameSelection)
+              nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+              if (content)
               {
-                nsCOMPtr<nsIContent> content = do_QueryInterface(node);
-                if (content)
+                nsIFrame *deleteInFrame;
+                PRInt32 frameOffset;
+
+                shell->GetPrimaryFrameFor(content, &deleteInFrame);
+                if (deleteInFrame)
                 {
-                  nsIFrame *deleteInFrame;
-                  PRInt32 frameOffset;
+                  PRUint8 currentCursorLevel;
+                  PRUint8 frameLevel;
+                  void *value;
 
-                  shell->GetPrimaryFrameFor(content, &deleteInFrame);
-                  if (deleteInFrame)
+                  res = deleteInFrame->GetChildFrameContainingOffset(offset, nsIEditor::eNext==aAction, &frameOffset, &deleteInFrame);
+                  if NS_SUCCEEDED(res)
                   {
-                    PRUint8 currentCursorLevel;
-                    PRUint8 frameLevel;
-                    void *value;
-
-                    res = deleteInFrame->GetChildFrameContainingOffset(offset, nsIEditor::eNext==aAction, &frameOffset, &deleteInFrame);
-                    if NS_SUCCEEDED(res)
+                    shell->GetCursorBidiLevel(&currentCursorLevel);
+                    nsIAtom* embeddingLevel = NS_NewAtom("EmbeddingLevel");
+                    deleteInFrame->GetBidiProperty(context, embeddingLevel, &value);
+                    frameLevel = (PRUint8)value;
+                    shell->SetCursorBidiLevel(frameLevel);
+                    if (currentCursorLevel != frameLevel)
                     {
-                      selCon->GetCursorBidiLevel(&currentCursorLevel);
-                      nsIAtom* embeddingLevel = NS_NewAtom("EmbeddingLevel");
-                      deleteInFrame->GetBidiProperty(context, embeddingLevel, &value);
-                      frameLevel = (PRUint8)value;
-                      selCon->SetCursorBidiLevel(frameLevel);
-                      if (currentCursorLevel != frameLevel)
-                      {
-                        *aCancel = PR_TRUE;
-                        return NS_OK;
-                      }
+                      *aCancel = PR_TRUE;
+                      return NS_OK;
                     }
                   }
                 }

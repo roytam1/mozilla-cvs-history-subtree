@@ -340,7 +340,7 @@ private:
 
 #ifdef IBMBIDI
   void BidiLevelFromMove(nsIPresContext* aContext,
-                         nsISelectionController* aSelCon,
+                         nsIPresShell* aPresShell,
                          nsIContent *aNode,
                          PRUint32 aContentOffset,
                          PRUint32 aKeycode);
@@ -1480,10 +1480,6 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 #ifdef IBMBIDI
   // Mamdouh : Flage for VK key
   caret->AccessVirtualKey(1);
-
-  // Simon
-  nsCOMPtr<nsISelectionController> selCon;
-  selCon = do_QueryInterface(shell);
 #endif 
   pos.mPreferLeft = mHint;
   if (NS_SUCCEEDED(result) && NS_SUCCEEDED(result = frame->PeekOffset(context, &pos)) && pos.mResultContent)
@@ -1513,24 +1509,24 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 
         // force the offset to the logical beginning (for HOME) or end (for END) of the frame
         // (if it is an RTL frame it will be at the visual beginning or end, which we don't want in this case)
-          if (nsIDOMKeyEvent::DOM_VK_HOME == aKeycode)
-        pos.mContentOffset = frameStart;
-          else
-            pos.mContentOffset = frameEnd;
+        if (nsIDOMKeyEvent::DOM_VK_HOME == aKeycode)
+          pos.mContentOffset = frameStart;
+        else
+          pos.mContentOffset = frameEnd;
 
         // set the cursor Bidi level to the paragraph embedding level
-          theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, &level);
-          selCon->SetCursorBidiLevel((PRUint8)level);
-          break;
+        theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, &level);
+        shell->SetCursorBidiLevel((PRUint8)level);
+        break;
 
       default:
         // If the current position is not a frame boundary, it's enough just to take the Bidi level of the current frame
         if (pos.mContentOffset != frameStart && pos.mContentOffset != frameEnd) {
           theFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, &level);
-          selCon->SetCursorBidiLevel((PRUint8)level);
+          shell->SetCursorBidiLevel((PRUint8)level);
         }
         else
-          BidiLevelFromMove(context, selCon, pos.mResultContent, pos.mContentOffset, aKeycode);
+          BidiLevelFromMove(context, shell, pos.mResultContent, pos.mContentOffset, aKeycode);
     }
 #endif
     result = TakeFocus(pos.mResultContent, pos.mContentOffset, pos.mContentOffset, aContinue, PR_FALSE);
@@ -1554,7 +1550,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
       if (NS_SUCCEEDED(result = frame->PeekOffset(context, &pos)) && pos.mResultContent)
       {
 #ifdef IBMBIDI
-        BidiLevelFromMove(context, selCon, pos.mResultContent, pos.mContentOffset, aKeycode);
+        BidiLevelFromMove(context, shell, pos.mResultContent, pos.mContentOffset, aKeycode);
 #endif // IBMBIDI
         mHint = (HINT)pos.mPreferLeft;
         PostReason(nsIDOMSelectionListener::MOUSEUP_REASON);//force an update as though we used the mouse.
@@ -1867,7 +1863,7 @@ NS_IMETHODIMP
  */
 
 void nsSelection::BidiLevelFromMove(nsIPresContext* aContext,
-                                    nsISelectionController* aSelCon,
+                                    nsIPresShell* aPresShell,
                                     nsIContent *aNode,
                                     PRUint32 aContentOffset,
                                     PRUint32 aKeycode)
@@ -1878,7 +1874,7 @@ void nsSelection::BidiLevelFromMove(nsIPresContext* aContext,
   nsIFrame* firstFrame=nsnull;
   nsIFrame* secondFrame=nsnull;
 
-  aSelCon->GetCursorBidiLevel(&currentLevel);
+  aPresShell->GetCursorBidiLevel(&currentLevel);
 
   GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
 
@@ -1886,27 +1882,27 @@ void nsSelection::BidiLevelFromMove(nsIPresContext* aContext,
 
     // Right and Left: the new cursor Bidi level is the level of the character moved over
     case nsIDOMKeyEvent::DOM_VK_RIGHT:
-        if (currentLevel & 1)
-      aSelCon->SetCursorBidiLevel(secondLevel);
-        else
-          aSelCon->SetCursorBidiLevel(firstLevel);
-        break;
+      if (currentLevel & 1)
+        aPresShell->SetCursorBidiLevel(secondLevel);
+      else
+        aPresShell->SetCursorBidiLevel(firstLevel);
+      break;
 
     case nsIDOMKeyEvent::DOM_VK_LEFT:
-        if (currentLevel & 1)
-      aSelCon->SetCursorBidiLevel(firstLevel);
-        else
-          aSelCon->SetCursorBidiLevel(secondLevel);
-        break;
+      if (currentLevel & 1)
+        aPresShell->SetCursorBidiLevel(firstLevel);
+      else
+        aPresShell->SetCursorBidiLevel(secondLevel);
+      break;
 
     // Up and Down: the new cursor Bidi level is the smaller of the two surrounding characters
     case nsIDOMKeyEvent::DOM_VK_UP:
     case nsIDOMKeyEvent::DOM_VK_DOWN:
-        aSelCon->SetCursorBidiLevel(PR_MIN(firstLevel, secondLevel));
-    break;
+      aPresShell->SetCursorBidiLevel(PR_MIN(firstLevel, secondLevel));
+      break;
 
     default:
-      aSelCon->UndefineCursorBidiLevel();
+      aPresShell->UndefineCursorBidiLevel();
   }
 }
 
@@ -1922,18 +1918,13 @@ void nsSelection::BidiLevelFromClick(nsIContent *aNode, PRUint32 aContentOffset)
   if (NS_FAILED(result) || !shell)
     return;
 
-  nsCOMPtr<nsISelectionController> selCon;
-  selCon = do_QueryInterface(shell);
-  if (!selCon)
-    return;
-
   nsIFrame* clickInFrame=nsnull;
   void *frameLevel;
   PRInt32 OffsetNotUsed;
 
   GetFrameForNodeOffset(aNode, aContentOffset, mHint, &clickInFrame, &OffsetNotUsed);
   clickInFrame->GetBidiProperty(context, nsLayoutAtoms::embeddingLevel, &frameLevel);
-  selCon->SetCursorBidiLevel((PRUint8)frameLevel);
+  shell->SetCursorBidiLevel((PRUint8)frameLevel);
 }
 #endif IBMBIDI
 

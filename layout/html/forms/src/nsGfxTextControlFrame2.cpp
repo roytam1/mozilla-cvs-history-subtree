@@ -535,9 +535,6 @@ public:
   NS_IMETHOD ScrollLine(PRBool aForward){return NS_OK;}//*
   NS_IMETHOD ScrollHorizontal(PRBool aLeft){return NS_OK;}//*
   NS_IMETHOD SelectAll(void);
-  NS_IMETHOD SetCursorBidiLevel(PRUint8 aLevel);
-  NS_IMETHOD GetCursorBidiLevel(PRUint8 *aOutLevel);
-  NS_IMETHOD UndefineCursorBidiLevel();
   NS_IMETHOD CheckVisibility(nsIDOMNode *node, PRInt16 startOffset, PRInt16 EndOffset, PRBool *_retval);
 
   //NSIFRAMSELECTION INTERFACES
@@ -587,7 +584,6 @@ private:
   nsCOMPtr<nsIContent>        mLimiter;
   nsWeakPtr mPresShellWeak;
 #ifdef IBMBIDI
-  PRUint8   mBidiLevel; // The Bidi level of the cursor
   nsCOMPtr<nsIBidiKeyboard> mBidiKeyboard;
 #endif
 };
@@ -825,41 +821,6 @@ nsTextInputSelectionImpl::CheckVisibility(nsIDOMNode *node, PRInt16 startOffset,
 
 }
 
-NS_IMETHODIMP
-   nsTextInputSelectionImpl::SetCursorBidiLevel(PRUint8 aLevel)
-{
-#ifdef IBMBIDI
-  mBidiLevel = aLevel;
-  
-  //PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
-  //if (parityChange)                                  // if so, change the keyboard language
-  if (mBidiKeyboard)
-    mBidiKeyboard->SetLangFromBidiLevel(aLevel);
-#endif // IBMBIDI
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-   nsTextInputSelectionImpl::GetCursorBidiLevel(PRUint8 *aOutLevel)
-{
-#ifdef IBMBIDI
-  if (!aOutLevel) { return NS_ERROR_INVALID_ARG; }
-  *aOutLevel = mBidiLevel;
-#endif
-  return NS_OK;    
-}
-
-NS_IMETHODIMP
-nsTextInputSelectionImpl::UndefineCursorBidiLevel()
-{
-#ifdef IBMBIDI
-  mBidiLevel |= nsISelectionController::BIDI_LEVEL_UNDEFINED;
-#endif
-  return NS_OK;
-}
-
-
-
 //nsTextInputSelectionImpl::FRAMESELECTIONAPIS
 
 NS_IMETHODIMP
@@ -1032,14 +993,13 @@ NS_IMETHODIMP nsTextInputSelectionImpl::SetScrollableView(nsIScrollableView *aSc
 }
 
 #ifdef IBMBIDI
-NS_IMETHODIMP
-   nsTextInputSelectionImpl::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
-  nsIContent *aNode,
-  PRUint32 aContentOffset,
-  nsIFrame **aPrevFrame,
-  nsIFrame **aNextFrame,
-  PRUint8 *aPrevLevel,
-  PRUint8 *aNextLevel)
+NS_IMETHODIMP nsTextInputSelectionImpl::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
+                                                              nsIContent *aNode,
+                                                              PRUint32 aContentOffset,
+                                                              nsIFrame **aPrevFrame,
+                                                              nsIFrame **aNextFrame,
+                                                              PRUint8 *aPrevLevel,
+                                                              PRUint8 *aNextLevel)
 {
   if (mFrameSelection)
     return mFrameSelection->GetPrevNextBidiLevels(aPresContext, aNode, aContentOffset, aPrevFrame, aNextFrame, aPrevLevel, aNextLevel);

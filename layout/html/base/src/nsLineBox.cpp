@@ -662,8 +662,8 @@ nsLineIterator::CheckLineOrder(PRInt32                  aLine,
                                nsIFrame                 **aLastVisual)
 {
   nsRect    checkRect;
-  PRInt32   testLine;
-  PRInt64   saveOrig, testOrig;
+  PRInt32   saveLine, testLine;
+  nscoord   saveX;
   nsIFrame  *checkFrame;
   nsIFrame  *firstFrame;
   nscoord   minX, maxX;
@@ -679,27 +679,28 @@ nsLineIterator::CheckLineOrder(PRInt32                  aLine,
   checkFrame = line->mFirstChild;
 
   checkFrame->GetRect(checkRect);
-  nsresult result = FindLineContaining(checkFrame, &testLine);
+  nsresult result = FindLineContaining(checkFrame, &saveLine);
   if (NS_FAILED(result))
     return result;
-  LL_SHL(saveOrig, testLine, 32);
-  LL_OR2(saveOrig, checkRect.x);
+  saveX = checkRect.x;
 
   for (; checkFrame; result = checkFrame->GetNextSibling(&checkFrame)) {
     if (NS_FAILED(result))
       break;
-
-    checkFrame->GetRect(checkRect);
     result = FindLineContaining(checkFrame, &testLine);
     if (NS_FAILED(result))
       return result;
-    LL_SHL(testOrig, testLine, 32);
-    LL_OR2(testOrig, checkRect.x);
-    if (LL_CMP(testOrig, <, saveOrig)) { // if the origin of any frame is less than the previous frame, the line is reordered
+    if (testLine != saveLine) {
       *aIsReordered = PR_TRUE;
       break;
     }
-    saveOrig = testOrig;
+
+    checkFrame->GetRect(checkRect);
+    if (checkRect.x < saveX) { // if the origin of any frame is less than the previous frame, the line is reordered
+      *aIsReordered = PR_TRUE;
+      break;
+    }
+    saveX = checkRect.x;
   }
 
   if (*aIsReordered) {
@@ -813,27 +814,24 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
       nsIFrame* nextFrame;
 #ifdef IBMBIDI
       if (isReordered) {
-        PRInt64 maxOrig, limOrig, testOrig;
+        nscoord maxX, limX;
         PRInt32 testLine;
         nsRect tempRect;
         nsIFrame* tempFrame;
 
-        maxOrig = LL_MININT;
+        maxX = -0x7fffffff;
         frame->GetRect(tempRect);
 
-        LL_SHL(limOrig, aLineNumber, 32);
-        LL_OR2(limOrig, tempRect.x);
+        limX = tempRect.x;
         tempFrame = line->mFirstChild;
         nextFrame = nsnull;
 
         while (tempFrame) {
           if (NS_SUCCEEDED(FindLineContaining(tempFrame, &testLine))
-              && testLine >= 0) {
+              && testLine == aLineNumber) {
             tempFrame->GetRect(tempRect);
-            LL_SHL(testOrig, testLine, 32);
-            LL_OR2(testOrig, tempRect.x);
-            if (LL_CMP(testOrig, >, maxOrig) && LL_CMP(testOrig, <, limOrig)) { // we are looking for the highest value less than the current one
-              maxOrig = testOrig;
+            if (tempRect.x > maxX && tempRect.x < limX) { // we are looking for the highest value less than the current one
+              maxX = tempRect.x;
               nextFrame = tempFrame;
             }
           }
@@ -862,6 +860,8 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
         *aXIsBeforeFirstFrame = PR_TRUE;
       }
       frame = nextFrame;
+      if (!frame)
+        break;
     }
   }
   else {
@@ -875,25 +875,22 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
       if (isReordered) {
         nsRect tempRect;
         nsIFrame* tempFrame;
-        PRInt64 minOrig, limOrig, testOrig;
-        PRInt32 testLine, thisLine;
+        PRInt64 minX, limX;
+        PRInt32 testLine;
 
-        minOrig = LL_MAXINT;
+        minX = 0x7fffffff;
         frame->GetRect(tempRect);
 
-        LL_SHL(limOrig, aLineNumber, 32);
-        LL_OR2(limOrig, tempRect.x);
+        limX = tempRect.x;
         tempFrame = line->mFirstChild;
         nextFrame = nsnull;
 
         while (tempFrame) {
           if (NS_SUCCEEDED(FindLineContaining(tempFrame, &testLine))
-              && testLine >= 0) {
+              && testLine == aLineNumber) {
             tempFrame->GetRect(tempRect);
-            LL_SHL(testOrig, testLine, 32);
-            LL_OR2(testOrig, tempRect.x);
-            if (LL_CMP(testOrig, <, minOrig) && LL_CMP(testOrig, >, limOrig)) { // we are looking for the lowest value greater than the current one
-              minOrig = testOrig;
+            if (tempRect.x < minX && tempRect.x > limX) { // we are looking for the lowest value greater than the current one
+              minX = tempRect.x;
               nextFrame = tempFrame;
             }
           }
@@ -922,6 +919,8 @@ nsLineIterator::FindFrameAt(PRInt32 aLineNumber,
         *aXIsAfterLastFrame = PR_TRUE;
       }
       frame = nextFrame;
+      if (!frame)
+        break;
     }
   }
 
