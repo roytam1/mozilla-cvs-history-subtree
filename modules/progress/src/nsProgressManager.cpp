@@ -34,7 +34,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 //
 //
 
-#if defined(DEBUG)
+#if 0 /* defined(DEBUG) */
 #define TRACE_PROGRESS(args) pm_TraceProgress args
 
 static void
@@ -64,6 +64,11 @@ pm_TraceProgress(const char* fmtstr, ...)
 //
 //
 
+/**
+ * This class encapsulates the transfer state for each stream that will
+ * be transferring data, is currently transferring data, or has previously
+ * transferred data in the current context.
+ */
 class nsTransfer
 {
 protected:
@@ -281,6 +286,10 @@ pm_CompareURLs(const void* v1, const void* v2)
 
 
 ////////////////////////////////////////////////////////////////////////
+//
+// Hash table iterators
+//
+//
 
 struct AggregateObjectInfo {
     PRUint32 ObjectCount;
@@ -311,15 +320,59 @@ pm_AggregateObjectInfo(PLHashEntry* he, PRIntn i, void* closure)
 }
 
 
+////////////////////////////////////////////////////////////////////////
+//
+// nsTopProgressManager
+//
+//
+
+
+/**
+ * An <b>nsTopProgressManager</b> is a progress manager that is associated
+ * with a top-level window context. It does the dirty work of managing the
+ * progress bar and the status text.
+ */
 class nsTopProgressManager : public nsProgressManager
 {
 protected:
+    /**
+     * A table of URLs that we are monitoring progress for. The table is
+     * keyed by <b>URL_Structs</b>, the values are <b>nsTransfer</b>
+     * objects.
+     */
     PLHashTable* fURLs;
+
+    /**
+     * The time at which the progress manager was created. Used to compute
+     * elapsed time for the percentage bar.
+     */
     nsTime fStart;
+
+    /**
+     * The current amount of progress shown on the chrome's progress bar
+     */
     PRUint16 fProgress;
+
+    /**
+     * The default status message to display if nothing more appropriate
+     * is around.
+     */
     char* fDefaultStatus;
+
+    /**
+     * An FE timeout object that is used to periodically update the
+     * status bar.
+     */
     void* fTimeout;
+
+    /**
+     * The FE timeout callback.
+     */
     static void TimeoutCallback(void* self);
+
+    /**
+     * Called to update the status bar.
+     */
     virtual void Tick(void);
 
 public:
@@ -340,114 +393,8 @@ public:
 };
 
 
-
-class nsSubProgressManager : public nsProgressManager
-{
-public:
-    nsSubProgressManager(MWContext* context);
-    virtual ~nsSubProgressManager(void);
-
-    NS_IMETHOD
-    OnStartBinding(const URL_Struct* url);
-
-    NS_IMETHOD
-    OnProgress(const URL_Struct* url, PRUint32 bytesReceived, PRUint32 contentLength);
-
-    NS_IMETHOD
-    OnStatus(const URL_Struct* url, const char* message);
-
-    NS_IMETHOD
-    OnStopBinding(const URL_Struct* url, PRInt32 status, const char* message);
-};
-
-
 ////////////////////////////////////////////////////////////////////////
-//
-// nsProgressManager
-//
-//
 
-static void
-pm_Ensure(MWContext* context)
-{
-    if (! context)
-        return;
-
-    if (context->progressManager)
-        return;
-
-    if (context->grid_parent) {
-        pm_Ensure(context->grid_parent);
-        context->progressManager =
-            new nsSubProgressManager(context);
-    }
-    else {   
-        context->progressManager =
-            new nsTopProgressManager(context);
-    }
-}
-
-void
-nsProgressManager::Ensure(MWContext* context)
-{
-    pm_Ensure(context);
-
-    if (context->progressManager)
-        context->progressManager->AddRef();
-}
-
-
-void
-nsProgressManager::Release(MWContext* context)
-{
-    if (! context)
-        return;
-
-    if (context->progressManager)
-        context->progressManager->Release();
-}
-
-nsProgressManager::nsProgressManager(MWContext* context)
-    : fContext(context)
-{
-    NS_INIT_REFCNT();
-}
-
-
-
-nsProgressManager::~nsProgressManager(void)
-{
-    if (fContext) {
-        fContext->progressManager = NULL;
-        fContext = NULL;
-    }
-}
-
-
-NS_IMPL_ADDREF(nsProgressManager);
-NS_IMPL_RELEASE(nsProgressManager);
-
-nsresult
-nsProgressManager::QueryInterface(const nsIID& iid, void** result)
-{
-    if (iid.Equals(kITransferListenerIID)) {
-        (*result) = (void*) ((nsITransferListener*) this);
-        AddRef();
-        return NS_OK;
-    }
-    else if (iid.Equals(kISupportsIID)) {
-        (*result) = (void*) ((nsISupports*) this);
-        AddRef();
-        return NS_OK;
-    }
-    return NS_NOINTERFACE;
-}
-
-////////////////////////////////////////////////////////////////////////
-//
-// nsTopProgressManager
-//
-//
 
 nsTopProgressManager::nsTopProgressManager(MWContext* context)
     : nsProgressManager(context), fStart(PR_Now()), fDefaultStatus(NULL)
@@ -486,7 +433,8 @@ nsTopProgressManager::~nsTopProgressManager(void)
         fTimeout = NULL;
     }
 
-    FE_Progress(fContext, "Done");
+    // XXX Needs to go to allxpstr.h
+    FE_Progress(fContext, "Done.");
 }
 
 
@@ -504,14 +452,6 @@ nsTopProgressManager::OnStartBinding(const URL_Struct* url)
         return NS_ERROR_NULL_POINTER;
 
     TRACE_PROGRESS(("OnStartBinding(%s)\n", url->address));
-
-#if 0
-    if (PL_HashTableLookup(fURLs, url))
-        return NS_OK; // already tracking it...
-#endif
-
-    TRACE_PROGRESS(("nsProgressManager.OnStartBinding(%s): added new URL to track\n",
-                    url->address));
 
     PL_HashTableAdd(fURLs, url, new nsTransfer(url));
     return NS_OK;
@@ -639,6 +579,7 @@ nsTopProgressManager::Tick(void)
         }
     }
 
+    // Compute how much time has elapsed
     nsTime dt = nsTime(PR_Now()) - fStart;
     PRUint32 elapsed = dt.ToMSec();
 
@@ -650,12 +591,20 @@ nsTopProgressManager::Tick(void)
                     info.BytesReceived, info.ContentLength));
 
     if (info.MSecRemaining != 0) {
-        // XXX This is bogus, not monotonically increasing.
+        // Compute the percent complete, that is, elapsed / (elapsed + remaining)
         double pctComplete = ((double) elapsed) / ((double) (elapsed + info.MSecRemaining));
 
+        // This hackery is a kludge to make the progress bar
+        // monotonically increase rather than slipping backwards as we
+        // discover that there's more content to download. It works by
+        // adjusting the progress manager's start time backwards to
+        // make the elapsed time (time we've waited so far) seem
+        // larger in proportion to the amount of time that appears to
+        // be left.
         if (((PRUint32) (pctComplete * 100.0)) < fProgress) {
-            // Adjust the elapsed time so the progress bar doesn't go backwards.
-            PRUint32 newElapsed = (PRUint32) ((pctComplete * ((double) info.MSecRemaining)) / (1.0 - pctComplete));
+            PRUint32 newElapsed =
+                (PRUint32) ((pctComplete * ((double) info.MSecRemaining))
+                            / (1.0 - pctComplete));
 
             PRUint32 dMSec = newElapsed - elapsed;
             fStart -= nsTime::FromMSec(dMSec);
@@ -665,6 +614,7 @@ nsTopProgressManager::Tick(void)
         }
     }
 
+    // Check to see if we're done.
     if (info.CompleteCount == info.ObjectCount) {
         TRACE_PROGRESS(("Complete: %ld/%ld objects loaded\n",
                         info.CompleteCount,
@@ -680,9 +630,11 @@ nsTopProgressManager::Tick(void)
     }
     else {
         // Reset the timeout to fire again...
-        fTimeout = FE_SetTimeout(nsTopProgressManager::TimeoutCallback, (void*) this, 500);
+        fTimeout = FE_SetTimeout(nsTopProgressManager::TimeoutCallback,
+                                 (void*) this, 500);
     }
 }
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -691,19 +643,51 @@ nsTopProgressManager::Tick(void)
 //
 //
 
+/**
+ * The <b>nsSubProgressManager</b> is a progress manager that gets created
+ * in a grid (frame cell) context. It simply delegates all of the operations
+ * in the <b>nsITransferListener</b> interface to it's grid parent's
+ * progress manager.
+ */
+class nsSubProgressManager : public nsProgressManager
+{
+public:
+    nsSubProgressManager(MWContext* context);
+    virtual ~nsSubProgressManager(void);
+
+    NS_IMETHOD
+    OnStartBinding(const URL_Struct* url);
+
+    NS_IMETHOD
+    OnProgress(const URL_Struct* url, PRUint32 bytesReceived, PRUint32 contentLength);
+
+    NS_IMETHOD
+    OnStatus(const URL_Struct* url, const char* message);
+
+    NS_IMETHOD
+    OnStopBinding(const URL_Struct* url, PRInt32 status, const char* message);
+};
+
+////////////////////////////////////////////////////////////////////////
+
+
 nsSubProgressManager::nsSubProgressManager(MWContext* context)
     : nsProgressManager(context)
 {
+    // Grab a reference to the parent context's progress manager
     nsITransferListener* pm = fContext->grid_parent->progressManager;
     PR_ASSERT(pm);
-    pm->AddRef();
+    if (pm)
+        pm->AddRef();
 }
 
 
 nsSubProgressManager::~nsSubProgressManager(void)
 {
+    // Release the reference on the parent context's progress manager
     nsITransferListener* pm = fContext->grid_parent->progressManager;
-    if (pm) pm->Release();
+    if (pm)
+        pm->Release();
 }
 
 
@@ -758,5 +742,147 @@ nsSubProgressManager::OnStopBinding(const URL_Struct* url,
         return NS_ERROR_NULL_POINTER;
 
     return pm->OnStopBinding(url, status, message);
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+//
+// nsProgressManager
+//
+//
+
+/**
+ * <p>
+ * This unholiness is used to keep reference counts straight for
+ * all the wild and wooly ways that a progress manager can get
+ * created. It recursively creates and installs progress managers,
+ * walking the grid hierarchy up to the root, if necessary. Recursion
+ * terminates as soon as a context is found with a progress manager
+ * already installed.
+ * </p>
+ *
+ * <p>
+ * Just for posterity, there are several ways that I can think of
+ * that a progress manager might be born. We need to survive all
+ * of them:
+ * </p>
+ *
+ * <ol>
+ * <li>
+ * A progress manager can be created in a simple window context
+ * </li>
+ *
+ * <li>
+ * A progress manager can be created in a top-level grid context,
+ * which will quickly receive an <b>AllConnectionsComplete</b>
+ * as soon as it reads the HTML for the frameset.
+ * </li>
+ *
+ * <li>
+ * A progress manager can be created in a child grid context, in
+ * a frameset.
+ * </li>
+ *
+ * <li>
+ * A progress manager can be created in a child grid context, in
+ * response to somebody clicking a link on a page in the child
+ * context
+ * </li>
+ * </ol>
+ *
+ * <p>
+ * In each case, we need to make sure that we properly create
+ * A top-level grid context and that everything gets refcounted
+ * nicely. Could be nasty situations like, I'm loading a link
+ * on a left frame, and the user gets bored and clicks a link
+ * in the right frame! This should take care of that, too.
+ * </p>
+ */
+
+static void
+pm_RecursiveEnsure(MWContext* context)
+{
+    if (! context)
+        return;
+
+    if (context->progressManager)
+        return;
+
+    if (context->grid_parent) {
+        pm_RecursiveEnsure(context->grid_parent);
+        context->progressManager =
+            new nsSubProgressManager(context);
+    }
+    else {   
+        context->progressManager =
+            new nsTopProgressManager(context);
+    }
+}
+
+void
+nsProgressManager::Ensure(MWContext* context)
+{
+    pm_RecursiveEnsure(context);
+
+    if (context->progressManager)
+        context->progressManager->AddRef();
+}
+
+
+void
+nsProgressManager::Release(MWContext* context)
+{
+    if (! context)
+        return;
+
+    // Note that we DO NOT set the context's progressManager
+    // slot to NULL. This is due to the obscene reference
+    // counting that we do: the slot will be set to NULL by
+    // the progressManager's destructor.
+    if (context->progressManager)
+        context->progressManager->Release();
+}
+
+nsProgressManager::nsProgressManager(MWContext* context)
+    : fContext(context)
+{
+    NS_INIT_REFCNT();
+}
+
+
+
+nsProgressManager::~nsProgressManager(void)
+{
+    // HERE is where we null the context's progressManager slot. We
+    // wait until the progress manager is actually destroyed, because
+    // there are several ways that a reference to the progress manager
+    // might be held, and unfortunately, the only public way to access
+    // the progress manager is through the contexts.
+    if (fContext) {
+        fContext->progressManager = NULL;
+        fContext = NULL;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+
+NS_IMPL_ADDREF(nsProgressManager);
+NS_IMPL_RELEASE(nsProgressManager);
+
+nsresult
+nsProgressManager::QueryInterface(const nsIID& iid, void** result)
+{
+    if (iid.Equals(kITransferListenerIID)) {
+        (*result) = (void*) ((nsITransferListener*) this);
+        AddRef();
+        return NS_OK;
+    }
+    else if (iid.Equals(kISupportsIID)) {
+        (*result) = (void*) ((nsISupports*) this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
 }
 
