@@ -534,6 +534,7 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
                                      const nsAString & aLocalName,
                                      nsIVariant *aValue)
 {
+    NS_ENSURE_ARG(aValue);
     PRUint16 dataType;
     aValue->GetDataType(&dataType);
     switch (dataType) {
@@ -586,7 +587,7 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
-    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    rv = namespaceManager->RegisterNameSpace(aNamespaceURI, nsId);
     NS_ENSURE_SUCCESS(rv, rv);
     nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
     txExpandedName varName(nsId, localName);
@@ -614,7 +615,7 @@ txMozillaXSLTProcessor::GetParameter(const nsAString& aNamespaceURI,
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
-    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    rv = namespaceManager->RegisterNameSpace(aNamespaceURI, nsId);
     NS_ENSURE_SUCCESS(rv, rv);
     nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
     txExpandedName varName(nsId, localName);
@@ -636,7 +637,7 @@ txMozillaXSLTProcessor::RemoveParameter(const nsAString& aNamespaceURI,
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
-    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    rv = namespaceManager->RegisterNameSpace(aNamespaceURI, nsId);
     nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
     txExpandedName varName(nsId, localName);
 
@@ -709,7 +710,7 @@ txVariable::Convert(nsIVariant *aValue, ExprResult** aResult)
         case nsIDataType::VTYPE_ASTRING:
         {
             String value;
-            nsresult rv = aValue->GetAsAString(value.getNSString());
+            nsresult rv = aValue->GetAsAString(value);
             NS_ENSURE_SUCCESS(rv, rv);
 
             *aResult = new StringResult(value);

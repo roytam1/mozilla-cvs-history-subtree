@@ -74,26 +74,26 @@ public:
     }
     nsresult getValue(ExprResult** aValue)
     {
-        NS_ENSURE_TRUE(mValue, NS_ERROR_FAILURE);
+        NS_ASSERTION(mValue, "variablevalue is null");
 
         if (!mTxValue) {
-            Convert(mValue, &mTxValue);
+            nsresult rv = Convert(mValue, &mTxValue);
+            NS_ENSURE_SUCCESS(rv, rv);
         }
-        NS_ENSURE_TRUE(mTxValue, NS_ERROR_FAILURE);
 
         *aValue = mTxValue;
-        NS_ENSURE_TRUE(*aValue, NS_ERROR_FAILURE);
 
         return NS_OK;
     }
     nsresult getValue(nsIVariant** aValue)
     {
         *aValue = mValue;
-        NS_IF_ADDREF(*aValue);
+        NS_ADDREF(*aValue);
         return NS_OK;
     }
     void setValue(nsIVariant* aValue)
     {
+        NS_ASSERTION(aValue, "setting variablevalue to null");
         mValue = aValue;
         delete mTxValue;
         mTxValue = nsnull;
