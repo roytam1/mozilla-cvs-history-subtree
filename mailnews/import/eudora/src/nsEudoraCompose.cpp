@@ -572,13 +572,16 @@ nsMsgAttachedFile * nsEudoraCompose::GetLocalAttachments( void)
 
 void nsEudoraCompose::ConvertSysToUnicode( const char *pStr, nsString& uniStr)
 {
+  if (!pStr)
+    return;
+
 	if (!m_pImportService) {
 		m_pImportService = do_GetService(NS_IMPORTSERVICE_CONTRACTID);
 	}
 	if (m_pImportService) {
 		m_pImportService->SystemStringToUnicode( pStr, uniStr);
 	}
-	else
+	else 
 		uniStr.AssignWithConversion( pStr);
 }
 
