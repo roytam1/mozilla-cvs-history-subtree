@@ -106,11 +106,10 @@ DIRS		+= \
 		caps \
 		expat \
 		htmlparser \
-		gfx \
 		modules/plugin \
 		dom \
 		view \
-		widget \
+		gfx2 \
 		layout \
 		db \
 		rdf \
