@@ -102,7 +102,7 @@
 #include "nsIXMLContent.h"
 #include "nsIXULContent.h"
 #include "nsIXULContentSink.h"
-#include "nsIXULContentUtils.h"
+#include "nsXULContentUtils.h"
 #include "nsIXULPrototypeCache.h"
 #include "nsLWBrkCIID.h"
 #include "nsLayoutCID.h"
@@ -111,6 +111,7 @@
 #include "nsParserCIID.h"
 #include "nsPIBoxObject.h"
 #include "nsRDFCID.h"
+#include "nsILocalStore.h"
 #include "nsRDFDOMNodeList.h"
 #include "nsXPIDLString.h"
 #include "nsIDOMWindowInternal.h"
@@ -120,7 +121,6 @@
 #include "plstr.h"
 #include "prlog.h"
 #include "rdf.h"
-#include "rdfutil.h"
 #include "nsIFrame.h"
 #include "nsIPrivateDOMImplementation.h"
 #include "nsIDOMDOMImplementation.h"
@@ -158,7 +158,6 @@ static NS_DEFINE_CID(kTextNodeCID,               NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,          NS_WELLFORMEDDTD_CID);
 static NS_DEFINE_CID(kXMLElementFactoryCID,      NS_XML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
-static NS_DEFINE_CID(kXULContentUtilsCID,        NS_XULCONTENTUTILS_CID);
 static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
 static NS_DEFINE_CID(kXULTemplateBuilderCID,     NS_XULTEMPLATEBUILDER_CID);
 static NS_DEFINE_CID(kDOMImplementationCID,      NS_DOM_IMPLEMENTATION_CID);
@@ -232,7 +231,6 @@ nsIElementFactory*  nsXULDocument::gXMLElementFactory;
 nsINameSpaceManager* nsXULDocument::gNameSpaceManager;
 PRInt32 nsXULDocument::kNameSpaceID_XUL;
 
-nsIXULContentUtils* nsXULDocument::gXULUtils;
 nsIXULPrototypeCache* nsXULDocument::gXULCache;
 nsIScriptSecurityManager* nsXULDocument::gScriptSecurityManager;
 nsIPrincipal* nsXULDocument::gSystemPrincipal;
@@ -549,11 +547,6 @@ nsXULDocument::~nsXULDocument()
             gNameSpaceManager = nsnull;
         }
 
-        if (gXULUtils) {
-            nsServiceManager::ReleaseService(kXULContentUtilsCID, gXULUtils);
-            gXULUtils = nsnull;
-        }
-
         if (gXULCache) {
             nsServiceManager::ReleaseService(kXULPrototypeCacheCID, gXULCache);
             gXULCache = nsnull;
@@ -647,9 +640,6 @@ nsXULDocument::QueryInterface(REFNSIID iid, void** result)
     }
     else if (iid.Equals(NS_GET_IID(nsIDOMEventCapturer))) {
         *result = NS_STATIC_CAST(nsIDOMEventCapturer*, this);
-    }
-    else if (iid.Equals(NS_GET_IID(nsIStreamLoadableDocument))) {
-        *result = NS_STATIC_CAST(nsIStreamLoadableDocument*, this);
     }
     else if (iid.Equals(NS_GET_IID(nsISupportsWeakReference))) {
         *result = NS_STATIC_CAST(nsISupportsWeakReference*, this);
@@ -1543,6 +1533,10 @@ nsXULDocument::EndLoad()
     rv = mCurrentPrototype->GetURI(getter_AddRefs(uri));
     if (NS_FAILED(rv)) return rv;
 
+    // Remember if the XUL cache is on
+    PRBool useXULCache;
+    gXULCache->GetEnabled(&useXULCache);
+
     NS_WITH_SERVICE(nsIChromeRegistry, reg, kChromeRegistryCID, &rv);
     if (NS_FAILED(rv)) return rv;
     nsCOMPtr<nsISupportsArray> sheets;
@@ -1558,14 +1552,16 @@ nsXULDocument::EndLoad()
         if (sheet) {
           nsCOMPtr<nsIURI> sheetURL;
           sheet->GetURL(*getter_AddRefs(sheetURL));
-          if (gXULUtils->UseXULCache() && IsChromeURI(sheetURL))
-            mCurrentPrototype->AddStyleSheetReference(sheetURL);
+
+          if (useXULCache && IsChromeURI(sheetURL)) {
+              mCurrentPrototype->AddStyleSheetReference(sheetURL);
+          }
           AddStyleSheet(sheet);
         }
       }
     }
 
-    if (gXULUtils->UseXULCache() && IsChromeURI(mDocumentURL)) {
+    if (useXULCache && IsChromeURI(mDocumentURL)) {
         // If it's a 'chrome:' prototype document, then put it into
         // the prototype cache; other XUL documents will be reloaded
         // each time.
@@ -2239,28 +2235,6 @@ nsXULDocument::SetCurrentPrototype(nsIXULPrototypeDocument* aDocument)
 
 //----------------------------------------------------------------------
 //
-// nsIStreamLoadableDocument interface
-//
-
-NS_IMETHODIMP
-nsXULDocument::LoadFromStream(nsIInputStream& xulStream,
-                              nsISupports* aContainer,
-                              const char* aCommand)
-{
-    nsresult rv;
-
-    // XXXbe this is dead code, eliminate
-    nsCOMPtr<nsIParser> parser;
-    rv = PrepareToLoad(aContainer, aCommand, nsnull, nsnull, getter_AddRefs(parser));
-    if (NS_FAILED(rv)) return rv;
-
-    parser->Parse(xulStream,NS_ConvertASCIItoUCS2(kXULTextContentType));
-    return NS_OK;
-}
-
-
-//----------------------------------------------------------------------
-//
 // nsIDOMDocument interface
 //
 
@@ -2536,7 +2510,7 @@ nsXULDocument::Persist(nsIContent* aElement, PRInt32 aNameSpaceID,
     nsresult rv;
 
     nsCOMPtr<nsIRDFResource> element;
-    rv = gXULUtils->GetElementResource(aElement, getter_AddRefs(element));
+    rv = nsXULContentUtils::GetElementResource(aElement, getter_AddRefs(element));
     if (NS_FAILED(rv)) return rv;
 
     // No ID, so nothing to persist.
@@ -3159,7 +3133,7 @@ nsXULDocument::AddElementToDocumentPre(nsIContent* aElement)
     nsAutoString value;
     rv = aElement->GetAttribute(kNameSpaceID_None, kCommandUpdaterAtom, value);
     if ((rv == NS_CONTENT_ATTR_HAS_VALUE) && value == NS_LITERAL_STRING("true")) {
-        rv = gXULUtils->SetCommandUpdater(this, aElement);
+        rv = nsXULContentUtils::SetCommandUpdater(this, aElement);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -3952,11 +3926,6 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
         gNameSpaceManager->RegisterNameSpace(NS_ConvertASCIItoUCS2(kXULNameSpaceURI), kNameSpaceID_XUL);
 
 
-        rv = nsServiceManager::GetService(kXULContentUtilsCID,
-                                          NS_GET_IID(nsIXULContentUtils),
-                                          (nsISupports**) &gXULUtils);
-        if (NS_FAILED(rv)) return rv;
-
         rv = nsServiceManager::GetService(kXULPrototypeCacheCID,
                                           NS_GET_IID(nsIXULPrototypeCache),
                                           (nsISupports**) &gXULCache);
@@ -4683,7 +4652,7 @@ nsXULDocument::ApplyPersistentAttributes()
         if (NS_FAILED(rv)) return rv;
 
         nsAutoString id;
-        rv = gXULUtils->MakeElementID(this, NS_ConvertASCIItoUCS2(uri), id);
+        rv = nsXULContentUtils::MakeElementID(this, NS_ConvertASCIItoUCS2(uri), id);
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to compute element ID");
         if (NS_FAILED(rv)) return rv;
 
@@ -5236,7 +5205,10 @@ nsXULDocument::ResumeWalk()
         rv = gXULCache->GetPrototype(uri, getter_AddRefs(mCurrentPrototype));
         if (NS_FAILED(rv)) return rv;
 
-        if (gXULUtils->UseXULCache() && mCurrentPrototype) {
+        PRBool cache;
+        gXULCache->GetEnabled(&cache);
+
+        if (cache && mCurrentPrototype) {
             // Found the overlay's prototype in the cache.
             rv = AddPrototypeSheets();
             if (NS_FAILED(rv)) return rv;
@@ -5730,8 +5702,9 @@ nsXULDocument::CheckTemplateBuilder(nsIContent* aElement)
         if (uriStr == NS_LITERAL_STRING("rdf:null"))
             continue;
 
-        rv = rdf_MakeAbsoluteURI(docurl, uriStr);
-        if (NS_FAILED(rv)) return rv;
+        // N.B. that `failure' (e.g., because it's an unknown
+        // protocol) leaves uriStr unaltered.
+        NS_MakeAbsoluteURI(uriStr, uriStr, docurl);
 
         if (docPrincipal.get() != gSystemPrincipal) {
             // Our document is untrusted, so check to see if we can

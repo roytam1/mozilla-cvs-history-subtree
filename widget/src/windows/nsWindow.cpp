@@ -3786,10 +3786,9 @@ PRBool nsWindow::OnPaint()
         // is only the overhead of the dispatching the paint event.
       if (nsEventStatus_eIgnore != eventStatus) {
         ::InvertRgn(debugPaintFlashDC, debugPaintFlashRegion);
-        int x;
-        for (x = 0; x < 1000000; x++);
+        PR_Sleep(PR_MillisecondsToInterval(50));
         ::InvertRgn(debugPaintFlashDC, debugPaintFlashRegion);
-        for (x = 0; x < 1000000; x++);
+        PR_Sleep(PR_MillisecondsToInterval(50));
       }
       ::ReleaseDC(mWnd, debugPaintFlashDC);
       ::DeleteObject(debugPaintFlashRegion);

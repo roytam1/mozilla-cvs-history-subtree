@@ -24,6 +24,7 @@
 #include "nsBookmarksService.h"
 #include "nsDirectoryViewer.h"
 #include "nsGlobalHistory.h"
+#include "nsILocalStore.h"
 #include "nsLocalSearchService.h"
 #include "nsInternetSearchService.h"
 #include "nsRelatedLinksHandlerImpl.h"
@@ -86,6 +87,8 @@ static nsModuleComponentInfo components[] = {
       NS_URLBARHISTORY_CONTRACTID, nsUrlbarHistoryConstructor },
     { "nsUrlbarHistory", NS_URLBARHISTORY_CID,
       NS_URLBARAUTOCOMPLETE_CONTRACTID, nsUrlbarHistoryConstructor },
+    { "Local Store", NS_LOCALSTORE_CID,
+      NS_LOCALSTORE_CONTRACTID, NS_NewLocalStore },
 #if defined(XP_WIN)
     { NS_IURLWIDGET_CLASSNAME, NS_IURLWIDGET_CID, NS_IURLWIDGET_CONTRACTID, 
       nsUrlWidgetConstructor }, 

@@ -69,7 +69,6 @@
 #include "nsIPresShell.h"
 #include "nsIDocumentObserver.h"
 
-#include "nsIXULContentUtils.h"
 #include "nsIXULPrototypeCache.h"
 #include "nsIDOMLoadListener.h"
 
@@ -197,7 +196,6 @@ public:
   nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; };
 
   static nsIXULPrototypeCache* gXULCache;
-  static nsIXULContentUtils* gXULUtils;
   static PRInt32 gRefCnt;
 
   nsXBLStreamListener(nsIStreamListener* aInner, nsIDocument* aDocument, nsIDocument* aBindingDocument);
@@ -215,7 +213,6 @@ private:
 };
 
 nsIXULPrototypeCache* nsXBLStreamListener::gXULCache = nsnull;
-nsIXULContentUtils* nsXBLStreamListener::gXULUtils = nsnull;
 PRInt32 nsXBLStreamListener::gRefCnt = 0;
 
 /* Implementation file */
@@ -231,12 +228,8 @@ nsXBLStreamListener::nsXBLStreamListener(nsIStreamListener* aInner, nsIDocument*
   mBindingDocument = aBindingDocument;
   gRefCnt++;
   if (gRefCnt == 1) {
-    nsresult rv = nsServiceManager::GetService("@mozilla.org/rdf/xul-content-utils;1",
-                                      NS_GET_IID(nsIXULContentUtils),
-                                      (nsISupports**) &gXULUtils);
-    if (NS_FAILED(rv)) return;
-
-    rv = nsServiceManager::GetService("@mozilla.org/rdf/xul-prototype-cache;1",
+    nsresult rv;
+    rv = nsServiceManager::GetService("@mozilla.org/xul/xul-prototype-cache;1",
                                       NS_GET_IID(nsIXULPrototypeCache),
                                       (nsISupports**) &gXULCache);
     if (NS_FAILED(rv)) return;
@@ -248,13 +241,8 @@ nsXBLStreamListener::~nsXBLStreamListener()
   /* destructor code */
   gRefCnt--;
   if (gRefCnt == 0) {
-    if (gXULUtils) {
-      nsServiceManager::ReleaseService("@mozilla.org/rdf/xul-content-utils;1", gXULUtils);
-      gXULUtils = nsnull;
-    }
-
     if (gXULCache) {
-      nsServiceManager::ReleaseService("@mozilla.org/rdf/xul-prototype-cache;1", gXULCache);
+      nsServiceManager::ReleaseService("@mozilla.org/xul/xul-prototype-cache;1", gXULCache);
       gXULCache = nsnull;
     }
   }
@@ -363,7 +351,9 @@ nsXBLStreamListener::Load(nsIDOMEvent* aEvent)
     // If the doc is a chrome URI, then we put it into the XUL cache.
     PRBool cached = PR_FALSE;
     if (IsChromeOrResourceURI(uri)) {
-      if (gXULUtils && gXULUtils->UseXULCache()) {
+      PRBool useXULCache;
+      gXULCache->GetEnabled(&useXULCache);
+      if (useXULCache) {
         cached = PR_TRUE;
         gXULCache->PutXBLDocumentInfo(info);
       }
@@ -494,7 +484,6 @@ NS_IMPL_ISUPPORTS(nsProxyStream, NS_GET_IID(nsIInputStream));
 
 // Static member variable initialization
 PRUint32 nsXBLService::gRefCnt = 0;
-nsIXULContentUtils* nsXBLService::gXULUtils = nsnull;
 nsIXULPrototypeCache* nsXBLService::gXULCache = nsnull;
  
 nsINameSpaceManager* nsXBLService::gNameSpaceManager = nsnull;
@@ -559,12 +548,7 @@ nsXBLService::nsXBLService(void)
 
     gClassTable = new nsHashtable();
 
-    rv = nsServiceManager::GetService("@mozilla.org/rdf/xul-content-utils;1",
-                                      NS_GET_IID(nsIXULContentUtils),
-                                      (nsISupports**) &gXULUtils);
-    if (NS_FAILED(rv)) return;
-
-    rv = nsServiceManager::GetService("@mozilla.org/rdf/xul-prototype-cache;1",
+    rv = nsServiceManager::GetService("@mozilla.org/xul/xul-prototype-cache;1",
                                       NS_GET_IID(nsIXULPrototypeCache),
                                       (nsISupports**) &gXULCache);
     if (NS_FAILED(rv)) return;
@@ -597,13 +581,8 @@ nsXBLService::~nsXBLService(void)
     delete gClassTable;
     gClassTable = nsnull;
 
-    if (gXULUtils) {
-      nsServiceManager::ReleaseService("@mozilla.org/rdf/xul-content-utils;1", gXULUtils);
-      gXULUtils = nsnull;
-    }
-
     if (gXULCache) {
-      nsServiceManager::ReleaseService("@mozilla.org/rdf/xul-prototype-cache;1", gXULCache);
+      nsServiceManager::ReleaseService("@mozilla.org/xul/xul-prototype-cache;1", gXULCache);
       gXULCache = nsnull;
     }
   }
@@ -762,7 +741,10 @@ NS_IMETHODIMP
 nsXBLService::GetXBLDocumentInfo(const nsCString& aURLStr, nsIContent* aBoundElement, nsIXBLDocumentInfo** aResult)
 {
   *aResult = nsnull;
-  if (gXULUtils && gXULUtils->UseXULCache()) {
+
+  PRBool useXULCache;
+  gXULCache->GetEnabled(&useXULCache);
+  if (useXULCache) {
     // The first line of defense is the chrome cache.  
     // This cache crosses the entire product, so any XBL bindings that are
     // part of chrome will be reused across all XUL documents.
@@ -1073,8 +1055,11 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
   *aResult = nsnull;
 
   // We've got a file.  Check our XBL document cache.
+  PRBool useXULCache;
+  gXULCache->GetEnabled(&useXULCache);
+
   nsCOMPtr<nsIXBLDocumentInfo> info;
-  if (gXULUtils && gXULUtils->UseXULCache()) {
+  if (useXULCache) {
     // The first line of defense is the chrome cache.  
     // This cache crosses the entire product, so that any XBL bindings that are
     // part of chrome will be reused across all XUL documents.
@@ -1135,7 +1120,7 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement, nsIDocument* aB
         // If the doc is a chrome URI, then we put it into the XUL cache.
         PRBool cached = PR_FALSE;
         if (IsChromeOrResourceURI(uri)) {
-          if (gXULUtils && gXULUtils->UseXULCache()) {
+          if (useXULCache) {
             cached = PR_TRUE;
             gXULCache->PutXBLDocumentInfo(info);
           }

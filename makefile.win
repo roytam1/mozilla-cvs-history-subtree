@@ -68,6 +68,7 @@ DIRS =                         \
   modules\oji                  \
   caps                         \
   intl                         \
+  rdf                          \
 !endif
 !if defined(LAYOUT_DIRS)
 # the following are associated with the layout engine
@@ -81,7 +82,6 @@ DIRS =                         \
   view                         \
   content                      \
   layout                       \
-  rdf                          \
   docshell                     \
   webshell                     \
   embedding                    \

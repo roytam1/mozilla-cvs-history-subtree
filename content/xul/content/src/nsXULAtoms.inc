@@ -1,9 +1,9 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++ tab-width: 4 indent-tabs-mode: nil c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
+ * License Version 1.1 (the "License") you may not use this file
  * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * the License at http:
  *
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
@@ -25,74 +25,176 @@
  */
 
 /*
-
   XUL atom declarations.
-
  */
-
-NS_XULATOM(action);
-NS_XULATOM(binding);
-NS_XULATOM(bindings);
-NS_XULATOM(broadcaster);
-NS_XULATOM(browser);
-NS_XULATOM(child);
-NS_XULATOM2(clazz, "class");
-NS_XULATOM(command);
-NS_XULATOM(conditions);
-NS_XULATOM(container);
-NS_XULATOM(containment);
-NS_XULATOM(content);
-NS_XULATOM(context);
-NS_XULATOM(editor);
-NS_XULATOM(empty);
-NS_XULATOM(events);
-NS_XULATOM(flags);
-NS_XULATOM(height);
-NS_XULATOM(hidden);
-NS_XULATOM(id);
-NS_XULATOM(iframe);
-NS_XULATOM(ignore);
-NS_XULATOM(instanceOf);
-NS_XULATOM(iscontainer);
-NS_XULATOM(isempty);
-NS_XULATOM(key);
-NS_XULATOM(member);
-NS_XULATOM(menu);
-NS_XULATOM(menubutton);
-NS_XULATOM(menulist);
-NS_XULATOM(menupopup);
-NS_XULATOM(object);
-NS_XULATOM(observes);
-NS_XULATOM(open);
-NS_XULATOM(outliner);
-NS_XULATOM(parent);
-NS_XULATOM(persist);
-NS_XULATOM(popup);
-NS_XULATOM(popupset);
-NS_XULATOM(predicate);
-NS_XULATOM(property);
-NS_XULATOM(ref);
-NS_XULATOM(resource);
-NS_XULATOM(rule);
-NS_XULATOM(scrollbar);
-NS_XULATOM(selected);
-NS_XULATOM(style);
-NS_XULATOM(subject);
-NS_XULATOM(tag);
-NS_XULATOM(targets);
-NS_XULATOM(textnode);
-NS_XULATOM(tooltip);
-NS_XULATOM(tree);
-NS_XULATOM(treecell);
-NS_XULATOM(treechildren);
-NS_XULATOM(treecol);
-NS_XULATOM(treeitem);
-NS_XULATOM(triple);
-NS_XULATOM(uri);
-NS_XULATOM(value);
-NS_XULATOM(width);
-NS_XULATOM(window);
-NS_XULATOM(xulcontentsgenerated);
-NS_XULATOM(scrollbox);
-NS_XULATOM(left);
-NS_XULATOM(top);
+NS_XULATOM(acceltext, "acceltext") 
+NS_XULATOM(accesskey, "accesskey") 
+NS_XULATOM(action, "action")
+NS_XULATOM(allowevents, "allowevents") 
+NS_XULATOM(autorepeatbutton, "autorepeatbutton")
+NS_XULATOM(autostretch, "autostretch")
+NS_XULATOM(binding, "binding")
+NS_XULATOM(bindings, "bindings")
+NS_XULATOM(blankrow, "blankrow")
+NS_XULATOM(box, "box")
+NS_XULATOM(broadcaster, "broadcaster") 
+NS_XULATOM(browser, "browser")
+NS_XULATOM(bulletinboard, "bulletinboard")
+NS_XULATOM(button, "button")
+NS_XULATOM(checkbox, "checkbox")
+NS_XULATOM(child, "child")
+NS_XULATOM(clazz, "class")
+NS_XULATOM(collapse, "collapse")
+NS_XULATOM(collapsed, "collapsed")
+NS_XULATOM(column, "column")
+NS_XULATOM(columns, "columns")
+NS_XULATOM(command, "command")
+NS_XULATOM(conditions, "conditions")
+NS_XULATOM(container, "container")
+NS_XULATOM(containment, "containment")
+NS_XULATOM(content, "content")
+NS_XULATOM(context, "context")
+NS_XULATOM(crop, "crop")
+NS_XULATOM(curpos, "curpos")
+NS_XULATOM(ddDragDropArea, "dragdroparea")
+NS_XULATOM(ddDropLocation, "dd-droplocation")
+NS_XULATOM(ddDropLocationCoord, "dd-droplocationcoord")
+NS_XULATOM(ddDropMarker, ":-moz-drop-marker")
+NS_XULATOM(ddDropOn, "dd-dropon")
+NS_XULATOM(ddNoDropBetweenRows, "dd-nodropbetweenrows")
+NS_XULATOM(ddTriggerRepaint, "dd-triggerrepaint")
+NS_XULATOM(ddTriggerRepaintRestore, "dd-triggerrepaintrestore")
+NS_XULATOM(ddTriggerRepaintSorted, "dd-triggerrepaintsorted")
+NS_XULATOM(debug, "debug")
+NS_XULATOM(deck, "deck")
+NS_XULATOM(dir, "dir")
+NS_XULATOM(editor, "editor")
+NS_XULATOM(empty, "empty")
+NS_XULATOM(equalsize, "equalsize")
+NS_XULATOM(events, "events")
+NS_XULATOM(fixed, "fixed")
+NS_XULATOM(flags, "flags")
+NS_XULATOM(flex, "flex")
+NS_XULATOM(fontpicker, "fontpicker")
+NS_XULATOM(grid, "grid")
+NS_XULATOM(grippy, "grippy")
+NS_XULATOM(hbox, "hbox")
+NS_XULATOM(height, "height")
+NS_XULATOM(hidden, "hidden")
+NS_XULATOM(id, "id")
+NS_XULATOM(iframe, "iframe")
+NS_XULATOM(ignore, "ignore")
+NS_XULATOM(ignorekeys, "ignorekeys") 
+NS_XULATOM(image, "image")
+NS_XULATOM(increment, "increment")
+NS_XULATOM(indent, "indent") 
+NS_XULATOM(index, "index")
+NS_XULATOM(instanceOf, "instanceOf")
+NS_XULATOM(iscontainer, "iscontainer")
+NS_XULATOM(isempty, "isempty")
+NS_XULATOM(key, "key")
+NS_XULATOM(keycode, "keycode");
+NS_XULATOM(keytext, "keytext");
+NS_XULATOM(left, "left")
+NS_XULATOM(listbox, "listbox")
+NS_XULATOM(maxpos, "maxpos")
+NS_XULATOM(member, "member")
+NS_XULATOM(menu, "menu") 
+NS_XULATOM(menuactive, "menuactive") 
+NS_XULATOM(menubar, "menubar") 
+NS_XULATOM(menubutton, "menubutton")
+NS_XULATOM(menugenerated, "menugenerated") 
+NS_XULATOM(menuitem, "menuitem") 
+NS_XULATOM(menulist, "menulist")
+NS_XULATOM(menupopup, "menupopup")
+NS_XULATOM(menutobedisplayed, "menutobedisplayed") 
+NS_XULATOM(minheight, "min-height")
+NS_XULATOM(minwidth, "min-width")
+NS_XULATOM(mode, "mode")
+NS_XULATOM(modifiers, "modifiers");
+NS_XULATOM(mousethrough, "mousethrough")
+NS_XULATOM(object, "object")
+NS_XULATOM(observes, "observes") 
+NS_XULATOM(open, "open") 
+NS_XULATOM(orient, "orient")
+NS_XULATOM(outer, "outer") 
+NS_XULATOM(pageincrement, "pageincrement")
+NS_XULATOM(palettename, "palettename")
+NS_XULATOM(parent, "parent")
+NS_XULATOM(persist, "persist")
+NS_XULATOM(popup, "popup") 
+NS_XULATOM(popupalign, "popupalign") 
+NS_XULATOM(popupanchor, "popupanchor") 
+NS_XULATOM(popupset, "popupset") 
+NS_XULATOM(predicate, "predicate")
+NS_XULATOM(progressbar, "progressbar")
+NS_XULATOM(property, "property")
+NS_XULATOM(radio, "radio")
+NS_XULATOM(radiogroup, "radiogroup")
+NS_XULATOM(ref, "ref")
+NS_XULATOM(resizeafter, "resizeafter")
+NS_XULATOM(resizebefore, "resizebefore")
+NS_XULATOM(resizer, "resizer")
+NS_XULATOM(resource, "resource")
+NS_XULATOM(row, "row")
+NS_XULATOM(rows, "rows")
+NS_XULATOM(rule, "rule")
+NS_XULATOM(scrollbar, "scrollbar")
+NS_XULATOM(scrollbarbutton, "scrollbarbutton")
+NS_XULATOM(scrollbarlist, "scrollbarlist") 
+NS_XULATOM(scrollbox, "scrollbox")
+NS_XULATOM(selected, "selected")
+NS_XULATOM(sizemode, "sizemode") 
+NS_XULATOM(sizetopopup, "sizetopopup") 
+NS_XULATOM(slider, "slider")
+NS_XULATOM(spinner, "spinner")
+NS_XULATOM(splitter, "splitter")
+NS_XULATOM(spring, "spring")
+NS_XULATOM(stack, "stack")
+NS_XULATOM(state, "state")
+NS_XULATOM(style, "style")
+NS_XULATOM(subject, "subject")
+NS_XULATOM(tab, "tab")
+NS_XULATOM(tabbox, "tabbox")
+NS_XULATOM(tabcontrol, "tabcontrol")
+NS_XULATOM(tabpage, "tabpage")
+NS_XULATOM(tabpanel, "tabpanel")
+NS_XULATOM(tag, "tag")
+NS_XULATOM(targets, "targets")
+NS_XULATOM(templateAtom, "template") 
+NS_XULATOM(text, "text")
+NS_XULATOM(textarea, "textarea")
+NS_XULATOM(textfield, "textfield")
+NS_XULATOM(textnode, "textnode")
+NS_XULATOM(thumb, "thumb")
+NS_XULATOM(title, "title")
+NS_XULATOM(titlebar, "titlebar")
+NS_XULATOM(titledbox, "titledbox")
+NS_XULATOM(titledboxContentPseudo, ":titledbox-content")
+NS_XULATOM(toggled, "toggled")
+NS_XULATOM(toolbar, "toolbar")
+NS_XULATOM(toolbaritem, "toolbaritem")
+NS_XULATOM(toolbox, "toolbox")
+NS_XULATOM(tooltip, "tooltip")
+NS_XULATOM(top, "top")
+NS_XULATOM(tree, "tree") 
+NS_XULATOM(treecaption, "treecaption") 
+NS_XULATOM(treecell, "treecell") 
+NS_XULATOM(treechildren, "treechildren") 
+NS_XULATOM(treecol, "treecol") 
+NS_XULATOM(treecolgroup, "treecolgroup") 
+NS_XULATOM(treecols, "treecols") 
+NS_XULATOM(treefoot, "treefoot") 
+NS_XULATOM(treehead, "treehead") 
+NS_XULATOM(treeindentation, "treeindentation") 
+NS_XULATOM(treeitem, "treeitem") 
+NS_XULATOM(treerow, "treerow") 
+NS_XULATOM(treerows, "treerows") 
+NS_XULATOM(triple, "triple")
+NS_XULATOM(uri, "uri")
+NS_XULATOM(value, "value")
+NS_XULATOM(vbox, "vbox")
+NS_XULATOM(widget, "widget")
+NS_XULATOM(width, "width")
+NS_XULATOM(window, "window")
+NS_XULATOM(xulcontentsgenerated, "xulcontentsgenerated")

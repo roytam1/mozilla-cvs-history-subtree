@@ -54,7 +54,6 @@
 #include "nsIScriptObjectOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsIStreamLoadableDocument.h"
 #include "nsISupportsArray.h"
 #include "nsIURI.h"
 #include "nsIWordBreakerFactory.h"
@@ -93,7 +92,6 @@ struct PRLogModuleInfo;
  */
 class nsXULDocument : public nsIDocument,
                       public nsIXULDocument,
-                      public nsIStreamLoadableDocument,
                       public nsIDOMXULDocument,
                       public nsIDOMDocumentEvent,
                       public nsIDOMDocumentView,
@@ -302,11 +300,6 @@ public:
     NS_IMETHOD AddSubtreeToDocument(nsIContent* aElement);
     NS_IMETHOD RemoveSubtreeFromDocument(nsIContent* aElement);
     
-    // nsIStreamLoadableDocument interface
-    NS_IMETHOD LoadFromStream(nsIInputStream& xulStream,
-                              nsISupports* aContainer,
-                              const char* aCommand );
-
     // nsIDOMEventCapturer interface
     NS_IMETHOD    CaptureEvent(const nsAReadableString& aType);
     NS_IMETHOD    ReleaseEvent(const nsAReadableString& aType);
