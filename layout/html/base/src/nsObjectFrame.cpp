@@ -187,6 +187,10 @@ public:
 
   void SetPluginHost(nsIPluginHost* aHost);
 
+#ifdef XP_MAC
+  void FixUpPluginWindow();
+#endif
+
 private:
   nsPluginWindow    mPluginWindow;
   nsIPluginInstance *mInstance;
@@ -924,6 +928,7 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   nsPoint origin;
   nsPluginWindow  *window;
   float           t2p;
+
   aPresContext->GetTwipsToPixels(&t2p);
 
   SetFullURL(aURL);
@@ -946,10 +951,18 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
   window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
   
+  // on the Mac we need to set the clipRect to { 0, 0, 0, 0 } for now. This will keep
+  // us from drawing on screen until the widget is properly positioned, which will not
+  // happen until we have finished the reflow process.
   window->clipRect.top = 0;
   window->clipRect.left = 0;
+#ifndef XP_MAC
   window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
   window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+#else
+  window->clipRect.bottom = 0;
+  window->clipRect.right = 0;
+#endif
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -1009,10 +1022,14 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
   window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
   window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
 
+  // ignore this for now on the Mac because the widget is not properly positioned
+  // yet and won't be until we have finished the reflow process.
+#ifndef XP_MAC
   window->clipRect.top = 0;
   window->clipRect.left = 0;
   window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
   window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+#endif
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -1192,7 +1209,6 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
       if (NS_OK == mInstanceOwner->GetWindow(window)) {
         nsIView           *parentWithView;
         nsPoint           origin;
-        nsIPluginInstance *inst;
         float             t2p;
         aPresContext->GetTwipsToPixels(&t2p);
         nscoord           offx, offy;
@@ -1222,12 +1238,12 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
         window->clipRect.left = 0;
         window->clipRect.bottom = window->clipRect.top + window->height;
         window->clipRect.right = window->clipRect.left + window->width;
+#else
+        // now that we have finished the reflow process, the widget is properly positioned
+        // and we can validate the plugin clipping information by syncing the plugin
+        // window info to reflect the current widget location.
+        mInstanceOwner->FixUpPluginWindow();
 #endif
-
-        if (NS_OK == mInstanceOwner->GetInstance(inst)) {
-          inst->SetWindow(window);
-          NS_RELEASE(inst);
-        }
 
         //~~~
         mInstanceOwner->ReleasePluginPort((nsPluginPort *)window->window);
@@ -2623,6 +2639,10 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
 {
 #ifdef XP_MAC
+    // validate the plugin clipping information by syncing the plugin window info to
+    // reflect the current widget location. This makes sure that everything is updated
+    // correctly in the event of scrolling in the window.
+    FixUpPluginWindow();
 	if (mInstance != NULL) {
 		EventRecord idleEvent;
 		::OSEventAvail(0, &idleEvent);
@@ -2711,6 +2731,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
 {
   nsIView   *view;
   nsresult  rv = NS_ERROR_FAILURE;
+  float     p2t;
 
   if (nsnull != mOwner)
   {
@@ -2724,9 +2745,11 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
 
       mInstance->GetValue(nsPluginInstanceVariable_WindowlessBool, (void *)&windowless);
 
+      // always create widgets in Twips, not pixels
+      mContext->GetScaledPixelsToTwips(&p2t);
       rv = mOwner->CreateWidget(mContext,
-                                mPluginWindow.width,
-                                mPluginWindow.height,
+                                NSIntPixelsToTwips(mPluginWindow.width, p2t),
+                                NSIntPixelsToTwips(mPluginWindow.height, p2t),
                                 windowless);
       if (NS_OK == rv)
       {
@@ -2889,4 +2912,26 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
   aPixelRect.height = NSTwipsToIntPixels(aTwipsRect.height, t2p);
 }
 #endif	// DO_DIRTY_INTERSECT
+
+void nsPluginInstanceOwner::FixUpPluginWindow()
+{
+  if (mWidget) {
+    nscoord absWidgetX = 0;
+    nscoord absWidgetY = 0;
+    nsRect widgetClip(0,0,0,0);
+    GetWidgetPosAndClip(mWidget,absWidgetX,absWidgetY,widgetClip);
+
+    // set the port coordinates
+    mPluginWindow.x = absWidgetX;
+    mPluginWindow.y = absWidgetY;
+
+    // fix up the clipping region
+    mPluginWindow.clipRect.top = widgetClip.y;
+    mPluginWindow.clipRect.left = widgetClip.x;
+    mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
+    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
+  }
+}
+
+
 #endif	// XP_MAC
