@@ -201,7 +201,7 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
       if (argc > 1) {
         nsCOMPtr<nsISupports> value;
         nsAutoString type;
-        nsresult rc = nsSOAPUtils::ConvertJSValToValue(cx,
+        nsresult rc = nsSOAPJSValue::ConvertJSValToValue(cx,
                                           argv[1],
                                           getter_AddRefs(value),
                                           type);
@@ -234,7 +234,7 @@ nsSOAPParameter::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
                                                 JS_GetStringChars(str));
     if (NS_LITERAL_STRING("value").Equals(name)) {
-      return nsSOAPUtils::ConvertValueToJSVal(cx,
+      return nsSOAPJSValue::ConvertValueToJSVal(cx,
                                         mValue,
                                         mType,
                                         vp);
@@ -253,7 +253,7 @@ nsSOAPParameter::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
                                                 JS_GetStringChars(str));
     if (NS_LITERAL_STRING("value").Equals(name)) {
-      return nsSOAPUtils::ConvertJSValToValue(cx,
+      return nsSOAPJSValue::ConvertJSValToValue(cx,
                                         *vp,
                                         getter_AddRefs(mValue),
                                         mType);

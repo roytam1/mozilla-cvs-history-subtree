@@ -43,6 +43,16 @@ public:
   nsSOAPJSValue();
   virtual ~nsSOAPJSValue();
 
+  static JSContext* GetSafeContext();
+  static JSContext* GetCurrentContext();
+  static nsresult ConvertValueToJSVal(JSContext* aContext, 
+                                      nsISupports* aValue, 
+                                      const nsAReadableString & aType,
+                                      jsval* vp);
+  static nsresult ConvertJSValToValue(JSContext* aContext,
+                                      jsval val, 
+                                      nsISupports** aValue,
+                                      nsAWritableString & aType);
 protected:
   JSObject *mObject;
   JSContext *mContext;

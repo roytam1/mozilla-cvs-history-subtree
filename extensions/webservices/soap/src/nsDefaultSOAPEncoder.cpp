@@ -22,6 +22,7 @@
 
 #include "nsDefaultSOAPEncoder.h"
 #include "nsSOAPUtils.h"
+#include "nsSOAPJSValue.h"
 #include "nsSOAPParameter.h"
 #include "nsXPIDLString.h"
 #include "nsIDOMDocument.h"
@@ -308,7 +309,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptArray(JSObject* arrayobj,
   attrVal.AssignWithConversion(kArrayTypeVal);
   element->SetAttributeNS(attrNS, attrName, attrVal);
   
-  JSContext* cx = nsSOAPUtils::GetSafeContext();
+  JSContext* cx = nsSOAPJSValue::GetSafeContext();
   if (!JS_IsArrayObject(cx, arrayobj)) return NS_ERROR_INVALID_ARG;
 
   jsuint index, count;
@@ -369,7 +370,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptObject(JSObject* obj,
                                                 nsIDOMElement* element, 
                                                 nsIDOMDocument* document)
 {
-  JSContext* cx = nsSOAPUtils::GetSafeContext();
+  JSContext* cx = nsSOAPJSValue::GetSafeContext();
   JSIdArray* idarray = JS_Enumerate(cx, obj);
 
   // Tread lightly here. Only serialize what we believe we can.
@@ -732,7 +733,7 @@ nsDefaultSOAPEncoder::DeserializeJavaScriptObject(nsIDOMElement *element,
                                                   JSObject** _retval)
 {
   nsresult rv;
-  JSContext* cx = nsSOAPUtils::GetSafeContext();
+  JSContext* cx = nsSOAPJSValue::GetSafeContext();
   JSObject* obj = JS_NewObject(cx, nsnull, nsnull, nsnull);
   if (!obj) return NS_ERROR_FAILURE;
 
@@ -756,7 +757,7 @@ nsDefaultSOAPEncoder::DeserializeJavaScriptObject(nsIDOMElement *element,
     param->GetType(&type);
 
     jsval val;
-    rv = nsSOAPUtils::ConvertValueToJSVal(cx, value, jsvalue, type, &val);
+    rv = nsSOAPJSValue::ConvertValueToJSVal(cx, value, jsvalue, type, &val);
     if (NS_FAILED(rv)) return rv;
 
     if (name) {
@@ -934,7 +935,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
     param->SetValueAndType(value, type);
   }
   else if (jsvalue) {
-    JSContext* cx = nsSOAPUtils::GetSafeContext();
+    JSContext* cx = nsSOAPJSValue::GetSafeContext();
     param->SetValue(cx, OBJECT_TO_JSVAL(jsvalue));
   }
 

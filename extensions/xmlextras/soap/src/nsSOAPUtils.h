@@ -25,7 +25,6 @@
 
 #include "nsString.h"
 #include "nsIDOMElement.h"
-#include "jsapi.h"
 
 class nsSOAPUtils {
 public:
@@ -57,16 +56,6 @@ public:
 #endif
   static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
                                         nsAWritableString & aEncodingStyle);
-  static JSContext* GetSafeContext();
-  static JSContext* GetCurrentContext();
-  static nsresult ConvertValueToJSVal(JSContext* aContext, 
-                                      nsISupports* aValue, 
-                                      const nsAReadableString & aType,
-                                      jsval* vp);
-  static nsresult ConvertJSValToValue(JSContext* aContext,
-                                      jsval val, 
-                                      nsISupports** aValue,
-                                      nsAWritableString & aType);
 
   static const nsString kSOAPEnvURI;
   static const nsString kSOAPEncodingURI;
