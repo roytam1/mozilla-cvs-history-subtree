@@ -642,9 +642,9 @@ install : \
         $(DIST)\lib\nsldaps$(DLL_BITS)v$(MOZ_LDAP_VER).lib \
 !endif
 !if "$(MOZ_BITS)"=="32"
-        $(DIST_PUBLIC)\ldap\lber.h \
-        $(DIST_PUBLIC)\ldap\ldap.h \
-        $(DIST_PUBLIC)\ldap\disptmpl.h \
+        $(DIST_PUBLIC)\lber.h \
+        $(DIST_PUBLIC)\ldap.h \
+        $(DIST_PUBLIC)\disptmpl.h \
 !else
         $(DIST_PUBLIC)\win16\lber.h \
         $(DIST_PUBLIC)\win16\ldap.h \
@@ -664,14 +664,14 @@ $(DIST)\lib\nsldaps$(DLL_BITS)v$(MOZ_LDAP_VER).lib : $(OUTDIR)\nsldaps$(DLL_BITS
 !endif
 
 !if "$(MOZ_BITS)"=="32"
-$(DIST_PUBLIC)\ldap\lber.h : $(LDAP_SRC)\ldap\include\lber.h
-        copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\ldap\lber.h
+$(DIST_PUBLIC)\lber.h : $(LDAP_SRC)\ldap\include\lber.h
+        copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\lber.h
 
-$(DIST_PUBLIC)\ldap\ldap.h : $(LDAP_SRC)\ldap\include\ldap.h
-        copy $(LDAP_SRC)\ldap\include\ldap.h $(DIST_PUBLIC)\ldap\ldap.h
+$(DIST_PUBLIC)\ldap.h : $(LDAP_SRC)\ldap\include\ldap.h
+        copy $(LDAP_SRC)\ldap\include\ldap.h $(DIST_PUBLIC)\ldap.h
 
-$(DIST_PUBLIC)\ldap\disptmpl.h : $(LDAP_SRC)\ldap\include\disptmpl.h
-        copy $(LDAP_SRC)\ldap\include\disptmpl.h $(DIST_PUBLIC)\ldap\disptmpl.h
+$(DIST_PUBLIC)\disptmpl.h : $(LDAP_SRC)\ldap\include\disptmpl.h
+        copy $(LDAP_SRC)\ldap\include\disptmpl.h $(DIST_PUBLIC)\disptmpl.h
 !else
 $(DIST_PUBLIC)\win16\lber.h : $(LDAP_SRC)\ldap\include\lber.h
         copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\win16\lber.h
