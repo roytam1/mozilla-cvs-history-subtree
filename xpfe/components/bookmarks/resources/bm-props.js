@@ -58,6 +58,7 @@ var RDFC = Components.classes["@mozilla.org/rdf/container-utils;1"]
                      .getService(Components.interfaces.nsIRDFContainerUtils);
 
 var Bookmarks = RDF.GetDataSource("rdf:bookmarks");
+var RemoteBookmarks = RDF.GetDataSource("rdf:remotebookmarks");
 
 var gBookmarkURL = "";
 
@@ -75,6 +76,12 @@ function Init()
     var value = Bookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
                                     RDF.GetResource(gProperties[i]),
                                     true);
+    if (!value)
+    {
+        value = RemoteBookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
+                                    RDF.GetResource(gProperties[i]),
+                                    true);
+    }
 
     if (value)
       value = value.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
@@ -93,6 +100,12 @@ function Init()
   value = Bookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
                               RDF.GetResource("http://home.netscape.com/WEB-rdf#Schedule"),
                               true);
+  if (!value)
+  {
+    value = RemoteBookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
+                              RDF.GetResource("http://home.netscape.com/WEB-rdf#Schedule"),
+                              true);
+  }
 
   if (value) {
     value = value.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
@@ -200,6 +213,25 @@ function Init()
 
 function Commit()
 {
+  // rjc: commit changes in reverse-ds order
+
+  var remotechanged = doCommit(RemoteBookmarks);
+
+  var changed = doCommit(Bookmarks);
+  if (changed) {
+    var remote = Bookmarks.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
+    if (remote)
+      remote.Flush();
+  }
+
+  window.close();
+  return true;
+}
+
+
+
+function doCommit(ds)
+{
   var changed = false;
 
   // Grovel through the fields to see if any of the values have
@@ -212,12 +244,16 @@ function Commit()
       // Get the new value as a literal, using 'null' if the value is empty.
       var newvalue = field.value;
 
-      var oldvalue = Bookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
+      var oldvalue = ds.GetTarget(RDF.GetResource(gBookmarkURL),
                                          RDF.GetResource(gProperties[i]),
                                          true);
-
-      if (oldvalue)
-        oldvalue = oldvalue.QueryInterface(Components.interfaces.nsIRDFLiteral);
+      try {
+        if (oldvalue)
+          oldvalue = oldvalue.QueryInterface(Components.interfaces.nsIRDFLiteral);
+        }
+      catch(ex) {
+        oldvalue = null;
+        }
 
       if (newvalue && gProperties[i] == (NC_NAMESPACE_URI + "ShortcutURL")) {
         // shortcuts are always lowercased internally
@@ -233,7 +269,7 @@ function Commit()
       if (newvalue)
         newvalue = RDF.GetLiteral(newvalue);
 
-      if (updateAttribute(gProperties[i], oldvalue, newvalue)) {
+      if (updateAttribute(ds, gProperties[i], oldvalue, newvalue)) {
         // Update gBookmarkURL if the url changed
         if (newvalue && gProperties[i] == NC_NAMESPACE_URI + "URL")
           gBookmarkURL = newvalue.Value;
@@ -248,7 +284,7 @@ function Commit()
   var scheduleTab = document.getElementById("ScheduleTab");
   if (scheduleTab) {
     var scheduleRes = "http://home.netscape.com/WEB-rdf#Schedule";
-    oldvalue = Bookmarks.GetTarget(RDF.GetResource(gBookmarkURL),
+    oldvalue = ds.GetTarget(RDF.GetResource(gBookmarkURL),
                                    RDF.GetResource(scheduleRes), true);
     newvalue = "";
     var dayRangeNode = document.getElementById("dayRange");
@@ -299,39 +335,30 @@ function Commit()
     if (newvalue)
       newvalue = RDF.GetLiteral(newvalue);
 
-    if (updateAttribute(scheduleRes, oldvalue, newvalue))
+    if (updateAttribute(ds, scheduleRes, oldvalue, newvalue))
       changed = true;
   }
-
-  if (changed) {
-    var remote = Bookmarks.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
-    if (remote)
-      remote.Flush();
-  }
-
-  window.close();
-  return true;
+  return(changed);
 }
 
-function updateAttribute(prop, oldvalue, newvalue)
+function updateAttribute(ds, prop, oldvalue, newvalue)
 {
   var changed = false;
 
   if (prop && (oldvalue || newvalue) && oldvalue != newvalue) {
-
     if (oldvalue && !newvalue) {
-      Bookmarks.Unassert(RDF.GetResource(gBookmarkURL),
+      ds.Unassert(RDF.GetResource(gBookmarkURL),
                          RDF.GetResource(prop),
                          oldvalue);
     }
     else if (!oldvalue && newvalue) {
-      Bookmarks.Assert(RDF.GetResource(gBookmarkURL),
+      ds.Assert(RDF.GetResource(gBookmarkURL),
                        RDF.GetResource(prop),
                        newvalue,
                        true);
     }
     else /* if (oldvalue && newvalue) */ {
-      Bookmarks.Change(RDF.GetResource(gBookmarkURL),
+      ds.Change(RDF.GetResource(gBookmarkURL),
                        RDF.GetResource(prop),
                        oldvalue,
                        newvalue);

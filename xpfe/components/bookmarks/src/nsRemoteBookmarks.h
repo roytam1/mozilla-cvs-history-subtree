@@ -103,9 +103,11 @@ protected:
   nsCOMPtr<nsILDAPConnection> mConnection;
   nsCOMPtr<nsILDAPOperation>  mLDAPOperation;
   nsCOMPtr<nsILDAPURL>        mLDAPURL;
-  nsCOMPtr<nsIRDFResource>    mSource;
   nsCOMPtr<nsIRDFContainer>   mContainer;
   nsCOMPtr<nsIRDFResource>    mNode;
+  nsCOMPtr<nsIRDFResource>    mProperty;
+  nsCOMPtr<nsIRDFNode>        mOldTarget;
+  nsCOMPtr<nsIRDFNode>        mNewTarget;
   nsCOMPtr<nsITimer>          mTimer;
   nsString                    mPassword;
   PRUint32                    mOpcode;
@@ -120,9 +122,10 @@ protected:
   nsresult GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
   nsresult insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, nsISupportsArray *aArguments, nsIRDFResource *aItemType);
   nsresult deleteLDAPBookmarkItem(nsIRDFResource *aNode, nsISupportsArray *aArguments, PRInt32 parentArgIndex, nsIRDFResource *aItemType);
+  nsresult updateLDAPBookmarkItem(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aOldTarget, nsIRDFNode *aNewTarget);
   nsresult getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
 
-  enum { LDAP_READY=0, LDAP_SEARCH, LDAP_ADD, LDAP_DELETE };
+  enum { LDAP_READY=0, LDAP_SEARCH, LDAP_ADD, LDAP_DELETE, LDAP_MODIFY };
 
 public:
   nsRemoteBookmarks();

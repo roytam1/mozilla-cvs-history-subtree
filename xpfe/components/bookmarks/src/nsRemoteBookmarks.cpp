@@ -87,9 +87,16 @@
 #define REMOTE_BOOKMARK_PREFIX         "moz-bookmark-"
 #define REMOTE_BOOKMARK_PREFIX_LENGTH  (sizeof(REMOTE_BOOKMARK_PREFIX)-1)
 
+// Mozilla Schema
+#define MOZ_SCHEMA_OBJ_CLASS      "objectclass"
+#define MOZ_SCHEMA_BMK_CLASS      "mozillaBookmark"
+#define MOZ_SCHEMA_FOLDER_CLASS   "mozillaFolder"
+#define MOZ_SCHEMA_NAME           "mozillaName"
+#define MOZ_SCHEMA_URL            "mozillaURL"
 
 #define NS_LDAPCONNECTION_CONTRACTID   "@mozilla.org/network/ldap-connection;1" 
 #define NS_LDAPOPERATION_CONTRACTID    "@mozilla.org/network/ldap-operation;1" 
+#define NS_LDAPMODIFICATION_CONTRACTID "@mozilla.org/network/ldap-modification;1" 
 #define NS_LDAPMESSAGE_CONTRACTID      "@mozilla.org/network/ldap-message;1"
 #define NS_LDAPURL_CONTRACTID          "@mozilla.org/network/ldap-url;1"
 
@@ -492,13 +499,6 @@ nsRemoteBookmarks::GetTargets(nsIRDFResource* aSource,
 
 
 
-NS_IMETHODIMP_(void)
-nsRemoteBookmarks::Notify(nsITimer* aTimer)
-{
-}
-
-
-
 NS_IMETHODIMP
 nsRemoteBookmarks::Assert(nsIRDFResource* aSource,
                           nsIRDFResource* aProperty,
@@ -516,12 +516,13 @@ nsRemoteBookmarks::Assert(nsIRDFResource* aSource,
   NS_PRECONDITION(aTarget != nsnull, "null ptr");
   if (! aTarget)
     return(NS_ERROR_NULL_POINTER);
-
-  if (mInner)
+/*
+  if (mInner && (aTruthValue == PR_TRUE))
   {
     nsresult rv = mInner->Assert(aSource, aProperty, aTarget, aTruthValue);
     return(rv);
   }
+*/
   return(NS_RDF_ASSERTION_REJECTED);
 }
 
@@ -578,8 +579,15 @@ nsRemoteBookmarks::Change(nsIRDFResource* aSource,
 
   if (mInner)
   {
+    if (aProperty == kNC_Name)
+    {
+      nsresult rv = updateLDAPBookmarkItem(aSource, aProperty, aOldTarget, aNewTarget);
+      return(rv);
+    }
+/*
     nsresult rv = mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
     return(rv);
+*/
   }
   return(NS_RDF_ASSERTION_REJECTED);
 }
@@ -1156,6 +1164,18 @@ nsRemoteBookmarks::EndUpdateBatch(nsIRDFDataSource* aDataSource)
 
 
 ////////////////////////////////////////////////////////////////////////
+// nsITimerCallback
+
+
+
+NS_IMETHODIMP_(void)
+nsRemoteBookmarks::Notify(nsITimer* aTimer)
+{
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
 // nsILDAPMessageListener
 
 
@@ -1237,7 +1257,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           NS_ENSURE_SUCCESS(rv, rv);
 
           static const char *attrs[] = {
-          "mozillaURL", "mozillaName", "objectclass", nsnull
+            MOZ_SCHEMA_URL, MOZ_SCHEMA_NAME, MOZ_SCHEMA_OBJ_CLASS, nsnull
           };
 
           // when we called SetSpec(), our spec contained UTF8 data
@@ -1257,6 +1277,52 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         case nsRemoteBookmarks::LDAP_DELETE:
         {
           rv = mLDAPOperation->DeleteExt(NS_ConvertUTF8toUCS2(dn).get());
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+        break;
+
+        case nsRemoteBookmarks::LDAP_MODIFY:
+        {
+          nsresult rv;
+          nsCOMPtr<nsILDAPModification> ldapMod = do_CreateInstance(NS_LDAPMODIFICATION_CONTRACTID, &rv);
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          // XXX when to add, when to modify?
+          if (mOldTarget)
+            rv = ldapMod->SetOperation(nsILDAPModification::MOD_REPLACE);
+          else
+            rv = ldapMod->SetOperation(nsILDAPModification::MOD_ADD);          
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          // set type of LDAP mod based up RDF property change
+          if (mProperty == kNC_Name)
+          {
+            rv = ldapMod->SetType(MOZ_SCHEMA_NAME);
+          }
+          else
+          {
+            return(NS_ERROR_UNEXPECTED);
+          }
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          nsCOMPtr<nsIRDFLiteral> rdfLit = do_QueryInterface(mNewTarget);
+          if (!rdfLit)
+            return(NS_ERROR_UNEXPECTED);
+          const PRUnichar *value = nsnull;
+          rv = rdfLit->GetValueConst(&value);
+          NS_ENSURE_SUCCESS(rv, rv);
+          nsCAutoString utf8Value = NS_ConvertUCS2toUTF8(value);
+          
+          const char *values[2];
+          values[0] = utf8Value.get();
+          values[1] = nsnull;
+          rv = ldapMod->SetValues(1, values);
+
+          nsILDAPModification *mods[2];
+          mods[0] = ldapMod;
+          mods[1] = nsnull;
+
+          rv = mLDAPOperation->ModifyExt(NS_ConvertUTF8toUCS2(dn).get(), 1, mods);
           NS_ENSURE_SUCCESS(rv, rv);
         }
         break;
@@ -1315,23 +1381,26 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       PR_smprintf_free (_ldapSearchUrlString);
 
       nsCOMPtr<nsIRDFResource> searchRes;
+      nsCOMPtr<nsIRDFLiteral> searchResLit;
 
       nsAutoString classStr, urlStr, nameStr;
-      GetLDAPMsgAttrValue(aMessage, "objectclass", classStr);
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_OBJ_CLASS, classStr);
       classStr.Trim(" \t");
-      if (classStr.EqualsIgnoreCase("mozillaBookmark"))
+      if (classStr.EqualsIgnoreCase(MOZ_SCHEMA_BMK_CLASS))
       {
         // its a Bookmark
-        GetLDAPMsgAttrValue(aMessage, "mozillaName", nameStr);
-        GetLDAPMsgAttrValue(aMessage, "mozillaURL", urlStr);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_URL, urlStr);
         urlStr.Trim(" \t");
         if (urlStr.Length() < 1)
           return(NS_OK);
 
 #ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
         rv = gRDF->GetUnicodeResource(urlStr.get(), getter_AddRefs(searchRes));
+        rv = gRDF->GetLiteral(urlStr.get(), getter_AddRefs(searchResLit));
 #else
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
+        rv = gRDF->GetLiteral(ldapSearchUrlString.get(), getter_AddRefs(searchResLit));
 #endif
         NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1339,10 +1408,10 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         rv = mInner->Assert(searchRes, kRDF_type, kNC_Bookmark, PR_TRUE);
         NS_ENSURE_SUCCESS(rv, rv);
       }
-      else if (classStr.EqualsIgnoreCase("mozillaFolder"))
+      else if (classStr.EqualsIgnoreCase(MOZ_SCHEMA_FOLDER_CLASS))
       {
         // its a Folder
-        GetLDAPMsgAttrValue(aMessage, "mozillaName", nameStr);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
 
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1373,12 +1442,15 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       // so we have to be tricky and hang the true LDAP URL off of #LDAPURL
       rv = mInner->Assert(searchRes, kNC_LDAPURL, urlRes, PR_TRUE);
       NS_ENSURE_SUCCESS(rv, rv);
-      rv = mInner->Assert(searchRes, kNC_URL, searchRes, PR_TRUE);
-      NS_ENSURE_SUCCESS(rv, rv);
+      if (searchResLit)
+      {
+        rv = mInner->Assert(searchRes, kNC_URL, searchResLit, PR_TRUE);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
 #else
       rv = mInner->Assert(searchRes, kNC_URL, urlRes, PR_TRUE);
-#endif
       NS_ENSURE_SUCCESS(rv, rv);
+#endif
 
       // prevent duplicates                                                       
       PRInt32 aIndex;                                                             
@@ -1404,7 +1476,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
            (NS_SUCCEEDED(rv = mContainer->GetCount(&count)) &&
            (count == 0) && (mPassword.IsEmpty()))))
       {
-        // rebind
         rv = doLDAPRebind();
         return(rv);
       }
@@ -1426,6 +1497,26 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 #ifdef  LDAP_MOD_SUPPORT
 
     case nsILDAPMessage::RES_MODIFY:
+    {
+    if (errorCode != nsILDAPErrors::SUCCESS)
+    {
+      if ( errorCode == nsILDAPErrors::INAPPROPRIATE_AUTH ||
+           errorCode == nsILDAPErrors::INVALID_CREDENTIALS ||
+           errorCode == nsILDAPErrors::INSUFFICIENT_ACCESS)
+      {
+        rv = doLDAPRebind();
+        return(rv);
+      }
+      if (errorCode != nsILDAPErrors::NO_SUCH_OBJECT)
+      {
+        showLDAPError(aMessage);
+        return(NS_ERROR_FAILURE);
+      }
+    }
+    // success, update the internal graph
+    rv = mInner->Change(mNode, mProperty, mOldTarget, mNewTarget);
+    NS_ENSURE_SUCCESS(rv, rv);
+    }
     break;
 
     case nsILDAPMessage::RES_ADD:
@@ -1439,7 +1530,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
            errorCode == nsILDAPErrors::INVALID_CREDENTIALS ||
            errorCode == nsILDAPErrors::INSUFFICIENT_ACCESS)
       {
-        // rebind and try again
         rv = doLDAPRebind();
         return(rv);
       }
@@ -1567,7 +1657,8 @@ nsRemoteBookmarks::doLDAPQuery(nsILDAPConnection *ldapConnection,
   {
     aParent->GetValueConst(&srcURI);
   }
-  else if (ldapOpcode == nsRemoteBookmarks::LDAP_DELETE)
+  else if ((ldapOpcode == nsRemoteBookmarks::LDAP_DELETE) ||
+    (ldapOpcode == nsRemoteBookmarks::LDAP_MODIFY))
   {
     nsCOMPtr<nsIRDFNode> rdfNode;
     rv = mInner->GetTarget(aNode, kNC_LDAPURL, PR_TRUE, getter_AddRefs(rdfNode));
@@ -1859,6 +1950,41 @@ nsRemoteBookmarks::deleteLDAPBookmarkItem(nsIRDFResource *aNode,
   nsAutoString dummy;
   rv = doLDAPQuery(ldapConnection, argParent, aNode, dummy, dummy,
     nsRemoteBookmarks::LDAP_DELETE);
+  return(rv);
+}
+
+
+
+nsresult
+nsRemoteBookmarks::updateLDAPBookmarkItem(nsIRDFResource *aSource,
+                                          nsIRDFResource *aProperty,
+                                          nsIRDFNode *aOldTarget,
+                                          nsIRDFNode *aNewTarget)
+{
+  nsresult rv;
+  nsCOMPtr<nsIRDFNode> rdfNode;
+  rv = mInner->GetTarget(aSource, kNC_LDAPURL, PR_TRUE, getter_AddRefs(rdfNode));
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIRDFResource> rdfRes = do_QueryInterface(rdfNode);
+  if (!rdfRes)
+    return(NS_OK);
+  
+  if (!isRemoteBookmarkURI(rdfRes))
+    return(NS_OK);
+
+  // Get the ldap connection
+  nsCOMPtr<nsILDAPConnection> ldapConnection;
+  ldapConnection = do_CreateInstance(NS_LDAPCONNECTION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // XXX broken
+  mProperty = aProperty;
+  mOldTarget = aOldTarget;
+  mNewTarget = aNewTarget;
+
+  nsAutoString dummy;
+  rv = doLDAPQuery(ldapConnection, nsnull, aSource, dummy, dummy,
+    nsRemoteBookmarks::LDAP_MODIFY);
   return(rv);
 }
 
