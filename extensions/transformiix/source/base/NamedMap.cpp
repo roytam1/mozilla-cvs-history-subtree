@@ -317,10 +317,10 @@ NamedMap::BucketItem* NamedMap::getBucketItem(const String& key) {
 **/
 unsigned long NamedMap::hashKey(const String& key)
 {
-    PRInt32 len = key.length();
+    PRUint32 len = key.length();
 
     unsigned long hashCode = 0;
-    for (PRInt32 i = 0; i < len; i++) {
+    for (PRUint32 i = 0; i < len; i++) {
         hashCode += ((PRInt32)key.charAt(i)) << 3;
     }
     return hashCode;

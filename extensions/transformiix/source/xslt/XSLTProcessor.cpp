@@ -270,11 +270,11 @@ void XSLTProcessor::getHrefFromStylesheetPI(Document& xmlDocument, String& href)
 **/
 void XSLTProcessor::parseStylesheetPI(String& data, String& type, String& href) {
 
-    PRInt32 size = data.length();
+    PRUint32 size = data.length();
     NamedMap bufferMap;
     bufferMap.put("type", &type);
     bufferMap.put("href", &href);
-    int ccount = 0;
+    PRUint32 ccount = 0;
     MBool inLiteral = MB_FALSE;
     UNICODE_CHAR matchQuote = '"';
     String sink;
@@ -1361,7 +1361,7 @@ void XSLTProcessor::processAction(Node* aNode,
                 String value;
                 processChildrenAsValue(aNode, actionElement, aPs, MB_TRUE, value);
                 PRInt32 pos = 0;
-                PRInt32 length = value.length();
+                PRUint32 length = value.length();
                 while ((pos = value.indexOf('-', pos)) != NOT_FOUND) {
                     ++pos;
                     if ((pos == length) || (value.charAt(pos) == '-'))

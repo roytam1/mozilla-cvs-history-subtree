@@ -65,8 +65,8 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
     if (attValue.isEmpty())
         return avt; //XXX should return 0, but that causes crash in lre12
 
-    PRInt32 size = attValue.length();
-    int cc = 0;
+    PRUint32 size = attValue.length();
+    PRUint32 cc = 0;
     UNICODE_CHAR nextCh;
     UNICODE_CHAR ch;
     String buffer;

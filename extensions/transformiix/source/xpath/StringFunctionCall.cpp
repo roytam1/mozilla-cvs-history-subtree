@@ -116,7 +116,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             MBool first = MB_TRUE;
             String normed(resultStr.length());
             UNICODE_CHAR c;
-            PRInt32 src;
+            PRUint32 src;
             for (src = 0; src < resultStr.length(); src++) {
                 c = resultStr.charAt(src);
                 if (c == ' ' || c == '\n' ||
@@ -196,7 +196,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
                 return new StringResult();
             
             String resultStr;
-            src.subString((PRInt32)start, (PRInt32)end, resultStr);
+            src.subString((PRUint32)start, (PRUint32)end, resultStr);
             return new StringResult(resultStr);
         }
         case SUBSTRING_AFTER:
@@ -208,8 +208,8 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg1);
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg2);
             PRInt32 idx = arg1.indexOf(arg2);
-            if (idx >= 0) {
-                PRInt32 len = arg2.length();
+            if (idx != NOT_FOUND) {
+                PRUint32 len = arg2.length();
                 arg1.subString(idx + len, arg2);
                 return new StringResult(arg2);
             }
@@ -224,7 +224,7 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg1);
             evaluateToString((Expr*)iter.next(), aContext, aCs, arg2);
             PRInt32 idx = arg1.indexOf(arg2);
-            if (idx >= 0) {
+            if (idx != NOT_FOUND) {
                 arg2.clear();
                 arg1.subString(0, idx, arg2);
                 return new StringResult(arg2);
@@ -244,10 +244,10 @@ ExprResult* StringFunctionCall::evaluate(Node* aContext, ContextState* aCs)
             String oldChars, newChars, dest;
             evaluateToString((Expr*)iter.next(), aContext, aCs, oldChars);
             evaluateToString((Expr*)iter.next(), aContext, aCs, newChars);
-            PRInt32 i;
+            PRUint32 i;
             for (i = 0; i < src.length(); i++) {
                 PRInt32 idx = oldChars.indexOf(src.charAt(i));
-                if (idx >= 0) {
+                if (idx != NOT_FOUND) {
                     if (idx < newChars.length())
                         dest.append(newChars.charAt(idx));
                 }

@@ -237,8 +237,8 @@ void ExprLexer::parse(const String& pattern)
     return;
 
   String tokenBuffer;
-  PRInt32 iter = 0, start;
-  PRInt32 size = pattern.length();
+  PRUint32 iter = 0, start;
+  PRUint32 size = pattern.length();
   short defType;
   UNICODE_CHAR ch;
 
@@ -277,7 +277,7 @@ void ExprLexer::parse(const String& pattern)
       start = iter;
       while (++iter < size && 
              isNCNameChar(pattern.charAt(iter))) /* just go */ ;
-      PRInt32 end = iter;
+      PRUint32 end = iter;
       if (pattern.charAt(iter)==COLON) {
         // try QName or wildcard, might need to step back for axis
         if (++iter < size)

@@ -130,8 +130,8 @@ MBool Double::isNeg(double aDbl)
  */
 double Double::toDouble(const String& aSrc)
 {
-    PRInt32 idx = 0;
-    PRInt32 len = aSrc.length();
+    PRUint32 idx = 0;
+    PRUint32 len = aSrc.length();
     MBool digitFound = MB_FALSE;
 
     // leading whitespace

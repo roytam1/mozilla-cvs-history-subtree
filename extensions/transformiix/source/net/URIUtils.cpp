@@ -227,10 +227,10 @@ URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
     short mode = PROTOCOL_MODE;
 
     // look for protocol
-    int totalCount = uri.length();
-    int charCount = 0;
+    PRUint32 totalCount = uri.length();
+    PRUint32 charCount = 0;
     UNICODE_CHAR prevCh = '\0';
-    int fslash = 0;
+    PRUint32 fslash = 0;
     String buffer(uri.length());
     while ( charCount < totalCount ) {
         UNICODE_CHAR ch = uri.charAt(charCount++);

@@ -139,8 +139,8 @@ MBool XMLUtils::isValidQName(const String& name) {
     if (!isAlphaChar(name.charAt(0)))
         return MB_FALSE;
 
-    int size = name.length();
-    for (int i = 1; i < size; i++) {
+    PRUint32 size = name.length();
+    for (PRUint32 i = 1; i < size; i++) {
         if (!isQNameChar(name.charAt(i)))
             return MB_FALSE;
     }
@@ -151,7 +151,7 @@ MBool XMLUtils::isValidQName(const String& name) {
  * Returns true if the given string has only whitespace characters
 **/
 MBool XMLUtils::isWhitespace(const String& text) {
-    for ( int i = 0; i < text.length(); i++ ) {
+    for (PRUint32 i = 0; i < text.length(); i++ ) {
         PRInt32 ch = text.charAt(i);
         switch ( ch ) {
             case ' '  :
@@ -201,7 +201,7 @@ void XMLUtils::normalizePIValue(String& piValue)
 **/
 MBool XMLUtils::shouldStripTextnode (const String& data){
     MBool toStrip = MB_TRUE;
-    for (PRInt32 i=0;toStrip && i<data.length();i++){
+    for (PRUint32 i=0;toStrip && i<data.length();i++){
         switch(data.charAt(i)) {
             case 0x0020: // space
             case 0x0009: // tab

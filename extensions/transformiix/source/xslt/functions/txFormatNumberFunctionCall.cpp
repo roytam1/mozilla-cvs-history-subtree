@@ -119,8 +119,8 @@ ExprResult* txFormatNumberFunctionCall::evaluate(Node* aContext,
     int multiplier=1;
     int groupSize=-1;
 
-    int pos=0;
-    int formatLen = formatStr.length();
+    PRUint32 pos = 0;
+    PRUint32 formatLen = formatStr.length();
     MBool inQuote;
 
     // Get right subexpression
@@ -384,7 +384,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(Node* aContext,
     MBool carry = (i+1 < buflen) && (buf[i+1] >= '5');
     MBool hasFraction = MB_FALSE;
 
-    PRInt32 resPos = res.length()-1;
+    PRUint32 resPos = res.length()-1;
 
     // Fractions
     for (; i >= bufIntDigits; --i) {
