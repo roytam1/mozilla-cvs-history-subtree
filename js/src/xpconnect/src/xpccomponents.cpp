@@ -1378,7 +1378,6 @@ nsXPCComponents_Constructor::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
         // for the property with this name - i.e. we let its caching of these
         // nsIJSCID objects work for us.
 
-
         nsCOMPtr<nsIXPCComponents_Classes> classes;
         nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
         JSObject* classesObj = nsnull;

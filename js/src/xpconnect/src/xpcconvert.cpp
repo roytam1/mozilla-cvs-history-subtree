@@ -942,14 +942,12 @@ XPCConvert::JSObject2NativeInterface(XPCCallContext& ccx,
 
     nsISupports* iface;
 
-// fix this
-/*
     // is this really a native xpcom object with a wrapper?
     XPCWrappedNative* wrappedNative =
-                XPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx, src);
+                XPCWrappedNative::GetWrappedNativeOfJSObject(cx, src);
     if(wrappedNative)
     {
-        iface = wrappedNative->GetNative();
+        iface = wrappedNative->GetIdentityObject();
         // is the underlying object the right interface?
         if(wrappedNative->GetIID().Equals(*iid))
         {
@@ -960,7 +958,6 @@ XPCConvert::JSObject2NativeInterface(XPCCallContext& ccx,
         else
             return NS_SUCCEEDED(iface->QueryInterface(*iid, dest));
     }
-*/
     // else...
 
     // Does the JSObject have 'nsISupportness'? (as do DOM objects.)
@@ -1042,12 +1039,10 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
             return nsnull;
         }
 
-// XXX fix this
-  
         // is this really a native xpcom object with a wrapper?
-//        XPCWrappedNative* wrapper;
-//        if(nsnull != (wrapper =
-//           XPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx,obj)))
+        XPCWrappedNative* wrapper;
+        if(nsnull != (wrapper =
+           XPCWrappedNative::GetWrappedNativeOfJSObject(cx,obj)))
         if(0)
         {
             nsIXPCException* iface;

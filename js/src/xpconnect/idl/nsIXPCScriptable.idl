@@ -39,6 +39,7 @@
 [uuid(fa2c3b80-0e9d-11d5-9092-0010a4e73d9a)]
 interface nsIXPCScriptable : nsISupports
 {
+    /* bitflags used for 'flags' (only 32 bits available!) */
 
     const PRUint32 WANT_CREATE                      = 1 <<  0;
     const PRUint32 WANT_ADDPROPERTY                 = 1 <<  1;
@@ -56,16 +57,15 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 WANT_CONSTRUCT                   = 1 << 13;
     const PRUint32 WANT_HASINSTANCE                 = 1 << 14;
     const PRUint32 WANT_MARK                        = 1 << 15;
-    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 16;
-    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 17;
-    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 18;
-    const PRUint32 NO_TEAROFFS                      = 1 << 19;
+    const PRUint32 USE_JSSTUB_FOR_ADDPROPERTY       = 1 << 16;
+    const PRUint32 USE_JSSTUB_FOR_DELPROPERTY       = 1 << 17;
+    const PRUint32 USE_JSSTUB_FOR_GETPROPERTY       = 1 << 18;
+    const PRUint32 USE_JSSTUB_FOR_SETPROPERTY       = 1 << 19;
+    const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 20;
+    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 21;
+    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 22;
+    const PRUint32 NO_TEAROFFS                      = 1 << 23;
 
-    /* XXX I want some flags to tell xpc to use JS stubs for some of these */
-    // e.g.  USE_JSSTUB_FOR_ADDPROPERTY
-
-
-    // XXX need to add wrapper param to each of the below!!!
 
     readonly attribute string   className;
     readonly attribute PRUint32 flags;

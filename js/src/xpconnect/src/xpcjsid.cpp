@@ -453,13 +453,9 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
 
         NS_ASSERTION(obj, "when is an object not an object?");
 
-        JSObject* ignored1;
-        XPCWrappedNativeTearOff* ignored2;
-
         // is this really a native xpcom object with a wrapper?
         XPCWrappedNative* other_wrapper =
-           XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj,
-                                                        &ignored1, &ignored2);
+           XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
 
         if(!other_wrapper)
             return NS_OK;
@@ -786,23 +782,18 @@ xpc_JSObjectToID(JSContext *cx, JSObject* obj)
     if(!cx || !obj)
         return nsnull;
 
-// fix this
-#if 0
     // NOTE: this call does NOT addref
     XPCWrappedNative* wrapper =
-        XPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx, obj);
+        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
     if(wrapper)
     {
         if(wrapper->GetIID().Equals(NS_GET_IID(nsIJSID))  ||
            wrapper->GetIID().Equals(NS_GET_IID(nsIJSIID)) ||
            wrapper->GetIID().Equals(NS_GET_IID(nsIJSCID)))
         {
-            ((nsIJSID*)wrapper->GetNative())->GetId(&id);
+            ((nsIJSID*)wrapper->GetIdentityObject())->GetId(&id);
         }
     }
-#endif
-    // XXX it might be nice to try to construct one from an object that can be
-    // converted into a string.
     return id;
 }
 

@@ -156,7 +156,7 @@ hash_root(const void *key)
 JS_STATIC_DLL_CALLBACK(intN)
 DEBUG_WrapperChecker(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
+// XXX fix this
 //    NS_ASSERTION(!((nsXPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
     ++ *((int*)arg);
     return HT_ENUMERATE_NEXT;
@@ -465,7 +465,7 @@ WrappedJSMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeClassMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
+// XXX fix this
 //    ((nsXPCWrappedNativeClass*)he->value)->DebugDump(*(PRInt16*)arg);
     return HT_ENUMERATE_NEXT;
 }
@@ -513,7 +513,7 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
             XPC_LOG_OUTDENT();
         }
 
-// fix this
+// XXX fix this
 #if 0
         XPC_LOG_ALWAYS(("mWrappedNativeClassMap @ %x with %d wrapperclasses(s)", \
                          mWrappedNativeClassMap, mWrappedNativeClassMap ? \

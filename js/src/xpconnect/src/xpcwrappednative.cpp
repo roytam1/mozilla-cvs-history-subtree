@@ -270,7 +270,7 @@ XPCWrappedNative::Release(void)
 void
 XPCWrappedNative::JSObjectFinalized(JSContext *cx, JSObject *obj)
 {
-    // fix this...
+    // XXX fix this...
 /*
     nsIXPCScriptable* ds;
     nsIXPCScriptable* as;
@@ -306,16 +306,20 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
            JS_InstanceOf(cx, cur, &XPC_WN_WithHelper_JSClass, nsnull) ||
            JS_InstanceOf(cx, cur, &XPC_WN_WithHelperNoCall_JSClass, nsnull))
         {
-            *pobj2 = cur;
+            if(pobj2) 
+                *pobj2 = cur;
             return (XPCWrappedNative*) JS_GetPrivate(cx, cur);
         }
 
         if(JS_InstanceOf(cx, cur, &XPC_WN_Tearoff_JSClass, nsnull))
         {
-            XPCWrappedNativeTearOff* to;
+            if(pobj2) 
+                *pobj2 = cur;
 
-            *pobj2 = cur;
-            *pTearOff = to = (XPCWrappedNativeTearOff*) JS_GetPrivate(cx, cur);
+            XPCWrappedNativeTearOff* to = 
+                (XPCWrappedNativeTearOff*) JS_GetPrivate(cx, cur);
+            if(pTearOff)
+                *pTearOff = to;
             return to->GetPrivateWrapper();                   
         }
 

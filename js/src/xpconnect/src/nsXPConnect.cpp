@@ -507,11 +507,8 @@ nsXPConnect::GetWrappedNativeOfJSObject(JSContext * aJSContext, JSObject * aJSOb
     if(!ccx.IsValid())
         return NS_ERROR_FAILURE;
 
-    // XXX fix this
-    nsIXPConnectWrappedNative* wrapper = nsnull;
-
-//    nsIXPConnectWrappedNative* wrapper = 
-//        nsXPCWrappedNativeClass::GetWrappedNativeOfJSObject(aJSContext, aJSObj);
+    nsIXPConnectWrappedNative* wrapper = 
+        XPCWrappedNative::GetWrappedNativeOfJSObject(aJSContext, aJSObj);
     if(wrapper)
     {
         NS_ADDREF(wrapper);

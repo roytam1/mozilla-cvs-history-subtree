@@ -150,11 +150,6 @@ extern const char XPC_ARG_FORMATTER_FORMAT_STR[]; // format string
 
 /***************************************************************************/
 
-
-// XXX fix this
-class XPCNativeMemberDescriptor;
-
-
 class nsXPConnect : public nsIXPConnect
 {
 public:
@@ -1652,25 +1647,30 @@ public:
 
 
     JSBool WantCreate()                   const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CREATE);}
-    JSBool WantAddproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
-    JSBool WantDelproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
-    JSBool WantGetproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_GETPROPERTY);}
-    JSBool WantSetproperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_SETPROPERTY);}
+    JSBool WantAddProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
+    JSBool WantDelProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
+    JSBool WantGetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_GETPROPERTY);}
+    JSBool WantSetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_SETPROPERTY);}
     JSBool WantEnumerate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ENUMERATE);}
-    JSBool WantNewenumerate()             const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWENUMERATE);}
+    JSBool WantNewEnumerate()             const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWENUMERATE);}
     JSBool WantResolve()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_RESOLVE);}
-    JSBool WantNewresolve()               const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWRESOLVE);}
+    JSBool WantNewResolve()               const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWRESOLVE);}
     JSBool WantConvert()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONVERT);}
     JSBool WantFinalize()                 const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_FINALIZE);}
-    JSBool WantCheckaccess()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CHECKACCESS);}
+    JSBool WantCheckAccess()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CHECKACCESS);}
     JSBool WantCall()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CALL);}
     JSBool WantConstruct()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONSTRUCT);}
-    JSBool WantHasinstance()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_HASINSTANCE);}
+    JSBool WantHasInstance()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_HASINSTANCE);}
     JSBool WantMark()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_MARK);}
+    JSBool UseJSStubForAddProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY);}
+    JSBool UseJSStubForDelProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY);}
+    JSBool UseJSStubForGetProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_GETPROPERTY);}
+    JSBool UseJSStubForSetProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY);}
     JSBool DontEnumStaticProps()          const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ENUM_STATIC_PROPS);}
     JSBool DontAskInstanceForScriptable() const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE);}
     JSBool HideQueryInterface()           const {return (JSBool)(mFlags & nsIXPCScriptable::HIDE_QUERY_INTERFACE);}
     JSBool NoTearoffs()                   const {return (JSBool)(mFlags & nsIXPCScriptable::NO_TEAROFFS);}
+
 
 private:
     // disable copy ctor and assignment
@@ -1763,8 +1763,9 @@ public:
                  XPCNativeInterface* Interface);
                               
     static XPCWrappedNative*
-    GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj, JSObject** pobj2,
-                               XPCWrappedNativeTearOff** pTearOff);
+    GetWrappedNativeOfJSObject(JSContext* cx, JSObject* obj, 
+                               JSObject** pobj2 = nsnull,
+                               XPCWrappedNativeTearOff** pTearOff = nsnull);
 
     XPCWrappedNativeProto* GetProto()          const {return mProto;}
     XPCNativeSet*          GetSet()            const {return mSet;}
