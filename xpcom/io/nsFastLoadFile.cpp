@@ -591,17 +591,19 @@ nsFastLoadFileReader::Open()
 NS_IMETHODIMP
 nsFastLoadFileReader::Close()
 {
+    PRUint32 strongTotal = 0, weakTotal = 0;
+
     // Give up any dangling strong refs, after asserting there aren't any.
     for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
         nsFastLoadSharpObjectEntry* entry = &mFooter.mObjectMap[i];
 
-        NS_ASSERTION(entry->mStrongRefCnt == 0,
-                     "failed to deserialize all strong refs!");
-        NS_ASSERTION(entry->mWeakRefCnt == 0,
-                     "failed to deserialize all weak refs!");
+        strongTotal += entry->mStrongRefCnt;
+        weakTotal += entry->mWeakRefCnt;
 
         entry->mObject = nsnull;
     }
+    NS_ASSERTION(strongTotal == 0, "failed to deserialize all strong refs!");
+    NS_ASSERTION(weakTotal == 0, "failed to deserialize all weak refs!");
 
     return mInputStream->Close();
 }
