@@ -424,7 +424,7 @@ static GCSeg* DoGrowHeap(PRInt32 requestedSize, PRBool exactly)
 #ifdef DEBUG
     {
     char str[256];
-    sprintf(str, "[1] Allocated %d bytes at %p\n", sizeof(GCSegInfo), segInfo);
+    sprintf(str, "[1] Allocated %d bytes at %p\n", (int)sizeof(GCSegInfo), segInfo);
     OutputDebugString(str);
     }
 #endif
@@ -642,7 +642,7 @@ static void ShrinkGCHeap(GCSeg *sp)
 #ifdef GCMETER
     if (_pr_gcMeter & _GC_METER_GROWTH) {
         fprintf(stderr, "[GC: free segment base=%p size=%d]\n",
-                sp->base, sp->limit - sp->base);
+                sp->base, (int)(sp->limit - sp->base));
     }
 #endif    
 
@@ -1647,10 +1647,10 @@ static void dogc(void)
     if (_pr_gcMeter & _GC_METER_STATS) {
         fprintf(stderr,
                 "[GCSTATS: busy:%d skipped:%d, alloced:%d+wasted:%d+free:%d = total:%d]\n",
-                _pr_gcData.busyMemory,
-        meter.skippedFreeChunks,
-                meter.allocBytes, meter.wastedBytes, _pr_gcData.freeMemory,
-                _pr_gcData.allocMemory);
+                (int)_pr_gcData.busyMemory,
+				(int)meter.skippedFreeChunks,
+                (int)meter.allocBytes, (int)meter.wastedBytes, (int)_pr_gcData.freeMemory,
+                (int)_pr_gcData.allocMemory);
     }        
     memset(&meter, 0, sizeof(meter));
 #endif
@@ -1981,7 +1981,7 @@ PR_DumpHexWords(FILE *out, PRWord *p, int nWords,
     nWords -= i;
     while (i--)
     {
-        fprintf(out, "0x%.8X", *p++);
+        fprintf(out, "0x%.8X", (unsigned int)*p++);
         if (i)
         fputc(' ', out);
     }
@@ -1994,7 +1994,7 @@ pr_DumpObject(FILE *out, GCType* tp, PRWord *p,
           size_t bytes, PRBool detailed)
 {
     char kindChar = tp->kindChar;
-    fprintf(out, "0x%p: 0x%.6X %c  ", p, bytes, kindChar ? kindChar : '?');
+    fprintf(out, "0x%p: 0x%.6X %c  ", p, (unsigned int)bytes, kindChar ? kindChar : '?');
     if (tp->dump)
     (*tp->dump)(out, (void*) (p + 1), detailed, 0);
     if (detailed)
@@ -2006,8 +2006,8 @@ pr_DumpUnknown(FILE *out, GCType* tp, PRWord tix, PRWord *p,
            size_t bytes, PRBool detailed)
 {
     char kindChar = tp->kindChar;
-    fprintf(out, "0x%p: 0x%.6X %c  ", p, bytes, kindChar ? kindChar : '?');
-    fprintf(out, "UNKNOWN KIND %d\n", tix);
+    fprintf(out, "0x%p: 0x%.6X %c  ", p, (unsigned int)bytes, kindChar ? kindChar : '?');
+    fprintf(out, "UNKNOWN KIND %d\n", (unsigned int)tix);
     if (detailed)
     PR_DumpHexWords(out, p, bytes>>2, 22, 4);
 }
@@ -2019,7 +2019,7 @@ pr_DumpFree(FILE *out, PRWord *p, size_t size, PRBool detailed)
 # pragma unused( detailed )
 #endif
 
-    fprintf(out, "0x%p: 0x%.6X -  FREE\n", p, size);
+    fprintf(out, "0x%p: 0x%.6X -  FREE\n", p, (unsigned int)size);
 }
 
 static void PR_CALLBACK

@@ -148,8 +148,14 @@ _PR_MD_SET_PRIORITY(_MDThread *thread, PRThreadPriority newPri)
 PR_IMPLEMENT(void)
 _PR_MD_CLEAN_THREAD(PRThread *thread)
 {
-   /* Just call _PR_MD_EXIT_THREAD for now */
-   _PR_MD_EXIT_THREAD(thread);
+	if (&thread->md.blocked_sema) {
+	  _PR_MD_DESTROY_SEM(&thread->md.blocked_sema);
+	}
+	
+	if (thread->md.handle) {
+	  DosKillThread(thread->md.handle);
+	  thread->md.handle = 0;
+	}
 }
 
 PR_IMPLEMENT(void)

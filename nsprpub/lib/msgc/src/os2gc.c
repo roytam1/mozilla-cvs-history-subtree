@@ -20,6 +20,7 @@
  * GC related routines
  *
  */
+#include <stdlib.h>
 #include "prlog.h"
 
 /* Leave a bit of room for any malloc header bytes... */

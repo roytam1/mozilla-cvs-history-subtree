@@ -57,7 +57,11 @@ int main(int argc, char **argv)
 
 	
     PR_STDIO_INIT();
+#ifndef XP_OS2
 	t1 = PR_Open("/usr/tmp/ttools/nspr20/err03.tmp", PR_TRUNCATE | PR_RDWR, 0666);
+#else
+    t1 = PR_Open("tempfile.txt", PR_TRUNCATE | PR_RDWR, 0666);
+#endif
 	if (t1 == NULL) {
 		if (PR_GetError() == PR_FILE_NOT_FOUND_ERROR) {
 				printf ("error code is %d \n", PR_GetError());

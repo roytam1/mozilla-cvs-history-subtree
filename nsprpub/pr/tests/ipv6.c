@@ -61,6 +61,7 @@ static PRStatus PrintAddress(const PRNetAddr* address)
     PRNetAddr translation;
     char buffer[ADDR_BUFFER];
     PRStatus rv = PR_NetAddrToString(address, buffer, sizeof(buffer));
+	memset(&translation, 0, sizeof(PRNetAddr));
     if (PR_FAILURE == rv) PL_FPrintError(err, "PR_NetAddrToString");
     else
     {
@@ -153,6 +154,7 @@ PRIntn main(PRIntn argc, char **argv)
         {
             PRIntn index = 0;
             PRNetAddr address;
+            memset(&address, 0, sizeof(PRNetAddr));
             PR_fprintf(err, "success .. enumerating results\n");
             do
             {

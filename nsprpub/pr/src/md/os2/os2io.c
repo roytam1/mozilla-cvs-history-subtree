@@ -223,8 +223,8 @@ _PR_MD_LSEEK64(PRFileDesc *fd, PRInt64 offset, int whence)
 		hi = newLocation = -1;
    }
 
-    result.lo = hi;
-    result.hi = newLocation;
+    result.lo = newLocation;
+    result.hi = hi;
 	return result;
 }
 

@@ -121,6 +121,15 @@ CSRCS =             \
 	xnotify.c       \
 	$(NULL)
 
+ifeq ($(OS_TARGET),OS2)
+CSRCS +=            \
+	servr_uu.c		\
+	sleep.c			\
+	stat.c		    \
+	yield.c         \
+	$(NULL)
+endif
+
 ifeq ($(OS_ARCH), WINNT)
 PROG_SUFFIX = .exe
 else
@@ -146,8 +155,11 @@ ifeq ($(OS_TARGET), WIN16)
 else
 ifeq ($(OS_TARGET), OS2)
 ifdef XP_OS2_VACPP
+  LDOPTS =
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
+else
+  LDOPTS = -Zlinker /PM:VIO
 endif
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
@@ -380,7 +392,7 @@ ifeq ($(OS_TARGET),WIN16)
 	wlink @w16link.
 else
 ifeq ($(OS_TARGET),OS2)
-	$(LINK) $(EXEFLAGS) $< $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
+	$(LINK) $(EXEFLAGS) $(LDOPTS) $< $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
 else
 	link $(LDOPTS) $< $(LIBPLC) $(LIBPR) wsock32.lib -out:$@
 endif

@@ -65,6 +65,7 @@ ifdef XP_OS2_VACPP
   LIBPLC = $(DIST)/lib/plc$(NSPR_VERSION).lib
   LIBGC= $(DIST)/lib/msgc$(GC_VERSION).lib
 else
+  LDFLAGS = -Zlinker /PM:VIO
   LIBPR = -lnspr$(NSPR_VERSION)
   LIBPLC = -lplc$(NSPR_VERSION)
   LIBGC= -lmsgc$(GC_VERSION)
