@@ -327,13 +327,7 @@ il_image_match(il_container *ic,          /* Candidate for match. */
             }
         }
     }
-
-
-        return FALSE;
-
-    if((ic->display_type==IL_Printer) &&
-	(ic->dest_width != ic->image->header.width) &&
-	(ic->dest_height != ic->image->header.height ))
+    
     /* Check the url (we have already checked the hash value which is based
        on the url.) */
     if (strcmp(image_url, ic->url_address))
