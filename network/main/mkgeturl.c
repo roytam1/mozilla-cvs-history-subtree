@@ -2390,10 +2390,7 @@ NET_GetURL (URL_Struct *URL_s,
 
     /* check for the url in the cache
      */
-    cache_method = NULL;
-/* XXX WHS
     cache_method = NET_FindURLInCache(URL_s, window_id);
-*/
 
 	if (!cache_method)
 	  {

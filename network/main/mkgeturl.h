@@ -124,7 +124,7 @@ extern char * NET_FindProxyHostForUrl(const char *proto, char *urladdress);
 extern void NET_RegisterProtocolImplementation(NET_ProtoImpl *impl, 
                                                const char *for_proto);
 
-#define NET_ProtocolEquals(_a, _b) (PL_strcasecmp(_a, _b) == 0)
+#define NET_ProtocolEquals(_a, _b) ((_a) && (PL_strcasecmp(_a, _b) == 0))
 
 PR_END_EXTERN_C
 #endif /* not MKGetURL_H */

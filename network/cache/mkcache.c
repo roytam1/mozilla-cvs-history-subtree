@@ -2293,12 +2293,13 @@ NET_IsPartialCacheFile(URL_Struct *URL_s)
 		return(0);
 }
 
-PUBLIC int
+PUBLIC char *
 NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 {
 	net_CacheObject *found_cache_obj;
     XP_StatStruct    stat_entry;
-	int   status;
+	int  status;
+    char *proto;
 	char *byterange;
 	char  byterange_char;
 	DBT  *key;
@@ -2319,10 +2320,10 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 		/* can't find it here.  Let's look
 		 * in the memory and external caches
 		 */
-		status = NET_FindURLInMemCache(URL_s, ctxt);
+		proto = NET_FindURLInMemCache(URL_s, ctxt);
 	
-		if(status)
-			return(status);
+		if(proto)
+			return(proto);
 		else
 			return(NET_FindURLInExtCache(URL_s, ctxt));
 	  }
@@ -2429,10 +2430,10 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 		/* can't find it here.  Let's look
 		 * in the memory and external caches
 		 */
-		status = NET_FindURLInMemCache(URL_s, ctxt);
+		proto = NET_FindURLInMemCache(URL_s, ctxt);
 	
-		if(status)
-			return(status);
+		if(proto)
+			return(proto);
 		else
 			return(NET_FindURLInExtCache(URL_s, ctxt));
 	  }
@@ -2631,7 +2632,7 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 
 	TRACEMSG(("Using Disk Copy"));
 
-	return(FILE_CACHE_TYPE_URL);
+	return PL_strdup(FILE_CACHE_PROTOCOL);
 }
 
 

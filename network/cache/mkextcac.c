@@ -361,7 +361,7 @@ NET_OpenExtCacheFAT(MWContext *ctxt, char * cache_name, char * instructions)
  * method and sets a filename in the
  * URL struct if found
  */
-MODULE_PRIVATE int
+MODULE_PRIVATE char *
 NET_FindURLInExtCache(URL_Struct * URL_s, MWContext *ctxt)
 {
 	return CACHE_FindURLInCache(URL_s, ctxt);
@@ -1047,7 +1047,7 @@ PUBLIC int CACHE_RemoveCache(ExtCacheDBInfo *db)
     return ret;
 }
 
-MODULE_PRIVATE int
+MODULE_PRIVATE char *
 CACHE_FindURLInCache(URL_Struct *URL_s, MWContext *ctxt)
 {
 	DBT *key;
@@ -1274,7 +1274,7 @@ CACHE_FindURLInCache(URL_Struct *URL_s, MWContext *ctxt)
 
 	URL_s->ext_cache_file = TRUE;
 
-	return(FILE_CACHE_TYPE_URL);
+	return PL_strdup(FILE_CACHE_PROTOCOL);
 }
 
 

@@ -1173,7 +1173,7 @@ NET_IsURLInMemCache(URL_Struct *URL_s)
  * struct including "memory_copy" which is a pointer
  * to the found net_MemoryCacheObject struct.
  */
-MODULE_PRIVATE int
+MODULE_PRIVATE char *
 NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 {
 	net_MemoryCacheObject *found_cache_obj;
@@ -1248,7 +1248,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 
 		TRACEMSG(("Cached copy is valid. returning method"));
 
-		return(MEMORY_CACHE_TYPE_URL);
+		return PL_strdup(MEMORY_CACHE_PROTOCOL);
       }
 
 	TRACEMSG(("URL not found in cache"));

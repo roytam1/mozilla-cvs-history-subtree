@@ -24,7 +24,7 @@
 PR_BEGIN_EXTERN_C
 
 extern void   NET_CleanupCache (char * filename);
-extern int    NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt);
+extern char  *NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt);
 extern void   NET_RefreshCacheFileExpiration(URL_Struct * URL_s);
 
 extern void NET_CacheInit(void);
@@ -72,7 +72,7 @@ CACHE_OpenAllSARCache();
 extern void
 NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry);
 
-extern int
+extern char *
 NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt);
 
 /* lookup routine
@@ -82,7 +82,8 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt);
  * method and sets a filename in the
  * URL struct if found
  */
-extern int NET_FindURLInExtCache(URL_Struct * URL_s, MWContext *ctxt);
+extern char *
+NET_FindURLInExtCache(URL_Struct * URL_s, MWContext *ctxt);
 
 PR_END_EXTERN_C
 

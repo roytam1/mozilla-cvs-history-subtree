@@ -3138,10 +3138,15 @@ NET_URL_Type (CONST char *URL)
 PUBLIC char *NET_GetURLProtocol(const char *url)
 {
     char *proto = NET_ParseURL(url, GET_PROTOCOL_PART);
-    if (proto) {
+    if (proto && *proto) {
         char *colon = PL_strchr(proto, ':');
         if (colon)
             *colon = '\0';
+    } else {
+        /* Figure out from address */
+        /* XXX WHS sort out internal types */
+        /* default to NULL */
+        proto = NULL;
     }
     return proto;
 }
