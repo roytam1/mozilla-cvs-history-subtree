@@ -942,6 +942,13 @@ ConvertArgs(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 #endif
 
+static JSBool
+BuildDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    printf("built on %s at %s\n", __DATE__, __TIME__);
+    return JS_TRUE;
+}
+
 static JSFunctionSpec shell_functions[] = {
     {"version",         Version,        0},
     {"load",            Load,           1},
@@ -966,6 +973,7 @@ static JSFunctionSpec shell_functions[] = {
 #ifdef TEST_CVTARGS
     {"cvtargs",         ConvertArgs,    0, 0, 12},
 #endif
+    {"build",           BuildDate,      0},
     {0}
 };
 
@@ -995,6 +1003,7 @@ static char *shell_help_messages[] = {
 #ifdef TEST_CVTARGS
     "cvtargs b c ...        Test JS_ConvertArguments",
 #endif
+    "build                  Show build date and time",
     0
 };
 
