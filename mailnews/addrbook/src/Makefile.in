@@ -81,6 +81,7 @@ CPPSRCS		= \
                 nsAbBooleanExpression.cpp \
                 nsAbDirectoryRDFResource.cpp \
                 nsAbQueryStringToExpression.cpp \
+                nsAbView.cpp \
 		$(NULL)
 
 EXPORTS		= \
