@@ -38,6 +38,13 @@ EXPORTS		= \
 		nsHankakuToZenkakuCID.h \
 		nsArabicBasicLToPFormBVCID.h \
 		$(NULL)
+                
+ifdef IBMBIDI
+EXPORTS         += \
+		nsIUBidiUtils.h \
+		nsIBidi.h \
+		$(NULL)
+endif
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 

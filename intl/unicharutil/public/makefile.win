@@ -31,6 +31,10 @@ EXPORTS = \
 	nsHankakuToZenkakuCID.h \
 	nsArabicBasicLToPFormBVCID.h \
 	nsUnicharUtilCIID.h \
+!ifdef IBMBIDI
+	nsIUBidiUtils.h \
+	nsIBidi.h \
+!endif
 	$(NULL)
 
 MODULE=unicharutil

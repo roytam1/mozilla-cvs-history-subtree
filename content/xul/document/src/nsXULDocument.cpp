@@ -421,6 +421,9 @@ nsXULDocument::nsXULDocument(void)
 {
     NS_INIT_REFCNT();
     mCharSetID.AssignWithConversion("UTF-8");
+#ifdef IBMBIDI
+  mBidiEnabled = PR_FALSE;
+#endif // IBMBIDI
 
 // Temporary hack that tells if some new DOM Level 2 features are on or off
     nsresult rv;
@@ -871,6 +874,19 @@ nsXULDocument::SetDocumentCharacterSet(const nsString& aCharSetID)
   }
   return NS_OK;
 }
+
+#ifdef IBMBIDI
+//In nsWebShell doc->SetBidi() is once casted as nsXULDocument, and nsDocument
+//looking into removing these....
+NS_IMETHODIMP   nsXULDocument::SetBidi(nsBidiOptions Source)
+{
+	return NS_OK;
+}
+NS_IMETHODIMP   nsXULDocument::GetBidi(nsBidiOptions * Dist)
+{
+	return NS_OK;
+}
+#endif //IBMBIDI
 
 NS_IMETHODIMP
 nsXULDocument::AddCharSetObserver(nsIObserver* aObserver)

@@ -142,7 +142,12 @@
 #define CS_CP_1257    (SINGLEBYTE         |  64) /*   64  Windows Baltic */
 #define CS_CP_1258    (SINGLEBYTE         |  65) /*   65  Windows Vietnamese */
 #define CS_8859_15    (SINGLEBYTE         |  66) /*   66  EURO Support latin */
+#ifdef IBMBIDI
+#define CS_CP_864i    (SINGLEBYTE         |  67) /*   67  864i = 864 Implicit mode */
+#define INTL_CHAR_SET_MAX                    68  /* must be highest + 1 */
+#else // #ifndef IBMBIDI
 #define INTL_CHAR_SET_MAX                    67  /* must be highest + 1 */
+#endif // IBMBIDI
 
 #define CS_USER_DEFINED_ENCODING (SINGLEBYTE | 254) /* 254 */
 #define CS_UNKNOWN    (SINGLEBYTE         | 255) /* 255 */
@@ -267,7 +272,11 @@ static csname2id_t csname2id_tbl[] = {
 	/* cP864 support for ibm */
 			{"ibm864", "Cp864", CS_CP_864},         /* PC Arabic */
 			{"cp864", "Cp864", CS_CP_864},          /* PC Arabic */
-
+#ifdef IBMBIDI
+	/* cP864i support for 864 Implicit mode */
+			{"ibm864i", "Cp864i", CS_CP_864i},      /* PC Arabic */
+			{"cp864i", "Cp864i", CS_CP_864i},       /* PC Arabic */
+#endif // IBMBIDI
 	/* aliases for us-ascii: */
 			{"ansi_x3.4-1968", "", CS_ASCII},
 			{"iso-ir-6", "", CS_ASCII},

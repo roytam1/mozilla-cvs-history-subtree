@@ -53,12 +53,18 @@
 #include "nsCP857ToUnicode.h"
 #include "nsCP862ToUnicode.h"
 #include "nsCP864ToUnicode.h"
+#ifdef IBMBIDI
+#include "nsCP864iToUnicode.h"
+#endif // IBMBIDI
 #include "nsUnicodeToCP850.h"
 #include "nsUnicodeToCP852.h"
 #include "nsUnicodeToCP855.h"
 #include "nsUnicodeToCP857.h"
 #include "nsUnicodeToCP862.h"
 #include "nsUnicodeToCP864.h"
+#ifdef IBMBIDI
+#include "nsUnicodeToCP864i.h"
+#endif // IBMBIDI
 
 //----------------------------------------------------------------------------
 // Global functions and data [declaration]
@@ -119,6 +125,14 @@ static FactoryData g_FactoryData[] =
     "IBM864",
     "Unicode"
   },
+#ifdef IBMBIDI
+  {
+    &kCP864iToUnicodeCID,
+    nsCP864iToUnicode::CreateInstance,
+    "IBM864i",
+    "Unicode"
+  },
+#endif // IBMBIDI
   {
     &kUnicodeToCP850CID,
     nsUnicodeToCP850::CreateInstance,
@@ -155,6 +169,14 @@ static FactoryData g_FactoryData[] =
     "Unicode",
     "IBM864"
   },
+#ifdef IBMBIDI
+  {
+    &kUnicodeToCP864iCID,
+    nsUnicodeToCP864i::CreateInstance,
+    "Unicode",
+    "IBM864i"
+  },
+#endif // IBMBIDI
 };
 
 #define ARRAY_SIZE(_array)                                      \

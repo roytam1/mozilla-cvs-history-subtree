@@ -59,6 +59,13 @@ CPPSRCS		= \
 		nsUCvIBMModule.cpp \
 		$(NULL)
 
+ifdef IBMBIDI
+CPPSRCS         += \
+		nsCP864iToUnicode.cpp \
+		nsUnicodeToCP864i.cpp \
+		$(NULL)                
+endif
+
 EXPORTS		= nsUCvIBMCID.h
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 

@@ -70,6 +70,10 @@
 #include "nsINodeInfo.h"
 #include "nsIDOMDocumentEvent.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
+
 class nsIAtom;
 class nsIElementFactory;
 class nsIDOMStyleSheetList;
@@ -142,6 +146,22 @@ public:
     NS_IMETHOD GetDocumentCharacterSet(nsString& oCharSetID);
 
     NS_IMETHOD SetDocumentCharacterSet(const nsString& aCharSetID);
+
+#ifdef IBMBIDI
+    NS_IMETHOD SetBidi(nsBidiOptions Source);
+    NS_IMETHOD GetBidi(nsBidiOptions * Dist);
+
+    NS_IMETHOD BidiEnabled(PRBool& aBidiEnabled) const
+    {
+      aBidiEnabled = mBidiEnabled;
+      return NS_OK;
+    }
+    NS_IMETHOD EnableBidi(void)
+    {
+      mBidiEnabled = PR_TRUE;
+      return NS_OK;
+    }
+#endif // IBMBIDI
 
     NS_IMETHOD AddCharSetObserver(nsIObserver* aObserver);
     NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver);
@@ -593,6 +613,11 @@ protected:
     nsVoidArray mForwardReferences;
     nsForwardReference::Phase mResolutionPhase;
     PRInt32 mNextContentID;
+
+#ifdef IBMBIDI
+    nsBidiOptions	mBidi;
+    PRBool        mBidiEnabled;
+#endif // IBMBIDI
 
     // The following are pointers into the content model which provide access to
     // the objects triggering either a popup or a tooltip. These are marked as

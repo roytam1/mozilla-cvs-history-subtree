@@ -50,6 +50,11 @@ public:
   NS_IMETHOD GetParent(nsIWebShell*& aParent);*/
   NS_IMETHOD GetReferrer(nsIURI **aReferrer);
 
+#ifdef IBMBIDI
+  NS_IMETHOD SetBidi(nsBidiOptions Source);
+  NS_IMETHOD GetBidi(nsBidiOptions * Dist);
+#endif // IBMBIDI
+
   // Document load api's
   NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult);
 
@@ -129,6 +134,10 @@ protected:
   PRBool mFiredUnloadEvent;
 
   nsRect   mBounds;
+
+#ifdef IBMBIDI
+  nsBidiOptions    mBidi; // IBMBIDI Options
+#endif // IBMBIDI
 
   eCharsetReloadState mCharsetReloadState;
 
