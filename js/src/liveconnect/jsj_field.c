@@ -79,6 +79,7 @@ add_java_field_to_class_descriptor(JSContext *cx,
     }
     
     signature = jsj_GetJavaClassDescriptor(cx, jEnv, fieldType);
+    (*jEnv)->DeleteLocalRef(jEnv, fieldType);
     if (!signature)
         goto error;
     field_spec->signature = signature;
@@ -192,11 +193,11 @@ jsj_ReflectJavaFields(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor *class_de
 
         /* Don't allow access to private or protected Java fields. */
         if (!(modifiers & ACC_PUBLIC))
-            continue;
+            goto no_reflect;
 
         /* Reflect all instance fields or all static fields, but not both */
         if (reflect_only_static_fields != ((modifiers & ACC_STATIC) != 0))
-            continue;
+            goto no_reflect;
 
         /* Determine the unqualified name of the field */
         field_name_jstr = (*jEnv)->CallObjectMethod(jEnv, java_field, jlrField_getName);
@@ -212,7 +213,16 @@ jsj_ReflectJavaFields(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor *class_de
                                                 java_field, modifiers);
         if (!ok)
             return JS_FALSE;
+
+        (*jEnv)->DeleteLocalRef(jEnv, field_name_jstr);
+        field_name_jstr = NULL;
+
+no_reflect:
+        (*jEnv)->DeleteLocalRef(jEnv, java_field);
+        java_field = NULL;
     }
+
+    (*jEnv)->DeleteLocalRef(jEnv, joFieldArray);
 
     /* Success */
     return JS_TRUE;
@@ -229,7 +239,7 @@ JSBool
 jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
                       jobject java_obj, jsval *vp)
 {
-    JSBool is_static_field;
+    JSBool is_static_field, success;
     jvalue java_value;
     JavaSignature *signature;
     JavaSignatureChar field_type;
@@ -295,7 +305,9 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     default:
         JS_ASSERT(IS_REFERENCE_TYPE(field_type));
         GET_JAVA_FIELD(Object,l);
-        break;
+        success = jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value.l, vp);
+        (*jEnv)->DeleteLocalRef(jEnv, java_value.l);
+        return success;
     }
     
 #undef GET_JAVA_FIELD

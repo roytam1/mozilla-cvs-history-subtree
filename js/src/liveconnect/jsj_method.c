@@ -300,6 +300,7 @@ jsj_InitJavaMethodSignature(JSContext *cx, JNIEnv *jEnv,
             jclass arg_class = (*jEnv)->GetObjectArrayElement(jEnv, arg_classes, i);
             
             a = arg_signatures[i] = jsj_GetJavaClassDescriptor(cx, jEnv, arg_class);
+            (*jEnv)->DeleteLocalRef(jEnv, arg_class);
             if (!a) {
                 jsj_UnexpectedJavaError(cx, jEnv, "Could not determine Java class "
                                                   "signature using java.lang.reflect");
@@ -311,7 +312,7 @@ jsj_InitJavaMethodSignature(JSContext *cx, JNIEnv *jEnv,
     /* Get the Java class of the method's return value */
     if (is_constructor) {
         /* Constructors always have a "void" return type */
-        return_val_class = jlVoid_TYPE;
+        return_val_signature = jsj_GetJavaClassDescriptor(cx, jEnv, jlVoid_TYPE);
     } else {
         return_val_class =
             (*jEnv)->CallObjectMethod(jEnv, method, jlrMethod_getReturnType);
@@ -321,18 +322,23 @@ jsj_InitJavaMethodSignature(JSContext *cx, JNIEnv *jEnv,
                                     "using java.lang.reflect.Method.getReturnType()");
             goto error;
         }
+
+        /* Build a JavaSignature object corresponding to the method's return value */
+        return_val_signature = jsj_GetJavaClassDescriptor(cx, jEnv, return_val_class);
+        (*jEnv)->DeleteLocalRef(jEnv, return_val_class);
     }
 
-    /* Build a JavaSignature object corresponding to the method's return value */
-    return_val_signature = jsj_GetJavaClassDescriptor(cx, jEnv, return_val_class);
     if (!return_val_signature)
         goto error;
     method_signature->return_val_signature = return_val_signature;
 
+    (*jEnv)->DeleteLocalRef(jEnv, arg_classes);
     return method_signature;
 
 error:
 
+    if (arg_classes)
+        (*jEnv)->DeleteLocalRef(jEnv, arg_classes);
     jsj_PurgeJavaMethodSignature(cx, jEnv, method_signature);
     return NULL;
 }
@@ -512,25 +518,32 @@ jsj_ReflectJavaMethods(JSContext *cx, JNIEnv *jEnv,
 
         /* Don't allow access to private or protected Java methods. */
         if (!(modifiers & ACC_PUBLIC))
-            continue;
+            goto dont_reflect_method;
 
         /* Abstract methods can't be invoked */
         if (modifiers & ACC_ABSTRACT)
-            continue;
+            goto dont_reflect_method;
 
         /* Reflect all instance methods or all static methods, but not both */
         if (reflect_only_static_methods != ((modifiers & ACC_STATIC) != 0))
-            continue;
-
+            goto dont_reflect_method;
         
         /* Add a JavaMethodSpec object to the JavaClassDescriptor */
         method_name_jstr = (*jEnv)->CallObjectMethod(jEnv, java_method, jlrMethod_getName);
         ok = add_java_method_to_class_descriptor(cx, jEnv, class_descriptor, method_name_jstr, java_method,
                                                  reflect_only_static_methods, JS_FALSE);
-        if (!ok)
+        (*jEnv)->DeleteLocalRef(jEnv, method_name_jstr);
+        if (!ok) {
+            (*jEnv)->DeleteLocalRef(jEnv, java_method);
+            (*jEnv)->DeleteLocalRef(jEnv, joMethodArray);
             return JS_FALSE;
+        }
+
+dont_reflect_method:
+        (*jEnv)->DeleteLocalRef(jEnv, java_method);
     }
 
+    (*jEnv)->DeleteLocalRef(jEnv, joMethodArray);
     if (reflect_only_instance_methods)
         return JS_TRUE;
         
@@ -555,15 +568,23 @@ jsj_ReflectJavaMethods(JSContext *cx, JNIEnv *jEnv,
 
         /* Don't allow access to private or protected Java methods. */
         if (!(modifiers & ACC_PUBLIC))
-            continue;
+            goto dont_reflect_constructor;
         
         /* Add a JavaMethodSpec object to the JavaClassDescriptor */
         ok = add_java_method_to_class_descriptor(cx, jEnv, class_descriptor, NULL,
                                                  java_constructor,
                                                  JS_FALSE, JS_TRUE);
-        if (!ok)
+        if (!ok) {
+            (*jEnv)->DeleteLocalRef(jEnv, joConstructorArray);
+            (*jEnv)->DeleteLocalRef(jEnv, java_constructor);
             return JS_FALSE;
+        }
+
+dont_reflect_constructor:
+        (*jEnv)->DeleteLocalRef(jEnv, java_constructor);
     }
+
+    (*jEnv)->DeleteLocalRef(jEnv, joConstructorArray);
     return JS_TRUE;
 }
 
@@ -1300,8 +1321,6 @@ convert_JS_method_args_to_java_argv(JSContext *cx, JNIEnv *jEnv, jsval *argv,
         ok = jsj_ConvertJSValueToJavaValue(cx, jEnv, argv[i], arg_signatures[i],
                                            &dummy_cost, &jargv[i], &localv[i]);
         if (!ok) {
-            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                            JSJMSG_CONVERT_JS_VALUE);
             JS_free(cx, jargv);
             JS_free(cx, localv);
             *localvp = NULL;
@@ -1330,9 +1349,9 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     JavaSignature *return_val_signature;
     JSContext *old_cx;
     JNIEnv *jEnv;
-    JSBool *localv, error_occurred;
+    JSBool *localv, error_occurred, success;
 
-    error_occurred = JS_FALSE;
+    success = error_occurred = JS_FALSE;
     return_val_signature = NULL;    /* Quiet gcc uninitialized variable warning */
 
     methodID = method->methodID;
@@ -1454,10 +1473,12 @@ out:
     if (jargv)
        JS_free(cx, jargv);
 
-    if (error_occurred)
-        return JS_FALSE;
-    else
-        return jsj_ConvertJavaValueToJSValue(cx, jEnv, return_val_signature, &java_value, vp);
+    if (!error_occurred) {
+        success = jsj_ConvertJavaValueToJSValue(cx, jEnv, return_val_signature, &java_value, vp);
+        if (IS_REFERENCE_TYPE(return_val_signature->type))
+            (*jEnv)->DeleteLocalRef(jEnv, java_value.l);
+    }
+    return success;
 }
 
 static JSBool
@@ -1584,8 +1605,10 @@ invoke_java_constructor(JSContext *cx,
     JSContext *old_cx;
     JNIEnv *jEnv;
     JSBool *localv;
-    JSBool error_occurred = JS_FALSE;
+    JSBool success, error_occurred;
     java_object = NULL;	    /* Stifle gcc uninitialized variable warning */
+
+    success = error_occurred = JS_FALSE;
     
     methodID = method->methodID;
     signature = &method->signature;
@@ -1635,10 +1658,10 @@ out:
     if (jargv)
        JS_free(cx, jargv);
         
-    if (error_occurred)
-        return JS_FALSE;
-    else
-        return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_object, vp);
+    if (!error_occurred)
+        success = jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_object, vp);
+    (*jEnv)->DeleteLocalRef(jEnv, java_object);
+    return success;
 }
 
 static JSBool
