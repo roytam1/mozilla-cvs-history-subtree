@@ -34,9 +34,8 @@
  * Creates a new FilterExpr using the given Expr
  * @param expr the Expr to use for evaluation
 **/
-FilterExpr::FilterExpr(Expr* aExpr) : PredicateList()
+FilterExpr::FilterExpr(Expr* aExpr) : PredicateList(), expr(aExpr)
 {
-    this->expr = aExpr;
 } //-- FilterExpr
 
 /**

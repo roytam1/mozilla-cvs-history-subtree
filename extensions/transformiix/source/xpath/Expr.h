@@ -287,7 +287,6 @@ public:
     void add(Expr* expr);
 
     void evaluatePredicates(NodeSet* nodes, txIMatchContext* aContext);
-    MBool matchPredicates(txIEvalContext* aContext);
 
     /**
      * returns true if this predicate list is empty
@@ -304,7 +303,7 @@ public:
     **/
     virtual void toString(String& aDest);
 
-private:
+protected:
     //-- list of predicates
     List predicates;
 }; //-- PredicateList
@@ -342,9 +341,6 @@ public:
      * Destructor, will delete all predicates and the given NodeExpr
     **/
     virtual ~LocationStep();
-
-    nsresult evalStep(Node* aNode, txIMatchContext* aContext,
-                      NodeSet* aResult);
 
     TX_DECL_EXPR;
 

@@ -201,7 +201,7 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     // Get the pattern
     txPSParseContext context(this, aXslTemplate);
     txPattern* pattern = exprParser.createPattern(match, &context);
-    #ifdef DEBUG
+    #ifdef TX_PATTERN_DEBUG
     String foo;
     pattern->toString(foo);
     #endif
@@ -406,7 +406,7 @@ Node* ProcessorState::findTemplate(Node* aNode,
             MatchableTemplate* templ;
             while (!matchTemplate &&
                    (templ = (MatchableTemplate*)templateIter.next())) {
-                #ifdef DEBUG
+                #ifdef TX_PATTERN_DEBUG
                 String foo;
                 templ->mMatch->toString(foo);
                 #endif

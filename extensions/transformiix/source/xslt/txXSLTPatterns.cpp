@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txXSLTPatterns.h"
+#include "txNodeSetContext.h"
 #include "txForwardContext.h"
 
 /*
@@ -325,6 +326,25 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
             return MB_FALSE;
         return MB_TRUE;
     }
+
+    /*
+     * Evaluate Predicates
+     *
+     * Copy all siblings/attributes matching mNodeTest to nodes
+     * Up to the last Predicate do
+     *  Foreach node in nodes
+     *   evaluate Predicate with node as context node
+     *   if the result is a number, check the context position,
+     *    otherwise convert to bool
+     *   if result is true, copy node to newNodes
+     *  if aNode is not member of newNodes, return MB_FALSE
+     *  nodes = newNodes
+     *
+     * For the last Predicate, evaluate Predicate with aNode as
+     *  context node, if the result is a number, check the position,
+     *  otherwise return the result converted to boolean
+     */
+
     // Create the context node set for evaluating the predicates
     NodeSet nodes;
     Node* parent = aNode->getXPathParent();
@@ -348,8 +368,52 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
         }
     }
 
+    txListIterator iter(&predicates);
+    Expr* predicate = (Expr*)iter.next();
+    NodeSet newNodes;
+
+    while (iter.hasNext()) {
+        newNodes.clear();
+        txNodeSetContext predContext(&nodes, aContext);
+        while (predContext.hasNext()) {
+            predContext.next();
+            ExprResult* exprResult = predicate->evaluate(&predContext);
+            if (!exprResult)
+                break;
+            switch(exprResult->getResultType()) {
+                case ExprResult::NUMBER :
+                    // handle default, [position() == numberValue()]
+                    if ((double)predContext.position() ==
+                        exprResult->numberValue())
+                        newNodes.append(predContext.getContextNode());
+                    break;
+                default:
+                    if (exprResult->booleanValue())
+                        newNodes.append(predContext.getContextNode());
+                    break;
+            }
+            delete exprResult;
+        }
+        // Move new NodeSet to the current one
+        nodes.clear();
+        nodes.append(&newNodes);
+        if (!nodes.contains(aNode)) {
+            return MB_FALSE;
+        }
+        predicate = (Expr*)iter.next();
+    }
     txForwardContext evalContext(aContext, aNode, &nodes);
-    return matchPredicates(&evalContext);
+    ExprResult* exprResult = predicate->evaluate(&evalContext);
+    if (!exprResult)
+        return MB_FALSE;
+    switch(exprResult->getResultType()) {
+        case ExprResult::NUMBER :
+            // handle default, [position() == numberValue()]
+            return ((double)evalContext.position() ==
+                    exprResult->numberValue());
+        default:
+            return exprResult->booleanValue();
+    }
 } // matches
 
 double txStepPattern::getDefaultPriority()

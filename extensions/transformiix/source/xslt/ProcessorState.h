@@ -303,10 +303,6 @@ public:
      */
     txIEvalContext* setEvalContext(txIEvalContext* aEContext)
     {
-        #ifdef DEBUG
-        //cout << "eval context set to "<<
-        //    aEContext->getContextNodeSet()->get(0)->getNodeName() << endl;
-        #endif
         txIEvalContext* tmp = mEvalContext;
         mEvalContext = aEContext;
         return tmp;

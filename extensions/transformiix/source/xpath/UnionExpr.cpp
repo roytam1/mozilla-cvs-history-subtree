@@ -44,7 +44,7 @@ UnionExpr::~UnionExpr() {
     ListIterator iter(&expressions);
     while (iter.hasNext()) {
          iter.next();
-         delete  (Expr*)iter.remove();
+         delete (Expr*)iter.remove();
     }
 } //-- ~UnionExpr
 

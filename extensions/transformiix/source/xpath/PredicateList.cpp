@@ -100,37 +100,6 @@ void PredicateList::evaluatePredicates(NodeSet* nodes,
     }
 }
 
-MBool PredicateList::matchPredicates(txIEvalContext* aContext)
-{
-    NS_ASSERTION(aContext, "called with no context");
-    txListIterator iter(&predicates);
-    NS_ASSERTION(iter.hasNext(), "PredicateList without predicates");
-    if (!iter.hasNext())
-        return MB_TRUE;
-    Expr* first = (Expr*)iter.next();
-    // single predicate, that's easy and cheap
-    if (!iter.hasNext()) {
-        ExprResult* exprResult = first->evaluate(aContext);
-        if (!exprResult)
-            return MB_FALSE;
-        switch(exprResult->getResultType()) {
-            case ExprResult::NUMBER :
-                // handle default, [position() == numberValue()]
-                return ((double)aContext->position() ==
-                        exprResult->numberValue());
-                default:
-                    return exprResult->booleanValue();
-        }
-    }
-    // multiple predicates, create a nodeset and call evaluatePredicates
-    NodeSet nodes(*(aContext->getContextNodeSet()));
-
-    evaluatePredicates(&nodes, aContext);
-
-    return nodes.contains(aContext->getContextNode());
-}
-
-
 /*
  * returns true if this predicate list is empty
  */

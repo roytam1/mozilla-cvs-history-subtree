@@ -961,7 +961,7 @@ void XSLTProcessor::process
         stylesheet = xslDoc->getElementById(frag);
         if (!stylesheet) {
             String err("unable to get fragment");
-            notifyError(err, ErrorObserver::FATAL);
+            cerr << err << endl;
             delete xmlDoc;
             delete xslDoc;
             return;
