@@ -43,8 +43,6 @@
 #define MOZILLA_THREAD_PRIORITY PR_PRIORITY_LOW
 #endif
 
-#if defined(OJI) || defined(JAVA)
-
 #ifndef XP_PC
 #define XP_PC
 #endif
@@ -64,7 +62,6 @@
 
 #include "nspr.h"
 #include "plevent.h"
-#endif /* OJI || JAVA */
 
 #if defined(OJI)
 #include "jvmmgr.h"
