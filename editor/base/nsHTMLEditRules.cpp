@@ -26,6 +26,10 @@
 #pragma optimization_level 1
 #endif
 
+#ifdef EDITOR_MAC_INSTRUMENTATION
+#include "InstrumentationHelpers.h" 
+#endif
+
 #include "nsHTMLEditRules.h"
 
 #include "nsEditor.h"
@@ -299,6 +303,9 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
 NS_IMETHODIMP
 nsHTMLEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
 {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+  INST_TRACE("HTMLEditRules-AfterEdit");	
+#endif
   if (mLockRulesSniffing) return NS_OK;
 
   nsAutoLockRulesSniffing lockIt(this);
@@ -339,6 +346,7 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
 {
   ConfirmSelectionInBody();
   if (action == nsEditor::kOpIgnore) return NS_OK;
+  if (action == nsHTMLEditor::kOpHTMLLoad) return NS_OK; // fast html insertion
   
   nsCOMPtr<nsISelection>selection;
   nsresult res = mHTMLEditor->GetSelection(getter_AddRefs(selection));
@@ -383,7 +391,6 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
     if (// (action == nsEditor::kOpInsertText) || 
         // (action == nsEditor::kOpInsertIMEText) ||
         (action == nsHTMLEditor::kOpInsertElement) ||
-        (action == nsHTMLEditor::kOpInsertQuotation) ||
         (action == nsEditor::kOpInsertNode))
     {
       res = ReplaceNewlines(mDocChangeRange);

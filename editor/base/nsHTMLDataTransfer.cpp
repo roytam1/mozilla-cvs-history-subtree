@@ -18,8 +18,11 @@
  * Rights Reserved.
  *
  */
+#ifdef EDITOR_MAC_INSTRUMENTATION
+#include "InstrumentationHelpers.h" 
+#endif
+ 
 #include "nsICaret.h"
-
 
 #include "nsHTMLEditor.h"
 #include "nsHTMLEditRules.h"
@@ -166,20 +169,104 @@ NS_IMETHODIMP nsHTMLEditor::InsertHTML(const nsAReadableString & aInString)
   return InsertHTMLWithCharset(aInString, charset);
 }
 
-nsresult nsHTMLEditor::InsertHTMLWithContext(const nsAReadableString & aInputString, const nsAReadableString & aContextStr, const nsAReadableString & aInfoStr)
-{
-  nsAutoString charset;
-  return InsertHTMLWithCharsetAndContext(aInputString, charset, aContextStr, aInfoStr);
-}
-
-
 NS_IMETHODIMP nsHTMLEditor::InsertHTMLWithCharset(const nsAReadableString & aInputString, const nsAReadableString & aCharset)
 {
-  return InsertHTMLWithCharsetAndContext(aInputString, aCharset, nsAutoString(), nsAutoString());
+  nsresult res = NS_OK;
+  if (!mRules) return NS_ERROR_NOT_INITIALIZED;
+
+  // force IME commit; set up rules sniffing and batching
+  ForceCompositionEnd();
+{
+  nsAutoEditBatch beginBatching(this);
+  nsAutoRules beginRulesSniffing(this, kOpHTMLLoad, nsIEditor::eNext);
+  
+  // Get selection
+  nsCOMPtr<nsISelection>selection;
+  res = GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(res)) return res;
+  
+  // Get the first range in the selection, for context:
+  nsCOMPtr<nsIDOMRange> range, clone;
+  res = selection->GetRangeAt(0, getter_AddRefs(range));
+  NS_ENSURE_SUCCESS(res, res);
+  if (!range)
+    return NS_ERROR_NULL_POINTER;
+  nsCOMPtr<nsIDOMNSRange> nsrange (do_QueryInterface(range));
+  if (!nsrange)
+    return NS_ERROR_NO_INTERFACE;
+
+  // create fragment for pasted html
+  nsCOMPtr<nsIDOMDocumentFragment> docfrag;
+  {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+    INST_TRACE("InsertHTML-CreateContextualFragment");	
+#endif
+    res = nsrange->CreateContextualFragment(aInputString, getter_AddRefs(docfrag));
+    NS_ENSURE_SUCCESS(res, res);
+  }
+  // put the fragment into the document
+  // crazy what i have to go through to get the right info for dom insertion
+  nsCOMPtr<nsIDOMNode> parent, junk;
+  res = range->GetStartContainer(getter_AddRefs(parent));
+  NS_ENSURE_SUCCESS(res, res);
+  if (!parent)
+    return NS_ERROR_NULL_POINTER;
+  PRInt32 childOffset;
+  res = range->GetStartOffset(&childOffset);
+  NS_ENSURE_SUCCESS(res, res);
+  nsCOMPtr<nsIContent> childContent, cParent(do_QueryInterface(parent));
+  if (!cParent)
+    return NS_ERROR_NO_INTERFACE;
+  cParent->ChildAt(childOffset, *getter_AddRefs(childContent));
+  if (childContent)
+  {
+    nsCOMPtr<nsIDOMNode> childNode(do_QueryInterface(childContent));
+    if (!childNode)
+      return NS_ERROR_NO_INTERFACE;
+    {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+      INST_TRACE("InsertHTML-InsertBefore");	
+#endif
+      res = parent->InsertBefore(docfrag, childNode, getter_AddRefs(junk));
+      NS_ENSURE_SUCCESS(res, res);
+    }
+  }
+  else
+  {
+    {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+      INST_TRACE("InsertHTML-AppendChild");	
+#endif
+      res = parent->AppendChild(docfrag, getter_AddRefs(junk));
+      NS_ENSURE_SUCCESS(res, res);
+    }
+  }
+  
+  // nuke the undo/redo stack
+}  
+  return res;
+}
+
+NS_IMETHODIMP nsHTMLEditor::PasteHTML(const nsAReadableString & aInString)
+{
+  nsAutoString charset;
+  return PasteHTMLWithCharset(aInString, charset);
+}
+
+nsresult nsHTMLEditor::PasteHTMLWithContext(const nsAReadableString & aInputString, const nsAReadableString & aContextStr, const nsAReadableString & aInfoStr)
+{
+  nsAutoString charset;
+  return PasteHTMLWithCharsetAndContext(aInputString, charset, aContextStr, aInfoStr);
 }
 
 
-nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsAReadableString & aInputString,
+NS_IMETHODIMP nsHTMLEditor::PasteHTMLWithCharset(const nsAReadableString & aInputString, const nsAReadableString & aCharset)
+{
+  return PasteHTMLWithCharsetAndContext(aInputString, aCharset, nsAutoString(), nsAutoString());
+}
+
+
+nsresult nsHTMLEditor::PasteHTMLWithCharsetAndContext(const nsAReadableString & aInputString,
                                                        const nsAReadableString & aCharset,
                                                        const nsAReadableString & aContextStr,
                                                        const nsAReadableString & aInfoStr)
@@ -632,7 +719,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         textDataObj->ToString ( &text );
         stuffToPaste.Assign ( text, len / 2 );
         nsAutoEditBatch beginBatching(this);
-        rv = InsertHTMLWithContext(stuffToPaste, aContextStr, aInfoStr);
+        rv = PasteHTMLWithContext(stuffToPaste, aContextStr, aInfoStr);
         if (text)
           nsMemory::Free(text);
       }
@@ -705,7 +792,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
               stuffToPaste.AppendWithConversion ( "</A>" );
             }
             nsAutoEditBatch beginBatching(this);
-            rv = InsertHTML(stuffToPaste);
+            rv = PasteHTML(stuffToPaste);
           }
           if (urltext) nsCRT::free(urltext);
         }
@@ -1209,7 +1296,7 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsCitedQuotation(const nsAReadableString & aCit
                                                   PRInt32 aSelectionType)
 {
   nsAutoEditBatch beginBatching(this);
-  nsAutoRules beginRulesSniffing(this, kOpInsertQuotation, nsIEditor::eNext);
+  nsAutoRules beginRulesSniffing(this, kOpHTMLLoad, nsIEditor::eNext);
 
   // get selection
   nsCOMPtr<nsISelection> selection;
@@ -1348,7 +1435,7 @@ nsHTMLEditor::InsertAsPlaintextQuotation(const nsAReadableString & aQuotedText,
   else
   {
     nsAutoEditBatch beginBatching(this);
-    nsAutoRules beginRulesSniffing(this, kOpInsertQuotation, nsIEditor::eNext);
+    nsAutoRules beginRulesSniffing(this, kOpHTMLLoad, nsIEditor::eNext);
 
     // give rules a chance to handle or cancel
     nsTextRulesInfo ruleInfo(nsTextEditRules::kInsertElement);
@@ -1424,7 +1511,7 @@ nsHTMLEditor::InsertAsCitedQuotation(const nsAReadableString & aQuotedText,
   else
   {
     nsAutoEditBatch beginBatching(this);
-    nsAutoRules beginRulesSniffing(this, kOpInsertQuotation, nsIEditor::eNext);
+    nsAutoRules beginRulesSniffing(this, kOpHTMLLoad, nsIEditor::eNext);
 
     // give rules a chance to handle or cancel
     nsTextRulesInfo ruleInfo(nsTextEditRules::kInsertElement);
@@ -1455,7 +1542,7 @@ nsHTMLEditor::InsertAsCitedQuotation(const nsAReadableString & aQuotedText,
       }
 
       if (aInsertHTML)
-        res = InsertHTMLWithCharset(aQuotedText, aCharset);
+        res = InsertHTMLWithCharset(aQuotedText, aCharset);  // clears undo stack!!
 
       else
         res = InsertText(aQuotedText);  // XXX ignore charset

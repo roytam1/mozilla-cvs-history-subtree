@@ -20,6 +20,9 @@
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
+#ifdef EDITOR_MAC_INSTRUMENTATION
+#include "InstrumentationHelpers.h" 
+#endif
 
 #include "pratom.h"
 
@@ -4264,8 +4267,12 @@ nsresult nsEditor::EndUpdateViewBatch()
       nsCOMPtr<nsIPresShell>    presShell;
       rv = GetPresShell(getter_AddRefs(presShell));
       if (NS_SUCCEEDED(rv) && presShell)
+      {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+        INST_TRACE("EndReflowBatching");	
+#endif
         presShell->EndReflowBatching(forceReflow);
-
+      }
       PRUint32 updateFlag = NS_VMREFRESH_IMMEDIATE;
 
       if (flags & nsIPlaintextEditor::eEditorDisableForcedUpdatesMask)
@@ -4275,7 +4282,12 @@ nsresult nsEditor::EndUpdateViewBatch()
       mViewManager->EnableRefresh(updateFlag);
       HACKForceRedraw();
 #else
-      mViewManager->EndUpdateViewBatch(updateFlag);
+      {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+        INST_TRACE("EndUpdateViewBatch");	
+#endif
+        mViewManager->EndUpdateViewBatch(updateFlag);
+      }
 #endif
     }
   }  

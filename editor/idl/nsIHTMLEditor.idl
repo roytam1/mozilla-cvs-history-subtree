@@ -155,11 +155,21 @@ interface nsIHTMLEditor : nsISupports
   void NodeIsBlock(in nsIDOMNode node, out boolean isBlock);
 
   /**
-   * Insert some HTML source at the current location
+   * Insert some HTML source at the current location.  Not undoable
+   *    (clears undo stack).  Use PasteHTML for undoable insertion.
+   *    This is meant for initializing documents.
    *
    * @param aInputString   the string to be inserted
    */
   void  InsertHTML(in DOMString   aInputString);
+
+
+  /**
+   * Insert some HTML source at the current location
+   *
+   * @param aInputString   the string to be inserted
+   */
+  void  PasteHTML(in DOMString   aInputString);
 
 
   /** Rebuild the entire document from source HTML
@@ -172,6 +182,8 @@ interface nsIHTMLEditor : nsISupports
   /**
    * Insert some HTML source, interpreting
    * the string argument according to the given charset.
+   * Not undoable (clears undo stack).  Use PasteHTMLWithCharset
+   * for undoable insertion.  This is meant for initializing documents.
    *
    * @param aInputString   the string to be inserted
    * @param aCharset       Charset of string
@@ -179,6 +191,19 @@ interface nsIHTMLEditor : nsISupports
    *                       If null, insert at the current location.
    */
   void  InsertHTMLWithCharset(in DOMString   aInputString,
+                                   in DOMString   aCharset);
+
+
+  /**
+   * Insert some HTML source, interpreting
+   * the string argument according to the given charset.
+   *
+   * @param aInputString   the string to be inserted
+   * @param aCharset       Charset of string
+   * @param aParentNode    Parent to insert under.
+   *                       If null, insert at the current location.
+   */
+  void  PasteHTMLWithCharset(in DOMString   aInputString,
                                    in DOMString   aCharset);
 
 

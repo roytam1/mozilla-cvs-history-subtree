@@ -20,8 +20,11 @@
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
-#include "nsICaret.h"
+#ifdef EDITOR_MAC_INSTRUMENTATION
+#include "InstrumentationHelpers.h" 
+#endif
 
+#include "nsICaret.h"
 
 #include "nsHTMLEditor.h"
 #include "nsHTMLEditRules.h"
@@ -106,6 +109,7 @@
 #include "nsEditorUtils.h"
 #include "nsIPref.h"
 
+
 // HACK - CID for NS_CTRANSITIONAL_DTD_CID so that we can get at transitional dtd
 #define NS_CTRANSITIONAL_DTD_CID \
 { 0x4611d482, 0x960a, 0x11d4, { 0x8e, 0xb0, 0xb6, 0x17, 0x66, 0x1b, 0x6f, 0x7c } }
@@ -145,6 +149,9 @@ nsHTMLEditor::nsHTMLEditor()
 , mTypeInState(nsnull)
 , mSelectedCellIndex(0)
 {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+  INST_TRACE("htmleditor construction");	
+#endif
 // Done in nsEditor
 // NS_INIT_REFCNT();
   mBoldAtom = getter_AddRefs(NS_NewAtom("b"));
@@ -228,6 +235,9 @@ NS_IMETHODIMP nsHTMLEditor::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 NS_IMETHODIMP nsHTMLEditor::Init(nsIDOMDocument *aDoc, 
                                  nsIPresShell   *aPresShell, nsIContent *aRoot, nsISelectionController *aSelCon, PRUint32 aFlags)
 {
+#ifdef EDITOR_MAC_INSTRUMENTATION
+  INST_TRACE("htmleditor INIT");	
+#endif
   NS_PRECONDITION(aDoc && aPresShell, "bad arg");
   if (!aDoc || !aPresShell)
     return NS_ERROR_NULL_POINTER;

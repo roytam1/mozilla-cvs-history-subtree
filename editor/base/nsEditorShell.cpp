@@ -19,6 +19,9 @@
  *
  * Contributor(s): 
  */
+#ifdef EDITOR_MAC_INSTRUMENTATION
+#include "InstrumentationHelpers.h" 
+#endif
 
 #include <stdio.h>
 
@@ -2593,6 +2596,9 @@ nsEditorShell::InsertAsCitedQuotation(const PRUnichar *quotedText,
                                       const PRUnichar *charset,
                                       nsIDOMNode** aNodeInserted)
 {  
+#ifdef EDITOR_MAC_INSTRUMENTATION
+  INST_TRACE("EditorShell-InsertAsCitedQuotation");	
+#endif
   nsresult  err = NS_NOINTERFACE;
   
   nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);

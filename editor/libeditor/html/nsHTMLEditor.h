@@ -76,10 +76,10 @@ public:
     kOpRemoveList          = 3006,
     kOpMakeDefListItem     = 3007,
     kOpInsertElement       = 3008,
-    kOpInsertQuotation     = 3009,
     kOpSetTextProperty     = 3010,
     kOpRemoveTextProperty  = 3011,
-    kOpHTMLPaste           = 3012
+    kOpHTMLPaste           = 3012,
+    kOpHTMLLoad            = 3013
   };
 
 
@@ -123,6 +123,9 @@ public:
 
   NS_IMETHOD InsertHTML(const nsAReadableString &aInputString);
   NS_IMETHOD InsertHTMLWithCharset(const nsAReadableString& aInputString,
+                                   const nsAReadableString& aCharset);
+  NS_IMETHOD PasteHTML(const nsAReadableString &aInputString);
+  NS_IMETHOD PasteHTMLWithCharset(const nsAReadableString& aInputString,
                                    const nsAReadableString& aCharset);
   NS_IMETHOD RebuildDocumentFromSource(const nsAReadableString& aSourceString);
   NS_IMETHOD InsertElementAtSelection(nsIDOMElement* aElement, PRBool aDeleteSelection);
@@ -549,10 +552,10 @@ protected:
   NS_IMETHOD InsertFromTransferable(nsITransferable *transferable, 
                                     const nsAReadableString & aContextStr,
                                     const nsAReadableString & aInfoStr);
-  nsresult   InsertHTMLWithContext(const nsAReadableString & aInputString, 
+  nsresult   PasteHTMLWithContext(const nsAReadableString & aInputString, 
                                    const nsAReadableString & aContextStr, 
                                    const nsAReadableString & aInfoStr);
-  nsresult   InsertHTMLWithCharsetAndContext(const nsAReadableString & aInputString,
+  nsresult   PasteHTMLWithCharsetAndContext(const nsAReadableString & aInputString,
                                              const nsAReadableString & aCharset,
                                              const nsAReadableString & aContextStr,
                                              const nsAReadableString & aInfoStr);
