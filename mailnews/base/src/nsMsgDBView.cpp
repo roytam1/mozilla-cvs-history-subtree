@@ -358,7 +358,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       }
 
       // make sure there aren't more IDs than we allocated space for
-      NS_ASSERTION(numSoFar >= arraySize, "out of memory");
+      NS_ASSERTION(numSoFar < arraySize, "out of memory");
       if (numSoFar >= arraySize) {
         PR_FREEIF(pPtrBase);
         PR_FREEIF(pTemp);
