@@ -783,7 +783,7 @@ InMemoryDataSource::GetSource(nsIRDFResource* property,
         return NS_OK;
     }
     *source = nsnull;
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_RDF_NO_VALUE;
 }
 
 NS_IMETHODIMP
@@ -812,7 +812,7 @@ InMemoryDataSource::GetTarget(nsIRDFResource* source,
     // If we get here, then there was no target with for the specified
     // property & truth value.
     *target = nsnull;
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_RDF_NO_VALUE;
 }
 
 NS_IMETHODIMP

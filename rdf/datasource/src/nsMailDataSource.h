@@ -74,8 +74,6 @@ DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, host);
 #define getMem(x) PR_Calloc(1,(x))
 
 
-// THE mail data source.
-static nsIRDFDataSource* gMailDataSource = nsnull;
 
 // The RDF service manager. Cached in the mail data source's
 // constructor
@@ -121,23 +119,8 @@ class MailDataSource :  public nsIRDFMailDataSource
 {
 private:
     char*       mURI;
-    nsVoidArray mAccounts;
     nsVoidArray* mObservers;
     nsIRDFService* mSrv;
-    nsIRDFDataSource* mMiscMailData;
-
-    // caching frequently used resources
-    nsIRDFResource* mResourceChild;
-    nsIRDFResource* mResourceFolder;
-    nsIRDFResource* mResourceFrom;
-    nsIRDFResource* mResourceSubject;
-    nsIRDFResource* mResourceDate;
-    nsIRDFResource* mResourceUser;
-    nsIRDFResource* mResourceHost;
-    nsIRDFResource* mResourceAccount;
-    nsIRDFResource* mResourceName;
-    nsIRDFResource* mMailRoot;
-    nsIRDFResource* mResourceColumns;
 
     // internal methods
     nsresult InitAccountList (void) ;
@@ -152,7 +135,6 @@ public:
     virtual ~MailDataSource (void) ;
 
     // nsIRDFMailDataSource  methods
-    NS_IMETHOD GetAccountList (nsVoidArray** result) ;    
     NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) ;
     NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder);
     NS_IMETHOD Init(const char* uri) ;
@@ -181,15 +163,31 @@ public:
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
                             nsIRDFArcsOutCursor** labels); 
     NS_IMETHOD Flush() ;
+
+    // caching frequently used resources
+    nsIRDFResource* mResourceChild;
+    nsIRDFResource* mResourceFolder;
+    nsIRDFResource* mResourceFrom;
+    nsIRDFResource* mResourceSubject;
+    nsIRDFResource* mResourceDate;
+    nsIRDFResource* mResourceUser;
+    nsIRDFResource* mResourceHost;
+    nsIRDFResource* mResourceAccount;
+    nsIRDFResource* mResourceName;
+    nsIRDFResource* mMailRoot;
+    nsIRDFResource* mResourceColumns;
+
+    nsIRDFDataSource* mMiscMailData;
+
 };
 
+
+// THE mail data source.
+static MailDataSource* gMailDataSource = nsnull;
 
 class MailAccount : public nsIRDFMailAccount 
 {
 private:
-    nsIRDFLiteral*       mUser;
-    nsIRDFLiteral*       mHost;
-    nsVoidArray          mFolders;
     char*                mURI ;        
     nsresult InitMailAccount (const char* uri);
 
@@ -202,7 +200,6 @@ public:
     NS_IMETHOD GetUser(nsIRDFLiteral**  result) const;
     NS_IMETHOD GetName(nsIRDFLiteral**  result) const ;
     NS_IMETHOD GetHost(nsIRDFLiteral**  result) const ;
-    NS_IMETHOD GetFolderList (nsVoidArray** result) ;
     NS_IMETHOD AddFolder (nsIRDFMailFolder* folder) ;
     NS_IMETHOD RemoveFolder (nsIRDFMailFolder* folder) ;
 
@@ -225,8 +222,6 @@ private:
     nsVoidArray    mMessages;
     FILE*          mSummaryFile;
     MailFolderStatus   mStatus;
-    MailAccount*   mAccount;
-    nsIRDFLiteral* mName;
     char*                             mURI ;
 
 public:
@@ -241,7 +236,6 @@ public:
     NS_IMETHOD AddMessage (nsIRDFMailMessage* msg) ;
     NS_IMETHOD RemoveMessage (nsIRDFMailMessage* msg) ;
     MailFolder (const char* uri) ;
-    MailFolder (char* uri, nsIRDFLiteral* name, MailAccount* account) ;
     virtual ~MailFolder (void) ;
     nsresult  AddMessage(PRUnichar* uri, MailFolder* folder,
                          nsIRDFResource* from, nsIRDFLiteral* subject, nsIRDFLiteral* date,

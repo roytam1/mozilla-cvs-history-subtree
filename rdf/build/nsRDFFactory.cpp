@@ -124,8 +124,8 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
             return rv;
     }
     else if (mClassID.Equals(kRDFStreamDataSourceCID)) {
-        if (NS_FAILED(rv = NS_NewRDFStreamDataSource((nsIRDFDataSource**) &inst)))
-            return rv;
+        //        if (NS_FAILED(rv = NS_NewRDFStreamDataSource((nsIRDFDataSource**) &inst)))
+          return rv;
     }
     else if (mClassID.Equals(kRDFBookmarkDataSourceCID)) {
         if (NS_FAILED(rv = NS_NewRDFBookmarkDataSource((nsIRDFDataSource**) &inst)))
