@@ -158,7 +158,8 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
             Element* element = (Element*)aSourceNode;
             const String& name = element->getNodeName();
             PRInt32 nsID = element->getNamespaceID();
-            startElement(name, nsID, aPs);
+            NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
+            aPs->mResultHandler->startElement(name, nsID);
 
             // Copy attributes
             NamedNodeMap* attList = element->getAttributes();
@@ -268,7 +269,8 @@ txXSLTProcessor::processAction(Node* aAction,
         // Literal result element
         // XXX TODO Check for excluded namespaces and aliased namespaces (element and attributes) 
         const String& nodeName = aAction->getNodeName();
-        startElement(nodeName, nsID, aPs);
+        NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
+        aPs->mResultHandler->startElement(nodeName, nsID);
 
         processAttributeSets(actionElement, aPs);
 
@@ -344,6 +346,7 @@ txXSLTProcessor::processAction(Node* aAction,
             NodeSet* nodeSet = (NodeSet*)exprResult;
             if (nodeSet->isEmpty()) {
                 delete nodeSet;
+                TX_RELEASE_ATOM(localName);
                 return;
             }
 
@@ -631,7 +634,8 @@ txXSLTProcessor::processAction(Node* aAction,
             return;
         }
 
-        startElement(name, resultNsID, aPs);
+        NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
+        aPs->mResultHandler->startElement(name, resultNsID);
         processAttributeSets(actionElement, aPs);
         processChildren(actionElement, aPs);
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
@@ -655,6 +659,7 @@ txXSLTProcessor::processAction(Node* aAction,
             NodeSet* nodeSet = (NodeSet*)exprResult;
             if (nodeSet->isEmpty()) {
                 delete nodeSet;
+                TX_RELEASE_ATOM(localName);
                 return;
             }
             txNodeSetContext evalContext(nodeSet, aPs);
@@ -1619,39 +1624,9 @@ txXSLTProcessor::processVariable(Element* aVariable,
 }
 
 void
-txXSLTProcessor::startElement(const String& aName,
-                              const PRInt32 aNsID,
-                              ProcessorState* aPs)
-{
-    if (!aPs->haveDocumentElement() && (aPs->mResultHandler == aPs->mOutputHandler)) {
-        txOutputFormat* format = aPs->getOutputFormat();
-        if (format->mMethod == eMethodNotSet) {
-            // XXX Should check for whitespace-only sibling text nodes
-            if ((aNsID == kNameSpaceID_None) &&
-                aName.isEqualIgnoreCase(String("html"))) {
-                // Switch to html output mode according to the XSLT spec.
-                format->mMethod = eHTMLOutput;
-            }
-            else {
-                format->mMethod = eXMLOutput;
-            }
-            aPs->mOutputHandler = aPs->getOutputHandler(format->mMethod);
-            if (!aPs->mOutputHandler) {
-                // XXX Error
-                return;
-            }
-            aPs->mOutputHandler->setOutputFormat(format);
-            aPs->mResultHandler = aPs->mOutputHandler;
-        }
-        aPs->setHaveDocumentElement(MB_TRUE);
-    }
-    NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-    aPs->mResultHandler->startElement(aName, aNsID);
-}
-
-void
 txXSLTProcessor::transform(ProcessorState* aPs)
 {
+    nsresult rv = NS_OK;
     txListIterator frameIter(aPs->getImportFrames());
     ProcessorState::ImportFrame* frame;
     txOutputFormat* outputFormat = aPs->getOutputFormat();
@@ -1659,13 +1634,14 @@ txXSLTProcessor::transform(ProcessorState* aPs)
         outputFormat->merge(frame->mOutputFormat);
     }
 
-    aPs->mOutputHandler = aPs->getOutputHandler(outputFormat->mMethod);
-    if (!aPs->mOutputHandler) {
+    txIOutputXMLEventHandler* handler = 0;
+    rv = aPs->mOutputHandlerFactory->createHandlerWith(aPs->getOutputFormat(),
+                                                       handler);
+    if (NS_FAILED(rv)) {
         return;
     }
-    aPs->mResultHandler = aPs->mOutputHandler;
-    aPs->mOutputHandler->setOutputFormat(outputFormat);
-    aPs->setHaveDocumentElement(MB_FALSE);
+    aPs->mOutputHandler = handler;
+    aPs->mResultHandler = handler;
     aPs->mOutputHandler->startDocument();
 
     frame = 0;
@@ -1695,7 +1671,8 @@ txXSLTProcessor::xslCopy(Element* aAction, ProcessorState* aPs)
             String nodeName = element->getNodeName();
             PRInt32 nsID = element->getNamespaceID();
 
-            startElement(nodeName, nsID, aPs);
+            NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
+            aPs->mResultHandler->startElement(nodeName, nsID);
             // XXX copy namespace attributes once we have them
             processAttributeSets(aAction, aPs);
             processChildren(aAction, aPs);

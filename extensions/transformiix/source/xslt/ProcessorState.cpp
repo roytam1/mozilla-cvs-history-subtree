@@ -48,16 +48,6 @@
 #include "txVariableMap.h"
 #include "XSLTProcessor.h"
 
-#ifdef TX_EXE
-#include "txUnknownHandler.h"
-#include "txTextOutput.h"
-#include "txHTMLOutput.h"
-#else
-#include "nsITransformObserver.h"
-#include "txMozillaTextOutput.h"
-#include "txMozillaXMLOutput.h"
-#endif
-
 /**
  * Creates a new ProcessorState for the given XSL document
 **/
@@ -71,12 +61,9 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
       mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
       mRTFDocument(0),
-#ifdef TX_EXE
-      mStandaloneOutputHandler(0),
-      mOut(0),
-#endif
       mOutputHandler(0),
-      mResultHandler(0)
+      mResultHandler(0),
+      mOutputHandlerFactory(0)
 {
     NS_ASSERTION(aSourceDocument, "missing source document");
     NS_ASSERTION(aXslDocument, "missing xslt document");
@@ -117,6 +104,10 @@ ProcessorState::~ProcessorState()
   if (mSourceDocument)
       loadedDocuments.remove(mSourceDocument->getBaseURI());
 
+  // in module the outputhandler is refcounted
+#ifdef TX_EXE
+  delete mOutputHandler;
+#endif
 } //-- ~ProcessorState
 
 
@@ -1141,106 +1132,6 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
 
    return NS_ERROR_XPATH_PARSE_FAILED;
 } //-- resolveFunctionCall
-
-txOutputXMLEventHandler*
-ProcessorState::getOutputHandler(txOutputMethod aMethod)
-{
-#ifdef TX_EXE
-    if (mStandaloneOutputHandler) {
-        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
-            txUnknownHandler* oldHandler =
-                (txUnknownHandler*)mStandaloneOutputHandler;
-            if (aMethod == eHTMLOutput) {
-                mStandaloneOutputHandler = new txHTMLOutput();
-            }
-            else {
-                mStandaloneOutputHandler = new txXMLOutput();
-            }
-            NS_ASSERTION(mStandaloneOutputHandler,
-                         "Setting mStandaloneOutputHandler to NULL!");
-            mStandaloneOutputHandler->setOutputStream(mOut);
-            txOutputFormat* format = getOutputFormat();
-            format->mMethod = aMethod;
-            mStandaloneOutputHandler->setOutputFormat(format);
-            oldHandler->flush(mStandaloneOutputHandler);
-            delete oldHandler;
-            return mStandaloneOutputHandler;
-        }
-        delete mStandaloneOutputHandler;
-        mStandaloneOutputHandler = 0;
-    }
-    switch (aMethod) {
-        case eXMLOutput:
-        {
-            mStandaloneOutputHandler = new txXMLOutput();
-            break;
-        }
-        case eHTMLOutput:
-        {
-            mStandaloneOutputHandler = new txHTMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mStandaloneOutputHandler = new txTextOutput();
-            break;
-        }
-        case eMethodNotSet:
-        {
-            mStandaloneOutputHandler = new txUnknownHandler(this);
-            break;
-        }
-    }
-    if (mOut) {
-        mStandaloneOutputHandler->setOutputStream(mOut);
-    }
-    return mStandaloneOutputHandler;
-#else
-    if (mMozillaOutputHandler) {
-        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
-            return mMozillaOutputHandler;
-        }
-        mMozillaOutputHandler = nsnull;
-    }
-    switch (aMethod) {
-        case eMethodNotSet:
-        case eXMLOutput:
-        case eHTMLOutput:
-        {
-            mMozillaOutputHandler = new txMozillaXMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mMozillaOutputHandler = new txMozillaTextOutput();
-            break;
-        }
-    }
-    if (mMozillaOutputHandler) {
-        nsCOMPtr<nsIDOMDocument> source =
-            do_QueryInterface(mSourceDocument->getNSObj());
-        mMozillaOutputHandler->setSourceDocument(source);
-        nsCOMPtr<nsITransformObserver> observer =
-            do_QueryReferent(mObserver);
-        mMozillaOutputHandler->setObserver(observer);
-    }
-    return mMozillaOutputHandler;
-#endif
-}
-
-#ifdef TX_EXE
-void
-ProcessorState::setOutputStream(ostream* aOut)
-{
-    mOut = aOut;
-}
-#else
-void
-ProcessorState::setTransformObserver(nsITransformObserver* aObserver)
-{
-    mObserver = do_GetWeakReference(aObserver);
-}
-#endif
 
   //-------------------/
  //- Private Methods -/

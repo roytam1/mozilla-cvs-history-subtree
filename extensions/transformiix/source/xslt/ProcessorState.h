@@ -43,10 +43,6 @@
 #include "XSLTFunctions.h"
 #include "txError.h"
 
-#ifndef TX_EXE
-#include "nsWeakPtr.h"
-#endif
-
 class txVariableMap;
 class txXSLKey;
 
@@ -149,11 +145,6 @@ public:
      * to serialize the output.
      */
     txOutputFormat* getOutputFormat();
-
-    /**
-     * Returns the OutputHandler to use
-     */
-    txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod);
 
     /**
      * Add a global variable
@@ -359,25 +350,14 @@ public:
     nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                  Element* aElem, FunctionCall*& aFunction);
 
-    
-    MBool haveDocumentElement()
-    {
-        return mHaveDocumentElement;
-    }
-
-    void setHaveDocumentElement(MBool aHaveDocumentElement)
-    {
-        mHaveDocumentElement = aHaveDocumentElement;
-    }
-
 #ifdef TX_EXE
-    void setOutputStream(ostream* aOut);
+    txIOutputXMLEventHandler* mOutputHandler;
 #else
-    void setTransformObserver(nsITransformObserver* aObserver);
+    nsCOMPtr<txIOutputXMLEventHandler> mOutputHandler;
 #endif
-
-    txOutputXMLEventHandler* mOutputHandler;
     txXMLEventHandler* mResultHandler;
+    
+    txIOutputHandlerFactory* mOutputHandlerFactory;
 
 private:
 
@@ -491,16 +471,6 @@ private:
      * Document used to create RTFs
      */
     Document* mRTFDocument;
-    
-    MBool mHaveDocumentElement;
-
-#ifdef TX_EXE
-    txStreamXMLEventHandler* mStandaloneOutputHandler;
-    ostream* mOut;
-#else
-    nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
-    nsWeakPtr mObserver;
-#endif
 };
 
 /**

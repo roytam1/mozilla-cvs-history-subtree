@@ -41,6 +41,7 @@
 
 #include "txXMLEventHandler.h"
 #include "TxString.h"
+#include "txOutputFormat.h"
 
 class ProcessorState;
 
@@ -91,11 +92,15 @@ public:
     String mStringTwo;
 };
 
-class txUnknownHandler : public txStreamXMLEventHandler
+class txUnknownHandler : public txIOutputXMLEventHandler
 {
 public:
-    txUnknownHandler(ProcessorState* aState);
+    txUnknownHandler(ProcessorState* aPs);
     virtual ~txUnknownHandler();
+
+#ifndef TX_EXE
+    NS_DECL_ISUPPORTS
+#endif
 
     /*
      * Signals to receive the start of an attribute.
@@ -178,40 +183,29 @@ public:
      */
     void startElement(const String& aName,
                       const PRInt32 aNsID);
-    /*
-     * Sets the output format.
-     *
-     * @param aOutputFormat the output format
-     */
-    void setOutputFormat(txOutputFormat* aOutputFormat);
 
+#ifndef TX_EXE
     /**
-     * Get the output stream.
+     * Gets the Mozilla output document
      *
-     * @param aOutputStream the current output stream
+     * @param aDocument the Mozilla output document
      */
-    void getOutputStream(ostream** aOutputStream);
-
-    /*
-     * Sets the output stream.
-     *
-     * @param aOutputStream the output stream
-     */
-    void setOutputStream(ostream* aOutputStream);
-
-    void flush(txStreamXMLEventHandler* aHandler);
+    void getOutputDocument(nsIDOMDocument** aDocument);
+#endif
 
 private:
+    nsresult createHandlerAndFlush(txOutputMethod aMethod,
+                                   const String& aName,
+                                   const PRInt32 aNsID);
     void addTransaction(txOutputTransaction* aTransaction);
 
     PRUint32 mTotal, mMax;
-    ostream* mOut;
     /*
      * XXX we shouldn't hold to the ProcessorState, as we're supposed
      * to live without it. But as a standalone handler, we don't.
      * The right fix may need a txOutputFormat here.
      */
-    ProcessorState* mProcessorState;
+    ProcessorState* mPs;
     txOutputTransaction** mArray;
 
     static PRUint32 kReasonableTransactions;

@@ -46,13 +46,15 @@
 #include "nsWeakPtr.h"
 #include "txOutputFormat.h"
 #include "nsIDOMDocument.h"
+#include "nsIDOMDocumentFragment.h"
 
 class nsITransformObserver;
 
-class txMozillaTextOutput : public txIMozillaXMLEventHandler
+class txMozillaTextOutput : public txIOutputXMLEventHandler
 {
 public:
-    txMozillaTextOutput();
+    txMozillaTextOutput(nsIDOMDocument* aSourceDocument, nsITransformObserver* aObserver);
+    txMozillaTextOutput(nsIDOMDocumentFragment* aDest);
     virtual ~txMozillaTextOutput();
 
     NS_DECL_ISUPPORTS
@@ -142,39 +144,19 @@ public:
                       const PRInt32 aNsID);
 
     /**
-     * Sets the output format.
-     *
-     * @param aOutputFormat the output format
-     */
-    void setOutputFormat(txOutputFormat* aOutputFormat);
-
-    /**
-     * Sets the Mozilla source document
-     *
-     * @param aDocument the Mozilla source document
-     */
-    void setSourceDocument(nsIDOMDocument* aDocument);
-
-    /**
      * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
     void getOutputDocument(nsIDOMDocument** aDocument);
 
-    /**
-     * Sets the content-sink observer
-     *
-     * @param aObserver the content-sink observer
-     */
-    void setObserver(nsITransformObserver* aObserver);
-
 private:
     nsCOMPtr<nsIDOMCharacterData> mTextNode;
-    nsCOMPtr<nsIContent> mRootContent;
     nsWeakPtr mObserver;
     nsCOMPtr<nsIDOMDocument> mDocument;
     txOutputFormat mOutputFormat;
+    nsCOMPtr<nsIDOMDocumentFragment> mFragment;
+    nsCOMPtr<nsIDOMDocument> mSourceDocument;
 };
 
 #endif

@@ -25,6 +25,7 @@
 #define TRANSFRMX_XML_EVENT_HANDLER_H
 
 #include "baseutils.h"
+#include "txError.h"
 class String;
 class txOutputFormat;
 #ifdef TX_EXE
@@ -111,16 +112,18 @@ public:
                               const PRInt32 aNsID) = 0;
 };
 
-class txOutputXMLEventHandler : public txXMLEventHandler
+#ifdef TX_EXE
+class txIOutputXMLEventHandler : public txXMLEventHandler
+#else
+#define TX_IOUTPUTXMLEVENTHANDLER_IID \
+{ 0x80e5e802, 0x8c88, 0x11d6, \
+  { 0xa7, 0xf2, 0xc5, 0xc3, 0x85, 0x6b, 0xbb, 0xbc }}
+
+class txIOutputXMLEventHandler : public nsISupports,
+                                 public txXMLEventHandler
+#endif
 {
 public:
-    /**
-     * Sets the output format.
-     *
-     * @param aOutputFormat the output format
-     */
-    virtual void setOutputFormat(txOutputFormat* aOutputFormat) = 0;
-
     /**
      * Signals to receive characters that don't need output escaping.
      *
@@ -136,43 +139,9 @@ public:
      *                 disable-output-escaping
      */
     virtual MBool hasDisableOutputEscaping() = 0;
-};
 
-#ifdef TX_EXE
-class txStreamXMLEventHandler : public txOutputXMLEventHandler
-{
-public:
-    /**
-     * Get the output stream.
-     *
-     * @param aOutputStream the current output stream
-     */
-    virtual void getOutputStream(ostream** aOutputStream) = 0;
-
-    /**
-     * Sets the output stream.
-     *
-     * @param aOutputStream the output stream
-     */
-    virtual void setOutputStream(ostream* aOutputStream) = 0;
-};
-#else
-#define TX_IMOZILLAXMLEVENTHANDLER_IID \
-{ 0x80e5e802, 0x8c88, 0x11d6, \
-  { 0xa7, 0xf2, 0xc5, 0xc3, 0x85, 0x6b, 0xbb, 0xbc }}
-
-class txIMozillaXMLEventHandler : public nsISupports,
-                                  public txOutputXMLEventHandler
-{
-public:
-    NS_DEFINE_STATIC_IID_ACCESSOR(TX_IMOZILLAXMLEVENTHANDLER_IID)
-
-    /**
-     * Sets the Mozilla source document
-     *
-     * @param aDocument the Mozilla source document
-     */
-    virtual void setSourceDocument(nsIDOMDocument* aDocument) = 0;
+#ifndef TX_EXE
+    NS_DEFINE_STATIC_IID_ACCESSOR(TX_IOUTPUTXMLEVENTHANDLER_IID)
 
     /**
      * Gets the Mozilla output document
@@ -180,14 +149,47 @@ public:
      * @param aDocument the Mozilla output document
      */
     virtual void getOutputDocument(nsIDOMDocument** aDocument) = 0;
+#endif
+};
+
+/**
+ * Interface used to create the appropriate outputhandler
+ */
+class txIOutputHandlerFactory
+{
+public:
+    virtual ~txIOutputHandlerFactory() {};
 
     /**
-     * Sets the content-sink observer
-     *
-     * @param aObserver the content-sink observer
+     * Creates an outputhandler for the specified format.
+     * @param aFromat  format to get handler for
+     * @param aHandler outparam. The created handler
      */
-    virtual void setObserver(nsITransformObserver* aObserver) = 0;
+    virtual nsresult
+    createHandlerWith(txOutputFormat* aFormat,
+                      txIOutputXMLEventHandler*& aHandler) = 0;
+
+    /**
+     * Creates an outputhandler for the specified format, with the specified
+     * name and namespace for the root element.
+     * @param aFromat  format to get handler for
+     * @param aName    name of the root element
+     * @param aNsID    namespace-id of the root element
+     * @param aHandler outparam. The created handler
+     */
+    virtual nsresult
+    createHandlerWith(txOutputFormat* aFormat,
+                      const String& aName,
+                      PRInt32 aNsID,
+                      txIOutputXMLEventHandler*& aHandler) = 0;
 };
-#endif
+
+#define TX_DECL_TXIOUTPUTHANDLERFACTORY                               \
+    nsresult createHandlerWith(txOutputFormat* aFormat,               \
+                               txIOutputXMLEventHandler*& aHandler);  \
+    nsresult createHandlerWith(txOutputFormat* aFormat,               \
+                               const String& aName,                   \
+                               PRInt32 aNsID,                         \
+                               txIOutputXMLEventHandler*& aHandler)   \
 
 #endif

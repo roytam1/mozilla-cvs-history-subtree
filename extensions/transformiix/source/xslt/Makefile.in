@@ -42,6 +42,7 @@ REQUIRES	= string \
 		  htmlparser \
 		  webshell \
 		  docshell \
+		  layout \
 		  $(NULL)
 endif
 
@@ -54,13 +55,13 @@ CPPSRCS = Names.cpp \
         txXSLTNumberCounters.cpp \
         txXSLTPatterns.cpp \
         txPatternParser.cpp \
+        txUnknownHandler.cpp \
         XSLTProcessor.cpp
 
 ifdef TX_EXE
 CPPSRCS += txHTMLOutput.cpp	\
            txStandaloneXSLTProcessor.cpp \
            txTextOutput.cpp \
-           txUnknownHandler.cpp \
            txXMLOutput.cpp
 else
 CPPSRCS += txMozillaTextOutput.cpp \

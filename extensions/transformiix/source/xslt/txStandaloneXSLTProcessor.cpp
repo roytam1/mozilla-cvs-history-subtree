@@ -48,6 +48,73 @@
 #include "txTextOutput.h"
 
 /**
+ * Output Handler Factory
+ */
+class txStandaloneHandlerFactory : public txIOutputHandlerFactory
+{
+public:
+    txStandaloneHandlerFactory(ProcessorState* aPs,
+                               ostream* aStream)
+        : mPs(aPs), mStream(aStream)
+    {
+    }
+
+    virtual ~txStandaloneHandlerFactory()
+    {
+    };
+
+    TX_DECL_TXIOUTPUTHANDLERFACTORY;
+
+private:
+    ProcessorState* mPs;
+    ostream* mStream;
+};
+
+nsresult
+txStandaloneHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
+                                              txIOutputXMLEventHandler*& aHandler)
+{
+    aHandler = 0;
+    switch (aFormat->mMethod) {
+        case eXMLOutput:
+            aHandler = new txXMLOutput(aFormat, mStream);
+            break;
+
+        case eHTMLOutput:
+            aHandler = new txHTMLOutput(aFormat, mStream);
+            break;
+
+        case eTextOutput:
+            aHandler = new txTextOutput(mStream);
+            break;
+
+        case eMethodNotSet:
+            aHandler = new txUnknownHandler(mPs);
+            break;
+    }
+    NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
+    return NS_OK;
+}
+
+nsresult
+txStandaloneHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
+                                              const String& aName,
+                                              PRInt32 aNsID,
+                                              txIOutputXMLEventHandler*& aHandler)
+{
+    aHandler = 0;
+    NS_ASSERTION(aFormat->mMethod != eMethodNotSet,
+                 "How can method not be known when root element is?");
+    NS_ENSURE_TRUE(aFormat->mMethod != eMethodNotSet, NS_ERROR_UNEXPECTED);
+    return createHandlerWith(aFormat, aHandler);
+}
+
+
+/**
+ * txStandaloneXSLTProcessor
+ */
+
+/**
  * Transform a XML document given by path.
  * The stylesheet is retrieved by a processing instruction,
  * or an error is returned.
@@ -143,7 +210,6 @@ txStandaloneXSLTProcessor::transform(Document* aSource, Node* aStylesheet,
         stylesheetDoc = aStylesheet->getOwnerDocument();
     }
     ProcessorState ps(aSource, stylesheetDoc);
-    ps.setOutputStream(&aOut);
 
     ps.addErrorObserver(aErr);
 
@@ -161,6 +227,9 @@ txStandaloneXSLTProcessor::transform(Document* aSource, Node* aStylesheet,
     if (NS_FAILED(rv)) {
         return rv;
     }
+
+    txStandaloneHandlerFactory handlerFactory(&ps, &aOut);
+    ps.mOutputHandlerFactory = &handlerFactory;
 
 #ifndef XP_WIN
     bool sync = aOut.sync_with_stdio(false);

@@ -52,11 +52,17 @@
 #include "nsWeakPtr.h"
 #include "txOutputFormat.h"
 
-class txMozillaXMLOutput : public txIMozillaXMLEventHandler,
+class txMozillaXMLOutput : public txIOutputXMLEventHandler,
                            public nsIScriptLoaderObserver
 {
 public:
-    txMozillaXMLOutput();
+    txMozillaXMLOutput(const String& aRootName,
+                       PRInt32 aRootNsID,
+                       txOutputFormat* aFormat,
+                       nsIDOMDocument* aSourceDocument,
+                       nsITransformObserver* aObserver);
+    txMozillaXMLOutput(txOutputFormat* aFormat,
+                       nsIDOMDocumentFragment* aFragment);
     virtual ~txMozillaXMLOutput();
 
     NS_DECL_ISUPPORTS
@@ -148,18 +154,6 @@ public:
                       const PRInt32 aNsID);
 
     /**
-     * Sets the output format.
-     *
-     * @param aOutputFormat the output format
-     */
-    void setOutputFormat(txOutputFormat* aOutputFormat);
-
-    /**
-     * Disables loading of stylesheets.
-     */
-    void disableStylesheetLoad();
-
-    /**
      * Removes a script element from the array of elements that are
      * still loading.
      *
@@ -168,25 +162,11 @@ public:
     void removeScriptElement(nsIDOMHTMLScriptElement *aElement);
 
     /**
-     * Sets the Mozilla source document
-     *
-     * @param aDocument the Mozilla source document
-     */
-    void setSourceDocument(nsIDOMDocument* aDocument);
-
-    /**
      * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
     void getOutputDocument(nsIDOMDocument** aDocument);
-
-    /**
-     * Sets the content-sink observer
-     *
-     * @param aObserver the content-sink observer
-     */
-    void setObserver(nsITransformObserver* aObserver);
 
 private:
     void closePrevious(PRInt8 aAction);
@@ -194,10 +174,10 @@ private:
     void endHTMLElement(nsIDOMElement* aElement, PRBool aXHTML);
     void processHTTPEquiv(nsIAtom* aHeader, const nsAString& aValue);
     void wrapChildren(nsIDOMNode* aCurrentNode, nsIDOMElement* aWrapper);
-    nsresult createResultDocument(const String& aName);
+    nsresult createResultDocument(const String& aName, PRInt32 aNsID,
+                                  nsIDOMDocument* aSourceDocument);
     void SignalTransformEnd();
 
-    nsCOMPtr<nsIDOMDocument> mSourceDocument;
     nsCOMPtr<nsIDOMDocument> mDocument;
     nsCOMPtr<nsIDOMNode> mCurrentNode;
     nsCOMPtr<nsIDOMNode> mParentNode;
@@ -224,30 +204,9 @@ private:
     PRPackedBool mHaveBaseElement;
 
     PRPackedBool mInTransform;
+    PRPackedBool mCreatingNewDocument;
  
     enum txAction { eCloseElement = 1, eFlushText = 2 };
-
-    struct DelayedNode {
-        enum Type { eCommentNode, ePINode, eTextNode };
-        DelayedNode(Type aType, const String& aName, const String& aData)
-            : mType(aType),
-              mName(aName),
-              mData(aData)
-        {
-        }
-
-        DelayedNode(Type aType, const String& aData)
-            : mType(aType),
-              mData(aData)
-        {
-        }
-
-        Type mType;
-        String mName;
-        String mData;
-    };
-
-    txList mDelayedNodes;
 };
 
 #endif

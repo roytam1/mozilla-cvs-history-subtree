@@ -39,7 +39,8 @@
 #include "txTextOutput.h"
 #include "TxString.h"
 
-txTextOutput::txTextOutput()
+txTextOutput::txTextOutput(ostream* aOut)
+    : mOut(aOut)
 {
 }
 
@@ -88,22 +89,4 @@ void txTextOutput::startDocument()
 void txTextOutput::startElement(const String& aName,
                                 const PRInt32 aNsID)
 {
-}
-
-void txTextOutput::getOutputStream(ostream** aOutputStream)
-{
-    if (aOutputStream)
-        *aOutputStream = mOut;
-}
-
-void txTextOutput::setOutputStream(ostream* aOutputStream)
-{
-    mOut = aOutputStream;
-}
-
-void txTextOutput::setOutputFormat(txOutputFormat* aOutputFormat)
-{
-    mOutputFormat.reset();
-    mOutputFormat.merge(*aOutputFormat);
-    mOutputFormat.setFromDefaults();
 }

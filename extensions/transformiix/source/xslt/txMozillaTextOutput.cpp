@@ -45,10 +45,21 @@
 #include "nsIDOMText.h"
 #include "nsITransformObserver.h"
 #include "TxString.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
-txMozillaTextOutput::txMozillaTextOutput()
+txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocument* aSourceDocument,
+                                         nsITransformObserver* aObserver)
+    : mSourceDocument(aSourceDocument)
+{
+    NS_INIT_ISUPPORTS();
+
+    mObserver = do_GetWeakReference(aObserver);
+}
+
+txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocumentFragment* aDest)
+    : mFragment(aDest)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -57,7 +68,7 @@ txMozillaTextOutput::~txMozillaTextOutput()
 {
 }
 
-NS_IMPL_ISUPPORTS1(txMozillaTextOutput, txIMozillaXMLEventHandler);
+NS_IMPL_ISUPPORTS1(txMozillaTextOutput, txIOutputXMLEventHandler);
 
 void txMozillaTextOutput::attribute(const String& aName,
                                     const PRInt32 aNsID,
@@ -93,15 +104,31 @@ void txMozillaTextOutput::processingInstruction(const String& aTarget,
 {
 }
 
-void txMozillaTextOutput::setOutputFormat(txOutputFormat* aOutputFormat)
-{
-    mOutputFormat.reset();
-    mOutputFormat.merge(*aOutputFormat);
-    mOutputFormat.setFromDefaults();
-}
-
 void txMozillaTextOutput::startDocument()
 {
+    nsresult rv = NS_OK;
+    
+    // If we are transforming into a fragment then just create a textnode
+    if (mFragment) {
+        nsCOMPtr<nsIDOMDocument> doc;
+        mFragment->GetOwnerDocument(getter_AddRefs(doc));
+        NS_ASSERTION(doc, "unable to get ownerdocument");
+        nsCOMPtr<nsIDOMText> textNode;
+        rv = doc->CreateTextNode(NS_LITERAL_STRING(""),
+                                 getter_AddRefs(textNode));
+        if (NS_FAILED(rv)) {
+            return;
+        }
+        nsCOMPtr<nsIDOMNode> dummy;
+        rv = mFragment->AppendChild(textNode, getter_AddRefs(dummy));
+        if (NS_FAILED(rv)) {
+            return;
+        }
+
+        mTextNode = textNode;
+        return;
+    }
+
     /*
      * Create an XHTML document to hold the text.
      *
@@ -114,7 +141,6 @@ void txMozillaTextOutput::startDocument()
      */
 
     // Create document
-    nsresult rv;
     nsCOMPtr<nsIDocument> doc;
     doc = do_CreateInstance(kXMLDocumentCID, &rv);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create document");
@@ -124,15 +150,31 @@ void txMozillaTextOutput::startDocument()
     mDocument = do_QueryInterface(doc);
     NS_ASSERTION(mDocument, "Need document");
 
-//    // Notify the contentsink that the document is created
-//    nsCOMPtr<nsIObserverService> observerService =
-//        do_GetService("@mozilla.org/observer-service;1", &rv);
-//    if (NS_SUCCEEDED(rv)) {
-//        observerService->AddObserver(mObserver, "xslt-document-created",
-//                                     PR_TRUE);
-//        observerService->NotifyObservers(mDocument, "xslt-document-created",
-//                                         nsnull);
-//    }
+    // Reset and set up document
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIDocument> sourceDoc = do_QueryInterface(mSourceDocument);
+    sourceDoc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+    nsCOMPtr<nsIIOService> serv = do_GetService(NS_IOSERVICE_CONTRACTID);
+    if (serv) {
+        // Create a temporary channel to get nsIDocument->Reset to
+        // do the right thing. We want the output document to get
+        // much of the input document's characteristics.
+        nsCOMPtr<nsIURI> docURL;
+        sourceDoc->GetDocumentURL(getter_AddRefs(docURL));
+        serv->NewChannelFromURI(docURL, getter_AddRefs(channel));
+    }
+    doc->Reset(channel, loadGroup);
+    nsCOMPtr<nsIURI> baseURL;
+    sourceDoc->GetBaseURL(*getter_AddRefs(baseURL));
+    doc->SetBaseURL(baseURL);
+    // XXX We might want to call SetDefaultStylesheets here
+
+    // Notify the contentsink that the document is created
+    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
+    if (observer) {
+        observer->OnDocumentCreated(mDocument);
+    }
 
     // Create the content
     nsCOMPtr<nsIDOMElement> element, docElement;
@@ -180,7 +222,7 @@ void txMozillaTextOutput::startDocument()
                                NS_LITERAL_STRING("body"),
                                getter_AddRefs(element));
     NS_ASSERTION(element, "Failed to create body element");
-    if (!mRootContent) {
+    if (!element) {
         return;
     }
 
@@ -229,17 +271,8 @@ void txMozillaTextOutput::startElement(const String& aName,
 {
 }
 
-void txMozillaTextOutput::setSourceDocument(nsIDOMDocument* aDocument)
-{
-}
-
 void txMozillaTextOutput::getOutputDocument(nsIDOMDocument** aDocument)
 {
     *aDocument = mDocument;
     NS_IF_ADDREF(*aDocument);
-}
-
-void txMozillaTextOutput::setObserver(nsITransformObserver* aObserver)
-{
-    mObserver = do_GetWeakReference(aObserver);
 }
