@@ -1577,6 +1577,7 @@ int _MD_mac_get_nonblocking_connect_error(PRInt32 osfd)
         case T_DATAXFER:
             return 0;
         case T_IDLE:
+        case T_INREL:	/* beard: is this an error? */
             return -1;
         default:
             PR_ASSERT(0);
