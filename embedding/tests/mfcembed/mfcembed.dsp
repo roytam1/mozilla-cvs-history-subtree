@@ -210,6 +210,10 @@ SOURCE=.\StdAfx.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\ToolBarObserver.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\winEmbedFileLocProvider.h
 # End Source File
 # End Group

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Developer Studio generated include file.
-// Used by MfcEmbed.rc
+// Used by mfcembed.rc
 //
 #define IDD_ABOUTBOX                    100
 #define IDR_MAINFRAME                   128
@@ -74,6 +74,7 @@
 #define ID_EDIT_PAGE                    32792
 #define ID_BOLD                         32793
 #define ID_ITALICS                      32794
+#define ID_TOOLBAR_UPDATE               32794
 #define ID_UNDERLINE                    32795
 #define ID_SAVE                         32796
 
@@ -85,6 +86,6 @@
 #define _APS_NEXT_RESOURCE_VALUE        156
 #define _APS_NEXT_COMMAND_VALUE         32797
 #define _APS_NEXT_CONTROL_VALUE         1022
-#define _APS_NEXT_SYMED_VALUE           101
+#define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif

@@ -65,7 +65,7 @@ public:
 	virtual ~CBrowserView();
 
 	// Some helper methods
-	HRESULT CreateBrowser();
+	HRESULT CreateBrowser(BOOL aIsEditable=FALSE);
 	HRESULT DestroyBrowser();
 	void OpenURL(const char* pUrl);
 	void OpenURL(const PRUnichar* pUrl);

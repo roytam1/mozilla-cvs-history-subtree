@@ -101,6 +101,13 @@ BEGIN_MESSAGE_MAP(CBrowserFrame, CFrameWnd)
 	ON_WM_ACTIVATE()
 	ON_COMMAND(ID_NEW_EDITORWINDOW, OnNewEditorwindow)
 	ON_COMMAND(ID_EDIT_PAGE, OnEditPage)
+	ON_COMMAND(ID_BOLD, OnBold)
+	ON_WM_TIMER()
+	ON_UPDATE_COMMAND_UI(ID_BOLD, OnUpdateBold)
+	ON_COMMAND(ID_ITALICS, OnItalics)
+	ON_UPDATE_COMMAND_UI(ID_ITALICS, OnUpdateItalics)
+	ON_COMMAND(ID_UNDERLINE, OnUnderline)
+	ON_UPDATE_COMMAND_UI(ID_UNDERLINE, OnUpdateUnderline)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -121,6 +128,7 @@ CBrowserFrame::CBrowserFrame(PRUint32 chromeMask)
 	// will have menubar, toolbar, statusbar etc.
 
 	m_chromeMask = chromeMask;
+  NS_ADDREF(&mToolBarObserver);//make sure no one releases this
 }
 
 CBrowserFrame::~CBrowserFrame()
@@ -188,6 +196,7 @@ int CBrowserFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create toolbar\n");
 		return -1;      // fail to create
 	}
+  mToolBarObserver.SetFrame(this,ID_TOOLBAR_UPDATE,100); //update if 100 ticks goes by and no more changes
 
 	// Create a ReBar window to which the toolbar and UrlBar 
 	// will be added
@@ -421,7 +430,8 @@ void CBrowserFrame::OnNewEditorwindow()
     CBrowserImpl *impl = pEditorFrame->GetBrowserImpl();
     if (impl)
     {
-        impl->MakeEditable();
+        ((CEditorImpl *)impl)->AddEditorObservers(&mToolBarObserver);
+        ((CEditorImpl *)impl)->MakeEditable();
     }
   }
 }
@@ -444,7 +454,104 @@ void CBrowserFrame::OnEditPage()
     CBrowserImpl *impl = pEditorFrame->GetBrowserImpl();
     if (impl)
     {
-        impl->MakeEditable();
+        ((CEditorImpl *)impl)->AddEditorObservers(&mToolBarObserver);
+        ((CEditorImpl *)impl)->MakeEditable();
     }
+  }	
+}
+
+void CBrowserFrame::OnUpdateBold(CCmdUI* pCmdUI) 
+{
+	// TODO: Add your command update UI handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    PRBool retval;
+    nsICommandParams *params;
+    nsresult rv = editimpl->GetCommandState("cmd_bold", &params);
+    if (NS_SUCCEEDED(editimpl->IsCommandEnabled("cmd_bold",&retval)) && retval)
+    	pCmdUI->Enable(TRUE);
+    else
+      pCmdUI->Enable(FALSE);
+  }
+}
+
+void CBrowserFrame::OnBold() 
+{
+	// TODO: Add your command handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    editimpl->DoCommand("cmd_bold");
+  }
+}
+
+void CBrowserFrame::OnTimer(UINT nIDEvent) 
+{
+	// TODO: Add your message handler code here and/or call default
+	if (nIDEvent == ID_TOOLBAR_UPDATE)
+  {
+    KillTimer(nIDEvent);
+    m_wndToolBar.Invalidate();
+  }
+  else
+  {
+    ASSERT(0);
+  }
+	//CFrameWnd::OnTimer(nIDEvent);
+}
+
+
+void CBrowserFrame::OnItalics() 
+{
+	// TODO: Add your command handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    editimpl->DoCommand("cmd_italic");
+  }	
+}
+
+void CBrowserFrame::OnUpdateItalics(CCmdUI* pCmdUI) 
+{
+	// TODO: Add your command update UI handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    PRBool retval;
+    if (NS_SUCCEEDED(editimpl->IsCommandEnabled("cmd_italic",&retval)) && retval)
+    	pCmdUI->Enable(TRUE);
+    else
+      pCmdUI->Enable(FALSE);
+  }
+}
+
+void CBrowserFrame::OnUnderline() 
+{
+	// TODO: Add your command handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    editimpl->DoCommand("cmd_underline");
+  }
+}
+
+void CBrowserFrame::OnUpdateUnderline(CCmdUI* pCmdUI) 
+{
+	// TODO: Add your command update UI handler code here
+  CBrowserImpl *impl = GetBrowserImpl();
+  CEditorImpl  *editimpl = (CEditorImpl *) impl;
+  if (editimpl)
+  {
+    PRBool retval;
+    if (NS_SUCCEEDED(editimpl->IsCommandEnabled("cmd_underline",&retval)) && retval)
+    	pCmdUI->Enable(TRUE);
+    else
+      pCmdUI->Enable(FALSE);
   }	
 }

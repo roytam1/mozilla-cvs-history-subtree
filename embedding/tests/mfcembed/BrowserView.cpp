@@ -163,8 +163,10 @@ CBrowserView::~CBrowserView()
 //
 int CBrowserView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-	CreateBrowser();
-
+	if (mpBrowserFrame && mpBrowserFrame->GetEditable())
+    CreateBrowser(TRUE);
+  else
+    CreateBrowser(FALSE);
 	return 0;
 }
 
@@ -175,7 +177,7 @@ void CBrowserView::OnDestroy()
 
 // Create an instance of the Mozilla embeddable browser
 //
-HRESULT CBrowserView::CreateBrowser() 
+HRESULT CBrowserView::CreateBrowser(BOOL aIsEditable)
 {	   
 	// Create web shell
 	nsresult rv;
@@ -208,7 +210,10 @@ HRESULT CBrowserView::CreateBrowser()
 	// The CBrowserImpl object uses the BrowserFrameGlue pointer to 
 	// call the methods on that interface to update the status/progress bars
 	// etc.
-	mpBrowserImpl = new CBrowserImpl();
+	if (!aIsEditable)
+    mpBrowserImpl = new CBrowserImpl();
+  else
+    mpBrowserImpl = new CEditorImpl();
 	if(mpBrowserImpl == nsnull)
 		return NS_ERROR_OUT_OF_MEMORY;
 

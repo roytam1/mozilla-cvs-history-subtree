@@ -84,8 +84,9 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsISimpleEnumerator.h"
-#include "nsIEditingSession.h"
 
+#include "nsIEditingSession.h"
+#include "nsICommandManager.h"
 #include "BrowserImpl.h"
 
 CBrowserImpl::CBrowserImpl()
@@ -403,9 +404,13 @@ NS_IMETHODIMP CBrowserImpl::SetVisibility(PRBool aVisibility)
     return NS_OK;
 }
 
+
+//EDITORIMPL
+
 NS_METHOD
-CBrowserImpl::MakeEditable()
+CEditorImpl::MakeEditable()
 {
+  nsresult rv;
   nsCOMPtr<nsIDOMWindow>        domWindow;
   mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
   if (!domWindow)
@@ -414,7 +419,7 @@ CBrowserImpl::MakeEditable()
   if (!scriptGlobalObject)
       return NS_ERROR_FAILURE;
   nsCOMPtr<nsIDocShell>        docShell;
-  nsresult rv  = scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+  rv  = scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
   if (NS_FAILED(rv))
     return rv;
   if (!docShell)
@@ -446,7 +451,7 @@ CBrowserImpl::MakeEditable()
         nsCOMPtr<nsIDocShell> curShell = do_QueryInterface(curSupports, &rv);
         if (NS_FAILED(rv)) break;
 
-        nsCOMPtr<nsIDOMWindow> childWindow = do_GetInterface(curShell);
+        nsCOMPtr<nsIDOMWindow> childWindow = do_GetInterface(curShell,&rv);
         if (childWindow)
           editingSession->MakeWindowEditable(childWindow, PR_FALSE);
     }
@@ -457,5 +462,67 @@ CBrowserImpl::MakeEditable()
 
 //nsIObserver
 
+NS_IMETHODIMP
+CEditorImpl::AddEditorObservers(nsIObserver *aObserver)
+{
+  nsCOMPtr<nsICommandManager> commandManager;
+  nsresult rv;
+  commandManager = do_GetInterface(mWebBrowser,&rv);
+  if (commandManager)
+  {
+    nsAutoString tString(NS_LITERAL_STRING("cmd_bold"));
+    rv = commandManager->AddCommandObserver(aObserver,tString);
+    tString = NS_LITERAL_STRING("cmd_italic");
+    rv = commandManager->AddCommandObserver(aObserver,tString);
+    tString = NS_LITERAL_STRING("cmd_underline");
+    rv = commandManager->AddCommandObserver(aObserver,tString);
+  }
+  return rv;
+}
 
-nsIObserver
+
+NS_IMETHODIMP
+CEditorImpl::DoCommand(const char *aCommand, nsICommandParams *aCommandParams)
+{
+  nsCOMPtr<nsICommandManager> commandManager;
+  nsresult rv = NS_ERROR_FAILURE;
+  commandManager = do_GetInterface(mWebBrowser,&rv);
+  if (commandManager)
+  {
+    nsAutoString tString;
+    tString.AssignWithConversion(aCommand);
+    rv = commandManager->DoCommand(tString,aCommandParams);
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
+CEditorImpl::IsCommandEnabled(const char *aCommand, PRBool *retval)
+{
+  nsCOMPtr<nsICommandManager> commandManager;
+  nsresult rv = NS_ERROR_FAILURE;
+  commandManager = do_GetInterface(mWebBrowser,&rv);
+  if (commandManager)
+  {
+    nsAutoString tString;
+    tString.AssignWithConversion(aCommand);
+    rv = commandManager->IsCommandEnabled(tString,retval);
+  }
+  return rv;
+}
+
+
+NS_IMETHODIMP
+CEditorImpl::GetCommandState(const char *aCommand, nsICommandParams **aCommandParams)
+{
+  nsCOMPtr<nsICommandManager> commandManager;
+  nsresult rv = NS_ERROR_FAILURE;
+  commandManager = do_GetInterface(mWebBrowser,&rv);
+  if (commandManager)
+  {
+    nsAutoString tString;
+    tString.AssignWithConversion(aCommand);
+    rv = commandManager->GetCommandState(tString,aCommandParams);
+  }
+  return rv;
+}

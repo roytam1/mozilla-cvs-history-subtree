@@ -347,7 +347,7 @@ CBrowserFrame* CMfcEmbedApp::CreateNewBrowserFrame(PRUint32 chromeMask,
 
 	// Now, create the browser frame
 	CBrowserFrame* pFrame = new CBrowserFrame(chromeMask);
-  pFrame->SetEditor(bIsEditor);
+  pFrame->SetEditable(bIsEditor);
 	if (!pFrame->Create(NULL, strTitle, WS_OVERLAPPEDWINDOW, 
 					winSize, NULL, MAKEINTRESOURCE(resId), 0L, NULL))
 	{
