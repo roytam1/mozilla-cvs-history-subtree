@@ -28,8 +28,8 @@ EXPORTS =				\
         rdf.h                   	\
 	nsIRDFCompositeDataSource.h	\
 	nsIRDFContentSink.h		\
-	nsIRDFCursor.h          	\
 	nsIRDFDataSource.h      	\
+	nsIRDFEnumerator.h		\
         nsIRDFNode.h            	\
 	nsIRDFObserver.h        	\
 	nsIRDFResource.h		\
