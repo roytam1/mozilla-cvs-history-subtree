@@ -219,10 +219,6 @@ print " </RDF:Seq></em:updates>\n";
 if (!empty($highestVersionData)) {
     print " <em:version>{$highestVersionData['extversion']}</em:version>\n";
     print " <em:updateLink>{$highestVersionData['exturi']}</em:updateLink>\n";
-} else if (!empty($thisVersionData)) {
-    // XXX - should we return this to 0.9, if there is no newer version available?
-    print " <em:version>{$thisVersionData['extversion']}</em:version>\n";
-    print " <em:updateLink>{$thisVersionData['exturi']}</em:updateLink>\n";
 }
 
 print "</RDF:Description>\n\n";
