@@ -72,6 +72,7 @@ NS_INTERFACE_MAP_END
 ResizeEventListener::ResizeEventListener(nsIHTMLEditor * aEditor) :
  mEditor(aEditor)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 ResizeEventListener::~ResizeEventListener()
@@ -101,6 +102,7 @@ NS_INTERFACE_MAP_END
 ResizerSelectionListener::ResizerSelectionListener(nsIHTMLEditor * aEditor) :
  mEditor(aEditor)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 ResizerSelectionListener::~ResizerSelectionListener()
@@ -133,6 +135,7 @@ NS_IMPL_RELEASE(ResizerMutationListener)
 ResizerMutationListener::ResizerMutationListener(nsIHTMLEditor * aEditor):
   mEditor(aEditor)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 ResizerMutationListener::~ResizerMutationListener() 
@@ -233,6 +236,7 @@ NS_IMPL_RELEASE(ResizerMouseMotionListener)
 ResizerMouseMotionListener::ResizerMouseMotionListener(nsIHTMLEditor * aEditor):
  mEditor(aEditor)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 ResizerMouseMotionListener::~ResizerMouseMotionListener() 
