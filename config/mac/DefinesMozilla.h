@@ -44,6 +44,10 @@
 //#define MOZ_PERF_METRICS 1		// Uncomment to get metrics in layout, parser and webshell.
 															// You also need to define __TIMESIZE_DOUBLE__ in <timesize.mac.h>
 
+#ifdef MOZ_STATIC_COMPONENT_LIBS
+#define XPCOM_TRANSLATE_NSGM_ENTRY_POINT 1
+#endif
+
 // reflow counters, enabled in debug builds and visible via a pref
 #ifdef DEBUG
 #define MOZ_REFLOW_PERF 1

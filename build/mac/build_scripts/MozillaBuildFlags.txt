@@ -66,6 +66,8 @@ chatzilla       1
 xml_rpc         1
 cview           1
 help            1
+static_build    0      MOZ_STATIC_COMPONENT_LIBS
+
 
 filepath_flags
 idepath             ":CodeWarrior IDE Path.txt"
