@@ -43,6 +43,8 @@
 #include "txStylesheet.h"
 #include "txNodeSetContext.h"
 #include "txTextHandler.h"
+#include "nsIConsoleService.h"
+#include "nsIServiceManagerUtils.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -238,6 +240,28 @@ txLREAttribute::execute(txExecutionState& aEs)
     aEs.mResultHandler->attribute(nodeName, mNamespaceID, value);
 
     return NS_OK;
+}
+
+txMessage::txMessage(PRBool aTerminate)
+    : mTerminate(aTerminate)
+{
+}
+
+nsresult
+txMessage::execute(txExecutionState& aEs)
+{
+    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+
+    nsCOMPtr<nsIConsoleService> consoleSvc = 
+      do_GetService("@mozilla.org/consoleservice;1");
+    if (consoleSvc) {
+        nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
+        logString.Append(handler->mValue);
+        consoleSvc->LogStringMessage(logString.get());
+    }
+    delete handler;
+
+    return mTerminate ? NS_ERROR_XSLT_ABORTED : NS_OK;
 }
 
 txPushNewContext::txPushNewContext(Expr* aSelect)

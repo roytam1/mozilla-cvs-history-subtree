@@ -845,6 +845,55 @@ txFnEndIf(txStylesheetCompilerState& aState)
     return aState.addGotoTarget(&condGoto->mTarget);
 }
 
+// xsl:message
+nsresult
+txFnStartMessage(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txPushStringHandler(PR_FALSE);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIAtom> terminateAtom;
+    rv = getAtomAttr(aAttributes, aAttrCount, txXSLTAtoms::terminate,
+                     PR_FALSE, aState, getter_AddRefs(terminateAtom));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    PRBool terminate = PR_FALSE;
+    if (terminateAtom == txXSLTAtoms::yes) {
+        terminate = MB_TRUE;
+    }
+    else if (terminateAtom && terminateAtom != txXSLTAtoms::no &&
+             !aState.fcp()) {
+        // XXX ErrorReport: unknown value for terminate
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+
+    instr = new txMessage(terminate);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndMessage(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 // xsl:text
 nsresult
 txFnStartText(PRInt32 aNamespaceID,
@@ -991,6 +1040,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "fallback", txFnStartElementSetIgnore, txFnEndElementSetIgnore },
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },
     { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
+    { kNameSpaceID_XSLT, "message", txFnStartMessage, txFnEndMessage },
     { kNameSpaceID_XSLT, "text", txFnStartText, txFnEndText },
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
     { 0, 0, 0, 0 } },

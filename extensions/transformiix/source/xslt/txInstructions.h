@@ -159,6 +159,16 @@ public:
     Expr* mValue;
 };
 
+class txMessage : public txInstruction
+{
+public:
+    txMessage(PRBool aTerminate);
+
+    TX_DECL_TXINSTRUCTION
+
+    PRBool mTerminate;
+};
+
 class txPushNewContext : public txInstruction
 {
 public:

@@ -112,6 +112,7 @@ TX_ATOM(priority, "priority");
 TX_ATOM(select, "select");
 TX_ATOM(standalone, "standalone");
 TX_ATOM(test, "test");
+TX_ATOM(terminate, "terminate");
 TX_ATOM(use, "use");
 TX_ATOM(useAttributeSets, "use-attribute-sets");
 TX_ATOM(value, "value");
