@@ -1783,7 +1783,11 @@ nsresult nsProfileLock::Lock(nsILocalFile* aFile)
                                  0, // no sharing - of course
                                  nsnull,
                                  OPEN_ALWAYS,
+#if !defined(WINCE)
                                  FILE_FLAG_DELETE_ON_CLOSE,
+#else /* WINCE */
+                                 0, // rely on sharing restrictions only.
+#endif /* WINCE */
                                  nsnull);
     if (mLockFileHandle == INVALID_HANDLE_VALUE)
         return NS_ERROR_FILE_ACCESS_DENIED;
