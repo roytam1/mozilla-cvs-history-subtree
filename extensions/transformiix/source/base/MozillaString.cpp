@@ -69,7 +69,7 @@ void String::replace(const PRUint32 aOffset, const String& aSource)
   mString.Replace(aOffset, mString.Length() - aOffset, aSource.mString);
 }
 
-void String::deleteChars(const PRUint32 offset, const PRUint32 count)
+void String::deleteChars(const PRUint32 aOffset, const PRUint32 aCount)
 {
   mString.Cut(offset, count);
 }

@@ -146,7 +146,7 @@ public:
     /* explicit */ String(const char* aSource); // XXX Used for literal strings
     String& operator = (const char* aSource); // XXX Used for literal strings
     void append(const char* aSource);
-    PRInt32 indexOf(char aData, const PRUint32 aOffset = 0) const;
+    PRInt32 indexOf(const char aData, const PRUint32 aOffset = 0) const;
     PRInt32 lastIndexOf(const char aData, const PRUint32 aOffset = 0) const;
     MBool isEqual(const char* aData) const;
     char* toCharArray() const;
