@@ -135,10 +135,6 @@ else
 	cp $(topsrcdir)/dist/bin/libplugletjni.so $(PACKAGE_LIB)/libplugletjni.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libpluglet.so $(PACKAGE_LIB)/libpluglet.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libjavadom.so $(PACKAGE_LIB)/libjavadom.so.$(VERSION_NUMBER)
-	cp $(topsrcdir)/dist/bin/components/libpluglet.so $(topsrcdir)/dist/bin/components/libpluglet.so.$(VERSION_NUMBER)
-	cp $(topsrcdir)/dist/bin/components/libjavadom.so $(topsrcdir)/dist/bin/components/libjavadom.so.$(VERSION_NUMBER)
-	rm -r $(topsrcdir)/dist/bin/components/libpluglet.so
-	rm -r $(topsrcdir)/dist/bin/components/libjavadom.so
 	chmod 555 $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwebclient.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwc_share.a.$(VERSION_NUMBER)
@@ -146,8 +142,6 @@ else
 	chmod 555 $(PACKAGE_LIB)/libplugletjni.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libpluglet.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libjavadom.so.$(VERSION_NUMBER)
-	chmod 555 $(topsrcdir)/dist/bin/components/libpluglet.so.$(VERSION_NUMBER)
-	chmod 555 $(topsrcdir)/dist/bin/components/libjavadom.so.$(VERSION_NUMBER)
 	if test ! -d $(PACKAGE_LIB)/libwc_share.a ; then ln -s libwc_share.a.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwc_share.a ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libwebclientstub.so ; then ln -s libwebclientstub.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwebclientstub.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libwebclient.so ; then ln -s libwebclient.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwebclient.so ; else true ; fi ;
@@ -155,8 +149,6 @@ else
 	if test ! -d $(PACKAGE_LIB)/libplugletjni.so ; then ln -s libplugletjni.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libplugletjni.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libpluglet.so ; then ln -s libpluglet.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libpluglet.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libjavadom.so ; then ln -s libjavadom.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libjavadom.so ; else true ; fi ;
-	if test ! -d $(topsrcdir)/dist/bin/components/libpluglet.so ; then ln -s libpluglet.so.$(VERSION_NUMBER) $(topsrcdir)/dist/bin/components/libpluglet.so ; else true ; fi ;
-	if test ! -d $(topsrcdir)/dist/bin/components/libjavadom.so ; then ln -s libjavadom.so.$(VERSION_NUMBER) $(topsrcdir)/dist/bin/components/libjavadom.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_EXAMPLE)/runem ; then cp $(topsrcdir)/java/webclient/src_moz/runem $(PACKAGE_EXAMPLE)/runem ; else true ; fi ;
 	if test ! -d $(PACKAGE_EXAMPLE)/runem.pl ; then cp $(topsrcdir)/java/webclient/src_share/runem_commercial.pl $(PACKAGE_EXAMPLE)/runem.pl ; else true ; fi ;
 	chmod 755 $(PACKAGE_EXAMPLE)/runem.pl

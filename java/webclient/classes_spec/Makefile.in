@@ -77,7 +77,6 @@ ifneq ($(PACKAGE_BUILD),)
 	if test ! -d $(PACKAGE_LIB)/blackwood.$(VERSION_NUMBER).jar ; then rm -f $(PACKAGE_LIB)/blackwood.$(VERSION_NUMBER).jar ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/blackwood.jar ; then rm -f $(PACKAGE_LIB)/blackwood.jar ; else true ; fi ;
 	cd $(topsrcdir)/dist/classes ; \
-	jar -xvf ../../java/external/dom2.jar ; \
 	jar -cvf blackwood.$(VERSION_NUMBER).jar org ; \
 	cp blackwood.$(VERSION_NUMBER).jar  ../javadev/lib/blackwood.$(VERSION_NUMBER).jar ;
 	cd $(topsrcdir)/dist/javadev/lib ; \

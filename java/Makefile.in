@@ -34,4 +34,18 @@ DIRS=   util		\
 	webclient	\
 	$(NULL)
 
+export:: unjar_dom
+
 include $(topsrcdir)/config/rules.mk
+
+unjar_dom:
+	if test ! -d $(DEPTH)/dist/classes; \
+		then mkdir $(DEPTH)/dist/classes; \
+	fi; 
+	cd $(DEPTH)/dist/classes; \
+	$(JDKHOME)/bin/jar -xf ../../java/external/dom2.jar; \
+	cd ../../java
+
+clobber_all::
+	$(RM) -rf $(DEPTH)/dist/classes/org/w3c
+
