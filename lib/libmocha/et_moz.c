@@ -34,6 +34,7 @@
 #include "np.h"
 #include "prefapi.h"
 #include "pa_parse.h"
+#include "cacheutils.h"
 #include "netcache.h"
 
 #define IL_CLIENT
@@ -2295,11 +2296,11 @@ et_HandleEvent_SetWriteStream(MozillaEvent_DocCacheConverter * e)
     top_state = lo_GetMochaTopState(e->ce.context);
     if (top_state && !top_state->mocha_write_stream) {
         top_state->mocha_write_stream
-            = NET_CStreamToVoidStream(NET_CloneWysiwygCacheFile(e->ce.context, 
+            = NET_CloneWysiwygCacheFile(e->ce.context, 
 				        e->pUrl,
 				        (uint32)top_state->script_bytes,
 					e->wysiwyg_url,
-					e->base_href));
+					e->base_href);
     }
 }
 
