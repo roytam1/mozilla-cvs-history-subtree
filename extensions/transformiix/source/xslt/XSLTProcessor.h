@@ -39,35 +39,35 @@ class txOutputXMLEventHandler;
 class txXSLTProcessor
 {
 public:
-    /*
+    /**
      * Initialisation and shutdown routines
      * Allocate and free static atoms.
      */
     static MBool txInit();
     static MBool txShutdown();
 
-    /*
+    /**
      * Creates a new txXSLTProcessor.
      */
     txXSLTProcessor();
 
-    /*
+    /**
      * Default destructor for txXSLTProcessor.
      */
     virtual ~txXSLTProcessor();
 
 protected:
-    /*
+    /**
      * Returns the name of this XSLT processor.
      */
     String& getAppName();
 
-    /*
+    /**
      * Returns the version of this XSLT processor.
      */
     String& getAppVersion();
 
-    /*
+    /**
      * Processes a stylesheet document.
      *
      * @param aSource the source document
@@ -87,7 +87,7 @@ protected:
         return NS_OK;
     }
 
-    /*
+    /**
      * Processes a stylesheet element.
      *
      * @param aSource the source document
@@ -107,7 +107,7 @@ protected:
         return NS_OK;
     }
 
-    /*
+    /**
      * Transforms a node.
      *
      * @param aNode the node to transform
@@ -116,26 +116,13 @@ protected:
     void transform(Node* aNode, ProcessorState* aPs);
 
 private:
-    /*
+    /**
      * A warning message used by all templates that do not allow non character
      * data to be generated
      */
     static const String NON_TEXT_TEMPLATE_WARNING;
 
-    /*
-     * Binds the given Variable
-     *
-     * @param aName YYY
-     * @param aValue YYY
-     * @param aAllowShadowing YYY
-     * @param aPs the current ProcessorState
-     */
-    void bindVariable(String& aName,
-                      ExprResult* aValue,
-                      MBool aAllowShadowing,
-                      ProcessorState* aPs);
-
-    /*
+    /**
      * Copy a node. For document nodes, copy the children.
      *
      * @param aNode YYY
@@ -143,7 +130,7 @@ private:
      */
     void copyNode(Node* aNode, ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aNode YYY
@@ -154,42 +141,42 @@ private:
                  const txExpandedName& aMode,
                  ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aNode YYY
-     * @param aXsltAction YYY
+     * @param aAction YYY
      * @param aPs the current ProcessorState
      */
     void processAction(Node* aNode,
-                       Node* aXsltAction,
+                       Node* aAction,
                        ProcessorState* aPs);
 
-    /*
+    /**
      * Processes the attribute sets specified in the use-attribute-sets attribute
      * of the element specified in aElement
      *
      * @param aElement YYY
      * @param aNode YYY
      * @param aPs the current ProcessorState
+     * @param aRecursionStack YYY
      */
-    void processAttributeSets(Element* aElement,
-                              Node* aNode,
-                              ProcessorState* aPs);
+    void processAttributeSets(Element* aElement, Node* aNode,
+                              ProcessorState* aPs, Stack* aRecursionStack = 0);
 
-    /*
+    /**
      * Processes the children of the specified element using the given context node
      * and ProcessorState.
      *
      * @param aNode the context node
-     * @param aXsltElement the template to be processed. Must be != NULL
+     * @param aElement the template to be processed. Must be != NULL
      * @param aPs the current ProcessorState
      */
     void processChildren(Node* aNode,
-                         Element* aXsltElement,
+                         Element* aElement,
                          ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aNode YYY
@@ -204,7 +191,7 @@ private:
                                 MBool aOnlyText,
                                 String& aValue);
 
-    /*
+    /**
      * Invokes the default template for the specified node
      *
      * @param aNode context node
@@ -215,7 +202,7 @@ private:
                                 ProcessorState* aPs,
                                 const txExpandedName& aMode);
 
-    /*
+    /**
      * Processes an include or import stylesheet.
      *
      * @param aHref URI of stylesheet to process
@@ -228,35 +215,37 @@ private:
                         txListIterator* aImportFrame,
                         ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
-     * @param aXslTemplate YYY
+     * @param aTemplate YYY
      * @param aNode YYY
      * @param aParams YYY
      * @param aMode YYY
      * @param aFrame YYY
      * @param aPs the current ProcessorState
      */
-    void processMatchedTemplate(Node* aXslTemplate,
+    void processMatchedTemplate(Node* aTemplate,
                                 Node* aNode,
-                                NamedMap* aParams,
+                                txVariableMap* aParams,
                                 const txExpandedName& aMode,
                                 ProcessorState::ImportFrame* aFrame,
                                 ProcessorState* aPs);
 
-    /*
-     * Processes the xsl:with-param elements of the given xsl action
+    /***
+     * Processes the xsl:with-param child elements of the given xsl action.
      *
-     * @param aXsltAction YYY
-     * @param aContext YYY
-     * @param aPs the current ProcessorState
+     * @param aAction  the action node that takes parameters (xsl:call-template
+     *                 or xsl:apply-templates
+     * @param aContext the current context node
+     * @param aMap     map to place parsed variables in
+     * @param aPs      the current ProcessorState
+     * @return         errorcode
      */
-    NamedMap* processParameters(Element* aXsltAction,
-                                Node* aContext,
-                                ProcessorState* aPs);
+    NamedMap* processParameters(Element* aAction, Node* aContext,
+                               txVariableMap* aMap, ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aSource YYY
@@ -269,33 +258,19 @@ private:
                            txListIterator* aImportFrame,
                            ProcessorState* aPs);
 
-    /*
-     * XXX.
+    /**
+     * Processes the specified template using the given context,
+     * ProcessorState, and parameters.
      *
-     * @param aNode YYY
-     * @param aXsltTemplate YYY
-     * @param aPs the current ProcessorState
-     * @param aActualParams YYY
-     */
-    void processTemplate(Node* aNode,
-                         Node* aXsltTemplate,
-                         ProcessorState* aPs,
-                         NamedMap* aActualParams = NULL);
-
-    /*
-     * XXX.
-     *
-     * @param aXsltTemplate YYY
      * @param aContext YYY
+     * @param aTemplate YYY
+     * @param aParams YYY
      * @param aPs the current ProcessorState
-     * @param aActualParams YYY
      */
-    void processTemplateParams(Node* aXsltTemplate,
-                               Node* aContext,
-                               ProcessorState* aPs,
-                               NamedMap* aActualParams);
+    void processTemplate(Node* aContext, Node* aTemplate,
+                         txVariableMap* aParams, ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aSource YYY
@@ -303,23 +278,22 @@ private:
      * @param aImportFrame YYY
      * @param aPs the current ProcessorState
      */
-    void processTopLevel(Document* aSource,
-                         Element* aStylesheet,
+    void processTopLevel(Document* aSource, Element* aStylesheet,
                          txListIterator* aImportFrame,
                          ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aNode YYY
-     * @param aXsltVariable YYY
+     * @param aVariable YYY
      * @param aPs the current ProcessorState
      */
     ExprResult* processVariable(Node* aNode,
-                                Element* aXsltVariable,
+                                Element* aVariable,
                                 ProcessorState* aPs);
 
-    /*
+    /**
      * XXX.
      *
      * @param aMethod YYY
@@ -329,7 +303,7 @@ private:
                       const PRInt32 aNsID,
                       ProcessorState* aPs);
 
-    /*
+    /**
      * Performs the xsl:copy action as specified in the XSLT specification
      *
      * @param aNode YYY
@@ -340,7 +314,7 @@ private:
                  Element* aAction,
                  ProcessorState* aPs);
 
-    /*
+    /**
      * Performs the xsl:copy-of action as specified in the XSLT specification
      *
      * @param aExprResult YYY
@@ -349,17 +323,17 @@ private:
     void xslCopyOf(ExprResult* aExprResult,
                    ProcessorState* aPs);
 
-    /*
+    /**
      * The version of XSL which this Processes
      */
     String mXsltVersion;
 
-    /*
+    /**
      * Used as default expression for some elements
      */
     Expr* mNodeExpr;
 
-    /*
+    /**
      * Fatal ErrorObserver
      */
     SimpleErrorObserver mFatalObserver;
