@@ -171,8 +171,10 @@ Contributor(s):  Håkan Waara <hwaara@chello.se>
                   oncommand="openHelp('mail-filters');"/>
           <spacer flex="1"/>
           <button id="reorderUpButton" label="&reorderUpButton.label;" accesskey="&reorderUpButton.accesskey;" 
+                  class="up"
                   oncommand="onUp(event);"/>
           <button id="reorderDownButton" label="&reorderDownButton.label;" accesskey="&reorderDownButton.accesskey;" 
+                  class="down"
                   oncommand="onDown(event);"/>
           <spacer flex="1"/>
         </vbox>
