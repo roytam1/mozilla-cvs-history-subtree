@@ -3243,6 +3243,9 @@ nsPluginInstanceOwner::Destroy()
     else NS_ASSERTION(PR_FALSE, "plugin was not an event listener");
   }
   else NS_ASSERTION(PR_FALSE, "plugin had no content");
+
+  mOwner = nsnull; // break relationship between frame and plugin instance owner
+
   return NS_OK;
 }
 
