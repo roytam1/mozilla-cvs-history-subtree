@@ -166,7 +166,8 @@ endif
 # This option is depricated. The best way to have client.mk pull a tag
 # is to set MOZ_CO_TAG (see above) and commit that change on the tag.
 ifdef MOZ_CO_BRANCH
-  CVS_CO_FLAGS :=  -r $(MOZ_CO_BRANCH)
+  $(warning Use MOZ_CO_TAG instead of MOZ_CO_BRANCH)
+  CVS_CO_FLAGS := -r $(MOZ_CO_BRANCH)
 endif
 
 # MOZ_CO_FLAGS - Anything that we should use on all checkouts
@@ -199,6 +200,9 @@ endif
 #
 PSM_CO_MODULE= mozilla/security/manager
 PSM_CO_FLAGS := -P -A
+ifdef MOZ_CO_FLAGS
+  PSM_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef PSM_CO_TAG
   PSM_CO_FLAGS := $(PSM_CO_FLAGS) -r $(PSM_CO_TAG)
 endif
@@ -216,6 +220,9 @@ NSS_CO_TAG = NSS_CLIENT_BRANCH
 endif
 
 NSS_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  NSS_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef NSS_CO_TAG
    NSS_CO_FLAGS := $(NSS_CO_FLAGS) -r $(NSS_CO_TAG)
 endif
@@ -231,6 +238,9 @@ endif
 #
 NSPR_CO_MODULE = mozilla/nsprpub
 NSPR_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  NSPR_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef NSPR_CO_TAG
   NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) -r $(NSPR_CO_TAG)
 endif
@@ -241,6 +251,9 @@ CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR
 #
 LDAPCSDK_CO_MODULE = mozilla/directory/c-sdk
 LDAPCSDK_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  LDAPCSDK_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef LDAPCSDK_CO_TAG
   LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) -r $(LDAPCSDK_CO_TAG)
 endif
@@ -251,6 +264,9 @@ CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS
 #
 ACCESSIBLE_CO_MODULE = mozilla/accessible
 ACCESSIBLE_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  ACCESSIBLE_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef ACCESSIBLE_CO_TAG
   ACCESSIBLE_CO_FLAGS := $(ACCESSIBLE_CO_FLAGS) -r $(ACCESSIBLE_CO_TAG)
 endif
@@ -261,6 +277,9 @@ CVSCO_ACCESSIBLE = $(CVS) $(CVS_FLAGS) co $(ACCESSIBLE_CO_FLAGS) $(CVS_CO_DATE_F
 #
 GFX2_CO_MODULE = mozilla/gfx2
 GFX2_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  GFX2_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef GFX2_CO_TAG
   GFX2_CO_FLAGS := $(GFX2_CO_FLAGS) -r $(GFX2_CO_TAG)
 endif
@@ -271,6 +290,9 @@ CVSCO_GFX2 = $(CVS) $(CVS_FLAGS) co $(GFX2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(GFX2
 #
 IMGLIB2_CO_MODULE = mozilla/modules/libpr0n
 IMGLIB2_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  IMGLIB2_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
 ifdef IMGLIB2_CO_TAG
   IMGLIB2_CO_FLAGS := $(IMGLIB2_CO_FLAGS) -r $(IMGLIB2_CO_TAG)
 endif
@@ -345,7 +367,6 @@ SVG_BRANCH_FILES := \
 	content/build/makefile.win \
 	content/build/nsContentCID.h \
 	content/build/nsContentDLF.cpp \
-	content/build/nsContentFactory.cpp \
 	content/build/nsContentModule.cpp \
 	content/html/document/src/nsHTMLDocument.cpp \
 	content/html/style/public/nsIRuleNode.h \
