@@ -26,24 +26,16 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= rdf
+MODULE		= dom
 
-XPIDLSRCS	= \
-		nsIRDFCompositeDataSource.idl \
-		nsIRDFContainer.idl \
-		nsIRDFContainerUtils.idl \
-		nsIRDFDelegateFactory.idl \
-		nsIRDFDataSource.idl \
-		nsIRDFLiteral.idl \
-		nsIRDFNode.idl \
-		nsIRDFObserver.idl \
-		nsIRDFPurgeableDataSource.idl \
-		nsIRDFRemoteDataSource.idl \
-		nsIRDFResource.idl \
-		nsIRDFService.idl \
-		nsIRDFXMLSink.idl \
-		nsIRDFXMLSource.idl \
+EXPORTS		= \
+		nsIDOMXULCommandDispatcher.h \
+		nsIDOMXULDocument.h \
+		nsIDOMXULElement.h \
+		nsIDOMXULTreeElement.h \
 		$(NULL)
+
+EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
 include $(topsrcdir)/config/rules.mk
 

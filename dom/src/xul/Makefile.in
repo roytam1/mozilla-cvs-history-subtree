@@ -26,24 +26,22 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= rdf
+MODULE		= dom
+LIBRARY_NAME	= jsdomxul_s
+REQUIRES	= xpcom js widget layout caps rdf
 
-XPIDLSRCS	= \
-		nsIRDFCompositeDataSource.idl \
-		nsIRDFContainer.idl \
-		nsIRDFContainerUtils.idl \
-		nsIRDFDelegateFactory.idl \
-		nsIRDFDataSource.idl \
-		nsIRDFLiteral.idl \
-		nsIRDFNode.idl \
-		nsIRDFObserver.idl \
-		nsIRDFPurgeableDataSource.idl \
-		nsIRDFRemoteDataSource.idl \
-		nsIRDFResource.idl \
-		nsIRDFService.idl \
-		nsIRDFXMLSink.idl \
-		nsIRDFXMLSource.idl \
+CPPSRCS		= \
+		nsJSXULCommandDispatcher.cpp \
+		nsJSXULDocument.cpp \
+		nsJSXULElement.cpp \
+		nsJSXULTreeElement.cpp \
 		$(NULL)
 
+# we don't want the shared lib, but we want to force the creation of a static lib.
+override NO_SHARED_LIB=1
+override NO_STATIC_LIB=
+
 include $(topsrcdir)/config/rules.mk
+
+DEFINES		+= -D_IMPL_NS_DOM
 
