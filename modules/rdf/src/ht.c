@@ -1257,6 +1257,7 @@ htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx)
 {
 	NET_AllHeaders		*headers;
 	RDF_Resource		r;
+	char			*temp;
 	unsigned long		headerNum=0,matchNum;
 
 struct	{
@@ -1286,8 +1287,19 @@ struct	{
 						{
 							if (headers->value[headerNum] != NULL)
 							{
-								RDF_Assert(gNCDB, r, matches[matchNum].r,
-									headers->value[headerNum], RDF_STRING_TYPE);
+								/* if already exists, don't change */
+								if ((temp = RDF_GetSlotValue(gNCDB, r,
+									matches[matchNum].r, RDF_STRING_TYPE,
+									PR_FALSE, PR_TRUE)) != NULL)
+								{
+									freeMem(temp);
+								}
+								else
+								{
+									RDF_Assert(gNCDB, r, matches[matchNum].r,
+										headers->value[headerNum],
+										RDF_STRING_TYPE);
+								}
 							}
 						}
 					}
