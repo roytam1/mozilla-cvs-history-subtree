@@ -34,7 +34,11 @@ endif
 ASFLAGS         =
 DEFINES         =
 
+ifeq ($(OS_ARCH), WINNT)
+INSTALL = nsinstall
+else
 INSTALL	= $(DEPTH)/../../dist/$(OBJDIR)/bin/nsinstall
+endif
 
 include $(DEPTH)/config/$(OS_CONFIG).mk
 
