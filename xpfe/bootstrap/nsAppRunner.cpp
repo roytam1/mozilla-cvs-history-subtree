@@ -104,6 +104,11 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 // header file for profile manager
 #include "nsIProfileInternal.h"
 
+#ifdef NO_SHARED_LIB
+#include "nsStaticComponent.h"
+static NSGetModuleInfoFunc getModuleInfo;
+#endif
+
 #if defined(XP_UNIX)
   extern void InstallUnixSignalHandlers(const char *ProgramName);
 #endif
@@ -1281,6 +1286,11 @@ int main(int argc, char* argv[])
     splash->Show();
   }
 
+#ifdef NO_SHARED_LIB
+  // Initialize XPCOM's module info table
+  NSGetModuleInfo = getModuleInfo;
+#endif
+
   rv = NS_InitXPCOM(NULL, NULL);
   NS_ASSERTION( NS_SUCCEEDED(rv), "NS_InitXPCOM failed" );
 
@@ -1321,10 +1331,10 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
 }
 #endif // XP_PC && WIN32
 
-#include "nsStaticComponent.h"
+#ifdef NO_SHARED_LIB
 
-#define MODULE(name) { "NSGetModule_" #name, NSGetModule_##name }
-#define DECL_MODULE(name) extern "C" nsGetModuleProc NSGetModule_##name;
+#define MODULE(name) { "NSGetModule_" #name, NSGETMODULE_ENTRY_POINT(name) }
+#define DECL_MODULE(name) extern "C" nsGetModuleProc NSGETMODULE_ENTRY_POINT(name);
 
 DECL_MODULE(Browser_Embedding_Module)
 DECL_MODULE(IMAP_factory)
@@ -1496,11 +1506,12 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(xpconnect),
 };
 
-extern "C" nsresult
-NSGetStaticModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
+extern "C" static nsresult
+getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
 {
   *info = StaticModuleInfo;
   *count = sizeof(StaticModuleInfo) / sizeof(StaticModuleInfo[0]);
   return NS_OK;
 }
 
+#endif // NO_SHARED_LIB
