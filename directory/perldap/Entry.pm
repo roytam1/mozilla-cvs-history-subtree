@@ -371,7 +371,7 @@ sub move
 
 #############################################################################
 # Copy an attribute, return TRUE or FALSE depending on the outcome. This
-# almost identical to the rename method, except we don't delete the source.
+# is almost identical to the move method, except we don't delete the source.
 #
 sub copy
 {
@@ -902,6 +902,32 @@ modifications and updates to your LDAP entries.
 
 =over 13
 
+=item B<addDNValue>
+
+Just like B<addValue>, except this method assume the value is a DN
+attribute. For instance
+
+   $dn = "uid=Leif, dc=Netscape, dc=COM";
+   $entry->addDNValue("uniqueMember", $dn);
+
+
+will only add the DN for "uid=leif" if it does not exist as a DN in the
+uniqueMember attribute.
+
+=item B<addValue>
+
+Add a value to an attribute. If the attribute value already exists, or we
+couldn't add the value for any other reason, we'll return FALSE (0),
+otherwise we return TRUE (1). The first two arguments are the attribute
+name, and the value to add.
+
+The optional third argument is a flag, indicating that we want to add the
+attribute without checking for duplicates. This is useful if you know the
+values are unique already, or if you perhaps want to allow duplicates for
+a particular attribute. To add a CN to an existing entry/attribute, do:
+
+    $entry->addValue("cn", "Leif Hedstrom");
+
 =item B<attrModified>
 
 This is an internal function, that can be used to force the API to
@@ -912,22 +938,59 @@ fix the API. Example
 
     $entry->attrModified("cn");
 
-=item B<isModified>
+=item B<copy>
 
-This is a somewhat more useful method, which will return the internal
-modification status of a particular attribute. The argument is the name of
-the attribute, and the return value is True or False. If the attribute has
-been modified, in any way, we return True (1), otherwise we return False
-(0). For example:
+Copy the value of one attribute to another.  Requires at least two
+arguments.  The first argument is the name of the attribute to copy, and
+the second argument is the name of the new attribute to copy to.  The new
+attribute can not currently exist in the entry, else the copy will fail.
+There is an optional third argument (a boolean flag), which, when set to
+1, will force an
+override and copy to the new attribute even if it already exists.  Returns TRUE if the copy
+was successful.
 
-    if ($entry->isModified("cn")) { # do something }
+    $entry->copy("cn", "description");
 
-=item B<isDeleted>
+=item B<exists>
 
-This is almost identical to B<isModified>, except it tests if an attribute
-has been deleted. You use it the same way as above, like
+Return TRUE if the specified attribute is defined in the LDAP entry. This
+is useful to know if an entry has a particular attribute, regardless of
+the value. For instance:
 
-    if (! $entry->isDeleted("cn")) { # do something }
+    if ($entry->exists("jpegphoto")) { # do something special }
+
+=item B<getDN>
+
+Return the DN for the entry. For instance
+
+    print "The DN is: ", $entry->getDN(), "\n";
+
+Just like B<setDN>, this method also has an optional argument, which
+indicates we should normalize the DN before returning it to the caller.
+
+=item B<getValues>
+
+Returns an entire array of values for the attribute specified.  Note that
+this returns an array, and not a pointer to an array.
+
+    @someArray = $entry->getValues("description");
+
+=item B<hasValue>
+
+Return TRUE or FALSE if the attribute has the specified value. A typical
+usage is to see if an entry is of a certain object class, e.g.
+
+    if ($entry->hasValue("objectclass", "person", 1)) { # do something }
+
+The (optional) third argument indicates if the string comparison should be
+case insensitive or not, and the (optional) fourth argument indicats
+wheter we should normalize the string as if it was a DN. The first two
+arguments are the name and value of the attribute, respectively.
+
+=item B<hasDNValue>
+
+Exactly like B<hasValue>, except we assume the attribute values are DN
+attributes.
 
 =item B<isAttr>
 
@@ -943,6 +1006,63 @@ The code section will only be executed if these criterias are true:
     2. The name of the attribute does not begin, and end, with an
        underscore character (_).
     2. The attribute has one or more values in the entry.
+
+=item B<isDeleted>
+
+This is almost identical to B<isModified>, except it tests if an attribute
+has been deleted. You use it the same way as above, like
+
+    if (! $entry->isDeleted("cn")) { # do something }
+
+=item B<isModified>
+
+This is a somewhat more useful method, which will return the internal
+modification status of a particular attribute. The argument is the name of
+the attribute, and the return value is True or False. If the attribute has
+been modified, in any way, we return True (1), otherwise we return False
+(0). For example:
+
+    if ($entry->isModified("cn")) { # do something }
+
+=item B<matchValue>
+
+This is very similar to B<hasValue>, except it does a regular expression
+match instead of a full string match. It takes the same arguments,
+including the optional third argument to specify case insensitive
+matching. The usage is identical to the example for hasValue, e.g.
+
+    if ($entry->matchValue("objectclass", "pers", 1)) { # do something }
+
+=item B<matchDNValue>
+
+Like B<matchValue>, except the attribute values are considered being DNs.
+
+=item B<move>
+Identical to the copy method, except the original attribute is
+deleted once the move to the new attribute is complete.
+
+    $entry->move("cn", "sn");
+
+=item B<printLDIF>
+
+Print the entry in a format called LDIF (LDAP Data Interchange
+Format, RFC xxxx). An example of an LDIF entry is:
+
+    dn: uid=leif,ou=people,dc=netscape,dc=com
+    objectclass: top
+    objectclass: person
+    objectclass: inetOrgPerson
+    uid: leif
+    cn: Leif Hedstrom
+    mail: leif@netscape.com
+
+The above would be the result of
+
+    $entry->printLDIF();
+
+If you need to write to a file, open and then select() it.
+For more useful LDIF functionality, check out the
+Mozilla::LDAP::LDIF.pm module.
 
 =item B<remove>
 
@@ -977,31 +1097,19 @@ in all LDAP entries. For example
 will remove the owner "uid=leif,dc=netscape,dc=com", no matter how it's
 capitalized and formatted in the entry.
 
-=item B<addValue>
+=item B<setDN>
 
-Add a value to an attribute. If the attribute value already exists, or we
-couldn't add the value for any other reason, we'll return FALSE (0),
-otherwise we return TRUE (1). The first two arguments are the attribute
-name, and the value to add.
+Set the DN to the specified value. Only do this on new entries, it will
+not work well if you try to do this on an existing entry. If you wish to
+rename an entry, use the Mozilla::Conn::modifyRDN method instead.
+Eventually we'll provide a complete "rename" method. To set the DN for a
+newly created entry, we can do
 
-The optional third argument is a flag, indicating that we want to add the
-attribute without checking for duplicates. This is useful if you know the
-values are unique already, or if you perhaps want to allow duplicates for
-a particular attribute. To add a CN to an existing entry/attribute, do:
+    $entry->setDN("uid=leif,ou=people,dc=netscape,dc=com");
 
-    $entry->addValue("cn", "Leif Hedstrom");
-
-=item B<addDNValue>
-
-Just like B<addValue>, except this method assume the value is a DN
-attribute. For instance
-
-   $dn = "uid=Leif, dc=Netscape, dc=COM";
-   $entry->addDNValue("uniqueMember", $dn);
-
-
-will only add the DN for "uid=leif" if it does not exist as a DN in the
-uniqueMember attribute.
+There is an optional third argument, a boolean flag, indicating that we
+should normalize the DN before setting it. This will assure a consistent
+format of your DNs.
 
 =item B<setValues>
 
@@ -1018,59 +1126,6 @@ or if it's a single value attribute,
 
     $entry->setValues("uidNumber", "12345");
 
-=item B<hasValue>
-
-Return TRUE or FALSE if the attribute has the specified value. A typical
-usage is to see if an entry is of a certain object class, e.g.
-
-    if ($entry->hasValue("objectclass", "person", 1)) { # do something }
-
-The (optional) third argument indicates if the string comparison should be
-case insensitive or not, and the (optional) fourth argument indicats
-wheter we should normalize the string as if it was a DN. The first two
-arguments are the name and value of the attribute, respectively.
-
-=item B<hasDNValue>
-
-Exactly like B<hasValue>, except we assume the attribute values are DN
-attributes.
-
-=item B<matchValue>
-
-This is very similar to B<hasValue>, except it does a regular expression
-match instead of a full string match. It takes the same arguments,
-including the optional third argument to specify case insensitive
-matching. The usage is identical to the example for hasValue, e.g.
-
-    if ($entry->matchValue("objectclass", "pers", 1)) { # do something }
-
-=item B<matchDNValue>
-
-Like B<matchValue>, except the attribute values are considered being DNs.
-
-=item B<setDN>
-
-Set the DN to the specified value. Only do this on new entries, it will
-not work well if you try to do this on an existing entry. If you wish to
-rename an entry, use the Mozilla::Conn::modifyRDN method instead.
-Eventually we'll provide a complete "rename" method. To set the DN for a
-newly created entry, we can do
-
-    $entry->setDN("uid=leif,ou=people,dc=netscape,dc=com");
-
-There is an optional third argument, a boolean flag, indicating that we
-should normalize the DN before setting it. This will assure a consistent
-format of your DNs.
-
-=item B<getDN>
-
-Return the DN for the entry. For instance
-
-    print "The DN is: ", $entry->getDN(), "\n";
-
-Just like B<setDN>, this method also has an optional argument, which
-indicates we should normalize the DN before returning it to the caller.
-
 =item B<size>
 
 Return the number of values for a particular attribute. For instance
@@ -1080,35 +1135,6 @@ Return the number of values for a particular attribute. For instance
 
 This will set C<$numVals> to two (2). The only argument is the name of the
 attribute, and the return value is the size of the value array.
-
-=item B<exists>
-
-Return TRUE if the specified attribute is defined in the LDAP entry. This
-is useful to know if an entry has a particular attribute, regardless of
-the value. For instance:
-
-    if ($entry->exists("jpegphoto")) { # do something special }
-
-=item B<printLDIF>
-
-Print the entry in a format called LDIF (LDAP Data Interchange
-Format, RFC xxxx). An example of an LDIF entry is:
-
-    dn: uid=leif,ou=people,dc=netscape,dc=com
-    objectclass: top
-    objectclass: person
-    objectclass: inetOrgPerson
-    uid: leif
-    cn: Leif Hedstrom
-    mail: leif@netscape.com
-
-The above would be the result of
-
-    $entry->printLDIF();
-
-If you need to write to a file, open and then select() it.
-For more useful LDIF functionality, check out the
-Mozilla::LDAP::LDIF.pm module.
 
 =back
 
