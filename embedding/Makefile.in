@@ -26,5 +26,6 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 DIRS = base components browser lite
+PACKAGE_FILE = embed.pkg
 
 include $(topsrcdir)/config/rules.mk
