@@ -330,10 +330,6 @@
     </radiogroup>
     
   </titledbox>              
-
-  <box autostretch="never">
-    <checkbox id="askBeforeOpen" label="&askBeforeOpen.label;" accesskey="&askBeforeOpen.accesskey;"/>         
-  </box>
   
   <separator/>
   
