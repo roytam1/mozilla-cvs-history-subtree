@@ -52,6 +52,7 @@ extern "C"
 #include <FSp_fopen.h>
 }
 
+#pragma mark [static util funcs]
 // Simple func to map Mac OS errors into nsresults
 static nsresult MacErrorMapper(OSErr inErr)
 {
@@ -65,6 +66,14 @@ static nsresult MacErrorMapper(OSErr inErr)
 
         case dupFNErr:
             outErr = NS_ERROR_FILE_ALREADY_EXISTS;
+            break;
+		
+        case dskFulErr:
+            outErr = NS_ERROR_FILE_DISK_FULL;
+            break;
+		
+        case fLckdErr:
+            outErr = NS_ERROR_FILE_IS_LOCKED;
             break;
 		
 		// Can't find good map for some
@@ -203,6 +212,7 @@ static void My_CloseDir(MyPRDir *mdDir)
 		PR_DELETE(mdDir->currentEntryName);
 }
 
+#pragma mark [nsDirEnumerator]
 class nsDirEnumerator : public nsISimpleEnumerator
 {
     public:
@@ -297,13 +307,7 @@ class nsDirEnumerator : public nsISimpleEnumerator
 
 NS_IMPL_ISUPPORTS(nsDirEnumerator, NS_GET_IID(nsISimpleEnumerator));
 
-
-
-
-
-
-
-
+#pragma mark [CTOR/DTOR]
 nsLocalFile::nsLocalFile()
 {
     NS_INIT_REFCNT();
@@ -315,7 +319,7 @@ nsLocalFile::~nsLocalFile()
 {
 }
 
-/* nsISupports interface implementation. */
+#pragma mark [nsISupports interface implementation]
 NS_IMPL_ISUPPORTS3(nsLocalFile, nsILocalFileMac, nsILocalFile, nsIFile)
 
 NS_METHOD
@@ -833,248 +837,22 @@ nsLocalFile::GetPath(char **_retval)
 }
 
 
-
-nsresult
-nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char * newName, PRBool followSymlinks, PRBool move)
-{
-    nsresult rv;
-    char* filePath;
-
-    // get the path that we are going to copy to.
-    // Since windows does not know how to auto
-    // resolve shortcust, we must work with the
-    // target.
-    char* inFilePath;
-    destParent->GetTarget(&inFilePath);  
-    nsCString destPath = inFilePath;
-    nsAllocator::Free(inFilePath);
-
-    destPath.Append("\\");
-
-    if (newName == nsnull)
-    {
-        char *aFileName;
-        sourceFile->GetLeafName(&aFileName);
-        destPath.Append(aFileName);
-        nsAllocator::Free(aFileName);
-    }
-    else
-    {
-        destPath.Append(newName);
-    }
-
-           
-    if (followSymlinks)
-    {
-       rv = sourceFile->GetTarget(&filePath);
-    }
-    else
-    {
-        rv = sourceFile->GetPath(&filePath);
-    }
-
-    if (NS_FAILED(rv))
-        return rv;
-
-    //int copyOK;
-
-    if (!move)
-    {
-        //copyOK = CopyFile(filePath, destPath, PR_TRUE);
-    }
-    else
-    {
-        //copyOK = MoveFile(filePath, destPath);
-    }
-    
-    //if (!copyOK)  // CopyFile and MoveFile returns non-zero if succeeds (backward if you ask me).
-    
-    nsAllocator::Free(filePath);
-
-    return rv;
-}
-
-
-nsresult
-nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move)
-{
-    NS_ENSURE_ARG(newParentDir);
-	nsresult rv = NS_OK;
-	
-    // check to see if this exists, otherwise return an error.
-    PRBool sourceExists;
-    Exists(&sourceExists);
-    if (sourceExists == PR_FALSE)
-    {
-    	return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST;
-    }
-
-    // make sure destination exists and is a directory.  Create it if not there.
-    PRBool parentExists;
-    newParentDir->Exists(&parentExists);
-    if (parentExists == PR_FALSE)
-    {
-        rv = newParentDir->Create(DIRECTORY_TYPE, 0);
-        if (NS_FAILED(rv))
-            return rv;
-    }
-    else
-    {
-        PRBool isDir;
-        newParentDir->IsDirectory(&isDir);
-        if (isDir == PR_FALSE)
-        {
-            if (followSymlinks)
-            {
-                PRBool isLink;
-                newParentDir->IsSymlink(&isLink);
-                if (isLink)
-                {
-                    char* target;
-                    newParentDir->GetTarget(&target);
-
-                    nsCOMPtr<nsILocalFile> realDest = new nsLocalFile();
-                    if (realDest == nsnull)
-                        return NS_ERROR_OUT_OF_MEMORY;
-
-                    rv = realDest->InitWithPath(target);
-                    
-                    nsAllocator::Free(target);
-
-                    if (NS_FAILED(rv)) 
-                        return rv;
-                    
-                    return CopyMove(realDest, newName, followSymlinks, move);
-                }
-            }
-            else
-            {                
-                return NS_ERROR_FILE_DESTINATION_NOT_DIR;
-            }
-        }        
-    }
-
-    // check to see if we are a directory, if so enumerate it.
-
-    PRBool isDir;
-    IsDirectory(&isDir);
-    PRBool isSymlink;
-    IsSymlink(&isSymlink);
-
-    if (!isDir || (isSymlink && !followSymlinks))
-    {
-        rv = CopySingleFile(this, newParentDir, newName, followSymlinks, move);
-        if (NS_FAILED(rv))
-            return rv;
-    }
-    else
-    {
-        // create a new target destination in the new parentDir;
-        nsCOMPtr<nsIFile> target;
-        rv = newParentDir->Clone(getter_AddRefs(target));
-        
-        if (NS_FAILED(rv)) 
-            return rv;
-        
-        char *allocatedNewName;
-        if (!newName)
-        {
-            GetLeafName(&allocatedNewName);// this should be the leaf name of the 
-        }
-        else
-        {
-            allocatedNewName = (char*) nsAllocator::Clone( newName, strlen(newName)+1 );
-        }
-        
-        rv = target->Append(allocatedNewName);
-        if (NS_FAILED(rv)) 
-            return rv;
-
-        nsAllocator::Free(allocatedNewName);
-
-        target->Create(DIRECTORY_TYPE, 0);
-        if (NS_FAILED(rv))
-            return rv;
-        
-        nsDirEnumerator* dirEnum = new nsDirEnumerator();
-        if (!dirEnum)
-            return NS_ERROR_OUT_OF_MEMORY;
-        
-        rv = dirEnum->Init(this);
-
-        nsCOMPtr<nsISimpleEnumerator> iterator = do_QueryInterface(dirEnum);
-
-        PRBool more;
-        iterator->HasMoreElements(&more);
-        while (more)
-        {
-            nsCOMPtr<nsISupports> item;
-            nsCOMPtr<nsIFile> file;
-            iterator->GetNext(getter_AddRefs(item));
-            file = do_QueryInterface(item);
-            PRBool isDir, isLink;
-            
-            file->IsDirectory(&isDir);
-            file->IsSymlink(&isLink);
-
-            if (move)
-            {
-                if (followSymlinks)
-                    rv = NS_ERROR_FAILURE;
-                else
-                    rv = file->MoveTo(target, nsnull);
-            }
-            else
-            {   
-                if (followSymlinks)
-                    rv = file->CopyToFollowingLinks(target, nsnull);
-                else
-                    rv = file->CopyTo(target, nsnull);
-            }
-                    
-            iterator->HasMoreElements(&more);
-        }
-    }
-    
-
-    // If we moved, we want to adjust this.
-    if (move)
-    {
-        if (newName == nsnull)
-        {
-            char *aFileName;
-            GetLeafName(&aFileName);
-           // InitWithFile(newParentDir);
-            Append(aFileName); 
-            nsAllocator::Free(aFileName);
-        }
-        else
-        {
-           // InitWithFile(newParentDir);
-            Append(newName);
-        }
-        MakeDirty();
-    }
-        
-    return NS_OK;
-}
-
 NS_IMETHODIMP  
 nsLocalFile::CopyTo(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_FALSE, PR_FALSE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
 nsLocalFile::CopyToFollowingLinks(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_TRUE, PR_FALSE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
 nsLocalFile::MoveTo(nsIFile *newParentDir, const char *newName)
 {
-    return CopyMove(newParentDir, newName, PR_FALSE, PR_TRUE);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP  
@@ -1243,7 +1021,35 @@ nsLocalFile::GetFileSize(PRInt64 *aFileSize)
 NS_IMETHODIMP  
 nsLocalFile::SetFileSize(PRInt64 aFileSize)
 {
+    PRBool	exists;
+    
+    Exists(&exists);
+    if (exists)
+    {
+	    short   refNum;
+	    OSErr   err;
+	    PRInt32	aNewLength;
+		
+		LL_L2I(aNewLength, aFileSize);
+		
+		// Need to open the file to set the size
+		if (::FSpOpenDF(&mSpec, fsWrPerm, &refNum) != noErr)
+		    return NS_ERROR_FILE_ACCESS_DENIED;
 
+		err = ::SetEOF(refNum, aNewLength);
+		    
+		// Close the file unless we got an error that it was already closed
+		if (err != fnOpnErr)
+		    (void)::FSClose(refNum);
+		    
+		if (err != noErr)
+			return MacErrorMapper(err);
+	}
+	else
+	{
+		return NS_ERROR_FILE_NOT_FOUND;
+	}
+        
     return NS_OK;
 }
 
@@ -1311,7 +1117,13 @@ NS_IMETHODIMP
 nsLocalFile::Exists(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
-            
+    *_retval = PR_FALSE;		// Assume failure
+    (void)ResolveAndStat(PR_TRUE);
+    
+	FSSpec temp;
+	if (::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &temp) == noErr)
+		*_retval = PR_TRUE;
+
     return NS_OK;
 }
 
@@ -1489,8 +1301,17 @@ nsLocalFile::GetDirectoryEntries(nsISimpleEnumerator * *entries)
     return NS_OK;
 }
 
-
+#pragma mark [nsILocalFileMac]
 // Implementation of Mac specific finctions from nsILocalFileMac
+
+
+NS_IMETHODIMP nsLocalFile::GetInitType(nsLocalFileMacInitType *type)
+{
+	NS_ENSURE_ARG(type);
+    *type = mInitType;
+	return NS_OK;
+}
+
 NS_IMETHODIMP nsLocalFile::InitWithFSSpec(const FSSpec *fileSpec)
 {
 	mSpec = *fileSpec;
@@ -1504,6 +1325,13 @@ NS_IMETHODIMP nsLocalFile::GetFSSpec(FSSpec *fileSpec)
     *fileSpec = mSpec;
     return NS_OK;
 
+}
+
+NS_IMETHODIMP nsLocalFile::GetAppendedPath(char **_retval)
+{
+	NS_ENSURE_ARG_POINTER(_retval);
+	*_retval = (char*) nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
+	return NS_OK;
 }
 
 NS_IMETHODIMP nsLocalFile::GetFileTypeAndCreator(OSType *type, OSType *creator)

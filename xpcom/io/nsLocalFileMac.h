@@ -37,11 +37,6 @@
 
 #include <Files.h>
 
-typedef enum {
-	eInitWithPath = 0,
-	eInitWithFSSpec
-} nsLocalFileMacInitType;
-
 class NS_COM nsLocalFile : public nsILocalFile, public nsILocalFileMac
 {
 public:
@@ -61,12 +56,16 @@ public:
     // nsILocalFile interface
     NS_DECL_NSILOCALFILE
 
-  NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec);
+	NS_IMETHOD GetInitType(nsLocalFileMacInitType *type);
 
-  NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
+	NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec);
 
-  NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator);
-  NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator);
+	NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
+
+	NS_IMETHOD GetAppendedPath(char * *aPath);
+
+	NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator);
+	NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator);
 
 private:
 
@@ -76,7 +75,7 @@ private:
     // If we're inited with a path then we store it here
     nsCString mWorkingPath;
     
-    // Any nodes added with AppendPath are stored here
+    // Any nodes added with AppendPath if we were initialized with an FSSpec are stored here
     nsCString mAppendedPath;
 
     // this will be the resolved path which will *NEVER* be returned to the user
@@ -100,10 +99,6 @@ private:
     
     // Routine to walk a path constructing directory nodes as it goes
     nsresult ConstructDirectoryTree();
-
-    nsresult CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move);
-    nsresult CopySingleFile(nsIFile *source, nsIFile* dest, const char * newName, PRBool followSymlinks, PRBool move);
-
 };
 
 #endif

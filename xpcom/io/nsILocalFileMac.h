@@ -39,23 +39,36 @@
     { 0xbe, 0x04, 0xbc, 0xd5, 0x7a, 0x64, 0xcc, 0xc9 }}
 
 
+typedef enum {
+	eInitWithPath = 0,
+	eInitWithFSSpec
+} nsLocalFileMacInitType;
+
 class nsILocalFileMac : public nsISupports
 {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILOCALFILEMAC_IID)
-  
-  // Since the OS native way to represent a file on the Mac is an FSSpec
-  // we provide a way to initialize an nsLocalFile with one
-  NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec) = 0;
-  
-  // In case we need to get the FSSpec at the heart of an nsLocalFIleMac
-  NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;
+public: 
+	NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILOCALFILEMAC_IID)
 
-  // Get/Set methods for the file type and creator codes
-  // Note that passing null for either the type or creator in the
-  // SetFileTypeAndCreator call will preserve the existing code
-  NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator) = 0;
-  NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator) = 0;
+	// We need to be able to determine what init method was used as that
+	// will affect how we clone a nsILocalFileMac
+	NS_IMETHOD GetInitType(nsLocalFileMacInitType *type) = 0;
+
+	// Since the OS native way to represent a file on the Mac is an FSSpec
+	// we provide a way to initialize an nsLocalFile with one
+	NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec) = 0;
+
+	// In case we need to get the FSSpec at the heart of an nsLocalFIleMac
+	NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;
+	
+	// Since we may have both an FSSpec and an appended path we need a method
+	// to grab just the appended path
+	NS_IMETHOD GetAppendedPath(char * *aPath) = 0;
+
+	// Get/Set methods for the file type and creator codes
+	// Note that passing null for either the type or creator in the
+	// SetFileTypeAndCreator call will preserve the existing code
+	NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator) = 0;
+	NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator) = 0;
 };
 
 #endif
