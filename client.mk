@@ -368,6 +368,8 @@ SVG_BRANCH_FILES := \
 	content/shared/src/nsSVGAtoms.cpp \
 	content/shared/src/nsStyleStruct.cpp \
 	content/shared/src/nsStyleUtil.cpp \
+	content/xml/document/src/nsXMLDocument.cpp \
+	content/xml/document/src/nsXMLDocument.h \
 	dom/public/idl/Makefile.in \
 	dom/public/idl/makefile.win \
 	dom/public/nsIDOMClassInfo.h \
@@ -378,6 +380,7 @@ SVG_BRANCH_FILES := \
 	htmlparser/src/nsViewSourceHTML.cpp \
 	layout/build/Makefile.in \
 	layout/build/makefile.win \
+	layout/html/style/src/Makefile.in \
 	layout/html/style/src/makefile.win \
 	layout/html/style/src/nsCSSFrameConstructor.cpp \
 	layout/html/style/src/nsCSSFrameConstructor.h \

@@ -92,7 +92,9 @@ enum nsStyleStructID {
 #define NS_STYLE_INHERIT_BORDER           NS_STYLE_INHERIT_BIT(eStyleStruct_Border)
 #define NS_STYLE_INHERIT_OUTLINE          NS_STYLE_INHERIT_BIT(eStyleStruct_Outline)
 #define NS_STYLE_INHERIT_XUL              NS_STYLE_INHERIT_BIT(eStyleStruct_XUL)
+#ifdef MOZ_SVG
 #define NS_STYLE_INHERIT_SVG              NS_STYLE_INHERIT_BIT(eStyleStruct_SVG)
+#endif
 
 #define NS_STYLE_INHERIT_MASK             0x00ffffff
 

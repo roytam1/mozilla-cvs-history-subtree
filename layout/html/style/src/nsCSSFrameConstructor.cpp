@@ -127,6 +127,9 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
+#include "nsISVGAttribute.h"
+#include "nsISVGValue.h"
+#include "nsISVGStyleValue.h"
 
 extern nsresult
 NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -10099,6 +10102,63 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
         }
       }
     }
+#ifdef MOZ_SVG
+    else {     // XXX should check we're in SVG NS
+      nsCOMPtr<nsIDOMElement> domel(do_QueryInterface(aContent));
+      if (domel) {
+        // XXX there must be a better way of doing this
+        nsCOMPtr<nsIDOMAttr> attr;
+        domel->GetAttributeNode(NS_LITERAL_STRING("style"), getter_AddRefs(attr));
+        if (attr) {
+          nsCOMPtr<nsISVGAttribute> svgattr(do_QueryInterface(attr));
+          if (svgattr) {
+            nsCOMPtr<nsISVGValue> value;
+            svgattr->GetSVGValue(getter_AddRefs(value));
+            if (value) {
+              nsCOMPtr<nsISVGStyleValue> stylevalue(do_QueryInterface(value));
+              if (stylevalue) {
+                nsCOMPtr<nsIDocument> doc;
+                aContent->GetDocument(*getter_AddRefs(doc));
+                if (doc) {
+                  stylevalue->GetStyleRule(doc, getter_AddRefs(rule));
+                  if (rule) {
+                    inlineStyle = PR_TRUE;
+                    
+                    // ----
+                    if (primaryFrame)
+                      primaryFrame->GetStyleContext(getter_AddRefs(styleContext));
+                    else {
+                      // We might be in the undisplayed map.  Retrieve the style context from there.
+                      nsCOMPtr<nsIFrameManager> frameManager;
+                      shell->GetFrameManager(getter_AddRefs(frameManager));
+                      frameManager->GetUndisplayedContent(aContent, getter_AddRefs(styleContext));
+                      if (!styleContext) {
+                        // Well, we don't have a context to use as a guide.  
+                        // Attempt #3 will be to resolve style if we at least have a parent frame.
+                        nsCOMPtr<nsIContent> parent;
+                        aContent->GetParent(*getter_AddRefs(parent));
+                        if (parent) {
+                          nsIFrame* parentFrame;
+                          shell->GetPrimaryFrameFor(parent, &parentFrame);
+                          if (parentFrame) {
+                            nsCOMPtr<nsIStyleContext> parentContext;
+                            parentFrame->GetStyleContext(getter_AddRefs(parentContext));
+                            aPresContext->ResolveStyleContextFor(aContent, parentContext, PR_FALSE,
+                                                                 getter_AddRefs(styleContext));  
+                          }
+                        }
+                      }
+                    }
+                    //-----
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+#endif
   }
 
   // apply changes
@@ -10128,6 +10188,12 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
       shell->GetFrameManager(getter_AddRefs(frameManager));
 
       PRBool affects;
+#ifdef MOZ_SVG
+      // XXX should check we're in SVG NS here
+      if (aAttribute == nsHTMLAtoms::style)
+        affects = PR_TRUE;
+      else
+#endif
       frameManager->AttributeAffectsStyle(aAttribute, aContent, affects);
       if (affects) {
 #ifdef DEBUG_shaver
