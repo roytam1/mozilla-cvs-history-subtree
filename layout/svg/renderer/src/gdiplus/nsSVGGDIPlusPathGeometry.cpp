@@ -447,7 +447,10 @@ nsSVGGDIPlusPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_re
   GetCoveredRegion(getter_AddRefs(after));
   if (after)
     after->Combine(before, _retval);
-    
+  else {
+    *_retval = before;
+    NS_IF_ADDREF(*_retval);
+  }
   return NS_OK;
 }
 
