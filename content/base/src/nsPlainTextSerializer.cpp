@@ -127,6 +127,7 @@ NS_IMETHODIMP
 nsPlainTextSerializer::Init(PRUint32 aFlags, PRUint32 aWrapColumn)
 {
   mFlags = aFlags;
+  mWrapColumn = aWrapColumn;
 
   nsresult rv;
   NS_WITH_SERVICE(nsILineBreakerFactory, lf, kLWBrkCID, &rv);
