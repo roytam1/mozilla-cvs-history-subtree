@@ -291,6 +291,7 @@ nsSVGGDIPlusGlyphMetrics::GetBoundingRect()
     stringFormat.SetMeasurableCharacterRanges(1, &charRange);
 
     Region region;
+    region.MakeEmpty();
 
     // we measure in the transformed coordinate system...
     GraphicsState state = graphics.Save();
