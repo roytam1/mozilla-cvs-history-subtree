@@ -1,3 +1,14 @@
+1999-01-05  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (getRes): Ooops, didn't return the appropriate
+	value... :(
+
+	* Entry.pm (NEXTKEY): Don't return the last $key if it's one that
+	should be hidden.
+
+	* Conn.pm (newEntry): New method, to create an empty LDAP::Entry
+	object. It is properly "tied" into the appropriate object.
+
 1999-01-04  Leif Hedstrom  <leif@netscape.com>
 
 	* Entry.pm (setDN): Added third optional argument, to enfoce DN
