@@ -97,7 +97,7 @@ void InitTest(char* creationPath, char* appendPath)
     VerifyResult(rv);
 
     printf("Appending %s \n", appendPath);
-    rv = file->AppendPath(appendPath);
+    rv = file->Append(appendPath);
     VerifyResult(rv);
 
     printf("Getting Filename\n");
@@ -143,7 +143,7 @@ void CreationTest(char* creationPath, char* appendPath,
     VerifyResult(rv);
  
     printf("Appending %s\n", appendPath);
-    rv = file->AppendPath(appendPath);
+    rv = file->Append(appendPath);
     VerifyResult(rv);
     
     printf("Check For Existance\n");
@@ -194,7 +194,7 @@ DeletionTest(char* creationPath, char* appendPath, PRBool recursive)
     VerifyResult(rv);
  
     printf("Appending %s\n", appendPath);
-    rv = file->AppendPath(appendPath);
+    rv = file->Append(appendPath);
     VerifyResult(rv);
     
     printf("Check For Existance\n");
