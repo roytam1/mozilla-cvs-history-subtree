@@ -1147,7 +1147,6 @@ protected:
   FrameArena                    mFrameArena;
   StackArena*                   mStackArena;
   nsCOMPtr<nsIDragService>      mDragService;
-  PRInt32                       mRCCreatedDuringLoad; // Counter to keep track of reflow commands created during doc
   nsCOMPtr<nsIRequest>          mDummyLayoutRequest;
 
   // used for list of posted events and attribute changes. To be done
@@ -3219,6 +3218,10 @@ PresShell::EndLoad(nsIDocument *aDocument)
 NS_IMETHODIMP
 PresShell::FrameNeedsReflow(nsIFrame *aFrame)
 {
+  NS_PRECONDITION(aFrame->GetStateBits() &
+                    (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN),
+                  "frame not dirty");
+
   // If we've not yet done the initial reflow, then don't bother
   // enqueuing a reflow command yet.
   if (! mDidInitialReflow)
@@ -3241,16 +3244,18 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
   }  
 #endif
 
-  // XXX Add to the set of roots needing reflow!
+  // Add to the set of roots needing reflow and set dirty bits.
   nsIFrame *reflowRoot = aFrame;
   do {
     reflowRoot = reflowRoot->GetParent();
+    reflowRoot->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
   } while (!(reflowRoot->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
            (reflowRoot = reflowRoot->GetParent()) != nsnull);
   if (mDirtyRoots.IndexOf(reflowRoot) == -1)
     mDirtyRoots.AppendElement(reflowRoot);
 
-  // XXX Need to add the dummy layout request if it's during document load!
+  if (gAsyncReflowDuringDocLoad && mDocumentLoading && !mDummyLayoutRequest)
+    AddDummyLayoutRequest();
 
   // For async reflow during doc load, post a reflow event if we are not batching reflow commands.
   // For sync reflow during doc load, post a reflow event if we are not batching reflow commands
@@ -5910,7 +5915,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
     // If there are no more reflow commands in the queue, we'll want
     // to remove the ``dummy request''.
-    if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest && !mIsReflowing) {
+    if (mDummyLayoutRequest && mDirtyRoots.Count() == 0 && !mIsReflowing) {
       RemoveDummyLayoutRequest();
     }
 
