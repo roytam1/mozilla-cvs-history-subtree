@@ -24,6 +24,7 @@
 #include "nsJVMManager.h"
 #include "nsPluginInstancePeer.h"
 #include "npglue.h"
+#include "nsCCapsManager.h"
 
 static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
 static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
@@ -270,62 +271,57 @@ get_java_vm_impl(char **errp)
 #endif
 
 static JSPrincipals* PR_CALLBACK
-get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext)
+get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext,
+                                       void **ppNSIPrincipalArrayIN, int numPrincipals,
+                                       void *pNSISecurityContext)
 {
-    nsIPrincipal  **ppNSIPrincipalArray = NULL;
+    nsIPrincipal  **ppNSIPrincipalArray = (nsIPrincipal  **)ppNSIPrincipalArrayIN;
     PRInt32        length = 0;
     nsresult       err    = NS_OK;
-    void          *pNSPrincipalArray = NULL;
-#if 0 // TODO: =-= sudu: fix it.
     nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
+    void          *pNSPrincipalArray = NULL;
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      if (pJVMPI != NULL) {
-         err = pJVMPI->GetPrincipalArray(pJNIEnv, 0, &ppNSIPrincipalArray, &length);   
-         if ((err == NS_OK) && (ppNSIPrincipalArray != NULL)) {
-             nsIPluginManager *pNSIPluginManager = NULL;
-             NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-             err = pJVMMgr->QueryInterface(kIPluginManagerIID,
-                                  (void**)&pNSIPluginManager);
+        if (ppNSIPrincipalArray != NULL) {
+            nsIPluginManager *pNSIPluginManager = NULL;
+            NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+            err = pJVMMgr->QueryInterface(kIPluginManagerIID,
+                                          (void**)&pNSIPluginManager);
 
-             if(   (err == NS_OK) 
-                && (pNSIPluginManager != NULL )
-               )
-             {
-               nsCCapsManager *pNSCCapsManager = NULL;
-               NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
-               err = pNSIPluginManager->QueryInterface(kICapsManagerIID, (void**)&pNSCCapsManager);
-               if(   (err == NS_OK) 
-                  && (pNSCCapsManager != NULL)
-                 )
-               {
-                 PRInt32 i=0;
-                 nsPrincipal *pNSPrincipal = NULL;
-                 pNSPrincipalArray = nsCapsNewPrincipalArray(length);
-                 if (pNSPrincipalArray != NULL) 
-                 {
-                   while( i<length )
-                   {
-                      err = pNSCCapsManager->GetNSPrincipal(ppNSIPrincipalArray[i], &pNSPrincipal);
-                      nsCapsSetPrincipalArrayElement(pNSPrincipalArray, i, pNSPrincipal);
-                      i++;
-                   }
-                 }
-                 pNSCCapsManager->Release();
-               }
-               pNSIPluginManager->Release();
-             }
-         }
-         //pJVMPI->Release();
-      }
-      pJVMMgr->Release();
+            if(   (err == NS_OK) 
+                  && (pNSIPluginManager != NULL )
+                )
+            {
+                nsCCapsManager *pNSCCapsManager = NULL;
+                NS_DEFINE_IID(kICapsManagerIID, NS_ICAPSMANAGER_IID);
+                err = pNSIPluginManager->QueryInterface(kICapsManagerIID, (void**)&pNSCCapsManager);
+                if(   (err == NS_OK) 
+                      && (pNSCCapsManager != NULL)
+                    )
+                {
+                    PRInt32 i=0;
+                    nsPrincipal *pNSPrincipal = NULL;
+                    pNSPrincipalArray = nsCapsNewPrincipalArray(length);
+                    if (pNSPrincipalArray != NULL) 
+                    {
+                        while( i<length )
+                        {
+                            err = pNSCCapsManager->GetNSPrincipal(ppNSIPrincipalArray[i], &pNSPrincipal);
+                            nsCapsSetPrincipalArrayElement(pNSPrincipalArray, i, pNSPrincipal);
+                            i++;
+                        }
+                    }
+                    pNSCCapsManager->Release();
+                }
+                pNSIPluginManager->Release();
+            }
+        }
+        pJVMMgr->Release();
     }
-#endif
     if (  (pNSPrincipalArray != NULL)
-        &&(length != 0)
-       )
+          &&(length != 0)
+        )
     {
-        return LM_GetJSPrincipalsFromJavaCaller(pJSContext, pNSPrincipalArray);
+        return LM_GetJSPrincipalsFromJavaCaller(pJSContext, pNSPrincipalArray, pNSISecurityContext);
     }
 
     return NULL;
@@ -338,16 +334,16 @@ get_java_wrapper_impl(JNIEnv *pJNIEnv, jint jsobject)
     jobject  pJSObjectWrapper = NULL;
     nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      if (pJVMPI != NULL) {
-         err = pJVMPI->GetJavaWrapper(pJNIEnv, jsobject, &pJSObjectWrapper);
-         //pJVMPI->Release();
-      }
-      pJVMMgr->Release();
+        nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
+        if (pJVMPI != NULL) {
+            err = pJVMPI->GetJavaWrapper(pJNIEnv, jsobject, &pJSObjectWrapper);
+            //pJVMPI->Release();
+        }
+        pJVMMgr->Release();
     }
     if ( err != NS_OK )
     {
-       return NULL;
+        return NULL;
     }
     return pJSObjectWrapper;
 }
@@ -356,6 +352,7 @@ static JSBool PR_CALLBACK
 enter_js_from_java_impl(JNIEnv *jEnv, char **errp)
 {
 #ifdef OJI
+    MWContext *cx = XP_FindSomeContext();   /* XXXMLM */
     ThreadLocalStorageAtIndex0 *priv = NULL;
     if ( PR_GetCurrentThread() == NULL )
     {
@@ -373,7 +370,7 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp)
         }
     }
 
-    return LM_LockJS(errp);
+    return LM_LockJS(cx, errp);
 #else
     return JS_TRUE;
 #endif
@@ -382,9 +379,10 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp)
 static void PR_CALLBACK
 exit_js_impl(JNIEnv *jEnv)
 {
+    MWContext *cx = XP_FindSomeContext();   /* XXXMLM */
     ThreadLocalStorageAtIndex0 *priv = NULL;
 
-    LM_UnlockJS();
+    LM_UnlockJS(cx);
 
     if (   (PR_GetCurrentThread() != NULL )
            && ((priv = (ThreadLocalStorageAtIndex0 *)PR_GetThreadPrivate(tlsIndex_g)) != NULL)
