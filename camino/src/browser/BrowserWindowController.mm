@@ -1044,7 +1044,6 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)forward:(id)aSender
 {
-  NSLog(@"forward sender is %@", aSender);
   [[mBrowserView getBrowserView] goForward];
 }
 
@@ -1156,7 +1155,7 @@ static NSArray* sToolbarDefaults = nil;
   [self back:sender];
 }
 
-// map command-left arrow to 'forward'
+// map command-right arrow to 'forward'
 - (void)moveToEndOfLine:(id)sender
 {
   [self forward:sender];
@@ -1165,7 +1164,10 @@ static NSArray* sToolbarDefaults = nil;
 // map delete key to Back
 - (void)deleteBackward:(id)sender
 {
-  [self back:sender];
+  if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+    [self forward:sender];
+  else
+    [self back:sender];
 }
 
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer activate:(BOOL)activate
