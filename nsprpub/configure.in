@@ -1293,7 +1293,11 @@ case "$target" in
         OBJDIR_SUFFIX=OBJD
     fi
 
-    OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+    if test "$OS_TARGET" = "WINCE"; then
+        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -PDB:NONE -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000'
+    else
+        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+    fi
 
     case "$OS_TARGET" in
     WINNT)
