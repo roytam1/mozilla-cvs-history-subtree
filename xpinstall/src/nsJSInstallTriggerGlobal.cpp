@@ -41,6 +41,11 @@ extern PRBool nsCvrtJSValToBool(PRBool* aProp,
                                 JSContext* aContext,
                                 jsval aValue);
 
+extern PRBool nsCvrtJSValToObj(nsISupports** aSupports,
+                               REFNSIID aIID,
+                               const nsString& aTypeName,
+                               JSContext* aContext,
+                               jsval aValue);
 
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIJSScriptObjectIID, NS_IJSSCRIPTOBJECT_IID);

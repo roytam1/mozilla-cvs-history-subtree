@@ -190,6 +190,42 @@ PRBool nsCvrtJSValToBool(PRBool* aProp,
   return JS_TRUE;
 }
 
+PRBool nsCvrtJSValToObj(nsISupports** aSupports,
+                        REFNSIID aIID,
+                        const nsString& aTypeName,
+                        JSContext* aContext,
+                        jsval aValue)
+{
+  if (JSVAL_IS_NULL(aValue)) {
+    *aSupports = nsnull;
+  }
+  else if (JSVAL_IS_OBJECT(aValue)) {
+    JSObject* jsobj = JSVAL_TO_OBJECT(aValue); 
+    JSClass* jsclass = JS_GetClass(aContext, jsobj);
+    if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) {
+      nsISupports *supports = (nsISupports *)JS_GetPrivate(aContext, jsobj);
+      if (NS_OK != supports->QueryInterface(aIID, (void **)aSupports)) {
+        char buf[128];
+        char typeName[128];
+        aTypeName.ToCString(typeName, sizeof(typeName));
+        sprintf(buf, "Parameter must of type %s", typeName);
+        JS_ReportError(aContext, buf);
+        return JS_FALSE;
+      }
+    }
+    else {
+      JS_ReportError(aContext, "Parameter isn't a object");
+      return JS_FALSE;
+    }
+  }
+  else {
+    JS_ReportError(aContext, "Parameter must be an object");
+    return JS_FALSE;
+  }
+
+  return JS_TRUE;
+}
+
 
 //
 // Native method AbortInstall
