@@ -330,18 +330,17 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
         ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
                              ("SelectChild() = %p",nsnull));
         return nsnull;
-    } else {
-        aCurrentChunk = mNode->mKidU.mChunk;
-        aPos = &aCurrentChunk->mKids[0];
-    }
-    if (*aPos && (*aPos)->mFrame == aChildIFrame)
-    {
-        ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
-                       ("SelectChild() = %p",(*aPos)->mFrame));
-        return *aPos;
     }
 
-    while (aPos && *aPos) {
+    aCurrentChunk = mNode->mKidU.mChunk;
+    aPos = &aCurrentChunk->mKids[0];
+    // aPos cannot be null here
+    while (*aPos) {
+        if (*aPos && (*aPos)->mFrame == aChildIFrame) {
+            ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                           ("SelectChild() = %p",(*aPos)->mFrame));
+            return *aPos;
+        }
         if (aPos < &aCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
             aPos++;
         } else {
@@ -353,11 +352,6 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
             } else {
                 aPos = &aCurrentChunk->mKids[0];
             }
-        }
-        if (*aPos && (*aPos)->mFrame == aChildIFrame) {
-            ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
-                           ("SelectChild() = %p",(*aPos)->mFrame));
-            return *aPos;
         }
     }
 
