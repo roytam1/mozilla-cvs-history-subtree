@@ -4093,23 +4093,23 @@ nsFontSubset::~nsFontSubset()
 
 void
 nsFontSubset::Convert(const PRUnichar* aString, PRUint32 aLength,
-  char* aResult /*IN/OUT*/, int* aResultLength /*IN/OUT*/)
+  char** aResult /*IN/OUT*/, int* aResultLength /*IN/OUT*/)
 {
   int len = *aResultLength; // current available len of aResult
   *aResultLength = 0;
 
   // Get the number of bytes needed for the conversion
   int nb = WideCharToMultiByte(mCodePage, 0, aString, aLength,
-                               aResult, 0, nsnull, nsnull);
+                               *aResult, 0, nsnull, nsnull);
   if (!nb) return;
   if (nb > len) {
     // Allocate a bigger array that the caller should free
-    aResult = new char[nb];
-    if (!aResult) return;
+    *aResult = new char[nb];
+    if (!*aResult) return;
   }
   // Convert the Unicode string to ANSI
   nb = WideCharToMultiByte(mCodePage, 0, aString, aLength,
-                           aResult, nb, nsnull, nsnull);
+                           *aResult, nb, nsnull, nsnull);
   *aResultLength = nb;
 }
 
@@ -4119,10 +4119,10 @@ nsFontSubset::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
   char str[CHAR_BUFFER_SIZE];
   char* pstr = str;
   int len = CHAR_BUFFER_SIZE;
-  Convert(aString, aLength, pstr, &len);
+  Convert(aString, aLength, &pstr, &len);
   if (len) {
     SIZE size;
-    ::GetTextExtentPoint32A(aDC, str, len, &size);
+    ::GetTextExtentPoint32A(aDC, pstr, len, &size);
     if (pstr != str) {
       delete[] pstr;
     }
@@ -4138,9 +4138,9 @@ nsFontSubset::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   char str[CHAR_BUFFER_SIZE];
   char* pstr = str;
   int len = CHAR_BUFFER_SIZE;
-  Convert(aString, aLength, pstr, &len);
+  Convert(aString, aLength, &pstr, &len);
   if (len) {
-    ::ExtTextOutA(aDC, aX, aY, 0, NULL, str, len, NULL);
+    ::ExtTextOutA(aDC, aX, aY, 0, NULL, pstr, len, NULL);
     if (pstr != str) {
       delete[] pstr;
     }
@@ -4158,7 +4158,7 @@ nsFontSubset::GetBoundingMetrics(HDC                aDC,
   char str[CHAR_BUFFER_SIZE];
   char* pstr = str;
   int length = CHAR_BUFFER_SIZE;
-  Convert(aString, aLength, pstr, &length);
+  Convert(aString, aLength, &pstr, &length);
   if (!length) return NS_ERROR_UNEXPECTED;
 
   // measure the string
@@ -4224,7 +4224,7 @@ public:
 
   // overloaded method to convert all chars to the replacement char
   virtual void Convert(const PRUnichar* aString, PRUint32 aLength,
-                       char* aResult, int* aResultLength);
+                       char** aResult, int* aResultLength);
 };
 
 nsFontSubsetSubstitute::nsFontSubsetSubstitute()
@@ -4242,7 +4242,7 @@ nsFontSubsetSubstitute::~nsFontSubsetSubstitute()
 
 void
 nsFontSubsetSubstitute::Convert(const PRUnichar* aString, PRUint32 aLength,
-  char* aResult, int* aResultLength)
+  char** aResult, int* aResultLength)
 {
   nsAutoString tmp;
   for (PRUint32 i = 0; i < aLength; ++i) {
