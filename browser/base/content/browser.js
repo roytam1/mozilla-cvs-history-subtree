@@ -349,11 +349,6 @@ function shouldFastFind(evt)
   return true;
 }
 
-function isPrintable(c)
-{
-  return (c >= 32 && c <= 126);
-}
-
 function onFindBarFocus()
 {
   toggleLinkFocus(false);
@@ -391,7 +386,7 @@ function onBrowserKeyPress(evt)
     else if (evt.keyCode == 27) { // Escape
       closeFindBar();
     }
-    else if (isPrintable(evt.charCode)) {
+    else {
       if (evt.charCode == 32) // Space
         evt.preventDefault();
         
@@ -401,7 +396,7 @@ function onBrowserKeyPress(evt)
     return;
   }
   
-  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & isPrintable(evt.charCode) && evt.charCode != 32)) {   
+  if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & evt.charCode != 32)) {   
     gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;
     toggleLinkFocus(true);
     if (openFindBar()) {      
