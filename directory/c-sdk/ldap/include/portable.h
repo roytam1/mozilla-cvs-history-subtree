@@ -276,7 +276,8 @@ int strncasecmp(const char *, const char *, size_t);
     defined(UNIXWARE) || defined(SUNOS4) || defined(SNI) || defined(BSDI) || \
     defined(NCR) || defined(OSF1) || defined(NEC) || defined(VMS) || \
     ( defined(HPUX10) && !defined(_REENTRANT)) || defined(HPUX11) || \
-    defined(UnixWare) || defined(LINUX) || defined(NETBSD) || defined(FREEBSD) || \
+    defined(UnixWare) || defined(LINUX) || defined(NETBSD) || \
+    defined(FREEBSD) || defined(OPENBSD) || \
     (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #elif defined(AIX)
@@ -310,7 +311,7 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) \
         || defined(hpux) || defined(HPUX11) || defined(NETBSD) \
         || defined(IRIX6) || defined(FREEBSD) || defined(VMS) \
-        || defined(NTO)
+        || defined(NTO) || defined(OPENBSD)
 #define NSLDAPI_CTIME( c, b, l )        ctime_r( c, b )
 #elif defined( OSF1V3 )
 #define NSLDAPI_CTIME( c, b, l )	(ctime_r( c, b, l ) ? NULL : b)
