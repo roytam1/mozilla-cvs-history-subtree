@@ -45,25 +45,30 @@
 #include "nsCOMPtr.h"
 #include "Stack.h"
 #include "XMLUtils.h"
+#include "nsVoidArray.h"
+#include "txIXPathContext.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
-class txIEvalContext;
 class ExprResult;
 class txStylesheet;
 class txRecursionCheckpointStart;
 class txExpandedNameMap;
 
-class txExecutionState
+class txExecutionState : public txIMatchContext
 {
 public:
+    txExecutionState(txStylesheet* aStylesheet);
+    ~txExecutionState();
     nsresult init(Node* aNode, txExpandedNameMap* aGlobalParams);
 
+    TX_DECL_MATCH_CONTEXT;
+
     // Stack functions
-    nsresult pushEvalContext(txIEvalContext* aContext);
-    txIEvalContext* popEvalContext();
-    nsresult pushExprResult(ExprResult* aExprResult);
-    ExprResult* popExprResult();
+    //nsresult pushEvalContext(txIEvalContext* aContext);
+    //void popEvalContext();
+    //nsresult pushExprResult(ExprResult* aExprResult);
+    //ExprResult* popExprResult();
     nsresult pushString(const nsAString& aStr);
     void popString(nsAString& aStr);
     nsresult pushInt(PRInt32 aInt);
@@ -71,12 +76,11 @@ public:
 
     // state-getting functions
     txIEvalContext* getEvalContext();
-    txInstruction* getAttributeSet(const txExpandedName& aName);
-    txInstruction* getNextInstruction();
 
     // state-modification functions
+    txInstruction* getNextInstruction();
     nsresult runTemplate(txInstruction* aInstruction);
-    nsresult gotoInstruction(txInstruction* aNext);
+    void gotoInstruction(txInstruction* aNext);
 
     // Other
     nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
@@ -91,9 +95,18 @@ public:
     txXMLEventHandler* mResultHandler;
     txIOutputHandlerFactory* mOutputHandlerFactory;
 
-private:
     txStylesheet* mStylesheet;
-    Stack mStack;
+
+private:
+    Stack mReturnStack;
+    nsStringArray mStringStack;
+    txInstruction* mNextInstruction;
+    
+    txIEvalContext* mEvalContext;
+    txIEvalContext* mInitialEvalContext;
+    
+    nsVoidArray mRecursionInstructions;
+    nsVoidArray mRecursionContexts;
 };
 
 #endif

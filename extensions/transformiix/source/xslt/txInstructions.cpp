@@ -41,6 +41,7 @@
 #include "TxString.h"
 #include "Expr.h"
 #include "ExprResult.h"
+#include "txStylesheet.h"
 
 txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
                                      nsIAtom* aLocalName,
@@ -136,7 +137,7 @@ txInsertAttrSet::txInsertAttrSet(const txExpandedName& aName)
 
 nsresult txInsertAttrSet::execute(txExecutionState& aEs)
 {
-    txInstruction* instr = aEs.getAttributeSet(mName);
+    txInstruction* instr = aEs.mStylesheet->getAttributeSet(mName);
     NS_ENSURE_TRUE(instr, NS_ERROR_XSLT_EXECUTION_FAILURE);
 
     nsresult rv = aEs.runTemplate(instr);

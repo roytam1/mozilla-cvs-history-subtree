@@ -37,14 +37,161 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txExecutionState.h"
+#include "txSingleNodeContext.h"
+#include "txInstructions.h"
+#include "txStylesheet.h"
+
+txExecutionState::txExecutionState(txStylesheet* aStylesheet)
+    : mStylesheet(aStylesheet)
+{
+}
+
+txExecutionState::~txExecutionState()
+{
+    delete mEvalContext;
+    
+    // XXX mind the initial evalcontext, it can occur more then once in the
+    // evalcontext-stack
+}
 
 nsresult
 txExecutionState::init(Node* aNode,
                        txExpandedNameMap* aGlobalParams)
 {
-    // set initial and global eval-context
-    // set initial instruction
-    // set global parameters
+    nsresult rv = NS_OK;
+    mEvalContext = new txSingleNodeContext(aNode, this);
+    NS_ENSURE_TRUE(mEvalContext, NS_ERROR_OUT_OF_MEMORY);
+
+    mInitialEvalContext = mEvalContext;
+
+
+    txIOutputXMLEventHandler* handler = 0;
+    rv = mOutputHandlerFactory->
+        createHandlerWith(mStylesheet->getOutputFormat(), &handler);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mOutputHandler = handler;
+    mResultHandler = handler;
+    mOutputHandler->startDocument();
+    // XXX who calls mOutputHandler->endDocument(); ?
+
+    txStylesheet::ImportFrame* frame = 0;
+    mNextInstruction = mStylesheet->findTemplate(aNode, txExpandedName(),
+                                                 this, nsnull, &frame);
+    rv = mReturnStack.push(0);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // XXX set global parameters
     
     return NS_OK;
+}
+
+nsresult
+txExecutionState::getVariable(PRInt32 aNamespace, txAtom* aLName,
+                              ExprResult*& aResult)
+{
+    // XXX implement me
+    return NS_OK;
+}
+
+PRBool
+txExecutionState::isStripSpaceAllowed(Node* aNode)
+{
+    // XXX implement me
+    return PR_FALSE;
+}
+
+void
+txExecutionState::receiveError(const String& aMsg, nsresult aRes)
+{
+    // XXX implement me
+}
+
+nsresult
+txExecutionState::pushString(const nsAString& aStr)
+{
+    if (!mStringStack.AppendString(aStr)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    return NS_OK;
+}
+
+
+void
+txExecutionState::popString(nsAString& aStr)
+{
+    mStringStack.StringAt(mStringStack.Count() - 1, aStr);
+}
+
+txIEvalContext*
+txExecutionState::getEvalContext()
+{
+    return mEvalContext;
+}
+
+txInstruction*
+txExecutionState::getNextInstruction()
+{
+    if (!mNextInstruction) {
+        mNextInstruction = (txInstruction*)mReturnStack.pop();
+        if (!mNextInstruction) {
+            return nsnull;
+        }
+        // XXX pop local variables
+    }
+    
+    txInstruction* instr = mNextInstruction;
+    mNextInstruction = instr->mNext;
+    
+    return instr;
+}
+
+nsresult
+txExecutionState::runTemplate(txInstruction* aInstruction)
+{
+    // XXX push local variables
+    nsresult rv = mReturnStack.push(mNextInstruction);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    mNextInstruction = aInstruction;
+    
+    return NS_OK;
+}
+
+void
+txExecutionState::gotoInstruction(txInstruction* aNext)
+{
+    mNextInstruction = aNext;
+}
+
+nsresult
+txExecutionState::enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
+                                           txIEvalContext* aContext)
+{
+    PRInt32 i;
+    for (i = 0; i < mRecursionInstructions.Count(); ++i) {
+        if (mRecursionInstructions[i] == aChk &&
+            mRecursionContexts[i] == aContext) {
+            return NS_ERROR_XSLT_BAD_RECURSION;
+        }
+    }
+    
+    if (!mRecursionInstructions.AppendElement(aChk)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    if (!mRecursionContexts.AppendElement(aContext)) {
+        mRecursionInstructions.RemoveElementAt(mRecursionInstructions.Count() - 1);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    return NS_OK;
+}
+
+void
+txExecutionState::leaveRecursionCheckpoint()
+{
+    mRecursionInstructions.RemoveElementAt(mRecursionInstructions.Count() - 1);
+    mRecursionContexts.RemoveElementAt(mRecursionContexts.Count() - 1);
 }

@@ -5,6 +5,13 @@
 #include "txInstructions.h"
 #include "primitives.h"
 
+txStylesheet::txStylesheet()
+    : mNamedTemplates(PR_FALSE),
+      mDecimalFormats(PR_TRUE),
+      mAttributeSets(PR_TRUE)
+{
+}
+
 nsresult
 txStylesheet::init()
 {
@@ -27,6 +34,106 @@ txStylesheet::~txStylesheet()
         delete (txInstruction*)instrIter.next();
     }
 }
+
+txInstruction*
+txStylesheet::findTemplate(Node* aNode,
+                           const txExpandedName& aMode,
+                           txIMatchContext* aContext,
+                           ImportFrame* aImportedBy,
+                           ImportFrame** aImportFrame)
+{
+    NS_ASSERTION(aImportFrame, "missing ImportFrame pointer");
+    NS_ASSERTION(aNode, "missing node");
+
+    txInstruction* matchTemplate = 0;
+    ImportFrame* endFrame = 0;
+    txListIterator frameIter(&mImportFrames);
+
+    if (aImportedBy) {
+        ImportFrame* curr = (ImportFrame*)frameIter.next();
+        while (curr != aImportedBy)
+               curr = (ImportFrame*)frameIter.next();
+
+        endFrame = aImportedBy->mFirstNotImported;
+    }
+
+#ifdef PR_LOGGING
+    txPattern match = 0;
+#endif
+
+    ImportFrame* frame;
+    while (!matchTemplate &&
+           (frame = (ImportFrame*)frameIter.next()) &&
+           frame != endFrame) {
+
+        // get templatelist for this mode
+        txList* templates;
+        templates = (txList*)frame->mMatchableTemplates.get(aMode);
+
+        if (templates) {
+            txListIterator templateIter(templates);
+
+            // Find template with highest priority
+            MatchableTemplate* templ;
+            while (!matchTemplate &&
+                   (templ = (MatchableTemplate*)templateIter.next())) {
+                if (templ->mMatch->matches(aNode, aContext)) {
+                    matchTemplate = templ->mFirstInstruction;
+                    *aImportFrame = frame;
+#ifdef PR_LOGGING
+                    match = templ->mMatch;
+#endif
+                }
+            }
+        }
+    }
+
+#ifdef PR_LOGGING
+    String mode;
+    if (aMode.mLocalName) {
+        TX_GET_ATOM_STRING(aMode.mLocalName, mode);
+    }
+    if (matchTemplate) {
+        String matchAttr;
+        match->toString(matchAttr);
+        // matchTemplate can be a document (see addLREStylesheet)
+        PR_LOG(txLog::xslt, PR_LOG_DEBUG,
+               ("MatchTemplate, Pattern %s, Mode %s, Node %s\n",
+                NS_LossyConvertUCS2toASCII(matchAttr).get(),
+                NS_LossyConvertUCS2toASCII(mode).get(),
+                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get()));
+    }
+    else {
+        PR_LOG(txLog::xslt, PR_LOG_DEBUG,
+               ("No match, Node %s, Mode %s\n", 
+                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get(),
+                NS_LossyConvertUCS2toASCII(mode).get()));
+    }
+#endif
+    
+    // XXX get default template
+
+    return matchTemplate;
+}
+
+txDecimalFormat*
+txStylesheet::getDecimalFormat(const txExpandedName& aName)
+{
+    return (txDecimalFormat*)mDecimalFormats.get(aName);
+}
+
+txInstruction*
+txStylesheet::getAttributeSet(const txExpandedName& aName)
+{
+    return (txInstruction*)mAttributeSets.get(aName);
+}
+
+txOutputFormat*
+txStylesheet::getOutputFormat()
+{
+    return &mOutputFormat;
+}
+
 
 nsresult
 txStylesheet::doneCompiling()

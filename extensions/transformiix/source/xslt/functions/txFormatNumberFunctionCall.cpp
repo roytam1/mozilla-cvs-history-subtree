@@ -97,7 +97,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
             formatName.mNamespaceID = kNameSpaceID_Unknown;
     }
 
-    txDecimalFormat* format = nsnull; //mStylesheet->getDecimalFormat(formatName);
+    txDecimalFormat* format = mStylesheet->getDecimalFormat(formatName);
     if (!format) {
         String err("unknown decimal format for: ");
         toString(err);

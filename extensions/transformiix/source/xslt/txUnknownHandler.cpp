@@ -38,7 +38,8 @@
 
 #include "txUnknownHandler.h"
 #include <string.h>
-#include "ProcessorState.h"
+#include "txExecutionState.h"
+#include "txStylesheet.h"
 
 #ifndef TX_EXE
 NS_IMPL_ISUPPORTS1(txUnknownHandler, txIOutputXMLEventHandler);
@@ -46,9 +47,9 @@ NS_IMPL_ISUPPORTS1(txUnknownHandler, txIOutputXMLEventHandler);
 
 PRUint32 txUnknownHandler::kReasonableTransactions = 8;
 
-txUnknownHandler::txUnknownHandler(ProcessorState* aPs)
+txUnknownHandler::txUnknownHandler(txExecutionState* aEs)
     : mTotal(0), mMax(kReasonableTransactions), 
-      mPs(aPs)
+      mEs(aEs)
 {
 #ifndef TX_EXE
     NS_INIT_ISUPPORTS();
@@ -116,7 +117,7 @@ void txUnknownHandler::endDocument()
     if (NS_FAILED(rv))
         return;
 
-    mPs->mResultHandler->endDocument();
+    mEs->mResultHandler->endDocument();
 
     // in module the outputhandler is refcounted
 #ifdef TX_EXE
@@ -164,7 +165,7 @@ void txUnknownHandler::startElement(const String& aName,
 #endif
 
     nsresult rv = NS_OK;
-    txOutputFormat* format = mPs->getOutputFormat();
+    txOutputFormat* format = mEs->mStylesheet->getOutputFormat();
     if (format->mMethod != eMethodNotSet) {
         rv = createHandlerAndFlush(format->mMethod, aName, aNsID);
     }
@@ -178,7 +179,7 @@ void txUnknownHandler::startElement(const String& aName,
     if (NS_FAILED(rv))
         return;
 
-    mPs->mResultHandler->startElement(aName, aNsID);
+    mEs->mResultHandler->startElement(aName, aNsID);
 
     // in module the outputhandler is refcounted
 #ifdef TX_EXE
@@ -198,16 +199,17 @@ nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
                                                  const PRInt32 aNsID)
 {
     nsresult rv = NS_OK;
-    txOutputFormat* format = mPs->getOutputFormat();
-    format->mMethod = aMethod;
+    txOutputFormat format;
+    format.merge(*mEs->mStylesheet->getOutputFormat());
+    format.mMethod = aMethod;
 
     txIOutputXMLEventHandler* handler = 0;
-    rv = mPs->mOutputHandlerFactory->createHandlerWith(format, aName, aNsID,
+    rv = mEs->mOutputHandlerFactory->createHandlerWith(&format, aName, aNsID,
                                                        &handler);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mPs->mOutputHandler = handler;
-    mPs->mResultHandler = handler;
+    mEs->mOutputHandler = handler;
+    mEs->mResultHandler = handler;
 
     PRUint32 counter;
     for (counter = 0; counter < mTotal; ++counter) {

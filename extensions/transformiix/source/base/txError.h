@@ -104,4 +104,7 @@ typedef PRUint32 nsresult;
 #define NS_ERROR_XPATH_UNKNOWN_FUNCTION                \
     NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_XSLT, 6)
 
+#define NS_ERROR_XSLT_BAD_RECURSION                    \
+    NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_XSLT, 7)
+
 #endif // __TX_ERROR

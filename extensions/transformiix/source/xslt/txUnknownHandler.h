@@ -43,7 +43,7 @@
 #include "TxString.h"
 #include "txOutputFormat.h"
 
-class ProcessorState;
+class txExecutionState;
 
 class txOutputTransaction
 {
@@ -95,7 +95,7 @@ public:
 class txUnknownHandler : public txIOutputXMLEventHandler
 {
 public:
-    txUnknownHandler(ProcessorState* aPs);
+    txUnknownHandler(txExecutionState* aEs);
     virtual ~txUnknownHandler();
 
 #ifndef TX_EXE
@@ -183,11 +183,11 @@ private:
 
     PRUint32 mTotal, mMax;
     /*
-     * XXX we shouldn't hold to the ProcessorState, as we're supposed
+     * XXX we shouldn't hold to the txExecutionState, as we're supposed
      * to live without it. But as a standalone handler, we don't.
      * The right fix may need a txOutputFormat here.
      */
-    ProcessorState* mPs;
+    txExecutionState* mEs;
     txOutputTransaction** mArray;
 
     static PRUint32 kReasonableTransactions;

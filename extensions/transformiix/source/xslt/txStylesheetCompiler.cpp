@@ -1,4 +1,3 @@
-#if 0
 #include "txStylesheetCompiler.h"
 #include "txStylesheetCompileHandlers.h"
 #include "txAtoms.h"
@@ -9,6 +8,7 @@
 #include "txToplevelItems.h"
 #include "ExprParser.h"
 #include "txPatternParser.h"
+#include "XSLTFunctions.h"
 
 txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI)
     : mState(aBaseURI, nsnull)
@@ -230,6 +230,8 @@ txStylesheetCompiler::ensureNewElementContext()
     }
 
     mState.mElementContext = context;
+
+    return NS_OK;
 }
 
 
@@ -364,7 +366,6 @@ nsresult
 txStylesheetCompilerState::openInstructionContainer(txInstructionContainer* aContainer)
 {
     NS_PRECONDITION(!mNextInstrPtr, "can't nest instruction-containers");
-    NS_ENSURE_FALSE(mNextInstrPtr, NS_ERROR_UNEXPECTED);
 
     mNextInstrPtr = &aContainer->mFirstInstruction;
     return NS_OK;
@@ -380,7 +381,6 @@ nsresult
 txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
 {
     NS_PRECONDITION(mNextInstrPtr, "adding instruction outside container");
-    NS_ENSURE_TRUE(mNextInstrPtr, NS_ERROR_UNEXPECTED);
 
     *mNextInstrPtr = aInstruction;
     mNextInstrPtr = &aInstruction->mNext;
@@ -441,8 +441,6 @@ txStylesheetCompilerState::resolveNamespacePrefix(txAtom* aPrefix,
     return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }
 
-#define CHECK_FN(_name) aName == txXSLTAtoms::_name
-
 nsresult
 txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
@@ -452,55 +450,55 @@ txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
    if (aID != kNameSpaceID_None) {
        return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
    }
-   if (CHECK_FN(document)) {
+   if (aName == txXSLTAtoms::document) {
        aFunction = new DocumentFunctionCall(mElementContext->mBaseURI);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(key)) {
+   if (aName == txXSLTAtoms::key) {
        aFunction = new txKeyFunctionCall(mElementContext->mMappings);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(formatNumber)) {
+   if (aName == txXSLTAtoms::formatNumber) {
        aFunction = new txFormatNumberFunctionCall(mStylesheet,
                                                   mElementContext->mMappings);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(current)) {
+   if (aName == txXSLTAtoms::current) {
        aFunction = new CurrentFunctionCall();
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(unparsedEntityUri)) {
+   if (aName == txXSLTAtoms::unparsedEntityUri) {
 
        return NS_ERROR_NOT_IMPLEMENTED;
    }
-   if (CHECK_FN(generateId)) {
+   if (aName == txXSLTAtoms::generateId) {
        aFunction = new GenerateIdFunctionCall();
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(systemProperty)) {
+   if (aName == txXSLTAtoms::systemProperty) {
        aFunction = new SystemPropertyFunctionCall(mElementContext->mMappings);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(elementAvailable)) {
+   if (aName == txXSLTAtoms::elementAvailable) {
        aFunction =
           new ElementAvailableFunctionCall(mElementContext->mMappings);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
-   if (CHECK_FN(functionAvailable)) {
+   if (aName == txXSLTAtoms::functionAvailable) {
        aFunction =
           new FunctionAvailableFunctionCall(mElementContext->mMappings);
        NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
@@ -516,4 +514,3 @@ txStylesheetCompilerState::receiveError(const String& aMsg, nsresult aRes)
 {
     // XXX implement me
 }
-#endif

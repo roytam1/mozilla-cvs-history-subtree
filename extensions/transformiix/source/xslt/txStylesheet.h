@@ -10,14 +10,39 @@ class txToplevelItem;
 class txPattern;
 class txInstruction;
 class txTemplateItem;
+class txDecimalFormat;
 
 class txStylesheet
 {
 public:
+    class ImportFrame;
+    friend class txStylesheetCompilerState;
+    // To be able to do some cleaning up in destructor
+    friend class ImportFrame;
+
+    txStylesheet();
     ~txStylesheet();
     nsresult init();
+    
+    txInstruction* findTemplate(Node* aNode,
+                                const txExpandedName& aMode,
+                                txIMatchContext* aContext,
+                                ImportFrame* aImportedBy,
+                                ImportFrame** aImportFrame);
+    txDecimalFormat* getDecimalFormat(const txExpandedName& aName);
+    txInstruction* getAttributeSet(const txExpandedName& aName);
+    txOutputFormat* getOutputFormat();
 
-    friend class txStylesheetCompilerState;
+    /**
+     * Called by the stylesheet compiler once all stylesheets has been read.
+     */
+    nsresult doneCompiling();
+
+    /**
+     * Add a key to the stylesheet
+     */
+    nsresult addKey(const txExpandedName& aName, txPattern* aMatch,
+                    Expr* aUse);
 
     /**
      * Contain information that is import precedence dependant.
@@ -37,19 +62,6 @@ public:
         // ImportFrame which is the first one *not* imported by this frame
         ImportFrame* mFirstNotImported;
     };
-    // To be able to do some cleaning up in destructor
-    friend class ImportFrame;
-
-    /**
-     * Called by the stylesheet compiler once all stylesheets has been read.
-     */
-    nsresult doneCompiling();
-
-    /**
-     * Add a key to the stylesheet
-     */
-    nsresult addKey(const txExpandedName& aName, txPattern* aMatch,
-                    Expr* aUse);
 
 private:
     class MatchableTemplate {
@@ -85,6 +97,12 @@ private:
     
     // Named templates
     txExpandedNameMap mNamedTemplates;
+    
+    // Map with all decimal-formats
+    txExpandedNameMap mDecimalFormats;
+
+    // Map with all named attribute sets
+    txExpandedNameMap mAttributeSets;
 };
 
 

@@ -109,7 +109,7 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
         case eMethodNotSet:
         case eXMLOutput:
         {
-            *aHandler = new txUnknownHandler(mPs);
+            // XXX *aHandler = new txUnknownHandler(mPs);
             break;
         }
 
