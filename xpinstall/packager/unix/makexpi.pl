@@ -70,9 +70,8 @@ sub RecursiveStrip
     @libraryList = grep { ! /freebl_pure32_3/ } @libraryList;
 
     # As stated by Wan-Teh, the true fix is to recreate the *.chk files for
-    # files of the form *softokn3*, *freebl_hybrid_3*, and *freebl_pure32_3*
-    # after they have been stripped.  To be safe, we should probably regenerate
-    # all of the *.chk files for stripped libraries.
+    # the softokn3, freebl_hybrid_3, and freebl_pure32_3 shared libraries
+    # after they have been stripped.
 
     # strip all strippable files
     system("strip @libraryList") if (defined(@libraryList));
