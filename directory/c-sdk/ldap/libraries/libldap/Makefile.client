@@ -208,7 +208,7 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLDAP)
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLDAP) $(DLLLDAP)
 
 ltest::	$(LIBLDAP) test.o
 		$(LINK_EXE) test.o
@@ -223,6 +223,13 @@ ifdef SO_FILES_TO_REMOVE
 endif
 	$(LINK_DLL) $(DSO_LDOPTS) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
 
+$(DLLLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
+	@echo ======= making $(DLLLDAP)
+ifdef SO_FILES_TO_REMOVE
+	-$(RM) $(SO_FILES_TO_REMOVE)
+endif
+	$(LINK_LIB) $(DSO_LDOPTS) $(LDAP_EXPORT_FLAGS) $(EXTRA_LIBS)
+
 veryclean:: clean
 
 clean::
@@ -232,9 +239,10 @@ clean::
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install:: $(LIBLDAP)
+install:: $(LIBLDAP) $(DLLLDAP)
 ifdef MKSHLIB
 	$(INSTALL) -m 555 $(LIBLDAP) $(INSTALLDIR)/lib
+	$(INSTALL) -m 555 $(DLLLDAP) $(INSTALLDIR)/lib
 endif
 ifeq ($(OS_ARCH), WINNT)
 	$(INSTALL) -m 555 $(LIBLDAP) $(INSTALLDIR)/lib
