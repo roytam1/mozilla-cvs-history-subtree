@@ -45,6 +45,26 @@ function onDownloadOpen(aEvent)
   }
 }
 
+function setRDFProperty(aID, aProperty, aValue)
+{
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+
+  var db = gDownloadManager.datasource;
+  var propertyArc = rdf.GetResource(NC_NS + aProperty);
+  
+  var res = rdf.GetResource(aID);
+  var node = db.GetTarget(res, propertyArc, true);
+  if (node)
+    db.Change(res, propertyArc, node, rdf.GetLiteral(aValue));
+  else
+    db.Assert(res, propertyArc, rdf.GetLiteral(aValue), true);
+}
+
+function onDownloadAnimated(aEvent)
+{
+  setRDFProperty(aEvent.target.id, "DownloadAnimated", "true");
+}
+
 function onDownloadRetry(aEvent)
 {
 
@@ -58,13 +78,14 @@ function Startup()
   const dlmgrIID = Components.interfaces.nsIDownloadManager;
   gDownloadManager = Components.classes[dlmgrContractID].getService(dlmgrIID);
 
-  downloadView.addEventListener("download-cancel",  onDownloadCancel, false);
-  downloadView.addEventListener("download-pause",   onDownloadPause,  false);
-  downloadView.addEventListener("download-resume",  onDownloadResume, false);
-  downloadView.addEventListener("download-remove",  onDownloadRemove, false);
-  downloadView.addEventListener("download-show",    onDownloadShow,   false);
-  downloadView.addEventListener("download-retry",   onDownloadRetry,  false);
-  downloadView.addEventListener("dblclick",         onDownloadOpen,   false);
+  downloadView.addEventListener("download-cancel",  onDownloadCancel,   false);
+  downloadView.addEventListener("download-pause",   onDownloadPause,    false);
+  downloadView.addEventListener("download-resume",  onDownloadResume,   false);
+  downloadView.addEventListener("download-remove",  onDownloadRemove,   false);
+  downloadView.addEventListener("download-show",    onDownloadShow,     false);
+  downloadView.addEventListener("download-retry",   onDownloadRetry,    false);
+  downloadView.addEventListener("download-animated",onDownloadAnimated, false);
+  downloadView.addEventListener("dblclick",         onDownloadOpen,     false);
 
   var ds = gDownloadManager.datasource;
 
@@ -100,15 +121,9 @@ function saveStatusMessages()
   
   for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
     var currItem = downloadView.childNodes[i];
-    if (currItem.getAttribute("state") == "4") {
-      var res = rdf.GetResource(currItem.id);
-      
-      var node = db.GetTarget(res, statusArc, true);
-      if (node)
-        db.Change(res, statusArc, node, rdf.GetLiteral(currItem.getAttribute("status-internal")));
-      else
-        db.Assert(res, statusArc, rdf.GetLiteral(currItem.getAttribute("status-internal")), true);
-    }
+    if (currItem.getAttribute("state") == "4")
+      setRDFProperty(currItem.id, "DownloadStatus", 
+                     currItem.getAttribute("status-internal"));
   }
  
   gDownloadManager.endBatchUpdate();

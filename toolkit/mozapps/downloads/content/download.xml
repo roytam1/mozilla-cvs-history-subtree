@@ -57,7 +57,7 @@
   
   <binding id="download-downloading" extends="chrome://mozapps/content/downloads/download.xml#download-base">
     <content>
-      <xul:hbox flex="1" class="downloadContentBox">
+      <xul:hbox flex="1" class="downloadContentBox" xbl:inherits="animated">
 #ifdef XP_WIN
         <xul:vbox pack="start">
           <xul:image class="downloadTypeIcon" style="width: 32px; max-width: 32px; height: 32px; max-height: 32px;" xbl:inherits="src=image"/>
@@ -140,7 +140,7 @@
         <![CDATA[
           if (aDownload.getAttribute("state") != "0" || 
               aDownload._adlStep > aDownload._adl_kUpperBounds) {
-            this.fireEvent('animated');
+            aDownload.fireEvent('animated');
             return;
           }
             

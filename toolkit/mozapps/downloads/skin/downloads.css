@@ -36,6 +36,9 @@ download[state="0"], download[state="-1"], download[state="4"] {
   -moz-opacity: 0.0;
 }
 
+.downloadContentBox[animated="true"] {
+  -moz-opacity: 1.0;
+}
 
 .downloadTypeIcon {
   margin-right: 10px;
