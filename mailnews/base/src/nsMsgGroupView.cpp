@@ -122,6 +122,9 @@ nsHashKey *nsMsgGroupView::AllocHashKeyForHdr(nsIMsgDBHdr *msgHdr)
     case nsMsgViewSortType::byAuthor:
       (void) msgHdr->GetAuthor(getter_Copies(cStringKey));
       return new nsCStringKey(cStringKey.get());
+    case nsMsgViewSortType::byRecipient:
+      (void) msgHdr->GetRecipients(getter_Copies(cStringKey));
+      return new nsCStringKey(cStringKey.get());
     case nsMsgViewSortType::byAccount:
       {
         nsCOMPtr <nsIMsgDatabase> dbToUse = m_db;
