@@ -44,6 +44,9 @@ extern nsIRollupListener * gRollupListener;
 extern nsIWidget         * gRollupWidget;
 extern PRBool              gRollupConsumeRollupEvent;
 extern PRBool              gDontActivate;
+#ifdef DEBUG_FOCUS
+extern int currentWindowIdentifier;
+#endif
 
 BOOL nsFrameWindow::fHiddenWindowCreated = FALSE;
 
@@ -149,6 +152,11 @@ void nsFrameWindow::RealDoCreate( HWND hwndP, nsWindow *aParent,
                                    0,
                                    &mWnd);
 
+#ifdef DEBUG_FOCUS
+   mWindowIdentifier = currentWindowIdentifier;
+   currentWindowIdentifier++;
+   printf("Create Window  (%d) - hwndClient=%x, hwndFrame=%x\n", mWindowIdentifier, mWnd, mFrameWnd);
+#endif
   
    /* Because WinCreateStdWindow doesn't take an owner, we have to set it */
    if (hwndP)

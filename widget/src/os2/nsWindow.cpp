@@ -146,7 +146,7 @@ extern "C" {
 static PRUint32 gLastInputEventTime = 0;
 
 #ifdef DEBUG_FOCUS
-static int currentWindowIdentifier = 0;
+int currentWindowIdentifier = 0;
 #endif
 
 //-------------------------------------------------------------------------
@@ -877,15 +877,6 @@ void nsWindow::RealDoCreate( HWND              hwndP,
       }
    }
 
-#ifdef DEBUG_FOCUS
-   mWindowIdentifier = currentWindowIdentifier;
-   currentWindowIdentifier++;
-   if (aInitData && (aInitData->mWindowType == eWindowType_toplevel)) {
-      printf("[%x] Create Frame Window (%d)\n", this, mWindowIdentifier);
-   } else {
-     printf("[%x] Create Window  (%d)\n", this, mWindowIdentifier);
-   }
-#endif
 
    // Create a window: create hidden & then size to avoid swp_noadjust problems
    // owner == parent except for 'borderless top-level' -- see nsCanvas.cpp
@@ -898,6 +889,12 @@ void nsWindow::RealDoCreate( HWND              hwndP,
                            HWND_TOP,
                            mParent ? mParent->GetNextID() : 0,
                            0, 0);      // ctldata, presparams
+
+#ifdef DEBUG_FOCUS
+   mWindowIdentifier = currentWindowIdentifier;
+   currentWindowIdentifier++;
+   printf("Create Window  (%d) - hwnd=%x\n", mWindowIdentifier, mWnd);
+#endif
 
    NS_ASSERTION( mWnd, "Couldn't create window");
 
@@ -1063,7 +1060,7 @@ NS_METHOD nsWindow::Destroy()
       {
          HWND hwndBeingDestroyed = mFrameWnd ? mFrameWnd : mWnd;
 #ifdef DEBUG_FOCUS
-         printf("[%x] Destroy (%d)\n", this, mWindowIdentifier);
+         printf("Destroy (%d)\n", mWindowIdentifier);
 #endif
          if (hwndBeingDestroyed == WinQueryFocus(HWND_DESKTOP)) {
            WinSetFocus(HWND_DESKTOP, WinQueryWindow(hwndBeingDestroyed, QW_PARENT));
@@ -1470,7 +1467,7 @@ NS_METHOD nsWindow::SetFocus(PRBool aRaise)
     if (mWnd) {
         if (!mInSetFocus) {
 #ifdef DEBUG_FOCUS
-           printf("[%x] SetFocus (%d)\n", this, mWindowIdentifier);
+           printf("SetFocus (%d)\n", mWindowIdentifier);
 #endif
            ULONG sessionID;
            DosQuerySysInfo(QSV_FOREGROUND_FS_SESSION, QSV_FOREGROUND_FS_SESSION, 
@@ -2513,7 +2510,7 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 
        case WM_ACTIVATE:
 #ifdef DEBUG_FOCUS
-          printf("[%x] WM_ACTIVATE (%d)\n", this, mWindowIdentifier);
+          printf("WM_ACTIVATE (%d)\n", mWindowIdentifier);
 #endif
           if (mp1) {
             /* The window is being activated */
@@ -2529,7 +2526,7 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 
         case WM_FOCUSCHANGED:
 #ifdef DEBUG_FOCUS
-          printf("[%x] WM_FOCUSCHANGED (%d)\n", this, mWindowIdentifier);
+          printf("WM_FOCUSCHANGED (%d)\n", mWindowIdentifier);
 #endif
           if (SHORT1FROMMP(mp2)) {
 
@@ -2551,21 +2548,24 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 
             /* We are receiving focus */
 #ifdef DEBUG_FOCUS
-            printf("[%x] NS_GOTFOCUS (%d)\n", this, mWindowIdentifier);
+            printf("NS_GOTFOCUS (%d)\n", mWindowIdentifier);
 #endif
             result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
             if (gJustGotActivate) {
               gJustGotActivate = PR_FALSE;
               gJustGotDeactivate = PR_FALSE;
+#ifdef DEBUG_FOCUS
+              printf("NS_GOTFOCUS (%d)\n", clientWnd->mWindowIdentifier);
+#endif
               result = clientWnd->DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
 #ifdef DEBUG_FOCUS
-              printf("[%x] NS_ACTIVATE (%d)\n", this, mWindowIdentifier);
+              printf("NS_ACTIVATE (%d)\n", mWindowIdentifier);
 #endif
               result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
             }
             if ( WinIsChild( mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
 #ifdef DEBUG_FOCUS
-              printf("[%x] NS_PLUGIN_ACTIVATE (%d)\n", this, mWindowIdentifier);
+              printf("NS_PLUGIN_ACTIVATE (%d)\n", mWindowIdentifier);
 #endif
               result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
             }
@@ -2580,12 +2580,12 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
             if (gJustGotDeactivate) {
                gJustGotDeactivate = PR_FALSE;
 #ifdef DEBUG_FOCUS
-               printf("[%x] NS_DEACTIVATE (%d)\n", this, mWindowIdentifier);
+               printf("NS_DEACTIVATE (%d)\n", mWindowIdentifier);
 #endif
                result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
             }
 #ifdef DEBUG_FOCUS
-            printf("[%x] NS_LOSTFOCUS (%d)\n", this, mWindowIdentifier);
+            printf("NS_LOSTFOCUS (%d)\n", mWindowIdentifier);
 #endif
             result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
           }
