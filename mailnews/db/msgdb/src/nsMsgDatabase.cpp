@@ -2623,6 +2623,17 @@ nsresult nsMsgDatabase::RowCellColumnTonsCString(nsIMdbRow *hdrRow, mdb_token co
 	return err;
 }
 
+nsIMimeConverter *nsMsgDatabase::GetMimeConverter()
+{
+	if (!m_mimeConverter)
+	{
+		// apply mime decode
+		nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
+                                          NS_GET_IID(nsIMimeConverter), getter_AddRefs(m_mimeConverter));
+	}
+  return m_mimeConverter;
+}
+
 nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_token columnToken, PRUnichar* *resultStr)
 {
 	nsresult err = NS_OK;
@@ -2630,13 +2641,8 @@ nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_to
 	err = RowCellColumnTonsString(row, columnToken, nakedString);
 	if (NS_SUCCEEDED(err) && nakedString.Length() > 0)
 	{
-		if (!m_mimeConverter)
-		{
-			// apply mime decode
-			err = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
-                                            NS_GET_IID(nsIMimeConverter), getter_AddRefs(m_mimeConverter));
-		}
-		if (NS_SUCCEEDED(err) && m_mimeConverter) 
+    GetMimeConverter();
+		if (m_mimeConverter) 
 		{
 			nsAutoString charset;
 			nsAutoString decodedStr;
@@ -2671,6 +2677,49 @@ nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_to
 		}
 	}
 	return err;
+}
+
+nsresult nsMsgDatabase::RowCellColumnToAddressCollationKey(nsIMdbRow *row, mdb_token colToken, PRUint8 **result, PRUint32 *len)
+{
+	nsCAutoString cSender;
+	nsXPIDLCString name;
+
+	nsresult ret = RowCellColumnTonsCString(row, colToken, cSender);
+	if (NS_SUCCEEDED(ret))
+	{
+		nsIMsgHeaderParser *headerParser = GetHeaderParser();
+		if (headerParser)
+		{
+			// apply mime decode
+			nsIMimeConverter *converter = GetMimeConverter();
+
+			if (NS_SUCCEEDED(ret) && nsnull != converter) 
+			{
+				char *resultStr = nsnull;
+				char *charset = nsnull;
+				m_dbFolderInfo->GetCharPtrCharacterSet(&charset);
+				char charsetName[128];
+				PL_strncpy(charsetName, charset, sizeof(charsetName));
+
+				ret = converter->DecodeMimePartIIStr(cSender.GetBuffer(), charsetName, &resultStr);
+				if (NS_SUCCEEDED(ret))
+				{
+					ret = headerParser->ExtractHeaderAddressName (charsetName, resultStr, getter_Copies(name));
+				}
+				PR_FREEIF(resultStr);
+				PR_FREEIF(charset);
+			}
+
+		}
+	}
+	if (NS_SUCCEEDED(ret))
+	{
+		nsAutoString nameStr;
+    nameStr.AssignWithConversion(name);
+		ret = CreateCollationKey(nameStr.GetUnicode(), result, len);
+	}
+
+	return ret;
 }
 
 nsresult nsMsgDatabase::GetCollationKeyGenerator()

@@ -614,51 +614,7 @@ NS_IMETHODIMP nsMsgHdr::GetMime2DecodedRecipients(PRUnichar* *resultRecipients)
 
 NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(PRUint8 **resultAuthor, PRUint32 *len)
 {
-	nsCAutoString cSender;
-	char *name = nsnull;
-
-	nsresult ret = m_mdb->RowCellColumnTonsCString(GetMDBRow(), m_mdb->m_senderColumnToken, cSender);
-	if (NS_SUCCEEDED(ret))
-	{
-		nsIMsgHeaderParser *headerParser = m_mdb->GetHeaderParser();
-		if (headerParser)
-		{
-			// apply mime decode
-      // XXX TODO cache the converter
-			nsIMimeConverter *converter;
-			ret = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
-												NS_GET_IID(nsIMimeConverter), (void **)&converter);
-
-			if (NS_SUCCEEDED(ret) && nsnull != converter) 
-			{
-				char *resultStr = nsnull;
-				char *charset = nsnull;
-				m_mdb->m_dbFolderInfo->GetCharPtrCharacterSet(&charset);
-				char charsetName[128];
-				PL_strncpy(charsetName, charset, sizeof(charsetName));
-
-				ret = converter->DecodeMimePartIIStr(cSender.GetBuffer(), charsetName, &resultStr);
-				if (NS_SUCCEEDED(ret))
-				{
-					ret = headerParser->ExtractHeaderAddressName (charsetName, resultStr, &name);
-				}
-				NS_RELEASE(converter);
-				PR_FREEIF(resultStr);
-				PR_FREEIF(charset);
-			}
-
-		}
-	}
-	if (NS_SUCCEEDED(ret))
-	{
-		nsAutoString nameStr;
-    nameStr.AssignWithConversion(name);
-		ret = m_mdb->CreateCollationKey(nameStr.GetUnicode(), resultAuthor, len);
-	}
-
-	if (name) PL_strfree(name);
-
-	return ret;
+  return m_mdb->RowCellColumnToAddressCollationKey(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor, len);
 }
 
 NS_IMETHODIMP nsMsgHdr::GetSubjectCollationKey(PRUint8 **resultSubject, PRUint32 *len)
