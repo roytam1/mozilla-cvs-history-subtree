@@ -25,16 +25,15 @@ srcdir		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-# PENDING(edburns): make it so it's possible to just build
-# webclient and javadom
-
 DIRS=   util		\
 	external	\
 	dom		\
-	plugins		\
-	xpcom		\
-	webclient	\
-	$(NULL)
+	webclient
+
+ifeq ($(BUILD_WEBCLIENT_ONLY),)
+DIRS += xpcom \
+        plugins
+endif
 
 include $(topsrcdir)/config/rules.mk
 
