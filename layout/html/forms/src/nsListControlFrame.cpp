@@ -2009,7 +2009,6 @@ nsListControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
   if (aOn) {
     PRInt32 selectedIndex;
     GetSelectedIndex(&selectedIndex);
-    ScrollToIndex(selectedIndex);
     mFocused = this;
   } else {
     mFocused = nsnull;
