@@ -110,6 +110,14 @@ nsPresContext::nsPresContext()
   mDefaultColor = NS_RGB(0x00, 0x00, 0x00);
   mDefaultBackgroundColor = NS_RGB(0xFF, 0xFF, 0xFF);
 #endif
+  
+  mUseDocumentColors = PR_TRUE;
+  mUseDocumentFonts = PR_TRUE;
+
+  mLinkColor = NS_RGB(0x33, 0x33, 0xFF);
+  mVisitedLinkColor = NS_RGB(0x66, 0x00, 0xCC);
+  mUnderlineLinks = PR_TRUE;
+
   mDefaultBackgroundImageAttachment = NS_STYLE_BG_ATTACHMENT_SCROLL;
   mDefaultBackgroundImageRepeat = NS_STYLE_BG_REPEAT_XY;
   mDefaultBackgroundImageOffsetX = mDefaultBackgroundImageOffsetY = 0;
@@ -144,6 +152,9 @@ nsPresContext::~nsPresContext()
   if (mPrefs) {
     mPrefs->UnregisterCallback("font.", PrefChangedCallback, (void*)this);
     mPrefs->UnregisterCallback("browser.display.", PrefChangedCallback, (void*)this);
+    mPrefs->UnregisterCallback("browser.underline_anchors", PrefChangedCallback, (void*)this);
+    mPrefs->UnregisterCallback("browser.link_color", PrefChangedCallback, (void*)this);
+    mPrefs->UnregisterCallback("browser.visited_color", PrefChangedCallback, (void*)this);
   }
 }
 
@@ -211,11 +222,11 @@ nsPresContext::GetUserPreferences()
 {
   PRInt32 prefInt;
 
-  if (NS_OK == mPrefs->GetIntPref("browser.display.base_font_scaler", &prefInt)) {
+  if (NS_SUCCEEDED(mPrefs->GetIntPref("browser.display.base_font_scaler", &prefInt))) {
     mFontScaler = prefInt;
   }
 
-  if (NS_OK == mPrefs->GetIntPref("nglayout.compatibility.mode", &prefInt)) {
+  if (NS_SUCCEEDED(mPrefs->GetIntPref("nglayout.compatibility.mode", &prefInt))) {
     // XXX this should really be a state on the webshell instead of using prefs
     switch (prefInt) {
       case 1: 
@@ -236,32 +247,76 @@ nsPresContext::GetUserPreferences()
     mCompatibilityLocked = PR_FALSE;  // auto
   }
 
-  if (NS_OK == mPrefs->GetIntPref("nglayout.widget.mode", &prefInt)) {
+  if (NS_SUCCEEDED(mPrefs->GetIntPref("nglayout.widget.mode", &prefInt))) {
     mWidgetRenderingMode = (enum nsWidgetRendering)prefInt;  // bad cast
   }
 
+  // * document colors
   PRBool usePrefColors = PR_TRUE;
-#ifdef _WIN32
+  PRUint32  colorPref;
   PRBool boolPref;
+#ifdef _WIN32
   // XXX Is Windows the only platform that uses this?
-  if (NS_OK == mPrefs->GetBoolPref("browser.display.wfe.use_windows_colors", &boolPref)) {
+  if (NS_SUCCEEDED(mPrefs->GetBoolPref("browser.display.wfe.use_windows_colors", &boolPref))) {
     usePrefColors = !boolPref;
   }
 #endif
   if (usePrefColors) {
-    PRUint32  colorPref;
-    if (NS_OK == mPrefs->GetColorPrefDWord("browser.display.foreground_color", &colorPref)) {
+    if (NS_SUCCEEDED(mPrefs->GetColorPrefDWord("browser.display.foreground_color", &colorPref))) {
       mDefaultColor = (nscolor)colorPref;
     }
-    if (NS_OK == mPrefs->GetColorPrefDWord("browser.display.background_color", &colorPref)) {
+    if (NS_SUCCEEDED(mPrefs->GetColorPrefDWord("browser.display.background_color", &colorPref))) {
       mDefaultBackgroundColor = (nscolor)colorPref;
     }
   }
-  if (NS_OK == mPrefs->GetIntPref("browser.display.direction", &prefInt)) {
-    mDefaultDirection = prefInt;
+  if (NS_SUCCEEDED(mPrefs->GetBoolPref("browser.display.use_document_colors", &boolPref))) {
+    mUseDocumentColors = boolPref;
+  }
+  // * link colors
+  if (NS_SUCCEEDED(mPrefs->GetBoolPref("browser.underline_anchors", &boolPref))) {
+    mUnderlineLinks = boolPref;
+  }
+  if (NS_SUCCEEDED(mPrefs->GetColorPrefDWord("browser.anchor_color", &colorPref))) {
+    mLinkColor = (nscolor)colorPref;
+  }
+  if (NS_SUCCEEDED(mPrefs->GetColorPrefDWord("browser.visited_color", &colorPref))) {
+    mVisitedLinkColor = (nscolor)colorPref;
   }
 
+  // * use fonts?
+  if (NS_SUCCEEDED(mPrefs->GetIntPref("browser.display.use_document_fonts", &prefInt))) {
+    mUseDocumentFonts = prefInt == 0 ? PR_FALSE : PR_TRUE;
+  }
+  // * direction
+  if (NS_SUCCEEDED(mPrefs->GetIntPref("browser.display.direction", &prefInt))) {
+    mDefaultDirection = prefInt;
+  }
+  
   GetFontPreferences();
+}
+
+NS_IMETHODIMP
+nsPresContext::GetCachedBoolPref(PRUint32 prefType, PRBool &aValue)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+
+  switch(prefType) {
+  case kPresContext_UseDocumentFonts :
+    aValue = mUseDocumentFonts;
+    rv = NS_OK;
+    break;
+  case kPresContext_UseDocumentColors:
+    aValue = mUseDocumentColors;
+    rv = NS_OK;
+    break;
+  case kPresContext_UnderlineLinks:
+    aValue = mUnderlineLinks;
+    rv = NS_OK;
+    break;
+  default :
+    rv = NS_ERROR_FAILURE;
+  }
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -308,6 +363,12 @@ nsPresContext::PreferenceChanged(const char* aPrefName)
 {
   // Initialize our state from the user preferences
   GetUserPreferences();
+
+  // update the presShell: tell it to set the preference style rules up
+  if (mShell) {
+    mShell->SetPreferenceStyleRules(PR_TRUE);
+  }
+
   if (mDeviceContext) {
     mDeviceContext->FlushFontCache();
     RemapStyleAndReflow();
@@ -327,6 +388,9 @@ nsPresContext::Init(nsIDeviceContext* aDeviceContext)
     // Register callbacks so we're notified when the preferences change
     mPrefs->RegisterCallback("font.", PrefChangedCallback, (void*)this);
     mPrefs->RegisterCallback("browser.display.", PrefChangedCallback, (void*)this);
+    mPrefs->RegisterCallback("browser.underline_anchors", PrefChangedCallback, (void*)this);
+    mPrefs->RegisterCallback("browser.link_color", PrefChangedCallback, (void*)this);
+    mPrefs->RegisterCallback("browser.visited_color", PrefChangedCallback, (void*)this);
 
     // Initialize our state from the user preferences
     GetUserPreferences();
@@ -751,6 +815,28 @@ nsPresContext::GetDefaultBackgroundImageAttachment(PRUint8* aAttachment)
 }
 
 NS_IMETHODIMP
+nsPresContext::GetDefaultLinkColor(nscolor* aColor)
+{
+  NS_PRECONDITION(nsnull != aColor, "null argument");
+  if (aColor) {
+    *aColor = mLinkColor;
+    return NS_OK;
+  }
+  return NS_ERROR_NULL_POINTER;
+}
+
+NS_IMETHODIMP 
+nsPresContext::GetDefaultVisitedLinkColor(nscolor* aColor)
+{
+  NS_PRECONDITION(nsnull != aColor, "null argument");
+  if (aColor) {
+    *aColor = mVisitedLinkColor;
+    return NS_OK;
+  }
+  return NS_ERROR_NULL_POINTER;
+}
+
+NS_IMETHODIMP
 nsPresContext::SetDefaultColor(nscolor aColor)
 {
   mDefaultColor = aColor;
@@ -790,6 +876,20 @@ NS_IMETHODIMP
 nsPresContext::SetDefaultBackgroundImageAttachment(PRUint8 aAttachment)
 {
   mDefaultBackgroundImageAttachment = aAttachment;
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsPresContext::SetDefaultLinkColor(nscolor aColor)
+{
+  mLinkColor = aColor;
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsPresContext::SetDefaultVisitedLinkColor(nscolor aColor)
+{
+  mVisitedLinkColor = aColor;
   return NS_OK;
 }
 

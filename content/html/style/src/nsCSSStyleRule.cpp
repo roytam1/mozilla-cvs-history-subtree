@@ -55,6 +55,10 @@
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 
+// MJA: bug 31816
+#include "nsIDocShellTreeItem.h"
+// - END MJA
+
 // #define DEBUG_REFS
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -1599,17 +1603,48 @@ MapDeclarationFontInto(nsICSSDeclaration* aDeclaration,
 
             font->mFont.name = familyList;
             nsAutoString  face;
-            if (NS_OK == dc->FirstExistingFont(font->mFont, face)) {
-              if (face.EqualsIgnoreCase("-moz-fixed")) {
-                font->mFlags |= NS_STYLE_FONT_USE_FIXED;
+
+            // MJA: bug 31816
+            // if we are not using document fonts, but this is a xul document,
+            // then we set the chromeOverride bit so we use the document fonts anyway
+            PRBool chromeOverride = PR_FALSE;
+            PRBool useDocumentFonts = PR_TRUE;
+            aPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts,useDocumentFonts);
+            if (!useDocumentFonts) {
+              nsresult result = NS_OK;
+              nsCOMPtr<nsISupports> container;
+              result = aPresContext->GetContainer(getter_AddRefs(container));
+              if (NS_SUCCEEDED(result) && container) {
+                nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+                if (NS_SUCCEEDED(result) && docShell){
+                  PRInt32 docShellType;
+                  result = docShell->GetItemType(&docShellType);
+                  if (NS_SUCCEEDED(result)){
+                    if (nsIDocShellTreeItem::typeChrome == docShellType){
+                      chromeOverride = PR_TRUE;
+                    }
+                  }      
+                }
               }
-							else {
-								font->mFlags &= ~NS_STYLE_FONT_USE_FIXED;
-							}
             }
-            else {
+
+            // find the correct font if we are usingDocumentFonts OR we are overriding for XUL
+            // MJA: bug 31816
+            PRBool fontFaceOK = PR_TRUE;
+            PRBool isMozFixed = font->mFont.name.EqualsIgnoreCase("-moz-fixed");
+            if ((chromeOverride || useDocumentFonts)) {
+              fontFaceOK = (NS_SUCCEEDED(dc->FirstExistingFont(font->mFont, face)));
+            }
+            if (!fontFaceOK || !(chromeOverride || useDocumentFonts)) {
+              // now set to defaults
               font->mFont.name = defaultFont.name;
-              font->mFixedFont.name = defaultFixedFont.name;
+              font->mFixedFont.name= defaultFixedFont.name;
+            }
+            // set to monospace if using moz-fixed
+            if (isMozFixed) {
+              font->mFlags |= NS_STYLE_FONT_USE_FIXED;
+            } else {
+              font->mFlags &= ~NS_STYLE_FONT_USE_FIXED;
             }
             font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
           }
