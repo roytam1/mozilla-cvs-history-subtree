@@ -658,15 +658,15 @@ output_jpeg_scanlines(il_container *ic, int num_scanlines)
     return input_exhausted;
 }
 
-#define JPEG_OUTPUT_CHUNK_SIZE     50000
+#define JPEG_OUTPUT_CHUNK_SIZE     150000
 
 /* Timeout durations, in milliseconds */
 
 /* Delay between displaying chunks of pixels for the first scan. */
-#define JPEG_TIMEOUT_INITIAL_DELAY   100
+#define JPEG_TIMEOUT_INITIAL_DELAY   32
 
 /* Delay between displaying chunks of pixels for subsequent scans */
-#define JPEG_TIMEOUT_DELAY           200
+#define JPEG_TIMEOUT_DELAY           250
 
 static void
 jpeg_timeout_callback(void *closure)
