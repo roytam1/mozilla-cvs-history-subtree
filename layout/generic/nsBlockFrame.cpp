@@ -1067,94 +1067,12 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
   // What are those cases, and do we get the wrong behavior?
 
   // Compute final width
-  nscoord maxElementWidth = 0;
 #ifdef NOISY_KIDXMOST
   printf("%p aState.mKidXMost=%d\n", this, aState.mKidXMost); 
 #endif
-  if (!HaveAutoWidth(aReflowState)) {
-    // Use style defined width
-    aMetrics.width = borderPadding.left + aReflowState.mComputedWidth +
-      borderPadding.right;
-  }
-  else {
-    nscoord computedWidth;
-
-    // XXX Misleading comment:
-    // There are two options here. We either shrink wrap around our
-    // contents or we fluff out to the maximum block width. Note:
-    // We always shrink wrap when given an unconstrained width.
-    if ((0 == (NS_BLOCK_SHRINK_WRAP & mState)) &&
-        !aState.GetFlag(BRS_UNCONSTRAINEDWIDTH) &&
-        !aState.GetFlag(BRS_SHRINKWRAPWIDTH)) {
-      // XXX Misleading comment:
-      // Set our width to the max width if we aren't already that
-      // wide. Note that the max-width has nothing to do with our
-      // contents (CSS2 section XXX)
-      // XXXldb In what cases do we reach this code?
-      computedWidth = borderPadding.left + aState.mContentArea.width +
-        borderPadding.right;
-    } else {
-      computedWidth = aState.mKidXMost;
-      if (NS_BLOCK_SPACE_MGR & mState) {
-        // Include the space manager's state to properly account for the
-        // extent of floated elements.
-        nscoord xmost;
-        if (aReflowState.mSpaceManager->XMost(xmost) &&
-            computedWidth < xmost)
-          computedWidth = xmost;
-      }
-      computedWidth += borderPadding.right;
-    }
-
-    // Apply min/max values
-    if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedMaxWidth) {
-      nscoord computedMaxWidth = aReflowState.mComputedMaxWidth +
-        borderPadding.left + borderPadding.right;
-      if (computedWidth > computedMaxWidth) {
-        computedWidth = computedMaxWidth;
-      }
-    }
-    if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedMinWidth) {
-      nscoord computedMinWidth = aReflowState.mComputedMinWidth +
-        borderPadding.left + borderPadding.right;
-      if (computedWidth < computedMinWidth) {
-        computedWidth = computedMinWidth;
-      }
-    }
-    aMetrics.width = computedWidth;
-
-    // If we're shrink wrapping, then now that we know our final width we
-    // need to do horizontal alignment of the inline lines and make sure
-    // blocks are correctly sized and positioned. Any lines that need
-    // final adjustment will have been marked as dirty
-    if (aState.GetFlag(BRS_SHRINKWRAPWIDTH) && aState.GetFlag(BRS_NEEDRESIZEREFLOW)) {
-      // If the parent reflow state is also shrink wrap width, then
-      // we don't need to do this, because it will reflow us after it
-      // calculates the final width
-      const nsHTMLReflowState *prs = aReflowState.parentReflowState;
-      if (!prs || NS_SHRINKWRAPWIDTH != prs->mComputedWidth) {
-        // XXX Is this only used on things that are already NS_BLOCK_SPACE_MGR
-        // and NS_BLOCK_MARGIN_ROOT?
-        nsHTMLReflowState reflowState(aReflowState);
-
-        reflowState.mComputedWidth = aMetrics.width - borderPadding.left -
-                                     borderPadding.right;
-        reflowState.reason = eReflowReason_Resize;
-        reflowState.mSpaceManager->ClearRegions();
-
-#ifdef DEBUG
-        nscoord oldDesiredWidth = aMetrics.width;
-#endif
-        nsBlockReflowState state(reflowState, aState.mPresContext, this,
-                                 aMetrics,
-                                 aReflowState.mFlags.mHasClearance || (NS_BLOCK_MARGIN_ROOT & mState),
-                                 (NS_BLOCK_MARGIN_ROOT & mState));
-        ReflowDirtyLines(state);
-        aState.mY = state.mY;
-        NS_ASSERTION(oldDesiredWidth == aMetrics.width, "bad desired width");
-      }
-    }
-  }
+  // Use style defined width
+  aMetrics.width = borderPadding.left + aReflowState.mComputedWidth +
+    borderPadding.right;
 
   // Return bottom margin information
   // rbs says he hit this assertion occasionally (see bug 86947), so
@@ -1516,23 +1434,9 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
 
 #ifdef DEBUG
   if (gNoisyReflow) {
-    if (aState.mReflowState.reason == eReflowReason_Incremental) {
-      IndentBy(stdout, gNoiseIndent);
-      ListTag(stdout);
-      printf(": incrementally reflowing dirty lines");
-
-      nsHTMLReflowCommand *command = aState.mReflowState.path->mReflowCommand;
-      if (command) {
-        nsReflowType type;
-        command->GetType(type);
-        printf(": type=%s(%d)", kReflowCommandType[type], type);
-      }
-    }
-    else {
-      IndentBy(stdout, gNoiseIndent);
-      ListTag(stdout);
-      printf(": reflowing dirty lines");
-    }
+    IndentBy(stdout, gNoiseIndent);
+    ListTag(stdout);
+    printf(": reflowing dirty lines");
     printf(" computedWidth=%d\n", aState.mReflowState.mComputedWidth);
     gNoiseIndent++;
   }
