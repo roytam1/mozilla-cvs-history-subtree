@@ -67,7 +67,10 @@ nsMapiRegistry::~nsMapiRegistry() {
 
 NS_IMETHODIMP
 nsMapiRegistry::GetIsDefaultMailClient(PRBool * retval) {
-    *retval = m_DefaultMailClient;
+    // we need to get the value from registry everytime
+    // because the registry settings can be changed from
+    // other mail applications.
+    *retval = IsDefaultMailClient();
     return NS_OK;
 }
 

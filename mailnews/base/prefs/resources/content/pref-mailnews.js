@@ -1,17 +1,3 @@
-function Init()
-{
-  parent.initPanel('chrome://messenger/content/pref-mailnews.xul');
-  var initFunc;
-  try {
-    initFunc = document.getElementById("mailnewsEnableMapi").getAttribute('initFunc');
-  }
-  catch (ex) {
-    initFunc = null;
-  }
-  if (initFunc)
-    eval(initFunc);
-}
-
 function Startup()
 {
   var startupFunc;
