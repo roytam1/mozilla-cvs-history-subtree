@@ -732,12 +732,6 @@ nsIFrame::Redraw(nsBoxLayoutState& aState,
   if (aState.PaintingDisabled())
     return NS_OK;
 
-  const nsHTMLReflowState* s = aState.GetReflowState();
-  if (s) {
-    if (s->reason != eReflowReason_Incremental)
-      return NS_OK;
-  }
-
   nsRect damageRect(0,0,0,0);
   if (aDamageRect)
     damageRect = *aDamageRect;
