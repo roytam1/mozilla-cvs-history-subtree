@@ -1211,7 +1211,7 @@ function delayedStartup()
                            .getService(Components.interfaces.nsIPrefBranch);
   BrowserOffline.init();
   
-  if (document.documentElement.getAttribute("chromehidden").indexOf("toolbar") != -1) {
+  if (gURLBar && document.documentElement.getAttribute("chromehidden").indexOf("toolbar") != -1) {
     gURLBar.setAttribute("readonly", "true"); 
     gURLBar.setAttribute("enablehistory", "false");
   }
@@ -1546,6 +1546,9 @@ URLBarAutoFillPrefListener.prototype =
   
   toggleAutoFillInURLBar: function ()
   {
+    if (!gURLBar)
+      return;
+
     var prefValue = false;
     try {
       prefValue = gPrefService.getBoolPref(this.domain);
@@ -2041,6 +2044,22 @@ function BrowserLoadURL(aTriggeringEvent, aPostData)
   }
 }
 
+function SearchLoadURL(aURL, aTriggeringEvent)
+{
+  if (gBrowser.localName == "tabbrowser" &&
+      aTriggeringEvent && 'altKey' in aTriggeringEvent &&
+      aTriggeringEvent.altKey) {
+    _content.focus();
+    var t = gBrowser.addTab(aURL, null); // open link in new tab
+    gBrowser.selectedTab = t;
+    if (gURLBar)
+      gURLBar.value = aURL;
+  }
+  else  
+    loadURI(aURL, null, null);
+  _content.focus();
+}
+
 function getShortcutOrURI(aURL, aPostDataRef)
 {
   // rjc: added support for URL shortcuts (3/30/1999)
@@ -2415,6 +2434,9 @@ function SetPageProxyState(aState, aURI)
 
 function PageProxySetIcon (aURL)
 {
+  if (!gProxyFavIcon)
+    return;
+
   if (gProxyFavIcon.getAttribute("src") != aURL)
     gProxyFavIcon.setAttribute("src", aURL);
   else if (gProxyDeck.selectedIndex != 1)
@@ -3496,28 +3518,30 @@ nsBrowserStatusHandler.prototype =
 
       //XXXBlake don't we have to reinit this.urlBar, etc.
       //         when the toolbar changes?
-      var userTypedValue = browser.userTypedValue;
-      if (gURLBar && !userTypedValue) {
-        // If the url has "wyciwyg://" as the protocol, strip it off.
-        // Nobody wants to see it on the urlbar for dynamically generated
-        // pages. 
-        if (!gURIFixup)
-          gURIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
-                                .getService(Components.interfaces.nsIURIFixup);
-        if (location && gURIFixup)
-          try {
-            var locationURI = gURIFixup.createExposableURI(aLocation);
-            location = locationURI.spec;
-          } catch (exception) {}
+      if (gURLBar) {
+        var userTypedValue = browser.userTypedValue;
+        if (!userTypedValue) {
+          // If the url has "wyciwyg://" as the protocol, strip it off.
+          // Nobody wants to see it on the urlbar for dynamically generated
+          // pages. 
+          if (!gURIFixup)
+            gURIFixup = Components.classes["@mozilla.org/docshell/urifixup;1"]
+                                  .getService(Components.interfaces.nsIURIFixup);
+          if (location && gURIFixup)
+            try {
+              var locationURI = gURIFixup.createExposableURI(aLocation);
+              location = locationURI.spec;
+            } catch (exception) {}
         
-        setTimeout(function(loc, aloc) { gURLBar.value = loc; SetPageProxyState("valid", aloc);}, 0, location, aLocation);
+          setTimeout(function(loc, aloc) { gURLBar.value = loc; SetPageProxyState("valid", aloc);}, 0, location, aLocation);
         
-        // Setting the urlBar value in some cases causes userTypedValue to
-        // become set because of oninput, so reset it to its old value.
-        browser.userTypedValue = userTypedValue;
-      } else {
-        gURLBar.value = userTypedValue;
-        SetPageProxyState("invalid", null);
+          // Setting the urlBar value in some cases causes userTypedValue to
+          // become set because of oninput, so reset it to its old value.
+          browser.userTypedValue = userTypedValue;
+        } else {
+          gURLBar.value = userTypedValue;
+          SetPageProxyState("invalid", null);
+        }
       }
     }
     UpdateBackForwardButtons();
@@ -3551,7 +3575,8 @@ nsBrowserStatusHandler.prototype =
     switch (aState) {
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_HIGH:
         this.securityButton.setAttribute("level", "high");
-        this.urlBar.setAttribute("level", "high");
+        if (this.urlBar)
+          this.urlBar.setAttribute("level", "high");
         try {
           this.securityButton.setAttribute("label",
             gBrowser.contentWindow.location.host);
@@ -3559,7 +3584,8 @@ nsBrowserStatusHandler.prototype =
         break;
       case wpl.STATE_IS_SECURE | wpl.STATE_SECURE_LOW:
         this.securityButton.setAttribute("level", "low");
-        this.urlBar.setAttribute("level", "low");
+        if (this.urlBar)
+          this.urlBar.setAttribute("level", "low");
         try {
           this.securityButton.setAttribute("label", 
             gBrowser.contentWindow.location.host);
@@ -3567,23 +3593,27 @@ nsBrowserStatusHandler.prototype =
         break;
       case wpl.STATE_IS_BROKEN:
         this.securityButton.setAttribute("level", "broken");
-        this.urlBar.setAttribute("level", "broken");
+        if (this.urlBar)
+          this.urlBar.setAttribute("level", "broken");
         break;
       case wpl.STATE_IS_INSECURE:
       default:
         this.securityButton.removeAttribute("level");
-        this.urlBar.removeAttribute("level");
+        if (this.urlBar)
+          this.urlBar.removeAttribute("level");
         break;
     }
 
     var securityUI = gBrowser.securityUI;
     if (securityUI) {
       this.securityButton.setAttribute("tooltiptext", securityUI.tooltipText);
-      this.urlBar.setAttribute("infotext", securityUI.tooltipText);
+      if (this.urlBar)
+        this.urlBar.setAttribute("infotext", securityUI.tooltipText);
     }
     else {
       this.securityButton.setAttribute("tooltiptext", securityUI.tooltipText);
-      this.urlBar.removeAttribute("infotext");
+      if (this.urlBar)
+        this.urlBar.removeAttribute("infotext");
     }
   },
 
