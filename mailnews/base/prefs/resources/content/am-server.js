@@ -41,7 +41,7 @@ function onInit()
 
 function onPreInit(account, accountValues)
 {
-    var type = parent.getAccountValue(account, accountValues, "server", "type");
+    var type = parent.getAccountValue(account, accountValues, "server", "type", null, false);
     
     hideShowControls(type);
 }

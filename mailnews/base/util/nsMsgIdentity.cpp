@@ -19,8 +19,12 @@
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
+ * Original Author:
+ *   Alec Flett <alecf@netscape.com>
+ *
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -454,17 +458,6 @@ NS_IMPL_IDPREF_BOOL(OverrideGlobalPref, "overrideGlobal_Pref");
 
 NS_IMPL_IDPREF_BOOL(Valid, "valid");
 
-NS_IMPL_IDPREF_BOOL(IfPossibleEncryptMessage, 
-                    "encrypt_mail_if_possible");
-NS_IMPL_IDPREF_BOOL(AlwaysEncryptMessage, 
-                    "encrypt_mail_always");
-NS_IMPL_IDPREF_WSTR(EncryptionCertName, 
-                   "encryption_cert_name");
-NS_IMPL_IDPREF_BOOL(SignMessage, 
-                    "sign_mail");
-NS_IMPL_IDPREF_WSTR(SigningCertName, 
-                   "signing_cert_name");
-
 nsresult 
 nsMsgIdentity::getFolderPref(const char *prefname, char **retval, PRBool mustHaveDefault)
 {
@@ -529,6 +522,46 @@ nsMsgIdentity::setFolderPref(const char *prefname, const char *value)
         }
     }
     return rv;
+}
+
+NS_IMETHODIMP nsMsgIdentity::SetUnicharAttribute(const char *aName, const PRUnichar *val)
+{
+  return setUnicharPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::GetUnicharAttribute(const char *aName, PRUnichar **val)
+{
+  return getUnicharPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::SetCharAttribute(const char *aName, const char *val)
+{
+  return setCharPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::GetCharAttribute(const char *aName, char **val)
+{
+  return getCharPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::SetBoolAttribute(const char *aName, PRBool val)
+{
+  return setBoolPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::GetBoolAttribute(const char *aName, PRBool *val)
+{
+  return getBoolPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::SetIntAttribute(const char *aName, PRInt32 val)
+{
+  return setIntPref(aName, val);
+}
+
+NS_IMETHODIMP nsMsgIdentity::GetIntAttribute(const char *aName, PRInt32 *val)
+{
+  return getIntPref(aName, val);
 }
 
 #define COPY_IDENTITY_FILE_VALUE(SRC_ID,MACRO_GETTER,MACRO_SETTER) 	\
