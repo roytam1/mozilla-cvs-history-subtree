@@ -297,7 +297,7 @@ if (!JSVAL_IS_NUMBER(v)) {                                               \
 
 #if XP_MAC
 
-// on MRJ jlong is typedef'd to wide, which is a struct.
+/* on MRJ jlong is typedef'd to wide, which is a struct. */
 #include <Math64.h>
 
 static jsint jlong_to_jsint(jlong lvalue)

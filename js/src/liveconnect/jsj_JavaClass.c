@@ -79,8 +79,8 @@ JavaClass_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         return JS_TRUE;
 
     default:
-        return JS_TRUE;
     }
+    return JS_TRUE;
 }
 
 static JSBool
@@ -160,6 +160,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
             return jsj_GetJavaFieldValue(cx, jEnv, member_descriptor->field, java_class, vp);
         } else {
             PR_ASSERT(0);
+            return JS_FALSE;
         }
     } else {
         JSFunction *function;

@@ -973,7 +973,7 @@ jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
     JavaMemberDescriptor *member_descriptor;
     JavaObjectWrapper *java_wrapper;
     JavaClassDescriptor *class_descriptor;
-    jsint id;
+    jsid id;
     jsval idval;
     JSJavaThreadState *jsj_env;
     JNIEnv *jEnv;

@@ -264,6 +264,7 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 
     LOAD_FIELD_OBJ(java.lang.Void,          TYPE,               "Ljava/lang/Class;",            jlVoid);
   
+    return JS_TRUE;
 }
 
 #if XP_MAC
@@ -701,6 +702,7 @@ JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp)
         return JS_FALSE;
 
     jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, vp);
+    return JS_TRUE;
 }
 
 /*===========================================================================*/

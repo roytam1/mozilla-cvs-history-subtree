@@ -17,7 +17,7 @@
 
 
 
-DEPTH		= ../..
+DEPTH		= ../../..
 
 include $(DEPTH)/config/config.mk
 
@@ -30,19 +30,30 @@ LIBRARY_NAME	= jsj
 
 REQUIRES	= java js applet nspr img util layer
 
-CSRCS		= \
-		  jsjava.c \
-		  jsStubs.c \
-		  $(NULL)
-
+ifdef JAVA_OR_OJI
+CSRCS = jsj.c		  \
+	jsj_JSObject.c	  \
+	jsj_JavaArray.c	  \
+	jsj_JavaClass.c	  \
+	jsj_JavaObject.c  \
+	jsj_JavaPackage.c \
+	jsj_array.c	  \
+	jsj_class.c	  \
+	jsj_convert.c	  \
+	jsj_field.c	  \
+	jsj_hash.c	  \
+	jsj_method.c	  \
+	jsj_utils.c
+else
+CSRCS = \
+	jsjava.c \
+	jsStubs.c \
+	$(NULL)
+endif
 
 JRI_GEN		= netscape.javascript.JSObject netscape.javascript.JSException
 
 ifdef JAVA_OR_OJI
-CSRCS	 += jsjsa.c      \
-	    stubs.c      \
-	    jsj_nodl.c    \
-	    $(NULL)
 EXPORTS		= jsjava.h \
 		  $(JRI_GEN_DIR)/netscape_javascript_JSObject.h \
 		  $(JRI_GEN_DIR)/netscape_javascript_JSException.h \
