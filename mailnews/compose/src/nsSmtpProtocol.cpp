@@ -1232,8 +1232,11 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
                                                nsIMsgHeaderParser::GetIID(),
                                                getter_AddRefs(parser));
 
-			m_runningURL->GetAllRecipients(&addresses);
+			// mscott -- temp hack until i've gotten mime to build...
+			//m_runningURL->GetAllRecipients(&addresses);
+			m_runningURL->GetAllRecipients(&m_addresses);
 
+#if 0
 			if (NS_SUCCEEDED(rv) && parser)
 			{
 				parser->RemoveDuplicateAddresses(nsnull, addresses, nsnull, PR_FALSE, &addrs1);
@@ -1263,6 +1266,7 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 				m_addresses = m_addressCopy;
 				PR_FREEIF(addresses); // free our original addresses string...
 			} // if parser
+#endif
 		} // if post message
 		
 		rv = nsMsgProtocol::LoadUrl(aURL);
