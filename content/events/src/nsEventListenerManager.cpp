@@ -1034,36 +1034,23 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
     if (content) {
       nsAutoString handlerBody;
       result = content->GetAttribute(kNameSpaceID_None, aName, handlerBody);
+
       if (NS_SUCCEEDED(result)) {
         if (handlerOwner) {
           // Always let the handler owner compile the event
           // handler, as it may want to use a special
           // context or scope object.
-
-          // XXX: Why doesn't this end up calling nsNodeSH::SetProperty()???
-          result = handlerOwner->CompileEventHandler(aContext, jsobj, aName, handlerBody, &handler);
+          result = handlerOwner->CompileEventHandler(aContext, jsobj, aName,
+                                                     handlerBody, &handler);
         }
         else {
-          // Why doesn't this end up calling nsNodeSH::SetProperty()???
           result = aContext->CompileEventHandler(jsobj, aName, handlerBody,
                                                  (handlerOwner != nsnull),
                                                  &handler);
         }
+
         if (NS_SUCCEEDED(result)) {
           aListenerStruct->mHandlerIsString &= ~aSubType;
-
-          // Make sure the wrapper (holder) doesn't get released.
-
-          // XXX: This shouldn't be needed if the above code would end
-          // up calling nsNodeSH::SetProperty()!!!
-
-          nsCOMPtr<nsIDocument> doc;
-
-          content->GetDocument(*getter_AddRefs(doc));
-
-          if (doc) {
-            doc->AddReference(content, holder);
-          }
         }
       }
     }
