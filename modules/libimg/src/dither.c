@@ -372,4 +372,3 @@ il_quantize_fs_dither(il_container *ic, const uint8 *mask,
 
 /* END code adapted from jpeg library */
 
-
