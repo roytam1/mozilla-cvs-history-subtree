@@ -7,7 +7,6 @@ en-US.jar:
 +  locale/en-US/global/charsetOverlay.dtd               (charsetOverlay.dtd)
 +  locale/en-US/global/commonDialog.dtd                 (commonDialog.dtd)
 +  locale/en-US/global/commonDialogs.properties         (commonDialogs.properties)
-   locale/en-US/global/contentAreaCommands.properties   (contentAreaCommands.properties)
 *+ locale/en-US/global/customizeCharset.dtd             (customizeCharset.dtd)
 +  locale/en-US/global/customizeToolbar.dtd             (customizeToolbar.dtd )
 +  locale/en-US/global/customizeToolbar.properties      (customizeToolbar.properties)
