@@ -38,19 +38,14 @@ REQUIRES	= string \
 endif
 
 CPPSRCS = AdditiveExpr.cpp \
-        AttributeExpr.cpp \
         AttributeValueTemplate.cpp \
-        BasicNodeExpr.cpp \
         BooleanExpr.cpp \
         BooleanFunctionCall.cpp \
         BooleanResult.cpp \
-        ElementExpr.cpp \
         ErrorFunctionCall.cpp \
-        Expr.cpp \
         ExprLexer.cpp \
         ExprLexerChars.cpp \
         ExprParser.cpp \
-        ExtensionFunctionCall.cpp \
         FilterExpr.cpp \
         FunctionCall.cpp \
         LocationStep.cpp \
@@ -67,7 +62,10 @@ CPPSRCS = AdditiveExpr.cpp \
         StringExpr.cpp \
         StringFunctionCall.cpp \
         StringResult.cpp \
-        TextExpr.cpp \
+        txNameTest.cpp \
+        txNodeTypeTest.cpp \
+        txForwardContext.cpp \
+        txNodeSetContext.cpp \
         UnionExpr.cpp \
         UnaryExpr.cpp \
         VariableRefExpr.cpp \
@@ -82,6 +80,7 @@ include $(topsrcdir)/config/rules.mk
 INCLUDES += -I$(srcdir) -I$(srcdir)/../base \
         -I$(srcdir)/../xml -I$(srcdir)/../xml/dom \
         -I$(srcdir)/../xslt -I$(srcdir)/../xslt/util \
-        -I$(srcdir)/../xslt/functions
+        -I$(srcdir)/../xslt/functions \
+        -I$(srcdir)
 
 libs:: $(OBJS)

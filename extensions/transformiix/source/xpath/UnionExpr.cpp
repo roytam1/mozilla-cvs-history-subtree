@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -41,12 +41,11 @@ UnionExpr::UnionExpr() {
  * Destructor, will delete all Path Expressions
 **/
 UnionExpr::~UnionExpr() {
-    ListIterator* iter = expressions.iterator();
-    while (iter->hasNext()) {
-         iter->next();
-         delete  (Expr*)iter->remove();
+    ListIterator iter(&expressions);
+    while (iter.hasNext()) {
+         iter.next();
+         delete  (Expr*)iter.remove();
     }
-    delete iter;
 } //-- ~UnionExpr
 
 /**
@@ -69,21 +68,21 @@ void UnionExpr::addExpr(Expr* expr) {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* UnionExpr::evaluate(Node* context, ContextState* cs)
+ExprResult* UnionExpr::evaluate(txIEvalContext* aContext)
 {
     NodeSet* nodes = new NodeSet();
-
-    if (!context || expressions.getLength() == 0 || !nodes)
-        return nodes;
+    if (!aContext || (expressions.getLength() == 0) || !nodes)
+            return nodes;
 
     txListIterator iter(&expressions);
 
     while (iter.hasNext()) {
         Expr* expr = (Expr*)iter.next();
-        ExprResult* exprResult = expr->evaluate(context, cs);
+        ExprResult* exprResult = expr->evaluate(aContext);
         if (!exprResult ||
             exprResult->getResultType() != ExprResult::NODESET) {
             delete exprResult;
+            delete nodes;
             return new StringResult("error");
         }
         nodes->add((NodeSet*)exprResult);
@@ -94,45 +93,6 @@ ExprResult* UnionExpr::evaluate(Node* context, ContextState* cs)
 } //-- evaluate
 
 /**
- * Returns the default priority of this Pattern based on the given Node,
- * context Node, and ContextState.
-**/
-double UnionExpr::getDefaultPriority(Node* node, Node* context,
-                                     ContextState* cs)
-{
-    //-- find highest priority
-    double priority = Double::NEGATIVE_INFINITY;
-    ListIterator iter(&expressions);
-    while (iter.hasNext()) {
-        Expr* expr = (Expr*)iter.next();
-        double tmpPriority = expr->getDefaultPriority(node, context, cs);
-        if (tmpPriority > priority && expr->matches(node, context, cs))
-            priority = tmpPriority;
-    }
-    return priority;
-} //-- getDefaultPriority
-
-/**
- * Determines whether this UnionExpr matches the given node within
- * the given context
-**/
-MBool UnionExpr::matches(Node* node, Node* context, ContextState* cs) {
-
-    ListIterator* iter = expressions.iterator();
-
-    while (iter->hasNext()) {
-        Expr* expr = (Expr*)iter->next();
-        if (expr->matches(node, context, cs)) {
-             delete iter;
-             return MB_TRUE;
-        }
-    }
-    delete iter;
-    return MB_FALSE;
-} //-- matches
-
-
-/**
  * Returns the String representation of this Expr.
  * @param dest the String to use when creating the String
  * representation. The String representation will be appended to
@@ -140,17 +100,16 @@ MBool UnionExpr::matches(Node* node, Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void UnionExpr::toString(String& dest) {
-    ListIterator* iter = expressions.iterator();
+void UnionExpr::toString(String& aDest)
+{
+    txListIterator iter(&expressions);
 
     short count = 0;
-    while (iter->hasNext()) {
+    while (iter.hasNext()) {
         //-- set operator
         if (count > 0)
-            dest.append(" | ");
-        ((Expr*)iter->next())->toString(dest);
+            aDest.append(" | ");
+        ((Expr*)iter.next())->toString(aDest);
         ++count;
     }
-    delete iter;
-} //-- toString
-
+}

@@ -36,6 +36,7 @@
 #include "ExprLexer.h"
 #include "Expr.h"
 #include "List.h"
+class txIParseContext;
 
 class ExprParser {
 
@@ -51,24 +52,25 @@ public:
     **/
     ~ExprParser();
 
-    Expr* createExpr(const String& aExpression);
-    Pattern* createPattern(const String& aPattern);
+    Expr* createExpr(const String& aExpression, txIParseContext* aContext);
+    Pattern* createPattern(const String& aPattern, txIParseContext* aContext);
 
     /**
      * Creates an Attribute Value Template using the given value
     **/
-    AttributeValueTemplate* createAttributeValueTemplate(const String& attValue);
+    AttributeValueTemplate* createAttributeValueTemplate
+        (const String& attValue, txIParseContext* aContext);
 
 
 private:
-
+    txIParseContext* mContext;
 
     Expr*          createBinaryExpr   (Expr* left, Expr* right, Token* op);
     Expr*          createExpr         (ExprLexer& lexer);
     Expr*          createFilterExpr   (ExprLexer& lexer);
     FunctionCall*  createFunctionCall (ExprLexer& lexer);
     LocationStep*  createLocationStep (ExprLexer& lexer);
-    NodeExpr*      createNodeExpr     (ExprLexer& lexer);
+    txNodeTest*    createNodeTest     (ExprLexer& lexer);
     Expr*          createPathExpr     (ExprLexer& lexer);
     Expr*          createUnionExpr    (ExprLexer& lexer);
 
@@ -77,6 +79,13 @@ private:
     MBool          isNodeTypeToken     (Token* tok);
 
     static short   precedenceLevel     (short tokenType);
+
+    /**
+     * Resolve a QName, given the mContext parse context.
+     * Returns prefix and localName as well as namespace ID
+    **/
+    nsresult resolveQName(const String& aQName, String& aPrefix,
+                          String& aLocalName, PRInt32 aNamespace);
 
     /**
      * Using the given lexer, parses the tokens if they represent a predicate list

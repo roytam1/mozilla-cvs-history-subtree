@@ -25,14 +25,13 @@
 
 #include "Expr.h"
 
-UnaryExpr::UnaryExpr(Expr* expr)
+UnaryExpr::UnaryExpr(Expr* aExpr) : mExpr(aExpr)
 {
-    this->expr = expr;
 }
 
 UnaryExpr::~UnaryExpr()
 {
-    delete expr;
+    delete mExpr;
 }
 
 /*
@@ -42,9 +41,9 @@ UnaryExpr::~UnaryExpr()
  * for evaluation.
  * @return the result of the evaluation.
  */
-ExprResult* UnaryExpr::evaluate(Node* context, ContextState* cs)
+ExprResult* UnaryExpr::evaluate(txIEvalContext* aContext)
 {
-    ExprResult* exprRes = expr->evaluate(context, cs);
+    ExprResult* exprRes = mExpr->evaluate(aContext);
     double value = exprRes->numberValue();
     delete exprRes;
 #ifdef HPUX
@@ -67,10 +66,10 @@ ExprResult* UnaryExpr::evaluate(Node* context, ContextState* cs)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
  */
-void UnaryExpr::toString(String& str)
+void UnaryExpr::toString(String& aDest)
 {
-    if (!expr)
+    if (!mExpr)
         return;
-    str.append('-');
-    expr->toString(str);
+    aDest.append('-');
+    mExpr->toString(aDest);
 }

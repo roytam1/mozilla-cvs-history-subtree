@@ -24,6 +24,7 @@
  */
 
 #include "Expr.h"
+#include "txIXPathContext.h"
 
 /**
  * Creates a new RootExpr
@@ -40,10 +41,13 @@ RootExpr::RootExpr(MBool aSerialize) {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* RootExpr::evaluate(Node* context, ContextState* cs)
+ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
 {
-    if (!context)
-        return new StringResult("error");
+    Node* context;
+    if (!aContext && !(context=aContext->getContextNode())) {
+        NS_ASSERTION(0, "internal error");
+        return 0;
+    }
 
     if (context->getNodeType() != Node::DOCUMENT_NODE)
         return new NodeSet(context->getOwnerDocument());
@@ -54,7 +58,8 @@ ExprResult* RootExpr::evaluate(Node* context, ContextState* cs)
  * Returns the default priority of this Pattern based on the given Node,
  * context Node, and ContextState.
 **/
-double RootExpr::getDefaultPriority(Node* node, Node* context, ContextState* cs) {
+double RootExpr::getDefaultPriority()
+{
     return 0.5;
 } //-- getDefaultPriority
 
@@ -62,9 +67,9 @@ double RootExpr::getDefaultPriority(Node* node, Node* context, ContextState* cs)
  * Determines whether this NodeExpr matches the given node within
  * the given context
 **/
-MBool RootExpr::matches(Node* node, Node* context, ContextState* cs) {
+MBool RootExpr::matches(Node* node, txIMatchContext* aContext) {
     return node && (node->getNodeType() == Node::DOCUMENT_NODE);
-} //-- matches
+}
 
 /**
  * Returns the String representation of this Expr.
@@ -74,7 +79,8 @@ MBool RootExpr::matches(Node* node, Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void RootExpr::toString(String& dest) {
+void RootExpr::toString(String& aDest)
+{
     if (mSerialize)
-        dest.append('/');
+        aDest.append('/');
 } //-- toString

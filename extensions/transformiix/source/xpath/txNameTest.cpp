@@ -1,0 +1,146 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is TransforMiiX XSLT processor.
+ * 
+ * The Initial Developer of the Original Code is The MITRE Corporation.
+ * Portions created by MITRE are Copyright (C) 1999 The MITRE Corporation.
+ *
+ * Portions created by Keith Visco as a Non MITRE employee,
+ * (C) 1999 Keith Visco. All Rights Reserved.
+ * 
+ * Contributor(s): 
+ * Keith Visco, kvisco@ziplink.net
+ *   -- original author.
+ *
+ */
+
+#include "Expr.h"
+#include "txAtoms.h"
+#include "txIXPathContext.h"
+
+txNameTest::txNameTest(String& aPrefix, String& aLocalName, PRUint32 aNSID,
+                       Node::NodeType aNodeType)
+    :mPrefix(aPrefix), mNamespace(aNSID), mNodeType(aNodeType)
+{
+    mLocalName = TX_GET_ATOM(aLocalName);
+}
+
+txNameTest::~txNameTest()
+{
+    TX_IF_RELEASE_ATOM(mLocalName);
+}
+
+/*
+ * Determines whether this txNodeTest matches the given node
+ */
+MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
+{
+    if (!aNode || aNode->getNodeType() != mNodeType)
+        return MB_FALSE;
+
+    // Totally wild?
+    if (mLocalName == txXPathAtoms::_asterix &&
+        !(kNameSpaceID_None == mNamespace))
+        return MB_TRUE;
+
+    // Compare namespaces
+    if (aNode->getNamespaceID() != mNamespace)
+        return MB_FALSE;
+
+    // Name wild?
+    if (mLocalName == txXPathAtoms::_asterix)
+        return MB_TRUE;
+
+    // Compare local-names
+    txAtom* localName;
+    aNode->getLocalName(&localName);
+    MBool result = localName == mLocalName;
+    TX_IF_RELEASE_ATOM(localName);
+
+    return result;
+}
+
+/*
+ * Returns the default priority of this txNodeTest
+ */
+double txNameTest::getDefaultPriority()
+{
+    if (mLocalName == txXPathAtoms::_asterix) {
+        if (kNameSpaceID_None == mNamespace)
+            return -0.5;
+        return -0.25;
+    }
+    return 0;
+}
+
+/*
+ * Returns the NodeSet of nodes matching this name test with
+ * the XPathParent being the given Node.
+ */
+nsresult txNameTest::evalStep(Node* aNode, txIMatchContext* aContext,
+                              NodeSet* aResult)
+{
+    Node::NodeType type = (Node::NodeType)aNode->getNodeType();
+    switch (mNodeType) {
+        case Node::ELEMENT_NODE:
+            if (Node::ELEMENT_NODE == type) {
+                Node* child = aNode->getFirstChild();
+                while (child) {
+                    if (matches(child, aContext)) {
+                        aResult->add(child);
+                    }
+                    child = child->getNextSibling();
+                }
+            }
+            else if (Node::DOCUMENT_NODE == type) {
+                Element* docElem = ((Document*)aNode)->getDocumentElement();
+                if (matches(docElem, aContext)) {
+                    aResult->add(docElem);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return NS_OK;
+}
+
+/*
+ * Returns a NodeSet of nodes matching this step and having
+ * the context node of aContext as XPathParent
+ */
+ExprResult* txNameTest::evaluate(txIEvalContext* aContext)
+{
+    NodeSet* result = new NodeSet();
+    if (!result) {
+        // XXX error out of mem
+        return 0;
+    }
+    evalStep(aContext->getContextNode(), aContext, result);
+    return result;
+}
+          
+/*
+ * Returns the String representation of this txNodeTest.
+ * @param aDest the String to use when creating the string representation.
+ *              The string representation will be appended to the string.
+ */
+void txNameTest::toString(String& aDest)
+{
+    if (kNameSpaceID_None != mNamespace) {
+        aDest.append(mPrefix);
+        aDest.append(':');
+    }
+    String localName;
+    TX_GET_ATOM_STRING(mLocalName, localName);
+    aDest.append(localName);
+}

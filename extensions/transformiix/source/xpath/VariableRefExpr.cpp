@@ -1,4 +1,4 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -24,6 +24,8 @@
  */
 
 #include "Expr.h"
+#include "txAtom.h"
+#include "txIXPathContext.h"
 
   //-------------------/
  //- VariableRefExpr -/
@@ -32,9 +34,19 @@
 /**
  * Creates a VariableRefExpr with the given variable name
 **/
-VariableRefExpr::VariableRefExpr(const String& name) {
-    this->name = name;
-} //-- VariableRefExpr
+VariableRefExpr::VariableRefExpr(const String& aPrefix,
+                                 const String& aLocalName, PRInt32 aID)
+    : mPrefix(aPrefix), mNamespace(aID)
+{
+    mLocalName = TX_GET_ATOM(aLocalName);
+}
+
+/*
+ * Release the local name atom
+VariableRefExpr::~VariableRefExpr()
+{
+    TX_IF_RELEASE_ATOM(mLocalName);
+}
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -43,9 +55,15 @@ VariableRefExpr::VariableRefExpr(const String& name) {
  * for evaluation
  * @return the result of the evaluation
 **/
-ExprResult* VariableRefExpr::evaluate(Node* context, ContextState* cs) {
-
-    ExprResult* exprResult = cs->getVariable(name);
+ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
+{
+    ExprResult* exprResult = 0;
+    nsresult res = NS_OK;
+    res = aContext->getVariable(mNamespace, mLocalName, exprResult);
+    if (NS_FAILED(res)) {
+      // XXX report error, undefined variable
+      return 0;
+    }
     //-- make copy to prevent deletetion
     //-- I know, I should add a #copy method to ExprResult, I will
     ExprResult* copyOfResult = 0;
@@ -88,7 +106,14 @@ ExprResult* VariableRefExpr::evaluate(Node* context, ContextState* cs) {
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void VariableRefExpr::toString(String& str) {
-    str.append('$');
-    str.append(name);
+void VariableRefExpr::toString(String& aDest)
+{
+    aDest.append('$');
+    if (kNameSpaceID_None != mNamespace) {
+        aDest.append(mPrefix);
+        aDest.append(':');
+    }
+    String lname;
+    TX_GET_ATOM_STRING(mLocalName, lname);
+    aDest.append(lname);
 } //-- toString
