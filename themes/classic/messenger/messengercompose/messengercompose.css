@@ -261,7 +261,7 @@
 #attachmentBucket, #attachmentBucketText
   {
     margin-left           : 0px;
-    -moz-user-focus       : none;
+    -moz-user-focus       : normal !important;
   }
 
 
