@@ -1442,7 +1442,7 @@ nsImageFrame::GetBaseURI(nsIURI **aURI)
     nsCOMPtr<nsIDocument> doc;
     if (mContent) {
       rv = mContent->GetDocument(*getter_AddRefs(doc));
-      if (NS_SUCCEEDED(rv)) {
+      if (doc) {
         doc->GetBaseURL(*getter_AddRefs(baseURI));
       }
     }
@@ -1503,7 +1503,7 @@ nsImageFrame::CanLoadImage(nsIURI *aURI)
   nsCOMPtr<nsIDocument> document;
   if (mContent) {
     rv = mContent->GetDocument(*getter_AddRefs(document));
-    if (NS_FAILED(rv)) {
+    if (! document) {
       NS_ASSERTION(0, "expecting a document");
       return shouldLoad;
     }
