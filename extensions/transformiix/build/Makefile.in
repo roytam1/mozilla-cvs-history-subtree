@@ -64,6 +64,7 @@ LOBJS =../source/base/ArrayList.$(OBJ_SUFFIX) \
   ../source/base/Tokenizer.$(OBJ_SUFFIX) \
   ../source/base/txAtoms.$(OBJ_SUFFIX) \
   ../source/base/txExpandedNameMap.$(OBJ_SUFFIX) \
+  ../source/base/txNamespaceMap.$(OBJ_SUFFIX) \
   ../source/base/txURIUtils.$(OBJ_SUFFIX) \
   ../source/xml/dom/mozImpl/MozillaAttr.$(OBJ_SUFFIX) \
   ../source/xml/dom/mozImpl/MozillaDocument.$(OBJ_SUFFIX) \
@@ -120,6 +121,8 @@ LOBJS =../source/base/ArrayList.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaXSLTProcessor.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaXMLOutput.$(OBJ_SUFFIX) \
   ../source/xslt/txRtfHandler.$(OBJ_SUFFIX) \
+  ../source/xslt/txStylesheetCompiler.$(OBJ_SUFFIX) \
+  ../source/xslt/txStylesheetCompilerHandlers.$(OBJ_SUFFIX) \
   ../source/xslt/txTextHandler.$(OBJ_SUFFIX) \
   ../source/xslt/txUnknownHandler.$(OBJ_SUFFIX) \
   ../source/xslt/txXSLTNumber.$(OBJ_SUFFIX) \

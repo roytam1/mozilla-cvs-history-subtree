@@ -66,7 +66,7 @@ public:
      * @param obj a pointer to the object that is to be added to the
      * top of this Stack
     **/
-    void push(void* obj);
+    nsresult push(void* obj);
 
     /**
      * Removes and returns the specified Object from the top of this Stack.

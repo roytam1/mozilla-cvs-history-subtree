@@ -51,6 +51,11 @@ public:
     txList();
 
     /**
+     * Copy constructor
+     */
+    txList(const txList& aOther);
+
+    /**
      * txList destructor, object references will not be deleted.
     **/
     virtual ~txList();
@@ -198,6 +203,11 @@ public:
      * Resets the current location within the txList to the end of the txList
     **/
     void resetToEnd();
+
+    /**
+     * Sets value at current position
+     */
+    nsresult setValue(void* aValue);
 
 private:
 

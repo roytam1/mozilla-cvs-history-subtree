@@ -34,6 +34,7 @@
 #include "dom.h"
 #include "txAtom.h"
 #include "txError.h"
+#include "txNamespaceMap.h"
 
 class String;
 
@@ -64,6 +65,13 @@ public:
     }
     
     nsresult init(const String& aQName, Node* aResolver, MBool aUseDefault);
+    nsresult init(const String& aQName, txNamespaceMap& aResolver,
+                  MBool aUseDefault);
+
+    MBool isNull()
+    {
+        return mNamespaceID == kNameSpaceID_None && !mLocalName;
+    }
 
     txExpandedName& operator = (const txExpandedName& rhs)
     {

@@ -65,7 +65,7 @@ nsresult txExpandedNameMap::add(const txExpandedName& aKey, TxObject* aValue)
     for (i = 0; i < mItemCount; ++i) {
         if (mItems[i].mLocalName == aKey.mLocalName &&
             mItems[i].mNamespaceID == aKey.mNamespaceID) {
-            return NS_ERROR_FAILURE;
+            return NS_ERROR_XSLT_ALREADY_SET;
         }
     }
     

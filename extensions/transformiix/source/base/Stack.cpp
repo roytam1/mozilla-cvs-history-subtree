@@ -67,8 +67,9 @@ void* Stack::peek() {
  * @param obj a pointer to the object that is to be added to the
  * top of this Stack
 **/
-void Stack::push(void* obj) {
-    insert(0,obj);
+nsresult Stack::push(void* obj)
+{
+    return insert(0,obj);
 } //-- push
 
 /**

@@ -101,7 +101,13 @@ txXSLTProcessor::txInit()
         return MB_FALSE;
     if (!txXPathAtoms::init())
         return MB_FALSE;
-    return txXSLTAtoms::init();
+    if (!txXSLTAtoms::init())
+        return MB_FALSE;
+    
+    if (!txHandlerTable::init())
+        return MB_FALSE;
+
+    return MB_TRUE;
 }
 
 /* static */
@@ -118,6 +124,9 @@ txXSLTProcessor::txShutdown()
     txXMLAtoms::shutdown();
     txXPathAtoms::shutdown();
     txXSLTAtoms::shutdown();
+
+    txHandlerTable::shutdown();
+
     return MB_TRUE;
 }
 

@@ -175,7 +175,13 @@ double Double::toDouble(const String& aSrc)
     // "."==NaN, ".0"=="0."==0
     if (digitFound && idx == len) {
         NS_LossyConvertUCS2toASCII buf(aSrc);
-        double res = buf.get() ? atof(buf.get()) : Double::NaN;
+        double res = buf.get() ?
+#ifdef TX_EXE
+                     atof(buf.get())
+#else
+                     PR_strtod(buf.get(), 0)
+#endif
+                     : Double::NaN;
         return res;
     }
 

@@ -65,6 +65,38 @@ nsresult txExpandedName::init(const String& aQName,
     return NS_OK;
 }
 
+nsresult txExpandedName::init(const String& aQName,
+                              txNamespaceMap& aResolver,
+                              MBool aUseDefault)
+{
+    if (!XMLUtils::isValidQName(aQName))
+        return NS_ERROR_FAILURE;
+
+    PRInt32 idx = aQName.indexOf(':');
+    if (idx != kNotFound) {
+        String localName, prefixStr;
+        aQName.subString(0, (PRUint32)idx, prefixStr);
+        txAtom* prefix = TX_GET_ATOM(prefixStr);
+        PRInt32 namespaceID = aResolver.lookupNamespace(prefix);
+        if (namespaceID == kNameSpaceID_Unknown)
+            return NS_ERROR_FAILURE;
+        mNamespaceID = namespaceID;
+
+        aQName.subString((PRUint32)idx + 1, localName);
+        TX_IF_RELEASE_ATOM(mLocalName);
+        mLocalName = TX_GET_ATOM(localName);
+    }
+    else {
+        TX_IF_RELEASE_ATOM(mLocalName);
+        mLocalName = TX_GET_ATOM(aQName);
+        if (aUseDefault)
+            mNamespaceID = aResolver.lookupNamespace(0);
+        else
+            mNamespaceID = kNameSpaceID_None;
+    }
+    return NS_OK;
+}
+
   //------------------------------/
  //- Implementation of XMLUtils -/
 //------------------------------/

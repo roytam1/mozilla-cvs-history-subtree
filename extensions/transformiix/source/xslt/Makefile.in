@@ -50,6 +50,8 @@ CPPSRCS = Names.cpp \
         txOutputFormat.cpp \
         ProcessorState.cpp \
         txRtfHandler.cpp \
+        txStylesheetCompiler.cpp \
+        txStylesheetCompilerHandlers.cpp \
         txTextHandler.cpp \
         txXSLTNumber.cpp \
         txXSLTNumberCounters.cpp \
