@@ -46,10 +46,8 @@ function numMatchingChars(str1, str2) {
 function sortFilename(a, b) {
   if (a.cachedName < b.cachedName) {
     return -1;
-  } else if (a.cachedName > b.cachedName) {
-    return 1;
   } else {
-    return 0;
+    return 1;
   }
 }
   
@@ -292,11 +290,10 @@ nsFileView.prototype = {
       this.mDirList.reverse();
       this.mFilteredFiles.reverse();
     } else {
-      var compareFunc;
+      var compareFunc, i;
       
       /* We pre-fetch all the data we are going to sort on, to avoid
          calling into C++ on every comparison */
-      var i;
 
       switch (sortType) {
       case 0:
