@@ -123,8 +123,12 @@
                   a conflict.
        3. If there were conflicts, ask the user what to do        
        4. Upload profile files
-       5  Create listing file for server based on conflict choices and
-          upload success
+       5  Create listing file for server, based on conflict choices and
+          upload success, containing
+          - the entries from the server's listing file for
+            those files which we chose not to upload /plus/
+          - the entries for those local files which successfully uploaded
+
        6. Upload listing file (created in step 6)
        7. Create listing-uploaded, not containing those files for which
           the user selected the server version (otherwise, we would think
@@ -282,9 +286,7 @@ function download(transfer, remoteListing)
           onCancel();
           return;
         }
-        transfer.files = extractFiles(answer.server, transfer.files);
-               /* only transfer those files that the user explicitly selected
-                  for transfer, saving the rest from being overwritten. */
+        transfer.files = substractFiles(transfer.files, answer.local);
         transfer.filesChanged();
       }
     }
@@ -378,9 +380,7 @@ function upload(transfer, remoteListing)
             onCancel();
             return;
           }
-          transfer.files = extractFiles(answer.local, transfer.files);
-                 /* only transfer those files that the user explicitly selected
-                    for transfer, saving the rest from being overwritten. */
+          transfer.files = substractFiles(transfer.files, answer.server);
           transfer.filesChanged();
         }
         uploadStep4(transfer, localFiles, remoteListing, answer.server);
@@ -395,9 +395,6 @@ function uploadStep4(transfer, localFiles, remoteFiles, keepServerVersionFiles)
     transfer.finishedCallbacks.push(function(success)
     {
       ddump("Step 5: Generating listing file based on facts");
-      /* the entries from the server's listing file for those files
-         which we chose not to upload /plus/ the entries for those local files
-         which successfully uploaded */
       var filesDone = extractFiles(transfer.filesWithStatus("done"),
                                    localFiles);
       createListingFile(filesDone.concat(

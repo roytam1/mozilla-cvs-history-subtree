@@ -988,7 +988,7 @@ TransferProgressListener.prototype =
     // dummy
   },
 
-  /* XXX
+  /*
   // nsIDocShellTreeItem (wtf?)
   name : "dummy in transfer.js",
   itemType : 0,

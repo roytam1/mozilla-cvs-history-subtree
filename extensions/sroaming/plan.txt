@@ -1,16 +1,15 @@
 - conflict
   - listing transfer
     - progress feedback and error reporting
-  - some files failed (see XXX - update: eh, where was that?)
   - fix dialog
     - column headings
     - width
+  - some files failed (see XXX - update: eh, where was that?)
 - Bugs
   - some files never "finish" (compare feedback below)
     - ftp upload: ok -> busy [4]
 - error handling
   - (local profile) files missing, also adjust listing.xml
-  - pressing cancel after finished with failed, all files are set to abort v
   - copy protocol
     - no remote files yet
 - world gone
