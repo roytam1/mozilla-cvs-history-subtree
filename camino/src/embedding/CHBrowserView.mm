@@ -125,8 +125,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     
 // Hook up the widget hierarchy with us as the parent
     nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
-    baseWin->InitWindow((NSView*)self, nsnull, 0, 0,
-                        frame.size.width, frame.size.height);
+    baseWin->InitWindow((NSView*)self, nsnull, 0, 0, (int)frame.size.width, (int)frame.size.height);
     baseWin->Create();
     
 // register the view as a drop site for text, files, and urls. 
@@ -362,8 +361,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
  
     // Hook up the widget hierarchy with us as the parent
     nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
-    baseWin->InitWindow((NSView*)self, nsnull, 0, 0, 
-      frame.size.width, frame.size.height);
+    baseWin->InitWindow((NSView*)self, nsnull, 0, 0, (int)frame.size.width, (int)frame.size.height);
     baseWin->Create();
   }
 
@@ -371,7 +369,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 -(void) saveInternal: (nsIURI*)aURI
         withDocument: (nsIDOMDocument*)aDocument
-        suggestedFilename: (const char*)aFilename
+        suggestedFilename: (NSString*)aFileName
         bypassCache: (BOOL)aBypassCache
         filterView: (NSView*)aFilterView
         filterList: (NSPopUpButton*)aFilterList
@@ -417,7 +415,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     // listener. This allows us to look for the content-disposition header, which
     // can supply a filename, and maybe has something to do with CGI-generated
     // content (?)
-    nsCAutoString fileName(aFilename);
+    nsAutoString fileName;
+    [aFileName assignTo_nsAString:fileName];
     nsHeaderSniffer* sniffer = new nsHeaderSniffer(webPersist, tmpFile, aURI, 
                                                    aDocument, postData, fileName, aBypassCache,
                                                    aFilterView, aFilterList);
@@ -481,7 +480,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   
   [self saveInternal: url.get()
         withDocument: nsnull
-   suggestedFilename: (([aFilename length] > 0) ? [aFilename fileSystemRepresentation] : "")
+   suggestedFilename: aFilename
          bypassCache: YES
           filterView: aFilterView
           filterList: aFilterList];
@@ -548,7 +547,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     
     [self saveInternal: url.get()
           withDocument: domDocument
-          suggestedFilename: ""
+          suggestedFilename: @""
           bypassCache: NO
           filterView: aFilterView
           filterList: aFilterList];

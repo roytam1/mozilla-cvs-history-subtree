@@ -36,6 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
+
 #include "SaveHeaderSniffer.h"
 
 #include "netCore.h"
@@ -53,7 +55,7 @@ const char* const persistContractID = "@mozilla.org/embedding/browser/nsWebBrows
 
 nsHeaderSniffer::nsHeaderSniffer(nsIWebBrowserPersist* aPersist, nsIFile* aFile, nsIURI* aURL,
                 nsIDOMDocument* aDocument, nsIInputStream* aPostData,
-                const nsCString& aSuggestedFilename, PRBool aBypassCache,
+                const nsAString& aSuggestedFilename, PRBool aBypassCache,
                 NSView* aFilterView, NSPopUpButton* aFilterList)
 : mPersist(aPersist)
 , mTmpFile(aFile)
@@ -184,7 +186,7 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
         [mFilterList selectItemAtIndex: filterIndex];
         
     // We need to figure out what file name to use.
-    nsCAutoString defaultFileName;
+    nsAutoString defaultFileName;
     if (!mContentDisposition.IsEmpty()) {
         // (1) Use the HTTP header suggestion.
         PRInt32 index = mContentDisposition.Find("filename=");
@@ -193,14 +195,18 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
             index += 9;
             nsCAutoString filename;
             mContentDisposition.Right(filename, mContentDisposition.Length() - index);
-            defaultFileName = filename;
+            defaultFileName = NS_ConvertUTF8toUCS2(filename);
         }
     }
     
     if (defaultFileName.IsEmpty()) {
         nsCOMPtr<nsIURL> url(do_QueryInterface(mURL));
         if (url)
-            url->GetFileName(defaultFileName); // (2) For file URLs, use the file name.
+        {
+            nsCAutoString urlFileName;
+            url->GetFileName(urlFileName); // (2) For file URLs, use the file name.
+            defaultFileName = NS_ConvertUTF8toUCS2(urlFileName);
+        }
     }
     
     if (defaultFileName.IsEmpty() && mDocument && isHTML) {
@@ -208,7 +214,7 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
         nsAutoString title;
         if (htmlDoc)
             htmlDoc->GetTitle(title); // (3) Use the title of the document.
-        defaultFileName.AssignWithConversion(title);
+        defaultFileName = title;
     }
     
     if (defaultFileName.IsEmpty()) {
@@ -216,25 +222,28 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
         defaultFileName = mDefaultFilename;
     }
 
-    if (defaultFileName.IsEmpty() && mURL)
+    if (defaultFileName.IsEmpty() && mURL) {
         // (5) Use the host.
-        mURL->GetHost(defaultFileName);
+        nsCAutoString hostName;
+        mURL->GetHost(hostName);
+        defaultFileName = NS_ConvertUTF8toUCS2(hostName);
+    }
     
     // One last case to handle about:blank and other fruity untitled pages.
     if (defaultFileName.IsEmpty())
-        defaultFileName = "untitled";
+        defaultFileName = NS_LITERAL_STRING("untitled");		// XXX localize
         
     // Validate the file name to ensure legality.
     for (PRUint32 i = 0; i < defaultFileName.Length(); i++)
         if (defaultFileName[i] == ':' || defaultFileName[i] == '/')
-            defaultFileName.SetCharAt(i, ' ');
+            defaultFileName.SetCharAt(' ', i);
             
     // Make sure the appropriate extension is appended to the suggested file name.
     nsCOMPtr<nsIURI> fileURI(do_CreateInstance("@mozilla.org/network/standard-url;1"));
     nsCOMPtr<nsIURL> fileURL(do_QueryInterface(fileURI, &rv));
     if (!fileURL)
         return rv;
-    fileURL->SetFilePath(defaultFileName);
+    fileURL->SetFilePath(NS_ConvertUCS2toUTF8(defaultFileName));
     
     nsCAutoString fileExtension;
     fileURL->GetFileExtension(fileExtension);
@@ -242,7 +251,7 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
     PRBool setExtension = PR_FALSE;
     if (mContentType.Equals("text/html")) {
         if (fileExtension.IsEmpty() || (!fileExtension.Equals("htm") && !fileExtension.Equals("html"))) {
-            defaultFileName += ".html";
+            defaultFileName.AppendWithConversion(".html");
             setExtension = PR_TRUE;
         }
     }
@@ -260,8 +269,8 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
         char** extList = nsnull;
         mimeInfo->GetFileExtensions(&extCount, &extList);        
         if (extCount > 0 && extList) {
-            defaultFileName += ".";
-            defaultFileName += extList[0];
+            defaultFileName += PRUnichar('.');
+            defaultFileName.AppendWithConversion(extList[0]);
         }
     }
     
@@ -269,7 +278,7 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
     NSSavePanel* savePanel = [NSSavePanel savePanel];
     NSString* file = nil;
     if (!defaultFileName.IsEmpty())
-        file = [[NSString alloc] initWithCString: defaultFileName.get()];
+        file = [NSString stringWith_nsAString:defaultFileName];
         
     if (isHTML)
         [savePanel setAccessoryView: mFilterView];
@@ -277,9 +286,6 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
     if ([savePanel runModalForDirectory: nil file: file] == NSFileHandlingPanelCancelButton)
         return NS_OK;
        
-    // Release the file string.
-    [file release];
-    
     // Update the filter index.
     if (isHTML && mFilterList) {
         filterIndex = [mFilterList indexOfSelectedItem];
@@ -296,14 +302,8 @@ nsresult nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
     else
         sourceData = do_QueryInterface(mURL);
 
-    NSString* destName = [savePanel filename];
-    
-    PRUint32 dstLen = [destName length];
-    PRUnichar* tmp = new PRUnichar[dstLen + sizeof(PRUnichar)];
-    tmp[dstLen] = (PRUnichar)'\0';
-    [destName getCharacters:tmp];
-    nsAutoString dstString(tmp);
-    delete tmp;
+    nsAutoString dstString;
+    [[savePanel filename] assignTo_nsAString:dstString];
 
     return InitiateDownload(sourceData, dstString, inOriginalURI);
 }
