@@ -1390,6 +1390,14 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
+  else if (aData->mSID == eStyleStruct_Visibility) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+  
+    if (readDisplay &&
+        (readDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE_CELL))
+      nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+  }
   else if (aData->mSID == eStyleStruct_Border && aData->mMarginData) {
     const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
                   aData->mStyleContext->GetStyleData(eStyleStruct_Display);
@@ -1475,54 +1483,6 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
 }
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext*        aContext,
-                  nsIPresContext*                aPresContext)
-{
-  NS_PRECONDITION(nsnull!=aContext, "bad style context arg");
-  NS_PRECONDITION(nsnull!=aPresContext, "bad presentation context arg");
-
-  if (nsnull!=aAttributes) {
-    float sp2t;
-    aPresContext->GetScaledPixelsToTwips(&sp2t);
-    nsHTMLValue value;
-
-    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
-                aContext->GetStyleData(eStyleStruct_Display);
-    if (readDisplay &&
-        (readDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
-    }
-    else {  // handle attributes for table
-
-      // align; Check for enumerated type (it may be another type if
-      // illegal)
-      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-
-      if (value.GetUnit() == eHTMLUnit_Enumerated) {
-        if ((NS_STYLE_TEXT_ALIGN_CENTER != value.GetIntValue()) &&
-            (NS_STYLE_TEXT_ALIGN_MOZ_CENTER != value.GetIntValue())) {
-          nsStyleDisplay* display = (nsStyleDisplay*)
-            aContext->GetMutableStyleData(eStyleStruct_Display);
-
-          switch (value.GetIntValue()) {
-          case NS_STYLE_TEXT_ALIGN_LEFT:
-            display->mFloats = NS_STYLE_FLOAT_LEFT;
-            break;
-          case NS_STYLE_TEXT_ALIGN_RIGHT:
-          case NS_STYLE_TEXT_ALIGN_MOZ_RIGHT:
-            display->mFloats = NS_STYLE_FLOAT_RIGHT;
-            break;
-          }
-        }
-      }
-
-      nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                    aPresContext);
-    }
-  }
-}
-
 NS_IMETHODIMP
 nsHTMLTableElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                              PRInt32& aHint) const
@@ -1560,7 +1520,7 @@ nsHTMLTableElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMap
                                                  nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -66,9 +66,9 @@ nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
   // Paint inline element backgrounds in the foreground layer, but
   // others in the background (bug 36710).
   if (((frameType.get() == nsLayoutAtoms::inlineFrame)?NS_FRAME_PAINT_LAYER_FOREGROUND:NS_FRAME_PAINT_LAYER_BACKGROUND) == aWhichLayer) {
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)
-      mStyleContext->GetStyleData(eStyleStruct_Display);
-    if (disp->IsVisible() && mRect.width && mRect.height) {
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)((nsIStyleContext*)mStyleContext)->GetStyleData(eStyleStruct_Visibility);
+    if (vis->IsVisible() && mRect.width && mRect.height) {
       // Paint our background and border
       PRIntn skipSides = GetSkipSides();
       const nsStyleBackground* color = (const nsStyleBackground*)
@@ -450,14 +450,14 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
     // Get nsStyleColor and nsStyleDisplay
     const nsStyleBackground* color = (const nsStyleBackground*)
       aStyleContext->GetStyleData(eStyleStruct_Background);
-    const nsStyleUserInterface* ui = (const nsStyleUserInterface*)
-      aStyleContext->GetStyleData(eStyleStruct_UserInterface);
     const nsStyleDisplay* display = (const nsStyleDisplay*)
       aStyleContext->GetStyleData(eStyleStruct_Display);
     const nsStylePosition* position = (const nsStylePosition*)
       aStyleContext->GetStyleData(eStyleStruct_Position);
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)aStyleContext->GetStyleData(eStyleStruct_Visibility);
     
-    if (ui->mOpacity != 1.0f) {
+    if (vis->mOpacity != 1.0f) {
       NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
         ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p opacity=%g",
          aFrame, ui->mOpacity));
@@ -473,12 +473,12 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
     // See if the frame is being relatively positioned or absolutely
     // positioned
     if (!aForce) {
-      if (NS_STYLE_POSITION_RELATIVE == position->mPosition) {
+      if (NS_STYLE_POSITION_RELATIVE == display->mPosition) {
         NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
           ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p relatively positioned",
           aFrame));
         aForce = PR_TRUE;
-      } else if (position->IsAbsolutelyPositioned()) {
+      } else if (display->IsAbsolutelyPositioned()) {
         NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
           ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p absolutely positioned",
           aFrame));
@@ -611,10 +611,10 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
         PRBool  viewHasTransparentContent = (color->mBackgroundFlags &
                   NS_STYLE_BG_COLOR_TRANSPARENT) == NS_STYLE_BG_COLOR_TRANSPARENT;
 
-        if (NS_STYLE_VISIBILITY_COLLAPSE == display->mVisible) {
+        if (NS_STYLE_VISIBILITY_COLLAPSE == vis->mVisible) {
           viewIsVisible = PR_FALSE;
         }
-        else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
+        else if (NS_STYLE_VISIBILITY_HIDDEN == vis->mVisible) {
           // If it has a widget, hide the view because the widget can't deal with it
           nsIWidget* widget = nsnull;
           view->GetWidget(widget);
@@ -653,11 +653,11 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
 
         // XXX If it's fixed positioned, then create a widget so it floats
         // above the scrolling area
-        if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+        if (NS_STYLE_POSITION_FIXED == display->mPosition) {
           view->CreateWidget(kCChildCID);
         }
 
-        viewManager->SetViewOpacity(view, ui->mOpacity);
+        viewManager->SetViewOpacity(view, vis->mOpacity);
         NS_RELEASE(viewManager);
       }
 

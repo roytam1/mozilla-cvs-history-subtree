@@ -1795,9 +1795,9 @@ nsComboboxControlFrame::GetFrameForPoint(nsIPresContext* aPresContext,
 
   if ( mRect.Contains(aPoint) &&
        (aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) ) {
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)
-      mStyleContext->GetStyleData(eStyleStruct_Display);
-    if (disp->IsVisible()) {
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+    if (vis->IsVisible()) {
       *aFrame = this;
       return NS_OK;
     }
@@ -2575,9 +2575,10 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
       /////////////////////
       // draw focus
       // XXX This is only temporary
-      const nsStyleDisplay* disp = (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
+      const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
       // Only paint the focus if we're visible
-      if (disp->IsVisible()) {
+      if (vis->IsVisible()) {
         nsCOMPtr<nsIEventStateManager> stateManager;
         nsresult rv = mPresContext->GetEventStateManager(getter_AddRefs(stateManager));
         if (NS_SUCCEEDED(rv)) {

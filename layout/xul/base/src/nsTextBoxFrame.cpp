@@ -219,9 +219,9 @@ nsTextBoxFrame::Paint(nsIPresContext*      aPresContext,
                       const nsRect&        aDirtyRect,
                       nsFramePaintLayer    aWhichLayer)
 {
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)
-    mStyleContext->GetStyleData(eStyleStruct_Display);
-    if (!disp->IsVisible())
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+    if (!vis->IsVisible())
         return NS_OK;
 
     if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {

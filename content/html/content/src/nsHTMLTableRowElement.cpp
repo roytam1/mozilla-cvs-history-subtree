@@ -601,6 +601,7 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
   }
 
   nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -629,9 +630,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
       textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
     }
-
-    nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                  aPresContext);
   }
 }
 

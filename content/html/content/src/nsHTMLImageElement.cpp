@@ -62,6 +62,8 @@
 #include "nsIFrameImageLoader.h"
 #endif
 
+#include "nsIRuleNode.h"
+
 #include "nsIJSContextStack.h"
 
 // XXX nav attrs: suppress
@@ -517,12 +519,33 @@ static void
 MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
                       nsRuleData* aData)
 {
-  if (!aData)
+  if (!aData || !aAttributes)
     return;
+
+  if (aData->mSID == eStyleStruct_Display) {
+    if (aData->mDisplayData->mFloat.GetUnit() == eCSSUnit_Null) {
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+      if (value.GetUnit() == eHTMLUnit_Enumerated) {
+        PRUint8 align = value.GetIntValue();
+        switch (align) {
+        case NS_STYLE_TEXT_ALIGN_LEFT:
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_LEFT, eCSSUnit_Enumerated);
+          break;
+        case NS_STYLE_TEXT_ALIGN_RIGHT:
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_RIGHT, eCSSUnit_Enumerated);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
 
   nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -535,26 +558,19 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
       PRUint8 align = value.GetIntValue();
-      nsStyleDisplay* display = (nsStyleDisplay*)
-        aContext->GetMutableStyleData(eStyleStruct_Display);
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
       switch (align) {
       case NS_STYLE_TEXT_ALIGN_LEFT:
-        display->mFloats = NS_STYLE_FLOAT_LEFT;
-        break;
       case NS_STYLE_TEXT_ALIGN_RIGHT:
-        display->mFloats = NS_STYLE_FLOAT_RIGHT;
         break;
-      default:
+      default: {
+        nsStyleText* text = (nsStyleText*)
+        aContext->GetMutableStyleData(eStyleStruct_Text);
         text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
         break;
       }
+      }
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

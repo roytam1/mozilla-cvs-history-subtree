@@ -200,6 +200,8 @@ nsHTMLReflowState::Init(nsIPresContext* aPresContext,
                       (const nsStyleStruct*&)mStylePosition);
   frame->GetStyleData(eStyleStruct_Display,
                       (const nsStyleStruct*&)mStyleDisplay);
+  frame->GetStyleData(eStyleStruct_Visibility,
+                      (const nsStyleStruct*&)mStyleVisibility);
   frame->GetStyleData(eStyleStruct_Border,
                       (const nsStyleStruct*&)mStyleBorder);
   frame->GetStyleData(eStyleStruct_Margin,
@@ -208,7 +210,7 @@ nsHTMLReflowState::Init(nsIPresContext* aPresContext,
                       (const nsStyleStruct*&)mStylePadding);
   frame->GetStyleData(eStyleStruct_Text,
                       (const nsStyleStruct*&)mStyleText);
-  mFrameType = DetermineFrameType(frame, mStylePosition, mStyleDisplay);
+  mFrameType = DetermineFrameType(frame, mStyleDisplay);
   InitConstraints(aPresContext, aContainingBlockWidth, aContainingBlockHeight);
 }
 
@@ -260,18 +262,14 @@ nsHTMLReflowState::GetContainingBlockContentWidth(const nsHTMLReflowState* aPare
 nsCSSFrameType
 nsHTMLReflowState::DetermineFrameType(nsIFrame* aFrame)
 {
-  const nsStylePosition* stylePosition;
-  aFrame->GetStyleData(eStyleStruct_Position,
-                       (const nsStyleStruct*&)stylePosition);
   const nsStyleDisplay* styleDisplay;
   aFrame->GetStyleData(eStyleStruct_Display,
                        (const nsStyleStruct*&)styleDisplay);
-  return DetermineFrameType(aFrame, stylePosition, styleDisplay);
+  return DetermineFrameType(aFrame, styleDisplay);
 }
 
 nsCSSFrameType
 nsHTMLReflowState::DetermineFrameType(nsIFrame* aFrame,
-                                      const nsStylePosition* aPosition,
                                       const nsStyleDisplay* aDisplay)
 {
   nsCSSFrameType frameType;
@@ -285,7 +283,7 @@ nsHTMLReflowState::DetermineFrameType(nsIFrame* aFrame,
   // Make sure the frame was actually moved out of the flow, and don't
   // just assume what the style says
   if (frameState & NS_FRAME_OUT_OF_FLOW) {
-    if (aPosition->IsAbsolutelyPositioned()) {
+    if (aDisplay->IsAbsolutelyPositioned()) {
       frameType = NS_CSS_FRAME_TYPE_ABSOLUTE;
     }
     else if (NS_STYLE_FLOAT_NONE != aDisplay->mFloats) {
@@ -368,10 +366,10 @@ nsHTMLReflowState::ComputeRelativeOffsets(const nsHTMLReflowState* cbrs,
   // If neither 'left' not 'right' are auto, then we're over-constrained and
   // we ignore one of them
   if (!leftIsAuto && !rightIsAuto) {
-    const nsStyleDisplay* display;
-    frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
+    const nsStyleVisibility* vis;
+    frame->GetStyleData(eStyleStruct_Visibility, (const nsStyleStruct*&)vis);
     
-    if (NS_STYLE_DIRECTION_LTR == display->mDirection) {
+    if (NS_STYLE_DIRECTION_LTR == vis->mDirection) {
       rightIsAuto = PR_TRUE;
     } else {
       leftIsAuto = PR_TRUE;
@@ -727,8 +725,8 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsIPresContext*    aPresContext,
   }
   
   // Get the 'direction' of the block
-  const nsStyleDisplay* blockDisplay;
-  aBlockFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)blockDisplay);
+  const nsStyleVisibility* blockVis;
+  aBlockFrame->GetStyleData(eStyleStruct_Visibility, (const nsStyleStruct*&)blockVis);
 
   // How we determine the hypothetical box depends on whether the element
   // would have been inline-level or block-level
@@ -758,7 +756,7 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsIPresContext*    aPresContext,
     aHypotheticalBox.mTop = placeholderOffset.y;
 
     // To determine the left and right offsets we need to look at the block's 'direction'
-    if (NS_STYLE_DIRECTION_LTR == blockDisplay->mDirection) {
+    if (NS_STYLE_DIRECTION_LTR == blockVis->mDirection) {
       // The placeholder represents the left edge of the hypothetical box
       aHypotheticalBox.mLeft = placeholderOffset.x;
       aHypotheticalBox.mLeftIsExact = PR_TRUE;
@@ -819,7 +817,7 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsIPresContext*    aPresContext,
     }
 
     // To determine the left and right offsets we need to look at the block's 'direction'
-    if (NS_STYLE_DIRECTION_LTR == blockDisplay->mDirection) {
+    if (NS_STYLE_DIRECTION_LTR == blockVis->mDirection) {
       aHypotheticalBox.mLeft = aBlockContentArea.left;
       aHypotheticalBox.mLeftIsExact = PR_TRUE;
 
@@ -947,7 +945,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsIPresContext* aPresContext,
 
   // When the CSS2 spec refers to direction it means the containing block's
   // direction and not the direction of the absolutely positioned element itself
-  PRUint8 direction = cbrs->mStyleDisplay->mDirection;
+  PRUint8 direction = cbrs->mStyleVisibility->mDirection;
 
   // Initialize the 'width' computed value
   nsStyleUnit widthUnit = mStylePosition->mWidth.GetUnit();
@@ -1504,7 +1502,7 @@ nsHTMLReflowState::InitConstraints(nsIPresContext* aPresContext,
     }
 
     // See if the element is relatively positioned
-    if (NS_STYLE_POSITION_RELATIVE == mStylePosition->mPosition) {
+    if (NS_STYLE_POSITION_RELATIVE == mStyleDisplay->mPosition) {
       ComputeRelativeOffsets(cbrs, aContainingBlockWidth, aContainingBlockHeight);
     } else {
       // Initialize offsets to 0
@@ -1949,7 +1947,7 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
       mComputedMargin.right = 0;
       const nsHTMLReflowState* prs = (const nsHTMLReflowState*)
         parentReflowState;
-      if (prs && (NS_STYLE_DIRECTION_RTL == prs->mStyleDisplay->mDirection)) {
+      if (prs && (NS_STYLE_DIRECTION_RTL == prs->mStyleVisibility->mDirection)) {
         mComputedMargin.left = availMarginSpace;
       }
       isAutoLeftMargin = isAutoRightMargin = PR_FALSE;
@@ -1975,7 +1973,7 @@ nsHTMLReflowState::CalculateBlockSideMargins(nscoord aAvailWidth,
             (prs->mStyleText->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER);
         } else
         // Otherwise apply the CSS rules
-        if (NS_STYLE_DIRECTION_LTR == prs->mStyleDisplay->mDirection) {
+        if (NS_STYLE_DIRECTION_LTR == prs->mStyleVisibility->mDirection) {
           // The specified value of margin-right is ignored (== forced
           // to auto)
           isAutoRightMargin = PR_TRUE;
@@ -2051,9 +2049,9 @@ ComputeLineHeight(nsIRenderingContext* aRenderingContext,
     aStyleContext->GetStyleData(eStyleStruct_Text);
   const nsStyleFont* font = (const nsStyleFont*)
     aStyleContext->GetStyleData(eStyleStruct_Font);
-  const nsStyleDisplay* display = (const nsStyleDisplay*)
-    aStyleContext->GetStyleData(eStyleStruct_Display);
-
+  const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)aStyleContext->GetStyleData(eStyleStruct_Visibility);
+  
   nsStyleUnit unit = text->mLineHeight.GetUnit();
   if (eStyleUnit_Inherit == unit) {
     // Inherit parents line-height value
@@ -2084,8 +2082,8 @@ ComputeLineHeight(nsIRenderingContext* aRenderingContext,
     nsCOMPtr<nsIDeviceContext> deviceContext;
     aRenderingContext->GetDeviceContext(*getter_AddRefs(deviceContext));
     nsCOMPtr<nsIAtom> langGroup;
-    if (display->mLanguage) {
-      display->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
+    if (vis->mLanguage) {
+      vis->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
     }
     nsCOMPtr<nsIFontMetrics> fm;
     deviceContext->GetMetricsFor(font->mFont, langGroup, *getter_AddRefs(fm));

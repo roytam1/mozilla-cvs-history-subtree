@@ -64,6 +64,8 @@
 #include "nsIRadioControlFrame.h"
 #include "nsIFormManager.h"
 
+#include "nsIRuleNode.h"
+
 // XXX align=left, hspace, vspace, border? other nav4 attrs
 
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
@@ -1372,6 +1374,26 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   if (!aData)
     return;
 
+  if (aData->mSID == eStyleStruct_Display) {
+    if (aData->mDisplayData->mFloat.GetUnit() == eCSSUnit_Null) {
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+      if (value.GetUnit() == eHTMLUnit_Enumerated) {
+        PRUint8 align = value.GetIntValue();
+        switch (align) {
+        case NS_STYLE_TEXT_ALIGN_LEFT:
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_LEFT, eCSSUnit_Enumerated);
+          break;
+        case NS_STYLE_TEXT_ALIGN_RIGHT:
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_RIGHT, eCSSUnit_Enumerated);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+
   nsHTMLValue value;
   aAttributes->GetAttribute(nsHTMLAtoms::type, value);
   if (eHTMLUnit_Enumerated == value.GetUnit()) {  
@@ -1384,37 +1406,34 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
+
 
 static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
-  nsHTMLValue value;
-
-  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-  if (eHTMLUnit_Enumerated == value.GetUnit()) {
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aContext->GetMutableStyleData(eStyleStruct_Display);
-    nsStyleText* text = (nsStyleText*)
-      aContext->GetMutableStyleData(eStyleStruct_Text);
-    switch (value.GetIntValue()) {
-    case NS_STYLE_TEXT_ALIGN_LEFT:
-      display->mFloats = NS_STYLE_FLOAT_LEFT;
-      break;
-    case NS_STYLE_TEXT_ALIGN_RIGHT:
-      display->mFloats = NS_STYLE_FLOAT_RIGHT;
-      break;
-    default:
-      text->mVerticalAlign.SetIntValue(value.GetIntValue(),
-                                       eStyleUnit_Enumerated);
-      break;
+  if (nsnull != aAttributes) {
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      PRUint8 align = value.GetIntValue();
+      switch (align) {
+      case NS_STYLE_TEXT_ALIGN_LEFT:
+      case NS_STYLE_TEXT_ALIGN_RIGHT:
+        break;
+      default: {
+        nsStyleText* text = (nsStyleText*)
+        aContext->GetMutableStyleData(eStyleStruct_Text);
+        text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
+        break;
+      }
+      }
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

@@ -444,6 +444,7 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
   }
   
   nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -487,9 +488,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         textStyle->mWhiteSpace = NS_STYLE_WHITESPACE_NOWRAP;
       }
     }
-
-    nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                  aPresContext);
   }
 }
 

@@ -246,9 +246,9 @@ nsImageControlFrame::Init(nsIPresContext*  aPresContext,
     viewMan->InsertChild(parView, view, 0);
     SetView(aPresContext, view);
 
-    const nsStyleUserInterface* ui = (const nsStyleUserInterface*) mStyleContext->GetStyleData(eStyleStruct_UserInterface);
+    const nsStyleVisibility* vis = (const nsStyleVisibility*) mStyleContext->GetStyleData(eStyleStruct_Visibility);
     // set the opacity
-    viewMan->SetViewOpacity(view, ui->mOpacity);
+    viewMan->SetViewOpacity(view, vis->mOpacity);
   }
 
   return rv;

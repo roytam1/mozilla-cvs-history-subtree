@@ -5228,14 +5228,12 @@ SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
   PRBool clipState;
   const nsStyleDisplay* display;
   aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-  const nsStylePosition* position;
-  aFrame->GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&) position);
-
+  
   // 'clip' only applies to absolutely positioned elements, and is
   // relative to the element's border edge. 'clip' applies to the entire
   // element: border, padding, and content areas, and even scrollbars if
   // there are any.
-  if (position->IsAbsolutelyPositioned() && (display->mClipFlags & NS_STYLE_CLIP_RECT)) {
+  if (display->IsAbsolutelyPositioned() && (display->mClipFlags & NS_STYLE_CLIP_RECT)) {
     nsSize  size;
 
     // Start with the 'auto' values and then factor in user specified values

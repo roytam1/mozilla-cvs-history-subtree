@@ -161,13 +161,13 @@ CSSFirstLineRule::MapStyleInto(nsIMutableStyleContext* aContext,
   parentContext = aContext->GetParent();
 
   // Undo any change made to "direction"
-  nsStyleDisplay* display = (nsStyleDisplay*)
-    aContext->GetMutableStyleData(eStyleStruct_Display);
+  nsStyleVisibility* vis = (nsStyleVisibility*)
+    aContext->GetMutableStyleData(eStyleStruct_Visibility);
   if (parentContext) {
-    const nsStyleDisplay* parentDisplay = (const nsStyleDisplay*)
-      parentContext->GetStyleData(eStyleStruct_Display);
-    if (parentDisplay) {
-      display->mDirection = parentDisplay->mDirection;
+    const nsStyleVisibility* parentVis = (const nsStyleVisibility*)
+      parentContext->GetStyleData(eStyleStruct_Visibility);
+    if (parentVis) {
+      vis->mDirection = parentVis->mDirection;
     }
   }
 
@@ -280,13 +280,13 @@ CSSFirstLetterRule::MapStyleInto(nsIMutableStyleContext* aContext,
   parentContext = aContext->GetParent();
 
   // Undo any change made to "direction"
-  nsStyleDisplay* display = (nsStyleDisplay*)
-    aContext->GetMutableStyleData(eStyleStruct_Display);
+  nsStyleVisibility* vis = (nsStyleVisibility*)
+    aContext->GetMutableStyleData(eStyleStruct_Visibility);
   if (parentContext) {
-    const nsStyleDisplay* parentDisplay = (const nsStyleDisplay*)
-      parentContext->GetStyleData(eStyleStruct_Display);
-    if (parentDisplay) {
-      display->mDirection = parentDisplay->mDirection;
+    const nsStyleVisibility* parentVis = (const nsStyleVisibility*)
+      parentContext->GetStyleData(eStyleStruct_Visibility);
+    if (parentVis) {
+      vis->mDirection = parentVis->mDirection;
     }
   }
 

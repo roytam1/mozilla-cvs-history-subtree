@@ -1218,13 +1218,12 @@ nsObjectFrame::GetBaseURL(nsIURI* &aURL)
 PRBool
 nsObjectFrame::IsHidden() const
 {
-    // check the style visibility first
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
-    if (disp != nsnull)
-  {
-    if(!disp->IsVisibleOrCollapsed())
-      return PR_TRUE;
-  }
+  // check the style visibility first
+  const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+    
+  if(!vis->IsVisibleOrCollapsed())
+    return PR_TRUE;
 
   nsCOMPtr<nsIAtom> tag;
   mContent->GetTag(*getter_AddRefs(tag));
@@ -1362,10 +1361,11 @@ nsObjectFrame::Paint(nsIPresContext* aPresContext,
   }
 
 
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
-  if ((disp != nsnull) && !disp->IsVisibleOrCollapsed()) {
+  const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+    
+  if (!vis->IsVisibleOrCollapsed())
     return NS_OK;
-  }
   
   nsIFrame * child = mFrames.FirstChild();
   if (child != NULL) {    // This is an image

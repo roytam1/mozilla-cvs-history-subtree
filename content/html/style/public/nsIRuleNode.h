@@ -35,6 +35,7 @@ typedef void (*nsPostResolveFunc)(nsRuleData* aData);
 
 struct nsInheritedStyleData
 {
+  nsStyleVisibility* mVisibilityData;
   nsStyleFont* mFontData;
   nsStyleList* mListData;
   nsStyleTableBorder* mTableData;
@@ -45,26 +46,29 @@ struct nsInheritedStyleData
     aContext->AllocateFromShell(sz, &result);
     return result;
   };
-  void Destroy(nsIPresContext* aContext) {
-    if (mFontData)
+  void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
+    if (mVisibilityData && !(aBits & NS_STYLE_INHERIT_VISIBILITY))
+      mVisibilityData->Destroy(aContext);
+    if (mFontData && !(aBits & NS_STYLE_INHERIT_FONT))
       mFontData->Destroy(aContext);
-    if (mListData)
+    if (mListData && !(aBits & NS_STYLE_INHERIT_LIST))
       mListData->Destroy(aContext);
-    if (mTableData)
+    if (mTableData && !(aBits & NS_STYLE_INHERIT_TABLE_BORDER))
       mTableData->Destroy(aContext);
-    if (mColorData)
+    if (mColorData && !(aBits & NS_STYLE_INHERIT_COLOR))
       mColorData->Destroy(aContext);
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
-    :mFontData(nsnull), mListData(nsnull), mTableData(nsnull), mColorData(nsnull) {};
+    :mVisibilityData(nsnull), mFontData(nsnull), mListData(nsnull), 
+     mTableData(nsnull), mColorData(nsnull) {};
 };
 
 struct nsResetStyleData
 {
   nsResetStyleData()
-    :mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
+    :mDisplayData(nsnull), mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
      mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull), mBackgroundData(nsnull) {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
@@ -76,28 +80,31 @@ struct nsResetStyleData
     aContext->AllocateFromShell(sz, &result);
     return result;
   }
-  void Destroy(nsIPresContext* aContext) {
-    if (mMarginData)
+  void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
+    if (mDisplayData && !(aBits & NS_STYLE_INHERIT_DISPLAY))
+      mDisplayData->Destroy(aContext);
+    if (mMarginData && !(aBits & NS_STYLE_INHERIT_MARGIN))
       mMarginData->Destroy(aContext);
-    if (mBorderData)
+    if (mBorderData && !(aBits & NS_STYLE_INHERIT_BORDER))
       mBorderData->Destroy(aContext);
-    if (mPaddingData)
+    if (mPaddingData && !(aBits & NS_STYLE_INHERIT_PADDING))
       mPaddingData->Destroy(aContext);
-    if (mOutlineData)
+    if (mOutlineData && !(aBits & NS_STYLE_INHERIT_OUTLINE))
       mOutlineData->Destroy(aContext);
-    if (mPositionData)
+    if (mPositionData && !(aBits & NS_STYLE_INHERIT_POSITION))
       mPositionData->Destroy(aContext);
-    if (mTableData)
+    if (mTableData && !(aBits & NS_STYLE_INHERIT_TABLE))
       mTableData->Destroy(aContext);
-    if (mBackgroundData)
+    if (mBackgroundData && !(aBits & NS_STYLE_INHERIT_BACKGROUND))
       mBackgroundData->Destroy(aContext);
 #ifdef INCLUDE_XUL
-    if (mXULData)
+    if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
 #endif
     aContext->FreeToShell(sizeof(nsResetStyleData), this);
   };
 
+  nsStyleDisplay* mDisplayData;
   nsStyleMargin* mMarginData;
   nsStyleBorder* mBorderData;
   nsStylePadding* mPaddingData;
@@ -119,12 +126,14 @@ struct nsCachedStyleData
   static PRBool IsReset(const nsStyleStructID& aSID)
   {
     switch (aSID) {
-      case eStyleStruct_Font: // [Inherited]
+      case eStyleStruct_Visibility: // [Inherited]
+      case eStyleStruct_Font:
       case eStyleStruct_List:
       case eStyleStruct_TableBorder:
       case eStyleStruct_Color:
         return PR_FALSE; 
-      case eStyleStruct_Margin: // [Reset]
+      case eStyleStruct_Display: // [Reset]
+      case eStyleStruct_Margin: 
       case eStyleStruct_Padding:
       case eStyleStruct_Border:
       case eStyleStruct_Outline:
@@ -141,6 +150,8 @@ struct nsCachedStyleData
   static PRUint32 nsCachedStyleData::GetBitForSID(const nsStyleStructID& aSID)
   {
     switch (aSID) {
+      case eStyleStruct_Visibility:
+        return NS_STYLE_INHERIT_VISIBILITY;
       case eStyleStruct_Font:
         return NS_STYLE_INHERIT_FONT;   
       case eStyleStruct_Color:
@@ -181,6 +192,10 @@ struct nsCachedStyleData
   };
   nsStyleStruct* GetStyleData(const nsStyleStructID& aSID) {
     switch (aSID) {
+      case eStyleStruct_Display:
+        return mResetData ? mResetData->mDisplayData : nsnull;
+      case eStyleStruct_Visibility:
+        return mInheritedData ? mInheritedData->mVisibilityData : nsnull;
       case eStyleStruct_Font:
         return mInheritedData ? mInheritedData->mFontData : nsnull;
       case eStyleStruct_Color:
@@ -211,6 +226,13 @@ struct nsCachedStyleData
     return nsnull;
   };
 
+  void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
+    if (mResetData)
+      mResetData->Destroy(aBits, aContext);
+    if (mInheritedData)
+      mInheritedData->Destroy(aBits, aContext);
+  }
+
   nsCachedStyleData() :mInheritedData(nsnull), mResetData(nsnull) {};
   ~nsCachedStyleData() {};
 };
@@ -223,6 +245,7 @@ struct nsRuleData
   nsPostResolveFunc mPostResolveCallback;
 
   nsCSSFont* mFontData; // Should always be stack-allocated! We don't own these structures!
+  nsCSSDisplay* mDisplayData;
   nsCSSMargin* mMarginData;
   nsCSSList* mListData;
   nsCSSPosition* mPositionData;
@@ -235,8 +258,8 @@ struct nsRuleData
 
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
-     mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), mPositionData(nsnull), mTableData(nsnull),
-     mColorData(nsnull)
+     mDisplayData(nsnull), mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), 
+     mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;

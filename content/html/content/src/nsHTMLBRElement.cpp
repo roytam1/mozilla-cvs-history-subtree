@@ -30,7 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLBRElement : public nsGenericHTMLLeafElement,
                         public nsIDOMHTMLBRElement
@@ -189,20 +189,29 @@ nsHTMLBRElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aData || !aAttributes)
+    return;
+
+  if (aData->mSID == eStyleStruct_Display) {
+    if (aData->mDisplayData->mClear.GetUnit() == eCSSUnit_Null) {
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::clear, value);
+      if (value.GetUnit() == eHTMLUnit_Enumerated)
+        aData->mDisplayData->mClear = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+    }
+  }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
-  nsStyleDisplay* display = (nsStyleDisplay*)
-    aContext->GetMutableStyleData(eStyleStruct_Display);
-
-  nsHTMLValue value;
-  aAttributes->GetAttribute(nsHTMLAtoms::clear, value);
-  if (value.GetUnit() == eHTMLUnit_Enumerated) {
-    display->mBreakType = value.GetIntValue();
-  }
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP
@@ -224,7 +233,7 @@ NS_IMETHODIMP
 nsHTMLBRElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                               nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

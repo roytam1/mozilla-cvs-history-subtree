@@ -298,6 +298,8 @@ nsRuleNode::nsRuleNode(nsIPresContext* aContext, nsIStyleRule* aRule, nsRuleNode
 
 nsRuleNode::~nsRuleNode()
 {
+  if (mStyleData.mResetData || mStyleData.mInheritedData)
+    mStyleData.Destroy(0, mPresContext);
   delete mChildren;
   gRefCnt--;
 }
@@ -391,10 +393,14 @@ nsRuleNode::InheritsFromParentRule(const nsStyleStructID& aSID)
   return mInheritBits & nsCachedStyleData::GetBitForSID(aSID);
 }
 
-nsRuleNode::RuleDetail
+inline nsRuleNode::RuleDetail
 nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStruct& aCSSStruct)
 {
   switch (aSID) {
+  case eStyleStruct_Display:
+    return CheckDisplayProperties((const nsCSSDisplay&)aCSSStruct);
+  case eStyleStruct_Visibility:
+    return CheckVisibilityProperties((const nsCSSDisplay&)aCSSStruct);
   case eStyleStruct_Font:
     return CheckFontProperties((const nsCSSFont&)aCSSStruct);
   case eStyleStruct_Color:
@@ -425,6 +431,31 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
 
   return eRuleNone;
 }
+
+const nsStyleStruct*
+nsRuleNode::GetDisplayData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSDisplay displayData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Display, mPresContext, aContext);
+  ruleData.mDisplayData = &displayData;
+
+  nsCSSRect clip;
+  displayData.mClip = &clip;
+  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_Display, aContext, aMutableContext, &ruleData, &displayData);
+  displayData.mClip = nsnull;
+  return res;
+}
+
+const nsStyleStruct*
+nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSDisplay displayData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Visibility, mPresContext, aContext);
+  ruleData.mDisplayData = &displayData;
+
+  return WalkRuleTree(eStyleStruct_Visibility, aContext, aMutableContext, &ruleData, &displayData);
+}
+
 
 const nsStyleStruct*
 nsRuleNode::GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
@@ -608,8 +639,12 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
 
     // See if this rule node has cached the fact that the remaining nodes along this
     // path specify no data whatsoever.
-    if (ruleNode->mNoneBits & bit)
+    if (ruleNode->mNoneBits & bit) {
+      // The bit is only set when we are supposed to fully inherit.  Change the rule
+      // detail to reflect this.
+      //detail = eRuleFullInherited;
       break;
+    }
 
     // Ask the rule to fill in the properties that it specifies.
     ruleNode->GetRule(getter_AddRefs(rule));
@@ -650,9 +685,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
     // along the branch from the highest node down to our node indicating that no non-inherited data
     // was specified.
     if (detail == eRuleNone)
-      PropagateNoneBit(bit, ruleNode); // XXXdwh This could be optimized to also propagate the
-                                       // eRuleFullInherited case, but we would need a third set
-                                       // of bits, and it's probably not worth the bloat.
+      PropagateNoneBit(bit, ruleNode);
     
     // All information must necessarily be inherited from our parent style context.
     // In the absence of any computed data in the rule tree and with
@@ -665,6 +698,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
       // should be walked to find the data.
       const nsStyleStruct* parentStruct = parentContext->GetStyleData(aSID);
       aContext->AddInheritBit(bit);
+      aMutableContext->SetStyle(aSID, *parentStruct);
       return parentStruct;
     }
     else
@@ -697,6 +731,18 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       nsStyleFont* fontData = new (mPresContext) nsStyleFont(defaultFont, defaultFixedFont);
       aMutableContext->SetStyle(eStyleStruct_Font, *fontData);
       return fontData;
+    }
+    case eStyleStruct_Display:
+    {
+      nsStyleDisplay* disp = new (mPresContext) nsStyleDisplay();
+      aMutableContext->SetStyle(eStyleStruct_Display, *disp);
+      return disp;
+    }
+    case eStyleStruct_Visibility:
+    {
+      nsStyleVisibility* vis = new (mPresContext) nsStyleVisibility(mPresContext);
+      aMutableContext->SetStyle(eStyleStruct_Visibility, *vis);
+      return vis;
     }
     case eStyleStruct_Color:
     {
@@ -781,6 +827,12 @@ nsRuleNode::ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartS
   case eStyleStruct_Font:
     return ComputeFontData((nsStyleFont*)aStartStruct, (const nsCSSFont&)aStartData,
                            aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Display:
+    return ComputeDisplayData((nsStyleDisplay*)aStartStruct, (const nsCSSDisplay&)aStartData,
+                              aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Visibility:
+    return ComputeVisibilityData((nsStyleVisibility*)aStartStruct, (const nsCSSDisplay&)aStartData,
+                                 aContext, aMutableContext, aHighestNode, aRuleDetail);
   case eStyleStruct_Color:
     return ComputeColorData((nsStyleColor*)aStartStruct, (const nsCSSColor&)aStartData,
                             aContext, aMutableContext, aHighestNode, aRuleDetail);
@@ -1179,6 +1231,266 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
   }
 
   return font;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeDisplayData(nsStyleDisplay* aStartDisplay, const nsCSSDisplay& aDisplayData, 
+                               nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                               nsRuleNode* aHighestNode,
+                               const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW DISPLAY CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleDisplay* display;
+  if (aStartDisplay)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    display = new (mPresContext) nsStyleDisplay(*aStartDisplay);
+  else
+    display = new (mPresContext) nsStyleDisplay();
+  nsStyleDisplay* parentDisplay = display;
+
+  if (parentContext)
+    parentDisplay = (nsStyleDisplay*)parentContext->GetStyleData(eStyleStruct_Display);
+  PRBool inherited = PR_FALSE;
+
+  // display: enum, none, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mDisplay.GetUnit()) {
+    display->mDisplay = aDisplayData.mDisplay.GetIntValue();
+  }
+  else if (eCSSUnit_None == aDisplayData.mDisplay.GetUnit()) {
+    display->mDisplay = NS_STYLE_DISPLAY_NONE;
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mDisplay.GetUnit()) {
+    inherited = PR_TRUE;
+    display->mDisplay = parentDisplay->mDisplay;
+  }
+
+  // binding: url, none, inherit
+  if (eCSSUnit_URL == aDisplayData.mBinding.GetUnit()) {
+    aDisplayData.mBinding.GetStringValue(display->mBinding);
+  }
+  else if (eCSSUnit_None == aDisplayData.mBinding.GetUnit()) {
+    display->mBinding.Truncate();
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mBinding.GetUnit()) {
+    inherited = PR_TRUE;
+    display->mBinding = parentDisplay->mBinding;
+  }
+
+  // position: enum, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mPosition.GetUnit()) {
+    display->mPosition = aDisplayData.mPosition.GetIntValue();
+    if (display->mPosition != NS_STYLE_POSITION_NORMAL) {
+      // :before and :after elts cannot be positioned.  We need to check for this
+      // case.
+      nsCOMPtr<nsIAtom> tag;
+      aContext->GetPseudoType(*getter_AddRefs(tag));
+      if (tag && tag.get() == nsCSSAtoms::beforePseudo || tag.get() == nsCSSAtoms::afterPseudo)
+        display->mPosition = NS_STYLE_POSITION_NORMAL;
+    }
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mPosition.GetUnit()) {
+    inherited = PR_TRUE;
+    display->mPosition = parentDisplay->mPosition;
+  }
+
+  // clear: enum, none, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mClear.GetUnit()) {
+    display->mBreakType = aDisplayData.mClear.GetIntValue();
+  }
+  else if (eCSSUnit_None == aDisplayData.mClear.GetUnit()) {
+    display->mBreakType = NS_STYLE_CLEAR_NONE;
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mClear.GetUnit()) {
+    inherited = PR_TRUE;
+    display->mBreakType = parentDisplay->mBreakType;
+  }
+
+  // float: enum, none, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mFloat.GetUnit()) {
+    display->mFloats = aDisplayData.mFloat.GetIntValue();
+  }
+  else if (eCSSUnit_None == aDisplayData.mFloat.GetUnit()) {
+    display->mFloats = NS_STYLE_FLOAT_NONE;
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mFloat.GetUnit()) {
+    inherited = PR_TRUE;
+    display->mFloats = parentDisplay->mFloats;
+  }
+
+  // overflow: enum, auto, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mOverflow.GetUnit()) {
+    display->mOverflow = aDisplayData.mOverflow.GetIntValue();
+  }
+  else if (eCSSUnit_Auto == aDisplayData.mOverflow.GetUnit()) {
+    display->mOverflow = NS_STYLE_OVERFLOW_AUTO;
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mOverflow.GetUnit()) {
+    display->mOverflow = parentDisplay->mOverflow;
+  }
+
+  // clip property: length, auto, inherit
+  if (nsnull != aDisplayData.mClip) {
+    if (eCSSUnit_Inherit == aDisplayData.mClip->mTop.GetUnit()) { // if one is inherit, they all are
+      inherited = PR_TRUE;
+      display->mClipFlags = NS_STYLE_CLIP_INHERIT;
+    }
+    else {
+      PRBool  fullAuto = PR_TRUE;
+
+      display->mClipFlags = 0; // clear it
+
+      if (eCSSUnit_Auto == aDisplayData.mClip->mTop.GetUnit()) {
+        display->mClip.y = 0;
+        display->mClipFlags |= NS_STYLE_CLIP_TOP_AUTO;
+      } 
+      else if (aDisplayData.mClip->mTop.IsLengthUnit()) {
+        display->mClip.y = CalcLength(aDisplayData.mClip->mTop, nsnull, aContext, mPresContext, inherited);
+        fullAuto = PR_FALSE;
+      }
+      if (eCSSUnit_Auto == aDisplayData.mClip->mBottom.GetUnit()) {
+        display->mClip.height = 0;
+        display->mClipFlags |= NS_STYLE_CLIP_BOTTOM_AUTO;
+      } 
+      else if (aDisplayData.mClip->mBottom.IsLengthUnit()) {
+        display->mClip.height = CalcLength(aDisplayData.mClip->mBottom, nsnull, aContext, mPresContext, inherited) -
+                                display->mClip.y;
+        fullAuto = PR_FALSE;
+      }
+      if (eCSSUnit_Auto == aDisplayData.mClip->mLeft.GetUnit()) {
+        display->mClip.x = 0;
+        display->mClipFlags |= NS_STYLE_CLIP_LEFT_AUTO;
+      } 
+      else if (aDisplayData.mClip->mLeft.IsLengthUnit()) {
+        display->mClip.x = CalcLength(aDisplayData.mClip->mLeft, nsnull, aContext, mPresContext, inherited);
+        fullAuto = PR_FALSE;
+      }
+      if (eCSSUnit_Auto == aDisplayData.mClip->mRight.GetUnit()) {
+        display->mClip.width = 0;
+        display->mClipFlags |= NS_STYLE_CLIP_RIGHT_AUTO;
+      } 
+      else if (aDisplayData.mClip->mRight.IsLengthUnit()) {
+        display->mClip.width = CalcLength(aDisplayData.mClip->mRight, nsnull, aContext, mPresContext, inherited) -
+                               display->mClip.x;
+        fullAuto = PR_FALSE;
+      }
+      display->mClipFlags &= ~NS_STYLE_CLIP_TYPE_MASK;
+      if (fullAuto) {
+        display->mClipFlags |= NS_STYLE_CLIP_AUTO;
+      }
+      else {
+        display->mClipFlags |= NS_STYLE_CLIP_RECT;
+      }
+    }
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Display, *display);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mDisplayData = display;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_DISPLAY, aHighestNode);
+  }
+
+  return display;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeVisibilityData(nsStyleVisibility* aStartVisibility, const nsCSSDisplay& aDisplayData, 
+                                  nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                  nsRuleNode* aHighestNode,
+                                  const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW VISIBILITY CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleVisibility* visibility = nsnull;
+  nsStyleVisibility* parentVisibility = visibility;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartVisibility)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    visibility = new (mPresContext) nsStyleVisibility(*aStartVisibility);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentVisibility = (nsStyleVisibility*)parentContext->GetStyleData(eStyleStruct_Visibility);
+      if (parentVisibility)
+        visibility = new (mPresContext) nsStyleVisibility(*parentVisibility);
+    }
+  }
+
+  if (!visibility)
+    visibility = parentVisibility = new (mPresContext) nsStyleVisibility(mPresContext);
+
+  // opacity: factor, percent, inherit
+  if (eCSSUnit_Percent == aDisplayData.mOpacity.GetUnit()) {
+    inherited = PR_TRUE;
+    float opacity = parentVisibility->mOpacity * aDisplayData.mOpacity.GetPercentValue();
+    if (opacity < 0.0f) {
+      visibility->mOpacity = 0.0f;
+    } else if (1.0 < opacity) {
+      visibility->mOpacity = 1.0f;
+    }
+    else {
+      visibility->mOpacity = opacity;
+    }
+  }
+  else if (eCSSUnit_Number == aDisplayData.mOpacity.GetUnit()) {
+    visibility->mOpacity = aDisplayData.mOpacity.GetFloatValue();
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mOpacity.GetUnit()) {
+    inherited = PR_TRUE;
+    visibility->mOpacity = parentVisibility->mOpacity;
+  }
+
+  // direction: enum, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mDirection.GetUnit()) {
+    visibility->mDirection = aDisplayData.mDirection.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mDirection.GetUnit()) {
+    inherited = PR_TRUE;
+    visibility->mDirection = parentVisibility->mDirection;
+  }
+
+  // visibility: enum, inherit
+  if (eCSSUnit_Enumerated == aDisplayData.mVisibility.GetUnit()) {
+    visibility->mVisible = aDisplayData.mVisibility.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aDisplayData.mVisibility.GetUnit()) {
+    inherited = PR_TRUE;
+    visibility->mVisible = parentVisibility->mVisible;
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Color, *visibility);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mVisibilityData = visibility;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_VISIBILITY, aHighestNode);
+  }
+
+  return visibility;
 }
 
 const nsStyleStruct*
@@ -1940,22 +2252,6 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
     parentPos = (nsStylePosition*)parentContext->GetStyleData(eStyleStruct_Position);
   PRBool inherited = PR_FALSE;
 
-  // position: enum, inherit
-  if (eCSSUnit_Enumerated == aPosData.mPosition.GetUnit()) {
-    pos->mPosition = aPosData.mPosition.GetIntValue();
-    if (pos->mPosition != NS_STYLE_POSITION_NORMAL) {
-      // :before and :after elts cannot be positioned.  We need to check for this
-      // case.
-      nsCOMPtr<nsIAtom> tag;
-      aContext->GetPseudoType(*getter_AddRefs(tag));
-      if (tag && tag.get() == nsCSSAtoms::beforePseudo || tag.get() == nsCSSAtoms::afterPseudo)
-        pos->mPosition = NS_STYLE_POSITION_NORMAL;
-    }
-  }
-  else if (eCSSUnit_Inherit == aPosData.mPosition.GetUnit()) {
-    pos->mPosition = parentPos->mPosition;
-  }
-
   // box offsets: length, percent, auto, inherit
   if (aPosData.mOffset) {
     nsStyleCoord  coord;
@@ -2287,7 +2583,7 @@ ExamineRectProperties(const nsCSSRect* aRect, PRUint32& aTotalCount, PRUint32& a
   }
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckFontProperties(const nsCSSFont& aFontData)
 {
   const PRUint32 numFontProps = 5;
@@ -2357,7 +2653,99 @@ nsRuleNode::CheckFontProperties(const nsCSSFont& aFontData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckDisplayProperties(const nsCSSDisplay& aData)
+{
+  // Left/Top/Right/Bottom are the four props we have to check.
+  const PRUint32 numProps = 10;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  ExamineRectProperties(aData.mClip, totalCount, inheritCount);
+
+  if (eCSSUnit_Null != aData.mDisplay.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mDisplay.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mBinding.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mBinding.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mPosition.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mPosition.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mFloat.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mFloat.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mClear.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mClear.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mOverflow.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mOverflow.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps) 
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckVisibilityProperties(const nsCSSDisplay& aData)
+{
+  // Left/Top/Right/Bottom are the four props we have to check.
+  const PRUint32 numProps = 2;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aData.mVisibility.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mVisibility.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mDirection.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mDirection.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps) 
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckMarginProperties(const nsCSSMargin& aMarginData)
 {
   // Left/Top/Right/Bottom are the four props we have to check.
@@ -2380,7 +2768,7 @@ nsRuleNode::CheckMarginProperties(const nsCSSMargin& aMarginData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckBorderProperties(const nsCSSMargin& aBorderData)
 {
   // Left/Top/Right/Bottom are the four props we have to check.
@@ -2411,7 +2799,7 @@ nsRuleNode::CheckBorderProperties(const nsCSSMargin& aBorderData)
   return eRulePartialMixed;
 }
   
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckPaddingProperties(const nsCSSMargin& aPaddingData)
 {
   // Left/Top/Right/Bottom are the four props we have to check.
@@ -2434,14 +2822,14 @@ nsRuleNode::CheckPaddingProperties(const nsCSSMargin& aPaddingData)
   return eRulePartialMixed;
 }
   
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckOutlineProperties(const nsCSSMargin& aMargin)
 {
   // XXXdwh write me!
   return eRuleNone;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckListProperties(const nsCSSList& aListData)
 {
   const PRUint32 numListProps = 3;
@@ -2476,7 +2864,7 @@ nsRuleNode::CheckListProperties(const nsCSSList& aListData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckColorProperties(const nsCSSColor& aColorData)
 {
   const PRUint32 numColorProps = 1;
@@ -2501,7 +2889,7 @@ nsRuleNode::CheckColorProperties(const nsCSSColor& aColorData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckBackgroundProperties(const nsCSSColor& aColorData)
 {
   const PRUint32 numBGProps = 6;
@@ -2557,21 +2945,15 @@ nsRuleNode::CheckBackgroundProperties(const nsCSSColor& aColorData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckPositionProperties(const nsCSSPosition& aPosData)
 {
-  const PRUint32 numPosProps = 13;
+  const PRUint32 numPosProps = 12;
   PRUint32 totalCount=0;
   PRUint32 inheritCount=0;
 
   ExamineRectProperties(aPosData.mOffset, totalCount, inheritCount);
   
-  if (eCSSUnit_Null != aPosData.mPosition.GetUnit()) {
-    totalCount++;
-    if (eCSSUnit_Inherit == aPosData.mPosition.GetUnit())
-      inheritCount++;
-  }
-
   if (eCSSUnit_Null != aPosData.mWidth.GetUnit()) {
     totalCount++;
     if (eCSSUnit_Inherit == aPosData.mWidth.GetUnit())
@@ -2633,7 +3015,7 @@ nsRuleNode::CheckPositionProperties(const nsCSSPosition& aPosData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckTableProperties(const nsCSSTable& aTableData)
 {
   const PRUint32 numTableProps = 5;
@@ -2683,7 +3065,7 @@ nsRuleNode::CheckTableProperties(const nsCSSTable& aTableData)
   return eRulePartialMixed;
 }
 
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckTableBorderProperties(const nsCSSTable& aTableData)
 {
   const PRUint32 numTableProps = 5;
@@ -2734,7 +3116,7 @@ nsRuleNode::CheckTableBorderProperties(const nsCSSTable& aTableData)
 }
 
 #ifdef INCLUDE_XUL
-nsRuleNode::RuleDetail 
+inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
 {
   const PRUint32 numXULProps = 1;
@@ -2795,6 +3177,10 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
     // Nothing is cached.  We'll have to delve further and examine our rules.
     case eStyleStruct_Font:
       return GetFontData(aContext, aMutableContext);
+    case eStyleStruct_Display:
+      return GetDisplayData(aContext, aMutableContext);
+    case eStyleStruct_Visibility:
+      return GetVisibilityData(aContext, aMutableContext);
     case eStyleStruct_Color:
       return GetColorData(aContext, aMutableContext);
     case eStyleStruct_Background:

@@ -649,7 +649,6 @@ nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
 nsStylePosition::nsStylePosition(void) 
 { 
   // positioning values not inherited
-  mPosition = NS_STYLE_POSITION_NORMAL;
   nsStyleCoord  autoCoord(eStyleUnit_Auto);
   mOffset.SetLeft(autoCoord);
   mOffset.SetTop(autoCoord);
@@ -676,21 +675,18 @@ nsStylePosition::nsStylePosition(const nsStylePosition& aSource)
 
 PRInt32 nsStylePosition::CalcDifference(const nsStylePosition& aOther) const
 {
-  if (mPosition == aOther.mPosition) {
-    if ((mOffset == aOther.mOffset) &&
-        (mWidth == aOther.mWidth) &&
-        (mMinWidth == aOther.mMinWidth) &&
-        (mMaxWidth == aOther.mMaxWidth) &&
-        (mHeight == aOther.mHeight) &&
-        (mMinHeight == aOther.mMinHeight) &&
-        (mMaxHeight == aOther.mMaxHeight) &&
-        (mBoxSizing == aOther.mBoxSizing) &&
-        (mZIndex == aOther.mZIndex)) {
-      return NS_STYLE_HINT_NONE;
-    }
-    return NS_STYLE_HINT_REFLOW;
+  if ((mOffset == aOther.mOffset) &&
+      (mWidth == aOther.mWidth) &&
+      (mMinWidth == aOther.mMinWidth) &&
+      (mMaxWidth == aOther.mMaxWidth) &&
+      (mHeight == aOther.mHeight) &&
+      (mMinHeight == aOther.mMinHeight) &&
+      (mMaxHeight == aOther.mMaxHeight) &&
+      (mBoxSizing == aOther.mBoxSizing) &&
+      (mZIndex == aOther.mZIndex)) {
+    return NS_STYLE_HINT_NONE;
   }
-  return NS_STYLE_HINT_FRAMECHANGE;
+  return NS_STYLE_HINT_REFLOW;
 }
 
 // --------------------
@@ -827,3 +823,112 @@ PRInt32 nsStyleBackground::CalcDifference(const nsStyleBackground& aOther) const
     return NS_STYLE_HINT_NONE;
   return NS_STYLE_HINT_VISUAL;
 }
+
+// --------------------
+// nsStyleDisplay
+//
+
+nsStyleDisplay::nsStyleDisplay()
+{
+  mDisplay = NS_STYLE_DISPLAY_INLINE;
+  mPosition = NS_STYLE_POSITION_NORMAL;
+  mFloats = NS_STYLE_FLOAT_NONE;
+  mBreakType = NS_STYLE_CLEAR_NONE;
+  mBreakBefore = PR_FALSE;
+  mBreakAfter = PR_FALSE;
+  mOverflow = NS_STYLE_OVERFLOW_VISIBLE;
+  mClipFlags = NS_STYLE_CLIP_AUTO;
+  mClip.SetRect(0,0,0,0);
+#ifdef IBMBIDI
+  mExplicitDirection = NS_STYLE_DIRECTION_INHERIT;
+#endif // IBMBIDI
+}
+
+nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
+{
+#ifdef IBMBIDI
+  mExplicitDirection = aSource.mExplicitDirection;
+#endif // IBMBIDI
+  mDisplay = aSource.mDisplay;
+  mBinding = aSource.mBinding;
+  mPosition = aSource.mPosition;
+  mFloats = aSource.mFloats;
+  mBreakType = aSource.mBreakType;
+  mBreakBefore = aSource.mBreakBefore;
+  mBreakAfter = aSource.mBreakAfter;
+  mOverflow = aSource.mOverflow;
+  mClipFlags = aSource.mClipFlags;
+  mClip = aSource.mClip;
+}
+
+PRInt32 nsStyleDisplay::CalcDifference(const nsStyleDisplay& aOther) const
+{
+  if (mBinding != aOther.mBinding || mPosition != aOther.mPosition)
+    return NS_STYLE_HINT_FRAMECHANGE;
+
+  if ((mDisplay == aOther.mDisplay) &&
+      (mFloats == aOther.mFloats) &&
+      (mOverflow == aOther.mOverflow)) {
+    if ((mBreakType == aOther.mBreakType) &&
+        (mBreakBefore == aOther.mBreakBefore) &&
+        (mBreakAfter == aOther.mBreakAfter)) {
+      if ((mClipFlags == aOther.mClipFlags) &&
+          (mClip == aOther.mClip)) {
+        return NS_STYLE_HINT_NONE;
+      }
+      return NS_STYLE_HINT_VISUAL;
+    }
+    return NS_STYLE_HINT_REFLOW;
+  }
+  return NS_STYLE_HINT_FRAMECHANGE;
+}
+
+// --------------------
+// nsStyleVisibility
+//
+
+nsStyleVisibility::nsStyleVisibility(nsIPresContext* aPresContext)
+{
+#ifdef IBMBIDI
+  PRUint32 bidiOptions;
+  aPresContext->GetBidi(&bidiOptions);
+  if (GET_BIDI_OPTION_DIRECTION(bidiOptions) == IBMBIDI_TEXTDIRECTION_RTL)
+    mDirection = NS_STYLE_DIRECTION_RTL;
+  else
+    mDirection = NS_STYLE_DIRECTION_LTR;
+#else // ifdef IBMBIDI
+  aPresContext->GetDefaultDirection(&mDirection);
+#endif // IBMBIDI
+  aPresContext->GetLanguage(getter_AddRefs(mLanguage));
+  mVisible = NS_STYLE_VISIBILITY_VISIBLE;
+  mOpacity = 1.0f;
+}
+
+nsStyleVisibility::nsStyleVisibility(const nsStyleVisibility& aSource)
+{
+  mDirection = aSource.mDirection;
+  mVisible = aSource.mVisible;
+  mLanguage = aSource.mLanguage;
+  mOpacity = aSource.mOpacity;
+} 
+
+PRInt32 nsStyleVisibility::CalcDifference(const nsStyleVisibility& aOther) const
+{
+  if (mOpacity != aOther.mOpacity)
+    return NS_STYLE_HINT_VISUAL;
+
+  if ((mDirection == aOther.mDirection) &&
+      (mLanguage == aOther.mLanguage)) {
+    if ((mVisible == aOther.mVisible)) {
+      return NS_STYLE_HINT_NONE;
+    }
+    if ((mVisible != aOther.mVisible) && 
+        ((NS_STYLE_VISIBILITY_COLLAPSE == mVisible) || 
+         (NS_STYLE_VISIBILITY_COLLAPSE == aOther.mVisible))) {
+      return NS_STYLE_HINT_REFLOW;
+    }
+    return NS_STYLE_HINT_VISUAL;
+  }
+  return NS_STYLE_HINT_REFLOW;
+}
+

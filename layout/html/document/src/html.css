@@ -135,6 +135,15 @@ table, :table {
   -moz-box-sizing: border-box;
 }
 
+table[align="left"] {
+  float: left;
+}
+
+table[align="right"] {
+  float: right;
+  text-align: start;
+}
+
 :table-outer {
   display: table;
   margin: 0;

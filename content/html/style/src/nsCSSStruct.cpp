@@ -350,11 +350,13 @@ nsCSSDisplay::nsCSSDisplay(const nsCSSDisplay& aCopy)
   : mDirection(aCopy.mDirection),
     mDisplay(aCopy.mDisplay),
     mBinding(aCopy.mBinding),
+    mPosition(aCopy.mPosition),
     mFloat(aCopy.mFloat),
     mClear(aCopy.mClear),
     mClip(nsnull),
     mOverflow(aCopy.mOverflow),
-    mVisibility(aCopy.mVisibility)
+    mVisibility(aCopy.mVisibility),
+    mOpacity(aCopy.mOpacity)
 {
   MOZ_COUNT_CTOR(nsCSSDisplay);
   CSS_IF_COPY(mClip, nsCSSRect);
@@ -380,9 +382,12 @@ void nsCSSDisplay::List(FILE* out, PRInt32 aIndent) const
   mDirection.AppendToString(buffer, eCSSProperty_direction);
   mDisplay.AppendToString(buffer, eCSSProperty_display);
   mBinding.AppendToString(buffer, eCSSProperty_binding);
+  mPosition.AppendToString(buffer, eCSSProperty_position);
   mFloat.AppendToString(buffer, eCSSProperty_float);
   mClear.AppendToString(buffer, eCSSProperty_clear);
   mVisibility.AppendToString(buffer, eCSSProperty_visibility);
+  mOpacity.AppendToString(buffer, eCSSProperty_opacity);
+
   fputs(buffer, out);
   if (nsnull != mClip) {
     mClip->List(out, eCSSProperty_clip);
@@ -510,8 +515,7 @@ nsCSSPosition::nsCSSPosition(void)
 }
 
 nsCSSPosition::nsCSSPosition(const nsCSSPosition& aCopy)
-  : mPosition(aCopy.mPosition),
-    mWidth(aCopy.mWidth),
+  : mWidth(aCopy.mWidth),
     mMinWidth(aCopy.mMinWidth),
     mMaxWidth(aCopy.mMaxWidth),
     mHeight(aCopy.mHeight),
@@ -542,7 +546,6 @@ void nsCSSPosition::List(FILE* out, PRInt32 aIndent) const
 
   nsAutoString buffer;
 
-  mPosition.AppendToString(buffer, eCSSProperty_position);
   mWidth.AppendToString(buffer, eCSSProperty_width);
   mMinWidth.AppendToString(buffer, eCSSProperty_min_width);
   mMaxWidth.AppendToString(buffer, eCSSProperty_max_width);
@@ -858,8 +861,7 @@ nsCSSUserInterface::nsCSSUserInterface(const nsCSSUserInterface& aCopy)
     mUserSelect(aCopy.mUserSelect),
     mKeyEquivalent(nsnull),
     mUserFocus(aCopy.mUserFocus),
-    mResizer(aCopy.mResizer),
-    mOpacity(aCopy.mOpacity)
+    mResizer(aCopy.mResizer)
 {
   MOZ_COUNT_CTOR(nsCSSUserInterface);
   CSS_IF_COPY(mCursor, nsCSSValueList);
@@ -900,8 +902,7 @@ void nsCSSUserInterface::List(FILE* out, PRInt32 aIndent) const
     cursor->mValue.AppendToString(buffer, eCSSProperty_cursor);
     cursor = cursor->mNext;
   }
-  mOpacity.AppendToString(buffer, eCSSProperty_opacity);
-
+  
   fputs(buffer, out);
 }
 
@@ -1381,16 +1382,20 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_clear:
     case eCSSProperty_display:
     case eCSSProperty_binding:
+    case eCSSProperty_position:          
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
+    case eCSSProperty_opacity:
     case eCSSProperty_overflow:
       CSS_ENSURE(Display) {
         switch (aProperty) {
           case eCSSProperty_float:      mDisplay->mFloat = aValue;      break;
           case eCSSProperty_clear:      mDisplay->mClear = aValue;      break;
           case eCSSProperty_display:    mDisplay->mDisplay = aValue;    break;
+          case eCSSProperty_position:   mDisplay->mPosition = aValue;   break;
           case eCSSProperty_direction:  mDisplay->mDirection = aValue;  break;
           case eCSSProperty_visibility: mDisplay->mVisibility = aValue; break;
+          case eCSSProperty_opacity:    mDisplay->mOpacity = aValue;    break;
           case eCSSProperty_overflow:   mDisplay->mOverflow = aValue;   break;
           case eCSSProperty_binding:         
             mDisplay->mBinding = aValue;      
@@ -1553,7 +1558,6 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
       break;
 
     // nsCSSPosition
-    case eCSSProperty_position:
     case eCSSProperty_width:
     case eCSSProperty_min_width:
     case eCSSProperty_max_width:
@@ -1564,7 +1568,6 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_z_index:
       CSS_ENSURE(Position) {
         switch (aProperty) {
-          case eCSSProperty_position:   mPosition->mPosition = aValue;   break;
           case eCSSProperty_width:      mPosition->mWidth = aValue;      break;
           case eCSSProperty_min_width:  mPosition->mMinWidth = aValue;   break;
           case eCSSProperty_max_width:  mPosition->mMaxWidth = aValue;   break;
@@ -1716,7 +1719,6 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
     case eCSSProperty_cursor:
-    case eCSSProperty_opacity:
       CSS_ENSURE(UserInterface) {
         switch (aProperty) {
           case eCSSProperty_user_input:       mUserInterface->mUserInput = aValue;      break;
@@ -1736,8 +1738,7 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
               CSS_IF_DELETE(mUserInterface->mCursor->mNext);
             }
             break;
-          case eCSSProperty_opacity:                mUserInterface->mOpacity = aValue;         break;
-         
+          
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -1991,7 +1992,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_background_attachment:
       case eCSSProperty_background_x_position:
       case eCSSProperty_background_y_position:
-      case eCSSProperty_opacity:
         if (nsnull != mColor) {
           CSS_ENSURE_IMPORTANT(Color) {
             switch (aProperty) {
@@ -2058,16 +2058,20 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_clear:
       case eCSSProperty_overflow:
       case eCSSProperty_visibility:
+      case eCSSProperty_opacity:
+      case eCSSProperty_position:
         if (nsnull != mDisplay) {
           CSS_ENSURE_IMPORTANT(Display) {
             switch (aProperty) {
               CSS_CASE_IMPORTANT(eCSSProperty_direction,  mDisplay->mDirection);
               CSS_CASE_IMPORTANT(eCSSProperty_display,    mDisplay->mDisplay);
-              CSS_CASE_IMPORTANT(eCSSProperty_binding,   mDisplay->mBinding);
+              CSS_CASE_IMPORTANT(eCSSProperty_binding,    mDisplay->mBinding);
+              CSS_CASE_IMPORTANT(eCSSProperty_position,   mDisplay->mPosition);
               CSS_CASE_IMPORTANT(eCSSProperty_float,      mDisplay->mFloat);
               CSS_CASE_IMPORTANT(eCSSProperty_clear,      mDisplay->mClear);
               CSS_CASE_IMPORTANT(eCSSProperty_overflow,   mDisplay->mOverflow);
               CSS_CASE_IMPORTANT(eCSSProperty_visibility, mDisplay->mVisibility);
+              CSS_CASE_IMPORTANT(eCSSProperty_opacity,    mDisplay->mOpacity);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -2261,7 +2265,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
         break;
 
       // nsCSSPosition
-      case eCSSProperty_position:
       case eCSSProperty_width:
       case eCSSProperty_min_width:
       case eCSSProperty_max_width:
@@ -2273,7 +2276,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
         if (nsnull != mPosition) {
           CSS_ENSURE_IMPORTANT(Position) {
             switch (aProperty) {
-              CSS_CASE_IMPORTANT(eCSSProperty_position,   mPosition->mPosition);
               CSS_CASE_IMPORTANT(eCSSProperty_width,      mPosition->mWidth);
               CSS_CASE_IMPORTANT(eCSSProperty_min_width,  mPosition->mMinWidth);
               CSS_CASE_IMPORTANT(eCSSProperty_max_width,  mPosition->mMaxWidth);
@@ -2459,7 +2461,6 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
               CSS_CASE_IMPORTANT(eCSSProperty_user_select,  mUserInterface->mUserSelect);
               CSS_CASE_IMPORTANT(eCSSProperty_user_focus,   mUserInterface->mUserFocus);
               CSS_CASE_IMPORTANT(eCSSProperty_resizer,      mUserInterface->mResizer);
-              CSS_CASE_IMPORTANT(eCSSProperty_opacity,      mUserInterface->mOpacity);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -2817,19 +2818,23 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_clear:
     case eCSSProperty_display:
     case eCSSProperty_binding:
+    case eCSSProperty_position:
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
+    case eCSSProperty_opacity:
     case eCSSProperty_overflow:
       CSS_CHECK(Display) {
         switch (aProperty) {
           case eCSSProperty_float:      mDisplay->mFloat.Reset();      break;
           case eCSSProperty_clear:      mDisplay->mClear.Reset();      break;
           case eCSSProperty_display:    mDisplay->mDisplay.Reset();    break;
+          case eCSSProperty_position:   mDisplay->mPosition.Reset();   break;
           case eCSSProperty_binding:         
             mDisplay->mBinding.Reset();      
             break;
           case eCSSProperty_direction:  mDisplay->mDirection.Reset();  break;
           case eCSSProperty_visibility: mDisplay->mVisibility.Reset(); break;
+          case eCSSProperty_opacity:    mDisplay->mOpacity.Reset();    break;
           case eCSSProperty_overflow:   mDisplay->mOverflow.Reset();   break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
@@ -2989,7 +2994,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
       break;
 
     // nsCSSPosition
-    case eCSSProperty_position:
     case eCSSProperty_width:
     case eCSSProperty_min_width:
     case eCSSProperty_max_width:
@@ -3000,7 +3004,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_z_index:
       CSS_CHECK(Position) {
         switch (aProperty) {
-          case eCSSProperty_position:   mPosition->mPosition.Reset();   break;
           case eCSSProperty_width:      mPosition->mWidth.Reset();      break;
           case eCSSProperty_min_width:  mPosition->mMinWidth.Reset();   break;
           case eCSSProperty_max_width:  mPosition->mMaxWidth.Reset();   break;
@@ -3152,7 +3155,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
     case eCSSProperty_cursor:
-    case eCSSProperty_opacity:
       CSS_CHECK(UserInterface) {
         switch (aProperty) {
           case eCSSProperty_user_input:       mUserInterface->mUserInput.Reset();      break;
@@ -3172,7 +3174,6 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
               CSS_IF_DELETE(mUserInterface->mCursor->mNext);
             }
             break;
-          case eCSSProperty_opacity:                mUserInterface->mOpacity.Reset();         break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -3526,8 +3527,10 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_clear:
     case eCSSProperty_display:
     case eCSSProperty_binding:
+    case eCSSProperty_position:
     case eCSSProperty_direction:
     case eCSSProperty_visibility:
+    case eCSSProperty_opacity:
     case eCSSProperty_overflow:
       if (nsnull != mDisplay) {
         switch (aProperty) {
@@ -3538,7 +3541,9 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
             aValue = mDisplay->mBinding;        
             break;
           case eCSSProperty_direction:  aValue = mDisplay->mDirection;  break;
+          case eCSSProperty_position:   aValue = mDisplay->mPosition;   break;
           case eCSSProperty_visibility: aValue = mDisplay->mVisibility; break;
+          case eCSSProperty_opacity:    aValue = mDisplay->mOpacity;    break;
           case eCSSProperty_overflow:   aValue = mDisplay->mOverflow;   break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
@@ -3712,7 +3717,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
       break;
 
     // nsCSSPosition
-    case eCSSProperty_position:
     case eCSSProperty_width:
     case eCSSProperty_min_width:
     case eCSSProperty_max_width:
@@ -3723,7 +3727,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_z_index:
       if (nsnull != mPosition) {
         switch (aProperty) {
-          case eCSSProperty_position:   aValue = mPosition->mPosition;   break;
           case eCSSProperty_width:      aValue = mPosition->mWidth;      break;
           case eCSSProperty_min_width:  aValue = mPosition->mMinWidth;   break;
           case eCSSProperty_max_width:  aValue = mPosition->mMaxWidth;   break;
@@ -3889,7 +3892,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_user_focus:
     case eCSSProperty_resizer:
     case eCSSProperty_cursor:
-    case eCSSProperty_opacity:
       if (nsnull != mUserInterface) {
         switch (aProperty) {
           case eCSSProperty_user_input:       aValue = mUserInterface->mUserInput;       break;
@@ -3907,7 +3909,6 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
               aValue = mUserInterface->mCursor->mValue;
             }
             break;
-          case eCSSProperty_opacity:                aValue = mUserInterface->mOpacity;         break;
           
           CSS_BOGUS_DEFAULT; // make compiler happy
         }

@@ -330,6 +330,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -341,9 +343,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     nsGenericHTMLElement::MapImageAlignAttributeInto(aAttributes, aContext,
                                                      aPresContext);
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

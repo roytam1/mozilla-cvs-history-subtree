@@ -225,15 +225,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
     if (value.GetUnit() == eHTMLUnit_Enumerated)
       aData->mListData->mType = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
   }
-}
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -257,7 +250,7 @@ nsHTMLLIElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRul
                                               nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

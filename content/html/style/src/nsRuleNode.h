@@ -101,6 +101,14 @@ protected:
                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                         nsRuleNode* aHighestNode,
                                         const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeDisplayData(nsStyleDisplay* aStartDisplay, const nsCSSDisplay& aDisplayData, 
+                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsRuleNode* aHighestNode,
+                                          const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeVisibilityData(nsStyleVisibility* aStartVisibility, const nsCSSDisplay& aDisplayData, 
+                                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                             nsRuleNode* aHighestNode,
+                                             const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData, 
                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                        nsRuleNode* aHighestNode,
@@ -153,6 +161,8 @@ protected:
 #endif
 
   RuleDetail CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStruct& aCSSStruct);
+  RuleDetail CheckDisplayProperties(const nsCSSDisplay& aDisplay);
+  RuleDetail CheckVisibilityProperties(const nsCSSDisplay& aDisplay);
   RuleDetail CheckFontProperties(const nsCSSFont& aFont);
   RuleDetail CheckColorProperties(const nsCSSColor& aColor);
   RuleDetail CheckBackgroundProperties(const nsCSSColor& aColor);
@@ -168,7 +178,9 @@ protected:
   RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
 #endif
 
-  const nsStyleStruct* GetParentData(const nsStyleStructID& aSID); 
+  const nsStyleStruct* GetParentData(const nsStyleStructID& aSID);
+  const nsStyleStruct* GetDisplayData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetVisibilityData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetColorData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetBackgroundData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
@@ -202,4 +214,3 @@ public:
 };
 
 #endif
-

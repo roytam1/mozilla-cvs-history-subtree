@@ -2225,8 +2225,9 @@ MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                      nsIMutableStyleContext* aStyleContext,
                      nsIPresContext* aPresContext)
 {
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aStyleContext,
-                                                aPresContext);
+ // XXXdwh Don't forget about this function.
+ // nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aStyleContext,
+ //                                               aPresContext);
   nsHTMLValue value;
   // Get dir attribute
   aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
@@ -2242,13 +2243,15 @@ NS_IMETHODIMP
 nsGenericHTMLElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                    nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
 #ifdef IBMBIDI
-  if (mNodeInfo->Equals(nsHTMLAtoms::bdo) )
+  if (mNodeInfo->Equals(nsHTMLAtoms::bdo)) {
+    aMapRuleFunc = &MapCommonAttributesInto;
     aMapFunc = &MapBdoAttributesInto;
+  }
   else
 #endif // IBMBIDI
-  aMapFunc = &MapCommonAttributesInto;
+  aMapRuleFunc = &MapCommonAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 
@@ -3029,24 +3032,20 @@ nsGenericHTMLElement::ParseStyleAttribute(const nsAReadableString& aValue, nsHTM
  */
 void
 nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                                              nsIMutableStyleContext* aStyleContext,
-                                              nsIPresContext* aPresContext)
+                                              nsRuleData* aData)
 {
-  nsHTMLValue value;
-  aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
-  if (value.GetUnit() == eHTMLUnit_Enumerated) {
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aStyleContext->GetMutableStyleData(eStyleStruct_Display);
-    display->mDirection = value.GetIntValue();
-#ifdef IBMBIDI
-    display->mExplicitDirection = display->mDirection;
+  if (aData->mSID != eStyleStruct_Visibility || !aData->mDisplayData)
+    return;
 
-    if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
-      aPresContext->EnableBidi();
-    }
-#endif // IBMBIDI
+  if (aData->mDisplayData->mDirection.GetUnit() == eCSSUnit_Null) {
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated)
+      aData->mDisplayData->mDirection = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
   }
-  aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
+  
+  // XXXdwh. I have broken lang!
+  /*aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
   if (value.GetUnit() == eHTMLUnit_String) {
     if (!gLangService) {
       nsServiceManager::GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID,
@@ -3055,13 +3054,15 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
         return;
       }
     }
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aStyleContext->GetMutableStyleData(eStyleStruct_Display);
+    nsStyleVisibility* vis = (nsStyleVisibility*)
+      aStyleContext->GetMutableStyleData(eStyleStruct_Visibility);
+   
     nsAutoString lang;
     value.GetStringValue(lang);
     gLangService->LookupLanguage(lang.GetUnicode(),
-      getter_AddRefs(display->mLanguage));
+      getter_AddRefs(vis->mLanguage));
   }
+  */
 }
 
 PRBool

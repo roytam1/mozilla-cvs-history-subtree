@@ -320,8 +320,11 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
   }
   const nsStyleDisplay* disp =
     (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
+  const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+ 
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
-    if (disp->IsVisibleOrCollapsed()) {
+    if (vis->IsVisibleOrCollapsed()) {
 
       const nsStyleBackground* myColor = (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);
 #ifdef OLD_TABLE_SELECTION

@@ -186,6 +186,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -195,8 +196,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 {
   nsGenericHTMLElement::MapImageAlignAttributeInto(aAttributes, aContext,
                                                    aPresContext);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

@@ -210,6 +210,7 @@ struct nsHTMLReflowState {
 
   // Cached pointers to the various style structs used during intialization
   const nsStyleDisplay* mStyleDisplay;
+  const nsStyleVisibility* mStyleVisibility;
   const nsStylePosition* mStylePosition;
   const nsStyleBorder* mStyleBorder;
   const nsStyleMargin* mStyleMargin;
@@ -377,7 +378,6 @@ protected:
                                    nscoord& aResult);
 
   static nsCSSFrameType DetermineFrameType(nsIFrame* aFrame,
-                                           const nsStylePosition* aPosition,
                                            const nsStyleDisplay* aDisplay);
 
   // Computes margin values from the specified margin style information, and

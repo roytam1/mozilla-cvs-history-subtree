@@ -30,6 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
+#include "nsIRuleNode.h"
 
 // XXX missing nav attributes
 
@@ -186,6 +187,15 @@ nsHTMLParagraphElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aData || !aAttributes)
+    return;
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -199,9 +209,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       text->mTextAlign = value.GetIntValue();
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP
@@ -223,7 +230,7 @@ NS_IMETHODIMP
 nsHTMLParagraphElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                      nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

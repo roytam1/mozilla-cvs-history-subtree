@@ -424,9 +424,9 @@ NS_METHOD nsTableColGroupFrame::Paint(nsIPresContext*      aPresContext,
     nsCompatibility mode;
     aPresContext->GetCompatibilityMode(&mode);
     if (eCompatibility_Standard == mode) {
-      const nsStyleDisplay* disp =
-        (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
-      if (disp->IsVisibleOrCollapsed()) {
+      const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+      if (vis->IsVisibleOrCollapsed()) {
         const nsStyleBorder* border =
           (const nsStyleBorder*)mStyleContext->GetStyleData(eStyleStruct_Border);
         const nsStyleBackground* color =

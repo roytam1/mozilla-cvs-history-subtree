@@ -955,12 +955,12 @@ GetChildListNameFor(nsIPresContext* aPresContext,
   aChildFrame->GetFrameState(&frameState);
   if (frameState & NS_FRAME_OUT_OF_FLOW) {
     // Look at the style information to tell
-    const nsStylePosition* position;
-    aChildFrame->GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&)position);
+    const nsStyleDisplay* disp;
+    aChildFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)disp);
     
-    if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+    if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
       listName = nsLayoutAtoms::absoluteList;
-    } else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+    } else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
       listName = nsLayoutAtoms::fixedList;
     } else {
 #ifdef NS_DEBUG
@@ -2496,18 +2496,6 @@ nsCSSFrameConstructor::GetParentFrame(nsIPresShell*            aPresShell,
   return rv;
 }
 
-
-void
-FixUpOuterTableFloat(nsIStyleContext* aOuterSC,
-                     nsIStyleContext* aInnerSC)
-{
-  nsStyleDisplay* outerStyleDisplay = (nsStyleDisplay*)aOuterSC->GetMutableStyleData(eStyleStruct_Display);
-  nsStyleDisplay* innerStyleDisplay = (nsStyleDisplay*)aInnerSC->GetStyleData(eStyleStruct_Display);
-  if (outerStyleDisplay->mFloats != innerStyleDisplay->mFloats) {
-    outerStyleDisplay->mFloats = innerStyleDisplay->mFloats;
-  }
-}
-
 // Construct the outer, inner table frames and the children frames for the table. 
 nsresult
 nsCSSFrameConstructor::ConstructTableFrame(nsIPresShell*            aPresShell,
@@ -2548,8 +2536,7 @@ nsCSSFrameConstructor::ConstructTableFrame(nsIPresShell*            aPresShell,
   aPresContext->ResolvePseudoStyleContextFor(aContent, nsHTMLAtoms::tableOuterPseudo,
                                              aStyleContext, PR_FALSE,
                                              getter_AddRefs(outerStyleContext));
-  FixUpOuterTableFloat(outerStyleContext, aStyleContext);
-
+  
   // Init the table outer frame and see if we need to create a view, e.g.
   // the frame is absolutely positioned  
   InitAndRestoreFrame(aPresContext, aState, aContent, 
@@ -3468,11 +3455,6 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
             return rv;
           }
           isBlockFrame = PR_TRUE;
-
-          // Since we always create a block frame, we need to make sure that the 
-          // style context's display type is block level.
-          nsStyleDisplay* disp = (nsStyleDisplay*)styleContext->GetMutableStyleData(eStyleStruct_Display);
-          disp->mDisplay = NS_STYLE_DISPLAY_BLOCK;
         }
 
         // initialize the child
@@ -3672,11 +3654,6 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   aPresContext->ResolvePseudoStyleContextFor(nsnull, nsLayoutAtoms::viewportPseudo,
                                            nsnull, PR_FALSE,
                                            getter_AddRefs(viewportPseudoStyle));
-
-  { // ensure that the viewport thinks it is a block frame, layout goes pootsy if it doesn't
-    nsStyleDisplay* display = (nsStyleDisplay*)viewportPseudoStyle->GetMutableStyleData(eStyleStruct_Display);
-    display->mDisplay = NS_STYLE_DISPLAY_BLOCK;
-  }
 
   NS_NewViewportFrame(aPresShell, &viewportFrame);
 
@@ -4680,21 +4657,19 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
     // Ignore the tag if it's not HTML content
     if (aNameSpaceID == kNameSpaceID_HTML) {
       // See if the element is absolute or fixed positioned
-      const nsStylePosition* position = (const nsStylePosition*)
-        aStyleContext->GetStyleData(eStyleStruct_Position);
       const nsStyleDisplay* display = (const nsStyleDisplay*)
         aStyleContext->GetStyleData(eStyleStruct_Display);
-      if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+      if (NS_STYLE_POSITION_ABSOLUTE == display->mPosition) {
         isAbsolutelyPositioned = PR_TRUE;
       }
-      else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+      else if (NS_STYLE_POSITION_FIXED == display->mPosition) {
         isFixedPositioned = PR_TRUE;
       }
       else {
         if (NS_STYLE_FLOAT_NONE != display->mFloats) {
           isFloating = PR_TRUE;
         }
-        if (NS_STYLE_POSITION_RELATIVE == position->mPosition) {
+        if (NS_STYLE_POSITION_RELATIVE == display->mPosition) {
           isRelativePositioned = PR_TRUE;
         }
       }
@@ -5312,9 +5287,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 
   if (isXULNS || isXULDisplay) {
     // See if the element is absolutely positioned
-    const nsStylePosition* position = (const nsStylePosition*)
-      aStyleContext->GetStyleData(eStyleStruct_Position);
-    if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition)
+    if (NS_STYLE_POSITION_ABSOLUTE == display->mPosition)
       isAbsolutelyPositioned = PR_TRUE;
 
     if (isXULNS) {
@@ -5324,9 +5297,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewButtonBoxFrame(aPresShell, &newFrame);
-
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
 
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
@@ -6178,17 +6148,13 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
   PRBool    pseudoParent = PR_FALSE; // is the new frame's parent anonymous
   nsresult  rv = NS_OK;
 
-  // Get the position syle info
-  const nsStylePosition* position = (const nsStylePosition*)
-    aStyleContext->GetStyleData(eStyleStruct_Position);
-
   // The frame is also a block if it's an inline frame that's floated or
   // absolutely positioned
   if (NS_STYLE_FLOAT_NONE != aDisplay->mFloats) {
     isFloating = PR_TRUE;
   }
   if ((NS_STYLE_DISPLAY_INLINE == aDisplay->mDisplay) &&
-      (isFloating || position->IsAbsolutelyPositioned())) {
+      (isFloating || aDisplay->IsAbsolutelyPositioned())) {
     isBlock = PR_TRUE;
   }
 
@@ -6220,9 +6186,9 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
     }
     // See if it's absolute positioned or fixed positioned
-    if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+    if (NS_STYLE_POSITION_ABSOLUTE == aDisplay->mPosition) {
       isAbsolutelyPositioned = PR_TRUE;
-    } else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+    } else if (NS_STYLE_POSITION_FIXED == aDisplay->mPosition) {
       isFixedPositioned = PR_TRUE;
     }
 
@@ -6296,7 +6262,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     ///------
   }
   // See if the frame is absolute or fixed positioned
-  else if (position->IsAbsolutelyPositioned() &&
+  else if (aDisplay->IsAbsolutelyPositioned() &&
            ((NS_STYLE_DISPLAY_BLOCK == aDisplay->mDisplay) ||
             (NS_STYLE_DISPLAY_INLINE == aDisplay->mDisplay) ||
             (NS_STYLE_DISPLAY_LIST_ITEM == aDisplay->mDisplay))) {
@@ -6304,7 +6270,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     if (!pseudoParent && !aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
     }
-    if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+    if (NS_STYLE_POSITION_ABSOLUTE == aDisplay->mPosition) {
       isAbsolutelyPositioned = PR_TRUE;
     } else {
       isFixedPositioned = PR_TRUE;
@@ -6406,7 +6372,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     }
   }
   // See if it's relatively positioned
-  else if ((NS_STYLE_POSITION_RELATIVE == position->mPosition) &&
+  else if ((NS_STYLE_POSITION_RELATIVE == aDisplay->mPosition) &&
            ((NS_STYLE_DISPLAY_BLOCK == aDisplay->mDisplay) ||
             (NS_STYLE_DISPLAY_INLINE == aDisplay->mDisplay) ||
             (NS_STYLE_DISPLAY_LIST_ITEM == aDisplay->mDisplay))) {
@@ -6521,10 +6487,10 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
         ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
       }
       nsIFrame* geometricParent = adjParentFrame;
-      if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+      if (NS_STYLE_POSITION_ABSOLUTE == aDisplay->mPosition) {
         isAbsolutelyPositioned = PR_TRUE;
         geometricParent = aState.mAbsoluteItems.containingBlock;
-      } else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+      } else if (NS_STYLE_POSITION_FIXED == aDisplay->mPosition) {
         isFixedPositioned = PR_TRUE;
         geometricParent = aState.mFixedItems.containingBlock;
       } else if (isFloating) {
@@ -7437,18 +7403,16 @@ nsCSSFrameConstructor::GetAbsoluteContainingBlock(nsIPresContext* aPresContext,
   // relatively positioned
   nsIFrame* containingBlock = nsnull;
   for (nsIFrame* frame = aFrame; frame; frame->GetParent(&frame)) {
-    const nsStylePosition* position;
+    const nsStyleDisplay* disp;
 
     // Is it positioned?
-    frame->GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&)position);
-    if ((position->mPosition == NS_STYLE_POSITION_ABSOLUTE) ||
-        (position->mPosition == NS_STYLE_POSITION_RELATIVE)) {
-      const nsStyleDisplay* display;
+    frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)disp);
+    if ((disp->mPosition == NS_STYLE_POSITION_ABSOLUTE) ||
+        (disp->mPosition == NS_STYLE_POSITION_RELATIVE)) {
       
       // If it's a table then ignore it, because for the time being tables
       // are not containers for absolutely positioned child frames
-      frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
-      if (display->mDisplay != NS_STYLE_DISPLAY_TABLE) {
+      if (disp->mDisplay != NS_STYLE_DISPLAY_TABLE) {
         nsCOMPtr<nsIAtom> frameType;
         // This may set frameType to null.
         frame->GetFrameType(getter_AddRefs(frameType));
@@ -7504,12 +7468,8 @@ nsCSSFrameConstructor::GetFloaterContainingBlock(nsIPresContext* aPresContext,
       break;
     }
     else if (NS_STYLE_DISPLAY_INLINE == display->mDisplay) {
-      const nsStylePosition* position;
-      containingBlock->GetStyleData(eStyleStruct_Position,
-                                    (const nsStyleStruct*&)position);
-
       if ((NS_STYLE_FLOAT_NONE != display->mFloats) ||
-          (position->IsAbsolutelyPositioned())) {
+          (display->IsAbsolutelyPositioned())) {
         if (NS_STYLE_FLOAT_NONE != display->mFloats) {
           nsCOMPtr<nsIAtom> frameType;
           containingBlock->GetFrameType(getter_AddRefs(frameType));
@@ -7704,10 +7664,7 @@ FindPreviousAnonymousSibling(nsIPresShell* aPresShell,
           const nsStyleDisplay* display;
           prevSibling->GetStyleData(eStyleStruct_Display,
                                     (const nsStyleStruct*&)display);
-          const nsStylePosition* position;
-          prevSibling->GetStyleData(eStyleStruct_Position,
-                                    (const nsStyleStruct*&)position);
-          if (display->IsFloating() || position->IsPositioned()) {
+          if (display->IsFloating() || display->IsPositioned()) {
             // Nope. Get the place-holder instead
             nsIFrame* placeholderFrame;
             aPresShell->GetPlaceholderFrameFor(prevSibling, &placeholderFrame);
@@ -7774,10 +7731,7 @@ FindNextAnonymousSibling(nsIPresShell* aPresShell,
           const nsStyleDisplay* display;
           nextSibling->GetStyleData(eStyleStruct_Display,
                                     (const nsStyleStruct*&)display);
-          const nsStylePosition* position;
-          nextSibling->GetStyleData(eStyleStruct_Position,
-                                    (const nsStyleStruct*&)position);
-          if (display->IsFloating() || position->IsPositioned()) {
+          if (display->IsFloating() || display->IsPositioned()) {
             // Nope. Get the place-holder instead
             nsIFrame* placeholderFrame;
             aPresShell->GetPlaceholderFrameFor(nextSibling, &placeholderFrame);
@@ -7824,10 +7778,7 @@ FindPreviousSibling(nsIPresShell* aPresShell,
       const nsStyleDisplay* display;
       prevSibling->GetStyleData(eStyleStruct_Display,
                                 (const nsStyleStruct*&)display);
-      const nsStylePosition* position;
-      prevSibling->GetStyleData(eStyleStruct_Position,
-                                (const nsStyleStruct*&)position);
-      if (display->IsFloating() || position->IsPositioned()) {
+      if (display->IsFloating() || display->IsPositioned()) {
         // Nope. Get the place-holder instead
         nsIFrame* placeholderFrame;
         aPresShell->GetPlaceholderFrameFor(prevSibling, &placeholderFrame);
@@ -7873,10 +7824,7 @@ FindNextSibling(nsIPresShell* aPresShell,
       const nsStyleDisplay* display;
       nextSibling->GetStyleData(eStyleStruct_Display,
                                 (const nsStyleStruct*&)display);
-      const nsStylePosition* position;
-      nextSibling->GetStyleData(eStyleStruct_Position,
-                                (const nsStyleStruct*&)position);
-      if (display->IsFloating() || position->IsPositioned()) {
+      if (display->IsFloating() || display->IsPositioned()) {
         // Nope. Get the place-holder instead
         nsIFrame* placeholderFrame;
         aPresShell->GetPlaceholderFrameFor(nextSibling, &placeholderFrame);
@@ -9185,9 +9133,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     }
     else {
       // See if it's absolutely or fixed positioned
-      const nsStylePosition* position;
-      childFrame->GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&)position);
-      if (position->IsAbsolutelyPositioned()) {
+      if (display->IsAbsolutelyPositioned()) {
         // Get the placeholder frame
         nsIFrame* placeholderFrame;
         frameManager->GetPlaceholderFrameFor(childFrame, &placeholderFrame);
@@ -9198,7 +9144,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
         // Generate two notifications. First for the absolutely positioned
         // frame
         rv = frameManager->RemoveFrame(aPresContext, *shell, parentFrame,
-          (NS_STYLE_POSITION_FIXED == position->mPosition) ?
+          (NS_STYLE_POSITION_FIXED == display->mPosition) ?
           nsLayoutAtoms::fixedList : nsLayoutAtoms::absoluteList, childFrame);
 
         // Now the placeholder frame
@@ -9253,23 +9199,23 @@ SyncAndInvalidateView(nsIPresContext* aPresContext,
                       nsIViewManager* aViewManager)
 {
   const nsStyleBackground* bg;
-  const nsStyleUserInterface* ui;
   const nsStyleDisplay* disp; 
+  const nsStyleVisibility* vis;
   aFrame->GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&) bg);
-  aFrame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&) ui);
   aFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) disp);
+  aFrame->GetStyleData(eStyleStruct_Visibility, (const nsStyleStruct*&) vis);
 
-  aViewManager->SetViewOpacity(aView, ui->mOpacity);
+  aViewManager->SetViewOpacity(aView, vis->mOpacity);
 
   // See if the view should be hidden or visible
   PRBool  viewIsVisible = PR_TRUE;
   PRBool  viewHasTransparentContent = (bg->mBackgroundFlags &
             NS_STYLE_BG_COLOR_TRANSPARENT) == NS_STYLE_BG_COLOR_TRANSPARENT;
 
-  if (NS_STYLE_VISIBILITY_COLLAPSE == disp->mVisible) {
+  if (NS_STYLE_VISIBILITY_COLLAPSE == vis->mVisible) {
     viewIsVisible = PR_FALSE;
   }
-  else if (NS_STYLE_VISIBILITY_HIDDEN == disp->mVisible) {
+  else if (NS_STYLE_VISIBILITY_HIDDEN == vis->mVisible) {
     // If it has a widget, hide the view because the widget can't deal with it
     nsIWidget* widget = nsnull;
     aView->GetWidget(widget);
@@ -10097,10 +10043,8 @@ nsCSSFrameConstructor::ConstructAlternateFrame(nsIPresShell*    aPresShell,
   PRBool    isOutOfFlow = PR_FALSE;
   const nsStyleDisplay* display = (const nsStyleDisplay*)
     aStyleContext->GetStyleData(eStyleStruct_Display);
-  const nsStylePosition* position = (const nsStylePosition*)
-    aStyleContext->GetStyleData(eStyleStruct_Position);
-
-  if (position->IsAbsolutelyPositioned()) {
+  
+  if (display->IsAbsolutelyPositioned()) {
     NS_NewAbsoluteItemWrapperFrame(aPresShell, &containerFrame);
     isOutOfFlow = PR_TRUE;
   } else if (display->IsFloating()) {

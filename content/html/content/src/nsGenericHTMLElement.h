@@ -286,8 +286,7 @@ public:
    */
 
   static void MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAttributes, 
-                                      nsIMutableStyleContext* aStyleContext,
-                                      nsIPresContext* aPresContext);
+                                      nsRuleData* aRuleData);
   static PRBool GetCommonMappedAttributesImpact(const nsIAtom* aAttribute,
                                                 PRInt32& aHint);
 

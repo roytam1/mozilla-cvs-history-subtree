@@ -56,7 +56,7 @@
 #include "nsIFormControlFrame.h"
 #include "nsIFrame.h"
 
-
+#include "nsIRuleNode.h"
 
 class nsHTMLSelectElement;
 
@@ -158,7 +158,7 @@ public:
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -1347,6 +1347,14 @@ nsHTMLSelectElement::StringToAttribute(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aData || !aAttributes)
+    return;
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+}
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -1355,27 +1363,18 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
   aAttributes->GetAttribute(nsHTMLAtoms::align, value);
   if (eHTMLUnit_Enumerated == value.GetUnit()) {
-    nsStyleDisplay* display = (nsStyleDisplay*)aContext->GetMutableStyleData(eStyleStruct_Display);
     nsStyleText* text = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
     switch (value.GetIntValue()) {
-    case NS_STYLE_TEXT_ALIGN_LEFT: {
-      display->mFloats = NS_STYLE_FLOAT_LEFT;
+    case NS_STYLE_TEXT_ALIGN_LEFT:
+    case NS_STYLE_TEXT_ALIGN_RIGHT:
       break;
-      }
-    case NS_STYLE_TEXT_ALIGN_RIGHT: {
-      display->mFloats = NS_STYLE_FLOAT_RIGHT;
-      break;
-      }
     default: {
       text->mVerticalAlign.SetIntValue(value.GetIntValue(),
                                        eStyleUnit_Enumerated);
       break;
-      }
+    }
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP
@@ -1397,10 +1396,10 @@ nsHTMLSelectElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 }
 
 NS_IMETHODIMP
-nsHTMLSelectElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLSelectElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                   nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

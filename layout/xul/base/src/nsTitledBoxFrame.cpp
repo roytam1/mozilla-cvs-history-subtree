@@ -105,10 +105,10 @@ nsTitledBoxFrame::Paint(nsIPresContext* aPresContext,
 {
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
     // Paint our background and border
-    const nsStyleDisplay* disp =
-      (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
 
-    if (disp->IsVisible() && mRect.width && mRect.height) {
+    if (vis->IsVisible() && mRect.width && mRect.height) {
       PRIntn skipSides = GetSkipSides();
       const nsStyleBackground* color =
         (const nsStyleBackground*)mStyleContext->GetStyleData(eStyleStruct_Background);

@@ -1791,9 +1791,9 @@ nsFrame::GetFrameForPoint(nsIPresContext* aPresContext,
 {
   if ((aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) &&
       (mRect.Contains(aPoint))) {
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)
-      mStyleContext->GetStyleData(eStyleStruct_Display);
-    if (disp->IsVisible()) {
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)((nsIStyleContext*)mStyleContext)->GetStyleData(eStyleStruct_Visibility);
+    if (vis->IsVisible()) {
       *aFrame = this;
       return NS_OK;
     }
@@ -2218,14 +2218,13 @@ nsFrame::IsFrameTreeTooDeep(const nsHTMLReflowState& aReflowState,
 // Style sizing methods
 NS_IMETHODIMP nsFrame::IsPercentageBase(PRBool& aBase) const
 {
-  const nsStylePosition* position;
-  GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&)position);
-  if (position->mPosition != NS_STYLE_POSITION_NORMAL) {
+  const nsStyleDisplay* display;
+    GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
+    
+  if (display->mPosition != NS_STYLE_POSITION_NORMAL) {
     aBase = PR_TRUE;
   }
   else {
-    const nsStyleDisplay* display;
-    GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
     if ((display->mDisplay == NS_STYLE_DISPLAY_BLOCK) || 
         (display->mDisplay == NS_STYLE_DISPLAY_LIST_ITEM) ||
         (display->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL)) {
@@ -2436,8 +2435,9 @@ nsFrame::IsVisibleForPainting(nsIPresContext *     aPresContext,
 {
   // first check to see if we are visible
   if (aCheckVis) {
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)((nsIStyleContext*)mStyleContext)->GetStyleData(eStyleStruct_Display);
-    if (!disp->IsVisible()) {
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)((nsIStyleContext*)mStyleContext)->GetStyleData(eStyleStruct_Visibility);
+    if (!vis->IsVisible()) {
       *aIsVisible = PR_FALSE;
       return NS_OK;
     }

@@ -169,127 +169,6 @@ PRInt32 StyleTextImpl::CalcDifference(const StyleTextImpl& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
-
-// --------------------
-// nsStyleDisplay
-//
-
-struct StyleDisplayImpl: public nsStyleDisplay {
-  StyleDisplayImpl(void) { }
-
-  void ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleDisplay& aSource);
-  void CopyTo(nsStyleDisplay& aDest) const;
-  PRInt32 CalcDifference(const StyleDisplayImpl& aOther) const;
- 
-private:  // These are not allowed
-  StyleDisplayImpl(const StyleDisplayImpl& aOther);
-  StyleDisplayImpl& operator=(const StyleDisplayImpl& aOther);
-};
-
-void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* aPresContext)
-{
-  if (nsnull != aParent) {
-    mDirection = aParent->mDirection;
-    mLanguage = aParent->mLanguage;
-    mVisible = aParent->mVisible;
-  }
-  else {
-#ifdef IBMBIDI
-    PRUint32 mBidioptions;
-    aPresContext->GetBidi(&mBidioptions);
-    if (GET_BIDI_OPTION_DIRECTION(mBidioptions) == IBMBIDI_TEXTDIRECTION_RTL)
-      mDirection = NS_STYLE_DIRECTION_RTL;
-    else
-      mDirection = NS_STYLE_DIRECTION_LTR;
-#else // ifdef IBMBIDI
-    aPresContext->GetDefaultDirection(&mDirection);
-#endif // IBMBIDI
-    aPresContext->GetLanguage(getter_AddRefs(mLanguage));
-    mVisible = NS_STYLE_VISIBILITY_VISIBLE;
-  }
-  mDisplay = NS_STYLE_DISPLAY_INLINE;
-  mBinding.SetLength(0);
-  mFloats = NS_STYLE_FLOAT_NONE;
-  mBreakType = NS_STYLE_CLEAR_NONE;
-  mBreakBefore = PR_FALSE;
-  mBreakAfter = PR_FALSE;
-  mOverflow = NS_STYLE_OVERFLOW_VISIBLE;
-  mClipFlags = NS_STYLE_CLIP_AUTO;
-  mClip.SetRect(0,0,0,0);
-#ifdef IBMBIDI
-  mExplicitDirection = NS_STYLE_DIRECTION_INHERIT;
-#endif // IBMBIDI
-}
-
-void StyleDisplayImpl::SetFrom(const nsStyleDisplay& aSource)
-{
-  mDirection = aSource.mDirection;
-#ifdef IBMBIDI
-  mExplicitDirection = aSource.mExplicitDirection;
-#endif // IBMBIDI
-  mDisplay = aSource.mDisplay;
-  mBinding = aSource.mBinding;
-  mFloats = aSource.mFloats;
-  mBreakType = aSource.mBreakType;
-  mBreakBefore = aSource.mBreakBefore;
-  mBreakAfter = aSource.mBreakAfter;
-  mVisible = aSource.mVisible;
-  mOverflow = aSource.mOverflow;
-  mClipFlags = aSource.mClipFlags;
-  mClip = aSource.mClip;
-  mLanguage = aSource.mLanguage;
-}
-
-void StyleDisplayImpl::CopyTo(nsStyleDisplay& aDest) const
-{
-  aDest.mDirection = mDirection;
-#ifdef IBMBIDI
-  aDest.mExplicitDirection = mExplicitDirection;
-#endif // IBMBIDI
-  aDest.mDisplay = mDisplay;
-  aDest.mBinding = mBinding;
-  aDest.mFloats = mFloats;
-  aDest.mBreakType = mBreakType;
-  aDest.mBreakBefore = mBreakBefore;
-  aDest.mBreakAfter = mBreakAfter;
-  aDest.mVisible = mVisible;
-  aDest.mOverflow = mOverflow;
-  aDest.mClipFlags = mClipFlags;
-  aDest.mClip = mClip;
-  aDest.mLanguage = mLanguage;
-}
-
-PRInt32 StyleDisplayImpl::CalcDifference(const StyleDisplayImpl& aOther) const
-{
-  if (mBinding != aOther.mBinding)
-    return NS_STYLE_HINT_FRAMECHANGE;
-
-  if ((mDisplay == aOther.mDisplay) &&
-      (mFloats == aOther.mFloats) &&
-      (mOverflow == aOther.mOverflow)) {
-    if ((mDirection == aOther.mDirection) &&
-        (mLanguage == aOther.mLanguage) &&
-        (mBreakType == aOther.mBreakType) &&
-        (mBreakBefore == aOther.mBreakBefore) &&
-        (mBreakAfter == aOther.mBreakAfter)) {
-      if ((mVisible == aOther.mVisible) &&
-          (mClipFlags == aOther.mClipFlags) &&
-          (mClip == aOther.mClip)) {
-        return NS_STYLE_HINT_NONE;
-      }
-      if ((mVisible != aOther.mVisible) && 
-          ((NS_STYLE_VISIBILITY_COLLAPSE == mVisible) || 
-           (NS_STYLE_VISIBILITY_COLLAPSE == aOther.mVisible))) {
-        return NS_STYLE_HINT_REFLOW;
-      }
-      return NS_STYLE_HINT_VISUAL;
-    }
-    return NS_STYLE_HINT_REFLOW;
-  }
-  return NS_STYLE_HINT_FRAMECHANGE;
-}
-
 //-----------------------
 // nsStyleContent
 //
@@ -491,7 +370,6 @@ void StyleUserInterfaceImpl::ResetFrom(const nsStyleUserInterface* aParent, nsIP
     mUserInput = aParent->mUserInput;
     mUserModify = aParent->mUserModify;
     mUserFocus = aParent->mUserFocus;
-    mOpacity = aParent->mOpacity;
     mCursor = aParent->mCursor; // fix for bugzilla bug 51113
     mCursorImage = aParent->mCursorImage; // fix for bugzilla bug 51113
   }
@@ -500,7 +378,6 @@ void StyleUserInterfaceImpl::ResetFrom(const nsStyleUserInterface* aParent, nsIP
     mUserModify = NS_STYLE_USER_MODIFY_READ_ONLY;
     mUserFocus = NS_STYLE_USER_FOCUS_NONE;
 
-    mOpacity = 1.0f;
     mCursor = NS_STYLE_CURSOR_AUTO; // fix for bugzilla bug 51113
   }
 
@@ -521,7 +398,6 @@ void StyleUserInterfaceImpl::SetFrom(const nsStyleUserInterface& aSource)
   
   mCursor = aSource.mCursor;
   mCursorImage = aSource.mCursorImage;
-  mOpacity = aSource.mOpacity;
 }
 
 void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
@@ -536,14 +412,12 @@ void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
   
   aDest.mCursor = mCursor;
   aDest.mCursorImage = mCursorImage;
-  aDest.mOpacity = mOpacity;
 }
 
 PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOther) const
 {
   if ((mCursor != aOther.mCursor) ||
-      (mCursorImage != aOther.mCursorImage) ||
-      (mOpacity != aOther.mOpacity))
+      (mCursorImage != aOther.mCursorImage))
     return NS_STYLE_HINT_VISUAL;
 
   if ((mUserInput == aOther.mUserInput) && 
@@ -638,7 +512,6 @@ protected:
 
   // the style data...
   StyleTextImpl           mText;
-  StyleDisplayImpl        mDisplay;
   StyleContentImpl        mContent;
   StyleUserInterfaceImpl  mUserInterface;
 	
@@ -659,7 +532,6 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mRuleNode(aRuleNode),
     mDataCode(-1),
     mText(),
-    mDisplay(),
     mContent(),
     mUserInterface()
 {
@@ -686,8 +558,11 @@ StyleContextImpl::~StyleContextImpl()
   NS_IF_RELEASE(mPseudoTag);
   
   // Free up our data structs.
-  nsCOMPtr<nsIPresContext> presContext;
-  mRuleNode->GetPresContext(getter_AddRefs(presContext));
+  if (mCachedStyleData.mResetData || mCachedStyleData.mInheritedData) {
+    nsCOMPtr<nsIPresContext> presContext;
+    mRuleNode->GetPresContext(getter_AddRefs(presContext));
+    mCachedStyleData.Destroy(mInheritBits, presContext);
+  }
 }
 
 NS_IMPL_ADDREF(StyleContextImpl)
@@ -892,6 +767,8 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
   nsStyleStruct*  result = nsnull;
       
   switch (aSID) {
+    case eStyleStruct_Display:
+    case eStyleStruct_Visibility:
     case eStyleStruct_Font:
     case eStyleStruct_Color:
     case eStyleStruct_Background:
@@ -905,12 +782,12 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_TableBorder:
     case eStyleStruct_XUL: {
       StyleContextImpl* curr = this;
-      if (mParent) {
+      /*if (mParent) {
         PRUint32 bit = nsCachedStyleData::GetBitForSID(aSID); // Check inheritance
         while (curr && (curr->mInheritBits & bit))
           curr = curr->mParent;
       }
-
+*/
       const nsStyleStruct* cachedData = curr->mCachedStyleData.GetStyleData(aSID); 
       if (cachedData)
         return cachedData; // We have computed data stored on this node in the context tree.
@@ -919,9 +796,6 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     }
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
-      break;
-    case eStyleStruct_Display:
-      result = & GETSCDATA(Display);
       break;
     case eStyleStruct_Content:
       result = & GETSCDATA(Content);
@@ -996,13 +870,12 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_Position:
     case eStyleStruct_Table:
     case eStyleStruct_TableBorder:
+    case eStyleStruct_Display:
+    case eStyleStruct_Visibility:
       NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
       return nsnull;
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
-      break;
-    case eStyleStruct_Display:
-      result = & GETSCDATA(Display);
       break;
     case eStyleStruct_Content:
       result = & GETSCDATA(Content);
@@ -1070,7 +943,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       GETSCDATA(Text).SetFrom((const nsStyleText&)aStruct);
       break;
     case eStyleStruct_Display:
-      GETSCDATA(Display).SetFrom((const nsStyleDisplay&)aStruct);
+      mCachedStyleData.mResetData->mDisplayData = (nsStyleDisplay*)(const nsStyleDisplay*)(&aStruct);
+      break;
+    case eStyleStruct_Visibility:
+      mCachedStyleData.mInheritedData->mVisibilityData = (nsStyleVisibility*)(const nsStyleVisibility*)(&aStruct);
       break;
     case eStyleStruct_Table:
       mCachedStyleData.mResetData->mTableData = (nsStyleTable*)(const nsStyleTable*)(&aStruct);
@@ -1146,13 +1022,11 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 
   if (nsnull != mParent) {
     GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
-    GETSCDATA(Display).ResetFrom(&(mParent->GETSCDATA(Display)), aPresContext);
     GETSCDATA(Content).ResetFrom(&(mParent->GETSCDATA(Content)), aPresContext);
     GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
   }
   else {
     GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
-    GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
     GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
   }
@@ -1179,104 +1053,35 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
   //    XXX - there are problems with following the spec here: what we will do instead of
   //          following the letter of the spec is to make sure that floated elements are
   //          some kind of block, not strictly 'block' - see EnsureBlockDisplay method
-  nsStyleDisplay *disp = (nsStyleDisplay *)GetMutableStyleData(eStyleStruct_Display);
+  nsStyleDisplay *disp = (nsStyleDisplay *)GetStyleData(eStyleStruct_Display);
   if (disp) {
     if (disp->mDisplay != NS_STYLE_DISPLAY_NONE &&
         disp->mFloats != NS_STYLE_FLOAT_NONE ) {
       EnsureBlockDisplay(disp->mDisplay);
     }
   }
+  
   // 2) if position is 'absolute' or 'fixed' then display must be 'block and float must be 'none'
   //    XXX - see note for fixup 1) above...
-  const nsStylePosition *pos = (const nsStylePosition *)GetStyleData(eStyleStruct_Position);
-  if (pos) {
-    if (pos->IsAbsolutelyPositioned()) {
-      if (disp) {
-        if(disp->mDisplay != NS_STYLE_DISPLAY_NONE) {
-          EnsureBlockDisplay(disp->mDisplay);
-          disp->mFloats = NS_STYLE_FLOAT_NONE;
-        }
-      }
-    }
+  if (disp->IsAbsolutelyPositioned() && disp->mDisplay != NS_STYLE_DISPLAY_NONE) {
+    EnsureBlockDisplay(disp->mDisplay);
+    disp->mFloats = NS_STYLE_FLOAT_NONE;
   }
 
-  nsCompatibility quirkMode = eCompatibility_Standard;
-  aPresContext->GetCompatibilityMode(&quirkMode);
-  if (eCompatibility_NavQuirks == quirkMode) {
-    if (((GETSCDATA(Display).mDisplay == NS_STYLE_DISPLAY_TABLE) || 
-         (GETSCDATA(Display).mDisplay == NS_STYLE_DISPLAY_TABLE_CAPTION)) &&
-        (nsnull == mPseudoTag)) {
-
-      StyleContextImpl* holdParent = mParent;
-      mParent = nsnull; // cut off all inheritance. this really blows
-
-      // XXX the style we do preserve is visibility, direction, language
-      PRUint8 visible = GETSCDATA(Display).mVisible;
-      PRUint8 direction = GETSCDATA(Display).mDirection;
-      nsCOMPtr<nsILanguageAtom> language = GETSCDATA(Display).mLanguage;
-
-      // time to emulate a sub-document
-      // This is ugly, but we need to map style once to determine display type
-      // then reset and map it again so that all local style is preserved
-      if (GETSCDATA(Display).mDisplay != NS_STYLE_DISPLAY_TABLE) {
-       // GETSCDATA(Font).ResetFrom(nsnull, aPresContext);
-      }
-      //GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Position).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Margin).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Padding).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Border).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(Outline).ResetFrom(nsnull, aPresContext);
-      //GETSCDATA(XUL).ResetFrom(nsnull, aPresContext);
-
-      GETSCDATA(Display).mVisible = visible;
-      GETSCDATA(Display).mDirection = direction;
-      GETSCDATA(Display).mLanguage = language;
-
-      if (!isRoot) {
-        MapStyleData  data(this, aPresContext);
-        //MapStyleRuleFont(&data, mRuleNode);
-        //if (GETSCDATA(Font).mFlags & NS_STYLE_FONT_USE_FIXED) {
-        //  GETSCDATA(Font).mFont = GETSCDATA(Font).mFixedFont;
-        // }
-        MapStyleRule(&data, mRuleNode);
-      }
-    
-      // reset all font data for tables again
-      if (GETSCDATA(Display).mDisplay == NS_STYLE_DISPLAY_TABLE) {
-        // get the font-name to reset: this property we preserve
-        //nsAutoString strName(GETSCDATA(Font).mFont.name);
-        //nsAutoString strMixedName(GETSCDATA(Font).mFixedFont.name);
-   
-        //GETSCDATA(Font).ResetFrom(nsnull, aPresContext);
-   
-        // now reset the font names back to original
-        //GETSCDATA(Font).mFont.name = strName;
-        //GETSCDATA(Font).mFixedFont.name = strMixedName;
-      }
-      mParent = holdParent;
-    }
-  } else {
-    // In strict mode, we still have to support one "quirky" thing
-    // for tables.  HTML's alignment attributes have always worked
-    // so they don't inherit into tables, but instead align the
-    // tables.  We should keep doing this, because HTML alignment
-    // is just weird, and we shouldn't force it to match CSS.
-    if (GETSCDATA(Display).mDisplay == NS_STYLE_DISPLAY_TABLE) {
-      // -moz-center and -moz-right are used for HTML's alignment
-      if ((GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER) ||
-          (GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_RIGHT))
-      {
-        GETSCDATA(Text).mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
-      }
+  // Even in strict mode, we still have to support one "quirky" thing
+  // for tables.  HTML's alignment attributes have always worked
+  // so they don't inherit into tables, but instead align the
+  // tables.  We should keep doing this, because HTML alignment
+  // is just weird, and we shouldn't force it to match CSS.
+  if (disp->mDisplay == NS_STYLE_DISPLAY_TABLE) {
+    // -moz-center and -moz-right are used for HTML's alignment
+    if ((GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER) ||
+        (GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_RIGHT))
+    {
+      GETSCDATA(Text).mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
     }
   }
-
+   
   if (aRecurse) {
     if (nsnull != mChild) {
       StyleContextImpl* child = mChild;
@@ -1395,9 +1200,22 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
         aHint = hint;
       }
     }
+    
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Display).CalcDifference(other->GETSCDATA(Display));
+      const nsStyleVisibility* vis = (const nsStyleVisibility*)GetStyleData(eStyleStruct_Visibility);
+      const nsStyleVisibility* otherVis = (const nsStyleVisibility*)aOther->GetStyleData(eStyleStruct_Visibility);
+      hint = vis->CalcDifference(*otherVis);
+      if (aHint < hint) {
+        aHint = hint;
+      }
+    }
+
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleDisplay* display = (const nsStyleDisplay*)GetStyleData(eStyleStruct_Display);
+      const nsStyleDisplay* otherDisplay = (const nsStyleDisplay*)aOther->GetStyleData(eStyleStruct_Display);
+      hint = display->CalcDifference(*otherDisplay);
       if (aHint < hint) {
         aHint = hint;
       }
@@ -1519,8 +1337,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     printf( "*************************************\n");
     printf( " - StyleTextImpl:          %ld\n", (long)sizeof(GETSCDATA(Text)) );
     totalSize += (long)sizeof(GETSCDATA(Text));
-    printf( " - StyleDisplayImpl:       %ld\n", (long)sizeof(GETSCDATA(Display)) );
-    totalSize += (long)sizeof(GETSCDATA(Display));
     printf( " - StyleContentImpl:       %ld\n", (long)sizeof(GETSCDATA(Content)) );
     totalSize += (long)sizeof(GETSCDATA(Content));
     printf( " - StyleUserInterfaceImpl: %ld\n", (long)sizeof(GETSCDATA(UserInterface)) );

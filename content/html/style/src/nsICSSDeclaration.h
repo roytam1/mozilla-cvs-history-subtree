@@ -201,11 +201,13 @@ struct nsCSSDisplay : public nsCSSStruct  {
   nsCSSValue mDirection;
   nsCSSValue mDisplay;
   nsCSSValue mBinding;
+  nsCSSValue mPosition;
   nsCSSValue mFloat;
   nsCSSValue mClear;
   nsCSSRect* mClip;
   nsCSSValue mOverflow;
   nsCSSValue mVisibility;
+  nsCSSValue mOpacity;
 };
 
 struct nsCSSMargin : public nsCSSStruct  {
@@ -237,7 +239,6 @@ struct nsCSSPosition : public nsCSSStruct  {
   const nsID& GetID(void);
   void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
 
-  nsCSSValue  mPosition;
   nsCSSValue  mWidth;
   nsCSSValue  mMinWidth;
   nsCSSValue  mMaxWidth;
@@ -363,7 +364,6 @@ struct nsCSSUserInterface : public nsCSSStruct  { // NEW
   nsCSSValue      mResizer;
   
   nsCSSValueList* mCursor;
-  nsCSSValue      mOpacity;
 };
 
 struct nsCSSAural : public nsCSSStruct  { // NEW

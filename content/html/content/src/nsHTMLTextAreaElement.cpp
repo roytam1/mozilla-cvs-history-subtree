@@ -49,6 +49,7 @@
 #include "nsIFrame.h"
 #include "nsIFormControlFrame.h"
 #include "nsIPrivateDOMEvent.h"
+#include "nsIRuleNode.h"
 
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 
@@ -474,6 +475,16 @@ nsHTMLTextAreaElement::StringToAttribute(nsIAtom* aAttribute,
 }
 
 static void
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
+{
+  if (!aAttributes || !aData)
+    return;
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+}
+
+static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
@@ -502,9 +513,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       break;
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP
@@ -531,7 +539,7 @@ NS_IMETHODIMP
 nsHTMLTextAreaElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                     nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

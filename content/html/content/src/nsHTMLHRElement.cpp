@@ -211,7 +211,7 @@ static void
 MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
                       nsRuleData* aData)
 {
-  if (!aAttributes || !aData || !aData->mMarginData)
+  if (!aAttributes || !aData)
     return;
 
   if (aData->mSID == eStyleStruct_Margin) {
@@ -269,15 +269,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
-}
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -305,7 +298,7 @@ nsHTMLHRElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRul
                                               nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

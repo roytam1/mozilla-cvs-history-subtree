@@ -266,6 +266,8 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       }
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -297,9 +299,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                                             eStyleUnit_Enumerated);
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

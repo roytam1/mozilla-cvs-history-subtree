@@ -39,22 +39,23 @@
 
 class nsIFrame;
 
-#define NS_STYLE_INHERIT_FONT             0x0001
-#define NS_STYLE_INHERIT_COLOR            0x0002
-#define NS_STYLE_INHERIT_BACKGROUND       0x0004
-#define NS_STYLE_INHERIT_LIST             0x0008
-#define NS_STYLE_INHERIT_POSITION         0x0010
-#define NS_STYLE_INHERIT_TEXT             0x0020
-#define NS_STYLE_INHERIT_DISPLAY          0x0040
-#define NS_STYLE_INHERIT_TABLE            0x0080
-#define NS_STYLE_INHERIT_TABLE_BORDER     0x0100
-#define NS_STYLE_INHERIT_CONTENT          0x0200
-#define NS_STYLE_INHERIT_UI               0x0400
-#define NS_STYLE_INHERIT_MARGIN           0x0800
-#define NS_STYLE_INHERIT_PADDING          0x1000
-#define NS_STYLE_INHERIT_BORDER           0x2000
-#define NS_STYLE_INHERIT_OUTLINE          0x4000
-#define NS_STYLE_INHERIT_XUL              0x8000
+#define NS_STYLE_INHERIT_FONT             0x00001
+#define NS_STYLE_INHERIT_COLOR            0x00002
+#define NS_STYLE_INHERIT_BACKGROUND       0x00004
+#define NS_STYLE_INHERIT_LIST             0x00008
+#define NS_STYLE_INHERIT_POSITION         0x00010
+#define NS_STYLE_INHERIT_TEXT             0x00020
+#define NS_STYLE_INHERIT_DISPLAY          0x00040
+#define NS_STYLE_INHERIT_VISIBILITY       0x00080
+#define NS_STYLE_INHERIT_TABLE            0x00100
+#define NS_STYLE_INHERIT_TABLE_BORDER     0x00200
+#define NS_STYLE_INHERIT_CONTENT          0x00400
+#define NS_STYLE_INHERIT_UI               0x00800
+#define NS_STYLE_INHERIT_MARGIN           0x01000
+#define NS_STYLE_INHERIT_PADDING          0x02000
+#define NS_STYLE_INHERIT_BORDER           0x04000
+#define NS_STYLE_INHERIT_OUTLINE          0x08000
+#define NS_STYLE_INHERIT_XUL              0x10000
 
 enum nsStyleStructID {
   eStyleStruct_Font           = 1,
@@ -64,26 +65,25 @@ enum nsStyleStructID {
   eStyleStruct_Position       = 5,
   eStyleStruct_Text           = 6,
   eStyleStruct_Display        = 7,
-  eStyleStruct_Content        = 8,
-  eStyleStruct_UserInterface  = 9,
-  eStyleStruct_Table          = 10,
-  eStyleStruct_TableBorder    = 11,
-  eStyleStruct_Margin         = 12,
-  eStyleStruct_Padding        = 13,
-  eStyleStruct_Border         = 14,
-  eStyleStruct_Outline        = 15,
-  eStyleStruct_XUL            = 16,
+  eStyleStruct_Visibility     = 8,
+  eStyleStruct_Content        = 9,
+  eStyleStruct_UserInterface  = 10,
+  eStyleStruct_Table          = 11,
+  eStyleStruct_TableBorder    = 12,
+  eStyleStruct_Margin         = 13,
+  eStyleStruct_Padding        = 14,
+  eStyleStruct_Border         = 15,
+  eStyleStruct_Outline        = 16,
+  eStyleStruct_XUL            = 17,
   eStyleStruct_Max            = eStyleStruct_XUL,
-  eStyleStruct_BorderPaddingShortcut = 17       // only for use in GetStyle()
+  eStyleStruct_BorderPaddingShortcut = 18       // only for use in GetStyle()
 };
-
-
 
 // The actual structs start here
 struct nsStyleStruct {
 };
 
-// The lifetime of these objects is managed by the nsIStyleContext.
+// The lifetime of these objects is managed by the presshell's arena.
 
 struct nsStyleFont : public nsStyleStruct {
   nsStyleFont(void);
@@ -120,8 +120,8 @@ struct nsStyleColor : public nsStyleStruct {
     aContext->FreeToShell(sizeof(nsStyleColor), this);
   };
 
-  // Don't add any members to this struct.  We can achieve caching in the rule
-  // tree (rather than the style tree) by letting color stay by itself. -dwh
+  // Don't add ANY members to this struct!  We can achieve caching in the rule
+  // tree (rather than the style tree) by letting color stay by itself! -dwh
   nscolor mColor;                 // [inherited]
 };
 
@@ -460,8 +460,6 @@ struct nsStylePosition : public nsStyleStruct {
 
   PRInt32 CalcDifference(const nsStylePosition& aOther) const;
   
-  PRUint8   mPosition;                  // [reset] see nsStyleConsts.h
-
   nsStyleSides  mOffset;                // [reset]
   nsStyleCoord  mWidth;                 // [reset] coord, percent, auto, inherit
   nsStyleCoord  mMinWidth;              // [reset] coord, percent, inherit
@@ -472,12 +470,6 @@ struct nsStylePosition : public nsStyleStruct {
   PRUint8       mBoxSizing;             // [reset] see nsStyleConsts.h
 
   nsStyleCoord  mZIndex;                // [reset] 
-
-  PRBool IsAbsolutelyPositioned() const {return (NS_STYLE_POSITION_ABSOLUTE == mPosition) ||
-                                                (NS_STYLE_POSITION_FIXED == mPosition);}
-
-  PRBool IsPositioned() const {return IsAbsolutelyPositioned() ||
-                                      (NS_STYLE_POSITION_RELATIVE == mPosition);}
 };
 
 struct nsStyleText : public nsStyleStruct {
@@ -504,21 +496,63 @@ struct nsStyleText : public nsStyleStruct {
   }
 };
 
-struct nsStyleDisplay : public nsStyleStruct {
-  nsStyleDisplay(void) {};
-  ~nsStyleDisplay(void) {};
+struct nsStyleVisibility : public nsStyleStruct {
+  nsStyleVisibility(nsIPresContext* aPresContext);
+  nsStyleVisibility(const nsStyleVisibility& aVisibility);
+  ~nsStyleVisibility() {};
 
-  PRUint8 mDirection;           // [inherited] see nsStyleConsts.h NS_STYLE_DIRECTION_*
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleVisibility), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleVisibility& aOther) const;
+  
+  PRUint8 mDirection;                  // [inherited] see nsStyleConsts.h NS_STYLE_DIRECTION_*
+  PRUint8   mVisible;                  // [inherited]
+  nsCOMPtr<nsILanguageAtom> mLanguage; // [inherited]
+  float mOpacity;                      // [inherited] percentage
+ 
+  PRBool IsVisible() const {
+		return (mVisible == NS_STYLE_VISIBILITY_VISIBLE);
+	}
+
+	PRBool IsVisibleOrCollapsed() const {
+		return ((mVisible == NS_STYLE_VISIBILITY_VISIBLE) ||
+						(mVisible == NS_STYLE_VISIBILITY_COLLAPSE));
+	}
+};
+
+struct nsStyleDisplay : public nsStyleStruct {
+  nsStyleDisplay();
+  nsStyleDisplay(const nsStyleDisplay& aOther); 
+  ~nsStyleDisplay();
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleDisplay), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleDisplay& aOther) const;
+  
 #ifdef IBMBIDI
   PRUint8 mExplicitDirection ;  // [reset] see nsStyleConsts.h NS_STYLE_DIRECTION_*
 #endif
   PRUint8 mDisplay;             // [reset] see nsStyleConsts.h NS_STYLE_DISPLAY_*
   nsString  mBinding;           // [reset] absolute url string
+  PRUint8   mPosition;          // [reset] see nsStyleConsts.h
   PRUint8 mFloats;              // [reset] see nsStyleConsts.h NS_STYLE_FLOAT_*
   PRUint8 mBreakType;           // [reset] see nsStyleConsts.h NS_STYLE_CLEAR_*
   PRPackedBool mBreakBefore;    // [reset] 
   PRPackedBool mBreakAfter;     // [reset] 
-  PRUint8   mVisible;           // [inherited]
   PRUint8   mOverflow;          // [reset] see nsStyleConsts.h
 
   PRUint8   mClipFlags;         // [reset] see nsStyleConsts.h
@@ -530,8 +564,7 @@ struct nsStyleDisplay : public nsStyleStruct {
 #else
   nsRect    mClip;              // [reset] offsets from upper-left border edge
 #endif
-  nsCOMPtr<nsILanguageAtom> mLanguage; // [inherited]
-
+  
   PRBool IsBlockLevel() const {return (NS_STYLE_DISPLAY_BLOCK == mDisplay) ||
                                       (NS_STYLE_DISPLAY_LIST_ITEM == mDisplay) ||
                                       (NS_STYLE_DISPLAY_TABLE == mDisplay);}
@@ -540,14 +573,11 @@ struct nsStyleDisplay : public nsStyleStruct {
     return NS_STYLE_FLOAT_NONE != mFloats;
   }
 
-	PRBool IsVisible() const {
-		return (mVisible == NS_STYLE_VISIBILITY_VISIBLE);
-	}
+  PRBool IsAbsolutelyPositioned() const {return (NS_STYLE_POSITION_ABSOLUTE == mPosition) ||
+                                                (NS_STYLE_POSITION_FIXED == mPosition);}
 
-	PRBool IsVisibleOrCollapsed() const {
-		return ((mVisible == NS_STYLE_VISIBILITY_VISIBLE) ||
-						(mVisible == NS_STYLE_VISIBILITY_COLLAPSE));
-	}
+  PRBool IsPositioned() const {return IsAbsolutelyPositioned() ||
+                                      (NS_STYLE_POSITION_RELATIVE == mPosition);}
 };
 
 struct nsStyleTable: public nsStyleStruct {
@@ -795,14 +825,10 @@ struct nsStyleUserInterface: public nsStyleStruct {
   PRUnichar mKeyEquivalent;   // [reset] XXX what type should this be?
   PRUint8   mResizer;         // [reset]
   
-  float mOpacity;                       // [inherited] percentage
-  
   // These properties are treated as inherited.  See bugzilla bug 51113.  This is
   // not (strictly speaking) the correct behavior.
   PRUint8 mCursor;                // [inherited] See nsStyleConsts.h NS_STYLE_CURSOR_*
   nsString mCursorImage;          // [inherited] url string
-  
-
 };
 
 #ifdef INCLUDE_XUL

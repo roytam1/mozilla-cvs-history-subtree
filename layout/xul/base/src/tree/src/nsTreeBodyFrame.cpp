@@ -1149,9 +1149,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Paint(nsIPresContext*      aPresContext,
       aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND)
     return NS_OK;
 
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)
-      mStyleContext->GetStyleData(eStyleStruct_Display);
-  if (!disp->IsVisibleOrCollapsed())
+  const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+  if (!vis->IsVisibleOrCollapsed())
     return NS_OK; // We're invisible.  Don't paint.
 
   // Handles painting our background, border, and outline.
@@ -1376,9 +1376,10 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
     // Resolve the style to use for the connecting lines.
     nsCOMPtr<nsIStyleContext> lineContext;
     GetPseudoStyleContext(nsXULAtoms::mozoutlinerline, getter_AddRefs(lineContext));
-    const nsStyleDisplay* displayStyle = (const nsStyleDisplay*)lineContext->GetStyleData(eStyleStruct_Display);
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)lineContext->GetStyleData(eStyleStruct_Visibility);
     
-    if (displayStyle->IsVisibleOrCollapsed() && level && NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
+    if (vis->IsVisibleOrCollapsed() && level && NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
       // Paint the connecting lines.
       aRenderingContext.PushState();
 

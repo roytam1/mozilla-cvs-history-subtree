@@ -205,15 +205,8 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       aData->mTableData->mCaptionSide = val;
     }
   }
-}
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -237,7 +230,7 @@ nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFun
                                                         nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -469,7 +469,7 @@ public:
     const nsStyleFont* mFont;
     const nsStyleText* mText;
     const nsStyleColor* mColor;
-    const nsStyleDisplay* mDisplay;
+    const nsStyleVisibility* mVisibility;
     nsIFontMetrics* mNormalFont;
     nsIFontMetrics* mSmallFont;
     nsIFontMetrics* mLastFont;
@@ -502,7 +502,7 @@ public:
       mColor = (const nsStyleColor*) sc->GetStyleData(eStyleStruct_Color);
       mFont = (const nsStyleFont*) sc->GetStyleData(eStyleStruct_Font);
       mText = (const nsStyleText*) sc->GetStyleData(eStyleStruct_Text);
-      mDisplay = (const nsStyleDisplay*) sc->GetStyleData(eStyleStruct_Display);
+      mVisibility = (const nsStyleVisibility*) sc->GetStyleData(eStyleStruct_Visibility);
 
       // Cache the original decorations and reuse the current font
       // to query metrics, rather than creating a new font which is expensive.
@@ -512,8 +512,8 @@ public:
       nsCOMPtr<nsIDeviceContext> deviceContext;
       aRenderingContext.GetDeviceContext(*getter_AddRefs(deviceContext));
       nsCOMPtr<nsIAtom> langGroup;
-      if (mDisplay->mLanguage) {
-        mDisplay->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
+      if (mVisibility->mLanguage) {
+        mVisibility->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
       }
       deviceContext->GetMetricsFor(*plainFont, langGroup, mNormalFont);
       aRenderingContext.SetFont(mNormalFont);
@@ -2083,8 +2083,9 @@ nsTextFrame::IsVisibleForPainting(nsIPresContext *     aPresContext,
 {
   if (aCheckVis) {
     nsIStyleContext* sc = mStyleContext;
-    const nsStyleDisplay* disp = (const nsStyleDisplay*)sc->GetStyleData(eStyleStruct_Display);
-    if (!disp->IsVisible()) {
+    const nsStyleVisibility* vis = 
+      (const nsStyleVisibility*)mStyleContext->GetStyleData(eStyleStruct_Visibility);
+    if (!vis->IsVisible()) {
       *aIsVisible = PR_FALSE;
       return NS_OK;
     }

@@ -220,6 +220,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
         aData->mPositionData->mWidth = nsCSSValue((float)value.GetIntValue(), eCSSUnit_Char);
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -264,9 +266,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       // XXX set
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP

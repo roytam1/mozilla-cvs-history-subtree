@@ -277,6 +277,8 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
     if (value.GetUnit() == eHTMLUnit_Integer)
       aData->mTableData->mSpan = nsCSSValue(value.GetIntValue(), eCSSUnit_Integer);
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 static void
@@ -307,9 +309,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                                             eStyleUnit_Enumerated);
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
 }
 
 NS_IMETHODIMP
