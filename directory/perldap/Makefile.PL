@@ -160,8 +160,6 @@ push(@extras,
      AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
     if ($] >= 5.005);
 
-print "Version is $]\n";
-
 #
 # Ok, let's do it!
 #
@@ -174,8 +172,5 @@ WriteMakefile(
 	      'MYEXTLIB'	=>	$my_extlib,
 	      'DEFINE'		=> 	"$v3_def $ssl_def",
 	      'XSOPT'		=>	"-nolinenumbers",
-	      dynamic_lib	=>	{
-		OTHERLDFLAGS => 'kernel32.lib oldnames.lib'
-	      },
 	      @extras
 );
