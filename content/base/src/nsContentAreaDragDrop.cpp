@@ -78,7 +78,9 @@
 #include "nsNetUtil.h"
 #include "nsIFile.h"
 #include "nsIWebNavigation.h"
-#include "nsIDragDropOverride.h"
+#include "nsIClipboardDragDropHooks.h"
+#include "nsIClipboardDragDropHookList.h"
+#include "nsIDocShell.h"
 #include "nsIContent.h"
 #include "nsIXMLContent.h"
 #include "nsINameSpaceManager.h"
@@ -118,7 +120,7 @@ NS_INTERFACE_MAP_END
 // nsContentAreaDragDrop ctor
 //
 nsContentAreaDragDrop::nsContentAreaDragDrop ( ) 
-  : mListenerInstalled(PR_FALSE), mNavigator(nsnull), mOverrideDrag(nsnull), mOverrideDrop(nsnull)
+  : mListenerInstalled(PR_FALSE), mNavigator(nsnull)
 {
   NS_INIT_ISUPPORTS();
 } // ctor
@@ -135,17 +137,13 @@ nsContentAreaDragDrop::~nsContentAreaDragDrop ( )
 
 
 NS_IMETHODIMP
-nsContentAreaDragDrop::HookupTo(nsIDOMEventTarget *inAttachPoint, nsIWebNavigation* inNavigator,
-                                  nsIOverrideDragSource* inOverrideDrag, nsIOverrideDropSite* inOverrideDrop)
+nsContentAreaDragDrop::HookupTo(nsIDOMEventTarget *inAttachPoint, nsIWebNavigation* inNavigator)
 {
   NS_ASSERTION(inAttachPoint, "Can't hookup Drag Listeners to NULL receiver");
   mEventReceiver = do_QueryInterface(inAttachPoint);
   NS_ASSERTION(mEventReceiver, "Target doesn't implement nsIDOMEventReceiver as needed");
   mNavigator = inNavigator;
-  
-  mOverrideDrag = inOverrideDrag;
-  mOverrideDrop = inOverrideDrop;
-  
+
   return AddDragListener();
 }
 
@@ -250,8 +248,25 @@ nsContentAreaDragDrop::DragOver(nsIDOMEvent* inEvent)
     // the drop is allowed. If it allows it, we should still protect against
     // dropping w/in the same document.
     PRBool dropAllowed = PR_TRUE;
-    if ( mOverrideDrop )
-      mOverrideDrop->AllowDrop(inEvent, session, &dropAllowed);    
+    nsCOMPtr<nsISimpleEnumerator> enumerator;
+    GetHookEnumeratorFromEvent(inEvent, getter_AddRefs(enumerator));
+    if (enumerator) {
+      PRBool hasMoreHooks = PR_FALSE;
+      while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
+             && hasMoreHooks) {
+        nsCOMPtr<nsISupports> isupp;
+        if (NS_FAILED(enumerator->GetNext(getter_AddRefs(isupp))))
+          break;
+        nsCOMPtr<nsIClipboardDragDropHooks> override = do_QueryInterface(isupp);
+        if (override) {
+          nsresult hookResult = override->AllowDrop(inEvent, session, &dropAllowed);
+          NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in AllowDrop");    
+          if (!dropAllowed)
+            break;
+        }
+      }
+    }
+
     nsCOMPtr<nsIDOMDocument> sourceDoc;
     session->GetSourceDocument(getter_AddRefs(sourceDoc));
     nsCOMPtr<nsIDOMDocument> eventDoc;
@@ -365,7 +380,7 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
   if ( !trans )
     return NS_ERROR_FAILURE;
     
-  // add the relevant flavors. order is important (higest fidelity to lowest)
+  // add the relevant flavors. order is important (highest fidelity to lowest)
   trans->AddDataFlavor(kURLMime);
   trans->AddDataFlavor(kFileMime);
   trans->AddDataFlavor(kUnicodeMime);
@@ -374,12 +389,26 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
   if ( NS_SUCCEEDED(rv) ) {
     // if the client has provided an override callback, call it. It may
     // still return that we should continue processing.
-    if ( mOverrideDrop ) {
-      PRBool actionHandled = PR_FALSE;
-      if ( NS_SUCCEEDED(mOverrideDrop->DropAction(inMouseEvent, trans, &actionHandled)) )
-        if ( actionHandled )
-          return NS_OK;
+    nsCOMPtr<nsISimpleEnumerator> enumerator;
+    GetHookEnumeratorFromEvent(inMouseEvent, getter_AddRefs(enumerator));
+    if (enumerator) {
+      PRBool actionCanceled = PR_TRUE;
+      PRBool hasMoreHooks = PR_FALSE;
+      while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
+             && hasMoreHooks) {
+        nsCOMPtr<nsISupports> isupp;
+        if (NS_FAILED(enumerator->GetNext(getter_AddRefs(isupp))))
+          break;
+        nsCOMPtr<nsIClipboardDragDropHooks> override = do_QueryInterface(isupp);
+        if (override) {
+          nsresult hookResult = override->OnPasteOrDrop(inMouseEvent, trans, &actionCanceled);
+          NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in OnPasteOrDrop");
+          if (!actionCanceled)
+            return NS_OK;
+        }
+      }
     }
+
     nsXPIDLCString flavor;
     nsCOMPtr<nsISupports> dataWrapper;
     PRUint32 dataLen = 0;
@@ -745,7 +774,7 @@ nsContentAreaDragDrop::BuildDragData(nsIDOMEvent* inMouseEvent, nsAString & outU
   // only drag form elements by using the alt key,
   // otherwise buttons and select widgets are hard to use
   nsCOMPtr<nsIFormControl> form(do_QueryInterface(target));
-  if ( form && !isAltKeyDown )
+  if (form && !isAltKeyDown)
     return PR_FALSE;
   
   // the resulting strings from the beginning of the drag
@@ -914,11 +943,11 @@ nsContentAreaDragDrop::BuildDragData(nsIDOMEvent* inMouseEvent, nsAString & outU
 
   if ( startDrag ) {
     // default text value is the URL
-    if ( titleString.IsEmpty() )
+    if (titleString.IsEmpty())
       titleString = urlString;
     
     // if we haven't constructed a html version, make one now
-    if ( htmlString.IsEmpty() && !urlString.IsEmpty() )
+    if (htmlString.IsEmpty() && !urlString.IsEmpty())
       CreateLinkText(urlString, titleString, htmlString);
   }
   
@@ -962,7 +991,7 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
     if ( !urlPrimitive )
       return NS_ERROR_FAILURE;
     urlPrimitive->SetData(dragData);
-    trans->SetTransferData(kURLMime, urlPrimitive, dragData.Length() * 2);
+    trans->SetTransferData(kURLMime, urlPrimitive, dragData.Length() * sizeof(PRUnichar));
   }
   
   // add a special flavor, even if we dont have html context data
@@ -971,7 +1000,7 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
   if ( !context )
     return NS_ERROR_FAILURE;
   context->SetData(contextData);
-  trans->SetTransferData(kHTMLContext, context, contextData.Length() * 2);
+  trans->SetTransferData(kHTMLContext, context, contextData.Length() * sizeof(PRUnichar));
   
   // add a special flavor if we're have html info data
   if ( !inInfoString.IsEmpty() ) {
@@ -980,7 +1009,7 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
     if ( !info )
       return NS_ERROR_FAILURE;
     info->SetData(infoData);
-    trans->SetTransferData(kHTMLInfo, info, infoData.Length() * 2);
+    trans->SetTransferData(kHTMLInfo, info, infoData.Length() * sizeof(PRUnichar));
   }
   
   // add the full html
@@ -988,7 +1017,7 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
   if ( !htmlPrimitive )
     return NS_ERROR_FAILURE;
   htmlPrimitive->SetData(inHTMLString);
-  trans->SetTransferData(kHTMLMime, htmlPrimitive, inHTMLString.Length() * 2);
+  trans->SetTransferData(kHTMLMime, htmlPrimitive, inHTMLString.Length() * sizeof(PRUnichar));
 
   // add the plain (unicode) text. we use the url for text/unicode data if an anchor
   // is being dragged, rather than the title text of the link or the alt text for
@@ -997,7 +1026,7 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
   if ( !textPrimitive )
     return NS_ERROR_FAILURE;
   textPrimitive->SetData(inIsAnchor ? inURLString : inTitleString);
-  trans->SetTransferData(kUnicodeMime, textPrimitive, (inIsAnchor ? inURLString.Length() : inTitleString.Length()) * 2);  
+  trans->SetTransferData(kUnicodeMime, textPrimitive, (inIsAnchor ? inURLString.Length() : inTitleString.Length()) * sizeof(PRUnichar));
   
   // add image data, if present. For now, all we're going to do with this is turn it
   // into a native data flavor, so indicate that with a new flavor so as not to confuse
@@ -1015,6 +1044,32 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
   return NS_OK;
 }
 
+nsresult
+nsContentAreaDragDrop::GetHookEnumeratorFromEvent(nsIDOMEvent* inEvent,
+                                          nsISimpleEnumerator **outEnumerator)
+{
+  *outEnumerator = nsnull;
+
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  GetEventDocument(inEvent, getter_AddRefs(domdoc));
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+  NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsISupports> isupp;
+  doc->GetContainer(getter_AddRefs(isupp));
+  nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(isupp);
+  NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIClipboardDragDropHookList> hookList = do_GetInterface(docShell);
+  NS_ENSURE_TRUE(hookList, NS_ERROR_FAILURE);
+  nsCOMPtr<nsISimpleEnumerator> enumerator;
+  hookList->GetHookEnumerator(getter_AddRefs(enumerator));
+  NS_ENSURE_TRUE(enumerator, NS_ERROR_FAILURE);
+
+  *outEnumerator = enumerator;
+  NS_ADDREF(*outEnumerator);
+  return NS_OK;
+}
 
 //
 // DragGesture
@@ -1035,11 +1090,24 @@ nsContentAreaDragDrop::DragGesture(nsIDOMEvent* inMouseEvent)
 
   // if the client has provided an override callback, check if we
   // should continue
-  if ( mOverrideDrag ) {
-    PRBool allow = PR_FALSE;
-    if ( NS_SUCCEEDED(mOverrideDrag->AllowStart(inMouseEvent, &allow)) )
-      if ( !allow )
-        return NS_OK;
+  nsCOMPtr<nsISimpleEnumerator> enumerator;
+  GetHookEnumeratorFromEvent(inMouseEvent, getter_AddRefs(enumerator));
+  if (enumerator) {
+    PRBool allow = PR_TRUE;
+    PRBool hasMoreHooks = PR_FALSE;
+    while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
+           && hasMoreHooks) {
+      nsCOMPtr<nsISupports> isupp;
+      if (NS_FAILED(enumerator->GetNext(getter_AddRefs(isupp))))
+        break;
+      nsCOMPtr<nsIClipboardDragDropHooks> override = do_QueryInterface(isupp);
+      if (override) {
+        nsresult hookResult = override->AllowStartDrag(inMouseEvent, &allow);
+        NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in AllowStartDrag");
+        if (!allow)
+          return NS_OK;
+      }
+    }
   }
   
   nsAutoString urlString, titleString, htmlString, contextString, infoString;
@@ -1051,12 +1119,32 @@ nsContentAreaDragDrop::DragGesture(nsIDOMEvent* inMouseEvent)
   if ( startDrag ) {
     // build up the transferable with all this data.
     nsCOMPtr<nsITransferable> trans;
-    nsresult rv = CreateTransferable(urlString, titleString, htmlString, contextString, infoString, image, isAnchor, getter_AddRefs(trans));
+    CreateTransferable(urlString, titleString, htmlString, contextString, infoString, image, isAnchor, getter_AddRefs(trans));
     if ( trans ) {
       // if the client has provided an override callback, let them manipulate
       // the flavors or drag data
-      if ( mOverrideDrag )
-        mOverrideDrag->Modify(trans);
+      nsCOMPtr<nsISimpleEnumerator> enumerator;
+      GetHookEnumeratorFromEvent(inMouseEvent, getter_AddRefs(enumerator));
+      if (enumerator)
+      {
+        PRBool hasMoreHooks = PR_FALSE;
+        PRBool doContinueDrag = PR_TRUE;
+        while (NS_SUCCEEDED(enumerator->HasMoreElements(&hasMoreHooks))
+               && hasMoreHooks)
+        {
+          nsCOMPtr<nsISupports> isupp;
+          if (NS_FAILED(enumerator->GetNext(getter_AddRefs(isupp))))
+            break;
+          nsCOMPtr<nsIClipboardDragDropHooks> override = do_QueryInterface(isupp);
+          if (override)
+          {
+            nsresult hookResult = override->OnCopyOrDrag(trans, &doContinueDrag);
+            NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in OnCopyOrDrag");
+            if (!doContinueDrag)
+              return NS_OK;
+          }
+        }
+      }
 
       nsCOMPtr<nsISupportsArray> transArray(do_CreateInstance("@mozilla.org/supports-array;1"));
       if ( !transArray )

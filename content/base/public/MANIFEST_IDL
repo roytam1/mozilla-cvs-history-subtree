@@ -14,4 +14,3 @@ nsIPrintProgress.idl
 nsIPrintStatusFeedback.idl
 nsIPrintProgressParams.idl
 nsIDragDropHandler.idl
-nsIDragDropOverride.idl
