@@ -9,8 +9,10 @@
 <script>
   var view = ({
     rowCount : 5000000,
+    selection : null,
 	getRowProperties : function(index, prop) {},
 	getCellProperties : function(index, prop) {},
+        getColumnProperties : function(index, col, prop) {},
 	outliner : null,
 	setOutliner : function(out) { this.outliner = out; },
 	getCellText : function(i, col) { return "Text at row #" + i + " in col " + col; }
@@ -30,9 +32,10 @@
   <outliner id="out" flex="1">
     <outlinercol id="Col1" value="Col1" flex="1"/>
     <outlinercol id="Col2" value="Col2" flex="1"/>
-	<outlinercol id="Col3" value="Col3" flex="1"/>
+    <outlinercol id="Col3" value="Col3" flex="1"/>
     <outlinercol id="Col4" value="Col4" flex="1"/>
-    <outlinerbody flex="1"/>
+    <outlinercol fixed="true" id="Col5" width="32" cycler="true"/>
+    <outlinerbody flex="1" onselect="dump('selection changed!\n')"/>
   </outliner>
 
   <hbox>
