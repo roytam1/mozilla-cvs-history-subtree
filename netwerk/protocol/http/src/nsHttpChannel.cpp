@@ -363,51 +363,78 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 //-----------------------------------------------------------------------------
 
 NS_IMETHODIMP
-nsHttpChannel::GetRequestMethod(char **aRequestMethod)
+nsHttpChannel::GetRequestMethod(char **method)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return DupString(mRequestHead.Method().get(), method);
 }
 NS_IMETHODIMP
-nsHttpChannel::SetRequestMethod(const char *aRequestMethod)
+nsHttpChannel::SetRequestMethod(const char *method)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+    nsHttpAtom atom = nsHttp::ResolveAtom(method);
+    if (!atom)
+        return NS_ERROR_FAILURE;
+
+    mRequestHead.SetMethod(atom);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetRequestURI(char **aRequestURI)
+nsHttpChannel::GetReferrer(nsIURI **referrer)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(referrer);
+    *referrer = mReferrer;
+    NS_ADDREF(*referrer);
+    return NS_OK;
 }
 NS_IMETHODIMP
-nsHttpChannel::SetRequestURI(const char *aRequestURI)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsHttpChannel::GetReferrer(nsIURI **aReferrer)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-NS_IMETHODIMP
-nsHttpChannel::SetReferrer(nsIURI *aReferrer)
+nsHttpChannel::SetReferrer(nsIURI *referrer)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+    if (nsHttpHandler::get()->BrowseAnonymously())
+        return NS_OK;
+
+    // save a copy of the referrer so we can return it if requested
+    mReferrer = referrer;
+
+    nsXPIDLCString spec;
+    referrer->GetSpec(getter_Copies(spec));
+    if (spec) {
+        nsCAutoString ref(spec.get());
+        // strip away any prehost; we don't want to be giving out passwords ;-)
+        nsXPIDLCString prehost;
+        referrer->GetPreHost(getter_Copies(prehost));
+        if (prehost && *prehost) {
+            PRUint32 prehostLoc = PRUint32(ref.Find(prehost, PR_TRUE));
+            ref.Cut(prehostLoc, nsCharTraits<char>::length(prehost) + 1); // + 1 for @
+        }
+        mRequestHead.SetHeader(nsHttp::Referer, ref);
+    }
+    return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetRequestHeader(const char *header, char **_retval)
+nsHttpChannel::GetRequestHeader(const char *header, char **value)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsHttpAtom atom = nsHttp::ResolveAtom(header);
+    if (!atom)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    return mRequestHead.GetHeader(atom, value);
 }
 
 NS_IMETHODIMP
 nsHttpChannel::SetRequestHeader(const char *header, const char *value)
 {
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+    nsHttpAtom atom = nsHttp::ResolveAtom(header);
+    if (!atom)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    return mRequestHead.SetHeader(atom, value);
 }
 
 NS_IMETHODIMP
@@ -521,32 +548,22 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 NS_IMETHODIMP
 nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
-    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
-
     LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
         this, status));
 
+    NS_PRECONDITION(mListener, "null listener");
+    NS_PRECONDITION(mTransaction, "null transaction");
+
     mIsPending = PR_FALSE;
     mStatus = status;
+
+    // at this point, we're done with the transaction
+    NS_RELEASE(mTransaction);
 
     mListener->OnStopRequest(this, mListenerContext, status);
 
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, nsnull, status);
-
-    NS_ASSERTION(mTransaction, "what? no transaction!");
-    // 
-    // we need to decide what to do with the transaction's connection.  if
-    // authentication is required, then we would want to explicitly reuse
-    // the connection.  otherwise, the connection can just be recycled.
-    //
-    // XXX need to support authentication
-    /*
-    if (mTransaction->TransactionSink()) {
-        nsHttpHandler::get()->RecycleConnection(mTransaction->Connection());
-        mTransaction->SetTransactionSink(nsnull);
-    }
-    */
 
     return NS_OK;
 }

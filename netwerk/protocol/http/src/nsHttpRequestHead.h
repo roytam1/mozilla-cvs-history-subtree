@@ -26,9 +26,9 @@ public:
     nsHttpVersion      Version()    { return mVersion; }
     nsCommonCString    RequestURI() { return mRequestURI; }
 
-    const char *PeekHeader(nsHttpAtom h)                  { return mHeaders.PeekHeader(h); }
-    nsresult SetHeader(nsHttpAtom h, const nsACString &v) { return mHeaders.SetHeader(h, v); }
-    nsresult GetHeader(nsHttpAtom h, nsACString &v)       { return mHeaders.GetHeader(h, v); }
+    const char *PeekHeader(nsHttpAtom h)            { return mHeaders.PeekHeader(h); }
+    nsresult SetHeader(nsHttpAtom h, const char *v) { return mHeaders.SetHeader(h, v); }
+    nsresult GetHeader(nsHttpAtom h, char **v)      { return mHeaders.GetHeader(h, v); }
 
     nsresult Flatten(nsACString &);
 

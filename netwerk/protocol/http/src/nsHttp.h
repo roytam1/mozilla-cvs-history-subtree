@@ -28,7 +28,6 @@
 #include "nsError.h"
 #include "plstr.h"
 #include "prlog.h"
-#include "nsAString.h"
 
 #if defined(PR_LOGGING)
 //
@@ -73,7 +72,7 @@ struct nsHttp
 {
     static void DestroyAtomTable();
 
-    static nsHttpAtom ResolveAtom(const nsACString &);
+    static nsHttpAtom ResolveAtom(const char *);
 
     /* Declare all atoms
      *

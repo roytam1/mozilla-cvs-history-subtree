@@ -6,14 +6,14 @@
 //-----------------------------------------------------------------------------
 
 nsresult
-nsHttpHeaderArray::SetHeader(nsHttpAtom header, const nsACString &value)
+nsHttpHeaderArray::SetHeader(nsHttpAtom header, const char *value)
 {
     nsEntry *entry = nsnull;
     PRInt32 index;
 
     // If a NULL value is passed in, then delete the header entry...
     index = LookupEntry(header, &entry);
-    if (value.IsEmpty()) {
+    if (!value) {
         if (entry) {
             mHeaders.RemoveElementAt(index);
             delete entry;
@@ -46,9 +46,8 @@ nsHttpHeaderArray::SetHeader(nsHttpAtom header, const nsACString &value)
         entry->value.Append(value);
     }
     // Replace the existing string with the new value
-    else {
+    else
         entry->value = value;
-    }
     return NS_OK;
 }
 
@@ -61,15 +60,14 @@ nsHttpHeaderArray::PeekHeader(nsHttpAtom header)
 }
 
 nsresult
-nsHttpHeaderArray::GetHeader(nsHttpAtom header, nsACString &result)
+nsHttpHeaderArray::GetHeader(nsHttpAtom header, char **result)
 {
     nsEntry *entry = nsnull;
 
     LookupEntry(header, &entry);
     if (!entry) return NS_ERROR_NOT_AVAILABLE;
 
-    result = entry->value;
-    return NS_OK;
+    return DupString(entry->value.get(), result);
 }
 
 nsresult

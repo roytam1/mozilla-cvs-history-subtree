@@ -15,8 +15,8 @@ public:
 
     const char *PeekHeader(nsHttpAtom header);
 
-    nsresult SetHeader(nsHttpAtom header, const nsACString &value);
-    nsresult GetHeader(nsHttpAtom header, nsACString &value);
+    nsresult SetHeader(nsHttpAtom header, const char *value);
+    nsresult GetHeader(nsHttpAtom header, char **value);
 
     nsresult VisitHeaders(nsIHttpHeaderVisitor *visitor);
 
@@ -25,11 +25,11 @@ public:
 private:
     struct nsEntry
     {
-        nsEntry(nsHttpAtom h, const nsACString &v)
+        nsEntry(nsHttpAtom h, const char *v)
             : header(h) { value = v; }
 
-        nsHttpAtom      header;
-        nsCommonCString value;
+        nsHttpAtom header;
+        nsCString  value;
     };
 
     PRInt32 LookupEntry(nsHttpAtom header, nsEntry **);

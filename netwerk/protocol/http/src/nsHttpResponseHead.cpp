@@ -82,21 +82,22 @@ nsHttpResponseHead::ParseHeaderLine(const nsReadingIterator<char> &begin,
     nsReadingIterator<char> p = begin;
 
     if (FindCharInReadable(':', p, end)) {
-        nsHttpAtom atom = nsHttp::ResolveAtom(Substring(begin, p));
+        nsCommonCString header = Substring(begin, p);
+        nsHttpAtom atom = nsHttp::ResolveAtom(header.get());
         if (atom) {
             // skip over whitespace
             do {
                 ++p;
             } while (*p == ' ');
 
-            nsPromiseCSubstring val(p, end);
+            nsCommonCString val = Substring(p, end);
 
             // assign response header
-            mHeaders.SetHeader(atom, val);
+            mHeaders.SetHeader(atom, val.get());
 
             // handle some special case headers...
             if (atom == nsHttp::Content_Length)
-                mContentLength = atoi(PromiseFlatCString(val).get());
+                mContentLength = atoi(val.get());
             else if (atom == nsHttp::Content_Type)
                 ParseContentType(val);
         }

@@ -25,7 +25,6 @@
 #include "nscore.h"
 #include "plhash.h"
 #include "nsCRT.h"
-#include "nsPromiseFlatString.h"
 
 #if defined(PR_LOGGING)
 PRLogModuleInfo *gHttpLog = nsnull;
@@ -112,7 +111,7 @@ nsHttp::DestroyAtomTable()
 }
 
 nsHttpAtom
-nsHttp::ResolveAtom(const nsACString &str)
+nsHttp::ResolveAtom(const char *str)
 {
     if (!gHttpAtomTable)
         CreateAtomTable();
@@ -121,7 +120,7 @@ nsHttp::ResolveAtom(const nsACString &str)
 
     if (gHttpAtomTable)
         atom._val = (const char *)
-                PL_HashTableLookup(gHttpAtomTable, PromiseFlatCString(str).get());
+                PL_HashTableLookup(gHttpAtomTable, str);
 
     return atom;
 }

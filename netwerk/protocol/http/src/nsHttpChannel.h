@@ -46,6 +46,7 @@ private:
     nsCOMPtr<nsIStreamListener> mListener;
     nsCOMPtr<nsISupports>       mListenerContext;
     nsCOMPtr<nsILoadGroup>      mLoadGroup;
+    nsCOMPtr<nsIURI>            mReferrer;
 
     nsHttpRequestHead           mRequestHead;
     nsHttpResponseHead         *mResponseHead;

@@ -15,13 +15,6 @@ interface nsIHttpChannel : nsIChannel
     attribute string requestMethod;
 
     /**
-     * Get/set the Request-URI portion of the HTTP Request-Line (see RFC2616
-     * section 5.1).  This is typically the absolute path of the channel's
-     * URL.
-     */
-    attribute string requestURI;
-
-    /**
      * Get/set the referrer URI on the request.  This is the address (URI) of
      * the resource from which the Request-URI was obtained (see RFC2616
      * section 14.36).  The user pref 'network.http.anonymous' may cause the

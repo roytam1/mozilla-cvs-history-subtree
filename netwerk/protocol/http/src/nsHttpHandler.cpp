@@ -198,38 +198,41 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     LOG(("nsHttpHandler::AddStandardRequestHeaders\n"));
 
     // Add the User-Agent header:
-    rv = request->SetHeader(nsHttp::User_Agent, UserAgent());
+    rv = request->SetHeader(nsHttp::User_Agent, UserAgent().get());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept header:
     //
     // Send */*. We're no longer chopping MIME-types for acceptance.
     // MIME based content negotiation has died.
-    rv = request->SetHeader(nsHttp::Accept, NS_LITERAL_CSTRING("*/*"));
+    rv = request->SetHeader(nsHttp::Accept, "*/*");
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Language header:
-    rv = request->SetHeader(nsHttp::Accept_Language, mAcceptLanguages);
+    rv = request->SetHeader(nsHttp::Accept_Language, mAcceptLanguages.get());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Encoding header:
-    rv = request->SetHeader(nsHttp::Accept_Encoding, mAcceptEncodings);
+    rv = request->SetHeader(nsHttp::Accept_Encoding, mAcceptEncodings.get());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept-Charset header:
-    rv = request->SetHeader(nsHttp::Accept_Charset, mAcceptCharsets);
+    rv = request->SetHeader(nsHttp::Accept_Charset, mAcceptCharsets.get());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Connection header:
     const char *connectionType = "close";
     if (caps && ALLOW_KEEPALIVE) {
-        rv = request->SetHeader(nsHttp::Keep_Alive,
-                nsPrintfCString("%d", mKeepAliveTimeout));
+        char buf[32];
+
+        PR_snprintf(buf, sizeof(buf), "%d", mKeepAliveTimeout);
+
+        rv = request->SetHeader(nsHttp::Keep_Alive, buf);
         if (NS_FAILED(rv)) return rv;
         
         connectionType = "keep-alive";
     }
-    return request->SetHeader(nsHttp::Connection, nsLocalCString(connectionType));
+    return request->SetHeader(nsHttp::Connection, connectionType);
 }
 
 nsresult

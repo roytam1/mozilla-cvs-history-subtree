@@ -47,6 +47,8 @@ public:
     nsresult AddStandardRequestHeaders(nsHttpHeaderArray *,
                                        PRUint32 capabilities);
 
+    PRBool BrowseAnonymously() { return mBrowseAnonymously; }
+
     //
     // Connection management methods:
     //
