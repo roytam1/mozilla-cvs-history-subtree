@@ -110,10 +110,10 @@ extern "C" void ShowOSAlert(char* aMessage);
 // header file for profile manager
 #include "nsIProfileInternal.h"
 
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
-static nsresult
-getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
+nsresult
+apprunner_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
 
 #if defined(XP_UNIX)
@@ -1414,9 +1414,9 @@ int main(int argc, char* argv[])
     splash->Show();
   }
 
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef _BUILD_STATIC_BIN
   // Initialize XPCOM's module info table
-  NSGetStaticModuleInfo = getModuleInfo;
+  NSGetStaticModuleInfo = apprunner_getModuleInfo;
 #endif
 
   rv = NS_InitXPCOM(NULL, NULL);
@@ -1459,7 +1459,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
 }
 #endif // XP_PC && WIN32
 
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef _BUILD_STATIC_BIN
 
 #define MODULE(name) { "NSGetModule_" #name, NSGETMODULE_ENTRY_POINT(name) }
 #define DECL_MODULE(name)                                      \
@@ -1639,11 +1639,12 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
 };
 
 static nsresult
-getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
+apprunner_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
 {
   *info = StaticModuleInfo;
   *count = sizeof(StaticModuleInfo) / sizeof(StaticModuleInfo[0]);
   return NS_OK;
 }
 
-#endif // MOZ_STATIC_COMPONENT_LIBS
+#endif // _BUILD_STATIC_BIN
+

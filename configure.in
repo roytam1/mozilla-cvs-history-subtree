@@ -3979,10 +3979,6 @@ if (test -z "$BUILD_SHARED_LIBS" && test -z "$BUILD_STATIC_LIBS") ||
     AC_MSG_ERROR([Only one of --enable-shared or --enable-static must be specified.])
 fi
 
-if test "$MOZ_STATIC_COMPONENT_LIBS"; then
-  AC_DEFINE(MOZ_STATIC_COMPONENT_LIBS)
-fi
-
 dnl ========================================================
 
 MOZ_ARG_ENABLE_STRING(static-components,

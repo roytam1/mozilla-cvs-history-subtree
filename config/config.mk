@@ -270,11 +270,10 @@ ifndef BUILD_SHARED_LIBS
 _ENABLE_PIC=
 endif
 
-ifneq (,$(IS_COMPONENT))
-ifneq (, $(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
-DEFINES	+= -DNSGetModule=$(LIBRARY_NAME)_NSGetModule -DNSGetModule_components=$(LIBRARY_NAME)_NSGM_comps -DNSGetModule_components_count=$(LIBRARY_NAME)_NSGM_comp_count
+ifdef IS_COMPONENT
+ifneq (,$(MOZ_STATIC_COMPONENT_LIBS)$(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
+DEFINES += -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT=1
 FORCE_STATIC_LIB=1
-_ENABLE_PIC=1
 endif
 endif
 

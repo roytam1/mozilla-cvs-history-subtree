@@ -316,7 +316,7 @@ nsresult nsComponentManagerImpl::Init(void)
     }
 
     if (mStaticComponentLoader == nsnull) {
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
         extern nsresult NS_NewStaticComponentLoader(nsIComponentLoader **);
         NS_NewStaticComponentLoader(&mStaticComponentLoader);
         if (!mStaticComponentLoader)
@@ -331,7 +331,7 @@ nsresult nsComponentManagerImpl::Init(void)
             return NS_ERROR_OUT_OF_MEMORY;
         nsCStringKey loaderKey(nativeComponentType);
         mLoaders->Put(&loaderKey, mNativeComponentLoader);
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
         nsCStringKey staticKey(staticComponentType);
         mLoaders->Put(&staticKey, mStaticComponentLoader);
 #endif
@@ -391,7 +391,7 @@ nsresult nsComponentManagerImpl::Shutdown(void)
 
     // we have an extra reference on this one, which is probably a good thing
     NS_IF_RELEASE(mNativeComponentLoader);
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
     NS_IF_RELEASE(mStaticComponentLoader);
 #endif
     
@@ -2046,7 +2046,7 @@ nsComponentManagerImpl::AutoRegisterImpl(PRInt32 when, nsIFile *inDirSpec)
     rv = mNativeComponentLoader->AutoRegisterComponents((PRInt32)when, dir);
     if (NS_FAILED(rv)) return rv;
 
-#ifdef MOZ_STATIC_COMPONENT_LIBS
+#ifdef ENABLE_STATIC_COMPONENT_LOADER
     rv = mStaticComponentLoader->AutoRegisterComponents((PRInt32)when, dir);
     if (NS_FAILED(rv)) return rv;
 #endif
