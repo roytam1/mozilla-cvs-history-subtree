@@ -1934,7 +1934,7 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
     // if we're deleting a message, we should pseudo-interrupt the msg
     //load of the current message.
     PRBool interrupted = PR_FALSE;
-    imapServer->PseudoInterruptMsgLoad(this, &interrupted);
+    imapServer->PseudoInterruptMsgLoad(this, msgWindow, &interrupted);
   }
   
   rv = BuildIdsAndKeyArray(messages, messageIds, srcKeyArray);

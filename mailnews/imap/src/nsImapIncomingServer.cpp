@@ -959,13 +959,33 @@ nsImapIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
 NS_IMETHODIMP nsImapIncomingServer::PerformBiff()
 {
   nsresult rv;
+  nsCOMPtr<nsIImapService> imapService = do_GetService(kImapServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  if (!imapService) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIEventQueue> queue;
+  // get the Event Queue for this thread...
+  nsCOMPtr<nsIEventQueueService> pEventQService = 
+    do_GetService(kEventQueueServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  if (!pEventQService) return NS_ERROR_FAILURE;
 
-	nsCOMPtr<nsIMsgFolder> rootMsgFolder;
-	rv = GetRootMsgFolder(getter_AddRefs(rootMsgFolder));
-	if(NS_SUCCEEDED(rv))
+  nsCOMPtr<nsIFolder> rootFolder;
+  rv = GetRootFolder(getter_AddRefs(rootFolder));
+  if (NS_FAILED(rv)) return rv;
+  if (!rootFolder) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsIMsgFolder> rootMsgFolder = do_QueryInterface(rootFolder, &rv);
+  if (NS_FAILED(rv)) return rv;
+  PRUint32 numFolders;
+  nsCOMPtr<nsIMsgFolder> inbox;
+  rv = rootMsgFolder->GetFoldersWithFlag(MSG_FOLDER_FLAG_INBOX, 1, &numFolders, getter_AddRefs(inbox));
+  if (inbox)
 	{
     SetPerformingBiff(PR_TRUE);
-		rv = rootMsgFolder->GetNewMessages(nsnull, nsnull);
+    inbox->SetGettingNewMessages(PR_TRUE);
+    rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
+    if (NS_FAILED(rv)) return rv;
+    rv = imapService->Biff(queue, inbox, this, nsnull, 0);
   }
   return rv;
 }
@@ -2441,7 +2461,7 @@ NS_IMETHODIMP  nsImapIncomingServer::CommitNamespaces()
 
 }
 
-NS_IMETHODIMP nsImapIncomingServer::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, PRBool *interrupted)
+NS_IMETHODIMP nsImapIncomingServer::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, nsIMsgWindow *aMsgWindow, PRBool *interrupted)
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIImapProtocol> connection;
@@ -2460,7 +2480,7 @@ NS_IMETHODIMP nsImapIncomingServer::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFo
     aSupport = getter_AddRefs(m_connectionCache->ElementAt(i));
     connection = do_QueryInterface(aSupport);
     if (connection)
-      rv = connection->PseudoInterruptMsgLoad(aImapFolder, interrupted);
+      rv = connection->PseudoInterruptMsgLoad(aImapFolder, aMsgWindow, interrupted);
   }
   
   PR_CExitMonitor(this);

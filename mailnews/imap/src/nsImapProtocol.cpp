@@ -933,7 +933,7 @@ nsImapProtocol::GetLastActiveTimeStamp(PRTime* aTimeStamp)
 }
 
 NS_IMETHODIMP
-nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, PRBool *interrupted)
+nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, nsIMsgWindow *aMsgWindow, PRBool *interrupted)
 {
   NS_ENSURE_ARG (interrupted);
 
@@ -955,9 +955,11 @@ nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, PRBool *interr
       if (NS_SUCCEEDED(rv) && runningImapURL)
       {
         nsCOMPtr <nsIMsgFolder> runningImapFolder;
+        nsCOMPtr <nsIMsgWindow> msgWindow;
         nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(runningImapURL);
+        mailnewsUrl->GetMsgWindow(getter_AddRefs(msgWindow));
         mailnewsUrl->GetFolder(getter_AddRefs(runningImapFolder));
-        if (aImapFolder == runningImapFolder)
+        if (aImapFolder == runningImapFolder && msgWindow == aMsgWindow)
         {
           PseudoInterrupt(PR_TRUE);
           *interrupted = PR_TRUE;
@@ -2121,7 +2123,9 @@ void nsImapProtocol::ProcessSelectedStateURL()
         }
         break;
       case nsIImapUrl::nsImapBiff:
-          PeriodicBiff(); 
+          ProcessMailboxUpdate(PR_FALSE); // see if this does the right thing.
+
+//          PeriodicBiff(); 
           break;
       case nsIImapUrl::nsImapOnlineCopy:
       case nsIImapUrl::nsImapOnlineMove:
@@ -3417,19 +3421,11 @@ void nsImapProtocol::PeriodicBiff()
   
   if (GetServerStateParser().GetIMAPstate() == nsImapServerResponseParser::kFolderSelected)
     {
-    Noop(); // check the latest number of messages
-    PRInt32 numMessages = 0;
-    m_flagState->GetNumberOfMessages(&numMessages);
-        if (GetServerStateParser().NumberOfMessages() != numMessages)
-        {
       PRUint32 id = GetServerStateParser().HighestRecordedUID() + 1;
       nsCString fetchStr;           // only update flags
       PRUint32 added = 0, deleted = 0;
       
       deleted = m_flagState->GetNumberOfDeletedMessages();
-      added = numMessages;
-      if (!added || (added == deleted)) // empty keys, get them all
-        id = 1;
 
       //sprintf(fetchStr, "%ld:%ld", id, id + GetServerStateParser().NumberOfMessages() - fFlagState->GetNumberOfMessages());
       fetchStr.AppendInt(id, 10);
@@ -3443,9 +3439,6 @@ void nsImapProtocol::PeriodicBiff()
         }
         else
             m_currentBiffState = nsIMsgFolder::nsMsgBiffState_NoMail;
-    }
-    else
-      m_currentBiffState = nsIMsgFolder::nsMsgBiffState_Unknown;
     
     if (startingState != m_currentBiffState)
       SendSetBiffIndicatorEvent(m_currentBiffState);
@@ -7204,6 +7197,18 @@ NS_IMETHODIMP nsImapMockChannel::Close()
 {
   if (mReadingFromCache)
     NotifyStartEndReadFromCache(PR_FALSE);
+  else
+  {
+    nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_url);
+    if (mailnewsUrl)
+    {
+      nsCOMPtr<nsICacheEntryDescriptor>  cacheEntry;
+      mailnewsUrl->GetMemCacheEntry(getter_AddRefs(cacheEntry));
+      if (cacheEntry)
+        cacheEntry->MarkValid();
+    }
+  }
+
 
   m_channelListener = nsnull;
   mCacheRequest = nsnull;
@@ -7358,7 +7363,6 @@ nsImapMockChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCache
     // gets written to both 
     if (access & nsICache::ACCESS_WRITE && !(access & nsICache::ACCESS_READ))
     {
-      entry->MarkValid();
       // use a stream listener Tee to force data into the cache and to our current channel listener...
       nsCOMPtr<nsIStreamListener> newListener;
       nsCOMPtr<nsIStreamListenerTee> tee = do_CreateInstance(kStreamListenerTeeCID, &rv);

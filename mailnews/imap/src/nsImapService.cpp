@@ -831,7 +831,7 @@ nsresult nsImapService::FetchMimePart(nsIImapUrl * aImapUrl,
           nsCOMPtr<nsIImapIncomingServer>
             aImapServer(do_QueryInterface(aMsgIncomingServer, &rv));
           if (NS_SUCCEEDED(rv) && aImapServer)
-            aImapServer->PseudoInterruptMsgLoad(aImapMailFolder, &interrupted);
+            aImapServer->PseudoInterruptMsgLoad(aImapMailFolder, nsnull, &interrupted);
         }
       }
       // if the display consumer is a docshell, then we should run the url in the docshell.
@@ -1228,7 +1228,7 @@ nsImapService::FetchMessage(nsIImapUrl * aImapUrl,
       nsCOMPtr<nsIImapIncomingServer>
         aImapServer(do_QueryInterface(aMsgIncomingServer, &rv));
       if (NS_SUCCEEDED(rv) && aImapServer)
-        aImapServer->PseudoInterruptMsgLoad(aImapMailFolder, &interrupted);
+        aImapServer->PseudoInterruptMsgLoad(aImapMailFolder, aMsgWindow, &interrupted);
     }
 	 }
   // if the display consumer is a docshell, then we should run the url in the docshell.
@@ -1505,7 +1505,7 @@ nsImapService::Expunge(nsIEventQueue * aClientEventQueue,
 	return rv;
 }
 
-/* old-stle biff that doesn't download headers */
+/* old-stle biff that doesn't do a noop */
 NS_IMETHODIMP
 nsImapService::Biff(nsIEventQueue * aClientEventQueue, 
                     nsIMsgFolder * aImapMailFolder,
