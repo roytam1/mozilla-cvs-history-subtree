@@ -87,7 +87,13 @@ nsresult nsMsgThread::InitCachedValues()
 		err = m_mdbDB->RowCellColumnToUInt32(m_metaRow, m_mdbDB->m_threadIdColumnToken, &m_threadKey);
 	    err = m_mdbDB->RowCellColumnToUInt32(m_metaRow, m_mdbDB->m_threadUnreadChildrenColumnToken, &m_numUnreadChildren);
 		err = m_mdbDB->RowCellColumnToUInt32(m_metaRow, m_mdbDB->m_threadRootKeyColumnToken, &m_threadRootKey, nsMsgKey_None);
-		
+    // fix num children if it's wrong. this doesn't work - some DB's have a bogus thread table
+    // that is full of bogus headers - don't know why.
+    PRUint32 rowCount = 0;
+    m_mdbTable->GetCount(m_mdbDB->GetEnv(), &rowCount);
+//    NS_ASSERTION(m_numChildren <= rowCount, "num children wrong - fixing");
+    if (m_numChildren > rowCount)
+      ChangeChildCount((PRInt32) rowCount - (PRInt32) m_numChildren);
 		if (NS_SUCCEEDED(err))
 			m_cachedValuesInitialized = PR_TRUE;
 	}
@@ -226,6 +232,9 @@ NS_IMETHODIMP nsMsgThread::AddChild(nsIMsgDBHdr *child, nsIMsgDBHdr *inReplyTo, 
 			if (hdr->IsParentOf(curHdr))
 			{
 				nsMsgKey oldThreadParent;
+				mdb_pos outPos;
+        // move this hdr before the current header.
+				m_mdbTable->MoveRow(m_mdbDB->GetEnv(), hdrRow, -1, childIndex, &outPos);
 				curHdr->GetThreadParent(&oldThreadParent);
 				curHdr->GetMessageKey(&msgKey);
 				curHdr->SetThreadParent(newHdrKey);
@@ -245,6 +254,7 @@ NS_IMETHODIMP nsMsgThread::AddChild(nsIMsgDBHdr *child, nsIMsgDBHdr *inReplyTo, 
 					SetThreadRootKey(newHdrKey);
 					parentKeyNeedsSetting = PR_FALSE;
 				}
+        break;
 			}
 		}
 	}
