@@ -720,7 +720,7 @@ void ScopeChain::collectNames(StmtNode *p)
         {
             ClassStmtNode *classStmt = checked_cast<ClassStmtNode *>(p);
             const StringAtom& name = classStmt->name;
-            JSType *thisClass = new JSType(m_cx, name, NULL);
+            JSType *thisClass = new JSType(name, NULL);
 
             m_cx->setAttributeValue(classStmt);            
 
@@ -805,7 +805,7 @@ void ScopeChain::collectNames(StmtNode *p)
             bool isOperator = (f->attributeValue->mTrueFlags & Property::Operator) == Property::Operator;
             bool isPrototype = (f->attributeValue->mTrueFlags & Property::Prototype) == Property::Prototype;
             
-            JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), this);
+            JSFunction *fnc = new JSFunction(NULL, m_cx->getParameterCount(f->function), this);
             fnc->setIsPrototype(isPrototype);
             fnc->setIsConstructor(isConstructor);
             f->mFunction = fnc;
@@ -903,11 +903,11 @@ void ScopeChain::collectNames(StmtNode *p)
 }
 
 // Make sure there's a default constructor. XXX anything else?
-void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
+void JSType::completeClass(Context *cx, ScopeChain *scopeChain)
 {    
     // if none exists, build a default constructor that calls 'super()'
     if (getDefaultConstructor() == NULL) {
-        JSFunction *fnc = new JSFunction(cx, Object_Type, 0, scopeChain);
+        JSFunction *fnc = new JSFunction(Object_Type, 0, scopeChain);
         ByteCodeGen bcg(cx, scopeChain);
 
         if (mSuperType && mSuperType->getDefaultConstructor()) {
@@ -1060,7 +1060,7 @@ Reference *JSType::genReference(const String& name, NamespaceList *names, Access
     return NULL;
 }
 
-JSType::JSType(Context *cx, const String &name, JSType *super) 
+JSType::JSType(const String &name, JSType *super) 
             : JSObject(Type_Type),
                     mSuperType(super), 
                     mVariableCount(0),
@@ -1080,7 +1080,7 @@ JSType::JSType(Context *cx, const String &name, JSType *super)
         mPrototypeObject->mPrototype = mSuperType->mPrototypeObject;
 }
 
-JSType::JSType(Context *cx, JSType *xClass)     // used for constructing the static component type
+JSType::JSType(JSType *xClass)     // used for constructing the static component type
             : JSObject(Type_Type),
                     mSuperType(xClass), 
                     mVariableCount(0),
@@ -1158,7 +1158,7 @@ Reference *Activation::genReference(const String& name, NamespaceList *names, Ac
 
 void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
 {
-    fnc->mParameterBarrel = new ParameterBarrel(this);
+    fnc->mParameterBarrel = new ParameterBarrel();
     mScopeChain->addScope(fnc->mParameterBarrel);
     VariableBinding *v = f.parameters;
     while (v) {
@@ -1328,7 +1328,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     s = s->next;
                 }
             }
-            thisClass->completeClass(this, mScopeChain, superClass);
+            thisClass->completeClass(this, mScopeChain);
 
             mScopeChain->popScope();
         }        
@@ -1482,7 +1482,7 @@ static JSValue Boolean_toString(Context *, const JSValue& thisValue, JSValue * /
         return JSValue(new String(widenCString("false")));
 }
 
-static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
+static JSValue ExtendAttribute_Invoke(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 argc)
 {
     ASSERT(argc == 1);
 
@@ -1522,15 +1522,15 @@ void Context::assureStackSpace(uint32 s)
 
 
 // Initialize a built-in class - setting the functions into the prototype object
-void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef)
+void Context::initClass(JSType *type, ClassDef *cdef, PrototypeFunctions *pdef)
 {
     mScopeChain->addScope(type);
-    type->setDefaultConstructor(new JSFunction(this, cdef->defCon, Object_Type));
+    type->setDefaultConstructor(new JSFunction(cdef->defCon, Object_Type));
 
     // the prototype functions are defined in the prototype object...
     if (pdef) {
         for (uint32 i = 0; i < pdef->mCount; i++) {
-            JSFunction *fun = new JSFunction(this, pdef->mDef[i].imp, pdef->mDef[i].result);
+            JSFunction *fun = new JSFunction(pdef->mDef[i].imp, pdef->mDef[i].result);
             fun->setExpectedArgs(pdef->mDef[i].length);
             type->mPrototypeObject->defineVariable(widenCString(pdef->mDef[i].name), 
                                                (NamespaceList *)(NULL), 
@@ -1538,7 +1538,7 @@ void Context::initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFu
                                                JSValue(fun));
         }
     }
-    type->completeClass(this, mScopeChain, super);
+    type->completeClass(this, mScopeChain);
     type->setStaticInitializer(this, NULL);
     type->mUninitializedValue = *cdef->uninit;
     getGlobalObject()->defineVariable(widenCString(cdef->name), (NamespaceList *)(NULL), Type_Type, JSValue(type));
@@ -1566,24 +1566,24 @@ void Context::initBuiltins()
         { "NamedArgument",  NULL,                  &kNullValue    },
     };
 
-    Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
+    Object_Type  = new JSType(widenCString(builtInClasses[0].name), NULL);
     Object_Type->mIsDynamic = true;
     // XXX aren't all the built-ins thus?
 
-    Type_Type           = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
-    Function_Type       = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
-    Number_Type         = new JSType(this, widenCString(builtInClasses[3].name), Object_Type);
-    Integer_Type        = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
-    String_Type         = new JSStringType(this, widenCString(builtInClasses[5].name), Object_Type);
-    Array_Type          = new JSArrayType(this, widenCString(builtInClasses[6].name), Object_Type);
-    Boolean_Type        = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
-    Void_Type           = new JSType(this, widenCString(builtInClasses[8].name), Object_Type);
-    Unit_Type           = new JSType(this, widenCString(builtInClasses[9].name), Object_Type);
-    Attribute_Type      = new JSType(this, widenCString(builtInClasses[10].name), Object_Type);
-    NamedArgument_Type  = new JSType(this, widenCString(builtInClasses[11].name), Object_Type);
+    Type_Type           = new JSType(widenCString(builtInClasses[1].name), Object_Type);
+    Function_Type       = new JSType(widenCString(builtInClasses[2].name), Object_Type);
+    Number_Type         = new JSType(widenCString(builtInClasses[3].name), Object_Type);
+    Integer_Type        = new JSType(widenCString(builtInClasses[4].name), Object_Type);
+    String_Type         = new JSStringType(widenCString(builtInClasses[5].name), Object_Type);
+    Array_Type          = new JSArrayType(widenCString(builtInClasses[6].name), Object_Type);
+    Boolean_Type        = new JSType(widenCString(builtInClasses[7].name), Object_Type);
+    Void_Type           = new JSType(widenCString(builtInClasses[8].name), Object_Type);
+    Unit_Type           = new JSType(widenCString(builtInClasses[9].name), Object_Type);
+    Attribute_Type      = new JSType(widenCString(builtInClasses[10].name), Object_Type);
+    NamedArgument_Type  = new JSType(widenCString(builtInClasses[11].name), Object_Type);
 
 
-    String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
+    String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(String_fromCharCode, String_Type)));
 
 
     ProtoFunDef objectProtos[] = 
@@ -1620,22 +1620,22 @@ void Context::initBuiltins()
 
     ASSERT(mGlobal);
     *mGlobal = Object_Type->newInstance(this);
-    initClass(Object_Type,  NULL,         &builtInClasses[0], new PrototypeFunctions(&objectProtos[0]) );
+    initClass(Object_Type,  &builtInClasses[0], new PrototypeFunctions(&objectProtos[0]) );
     
     // pull up them bootstraps 
     (*mGlobal)->mPrototype = Object_Type->mPrototype;
 
-    initClass(Type_Type,            Object_Type,  &builtInClasses[1],  NULL );
-    initClass(Function_Type,        Object_Type,  &builtInClasses[2],  new PrototypeFunctions(&functionProtos[0]) );
-    initClass(Number_Type,          Object_Type,  &builtInClasses[3],  new PrototypeFunctions(&numberProtos[0]) );
-    initClass(Integer_Type,         Object_Type,  &builtInClasses[4],  new PrototypeFunctions(&integerProtos[0]) );
-    initClass(String_Type,          Object_Type,  &builtInClasses[5],  getStringProtos() );
-    initClass(Array_Type,           Object_Type,  &builtInClasses[6],  getArrayProtos() );
-    initClass(Boolean_Type,         Object_Type,  &builtInClasses[7],  new PrototypeFunctions(&booleanProtos[0]) );
-    initClass(Void_Type,            Object_Type,  &builtInClasses[8],  NULL);
-    initClass(Unit_Type,            Object_Type,  &builtInClasses[9],  NULL);
-    initClass(Attribute_Type,       Object_Type,  &builtInClasses[10], NULL);
-    initClass(NamedArgument_Type,   Object_Type,  &builtInClasses[10], NULL);
+    initClass(Type_Type,            &builtInClasses[1],  NULL );
+    initClass(Function_Type,        &builtInClasses[2],  new PrototypeFunctions(&functionProtos[0]) );
+    initClass(Number_Type,          &builtInClasses[3],  new PrototypeFunctions(&numberProtos[0]) );
+    initClass(Integer_Type,         &builtInClasses[4],  new PrototypeFunctions(&integerProtos[0]) );
+    initClass(String_Type,          &builtInClasses[5],  getStringProtos() );
+    initClass(Array_Type,           &builtInClasses[6],  getArrayProtos() );
+    initClass(Boolean_Type,         &builtInClasses[7],  new PrototypeFunctions(&booleanProtos[0]) );
+    initClass(Void_Type,            &builtInClasses[8],  NULL);
+    initClass(Unit_Type,            &builtInClasses[9],  NULL);
+    initClass(Attribute_Type,       &builtInClasses[10], NULL);
+    initClass(NamedArgument_Type,   &builtInClasses[10], NULL);
 }
 
 
@@ -1672,7 +1672,7 @@ struct OperatorInitData {
     { "|",            JS2Runtime::BitOr,            },
 };
 
-void initOperatorTable()
+static void initOperatorTable()
 {
     static bool mapped = false;
     if (!mapped) {
@@ -1730,7 +1730,7 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
         initBuiltins();
         JSObject *mathObj = Object_Type->newInstance(this);
         getGlobalObject()->defineVariable(widenCString("Math"), (NamespaceList *)(NULL), Object_Type, JSValue(mathObj));
-        initMathObject(this, mathObj);    
+        initMathObject(mathObj);    
         getGlobalObject()->defineVariable(widenCString("undefined"), (NamespaceList *)(NULL), Void_Type, kUndefinedValue);
         getGlobalObject()->defineVariable(widenCString("NaN"), (NamespaceList *)(NULL), Void_Type, kNaNValue);
         getGlobalObject()->defineVariable(widenCString("Infinity"), (NamespaceList *)(NULL), Void_Type, kPositiveInfinity);                
@@ -1757,7 +1757,7 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
         getGlobalObject()->defineVariable(widenCString(attribute_init[i].name), (NamespaceList *)(NULL), Attribute_Type, JSValue(attr));
     }
 
-    JSFunction *x = new JSFunction(this, ExtendAttribute_Invoke, Attribute_Type);
+    JSFunction *x = new JSFunction(ExtendAttribute_Invoke, Attribute_Type);
     getGlobalObject()->defineVariable(widenCString("extend"), (NamespaceList *)(NULL), Attribute_Type, JSValue(x));
 
     NullAttribute = new Attribute(0, 0);

@@ -647,8 +647,8 @@ static const double two31 = 2147483648.0;
 
     class JSType : public JSObject {
     public:        
-        JSType(Context *cx, const String &name, JSType *super);
-        JSType(Context *cx, JSType *xClass);     // used for constructing the static component type
+        JSType(const String &name, JSType *super);
+        JSType(JSType *xClass);     // used for constructing the static component type
 
         virtual ~JSType() { } // keeping gcc happy
 
@@ -724,7 +724,7 @@ static const double two31 = 2147483648.0;
         JSValue getUninitializedValue()    { return mUninitializedValue; }
 
         // assumes that the super types have been completed already
-        void completeClass(Context *cx, ScopeChain *scopeChain, JSType *super);
+        void completeClass(Context *cx, ScopeChain *scopeChain);
 
         virtual bool isDynamic() { return mIsDynamic; }
 
@@ -771,8 +771,8 @@ static const double two31 = 2147483648.0;
 
     class JSArrayType : public JSType {
     public:
-        JSArrayType(Context *cx, const String &name, JSType *super) 
-            : JSType(cx, name, super)
+        JSArrayType(const String &name, JSType *super) 
+            : JSType(name, super)
         {
         }
         virtual ~JSArrayType() { } // keeping gcc happy
@@ -805,8 +805,8 @@ static const double two31 = 2147483648.0;
 
     class JSStringType : public JSType {
     public:
-        JSStringType(Context *cx, const String &name, JSType *super) 
-            : JSType(cx, name, super)
+        JSStringType(const String &name, JSType *super) 
+            : JSType(name, super)
         {
         }
         virtual ~JSStringType() { } // keeping gcc happy
@@ -828,7 +828,7 @@ static const double two31 = 2147483648.0;
     class ParameterBarrel : public JSType {
     public:
 
-        ParameterBarrel(Context *cx) : JSType(cx, NULL) 
+        ParameterBarrel() : JSType(NULL) 
         {
         }
         virtual ~ParameterBarrel() { } // keeping gcc happy
@@ -860,21 +860,21 @@ static const double two31 = 2147483648.0;
     class Activation : public JSType {
     public:
 
-        Activation(Context *cx) 
-                    : JSType(cx, NULL), 
+        Activation() 
+                    : JSType(NULL), 
                         mLocals(NULL), 
                         mStack(NULL),
                         mStackTop(0),
                         mPC(0), 
                         mModule(NULL)  { }
 
-        Activation(Context *cx, JSValue *locals, 
+        Activation(JSValue *locals, 
                         JSValue *stack, uint32 stackTop,
                         ScopeChain *scopeChain,
                         JSValue *argBase, JSValue curThis,
                         uint8 *pc, 
                         ByteCodeModule *module )
-                    : JSType(cx, NULL), 
+                    : JSType(NULL), 
                         mLocals(locals), 
                         mStack(stack), 
                         mStackTop(stackTop),
@@ -1119,7 +1119,7 @@ static const double two31 = 2147483648.0;
 
     class JSFunction : public JSObject {
     protected:
-        JSFunction() : JSObject(Function_Type), mActivation(NULL) { mPrototype = Function_Type->mPrototypeObject; }        // for JSBoundFunction (XXX ask Patrick about this structure)
+        JSFunction() : JSObject(Function_Type), mActivation() { mPrototype = Function_Type->mPrototypeObject; }        // for JSBoundFunction (XXX ask Patrick about this structure)
     public:
 
         class ArgumentData {
@@ -1135,10 +1135,10 @@ static const double two31 = 2147483648.0;
 
         // XXX these should be Function_Type->newInstance() calls, no?
 
-        JSFunction(Context *cx, JSType *resultType, uint32 argCount, ScopeChain *scopeChain) 
+        JSFunction(JSType *resultType, uint32 argCount, ScopeChain *scopeChain) 
                     : JSObject(Function_Type), 
                         mParameterBarrel(NULL),
-                        mActivation(cx),
+                        mActivation(),
                         mByteCode(NULL), 
                         mCode(NULL), 
                         mResultType(resultType), 
@@ -1156,10 +1156,10 @@ static const double two31 = 2147483648.0;
             mPrototype = Function_Type->mPrototypeObject;
         }
         
-        JSFunction(Context *cx, NativeCode *code, JSType *resultType) 
+        JSFunction(NativeCode *code, JSType *resultType) 
                     : JSObject(Function_Type), 
                         mParameterBarrel(NULL),
-                        mActivation(cx),
+                        mActivation(),
                         mByteCode(NULL), 
                         mCode(code), 
                         mResultType(resultType), 
@@ -1357,7 +1357,7 @@ static const double two31 = 2147483648.0;
         StringAtom& PrototypeKeyWord;
 
         void initBuiltins();
-        void initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef);
+        void initClass(JSType *type, ClassDef *cdef, PrototypeFunctions *pdef);
         void initOperators();
         void initAttributeValue(char *name, uint32 trueFlags, uint32 falseFlags);
         

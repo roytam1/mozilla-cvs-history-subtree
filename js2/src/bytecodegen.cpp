@@ -665,14 +665,14 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 if (static_cg.hasContent()) {
                     // build a function to be invoked 
                     // when the class is loaded
-                    f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
+                    f = new JSFunction(Void_Type, 0, mScopeChain);
                     f->setByteCode(new ByteCodeModule(&static_cg));
                 }
                 thisClass->setStaticInitializer(m_cx, f);
                 f = NULL;
                 if (bcg.hasContent()) {
                     // execute this function now to form the initial instance
-                    f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
+                    f = new JSFunction(Void_Type, 0, mScopeChain);
                     f->setByteCode(new ByteCodeModule(&bcg));
                 }
                 thisClass->setInstanceInitializer(m_cx, f);
@@ -2138,7 +2138,7 @@ BinaryOpEquals:
     case ExprNode::functionLiteral:
         {
             FunctionExprNode *f = checked_cast<FunctionExprNode *>(p);
-            JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), mScopeChain);
+            JSFunction *fnc = new JSFunction(NULL, m_cx->getParameterCount(f->function), mScopeChain);
             m_cx->buildRuntimeForFunction(f->function, fnc);
             ByteCodeGen bcg(m_cx, mScopeChain);
             bcg.genCodeForFunction(f->function, fnc, false, NULL);

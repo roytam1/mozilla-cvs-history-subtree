@@ -150,7 +150,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
         return false;
     }
     else {
-        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - 2, mScopeChain,
+        mActivationStack.push(new Activation(mLocals, mStack, mStackTop - 2, mScopeChain,
                                                 mArgumentBase, mThis, mPC, mCurModule));
         mThis = newThis;
         mCurModule = target->getByteCode();
@@ -174,7 +174,7 @@ JSValue Context::invokeFunction(JSFunction *target, const JSValue& thisValue, JS
 
 JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 /*argc*/)
 { 
-    mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, mScopeChain,
+    mActivationStack.push(new Activation(mLocals, mStack, mStackTop, mScopeChain,
                                             mArgumentBase, mThis, NULL, mCurModule));   // use NULL pc value to force interpret loop to exit
     mThis = thisValue;
     if (scopeChain)
@@ -482,7 +482,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 
 
                     if (!target->isNative()) {
-                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - (cleanUp + 1),
+                        mActivationStack.push(new Activation(mLocals, mStack, mStackTop - (cleanUp + 1),
                                                                     mScopeChain,
                                                                     mArgumentBase, oldThis,
                                                                     pc, mCurModule));
@@ -841,7 +841,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             // lie about argCount to the activation since it
                             // would normally expect to clean the function pointer
                             // off the stack as well.
-                            mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop - 1, 
+                            mActivationStack.push(new Activation(mLocals, mStack, mStackTop - 1, 
                                                                     mScopeChain,
                                                                     mArgumentBase, mThis,
                                                                     pc, mCurModule));
@@ -1657,7 +1657,7 @@ void Context::initOperators()
     };
 
     for (uint32 i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
-        JSFunction *f = new JSFunction(this, OpTable[i].imp, OpTable[i].resType);
+        JSFunction *f = new JSFunction(OpTable[i].imp, OpTable[i].resType);
         OperatorDefinition *op = new OperatorDefinition(OpTable[i].op1, OpTable[i].op2, f);
         mOperatorTable[OpTable[i].which].push_back(op);
     }

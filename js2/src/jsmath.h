@@ -34,7 +34,7 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-    void initMathObject(Context *cx, JSObject *mathObj);
+    void initMathObject(JSObject *mathObj);
 
 
 }

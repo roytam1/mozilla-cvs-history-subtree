@@ -132,7 +132,7 @@ static JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue * /
     
 }
 
-static JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Array_push(Context * /*cx*/, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
