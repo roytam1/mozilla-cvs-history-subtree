@@ -140,7 +140,7 @@ nsLocalMailCopyState::~nsLocalMailCopyState()
 ///////////////////////////////////////////////////////////////////////////////
 
 nsMsgLocalMailFolder::nsMsgLocalMailFolder(void)
-  : mHaveReadNameFromDB(PR_FALSE), mGettingMail(PR_FALSE),
+  : mHaveReadNameFromDB(PR_FALSE),
     mInitialized(PR_FALSE), mCopyState(nsnull), mType(nsnull),
     mCheckForNewMessagesAfterParsing(PR_FALSE), mNumFilterClassifyRequests(0)
 {
@@ -718,6 +718,8 @@ nsMsgLocalMailFolder::UpdateFolder(nsIMsgWindow *aWindow)
     }
     else if (mCopyState)
       mCopyState->m_notifyFolderLoaded = PR_TRUE; //defer folder loaded notification
+    else // if the db was already open, it's probably OK to load it...
+      NotifyFolderEvent(mFolderLoadedAtom);
   }
   PRBool filtersRun;
   // if we have new messages, try the filter plugins.
