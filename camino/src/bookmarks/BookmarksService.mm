@@ -226,7 +226,7 @@ BookmarksService::GetWrapperFor(nsIContent* aContent)
   PRUint32 contentID = 0;
   aContent->GetContentID(&contentID);
 
-  BookmarkItem* item = [gDictionary objectForKey: [NSNumber numberWithInt: contentID]];
+  BookmarkItem* item = BookmarksService::GetWrapperFor(contentID);
   if (item)
     return item;
 
@@ -241,8 +241,7 @@ BookmarksService::GetWrapperFor(nsIContent* aContent)
 BookmarkItem*
 BookmarksService::GetWrapperFor(PRUint32 contentID)
 {
-  BookmarkItem* item = [gDictionary objectForKey: [NSNumber numberWithUnsignedInt: contentID]];
-  return item;
+  return [gDictionary objectForKey: [NSNumber numberWithUnsignedInt: contentID]];
 }
 
 NSMenu*
@@ -838,7 +837,7 @@ void
 BookmarksService::OpenMenuBookmark(BrowserWindowController* aController, id aMenuItem)
 {
   // Get the corresponding bookmark item.
-  BookmarkItem* item = [gDictionary objectForKey: [NSNumber numberWithInt: [aMenuItem tag]]];
+  BookmarkItem* item = BookmarksService::GetWrapperFor([aMenuItem tag]);
 
   // Get the content node.
   nsIContent* content = [item contentNode];
@@ -1228,12 +1227,16 @@ bool
 BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs)
 {
   if ( !draggedIDs )
-    return NO;
+    return false;
 
   NSMutableArray *draggedItems = [NSMutableArray arrayWithCapacity: [draggedIDs count]];
   BOOL toolbarRootMoving = NO;
   
-  for (unsigned int i = 0; i < [draggedIDs count]; i++) {
+  BOOL          haveCommonParent = YES;
+  BookmarkItem* commonDragParent = nil;
+  
+  for (unsigned int i = 0; i < [draggedIDs count]; i++)
+  {
     NSNumber* contentID = [draggedIDs objectAtIndex: i];
     BookmarkItem* bookmarkItem = BookmarksService::GetWrapperFor([contentID unsignedIntValue]);
     nsCOMPtr<nsIContent> itemContent = [bookmarkItem contentNode];    
@@ -1244,8 +1247,42 @@ BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, N
 
     if (bookmarkItem)
       [draggedItems addObject: bookmarkItem];
+    
+    if (haveCommonParent)
+    {
+      if (!commonDragParent)
+        commonDragParent = [bookmarkItem parentItem];
+      else if ([bookmarkItem parentItem] != commonDragParent)
+      {
+        commonDragParent = nil;
+        haveCommonParent = NO;
+      }
+    }
   }
-      
+
+  // if there is only one item being dragged (or, if items are contiguous),
+  // prevent drops which would not affect the final order
+  if (haveCommonParent)
+  {
+    // are we contiguous?
+    // XXX bail for now if > 1 being dragged
+    if ([draggedItems count] == 1)
+    {
+      BookmarkItem* draggedItem = [draggedItems objectAtIndex:0];
+      nsCOMPtr<nsIContent> parentContent;
+      [draggedItem contentNode]->GetParent(*getter_AddRefs(parentContent));
+      if (parentContent)
+      {
+        PRInt32 childIndex;
+        if (NS_SUCCEEDED(parentContent->IndexOf([draggedItem contentNode], childIndex)))
+        {
+          if (childIndex == index || childIndex + 1 == index)
+            return false;
+        }
+      }
+    }
+  }
+
   // If we are being dropped into the top level, allow it
   if ([proposedParent contentNode] == [BookmarksService::GetRootItem() contentNode])
     return true;
@@ -1257,13 +1294,12 @@ BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, N
   // Make sure that we are not being dropped into one of our own children
   // If the proposed parent, or any of it's ancestors matches one of the nodes being dragged
   // then deny the drag.
-  
-  for (unsigned int i = 0; i < [draggedItems count]; i++) {
-    if (BookmarksService::DoAncestorsIncludeNode(proposedParent, [draggedItems objectAtIndex: i])) {
+  for (unsigned int i = 0; i < [draggedItems count]; i++)
+  {
+    if (BookmarksService::DoAncestorsIncludeNode(proposedParent, [draggedItems objectAtIndex: i]))
       return false;
-    }
   }
-  
+    
   return true;
 }
 

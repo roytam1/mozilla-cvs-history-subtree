@@ -234,7 +234,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     navFlags |= nsIWebNavigation::LOAD_FLAGS_BYPASS_CACHE | 
                 nsIWebNavigation::LOAD_FLAGS_BYPASS_PROXY;
   }
-
+  
   nsresult rv = nav->Reload(navFlags);
   if (NS_FAILED(rv)) {
     // XXX need to throw
@@ -517,6 +517,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
         return;
     nsAutoString urlStr;
     location->GetHref(urlStr);
+#warning fix me
     nsCAutoString urlCStr; urlCStr.AssignWithConversion(urlStr);
     nsCOMPtr<nsIURI> url;
     nsresult rv = NS_NewURI(getter_AddRefs(url), urlCStr.get());

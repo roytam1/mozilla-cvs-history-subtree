@@ -32,7 +32,11 @@
 #include "nsIContent.h"
 
 @interface BookmarksToolbar(Private)
+
+- (void)setButtonInsertionPoint:(id <NSDraggingInfo>)sender;
+- (NSRect)insertionRectForButton:(NSView*)aButton position:(int)aPosition;
 - (BookmarksButton*)makeNewButtonWithElement:(nsIDOMElement*)element;
+
 @end
 
 @implementation BookmarksToolbar
@@ -261,7 +265,8 @@
 
 -(void)showBookmarksToolbar: (BOOL)aShow
 {
-  if (!aShow) {
+  if (!aShow)
+  {
     float height = [self bounds].size.height;
     [self setFrame: NSMakeRect([self frame].origin.x, [self frame].origin.y + height,
                                [self frame].size.width, 0)];
@@ -277,43 +282,54 @@
   mIsShowing = aShow;
 }
 
-- (void)setButtonInsertionPoint:(NSPoint)aPoint
+- (void)setButtonInsertionPoint:(id <NSDraggingInfo>)sender
 {
-  int count = [mButtons count];
+  NSPoint   dragLocation  = [sender draggingLocation];
+  NSPoint   superviewLoc  = [[self superview] convertPoint:dragLocation fromView:nil]; // convert from window
+  NSButton* sourceButton  = [sender draggingSource];
+  int       count         = [mButtons count];
   
   mDragInsertionButton = nsnull;
   mDragInsertionPosition = BookmarksService::CHInsertAfter;
   
-  for (int i = 0; i < count; ++i) {
-    BookmarksButton* button = [mButtons objectAtIndex: i];
-    //NSLog(@"check %d - %d,%d %d,%d\n", i, [button frame].origin.x, [button frame].origin.y, aPoint.x, aPoint.y);
-    // XXX origin.y is coming up zero here! Need that to check the row we're dragging in :(
-    
+  NSView* foundView = [self hitTest:superviewLoc];
+  if (foundView && [foundView isMemberOfClass:[BookmarksButton class]])
+  {
+    BookmarksButton* targetButton = foundView;
+
     nsCOMPtr<nsIAtom> tagName;
-    nsCOMPtr<nsIContent> contentNode = do_QueryInterface([button element]);
+    nsCOMPtr<nsIContent> contentNode = do_QueryInterface([targetButton element]);
     contentNode->GetTag(*getter_AddRefs(tagName));
-    
-    if (tagName == BookmarksService::gFolderAtom) {
-      if (([button frame].origin.x+([button frame].size.width) > aPoint.x)) {
-        mDragInsertionButton = button;
-        mDragInsertionPosition = BookmarksService::CHInsertInto;
-        return;
-      }
-    } else if (([button frame].origin.x+([button frame].size.width/2) > aPoint.x)) {
-      mDragInsertionButton = button;
-      mDragInsertionPosition = BookmarksService::CHInsertBefore;
-      return;
-    } else if (([button frame].origin.x+([button frame].size.width) > aPoint.x)) {
-      mDragInsertionButton = button;
-      mDragInsertionPosition = BookmarksService::CHInsertAfter;
-      return;
+
+    if (tagName == BookmarksService::gFolderAtom)
+    {
+      mDragInsertionButton = targetButton;
+      mDragInsertionPosition = BookmarksService::CHInsertInto;
     }
+    else if (targetButton != sourceButton)
+    {
+      NSPoint	localLocation = [[self superview] convertPoint:superviewLoc toView:foundView];
+      
+      mDragInsertionButton = targetButton;
+      
+      if (localLocation.x < NSWidth([targetButton bounds]) / 2.0)
+        mDragInsertionPosition = BookmarksService::CHInsertBefore;
+      else
+        mDragInsertionPosition = BookmarksService::CHInsertAfter;
+    }
+  }
+  else
+  {
+    // throw it in at the end
+    mDragInsertionButton   = [mButtons objectAtIndex:[mButtons count] - 1];    
+    mDragInsertionPosition = BookmarksService::CHInsertAfter;
   }
 }
 
-- (BOOL)dropDestinationValid:(NSPasteboard*)draggingPasteboard
+- (BOOL)dropDestinationValid:(id <NSDraggingInfo>)sender
 {
-  NSArray*  types = [draggingPasteboard types];
+  NSPasteboard* draggingPasteboard = [sender draggingPasteboard];
+  NSArray*      types = [draggingPasteboard types];
 
   if ([types containsObject: @"MozBookmarkType"]) 
   {
@@ -334,8 +350,12 @@
       nsCOMPtr<nsIDOMElement> toolbarRoot = BookmarksService::gToolbarRoot;
       destinationContent = do_QueryInterface(toolbarRoot);
       index = [mButtons indexOfObject: mDragInsertionButton];
+      if (mDragInsertionPosition == BookmarksService::CHInsertAfter)
+        ++index;
     }
 
+    // we rely on IsBookmarkDropValid to filter out drops where the source
+    // and destination are the same. 
     BookmarkItem* toolbarFolderItem = BookmarksService::GetWrapperFor(destinationContent);
     if (!BookmarksService::IsBookmarkDropValid(toolbarFolderItem, index, draggedIDs)) {
       return NO;
@@ -349,9 +369,15 @@
 
 - (unsigned int)draggingEntered:(id <NSDraggingInfo>)sender
 {
-  if (![self dropDestinationValid:[sender draggingPasteboard]])
+  // we have to set the drag target before we can test for drop validation
+  [self setButtonInsertionPoint:sender];
+
+  if (![self dropDestinationValid:sender]) {
+    mDragInsertionButton = nil;
+    mDragInsertionPosition = BookmarksService::CHInsertNone;
     return NSDragOperationNone;
-  
+  }
+    
   return NSDragOperationGeneric;
 }
 
@@ -369,10 +395,14 @@
   if (mDragInsertionPosition)
     [self setNeedsDisplayInRect:[self insertionRectForButton:mDragInsertionButton position:mDragInsertionPosition]];
 
-  if (![self dropDestinationValid:[sender draggingPasteboard]])
+  // we have to set the drag target before we can test for drop validation
+  [self setButtonInsertionPoint:sender];
+  
+  if (![self dropDestinationValid:sender]) {
+    mDragInsertionButton = nil;
+    mDragInsertionPosition = BookmarksService::CHInsertNone;
     return NSDragOperationNone;
-
-  [self setButtonInsertionPoint:[sender draggingLocation]];
+  }
   
   if (mDragInsertionPosition)
     [self setNeedsDisplayInRect:[self insertionRectForButton:mDragInsertionButton position:mDragInsertionPosition]];

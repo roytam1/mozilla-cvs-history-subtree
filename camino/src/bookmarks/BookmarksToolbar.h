@@ -52,7 +52,4 @@ class BookmarksButton;
 -(BOOL)isShown;
 -(void)showBookmarksToolbar: (BOOL)aShow;
 
-- (void) setButtonInsertionPoint:(NSPoint)aPoint;
-- (NSRect)insertionRectForButton:(NSView*)aButton position:(int)aPosition;
-
 @end

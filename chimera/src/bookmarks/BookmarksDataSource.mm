@@ -136,7 +136,7 @@
       if (parentContent != root) {
         PRUint32 contentID;
         parentContent->GetContentID(&contentID);
-        item = [(BookmarksService::gDictionary) objectForKey: [NSNumber numberWithInt: contentID]];
+        item = BookmarksService::GetWrapperFor(contentID);
       }
     }
   }
@@ -268,8 +268,9 @@
     mBookmarks->GetRootContent(getter_AddRefs(parentContent));
     parentElt = do_QueryInterface(parentContent);
   }
-  else {
-    BookmarkItem* item = [(BookmarksService::gDictionary) objectForKey: [NSNumber numberWithInt: tag]];
+  else
+  {
+    BookmarkItem* item = BookmarksService::GetWrapperFor(tag);
     // Get the content node.
     parentContent = [item contentNode];
     parentElt = do_QueryInterface(parentContent);
@@ -445,21 +446,21 @@
 
 - (id)outlineView:(NSOutlineView *)outlineView child:(int)index ofItem:(id)item
 {
-    if (!mBookmarks)
-        return nil;
-       
-    nsCOMPtr<nsIContent> content;
-    if (!item)
-        BookmarksService::GetRootContent(getter_AddRefs(content));
-    else
-        content = [item contentNode];
-    
-    nsCOMPtr<nsIContent> child;
-    content->ChildAt(index, *getter_AddRefs(child));
-    if ( child )
-      return BookmarksService::GetWrapperFor(child);
-    
+  if (!mBookmarks)
     return nil;
+      
+  nsCOMPtr<nsIContent> content;
+  if (!item)
+    BookmarksService::GetRootContent(getter_AddRefs(content));
+  else
+    content = [item contentNode];
+  
+  nsCOMPtr<nsIContent> child;
+  content->ChildAt(index, *getter_AddRefs(child));
+  if ( child )
+    return BookmarksService::GetWrapperFor(child);
+  
+  return nil;
 }
 
 - (BOOL)outlineView:(NSOutlineView *)outlineView isItemExpandable:(id)item
@@ -632,14 +633,19 @@
   if (index == NSOutlineViewDropOnItemIndex)
     return NSDragOperationNone;
 
-  if ([types containsObject: @"MozBookmarkType"]) {
+  if ([types containsObject: @"MozBookmarkType"])
+  {
     NSArray *draggedIDs = [[info draggingPasteboard] propertyListForType: @"MozBookmarkType"];
-    BookmarkItem* parent;
-    parent = (item) ? item : BookmarksService::GetRootItem();
+
+    BookmarkItem* parent = (item) ? item : BookmarksService::GetRootItem();
     return (BookmarksService::IsBookmarkDropValid(parent, index, draggedIDs)) ? NSDragOperationGeneric : NSDragOperationNone;
-  } else if ([types containsObject: @"MozURLType"]) {
+  }
+  
+  if ([types containsObject: @"MozURLType"]) {
     return NSDragOperationGeneric;
-  } else if ([types containsObject: NSStringPboardType]) {
+  }
+  
+  if ([types containsObject: NSStringPboardType]) {
     return NSDragOperationGeneric;
   }
 
@@ -918,10 +924,28 @@
 
 - (BOOL)isFolder
 {
-    nsCOMPtr<nsIAtom> tagName;
-    mContentNode->GetTag(*getter_AddRefs(tagName));
+  nsCOMPtr<nsIAtom> tagName;
+  mContentNode->GetTag(*getter_AddRefs(tagName));
+  return (tagName == BookmarksService::gFolderAtom);
+}
 
-    return (tagName == BookmarksService::gFolderAtom);
+- (BookmarkItem*)parentItem
+{
+  nsCOMPtr<nsIContent> parentContent;
+  mContentNode->GetParent(*getter_AddRefs(parentContent));
+
+  nsCOMPtr<nsIContent> rootContent;
+  BookmarksService::GetRootContent(getter_AddRefs(rootContent));
+
+  // The root has no item
+  if (parentContent != rootContent)
+  {
+    PRUint32 contentID;
+    parentContent->GetContentID(&contentID);
+    return BookmarksService::GetWrapperFor(contentID);
+  }
+  
+  return nil;
 }
 
 @end

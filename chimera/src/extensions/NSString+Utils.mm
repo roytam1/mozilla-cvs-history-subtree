@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <AppKit/AppKit.h>		// for NSStringDrawing.h
+
 #import "NSString+Utils.h"
 
 #include "nsString.h"

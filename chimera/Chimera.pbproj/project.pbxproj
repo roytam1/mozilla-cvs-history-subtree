@@ -488,6 +488,7 @@
 				F5B950BE030C83B601A96654,
 				F558B1F2030F6E470166970F,
 				F5D98EBD031AC38601A96654,
+				F5FDF168031AF47301DE816D,
 			);
 			isa = PBXHeadersBuildPhase;
 			name = Headers;
@@ -618,6 +619,7 @@
 				F5648BB4030DE1BC01A96654,
 				F558B1F3030F6E470166970F,
 				F5D98EBA031AC37801A96654,
+				F5FDF169031AF47401DE816D,
 			);
 			isa = PBXSourcesBuildPhase;
 			name = Sources;
@@ -5324,6 +5326,7 @@
 		};
 		F5B950BA030C833301A96654 = {
 			children = (
+				F5FDF166031AF47301DE816D,
 				F5D98EBC031AC38601A96654,
 				F558099D02F22168015DF512,
 				F549ACE40302DEBB01026D5D,
@@ -5345,6 +5348,7 @@
 				F5C3AB820270072A01A80166,
 				F541495B02711A8301A80166,
 				F541495F02711B0001A80166,
+				F5FDF167031AF47301DE816D,
 			);
 			isa = PBXGroup;
 			name = Source;
@@ -5631,6 +5635,7 @@
 				F5B950C0030C83B601A96654,
 				F558B1F4030F6E470166970F,
 				F5D98EBE031AC38701A96654,
+				F5FDF16A031AF47401DE816D,
 			);
 			isa = PBXHeadersBuildPhase;
 			name = Headers;
@@ -5762,6 +5767,7 @@
 				F5B950C1030C83B601A96654,
 				F558B1F5030F6E480166970F,
 				F5D98EBB031AC37801A96654,
+				F5FDF16B031AF47401DE816D,
 			);
 			isa = PBXSourcesBuildPhase;
 			name = Sources;
@@ -7951,6 +7957,42 @@
 		};
 		F5FB367C0208010801236FF3 = {
 			fileRef = F5F181C90208006F0124611D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5FDF166031AF47301DE816D = {
+			isa = PBXFileReference;
+			name = DraggableImageAndTextCell.h;
+			path = src/extensions/DraggableImageAndTextCell.h;
+			refType = 4;
+		};
+		F5FDF167031AF47301DE816D = {
+			isa = PBXFileReference;
+			name = DraggableImageAndTextCell.mm;
+			path = src/extensions/DraggableImageAndTextCell.mm;
+			refType = 4;
+		};
+		F5FDF168031AF47301DE816D = {
+			fileRef = F5FDF166031AF47301DE816D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5FDF169031AF47401DE816D = {
+			fileRef = F5FDF167031AF47301DE816D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5FDF16A031AF47401DE816D = {
+			fileRef = F5FDF166031AF47301DE816D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5FDF16B031AF47401DE816D = {
+			fileRef = F5FDF167031AF47301DE816D;
 			isa = PBXBuildFile;
 			settings = {
 			};

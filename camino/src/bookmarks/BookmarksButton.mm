@@ -33,6 +33,8 @@
 #include "nsString.h"
 #include "nsCRT.h"
 
+#import "DraggableImageAndTextCell.h"
+
 #import "BookmarkInfoController.h"
 #import "BookmarksDataSource.h"
 #import "BookmarksService.h"
@@ -41,14 +43,19 @@
 
 - (id)initWithFrame:(NSRect)frame
 {
-    if ( (self = [super initWithFrame:frame]) ) {
-        [self setBezelStyle: NSRegularSquareBezelStyle];
-        [self setButtonType: NSMomentaryChangeButton];
-        [self setBordered: NO];
-        [self setImagePosition: NSImageLeft];
-        [self setRefusesFirstResponder: YES];
-        [self setFont: [NSFont labelFontOfSize: 11.0]];
-    }
+  if ( (self = [super initWithFrame:frame]) )
+  {
+    DraggableImageAndTextCell* newCell = [[DraggableImageAndTextCell alloc] init];
+    [newCell setDraggable:YES];
+    [self setCell:newCell];
+
+    [self setBezelStyle: NSRegularSquareBezelStyle];
+    [self setButtonType: NSMomentaryChangeButton];
+    [self setBordered: NO];
+    [self setImagePosition: NSImageLeft];
+    [self setRefusesFirstResponder: YES];
+    [self setFont: [NSFont labelFontOfSize: 11.0]];
+  }
   return self;
 }
 
@@ -258,14 +265,47 @@
 
 - (void) mouseDragged: (NSEvent*) aEvent
 {
-  // XXX mouseDragged is never called because buttons cancel dragging while you mouse down 
-  //     I have to fix this in an ugly way, by doing the "click" stuff myself and never relying
-  //     on the superclass for that.  Bah!
+  // Get the href attribute.  This is the URL we want to load.
+  nsAutoString hrefStr;
+  mElement->GetAttribute(NS_LITERAL_STRING("href"), hrefStr);
+  if (hrefStr.IsEmpty())
+    return;
 
-  //  perhaps you could just implement mouseUp to perform the action (which should be the case
-  //  things shouldn't happen on mouse down)  Then does mouseDragged get overridden?
+  nsAutoString titleStr;
+  mElement->GetAttribute(NS_LITERAL_STRING("name"), titleStr);
+  
+  NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+  [pboard declareTypes:[NSArray arrayWithObjects:@"MozBookmarkType", @"MozURLType", NSURLPboardType, NSStringPboardType, nil] owner:self];
 
-  //   BookmarksService::DragBookmark(mElement, self, aEvent);
+  NSString     *url = [NSString stringWith_nsAString: hrefStr];
+  NSString     *title = [NSString stringWith_nsAString: titleStr];
+  NSString     *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
+
+  // MozBookmarkType
+  nsCOMPtr<nsIContent> content = do_QueryInterface(mElement);
+  if (content)
+  {
+    PRUint32 contentID;
+    content->GetContentID(&contentID);  
+    NSArray *itemsArray = [NSArray arrayWithObjects:[NSNumber numberWithInt: contentID], nil];
+    [pboard setPropertyList: itemsArray forType: @"MozBookmarkType"];  
+  }
+  
+  // MozURLType data
+  NSArray      *dataVals = [NSArray arrayWithObjects: url, cleanedTitle, nil];
+  NSArray      *dataKeys = [NSArray arrayWithObjects: @"url", @"title", nil];
+  NSDictionary *data = [NSDictionary dictionaryWithObjects:dataVals forKeys:dataKeys];
+  [pboard setPropertyList:data forType: @"MozURLType"];
+  
+  // NSURLPboardType data
+  [[NSURL URLWithString:url] writeToPasteboard: pboard];
+  
+  // NSStringPboardType data
+  [pboard setString:url forType: NSStringPboardType];
+
+  [self dragImage: [MainController createImageForDragging:[self image] title:title]
+                    at: NSMakePoint(0,NSHeight([self bounds])) offset: NSMakeSize(0,0)
+                    event: aEvent pasteboard: pboard source: self slideBack: YES];
 }
 
 @end

@@ -119,5 +119,6 @@ class BookmarksService;
 - (NSNumber*)contentID;
 - (id)copyWithZone:(NSZone *)aZone;
 - (BOOL)isFolder;
+- (BookmarkItem*)parentItem;
 
 @end
