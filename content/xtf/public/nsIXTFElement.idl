@@ -69,9 +69,9 @@ interface nsIXTFElement : nsISupports
   void childRemoved(in unsigned long index);
 
   void willSetAttribute(in AString name, in AString newValue);
-  void AttributeSet(in AString name, in AString newValue);
+  void attributeSet(in AString name, in AString newValue);
 
   void willUnsetAttribute(in AString name);
-  void AttributeUnset(in AString name);
+  void attributeUnset(in AString name);
 };
 
