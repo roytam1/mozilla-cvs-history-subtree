@@ -248,8 +248,6 @@ nsSeamonkeyProfileMigrator::GetProfileDataFromSeamonkeyRegistry(nsISupportsArray
 
 static 
 nsSeamonkeyProfileMigrator::PREFTRANSFORM gTransforms[] = {
-  { "browser.anchor_color",                   0, F(GetString),    F(SetString), PR_FALSE, -1 },
-
   MAKESAMETYPEPREFTRANSFORM("signon.SignonFileName",                    String),
   MAKESAMETYPEPREFTRANSFORM("browser.startup.homepage",                 WString),
   MAKESAMETYPEPREFTRANSFORM("browser.history_expire_days",              Int),

@@ -65,6 +65,7 @@ CPPSRCS		= nsProfileMigrator.cpp \
             nsNetscapeProfileMigratorBase.cpp \
             nsDogbertProfileMigrator.cpp \
             nsSeamonkeyProfileMigrator.cpp \
+            nsINIParser.cpp \
             nsOperaProfileMigrator.cpp \
             $(NULL)
 

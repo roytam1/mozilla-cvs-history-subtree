@@ -44,7 +44,9 @@
 #include "nsIInputStream.h"
 #include "nsILineInputStream.h"
 #include "nsILocalFile.h"
+#include "nsINIParser.h"
 #include "nsIObserverService.h"
+#include "nsIPrefService.h"
 #include "nsIProperties.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsPrimitives.h"
@@ -155,10 +157,108 @@ nsOperaProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
   return NS_OK;
 }
 
+#define _OPM(type) nsOperaProfileMigrator::type
+
+static
+nsOperaProfileMigrator::PREFTRANSFORM gTransforms[] = {
+  { "User Prefs", "Download Directory", _OPM(STRING), "browser.download.defaultFolder", _OPM(SetFile), PR_FALSE, -1 },
+  { nsnull, "Enable Cookies", _OPM(INT), "network.cookie.cookieBehavior", _OPM(SetCookieBehavior), PR_FALSE, -1 },
+  { nsnull, "Accept Cookies For Session Only", _OPM(BOOL), "network.cookie.enableForCurrentSessionOnly", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Allow script to resize window", _OPM(BOOL), "dom.disable_window_move_resize", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Allow script to move window", _OPM(BOOL), "dom.disable_window_move_resize", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Allow script to raise window", _OPM(BOOL), "dom.disable_window_flip", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Allow script to change status", _OPM(BOOL), "dom.disable_window_status_change", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Home URL", _OPM(STRING), "browser.startup.homepage", _OPM(SetWString), PR_FALSE, -1 },
+  { nsnull, "Ignore Unrequested Popups", _OPM(BOOL), "dom.disable_open_during_load", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Load Figures", _OPM(BOOL), "network.image.imageBehavior", _OPM(SetInt), PR_FALSE, -1 },
+
+  { "Visited Link", nsnull, _OPM(COLOR), "browser.visited_color", _OPM(SetString), PR_FALSE, -1 },
+  { "Link", nsnull, _OPM(COLOR), "browser.anchor_color", _OPM(SetString), PR_FALSE, -1 },
+  { nsnull, "Underline", _OPM(BOOL), "browser.underline_anchors", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Expiry", _OPM(INT), "browser.history_expire_days", _OPM(SetInt), PR_FALSE, -1 },
+
+  { "Security Prefs", "Enable SSL v2", _OPM(BOOL), "security.enable_ssl2", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Enable SSL v3", _OPM(BOOL), "security.enable_ssl3", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Enable TLS v1.0", _OPM(BOOL), "security.enable_tls", _OPM(SetBool), PR_FALSE, -1 },
+
+  { "Extensions", "Scripting", _OPM(BOOL), "javascript.enabled", _OPM(SetBool), PR_FALSE, -1 }
+};
+
+nsresult 
+nsOperaProfileMigrator::SetFile(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::SetCookieBehavior(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::SetBool(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::SetWString(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::SetInt(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::SetString(void* aTransform, nsIPrefBranch* aBranch)
+{
+  return NS_OK;
+}
+
 nsresult
 nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
 {
-  printf("*** copy opera preferences\n");
+  nsCOMPtr<nsIFile> operaPrefs;
+  mOperaProfile->Clone(getter_AddRefs(operaPrefs));
+  operaPrefs->Append(NS_LITERAL_STRING("opera6.ini"));
+
+  nsCAutoString path;
+  operaPrefs->GetNativePath(path);
+  char* pathCopy = ToNewCString(path);
+  nsINIParser* parser = new nsINIParser(pathCopy);
+
+  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  psvc->ResetPrefs();
+
+  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+
+  // Traverse the standard transforms
+
+  // Copy Proxy Settings
+
+  // Copy User Content Sheet
+  if (aReplace)
+    CopyUserContentSheet(parser);
+
+  nsCRT::free(pathCopy);
+
+  return NS_OK;
+}
+
+nsresult 
+nsOperaProfileMigrator::CopyUserContentSheet(nsINIParser* aParser)
+{
+  char* userContentCSS = nsnull;
+  PRInt32 size;
+  PRInt32 err = aParser->GetStringAlloc("User Prefs", "Local CSS File", &userContentCSS, &size);
+  if (err == nsINIParser::OK && userContentCSS) {
+    // Copy the file
+  }
   return NS_OK;
 }
 

@@ -46,6 +46,8 @@
 #include "nsVoidArray.h"
 
 class nsILocalFile;
+class nsINIParser;
+class nsIPrefBranch;
 
 class nsOperaProfileMigrator : public nsIBrowserProfileMigrator
 {
@@ -56,8 +58,37 @@ public:
   nsOperaProfileMigrator();
   virtual ~nsOperaProfileMigrator();
 
+public:
+
+  typedef enum { STRING, INT, BOOL, COLOR } PrefType;
+
+  typedef nsresult(*prefConverter)(void*, nsIPrefBranch*);
+
+  typedef struct {
+    char*         sectionName;
+    char*         keyName;
+    PrefType      type;
+    char*         targetPrefName;
+    prefConverter prefSetterFunc;
+    PRBool        prefHasValue;
+    union {
+      PRInt32     intValue;
+      PRBool      boolValue;
+      char*       stringValue;
+    };
+  } PREFTRANSFORM;
+
+  static nsresult SetFile(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetCookieBehavior(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetBool(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetWString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetString(void* aTransform, nsIPrefBranch* aBranch);
+
 protected:
   nsresult CopyPreferences(PRBool aReplace);
+  nsresult CopyUserContentSheet(nsINIParser* aParser);
+
   nsresult CopyCookies(PRBool aReplace);
   nsresult CopyHistory(PRBool aReplace);
   nsresult CopyFormData(PRBool aReplace);

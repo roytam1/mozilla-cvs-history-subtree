@@ -191,8 +191,8 @@ nsProfileMigrator::GetDefaultBrowserMigratorKey(nsIBrowserProfileMigrator** aMig
               bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_FIREBIRD)) {
-              key->SetData(NS_LITERAL_STRING("dogbert"));
-              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
+              key->SetData(NS_LITERAL_STRING("opera"));
+              bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera");
             }
             else if (!nsCRT::strcasecmp((char*)internalName, INTERNAL_NAME_OPERA)) {
               key->SetData(NS_LITERAL_STRING("opera"));
