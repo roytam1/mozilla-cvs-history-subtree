@@ -61,7 +61,7 @@ LocationStep::~LocationStep() {
 **/
 ExprResult* LocationStep::evaluate(txIEvalContext* aContext)
 {
-    NS_ASSERTION(aContext, "internal error")
+    NS_ASSERTION(aContext, "internal error");
 
     NodeSet* nodes = new NodeSet();
     if (!nodes)
