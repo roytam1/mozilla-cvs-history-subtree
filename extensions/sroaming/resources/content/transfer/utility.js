@@ -149,8 +149,9 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
     case kNotConnected:
     case kConnectionRefused:
     case kNetTimeout:
-    case kNoConnectionOrTimeout:
+    case kUnknownHost:
     case kPortAccessNotAllowed:
+    case kUnknownProxyHost:
       statusMessage = GetString("ServerNotAvailable");
       break;
     case kOffline:
@@ -198,6 +199,7 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
 //   These are translated from C++ error code strings like this:
 //   kFileNotFound = "NS_FILE_NOT_FOUND",
 const kNS_OK = 0;
+const kMyBase = 0x80780000; // Generic module, only valid within our module
 const kNetBase = 2152398848; // 0x804B0000
 const kFilesBase = 2152857600; // 0x80520000
 const kUnknownType = kFilesBase + 04; // nsError.h
@@ -213,19 +215,14 @@ const kConnectionRefused = kNetBase + 13;
 const kNetTimeout = kNetBase + 14;
 const kInProgress = kNetBase + 15; // netCore.h
 const kOffline = kNetBase + 16; // netCore.h; 0x804b0010
-const kNoConnectionOrTimeout = kNetBase + 30;
+const kUnknownHost = kNetBase + 30; // nsNetErr; was "no connection or timeout"
+const kUnknownProxyHost = kNetBase + 42; // nsNetError.h
 const kPortAccessNotAllowed = kNetBase + 19; // netCore.h
+const kErrorDocumentNotCached = kNetBase + 70; // nsNetError.h
 const kErrorBindingFailed = kNetBase + 1; // netCore.h
 const kErrorBindingAborted = kNetBase + 2; // netCore.h
 const kErrorBindingRedirected = kNetBase + 3; // netCore.h
 const kErrorBindingRetargeted = kNetBase + 4; // netCore.h
-const kStatusResolvingHost = kNetBase + 80;// nsISocketTransport.idl
-const kStatusConnectedTo = kNetBase + 81; // nsISocketTransport.idl
-const kStatusSendingTo = kNetBase + 5; // nsISocketTransport.idl
-const kStatusRecievingFrom = kNetBase + 6; // nsISocketTransport.idl
-const kStatusConnectingTo = kNetBase + 7; // nsISocketTransport.idl
-const kStatusWaitingFor = kNetBase + 82 // nsISocketTransport.idl
-const kStatusReadFrom = kNetBase + 8; // nsIFileTransportService.idl
 const kStatusBeginFTPTransaction = kNetBase + 27; // ftpCore.h
 const kStatusEndFTPTransaction = kNetBase + 28; // ftpCore.h
 const kStatusFTPLogin = kNetBase + 21; // ftpCore.h
@@ -245,7 +242,26 @@ const kErrorFTPAuthNeeded = 0x4B001B; // XXX not sure what exactly this is or
    // where it comes from (grep doesn't find it in dec or hex notation), but
    // that's what I get when the credentials are not accepted by the FTP server
 const kErrorFTPAuthFailed = 0x4B001C; // dito
-const kStatusHTTP = 500; // XXX Hack
+const kStatusHTTP = kMyBase + 0;
+/* See Transfer.onStatus().
+   *_Status are the number we get from nsIProgressEventSink, the others
+   are what we use internally in the rest of the code. */
+const kStatusResolvingHost = kMyBase + 5;
+const kStatusConnectedTo = kMyBase + 6;
+const kStatusSendingTo = kMyBase + 7;
+const kStatusReceivingFrom = kMyBase + 8;
+const kStatusConnectingTo = kMyBase + 9;
+const kStatusWaitingFor = kMyBase + 10;
+const kStatusReadFrom = kMyBase + 11;
+const kStatusWroteTo = kMyBase + 12;
+const kStatusResolvingHost_Status = kNetBase + 3;// nsISocketTransport.idl
+const kStatusConnectedTo_Status = kNetBase + 4; // nsISocketTransport.idl
+const kStatusSendingTo_Status = kNetBase + 5; // nsISocketTransport.idl
+const kStatusReceivingFrom_Status = kNetBase + 6; // nsISocketTransport.idl
+const kStatusConnectingTo_Status = kNetBase + 7; // nsISocketTransport.idl
+const kStatusWaitingFor_Status = kNetBase + 10; // nsISocketTransport.idl
+const kStatusReadFrom_Status = kNetBase + 8; // nsIFileTransportService.idl
+const kStatusWroteTo_Status = kNetBase + 9; // nsIFileTransportService.idl
 
 // Translates an XPCOM result code into a String similar to the C++ constant.
 function NameForStatusCode(aStatusCode)
@@ -256,20 +272,22 @@ function NameForStatusCode(aStatusCode)
       return "NS_OK";
     case kStatusReadFrom:
       return "NET_STATUS_READ_FROM";
-    case kStatusRecievingFrom:
+    case kStatusWroteTo:
+      return "NET_STATUS_WROTE_TO";
+    case kStatusReceivingFrom:
       return "NET_STATUS_RECEIVING_FROM";
     case kStatusSendingTo:
       return "NET_STATUS_SENDING_TO";
     case kStatusWaitingFor:
       return "NET_STATUS_WAITING_FOR";
-    case kStatusHTTP:
-      return "See HTTP response";
     case kStatusResolvingHost:
       return "NET_STATUS_RESOLVING_HOST";
     case kStatusConnectedTo:
       return "NET_STATUS_CONNECTED_TO";
     case kStatusConnectingTo:
       return "NET_STATUS_CONNECTING_TO";
+    case kStatusHTTP:
+      return "See HTTP response";
     case kErrorBindingFailed:
       return "BINDING_FAILED";
     case kErrorBindingAborted:
@@ -308,10 +326,36 @@ function NameForStatusCode(aStatusCode)
       return "FTP_PASV";
     case kStatusFTPPWD:
       return "FTP_PWD";
+    case kUnknownHost:
+      return "UNKNOWN_HOST or NO_CONNECTION_OR_TIMEOUT";
+    case kUnknownProxyHost:
+      return "UNKNOWN_PROXY_HOST";
+    case kErrorFTPAuthNeeded:
+      return "FTP auth needed ?";
+    case kErrorFTPAuthFailed:
+      return "FTP auth failed ?";
     case kStatusBeginFTPTransaction:
       return "NET_STATUS_BEGIN_FTP_TRANSACTION";
     case kStatusEndFTPTransaction:
       return "NET_STATUS_END_FTP_TRANSACTION";
+    case kNetBase + 61:
+      return "NET_CACHE_KEY_NOT_FOUND";
+    case kNetBase + 62:
+      return "NET_CACHE_DATA_IS_STREAM";
+    case kNetBase + 63:
+      return "NET_CACHE_DATA_IS_NOT_STREAM";
+    case kNetBase + 64:
+      return "NET_CACHE_WAIT_FOR_VALIDATION"; // XXX error or status?
+    case kNetBase + 65:
+      return "NET_CACHE_ENTRY_DOOMED";
+    case kNetBase + 66:
+      return "NET_CACHE_READ_ACCESS_DENIED";
+    case kNetBase + 67:
+      return "NET_CACHE_WRITE_ACCESS_DENIED";
+    case kNetBase + 68:
+      return "NET_CACHE_IN_USE";
+    case kErrorDocumentNotCached:
+      return "NET_DOCUMENT_NOT_CACHED";//XXX error or status? seems to be error
     case kFilesBase + 1: // nsError.h
       return "UNRECOGNIZED_PATH";
     case kFilesBase + 2: // nsError.h
@@ -350,15 +394,9 @@ function NameForStatusCode(aStatusCode)
       return "DIR_NOT_EMPTY";
     case kAccessDenied:
       return "ACCESS_DENIED";
-    case kNoConnectionOrTimeout:
-      return "NO_CONNECTION_OR_TIMEOUT";
-    case kErrorFTPAuthNeeded:
-      return "FTP auth needed ?";
-    case kErrorFTPAuthFailed:
-      return "FTP auth failed ?";
     default:
       for (a in Components.results)
-        if (Components.results[a]==aStatusCode)
+        if (Components.results[a] == aStatusCode)
           return a;
       return String(aStatusCode);
   }

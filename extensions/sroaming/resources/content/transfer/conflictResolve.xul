@@ -37,8 +37,10 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xml-stylesheet href="chrome://communicator/skin/profile/profile.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/"
+                 type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/profile/profile.css"
+                 type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
 
@@ -53,30 +55,40 @@
   class="color-dialog non-resizable"
   title="&windowtitle.label;"
   orient="vertical"
-  style="width: 42em;"
+  style="width: 60em;"
   onunload="onExit();"
   onload="StartUp();"
   >
 
-  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/conflictResolve.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/conflictResolve.js"/>
+  <script type="application/x-javascript"
+          src="chrome://sroaming/content/transfer/utility.js"/>
 
   <keyset id="dialogKeys"/>
 
 
 
-  <dialogheader class="header-large" id="header" title="&windowtitle.label;" description="&subheader.label;"/>
+  <dialogheader class="header-large"
+                id="header"
+                title="&windowtitle.label;"
+                description="&subheader.label;"/>
 
   <separator orient="vertical"/>
 
   <deck id="intro">
-    <description style="width: 17em;border:1px solid transparent;" flex="1">&intro-download.label;</description>
-    <description style="width: 17em;border:1px solid transparent;" flex="1">&intro-upload.label;</description>
+    <description style="width: 17em; border: 1px solid transparent;" flex="1">
+      &intro-download.label;
+    </description>
+    <description style="width: 17em; border: 1px solid transparent;" flex="1">
+      &intro-upload.label;
+    </description>
   </deck>
 
   <separator orient="vertical"/>
 
   <!-- files with radios will be added here -->
-  <hbox>
+  <vbox valign="center">
   <grid>
     <rows>
       <row flex="1"/>
@@ -104,7 +116,7 @@
       </column>
     </columns>
   </grid>
-  </hbox>
+  </vbox>
 
   <separator orient="vertical"/>
 

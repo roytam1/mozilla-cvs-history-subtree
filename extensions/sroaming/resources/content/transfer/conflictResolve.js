@@ -49,9 +49,10 @@ function StartUp()
   centerWindowOnScreen();
   LoadElements();
   ClearParam();
+  window.sizeToContent();
 }
 
-function AddItem(filename, fileid)
+function AddItem(fileid, filename, server, local)
 {
   var filenames = document.getElementById("filenames");
   var radios = document.getElementById("radios");
@@ -65,8 +66,12 @@ function AddItem(filename, fileid)
 
   var radioServer = document.createElement("radio");
   radioServer.setAttribute("value", "1");
+  if (server)
+    radioServer.setAttribute("label", server);
   var radioLocal = document.createElement("radio");
   radioLocal.setAttribute("value", "2");
+  if (local)
+    radioLocal.setAttribute("label", local);
 
   radiogroup.setAttribute("value", gIsDownload ? "2" : "1");
 
@@ -77,29 +82,50 @@ function AddItem(filename, fileid)
   radios.appendChild(radiogroup);
 }
 
+function FileLabel(lastModified, size)
+{
+  if (!lastModified || lastModified == "" || !size || size == "")
+    return GetString("FileStatsUnknown");
+
+  var dateString = new Date(Number(lastModified)).toLocaleString();
+  return GetString("FileStats")
+         .replace(/%date%/, dateString)
+         .replace(/%size%/, size);
+}
+
 function LoadElements()
 {
   //For definition of meaning of params, see mozSRoaming.cpp::ConflictResolveUI
 
   // download
   var direction = params.GetInt(0);
-dump("Passing in: Int 0 (direction) is " + direction + "\n");
+  ddump("Passing in: Int 0 (direction) is " + direction);
   if (direction != 1 && direction != 2)
-    dump("Error: Bad direction param");
+    dumpError("Bad direction param");
   gIsDownload = direction == 1;
 
   // count
   gCount = params.GetInt(1);
-dump("Passing in: Int 1 (count) is " + gCount + "\n");
+  ddump("Passing in: Int 1 (count) is " + gCount);
   if (gCount < 1)
-    dump("Error: Bad count param");
+    dumpError("Bad count param");
 
   // filenames
   for (var i = 0; i < gCount; i++)
   {
-    var filename = params.GetString(i);
-dump("Passing in: String " + i + " is " + filename + "\n");
-    AddItem(filename, "file" + i);
+    var value = params.GetString(i);
+    ddump("Passing in: String " + i + " is " + value);
+    var values = value.split(",");
+    if (values.length != 1 && values.length != 5)
+      dumpError("Bad file param");
+    if (values.length == 5)
+    {
+      var server = FileLabel(values[1], values[2]);
+      var local = FileLabel(values[3], values[4]);
+      AddItem("file" + i, values[0], server, local);
+    }
+    else
+      AddItem("file" + i, values[0]);
   }
 
   var descr_deck = document.getElementById("intro");
@@ -117,16 +143,19 @@ function ClearParam()
 
 function onExit()
 {
-dump("ShutDown()\n");
+  ddump("ShutDown()");
   for (var i = 0; i < gCount; i++)
   {
     var radiogroup = document.getElementById("file" + i);
-    var choice = radiogroup.value == "1";
-    if (choice != "1" && choice != "2")
-      dump("Error: Bad radiogroup value: -" + choice + "-\n");
-    var isServer = choice == "1";
-    filename = params.SetInt(i, isServer ? 1 : 2);
-dump("Passing back: Int " + i + " is " + isServer ? 1 : 2 + "\n");
+    var choice = Number(radiogroup.value);
+    if (choice != 1 && choice != 2) // XXX nothign selected? cancel?
+    {
+      dumpError("Bad radiogroup value: -" + radiogroup.value +
+                "- -" + choice + "-");
+      choice = 0;
+    }
+    filename = params.SetInt(i, choice);
+    ddump("Passing back: Int " + i + " is " + choice);
   }
   return true;
 }

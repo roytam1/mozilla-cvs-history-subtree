@@ -175,6 +175,7 @@ function checkAndTransfer(transfer, listingProgress)
      Some need local vars, I don't want to use global vars for that. */
 
   ddump("Step 1: Downloading listing file from server");
+  remove(kListingTransferFilename);
   var filesListing = new Array();
   filesListing[0] = new Object();
   filesListing[0].filename = kListingTransferFilename;
@@ -183,23 +184,35 @@ function checkAndTransfer(transfer, listingProgress)
   var listingTransfer = new Transfer(true, // download
                                      transfer.serial,
                                      transfer.localDir, transfer.remoteDir,
-                                     transfer.password, transfer.savepw,
+                                     transfer.password, transfer.savePassword,
                                      filesListing,
-                                     function()
+                                     function(success)
   {
+    /* in case we had to ask for the password,
+       save it for the main transfer as well */
+    transfer.username = listingTransfer.username;
+    transfer.password = listingTransfer.password;
+    transfer.savePassword = listingTransfer.savePassword;
+
     ddump("loading remote listing file");
-    var remoteListingDOM = document.implementation
-                                   .createDocument("", "remoteListing", null);
-    remoteListingDOM.load(gLocalDir + kListingTransferFilename);
-    remoteListingDOM.addEventListener("load", function()
+    var remoteListingResult = loadAndReadListingFile(success
+                                                     ? kListingTransferFilename
+                                                     : null,
+                                                     function()
     {
-      var remoteListing = readListingFile(remoteListingDOM);
+      dumpObject(remoteListingResult, "remoteListingResult");
+      var remoteListing = remoteListingResult.value;
+      dumpObject(remoteListing, "remoteListing");
       if (transfer.download)
-        Download(transfer, remoteListing);
+        download(transfer, remoteListing);
       else
-        Upload(transfer, remoteListing);
-    }, false);
-  }, progressXXX); listingTransfer.transfer();
+        upload(transfer, remoteListing);
+    });
+  }, function()
+  {
+  });
+  listingTransfer.transfer();
+  // XXX progress callback
 }
 
 
@@ -207,13 +220,10 @@ function checkAndTransfer(transfer, listingProgress)
 function download(transfer, remoteListing)
 {
   ddump("loading listing-uploaded file");
-  var listingUploadedDOM = document.implementation
-                                 .createDocument("", "listingUploaded", null);
-  listingUploadedDOM.load(gLocalDir + kListingUploadedFilename);
-  listingUploadedDOM.addEventListener("load", function()
+  var listingUploadedResult = loadAndReadListingFile(kListingUploadedFilename,
+                                                     function()
   {
-    var listingUploaded = readListingFile(listingUploadedDOM);
-
+    var listingUploaded = listingUploadedResult.value;
     ddump("Step 2: Comparing these listing files");
     var comparisonStep2 = compareFiles(transfer.files,
                                        remoteListing,
@@ -236,7 +246,7 @@ function download(transfer, remoteListing)
       var comparisonStep2a = compareFiles(transfer.files,
                                           localFiles,
                                           listingUploaded);
-      if (comparisonStep2a.mismatch.length == 0)
+      if (comparisonStep2a.mismatches.length == 0)
       {
         ddump("Step 3: Skipped, because no conflict found");
         // no conflict, but we need to download.
@@ -245,10 +255,10 @@ function download(transfer, remoteListing)
       else
       {
         ddump("Step 3: Asking user which version to use");
-        var answer = conflictAsk(extractFiles(comparisonStep2a.mismatches,
-                                              remoteListing),
-                                 extractFiles(comparisonStep2a.mismatches,
-                                              localFiles)      );
+        var answer = conflictAsk(true,
+                                 comparisonStep2a.mismatches,
+                                 remoteListing,
+                                 localFiles);
                /* for the mismatching files, pass the stats of the server
                   and local versions to the dialog */
         transfer.files = extractFiles(answer.server, transfer.files);
@@ -258,13 +268,16 @@ function download(transfer, remoteListing)
     }
 
     ddump("Step 4: Downloading profile files");
-    var originalMainFinishedCallback = transfer.finishedCallback;
-    transfer.finishedCallback = function()
+    transfer.filesChanged();
+    window.sizeToContent(); // violation of backend/frontend separation
+    transfer.finishedCallbacks.push(function()
     {
+      /*
       ddumpCont("Step 5: Check local files (incl. downloaded one) against ");
       ddump("server listing");
-      //var localFiles = localFilesStats(remoteListing);
-      //checkFailedFiles(transfer);
+      var localFiles = localFilesStats(remoteListing);
+      checkFailedFiles(transfer);
+      */
 
       /* Profile files should now match the listing.xml from the server.
          Move listing.xml from server to listing-downloaded, to prevent
@@ -272,11 +285,9 @@ function download(transfer, remoteListing)
          last version we got from the server, for future checks. */
       move(kListingTransferFilename, kListingDownloadedFilename);
 
-      if (originalMainFinishedCallback)
-        originalMainFinishedCallback();
-
       ddump("transfer done");
-    }; transfer.transfer();
+    });
+    transfer.transfer();
   }, false);
 }
 
@@ -285,12 +296,11 @@ function download(transfer, remoteListing)
 function upload(transfer, remoteListing)
 {
   ddump("loading listing-downloaded file");
-  var listingDownloadedDOM = document.implementation
-                               .createDocument("", "listingDownloaded", null);
-  listingDownloadedDOM.load(gLocalDir + kListingDownloadedFilename);
-  listingDownloadedDOM.addEventListener("load", function()
+  var listingDownloadedResult = loadAndReadListingFile(
+                                               kListingDownloadedFilename,
+                                               function()
   {
-    var listingDownloaded = readListingFile(listingDownloadedDOM);
+    var listingDownloaded = listingDownloadedResult.value;
     var localFiles = localFilesStats(transfer.files);
 
     ddump("Step 2: Comparing these listing files");
@@ -301,6 +311,7 @@ function upload(transfer, remoteListing)
       // Match: files didn't change on the server since our last download
     {
       ddump("Step 3: Skipped, because no conflict found");
+      uploadStep4(transfer, localFiles);
     }
     else // Mismatch
     {
@@ -311,17 +322,15 @@ function upload(transfer, remoteListing)
          yet? */
       ddump("Step 2a: Comparing listing from server with listing-uploaded");
       ddump("loading listing-uploaded file");
-      var listingUploadedDOM = document.implementation
-                                 .createDocument("", "listingUploaded", null);
-      listingUploadedDOM.load(gLocalDir + kListingUploadedFilename);
-      listingUploadedDOM.addEventListener("load", function()
+      var listingUploadedResult = loadAndReadListingFile(
+                                                   kListingUploadedFilename,
+                                                   function()
       {
-        var listingUploaded = readListingFile(listingUploadedDOM);
-
+        var listingUploaded = listingUploadedResult.value;
         var comparisonStep2a = compareFiles(transfer.files,
                                             remoteListing,
                                             listingUploaded);
-        if (comparisonStep2a.mismatch.length == 0)
+        if (comparisonStep2a.mismatches.length == 0)
         {
           ddump("Step 3: Skipped, because no conflict found");
           /* no conflict (we were the last ones who uploaded),
@@ -331,49 +340,60 @@ function upload(transfer, remoteListing)
         else
         {
           ddump("Step 3: Asking user which version to use");
-          var answer = conflictAsk(extractFiles(comparisonStep2a.mismatches,
-                                                remoteListing),
-                                   extractFiles(comparisonStep2a.mismatches,
-                                                localFiles)      );
+          var answer = conflictAsk(false,
+                                   comparisonStep2a.mismatches,
+                                   remoteListing,
+                                   localFiles);
                  /* for the mismatching files, pass the stats of the server
                     and local versions to the dialog */
+          // XXX exit out, if user pressed cancel
           transfer.files = extractFiles(answer.local, transfer.files);
                  /* only transfer those files that the user explicitly selected
                     for transfer, saving the rest from being overwritten. */
         }
+        uploadStep4(transfer, localFiles);
       }, false);
     }
+  }, false);
+}
 
+function uploadStep4(transfer, localFiles)
+{
     ddump("Step 4: Creating listing file from local files");
+    remove(kListingTransferFilename);
     createListingFile(localFiles, kListingTransferFilename);
 
     ddump("Step 5: Uploading profile files and listing file");
     // add listing file to the files to be uploaded
-    var listingEntry = new Object();
-    listingEntry.filename = kListingTransferFilename;
-    listingEntry.mimetype = kListingMimetype;
-    listingEntry.size = undefined;
+    var listingEntry = new TransferFile(transfer,
+                                        0, // corrected with filesChanged()
+                                        kListingTransferFilename,
+                                        kListingMimetype,
+                                        undefined);
     transfer.files.push(listingEntry);
 
-    var originalMainFinishedCallback = transfer.finishedCallback;
-    transfer.finishedCallback = function()
+    transfer.filesChanged();
+    window.sizeToContent(); // violation of backend/frontend separation
+    transfer.finishedCallbacks.push(function(success)
     {
-      ddump("Step 6: mv listing to listing-uploaded");
-      move(kListingTransferFilename, kListingUploadedFilename);
-
-      if (originalMainFinishedCallback)
-        originalMainFinishedCallback();
+      if (success)
+      {
+        ddump("Step 6: mv listing to listing-uploaded");
+        move(kListingTransferFilename, kListingUploadedFilename);
+      }
+      else
+        ddump("Step 6: Skipped, because transfer failed");
 
       ddump("transfer done");
-    }; transfer.transfer();
-  }, false);
+    });
+    transfer.transfer();
 }
-
 
 /*
   Takes 3 lists of files. For each entry in filesList, it compares the
   corresponding entries in files1 and files2 and returns,
   which entries match and which don't.
+  If files1 or files2 is empty, this is considered a mismatch.
 
   @param filesList  FilesList
   @param files1  FilesStats
@@ -386,6 +406,9 @@ function upload(transfer, remoteListing)
 function compareFiles(filesList, files1, files2)
 {
   ddump("comparing file lists");
+  dumpObject(filesList, "  filesList", 1);
+  dumpObject(files1, "  files1", 1);
+  dumpObject(files2, "  files2", 1);
 
   var result = new Object();
   result.matches = new Array();
@@ -468,6 +491,9 @@ function extractFiles(filesList, files1)
 */
 function findEntry(filename, files)
 {
+  if (!filename || !files)
+    return;
+
   var f;
   for (var i = 0, l = files.length; i < l; i++)
   {
@@ -479,9 +505,71 @@ function findEntry(filename, files)
 
 
 /*
+   Reads an (XML) listing file from disk and returns the contained data as
+   FilesStats (by invoking readListingFile).
+
+   Non-blocking, it will return before the file is loaded, so you need to
+   specify a callback to be able to actually use the returned array.
+
+   @param filename  String  filename rel to profile dir.
+                       May be null (to be used e.g. when the network transfer 
+                       failed), in which case the result array will be empty.
+   @param loadedCallback  function()  will be called, when the
+                       DOMDocument finished loading and was read,
+                       i.e. that's where you continue processing.
+   @return Object with property |value| of type FilesStats
+                       (i.e. Files Stats passed by reference)
+                       The data read from the file.
+                       It may be empty, in case loading/reading the file
+                       failed (e.g. file doesn't exist).
+                       Attention: you cannot use the data after the
+                       function returned, only in the loadedCallback.
+*/
+function loadAndReadListingFile(filename, loadedCallback)
+{
+  var result = new Object();
+  result.value = new Array(); /* passing back just the array seems to pass
+                                 by value, while the property value seems
+                                 to be passed by reference. We need to pass
+                                 by reference, because it will be filled,
+                                 as described above. */
+  var domdoc = document.implementation.createDocument("", filename, null);
+
+  var loaded = function()
+  {
+      // XXX works? (reference)
+      result.value = readListingFile(domdoc);
+    loadedCallback();
+  }
+
+  if (filename)
+  {
+    try
+    {
+      domdoc.async = true;
+      domdoc.load(gLocalDir + filename);
+      domdoc.addEventListener("load", loaded, false);
+    }
+    catch(e)
+    {
+      setTimeout(loaded, 0); // see below
+    }
+  }
+  else
+  {
+    setTimeout(loaded, 0);
+      /* using timeout, so that we first return (to deliver domdoc to the
+         caller) before we invoke loadedCallback, so that loadedCallback
+         can use domdoc. */
+  }
+  dumpObject(result, "result");
+  return result;
+}
+
+/*
   Takes a listing file and reads it into the returned array
 
-  @param listingFileDOM  nsIDOMDocument?  listing file, already read into DOM
+  @param listingFileDOM  nsIDOMDocument  listing file, already read into DOM
   @result  FilesStats  list of files which have to be transferred.
                        Will be empty in the case of an error.
  */
@@ -490,7 +578,7 @@ function readListingFile(listingFileDOM)
   ddump("will interpret listing file");
   var files = new Array();
 
-  if (!listingFileDOM)
+  if (!listingFileDOM || !listingFileDOM.childNodes)
   {
     dumpError("got no listing file");
     return files;
@@ -506,6 +594,10 @@ function readListingFile(listingFileDOM)
     for (var i = 0, l = root.length; i < l; i++)
     {
       var curNode = root.item(i);
+      ddump("  " + curNode.nodeName);
+      if (curNode.nodeType == Node.ELEMENT_NODE // XXX
+          && curNode.tagName == "html")
+        alert(curNode);
       if (curNode.nodeType == Node.ELEMENT_NODE
           && curNode.tagName == "listing")
         listing = curNode.childNodes;
@@ -650,16 +742,19 @@ function localFilesStats(checkFiles)
   but the user can make decisions for each file individually.
 
   @param download  boolean
+  @param filesList    FilesList   The files which have conflicts.
   @param serverFiles  FilesStats  The versions of the
                                   files as they are on the server.
+                                  Files must be a superset of filesList.
   @param localFiles   FilesStats  The versions of the files as they are
-                                  in the local profile. Filenames must match.
-  @result  Object with properties |server| and |local|, both FilesStats
+                                  in the local profile.
+                                  Files must be a superset of filesList.
+  @result  Object with properties |server| and |local|, both FilesList
                              Each file will be *either* in |local| or |server|.
                              If a fatal error occurred or the user pressed
                              Cancel, both arrays will be empty.
  */
-function conflictAsk(download, serverFiles, localFiles)
+function conflictAsk(download, filesList, serverFiles, localFiles)
 {
   var result = new Object();
   result.server = new Array();
@@ -672,17 +767,24 @@ function conflictAsk(download, serverFiles, localFiles)
                 .classes["@mozilla.org/embedcomp/dialogparam;1"]
                 .createInstance(Components.interfaces.nsIDialogParamBlock);
     param.SetInt(0, download ? 1 : 2);
-    /* how do I transfer the dates of the file versions to the dialog, without
-       excluding C++ callers? XXX */
-    param.SetInt(1, serverFiles.length);
-    for (var i = 0, l = serverFiles.length; i < l; i++)
-      param.SetString(i, serverFiles[i].filename);
+    /*  XXX */
+    param.SetInt(1, filesList.length);
+    for (var i = 0, l = filesList.length; i < l; i++)
+    {
+      var filename = filesList[i].filename;
+      var sf = findEntry(filename, serverFiles);
+      var lf = findEntry(filename, localFiles);
+      param.SetString(i, filename
+                         + (sf ? "," + sf.lastModified + "," + sf.size : ",,")
+                         + (lf ? "," + lf.lastModified + "," + lf.size : ",,")
+                      );
+    }
 
     // invoke dialog, wait for return
     var windowWatcher = Components
                         .classes["@mozilla.org/embedcomp/window-watcher;1"]
                         .getService(Components.interfaces.nsIWindowWatcher);
-    windowWatcher.OpenWindow(window, kConflDlg, null,
+    windowWatcher.openWindow(window, kConflDlg, null,
                              "centerscreen,chrome,modal,titlebar",
                              param);
     // XXX what do we get in the case of Cancel by user?
@@ -692,13 +794,13 @@ function conflictAsk(download, serverFiles, localFiles)
        last |for| statement. If that is not true, the indices gotten from
        param block will not match the array and we will interpret the result
        wrongly. */
-    for (var i = 0, l = serverFiles.length; i < l; i++)
+    for (var i = 0, l = filesList.length; i < l; i++)
     {
       var value = param.GetInt(i);
       if (value == 1) // use server version
-        result.server.push(serverFiles[i]);
+        result.server.push(filesList[i]);
       else if (value == 2) // use local version
-        result.local.push(serverFiles[i]); // *cough*
+        result.local.push(filesList[i]); // *cough*
     }
   }
   catch (e)
@@ -725,7 +827,19 @@ function makeNSIFileFromRelFilename(filename)
  */
 function move(from, to)
 {
+  ddump("mv " + from + " to " + to);
   var lf = makeNSIFileFromRelFilename(from);
   if (lf && lf.exists())
     lf.moveTo(null, to);
+}
+
+
+/* Deletes a file in the local profile dir
+ */
+function remove(filename)
+{
+  ddump("rm " + filename);
+  var lf = makeNSIFileFromRelFilename(filename);
+  if (lf && lf.exists())
+    lf.remove(false);
 }

@@ -102,6 +102,20 @@ public:
     void Encrypt(/*inout*/ nsAString& );
     void Decrypt(/*inout*/ nsAString& );
 
+    /* At the time we attempt to upload, the network lib has already been
+       shut down. So, temporarily restore it and then close it down again.
+       Of course, this is a hack, until we (me, ccarlen, darin) have found a
+       better solution and it has been tested thoroughly for regressions.
+       This problem currently doesn't appear during download (at startup).
+
+       @param restore  if true, then restore, otherwise close
+       @param topic  the notification topic.
+                     either "profile-change-net-restore"
+                     or "profile-change-net-teardown"
+    */
+    //nsresult RestoreCloseNet(const char* topic);
+    nsresult RestoreCloseNet(PRBool restore);
+
 protected:
     // Data (see getters above)
     PRBool mIsRoaming;

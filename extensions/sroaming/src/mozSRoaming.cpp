@@ -45,6 +45,7 @@
 #include "mozSRoamingCopy.h"
 #include "mozSRoamingStream.h"
 #include "nsILocalFile.h"
+#include "nsIObserverService.h"
 
 // UI
 #include "nsIDialogParamBlock.h"
@@ -156,12 +157,16 @@ printf("\n\n\n!!!! endsession\n\n\n\n");
 
     PrefsDone();
 
+    RestoreCloseNet(PR_TRUE);
+
     rv = proto->Upload();
     if (NS_FAILED(rv))
     {
         printf("error 0x%x\n", rv);
         return rv;
     }
+
+    RestoreCloseNet(PR_FALSE);
 
     delete proto;
     return NS_OK;
@@ -218,7 +223,8 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
 
     nsresult rv;
     nsCOMPtr<nsIWindowWatcher> windowWatcher
-              (do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv));
+      //       (do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv));
+                             (do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv));
     if (NS_FAILED(rv))
         return rv;
 
@@ -451,4 +457,23 @@ void mozSRoaming::Encrypt(/*inout*/ nsAString& )
 
 void mozSRoaming::Decrypt(/*inout*/ nsAString& )
 {
+}
+
+nsresult mozSRoaming::RestoreCloseNet(PRBool restore)
+{
+  const char* topic = restore ? "profile-change-net-restore"
+                              : "profile-change-net-teardown";
+  printf("%s...\n", topic);
+  nsresult rv;
+  nsCOMPtr<nsIObserverService> observerService
+                       (do_GetService("@mozilla.org/observer-service;1", &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsISupports> subject(do_GetService(NS_PROFILE_CONTRACTID, &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = observerService->NotifyObservers(subject, topic,
+                                        NS_LITERAL_STRING("switch").get());
+  printf("%s done\n", topic);
+  return rv;
 }

@@ -32,6 +32,8 @@ IS_COMPONENT	= 1
 #MODULE_NAME	= mozSRoamingModule
 #XXX previous line needed?
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
+		  reglib \
 		  string \
 		  profile \
 		  necko \
@@ -48,6 +50,7 @@ CPPSRCS= \
 
 EXTRA_DSO_LDOPTS += \
 	$(MOZ_COMPONENT_LIBS) \
+	$(MOZ_XPCOM_OBSOLETE_LIBS) \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

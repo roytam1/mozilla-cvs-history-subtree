@@ -1,4 +1,4 @@
-/*-*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-*/
+/*-*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-*/
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -104,10 +104,11 @@ function Transfer(download, serial,
              // this will throw an exception, if the user entered a bad URI.
              // catch in caller
   this.username = uri.username;
-  if (!this.username && this.username == "")
+  if (!this.username || this.username == "")
     throw {prop:"NoUsername"};
   this.password = password;
-  //this.password = this.username && this.username != "" ? password : undefined;
+  if (!savepw)
+    savepw = false;
   this.savePassword = savepw; //savepw is when the user checked the checkbox
   this.saveLogin = false;     //savelogin is when we will write to disk
   this.sitename = uri.host;
@@ -140,14 +141,14 @@ function Transfer(download, serial,
 
   // callbacks
 
-  if (finishedCallback == null)
-    finishedCallback = undefined;
-  if (progressCallback == null)
-    progressCallback = undefined;
-  this.finishedCallback = finishedCallback;
-  this.progressCallback = progressCallback;
-
-  this.dump();
+  this.finishedCallbacks = new Array();
+  this.progressCallbacks = new Array();
+  if (finishedCallback)
+    this.finishedCallbacks.push(finishedCallback);
+  if (progressCallback)
+    this.progressCallbacks.push(progressCallback);
+  /* I'm using arrays here, to allow the caller to hook up
+     additional callbacks. */
 }
 Transfer.prototype =
 {
@@ -158,10 +159,9 @@ Transfer.prototype =
   done : function(success)
   {
     ddump("Done(" + (success ? "without" : "with") + " errors)");
-    this.dump();
 
-    if (this.finishedCallback)
-      this.finishedCallback(success);
+    for (var i = 0, l = this.finishedCallbacks.length; i < l; i++)
+      this.finishedCallbacks[i](success);
 
     /* The close dialog stuff (when all files are done successfully) is UI and
        thus in sroamingProgress.js, called from SetProgressStatus(), which
@@ -175,6 +175,12 @@ Transfer.prototype =
    */
   transfer : function()
   {
+    ddump("starting transfer");
+    this.dump();
+
+    if (this.files.length == 0)
+      this.done(true); // should be true?
+
     if (this.serial)
     {
       this.nextFile();
@@ -188,7 +194,7 @@ Transfer.prototype =
 
   /* In serial mode, start the download of the next file, because all
      previous downloads are finished.
-     @return  1: there are still files busy (you did something wrong)
+     @return  1: there are still files busy (something went wrong)
               2: transfer of next file started
               3: all files were already done, nothing left to do.
      @throws "transfer failed" (from transferFile)
@@ -200,10 +206,10 @@ Transfer.prototype =
     {
       if (this.files[i].status == "busy")
       {
-        dumpError("Programming error: nextFile() called, although there is"
+        dumpError("Programming error: nextFile() called, although there is "
                   + "still a download in progress.");
         this.dump();
-        return 1;
+        //return 1;
       }
     }
 
@@ -240,8 +246,6 @@ Transfer.prototype =
     {
       var ioserv = GetIOService();
       var baseURL = ioserv.newURI(this.remoteDir, null, null);
-      //if (this.savePassword && this.password && this.password != ""
-      //    && this.username && this.username != "")
       if (this.savePassword && this.password && this.password != "")
         baseURL.password = this.password;
       var localURL = ioserv.newURI(this.localDir, null, null);
@@ -374,10 +378,27 @@ Transfer.prototype =
         }
       }
     }
-    if(this.finishedCallback)
-      this.finishedCallback(false); // called twice, because of done()?
+
+    /* finishedCallbacks called by done(), which will be called once all files
+       are finished/cancelled. */
   },
 
+  /* Hack.
+     We need to change the list of files (add or remove files) after
+     the Transfer object was created. However, in that case, the internal
+     bookkeeping stuff (filei of TransferFile) won't match anymore, so this
+     function fixes that.
+     Note: If you add files, create them using new TransferFile(). If you
+     remove files, do that best using splice or readd the remaining files to a
+     new array.
+  */
+  filesChanged : function()
+  {
+    for (var i = 0, l = this.files.length; i < l; i++)
+    {
+      this.files[i].filei = i;
+    }
+  },
 
   // Progress
 
@@ -481,9 +502,8 @@ Transfer.prototype =
     this.progress = progressSize / this.progressSizeAll;
        // I protected at the very beginning against this.progressSizeAll == 0
 
-
-    if(this.progressCallback)
-      this.progressCallback(filei);
+    for (var i = 0, l = this.progressCallbacks.length; i < l; i++)
+      this.progressCallbacks[i](filei);
   },
 
   
@@ -566,8 +586,10 @@ Transfer.prototype =
       ddump("  File " + i + ":");
       this.files[i].dump();
     }
-    ddump(" finished callback: " + (this.finishedCallback ? "exists":"none"));
-    ddump(" progress callback: " + (this.progressCallback ? "exists":"none"));
+    ddump(" finished callbacks: " + this.finishedCallbacks.length);
+    ddump(" progress callbacks: " + this.progressCallbacks.length);
+    for (var i = 0, l = this.finishedCallbacks.length; i < l; i++)
+      ddump(this.finishedCallbacks[i]);
   }
 }
 
@@ -664,8 +686,8 @@ TransferFile.prototype =
       if (aMessage)
         this.statusText = aMessage;
 
-      if(this.transfer.progressCallback)
-        this.transfer.progressCallback(this.filei);
+      for (var i = 0, l = this.transfer.progressCallbacks.length; i < l; i++)
+        this.transfer.progressCallbacks[i](this.filei);
     }
     if (
         !(was_done || was_failed)
@@ -710,12 +732,18 @@ TransferProgressListener.prototype =
     if (aStatusCode == kNS_OK)
     {
       /* HTTP gives us NS_OK, although the request failed with an HTTP error
-         code, so check for that */
+         code, so check for that.
+         FTP gives us NS_OK, although the transfer is still ongoing
+         (bug XXX), but onStatus gives us END_FTP_TRANSACTION, if the
+         request *really* stopped, so just ignore this NS_OK for FTP here. */
       var channel = this.file.channel;
+      var scheme = channel.URI.scheme;
       if (!channel || !channel.URI)
         this.file.setStatus("failed", kErrorUnexpected);
-      else if (channel.URI.scheme == "http")
+      else if (scheme == "http")
         this.privateHTTPResponse();
+      //else if (scheme == "ftp")
+      //XXX  return;
       else
         // let's hope that the other protocol impl.s are saner
         this.file.setStatus("done", aStatusCode);
@@ -728,6 +756,31 @@ TransferProgressListener.prototype =
 
   onStatus : function(aRequest, aContext, aStatusCode, aStatusArg)
   {
+    /* The status codes that are passwed to us here in aStatusCode look like
+       nsresult error codes, but their numerical values overlap with other,
+       real errors. Darin said that real errors are never passed in here,
+       so we don't have a hard conflict. To make processing easier, I just
+       translate these status codes into made-up, unique error codes,
+       so we can later check them with together other status and error codes
+       and store them in the normal this.status field (which contains
+       normal XPCOM error codes) etc.. */
+    if      (aStatusCode == kStatusResolvingHost_Status)
+              aStatusCode = kStatusResolvingHost;
+    else if (aStatusCode == kStatusConnectedTo_Status)
+              aStatusCode = kStatusConnectedTo;
+    else if (aStatusCode == kStatusSendingTo_Status)
+              aStatusCode = kStatusSendingTo;
+    else if (aStatusCode == kStatusReceivingFrom_Status)
+              aStatusCode = kStatusReceivingFrom;
+    else if (aStatusCode == kStatusConnectingTo_Status)
+              aStatusCode = kStatusConnectingTo;
+    else if (aStatusCode == kStatusWaitingFor_Status)
+              aStatusCode = kStatusWaitingFor;
+    else if (aStatusCode == kStatusReadFrom_Status)
+              aStatusCode = kStatusReadFrom;
+    else if (aStatusCode == kStatusWroteTo_Status)
+              aStatusCode = kStatusWroteTo;
+
     ddump("onStatus:");
     ddump("  Request: " + aRequest.name);
     ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
@@ -763,7 +816,7 @@ TransferProgressListener.prototype =
       return;
     else if (aStatusCode == kStatusReadFrom)
       status = "busy";
-    else if (aStatusCode == kStatusRecievingFrom)
+    else if (aStatusCode == kStatusReceivingFrom)
       status = "busy";
     else if (aStatusCode == kStatusSendingTo)
       status = "busy";
@@ -869,7 +922,7 @@ TransferProgressListener.prototype =
   // nsIPrompt
   alert : function(dlgTitle, text)
   {
-    ddump("alert");
+    ddump("alert " + text);
 
     // FTP sends us these in the case of an error *sigh*. Don't display dialog,
     // but redirect to file errors.

@@ -38,7 +38,7 @@ var gFileNotFound = false;
 var gStatusMessage="";
 
 var gTimerID;
-var gTimeout = 0;
+var gTimeout = 1000;
 var gAllowEnterKey = false;
 
 const XUL_NS ="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
@@ -51,7 +51,8 @@ function Startup()
   try
   {
     GetParams(); // dialog params -> gTransfer
-    gTransfer.transfer(); // non-blocking
+    //gTransfer.transfer(); // non-blocking
+    checkAndTransfer(gTransfer, null); // half-blocking
   }
   catch (e)
   {
@@ -84,6 +85,7 @@ function Startup()
   for (var i = 0; i < gTransfer.files.length; i++)
     SetProgressStatus(i);
   window.sizeToContent();
+  ddump("resized");
 }
 
 /*
@@ -163,16 +165,6 @@ function GetParams()
                            password, savepw,
                            files,
                            undefined, SetProgressStatus);
-
-  files = new Array();
-  files[0] = new Object();
-  files[0].filename = "listing.xml";
-  files[0].mimetype = "text/xml";
-  gTransferListing = new Transfer(download, serial,
-                                  profileDir, remoteDir,
-                                  password, savepw,
-                                  files,
-                                  undefined, SetProgressStatus);
 }
 
 function PassBackParams()
@@ -199,7 +191,7 @@ function PassBackParams()
     params.SetString(0, "");
     params.SetString(1, "");
   }
-  // XXX call gTransfer.finishedCallback()?
+  // XXX call gTransfer.done()?
   ddump(" done");
 }
 

@@ -1,27 +1,34 @@
-- rework
-  - conflict
+- conflict
+  - listing transfer
+    - FTP: downloaded file is empty
+    - save login from listing transfer for main transfer v
+    - progress feedback and error reporting
+  - reading of listing file works only half v?
+  - some files failed (see XXX)
+  - pressing cancel uploads
+  - fix dialog
+  - resize for listing.xml
 - Bugs
-  - no upload at switch profile
-  - trunk upload
+  - trunk: upload
     - ftp: offline
     - http: not initialized
+  - overwriting local files, if login is incorrect?
+  - no upload at switch profile
 - error handling
+  - files deleted on server / server changed. listing-uploaded no longer true
   - (local profile) files missing
-  - ftp
-    - ok too early: after binding, ns_ok, then goes on to transfer
-      - malformed url (or cancelled auth?) stops and then goes back to busy.
-        reports success, but failed.
-  - http
-  - cancel by user in progress dialog: xpconnect errors
   - pressing cancel after finished with failed, all files are set to abort
   - copy protocol
     - no remote files yet
-m conflictresolve: mod/upload times
 - world gone
-  - ddump, xpcom not defined after done
-  - see ftp above
+  - problem: ddump, xpcom not defined after files done and dialog closed
+    solution: close dialog only when done with processing.
+    workaround: gTimeout
+  - problem: cancel by user in progress dialog: xpconnect errors
+    solution: prevent dialog closure (even if cancel pressed) until we're done.
 
 Later:
+- nsiprogresseventsink comment
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw

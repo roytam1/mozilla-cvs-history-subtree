@@ -36,16 +36,16 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!ENTITY            windowtitle.label     "Roaming files conflicts">
+<!ENTITY windowtitle.label     "Roaming files conflicts">
 
-<!ENTITY            subheader.label       "Select which version of files to keep">
+<!ENTITY subheader.label       "Select which version of files to keep">
 
-<!ENTITY            intro-download.label  "Download: Several files in your local user profile have been changed since the files on the server have been last uploaded. This suggests that the files on the server are not uptodate. Which version of the files do you want to keep?">
-<!ENTITY            intro-upload.label    "Upload: Several files have been changed both on the server and in your local user profile since the files have been last uploaded. Which version of the files do you want to keep?">
+<!ENTITY intro-download.label  "Download: Several files in your local user profile have been changed since the files on the server have been last uploaded. This suggests that the files on the server are not uptodate. Which version of the files do you want to keep?">
+<!ENTITY intro-upload.label    "Upload: Several files have been changed both on the server and in your local user profile since the files have been last uploaded. Which version of the files do you want to keep?">
 
-<!ENTITY            filename.label             "Filename">
-<!ENTITY            server.label           "Server">
-<!ENTITY            local.label            "Local">
+<!ENTITY filename.label        "Filename">
+<!ENTITY server.label          "Server">
+<!ENTITY local.label           "Local">
 
-<!ENTITY            start.label           "OK">
-<!ENTITY            exit.label            "Cancel roaming"><!-- XXX needed? -->
+<!ENTITY start.label           "OK">
+<!ENTITY exit.label            "Cancel roaming"><!-- XXX needed? -->
