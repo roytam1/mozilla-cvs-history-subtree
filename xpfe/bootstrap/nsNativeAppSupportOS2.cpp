@@ -670,6 +670,9 @@ nsNativeAppSupportOS2::CheckConsole() {
               strcpy(pszArgString, TURBOD);
               strcat(pszArgString, " -l -p ");
               strcat(pszArgString, __argv[0]);
+              char *pchar = strrchr(pszArgString, '\\');
+              pchar++;
+              *pchar = '\0';
               pszArgString[strlen(TURBOD)] = '\0';
        
               rc = DosExecPgm(NULL,0,EXEC_BACKGROUND,
@@ -2296,6 +2299,16 @@ nsNativeAppSupportOS2::StartServerMode() {
         // We dont have to anything anymore. The native UI
         // will create the window
         return NS_OK;
+    } else {
+        // Sometimes a window will have been opened even though mShouldShowUI is false
+        // (e.g., mozilla -mail -turbo).  Detect that by testing whether there's a
+        // window already open.
+        nsCOMPtr<nsIDOMWindowInternal> win;
+        GetMostRecentWindow( 0, getter_AddRefs( win ) );
+        if ( win ) {
+            // Window already opened, don't need this special Nav window.
+            return NS_OK;
+        }
     }
 
     // Since native UI wont create any window, we create a hidden window
