@@ -563,6 +563,8 @@
 				F55EBC9C0383665201A80166,
 				F57BED9B03A1824801A9666E,
 				F57BEDA003A1825001A9666E,
+				F5C8D55303A2A42401A8016F,
+				F5C8D55603A2A43301A8016F,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2338,6 +2340,7 @@
 				F53C1CD6032FF3B301A96654,
 				F53D36BD037843C201A80166,
 				F58DB2D20381FD3301A9666E,
+				F5C8D55503A2A43301A8016F,
 			);
 			isa = PBXGroup;
 			name = Headers;
@@ -5989,6 +5992,7 @@
 				F507A84A03116E6E01026D5D,
 				F507A84D03116E7401026D5D,
 				F507A85003116E7901026D5D,
+				F5C8D55203A2A42401A8016F,
 			);
 			isa = PBXGroup;
 			name = Nibs;
@@ -7299,6 +7303,8 @@
 				F55EBC9E0383665201A80166,
 				F57BED9C03A1824801A9666E,
 				F57BEDA203A1825001A9666E,
+				F5C8D55403A2A42401A8016F,
+				F5C8D55703A2A43301A8016F,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9145,6 +9151,42 @@
 		};
 		F5C3AB840270072A01A80166 = {
 			fileRef = F5C3AB820270072A01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5C8D55203A2A42401A8016F = {
+			isa = PBXFileReference;
+			name = ChimeraUIConstants.h;
+			path = src/includes/ChimeraUIConstants.h;
+			refType = 4;
+		};
+		F5C8D55303A2A42401A8016F = {
+			fileRef = F5C8D55203A2A42401A8016F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5C8D55403A2A42401A8016F = {
+			fileRef = F5C8D55203A2A42401A8016F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5C8D55503A2A43301A8016F = {
+			isa = PBXFileReference;
+			name = ChimeraUIConstants.h;
+			path = src/includes/ChimeraUIConstants.h;
+			refType = 4;
+		};
+		F5C8D55603A2A43301A8016F = {
+			fileRef = F5C8D55503A2A43301A8016F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5C8D55703A2A43301A8016F = {
+			fileRef = F5C8D55503A2A43301A8016F;
 			isa = PBXBuildFile;
 			settings = {
 			};
