@@ -14,15 +14,11 @@ bin/.autoreg
 ; en-US 
 bin/chrome/en-US.jar
 bin/chrome/en-unix.jar
-
-[regus]
 ; US
 ; If you add a new directory you must explicitly call addDirectory in regus.jst
 bin/chrome/US.jar
 bin/defaults/profile/US/*
 bin/searchplugins/*
-
-[deflenus]
 ; Default files for US
 bin/defaults/profile/bookmarks.html
 bin/defaults/profile/localstore.rdf

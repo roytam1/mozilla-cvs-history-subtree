@@ -235,13 +235,11 @@ Description Long=Browser will be installed with the most common options.
 C0=Component XPCOM
 C1=Component Browser
 ;C2=Component Uninstaller
-C2=Component US English Profile Defaults
-C3=Component En US lang pack
-C4=Component US region pack
-C5=Component Help
+C2=Component En US lang pack
+C3=Component Help
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C6=Component QFA
+C4=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -257,13 +255,11 @@ C1=Component Browser
 C2=Component ABE
 C3=Component ADT
 ;C4=Component Uninstaller
-C4=Component US English Profile Defaults
-C5=Component En US lang pack
-C6=Component US region pack
-C7=Component Help
+C4=Component En US lang pack
+C5=Component Help
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C8=Component QFA
+C6=Component QFA
 
 [Dialog Select Components]
 Show Dialog=TRUE
@@ -709,18 +705,6 @@ FileCount=$FileCount$
 [Component Uninstaller-Destination Path0]
 Path=[WINDIR]
 
-[Component US English Profile Defaults]
-Description Short=US English Defaults
-;*** LOCALIZE ME BABY ***
-Description Long=US English Default Profile Data
-Archive=deflenus.xpi
-$InstallSize$:deflenus
-$InstallSizeSystem$
-$InstallSizeArchive$:deflenus.xpi
-Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\defaults\profile\bookmarks.html
-FileCount=$FileCount$
-
 [Component En US lang pack]
 ;*** LOCALIZE ME BABY ***
 Description Short=English (US) Language Pack
@@ -732,19 +716,6 @@ $InstallSizeSystem$
 $InstallSizeArchive$:langenus.xpi
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\chrome\en-US.jar
-FileCount=$FileCount$
-
-[Component US region pack]
-;*** LOCALIZE ME BABY ***
-Description Short=US Region Pack
-;*** LOCALIZE ME BABY ***
-Description Long=Regional content for US users
-Archive=regus.xpi
-$InstallSize$:regus
-$InstallSizeSystem$
-$InstallSizeArchive$:regus.xpi
-Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\chrome\US.jar
 FileCount=$FileCount$
 
 [Component QFA]

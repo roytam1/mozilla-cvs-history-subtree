@@ -232,13 +232,11 @@ Description Long=Browser will be installed with the most common options.
 C0=Component XPCOM
 C1=Component Browser
 C2=Component Uninstaller
-C3=Component US English Profile Defaults
-C4=Component En US lang pack
-C5=Component US region pack
-C6=Component Help
+C3=Component En US lang pack
+C4=Component Help
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C7=Component QFA
+C5=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -254,13 +252,11 @@ C1=Component Browser
 C2=Component ABE
 C3=Component ADT
 C4=Component Uninstaller
-C5=Component US English Profile Defaults
-C6=Component En US lang pack
-C7=Component US region pack
-C8=Component Help
+C5=Component En US lang pack
+C6=Component Help
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-C9=Component QFA
+C7=Component QFA
 
 [Dialog Select Components]
 Show Dialog=TRUE
