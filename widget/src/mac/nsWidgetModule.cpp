@@ -140,8 +140,7 @@ static nsModuleComponentInfo components[] =
     nsFileWidgetConstructor },
   { "Mac File Widget",
     NS_FILEPICKER_CID,
-        // thesteve changed: "@mozilla.org/widgets/filepicker/mac;1",
-    "@mozilla.org/widgets/filepicker;1",
+    "@mozilla.org/filepicker;1",
     nsFilePickerConstructor },
   { "Mac Horiz Scrollbar",
     NS_HORZSCROLLBAR_CID,
@@ -165,17 +164,14 @@ static nsModuleComponentInfo components[] =
     nsLookAndFeelConstructor },
   { "Mac Sound",
     NS_SOUND_CID,
-    //    "@mozilla.org/widget/sound/mac;1"
     "@mozilla.org/sound;1",
     nsSoundConstructor },
   { "File Spec with UI",
     NS_FILESPECWITHUI_CID,
-    //    "@mozilla.org/widget/filespecwithui/mac;1",
     "@mozilla.org/filespecwithui;1",
     nsFileSpecWithUIImplConstructor },
   { "Transferable",
     NS_TRANSFERABLE_CID,
-    //    "@mozilla.org/widget/transferable/mac;1",
     "@mozilla.org/widget/transferable;1",
     nsTransferableConstructor },
   { "HTML Format Converter",
@@ -193,15 +189,8 @@ static nsModuleComponentInfo components[] =
     nsClipboardHelperConstructor },
   { "Mac Drag Service",
     NS_DRAGSERVICE_CID,
-    //    "@mozilla.org/widget/dragservice/mac;1",
     "@mozilla.org/widget/dragservice;1",
     nsDragServiceConstructor },
-#if 0  // added by thesteve, influenced by nsWinWidgetFactory.cpp
-  { "Font Retriever Service",
-    NS_FONTRETRIEVERSERVICE_CID,
-    "@mozilla.org/widget/fontretrieverservice/win;1",
-    nsFontRetrieverServiceConstructor },
-#endif // 1
   { "Mac nsTimer",
     NS_TIMER_CID,
     "@mozilla.org/timer;1",
@@ -237,7 +226,7 @@ static nsModuleComponentInfo components[] =
     NS_TEXTAREA_CID,
     "@mozilla.org/widgets/textarea/mac;1",
     nsCheckButtonConstructor },
-#endif
+#endif  // USE_NATIVE_VERSION
   { "Mac Text Widget",
     NS_TEXTFIELD_CID,
     "@mozilla.org/widgets/textwidget/mac;1",
@@ -261,7 +250,7 @@ static nsModuleComponentInfo components[] =
     NS_MENUITEM_CID,
     "@mozilla.org/widget/menuitem/mac;1",
     nsMenuItemConstructor },
-#endif 0
+#endif  // 1
 
 #ifdef IBMBIDI
     { "Mac Bidi Keyboard",
