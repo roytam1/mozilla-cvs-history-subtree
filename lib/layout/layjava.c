@@ -592,7 +592,7 @@ lo_FormatJavaAppInternal(MWContext *context, lo_DocState *state, PA_Tag *tag, LO
 	}
 }
 
-
+#ifdef JAVA
 void
 lo_FinishJavaApp(MWContext *context, lo_DocState *state,
 	LO_JavaAppStruct *java_app)
@@ -754,7 +754,7 @@ lo_CloseJavaApp(MWContext *context, lo_DocState *state,
 
 	state->current_java = NULL;
 }
-
+#endif /* JAVA */
 
 void
 lo_RelayoutJavaApp(MWContext *context, lo_DocState *state, PA_Tag *tag,
