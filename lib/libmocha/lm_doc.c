@@ -844,7 +844,7 @@ LM_GetBaseHrefTag(JSContext *cx, JSPrincipals *principals)
 
 static int
 doc_write_stream(JSContext *cx, MochaDecoder *decoder,
-                 NET_StreamClass *stream, char *str, size_t len)
+                 NET_VoidStreamClass *stream, char *str, size_t len)
 {	
     ET_lo_DoDocWrite(cx, decoder->window_context, stream, str, len,
                      decoder->doc_id);
@@ -915,12 +915,12 @@ lm_MakeWysiwygUrl(JSContext *cx, MochaDecoder *decoder, int32 layer_id,
     return url_string;
 }
 
-static NET_StreamClass *
+static NET_VoidStreamClass *
 doc_cache_converter(JSContext *cx, MochaDecoder *decoder,
                     URL_Struct *url_struct, char *wysiwyg_url,
                     int32 layer_id)
 {
-    NET_StreamClass * rv;
+    NET_VoidStreamClass * rv;
 
     rv = ET_moz_DocCacheConverter(decoder->window_context, 
                                   url_struct, wysiwyg_url,
@@ -933,11 +933,11 @@ doc_cache_converter(JSContext *cx, MochaDecoder *decoder,
 
 }
 
-NET_StreamClass *
+NET_VoidStreamClass *
 LM_WysiwygCacheConverter(MWContext *context, URL_Struct *url_struct,
                          const char * wysiwyg_url, const char * base_href)
 {
-    NET_StreamClass *cache_stream;
+    NET_VoidStreamClass *cache_stream;
 
     if (!wysiwyg_url) {
         cache_stream = 0;
@@ -947,8 +947,8 @@ LM_WysiwygCacheConverter(MWContext *context, URL_Struct *url_struct,
         if (cache_stream) {
             /* Wysiwyg files need a base tag that removes that URL prefix. */
             if (base_href) {
-                (void) cache_stream->put_block(cache_stream, 
-                                               base_href,
+                (void) NET_StreamPutBlock(cache_stream, 
+                                               (char*)base_href,
                                                XP_STRLEN(base_href));
             }
         }
@@ -958,7 +958,7 @@ LM_WysiwygCacheConverter(MWContext *context, URL_Struct *url_struct,
 
 static char nscp_open_tag[] = "<" PT_NSCP_OPEN ">";
 
-static NET_StreamClass *
+static NET_VoidStreamClass *
 doc_open_stream(JSContext *cx, MochaDecoder *decoder, JSObject *doc_obj,
                 const char *mime_type, JSBool replace)
 {
@@ -969,7 +969,7 @@ doc_open_stream(JSContext *cx, MochaDecoder *decoder, JSObject *doc_obj,
     URL_Struct *url_struct, *cached_url;
     MochaDecoder *running;
     History_entry *he;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     JSBool is_text_html;
     FO_Present_Types present_type;
 
@@ -1113,8 +1113,8 @@ bad:
     decoder->stream_owner = LO_DOCUMENT_LAYER_ID;
     decoder->url_struct = 0;
     if (stream) {
-        (*stream->abort)(stream, MK_UNABLE_TO_CONVERT);
-        XP_DELETE(stream);
+        NET_StreamAbort(stream, MK_UNABLE_TO_CONVERT);
+        NET_StreamFree(stream);
     }
     NET_FreeURLStruct(url_struct);
     if (cached_url)
@@ -1194,7 +1194,7 @@ doc_open(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval *rval)
         }
         lm_ClearDecoderStream(decoder, JS_FALSE);
     }
-    stream = NET_CStreamToVoidStream(doc_open_stream(cx, decoder, obj, mime_type, replace));
+    stream = doc_open_stream(cx, decoder, obj, mime_type, replace);
     if (!stream)
         return JS_FALSE;
     *rval = OBJECT_TO_JSVAL(doc->object);
@@ -1246,10 +1246,10 @@ doc_clear(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-static NET_StreamClass *
+static NET_VoidStreamClass *
 doc_get_stream(JSContext *cx, MochaDecoder *decoder, JSObject *doc_obj)
 {
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     JSDocument *doc;
 
     doc = JS_GetPrivate(cx, doc_obj);
@@ -1288,7 +1288,7 @@ do_doc_write(JSContext *cx, JSObject *obj,
     JSDocument *doc;
     MochaDecoder *decoder;
     MochaDecoder *running;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     uint i;
     int status, total_len, len;
     static char eol[] = "\n";

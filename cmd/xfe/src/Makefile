@@ -51,6 +51,7 @@ REQUIRES	=\
 			xpcom \
 			plug \
 			netcnvts \
+			network \
 			cstream
 
 CPPSRCS		= \

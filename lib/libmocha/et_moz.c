@@ -1279,11 +1279,11 @@ et_DestroyEvent_NetlibWithUrl(MozillaEvent_GenericNetLib* e)
 }
 
 
-NET_StreamClass	*
+NET_VoidStreamClass	*
 ET_net_CacheConverter(FO_Present_Types format, void * obj,
                       URL_Struct *pUrl, MWContext * context)
 {
-    NET_StreamClass * ret;
+    NET_VoidStreamClass * ret;
     MozillaEvent_GenericNetLib* event = PR_NEW(MozillaEvent_GenericNetLib);
     if (event == NULL) 
         return(NULL);
@@ -1295,7 +1295,7 @@ ET_net_CacheConverter(FO_Present_Types format, void * obj,
     event->pStuff = obj;
     event->pUrl = NET_HoldURLStruct(pUrl);
 
-    ret = (NET_StreamClass *) et_PostEvent(&event->ce, TRUE);
+    ret = (NET_VoidStreamClass *) et_PostEvent(&event->ce, TRUE);
     return(ret);
 
 }
@@ -1331,19 +1331,19 @@ ET_net_FindURLInCache(URL_Struct * pUrl, MWContext * pContext)
 PR_STATIC_CALLBACK(void*)
 et_HandleEvent_StreamBuilder(MozillaEvent_GenericNetLib* e)
 {
-    NET_StreamClass *rv;
+    NET_VoidStreamClass *rv;
 	
     NET_SetActiveEntryBusyStatus(e->pUrl, TRUE);
-    rv = NET_StreamBuilder(e->format, e->pUrl, e->ce.context);
+    rv = NET_VoidStreamBuilder(e->format, e->pUrl, e->ce.context);
     NET_SetActiveEntryBusyStatus(e->pUrl, FALSE);
     return((void *)rv);
 }
 
-NET_StreamClass	*
+NET_VoidStreamClass	*
 ET_net_StreamBuilder(FO_Present_Types format, URL_Struct *pUrl, 
 		     MWContext * pContext)
 {
-    NET_StreamClass * ret;
+    NET_VoidStreamClass * ret;
     MozillaEvent_GenericNetLib* event = PR_NEW(MozillaEvent_GenericNetLib);
     if (event == NULL) 
         return(NULL);
@@ -1354,7 +1354,7 @@ ET_net_StreamBuilder(FO_Present_Types format, URL_Struct *pUrl,
     event->format = format;
     event->pUrl = NET_HoldURLStruct(pUrl);
 
-    ret = (NET_StreamClass *) et_PostEvent(&event->ce, TRUE);
+    ret = (NET_VoidStreamClass *) NET_CStreamToVoidStream(et_PostEvent(&event->ce, TRUE));
     return(ret);
 
 }
@@ -1363,7 +1363,7 @@ ET_net_StreamBuilder(FO_Present_Types format, URL_Struct *pUrl,
 
 typedef struct {
     ETEvent		  ce;
-    NET_StreamClass	* stream;
+    NET_VoidStreamClass	* stream;
     void		* data;
     size_t		  len;
     JSBool		  self_modifying;
@@ -1460,7 +1460,7 @@ et_HandleEvent_DocWrite(MozillaEvent_DocWrite* e)
     LO_UnlockLayout();
 
     /* shove the data out */
-    status = (*e->stream->put_block)(e->stream, e->data, e->len);
+    status = NET_StreamPutBlock(e->stream, e->data, e->len);
 
     LO_LockLayout();
 
@@ -1596,7 +1596,7 @@ et_PopEventQueue(void)
  *   all been proceed.
  */
 int
-ET_lo_DoDocWrite(JSContext *cx, MWContext * context, NET_StreamClass * stream,
+ET_lo_DoDocWrite(JSContext *cx, MWContext * context, NET_VoidStreamClass * stream,
                  char * str, size_t len, int32 doc_id)
 {
     MochaDecoder * decoder;
@@ -2058,19 +2058,18 @@ ET_moz_CallAsyncAndSubEventLoop(ETVoidPtrFunc fn, void *data,
 /****************************************************************************/
 typedef struct {
     ETEvent              ce;
-    MKStreamAbortFunc    fn;
-    void               * data;
+    NET_VoidStreamClass *stream;
     int			 status;
 } MozillaEvent_CallAbort;
 
 PR_STATIC_CALLBACK(void)
 et_HandleEvent_Abort(MozillaEvent_CallAbort* e)
 {
-    (*e->fn)(e->data, e->status);
+    NET_StreamAbort(e->stream, e->status);
 }
 
 void
-ET_moz_Abort(MKStreamAbortFunc fn, void * data, int status)
+ET_moz_Abort(NET_VoidStreamClass *stream, int status)
 {
 
     MozillaEvent_CallAbort* event = PR_NEW(MozillaEvent_CallAbort);
@@ -2079,8 +2078,7 @@ ET_moz_Abort(MKStreamAbortFunc fn, void * data, int status)
     PR_InitEvent(&event->ce.event, NULL,
 		 (PRHandleEventProc)et_HandleEvent_Abort,
 		 (PRDestroyEventProc)et_DestroyEvent_GenericEvent);
-    event->fn = fn;
-    event->data = data;
+    event->stream = stream;
     event->status = status;
 
     (void) et_PostEvent(&event->ce, TRUE);
@@ -2297,11 +2295,11 @@ et_HandleEvent_SetWriteStream(MozillaEvent_DocCacheConverter * e)
     top_state = lo_GetMochaTopState(e->ce.context);
     if (top_state && !top_state->mocha_write_stream) {
         top_state->mocha_write_stream
-            = NET_CloneWysiwygCacheFile(e->ce.context, 
+            = NET_CStreamToVoidStream(NET_CloneWysiwygCacheFile(e->ce.context, 
 				        e->pUrl,
 				        (uint32)top_state->script_bytes,
 					e->wysiwyg_url,
-					e->base_href);
+					e->base_href));
     }
 }
 
@@ -2343,13 +2341,13 @@ ET_moz_SetMochaWriteStream(MochaDecoder * decoder)
 
 /****************************************************************************/
 
-PRIVATE NET_StreamClass *
+PRIVATE NET_VoidStreamClass *
 lm_DocCacheConverterNoHistory(MWContext * context, URL_Struct * url,
 			      const char * wysiwyg_url)
 {
     lo_TopState *top_state;
     char *address;
-    NET_StreamClass *cache_stream;
+    NET_VoidStreamClass *cache_stream;
 
     top_state = lo_GetMochaTopState(context);
     if (!top_state)
@@ -2363,22 +2361,22 @@ lm_DocCacheConverterNoHistory(MWContext * context, URL_Struct * url,
     /* Then pass it via url_struct to create a cache converter stream. */
     address = url->address;
     url->address = url->wysiwyg_url;
-    cache_stream = NET_CacheConverter(FO_CACHE_ONLY,
+    cache_stream = NET_CStreamToVoidStream(NET_CacheConverter(FO_CACHE_ONLY,
 				      (void *)1,    /* XXX don't hold url */
 				      url,
-				      context);
+				      context));
     url->address = address;
 
     top_state->mocha_write_stream = cache_stream;
     return cache_stream;
 }
 
-NET_StreamClass *
+NET_VoidStreamClass *
 lm_DocCacheConverter(MWContext * context, URL_Struct * url,
 		     const char * wysiwyg_url)
 {
     History_entry *he;    
-    NET_StreamClass *cache_stream;
+    NET_VoidStreamClass *cache_stream;
 
     cache_stream = lm_DocCacheConverterNoHistory(context, url, wysiwyg_url);
 
@@ -2397,10 +2395,10 @@ lm_DocCacheConverter(MWContext * context, URL_Struct * url,
     return cache_stream;
 }
 
-PR_STATIC_CALLBACK(NET_StreamClass *)
+PR_STATIC_CALLBACK(NET_VoidStreamClass *)
 et_HandleEvent_DocCacheConverter(MozillaEvent_DocCacheConverter * e)
 {
-    NET_StreamClass * stream;
+    NET_VoidStreamClass * stream;
     
     if (e->layer_id != LO_DOCUMENT_LAYER_ID) {
         return lm_DocCacheConverterNoHistory(e->ce.context, 
@@ -2421,11 +2419,11 @@ et_DestroyEvent_DocCacheConverter(MozillaEvent_DocCacheConverter * e)
     XP_FREE(e);
 }
 
-NET_StreamClass *
+NET_VoidStreamClass *
 ET_moz_DocCacheConverter(MWContext * pContext, URL_Struct * pUrl, 
 			 char * wysiwyg_url, int32 layer_id)
 {
-    NET_StreamClass * ret = NULL;
+    NET_VoidStreamClass * ret = NULL;
     MozillaEvent_DocCacheConverter * event;
     
     event = XP_NEW_ZAP(MozillaEvent_DocCacheConverter);
