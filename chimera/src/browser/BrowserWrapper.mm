@@ -365,7 +365,11 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)onStatusChange:(NSString*)aStatusString
 {
-  [mStatus setStringValue: aStatusString];
+  if (![[mStatus stringValue] isEqualToString:aStatusString])
+  {
+    [mStatus setStringValue: aStatusString];
+    [mStatus displayIfNeeded];
+  }
 }
 
 //
@@ -384,25 +388,31 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type 
 {
-  if (type == NSStatusTypeScriptDefault) {
-    if (mDefaultStatusString) {
+  NSString* newStatus = nil;
+  
+  if (type == NSStatusTypeScriptDefault)
+  {
+    if (mDefaultStatusString)
       [mDefaultStatusString release];
-    }
+
     mDefaultStatusString = statusString;
-    if (mDefaultStatusString) {
-      [mDefaultStatusString retain];
-    }
+    [mDefaultStatusString retain];
   }
-  else if (!statusString) {
-    if (mDefaultStatusString) {
-      [mStatus setStringValue:mDefaultStatusString];
-    }
-    else {
-      [mStatus setStringValue:mLoadingStatusString];
-    }      
+  else if (!statusString)
+  {
+    newStatus = (mDefaultStatusString) ? mDefaultStatusString : mLoadingStatusString;
   }
-  else {
-    [mStatus setStringValue:statusString];
+  else
+  {
+    newStatus = statusString;
+  }
+  
+  if (newStatus && ![[mStatus stringValue] isEqualToString:newStatus])
+  {
+    [mStatus setStringValue:newStatus];
+    [mStatus displayIfNeeded];      // force an immediate display. This works around some issues
+                                    // where cocoa unions update rects in the content and chrome,
+                                    // causing slow updating (bug 2194819).
   }
 }
 
