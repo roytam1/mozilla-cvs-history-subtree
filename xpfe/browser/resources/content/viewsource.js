@@ -62,6 +62,11 @@ function BrowserClose()
   window.close();
 }
 
+function getMarkupDocumentViewer()
+{
+  return document.getElementById("content").markupDocumentViewer;
+}
+
 function BrowserFind()
 {
   if (appCore)
