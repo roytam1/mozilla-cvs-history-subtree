@@ -57,4 +57,4 @@ struct icaldatetimeperiodtype icalvalue_get_datetimeperiod(icalvalue* value);
 
 void icalvalue_reset_kind(icalvalue* value);
 
-/* Everything below this line is machine generated. Do not edit. */
+<insert_code_here>
