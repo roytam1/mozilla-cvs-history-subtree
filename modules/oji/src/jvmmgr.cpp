@@ -308,7 +308,11 @@ nsJVMMgr::GetJavaErrorString(JRIEnv* env)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef XP_MAC
+static NS_DEFINE_IID(kIJNIPluginIID, NS_IJVMPLUGIN_IID);
+#else
 static NS_DEFINE_IID(kIJRIPluginIID, NS_IJRIPLUGIN_IID);        // XXX change later to JNI
+#endif
 
 // Should be in a header; must solve build-order problem first
 extern "C" void SU_Initialize(JRIEnv * env);
@@ -334,6 +338,27 @@ nsJVMMgr::StartupJVM(void)
 
     nsJVMError err = fJVM->StartupJVM(&initargs);
     if (err == nsJVMError_Ok) {
+#if defined(XP_MAC)
+		// On the MacOS, MRJ uses JNI exclusively.
+        nsIJNIPlugin* jniJVM;
+        if (fJVM->QueryInterface(kIJNIPluginIID, (void**)&jniJVM) == NS_OK) {
+            JNIEnv* env = jniJVM->GetJNIEnv();
+            if (env) {
+                if (env->ExceptionOccurred()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+                jniJVM->ReleaseJNIEnv(env);
+            }
+            fStatus = nsJVMStatus_Running;
+            jniJVM->Release();
+        }
+        else {
+            // Non-JNI JVM -- bail.
+            jvm->Release();
+            return ShutdownJVM();
+        }
+#else
         nsIJRIPlugin* jriJVM;
         if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
             JRIEnv* env = jriJVM->GetJRIEnv();
@@ -352,10 +377,11 @@ nsJVMMgr::StartupJVM(void)
             jriJVM->Release();
         }
         else {
-            // Non-JNI JVM -- bail.
+            // Non-JRI JVM -- bail.
             jvm->Release();
             return ShutdownJVM();
         }
+#endif
     }
     jvm->Release();
     return fStatus;
