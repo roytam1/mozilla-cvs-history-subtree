@@ -40,12 +40,12 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
-#NSPR_CO_TAG=SeaMonkey_M17_BRANCH
-#PSM_CO_TAG=SeaMonkey_M17_BRANCH
-#LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
-#IMGLIB2_BRANCH=SeaMonkey_M17_BRANCH
-#GFX2_BRANCH=SeaMonkey_M17_BRANCH
+MOZ_BRANCH=MOZILLA_0_8_1_BRANCH
+NSPR_CO_TAG=MOZILLA_0_8_1_BRANCH
+PSM_CO_TAG=MOZILLA_0_8_1_BRANCH
+LDAPCSDK_CO_TAG=MOZILLA_0_8_1_BRANCH
+IMGLIB2_BRANCH=MOZILLA_0_8_1_BRANCH
+GFX2_BRANCH=MOZILLA_0_8_1_BRANCH
 
 
 !if "$(MOZ_BRANCH)" != ""

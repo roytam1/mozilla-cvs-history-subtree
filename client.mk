@@ -52,13 +52,13 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
-NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
-PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
-NSS_CO_TAG = NSS_CLIENT_TAG
-LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
-GFX2_CO_TAG = 
-IMGLIB2_CO_TAG = 
+MOZ_CO_TAG = MOZILLA_0_8_1_BRANCH
+NSPR_CO_TAG = MOZILLA_0_8_1_BRANCH
+PSM_CO_TAG = MOZILLA_0_8_1_BRANCH 
+NSS_CO_TAG = MOZILLA_0_8_1_BRANCH
+LDAPCSDK_CO_TAG = MOZILLA_0_8_1_BRANCH
+GFX2_CO_TAG = MOZILLA_0_8_1_BRANCH
+IMGLIB2_CO_TAG = MOZILLA_0_8_1_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
