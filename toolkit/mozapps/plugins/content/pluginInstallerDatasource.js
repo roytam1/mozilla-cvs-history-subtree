@@ -96,7 +96,7 @@ nsRDFItemUpdater.prototype = {
     gPluginInstaller.pluginInfoReceived(pluginInfo);
   },
 
-  onDatasourceError: function pfs_onDatasourceError (aError, aPluginRequestItem){
+  onDatasourceError: function pfs_onDatasourceError (aPluginRequestItem, aError){
     this._os.notifyObservers(aPluginRequestItem, "error", aError);
     gPluginInstaller.pluginInfoReceived(null);
   },
