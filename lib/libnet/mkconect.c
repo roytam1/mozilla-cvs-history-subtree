@@ -120,7 +120,7 @@ typedef enum {
 struct _TCP_ConData {
 	TCPStatesEnum       next_state;  /* states of the machine */
 	PRNetAddr           net_addr;
-	XP_Bool            	use_security;
+	HG93765
 	time_t              begin_time;
 };
 
@@ -891,6 +891,7 @@ net_start_first_connect(const char   *host,
         FREE(buf);
       }
 
+	HG26300
 	/* set the begining time to be the current time.
 	 * the timeout value will be  compared to this
 	 * later
@@ -1024,7 +1025,7 @@ NET_BeginConnect (CONST char   *url,
           	      char         *prot_name, 
           	      int           def_port, 
           	      PRFileDesc     **sock, 
-			      Bool       use_security,
+			      HG92743
 			      TCP_ConData **tcp_con_data,
           	      MWContext    *window_id,
 			      char        **error_msg,
@@ -1251,7 +1252,7 @@ HG71089
 	  {
        	(*tcp_con_data)->next_state = NET_TCP_FINISH_CONNECT;
 		/* save in case we need it */
-       	(*tcp_con_data)->use_security = use_security; 
+       	HG83665 
 	  }
 
 	if(status < 0)
@@ -1479,7 +1480,7 @@ error_out:
                                  				prot_name,
                                  				def_port,
                                  				sock,
-                                 				(*tcp_con_data)->use_security,
+                                 				HG98376
                                  				tcp_con_data,
                                  				window_id,
 								 				error_msg,
@@ -1490,6 +1491,7 @@ error_out:
 				else
 					FREE(host);
 
+				HG92362
                 if (error == PR_CONNECT_REFUSED_ERROR)
 					{
 							char * host = NET_ParseURL(url, GET_HOST_PART);

@@ -27,7 +27,7 @@
 #include "msgnet.h"
 #include "xpgetstr.h"
 #include "secnav.h"
-#include "ssl.h"
+#include HG26363
 #include "sslerr.h"
 #include "prefapi.h"
 #include "prlog.h"
@@ -1332,17 +1332,14 @@ void StartIMAPConnection(TNavigatorImapConnection *imapConnection)
     
     FE_SetProgressBarPercent(ce->window_id, -1);
 
-	int32 sslPort = 0;
 	HG83344
-	if (!sslPort)
-		sslPort = IMAP4_PORT_SSL_DEFAULT;
 
     ce->status = NET_BeginConnect(ce->URL_s->address,
                                   ce->URL_s->IPAddressString,
                 "IMAP4",
-                (imapConnection->UseSSL() ? sslPort : IMAP4_PORT),
+                (HG26227 IMAP4_PORT),
                 &ce->socket,
-                imapConnection->UseSSL(),
+                HG27326,
                 imapConnection->GetTCPConData(),
                 ce->window_id,
                 &ce->URL_s->error_msg,
@@ -1374,7 +1371,7 @@ void StartIMAPConnection(TNavigatorImapConnection *imapConnection)
         NET_ClearConnectSelect(ce->window_id, ce->socket);
         TRACEMSG(("Closing and clearing socket ce->socket: %d", 
                  ce->socket));
-		net_graceful_shutdown(ce->socket, imapConnection->UseSSL());
+		net_graceful_shutdown(ce->socket, HG38373);
         PR_Close(ce->socket);
             ce->socket = NULL;
             imapConnection->SetIOSocket(ce->socket);
@@ -1395,16 +1392,11 @@ void FinishIMAPConnection(void *blockingConnectionVoid,
     
     ActiveEntry *ce = imapConnection->GetActiveEntry();
 
-	int32 sslPort = 0;
-	if (imapConnection->UseSSL())
-	{
-		HG83344
-		if (!sslPort)
-			sslPort = IMAP4_PORT_SSL_DEFAULT;
-	}
+	HG83344
+		
     ce->status = NET_FinishConnect(ce->URL_s->address,
                 "IMAP4",
-                (imapConnection->UseSSL() ? sslPort : IMAP4_PORT),
+                (HG72523 IMAP4_PORT),
                 &ce->socket,
                 imapConnection->GetTCPConData(),
                 ce->window_id,
@@ -1437,7 +1429,7 @@ void FinishIMAPConnection(void *blockingConnectionVoid,
 		NET_TotalNumberOfOpenConnections--;
 		NET_ClearConnectSelect(ce->window_id, ce->socket);
 		TRACEMSG(("Closing and clearing socket ce->socket: %d", ce->socket));
-		net_graceful_shutdown(ce->socket, imapConnection->UseSSL());
+		net_graceful_shutdown(ce->socket, HG73653);
 		PR_Close(ce->socket);
         ce->socket = NULL;
         imapConnection->SetIOSocket(ce->socket);
@@ -3797,7 +3789,7 @@ TNavigatorImapConnection::~TNavigatorImapConnection()
     if (GetIOSocket() != 0)
 	{
 		// Logout(); *** We still need to close down the socket
-		net_graceful_shutdown(GetIOSocket(), UseSSL());
+		net_graceful_shutdown(GetIOSocket(), HG32830);
 		PR_Close(GetIOSocket());
 		SetIOSocket(NULL);    // delete connection
 		if (GetActiveEntry())
@@ -10176,7 +10168,7 @@ NET_ProcessIMAP4 (ActiveEntry *ce)
 
 				shouldDieAtEnd = TRUE;
 				imapConnection->SetIOSocket(NULL);    // delete connection
-				net_graceful_shutdown(ce->socket, imapConnection->UseSSL());
+				net_graceful_shutdown(ce->socket, HG87263);
 				PR_Close(ce->socket);                                           
 			}
 			else
@@ -10314,7 +10306,7 @@ NET_InterruptIMAP4(ActiveEntry * ce)
 		TRACEMSG(("Closing and clearing socket ce->socket: %d",
                   ce->socket));
 	    imapConnection->SetIOSocket(NULL);
-		net_graceful_shutdown(ce->socket, imapConnection->UseSSL());
+		net_graceful_shutdown(ce->socket, HG83733);
 		PR_Close(ce->socket);
 		imapConnection->SetIOSocket(NULL);
 		NET_TotalNumberOfOpenConnections--;

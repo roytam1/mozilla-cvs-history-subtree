@@ -5697,11 +5697,7 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 		  {
 			char *prefix = "news://";
 			char *slash = XP_STRRCHR (newshost, '/');
-			if (slash && !strcasecomp (slash, "/secure"))
-			  {
-				*slash = 0;
-				prefix = "snews://";
-			  }
+			HG32828
 			newspost_url = (char *) XP_ALLOC (XP_STRLEN (prefix) +
 											  XP_STRLEN (newshost) + 10);
 			if (newspost_url)

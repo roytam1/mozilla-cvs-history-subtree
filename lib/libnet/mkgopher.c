@@ -20,7 +20,7 @@
  */
 
 #include "mkutils.h"
-#include "ssl.h"
+#include 
  
 /* Gopher types:
  */
