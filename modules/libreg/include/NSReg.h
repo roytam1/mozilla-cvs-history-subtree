@@ -20,6 +20,8 @@
 #ifndef _NSREG_H_
 #define _NSREG_H_
 
+#include "xp_core.h"
+
 typedef int32   REGERR;
 typedef int32   RKEY;
 typedef uint32  REGENUM;
@@ -67,7 +69,9 @@ typedef struct _reginfo
 
 /* enumeration styles */
 #define REGENUM_NORMAL                  (0x00)
+#define REGENUM_CHILDREN                REGENUM_NORMAL
 #define REGENUM_DESCEND                 (0x01)
+#define REGENUM_DEPTH_FIRST             (0x02)
 
 /* entry data types */
 #define REGTYPE_ENTRY                 (0x0010)
@@ -77,11 +81,14 @@ typedef struct _reginfo
 
 #define REG_DELETE_LIST_KEY  "Netscape/Communicator/SoftwareUpdate/Delete List"
 #define REG_REPLACE_LIST_KEY "Netscape/Communicator/SoftwareUpdate/Replace List"
+#define REG_UNINSTALL_DIR    "Netscape/Communicator/SoftwareUpdate/Uninstall/"
+
+#define UNINSTALL_NAV_STR "."
 
 #define UNIX_GLOBAL_FLAG     "MOZILLA_SHARED_REGISTRY"
 
 /* Platform-dependent declspec for library interface */
-#if defined(STANDALONE_REGISTRY) && defined(XP_PC)
+#if defined(XP_PC)
  #if defined(WIN32)
  #define VR_INTERFACE(type)     __declspec(dllexport) type __stdcall
  #elif defined(XP_OS2)
@@ -89,9 +96,11 @@ typedef struct _reginfo
  #else
  #define VR_INTERFACE(type)     type _far _pascal _export
  #endif
+#elif defined XP_MAC
+  #define VR_INTERFACE(__x)  __declspec(export) __x
 #else
  #define VR_INTERFACE(type)     type
-#endif /* STANDALONE_REGISTRY and XP_PC */
+#endif
 
 
 XP_BEGIN_PROTOS
@@ -111,6 +120,14 @@ VR_INTERFACE(REGERR) NR_RegClose(
 
 VR_INTERFACE(REGERR) NR_RegPack(
          HREG hReg         /* handle of open registry to pack */
+       );
+
+VR_INTERFACE(REGERR) NR_RegGetUsername(
+	    char **name        /* on return, an alloc'ed copy of the current user name */
+       );
+
+VR_INTERFACE(REGERR) NR_RegSetUsername(
+	 const char *name  /* name of current user */
        );
 
 /* ---------------------------------------------------------------------
@@ -207,8 +224,8 @@ VR_INTERFACE(REGERR) NR_RegEnumEntries(
        );
 
 #ifndef STANDALONE_REGISTRY
-void NR_ShutdownRegistry(void);
-void NR_StartupRegistry(void);
+VR_INTERFACE(void) NR_ShutdownRegistry(void);
+VR_INTERFACE(void) NR_StartupRegistry(void);
 #endif /* STANDALONE_REGISTRY */
 
 XP_END_PROTOS

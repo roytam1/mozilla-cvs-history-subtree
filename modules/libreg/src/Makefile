@@ -20,9 +20,9 @@ DEPTH		= ../../..
 MODULE		= libreg
 LIBRARY_NAME	= reg
 
-REQUIRES	= libreg nspr dbm pref js
+REQUIRES	= libreg nspr pref js
 
-CSRCS		= reg.c VerReg.c
+CSRCS		= reg.c VerReg.c vr_stubs.c
 
 BIN_SRCS	= VerReg.c reg.c vr_stubs.c
 BIN_OBJS	= $(addprefix $(OBJDIR)/R_,$(BIN_SRCS:.c=.o))

@@ -17,7 +17,7 @@
 
 DEPTH		= ../../../..
 
-REQUIRES	= softupdt
+REQUIRES	= softupdt zlib
 
 CSRCS		= nsdiff.c
 

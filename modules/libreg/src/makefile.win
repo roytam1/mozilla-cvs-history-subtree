@@ -31,7 +31,7 @@ IGNORE_MANIFEST=1
 DEPTH= ..\..\..
 
 !ifndef MAKE_OBJ_TYPE
-MAKE_OBJ_TYPE=EXE
+MAKE_OBJ_TYPE=DLL
 !endif
 
 #//------------------------------------------------------------------------
@@ -51,6 +51,7 @@ PDBFILE=$(LIBNAME).pdb
 OBJS=                                       \
     .\$(OBJDIR)\reg.obj                     \
     .\$(OBJDIR)\VerReg.obj                  \
+    .\$(OBJDIR)\vr_stubs.obj                 \
     $(NULL)
 
 #//------------------------------------------------------------------------
@@ -60,6 +61,7 @@ OBJS=                                       \
 #//
 #//------------------------------------------------------------------------
 
+DLL=$(OBJDIR)\$(LIBNAME).dll
 LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
 
 #//------------------------------------------------------------------------
@@ -68,6 +70,8 @@ LIBRARY= .\$(OBJDIR)\$(LIBNAME).lib
 #//     (ie. LCFLAGS, LLFLAGS, LLIBS, LINCS)
 #//
 #//------------------------------------------------------------------------
+LCFLAGS = $(LCFLAGS)
+LLIBS = $(LLIBS) $(LIBNSPR)
 
 #//
 #// Win16 places ALL public header files in $(PUBLIC)/win16
@@ -88,6 +92,12 @@ LINCS= $(LINCS) -I$(PUBLIC)/libreg   \
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
 
-install:: $(LIBRARY)
+libs:: $(DLL)	
     $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+    $(MAKE_INSTALL) $(DLL) $(DIST)\bin
 
+export:: $(DLL)
+
+clobber::
+    $(RM) $(DIST)\bin\$(DLL)
+    $(RM) $(DIST)\lib\$(LIBRARY)

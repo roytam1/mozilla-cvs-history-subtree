@@ -19,16 +19,19 @@
 /* this file contains stubs needed to build the registry routines
  * into a stand-alone library for use with our installers
  */
-#ifdef STANDALONE_REGISTRY
 
 #include <stdio.h>
 #include <string.h>
+
+#ifndef STANDALONE_REGISTRY
+#include "prtypes.h"
+#endif
+
 #include "vr_stubs.h"
 
 #ifdef XP_MAC
 #include <Folders.h>
 #include <Script.h>
-#include <size_t.h>
 #include <stdlib.h>
 #endif
 
@@ -162,6 +165,10 @@ extern XP_File VR_StubOpen (const char *mode)
     return fh;
 }
 
+#if 0
+/* Uncomment the following for older Mac build environments
+ * that don't support these functions
+ */
 char *strdup(const char *source)
 {
         char    *newAllocation;
@@ -234,6 +241,8 @@ int strncasecmp(const char *str1, const char *str2, int length)
 
 	return currentChar1 - currentChar2;
 }
+#endif /* 0 */
+
 #endif /* XP_MAC */
 
 
@@ -255,31 +264,67 @@ int strncasecmp(const char *str1, const char *str2, int length)
 #include "NSReg.h"
 #include "VerReg.h"
 
+#define DEF_REG "/.netscape/registry"
+
 char *TheRegistry; 
 char *Flist;
+
+#ifdef STANDALONE_REGISTRY
 /* WARNING: build hackery */
 long BUILDNUM =
 #include "../../../build/build_number"
 ;
+#endif
 
 
 REGERR vr_ParseVersion(char *verstr, VERSION *result);
 int main(int argc, char *argv[]);
 
 #ifdef XP_UNIX
-XP_File VR_StubOpen (const char * mode)
+XP_File VR_StubOpen (const char *name, const char * mode)
 {
 	XP_File fh;
     struct stat st;
 
-    if ( stat( TheRegistry, &st ) == 0 )
-        fh = fopen( TheRegistry, XP_FILE_UPDATE_BIN );
-    else
-        fh = fopen( TheRegistry, XP_FILE_WRITE_BIN );
-
-	return fh;
-}
+#ifndef STANDALONE_REGISTRY
+    char *def = NULL;
+    char *home = NULL;
+    if (name == NULL || *name == '\0') {
+        home = getenv("HOME");
+        if (home != NULL) {
+            def = (char *) XP_ALLOC(XP_STRLEN(home) + XP_STRLEN(DEF_REG) + 1);
+            if (def != NULL) {
+                XP_STRCPY(def, home);
+                XP_STRCAT(def, DEF_REG);
+            }
+        }
+        if (def != NULL) {
+            name = def;
+        } 
+        else {
+            /* couldn't find the filename to open */
+            return (XP_File)NULL;
+        }
+    }
+#else
+    name = TheRegistry;
 #endif
+
+    if ( stat( name, &st ) == 0 )
+        fh = fopen( name, XP_FILE_UPDATE_BIN );
+    else
+        fh = fopen( name, XP_FILE_WRITE_BIN );
+
+#ifndef STANDALONE_REGISTRY
+    XP_FREE(def);
+#endif
+	
+    return fh;
+}
+#endif /* XP_UNIX */
+
+
+#ifdef STANDALONE_REGISTRY
 
 int main(int argc, char *argv[])
 {
@@ -361,6 +406,7 @@ int main(int argc, char *argv[])
 	fclose( fh );
 	return 0;
 }
-#endif /* XP_UNIX || XP_OS2 */
 
 #endif /* STANDALONE_REGISTRY */
+
+#endif /* XP_UNIX || XP_OS2 */

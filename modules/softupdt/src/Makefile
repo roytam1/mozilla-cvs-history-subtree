@@ -24,6 +24,7 @@ REQUIRES	= softupdt js java net dbm nspr img util layer pref \
                   jar security applet lay style libreg network
 
 JRI_GEN		= netscape.softupdate.FolderSpec \
+          netscape.softupdate.InstallDelete \
           netscape.softupdate.InstallObject \
 		  netscape.softupdate.InstallFile \
 		  netscape.softupdate.InstallPatch \
@@ -59,6 +60,7 @@ JRI_GEN		+= netscape.softupdate.WinReg netscape.softupdate.WinProfile netscape.s
 endif
 
 EXPORTS		= ../include/softupdt.h \
+          $(JRI_GEN_DIR)/netscape_softupdate_InstallDelete.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_InstallFile.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_InstallObject.h \
 		  $(JRI_GEN_DIR)/netscape_softupdate_SoftwareUpdate.h \
@@ -86,6 +88,7 @@ $(OBJDIR)/su_folderspec.o: $(JRI_GEN_DIR)/netscape_softupdate_FolderSpec.c \
 			   $(JRI_GEN_DIR)/netscape_softupdate_SoftwareUpdate.h
 
 $(OBJDIR)/su_instl.o:	$(JRI_GEN_DIR)/netscape_softupdate_InstallFile.c \
+            $(JRI_GEN_DIR)/netscape_softupdate_InstallDelete.c	 \
 			$(JRI_GEN_DIR)/netscape_softupdate_InstallObject.c \
 			$(JRI_GEN_DIR)/netscape_softupdate_InstallExecute.c \
 			$(JRI_GEN_DIR)/netscape_softupdate_InstallPatch.c \
