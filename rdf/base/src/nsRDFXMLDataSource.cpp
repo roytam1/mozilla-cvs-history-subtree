@@ -594,10 +594,12 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
 {
     nsresult rv;
 
+//xx dougt - what request do we really have here?  I probably broke blocking RDF parsing.
+
     // XXX I really hate the way that we're spoon-feeding this stuff
     // to the parser: it seems like this is something that netlib
     // should be able to do by itself.
-
+    
     nsCOMPtr<nsIChannel> channel;
     // Null LoadGroup ?
     rv = NS_OpenURI(getter_AddRefs(channel), aURL, nsnull);
@@ -605,7 +607,7 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
 
     nsIInputStream* in;
     PRUint32 sourceOffset = 0;
-    rv = channel->OpenInputStream(&in);
+    rv = channel->OpenInputStream(0, -1, &in);
 
     // If we couldn't open the channel, then just return.
     if (NS_FAILED(rv)) return NS_OK;
@@ -618,7 +620,7 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     if (! proxy)
         goto done;
 
-    aConsumer->OnStartRequest(channel, nsnull);
+    aConsumer->OnStartRequest(nsnull, nsnull);
     while (PR_TRUE) {
         char buf[1024];
         PRUint32 readCount;
@@ -631,13 +633,13 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
 
         proxy->SetBuffer(buf, readCount);
 
-        rv = aConsumer->OnDataAvailable(channel, nsnull, proxy, sourceOffset, readCount);
+        rv = aConsumer->OnDataAvailable(nsnull, nsnull, proxy, sourceOffset, readCount);
         sourceOffset += readCount;
         if (NS_FAILED(rv))
             break;
     }
 
-    aConsumer->OnStopRequest(channel, nsnull, rv, nsnull);
+    aConsumer->OnStopRequest(nsnull, nsnull, rv, nsnull);
 
 	// don't leak proxy!
 	proxy->Close();
@@ -1082,13 +1084,13 @@ RDFXMLDataSourceImpl::RemoveXMLSinkObserver(nsIRDFXMLSinkObserver* aObserver)
 //
 
 NS_IMETHODIMP
-RDFXMLDataSourceImpl::OnStartRequest(nsIChannel *channel, nsISupports *ctxt)
+RDFXMLDataSourceImpl::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
-    return mParser->OnStartRequest(channel, ctxt);
+    return mParser->OnStartRequest(request, ctxt);
 }
 
 NS_IMETHODIMP
-RDFXMLDataSourceImpl::OnStopRequest(nsIChannel *channel,
+RDFXMLDataSourceImpl::OnStopRequest(nsIRequest *request,
                                     nsISupports *ctxt,
                                     nsresult status,
                                     const PRUnichar *errorMsg)
@@ -1101,7 +1103,7 @@ RDFXMLDataSourceImpl::OnStopRequest(nsIChannel *channel,
     }
 
     nsresult rv;
-    rv = mParser->OnStopRequest(channel, ctxt, status, errorMsg);
+    rv = mParser->OnStopRequest(request, ctxt, status, errorMsg);
 
     mParser = nsnull; // release the parser
 
@@ -1114,13 +1116,13 @@ RDFXMLDataSourceImpl::OnStopRequest(nsIChannel *channel,
 //
 
 NS_IMETHODIMP
-RDFXMLDataSourceImpl::OnDataAvailable(nsIChannel *channel,
+RDFXMLDataSourceImpl::OnDataAvailable(nsIRequest *request,
                                       nsISupports *ctxt,
                                       nsIInputStream *inStr,
                                       PRUint32 sourceOffset,
                                       PRUint32 count)
 {
-    return mParser->OnDataAvailable(channel, ctxt, inStr, sourceOffset, count);
+    return mParser->OnDataAvailable(request, ctxt, inStr, sourceOffset, count);
 }
 
 //----------------------------------------------------------------------
