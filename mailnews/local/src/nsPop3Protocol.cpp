@@ -60,7 +60,6 @@
 #include "nsISignatureVerifier.h"
 
 #define EXTRA_SAFETY_SPACE 3096
-#define kLargeNumberOfMessages 50000
 
 static PRLogModuleInfo *POP3LOGMODULE = nsnull;
 
@@ -1413,8 +1412,7 @@ PRInt32 nsPop3Protocol::SendList()
 
 
     m_pop3ConData->msg_info = (Pop3MsgInfo *) 
-      PR_CALLOC(sizeof(Pop3MsgInfo) *
-      (m_pop3ConData->number_of_messages < kLargeNumberOfMessages ? m_pop3ConData->number_of_messages : kLargeNumberOfMessages));
+      PR_CALLOC(sizeof(Pop3MsgInfo) * m_pop3ConData->number_of_messages);
     if (!m_pop3ConData->msg_info)
         return(MK_OUT_OF_MEMORY);
     m_pop3ConData->next_state_after_response = POP3_GET_LIST;
@@ -1483,20 +1481,6 @@ nsPop3Protocol::GetList(nsIInputStream* inputStream,
       {
         m_pop3ConData->msg_info[m_listpos-1].size = atol(token);
         m_pop3ConData->msg_info[m_listpos-1].msgnum = msg_num;
-      }
-      
-      if (m_listpos >= kLargeNumberOfMessages && m_listpos < m_pop3ConData->number_of_messages)
-      {
-        m_pop3ConData->msg_info = (Pop3MsgInfo *)   //allocate space for next entry
-          PR_REALLOC(m_pop3ConData->msg_info, sizeof(Pop3MsgInfo) * (m_listpos + 1));
-        if (!m_pop3ConData->msg_info)
-        {
-          m_pop3ConData->number_of_messages = m_listpos; //so that we don't try to free not allocated entries!
-          return(MK_OUT_OF_MEMORY);
-        }
-        m_pop3ConData->msg_info[m_listpos].msgnum = 0; //initialize
-        m_pop3ConData->msg_info[m_listpos].size = 0; //initialize
-        m_pop3ConData->msg_info[m_listpos].uidl = nsnull;
       }
     }
   }
