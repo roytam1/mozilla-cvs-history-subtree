@@ -306,10 +306,19 @@ patch: $(PROGRAM)
 build_xpi: $(PROGRAM)
 	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties xpi/psm/psmdata/ui
 	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm xpi/psm/psmdata/doc
+	$(NSINSTALL) -m 644 $(XPCOM_LIBS) xpi/psm 
+	$(NSINSTALL) -m 644 $(NSPR_LIBS) xpi/psm
 ifneq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) -m 775 start-psm xpi/psm
 endif
 	$(NSINSTALL) -m 755 $(PROGRAM) xpi/psm
+ifneq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) -m 755 $(DIST)/bin/regxpcom $(PLATFORM)
+	$(NSINSTALL) -m 755 start-regxpcom $(PLATFORM)
+	cd $(PLATFORM); start-regxpcom
+	$(NSINSTALL) -m 644 $(PLATFORM)/component.reg xpi/psm
+endif
+	$(NSINSTALL) -m 666 $(PLATFORM)/components/*.* xpi/psm/components
 	cp $(INSTALL_JS) xpi/install.js
 	cd xpi; zip -T -r ../$(PLATFORM)/psm.xpi psm install.js
 	rm -rf xpi
