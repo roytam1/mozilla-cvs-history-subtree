@@ -25,6 +25,7 @@
  */
 
 #include "ldaptool.h"
+#include "fileurl.h"
 
 #ifdef LDAP_TOOL_ARGPIN
 #include "argpin.h"
@@ -34,7 +35,6 @@
 #include <nspr.h>	/* for PR_Cleanup() */
 #include <stdlib.h>
 #include <time.h>	/* for time() and ctime() */
-
 
 static LDAP_REBINDPROC_CALLBACK get_rebind_credentials;
 static void print_library_info( const LDAPAPIInfo *aip, FILE *fp );
@@ -107,8 +107,6 @@ ldaptool_common_usage( int two_hosts )
 #endif /* NET_SSL */
     fprintf( stderr, "    -D binddn\tbind dn\n" );
     fprintf( stderr, "    -w passwd\tbind passwd (for simple authentication)\n" );
-    fprintf( stderr, "    -w - \tprompt for bind passwd (for simple authentication)\n" );
-    fprintf( stderr, "    -j file\tread bind passwd from 'file' (for simple authentication)\n" );
     fprintf( stderr, "    -E\t\task server to expose (report) bind identity\n" );
 #ifdef LDAP_DEBUG
     fprintf( stderr, "    -d level\tset LDAP debugging level to `level'\n" );
@@ -134,6 +132,8 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -Y proxyid\tproxied authorization id,\n" );
     fprintf( stderr, "              \te.g, dn:uid=bjensen,dc=example,dc=com\n" );
     fprintf( stderr, "    -H\t\tdisplay usage information\n" );
+    fprintf( stderr, "    -J oid[:criticality[:value|::b64value|:<fileurl]]\n" );
+    fprintf( stderr, "\t\tcriticality is a boolean value (default is false)\n" );
 }
 
 /* globals */
@@ -145,13 +145,11 @@ int			ldaptool_port2 = LDAP_PORT;
 int			ldaptool_verbose = 0;
 int			ldaptool_not = 0;
 FILE			*ldaptool_fp = NULL;
-FILE			*password_fp = NULL;
 char			*ldaptool_progname = "";
 char			*ldaptool_nls_lang = NULL;
 char                    *proxyauth_id = NULL;
 int			proxyauth_version = 2;	/* use newer proxy control */
-LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS]
-				= {NULL,NULL,NULL,NULL,NULL,NULL} ;
+LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS];
 #ifdef LDAP_DEBUG
 int			ldaptool_dbg_lvl = 0;
 #endif /* LDAP_DEBUG */
@@ -167,7 +165,6 @@ static int		lib_version_mismatch_is_fatal = 1;
 static int		ldversion = -1;	/* use default */
 static int		refhoplim = LDAPTOOL_DEFREFHOPLIMIT;
 static int		send_manage_dsait_ctrl = 0;
-static int		prompt_password = 0;
 
 #ifndef NO_LIBLCACHE
 static char		*cache_config_file = NULL;
@@ -177,8 +174,6 @@ static int		secure = 0;
 static int		isZ = 0;
 static int		isN = 0;
 static int		isW = 0;
-static int		isw = 0;
-static int		isj = 0;
 static char		*ssl_certdbpath = LDAPTOOL_DEFCERTDBPATH;
 static char		*ssl_keydbpath = LDAPTOOL_DEFKEYDBPATH;
 /*
@@ -230,6 +225,9 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
     extern char	*optarg;
     extern int	optind;
     LDAPAPIInfo	ldai;
+    char *ctrl_arg, *ctrl_oid=NULL, *ctrl_value=NULL;
+    int ctrl_criticality=0, vlen;
+    LDAPControl *ldctrl;
 
     /*
      * Set program name global based on argv[0].
@@ -314,7 +312,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	extra_opts = "";
     }
 
-    common_opts = "nvEMRHZ0d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:";
+    common_opts = "nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
 
     /* note: optstring must include room for liblcache "C:" option */
     if (( optstring = (char *) malloc( strlen( extra_opts ) + strlen( common_opts )
@@ -468,19 +466,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
 #endif /* NET_SSL */
 	case 'w':	/* bind password */
-	    isw = 1;
-	    if ( optarg[0] == '-' && optarg[1] == '\0' )
-	    	prompt_password = 1;
-	    else
-	        passwd = strdup( optarg );
-	    break;
-	case 'j':	/* bind password from file */
-	    isj = 1;
-	    if ((password_fp = fopen( optarg, "r" )) == NULL ) {
-		    fprintf(stderr, "%s: Unable to open '%s' file\n",
-			ldaptool_progname, optarg);
-		    exit( LDAP_PARAM_ERROR );
-	    }
+	    passwd = strdup( optarg );
 	    break;
 	case 'O':	/* referral hop limit */
 	    refhoplim = atoi( optarg );
@@ -531,6 +517,31 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
  	case '0':	/* zero -- override LDAP library version check */
 	    break;	/* already handled above */
+	case 'J':
+	    if ( (ctrl_arg = strdup( optarg)) == NULL ) {
+		perror ("strdup");
+		exit (LDAP_NO_MEMORY);
+	    }
+	    if (ldaptool_parse_ctrl_arg(ctrl_arg, ':', &ctrl_oid,
+		    &ctrl_criticality, &ctrl_value, &vlen)) {
+		return (-1);
+	    }
+	    ldctrl = calloc(1,sizeof(LDAPControl));
+	    if (ctrl_value) {
+		rc = ldaptool_berval_from_ldif_value( ctrl_value, 
+			vlen, &(ldctrl->ldctl_value),
+			1 /* recognize file URLs */, 
+			0 /* always try file */,
+			1 /* report errors */ );
+		if ((rc = ldaptool_fileurlerr2ldaperr( rc )) != LDAP_SUCCESS) {
+		    fprintf( stderr, "Unable to parse %s\n", ctrl_value);
+		    return (-1);
+		}
+	    }
+	    ldctrl->ldctl_oid = ctrl_oid;
+	    ldctrl->ldctl_iscritical = ctrl_criticality;
+	    ldaptool_add_control_to_array(ldctrl, ldaptool_request_ctrls);
+	    break;
 	default:
 	    (*extra_opt_callback)( i, optarg );
 	}
@@ -543,71 +554,6 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		return (-1);
 	}
     }
-
-    if ( isj && isw ) {
-	fprintf(stderr, "%s: -j and -w options cannot be specified simultaneously\n", ldaptool_progname );
-	return (-1);
-    }
-
-    if (prompt_password != 0) {
-	char *password_string = "Enter bind password: ";
-	char pbuf[257];
-
-#if defined(_WIN32)
-	fputs(password_string,stdout);
-	fflush(stdout);
-	if (fgets(pbuf,256,stdin) == NULL) {
-	    passwd = NULL;
-	} else {
-	    char *tmp;
-
-	    tmp = strchr(pbuf,'\n');
-	    if (tmp) *tmp = '\0';
-	    tmp = strchr(pbuf,'\r');
-	    if (tmp) *tmp = '\0';
-	    passwd = pbuf;
-	}
-#else
-#if defined(SOLARIS)
-	/* 256 characters on Solaris */
-	passwd = getpassphrase(password_string);
-#else
-	/* limited to 16 chars on Tru64, 32 on AIX */
-	passwd = getpass(password_string);
-#endif
-#endif
-
-    } else if (password_fp != NULL) {
-            char *linep = NULL;
-            int   increment = 0;
-            int   c, index;
-
-            /* allocate initial block of memory */
-            if ((linep = (char *)malloc(BUFSIZ)) == NULL) {
-                fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
-                exit( LDAP_NO_MEMORY );
-            }
-            increment++;
-            index = 0;
-            while ((c = fgetc( password_fp )) != '\n' && c != EOF) {
-
-                /* check if we will overflow the buffer */
-                if ((c != EOF) && (index == ((increment * BUFSIZ) -1))) {
-
-                    /* if we did, add another BUFSIZ worth of bytes */
-                    if ((linep = (char *)
-                        realloc(linep, (increment + 1) * BUFSIZ)) == NULL) {
-                	fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
-                        exit( LDAP_NO_MEMORY );
-                    }
-                    increment++;
-                }
-                linep[index++] = c;
-            }
-            linep[index] = '\0';
-	    passwd = linep;
-    }
-
     /*
      * If verbose (-v) flag was passed in, display program name and start time.
      * If the verbose flag was passed at least twice (-vv), also display
@@ -1477,6 +1423,117 @@ ldaptool_reset_control_array( LDAPControl **array )
     }
 }
 
+/*
+ * Parse the optarg from -J option of ldapsearch
+ * and within LDIFfile for ldapmodify. Take ctrl_arg 
+ * (the whole string) and divide it into oid, criticality
+ * and value. This function breaks down original ctrl_arg
+ * with '\0' in places. Also, calculate length of valuestring.
+ */
+int
+ldaptool_parse_ctrl_arg(char *ctrl_arg, char sep,
+		char **ctrl_oid, int *ctrl_criticality,
+		char **ctrl_value, int *vlen)
+{
+    char *s, *p, *d;
+    int strict;
+
+    /* Initialize passed variables with default values */
+    *ctrl_oid = *ctrl_value = NULL;
+    *ctrl_criticality = 0;
+    *vlen = 0;
+
+    strict = (sep == ' ' ? 1 : 0);
+    if(!(s=strchr(ctrl_arg, sep))) {
+	/* Possible values of ctrl_arg are 
+	 * oid[:value|::b64value|:<fileurl] within LDIF, i.e. sep=' '
+	 * oid from command line option, i.e. sep=':'
+	 */
+	if (sep == ' ') {
+	    if (!(s=strchr(ctrl_arg, ':'))) {
+		*ctrl_oid = ctrl_arg;
+	    }
+	    else {
+		/* ctrl_arg is of oid:[value|:b64value|<fileurl]
+		 * form in the LDIF record. So, grab the oid and then
+		 * jump to continue the parsing of ctrl_arg.
+		 * 's' is pointing just after oid ends.
+		 */
+		*s++ = '\0';
+		*ctrl_oid = ctrl_arg;
+		return (calculate_ctrl_value( s, ctrl_value, vlen ));
+	    }
+	} else {
+		/* oid - from command line option, i.e. sep=':' */
+		*ctrl_oid = ctrl_arg;
+	}
+    }
+    else {
+	/* Possible values of ctrl_arg are
+	 * oid:criticality[:value|::b64value|:<fileurl] - command line
+	 * oid criticality[:value|::b64value|:<fileurl] - LDIF
+	 * And 's' is pointing just after oid ends.
+	 */
+
+	if (*(s+1) == '\0') {
+	    fprintf( stderr, "missing value\n" );
+	    return( -1 );
+	}
+	*s = '\0';
+	*ctrl_oid = ctrl_arg;
+	p = ++s;
+	if(!(s=strchr(p, ':'))) {
+	    if ( (*ctrl_criticality = ldaptool_boolean_str2value(p, strict))
+			== -1 ) {
+		fprintf( stderr, "Invalid criticality value\n" );
+		return( -1 );
+	    }
+	}
+	else {
+	    if (*(s+1) == '\0') { 
+	        fprintf( stderr, "missing value\n" );
+	        return ( -1 );
+	    }
+	    *s++ = '\0';
+            if ( (*ctrl_criticality = ldaptool_boolean_str2value(p, strict))
+			== -1 ) {
+		fprintf( stderr, "Invalid criticality value\n" );
+		return ( -1 );
+	    }
+	    return (calculate_ctrl_value( s, ctrl_value, vlen ));
+	}
+    }
+}
+
+/*
+ * This function calculates control value and its length. *value can
+ * be pointing to plain value, ":b64encoded value" or "<fileurl".
+ */
+static int
+calculate_ctrl_value( const char *value,
+	char **ctrl_value, int *vlen)
+{
+    int b64;
+    if (*value == ':') {
+	value++;
+	b64 = 1;
+    } else {
+	b64 = 0;
+    }
+    *ctrl_value = value;
+
+    if ( b64 ) {
+	if (( *vlen = ldif_base64_decode( value, (unsigned char *)value ))
+		< 0 ) {
+	    fprintf( stderr, 
+		"Unable to decode base64 control value \"%s\"\n", value);
+	    return( -1 );
+	}
+    } else {
+	*vlen = (int)strlen(*ctrl_value);
+    }
+    return( 0 );
+}
 
 /*
  * callback function for LDAP bind credentials
@@ -2006,16 +2063,32 @@ ldaptool_fortezza_err2string( int err )
 #endif /* NET_SSL */
 
 int
-ldaptool_boolean_str2value ( const char *ptr )
+ldaptool_boolean_str2value ( const char *ptr, int strict )
 {
-   if ( !(strcasecmp(ptr, "true")) ||
-	!(strcasecmp(ptr, "t")) ||
-	!(strcmp(ptr, "1")) )
-	return (1);
-   else if ( !(strcasecmp(ptr, "false")) ||
+    if (strict) {
+	if ( !(strcasecmp(ptr, "true"))) {
+	    return 1;
+	}
+	else if ( !(strcasecmp(ptr, "false"))) {
+	    return 0;
+	}
+	else {
+	    return (-1);
+	}
+    }
+    else {
+	if ( !(strcasecmp(ptr, "true")) ||
+	     !(strcasecmp(ptr, "t")) ||
+	     !(strcmp(ptr, "1")) ) {
+		return (1);
+	}
+	else if ( !(strcasecmp(ptr, "false")) ||
 	     !(strcasecmp(ptr, "f")) ||
-	     !(strcmp(ptr, "0")) )
-	return (0);
-   else 
-	return (-1);
+	     !(strcmp(ptr, "0")) ) {
+	    	return (0);
+	}
+	else { 
+	    return (-1);
+	}	
+    }
 } 

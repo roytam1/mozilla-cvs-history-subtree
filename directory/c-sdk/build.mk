@@ -38,7 +38,7 @@ OS_VERS         := $(shell uname -r)
 ifeq ($(OS_VERS),5.8)
 ifneq ($(OS_TEST),i86pc)
 NSPR_RELEASE_TAG=v4.1.2/forte6
-NSS_RELEASE_TAG	=NSS_3_3_RTM/forte6
+NSS_RELEASE_TAG	=NSS_3_3_RTM/forte6.2
 SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM/forte6
 endif
 endif

@@ -139,6 +139,7 @@ main( int argc, char **argv )
 #endif
 
 
+    ldaptool_reset_control_array( ldaptool_request_ctrls );
     optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:C:",
         0, options_callback );
 
@@ -453,13 +454,13 @@ options_callback( int option, char *optarg )
 	    usage();
 	}
 	if (ps_ptr=strtok(NULL, ":")) {
-	    if ( (changesonly = ldaptool_boolean_str2value(ps_ptr)) == -1) {
+	    if ( (changesonly = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
 	}    
 	if (ps_ptr=strtok(NULL, ":")) {
-	    if ( (return_echg_ctls = ldaptool_boolean_str2value(ps_ptr)) == -1) {
+	    if ( (return_echg_ctls = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
@@ -683,7 +684,6 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
 
-    ldaptool_reset_control_array( ldaptool_request_ctrls );
 
     matches = 0;
     first = 1;

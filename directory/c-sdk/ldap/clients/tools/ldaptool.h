@@ -110,7 +110,7 @@ extern "C" {
 #define LDAPTOOL_SAFEREALLOC( ptr, size )  ( ptr == NULL ? malloc( size ) : \
 						realloc( ptr, size ))
 /* this defines the max number of control requests for the tools */
-#define CONTROL_REQUESTS 6
+#define CONTROL_REQUESTS 50
 
 /*
  * globals (defined in common.c)
@@ -167,7 +167,10 @@ int ldaptool_rename_s(  LDAP *ld, const char *dn, const char *newrdn,
 int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
 	    const struct berval *bvalue, LDAPControl **serverctrls,
 	    LDAPControl **clientctrls, char *msg );
-int ldaptool_boolean_str2value ( const char *s );
+int ldaptool_boolean_str2value ( const char *s, int strict );
+int ldaptool_parse_ctrl_arg ( char *ctrl_arg, char sep, char **ctrl_oid, 
+	    int *ctrl_criticality, char **ctrl_value, int *vlen);
+
 
 #ifdef __cplusplus
 }

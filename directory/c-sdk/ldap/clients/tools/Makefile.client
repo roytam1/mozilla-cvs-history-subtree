@@ -73,33 +73,30 @@ LIBDIR		= $(OBJDIR_NAME)/lib
 
 ifeq ($(OS_ARCH), WINNT)
 LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.obj)
-LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.obj) \
-			  $(addprefix $(OBJDEST)/, fileurl.obj) 
-LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.obj) \
-			  $(addprefix $(OBJDEST)/, fileurl.obj) 
-LDAPCOMPARE_OBJ    	= $(addprefix $(OBJDEST)/, ldapcompare.obj) \
-			  $(addprefix $(OBJDEST)/, fileurl.obj) 
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.obj)
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.obj)
+LDAPCOMPARE_OBJ    	= $(addprefix $(OBJDEST)/, ldapcompare.obj)
 LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.obj)
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.obj) \
-			  $(addprefix $(OBJDEST)/, convutf8.obj)
+			  $(addprefix $(OBJDEST)/, convutf8.obj) \
+			  $(addprefix $(OBJDEST)/, fileurl.obj) 
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.obj) \
 			   $(addprefix $(OBJDEST)/, ntuserpin.obj)
 endif
 else
 LDAPDELETE_OBJ		= $(addprefix $(OBJDEST)/, ldapdelete.o)
-LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o) \
-			  $(addprefix $(OBJDEST)/, fileurl.o) 
-LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o) \
-			  $(addprefix $(OBJDEST)/, fileurl.o) 
-LDAPCOMPARE_OBJ     = $(addprefix $(OBJDEST)/, ldapcompare.o) \
-			  $(addprefix $(OBJDEST)/, fileurl.o) 
+LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o)
+LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o)
+LDAPCOMPARE_OBJ         = $(addprefix $(OBJDEST)/, ldapcompare.o)
 LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
 ifeq ($(OS_ARCH), HP-UX)
-LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
 else
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
-			  $(addprefix $(OBJDEST)/, convutf8.o)
+			  $(addprefix $(OBJDEST)/, convutf8.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
 endif
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \

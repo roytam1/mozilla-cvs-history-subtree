@@ -302,8 +302,11 @@ static int
 process_ldif_rec( char *rbuf )
 {
     char	*line, *dn, *type, *value, *newrdn, *newparent, *p;
+    char	*ctrl_oid=NULL, *ctrl_value=NULL;
+    int 	ctrl_criticality=1;
+    LDAPControl *ldctrl;
     int		rc, linenum, vlen, modop, replicaport;
-    int		expect_modop, expect_sep, expect_ct, expect_newrdn;
+    int		expect_modop, expect_sep, expect_chgtype_or_control, expect_newrdn;
     int		expect_deleteoldrdn, expect_newparent, rename, moddn;
     int		deleteoldrdn, saw_replica, use_record, new_entry, delete_entry;
     int         got_all, got_value;
@@ -313,7 +316,7 @@ process_ldif_rec( char *rbuf )
 
     rc = got_all = saw_replica = delete_entry = expect_modop = 0;
     expect_deleteoldrdn = expect_newrdn = expect_newparent = expect_sep = 0;
-    expect_ct = linenum = got_value = rename = moddn = 0;
+    expect_chgtype_or_control = linenum = got_value = rename = moddn = 0;
     deleteoldrdn = 1;
     use_record = force;
     pmods = NULL;
@@ -365,7 +368,7 @@ evaluate_line:
 		    perror( "strdup" );
 		    exit( LDAP_NO_MEMORY );
 		}
-		expect_ct = 1;
+		expect_chgtype_or_control = 1;
 
 	    } else if ( strcasecmp( type, T_VERSION_STR ) == 0 ) {
 		ldif_version = atoi( value );
@@ -395,13 +398,37 @@ evaluate_line:
 	    continue; /* skip all lines until we see "dn:" */
 	}
 
-	if ( expect_ct ) {
-	    expect_ct = 0;
+	if ( expect_chgtype_or_control ) {
+	    expect_chgtype_or_control = 0;
 	    if ( !use_record && saw_replica ) {
 		printf( "%s: skipping change record for entry: %s\n\t(LDAP host/port does not match replica: lines)\n",
 			ldaptool_progname, dn );
 		free( dn );
 		return( 0 );
+	    }
+
+	    if ( strcasecmp( type, "control" ) == 0 ) {
+		value = strdup_and_trim( value );
+		if (ldaptool_parse_ctrl_arg(value, ' ', &ctrl_oid, 
+			&ctrl_criticality, &ctrl_value, &vlen)) {
+			    usage();
+		}
+        	ldctrl = calloc(1,sizeof(LDAPControl));
+        	if (ctrl_value) {
+        	    rc = ldaptool_berval_from_ldif_value( ctrl_value, vlen,
+			 &(ldctrl->ldctl_value),
+			 1 /* recognize file URLs */, 0 /* always try file */,
+            		 1 /* report errors */ );
+        	    if ((rc = ldaptool_fileurlerr2ldaperr( rc )) != LDAP_SUCCESS) {
+            		fprintf( stderr, "Unable to parse %s\n", ctrl_value);
+            		usage();
+        	    }
+        	}
+        	ldctrl->ldctl_oid = ctrl_oid;
+        	ldctrl->ldctl_iscritical = ctrl_criticality;
+        	ldaptool_add_control_to_array(ldctrl, ldaptool_request_ctrls);
+		expect_chgtype_or_control = 1;
+		continue;
 	    }
 
 	    if ( strcasecmp( type, T_CHANGETYPESTR ) == 0 ) {
