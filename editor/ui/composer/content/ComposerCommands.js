@@ -458,7 +458,7 @@ var nsPreviewCommand =
 
     // Check if we saved again just in case?
 	  if (DocumentHasBeenSaved())
-	    window.openDialog(getBrowserURL(), "EditorPreview", "chrome,all,dialog=no", window._content.location);
+	    window.openDialog(getBrowserURL(), "_blank", "chrome,all,dialog=no", window._content.location);
   }
 };
 
