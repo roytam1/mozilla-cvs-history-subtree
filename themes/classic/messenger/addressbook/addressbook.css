@@ -116,6 +116,22 @@
   -moz-image-region: rect(210px 92px 231px 69px) !important;
 }
 
+#button-more {
+  -moz-image-region: rect(210px 23px 231px 0px);
+}
+
+#button-more:hover {
+  -moz-image-region: rect(210px 46px 231px 23px);
+} 
+
+#button-more:hover:active {
+  -moz-image-region: rect(210px 69px 231px 46px);
+}
+
+#button-more[disabled] {
+  -moz-image-region: rect(210px 92px 231px 69px) !important;
+}
+
 /* ::::: sidebar header ::::: */
 
 sidebarheader {
