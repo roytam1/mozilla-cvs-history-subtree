@@ -84,7 +84,7 @@ $user=$ARGV[$[];
 #
 $conn = new Mozilla::LDAP::Conn($ld{host}, $ld{port}, $ld{bind},
 				$ld{pswd}, $ld{cert});
-die "Could't connect to LDAP server $ld{host}" unless $ld{conn};
+die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 
 #############################################################################
@@ -102,4 +102,4 @@ while($entry)
 #############################################################################
 # Close the connection.
 #
-$ld{conn}->close if $ld{conn};
+$conn->close if $conn;
