@@ -317,7 +317,6 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
   // by default, the unread only view should have all threads expanded.
 	if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) && m_sortType == nsMsgViewSortType::byThread)
 		ExpandAll();
-	m_sortValid = PR_TRUE;
   if (sortType != nsMsgViewSortType::byThread)
     ExpandAll(); // for now, expand all and do a flat sort.
 

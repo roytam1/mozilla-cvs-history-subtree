@@ -60,7 +60,7 @@ nsMsgDBView::nsMsgDBView()
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
-  m_sortValid = PR_TRUE;
+  m_sortValid = PR_FALSE;
   m_sortOrder = nsMsgViewSortOrder::none;
   m_viewFlags = nsMsgViewFlagsType::kNone;
   m_cachedMsgKey = nsMsgKey_None;
@@ -164,7 +164,8 @@ nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
 
 nsresult nsMsgDBView::SaveSelection(nsMsgKeyArray * aMsgKeyArray)
 {
-  NS_ENSURE_TRUE(mOutlinerSelection, NS_OK);
+  if (!mOutlinerSelection)
+    return NS_OK;
 
   // first, freeze selection.
   mOutlinerSelection->SetSelectEventsSuppressed(PR_TRUE);
@@ -186,7 +187,8 @@ nsresult nsMsgDBView::SaveSelection(nsMsgKeyArray * aMsgKeyArray)
 
 nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
 {
-  NS_ENSURE_TRUE(mOutlinerSelection, NS_OK);
+  if (!mOutlinerSelection)  // don't assert.
+    return NS_OK;
 
   // first, unfreeze selection.
   mOutlinerSelection->ClearSelection(); // clear the existing selection.
@@ -2266,6 +2268,7 @@ NS_IMETHODIMP nsMsgDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldPa
 
 NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
 {
+  ClearHdrCache();
   m_db = nsnull;
   return NS_OK;
 }
@@ -2276,6 +2279,11 @@ NS_IMETHODIMP nsMsgDBView::OnReadChanged(nsIDBChangeListener *instigator)
   return NS_OK;
 }
 
+void nsMsgDBView::ClearHdrCache()
+{
+  m_cachedHdr = nsnull;
+  m_cachedMsgKey = nsMsgKey_None;
+}
 
 void	nsMsgDBView::EnableChangeUpdates()
 {
@@ -2302,6 +2310,9 @@ void	nsMsgDBView::NoteChange(nsMsgViewIndex firstLineChanged, PRInt32 numChanged
       {
         mOutliner->RowsRemoved(firstLineChanged, numChanged);
       }
+    case nsMsgViewNotificationCode::all:
+      ClearHdrCache();
+      break;
     }
   }
 }

@@ -183,7 +183,7 @@ protected:
   nsresult ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState);
 
   void FreeAll(nsVoidArray *ptrs);
-  
+  void ClearHdrCache();
   nsMsgKeyArray m_keys;
   nsUInt32Array m_flags;
   nsUint8Array   m_levels;
