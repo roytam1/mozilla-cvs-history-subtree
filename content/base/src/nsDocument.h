@@ -50,7 +50,7 @@
 #include "nsIDOMDocumentView.h"
 #include "nsIDOMDocumentXBL.h"
 #include "nsIDOMNSDocument.h"
-#include "nsIDOMDocumentStyle.h"
+#include "nsIDOMNSDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
 #include "nsIDOMDocumentTraversal.h"
 #include "nsStubDocumentObserver.h"
@@ -182,7 +182,7 @@ class nsDocument : public nsIDocument,
                    public nsIDOMNSDocument,
                    public nsIDOMDocumentEvent,
                    public nsIDOM3DocumentEvent,
-                   public nsIDOMDocumentStyle,
+                   public nsIDOMNSDocumentStyle,
                    public nsIDOMDocumentView,
                    public nsIDOMDocumentRange,
                    public nsIDOMDocumentTraversal,
@@ -461,6 +461,9 @@ public:
 
   // nsIDOMDocumentStyle
   NS_DECL_NSIDOMDOCUMENTSTYLE
+
+  // nsIDOMNSDocumentStyle
+  NS_DECL_NSIDOMNSDOCUMENTSTYLE
 
   // nsIDOMDocumentView
   NS_DECL_NSIDOMDOCUMENTVIEW

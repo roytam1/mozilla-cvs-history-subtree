@@ -57,6 +57,7 @@ nsStyleSet::nsStyleSet()
     mDestroyedCount(0),
     mBatching(0),
     mInShutdown(PR_FALSE),
+    mAuthorStyleDisabled(PR_FALSE),
     mDirty(0)
 {
 }
@@ -123,6 +124,10 @@ nsresult
 nsStyleSet::GatherRuleProcessors(PRInt32 aType)
 {
   mRuleProcessors[aType].Clear();
+  if (mAuthorStyleDisabled && aType == eDocSheet) {
+    //don't regather if this level is disabled
+    return NS_OK;
+  }
   if (mSheets[aType].Count()) {
     RuleProcessorEnumData data(&mRuleProcessors[aType]);
     if (!mSheets[aType].EnumerateBackwards(EnumRuleProcessor, &data))
@@ -204,6 +209,24 @@ nsStyleSet::ReplaceSheets(sheetType aType,
     return GatherRuleProcessors(aType);
 
   mDirty |= 1 << aType;
+  return NS_OK;
+}
+
+PRBool
+nsStyleSet::GetAuthorStyleDisabled()
+{
+  return mAuthorStyleDisabled;
+}
+
+nsresult
+nsStyleSet::SetAuthorStyleDisabled(PRBool aStyleDisabled)
+{
+  if (aStyleDisabled == !mAuthorStyleDisabled) {
+    mAuthorStyleDisabled = aStyleDisabled;
+    BeginUpdate();
+    mDirty |= 1 << eDocSheet;
+    return EndUpdate();
+  }
   return NS_OK;
 }
 

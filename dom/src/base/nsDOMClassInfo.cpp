@@ -198,7 +198,7 @@
 #include "nsIDOMMouseEvent.h"
 #include "nsIDOMPopupBlockedEvent.h"
 #include "nsIDOMMutationEvent.h"
-#include "nsIDOMDocumentStyle.h"
+#include "nsIDOMNSDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
 #include "nsIDOMDocumentTraversal.h"
 #include "nsIDOMDocumentXBL.h"
@@ -1495,6 +1495,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocumentStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentRange)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentTraversal)
@@ -1601,6 +1602,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocumentStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentRange)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentTraversal)
@@ -2044,6 +2046,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentXBL)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocumentStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentRange)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentTraversal)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
@@ -2140,6 +2143,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocumentStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentRange)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentTraversal)
@@ -2190,6 +2194,7 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentView)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentXBL)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocumentStyle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentRange)
   DOM_CLASSINFO_MAP_END_WITH_XPATH
 

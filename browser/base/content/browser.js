@@ -5231,7 +5231,7 @@ function ShowWindowFromResource( node )
 #endif
 
 #ifdef SHOW_ALT_SS_UI
-/* Begin Page Theme Functions */
+/* Begin Page Style Functions */
 function getStyleSheetArray(frame)
 {
   var styleSheets = frame.document.styleSheets;
@@ -5254,19 +5254,17 @@ function getAllStyleSheets(frameset)
 
 function stylesheetFillPopup(menuPopup)
 {
-  var plainStyle = menuPopup.firstChild;
-  var normalStyle = plainStyle.nextSibling;
-  var sep = normalStyle.nextSibling;
+  var noStyle = menuPopup.firstChild;
+  var persistentOnly = noStyle.nextSibling;
+  var sep = persistentOnly.nextSibling;
   while (sep.nextSibling)
     menuPopup.removeChild(sep.nextSibling);
 
-  var noOptionalStyles = true;
   var styleSheets = getAllStyleSheets(window._content);
   var currentStyleSheets = [];
-
-  var allDisabled = true;
+  var styleDisabled = getMarkupDocumentViewer().authorStyleDisabled;
   var haveAltSheets = false;
-  var haveAnyNonAltSheets = false;
+  var altStyleSelected = false;
   
   for (var i = 0; i < styleSheets.length; ++i) {
     var currentStyleSheet = styleSheets[i];
@@ -5276,12 +5274,9 @@ function stylesheetFillPopup(menuPopup)
     if (media && (media.indexOf("screen") == -1) && (media.indexOf("all") == -1))
         continue;
         
-    if (!currentStyleSheet.disabled)
-        allDisabled = false;
-        
     if (currentStyleSheet.title) {
       if (!currentStyleSheet.disabled)
-        noOptionalStyles = false;
+        altStyleSelected = true;
 
       haveAltSheets = true;
       
@@ -5294,7 +5289,7 @@ function stylesheetFillPopup(menuPopup)
         menuItem.setAttribute("type", "radio");
         menuItem.setAttribute("label", currentStyleSheet.title);
         menuItem.setAttribute("data", currentStyleSheet.title);
-        menuItem.setAttribute("checked", !currentStyleSheet.disabled);
+        menuItem.setAttribute("checked", !currentStyleSheet.disabled && !styleDisabled);
         menuPopup.appendChild(menuItem);
         currentStyleSheets[currentStyleSheet.title] = menuItem;
       } else {
@@ -5302,15 +5297,13 @@ function stylesheetFillPopup(menuPopup)
           lastWithSameTitle.removeAttribute("checked");
       }
     }
-    else 
-       haveAnyNonAltSheets = true;
   }
   
-  normalStyle.setAttribute("checked", noOptionalStyles && (!haveAnyNonAltSheets || !allDisabled));
-  plainStyle.setAttribute("checked", allDisabled && haveAnyNonAltSheets);
-  
-  plainStyle.hidden = !haveAnyNonAltSheets;
+  noStyle.setAttribute("checked", styleDisabled);
+  persistentOnly.setAttribute("checked", !altStyleSelected && !styleDisabled);
+  persistentOnly.hidden = (window._content.document.preferredStylesheetSet) ? true : false;
   sep.hidden = !haveAltSheets;
+  return true;
 }
 
 function stylesheetInFrame(frame, title) {
@@ -5345,6 +5338,10 @@ function stylesheetSwitchAll(frameset, title) {
   for (var i = 0; i < frameset.frames.length; i++) {
     stylesheetSwitchAll(frameset.frames[i], title);
   }
+}
+
+function setStyleDisabled(disabled) {
+  getMarkupDocumentViewer().authorStyleDisabled = disabled;
 }
 
 function updatePageTheme(evt)

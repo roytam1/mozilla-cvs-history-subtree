@@ -167,6 +167,10 @@ class nsStyleSet
   nsresult ReplaceSheets(sheetType aType,
                          const nsCOMArray<nsIStyleSheet> &aNewSheets);
 
+  //Enable/Disable entire author style level (Doc & PresHint levels)
+  PRBool GetAuthorStyleDisabled();
+  nsresult SetAuthorStyleDisabled(PRBool aStyleDisabled);
+
   PRInt32 SheetCount(sheetType aType) const {
     return mSheets[aType].Count();
   }
@@ -238,6 +242,7 @@ class nsStyleSet
   PRUint16 mBatching;
 
   unsigned mInShutdown : 1;
+  unsigned mAuthorStyleDisabled: 1;
   unsigned mDirty : 7;  // one dirty bit is used per sheet type
 };
 

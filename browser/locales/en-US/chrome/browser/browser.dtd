@@ -320,13 +320,15 @@
 <!ENTITY zoomWindow.label "Zoom">
 <!ENTITY windowMenu.label "Window">
 
-<!ENTITY pageThemeButton.label "Page Themes">
-<!ENTITY pageThemeNoTheme.label "No Theme">
-<!ENTITY pageThemeNoTheme.accesskey "n">
-<!ENTITY pageThemePersistentOnly.label "Basic Theme">
-<!ENTITY pageThemePersistentOnly.accesskey "b">
+<!ENTITY pageStyleMenu.label "Page Style">
+<!ENTITY pageStyleMenu.accesskey "y">
+<!ENTITY pageStyleButton.label "Page Styles">
+<!ENTITY pageStyleNoStyle.label "No Style">
+<!ENTITY pageStyleNoStyle.accesskey "n">
+<!ENTITY pageStylePersistentOnly.label "Basic Page Style">
+<!ENTITY pageStylePersistentOnly.accesskey "b">
 
-<!ENTITY pageThemeIcon.tooltip            "Switch to an alternate stylesheet">
+<!ENTITY pageStyleIcon.tooltip             "Switch to an alternate page style">
 <!ENTITY pageReportIcon.tooltip            "Change popup blocking settings for this web site">
 
 <!ENTITY find.label "Find:">

@@ -1750,20 +1750,22 @@ function getAllStyleSheets(frameset)
 
 function stylesheetFillPopup(menuPopup)
 {
-  var itemNoOptStyles = menuPopup.firstChild;
-  while (itemNoOptStyles.nextSibling)
-    menuPopup.removeChild(itemNoOptStyles.nextSibling);
+  /* Clear menu */
+  var itemPersistentOnly = menuPopup.firstChild.nextSibling;
+  while (itemPersistentOnly.nextSibling)
+    menuPopup.removeChild(itemPersistentOnly.nextSibling);
 
-  var noOptionalStyles = true;
   var styleSheets = getAllStyleSheets(window._content);
   var currentStyleSheets = [];
+  var styleDisabled = getMarkupDocumentViewer().authorStyleDisabled;
+  var altStyleSelected = false;
 
   for (var i = 0; i < styleSheets.length; ++i) {
     var currentStyleSheet = styleSheets[i];
 
     if (currentStyleSheet.title) {
       if (!currentStyleSheet.disabled)
-        noOptionalStyles = false;
+        altStyleSelected = true;
 
       var lastWithSameTitle = null;
       if (currentStyleSheet.title in currentStyleSheets)
@@ -1774,7 +1776,7 @@ function stylesheetFillPopup(menuPopup)
         menuItem.setAttribute("type", "radio");
         menuItem.setAttribute("label", currentStyleSheet.title);
         menuItem.setAttribute("data", currentStyleSheet.title);
-        menuItem.setAttribute("checked", !currentStyleSheet.disabled);
+        menuItem.setAttribute("checked", !currentStyleSheet.disabled && !styleDisabled);
         menuPopup.appendChild(menuItem);
         currentStyleSheets[currentStyleSheet.title] = menuItem;
       } else {
@@ -1783,7 +1785,9 @@ function stylesheetFillPopup(menuPopup)
       }
     }
   }
-  itemNoOptStyles.setAttribute("checked", noOptionalStyles);
+  menuPopup.firstChild.setAttribute("checked", styleDisabled);
+  itemPersistentOnly.setAttribute("checked", !altStyleSelected && !styleDisabled);
+  itemPersistentOnly.hidden = (window._content.document.preferredStylesheetSet) ? true : false;
 }
 
 function stylesheetInFrame(frame, title) {
@@ -1816,6 +1820,10 @@ function stylesheetSwitchAll(frameset, title) {
   for (var i = 0; i < frameset.frames.length; i++) {
     stylesheetSwitchAll(frameset.frames[i], title);
   }
+}
+
+function setStyleDisabled(disabled) {
+  getMarkupDocumentViewer().authorStyleDisabled = disabled;
 }
 
 function applyTheme(themeName)
