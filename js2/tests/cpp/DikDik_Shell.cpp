@@ -184,10 +184,6 @@ static void readEvalPrint(Context *cx, FILE *in)
     stdOut << '\n';
 }
 
-} /* namespace Shell */
-} /* namespace JavaScript */
-
-
 bool processArgs(Context *cx, int argc, char **argv)
 {
     bool doInteractive = true;
@@ -196,7 +192,11 @@ bool processArgs(Context *cx, int argc, char **argv)
             switch (argv[i][1]) {
             case 'f':
                 {
-                    cx->readEvalFile(JavaScript::widenCString(argv[++i]));
+                    try {
+                        cx->readEvalFile(JavaScript::widenCString(argv[++i]));
+                    } catch (Exception &e) {
+                            stdOut << '\n' << e.fullMessage();
+                    }
                     doInteractive = false;
                 }
                 break;
@@ -206,6 +206,9 @@ bool processArgs(Context *cx, int argc, char **argv)
     }
     return doInteractive;
 }
+
+} /* namespace Shell */
+} /* namespace JavaScript */
 
 
 int main(int argc, char **argv)

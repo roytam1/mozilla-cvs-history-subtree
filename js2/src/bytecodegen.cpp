@@ -1918,7 +1918,7 @@ BinaryOpEquals:
             addNumberRef(n->num);
             addOp(LoadConstantStringOp);
             addStringRef(n->numStr);
-            addOp(InvokeOp);
+            addOpAdjustDepth(InvokeOp, -2);
             addLong(2);
             addOp(NoThis);
         }

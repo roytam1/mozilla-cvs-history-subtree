@@ -2534,6 +2534,7 @@ void Context::initBuiltins()
     ClassDef builtInClasses[] =
     {
         { "Object",     Object_Constructor  },
+        { "Type",       NULL  },
         { "Number",     Number_Constructor  },
         { "String",     String_Constructor  },
         { "Array",      Array_Constructor   },
@@ -2546,12 +2547,14 @@ void Context::initBuiltins()
     Object_Type->mIsDynamic = true;
     // XXX aren't all the built-ins thus?
 
-    Number_Type  = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
-    String_Type  = new JSStringType(this, widenCString(builtInClasses[2].name), Object_Type);
-    Array_Type   = new JSArrayType(this, widenCString(builtInClasses[3].name), Object_Type);
-    Boolean_Type = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
-    Void_Type    = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
-    Unit_Type    = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
+    Type_Type = new JSType(this, widenCString(builtInClasses[1].name), Object_Type);
+
+    Number_Type  = new JSType(this, widenCString(builtInClasses[2].name), Object_Type);
+    String_Type  = new JSStringType(this, widenCString(builtInClasses[3].name), Object_Type);
+    Array_Type   = new JSArrayType(this, widenCString(builtInClasses[4].name), Object_Type);
+    Boolean_Type = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
+    Void_Type    = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
+    Unit_Type    = new JSType(this, widenCString(builtInClasses[7].name), Object_Type);
 
 
     String_Type->defineVariable(widenCString("fromCharCode"), NULL, String_Type, JSValue(new JSFunction(this, String_fromCharCode, String_Type)));
@@ -2585,10 +2588,12 @@ void Context::initBuiltins()
     (*mGlobal)->mPrototype = Object_Type->mPrototype;
 
     initClass(Number_Type,  Object_Type,  &builtInClasses[1], new PrototypeFunctions(&numberProtos[0]) );
-    initClass(String_Type,  Object_Type,  &builtInClasses[2], getStringProtos() );
-    initClass(Array_Type,   Object_Type,  &builtInClasses[3], getArrayProtos() );
-    initClass(Boolean_Type, Object_Type,  &builtInClasses[4], new PrototypeFunctions(&booleanProtos[0]) );
-    initClass(Void_Type,    Object_Type,  &builtInClasses[5], NULL);
+    initClass(Type_Type,    Object_Type,  &builtInClasses[2], NULL );
+    initClass(String_Type,  Object_Type,  &builtInClasses[3], getStringProtos() );
+    initClass(Array_Type,   Object_Type,  &builtInClasses[4], getArrayProtos() );
+    initClass(Boolean_Type, Object_Type,  &builtInClasses[5], new PrototypeFunctions(&booleanProtos[0]) );
+    initClass(Void_Type,    Object_Type,  &builtInClasses[6], NULL);
+    initClass(Unit_Type,    Object_Type,  &builtInClasses[7], NULL);
 }
 
 Context::Context(JSObject **global, World &world, Arena &a) 
@@ -2667,8 +2672,11 @@ void JSType::printSlotsNStuff(Formatter& f) const
         if (*i == NULL)
             f << "NULL\n";
         else
-            if (!(*i)->isNative())
-                f << *((*i)->getByteCode());
+            if (!(*i)->isNative()) {
+                ByteCodeModule *m = (*i)->getByteCode();
+                if (m)
+                    f << *m;
+            }
     }
     if (mStatics)
         f << "Statics :\n" << *mStatics;
