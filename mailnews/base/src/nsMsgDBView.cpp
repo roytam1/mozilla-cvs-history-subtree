@@ -2533,9 +2533,8 @@ nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
 #ifdef DEBUG_bienvenu
 	NS_ASSERTION((int) m_keys.GetSize() == m_flags.GetSize() && (int) m_keys.GetSize() == m_levels.GetSize(), "view arrays out of sync!");
 #endif
-  PRUint32 msgFlags;
-  msgHdr->GetFlags(&msgFlags);
-	if (msgFlags & MSG_FLAG_IGNORED && !GetShowingIgnored())
+  msgHdr->GetFlags(&flags);
+	if (flags & MSG_FLAG_IGNORED && !GetShowingIgnored())
 		return NS_OK;
 
   nsMsgKey msgKey, threadId;
@@ -2546,7 +2545,7 @@ nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
 
   // ### this isn't quite right, is it? Should be checking that our thread parent key is none?
 	if (threadParent == nsMsgKey_None) 
-		msgFlags |= MSG_VIEW_FLAG_ISTHREAD;
+		flags |= MSG_VIEW_FLAG_ISTHREAD;
 	nsMsgViewIndex insertIndex = GetInsertIndex(msgHdr);
 	if (insertIndex == nsMsgViewIndex_None)
 	{

@@ -28,7 +28,6 @@ XPIDLSRCS =								\
 		.\nsICopyMessageListener.idl	\
 		.\nsIFolder.idl					\
 		.\nsIFolderListener.idl			\
-		.\nsIMessage.idl				\
 		.\nsIMsgAccount.idl				\
 		.\nsIMsgAccountManager.idl		\
 		.\nsIMessengerMigrator.idl		\

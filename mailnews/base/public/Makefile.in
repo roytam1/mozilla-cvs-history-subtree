@@ -43,7 +43,6 @@ XPIDLSRCS	= \
 		nsIMessenger.idl \
 		nsIFolder.idl \
 		nsIFolderListener.idl \
-		nsIMessage.idl \
 		nsIMsgAccount.idl \
 		nsIMsgAccountManager.idl \
 		nsIMsgFolder.idl \
