@@ -1586,15 +1586,7 @@ var BookmarksUtils = {
       // into the default bookmark folder.
       BMSVC.addBookmarkImmediately(aURL, aTitle, kBMSVCIID.BOOKMARK_DEFAULT_TYPE, aCharset);
     }
-  },                                                                          
-
-  loadBookmarkBrowser: function (aEvent, aDS)
-  {
-    var rSource   = RDF.GetResource(aEvent.target.id);
-    var selection = BookmarksUtils.getSelectionFromResource(rSource);
-    BookmarksCommand.openBookmark(selection, "current", aDS)
   }
-
 }
 
 

@@ -256,6 +256,13 @@ var BookmarksMenu = {
       var commandNode = document.getElementById("cmd_bm_copy");
       commandNode.setAttribute("disabled", "true");
     }
+  },
+
+  loadBookmark: function (aTarget, aDS)
+  {
+    var rSource   = RDF.GetResource(aTarget.id);
+    var selection = BookmarksUtils.getSelectionFromResource(rSource);
+    BookmarksCommand.openBookmark(selection, "current", aDS)
   }
 }
 
