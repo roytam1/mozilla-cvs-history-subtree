@@ -6825,7 +6825,7 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
                                          nsFrameItems&            aFrameItems)
 {
 #ifdef DEBUG
-  printf("nsCSSFrameConstructor::ConstructXTFFrame\n");
+//  printf("nsCSSFrameConstructor::ConstructXTFFrame\n");
 #endif
   nsresult  rv = NS_OK;
   PRBool isAbsolutelyPositioned = PR_FALSE;
