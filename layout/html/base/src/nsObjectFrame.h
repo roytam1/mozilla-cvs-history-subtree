@@ -139,6 +139,7 @@ protected:
   PRBool IsHidden() const;
 
   nsresult NotifyContentObjectWrapper();
+  nsresult GetWindowOriginInPixels(nsIPresContext * aPresContext, PRBool aWindoless, nsPoint* aOrigin);
 
 private:
   nsPluginInstanceOwner *mInstanceOwner;
