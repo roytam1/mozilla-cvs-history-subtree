@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -353,7 +353,6 @@ public:
     NS_IMETHOD_(NPPluginType)
     GetMode(void);
 
-#ifdef OJI
     // Get a ptr to the paired list of attribute names and values,
     // returns the length of the array.
     //
@@ -390,19 +389,6 @@ public:
     // returns a NPTagType.
     NS_IMETHOD_(NPTagType) 
     GetTagType(void);
-#else
-     // (Corresponds to NPP_New's argc argument.)
-     NS_IMETHOD_(PRUint16)
-     GetArgCount(void);
-  
-     // (Corresponds to NPP_New's argn argument.)
-     NS_IMETHOD_(const char**)
-     GetArgNames(void);
-  
-     // (Corresponds to NPP_New's argv argument.)
-     NS_IMETHOD_(const char**)
-     GetArgValues(void);
-#endif /* OJI */
 
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void);
