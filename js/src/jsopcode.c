@@ -690,7 +690,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 {
     JSContext *cx;
     JSPrinter *jp;
-    jsbytecode *endpc, *done;
+    jsbytecode *endpc, *done, *forelem_tgt;
     ptrdiff_t len, todo, oplen, cond, next, tail;
     JSOp op, lastop, saveop;
     JSCodeSpec *cs, *topcs;
@@ -1231,8 +1231,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 	      case JSOP_FORELEM:
 		rval = POP_STR();
-		/* FALL THROUGH */
-	      case JSOP_FORELEM2:
 		xval = POP_STR();
 		atom = NULL;
 		lval = POP_STR();
@@ -1243,6 +1241,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		LOCAL_ASSERT(*pc == JSOP_IFEQ);
 		oplen = js_CodeSpec[JSOP_IFEQ].length;
 		len = GET_JUMP_OFFSET(pc);
+              do_forinbody:
 		js_printf(jp, "\tfor (%s%s",
 			  (sn && SN_TYPE(sn) == SRC_VAR) ? "var " : "", lval);
 		if (atom)
@@ -1259,6 +1258,32 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		js_printf(jp, "\t}\n");
 		todo = -2;
 		break;
+
+              case JSOP_FORELEM2:
+		pc++;
+		LOCAL_ASSERT(*pc == JSOP_IFEQ);
+		len = js_CodeSpec[JSOP_IFEQ].length;
+                /*
+                    this gets a little wacky. Only the length of the body of
+                    the for statement PLUS the indexing expression is known
+                    here, so we pass it to the enumelem decompilation via this
+                    local. Hopefully no intervening code can mess up the value?
+                */
+		forelem_tgt = pc + GET_JUMP_OFFSET(pc);
+                break;
+
+              case JSOP_ENUMELEM:
+                /*
+                    the stack has the object and the index expression.
+                    The for body length can now be adjusted to account for
+                    the length of the indexing epxression.
+                */
+                atom = NULL;
+		xval = POP_STR();
+		lval = POP_STR();
+                rval = OFF2STR(&ss->sprinter, ss->offsets[ss->top-1]);
+                len = forelem_tgt - pc;
+                goto do_forinbody;
 
 	      case JSOP_DUP2:
 		rval = OFF2STR(&ss->sprinter, ss->offsets[ss->top-2]);
