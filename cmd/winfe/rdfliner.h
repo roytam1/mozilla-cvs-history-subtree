@@ -153,6 +153,7 @@ public:
 	int GetSortColumn() { return m_nSortColumn; }
 	int GetSortType() { return m_nSortType; }
 	BOOL IsPopup() { return m_bIsPopup; }
+	BOOL InNavigationMode() { return m_bInNavigationMode; }
 
 	// Setters
 	void SetNavigationMode(BOOL inMode);

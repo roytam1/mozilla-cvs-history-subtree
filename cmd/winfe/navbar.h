@@ -23,33 +23,11 @@
 #include "usertlbr.h"
 
 #define NAVBAR_HEIGHT 23
-#define NAVBAR_CLOSEBOX	15
+#define NAVBAR_CLOSEBOX	16
 
-class CSelectorButton;
-
-/*  This class may yet be of use.  For now comment it out.
-class CNavMenuButton : public CRDFToolbarButton
-{
-protected:
-	HT_View m_HTView; // Pointer to HT_View if one exists.
-	
-public:
-	CNavMenuButton();
-
-	void UpdateView(HT_View v);
-	void UpdateButtonText(CRect target);
-
-	afx_msg LRESULT OnDragMenuOpen(WPARAM wParam, LPARAM lParam);
-	afx_msg BOOL OnCommand(UINT wParam, LONG lParam);
-
-	DECLARE_MESSAGE_MAP()
-};
-*/
 
 class CNavTitleBar : public CWnd, public CCustomImageObject
 {
-	//CNavMenuButton* m_pMenuButton;	// Pointer to the button
-	CSelectorButton* m_pSelectorButton; // Selector button
 	BOOL m_bHasFocus;	// Determines what colors to use for the caption
 	CPoint m_PointHit;	// MouseDown tracking
 	CString titleText;	// Name of the current workspace
@@ -65,7 +43,6 @@ public:
 	~CNavTitleBar();
 
 	void SetHTView(HT_View theView);
-	void UpdateView(CSelectorButton* pButton, HT_View view); 
 	void NotifyFocus(BOOL hasFocus) { m_bHasFocus = hasFocus; Invalidate(); }
 
 	void LoadComplete(HT_Resource r) { Invalidate(); }

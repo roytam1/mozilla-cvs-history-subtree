@@ -1005,7 +1005,9 @@ void CRDFOutliner::OnSelDblClk(int iLine)
 			if (IsPopup())
 			{	
 				// Destroy the entire tree.
-				GetParentFrame()->PostMessage(WM_CLOSE);
+				CFrameWnd* pFrameWnd = GetParentFrame();
+				if (pFrameWnd->IsKindOf(RUNTIME_CLASS(CNSNavFrame)))
+					((CNSNavFrame*)pFrameWnd)->DeleteNavCenter();
 			}
 		}
 	}
@@ -1674,15 +1676,16 @@ void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
 			m_NavTitleBar->NotifyFocus(TRUE);
 		else
 		{
-			CFrameWnd* pFrame = GetParentFrame();
-			if (pFrame && !pFrame->IsChild(pWnd))
+			CFrameWnd* pFrameWnd = GetParentFrame();
+			if (pFrameWnd && !pFrameWnd->IsChild(pWnd))
 			{
 				// Invalidate for a redraw
 				m_NavTitleBar->NotifyFocus(FALSE);
 				if (IsPopup())
 				{		
-					// Need to destroy the window
-					pFrame->PostMessage(WM_CLOSE);
+					// Destroy the window.
+					if (pFrameWnd->IsKindOf(RUNTIME_CLASS(CNSNavFrame)))
+						((CNSNavFrame*)pFrameWnd)->DeleteNavCenter();
 				}
 			}
 		}
@@ -1763,6 +1766,8 @@ void CRDFOutliner::OnPaint()
 		// Options for navigation mode.
 		m_ForegroundColor = RGB(255,255,255);
 		m_BackgroundColor = RGB(0,0,0);
+		m_SortBackgroundColor = RGB(0,0,0);
+		m_SortForegroundColor = RGB(255,255,255);
 		m_bHasPipes = FALSE;
 		m_bDrawDividers = FALSE;
 		m_bUseSingleClick = TRUE;
@@ -1772,6 +1777,8 @@ void CRDFOutliner::OnPaint()
 		// Options for management mode.
 		m_ForegroundColor = RGB(0,0,0);
 		m_BackgroundColor = RGB(240,240,240);
+		m_SortBackgroundColor = RGB(224,224,224);
+		m_SortForegroundColor = RGB(0,0,0);
 		m_bHasPipes = TRUE;
 		m_bDrawDividers = TRUE;
 		m_bUseSingleClick = FALSE;
@@ -1799,14 +1806,12 @@ void CRDFOutliner::OnPaint()
 	HT_GetNodeData(top, gNavCenter->sortColumnFGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_SortForegroundColor);
-	else m_SortForegroundColor = RGB(0,0,0);
-
+	
 	// Sort background color
 	HT_GetNodeData(top, gNavCenter->sortColumnBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_SortBackgroundColor);
-	else m_SortBackgroundColor = RGB(224,224,224);
-
+	
 	// Compute the shadow/highlight colors for sorting and for normal modes.
 	Compute3DColors(m_SortBackgroundColor, m_SortHighlightColor, m_SortShadowColor);
 	Compute3DColors(m_BackgroundColor, m_HighlightColor, m_ShadowColor);

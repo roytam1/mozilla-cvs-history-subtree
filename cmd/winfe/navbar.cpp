@@ -31,125 +31,6 @@
 // The Nav Center vocab element
 extern "C" RDF_NCVocab gNavCenter;
 
-/* This class may yet be of use.  For now comment it out.
-BEGIN_MESSAGE_MAP(CNavMenuButton, CRDFToolbarButton)
-	ON_MESSAGE(NSDRAGMENUOPEN, OnDragMenuOpen) 
-END_MESSAGE_MAP()
-
-CNavMenuButton::CNavMenuButton()
-:m_HTView(NULL)
-{
-	m_bShouldShowRMMenu = FALSE;
-}
-
-LRESULT CNavMenuButton::OnDragMenuOpen(WPARAM wParam, LPARAM lParam)
-{
-// Set the focus to the tree view.
-	if (!m_HTView)
-		return 1;
-
-	CSelectorButton* pSelectorButton = (CSelectorButton*)HT_GetViewFEData(m_HTView);
-	if (!pSelectorButton)
-		return 1;
-
-	// Get the tree view and set focus to it.
-	CRDFContentView* pView = pSelectorButton->GetContentView();
-	if (pView)
-		pView->SetFocus();
-	
-// Set our drop menu's user data.
-	m_pCachedDropMenu = (CDropMenu *)lParam;  // Set our drop menu
-	
-	m_MenuCommandMap.Clear();
-	HT_View theView = m_HTView;
-	HT_Resource node = NULL;
-	node = HT_GetNextSelection(theView, node);
-	BOOL bg = (node == NULL);
-	
-	HT_Cursor theCursor = HT_NewContextualMenuCursor(theView, PR_FALSE, (PRBool)bg);
-	if (theCursor != NULL)
-	{
-		// We have a cursor. Attempt to iterate
-		HT_MenuCmd theCommand; 
-		while (HT_NextContextMenuItem(theCursor, &theCommand))
-		{
-			char* menuName = HT_GetMenuCmdName(theCommand);
-			if (theCommand == HT_CMD_SEPARATOR)
-				m_pCachedDropMenu->AppendMenu(MF_SEPARATOR, 0, TRUE, NULL, NULL);
-			else
-			{
-				// Add the command to our command map
-				CRDFMenuCommand* rdfCommand = new CRDFMenuCommand(menuName, theCommand);
-				int index = m_MenuCommandMap.AddCommand(rdfCommand);
-				m_pCachedDropMenu->AppendMenu(MF_STRING, index+FIRST_HT_MENU_ID, menuName, TRUE, NULL, NULL, NULL);
-			}
-		}
-		HT_DeleteCursor(theCursor);
-	}
-	return 1;
-}
-
-BOOL CNavMenuButton::OnCommand(UINT wParam, LONG lParam)
-{
-	BOOL bRtn = TRUE;
-	
-	if (wParam >= FIRST_HT_MENU_ID && wParam <= LAST_HT_MENU_ID)
-	{
-		// A selection was made from the context menu.
-		// Use the menu map to get the HT command value
-		CRDFMenuCommand* theCommand = (CRDFMenuCommand*)(m_MenuCommandMap.GetCommand((int)wParam-FIRST_HT_MENU_ID));
-		if (theCommand)
-		{
-			HT_MenuCmd htCommand = theCommand->GetHTCommand();
-			HT_DoMenuCmd(HT_GetPane(m_HTView), htCommand);
-		}
-		
-	}
-
-	return bRtn;
-}
-
-void CNavMenuButton::UpdateView(HT_View v)
-{
-	m_HTView = v;
-	if (v == NULL)
-		SetText("No View Selected.");
-	else SetText(HT_GetNodeName(HT_TopNode(m_HTView)));
-}
-
-void CNavMenuButton::UpdateButtonText(CRect rect)
-{
-	CString originalText = "No View Selected.";
-	if (m_HTView != NULL)
-		originalText = HT_GetNodeName(HT_TopNode(m_HTView));    
-	
-	int currCount = originalText.GetLength();
-        
-    // Start off at the maximal string
-    CString strTxt = originalText;
-
-	CSize theSize = GetButtonSizeFromChars(originalText, currCount);
-	int horExtent = theSize.cx;
-	int width = horExtent;
-	int cutoff = rect.right - NAVBAR_CLOSEBOX - 9;
-	if (width > cutoff && cutoff > 0)
-			width = cutoff;
-		
-	while (horExtent > width)
-	{
-		strTxt = originalText.Left(currCount-3) + "...";
-		theSize = GetButtonSizeFromChars(strTxt, currCount);
-		horExtent = theSize.cx;
-		currCount--;
-	}
-
-	SetTextWithoutResize(strTxt);
-
-	int height = GetRequiredButtonSize().cy;
-	MoveWindow(2, (rect.Height()-height)/2, width, height);
-}
-*/
-
 extern void DrawUpButton(HDC dc, CRect& rect);
 
 BEGIN_MESSAGE_MAP(CNavTitleBar, CWnd)
@@ -166,7 +47,7 @@ BEGIN_MESSAGE_MAP(CNavTitleBar, CWnd)
 END_MESSAGE_MAP()
 
 CNavTitleBar::CNavTitleBar()
-:m_pSelectorButton(NULL), m_bHasFocus(FALSE) // ,m_pMenuButton(NULL)
+:m_bHasFocus(FALSE) 
 {
 	m_pBackgroundImage = NULL;
 	m_View = NULL;
@@ -283,123 +164,25 @@ void CNavTitleBar::OnPaint( )
 
 	dc.SetTextColor(oldColor);
 	dc.SetBkMode(nOldBkMode);
-
-/*
-	// Draw the close box at the edge of the bar.
-	CNSNavFrame* navFrameParent = (CNSNavFrame*)GetParentFrame();
-	if (XP_IsNavCenterDocked(navFrameParent->GetHTPane()))
-	{*/
 	
-	int left = rect.right - NAVBAR_CLOSEBOX - 5;
-	int right = left + NAVBAR_CLOSEBOX;
 	int top = rect.top + (rect.Height() - NAVBAR_CLOSEBOX)/2;
-	int bottom = top + NAVBAR_CLOSEBOX;
+	int left = rect.right - (3*(NAVBAR_CLOSEBOX+1)) - 4;
 	
-	CRDFImage* pImage = LookupImage("http://www.shadowland.org/images/blah.gif", NULL);
-
-	int imageWidth = 16;
-	int imageHeight = 15;
-	COLORREF bkColor = m_BackgroundColor;
-
 	HDC hDC = dc.m_hDC;
-	if (pImage && pImage->FrameLoaded()) 
-	{
-		// Now we draw this bad boy.
-		if (pImage->m_BadImage) 
-		{ 
-			// display broken icon.
-			HDC tempDC = ::CreateCompatibleDC(hDC);
-			HBITMAP hOldBmp = (HBITMAP)::SelectObject(tempDC,  CRDFImage::m_hBadImageBitmap);
-			::StretchBlt(hDC, 
-					 left, top,
-					 imageWidth, imageHeight, 
-					 tempDC, 0, 0, 
-					 imageWidth, imageHeight, SRCCOPY);
-			::SelectObject(tempDC, hOldBmp);
-			::DeleteDC(tempDC);
-		}
-		else if (pImage->bits ) 
-		{
-			// Center the image. 
-			long width = pImage->bmpInfo->bmiHeader.biWidth;
-			long height = pImage->bmpInfo->bmiHeader.biHeight;
-			int xoffset = (imageWidth-width)/2;
-			int yoffset = (imageHeight-height)/2;
-			if (xoffset < 0) xoffset = 0;
-			if (yoffset < 0) yoffset = 0;
-			if (width > imageWidth) width = imageWidth;
-			if (height > imageHeight) height = imageHeight;
+	CRDFImage* pImage = LookupImage("http://rdf.netscape.com/rdf/closebox.gif", NULL);
+	DrawRDFImage(pImage, left, top, 16, 16, hDC, m_BackgroundColor);
 
-			HPALETTE hPal = WFE_GetUIPalette(NULL);
-			HPALETTE hOldPal = ::SelectPalette(hDC, hPal, TRUE);
+	left += NAVBAR_CLOSEBOX+1;
+	pImage = LookupImage("http://rdf.netscape.com/rdf/closebox.gif", NULL);
+	DrawRDFImage(pImage, left, top, 16, 16, hDC, m_BackgroundColor);
 
-			::RealizePalette(hDC);
-			
-			if (pImage->maskbits) 
-			{
-				WFE_StretchDIBitsWithMask(hDC, TRUE, NULL,
-					left+xoffset, top+xoffset,
-					width, height,
-					0, 0, width, height,
-					pImage->bits, pImage->bmpInfo,
-					pImage->maskbits, FALSE, bkColor);
-			}
-			else 
-			{
-				::StretchDIBits(hDC,
-					left+xoffset, top+xoffset,
-					width, height,
-					0, 0, width, height, pImage->bits, pImage->bmpInfo, DIB_RGB_COLORS,
-					SRCCOPY);
-			}
-
-			::SelectPalette(hDC, hOldPal, TRUE);
-		}
-	}
-/*
-		CRect edgeRect(left, top, right, bottom);
-		CBrush* closeBoxBrush = CBrush::FromHandle(sysInfo.m_hbrBtnFace);
-		dc.FillRect(&edgeRect, closeBoxBrush);
-
-		DrawUpButton(dc.m_hDC, edgeRect);
-
-		HPEN hPen = (HPEN)::CreatePen(PS_SOLID, 1, RGB(0,0,0));
-		HPEN hOldPen = (HPEN)(dc.SelectObject(hPen));
-
-		dc.MoveTo(edgeRect.left+4, edgeRect.top+4);
-		dc.LineTo(edgeRect.right-5, edgeRect.bottom-4);
-		dc.MoveTo(edgeRect.right-6, edgeRect.top+4);
-		dc.LineTo(edgeRect.left+3, edgeRect.bottom-4);
-		dc.SelectObject(hOldPen);
-
-		VERIFY(::DeleteObject(hPen));
-	}
-		
-	if (sysInfo.m_iBitsPerPixel < 16 && (::GetDeviceCaps(dc.m_hDC, RASTERCAPS) & RC_PALETTE))
-	{
-		::SelectPalette(dc.m_hDC, pOldPalette, FALSE);
-	}
-
-/*	HPEN hShadowPen = ::CreatePen(PS_SOLID, 1, ::GetSysColor(COLOR_3DSHADOW));
-
-	dc.SelectObject(hShadowPen);
-	dc.MoveTo(rect.left, rect.bottom-1);
-	dc.LineTo(rect.right, rect.bottom-1);
-	
-	VERIFY(::DeleteObject(hShadowPen));
-*/
-
+	left += NAVBAR_CLOSEBOX+1;
+	pImage = LookupImage("http://rdf.netscape.com/rdf/closebox.gif", NULL);
+	DrawRDFImage(pImage, left, top, 16, 16, hDC, m_BackgroundColor);
 }
 
 int CNavTitleBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
-//	m_pMenuButton = new CNavMenuButton();
-//	BOOKMARKITEM dummy;
-
-//	m_pMenuButton->Create(this, FALSE, CSize(32, 21), CSize(32, 21), "No view selected.", 
-//						  "Click here to view the options menu.",
-//						  "Click on the button to view the options menu.", CSize(0,0), 100, 15, dummy,
-//						  NULL, TB_HAS_IMMEDIATE_MENU | TB_HAS_DRAGABLE_MENU);
 	return 0;
 }
 
@@ -414,28 +197,36 @@ void CNavTitleBar::OnLButtonDown (UINT nFlags, CPoint point )
 	int top = rect.top + (rect.Height() - NAVBAR_CLOSEBOX)/2;
 	int bottom = top + NAVBAR_CLOSEBOX;
 
-	CRect edgeRect(left, top, right, bottom);
-	if (edgeRect.PtInRect(point))
+	CRect closeBoxRect(left, top, right, bottom);
+	left -= NAVBAR_CLOSEBOX;
+	right -= NAVBAR_CLOSEBOX;
+	CRect modeBoxRect(left, top, right, bottom);
+	left -= NAVBAR_CLOSEBOX;
+	right -= NAVBAR_CLOSEBOX;
+	CRect sortBoxRect(left, top, right, bottom);
+
+	if (closeBoxRect.PtInRect(point))
 	{
 		// Destroy the window.
-		GetParentFrame()->PostMessage(WM_CLOSE);
-
-		// Collapse the view
-		/*if (m_pSelectorButton)
-			m_pSelectorButton->OnAction();*/
+		CFrameWnd* pFrameWnd = GetParentFrame();
+		if (pFrameWnd->IsKindOf(RUNTIME_CLASS(CNSNavFrame)))
+			((CNSNavFrame*)pFrameWnd)->DeleteNavCenter();
+	}
+	else if (modeBoxRect.PtInRect(point))
+	{
+		CRDFOutliner* pOutliner = (CRDFOutliner*)HT_GetViewFEData(m_View);
+		pOutliner->SetNavigationMode(!pOutliner->InNavigationMode());
+	}
+	else if (sortBoxRect.PtInRect(point))
+	{
+		
 	}
 	else
 	{
-		// Set the focus.
-		if (m_pSelectorButton)
-		{
-			CRDFContentView* pView = m_pSelectorButton->GetContentView();
-			if (pView)
-				pView->SetFocus();
-		}
-
 		m_PointHit = point;
-		SetCapture();
+		CFrameWnd* pFrameWnd = GetParentFrame();
+		if (pFrameWnd->IsKindOf(RUNTIME_CLASS(CNSNavFrame)))
+			SetCapture();
 	}
 }
 
@@ -470,44 +261,8 @@ void CNavTitleBar::OnLButtonUp(UINT nFlags, CPoint point)
 
 void CNavTitleBar::OnSize( UINT nType, int cx, int cy )
 {	
-/*	if (m_pMenuButton)
-	{
-		CRect rect;
-		GetClientRect(&rect);
-		m_pMenuButton->UpdateButtonText(rect);
-	}
-*/
 }
 
-void CNavTitleBar::UpdateView(CSelectorButton* pButton, HT_View view)
-{ 
-	m_pSelectorButton = pButton; 
-/*
-	if (m_pMenuButton)
-	{
-		CRect rect;
-		GetClientRect(&rect);
-		m_pMenuButton->UpdateView(view);
-		m_pMenuButton->UpdateButtonText(rect);
-	}
-*/
-	if (pButton && pButton->GetContentView())
-	{
-		((CRDFOutliner*)(pButton->GetContentView()->GetOutlinerParent()->GetOutliner()))->SetTitleBar(this);
-	}
-
-	titleText = "No View Selected.";
-	m_View = view;
-	if (view)
-	{
-		HT_Resource r = HT_TopNode(view);
-		if (r)
-		{
-			titleText = HT_GetNodeName(r);
-		}
-		Invalidate();
-	}
-}
 
 void CNavTitleBar::SetHTView(HT_View view)
 {

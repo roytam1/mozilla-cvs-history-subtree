@@ -481,10 +481,7 @@ void CSelector::SetCurrentButton(CSelectorButton* pButton)
 	// Selecting the button.
 	m_pCurButton = pButton;
 	m_pCurButton->SetDepressed(TRUE);
-
-	((CNSNavFrame*)GetParentFrame())->GetNavTitleBar()->UpdateView(m_pCurButton, m_pCurButton->GetHTView());
-	((CNSNavFrame*)GetParentFrame())->UpdateTitleBar(m_pCurButton->GetHTView());
-			
+		
 	// adjust the window. here.
 	m_pContentView->SwitchHTViews(m_pCurButton->GetHTView());
 	m_pContentView->SetFocus();

@@ -195,7 +195,7 @@ void CNSNavFrame::DeleteNavCenter()
 	if (m_DragWnd)
 		m_DragWnd->DestroyWindow();
 
-	DestroyWindow();
+	PostMessage(WM_CLOSE);
 }
 
 BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
