@@ -33,6 +33,11 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 #endif
 
+#ifdef HPUX
+#define FD_SETSIZE    30000
+#undef	NSLDAPI_HAVE_POLL
+#endif
+
 /*
  * On platforms where poll() does not exist, we use select().
  * Therefore, we should increase the number of file descriptors
