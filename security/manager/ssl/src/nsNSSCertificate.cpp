@@ -3957,12 +3957,11 @@ nsNSSCertificateDB::ConstructX509FromBase64(const char * base64, nsIX509Cert **_
   }
 
   nsresult rv = nsNSS->QueryInterface(NS_GET_IID(nsIX509Cert), (void**)_retval);
-  NS_RELEASE(nsNSS);
 
-  if (NS_FAILED(rv) || !*_retval) {
-    return rv;
+  if (NS_SUCCEEDED(rv) && *_retval) {
+    NS_ADDREF(*_retval);
   }
   
-  NS_ADDREF(*_retval);
-  return NS_OK;
+  NS_RELEASE(nsNSS);
+  return rv;
 }
