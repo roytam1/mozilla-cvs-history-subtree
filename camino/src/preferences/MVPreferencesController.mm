@@ -126,13 +126,13 @@ NSString *MVPreferencesWindowNotification = @"MVPreferencesWindowNotification";
   if ( currentPaneIdentifier && [[loadedPanes objectForKey:currentPaneIdentifier] shouldUnselect] != NSUnselectNow ) {
     /* more to handle later */
 #if DEBUG
-    NSLog( @"can't unselect current" );
+    NSLog(@"can't unselect current preferences pane");
 #endif
     return;
   }
   [window setContentView:[[[NSView alloc] initWithFrame:[mainView frame]] autorelease]];
 
-  [window setTitle:[NSString stringWithFormat:NSLocalizedString( @"%@ Preferences", nil ), [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"]]];
+  [window setTitle:[NSString stringWithFormat:NSLocalizedString( @"PrefsWindowTitleFormat", @"" ), [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"]]];
   [self _resizeWindowForContentView:mainView];
 
   [[loadedPanes objectForKey:currentPaneIdentifier] willUnselect];
@@ -299,15 +299,13 @@ NSString *MVPreferencesWindowNotification = @"MVPreferencesWindowNotification";
 
 - (void) _resizeWindowForContentView:(NSView *) view
 {
-  NSRect windowFrame, newWindowFrame;
-  unsigned int newWindowHeight;
+  NSRect windowFrame = [NSWindow contentRectForFrameRect:[window frame] styleMask:[window styleMask]];
+  float  newWindowHeight = NSHeight( [view frame] );
 
-  windowFrame = [NSWindow contentRectForFrameRect:[window frame] styleMask:[window styleMask]];
-  newWindowHeight = NSHeight( [view frame] );
   if ( [[window toolbar] isVisible] )
     newWindowHeight += NSHeight( [[[window toolbar] _toolbarView] frame] );
-  newWindowFrame = [NSWindow frameRectForContentRect:NSMakeRect( NSMinX( windowFrame ), NSMaxY( windowFrame ) - newWindowHeight, NSWidth( windowFrame ), newWindowHeight ) styleMask:[window styleMask]];
-
+    
+  NSRect newWindowFrame = [NSWindow frameRectForContentRect:NSMakeRect( NSMinX( windowFrame ), NSMaxY( windowFrame ) - newWindowHeight, NSWidth( windowFrame ), newWindowHeight ) styleMask:[window styleMask]];
   [window setFrame:newWindowFrame display:YES animate:[window isVisible]];
 }
 

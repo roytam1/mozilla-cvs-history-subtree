@@ -308,14 +308,17 @@ const unsigned int bottomBorder = 15;
 	// Draw icon, dark if it is currently being pressed
 	destinationRect = NSIntegralRect( NSMakeRect( NSMidX( buttonRect) - iconSize.width / 2., NSMaxY( buttonRect ) - iconBaseline - iconSize.height, iconSize.width, iconSize.height ) );
 	destinationRect.size = iconSize;
-	if( index != pressedIconIndex && image ) [image drawFlippedInRect:destinationRect operation:NSCompositeSourceOver fraction:1.];
-	else if( image ) {
+	if( index != pressedIconIndex && image )
+    [image drawFlippedInRect:destinationRect operation:NSCompositeSourceOver fraction:1.];
+	else if( image )
+  {
 		NSImage *darkImage;
 		NSSize darkImageSize;
 
 		darkImage = [image copy];
 		darkImageSize = [darkImage size];
-		[darkImage lockFocus]; {
+		[darkImage lockFocus];
+    {
 			[[NSColor blackColor] set];
 			NSRectFillUsingOperation( NSMakeRect( 0., 0., darkImageSize.width, darkImageSize.height ), NSCompositeSourceIn );
 			[darkImage unlockFocus];
@@ -325,7 +328,8 @@ const unsigned int bottomBorder = 15;
 		[image drawFlippedInRect:destinationRect operation:NSCompositeSourceOver fraction:.6666667];
 		[darkImage release];
 	}
-	if( focusedIndex == index ) CGContextRestoreGState( context );
+	if( focusedIndex == index )
+    CGContextRestoreGState( context );
 
 	// Draw text
 	[paraStyle setAlignment:NSCenterTextAlignment];
@@ -362,7 +366,8 @@ const unsigned int bottomBorder = 15;
 	NSMutableParagraphStyle *paraStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
 
 	dragImage = [[NSImage alloc] initWithSize:buttonSize];
-	[dragImage lockFocus]; {
+	[dragImage lockFocus];
+  {
 		float nameHeight;
 		NSSize nameSize;
 		NSDictionary *attributesDictionary;
