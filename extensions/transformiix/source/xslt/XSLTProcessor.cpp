@@ -15,7 +15,7 @@
  * Portions created by MITRE are Copyright (C) 1999 The MITRE Corporation.
  *
  * Portions created by Keith Visco as a Non MITRE employee,
- * (C) 1999 Keith Visco. All Rights Reserved.
+ * (C) 1999, 2000 Keith Visco. All Rights Reserved.
  *
  * Contributor(s):
  * Keith Visco, kvisco@ziplink.net
@@ -74,7 +74,7 @@ XSLTProcessor::XSLTProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20000523]");
+    appVersion.append("1.0 [beta v20000722]");
 
 
     //-- create XSL element types
