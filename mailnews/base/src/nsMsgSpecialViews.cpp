@@ -50,6 +50,25 @@ PRBool nsMsgThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *threadHdr)
   return PR_FALSE;
 }
 
+nsresult nsMsgThreadsWithUnreadDBView::AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed)
+{
+  nsresult rv = NS_OK;
+
+  nsCOMPtr <nsIMsgDBHdr> parentHdr;
+  PRUint32 msgFlags;
+  PRUint32 newFlags;
+  msgHdr->GetFlags(&msgFlags);
+  GetFirstMessageHdrToDisplayInThread(threadHdr, getter_AddRefs(parentHdr));
+	if (parentHdr && (ensureListed || !(msgFlags & MSG_FLAG_READ)))
+	{
+		parentHdr->OrFlags(MSG_VIEW_FLAG_HASCHILDREN | MSG_VIEW_FLAG_ISTHREAD, &newFlags);
+		if (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly))
+			parentHdr->OrFlags(MSG_FLAG_ELIDED, &newFlags);
+		rv = AddHdr(parentHdr);
+	}
+  return rv;
+}
+
 PRBool nsMsgWatchedThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *threadHdr)
 {
 	if (threadHdr)
@@ -64,12 +83,32 @@ PRBool nsMsgWatchedThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *thread
   }
   return PR_FALSE;
 }
+
+nsresult nsMsgWatchedThreadsWithUnreadDBView::AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed)
+{
+  nsresult rv = NS_OK;
+  PRUint32 threadFlags;
+  PRUint32 msgFlags, newFlags;
+  msgHdr->GetFlags(&msgFlags);
+  threadHdr->GetFlags(&threadFlags);
+  if (threadFlags & MSG_FLAG_WATCHED)
+  {
+    nsCOMPtr <nsIMsgDBHdr> parentHdr;
+    GetFirstMessageHdrToDisplayInThread(threadHdr, getter_AddRefs(parentHdr));
+    if (parentHdr && (ensureListed || !(msgFlags & MSG_FLAG_READ)))
+    {
+      parentHdr->OrFlags(MSG_FLAG_ELIDED | MSG_VIEW_FLAG_HASCHILDREN | MSG_VIEW_FLAG_ISTHREAD, &newFlags);
+      rv = AddHdr(parentHdr);
+    }
+  }
+  return rv;
+}
 #ifdef WE_DO_CACHELESS_VIEWS
 // This view will initially be used for cacheless IMAP.
 CachelessView::CachelessView(ViewType viewType)
 {
 	m_viewType = viewType;
-	m_viewFlags = kOutlineDisplay;
+	m_viewFlags = kThreadedDisplay;
 	SetInitialSortState();
 	m_folder = NULL;
 	m_master = NULL;

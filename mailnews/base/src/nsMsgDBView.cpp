@@ -52,7 +52,6 @@ NS_INTERFACE_MAP_END
 nsMsgDBView::nsMsgDBView()
 {
   NS_INIT_ISUPPORTS();
-  m_viewType = nsMsgDBViewType::anyView;
   /* member initializers and constructor code */
   m_sortValid = PR_TRUE;
   m_sortOrder = nsMsgViewSortOrder::none;
@@ -337,7 +336,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeV
   case nsMsgViewCommandType::deleteNoTrash:
 		// since the FE could have constructed the list of indices in
 		// any order (e.g. order of discontiguous selection), we have to
-		// sort the indices in order to find out which MSG_ViewIndex will
+		// sort the indices in order to find out which nsMsgViewIndex will
 		// be deleted first.
 		if (numIndices > 1)
 			NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
@@ -509,6 +508,21 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
 }
 // view modifications methods by index
 
+// This method just removes the specified line from the view. It does
+// NOT delete it from the database.
+nsresult nsMsgDBView::RemoveByIndex(nsMsgViewIndex index)
+{
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+
+	m_keys.RemoveAt(index);
+	m_flags.RemoveAt(index);
+	m_levels.RemoveAt(index);
+	NoteChange(index, -1, nsMsgViewNotificationCode::insertOrDelete);
+	return NS_OK;
+}
+
+
 // read/unread handling.
 nsresult nsMsgDBView::ToggleReadByIndex(nsMsgViewIndex index)
 {
@@ -676,7 +690,7 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
         PRUint32 flags = m_flags.GetAt(i);
         PRUint32 level = m_levels.GetAt(i);
         printf("[%d]\t",i);
-        if (m_viewFlags == nsMsgViewFlagsType::kOutlineDisplay) {
+        if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0) {
             if (flags | MSG_FLAG_ELIDED) {
                 printf("+");
             }
@@ -1155,6 +1169,17 @@ nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *th
 	return retIndex;
 }
 
+// caller must referTo hdr if they want to hold it or change it!
+nsresult nsMsgDBView::GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result)
+{
+  nsresult rv;
+
+	if (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)
+		rv = threadHdr->GetFirstUnreadChild(result);
+	else
+		rv = threadHdr->GetChildHdrAt(0, result);
+	return rv;
+}
 
 // Find the view index of the thread containing the passed msgKey, if
 // the thread is in the view. MsgIndex is passed in as a shortcut if
@@ -1456,6 +1481,269 @@ nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollap
 	return rv;
 }
 
+nsresult nsMsgDBView::OnNewHeader(nsMsgKey newKey, PRBool /*ensureListed*/)
+{
+	nsresult rv = NS_MSG_MESSAGE_NOT_FOUND;;
+	// views can override this behaviour, which is to append to view.
+	// This is the mail behaviour, but threaded views will want
+	// to insert in order...
+	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = m_db->GetMsgHdrForKey(newKey, getter_AddRefs(msgHdr));
+	if (NS_SUCCEEDED(rv) && msgHdr != nsnull)
+	{
+		rv = AddHdr(msgHdr);
+	}
+	return rv;
+}
+
+
+nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
+{
+	nsMsgViewIndex retIndex = nsMsgViewIndex_None;
+	nsMsgViewIndex prevInsertIndex = nsMsgViewIndex_None;
+	nsMsgKey insertKey;
+  hdr->GetMessageKey(&insertKey);
+
+  if (m_sortOrder == nsMsgViewSortOrder::ascending)
+	{
+		// loop backwards looking for top level message with id > id of header we're inserting 
+		// and put new header before found header, or at end.
+		for (PRInt32 i = GetSize() - 1; i >= 0; i--) 
+		{
+			char level = m_levels[i];
+			if (level == 0)
+			{
+				if (insertKey < m_keys.GetAt(i))
+					prevInsertIndex = i;
+				else if (insertKey >= m_keys.GetAt(i))
+				{
+					retIndex = (prevInsertIndex == nsMsgViewIndex_None) ? nsMsgViewIndex_None : i + 1;
+					if (prevInsertIndex == nsMsgViewIndex_None)
+					{
+						retIndex = nsMsgViewIndex_None;
+					}
+					else
+					{
+						for (retIndex = i + 1; retIndex < GetSize(); retIndex++)
+						{
+							if (m_levels[retIndex] == 0)
+								break;
+						}
+					}
+					break;
+				}
+
+			}
+		}
+	}
+	else
+	{
+		// loop forwards looking for top level message with id < id of header we're inserting and put 
+		// new header before found header, or at beginning.
+		for (PRInt32 i = 0; i < GetSize(); i++) 
+		{
+			char level = m_levels[i];
+			if (level == 0)
+			{
+				if (insertKey > m_keys.GetAt(i))
+				{
+					retIndex = i;
+					break;
+				}
+			}
+		}
+	}
+	return retIndex;
+}
+
+
+nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
+{
+	PRBool done = PR_FALSE;
+	PRBool withinOne = PR_FALSE;
+	nsMsgViewIndex retIndex = nsMsgViewIndex_None;
+	nsMsgViewIndex	tryIndex = GetSize() / 2;
+	nsMsgViewIndex	newTryIndex;
+	nsMsgViewIndex lowIndex = 0;
+	nsMsgViewIndex highIndex = GetSize() - 1;
+	IdDWord			dWordEntryInfo1, dWordEntryInfo2;
+	IdStr		strPtrInfo1, strPtrInfo2;
+
+	if (GetSize() == 0)
+		return 0;
+
+	PRUint16	maxLen;
+	nsXPIDLString	field1Str;
+	nsXPIDLString field2Str;
+	eFieldType fieldType;
+  nsresult rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
+	const void	*pValue1, *pValue2;
+	char *intlString1 = nsnull;
+
+	if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0)
+	{
+		retIndex = GetIndexForThread(msgHdr);
+		return retIndex;
+	}
+
+	int (*comparisonFun) (const void *pItem1, const void *pItem2, void *privateData)=nsnull;
+	int retStatus = 0;
+	switch (fieldType)
+	{
+		case kString:
+			comparisonFun = FnSortIdStr;
+      GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
+// ### TODO      strPtrInfo1.str = (char *) (const PRUnichar* ) field1Str;
+			msgHdr->GetMessageKey(&strPtrInfo1.info.id);
+			pValue1 = &strPtrInfo1;
+			break;
+		case kU32:
+			pValue1 = &dWordEntryInfo1;
+			GetLongField(msgHdr, m_sortType, &dWordEntryInfo1.dword);
+			msgHdr->GetMessageKey(&dWordEntryInfo1.info.id);
+			comparisonFun = FnSortIdDWord;
+			break;
+		default:
+			done = PR_TRUE;
+	}
+	while (!done)
+	{
+		if (highIndex == lowIndex)
+			break;
+		nsMsgKey	messageKey = GetAt(tryIndex);
+		nsCOMPtr <nsIMsgDBHdr> tryHdr;
+    rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(tryHdr));
+		char	*intlString2 = nsnull;
+		if (!tryHdr)
+			break;
+		if (fieldType == kString)
+		{
+			GetStringField(tryHdr, m_sortType, getter_Copies(field2Str));
+// ### TODO      strPtrInfo2.str = (const char *) (const PRUnichar* ) field2Str;
+			strPtrInfo2.info.id = messageKey;
+			pValue2 = &strPtrInfo2;
+		}
+		else
+		{
+			GetLongField(tryHdr, m_sortType, &dWordEntryInfo2.dword);
+			dWordEntryInfo2.info.id = messageKey;
+			pValue2 = &dWordEntryInfo2;
+		}
+		retStatus = (*comparisonFun)(&pValue1, &pValue2, nsnull);
+		if (retStatus == 0)
+			break;
+    if (m_sortOrder == nsMsgViewSortOrder::descending)	//switch retStatus based on sort order
+			retStatus = (retStatus > 0) ? -1 : 1;
+
+		if (retStatus < 0)
+		{
+			newTryIndex = tryIndex  - (tryIndex - lowIndex) / 2;
+			if (newTryIndex == tryIndex)
+			{
+				if (!withinOne && newTryIndex > lowIndex)
+				{
+					newTryIndex--;
+					withinOne = PR_TRUE;
+				}
+			}
+			highIndex = tryIndex;
+		}
+		else
+		{
+			newTryIndex = tryIndex + (highIndex - tryIndex) / 2;
+			if (newTryIndex == tryIndex)
+			{
+				if (!withinOne && newTryIndex < highIndex)
+				{
+					withinOne = PR_TRUE;
+					newTryIndex++;
+				}
+				lowIndex = tryIndex;
+			}
+		}
+		if (tryIndex == newTryIndex)
+			break;
+		else
+			tryIndex = newTryIndex;
+	}
+	if (retStatus >= 0)
+		retIndex = tryIndex + 1;
+	else if (retStatus < 0)
+		retIndex = tryIndex;
+
+	return retIndex;
+}
+
+nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
+{
+	PRUint32	flags = 0;
+#ifdef DEBUG_bienvenu
+	NS_ASSERTION((int) m_keys.GetSize() == m_flags.GetSize() && (int) m_keys.GetSize() == m_levels.GetSize(), "view arrays out of sync!");
+#endif
+  PRUint32 msgFlags;
+  msgHdr->GetFlags(&msgFlags);
+	if (msgFlags & MSG_FLAG_IGNORED && !GetShowingIgnored())
+		return NS_OK;
+
+  nsMsgKey msgKey, threadId;
+  msgHdr->GetMessageKey(&msgKey);
+  msgHdr->GetThreadId(&threadId);
+
+  // ### this isn't quite right, is it? Should be checking that our thread parent key is none?
+	if (msgKey == threadId) 
+		msgFlags |= MSG_VIEW_FLAG_ISTHREAD;
+	nsMsgViewIndex insertIndex = GetInsertIndex(msgHdr);
+	if (insertIndex == nsMsgViewIndex_None)
+	{
+		// if unreadonly, level is 0 because we must be the only msg in the thread.
+    char levelToAdd = 0; // ### TODO ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) != 0) ? 0 : msgHdr->GetLevel();
+
+    if (m_sortOrder == nsMsgViewSortOrder::ascending)
+		{
+			m_keys.Add(msgKey);
+			m_flags.Add(flags);
+			m_levels.Add(levelToAdd);
+			NoteChange(m_keys.GetSize() - 1, 1, nsMsgViewNotificationCode::insertOrDelete);
+		}
+		else
+		{
+			m_keys.InsertAt(0, msgKey);
+			m_flags.InsertAt(0, flags);
+			m_levels.InsertAt(0, levelToAdd);
+			NoteChange(0, 1, nsMsgViewNotificationCode::insertOrDelete);
+		}
+		m_sortValid = PR_FALSE;
+	}
+	else
+	{
+		m_keys.InsertAt(insertIndex, msgKey);
+		m_flags.InsertAt(insertIndex, flags);
+    char level = 0; // ### TODO (m_sortType == nsMsgViewSortType::byThread) ? 0 : msgHdr->GetLevel();
+		m_levels.InsertAt(insertIndex, level);
+    NoteChange(insertIndex, 1, nsMsgViewNotificationCode::insertOrDelete);
+	}
+	OnHeaderAddedOrDeleted();
+	return NS_OK;
+}
+
+nsresult nsMsgDBView::InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex)
+{
+	PRUint32	flags = 0;
+  nsMsgKey msgKey;
+	msgHdr->GetFlags(&flags);
+  msgHdr->GetMessageKey(&msgKey);
+
+	NoteStartChange(insertIndex, 1, nsMsgViewNotificationCode::changed);
+	m_keys.SetAt(insertIndex, msgKey);
+	m_flags.SetAt(insertIndex, flags);
+  char level = 0; // ### TODO (m_sortType == nsMsgViewSortType::byThread) ? 0 : msgHdr->GetLevel()
+	m_levels.SetAt(insertIndex, level);
+	NoteEndChange(insertIndex, 1, nsMsgViewNotificationCode::changed);
+	OnHeaderAddedOrDeleted();
+	return NS_OK;
+}
+
+
 PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
 {
   return PR_TRUE; // default is to want all threads.
@@ -1520,10 +1808,37 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
 }
 
 NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, 
-                                       PRUint32, nsIDBChangeListener *aInstigator)
+                                       PRUint32 aNewFlags, nsIDBChangeListener *aInstigator)
 {
+  // if we're not the instigator, update flags if this key is in our view
+  if (aInstigator != this)
+  {
+    nsMsgViewIndex index = FindViewIndex(aKeyChanged);
+    if (index != nsMsgViewIndex_None)
+    {
+      PRUint32 viewOnlyFlags = m_flags[index] & MSG_VIEW_FLAGS;
+
+      // ### what about saving the old view only flags, like IsThread and HasChildren?
+      // I think we'll want to save those away.
+      m_flags[index] = aNewFlags || viewOnlyFlags;
+      // tell the view the extra flag changed, so it can
+      // update the previous view, if any.
+      OnExtraFlagChanged(index, aNewFlags);
+      NoteChange(index, 1, nsMsgViewNotificationCode::changed);
+    }
+    else
+    {
+      nsMsgViewIndex threadIndex = ThreadIndexOfMsg(aKeyChanged);
+      // may need to fix thread counts
+      if (threadIndex != nsMsgViewIndex_None)
+        NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+
+    }
+  }
+  // don't need to propagate notifications, right?
   return NS_OK;
 }
+
 NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                             nsIDBChangeListener *aInstigator)
 {
@@ -1533,6 +1848,7 @@ NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKe
 NS_IMETHODIMP nsMsgDBView::OnKeyAdded(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                           nsIDBChangeListener *aInstigator)
 {
+//  OnNewHeader(
   return NS_OK;
 }
                           
@@ -2125,14 +2441,14 @@ nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices
         {
             err = ToggleThreadIgnored(thread, threadIndex);
             if (resultToggleState)
-                *resultToggleState = (thread->GetFlags() & kIgnored) ? TRUE : FALSE;
+                *resultToggleState = (thread->GetFlags() & kIgnored) ? TRUE : PR_FALSE;
             thread->unrefer();
         }
     }
     else
     {
         if (numIndices > 1)
-            XP_QSORT (indices, numIndices, sizeof(MSG_ViewIndex), MSG_Pane::CompareViewIndices);
+            XP_QSORT (indices, numIndices, sizeof(nsMsgViewIndex), MSG_Pane::CompareViewIndices);
         for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
         {
             MsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, &thread);

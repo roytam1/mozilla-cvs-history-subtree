@@ -66,7 +66,13 @@ protected:
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
 
   // routines used in building up view
-  PRBool WantsThisThread(nsIMsgThread * thread);
+  virtual PRBool WantsThisThread(nsIMsgThread * thread);
+  virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
+  PRBool GetShowingIgnored() {return (m_viewFlags & nsMsgViewFlagsType::kShowIgnored) != 0;}
+  virtual nsresult OnNewHeader(nsMsgKey newKey, PRBool ensureListed);
+  virtual nsMsgViewIndex GetInsertIndex(nsIMsgDBHdr *msgHdr);
+  nsMsgViewIndex GetIndexForThread(nsIMsgDBHdr *hdr);
+  virtual nsresult InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex);
 
   nsresult ToggleExpansion(nsMsgViewIndex index, PRUint32 *numChanged);
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
@@ -76,6 +82,7 @@ protected:
   // helper routines for thread expanding and collapsing.
   nsresult		GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount);
   nsMsgViewIndex GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr);
+  nsresult GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result);
   nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
 											  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
 											  PRInt32 *pThreadCount = nsnull,
@@ -115,7 +122,9 @@ protected:
   nsresult OrExtraFlag(nsMsgViewIndex index, PRUint32 orflag);
   nsresult AndExtraFlag(nsMsgViewIndex index, PRUint32 andflag);
   nsresult SetExtraFlag(nsMsgViewIndex index, PRUint32 extraflag);
-	virtual void		OnExtraFlagChanged(nsMsgViewIndex /*index*/, PRUint32 /*extraFlag*/) {}
+	virtual nsresult RemoveByIndex(nsMsgViewIndex index);
+  virtual void		OnExtraFlagChanged(nsMsgViewIndex /*index*/, PRUint32 /*extraFlag*/) {}
+	virtual void		OnHeaderAddedOrDeleted() {}	
 
   // for sorting
   nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
@@ -150,7 +159,6 @@ protected:
   PRBool		m_sortValid;
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
-  nsMsgDBViewTypeValue m_viewType;
   nsMsgViewFlagsTypeValue m_viewFlags;
 };
 

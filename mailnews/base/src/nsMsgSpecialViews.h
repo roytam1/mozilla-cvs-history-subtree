@@ -34,6 +34,7 @@ public:
     NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount);
 	virtual PRBool		WantsThisThread(nsIMsgThread *threadHdr);
 protected:
+  virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);
 
 };
 
@@ -43,6 +44,7 @@ public:
 	const char * GetViewName(void) {return "WatchedThreadsWithUnreadView"; }
 	virtual PRBool		WantsThisThread(nsIMsgThread *threadHdr);
 protected:
+  virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);
 
 };
 #ifdef DOING_CACHELESS_VIEW

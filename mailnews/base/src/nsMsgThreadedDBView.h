@@ -41,12 +41,17 @@ public:
   NS_IMETHOD Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
 
 protected:
+  virtual nsresult OnNewHeader(nsMsgKey newKey, PRBool ensureListed);
+  virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);
   nsresult ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnly, nsMsgKey *pOutput, PRInt32 *pFlags, char *pLevels, 
 									 PRInt32 numToList, PRInt32 *pNumListed, PRInt32 *pTotalHeaders);
   nsresult InitSort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
   nsresult ExpandAll();
-  void	    OnExtraFlagChanged(nsMsgViewIndex index, PRUint32 extraFlag);
+  virtual void	    OnExtraFlagChanged(nsMsgViewIndex index, PRUint32 extraFlag);
+  virtual void OnHeaderAddedOrDeleted();
 	void			ClearPrevIdArray();
+  virtual nsresult RemoveByIndex(nsMsgViewIndex index);
+
   // these are used to save off the previous view so that bopping back and forth
   // between two views is quick (e.g., threaded and flat sorted by date).
 	PRBool		m_havePrevView;

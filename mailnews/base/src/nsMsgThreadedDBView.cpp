@@ -31,7 +31,6 @@ nsMsgThreadedDBView::nsMsgThreadedDBView()
 {
   /* member initializers and constructor code */
 	m_havePrevView = PR_FALSE;
-  m_viewType = nsMsgDBViewType::allThreads; // by default
 }
 
 nsMsgThreadedDBView::~nsMsgThreadedDBView()
@@ -68,7 +67,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 	m_havePrevView = PR_FALSE;
 	nsresult getSortrv = NS_OK; // ### TODO m_db->GetSortInfo(&sortType, &sortOrder);
 
-	// list all the ids into m_idArray.
+	// list all the ids into m_keys.
 	nsMsgKey startMsg = 0; 
 	do
 	{
@@ -78,7 +77,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 		PRInt32		flagArray[kIdChunkSize];
 		char		levelArray[kIdChunkSize];
 
-    rv = ListThreadIds(&startMsg, m_viewType == nsMsgDBViewType::onlyUnreadHeaders, idArray, flagArray, 
+    rv = ListThreadIds(&startMsg, (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) != 0, idArray, flagArray, 
                     levelArray, kIdChunkSize, &numListed, nsnull);
 		if (NS_SUCCEEDED(rv))
 		{
@@ -153,7 +152,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 	else
 	{
     PRUint32 viewType;
-    if (m_viewType == nsMsgDBViewType::allThreads)
+    if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) == 0)
       viewType = nsMsgViewType::eShowAll;
     else
       viewType = nsMsgViewType::eShowUnread;
@@ -208,7 +207,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 					// make sure DB agrees with newsrc, if we're news.
 					m_db->IsRead(msgKey, &isRead);
 					m_db->MarkHdrRead(msgHdr, isRead, nsnull);
-					// try adding in kIsThread flag for unreadonly view.
+					// try adding in MSG_VIEW_FLAG_ISTHREAD flag for unreadonly view.
 					pFlags[numListed] = msgFlags | MSG_VIEW_FLAG_ISTHREAD | threadFlags;
 					if (numChildren > 1)
 						pFlags[numListed] |= MSG_VIEW_FLAG_HASCHILDREN;
@@ -295,6 +294,10 @@ void	nsMsgThreadedDBView::OnExtraFlagChanged(nsMsgViewIndex index, PRUint32 extr
 		m_sortValid = PR_FALSE;
 }
 
+void nsMsgThreadedDBView::OnHeaderAddedOrDeleted()
+{
+	ClearPrevIdArray();
+}
 
 void nsMsgThreadedDBView::ClearPrevIdArray()
 {
@@ -322,5 +325,198 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 	if (sortType != nsMsgViewSortType::byThread)	// forget prev view, since it has everything expanded.
 		ClearPrevIdArray();
 	return NS_OK;
+}
+
+nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, PRBool ensureListed)
+{
+	nsresult	rv = NS_OK;
+	// views can override this behaviour, which is to append to view.
+	// This is the mail behaviour, but threaded views want
+	// to insert in order...
+	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = m_db->GetMsgHdrForKey(newKey, getter_AddRefs(msgHdr));
+	if (NS_SUCCEEDED(rv) && msgHdr != nsnull)
+	{
+    PRUint32 msgFlags;
+    msgHdr->GetFlags(&msgFlags);
+    if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) && !ensureListed && (msgFlags & MSG_FLAG_READ))
+			return NS_OK;
+		// Currently, we only add the header in a threaded view if it's a thread.
+		// We used to check if this was the first header in the thread, but that's
+		// a bit harder in the unreadOnly view. But we'll catch it below.
+    if (! (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay))// || msgHdr->GetMessageKey() == m_messageDB->GetKeyOfFirstMsgInThread(msgHdr->GetMessageKey()))
+			rv = AddHdr(msgHdr);
+		else	// need to find the thread we added this to so we can change the hasnew flag
+				// added message to existing thread, but not to view
+		{		// Fix flags on thread header.
+			PRInt32 threadCount;
+			PRUint32 threadFlags;
+			nsMsgViewIndex threadIndex = ThreadIndexOfMsg(newKey, nsMsgViewIndex_None, &threadCount, &threadFlags);
+			if (threadIndex != nsMsgViewIndex_None)
+			{
+				// check if this is now the new thread hdr
+				PRUint32	flags = m_flags[threadIndex];
+				// if we have a collapsed thread which just got a new
+				// top of thread, change the keys array.
+        char level = 0; // ### TODO
+				if ((flags & MSG_FLAG_ELIDED) && level == 0 
+					&& (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) || !(msgFlags & MSG_FLAG_READ)))
+				{
+          nsMsgKey msgKey;
+          msgHdr->GetMessageKey(&msgKey);
+					m_keys.SetAt(threadIndex, msgKey);
+					NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+				}
+				if (! (flags & MSG_VIEW_FLAG_HASCHILDREN))
+				{
+					flags |= MSG_VIEW_FLAG_HASCHILDREN | MSG_VIEW_FLAG_ISTHREAD;
+          if (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly))
+						flags |= MSG_FLAG_ELIDED;
+					m_flags[threadIndex] = flags;
+					NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+				}
+				if (! (flags & MSG_FLAG_ELIDED))	// thread is expanded
+				{								// insert child into thread
+					PRUint8 level = 0;					// levels of other hdrs may have changed!
+					PRUint32	newFlags = msgFlags;
+          nsMsgViewIndex insertIndex = 0;
+#ifdef HAVE_PORT
+					 insertIndex = GetInsertInfoForNewHdr(newKey, threadIndex, &level);
+#endif
+					// this header is the new king! try collapsing the existing thread,
+					// removing it, installing this header as king, and expanding it.
+					if (level == 0)	
+					{
+						CollapseByIndex(threadIndex, nsnull);
+						// call base class, so child won't get promoted.
+						nsMsgDBView::RemoveByIndex(threadIndex);	
+						newFlags |= MSG_VIEW_FLAG_ISTHREAD | MSG_VIEW_FLAG_HASCHILDREN | MSG_FLAG_ELIDED;
+					}
+					m_keys.InsertAt(insertIndex, newKey);
+					m_flags.InsertAt(insertIndex, newFlags, 1);
+					m_levels.InsertAt(insertIndex, level);
+					NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+					NoteChange(insertIndex, 1, nsMsgViewNotificationCode::insertOrDelete);
+					if (level == 0)
+						ExpandByIndex(threadIndex, nsnull);
+				}
+			}
+			else // adding msg to thread that's not in view.
+			{
+				nsCOMPtr <nsIMsgThread> threadHdr;
+        m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+				if (threadHdr)
+				{
+          AddMsgToThreadNotInView(threadHdr, msgHdr, ensureListed);
+				}
+			}
+		}
+	}
+	else
+		rv = NS_MSG_MESSAGE_NOT_FOUND;
+	return rv;
+}
+
+nsresult nsMsgThreadedDBView::AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed)
+{
+  nsresult rv = NS_OK;
+  PRUint32 threadFlags;
+  threadHdr->GetFlags(&threadFlags);
+	if (!(threadFlags & MSG_FLAG_IGNORED))
+		rv = AddHdr(msgHdr);
+  return rv;
+}
+
+// This method just removes the specified line from the view. It does
+// NOT delete it from the database.
+nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
+{
+	nsresult rv = NS_OK;
+	PRInt32	flags;
+
+	if (!IsValidIndex(index))
+		return NS_MSG_INVALID_DBVIEW_INDEX;
+
+	flags = m_flags[index];
+
+  if (! (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay))
+		return nsMsgDBView::RemoveByIndex(index);
+
+#ifdef HAVE_PORT
+  if ((flags & kIsThread) && !(flags & kElided) && (flags & kHasChildren))
+	{
+		// fix flags on thread header...Newly promoted message 
+		// should have flags set correctly
+		nsCOMPtr <nsIMsgThread> threadHdr; = m_db->GetThreadHdrForMsgID(m_idArray[index]);
+		if (threadHdr)
+		{
+			MessageDBView::RemoveByIndex(index);
+			nsCOMPtr <nsIMsgThread> nextThreadHdr = (index < GetSize()) 
+				? m_messageDB->GetNeoThreadHdrForMsgID(m_idArray[index]) : 0;
+			// make sure id of next message is really in the same thread
+			// it might have been deleted from the view but not the db yet.
+			if (threadHdr == nextThreadHdr && threadHdr->GetNumChildren() > 1)
+			{
+				// unreadOnly
+				nsCOMPtr <nsIMsgDBHdr> msgHdr = threadHdr->GetChildHdrAt(1);
+				if (msgHdr != NULL)
+				{
+					char flag = 0;
+					CopyDBFlagsToExtraFlags(msgHdr->GetFlags(), &flag);
+					if (threadHdr->GetNumChildren() > 2)
+						flag |= kIsThread | kHasChildren;
+					m_flags.SetAtGrow(index, (uint8) flag);
+					m_levels.SetAtGrow(index, 0);
+				}
+			}
+		}
+		return err;
+	}
+	else if (!(flags & kIsThread))
+	{
+		return MessageDBView::RemoveByIndex(index);
+	}
+	// deleting collapsed thread header is special case. Child will be promoted,
+	// so just tell FE that line changed, not that it was deleted
+	nsCOMPtr <nsIMsgThread> threadHdr = m_messageDB->GetNeoThreadHdrForMsgID(m_idArray[index]);
+	if (threadHdr && threadHdr->GetNumChildren() > 1)
+	{
+		// change the id array and flags array to reflect the child header.
+		// If we're not deleting the header, we want the second header,
+		// Otherwise, the first one (which just got promoted).
+		nsCOMPtr <nsIMsgDBHdr> msgHdr = threadHdr->GetChildHdrAt(1);
+		if (msgHdr != NULL)
+		{
+			m_keys.SetAt(index, msgHdr->GetMessageKey());
+
+			char flag = 0;
+			CopyDBFlagsToExtraFlags(msgHdr->GetFlags(), &flag);
+//			if (msgHdr->GetArticleNum() == msgHdr->GetThreadId())
+				flag |= kIsThread;
+
+			if (threadHdr->GetNumChildren() == 2)	// if only hdr in thread (with one about to be deleted)
+													// adjust flags.
+			{
+				flag &=  ~kHasChildren;
+				flag &= ~kElided;
+				// tell FE that thread header needs to be repainted.
+				if (index > 0)
+					NoteChange(index - 1, 0, MSG_NotifyInsertOrDelete);
+			}
+			else
+			{
+				flag |= kHasChildren;
+				flag |= kElided;
+			}
+			m_flags[index] = flag;
+		}
+		else
+			XP_ASSERT(FALSE);	
+		NoteChange(index, 0, MSG_NotifyInsertOrDelete);	// horrible hack to tell fe that the key has changed
+	}
+	else
+		err = MessageDBView::RemoveByIndex(index);
+#endif
+	return rv;
 }
 

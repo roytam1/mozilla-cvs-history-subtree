@@ -60,10 +60,6 @@ typedef PRInt32 MsgFlags;
 #define MSG_FLAG_ELIDED   0x0020    /* Whether the children of this
                                        sub-thread are folded in the
                                        display.  */
-#define MSG_FLAG_EXPIRED  0x0040    /* If this flag is set, then this
-                                       is not a "real" message, but is
-                                       a dummy container representing
-                                       an expired parent in a thread.  */
 #define MSG_FLAG_OFFLINE  0x0080	/* db has offline news or imap article
 											 */
 #define MSG_FLAG_WATCHED  0x0100    /* If set, then this thread is watched (in
