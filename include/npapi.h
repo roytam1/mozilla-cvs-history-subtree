@@ -33,6 +33,13 @@
 #pragma pack(1)
 #endif
 
+/* 
+ * NO_NSPR_10_SUPPORT disables the inclusion 
+ * of obsolete/protypes.h, whose int16, uint16, 
+ * int32, and uint32 typedefs conflict with those 
+ * in this file. 
+ */ 
+#define NO_NSPR_10_SUPPORT
 #include "jri.h"                /* Java Runtime Interface */
 
 #if defined (__OS2__ ) || defined (OS2)
