@@ -112,14 +112,20 @@ extern char* lo_alignStrings[];
 #define	AREA_SHAPE_CIRCLE	3
 #define	AREA_SHAPE_POLY		4
 
-#define	BODY_ATTR_BACKGROUND	0x01
-#define	BODY_ATTR_BGCOLOR	0x02
-#define	BODY_ATTR_TEXT		0x04
-#define	BODY_ATTR_LINK		0x08
-#define	BODY_ATTR_VLINK		0x10
-#define	BODY_ATTR_ALINK		0x20
-#define	BODY_ATTR_MARGINS	0x40
-#define	BODY_ATTR_JAVA		0x80
+/*	ebb - begin */
+/*
+	Expanded these to 16 bits.
+*/
+#define	BODY_ATTR_BACKGROUND	0x0001
+#define	BODY_ATTR_BGCOLOR		0x0002
+#define	BODY_ATTR_TEXT			0x0004
+#define	BODY_ATTR_LINK			0x0008
+#define	BODY_ATTR_VLINK			0x0010
+#define	BODY_ATTR_ALINK			0x0020
+#define	BODY_ATTR_MARGINS		0x0040
+#define	BODY_ATTR_JAVA			0x0080
+#define	BODY_ATTR_ICCPROFILE	0x0100
+/*	ebb - end */
 
 #define DEF_TAB_WIDTH		8
 
@@ -740,10 +746,15 @@ struct lo_TopState_struct {
     PRPackedBool scrolling_doc;	/* Is this a special scrolling doc (hack) */
     PRPackedBool have_title;	/* set by first <TITLE> */
     PRPackedBool in_form;	/* true if in <FORM>...</FORM> */
-    uint8 body_attr;		/* What attributes were set by BODY */
+/*	ebb - begin */
+    uint16 body_attr;		/* What attributes were set by BODY */
+/*	ebb - end */
     char *unknown_head_tag;	/* ignore content in this case if non-NULL */
     char *base_target;		/* Base target of urls in this document */
     char *base_url;		/* Base url of this document */
+/*	ebb - begin */
+    PA_Block icc_profile_url;	/* url of icc profile for this document */
+/*	ebb - end */
     char *inline_stream_blocked_base_url; /* Base url for prefetched images */
     char *main_stream_blocked_base_url; /* Base url for prefetched images */
     char *url;			/* Real url of this document */
