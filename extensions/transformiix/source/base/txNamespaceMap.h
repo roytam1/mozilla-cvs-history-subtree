@@ -42,12 +42,13 @@
 #include "txError.h"
 #include "baseutils.h"
 #include "nsIAtom.h"
-#include "List.h"
 #include "nsCOMArray.h"
 
 class txNamespaceMap
 {
 public:
+    txNamespaceMap();
+    txNamespaceMap(const txNamespaceMap& aOther);
     nsresult addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI);
     PRInt32 lookupNamespace(nsIAtom* aPrefix);
     PRInt32 lookupNamespace(const nsAString& aPrefix);

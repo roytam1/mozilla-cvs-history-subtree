@@ -40,6 +40,16 @@
 #include "dom.h"
 #include "txAtoms.h"
 
+txNamespaceMap::txNamespaceMap()
+{
+}
+
+txNamespaceMap::txNamespaceMap(const txNamespaceMap& aOther)
+    : mPrefixes(aOther.mPrefixes)
+{
+    mNamespaces = aOther.mNamespaces; //bah! I want a copy-constructor!
+}
+
 nsresult
 txNamespaceMap::addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI)
 {
@@ -65,7 +75,7 @@ txNamespaceMap::addNamespace(nsIAtom* aPrefix, const nsAString& aNamespaceURI)
 
         return NS_OK;
     }
-    
+
     // New mapping
     if (!mPrefixes.AppendObject(prefix)) {
         return NS_ERROR_OUT_OF_MEMORY;
