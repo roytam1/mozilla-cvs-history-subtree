@@ -1,3 +1,9 @@
+1999-08-19  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (FIRSTKEY): Bug fix, we'd crap out if there are no
+	attributes in the returned entry.
+	(NEXTKEY): Ditto.
+
 1999-08-18  Leif Hedstrom  <leif@netscape.com>
 
 	* Set version number to v1.4! Woohoo! Also tagged it as v1.3.4,

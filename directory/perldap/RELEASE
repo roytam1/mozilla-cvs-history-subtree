@@ -37,7 +37,11 @@ Entry.pm:
 	* Fixed numerous bugs for large attribute sets.
 	* Fixed bug 4368 ("exists vs. EXISTS").
 	* Fixed several loop bugs.
-	* Removed all _self_obj_  references, it's obsolete in this version.
+	* Removed all _self_obj_  references, it's obsolete in this
+	  version.
+	* We support each() and keys() now on the Entry object, to loop
+	  through all attribute names (types).
+
 
 Conn.pm:
 	* close() - fixed memory leak.
@@ -64,7 +68,6 @@ Miscellaneous
 -------------
 
 	* Various other optimizations on tests and such.
-	* Set .pm files to "use strict".
 	* Fixed most (all?) known memory leaks.
 	* Fixed a lot of problems with Makefile.PL, adding some new targets
 	  (like "make html"). Add a skeleton to "make test".
