@@ -851,21 +851,48 @@ nsNSSCertificate::FormatUIStrings(const nsAutoString &nickname, nsAutoString &ni
   return rv;
 }
 
+
+#define NS_NSS_LONG 4
+#define NS_NSS_GET_LONG(x) ((((unsigned long)((x)[0])) << 24) | \
+                            (((unsigned long)((x)[1])) << 16) | \
+                            (((unsigned long)((x)[2])) <<  8) | \
+                             ((unsigned long)((x)[3])) )
+#define NS_NSS_PUT_LONG(src,dest) (dest)[0] = (((src) >> 24) & 0xff); \
+                                  (dest)[1] = (((src) >> 16) & 0xff); \
+                                  (dest)[2] = (((src) >>  8) & 0xff); \
+                                  (dest)[3] = ((src) & 0xff); 
+
+
 /* readonly attribute string dbKey; */
 NS_IMETHODIMP 
 nsNSSCertificate::GetDbKey(char * *aDbKey)
 {
-  SECStatus srv;
   SECItem key;
 
   NS_ENSURE_ARG(aDbKey);
   *aDbKey = nsnull;
+#ifdef NSS_3_3
+  SECStatus srv;
   srv = CERT_KeyFromIssuerAndSN(mCert->arena, &mCert->derIssuer,
                                 &mCert->serialNumber, &key);
   if (srv != SECSuccess) {
     return NS_ERROR_FAILURE;
   }
+#else
+  key.len = NS_NSS_LONG*4+mCert->serialNumber.len+mCert->derIssuer.len;
+  key.data = (unsigned char *)nsMemory::Alloc(key.len);
+  NS_NSS_PUT_LONG(0,key.data); // later put moduleID
+  NS_NSS_PUT_LONG(0,&key.data[NS_NSS_LONG]); // later put slotID
+  NS_NSS_PUT_LONG(mCert->serialNumber.len,&key.data[NS_NSS_LONG*2]);
+  NS_NSS_PUT_LONG(mCert->derIssuer.len,&key.data[NS_NSS_LONG*3]);
+  memcpy(&key.data[NS_NSS_LONG*4],mCert->serialNumber.data,
+						mCert->serialNumber.len);
+  memcpy(&key.data[NS_NSS_LONG*4+mCert->serialNumber.len],
+			mCert->derIssuer.data, mCert->derIssuer.len);
+#endif
+  
   *aDbKey = NSSBase64_EncodeItem(nsnull, nsnull, 0, &key);
+  nsMemory::Free(key.data); // SECItem is a 'c' type without a destrutor
   return (*aDbKey) ? NS_OK : NS_ERROR_FAILURE;
 }
 
@@ -2542,7 +2569,6 @@ nsNSSCertificateDB::GetCertByNickname(nsIPK11Token *aToken,
   *_rvCert = nsnull;
   return NS_ERROR_FAILURE;
 }
-
 /* nsIX509Cert getCertByDBKey(in string aDBkey, in nsIPK11Token aToken); */
 NS_IMETHODIMP 
 nsNSSCertificateDB::GetCertByDBKey(const char *aDBkey, nsIPK11Token *aToken,
@@ -2550,14 +2576,35 @@ nsNSSCertificateDB::GetCertByDBKey(const char *aDBkey, nsIPK11Token *aToken,
 {
   SECItem keyItem = {siBuffer, nsnull, 0};
   SECItem *dummy;
+  CERTIssuerAndSN issuerSN;
+  unsigned long moduleID,slotID;
   *_cert = nsnull; 
   if (!aDBkey) return NS_ERROR_FAILURE;
   dummy = NSSBase64_DecodeBuffer(nsnull, &keyItem, aDBkey,
                                  (PRUint32)PL_strlen(aDBkey)); 
+#ifdef NSS_3_3
   // In the future, this should actually look on the token.  But for now,
   // take it for granted that the cert has been loaded into the temp db.
   CERTCertificate *cert = CERT_FindCertByKey(CERT_GetDefaultCertDB(),
                                              &keyItem);
+#else
+  // the future is now, the cert is not longer loaded into temp db's forn now
+  // just fail
+  CERTCertificate *cert;
+
+  // someday maybe we can speed up the search using the moduleID and slotID
+  moduleID = NS_NSS_GET_LONG(keyItem.data);
+  slotID = NS_NSS_GET_LONG(&keyItem.data[NS_NSS_LONG]);
+
+  // build the issuer/SN structure
+  issuerSN.serialNumber.len = NS_NSS_GET_LONG(&keyItem.data[NS_NSS_LONG*2]);
+  issuerSN.derIssuer.len = NS_NSS_GET_LONG(&keyItem.data[NS_NSS_LONG*3]);
+  issuerSN.serialNumber.data= &keyItem.data[NS_NSS_LONG*4];
+  issuerSN.derIssuer.data= &keyItem.data[NS_NSS_LONG*4+
+                                              issuerSN.serialNumber.len];
+
+  cert = CERT_FindCertByIssuerAndSN(CERT_GetDefaultCertDB(), &issuerSN);
+#endif
   PR_FREEIF(keyItem.data);
   if (cert) {
     nsNSSCertificate *nssCert = new nsNSSCertificate(cert);
@@ -3152,9 +3199,11 @@ nsNSSCertificateDB::ImportUserCertificate(char *data, PRUint32 length, nsIInterf
   PK11_FreeSlot(slot);
 
   /* pick a nickname for the cert */
-  if (cert->subjectList && cert->subjectList->entry && 
-    cert->subjectList->entry->nickname) {
-  	nickname = cert->subjectList->entry->nickname;
+  if (cert->nickname) {
+	/* sigh, we need a call to look up other certs with this subject and
+	 * identify nicknames from them. We can no longer walk down internal
+	 * database structures  rjr */
+  	nickname = cert->nickname;
   } else {
     nickname = default_nickname(cert, ctx);
   }
@@ -3525,14 +3574,9 @@ nsNSSCertificateDB::GetOCSPResponders(nsISupportsArray ** aResponders)
     return rv;
   }
 
-  sec_rv = SEC_TraversePermCerts(CERT_GetDefaultCertDB(),
-                              ::GetOCSPResponders,
-                              respondersArray);
-  if (sec_rv == SECSuccess) {
-    sec_rv = PK11_TraverseSlotCerts(::GetOCSPResponders,
+  sec_rv = PK11_TraverseSlotCerts(::GetOCSPResponders,
                                  respondersArray,
                                  nsnull);
-  }
   if (sec_rv != SECSuccess) {
     goto loser;
   }
@@ -4013,8 +4057,13 @@ nsNSSCertificateDB::GetCertByEmailAddress(nsIPK11Token *aToken, const char *aEma
   SECStatus sec_rv;
   nsresult rv = NS_OK;
 
+#ifdef NSS_3_3
   certList = CERT_CreateEmailAddrCertList(nsnull, CERT_GetDefaultCertDB(),
           (char*)aEmailAddress, PR_Now(), PR_TRUE);
+#else
+  // fix this... rjr
+  certList = nsnull;
+#endif
   if (certList == nsnull) {
     rv = NS_ERROR_FAILURE;
     goto loser;
