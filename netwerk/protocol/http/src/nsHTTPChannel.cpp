@@ -1917,6 +1917,8 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
     //
     // Call the consumer OnStopRequest(...) to end the request...
     //----------------------------------------------------------------
+    mStatus = aStatus; // set the channel's status based on the respone status
+
     if (aListener)
     {
         rv = aListener->OnStopRequest(this, mResponseContext, aStatus, aStatusArg);
@@ -1939,7 +1941,7 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
     // After the consumer has been notified, remove the channel from its 
     // load group...  This will trigger an OnStopRequest from the load group.
     //
-    
+   
     if (mLoadGroup)
         mLoadGroup->RemoveChannel(this, nsnull, aStatus, aStatusArg);
 
