@@ -1,9 +1,0 @@
-rdf.h
-nsIRDFCursor.h
-nsIRDFDataBase.h
-nsIRDFDataSource.h
-nsIRDFNode.h
-nsIRDFObserver.h
-nsIRDFResourceFactory.h
-nsIRDFService.h
-nsIRDFXMLSource.h
