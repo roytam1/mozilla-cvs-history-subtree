@@ -120,4 +120,4 @@ private:
 #endif
 
 #define INTERFACE_OFFSET(leafType, interfaceType) \
-	UInt32((interfaceType*) ((leafType*)0))
+	(UInt32((interfaceType*) ((leafType*)4)) - UInt32((leafType*)4))
