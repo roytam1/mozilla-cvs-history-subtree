@@ -462,7 +462,7 @@ Widget XFE_PrefsPageMessages::createEightBitFrame (Widget parent,
 
 void XFE_PrefsPageMessages::init()
 {
-    XP_Bool boolval;
+    PRBool boolval;
     XP_Bool locked;
     int32 intval;
     char charval[10];           // this is only for the 2 or 3 character

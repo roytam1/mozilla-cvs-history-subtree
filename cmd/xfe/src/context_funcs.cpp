@@ -1178,7 +1178,7 @@ extern "C" void
 FE_RememberPopPassword (MWContext *context, const char *password)
 {
     // If we aren't supposed to remember don't save anything
-    XP_Bool passwordProtectLocalCache;
+    PRBool passwordProtectLocalCache;
 
     PREF_GetBoolPref("mail.password_protect_local_cache", 
 		     &passwordProtectLocalCache);

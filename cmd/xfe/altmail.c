@@ -62,13 +62,13 @@ change_resource(char* resource, char* value)
 void
 AltMailInit(void)
 {
-	XP_Bool use_altmail = FALSE;
+	PRBool use_altmail = PR_FALSE;
 	char* lib_name;
 	PRLibrary* lib;
 
 	PREF_GetBoolPref("mail.use_altmail", &use_altmail);
 
-	if ( use_altmail == FALSE ) return;
+	if ( use_altmail == PR_FALSE ) return;
 
 	PREF_CopyCharPref("mail.altmail_dll", &lib_name);
 

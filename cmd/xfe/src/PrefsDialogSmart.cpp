@@ -330,7 +330,7 @@ XFE_PrefsPageBrowserSmart::read()
 	XP_ASSERT( m_prefsDataBrowserSmart != NULL );
 
 	PrefsDataBrowserSmart *		fep = m_prefsDataBrowserSmart;
-	XP_Bool  backendBoolValue;
+	PRBool   backendBoolValue;
     char     *backendCharValue;
     int      backendIntValue;
     int      prefStatus;
@@ -403,7 +403,7 @@ void
 XFE_PrefsPageBrowserSmart::write()
 {
 	PrefsDataBrowserSmart *		fep = m_prefsDataBrowserSmart;
-	XP_Bool	old_related_links_enabled;
+	PRBool 	old_related_links_enabled;
     XP_Bool currentValue;
 
 	XP_ASSERT(fep);
@@ -454,7 +454,7 @@ XFE_PrefsPageBrowserSmart::updateRelatedLinksSensitive()
 	XP_ASSERT( m_prefsDataBrowserSmart != NULL );
 
 	PrefsDataBrowserSmart *		fep = m_prefsDataBrowserSmart;
-    XP_Bool backendBoolValue;
+    PRBool backendBoolValue;
 
 	// Related links enabled
 	PREF_GetBoolPref(PREF_BROWSER_RELATED_ENABLED, &backendBoolValue);

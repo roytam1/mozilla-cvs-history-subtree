@@ -2179,7 +2179,7 @@ void XFE_PrefsPageGeneralColors::read()
 
 	// Underline links
 
-    XP_Bool underline_links;
+    PRBool underline_links;
     PREF_GetBoolPref("browser.underline_anchors",&underline_links);
 
 	XtVaSetValues(fep->underline_links_toggle, 
@@ -2272,7 +2272,7 @@ void XFE_PrefsPageGeneralColors::write()
 
 	// Underline links
 
-	XP_Bool old_underline_links;
+	PRBool old_underline_links;
     PREF_GetBoolPref("browser.underline_anchors",&old_underline_links);
 
     XP_Bool new_underline_links;
@@ -2891,7 +2891,7 @@ void XFE_PrefsPageGeneralPrivacy::read()
 
   PrefsDataGeneralPrivacy *fep = m_prefsDataGeneralPrivacy;
   Boolean   sensitive;
-  XP_Bool   initialBoolValue;
+  PRBool   initialBoolValue;
   int       initialIntValue;
 
   // Privacy

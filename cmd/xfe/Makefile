@@ -1334,3 +1334,6 @@ symbols:
 	@echo "RELEASES    = $(RELEASES)"
 	@echo "OS_ARCH     = $(OS_ARCH)"
 	@echo "FC_PLATFORM = $(FC_PLATFORM)"
+
+foo:
+	echo $(MOTIF)

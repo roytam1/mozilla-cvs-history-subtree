@@ -2625,7 +2625,7 @@ void XFE_PrefsPageMailNewsCopies::init()
 {
  
     // values to grab from preference
-    Bool boolval;
+    PRBool boolval;
     Bool locked;
     char *charval;
     char *bcc, *email, *bcc_format;
@@ -3210,7 +3210,7 @@ Widget XFE_PrefsPageMailNewsHTML::createNoHTMLFrame(Widget parent,
 void XFE_PrefsPageMailNewsHTML::init()
 {
   
-    Bool boolval;
+    PRBool boolval;
     Bool locked;
     int32 intval;
  
@@ -3545,7 +3545,7 @@ Widget XFE_PrefsPageMailNewsReceipts::createReceiveReceiptsFrame(Widget parent,
 void XFE_PrefsPageMailNewsReceipts::init()
 {
   
-    Bool boolval;
+    PRBool boolval;
     Bool locked;
     int32 intval;
  

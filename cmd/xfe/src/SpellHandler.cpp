@@ -312,7 +312,7 @@ void
 XFE_SpellHandler::initSpellChecker()
 {
     // Let people disable spell checking in case they have NFS-related hangs:
-    XP_Bool disable_spell_checker;
+    PRBool disable_spell_checker;
     PREF_GetBoolPref("editor.disable_spell_checker", &disable_spell_checker);
     if (disable_spell_checker) {
         m_active = FALSE;

@@ -424,7 +424,7 @@ XFE_ThreadFrame::XFE_ThreadFrame(Widget toplevel, XFE_Frame *parent_frame,
 	
 #ifdef USE_3PANE
 
-        XP_Bool show_folder;
+        PRBool show_folder;
         PREF_GetBoolPref(THREEPANEVIEW_SHOW_PREF, &show_folder);
 
         m_banner->setShowFolder(show_folder); /* This has to be set before view 
