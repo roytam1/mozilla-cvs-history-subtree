@@ -222,6 +222,15 @@ ifdef MOZ_PHOENIX
 tier_9_dirs	+= toolkit
 endif
 
+ifdef MOZ_IPC
+tier_9_dirs += modules/ipc
+endif
+
+ifdef MOZ_PROFILESHARING
+tier_9_dirs += modules/transactionmngr
+endif
+
+
 #
 # tier 9x - application features
 #

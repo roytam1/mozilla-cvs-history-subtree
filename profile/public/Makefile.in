@@ -30,14 +30,16 @@ MODULE		= profile
 GRE_MODULE	= 1
 
 SDK_XPIDLSRCS	= \
-                  nsIProfile.idl \
-                  $(NULL)
+		nsIProfile.idl \
+		nsIProfileChangeStatus.idl \
+		nsIProfileSharing.idl \
+		$(NULL)
 
 XPIDLSRCS	= \
-                  nsIProfileInternal.idl \
-                  nsIProfileStartupListener.idl \
-                  nsIProfileChangeStatus.idl \
-                  $(NULL)
+		nsIProfileInternal.idl \
+		nsIProfileStartupListener.idl \
+		nsIProfileChangeStatus.idl \
+		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
 EXPORTS		= \

@@ -44,6 +44,10 @@ REQUIRES	= xpcom \
 		  intl \
 		  necko \
 		  $(NULL)
+      
+ifdef MOZ_PROFILESHARING
+REQUIRES	+= transaction_manager
+endif
 
 include $(topsrcdir)/config/config.mk
 

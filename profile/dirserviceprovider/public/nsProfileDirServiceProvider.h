@@ -43,13 +43,14 @@
 
 // Forward Declarations
 class nsIAtom;
+class nsProfileLock;
 
 // --------------------------------------------------------------------------------------
 // nsProfileDirServiceProvider - The nsIDirectoryServiceProvider implementation used for
 // profile-relative file locations.
 // --------------------------------------------------------------------------------------
 
-class nsProfileDirServiceProvider: public nsIDirectoryServiceProvider 
+class nsProfileDirServiceProvider: public nsIDirectoryServiceProvider
 {  
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDIRECTORYSERVICEPROVIDER
@@ -57,6 +58,22 @@ class nsProfileDirServiceProvider: public nsIDirectoryServiceProvider
   friend nsresult NS_NewProfileDirServiceProvider(PRBool, nsProfileDirServiceProvider**);
 
 public:
+
+   /**
+    * InitSharing
+    *
+    * Initializes profile sharing and activates it for this session.
+    * If used, this must be called before SetProfileDir.
+    * This is a no-op unless MOZ_PROFILESHARING is defined.
+    *
+    * @param aClientName   A generic identifier of the current client
+    *											 within the suite of applications which share
+    *											 this profile. It is used to separate the client's
+    * 										 non-shared data from shared data within
+    *											 the profile directory.
+    */
+
+   virtual nsresult        InitSharing(const nsAString& aClientName);
 
    /**
     * SetProfileDir
@@ -79,13 +96,22 @@ public:
 
   virtual nsresult         Register();
 
+  /**
+   * Shutdown
+   *
+   * Must be called before shutting down XPCOM.
+   */
+  
+  virtual nsresult				 Shutdown();
+
 protected:
                            nsProfileDirServiceProvider(PRBool aNotifyObservers = PR_TRUE);
    virtual                 ~nsProfileDirServiceProvider();
 
   nsresult                 Initialize();
   nsresult                 InitProfileDir(nsIFile* profileDir);
-  nsresult                 EnsureProfileFileExists(nsIFile *aFile);
+  nsresult								 InitNonSharedProfileDir();
+  nsresult                 EnsureProfileFileExists(nsIFile *aFile, nsIFile *destDir);
   nsresult                 UndefineFileLocations();
 
 protected:
@@ -109,6 +135,10 @@ protected:
 
   PRPackedBool             mNotifyObservers;
   nsCOMPtr<nsIFile>        mProfileDir;
+  nsProfileLock*					 mProfileDirLock;
+  
+  nsCOMPtr<nsIFile>				 mNonSharedProfileDir;
+  nsString								 mNonSharedDirName;
 };
 
 

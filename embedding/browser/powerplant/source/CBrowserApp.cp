@@ -89,7 +89,13 @@
 #include "nsProfileDirServiceProvider.h"
 #endif
 
-static const char* kProgramName = "PPEmbed";
+#ifdef SHARED_PROFILE
+#include "nsIProfileSharing.h"
+#define kAppDataFolderName NS_LITERAL_STRING("PPEmbed Suite")
+#else
+#define kAppDataFolderName NS_LITERAL_STRING("PPEmbed")
+#endif
+
 
 // ===========================================================================
 //      ¥ Main Program
@@ -217,7 +223,7 @@ CBrowserApp::CBrowserApp()
       }
    }
    
-   CAppFileLocationProvider *fileLocProvider = new CAppFileLocationProvider(kProgramName);
+   CAppFileLocationProvider *fileLocProvider = new CAppFileLocationProvider(kAppDataFolderName);
    ThrowIfNil_(fileLocProvider);
 
    rv = NS_InitEmbedding(macDir, fileLocProvider);
@@ -254,6 +260,26 @@ void
 CBrowserApp::StartUp()
 {
     nsresult rv;
+
+#ifdef SHARED_PROFILE    
+    CFBundleRef appBundle = CFBundleGetMainBundle();
+    ThrowIfNil_(appBundle);
+
+    nsAutoString suiteMemberStr;
+    // We don't get an owning reference here, so no CFRelease.
+    CFStringRef bundleStrRef = (CFStringRef)CFBundleGetValueForInfoDictionaryKey(
+                                appBundle, CFSTR("ProfilesSuiteMemberName"));
+                                
+    if (bundleStrRef && (CFGetTypeID(bundleStrRef) == CFStringGetTypeID())) {
+        UniChar buffer[256];
+        CFIndex strLen = CFStringGetLength(bundleStrRef);
+        ThrowIf_(strLen >= (sizeof(buffer) / sizeof(buffer[0])));
+        CFStringGetCharacters(bundleStrRef, CFRangeMake(0, strLen), buffer);
+        buffer[strLen] = 0;
+        suiteMemberStr.Assign(static_cast<PRUnichar*>(buffer));
+    }
+    ThrowIf_(suiteMemberStr.IsEmpty());
+#endif
         
 #ifdef USE_PROFILES
 
@@ -272,26 +298,28 @@ CBrowserApp::StartUp()
 #else
     
     // If we don't want different user profiles, all that's needed is
-    // to make an nsMPFileLocProvider. This will provide the same file
+    // to make an nsProfileDirServiceProvider. This will provide the same file
     // locations as the profile service but always within the specified folder.
     
-    nsCOMPtr<nsIFile> rootDir;
-    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILES_ROOT_DIR, getter_AddRefs(rootDir));
-    ThrowIfNil_(rootDir);
-    rv = rootDir->AppendNative(nsDependentCString("guest"));
-    ThrowIfError_(rv);       
+    nsCOMPtr<nsIFile> appDataDir;
+    rv = NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_DIR, getter_AddRefs(appDataDir));
+    ThrowIfNil_(appDataDir);
     
     nsCOMPtr<nsProfileDirServiceProvider> locProvider;
     NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(locProvider));
     ThrowIfNil_(locProvider);
-    
-    // Directory service holds an strong reference to any
+    // Directory service holds a strong reference to any
     // provider that is registered with it. Let it hold the
     // only ref. locProvider won't die when we leave this scope.
     rv = locProvider->Register();
     ThrowIfError_(rv);
-    nsCOMPtr<nsILocalFile> profileDir(do_QueryInterface(rootDir));
-    rv = locProvider->SetProfileDir(profileDir);
+
+#ifdef SHARED_PROFILE
+    locProvider->InitSharing(suiteMemberStr);
+#endif
+    
+    nsCOMPtr<nsILocalFile> localAppDataDir(do_QueryInterface(appDataDir));
+    rv = locProvider->SetProfileDir(localAppDataDir);
     ThrowIfError_(rv);
 #endif
 

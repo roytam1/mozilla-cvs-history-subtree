@@ -39,6 +39,7 @@
 #include "nsIProfileInternal.h"
 #include "nsIProfileStartupListener.h"
 #include "nsIProfileChangeStatus.h"
+#include "nsIProfileSharing.h"
 #include "nsCOMPtr.h"
 #include "nsISupports.h"
 #include "nsIRegistry.h"
@@ -57,12 +58,14 @@
 #define _MAX_LENGTH   256
 
 class nsProfile: public nsIProfileInternal,
-                 public nsIProfileChangeStatus 
+                 public nsIProfileChangeStatus,
+                 public nsIProfileSharing 
 {
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROFILE
     NS_DECL_NSIPROFILEINTERNAL
     NS_DECL_NSIPROFILECHANGESTATUS
+    NS_DECL_NSIPROFILESHARING
 
 private:
     nsresult ProcessArgs(nsICmdLineService *service,
@@ -94,7 +97,6 @@ private:
 
     nsString mCurrentProfileName;
     PRBool mCurrentProfileAvailable;
-    nsProfileLock mCurrentProfileLock;
 
     PRBool mIsUILocaleSpecified;
     nsCString mUILocaleName;

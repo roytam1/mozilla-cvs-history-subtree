@@ -63,6 +63,7 @@ REQUIRES	= xpcom \
 		  appshell \
 		  uconv \
 		  windowwatcher \
+		  profdirserviceprovider \
 		  $(NULL)
 
 CPPSRCS		= \

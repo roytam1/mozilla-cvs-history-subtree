@@ -12052,6 +12052,28 @@ then
 fi
 
 
+if test "${enable_profilesharing+set}" = set; then
+  enableval="$enable_profilesharing"
+  if test "$enableval" = "yes"; then
+    MOZ_PROFILESHARING=1
+    cat >> confdefs.h <<\EOF
+#define MOZ_PROFILESHARING 1
+EOF
+
+  elif test "$enableval" = "no"; then
+    :
+  else
+    { echo "configure: error: Option, profilesharing, does not take an argument ($enableval)." 1>&2; exit 1; }
+  fi
+fi
+
+if test "$MOZ_PROFILESHARING";
+then
+    MOZ_IPC=1
+fi
+
+
+
 ENABLE_TESTS=1
 # Check whether --enable-tests or --disable-tests was given.
 if test "${enable_tests+set}" = set; then
@@ -15222,6 +15244,8 @@ s%@MOZ_COMPOSER@%$MOZ_COMPOSER%g
 s%@MOZ_INSTALLER@%$MOZ_INSTALLER%g
 s%@MOZ_NO_ACTIVEX_SUPPORT@%$MOZ_NO_ACTIVEX_SUPPORT%g
 s%@MOZ_ACTIVEX_SCRIPTING_SUPPORT@%$MOZ_ACTIVEX_SCRIPTING_SUPPORT%g
+s%@MOZ_PROFILESHARING@%$MOZ_PROFILESHARING%g
+s%@MOZ_IPC@%$MOZ_IPC%g
 s%@JS_ULTRASPARC_OPTS@%$JS_ULTRASPARC_OPTS%g
 s%@MOZ_OPTIMIZE@%$MOZ_OPTIMIZE%g
 s%@MOZ_OPTIMIZE_FLAGS@%$MOZ_OPTIMIZE_FLAGS%g

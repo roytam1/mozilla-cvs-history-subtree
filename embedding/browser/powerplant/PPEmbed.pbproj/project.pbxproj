@@ -141,7 +141,6 @@
 				05952DFCFFF02D1B11CA0E50,
 				05952DFDFFF02D1B11CA0E50,
 			);
-			hasScannedForEncodings = 1;
 			isa = PBXProject;
 			mainGroup = 20286C29FDCF999611CA2CEA;
 			projectDirPath = "";
@@ -156,6 +155,8 @@
 				20286C32FDCF999611CA2CEA,
 				F5A63F7E03A53D2501202892,
 				195DF8C9FE9D4F0611CA2CBB,
+				F5C468B40406ABC801202892,
+				F5C468BA0406C7F201202892,
 			);
 			isa = PBXGroup;
 			name = "¬´PROJECTNAME¬ª";
@@ -232,7 +233,9 @@
 				F5A6416803A6440201202892,
 				F5A6416B03A6446D01202892,
 				F5A6416E03A644F401202892,
+				F5C4689904059A9101202892,
 				7964A6AC03E9CA6700202892,
+				F5C468B304059D5C01202892,
 				20286C36FDCF999611CA2CEA,
 				20286C38FDCF999611CA2CEA,
 				20286C3BFDCF999611CA2CEA,
@@ -243,7 +246,7 @@
 				FRAMEWORK_SEARCH_PATHS = ../../../lib/mac/PowerPlant/build;
 				HEADER_SEARCH_PATHS = "../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/include/string ../../../dist/include/necko ../../../dist/include/dom ../../../dist/include/pref ../../../dist/include/windowwatcher ../../../dist/include/embed_base ../../../dist/include/docshell ../../../dist/include/webshell ../../../dist/include/webbrwsr ../../../dist/include/webbrowserpersist ../../../dist/include/gfx ../../../dist/include/widget ../../../dist/include/uriloader ../../../dist/include/exthandler ../../../dist/include/helperAppDlg ../../../dist/include/profile ../../../dist/include/profdirserviceprovider ../../../dist/include/content ../../../dist/include/wallet ../../../dist/include/shistory ../../../dist/include/find ../../../dist/include/mimetype ../../../ ../../../lib/mac/PowerPlant/build/PowerPlant.framework/Versions/A/Headers \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
 				INSTALL_PATH = /;
-				LIBRARY_SEARCH_PATHS = "../../../dist/Embed ../../../dist/Embed/components ../../../dist/lib";
+				LIBRARY_SEARCH_PATHS = "../../../dist/Embed ../../../dist/Embed/components ../../../dist/lib /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/ipc/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/build /Users/conrad/Development/PROFILE_SHARING_1_BRANCH/mozilla/modules/transactionmngr/module";
 				OPTIMIZATION_CFLAGS = "-O0";
 				OTHER_CFLAGS = "\"-DOSTYPE=\\\"Darwin6.2\\\"\" \"-DOSARCH=\\\"Darwin\\\"\" -D__dest_os=__mac_os -D_STD=std -D_CSTD=std -fpascal-strings -fshort-wchar";
 				OTHER_LDFLAGS = "";
@@ -252,6 +255,7 @@
 				PRECOMPILE_PREFIX_HEADER = YES;
 				PREFIX_HEADER = pch/Prefix.h;
 				PRODUCT_NAME = PPEmbed;
+				PROFILESHARING = 1;
 				SECTORDER_FLAGS = "";
 				USE_GCC3_PFE_SUPPORT = YES;
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas -Wno-long-double";
@@ -276,6 +280,8 @@
 	<string></string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>PPEmbed</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
@@ -286,9 +292,14 @@
 	<false/>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
+	<key>ProfilesFolderName</key>
+	<string>PPEmbed</string>
+	<key>ProfilesSuiteMemberName</key>
+	<string>Browser</string>
 </dict>
 </plist>
 ";
+			shouldUseHeadermap = 0;
 		};
 		20286C35FDCF999611CA2CEA = {
 			buildActionMask = 2147483647;
@@ -2607,6 +2618,40 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
+		};
+		F5C4689904059A9101202892 = {
+			buildActionMask = 2147483647;
+			dstPath = ipc/modules;
+			dstSubfolderSpec = 6;
+			files = (
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5C468B304059D5C01202892 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			generatedFileNames = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			neededFileNames = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "DIST_BIN=../../../dist/bin\nEXECUTABLES_DIR=\"${SYMROOT}/${PRODUCT_NAME}.${WRAPPER_EXTENSION}/Contents/MacOS\"\n\nif [ -n \"$PROFILESHARING\" ]; then\n  rsync -a -L $DIST_BIN/ipc \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/mozipcd \"$EXECUTABLES_DIR\" || exit 1\n  rsync -a -L $DIST_BIN/components/libipc.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\n  rsync -a -L $DIST_BIN/components/libtransmngr_client.dylib \"$EXECUTABLES_DIR\"/components/ || exit 1\nfi\n";
+		};
+		F5C468B40406ABC801202892 = {
+			isa = PBXFileReference;
+			name = nsProfileDirServiceProvider.cpp;
+			path = ../../../profile/dirserviceprovider/src/nsProfileDirServiceProvider.cpp;
+			refType = 2;
+		};
+		F5C468BA0406C7F201202892 = {
+			isa = PBXFileReference;
+			name = nsPrefService.cpp;
+			path = ../../../modules/libpref/src/nsPrefService.cpp;
+			refType = 2;
 		};
 	};
 	rootObject = 20286C28FDCF999611CA2CEA;

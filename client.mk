@@ -52,13 +52,14 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
-NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
-NSS_CO_TAG = NSS_CLIENT_TAG
-LDAPCSDK_CO_TAG = ldapcsdk_50_client_branch
-ACCESSIBLE_CO_TAG = 
-IMGLIB2_CO_TAG = 
+MOZ_CO_TAG = PROFILE_SHARING_1_BRANCH
+NSPR_CO_TAG = PROFILE_SHARING_1_BRANCH
+PSM_CO_TAG = PROFILE_SHARING_1_BRANCH
+NSS_CO_TAG = PROFILE_SHARING_1_BRANCH
+LDAPCSDK_CO_TAG = PROFILE_SHARING_1_BRANCH
+ACCESSIBLE_CO_TAG = PROFILE_SHARING_1_BRANCH
+IMGLIB2_CO_TAG = PROFILE_SHARING_1_BRANCH
+IPC_CO_TAG = 
 BUILD_MODULES = all
 
 #######################################################################
@@ -281,6 +282,19 @@ endif
 CVSCO_IMGLIB2 = $(CVS) $(CVS_FLAGS) co $(IMGLIB2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IMGLIB2_CO_MODULE)
 
 ####################################
+# CVS defines for ipc module
+#
+IPC_CO_MODULE = mozilla/modules/ipc
+IPC_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  IPC_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+ifdef IPC_CO_TAG
+  IPC_CO_FLAGS := $(IPC_CO_FLAGS) -r $(IPC_CO_TAG)
+endif
+CVSCO_IPC = $(CVS) $(CVS_FLAGS) co $(IPC_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IPC_CO_MODULE)
+
+####################################
 # CVS defines for Calendar 
 #
 CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar mozilla/other-licenses/libical
@@ -439,6 +453,7 @@ real_checkout:
         cvs_co $(CVSCO_LDAPCSDK) && \
         cvs_co $(CVSCO_ACCESSIBLE) && \
         cvs_co $(CVSCO_IMGLIB2) && \
+        cvs_co $(CVSCO_IPC) && \
 	cvs_co $(CVSCO_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	$(CHECKOUT_PHOENIX) && \
@@ -499,6 +514,7 @@ real_fast-update:
 	fast_update $(CVSCO_LDAPCSDK) && \
 	fast_update $(CVSCO_ACCESSIBLE) && \
 	fast_update $(CVSCO_IMGLIB2) && \
+	fast_update $(CVSCO_IPC) && \
 	fast_update $(CVSCO_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	$(FASTUPDATE_PHOENIX) && \
