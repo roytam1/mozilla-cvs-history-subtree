@@ -242,7 +242,7 @@ NS_IMETHODIMP CWebBrowserChrome::OnProgressChange(nsIWebProgress *progress, nsIR
 }
 
 NS_IMETHODIMP CWebBrowserChrome::OnStateChange(nsIWebProgress *progress, nsIRequest *request,
-                                               PRInt32 progressStateFlags, PRUint32 status)
+                                               PRUint32 progressStateFlags, nsresult status)
 {
 	NS_ENSURE_TRUE(mBrowserWindow, NS_OK);
 	

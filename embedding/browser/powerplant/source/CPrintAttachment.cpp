@@ -110,7 +110,7 @@ CPrintProgressListener::~CPrintProgressListener()
 NS_IMPL_ISUPPORTS1(CPrintProgressListener,
                    nsIWebProgressListener);
                    
-NS_IMETHODIMP CPrintProgressListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRInt32 aStateFlags, PRUint32 aStatus)
+NS_IMETHODIMP CPrintProgressListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 aStateFlags, nsresult aStatus)
 {    
     if ((aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT) &&
         (aStateFlags & nsIWebProgressListener::STATE_START))
@@ -174,19 +174,19 @@ NS_IMETHODIMP CPrintProgressListener::OnProgressChange(nsIWebProgress *aWebProgr
 
 NS_IMETHODIMP CPrintProgressListener::OnLocationChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, nsIURI *location)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP CPrintProgressListener::OnStatusChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, nsresult aStatus, const PRUnichar *aMessage)
 {
     nsCAutoString cString; cString.AssignWithConversion(aMessage);
     printf("CPrintProgressListener::OnStatusChange: aStatus = %s\n", cString.get());
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
-NS_IMETHODIMP CPrintProgressListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRInt32 state)
+NS_IMETHODIMP CPrintProgressListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 state)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 void CPrintProgressListener::ListenToMessage(MessageT inMessage,
