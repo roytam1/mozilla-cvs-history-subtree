@@ -774,8 +774,10 @@ HTMLContentSink::AddAttributes(const nsIParserNode& aNode,
     k.ToLowerCase();
 
     nsIAtom*  keyAtom = NS_NewAtom(k);
+    nsHTMLValue value;
 
-    if (!aContent->HasAttr(kNameSpaceID_None, keyAtom)) {
+    if (NS_CONTENT_ATTR_NOT_THERE == 
+        aContent->GetHTMLAttribute(keyAtom, value)) {
       // Get value and remove mandatory quotes
       GetAttributeValueAt(aNode, i, v);
 

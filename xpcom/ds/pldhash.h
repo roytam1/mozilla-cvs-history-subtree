@@ -272,7 +272,7 @@ typedef void
  */
 typedef void
 (* PR_CALLBACK PLDHashInitEntry)(PLDHashTable *table,
-                                     PLDHashEntryHdr *entry,
+                                     const PLDHashEntryHdr *entry,
                                      const void *key);
 
 /*

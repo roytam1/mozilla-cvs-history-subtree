@@ -207,20 +207,9 @@ NS_LAYOUT nsresult
 NS_NewImageDocument(nsIDocument** aInstancePtrResult)
 {
   nsImageDocument* doc = new nsImageDocument();
-  NS_ENSURE_TRUE(doc, NS_ERROR_OUT_OF_MEMORY);
-
-  nsresult rv = doc->Init();
-
-  if (NS_FAILED(rv)) {
-    delete doc;
-
-    return rv;
-  }
-
-  *aInstancePtrResult = doc;
-  NS_ADDREF(*aInstancePtrResult);
-
-  return NS_OK;
+  if(doc)
+    return doc->QueryInterface(NS_GET_IID(nsIDocument), (void**) aInstancePtrResult);
+  return NS_ERROR_OUT_OF_MEMORY;
 }
 
 nsImageDocument::nsImageDocument()
