@@ -3,5 +3,4 @@
 #
 
 jvmmgr.h
-nsjvm.h
-nsscd.h
+nsIJVM.h
