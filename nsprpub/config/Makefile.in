@@ -122,3 +122,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) $(OUTOPTION)$@
 endif
+
+real_install:: nspr.m4
+	$(NSINSTALL) -D $(DESTDIR)$(datadir)/aclocal
+	$(NSINSTALL) -t -m 0644 $< $(DESTDIR)$(datadir)/aclocal

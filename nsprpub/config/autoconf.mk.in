@@ -9,10 +9,11 @@ exec_prefix	= @exec_prefix@
 bindir		= @bindir@
 includedir	= @includedir@/nspr
 libdir		= @libdir@
+datadir		= @datadir@
 
 dist_prefix	= @dist_prefix@
 dist_bindir	= @dist_bindir@
-dist_includedir = @dist_includedir@
+dist_includedir = @dist_includedir@/nspr
 dist_libdir	= @dist_libdir@
 
 DIST		= $(dist_prefix)
