@@ -30,7 +30,7 @@
  
  srDest = 1000;
 logComment("Starting Install Process");
- err    = initInstall("Webclient", "Webclient", "1.0"); 
+ err    = initInstall("Webclient", "Webclient", "1.1"); 
  logComment("initInstall: " + err);
  
  fProgram = getFolder("Program");
@@ -40,7 +40,7 @@ logComment("Starting Install Process");
  {
    setPackageFolder(fProgram);
    err = addDirectory("",
-     "1.0",
+     "1.1",
      "javadev", // dir name in jar to extract 
      fProgram, // Where to put this file 
                // (Returned from GetFolder) 
@@ -56,11 +56,16 @@ logComment("Starting Install Process");
    err = File.copy(src, fComponents);
    src = getFolder(fJavadev, "lib/bcjavastubs.dll");
    err = File.copy(src, fComponents);
-   src = getFolder(fJavadev, "lib/javaloader.dll");
+   src = getFolder(fJavadev, "lib/bcjavaloader.dll");
    err = File.copy(src, fComponents);
    src = getFolder(fJavadev, "lib/bcxpcomstubs.dll");
    err = File.copy(src, fComponents);
-   src = getFolder(fJavadev, "regxpcom.exe");
+   src = getFolder(fJavadev, "lib/regxpcom.exe");
+   err = File.copy(src, fProgram);
+
+   src = getFolder(fJavadev, "lib/javadomjni.dll");
+   err = File.copy(src, fProgram);
+   src = getFolder(fJavadev, "lib/webclient.dll");
    err = File.copy(src, fProgram);
 
    // check return value

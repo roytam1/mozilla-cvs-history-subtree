@@ -36,7 +36,7 @@ function symlink(lnk, tgt)
  
  srDest = 1000;
 logComment("Starting Install Process");
- err    = initInstall("Webclient", "Webclient", "1.0"); 
+ err    = initInstall("Webclient", "Webclient", "1.1"); 
  logComment("initInstall: " + err);
  
  fProgram = getFolder("Program");
@@ -46,7 +46,7 @@ logComment("Starting Install Process");
  {
    setPackageFolder(fProgram);
    err = addDirectory("",
-     "1.0",
+     "1.1",
      "javadev", // dir name in jar to extract 
      fProgram, // Where to put this file 
                // (Returned from GetFolder) 
@@ -62,8 +62,8 @@ logComment("Starting Install Process");
            getFolder(fJavadev, "lib/libbcorb.so"));
    symlink(fComponents + "libbcjavastubs.so", 
            getFolder(fJavadev, "lib/libbcjavastubs.so"));
-   symlink(fComponents + "libjavaloader.so", 
-           getFolder(fJavadev, "lib/libjavaloader.so"));
+   symlink(fComponents + "libbcjavaloader.so", 
+           getFolder(fJavadev, "lib/libbcjavaloader.so"));
    symlink(fComponents + "libjavaSample.so", 
            getFolder(fJavadev, "lib/libjavaSample.so"));
    symlink(fComponents + "libbcTest.so", 
