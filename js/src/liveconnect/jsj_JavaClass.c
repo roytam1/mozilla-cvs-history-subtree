@@ -164,7 +164,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     } else {
         JSFunction *function;
         
-        /* FIXME - eliminate JSFUN_BOUND_METHOD */
+        /* TODO - eliminate JSFUN_BOUND_METHOD */
         JS_IdToValue(cx, id, &idval);
         member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
         function = JS_NewFunction(cx, jsj_JavaStaticMethodWrapper, 0,
@@ -268,7 +268,7 @@ JavaClass_defineProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
                          JSPropertyOp getter, JSPropertyOp setter,
                          uintN attrs, JSProperty **propp)
 {
-    JS_ReportError(cx, "Properties of JavaClass objects may not be deleted");
+    JS_ReportError(cx, "Cannot define a new property in a JavaClass");
     return JS_FALSE;
 }
 
@@ -298,8 +298,18 @@ JavaClass_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 static JSBool
 JavaClass_deleteProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
-    JS_ReportError(cx, "Properties of JavaClass objects may not be deleted");
-    return JS_FALSE;
+    JSVersion version = JS_GetVersion(cx);
+    
+    *vp = JSVAL_FALSE;
+
+    if (!JSVERSION_IS_ECMA(version)) {
+        JS_ReportError(cx, "Properties of JavaClass objects may not be deleted");
+        return JS_FALSE;
+    } else {
+        /* Attempts to delete permanent properties are silently ignored
+           by ECMAScript. */
+        return JS_TRUE;
+    }
 }
 
 static JSBool
@@ -333,7 +343,7 @@ JavaClass_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         jsj_MapJSContextToJSJThread(cx, &jEnv);
         if (!jEnv)
             return JS_FALSE;
-        member_descriptor = jsj_GetClassInstanceMembers(cx, jEnv, class_descriptor);
+        member_descriptor = jsj_GetClassStaticMembers(cx, jEnv, class_descriptor);
         *statep = PRIVATE_TO_JSVAL(member_descriptor);
         if (idp)
             *idp = INT_TO_JSVAL(class_descriptor->num_instance_members);
@@ -451,7 +461,7 @@ JSObjectOps JavaClass_ops = {
     JavaClass_hasInstance,      /* hasInstance */
 };
 
-JSObjectOps *
+static JSObjectOps *
 JavaClass_getObjectOps(JSContext *cx, JSClass *clazz)
 {
     return &JavaClass_ops;
@@ -464,7 +474,7 @@ JSClass JavaClass_class = {
     JavaClass_getObjectOps,
 };
 
-JSObject *
+static JSObject *
 jsj_new_JavaClass(JSContext *cx, JNIEnv *jEnv, JSObject* parent_obj,
                   JavaClassDescriptor *class_descriptor)
 {

@@ -30,6 +30,48 @@
 
 #include "jsj_private.h"      /* LiveConnect internals */
 
+/* Shorthands for ASCII (7-bit) decimal and hex conversion. */
+#define JS7_ISDEC(c)    (((c) >= '0') && ((c) <= '9'))
+#define JS7_UNDEC(c)    ((c) - '0')
+
+/*
+ * Convert any jsval v to an integer jsval if ToString(v)
+ * contains a base-10 integer that fits into 31 bits.
+ * Otherwise return v.
+ */
+static jsval
+try_convert_to_jsint(JSContext *cx, jsval idval)
+{
+    const jschar *cp;
+    JSString *jsstr;
+    
+    jsstr = JS_ValueToString(cx, idval);
+    if (!jsstr)
+        return idval;
+
+    cp = JS_GetStringChars(jsstr);
+    if (JS7_ISDEC(*cp)) {
+        jsuint index = JS7_UNDEC(*cp++);
+        jsuint oldIndex = 0;
+        jsuint c;
+        if (index != 0) {
+            while (JS7_ISDEC(*cp)) {
+                oldIndex = index;
+                c = JS7_UNDEC(*cp);
+                index = 10*index + c;
+                cp++;
+            }
+        }
+        if (*cp == 0 &&
+            (oldIndex < (JSVAL_INT_MAX / 10) ||
+            (oldIndex == (JSVAL_INT_MAX / 10) && c < (JSVAL_INT_MAX % 10)))) {
+            return INT_TO_JSVAL(index);
+        }
+    }
+    return idval;
+}
+
+
 static JSBool
 access_java_array_element(JSContext *cx,
                           JNIEnv *jEnv,
@@ -67,6 +109,9 @@ access_java_array_element(JSContext *cx,
 
     JS_IdToValue(cx, id, &idval);
 
+    if (!JSVAL_IS_INT(idval))
+        idval = try_convert_to_jsint(cx, idval);
+
     if (!JSVAL_IS_INT(idval)) {
         /*
          * Usually, properties of JavaArray objects are indexed by integers, but
@@ -79,9 +124,17 @@ access_java_array_element(JSContext *cx,
             member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
             
             if (do_assignment) {
-                JS_ReportError(cx, "Attempt to write to invalid Java array "
-                    "element \"%s\"", member_name);
-                return JS_FALSE;
+                JSVersion version = JS_GetVersion(cx);
+
+                if (!JSVERSION_IS_ECMA(version)) {
+ 
+                    JS_ReportError(cx, "Attempt to write to invalid Java array "
+                                       "element \"%s\"", member_name);
+                    return JS_FALSE;
+                } else {
+                    *vp = JSVAL_VOID;
+                    return JS_TRUE;
+                }
             } else {
                 if (!strcmp(member_name, "length")) {
                     array_length = jsj_GetJavaArrayLength(cx, jEnv, java_array);
@@ -170,7 +223,7 @@ JavaArray_defineProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
                          JSPropertyOp getter, JSPropertyOp setter,
                          uintN attrs, JSProperty **propp)
 {
-    JS_ReportError(cx, "Elements of JavaArray objects may not be deleted");
+    JS_ReportError(cx, "Cannot define a new property in a JavaArray");
     return JS_FALSE;
 }
 
@@ -200,8 +253,18 @@ JavaArray_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 static JSBool
 JavaArray_deleteProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
-    JS_ReportError(cx, "Elements of JavaArray objects may not be deleted");
-    return JS_FALSE;
+    JSVersion version = JS_GetVersion(cx);
+
+    *vp = JSVAL_FALSE;
+    
+    if (!JSVERSION_IS_ECMA(version)) {
+        JS_ReportError(cx, "Properties of JavaArray objects may not be deleted");
+        return JS_FALSE;
+    } else {
+        /* Attempts to delete permanent properties are silently ignored
+           by ECMAScript. */
+        return JS_TRUE;
+    }
 }
 
 static JSBool
@@ -308,7 +371,7 @@ JSObjectOps JavaArray_ops = {
     NULL                        /* hasInstance */
 };
 
-JSObjectOps *
+static JSObjectOps *
 JavaArray_getObjectOps(JSContext *cx, JSClass *clazz)
 {
     return &JavaArray_ops;
