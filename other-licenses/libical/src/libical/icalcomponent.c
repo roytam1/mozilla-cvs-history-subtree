@@ -818,7 +818,7 @@ time_t icalcomponent_convert_time(icalproperty *p)
 		time_t t;
 
 		t = time(NULL);
-	 	offset = GMTDelta;
+	 	offset = localtime(&t)->tm_gmtoff;
 #endif
 #endif
 	}
