@@ -2125,6 +2125,8 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	nsMsgViewIndex highIndex = GetSize() - 1;
 	IdDWord	dWordEntryInfo1, dWordEntryInfo2;
 	IdKeyPtr	keyInfo1, keyInfo2;
+  IdPRTime timeInfo1, timeInfo2;
+
   nsresult rv;
 
 	if (GetSize() == 0)
@@ -2158,6 +2160,13 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 			comparisonFun = FnSortIdDWord;
 			pValue1 = (void *) &dWordEntryInfo1;
 			break;
+    case kPRTime:
+      rv = GetPRTimeField(msgHdr, m_sortType, &timeInfo1.prtime);
+			msgHdr->GetMessageKey(&timeInfo1.info.id);
+      NS_ENSURE_SUCCESS(rv,rv);
+      comparisonFun = FnSortIdPRTime;
+      pValue1 = (void *) &timeInfo1;
+      break;
 		default:
 			done = PR_TRUE;
 	}
@@ -2177,12 +2186,18 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 			keyInfo2.info.id = messageKey;
       pValue2 = &keyInfo2;
 		}
-		else
+		else if (fieldType == kU32)
 		{
 			GetLongField(tryHdr, m_sortType, &dWordEntryInfo2.dword);
 			dWordEntryInfo2.info.id = messageKey;
 			pValue2 = &dWordEntryInfo2;
 		}
+    else if (fieldType == kPRTime)
+    {
+			GetPRTimeField(tryHdr, m_sortType, &timeInfo2.prtime);
+			timeInfo2.info.id = messageKey;
+			pValue2 = &timeInfo2;
+    }
 		retStatus = (*comparisonFun)(&pValue1, &pValue2, nsnull);
 		if (retStatus == 0)
 			break;
