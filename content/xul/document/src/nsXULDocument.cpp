@@ -860,14 +860,11 @@ nsXULDocument::SetDocumentCharacterSet(const nsAReadableString& aCharSetID)
 {
   if (!mCharSetID.Equals(aCharSetID)) {
     mCharSetID.Assign(aCharSetID);
-    nsAutoString charSetTopic;
-    charSetTopic.Assign(NS_LITERAL_STRING("charset"));
-    nsAutoString charSetID(aCharSetID);
     PRInt32 n = mCharSetObservers.Count();
     for (PRInt32 i = 0; i < n; i++) {
       nsIObserver* observer = (nsIObserver*) mCharSetObservers.ElementAt(i);
-      observer->Observe((nsIDocument*) this, charSetTopic.GetUnicode(),
-                        charSetID.GetUnicode());
+      observer->Observe((nsIDocument*) this, NS_LITERAL_STRING("charset"),
+                        nsPromiseFlatString(aCharSetID));
     }
   }
   return NS_OK;
@@ -6756,7 +6753,7 @@ nsXULDocument::ToXIF(nsIXIFConverter* aConverter, nsIDOMNode* aNode)
 } 
 
 NS_IMETHODIMP
-nsXULDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
+nsXULDocument::CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection)
 {
   nsresult result=NS_OK;
 
@@ -6770,28 +6767,28 @@ nsXULDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
 
   converter->SetSelection(aSelection);
 
-  converter->AddStartTag( NS_ConvertToString("section") , PR_TRUE); 
-  converter->AddStartTag( NS_ConvertToString("section_head") , PR_TRUE);
+  converter->AddStartTag( NS_LITERAL_STRING("section") , PR_TRUE); 
+  converter->AddStartTag( NS_LITERAL_STRING("section_head") , PR_TRUE);
 
-  converter->BeginStartTag( NS_ConvertToString("document_info") );
-  converter->AddAttribute(NS_ConvertToString("charset"),mCharSetID);
+  converter->BeginStartTag( NS_LITERAL_STRING("document_info") );
+  converter->AddAttribute(NS_LITERAL_STRING("charset"),mCharSetID);
 /*  nsCOMPtr<nsIURI> uri (getter_AddRefs(GetDocumentURL()));
   if (uri)
   {
     char* spec = 0;
     if (NS_SUCCEEDED(uri->GetSpec(&spec)) && spec)
     {
-      converter->AddAttribute(NS_ConvertToString("uri"), NS_ConvertToString(spec));
+      converter->AddAttribute(NS_LITERAL_STRING("uri"), NS_ConvertToString(spec));
       Recycle(spec);
     }
   }*/
-  converter->FinishStartTag(NS_ConvertToString("document_info"),PR_TRUE,PR_TRUE);
+  converter->FinishStartTag(NS_LITERAL_STRING("document_info"),PR_TRUE,PR_TRUE);
 
-  converter->AddEndTag(NS_ConvertToString("section_head"), PR_TRUE, PR_TRUE);
-  converter->AddStartTag(NS_ConvertToString("section_body"), PR_TRUE);
+  converter->AddEndTag(NS_LITERAL_STRING("section_head"), PR_TRUE, PR_TRUE);
+  converter->AddStartTag(NS_LITERAL_STRING("section_body"), PR_TRUE);
 //HACKHACKHACK DOCTYPE NOT DONE FOR XULDOCUMENTS>ASSIGN IN HTML
   nsString hack;
-  hack.AssignWithConversion("DOCTYPE html PUBLIC \"-//w3c//dtd html 4.0 transitional//en\"");
+  hack.Assign(NS_LITERAL_STRING("DOCTYPE html PUBLIC \"-//w3c//dtd html 4.0 transitional//en\""));
   converter->AddMarkupDeclaration(hack);
   
   nsCOMPtr<nsIDOMDocumentType> doctype;

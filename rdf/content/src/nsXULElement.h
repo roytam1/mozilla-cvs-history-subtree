@@ -449,7 +449,7 @@ public:
     NS_IMETHOD CompileEventHandler(nsIScriptContext* aContext,
                                    void* aTarget,
                                    nsIAtom *aName,
-                                   const nsString& aBody,
+                                   const nsAReadableString& aBody,
                                    void** aHandler);
     NS_IMETHOD GetCompiledEventHandler(nsIAtom *aName, void** aHandler);
 

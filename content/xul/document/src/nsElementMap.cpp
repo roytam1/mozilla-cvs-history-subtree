@@ -152,21 +152,23 @@ nsElementMap::Add(const nsAReadableString& aID, nsIContent* aContent)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsAutoString id(aID);
+    const PRUnichar *id = nsPromiseFlatString(aID);
+
     ContentListItem* head =
-        NS_STATIC_CAST(ContentListItem*, PL_HashTableLookup(mMap, id.GetUnicode()));
+        NS_STATIC_CAST(ContentListItem*, PL_HashTableLookup(mMap, id));
 
     if (! head) {
         head = new (mPool) ContentListItem(aContent);
         if (! head)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        PRUnichar* key = new PRUnichar[id.Length() + 1];
+        // XXX Why not simply do a ToNewUnicode() here?
+        PRUnichar* key = new PRUnichar[aID.Length() + 1];
         if (! key)
             return NS_ERROR_OUT_OF_MEMORY;
 
-        nsCRT::memcpy(key, id.GetUnicode(), id.Length() * sizeof(PRUnichar));
-        key[id.Length()] = PRUnichar(0);
+        nsCRT::memcpy(key, id, aID.Length() * sizeof(PRUnichar));
+        key[aID.Length()] = PRUnichar(0);
 
         PL_HashTableAdd(mMap, key, head);
     }
@@ -194,7 +196,7 @@ nsElementMap::Add(const nsAReadableString& aID, nsIContent* aContent)
 
                     nsCAutoString tagnameC, aidC; 
                     tagnameC.AssignWithConversion(tagname);
-                    aidC.AssignWithConversion(id);
+                    aidC.AssignWithConversion(id, aID.Length());
                     PR_LOG(gMapLog, PR_LOG_ALWAYS,
                            ("xulelemap(%p) dup    %s[%p] <-- %s\n",
                             this,
@@ -231,7 +233,7 @@ nsElementMap::Add(const nsAReadableString& aID, nsIContent* aContent)
 
         nsCAutoString tagnameC, aidC; 
         tagnameC.AssignWithConversion(tagname);
-        aidC.AssignWithConversion(id);
+        aidC.AssignWithConversion(id, aID.Length());
         PR_LOG(gMapLog, PR_LOG_ALWAYS,
                ("xulelemap(%p) add    %s[%p] <-- %s\n",
                 this,
@@ -252,7 +254,8 @@ nsElementMap::Remove(const nsAReadableString& aID, nsIContent* aContent)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsAutoString id(aID);
+    const PRUnichar *id = nsPromiseFlatString(aID);
+
 #ifdef PR_LOGGING
     if (PR_LOG_TEST(gMapLog, PR_LOG_ALWAYS)) {
         nsresult rv;
@@ -278,8 +281,8 @@ nsElementMap::Remove(const nsAReadableString& aID, nsIContent* aContent)
 #endif
 
     PLHashEntry** hep = PL_HashTableRawLookup(mMap,
-                                              Hash(id.GetUnicode()),
-                                              id.GetUnicode());
+                                              Hash(id),
+                                              id);
 
     // XXX Don't comment out this assert: if you get here, something
     // has gone dreadfully, horribly wrong. Curse. Scream. File a bug
@@ -328,10 +331,9 @@ nsElementMap::Find(const nsAReadableString& aID, nsISupportsArray* aResults)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsAutoString id(aID);
     aResults->Clear();
     ContentListItem* item =
-        NS_REINTERPRET_CAST(ContentListItem*, PL_HashTableLookup(mMap, id.GetUnicode()));
+        NS_REINTERPRET_CAST(ContentListItem*, PL_HashTableLookup(mMap, (const PRUnichar *)nsPromiseFlatString(aID)));
 
     while (item) {
         aResults->AppendElement(item->mContent);
@@ -348,9 +350,8 @@ nsElementMap::FindFirst(const nsAReadableString& aID, nsIContent** aResult)
     if (! mMap)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsAutoString id(aID);
     ContentListItem* item =
-        NS_REINTERPRET_CAST(ContentListItem*, PL_HashTableLookup(mMap, id.GetUnicode()));
+        NS_REINTERPRET_CAST(ContentListItem*, PL_HashTableLookup(mMap, (const PRUnichar *)nsPromiseFlatString(aID)));
 
     if (item) {
         *aResult = item->mContent;

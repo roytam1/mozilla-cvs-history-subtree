@@ -277,13 +277,10 @@ nsXULCommandDispatcher::UpdateCommands(const nsAReadableString& aEventName)
   }
 #endif
   
-    // XXX Fix Matches to take nsAReadableStrings...
-    nsAutoString eventName(aEventName);
-
     for (Updater* updater = mUpdaters; updater != nsnull; updater = updater->mNext) {
         // Skip any nodes that don't match our 'events' or 'targets'
         // filters.
-        if (! Matches(updater->mEvents, eventName))
+        if (! Matches(updater->mEvents, aEventName))
             continue;
 
         if (! Matches(updater->mTargets, id))
@@ -505,12 +502,12 @@ nsXULCommandDispatcher::SetScriptObject(void *aScriptObject)
 
 PRBool
 nsXULCommandDispatcher::Matches(const nsString& aList, 
-                                const nsString& aElement)
+                                const nsAReadableString& aElement)
 {
     if (aList.Equals(NS_LITERAL_STRING("*")))
         return PR_TRUE; // match _everything_!
 
-    PRInt32 indx = aList.Find(aElement);
+    PRInt32 indx = aList.Find(nsPromiseFlatString(aElement));
     if (indx == -1)
         return PR_FALSE; // not in the list at all
 
@@ -551,14 +548,14 @@ nsXULCommandDispatcher::GetParentWindowFromDocument(nsIDOMDocument* aDocument, n
 NS_IMETHODIMP
 nsXULCommandDispatcher::GetControllerForCommand(const nsAReadableString& aCommand, nsIController** _retval)
 {
-    nsAutoString command(aCommand);
+    const PRUnichar *command = nsPromiseFlatString(aCommand);
     *_retval = nsnull;
 
     nsCOMPtr<nsIControllers> controllers;
     GetControllers(getter_AddRefs(controllers));
     if(controllers) {
       nsCOMPtr<nsIController> controller;
-      controllers->GetControllerForCommand(command.GetUnicode(), getter_AddRefs(controller));
+      controllers->GetControllerForCommand(command, getter_AddRefs(controller));
       if(controller) {
         *_retval = controller;
         NS_ADDREF(*_retval);
@@ -588,7 +585,7 @@ nsXULCommandDispatcher::GetControllerForCommand(const nsAReadableString& aComman
         domWindow->GetControllers(getter_AddRefs(controllers2));
         if(controllers2) {
           nsCOMPtr<nsIController> controller;
-          controllers2->GetControllerForCommand(command.GetUnicode(), getter_AddRefs(controller));
+          controllers2->GetControllerForCommand(command, getter_AddRefs(controller));
           if(controller) {
             *_retval = controller;
             NS_ADDREF(*_retval);

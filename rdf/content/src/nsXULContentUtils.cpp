@@ -627,7 +627,7 @@ nsXULContentUtils::GetElementLogString(nsIContent* aElement, nsAWritableString& 
 {
     nsresult rv;
 
-    aResult.Assign(NS_LITERAL_STRING("<"));
+    aResult.Assign(PRUnichar('<'));
 
     nsCOMPtr<nsINameSpace> ns;
 

@@ -1751,14 +1751,16 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aV
 
         nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(global);
             
-        rv = manager->AddScriptEventListener(context, owner, aName, nsAutoString(aValue), aIID, PR_FALSE);
+        rv = manager->AddScriptEventListener(context, owner, aName,
+                                             aValue, aIID, PR_FALSE);
     }
     else {
         nsCOMPtr<nsIEventListenerManager> manager;
         rv = GetListenerManager(getter_AddRefs(manager));
         if (NS_FAILED(rv)) return rv;
 
-        rv = manager->AddScriptEventListener(context, this, aName, nsAutoString(aValue), aIID, PR_TRUE);
+        rv = manager->AddScriptEventListener(context, this, aName,
+                                             aValue, aIID, PR_TRUE);
     }
 
     return rv;
@@ -2040,7 +2042,7 @@ NS_IMETHODIMP
 nsXULElement::CompileEventHandler(nsIScriptContext* aContext,
                                   void* aTarget,
                                   nsIAtom *aName,
-                                  const nsString& aBody,
+                                  const nsAReadableString& aBody,
                                   void** aHandler)
 {
     nsresult rv;
@@ -3624,7 +3626,7 @@ nsXULElement::ExecuteOnBroadcastHandler(nsIDOMElement* anElement, const nsAReada
                     // We are observing the broadcaster, but is this the right
                     // attribute?
                     nsAutoString listeningToAttribute;
-                    domElement->GetAttribute(NS_LITERAL_STRING("attribute"), listeningToAttribute);
+                    domElement->GetAttribute(NS_ConvertASCIItoUCS2("attribute"), listeningToAttribute);
                     if (listeningToAttribute.Equals(attrName)) {
                         // This is the right observes node.
                         // Execute the onchange event handler

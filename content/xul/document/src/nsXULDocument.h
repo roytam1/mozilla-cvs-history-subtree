@@ -266,7 +266,7 @@ public:
 
     NS_IMETHOD FindNext(const nsAReadableString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound);
 
-    NS_IMETHOD CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection);
+    NS_IMETHOD CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection);
 
     NS_IMETHOD ToXIF(nsIXIFConverter *aConverter, nsIDOMNode* aNode);
 
