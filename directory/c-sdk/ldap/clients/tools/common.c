@@ -144,7 +144,7 @@ char			*ldaptool_nls_lang = NULL;
 char                    *proxyauth_id = NULL;
 int			proxyauth_version = 2;	/* use newer proxy control */
 LDAPControl		*ldaptool_request_ctrls[CONTROL_REQUESTS]
-				= {NULL,NULL,NULL,NULL,NULL} ;
+				= {NULL,NULL,NULL,NULL,NULL,NULL} ;
 #ifdef LDAP_DEBUG
 int			ldaptool_dbg_lvl = 0;
 #endif /* LDAP_DEBUG */
@@ -1852,3 +1852,18 @@ ldaptool_fortezza_err2string( int err )
 
 #endif /* FORTEZZA */
 #endif /* NET_SSL */
+
+int
+boolean_str2value ( const char *ptr )
+{
+   if ( !(strcasecmp(ptr, "true")) ||
+	!(strcasecmp(ptr, "t")) ||
+	!(strcmp(ptr, "1")) )
+	return (1);
+   else if ( !(strcasecmp(ptr, "false")) ||
+	     !(strcasecmp(ptr, "f")) ||
+	     !(strcmp(ptr, "0")) )
+	return (0);
+   else 
+	return (-1);
+} 

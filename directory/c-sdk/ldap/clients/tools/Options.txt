@@ -47,7 +47,7 @@ ldapmodrdn.c (deprecated)
 	avail:	[1-9]  ABCFGJLSTU abegjloqstuxz
 
 ldapsearch.c
-	raw:	ABLTU1eotuxa:b:F:G:l:S:s:z:
+	raw:	ABLTU1eotuxa:b:F:G:l:S:s:z:C:
 	sorted:	1 ABFGLSTU abeostuxz
 	all:	01 ABDFGHIKLMNOPQRSTUVWXYZ abdefhikmnopstuvwxyz
 	avail:	[2-9] CJ cgjlqr

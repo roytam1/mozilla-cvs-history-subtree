@@ -75,6 +75,10 @@ usage( void )
     fprintf( stderr, "            \t(alias dereferencing)\n" );
     fprintf( stderr, "    -l time lim\ttime limit (in seconds) for search\n" );
     fprintf( stderr, "    -z size lim\tsize limit (in entries) for search\n" );
+    fprintf( stderr, "    -C ps:changetype[:changesonly[:entrychgcontrols]]\n" );
+    fprintf( stderr, "\t\tchangetypes are add,delete,modify,replace,any\n" );
+    fprintf( stderr, "\t\tchangesonly and  entrychgcontrols are boolean values\n" );
+    fprintf( stderr, "\t\t(default is 1)\n" );
     fprintf( stderr, "    -G before%cafter%cindex%ccount | before%cafter%cvalue where 'before' and\n", VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP, VLV_PARAM_SEP );
     fprintf( stderr, "\t\t'after' are the number of entries surrounding 'index.'\n");
     fprintf( stderr, "\t\t'count' is the content count, 'value' is the search value.\n");
@@ -92,8 +96,11 @@ static int	includeufn, allow_binary, vals2tmp, ldif, scope, deref;
 static int	attrsonly, timelimit, sizelimit, server_sort, fold;
 static int	minimize_base64, produce_file_urls;
 static int	use_vlv = 0, vlv_before, vlv_after, vlv_index, vlv_count;
+static int	use_psearch=0;
 static int	write_ldif_version = 1;
 
+/* Persisten search variables */
+static int	chgtype=0, changesonly=1, return_echg_ctls=1;
 
 int
 main( int argc, char **argv )
@@ -120,7 +127,7 @@ main( int argc, char **argv )
 #endif
 
 
-    optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:",
+    optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:C:",
         0, options_callback );
 
     if ( optind == -1 ) {
@@ -275,7 +282,8 @@ main( int argc, char **argv )
 static void
 options_callback( int option, char *optarg )
 {
-    char *s;
+    char *s, *p, *temp_arg, *ps_ptr, *ps_arg;
+    int i=0;
     
     switch( option ) {
     case 'u':	/* include UFN */
@@ -411,7 +419,65 @@ options_callback( int option, char *optarg )
 	    exit( LDAP_PARAM_ERROR );
 	}
 	break;
+    case 'C':
+	use_psearch++;
+	if ( (ps_arg = strdup( optarg)) == NULL ) {
+	    perror ("strdup");
+	    exit (LDAP_NO_MEMORY);
+	}
+	
+	ps_ptr=strtok(ps_arg, ":");
+	if (ps_ptr == NULL || (strcasecmp(ps_ptr, "ps")) ) {
+	    fprintf (stderr, "Invalid argument for -C\n");
+	    usage();
+	}
+	if (ps_ptr=strtok(NULL, ":")) {
+	    if ( (temp_arg = strdup( ps_ptr )) == NULL ) {
+	        perror ("strdup");
+	    	exit (LDAP_NO_MEMORY);
+	    } 
+	} else {
+	    fprintf (stderr, "Invalid argument for -C\n");
+	    usage();
+	}
+	if (ps_ptr=strtok(NULL, ":")) {
+	    if ( (changesonly = boolean_str2value(ps_ptr)) == -1) {
+		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
+		usage();
+	    }
+	}    
+	if (ps_ptr=strtok(NULL, ":")) {
+	    if ( (return_echg_ctls = boolean_str2value(ps_ptr)) == -1) {
+		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
+		usage();
+	    }
+	}    
 
+	/* Now parse the temp_arg and build chgtype as
+	 * the changetypes are encountered */
+
+	if ((ps_ptr = strtok( temp_arg, "," )) == NULL) {
+		usage();
+	} else {
+	    while ( ps_ptr ) {
+		if ((strcasecmp(ps_ptr, "add"))==0) 
+		    chgtype |= LDAP_CHANGETYPE_ADD;
+		else if ((strcasecmp(ps_ptr, "delete"))==0) 
+		    chgtype |= LDAP_CHANGETYPE_DELETE;
+		else if ((strcasecmp(ps_ptr, "modify"))==0) 
+		    chgtype |= LDAP_CHANGETYPE_MODIFY;
+		else if ((strcasecmp(ps_ptr, "replace"))==0) 
+		    chgtype |= LDAP_CHANGETYPE_MODDN;
+		else if ((strcasecmp(ps_ptr, "any"))==0) 
+		    chgtype = LDAP_CHANGETYPE_ANY;
+		else {
+			fprintf(stderr, "Unknown changetype: %s\n", ps_ptr);
+			usage();
+		}
+		ps_ptr = strtok( NULL, "," );
+	    }
+	  }
+	break;
     default:
 	usage();
 	break;
@@ -488,6 +554,17 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	ldaptool_add_control_to_array(ldctrl, ldaptool_request_ctrls);
     }
     
+    if (use_psearch) {
+	if ( ldap_create_persistentsearch_control( ld, chgtype,
+                changesonly, return_echg_ctls, 
+		1, &ldctrl ) != LDAP_SUCCESS )
+	{
+		ldap_perror( ld, "ldap_create_persistentsearch_control" );
+		return (1);
+	}
+	ldaptool_add_control_to_array(ldctrl, ldaptool_request_ctrls);
+    }
+
 
     if (server_sort) {
 	/* First make a sort key list from the attribute list we have */
