@@ -388,6 +388,7 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
     
     impl->changed = 0;    
 
+#ifndef XP_OS2
 #ifndef XP_MAC
 #ifndef WIN32
     if(ftruncate(impl->fd,write_size) < 0){
@@ -399,6 +400,14 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
 #else
     // XXX THIS IS BROKEN ON MAC, NEED REPLACEMENT FOR ftruncate()
 #endif    
+    /* On OS/2, the file can be larger than what you are told is written */
+    /* Because of line endings (0x0A 0x0D). Unfortunately, we chouldn't */
+    /* Just take the WIN32 path, because the chsize is crashing OS/2. */
+    /* We're looking into the crash. */
+    if(ftruncate(impl->fd,tell(impl->fd)) < 0){
+	return ICAL_FILE_ERROR;
+    }
+#endif
     return ICAL_NO_ERROR;
     
 } 
