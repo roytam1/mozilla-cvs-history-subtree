@@ -5469,6 +5469,10 @@ READ_CHUNK (mng_read_jhdr)
 #ifdef MNG_INCLUDE_JNG
 READ_CHUNK (mng_read_jdaa)
 {
+#if defined(MNG_SUPPORT_DISPLAY) || defined (MNG_STORE_CHUNKS)
+  mng_retcode iRetcode;
+#endif
+
 #ifdef MNG_SUPPORT_TRACE
   MNG_TRACE (pData, MNG_FN_READ_JDAA, MNG_LC_START)
 #endif
@@ -5488,19 +5492,16 @@ READ_CHUNK (mng_read_jdaa)
   pData->bHasJDAA = MNG_TRUE;          /* got some JDAA now, don't we */
 
 #ifdef MNG_SUPPORT_DISPLAY
-  if (iRawlen)
-  {                                    /* display processing for non-empty chunks */
-    mng_retcode iRetcode = mng_process_display_jdaa (pData, iRawlen, pRawdata);
+  iRetcode = mng_process_display_jdaa (pData, iRawlen, pRawdata);
 
-    if (iRetcode)                      /* on error bail out */
-      return iRetcode;
-  }
+  if (iRetcode)                      /* on error bail out */
+    return iRetcode;
 #endif /* MNG_SUPPORT_DISPLAY */
 
 #ifdef MNG_STORE_CHUNKS
   if (pData->bStorechunks)
   {                                    /* initialize storage */
-    mng_retcode iRetcode = ((mng_chunk_headerp)pHeader)->fCreate (pData, pHeader, ppChunk);
+    iRetcode = ((mng_chunk_headerp)pHeader)->fCreate (pData, pHeader, ppChunk);
 
     if (iRetcode)                      /* on error bail out */
       return iRetcode;
@@ -5531,6 +5532,10 @@ READ_CHUNK (mng_read_jdaa)
 #ifdef MNG_INCLUDE_JNG
 READ_CHUNK (mng_read_jdat)
 {
+#if defined(MNG_SUPPORT_DISPLAY) || defined (MNG_STORE_CHUNKS)
+  mng_retcode iRetcode;
+#endif
+
 #ifdef MNG_SUPPORT_TRACE
   MNG_TRACE (pData, MNG_FN_READ_JDAT, MNG_LC_START)
 #endif
@@ -5544,19 +5549,16 @@ READ_CHUNK (mng_read_jdat)
   pData->bHasJDAT = MNG_TRUE;          /* got some JDAT now, don't we */
 
 #ifdef MNG_SUPPORT_DISPLAY
-  if (iRawlen)
-  {                                    /* display processing for non-empty chunks */
-    mng_retcode iRetcode = mng_process_display_jdat (pData, iRawlen, pRawdata);
+  iRetcode = mng_process_display_jdat (pData, iRawlen, pRawdata);
 
-    if (iRetcode)                      /* on error bail out */
-      return iRetcode;
-  }
+  if (iRetcode)                      /* on error bail out */
+    return iRetcode;
 #endif /* MNG_SUPPORT_DISPLAY */
 
 #ifdef MNG_STORE_CHUNKS
   if (pData->bStorechunks)
   {                                    /* initialize storage */
-    mng_retcode iRetcode = ((mng_chunk_headerp)pHeader)->fCreate (pData, pHeader, ppChunk);
+    iRetcode = ((mng_chunk_headerp)pHeader)->fCreate (pData, pHeader, ppChunk);
 
     if (iRetcode)                      /* on error bail out */
       return iRetcode;
