@@ -357,8 +357,15 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
     if ( x )
       *x = (PRInt32)frame.origin.x;
-    if ( y )
-      *y = (PRInt32)frame.origin.y;
+    if ( y ) {
+      // websites (and gecko) expect the |y| value to be in "quickdraw" coordinates 
+      // (topleft of window, origin is topleft of main device). Convert from cocoa -> 
+      // quickdraw coord system.
+      GDHandle screenDevice = ::GetMainDevice();
+      Rect screenRect = (**screenDevice).gdRect;
+      short screenHeight = screenRect.bottom - screenRect.top;
+      *y = screenHeight - (PRInt32)(frame.origin.y + frame.size.height);
+    }
   }
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {
     if ( cx )
