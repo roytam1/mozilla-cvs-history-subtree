@@ -45,6 +45,14 @@
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
 
+
+// {f424fd81-cca6-11d5-a73c-dc628c6e85bc}
+#define NS_CONTROLLERCOMMANDMANAGER_CID \
+{ 0xf424fd81, 0xcca6, 0x11d5, { 0xa7, 0x3c, 0xdc, 0x62, 0x8c, 0x6e, 0x85, 0xbc } }
+
+#define NS_CONTROLLERCOMMANDMANAGER_CONTRACTID \
+ "@mozilla.org/embedcomp/controller-command-manager;1"
+
 class  nsControllerCommandManager : public nsIControllerCommandManager,
                                     public nsSupportsWeakReference
 {

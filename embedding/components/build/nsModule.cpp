@@ -44,6 +44,7 @@
 #include "nsJSConsoleService.h"
 #include "nsWebBrowserFind.h"
 #include "nsCommandManager.h"
+#include "nsControllerCommandManager.h"
 #include "nsCommandParams.h"
 #include "nsCommandGroup.h"
 
@@ -54,6 +55,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppStartupNotifier)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsJSConsoleService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWebBrowserFind)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCommandManager)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsControllerCommandManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCommandParams, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsControllerCommandGroup)
 
@@ -64,6 +66,7 @@ static nsModuleComponentInfo gComponents[] = {
   { "JS Console Service", NS_JSCONSOLESERVICE_CID, NS_JSCONSOLESERVICE_CONTRACTID, nsJSConsoleServiceConstructor },
   { "Window Watcher", NS_WINDOWWATCHER_CID, NS_WINDOWWATCHER_CONTRACTID, nsWindowWatcherConstructor },
   { "Find",           NS_WEB_BROWSER_FIND_CID, NS_WEB_BROWSER_FIND_CONTRACTID, nsWebBrowserFindConstructor },
+  { "Controller Command Manager", NS_CONTROLLERCOMMANDMANAGER_CID, NS_CONTROLLERCOMMANDMANAGER_CONTRACTID, nsControllerCommandManagerConstructor },
   { "Command Manager", NS_COMMAND_MANAGER_CID, NS_COMMAND_MANAGER_CONTRACTID, nsCommandManagerConstructor },
   { "Command Params", NS_COMMAND_PARAMS_CID, NS_COMMAND_PARAMS_CONTRACTID, nsCommandParamsConstructor },
   { "Command Group", NS_CONTROLLER_COMMAND_GROUP_CID, NS_CONTROLLER_COMMAND_GROUP_CONTRACTID, nsControllerCommandGroupConstructor },
