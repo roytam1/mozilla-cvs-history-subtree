@@ -914,7 +914,7 @@ sub run_all_tests {
 	#   $Settings::CleanProfile = 0
 	#
 	# Manual steps for this test:
-	# 1) Create pop account qatest03/Ne!s-pe
+	# 1) Create pop account qatest03/Ne!sc-pe
 	# 2) Login to this mail account, type in password, and select
 	#    "remember password with password manager".
 	# 3) Add first recipient of new Inbox to AB, select "receives plaintext"
