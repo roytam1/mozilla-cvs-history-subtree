@@ -112,9 +112,7 @@ void CToolbarPatternBevelView::CalcArrangement( Boolean inRotateArrangement, Int
 
 				if ( !inRotateArrangement )
 					{
-						SDimension16	dummy;
-						
-						button->ChangeMode(inNewMode, dummy);
+						button->ChangeMode(inNewMode, SDimension16());
 
 							// ...and the post-ChangeMode size for |new_cell_size|
 						button->GetFrameSize(button_size);

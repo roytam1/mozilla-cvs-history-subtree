@@ -211,13 +211,15 @@ void CPrefsDialog::DoPrefsWindow(
 			// This is icky
 #ifndef PREFS_DIALOG_REMEMBERS_PANE
 			mTable->CollapseRow( mTable->FindMessage ( PrefPaneID::eBrowser_Main  ) );
+			#ifdef MOZ_MAIL_NEWS
 			mTable->CollapseRow( mTable->FindMessage ( PrefPaneID::eMailNews_Main ) );
+			#endif // MOZ_MAIL_NEWS
 			#ifdef EDITOR
 				mTable->CollapseRow( mTable->FindMessage ( PrefPaneID::eEditor_Main ) );
 			#endif // Editor
-			#ifdef MOZ_MAIL_NEWS
+			#ifdef MOZ_OFFLINE
 			mTable->CollapseRow( mTable->FindMessage ( PrefPaneID::eOffline_Main ) );
-			#endif // MOZ_MAIL_NEWS
+			#endif // MOZ_OFFLINE
 			mTable->CollapseRow( mTable->FindMessage ( PrefPaneID::eAdvanced_Main ) );	
 #endif
 			

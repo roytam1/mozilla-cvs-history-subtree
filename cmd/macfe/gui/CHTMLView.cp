@@ -350,11 +350,6 @@ void CHTMLView::SetContext(
 		CL_SetCompositorEnabled(*mCompositor, PR_FALSE);
 	if (mContext != NULL)
 		{
-		// mContext->SetCompositor(NULL);
-				// ^^^^^^^^Do NOT do this.  If you do, layout will not be able
-				// to clean up properly.  This is very bad.
-				// The compositor needs to stick around till the context is deleted.
-				// So the context shares the CSharableCompositor
 		mContext->RemoveListener(this);
 		mContext->SetCompositor(NULL);
 		mContext->RemoveUser(this);
@@ -779,7 +774,7 @@ void MochaImageFormSubmitCallback(MWContext* pContext,
 					}
 				}
 			}
-		catch (ExceptionCode inErr)
+		catch (...)
 			{
 			LO_FreeSubmitData(theSubmit);
 			throw;			

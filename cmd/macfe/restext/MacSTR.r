@@ -1166,22 +1166,22 @@ resource 'STR ' ( ERROR_OPEN_PROFILE_MANAGER, "", purgeable ) {
 
 resource 'STR ' ( CALENDAR_APP_NAME,
 #if USE_RESOURCE_NAMES
-	"Mozilla Calendar"
+	"Netscape Calendar"
 #else
 	""
 #endif
 	, purgeable ) {
-	"Mozilla Calendar";
+	"Netscape Calendar";
 };
 
 resource 'STR ' ( IMPORT_APP_NAME,
 #if USE_RESOURCE_NAMES
-	"Mozilla Import"
+	"Netscape Import"
 #else
 	""
 #endif
 	, purgeable ) {
-	"Mozilla Import";
+	"Netscape Import";
 };
 
 resource 'STR ' ( AIM_APP_NAME,
@@ -1197,23 +1197,23 @@ resource 'STR ' ( AIM_APP_NAME,
 #if 0
 resource 'STR ' ( CONFERENCE_APP_NAME,
 #if USE_RESOURCE_NAMES
-	"Mozilla Conference"
+	"Netscape Conference"
 #else
 	""
 #endif
 	, purgeable ) {
-	"Mozilla Conference";
+	"Netscape Conference";
 };
 #endif
 
 resource 'STR ' ( NETSCAPE_TELNET,
 #if USE_RESOURCE_NAMES
-	"Mozilla Telnet"
+	"Netscape Telnet"
 #else
 	""
 #endif
 	, purgeable ) {
-	"Mozilla Telnet";
+	"Netscape Telnet";
 };
 
 resource 'STR ' ( NETSCAPE_TELNET_NAME_ARG,
@@ -1248,12 +1248,12 @@ resource 'STR ' ( NETSCAPE_TELNET_PORT_ARG,
 
 resource 'STR ' ( NETSCAPE_TN3270,
 #if USE_RESOURCE_NAMES
-	"Mozilla Tn3270"
+	"Netscape Tn3270"
 #else
 	""
 #endif
 	, purgeable ) {
-	"Mozilla Tn3270";
+	"Netscape Tn3270";
 };
 
 resource 'STR ' ( CLOSE_WINDOW,
@@ -1294,8 +1294,8 @@ resource 'STR ' ( MALLOC_HEAP_LOW_RESID,
 	""
 #endif
 	, purgeable ) {
-	PROGRAM_NAME" is running out of memory.Ê It is recomended that you quit "
-	"other running applications or close Navigator windows to continue running "
+	PROGRAM_NAME" is running out of memory.Ê It is recommended that you quit "
+	"other running applications or close "PROGRAM_NAME" windows to continue running "
 	"this program.";
 };
 

@@ -1152,10 +1152,10 @@ void CFrontApp::RegisterMimeType(CMimeMapper * mapper)
 			// Disable the previous plug-in, if any
 			if (pdesc)
 				NPL_EnablePluginType(mimeName, pdesc, false);
-
+#ifdef OLD_IMAGE_LIB
 			if (mimeName == IMAGE_GIF || mimeName == IMAGE_JPG || mimeName == IMAGE_XBM || mimeName == IMAGE_PNG)
 				NET_RegisterContentTypeConverter(mimeName, FO_PRESENT, nil, IL_ViewStream);
-
+#endif
 #ifdef MOZ_MAIL_NEWS // BinHex decoder is in mail/news code, right?
 			else if (mimeName == APPLICATION_BINHEX)
 				NET_RegisterContentTypeConverter(APPLICATION_BINHEX, FO_PRESENT, nil, fe_MakeBinHexDecodeStream);
@@ -2436,7 +2436,7 @@ void CFrontApp::FindCommandStatus( CommandT command, Boolean& enabled,
 #ifdef MOZ_MAIL_NEWS
 		case cmd_MailNewsFolderWindow:
 		case cmd_NewsGroups:
-	//	case cmd_GetNewMail:
+		case cmd_GetNewMail:
 		case cmd_Inbox:
 		case cmd_MailNewsSearch:
 		case cmd_MailFilters:

@@ -461,37 +461,41 @@ CUserProfile::DoNetProfileDialog()
 // Creates a network profile folder
 // The folder is located inside the users folder
 ProfileErr 
-CUserProfile::CreateNetProfile( FSSpec usersFolder, FSSpec &profileFolderSpec )
+CUserProfile::CreateNetProfile( FSSpec usersFolder, FSSpec& profileFolderSpec )
 {	
-	ProfileErr	perr = eOK;
+	ProfileErr perr;
+	perr = DoNetProfileDialog();
 	
+	if (perr == eOK)
+	{
 	try
 	{
-		CStr255 profileFolderName("Temporary Profile");	/* l10n */
-		OSErr err;
-		
-	// Create the folder spec of the profile directory
-		profileFolderSpec = usersFolder;
-		LString::CopyPStr(profileFolderName, profileFolderSpec.name, sizeof(profileFolderSpec.name));
-		
-	// If the folder already exists, delete it
-		err = CFileMgr::DeleteFolder( profileFolderSpec );
-		XP_ASSERT((err == noErr) || (err == fnfErr));
+			CStr255 profileFolderName("Temporary Profile");
+			OSErr err;
+			
+		// Create the folder spec of the profile directory
+			profileFolderSpec = usersFolder;
+			LString::CopyPStr(profileFolderName, profileFolderSpec.name, sizeof(profileFolderSpec.name));
+			
+		// If the folder already exists, delete it
+			err = CFileMgr::DeleteFolder( profileFolderSpec );
+			XP_ASSERT((err == noErr) || (err == fnfErr));
 
-	// Create the folder
-		short dummy; 
-		long dummy2;
-		err = CFileMgr::CreateFolderInFolder(usersFolder.vRefNum, usersFolder.parID, profileFolderName, 
-						&dummy, &dummy2);
-		ThrowIfOSErr_(err);
-		ReflectToPreferences( CStr255("Network Profile"), profileFolderSpec);
-		sCurrentProfileID = kTemporaryProfileID;
+		// Create the folder
+			short dummy; 
+			long dummy2;
+			err = CFileMgr::CreateFolderInFolder(usersFolder.vRefNum, usersFolder.parID, profileFolderName, 
+							&dummy, &dummy2);
+			ThrowIfOSErr_(err);
+			ReflectToPreferences( CStr255("Network Profile"), profileFolderSpec);
+		}
+		catch (ExceptionCode err)
+		{
+			XP_ASSERT(false);
+			return eUnknownError;
+		}
 	}
-	catch (ExceptionCode err)
-	{
-		XP_ASSERT(false);
-		return eUnknownError;
-	}
+
 	return perr;
 }
 
@@ -567,7 +571,8 @@ ProfileErr CUserProfile::HandleProfileDialog(
 	short lastUserID,
 	Boolean	wantsProfileManager )
 {
-	int					dialogID = profileManagerDialog; // wantsProfileManager ? profileManagerDialog : profileSelectDialog;
+	int					dialogID = wantsProfileManager ?
+		profileManagerDialog : profileSelectDialog;
 	Boolean				success = false;
 	LListBox*			listBox;
 	LGAPushButton*		okButton;
