@@ -32,9 +32,11 @@ XPIDL_MODULE	= xmlsoap
 XPIDLSRCS	= \
 		nsISOAPAttachments.idl \
 		nsISOAPCall.idl \
+		nsISOAPDecoder.idl \
+		nsISOAPEncoder.idl \
+		nsISOAPEncodingRegistry.idl \
 		nsISOAPFault.idl \
 		nsISOAPJSValue.idl \
-		nsISOAPEncoder.idl \
 		nsISOAPMessage.idl \
 		nsISOAPParameter.idl \
 		nsISOAPResponse.idl \
@@ -44,8 +46,6 @@ XPIDLSRCS	= \
 		nsISOAPStruct.idl		\
 		nsISOAPTransport.idl \
 		nsISOAPTransportListener.idl \
-		nsISOAPTypeRegistry.idl \
-		nsISOAPDecoder.idl \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk

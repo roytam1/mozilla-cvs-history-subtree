@@ -29,28 +29,19 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMText.h"
 #include "nsCOMPtr.h"
+#include "nsISchema.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIDOMParser.h"
 #include "nsSOAPUtils.h"
-#include "nsISOAPTypeRegistry.h"
+#include "nsISOAPEncodingRegistry.h"
 #include "prprf.h"
 #include "nsReadableUtils.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
 
-NS_NAMED_LITERAL_STRING(kStructElementName,"Struct");
-NS_NAMED_LITERAL_STRING(kStringElementName,"string");
-NS_NAMED_LITERAL_STRING(kBooleanElementName,"boolean");
-NS_NAMED_LITERAL_STRING(kDoubleElementName,"double");
-NS_NAMED_LITERAL_STRING(kFloatElementName,"float");
-NS_NAMED_LITERAL_STRING(kLongElementName,"long");
-NS_NAMED_LITERAL_STRING(kIntElementName,"int");
-NS_NAMED_LITERAL_STRING(kShortElementName,"short");
-NS_NAMED_LITERAL_STRING(kByteElementName,"byte");
-NS_NAMED_LITERAL_STRING(kArrayElementName,"Array");
 
 NS_NAMED_LITERAL_STRING(kOne,"1");
 NS_NAMED_LITERAL_STRING(kZero,"0");
@@ -74,8 +65,8 @@ ns##name##Encoder::~ns##name##Encoder() {}
 #define REGISTER_ENCODER(name) \
 {\
   ns##name##Encoder *handler = new ns##name##Encoder();\
-  registry->AddNativeType(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##Type, handler);\
-  registry->AddSchemaType(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##SchemaNamespaceURI, nsSOAPUtils::k##name##SchemaType, handler);\
+  registry->AddEncoder(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##Type, handler);\
+  registry->AddDecoder(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##SchemaNamespaceURI, nsSOAPUtils::k##name##SchemaType, handler);\
 }
 
 // All encoders must be first declared and then registered.
@@ -94,7 +85,7 @@ DECLARE_ENCODER(Null)
 DECLARE_ENCODER(Void)
 DECLARE_ENCODER(Unknown)
 
-NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* registry)
+NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPEncodingRegistry* registry)
 {
   REGISTER_ENCODER(String)
   REGISTER_ENCODER(Boolean)
@@ -116,9 +107,9 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* regist
 
 NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 		                          const nsAReadableString & aValue, 
-		                          const nsAReadableString & aDefaultTag, 
-		                          nsISOAPParameter * aSource, 
-		                          const nsAReadableString & aEncodingStyleURI, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  
 					  const nsAReadableString & aSchemaNamespaceURI, 
 					  const nsAReadableString & aSchemaType, 
 					  nsIDOMNode* aDestination)
@@ -126,15 +117,9 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
   nsCOMPtr<nsIDOMDocument>document;
   nsresult rc = aDestination->GetOwnerDocument(getter_AddRefs(document));
   if (NS_FAILED(rc)) return rc;
-  nsAutoString name;
-  rc = aSource->GetName(name);
-  if (NS_FAILED(rc)) return rc;
-  if (name.IsEmpty()) {
-    name = aDefaultTag;
-  }
   nsCOMPtr<nsIDOMElement>element;
-  rc = document->CreateElementNS(nsSOAPUtils::kEmpty, 
-		                 name, 
+  rc = document->CreateElementNS(aNamespaceURI,
+		                 aName, 
 				 getter_AddRefs(element));
   if (NS_FAILED(rc)) return rc;
   nsCOMPtr<nsIDOMNode>ignore;
@@ -159,10 +144,12 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 
 //  String
 
-NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPTypeRegistry* aTypes,
-		                          nsISOAPParameter* aSource,
+NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter* aSource,
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -178,18 +165,19 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPTypeRegistry* aTypes,
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
-  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
-  if (NS_FAILED(rc)) return rc;
-  rc = aSource->GetSchemaType(schemaType);
-  if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty()) {
+  if (aSchemaType) {
+    rc = aSchemaType->GetTargetNamespace(schemaNamespaceURI);
+    if (NS_FAILED(rc)) return rc;
+    rc = aSchemaType->GetName(schemaType);
+    if (NS_FAILED(rc)) return rc;
+  }
+  else {
     schemaType = nsSOAPUtils::kStringSchemaType;
     schemaNamespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kStringElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaType,
 		       schemaNamespaceURI,
 		       aDestination);
@@ -197,10 +185,12 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPTypeRegistry* aTypes,
 
 //  PRBool
 
-NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPTypeRegistry* type,
-		                           nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination, 
 					  nsISOAPAttachments* aAttachments)
 {
@@ -224,9 +214,8 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPTypeRegistry* type,
     schemaNamespaceURI = nsSOAPUtils::kBooleanSchemaNamespaceURI;
   }
   return EncodeValue(b ? kOne : kZero, 
-		       kBooleanElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -234,10 +223,12 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPTypeRegistry* type,
 
 //  Double
 
-NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -262,9 +253,8 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kDoubleSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kDoubleElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -272,10 +262,12 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPTypeRegistry* types,
 
 //  Float
 
-NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -300,9 +292,8 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kFloatSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kFloatElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -310,10 +301,12 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPTypeRegistry* types,
 
 //  PRInt64
 
-NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -338,9 +331,8 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kLongSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kLongElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -348,10 +340,12 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPTypeRegistry* types,
 
 //  PRInt32
 
-NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -376,9 +370,8 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kIntSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kIntElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -386,10 +379,12 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPTypeRegistry* types,
 
 //  PRInt16
 
-NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -414,9 +409,8 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kShortSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kShortElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -424,10 +418,12 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPTypeRegistry* types,
 
 //  Byte
 
-NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPTypeRegistry* types,
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 					  const nsAReadableString & aEncodingStyleURI, 
-					  const nsAReadableString & aNativeType, 
+		                          nsISOAPParameter *aSource, 
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
 					  nsIDOMNode* aDestination,
 					  nsISOAPAttachments* aAttachments)
 {
@@ -452,9 +448,8 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPTypeRegistry* types,
     schemaNamespaceURI = nsSOAPUtils::kByteSchemaNamespaceURI;
   }
   return EncodeValue(string, 
-		       kByteElementName,
-                       aSource, 
-		       aEncodingStyleURI,
+		       aNamespaceURI,
+		       aName,
 		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
@@ -477,11 +472,10 @@ Void
 Unknown
 */
 
-NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPTypeRegistry* types,
-		                          nsIDOMNode *aSource, 
+NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPEncodingRegistry* aEncodings,
 					    const nsAReadableString & aEncodingStyleURI, 
-					    const nsAReadableString & aSchemaNamespaceURI, 
-					    const nsAReadableString & aSchemaType, 
+		                            nsIDOMNode *aSource, 
+					    nsISchemaType *aSchemaType,
 					    nsISOAPAttachments* aAttachments,
 					    nsISOAPParameter **_retval)
 {
@@ -489,62 +483,6 @@ NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPTypeRegistry* types,
 }
 
 #if 0
-
-static void
-GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName)
-{
-  if (aType.Equals(nsSOAPUtils::kNullType) || aType.Equals(nsSOAPUtils::kVoidType))
-    aName = kStructElementName;
-  else if (aType.Equals(nsSOAPUtils::kStringType))
-    aName = kStringElementName;
-  else if (aType.Equals(nsSOAPUtils::kBooleanType))
-    aName = kBooleanElementName;
-  else if (aType.Equals(nsSOAPUtils::kDoubleType))
-    aName = kDoubleElementName;
-  else if (aType.Equals(nsSOAPUtils::kFloatType))
-    aName = kFloatElementName;
-  else if (aType.Equals(nsSOAPUtils::kLongType))
-    aName = kLongElementName;
-  else if (aType.Equals(nsSOAPUtils::kIntType))
-    aName = kIntElementName;
-  else if (aType.Equals(nsSOAPUtils::kShortType))
-    aName = kShortElementName;
-  else if (aType.Equals(nsSOAPUtils::kByteType))
-    aName = kByteElementName;
-  else if (aType.Equals(nsSOAPUtils::kArrayType))
-    aName = kArrayElementName;
-  else if (nsSOAPUtils::StartsWith(aType,nsSOAPUtils::kStructTypePrefix))
-    aName = kStructElementName;
-  else
-    aName = nsSOAPUtils::kEmpty;
-}
-
-static void
-GetTypeForElementName(const nsAReadableString & aName, nsAWritableString & aType)
-{
-  if (aName.Equals(kStringElementName))
-    aType = nsSOAPUtils::kStringType;
-  else if (aName.Equals(kBooleanElementName))
-    aType = nsSOAPUtils::kBooleanType;
-  else if (aName.Equals(kDoubleElementName))
-    aType = nsSOAPUtils::kDoubleType;
-  else if (aName.Equals(kFloatElementName))
-    aType = nsSOAPUtils::kFloatType;
-  else if (aName.Equals(kLongElementName))
-    aType = nsSOAPUtils::kLongType;
-  else if (aName.Equals(kIntElementName))
-    aType = nsSOAPUtils::kIntType;
-  else if (aName.Equals(kShortElementName))
-    aType = nsSOAPUtils::kShortType;
-  else if (aName.Equals(kByteElementName))
-    aType = nsSOAPUtils::kByteType;
-  else if (aName.Equals(kArrayElementName))
-    aType = nsSOAPUtils::kArrayType;
-  else if (aName.Equals(kStructElementName))
-    aType = nsSOAPUtils::kStructTypePrefix;
-  else
-    aType = nsSOAPUtils::kNullType;
-}
 
 NS_NAMED_LITERAL_STRING(kXSDStringName, "string");
 NS_NAMED_LITERAL_STRING(kXSDBooleanName, "boolean");

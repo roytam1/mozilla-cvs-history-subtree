@@ -22,7 +22,8 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPTypeRegistry;
+interface nsISchemaType;
+interface nsISOAPEncodingRegistry;
 interface nsIDOMNode;
 interface nsISOAPParameter;
 interface nsISOAPAttachments;
@@ -39,21 +40,23 @@ interface nsISOAPDecoder : nsISupports {
 /**
  * Decode the source DOM node
  *
- * @param aMessage The message supplying the data to be decoded
- *
- * @param aSource The DOM node to be decoded.
+ * @param aEncodings The encodings used to decode
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aSchemaNamespaceURI The schema namespace URI of the source DOM node
+ * @param aSource The DOM node to be decoded.
  *
  * @param aSchemaType The schema type of the source DOM node
  *
- * @return The decoded parameter, which is null if 
- *   the operation failed or did not return a result.  In case of 
- *   failure, a more complete status is recorded in the message.
+ * @param aAttachments Dispenses any attachments.
+ *
+ * @return The decoded parameter, soon to become a variant, which is null if 
+ *   the operation failed or did not return a result.
  */
-nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
-    in AString aEncodingStyleURI, in AString aSchemaNamespaceURI, in AString aSchemaType,
+nsISOAPParameter decode(
+    in nsISOAPEncodingRegistry aEncodings, 
+    in AString aEncodingStyleURI, 
+    in nsIDOMNode aSource, 
+    in nsISchemaType aSchemaType,
     in nsISOAPAttachments aAttachments);
 };

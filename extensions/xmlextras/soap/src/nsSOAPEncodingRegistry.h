@@ -20,12 +20,11 @@
  * Contributor(s): 
  */
 
-#ifndef nsSOAPTypeRegistry_h__
-#define nsSOAPTypeRegistry_h__
+#ifndef nsSOAPEncodingRegistry_h__
+#define nsSOAPEncodingRegistry_h__
 
 #include "nsString.h"
-#include "nsISOAPType.h"
-#include "nsISOAPTypeRegistry.h"
+#include "nsISOAPEncodingRegistry.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"
 #include "nsISOAPEncoder.h"
@@ -33,17 +32,17 @@
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 
-class nsSOAPTypeRegistry : public nsISOAPTypeRegistry,
+class nsSOAPEncodingRegistry : public nsISOAPEncodingRegistry,
 		    public nsISecurityCheckedComponent
 {
 public:
-  nsSOAPTypeRegistry();
-  virtual ~nsSOAPTypeRegistry();
+  nsSOAPEncodingRegistry();
+  virtual ~nsSOAPEncodingRegistry();
 
   NS_DECL_ISUPPORTS
 
-  // nsISOAPTypeRegistry
-  NS_DECL_NSISOAPTYPEREGISTRY
+  // nsISOAPEncodingRegistry
+  NS_DECL_NSISOAPENCODINGREGISTRY
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
@@ -51,14 +50,14 @@ public:
 protected:
   nsSupportsHashtable* mNativeTypes;
   nsSupportsHashtable* mSchemaTypes;
-  nsCOMPtr<nsISOAPTypeRegistry> mDefault;
+  nsCOMPtr<nsISOAPEncodingRegistry> mDefault;
 
 };
 
-class nsSOAPDefaultTypeRegistry : nsSOAPTypeRegistry
+class nsSOAPDefaultEncodingRegistry : nsSOAPEncodingRegistry
 {
 public:
-  nsSOAPDefaultTypeRegistry();
+  nsSOAPDefaultEncodingRegistry();
 };
 
 #endif

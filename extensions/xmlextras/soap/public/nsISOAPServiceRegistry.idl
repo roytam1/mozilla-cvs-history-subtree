@@ -24,7 +24,7 @@
 
 interface nsIDOMElement;
 interface nsISOAPService;
-interface nsISOAPTypeRegistry;
+interface nsISOAPEncodingRegistry;
 
 /**
  * This interface represents a registry of SOAP services.
@@ -74,7 +74,7 @@ interface nsISOAPServiceRegistry {
  *   added to messages sent to services in this
  *   registry.
  */
-  attribute nsISOAPTypeRegistry types;
+  attribute nsISOAPEncodingRegistry encodings;
 };
 
 %{ C++

@@ -26,7 +26,7 @@ interface nsISupportsArray;
 interface nsIDOMDocument;
 interface nsIDOMElement;
 interface nsISOAPParameter;
-interface nsISOAPTypeRegistry;
+interface nsISOAPEncodingRegistry;
 
 /**
  * This interface controls all SOAP messages. It permits easy
@@ -200,5 +200,5 @@ interface nsISOAPMessage : nsISupports {
    * A local registry of type information.  This is optional but
    *   may be used to override the default type registry.
    */
-  attribute nsISOAPTypeRegistry types;
+  attribute nsISOAPEncodingRegistry encodings;
 };

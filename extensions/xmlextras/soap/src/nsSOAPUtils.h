@@ -81,7 +81,7 @@ public:
   static const nsString kFaultActorTagName;
   static const nsString kFaultDetailTagName;
   static const nsString kEmpty;
-  static const nsString kTypeSeparator;
+  static const nsString kEncodingSeparator;
   static const nsString kQualifiedSeparator;
   static const nsString kStringType;
   static const nsString kBooleanType;

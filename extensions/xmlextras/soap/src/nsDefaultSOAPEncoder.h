@@ -33,7 +33,7 @@
 class nsDefaultSOAPEncoder
 {
 public:
-  static nsresult RegisterEncoders(nsISOAPTypeRegistry* aRegistry);
+  static nsresult RegisterEncoders(nsISOAPEncodingRegistry* aRegistry);
 
 protected:
   static nsresult MakeNamespacePrefix(nsIDOMElement* aScope,
@@ -41,9 +41,8 @@ protected:
 				      nsAWritableString & aPrefix);
   static nsresult EncodeValue(
 	                              const nsAReadableString & aValue, 
-		                      const nsAReadableString & aDefaultTag, 
-		                      nsISOAPParameter * aSource, 
-		                      const nsAReadableString & aEncodingStyleURI, 
+				      const nsAReadableString & aNamespaceURI, 
+				      const nsAReadableString & aName, 
 				      const nsAReadableString & aSchemaNamespaceURI, 
 				      const nsAReadableString & aSchemaType, 
 				      nsIDOMNode* aDestination);

@@ -45,7 +45,7 @@ NS_NAMED_LITERAL_STRING(kFaultActorTagName,"faultactor");
 NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
 
 NS_NAMED_LITERAL_STRING(kEmpty,"");
-NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
+NS_NAMED_LITERAL_STRING(kEncodingSeparator,"#");
 NS_NAMED_LITERAL_STRING(kQualifiedSeparator,"#");
 
 NS_NAMED_LITERAL_STRING(kStringType,"#string");

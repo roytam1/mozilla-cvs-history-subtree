@@ -24,7 +24,7 @@
 #define nsSOAPMessage_h__
 
 #include "nsString.h"
-#include "nsISOAPTypeRegistry.h"
+#include "nsISOAPEncodingRegistry.h"
 #include "nsISOAPMessage.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIXPCScriptable.h"
@@ -56,7 +56,7 @@ protected:
 
   nsCOMPtr<nsIDOMDocument> mMessage;
   nsCOMPtr<nsISupportsArray> mProtocol;
-  nsCOMPtr<nsISOAPTypeRegistry> mTypes;
+  nsCOMPtr<nsISOAPEncodingRegistry> mEncodings;
   nsString mActionURI;
   nsString mEncodingStyleURI;
   nsString mTargetObjectURI;

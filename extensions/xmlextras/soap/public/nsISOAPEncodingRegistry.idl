@@ -1,0 +1,143 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsISchemaType;
+interface nsIDOMElement;
+interface nsIDOMNode;
+interface nsISOAPEncoder;
+interface nsISOAPDecoder;
+interface nsISOAPMessage;
+interface nsISOAPParameter;
+interface nsISOAPAttachments;
+
+/**
+ * This interface keeps track of all the known types and how
+ *   each should be encoded (by type) or decoded (by 
+ *   schema type)
+ */
+
+[scriptable, uuid(9ae49600-1dd1-11b2-877f-e62f620c5e92)]
+interface nsISOAPEncodingRegistry : nsISupports {
+/**
+   * Add a type to this registry so it can be serialized / deserialized
+   *
+   * @param aEncoding The encoding to serve as key.
+   *
+   * @param aNativeType The native type to serve as key.
+   *
+   * @param aEncoder The encoder to be added.
+   *
+   * @return True if type was added, false if type could not be added
+   */
+  void addEncoder(in AString aEncoding, in AString aNativeType, in nsISOAPEncoder aEncoder);
+
+/**
+   * Add a type to this registry so it can be serialized / deserialized
+   *
+   * @param aEncoding The encoding to serve as key.
+   *
+   * @param aSchemaNamespaceURI The schema namespace URI to serve as key.
+   *
+   * @param aSchemaType The schema type to serve as key.
+   *
+   * @param aDecoder The decoder to be added.
+   *
+   * @return True if type was added, false if type could not be added
+   */
+  void addDecoder(in AString aEncoding, 
+   in AString aSchemaNamespaceURI, in AString aSchemaType, 
+   in nsISOAPDecoder aDecoder);
+
+  nsISOAPEncoder queryByNativeType(in AString aEncoding, in AString aNativeType);
+  nsISOAPDecoder queryBySchemaType(in AString aEncoding, in nsISchemaType aSchemaType);
+
+/**
+ * Encode the source parameter
+ *
+ * @param aEncodings The encodings to be used.
+ *
+ * @param aEncodingStyleURI The encoding style
+ *
+ * @param aSource The parameter to be encoded, soon to become a variant
+ *
+ * @param aNamespaceURI The namespace of the thing being coded
+ *
+ * @param aName The name of the thing being coded
+ *
+ * @param aSchemaType The schema type of the thing being encoded
+ *
+ * @param aDestination The node scope, if any, where the result 
+ *   will live.  If this is null, then the result must be 
+ *   explicitly attached to the message.
+ *
+ * @param aAttachments Accumulates any attachments.
+ */
+  void encode(
+      in nsISOAPEncodingRegistry aEncodings, 
+      in AString aEncodingStyleURI, 
+      in nsISOAPParameter aSource, 
+      in AString aNamespaceURI,
+      in AString aName,
+      in nsISchemaType aSchemaType,
+      in nsIDOMNode aDestination, 
+      in nsISOAPAttachments aAttachments);
+
+/**
+ * Decode the source DOM node
+ *
+ * @param aEncodings The encodings used to decode
+ *
+ * @param aEncodingStyleURI The encoding style
+ *
+ * @param aSource The DOM node to be decoded.
+ *
+ * @param aSchemaType The schema type of the source DOM node
+ *
+ * @param aAttachments Dispenses any attachments.
+ *
+ * @return The decoded parameter, soon to become a variant, which is null if 
+ *   the operation failed or did not return a result.
+ */
+  nsISOAPParameter decode(
+      in nsISOAPEncodingRegistry aEncodings, 
+      in AString aEncodingStyleURI, 
+      in nsIDOMNode aSource, 
+      in nsISchemaType aSchemaType,
+      in nsISOAPAttachments aAttachments);
+};
+
+%{ C++
+#define NS_SOAPENCODINGREGISTRY_CID                            \
+{ /* 5ad0eace-1dd2-11b2-a260-ff42edcaedb3 */        \
+  0x5ad0eace, 0x1dd2, 0x11b2,                       \
+ {0xa2, 0x60, 0xff, 0x42, 0xed, 0xca, 0xed, 0xb3} }
+#define NS_SOAPENCODINGREGISTRY_CONTRACTID \
+"@mozilla.org/xmlextras/soap/typeregistry;1"
+#define NS_SOAPDEFAULTENCODINGREGISTRY_CID                            \
+{ /* 06fb035c-1dd2-11b2-bc30-f6d8e314d6b9 */        \
+  0x06fb035c, 0x1dd2, 0x11b2,                       \
+ {0xbc, 0x30, 0xf6, 0xd8, 0xe3, 0x14, 0xd6, 0xb9} }
+#define NS_SOAPDEFAULTENCODINGREGISTRY_CONTRACTID \
+"@mozilla.org/xmlextras/soap/defaulttyperegistry;1"
+%}

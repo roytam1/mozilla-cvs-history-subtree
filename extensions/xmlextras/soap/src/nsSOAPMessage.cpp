@@ -26,7 +26,7 @@
 #include "nsSOAPUtils.h"
 #include "nsSOAPMessage.h"
 #include "nsSOAPParameter.h"
-#include "nsSOAPTypeRegistry.h"
+#include "nsSOAPEncodingRegistry.h"
 #include "nsISOAPEncoder.h"
 #include "nsISOAPDecoder.h"
 #include "nsSOAPJSValue.h"
@@ -41,7 +41,7 @@ static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 //
 /////////////////////////////////////////////
   
-nsSOAPMessage::nsSOAPMessage(): mTypes(new nsSOAPTypeRegistry())
+nsSOAPMessage::nsSOAPMessage(): mEncodings(new nsSOAPEncodingRegistry())
 {
   NS_INIT_ISUPPORTS();
   mStatus = 0;
@@ -144,15 +144,15 @@ NS_IMETHODIMP nsSOAPMessage::SetActionURI(const nsAReadableString & aActionURI)
 }
 
 /* attribute DOMString encodingStyleURI; */
-NS_IMETHODIMP nsSOAPMessage::GetEncodingStyleURI(nsAWritableString & aEncodingStyleURI)
+NS_IMETHODIMP nsSOAPMessage::GetEncodingStyleURI(nsAWritableString & aEncodingsStyleURI)
 {
-  NS_ENSURE_ARG_POINTER(&aEncodingStyleURI);
-  aEncodingStyleURI.Assign(mEncodingStyleURI);
+  NS_ENSURE_ARG_POINTER(&aEncodingsStyleURI);
+  aEncodingsStyleURI.Assign(mEncodingStyleURI);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPMessage::SetEncodingStyleURI(const nsAReadableString & aEncodingStyleURI)
+NS_IMETHODIMP nsSOAPMessage::SetEncodingStyleURI(const nsAReadableString & aEncodingsStyleURI)
 {
-  mEncodingStyleURI.Assign(aEncodingStyleURI);
+  mEncodingStyleURI.Assign(aEncodingsStyleURI);
   return NS_OK;
 }
 
@@ -235,17 +235,21 @@ NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
   nsCOMPtr<nsISupports> next;
   nsCOMPtr<nsISOAPParameter> param;
   nsCOMPtr<nsIDOMElement> element;
-  nsAutoString type;
+  nsAutoString name;
   PRBool isHeader;
   for (PRUint32 i = 0; i < count; i++) {
     next = dont_AddRef(SOAPParameters->ElementAt(i));
     param = do_QueryInterface(next);
     if (!param) return NS_ERROR_FAILURE;
-    rv = param->GetType(type);
+    rv = param->GetName(name);
     if (NS_FAILED(rv)) return rv;
     rv = param->GetHeader(&isHeader);
     if (NS_FAILED(rv)) return rv;
-    rv = mTypes->Encode(mTypes, param, mEncodingStyleURI, type, isHeader ? header : body, nsnull);
+ //  Need a callback here to get type?
+    rv = mEncodings->Encode(mEncodings, mEncodingStyleURI, param, 
+		    nsSOAPUtils::kEmpty, name,
+		    nsnull,
+		    isHeader ? header : body, nsnull);
     if (NS_FAILED(rv)) return rv;
   }
   return NS_OK;
@@ -280,7 +284,6 @@ NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
   nsCOMPtr<nsIDOMNode> attr;
   nsCOMPtr<nsISOAPParameter> param;
   nsAutoString encoding;
-  nsAutoString type;
   nsAutoString namespaceURI;
   PRBool isHeader = header != nsnull;
   if (!isHeader)
@@ -302,20 +305,8 @@ NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
       else {
 	encoding = mEncodingStyleURI;
       }
-// Get the schema type
-      rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
-      if (NS_FAILED(rv)) return rv;
-      if (attr) {
-	nsAutoString temp;
-	attr->GetNodeValue(temp);
-	nsSOAPUtils::GetNamespaceURI(current, temp, namespaceURI);
-	nsSOAPUtils::GetLocalName(temp, type);
-      }
-      else {  // Need fancier fallback type determination
-	namespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
-	type = nsSOAPUtils::kStringSchemaType;
-      }
-      rv = mTypes->Decode(mTypes, current, encoding, namespaceURI, type, nsnull, getter_AddRefs(param));
+ //  Need a callback here to get type.
+      rv = mEncodings->Decode(mEncodings, encoding, current, nsnull, nsnull, getter_AddRefs(param));
       if (NS_FAILED(rv)) return rv;
       if (param) {
 	rv = param->SetHeader(isHeader);
@@ -358,17 +349,17 @@ NS_IMETHODIMP nsSOAPMessage::SetProtocolParameters(nsISupportsArray * aProtocol)
   return NS_OK;
 }
 
-/* attribute nsISOAPTypeRegistry types; */
-NS_IMETHODIMP nsSOAPMessage::GetTypes(nsISOAPTypeRegistry * *aTypes)
+/* attribute nsISOAPEncodingRegistry types; */
+NS_IMETHODIMP nsSOAPMessage::GetEncodings(nsISOAPEncodingRegistry * *aEncodings)
 {
-  NS_ENSURE_ARG_POINTER(aTypes);
-  *aTypes = mTypes;
-  NS_IF_ADDREF(*aTypes);
+  NS_ENSURE_ARG_POINTER(aEncodings);
+  *aEncodings = mEncodings;
+  NS_IF_ADDREF(*aEncodings);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)
+NS_IMETHODIMP nsSOAPMessage::SetEncodings(nsISOAPEncodingRegistry * aEncodings)
 {
-  mTypes = aTypes;
+  mEncodings = aEncodings;
   return NS_OK;
 }
 

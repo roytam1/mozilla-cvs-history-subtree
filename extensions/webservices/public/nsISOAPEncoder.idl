@@ -22,7 +22,8 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPTypeRegistry;
+interface nsISchemaType;
+interface nsISOAPEncodingRegistry;
 interface nsISOAPParameter;
 interface nsIDOMNode;
 interface nsISOAPAttachments;
@@ -37,23 +38,31 @@ interface nsISOAPEncoder : nsISupports {
 /**
  * Encode the source parameter
  *
- * @param aMessage The message receiving the encoded data
- *
- * @param aSource The parameter to be encoded
+ * @param aEncodings The encodings to be used.
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aNativeType The type ID of the source parameter
+ * @param aSource The parameter to be encoded, soon to become a variant
+ *
+ * @param aNamespaceURI The namespace of the thing being coded
+ *
+ * @param aName The name of the thing being coded
+ *
+ * @param aSchemaType The schema type of the thing being encoded
  *
  * @param aDestination The node scope, if any, where the result 
  *   will live.  If this is null, then the result must be 
  *   explicitly attached to the message.
  *
- * @param aConfiguration Configuration object which may specify more
- *   details used by the encoder.
+ * @param aAttachments Accumulates any attachments.
  */
 void encode(
-    in nsISOAPTypeRegistry aTypes, in nsISOAPParameter aSource, 
-    in AString aEncodingStyleURI, in AString aNativeType, 
-    in nsIDOMNode aDestination, in nsISOAPAttachments aAttachments);
+    in nsISOAPEncodingRegistry aEncodings, 
+    in AString aEncodingStyleURI, 
+    in nsISOAPParameter aSource, 
+    in AString aNamespaceURI, 
+    in AString aName, 
+    in nsISchemaType aSchemaType,
+    in nsIDOMNode aDestination, 
+    in nsISOAPAttachments aAttachments);
 };
