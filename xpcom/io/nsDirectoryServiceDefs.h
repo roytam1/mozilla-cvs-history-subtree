@@ -30,6 +30,9 @@
 // dirs are always available even if no nsIDirectoryServiceProviders have been registered
 // with the service. Application level keys are defined in nsAppDirectoryServiceDefs.h.
 //
+// Keys whose definition ends in "DIR" or "FILE" return a single nsIFile (or subclass).
+// Keys whose definition ends in "LIST" return an nsISimpleEnumerator which enumerates a
+// list of file objects.
 //========================================================================================
 
 
@@ -46,6 +49,8 @@
 #define NS_OS_TEMP_DIR                          "TmpD"
 #define NS_OS_CURRENT_PROCESS_DIR               "CurProcD"
 #define NS_OS_CURRENT_WORKING_DIR               "CurWorkD"
+
+#define NS_OS_PLUGINS_DIR_LIST                  "OSPluginsDL"
 
 #if !defined (XP_UNIX)
     #define NS_OS_SYSTEM_DIR                    "SysD"
