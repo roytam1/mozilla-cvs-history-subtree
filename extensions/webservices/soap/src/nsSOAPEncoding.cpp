@@ -31,6 +31,7 @@
 #include "nsIComponentManager.h"
 #include "nsIDOMNodeList.h"
 #include "nsISchema.h"
+#include "nsISchemaLoader.h"
 #include "nsSOAPUtils.h"
 
 //  First comes the registry which shares between associated encodings but is never seen by xpconnect.
@@ -80,9 +81,10 @@ nsresult nsSOAPEncodingRegistry::GetSchemaCollection(nsISchemaCollection** aSche
   NS_ENSURE_ARG_POINTER(aSchemaCollection);
   if (!mSchemaCollection) {
     nsresult rv;
-    mSchemaCollection = do_CreateInstance(NS_SCHEMALOADER_CONTRACTID, &rv);
-    if (NS_FAILED(rv))
-      return rv;
+    nsCOMPtr<nsISchemaLoader>loader = do_CreateInstance(NS_SCHEMALOADER_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    mSchemaCollection = do_QueryInterface(loader);
+    if (!mSchemaCollection) return NS_ERROR_FAILURE;
   }
   *aSchemaCollection = mSchemaCollection;
   NS_ADDREF(*aSchemaCollection);
