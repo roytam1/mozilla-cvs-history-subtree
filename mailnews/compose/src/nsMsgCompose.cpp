@@ -110,6 +110,7 @@
 #include "nsUnicharUtils.h"
 #include "nsNetUtil.h"
 #include "nsMsgSimulateError.h"
+#include "nsIAddrDatabase.h"
 
 // Defines....
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
@@ -3578,7 +3579,7 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
 
             /* Then if we have a card for this email address */
             nsCAutoString emailStr; emailStr.AssignWithConversion(recipient->mEmail);
-            rv = abDataBase->GetCardForEmailAddress(abDirectory, emailStr.get(), getter_AddRefs(existingCard));
+            rv = abDataBase->GetCardFromAttribute(abDirectory, kPriEmailColumn, emailStr.get(), PR_TRUE /* lowerCase */, getter_AddRefs(existingCard));
             if (NS_SUCCEEDED(rv) && existingCard)
             {
               recipient->mPreferFormat = nsIAbPreferMailFormat::unknown;
