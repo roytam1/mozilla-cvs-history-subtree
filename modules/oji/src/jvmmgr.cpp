@@ -18,10 +18,12 @@
 
 #include "nsJVMManager.h"
 #include "nsIServiceManager.h"
+#include "nsIJVMPrefsWindow.h"
 
 static NS_DEFINE_CID(kJVMManagerCID, NS_JVMMANAGER_CID);
 static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
 static NS_DEFINE_IID(kIJVMConsoleIID, NS_IJVMCONSOLE_IID);
+static NS_DEFINE_IID(kIJVMPrefsWindowIID, NS_IJVMPREFSWINDOW_IID);
 static NS_DEFINE_IID(kISymantecDebuggerIID, NS_ISYMANTECDEBUGGER_IID);
 
 PR_BEGIN_EXTERN_C
@@ -37,7 +39,7 @@ JVM_GetJVMMgr(void)
 	nsresult result = NS_OK;
     if (thePluginManager == NULL) {
         result = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
-		if (result != NS_OK)
+p		if (result != NS_OK)
 			return NULL;
     }
     nsJVMManager* mgr = NULL;
@@ -122,6 +124,8 @@ JVM_AddToClassPath(const char* dirPath)
     return err == NS_OK;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 // This will get the JVMConsole if one is available. You have to Release it 
 // when you're done with it.
 static nsIJVMConsole*
@@ -187,6 +191,63 @@ JVM_PrintToConsole(const char* msg)
         console->Release();
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+// This will get the JVMPrefsWindow if one is available. You have to Release it 
+// when you're done with it.
+static nsIJVMPrefsWindow*
+GetPrefsWindow(void)
+{
+    nsIJVMPrefsWindow* prefsWin = NULL;
+    nsIJVMPlugin* jvm = GetRunningJVM();
+    if (jvm) {
+        jvm->QueryInterface(kIJVMPrefsWindowIID, (void**)&prefsWin);
+        // jvm->Release(); // GetRunningJVM no longer calls AddRef
+    }
+    return prefsWin;
+}
+
+PR_IMPLEMENT(void)
+JVM_ShowPrefsWindow(void)
+{
+    nsIJVMPrefsWindow* prefsWin = GetPrefsWindow();
+    if (prefsWin) {
+        prefsWin->Show();
+        prefsWin->Release();
+    }
+}
+
+PR_IMPLEMENT(void)
+JVM_HidePrefsWindow(void)
+{
+    nsJVMStatus status = JVM_GetJVMStatus();
+    if (status == nsJVMStatus_Running) {
+        nsIJVMPrefsWindow* prefsWin = GetPrefsWindow();
+        if (prefsWin) {
+            prefsWin->Hide();
+            prefsWin->Release();
+        }
+    }
+}
+
+PR_IMPLEMENT(PRBool)
+JVM_IsPrefsWindowVisible(void)
+{
+    PRBool result = PR_FALSE;
+    nsJVMStatus status = JVM_GetJVMStatus();
+    if (status == nsJVMStatus_Running) {
+        nsIJVMPrefsWindow* prefsWin = GetPrefsWindow();
+        if (prefsWin) {
+            nsresult err = prefsWin->IsVisible(&result);
+            PR_ASSERT(err != NS_OK ? result == PR_FALSE : PR_TRUE);
+            prefsWin->Release();
+        }
+    }
+    return result;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 PR_IMPLEMENT(void)
 JVM_StartDebugger(void)

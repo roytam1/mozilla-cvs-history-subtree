@@ -71,6 +71,15 @@ PR_EXTERN(void)
 JVM_PrintToConsole(const char* msg);
 
 PR_EXTERN(void)
+JVM_ShowPrefsWindow(void);
+
+PR_EXTERN(void)
+JVM_HidePrefsWindow(void);
+
+PR_EXTERN(PRBool)
+JVM_IsPrefsWindowVisible(void);
+
+PR_EXTERN(void)
 JVM_StartDebugger(void);
 
 PR_EXTERN(JNIEnv*)
