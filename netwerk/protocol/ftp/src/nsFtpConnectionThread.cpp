@@ -1717,6 +1717,7 @@ nsFtpState::SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount) {
 
 nsresult
 nsFtpState::StopProcessing() {
+    nsresult rv;
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("(%x) nsFtpState stopping", this));
 
     // Clean up the event loop
