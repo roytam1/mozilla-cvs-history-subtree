@@ -291,16 +291,18 @@ CNavDTD::~CNavDTD(){
  * @param 
  * @return
  */
-nsresult CNavDTD::CreateNewInstance(nsIDTD** aInstancePtrResult)
-{
-  nsresult result = NS_NewNavHTMLDTD(aInstancePtrResult);
-  NS_ENSURE_SUCCESS(result, result);
+nsresult CNavDTD::CreateNewInstance(nsIDTD** aInstancePtrResult){
 
-  CNavDTD* dtd = NS_STATIC_CAST(CNavDTD*, *aInstancePtrResult);
-    
-  dtd->mDTDMode = mDTDMode;
-  dtd->mParserCommand = mParserCommand;
-  dtd->mDocType = mDocType;
+  nsresult result=NS_NewNavHTMLDTD(aInstancePtrResult);
+
+  if(aInstancePtrResult) {
+    CNavDTD *theOtherDTD=(CNavDTD*)*aInstancePtrResult;
+    if(theOtherDTD) {
+      theOtherDTD->mDTDMode=mDTDMode;
+      theOtherDTD->mParserCommand=mParserCommand;
+      theOtherDTD->mDocType=mDocType;
+    }
+  }
 
   return result;
 }

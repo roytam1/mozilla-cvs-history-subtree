@@ -39,7 +39,6 @@
 #include "nsISupports.idl"
 
 interface nsIEditor;
-interface nsITextServicesFilter;
 
 [scriptable, uuid(87ce8b81-1cf2-11d3-9ce4-c60a16061e7c)]
 interface nsIEditorSpellCheck : nsISupports
@@ -59,6 +58,5 @@ interface nsIEditorSpellCheck : nsISupports
   wstring       GetCurrentDictionary();
   void          SetCurrentDictionary(in wstring dictionary);
   void          UninitSpellChecker();
-  void          setFilter(in nsITextServicesFilter filter);
 
 };

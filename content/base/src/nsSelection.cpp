@@ -1643,7 +1643,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 
   //set data using mLimiter to stop on scroll views.  If we have a limiter then we stop peeking
   //when we hit scrollable views.  If no limiter then just let it go ahead
-  pos.SetData(mTracker, desiredX, aAmount, eDirPrevious, offsetused, PR_FALSE,PR_TRUE, PR_TRUE, mLimiter != nsnull, PR_FALSE);
+  pos.SetData(mTracker, desiredX, aAmount, eDirPrevious, offsetused, PR_FALSE,PR_TRUE, PR_TRUE, mLimiter != nsnull);
 
   HINT tHint(mHint); //temporary variable so we dont set mHint until it is necessary
   switch (aKeycode){
@@ -2757,7 +2757,7 @@ nsSelection::HandleDrag(nsIPresContext *aPresContext, nsIFrame *aFrame, nsPoint&
       //set data using mLimiter to stop on scroll views.  If we have a limiter then we stop peeking
       //when we hit scrollable views.  If no limiter then just let it go ahead
       pos.SetData(mTracker, 0, eSelectDir, eDirNext, startPos, PR_FALSE,
-                  PR_TRUE, PR_TRUE, mLimiter != nsnull, PR_FALSE);
+                  PR_TRUE, PR_TRUE, mLimiter != nsnull);
       mHint = HINT(beginOfContent);
       HINT saveHint = mHint;
       newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,

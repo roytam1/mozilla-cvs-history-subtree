@@ -1531,23 +1531,6 @@ nsHTMLEditRules::WillInsertBreak(nsISelection *aSelection, PRBool *aCancel, PRBo
     
   if (!blockParent) return NS_ERROR_FAILURE;
   
-  // if block is empty, populate with br.
-  // (for example, imagine a div that contains the word "text".  the user selects
-  // "text" and types return.  "text" is deleted leaving an empty block.  we want
-  // to put in one br to make block have a line.  then code further below will put 
-  // in a second br.)
-  PRBool isEmpty;
-  res = IsEmptyBlock(blockParent, &isEmpty);
-  if (isEmpty)
-  {
-    nsCOMPtr<nsIDOMNode> brNode;
-    PRUint32 blockLen;
-    res = mHTMLEditor->GetLengthOfDOMNode(blockParent, blockLen);
-    if (NS_FAILED(res)) return res;
-    res = mHTMLEditor->CreateBR(blockParent, blockLen, address_of(brNode));
-    if (NS_FAILED(res)) return res;
-  }
-  
   nsCOMPtr<nsIDOMNode> listItem = IsInListItem(blockParent);
   if (listItem)
   {

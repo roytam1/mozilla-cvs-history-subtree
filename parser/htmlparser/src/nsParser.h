@@ -171,7 +171,7 @@ class nsParser : public nsIParser,
 
     virtual nsIParserFilter* SetParserFilter(nsIParserFilter* aFilter);
     
-    NS_IMETHOD RegisterDTD(nsIDTD* aDTD);
+    virtual void RegisterDTD(nsIDTD* aDTD);
 
     /**
      *  Retrieve the scanner from the topmost parser context
