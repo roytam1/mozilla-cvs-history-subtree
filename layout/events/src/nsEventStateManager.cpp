@@ -1517,13 +1517,6 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           }
         
           if ( status != nsEventStatus_eConsumeNoDefault ) {
-            nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(targetContent));
-            if (!elt) {
-              // Only elements can be placed into :hover. Instead of putting
-              // ourselves into :hover, put our parent element into :hover instead.
-              nsCOMPtr<nsIContent> child = targetContent;
-              child->GetParent(*getter_AddRefs(targetContent));
-            }
             SetContentState(targetContent, NS_EVENT_STATE_HOVER);
           }
 
