@@ -64,6 +64,7 @@ mailnews/import/oexpress/Makefile
 mailnews/import/outlook/Makefile
 mailnews/import/outlook/src/Makefile
 mailnews/extensions/Makefile
+mailnews/extensions/junkmail/Makefile
 mailnews/extensions/smime/Makefile
 mailnews/extensions/smime/build/Makefile
 mailnews/extensions/smime/src/Makefile
