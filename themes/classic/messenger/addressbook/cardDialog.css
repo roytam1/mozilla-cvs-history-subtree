@@ -37,6 +37,14 @@
 
 .CardEditLabel {
   width: 8em;
+  -moz-box-pack: end;
+  -moz-box-align: center;
+}
+
+.CardEditLabelOther {
+  width: 9em;
+  -moz-box-pack: end;
+  -moz-box-align: center;
 }
 
 .RadioWidth {

@@ -32,10 +32,10 @@
 groupbox {
   margin: 5px;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDHighlight ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDHighlight;
+  -moz-border-top-colors: #3A6E84 #86B3C8;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-bottom-colors: #C9F3FF #23759A;
+  -moz-border-left-colors: #31718D #89CAE8;
   padding: 5px;
 }
 
@@ -46,5 +46,5 @@ groupbox {
 caption {
   margin: 0px 6px 2px 6px;
   padding: 0px 3px;
-  background-color: -moz-Dialog; 
+  background-color: #3398CC; 
 }

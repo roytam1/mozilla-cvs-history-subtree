@@ -32,13 +32,13 @@
 menupopup,
 popup {
   border: 2px solid;
-  -moz-border-top-colors: ThreeDLightShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDLightShadow ThreeDHighlight;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
+  background-color: #3398CC;
   padding: 1px;
   min-width: 1px;
-  background-color: Menu;
 }
 
 /* ::::: tooltip ::::: */
@@ -68,12 +68,12 @@ tooltip[titletip="true"] {
 menulist > menupopup,
 .menulist-menupopup {
   border-width: 1px;
-  -moz-border-top-colors: -moz-FieldText;
-  -moz-border-right-colors: -moz-FieldText;
-  -moz-border-bottom-colors: -moz-FieldText;
-  -moz-border-left-colors: -moz-FieldText;
+  -moz-border-top-colors: #000000;
+  -moz-border-right-colors: #000000;
+  -moz-border-bottom-colors: #000000;
+  -moz-border-left-colors: #000000;
   padding: 0px;
   min-width: 0px;
-  background-color: -moz-Field;
+  background-color: #FFFFFF;
 }
 

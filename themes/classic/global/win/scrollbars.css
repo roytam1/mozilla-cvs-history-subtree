@@ -34,7 +34,7 @@ scrollbar {
   -moz-appearance: scrollbartrack-horizontal;
   -moz-binding: url("chrome://global/content/bindings/scrollbar.xml#scrollbar");
   cursor: default;
-  background: url("chrome://global/skin/scrollbar/slider.gif") scrollbar;
+  background: #0173A7;
 }
 
 scrollbar[orient="vertical"] 
@@ -47,11 +47,11 @@ scrollbar[orient="vertical"]
 thumb,
 scrollbarbutton {
   border: 2px solid;
-  -moz-border-top-colors: ThreeDLightShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDLightShadow ThreeDHighlight;
-  background-color: -moz-Dialog;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
+  background-color: #3398CC;
 }
 
 /* ::::: thumb (horizontal) ::::: */
@@ -77,16 +77,12 @@ thumb[orient="horizontal"] > gripper {
 /* ::::: scrollbar button ::::: */
 
 scrollbarbutton {
-  background: -moz-Dialog no-repeat 0px 1px;
+  background: #3398CC;
   min-width: 16px;
   min-height: 16px;
 }
 
 scrollbarbutton:hover:active {
-  -moz-border-top-colors: ThreeDShadow -moz-Dialog;
-  -moz-border-right-colors: ThreeDShadow -moz-Dialog;
-  -moz-border-bottom-colors: ThreeDShadow -moz-Dialog;
-  -moz-border-left-colors: ThreeDShadow -moz-Dialog;
   background-position: 1px 2px;
 }
 

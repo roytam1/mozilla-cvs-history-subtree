@@ -31,13 +31,13 @@
 
 listbox {
   margin: 2px 4px;
-  border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
+  border: 1px solid !important;
+  -moz-border-top-colors: #02669E !important;
+  -moz-border-right-colors: #A4C6FF !important;
+  -moz-border-bottom-colors: #A4C6FF !important;
+  -moz-border-left-colors: #6E65B1 !important;
+  background-color: #FFFFFF;
+  color: #000000;
 }
 
 /* ::::: listitem ::::: */
@@ -47,17 +47,17 @@ listitem {
 }
 
 listbox:focus > listitem[selected="true"][current="true"] {
-  border: 1px dotted #F5DB95;
+  border: 1px dotted #528ABA;
 }
 
 listitem[selected="true"] {
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
+  background-color: #A2CFF9;
+  color: #000000;
 }
 
 listbox:focus > listitem[selected="true"] {
-  background-color: Highlight;
-  color: HighlightText;
+  background-color: #A2CFF9;
+  color: #FFFFFF;
 }
 
 /* ::::: listheader ::::: */
@@ -65,12 +65,12 @@ listbox:focus > listitem[selected="true"] {
 listheader { 
   -moz-box-align: center;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight ThreeDLightShadow;
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
+  background-color: #3398CC;
+  color: #000000;
   padding: 0 4px;
 }
 
@@ -121,7 +121,7 @@ listheader[sortable="true"]:hover:active {
 }
 
 .listcell-label[disabled="true"] {
-  color: GrayText;
+  color: #024A69;
 }
 
 /* ::::: listcell checkbox ::::: */
@@ -141,7 +141,7 @@ listheader[sortable="true"]:hover:active {
 }
 
 .listcell-check[disabled="true"] {
-  border-color: GrayText;
+  border-color: #024A69;
   background-image: url("chrome://global/skin/checkbox/cbox-dis.gif");
 }
 

@@ -30,25 +30,36 @@
 /* ::::: toolbox ::::: */
 
 toolbox {
-  border-bottom: 1px solid #494F5D;
+  border-bottom: 1px solid #016894;
 }
- 
+
+.toolbar-primary {
+  background: url("chrome://global/skin/toolbar/prtb-bg.gif") #3398CD repeat-x;
+  border-left: 1px solid #88AFFF;
+  border-top: 1px solid #88AFFF;
+  border-bottom: none !important;
+}
+
+.toolbarseparator-primary {
+  width: 0px;
+}
+
 /* ::::: toolbar ::::: */
 
 toolbar,menubar {
-  min-width: 1px; /* DON'T DELETE!
-    Prevents hiding of scrollbars in browser when window is made smaller.*/
-  background: #3398cc;
+  min-width: 1px;
+  background: #3398CC;
+  border-bottom: 1px solid #0165A0;
   color: #000000;
 }
 
 toolbar > .toolbar-holder {
   color: white;
-  background: #3398cc;
+  /*background: #3398cc;
   border-right: 1px solid #02659c !important;
   border-left: 1px solid #84affd !important;
   border-top: 1px solid #84affd !important;
-  border-bottom: 1px solid #02659c !important;
+  border-bottom: 1px solid #02659c !important;*/
 }
 
 /* ::::: toolbargrippy ::::: */
@@ -97,7 +108,7 @@ toolbargrippy[tbgrippy-collapsed="true"] > .toolbargrippy-texture {
 }
 
 .collapsed-tray-spacer {
-  border-bottom: 1px solid ThreeDShadow;
+  
 }  
 
 /* ::::: toolbarseparator ::::: */

@@ -59,11 +59,11 @@ checkbox:focus > .checkbox-label-box {
 /* ..... disabled state ..... */
 
 checkbox[disabled="true"] > .checkbox-check {
-  background-color: -moz-Dialog;
+  background-color: #FFFFFF;
 }
 
 checkbox[disabled="true"] {
-  color: GrayText !important;
+  color: #024A69 !important;
 }
 
 /* ::::: checkmark image ::::: */
@@ -72,17 +72,17 @@ checkbox[disabled="true"] {
   -moz-appearance: checkbox;
   -moz-box-align: center;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
+  -moz-border-top-colors: #3A6E84 #86B3C8;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-bottom-colors: #C9F3FF #23759A;
+  -moz-border-left-colors: #31718D #89CAE8;
   min-width: 13px;
   min-height: 13px;
-  background: -moz-Field no-repeat 50% 50%;
+  background: #FFFFFF no-repeat 50% 50%;
 }
   
 checkbox:hover:active > .checkbox-check {
-  background-color: -moz-Dialog;
+  background-color: #FFFFFF;
 }
 
 /* ..... checked state ..... */

@@ -34,27 +34,27 @@ splitter {
   -moz-box-pack: center;
   cursor: e-resize;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDShadow ThreeDLightShadow;
-  -moz-border-left-colors: ThreeDDarkShadow ThreeDHighlight;
-  min-width: 8px;
-  background: #3398cc;
+  border-top: none;
+  border-bottom: none;
+  -moz-border-right-colors: #A5BDEB #433739;
+  -moz-border-left-colors: #86AFFE #A7C6FF;
+  min-width: 10px;
+  background: #3398CC;
 }
 
 splitter[state="dragging"] {
-  background-image: url("chrome://global/skin/splitter/drag-bg.gif");
+
 }
 
 /* ::::: splitter (horizontal) ::::: */
 
 splitter[orient="vertical"] {
   cursor: n-resize;
-  -moz-border-top-colors: ThreeDDarkShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDShadow ThreeDLightShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight ThreeDLightShadow;
-  min-height: 8px;
+  border-left: none;
+  border-right: none;
+  -moz-border-top-colors: #A5BDEB #433739;
+  -moz-border-bottom-colors: #86AFFE #A7C6FF;
+  min-height: 10px;
 }
 
 /* ::::: splitter grippy ::::: */

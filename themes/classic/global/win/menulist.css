@@ -34,12 +34,12 @@ menulist {
   -moz-appearance: menulist;
   margin: 2px 4px;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
+  background-color: #3398CC;
+  color: #000000;
 }
 
 .menulist-label-box {
@@ -66,17 +66,12 @@ menulist[open="true"]:focus > .menulist-label-box {
   min-width: 17px;
   -moz-box-align: center;
   -moz-box-pack: center;
-  border: 2px solid;
-  background-color: -moz-Dialog;
+  background-color: #3398CC;
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
 }
 
 .menulist-dropmarker,
 menulist[disabled="true"]:hover:active > .menulist-dropmarker {
-  -moz-border-top-colors: ThreeDLightShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDLightShadow ThreeDHighlight;
   padding: 1px;
 }
 
@@ -85,10 +80,6 @@ menulist[disabled="true"] > .menulist-dropmarker {
 }
 
 menulist:hover:active > .menulist-dropmarker {
-  -moz-border-top-colors: ThreeDShadow ThreeDFace;
-  -moz-border-right-colors: ThreeDShadow ThreeDFace;
-  -moz-border-bottom-colors: ThreeDShadow ThreeDFace;
-  -moz-border-left-colors: ThreeDShadow ThreeDFace;
   padding: 2px 0px 0px 2px;
 }
 
@@ -103,8 +94,7 @@ menulist:focus > .menulist-label-box {
 /* ..... disabled state ..... */
 
 menulist[disabled="true"] {
-  background-color: -moz-Dialog;
-  color: GrayText;
+  color: #024A69;
 }
 
 /* ::::: editable menulists ::::: */

@@ -102,13 +102,13 @@
 /* ::::: special toolbar colors ::::: */
 
 #content-frame {
-  border-left: 1px solid ThreeDDarkShadow;
-  border-right: 1px solid ThreeDLightShadow;
+  border-left: 1px solid #02669E;
+  border-right: 1px solid #86AEFE;
 }
 
 #appcontent {
-  border-left: 1px solid ThreeDShadow;
-  border-right: 1px solid ThreeDHighlight;
+  border-left: 1px solid #02669E;
+  border-right: 1px solid #C9F4FF;
 }
 
 #attachmentbucket-sizer {
@@ -120,7 +120,7 @@
   border-top-width: 1px;
   border-left: none;
   border-right: none;
-  -moz-border-top-colors: ThreeDHighlight;
+  -moz-border-top-colors: #C9F4FF;
 }
 /* ::::: autocomplete icons ::::: */
 
@@ -150,7 +150,7 @@ treechildren:-moz-tree-image(remote-err) {
 
 .composemenu-text-2 {
   font-style: italic;
-  color: GrayText;
+  color: #024A69;
 }
 
 #button-more {

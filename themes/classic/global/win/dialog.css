@@ -59,13 +59,13 @@ dialog {
 dialogheader {
   margin: 0px 5px 5px 5px;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDDarkShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDDarkShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
   padding: 5px 8px;
-  background-color: Highlight;
-  color: HighlightText;
+  color: #FFFFFF;
+  background-color: #3398CC;
 }
 
 .dialogheader-title {
@@ -82,10 +82,10 @@ dialogheader {
   border-left: none;
   border-right: none;
   border-top: none;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDShadow;
+  -moz-border-bottom-colors: #000000 #02669E;
   padding: 12px 5px 12px 25px;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
+  background-color: #3398CC;
+  color: #FFFFFF;
 }
 
 .header-large > .dialogheader-title {

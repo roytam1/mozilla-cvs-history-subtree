@@ -48,7 +48,7 @@ menu.push[open="true"] {
 menu.push[disabled="true"],
 menu.push[disabled="true"]:hover,
 menu.push[disabled="true"]:hover:active {
-  color: GrayText;
+  color: #024A69;
 }
 
 /* ::::: askSendFormat.xul ::::: */

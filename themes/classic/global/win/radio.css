@@ -59,11 +59,11 @@ radio[focused="true"] > .radio-label-box {
 /* ..... disabled state ..... */
 
 radio[disabled="true"] > .radio-check-box1 {
-  background-color: -moz-Dialog;
+  background-color: #FFFFFF;
 }
 
 radio[disabled="true"] {
-  color: GrayText !important;
+  color: #024A69 !important;
 }
 
 /* ::::: checkmark image ::::: */
@@ -71,21 +71,21 @@ radio[disabled="true"] {
 .radio-check-box1 {
   -moz-appearance: radio;
   margin: 1px 0px;
-  border-top: 1px solid ThreeDShadow;
-  border-right: 1px solid ThreeDHighlight;
-  border-bottom: 1px solid ThreeDHighlight;
-  border-left: 1px solid ThreeDShadow;
+  border-top: 1px solid #02669E;
+  border-right: 1px solid #86AEFE;
+  border-bottom: 1px solid #86AEFE;
+  border-left: 1px solid #02669E;
   -moz-border-radius: 50%;
   width: 12px;
   height: 12px;
-  background-color: -moz-Field;
+  background-color: #FFFFFF;
 }
 
 .radio-check-box2 {
-  border-top: 1px solid ThreeDDarkShadow;
-  border-right: 1px solid ThreeDLightShadow;
-  border-bottom: 1px solid ThreeDLightShadow;
-  border-left: 1px solid ThreeDDarkShadow;
+  border-top: 1px solid #02669E;
+  border-right: 1px solid #86AEFE;
+  border-bottom: 1px solid #86AEFE;
+  border-left: 1px solid #02669E;
   -moz-border-radius: 50%;
   padding: 2px;
   width: 4px;
@@ -94,7 +94,7 @@ radio[disabled="true"] {
 }
 
 radio:hover:active > .radio-check-box1 {
-  background-color: -moz-Dialog;
+  background-color: #FFFFFF;
 }
 
 /* ..... selected state ..... */

@@ -41,7 +41,7 @@ toolbarbutton {
   -moz-border-left-colors: transparent;
   padding: 2px;
   background-color: transparent;
-  color: -moz-DialogText;
+  color: #000000;
 }
 
 .toolbarbutton-icon {
@@ -55,18 +55,19 @@ toolbarbutton {
 
 toolbarbutton:hover,
 toolbarbutton[buttonover="true"] {
-  -moz-border-top-colors: ThreeDDarkShadow ThreeDHighlight;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDDarkShadow ThreeDHighlight;
+  -moz-border-top-colors: #000000 #86AEFE;
+  -moz-border-right-colors: #000000 #02669E;
+  -moz-border-bottom-colors: #000000 #02669E;
+  -moz-border-left-colors: #000000 #86AEFE;
+
 } 
     
 toolbarbutton:hover:active,
 toolbarbutton[open="true"] {
-  -moz-border-top-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDHighlight;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDHighlight;
-  -moz-border-left-colors: ThreeDDarkShadow ThreeDShadow;
+  -moz-border-top-colors: #000000 #02669E;
+  -moz-border-right-colors: #000000 #86AEFE;
+  -moz-border-bottom-colors: #000000 #86AEFE;
+  -moz-border-left-colors: #000000 #02669E;
   padding: 3px 1px 1px 3px;
 }
 
@@ -79,7 +80,7 @@ toolbarbutton[disabled="true"][open="true"] {
   -moz-border-bottom-colors: transparent;
   -moz-border-left-colors: transparent;
   padding: 2px;
-  color: GrayText;
+  color: #024A69;
 }
 
 /* ..... checked state ..... */

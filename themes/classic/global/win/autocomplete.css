@@ -52,7 +52,7 @@ textbox {
   -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
   -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
   -moz-border-left-colors: ThreeDLightShadow ThreeDHighlight;
-  background-color: -moz-Dialog;
+  background-color: #FFFFFF;
   padding: 1px;
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
 }

@@ -42,33 +42,32 @@ tabpanels {
   border-right: 2px solid;
   border-bottom: 2px solid;
   border-left: 2px solid;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight ThreeDLightShadow;
+  -moz-border-top-colors: #3A6E84 #86B3C8;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-bottom-colors: #C9F3FF #23759A;
+  -moz-border-left-colors: #31718D #89CAE8;
   padding: 8px;
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
+  background-color: #3398CC;
+  color: #000000;
 }
 
 /* ::::: tab ::::: */
 
-tab 
-{
+tab {
   -moz-appearance: tab;
   margin-top: 2px;
   border-top: 2px solid;
   border-right: 2px solid;
   border-left: 2px solid;
-  border-bottom: 1px solid ThreeDHighlight;
-  -moz-border-top-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight ThreeDLightShadow;
+  -moz-border-top-colors: #3A6E84 #86B3C8;
+  -moz-border-right-colors: #B7ECFC #31718D;
+  -moz-border-left-colors: #31718D #89CAE8;
   -moz-border-radius-topleft: 2px;
   -moz-border-radius-topright: 2px;
   -moz-border-radius-bottomright: 1px;
   padding: 1px 4px 2px 4px;
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
+  background-color: #3398CC;
+  color: #000000;
 }
 
 .tab-text {

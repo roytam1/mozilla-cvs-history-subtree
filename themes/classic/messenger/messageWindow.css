@@ -33,7 +33,7 @@
 /* ::::: message header borders ::::: */
 
 #msgHeaderView {
-  border: 1px outset ThreeDFace !important;
+  border: 1px outset #C9F4FF !important;
 }
 
 #viewPos {

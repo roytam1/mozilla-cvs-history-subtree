@@ -37,14 +37,14 @@ textbox
   -moz-appearance: textfield;
   cursor: text;
   margin: 2px 4px;
-  border: 2px solid;
-  -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
-  -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-bottom-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
+  border: 1px solid;
+  -moz-border-top-colors: #000000;
+  -moz-border-right-colors: #FFFFFF;
+  -moz-border-bottom-colors: #FFFFFF;
+  -moz-border-left-colors: #000000;
   padding: 1px 0px 1px 2px;
-  background-color: -moz-Field;
-  color: -moz-FieldText;
+  background-color: #FFFFFF;
+  color: #000000;
 }
     
 html|*.textbox-input, 
@@ -60,16 +60,16 @@ html|*.textbox-textarea {
 /* ..... readonly state ..... */
 
 textbox[readonly="true"] {
-  background-color: -moz-Dialog;
-  color: -moz-DialogText;
+  background-color: #FFFFFF;
+  color: #024A69;
 }
 
 /* ..... disabled state ..... */
 
 textbox[disabled="true"] {
   cursor: default;
-  background-color: -moz-Dialog;
-  color: GrayText;
+  background-color: #FFFFFF;
+  color: #024A69;
 } 
 
 /* ::::: plain textbox ::::: */

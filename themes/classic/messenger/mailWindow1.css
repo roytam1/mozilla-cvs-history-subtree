@@ -42,44 +42,38 @@
   height: 0px;
 }
 
+#mailToolbarToolbox {
+  border-bottom: none;
+}
+
 /* ::::: border adjustments for focus ring and joined splitters ::::: */
 
-/* ..... sidebar adjustments ..... */
-
-#sidebar-panels-splitter-box {
-  border-top: 1px solid;
-  -moz-border-top-colors: ThreeDShadow;
-}
 
 /* ..... splitter adjustments ..... */
 
-#sidebar-splitter {
-  border-right: none;
-  border-bottom: none;
+#sidebar-splitter,
+#gray_vertical_splitter {
   border-left: none;
-  min-width: 5px;
+  border-right: none;
 }
 
 #threadpane-splitter {
-  border: none;
-  min-height: 5px;
+
 }
 
 #sidebar-panels-splitter {
-  border-top: 1px solid;
-  -moz-border-top-colors: ThreeDHighlight;
+
 }
 
 #threadpane-splitter[state="collapsed"] {
-  border-bottom: 2px solid;
+
 }
 
 /* ..... tree adjustments ..... */
  
 #folderTree {
-  border-right: 1px solid;
-  -moz-border-right-colors: ThreeDShadow;
   min-width: 1px;
+  margin-right: 15px;
 }
 
 #threadTree {
@@ -89,28 +83,39 @@
 }
 
 #searchBox {
-  background: #3398cc;
-  border-top: 1px solid ThreeDHighlight;
-  border-bottom: 1px solid ThreeDShadow;
+  background: url("chrome://messenger/skin/icons/search-bg.gif") repeat-x #75BAD9;
+  border: 2px solid;
+  -moz-border-top-colors: #A7C6FF #7894A2;
+  -moz-border-bottom-colors: #C9F4FF #75BAD9;
+  -moz-border-left-colors: #434240 #CBCDFF;
+  border-right: none;
+  margin-bottom: 10px;
+  padding: 3px;
 }
 
 #folderTree > .tree-rows > .tree-bodybox,
 #threadTree > .tree-rows > .tree-bodybox {
-  border: 1px solid transparent;  
+  
 }
 
 #folderTree:focus > .tree-rows > .tree-bodybox,
 #threadTree:focus > .tree-rows > .tree-bodybox {
-  border: 1px solid #000000;
+  
+}
+
+#threadTree > treecols > treecol,
+#threadTree > treecols > treecolpicker {
+  background: url("chrome://messenger/skin/icons/threadtree-col-bg.gif") repeat-x #2A86B9;
+  border-top: none !important;
+  -moz-border-left-colors: #23698D #B7DDEA !important;
+  border-right: 1px solid #194C69 !important;
+  border-bottom: 1px solid #194C69 !imporant;
 }
 
 /* ..... message pane adjustments ..... */
 
 #messagepanebox {
- border-top: 2px solid;
- border-left: 2px solid;
- -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
- -moz-border-left-colors: ThreeDShadow ThreeDDarkShadow;
+
 }
 
 #msgHeaderView {
@@ -118,10 +123,9 @@
 }
 
 #messagepane {
-  border: 1px solid -moz-Field;
-  border-right: none;
+  
 }
 
 #messagepanebox[focusring="true"] > #messagepane {
-  border-color: #000000;
+
 }

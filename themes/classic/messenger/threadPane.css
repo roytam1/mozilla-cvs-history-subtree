@@ -67,11 +67,11 @@ treechildren:-moz-tree-cell-text(priorityCol, priority-low) {
 }
 
 treechildren:-moz-tree-cell-text(priorityCol, selected) {
-  color: -moz-DialogText;
+  color: #000000;
 }
 
 treechildren:-moz-tree-cell-text(priorityCol, selected, focus) {
-  color: HighlightText;
+  color: #000000;
 }
  ****/
 
