@@ -4022,8 +4022,9 @@ nsContextMenu.prototype = {
 
         // BiDi UI
         var showBIDI = isBidiEnabled();
-        this.showItem( "context-sep-bidi", this.onTextInput && showBIDI);
+        this.showItem( "context-sep-bidi", showBIDI);
         this.showItem( "context-bidi-text-direction-toggle", this.onTextInput && showBIDI);
+        this.showItem( "context-bidi-page-direction-toggle", !this.onTextInput && showBIDI);
 
         if (this.onImage) {
           var blockImage = document.getElementById("context-blockimage");

@@ -229,5 +229,9 @@
                 label="&bidiSwitchTextDirectionItem.label;"
                 accesskey="&bidiSwitchTextDirectionItem.accesskey;"
                 oncommand="SwitchTextEntryDirection(gContextMenu.target)"/>
+      <menuitem hidden="true" id="context-bidi-page-direction-toggle"
+                label="&bidiSwitchPageDirectionItem.label;"
+                accesskey="&bidiSwitchPageDirectionItem.accesskey;"
+                oncommand="SwitchDocumentDirection();"/>
     </popup>
 
