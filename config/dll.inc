@@ -72,25 +72,32 @@ $(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefile.win
 #// Rule to build a 32-bit DLL using the DLL target
 #//
 #//------------------------------------------------------------------------
-$(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(MISCDEP) makefile.win $(DEPTH)\config\dll.inc
+$(DLL): $(OBJDIR) $(OBJS) $(LLIBS) $(RESFILE) $(DEFFILE) $(LIBFILE) $(MISCDEP) makefile.win $(DEPTH)\config\dll.inc
 	echo +++ make: Creating DLL: $@
-    $(LD) @<<$(CFGFILE)
-        /NOLOGO /DLL /OUT:$@ 
-		/PDB:$(PDBFILE)
+        echo /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE)       > $(CFGFILE)
 !ifdef DEFFILE
-        /DEF:$(DEFFILE)
+        echo /DEF:$(DEFFILE)                           >> $(CFGFILE)
 !endif
 !ifdef MAPFILE
-		/MAP:$(MAPFILE)
+        echo /MAP:$(MAPFILE)                           >> $(CFGFILE)
 !endif
 !if exist(win32.order) && !defined(MOZ_DEBUG) && defined(MOZ_COVERAGE)
-        /ORDER:@win32.order
+        echo /ORDER:@win32.order                       >> $(CFGFILE)
 !endif
-        $(LFLAGS)
-        $(OBJS) 
-        $(RESFILE)
-        $(LLIBS) $(WIN_LIBS) $(OS_LIBS)
-<<KEEP
+!ifdef LFLAGS
+        echo $(LFLAGS)                                 >> $(CFGFILE)
+!endif
+!ifdef OBJS
+        echo $(OBJS)                                   >> $(CFGFILE)
+!endif
+!ifdef RESFILE
+        echo $(RESFILE)                                >> $(CFGFILE)
+!endif
+!ifdef LIBFILE
+        cat $(LIBFILE)                                 >> $(CFGFILE)
+!endif
+        echo $(LLIBS) $(WIN_LIBS) $(OS_LIBS)           >> $(CFGFILE)
+        $(LD) @$(CFGFILE)
 !endif
 
 !endif # DLL && ! CONFIG_DLL_INC
