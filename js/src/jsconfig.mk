@@ -43,7 +43,7 @@ else
   ifneq ($(OS_ARCH), WINNT)
 	cp       $(NSPR_SHARED)/*.jar $(NSPR_LOCAL)
   else
-	sh       $(MOZ_DEPTH)/js/compftp.sh $(NSPR_SHARED) $(NSPR_LOCAL) *.jar
+	sh       $(MOZ_DEPTH)/../reltools/compftp.sh $(NSPR_SHARED) $(NSPR_LOCAL) *.jar
   endif
 	unzip -o $(NSPR_LOCAL)/mdbinary.jar -d $(NSPR_DIST)
 	mkdir -p $(NSPR_DIST)/include
