@@ -406,9 +406,14 @@ function FindOutlinerColumnBySortType(sortKey)
 	else if(sortKey == nsMsgViewSortType.bySubject)
 		return "subjectCol";
 	else if(sortKey == nsMsgViewSortType.byUnread)
-		return "UnreadButtonColumn";
+		return "unreadButtonColHeader";
+ 	else if(sortKey == nsMsgViewSortType.byStatus)
+		return "statusCol";
+  else if (sortKey == nsMsgViewSortType.bySize)
+    return "sizeCol";
 
-	return "dateCol";
+  // oops we haven't added the column for the sort key they are using yet...return null.
+	return null;
 }
 
 function FindThreadPaneColumnBySortResource(sortID)

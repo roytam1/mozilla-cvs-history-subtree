@@ -42,6 +42,8 @@ Rights Reserved.
   <outlinercol id="dateCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="2" value="&dateColumn.label;"/>
   <splitter class="tree-splitter"/>
   <outlinercol id="statusCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" flex="1" value="&statusColumn.label;"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="sizeCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" flex="1"  value="&sizeColumn.label;"/>
   <outlinerbody flex="1" onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();"/>
 </outliner>
 
