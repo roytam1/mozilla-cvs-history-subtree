@@ -71,6 +71,8 @@ Rights Reserved.
 <script type="application/x-javascript" src="chrome://messenger/content/msgAccountCentral.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/searchBar.js"/>
+<script type="application/x-javascript" src="chrome://communicator/content/nsContextMenu.js"/>
+<script type="application/x-javascript" src="chrome://communicator/content/contentAreaUtils.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/contentAreaClick.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
