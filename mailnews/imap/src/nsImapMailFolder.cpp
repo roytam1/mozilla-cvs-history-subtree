@@ -1363,6 +1363,24 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
     if (NS_FAILED(rv)) return rv;
 
     rv = GetFlag(MSG_FOLDER_FLAG_TRASH, &isTrashFolder);
+
+    nsCOMPtr<nsIMsgFolder> rootFolder;
+    nsCOMPtr<nsIMsgFolder> trashFolder;
+
+	if (!isTrashFolder)
+	{
+        rv = GetRootFolder(getter_AddRefs(rootFolder));
+        if (NS_SUCCEEDED(rv) && rootFolder)
+        {
+            PRUint32 numFolders = 0;
+            rv = rootFolder->GetFoldersWithFlag(MSG_FOLDER_FLAG_TRASH,
+                                                1, &numFolders,
+                                                getter_AddRefs(trashFolder));
+			// if we can't find the trash, we'll just have to do an imap delete and pretend this is the trash
+			if (NS_FAILED(rv) || !trashFolder)
+				isTrashFolder = PR_TRUE;
+		}
+	}
     if (NS_SUCCEEDED(rv) && isTrashFolder)
     {
         rv = StoreImapFlags(kImapMsgDeletedFlag, PR_TRUE, srcKeyArray);
@@ -1391,28 +1409,17 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
 		if (txnMgr) SetTransactionManager(txnMgr);
 	  }
         
-        nsCOMPtr<nsIMsgFolder> rootFolder;
-        rv = GetRootFolder(getter_AddRefs(rootFolder));
-        if (NS_SUCCEEDED(rv) && rootFolder)
-        {
-            nsCOMPtr<nsIMsgFolder> trashFolder;
-            PRUint32 numFolders = 0;
-            rv = rootFolder->GetFoldersWithFlag(MSG_FOLDER_FLAG_TRASH,
-                                                1, &numFolders,
-                                                getter_AddRefs(trashFolder));
+      if(trashFolder)
+	  {
+        nsCOMPtr<nsIMsgFolder> srcFolder;
+        nsCOMPtr<nsISupports>srcSupport;
+        PRUint32 count = 0;
+        rv = messages->Count(&count);
 
-            if(NS_SUCCEEDED(rv) && trashFolder)
-            {
-                nsCOMPtr<nsIMsgFolder> srcFolder;
-                nsCOMPtr<nsISupports>srcSupport;
-                PRUint32 count = 0;
-                rv = messages->Count(&count);
-                
-                rv = QueryInterface(NS_GET_IID(nsIMsgFolder),
-                                    getter_AddRefs(srcFolder));
-				rv = trashFolder->CopyMessages(srcFolder, messages, PR_TRUE, msgWindow, nsnull);
-            }
-        }
+        rv = QueryInterface(NS_GET_IID(nsIMsgFolder),
+						getter_AddRefs(srcFolder));
+        rv = trashFolder->CopyMessages(srcFolder, messages, PR_TRUE, msgWindow, nsnull);
+	  }
     }
     return rv;
 }
