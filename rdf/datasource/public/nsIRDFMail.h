@@ -58,7 +58,7 @@ public:
 
     NS_IMETHOD GetHost(nsIRDFLiteral**  result) const = 0;
 
-    NS_IMETHOD GetFolderList (nsVoidArray* result) = 0;
+    NS_IMETHOD GetFolderList (nsVoidArray** result) = 0;
 
     NS_IMETHOD AddFolder (nsIRDFMailFolder* folder) = 0;
 

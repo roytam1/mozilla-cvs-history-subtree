@@ -58,6 +58,8 @@
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
 #include "rdfutil.h"
+#include "nsIRDFMail.h"
+#include "nsIRDFService.h"
 #include "plhash.h"
 #include "plstr.h"
 
@@ -76,7 +78,7 @@ static NS_DEFINE_IID(kIRDFMailDataSourceIID,   NS_IRDFMAILDATAOURCE_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 
 static nsIRDFDataSource* kMailDataSource; // XXX THE mail data source. need to initialize this.
-
+static nsIRDFService*    kRDFService; // XXX THE rdf service manager. need to initialize this.
 // need factories for all these interfaces. Need hooks into GetResource for some of them.
 // I am missing about 60% of the add and release refs.
 
@@ -105,13 +107,11 @@ public:
     }
 
 private:
-    static     nsIRDFService*         mMgr ;
     char*                             mURI ;
 };
 
 
 MailObject::MailObject(const char* uri)
-    : mMgr(mgr)
 {
     mURI = PL_strdup(uri);
 }
@@ -119,7 +119,8 @@ MailObject::MailObject(const char* uri)
 
 MailObject::~MailObject(void)
 {
-    mMgr->ReleaseNode(this);
+    // kRDFService->ReleaseNode(this); XXX how should this happen? ReleaseNode is part of ServiceImpl
+    // and not nsIRDFService
     PL_strfree(mURI);
 }
 
@@ -155,7 +156,7 @@ MailObject::EqualsResource(const nsIRDFResource* resource, PRBool* result) const
     if (!resource || !result)
         return NS_ERROR_NULL_POINTER;
 
-    *result = (resource == this);
+    *result = (resource == (nsIRDFResource*) this);
     return NS_OK;
 }
 
@@ -188,6 +189,8 @@ private:
     nsIRDFResource* mResourceDate;
     nsIRDFResource* mResourceUser;
     nsIRDFResource* mResourceHost;
+    nsIRDFResource* mResourceAccount;
+    nsIRDFResource* mResourceName;
 
 public:
   
@@ -237,21 +240,28 @@ public:
         return NS_ERROR_NOT_IMPLEMENTED;
     }
 
+    PRBool peq (nsIRDFResource* r1, nsIRDFResource* r2) {
+        PRBool result;
+        if ((NS_OK == r1->EqualsResource(r2, &result)) && result) {
+            return 1;
+        } else return 0;
+    }
+
     NS_IMETHOD GetSource(nsIRDFResource* property, nsIRDFNode* target,
                          PRBool tv,  nsIRDFResource** source /* out */) {
         nsIRDFMailMessage* msg ;
         nsIRDFMailFolder*  fl;
         nsresult rv = NS_ERROR_RDF_NO_VALUE;
         if (!tv) return rv;
-        if (NS_OK = target->QueryInterface(kIRDFMailMessageIID, &msg)) {
-            if (property->Equals(mResourceChild)) {
-                rv = msg->GetFolder(source);
+        if (NS_OK == target->QueryInterface(kIRDFMailMessageIID, (void**)&msg)) {
+            if (peq(mResourceChild, property)) {
+                rv = msg->GetFolder((nsIRDFMailFolder**)source);
             }
             NS_RELEASE(msg);
             return rv;
-        } else  if (NS_OK = source->QueryInterface(kIRDFMailFolderIID, &fl)) {
-            if (property->Equals(mResourceAccount)) {
-                rv = fl->GetAccount(source);
+        } else  if (NS_OK == target->QueryInterface(kIRDFMailFolderIID, (void**)&fl)) {
+            if (peq(mResourceAccount, property)) {
+                rv = fl->GetAccount((nsIRDFMailAccount**)source);
             }
             NS_RELEASE(fl);
             return rv;
@@ -266,32 +276,32 @@ public:
         nsIRDFMailFolder*  fl;
         nsresult rv = NS_ERROR_RDF_NO_VALUE;
         if (!tv) return rv;
-        if (NS_OK = source->QueryInterface(kIRDFMailMessageIID, &msg)) {
+        if (NS_OK == source->QueryInterface(kIRDFMailMessageIID, (void**)&msg)) {
             // maybe something here to make sure that the folder corresponding to the message
             // has been initialized?
-            if (property->Equals(mResourceFrom)) {
-                rv = msg->GetSender(target);
+            if (peq(mResourceFrom, property)) {
+                rv = msg->GetSender((nsIRDFResource**)target);
             }
-            else if (property->Equals(mResourceSubject)) {
-                rv = msg->GetSubject(target);
+            else if (peq(mResourceSubject, property)) {
+                rv = msg->GetSubject((nsIRDFLiteral**)target);
             }
-            else if (property->Equals(mResourceDate)) {
-                rv = msg->GetTarget(target);
+            else if (peq(mResourceDate, property)) {
+                rv = msg->GetDate((nsIRDFLiteral**)target);
             }
             NS_RELEASE(msg);
             return rv;
-        } else if (NS_OK = source->QueryInterface(kIRDFMailFolderIID, &fl)) {
-            if (property->Equals(mResourceName)) {
-                rv = fl->GetName(target);
+        } else if (NS_OK == source->QueryInterface(kIRDFMailFolderIID, (void**)&fl)) {
+            if (peq(mResourceName, property)) {
+                rv = fl->GetName((nsIRDFLiteral**)target);
             } 
             NS_RELEASE(fl);
             return rv;        
-        } else if (NS_OK = source->QueryInterface(kIRDFMailAccountIID, &ac)) {
-            if (property->Equals(mResourceUser)) {
-                rv = ac->GetUser(target);
+        } else if (NS_OK == source->QueryInterface(kIRDFMailAccountIID, (void**) &ac)) {
+            if (peq(mResourceUser, property)) {
+                rv = ac->GetUser((nsIRDFLiteral**)target);
             } 
-            else if (property->Equals(mResourceHost)) {
-                rv = ac->GetHost(target);
+            else if (peq(mResourceHost, property)) {
+                rv = ac->GetHost((nsIRDFLiteral**)target);
             }
             NS_RELEASE(ac);
             return rv;
@@ -326,14 +336,14 @@ public:
             if ((mObservers = new nsVoidArray()) == nsnull)
                 return NS_ERROR_OUT_OF_MEMORY;
         }
-        mObservers->AppendElement(observer);
+        mObservers->AppendElement(n);
         return NS_OK;
     }
 
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n) {
         if (! mObservers)
             return NS_OK;
-        mObservers->RemoveElement(observer);
+        mObservers->RemoveElement(n);
         return NS_OK;
     }
 
@@ -353,7 +363,7 @@ public:
 };
 
 NS_IMPL_ISUPPORTS(MailDataSource, kIRDFMailDataSourceIID);
-}
+
 
 
 /********************************** MailDataAccount **************************************
@@ -365,7 +375,7 @@ class MailAccount : public MailObject,
 private:
   nsIRDFLiteral*       mUser;
   nsIRDFLiteral*       mHost;
-  nsVoidArray mFolders;
+  nsVoidArray          mFolders;
         
 public:
     
@@ -383,12 +393,11 @@ public:
         return NS_OK;
     }
 
-    NS_IMETHOD GetFolderList (nsVoidArray* result) {
-        *result = mFolders;
-        NS_ADDREF(mFolders);
+    NS_IMETHOD GetFolderList (nsVoidArray** result) {
+        *result = &mFolders;
         return NS_OK;
     }
-
+ 
     NS_IMETHOD AddFolder (nsIRDFMailFolder* folder) {
         return NS_ERROR_NOT_IMPLEMENTED;
     }
@@ -413,7 +422,27 @@ public:
 
 };
 
-NS_IMPL_ISUPPORTS(MailAccount, kIRDFMailAccountIID);
+NS_IMPL_ADDREF(MailAccount);
+NS_IMPL_RELEASE(MailAccount);
+
+NS_IMETHODIMP
+MailAccount::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+    
+    *result = nsnull;
+    if (iid.Equals(kIRDFResourceIID) ||
+        iid.Equals(kIRDFNodeIID) ||
+        iid.Equals(kIRDFMailAccountIID) ||
+        iid.Equals(kISupportsIID)) {
+        *result = NS_STATIC_CAST(nsIRDFMailAccount*, this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
 
 /********************************** MailFolder **************************************
  ************************************************************************************/
@@ -449,8 +478,9 @@ public:
         return NS_OK;
     }
     
-    NS_IMETHOD GetMessageList (nsVoidArray* result) {
-        *result = mMessages;
+    NS_IMETHOD GetMessageList (nsVoidArray** result) {
+        *result = &mMessages;
+        return NS_OK;
     }
 
     NS_IMETHOD AddMessage (nsIRDFMailMessage* msg) {
@@ -475,13 +505,33 @@ public:
         
 };
 
-NS_IMPL_ISUPPORTS(MailFolder, kIRDFMailFolderIID);
+NS_IMPL_ADDREF(MailFolder);
+NS_IMPL_RELEASE(MailFolder);
+
+NS_IMETHODIMP
+MailFolder::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+    
+    *result = nsnull;
+    if (iid.Equals(kIRDFResourceIID) ||
+        iid.Equals(kIRDFNodeIID) ||
+        iid.Equals(kIRDFMailFolderIID) ||
+        iid.Equals(kISupportsIID)) {
+        *result = NS_STATIC_CAST(nsIRDFMailFolder*, this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
 
 /********************************** MailMessage **************************************
  ************************************************************************************/
 
 class MailMessage : public MailObject,
-                    public nsIRDFResource 
+                    public nsIRDFMailMessage 
 {
 private:
     MailFolder*     mFolder;
@@ -557,7 +607,29 @@ public:
     }
 };
 
-NS_IMPL_ISUPPORTS(MailMessage, kIRDFMailMessageIID);
+
+NS_IMPL_ADDREF(MailMessage);
+NS_IMPL_RELEASE(MailMessage);
+
+NS_IMETHODIMP
+MailMessage::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+    
+    *result = nsnull;
+    if (iid.Equals(kIRDFResourceIID) ||
+        iid.Equals(kIRDFNodeIID) ||
+        iid.Equals(kIRDFMailMessageIID) ||
+        iid.Equals(kISupportsIID)) {
+        *result = NS_STATIC_CAST(nsIRDFMailMessage*, this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
+
 
 /********************************** nsIRDFPerson **************************************
  * nsIRDFPerson is not really a person. It corresponds to someone you can recieve
@@ -581,13 +653,14 @@ private:
     nsIRDFResource* mProperty;
     nsIRDFNode*     mTarget;
     PRBool          mValueReturnedp;
+    PRBool          mInversep;
 
 public:
     SingletonMailCursor(nsIRDFNode* u,
                         nsIRDFResource* s,
                         PRBool inversep) {
         if (!inversep) {
-            mSource = u;
+            mSource = (nsIRDFResource*)u;
             mTarget = nsnull;
         } else {
             mSource = nsnull;
@@ -597,6 +670,7 @@ public:
         mProperty = s;
         NS_ADDREF(mProperty);
         mValueReturnedp = 0;
+        mInversep = inversep;
     }
             
     
@@ -620,12 +694,12 @@ public:
             return NS_ERROR_RDF_CURSOR_EMPTY;
         }
         mValueReturnedp = 1;
-        if (inversep) {
-            rv = mMailDataSource->GetSource(mProperty, mTarget, 1, &mValue);
-            mSource = mValue;
+        if (mInversep) {
+            rv = kMailDataSource->GetSource(mProperty, mTarget, 1, (nsIRDFResource**)&mValue);
+            mSource = (nsIRDFResource*)mValue;
         } else {
-            rv = mMailDataSource->GetTarget(mSource, mProperty,  1, &mValue);
-            mSource = mValue;
+            rv = kMailDataSource->GetTarget(mSource, mProperty,  1, &mValue);
+            mTarget = mValue;
         }
         NS_ADDREF(mValue);
         NS_ADDREF(mValue); 
@@ -698,9 +772,9 @@ public:
    
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void) {
-        if (mArray->count() => mCount) return  NS_ERROR_RDF_NO_VALUE;
+        if (mArray->Count() <= mCount) return  NS_ERROR_RDF_NO_VALUE;
         NS_IF_RELEASE(mValue);
-        mValue = mArray->elementAt(mCount++);
+        mValue = (nsIRDFNode*) mArray->ElementAt(mCount++);
         NS_ADDREF(mValue);
         return NS_OK;
     }
