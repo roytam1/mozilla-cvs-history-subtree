@@ -265,12 +265,6 @@ class ConstStringImpl
                                         {
                                         }
 
-                                        ConstStringImpl(const nsCString& inString)
-                                            : ConstCharImpl(inString.ToNewCString(),
-                                                            inString.Length())
-                                        {
-                                        }
-
                                         ~ConstStringImpl()
                                         {
                                             Recycle((char*)mConstString);
@@ -314,7 +308,7 @@ class StringImpl
                                             chars.Seek(PR_SEEK_SET, 0);
                                             PRUint32 newLength;
                                             chars.Available(&newLength);
-                                            mString.AssignWithConversion(cstring, newLength);
+                                            mString.Assign(cstring, newLength);
                                             // Set our const string also...
                                             delete [] (char*)mConstString;
                                             mConstString = cstring;
@@ -371,27 +365,6 @@ extern "C" NS_COM nsresult NS_NewStringInputStream(
     nsISupports** aStreamResult,
     const nsString& aStringToRead)
     // Factory method to get an nsInputStream from a string.  Result will implement all the
-    // file stream interfaces in nsIFileStream.h
-//----------------------------------------------------------------------------------------
-{
-    NS_PRECONDITION(aStreamResult != nsnull, "null ptr");
-    if (! aStreamResult)
-        return NS_ERROR_NULL_POINTER;
-
-    ConstStringImpl* stream = new ConstStringImpl(aStringToRead);
-    if (! stream)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF(stream);
-    *aStreamResult = (nsISupports*)(void*)stream;
-    return NS_OK;
-}
-
-//----------------------------------------------------------------------------------------
-extern "C" NS_COM nsresult NS_NewCStringInputStream(
-    nsISupports** aStreamResult,
-    const nsCString& aStringToRead)
-    // Factory method to get an nsInputStream from a cstring.  Result will implement all the
     // file stream interfaces in nsIFileStream.h
 //----------------------------------------------------------------------------------------
 {

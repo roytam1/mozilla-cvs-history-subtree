@@ -142,8 +142,7 @@ NS_NewB2UConverter(nsIUnicodeDecoder** aInstancePtrResult,
 
   // Create converter
   nsresult res;
-  nsAutoString defaultCharset;
-  defaultCharset.AssignWithConversion("ISO-8859-1");
+  nsAutoString defaultCharset("ISO-8859-1");
 
   if (aCharSet == nsnull) aCharSet = &defaultCharset;
 
