@@ -26,6 +26,7 @@
 #include "nsIOutputStream.h"
 #include "nsIURI.h"
 #include "nsIPref.h"
+#include "nsIChannel.h"
 
 class nsMimeXmlEmitter : public nsIMimeEmitter {
 public: 
@@ -36,7 +37,7 @@ public:
     NS_DECL_ISUPPORTS
 
     // These will be called to start and stop the total operation
-    NS_IMETHOD    Initialize(nsIURI *url);
+    NS_IMETHOD    Initialize(nsIURI *url, nsIChannel *aChannel);
     NS_IMETHOD    Complete();
 
     // Set the output stream/listener for processed data.
@@ -77,6 +78,7 @@ protected:
     nsIOutputStream     *mOutStream;
 	nsIInputStream	    *mInputStream;
     nsIStreamListener   *mOutListener;
+	nsIChannel			*mChannel;
 
     PRUint32            mTotalWritten;
     PRUint32            mTotalRead;
