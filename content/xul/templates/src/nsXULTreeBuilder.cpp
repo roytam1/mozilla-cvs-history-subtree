@@ -906,7 +906,7 @@ nsXULOutlinerBuilder::ReplaceMatch(nsIRDFResource* aMember,
             mRows.RemoveRowAt(iter);
 
             // Notify the box object
-            mBoxObject->RowCountChanged(row, -delta);
+            mBoxObject->RowCountChanged(row, -delta - 1);
         }
     }
     else if (aNewMatch) {
