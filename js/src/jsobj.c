@@ -593,8 +593,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     caller = cx->fp->down;
     implicitWith = JS_FALSE; /* Unnecessary init to kill gcc warning */
 
-    if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
-            && (*caller->pc != JSOP_CALLSPECIAL)) {
+    if (JSVERSION_IS_ECMA(cx->version) && *caller->pc != JSOP_EVAL) {
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_BAD_INDIRECT_CALL, js_eval_str);
         return JS_FALSE;
@@ -2623,7 +2622,6 @@ out:
 
 /* Routines to print out values during debugging. */
 
-static
 void printChar(jschar *cp) {
     fprintf(stderr, "jschar* (0x%p) \"", cp);
     while (*cp)
@@ -2632,7 +2630,6 @@ void printChar(jschar *cp) {
     fputc('\n', stderr);
 }
 
-static
 void printString(JSString *str) {
     jsuint i;
     fprintf(stderr, "string (0x%p) \"", str);
@@ -2644,7 +2641,6 @@ void printString(JSString *str) {
 
 void printVal(jsval val);
 
-static
 void printObj(JSObject *jsobj) { 
     jsuint i;
     jsval val;
@@ -2664,7 +2660,7 @@ void printObj(JSObject *jsobj) {
 }
 
 void printVal(jsval val) {
-    fprintf(stderr, "val %d (0x%p) = ", val, val);
+    fprintf(stderr, "val %d (0x%p) = ", val, (void *)val);
     if (JSVAL_IS_NULL(val)) {
 	fprintf(stderr, "null\n");
     } else if (JSVAL_IS_VOID(val)) {
@@ -2685,13 +2681,11 @@ void printVal(jsval val) {
     fflush(stderr);
 }
 
-static
 void printId(jsid id) {
-    fprintf(stderr, "id %d (0x%p) is ", id, id);
+    fprintf(stderr, "id %d (0x%p) is ", id, (void *)id);
     printVal(js_IdToValue(id));
 }
 
-static
 void printAtom(JSAtom *atom) {
     printString(ATOM_TO_STRING(atom));
 }

@@ -69,7 +69,7 @@ js_CompareAndSwap(jsword *w, jsword ov, jsword nv)
 	}
 }
 
-#elif defined(SOLARIS) && !defined(NSPR_LOCK)
+#elif defined(SOLARIS) && defined(sparc) && !defined(NSPR_LOCK)
 
 #ifndef ULTRA_SPARC
 JS_INLINE jsword
@@ -338,7 +338,7 @@ js_SuspendThread(JSThinLock *p)
 	PR_Unlock(fl->slock);
 	return 1;
     }
-    stat = PR_WaitCondVar(fl->svar,PR_INTERVAL_NO_TIMEOUT);
+    stat = (JSStatus)PR_WaitCondVar(fl->svar,PR_INTERVAL_NO_TIMEOUT);
     if (stat == JS_FAILURE) {
 	fl->susp--;
 	return 0;
@@ -366,7 +366,7 @@ js_ResumeThread(JSThinLock *p)
 	PR_Unlock(fl->slock);
 	return;
     }
-    stat = PR_NotifyCondVar(fl->svar);
+    stat = (JSStatus)PR_NotifyCondVar(fl->svar);
     JS_ASSERT(stat != JS_FAILURE);
     PR_Unlock(fl->slock);
 }

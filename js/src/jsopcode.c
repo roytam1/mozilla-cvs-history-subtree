@@ -728,7 +728,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     op = JSOP_NOP;
     while (pc < endpc) {
 	lastop = op;
-	op = saveop = (JSOp)*pc;
+	op = saveop = (JSOp) *pc;
 	if (op >= JSOP_LIMIT) {
 	    switch (op) {
 	      case JSOP_GETPROP2:
@@ -1340,7 +1340,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 	      case JSOP_NEW:
 	      case JSOP_CALL:
-	      case JSOP_CALLSPECIAL:
+	      case JSOP_EVAL:
 		saveop = op;
 		op = JSOP_NOP;           /* turn off parens */
 		argc = GET_ARGC(pc);

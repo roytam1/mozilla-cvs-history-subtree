@@ -19,9 +19,11 @@
 #ifndef _jsfile_h__
 #define _jsfile_h__
 
-extern JSObject*
-js_InitFileClass(JSContext *cx, JSObject* obj);
+#if JS_HAS_FILE_OBJECT
+JS_EXTERN_API(JSObject*)
+js_InitFileClass(JSContext *cx, JSObject* obj, JSBool initStandardStreams);
 
-
+JS_EXTERN_API(JSObject*)
+js_NewFileObject(JSContext *cx, char *bytes);
+#endif /* JS_HAS_FILE_OBJECT */
 #endif /* _jsfile_h__ */
-

@@ -541,7 +541,7 @@ call_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
 	if (getter == js_GetArgument || getter == js_GetLocalVariable) {
 	    if (getter == js_GetArgument) {
 	        vp = fp->argv;
-	        nslots = fp->argc;
+	        nslots = fp->fun->nargs;
 	        getter = setter = NULL;
             } else {
 	        vp = fp->vars;
