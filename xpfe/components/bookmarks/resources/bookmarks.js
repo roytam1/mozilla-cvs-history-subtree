@@ -274,7 +274,8 @@ var BookmarksCommand = {
     case "BookmarkSeparator":
       commands = ["bm_newfolder", "bm_separator", 
                   "bm_cut", "bm_copy", "bm_paste", "bm_separator",
-                  "bm_delete"];
+                  "bm_delete", "bm_separator",
+                  "bm_properties"];
       break;
     case "Bookmark":
       commands = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab", "bm_separator",

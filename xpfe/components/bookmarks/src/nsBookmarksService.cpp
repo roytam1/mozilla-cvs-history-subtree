@@ -3434,43 +3434,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
 
     nsresult    rv;
 
-    // If they want the URL...
-/*    if (aTruthValue && aProperty == kNC_URL)
-    {
-        // ... and it is in fact a bookmark for which we want to show a URL ...
-
-        nsCOMPtr<nsIRDFNode> nodeType;
-        GetSynthesizedType(aSource, getter_AddRefs(nodeType));
-        if ((nodeType == kNC_Bookmark) || (nodeType == kNC_Folder) ||
-            (nodeType == kNC_IEFavorite && aSource != kNC_IEFavoritesRoot))
-        {
-            const char  *uri;
-            if (NS_FAILED(rv = aSource->GetValueConst( &uri )))
-            {
-                NS_ERROR("unable to get source's URI");
-                return rv;
-            }
-
-            nsAutoString    ncURI; 
-            ncURI.AssignWithConversion(uri);
-            if (ncURI.Find("NC:", PR_TRUE, 0) == 0)
-            {
-                return NS_RDF_NO_VALUE;
-            }
-
-            nsIRDFLiteral* literal;
-            if (NS_FAILED(rv = gRDF->GetLiteral(ncURI.get(), &literal)))
-            {
-                NS_ERROR("unable to construct literal for URL");
-                return rv;
-            }
-
-            *aTarget = NS_REINTERPRET_CAST(nsIRDFNode*, literal);    // it was AddReffed by GetLiteral()
-            return NS_OK;
-        }
-        return NS_RDF_NO_VALUE;
-    }
-    else */ if (aTruthValue && (aProperty == kRDF_type))
+    if (aTruthValue && (aProperty == kRDF_type))
     {
         rv = GetSynthesizedType(aSource, aTarget);
         return rv;
