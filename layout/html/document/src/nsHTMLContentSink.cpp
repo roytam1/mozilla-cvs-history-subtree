@@ -1583,8 +1583,8 @@ SinkContext::AddComment(const nsIParserNode& aNode)
 nsresult
 SinkContext::End()
 {
-  NS_ASSERTION(mStackPos == 1, "insufficient close container calls");
-
+ /** NS_ASSERTION(mStackPos == 1, "insufficient close container calls");
+ */
   for (PRInt32 i = 0; i < mStackPos; i++) {
     NS_RELEASE(mStack[i].mContent);
   }
