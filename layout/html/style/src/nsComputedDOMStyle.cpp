@@ -50,7 +50,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIComputedDOMStyle
-  NS_IMETHOD Init(nsIDOMElement *aElement, const nsString& aPseudoElt,
+  NS_IMETHOD Init(nsIDOMElement *aElement, const nsAReadableString& aPseudoElt,
                   nsIPresShell *aPresShell);
 
   // nsIDOMCSSStyleDeclaration
@@ -155,7 +155,7 @@ nsComputedDOMStyle::SetScriptObject(void* aScriptObject)
 
 
 NS_IMETHODIMP
-nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsString& aPseudoElt,
+nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsAReadableString& aPseudoElt,
                          nsIPresShell *aPresShell)
 {
   NS_ENSURE_ARG_POINTER(aElement);
@@ -246,7 +246,8 @@ nsComputedDOMStyle::GetPropertyCSSValue(const nsAReadableString& aPropertyName,
   nsCOMPtr<nsIDOMCSSPrimitiveValue> val;
   nsresult rv = NS_OK;
 
-  nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
+  // XXX FIX THIS!!!
+  nsCSSProperty prop = nsCSSProps::LookupProperty(nsAutoString(aPropertyName));
 
   switch (prop) {
   case eCSSProperty_behavior :

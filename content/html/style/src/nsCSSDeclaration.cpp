@@ -3324,7 +3324,8 @@ CSSDeclarationImpl::AppendComment(const nsAReadableString& aComment)
     mComments = new nsStringArray();
   }
   if ((nsnull != mComments) && (nsnull != mOrder)) {
-    mComments->AppendString(aComment);
+    // XXX nsStringArray::Append() doesn't take nsAReadableString!!!!
+    mComments->AppendString(nsAutoString(aComment));
     mOrder->AppendElement((void*)-mComments->Count());
     result = NS_OK;
   }
@@ -3916,7 +3917,8 @@ NS_IMETHODIMP
 CSSDeclarationImpl::GetValue(const nsAReadableString& aProperty,
                              nsAWritableString& aValue)
 {
-  nsCSSProperty propID = nsCSSProps::LookupProperty(aProperty);
+  // XXX FIX THIS!!!
+  nsCSSProperty propID = nsCSSProps::LookupProperty(nsAutoString(aProperty));
   return GetValue(propID, aValue);
 }
 
@@ -4440,7 +4442,8 @@ NS_IMETHODIMP
 CSSDeclarationImpl::GetValueIsImportant(const nsAReadableString& aProperty,
                                         PRBool& aIsImportant)
 {
-  nsCSSProperty propID = nsCSSProps::LookupProperty(aProperty);
+  // XXX FIX THIS!!!
+  nsCSSProperty propID = nsCSSProps::LookupProperty(nsAutoString(aProperty));
   return GetValueIsImportant(propID, aIsImportant);
 }
 
