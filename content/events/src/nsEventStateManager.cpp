@@ -3546,11 +3546,13 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             #ifndef XP_PC     
                  oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
             #else
-                 PRBool isSuppressed;
-                 newFocusController->GetSuppressFocus(&isSuppressed);
-                 while (isSuppressed) {
-                   newFocusController->SetSuppressFocus(PR_FALSE, "SendFocusBlur Window Switch");
+                 if(newFocusController) {
+                   PRBool isSuppressed;
                    newFocusController->GetSuppressFocus(&isSuppressed);
+                   while (isSuppressed) {
+                     newFocusController->SetSuppressFocus(PR_FALSE, "SendFocusBlur Window Switch");
+                     newFocusController->GetSuppressFocus(&isSuppressed);
+                   }
                  }
             #endif
             }
