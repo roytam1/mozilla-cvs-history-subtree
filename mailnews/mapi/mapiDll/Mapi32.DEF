@@ -42,4 +42,11 @@ EXPORTS
         MAPILogoff
 	MAPISendMail
 	MAPISendDocuments
-
+        MAPIFindNext
+        MAPIReadMail
+        MAPISaveMail
+        MAPIDeleteMail
+        MAPIAddress
+        MAPIDetails
+        MAPIResolveName
+        MAPIFreeBuffer
