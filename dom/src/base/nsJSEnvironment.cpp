@@ -1027,6 +1027,12 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
+  if (!aGlobalObject) {
+    // If we don't get a global object then there's nothing more to do here.
+
+    return NS_OK;
+  }
+
   mIsInitialized = PR_FALSE;
 
   nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rv);
@@ -1504,8 +1510,9 @@ NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
 
   // Bind the script context and the global object
   nsresult rv = scriptContext->InitContext(aGlobal);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (NS_SUCCEEDED(rv)) {
+  if (aGlobal) {
     rv = aGlobal->SetContext(scriptContext);
   }
 
