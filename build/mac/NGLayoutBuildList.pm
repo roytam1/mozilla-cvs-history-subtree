@@ -283,9 +283,12 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:modules:libreg:include:MANIFEST",					"$distdirectory:libreg:");
 
 	#XPCOM
+	InstallFromManifest(":mozilla:xpcom:base:MANIFEST_IDL",							"$distdirectory:idl:");
+	InstallFromManifest(":mozilla:xpcom:io:MANIFEST_IDL",							"$distdirectory:idl:");
+	InstallFromManifest(":mozilla:xpcom:ds:MANIFEST_IDL",							"$distdirectory:idl:");
+
 	BuildOneProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp", 						"headers", "", 0, 0, 0);
 
-	InstallFromManifest(":mozilla:xpcom:idl:MANIFEST",								"$distdirectory:idl:");
     InstallFromManifest(":mozilla:xpcom:public:MANIFEST",							"$distdirectory:xpcom:");
 	InstallFromManifest(":mozilla:xpcom:base:MANIFEST",								"$distdirectory:xpcom:");
 	InstallFromManifest(":mozilla:xpcom:components:MANIFEST",						"$distdirectory:xpcom:");
@@ -724,6 +727,12 @@ sub BuildCommonProjects()
 	BuildOneProject(":mozilla:modules:libreg:macbuild:libreg.mcp",				"libreg$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
 
 	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"xpcom$D.shlb", "xpcom.toc", 1, $main::ALIAS_SYM_FILES, 0);
+	
+	# This next line builds the dummy base shlb. On 99/05/24 :mozilla:base: has gone away and its code
+	# is now included in the xpcom library. But many projects still link with base, and it is faster to
+	# make a dummy base library than to remove base from all the projects in the tree. Eventually, though,
+	# we want to do this.
+	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"base$D.shlb(dummy)", "", 1, $main::ALIAS_SYM_FILES, 0);
 	
 	BuildOneProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp",						"xpcom.xpt", "", 1, 0, 1);
 
