@@ -326,6 +326,7 @@ private:
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
   PRPackedBool       mContentFocused;
+  PRPackedBool       mWidgetVisible;    // used on Mac to store our widget's visible state
   PRUint16          mNumCachedAttrs;
   PRUint16          mNumCachedParams;
   char              **mCachedAttrParamNames;
@@ -2035,6 +2036,7 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mTagText = nsnull;
   mPluginHost = nsnull;
   mContentFocused = PR_FALSE;
+  mWidgetVisible = PR_TRUE;
   mNumCachedAttrs = 0;
   mNumCachedParams = 0;
   mCachedAttrParamNames = nsnull;
@@ -2995,9 +2997,9 @@ nsresult nsPluginInstanceOwner::EnsureCachedAttrParamArrays()
 static void InitializeEventRecord(EventRecord* event)
 {
     memset(event, 0, sizeof(EventRecord));
-    GetGlobalMouse(&event->where);
-    event->when = TickCount();
-    event->modifiers = GetCurrentKeyModifiers();
+    ::GetGlobalMouse(&event->where);
+    event->when = ::TickCount();
+    event->modifiers = ::GetCurrentKeyModifiers();
 }
 #else
 inline void InitializeEventRecord(EventRecord* event) { ::OSEventAvail(0, event); }
@@ -3046,10 +3048,12 @@ nsresult nsPluginInstanceOwner::ScrollPositionWillChange(nsIScrollableView* aScr
         scrollEvent.what = nsPluginEventType_ScrollingBeginsEvent;
         
         nsPluginPort* pluginPort = FixUpPluginWindow();
-        nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-        
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        if (pluginPort) {
+            nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+            
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        }
     }
 #endif
     return NS_OK;
@@ -3064,22 +3068,24 @@ nsresult nsPluginInstanceOwner::ScrollPositionDidChange(nsIScrollableView* aScro
         scrollEvent.what = nsPluginEventType_ScrollingEndsEvent;
 
         nsPluginPort* pluginPort = FixUpPluginWindow();
-        nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        if (pluginPort) {
+            nsPluginEvent pluginEvent = { &scrollEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+    
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
 #if defined(XP_MACOSX)
-        // FIXME - Only invalidate the newly revealed amount.
-        // mWidget->Invalidate(PR_TRUE);
-        Composite();
+            // FIXME - Only invalidate the newly revealed amount.
+            // mWidget->Invalidate(PR_TRUE);
+            Composite();
 #else
-        if (!eventHandled) {
-            nsRect bogus(0,0,0,0);
-            Paint(bogus, 0);     // send an update event to the plugin
+            if (!eventHandled) {
+                nsRect bogus(0,0,0,0);
+                Paint(bogus, 0);     // send an update event to the plugin
+            }
+#endif
         }
 #endif
     }
-#endif
     return NS_OK;
 }
 
@@ -3210,6 +3216,10 @@ nsPluginInstanceOwner::MouseMove(nsIDOMEvent* aMouseEvent)
   // continue only for cases without child window
 #endif
 
+  // don't send mouse events if we are hiddden
+  if (!mWidgetVisible)
+    return NS_OK;
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
     nsMouseEvent* mouseEvent = nsnull;
@@ -3302,6 +3312,10 @@ nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
   // continue only for cases without child window
 #endif
 
+  // don't send mouse events if we are hiddden
+  if (!mWidgetVisible)
+    return NS_OK;
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
     nsMouseEvent* mouseEvent = nsnull;
@@ -3355,9 +3369,11 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
             event = &macEvent;
         }
         nsPluginPort* pluginPort = FixUpPluginWindow();
-        nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
         PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        if (pluginPort) {
+            nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        }
         if (eventHandled && !(anEvent.message == NS_MOUSE_LEFT_BUTTON_DOWN && !mContentFocused))
             rv = nsEventStatus_eConsumeNoDefault;
     }
@@ -3542,15 +3558,21 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
     // reflect the current widget location. This makes sure that everything is updated
     // correctly in the event of scrolling in the window.
     if (mInstance != NULL) {
-        EventRecord idleEvent;
-        InitializeEventRecord(&idleEvent);
-        idleEvent.what = nullEvent;
-        
         nsPluginPort* pluginPort = FixUpPluginWindow();
-        nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
-        
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        if (pluginPort) {
+            EventRecord idleEvent;
+            InitializeEventRecord(&idleEvent);
+            idleEvent.what = nullEvent;
+    
+            // we must give flash a bogus mouse location if we are not visible.
+            if (!mWidgetVisible)
+                idleEvent.where.h = idleEvent.where.v = 20000;
+       
+            nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(GetWindowFromPort(pluginPort->port)) };
+            
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        }
     }
 #endif
 
@@ -3900,11 +3922,6 @@ inline PRUint16 COLOR8TOCOLOR16(PRUint8 color8)
 nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
 {
   if (mWidget) {
-    nscoord absWidgetX = 0;
-    nscoord absWidgetY = 0;
-    nsRect widgetClip(0,0,0,0);
-    GetWidgetPosAndClip(mWidget,absWidgetX,absWidgetY,widgetClip);
-
     nsPluginPort* pluginPort = GetPluginPort();
 
 #if defined(MOZ_WIDGET_COCOA)
@@ -3917,6 +3934,12 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
         ::DisposeRgn(clipRgn);
     }
 #else
+    nscoord absWidgetX = 0;
+    nscoord absWidgetY = 0;
+    nsRect widgetClip(0,0,0,0);
+
+    GetWidgetPosAndClip(mWidget,absWidgetX,absWidgetY,widgetClip);
+
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
     mPluginWindow.y = absWidgetY;
@@ -3941,8 +3964,26 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
     macColor.blue  = COLOR8TOCOLOR16(NS_GET_B(color));
     ::RGBBackColor(&macColor);
     
+    PRBool isVisible;
+    mWidget->IsVisible(isVisible);
+    if (mWidgetVisible != isVisible) {
+        mWidgetVisible = isVisible;
+        // must do this to disable async Java Applet drawing
+        if (isVisible) {
+            mInstance->SetWindow(&mPluginWindow);
+        } else {
+            mInstance->SetWindow(nsnull);
+            // switching states, do not draw
+            pluginPort = nsnull;
+        }
+    }
+
 #if defined(MOZ_WIDGET_COCOA)
     // XXX somebody needs to synchronize clipping of the plugin's window port.
+    if (!mWidgetVisible) {
+        mPluginWindow.clipRect.right = mPluginWindow.clipRect.left;
+        mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top;
+    }
     ::ClipRect((Rect*)&mPluginWindow.clipRect);
 #endif
 

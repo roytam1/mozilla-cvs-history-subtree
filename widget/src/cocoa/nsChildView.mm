@@ -473,7 +473,13 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
 //-------------------------------------------------------------------------
 NS_METHOD nsChildView::IsVisible(PRBool & bState)
 {
-  bState = mVisible;
+  if (!mVisible) {
+    bState = mVisible;
+  } else {
+    // mVisible does not accurately reflect the state of a hidden tabbed view
+    // so verify that the view has a window as well
+    bState = ([mView window] != nil);
+  }
   return NS_OK;
 }
 
