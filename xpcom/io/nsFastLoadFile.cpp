@@ -209,6 +209,9 @@ nsFastLoadFileReader::ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo)
 {
     nsresult rv;
 
+    rv = Read32(&aInfo->mCIDOffset);
+    if (NS_FAILED(rv)) return rv;
+
     rv = Read16(&aInfo->mStrongRefCnt);
     if (NS_FAILED(rv)) return rv;
 
@@ -279,6 +282,30 @@ nsFastLoadFileReader::Close()
 }
 
 nsresult
+nsFastLoadFileReader::DeserializeObject(nsISupports* *aObject)
+{
+    nsresult rv;
+    NSFastLoadID fastCID;
+
+    rv = Read32(&fastCID);
+    if (NS_FAILED(rv)) return rv;
+
+    const nsID& slowCID = mFooter.GetID(fastCID);
+    nsCOMPtr<nsISupports> object(do_CreateInstance(slowCID, &rv));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISerializable> serializable(do_QueryInterface(object));
+    if (!serializable)
+        return NS_ERROR_FAILURE;
+
+    rv = serializable->Read(this);
+    if (NS_FAILED(rv)) return rv;
+
+    NS_ADDREF(*aObject = object);
+    return NS_OK;
+}
+
+nsresult
 nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 {
     nsresult rv;
@@ -295,29 +322,42 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
     nsCOMPtr<nsISupports> object;
 
     if (oid & MFL_OBJECT_DEF_TAG) {
-        NSFastLoadID cid;
-        rv = Read32(&cid);
-        if (NS_FAILED(rv)) return rv;
-
-        object = do_CreateInstance(mFooter.GetID(cid), &rv);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsISerializable> serializable(do_QueryInterface(object));
-        if (!serializable)
-            return NS_ERROR_FAILURE;
-
-        rv = serializable->Read(this);
+        rv = DeserializeObject(getter_AddRefs(object));
         if (NS_FAILED(rv)) return rv;
 
         if (oid != MFL_DULL_OBJECT_OID) {
+            // Save object until all refs have been deserialized.
             entry = &mFooter.GetSharpObjectEntry(oid);
             entry->mObject = object;
         }
     } else {
         entry = &mFooter.GetSharpObjectEntry(oid);
-        NS_ASSERTION(entry->mObject != nsnull, "out of order reference!");
-
         object = entry->mObject;
+
+        if (!object) {
+            // We skipped deserialization of this object from its position
+            // earlier in the input stream, presumably due to the reference
+            // there being an nsFastLoadPtr or some such thing.  Seek back
+            // and read it now.
+            nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+            PRUint32 saveOffset;
+
+            rv = seekable->Tell(&saveOffset);
+            if (NS_FAILED(rv)) return rv;
+            NS_ASSERTION(entry->mCIDOffset < saveOffset, "out of order object?!");
+
+            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, entry->mCIDOffset);
+            if (NS_FAILED(rv)) return rv;
+
+            rv = DeserializeObject(getter_AddRefs(object));
+            if (NS_FAILED(rv)) return rv;
+
+            rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
+            if (NS_FAILED(rv)) return rv;
+
+            // Save object until all refs have been deserialized.
+            entry->mObject = object;
+        }
     }
 
     if (entry) {
@@ -532,6 +572,9 @@ nsFastLoadFileWriter::WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInf
 {
     nsresult rv;
 
+    rv = Write32(aInfo.mCIDOffset);
+    if (NS_FAILED(rv)) return rv;
+
     rv = Write16(aInfo.mStrongRefCnt);
     if (NS_FAILED(rv)) return rv;
 
@@ -736,12 +779,23 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
         if (!entry->mObject) {
             // First time we've seen this object address: add it to mObjectMap
             // and serialize the object at the current stream offset.
+            nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+            PRUint32 thisOffset;
+
+            rv = seekable->Tell(&thisOffset);
+            if (NS_FAILED(rv)) {
+                aObject->Release();
+                return rv;
+            }
 
             // NB: aObject was already held, and mObject is a raw nsISupports*.
             entry->mObject = aObject;
 
             oid = (mObjectMap.entryCount << MFL_OBJECT_TAG_BITS);
             entry->mOID = oid;
+
+            // NB: the (32-bit, fast) CID and object data follow the OID.
+            entry->mInfo.mCIDOffset = thisOffset + sizeof(oid);
             entry->mInfo.mStrongRefCnt = aIsStrongRef ? 1 : 0;
             entry->mInfo.mWeakRefCnt   = aIsStrongRef ? 0 : 1;
 
@@ -766,8 +820,8 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
     if (NS_FAILED(rv)) return rv;
 
     if (oid & MFL_OBJECT_DEF_TAG) {
-        NSFastLoadID cid = MapID(aCID);
-        rv = Write32(cid);
+        NSFastLoadID fastCID = MapID(aCID);
+        rv = Write32(fastCID);
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsISerializable> serializable(do_QueryInterface(aObject));

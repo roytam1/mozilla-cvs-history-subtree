@@ -138,6 +138,7 @@ struct nsFastLoadFooterPrefix {
 };
 
 struct nsFastLoadSharpObjectInfo {
+    PRUint32    mCIDOffset;     // offset of object's NSFastLoadID and data
     PRUint16    mStrongRefCnt;
     PRUint16    mWeakRefCnt;
 };
@@ -259,6 +260,7 @@ class NS_COM nsFastLoadFileReader
     nsresult ReadFooterPrefix(nsFastLoadFooterPrefix *aFooterPrefix);
     nsresult ReadID(nsID *aID);
     nsresult ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo);
+    nsresult DeserializeObject(nsISupports* *aObject);
 
     nsresult   Open();
     NS_IMETHOD Close();
