@@ -256,7 +256,7 @@ hash_NativeKey(const void *key)
 {
     XPCNativeSetKey* Key = (XPCNativeSetKey*) key;
 
-    JSHashNumber h;
+    JSHashNumber h = 0;
     
     XPCNativeSet*       Set      = Key->GetBaseSet();
     XPCNativeInterface* Addition = Key->GetAddition();
@@ -265,7 +265,7 @@ hash_NativeKey(const void *key)
     if(!Set)
     {
         NS_ASSERTION(Addition, "bad key");
-        h = (JSHashNumber) Addition;
+        h ^= (JSHashNumber) Addition;    
     }
     else
     {
@@ -287,39 +287,66 @@ JS_STATIC_DLL_CALLBACK(intN)
 compare_NativeKeyToSet(const void *v1, const void *v2)
 {
     XPCNativeSetKey* Key = (XPCNativeSetKey*) v1;
-    XPCNativeSet*    SetInTable = (XPCNativeSet*) v2;
-
-    XPCNativeSet*       Set      = Key->GetBaseSet();
-    XPCNativeInterface* Addition = Key->GetAddition();
     
-    if(!Set)
+    // See the comment in the XPCNativeSetKey declaration in xpcprivate.h.
+    if(Key->IsAKey())
     {
-        return SetInTable->GetInterfaceCount() == 1 &&
-               *SetInTable->GetInterfaceArray() == Addition;
+        XPCNativeSet*    SetInTable = (XPCNativeSet*) v2;
+
+        XPCNativeSet*       Set      = Key->GetBaseSet();
+        XPCNativeInterface* Addition = Key->GetAddition();
+    
+        if(!Set)
+        {
+            return SetInTable->GetInterfaceCount() == 1 &&
+                   *SetInTable->GetInterfaceArray() == Addition;
+        }
+
+        if(!Addition && Set == SetInTable)
+            return 1;
+        
+        PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
+        if(count != SetInTable->GetInterfaceCount())
+            return 0;
+        
+        PRUint16 Position = Key->GetPosition();
+        XPCNativeInterface** CurrentInTable = SetInTable->GetInterfaceArray();
+        XPCNativeInterface** Current = Set->GetInterfaceArray();
+        for(PRUint16 i = 0; i < count; i++)
+        {
+            if(Addition && i == Position)
+            {
+                if(Addition != *(CurrentInTable++))
+                    return 0;
+            }
+            else
+            {
+                if(*(Current++) != *(CurrentInTable++))
+                    return 0;
+            }
+        }   
+        
+        return 1;
     }
 
-    if(!Addition && Set == SetInTable)
+    // else...
+
+    XPCNativeSet* Set1 = (XPCNativeSet*) v1;
+    XPCNativeSet* Set2 = (XPCNativeSet*) v2;
+
+    if(Set1 == Set2)
         return 1;
-        
-    PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
-    if(count != Set->GetInterfaceCount())
+    
+    PRUint16 count = Set1->GetInterfaceCount();
+    if(count != Set2->GetInterfaceCount())
         return 0;
 
-    PRUint16 Position = Key->GetPosition();
-    XPCNativeInterface** CurrentInTable = SetInTable->GetInterfaceArray();
-    XPCNativeInterface** Current = Set->GetInterfaceArray();
+    XPCNativeInterface** Current1 = Set1->GetInterfaceArray();
+    XPCNativeInterface** Current2 = Set2->GetInterfaceArray();
     for(PRUint16 i = 0; i < count; i++)
     {
-        if(Addition && i == Position)
-        {
-            if(Addition != *(CurrentInTable++))
-                return 0;
-        }
-        else
-        {
-            if(*(Current++) != *(CurrentInTable++))
-                return 0;
-        }
+        if(*(Current1++) != *(Current2++))
+            return 0;
     }   
     
     return 1;
