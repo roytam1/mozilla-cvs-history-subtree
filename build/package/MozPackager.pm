@@ -57,7 +57,6 @@ package MozPackages;
 
 # Parse packages.list into the global var %MozPackages::packageList
 sub parsePackageList {
-    # packages is a reference to a hash
     my ($packageListFile) = @_;
     
     my $fileh;
@@ -108,11 +107,17 @@ sub _recursePackage {
     
     MozPackager::_verbosePrint(1, "Recursing package $package");
 
-    ($MozPackages::packages{$package})
+    my $unPackage = ((my $realPackage = $package) =~ s/^\^//);
+    ($MozPackages::packages{$realPackage})
         || die("Package $package does not exist.");
     $myPackages->{$package} = 1;
 
-    foreach my $packageName (@{$MozPackages::packages{$package}}) {
+    foreach my $packageName (@{$MozPackages::packages{$realPackage}}) {
+        if ($unPackage) {
+            die("Cannot process double-negative packages, recursing $package, found $packageName")
+                if ($packageName =~ /^\^/);
+            $packageName = '^'. $packageName;
+        }
         _recursePackage($packageName, $myPackages);
     }
 }
@@ -249,12 +254,20 @@ sub _parseFile {
                 exists($MozPackages::packages{$package}) ||
                     die("At $file, line $.. Unknown package $package.");
 
+                if (exists(${$self->{'packages'}}{'^'. $package})) {
+                    # if we find a negative-package ^packagename, stop
+                    # immediately
+                    $process = 0;
+                    MozPackager::_verbosePrint(2, "Found package ^$package");
+                    last;
+                }
+
                 if (exists(${$self->{'packages'}}{$package})) {
                     $process = 1;
                     MozPackager::_verbosePrint(2, "Found package $package");
                 }
             }
-            MozPackager::_verbosePrint(2, "No package found.") unless $process;
+            MozPackager::_verbosePrint(2, "Skipping lines...") unless $process;
             next;
         }
 
@@ -359,20 +372,6 @@ sub mergeTo {
         die("xpt_link failed: code ". ($? >> 8));
 }
 
-# This is a helper for the stage-packages script.
-# it removes XPT files from a parser that are in another parser.
-
-sub removeFiles {
-    my ($parser, $unparser) = @_;
-
-    foreach my $file (keys %{$unparser->{'xptfiles'}}) {
-        if (exists($parser->{'xptfiles'}->{$file})) {
-            MozPackager::_verbosePrint(2, "Unmarking XPT file for merging: $file");
-            delete $parser->{'xptfiles'}->{$file};
-        }
-    }
-}
-
 sub _commandFunc {
     my ($parser, $args, $file, $filename) = @_;
 
@@ -430,6 +429,8 @@ sub _commandFunc {
 }
 
 package MozStage::Utils;
+
+use File::Copy;
 
 my $cansymlink = eval {symlink('', ''); 1; };
 
