@@ -688,7 +688,7 @@ BOOL CMapiMessage::GetAttachmentInfo( int idx)
 		LONG	aMethod = CMapiApi::GetLongFromProp( pVal);
 		if ((aMethod == ATTACH_BY_REF_ONLY) || (aMethod == ATTACH_BY_REFERENCE) || (aMethod == ATTACH_BY_REF_RESOLVE)) {
 			m_attachPath.Truncate();
-			pVal = CMapiApi::GetMapiProperty( lpAttach, PR_ATTACH_PATHNAME);
+			pVal = CMapiApi::GetMapiProperty( lpAttach, PR_ATTACH_LONG_PATHNAME);
 			if (pVal)
 				CMapiApi::GetStringFromProp( pVal, m_attachPath);
 			MAPI_TRACE2( "\t\t** Attachment #%d by ref: %s\r\n", idx, (const char *)m_attachPath);
@@ -713,7 +713,7 @@ BOOL CMapiMessage::GetAttachmentInfo( int idx)
 		bResult = FALSE;
 	
 	nsCString	fName, fExt;
-	pVal = CMapiApi::GetMapiProperty( lpAttach, PR_ATTACH_FILENAME);
+	pVal = CMapiApi::GetMapiProperty( lpAttach, PR_ATTACH_LONG_FILENAME);
 	if (pVal)
 		CMapiApi::GetStringFromProp( pVal, fName);
 	pVal = CMapiApi::GetMapiProperty( lpAttach, PR_ATTACH_EXTENSION);
