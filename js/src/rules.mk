@@ -51,7 +51,7 @@ else
 ifdef USE_MSVC
 $(SHARED_LIBRARY): $(LIB_OBJS)
 	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS) \
-	    /out:"$@" /pdb:"$(OBJDIR)/$(@F:.dll=.pdb)" \
+	    /out:"$@" \
 	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $^
 else
 $(LIBRARY): $(LIB_OBJS)
