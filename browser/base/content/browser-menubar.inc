@@ -154,10 +154,17 @@
                 <menuitem label="&stopCmd.label;" accesskey="&stopCmd.accesskey;" command="Browser:Stop" key="key_stop"/>
                 <menuitem accesskey="&reloadCmd.accesskey;" key="key_reload" label="&reloadCmd.label;" oncommand="BrowserReload();"/>
                 <menuseparator/>
-                <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
-                          command="cmd_textZoomEnlarge"/>
-                <menuitem key="key_textZoomReduce"  label="&textZoomReduceCmd.label;"  accesskey="&textZoomReduceCmd.accesskey;"
-                          command="cmd_textZoomReduce"/>
+                <menu label="&textSize.label;" accesskey="&textSize.accesskey;">
+                  <menupopup>                    
+                    <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
+                              command="cmd_textZoomEnlarge"/>
+                    <menuitem key="key_textZoomReduce"  label="&textZoomReduceCmd.label;"  accesskey="&textZoomReduceCmd.accesskey;"
+                              command="cmd_textZoomReduce"/>
+                    <menuseparator/>
+                    <menuitem key="key_textZoomReset" label="&textZoomResetCmd.label;" accesskey="&textZoomResetCmd.accesskey;"
+                              command="cmd_textZoomReset"/>
+                  </menupopup>
+                </menu>
                 <menu label="&charsetMenu.label;" accesskey="&charsetMenu.accesskey;"
                       datasources="rdf:charset-menu" ref="NC:BrowserCharsetMenuRoot"
                       oncommand="MultiplexHandler(event)" onpopupshowing="CreateMenu('browser');UpdateMenus(event)" onpopupshown="CreateMenu('more-menu');">
@@ -417,10 +424,6 @@
 #endif
             <menupopup id="menu_HelpPopup">
               <menuseparator/>
-              <menuitem accesskey="&tellAFriend.accesskey;"
-                        label="&tellAFriend.label;"
-                        oncommand="openUILink(getUILink('tellAFriend'), event, false, true);"
-                        onclick="checkForMiddleClick(this, event);"/>
               <menuitem accesskey="&promote.accesskey;"
                         label="&promote.label;"
                         oncommand="openUILink(getUILink('promote'), event, false, true);"

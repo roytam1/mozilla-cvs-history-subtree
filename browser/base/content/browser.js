@@ -335,7 +335,14 @@ function closeFindBar()
   findToolbar.hidden = true;
   gTypeAheadFindBuffer = "";
   changeSelectionColor(false);
-  gFindMode = FIND_NORMAL;
+  if (gQuickFindTimeout) {
+    clearTimeout(gQuickFindTimeout);
+    gQuickFindTimeout = null;    
+  }
+  
+  var statusIcon = document.getElementById("find-status-icon");
+  findField.removeAttribute("status");
+  statusIcon.removeAttribute("status");
 }
 
 function shouldFastFind(evt)
@@ -375,7 +382,7 @@ function onBrowserKeyPress(evt)
     return;
   
   var findField = document.getElementById("find-field");
-  if (gFindMode != FIND_NORMAL) {    
+  if (gFindMode != FIND_NORMAL && gQuickFindTimeout) {    
     if (evt.keyCode == 8) { // Backspace
       if (findField.value) {
         findField.value = findField.value.substr(0, findField.value.length - 1);
@@ -500,6 +507,7 @@ function flashFindBar()
 
 function onFindCmd()
 {
+  gFindMode = FIND_NORMAL;
   openFindBar();
   if (gFlashFindBar) {
     gFlashFindBarTimeout = setInterval(flashFindBar, 500);
@@ -515,8 +523,15 @@ function onFindAgainCmd()
   if (!findString)
     return onFindCmd();
 
-  changeSelectionColor(true);
-  findNext();
+  var res = findNext();
+  if (res == Components.interfaces.nsITypeAheadFind.FIND_NOTFOUND) {
+    if (openFindBar()) {
+      focusFindBar();
+      selectFindBar();
+      if (gFindMode != FIND_NORMAL)
+        setFindCloseTimeout();
+    }
+  }
 }
 
 function onFindPreviousCmd()
@@ -524,9 +539,16 @@ function onFindPreviousCmd()
   var findString = getBrowser().findString;
   if (!findString)
     return onFindCmd();
-  
-  changeSelectionColor(true);
-  findPrevious();
+ 
+  var res = findPrevious();
+  if (res == Components.interfaces.nsITypeAheadFind.FIND_NOTFOUND) {
+    if (openFindBar()) {
+      focusFindBar();
+      selectFindBar();
+      if (gFindMode != FIND_NORMAL)
+        setFindCloseTimeout();
+    }
+  }
 }
 
 function setHighlightTimeout()
@@ -536,32 +558,41 @@ function setHighlightTimeout()
   gHighlightTimeout = setTimeout(function() { toggleHighlight(false); toggleHighlight(true); }, 500);  
 }
 
+function isFindBarVisible()
+{
+  var findBar = document.getElementById("FindToolbar");
+  return !findBar.hidden;
+}
+
 function findNext()
 {
+  changeSelectionColor(true);
   var fastFind = getBrowser().fastFind; 
   var res = fastFind.findNext();  
   updateStatus(res, true);
     
-  if (gFindMode != FIND_NORMAL)
+  if (gFindMode != FIND_NORMAL && isFindBarVisible())
     setFindCloseTimeout();
+  
+  return res;
 }
 
 function findPrevious()
 {
+  changeSelectionColor(true);
   var fastFind = getBrowser().fastFind;
   var res = fastFind.findPrevious();
   updateStatus(res, false);
   
-  if (gFindMode != FIND_NORMAL)
+  if (gFindMode != FIND_NORMAL && isFindBarVisible())
     setFindCloseTimeout();
+  
+  return res;
 }
 
 function updateStatus(res, findNext)
 {
   var findBar = document.getElementById("FindToolbar");
-  if (findBar.hidden)
-    return;
-    
   var field = document.getElementById("find-field");
   var statusIcon = document.getElementById("find-status-icon");
   var statusText = document.getElementById("find-status");

@@ -139,6 +139,7 @@
     <command id="Browser:Stop"    oncommand="BrowserStop();" disabled="true"/>
     <command id="cmd_textZoomReduce"  oncommand="ZoomManager.prototype.getInstance().reduce();"/>
     <command id="cmd_textZoomEnlarge" oncommand="ZoomManager.prototype.getInstance().enlarge();"/>
+    <command id="cmd_textZoomReset" oncommand="ZoomManager.prototype.getInstance().reset();"/>
     <command id="Browser:OpenLocation" oncommand="openLocation();"/>
 
     <command id="Tools:Search" oncommand="focusSearchBar();"/>    
@@ -285,7 +286,7 @@
     <key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   command="cmd_textZoomReduce"  modifiers="accel"/>
     <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"  command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key                          key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
-    <key                          key="&textZoomResetCmd.commandkey;"    oncommand="ZoomManager.prototype.getInstance().reset();"   modifiers="accel"/>
+    <key id="key_textZoomReset"   key="&textZoomResetCmd.commandkey;"    command="cmd_textZoomReset"   modifiers="accel"/>
     
     <key id="key_SwitchTextDirection" key="&bidiSwitchTextDirectionItem.commandkey;" command="cmd_SwitchTextDirection" modifiers="accel,shift" />
 #ifdef XP_MACOSX
