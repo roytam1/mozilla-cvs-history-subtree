@@ -19,38 +19,45 @@
 # Contributor(s): 
 #
 
-DEPTH		= ../../..
+DEPTH		= ../../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= necko
-LIBRARY_NAME	= neckobase_s
+SAMPLES_DIR	= $(DIST)/bin/chrome/messenger/locale/en-US
 
-CPPSRCS		= \
-		nsAsyncStreamListener.cpp \
-		nsSyncStreamListener.cpp \
-		nsIOService.cpp \
-		nsSocketTransport.cpp \
-		nsSocketTransportService.cpp \
-		nsFileTransport.cpp \
-		nsFileTransportService.cpp \
-		nsStdURL.cpp \
-		nsSimpleURI.cpp \
-		nsNetModuleMgr.cpp \
-		nsNetModRegEntry.cpp \
-		nsLoadGroup.cpp \
-		nsInputStreamChannel.cpp \
-		nsDirectoryIndexStream.cpp \
-		nsUnicharStreamLoader.cpp \
+EXPORT_RESOURCE_SAMPLES = \
+		custreceipt.dtd \
+		pref-diskspace.dtd \
+		pref-mailnews.dtd \
+		pref-receipts.dtd \
+		pref-winsetting.dtd \
+		aw-accname.dtd \
+		aw-accounttype.dtd \
+		aw-done.dtd \
+		aw-email.dtd \
+		aw-fullname.dtd \
+		aw-identity.dtd \
+		aw-login.dtd \
+		aw-mailtype.dtd \
+		aw-server.dtd \
+		AccountManager.dtd \
+		AccountWizard.dtd \
+		am-advanced.dtd \
+		am-imap-advanced.dtd \
+		am-copies.dtd \
+		am-main.dtd \
+		am-server-top.dtd \
+		prefs.properties \
+        am-serverwithnoidentities.dtd   \
 		$(NULL)
 
-# we don't want the shared lib, but we want to force the creation of a
-# static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
-
 include $(topsrcdir)/config/rules.mk
+
+GARBAGE		+= $(addprefix $(SAMPLES_DIR)/, $(EXPORT_RESOURCE_SAMPLES))
+
+install::
+	$(INSTALL) $(addprefix $(srcdir)/, $(EXPORT_RESOURCE_SAMPLES)) $(SAMPLES_DIR)
 

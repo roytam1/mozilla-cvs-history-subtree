@@ -42,7 +42,6 @@
 #include "nsIAllocator.h"
 #include "nsIURL.h"
 #include "nsMsgUtils.h" // for NS_MsgHashIfNecessary()
-#include "nsEscape.h"
 
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -445,7 +444,7 @@ nsMsgFolder::parseURI(PRBool needServer)
                                           NS_GET_IID(nsIURL),
                                           (void **)getter_AddRefs(url));
   if (NS_FAILED(rv)) return rv;
-
+  
   rv = url->SetSpec(mURI);
   if (NS_FAILED(rv)) return rv;
 
@@ -470,17 +469,12 @@ nsMsgFolder::parseURI(PRBool needServer)
   if (mName.IsEmpty()) {
     // mName:
     // the name is the trailing directory in the path
-    char* fileName = nsnull;
-    rv = url->GetFileName(&fileName);
+    nsXPIDLCString fileName;
+    rv = url->GetFileName(getter_Copies(fileName));
     if (NS_SUCCEEDED(rv)) {
       // XXX conversion to unicode here? is fileName in UTF8?
-
-      nsCAutoString buffer;
-
-      buffer = nsUnescape(fileName);
-      mName = buffer;
+      mName = fileName;
     }
-    CRTFREEIF(fileName);
   }
 
   // grab the server by parsing the URI and looking it up
@@ -694,7 +688,6 @@ NS_IMETHODIMP nsMsgFolder::GetPrettyName(PRUnichar ** name)
 {
 	if (!name)
 		return NS_ERROR_NULL_POINTER;
-
 	*name = mName.ToNewUnicode();
 	return (*name) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
