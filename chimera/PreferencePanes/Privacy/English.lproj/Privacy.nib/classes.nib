@@ -15,9 +15,9 @@
         {
             ACTIONS = {
                 clearCookies = id; 
+                clickAskAboutCookies = id; 
                 clickAutoFillPasswords = id; 
                 clickEnableCookies = id; 
-                clickPromptForCookie = id; 
                 clickStorePasswords = id; 
                 editCookieSites = id; 
                 editCookieSitesDone = id; 
@@ -27,10 +27,11 @@
             CLASS = OrgMozillaChimeraPreferencePrivacy; 
             LANGUAGE = ObjC; 
             OUTLETS = {
+                mAskAboutCookies = NSButton; 
                 mAutoFillPasswords = NSButton; 
                 mCookieSitePanel = id; 
-                mCookies = id; 
-                mPromptForCookie = NSButton; 
+                mCookiesEnabled = NSButton; 
+                mEditSitesButton = NSButton; 
                 mSiteTable = NSTableView; 
                 mStorePasswords = NSButton; 
             }; 

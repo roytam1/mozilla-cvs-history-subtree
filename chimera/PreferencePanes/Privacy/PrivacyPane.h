@@ -9,9 +9,10 @@ class nsISupportsArray;
 
 @interface OrgMozillaChimeraPreferencePrivacy : PreferencePaneBase
 {
-  IBOutlet id mCookies;
+  IBOutlet NSButton* mCookiesEnabled;
+  IBOutlet NSButton* mAskAboutCookies;
   IBOutlet id mCookieSitePanel;
-  IBOutlet NSButton* mPromptForCookie;
+  IBOutlet NSButton* mEditSitesButton;
   
   IBOutlet NSButton* mStorePasswords;
   IBOutlet NSButton* mAutoFillPasswords;
@@ -31,11 +32,15 @@ class nsISupportsArray;
 - (int)numberOfRowsInTableView:(NSTableView *)aTableView;
 - (id)tableView:(NSTableView *)aTableView objectValueForTableColumn:(NSTableColumn *)aTableColumn row:(int)rowIndex;
 
--(IBAction) clickPromptForCookie:(id)sender;
 -(IBAction) clickEnableCookies:(id)sender;
+-(IBAction) clickAskAboutCookies:(id)sender;
 
 -(IBAction) clickStorePasswords:(id)sender;
 -(IBAction) clickAutoFillPasswords:(id)sender;
 -(IBAction) launchKeychainAccess:(id)sender;
+
+// helpers going between the enable cookie checkbox and the mozilla pref
+-(BOOL)mapCookiePrefToCheckbox:(int)inCookiePref;
+-(int)mapCookieCheckboxToPref:(BOOL)inCheckboxValue;
 
 @end

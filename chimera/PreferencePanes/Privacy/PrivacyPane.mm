@@ -15,6 +15,10 @@
 static const char* const gUseKeychainPref = "chimera.store_passwords_with_keychain";
 static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_autofill";
 
+const int kPromptForCookiesTag = 99;
+const int kEnableAllCookies = 0;
+const int kDisableAllCookies = 2;
+
 @implementation OrgMozillaChimeraPreferencePrivacy
 
 - (void) dealloc
@@ -23,24 +27,52 @@ static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_auto
   [super dealloc];
 }
 
+//
+// mapCookiePrefToCheckbox:
+//
+// Takes an int from the mozilla cookie pref and turns it into a BOOL
+// that can be used by our "enable cookies" checkbox.
+//
+-(BOOL)mapCookiePrefToCheckbox:(int)inCookiePref
+{
+  BOOL retval = YES;
+  if ( inCookiePref == kDisableAllCookies )
+    retval = NO;
+  return retval;
+}
+
+//
+// mapCookieCheckboxToPref:
+//
+// Takes a BOOL from a checkbox and maps it to the mozilla pref values
+//
+-(int)mapCookieCheckboxToPref:(BOOL)inCheckboxValue
+{
+  PRInt32 retval = kDisableAllCookies;
+  if ( inCheckboxValue )
+    retval = kEnableAllCookies;
+  return retval;
+}
 
 - (void)mainViewDidLoad
 {
   if ( !mPrefService )
     return;
     
-  // Hookup cookie prefs. Relies on the tags of the radio buttons in the matrix being
-  // set such that "enable all" is 0 and "disable all" is 2. If mozilla has other prefs
-  // that we don't quite know about, we assume they were remapped by the PreferenceManager
-  // at startup.
-  PRInt32 acceptCookies = 0;
+  // Hookup cookie prefs. The "ask about" and "cookie sites" buttons need to
+  // be disabled when cookies aren't enabled because they aren't applicable.
+  PRInt32 acceptCookies = kEnableAllCookies;
   mPrefService->GetIntPref("network.cookie.cookieBehavior", &acceptCookies);
-  if ( [mCookies selectCellWithTag:acceptCookies] != YES )
-    NS_WARNING("Bad value for network.cookie.cookieBehavior");
-    
+  BOOL cookiesEnabled = [self mapCookiePrefToCheckbox:acceptCookies];
+  [mCookiesEnabled setState:cookiesEnabled];
+  if ( !cookiesEnabled ) {
+    [mAskAboutCookies setEnabled:NO];
+    [mEditSitesButton setEnabled:NO];
+  }
   PRBool warnAboutCookies = PR_TRUE;
   mPrefService->GetBoolPref("network.cookie.warnAboutCookies", &warnAboutCookies);
-  [mPromptForCookie setState:(warnAboutCookies ? NSOnState : NSOffState)];
+  if ( warnAboutCookies )
+    [mAskAboutCookies setState:YES];
   
   // store permission manager service and cache the enumerator.
   nsCOMPtr<nsIPermissionManager> pm ( do_GetService(NS_PERMISSIONMANAGER_CONTRACTID) );
@@ -71,27 +103,31 @@ static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_auto
     cookieMonster->RemoveAll();
 }
 
-//
-// clickPromptForCookie:
-//
-// Set if the user should be prompted for each cookie
-//
--(IBAction) clickPromptForCookie:(id)sender
-{
-  [self setPref:"network.cookie.warnAboutCookies" toBoolean:[sender state] == NSOnState];
-}
 
 //
 // clickEnableCookies:
 //
-// Set cookie prefs. Relies on the tags of the radio buttons in the matrix being
-// set such that "enable all" is 0 and "disable all" is 2.
+// Set cookie prefs and updates the enabled/disabled states of the
+// "ask" and "edit sites" buttons.
 //
 -(IBAction) clickEnableCookies:(id)sender
 {
   if ( !mPrefService )
     return;
-  mPrefService->SetIntPref("network.cookie.cookieBehavior", [[mCookies selectedCell] tag]);
+    
+  // set the pref
+  BOOL enabled = [mCookiesEnabled state];
+  [self setPref:"network.cookie.cookieBehavior" toInt:[self mapCookieCheckboxToPref:enabled]];
+
+  // update the buttons
+  [mAskAboutCookies setEnabled:enabled];
+  [mEditSitesButton setEnabled:enabled];
+}
+
+
+-(IBAction) clickAskAboutCookies:(id)sender
+{
+  [self setPref:"network.cookie.warnAboutCookies" toBoolean:[sender state]];
 }
 
 
@@ -116,7 +152,7 @@ static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_auto
   }
   
 	[NSApp beginSheet:mCookieSitePanel
-        modalForWindow:[mCookies window]		// any old window accessor
+        modalForWindow:[mCookiesEnabled window]   // any old window accessor
         modalDelegate:self
         didEndSelector:@selector(editCookieSitesSheetDidEnd:returnCode:contextInfo:)
         contextInfo:NULL];
