@@ -72,6 +72,10 @@
 #ifdef XP_UNIX
 #include <ctype.h>
 #endif
+#ifdef XP_OS2
+#define INCL_DOS
+#include <os2.h>
+#endif
 
 nsXREDirProvider* gDirServiceProvider = nsnull;
 
@@ -547,22 +551,19 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   NS_ENSURE_SUCCESS(rv, rv);
 
 #elif defined(XP_OS2)
+#if 0 /* For OS/2 we want to always use MOZILLA_HOME */
   // we want an environment variable of the form
   // FIREFOX_HOME, etc
   nsDependentCString envVar(nsDependentCString(gAppData->appName));
-  char* varBuf = envVar.get();
-  while (*varBuf != '\0') {
-    *varBuf = toupper(*varBuf);
-    varBuf++;
-  }
   envVar.Append("_HOME");
-    
   char *pHome = getenv(envVar.get());
+#endif
+  char *pHome = getenv("MOZILLA_HOME");
   if (pHome && *pHome) {
     rv = NS_NewNativeLocalFile(nsDependentCString(pHome), PR_TRUE,
                                getter_AddRefs(localDir));
   } else {
-    PPID ppid;
+    PPIB ppib;
     PTIB ptib;
     char appDir[CCHMAXPATH];
 
