@@ -249,8 +249,8 @@ nsSupportsArray::Read(nsIObjectInputStream *aStream)
     if (mArray != mAutoArray) {
       delete[] mArray;
       mArray = mAutoArray;
-      newArraySize = kAutoArraySize;
     }
+    newArraySize = kAutoArraySize;
   }
   else {
     if (newArraySize <= mArraySize) {
@@ -258,7 +258,7 @@ nsSupportsArray::Read(nsIObjectInputStream *aStream)
       newArraySize = mArraySize;
     }
     else {
-      nsISupports** array = new nsISupports*[mArraySize];
+      nsISupports** array = new nsISupports*[newArraySize];
       if (!array)
         return NS_ERROR_OUT_OF_MEMORY;
       if (mArray != mAutoArray)
@@ -270,6 +270,10 @@ nsSupportsArray::Read(nsIObjectInputStream *aStream)
 
   rv = aStream->Read32(&mCount);
   if (NS_FAILED(rv)) return rv;
+
+  NS_ASSERTION(mCount <= mArraySize, "overlarge mCount!");
+  if (mCount > mArraySize)
+    mCount = mArraySize;
 
   for (PRUint32 i = 0; i < mCount; i++) {
     rv = aStream->ReadObject(PR_TRUE, &mArray[i]);
