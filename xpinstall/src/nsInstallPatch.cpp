@@ -374,13 +374,16 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
            
            // Encode! 
 		   // Encode src file, and put into temp file
-			status = PAS_EncodeFile(sourceFile.GetFSSpec(), tempMacFile->GetFSSpec());   
+		   FSSpec sourceSpec = sourceFile.GetFSSpec();
+		   FSSpec tempSpec   = tempMacFile.GetFSSpec();
+		    
+			status = PAS_EncodeFile(&sourceSpec, &tempSpec);   
 				
 			if (status == noErr)
 			{
 				// set
                 PL_strfree(realfile);
-				realfile = PL_strdup(nsprPath(*tempMacFile));
+				realfile = PL_strdup(nsprPath(tempMacFile));
 			}
 		}
 #endif 
@@ -460,17 +463,25 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 		PR_Close( dd->fOut );
 		dd->fOut = NULL;
 		
-        status =  PAS_DecodeFile(outFileSpec.GetFSSpec(), anotherMacFile->GetFSSpec());
+		
+		FSSpec outSpec = outFileSpec.GetFSSpec();
+		FSSpec anotherSpec   = anotherName.GetFSSpec();
+		
+			
+        status =  PAS_DecodeFile(&outSpec, &anotherSpec);
 		if (status != noErr)
 		{
 		   	goto cleanup;
         }
 		
-        nsFileSpec parent = outFileSpec.GetParent();
-        outFileSpec.Delete(PR_FALSE);
-        anotherMacFile->Copy(parent);
+        nsFileSpec parent;
         
-        *newFile = anotherMacFile;
+        outFileSpec.GetParent(parent);
+        
+        outFileSpec.Delete(PR_FALSE);
+        anotherName.Copy(parent);
+        
+        *newFile = &anotherName;
 	}
 	
 #endif 
