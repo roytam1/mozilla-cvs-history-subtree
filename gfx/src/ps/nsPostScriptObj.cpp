@@ -2610,6 +2610,16 @@ PRInt32 sRow, eRow, rStep;
   if(bytes_Per_Pix == 1)
     return ;
 
+  aImage->LockImagePixels(PR_FALSE);
+  theBits = aImage->GetBits();
+
+  /* image data might not be available (ex: spacer image) */
+  if (!theBits)
+  {
+    aImage->UnlockImagePixels(PR_FALSE);
+    return;
+  }
+
   rowData = aImage->GetLineStride();
   height = aImage->GetHeight();
   width = aImage->GetWidth();
@@ -2628,8 +2638,6 @@ PRInt32 sRow, eRow, rStep;
   fprintf(f, " { currentfile rowdata readhexstring pop }\n");
   fprintf(f, " image\n");
 
-  aImage->LockImagePixels(PR_FALSE);
-  theBits = aImage->GetBits();
   n = 0;
   if ( ( isTopToBottom = aImage->GetIsRowOrderTopToBottom()) == PR_TRUE ) {
 	sRow = height - 1;
@@ -2695,6 +2703,16 @@ PRInt32 sRow, eRow, rStep;
   if(bytes_Per_Pix == 1)
     return ;
 
+  aImage->LockImagePixels(PR_FALSE);
+  theBits = aImage->GetBits();
+
+  /* image data might not be available (ex: spacer image) */
+  if (!theBits)
+  {
+    aImage->UnlockImagePixels(PR_FALSE);
+    return;
+  }
+
   rowData = aImage->GetLineStride();
   height = aImage->GetHeight();
   width = aImage->GetWidth();
@@ -2713,8 +2731,6 @@ PRInt32 sRow, eRow, rStep;
   fprintf(f, " { currentfile rowdata readhexstring pop }\n");
   fprintf(f, " false 3 colorimage\n");
 
-  aImage->LockImagePixels(PR_FALSE);
-  theBits = aImage->GetBits();
   n = 0;
   if ( ( isTopToBottom = aImage->GetIsRowOrderTopToBottom()) == PR_TRUE ) {
 	sRow = height - 1;
