@@ -2292,19 +2292,16 @@ NS_IMETHODIMP nsPluginStreamListenerPeer::OnDataAvailable(nsIRequest *request,
         mPluginStreamInfo->SetStreamOffset(absoluteOffset + amtForwardToPlugin);
     }
 
-    nsCOMPtr<nsIInputStream> stream = aIStream;
-
     // if we are caching the file ourselves to disk, we want to 'tee' off
     // the data as the plugin read from the stream.  We do this by the magic
     // of an input stream tee.
 
+    nsCOMPtr<nsIInputStream> stream;
     nsCOMPtr<nsIOutputStream> outStream;
     mPluginStreamInfo->GetLocalCachedFileStream(getter_AddRefs(outStream));
-    if (outStream) {
-        rv = NS_NewInputStreamTee(getter_AddRefs(stream), aIStream, outStream);
-        if (NS_FAILED(rv)) 
-            return rv;
-    }
+    rv = NS_NewInputStreamTee(getter_AddRefs(stream), aIStream, outStream);
+    if (NS_FAILED(rv)) 
+        return rv;
 
     rv =  mPStreamListener->OnDataAvailable((nsIPluginStreamInfo*)mPluginStreamInfo, 
                                               stream, 
