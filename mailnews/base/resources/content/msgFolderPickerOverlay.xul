@@ -415,7 +415,7 @@ Rights Reserved.
       <template>
         <rule nc:CanSearchMessages="false">
           <!-- don't show servers which do not allow message searching -->
-        </rule>
+        </rule>   
         <rule iscontainer="true" isempty="false" nc:CanSearchMessages="true">
           <menupopup>
             <menu uri="..." 
@@ -435,7 +435,7 @@ Rights Reserved.
             </menu>
           </menupopup>
         </rule>
-        <rule nc:CanSearchMessages="true">
+        <rule nc:CanSearchMessages="true" nc:Virtual="false">
           <menupopup>
             <menuitem uri="..." value="..." 
                class="folderMenuItem menuitem-iconic"
