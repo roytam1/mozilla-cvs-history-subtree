@@ -15,11 +15,17 @@
  * Portions created by MITRE are Copyright (C) 1999 The MITRE Corporation.
  *
  * Portions created by Keith Visco as a Non MITRE employee,
- * (C) 1999 Keith Visco. All Rights Reserved.
+ * (C) 1999, 2000 Keith Visco. All Rights Reserved.
  *
  * Contributor(s):
+ *
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ *
+ * Marina Mechtcheriakova, mmarina@mindspring.com
+ *    -- Removed the trailing "s" from FOLLOWING_SIBLING_AXIS, and
+ *       PRECEDING_SIBLING_AXIS to be compatible with the
+ *       W3C XPath 1.0 Recommendation
  *
  * $Id$
  */
@@ -63,6 +69,7 @@ const String OUTPUT             = "output";
 const String PARAM              = "param";
 const String PI                 = "processing-instruction";
 const String PRESERVE_SPACE     = "preserve-space";
+const String SORT               = "sort";
 const String STRIP_SPACE        = "strip-space";
 const String TEMPLATE           = "template";
 const String TEXT               = "text";
@@ -122,18 +129,18 @@ const String CHILD_AXIS               =  "child";
 const String DESCENDANT_AXIS          =  "descendant";
 const String DESCENDANT_OR_SELF_AXIS  =  "descendant-or-self";
 const String FOLLOWING_AXIS           =  "following";
-const String FOLLOWING_SIBLING_AXIS   =  "following-siblings";
+const String FOLLOWING_SIBLING_AXIS   =  "following-sibling";
 const String NAMESPACE_AXIS           =  "namespace";
 const String PARENT_AXIS              =  "parent";
 const String PRECEDING_AXIS           =  "preceding";
-const String PRECEDING_SIBLING_AXIS   =  "preceding-siblings";
+const String PRECEDING_SIBLING_AXIS   =  "preceding-sibling";
 const String SELF_AXIS                =  "self";
 
 
 //-- NodeTest Operators
 const String ATTRIBUTE_FNAME         = "@";
 const String COMMENT_FNAME           = "comment";
-const String PI_FNAME                = "pi";
+const String PI_FNAME                = "processing-instruction";
 const String TEXT_FNAME              = "text";
 const String NODE_FNAME              = "node";
 const String IDENTITY_OP             = ".";
