@@ -73,7 +73,7 @@ jsdb_ScriptHookProc(JSDContext* jsdc,
        NULL != (fun = JS_ValueToFunction(data->cxDebugger, data->jsScriptHook)))
     {
         jsval result;
-        jsval args[2] = {jsdb_PointerToNewHandleVal(data->cxDebugger, jsdscript),
+        jsval args[2] = {P2H_SCRIPT(data->cxDebugger, jsdscript),
                          creating ? JSVAL_TRUE : JSVAL_FALSE };
         JS_CallFunction(data->cxDebugger, NULL, fun, 2, args, &result);
     }
@@ -185,41 +185,15 @@ jsdb_ErrorReporter(JSDContext*     jsdc,
     return ourRetVal;
 }
 
-/*
-* static JSContext*
-* _cloneContext(JSContext *cx)
-* {
-*     JSVersion version;
-*     JSContext *cx2;
-*     cx2 = JS_NewContext(JS_GetRuntime(cx), 8192);
-*     if (!cx2)
-*         return NULL;
-*     JS_SetErrorReporter(cx2, _ErrorReporter);
-*     JS_SetGlobalObject(cx2, JS_GetGlobalObject(cx));
-*     JS_SetContextPrivate(cx2, JS_GetContextPrivate(cx));
-*     version = JS_GetVersion(cx);
-*     if (version != JSVERSION_DEFAULT)
-*         JS_SetVersion(cx2, version);
-*     return cx2;
-* }
-*/
-
 JS_STATIC_DLL_CALLBACK(JSBool)
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-/*     JSContext *cx2; */
     uintN i;
     JSString *str;
     const char *filename;
     JSScript *script;
     JSBool ok;
     jsval result;
-
-    /*
-     * Create new context to execute in so that gc will still find
-     * roots for the script that called load().
-     */
-/*      cx2 = _cloneContext(cx); */
 
     ok = JS_TRUE;
     for (i = 0; i < argc; i++) {
@@ -234,13 +208,11 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         script = JS_CompileFile(cx, obj, filename);
         if (!script)
             continue;
-/*         ok = JS_ExecuteScript(cx2, obj, script, &result); */
         ok = JS_ExecuteScript(cx, obj, script, &result);
         JS_DestroyScript(cx, script);
         if (!ok)
             break;
     }
-/*     JS_DestroyContext(cx2); */
     JS_GC(cx);
     *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
     return ok;
@@ -289,8 +261,7 @@ SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (textJSString = JS_ValueToString(cx, argv[0])))
+    if(argc < 1 || !(textJSString = JS_ValueToString(cx, argv[0])))
     {
         JS_ReportError(cx, "safeEval requires source text as a first argument");
         return JS_FALSE;
@@ -301,7 +272,7 @@ SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     else
     {
         JSString* filenameJSString;
-        if(NULL == (filenameJSString = JS_ValueToString(cx, argv[1])))
+        if(!(filenameJSString = JS_ValueToString(cx, argv[1])))
         {
             JS_ReportError(cx, "safeEval passed non-string filename as 2nd param");
             return JS_FALSE;
@@ -320,19 +291,11 @@ SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         }
     }
 
-/*     if(NULL == (cx2 = _cloneContext(cx)))              */
-/*     {                                                  */
-/*         JS_ReportError(cx, "failed to clone context"); */
-/*         return JS_FALSE;                               */
-/*     }                                                  */
-
     if(! JS_EvaluateScript(cx, obj,
                            JS_GetStringBytes(textJSString),
                            JS_GetStringLength(textJSString),
                            filename, lineno, rval))
         *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
-/*     JS_GC(cx);              */
-/*     JS_DestroyContext(cx2); */
 
     return JS_TRUE;
 }
@@ -434,17 +397,17 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
     data->jsdcTarget = jsdc;
     data->debuggerDepth = depth+1;
 
-    if(NULL == (data->rtDebugger = JS_NewRuntime(8L * 1024L * 1024L)))
+    if(!(data->rtDebugger = JS_NewRuntime(8L * 1024L * 1024L)))
         return _initReturn("debugger runtime creation error", JS_FALSE);
 
-    if(NULL == (data->cxDebugger = JS_NewContext(data->rtDebugger, 8192)))
+    if(!(data->cxDebugger = JS_NewContext(data->rtDebugger, 8192)))
         return _initReturn("debugger creation error", JS_FALSE);
 
     JS_SetContextPrivate(data->cxDebugger, data);
 
     JS_SetErrorReporter(data->cxDebugger, _ErrorReporter);
 
-    if(NULL == (data->globDebugger =
+    if(!(data->globDebugger =
             JS_NewObject(data->cxDebugger, &debugger_global_class, NULL, NULL)))
         return _initReturn("debugger global object creation error", JS_FALSE);
 
@@ -460,7 +423,7 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
     if(data->debuggerDepth < MAX_DEBUGGER_DEPTH)
     {
         JSDContext* jsdc;
-        if(NULL == (jsdc = JSD_DebuggerOnForUser(data->rtDebugger, NULL, NULL)))
+        if(!(jsdc = JSD_DebuggerOnForUser(data->rtDebugger, NULL, NULL)))
             return _initReturn("failed to create jsdc for nested debugger", JS_FALSE);
         JSD_JSContextInUse(jsdc, data->cxDebugger);
         if(!JSDB_InitDebugger(data->rtDebugger, jsdc, data->debuggerDepth))

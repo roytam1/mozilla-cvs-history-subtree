@@ -100,7 +100,7 @@ jsdb_SetThreadState(JSDB_Data* data, JSDThreadState* jsdthreadstate)
 
     data->jsdthreadstate = jsdthreadstate;
     if(jsdthreadstate)
-        val = jsdb_PointerToNewHandleVal(data->cxDebugger, jsdthreadstate);
+        val = P2H_THREADSTATE(data->cxDebugger, jsdthreadstate);
     else
         val = JSVAL_NULL;
 
@@ -109,14 +109,45 @@ jsdb_SetThreadState(JSDB_Data* data, JSDThreadState* jsdthreadstate)
 }
 
 /***************************************************************************/
+/*
+*  System to store JSD_xxx handles in jsvals. This supports tracking the
+*  handle's type - both for debugging and for automatic 'dropping' of
+*  reference counted handle types (e.g. JSDValue).
+*/
+
+typedef struct JSDBHandle
+{
+    void* ptr;
+    JSDBHandleType type;
+} JSDBHandle;
+
+static const char _str_HandleNameString[]   = "handle_name";
 
 JS_STATIC_DLL_CALLBACK(void)
 handle_finalize(JSContext *cx, JSObject *obj)
 {
-    void* ptr;
-    ptr = JS_GetPrivate(cx, obj);
-    if(ptr)
-        free(ptr);
+    JSDBHandle* p;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    p = (JSDBHandle*) JS_GetPrivate(cx, obj);
+    if(p)
+    {
+        switch(p->type)
+        {
+          case JSDB_VALUE:
+            JSD_DropValue(data->jsdcTarget, (JSDValue*) p->ptr);
+            break;
+          case JSDB_PROPERTY:
+            JSD_DropProperty(data->jsdcTarget, (JSDProperty*) p->ptr);
+            break;
+          default:
+            break;
+        }
+        free(p);
+    }
+    else
+        JS_ASSERT(0);
 }    
 
 JSClass jsdb_HandleClass = {
@@ -129,16 +160,12 @@ JSClass jsdb_HandleClass = {
 JS_STATIC_DLL_CALLBACK(JSBool)
 handle_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-    char buf[32];
-    void** pptr;
-
-    if (!JS_InstanceOf(cx, obj, &jsdb_HandleClass, argv))
+    if(!JS_InstanceOf(cx, obj, &jsdb_HandleClass, argv) ||
+       !JS_GetProperty(cx, obj, _str_HandleNameString, rval))
+    {
+        JS_ASSERT(0);
         return JS_FALSE;
-    pptr = JS_GetPrivate(cx, obj);
-    JS_ASSERT(pptr);
-    JS_ASSERT(*pptr);
-    sprintf(buf,"%x", (int) *pptr);
-    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, buf));
+    }
     return JS_TRUE;
 }    
 
@@ -146,6 +173,110 @@ static JSFunctionSpec handle_methods[] = {
     {"toString",   handle_toString,        0},
     {0}
 };
+
+void*
+jsdb_HandleValToPointer(JSContext *cx, jsval val, JSDBHandleType type)
+{
+    JSDBHandle* p;
+    JSObject *obj;
+
+    if(!JSVAL_IS_OBJECT(val) ||
+       !(obj = JSVAL_TO_OBJECT(val)) ||
+       !JS_InstanceOf(cx, obj, &jsdb_HandleClass, NULL) ||
+       !(p = (JSDBHandle*) JS_GetPrivate(cx, obj)))
+    {
+        JS_ASSERT(0);
+        return NULL;
+    }
+    JS_ASSERT(p->ptr);
+    JS_ASSERT(p->type == type);
+    return p->ptr;
+}
+
+jsval
+jsdb_PointerToNewHandleVal(JSContext *cx, void* ptr, JSDBHandleType type)
+{
+    JSDBHandle* p;
+    JSObject* obj;
+    char* name;
+    char* type_name;
+    JSString* name_str;
+
+    if(!ptr || !(p = (JSDBHandle*)malloc(sizeof(JSDBHandle))))
+    {
+        JS_ASSERT(0);
+        return JSVAL_NULL;
+    }
+    JS_ASSERT(!(((int)p) & 1));    /* must be 2-byte-aligned */
+
+    p->ptr = ptr;
+    p->type = type;
+
+    if(!(obj = JS_NewObject(cx, &jsdb_HandleClass, NULL, NULL)) ||
+       !JS_SetPrivate(cx, obj, p))
+    {
+        JS_ASSERT(0);
+        return JSVAL_NULL;
+    }
+
+    switch(type)
+    {
+      case JSDB_GENERIC:
+        type_name = "GENERIC";
+        break;
+      case JSDB_CONTEXT:
+        type_name = "CONTEXT";
+        break;
+      case JSDB_SCRIPT:
+        type_name = "SCRIPT";
+        break;
+      case JSDB_SOURCETEXT:
+        type_name = "SOURCETEXT";
+        break;
+      case JSDB_THREADSTATE:
+        type_name = "THREADSTATE";
+        break;
+      case JSDB_STACKFRAMEINFO:
+        type_name = "STACKFRAMEINFO";
+        break;
+      case JSDB_VALUE:
+        type_name = "VALUE";
+        break;
+      case JSDB_PROPERTY:
+        type_name = "PROPERTY";
+        break;
+      case JSDB_OBJECT:
+        type_name = "OBJECT";
+        break;
+      default:
+        JS_ASSERT(0);
+        type_name = "BOGUS";
+        break;
+    }
+
+    name = JS_smprintf("%s:%x", type_name, ptr);
+    if(!name || 
+       !(name_str = JS_NewString(cx, name, strlen(name))) ||
+       !JS_DefineProperty(cx, obj,
+                          _str_HandleNameString,
+                          STRING_TO_JSVAL(name_str),
+                          NULL, NULL,
+                          JSPROP_READONLY|JSPROP_PERMANENT))
+    {
+        JS_ASSERT(0);
+        return JSVAL_NULL;
+    }
+    return OBJECT_TO_JSVAL(obj);
+}
+
+JSBool _initHandleSystem(JSDB_Data* data)
+{
+    return (JSBool) JS_InitClass(data->cxDebugger, data->globDebugger, 
+                                 NULL, &jsdb_HandleClass, NULL, 0,
+                                 NULL, handle_methods, NULL, NULL);
+}    
+
+/***************************************************************************/
 
 JSBool 
 jsdb_EvalReturnExpression(JSDB_Data* data, jsval* rval)
@@ -163,7 +294,7 @@ jsdb_EvalReturnExpression(JSDB_Data* data, jsval* rval)
     if(!JS_GetProperty(cx, data->jsdOb, _str_ReturnExpression, &expressionVal))
         return JS_FALSE;
 
-    if(NULL == (expressionString = JS_ValueToString(cx, expressionVal)))
+    if(!(expressionString = JS_ValueToString(cx, expressionVal)))
         return JS_FALSE;
 
     JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valTrue);
@@ -180,52 +311,6 @@ jsdb_EvalReturnExpression(JSDB_Data* data, jsval* rval)
     JS_SetProperty(cx, data->jsdOb, _str_ReturnExpression, &_valNull);
     return result;
 }
-
-void*
-jsdb_HandleValToPointer(JSContext *cx, jsval val)
-{
-    JSObject *obj;
-
-    if(!JSVAL_IS_OBJECT(val))
-        return NULL;
-
-    if(NULL == (obj = JSVAL_TO_OBJECT(val)))
-        return NULL;
-
-    if(!JS_InstanceOf(cx, obj, &jsdb_HandleClass, NULL))
-        return NULL;
-
-    return *((void**)JS_GetPrivate(cx, obj));
-}
-
-jsval
-jsdb_PointerToNewHandleVal(JSContext *cx, void* ptr)
-{
-    JSObject* obj;
-    void** pptr;
-
-    if(! ptr)
-        return JSVAL_NULL;
-
-    pptr = (void**)malloc(sizeof(void*));
-    if(! pptr)
-        return JSVAL_NULL;
-    JS_ASSERT(!(((int)pptr) & 1));    /* must be 2-byte-aligned */
-    *pptr = ptr;
-    obj = JS_NewObject(cx, &jsdb_HandleClass, NULL, NULL);
-    if(!obj)
-        return JSVAL_NULL;
-    if(!JS_SetPrivate(cx, obj, pptr))
-        return JSVAL_NULL;
-    return OBJECT_TO_JSVAL(obj);
-}
-
-JSBool _initHandleSystem(JSDB_Data* data)
-{
-    return (JSBool) JS_InitClass(data->cxDebugger, data->globDebugger, 
-                                 NULL, &jsdb_HandleClass, NULL, 0,
-                                 NULL, handle_methods, NULL, NULL);
-}    
 
 /***************************************************************************/
 /* High Level calls */
@@ -289,7 +374,7 @@ IterateScripts(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     while(NULL != (script = JSD_IterateScripts(data->jsdcTarget, &iterp)))
     {
         jsval retval;
-        argv[0] = jsdb_PointerToNewHandleVal(cx, script);
+        argv[0] = P2H_SCRIPT(cx, script);
 
         JS_CallFunction(cx, NULL, fun, argc, argv, &retval);
         count++ ;
@@ -307,8 +392,7 @@ IsActiveScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "IsActiveScript requires script handle");
         return JS_FALSE;
@@ -325,8 +409,7 @@ GetScriptFilename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetScriptFilename requires script handle");
         return JS_FALSE;
@@ -350,8 +433,7 @@ GetScriptFunctionName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetScriptFunctionName requires script handle");
         return JS_FALSE;
@@ -374,8 +456,7 @@ GetScriptBaseLineNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetScriptBaseLineNumber requires script handle");
         return JS_FALSE;
@@ -397,8 +478,7 @@ GetScriptLineExtent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetScriptLineExtent requires script handle");
         return JS_FALSE;
@@ -453,8 +533,7 @@ GetClosestPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 2 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])) ||
+    if(argc < 2 || !(jsdscript = H2P_SCRIPT(cx, argv[0])) ||
        ! JS_ValueToInt32(cx, argv[1], &line))
     {
         JS_ReportError(cx, "GetClosestPC requires script handle and a line number");
@@ -466,7 +545,7 @@ GetClosestPC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     }
 
-    *rval = jsdb_PointerToNewHandleVal(cx, (void*)
+    *rval = P2H_GENERIC(cx, (void*) 
                         JSD_GetClosestPC(data->jsdcTarget, jsdscript, line));
     return JS_TRUE;
 }
@@ -478,8 +557,7 @@ GetClosestLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 2 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 2 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetClosestLine requires script handle and a line number");
         return JS_FALSE;
@@ -491,7 +569,7 @@ GetClosestLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     }
 
     *rval = INT_TO_JSVAL(JSD_GetClosestLine(data->jsdcTarget, jsdscript,
-                                 (jsuword) jsdb_HandleValToPointer(cx, argv[1])));
+                                 (jsuword) H2P_GENERIC(cx, argv[1])));
     return JS_TRUE;
 }
 
@@ -575,9 +653,8 @@ GetStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    *rval = jsdb_PointerToNewHandleVal(cx,
-                        JSD_GetStackFrame(data->jsdcTarget,
-                                          data->jsdthreadstate));
+    *rval = P2H_STACKFRAMEINFO(cx, JSD_GetStackFrame(data->jsdcTarget,
+                                                     data->jsdthreadstate));
     return JS_TRUE;
 }
 
@@ -588,17 +665,15 @@ GetCallingStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdframe = (JSDStackFrameInfo*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
     {
         JS_ReportError(cx, "GetCallingStackFrame requires stackframe handle");
         return JS_FALSE;
     }
 
-    *rval = jsdb_PointerToNewHandleVal(cx,
-                        JSD_GetCallingStackFrame(data->jsdcTarget,
-                                                 data->jsdthreadstate,
-                                                 jsdframe));
+    *rval = P2H_STACKFRAMEINFO(cx, JSD_GetCallingStackFrame(data->jsdcTarget,
+                                                            data->jsdthreadstate,
+                                                            jsdframe));
     return JS_TRUE;
 }
 
@@ -609,17 +684,15 @@ GetScriptForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdframe = (JSDStackFrameInfo*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
     {
         JS_ReportError(cx, "GetScriptForStackFrame requires stackframe handle");
         return JS_FALSE;
     }
 
-    *rval = jsdb_PointerToNewHandleVal(cx,
-                        JSD_GetScriptForStackFrame(data->jsdcTarget,
-                                                   data->jsdthreadstate,
-                                                   jsdframe));
+    *rval = P2H_SCRIPT(cx, JSD_GetScriptForStackFrame(data->jsdcTarget,
+                                                      data->jsdthreadstate,
+                                                      jsdframe));
     return JS_TRUE;
 }
 
@@ -630,17 +703,15 @@ GetPCForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval 
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdframe = (JSDStackFrameInfo*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
     {
         JS_ReportError(cx, "GetPCForStackFrame requires stackframe handle");
         return JS_FALSE;
     }
 
-    *rval = jsdb_PointerToNewHandleVal(cx, (void*)
-                        JSD_GetPCForStackFrame(data->jsdcTarget,
-                                               data->jsdthreadstate,
-                                               jsdframe));
+    *rval = P2H_GENERIC(cx, (void*) JSD_GetPCForStackFrame(data->jsdcTarget,
+                                                           data->jsdthreadstate,
+                                                           jsdframe));
     return JS_TRUE;
 }
 
@@ -658,15 +729,13 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdframe = (JSDStackFrameInfo*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
     {
         JS_ReportError(cx, "EvaluateScriptInStackFrame requires stackframe handle");
         return JS_FALSE;
     }
 
-    if(argc < 2 ||
-       NULL == (textJSString = JS_ValueToString(cx, argv[1])))
+    if(argc < 2 || !(textJSString = JS_ValueToString(cx, argv[1])))
     {
         JS_ReportError(cx, "EvaluateScriptInStackFrame requires source text as a second param");
         return JS_FALSE;
@@ -677,7 +746,7 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     else
     {
         JSString* filenameJSString;
-        if(NULL == (filenameJSString = JS_ValueToString(cx, argv[2])))
+        if(!(filenameJSString = JS_ValueToString(cx, argv[2])))
         {
             JS_ReportError(cx, "EvaluateScriptInStackFrame passed non-string filename as 3rd param");
             return JS_FALSE;
@@ -734,8 +803,7 @@ SetTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "SetTrap requires script handle as first arg");
         return JS_FALSE;
@@ -746,7 +814,7 @@ SetTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     }
 
-    if(argc < 2 || 0 == (pc = (jsuword) jsdb_HandleValToPointer(cx, argv[1])))
+    if(argc < 2 || 0 == (pc = (jsuword) H2P_GENERIC(cx, argv[1])))
     {
         JS_ReportError(cx, "SetTrap requires pc handle as second arg");
         return JS_FALSE;
@@ -767,8 +835,7 @@ ClearTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "ClearTrap requires script handle as first arg");
         return JS_FALSE;
@@ -779,7 +846,7 @@ ClearTrap(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     }
 
-    if(argc < 2 || 0 == (pc = (jsuword) jsdb_HandleValToPointer(cx, argv[1])))
+    if(argc < 2 || 0 == (pc = (jsuword) H2P_GENERIC(cx, argv[1])))
     {
         JS_ReportError(cx, "ClearTrap requires pc handle as second arg");
         return JS_FALSE;
@@ -798,8 +865,7 @@ ClearAllTrapsForScript(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdscript = (JSDScript*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdscript = H2P_SCRIPT(cx, argv[0])))
     {
         JS_ReportError(cx, "ClearAllTrapsForScript script handle as first arg");
         return JS_FALSE;
@@ -894,7 +960,7 @@ IterateSources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     while(NULL != (jsdsrc = JSD_IterateSources(data->jsdcTarget, &iterp)))
     {
         jsval retval;
-        argv[0] = jsdb_PointerToNewHandleVal(cx, jsdsrc);
+        argv[0] = P2H_SOURCETEXT(cx, jsdsrc);
 
         JS_CallFunction(cx, NULL, fun, argc, argv, &retval);
         count++ ;
@@ -912,14 +978,13 @@ FindSourceForURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 || NULL == (jsstr = JS_ValueToString(cx, argv[0])))
+    if(argc < 1 || !(jsstr = JS_ValueToString(cx, argv[0])))
     {
         JS_ReportError(cx, "FindSourceForURL requires a URL (filename) string");
         return JS_FALSE;
     }
-    *rval = jsdb_PointerToNewHandleVal(cx,
-                    JSD_FindSourceForURL(data->jsdcTarget, 
-                                         JS_GetStringBytes(jsstr)));
+    *rval = P2H_SOURCETEXT(cx, JSD_FindSourceForURL(data->jsdcTarget, 
+                                                    JS_GetStringBytes(jsstr)));
     return JS_TRUE;
 }
 
@@ -930,8 +995,7 @@ GetSourceURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdsrc = (JSDSourceText*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdsrc = H2P_SOURCETEXT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetSourceURL requires sourcetext handle");
         return JS_FALSE;
@@ -952,8 +1016,7 @@ GetSourceText(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdsrc = (JSDSourceText*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdsrc = H2P_SOURCETEXT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetSourceText requires sourcetext handle");
         return JS_FALSE;
@@ -974,8 +1037,7 @@ GetSourceStatus(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdsrc = (JSDSourceText*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdsrc = H2P_SOURCETEXT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetSourceStatus requires sourcetext handle");
         return JS_FALSE;
@@ -993,8 +1055,7 @@ GetSourceAlterCount(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 ||
-       NULL == (jsdsrc = (JSDSourceText*) jsdb_HandleValToPointer(cx, argv[0])))
+    if(argc < 1 || !(jsdsrc = H2P_SOURCETEXT(cx, argv[0])))
     {
         JS_ReportError(cx, "GetSourceAlterCount requires sourcetext handle");
         return JS_FALSE;
