@@ -81,6 +81,7 @@ var personalToolbarObserver = {
         return;
         
       if (aEvent.target.localName == "menu" || aEvent.target.localName == "menubutton") {
+         if (aEvent.target.getAttribute("type") == "http://home.netscape.com/NC-rdf#Folder") {
          var child = aEvent.target.childNodes[0];
          if (child && child.localName == "menupopup")
            child.closePopup();
@@ -88,6 +89,7 @@ var personalToolbarObserver = {
            var parent = aEvent.target.parentNode;
            if (parent && parent.localName == "menupopup")
              parent.closePopup();
+         }
          }
       }
 
@@ -220,12 +222,7 @@ var personalToolbarObserver = {
 
   onDragOver: function (aEvent, aFlavour, aDragSession)
     {
-      var dropPosition
-      if (aEvent.target.getAttribute("type") == "http://home.netscape.com/NC-rdf#Folder"
-          && aEvent.target.getAttribute("container") == "true")
-        dropPosition = this.DROP_ON;
-      else
-        dropPosition = this.determineDropPosition(aEvent);
+      var dropPosition = this.determineDropPosition(aEvent);
 
       // bail if drop target is not a valid bookmark item or folder
       var inner = document.getElementById("innermostBox");
@@ -291,7 +288,7 @@ var personalToolbarObserver = {
       // you can drop ONTO containers, so there is a "middle" region
       if (overButton.getAttribute("container") == "true" &&
           overButton.getAttribute("type") == "http://home.netscape.com/NC-rdf#Folder")
-        regionCount = 3;
+        return this.DROP_ON;
 
       var regionWidth = overButtonBoxObject.width/regionCount;
 
@@ -327,6 +324,8 @@ var personalToolbarObserver = {
           case "menu":
           case "menuitem":
             var menu = aElement.parentNode.parentNode;
+            if (menu.getAttribute("type") != "http://home.netscape.com/NC-rdf#Folder")
+              return RDFUtils.getResource("NC:BookmarksRoot");
             return RDFUtils.getResource(menu.id);
           case "treecell":
             var treeitem = aElement.parentNode.parentNode.parentNode.parentNode;
