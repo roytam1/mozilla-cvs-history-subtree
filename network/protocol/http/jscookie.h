@@ -47,6 +47,8 @@ typedef struct {
 }
     JSCFCookieData;
 
+XP_BEGIN_PROTOS
+
 extern JSCFResult JSCF_Execute(
                                MWContext *mwcontext,
                                const char *script_name,
@@ -57,6 +59,8 @@ extern JSCFResult JSCF_Execute(
 /* runs the garbage collector on the filter context. Probably a good
    idea to call on completion of NET_GetURL or something. */
 extern void JSCF_Cleanup(void);
+
+XP_END_PROTOS
 
 #endif /* _JSCOOKIE_H_ */
 

@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -16,18 +16,35 @@
  * Reserved.
  */
 
-#ifndef FILEURL_H
-#define FILEURL_H
+#ifndef nsFileTransfer_h__
+#define nsFileTransfer_h__
 
-PR_BEGIN_EXTERN_C
+#include "nsSimpleTransfer.h"
+#include "mkgeturl.h"
 
-extern void NET_InitFileProtocol(void);
+class nsFileTransfer : public nsSimpleTransfer
+{
+public:
+    nsFileTransfer(ActiveEntry* entry);
 
-extern NET_StreamClass *
-net_CloneWysiwygLocalFile(MWContext *window_id, URL_Struct *URL_s,
-			  uint32 nbytes, const char * wysiwyg_url,
-			  const char * base_href);
+    // nsITransfer methods
 
-PR_END_EXTERN_C
+    virtual PRUint32
+    GetTimeRemainingMSec(void);
 
-#endif /* FILEURL_H */
+    virtual void
+    DisplayStatusMessage(void* closure, nsITransferDisplayStatusFunc callback);
+
+
+    // Methods specific to nsHTTPTransfer
+
+    virtual void
+    SetState(State state);
+
+protected:
+    virtual PRUint32 GetFileTimeRemainingMSec(void);
+    ActiveEntry* fEntry;
+};
+
+
+#endif /* nsFileTransfer_h__ */

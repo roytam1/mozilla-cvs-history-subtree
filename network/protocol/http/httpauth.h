@@ -23,6 +23,8 @@
 #include "mkgeturl.h"
 #endif
 
+XP_BEGIN_PROTOS
+
 /* removes all authorization structs from the auth list */
 extern void
 NET_RemoveAllAuthorizations(void);
@@ -35,5 +37,7 @@ NET_RemoveAllAuthorizations(void);
  */
 extern PRBool
 net_IsBetterAuth(char *new_auth, char *old_auth);
+
+XP_END_PROTOS
 
 #endif /* HTTPAUTH_H */

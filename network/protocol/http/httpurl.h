@@ -26,6 +26,8 @@
 #define DEF_HTTP_PORT 80
 #define DEF_HTTPS_PORT 443
 
+XP_BEGIN_PROTOS
+
 extern void
 NET_SetSendRefererHeader(Bool b);
 
@@ -35,5 +37,7 @@ NET_InitHTTPProtocol(void);
 extern void
 NET_getInternetKeyword(const URL_Struct *inURL, char *outKeyword,
 	int16 inMaxLength);
+
+XP_END_PROTOS
 
 #endif /* MKHTTP_H */

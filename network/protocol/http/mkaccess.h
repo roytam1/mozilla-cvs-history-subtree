@@ -22,6 +22,9 @@
 #ifndef MKGETURL_H
 #include "mkgeturl.h"
 #endif
+
+XP_BEGIN_PROTOS
+
 /* returns TRUE if authorization is required
  */
 extern Bool NET_AuthorizationRequired(char * address);
@@ -68,5 +71,7 @@ NET_CookieWarningPrefChanged(const char * newpref, void * data);
 
 MODULE_PRIVATE int PR_CALLBACK
 NET_CookieScriptPrefChanged(const char * newpref, void * data);
+
+XP_END_PROTOS
 
 #endif /* MKACCESS_H */

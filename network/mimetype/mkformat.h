@@ -65,6 +65,8 @@
 
 /* ------------------------------ Prototypes ------------------------------ */
 
+XP_BEGIN_PROTOS
+
 /*
  * cinfo_find finds any content information for the given uri. The file name
  * is the string following the last / in the uri. Multiple extensions are
@@ -90,5 +92,7 @@ extern NET_cinfo *NET_cinfo_find_enc (char *uri);
  * returns a cinfo structure so you can look up description and icon.
  */
 NET_cinfo *NET_cinfo_lookup(char *type);
+
+XP_END_PROTOS
 
 #endif /* MKFORMAT_H */

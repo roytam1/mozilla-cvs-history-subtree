@@ -40,11 +40,17 @@ LLIBS=  \
 MISCDEP=$(LLIBS)
 OBJS=   \
 	.\$(OBJDIR)\mkfile.obj		\
+!ifdef MOZ_SMOOTH_PROGRESS
+        .\$(OBJDIR)\nsFileTransfer.obj  \
+!endif
 	$(NULL)
 
 
-CSRCS =	\
-	mkfile.c	\
+CPPSRCS =	\
+	mkfile.cpp	        \
+!ifdef MOZ_SMOOTH_PROGRESS
+        nsFileTransfer.cpp      \
+!endif
 	$(NULL)
 
 
@@ -73,6 +79,10 @@ LINCS= \
     -I$(PUBLIC)\network \
     -I$(PUBLIC)\mimetype \
     -I$(PUBLIC)\security \
+!ifdef MOZ_SMOOTH_PROGRESS
+    -I$(PUBLIC)\progress \
+    -I$(PUBLIC)\xpcom    \
+!endif
     $(NULL)
 #!endif
 

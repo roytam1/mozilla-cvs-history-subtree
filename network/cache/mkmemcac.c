@@ -1388,8 +1388,10 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
         return (CE_STATUS);
 	  }
 
+#if !defined(SMOOTH_PROGRESS)
 	if (!CE_URL_S->load_background)
         FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 	/* process one chunk of the
 	 * cache file so that
@@ -1434,11 +1436,13 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
 		  {
 			NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
 
+#if !defined(SMOOTH_PROGRESS)
 			if (!CE_URL_S->load_background)
 				FE_GraphProgressDestroy(CE_WINDOW_ID,
 										CE_URL_S,
 										CE_URL_S->content_length,
 										CE_BYTES_RECEIVED);
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 			PR_Free(connection_data);
 
@@ -1563,11 +1567,13 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 		 */
 	    NET_ClearCallNetlibAllTheTime(CE_WINDOW_ID, "mkmemcac");
 
+#if !defined(SMOOTH_PROGRESS)
         if (!CE_URL_S->load_background)
             FE_GraphProgressDestroy(CE_WINDOW_ID,
                                     CE_URL_S,
                                     CE_URL_S->content_length,
                                     CE_BYTES_RECEIVED);
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 #ifdef MOZ_MAIL_NEWS
 	if (!PL_strncmp(CE_URL_S->address, "Mailbox://", 10))
@@ -1621,9 +1627,11 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
         CD_BYTES_WRITTEN_IN_SEGMENT = 0;
 	  }
 
+#if !defined(SMOOTH_PROGRESS)
 	if (!CE_URL_S->load_background)
         FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED,
                          chunk_size, CE_URL_S->content_length);
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 	if(CE_STATUS < 0)
 	  {
