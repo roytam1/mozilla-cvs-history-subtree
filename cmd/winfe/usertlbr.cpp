@@ -563,6 +563,7 @@ END_MESSAGE_MAP()
 
 int CRDFToolbarButton::OnMouseActivate( CWnd* pDesktopWnd, UINT nHitTest, UINT message )
 {
+	m_bButtonDown = TRUE;
 	return MA_ACTIVATE;
 }
 

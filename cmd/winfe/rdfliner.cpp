@@ -3941,6 +3941,7 @@ CRDFContentView::~CRDFContentView()
 	HT_SetViewFEData(v, NULL);
 	HT_DeletePane(HT_GetPane(v));
 
+	delete m_pNavBar;
 	delete m_pOutlinerParent;
 	delete m_pHTMLView;
 }
