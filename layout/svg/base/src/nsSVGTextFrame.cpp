@@ -383,7 +383,6 @@ nsSVGTextFrame::RemoveFrame(nsIPresContext* aPresContext,
     // removed frame. Let's just rebuild the whole tree for now
     outerSVGFrame->SuspendRedraw();
     mFragmentTreeDirty = PR_TRUE;
-    mPositioningDirty = PR_TRUE;
     
     if (dirty_region) {
       outerSVGFrame->InvalidateRegion(dirty_region, PR_FALSE);

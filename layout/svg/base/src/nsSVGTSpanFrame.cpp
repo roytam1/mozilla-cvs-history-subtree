@@ -54,6 +54,8 @@
 #include "nsISVGChildFrame.h"
 #include "nsISVGTextFrame.h"
 #include "nsISVGGlyphFragmentNode.h"
+#include "nsIDOMSVGRect.h"
+#include "nsISVGOuterSVGFrame.h"
 
 typedef nsContainerFrame nsSVGTSpanFrameBase;
 
