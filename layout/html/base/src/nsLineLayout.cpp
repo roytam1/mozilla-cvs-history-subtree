@@ -947,12 +947,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         nsReflowType type;
         rc->GetType(type);
         if (type == eReflowType_StyleChanged) {
-          nsIFrame* parentFrame = psd->mFrame
-            ? psd->mFrame->mFrame
-            : mBlockReflowState->frame;
-          nsIFrame* target;
-          rc->GetTarget(target);
-          if (target == parentFrame) {
+          nsIFrame* parentFrame = psd->mFrame ?
+            psd->mFrame->mFrame : mBlockReflowState->frame;
+          if (rc->IsATarget(parentFrame)) {
             reason = eReflowReason_StyleChange;
           }
         }

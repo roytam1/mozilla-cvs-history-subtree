@@ -264,10 +264,15 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
   if (NS_FRAME_FIRST_REFLOW & state) {
     reason = eReflowReason_Initial;
   }
-  else if (mNextRCFrame == aFrame) {
+  // FIX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+  else if (/*aState.mReflowState.reflowCommand &&
+             aState.mReflowState.reflowCommand->IsATarget(aFrame)*/ 0) {
     reason = eReflowReason_Incremental;
     // Make sure we only incrementally reflow once
-    mNextRCFrame = nsnull;
+    // XXX FIX!!! this doesn't do what I want - I want to make sure
+    // we don't do this code twice.  Probably store state inside the
+    // state object.
+    //aState.mReflowState.SetCurrentReflowNode(nsnull);
   }
   else if (mOuterReflowState.reason == eReflowReason_StyleChange) {
     reason = eReflowReason_StyleChange;
@@ -287,9 +292,9 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
         nsReflowType type;
         rc->GetType(type);
         if (type == eReflowType_StyleChanged) {
-          nsReflowTree::Node::Iterator reflowIterator(mOuterReflowState.GetCurrentReflowNode());
           // See if the reflow command is targeted at us
-          if (reflowIterator.IsTarget()) {
+          nsIFrame *aframe;
+          if (rc->IsATarget(aframe /*mOuterReflowState.frame*/)) {
             reason = eReflowReason_StyleChange;
           }
         }

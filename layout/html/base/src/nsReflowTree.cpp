@@ -198,8 +198,46 @@ nsReflowTree::Node *
 nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
 {
   nsReflowTree::Node *result = NextChild();
-  *aChildIFrame = mPos ? NS_STATIC_CAST(nsReflowTree::Node*,*mPos)->GetFrame() : nsnull;
+  *aChildIFrame = (mPos && *mPos) ?
+    NS_STATIC_CAST(nsReflowTree::Node*,*mPos)->GetFrame() : nsnull;
   return result;
+}
+
+nsReflowTree::Node *
+nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
+{
+    Node **aPos;
+    ChildChunk *aCurrentChunk;
+
+    if (!mNode)
+      return nsnull;
+
+    if (mNode->HasSingleChild()) {
+      aPos = &mNode->mKidU.mChild;
+    } else {
+      aCurrentChunk = mNode->mKidU.mChunk;
+      aPos = &aCurrentChunk->mKids[0];
+    }
+    if ((*aPos)->mFrame == aChildIFrame)
+      return *aPos;
+
+    while (aPos && *aPos)
+    {
+      if (aPos < &aCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
+        aPos++;
+      } else {
+        aCurrentChunk = aCurrentChunk->mNext;
+        if (!aCurrentChunk) {
+            aPos = NS_REINTERPRET_CAST(Node **, &mCurrentChunk);
+        } else {
+            aPos = &mCurrentChunk->mKids[0];
+        }
+      }
+      if ((*aPos)->mFrame == aChildIFrame)
+	return *aPos;
+    }
+
+    return nsnull;
 }
 
 void

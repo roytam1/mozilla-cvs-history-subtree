@@ -1004,9 +1004,7 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   // it to a resize reflow.
   nsReflowReason reason = aReflowState.reason;
   if (reason == eReflowReason_Incremental) {
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (target == this)
+    if (aReflowState.reflowCommand->IsATarget(this))
       reason = eReflowReason_Resize;
   }
 

@@ -1318,9 +1318,7 @@ nsTableOuterFrame::IR_InnerTableReflow(nsIPresContext*           aPresContext,
   // StyleChange reflow reasons down to the children so that they
   // don't over-optimize their reflow.
   nsReflowReason ReflowReason = eReflowReason_Incremental;
-  nsIFrame* target = nsnull;
-  aOuterRS.reflowCommand->GetTarget(target);
-  if (this == target) {
+  if (aOuterRS.reflowCommand->IsATarget(this)) {
     nsReflowType type;
     aOuterRS.reflowCommand->GetType(type);
     if (eReflowType_StyleChanged == type) {

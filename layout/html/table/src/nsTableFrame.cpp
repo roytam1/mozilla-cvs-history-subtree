@@ -1613,13 +1613,11 @@ PRBool nsTableFrame::NeedsReflow(const nsHTMLReflowState& aReflowState)
     // It's an incremental reflow and we're in galley mode. Only
     // do a full reflow if we need to.
 #ifndef TABLE_REFLOW_COALESCING_OFF
-    nsIFrame* reflowTarget;
-    aReflowState.reflowCommand->GetTarget(reflowTarget);
     nsReflowType reflowType;
     aReflowState.reflowCommand->GetType(reflowType);
     if (reflowType == eReflowType_Timeout) {
       result = PR_FALSE;
-      if (this == reflowTarget) {
+      if (aReflowState.reflowCommand->IsATarget(this)) {
         if (mNumDescendantTimeoutReflowsPending <= 0) {
           // no more timeout reflows are coming targeted below
           result = NeedStrategyInit() || NeedStrategyBalance();
@@ -2060,14 +2058,12 @@ NS_METHOD nsTableFrame::Reflow(nsIPresContext*          aPresContext,
     nsReflowType type;
     aReflowState.reflowCommand->GetType(type);
     if (eReflowType_Timeout == type) {
-      nsIFrame* target = nsnull;
-      aReflowState.reflowCommand->GetTarget(target);
-      if (target == this) { // target is me
+      if (aReflowState.reflowCommand->IsATarget(this)) { // target is me
         NS_ASSERTION(0 == mNumDescendantTimeoutReflowsPending, "was incorrectly target of timeout reflow"); 
         SetDescendantReflowedNotTimeout(PR_FALSE);
         SetRequestedTimeoutReflow(PR_FALSE);
       }
-      else if (target) {    // target is descendant        
+      else {    // target is descendant        
         if (0 >= mNumDescendantTimeoutReflowsPending) {
           NS_ASSERTION(!RequestedTimeoutReflow(), "invalid timeout request");
           SetDescendantReflowedNotTimeout(PR_FALSE);

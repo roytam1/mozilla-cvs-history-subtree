@@ -233,6 +233,29 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 }
 
 nsresult
+nsHTMLReflowCommand::GetTarget(nsIFrame*& aTargetFrame) const
+{
+  aTargetFrame = mTargetFrame;
+  return NS_OK;
+}
+
+nsresult
+nsHTMLReflowCommand::SetTarget(nsIFrame* aTargetFrame)
+{
+  mTargetFrame = aTargetFrame;
+  return NS_OK;
+}
+
+PRBool
+nsHTMLReflowCommand::IsATarget(const nsIFrame* aFrame) const
+{
+  // FIX!!!
+  if (aFrame != mTargetFrame)
+    return PR_FALSE;
+  return PR_TRUE;
+}
+
+nsresult
 nsHTMLReflowCommand::GetType(nsReflowType& aReflowType) const
 {
   aReflowType = mType;

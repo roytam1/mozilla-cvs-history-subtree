@@ -414,11 +414,9 @@ nsTableRowGroupFrame::ReflowChildren(nsIPresContext*        aPresContext,
       // it's target is the current frame, then make sure we send
       // StyleChange reflow reasons down to the children so that they
       // don't over-optimize their reflow.
-      nsIFrame* target = nsnull;
       nsReflowReason reason = aReflowState.reason;
       if (eReflowReason_Incremental == aReflowState.reason) {
-        aReflowState.reflowState.reflowCommand->GetTarget(target);
-        if (this == target) {
+        if (aReflowState.reflowState.reflowCommand->IsATarget(this)) {
           nsReflowType type;
           aReflowState.reflowState.reflowCommand->GetType(type);
           if (eReflowType_StyleChanged == type) {

@@ -2129,7 +2129,7 @@ PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aS
   // because we know the text control won't change size.
   if (aState.mReflowState.reflowCommand)
   {
-    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    nsReflowTree::Node::Iterator reflowIterator(aState.mReflowState.GetCurrentReflowNode());
     // See if the reflow command is targeted at us
     if (reflowIterator.IsTarget()) {
       nsIFrame *target = reflowIterator.CurrentNode()->GetFrame();
@@ -3153,7 +3153,6 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
                            aState.GetFlag(BRS_COMPUTEMAXELEMENTSIZE),
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
-  brc.SetNextRCFrame(aState.mNextRCFrame);
 
   // See if we should apply the top margin. If the block frame being
   // reflowed is a continuation (non-null prev-in-flow) then we don't
@@ -5142,8 +5141,6 @@ nsBlockFrame::ReflowFloater(nsBlockReflowState& aState,
   nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
                            computeMaxElementSize,
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
-
-  brc.SetNextRCFrame(aState.mNextRCFrame);
 
   // Reflow the floater
   PRBool isAdjacentWithTop = aState.IsAdjacentWithTop();

@@ -6316,7 +6316,8 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
         void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
         int i = 0;
 
-        while (mReflowCommands.Count() > /* 1 */ 0) {
+        //        while (mReflowCommands.Count() > /* 1 */ 0) {
+        for (int j = 0; j == 0; j++) {
           for (i = 0; i < /*mReflowCommands.Count()*/ 1; i++) {
             nsHTMLReflowCommand *command = 
               NS_STATIC_CAST(nsHTMLReflowCommand *,

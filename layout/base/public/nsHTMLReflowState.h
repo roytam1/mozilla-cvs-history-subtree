@@ -43,7 +43,6 @@
 
 class nsIFrame;
 class nsIPresContext;
-class nsHTMLReflowCommand;
 class nsIRenderingContext;
 class nsSpaceManager;
 class nsLineLayout;

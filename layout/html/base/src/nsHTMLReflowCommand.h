@@ -111,6 +111,28 @@ public:
   nsresult SetTarget(nsIFrame* aTargetFrame);
 
   /**
+   * Get the tree of the reflow command.
+   */
+  nsresult GetReflowTree(nsReflowTree** aTree) const
+  {
+    *aTree = mTree; return NS_OK;
+  }
+
+  /**
+   * Change the tree of the reflow command.
+   */
+  nsresult SetReflowTree(nsReflowTree* aTree)
+  {
+    NS_ASSERTION(!mTree,"ReflowTree already set");
+    mTree = aTree; return NS_OK;
+  }
+
+  /**
+   * Return if this is a target of this (possibly merged) reflow command
+   */
+  PRBool IsATarget(const nsIFrame* aFrame) const;
+
+  /**
    * Get the type of reflow command.
    */
   nsresult GetType(nsReflowType& aReflowType) const;
@@ -194,6 +216,7 @@ private:
   nsIAtom*        mAttribute;
   nsIAtom*        mListName;
   nsAutoVoidArray mPath;
+  nsReflowTree*   mTree;
   nsReflowTree::Node* mReflowNode;
   PRInt32         mFlags;
 };
