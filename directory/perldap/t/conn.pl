@@ -44,9 +44,9 @@ no strict "vars";
 #
 $BASE	= "dc=netscape,dc=com";
 $PEOPLE	= "ou=people";
-$GROUPS	= "ou=groups";
+#$GROUPS	= "ou=groups";
 $UID	= "leif-test";
-$CN	= "test-group-1";
+#$CN	= "test-group-1";
 
 
 #################################################################################
@@ -108,7 +108,7 @@ sub dotPrint
 
 sub attributeEQ
 {
-  my @a, @b;
+  my (@a, @b);
   my $i;
 
   @a = @{$_[0]};
@@ -131,6 +131,7 @@ sub attributeEQ
 # Test adding, deleting and retrieving entries.
 #
 $filter = "(uid=$UID)";
+undef $reuseConn;
 $conn = getConn();
 $nentry = Mozilla::LDAP::Conn->newEntry();
 
