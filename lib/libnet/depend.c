@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -44,7 +44,7 @@
 #include "xp_reg.h"
 #include "libi18n.h"
 #include "libevent.h"
-// #include "layout.h"
+/* #include "layout.h" */
 #include "mkgeturl.h"
 
 /*
@@ -356,11 +356,13 @@ PREF_EvaluateJSBuffer(const char * js_buffer, size_t length)
  *---------------------------------------------------------------------------
  */
 
+/*
 //
 // Open a file with the given name
 // If a special file type is provided we might need to get the name
 //  out of the preferences list
 //
+*/
 PUBLIC XP_File 
 XP_FileOpen(const char * name, XP_FileType type, const XP_FilePerm perm)
 {
@@ -369,9 +371,11 @@ XP_FileOpen(const char * name, XP_FileType type, const XP_FilePerm perm)
 }
 
 
+/*
 //
 // Return 0 on success, -1 on failure.  Silly unix weenies
 //
+*/
 PUBLIC int 
 XP_FileRemove(const char * name, XP_FileType type)
 {
@@ -379,11 +383,12 @@ XP_FileRemove(const char * name, XP_FileType type)
     return -1;
 }
 
-
+/*
 //
 // Mimic unix stat call
 // Return -1 on error
 //
+*/
 PUBLIC int 
 XP_Stat(const char * name, XP_StatStruct * info, XP_FileType type)
 {
@@ -391,8 +396,9 @@ XP_Stat(const char * name, XP_StatStruct * info, XP_FileType type)
     return -1;
 }
 
-
+/*
 // The caller is responsible for XP_FREE()ing the return string
+*/
 PUBLIC char *
 WH_FileName (const char *name, XP_FileType type)
 {
@@ -416,16 +422,18 @@ XP_OpenDir(const char * name, XP_FileType type)
     return NULL;
 }
 
-
+/*
 //
 // Close the directory
 //
+*/
+
+#ifdef XP_PC
 PUBLIC void 
 XP_CloseDir(XP_Dir dir)
 {
     MOZ_FUNCTION_STUB;
 }
-
 
 PUBLIC XP_DirEntryStruct * 
 XP_ReadDir(XP_Dir dir)
@@ -433,6 +441,7 @@ XP_ReadDir(XP_Dir dir)
     MOZ_FUNCTION_STUB;
     return NULL;
 }
+#endif
 
 
 
@@ -468,7 +477,7 @@ FE_Trace(const char * msg)
      * leads to corrupt trace info. Usually it causes bus errors.
      */
 	printf("%s", msg);
-//  MOZ_FUNCTION_STUB;
+/*  MOZ_FUNCTION_STUB; */
 }
 
 /*
@@ -483,9 +492,10 @@ int FE_AsyncDNSLookup(MWContext *context, char * host_port, PRHostEnt ** hoststr
     return -1;
 }
 
-
+/*
 // INTL_ResourceCharSet(void)
 //
+*/
 char *INTL_ResourceCharSet(void)
 {
     MOZ_FUNCTION_STUB;
@@ -519,10 +529,11 @@ XP_Bool FE_IsNetcasterInstalled(void)
     return FALSE;
 }
 
-
+/*
 //  A Url has changed context.
 //  We need to mark it in the new context if it has ncapi_data (which we use
 //  to track such things under windows).
+*/
 void FE_UrlChangedContext(URL_Struct *pUrl, MWContext *pOldContext, MWContext *pNewContext)
 {
     MOZ_FUNCTION_STUB;
@@ -536,6 +547,7 @@ void FE_UrlChangedContext(URL_Struct *pUrl, MWContext *pOldContext, MWContext *p
  *---------------------------------------------------------------------------
  */
 void FE_URLEcho(URL_Struct *pURL, int iStatus, MWContext *pContext)  {
+/*
 //  Purpose:  Echo the URL to all appropriately registered applications that are monitoring such URL traffic.
 //  Arguments:  pURL  The URL which is being loaded.
 //        iStatus The status of the load.
@@ -546,6 +558,7 @@ void FE_URLEcho(URL_Struct *pURL, int iStatus, MWContext *pContext)  {
 //  Revision History:
 //    01-18-95  created GAB
 //
+*/
     MOZ_FUNCTION_STUB;
 }
 
@@ -556,12 +569,13 @@ void FE_URLEcho(URL_Struct *pURL, int iStatus, MWContext *pContext)  {
  * From ns/cmd/winfe/edview2.cpp
  *---------------------------------------------------------------------------
  */
-
+/*
 // Note: This is used by Navigator's HTP UPLOAD as well as Composer's file saving
 //  DON'T ASSUME ANY EDITOR FUNCTIONALITY!
 // Dialog to give feedback and allow canceling, overwrite protection
 //   when downloading remote files 
 //
+*/
 void FE_SaveDialogCreate( MWContext *pMWContext, int iFileCount, ED_SaveDialogType saveType  )
 {
     MOZ_FUNCTION_STUB;
@@ -608,8 +622,9 @@ MWContext *FE_GetNetHelpContext()
     return NULL;
 }
 
-
+/*
 // Called from mkhelp.c to get the standard location of the NetHelp folder as a URL
+*/
 char * FE_GetNetHelpDir()
 {
     MOZ_FUNCTION_STUB;
@@ -649,10 +664,12 @@ void FE_RaiseWindow(MWContext *pContext)
  * From ns/cmd/winfe/fegrid.cpp
  *---------------------------------------------------------------------------
  */
+/*
 //  Create a new window.
 //  If pChrome is NULL, do a FE_MakeBlankWindow....
 //  pChrome specifies the attributes of a window.
 //  If you use this call, Toolbar information will not be saved in the preferences.
+*/
 MWContext *FE_MakeNewWindow(MWContext *pOldContext, URL_Struct *pUrl, char *pContextName, Chrome *pChrome)
 {
     MOZ_FUNCTION_STUB;

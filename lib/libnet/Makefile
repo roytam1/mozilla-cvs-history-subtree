@@ -17,74 +17,48 @@
 
 DEPTH			= ../..
 
-MODULE			= net
-LIBRARY_NAME		= net
+MODULE			= netlib
+LIBRARY_NAME		= netlib
 
-CSRCS			= cvactive.c \
-			  cvcolor.c \
-			  cvdisk.c \
-			  cvextcon.c \
-			  cvproxy.c \
-			  cvsimple.c \
-			  cvview.c \
-			  cvchunk.c \
-			  extcache.c \
-			  mkaccess.c \
-			  mkdaturl.c \
-			  mkformat.c \
-			  mkfsort.c \
-			  mkgopher.c \
-			  mkhelp.c \
-			  mkinit.c \
-			  mkjscfg.c \
-			  mkmocha.c \
-			  mkparse.c \
-			  mkremote.c \
-			  mkselect.c \
-			  mksockrw.c \
-			  mksort.c \
-			  mkstream.c \
-			  mktrace.c \
-			  mkpadpac.c \
-			  txview.c \
-			  jscookie.c \
-			  cvmime.c \
-			  cvunzip.c \
-			  mkautocf.c \
-			  mkcache.c \
-			  mkconect.c \
-			  mkextcac.c \
-			  mkfile.c \
-			  mkftp.c \
+CSRCS			= \
+			  depend.c \
 			  mkgeturl.c \
-			  mkhttp.c \
+			  mkconect.c \
+			  mksockrw.c \
+			  mkselect.c \
+			  mkcache.c \
 			  mkmemcac.c \
-			  mkmessag.c \
+			  extcache.c \
+			  mkextcac.c \
+			  mkpadpac.c \
+			  mkautocf.c \
+			  mkaccess.c \
+			  mkformat.c \
+			  jscookie.c \
+			  mkparse.c \
 			  mkutils.c \
-			  prefetch.c \
+			  mkfsort.c \
+			  mksort.c \
+			  mkmessag.c \
+			  mktrace.c \
+			  mkhttp.c \
+			  mkfile.c \
 			  $(NULL)
 
-CPPSRCS			= mkmarimb.cpp
+CPPSRCS			= \
+			  bamwrap.cpp \
+			  moz_depend.cpp \
+			  net_serv.cpp \
+			  net_strm.cpp \
+			  $(NULL)
 
 REQUIRES		= netcast parse js dbm nspr security htmldlgs ldap softupdt \
 			  img util jtools layer pref java libfont lay style applet \
-			  zlib li msg progress
+			  zlib li msg progress xpcom
 
-EXPORTS			= extcache.h \
-			  mkutils.h \
-			  mkselect.h \
-			  mkaccess.h \
-			  mkautocf.h \
-			  mkcache.h \
-			  mkformat.h \
-			  mkgeturl.h \
-			  mkhelp.h \
-			  mkstream.h \
-			  mktcp.h \
-			  mktrace.h \
-			  mkpadpac.h \
-			  mkmarimb.h \
-			  mkparse.h \
+EXPORTS			= \
+			  nsIStreamNotification.h \
+			  nsINetService.h \
 			  $(NULL)
 
 include $(DEPTH)/config/config.mk
@@ -117,7 +91,8 @@ endif
 
 include $(DEPTH)/config/rules.mk
 
-DEFINES			+= -DNEW_DECODERS
+DEFINES			+= -DNEW_DECODERS -DB1M
+INCLUDES		+= -I$(DEPTH)/raptor/base/src
 
 ifndef NO_UNIX_ASYNC_DNS
 DEFINES			+= -DUNIX_ASYNC_DNS
@@ -125,7 +100,7 @@ endif
 
 ifndef NO_UNIX_LDAP
 INCLUDES		+= -I$(DIST)/include
-DEFINES			+= -DLIBNET_LDAP
+DEFINES			+= -DLIBNET_LDAP 
 endif
 
 #
