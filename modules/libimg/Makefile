@@ -19,24 +19,10 @@ DEPTH		= ../..
 
 ifdef STANDALONE_IMAGE_LIB
 DIRS = png public src
-EXTRA_LIBS = libzlib.a libpng.a
 else
-DIRS = classes public src
-
-EXTRA_LIBS =
-
-ifdef MOZ_NATIVE_PNG
-EXTRA_LIBS	+= -lpng
-else
-DIRS		+= png
-EXTRA_LIBS	+= libpng.a
+DIRS = png classes public src
 endif
 
-ifdef MOZ_NATIVE_ZLIB
-EXTRA_LIBS	+= -lz
-else
-EXTRA_LIBS	+= libzlib.a
-endif
-endif
+EXTRA_LIBS	= libzlib.a libpng.a
 
 include $(DEPTH)/config/rules.mk

@@ -30,6 +30,7 @@
 #include "nsGfxCIID.h"
 #include "resource.h"
 #include <commctrl.h>
+
 #include "prtime.h"
 
 BOOL nsWindow::sIsRegistered = FALSE;
@@ -1396,8 +1397,8 @@ void nsWindow::SetUpForPaint(HDC aHDC)
 //-------------------------------------------------------------------------
 PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT *aRetValue)
 {
-    PRBool        result = PR_FALSE; // call the default nsWindow proc
-    nsPaletteInfo palInfo;
+    PRBool result = PR_FALSE; // call the default nsWindow proc
+
             
     *aRetValue = 0;
 
@@ -1636,38 +1637,45 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
             break;
         }
-
-        case WM_PALETTECHANGED:
-            if ((HWND)wParam == mWnd) {
-                // We caused the WM_PALETTECHANGED message so avoid realizing
-                // another foreground palette
-                result = PR_TRUE;
-                break;
-            }
-            // fall thru...
-
         case WM_QUERYNEWPALETTE:
-            mContext->GetPaletteInfo(palInfo);
-            if (palInfo.isPaletteDevice && palInfo.palette) {
+            if (mPalette) {
                 HDC hDC = ::GetDC(mWnd);
-                HPALETTE hOldPal = ::SelectPalette(hDC, (HPALETTE)palInfo.palette, FALSE);
+                HPALETTE hOldPal = ::SelectPalette(hDC, mPalette, 0);
                 
-                // Realize the drawing palette
                 int i = ::RealizePalette(hDC);
 
-                // Did the realization change?
-                if (i > 0) {
-                  // Yes, so repaint
-                  ::InvalidateRect(mWnd, (LPRECT)NULL, TRUE);
+                ::SelectPalette(hDC, hOldPal, 0);
+                ::ReleaseDC(mWnd, hDC);
+
+                if (i) {
+                    ::InvalidateRect(mWnd, (LPRECT)(NULL), 1);
+                    result = PR_TRUE;
+                }
+                else {
+                    result = PR_FALSE;
+                }
+            }
+            else {
+                result = PR_FALSE;
+            }
+            break;
+       case WM_PALETTECHANGED:
+           if (mPalette && (HWND)wParam != mWnd) {
+                HDC hDC = ::GetDC(mWnd);
+                HPALETTE hOldPal = ::SelectPalette(hDC, mPalette, 0);
+                
+                int i = ::RealizePalette(hDC);
+
+                if (i) {
+                    ::InvalidateRect(mWnd, (LPRECT)(NULL), 1);
                 }
 
-                ::SelectPalette(hDC, hOldPal, TRUE);
-                ::RealizePalette(hDC);
+                ::SelectPalette(hDC, hOldPal, 0);
                 ::ReleaseDC(mWnd, hDC);
-                *aRetValue = TRUE;
-            }
-            result = PR_TRUE;
-            break;
+           }
+           result = PR_TRUE;
+           break;
+
     }
 
     return result;

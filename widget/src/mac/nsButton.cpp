@@ -24,8 +24,9 @@
 #include "nsString.h"
 #include "nsStringUtil.h"
 
-#include <Controls.h>
+#include "nsXtEventHandler.h"
 
+#include <Xm/PushB.h>
 
 #define DBG 0
 //-------------------------------------------------------------------------
@@ -46,50 +47,39 @@ void nsButton::Create(nsIWidget *aParent,
                       nsWidgetInitData *aInitData) 
 {
   aParent->AddChild(this);
+  Widget parentWidget = nsnull;
 
   if (DBG) fprintf(stderr, "aParent 0x%x\n", aParent);
-	
-	WindowPtr window = nsnull;
 
   if (aParent) {
-    window = (WindowPtr) aParent->GetNativeData(NS_NATIVE_WIDGET);
+    parentWidget = (Widget) aParent->GetNativeData(NS_NATIVE_WIDGET);
   } else if (aAppShell) {
-    window = (WindowPtr) aAppShell->GetNativeData(NS_NATIVE_SHELL);
+    parentWidget = (Widget) aAppShell->GetNativeData(NS_NATIVE_SHELL);
   }
-  
-  NS_ASSERTION(window!=nsnull,"The WindowPtr for the widget cannot be null")
-	if (window)
-	{
-	  InitToolkit(aToolkit, aParent);
-	  // InitDeviceContext(aContext, parentWidget);
 
-	  if (DBG) fprintf(stderr, "Parent 0x%x\n", window);
+  InitToolkit(aToolkit, aParent);
+  InitDeviceContext(aContext, parentWidget);
 
-		// NOTE: CREATE MACINTOSH CONTROL HERE
-		Str255  title = "";
-		Boolean visible = PR_TRUE;
-		PRInt16 initialValue = 0;
-		PRInt16 minValue = 0;
-		PRInt16 maxValue = 1;
-		PRInt16 ctrlType = pushButProc;
-		
-		Rect r;
-		r.left = aRect.x;
-		r.top = aRect.y;
-		r.right = aRect.x + aRect.width;
-		r.bottom = aRect.y + aRect.height;
-		
-		mControl = NewControl ( window, &r, title, visible, 
-												    initialValue, minValue, maxValue, 
-												    ctrlType, (long)this);
+  if (DBG) fprintf(stderr, "Parent 0x%x\n", parentWidget);
 
-	  if (DBG) fprintf(stderr, "Button 0x%x  this 0x%x\n", mControl, this);
+  mWidget = ::XtVaCreateManagedWidget("button",
+                                    xmPushButtonWidgetClass, 
+                                    parentWidget,
+                                    XmNwidth, aRect.width,
+                                    XmNheight, aRect.height,
+                                    XmNrecomputeSize, False,
+                                    XmNhighlightOnEnter, False,
+		                    XmNx, aRect.x,
+		                    XmNy, aRect.y, 
+                                    nsnull);
 
-	  // save the event callback function
-	  mEventCallback = aHandleEventFunction;
+  if (DBG) fprintf(stderr, "Button 0x%x  this 0x%x\n", mWidget, this);
 
-	  //InitCallbacks("nsButton");
-	}
+  // save the event callback function
+  mEventCallback = aHandleEventFunction;
+
+  InitCallbacks("nsButton");
+
 }
 
 void nsButton::Create(nsNativeWidget aParent,
@@ -100,7 +90,6 @@ void nsButton::Create(nsNativeWidget aParent,
                       nsIToolkit *aToolkit,
                       nsWidgetInitData *aInitData)
 {
-	NS_ERROR("This Widget must not use this Create method");
 }
 
 //-------------------------------------------------------------------------
@@ -129,24 +118,6 @@ nsresult nsButton::QueryObject(REFNSIID aIID, void** aInstancePtr)
   return nsWindow::QueryObject(aIID, aInstancePtr);
 }
 
-//-------------------------------------------------------------------------
-//
-// Convert a nsString to a PascalStr255
-//
-//-------------------------------------------------------------------------
-void nsButton::StringToStr255(const nsString& aText, Str255& aStr255)
-{
-	char buffer[256];
-	
-	aText.ToCString(buffer,255);
-	
-	PRInt32 len = strlen(buffer);
-	for (PRInt32 i = 0; i < len; i++)
-		aStr255[i+1] = buffer[i];
-	aStr255[0] = len;
-}
-
-
 
 //-------------------------------------------------------------------------
 //
@@ -155,13 +126,13 @@ void nsButton::StringToStr255(const nsString& aText, Str255& aStr255)
 //-------------------------------------------------------------------------
 void nsButton::SetLabel(const nsString& aText)
 {
-	NS_ASSERTION(mControl != nsnull,"Control must not be null");
-	if (mControl != nsnull)
-	{
-		Str255 s;
-		StringToStr255(aText,s);
-		SetControlTitle(mControl,s);
-	}
+  NS_ALLOC_STR_BUF(label, aText, 256);
+  XmString str;
+  str = XmStringCreate(label, XmFONTLIST_DEFAULT_TAG);
+  XtVaSetValues(mWidget, XmNlabelString, str, nsnull);
+  NS_FREE_STR_BUF(label);
+  XmStringFree(str);
+
 }
 
 //-------------------------------------------------------------------------
@@ -171,6 +142,16 @@ void nsButton::SetLabel(const nsString& aText)
 //-------------------------------------------------------------------------
 void nsButton::GetLabel(nsString& aBuffer)
 {
+  XmString str;
+  XtVaGetValues(mWidget, XmNlabelString, &str, nsnull);
+  char * text;
+  if (XmStringGetLtoR(str, XmFONTLIST_DEFAULT_TAG, &text)) {
+    aBuffer.SetLength(0);
+    aBuffer.Append(text);
+    XtFree(text);
+  }
+
+  XmStringFree(str);
 
 }
 

@@ -19,10 +19,6 @@
 #include "oobj.h"
 #include "javaThreads.h"
 
-#ifdef RHAPSODY
-#include "c.h"  /* Defines for TRUE, FALSE. */
-#endif
-
 /* ArrayAlloc                                                                       libjsj.so */
 /* ns/sun-java/include/interpreter.h */
 /* ns/sun-java/md/gc_md.c */
@@ -32,7 +28,7 @@ ArrayAlloc(int32_t t, int32_t l)
   return NULL;
 }
 
-#if defined(XP_UNIX) && !defined(NO_X11)
+#ifdef XP_UNIX
 #include <X11/Intrinsic.h>
 
 /* AwtRegisterXtAppVars                                                             mozilla.o */
@@ -259,7 +255,7 @@ VerifyFieldAccess(ClassClass *current_class, ClassClass *field_class,
 /* awt_MToolkit_dispatchToWidget                                                    mozilla.o */
 /* ??? */
 /* ns/sun-java/awt/x/awt_MTookit.c */
-#if defined(XP_UNIX) && !defined(NO_X11)
+#ifdef XP_UNIX
 int
 awt_MToolkit_dispatchToWidget(XEvent *xev)
 {

@@ -60,8 +60,6 @@ public:
 
 private:
 
-	void StringToStr255(const nsString& aText, Str255& aStr255);
-
   // this should not be public
   static PRInt32 GetOuterOffset() {
     return offsetof(nsButton,mAggWidget);
@@ -85,8 +83,6 @@ private:
   };
   AggButton mAggWidget;
   friend class AggButton;
-  
-  ControlHandle	mControl;
 
 
 };

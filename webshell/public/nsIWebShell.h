@@ -70,12 +70,18 @@ public:
 
   NS_IMETHOD OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec) = 0;
 
+  //instances
+  NS_IMETHOD NewWebShell(nsIWebShell *&aNewWebShell) = 0;
+
   // Chrome control
 // NS_IMETHOD SetHistoryIndex(PRInt32 aIndex, PRInt32 aMaxIndex) = 0;
 
   // Link traversing control
 };
 
+// Do not change the order of these. nsReload (normal/the first item) must
+// always be zero. If you add enumerations, change the range
+// check in nsNetService (OpenStream & OpenBlockingStream).
 typedef enum {
   nsReload,
   nsReloadBypassCache,
@@ -146,7 +152,8 @@ public:
   NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult) = 0;
   NS_IMETHOD LoadURL(const PRUnichar *aURLSpec,
                      nsIPostData* aPostData=nsnull,
-                     PRBool aModifyHistory=PR_TRUE) = 0;
+                     PRBool aModifyHistory=PR_TRUE,
+                     nsReloadType type=nsReload) = 0;
   NS_IMETHOD Stop(void) = 0;
   NS_IMETHOD Reload(nsReloadType aType) = 0;
   

@@ -154,7 +154,8 @@ public:
   NS_IMETHOD GetDocumentLoader(nsIDocumentLoader*& aResult);
   NS_IMETHOD LoadURL(const PRUnichar *aURLSpec,
                      nsIPostData* aPostData=nsnull,
-                     PRBool aModifyHistory=PR_TRUE);
+                     PRBool aModifyHistory=PR_TRUE,
+                     nsReloadType type = nsReload);
   NS_IMETHOD Stop(void);
   NS_IMETHOD Reload(nsReloadType aType);
    
@@ -177,6 +178,7 @@ public:
   NS_IMETHOD ProgressLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
   NS_IMETHOD EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus);
   NS_IMETHOD OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec);
+  NS_IMETHOD NewWebShell(nsIWebShell *&aNewWebShell);
 
   // nsILinkHandler
   NS_IMETHOD OnLinkClick(nsIFrame* aFrame, 
@@ -405,13 +407,20 @@ nsWebShell::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     AddRef();
     return NS_OK;
   }
-  if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtr = (void*)(nsISupports*)(nsIWebShell*)this;
+  if (aIID.Equals(kILinkHandlerIID)) {
+    //I added this for plugin support of jumping
+    //through links. maybe there is a better way... MMP
+    *aInstancePtr = (void*)(nsILinkHandler*)this;
     AddRef();
     return NS_OK;
   }
   if (aIID.Equals(kRefreshURLIID)) {
     *aInstancePtr = (void*)(nsIRefreshUrl*)this;
+    AddRef();
+    return NS_OK;
+  }
+  if (aIID.Equals(kISupportsIID)) {
+    *aInstancePtr = (void*)(nsISupports*)(nsIWebShell*)this;
     AddRef();
     return NS_OK;
   }
@@ -944,7 +953,8 @@ static void convertFileToURL(nsString &aIn, nsString &aOut)
 NS_IMETHODIMP
 nsWebShell::LoadURL(const PRUnichar *aURLSpec,
                     nsIPostData* aPostData,
-                    PRBool aModifyHistory)
+                    PRBool aModifyHistory,
+                    nsReloadType type)
 {
   nsresult rv;
   PRInt32 colon, fSlash;
@@ -1016,7 +1026,8 @@ nsWebShell::LoadURL(const PRUnichar *aURLSpec,
                            this,           // Container
                            aPostData,      // Post Data
                            nsnull,         // Extra Info...
-                           mObserver);      // Observer
+                           mObserver,       // Observer
+                           (PRInt32)type);      // reload type
 
 
   return rv;
@@ -1040,7 +1051,7 @@ NS_IMETHODIMP nsWebShell::Reload(nsReloadType aType)
   nsString* s = (nsString*) mHistory.ElementAt(mHistoryIndex);
   if (nsnull != s) {
     // XXX What about the post data?
-    return LoadURL(*s, nsnull, PR_FALSE);
+    return LoadURL(*s, nsnull, PR_FALSE, aType);
   }
   return NS_ERROR_FAILURE;
 }
@@ -1113,7 +1124,8 @@ nsWebShell::GoTo(PRInt32 aHistoryIndex)
                              this,           // Container
                              nsnull,         // Post Data
                              nsnull,         // Extra Info...
-                             mObserver);      // Observer
+                             mObserver,      // Observer
+                             nsReload);      // the reload type
   }
   return rv;
 }
@@ -1240,6 +1252,15 @@ nsWebShell::OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUni
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsWebShell::NewWebShell(nsIWebShell *&aNewWebShell)
+{
+  if (nsnull != mContainer) {
+    return mContainer->NewWebShell(aNewWebShell);
+  }
+  return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 
@@ -1339,10 +1360,14 @@ nsWebShell::GetTarget(const PRUnichar* aName)
   nsIWebShell* target = nsnull;
 
   if (name.EqualsIgnoreCase("_blank")) {
-    // XXX Need api in nsIWebShellContainer
-    NS_ASSERTION(0, "not implemented yet");
-    target = this;
-    NS_ADDREF(target);
+    nsIWebShell *shell;
+    if (NS_OK == NewWebShell(shell))
+      target = shell;
+    else
+    {
+      //don't know what to do here? MMP
+      NS_ASSERTION(PR_FALSE, "unable to get new webshell");
+    }
   } 
   else if (name.EqualsIgnoreCase("_self")) {
     target = this;
@@ -1592,7 +1617,7 @@ nsWebShell::CancelRefreshURLTimers(void) {
 void nsWebShell::RefreshURLCallback(nsITimer* aTimer, void* aClosure) {
     refreshData *data=(refreshData*)aClosure;
     NS_PRECONDITION((data != nsnull), "Null pointer...");
-    data->shell->LoadURL(*data->aUrlSpec, nsnull, PR_TRUE);
+    data->shell->LoadURL(*data->aUrlSpec, nsnull, PR_TRUE, nsReload);
 }
 
 //----------------------------------------------------------------------
