@@ -1902,7 +1902,8 @@ js_Interpret(JSContext *cx, jsval *result)
 		/* XXX clean up to avoid special cases above ObjectOps layer */
 		(clasp = OBJ_GET_CLASS(cx, obj2),
 		 clasp == &js_FunctionClass || clasp == &js_ClosureClass) ||
-		!obj2->map->ops->construct) {
+                 !obj2->map->ops->construct) 
+            {
 		fun = js_ValueToFunction(cx, vp, JS_TRUE);
 		if (!fun) {
 		    ok = JS_FALSE;
@@ -1925,7 +1926,15 @@ js_Interpret(JSContext *cx, jsval *result)
 		parent = OBJ_GET_PARENT(cx, obj2);
 	    }
 
+#if 0
 	    obj = js_NewObject(cx, &js_ObjectClass, proto, parent);
+#else
+	    /* If there is no class prototype, use js_ObjectClass. */
+	    if (!proto)
+		obj = js_NewObject(cx, &js_ObjectClass, NULL, parent);
+	    else
+		obj = js_NewObject(cx, OBJ_GET_CLASS(cx, proto), proto, parent);
+#endif
 	    if (!obj) {
 		ok = JS_FALSE;
 		goto out;
