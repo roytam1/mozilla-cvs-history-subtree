@@ -74,6 +74,7 @@ protected:
   // Set when the appshell service is going away.
   PRBool mShuttingDown;
   PRBool mQuitOnLastWindowClosing;
+  PRBool mShownTurboDialog;
 
   // A "last event" that is used to flush the appshell's event queue.
   struct ExitEvent {

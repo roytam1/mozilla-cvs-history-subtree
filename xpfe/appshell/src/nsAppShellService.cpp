@@ -36,6 +36,7 @@
 #include "nsXPComFactory.h"    /* template implementation of a XPCOM factory */
 #include "nsIXPConnect.h"
 #include "nsIJSContextStack.h"
+#include "nsIPref.h"
 
 #include "nsIAppShell.h"
 #include "nsIWidget.h"
@@ -66,6 +67,7 @@ static NS_DEFINE_CID(kAppShellCID,          NS_APPSHELL_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 static NS_DEFINE_CID(kXPConnectCID, NS_XPCONNECT_CID);
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
 // copied from nsEventQueue.cpp
 static char *gEQActivatedNotification = "nsIEventQueueActivated";
@@ -81,7 +83,8 @@ nsAppShellService::nsAppShellService() :
   mSplashScreen( nsnull ),
   mNativeAppSupport( nsnull ),
   mShuttingDown( PR_FALSE ),
-  mQuitOnLastWindowClosing( PR_TRUE )
+  mQuitOnLastWindowClosing( PR_TRUE ),
+  mShownTurboDialog( PR_FALSE )
 {
   NS_INIT_REFCNT();
 }
@@ -814,15 +817,34 @@ nsAppShellService::UnregisterTopLevelWindow(nsIXULWindow* aWindow)
    nsCOMPtr<nsIBaseWindow> hiddenWin(do_QueryInterface(mHiddenWindow));
 	 if (!hiddenWin)
 		 Quit();
-  #else
-    // Check to see if we should quit in this case.
-    PRBool serverMode = PR_FALSE;
-    if (mNativeAppSupport)
-        mNativeAppSupport->GetIsServerMode(&serverMode);
-    if (serverMode)
-        return NS_OK;
-
-    Quit();
+  #elif XP_WIN 
+   PRBool isServerMode = PR_FALSE;
+   PRBool showDialog = PR_TRUE;
+   if (mNativeAppSupport)
+     mNativeAppSupport->GetIsServerMode(&isServerMode);
+   if (isServerMode && !mShownTurboDialog) {
+     NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
+     if (NS_SUCCEEDED(rv))
+       prefs->GetBoolPref("browser.turbo.showDialog", &showDialog);
+     if (showDialog) {      
+       nsCOMPtr<nsIDocShell> docShell;
+       if (aWindow)
+         aWindow->GetDocShell(getter_AddRefs(docShell));
+       nsCOMPtr<nsIDOMWindowInternal> domWin = do_GetInterface(docShell);
+       nsCOMPtr<nsIDOMWindow> newWindow;
+       mShownTurboDialog = PR_TRUE;
+       if (domWin)
+         domWin->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/profile/turboDialog.xul"),
+                            NS_LITERAL_STRING("_blank"),
+                            NS_LITERAL_STRING("chrome,modal,titlebar,centerscreen,dialog"),
+                            nsnull, getter_AddRefs(newWindow));
+     }     
+   }
+   if (isServerMode)
+     return NS_OK;
+   Quit();
+  #else   
+   Quit();
   #endif 
   }
   return rv;

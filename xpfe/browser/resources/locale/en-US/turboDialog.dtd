@@ -1,0 +1,4 @@
+<!ENTITY            exitWarningMsg.label   "Quick Launch is active, so Netscape remains in memory and can be started again quickly. You are still connected to mail accounts, instant messaging, and web sites. To completely exit Netscape, right click on the Netscape icon in the bottom right of the taskbar and select Exit.">
+<!ENTITY            exitWarningTitle.label "Quick Launch">
+<!ENTITY            exitWarningCheckbox.label "Don't show me this message again">
+<!ENTITY            exitWarningCheckbox.accesskey "D">

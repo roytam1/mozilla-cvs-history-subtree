@@ -312,7 +312,7 @@ function Startup()
   if (!isPageCycling) {
     var uriToLoad;
 
-    if (!appCore.cmdLineURLUsed  && !turboMode) {
+    if (!appCore.cmdLineURLUsed) {
       var cmdLineService = Components.classes["@mozilla.org/appshell/commandLineService;1"]
                                      .getService(Components.interfaces.nsICmdLineService);
       uriToLoad = cmdLineService.URLToLoad;
@@ -333,17 +333,6 @@ function Startup()
     if (uriToLoad && uriToLoad != "about:blank") {
       gURLBar.value = uriToLoad;
       loadURI(uriToLoad);
-    }
-
-    // Close the window now, if it's for turbo mode startup.
-    if ( turboMode ) {
-        // Set "command line used" flag.  If we don't do this, then when a cmd line url
-        // for a "real* invocation comes in, we will override it with the "cmd line url"
-        // from the turbo-mode process (i.e., the home page).
-        appCore.cmdLineURLUsed = true;
-        // For some reason, window.close() directly doesn't work, so do it in the future.
-        window.setTimeout( "window.close()", 100 );
-        return;
     }
 
     // Focus the content area if the caller instructed us to.
@@ -967,15 +956,6 @@ function BrowserViewSourceOfURL(url, charset)
              "_blank",
              "scrollbars,resizable,chrome,dialog=no",
              url, charset);
-}
-
-// doc=null for regular page, doc=owner document for frame.
-function BrowserPageInfo(doc)
-{
-  window.openDialog("chrome://navigator/content/pageInfo.xul",
-                    "_blank",
-                    "chrome,dialog=no",
-                    doc);
 }
 
 function hiddenWindowStartup()

@@ -58,6 +58,7 @@
 #include <fcntl.h>
 
 #define TURBO_QUIT 1
+#define TURBO_OPEN 2
 
 static HWND hwndForDOMWindow( nsISupports * );
 
@@ -758,6 +759,17 @@ struct MessageWindow {
          switch (selectedItem) {
          case TURBO_QUIT:
              (void)nsNativeAppSupportWin::HandleRequest( (LPBYTE)"mozilla -kill" );
+             break;
+         case TURBO_OPEN:
+             // Activate window or open a new one.
+             nsCOMPtr<nsIDOMWindowInternal> win;
+             GetMostRecentWindow( 0, getter_AddRefs( win ) );
+             if ( win ) {
+                 activateWindow( win );
+             } else {
+                // This will do the default thing and open a new window.
+                (void)nsNativeAppSupportWin::HandleRequest( (LPBYTE)"mozilla" );
+             }
              break;
          }
          PostMessage(msgWindow, WM_NULL, 0, 0);
@@ -1679,19 +1691,26 @@ nsNativeAppSupportWin::SetupSysTrayIcon() {
         svc->CreateBundle( "chrome://communicator/locale/profile/profileManager.properties",
                            getter_AddRefs( bundle2 ) );
         nsAutoString exitText;
+        nsAutoString openText;
         if ( bundle2 ) {
             nsXPIDLString text;
             bundle2->GetStringFromName( NS_LITERAL_STRING( "exitButton" ).get(),
                                         getter_Copies( text ) );
             exitText = (const PRUnichar*)text;
+            bundle2->GetStringFromName( NS_LITERAL_STRING( "openWindow" ).get(),
+                                        getter_Copies( text ) );
+            openText = (const PRUnichar*)text;
         }
         if ( exitText.IsEmpty() ) {
             // Fall back to this.
             exitText = NS_LITERAL_STRING( "Exit" );
         }
+        if ( openText.IsEmpty() )
+            openText = NS_LITERAL_STRING( "Open Netscape" );
 
         // Create menu and add item.
         mTrayIconMenu = ::CreatePopupMenu();
+        ::AppendMenuW( mTrayIconMenu, MF_STRING, TURBO_OPEN, openText.get() );
         ::AppendMenuW( mTrayIconMenu, MF_STRING, TURBO_QUIT, exitText.get() );
 
     }
@@ -1760,10 +1779,11 @@ nsNativeAppSupportWin::StartServerMode() {
     if ( !newWindow ) {
         return NS_OK;
     }
-
+    nsCOMPtr<nsIDOMWindowInternal> domWin = do_QueryInterface(newWindow);
     // Hide this window by re-parenting it (to ensure it doesn't appear).
     ReParent( newWindow, (HWND)MessageWindow() );
-
+    if (domWin)
+      domWin->Close();
     return NS_OK;
 }
 

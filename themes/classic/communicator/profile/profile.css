@@ -67,3 +67,8 @@ box#wizardButtons {
 box.selection {
   margin-top: 4px;
 }
+
+#turboTrayImage {
+  border: 2px inset ThreeDHighlight !important;
+  list-style-image: url("chrome://communicator/skin/profile/tray.gif");
+}

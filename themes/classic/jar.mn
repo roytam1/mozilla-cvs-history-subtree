@@ -49,6 +49,7 @@ classic.jar:
     skin/classic/communicator/profile/migrate.gif                        (communicator/profile/migrate.gif)
     skin/classic/communicator/profile/profileicon-large.gif              (communicator/profile/profileicon-large.gif)
     skin/classic/communicator/profile/profileManager.css                 (communicator/profile/profileManager.css)
+    skin/classic/communicator/profile/tray.gif                           (communicator/profile/tray.gif)
     skin/classic/communicator/regviewer/regviewer.css                    (communicator/regviewer/regviewer.css)
     skin/classic/communicator/related/related.css                        (communicator/related/related.css)
     skin/classic/communicator/related/sitemap.gif                        (communicator/related/sitemap.gif)
