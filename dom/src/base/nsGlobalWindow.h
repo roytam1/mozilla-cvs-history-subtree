@@ -222,23 +222,22 @@ protected:
   static void CloseWindow(nsISupports* aWindow);
 
   // Timeout Functions
-  NS_IMETHOD SetTimeoutOrInterval(JSContext *cx, jsval *argv, PRUint32 argc,
-                                  PRInt32* aReturn, PRBool aIsInterval);
+  nsresult SetTimeoutOrInterval(PRBool aIsInterval, PRInt32* aReturn);
   PRBool RunTimeout(nsTimeoutImpl *aTimeout);
   void DropTimeout(nsTimeoutImpl *aTimeout, nsIScriptContext* aContext=nsnull);
   void HoldTimeout(nsTimeoutImpl *aTimeout);
-  NS_IMETHOD ClearTimeoutOrInterval(PRInt32 aTimerID);
+  nsresult ClearTimeoutOrInterval(PRInt32 aTimerID);
   void ClearAllTimeouts();
   void InsertTimeoutIntoList(nsTimeoutImpl **aInsertionPoint, 
                              nsTimeoutImpl *aTimeout);
   friend void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure);
 
   // Helper Functions
-  NS_IMETHOD GetTreeOwner(nsIDocShellTreeOwner** aTreeOwner);
-  NS_IMETHOD GetTreeOwner(nsIBaseWindow** aTreeOwner);
-  NS_IMETHOD GetWebBrowserChrome(nsIWebBrowserChrome** aBrowserChrome);
-  NS_IMETHOD GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
-                           float* aT2P);
+  nsresult GetTreeOwner(nsIDocShellTreeOwner** aTreeOwner);
+  nsresult GetTreeOwner(nsIBaseWindow** aTreeOwner);
+  nsresult GetWebBrowserChrome(nsIWebBrowserChrome** aBrowserChrome);
+  nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
+                         float* aT2P);
   nsresult RegisterEventListener(const char* aEventName,
                                  REFNSIID aIID);
   void FlushPendingNotifications();

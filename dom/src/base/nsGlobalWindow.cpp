@@ -670,8 +670,13 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 
   mDocument = aDocument;
 
-  if (mDocument && mContext)
+  if (mDocument && mContext) {
     mContext->InitContext(this);
+
+    JSContext *cx = (JSContext *)mContext->GetNativeContext();
+
+    mScriptObject = ::JS_GetGlobalObject(cx);
+  }
 
   // Clear our mutation bitfield.
   mMutationBits = 0;
@@ -2203,17 +2208,13 @@ NS_IMETHODIMP GlobalWindowImpl::ClearInterval(PRInt32 aTimerID)
 NS_IMETHODIMP
 GlobalWindowImpl::SetTimeout(PRBool *_retval)
 {
-  //  return SetTimeoutOrInterval(cx, argv, argc, aReturn, PR_FALSE);
-
-  return NS_OK;
+  return SetTimeoutOrInterval(PR_FALSE, _retval);
 }
 
 NS_IMETHODIMP
 GlobalWindowImpl::SetInterval(PRBool *_retval)
 {
-  //  return SetTimeoutOrInterval(cx, argv, argc, aReturn, PR_TRUE);
-
-  return NS_OK;
+  return SetTimeoutOrInterval(PR_TRUE, _retval);
 }
 
 NS_IMETHODIMP
@@ -4095,11 +4096,32 @@ void GlobalWindowImpl::CloseWindow(nsISupports *aWindow)
 static const char *kSetIntervalStr = "setInterval";
 static const char *kSetTimeoutStr = "setTimeout";
 
-NS_IMETHODIMP GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
-                                                     jsval *argv, PRUint32 argc,
-                                                     PRInt32 *aReturn,
-                                                     PRBool aIsInterval)
+nsresult
+GlobalWindowImpl::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 {
+  NS_ENSURE_STATE(sXPConnect);
+
+  JSContext *cx = GetCurrentContext();
+
+  if (!cx) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+
+  rv = sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!ncc)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  PRUint32 argc;
+  jsval *argv = nsnull;
+
+  ncc->GetArgc(&argc);
+  ncc->GetArgvPtr(&argv);
+
   JSString *expr = nsnull;
   JSObject *funobj = nsnull;
   nsTimeoutImpl *timeout;
@@ -4195,7 +4217,6 @@ NS_IMETHODIMP GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
   timeout->version = ::JS_VersionToString(::JS_GetVersion(cx));
 
   // Get principal of currently executing code, save for execution of timeout
-  nsresult rv;
   nsCOMPtr<nsIScriptSecurityManager>
     securityManager(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv));
   if (NS_FAILED(rv))
@@ -4527,7 +4548,8 @@ void GlobalWindowImpl::HoldTimeout(nsTimeoutImpl *aTimeout)
   aTimeout->ref_count++;
 }
 
-NS_IMETHODIMP GlobalWindowImpl::ClearTimeoutOrInterval(PRInt32 aTimerID)
+nsresult
+GlobalWindowImpl::ClearTimeoutOrInterval(PRInt32 aTimerID)
 {
   PRUint32 public_id;
   nsTimeoutImpl **top, *timeout;
@@ -4619,7 +4641,8 @@ void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure)
 // GlobalWindowImpl: Helper Functions
 //*****************************************************************************
 
-NS_IMETHODIMP GlobalWindowImpl::GetTreeOwner(nsIDocShellTreeOwner **aTreeOwner)
+nsresult
+GlobalWindowImpl::GetTreeOwner(nsIDocShellTreeOwner **aTreeOwner)
 {
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
@@ -4627,7 +4650,8 @@ NS_IMETHODIMP GlobalWindowImpl::GetTreeOwner(nsIDocShellTreeOwner **aTreeOwner)
   return docShellAsItem->GetTreeOwner(aTreeOwner);
 }
 
-NS_IMETHODIMP GlobalWindowImpl::GetTreeOwner(nsIBaseWindow **aTreeOwner)
+nsresult
+GlobalWindowImpl::GetTreeOwner(nsIBaseWindow **aTreeOwner)
 {
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
@@ -4642,7 +4666,7 @@ NS_IMETHODIMP GlobalWindowImpl::GetTreeOwner(nsIBaseWindow **aTreeOwner)
   return CallQueryInterface(treeOwner, aTreeOwner);
 }
 
-NS_IMETHODIMP
+nsresult
 GlobalWindowImpl::GetWebBrowserChrome(nsIWebBrowserChrome **aBrowserChrome)
 {
   nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
@@ -4654,7 +4678,7 @@ GlobalWindowImpl::GetWebBrowserChrome(nsIWebBrowserChrome **aBrowserChrome)
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 GlobalWindowImpl::GetScrollInfo(nsIScrollableView **aScrollableView,
                                 float *aP2T, float *aT2P)
 {
