@@ -40,8 +40,6 @@ LIBNAME=xplib
 #//------------------------------------------------------------------------
 OBJS=                                   \
         .\$(OBJDIR)\xp_stub.obj         \
-        .\$(OBJDIR)\xp_str.obj          \
-        .\$(OBJDIR)\xp_list.obj         \
         .\$(OBJDIR)\xp_file.obj         \
         .\$(OBJDIR)\allxpstr.obj        \
         .\$(OBJDIR)\xp_error.obj        \
