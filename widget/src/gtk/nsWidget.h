@@ -34,6 +34,8 @@ class nsIToolkit;
 
 #include <gdk/gdkprivate.h>
 
+#include "gtkmozbox.h"
+
 #define NSRECT_TO_GDKRECT(ns,gdk) \
   PR_BEGIN_MACRO \
   gdk.x = ns.x; \
@@ -142,6 +144,7 @@ public:
     
   // Utility functions
 
+  void       HandleEvent(GdkEvent *event);
   PRBool     ConvertStatus(nsEventStatus aStatus);
   PRBool     DispatchMouseEvent(nsMouseEvent& aEvent);
   PRBool     DispatchStandardEvent(PRUint32 aMsg);
@@ -356,6 +359,9 @@ protected:
 
   guint32 mGrabTime;
   GtkWidget *mWidget;
+  // our mozbox for those native widgets
+  GtkMozBox *mMozBox;
+
   nsIWidget *mParent;
 
   // This is the composite update area (union of all the calls to

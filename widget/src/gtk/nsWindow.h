@@ -26,6 +26,9 @@
 
 #include "nsString.h"
 
+#include "gtkmozarea.h"
+#include "gdksuperwin.h"
+
 class nsFont;
 class nsIAppShell;
 
@@ -88,8 +91,22 @@ public:
   virtual  PRBool OnScroll(nsScrollbarEvent & aEvent, PRUint32 cPos);
   // in nsWidget now
   //    virtual  PRBool OnResize(nsSizeEvent &aEvent);
+  
+  static void SuperWinFilter(GdkSuperWin *superwin, XEvent *event, gpointer p);
+  
+  void HandleXlibExposeEvent(XEvent *event);
+  void HandleXlibConfigureNotifyEvent(XEvent *event);
+  void HandleXlibButtonEvent(XButtonEvent *aButtonEvent);
+  void HandleXlibMotionNotifyEvent(XMotionEvent *aMotionEvent);
+  void HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent);
+ 
+  // Return the GtkMozArea that is the nearest parent of this widget
+  GtkWidget *GetMozArea();
 
-
+  // Return the Gdk window used for rendering
+  virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
+  //  XXX Chris - fix these
+  //  virtual void OnButtonPressSignal(GdkEventButton * aGdkButtonEvent);
 
 protected:
 
@@ -135,7 +152,9 @@ protected:
   PRBool mLowerLeft;
 
   GtkWidget *mShell;  /* used for toplevel windows */
-  
+  GdkSuperWin *mSuperWin;
+  GtkMozArea  *mMozArea;
+
   nsIMenuBar *mMenuBar;
 private:
   nsresult     SetIcon(GdkPixmap *window_pixmap, 

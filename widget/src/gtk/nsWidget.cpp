@@ -95,6 +95,7 @@ nsWidget::nsWidget()
 
   mGrabTime = 0;
   mWidget = nsnull;
+  mMozBox = 0;
   mParent = nsnull;
   mPreferredWidth  = 0;
   mPreferredHeight = 0;
@@ -1162,6 +1163,25 @@ void nsWidget::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint
 
   //    mLastPoint.x = event.point.x;
   //    mLastPoint.y = event.point.y;
+}
+
+void 
+nsWidget::HandleEvent(GdkEvent *event)
+{
+  switch (event->any.type)
+    {
+    case GDK_MOTION_NOTIFY:
+      OnMotionNotifySignal (&event->motion);
+      break;
+    case GDK_BUTTON_PRESS:
+      OnButtonPressSignal (&event->button);
+      break;
+    case GDK_BUTTON_RELEASE:
+      OnButtonReleaseSignal (&event->button);
+      break;
+    default:
+      break;
+    }
 }
 
 PRBool nsWidget::ConvertStatus(nsEventStatus aStatus)

@@ -63,6 +63,8 @@ nsWindow::nsWindow()
   mIsDestroyingWindow = PR_FALSE;
   mOnDestroyCalled = PR_FALSE;
   mFont = nsnull;
+  mSuperWin = 0;
+  mMozArea = 0;
   
   mMenuBar = nsnull;
   mIsTooSmall = PR_FALSE;
@@ -1142,6 +1144,225 @@ nsWindow::OnRealize(GtkWidget *aWidget)
         gdk_window_set_decorations(mShell->window, (GdkWMDecoration)wmd);
     }
   }
+}
+
+void
+nsWindow::HandleXlibExposeEvent(XEvent *event)
+{
+  nsPaintEvent pevent;
+  
+  pevent.message = NS_PAINT;
+  pevent.widget = this;
+  pevent.eventStructType = NS_PAINT_EVENT;
+  pevent.point.x = event->xexpose.x;
+  pevent.point.y = event->xexpose.y;
+  pevent.rect = new nsRect(event->xexpose.x, event->xexpose.y,
+                           event->xexpose.width, event->xexpose.height);
+  /* XXX fix this */
+  pevent.time = 0;
+  AddRef();
+  OnExpose(pevent);
+  Release();
+  delete pevent.rect;
+}
+ 
+void
+nsWindow::HandleXlibButtonEvent(XButtonEvent * aButtonEvent)
+{
+  nsMouseEvent event;
+  
+  PRUint32 eventType = 0;
+  
+  if (aButtonEvent->type == ButtonPress)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
+          break;
+        }
+    }
+  else if (aButtonEvent->type == ButtonRelease)
+    {
+      switch(aButtonEvent->button)
+        {
+        case 1:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+          
+        case 2:
+          eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
+          break;
+          
+        case 3:
+          eventType = NS_MOUSE_RIGHT_BUTTON_UP;
+          break;
+          
+        default:
+          eventType = NS_MOUSE_LEFT_BUTTON_UP;
+          break;
+        }
+    }
+  
+  event.message = eventType;
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aButtonEvent->x);
+  event.point.y = nscoord(aButtonEvent->y);
+  
+  event.isShift = aButtonEvent->state & ShiftMask;
+  event.isControl = aButtonEvent->state & ControlMask;
+  event.isAlt = aButtonEvent->state & Mod1Mask;
+  event.time = aButtonEvent->time;
+  event.clickCount = 1;
+  
+  AddRef();
+  DispatchMouseEvent(event);
+  Release();
+}
+
+void
+nsWindow::HandleXlibMotionNotifyEvent(XMotionEvent * aMotionEvent)
+{
+  nsMouseEvent event;
+  
+  event.message = NS_MOUSE_MOVE;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aMotionEvent->x);
+  event.point.y = nscoord(aMotionEvent->y);
+  
+  event.widget = this;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+void
+nsWindow::HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent)
+{
+  nsMouseEvent event;
+  
+  if (aCrossingEvent->type == EnterNotify)
+    event.message = NS_MOUSE_ENTER;
+  
+  else
+    event.message = NS_MOUSE_EXIT;
+  
+  event.widget  = this;
+  event.eventStructType = NS_MOUSE_EVENT;
+  
+  event.point.x = nscoord(aCrossingEvent->x);
+  event.point.y = nscoord(aCrossingEvent->y);
+  event.time = aCrossingEvent->time;
+  
+  AddRef();
+  
+  DispatchMouseEvent(event);
+  
+  Release();
+}
+
+
+void
+nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
+{
+  XEvent    config_event;
+
+  while (XCheckTypedWindowEvent(event->xany.display, 
+                                event->xany.window, 
+                                ConfigureNotify,
+                                &config_event) == True) {
+    // make sure that we don't get other types of events.  
+    // StructureNotifyMask includes other kinds of events, too.
+    gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+    *event = config_event;
+    // make sure that if we remove a configure event from the queue
+    // that it gets pulled out of the superwin tranlate queue,
+    // too.
+#if 0
+    g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+            event->xconfigure.window,
+            event->xconfigure.x, 
+            event->xconfigure.y,
+            event->xconfigure.width, 
+            event->xconfigure.height);
+#endif
+  }
+
+  gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+
+  nsSizeEvent sevent;
+  sevent.message = NS_SIZE;
+  sevent.widget = this;
+  sevent.eventStructType = NS_SIZE_EVENT;
+  sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
+                                  event->xconfigure.width, event->xconfigure.height);
+  sevent.point.x = event->xconfigure.x;
+  sevent.point.y = event->xconfigure.y;
+  sevent.mWinWidth = event->xconfigure.width;
+  sevent.mWinHeight = event->xconfigure.height;
+  // XXX fix this
+  sevent.time = 0;
+  AddRef();
+  OnResize(sevent);
+  Release();
+  delete sevent.windowSize;
+}
+
+// Return the GtkMozArea that is the nearest parent of this widget
+GtkWidget *
+nsWindow::GetMozArea()
+{
+  GdkWindow *parent = mSuperWin->shell_window;
+  GtkWidget *widget;
+
+  if (mMozArea == nsnull)
+    while (parent)
+      {
+        gdk_window_get_user_data (parent, (void **)&widget);
+        if (widget != nsnull && GTK_IS_MOZAREA (widget))
+          {
+            mMozArea = (GtkMozArea *)widget;
+            break;
+          }
+        parent = gdk_window_get_parent (parent);
+        parent = gdk_window_get_parent (parent);
+      }
+  
+  return (GtkWidget *)mMozArea;
+}
+
+
+/* virtual */ GdkWindow *
+nsWindow::GetRenderWindow(GtkObject * aGtkObject)
+{
+  GdkWindow * renderWindow = nsnull;
+
+  if (aGtkObject)
+  {
+    if (GDK_IS_SUPERWIN(aGtkObject))
+    {
+      renderWindow = GDK_SUPERWIN(aGtkObject)->bin_window;
+    }
+  }
+  return renderWindow;
 }
 
 //////////////////////////////////////////////////////////////////////

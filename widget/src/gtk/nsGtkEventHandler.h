@@ -20,6 +20,8 @@
 #define __nsGtkEventHandler_h
 
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+#include "gdksuperwin.h"
 
 class nsIWidget;
 class nsIMenuItem;
@@ -59,5 +61,8 @@ gint nsGtkWidget_Expose_Callback(GtkWidget *w, gpointer p);
 
 gint nsGtkWidget_Refresh_Callback(gpointer call_data);
 
+void handle_xlib_shell_event(GdkSuperWin *superwin, XEvent *event, gpointer p);
+void handle_xlib_bin_event(GdkSuperWin *superwin, XEvent *event, gpointer p);
+void handle_gdk_event (GdkEvent *event, gpointer data);
 
 #endif  // __nsGtkEventHandler.h
