@@ -412,7 +412,7 @@ void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj)
     "callback code."
     "\n";
 
-#ifdef IM_SO_SMART_THAT_I_NEVER_MAKE_MISTAKES
+#ifdef I_FOOLISHLY_WANT_TO_IGNORE_THIS_LIKE_THE_OTHER_CRAP_WE_PRINTF
     NS_WARNING(msg);
 #else
     NS_ERROR(msg);

@@ -2297,6 +2297,7 @@ public:
 
     // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
 protected:
+    XPCWrappedNative(); // not implemented
     XPCWrappedNative(nsISupports* aIdentity,
                      XPCWrappedNativeProto* aProto);
     virtual ~XPCWrappedNative();
