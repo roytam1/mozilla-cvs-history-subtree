@@ -433,7 +433,6 @@ nsXULDocument::nsXULDocument(void)
 
 nsIFastLoadService* nsXULDocument::gFastLoadService = nsnull;
 nsIFile*            nsXULDocument::gFastLoadFile = nsnull;
-PRBool              nsXULDocument::gFastLoadDone = PR_FALSE;
 nsXULDocument*      nsXULDocument::gFastLoadList = nsnull;
 
 nsXULDocument::~nsXULDocument()
@@ -4456,15 +4455,10 @@ nsXULFastLoadFileIO::GetOutputStream(nsIOutputStream** aResult)
 nsresult
 nsXULDocument::StartFastLoad()
 {
-    // Once the FastLoad process has finished, typically during app startup,
-    // it cannot restart without the app restarting.
-    if (gFastLoadDone)
-        return NS_OK;
-
-    // Use gFastLoadService to decide whether this is the first nsXULDocument
-    // participating in FastLoad.  If gFastLoadService is non-null, this doc
-    // must not have been first, but it can join the process.  Examples where
-    // multiple master documents participate include hiddenWindow.xul and
+    // Test gFastLoadList to decide whether this is the first nsXULDocument
+    // participating in FastLoad.  If gFastLoadList is non-null, this document
+    // must not be first, but it can join the FastLoad process.  Examples of
+    // multiple master documents participating include hiddenWindow.xul and
     // navigator.xul on the Mac, and multiple-app-component (e.g., mailnews
     // and browser) startup due to command-line arguments.
     //
@@ -4472,18 +4466,20 @@ nsXULDocument::StartFastLoad()
     //
     // XXXbe we do not yet use nsFastLoadPtrs, but once we do, we must keep
     // the FastLoad input stream open for the life of the app.
-    nsCOMPtr<nsIFastLoadService> fastLoadService = gFastLoadService;
-    if (fastLoadService) {
+    if (gFastLoadList) {
         mIsFastLoad = PR_TRUE;
         mNextFastLoad = gFastLoadList;
         gFastLoadList = this;
         return NS_OK;
     }
+    NS_ASSERTION(!gFastLoadService,
+                 "gFastLoadList null but gFastLoadService non-null!");
 
     // Use a local to refer to the service till we're sure we succeeded, then
     // commit to gFastLoadService.  Same for gFastLoadFile, which is used to
     // delete the FastLoad file on abort.
-    fastLoadService = do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID);
+    nsCOMPtr<nsIFastLoadService> fastLoadService =
+        do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID);
     if (! fastLoadService)
         return NS_ERROR_FAILURE;
 
@@ -4594,10 +4590,6 @@ nsXULDocument::EndFastLoad()
         docp = &doc->mNextFastLoad;
     }
 
-    // If the list is empty now, the FastLoad process is done.
-    if (!gFastLoadList)
-        gFastLoadDone = PR_TRUE;
-
     // Fetch the current input (if FastLoad file existed) or output (if we're
     // creating the FastLoad file during this app startup) stream.
     nsCOMPtr<nsIObjectInputStream> objectInput;
@@ -4615,7 +4607,7 @@ nsXULDocument::EndFastLoad()
         // available via the input stream.  In that case, when we close
         // the output stream, below, we'll update the FastLoad file header
         // and footer.
-        if (gFastLoadDone) {
+        if (! gFastLoadList) {
             gFastLoadService->SetCurrentInputStream(nsnull);
             rv = objectInput->Close();
         }
@@ -4630,10 +4622,16 @@ nsXULDocument::EndFastLoad()
         // If this is the last of one or more XUL master documents loaded
         // together at app startup, close the FastLoad service's singleton
         // output stream now.
-        if (gFastLoadDone) {
+        if (! gFastLoadList) {
             gFastLoadService->SetCurrentOutputStream(nsnull);
             rv = objectOutput->Close();
         }
+    }
+
+    // If the list is empty now, the FastLoad process is done.
+    if (! gFastLoadList) {
+        NS_RELEASE(gFastLoadService);
+        NS_RELEASE(gFastLoadFile);
     }
 
     return rv;
@@ -4648,7 +4646,6 @@ nsXULDocument::AbortFastLoads()
 #endif
     while (gFastLoadList)
         gFastLoadList->EndFastLoad();
-    NS_ASSERTION(gFastLoadDone, "not gFastLoadDone after Abort!");
 
 #ifdef DEBUG
     gFastLoadFile->MoveTo(nsnull, "Aborted.mfasl");
@@ -4718,7 +4715,9 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
         // will therefore arrange to update the file, writing new data
         // at the end while old (available) data continues to be read
         // from the pre-existing part of the file.
-        rv = gFastLoadService->StartMuxedDocument(aURI, urlspec);
+        rv = gFastLoadService->StartMuxedDocument(aURI, urlspec,
+                                                  nsIFastLoadService::NS_FASTLOAD_READ |
+                                                  nsIFastLoadService::NS_FASTLOAD_WRITE);
         if (NS_FAILED(rv) && rv != NS_ERROR_NOT_AVAILABLE)
             AbortFastLoads();
     }
@@ -5519,14 +5518,17 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
         NS_ADDREF_THIS();
     }
     else {
+        // Set mSrcLoading *before* calling NS_NewStreamLoader, in case the
+        // stream completes (probably due to an error) within the activation
+        // of NS_NewStreamLoader.
+        aScriptProto->mSrcLoading = PR_TRUE;
+
         nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
 
         // N.B., the loader will be released in OnStreamComplete
         nsIStreamLoader* loader;
         rv = NS_NewStreamLoader(&loader, aScriptProto->mSrcURI, this, nsnull, group);
         if (NS_FAILED(rv)) return rv;
-
-        aScriptProto->mSrcLoading = PR_TRUE;
     }
 
     // Block until OnStreamComplete resumes us.
@@ -5596,7 +5598,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         if (mIsFastLoad) {
             nsXPIDLCString urispec;
             uri->GetSpec(getter_Copies(urispec));
-            rv = gFastLoadService->StartMuxedDocument(uri, urispec);
+            rv = gFastLoadService->StartMuxedDocument(uri, urispec,
+                                                      nsIFastLoadService::NS_FASTLOAD_WRITE);
             NS_ASSERTION(rv != NS_ERROR_NOT_AVAILABLE, "reading FastLoad?!");
             if (NS_SUCCEEDED(rv))
                 gFastLoadService->SelectMuxedDocument(uri);

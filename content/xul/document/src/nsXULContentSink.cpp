@@ -1570,11 +1570,9 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
         //       the nsXULPrototypeDocument on down...
         nsCOMPtr<nsIFastLoadService> fastLoadService;
         nsCOMPtr<nsIObjectInputStream> objectInput;
-        if (! script->mJSObject) {
-            nsXULDocument::GetFastLoadService(getter_AddRefs(fastLoadService));
-            if (fastLoadService)
-                fastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
-        }
+        nsXULDocument::GetFastLoadService(getter_AddRefs(fastLoadService));
+        if (fastLoadService)
+            fastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
 
         if (objectInput) {
             PRBool useXULCache = PR_TRUE;
@@ -1615,14 +1613,26 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
                     nsXPIDLCString spec;
                     script->mSrcURI->GetSpec(getter_Copies(spec));
                     rv2 = fastLoadService->StartMuxedDocument(script->mSrcURI,
-                                                              spec);
+                                                              spec,
+                                                              nsIFastLoadService::NS_FASTLOAD_READ);
                     if (NS_SUCCEEDED(rv2))
                         rv2 = fastLoadService->SelectMuxedDocument(script->mSrcURI);
+                } else {
+                    // An inline script: check FastLoad multiplexing direction
+                    // and skip script->Deserialize if we're not reading from a
+                    // muxed stream to get inline objects that are contained in
+                    // the current document.
+                    PRInt32 direction;
+                    fastLoadService->GetCurrentDirection(&direction);
+                    if (direction != nsIFastLoadService::NS_FASTLOAD_READ)
+                        rv2 = NS_ERROR_NOT_AVAILABLE;
                 }
 
                 // Don't reflect errors into rv: mJSObject will be null
                 // after any error, which suffices to cause the script to
                 // be reloaded (from the src= URI, if any) and recompiled.
+                // We're better off slow-loading than bailing out due to a
+                // FastLoad error.
                 if (NS_SUCCEEDED(rv2))
                     rv2 = script->Deserialize(objectInput, scriptContext);
 
