@@ -64,18 +64,18 @@ treechildren::-moz-tree-image(FilenameColumn, file) {
 
 .up-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
-  -moz-image-region: rect(0px 20px 20px 00px);
+  -moz-image-region: rect(0px 24px 24px 0px);
   max-width: 36px;
 }
 
 .home-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
-  -moz-image-region: rect(0px 40px 20px 20px);
+  -moz-image-region: rect(0px 48px 24px 24px);
   max-width: 36px;
 }
 
 .new-dir-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
-  -moz-image-region: rect(0px, 60px, 20px, 40px);
+  -moz-image-region: rect(0px, 72px, 24x, 48px);
   max-width: 36px;
 }

@@ -61,6 +61,7 @@ classic.jar:
         skin/classic/global/console/console.css                     (console/console.css)
         skin/classic/global/console/console-error-caret.gif         (console/console-error-caret.gif)
         skin/classic/global/console/console-error-dash.gif          (console/console-error-dash.gif)
+        skin/classic/global/Filepicker.png                          (filepicker/Filepicker.png)
         skin/classic/global/icons/Close.gif                         (icons/Close.gif)
         skin/classic/global/icons/close-button.gif                  (icons/close-button.gif)
         skin/classic/global/icons/Error.png                         (icons/Error.png)
