@@ -53,6 +53,7 @@ public:
 									nsnull, nsnull);
 		mCount = 0;	
 	};
+
 	~nsUnicodeFontMappingCache() 
 	{
 		if (mTable)
@@ -68,6 +69,7 @@ public:
 		*item = (nsUnicodeFontMappingMac*)PL_HashTableLookup(mTable, &key);
 		return nsnull != (*item);
 	};
+
 	inline void	Set(const nsString& key, nsUnicodeFontMappingMac *item)
 	{
 		nsString *newKey = new nsString(key);
@@ -79,19 +81,23 @@ public:
 	};
 
 private:
+
 	inline static PR_CALLBACK PLHashNumber HashKey(const void *aKey)
 	{
     nsString* key = (nsString*)aKey;
 		return nsCRT::HashCode(key->get());
 	};
+	
 	inline static PR_CALLBACK PRIntn		CompareKeys(const void *v1, const void *v2)
 	{
-		return ((nsString *)v1) -> Equals(* ((nsString *)v2));
+		return ((nsString *)v1)->Equals(* ((nsString *)v2));
 	};
+	
 	inline static PR_CALLBACK PRIntn		CompareValues(const void *v1, const void *v2)
 	{
-		return ((nsUnicodeFontMappingMac*)v1) -> Equals(* ((nsUnicodeFontMappingMac*)v2));
+		return ((nsUnicodeFontMappingMac*)v1)->Equals(* ((nsUnicodeFontMappingMac*)v2));
 	};
+	
 	inline static PR_CALLBACK PRIntn		FreeHashEntries(PLHashEntry *he, PRIntn italic, void *arg)
 	{
 		delete (nsString*)he->key;

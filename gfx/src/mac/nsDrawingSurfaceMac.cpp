@@ -52,17 +52,19 @@ static NS_DEFINE_IID(kIDrawingSurfaceMacIID, NS_IDRAWING_SURFACE_MAC_IID);
  * @return error status
  */
 nsDrawingSurfaceMac::nsDrawingSurfaceMac()
+: mPort(nsnull)
+, mGS(nsnull)
+, mWidth(0)
+, mHeight(0)
+, mLockOffset(0)
+, mLockHeight(0)
+, mLockFlags(0)
+, mIsOffscreen(PR_FALSE)
+, mIsLocked(PR_FALSE)
 {
   NS_INIT_REFCNT();
 
-  mPort = NULL;
-	mGS = sGraphicStatePool.GetNewGS();	//new nsGraphicState();
-  mWidth = mHeight = 0;
-  mLockOffset = mLockHeight = 0;
-  mLockFlags = 0;
-	mIsOffscreen = PR_FALSE;
-	mIsLocked = PR_FALSE;
-
+	mGS = sGraphicStatePool.GetNewGS();
 }
 
 /** --------------------------------------------------- 
@@ -72,7 +74,7 @@ nsDrawingSurfaceMac::nsDrawingSurfaceMac()
  */
 nsDrawingSurfaceMac::~nsDrawingSurfaceMac()
 {
-	if(mIsOffscreen && mPort){
+	if (mIsOffscreen && mPort) {
   	GWorldPtr offscreenGWorld = (GWorldPtr)mPort;
 		::UnlockPixels(::GetGWorldPixMap(offscreenGWorld));
 		::DisposeGWorld(offscreenGWorld);
@@ -80,9 +82,10 @@ nsDrawingSurfaceMac::~nsDrawingSurfaceMac()
 		nsGraphicsUtils::SetPortToKnownGoodPort();
 	}
 
-	if (mGS){
+	if (mGS) {
 		sGraphicStatePool.ReleaseGS(mGS); //delete mGS;
 	}
+
 }
 
 /** --------------------------------------------------- 
@@ -222,7 +225,6 @@ NS_IMETHODIMP nsDrawingSurfaceMac::Init(nsDrawingSurface	aDS)
 	nsDrawingSurfaceMac* surface = static_cast<nsDrawingSurfaceMac*>(aDS);
 	surface->GetGrafPtr(&mPort);
 	mGS->Init(surface);
-	
   return NS_OK;
 }
 

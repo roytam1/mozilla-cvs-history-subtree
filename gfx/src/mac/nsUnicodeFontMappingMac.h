@@ -44,19 +44,25 @@
 #include "nsFont.h"
  
 class nsUnicodeMappingUtil;
-class nsUnicodeFontMappingCache;
 
-class nsUnicodeFontMappingMac {
+class nsUnicodeFontMappingMac
+{
 public:
+
    nsUnicodeFontMappingMac(nsFont* aFont, nsIDeviceContext *aDeviceContext, 
    		const nsString& aLangGroup, const nsString& aLANG);
+
    short GetFontID(PRUnichar aChar);
-   inline const short *GetScriptFallbackFonts() {
+
+   inline const short *GetScriptFallbackFonts()
+   {
    		return mScriptFallbackFontIDs;
    }
+
    PRBool Equals(const nsUnicodeFontMappingMac& anther);
    
 protected:
+
    PRBool ScriptMapInitComplete();
    void InitByFontFamily(nsFont* aFont, nsIDeviceContext *aDeviceContext);
    void InitByLANG(const nsString& aLANG);
@@ -64,6 +70,7 @@ protected:
    void InitDefaultScriptFonts();
    void processOneLangRegion(const char* aLanguage, const char* aRegion );
    nsUnicodeBlock GetBlock(PRUnichar aChar);
+
 private:
    
    PRInt8 mPrivBlockToScript [kUnicodeBlockVarScriptMax] ;

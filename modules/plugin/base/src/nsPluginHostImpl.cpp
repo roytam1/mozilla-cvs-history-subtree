@@ -863,6 +863,7 @@ nsPluginTag::nsPluginTag(nsPluginTag* aPluginTag)
   mXPConnected = PR_FALSE;
   mFileName = new_str(aPluginTag->mFileName);
   mFullPath = new_str(aPluginTag->mFullPath);
+  printf("mFullPath = %s\n", mFullPath);
 }
 
 
@@ -3828,7 +3829,7 @@ NS_IMETHODIMP nsPluginHostImpl::SetUpPluginInstance(const char *aMimeType,
     isJavaPlugin = PR_TRUE;
   }
 
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if (defined(XP_UNIX) && !defined(XP_MACOSX)) || defined(XP_OS2)
   // This is a work-around on Unix for a LiveConnect problem (bug 83698).
   // The problem:
   // The proxy JNI needs to be created by the browser. If it is created by
@@ -4435,7 +4436,7 @@ NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugi
 
     if (nsnull == pluginTag->mLibrary)  // if we haven't done this yet
     {
-#ifndef XP_MAC
+#if 0 /* !defined(XP_MAC) */
       nsFileSpec file(pluginTag->mFileName);
 #else
       if (nsnull == pluginTag->mFullPath)
@@ -4918,6 +4919,8 @@ nsresult nsPluginHostImpl::FindPlugins(PRBool aCreatePluginList, PRBool * aPlugi
   if (aCreatePluginList)
   NS_TIMELINE_START_TIMER("LoadPlugins");
 
+  printf("nsPluginHostImpl::FindPlugins here.\n");
+
 #ifdef CALL_SAFETY_ON
   // check preferences on whether or not we want to try safe calls to plugins
   NS_INIT_PLUGIN_SAFE_CALLS;
@@ -4980,6 +4983,7 @@ nsresult nsPluginHostImpl::FindPlugins(PRBool aCreatePluginList, PRBool * aPlugi
   // 1. Scan the app-defined list of plugin dirs.
   rv = dirService->Get(NS_APP_PLUGINS_DIR_LIST, NS_GET_IID(nsISimpleEnumerator), getter_AddRefs(dirList));
   if (NS_SUCCEEDED(rv)) {
+    printf("scanning plugins directory list.\n");
     ScanPluginsDirectoryList(dirList, compManager, layoutPath, aCreatePluginList, &pluginschanged);
 
     if (pluginschanged)

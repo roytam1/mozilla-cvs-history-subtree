@@ -43,7 +43,7 @@
 
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#include "jni.h"
+#include <jni.h>
 
 #define NS_ILIVECONNECT_IID                          \
 { /* 68190910-3318-11d2-97f0-00805f8a28d0 */         \

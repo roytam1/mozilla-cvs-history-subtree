@@ -36,13 +36,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 #include <Script.h>
-#include "nsDeviceContextMac.h"
+
 #include "plhash.h"
 #include "nsCRT.h"
+
+#include "nsDeviceContextMac.h"
+#include "nsFontEnumerator.h"
 
 #include "nsUnicodeFontMappingMac.h"
 #include "nsUnicodeFontMappingCache.h"
 #include "nsUnicodeMappingUtil.h"
+
+
 #define BAD_FONT_NUM	-1
 #define BAD_SCRIPT 0x7f
 
@@ -53,8 +58,10 @@ static void FillVarBlockToScript( PRInt8 script, PRInt8 *aMap)
 {
 	if(BAD_SCRIPT == aMap[kBasicLatin - kUnicodeBlockFixedScriptMax])
 		aMap[kBasicLatin - kUnicodeBlockFixedScriptMax] = script;
+
 	if(BAD_SCRIPT == aMap[kOthers - kUnicodeBlockFixedScriptMax])
 		aMap[kOthers - kUnicodeBlockFixedScriptMax] = script;
+
 	switch( script )
 	{
 		case smRoman: 
@@ -96,21 +103,23 @@ struct MyFontEnumData {
 static PRBool FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *aData)
 {
   MyFontEnumData* data = (MyFontEnumData*)aData;
-  nsUnicodeMappingUtil * info = nsUnicodeMappingUtil::GetSingleton();
-  NS_PRECONDITION(info != nsnull, "out of memory");
+
+
   if (aGeneric)
   {
-  	if(nsnull == info)
-  		return PR_FALSE;
-    nsGenericFontNameType type = info->MapGenericFontNameType(aFamily);
+    nsGenericFontNameType type = nsUnicodeMappingUtil::MapGenericFontNameType(aFamily);
 
-	if( type != kUknownGenericFontName) {
-	    for(ScriptCode script = 0; script < 32 ; script++)
+  	if( type != kUknownGenericFontName)
+  	{
+      nsUnicodeMappingUtil* unicodeMappingUtil = nsUnicodeMappingUtil::GetSingleton();
+
+  	  for (ScriptCode script = 0; script < 32 ; script++)
+  		{
+  			const nsString* fontName = unicodeMappingUtil->GenericFontNameForScript(script,type);
+  			if (nsnull != fontName)
 		{
-			const nsString* fontName =  info->GenericFontNameForScript(script,type);
-			if(nsnull != fontName) {
 			    short fontNum;
-				nsDeviceContextMac::GetMacFontNumber(*fontName, fontNum);
+  				nsFontEnumeratorMac::GetMacFontID(*fontName, fontNum);
 					
 				if((0 != fontNum) && (BAD_FONT_NUM == data->mFont[ script ])) 
 					data->mFont[ script ] = fontNum;
@@ -127,7 +136,7 @@ static PRBool FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *a
     if (aliased || (NS_OK == data->mContext->CheckFontExistence(realFace)))
     {
 	    short fontNum;
-		nsDeviceContextMac::GetMacFontNumber(realFace, fontNum);
+  		nsFontEnumeratorMac::GetMacFontID(realFace, fontNum);
 		
 		if(0 != fontNum) {
 			ScriptCode script = ::FontToScript(fontNum);
@@ -139,6 +148,7 @@ static PRBool FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *a
   }
   return PR_TRUE;
 }
+
 //--------------------------------------------------------------------------
 nsUnicodeMappingUtil *nsUnicodeFontMappingMac::gUtil = nsnull;
 
@@ -149,6 +159,7 @@ void nsUnicodeFontMappingMac::InitByFontFamily(nsFont* aFont, nsIDeviceContext *
    	MyFontEnumData fontData(aDeviceContext, mPrivBlockToScript, mScriptFallbackFontIDs);
   	aFont->EnumerateFamilies(FontEnumCallback, &fontData);
 }
+
 //--------------------------------------------------------------------------
 
 void nsUnicodeFontMappingMac::processOneLangRegion(const char* aLanguage, const char* aRegion )
@@ -172,6 +183,7 @@ void nsUnicodeFontMappingMac::processOneLangRegion(const char* aLanguage, const 
 		FillVarBlockToScript(smJapanese, mPrivBlockToScript);
 	}
 }
+
 //--------------------------------------------------------------------------
 PRBool nsUnicodeFontMappingMac::ScriptMapInitComplete()
 {
@@ -350,7 +362,7 @@ short nsUnicodeFontMappingMac::GetFontID(PRUnichar aChar) {
 }
 
 //------------------------------------------------------------------------
-static nsUnicodeBlock gU0xxxMap[32]=
+static const nsUnicodeBlock gU0xxxMap[32]=
 {
  kBasicLatin, kLatin,    // U+0000
  kLatin,      kLatin,    // U+0100
@@ -472,7 +484,7 @@ static nsUnicodeBlock GetBlockUFXXX(PRUnichar aChar)
 //--------------------------------------------------------------------------
 
 typedef nsUnicodeBlock (* getUnicodeBlock)(PRUnichar aChar);
-static getUnicodeBlock gAllGetBlock[16] = 
+static const getUnicodeBlock gAllGetBlock[16] = 
 {
   &GetBlockU0XXX,          // 0
   &GetBlockU1XXX,          // 1

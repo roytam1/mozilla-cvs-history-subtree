@@ -37,6 +37,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include <Gestalt.h>
+#include <Appearance.h>
+#include <TextEncodingConverter.h>
+#include <TextCommon.h>
+#include <StringCompare.h>
+#include <Fonts.h>
+#include <Resources.h>
+#include <MacWindows.h>
+#include <FixMath.h>
+
+#include "nsFontEnumerator.h"
 #include "nsDeviceContextMac.h"
 #include "nsRenderingContextMac.h"
 #if TARGET_CARBON
@@ -48,15 +59,7 @@
 #include "nsString.h"
 #include "nsHashtable.h"
 #include "nsFont.h"
-#include <Gestalt.h>
-#include <Appearance.h>
-#include <TextEncodingConverter.h>
-#include <TextCommon.h>
-#include <StringCompare.h>
-#include <Fonts.h>
-#include <Resources.h>
-#include <MacWindows.h>
-#include <FixMath.h>
+
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsQuickSort.h"
@@ -362,6 +365,7 @@ NS_IMETHODIMP nsDeviceContextMac :: GetSystemFont(nsSystemFontID aID, nsFont *aF
         }
         if (err == noErr)
         {
+#warning factor
            err = ::TECCreateConverter(&converter, fontEncoding, unicodeEncoding);
            if (err == noErr)
            {
@@ -468,9 +472,9 @@ NS_IMETHODIMP nsDeviceContextMac :: ConvertPixel(nscolor aColor, PRUint32 & aPix
 NS_IMETHODIMP nsDeviceContextMac :: CheckFontExistence(const nsString& aFontName)
 {
   	short fontNum;
-	if (GetMacFontNumber(aFontName, fontNum))
+  if (nsFontEnumeratorMac::GetMacFontID(aFontName, fontNum))
 		return NS_OK;
-	else
+
 		return NS_ERROR_FAILURE;
 }
 
@@ -806,178 +810,6 @@ NS_IMETHODIMP nsDeviceContextMac::EndPage(void)
 #pragma mark -
 
 //------------------------------------------------------------------------
-
-nsHashtable* nsDeviceContextMac :: gFontInfoList = nsnull;
-
-class FontNameKey : public nsHashKey
-{
-public:
-  FontNameKey(const nsString& aString);
-
-  virtual PRUint32 HashCode(void) const;
-  virtual PRBool Equals(const nsHashKey *aKey) const;
-  virtual nsHashKey *Clone(void) const;
-
-  nsAutoString  mString;
-};
-
-FontNameKey::FontNameKey(const nsString& aString)
-{
-	mString.Assign(aString);
-}
-
-PRUint32 FontNameKey::HashCode(void) const
-{
-  nsString str;
-  ToLowerCase(mString, str);
-  return nsCRT::HashCode(str.get());
-}
-
-PRBool FontNameKey::Equals(const nsHashKey *aKey) const
-{
-  return mString.Equals(((FontNameKey*)aKey)->mString,
-                        nsCaseInsensitiveStringComparator());
-}
-
-nsHashKey* FontNameKey::Clone(void) const
-{
-  return new FontNameKey(mString);
-}
-
-#pragma mark -
-
-/** ---------------------------------------------------
- *  See documentation in nsIDeviceContext.h
- *	@update 12/9/98 dwc
- */
-void nsDeviceContextMac :: InitFontInfoList()
-{
-
-	OSStatus err;
-	if (!gFontInfoList) 
-	{
-		gFontInfoList = new nsHashtable();
-		if (!gFontInfoList)
-			return;
-
-#if TARGET_CARBON
-        // use the new Font Manager enumeration API.
-        FMFontFamilyIterator iter;
-        err = FMCreateFontFamilyIterator(NULL, NULL, kFMDefaultOptions, &iter);
-        if (err != noErr)
-            return;
-        
-		TextEncoding unicodeEncoding = ::CreateTextEncoding(kTextEncodingUnicodeDefault, 
-															kTextEncodingDefaultVariant,
-													 		kTextEncodingDefaultFormat);
-        // enumerate all fonts.
-        TECObjectRef converter = 0;
-        TextEncoding oldFontEncoding = 0;
-        FMFontFamily fontFamily;
-        while (FMGetNextFontFamily(&iter, &fontFamily) == noErr) {
-            Str255 fontName;
-            err = ::FMGetFontFamilyName(fontFamily, fontName);
-            if (err != noErr || fontName[0] == 0 || fontName[1] == '.' || fontName[1] == '%')
-                continue;
-            TextEncoding fontEncoding;
-            err = ::FMGetFontFamilyTextEncoding(fontFamily, &fontEncoding);
-            if (oldFontEncoding != fontEncoding) {
-                oldFontEncoding = fontEncoding;
-                if (converter)
-                    err = ::TECDisposeConverter(converter);
-                err = ::TECCreateConverter(&converter, fontEncoding, unicodeEncoding);
-                if (err != noErr)
-                    continue;
-            }
-            // convert font name to UNICODE.
-			PRUnichar unicodeFontName[sizeof(fontName)];
-			ByteCount actualInputLength, actualOutputLength;
-			err = ::TECConvertText(converter, &fontName[1], fontName[0], &actualInputLength, 
-										(TextPtr)unicodeFontName , sizeof(unicodeFontName), &actualOutputLength);	
-			unicodeFontName[actualOutputLength / sizeof(PRUnichar)] = '\0';
-
-			nsAutoString temp(unicodeFontName);
-    		FontNameKey key(temp);
-			gFontInfoList->Put(&key, (void*)fontFamily);
-        }
-        if (converter)
-            err = ::TECDisposeConverter(converter);
-        err = FMDisposeFontFamilyIterator(&iter);
-#else
-		short numFONDs = ::CountResources('FOND');
-		TextEncoding unicodeEncoding = ::CreateTextEncoding(kTextEncodingUnicodeDefault, 
-															kTextEncodingDefaultVariant,
-													 		kTextEncodingDefaultFormat);
-		TECObjectRef converter = nil;
-		ScriptCode lastscript = smUninterp;
-		for (short i = 1; i <= numFONDs ; i++)
-		{
-			Handle fond = ::GetIndResource('FOND', i);
-			if (fond)
-			{
-				short	fondID;
-				OSType	resType;
-				Str255	fontName;
-				::GetResInfo(fond, &fondID, &resType, fontName); 
-				if( (0 != fontName[0]) && ('.' != fontName[1]) && ('%' != fontName[1]))
-				{
-					ScriptCode script = ::FontToScript(fondID);
-					if (script != lastscript)
-					{
-						lastscript = script;
-
-						TextEncoding sourceEncoding;
-						err = ::UpgradeScriptInfoToTextEncoding(script, kTextLanguageDontCare, 
-									kTextRegionDontCare, NULL, &sourceEncoding);
-								
-						if (converter)
-							err = ::TECDisposeConverter(converter);
-
-						err = ::TECCreateConverter(&converter, sourceEncoding, unicodeEncoding);
-						if (err != noErr)
-							converter = nil;
-					}
-
-					if (converter)
-					{
-						PRUnichar unicodeFontName[sizeof(fontName)];
-						ByteCount actualInputLength, actualOutputLength;
-						err = ::TECConvertText(converter, &fontName[1], fontName[0], &actualInputLength, 
-													(TextPtr)unicodeFontName , sizeof(unicodeFontName), &actualOutputLength);	
-						unicodeFontName[actualOutputLength / sizeof(PRUnichar)] = '\0';
-						nsAutoString fontNameString(unicodeFontName);
-
-		        		FontNameKey key(fontNameString);
-						gFontInfoList->Put(&key, (void*)fondID);
-					}
-					::ReleaseResource(fond);
-				}
-			}
-		}
-		if (converter)
-			err = ::TECDisposeConverter(converter);				
-#endif /* !TARGET_CARBON */
-	}
-}
-
-
-
-/** ---------------------------------------------------
- *  See documentation in nsIDeviceContext.h
- *	@update 12/9/98 dwc
- */
-bool nsDeviceContextMac :: GetMacFontNumber(const nsString& aFontName, short &aFontNum)
-{
-	//¥TODO?: Maybe we shouldn't call that function so often. If nsFont could store the
-	//				fontNum, nsFontMetricsMac::SetFont() wouldn't need to call this at all.
-	InitFontInfoList();
-    FontNameKey key(aFontName);
-	aFontNum = (short)gFontInfoList->Get(&key);
-	return (aFontNum != 0) && (kFontIDSymbol != aFontNum);
-}
-
-
-//------------------------------------------------------------------------
 // Override to tweak font settings
 nsresult nsDeviceContextMac::CreateFontAliasTable()
 {
@@ -1054,228 +886,4 @@ PRUint32 nsDeviceContextMac::GetScreenResolution()
 PRBool nsDeviceContextMac::HaveFontManager90()
 {
   return (kUnresolvedCFragSymbolAddress != (UInt32) FMGetFontFamilyFromName);
-}
-
-
-#pragma mark -
-//------------------------------------------------------------------------
-nsFontEnumeratorMac::nsFontEnumeratorMac()
-{
-  NS_INIT_REFCNT();
-}
-
-NS_IMPL_ISUPPORTS1(nsFontEnumeratorMac, nsIFontEnumerator)
-
-typedef struct EnumerateFamilyInfo
-{
-  PRUnichar** mArray;
-  int         mIndex;
-} EnumerateFamilyInfo;
-
-typedef struct EnumerateFontInfo
-{
-  PRUnichar** mArray;
-  int         mIndex;
-  int         mCount;
-  ScriptCode	mScript;
-  nsGenericFontNameType mType;
-} EnumerateFontInfo;
-
-
-
-static int
-CompareFontNames(const void* aArg1, const void* aArg2, void* aClosure)
-{
-  const PRUnichar* str1 = *((const PRUnichar**) aArg1);
-  const PRUnichar* str2 = *((const PRUnichar**) aArg2);
-
-  // XXX add nsICollation stuff
-
-  return nsCRT::strcmp(str1, str2);
-}
-static PRBool
-EnumerateFamily(nsHashKey *aKey, void *aData, void* closure)
-
-{
-  EnumerateFamilyInfo* info = (EnumerateFamilyInfo*) closure;
-  PRUnichar** array = info->mArray;
-  int j = info->mIndex;
-  
-  
-  PRUnichar* str = ToNewUnicode(((FontNameKey*)aKey)->mString);
-  if (!str) {
-    for (j = j - 1; j >= 0; j--) {
-      nsMemory::Free(array[j]);
-    }
-    info->mIndex = 0;
-    return PR_FALSE;
-  }
-  array[j] = str;
-  info->mIndex++;
-
-  return PR_TRUE;
-}
-
-NS_IMETHODIMP
-nsFontEnumeratorMac::EnumerateAllFonts(PRUint32* aCount, PRUnichar*** aResult)
-{
-  if (aCount) {
-    *aCount = 0;
-  }
-  else {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aResult) {
-    *aResult = nsnull;
-  }
-  else {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-	nsDeviceContextMac::InitFontInfoList();
-	nsHashtable* list = nsDeviceContextMac::gFontInfoList;
-	if(!list) {
-		return NS_ERROR_FAILURE;
-	}
-	PRInt32 items = list->Count();
-  PRUnichar** array = (PRUnichar**)
-    nsMemory::Alloc(items * sizeof(PRUnichar*));
-  if (!array) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  EnumerateFamilyInfo info = { array, 0 };
-  list->Enumerate ( EnumerateFamily, &info);
-  NS_ASSERTION( items == info.mIndex, "didn't get all the fonts");
-  if (!info.mIndex) {
-    nsMemory::Free(array);
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  NS_QuickSort(array, info.mIndex, sizeof(PRUnichar*),
-    CompareFontNames, nsnull);
-
-  *aCount = info.mIndex;
-  *aResult = array;
-
-  return NS_OK;
-}
-
-static PRBool
-EnumerateFont(nsHashKey *aKey, void *aData, void* closure)
-
-{
-  EnumerateFontInfo* info = (EnumerateFontInfo*) closure;
-  PRUnichar** array = info->mArray;
-  int j = info->mCount;
-  PRBool match = PR_FALSE;
-#if TARGET_CARBON
-  // we need to match the cast of FMFontFamily in nsDeviceContextMac :: InitFontInfoList()
-  FMFontFamily fontFamily = (FMFontFamily) aData;
-  TextEncoding fontEncoding;
-  OSStatus status = ::FMGetFontFamilyTextEncoding(fontFamily, &fontEncoding);
-  if (noErr == status) {
-    ScriptCode script;
-    status = ::RevertTextEncodingToScriptInfo(fontEncoding, &script, nsnull, nsnull);
-    match = ((noErr == status) && (script == info->mScript));
-  }
-#else
-  short	fondID = (short) aData;
-  ScriptCode script = ::FontToScript(fondID);
-	match = (script == info->mScript) ;
-#endif
-  if (match) {
-	  PRUnichar* str = ToNewUnicode(((FontNameKey*)aKey)->mString);
-	  if (!str) {
-	    for (j = j - 1; j >= 0; j--) {
-	      nsMemory::Free(array[j]);
-	    }
-	    info->mIndex = 0;
-	    return PR_FALSE;
-	  }
-	  array[j] = str;
-	  info->mCount++;
-	}
-	info->mIndex++;
-  return PR_TRUE;
-}
-NS_IMETHODIMP
-nsFontEnumeratorMac::EnumerateFonts(const char* aLangGroup,
-  const char* aGeneric, PRUint32* aCount, PRUnichar*** aResult)
-{
-  if ((! aLangGroup) ||( !aGeneric ))
-  	return NS_ERROR_NULL_POINTER;
-  	
-  if (aCount) {
-    *aCount = 0;
-  }
-  else {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aResult) {
-    *aResult = nsnull;
-  }
-  else {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  if ((!strcmp(aLangGroup, "x-unicode")) ||
-      (!strcmp(aLangGroup, "x-user-def"))) {
-    return EnumerateAllFonts(aCount, aResult);
-  }
-
-	nsDeviceContextMac::InitFontInfoList();
-	nsHashtable* list = nsDeviceContextMac::gFontInfoList;
-	if(!list) {
-		return NS_ERROR_FAILURE;
-	}
-	PRInt32 items = list->Count();
-  PRUnichar** array = (PRUnichar**)
-    nsMemory::Alloc(items * sizeof(PRUnichar*));
-  if (!array) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  nsUnicodeMappingUtil* gUtil = nsUnicodeMappingUtil::GetSingleton();
-	if(!gUtil) {
-		return NS_ERROR_FAILURE;
-	}
-  
-  nsAutoString GenName; GenName.AssignWithConversion(aGeneric);
-  EnumerateFontInfo info = { array, 0 , 0, gUtil->MapLangGroupToScriptCode(aLangGroup) ,gUtil->MapGenericFontNameType(GenName) };
-  list->Enumerate ( EnumerateFont, &info);
-  if (!info.mIndex) {
-    nsMemory::Free(array);
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  NS_QuickSort(array, info.mCount, sizeof(PRUnichar*),
-    CompareFontNames, nsnull);
-
-  *aCount = info.mCount;
-  *aResult = array;
-
-  return NS_OK;
-}
-NS_IMETHODIMP
-nsFontEnumeratorMac::HaveFontFor(const char* aLangGroup,PRBool* aResult)
-{
-  NS_ENSURE_ARG_POINTER(aLangGroup);
-  NS_ENSURE_ARG_POINTER(aResult);
-  *aResult = PR_FALSE;
-  PRUint32 count;
-  PRUnichar **ptr;
-  nsresult res = EnumerateFonts(aLangGroup, "", &count, &ptr);
-  NS_ENSURE_SUCCESS(res, res);
-  *aResult = (count > 0);
-  PRUint32 i;
-  for(i = 0 ; i < count; i++)
-  	nsMemory::Free(ptr[i]);
-  nsMemory::Free(ptr);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFontEnumeratorMac::UpdateFontList(PRBool *updateFontList)
-{
-  *updateFontList = PR_FALSE; // always return false for now
-  return NS_OK;
 }

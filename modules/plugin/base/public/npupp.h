@@ -1127,7 +1127,7 @@ typedef struct _NPNetscapeFuncs {
 #endif
 
 
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
 /******************************************************************************************
  * Mac platform-specific plugin glue stuff
  *******************************************************************************************/

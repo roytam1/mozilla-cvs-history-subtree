@@ -184,6 +184,7 @@ protected:
      * instance and the browser.
      */
     NPP_t fNPP;
+    nsPluginWindow* mWindow;
 
     //these are used to store the windowless properties
     //which the browser will later query

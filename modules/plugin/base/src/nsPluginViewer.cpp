@@ -408,9 +408,9 @@ PluginViewerImpl::CreatePlugin(nsIRequest* request, nsIPluginHost* aHost, const 
     win->clipRect.left = aBounds.x;
     win->clipRect.bottom = aBounds.YMost();
     win->clipRect.right = aBounds.XMost();
-  #ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
     win->ws_info = nsnull;   //XXX need to figure out what this is. MMP
-  #endif
+#endif
 
     nsIURI* uri;
     rv = mChannel->GetURI(&uri);

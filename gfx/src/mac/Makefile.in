@@ -47,24 +47,30 @@ REQUIRES    = xpcom \
         content \
         layout \
         locale \
+        dom \
         $(NULL)
 
 CPPSRCS = \
         nsATSUIUtils.cpp \
+        nsATSUStyleCache.cpp \
         nsDeviceContextMac.cpp \
         nsDeviceContextSpecFactoryM.cpp \
         nsDeviceContextSpecX.cpp \
         nsDrawingSurfaceMac.cpp \
+        nsFontEnumerator.cpp \
         nsFontMetricsMac.cpp \
         nsGfxFactoryMac.cpp \
         nsGraphicState.cpp \
         nsImageMac.cpp \
         nsRegionMac.cpp \
         nsRenderingContextMac.cpp \
+        nsMacTextRenderer.cpp \
         nsMacUnicodeFontInfo.cpp \
+        nsQuickDrawTextRenderer.cpp \
         nsUnicodeFontMappingMac.cpp \
         nsUnicodeMappingUtil.cpp \
         nsUnicodeRenderingToolkit.cpp \
+        nsUnicodeTextRenderer.cpp \
         nsScreenMac.cpp \
         nsScreenManagerMac.cpp \
         nsPrintOptionsX.cpp \

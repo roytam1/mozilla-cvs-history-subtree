@@ -59,7 +59,7 @@ pref("backups.number_of_prefs_copies", 1);
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
+pref("browser.startup.homepage",	   "about:blank");
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.1", true);
 pref("browser.startup.autoload_homepage",   true);
@@ -228,7 +228,7 @@ pref("print.print_headerright", "&U");
 pref("print.print_footerleft", "&PT");
 pref("print.print_footercenter", "");
 pref("print.print_footerright", "&D");
-pref("print.show_print_progress", true);
+pref("print.show_print_progress", false);
 
 // When this is set to false it means each window has its PrintSettings
 // and a change in one browser window does not effect the others
@@ -707,3 +707,11 @@ pref("plugin.override_internal_types", false);
 // if true, enable XSLT (if installed)
 pref("xslt.enabled", true);
 
+pref("font.name.serif.x-western", "Lucida Grande");
+pref("font.name.sans-serif.x-western", "Lucida Grande");
+pref("font.size.variable.x-western", 15);
+pref("font.size.fixed.x-western", 12);
+pref("font.minimum-size.x-western", 10);
+pref("nglayout.mac.renderingmode", 1);
+pref("browser.toolbars.showBookmarksToolbar", true);
+pref("nglayout.initialpaint.delay", 250);

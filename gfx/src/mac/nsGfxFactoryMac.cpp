@@ -61,6 +61,7 @@
 #include "nsBlender.h"
 #include "nsCOMPtr.h"
 #include "nsPrintOptionsMac.h"
+#include "nsFontEnumerator.h"
 #include "nsUnicodeMappingUtil.h"
 
 #include "nsIGenericFactory.h"
@@ -184,5 +185,7 @@ nsGfxMacModuleDtor(nsIModule *self)
 }
 
 NS_IMPL_NSGETMODULE_WITH_DTOR(nsGfxMacModule, components, nsGfxMacModuleDtor)
+
+
 
 

@@ -104,27 +104,17 @@ protected:
   nsCOMPtr<nsIScreen> mPrimaryScreen;         // cache the screen for single-monitor systems
   
 public:
-  // InitFontInfoList and nsHashTable are static because GetMacFontNumber is static
-  static void InitFontInfoList();
-  static nsHashtable* gFontInfoList;
-public:
-  static bool GetMacFontNumber(const nsString& aFontName, short &fontNum);
 
 private:
+
 	static PRUint32		mPixelsPerInch;
 	static PRUint32   sNumberOfScreens;       // how many screens we have.
+
 public:
+
 	static PRUint32		GetScreenResolution();
 	static PRBool     HaveFontManager90();
 };
 
-
-class nsFontEnumeratorMac : public nsIFontEnumerator
-{
-public:
-  nsFontEnumeratorMac();
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIFONTENUMERATOR
-};
 
 #endif /* nsDeviceContextMac_h___ */

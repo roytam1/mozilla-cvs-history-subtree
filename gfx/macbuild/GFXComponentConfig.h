@@ -21,6 +21,6 @@
  */
 
 #if TARGET_CARBON
-// we can't use the carbon printing session APIs
+// we can't use the carbon printing session APIs yet (although we should)
 #define PM_USE_SESSION_APIS 0
 #endif

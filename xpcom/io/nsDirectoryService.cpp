@@ -42,15 +42,14 @@
 #include "nsLocalFile.h"
 #include "nsDebug.h"
 
+#include <CoreServices/CoreServices.h>
+
 #if defined(XP_MAC)
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
 #include <Processes.h>
 #include <Gestalt.h>
-#ifdef XP_MACOSX
-#include "prenv.h"
-#endif
 #elif defined(XP_WIN)
 #include <windows.h>
 #include <shlobj.h>
@@ -61,6 +60,13 @@
 #include <stdlib.h>
 #include <sys/param.h>
 #include "prenv.h"
+#ifdef XP_MACOSX
+#include <Folders.h>
+#include <Files.h>
+#include <Memory.h>
+#include <Processes.h>
+#include <Gestalt.h>
+#endif
 #elif defined(XP_OS2)
 #define MAX_PATH _MAX_PATH
 #elif defined(XP_BEOS)
@@ -1115,7 +1121,7 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
 	return rv;
 }
 
-#if defined (XP_MAC)
+#if defined (XP_MAC) || defined (XP_MACOSX)
 
 struct FindFolderParms
 {
@@ -1157,6 +1163,23 @@ class nsSystemDirEnumeratorMac : public nsISimpleEnumerator
         long foundDirID;
         FSSpec fileSpec;
 
+#ifdef TARGET_CARBON
+        FSRef foundRef;
+        const FindFolderParms *currentFolder = mFolderList + mCurrentIndex++;
+        err = ::FSFindFolder(currentFolder->vRefNumOrDomain,
+                             currentFolder->folderType,
+                             kDontCreateFolder, &foundRef);
+        if (err != noErr)
+            return NS_ERROR_FAILURE;
+        UInt8 path[512];
+        ::FSRefMakePath(&foundRef, path, sizeof(path));
+        nsCOMPtr<nsILocalFile> localFile;
+        nsDependentCString pathStr((char*)path);
+        NS_NewLocalFile(NS_ConvertUTF8toUCS2(pathStr), PR_TRUE, getter_AddRefs(localFile));
+        *result = localFile;
+        NS_IF_ADDREF(*result);
+        return NS_OK;
+#else
         const FindFolderParms *currentFolder = mFolderList + mCurrentIndex++;
         err = ::FindFolder(currentFolder->vRefNumOrDomain,
                            currentFolder->folderType,
@@ -1165,16 +1188,7 @@ class nsSystemDirEnumeratorMac : public nsISimpleEnumerator
             err = ::FSMakeFSSpec(foundVRefNum, foundDirID, "\p", &fileSpec);
         if (err != noErr)
             return NS_ERROR_FAILURE;
-                
-        nsCOMPtr<nsILocalFileMac> newFile;
-        nsresult rv = NS_NewLocalFileWithFSSpec(&fileSpec, PR_TRUE, getter_AddRefs(newFile));
-        if (NS_FAILED(rv))
-            return rv;
-
-        *result = newFile;
-        NS_ADDREF(*result);
-
-        return NS_OK;
+#endif
     }
 
     ~nsSystemDirEnumeratorMac() // I don't expect to be subclassed
@@ -1198,7 +1212,7 @@ nsDirectoryService::GetFiles(const char *prop, nsISimpleEnumerator **_retval)
         
     if (!nsCRT::strcmp(prop, NS_OS_PLUGINS_DIR_LIST))
     {
-#if defined(XP_MAC)       
+#if defined(XP_MAC) || defined(XP_MACOSX)
         static const FindFolderParms sClassicPluginsList[] = {
             { kOnAppropriateDisk, kInternetPlugInFolderType}
         };

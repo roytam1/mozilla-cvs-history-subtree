@@ -264,7 +264,7 @@ protected:
   nsIRenderingContext*    mTempRenderingContext;
   PRBool          mTempRenderingContextMadeHere;
     
-  nsPluginPort*     mPluginPort;
+  nsPluginPort*   mPluginPort;
 
   PRBool          mAcceptFocusOnClick;
     

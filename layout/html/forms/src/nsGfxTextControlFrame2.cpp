@@ -1906,6 +1906,7 @@ nsGfxTextControlFrame2::SetInitialValue()
   "border: 0px !important;" \
   "padding: 0px;" \
   "margin: 0px;" \
+  "background-color: inherit;" \
   ""
 
 NS_IMETHODIMP

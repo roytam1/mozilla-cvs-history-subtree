@@ -232,6 +232,10 @@ nsPresContext::~nsPresContext()
 #ifdef IBMBIDI
     mPrefs->UnregisterCallback("bidi.", PrefChangedCallback, (void*)this);
 #endif
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
+    mPrefs->UnregisterCallback("nglayout.mac.renderingmode", PrefChangedCallback, (void*)this);
+#endif
   }
 #ifdef IBMBIDI
   if (mBidiUtils) {
@@ -684,7 +688,10 @@ nsPresContext::Init(nsIDeviceContext* aDeviceContext)
 #ifdef IBMBIDI
     mPrefs->RegisterCallback("bidi.", PrefChangedCallback, (void*)this);
 #endif
-
+#if defined(XP_MAC) || defined(XP_MACOSX)
+    mPrefs->RegisterCallback("nglayout.mac.renderingmode", nsPresContext::PrefChangedCallback, (void*)this);
+#endif
+ 
     // Initialize our state from the user preferences
     GetUserPreferences();
   }
