@@ -1339,10 +1339,6 @@ CBrowserContainer::MouseClick(nsIDOMEvent* aMouseEvent)
     getPropertiesFromEvent(aMouseEvent);
 
     JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
-    ::util_StoreIntoPropertiesObject(env, properties,  CLICK_COUNT_KEY,
-                                     ONE_VALUE, (jobject) 
-                                     &(mInitContext->shareContext));
-
     util_SendEventToJava(mInitContext->env, 
                          mInitContext->nativeEventThread, 
                          mMouseTarget, 
@@ -1645,16 +1641,47 @@ void JNICALL CBrowserContainer::addMouseEventDataToProperties(nsIDOMEvent *aMous
     }
     
     int16Val = 0;
-    rv = mouseEvent->GetButton(&int16Val);
-    if (NS_SUCCEEDED(rv)) {
-        WC_ITOA(int16Val, buf, 10);
-        strVal = ::util_NewStringUTF(env, buf);
-        ::util_StoreIntoPropertiesObject(env, properties, BUTTON_KEY,
-                                         (jobject) strVal,
-                                         (jobject) 
+    intVal = 0; 
+    rv = mouseEvent->GetDetail(&intVal);
+    if (NS_SUCCEEDED(rv) && intVal) {
+        
+        // store the click-count
+        jobject clickValue;
+        switch (intVal) {
+        case 1:
+            clickValue = ONE_VALUE;
+            break;
+        case 2:
+            clickValue = TWO_VALUE;
+            break;
+        case 3:
+            clickValue = THREE_VALUE;
+            break;
+        case 4:
+            clickValue = FOUR_VALUE;
+            break;
+        case 5:
+        default:
+            clickValue = FIVE_VALUE;
+            break;
+        }
+        
+        ::util_StoreIntoPropertiesObject(env, properties,  CLICK_COUNT_KEY,
+                                         clickValue, (jobject) 
                                          &(mInitContext->shareContext));
+        
+
+        rv = mouseEvent->GetButton(&int16Val);
+        if (NS_SUCCEEDED(rv)) {
+            int16Val++;  // Java starts button numbering at 1, not 0.
+            WC_ITOA(int16Val, buf, 10);
+            strVal = ::util_NewStringUTF(env, buf);
+            ::util_StoreIntoPropertiesObject(env, properties, BUTTON_KEY,
+                                             (jobject) strVal,
+                                             (jobject) 
+                                             &(mInitContext->shareContext));
+        }
     }
-    
     rv = mouseEvent->GetAltKey(&boolVal);
     if (NS_SUCCEEDED(rv)) {
         strVal = boolVal ? (jstring) TRUE_VALUE : (jstring) FALSE_VALUE;

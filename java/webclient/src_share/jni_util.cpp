@@ -71,6 +71,9 @@ jobject TRUE_VALUE;
 jobject FALSE_VALUE;
 jobject ONE_VALUE;
 jobject TWO_VALUE;
+jobject THREE_VALUE;
+jobject FOUR_VALUE;
+jobject FIVE_VALUE;
 jobject BM_ADD_DATE_VALUE;
 jobject BM_LAST_MODIFIED_DATE_VALUE;
 jobject BM_LAST_VISIT_DATE_VALUE;
@@ -228,6 +231,21 @@ jboolean util_InitStringConstants()
     if (nsnull == (TWO_VALUE = 
                    ::util_NewGlobalRef(env, (jobject)
                                        ::util_NewStringUTF(env, "2")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (THREE_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, "3")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (FOUR_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, "4")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (FIVE_VALUE = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, "5")))) {
         return JNI_FALSE;
     }
     if (nsnull == (BM_ADD_DATE_VALUE = 
