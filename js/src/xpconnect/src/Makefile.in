@@ -33,14 +33,15 @@ MODULE=xpconnect
 # only copy the .so to components dir on platforms where xptcall is supported
 
 # Unixish x86
-ifneq (,$(filter SunOS Linux FreeBSD NetBSD BSD_OS,$(OS_ARCH)))
+#ifneq (,$(filter SunOS Linux FreeBSD NetBSD BSD_OS,$(OS_ARCH)))
+ifneq (,$(filter solaris2 linux-gnu ,$(OS_ARCH)))
 ifeq (86,$(findstring 86,$(OS_TEST)))
 IS_COMPONENT =  1
 endif
 endif
 
 # Solaris/sparc
-ifneq (,$(filter SunOS,$(OS_ARCH)))
+ifneq (,$(filter solaris2,$(OS_ARCH)))
 ifneq (86,$(findstring 86,$(OS_TEST)))
 IS_COMPONENT =  1
 endif
@@ -53,7 +54,7 @@ IS_COMPONENT =  1
 endif
 endif
 
-DEFINES	+= -DJSFILE -DJS_THREADSAFE
+DEFINES	+= -DJSFILE -DJS_THREADSAFE -DWIN32_LEAN_AND_MEAN -DEXPORT_XPTC_API
 
 CPPSRCS=		\
 	nsXPConnect.cpp		\
@@ -72,7 +73,7 @@ CPPSRCS=		\
 	xpcwrappednativeclass.cpp	\
 	$(NULL)
 
-
+ifneq (,$(filter-out mingw32, $(OS_ARCH))))
 EXTRA_DSO_LDOPTS = \
 	-L$(DIST)/bin \
 	-l$(MOZ_LIB_JS_PREFIX)js \
@@ -80,6 +81,7 @@ EXTRA_DSO_LDOPTS = \
 	-lreg \
 	$(NSPR_LIBS) \
 	$(NULL)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
