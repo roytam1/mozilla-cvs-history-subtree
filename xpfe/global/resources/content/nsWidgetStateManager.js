@@ -302,6 +302,11 @@ nsWidgetStateManager.prototype =
         {
           var element = wsm.contentArea.document.getElementById( aElementID );
           wsm.generic_Set( element, aDataObject );
+          // XXX required by band-aid fix to bug 90337
+          if( 'value' in aDataObject )
+            {
+              element.value = aDataObject.value;
+            }
         },
 
     get_Textbox:
