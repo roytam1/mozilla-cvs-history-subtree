@@ -109,6 +109,11 @@ static NS_DEFINE_CID(kCChildCID, NS_CHILD_CID);
 //           Also see bug 126466.
 #define MAX_DEPTH_CONTENT_FRAMES 8
 
+// Bug 136580: Limit to the number of nested content frames that can have the
+//             same URL. This is to stop content that is recursively loading
+//             itself.
+#define MAX_SAME_URL_CONTENT_FRAMES 3
+
 /*******************************************************************************
  * FrameLoadingInfo 
  ******************************************************************************/
@@ -983,25 +988,23 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext)
   PRInt32 depth = 0;
   nsCOMPtr<nsISupports> parentAsSupports;
   aPresContext->GetContainer(getter_AddRefs(parentAsSupports));
-  if (parentAsSupports) {
-    nsCOMPtr<nsIDocShellTreeItem> parentAsItem(do_QueryInterface(parentAsSupports));
-    while (parentAsItem) {
-      depth++;
-      if (MAX_DEPTH_CONTENT_FRAMES < depth) {
-        NS_WARNING("Too many nested content frames so giving up");
-        return NS_ERROR_UNEXPECTED; // Too deep, give up!  (silently?)
-      }
+  nsCOMPtr<nsIDocShellTreeItem> parentAsItem(do_QueryInterface(parentAsSupports));
+  while (parentAsItem) {
+    depth++;
+    if (depth >= MAX_DEPTH_CONTENT_FRAMES) {
+      NS_WARNING("Too many nested content frames so giving up");
+      return NS_ERROR_UNEXPECTED; // Too deep, give up!  (silently?)
+    }
 
-      // Only count depth on content, not chrome.
-      // If we wanted to limit total depth, skip the following check:
-      PRInt32 parentType;
-      parentAsItem->GetItemType(&parentType);
-      if (nsIDocShellTreeItem::typeContent == parentType) {
-        nsIDocShellTreeItem* temp = parentAsItem;
-        temp->GetParent(getter_AddRefs(parentAsItem));
-      } else {
-        break; // we have exited content, stop counting, depth is OK!
-      }
+    // Only count depth on content, not chrome.
+    // If we wanted to limit total depth, skip the following check:
+    PRInt32 parentType;
+    parentAsItem->GetItemType(&parentType);
+    if (nsIDocShellTreeItem::typeContent == parentType) {
+      nsIDocShellTreeItem* temp = parentAsItem;
+      temp->GetParent(getter_AddRefs(parentAsItem));
+    } else {
+      break; // we have exited content, stop counting, depth is OK!
     }
   }
 
@@ -1231,6 +1234,42 @@ nsHTMLFrameInnerFrame::DoLoadURL(nsIPresContext* aPresContext)
   rv = secMan->CheckLoadURI(referrer, newURI, nsIScriptSecurityManager::STANDARD);
   if (NS_FAILED(rv))
     return rv; // We're not
+
+  // Bug 136580: Check for recursive frame loading
+  PRInt32 matchCount = 0;
+  nsCOMPtr<nsISupports> parentAsSupports;
+  aPresContext->GetContainer(getter_AddRefs(parentAsSupports));
+  if (parentAsSupports) {
+    nsCOMPtr<nsIDocShellTreeItem> parentAsItem(do_QueryInterface(parentAsSupports));
+    while (parentAsItem) {
+      // Only interested in checking for recursion in content
+      PRInt32 parentType;
+      parentAsItem->GetItemType(&parentType);
+      if (parentType != nsIDocShellTreeItem::typeContent) {
+        break; // Not content
+      }
+      // Check the parent URI with the URI we're loading
+      nsCOMPtr<nsIWebNavigation> parentAsNav(do_QueryInterface(parentAsItem));
+      if (parentAsNav) {
+        // Does the URI match the one we're about to load?
+        nsCOMPtr<nsIURI> parentURI;
+        parentAsNav->GetCurrentURI(getter_AddRefs(parentURI));
+        if (parentURI) {
+          PRBool matches = PR_FALSE;
+          parentURI->Equals(newURI, &matches);
+          if (matches) {
+            matchCount++;
+            if (matchCount >= MAX_SAME_URL_CONTENT_FRAMES) {
+              NS_WARNING("Too many nested content frames have the same url (recursion?) so giving up");
+              return NS_ERROR_UNEXPECTED;
+            }
+          }
+        }
+      }
+      nsIDocShellTreeItem* temp = parentAsItem;
+      temp->GetParent(getter_AddRefs(parentAsItem));
+    }
+  }
 
   nsCOMPtr<nsIWebProgress> webProgress(do_GetInterface(mSubShell));
 
