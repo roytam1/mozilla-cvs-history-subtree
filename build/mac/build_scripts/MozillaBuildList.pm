@@ -353,6 +353,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:extensions:irc:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:wallet:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:intl:uconv:src:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:htmlparser:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:forms:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:base:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:mailnews:jar.mn", $chrome_dir, \%jars);
@@ -734,8 +735,11 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:src:base:MANIFEST",                          "$distdirectory:dom:");
 
     #ACCESSIBLE
-    InstallFromManifest(":mozilla:accessible:public:MANIFEST",                     "$distdirectory:accessible:");
-    
+    if ($main::options{accessible})
+    {
+        InstallFromManifest(":mozilla:accessible:public:MANIFEST",                 "$distdirectory:accessible:");    
+    }
+
     #JSURL
     InstallFromManifest(":mozilla:dom:src:jsurl:MANIFEST_IDL",                     "$distdirectory:idl:");
 
@@ -1099,7 +1103,10 @@ sub BuildIDLProjects()
 
     BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.mcp",                       "layout");
 
-    BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",               "accessible"); 
+    if ($main::options{accessible})
+    {
+        BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",           "accessible"); 
+    }
 
     BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.mcp",                             "rdf");
 
@@ -1609,7 +1616,7 @@ sub BuildAccessiblityProjects()
     }
     
     EndBuildModule("accessiblity");
-} # imglib2
+}
 
 #//--------------------------------------------------------------------------------------------------
 #// Build Editor Projects

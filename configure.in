@@ -2968,6 +2968,15 @@ if test "$IBMBIDI"; then
   AC_DEFINE(IBMBIDI)
 fi
 
+dnl accessibility support on by default
+ACCESSIBILITY=1
+MOZ_ARG_DISABLE_BOOL(accessibility,
+[  --disable-accessibility           Disable accessibility support],
+  ACCESSIBILITY= )
+if test "$ACCESSIBILITY"; then
+  AC_DEFINE(ACCESSIBILITY)
+fi
+
 dnl ========================================================
 dnl =
 dnl = --enable-monolithic-toolkit
@@ -3155,11 +3164,29 @@ dnl =
 dnl = Function reordering is off by default.
 dnl = 
 dnl ========================================================
-MOZ_REORDER=0
+MOZ_REORDER=
 MOZ_ARG_ENABLE_STRING(reorder,
 [  --enable-reorder        Enable function reordering ],
     [ if test "$enableval" != "no"; then
 	    MOZ_REORDER=1
+      fi ])
+
+dnl ========================================================
+dnl =
+dnl = --enable-timeline
+dnl = 
+dnl = Enable timeline service, which provides lightweight
+dnl = instrumentation of mozilla for performance measurement.
+dnl = 
+dnl = Timeline is off by default.
+dnl = 
+dnl ========================================================
+MOZ_TIMELINE=
+MOZ_ARG_ENABLE_STRING(timeline,
+[  --enable-timeline Enable timeline ],
+    [ if test "$enableval" != "no"; then
+            AC_DEFINE(MOZ_TIMELINE)
+	    MOZ_TIMELINE=1
       fi ])
 
 dnl ========================================================
@@ -4065,6 +4092,7 @@ AC_SUBST(MOZ_STATIC_COMPONENTS)
 AC_SUBST(MOZ_META_COMPONENTS)
 AC_SUBST(ENABLE_TESTS)
 AC_SUBST(IBMBIDI)
+AC_SUBST(ACCESSIBILITY)
 AC_SUBST(MOZ_USER_DIR)
 AC_SUBST(BUILD_IDLC)
 
@@ -4082,6 +4110,7 @@ AC_SUBST(MOZ_OS2_EMX_OBJECTFORMAT)
 AC_SUBST(MOZ_POST_DSO_LIB_COMMAND)
 AC_SUBST(MOZ_POST_PROGRAM_COMMAND)
 AC_SUBST(MOZ_REORDER)
+AC_SUBST(MOZ_TIMELINE)
 
 dnl system JPEG support
 dnl ========================================================

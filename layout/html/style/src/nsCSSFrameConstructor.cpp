@@ -100,6 +100,7 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 #include "nsBox.h"
 
 #ifdef INCLUDE_XUL
+#include "nsIRootBox.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDOMXULDocument.h"
 #endif
@@ -1740,7 +1741,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
 
   // Figure out which type of input frame to create
   nsAutoString  val;
-  if (NS_OK == aContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::type, val)) {
+  if (NS_OK == aContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::type, val)) {
     if (val.EqualsIgnoreCase("submit")) {
       rv = ConstructButtonControlFrame(aPresShell, aPresContext, aFrame);
     }
@@ -5410,6 +5411,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
   nsresult  rv = NS_OK;
   PRBool    isAbsolutelyPositioned = PR_FALSE;
   PRBool    isFixedPositioned = PR_FALSE;
+  PRBool    isPopup = PR_FALSE;
   PRBool    isReplaced = PR_FALSE;
   PRBool    frameHasBeenInitialized = PR_FALSE;
 
@@ -5554,7 +5556,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         isReplaced = PR_TRUE;
         if (aTag == nsHTMLAtoms::label || aTag == nsXULAtoms::description) {
           nsAutoString value;
-          if (aContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::value, value) ==
+          if (aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, value) ==
               NS_CONTENT_ATTR_NOT_THERE)
             return NS_OK;
         }
@@ -5583,12 +5585,22 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         rv = NS_NewMenuBarFrame(aPresShell, &newFrame);
   #endif
       }
-      else if (aTag == nsXULAtoms::popupset) {
+      else if (aTag == nsXULAtoms::popupgroup) {
         // This frame contains child popups
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewPopupSetFrame(aPresShell, &newFrame);
         ((nsPopupSetFrame*) newFrame)->SetFrameConstructor(this);
+
+        // Locate the root frame and tell it about the popupgroup.
+        nsIFrame* rootFrame;
+        aState.mFrameManager->GetRootFrame(&rootFrame);
+        if (rootFrame)
+          rootFrame->FirstChild(aPresContext, nsnull, &rootFrame);   
+        nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+        if (rootBox)
+          rootBox->SetPopupSetFrame(newFrame);
+
       }
       else if (aTag == nsXULAtoms::scrollbox) {
             rv = NS_NewScrollBoxFrame(aPresShell, &newFrame);
@@ -5755,7 +5767,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           NS_NewTreeLayout(aPresShell, layout);
 
           nsAutoString outer;
-          rv = aContent->GetAttribute(kNameSpaceID_None, nsXULAtoms::outer, outer); 
+          rv = aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::outer, outer); 
           if (outer.EqualsIgnoreCase("true")) {
             rv = NS_NewXULTreeOuterGroupFrame(aPresShell, &newFrame, PR_FALSE, layout);
             ((nsXULTreeGroupFrame*)newFrame)->InitGroup(this, aPresContext, (nsXULTreeOuterGroupFrame*) newFrame);
@@ -5892,6 +5904,16 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewMenuPopupFrame(aPresShell, &newFrame);
+
+        // If a popup is inside a menu, then the menu understands the complex
+        // rules/behavior governing the cascade of multiple menu popups and can handle
+        // having the real popup frame placed under it as a child.  
+        // If, however, the parent is *not* a menu frame, then we need to create
+        // a placeholder frame for the popup, and then we add the popup frame to the
+        // root popup set (that manages all such "detached" popups).
+        nsCOMPtr<nsIMenuFrame> menuFrame(do_QueryInterface(aParentFrame));
+        if (!menuFrame)
+          isPopup = PR_TRUE;
       } 
     }
   }
@@ -5969,11 +5991,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     }
 
-    // Add the new frame to our list of frame items.
-    aFrameItems.AddChild(topFrame);
-
     // If the frame is absolutely positioned, then create a placeholder frame
-    if (isAbsolutelyPositioned || isFixedPositioned) {
+    if (isAbsolutelyPositioned || isFixedPositioned || isPopup) {
       nsIFrame* placeholderFrame;
 
       CreatePlaceholderFrameFor(aPresShell, aPresContext, aState.mFrameManager, aContent,
@@ -5982,13 +6001,33 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       // Add the positioned frame to its containing block's list of child frames
       if (isAbsolutelyPositioned) {
         aState.mAbsoluteItems.AddChild(newFrame);
-      } else {
+      } else if (isFixedPositioned) {
         aState.mFixedItems.AddChild(newFrame);
+      } else if (isPopup) {
+        // Locate the root popup set and add ourselves to the popup set's list
+        // of popup frames.
+        nsIFrame* rootFrame;
+        aState.mFrameManager->GetRootFrame(&rootFrame);
+        if (rootFrame)
+          rootFrame->FirstChild(aPresContext, nsnull, &rootFrame);   
+        nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+        if (rootBox) {
+          nsIFrame* popupSetFrame;
+          rootBox->GetPopupSetFrame(&popupSetFrame);
+          if (popupSetFrame) {
+            nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+            if (popupSet)
+              popupSet->AddPopupFrame(newFrame);
+          }
+        }
       }
 
       // Add the placeholder frame to the flow
       aFrameItems.AddChild(placeholderFrame);
     }
+    else
+      // Add the new frame to our list of frame items.
+      aFrameItems.AddChild(topFrame);
   }
 
 // addToHashTable:
@@ -8135,7 +8174,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
               aContainer->GetParent(*getter_AddRefs(parent));
               if (parent) {
                 nsAutoString open;
-                parent->GetAttribute(kNameSpaceID_None, nsXULAtoms::open, open);
+                parent->GetAttr(kNameSpaceID_None, nsXULAtoms::open, open);
                 if (open.EqualsIgnoreCase("true")) {
                   // Clear our undisplayed content.
                   nsCOMPtr<nsIFrameManager> frameManager;
@@ -9407,6 +9446,27 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     const nsStyleDisplay* display;
     childFrame->GetStyleData(eStyleStruct_Display,
                              (const nsStyleStruct*&)display);
+    if (display->mDisplay == NS_STYLE_DISPLAY_POPUP) {
+       // Get the placeholder frame
+      nsIFrame* placeholderFrame;
+      frameManager->GetPlaceholderFrameFor(childFrame, &placeholderFrame);
+
+      // Remove the mapping from the frame to its placeholder
+      frameManager->SetPlaceholderFrameFor(childFrame, nsnull);
+
+      // Now we remove the popup frame
+      if (placeholderFrame) {
+        placeholderFrame->GetParent(&parentFrame);
+        DeletingFrameSubtree(aPresContext, shell, frameManager, placeholderFrame);
+        rv = frameManager->RemoveFrame(aPresContext, *shell, parentFrame,
+                                       nsnull, placeholderFrame);
+
+        // Destroy the real frame.
+        childFrame->Destroy(aPresContext);
+        return NS_OK;
+      }
+    }
+    
     if (display->IsFloating()) {
 #ifdef NOISY_FIRST_LETTER
       printf("  ==> child display is still floating!\n");
@@ -10405,19 +10465,19 @@ GetAlternateTextFor(nsIContent* aContent,
 
   // The "alt" attribute specifies alternate text that is rendered
   // when the image can not be displayed
-  rv = aContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText);
+  rv = aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText);
 
   // If there's no "alt" attribute, then use the value of the "title"
   // attribute. Note that this is not the same as a value of ""
   if (NS_CONTENT_ATTR_NOT_THERE == rv) {
-    rv = aContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::title, 
-                                aAltText);
+    rv = aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::title, 
+                           aAltText);
 
     // If there's no "alt" or "title" attribute, and aContent is an input    
     // element, then use the value of the "value" attribute
     if ((NS_CONTENT_ATTR_NOT_THERE == rv) && (nsHTMLAtoms::input == aTag)) {
-      rv = aContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::value,
-                                  aAltText);
+      rv = aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value,
+                             aAltText);
 
       // If there's no "value" attribute either, then use the localized string 
       // for "Submit" as the alternate text.
