@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!-- ***** BEGIN LICENSE BLOCK *****
    - Version: MPL 1.1/GPL 2.0/LGPL 2.1
    -
@@ -11,16 +12,14 @@
    - for the specific language governing rights and limitations under the
    - License.
    -
-   - The Original Code is Christopher Hoess <choess@stwing.upenn.edu>'s code.
+   - The Original Code is Mozilla Communicator
    -
    - The Initial Developer of the Original Code is
-   - Christopher Hoess.
-   - Portions created by the Initial Developer are Copyright (C) 2001
+   - Netscape Communications Corp..
+   - Portions created by the Initial Developer are Copyright (C) 2002
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -      Eric Hodel <drbrain@segment7.net>
-   -      Stuart Ballard <sballard@netreach.net>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,40 +35,31 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!-- Link Toolbar Title -->
-<!ENTITY linkToolbar.label "Site Navigation Bar">
+<?xml-sheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/smime/certFetchingStatus.css" type="text/css"?>
 
-<!-- Link Toolbar visibility options -->
-<!ENTITY linkToolbarAlways.label "Show Always">
-<!ENTITY linkToolbarAsNeeded.label "Show Only As Needed">
-<!ENTITY linkToolbarNever.label "Hide Always">
+<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
 
-<!-- Toolbar buttons, menus, and menuitems -->
-<!ENTITY topButton.label "Top">
-<!ENTITY upButton.label "Up">
-<!ENTITY firstButton.label "First">
-<!ENTITY prevButton.label "Previous">
-<!ENTITY nextButton.label "Next">
-<!ENTITY lastButton.label "Last">
+<!DOCTYPE window SYSTEM "chrome://messenger-smime/locale/certFetchingStatus.dtd">
 
-<!ENTITY documentButton.label "Document">
+<window id="certFetchingStatus" title="&title.label;"
+  class="dialog"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"      
+  style="width: 50em;"
+  onload="onLoad();">
 
-<!ENTITY tocButton.label "Table of Contents">
-<!ENTITY chapterButton.label "Chapters">
-<!ENTITY sectionButton.label "Sections">
-<!ENTITY subSectionButton.label "Subsections">
-<!ENTITY appendixButton.label "Appendices">
-<!ENTITY glossaryButton.label "Glossary">
-<!ENTITY indexButton.label "Index">
+<script type="application/x-javascript" src="chrome://messenger-smime/content/certFetchingStatus.js"/>
 
-<!ENTITY moreButton.label "More">
+<vbox>
 
-<!ENTITY helpButton.label "Help">
-<!ENTITY searchButton.label "Search">
+  <description>&info.message;</description>
+  <separator class="thin"/>
 
-<!ENTITY authorButton.label "Authors">
-<!ENTITY copyrightButton.label "Copyright">
+  <hbox align="center">
+    <button id="stopButton"
+            label="&stop.label;"
+            oncommand="stopFetching();"/>
+  </hbox>
 
-<!ENTITY bookmarkButton.label "Bookmarks">
-
-<!ENTITY alternateButton.label "Other Versions">
+</vbox>
+</window>
