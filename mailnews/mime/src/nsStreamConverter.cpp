@@ -287,10 +287,10 @@ NS_IMETHODIMP nsStreamConverter::QueryInterface(REFNSIID aIID, void** aInstanceP
 	if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
 	*aInstancePtr = nsnull;
 
-	if (aIID.Equals(nsCOMTypeInfo<nsIStreamConverter>::GetIID()) || 
+	if (aIID.Equals(nsCOMTypeInfo<nsIStreamConverter2>::GetIID()) || 
 		aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
 	{
-		*aInstancePtr = NS_STATIC_CAST(nsIStreamConverter*, this);
+		*aInstancePtr = NS_STATIC_CAST(nsIStreamConverter2*, this);
 	}              
 	else if(aIID.Equals(nsCOMTypeInfo<nsIMimeStreamConverter>::GetIID()))
 	{
