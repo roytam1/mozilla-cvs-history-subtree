@@ -35,6 +35,7 @@ xfeCmdSortDescending                                               sortDescendin
 xfeCmdABNewList                                                    abNewList
 xfeCmdABCopyEntry                                                  abCopyEntry
 xfeCmdABDeleteEntry                                                abDeleteEntry
+xfeCmdABDeleteAllEntries                                           abDeleteAllEntries
 xfeCmdABEditEntry                                                  abEditEntry
 xfeCmdABSearchEntry                                                abSearchEntry
 xfeCmdABSearchLdap                                                 abSearchLdap
@@ -55,6 +56,8 @@ xfeCmdDecreaseFont                                                 decreaseFont
 xfeCmdDelete                                                       delete
 xfeCmdEditConfiguration                                            editConfiguration
 xfeCmdModerateDiscussion                                           moderateDiscussion
+xfeCmdManageMailingList						   manageMailingList
+xfeCmdManagePublicFolders					   managePublicFolders
 xfeCmdEditMailFilterRules                                          editMailFilterRules
 xfeCmdEditMessage                                                  editMessage
 xfeCmdEditPreferences                                              editPreferences
@@ -85,6 +88,7 @@ xfeCmdNewNewsHost                                                  newNewsHost
 xfeCmdNextCategory                                                 nextCategory
 xfeCmdNextMessage                                                  nextMessage
 xfeCmdNextUnreadCategory                                           nextUnreadCategory
+xfeCmdFirstUnreadMessage                                            firstUnreadMessage
 xfeCmdNextUnreadMessage                                            nextUnreadMessage
 xfeCmdNextUnreadThread                                             nextUnreadThread
 xfeCmdNextNewsgroup                                                nextNewsgroup
@@ -133,6 +137,8 @@ xfeCmdOpenUrlFromSelection                                         openUrlFromSe
 xfeCmdRefresh                                                      refresh
 xfeCmdReload                                                       reload
 xfeCmdSaveAs                                                       saveAs
+
+xfeCmdSaveAsMenu                                                   saveAsMenu
 xfeCmdSaveLink                                                      saveURL
 xfeCmdSaveImage                                                    saveImage
 xfeCmdSaveBGImage                                                  saveBGImage
@@ -151,6 +157,7 @@ xfeCmdViewProperties                                               viewPropertie
 xfeCmdViewSecurity                                                 viewSecurity
                                                              
 xfeCmdViewDirectories                                              viewDirectories
+xfeCmdShowChrome                                                   showChrome
 xfeCmdShowFormattingToolbar                                        showFormattingToolbar
 xfeCmdShowImages                                                   showImages
                                                              
@@ -220,12 +227,14 @@ xfeCmdComposeArticleHTML                                           composeArticl
 xfeCmdComposeArticlePlain					   composeArticlePlain
 xfeCmdChooseMessagesForOffline                                     chooseMessageForOffline
 xfeCmdDeleteCategory                                               deleteCategory
+xfeCmdDeleteAny                                                	   deleteAny
 xfeCmdDeleteFolder                                                 deleteFolder
 xfeCmdDeleteMessage                                                deleteMessage
 xfeCmdFirstFlaggedMessage                                          firstFlaggedMessage
 xfeCmdFlagMessage                                                  flagMessage
 xfeCmdForwardMessage                                               forwardMessage
 xfeCmdForwardMessageQuoted                                         forwardMessageQuoted
+xfeCmdForwardMessageInLine                                         forwardMessageInLine
 xfeCmdGetFlaggedMessagesForOffline                                 getFlaggedMessagesForOffline
 xfeCmdGetNewMessages                                               getNewMessages
 xfeCmdGetNextNNewMsgs                                              getNextNNewMsgs
@@ -253,6 +262,7 @@ xfeCmdReplyToSenderAndNewsgroup                                    replyToSender
 xfeCmdRetrieveMarkedMessages                                       retrieveMarkedMessages
 xfeCmdRetrieveSelectedMessages                                     retrieveSelectedMessages
 xfeCmdSaveMessagesAs                                               saveMessagesAs
+xfeCmdSaveAsTemplate                                               saveAsTemplate
 xfeCmdSaveMessagesAsAndDelete                                      saveMessagesAsAndDelete
 xfeCmdSelectFlaggedMessages                                        selectFlaggedMessages
 xfeCmdSelectThread                                                 selectThread
@@ -303,6 +313,7 @@ xfeCmdSortByUnread                                                 sortByUnread
 xfeCmdSortForward                                                  sortForward
 xfeCmdSortBackward                                                 sortBackward
 xfeCmdToggleMessageExpansion                                       toggleMessageExpansion
+xfeCmdToggleFolderExpansion                                       toggleFolderExpansion
 xfeCmdViewNew                                                      viewNew
 xfeCmdViewAllMessages                                              viewAllMessages
 xfeCmdViewAllThreads                                               viewAllThreads
@@ -361,6 +372,7 @@ xfeCmdQuote                                                        quote
 xfeCmdQuoteOriginalText                                            quoteOriginalText
 xfeCmdRemoveLink                                                   removeLink
 xfeCmdSaveDraft                                                    saveDraft
+xfeCmdSaveTemplate                                                 saveTemplate
 xfeCmdSendMessageNow                                               sendMessageNow
 xfeCmdSendMessageLater                                             sendMessageLater
 xfeCmdViewAddresses                                                viewAddresses
