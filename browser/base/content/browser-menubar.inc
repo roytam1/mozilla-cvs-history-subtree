@@ -417,7 +417,7 @@
             </template>
             <menupopup id="windowPopup">
               <menuitem command="minimizeWindow" key="key_minimizeWindow"/>
-              <menuitem label="&zoomWindow.label;" disabled="true"/>
+              <menuitem command="zoomWindow"/>
               <menuseparator/>
               <menuitem label="&bringAllToFront.label;" disabled="true"/>
               <menuseparator id="sep-window-list"/>

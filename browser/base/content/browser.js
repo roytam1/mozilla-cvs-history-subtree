@@ -5527,6 +5527,16 @@ function SwitchFocusedTextEntryDirection() {
   }
 }
 
+#ifdef XP_MACOSX
+function zoomWindow()
+{
+  if (window.windowState == STATE_NORMAL)
+    window.maximize();
+  else
+    window.restore();
+}
+#endif
+
 function missingPluginInstaller(){
   this.missingPlugins = new Object();
 }

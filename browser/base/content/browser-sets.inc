@@ -158,7 +158,8 @@
     <command id="Tools:Themes" oncommand="BrowserOpenExtensions('themes');"/>
     
 #ifdef XP_MACOSX
-    <command id="minimizeWindow" label="&minimizeWindow.label;" disabled="true"/>
+    <command id="minimizeWindow" label="&minimizeWindow.label;" oncommand="window.minimize();" />
+    <command id="zoomWindow" label="&zoomWindow.label;" oncommand="zoomWindow();" />
 #endif
   </commandset>
 
@@ -300,8 +301,14 @@
     <key id="key_gotoHistory"  key="&historySidebarCmd.commandKey;"  command="viewHistorySidebar" modifiers="accel"/>
 #endif
 
-    <key id="key_newMessage" key="&sendMessage.commandkey;" command="Browser:NewMessage" modifiers="accel"/>
-
+    <key id="key_newMessage"
+         key="&sendMessage.commandkey;"
+         command="Browser:NewMessage"
+#ifdef XP_MACOSX
+         modifiers="accel,shift"/>
+#else
+         modifiers="accel"/>
+#endif
     <key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   command="cmd_textZoomReduce"  modifiers="accel"/>
     <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"  command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key                          key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
