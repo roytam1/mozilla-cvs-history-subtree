@@ -54,7 +54,6 @@
 #include "messages.h"
 #include "cmtcmn.h"
 #include "cmtutils.h"
-#include "obscure.h"
 #include <string.h>
 
 #if defined(XP_UNIX) || defined(XP_BEOS)
@@ -81,104 +80,6 @@
 #define LOG_S(x); ;
 #define ASSERT(x); ;
 #endif
-
-/* On error, returns -1.
-** On success, returns non-negative number of unobscured bytes in buf 
-*/
-int
-RecvInitObscureData(CMT_SocketFuncs *sockFuncs, CMTSocket sock, 
-                    SSMObscureObject * obj, void * buf, int bufSize )
-{
-    SSMObscureBool done = 0;
-    int rv = -1;
-
-    do {
-        int cc;
-        cc = sockFuncs->recv(sock, buf, bufSize);
-        if (cc <= 0)
-            return -1;
-	    rv = SSMObscure_RecvInit(obj, buf, cc, &done);
-    } while (!done);
-    return rv;
-}
-
-
-/* returns -1 on error, 0 on success. */
-int
-SendInitObscureData(CMT_SocketFuncs *sockFuncs, CMTSocket sock, 
-                    SSMObscureObject * obj)
-{
-    unsigned char * initBuf = NULL;
-    int             rv      = -1;
-
-    do {
-	int bufLen;
-	int len;
-	int cc;
-
-	bufLen = SSMObscure_SendInit(obj, NULL);
-	if (bufLen <= 0)
-	    break;
-
-	initBuf = (unsigned char *) malloc(bufLen);
-	if (!initBuf)
-	    break;
-
-	len = SSMObscure_SendInit(obj, initBuf);
-	if (len != bufLen)
-	    break;
-
-	cc = sockFuncs->send(sock, initBuf, len);
-
-	/* Note, this code assumes a blocking socket, 
-	** and hence doesn't deal with short writes.
-	*/
-	if (cc < len) 
-	    break;
-
-    	rv = 0;
-
-    } while (0);
-
-    if (initBuf) {
-	free(initBuf);
-    	initBuf = NULL;
-    }
-    return rv;
-}
-
-SSMObscureObject * InitClientObscureObject(CMT_SocketFuncs *sockFuncs, 
-                                           CMTSocket sock)
-{
-    SSMObscureObject * sobj = NULL;
-    unsigned char buf[512];
-    int rv = -1;
-
-    /* Create the obscuring object */
-    sobj = SSMObscure_Create(0);
-    if (!sobj) {
-        goto loser;
-    }
-
-    /* Send the initialization data */
-    rv = SendInitObscureData(sockFuncs, sock, sobj);
-    if (rv < 0) {
-        goto loser;
-    }
-
-    /* Receive the obscuring initialization data */
-    rv = RecvInitObscureData(sockFuncs, sock, sobj, buf, sizeof(buf));
-    if (rv < 0) {
-        goto loser;
-    }
-
-    return sobj;
-loser:
-    if (sobj) {
-        SSMObscure_Destroy(sobj);
-    }
-    return NULL;
-}
 
 static char*
 getCurrWorkDir(char *buf, int maxLen)
@@ -381,7 +282,6 @@ PCMT_CONTROL CMT_ControlConnect(CMT_MUTEX *mutex, CMT_SocketFuncs *sockFuncs)
 {
     PCMT_CONTROL control = NULL; 
     CMTSocket sock=NULL;
-    SSMObscureObject * obscureObj = NULL;
 #ifdef XP_UNIX
     int unixSock = 1;
     char path[20];
@@ -422,7 +322,6 @@ PCMT_CONTROL CMT_ControlConnect(CMT_MUTEX *mutex, CMT_SocketFuncs *sockFuncs)
 		goto loser;
 	}
 	control->sock = sock;
-    control->obscureObj = obscureObj;
     if (mutex != NULL) {
         control->mutex = (CMT_MUTEX*)calloc(sizeof(CMT_MUTEX),1);
         if (control->mutex == NULL) {
@@ -459,9 +358,6 @@ CMTStatus CMT_CloseControlConnection(PCMT_CONTROL control)
         if (refCount <= 0) {
             if (control->mutex != NULL) {
                 free (control->mutex);
-            }
-            if (control->obscureObj) {
-                SSMObscure_Destroy(control->obscureObj);
             }
             control->sockFuncs.close(control->sock);
             free(control);
