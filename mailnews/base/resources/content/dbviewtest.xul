@@ -9,7 +9,7 @@
 
 <box orient="vertical">
   <box orient="horizontal">
-    <textfield id="uriField" size="100" oncommand="openView"/>
+    <textfield id="uriField" size="100" onkeypress="if (event.keyCode == 13) openView()"/>
   </box>
   <box orient="vertical">
   <button class="dialog" value="open view" onclick="openView()"/>
