@@ -1411,8 +1411,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     wrapper->GetNative(getter_AddRefs(native));
     NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
 
-    const JSObject *o = *objp;
-
     nsresult rv = GlobalResolve(native, cx, obj, str, flags, &did_resolve);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1476,7 +1474,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       }
     }
 
-    if (o == *objp && str == s_content_id) {
+    if (str == s_content_id) {
       // Map window._content to window.content for backwards
       // compatibility, this should spit out an message on the JS
       // console.
