@@ -643,6 +643,7 @@
 				F5566DC5038E075F01A80166,
 				F5566DC6038E075F01A80166,
 				F5566DC7038E075F01A80166,
+				F5461CBC03AAC25C01A96660,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3721,6 +3722,48 @@
 			settings = {
 			};
 		};
+		F5461CB903AABF4501A96660 = {
+			isa = PBXFileReference;
+			name = libjsloader.a;
+			path = ../js/src/xpconnect/loader/libjsloader.a;
+			refType = 2;
+		};
+		F5461CBA03AABF4501A96660 = {
+			fileRef = F5461CB903AABF4501A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CBB03AAC25C01A96660 = {
+			isa = PBXFileReference;
+			name = nsProxyAutoConfig.js;
+			path = ../netwerk/base/src/nsProxyAutoConfig.js;
+			refType = 2;
+		};
+		F5461CBC03AAC25C01A96660 = {
+			fileRef = F5461CBB03AAC25C01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CBD03AAC25C01A96660 = {
+			fileRef = F5461CBB03AAC25C01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CBE03AAC27C01A96660 = {
+			fileRef = F5461CBB03AAC25C01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CBF03AAC36B01A96660 = {
+			fileRef = F5461CBB03AAC25C01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F549ACDE0302DE6001026D5D = {
 			isa = PBXFileReference;
 			name = ToolTip.mm;
@@ -4681,6 +4724,7 @@
 				F56F246602AC723001A967F3,
 				F56F246902AC723001A967F3,
 				F56F246A02AC723001A967F3,
+				F5461CB903AABF4501A96660,
 				F56F246B02AC723001A967F3,
 				F56F246F02AC723001A967F3,
 				F56F247002AC723001A967F3,
@@ -7025,7 +7069,7 @@
 				FRAMEWORK_SEARCH_PATHS = /Users/sdagley/Library/Frameworks;
 				HEADER_SEARCH_PATHS = "../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util";
+				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util /Volumes/Development/Trees/ChimeraOpt/mozilla/js/src/xpconnect/loader";
 				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -D_BUILD_STATIC_BIN -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lsmime3 -lssl3 -lnss3 -lsoftokn3 -lmozjs -lmozjpeg -ljsj -lmozpng -lmozmng -lpthread -lz -lm";
@@ -7394,6 +7438,7 @@
 				F5566DC9038E075F01A80166,
 				F5566DCA038E075F01A80166,
 				F5566DCB038E075F01A80166,
+				F5461CBD03AAC25C01A96660,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7484,6 +7529,7 @@
 				F56F244102AC706801A967F3,
 				F56F244302AC706801A967F3,
 				F56F244402AC706801A967F3,
+				F5461CBA03AABF4501A96660,
 				F56F245202AC714701A967F3,
 				F56F245302AC714701A967F3,
 				F56F245402AC714701A967F3,
@@ -8305,6 +8351,7 @@
 				F5BAAC0402AC693C01A967F3,
 				F5BAAC0502AC693C01A967F3,
 				F5BAAC0702AC693C01A967F3,
+				F5461CBF03AAC36B01A96660,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9890,6 +9937,7 @@
 				F6BD638201B30EA301A962F7,
 				F6BD638701B30F5301A962F7,
 				F5F14E9602A5A43A01A967F3,
+				F5461CBB03AAC25C01A96660,
 				F5247C2F0228B5E7013DD99A,
 				F6BD645501B3167601A962F7,
 				F6BD64FB01B3184301A962F7,
@@ -10209,6 +10257,7 @@
 				F6BD64B601B3167601A962F7,
 				F655020401B4812301A962F7,
 				F53A902402C1137901A967F3,
+				F5461CBE03AAC27C01A96660,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
