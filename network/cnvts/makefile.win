@@ -103,6 +103,7 @@ LINCS= \
     -I$(XPDIST)\public\style	\
     -I$(XPDIST)\public\zlib	\
     -I$(XPDIST)\public\softupdt	\
+    -I$(XPDIST)\public\cstream	\
     -I$(XPDIST)\public\network 
 #!endif
 

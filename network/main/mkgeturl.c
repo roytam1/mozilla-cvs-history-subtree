@@ -28,7 +28,7 @@
 #include "shist.h"
 #include "mkparse.h"
 #include "mkformat.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkpadpac.h"
 #include "netcache.h"
 #include "nslocks.h"
