@@ -129,26 +129,23 @@ function getAddressesFromURI(uri)
 {
   var addresses = "";
 
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-  var editList = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
-	
-  if (editList.addressLists)
-{
+  var editList = GetDirectoryFromURI(uri);
+  
+  if (editList.addressLists) {
     var total = editList.addressLists.Count();
     if (total) {
-      for ( var i = 0;  i < total; i++ )
-	{
+      for ( var i = 0;  i < total; i++ ) {
         var current = editList.addressLists.GetElementAt(i).QueryInterface(Components.interfaces.nsIAbCard);
         
         if (i == 0)
           addresses = current.primaryEmail;
         else
           addresses += "," + current.primaryEmail;
-	}
+	    }
     }
   }
   return addresses;
-  }
+}
 
 var gPrefs = Components.classes["@mozilla.org/preferences-service;1"];
 gPrefs = gPrefs.getService();

@@ -85,8 +85,7 @@ var abDirTreeObserver = {
         return;
 
       var targetID = treeItem.getAttribute("id");
-      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-      var directory = rdf.GetResource(targetID).QueryInterface(Components.interfaces.nsIAbDirectory);
+      var directory = GetDirectoryFromURI(targetID);
 
       var boxObject = GetAbResultsBoxObject();
       var abView = boxObject.view.QueryInterface(Components.interfaces.nsIAbView);
@@ -117,6 +116,8 @@ var abDirTreeObserver = {
         return false;
 
       var targetID = treeItem.getAttribute("id");
+      var directory = GetDirectoryFromURI(targetID);
+      dump("XXX over " + targetID + " mailing list = " + directory.isMailList + "\n");
       return true;
     },
 

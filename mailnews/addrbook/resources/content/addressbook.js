@@ -321,8 +321,7 @@ function AbDeleteDirectory()
                 else	
                     parentId = parent.getAttribute("id");
 
-                var dirResource = rdf.GetResource(parentId);
-                var parentDir = dirResource.QueryInterface(Components.interfaces.nsIAbDirectory);
+                var parentDir = GetDirectoryFromURI(parentId);
                 parentArray.AppendElement(parentDir);
             }
         }

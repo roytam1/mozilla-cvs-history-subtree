@@ -267,9 +267,8 @@ function OnLoadEditList()
   var listUri  = window.arguments[0].listURI;
   gOkCallback = window.arguments[0].okCallback;
 
-  gEditList = rdf.GetResource(listUri);
-  gEditList = gEditList.QueryInterface(Components.interfaces.nsIAbDirectory);
-
+  gEditList = GetDirectoryFromURI(listUri);
+ 
   document.getElementById('ListName').value = gEditList.dirName;
   document.getElementById('ListNickName').value = gEditList.listNickName;
   document.getElementById('ListDescription').value = gEditList.description;

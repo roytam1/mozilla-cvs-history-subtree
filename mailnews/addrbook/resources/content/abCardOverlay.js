@@ -216,8 +216,7 @@ function NewCardOKButton()
     {
       SetCardValues(editCard.card, document);
 
-      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
-      var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+      var directory = GetDirectoryFromURI(uri);
       directory.addCard(editCard.card);
 
       NotifySaveListeners();

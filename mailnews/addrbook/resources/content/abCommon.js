@@ -109,7 +109,7 @@ var DirPaneController =
         var selectedItems = dirTree.selectedItems;
         if (selectedItems.length == 1) {
           var mailingListUri = selectedItems[0].getAttribute('id');
-          var directory = rdf.GetResource(mailingListUri).QueryInterface(Components.interfaces.nsIAbDirectory);
+          var directory = GetDirectoryFromURI(mailingListUri);
           if (directory.isMailList)
              return true;
         }
@@ -152,7 +152,7 @@ function AbEditSelectedDirectory()
   var selectedItems = dirTree.selectedItems;
   if (selectedItems.length == 1) {
     var mailingListUri = selectedItems[0].getAttribute('id');
-    var directory = rdf.GetResource(mailingListUri).QueryInterface(Components.interfaces.nsIAbDirectory);
+    var directory = GetDirectoryFromURI(mailingListUri);
     if (directory.isMailList) {
       var parentURI = selectedItems[0].parentNode.parentNode.getAttribute('id');
       goEditListDialog(parentURI, null, mailingListUri, UpdateCardView);
@@ -693,3 +693,10 @@ function GenerateAddressFromCard(card)
   }
   return address;
 }
+
+function GetDirectoryFromURI(uri)
+{
+  var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+  return directory;
+}
+
