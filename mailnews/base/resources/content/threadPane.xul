@@ -44,6 +44,10 @@ Rights Reserved.
   <outlinercol id="statusCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" flex="1" value="&statusColumn.label;"/>
   <splitter class="tree-splitter"/>
   <outlinercol id="sizeCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" flex="1"  value="&sizeColumn.label;"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="flaggedCol" fixed="true" class="outlinercol-header outlinercol-image outlinercol-inset-header flagColumnHeader" display="&flagColumn.label;" cycler="true"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="priorityCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden witdth" flex="1" value="&priorityColumn.label;"/>
   <outlinerbody flex="1" onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();"/>
 </outliner>
 

@@ -411,6 +411,8 @@ function FindOutlinerColumnBySortType(sortKey)
 		return "statusCol";
   else if (sortKey == nsMsgViewSortType.bySize)
     return "sizeCol";
+  else if (sortKey == nsMsgViewSortType.byPriority)
+    return "priorityCol";
 
   // oops we haven't added the column for the sort key they are using yet...return null.
 	return null;
