@@ -306,6 +306,7 @@ typedef int PRInt32;
 #define SETUP_STATE_DOWNLOAD             "downloading"
 #define SETUP_STATE_UNPACK_XPCOM         "unpacking xpcom"
 #define SETUP_STATE_INSTALL_XPI          "installing xpi"
+#define SETUP_STATE_REMOVING_PREV_INST   "removing previous installation"
 
 
 typedef struct dlgSetup
@@ -471,9 +472,13 @@ typedef struct setupStruct
   BOOL      bLockPath;
   BOOL      bSharedInst;
   BOOL      bInstallFiles;
+  BOOL      checkCleanupOnUpgrade;
+  BOOL      doCleanupOnUpgrade;
   LPSTR     szAppID;
   LPSTR     szAppPath;
   LPSTR     szRegPath;
+  BOOL      greCleanupOrphans;
+  char      greCleanupOrphansMessage[MAX_BUF];
   char      greID[MAX_BUF];
   char      grePrivateKey[MAX_BUF];
 } setupGen;
@@ -562,6 +567,7 @@ typedef struct dlgInstall
     char szCancel[MAX_BUF];
     char szNext_[MAX_BUF];
     char szBack_[MAX_BUF];
+    char szIgnore_[MAX_BUF];
     char szProxySettings_[MAX_BUF];
     char szProxySettings[MAX_BUF];
     char szServer[MAX_BUF];
@@ -593,6 +599,8 @@ typedef struct dlgInstall
     char szCurrentSettings[MAX_BUF];
     char szInstall_[MAX_BUF];
     char szDelete_[MAX_BUF];
+    char szContinue_[MAX_BUF];
+    char szSkip_[MAX_BUF];
     char szExtracting[MAX_BUF];
     char szReadme_[MAX_BUF];
     char szPause_[MAX_BUF];
