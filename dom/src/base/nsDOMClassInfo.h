@@ -189,6 +189,11 @@ protected:
   static nsresult DefineInterfaceProperty(JSContext *cx, JSObject *obj,
                                           JSString *str);
 
+  nsresult doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
+                             nsISupports *native);
+  nsresult doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
+                              nsISupports *native);
+
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);

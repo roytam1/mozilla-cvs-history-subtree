@@ -645,22 +645,19 @@ nsDOMClassInfo::Init()
   sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
                                         elt, getter_AddRefs(old));
 
-  PRUint16 flags; // ???
   nsCOMPtr<nsIScriptSecurityManager> sm = 
       do_GetService("@mozilla.org/scriptsecuritymanager;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   sSecMan = sm;
   NS_ADDREF(sSecMan);
 
-  // This method better be called from JS through XPConnect, if not
-  // we're out of luck!
-  nsCOMPtr<nsIJSContextStack> stack =
+  nsCOMPtr<nsIThreadJSContextStack> stack =
     do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   JSContext *cx = nsnull;
 
-  rv = stack->Peek(&cx);
+  rv = stack->GetSafeJSContext(&cx);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Initialize static JSString's
@@ -1046,7 +1043,122 @@ nsDOMClassInfo::ShutDown()
 }
 
 
+// static helper that determines if a security manager check is needed
+// by checking if the callee's context is the same as the caller's
+// context
+
+static inline PRBool needsSecurityCheck(JSContext *cx, nsISupports *native)
+{
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+
+  if (!sgo) {
+    NS_ERROR("Huh, global not a nsIScriptGlobalObject?");
+
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIScriptContext> otherScriptContext;
+  sgo->GetContext(getter_AddRefs(otherScriptContext));
+
+  if (!otherScriptContext) {
+    return PR_FALSE;
+  }
+
+  // If the caller's context is the same as the callee's, we assume
+  // they have the same origin, and we can allow the call without an
+  // additional security check.
+
+  return cx != (JSContext *)otherScriptContext->GetNativeContext();
+}
+
+
 // Window helper
+
+nsresult
+nsWindowSH::doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
+                               nsISupports *native)
+{
+  if (!sSecMan || !needsSecurityCheck(cx, native)) {
+    return NS_OK;
+  }
+
+  nsresult rv;
+
+#if 1
+  PRBool isLocation = JSVAL_IS_STRING(id) &&
+    JSVAL_TO_STRING(id) == sLocation_id;
+
+  rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
+                                    cx, obj, native, this, "Window",
+                                    isLocation ? "location" : "scriptglobals",
+                                    PR_FALSE);
+#else
+  rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY, nsnull,
+                          cx, obj, native, this, id, nsnull);
+#endif
+
+  if (NS_SUCCEEDED(rv)) {
+    return rv;
+  }
+
+  // Security check failed. The above call set a JS exception. The
+  // following lines ensure that the exception is propagated.
+
+  nsCOMPtr<nsIXPCNativeCallContext> cnccx;
+  sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  cnccx->SetExceptionWasThrown(PR_TRUE);
+
+  return rv; // rv is from CheckPropertyAccess()
+}
+
+
+nsresult
+nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
+                              nsISupports *native)
+{
+  if (!sSecMan || !needsSecurityCheck(cx, native)) {
+    return NS_OK;
+  }
+
+  nsresult rv;
+
+  // Don't check the Components property, since we check its
+  // properties anyway. This will help performance.
+  if (JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sComponents_id) {
+    return NS_OK;
+  }
+
+#if 1
+  PRBool isLocation = JSVAL_IS_STRING(id) &&
+    JSVAL_TO_STRING(id) == sLocation_id;
+
+  rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY,
+                                    cx, obj, native, this, "Window",
+                                    isLocation ? "location" : "scriptglobals",
+                                    PR_FALSE);
+#else
+  rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY,
+                          nsnull, cx, obj, native, this, id, nsnull);
+#endif
+
+  if (NS_SUCCEEDED(rv)) {
+    return rv;
+  }
+
+  // Security check failed. The above call set a JS exception. The
+  // following lines ensure that the exception is propagated.
+
+  nsCOMPtr<nsIXPCNativeCallContext> cnccx;
+  sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  cnccx->SetExceptionWasThrown(PR_TRUE);
+
+  return rv; // rv is from CheckPropertyAccess()
+}
+
 
 NS_IMETHODIMP
 nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext * cx,
@@ -1090,47 +1202,16 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   nsCOMPtr<nsISupports> native;
   wrapper->GetNative(getter_AddRefs(native));
-  nsresult rv;
 
-  if (sSecMan) {
-    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
-    nsCOMPtr<nsIScriptContext> otherScriptContext;
-    if (sgo)
-        sgo->GetContext(getter_AddRefs(otherScriptContext));
-    JSContext *otherJSContext = nsnull;
-    if (otherScriptContext)
-        otherJSContext = (JSContext *) otherScriptContext->GetNativeContext();
+  nsresult rv = doCheckReadAccess(cx, obj, id, native);
 
-    //-- If the caller's context is the same as the callee's,
-    //   we assume they have the same origin, and we can allow the call
-    //   without an additional security check.
-    //   Also, don't check the Components property, 
-    //   since we check its properties anyway. This will help performance.
-    if (otherJSContext != cx &&
-        !(JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sComponents_id))
-    {
-#if 1
-        PRBool isLocation = JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sLocation_id;
-        rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY,
-                                                   cx, obj, native, this, "Window",
-                                                   isLocation ? "location" : "scriptglobals",
-                                                   PR_FALSE);
-#else
-        rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY, nsnull,
-                                cx, obj, native, this, id, nsnull);
-#endif
-        if (NS_FAILED(rv))
-        {
-            //-- Security check failed. The above call set a JS exception.
-            //   The following lines ensure that the exception is propagated.
-            *_retval = PR_FALSE;
-            nsCOMPtr<nsIXPCNativeCallContext> cnccx;
-            sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
-            if (cnccx)
-                cnccx->SetExceptionWasThrown(PR_TRUE);
-            return NS_OK;
-        }
-    }
+  if (NS_FAILED(rv)) {
+    // Security check failed. The security manager set a JS
+    // exception, we must make sure that exception is propagated.
+
+    *_retval = PR_FALSE;
+
+    return NS_OK;
   }
 
   if (JSVAL_IS_NUMBER(id)) {
@@ -1160,42 +1241,15 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsISupports> native;
   wrapper->GetNative(getter_AddRefs(native));
 
-  if (sSecMan) {
-    nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
-    nsCOMPtr<nsIScriptContext> otherScriptContext;
-    if (sgo)
-        sgo->GetContext(getter_AddRefs(otherScriptContext));
-    JSContext *otherJSContext = nsnull;
-    if (otherScriptContext)
-        otherJSContext = (JSContext *) otherScriptContext->GetNativeContext();
+  nsresult rv = doCheckWriteAccess(cx, obj, id, native);
 
-    //-- If the caller's context is the same as the callee's,
-    //   we assume they have the same origin, and we can allow the call
-    //   without an additional security check.
-    if (otherJSContext != cx)
-    {
-#if 1
-        PRBool isLocation = JSVAL_IS_STRING(id) && JSVAL_TO_STRING(id) == sLocation_id;
-        nsresult rv = sSecMan->CheckPropertyAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
-                                                   cx, obj, native, this, "Window",
-                                                   isLocation ? "location" : "scriptglobals",
-                                                   PR_FALSE);
-#else
-        nsresult rv = sSecMan->CanAccess(nsIXPCSecurityManager::ACCESS_SET_PROPERTY, nsnull,
-                                cx, obj, native, this, id, nsnull);
-#endif
-        if (NS_FAILED(rv))
-        {
-            //-- Security check failed. The above call set a JS exception.
-            //   The following lines ensure that the exception is propagated.
-            *_retval = PR_FALSE;
-            nsCOMPtr<nsIXPCNativeCallContext> cnccx;
-            sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
-            if (cnccx)
-                cnccx->SetExceptionWasThrown(PR_TRUE);
-            return NS_OK;
-        }
-    }
+  if (NS_FAILED(rv)) {
+    // Security check failed. The security manager set a JS
+    // exception, we must make sure that exception is propagated.
+
+    *_retval = PR_FALSE;
+
+    return NS_OK;
   }
 
   if (JSVAL_IS_STRING(id)) {
