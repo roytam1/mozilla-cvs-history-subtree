@@ -61,7 +61,8 @@ sub STORE
 {
   my ($self, $attr, $val) = ($_[$[], lc $_[$[ + 1], $_[$[ + 2]);
 
-  return if (($val eq "") || ($attr eq ""));
+  return unless (defined($val) && ($val ne ""));
+  return unless (defined($attr) && ($attr ne ""));
 
   if (defined($self->{$attr}))
     {
@@ -99,7 +100,7 @@ sub DELETE
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
-  return if ($attr eq "");
+  return unless (defined($attr) && ($attr ne ""));
   return unless defined($self->{$attr});
 
   $self->{"_${attr}_deleted_"} = 1;
@@ -115,7 +116,7 @@ sub attrModified
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
-  return 0 if ($attr eq "");
+  return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
   @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
@@ -134,7 +135,8 @@ sub isModified
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
-  return 0 if ($attr eq ""); return 0 unless defined($self->{$attr});
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 unless defined($self->{$attr});
   return $self->{"_self_obj_"}->{"_${attr}_modified_"};
 }
 
@@ -148,7 +150,7 @@ sub remove
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
-  return 0 if ($attr eq "");
+  return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
   $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
@@ -170,7 +172,8 @@ sub removeValue
   my $i = 0;
   local $_;
 
-  return 0 if (($val eq "") || ($attr eq ""));
+  return 0 unless (defined($val) && ($val ne ""));
+  return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
   @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
@@ -211,7 +214,9 @@ sub addValue
   my ($attr, $val, $force) = (lc $_[$[], $_[$[ + 1], $_[$[ + 2]);
   local $_;
 
-  return 0 if (($val eq "") || ($attr eq ""));
+  return 0 unless (defined($val) && ($val ne ""));
+  return 0 unless (defined($attr) && ($attr ne ""));
+
   if (!$force)
     {
       foreach (@{$self->{$attr}})
@@ -247,8 +252,10 @@ sub hasValue
 {
   my($self, $attr, $val, $nocase) = @_;
 
-  return 0 if (($val eq "") || ($attr eq ""));
+  return 0 unless (defined($val) && ($val ne ""));
+  return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
+
   return grep(/^\Q$val\E$/i, @{$self->{$attr}}) if $nocase;
   return grep(/^\Q$val\E$/, @{$self->{$attr}});
 }
@@ -262,7 +269,9 @@ sub matchValue
 {
   my($self, $attr, $reg, $nocase) = @_;
 
-  return 0 if (($reg eq "") || ($attr eq ""));
+  return 0 unless (defined($reg) && ($reg ne ""));
+  return 0 unless (defined($attr) && ($attr ne ""));
+
   return 0 unless defined($self->{$attr});
   return grep(/$reg/i, @{$self->{$attr}}) if $nocase;
   return grep(/$reg/, @{$self->{$attr}});
@@ -276,7 +285,7 @@ sub setDN
 {
   my ($self, $val) = @_;
 
-  return 0 if ($val eq "");
+  return 0 unless (defined($val) && ($val ne ""));
 
   $self->{"dn"} = $val;
 
@@ -304,7 +313,7 @@ sub size
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
   my @val;
 
-  return 0 if ($attr eq "");
+  return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
   @val = @{$self->{$attr}};
@@ -320,7 +329,8 @@ sub exists
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
-  return 0 if ($attr eq "");
+  return 0 unless (defined($attr) && ($attr ne ""));
+
   return defined($self->{$attr});
 }
 
