@@ -142,6 +142,8 @@ ber_special_free
 ber_get_next_buffer
 ber_err_print
 ber_sockbuf_free
+ber_get_next_buffer_ext
+ber_svecfree
 
 ldap_memfree
 ldap_ber_free
@@ -253,6 +255,14 @@ ldap_create_virtuallist_control
 ldap_parse_virtuallist_control
 ldap_create_proxyauth_control
 ldap_unbind_ext
+ldap_x_hostlist_first
+ldap_x_hostlist_next
+ldap_x_hostlist_statusfree
+ldap_x_malloc
+ldap_x_calloc
+ldap_x_realloc
+ldap_x_free
+ldap_create_proxiedauth_control
 ldap_memcache_init
 ldap_memcache_set
 ldap_memcache_get

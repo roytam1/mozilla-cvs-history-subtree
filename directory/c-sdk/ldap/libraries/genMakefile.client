@@ -20,6 +20,10 @@
 # Contributor(s): 
 #
 
+DEPTH	    = ../../../..
+NSPR_TREE = ../..
+MOD_DEPTH = ../..
+
 LDAP_SRC	=..
 include		../../build.mk
 
@@ -32,17 +36,25 @@ DEFLDAPW32CLIENT=$(WINDEFDIR)/ldap32
 DEFLDAPW16REV	=$(WINDEFDIR)/nsldap
 DEFLDAPW16	=$(WINDEFDIR)/libldap
 DEFLDSSLW32	=$(WINDEFDIR)/ldapssl
-DEFLCHW32	=$(WINDEFDIR)/nslch32
 DEFLDPRW32	=$(WINDEFDIR)/nsldappr32
 DEFLDPRINCL	=$(WINDEFDIR)/nsldappr-incl
 
-FILES		= $(DEFLDAPW32) $(DEFNSSLDAPW32) $(DEFLDAPSSLW32) \
-	          $(DEFLDAPW32CLIENT) $(DEFLDAPW16REV) $(DEFLDAPW16) \
-	          $(DEFLDSSLW32) $(DEFLCHW32) $(DEFLDPRW32) \
-	          $(DEFLDPRINCL)
+MACEXPDIR	=macintosh
+EXPLDAPMAC	=$(MACEXPDIR)/LDAPClient
+EXPSSLDAPMAC	=$(MACEXPDIR)/LDAPSSLClient
+EXPPRLDAPMAC	=$(MACEXPDIR)/LDAPPRClient
 
-TDFFILES	= $(addsuffix .tdf, $(FILES))
-DEFFILES	= $(addsuffix .def, $(FILES)) 
+
+WINFILES	= $(DEFLDAPW32) $(DEFNSSLDAPW32) $(DEFLDAPSSLW32) \
+	          $(DEFLDAPW32CLIENT) $(DEFLDAPW16REV) $(DEFLDAPW16) \
+	          $(DEFLDSSLW32) $(DEFLDPRW32) $(DEFLDPRINCL)
+
+WINTDFFILES	= $(addsuffix .tdf, $(WINFILES))
+WINDEFFILES	= $(addsuffix .def, $(WINFILES)) 
+
+MACFILES	= $(EXPLDAPMAC)	$(EXPSSLDAPMAC) $(EXPPRLDAPMAC)
+
+MACEXPFILES	= $(addsuffix .exp, $(MACFILES)) 
 
 ifeq ($(BUILD_OPT), 1)
 GENEXPARGS=OPTIMIZE $(LDAPVERS) $(LDAPVERS_SUFFIX)
@@ -52,29 +64,30 @@ endif
 
 all:
 	@echo
-	@echo "This Makefile is intended to be run on a Unix box"
-	@echo "and will generated the necessary .def files for "
-	@echo "a Windows build.  There is probably no reason why"
-	@echo "it has been run on Unix other than a long and"
-	@echo "glorius history :-)"
+	@echo "This Makefile will generate the necessary .def and .exp files"
+	@echo "for a Windows or MacOS build."
 	@echo
-	@echo "The valid options are:"
-	@echo "exportfiles	- generate exportfiles
-	@echo "forceall	- touch all of the tdf files
-	@echo "clean		- clean up generated files
+	@echo "The valid targets are:"
+	@echo "  exportfiles  - generate exportfiles"
+	@echo "  touch        - touch all of the template files"
+	@echo "  clean        - clean up generated files"
+	@echo
+	@echo "gmake exportfiles should be done after editing any of these files:"
+	@echo "  $(TEMPLATES)"
 	@echo
 
+exportfiles:	winexportfiles macexportfiles
 
-exportfiles:  $(DEFLDAPW32).def $(DEFLDAPSSLW32).def \
-        $(DEFLDAPW32CLIENT).def \
-        $(DEFLDAPW16).def $(DEFLDAPW16REV).def \
-        $(DEFLDSSLW32).def \
-        $(DEFLDPRW32).def $(DEFLDPRINCL).def \
-        $(DEFNSSLDAPW32).def
+winexportfiles:	$(WINDEFFILES)
+
+macexportfiles:	$(MACEXPFILES)
 
 PRLDAPEX	=libprldap/libprldap.ex
 LDAPSSLEX	=libldap_ssl.ex
 LDAPEX		=libldap.ex
+
+TEMPLATES	=$(PRLDAPEX) $(LDAPSSLEX) $(LDAPEX)
+
 
 #
 # All the various flavors of Windows:
@@ -107,6 +120,18 @@ $(DEFLDPRW32).def:      $(DEFLDPRW32).tdf $(PRLDAPEX) $(OTHERDEFDEPS)
 $(DEFLDPRINCL).def:     $(DEFLDPRINCL).tdf $(PRLDAPEX) $(OTHERDEFDEPS)
 	$(GENEXPORTS) Win32 $< $(PRLDAPEX) $(GENEXPARGS) > $@
 
+
+# MacOS files:
+$(EXPLDAPMAC).exp:		$(LDAPEX) $(OTHERDEFDEPS)
+	$(GENEXPORTS) MacOS Standard $< $(GENEXPARGS) > $@
+
+$(EXPSSLDAPMAC).exp:	$(LDAPSSLEX) $(OTHERDEFDEPS)
+	$(GENEXPORTS) MacOS Standard $< $(GENEXPARGS) > $@
+
+$(EXPPRLDAPMAC).exp:	$(PRLDAPEX) $(OTHERDEFDEPS)
+	$(GENEXPORTS) MacOS Standard $< $(GENEXPARGS) > $@
+
+
 ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # generic rules to create standard export/map files
 $(OBJDEST)/$(EXPLDAP).exp:      $(LDAPEX) $(OTHERDEFDEPS)
@@ -119,10 +144,10 @@ $(OBJDEST)/$(EXPLDPR).exp:      $(PRLDAPEX) $(OTHERDEFDEPS)
 	$(GENEXPORTS) $(ARCH) Standard $< $(GENEXPARGS) > $@
 endif
 
-forceall: FORCE
-	touch $(TDFFILES)
+touch: FORCE
+	touch $(TEMPLATES)
 
 clean: FORCE
-	$(RM) $(DEFFILES)
+	$(RM) $(WINDEFFILES) $(MACEXPFILES)
 
 FORCE:
