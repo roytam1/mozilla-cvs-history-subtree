@@ -104,6 +104,8 @@
 
 /// Standard "it worked" return value
 #define NS_OK                              0
+/// COM compatible false value
+#define NS_FALSE                           1
 
 #define NS_ERROR_BASE                      ((nsresult) 0xC1F30000)
 
