@@ -122,20 +122,20 @@ nsReflowTree::Node::Destroy(nsReflowTree::Node *node)
 
 nsReflowTree::Node::~Node()
 {
-    if (HasSingleChild())
-        Destroy(mKidU.mChild);
-    else
+    if (HasMultipleChildren())
         ChildChunk::Destroy(mKidU.mChunk);
+    else if (HasChildren())
+        Destroy(mKidU.mChild);
 }
 
 nsReflowTree::Node *
 nsReflowTree::Node::GetChild(nsIFrame *forFrame)
 {
-    if (!mKidU.mChild)
+    if (!HasChildren())
         // no kids yet, this becomes one
         return mKidU.mChild = Create(forFrame);
   
-    if (HasSingleChild()) {
+    if (!HasMultipleChildren()) {
         // our child is this frame, all done
         if (forFrame == mKidU.mChild->GetFrame())
             return mKidU.mChild;
@@ -266,7 +266,8 @@ nsReflowTree::Node::Iterator::NextChild()
         return nsnull;
 
     if (!mPos) {
-        if (mNode->HasSingleChild()) {
+        if (!mNode->HasMultipleChildren()) {
+            // if it's 0 children, *mPos == nsnull
             mPos = &mNode->mKidU.mChild;
         } else {
             mCurrentChunk = mNode->mKidU.mChunk;
@@ -275,7 +276,7 @@ nsReflowTree::Node::Iterator::NextChild()
         return *mPos;
     }
 
-    if (mNode->HasSingleChild())
+    if (!mNode->HasMultipleChildren())
         return nsnull;
 
     if (!*mPos)
@@ -314,14 +315,21 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     Node **aPos;
     ChildChunk *aCurrentChunk;
 
-    if (!mNode) {
+    if (!mNode || !mNode->HasChildren()) {
         ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
                        ("SelectChild() = %p",nsnull));
         return nsnull;
     }
     
-    if (mNode->HasSingleChild()) {
-        aPos = &mNode->mKidU.mChild;
+    if (!mNode->HasMultipleChildren()) {
+        if (mNode->mKidU.mChild->mFrame == aChildIFrame) {
+            ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                     ("SelectChild() = %p",mNode->mKidU.mChild->mFrame));
+            return mNode->mKidU.mChild;
+        }
+        ITERATOR_FRAME_TRACE(NS_FRAME_TRACE_TREE,
+                             ("SelectChild() = %p",nsnull));
+        return nsnull;
     } else {
         aCurrentChunk = mNode->mKidU.mChunk;
         aPos = &aCurrentChunk->mKids[0];
