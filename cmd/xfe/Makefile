@@ -257,6 +257,7 @@ BASIC_LIBS	= \
 		  $(DIST)/lib/libmarimurl.a	\
 		  $(DIST)/lib/libremoturl.a	\
 		  $(DIST)/lib/libnetwork.a	\
+		  $(DIST)/lib/libperf.a		\
 		  $(DIST)/lib/lib$(LITE_PREFIX)rdf.a \
 		  $(DIST)/lib/lib$(LITE_PREFIX)xml.a \
 		  $(DIST)/lib/lib$(LITE_PREFIX)lay.a \
