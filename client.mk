@@ -362,6 +362,30 @@ CHECKOUT_CALENDAR := true
 FASTUPDATE_CALENDAR := true
 endif
 
+####################################
+# CVS defines for Mozilla XRE (pulled and built if MOZ_XRE_APP is set)
+#
+CVSCO_XRE_APP := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/embedding/xre
+ifdef MOZ_XRE_APP
+CHECKOUT_XRE_APP := cvs_co $(CVSCO_XRE_APP)
+FASTUPDATE_XRE_APP:= fast_update $(CVSCO_XRE_APP)
+else
+CHECKOUT_XRE_APP := true
+FASTUPDATE_XRE_APP:= true
+endif
+
+####################################
+# CVS defines for standalone mail (pulled and built if MOZ_MINOTAUR is set)
+#
+CVSCO_MINOTAUR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/mailnews/app
+ifdef MOZ_XRE_APP
+CHECKOUT_MINOTAUR := cvs_co $(CVSCO_MINOTAUR)
+FASTUPDATE_MINOTAUR := fast_update $(CVSCO_MINOTAUR)
+else
+CHECKOUT_MINOTAUR := true
+FASTUPDATE_MINOTAUR := true
+endif
+
 
 # because some cygwin tools can't handle native dos-drive paths & vice-versa
 # force configure to use a relative path for --srcdir
@@ -438,6 +462,8 @@ real_checkout:
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
 	$(CHECKOUT_CALENDAR) && \
+    $(CHECKOUT_XRE_APP) && \
+    $(CHECKOUT_MINOTAUR) && \
 	$(CHECKOUT_LIBART) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
@@ -498,6 +524,8 @@ real_fast-update:
 	fast_update $(CVSCO_GFX2) && \
 	fast_update $(CVSCO_IMGLIB2) && \
 	$(FASTUPDATE_CALENDAR) && \
+    $(FASTUPDATE_XRE_APP) && \
+    $(FASTUPDATE_MINOTAUR) && \
 	$(FASTUPDATE_LIBART) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
 	fast_update $(CVSCO_NOSUBDIRS)
