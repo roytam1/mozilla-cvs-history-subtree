@@ -51,7 +51,6 @@
 #include "pk11func.h"
 
 #include "pki3hack.h"
-#include "certi.h"
 
 /*
  * On Windows nss3.dll needs to export the symbol 'mktemp' to be

@@ -307,22 +307,6 @@ nssCKFWToken_Create
   return (NSSCKFWToken *)NULL;
 }
 
-static void
-nss_ckfwtoken_session_iterator
-(
-  const void *key,
-  void *value,
-  void *closure
-)
-{
-  /*
-   * Remember that the fwToken->mutex is locked
-   */
-  NSSCKFWSession *fwSession = (NSSCKFWSession *)value;
-  (void)nssCKFWSession_Destroy(fwSession, CK_FALSE);
-  return;
-}
-
 /*
  * nssCKFWToken_Destroy
  *
@@ -347,19 +331,6 @@ nssCKFWToken_Destroy
   if( (void *)NULL != (void *)fwToken->mdToken->Invalidate ) {
     fwToken->mdToken->Invalidate(fwToken->mdToken, fwToken,
       fwToken->mdInstance, fwToken->fwInstance);
-  }
-  /* we can destroy the list without locking now because no one else is 
-   * referencing us (or _Destroy was invalidly called!)
-   */
-  nssCKFWHash_Iterate(fwToken->sessions, nss_ckfwtoken_session_iterator, 
-								(void *)NULL);
-  nssCKFWHash_Destroy(fwToken->sessions);
-
-  if (fwToken->sessionObjectHash) {
-    nssCKFWHash_Destroy(fwToken->sessionObjectHash);
-  }
-  if (fwToken->mdObjectHash) {
-    nssCKFWHash_Destroy(fwToken->mdObjectHash);
   }
 
   nssCKFWSlot_ClearToken(fwToken->fwSlot);
@@ -1576,6 +1547,21 @@ nssCKFWToken_RemoveSession
   return error;
 }
 
+static void
+nss_ckfwtoken_session_iterator
+(
+  const void *key,
+  void *value,
+  void *closure
+)
+{
+  /*
+   * Remember that the fwToken->mutex is locked
+   */
+  NSSCKFWSession *fwSession = (NSSCKFWSession *)value;
+  (void)nssCKFWSession_Destroy(fwSession, CK_FALSE);
+  return;
+}
 
 /*
  * nssCKFWToken_CloseAllSessions

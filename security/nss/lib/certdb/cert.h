@@ -968,12 +968,6 @@ CERT_DupCertList(CERTCertificateList * oldList);
 
 extern void CERT_DestroyCertificateList(CERTCertificateList *list);
 
-/*
-** is cert a user cert? i.e. does it have CERTDB_USER trust,
-** i.e. a private key?
-*/
-PRBool CERT_IsUserCert(CERTCertificate* cert);
-
 /* is cert a newer than cert b? */
 PRBool CERT_IsNewer(CERTCertificate *certa, CERTCertificate *certb);
 
@@ -1248,12 +1242,6 @@ CERT_FilterCertListByCANames(CERTCertList *certList, int nCANames,
 			     char **caNames, SECCertUsage usage);
 
 /*
- * Filter a list of certificates, removing those certs that aren't user certs
- */
-SECStatus
-CERT_FilterCertListForUserCerts(CERTCertList *certList);
-
-/*
  * Collect the nicknames from all certs in a CertList.  If the cert is not
  * valid, append a string to that nickname.
  *
@@ -1443,6 +1431,9 @@ CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
  */
 extern SECStatus CERT_GetCertType(CERTCertificate *cert);
 
+
+SECStatus InitCRLCache(void);
+SECStatus ShutdownCRLCache(void);
 
 SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,
                         SECItem* dp, int64 t, void* wincx);

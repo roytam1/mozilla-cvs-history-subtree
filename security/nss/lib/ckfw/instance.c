@@ -394,14 +394,6 @@ nssCKFWInstance_Destroy
     fwInstance->mdInstance->Finalize(fwInstance->mdInstance, fwInstance);
   }
 
-  if (fwInstance->sessionHandleHash) {
-     nssCKFWHash_Destroy(fwInstance->sessionHandleHash);
-  }
-
-  if (fwInstance->objectHandleHash) {
-     nssCKFWHash_Destroy(fwInstance->objectHandleHash);
-  }
-
 #ifdef DEBUG
   (void)instance_remove_pointer(fwInstance);
 #endif /* DEBUG */

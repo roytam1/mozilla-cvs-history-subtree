@@ -552,6 +552,38 @@ p12u_WriteToExportFile(void *arg, const char *buf, unsigned long len)
     }
 }
 
+static SECStatus
+cert_UserCertsOnly(CERTCertList *certList)
+{
+    CERTCertListNode *node, *freenode;
+    CERTCertificate *cert;
+    PRUint32 numusercerts = 0;
+    
+    node = CERT_LIST_HEAD(certList);
+    
+    while ( ! CERT_LIST_END(node, certList) ) {
+	cert = node->cert;
+	if ( !( cert->trust->sslFlags & CERTDB_USER ) &&
+	     !( cert->trust->emailFlags & CERTDB_USER ) &&
+	     !( cert->trust->objectSigningFlags & CERTDB_USER ) ) {
+	    /* Not a User Cert, so remove this cert from the list */
+	    freenode = node;
+	    node = CERT_LIST_NEXT(node);
+	    CERT_RemoveCertListNode(freenode);
+	} else {
+	    /* Is a User cert, so leave it in the list */
+	    node = CERT_LIST_NEXT(node);
+            numusercerts ++;
+	}
+    }
+    
+    if (numusercerts) {
+        return(SECSuccess);
+    } else  {
+        return(SECFailure);
+    }
+}
+
 void
 P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 			secuPWData *slotPw, secuPWData *p12FilePw)
@@ -577,11 +609,10 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 	return;
     }
 
-    if ((SECSuccess != CERT_FilterCertListForUserCerts(certlist)) ||
-        CERT_LIST_EMPTY(certlist)) {
-        SECU_PrintError(progName,"no user certs from given nickname");
+    if (SECSuccess != cert_UserCertsOnly(certlist)) {
+        SECU_PrintError(progName,"find user certs from nickname failed");
         pk12uErrno = PK12UERR_FINDCERTBYNN;
-        goto loser;
+        return;
     }
 
     /*	Password to use for PKCS12 file.  */
@@ -658,10 +689,9 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
                 pk12uErrno = PK12UERR_ADDCERTKEY;
                 goto loser;
         }
+        CERT_DestroyCertificate(cert);
+        node->cert = NULL;
     }
-
-    CERT_DestroyCertList(certlist);
-    certlist = NULL;
 
     if(SEC_PKCS12Encode(p12ecx, p12u_WriteToExportFile, p12cxt)
                         != SECSuccess) {
@@ -680,10 +710,17 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 loser:
     SEC_PKCS12DestroyExportContext(p12ecx);
 
-    if (certlist) {
-        CERT_DestroyCertList(certlist);
-        certlist = NULL;
-    }    
+    for (node = CERT_LIST_HEAD(certlist);!CERT_LIST_END(node,certlist);node=CERT_LIST_NEXT(node))
+    {
+        CERTCertificate* cert = node->cert;
+        if (!node->cert) {
+            continue;
+        }
+
+        if(cert) {
+            CERT_DestroyCertificate(cert);
+        }
+    }
 
     if (slotPw)
         PR_Free(slotPw->data);

@@ -371,7 +371,6 @@ struct CERTCertListStr {
 #define CERT_LIST_HEAD(l) ((CERTCertListNode *)PR_LIST_HEAD(&l->list))
 #define CERT_LIST_NEXT(n) ((CERTCertListNode *)n->links.next)
 #define CERT_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
-#define CERT_LIST_EMPTY(l) CERT_LIST_END(CERT_LIST_HEAD(l), l)
 
 struct CERTCrlEntryStr {
     SECItem serialNumber;
@@ -495,7 +494,7 @@ typedef PRInt64 SECCertificateUsage;
 #define certificateUsageStatusResponder        (0x0400)
 #define certificateUsageAnyCA                  (0x0800)
 
-#define certificateUsageHighest certificateUsageAnyCA
+#define highestUsage certificateUsageAnyCA
 
 /*
  * Does the cert belong to the user, a peer, or a CA.
