@@ -587,7 +587,8 @@ static void MapStyleRule(MapStyleData* aData, nsIRuleNode* aCurrNode)
 NS_IMETHODIMP
 StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 {
-  // XXXdwh This function can presumably be removed.
+  // XXXdwh This function needs to handle invalidation of style subtrees and rule
+  // subtrees.
   return NS_OK;
 }
 
@@ -962,9 +963,6 @@ NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
   if (nsnull == context) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  nsresult result = context->QueryInterface(NS_GET_IID(nsIStyleContext), (void **) aInstancePtrResult);
-  context->RemapStyle(aPresContext);  // remap after initial ref-count is set
-
-  return result;
+  return context->QueryInterface(NS_GET_IID(nsIStyleContext), (void **) aInstancePtrResult);
 }
 
