@@ -107,18 +107,14 @@ num_parseFloat(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 {
     JSString *str;
     jsdouble d;
-    const jschar *bp, *ep;
+    const jschar *ep;
 
     str = js_ValueToString(cx, argv[0]);
     if (!str)
 	return JS_FALSE;
-    /* XXXbe js_strtod shouldn't require NUL termination */
-    bp = js_UndependString(cx, str);
-    if (!bp)
+    if (!js_strtod(cx, str->chars, &ep, &d))
 	return JS_FALSE;
-    if (!js_strtod(cx, bp, &ep, &d))
-	return JS_FALSE;
-    if (ep == bp) {
+    if (ep == str->chars) {
 	*rval = DOUBLE_TO_JSVAL(cx->runtime->jsNaN);
 	return JS_TRUE;
     }
@@ -132,7 +128,7 @@ num_parseInt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
     jsint radix;
     jsdouble d;
-    const jschar *bp, *ep;
+    const jschar *ep;
 
     str = js_ValueToString(cx, argv[0]);
     if (!str)
@@ -148,13 +144,9 @@ num_parseInt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	*rval = DOUBLE_TO_JSVAL(cx->runtime->jsNaN);
 	return JS_TRUE;
     }
-    /* XXXbe js_strtointeger shouldn't require NUL termination */
-    bp = js_UndependString(cx, str);
-    if (!bp)
+    if (!js_strtointeger(cx, str->chars, &ep, radix, &d))
 	return JS_FALSE;
-    if (!js_strtointeger(cx, bp, &ep, radix, &d))
-	return JS_FALSE;
-    if (ep == bp) {
+    if (ep == str->chars) {
 	*rval = DOUBLE_TO_JSVAL(cx->runtime->jsNaN);
 	return JS_TRUE;
     }
@@ -630,7 +622,7 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
 {
     JSObject *obj;
     JSString *str;
-    const jschar *bp, *ep;
+    const jschar *ep;
 
     if (JSVAL_IS_OBJECT(v)) {
 	obj = JSVAL_TO_OBJECT(v);
@@ -653,14 +645,10 @@ js_ValueToNumber(JSContext *cx, jsval v, jsdouble *dp)
          * interpreted as decimal by js_strtod and will never get passed to
          * js_strtointeger (which would interpret them as octal).
          */
-        /* XXXbe js_strtod shouldn't require NUL termination */
-        bp = js_UndependString(cx, str);
-        if (!bp)
-            return JS_FALSE;
-        if ((!js_strtod(cx, bp, &ep, dp) ||
-             js_SkipWhiteSpace(ep) != bp + str->length) &&
-	    (!js_strtointeger(cx, bp, &ep, 0, dp) ||
-             js_SkipWhiteSpace(ep) != bp + str->length)) {
+         if ((!js_strtod(cx, str->chars, &ep, dp) ||
+              js_SkipWhiteSpace(ep) != str->chars + str->length) &&
+	     (!js_strtointeger(cx, str->chars, &ep, 0, dp) ||
+              js_SkipWhiteSpace(ep) != str->chars + str->length)) {
 	    goto badstr;
 	}
     } else if (JSVAL_IS_BOOLEAN(v)) {

@@ -1163,27 +1163,26 @@ js_NewRegExp(JSContext *cx, JSTokenStream *ts,
     size_t resize;
 
     const jschar *cp;
-    size_t len;
+    uintN len;
 
     re = NULL;
     mark = JS_ARENA_MARK(&cx->tempPool);
 
     state.context = cx;
     state.tokenStream = ts;
-    state.cpbegin = state.cp = JSSTRING_CHARS(str);
-    state.cpend = state.cp + JSSTRING_LENGTH(str);
+    state.cpbegin = state.cp = str->chars;
+    state.cpend = state.cp + str->length;
     state.flags = flags;
     state.parenCount = 0;
     state.progLength = 0;
 
     if (flat) {
-        len = JSSTRING_LENGTH(str);
-        cp = state.cpbegin;
+        len = str->length;
+        cp = str->chars;
         ren = NULL;
         while (len > 0) {
 	    ren2 = NewRENode(&state, 
-                             (len == 1) ? REOP_FLAT1 : REOP_FLAT,
-                             (void *)cp);
+                        (len == 1) ? REOP_FLAT1 : REOP_FLAT, (void *)cp);
 	    if (!ren2)
 	        goto out;
 	    ren2->flags = RENODE_NONEMPTY;
@@ -1246,14 +1245,12 @@ js_NewRegExpOpt(JSContext *cx, JSTokenStream *ts,
                 JSString *str, JSString *opt, JSBool flat)
 {
     uintN flags;
-    jschar *s;
-    size_t i, n;
+    jschar *cp;
 
     flags = 0;
     if (opt) {
-	s = JSSTRING_CHARS(opt);
-	for (i = 0, n = JSSTRING_LENGTH(opt); i < n; i++) {
-	    switch (s[i]) {
+	for (cp = opt->chars; *cp; cp++) {
+	    switch (*cp) {
 	      case 'g':
 		flags |= JSREG_GLOB;
 		break;
@@ -1265,7 +1262,7 @@ js_NewRegExpOpt(JSContext *cx, JSTokenStream *ts,
 		break;
 	      default: {
 		char charBuf[2] = " ";
-		charBuf[0] = (char)s[i];
+		charBuf[0] = (char)*cp;
                 js_ReportCompileErrorNumber(cx, ts, NULL, JSREPORT_ERROR,
                                             JSMSG_BAD_FLAG, charBuf);
 		return NULL;
@@ -2077,13 +2074,11 @@ js_ExecuteRegExp(JSContext *cx, JSRegExp *re, JSString *str, size_t *indexp,
      * and we never let cp get beyond cpend.
      */
     start = *indexp;
-    length = JSSTRING_LENGTH(str);
-    if (start > length)
-	start = length;
-    cp = JSSTRING_CHARS(str);
-    state.cpbegin = cp;
-    state.cpend = cp + length;
-    cp += start;
+    if (start > str->length)
+	start = str->length;
+    cp = str->chars + start;
+    state.cpbegin = str->chars;
+    state.cpend = str->chars + str->length;
     state.start = start;
     state.skipped = 0;
 
@@ -2243,7 +2238,7 @@ js_ExecuteRegExp(JSContext *cx, JSRegExp *re, JSString *str, size_t *indexp,
 	 * perl5        "hi", "hi there"            "hihitherehi therebye"
 	 * js1.2        "hi", "there"               "hihitheretherebye"
 	 */
-	res->leftContext.chars = JSSTRING_CHARS(str) + start;
+	res->leftContext.chars = str->chars + start;
 	res->leftContext.length = state.skipped;
     } else {
 	/*
@@ -2251,7 +2246,7 @@ js_ExecuteRegExp(JSContext *cx, JSRegExp *re, JSString *str, size_t *indexp,
 	 *
 	 * js1.3        "hi", "hi there"            "hihitherehi therebye"
 	 */
-	res->leftContext.chars = JSSTRING_CHARS(str);
+	res->leftContext.chars = str->chars;
 	res->leftContext.length = start + state.skipped;
     }
     res->rightContext.chars = ep;
@@ -2599,7 +2594,7 @@ regexp_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	return JS_TRUE;
     }
 
-    length = JSSTRING_LENGTH(re->source) + 2;
+    length = re->source->length + 2;
     nflags = 0;
     for (flags = re->flags; flags != 0; flags &= flags - 1)
 	nflags++;
@@ -2610,7 +2605,7 @@ regexp_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     }
 
     chars[0] = '/';
-    js_strncpy(&chars[1], JSSTRING_CHARS(re->source), length - 2);
+    js_strncpy(&chars[1], re->source->chars, length - 2);
     chars[length-1] = '/';
     if (nflags) {
 	if (re->flags & JSREG_GLOB)
@@ -2645,7 +2640,10 @@ regexp_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	return JS_FALSE;
     opt = NULL;
     if (argc == 0) {
-	str = cx->runtime->emptyString;
+	str = js_NewStringCopyN(cx, cx->runtime->emptyString->chars, 
+                                    cx->runtime->emptyString->length, 0);
+        if (!str)
+            return JS_FALSE;
     } else {
         if (JSVAL_IS_OBJECT(argv[0])) {
             /*

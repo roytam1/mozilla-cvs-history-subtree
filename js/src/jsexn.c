@@ -401,7 +401,7 @@ exn_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     jsval v;
     JSString *name, *message, *result;
     jschar *chars, *cp;
-    size_t name_length, message_length, length;
+    size_t length;
 
     if (!OBJ_GET_PROPERTY(cx, obj, (jsid)cx->runtime->atomState.nameAtom, &v))
         return JS_FALSE;
@@ -414,19 +414,17 @@ exn_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     }
 
-    if (JSSTRING_LENGTH(message) != 0) {
-        name_length = JSSTRING_LENGTH(name);
-        message_length = JSSTRING_LENGTH(message);
-        length = name_length + message_length + 2;
+    if (message->length != 0) {
+        length = name->length + message->length + 2;
         cp = chars = (jschar*) JS_malloc(cx, (length + 1) * sizeof(jschar));
         if (!chars)
             return JS_FALSE;
 
-        js_strncpy(cp, JSSTRING_CHARS(name), name_length);
-        cp += name_length;
+        js_strncpy(cp, name->chars, name->length);
+        cp += name->length;
         *cp++ = ':'; *cp++ = ' ';
-        js_strncpy(cp, JSSTRING_CHARS(message), message_length);
-        cp += message_length;
+        js_strncpy(cp, message->chars, message->length);
+        cp += message->length;
         *cp = 0;
 
         result = js_NewString(cx, chars, length, 0);
@@ -450,10 +448,10 @@ static JSBool
 exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     jsval v;
-    JSString *name, *message, *filename, *lineno_as_str, *result;
     int32 lineno;
-    size_t lineno_length, name_length, message_length, filename_length, length;
+    JSString *name, *message, *filename, *lineno_as_str, *result;
     jschar *chars, *cp;
+    size_t length;
 
     if (!OBJ_GET_PROPERTY(cx, obj, (jsid)cx->runtime->atomState.nameAtom, &v))
         return JS_FALSE;
@@ -480,24 +478,19 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         if (!(lineno_as_str = js_ValueToString(cx, v))) {
             return JS_FALSE;
         }
-        lineno_length = JSSTRING_LENGTH(lineno_as_str);
     } else {
         lineno_as_str = NULL;
-        lineno_length = 0;
     }
 
     /* Magic 8, for the characters in ``(new ())''. */
-    name_length = JSSTRING_LENGTH(name);
-    message_length = JSSTRING_LENGTH(message);
-    length = 8 + name_length + message_length;
+    length = 8 + name->length + message->length;
 
-    filename_length = JSSTRING_LENGTH(filename);
-    if (filename_length != 0) {
+    if (filename->length != 0) {
         /* append filename as ``, {filename}'' */
-        length += 2 + filename_length;
+        length += 2 + filename->length;
         if (lineno_as_str) {
             /* append lineno as ``, {lineno_as_str}'' */
-            length += 2 + lineno_length;
+            length += 2 + lineno_as_str->length;
         }
     } else {
         if (lineno_as_str) {
@@ -505,7 +498,7 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
              * no filename, but have line number,
              * need to append ``, "", {lineno_as_str}''
              */
-            length += 6 + lineno_length;
+            length += 6 + lineno_as_str->length;
         }
     }
 
@@ -514,19 +507,25 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
 
     *cp++ = '('; *cp++ = 'n'; *cp++ = 'e'; *cp++ = 'w'; *cp++ = ' ';
-    js_strncpy(cp, JSSTRING_CHARS(name), name_length);
-    cp += name_length;
+    js_strncpy(cp, name->chars, name->length);
+    cp += name->length;
     *cp++ = '(';
-    if (message_length != 0) {
-        js_strncpy(cp, JSSTRING_CHARS(message), message_length);
-        cp += message_length;
+    if (message->length != 0) {
+        js_strncpy(cp, message->chars, message->length);
+        cp += message->length;
     }
 
-    if (filename_length != 0) {
+    if (filename->length != 0) {
         /* append filename as ``, {filename}'' */
+        *cp++ = ','; *cp++ = ' ';
+        js_strncpy(cp, filename->chars, filename->length);
+        cp += filename->length;
+        if (lineno_as_str) {
+            /* append lineno as ``, {lineno_as_str}'' */
             *cp++ = ','; *cp++ = ' ';
-        js_strncpy(cp, JSSTRING_CHARS(filename), filename_length);
-        cp += filename_length;
+            js_strncpy(cp, lineno_as_str->chars, lineno_as_str->length);
+            cp += lineno_as_str->length;
+        }
     } else {
         if (lineno_as_str) {
             /*
@@ -534,13 +533,10 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
              * need to append ``, "", {lineno_as_str}''
              */
             *cp++ = ','; *cp++ = ' '; *cp++ = '"'; *cp++ = '"';
+            *cp++ = ','; *cp++ = ' ';
+            js_strncpy(cp, lineno_as_str->chars, lineno_as_str->length);
+            cp += lineno_as_str->length;
         }
-    }
-    if (lineno_as_str) {
-        /* append lineno as ``, {lineno_as_str}'' */
-        *cp++ = ','; *cp++ = ' ';
-        js_strncpy(cp, JSSTRING_CHARS(lineno_as_str), lineno_length);
-        cp += lineno_length;
     }
 
     *cp++ = ')'; *cp++ = ')'; *cp = 0;

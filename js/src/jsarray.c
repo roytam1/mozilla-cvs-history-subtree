@@ -90,8 +90,8 @@ IdIsIndex(jsid id, jsuint *indexp)
 
     /* It must be a string. */
     str = JSVAL_TO_STRING(id);
-    cp = JSSTRING_CHARS(str);
-    if (JS7_ISDEC(*cp) && JSSTRING_LENGTH(str) < sizeof(MAXSTR)) {
+    cp = str->chars;
+    if (JS7_ISDEC(*cp) && str->length < sizeof(MAXSTR)) {
 	jsuint index = JS7_UNDEC(*cp++);
 	jsuint oldIndex = 0;
 	jsuint c = 0;
@@ -317,7 +317,7 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
     jsval v;
     jsuint length, index;
     jschar *chars, *ochars;
-    size_t nchars, growth, seplen, tmplen;
+    size_t nchars, growth, seplen;
     const jschar *sepstr;
     JSString *str;
     JSHashEntry *he;
@@ -388,11 +388,8 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
             if (localeString) {
                 if (!js_ValueToObject(cx, v, &obj2))
                     goto doneBad;
-                if (!js_TryMethod(cx, obj2,
-                                  cx->runtime->atomState.toLocaleStringAtom,
-                                  0, NULL, &v)) {
+                if (!js_TryMethod(cx, obj2, cx->runtime->atomState.toLocaleStringAtom, 0, NULL, &v))
                     goto doneBad;
-                }
                 str = js_ValueToString(cx, v);
             }
             else
@@ -406,7 +403,7 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
 
 	/* Allocate 3 + 1 at end for ", ", closing bracket, and zero. */
 	growth = (nchars + (sepstr ? seplen : 0) +
-		  JSSTRING_LENGTH(str) +
+		  str->length +
 		  3 + 1) * sizeof(jschar);
 	if (!chars) {
 	    chars = (jschar *) malloc(growth);
@@ -424,11 +421,10 @@ array_join_sub(JSContext *cx, JSObject *obj, JSString *sep, JSBool literalize,
 	    js_strncpy(&chars[nchars], sepstr, seplen);
 	    nchars += seplen;
 	}
-	sepstr = JSSTRING_CHARS(sep);
+	sepstr = sep->chars;
 
-        tmplen = JSSTRING_LENGTH(str);
-        js_strncpy(&chars[nchars], JSSTRING_CHARS(str), tmplen);
-        nchars += tmplen;
+	js_strncpy(&chars[nchars], str->chars, str->length);
+	nchars += str->length;
     }
 
   done:

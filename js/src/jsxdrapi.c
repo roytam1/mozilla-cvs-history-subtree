@@ -413,7 +413,7 @@ JS_XDRString(JSXDRState *xdr, JSString **strp)
     jschar *chars = NULL, *raw;
 
     if (xdr->mode == JSXDR_ENCODE)
-        len = JSSTRING_LENGTH(*strp);
+        len = (*strp)->length;
     if (!JS_XDRUint32(xdr, &len))
         return JS_FALSE;
     nbytes = len * sizeof(jschar);
@@ -422,7 +422,7 @@ JS_XDRString(JSXDRState *xdr, JSString **strp)
         if (!(chars = (jschar *) JS_malloc(xdr->cx, nbytes + sizeof(jschar))))
             return JS_FALSE;
     } else {
-        chars = JSSTRING_CHARS(*strp);
+        chars = (*strp)->chars;
     }
 
     padlen = nbytes % JSXDR_ALIGN;

@@ -91,8 +91,8 @@ script_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         str = js_QuoteString(cx, str, '\'');
         if (!str)
             return JS_FALSE;
-        s = JSSTRING_CHARS(str);
-        k = JSSTRING_LENGTH(str);
+        s = str->chars;
+        k = str->length;
         n += k;
     }
 
@@ -197,8 +197,7 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
     /* Compile the new script using the caller's scope chain, a la eval(). */
     script = JS_CompileUCScriptForPrincipals(cx, scopeobj, principals,
-                                             JSSTRING_CHARS(str),
-                                             JSSTRING_LENGTH(str),
+                                             str->chars, str->length,
                                              file, line);
     if (!script)
         return JS_FALSE;

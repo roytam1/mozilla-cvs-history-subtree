@@ -169,7 +169,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
 	str = js_ValueToSource(cx, ATOM_KEY(atom));
 	if (!str)
 	    return 0;
-        cstr = js_DeflateString(cx, JSSTRING_CHARS(str), JSSTRING_LENGTH(str));
+	cstr = js_DeflateString(cx, str->chars, str->length);
 	if (!cstr)
 	    return 0;
 	fprintf(fp, " %s", cstr);
@@ -223,8 +223,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
 	    str = js_ValueToSource(cx, ATOM_KEY(atom));
 	    if (!str)
 		return 0;
-            cstr = js_DeflateString(cx, JSSTRING_CHARS(str),
-                                    JSSTRING_LENGTH(str));
+	    cstr = js_DeflateString(cx, str->chars, str->length);
 	    if (!cstr)
 		return 0;
 	    fprintf(fp, "\n\t%s: %d", cstr, off);
@@ -252,7 +251,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
         str = js_ValueToSource(cx, ATOM_KEY(atom));
         if (!str)
             return 0;
-        cstr = js_DeflateString(cx, JSSTRING_CHARS(str), JSSTRING_LENGTH(str));
+        cstr = js_DeflateString(cx, str->chars, str->length);
         if (!cstr)
             return 0;
         fprintf(fp, " %s", cstr);
@@ -377,8 +376,8 @@ QuoteString(Sprinter *sp, JSString *str, jschar quote)
 	return NULL;
 
     /* Loop control variables: z points at end of string sentinel. */
-    s = JSSTRING_CHARS(str);
-    z = s + JSSTRING_LENGTH(str);
+    s = str->chars;
+    z = s + str->length;
     for (t = s; t < z; s = ++t) {
 	/* Move t forward from s past un-quote-worthy characters. */
 	c = *t;
@@ -801,8 +800,8 @@ IsASCIIIdentifier(JSString *str)
     size_t n;
     jschar *s, c;
 
-    n = JSSTRING_LENGTH(str);
-    s = JSSTRING_CHARS(str);
+    n = str->length;
+    s = str->chars;
     c = *s;
     if (n == 0 || !JS_ISIDENT_START(c) || !JS_ISPRINT(c))
         return JS_FALSE;
@@ -1754,7 +1753,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 if (!str)
                     return JS_FALSE;
                 todo = SprintPut(&ss->sprinter, JS_GetStringBytes(str),
-                                 JSSTRING_LENGTH(str));
+                                 str->length);
                 break;
 
 #if JS_HAS_SWITCH_STATEMENT

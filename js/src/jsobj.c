@@ -581,8 +581,8 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     JSHashEntry *he;
     JSIdArray *ida;
     jschar *chars, *ochars, *vsharp;
-    const jschar *idstrchars, *vchars;
-    size_t nchars, idstrlength, gsoplength, vlength, vsharplength;
+    const jschar *vchars;
+    size_t nchars, vlength, vsharplength;
     char *comma;
     jsint i, j, length, valcnt;
     jsid id;
@@ -737,8 +737,6 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             }
             argv[0] = STRING_TO_JSVAL(idstr);
         }
-        idstrchars = JSSTRING_CHARS(idstr);
-        idstrlength = JSSTRING_LENGTH(idstr);
 
         for (j = 0; j < valcnt; j++) {
             /* Convert val[j] to its canonical source form. */
@@ -748,8 +746,8 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 goto error;
             }
             argv[1+j] = STRING_TO_JSVAL(valstr);
-            vchars = JSSTRING_CHARS(valstr);
-            vlength = JSSTRING_LENGTH(valstr);
+            vchars = valstr->chars;
+            vlength = valstr->length;
 
 #ifndef OLD_GETTER_SETTER
             /* Remove 'function ' from beginning of valstr. */
@@ -788,8 +786,8 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             chars = (jschar *)
                 realloc((ochars = chars),
                         (nchars + (comma ? 2 : 0) +
-                         idstrlength + 1 +
-                         (gsop[j] ? 1 + JSSTRING_LENGTH(gsop[j]) : 0) +
+                         idstr->length + 1 +
+                         (gsop[j] ? 1 + gsop[j]->length : 0) +
                          vsharplength + vlength +
                          (outermost ? 2 : 1) + 1) * sizeof(jschar));
             if (!chars) {
@@ -806,24 +804,22 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             comma = ", ";
 
 #ifdef OLD_GETTER_SETTER
-            js_strncpy(&chars[nchars], idstrchars, idstrlength);
-            nchars += idstrlength;
+            js_strncpy(&chars[nchars], idstr->chars, idstr->length);
+            nchars += idstr->length;
             if (gsop[j]) {
                 chars[nchars++] = ' ';
-                gsoplength = JSSTRING_LENGTH(gsop[j]);
-                js_strncpy(&chars[nchars], JSSTRING_CHARS(gsop[j]), gsoplength);
-                nchars += gsoplength;
+                js_strncpy(&chars[nchars], gsop[j]->chars, gsop[j]->length);
+                nchars += gsop[j]->length;
             }
             chars[nchars++] = ':';
 #else
             if (gsop[j]) {
-                gsoplength = JSSTRING_LENGTH(gsop[j]);
-                js_strncpy(&chars[nchars], JSSTRING_CHARS(gsop[j]), gsoplength);
-                nchars += gsoplength;
+                js_strncpy(&chars[nchars], gsop[j]->chars, gsop[j]->length);
+                nchars += gsop[j]->length;
                 chars[nchars++] = ' ';
             }
-            js_strncpy(&chars[nchars], idstrchars, idstrlength);
-            nchars += idstrlength;
+            js_strncpy(&chars[nchars], idstr->chars, idstr->length);
+            nchars += idstr->length;
             if (!gsop[j])
                 chars[nchars++] = ':';
 #endif
@@ -1010,8 +1006,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     fp->special |= JSFRAME_EVAL;
     script = JS_CompileUCScriptForPrincipals(cx, scopeobj, principals,
-                                             JSSTRING_CHARS(str),
-                                             JSSTRING_LENGTH(str),
+                                             str->chars, str->length,
                                              file, line);
     if (!script) {
         ok = JS_FALSE;
@@ -1859,7 +1854,7 @@ js_FreeSlot(JSContext *cx, JSObject *obj, uint32 slot)
 #if JS_BUG_EMPTY_INDEX_ZERO
 #define CHECK_FOR_EMPTY_INDEX(id)                                             \
     JS_BEGIN_MACRO                                                            \
-        if (JSSTRING_LENGTH(_str) == 0)                                       \
+        if (_str->length == 0)                                                \
             id = JSVAL_ZERO;                                                  \
     JS_END_MACRO
 #else
@@ -1874,12 +1869,11 @@ js_FreeSlot(JSContext *cx, JSObject *obj, uint32 slot)
         if (!JSVAL_IS_INT(id)) {                                              \
             JSAtom *_atom = (JSAtom *)id;                                     \
             JSString *_str = ATOM_TO_STRING(_atom);                           \
-            const jschar *_cp = JSSTRING_CHARS(_str);                         \
+            const jschar *_cp = _str->chars;                                  \
             JSBool _negative = (*_cp == '-');                                 \
             if (_negative) _cp++;                                             \
             if (JS7_ISDEC(*_cp) &&                                            \
-                JSSTRING_LENGTH(_str) - _negative                             \
-                <= sizeof(JSVAL_INT_MAX_STRING) - 1)                          \
+                _str->length - _negative <= sizeof(JSVAL_INT_MAX_STRING) - 1) \
             {                                                                 \
                 jsuint _index = JS7_UNDEC(*_cp++);                            \
                 jsuint _oldIndex = 0;                                         \
@@ -3603,12 +3597,10 @@ void printChar(jschar *cp) {
 }
 
 void printString(JSString *str) {
-    size_t i, n;
-    jschar *s;
+    jsuint i;
     fprintf(stderr, "string (0x%p) \"", str);
-    s = JSSTRING_CHARS(str);
-    for (i=0, n=JSSTRING_LENGTH(str); i < n; i++)
-        fputc(s[i], stderr);
+    for (i=0; i < str->length; i++)
+        fputc(str->chars[i], stderr);
     fputc('"', stderr);
     fputc('\n', stderr);
 }

@@ -200,7 +200,7 @@ struct JSRuntime {
     jsrefcount          nonInlineCalls;
     jsrefcount          constructs;
 
-    /* Scope lock and related metering. */
+    /* Scope lock metering. */
     jsrefcount          claimAttempts;
     jsrefcount          claimedScopes;
     jsrefcount          deadContexts;
@@ -208,17 +208,12 @@ struct JSRuntime {
     jsrefcount          liveScopes;
     jsrefcount          sharedScopes;
     jsrefcount          totalScopes;
-    jsrefcount          badUndependStrings;
 
     /* String instrumentation. */
     jsrefcount          liveStrings;
     jsrefcount          totalStrings;
-    jsrefcount          liveDependentStrings;
-    jsrefcount          totalDependentStrings;
     double              lengthSum;
     double              lengthSquaredSum;
-    double              strdepLengthSum;
-    double              strdepLengthSquaredSum;
 #endif
 };
 
