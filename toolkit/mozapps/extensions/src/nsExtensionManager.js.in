@@ -35,43 +35,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const nsIExtensionManager       = Components.interfaces.nsIExtensionManager;
-const nsIUpdateService          = Components.interfaces.nsIUpdateService;
-const nsIUpdateItem             = Components.interfaces.nsIUpdateItem;
+const nsIExtensionManager             = Components.interfaces.nsIExtensionManager;
+const nsIUpdateService                = Components.interfaces.nsIUpdateService;
+const nsIUpdateItem                   = Components.interfaces.nsIUpdateItem;
 
-const PREF_EM_APP_ID            = "app.id";
-const PREF_EM_APP_VERSION       = "app.version";
-const PREF_EM_LAST_APP_VERSION  = "extensions.lastAppVersion";
-const PREF_UPDATE_COUNT         = "update.extensions.count";
-const PREF_UPDATE_EXT_WSDL_URI  = "update.extensions.wsdl";
-const PREF_EM_WASINSAFEMODE     = "extensions.wasInSafeMode";
-const PREF_EM_DISABLEDOBSOLETE  = "extensions.disabledObsolete";
+const PREF_EM_APP_ID                  = "app.id";
+const PREF_EM_APP_VERSION             = "app.version";
+const PREF_EM_LAST_APP_VERSION        = "extensions.lastAppVersion";
+const PREF_UPDATE_COUNT               = "update.extensions.count";
+const PREF_UPDATE_EXT_WSDL_URI        = "update.extensions.wsdl";
+const PREF_EM_WASINSAFEMODE           = "extensions.wasInSafeMode";
+const PREF_EM_DISABLEDOBSOLETE        = "extensions.disabledObsolete";
+const PREF_GENERAL_SKINS_SELECTEDSKIN = "general.skins.selectedSkin";
 
-const DIR_EXTENSIONS            = "Extensions";
-const DIR_UNINSTALL             = "Uninstall";
-const DIR_TEMP                  = "Temp";
-const DIR_CHROME                = "chrome";
-const DIR_COMPONENTS            = "components";
-const DIR_DEFAULTS              = "defaults";
-const DIR_DEFAULTS_PREFS        = "preferences";
-const DIR_DEFAULTS_EXTENSIONS   = "extensions"; 
-const DIR_CR_CHROME             = "chrome";
-const DIR_CR_OVERLAYINFO        = "overlayinfo";
-const FILE_CR_CHROMEDS          = "chrome.rdf";
-const FILE_EXTENSIONS           = "Extensions.rdf";
-const FILE_UNINSTALL_LOG        = "Uninstall";
-const FILE_DEFAULTS             = "defaults.ini";
-const FILE_COMPONENT_MANIFEST   = "components.ini";
-const FILE_COMPAT_MANIFEST      = "compatibility.ini";
-const FILE_INSTALL_MANIFEST     = "install.rdf";
-const FILE_CHROME_MANIFEST      = "contents.rdf";
-const FILE_WASINSAFEMODE        = "Safe Mode";
-const FILE_INSTALLED_EXTENSIONS = "installed-extensions.txt"
+const DIR_EXTENSIONS                  = "Extensions";
+const DIR_UNINSTALL                   = "Uninstall";
+const DIR_TEMP                        = "Temp";
+const DIR_CHROME                      = "chrome";
+const DIR_COMPONENTS                  = "components";
+const DIR_DEFAULTS                    = "defaults";
+const DIR_DEFAULTS_PREFS              = "preferences";
+const DIR_DEFAULTS_EXTENSIONS         = "extensions"; 
+const DIR_CR_CHROME                   = "chrome";
+const DIR_CR_OVERLAYINFO              = "overlayinfo";
+const FILE_CR_CHROMEDS                = "chrome.rdf";
+const FILE_EXTENSIONS                 = "Extensions.rdf";
+const FILE_UNINSTALL_LOG              = "Uninstall";
+const FILE_DEFAULTS                   = "defaults.ini";
+const FILE_COMPONENT_MANIFEST         = "components.ini";
+const FILE_COMPAT_MANIFEST            = "compatibility.ini";
+const FILE_INSTALL_MANIFEST           = "install.rdf";
+const FILE_CHROME_MANIFEST            = "contents.rdf";
+const FILE_WASINSAFEMODE              = "Safe Mode";
+const FILE_INSTALLED_EXTENSIONS       = "installed-extensions.txt"
 const FILE_INSTALLED_EXTENSIONS_PROCESSED = "installed-extensions-processed.txt"
 
-const KEY_PROFILEDIR            = "ProfD";
-const KEY_APPDIR                = "XCurProcD";
-const KEY_DEFAULTS              = "ProfDefNoLoc";
+const KEY_PROFILEDIR                  = "ProfD";
+const KEY_APPDIR                      = "XCurProcD";
+const KEY_DEFAULTS                    = "ProfDefNoLoc";
+const KEY_DEFAULT_THEME               = "classic/1.0";
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -1261,44 +1263,41 @@ nsExtensionManager.prototype = {
     // and as such we must load it now and see what needs to happen.
     this._ensureDS();
     
-    // If there were any operations whose state changed, we need to restart
-    // (again!) after the component files have been properly installed are
-    // registered...
-    var needsRestart = false;
-    
     // Look for items that need to be installed
     var items = this._ds.getItemsWithFlagSet("toBeInstalled");
     for (var i = 0; i < items.length; ++i)
       this._finalizeInstall(items[i]);
-    needsRestart |= items.length > 0;
+
+    // If there were any install operations, we need to restart (again!) after 
+    // the component files have been properly installed are registered...
+    var needsRestart = items.length > 0;
     
     // Look for extensions that need to be enabled
     items = this._ds.getItemsWithFlagSet("toBeEnabled");
     for (var i = 0; i < items.length; ++i)
       this._finalizeEnableDisable(items[i], false);
-    needsRestart |= items.length > 0;
     
     // Look for extensions that need to be disabled
     items = this._ds.getItemsWithFlagSet("toBeDisabled");
     for (var i = 0; i < items.length; ++i)
       this._finalizeEnableDisable(items[i], true);
-    needsRestart |= items.length > 0;
     
     // Look for extensions that need to be removed
     items = this._ds.getItemsWithFlagSet("toBeUninstalled");
     for (var i = 0; i < items.length; ++i)
       this._finalizeUninstall(items[i]);
-    needsRestart |= items.length > 0;
       
     // Clean up any helper objects
     delete this._extInstaller;
     delete this._extUninstaller;
     delete this._extEnabler;
     
-    // Now that we've completed all installations and other extension
-    // operations, refresh the compatibility manifest so that we don't
-    // come in here in the future. 
-    this._writeCompatibilityManifest(false);
+    if (!needsRestart) {
+      // If no additional restart is required, it implies that there are
+      // no new components that need registering so we can inform the app
+      // not to do any extra startup checking next time round.    
+      this._writeCompatibilityManifest(false);
+    }
       
     win.close();
     
@@ -1359,7 +1358,7 @@ nsExtensionManager.prototype = {
   
   checkForMismatches: function () 
   {
-    var rv = false;
+    var needsRestart = false;
         
     // Check to see if the version of the application that is being started
     // now is the same one that was started last time. 
@@ -1384,16 +1383,26 @@ nsExtensionManager.prototype = {
           var itemType = getItemType(this._ds._getResourceForItem(items[i].id).Value);
           if (itemType == nsIUpdateItem.TYPE_EXTENSION)
             this.disableExtension(items[i].id);
-          else (itemType == nsIUpdateItem.TYPE_THEME) ;
-            // XXXben need to deselect theme and reselect default.
+          else if (itemType == nsIUpdateItem.TYPE_THEME) {
+            var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                               .getService(Components.interfaces.nsIXULChromeRegistry);
+            var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                                 .getService(Components.interfaces.nsIPrefBranch);
+            var inUse = cr.isSkinSelected(KEY_DEFAULT_THEME, true);
+            if (inUse != Components.interfaces.nsIChromeRegistry.FULL) {
+              pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, KEY_DEFAULT_THEME);
+              cr.selectSkin(KEY_DEFAULT_THEME, true);
+            }
+          }
         }
+        dump("*** incompatible list = " + items + "\n");
         var updates = Components.classes["@mozilla.org/updates/update-service;1"]
                                 .getService(Components.interfaces.nsIUpdateService);
         updates.checkForUpdates(items, items.length, nsIUpdateItem.TYPE_ADDON, 
                                 nsIUpdateService.SOURCE_EVENT_MISMATCH,
                                 null);
         
-        rv = true;
+        needsRestart = true;
       }
     }
     
@@ -1402,7 +1411,7 @@ nsExtensionManager.prototype = {
     // We must force a restart.
     var componentList = getFile(KEY_PROFILEDIR, [FILE_COMPONENT_MANIFEST]);
     if (!componentList.exists())
-      rv = true;
+      needsRestart = true;
     
     // Now update the last app version so we don't do this checking 
     // again. 
@@ -1410,10 +1419,12 @@ nsExtensionManager.prototype = {
 
     // Update the components manifests with paths for compatible, enabled, 
     // extensions.
+    // XXXben I think this might impose unnecessary restarts if needsRestart is
+    //        false.
     this._writeComponentManifest(false);
     this._writeComponentManifest(true);
     
-    return rv;
+    return needsRestart;
   },
   
   get inSafeMode() 
@@ -1660,11 +1671,15 @@ nsExtensionManager.prototype = {
   {
     if (!this._extInstaller)
       this._extInstaller = new nsExtensionInstaller(this._ds);
-    this._extInstaller.install(aExtensionID, 
-                               this._ds.isProfileItem(aExtensionID));
+      
+    var isProfile = this._ds.isProfileItem(aExtensionID);
+    this._extInstaller.install(aExtensionID, isProfile);
+    
+    // Update the Components Manifest
+    this._writeComponentManifest(isProfile);
     
     // Update the Defaults Manifest
-    this._writeDefaults(this._ds.isProfileItem(aExtensionID));
+    this._writeDefaults(isProfile);
   },
   
   _finalizeEnableDisable: function (aExtensionID, aDisable)
@@ -1684,8 +1699,6 @@ nsExtensionManager.prototype = {
                              this._ds._emR("toBeDisabled"),
                              null, isProfile,
                              nsIUpdateItem.TYPE_EXTENSION);
-    
-    this._writeDefaults(isProfile);
   },
   
   _finalizeUninstall: function (aExtensionID)
@@ -1698,9 +1711,6 @@ nsExtensionManager.prototype = {
     // Clean the extension resource
     this._ds.removeItemMetadata(aExtensionID, nsIUpdateItem.TYPE_EXTENSION);
     
-    // Update the Defaults Manifest
-    this._writeDefaults(isProfile);
-
     // Do this LAST since inferences are made about an item based on
     // what container it's in.
     this._ds.removeItemFromContainer(aExtensionID, 
@@ -1711,19 +1721,40 @@ nsExtensionManager.prototype = {
   uninstallExtension: function (aExtensionID)
   {
     this._ds.uninstallExtension(aExtensionID);
-    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
+
+    var isProfile = this._ds.isProfileItem(aExtensionID);
+
+    // Update the Components Manifest
+    this._writeComponentManifest(isProfile);
+
+    // Update the Defaults Manifest
+    this._writeDefaults(isProfile);
   },
   
   enableExtension: function (aExtensionID)
   {
     this._ds.enableExtension(aExtensionID);
-    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
+
+    var isProfile = this._ds.isProfileItem(aExtensionID);
+
+    // Update the Components Manifest
+    this._writeComponentManifest(isProfile);
+
+    // Update the Defaults Manifest
+    this._writeDefaults(isProfile);
   },
   
   disableExtension: function (aExtensionID)
   {
     this._ds.disableExtension(aExtensionID);
-    this._writeComponentManifest(this._ds.isProfileItem(aExtensionID));
+
+    var isProfile = this._ds.isProfileItem(aExtensionID);
+
+    // Update the Components Manifest
+    this._writeComponentManifest(isProfile);
+
+    // Update the Defaults Manifest
+    this._writeDefaults(isProfile);
   },
   
   update: function (aItems, aItemCount)
@@ -1813,7 +1844,6 @@ nsExtensionManager.prototype = {
   
   removeDownload: function (aURL, aType)
   {
-    dump("*** calling into removeDownload for " + aURL + "\n");
     for (var i = 0; i < this._transactions.length; ++i) {
       if (this._transactions[i].containsURL(aURL)) {
         this._transactions[i].removeDownload(aURL, aType);
@@ -1999,7 +2029,6 @@ nsItemDownloadTransaction.prototype = {
   
   removeDownload: function (aURL, aItemType)
   {
-    dump("*** txn rD = " + aURL + "\n");
     this._manager._ds.removeDownload(aURL, aItemType);
   },
   

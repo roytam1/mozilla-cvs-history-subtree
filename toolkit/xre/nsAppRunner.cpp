@@ -22,6 +22,7 @@
  * Contributor(s):
  *   Roland Mainz <roland.mainz@informatik.med.uni-giessen.de>
  *   Benjamin Smedberg <bsmedberg@covad.net>
+ *   Ben Goodger <ben@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
