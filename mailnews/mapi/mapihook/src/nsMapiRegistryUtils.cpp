@@ -365,11 +365,9 @@ PRBool nsMapiRegistryUtils::IsDefaultMailClient()
 
 PRBool nsMapiRegistryUtils::IsDefaultNewsClient()
 {
-    //first try to get the users default mail client
-
-    //first try to get the users default mail client
+    //first try to get the users default news client
     nsCAutoString name; 
-    GetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "", name);
+    GetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\News", "", name);
 
      //if that fails then get the machine's default client
     if(name.IsEmpty()) {
