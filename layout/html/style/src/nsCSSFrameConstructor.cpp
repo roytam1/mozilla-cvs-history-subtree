@@ -2981,7 +2981,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
     aContent->GetParent(*getter_AddRefs(grandPappy));
     nsCOMPtr<nsIAtom> tag;
     grandPappy->GetTag(*getter_AddRefs(tag));
-    if (tag == nsXULAtoms::tree) {
+    if (tag.get() == nsXULAtoms::tree) {
       // Create an anonymous scrollbar node.
       nsCOMPtr<nsIDocument> idocument;
       aContent->GetDocument(*getter_AddRefs(idocument));
