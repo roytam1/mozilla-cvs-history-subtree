@@ -283,7 +283,7 @@ nsresult nsSocketTransportService::AddToSelectList(nsSocketTransport* aTransport
     }
     // Initialize/update the info in the entry...
     pfd = &mSelectFDSet[i];
-    pfd->fd        = aTransport->GetSocket();;
+    pfd->fd        = aTransport->GetSocket();
     pfd->in_flags  = aTransport->GetSelectFlags();
     pfd->out_flags = 0;
     // Add the FileDesc to the PRPollDesc list...
