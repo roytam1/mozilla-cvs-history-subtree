@@ -91,7 +91,7 @@ nsXmlRpcClient.prototype = {
         // Should we care? POST works only on http and https..
         if (!oURL.scheme) oURL.scheme = 'http';
         if (oURL.scheme != 'http')
-            throw Components.Exceptions('Only HTTP is supported');
+            throw Components.Exception('Only HTTP is supported');
 
         this._serverUrl = oURL;
     },
