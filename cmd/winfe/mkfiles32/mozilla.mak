@@ -253,7 +253,7 @@ LINKFLAGS_DEBUG= \
 CFLAGS_DEFAULT=\
 !if "$(MOZ_BITS)"=="32"
     $(CFLAGS_DEBUG) \
-    /I$(DEPTH)\dist\public\js /I$(DEPTH)\dist\public\security /I$(DEPTH)\dist\public\network /I$(DEPTH)\dist\public\htmldlgs /I$(DEPTH)\dist\public\libfont
+    /I$(DEPTH)\dist\public\js /I$(DEPTH)\dist\public\security /I$(DEPTH)\dist\public\network /I$(DEPTH)\dist\public\htmldlgs /I$(DEPTH)\dist\public\libfont /I$(DEPTH)\dist\public\httpurl
 !else
     $(CFLAGS_RELEASE) -DFORCE_PR_LOG
 !endif
