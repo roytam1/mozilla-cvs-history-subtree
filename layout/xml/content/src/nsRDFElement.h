@@ -132,6 +132,10 @@ protected:
     nsIContent*       mParent;
 
     nsresult GenerateChildren(void) const;
+    nsresult CreateChild(nsIRDFNode* value, nsIRDFContent*& result) const;
+    nsresult CreateChild(nsIRDFNode* property,
+                         nsIRDFNode* value,
+                         nsIRDFContent*& result) const;
 };
 
 #endif // nsRDFElement_h___

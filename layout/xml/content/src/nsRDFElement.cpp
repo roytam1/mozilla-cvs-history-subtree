@@ -17,7 +17,32 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+/*
+
+  A "pseudo content element" that acts as a proxy to RDF.
+
+  Unfortunately, there is no one right way to transform RDF into a
+  document model. Ideally, one would like to use something like XSL to
+  define how to do it in a declarative, user-definable way. But since
+  we don't have XSL yet, that's not an option. So here we have a
+  hard-coded implementation that does the job.
+
+  TO DO
+
+  1) In the absence of XSL, at least factor out the strategy used to
+     build the content model so that multiple models can be build
+     (e.g., table-like HTML vs. XUI tree control, etc.)
+
+     This involves both hacking the code that generates children for
+     presentation, and the code that manipulates children via the DOM,
+     which leads us to the next item...
+
+  2) Implement DOM interfaces.
+
+ */
+
 #include "nsRDFElement.h"
+#include "nsHTMLParts.h" // XXX to create a text node
 #include "nsIDocument.h"
 #include "nsIAtom.h"
 #include "nsIEventListenerManager.h"
@@ -31,6 +56,7 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFCursor.h"
 #include "nsISupportsArray.h"
+#include "nsITextContent.h"
 
 #include "nsIEventStateManager.h"
 #include "nsDOMEvent.h"
@@ -59,10 +85,11 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, resource);
 static NS_DEFINE_IID(kIDOMNodeListIID,        NS_IDOMNODELIST_IID);
 static NS_DEFINE_IID(kIDocumentIID,           NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFContentIID,         NS_IRDFCONTENT_IID);
-static NS_DEFINE_IID(kIXMLContentIID,         NS_IXMLCONTENT_IID);
-static NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
-static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
+static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
+static NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
+static NS_DEFINE_IID(kITextContentIID,        NS_ITEXT_CONTENT_IID); // XXX grr...
+static NS_DEFINE_IID(kIXMLContentIID,         NS_IXMLCONTENT_IID);
 
 static NS_DEFINE_CID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
 
@@ -122,7 +149,13 @@ done:
 
 ////////////////////////////////////////////////////////////////////////
 // RDFDOMNodeListImpl
-//   Helper class to implement the nsIDOMNodeList interface
+//
+//   Helper class to implement the nsIDOMNodeList interface. It's
+//   probably wrong in some sense, as it uses the "naked" content
+//   interface to look for kids. (I assume in general this is bad
+//   because there may be pseudo-elements created for presentation
+//   that aren't visible to the DOM.)
+//
 
 class RDFDOMNodeListImpl : public nsIDOMNodeList {
 private:
@@ -173,6 +206,7 @@ RDFDOMNodeListImpl::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 }
 
 ////////////////////////////////////////////////////////////////////////
+// nsRDFElement
 
 nsresult
 NS_NewRDFElement(nsIRDFContent** result)
@@ -245,7 +279,7 @@ nsRDFElement::QueryInterface(REFNSIID iid, void** result)
 }
 
 ////////////////////////////////////////////////////////////////////////
-// nsIDOMNode
+// nsIDOMNode interface
 
 NS_IMETHODIMP
 nsRDFElement::GetNodeName(nsString& aNodeName)
@@ -396,16 +430,21 @@ nsRDFElement::HasChildNodes(PRBool* aReturn)
 NS_IMETHODIMP
 nsRDFElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
+
+#if 0
     nsRDFElement* it = new nsRDFElement();
     if (! it)
         return NS_ERROR_OUT_OF_MEMORY;
 
     return it->QueryInterface(kIDOMNodeIID, (void**) aReturn);
+#endif
 }
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsIDOMElement
+// nsIDOMElement interface
 
 NS_IMETHODIMP
 nsRDFElement::GetTagName(nsString& aTagName)
@@ -481,7 +520,7 @@ nsRDFElement::Normalize()
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsIDOMEventReceiver
+// nsIDOMEventReceiver interface
 
 NS_IMETHODIMP
 nsRDFElement::AddEventListener(nsIDOMEventListener *aListener, const nsIID& aIID)
@@ -514,23 +553,25 @@ nsRDFElement::GetNewListenerManager(nsIEventListenerManager **aInstancePtrResult
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsIScriptObjectOwner
+// nsIScriptObjectOwner interface
 
 NS_IMETHODIMP 
 nsRDFElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP 
 nsRDFElement::SetScriptObject(void *aScriptObject)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsIJSScriptObject
+// nsIJSScriptObject interface
 
 PRBool
 nsRDFElement::AddProperty(JSContext *aContext, jsval aID, jsval *aVp)
@@ -585,7 +626,7 @@ nsRDFElement::Finalize(JSContext *aContext)
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsIConent
+// nsIConent interface
 
 NS_IMETHODIMP
 nsRDFElement::GetDocument(nsIDocument*& aResult) const
@@ -599,29 +640,50 @@ nsRDFElement::GetDocument(nsIDocument*& aResult) const
 NS_IMETHODIMP
 nsRDFElement::SetDocument(nsIDocument* aDocument, PRBool aDeep)
 {
-    NS_PRECONDITION(!aDeep, "nsRDFElement: deep SetDocument not implemented"); // XXX
-    if (aDeep)
-        return NS_ERROR_NOT_IMPLEMENTED;
-
-    NS_PRECONDITION(aDocument, "null ptr");
-    if (!aDocument)
-        return NS_ERROR_NULL_POINTER;
-
     NS_IF_RELEASE(mDocument);
-    return aDocument->QueryInterface(kIRDFDocumentIID,
-                                     (void**) &mDocument); // implicit AddRef()
+
+    nsresult rv;
+
+    if (aDocument) {
+        if (NS_FAILED(rv = aDocument->QueryInterface(kIRDFDocumentIID,
+                                                     (void**) &mDocument)))
+            return rv;
+    }
+
+    // implicit AddRef() from QI
+
+    if (aDeep && mChildren) {
+        for (PRInt32 i = mChildren->Count() - 1; i >= 0; --i) {
+            // XXX this entire block could be more rigorous about
+            // dealing with failure.
+            nsISupports* obj = mChildren->ElementAt(i);
+
+            PR_ASSERT(obj);
+            if (! obj)
+                continue;
+
+            nsIContent* child;
+            if (NS_SUCCEEDED(obj->QueryInterface(kIContentIID, (void**) &child))) {
+                child->SetDocument(aDocument, aDeep);
+                NS_RELEASE(child);
+            }
+
+            NS_RELEASE(obj);
+        }
+    }
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsRDFElement::GetParent(nsIContent*& aResult) const
 {
-    // XXX traverse the property that represents "parenthood", and return
-    // that result?
-
     if (!mParent)
         return NS_ERROR_NOT_INITIALIZED;
 
     aResult = mParent;
+    NS_ADDREF(aResult);
+
     return NS_OK;
 }
 
@@ -639,12 +701,14 @@ nsRDFElement::SetParent(nsIContent* aParent)
 
     mParent = aParent;
     NS_IF_ADDREF(mParent);
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsRDFElement::CanContainChildren(PRBool& aResult) const
 {
+    aResult = PR_TRUE;
     return NS_OK;
 }
 
@@ -682,6 +746,7 @@ nsRDFElement::ChildAt(PRInt32 aIndex, nsIContent*& aResult) const
 NS_IMETHODIMP
 nsRDFElement::IndexOf(nsIContent* aPossibleChild, PRInt32& aResult) const
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -716,6 +781,7 @@ nsRDFElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
 NS_IMETHODIMP
 nsRDFElement::IsSynthetic(PRBool& aResult)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -728,8 +794,25 @@ nsRDFElement::GetTag(nsIAtom*& aResult) const
 
     // XXX the problem with this is that we only have a
     // fully-qualified URI, not "just" the tag. And I think the style
-    // system ain't gonna work right with that...
-    return mResource->GetAtomValue(aResult);
+    // system ain't gonna work right with that. So this is a complete
+    // hack to parse what probably _was_ the tag out.
+    nsresult rv;
+
+    nsAutoString s;
+    if (NS_FAILED(rv = mResource->GetStringValue(s)))
+        return rv;
+
+    PRInt32 index;
+
+    if ((index = s.RFind('#')) >= 0)
+        s.Cut(0, index + 1);
+    else if ((index = s.RFind('/')) >= 0)
+        s.Cut(0, index + 1);
+
+    s.ToUpperCase(); // because that's how CSS works
+
+    aResult = NS_NewAtom(s);
+    return NS_OK;
 }
 
 
@@ -868,14 +951,16 @@ nsRDFElement::List(FILE* out, PRInt32 aIndent) const
     nsresult rv;
 
     {
-        nsAutoString s;
-        if (NS_FAILED(rv = mResource->GetStringValue(s)))
+        nsIAtom* tag;
+        if (NS_FAILED(rv = GetTag(tag)))
             return rv;
 
         rdf_Indent(out, aIndent);
-        fputs("[", out);
-        fputs(s, out);
+        fputs("[RDF ", out);
+        fputs(tag->GetUnicode(), out);
         fputs("\n", out);
+
+        NS_RELEASE(tag);
     }
 
     {
@@ -972,7 +1057,7 @@ nsRDFElement::HandleDOMEvent(nsIPresContext& aPresContext,
                              PRUint32 aFlags,
                              nsEventStatus& aEventStatus)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 
@@ -1105,11 +1190,21 @@ nsRDFElement::GetProperty(const nsString& aPropertyURI, nsString& rValue) const
 ////////////////////////////////////////////////////////////////////////
 // Implementation methods
 
+
+// GenerateChildren
+//
+//   This is the money, baby. It's where we do the work of traversing
+//   the RDF graph to produce new nsRDFElements and hook them up into
+//   a semblance of a content model.
+//
+//   Ideally, this would be a "strategy", along with the logic for
+//   manipulating the generated content. (Well, actually, ideally,
+//   this would be hard coded to produce one kind of tree, and XSL
+//   would do the work of transforming it for presentation.)
+//
 nsresult
 nsRDFElement::GenerateChildren(void) const
 {
-    // count the number of outbound assertions from this resource for
-    // the property that represents "childhood".
     nsresult rv;
 
     if (!mResource || !mDocument)
@@ -1122,15 +1217,6 @@ nsRDFElement::GenerateChildren(void) const
     else {
         mChildren->Clear();
     }
-
-#ifdef DEBUG_waterson
-    {
-        char buf[1024];
-        nsAutoString s;
-        mResource->GetStringValue(s);
-        printf("generating content children for %s\n", s.ToCString(buf, sizeof buf));
-    }
-#endif
 
     nsIRDFResourceManager* mgr;
     if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
@@ -1145,9 +1231,12 @@ nsRDFElement::GenerateChildren(void) const
     if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
         goto done;
 
+#ifdef ONLY_CREATE_RDF_CONTAINERS_AS_CONTENT
     if (! rdf_IsContainer(mgr, ds, mResource))
         goto done;
+#endif
 
+    // Create a cursor that'll enumerate all of the outbound arcs
     if (NS_FAILED(rv = ds->ArcLabelsOut(mResource, properties)))
         goto done;
 
@@ -1164,62 +1253,45 @@ nsRDFElement::GenerateChildren(void) const
             break;
         }
 
-#ifdef DEBUG_waterson
-        {
-            char buf[1024];
-            printf("property %s...", uri.ToCString(buf, sizeof buf));
-        }
-#endif
-
+#ifdef ONLY_CREATE_RDF_CONTAINERS_AS_CONTENT
         if (! rdf_IsOrdinalProperty(uri)) {
-#ifdef DEBUG_waterson
-            printf("not a kid\n");
-#endif
             NS_RELEASE(property);
             continue;
         }
-
-#ifdef DEBUG_waterson
-        printf("adding children.\n");
 #endif
 
+        // Create a second cursor that'll enumerate all of the values
+        // for all of the arcs.
         nsIRDFCursor* values;
-        if (NS_SUCCEEDED(rv = ds->GetTargets(mResource, property, PR_TRUE, values))) {
-            PRBool moreValues;
-            while (NS_SUCCEEDED(rv = values->HasMoreElements(moreValues)) && moreValues) {
-                nsIRDFNode* value = NULL;
-
-                if (NS_FAILED(rv = values->GetNext(value, tv /* ignored */)))
-                    break;
-
-#ifdef DEBUG_waterson
-                {
-                    char buf[1024];
-                    nsAutoString s;
-                    value->GetStringValue(s);
-                    printf("...child %s\n", s.ToCString(buf, sizeof buf));
-                }
-#endif
-
-                nsRDFElement* child;
-
-                // Create and initialize a new child element
-                child = new nsRDFElement();
-                if (! child) {
-                    NS_RELEASE(value);
-                    rv = NS_ERROR_OUT_OF_MEMORY;
-                    break;
-                }
-
-                child->mDocument = mDocument;
-                child->mResource = value;
-                child->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(this));
-
-                mChildren->AppendElement(static_cast<nsIRDFContent*>(child));
-            }
-            NS_IF_RELEASE(values);
+        if (NS_FAILED(rv = ds->GetTargets(mResource, property, PR_TRUE, values))) {
+            NS_RELEASE(property);
+            break;
         }
 
+        PRBool moreValues;
+        while (NS_SUCCEEDED(rv = values->HasMoreElements(moreValues)) && moreValues) {
+            nsIRDFNode* value = NULL;
+            if (NS_FAILED(rv = values->GetNext(value, tv /* ignored */)))
+                break;
+
+            // XXX At this point, we need to decide exactly what kind
+            // of kid to create in the content model. For example, for
+            // leaf nodes, we probably want to create some kind of
+            // text element.
+            nsIRDFContent* child;
+            if (NS_FAILED(rv = CreateChild(property, value, child))) {
+                NS_RELEASE(value);
+                break;
+            }
+
+            // And finally, add the child into the content model
+            mChildren->AppendElement(child);
+
+            NS_RELEASE(child);
+            NS_RELEASE(value);
+        }
+
+        NS_RELEASE(values);
         NS_RELEASE(property);
 
         if (NS_FAILED(rv))
@@ -1231,6 +1303,128 @@ done:
     NS_IF_RELEASE(ds);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
 
+    return rv;
+}
+
+
+
+nsresult
+nsRDFElement::CreateChild(nsIRDFNode* value,
+                          nsIRDFContent*& result) const
+{
+    // XXX I wish that we could avoid doing it "by hand" like this
+    // (i.e., use interface methods so that we could extend to other
+    // kinds of kids later); however, there is a cascade of const-ness
+    // out to things like ChildCount() that is tough to get around.
+
+    nsRDFElement* child = new nsRDFElement();
+    if (! child)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    child->mDocument = mDocument;
+    NS_ADDREF(child->mDocument);
+
+    child->mResource = value;
+    NS_ADDREF(child->mResource);
+
+    child->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(this));
+    NS_ADDREF(child->mParent);
+
+    result = child;
+    NS_ADDREF(result);
+
+    return NS_OK;
+}
+
+
+nsresult
+nsRDFElement::CreateChild(nsIRDFNode* property,
+                          nsIRDFNode* value,
+                          nsIRDFContent*& result) const
+{
+    nsresult rv;
+    nsRDFElement* child = NULL;
+    nsIHTMLContent* grandchild = NULL; // XXX should just be regular nsIContent
+    nsRDFElement* grandchild2 = NULL;
+    nsITextContent* text = NULL;
+    nsIDocument* doc = NULL;
+    nsAutoString v;
+
+    child = new nsRDFElement();
+    if (! child) {
+        return NS_ERROR_OUT_OF_MEMORY;
+        goto error;
+    }
+
+    NS_ADDREF(child);
+    child->mDocument = mDocument;
+    child->mResource = property;
+    child->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(this));
+
+    NS_ADDREF(child->mDocument);
+    NS_ADDREF(child->mResource);
+    NS_ADDREF(child->mParent);
+
+    if (NS_FAILED(rv = NS_NewISupportsArray(&child->mChildren)))
+        goto error;
+
+    // now construct the first grandchild, which is just a vanilla text node.
+    if (NS_FAILED(rv = value->GetStringValue(v)))
+        goto error;
+
+    if (NS_FAILED(rv = NS_NewTextNode(&grandchild)))
+        goto error;
+
+    if (NS_FAILED(rv = mDocument->QueryInterface(kIDocumentIID, (void**) &doc)))
+        goto error;
+
+    if (NS_FAILED(rv = grandchild->SetDocument(doc, PR_FALSE)))
+        goto error;
+
+    NS_RELEASE(doc);
+
+    if (NS_FAILED(rv = grandchild->QueryInterface(kITextContentIID, (void**) &text)))
+        goto error;
+
+    if (NS_FAILED(rv = text->SetText(v.GetUnicode(), v.Length(), PR_FALSE)))
+        goto error;
+
+    NS_RELEASE(text);
+
+    // hook it up to the child
+    if (NS_FAILED(rv = grandchild->SetParent(child)))
+        goto error;
+
+    child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild));
+
+    // ...and construct the second grandchild, which is another RDF
+    // node.
+
+    grandchild2 = new nsRDFElement();
+    if (! grandchild2) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+        goto error;
+    }
+
+    grandchild2->mDocument = mDocument;
+    grandchild2->mResource = value;
+    grandchild2->mParent   = static_cast<nsIContent*>(const_cast<nsRDFElement*>(child));
+
+    NS_ADDREF(grandchild2->mDocument);
+    NS_ADDREF(grandchild2->mResource);
+    NS_ADDREF(grandchild2->mParent);
+
+    child->mChildren->AppendElement(static_cast<nsIContent*>(grandchild2));
+
+    // whew!
+    result = child;
+    return NS_OK;
+
+error:
+    NS_IF_RELEASE(text);
+    NS_IF_RELEASE(doc);
+    NS_IF_RELEASE(grandchild);
+    NS_IF_RELEASE(child);
     return rv;
 }
 
