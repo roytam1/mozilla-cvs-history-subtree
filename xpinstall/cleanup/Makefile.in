@@ -51,6 +51,10 @@ LIBS        = \
         -lmozregsa_s \
         $(NULL)
 
+ifeq ($(OS_ARCH),Rhapsody)
+LIBS += -lmacmorefiles_s
+endif
+
 DEFINES += -DSTANDALONE_REGISTRY
 
 include $(topsrcdir)/config/rules.mk
