@@ -525,7 +525,7 @@ var BookmarksCommand = {
    
     var selection = {item: items, parent:Array(items.length), length: items.length};
     BookmarksUtils.checkSelection(selection);
-    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget, -1);
+    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget);
   },
   
   deleteBookmark: function (aSelection)
@@ -696,7 +696,7 @@ var BookmarksCommand = {
   createNewResource: function(aResource, aTarget, aTxnType)
   {
     var selection = BookmarksUtils.getSelectionFromResource(aResource, aTarget.parent);
-    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget, -1);
+    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget);
     if (ok && aTxnType != "newseparator") {
       ok = this.openBookmarkProperties(selection);
       if (!ok)
@@ -1411,7 +1411,8 @@ var BookmarksUtils = {
     transaction.parent = new Array(aSelection.length);
     transaction.index  = new Array(aSelection.length);
     // the -1 business is a hack for 252133; it should go away once we can
-    // consistently add things after a given element.
+    // consistently add things after a given element.  Note that we
+    // stopped using it, because things magically seem to work now...
     var index = aTargetIndex ? aTargetIndex : aTarget.index;
     for (var i=0; i<aSelection.length; ++i) {
       var rSource = aSelection.item[i];
@@ -1419,7 +1420,7 @@ var BookmarksUtils = {
         rSource = BMSVC.cloneResource(rSource);
       transaction.item  [i] = rSource;
       transaction.parent[i] = aTarget.parent;
-      transaction.index [i] = ((index == -1) ? -1 : index++);
+      transaction.index [i] = ((index == -1) ? -1 : ++index);
     }
     BMSVC.transactionManager.doTransaction(transaction);
   },
@@ -1640,7 +1641,7 @@ BookmarkTransaction.prototype = {
   RDFC        : null,
   BMDS        : null,
 
-  QueryInterface: function (aUID)
+  QueryInterface: function (iid)
   {
     if (!iid.equals(Components.interfaces.nsITransaction) &&
         !iid.equals(Components.interfaces.nsISupports))
