@@ -1200,7 +1200,7 @@ var BookmarksUtils = {
     var isValid = new Array(aSelection.length);
     for (i=0; i<aSelection.length; ++i) {
       if (!aSelection.isValid[i] || aSelection.isImmutable[i] || 
-          !aSelection.parent [i] || aSelection.containsPTF)
+          !aSelection.parent [i])
         isValid[i] = false;
       else
         isValid[i] = true;
