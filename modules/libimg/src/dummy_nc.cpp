@@ -23,6 +23,9 @@
 #include "dummy_nc.h"
 #include "il_strm.h"
 #include "if.h"
+/* ebb - begin */
+#include "netcache.h"
+/* ebb - end */
 
 PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
@@ -75,6 +78,12 @@ public:
     virtual int GetURL (ilIURL * aUrl, NET_ReloadMethod aLoadMethod,
 			ilINetReader *aReader);
 
+/*	ebb - begin */
+	virtual PRBool FindURLInCache (ilIURL *aUrl);
+
+    MWContext *GetMWContext() { return mContext; };
+/*	ebb - end */
+
 private:
     MWContext *mContext;                             
     NET_ReloadMethod mReloadPolicy;
@@ -108,6 +117,9 @@ public:
 
     URL_Struct *GetURLStruct() { return mURLS; }
 
+/*	ebb - begin */
+	void		SetContentType(char* type);
+/*	ebb - end */
 private:
     ilINetReader *mReader;
     URL_Struct *mURLS;
@@ -308,7 +320,7 @@ il_load_image(MWContext *cx, char *image_url, NET_ReloadMethod cache_reload_poli
     }
 
     /* Fetch the image. */
-	image_req = IL_GetImage(image_url, cx->img_cx, obs_list, trans_pixel, 0, 0, 0, (ilINetContext *)net_cx);
+	image_req = IL_GetImage(image_url, NULL, cx->img_cx, obs_list, trans_pixel, 0, 0, 0, (ilINetContext *)net_cx);
 	if (!image_req) {
 		ret_val = PR_FALSE;
 	}
@@ -351,6 +363,20 @@ NetContextImpl::Interrupt()
         NET_InterruptWindow(mContext);
     }
 }
+
+/* ebb - begin */
+PRBool
+NetContextImpl::FindURLInCache(ilIURL *aURL)
+{
+    if (aURL != NULL) {
+    	return (PRBool)(NET_FindURLInCache(((URLImpl *)aURL)->GetURLStruct(), mContext));
+    }
+    else {
+        return PR_FALSE;
+    }
+}
+/* ebb - end */
+
 
 PRBool
 NetContextImpl::IsLocalFileURL(char *address)
@@ -413,7 +439,6 @@ NetContextImpl::GetURL (ilIURL *aURL,
     return NET_GetURL (urls, type, mContext, 
 		       (Net_GetUrlExitFunc*)&il_netgeturldone);
 }
-
 
 URLImpl::URLImpl()
 {
@@ -541,5 +566,20 @@ URLImpl::SetOwnerId(int ownerId)
         mURLS->owner_id = ownerId;
     }
 }
+
+/*	ebb - begin */
+void
+URLImpl::SetContentType(char* type)
+{
+	/*
+		First deallocate any memory,
+		then allocate a copy of the
+		passed string and set it.
+	*/
+	PR_FREEIF(mURLS->content_type);
+	StrAllocCopy(mURLS->content_type, type);
+}
+/*	ebb - end */
+
 
 
