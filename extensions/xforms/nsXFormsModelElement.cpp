@@ -377,6 +377,10 @@ nsXFormsModelElement::DoneAddingChildren()
         // We're using external instance data, so we need to load
         // the data into a new document which becomes our live instance data.
 
+        // XXX We need to come up with a mechanism so that the content sink
+        // can use xmlns declarations in effect for the <model> to resolve
+        // tag prefixes in the external instance data.
+
         // Hook up load an error listeners so we'll know when the document
         // is done loading.
 
