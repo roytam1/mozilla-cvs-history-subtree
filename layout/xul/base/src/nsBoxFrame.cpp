@@ -728,28 +728,14 @@ nsBoxFrame::Reflow(nsPresContext*          aPresContext,
   // If you make changes to this method, please keep nsLeafBoxFrame::Reflow
   // in sync, if the changes are applicable there.
 
-  DO_GLOBAL_REFLOW_COUNT("nsBoxFrame", aReflowState.reason);
+  DO_GLOBAL_REFLOW_COUNT("nsBoxFrame");
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
   NS_ASSERTION(aReflowState.mComputedWidth >=0 && aReflowState.mComputedHeight >= 0, "Computed Size < 0");
 
 #ifdef DO_NOISY_REFLOW
   printf("\n-------------Starting BoxFrame Reflow ----------------------------\n");
-  printf("%p ** nsBF::Reflow %d R: ", this, myCounter++);
-  switch (aReflowState.reason) {
-    case eReflowReason_Initial:
-      printf("Ini");break;
-    case eReflowReason_Incremental:
-      printf("Inc");break;
-    case eReflowReason_Resize:
-      printf("Rsz");break;
-    case eReflowReason_StyleChange:
-      printf("Sty");break;
-    case eReflowReason_Dirty:
-      printf("Drt ");
-      break;
-    default:printf("<unknown>%d", aReflowState.reason);break;
-  }
+  printf("%p ** nsBF::Reflow %d ", this, myCounter++);
   
   printSize("AW", aReflowState.availableWidth);
   printSize("AH", aReflowState.availableHeight);
@@ -1098,7 +1084,6 @@ nsBoxFrame::MarkIntrinsicWidthsDirty()
   SizeNeedsRecalc(mMaxSize);
   CoordNeedsRecalc(mFlex);
   CoordNeedsRecalc(mAscent);
-  return NS_OK;
 }
 
 NS_IMETHODIMP
