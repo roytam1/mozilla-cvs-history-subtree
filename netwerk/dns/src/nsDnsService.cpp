@@ -107,6 +107,7 @@
  */
 #if defined(XP_WIN)
 #define WM_DNS_SHUTDOWN         (WM_USER + 200)
+static char *windowClass = "Mozilla:DNSWindowClass";
 #endif /* XP_WIN */
 
 
@@ -975,6 +976,14 @@ nsDNSService::Init()
     NS_ASSERTION(mDNSServiceLock == nsnull, "nsDNSService not shut down");
     if (mDNSServiceLock)  return NS_ERROR_ALREADY_INITIALIZED;
 
+    // install xpcom shutdown observer
+    nsCOMPtr<nsIObserverService> observerService =
+        do_GetService("@mozilla.org/observer-service;1", &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
 #if defined(XP_MAC)
     OSStatus errOT = INIT_OPEN_TRANSPORT();
     NS_ASSERTION(errOT == kOTNoError, "InitOpenTransport failed.");
@@ -1112,6 +1121,10 @@ nsDNSService::~nsDNSService()
     }
 #endif
     CRTFREEIF(mMyIPAddress);
+
+#if defined(XP_WIN)
+    UnregisterClass(windowClass, (HINSTANCE) NULL);
+#endif
 }
 
 
@@ -1264,6 +1277,13 @@ nsDNSService::Observe(nsISupports *      subject,
 {
     nsresult rv = NS_OK;
     
+    if (!nsCRT::strcmp(NS_XPCOM_SHUTDOWN_OBSERVER_ID, topic))
+    {
+        // we need to shutdown!
+        ShutdownInternal(); 
+        return NS_OK;
+    }
+
     if (nsCRT::strcmp(NS_PREFBRANCH_PREFCHANGE_TOPIC_ID, topic))  
         return NS_OK;
     
@@ -1301,7 +1321,6 @@ nsDNSService::Observe(nsISupports *      subject,
             mIDNConverter = nsnull;
         }
     }
-    
     return rv;
 }
 
@@ -1379,7 +1398,6 @@ NS_IMETHODIMP
 nsDNSService::Run()
 {
     WNDCLASS    wc;
-    char *      windowClass = "Mozilla:DNSWindowClass";
 
     // register window class for DNS event receiver window
     memset(&wc, 0, sizeof(wc));
@@ -1814,7 +1832,7 @@ nsDNSService::ShutdownInternal()
 #elif defined(XP_WIN)
 
     SendMessage(mDNSWindow, WM_DNS_SHUTDOWN, 0, 0);
-
+    UnregisterClass(windowClass, NULL);
 #endif
 
     PR_Unlock(mDNSServiceLock);  // so dns thread can aquire it.
@@ -1827,6 +1845,15 @@ nsDNSService::ShutdownInternal()
     AbortLookups();
 
     (void) RemovePrefObserver();
+
+
+    // remove xpcom shutdown observer
+    nsCOMPtr<nsIObserverService> observerService =
+        do_GetService("@mozilla.org/observer-service;1", &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = observerService->RemoveObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
+    if (NS_FAILED(rv)) return rv;
 
     // reset hashtable
     // XXX assert hashtable is empty

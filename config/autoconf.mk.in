@@ -280,6 +280,8 @@ NSPR_LIBS	= @NSPR_LIBS@
 
 LDAP_CFLAGS	= @LDAP_CFLAGS@
 LDAP_LIBS	= @LDAP_LIBS@
+XPCOM_GLUE_LIBS	= @XPCOM_GLUE_LIBS@
+
 
 # MKSHLIB_FORCE_ALL is used to force the linker to include all object
 # files present in an archive. MKSHLIB_UNFORCE_ALL reverts the linker
@@ -287,6 +289,8 @@ LDAP_LIBS	= @LDAP_LIBS@
 # archives use these flags to force in all of the .o files in the
 # archives into the shared library.
 WRAP_MALLOC_LIB         = @WRAP_MALLOC_LIB@
+XPCOM_GLUE_LIBS	= @XPCOM_GLUE_LIBS@
+
 WRAP_MALLOC_CFLAGS      = @WRAP_MALLOC_CFLAGS@
 DSO_CFLAGS              = @DSO_CFLAGS@
 DSO_PIC_CFLAGS          = @DSO_PIC_CFLAGS@
