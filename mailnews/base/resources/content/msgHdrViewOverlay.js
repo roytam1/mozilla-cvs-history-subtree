@@ -345,6 +345,15 @@ var messageHeaderSink = {
         displayAttachmentsForExpandedView();
     },
 
+    onEndMsgDownload: function(url)
+    {
+      var msgFolder;
+      if (url)
+      {
+        msgFolder = url.folder;
+      }
+    },
+
     mSecurityInfo  : null,
     getSecurityInfo: function()
     {
