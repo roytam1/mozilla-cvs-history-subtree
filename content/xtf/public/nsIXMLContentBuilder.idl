@@ -48,6 +48,7 @@ interface nsIXMLContentBuilder : nsISupports
   void beginElement(in AString tagname);
   void endElement();
   void attrib(in AString name, in AString value);
+  void textNode(in AString text);
   readonly attribute nsIDOMElement root;
   readonly attribute nsIDOMElement current;
 };

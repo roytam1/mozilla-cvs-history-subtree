@@ -43,7 +43,7 @@
 importModule("resource:/jscodelib/StdLib.js");
 importModule("resource:/jscodelib/TemplateLib.js");
 
-MOZ_EXPORTED_SYMBOLS = [ "XHTML_NS", "SVG_NS",
+MOZ_EXPORTED_SYMBOLS = [ "XHTML_NS", "SVG_NS", "XUL_NS",
                          "ContentBuilder",
                          "XTFGenericElement",
                          "XTFSVGVisual",
@@ -57,7 +57,7 @@ MOZ_EXPORTED_SYMBOLS = [ "XHTML_NS", "SVG_NS",
 
 var XHTML_NS = "http://www.w3.org/1999/xhtml";
 var SVG_NS   = "http://www.w3.org/2000/svg";
-
+var XUL_NS   = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 //----------------------------------------------------------------------
 // ContentBuilder: simple interface to facilitate constructing xml
@@ -98,6 +98,12 @@ ContentBuilder.addProtoObj("endElement",
 ContentBuilder.addProtoObj("attrib",
   function(name, value) {
     this.builder.attrib(name, value);
+    return this;
+  });
+
+ContentBuilder.addProtoObj("textNode",
+  function(text) {
+    this.builder.textNode(text);
     return this;
   });
 

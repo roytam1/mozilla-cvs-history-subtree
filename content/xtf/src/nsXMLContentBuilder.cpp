@@ -50,6 +50,8 @@
 #include "nsContentCID.h"
 #include "nsIDocument.h"
 #include "nsIDOMElement.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMText.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
@@ -203,6 +205,21 @@ NS_IMETHODIMP nsXMLContentBuilder::Attrib(const nsAString & name, const nsAStrin
   NS_ASSERTION(mCurrent, "can't set attrib w/o open element");
   nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(name);
   mCurrent->SetAttr(0, nameAtom, value, PR_TRUE);
+  return NS_OK;
+}
+
+/* void textNode (in AString text); */
+NS_IMETHODIMP nsXMLContentBuilder::TextNode(const nsAString & text)
+{
+  NS_ASSERTION(mCurrent, "can't append textnode w/o open element");
+  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(mDocument);
+  NS_ASSERTION(domDoc, "no dom document");
+
+  nsCOMPtr<nsIDOMText> textNode;
+  domDoc->CreateTextNode(text, getter_AddRefs(textNode));
+  NS_ASSERTION(textNode, "Failed to create text node");
+  nsCOMPtr<nsIContent> textContent = do_QueryInterface(textNode);
+  mCurrent->AppendChildTo(textContent, PR_TRUE, PR_TRUE);
   return NS_OK;
 }
 
