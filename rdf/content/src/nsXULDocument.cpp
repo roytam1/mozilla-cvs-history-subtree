@@ -135,6 +135,7 @@ static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,       NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kTextNodeCID,               NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,          NS_WELLFORMEDDTD_CID);
+static NS_DEFINE_CID(kXMLElementFactoryCID,      NS_XML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
 static NS_DEFINE_CID(kXULContentUtilsCID,        NS_XULCONTENTUTILS_CID);
 static NS_DEFINE_CID(kXULCommandDispatcherCID,   NS_XULCOMMANDDISPATCHER_CID);
@@ -320,6 +321,7 @@ nsXULDocument::~nsXULDocument()
         NS_IF_RELEASE(kNC_value);
 
         NS_IF_RELEASE(gHTMLElementFactory);
+        NS_IF_RELEASE(gXMLElementFactory);
 
         if (gXULUtils) {
             nsServiceManager::ReleaseService(kXULContentUtilsCID, gXULUtils);
@@ -3068,6 +3070,13 @@ nsXULDocument::Init()
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get HTML element factory");
         if (NS_FAILED(rv)) return rv;
 
+        rv = nsComponentManager::CreateInstance(kXMLElementFactoryCID,
+                                                nsnull,
+                                                NS_GET_IID(nsIXMLElementFactory),
+                                                (void**) &gXMLElementFactory);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get XML element factory");
+        if (NS_FAILED(rv)) return rv;
+
         rv = nsServiceManager::GetService(kNameSpaceManagerCID,
                                           NS_GET_IID(nsINameSpaceManager),
                                           (nsISupports**) &gNameSpaceManager);
@@ -4022,7 +4031,7 @@ nsXULDocument::ContextStack::Pop()
     mTop = mTop->mNext;
     --mDepth;
 
-    NS_RELEASE(doomed->mElement);
+    NS_IF_RELEASE(doomed->mElement);
     delete doomed;
     return NS_OK;
 }
@@ -4127,17 +4136,14 @@ nsXULDocument::PrepareToWalk()
         return NS_OK;
     }
 
-    nsCOMPtr<nsIContent> root;
-    rv = CreateElement(proto, getter_AddRefs(root));
-    if (NS_FAILED(rv)) return rv;
-
-    rv = mContextStack.Push(proto, root);
-    if (NS_FAILED(rv)) return rv;
-
     // Do one-time initialization if we're preparing to walk the
     // master document's prototype.
+    nsCOMPtr<nsIContent> root;
 
     if (mState == eState_Master) {
+        rv = CreateElement(proto, getter_AddRefs(root));
+        if (NS_FAILED(rv)) return rv;
+
         SetRootContent(root);
 
         // Create the document's "hidden form" element which will wrap all
@@ -4173,6 +4179,9 @@ nsXULDocument::PrepareToWalk()
         if (NS_FAILED(rv)) return rv;
     }
     
+    rv = mContextStack.Push(proto, root);
+    if (NS_FAILED(rv)) return rv;
+
     return NS_OK;
 }
 
@@ -4204,31 +4213,32 @@ nsXULDocument::ResumeWalk()
             if (NS_FAILED(rv)) return rv;
 
             if (indx >= proto->mNumChildren) {
-                // We've processed all of the prototype's children.
-                // Check the element for a 'datasources' attribute, in
-                // which case we'll need to create a template builder
-                // and construct the first 'ply' of elements beneath
-                // it.
-                //
-                // N.B. that we do this -after- all other XUL children
-                // have been created: this ensures that there'll be a
-                // <template> tag available when we try to build that
-                // first ply of generated elements.
-                nsAutoString datasources;
-                rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
+                if (element) {
+                    // We've processed all of the prototype's children.
+                    // Check the element for a 'datasources' attribute, in
+                    // which case we'll need to create a template builder
+                    // and construct the first 'ply' of elements beneath
+                    // it.
+                    //
+                    // N.B. that we do this -after- all other XUL children
+                    // have been created: this ensures that there'll be a
+                    // <template> tag available when we try to build that
+                    // first ply of generated elements.
+                    nsAutoString datasources;
+                    rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
 
-                if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                    nsCOMPtr<nsIRDFContentModelBuilder> builder;
-                    rv = CreateTemplateBuilder(element, datasources, &builder);
-                    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
-                    if (NS_SUCCEEDED(rv)) {
+                    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+                        nsCOMPtr<nsIRDFContentModelBuilder> builder;
+                        rv = CreateTemplateBuilder(element, datasources, &builder);
+                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
+                        if (NS_FAILED(rv)) return rv;
+
                         // Force construction of immediate template sub-content _now_.
                         rv = builder->CreateContents(element);
                         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
+                        if (NS_FAILED(rv)) return rv;
                     }
                 }
-
-                if (NS_FAILED(rv)) return rv;
 
                 // Now pop the context stack back up to the parent
                 // element and continue the prototype walk.
@@ -4249,7 +4259,7 @@ nsXULDocument::ResumeWalk()
 
                 nsCOMPtr<nsIContent> child;
 
-                if ((mState == eState_Master) || (mContextStack.Depth() > 2)) {
+                if ((mState == eState_Master) || (mContextStack.Depth() > 1)) {
                     // Either we're in the master document, or we're
                     // in an overlay and far enough down into the
                     // overlay's content that we can simply build the
@@ -4264,7 +4274,7 @@ nsXULDocument::ResumeWalk()
                     rv = AddElementToMap(element);
                     if (NS_FAILED(rv)) return rv;
                 }
-                else if (mContextStack.Depth() == 2) {
+                else if (mContextStack.Depth() == 1) {
                     // We're in the "first ply" of an overlay: the
                     // "hookup" nodes. Create an 'overlay' element so
                     // that we can continue to build content, and
@@ -4358,6 +4368,8 @@ nsXULDocument::ResumeWalk()
         if (! uri)
             break;
 
+        mOverlays->RemoveElementAt(0);
+
         // Look in the prototype cache for the prototype document with
         // the specified URI.
         rv = gXULPrototypeCache->Get(uri, getter_AddRefs(mCurrentPrototype));
@@ -4377,6 +4389,8 @@ nsXULDocument::ResumeWalk()
             nsCOMPtr<nsIStreamListener> listener = do_QueryInterface(parser);
             if (! listener)
                 return NS_ERROR_UNEXPECTED;
+
+            parser->Parse(uri);
 
             nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
             rv = NS_OpenURI(listener, nsnull, uri, group);
@@ -4768,7 +4782,7 @@ nsXULDocument::OverlayForwardReference::Resolve()
         return eResolve_Error;
 
     nsAutoString id;
-    rv = mContent->GetAttribute(kNameSpaceID_XUL, kIdAtom, id);
+    rv = mContent->GetAttribute(kNameSpaceID_None, kIdAtom, id);
     if (NS_FAILED(rv)) return eResolve_Error;
 
     nsCOMPtr<nsIDOMElement> domoverlay;
@@ -4815,8 +4829,6 @@ nsXULDocument::OverlayForwardReference::Merge(nsIContent* aOriginalNode,
             nsCOMPtr<nsIAtom> tag;
             rv = aOverlayNode->GetAttributeNameAt(i, nameSpaceID, *getter_AddRefs(tag));
             if (NS_FAILED(rv)) return rv;
-
-            nameSpaceID = kNameSpaceID_None;
 
             if (nameSpaceID == kNameSpaceID_None && tag.get() == kIdAtom)
                 continue;
