@@ -89,6 +89,10 @@ public:
   NS_IMETHOD          SetParameters(PRUint32 aMaxRange, PRUint32 aThumbSize,
                             PRUint32 aPosition, PRUint32 aLineIncrement);
 
+    // called from the ScrollbarView when someone hits a part
+    // of the scrollbar.
+  void DoScroll(NSScrollerPart inPart);
+
 protected:
   
   virtual PRBool    IsVertical ( ) const = 0;
@@ -97,12 +101,6 @@ protected:
 
   virtual NSView*   CreateCocoaView() ;
   virtual GrafPtr   GetQuickDrawPort() ;
-
-private:
-
-  static 
-  pascal void       ScrollActionProc(ControlHandle, ControlPartCode);
-  void              DoScrollAction(ControlPartCode);
 
 // DATA
 private:
