@@ -129,8 +129,12 @@ clean-l10n:
 
 installers-%: % clean-l10n
 	@$(MAKE) -C ../app export                          # remake firefox.js
+	@$(MAKE) -C ../../toolkit/locales AB_CD=$*
 	@$(MAKE) AB_CD=$*                                  # build/register the chrome
 	@$(MAKE) xpi-$*                                    # build the langpack
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+	@$(MAKE) -C ../app repackage AB_CD=$*
+endif
 	@$(MAKE) -C ../installer AB_CD=$*                  # build the tarball/ZIP
 	@$(MAKE) -C ../installer installer AB_CD=$*        # build the installer
 

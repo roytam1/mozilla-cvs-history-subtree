@@ -288,9 +288,18 @@ ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 
 APP_NAME = Firefox
 
-libs:: $(PROGRAM)
+AB_CD = $(MOZ_UI_LOCALE)
+
+AB := $(firstword $(subst -, ,$(AB_CD)))
+
+clean clobber repackage::
+	rm -rf $(DIST)/$(APP_NAME).app
+
+libs repackage:: $(PROGRAM)
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/MacOS
-	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app
+	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app --exclude English.lproj
+	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
+	rsync -a --exclude CVS $(srcdir)/macbuild/Contents/Resources/English.lproj/ $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
 	sed -e "s/APP_VERSION/$(APP_VERSION)/" $(srcdir)/macbuild/Contents/Info.plist.in > $(DIST)/$(APP_NAME).app/Contents/Info.plist
 	rsync -a $(DIST)/bin/ $(DIST)/$(APP_NAME).app/Contents/MacOS
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS/mangle $(DIST)/$(APP_NAME).app/Contents/MacOS/shlibsign
@@ -302,8 +311,6 @@ libs:: $(PROGRAM)
 #       remove CVS dirs from packaged app
 	find $(DIST)/$(APP_NAME).app -type d -name "CVS" -prune -exec rm -rf {} \;
 
-clean clobber::
-	rm -rf $(DIST)/$(APP_NAME).app
 endif
 
 README_FILE = $(srcdir)/README.txt
