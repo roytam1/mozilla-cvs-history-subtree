@@ -373,10 +373,19 @@ struct ldap {
 	}
 
 /* enter/exit critical sections */
-/* The locks assume that the locks are thread safe */
+/*
+ * The locks assume that the locks are thread safe.  XXXmcs: which means???
+ *
+ * Note that we test for both ld_mutex_lock_fn != NULL AND ld_mutex != NULL.
+ * This is necessary because there is a window in ldap_init() between the
+ * time we set the ld_mutex_lock_fn pointer and the time we allocate the
+ * mutexes in which external code COULD be called which COULD make a call to
+ * something like ldap_get_option(), which uses LDAP_MUTEX_LOCK().  The
+ * libprldap code does this in its newhandle callback (prldap_newhandle).
+ */
 
 #define LDAP_MUTEX_LOCK(ld, lock) \
-    if ((ld)->ld_mutex_lock_fn != NULL) { \
+    if ((ld)->ld_mutex_lock_fn != NULL && ld->ld_mutex != NULL) { \
         if ((ld)->ld_threadid_fn != NULL) { \
             if ((ld)->ld_mutex_threadid[lock] == (ld)->ld_threadid_fn()) { \
                 (ld)->ld_mutex_refcnt[lock]++; \
@@ -391,7 +400,7 @@ struct ldap {
     } 
 
 #define LDAP_MUTEX_UNLOCK(ld, lock) \
-    if ((ld)->ld_mutex_lock_fn != NULL) { \
+    if ((ld)->ld_mutex_lock_fn != NULL && ld->ld_mutex != NULL) { \
         if ((ld)->ld_threadid_fn != NULL) { \
             if ((ld)->ld_mutex_threadid[lock] == (ld)->ld_threadid_fn()) { \
                 (ld)->ld_mutex_refcnt[lock]--; \
