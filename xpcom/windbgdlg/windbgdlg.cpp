@@ -48,8 +48,11 @@ WinMain(HINSTANCE  hInstance, HINSTANCE  hPrevInstance,
              "Click Retry to Debug the Application..\n"
              "Click Ignore to continue running the Application.", 
              lpszCmdLine);
-             
+
+#if 0             
     return MessageBox(NULL, msg, "nsDebug::Assertion",
                       MB_ICONSTOP | MB_SYSTEMMODAL| 
                       MB_ABORTRETRYIGNORE | MB_DEFBUTTON3);
+#endif
+    return IDIGNORE;
 }
