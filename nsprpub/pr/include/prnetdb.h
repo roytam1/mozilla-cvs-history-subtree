@@ -306,12 +306,8 @@ NSPR_API(void) PR_ConvertIpv4AddrToIpv6(PRUint32 v4addr, PRIPv6Addr *v6addr);
 ** RETURN:
 **  PRUint16                The 'port' field of 'addr'.
 ***********************************************************************/
-#ifdef _PR_INET6
 #define PR_NetAddrInetPort(addr) \
     ((addr)->raw.family == PR_AF_INET6 ? (addr)->ipv6.port : (addr)->inet.port)
-#else
-#define PR_NetAddrInetPort(addr) ((addr)->inet.port)
-#endif
 
 /***********************************************************************
 ** FUNCTION:	
