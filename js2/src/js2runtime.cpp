@@ -1178,6 +1178,7 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
     // complete the static class (inherit static instances etc)
     if (mStatics && mSuperType)
         mStatics->completeClass(cx, scopeChain, mSuperType->mStatics);
+    
 }
 
 
@@ -1287,6 +1288,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                     s = s->next;
                 }
             }
+            // too late !!! the methods have already been granted their
+            // vtable indices (same goes for fields)
             thisClass->completeClass(this, mScopeChain, superClass);
 
             mScopeChain->popScope();
@@ -1574,7 +1577,7 @@ JSValue Object_Constructor(Context *cx, JSValue *thisValue, JSValue *argv, uint3
 JSValue Object_toString(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue->isObject());
-    return JSValue::valueToString(cx, *thisValue);
+    return JSValue(new String(widenCString("[object") + /* [[class]] */ widenCString("]")));
 }
 
 
@@ -1835,7 +1838,7 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
                 ASSERT(false);
             }
             else
-                return (target->mCode)(cx, NULL, &value, 1);
+                return (target->mCode)(cx, &value, NULL, 0);
         }
         throw new Exception(Exception::runtimeError, "toString");    // XXX
     }
@@ -2126,8 +2129,11 @@ Formatter& operator<<(Formatter& f, const JSObject& obj)
 Formatter& operator<<(Formatter& f, const JSType& obj)
 {
     printFormat(f, "super @ 0x%08X\n", obj.mSuperType);
+    f << "properties\n";
     obj.printProperties(f);
+    f << "slotsnstuff\n";
     obj.printSlotsNStuff(f);
+    f << "done with type\n";
     return f;
 }
 Formatter& operator<<(Formatter& f, const Access& slot)

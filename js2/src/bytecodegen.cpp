@@ -162,10 +162,9 @@ void GetterMethodReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addByte(Explicit);
 }
 
-void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
+void GetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
-    bcg->addByte(GetMethodOp);
-    bcg->addLong(mIndex); 
+    bcg->addByte(LoadThisOp);
 }
 
 void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -173,6 +172,18 @@ void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addByte(InvokeOp);
     bcg->addLong(1);
     bcg->addByte(Explicit);
+}
+
+void SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg) 
+{
+    bcg->addByte(GetMethodOp);
+    bcg->addLong(mIndex);
+    bcg->addByte(SwapOp);
+}
+
+void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
+{
+    bcg->addByte(LoadThisOp);
 }
 
 void FunctionReference::emitCodeSequence(ByteCodeGen *bcg) 
@@ -652,7 +663,10 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             mLabelStack.pop_back();
 
             setLabel(labelAtIncrement);
-            if (f->expr3) genExpr(f->expr3);
+            if (f->expr3) {
+                genExpr(f->expr3);
+                addByte(PopOp);
+            }
 
             setLabel(labelAtTestCondition);
             if (f->expr2) {
@@ -816,7 +830,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 id.next = CURRENT_ATTR;
                 Reference *ref = lType->genReference(fieldName, &id, acc, 0);
                 if (ref == NULL)
-                    ref = new PropertyReference(fieldName, acc);
+                    ref = new PropertyReference(fieldName, acc, Object_Type);
                 return ref;
             }
             else {
@@ -824,7 +838,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
                 Reference *ref = lType->genReference(fieldName, CURRENT_ATTR, acc, 0);
                 if (ref == NULL)
-                    ref = new PropertyReference(fieldName, acc);
+                    ref = new PropertyReference(fieldName, acc, Object_Type);
                 return ref;
             }
 
@@ -889,10 +903,10 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
                 const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
                 readRef = lType->genReference(fieldName, CURRENT_ATTR, Read, 0);
                 if (readRef == NULL)
-                    readRef = new PropertyReference(fieldName, Read);
+                    readRef = new PropertyReference(fieldName, Read, Object_Type);
                 writeRef = lType->genReference(fieldName, CURRENT_ATTR, Write, 0);
                 if (writeRef == NULL)
-                    writeRef = new PropertyReference(fieldName, Write);
+                    writeRef = new PropertyReference(fieldName, Write, Object_Type);
             }
         }
         break;
@@ -1177,6 +1191,7 @@ BinaryOpEquals:
                 else
                     addByte(DupOp);
             }
+            writeRef->emitPreAssignment(this);
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addByte(DoOperatorOp);

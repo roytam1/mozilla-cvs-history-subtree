@@ -254,8 +254,8 @@ static const double two31 = 2147483648.0;
 
     class Context;
 
-    
-    
+   
+
     
     class Reference {
     public:
@@ -270,11 +270,14 @@ static const double two31 = 2147483648.0;
 
         virtual void emitInvokeSequence(ByteCodeGen *bcg)   { emitCodeSequence(bcg); }
 
+        virtual void emitPreAssignment(ByteCodeGen *bcg)    { }
+
         virtual void emitCodeSequence(ByteCodeGen *bcg) 
                 { throw Exception(Exception::internalError, "gen code for base ref"); }
 
         virtual bool getValue(Context *cx)
                 { throw Exception(Exception::internalError, "get value(cx) for base ref"); }
+        
         virtual bool setValue(Context *cx)
                 { throw Exception(Exception::internalError, "set value(cx) for base ref"); }
 
@@ -356,7 +359,6 @@ static const double two31 = 2147483648.0;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
         bool needsThis() { return true; }
-//        JSValue getValue();
         uint32 baseExpressionDepth() { return 1; }
         void emitInvokeSequence(ByteCodeGen *bcg);
     };
@@ -366,6 +368,7 @@ static const double two31 = 2147483648.0;
             : MethodReference(index, baseClass, type) { }
         void emitCodeSequence(ByteCodeGen *bcg);
         bool needsThis() { return true; }
+        void emitImplicitLoad(ByteCodeGen *bcg);
         uint32 baseExpressionDepth() { return 1; }
     };
     class SetterMethodReference : public MethodReference {
@@ -376,6 +379,7 @@ static const double two31 = 2147483648.0;
         bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
         uint32 baseExpressionDepth() { return 1; }
+        void emitPreAssignment(ByteCodeGen *bcg);
     };
 
     // a function
@@ -411,12 +415,12 @@ static const double two31 = 2147483648.0;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
     };
-    // the "we don't know any field by that name", either it'll be a dynamic property
-    // or we just didn't have enough type info at compile time.
+    // Either an existing value property (dynamic) or
+    // the "we don't know any field by that name".
     class PropertyReference : public Reference {
     public:
-        PropertyReference(const String& name, Access acc)
-            : Reference(Object_Type), mAccess(acc), mName(name) { }
+        PropertyReference(const String& name, Access acc, JSType *type)
+            : Reference(type), mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
@@ -637,7 +641,7 @@ static const double two31 = 2147483648.0;
                 Property &prop = PROPERTY(i);
                 switch (prop.mFlag) {
                 case ValuePointer:
-                    return new PropertyReference(name, acc);
+                    return new PropertyReference(name, acc, prop.mType);
                 case FunctionPair:
                     if (acc == Read)
                         return new GetterFunctionReference(prop.mData.fPair.getterF);
@@ -760,8 +764,9 @@ static const double two31 = 2147483648.0;
         {
             mStatics = new JSType(cx, this);
             // set the prototype object
-            mPrototype = new JSObject();    
-            defineVariable(widenCString("prototype"), NULL, Object_Type, JSValue(mPrototype));
+            mPrototype = new JSObject();
+            if (mSuperType) mPrototype->mPrototype = mSuperType->mPrototype;
+            defineStaticVariable(widenCString("prototype"), NULL, Object_Type);
         }
 
         // construct a new (empty) instance of this class
@@ -784,6 +789,12 @@ static const double two31 = 2147483648.0;
         {
             ASSERT(mStatics);
             mStatics->defineMethod(name, attr, type, f);
+        }
+
+        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type, JSValue v)
+        {
+            ASSERT(mStatics);
+            return mStatics->defineVariable(name, attr, type, v);
         }
 
         PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type)
@@ -931,7 +942,7 @@ static const double two31 = 2147483648.0;
                     ASSERT(mStatics == NULL);
                     return new ConstructorReference(mMethods[prop.mData.index], mSuperType);
                 case ValuePointer:
-                    return new PropertyReference(name, acc);
+                    return new PropertyReference(name, acc, prop.mType);
                 default:
                     NOT_REACHED("bad storage kind");
                     return NULL;
@@ -1386,7 +1397,7 @@ static const double two31 = 2147483648.0;
                 mScopeChain->addScope(Object_Type);
                 Object_Type->createStaticComponent(this);
                 Object_Type->setDefaultConstructor(new JSFunction(this, &Object_Constructor, Object_Type));
-                Object_Type->addMethod(widenCString("toString"), NULL, new JSFunction(this, &Object_toString, String_Type));
+                Object_Type->mPrototype->defineVariable(widenCString("toString"), NULL, String_Type, JSValue(new JSFunction(this, &Object_toString, String_Type)));
                 Object_Type->completeClass(this, mScopeChain, Object_Type);
                 Object_Type->setStaticInitializer(this, NULL);
                 global->defineVariable(widenCString("Object"), NULL, Type_Type, JSValue(Object_Type));
@@ -1531,24 +1542,28 @@ static const double two31 = 2147483648.0;
 
     inline bool AccessorReference::getValue(Context *cx) 
     { 
+        NOT_REACHED("need this?");
         cx->switchToFunction(mFunction);
         return true; 
     }
     
     inline bool AccessorReference::setValue(Context *cx) 
     { 
+        NOT_REACHED("need this?");
         cx->switchToFunction(mFunction);
         return true; 
     }
     
     inline bool LocalVarReference::getValue(Context *cx)
     {
+        NOT_REACHED("need this?");
         cx->mStack.push_back(cx->mLocals[mIndex]);
         return false;
     }
 
     inline bool LocalVarReference::setValue(Context *cx)
     {
+        NOT_REACHED("need this?");
         cx->mLocals[mIndex] = cx->mStack.back();
         return false;
     }
@@ -1574,10 +1589,8 @@ static const double two31 = 2147483648.0;
                 return false;
             }
         }
-        else {
-            ASSERT(false);
-            // prototype chain walking?
-        }
+        else
+            NOT_REACHED("mismatch between hasProp and getProp");        
         return false;
     }
 
@@ -1749,6 +1762,14 @@ static const double two31 = 2147483648.0;
                 const PropertyMap::value_type e(PROPERTY_NAME(pi), ATTR_PROPERTY(pi));
                 mProperties.insert(e);
             }
+        }
+        else {  // for the static instance...
+            // hook up the prototype object
+            PropertyIterator i;
+            type->hasProperty(widenCString("prototype"), NULL, Read, &i);
+            Property &prop = PROPERTY(i);
+            ASSERT(PROPERTY_KIND(i) == Slot);
+            mInstanceValues[PROPERTY_INDEX(i)] = JSValue(type->mSuperType->mPrototype);
         }
         // and then do the same for the super types
         JSType *t = type->mSuperType;
