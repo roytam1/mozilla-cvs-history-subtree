@@ -538,8 +538,6 @@ OSErr NSLoadIndexedFragment(const FSSpec *fileSpec, PRUint32 fragmentIndex,
 		BlockMoveData(fragNameBlock, &fragName[1], nameLen);
 		fragName[0] = nameLen;
 	}
-	
-	// DebugStr(fragName);
 
 	err = GetDiskFragment(fileSpec, fragOffset, fragLength, fragName, 
 					kLoadCFrag, outConnectionID, &main, errName);
