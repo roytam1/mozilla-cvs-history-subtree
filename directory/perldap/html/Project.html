@@ -138,7 +138,8 @@ important that a module or method doesn't work without it). The oustanding
     $del is defined or not, or the strict parsing will complain. Reported
     by James Briggs <briggsja@netscape.com>. There's a few of these in the
     code, I tried to fix as many as possible before shipping v1.0, some
-    were still left... <B><I>[leif]</I></B>
+    were still left... We should change all such occurences, and add tests
+    using "if defined()". <B><I>[leif]</I></B>
 
     <LI><B>Conn.pm</B>: Bug fix for case sensitivity on searches for
     specific attributes. <B><I>[leif, fixed 09/03]</I></B>
