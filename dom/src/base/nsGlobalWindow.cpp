@@ -4685,17 +4685,41 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIDOMWindow> domReturn;
+  nsAutoString nameString(aName);
 
   // determine whether we must divert the open window to a new tab.
 
-  PRBool divertOpen = PR_FALSE;
+  PRBool divertOpen = PR_TRUE; // at first, assume we will divert
+
+  // first, does the named window already exist? (see nsWindowWatcher)
+
+  if (nameString.EqualsIgnoreCase("_top") ||
+      nameString.EqualsIgnoreCase("_self") ||
+      nameString.EqualsIgnoreCase("_content") ||
+      nameString.EqualsIgnoreCase("_parent") ||
+      nameString.Equals(NS_LITERAL_STRING("_main")))
+    divertOpen = PR_FALSE;
+  else {
+    nsCOMPtr<nsIDocShellTreeOwner> docOwner;
+    GetTreeOwner(getter_AddRefs(docOwner));
+    if (docOwner) {
+      nsCOMPtr<nsIDocShellTreeItem> namedWindow;
+      docOwner->FindItemWithName(nameString.get(), 0,
+                                 getter_AddRefs(namedWindow));
+      if (namedWindow)
+        divertOpen = PR_FALSE;
+    }
+  }
+
+  // second, what do the prefs prescribe?
+
   PRInt32 containerPref = nsIBrowserDOMWindow::OPEN_NEWWINDOW;
 
-  if (!aExtraArgument) { // divert only if no extra argument
+  if (divertOpen) { // no such named window
+    divertOpen = PR_FALSE; // more tests to pass:
     nsCOMPtr<nsIDOMChromeWindow> thisChrome =
       do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
-    if (!thisChrome) {   // only if we're not chrome
+    if (!aExtraArgument && !thisChrome) {
 
       PRInt32 restrictionPref = 2;
       gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
@@ -4715,6 +4739,10 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
       }
     }
   }
+
+  nsCOMPtr<nsIDOMWindow> domReturn;
+
+  // divert the window.open into a new tab or into this window, if required
 
   if (divertOpen) {
     if (containerPref == nsIBrowserDOMWindow::OPEN_NEWTAB ||
@@ -4760,8 +4788,8 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
       GetTop(getter_AddRefs(domReturn));
     }
 
-    nsAutoString nameString(aName);
-    if (domReturn && !nameString.EqualsIgnoreCase("_blank"))
+    if (domReturn && !nameString.EqualsIgnoreCase("_blank") &&
+                     !nameString.EqualsIgnoreCase("_new"))
       domReturn->SetName(aName);
   }
 
