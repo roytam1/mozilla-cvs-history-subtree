@@ -35,6 +35,7 @@
 #include "prlink.h"
 #include "nsIFactory.h"
 #include "nsIWebShell.h"
+#include "nsIPref.h"
 #include "nsString.h"
 #include "plevent.h"
 #include "prthread.h"
@@ -134,6 +135,14 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
       PL_InitializeEventsLib("");
       NS_SetupRegistry();
       
+      // Load preferences
+      nsIPref *prefs;
+      rv = NSRepository::CreateInstance(kPrefCID, NULL, kIPrefIID,
+                                        (void **) &prefs);
+      if (NS_OK == rv) {
+        prefs->Startup("prefs.js");
+        prefs->Release();
+      }
       isFirstTime = FALSE;
     }
 
