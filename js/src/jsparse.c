@@ -69,6 +69,9 @@
 
 typedef JSParseNode *
 JSParser(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc);
+typedef JSParseNode *
+JSMemberParser(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+	       JSBool allowCallSyntax);
 
 static JSParser FunctionStmt;
 #if JS_HAS_LEXICAL_CLOSURE
@@ -91,7 +94,7 @@ static JSParser ShiftExpr;
 static JSParser AddExpr;
 static JSParser MulExpr;
 static JSParser UnaryExpr;
-static JSParseNode *MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool allowCallSyntax);
+static JSMemberParser MemberExpr;
 static JSParser PrimaryExpr;
 
 /*
@@ -160,7 +163,7 @@ WellTerminated(JSContext *cx, JSTokenStream *ts, JSTokenType lastExprType)
     if (tt != TOK_EOF && tt != TOK_EOL && tt != TOK_SEMI && tt != TOK_RC) {
 #if JS_HAS_LEXICAL_CLOSURE
 	if ((tt == TOK_FUNCTION || lastExprType == TOK_FUNCTION) &&
-	    cx->version < JSVERSION_1_2) {
+	    (cx->version < JSVERSION_1_2) && (cx->version >= JSVERSION_1_0)) {
 	    return JS_TRUE;
 	}
 #endif
@@ -244,6 +247,8 @@ out:
     return ok;
 }
 
+#ifdef CHECK_RETURN_EXPR
+
 /*
  * Insist on a final return before control flows out of pn, but don't be too
  * smart about loops (do {...; return e2;} while(0) at the end of a function
@@ -285,6 +290,8 @@ CheckFinalReturn(JSParseNode *pn)
 }
 
 static char badreturn_str[] = "function does not always return a value";
+
+#endif /* CHECK_RETURN_EXPR */
 
 static JSParseNode *
 FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
@@ -373,10 +380,10 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     JSAtom *funAtom, *argAtom;
     JSObject *parent;
     JSFunction *fun, *outerFun;
-    JSStmtInfo *topStmt;
     JSBool ok, named;
     JSObject *pobj;
     JSScopeProperty *sprop;
+    JSTreeContext funtc;
     jsval junk;
 
     /* Make a TOK_FUNCTION node. */
@@ -394,10 +401,6 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     parent = js_FindVariableScope(cx, &outerFun);
     if (!parent)
 	return NULL;
-
-    /* Clear tc->topStmt for semantic checking (restore at label out:). */
-    topStmt = tc->topStmt;
-    tc->topStmt = NULL;
 
 #if JS_HAS_LEXICAL_CLOSURE
     if (!funAtom || cx->fp->scopeChain != parent || InWithStatement(tc)) {
@@ -485,7 +488,8 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 			   ok = JS_FALSE; goto out);
     pn->pn_pos.begin = ts->token.pos.begin;
 
-    pn2 = FunctionBody(cx, ts, fun, tc);
+    INIT_TREE_CONTEXT(&funtc);
+    pn2 = FunctionBody(cx, ts, fun, &funtc);
     if (!pn2) {
     	ok = JS_FALSE;
     	goto out;
@@ -497,7 +501,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 
     pn->pn_fun = fun;
     pn->pn_body = pn2;
-    pn->pn_tryCount = tc->tryCount;
+    pn->pn_tryCount = funtc.tryCount;
 
 #if JS_HAS_LEXICAL_CLOSURE
     if (outerFun || cx->fp->scopeChain != parent || InWithStatement(tc))
@@ -510,7 +514,6 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 
     ok = JS_TRUE;
 out:
-    tc->topStmt = topStmt;
     if (!ok) {
 	if (named)
 	    (void) OBJ_DELETE_PROPERTY(cx, parent, (jsid)funAtom, &junk);
@@ -1005,7 +1008,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	 * with an 'in' expression as its initializer, leaving ts->pushback at
 	 * the right parenthesis.  This condition tests 1, then 3, then 2:
 	 */
-	if (pn1 && 
+	if (pn1 &&
 	    (pn1->pn_type == TOK_IN ||
 	     (pn1->pn_type == TOK_VAR && ts->pushback.type == TOK_RP) ||
 	     js_MatchToken(cx, ts, TOK_IN))) {
@@ -1160,7 +1163,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		    PR_ASSERT(0);
 		}
 		break;
-	      case TOK_VAR: 
+	      case TOK_VAR:
 		PR_ASSERT(pn4->pn_head->pn_type == TOK_NAME);
 		switch(pn4->pn_head->pn_op) {
 		  case JSOP_GETVAR:
@@ -1183,7 +1186,7 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		PR_ASSERT(0);
 	    }
 	    pn2->pn_left = pn4;
-	    
+
 	    /* (balance: */
 	    MUST_MATCH_TOKEN(TOK_RP, "missing ) after catch declaration");
 	    pn2->pn_right = Statement(cx, ts, tc);
@@ -1365,11 +1368,13 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    pn->pn_kid = NULL;
 	}
 
+#ifdef CHECK_RETURN_EXPR
 	if ((tc->flags & (TCF_RETURN_EXPR | TCF_RETURN_VOID)) ==
 	    (TCF_RETURN_EXPR | TCF_RETURN_VOID)) {
 	    js_ReportCompileError(cx, ts, badreturn_str);
 	    return NULL;
 	}
+#endif
 	break;
 
       case TOK_LC:
@@ -1463,6 +1468,17 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     JSScopeProperty *sprop;
     JSBool ok;
 
+    /*
+     * The tricky part of this code is to create special
+     * parsenode opcodes for getting and setting variables
+     * (which will be stored as special slots in the frame).
+     * The complex special case is an eval() inside a
+     * function. If the evaluated string references variables in
+     * the enclosing function, then we need to generate
+     * the special variable opcodes.
+     * We determine this by looking up the variable id in the
+     * current variable scope.
+     */
     PR_ASSERT(ts->token.type == TOK_VAR);
     pn = NewParseNode(cx, &ts->token, PN_LIST);
     if (!pn)
@@ -1475,8 +1491,13 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	return NULL;
     clasp = OBJ_GET_CLASS(cx, obj);
     if (fun && clasp == &js_FunctionClass) {
+        /* We are compiling code inside a function */
 	getter = js_GetLocalVariable;
 	setter = js_SetLocalVariable;
+    } else if (fun && clasp == &js_CallClass) {
+        /* We are compiling code from an eval inside a function */
+	getter = js_GetCallVariable;
+	setter = js_SetCallVariable;
     } else {
 	getter = clasp->getProperty;
 	setter = clasp->setProperty;
@@ -1517,7 +1538,25 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 			PR_ASSERT(sprop->getter == js_GetLocalVariable);
 			PR_ASSERT(JSVAL_IS_INT(sprop->id) &&
 				  JSVAL_TO_INT(sprop->id) < fun->nvars);
-		    }
+                    } else if (clasp == &js_CallClass) {
+                        if (sprop->getter == js_GetCallVariable) {
+                            /*
+                             * Referencing a variable introduced by a var
+                             * statement in the enclosing function. Check
+                             * that the slot number we have is in range.
+                             */
+			    PR_ASSERT(JSVAL_IS_INT(sprop->id) &&
+				      JSVAL_TO_INT(sprop->id) < fun->nvars);
+                        } else {
+                            /*
+                             * A variable introduced through another eval:
+                             * don't use the special getters and setters
+                             * since we can't allocate a slot in the frame.
+                             */
+                            getter = sprop->getter;
+                            setter = sprop->setter;
+                        }
+                    }
 		} else {
 		    /* Global var: (re-)set id a la js_DefineProperty. */
 		    sprop->id = ATOM_KEY(atom);
@@ -1528,11 +1567,22 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		sprop->attrs &= ~JSPROP_READONLY;
 	    }
 	} else {
+            /*
+             * Property not found in current variable scope: we have not
+             * seen this variable before.
+             * Define a new variable by adding a property to the current
+             * scope, or by allocating more slots in the function's frame.
+             */
 	    sprop = NULL;
 	    if (prop) {
 		OBJ_DROP_PROPERTY(cx, pobj, prop);
 		prop = NULL;
 	    }
+            if (getter == js_GetCallVariable) {
+                /* Can't increase fun->nvars in an active frame! */
+	        getter = clasp->getProperty;
+	        setter = clasp->setProperty;
+            }
 	    ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, JSVAL_VOID,
 				     getter, setter,
 				     JSPROP_ENUMERATE | JSPROP_PERMANENT,
@@ -1540,9 +1590,14 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    if (ok && prop) {
 		pobj = obj;
 		if (getter == js_GetLocalVariable) {
+                    /*
+                     * Allocate more room for variables in the
+                     * function's frame. We can do this only
+                     * before the function is called.
+                     */
 		    sprop = (JSScopeProperty *)prop;
 		    sprop->id = INT_TO_JSVAL(fun->nvars++);
-		}
+                }
 	    }
 	}
 
@@ -1560,21 +1615,28 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    }
 	}
 
-	if (ok && fun && clasp == &js_FunctionClass && !InWithStatement(tc)) {
-	    PR_ASSERT(sprop);
+	if (ok && fun && (clasp == &js_FunctionClass ||
+                          clasp == &js_CallClass) &&
+            !InWithStatement(tc))
+        {
+            /* Depending on the value of the getter, change the
+             * opcodes to the forms for arguments and variables.
+             */
 	    if (getter == js_GetArgument) {
 		PR_ASSERT(sprop && JSVAL_IS_INT(sprop->id));
 		pn2->pn_op = (pn2->pn_op == JSOP_NAME)
 			     ? JSOP_GETARG
 			     : JSOP_SETARG;
 		pn2->pn_slot = JSVAL_TO_INT(sprop->id);
-	    } else if (getter == js_GetLocalVariable) {
+	    } else if (getter == js_GetLocalVariable ||
+                       getter == js_GetCallVariable)
+            {
 		PR_ASSERT(sprop && JSVAL_IS_INT(sprop->id));
 		pn2->pn_op = (pn2->pn_op == JSOP_NAME)
 			     ? JSOP_GETVAR
 			     : JSOP_SETVAR;
 		pn2->pn_slot = JSVAL_TO_INT(sprop->id);
-	    }
+            }
 	}
 
 	if (prop)
@@ -1611,16 +1673,20 @@ Expr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     return pn;
 }
 
-/* ZZZbe don't create functions till codegen? or at least don't bind fn name */
+/* ZZZbe don't create functions till codegen? or at least don't bind
+ * fn name */
 static JSBool
 LookupArgOrVar(JSContext *cx, JSAtom *atom, JSTreeContext *tc,
 	       JSOp *opp, jsint *slotp)
 {
     JSObject *obj, *pobj;
+    JSClass *clasp;
+    JSFunction *fun;
     JSScopeProperty *sprop;
 
-    obj = cx->fp->scopeChain;
-    if (OBJ_GET_CLASS(cx, obj) != &js_FunctionClass)
+    obj = js_FindVariableScope(cx, &fun);
+    clasp = OBJ_GET_CLASS(cx, obj);
+    if (clasp != &js_FunctionClass && clasp != &js_CallClass)
     	return JS_TRUE;
     if (InWithStatement(tc))
     	return JS_TRUE;
@@ -1632,7 +1698,9 @@ LookupArgOrVar(JSContext *cx, JSAtom *atom, JSTreeContext *tc,
 	if (sprop->getter == js_GetArgument) {
 	    *opp = JSOP_GETARG;
 	    *slotp = JSVAL_TO_INT(sprop->id);
-	} else if (sprop->getter == js_GetLocalVariable) {
+	} else if (sprop->getter == js_GetLocalVariable ||
+                   sprop->getter == js_GetCallVariable)
+        {
 	    *opp = JSOP_GETVAR;
 	    *slotp = JSVAL_TO_INT(sprop->id);
 	}
@@ -1998,7 +2066,8 @@ UnaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 }
 
 static JSParseNode *
-ArgumentList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSParseNode *listNode)
+ArgumentList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+	     JSParseNode *listNode)
 {
     JSBool matched;
 
@@ -2020,17 +2089,18 @@ ArgumentList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSParseNode *l
 }
 
 static JSParseNode *
-MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool allowCallSyntax)
+MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
+	   JSBool allowCallSyntax)
 {
     JSParseNode *pn, *pn2, *pn3;
     JSTokenType tt;
 
-    /* Check for new expressions */
+    /* Check for new expression first. */
     ts->flags |= TSF_REGEXP;
     tt = js_PeekToken(cx, ts);
     ts->flags &= ~TSF_REGEXP;
     if (tt == TOK_NEW) {
-	(void)js_GetToken(cx, ts);
+	(void) js_GetToken(cx, ts);
 
 	pn = NewParseNode(cx, &ts->token, PN_LIST);
 	if (!pn)
@@ -2050,7 +2120,6 @@ MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc, JSBool allowCall
 	    return NULL;
 	}
 	pn->pn_pos.end = PN_LAST(pn)->pn_pos.end;
-
     } else {
 	pn = PrimaryExpr(cx, ts, tc);
 	if (!pn)

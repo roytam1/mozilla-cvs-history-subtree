@@ -287,11 +287,11 @@ GetChar(JSTokenStream *ts)
     int32 c;
     ptrdiff_t len, olen;
     jschar *nl;
-    
+
     if (ts->ungetpos != 0) {
 	c = ts->ungetbuf[--ts->ungetpos];
     } else {
-	if (ts->linebuf.ptr == ts->linebuf.limit) {                                                                                                         
+	if (ts->linebuf.ptr == ts->linebuf.limit) {
 	    len = PTRDIFF(ts->userbuf.limit, ts->userbuf.ptr, jschar);
 	    if (len <= 0) {
 #ifdef JSFILE
@@ -320,7 +320,7 @@ GetChar(JSTokenStream *ts)
 			}
 		    }
 		    for (j = 0; i < len; i++, j++)
-			ubuf[i] = (jschar) cbuf[j];
+			ubuf[i] = (jschar) (unsigned char) cbuf[j];
 		    ts->userbuf.limit = ubuf + len;
 		    ts->userbuf.ptr = ubuf;
 		} else
@@ -522,7 +522,6 @@ js_ReportCompileError(JSContext *cx, JSTokenStream *ts, const char *format,
 	fprintf(stderr, "%s:\n%s\n",message,
                 js_DeflateString(cx, ts->linebuf.base,
                                  ts->linebuf.limit - ts->linebuf.base));
-        
 #endif
     }
     if (lastc == '\n')
@@ -668,7 +667,7 @@ retry:
 
     if (JS7_ISDEC(c) || (c == '.' && JS7_ISDEC(PeekChar(ts)))) {
 	jsint radix;
-	jschar *endptr;
+	const jschar *endptr;
 	jsdouble dval;
 
 	radix = 10;
@@ -683,7 +682,15 @@ retry:
 		    RETURN(TOK_ERROR);
 		c = GetChar(ts);
 		radix = 16;
-	    } else if (JS7_ISDEC(c)) {
+	    } else if (JS7_ISDEC(c) && c < '8') {
+                /*
+                 * XXX Warning needed. Checking against c < '8' above is
+                 * non-ECMA, but is required to support legacy code; it's
+                 * likely that "08" and "09" are in use in code having to do
+                 * with dates.  So we need to support it, which makes our
+                 * behavior a superset of ECMA in this area.  We should be
+                 * raising a warning if '8' or '9' is encountered.
+                 */
 		radix = 8;
 	    }
 	}
@@ -729,16 +736,13 @@ retry:
 	FINISH_TOKENBUF(&ts->tokenbuf);
 
 	if (radix == 10) {
-	    /* Let js_strtod() do the hard work and validity checks. */
-	    if (!js_strtod(ts->tokenbuf.base, &endptr, &dval)) {
-		js_ReportCompileError(cx, ts,
-				      "floating point literal out of range");
+	    if (!js_strtod(cx, ts->tokenbuf.base, &endptr, &dval)) {
+		js_ReportCompileError(cx, ts, "out of memory");
 		RETURN(TOK_ERROR);
 	    }
 	} else {
-	    /* Let js_strtol() do the hard work, then check for overflow */
-	    if (!js_strtol(ts->tokenbuf.base, &endptr, radix, &dval)) {
-		js_ReportCompileError(cx, ts, "integer literal too large");
+	    if (!js_strtointeger(cx, ts->tokenbuf.base, &endptr, radix, &dval)) {
+		js_ReportCompileError(cx, ts, "out of memory");
 		RETURN(TOK_ERROR);
 	    }
 	}
