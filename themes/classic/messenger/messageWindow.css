@@ -35,3 +35,7 @@
 #msgHeaderView {
   border: 1px outset ThreeDFace !important;
 }
+
+#viewPos {
+  margin: 20px 5px 0px 5px;
+}
