@@ -42,6 +42,7 @@ EXPORTS		= nsCom.h \
                   nsIInputStream.h \
 	          nsIOutputStream.h \
 		  nscore.h \
+		  nsVector.h \
 		  $(NULL)
 
 LCFLAGS		= -D_IMPL_NS_COM -DUSE_NSREG

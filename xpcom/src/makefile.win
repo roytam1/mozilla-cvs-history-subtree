@@ -67,6 +67,7 @@ EXPORTS = \
 	nsIInputStream.h	\
 	nsIOutputStream.h	\
 	nscore.h        	\
+	nsVector.h		\
 	$(NULL)			
 
 MODULE = xpcom 

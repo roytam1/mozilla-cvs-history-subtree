@@ -194,11 +194,11 @@ int SOB_parse_manifest(char XP_HUGE *raw_manifest, long length,
 
 void
 SECNAV_signedAppletPrivileges(void *proto_win, char *javaPrin, 
-			      char *javaTarget, char *risk, int isCert);
+			      char *javaTarget, char *risk, PRBool isCert);
 
 void
 SECNAV_signedAppletPrivilegesOnMozillaThread(void *proto_win, char *javaPrin,
-                                             char *javaTarget, char *risk, int isCert);
+                                             char *javaTarget, char *risk, PRBool isCert);
 
 char *
 SOB_JAR_list_certs (void);
