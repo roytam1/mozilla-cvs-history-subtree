@@ -269,8 +269,12 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     // evaluate the global variable
     pushEvalContext(mInitialEvalContext);
     if (var->mExpr) {
+        txVariableMap* oldVars = mLocalVariables;
+        mLocalVariables = nsnull;
         aResult = var->mExpr->evaluate(getEvalContext());
         NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
+
+        mLocalVariables = oldVars;
     }
     else {
         nsAutoPtr<txRtfHandler> rtfHandler(new txRtfHandler);
