@@ -1114,8 +1114,10 @@ NS_IMETHODIMP nsNNTPProtocol::Cancel(nsresult status)  // handle stop button
 	return nsMsgProtocol::Cancel(NS_BINDING_ABORTED);
 }
 
+/* 
+   FIX THIS COMMENT, this is how 4.x worked.  6.x is different.
 
-/* The main news load init routine, and URL parser.
+   The main news load init routine, and URL parser.
    The syntax of news URLs is:
 
 	 To list all hosts:
@@ -1155,9 +1157,9 @@ NS_IMETHODIMP nsNNTPProtocol::Cancel(nsresult status)  // handle stop button
           news://xxx@host
         whoever had the idea to leave the <> off the IDs should be flogged.
 		So, we'll make sure we quote / in message IDs as %2F.
-
  */
-nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
+nsresult 
+nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 								  char ** aCommandSpecificData)
 {
     NS_ENSURE_ARG_POINTER(aURL);
@@ -1166,12 +1168,10 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
     NS_ENSURE_ARG_POINTER(aCommandSpecificData);
 
 	PRInt32 status = 0;
-	nsXPIDLCString fullPath;
-
 	char *group = 0;
     char *message_id = 0;
     char *command_specific_data = 0;
-	char * s = 0;
+	char *s = 0;
 
     PR_LOG(NNTP,PR_LOG_ALWAYS,("ParseURL"));
 
@@ -1183,8 +1183,23 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
     rv = m_runningURL->GetOriginalMessageURI(getter_Copies(uri));
     NS_ENSURE_SUCCESS(rv,rv);
 
-    // if the original message uri is non empty, then 
-    if (nsCRT::strlen((const char *)uri)) {
+    // if we are running the news_message:/ url from compose
+    // (for quoting, when doing reply) the OriginalMessageURI
+    // will not be set.  check the scheme to see if this is a 
+    // news_message:/ url.  if so, treat it like one.
+    if (*((const char *)uri) == '\0') {
+        nsXPIDLCString scheme;
+	    rv = aURL->GetScheme(getter_Copies(scheme));
+        NS_ENSURE_SUCCESS(rv,rv);
+        
+        if (!nsCRT::strcmp((const char *)scheme, "news_message")) {
+            rv = aURL->GetSpec(getter_Copies(uri));
+            NS_ENSURE_SUCCESS(rv,rv);
+        }
+    }
+
+    // if the original message uri is non empty, then use it
+    if (*((const char *)uri) != '\0') {
         PR_LOG(NNTP,PR_LOG_ALWAYS,("original message uri = %s",(const char *)uri));
 
         nsCOMPtr <nsIMsgFolder> folder;
@@ -1207,7 +1222,12 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
     }
 
 	// get the file path part and store it as the group...
-	aURL->GetPath(getter_Copies(fullPath));
+	nsXPIDLCString fullPath;
+	rv = aURL->GetPath(getter_Copies(fullPath));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("fullPath = %s",(const char *)fullPath));
+
 	if ((const char *)fullPath && ((*(const char *)fullPath) == '/'))
 		group = PL_strdup((const char *)fullPath+1); 
 	else
@@ -1216,23 +1236,23 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
 	// more to do here, but for now, this works.
 	// only escape if we are doing a search
 	if (m_newsAction == nsINntpUrl::ActionSearch) { 
-		nsUnescape (group);
+		nsUnescape(group);
 	}
 
-    /* "group" now holds the part after the host name:
+    /* 
+     "group" now holds the part after the host name:
 	 "message@id?search" or "/group/xxx?search" or "/message?id@xx?search"
 
 	 If there is an @, this is a message ID; else it is a group.
 	 Either way, there may be search data at the end.
     */
 
-	if (PL_strchr (group, '@') || PL_strstr(group,"%40")) {
+	if (PL_strchr(group, '@') || PL_strstr(group,"%40")) {
       message_id = nsUnescape(group);
 	  group = 0;
 	}
-    else if (!*group)
-	{
-   	  nsCRT::free (group);
+    else if (!*group) {
+   	  nsCRT::free(group);
 	  group = 0;
 	}
 
@@ -1244,8 +1264,7 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
 	 random-characters part of the ID (before @), but not in the host part
 	 (after @).)
    */
-   if (message_id || group)
-   {
+   if (message_id || group) {
 	  char *start;
 	  if (message_id) {
 		  start = PL_strchr(message_id,'@');
@@ -1259,43 +1278,37 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
 		if (*s == '?' || *s == '#')
 		  break;
 	  
-	  if (*s)
-	  {
+	  if (*s) {
 		  command_specific_data = nsCRT::strdup (s);
 		  *s = 0;
-		  if (!command_specific_data)
-			{
+		  if (!command_specific_data) {
 			  status = MK_OUT_OF_MEMORY;
 			  goto FAIL;
-			}
-		}
+          }
+      }
 
 	  /* Discard any now-empty strings. */
-	  if (message_id && !*message_id)
-		{
+	  if (message_id && !*message_id) {
 		  PR_Free (message_id);
 		  message_id = 0;
-		}
-	  else if (group && !*group)
-		{
-		  PR_Free (group);
+      }
+	  else if (group && !*group) {
+		  PR_Free(group);
 		  group = 0;
-		}
+      }
 	}
 
   FAIL:
   NS_ASSERTION (!message_id || message_id != group, "something not null");
-  if (status >= 0)
-  {  
+  if (status >= 0) {  
       *aGroup = group;
       *aMessageID = message_id;
       *aCommandSpecificData = command_specific_data;
   }
-  else
-  {
-	  PR_FREEIF (group);
-	  PR_FREEIF (message_id);
-	  PR_FREEIF (command_specific_data);
+  else {
+	  PR_FREEIF(group);
+	  PR_FREEIF(message_id);
+	  PR_FREEIF(command_specific_data);
   }
 
   // mscott - this function might need to be re-written to use nsresults

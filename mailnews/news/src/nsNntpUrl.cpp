@@ -259,8 +259,13 @@ nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
     // this could be a autosubscribe url (news://host/group)
     // or a message id url (news://host/message-id)
     // either way, we won't have a msgFolder for you
-    return NS_ERROR_UNEXPECTED;
+    return NS_ERROR_FAILURE;
    }
+
+#ifdef DEBUG_seth
+   printf("XXX mOriginalMessageURI = %s\n", mOriginalMessageURI.get());
+   // find first "?" and cut?
+#endif
 
    nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
    NS_ENSURE_SUCCESS(rv,rv);
@@ -276,7 +281,9 @@ nsNntpUrl::GetFolderCharset(PRUnichar **aCharacterSet)
 {
   nsCOMPtr<nsIMsgFolder> folder;
   nsresult rv = GetMsgFolder(getter_AddRefs(folder));
-  NS_ENSURE_SUCCESS(rv,rv);
+  // don't assert here.  this can happen if there is no message folder
+  // like when we display a news://host/message-id url
+  if (NS_FAILED(rv)) return rv;
 
   NS_ENSURE_TRUE(folder, NS_ERROR_FAILURE);
   rv = folder->GetCharset(aCharacterSet);
