@@ -4,7 +4,7 @@ ifndef OBJDIR
   endif
 endif
 
-NSPR_VERSION     = v3.0
+NSPR_VERSION     = v3.1beta
 NSPR_LOCAL       = $(MOZ_DEPTH)/dist/$(OBJDIR)/nspr
 NSPR_DIST        = $(MOZ_DEPTH)/dist/$(OBJDIR)
 NSPR_OBJDIR      = $(OBJDIR)
@@ -68,17 +68,11 @@ SHIP_LIBS      = libjs.$(SO_SUFFIX) libjs.a
 ifdef JS_LIVECONNECT
   SHIP_LIBS   += libjsj.$(SO_SUFFIX) libjsj.a
 endif
-# ifdef JS_THREADSAFE
-#   SHIP_LIBS += libnspr21.$(SO_SUFFIX)
-# endif
 ifeq ($(OS_ARCH), WINNT)
   SHIP_LIBS    = js32.dll js32.lib
   ifdef JS_LIVECONNECT
     SHIP_LIBS += jsj.dll jsj.lib
   endif
-#   ifdef JS_THREADSAFE
-#     SHIP_LIBS += libnspr21.dll
-#   endif
 endif
 SHIP_LIBS     := $(addprefix $(SHIP_DIST)/lib/, $(SHIP_LIBS))
 
