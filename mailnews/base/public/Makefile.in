@@ -44,7 +44,6 @@ XPIDLSRCS	= \
 		nsIFolder.idl \
 		nsIFolderListener.idl \
 		nsIMessage.idl \
-		nsIMessageView.idl \
 		nsIMsgAccount.idl \
 		nsIMsgAccountManager.idl \
 		nsIMsgFolder.idl \
@@ -75,7 +74,6 @@ XPIDLSRCS	= \
 		nsIMessengerMigrator.idl	\
 		nsIMessengerWindowService.idl	\
 		nsIMsgStringService.idl		\
-		nsIMsgViewNavigationService.idl \
 		nsIMsgPrintEngine.idl \
 		nsISubscribableServer.idl \
 		nsIMsgDBView.idl \
