@@ -43,7 +43,7 @@
 //
 
 #include "nsBoxLayoutState.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsBoxFrame.h"
 #include "nsIStyleContext.h"
 #include "nsHTMLAtoms.h"
@@ -152,10 +152,12 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
       {
          case eReflowReason_Incremental: 
          {
-             // ok if the target was not a box. Then unwind it down 
-            UnWind(mReflowState->reflowCommand, aRootBox);
-            mType = Dirty;
-            break;  
+           // XXXwaterson according to evaughan's prior comment here,
+           // the target ought not to be a box frame. This makes some
+           // of the logic in `Unwind' confusing.
+           Unwind(mReflowState->path, aRootBox);
+           mType = Dirty;
+           break;  
          }
 
          case eReflowReason_Dirty: 
@@ -186,158 +188,109 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
 
 
 void
-nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
+nsBoxLayoutState::Unwind(nsReflowPath* aReflowPath, nsIBox* aRootBox)
 {
-  // if incremental unwindow the chain
-  nsIFrame* incrementalChild = nsnull;
-  nsIFrame* target = nsnull;
-  aCommand->GetTarget(target);
-  nsReflowType  type;
-  mReflowState->reflowCommand->GetType(type);
+  // If incremental, unwind the reflow path, updating dirty bits
+  // appropriately. We recursively descend through the reflow tree,
+  // clearing the NS_FRAME_HAS_DIRTY_CHILDREN bit on each frame until
+  // we reach a target frame. When we reach a target frame, we set the
+  // NS_FRAME_HAS_DIRTY_CHILDREN bit on the root box's frame, and then
+  // call the target box's MarkDirty method. This will reset the
+  // NS_FRAME_HAS_DIRTY_CHILDREN bit on each box on the path back to
+  // root, as well as initialize each box correctly for a dirty
+  // layout.
+  nsReflowPath::iterator iter = aReflowPath->FirstChild();
+  nsReflowPath::iterator end = aReflowPath->EndChildren();
 
-  while(1)
-  {
-    aCommand->GetNext(incrementalChild, PR_FALSE);
-    if (incrementalChild == nsnull)
-      return;
-
-    // get the box for the given incrementalChild. If adaptor is true then
-    // it is some wrapped HTML frame.
+  for ( ; iter != end; ++iter) {
+    // Get the box for the given frame.
     PRBool isAdaptor = PR_FALSE;
-    nsIBox* ibox = GetBoxForFrame(incrementalChild, isAdaptor);
-    if (ibox) {
-      nsFrameState state;
-      incrementalChild->GetFrameState(&state);
-      state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
-      incrementalChild->SetFrameState(state);
-
-      // ok we got a box is it the target?
-      if (incrementalChild == target) {
-
-        nsFrameState boxState;
-        nsIFrame* frame;
-        aBox->GetFrame(&frame);
-        frame->GetFrameState(&boxState);
-
-        boxState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-        frame->SetFrameState(boxState);
-
-        // the target is a box?
-         // mark it dirty generating a new reflow command targeted
-         // at us and coelesce out this one.
-
-         if (type == eReflowType_StyleChanged) {
-            ibox->MarkStyleChange(*this);
-
-            // could be a visiblity change. Like collapse so we need to dirty
-            // parent so it gets redrawn. But be carefull we
-            // don't want to just mark dirty that would notify the
-            // box and it would notify its layout manager. This would 
-            // be really bad for grid because it would blow away
-            // all is cached infomation for is colums and rows. Because the
-            // our parent is most likely a rows or columns and it will think
-            // its child is getting bigger or something.
-            nsIBox* parent;
-            ibox->GetParentBox(&parent);
-            if (parent) {
-              nsFrameState parentState;
-              nsIFrame* parentFrame;
-              parent->GetFrame(&parentFrame);
-              parentFrame->GetFrameState(&parentState);
-              parentState |= NS_FRAME_IS_DIRTY;
-              parentFrame->SetFrameState(parentState);
-            }
-
-         } else {
-            ibox->MarkDirty(*this);      
-         }
-
-         return;
-      }
-
-      // was the child html?
-      if (isAdaptor) {
-        // the target is deep inside html we will have to honor this one.
-        // mark us as dirty so we don't post
-        // a dirty reflow
-        state = 0;
-        nsIFrame* frame;
-        aBox->GetFrame(&frame);
-        frame->GetFrameState(&state);
-        state |= NS_FRAME_HAS_DIRTY_CHILDREN;
-        frame->SetFrameState(state);
-
-        incrementalChild->GetFrameState(&state);
-        state &= ~NS_FRAME_IS_DIRTY;
-        incrementalChild->SetFrameState(state);
-
-        // mark the adaptor dirty
-        ibox->MarkDirty(*this);      
-        
-        // we are done and we did not coelesce
-        return;
-      }
-
-    } else {
+    nsIBox* ibox = GetBoxForFrame(*iter, isAdaptor);
+    if (! ibox) {
       NS_ERROR("This should not happen! We should always get a box");
-      break;
+      continue;
     }
-  
-    aCommand->GetNext(incrementalChild);
-  }
-}
 
-/*
-void
-nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
-{
-    
-  nsFrameState state;
-  nsIFrame* frame;
-  aBox->GetFrame(&frame);
-  frame->GetFrameState(&state);
-  state |= NS_FRAME_HAS_DIRTY_CHILDREN;
-  frame->SetFrameState(state);
+    // Clear the dirty-children bit. This will be re-set by MarkDirty
+    // once we reach a target.
+    nsFrameState state;
+    (*iter)->GetFrameState(&state);
+    state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
+    (*iter)->SetFrameState(state);
 
-  // if incremental unwindow the chain
-  nsIFrame* incrementalChild = nsnull;
+    if (isAdaptor) {
+      // It's nested HTML. Mark the root box's frame with
+      // NS_FRAME_HAS_DIRTY_CHILDREN so MarkDirty won't walk off the
+      // top of the box hierarchy and schedule another reflow command.
+      nsIFrame* frame;
+      aRootBox->GetFrame(&frame);
 
-  while(1)
-  {
-    aCommand->GetNext(incrementalChild, PR_FALSE);
-    if (incrementalChild == nsnull)
-      break;
+      frame->GetFrameState(&state);
+      state |= NS_FRAME_HAS_DIRTY_CHILDREN;
+      frame->SetFrameState(state);
 
-    nsIFrame* target = nsnull;
-    aCommand->GetTarget(target);
+      // Clear the frame's dirty bit so that MarkDirty doesn't
+      // optimize the layout away.
+      (*iter)->GetFrameState(&state);
+      state &= ~NS_FRAME_IS_DIRTY;
+      (*iter)->SetFrameState(state);
 
-    PRBool isAdaptor = PR_FALSE;
-    nsIBox* ibox = GetBoxForFrame(incrementalChild, isAdaptor);
-    if (ibox) {
-      if (incrementalChild == target || isAdaptor) {
-         ibox->MarkDirty(*this);
-         if (isAdaptor)
-           break;
-      } else 
-         ibox->MarkDirtyChildren(*this);
-      
-    } else {
-      break;
+      // Mark the adaptor dirty.
+      ibox->MarkDirty(*this);      
+        
+      // We are done and we did not coelesce.
+      continue;
     }
-  
-    aCommand->GetNext(incrementalChild);
-  }
-  
-}
-*/
 
-nsIBox*
-nsBoxLayoutState::GetTargetBox(nsHTMLReflowCommand* mCommand, PRBool& aIsAdaptor)
-{
-  nsIFrame* target = nsnull;
-  mReflowState->reflowCommand->GetTarget(target);
-  return GetBoxForFrame(target, aIsAdaptor);
+    // Is the box frame the target?
+    // XXXwaterson according to the evaughan's previous comments in
+    // HandleReflow, it ought to never be. Yet here we are.
+    nsHTMLReflowCommand *command = iter.get()->mReflowCommand;
+    if (command) {
+      // Mark the root box's frame with NS_FRAME_HAS_DIRTY_CHILDREN so
+      // that MarkDirty won't walk off the top of the box hierarchy
+      // and schedule another reflow command.
+      nsIFrame* frame;
+      aRootBox->GetFrame(&frame);
+
+      frame->GetFrameState(&state);
+      state |= NS_FRAME_HAS_DIRTY_CHILDREN;
+      frame->SetFrameState(state);
+
+      // The target is a box. Mark it dirty, generating a new reflow
+      // command targeted at us and coelesce out this one.
+      nsReflowType type;
+      command->GetType(type);
+
+      if (type == eReflowType_StyleChanged) {
+        ibox->MarkStyleChange(*this);
+
+        // could be a visiblity change. Like collapse so we need to dirty
+        // parent so it gets redrawn. But be carefull we
+        // don't want to just mark dirty that would notify the
+        // box and it would notify its layout manager. This would 
+        // be really bad for grid because it would blow away
+        // all is cached infomation for is colums and rows. Because the
+        // our parent is most likely a rows or columns and it will think
+        // its child is getting bigger or something.
+        nsIBox* parent;
+        ibox->GetParentBox(&parent);
+        if (parent) {
+          nsIFrame* parentFrame;
+          parent->GetFrame(&parentFrame);
+          parentFrame->GetFrameState(&state);
+          state |= NS_FRAME_IS_DIRTY;
+          parentFrame->SetFrameState(state);
+        }
+
+      }
+      else
+        ibox->MarkDirty(*this);      
+    }
+
+    // Recursively unwind the reflow path.
+    Unwind(iter.get(), aRootBox);
+  }
 }
 
 nsIBox*

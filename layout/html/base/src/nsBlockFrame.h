@@ -42,6 +42,7 @@
 #include "nsHTMLParts.h"
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLineBox.h"
+#include "nsReflowPath.h"
 
 class nsBlockReflowState;
 class nsBulletFrame;
@@ -80,7 +81,6 @@ public:
   typedef nsLineList::reverse_iterator          reverse_line_iterator;
   typedef nsLineList::const_reverse_iterator    const_reverse_line_iterator;
 
-protected:
   line_iterator begin_lines() { return mLines.begin(); }
   line_iterator end_lines() { return mLines.end(); }
   const_line_iterator begin_lines() const { return mLines.begin(); }
@@ -90,7 +90,6 @@ protected:
   const_reverse_line_iterator rbegin_lines() const { return mLines.rbegin(); }
   const_reverse_line_iterator rend_lines() const { return mLines.rend(); }
 
-public:
   friend nsresult NS_NewBlockFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRUint32 aFlags);
 
   // nsISupports
@@ -188,10 +187,9 @@ public:
     */
   nsIFrame* GetTopBlockChild();
 
-  // returns true on success and false if aFoundLine is set to end_lines()
-  PRBool FindLineFor(nsIFrame* aFrame,
-                     PRBool* aIsFloaterResult,
-                     line_iterator* aFoundLine);
+  // Returns the line containing aFrame, or end_lines() if the frame
+  // isn't in the block.
+  line_iterator FindLineFor(nsIFrame* aFrame);
 
   static nsresult GetCurrentLine(nsBlockReflowState *aState, nsLineBox **aOutCurrentLine);
 
@@ -302,9 +300,9 @@ protected:
    *
    * @param aPrevInFlow points to the target frame's prev-in-flow.
    */
-  void RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
-                                       line_iterator &aLine,
-                                       nsIFrame *aPrevInFlow);
+  void RetargetInlineIncrementalReflow(nsReflowPath::iterator &aFrame,
+                                       line_iterator          &aLine,
+                                       nsIFrame               *aPrevInFlow);
 
   /** set up the conditions necessary for an resize reflow
     * the primary task is to mark the minimumly sufficient lines dirty. 
@@ -449,10 +447,6 @@ protected:
   void PaintFloaters(nsIPresContext* aPresContext,
                      nsIRenderingContext& aRenderingContext,
                      const nsRect& aDirtyRect);
-
-  void RememberFloaterDamage(nsBlockReflowState& aState,
-                             nsLineBox* aLine,
-                             const nsRect& aOldCombinedArea);
 
   void PropagateFloaterDamage(nsBlockReflowState& aState,
                               nsLineBox* aLine,
