@@ -25,7 +25,7 @@
 #define nsIDOMNSUIEvent_h__
 
 #include "nsISupports.h"
-#include "nsString.h"
+#include "nsAWritableString.h"
 #include "nsIScriptContext.h"
 
 class nsIDOMNode;
