@@ -46,7 +46,7 @@
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 
-NS_IMPL_ISUPPORTS6(nsURLFetcher, nsIURLFetcher, nsIStreamListener, nsIURIContentListener, nsIInterfaceRequestor, nsIWebProgressListener, nsISupportsWeakReference)
+NS_IMPL_ISUPPORTS7(nsURLFetcher, nsIURLFetcher, nsIStreamListener, nsIURIContentListener, nsIInterfaceRequestor, nsIWebProgressListener, nsIHttpEventSink, nsISupportsWeakReference)
 
 
 /* 
@@ -68,6 +68,7 @@ nsURLFetcher::nsURLFetcher()
   mContentType = nsnull;
   mCharset = nsnull;
   mOnStopRequestProcessed = PR_FALSE;
+  mRedirection = PR_FALSE;
 }
 
 nsURLFetcher::~nsURLFetcher()
@@ -245,6 +246,8 @@ nsURLFetcher::OnDataAvailable(nsIRequest *request, nsISupports * ctxt, nsIInputS
 nsresult
 nsURLFetcher::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
+  mRedirection = PR_FALSE;  // start a new request, reset mRedirection
+  
   nsMsgAttachmentHandler *attachmentHdl = (nsMsgAttachmentHandler *)mTagData;
   if (attachmentHdl)
   {
@@ -375,7 +378,7 @@ nsURLFetcher::FireURLRequest(nsIURI *aURL, nsOutputFileStream *fOut,
   nsCOMPtr<nsIChannel> channel;
   nsCOMPtr<nsILoadGroup> loadGroup;
   pURILoader->GetLoadGroupForContext(cntListener, getter_AddRefs(loadGroup));
-  NS_ENSURE_SUCCESS(NS_OpenURI(getter_AddRefs(channel), aURL, nsnull, loadGroup), NS_ERROR_FAILURE);
+  NS_ENSURE_SUCCESS(NS_OpenURI(getter_AddRefs(channel), aURL, nsnull, loadGroup, this), NS_ERROR_FAILURE);
  
   rv = pURILoader->OpenURI(channel, nsIURILoader::viewNormal, nsnull /* window target */, 
                            cntListener);
@@ -406,7 +409,13 @@ nsURLFetcher::OnStateChange(nsIWebProgress *aProgress, nsIRequest *aRequest,
   // the url....
 
   if (NS_FAILED(aStatus))
+  {
+    //... but we must ignore abort message caused by a redirection!
+    if (aStatus == NS_BINDING_ABORTED && mRedirection)
+        return NS_OK;
+
     OnStopRequest(aRequest, nsnull, aStatus);
+  }
 
   return NS_OK;
 }
@@ -425,16 +434,32 @@ nsURLFetcher::OnStatusChange(nsIWebProgress* aWebProgress,
                              nsresult aStatus,
                              const PRUnichar* aMessage)
 {
-    return NS_OK;
+  return NS_OK;
 }
-
-
 
 NS_IMETHODIMP 
 nsURLFetcher::OnSecurityChange(nsIWebProgress *aWebProgress, 
                                nsIRequest *aRequest, 
                                PRInt32 state)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsURLFetcher::OnRedirect(nsIHttpChannel *aOldChannel, nsIChannel *aNewChannel)
+{
+  mRedirection = PR_TRUE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsURLFetcher::OnAuthenticate(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, char **username, char **password)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsURLFetcher::OnAuthenticationFailed(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, const char *username, const char *password)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
