@@ -3816,7 +3816,23 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 /* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
 NS_IMETHODIMP nsRenderingContextWin::DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsRect dr;
+  nsRect sr;
+
+	dr = *aDestRect;
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+
+  sr = *aSrcRect;
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  sr.x = aSrcRect->x;
+  sr.y = aSrcRect->y;
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<nsPIImageContainerWin> cw(do_QueryInterface(aImage));
+  if (!cw) return NS_ERROR_FAILURE;
+
+  return cw->DrawScaledImage(mDC, &sr, &dr);
 }
 
 /* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
