@@ -44,7 +44,7 @@
 
 #include "blapi.h"
 
-#define FREEBL_VERSION 0x0307
+#define FREEBL_VERSION 0x0306
 
 struct FREEBLVectorStr {
 
@@ -370,12 +370,6 @@ struct FREEBLVectorStr {
                              const int          seedlen);
 
   /* Version 3.006 came to here */
-
-  /* no modification to FREEBLVectorStr itself 
-   * but ECParamStr was modified 
-   */
-
-  /* Version 3.007 came to here */
 
 };
 

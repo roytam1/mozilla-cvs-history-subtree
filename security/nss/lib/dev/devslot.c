@@ -95,7 +95,8 @@ static const CK_FLAGS s_ck_readonly_flags = CKF_SERIAL_SESSION;
 #ifdef PURE_STAN_BUILD
 /* In pk11slot.c, this was a no-op.  So it is here also. */
 static CK_RV PR_CALLBACK
-nss_ck_slot_notify (
+nss_ck_slot_notify
+(
   CK_SESSION_HANDLE session,
   CK_NOTIFICATION event,
   CK_VOID_PTR pData
@@ -105,7 +106,8 @@ nss_ck_slot_notify (
 }
 
 NSS_IMPLEMENT NSSSlot *
-nssSlot_Create (
+nssSlot_Create
+(
   CK_SLOT_ID slotID,
   NSSModule *parent
 )
@@ -173,12 +175,14 @@ loser:
 #endif /* PURE_STAN_BUILD */
 
 NSS_IMPLEMENT PRStatus
-nssSlot_Destroy (
+nssSlot_Destroy
+(
   NSSSlot *slot
 )
 {
     if (slot) {
-	if (PR_AtomicDecrement(&slot->base.refCount) == 0) {
+	PR_AtomicDecrement(&slot->base.refCount);
+	if (slot->base.refCount == 0) {
 	    PZ_DestroyLock(slot->base.lock);
 #ifdef PURE_STAN_BUILD
 	    nssToken_Destroy(slot->token);
@@ -207,7 +211,8 @@ nssSlot_ExitMonitor(NSSSlot *slot)
 }
 
 NSS_IMPLEMENT void
-NSSSlot_Destroy (
+NSSSlot_Destroy
+(
   NSSSlot *slot
 )
 {
@@ -215,7 +220,8 @@ NSSSlot_Destroy (
 }
 
 NSS_IMPLEMENT NSSSlot *
-nssSlot_AddRef (
+nssSlot_AddRef
+(
   NSSSlot *slot
 )
 {
@@ -224,7 +230,8 @@ nssSlot_AddRef (
 }
 
 NSS_IMPLEMENT NSSUTF8 *
-nssSlot_GetName (
+nssSlot_GetName
+(
   NSSSlot *slot
 )
 {
@@ -232,7 +239,8 @@ nssSlot_GetName (
 }
 
 NSS_IMPLEMENT NSSUTF8 *
-nssSlot_GetTokenName (
+nssSlot_GetTokenName
+(
   NSSSlot *slot
 )
 {
@@ -249,7 +257,8 @@ within_token_delay_period(NSSSlot *slot)
     }
     time = PR_IntervalNow();
     lastTime = slot->lastTokenPing;
-    if ((lastTime) && ((time - lastTime) < s_token_delay_time)) {
+    if ((lastTime) &&
+	(time > lastTime) && ((time - lastTime) < s_token_delay_time)) {
 	return PR_TRUE;
     }
     slot->lastTokenPing = time;
@@ -257,7 +266,8 @@ within_token_delay_period(NSSSlot *slot)
 }
 
 NSS_IMPLEMENT PRBool
-nssSlot_IsTokenPresent (
+nssSlot_IsTokenPresent
+(
   NSSSlot *slot
 )
 {
@@ -275,7 +285,6 @@ nssSlot_IsTokenPresent (
     if (within_token_delay_period(slot)) {
 	return (PRBool)((slot->ckFlags & CKF_TOKEN_PRESENT) != 0);
     }
-
     /* First obtain the slot info */
 #ifdef PURE_STAN_BUILD
     epv = nssModule_GetCryptokiEPV(slot->module);
@@ -363,7 +372,8 @@ nssSlot_IsTokenPresent (
 
 #ifdef PURE_STAN_BUILD
 NSS_IMPLEMENT NSSModule *
-nssSlot_GetModule (
+nssSlot_GetModule
+(
   NSSSlot *slot
 )
 {
@@ -372,7 +382,8 @@ nssSlot_GetModule (
 #endif /* PURE_STAN_BUILD */
 
 NSS_IMPLEMENT void *
-nssSlot_GetCryptokiEPV (
+nssSlot_GetCryptokiEPV
+(
   NSSSlot *slot
 )
 {
@@ -384,7 +395,8 @@ nssSlot_GetCryptokiEPV (
 }
 
 NSS_IMPLEMENT NSSToken *
-nssSlot_GetToken (
+nssSlot_GetToken
+(
   NSSSlot *slot
 )
 {
@@ -396,7 +408,8 @@ nssSlot_GetToken (
 
 #ifdef PURE_STAN_BUILD
 NSS_IMPLEMENT PRBool
-nssSlot_IsPermanent (
+nssSlot_IsPermanent
+(
   NSSSlot *slot
 )
 {
@@ -404,7 +417,8 @@ nssSlot_IsPermanent (
 }
 
 NSS_IMPLEMENT PRBool
-nssSlot_IsFriendly (
+nssSlot_IsFriendly
+(
   NSSSlot *slot
 )
 {
@@ -412,7 +426,8 @@ nssSlot_IsFriendly (
 }
 
 NSS_IMPLEMENT PRBool
-nssSlot_IsHardware (
+nssSlot_IsHardware
+(
   NSSSlot *slot
 )
 {
@@ -420,7 +435,8 @@ nssSlot_IsHardware (
 }
 
 NSS_IMPLEMENT PRStatus
-nssSlot_Refresh (
+nssSlot_Refresh
+(
   NSSSlot *slot
 )
 {
@@ -435,7 +451,8 @@ nssSlot_Refresh (
 }
 
 static PRBool
-slot_needs_login (
+slot_needs_login
+(
   NSSSlot *slot,
   nssSession *session
 )
@@ -491,7 +508,8 @@ slot_needs_login (
 }
 
 static PRStatus
-slot_login (
+slot_login
+(
   NSSSlot *slot, 
   nssSession *session, 
   CK_USER_TYPE userType, 
@@ -553,7 +571,8 @@ slot_login (
 }
 
 static PRStatus
-init_slot_password (
+init_slot_password
+(
   NSSSlot *slot, 
   nssSession *rwSession, 
   NSSUTF8 *password
@@ -593,7 +612,8 @@ loser:
 }
 
 static PRStatus
-change_slot_password (
+change_slot_password
+(
   NSSSlot *slot, 
   nssSession *rwSession, 
   NSSUTF8 *oldPassword,
@@ -634,7 +654,8 @@ change_slot_password (
 }
 
 NSS_IMPLEMENT PRStatus
-nssSlot_Login (
+nssSlot_Login
+(
   NSSSlot *slot,
   NSSCallback *pwcb
 )
@@ -673,7 +694,8 @@ nssSlot_Login (
 }
 
 NSS_IMPLEMENT PRStatus
-nssSlot_Logout (
+nssSlot_Logout
+(
   NSSSlot *slot,
   nssSession *sessionOpt
 )
@@ -696,7 +718,8 @@ nssSlot_Logout (
 }
 
 NSS_IMPLEMENT PRBool
-nssSlot_IsLoggedIn (
+nssSlot_IsLoggedIn
+(
   NSSSlot *slot
 )
 {
@@ -705,7 +728,8 @@ nssSlot_IsLoggedIn (
 }
 
 NSS_IMPLEMENT void
-nssSlot_SetPasswordDefaults (
+nssSlot_SetPasswordDefaults
+(
   NSSSlot *slot,
   PRInt32 askPasswordTimeout
 )
@@ -715,7 +739,8 @@ nssSlot_SetPasswordDefaults (
 
 
 NSS_IMPLEMENT PRStatus
-nssSlot_SetPassword (
+nssSlot_SetPassword
+(
   NSSSlot *slot,
   NSSUTF8 *oldPasswordOpt,
   NSSUTF8 *newPassword
@@ -743,7 +768,8 @@ nssSlot_SetPassword (
 }
 
 NSS_IMPLEMENT nssSession *
-nssSlot_CreateSession (
+nssSlot_CreateSession
+(
   NSSSlot *slot,
   NSSArena *arenaOpt,
   PRBool readWrite /* so far, this is the only flag used */
@@ -794,7 +820,8 @@ nssSlot_CreateSession (
 }
 
 NSS_IMPLEMENT PRStatus
-nssSession_Destroy (
+nssSession_Destroy
+(
   nssSession *s
 )
 {
@@ -812,7 +839,8 @@ nssSession_Destroy (
 #endif /* PURE_STAN_BUILD */
 
 NSS_IMPLEMENT PRStatus
-nssSession_EnterMonitor (
+nssSession_EnterMonitor
+(
   nssSession *s
 )
 {
@@ -821,7 +849,8 @@ nssSession_EnterMonitor (
 }
 
 NSS_IMPLEMENT PRStatus
-nssSession_ExitMonitor (
+nssSession_ExitMonitor
+(
   nssSession *s
 )
 {
@@ -829,7 +858,8 @@ nssSession_ExitMonitor (
 }
 
 NSS_EXTERN PRBool
-nssSession_IsReadWrite (
+nssSession_IsReadWrite
+(
   nssSession *s
 )
 {

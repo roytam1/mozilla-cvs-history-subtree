@@ -17,7 +17,6 @@
  * Rights Reserved.
  * 
  * Contributor(s):
- *  Douglas Stebila <douglas@stebila.ca>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -139,14 +138,6 @@ SECStatus PK11_TokenRefresh(PK11SlotInfo *slot);
  ******************************************************************/
 PK11SlotInfo *PK11_FindSlotByName(char *name);
 PK11SlotInfo *PK11_FindSlotBySerial(char *serial);
-/******************************************************************
- * PK11_FindSlotsByAliases searches for a PK11SlotInfo using one or
- * more criteria : dllName, slotName and tokenName . In addition, if
- * presentOnly is set , only slots with a token inserted will be
- * returned.
- ******************************************************************/
-PK11SlotList *PK11_FindSlotsByAliases(const char *dllName,
-        const char* slotName, const char* tokenName, PRBool presentOnly);
 PRBool PK11_IsReadOnly(PK11SlotInfo *slot);
 PRBool PK11_IsInternal(PK11SlotInfo *slot);
 char * PK11_GetTokenName(PK11SlotInfo *slot);
@@ -297,51 +288,16 @@ SECStatus PK11_PubWrapSymKey(CK_MECHANISM_TYPE type, SECKEYPublicKey *pubKey,
 				PK11SymKey *symKey, SECItem *wrappedKey);
 SECStatus PK11_WrapSymKey(CK_MECHANISM_TYPE type, SECItem *params,
 	 PK11SymKey *wrappingKey, PK11SymKey *symKey, SECItem *wrappedKey);
-/* move a key to 'slot' optionally set the key attributes according to either
- * operation or the  flags and making the key permanent at the same time.
- * If the key is moved to the same slot, operation and flags values are 
- * currently ignored */
-PK11SymKey *PK11_MoveKey(PK11SlotInfo *slot, CK_ATTRIBUTE_TYPE operation, 
-			CK_FLAGS flags, PRBool  perm, PK11SymKey *symKey);
-/*
- * derive a new key from the base key.
- *  PK11_Derive returns a key which can do exactly one operation, and is
- * ephemeral (session key).
- *  PK11_DeriveWithFlags is the same as PK11_Derive, except you can use
- * CKF_ flags to enable more than one operation.
- *  PK11_DeriveWithFlagsPerm is the same as PK11_DeriveWithFlags except you can
- *  (optionally) make the key permanent (token key).
- */
 PK11SymKey *PK11_Derive(PK11SymKey *baseKey, CK_MECHANISM_TYPE mechanism,
    			SECItem *param, CK_MECHANISM_TYPE target, 
 		        CK_ATTRIBUTE_TYPE operation, int keySize);
 PK11SymKey *PK11_DeriveWithFlags( PK11SymKey *baseKey, 
 	CK_MECHANISM_TYPE derive, SECItem *param, CK_MECHANISM_TYPE target, 
 	CK_ATTRIBUTE_TYPE operation, int keySize, CK_FLAGS flags);
-PK11SymKey * PK11_DeriveWithFlagsPerm( PK11SymKey *baseKey, 
-	CK_MECHANISM_TYPE derive, 
-	SECItem *param, CK_MECHANISM_TYPE target, CK_ATTRIBUTE_TYPE operation, 
-	int keySize, CK_FLAGS flags, PRBool isPerm);
-
 PK11SymKey *PK11_PubDerive( SECKEYPrivateKey *privKey, 
  SECKEYPublicKey *pubKey, PRBool isSender, SECItem *randomA, SECItem *randomB,
  CK_MECHANISM_TYPE derive, CK_MECHANISM_TYPE target,
 		 CK_ATTRIBUTE_TYPE operation, int keySize,void *wincx) ;
-PK11SymKey *PK11_PubDeriveExtended( SECKEYPrivateKey *privKey, 
- SECKEYPublicKey *pubKey, PRBool isSender, SECItem *randomA, SECItem *randomB,
- CK_MECHANISM_TYPE derive, CK_MECHANISM_TYPE target,
-		 CK_ATTRIBUTE_TYPE operation, int keySize,void *wincx,
-		 CK_ULONG kdf, SECItem *sharedData);
-
-/*
- * unwrap a new key with a symetric key.
- *  PK11_Unwrap returns a key which can do exactly one operation, and is
- * ephemeral (session key).
- *  PK11_UnwrapWithFlags is the same as PK11_Unwrap, except you can use
- * CKF_ flags to enable more than one operation.
- *  PK11_UnwrapWithFlagsPerm is the same as PK11_UnwrapWithFlags except you can
- *  (optionally) make the key permanent (token key).
- */
 PK11SymKey *PK11_UnwrapSymKey(PK11SymKey *key, 
 	CK_MECHANISM_TYPE wraptype, SECItem *param, SECItem *wrapppedKey,  
 	CK_MECHANISM_TYPE target, CK_ATTRIBUTE_TYPE operation, int keySize);
@@ -349,26 +305,8 @@ PK11SymKey *PK11_UnwrapSymKeyWithFlags(PK11SymKey *wrappingKey,
 	CK_MECHANISM_TYPE wrapType, SECItem *param, SECItem *wrappedKey, 
 	CK_MECHANISM_TYPE target, CK_ATTRIBUTE_TYPE operation, int keySize, 
 	CK_FLAGS flags);
-PK11SymKey * PK11_UnwrapSymKeyWithFlagsPerm(PK11SymKey *wrappingKey, 
-	CK_MECHANISM_TYPE wrapType,
-        SECItem *param, SECItem *wrappedKey, 
-	CK_MECHANISM_TYPE target, CK_ATTRIBUTE_TYPE operation, 
-	 int keySize, CK_FLAGS flags, PRBool isPerm);
-
-/*
- * unwrap a new key with a private key.
- *  PK11_PubUnwrap returns a key which can do exactly one operation, and is
- * ephemeral (session key).
- *  PK11_PubUnwrapWithFlagsPerm is the same as PK11_PubUnwrap except you can 
- * use * CKF_ flags to enable more than one operation, and optionally make 
- * the key permanent (token key).
- */
 PK11SymKey *PK11_PubUnwrapSymKey(SECKEYPrivateKey *key, SECItem *wrapppedKey,
 	 CK_MECHANISM_TYPE target, CK_ATTRIBUTE_TYPE operation, int keySize);
-PK11SymKey * PK11_PubUnwrapSymKeyWithFlagsPerm(SECKEYPrivateKey *wrappingKey, 
-	  SECItem *wrappedKey, CK_MECHANISM_TYPE target, 
-	  CK_ATTRIBUTE_TYPE operation, int keySize,
-	  CK_FLAGS flags, PRBool isPerm);
 PK11SymKey *PK11_FindFixedKey(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, 
 						SECItem *keyID, void *wincx);
 SECStatus PK11_DeleteTokenPrivateKey(SECKEYPrivateKey *privKey,PRBool force);
@@ -440,9 +378,6 @@ SECStatus PK11_ImportEncryptedPrivateKeyInfo(PK11SlotInfo *slot,
 		unsigned int usage, void *wincx);
 SECKEYPrivateKeyInfo *PK11_ExportPrivateKeyInfo(
 		CERTCertificate *cert, void *wincx);
-SECKEYEncryptedPrivateKeyInfo *PK11_ExportEncryptedPrivKeyInfo(
-		PK11SlotInfo *slot, SECOidTag algTag, SECItem *pwitem,
-		SECKEYPrivateKey *pk, int iteration, void *wincx);
 SECKEYEncryptedPrivateKeyInfo *PK11_ExportEncryptedPrivateKeyInfo(
 		PK11SlotInfo *slot, SECOidTag algTag, SECItem *pwitem,
 		CERTCertificate *cert, int iteration, void *wincx);

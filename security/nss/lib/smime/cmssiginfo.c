@@ -535,8 +535,7 @@ NSS_CMSSignerInfo_GetVersion(NSSCMSSignerInfo *signerinfo)
 
 /*
  * NSS_CMSSignerInfo_GetSigningTime - return the signing time,
- *				      in UTCTime or GeneralizedTime format,
- *                                    of a CMS signerInfo.
+ *				      in UTCTime format, of a CMS signerInfo.
  *
  * sinfo - signerInfo data for this signer
  *
@@ -561,7 +560,7 @@ NSS_CMSSignerInfo_GetSigningTime(NSSCMSSignerInfo *sinfo, PRTime *stime)
     /* XXXX multi-valued attributes NIH */
     if (attr == NULL || (value = NSS_CMSAttribute_GetValue(attr)) == NULL)
 	return SECFailure;
-    if (CERT_DecodeTimeChoice(stime, value) != SECSuccess)
+    if (DER_UTCTimeToTime(stime, value) != SECSuccess)
 	return SECFailure;
     sinfo->signingTime = *stime;	/* make cached copy */
     return SECSuccess;
@@ -698,7 +697,7 @@ NSS_CMSSignerInfo_AddSigningTime(NSSCMSSignerInfo *signerinfo, PRTime t)
     mark = PORT_ArenaMark(poolp);
 
     /* create new signing time attribute */
-    if (CERT_EncodeTimeChoice(NULL, &stime, t) != SECSuccess)
+    if (DER_TimeToUTCTime(&stime, t) != SECSuccess)
 	goto loser;
 
     if ((attr = NSS_CMSAttribute_Create(poolp, SEC_OID_PKCS9_SIGNING_TIME, &stime, PR_FALSE)) == NULL) {
@@ -882,7 +881,7 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
     CERTCertificate *cert = NULL;
     SECItem *profile = NULL;
     NSSCMSAttribute *attr;
-    SECItem *stime = NULL;
+    SECItem *utc_stime = NULL;
     SECItem *ekp;
     CERTCertDBHandle *certdb;
     int save_error;
@@ -947,10 +946,10 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
 	attr = NSS_CMSAttributeArray_FindAttrByOidTag(signerinfo->authAttr,
 				       SEC_OID_PKCS9_SIGNING_TIME,
 				       PR_TRUE);
-	stime = NSS_CMSAttribute_GetValue(attr);
+	utc_stime = NSS_CMSAttribute_GetValue(attr);
     }
 
-    rv = CERT_SaveSMimeProfile (cert, profile, stime);
+    rv = CERT_SaveSMimeProfile (cert, profile, utc_stime);
     if (must_free_cert)
 	CERT_DestroyCertificate(cert);
 

@@ -64,7 +64,7 @@
  *     sidCacheEntry            sidCacheData[ numSIDCacheEntries];
  *     certCacheEntry           certCacheData[numCertCacheEntries];
  *     SSLWrappedSymWrappingKey keyCacheData[kt_kea_size][SSL_NUM_WRAP_MECHS];
- * } cacheMemCacheData;
+ * } sharedMemCacheData;
  */
 #include "nssrenam.h"
 #include "seccomon.h"
@@ -183,7 +183,7 @@ typedef struct sidCacheSetStr sidCacheSet;
 
 struct cacheDescStr {
 
-    PRUint32            cacheMemSize;
+    PRUint32            sharedMemSize;
 
     PRUint32		numSIDCacheLocks;
     PRUint32		numSIDCacheSets;
@@ -201,12 +201,9 @@ struct cacheDescStr {
     PRUint32		ssl2Timeout;
     PRUint32		ssl3Timeout;
 
-    PRUint32            numSIDCacheLocksInitialized;
-
     /* These values are volatile, and are accessed through sharedCache-> */
     PRUint32		nextCertCacheEntry;	/* certCacheLock protects */
     PRBool      	stopPolling;
-    PRBool		everInherited;
 
     /* The private copies of these values are pointers into shared mem */
     /* The copies of these values in shared memory are merely offsets */
@@ -219,11 +216,11 @@ struct cacheDescStr {
     SSLWrappedSymWrappingKey * keyCacheData;
 
     /* Only the private copies of these pointers are valid */
-    char *                     cacheMem;
+    char *                     sharedMem;
     struct cacheDescStr *      sharedCache;  /* shared copy of this struct */
     PRFileMap *                cacheMemMap;
     PRThread  *                poller;
-    PRBool                     shared;
+    PRBool shared;
 };
 typedef struct cacheDescStr cacheDesc;
 
@@ -266,14 +263,15 @@ static sslPID myPid;
 static PRUint32  ssl_max_sid_cache_locks = MAX_SID_CACHE_LOCKS;
 
 /* forward static function declarations */
-static PRUint32 SIDindex(cacheDesc *cache, const PRIPv6Addr *addr, PRUint8 *s, 
-                         unsigned nl);
+static PRUint32 SIDindex(cacheDesc *cache, const PRIPv6Addr *addr, PRUint8 *s, unsigned nl);
 static SECStatus LaunchLockPoller(cacheDesc *cache);
 
 
+
+
 struct inheritanceStr {
-    PRUint32 cacheMemSize;
-    PRUint32 fmStrLen;
+    PRUint32 sharedMemSize;
+    PRUint16 fmStrLen;
 };
 
 typedef struct inheritanceStr inheritance;
@@ -883,59 +881,23 @@ long gettid(void)
 }
 #endif
 
-static void
-CloseCache(cacheDesc *cache)
-{
-    int locks_initialized = cache->numSIDCacheLocksInitialized;
-
-    if (cache->cacheMem) {
-	/* If everInherited is true, this shared cache was (and may still
-	** be) in use by multiple processes.  We do not wish to destroy
-	** the mutexes while they are still in use.  
-	*/
-	if (PR_FALSE == cache->sharedCache->everInherited) {
-	    sidCacheLock *pLock = cache->sidCacheLocks;
-	    for (; locks_initialized > 0; --locks_initialized, ++pLock ) {
-		sslMutex_Destroy(&pLock->mutex);
-	    }
-	}
-	if (cache->shared) {
-	    PR_MemUnmap(cache->cacheMem, cache->cacheMemSize);
-	} else {
-	    PORT_Free(cache->cacheMem);
-	}
-	cache->cacheMem = NULL;
-    }
-    if (cache->cacheMemMap) {
-	PR_CloseFileMap(cache->cacheMemMap);
-	cache->cacheMemMap = NULL;
-    }
-    memset(cache, 0, sizeof *cache);
-}
-
 static SECStatus
 InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout, 
           PRUint32 ssl3_timeout, const char *directory, PRBool shared)
 {
     ptrdiff_t     ptr;
     sidCacheLock *pLock;
-    char *        cacheMem;
+    char *        sharedMem;
     PRFileMap *   cacheMemMap;
     char *        cfn = NULL;	/* cache file name */
     int           locks_initialized = 0;
     int           locks_to_initialize = 0;
     PRUint32      init_time;
 
-    if (cache->cacheMem) {
+    if (cache->sharedMem) {
 	/* Already done */
 	return SECSuccess;
     }
-
-    /* make sure loser can clean up properly */
-    cache->shared = shared;
-    cache->cacheMem    = cacheMem    = NULL;
-    cache->cacheMemMap = cacheMemMap = NULL;
-    cache->sharedCache = (cacheDesc *)0;
 
     cache->numSIDCacheEntries = maxCacheEntries ? maxCacheEntries 
                                                 : DEF_SID_CACHE_ENTRIES;
@@ -953,7 +915,7 @@ InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout,
 
     /* compute size of shared memory, and offsets of all pointers */
     ptr = 0;
-    cache->cacheMem     = (char *)ptr;
+    cache->sharedMem     = (char *)ptr;
     ptr += SID_ROUNDUP(sizeof(cacheDesc), SID_ALIGNMENT);
 
     cache->sidCacheLocks = (sidCacheLock *)ptr;
@@ -989,7 +951,7 @@ InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout,
     ptr = (ptrdiff_t)(cache->keyCacheData + cache->numKeyCacheEntries);
     ptr = SID_ROUNDUP(ptr, SID_ALIGNMENT);
 
-    cache->cacheMemSize = ptr;
+    cache->sharedMemSize = ptr;
 
     cache->keyCacheSize  = (char *)ptr - (char *)cache->keyCacheData;
 
@@ -1017,60 +979,67 @@ InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout,
 	cache->ssl3Timeout = DEF_SSL3_TIMEOUT;
     }
 
-    if (shared) {
-	/* Create file names */
+    /* Create file names */
 #if defined(XP_UNIX) || defined(XP_BEOS)
-	/* there's some confusion here about whether PR_OpenAnonFileMap wants
-	** a directory name or a file name for its first argument.
-	cfn = PR_smprintf("%s/.sslsvrcache.%d", directory, myPid);
-	*/
-	cfn = PR_smprintf("%s", directory);
-#elif defined(XP_WIN32)
-	cfn = PR_smprintf("%s/svrcache_%d_%x.ssl", directory, myPid, 
-			    GetCurrentThreadId());
-#elif defined(XP_OS2)
-	cfn = PR_smprintf("%s/svrcache_%d_%x.ssl", directory, myPid, 
-			    gettid());
-#else
-#error "Don't know how to create file name for this platform!"
+    /* there's some confusion here about whether PR_OpenAnonFileMap wants
+    ** a directory name or a file name for its first argument.
+    cfn = PR_smprintf("%s/.sslsvrcache.%d", directory, myPid);
+    */
+    cfn = PR_smprintf("%s", directory);
 #endif
-	if (!cfn) {
-	    goto loser;
-	}
+ 
+#ifdef XP_WIN32
+    cfn = PR_smprintf("%s/svrcache_%d_%x.ssl", directory, myPid, 
+    			GetCurrentThreadId());
+#endif
 
-	/* Create cache */
-	cacheMemMap = PR_OpenAnonFileMap(cfn, cache->cacheMemSize, 
-					 PR_PROT_READWRITE);
+#ifdef XP_OS2
+    cfn = PR_smprintf("%s/svrcache_%d_%x.ssl", directory, myPid, 
+    			gettid());
+#endif
+    if (!cfn) {
+	goto loser;
+    }
 
-	PR_smprintf_free(cfn);
-	if(!cacheMemMap) {
-	    goto loser;
-	}
-
-        cacheMem = PR_MemMap(cacheMemMap, 0, cache->cacheMemSize);
+    cache->shared = shared;
+    /* Create cache */
+    if (PR_TRUE == shared) {
+        cacheMemMap = PR_OpenAnonFileMap(cfn, cache->sharedMemSize, 
+                                            PR_PROT_READWRITE);
     } else {
-        cacheMem = PORT_Alloc(cache->cacheMemSize);
+        cacheMemMap = NULL;
+    }
+
+    PR_smprintf_free(cfn);
+    if( (PR_TRUE == shared) && (!cacheMemMap) ) {
+	goto loser;
+    }
+
+    if (PR_TRUE == shared) {
+        sharedMem = PR_MemMap(cacheMemMap, 0, cache->sharedMemSize);
+    } else {
+        sharedMem = PORT_Alloc(cache->sharedMemSize);
     }
     
-    if (! cacheMem) {
+    if (! sharedMem) {
         goto loser;
     }
 
     /* Initialize shared memory. This may not be necessary on all platforms */
-    memset(cacheMem, 0, cache->cacheMemSize);
+    memset(sharedMem, 0, cache->sharedMemSize);
 
     /* Copy cache descriptor header into shared memory */
-    memcpy(cacheMem, cache, sizeof *cache);
+    memcpy(sharedMem, cache, sizeof *cache);
 
     /* save private copies of these values */
     cache->cacheMemMap = cacheMemMap;
-    cache->cacheMem    = cacheMem;
-    cache->sharedCache = (cacheDesc *)cacheMem;
+    cache->sharedMem   = sharedMem;
+    cache->sharedCache = (cacheDesc *)sharedMem;
 
     /* Fix pointers in our private copy of cache descriptor to point to 
     ** spaces in shared memory 
     */
-    ptr = (ptrdiff_t)cache->cacheMem;
+    ptr = (ptrdiff_t)cache->sharedMem;
     *(ptrdiff_t *)(&cache->sidCacheLocks) += ptr;
     *(ptrdiff_t *)(&cache->keyCacheLock ) += ptr;
     *(ptrdiff_t *)(&cache->certCacheLock) += ptr;
@@ -1086,20 +1055,36 @@ InitCache(cacheDesc *cache, int maxCacheEntries, PRUint32 ssl2_timeout,
          locks_initialized < locks_to_initialize; 
 	 ++locks_initialized, ++pLock ) {
 
-	SECStatus err = sslMutex_Init(&pLock->mutex, shared);
-	if (err) {
-	    cache->numSIDCacheLocksInitialized = locks_initialized;
+	SECStatus err = sslMutex_Init(&pLock->mutex, isMultiProcess);
+	if (err)
 	    goto loser;
-	}
         pLock->timeStamp = init_time;
 	pLock->pid       = 0;
     }
-    cache->numSIDCacheLocksInitialized = locks_initialized;
 
     return SECSuccess;
 
 loser:
-    CloseCache(cache);
+    if (cache->cacheMemMap) {
+	if (cache->sharedMem) {
+	    if (locks_initialized > 0) {
+		pLock = cache->sidCacheLocks;
+		for (; locks_initialized > 0; --locks_initialized, ++pLock ) {
+		    sslMutex_Destroy(&pLock->mutex);
+		}
+	    }
+            if (shared) {
+                PR_MemUnmap(cache->sharedMem, cache->sharedMemSize);
+                cache->sharedMem = NULL;
+            }
+	}
+        if (shared) {
+            PR_CloseFileMap(cache->cacheMemMap);
+        } else {
+            PORT_Free(sharedMem);
+        }
+	cache->cacheMemMap = NULL;
+    }
     return SECFailure;
 }
 
@@ -1176,7 +1161,9 @@ SSL_ConfigServerSessionIDCache(	int      maxCacheEntries,
 SECStatus
 SSL_ShutdownServerSessionIDCacheInstance(cacheDesc *cache)
 {
-    CloseCache(cache);
+    /* if single process, close down, clean up.
+    ** if multi-process, TBD.
+    */
     return SECSuccess;
 }
 
@@ -1208,7 +1195,7 @@ SSL_ConfigMPServerSIDCache(	int      maxCacheEntries,
 
     isMultiProcess = PR_TRUE;
     result = SSL_ConfigServerSessionIDCacheInstance(cache, maxCacheEntries, 
-			ssl2_timeout, ssl3_timeout, directory, PR_TRUE);
+					ssl2_timeout, ssl3_timeout, directory, PR_TRUE);
     if (result != SECSuccess) 
         return result;
 
@@ -1219,7 +1206,7 @@ SSL_ConfigMPServerSIDCache(	int      maxCacheEntries,
 	return SECFailure;
     }
 
-    inherit.cacheMemSize	= cache->cacheMemSize;
+    inherit.sharedMemSize	= cache->sharedMemSize;
     inherit.fmStrLen            = fmStrLen;
 
     inhValue = BTOA_DataToAscii((unsigned char *)&inherit, sizeof inherit);
@@ -1253,7 +1240,6 @@ SSL_InheritMPServerSIDCacheInstance(cacheDesc *cache, const char * envString)
 {
     unsigned char * decoString = NULL;
     char *          fmString   = NULL;
-    char *          myEnvString = NULL;
     unsigned int    decoLen;
     ptrdiff_t       ptr;
     inheritance     inherit;
@@ -1270,12 +1256,9 @@ SSL_InheritMPServerSIDCacheInstance(cacheDesc *cache, const char * envString)
     ** then isMultiProcess will already be set.
     ** If not, we'll set it below.
     */
-    if (isMultiProcess) {
-	if (cache && cache->sharedCache) {
-	    cache->sharedCache->everInherited = PR_TRUE;
-	}
+    if (isMultiProcess)
     	return SECSuccess;	/* already done. */
-    }
+
     ssl_sid_lookup  = ServerSessionIDLookup;
     ssl_sid_cache   = ServerSessionIDCache;
     ssl_sid_uncache = ServerSessionIDUncache;
@@ -1287,15 +1270,15 @@ SSL_InheritMPServerSIDCacheInstance(cacheDesc *cache, const char * envString)
 	    return SECFailure;
 	}
     }
-    myEnvString = PORT_Strdup(envString);
-    if (!myEnvString) 
+    envString = PORT_Strdup(envString);
+    if (!envString) 
 	return SECFailure;
-    fmString = strchr(myEnvString, ',');
+    fmString = strchr(envString, ',');
     if (!fmString) 
     	goto loser;
     *fmString++ = 0;
 
-    decoString = ATOB_AsciiToData(myEnvString, &decoLen);
+    decoString = ATOB_AsciiToData(envString, &decoLen);
     if (!decoString) {
     	SET_ERROR_CODE
 	goto loser;
@@ -1311,39 +1294,34 @@ SSL_InheritMPServerSIDCacheInstance(cacheDesc *cache, const char * envString)
     	goto loser;
     }
 
-    memset(cache, 0, sizeof *cache);
-    cache->cacheMemSize	= inherit.cacheMemSize;
+    memset(&my, 0, sizeof my);
+    my.sharedMemSize	= inherit.sharedMemSize;
 
     /* Create cache */
-    cache->cacheMemMap = PR_ImportFileMapFromString(fmString);
-    if(! cache->cacheMemMap) {
+    my.cacheMemMap = PR_ImportFileMapFromString(fmString);
+    if(! my.cacheMemMap) {
 	goto loser;
     }
-    cache->cacheMem = PR_MemMap(cache->cacheMemMap, 0, cache->cacheMemSize);
-    if (! cache->cacheMem) {
+    my.sharedMem = PR_MemMap(my.cacheMemMap, 0, my.sharedMemSize);
+    if (! my.sharedMem) {
 	goto loser;
     }
-    cache->sharedCache   = (cacheDesc *)cache->cacheMem;
+    my.sharedCache   = (cacheDesc *)my.sharedMem;
 
-    if (cache->sharedCache->cacheMemSize != cache->cacheMemSize) {
+    if (my.sharedCache->sharedMemSize != my.sharedMemSize) {
 	SET_ERROR_CODE
     	goto loser;
     }
 
-    /* We're now going to overwrite the local cache instance with the 
-    ** shared copy of the cache struct, then update several values in 
-    ** the local cache using the values for cache->cacheMemMap and 
-    ** cache->cacheMem computed just above.  So, we copy cache into 
-    ** the automatic variable "my", to preserve the variables while
-    ** cache is overwritten.
-    */
-    my = *cache;  /* save values computed above. */
-    memcpy(cache, cache->sharedCache, sizeof *cache); /* overwrite */
+    memcpy(cache, my.sharedCache, sizeof *cache);
+    cache->cacheMemMap = my.cacheMemMap;
+    cache->sharedMem   = my.sharedMem;
+    cache->sharedCache = my.sharedCache;
 
     /* Fix pointers in our private copy of cache descriptor to point to 
-    ** spaces in shared memory, whose address is now in "my".
+    ** spaces in shared memory 
     */
-    ptr = (ptrdiff_t)my.cacheMem;
+    ptr = (ptrdiff_t)cache->sharedMem;
     *(ptrdiff_t *)(&cache->sidCacheLocks) += ptr;
     *(ptrdiff_t *)(&cache->keyCacheLock ) += ptr;
     *(ptrdiff_t *)(&cache->certCacheLock) += ptr;
@@ -1352,66 +1330,49 @@ SSL_InheritMPServerSIDCacheInstance(cacheDesc *cache, const char * envString)
     *(ptrdiff_t *)(&cache->certCacheData) += ptr;
     *(ptrdiff_t *)(&cache->keyCacheData ) += ptr;
 
-    cache->cacheMemMap = my.cacheMemMap;
-    cache->cacheMem    = my.cacheMem;
-    cache->sharedCache = (cacheDesc *)cache->cacheMem;
-
 #ifdef WINNT
     /*  On Windows NT we need to "fix" the sidCacheLocks here to support fibers
-    **  When NT fibers are used in a multi-process server, a second level of
-    **  locking is needed to prevent a deadlock, in case a fiber acquires the
-    **  cross-process mutex, yields, and another fiber is later scheduled on
-    **  the same native thread and tries to acquire the cross-process mutex.
-    **  We do this by using a PRLock in the sslMutex. However, it is stored in
-    **  shared memory as part of sidCacheLocks, and we don't want to overwrite
-    **  the PRLock of the parent process. So we need to make new, private
-    **  copies of sidCacheLocks before modifying the sslMutex with our own
-    **  PRLock
+        When NT fibers are used in a multi-process server, a second level of
+        locking is needed to prevent a deadlock, in case a fiber acquires the
+        cross-process mutex, yields, and another fiber is later scheduled on
+        the same native thread and tries to acquire the cross-process mutex.
+        We do this by using a PRLock in the sslMutex. However, it is stored in
+        shared memory as part of sidCacheLocks, and we don't want to overwrite
+        the PRLock of the parent process. So we need to make new, private
+        copies of sidCacheLocks before modifying the sslMutex with our own
+        PRLock
     */
     
+    newLocks = (sidCacheLock*)PORT_Alloc(sizeof(sidCacheLock)*(cache->numSIDCacheLocks + 2));
     /* note from jpierre : this should be free'd in child processes when
-    ** a function is added to delete the SSL session cache in the future. 
-    */
-    locks_to_initialize = cache->numSIDCacheLocks + 2;
-    newLocks = PORT_NewArray(sidCacheLock, locks_to_initialize);
-    if (!newLocks)
-    	goto loser;
-    /* copy the old locks */
-    memcpy(newLocks, cache->sidCacheLocks, 
-           locks_to_initialize * sizeof(sidCacheLock));
-    cache->sidCacheLocks = newLocks;
+       a function is added to delete the SSL session cache in the future */
     /* fix the locks */		
-    for (; locks_initialized < locks_to_initialize; ++locks_initialized) {
+    for (locks_to_initialize = cache->numSIDCacheLocks + 2;
+         locks_initialized < locks_to_initialize; 
+         ++locks_initialized) {
+        /* copy the old lock */
+        memcpy(&newLocks[locks_initialized], &cache->sidCacheLocks[locks_initialized], sizeof(sidCacheLock));
         /* now, make a local PRLock in this sslMutex for this child process */
-	SECStatus err;
-        err = sslMutex_2LevelInit(&newLocks[locks_initialized].mutex);
-	if (err != SECSuccess) {
-	    cache->numSIDCacheLocksInitialized = locks_initialized;
-	    goto loser;
-    	}
+        sslMutex_2LevelInit(&newLocks[locks_initialized].mutex);
     }
-    cache->numSIDCacheLocksInitialized = locks_initialized;
-
+    
+    /* then, make our cache object point to our new private sidCacheLocks */
+    /* first the session cache */
+    cache->sidCacheLocks = newLocks;
     /* also fix the key and cert cache which use the last 2 lock entries */
     cache->keyCacheLock  = cache->sidCacheLocks + cache->numSIDCacheLocks;
     cache->certCacheLock = cache->keyCacheLock  + 1;
 #endif
 
-    PORT_Free(myEnvString);
     PORT_Free(decoString);
-
-    /* mark that we have inherited this. */
-    cache->sharedCache->everInherited = PR_TRUE;
     isMultiProcess = PR_TRUE;
-
     return SECSuccess;
 
 loser:
-    PORT_Free(myEnvString);
     if (decoString) 
 	PORT_Free(decoString);
-    CloseCache(cache);
     return SECFailure;
+
 }
 
 SECStatus

@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * pserrstrs.h - map NSPR errors to strings (used by errormap.c)
@@ -42,12 +27,15 @@
 
 /*
  ****************************************************************************
- * On 21-June-2002, the code below this point was copied from the file
- * mozilla/security/nss/cmd/lib/NSPRerrs.h (tag NSS_3_4_2_RTM).
- * One addition was made: PR_OPERATION_ABORTED_ERROR.
+ * The code below this point was provided by Nelson Bolyard <nelsonb> of the
+ *	Netscape Certificate Server team on 27-March-1998.
+ *	Taken from the file ns/security/cmd/lib/NSPRerrs.h on NSS_1_BRANCH.
+ *	Last updated from there: 24-July-1998 by Mark Smith <mcs>
+ *
+ * All of the Directory Server specific changes are enclosed inside
+ *	#ifdef NS_DIRECTORY.
  ****************************************************************************
  */
-
 /* General NSPR 2.0 errors */
 /* Caller must #include "prerror.h" */
 
@@ -135,7 +123,6 @@ ER2( PR_NO_MORE_FILES_ERROR, 	"No more entries in the directory." )
 ER2( PR_END_OF_FILE_ERROR, 	"Encountered end of file." )
 ER2( PR_FILE_SEEK_ERROR, 	"Seek error." )
 ER2( PR_FILE_IS_BUSY_ERROR, 	"The file is busy." )
-ER2( PR_OPERATION_ABORTED_ERROR,  "The I/O operation was aborted" )
 ER2( PR_IN_PROGRESS_ERROR,
 "Operation is still in progress (probably a non-blocking connect)." )
 ER2( PR_ALREADY_INITIATED_ERROR,
@@ -149,21 +136,4 @@ ER2( PR_GROUP_EMPTY_ERROR, 	"The wait group is empty." )
 ER2( PR_INVALID_STATE_ERROR, 	"Object state improper for request." )
 #endif
 
-#ifdef PR_NETWORK_DOWN_ERROR
-ER2( PR_NETWORK_DOWN_ERROR,	"Network is down." )
-#endif
-
-#ifdef PR_SOCKET_SHUTDOWN_ERROR
-ER2( PR_SOCKET_SHUTDOWN_ERROR,	"The socket was previously shut down." )
-#endif
-
-#ifdef PR_CONNECT_ABORTED_ERROR
-ER2( PR_CONNECT_ABORTED_ERROR,	"TCP Connection aborted." )
-#endif
-
-#ifdef PR_HOST_UNREACHABLE_ERROR
-ER2( PR_HOST_UNREACHABLE_ERROR,	"Host is unreachable." )
-#endif
-
-/* always last */
 ER2( PR_MAX_ERROR, 		"Placeholder for the end of the list" )

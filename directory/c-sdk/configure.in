@@ -1,45 +1,41 @@
 dnl -*- Mode: Autoconf; tab-width: 4; indent-tabs-mode: nil; -*-
 dnl 
-dnl ***** BEGIN LICENSE BLOCK *****
-dnl Version: MPL 1.1/GPL 2.0/LGPL 2.1
+dnl The contents of this file are subject to the Mozilla Public
+dnl License Version 1.1 (the "License"); you may not use this file
+dnl except in compliance with the License. You may obtain a copy of
+dnl the License at http://www.mozilla.org/MPL/
 dnl 
-dnl The contents of this file are subject to the Mozilla Public License Version 
-dnl 1.1 (the "License"); you may not use this file except in compliance with 
-dnl the License. You may obtain a copy of the License at 
-dnl http://www.mozilla.org/MPL/
-dnl 
-dnl Software distributed under the License is distributed on an "AS IS" basis,
-dnl WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-dnl for the specific language governing rights and limitations under the
-dnl License.
+dnl Software distributed under the License is distributed on an "AS
+dnl IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+dnl implied. See the License for the specific language governing
+dnl rights and limitations under the License.
 dnl 
 dnl The Original Code is the Netscape Portable Runtime (NSPR).
 dnl 
-dnl The Initial Developer of the Original Code is
-dnl Netscape Communications Corporation.
-dnl Portions created by the Initial Developer are Copyright (C) 1998-2000
-dnl the Initial Developer. All Rights Reserved.
+dnl The Initial Developer of the Original Code is Netscape
+dnl Communications Corporation.  Portions created by Netscape are 
+dnl Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+dnl Rights Reserved.
 dnl 
 dnl Contributor(s):
-dnl   Christopher Seawood <cls@seawood.org>
-dnl   Dan Mosedale <dmose@netscape.com>
+dnl     Christopher Seawood <cls@seawood.org>
+dnl     Dan Mosedale <dmose@netscape.com>
 dnl 
-dnl Alternatively, the contents of this file may be used under the terms of
-dnl either of the GNU General Public License Version 2 or later (the "GPL"),
-dnl or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-dnl in which case the provisions of the GPL or the LGPL are applicable instead
-dnl of those above. If you wish to allow use of your version of this file only
-dnl under the terms of either the GPL or the LGPL, and not to allow others to
-dnl use your version of this file under the terms of the MPL, indicate your
-dnl decision by deleting the provisions above and replace them with the notice
-dnl and other provisions required by the GPL or the LGPL. If you do not delete
-dnl the provisions above, a recipient may use your version of this file under
-dnl the terms of any one of the MPL, the GPL or the LGPL.
+dnl Alternatively, the contents of this file may be used under the
+dnl terms of the GNU General Public License Version 2 or later (the
+dnl "GPL"), in which case the provisions of the GPL are applicable 
+dnl instead of those above.  If you wish to allow use of your 
+dnl version of this file only under the terms of the GPL and not to
+dnl allow others to use your version of this file under the MPL,
+dnl indicate your decision by deleting the provisions above and
+dnl replace them with the notice and other provisions required by
+dnl the GPL.  If you do not delete the provisions above, a recipient
+dnl may use your version of this file under either the MPL or the
+dnl GPL.
 dnl 
-dnl ***** END LICENSE BLOCK ***** 
 
 AC_PREREQ(2.12)
-AC_INIT(ldap/include/ldap.h)
+AC_INIT(ldap/build/dirver.c)
 
 AC_CONFIG_AUX_DIR(${srcdir}/config/autoconf)
 AC_CANONICAL_SYSTEM
@@ -354,7 +350,7 @@ if test -n "$MOZ_DEBUG"; then
     beos*)
         DEFINES="$DEFINES -DDEBUG_${USER}"
         ;;
-    msvc*|mks*|cygwin*|mingw*)
+    msvc*|mks*|cygwin*|mingw*|os2*)
         DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
@@ -463,7 +459,7 @@ fi
 if test "$GXX" = "yes"; then
     GNU_CXX=1
 fi
-if test "`echo | $AS -V 2>&1 | grep -c GNU`" != "0"; then
+if test "`echo | $AS -v 2>&1 | grep -c GNU`" != "0"; then
     GNU_AS=1
 fi
 rm -f a.out
@@ -547,10 +543,6 @@ fi
 
 if test "$OS_ARCH" = "Linux"; then
     OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-fi
-
-if test "$OS_ARCH" = "POSIX_for_OpenVMS_AXP"; then
-    OS_ARCH=OpenVMS
 fi
 
 #######################################################################
@@ -1196,7 +1188,11 @@ case "$target" in
     PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
     PROG_SUFFIX=.exe
-    NSINSTALL=nsinstall
+    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
+    NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
+    if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
+        PERL='$(CYGWIN_WRAPPER) perl'
+    fi
 
     if test -n "$GNU_CC"; then
         CC="$CC -mno-cygwin"
@@ -1459,24 +1455,94 @@ mips-sony-newsos*)
 
 *-openvms*)
     AC_DEFINE(XP_UNIX)
-    AC_DEFINE(VMS)
-    AC_DEFINE(VMS_AS_IS)
-    AC_DEFINE(_SOCKADDR_LEN)
-    AC_DEFINE(GENERIC_PTHREAD_REDEFINES)
     RESOLVE_LINK_SYMBOLS=1
-    CROSS_COMPILE=1
-    _HAVE_PTHREADS=1
-    HOST_CC=c89
-    HOST_CXX=cxx
-    HOST_CFLAGS=-O
-    HOST_CXXFLAGS=-O
-    CC=ccc
-    CXX=ccc
-    CFLAGS="$CFLAGS -Wc,names=\(short,as\)"
-    CXXFLAGS="$CXXFLAGS -Wc,names=\(short,as\)"
     MDCPUCFG_H=_openvms.cfg
     PR_MD_CSRCS=openvms.c
-    MKSHLIB='vmsld $(OPTIMIZER)'
+    AR_FLAGS='c $@'
+    DSO_LDOPTS='-shared -auto_symvec $(LDFLAGS) $(OPTIMIZER)'
+    ;;
+
+*-os2*)
+    AC_DEFINE(XP_OS2)
+    AC_DEFINE(XP_PC)
+    AC_DEFINE(BSD_SELECT)
+    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+    PR_MD_ARCH_DIR=os2
+    RESOLVE_LINK_SYMBOLS=1
+    NSINSTALL=nsinstall
+    LIB_PREFIX=
+    LIB_SUFFIX=lib
+    DLL_SUFFIX=dll
+    DLLTOOL=''
+    RC=rc.exe
+    PROG_SUFFIX=.exe
+    MDCPUCFG_H=_os2.cfg
+
+    # EMX/GCC build
+    if test -n "$GNU_CC"; then
+#        AC_DEFINE(USE_OS2_TOOLKIT_HEADERS)
+        AC_DEFINE(XP_OS2_EMX)
+        AC_DEFINE(OS2)
+        AC_DEFINE(TCPV40HDRS)
+        AR=emxomfar
+        AR_FLAGS='r $@'
+        LD='$(CC)'
+        CFLAGS="$CFLAGS -Wall -Zomf"
+        CXXFLAGS="$CFLAGS -Wall -Zomf"
+        MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+        DSO_CFLAGS=
+        DSO_LDOPTS='-Zomf -Zdll'
+        _OPTIMIZE_FLAGS="-O2 -s"
+        _DEBUG_FLAGS="-g -fno-inline"
+        if test -n "$MOZ_OPTIMIZE"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
+        fi
+        OS_LIBS="-lsocket"
+        IMPLIB='emximp -o'
+        FILTER='emxexp -o'
+
+        # GCC for OS/2 currently predefines these, but we don't want them
+        DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+
+    # Visual Age C++ build
+    elif test "$VACPP" = "yes"; then
+        MOZ_BUILD_ROOT=`pwd -D`
+        AC_DEFINE(XP_OS2_VACPP)
+        AC_DEFINE(OS2,4)
+        AC_DEFINE(TCPV40HDRS)
+        AC_DEFINE(_X86_)
+        OBJ_SUFFIX=obj
+        AS=alp
+        ASFLAGS='-Mb'
+        ASM_SUFFIX=asm
+        AR=ilib
+        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
+        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        HOST_CFLAGS="$CFLAGS"
+        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_LIBS='so32dll.lib tcp32dll.lib'
+        LD='-ilink'
+        MKSHLIB='$(LD) $(DSO_LDOPTS)'
+        IMPLIB='implib -nologo -noignorecase'
+        FILTER='cppfilt -q -B -P'
+        _OPTIMIZE_FLAGS='/O+ /Gl+ /Gx+ /qtune=pentium /qarch=pentium'
+        _DEBUG_FLAGS='/Ti+ '
+        LDFLAGS='/NOL /M /L'
+        DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /L /NOL'
+        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
+        if test -n "$MOZ_DEBUG"; then
+          LDFLAGS="$LDFLAGS /DE"
+          DLLFLAGS="$DLLFLAGS /DE"
+          EXEFLAGS="$EXEFLAGS /DE"
+        fi
+        if test -n "$MOZ_OPTIMIZE"; then
+          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+        fi
+    fi
     ;;
 
 *-osf*)
@@ -1713,88 +1779,6 @@ mips-sony-newsos*)
     PR_MD_CSRCS=unixware.c
     DSO_LDOPTS=-G
     CPU_ARCH=x86
-    ;;
-
-*-os2*)
-    AC_DEFINE(XP_OS2)
-    AC_DEFINE(BSD_SELECT)
-    AC_DEFINE(XP_PC)
-    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
-    OBJ_SUFFIX=obj
-    LIB_SUFFIX=lib
-    LIB_PREFIX=
-    DLL_SUFFIX=dll
-    ASM_SUFFIX=asm
-    RC=rc.exe
-    PR_MD_ARCH_DIR=os2
-    PROG_SUFFIX=.exe
-    NSINSTALL=nsinstall
-    MDCPUCFG_H=_os2.cfg
-    RESOLVE_LINK_SYMBOLS=1
-
-    # EMX/GCC build
-    if test "$GNU_CC"; then
-        AC_DEFINE(XP_OS2_EMX)
-        AC_DEFINE(OS2)
-        AR=emxomfar
-        AR_FLAGS='-p256 r $@'
-        CFLAGS="-Zmtd -Zomf"
-        HOST_CFLAGS="$CFLAGS"
-        CXXFLAGS="-Zmtd -Zomf"
-        OS_LIBS="-lsocket -lemxio"
-        LD='$(CC)'
-        IMPLIB='emximp -o'
-        FILTER='emxexp'
-        OS_DLLFLAGS='$(DSO_LDOPTS) -o $@'
-        _OPTIMIZE_FLAGS="-O2 -s"
-        _DEBUG_FLAGS=-g
-        if test -n "$MOZ_DEBUG"; then
-          DLLFLAGS='-g'
-          EXEFLAGS='-g $(OMF_FLAG) -Zmtd -L$(DIST)/lib -o $@'
-          DSO_LDOPTS='-g -Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
-        else
-          DLLFLAGS=
-          EXEFLAGS='-Zmtd -o $@'
-          DSO_LDOPTS='-Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
-        fi
-    fi
-    
-    # Visual Age C++ build
-    if test "$VACPP" = "yes"; then
-        AC_DEFINE(XP_OS2_VACPP)
-        AC_DEFINE(OS2,4)
-        AC_DEFINE(TCPV40HDRS)
-        AC_DEFINE(_X86_)
-        AS=alp
-        ASFLAGS='-Mb'
-        AR=-ilib
-        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
-        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        HOST_CFLAGS="$CFLAGS"
-        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
-        OS_LIBS='so32dll.lib tcp32dll.lib'
-        LD='-ilink'
-        MKSHLIB='$(LD) $(DSO_LDOPTS)'
-        IMPLIB='implib -nologo -noignorecase'
-        FILTER='cppfilt -q -B -P -o'
-        _OPTIMIZE_FLAGS='/O+ /Gl+ /G5 /qarch=pentium'
-        _DEBUG_FLAGS='/Ti+ '
-        LDFLAGS='/NOL /M /L'
-        DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /L /NOL'
-        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
-        if test -n "$MOZ_DEBUG"; then
-          LDFLAGS="$LDFLAGS /DE"
-          DLLFLAGS="$DLLFLAGS /DE"
-          EXEFLAGS="$EXEFLAGS /DE"
-        fi
-        if test -n "$MOZ_OPTIMIZE"; then
-          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
-        fi
-    fi
     ;;
 
 *)
@@ -2230,6 +2214,17 @@ fi
 RELEASE_OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${COMPILER_TAG}${IMPL_STRATEGY}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
 
 dnl ========================================================
+dnl Use cygwin wrapper for win32 builds
+dnl ========================================================
+case "$target_os" in
+mingw*|cygwin*|msvc*|mks*)
+    CC="\$(CYGWIN_WRAPPER) $CC"
+    CXX="\$(CYGWIN_WRAPPER) $CXX"
+    RC="\$(CYGWIN_WRAPPER) $RC"
+    ;;
+esac
+
+dnl ========================================================
 dnl Substitution of found variables.
 dnl ========================================================
 AC_SUBST(SHELL_OVERRIDE)
@@ -2316,6 +2311,7 @@ AC_SUBST(RC)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
+AC_SUBST(CYGWIN_WRAPPER)
 
 dnl ========================================================
 dnl Generate output files.
@@ -2325,6 +2321,7 @@ Makefile
 config/Makefile
 config/autoconf.mk
 ldap/Makefile
+ldap/build/Makefile
 ldap/clients/tools/Makefile
 ldap/include/Makefile
 ldap/libraries/Makefile

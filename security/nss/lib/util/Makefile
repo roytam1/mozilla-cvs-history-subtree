@@ -81,8 +81,6 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 
 
-export:: private_export
-
 tests:: $(OBJDIR)/test_utf8
 
 $(OBJDIR)/test_utf8: utf8.c

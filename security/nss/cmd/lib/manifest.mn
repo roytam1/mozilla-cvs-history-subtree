@@ -51,7 +51,3 @@ CSRCS		= secutil.c \
 
 REQUIRES	= nss nspr dbm
 
-ifdef NSS_ENABLE_ECC
-DEFINES += -DNSS_ENABLE_ECC
-endif
-

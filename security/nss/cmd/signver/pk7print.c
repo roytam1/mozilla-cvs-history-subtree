@@ -103,18 +103,18 @@ sv_PrintInteger(FILE *out, SECItem *i, char *m)
 
 
 int
-sv_PrintTime(FILE *out, SECItem *t, char *m)
+sv_PrintUTCTime(FILE *out, SECItem *t, char *m)
 {
     PRExplodedTime printableTime; 
     int64 time;
     char *timeString;
     int rv;
 
-    rv = CERT_DecodeTimeChoice(&time, t);
+    rv = DER_UTCTimeToTime(&time, t);
     if (rv) return rv;
 
-    /* Convert to local time */
-    PR_ExplodeTime(time, PR_LocalTimeParameters, &printableTime);
+    /* Converse to local time */
+    PR_ExplodeTime(time, PR_GMTParameters, &printableTime);
 
     timeString = (char *)PORT_Alloc(100);
 
@@ -127,16 +127,17 @@ sv_PrintTime(FILE *out, SECItem *t, char *m)
     return SECFailure;
 }
 
+
 int
 sv_PrintValidity(FILE *out, CERTValidity *v, char *m)
 {
     int rv;
 
     fprintf(out, m);
-    rv = sv_PrintTime(out, &v->notBefore, "notBefore=");
+    rv = sv_PrintUTCTime(out, &v->notBefore, "notBefore=");
     if (rv) return rv;
     fprintf(out, m);
-    sv_PrintTime(out, &v->notAfter, "notAfter=");
+    sv_PrintUTCTime(out, &v->notAfter, "notAfter=");
     return rv;
 }
 
@@ -199,7 +200,7 @@ sv_PrintAttribute(FILE *out, SEC_PKCS7Attribute *attr, char *m)
                         sv_PrintObjectID(out, value, om);
                         break;
                     case SEC_OID_PKCS9_SIGNING_TIME:
-                        sv_PrintTime(out, value, om);
+                        sv_PrintUTCTime(out, value, om);
                         break;
                 }
             }
@@ -455,9 +456,9 @@ sv_PrintCRLInfo(FILE *out, CERTCrl *crl, char *m)
     fprintf(out, m);
     sv_PrintName(out, &(crl->name), "name=");
     fprintf(out, m);
-    sv_PrintTime(out, &(crl->lastUpdate), "lastUpdate=");
+    sv_PrintUTCTime(out, &(crl->lastUpdate), "lastUpdate=");
     fprintf(out, m);
-    sv_PrintTime(out, &(crl->nextUpdate), "nextUpdate=");
+    sv_PrintUTCTime(out, &(crl->nextUpdate), "nextUpdate=");
     
     if (crl->entries != NULL) {
         iv = 0;
@@ -465,7 +466,7 @@ sv_PrintCRLInfo(FILE *out, CERTCrl *crl, char *m)
             fprintf(out, "%sentry[%d].", m, iv); 
             sv_PrintInteger(out, &(entry->serialNumber), "serialNumber=");
             fprintf(out, "%sentry[%d].", m, iv); 
-            sv_PrintTime(out, &(entry->revocationDate), "revocationDate=");
+            sv_PrintUTCTime(out, &(entry->revocationDate), "revocationDate=");
             sprintf(om, "%sentry[%d].signedCRLEntriesExtensions.", m, iv++); 
             sv_PrintExtensions(out, entry->extensions, om);
         }
@@ -768,6 +769,37 @@ secu_PrintPKCS7SignedAndEnveloped(FILE *out,
     }  
 
     return 0;
+}
+
+PR_IMPLEMENT(int)
+SECU_PrintCrl (FILE *out, SECItem *der, char *m, int level)
+{
+    PRArenaPool *arena = NULL;
+    CERTCrl *c = NULL;
+    int rv;
+
+    do {
+	/* Decode CRL */
+	c = (CERTCrl*) PORT_ZAlloc(sizeof(CERTCrl));
+	if (!c) {
+	    rv = PORT_GetError();
+	    break;
+	}
+
+	arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+	if (!arena) {
+	    rv = SEC_ERROR_NO_MEMORY;
+	    break;
+	}
+
+	rv = SEC_ASN1DecodeItem(arena, c, CERT_CrlTemplate, der);
+	if (rv != SECSuccess)
+	    break;
+	SECU_PrintCRLInfo (out, c, m, level);
+    } while (0);
+    PORT_FreeArena (arena, PR_FALSE);
+    PORT_Free (c);
+    return (rv);
 }
 
 /*

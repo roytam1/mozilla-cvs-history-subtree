@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- * 
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -356,13 +352,6 @@ PK11_IsUserCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	    PK11_SETATTRS(&theTemplate,CKA_VALUE, pubKey->u.dh.publicValue.data,
 						pubKey->u.dh.publicValue.len);
 	    break;
-#ifdef NSS_ENABLE_ECC
-	case ecKey:
-	    PK11_SETATTRS(&theTemplate,CKA_EC_POINT, 
-			  pubKey->u.ec.publicValue.data,
-			  pubKey->u.ec.publicValue.len);
-	    break;
-#endif /* NSS_ENABLE_ECC */
 	case keaKey:
 	case fortezzaKey:
 	case nullKey:
@@ -1251,8 +1240,7 @@ transfer_token_certs_to_collection(nssList *certList, NSSToken *token,
 }
 
 CERTCertificate *
-PK11_FindCertFromNickname(char *nickname, void *wincx) 
-{
+PK11_FindCertFromNickname(char *nickname, void *wincx) {
 #ifdef NSS_CLASSIC
     PK11SlotInfo *slot;
     int count=0;
@@ -1331,22 +1319,18 @@ PK11_FindCertFromNickname(char *nickname, void *wincx)
 	if (nssPKIObjectCollection_Count(collection) == 0 &&
 	    PORT_Strchr(nickname, '@') != NULL) 
 	{
-	    char* lowercaseName = CERT_FixupEmailAddr(nickname);
-	    if (lowercaseName) {
-		(void)nssTrustDomain_GetCertsForEmailAddressFromCache(defaultTD, 
-								      lowercaseName, 
-								      certList);
-		transfer_token_certs_to_collection(certList, token, collection);
-		instances = nssToken_FindCertificatesByEmail(token,
-							     NULL,
-							     lowercaseName,
-							     tokenOnly,
-							     0,
-							     &status);
-		nssPKIObjectCollection_AddInstances(collection, instances, 0);
-		nss_ZFreeIf(instances);
-		PORT_Free(lowercaseName);
-	    }
+	    (void)nssTrustDomain_GetCertsForEmailAddressFromCache(defaultTD, 
+	                                                          nickname, 
+	                                                          certList);
+	    transfer_token_certs_to_collection(certList, token, collection);
+	    instances = nssToken_FindCertificatesByEmail(token,
+		                                         NULL,
+		                                         nickname,
+		                                         tokenOnly,
+		                                         0,
+		                                         &status);
+	    nssPKIObjectCollection_AddInstances(collection, instances, 0);
+	    nss_ZFreeIf(instances);
 	}
 	certs = nssPKIObjectCollection_GetCertificates(collection, 
 	                                               NULL, 0, NULL);
@@ -1517,11 +1501,6 @@ PK11_GetPubIndexKeyID(CERTCertificate *cert) {
 	break;
     case dhKey:
         newItem = SECITEM_DupItem(&pubk->u.dh.publicValue);
-	break;
-    case ecKey:
-#ifdef NSS_ENABLE_ECC
-        newItem = SECITEM_DupItem(&pubk->u.ec.publicValue);
-#endif /* NSS_ENABLE_ECC */
 	break;
     case fortezzaKey:
     default:
@@ -3341,26 +3320,21 @@ pk11ListCertCallback(NSSCertificate *c, void *arg)
     char *nickname = NULL;
     unsigned int certType;
 
-    if ((type == PK11CertListUnique) || (type == PK11CertListRootUnique) ||
-        (type == PK11CertListCAUnique) || (type == PK11CertListUserUnique) ) {
-        /* only list one instance of each certificate, even if several exist */
+    if ((type == PK11CertListUnique) || (type == PK11CertListRootUnique)) {
 	isUnique = PR_TRUE;
     }
-    if ((type == PK11CertListCA) || (type == PK11CertListRootUnique) ||
-        (type == PK11CertListCAUnique)) {
+    if ((type == PK11CertListCA) || (type == PK11CertListRootUnique)) {
 	isCA = PR_TRUE;
     }
 
+
     /* if we want user certs and we don't have one skip this cert */
-    if ( ( (type == PK11CertListUser) || (type == PK11CertListUserUnique) ) && 
+    if ((type == PK11CertListUser) && 
 		!NSSCertificate_IsPrivateKeyAvailable(c, NULL,NULL)) {
 	return PR_SUCCESS;
     }
 
-    /* PK11CertListRootUnique means we want CA certs without a private key.
-     * This is for legacy app support . PK11CertListCAUnique should be used
-     * instead to get all CA certs, regardless of private key
-     */
+    /* if we want root certs, skip the user certs */
     if ((type == PK11CertListRootUnique) && 
 		NSSCertificate_IsPrivateKeyAvailable(c, NULL,NULL)) {
 	return PR_SUCCESS;

@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved. 
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -49,6 +45,7 @@
 
 #include "secutil.h"
 #include "secpkcs7.h"
+#include "secrng.h"
 #include <stdarg.h>
 #if !defined(_WIN32_WCE)
 #include <sys/stat.h>
@@ -939,29 +936,6 @@ SECU_PrintGeneralizedTime(FILE *out, SECItem *t, char *m, int level)
     secu_PrintTime(out, time, m, level);
 }
 
-/*
- * Format and print the UTC or Generalized Time "t".  If the tag message
- * "m" is not NULL, do indent formatting based on "level" and add a newline
- * afterward; otherwise just print the formatted time string only.
- */
-void
-SECU_PrintTimeChoice(FILE *out, SECItem *t, char *m, int level)
-{
-    switch (t->type) {
-        case siUTCTime:
-            SECU_PrintUTCTime(out, t, m, level);
-            break;
-
-        case siGeneralizedTime:
-            SECU_PrintGeneralizedTime(out, t, m, level);
-            break;
-
-        default:
-            PORT_Assert(0);
-            break;
-    }
-}
-
 static void secu_PrintAny(FILE *out, SECItem *i, char *m, int level);
 
 void
@@ -1239,26 +1213,6 @@ secu_PrintDSAPublicKey(FILE *out, SECKEYPublicKey *pk, char *m, int level)
     SECU_PrintInteger(out, &pk->u.dsa.publicValue, "PublicValue", level+1);
 }
 
-#ifdef NSS_ENABLE_ECC
-static void
-secu_PrintECPublicKey(FILE *out, SECKEYPublicKey *pk, char *m, int level)
-{
-    SECItem curveOID = { siBuffer, NULL, 0};
-
-    SECU_Indent(out, level); fprintf(out, "%s:\n", m);
-    SECU_PrintInteger(out, &pk->u.ec.publicValue, "PublicValue", level+1);
-    /* For named curves, the DEREncodedParams field contains an
-     * ASN Object ID (0x06 is SEC_ASN1_OBJECT_ID).
-     */
-    if ((pk->u.ec.DEREncodedParams.len > 2) &&
-	(pk->u.ec.DEREncodedParams.data[0] == 0x06)) {
-        curveOID.len = pk->u.ec.DEREncodedParams.data[1];
-	curveOID.data = pk->u.ec.DEREncodedParams.data + 2;
-	SECU_PrintObjectID(out, &curveOID, "Curve", level +1);
-    }
-}
-#endif /* NSS_ENABLE_ECC */
-
 static int
 secu_PrintSubjectPublicKeyInfo(FILE *out, PRArenaPool *arena,
 		       CERTSubjectPublicKeyInfo *i,  char *msg, int level)
@@ -1279,15 +1233,10 @@ secu_PrintSubjectPublicKeyInfo(FILE *out, PRArenaPool *arena,
 	    secu_PrintDSAPublicKey(out, pk, "DSA Public Key", level +1);
 	    break;
 
-#ifdef NSS_ENABLE_ECC
-	case ecKey:
-	    secu_PrintECPublicKey(out, pk, "EC Public Key", level +1);
-	    break;
-#endif
-
 	case dhKey:
 	case fortezzaKey:
 	case keaKey:
+	case ecKey:
     	    fprintf(out, "unable to format this SPKI algorithm type\n");
 	    break;
 	default:
@@ -1569,6 +1518,31 @@ SECU_PrintExtensions(FILE *out, CERTCertExtension **extensions,
 		    secu_PrintBasicConstraints(out,tmpitem,"Data",level+1);
 		    break;
 
+		case SEC_OID_X509_SUBJECT_ALT_NAME:
+		case SEC_OID_X509_ISSUER_ALT_NAME:
+	      /*
+	       * We should add at least some of the more interesting cases
+	       * here, but need to have subroutines to back them up.
+	       */
+		case SEC_OID_NS_CERT_EXT_NETSCAPE_OK:
+		case SEC_OID_NS_CERT_EXT_ISSUER_LOGO:
+		case SEC_OID_NS_CERT_EXT_SUBJECT_LOGO:
+		case SEC_OID_NS_CERT_EXT_ENTITY_LOGO:
+		case SEC_OID_NS_CERT_EXT_USER_PICTURE:
+		case SEC_OID_NS_KEY_USAGE_GOVT_APPROVED:
+
+		/* x.509 v3 Extensions */
+		case SEC_OID_X509_SUBJECT_DIRECTORY_ATTR:
+		case SEC_OID_X509_SUBJECT_KEY_ID:
+		case SEC_OID_X509_KEY_USAGE:
+		case SEC_OID_X509_PRIVATE_KEY_USAGE_PERIOD:
+		case SEC_OID_X509_NAME_CONSTRAINTS:
+		case SEC_OID_X509_CRL_DIST_POINTS:
+		case SEC_OID_X509_POLICY_MAPPINGS:
+		case SEC_OID_X509_POLICY_CONSTRAINTS:
+		case SEC_OID_X509_AUTH_KEY_ID:
+		    goto defualt;
+
 		case SEC_OID_X509_EXT_KEY_USAGE:
 		    PrintExtKeyUsageExten(out, tmpitem, "", level+1);
 		    break;
@@ -1599,32 +1573,9 @@ SECU_PrintExtensions(FILE *out, CERTCertExtension **extensions,
 		case SEC_OID_EXT_KEY_USAGE_CODE_SIGN:
 		case SEC_OID_EXT_KEY_USAGE_EMAIL_PROTECT:
 		case SEC_OID_EXT_KEY_USAGE_TIME_STAMP:
-		case SEC_OID_X509_SUBJECT_ALT_NAME:
-		case SEC_OID_X509_ISSUER_ALT_NAME:
-	      /*
-	       * We should add at least some of the more interesting cases
-	       * here, but need to have subroutines to back them up.
-	       */
-		case SEC_OID_NS_CERT_EXT_NETSCAPE_OK:
-		case SEC_OID_NS_CERT_EXT_ISSUER_LOGO:
-		case SEC_OID_NS_CERT_EXT_SUBJECT_LOGO:
-		case SEC_OID_NS_CERT_EXT_ENTITY_LOGO:
-		case SEC_OID_NS_CERT_EXT_USER_PICTURE:
-		case SEC_OID_NS_KEY_USAGE_GOVT_APPROVED:
-
-		/* x.509 v3 Extensions */
-		case SEC_OID_X509_SUBJECT_DIRECTORY_ATTR:
-		case SEC_OID_X509_SUBJECT_KEY_ID:
-		case SEC_OID_X509_KEY_USAGE:
-		case SEC_OID_X509_PRIVATE_KEY_USAGE_PERIOD:
-		case SEC_OID_X509_NAME_CONSTRAINTS:
-		case SEC_OID_X509_CRL_DIST_POINTS:
-		case SEC_OID_X509_POLICY_MAPPINGS:
-		case SEC_OID_X509_POLICY_CONSTRAINTS:
-		case SEC_OID_X509_AUTH_KEY_ID:
-
 
 	        default:
+          defualt:
 		secu_PrintAny(out, tmpitem, "Data", level+1);
 		break;
 	    }
@@ -1680,41 +1631,35 @@ printflags(char *trusts, unsigned int flags)
 
 /* callback for listing certs through pkcs11 */
 SECStatus
-SECU_PrintCertNickname(CERTCertListNode *node, void *data)
+SECU_PrintCertNickname(CERTCertificate *cert, void *data)
 {
     CERTCertTrust *trust;
-    CERTCertificate* cert;
     FILE *out;
     char trusts[30];
     char *name;
 
-    cert = node->cert;
-
     PORT_Memset (trusts, 0, sizeof (trusts));
     out = (FILE *)data;
     
-    name = node->appData;
-    if ( name == NULL) {
-        name = cert->nickname;
-    }
-    if ( name == NULL ) {
-        name = cert->emailAddr;
-    }
-    if ( name == NULL ) {
-        name = "(NULL)";
-    }
-
-    trust = cert->trust;
-    if (trust) {
-        printflags(trusts, trust->sslFlags);
-        PORT_Strcat(trusts, ",");
-        printflags(trusts, trust->emailFlags);
-        PORT_Strcat(trusts, ",");
-        printflags(trusts, trust->objectSigningFlags);
-    } else {
-        PORT_Memcpy(trusts,",,",3);
-    }
-    fprintf(out, "%-60s %-5s\n", name, trusts);
+	name = cert->nickname;
+	if ( name == NULL ) {
+	    name = cert->emailAddr;
+	}
+	if ( name == NULL ) {
+	    name = "(NULL)";
+	}
+	
+        trust = cert->trust;
+	if (trust) {
+	    printflags(trusts, trust->sslFlags);
+	    PORT_Strcat(trusts, ",");
+	    printflags(trusts, trust->emailFlags);
+	    PORT_Strcat(trusts, ",");
+	    printflags(trusts, trust->objectSigningFlags);
+	} else {
+	    PORT_Memcpy(trusts,",,",3);
+	}
+	fprintf(out, "%-60s %-5s\n", name, trusts);
 
     return (SECSuccess);
 }
@@ -1791,6 +1736,7 @@ SECU_PrintCertificate(FILE *out, SECItem *der, char *m, int level)
     if (rv)
 	goto loser;
     SECU_PrintExtensions(out, c->extensions, "Signed Extensions", level+1);
+    SECU_PrintFingerprints(out, &c->derCert, "Fingerprint", level);
 loser:
     PORT_FreeArena(arena, PR_FALSE);
     return rv;
@@ -2225,7 +2171,7 @@ SECU_PrintCrl (FILE *out, SECItem *der, char *m, int level)
 	if (!c)
 	    break;
 
-	rv = SEC_QuickDERDecodeItem(arena, c, SEC_ASN1_GET(CERT_CrlTemplate), der);
+	rv = SEC_ASN1DecodeItem(arena, c, SEC_ASN1_GET(CERT_CrlTemplate), der);
 	if (rv != SECSuccess)
 	    break;
 	SECU_PrintCRLInfo (out, c, m, level);
@@ -2437,7 +2383,6 @@ int SECU_PrintSignedData(FILE *out, SECItem *der, char *m,
     SECU_PrintAsHex(out, &sd->signature, "Signature", level+1);
 loser:
     PORT_FreeArena(arena, PR_FALSE);
-    SECU_PrintFingerprints(out, der, "Fingerprint", level+1);
     return rv;
 
 }
@@ -2550,7 +2495,7 @@ char *
 SECU_ErrorStringRaw(int16 err)
 {
     if (err == 0)
-	SECUErrorBuf[0] = '\0';
+	sprintf(SECUErrorBuf, "");
     else if (err == SEC_ERROR_BAD_DATA)
 	sprintf(SECUErrorBuf, "Bad data");
     else if (err == SEC_ERROR_BAD_DATABASE)
@@ -2674,117 +2619,4 @@ SECU_PrintPRandOSError(char *progName)
     if (errLen > 0 && errLen < sizeof buffer) {
         PR_fprintf(PR_STDERR, "\t%s\n", buffer);
     }
-}
-
-
-static char *
-bestCertName(CERTCertificate *cert) {
-    if (cert->nickname) {
-	return cert->nickname;
-    }
-    if (cert->emailAddr) {
-	return cert->emailAddr;
-    }
-    return cert->subjectName;
-}
-
-void
-SECU_printCertProblems(FILE *outfile, CERTCertDBHandle *handle, 
-	CERTCertificate *cert, PRBool checksig, 
-	SECCertificateUsage certUsage, void *pinArg, PRBool verbose)
-{
-    CERTVerifyLog      log;
-    CERTVerifyLogNode *node   = NULL;
-    unsigned int       depth  = (unsigned int)-1;
-    unsigned int       flags  = 0;
-    char *             errstr = NULL;
-    PRErrorCode	       err    = PORT_GetError();
-
-    log.arena = PORT_NewArena(512);
-    log.head = log.tail = NULL;
-    log.count = 0;
-    CERT_VerifyCertificate(handle, cert, checksig, certUsage, PR_Now(), pinArg, &log, NULL);
-
-    if (log.count > 0) {
-	fprintf(outfile,"PROBLEM WITH THE CERT CHAIN:\n");
-	for (node = log.head; node; node = node->next) {
-	    if (depth != node->depth) {
-		depth = node->depth;
-		fprintf(outfile,"CERT %d. %s %s:\n", depth,
-				 bestCertName(node->cert), 
-			  	 depth ? "[Certificate Authority]": "");
-	    	if (verbose) {
-		    const char * emailAddr;
-		    emailAddr = CERT_GetFirstEmailAddress(node->cert);
-		    if (emailAddr) {
-		    	fprintf(outfile,"Email Address(es): ");
-			do {
-			    fprintf(outfile, "%s\n", emailAddr);
-			    emailAddr = CERT_GetNextEmailAddress(node->cert,
-			                                         emailAddr);
-			} while (emailAddr);
-		    }
-		}
-	    }
-	    fprintf(outfile,"  ERROR %ld: %s\n", node->error,
-						SECU_Strerror(node->error));
-	    errstr = NULL;
-	    switch (node->error) {
-	    case SEC_ERROR_INADEQUATE_KEY_USAGE:
-		flags = (unsigned int)node->arg;
-		switch (flags) {
-		case KU_DIGITAL_SIGNATURE:
-		    errstr = "Cert cannot sign.";
-		    break;
-		case KU_KEY_ENCIPHERMENT:
-		    errstr = "Cert cannot encrypt.";
-		    break;
-		case KU_KEY_CERT_SIGN:
-		    errstr = "Cert cannot sign other certs.";
-		    break;
-		default:
-		    errstr = "[unknown usage].";
-		    break;
-		}
-	    case SEC_ERROR_INADEQUATE_CERT_TYPE:
-		flags = (unsigned int)node->arg;
-		switch (flags) {
-		case NS_CERT_TYPE_SSL_CLIENT:
-		case NS_CERT_TYPE_SSL_SERVER:
-		    errstr = "Cert cannot be used for SSL.";
-		    break;
-		case NS_CERT_TYPE_SSL_CA:
-		    errstr = "Cert cannot be used as an SSL CA.";
-		    break;
-		case NS_CERT_TYPE_EMAIL:
-		    errstr = "Cert cannot be used for SMIME.";
-		    break;
-		case NS_CERT_TYPE_EMAIL_CA:
-		    errstr = "Cert cannot be used as an SMIME CA.";
-		    break;
-		case NS_CERT_TYPE_OBJECT_SIGNING:
-		    errstr = "Cert cannot be used for object signing.";
-		    break;
-		case NS_CERT_TYPE_OBJECT_SIGNING_CA:
-		    errstr = "Cert cannot be used as an object signing CA.";
-		    break;
-		default:
-		    errstr = "[unknown usage].";
-		    break;
-		}
-	    case SEC_ERROR_UNKNOWN_ISSUER:
-	    case SEC_ERROR_UNTRUSTED_ISSUER:
-	    case SEC_ERROR_EXPIRED_ISSUER_CERTIFICATE:
-		errstr = node->cert->issuerName;
-		break;
-	    default:
-		break;
-	    }
-	    if (errstr) {
-		fprintf(stderr,"    %s\n",errstr);
-	    }
-	    CERT_DestroyCertificate(node->cert);
-	}    
-    }
-    PORT_SetError(err); /* restore original error code */
 }

@@ -955,21 +955,16 @@ CERT_SetSlopTime(PRInt32 slop)		/* seconds */
 SECStatus
 CERT_GetCertTimes(CERTCertificate *c, PRTime *notBefore, PRTime *notAfter)
 {
-    SECStatus rv;
-
-    if (!c || !notBefore || !notAfter) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
+    int rv;
     
     /* convert DER not-before time */
-    rv = CERT_DecodeTimeChoice(notBefore, &c->validity.notBefore);
+    rv = DER_UTCTimeToTime(notBefore, &c->validity.notBefore);
     if (rv) {
 	return(SECFailure);
     }
     
     /* convert DER not-after time */
-    rv = CERT_DecodeTimeChoice(notAfter, &c->validity.notAfter);
+    rv = DER_UTCTimeToTime(notAfter, &c->validity.notAfter);
     if (rv) {
 	return(SECFailure);
     }
@@ -1020,14 +1015,14 @@ SEC_GetCrlTimes(CERTCrl *date, PRTime *notBefore, PRTime *notAfter)
     int rv;
     
     /* convert DER not-before time */
-    rv = CERT_DecodeTimeChoice(notBefore, &date->lastUpdate);
+    rv = DER_UTCTimeToTime(notBefore, &date->lastUpdate);
     if (rv) {
 	return(SECFailure);
     }
     
     /* convert DER not-after time */
     if (date->nextUpdate.data) {
-	rv = CERT_DecodeTimeChoice(notAfter, &date->nextUpdate);
+	rv = DER_UTCTimeToTime(notAfter, &date->nextUpdate);
 	if (rv) {
 	    return(SECFailure);
 	}
@@ -1929,7 +1924,7 @@ CERT_IsNewer(CERTCertificate *certa, CERTCertificate *certb)
 	return(PR_FALSE);
     }
 
-    /* get current time */
+    /* get current UTC time */
     now = PR_Now();
 
     if ( newerbefore ) {

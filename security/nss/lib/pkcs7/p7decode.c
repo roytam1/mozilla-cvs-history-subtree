@@ -1249,16 +1249,6 @@ SEC_PKCS7DecodeItem(SECItem *p7item,
     return SEC_PKCS7DecoderFinish(p7dcx);
 }
 
-/*
- * Abort the ASN.1 stream. Used by pkcs 12
- */
-void
-SEC_PKCS7DecoderAbort(SEC_PKCS7DecoderContext *p7dcx, int error)
-{
-    PORT_Assert(p7dcx);
-    SEC_ASN1DecoderAbort(p7dcx->dcx, error);
-}
-
 
 /*
  * If the thing contains any certs or crls return true; false otherwise.
@@ -1447,7 +1437,7 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
     SECKEYPublicKey *publickey;
     SECItem *content_type;
     PK11SymKey *sigkey;
-    SECItem *encoded_stime;
+    SECItem *utc_stime;
     int64 stime;
     SECStatus rv;
 
@@ -1571,10 +1561,10 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
      * both on the cert verification and for importing the sender
      * email profile.
      */
-    encoded_stime = SEC_PKCS7GetSigningTime (cinfo);
-    if (encoded_stime != NULL) {
-	if (CERT_DecodeTimeChoice (&stime, encoded_stime) != SECSuccess)
-	    encoded_stime = NULL;	/* conversion failed, so pretend none */
+    utc_stime = SEC_PKCS7GetSigningTime (cinfo);
+    if (utc_stime != NULL) {
+	if (DER_UTCTimeToTime (&stime, utc_stime) != SECSuccess)
+	    utc_stime = NULL;	/* conversion failed, so pretend none */
     }
 
     /*
@@ -1586,7 +1576,7 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
      * maybe make them pass in the current time, always?).
      */
     if (CERT_VerifyCert (certdb, cert, PR_TRUE, certusage,
-			 encoded_stime != NULL ? stime : PR_Now(),
+			 utc_stime != NULL ? stime : PR_Now(),
 			 cinfo->pwfn_arg, NULL) != SECSuccess)
 	{
 	/*
@@ -1860,7 +1850,7 @@ savecert:
 	    profile = sec_PKCS7AttributeValue (attr);
 	}
 
-	rv = CERT_SaveSMimeProfile (cert, profile, encoded_stime);
+	rv = CERT_SaveSMimeProfile (cert, profile, utc_stime);
 
 	/*
 	 * Restore the saved error in case the calls above set a new

@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -50,12 +46,6 @@
 #include "pcert.h"
 #include "secasn1.h"
 #include "secoid.h"
-
-#ifdef NSS_ENABLE_ECC
-extern SECStatus EC_FillParams(PRArenaPool *arena, 
-			       const SECItem *encodedParams,
-			       ECParams *params);
-#endif
 
 static const SEC_ASN1Template nsslowcert_SubjectPublicKeyInfoTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(NSSLOWCERTSubjectPublicKeyInfo) },
@@ -139,16 +129,11 @@ nsslowcert_GetDefaultCertDB(void)
  */ 
 static unsigned char *
 nsslowcert_dataStart(unsigned char *buf, unsigned int length, 
-			unsigned int *data_length, PRBool includeTag,
-                        unsigned char* rettag) {
+			unsigned int *data_length, PRBool includeTag) {
     unsigned char tag;
     unsigned int used_length= 0;
 
     tag = buf[used_length++];
-
-    if (rettag) {
-        *rettag = tag;
-    }
 
     /* blow out when we come to the end */
     if (tag == 0) {
@@ -176,38 +161,18 @@ nsslowcert_dataStart(unsigned char *buf, unsigned int length,
     return (buf + (includeTag ? 0 : used_length));	
 }
 
-static void SetTimeType(SECItem* item, unsigned char tagtype)
-{
-    switch (tagtype) {
-        case SEC_ASN1_UTC_TIME:
-            item->type = siUTCTime;
-            break;
-
-        case SEC_ASN1_GENERALIZED_TIME:
-            item->type = siGeneralizedTime;
-            break;
-
-        default:
-            PORT_Assert(0);
-            break;
-    }
-}
-
 static int
 nsslowcert_GetValidityFields(unsigned char *buf,int buf_length,
 	SECItem *notBefore, SECItem *notAfter)
 {
-    unsigned char tagtype;
     notBefore->data = nsslowcert_dataStart(buf,buf_length,
-						&notBefore->len,PR_FALSE, &tagtype);
+						&notBefore->len,PR_FALSE);
     if (notBefore->data == NULL) return SECFailure;
-    SetTimeType(notBefore, tagtype);
     buf_length -= (notBefore->data-buf) + notBefore->len;
     buf = notBefore->data + notBefore->len;
     notAfter->data = nsslowcert_dataStart(buf,buf_length,
-						&notAfter->len,PR_FALSE, &tagtype);
+						&notAfter->len,PR_FALSE);
     if (notAfter->data == NULL) return SECFailure;
-    SetTimeType(notAfter, tagtype);
     return SECSuccess;
 }
 
@@ -222,33 +187,33 @@ nsslowcert_GetCertFields(unsigned char *cert,int cert_length,
     unsigned int dummylen;
 
     /* get past the signature wrap */
-    buf = nsslowcert_dataStart(cert,cert_length,&buf_length,PR_FALSE, NULL);
+    buf = nsslowcert_dataStart(cert,cert_length,&buf_length,PR_FALSE);
     if (buf == NULL) return SECFailure;
     /* get into the raw cert data */
-    buf = nsslowcert_dataStart(buf,buf_length,&buf_length,PR_FALSE, NULL);
+    buf = nsslowcert_dataStart(buf,buf_length,&buf_length,PR_FALSE);
     if (buf == NULL) return SECFailure;
     /* skip past any optional version number */
     if ((buf[0] & 0xa0) == 0xa0) {
-	dummy = nsslowcert_dataStart(buf,buf_length,&dummylen,PR_FALSE, NULL);
+	dummy = nsslowcert_dataStart(buf,buf_length,&dummylen,PR_FALSE);
 	if (dummy == NULL) return SECFailure;
 	buf_length -= (dummy-buf) + dummylen;
 	buf = dummy + dummylen;
     }
     /* serial number */
     if (derSN) {
-	derSN->data=nsslowcert_dataStart(buf,buf_length,&derSN->len,PR_TRUE, NULL);
+	derSN->data=nsslowcert_dataStart(buf,buf_length,&derSN->len,PR_TRUE);
     }
-    serial->data = nsslowcert_dataStart(buf,buf_length,&serial->len,PR_FALSE, NULL);
+    serial->data = nsslowcert_dataStart(buf,buf_length,&serial->len,PR_FALSE);
     if (serial->data == NULL) return SECFailure;
     buf_length -= (serial->data-buf) + serial->len;
     buf = serial->data + serial->len;
     /* skip the OID */
-    dummy = nsslowcert_dataStart(buf,buf_length,&dummylen,PR_FALSE, NULL);
+    dummy = nsslowcert_dataStart(buf,buf_length,&dummylen,PR_FALSE);
     if (dummy == NULL) return SECFailure;
     buf_length -= (dummy-buf) + dummylen;
     buf = dummy + dummylen;
     /* issuer */
-    issuer->data = nsslowcert_dataStart(buf,buf_length,&issuer->len,PR_TRUE, NULL);
+    issuer->data = nsslowcert_dataStart(buf,buf_length,&issuer->len,PR_TRUE);
     if (issuer->data == NULL) return SECFailure;
     buf_length -= (issuer->data-buf) + issuer->len;
     buf = issuer->data + issuer->len;
@@ -258,17 +223,17 @@ nsslowcert_GetCertFields(unsigned char *cert,int cert_length,
 	return SECSuccess;
     }
     /* validity */
-    valid->data = nsslowcert_dataStart(buf,buf_length,&valid->len,PR_FALSE, NULL);
+    valid->data = nsslowcert_dataStart(buf,buf_length,&valid->len,PR_FALSE);
     if (valid->data == NULL) return SECFailure;
     buf_length -= (valid->data-buf) + valid->len;
     buf = valid->data + valid->len;
     /*subject */
-    subject->data=nsslowcert_dataStart(buf,buf_length,&subject->len,PR_TRUE, NULL);
+    subject->data=nsslowcert_dataStart(buf,buf_length,&subject->len,PR_TRUE);
     if (subject->data == NULL) return SECFailure;
     buf_length -= (subject->data-buf) + subject->len;
     buf = subject->data + subject->len;
     /* subject  key info */
-    subjkey->data=nsslowcert_dataStart(buf,buf_length,&subjkey->len,PR_TRUE, NULL);
+    subjkey->data=nsslowcert_dataStart(buf,buf_length,&subjkey->len,PR_TRUE);
     if (subjkey->data == NULL) return SECFailure;
     buf_length -= (subjkey->data-buf) + subjkey->len;
     buf = subjkey->data + subjkey->len;
@@ -288,15 +253,15 @@ nsslowcert_GetCertTimes(NSSLOWCERTCertificate *c, PRTime *notBefore, PRTime *not
     }
     
     /* convert DER not-before time */
-    rv = CERT_DecodeTimeChoice(notBefore, &validity.notBefore);
+    rv = DER_UTCTimeToTime(notBefore, &validity.notBefore);
     if (rv) {
-        return(SECFailure);
+	return(SECFailure);
     }
     
     /* convert DER not-after time */
-    rv = CERT_DecodeTimeChoice(notAfter, &validity.notAfter);
+    rv = DER_UTCTimeToTime(notAfter, &validity.notAfter);
     if (rv) {
-        return(SECFailure);
+	return(SECFailure);
     }
 
     return(SECSuccess);
@@ -340,7 +305,7 @@ nsslowcert_IsNewer(NSSLOWCERTCertificate *certa, NSSLOWCERTCertificate *certb)
 	return(PR_FALSE);
     }
 
-    /* get current time */
+    /* get current UTC time */
     now = PR_Now();
 
     if ( newerbefore ) {
@@ -592,28 +557,6 @@ nsslowcert_ExtractPublicKey(NSSLOWCERTCertificate *cert)
 				 nsslowcert_DHPublicKeyTemplate, &os);
         if (rv == SECSuccess) return pubk;
         break;
-#ifdef NSS_ENABLE_ECC
-      case SEC_OID_ANSIX962_EC_PUBLIC_KEY:
-        pubk->keyType = NSSLOWKEYECKey;
-	/* Since PKCS#11 directly takes the DER encoding of EC params
-	 * and public value, we don't need any decoding here.
-	 */
-        rv = SECITEM_CopyItem(arena, &pubk->u.ec.ecParams.DEREncoding, 
-	    &spki.algorithm.parameters);
-        if ( rv != SECSuccess )
-            break;	
-
-	/* Fill out the rest of the ecParams structure 
-	 * based on the encoded params
-	 */
-	if (EC_FillParams(arena, &pubk->u.ec.ecParams.DEREncoding,
-	    &pubk->u.ec.ecParams) != SECSuccess) 
-	    break;
-
-        rv = SECITEM_CopyItem(arena, &pubk->u.ec.publicValue, &os);
-	if (rv == SECSuccess) return pubk;
-        break;
-#endif /* NSS_ENABLE_ECC */
       default:
         rv = SECFailure;
         break;

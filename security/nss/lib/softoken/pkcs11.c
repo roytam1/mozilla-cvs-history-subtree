@@ -1068,7 +1068,6 @@ pk11_handlePublicKeyObject(PK11Session *session, PK11Object *object,
 	if ( !pk11_hasAttribute(object, CKA_EC_POINT)) {
 	    return CKR_TEMPLATE_INCOMPLETE;
 	}
-	pubKeyAttr = CKA_EC_POINT;
 	derive = CK_TRUE;    /* for ECDH */
 	verify = CK_TRUE;    /* for ECDSA */
 	encrypt = CK_FALSE;
@@ -1220,9 +1219,6 @@ pk11_handlePrivateKeyObject(PK11Session *session,PK11Object *object,CK_KEY_TYPE 
 	if ( !pk11_hasAttribute(object, CKA_VALUE)) {
 	    return CKR_TEMPLATE_INCOMPLETE;
 	}
-	if ( !pk11_hasAttribute(object, CKA_NETSCAPE_DB)) {
-	    return CKR_TEMPLATE_INCOMPLETE;
-	}
 	encrypt = CK_FALSE;
 	recover = CK_FALSE;
 	wrap = CK_FALSE;
@@ -1332,8 +1328,6 @@ validateSecretKey(PK11Session *session, PK11Object *object,
     CK_BBOOL cktrue = CK_TRUE;
     CK_BBOOL ckfalse = CK_FALSE;
     PK11Attribute *attribute = NULL;
-    unsigned long requiredLen;
-
     crv = pk11_defaultAttribute(object,CKA_SENSITIVE,
 				isFIPS?&cktrue:&ckfalse,sizeof(CK_BBOOL));
     if (crv != CKR_OK)  return crv; 
@@ -1396,13 +1390,7 @@ validateSecretKey(PK11Session *session, PK11Object *object,
     case CKK_CDMF:
 	attribute = pk11_FindAttribute(object,CKA_VALUE);
 	/* shouldn't happen */
-	if (attribute == NULL) 
-	    return CKR_TEMPLATE_INCOMPLETE;
-	requiredLen = pk11_MapKeySize(key_type);
-	if (attribute->attrib.ulValueLen != requiredLen) {
-	    pk11_FreeAttribute(attribute);
-	    return CKR_KEY_SIZE_RANGE;
-	}
+	if (attribute == NULL) return CKR_TEMPLATE_INCOMPLETE;
 	pk11_FormatDESKey((unsigned char*)attribute->attrib.pValue,
 						 attribute->attrib.ulValueLen);
 	pk11_FreeAttribute(attribute);
@@ -2001,12 +1989,10 @@ pk11_mkPrivKey(PK11Object *object, CK_KEY_TYPE key_type, CK_RV *crvp)
 	crv = pk11_Attribute2SSecItem(arena,&privKey->u.ec.privateValue,
 							object,CKA_VALUE);
 	if (crv != CKR_OK) break;
-	crv = pk11_Attribute2SSecItem(arena, &privKey->u.ec.publicValue,
+	/* XXX Why does this break handlePrivateKeyObject ? 
+	crv = pk11_Attribute2SSecItem(arena,&privKey->u.ec.publicValue,
 				      object,CKA_NETSCAPE_DB);
-	if (crv != CKR_OK) break;
-        rv = DER_SetUInteger(privKey->arena, &privKey->u.ec.version,
-                          NSSLOWKEY_EC_PRIVATE_KEY_VERSION);
-	if (rv != SECSuccess) crv = CKR_HOST_MEMORY;
+	*/
 	break;
 #endif /* NSS_ENABLE_ECC */
 
@@ -3323,16 +3309,16 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
 						 flags | CKF_SERIAL_SESSION);
     if (session == NULL) return CKR_HOST_MEMORY;
 
+    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
     if (slot->readOnly && (flags & CKF_RW_SESSION)) {
 	/* NETSCAPE_SLOT_ID is Read ONLY */
 	session->info.flags &= ~CKF_RW_SESSION;
     }
-    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
-    ++slot->sessionCount;
-    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
+    slot->sessionCount++;
     if (session->info.flags & CKF_RW_SESSION) {
-	PR_AtomicIncrement(&slot->rwSessionCount);
+	slot->rwSessionCount++;
     }
+    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 
     do {
         do {
@@ -3379,18 +3365,19 @@ CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
     }
     PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,hSession));)
 
+    PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
     if (sessionFound) {
-	PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
-	if (--slot->sessionCount == 0) {
-	    pw = slot->password;
-	    slot->isLoggedIn = PR_FALSE;
-	    slot->password = NULL;
-	}
-	PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
+	slot->sessionCount--;
 	if (session->info.flags & CKF_RW_SESSION) {
-	    PR_AtomicDecrement(&slot->rwSessionCount);
+	    slot->rwSessionCount--;
 	}
     }
+    if (slot->sessionCount == 0) {
+	pw = slot->password;
+	slot->isLoggedIn = PR_FALSE;
+	slot->password = NULL;
+    }
+    PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 
     pk11_FreeSession(session);
     if (pw) SECITEM_ZfreeItem(pw, PR_TRUE);
@@ -3436,11 +3423,11 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
 		session->next = session->prev = NULL;
 		PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,i));)
 		PK11_USE_THREADS(PZ_Lock(slot->slotLock);)
-		--slot->sessionCount;
-		PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
+		slot->sessionCount--;
 		if (session->info.flags & CKF_RW_SESSION) {
-		    PR_AtomicDecrement(&slot->rwSessionCount);
+		    slot->rwSessionCount--;
 		}
+		PK11_USE_THREADS(PZ_Unlock(slot->slotLock);)
 	    } else {
 		PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,i));)
 	    }

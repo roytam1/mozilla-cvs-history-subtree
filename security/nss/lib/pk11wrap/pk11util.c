@@ -182,8 +182,6 @@ SECMOD_AddModuleToUnloadList(SECMODModule *newModule) {
  * get the list of PKCS11 modules that are available.
  */
 SECMODModuleList *SECMOD_GetDefaultModuleList() { return modules; }
-SECMODModuleList *SECMOD_GetDeadModuleList() { return modulesUnload; }
-SECMODModuleList *SECMOD_GetDBModuleList() { return modulesDB; }
 SECMODListLock *SECMOD_GetDefaultModuleListLock() { return moduleLock; }
 
 
@@ -192,7 +190,7 @@ SECMODListLock *SECMOD_GetDefaultModuleListLock() { return moduleLock; }
  * find a module by name, and add a reference to it.
  * return that module.
  */
-SECMODModule *SECMOD_FindModule(const char *name) {
+SECMODModule *SECMOD_FindModule(char *name) {
     SECMODModuleList *mlp;
     SECMODModule *module = NULL;
 
@@ -204,18 +202,6 @@ SECMODModule *SECMOD_FindModule(const char *name) {
 	    break;
 	}
     }
-    if (module) {
-	goto found;
-    }
-    for(mlp = modulesUnload; mlp != NULL; mlp = mlp->next) {
-	if (PORT_Strcmp(name,mlp->module->commonName) == 0) {
-	    module = mlp->module;
-	    SECMOD_ReferenceModule(module);
-	    break;
-	}
-    }
-
-found:
     SECMOD_ReleaseReadLock(moduleLock);
 
     return module;
@@ -270,17 +256,16 @@ PK11SlotInfo *SECMOD_LookupSlot(SECMODModuleID moduleID,CK_SLOT_ID slotID) {
  * optionally remove it from secmod.db.
  */
 SECStatus
-SECMOD_DeleteModuleEx(const char *name, SECMODModule *mod, 
-						int *type, PRBool permdb) 
-{
+SECMOD_DeleteModuleEx(char *name, SECMODModule *mod, int *type, PRBool permdb) {
     SECMODModuleList *mlp;
     SECMODModuleList **mlpp;
     SECStatus rv = SECFailure;
 
+
     *type = SECMOD_EXTERNAL;
 
     SECMOD_GetWriteLock(moduleLock);
-    for (mlpp = &modules,mlp = modules; 
+    for(mlpp = &modules,mlp = modules; 
 				mlp != NULL; mlpp = &mlp->next, mlp = *mlpp) {
 	if ((name && (PORT_Strcmp(name,mlp->module->commonName) == 0)) ||
 							mod == mlp->module) {
@@ -297,27 +282,6 @@ SECMOD_DeleteModuleEx(const char *name, SECMODModule *mod,
 	    break;
 	}
     }
-    if (mlp) {
-	goto found;
-    }
-    /* not on the internal list, check the unload list */
-    for (mlpp = &modulesUnload,mlp = modulesUnload; 
-				mlp != NULL; mlpp = &mlp->next, mlp = *mlpp) {
-	if ((name && (PORT_Strcmp(name,mlp->module->commonName) == 0)) ||
-							mod == mlp->module) {
-	    /* don't delete the internal module */
-	    if (!mlp->module->internal) {
-		SECMOD_RemoveList(mlpp,mlp);
-		rv = SECSuccess;
-	    } else if (mlp->module->isFIPS) {
-		*type = SECMOD_FIPS;
-	    } else {
-		*type = SECMOD_INTERNAL;
-	    }
-	    break;
-	}
-    }
-found:
     SECMOD_ReleaseWriteLock(moduleLock);
 
 
@@ -334,7 +298,7 @@ found:
  * find a module by name and delete it off the module list
  */
 SECStatus
-SECMOD_DeleteModule(const char *name, int *type) {
+SECMOD_DeleteModule(char *name, int *type) {
     return SECMOD_DeleteModuleEx(name, NULL, type, PR_TRUE);
 }
 
@@ -342,7 +306,7 @@ SECMOD_DeleteModule(const char *name, int *type) {
  * find a module by name and delete it off the module list
  */
 SECStatus
-SECMOD_DeleteInternalModule(const char *name) {
+SECMOD_DeleteInternalModule(char *name) {
     SECMODModuleList *mlp;
     SECMODModuleList **mlpp;
     SECStatus rv = SECFailure;
@@ -446,7 +410,7 @@ SECMOD_AddModule(SECMODModule *newModule) {
     return rv;
 }
 
-PK11SlotInfo *SECMOD_FindSlot(SECMODModule *module,const char *name) {
+PK11SlotInfo *SECMOD_FindSlot(SECMODModule *module,char *name) {
     int i;
     char *string;
 
@@ -497,7 +461,7 @@ PK11_IsFIPS(void)
 /* combines NewModule() & AddModule */
 /* give a string for the module name & the full-path for the dll, */
 /* installs the PKCS11 module & update registry */
-SECStatus SECMOD_AddNewModuleEx(const char* moduleName, const char* dllPath,
+SECStatus SECMOD_AddNewModuleEx(char* moduleName, char* dllPath,
                               unsigned long defaultMechanismFlags,
                               unsigned long cipherEnableFlags,
                               char* modparms,
@@ -509,7 +473,7 @@ SECStatus SECMOD_AddNewModuleEx(const char* moduleName, const char* dllPath,
 
     PR_SetErrorText(0, NULL);
 
-    module = SECMOD_CreateModule(dllPath, moduleName, modparms, nssparms);
+    module = SECMOD_CreateModule(dllPath,moduleName, modparms, nssparms);
 
     if (module == NULL) {
 	return result;
@@ -550,7 +514,7 @@ SECStatus SECMOD_AddNewModuleEx(const char* moduleName, const char* dllPath,
     return result;
 }
 
-SECStatus SECMOD_AddNewModule(const char* moduleName, const char* dllPath,
+SECStatus SECMOD_AddNewModule(char* moduleName, char* dllPath,
                               unsigned long defaultMechanismFlags,
                               unsigned long cipherEnableFlags)
 {

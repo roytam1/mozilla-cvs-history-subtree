@@ -64,10 +64,6 @@
 extern void SEC_Init(void);		/* XXX */
 char *progName = NULL;
 static int cms_verbose = 0;
-static secuPWData pwdata = { PW_NONE, 0 };
-static PK11PasswordFunc pwcb = NULL;
-static void *pwcb_arg = NULL;
-
 
 /* XXX stolen from cmsarray.c
  * nss_CMSArray_Count - count number of elements in array
@@ -208,7 +204,18 @@ decode(FILE *out, SECItem *output, SECItem *input,
     SECOidTag typetag;
     SECItem **digests;
     PLArenaPool *poolp;
+    PK11PasswordFunc pwcb;
+    void *pwcb_arg;
     SECItem *item, sitem = { 0, 0, 0 };
+    secuPWData pwdata = { PW_NONE, 0 };
+
+    if (decodeOptions->options->password)
+    {
+        pwdata.source = PW_PLAINTEXT;
+        pwdata.data = decodeOptions->options->password;
+    }
+    pwcb = SECU_GetModulePassword;
+    pwcb_arg = (void *)&pwdata;
 
     if (decodeOptions->contentFile) {
 	/* detached content: grab content file */
@@ -408,7 +415,7 @@ signed_data(struct signOptionsStr *signOptions)
                                          signOptions->nickname,
                                          signOptions->options->certUsage,
                                          PR_FALSE,
-                                         &pwdata)) == NULL) {
+                                         NULL)) == NULL) {
 	SECU_PrintError(progName, 
 	                "the corresponding cert for key \"%s\" does not exist",
 	                signOptions->nickname);
@@ -512,7 +519,7 @@ signed_data(struct signOptionsStr *signOptions)
                                               signOptions->nickname,
                                               certUsageEmailRecipient,
                                               PR_FALSE,
-                                              &pwdata)) == NULL) {
+                                              NULL)) == NULL) {
                 SECU_PrintError(progName, 
                          "the corresponding cert for key \"%s\" does not exist",
                          signOptions->encryptionKeyPreferenceNick);
@@ -544,7 +551,7 @@ signed_data(struct signOptionsStr *signOptions)
 	if ((ekpcert = CERT_FindUserCertByUsage(
                                      signOptions->options->certHandle, 
 	                             signOptions->encryptionKeyPreferenceNick,
-                                     certUsageEmailRecipient, PR_FALSE, &pwdata))
+                                     certUsageEmailRecipient, PR_FALSE, NULL))
 	      == NULL) {
 	    SECU_PrintError(progName, 
 	               "the corresponding cert for key \"%s\" does not exist",
@@ -952,6 +959,8 @@ main(int argc, char **argv)
     PLOptState *optstate;
     PLOptStatus status;
     Mode mode = UNKNOWN;
+    PK11PasswordFunc pwcb;
+    void *pwcb_arg;
     struct decodeOptionsStr decodeOptions = { 0 };
     struct signOptionsStr signOptions = { 0 };
     struct envelopeOptionsStr envelopeOptions = { 0 };
@@ -1026,6 +1035,7 @@ main(int argc, char **argv)
        case 'H':
            if (mode != SIGN) {
                fprintf(stderr,
+                       "%s: option -n only supported with option -D.\n",
                        "%s: option -H only supported with option -S.\n",
                        progName);
                Usage(progName);
@@ -1241,16 +1251,6 @@ main(int argc, char **argv)
     if (cms_verbose) {
 	fprintf(stderr, "Got default certdb\n");
     }
-    if (options.password)
-    {
-    	pwdata.source = PW_PLAINTEXT;
-    	pwdata.data = options.password;
-    }
-    pwcb = SECU_GetModulePassword;
-    pwcb_arg = (void *)&pwdata;
-
-    PK11_SetPasswordFunc(&SECU_GetModulePassword);
-
 
 #if defined(_WIN32)
     if (outFile == stdout) {
@@ -1378,6 +1378,14 @@ main(int argc, char **argv)
 	    fprintf(stderr, "%s: out of memory.\n", progName);
 	    exit(1);
 	}
+
+	if (options.password)
+	{
+    	    pwdata.source = PW_PLAINTEXT;
+    	    pwdata.data = options.password;
+	}
+	pwcb = SECU_GetModulePassword;
+	pwcb_arg = (void *)&pwdata;
 
 	if (cms_verbose) {
 	    fprintf(stderr, "cmsg [%p]\n", cmsg);

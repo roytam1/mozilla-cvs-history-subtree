@@ -353,7 +353,7 @@ struct PK11SessionStr {
  * (head[]->refCount),  objectLock protects all elements of the token
  * object hash table (tokObjects[], tokenIDCount, and tokenHashTable),
  * and slotLock protects the remaining protected elements:
- * password, isLoggedIn, ssoLoggedIn, and sessionCount
+ * password, isLoggedIn, ssoLoggedIn, sessionCount, and rwSessionCount.
  */
 struct PK11SlotStr {
     CK_SLOT_ID		slotID;
@@ -376,7 +376,7 @@ struct PK11SlotStr {
     PRInt32		sessionIDCount;  /* atomically incremented */
     int			sessionIDConflict;  /* not protected by a lock */
     int			sessionCount;
-    PRInt32             rwSessionCount; /* set by atomic operations */
+    int			rwSessionCount;
     int			tokenIDCount;
     int			index;
     PLHashTable		*tokenHashTable;
@@ -447,12 +447,8 @@ struct PK11SSLMACInfoStr {
 #define pk11_SlotFromSession(sp) ((sp)->slot)
 #define pk11_isToken(id) (((id) & PK11_TOKEN_MASK) == PK11_TOKEN_MAGIC)
 
-/* the session hash multiplier (see bug 201081) */
-#define SHMULTIPLIER 1791398085
-
 /* queueing helper macros */
-#define pk11_hash(value,size) \
-	((PRUint32)((value) * SHMULTIPLIER) & (size-1))
+#define pk11_hash(value,size) ((value) & (size-1))/*size must be a power of 2*/
 #define pk11queue_add(element,id,head,hash_size) \
 	{ int tmp = pk11_hash(id,hash_size); \
 	(element)->next = (head)[tmp]; \
@@ -472,34 +468,6 @@ struct PK11SSLMACInfoStr {
 	   else (head)[pk11_hash(id,hash_size)] = ((element)->next); \
 	(element)->next = NULL; \
 	(element)->prev = NULL; \
-
-#define pk11queue_init_element(element) \
-    (element)->prev = NULL;
-
-#define pk11queue_add2(element, id, index, head) \
-    {                                            \
-	(element)->next = (head)[index];         \
-	if ((head)[index])                       \
-	    (head)[index]->prev = (element);     \
-	(head)[index] = (element);               \
-    }
-
-#define pk11queue_find2(element, id, index, head) \
-    for ( (element) = (head)[index];              \
-          (element) != NULL;                      \
-          (element) = (element)->next) {          \
-	if ((element)->handle == (id)) { break; } \
-    }
-
-#define pk11queue_delete2(element, id, index, head) \
-	if ((element)->next) (element)->next->prev = (element)->prev; \
-	if ((element)->prev) (element)->prev->next = (element)->next; \
-	   else (head)[index] = ((element)->next);
-
-#define pk11queue_clear_deleted_element(element) \
-	(element)->next = NULL; \
-	(element)->prev = NULL; \
-
 
 /* sessionID (handle) is used to determine session lock bucket */
 #ifdef NOSPREAD

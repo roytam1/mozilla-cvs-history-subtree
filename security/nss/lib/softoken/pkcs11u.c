@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- * 
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -467,11 +463,6 @@ pk11_GetPubItem(NSSLOWKEYPublicKey *pubKey) {
     case NSSLOWKEYDHKey:
 	    pubItem = &pubKey->u.dh.publicValue;
 	    break;
-#ifdef NSS_ENABLE_ECC
-    case NSSLOWKEYECKey:
-	    pubItem = &pubKey->u.ec.publicValue;
-	    break;
-#endif /* NSS_ENABLE_ECC */
     default:
 	    break;
     }
@@ -587,44 +578,6 @@ pk11_FindDHPublicKeyAttribute(NSSLOWKEYPublicKey *key, CK_ATTRIBUTE_TYPE type)
     return NULL;
 }
 
-#ifdef NSS_ENABLE_ECC
-static PK11Attribute *
-pk11_FindECPublicKeyAttribute(NSSLOWKEYPublicKey *key, CK_ATTRIBUTE_TYPE type)
-{
-    unsigned char hash[SHA1_LENGTH];
-    CK_KEY_TYPE keyType = CKK_EC;
-
-    switch (type) {
-    case CKA_KEY_TYPE:
-	return pk11_NewTokenAttribute(type,&keyType,sizeof(keyType), PR_TRUE);
-    case CKA_ID:
-	SHA1_HashBuf(hash, key->u.ec.publicValue.data,
-		     key->u.ec.publicValue.len);
-	return pk11_NewTokenAttribute(type,hash,SHA1_LENGTH, PR_TRUE);
-    case CKA_DERIVE:
-    case CKA_VERIFY:
-	return (PK11Attribute *) &pk11_StaticTrueAttr;
-    case CKA_ENCRYPT:
-    case CKA_VERIFY_RECOVER:
-    case CKA_WRAP:
-	return (PK11Attribute *) &pk11_StaticFalseAttr;
-    case CKA_EC_PARAMS:
-        /* XXX Why is the last arg PR_FALSE? */
-	return pk11_NewTokenAttributeSigned(type,
-					key->u.ec.ecParams.DEREncoding.data,
-					key->u.ec.ecParams.DEREncoding.len,
-					PR_FALSE);
-    case CKA_EC_POINT:
-        /* XXX Why is the last arg PR_FALSE? */
-	return pk11_NewTokenAttributeSigned(type,key->u.ec.publicValue.data,
-					key->u.ec.publicValue.len, PR_FALSE);
-    default:
-	break;
-    }
-    return NULL;
-}
-#endif /* NSS_ENABLE_ECC */
-
 static PK11Attribute *
 pk11_FindPublicKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 {
@@ -666,10 +619,6 @@ pk11_FindPublicKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 	return pk11_FindDSAPublicKeyAttribute(key,type);
     case NSSLOWKEYDHKey:
 	return pk11_FindDHPublicKeyAttribute(key,type);
-#ifdef NSS_ENABLE_ECC
-    case NSSLOWKEYECKey:
-	return pk11_FindECPublicKeyAttribute(key,type);
-#endif /* NSS_ENABLE_ECC */
     default:
 	break;
     }
@@ -697,9 +646,9 @@ pk11_FindSecretKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
     case CKA_VERIFY:
     case CKA_WRAP:
     case CKA_UNWRAP:
-    case CKA_MODIFIABLE:
 	return (PK11Attribute *) &pk11_StaticTrueAttr;
     case CKA_NEVER_EXTRACTABLE:
+    case CKA_MODIFIABLE:
 	return (PK11Attribute *) &pk11_StaticFalseAttr;
     case CKA_LABEL:
         label = nsslowkey_FindKeyNicknameByPublicKey(object->obj.slot->keyDB,
@@ -848,41 +797,6 @@ pk11_FindDHPrivateKeyAttribute(NSSLOWKEYPrivateKey *key, CK_ATTRIBUTE_TYPE type)
     return NULL;
 }
 
-#ifdef NSS_ENABLE_ECC
-static PK11Attribute *
-pk11_FindECPrivateKeyAttribute(NSSLOWKEYPrivateKey *key, CK_ATTRIBUTE_TYPE type)
-{
-    unsigned char hash[SHA1_LENGTH];
-    CK_KEY_TYPE keyType = CKK_EC;
-
-    switch (type) {
-    case CKA_KEY_TYPE:
-	return pk11_NewTokenAttribute(type,&keyType,sizeof(keyType), PR_TRUE);
-    case CKA_ID:
-	SHA1_HashBuf(hash,key->u.ec.publicValue.data,key->u.ec.publicValue.len);
-	return pk11_NewTokenAttribute(type,hash,SHA1_LENGTH, PR_TRUE);
-    case CKA_DERIVE:
-    case CKA_SIGN:
-	return (PK11Attribute *) &pk11_StaticTrueAttr;
-    case CKA_DECRYPT:
-    case CKA_SIGN_RECOVER:
-    case CKA_UNWRAP:
-	return (PK11Attribute *) &pk11_StaticFalseAttr;
-    case CKA_VALUE:
-	return (PK11Attribute *) &pk11_StaticNullAttr;
-    case CKA_EC_PARAMS:
-        /* XXX Why is the last arg PR_FALSE? */
-	return pk11_NewTokenAttributeSigned(type,
-					key->u.ec.ecParams.DEREncoding.data,
-					key->u.ec.ecParams.DEREncoding.len,
-					PR_FALSE);
-    default:
-	break;
-    }
-    return NULL;
-}
-#endif /* NSS_ENABLE_ECC */
-
 static PK11Attribute *
 pk11_FindPrivateKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 {
@@ -924,10 +838,6 @@ pk11_FindPrivateKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 	return pk11_FindDSAPrivateKeyAttribute(key,type);
     case NSSLOWKEYDHKey:
 	return pk11_FindDHPrivateKeyAttribute(key,type);
-#ifdef NSS_ENABLE_ECC
-    case NSSLOWKEYECKey:
-	return pk11_FindECPrivateKeyAttribute(key,type);
-#endif /* NSS_ENABLE_ECC */
     default:
 	break;
     }
@@ -2200,19 +2110,23 @@ pk11_ReferenceObject(PK11Object *object)
 static PK11Object *
 pk11_ObjectFromHandleOnSlot(CK_OBJECT_HANDLE handle, PK11Slot *slot)
 {
+    PK11Object **head;
+    PZLock *lock;
     PK11Object *object;
-    PRUint32 index = pk11_hash(handle, slot->tokObjHashSize);
 
     if (pk11_isToken(handle)) {
 	return pk11_NewTokenObject(slot, NULL, handle);
     }
 
-    PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
-    pk11queue_find2(object, handle, index, slot->tokObjects);
+    head = slot->tokObjects;
+    lock = slot->objectLock;
+
+    PK11_USE_THREADS(PZ_Lock(lock);)
+    pk11queue_find(object,handle,head,slot->tokObjHashSize);
     if (object) {
 	pk11_ReferenceObject(object);
     }
-    PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
+    PK11_USE_THREADS(PZ_Unlock(lock);)
 
     return(object);
 }
@@ -2261,10 +2175,8 @@ pk11_FreeObject(PK11Object *object)
 void
 pk11_AddSlotObject(PK11Slot *slot, PK11Object *object)
 {
-    PRUint32 index = pk11_hash(object->handle, slot->tokObjHashSize);
-    pk11queue_init_element(object);
     PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
-    pk11queue_add2(object, object->handle, index, slot->tokObjects);
+    pk11queue_add(object,object->handle,slot->tokObjects,slot->tokObjHashSize);
     PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
 }
 
@@ -2298,7 +2210,6 @@ pk11_DeleteObject(PK11Session *session, PK11Object *object)
     NSSLOWCERTCertificate *cert;
     NSSLOWCERTCertTrust tmptrust;
     PRBool isKrl;
-    PRUint32 index = pk11_hash(object->handle, slot->tokObjHashSize);
 
   /* Handle Token case */
     if (so && so->session) {
@@ -2307,9 +2218,9 @@ pk11_DeleteObject(PK11Session *session, PK11Object *object)
 	pk11queue_delete(&so->sessionList,0,session->objects,0);
 	PK11_USE_THREADS(PZ_Unlock(session->objectLock);)
 	PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
-	pk11queue_delete2(object, object->handle, index, slot->tokObjects);
+	pk11queue_delete(object,object->handle,slot->tokObjects,
+						slot->tokObjHashSize);
 	PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
-	pk11queue_clear_deleted_element(object);
 	pk11_FreeObject(object); /* reduce it's reference count */
     } else {
 	PORT_Assert(to);

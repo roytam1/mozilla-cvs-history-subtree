@@ -109,6 +109,3 @@ _PR_x86_AtomicAdd:
     xaddl %eax, (%ecx)
     addl %edx, %eax
     ret
-
-/ Magic indicating no need for an executable stack
-.section .note.GNU-stack, "", @progbits ; .previous

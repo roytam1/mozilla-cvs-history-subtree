@@ -796,12 +796,8 @@ done:
 
     if (pkcs11db) {
 	secmod_CloseDB(pkcs11db);
-    } else if (moduleList[0] && rw) {
+    } else {
 	secmod_AddPermDB(appName,filename,dbname,moduleList[0], rw) ;
-    }
-    if (!moduleList[0]) {
-	PORT_Free(moduleList);
-	moduleList = NULL;
     }
     return moduleList;
 }
@@ -810,13 +806,11 @@ SECStatus
 secmod_ReleasePermDBData(const char *appName, const char *filename, 
 			const char *dbname, char **moduleSpecList, PRBool rw)
 {
-    if (moduleSpecList) {
-	char **index;
-	for(index = moduleSpecList; *index; index++) {
-	    PR_smprintf_free(*index);
-	}
-	PORT_Free(moduleSpecList);
+    char **index;
+    for(index = moduleSpecList; *index; index++) {
+	PR_smprintf_free(*index);
     }
+    PORT_Free(moduleSpecList);
     return SECSuccess;
 }
 

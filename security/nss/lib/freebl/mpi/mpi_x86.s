@@ -340,6 +340,3 @@ s_mpv_div_2dx1d:
        ret    
        nop
   
- # Magic indicating no need for an executable stack
-.section .note.GNU-stack, "", @progbits
-.previous

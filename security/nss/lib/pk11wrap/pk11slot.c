@@ -406,9 +406,15 @@ PK11_NewSlotInfo(SECMODModule *mod)
     if (slot == NULL) return slot;
 
 #ifdef PKCS11_USE_THREADS
+    slot->refLock = PZ_NewLock(nssILockSlot);
+    if (slot->refLock == NULL) {
+	PORT_Free(slot);
+	return slot;
+    }
     slot->sessionLock = mod->isThreadSafe ?
 	PZ_NewLock(nssILockSession) : (PZLock *)mod->refLock;
     if (slot->sessionLock == NULL) {
+	PZ_DestroyLock(slot->refLock);
 	PORT_Free(slot);
 	return slot;
     }
@@ -417,11 +423,13 @@ PK11_NewSlotInfo(SECMODModule *mod)
 	if (mod->isThreadSafe) {
 	    PZ_DestroyLock(slot->sessionLock);
 	}
+	PZ_DestroyLock(slot->refLock);
 	PORT_Free(slot);
 	return slot;
     }
 #else
     slot->sessionLock = NULL;
+    slot->refLock = NULL;
     slot->freeListLock = NULL;
 #endif
     slot->freeSymKeysHead = NULL;
@@ -472,7 +480,9 @@ PK11_NewSlotInfo(SECMODModule *mod)
 PK11SlotInfo *
 PK11_ReferenceSlot(PK11SlotInfo *slot)
 {
-    PR_AtomicIncrement(&slot->refCount);
+    PK11_USE_THREADS(PZ_Lock(slot->refLock);)
+    slot->refCount++;
+    PK11_USE_THREADS(PZ_Unlock(slot->refLock);)
     return slot;
 }
 
@@ -492,6 +502,10 @@ PK11_DestroySlot(PK11SlotInfo *slot)
 	PORT_Free(slot->mechanismList);
    }
 #ifdef PKCS11_USE_THREADS
+   if (slot->refLock) {
+	PZ_DestroyLock(slot->refLock);
+	slot->refLock = NULL;
+   }
    if (slot->isThreadSafe && slot->sessionLock) {
 	PZ_DestroyLock(slot->sessionLock);
    }
@@ -516,9 +530,13 @@ PK11_DestroySlot(PK11SlotInfo *slot)
 void
 PK11_FreeSlot(PK11SlotInfo *slot)
 {
-    if (PR_AtomicDecrement(&slot->refCount) == 0) {
-	PK11_DestroySlot(slot);
-    }
+    PRBool freeit = PR_FALSE;
+
+    PK11_USE_THREADS(PZ_Lock(slot->refLock);)
+    if (slot->refCount-- == 1) freeit = PR_TRUE;
+    PK11_USE_THREADS(PZ_Unlock(slot->refLock);)
+
+    if (freeit) PK11_DestroySlot(slot);
 }
 
 void
@@ -565,78 +583,6 @@ SECMOD_HasRootCerts(void)
 /***********************************************************
  * Functions to find specific slots.
  ***********************************************************/
-PK11SlotList *
-PK11_FindSlotsByAliases(const char *dllName, const char* slotName,
-                        const char* tokenName, PRBool presentOnly)
-{
-    SECMODModuleList *mlp;
-    SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
-    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
-    int i;
-    PK11SlotList* slotList = NULL;
-    PRUint32 slotcount = 0;
-    SECStatus rv = SECSuccess;
-
-    slotList = PK11_NewSlotList();
-    if (!slotList) {
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return NULL;
-    }
-
-    if ( ((NULL == dllName) || (0 == *dllName)) &&
-        ((NULL == slotName) || (0 == *slotName)) &&
-        ((NULL == tokenName) || (0 == *tokenName)) ) {
-        /* default to softoken */
-        PK11_AddSlotToList(slotList, PK11_GetInternalKeySlot());
-        return slotList;
-    }
-
-    /* work through all the slots */
-    SECMOD_GetReadLock(moduleLock);
-    for (mlp = modules; mlp != NULL; mlp = mlp->next) {
-        PORT_Assert(mlp->module);
-        if (!mlp->module) {
-            rv = SECFailure;
-            break;
-        }
-        if ((!dllName) || (mlp->module->dllName &&
-            (0 == PORT_Strcmp(mlp->module->dllName, dllName)))) {
-            for (i=0; i < mlp->module->slotCount; i++) {
-                PK11SlotInfo *tmpSlot = (mlp->module->slots?mlp->module->slots[i]:NULL);
-                PORT_Assert(tmpSlot);
-                if (!tmpSlot) {
-                    rv = SECFailure;
-                    break;
-                }
-                if ((PR_FALSE == presentOnly || PK11_IsPresent(tmpSlot)) &&
-                    ( (!tokenName) || (tmpSlot->token_name &&
-                    (0==PORT_Strcmp(tmpSlot->token_name, tokenName)))) &&
-                    ( (!slotName) || (tmpSlot->slot_name &&
-                    (0==PORT_Strcmp(tmpSlot->slot_name, slotName)))) ) {
-                    PK11SlotInfo* slot = PK11_ReferenceSlot(tmpSlot);
-                    if (slot) {
-                        PK11_AddSlotToList(slotList, slot);
-                        slotcount++;
-                    }
-                }
-            }
-        }
-    }
-    SECMOD_ReleaseReadLock(moduleLock);
-
-    if ( (0 == slotcount) || (SECFailure == rv) ) {
-        PORT_SetError(SEC_ERROR_NO_TOKEN);
-        PK11_FreeSlotList(slotList);
-        slotList = NULL;
-    }
-
-    if (SECFailure == rv) {
-        PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
-    }
-
-    return slotList;
-}
-
 PK11SlotInfo *
 PK11_FindSlotByName(char *name)
 {
@@ -1748,7 +1694,7 @@ PK11_ReadMechanismList(PK11SlotInfo *slot)
 {
     CK_ULONG count;
     CK_RV crv;
-    PRUint32 i;
+    int i;
 
     if (slot->mechanismList) {
 	PORT_Free(slot->mechanismList);
@@ -1960,6 +1906,7 @@ PK11_TokenRefresh(PK11SlotInfo *slot)
 {
     CK_TOKEN_INFO tokenInfo;
     CK_RV crv;
+    SECStatus rv;
 
     /* set the slot flags to the current token values */
     if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
@@ -2194,7 +2141,7 @@ PRBool PK11_HasRootCerts(PK11SlotInfo *slot) {
     return slot->hasRootCerts;
 }
 
-/* Get the module this slot is attached to */
+/* Get the module this slot is attatched to */
 SECMODModule *
 PK11_GetModule(PK11SlotInfo *slot)
 {
