@@ -48,13 +48,13 @@ nsTAutoString_CharT::Init( const CBufDescriptor& desc )
  
     if (desc.mFlags & CBufDescriptor::F_CONST)
       {
-        mFlags = F_TERMINATED;
-        // mFixedCapacity = 0; // this member will be ignored
+        // mFlags = F_TERMINATED; // already set in ctor
+        // mFixedCapacity = 0;    // this member will be ignored
       }
     else if (desc.mFlags & CBufDescriptor::F_STACK_BASED)
       {
         mFlags = F_TERMINATED | F_FIXED;
-        mFixedCapacity = desc.mCapacity;
+        mFixedCapacity = desc.mCapacity - 1;
       }
     else
       {

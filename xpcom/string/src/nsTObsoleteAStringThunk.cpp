@@ -60,6 +60,14 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
       nsTObsoleteAStringThunk_CharT() {}
 
 
+      static const void* get_vptr()
+        {
+          const void* result;
+          new (&result) self_type();
+          return result;
+        }
+
+
         /**
          * we are a nsTSubstring in disguise!
          */
@@ -84,7 +92,7 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
 
       virtual const buffer_handle_type* GetFlatBufferHandle() const
         {
-          return (buffer_handle_type *) (concrete_self()->IsTerminated() != PR_FALSE);
+          return (const buffer_handle_type*) (concrete_self()->IsTerminated() != PR_FALSE);
         }
 
       virtual const buffer_handle_type*  GetBufferHandle() const
@@ -196,40 +204,47 @@ class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
         }
 
       virtual const char_type *GetReadableFragment(const_fragment_type& frag, nsFragmentRequest which, PRUint32 offset) const
-      {
-        const substring_type* s = concrete_self();
-        switch (which)
-          {
-            case kFirstFragment:
-            case kLastFragment:
-            case kFragmentAt:
-              frag.mStart = s->Data();
-              frag.mEnd = frag.mStart + s->Length();
-              return frag.mStart + offset;
-            case kPrevFragment:
-            case kNextFragment:
-            default:
-              return 0;
-          }
-      }
+        {
+          const substring_type* s = concrete_self();
+          switch (which)
+            {
+              case kFirstFragment:
+              case kLastFragment:
+              case kFragmentAt:
+                frag.mStart = s->Data();
+                frag.mEnd = frag.mStart + s->Length();
+                return frag.mStart + offset;
+              case kPrevFragment:
+              case kNextFragment:
+              default:
+                return 0;
+            }
+        }
 
       virtual char_type *GetWritableFragment(fragment_type& frag, nsFragmentRequest which, PRUint32 offset)
-      {
-        substring_type* s = concrete_self();
-        switch (which)
-          {
-            case kFirstFragment:
-            case kLastFragment:
-            case kFragmentAt:
-              char_type* start;
-              s->BeginWriting(start);
-              frag.mStart = start;
-              frag.mEnd = start + s->Length();
-              return frag.mStart + offset;
-            case kPrevFragment:
-            case kNextFragment:
-            default:
-              return 0;
-          }
-      }
-};
+        {
+          substring_type* s = concrete_self();
+          switch (which)
+            {
+              case kFirstFragment:
+              case kLastFragment:
+              case kFragmentAt:
+                char_type* start;
+                s->BeginWriting(start);
+                frag.mStart = start;
+                frag.mEnd = start + s->Length();
+                return frag.mStart + offset;
+              case kPrevFragment:
+              case kNextFragment:
+              default:
+                return 0;
+            }
+        }
+  };
+
+
+  /**
+   * initialize the pointer to the canonical vtable...
+   */
+
+const void *nsTObsoleteAString_CharT::sCanonicalVTable = nsTObsoleteAStringThunk_CharT::get_vptr();

@@ -38,12 +38,20 @@
 
 #include "nsSubstringTuple.h"
 
+#if 0
   // convert fragment to |const string_base_type&|
 #define TO_SUBSTRING(_v)                                        \
     ( (ptrdiff_t(_v) & 0x1)                                     \
         ? NS_REINTERPRET_CAST(const abstract_string_type*,      \
             ((unsigned long)_v & ~0x1))->ToSubstring()          \
         : *NS_REINTERPRET_CAST(const substring_type*, (_v)) )
+#endif
+
+  // convert fragment to |const substring_type&|
+#define TO_SUBSTRING(_v)                                        \
+    ( (_v)->mVTable == obsolete_string_type::sCanonicalVTable   \
+        ? *(_v)->AsSubstring()                                   \
+        :  (_v)->ToSubstring() )
 
   // define nsSubstringTuple
 #include "string-template-def-unichar.h"

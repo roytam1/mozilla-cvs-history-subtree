@@ -53,7 +53,7 @@
 
 // ---------------------------------------------------------------------------
 
-static PRUnichar gNullChar = 0;
+static const PRUnichar gNullChar = 0;
 
 const char*      nsCharTraits<char>     ::sEmptyBuffer = (const char*) &gNullChar;
 const PRUnichar* nsCharTraits<PRUnichar>::sEmptyBuffer =               &gNullChar;

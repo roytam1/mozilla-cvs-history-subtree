@@ -105,6 +105,9 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
         // NOT TO BE IMPLEMENTED
       void operator=( const self_type& );
 
+        // NOT TO BE IMPLEMENTED
+      nsTPromiseFlatString_CharT();
+
     public:
 
       explicit

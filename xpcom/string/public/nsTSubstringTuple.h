@@ -57,20 +57,21 @@ class nsTSubstringTuple_CharT
       typedef nsTSubstring_CharT         substring_type;
       typedef nsTString_CharT            string_type;
       typedef nsTAString_CharT           abstract_string_type;
+      typedef nsTObsoleteAString_CharT   obsolete_string_type;
 
       typedef PRUint32                   size_type;
 
     public:
 
-      nsTSubstringTuple_CharT(const void* a, const void* b)
+      nsTSubstringTuple_CharT(const abstract_string_type* a, const abstract_string_type* b)
         : mHead(nsnull)
         , mFragA(a)
         , mFragB(b) {}
 
-      nsTSubstringTuple_CharT(const self_type& head, const void* frag)
+      nsTSubstringTuple_CharT(const self_type& head, const abstract_string_type* b)
         : mHead(&head)
         , mFragA(nsnull) // this fragment is ignored when head != nsnull
-        , mFragB(frag) {}
+        , mFragB(b) {}
 
         /**
          * computes the aggregate string length
@@ -92,57 +93,21 @@ class nsTSubstringTuple_CharT
 
     private:
 
-      const self_type* mHead;
-      const void*      mFragA;
-      const void*      mFragB;
-
-      // type of mFrag? is given by the least significant bit.  if set, the
-      // type is nsTAString_CharT, else it is nsTSubstring_CharT.
+      const self_type*            mHead;
+      const abstract_string_type* mFragA;
+      const abstract_string_type* mFragB;
   };
-
-
-#define NS_FLAG_READABLE(_r) ((void*)( ((unsigned long) _r) | 0x1 ))
 
 inline
 const nsTSubstringTuple_CharT
-operator+(const nsTSubstring_CharT& a, const nsTSubstring_CharT& b)
+operator+(const nsTAString_CharT& a, const nsTAString_CharT& b)
   {
     return nsTSubstringTuple_CharT(&a, &b);
   }
 
 inline
 const nsTSubstringTuple_CharT
-operator+(const nsTSubstringTuple_CharT& tuple, const nsTSubstring_CharT& str)
+operator+(const nsTSubstringTuple_CharT& head, const nsTAString_CharT& b)
   {
-    return nsTSubstringTuple_CharT(tuple, &str);
+    return nsTSubstringTuple_CharT(head, &b);
   }
-
-inline
-const nsTSubstringTuple_CharT
-operator+(const nsTAString_CharT& a, const nsTAString_CharT& b)
-  {
-    return nsTSubstringTuple_CharT(NS_FLAG_READABLE(&a), NS_FLAG_READABLE(&b));
-  }
-
-inline
-const nsTSubstringTuple_CharT
-operator+(const nsTSubstringTuple_CharT& tuple, const nsTAString_CharT& readable)
-  {
-    return nsTSubstringTuple_CharT(tuple, NS_FLAG_READABLE(&readable));
-  }
-
-inline
-const nsTSubstringTuple_CharT
-operator+(const nsTSubstring_CharT& str, const nsTAString_CharT& readable)
-  {
-    return nsTSubstringTuple_CharT(&str, NS_FLAG_READABLE(&readable));
-  }
-
-inline
-const nsTSubstringTuple_CharT
-operator+(const nsTAString_CharT& readable, const nsTSubstring_CharT& str)
-  {
-    return nsTSubstringTuple_CharT(NS_FLAG_READABLE(&readable), &str);
-  }
-
-#undef NS_FLAG_READABLE

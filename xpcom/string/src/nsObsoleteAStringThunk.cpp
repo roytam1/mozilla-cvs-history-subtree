@@ -50,29 +50,3 @@
 #include "string-template-def-char.h"
 #include "nsTObsoleteAStringThunk.cpp"
 #include "string-template-undef.h"
-
-
-/**
- * get pointers to canonical vtables...
- */
-
-inline void *operator new(size_t size, const void *loc) { return (void *) loc; }
-
-static const void *
-get_nsObsoleteAStringThunk_vptr()
-{
-  const void *result;
-  new (&result) nsObsoleteAStringThunk();
-  return result;
-}
-
-static const void *
-get_nsObsoleteACStringThunk_vptr()
-{
-  const void *result;
-  new (&result) nsObsoleteACStringThunk();
-  return result;
-}
-
-NS_COM const void *nsObsoleteAString::sCanonicalVTable = get_nsObsoleteAStringThunk_vptr();
-NS_COM const void *nsObsoleteACString::sCanonicalVTable = get_nsObsoleteACStringThunk_vptr();
