@@ -348,7 +348,7 @@ nsFastLoadFileReader::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead)
         mCurrentDocumentMapEntry = entry;
         if (NS_FAILED(rv)) return rv;
 
-        NS_ASSERTION(entry->mBytesLeft >= 8, "demux segment length botch!");
+        NS_ASSERTION(entry->mBytesLeft > 8, "demux segment length botch!");
         entry->mBytesLeft -= 8;
     }
 
@@ -971,6 +971,8 @@ nsFastLoadFileWriter::SelectMuxedDocument(nsISupports* aURI)
                             prevSegmentOffset + 4);
         if (NS_FAILED(rv)) return rv;
 
+        NS_ASSERTION(currentSegmentOffset - prevSegmentOffset > 8, "Bad length");
+        
         // The length counts all bytes in the segment, including the header
         // that contains [nextSegmentOffset, length].
         rv = Write32(currentSegmentOffset - prevSegmentOffset);
