@@ -16,10 +16,11 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
  * Contributor(s):
- * Paul Hangas <hangas@netscape.com>
- * Alec Flett <alecf@netscape.com>
- * Seth Spitzer <sspitzer@netscape.com>
+ *   Paul Hangas <hangas@netscape.com>
+ *   Alec Flett <alecf@netscape.com>
+ *   Seth Spitzer <sspitzer@netscape.com>
  */
 
 //NOTE: gAddressBookBundle must be defined and set or this Overlay won't work
