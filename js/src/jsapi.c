@@ -721,6 +721,8 @@ JS_malloc(JSContext *cx, size_t nbytes)
 {
     void *p;
 
+    cx->runtime->gcMallocBytes += nbytes;
+
 #if defined(XP_OS2) || defined(XP_MAC) || defined(AIX) || defined(OSF1)
     if (nbytes == 0) /*DSR072897 - Windows allows this, OS/2 & Mac don't*/
 	nbytes = 1;

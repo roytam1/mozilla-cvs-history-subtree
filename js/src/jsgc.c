@@ -189,7 +189,7 @@ retry:
 	METER(rt->gcStats.freelen--);
 	METER(rt->gcStats.recycle++);
     } else {
-	if (rt->gcBytes < rt->gcMaxBytes) {
+	if (rt->gcBytes < rt->gcMaxBytes && rt->gcMallocBytes < 0x10000) {
 	    JS_ARENA_ALLOCATE(thing, &rt->gcArenaPool, sizeof(JSGCThing));
 	    JS_ARENA_ALLOCATE(flagp, &rt->gcFlagsPool, sizeof(uint8));
 	}
@@ -649,6 +649,9 @@ js_GC(JSContext *cx)
 
     /* Lock out other GC allocator and collector invocations. */
     JS_LOCK_GC(rt);
+
+    /* Reset malloc counter */
+    rt->gcMallocBytes = 0;
 
     /* Do nothing if no assignment has executed since the last GC. */
     if (!rt->gcPoke) {
