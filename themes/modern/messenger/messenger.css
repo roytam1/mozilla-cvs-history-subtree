@@ -80,32 +80,40 @@ iframe {
 }
 
 #button-getmsg {
-	margin-left			: 0px;
-	list-style-image	: url("chrome://messenger/skin/getmsg.gif");
+  -moz-binding          : url("chrome://communicator/skin/menubuttonBindings.xml#menubutton-dual-standard");
+  margin                : 3px 3px 1px 3px;
+  text-align            : center;
+  list-style-image      : url("chrome://messenger/skin/getmsg.gif");
 }
 
+#button-getmsg > .menubutton-dual-stack > .menubutton-dual-button
+  {
+    margin                : 0px;
+    padding               : 0px;
+  }
+
+#button-getmsg > .menubutton-dual-stack > .menubutton-dual-dropmarker-box
+  {
+    margin-left           : 23px;
+    margin-top            : 21px;
+  }
+
 #button-getmsg[disabled="true"],
-#button-getmsg[disabled="true"]:hover,
-#button-getmsg[disabled="true"]:hover:active
+#button-getmsg[disabled="true"] > .menubutton-dual-stack > .menubutton-dual-button:hover,
+#button-getmsg[disabled="true"] > .menubutton-dual-stack > .menubutton-dual-button:hover:active
   {
     list-style-image      : url("chrome://messenger/skin/getmsg-disabled.gif");
   } 
 
-#button-getmsg:hover
+#button-getmsg > .menubutton-dual-stack > .menubutton-dual-button:hover
   {
     list-style-image      : url("chrome://messenger/skin/getmsg-hover.gif");
   } 
 
-#button-getmsg:hover:active
+#button-getmsg > .menubutton-dual-stack > .menubutton-dual-button:hover:active
   {
     list-style-image      : url("chrome://messenger/skin/getmsg-clicked.gif");
   } 
-
-#button-getmsg > .menubutton-dual-stack > .menubutton-dual-dropmarker-box
-  {
-    margin-left           : 27px;
-    margin-top            : 15px;
-  }
 
 #button-mark
   {
@@ -121,19 +129,25 @@ iframe {
     padding               : 0px;
   }
 
+#button-mark > .menubutton-dual-stack > .menubutton-dual-dropmarker-box
+  {
+    margin-left       : 21px;
+    margin-top                         : 21px;
+  }
+    
 #button-mark[disabled="true"],
-#button-mark[disabled="true"]:hover,
-#button-mark[disabled="true"]:hover:active
+#button-mark[disabled="true"] > .menubutton-dual-stack > .menubutton-dual-button:hover,
+#button-mark[disabled="true"] > .menubutton-dual-stack > .menubutton-dual-button:hover:active
   {
     list-style-image      : url("chrome://messenger/skin/mark-disabled.gif");
   } 
 
-#button-mark:hover
+#button-mark > .menubutton-dual-stack > .menubutton-dual-button:hover
   {
     list-style-image      : url("chrome://messenger/skin/mark-hover.gif");
   } 
 
-#button-mark:hover:active
+#button-mark > .menubutton-dual-stack > .menubutton-dual-button:hover:active
   {
     list-style-image      : url("chrome://messenger/skin/mark-clicked.gif");
   } 
@@ -322,7 +336,7 @@ iframe {
 
 #button-print > .menubutton-dual-stack > .menubutton-dual-dropmarker-box
   {
-    margin-left             : 19px;
+    margin-left       : 21px;
     margin-top				: 21px;
   }
 
