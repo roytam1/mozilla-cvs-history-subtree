@@ -335,6 +335,12 @@ ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= $(DIST)/lib/libjsl.a
 endif
 
+ifdef MOZ_MAIL_NEWS
+ifndef NO_SECURITY
+BASIC_LIBS	+= $(DIST)/lib/libsecnav.a
+endif
+endif
+
 BASIC_LIBS	+= $(DIST)/lib/libjrt.a
 
 else  # MOZ_JAVA
