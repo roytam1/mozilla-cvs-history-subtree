@@ -1318,13 +1318,17 @@ URLBarAutoFillPrefListener.prototype =
 }
 
 function ctrlNumberTabSelection(event)
-{
-  if (event.altKey && event.keyCode == KeyEvent.DOM_VK_RETURN &&
-      document.commandDispatcher.focusedElement && document.commandDispatcher.focusedElement.parentNode.parentNode == gURLBar) {
-    // Don't let winxp beep on ALT+ENTER, since the URL bar uses it.
-    event.preventDefault();
-    return;
-  } 
+{  
+  if (event.altKey && event.keyCode == KeyEvent.DOM_VK_RETURN) {    
+    // XXXblake Proper fix is to just check whether focus is in the urlbar. However, focus with the autocomplete widget is all
+    // hacky and broken and there's no way to do that right now. So this just patches it to ensure that alt+enter works when focus
+    // is on a link.
+    if (!document.commandDispatcher.focusedElement || document.commandDispatcher.focusedElement.localName.toLowerCase() != "a") {
+      // Don't let winxp beep on ALT+ENTER, since the URL bar uses it.
+      event.preventDefault();
+      return;
+    }
+  }
 
 #ifdef XP_MACOSX
   if (!event.metaKey)
