@@ -152,15 +152,6 @@ endif
 	$(NSINSTALL) $(EXPDIR)/Makefile $(INSTDIR)/examples
 	$(NSINSTALL) $(EXPDIR)/xmplflt.conf $(INSTDIR)/examples
 
-	@echo "Installing doc files"
-	$(NSINSTALL) -D $(INSTDIR)/docs
-	$(NSINSTALL) $(DOCDIR)/README $(INSTDIR)
-	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)
-	$(NSINSTALL) $(DOCDIR)/*.htm $(INSTDIR)
-	$(NSINSTALL) $(DOCDIR)/*.gif $(INSTDIR)
-	$(NSINSTALL) $(DOCDIR)/README $(INSTDIR)/docs
-	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)/docs
-
 ifdef BUILD_SHIP
 	@echo "Copying files to $(BUILD_SHIP) directory"
 	cp -r $(INSTDIR) $(BUILD_SHIP)
