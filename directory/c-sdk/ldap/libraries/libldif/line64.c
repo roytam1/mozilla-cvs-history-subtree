@@ -202,7 +202,7 @@ ldif_base64_decode( char *src, unsigned char *dst )
 	stop = strchr( src, '\0' );
 	byte = dst;
 	for ( p = src, len = 0; p < stop; p += 4, len += 3 ) {
-		for ( i = 0; i < 3; i++ ) {
+		for ( i = 0; i < 4; i++ ) {
 			if ( p[i] != '=' && (p[i] & 0x80 ||
 			    b642nib[ p[i] & 0x7f ] > 0x3f) ) {
 				return( -1 );
