@@ -1,7 +1,0 @@
-?Release@nsMsgComposeAndSend@@UAGKXZ ; 10
-?AddRef@nsSmtpService@@UAGKXZ ; 10
-?QueryInterface@nsMsgComposeService@@UAGIABUnsID@@PAPAX@Z ; 9
-_NSGetModule ; 1
-??0nsMsgComposeService@@QAE@XZ ; 1
-??1nsMsgComposeService@@UAE@XZ ; 1
-??_GnsMsgComposeService@@UAEPAXI@Z ; 1
