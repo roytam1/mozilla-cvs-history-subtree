@@ -42,7 +42,6 @@
 /////////////////////////////////////////////
   
 nsSOAPMessage::nsSOAPMessage()
- : mDefaultTypes(do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID))
 {
   NS_INIT_ISUPPORTS();
   mStatus = 0;
