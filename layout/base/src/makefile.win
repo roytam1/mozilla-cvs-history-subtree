@@ -72,6 +72,9 @@ CPPSRCS =				\
 	nsTextContentChangeData.cpp	\
 	nsTextNode.cpp			\
 	nsLayoutHistoryState.cpp	\
+	nsXMLContentSerializer.cpp	\
+	nsHTMLContentSerializer.cpp	\
+	nsPlainTextSerializer.cpp	\
 	$(NULL)
 
 MODULE=raptor 
@@ -122,6 +125,9 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsTextContentChangeData.obj	\
 	.\$(OBJDIR)\nsTextNode.obj		\
 	.\$(OBJDIR)\nsLayoutHistoryState.obj	\
+	.\$(OBJDIR)\nsXMLContentSerializer.obj	\
+	.\$(OBJDIR)\nsHTMLContentSerializer.obj	\
+	.\$(OBJDIR)\nsPlainTextSerializer.obj   \
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \

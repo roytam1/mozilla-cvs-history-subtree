@@ -30,6 +30,7 @@
 #include "nsWidgetsCID.h"
 #include "nsIClipboard.h"
 #include "nsIDOMDocument.h"
+#include "nsIDocumentEncoder.h"
 
 #include "nsIDocument.h"
 #include "nsSupportsPrimitives.h"
@@ -51,7 +52,6 @@ public:
   //end nsIDOMSelectionListener 
 protected:
   nsCOMPtr<nsIClipboard> mClipboard;
-  nsCOMPtr<nsIFormatConverter> mXIF;
   nsCOMPtr<nsITransferable> mTransferable;
   nsCOMPtr<nsIFormatConverter> mConverter;
 };
@@ -134,10 +134,17 @@ nsAutoCopyService::NotifySelectionChanged(nsIDOMDocument *aDoc, nsIDOMSelection 
 
   nsCOMPtr<nsIDocument> doc;
   doc = do_QueryInterface(NS_REINTERPRET_CAST(nsISupports *,aDoc),&rv);
-  nsAutoString xifBuffer;
-  /* nsPresShell::DoCopy thinks that this is infalliable -- do you? */
-  if (NS_FAILED(doc->CreateXIF(xifBuffer, aSel)))
-    return NS_ERROR_FAILURE;
+  nsAutoString htmlBuffer;
+
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
+
+  docEncoder = do_CreateInstance(NS_DOC_ENCODER_PROGID_BASE "text/html");
+  NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+
+  docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
+  docEncoder->SetSelection(aSel);
+
+  docEncoder->EncodeToString(htmlBuffer);
   
   /* create a transferable */
   static NS_DEFINE_CID(kCTransferableCID, NS_TRANSFERABLE_CID);
@@ -148,17 +155,17 @@ nsAutoCopyService::NotifySelectionChanged(nsIDOMDocument *aDoc, nsIDOMSelection 
   if (NS_FAILED(rv))
     return rv;
 
-  if (!mXIF) {
+  if (!mConverter) {
     static NS_DEFINE_CID(kCXIFConverterCID,        NS_XIFFORMATCONVERTER_CID);
     rv = nsComponentManager::CreateInstance(kCXIFConverterCID, nsnull,
                                             NS_GET_IID(nsIFormatConverter),
-                                            (void **)getter_AddRefs(mXIF));
+                                            getter_AddRefs(mConverter));
     if (NS_FAILED(rv))
       return rv;
   }
 
-  trans->AddDataFlavor(kXIFMime);
-  trans->SetConverter(mXIF);
+  trans->AddDataFlavor(kHTMLMime);
+  trans->SetConverter(mConverter);
   
   nsCOMPtr<nsISupportsWString> dataWrapper;
   rv = nsComponentManager::CreateInstance(NS_SUPPORTS_WSTRING_PROGID, nsnull, 
@@ -167,11 +174,11 @@ nsAutoCopyService::NotifySelectionChanged(nsIDOMDocument *aDoc, nsIDOMSelection 
   if (NS_FAILED(rv))
     return rv;
   
-  dataWrapper->SetData( NS_CONST_CAST(PRUnichar*,xifBuffer.GetUnicode()));
+  dataWrapper->SetData( NS_CONST_CAST(PRUnichar*,htmlBuffer.GetUnicode()));
   
   nsCOMPtr<nsISupports> generic(do_QueryInterface(dataWrapper));
   /* Length() is in characters, *2 gives bytes. */
-  trans->SetTransferData(kXIFMime, generic, xifBuffer.Length() * 2);
+  trans->SetTransferData(kHTMLMime, generic, htmlBuffer.Length() * 2);
   mClipboard->SetData(trans, nsnull,nsIClipboard::kSelectionClipboard);
 
 #ifdef DEBUG_CLIPBOARD

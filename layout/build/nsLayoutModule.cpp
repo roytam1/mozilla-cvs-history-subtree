@@ -56,6 +56,8 @@
 #include "nsIElementFactory.h"
 
 #include "nsIDocumentEncoder.h"
+#include "nsIContentSerializer.h"
+#include "nsIHTMLToTextSink.h"
 
 // SVG
 #ifdef MOZ_SVG
@@ -357,6 +359,17 @@ static Components gComponents[] = {
     NS_DOC_ENCODER_PROGID_BASE "text/plain", },
   { "XIF document encoder", NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_PROGID_BASE "text/xif", },
+
+  { "XML content serializer", NS_XMLCONTENTSERIALIZER_CID,
+    NS_CONTENTSERIALIZER_PROGID_PREFIX "text/xml", },
+  { "HTML content serializer", NS_HTMLCONTENTSERIALIZER_CID,
+    NS_CONTENTSERIALIZER_PROGID_PREFIX "text/html", },
+  { "XUL content serializer", NS_XMLCONTENTSERIALIZER_CID,
+    NS_CONTENTSERIALIZER_PROGID_PREFIX "text/xul", },
+  { "plaintext content serializer", NS_PLAINTEXTSERIALIZER_CID,
+    NS_CONTENTSERIALIZER_PROGID_PREFIX "text/plain", },
+  { "plaintext sink", NS_PLAINTEXTSERIALIZER_CID,
+    NS_PLAINTEXTSINK_PROGID, },
 
   { "XBL Service", NS_XBLSERVICE_CID, "component://netscape/xbl" },
   { "XBL Binding Manager", NS_BINDINGMANAGER_CID, "component://netscape/xbl/binding-manager" },

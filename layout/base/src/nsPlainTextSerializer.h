@@ -32,9 +32,12 @@
 #include "nsIParserService.h"
 #include "nsIContent.h"
 #include "nsIAtom.h"
+#include "nsIHTMLToTextSink.h"
+
 
 class nsPlainTextSerializer : public nsIContentSerializer,
-                              public nsIHTMLContentSink
+                              public nsIHTMLContentSink,
+                              public nsIHTMLToTextSink
 {
 public:
   nsPlainTextSerializer();
@@ -97,6 +100,10 @@ public:
   NS_IMETHOD DoFragment(PRBool aFlag);
   NS_IMETHOD BeginContext(PRInt32 aPosition) { return NS_OK; }
   NS_IMETHOD EndContext(PRInt32 aPosition) { return NS_OK; }
+
+  // nsIHTMLToTextSink
+  NS_IMETHOD Initialize(nsAWritableString* aOutString,
+                        PRUint32 aFlags, PRUint32 aWrapCol);
 
 protected:
   nsresult GetAttributeValue(nsIAtom* aName, nsString& aValueRet);
@@ -180,5 +187,7 @@ protected:
   nsCOMPtr<nsILineBreaker>     mLineBreaker;
   nsCOMPtr<nsIParserService>   mParserService;
 };
+
+extern nsresult NS_NewPlainTextSerializer(nsIContentSerializer** aSerializer);
 
 #endif

@@ -20,23 +20,23 @@
  * Contributor(s): 
  */
 
-#ifndef nsXIFFormatConverter_h__
-#define nsXIFFormatConverter_h__
+#ifndef nsHTMLFormatConverter_h__
+#define nsHTMLFormatConverter_h__
 
 #include "nsIFormatConverter.h"
 #include "nsString.h"
 
-class nsXIFFormatConverter : public nsIFormatConverter
+class nsHTMLFormatConverter : public nsIFormatConverter
 {
 public:
 
-  nsXIFFormatConverter();
-  virtual ~nsXIFFormatConverter();
+  nsHTMLFormatConverter();
+  virtual ~nsHTMLFormatConverter();
 
     // nsISupports
   NS_DECL_ISUPPORTS
   
-    // nsIXIFConverter
+    // nsIHTMLConverter
   NS_IMETHOD GetInputDataFlavors(nsISupportsArray **_retval) ;
   NS_IMETHOD GetOutputDataFlavors(nsISupportsArray **_retval) ;
   NS_IMETHOD CanConvert(const char *aFromDataFlavor, const char *aToDataFlavor, PRBool *_retval) ;
@@ -46,11 +46,10 @@ public:
 protected:
 
   nsresult AddFlavorToList ( nsISupportsArray* inList, const char* inFlavor ) ;
-  
-  NS_IMETHOD ConvertFromXIFToHTML(const nsAutoString & aFromStr, nsAutoString & aToStr);
-  NS_IMETHOD ConvertFromXIFToUnicode(const nsAutoString & aFromStr, nsAutoString & aToStr);
-  NS_IMETHOD ConvertFromXIFToAOLMail(const nsAutoString & aFromStr, nsAutoString & aToStr);
+
+  NS_IMETHOD ConvertFromHTMLToUnicode(const nsAutoString & aFromStr, nsAutoString & aToStr);
+  NS_IMETHOD ConvertFromHTMLToAOLMail(const nsAutoString & aFromStr, nsAutoString & aToStr);
 
 };
 
-#endif // nsXIFFormatConverter_h__
+#endif // nsHTMLFormatConverter_h__

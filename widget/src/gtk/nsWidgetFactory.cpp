@@ -56,7 +56,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsLookAndFeel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLabel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTransferable)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboard)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXIFFormatConverter)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLFormatConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontRetrieverService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFileSpecWithUIImpl)
@@ -185,10 +185,10 @@ static nsModuleComponentInfo components[] =
     //    "mozilla.widget.clipboard.gtk.1",
     "component://netscape/widget/clipboard",
     nsClipboardConstructor },
-  { "XIF Format Converter",
+  { "HTML Format Converter",
     NS_XIFFORMATCONVERTER_CID,
     "mozilla.widget.xifformatconverter.gtk.1",
-    nsXIFFormatConverterConstructor },
+    nsHTMLFormatConverterConstructor },
   { "Gtk Font Retriever Service",
     NS_FONTRETRIEVERSERVICE_CID,
     "mozilla.widget.fontretrieverservice.gtk.1",

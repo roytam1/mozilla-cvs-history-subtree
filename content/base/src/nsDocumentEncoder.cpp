@@ -31,28 +31,35 @@
 #include "nsIDocument.h"
 #include "nsIDOMSelection.h"
 #include "nsIPresShell.h"
-#include "nsXIFDTD.h"
 #include "nsParserCIID.h"
 #include "nsIParser.h"
 #include "nsHTMLContentSinkStream.h"
-#include "nsHTMLToTXTSinkStream.h"
+#include "nsCOMPtr.h"
+#include "nsIContentSerializer.h"
+#include "nsIUnicodeEncoder.h"
+#include "nsIOutputStream.h"
+#include "nsIDOMElement.h"
+#include "nsIDOMText.h"
+#include "nsIDOMCDATASection.h"
+#include "nsIDOMComment.h"
+#include "nsIDOMProcessingInstruction.h"
+#include "nsIDOMDocumentType.h"
+#include "nsIDOMNodeList.h"
+#include "nsIDOMRange.h"
+#include "nsRange.h"
+#include "nsICharsetConverterManager.h"
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
-static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID,
+                     NS_ICHARSETCONVERTERMANAGER_CID);
 
-static NS_DEFINE_CID(kCTextEncoderCID, NS_TEXT_ENCODER_CID);
 
-static NS_DEFINE_IID(kCParserIID, NS_IPARSER_IID);
-static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
-
-class nsTextEncoder : public nsIDocumentEncoder
+class nsDocumentEncoder : public nsIDocumentEncoder
 {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IDOCUMENT_ENCODER_IID; return iid; }
 
-  nsTextEncoder();
-  virtual ~nsTextEncoder();
+  nsDocumentEncoder();
+  virtual ~nsDocumentEncoder();
 
   NS_IMETHOD Init(nsIDocument* aDocument, const nsAReadableString& aMimeType, PRUint32 aFlags);
 
@@ -61,6 +68,7 @@ public:
 
   // Inherited methods from nsIDocumentEncoder
   NS_IMETHOD SetSelection(nsIDOMSelection* aSelection);
+  NS_IMETHOD SetRange(nsIDOMRange* aRange);
   NS_IMETHOD SetWrapColumn(PRUint32 aWC);
   NS_IMETHOD SetCharset(const nsAReadableString& aCharset);
 
@@ -68,13 +76,26 @@ public:
   NS_IMETHOD EncodeToString(nsAWritableString& aOutputString);
 
 protected:
-  // Local methods to the text encoder -- used to be in nsITextEncoder,
-  // but that interface is obsolete now.
-  //NS_IMETHOD PrettyPrint(PRBool aYes);
-  //NS_IMETHOD AddHeader(PRBool aYes);
+  nsresult SerializeNodeStart(nsIDOMNode* aNode, PRInt32 aStartOffset,
+                              PRInt32 aEndOffset, nsAWritableString& aStr);
+  nsresult SerializeToStringRecursive(nsIDOMNode* aNode,
+                                      nsAWritableString& aStr);
+  nsresult SerializeNodeEnd(nsIDOMNode* aNode, nsAWritableString& aStr);
+  nsresult SerializeRangeToString(nsIDOMRange *aRange,
+                                  nsAWritableString& aOutputString);
+  nsresult SerializeRangeNodes(nsVoidArray& aAncestors, nsIDOMNode* aStart,
+                               PRInt32 aStartOffset, nsIDOMNode* aEnd,
+                               PRInt32 aEndOffset, nsAWritableString& aString);
 
-  nsIDocument*      mDocument;
-  nsIDOMSelection*  mSelection;
+  nsresult FlushText(nsAWritableString& aString, PRBool aForce);
+
+  nsCOMPtr<nsIDocument>          mDocument;
+  nsCOMPtr<nsIDOMSelection>      mSelection;
+  nsCOMPtr<nsIDOMRange>          mRange;
+  nsCOMPtr<nsIOutputStream>      mStream;
+  nsCOMPtr<nsIContentSerializer> mSerializer;
+  nsCOMPtr<nsIUnicodeEncoder>    mUnicodeEncoder;
+
   nsString          mMimeType;
   nsString          mCharset;
   PRUint32          mFlags;
@@ -82,35 +103,37 @@ protected:
 };
 
 
-NS_IMPL_ADDREF(nsTextEncoder)
-NS_IMPL_RELEASE(nsTextEncoder)
+NS_IMPL_ADDREF(nsDocumentEncoder)
+NS_IMPL_RELEASE(nsDocumentEncoder)
 
-nsTextEncoder::nsTextEncoder()
+NS_INTERFACE_MAP_BEGIN(nsDocumentEncoder)
+   NS_INTERFACE_MAP_ENTRY(nsIDocumentEncoder)
+   NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+nsDocumentEncoder::nsDocumentEncoder()
 {
   NS_INIT_REFCNT();
 
   mMimeType.AssignWithConversion("text/plain");
 
-  mDocument = 0;
-  mSelection = 0;
   mFlags = 0;
   mWrapColumn = 72;
 }
 
-nsTextEncoder::~nsTextEncoder()
+nsDocumentEncoder::~nsDocumentEncoder()
 {
-  NS_IF_RELEASE(mDocument);
-  //NS_IF_RELEASE(mSelection);		// no. we never addref'd it.
 }
 
 NS_IMETHODIMP
-nsTextEncoder::Init(nsIDocument* aDocument, const nsAReadableString& aMimeType, PRUint32 aFlags)
+nsDocumentEncoder::Init(nsIDocument* aDocument,
+                        const nsAReadableString& aMimeType,
+                        PRUint32 aFlags)
 {
   if (!aDocument)
     return NS_ERROR_INVALID_ARG;
 
   mDocument = aDocument;
-  NS_ADDREF(mDocument);
 
   mMimeType = aMimeType;
 
@@ -119,247 +142,521 @@ nsTextEncoder::Init(nsIDocument* aDocument, const nsAReadableString& aMimeType, 
   return NS_OK;
 }
 
-nsresult nsTextEncoder::QueryInterface(REFNSIID aIID,   
-                                               void **aInstancePtr)
-{
-  if (nsnull == aInstancePtr)
-    return NS_ERROR_NULL_POINTER;   
-
-  *aInstancePtr = 0;   
-
-  if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtr = (void *)(nsISupports*)this;   
-  } else if (aIID.Equals(NS_GET_IID(nsIDocumentEncoder))) {
-    *aInstancePtr = (void *)(nsIDocumentEncoder*)this;   
-  }
-
-  if (nsnull == *aInstancePtr)
-    return NS_NOINTERFACE;   
-
-  NS_ADDREF_THIS();
-
-  return NS_OK;   
-}
-
 NS_IMETHODIMP
-nsTextEncoder::SetWrapColumn(PRUint32 aWC)
+nsDocumentEncoder::SetWrapColumn(PRUint32 aWC)
 {
   mWrapColumn = aWC;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTextEncoder::SetSelection(nsIDOMSelection* aSelection)
+nsDocumentEncoder::SetSelection(nsIDOMSelection* aSelection)
 {
   mSelection = aSelection;
-  return NS_OK;   
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTextEncoder::SetCharset(const nsAReadableString& aCharset)
+nsDocumentEncoder::SetRange(nsIDOMRange* aRange)
+{
+  mRange = aRange;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentEncoder::SetCharset(const nsAReadableString& aCharset)
 {
   mCharset = aCharset;
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsTextEncoder::EncodeToString(nsAWritableString& aOutputString)
+nsresult
+nsDocumentEncoder::SerializeNodeStart(nsIDOMNode* aNode, PRInt32 aStartOffset,
+                                      PRInt32 aEndOffset,
+                                      nsAWritableString& aStr)
 {
- nsresult rv;
+  PRUint16 type;
 
+  aNode->GetNodeType(&type);
+  switch (type) {
+    case nsIDOMNode::ELEMENT_NODE:
+    {
+      nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aNode);
+      mSerializer->AppendElementStart(element, aStr);
+      break;
+    }
+    case nsIDOMNode::TEXT_NODE:
+    {
+      nsCOMPtr<nsIDOMText> text = do_QueryInterface(aNode);
+      mSerializer->AppendText(text, aStartOffset, aEndOffset, aStr);
+      break;
+    }
+    case nsIDOMNode::CDATA_SECTION_NODE:
+    {
+      nsCOMPtr<nsIDOMCDATASection> cdata = do_QueryInterface(aNode);
+      mSerializer->AppendCDATASection(cdata, aStartOffset, aEndOffset, aStr);
+      break;
+    }
+    case nsIDOMNode::PROCESSING_INSTRUCTION_NODE:
+    {
+      nsCOMPtr<nsIDOMProcessingInstruction> pi = do_QueryInterface(aNode);
+      mSerializer->AppendProcessingInstruction(pi, aStartOffset, aEndOffset,
+                                               aStr);
+      break;
+    }
+    case nsIDOMNode::COMMENT_NODE:
+    {
+      nsCOMPtr<nsIDOMComment> comment = do_QueryInterface(aNode);
+      mSerializer->AppendComment(comment, aStartOffset, aEndOffset, aStr);
+      break;
+    }
+    case nsIDOMNode::DOCUMENT_TYPE_NODE:
+    {
+      nsCOMPtr<nsIDOMDocumentType> doctype = do_QueryInterface(aNode);
+      mSerializer->AppendDoctype(doctype, aStr);
+      break;
+    }
+  }
+  
+  return NS_OK;
+}
+
+nsresult
+nsDocumentEncoder::SerializeNodeEnd(nsIDOMNode* aNode,
+                                    nsAWritableString& aStr)
+{
+  PRUint16 type;
+
+  aNode->GetNodeType(&type);
+  switch (type) {
+    case nsIDOMNode::ELEMENT_NODE:
+    {
+      nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aNode);
+      mSerializer->AppendElementEnd(element, aStr);
+      break;
+    }
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsDocumentEncoder::SerializeToStringRecursive(nsIDOMNode* aNode,
+                                              nsAWritableString& aStr)
+{
+  nsresult rv = SerializeNodeStart(aNode, 0, -1, aStr);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRBool hasChildren = PR_FALSE;
+
+  aNode->HasChildNodes(&hasChildren);
+
+  if (hasChildren) {
+    nsCOMPtr<nsIDOMNodeList> childNodes;
+    rv = aNode->GetChildNodes(getter_AddRefs(childNodes));
+    NS_ENSURE_TRUE(childNodes, NS_SUCCEEDED(rv) ? NS_ERROR_FAILURE : rv);
+
+    PRInt32 index, count;
+
+    childNodes->GetLength((PRUint32*)&count);
+    for (index = 0; index < count; index++) {
+      nsCOMPtr<nsIDOMNode> child;
+
+      rv = childNodes->Item(index, getter_AddRefs(child));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      rv = SerializeToStringRecursive(child, aStr);
+      NS_ENSURE_SUCCESS(rv, rv);     
+    }
+  }
+
+  rv = SerializeNodeEnd(aNode, aStr);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  return FlushText(aStr, PR_FALSE);
+}
+
+static nsresult
+ConvertAndWrite(nsAReadableString& aString,
+                nsIOutputStream* aStream,
+                nsIUnicodeEncoder* aEncoder)
+{
+  NS_ENSURE_ARG_POINTER(aStream);
+  NS_ENSURE_ARG_POINTER(aEncoder);
+  nsresult rv;
+  PRInt32 charLength;
+  const PRUnichar* unicodeBuf = (const PRUnichar*)nsPromiseFlatString(aString);
+  PRInt32 unicodeLength = aString.Length();
+
+  rv = aEncoder->GetMaxLength(unicodeBuf, unicodeLength, &charLength);
+  if (NS_SUCCEEDED(rv)) {
+    nsCAutoString charXferString;
+    charXferString.SetCapacity(charLength);
+    char* charXferBuf = (char*)charXferString.GetBuffer();
+
+    rv = aEncoder->Convert(unicodeBuf, &unicodeLength, charXferBuf, &charLength);
+    if (NS_SUCCEEDED(rv)) {
+      PRUint32 written;
+      rv = aStream->Write(charXferBuf, charLength, &written);
+    }
+  }
+
+  return rv;
+}
+
+nsresult
+nsDocumentEncoder::FlushText(nsAWritableString& aString, PRBool aForce)
+{
+  if (!mStream)
+    return NS_OK;
+
+  nsresult rv = NS_OK;
+
+  if (aString.Length() > 1024 || aForce) {
+    rv = ConvertAndWrite(aString, mStream, mUnicodeEncoder);
+
+    aString.Truncate();
+  }
+
+  return rv;
+}
+
+static nsresult ChildAt(nsIDOMNode* aNode, PRInt32 aIndex, nsIDOMNode** aChild)
+{
+  nsCOMPtr<nsIDOMNodeList> children;
+  aNode->GetChildNodes(getter_AddRefs(children));
+  NS_ENSURE_TRUE(children, NS_ERROR_FAILURE);
+
+  children->Item(aIndex, aChild);
+
+  return NS_OK;
+}
+
+static PRInt32 IndexOf(nsIDOMNodeList* aNodeList, nsIDOMNode* aChild)
+{
+  nsCOMPtr<nsIDOMNode> node;
+  PRInt32 i = 0;
+
+  while (1) {
+    aNodeList->Item(i, getter_AddRefs(node));
+
+    if (node.get() == aChild)
+      return i;
+
+    i++;
+  }
+
+  return -1;
+}
+
+nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
+                     nsIDOMNode*& aNextNode, PRInt32& aDirection)
+{
+  PRBool hasChildren;
+
+  aNextNode = nsnull;
+
+  aNode->HasChildNodes(&hasChildren);
+
+  if (hasChildren && aDirection > 0) {
+    ChildAt(aNode, 0, &aNextNode);
+    NS_ENSURE_TRUE(aNextNode, NS_ERROR_FAILURE);
+
+    aIndexArray.AppendElement(0);
+
+    aDirection = 1;
+  } else if (aDirection > 0) {
+    aNextNode = aNode;
+
+    NS_ADDREF(aNextNode);
+
+    aDirection = -1;
+  } else {
+    nsCOMPtr<nsIDOMNode> parent;
+
+    aNode->GetParentNode(getter_AddRefs(parent));
+    NS_ENSURE_TRUE(parent, NS_ERROR_FAILURE);
+
+    PRInt32 count = aIndexArray.Count();
+
+    if (count) {
+      PRInt32 indx = (PRInt32)aIndexArray.ElementAt(count - 1);
+
+      ChildAt(parent, indx + 1, &aNextNode);
+
+      if (aNextNode)
+        aIndexArray.ReplaceElementAt((void *)(indx + 1), count - 1);
+      else
+        aIndexArray.RemoveElementAt(count - 1);
+    } else {
+      nsCOMPtr<nsIDOMNodeList> children;
+      parent->GetChildNodes(getter_AddRefs(children));
+      NS_ENSURE_TRUE(children, NS_ERROR_FAILURE);
+
+      PRInt32 indx = IndexOf(children, aNode);
+
+      ChildAt(parent, indx + 1, &aNextNode);
+
+      aIndexArray.AppendElement((void *)(indx + 1));
+    }
+
+    if (aNextNode) {
+      aDirection = 1;
+    } else {
+      aDirection = -1;
+
+      aNextNode = parent;
+
+      NS_ADDREF(aNextNode);
+    }
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
+                                       nsIDOMNode* aStart,
+                                       PRInt32 aStartOffset,
+                                       nsIDOMNode* aEnd,
+                                       PRInt32 aEndOffset,
+                                       nsAWritableString& aOutputString)
+{
+  PRInt32 i = aAncestors.Count();
+  nsCOMPtr<nsIDOMNode> node;
+  nsresult rv = NS_OK;
+
+  node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
+
+  nsIDOMNode* commonParent = node.get();
+
+  while (node) {
+    SerializeNodeStart(node, 0, -1, aOutputString);
+
+    node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
+  }
+
+  nsCOMPtr<nsIDOMNode> start, end;
+
+  PRUint16 type;
+  aStart->GetNodeType(&type);
+
+  if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
+    rv = ChildAt(aStart, aStartOffset, getter_AddRefs(start));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aStartOffset = 0;
+  } else {
+    start = aStart;
+  }
+
+  aEnd->GetNodeType(&type);
+
+  if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
+    rv = ChildAt(aEnd, aEndOffset, getter_AddRefs(end));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!end) {
+      // The endpoint of the range points to the end of the last child in
+      // a container, in this case we set the end to the container.
+
+      end = aEnd;
+    }
+
+    aEndOffset = -1;
+  } else {
+    end = aEnd;
+  }
+
+  if (start == end) {
+    SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString);
+  } else {
+    PRInt32 dir = 1;
+    nsVoidArray offsets;
+
+    SerializeNodeStart(start, aStartOffset, -1, aOutputString);
+
+    GetNextNode(start, offsets, *getter_AddRefs(node), dir);
+
+    while (node) {
+      if (dir > 0) {
+        if (node == end) {
+          SerializeNodeStart(node, 0, aEndOffset, aOutputString);
+
+          break;
+        } else {
+          SerializeNodeStart(node, 0, -1, aOutputString);
+        }
+      } else {
+        if (node == end) {
+          break;
+        }
+
+        SerializeNodeEnd(node, aOutputString);
+      }
+
+      nsIDOMNode *tmpNode = node;
+      GetNextNode(tmpNode, offsets, *getter_AddRefs(node), dir);
+    }
+  }
+
+  node = end;
+
+  while (node && commonParent && node.get() != commonParent) {
+    SerializeNodeEnd(node, aOutputString);
+
+    nsIDOMNode *tmpNode = node;
+    tmpNode->GetParentNode(getter_AddRefs(node));
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
+                                          nsAWritableString& aOutputString)
+{
+  if (!aRange)
+    return NS_OK;
+
+  PRBool collapsed;
+
+  aRange->GetCollapsed(&collapsed);
+
+  if (collapsed)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMNode> start, end, commonParent;
+  PRInt32 startOffset = 0, endOffset = 0;
+
+  aRange->GetStartContainer(getter_AddRefs(start));
+  NS_ENSURE_TRUE(start, NS_ERROR_FAILURE);
+
+  aRange->GetStartOffset(&startOffset);
+
+  aRange->GetEndContainer(getter_AddRefs(end));
+  NS_ENSURE_TRUE(end, NS_ERROR_FAILURE);
+
+  aRange->GetEndOffset(&endOffset);
+
+  aRange->GetCommonAncestorContainer(getter_AddRefs(commonParent));
+
+  if (!commonParent)
+    return NS_OK;
+
+  nsVoidArray ancestors;
+
+  nsRange::FillArrayWithAncestors(&ancestors, start);
+  ancestors.RemoveElementAt(0); // Remove 'start'
+
+  PRInt32 i = ancestors.Count();
+
+  while (i--) {
+    nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, ancestors.ElementAt(i));
+
+    if (!node || node == commonParent.get())
+      break;
+
+    ancestors.RemoveElementAt(i);
+  }
+
+  return SerializeRangeNodes(ancestors, start, startOffset,
+                             end, endOffset, aOutputString);
+}
+
+NS_IMETHODIMP
+nsDocumentEncoder::EncodeToString(nsAWritableString& aOutputString)
+{
   if (!mDocument)
     return NS_ERROR_NOT_INITIALIZED;
 
+  aOutputString.Truncate();
+
   // xxx Also make sure mString is a mime type "text/html" or "text/plain"
-  
-  if (mDocument)
-  {
-    nsString buffer;
 
-    if (mMimeType.EqualsWithConversion("text/xif"))
-    {
-      mDocument->CreateXIF(aOutputString, mSelection);
-      return NS_OK;
+  nsCAutoString progId(NS_CONTENTSERIALIZER_PROGID_PREFIX);
+  progId.AppendWithConversion(mMimeType);
+
+  mSerializer = do_CreateInstance(NS_STATIC_CAST(const char *, progId));
+  NS_ENSURE_TRUE(mSerializer, NS_ERROR_NOT_IMPLEMENTED);
+
+  mSerializer->Init(mFlags, mWrapColumn);
+
+  nsresult rv = NS_OK;
+
+  if (mSelection) {
+    nsCOMPtr<nsIDOMRange> range;
+    PRInt32 i, count = 0;
+
+    rv = mSelection->GetRangeCount(&count);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    for (i = 0; i < count; i++) {
+      mSelection->GetRangeAt(i, getter_AddRefs(range));
+
+      rv = SerializeRangeToString(range, aOutputString);
+      NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    mDocument->CreateXIF(buffer, mSelection);
+    mSelection = nsnull;
+  } else if (mRange) {
+      rv = SerializeRangeToString(mRange, aOutputString);
 
-    nsIParser* parser;
+      mRange = nsnull;
+  } else {
+    nsCOMPtr<nsIDOMNode> doc(do_QueryInterface(mDocument));
 
-    rv = nsComponentManager::CreateInstance(kCParserCID, 
-                                            nsnull, 
-                                            kCParserIID, 
-                                            (void **)&parser);
+    rv = SerializeToStringRecursive(doc, aOutputString);
+  }
 
-    if (NS_SUCCEEDED(rv))
-    {
-      nsIHTMLContentSink* sink = nsnull;
-
-      if (mMimeType.EqualsWithConversion("text/html"))
-        rv = NS_New_HTML_ContentSinkStream(&sink, &aOutputString, mFlags);
-
-      else  // default to text/plain
-        rv = NS_New_HTMLToTXT_SinkStream(&sink, &aOutputString,
-                                         mWrapColumn, mFlags);
-
-      if (sink && NS_SUCCEEDED(rv))
-      {
-        parser->SetContentSink(sink);
-        nsIDTD* dtd = nsnull;
-        rv = NS_NewXIFDTD(&dtd);
-        if (NS_SUCCEEDED(rv))
-        {
-          parser->RegisterDTD(dtd);
-          parser->Parse(buffer, 0, NS_ConvertToString("text/xif"), PR_FALSE, PR_TRUE);
-        }
-        NS_IF_RELEASE(dtd);
-        NS_IF_RELEASE(sink);
-      }
-      NS_RELEASE(parser);
-    }
-	}
   return rv;
 }
 
 NS_IMETHODIMP
-nsTextEncoder::EncodeToStream(nsIOutputStream* aStream)
+nsDocumentEncoder::EncodeToStream(nsIOutputStream* aStream)
 {
-  nsresult rv;
+  nsresult rv = NS_OK;
 
   if (!mDocument)
     return NS_ERROR_NOT_INITIALIZED;
 
+  NS_WITH_SERVICE(nsICharsetConverterManager,
+                  charsetConv, 
+                  kCharsetConverterManagerCID,
+                  &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoString charsetStr;
+  charsetStr.Assign(mCharset);
+  rv = charsetConv->GetUnicodeEncoder(&charsetStr,
+                                      getter_AddRefs(mUnicodeEncoder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // xxx Also make sure mString is a mime type "text/html" or "text/plain"
-  
-  if (mDocument)
-  {
-    nsString buffer;
 
-    mDocument->CreateXIF(buffer,mSelection);
-    
-    nsString*     charset = nsnull;
-    nsAutoString  defaultCharset; defaultCharset.AssignWithConversion("ISO-8859-1");
-    if (!mCharset.EqualsWithConversion("null") && !mCharset.IsEmpty())
-      charset = &mCharset; 
+  mStream = aStream;
 
-    nsIParser* parser;
+  nsAutoString buf;
 
-    rv = nsComponentManager::CreateInstance(kCParserCID, 
-                                            nsnull, 
-                                            kCParserIID, 
-                                            (void **)&parser);
+  rv = EncodeToString(buf);
 
-    if (NS_SUCCEEDED(rv)) {
-      nsIHTMLContentSink* sink = nsnull;
+  // Force a flush of the last chunk of data.
+  FlushText(buf, PR_TRUE);
 
-      if (mMimeType.EqualsWithConversion("text/html"))
-        rv = NS_New_HTML_ContentSinkStream(&sink, aStream, charset, mFlags);
+  mStream = nsnull;
+  mUnicodeEncoder = nsnull;
 
-      else
-        rv = NS_New_HTMLToTXT_SinkStream(&sink, aStream, charset,
-                                         mWrapColumn, mFlags);
-
-      if (NS_SUCCEEDED(rv))
-      {
-        parser->SetContentSink(sink);
-
-        nsIDTD* dtd = nsnull;
-        rv = NS_NewXIFDTD(&dtd);
-        if (NS_SUCCEEDED(rv))
-        {
-          parser->RegisterDTD(dtd);
-          parser->Parse(buffer, 0, NS_ConvertToString("text/xif"), PR_FALSE, PR_TRUE);
-        }
-        NS_IF_RELEASE(dtd);
-        NS_IF_RELEASE(sink);
-      }
-      NS_RELEASE(parser);
-    }
-	}
   return rv;
 }
 
 nsresult
 NS_NewTextEncoder(nsIDocumentEncoder** aResult)
 {
-  *aResult = new nsTextEncoder;
+  *aResult = new nsDocumentEncoder;
   if (!*aResult)
     return NS_ERROR_OUT_OF_MEMORY;
  NS_ADDREF(*aResult);
  return NS_OK;
 }
 
-
-class nsDocumentEncoderFactory : public nsIFactory
-{
-public:   
-  nsDocumentEncoderFactory();   
-  virtual ~nsDocumentEncoderFactory();   
-
-  // nsISupports methods   
-  NS_DECL_ISUPPORTS
-
-  NS_IMETHOD CreateInstance(nsISupports *aOuter,
-                            REFNSIID aIID,
-                            void **aResult);
-};   
-
-MOZ_DECL_CTOR_COUNTER(nsDocumentEncoderFactory);
-
-nsDocumentEncoderFactory::nsDocumentEncoderFactory()
-{
-  MOZ_COUNT_CTOR(nsDocumentEncoderFactory);
-  mRefCnt = 0;
-}
-
-nsDocumentEncoderFactory::~nsDocumentEncoderFactory()
-{
-  MOZ_COUNT_DTOR(nsDocumentEncoderFactory);
-}
-
-NS_IMPL_ADDREF(nsDocumentEncoderFactory)
-NS_IMPL_RELEASE(nsDocumentEncoderFactory)
-
-nsresult nsDocumentEncoderFactory::QueryInterface(REFNSIID aIID,   
-                                               void **aInstancePtr)
-{
-  if (nsnull == aInstancePtr)
-    return NS_ERROR_NULL_POINTER;   
-
-  *aInstancePtr = 0;   
-
-  if (aIID.Equals(kISupportsIID)) {
-    *aInstancePtr = (void *)(nsISupports*)this;   
-  } else if (aIID.Equals(kIFactoryIID)) {
-    *aInstancePtr = (void *)(nsIFactory*)this;   
-  }
-
-  if (nsnull == *aInstancePtr)
-    return NS_NOINTERFACE;   
-
-  NS_ADDREF_THIS();
-
-  return NS_OK;   
-}
-
-nsresult
-nsDocumentEncoderFactory::CreateInstance(nsISupports *aOuter,
-                                         REFNSIID aIID,
-                                         void **aResult)
-{
-  if (!aResult)
-    return NS_ERROR_NULL_POINTER;  
-
-  *aResult = 0;
-
-  if (aIID.Equals(kCTextEncoderCID))
-    *aResult = new nsTextEncoder;
-  else
-    return NS_NOINTERFACE;
-
-  if (*aResult == NULL)
-    return NS_ERROR_OUT_OF_MEMORY;  
-
-  return NS_OK;
-}
 

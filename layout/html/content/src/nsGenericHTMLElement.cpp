@@ -91,7 +91,6 @@
 #include "nsParserCIID.h"
 #include "nsIHTMLContentSink.h"
 #include "nsHTMLContentSinkStream.h"
-#include "nsXIFDTD.h"
 #include "nsLayoutCID.h"
 // XXX todo: add in missing out-of-memory checks
 
@@ -812,47 +811,23 @@ nsGenericHTMLElement::GetInnerHTML(nsAWritableString& aInnerHTML)
   nsCOMPtr<nsIDOMNode> thisNode(do_QueryInterface(mContent));
   nsresult rv = NS_OK;
 
-  // Frist we create XIF for the children of this node...
-  nsAutoString buf;
-  nsCOMPtr<nsIXIFConverter> xifc;
-  nsComponentManager::CreateInstance(kXIFConverterCID,
-                           nsnull,
-                           NS_GET_IID(nsIXIFConverter),
-                           getter_AddRefs(xifc));
-  NS_ENSURE_TRUE(xifc,NS_ERROR_FAILURE);
-  xifc->Init(buf);
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
+  docEncoder = do_CreateInstance(NS_DOC_ENCODER_PROGID_BASE "text/html");
 
-  PRUint32 i, count = 0;
-  nsCOMPtr<nsIDOMNodeList> childNodes;
-  thisNode->GetChildNodes(getter_AddRefs(childNodes));
-  if (childNodes)
-    childNodes->GetLength(&count);
+  NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
 
-  for (i = 0; i < count; i++) {
-    nsCOMPtr<nsIDOMNode> child;
-    childNodes->Item(i, getter_AddRefs(child));
-    rv = mDocument->ToXIF(xifc, child);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
+  docEncoder->Init(mDocument, NS_LITERAL_STRING("text/html"), 0);
 
-  // And then we use the parser and sinks to create the HTML.
+  nsRange *range = new nsRange;
+  NS_ENSURE_TRUE(range, NS_ERROR_OUT_OF_MEMORY);
+  nsCOMPtr<nsIDOMRange> kungFoDeathGrip(range);
 
-  static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
-  nsCOMPtr<nsIParser> parser = do_CreateInstance(kCParserCID, &rv);
+  rv = range->SelectNodeContents(thisNode);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIHTMLContentSink> sink;
-  rv = NS_New_HTML_ContentSinkStream(getter_AddRefs(sink), &aInnerHTML, 0);
-  NS_ENSURE_SUCCESS(rv, rv);
+  docEncoder->SetRange(range);
 
-  parser->SetContentSink(sink);
-  nsCOMPtr<nsIDTD> dtd;
-
-  rv = NS_NewXIFDTD(getter_AddRefs(dtd));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  parser->RegisterDTD(dtd);
-  parser->Parse(buf, 0, NS_ConvertASCIItoUCS2("text/xif"), PR_FALSE, PR_TRUE);
+  docEncoder->EncodeToString(aInnerHTML);
 
   return rv;
 }

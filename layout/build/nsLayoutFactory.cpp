@@ -64,6 +64,10 @@
 #include "nsContentPolicyUtils.h"
 #include "nsIXIFConverter.h"
 
+#include "nsXMLContentSerializer.h"
+#include "nsHTMLContentSerializer.h"
+#include "nsPlainTextSerializer.h"
+
 #include "nsINodeInfo.h"
 #include "nsIComputedDOMStyle.h"
 
@@ -103,6 +107,10 @@ static NS_DEFINE_CID(kLayoutDocumentLoaderFactoryCID, NS_LAYOUT_DOCUMENT_LOADER_
 static NS_DEFINE_CID(kLayoutDebuggerCID, NS_LAYOUT_DEBUGGER_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID, NS_HTML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kTextEncoderCID, NS_TEXT_ENCODER_CID);
+
+static NS_DEFINE_CID(kXMLContentSerializerCID, NS_XMLCONTENTSERIALIZER_CID);
+static NS_DEFINE_CID(kHTMLContentSerializerCID, NS_HTMLCONTENTSERIALIZER_CID);
+static NS_DEFINE_CID(kPlainTextSerializerCID, NS_PLAINTEXTSERIALIZER_CID);
 
 static NS_DEFINE_CID(kXBLServiceCID, NS_XBLSERVICE_CID);
 static NS_DEFINE_CID(kBindingManagerCID, NS_BINDINGMANAGER_CID);
@@ -409,6 +417,27 @@ nsLayoutFactory::CreateInstance(nsISupports *aOuter,
     res = NS_NewTextEncoder((nsIDocumentEncoder**) &inst);
     if (NS_FAILED(res)) {
       LOG_NEW_FAILURE("NS_NewTextEncoder", res);
+      return res;
+    }
+  }
+  else if (mClassID.Equals(kXMLContentSerializerCID)) {
+    res = NS_NewXMLContentSerializer((nsIContentSerializer**) &inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewXMLContentSerializer", res);
+      return res;
+    }
+  }
+  else if (mClassID.Equals(kHTMLContentSerializerCID)) {
+    res = NS_NewHTMLContentSerializer((nsIContentSerializer**) &inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewHTMLContentSerializer", res);
+      return res;
+    }
+  }
+  else if (mClassID.Equals(kPlainTextSerializerCID)) {
+    res = NS_NewPlainTextSerializer((nsIContentSerializer**) &inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewPlainTextSerializer", res);
       return res;
     }
   }

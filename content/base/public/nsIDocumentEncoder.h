@@ -29,6 +29,7 @@
 class nsIDocumentEncoder;
 class nsIDocument;
 class nsIDOMSelection;
+class nsIDOMRange;
 class nsIOutputStream;
 class nsISupportsArray;
 
@@ -49,11 +50,14 @@ class nsISupportsArray;
     {0x83, 0x0f, 0x00, 0x10, 0x4b, 0xed, 0x04, 0x5e} \
 }
 
-#define NS_DOC_ENCODER_PROGID_BASE "component://netscape/layout/documentEncoder?type="
+#define NS_DOC_ENCODER_PROGID_BASE \
+  "component://netscape/layout/documentEncoder?type="
 
 class nsIDocumentEncoder : public nsISupports
 {
 public:
+
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_ENCODER_IID)
 
   /**
    * Output methods flag bits.
@@ -106,13 +110,12 @@ public:
     OutputCRLineBreak = 512,
     OutputLFLineBreak = 1024
   };
-  
-  static const nsIID& GetIID() { static nsIID iid = NS_IDOCUMENT_ENCODER_IID; return iid; }
 
   /**
    *  Initialize with a pointer to the document and the mime type.
    */
-  NS_IMETHOD Init(nsIDocument* aDocument, const nsAReadableString& aMimeType, PRUint32 flags) = 0;
+  NS_IMETHOD Init(nsIDocument* aDocument, const nsAReadableString& aMimeType,
+                  PRUint32 flags) = 0;
 
   /**
    *  If the selection is set to a non-null value, then the
@@ -120,6 +123,13 @@ public:
    *  document is encoded.
    */
   NS_IMETHOD SetSelection(nsIDOMSelection* aSelection) = 0;
+
+  /**
+   *  If the range is set to a non-null value, then the
+   *  range is used for encoding, otherwise the entire
+   *  document or selection is encoded.
+   */
+  NS_IMETHOD SetRange(nsIDOMRange* aRange) = 0;
 
   /**
    *  Documents typically have an intrinsic character set.
@@ -147,24 +157,6 @@ public:
   NS_IMETHOD EncodeToStream(nsIOutputStream* aStream) = 0;
   NS_IMETHOD EncodeToString(nsAWritableString& aOutputString) = 0;
 };
-
-// XXXXXXXXXXXXXXXX nsITextEncoder is going away! XXXXXXXXXXXXXXXXXXXXXX
-#ifdef USE_OBSOLETE_TEXT_ENCODER
-// Example of a output service for a particular encoder.
-// The text encoder handles XIF, HTML, and plaintext.
-class nsITextEncoder : public nsIDocumentEncoder
-{
-public:
-  static const nsIID& GetIID() { static nsIID iid = NS_TEXT_ENCODER_CID; return iid; }
-
-  // Get embedded objects -- images, links, etc.
-  // NOTE: we may want to use an enumerator
-  NS_IMETHOD PrettyPrint(PRBool aYes) = 0;
-  NS_IMETHOD SetWrapColumn(PRUint32 aWC) = 0;
-  NS_IMETHOD AddHeader(PRBool aYes) = 0;
-};
-#endif /* USE_OBSOLETE_TEXT_ENCODER */
-
 
 #endif /* nsIDocumentEncoder_h__ */
 

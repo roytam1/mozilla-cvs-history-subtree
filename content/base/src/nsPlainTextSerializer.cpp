@@ -64,6 +64,17 @@ static PRInt32 unicharwidth(const PRUnichar* pwcs, PRInt32 n);
 static const PRUint32 TagStackSize = 500;
 static const PRUint32 OLStackSize = 100;
 
+nsresult NS_NewPlainTextSerializer(nsIContentSerializer** aSerializer)
+{
+  nsPlainTextSerializer* it = new nsPlainTextSerializer();
+  if (!it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  return it->QueryInterface(NS_GET_IID(nsIContentSerializer),
+                            (void**)aSerializer);
+}
+
 nsPlainTextSerializer::nsPlainTextSerializer()
 {
   NS_INIT_ISUPPORTS();
@@ -105,10 +116,11 @@ nsPlainTextSerializer::~nsPlainTextSerializer()
   delete[] mOLStack;
 }
 
-NS_IMPL_ISUPPORTS3(nsPlainTextSerializer, 
+NS_IMPL_ISUPPORTS4(nsPlainTextSerializer, 
                    nsIContentSerializer,
                    nsIContentSink,
-                   nsIHTMLContentSink)
+                   nsIHTMLContentSink,
+                   nsIHTMLToTextSink)
 
 
 NS_IMETHODIMP 
@@ -155,6 +167,21 @@ nsPlainTextSerializer::Init(PRUint32 aFlags, PRUint32 aWrapColumn)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsPlainTextSerializer::Initialize(nsAWritableString* aOutString,
+                                  PRUint32 aFlags, PRUint32 aWrapCol)
+{
+  nsresult rv = Init(aFlags, aWrapCol);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // XXX This is wrong. It violates XPCOM string ownership rules.
+  // We're only getting away with this because instances of this
+  // class are restricted to single function scope.
+  mOutputString = aOutString;
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP 
 nsPlainTextSerializer::AppendText(nsIDOMText* aText, 
                                   PRInt32 aStartOffset,
@@ -163,7 +190,7 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
 {
   NS_ENSURE_ARG(aText);
 
-  nsresult rv;
+  nsresult rv = NS_OK;
   PRInt32 length = 0;
   nsAutoString textstr;
 
@@ -183,6 +210,8 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
     }
   }
 
+  mOutputString = &aStr;
+
   nsAutoString linebuffer;
 
   // We have to split the string across newlines
@@ -194,28 +223,30 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
     // Pass in the line
     textstr.Mid(linebuffer, start, offset-start);
     rv = DoAddLeaf(eHTMLTag_text, linebuffer);
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+    if (NS_FAILED(rv)) break;
 
     // Pass in a newline
     rv = DoAddLeaf(eHTMLTag_newline, mLineBreak);
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+    if (NS_FAILED(rv)) break;
     
     start = offset+1;
     offset = textstr.FindCharInSet("\n\r", start);
   }
 
   // Consume the last bit of the string if there's any left
-  if (start < length) {
+  if (NS_SUCCEEDED(rv) & (start < length)) {
     if (start) {
       textstr.Mid(linebuffer, start, offset-start);
-      return DoAddLeaf(eHTMLTag_text, linebuffer);
+      rv = DoAddLeaf(eHTMLTag_text, linebuffer);
     }
     else {
-      return DoAddLeaf(eHTMLTag_text, textstr);
+      rv = DoAddLeaf(eHTMLTag_text, textstr);
     }
   }
   
-  return NS_OK;
+  mOutputString = nsnull;
+
+  return rv;
 }
 
 NS_IMETHODIMP 
@@ -292,6 +323,7 @@ nsPlainTextSerializer::OpenContainer(const nsIParserNode& aNode)
   const nsString&   namestr = aNode.GetText();
   nsCOMPtr<nsIAtom> name = dont_AddRef(NS_NewAtom(namestr));
 
+  mParserNode = &aNode;
   return DoOpenContainer(type, name);
 }
 
@@ -302,6 +334,7 @@ nsPlainTextSerializer::CloseContainer(const nsIParserNode& aNode)
   const nsString&   namestr = aNode.GetText();
   nsCOMPtr<nsIAtom> name = dont_AddRef(NS_NewAtom(namestr));
   
+  mParserNode = &aNode;
   return DoCloseContainer(type, name);
 }
  
@@ -311,6 +344,7 @@ nsPlainTextSerializer::AddLeaf(const nsIParserNode& aNode)
   PRInt32 type = aNode.GetNodeType();
   const nsString& text = aNode.GetText();
 
+  mParserNode = &aNode;
   return DoAddLeaf(type, text);
 }
 

@@ -30,43 +30,41 @@
 
 #include "nsITransferable.h" // for mime defs, this is BAD
 
-// XIF convertor stuff
+// HTML convertor stuff
 #include "nsIParser.h"
 #include "nsParserCIID.h"
-#include "nsHTMLContentSinkStream.h"
-#include "nsHTMLToTXTSinkStream.h"
-#include "nsXIFDTD.h"
-#include "nsIStringStream.h"
+#include "nsIContentSink.h"
 
 #include "nsString.h"
 #include "nsWidgetsCID.h"
 #include "nsXIFFormatConverter.h"
 #include "nsPrimitiveHelpers.h"
 #include "nsIDocumentEncoder.h"
+#include "nsIHTMLToTextSink.h"
 
 static NS_DEFINE_CID(kCParserCID, NS_PARSER_IID);  // don't panic. NS_PARSER_IID just has the wrong name.
 
-NS_IMPL_ADDREF(nsXIFFormatConverter)
-NS_IMPL_RELEASE(nsXIFFormatConverter)
-NS_IMPL_QUERY_INTERFACE1(nsXIFFormatConverter, nsIFormatConverter)
+NS_IMPL_ADDREF(nsHTMLFormatConverter)
+NS_IMPL_RELEASE(nsHTMLFormatConverter)
+NS_IMPL_QUERY_INTERFACE1(nsHTMLFormatConverter, nsIFormatConverter)
 
 
 //-------------------------------------------------------------------------
 //
-// XIFFormatConverter constructor
+// HTMLFormatConverter constructor
 //
 //-------------------------------------------------------------------------
-nsXIFFormatConverter::nsXIFFormatConverter()
+nsHTMLFormatConverter::nsHTMLFormatConverter()
 {
   NS_INIT_REFCNT();
 }
 
 //-------------------------------------------------------------------------
 //
-// XIFFormatConverter destructor
+// HTMLFormatConverter destructor
 //
 //-------------------------------------------------------------------------
-nsXIFFormatConverter::~nsXIFFormatConverter()
+nsHTMLFormatConverter::~nsHTMLFormatConverter()
 {
 }
 
@@ -75,20 +73,20 @@ nsXIFFormatConverter::~nsXIFFormatConverter()
 // GetInputDataFlavors
 //
 // Creates a new list and returns the list of all the flavors this converter
-// knows how to import. In this case, it's just XIF.
+// knows how to import. In this case, it's just HTML.
 //
 // Flavors (strings) are wrapped in a primitive object so that JavaScript can
 // access them easily via XPConnect.
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::GetInputDataFlavors(nsISupportsArray **_retval)
+nsHTMLFormatConverter::GetInputDataFlavors(nsISupportsArray **_retval)
 {
   if ( !_retval )
     return NS_ERROR_INVALID_ARG;
   
   nsresult rv = NS_NewISupportsArray ( _retval );  // addrefs for us
   if ( NS_SUCCEEDED(rv) )
-    rv = AddFlavorToList ( *_retval, kXIFMime );
+    rv = AddFlavorToList ( *_retval, kHTMLMime );
   
   return rv;
   
@@ -99,14 +97,14 @@ nsXIFFormatConverter::GetInputDataFlavors(nsISupportsArray **_retval)
 // GetOutputDataFlavors
 //
 // Creates a new list and returns the list of all the flavors this converter
-// knows how to export (convert). In this case, it's all sorts of things that XIF can be
+// knows how to export (convert). In this case, it's all sorts of things that HTML can be
 // converted to.
 //
 // Flavors (strings) are wrapped in a primitive object so that JavaScript can
 // access them easily via XPConnect.
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::GetOutputDataFlavors(nsISupportsArray **_retval)
+nsHTMLFormatConverter::GetOutputDataFlavors(nsISupportsArray **_retval)
 {
   if ( !_retval )
     return NS_ERROR_INVALID_ARG;
@@ -140,7 +138,7 @@ nsXIFFormatConverter::GetOutputDataFlavors(nsISupportsArray **_retval)
 // to a list
 //
 nsresult
-nsXIFFormatConverter :: AddFlavorToList ( nsISupportsArray* inList, const char* inFlavor )
+nsHTMLFormatConverter :: AddFlavorToList ( nsISupportsArray* inList, const char* inFlavor )
 {
   nsCOMPtr<nsISupportsString> dataFlavor;
   nsresult rv = nsComponentManager::CreateInstance(NS_SUPPORTS_STRING_PROGID, nsnull, 
@@ -161,10 +159,10 @@ nsXIFFormatConverter :: AddFlavorToList ( nsISupportsArray* inList, const char* 
 // CanConvert
 //
 // Determines if we support the given conversion. Currently, this method only
-// converts from XIF to others.
+// converts from HTML to others.
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDataFlavor, PRBool *_retval)
+nsHTMLFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDataFlavor, PRBool *_retval)
 {
   if ( !_retval )
     return NS_ERROR_INVALID_ARG;
@@ -173,11 +171,10 @@ nsXIFFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDat
   
   *_retval = PR_FALSE;
   nsAutoString fromFlavor; fromFlavor.AssignWithConversion( aFromDataFlavor );
-  if ( fromFlavor.EqualsWithConversion(kXIFMime) ) {
-    nsAutoString toFlavor; toFlavor.AssignWithConversion( aToDataFlavor );
-    if ( toFlavor.EqualsWithConversion(kHTMLMime) )
+  if ( !nsCRT::strcmp(aFromDataFlavor, kHTMLMime) ) {
+    if ( !nsCRT::strcmp(aToDataFlavor, kHTMLMime) )
       *_retval = PR_TRUE;
-    else if ( toFlavor.EqualsWithConversion(kUnicodeMime) )
+    else if ( !nsCRT::strcmp(aToDataFlavor, kUnicodeMime) )
       *_retval = PR_TRUE;
 #if NOT_NOW
 // pinkerton
@@ -197,7 +194,7 @@ nsXIFFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDat
 // Convert
 //
 // Convert data from one flavor to another. The data is wrapped in primitive objects so that it is
-// accessable from JS. Currently, this only accepts XIF input, so anything else is invalid.
+// accessable from JS. Currently, this only accepts HTML input, so anything else is invalid.
 //
 //XXX This method copies the data WAAAAY too many time for my liking. Grrrrrr. Mostly it's because
 //XXX we _must_ put things into nsStrings so that the parser will accept it. Lame lame lame lame. We
@@ -205,19 +202,18 @@ nsXIFFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDat
 //XXX unicode out of the string. Lame lame lame.
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::Convert(const char *aFromDataFlavor, nsISupports *aFromData, PRUint32 aDataLen, 
+nsHTMLFormatConverter::Convert(const char *aFromDataFlavor, nsISupports *aFromData, PRUint32 aDataLen, 
                                const char *aToDataFlavor, nsISupports **aToData, PRUint32 *aDataToLen)
 {
   if ( !aToData || !aDataToLen )
     return NS_ERROR_INVALID_ARG;
 
   nsresult rv = NS_OK;
-  
-  nsCAutoString fromFlavor ( aFromDataFlavor );
-  if ( fromFlavor.Equals(kXIFMime) ) {
+
+  if ( !nsCRT::strcmp(aFromDataFlavor, kHTMLMime) ) {
     nsCAutoString toFlavor ( aToDataFlavor );
 
-    // XIF on clipboard is going to always be double byte so it will be in a primitive
+    // HTML on clipboard is going to always be double byte so it will be in a primitive
     // class of nsISupportsWString. Also, since the data is in two byte chunks the 
     // length represents the length in 1-byte chars, so we need to divide by two.
     nsCOMPtr<nsISupportsWString> dataWrapper0 ( do_QueryInterface(aFromData) );
@@ -231,22 +227,26 @@ nsXIFFormatConverter::Convert(const char *aFromDataFlavor, nsISupports *aFromDat
         // note: conversion to text/plain is done inside the clipboard. we do not need to worry 
         // about it here.
         if ( toFlavor.Equals(kHTMLMime) || toFlavor.Equals(kUnicodeMime) ) {
-          nsAutoString outStr;
           nsresult res;
-          if (toFlavor.Equals(kHTMLMime))
-            res = ConvertFromXIFToHTML(dataStr, outStr);
-          else
-            res = ConvertFromXIFToUnicode(dataStr, outStr);
-          if ( NS_SUCCEEDED(res) ) {
-            PRInt32 dataLen = outStr.Length() * 2;
-            nsPrimitiveHelpers::CreatePrimitiveForData ( toFlavor, (void*)outStr.GetUnicode(), dataLen, aToData );
-            if ( *aToData ) 
+          if (toFlavor.Equals(kHTMLMime)) {
+            PRInt32 dataLen = dataStr.Length() * 2;
+            nsPrimitiveHelpers::CreatePrimitiveForData ( toFlavor, (void*)dataStr.GetUnicode(), dataLen, aToData );
+            if ( *aToData )
               *aDataToLen = dataLen;
+          } else {
+            nsAutoString outStr;
+            res = ConvertFromHTMLToUnicode(dataStr, outStr);
+            if (NS_SUCCEEDED(res)) {
+              PRInt32 dataLen = outStr.Length() * 2;
+              nsPrimitiveHelpers::CreatePrimitiveForData ( toFlavor, (void*)outStr.GetUnicode(), dataLen, aToData );
+              if ( *aToData ) 
+                *aDataToLen = dataLen;
+            }
           }
         } // else if HTML or Unicode
         else if ( toFlavor.Equals(kAOLMailMime) ) {
           nsAutoString outStr;
-          if ( NS_SUCCEEDED(ConvertFromXIFToAOLMail(dataStr, outStr)) ) {
+          if ( NS_SUCCEEDED(ConvertFromHTMLToAOLMail(dataStr, outStr)) ) {
             PRInt32 dataLen = outStr.Length() * 2;
             nsPrimitiveHelpers::CreatePrimitiveForData ( toFlavor, (void*)outStr.GetUnicode(), dataLen, aToData );
             if ( *aToData ) 
@@ -272,15 +272,16 @@ nsXIFFormatConverter::Convert(const char *aFromDataFlavor, nsISupports *aFromDat
 
 #if USE_PLAIN_TEXT
 //
-// ConvertFromXIFToText
+// ConvertFromHTMLToText
 //
-// Takes XIF and converts it to plain text using the correct charset for the platform/OS/language.
+// Takes HTML and converts it to plain text using the correct charset for the platform/OS/language.
 //
 // *** This code is now obsolete, but I'm leaving it around for reference about how to do 
 // *** charset conversion with streams
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::ConvertFromXIFToText(const nsAutoString & aFromStr, nsCAutoString & aToStr)
+nsHTMLFormatConverter::ConvertFromHTMLToText(const nsAutoString & aFromStr,
+                                             nsCAutoString & aToStr)
 {
   // Figure out the correct charset we need to use. We are guaranteed that this does not change
   // so we cache it.
@@ -296,56 +297,28 @@ nsXIFFormatConverter::ConvertFromXIFToText(const nsAutoString & aFromStr, nsCAut
       
     hasDeterminedCharset = PR_TRUE;
   }
-  
-  // create the parser to do the conversion.
-  aToStr = "";
-  nsCOMPtr<nsIParser> parser;
-  nsresult rv = nsComponentManager::CreateInstance(kCParserCID, nsnull, NS_GET_IID(nsIParser),
-                                                     getter_AddRefs(parser));
-  if ( !parser )
-    return rv;
 
-  // create a string stream to hold the converted text in the appropriate charset. The stream
-  // owns the char buffer it creates, so we don't have to worry about it.
-  nsCOMPtr<nsISupports> stream;
-  char* buffer = nsnull;
-  rv = NS_NewCharOutputStream ( getter_AddRefs(stream), &buffer );   // owns |buffer|
-  if ( !stream )    
-    return rv;
-  nsCOMPtr<nsIOutputStream> outStream ( do_QueryInterface(stream) );
-  
-  // convert it!
-  nsCOMPtr<nsIHTMLContentSink> sink;
-  rv = NS_New_HTMLToTXT_SinkStream(getter_AddRefs(sink),outStream,&platformCharset,
-                                   nsIDocumentEncoder::OutputSelectionOnly
-                                    | nsIDocumentEncoder::OutputAbsoluteLinks);
-  if ( sink ) {
-    parser->SetContentSink(sink);
-	
-    nsCOMPtr<nsIDTD> dtd;
-    rv = NS_NewXIFDTD(getter_AddRefs(dtd));
-    if ( dtd ) {
-      parser->RegisterDTD(dtd);
-      parser->Parse(aFromStr, 0, "text/xif",PR_FALSE,PR_TRUE);           
-    }
-  }
-  
-  // assign the data back into our out param.
-  aToStr = buffer;
+  nsAutoString str;
+
+  rv = ConvertFromHTMLToUnicode(aFromStr, str);
+
+  aToStr.AssignWithConversion(str);
+
+  // XXX Do the conversion!!!!
 
   return NS_OK;
-} // ConvertFromXIFToText
+} // ConvertFromHTMLToText
 #endif
 
 
 //
-// ConvertFromXIFToUnicode
+// ConvertFromHTMLToUnicode
 //
-// Takes XIF and converts it to plain text but in unicode. We can't just use the xif->text
+// Takes HTML and converts it to plain text but in unicode. We can't just use the xif->text
 // routine as it also does a charset conversion which isn't what we want.
 //
 NS_IMETHODIMP
-nsXIFFormatConverter::ConvertFromXIFToUnicode(const nsAutoString & aFromStr, nsAutoString & aToStr)
+nsHTMLFormatConverter::ConvertFromHTMLToUnicode(const nsAutoString & aFromStr, nsAutoString & aToStr)
 {
   // create the parser to do the conversion.
   aToStr.SetLength(0);
@@ -356,23 +329,23 @@ nsXIFFormatConverter::ConvertFromXIFToUnicode(const nsAutoString & aFromStr, nsA
     return rv;
 
   // convert it!
-  nsCOMPtr<nsIHTMLContentSink> sink;
-  rv = NS_New_HTMLToTXT_SinkStream(getter_AddRefs(sink), &aToStr, 0,
-                                   nsIDocumentEncoder::OutputSelectionOnly
-                                    | nsIDocumentEncoder::OutputAbsoluteLinks);
-  if ( sink ) {
-    parser->SetContentSink(sink);
-	
-    nsCOMPtr<nsIDTD> dtd;
-    rv = NS_NewXIFDTD(getter_AddRefs(dtd));
-    if ( dtd ) {
-      parser->RegisterDTD(dtd);
-      parser->Parse(aFromStr, 0, NS_ConvertASCIItoUCS2("text/xif"),PR_FALSE,PR_TRUE);           
-    }
-  }
+  nsCOMPtr<nsIContentSink> sink;
+
+  sink = do_CreateInstance(NS_PLAINTEXTSINK_PROGID);
+  NS_ENSURE_TRUE(sink, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIHTMLToTextSink> textSink(do_QueryInterface(sink));
+  NS_ENSURE_TRUE(textSink, NS_ERROR_FAILURE);
+
+  textSink->Initialize(&aToStr, nsIDocumentEncoder::OutputSelectionOnly
+                       | nsIDocumentEncoder::OutputAbsoluteLinks, 0);
+
+  parser->SetContentSink(sink);
+
+  parser->Parse(aFromStr, 0, NS_LITERAL_STRING("text/html"), PR_FALSE, PR_TRUE);
   
   return NS_OK;
-} // ConvertFromXIFToUnicode
+} // ConvertFromHTMLToUnicode
 
 
 /**
@@ -380,47 +353,16 @@ nsXIFFormatConverter::ConvertFromXIFToUnicode(const nsAutoString & aFromStr, nsA
   *
   */
 NS_IMETHODIMP
-nsXIFFormatConverter::ConvertFromXIFToHTML(const nsAutoString & aFromStr, nsAutoString & aToStr)
+nsHTMLFormatConverter::ConvertFromHTMLToAOLMail(const nsAutoString & aFromStr,
+                                                nsAutoString & aToStr)
 {
-  aToStr.SetLength(0);
-  nsCOMPtr<nsIParser> parser;
-  nsresult rv = nsComponentManager::CreateInstance(kCParserCID, 
-                                             nsnull, 
-                                             NS_GET_IID(nsIParser), 
-                                             getter_AddRefs(parser));
-  if ( !parser )
-    return rv;
+  // XXX extra copy!!!
+  nsAutoString html(aFromStr);
 
-  nsCOMPtr<nsIHTMLContentSink> sink;
-  rv = NS_New_HTML_ContentSinkStream(getter_AddRefs(sink), &aToStr,
-                                     nsIDocumentEncoder::OutputSelectionOnly
-                                      | nsIDocumentEncoder::OutputAbsoluteLinks);
-  if ( sink ) {
-    parser->SetContentSink(sink);
-	
-    nsCOMPtr<nsIDTD> dtd;
-    rv = NS_NewXIFDTD(getter_AddRefs(dtd));
-    if ( dtd ) {
-      parser->RegisterDTD(dtd);
-      parser->Parse(aFromStr, 0, NS_ConvertASCIItoUCS2("text/xif"),PR_FALSE,PR_TRUE);           
-    }
-  }
-  return NS_OK;
-}
+  aToStr.AssignWithConversion("<HTML>");
+  aToStr.Append(html);
+  aToStr.AppendWithConversion("</HTML>");
 
-/**
-  * 
-  *
-  */
-NS_IMETHODIMP
-nsXIFFormatConverter::ConvertFromXIFToAOLMail(const nsAutoString & aFromStr, nsAutoString & aToStr)
-{
-  nsAutoString html;
-  if (NS_OK == ConvertFromXIFToHTML(aFromStr, html)) {
-    aToStr.AssignWithConversion("<HTML>");
-    aToStr.Append(html);
-    aToStr.AppendWithConversion("</HTML>");
-  }
   return NS_OK;
 }
 

@@ -5249,9 +5249,21 @@ NS_IMETHODIMP nsHTMLEditor::DoDrag(nsIDOMEvent *aDragEvent)
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
   if (doc)
   {
+    nsCOMPtr<nsIDocumentEncoder> docEncoder;
+
+    docEncoder = do_CreateInstance(NS_DOC_ENCODER_PROGID_BASE "text/html");
+    NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+
+    docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
+    docEncoder->SetSelection(selection);
+
     nsAutoString buffer;
-    rv = doc->CreateXIF(buffer, selection);
-    if (NS_FAILED(rv)) return rv;
+
+    rv = docEncoder->EncodeToString(buffer);
+  
+    if (NS_FAILED(rv))
+      return rv;
+
     if ( !buffer.IsEmpty() )
     {
       nsCOMPtr<nsIFormatConverter> xifConverter;
@@ -5266,7 +5278,7 @@ NS_IMETHODIMP nsHTMLEditor::DoDrag(nsIDOMEvent *aDragEvent)
       if (NS_FAILED(rv)) return rv;
       if ( !dataWrapper ) return NS_ERROR_OUT_OF_MEMORY;
 
-      rv = trans->AddDataFlavor(kXIFMime);
+      rv = trans->AddDataFlavor(kHTMLMime);
       if (NS_FAILED(rv)) return rv;
       rv = trans->SetConverter(xifConverter);
       if (NS_FAILED(rv)) return rv;
@@ -5277,7 +5289,7 @@ NS_IMETHODIMP nsHTMLEditor::DoDrag(nsIDOMEvent *aDragEvent)
       // QI the data object an |nsISupports| so that when the transferable holds
       // onto it, it will addref the correct interface.
       nsCOMPtr<nsISupports> nsisupportsDataWrapper ( do_QueryInterface(dataWrapper) );
-      rv = trans->SetTransferData(kXIFMime, nsisupportsDataWrapper, buffer.Length() * 2);
+      rv = trans->SetTransferData(kHTMLMime, nsisupportsDataWrapper, buffer.Length() * 2);
       if (NS_FAILED(rv)) return rv;
 
       /* add the transferable to the array */

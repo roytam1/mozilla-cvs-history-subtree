@@ -80,8 +80,6 @@
 #include "nsIParser.h"
 #include "nsParserCIID.h"
 #include "nsHTMLContentSinkStream.h"
-#include "nsHTMLToTXTSinkStream.h"
-#include "nsXIFDTD.h"
 #include "nsIFrameSelection.h"
 #include "nsIDOMNSHTMLInputElement.h" //optimization for ::DoXXX commands
 #include "nsIDOMNSHTMLTextAreaElement.h"
@@ -126,6 +124,7 @@
 #include "nsIScrollableFrame.h"
 #include "prtime.h"
 #include "prlong.h"
+#include "nsIDocumentEncoder.h"
 
 #include "nsIDragService.h"
 
@@ -1636,7 +1635,6 @@ GetRootScrollFrame(nsIPresContext* aPresContext, nsIFrame* aRootFrame, nsIFrame*
       // If child is scrollframe keep it (native)
       aRootFrame->FirstChild(aPresContext, nsnull, &theFrame);
       if (theFrame) {
-        nsCOMPtr<nsIAtom> fType;
         theFrame->GetFrameType(getter_AddRefs(fType));
         if (nsLayoutAtoms::scrollFrame == fType.get()) {
           *aScrollFrame = theFrame;
@@ -1644,7 +1642,6 @@ GetRootScrollFrame(nsIPresContext* aPresContext, nsIFrame* aRootFrame, nsIFrame*
           // If the first child of that is scrollframe, use it instead (gfx)
           theFrame->FirstChild(aPresContext, nsnull, &theFrame);
           if (theFrame) {
-            nsCOMPtr<nsIAtom> fType;
             theFrame->GetFrameType(getter_AddRefs(fType));
             if (nsLayoutAtoms::scrollFrame == fType.get()) {
               *aScrollFrame = theFrame;
@@ -2919,8 +2916,16 @@ PresShell::DoCopy()
   if (isCollapsed)
     return NS_OK;
 
-  doc->CreateXIF(buffer,sel);
+  nsCOMPtr<nsIDocumentEncoder> docEncoder;
 
+  docEncoder = do_CreateInstance(NS_DOC_ENCODER_PROGID_BASE "text/html");
+  NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
+
+  docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
+  docEncoder->SetSelection(sel);
+
+  docEncoder->EncodeToString(buffer);
+  
   // Get the Clipboard
   NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);
   if (NS_FAILED(rv)) 
@@ -2936,17 +2941,17 @@ PresShell::DoCopy()
       // The data on the clipboard will be in "XIF" format
       // so give the clipboard transferable a "XIFConverter" for 
       // converting from XIF to other formats
-      nsCOMPtr<nsIFormatConverter> xifConverter;
+      nsCOMPtr<nsIFormatConverter> converter;
       rv = nsComponentManager::CreateInstance(kCXIFConverterCID, nsnull, 
                                               NS_GET_IID(nsIFormatConverter),
-                                              getter_AddRefs(xifConverter));
-      if ( xifConverter ) {
+                                              getter_AddRefs(converter));
+      if ( converter ) {
         // Add the XIF DataFlavor to the transferable
         // this tells the transferable that it can handle receiving the XIF format
-        trans->AddDataFlavor(kXIFMime);
+        trans->AddDataFlavor(kHTMLMime);
 
         // Add the converter for going from XIF to other formats
-        trans->SetConverter(xifConverter);
+        trans->SetConverter(converter);
 
         // Now add the XIF data to the transferable, placing it into a nsISupportsWString object.
         // the transferable wants the number bytes for the data and since it is double byte
@@ -2961,7 +2966,7 @@ PresShell::DoCopy()
           // QI the data object an |nsISupports| so that when the transferable holds
           // onto it, it will addref the correct interface.
           nsCOMPtr<nsISupports> genericDataObj ( do_QueryInterface(dataWrapper) );
-          trans->SetTransferData(kXIFMime, genericDataObj, buffer.Length()*2);
+          trans->SetTransferData(kHTMLMime, genericDataObj, buffer.Length()*2);
         }
         
         // put the transferable on the clipboard
@@ -4134,7 +4139,7 @@ struct ReflowEvent : public PLEvent {
     if (presShell) {
 #ifdef DEBUG
       if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", presShell, this);
+         printf("\n*** Handling reflow event: PresShell=%p, event=%p\n", presShell.get(), this);
       }
 #endif
       // XXX Statically cast the pres shell pointer so that we can call
