@@ -765,6 +765,9 @@ net_news_response (ActiveEntry * ce)
 	else if (502 == cd->response_code)
 	{
 	    net_news_last_username_probably_valid = FALSE;
+#if defined(SingleSignon)
+		SI_RemoveUser(ce->URL_s->address, NULL, TRUE);
+#endif
 		return net_display_html_error_state(ce);
 	}
 #endif
