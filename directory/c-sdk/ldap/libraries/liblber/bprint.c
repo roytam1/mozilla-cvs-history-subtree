@@ -17,9 +17,10 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  */
 /* bprint.c - a printing utility for debuging output */
+
 #include <string.h>
 #include "lber-int.h"
 

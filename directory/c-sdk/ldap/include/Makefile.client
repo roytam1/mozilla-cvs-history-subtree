@@ -1,5 +1,7 @@
 DEPTH		= ../../../..
-
+MOD_DEPTH       = ../../../../nsprpub
+NSPR_TREE	= ../../../../nsprpub
+XPDIST		= ../../../../dist
 
 CHMOD		= chmod
 RM		= rm -f
@@ -12,7 +14,7 @@ HEADERS		= \
 		  srchpref.h \
 		  $(NULL)
 
-include $(DEPTH)/config/rules.mk
+include $(NSPR_TREE)/config/rules.mk
 
 GARBAGE		+= sdkver.h dirver.h
 
@@ -44,5 +46,7 @@ dirver.h:	$(DIRVER_PROG)
 	@$< $(DIR_VERSION) UseSystemDate $@
 
 install::	export
+
+clean::
 
 FORCE:
