@@ -4437,22 +4437,31 @@ nsXULDocument::StartFastLoad()
         PRUint32 checksum;
         rv = fastLoadService->NewInputStream(bufferedInput, &checksum,
                                              getter_AddRefs(objectInput));
-        if (NS_FAILED(rv)) return rv;
+        if (NS_SUCCEEDED(rv)) { 
+            // XXXbe verify checksum, clear exists if bad
+            // XXXbe check dependencies, clear exists if any are newer
 
-        // XXXbe verify checksum, clear exists if bad
-        // XXXbe check dependencies, clear exists if any are newer
+            // XXXbe version number, then scripts only for now -- bump
+            // version later when rest of prototype document header is
+            // serialized
+            PRUint32 version;
+            rv = objectInput->Read32(&version);
+            if (version != XUL_FASTLOAD_FILE_VERSION) {
+                NS_WARNING("bad FastLoad file version");
+                rv = NS_ERROR_UNEXPECTED;
+            }
+        }
 
-        // XXXbe version number, then scripts only for now -- bump
-        // version later when rest of prototype document header is
-        // serialized
-        PRUint32 version;
-        rv = objectInput->Read32(&version);
-        NS_ASSERTION(version == XUL_FASTLOAD_FILE_VERSION,
-                     "bad FastLoad file version");
-        if (version != XUL_FASTLOAD_FILE_VERSION)
-            return NS_ERROR_UNEXPECTED;
-
-        fastLoadService->SetCurrentInputStream(objectInput);
+        if (NS_SUCCEEDED(rv)) {
+            fastLoadService->SetCurrentInputStream(objectInput);
+        } else {
+#ifdef DEBUG
+            file->MoveTo(nsnull, "Invalid.mfasl");
+#else
+            file->Delete(PR_FALSE);
+#endif
+            exists = PR_FALSE;
+        }
     }
 
     // FastLoad file not found, or invalid: write a new one.
