@@ -1642,8 +1642,8 @@ dsN *CreateDSNode()
 
   if((dsNode->szPath = NS_GlobalAlloc(MAX_BUF)) == NULL)
     exit(1);
-  dsNode->Next             = NULL;
-  dsNode->Prev             = NULL;
+  dsNode->Next             = dsNode;
+  dsNode->Prev             = dsNode;
 
   return(dsNode);
 }
@@ -1665,17 +1665,17 @@ void DsNodeInsert(dsN **dsNHead, dsN *dsNTemp)
   }
 }
 
-void DsNodeDelete(dsN *dsNTemp)
+void DsNodeDelete(dsN **dsNTemp)
 {
-  if(dsNTemp != NULL)
+  if(*dsNTemp != NULL)
   {
-    dsNTemp->Next->Prev = dsNTemp->Prev;
-    dsNTemp->Prev->Next = dsNTemp->Next;
-    dsNTemp->Next       = NULL;
-    dsNTemp->Prev       = NULL;
+    (*dsNTemp)->Next->Prev = (*dsNTemp)->Prev;
+    (*dsNTemp)->Prev->Next = (*dsNTemp)->Next;
+    (*dsNTemp)->Next       = NULL;
+    (*dsNTemp)->Prev       = NULL;
 
-    FreeMemory(&(dsNTemp->szPath));
-    FreeMemory(&dsNTemp);
+    FreeMemory(&((*dsNTemp)->szPath));
+    FreeMemory(dsNTemp);
   }
 }
 
@@ -1974,7 +1974,7 @@ HRESULT VerifyDiskSpace()
 #endif
 
   ULONGLONG ullDSAvailable;
-  HRESULT   hRetValue = TRUE;
+  HRESULT   hRetValue = FALSE;
   dsN       *dsnComponentDSRequirement = NULL;
   dsN       *dsnTemp = NULL;
 
@@ -1990,13 +1990,17 @@ HRESULT VerifyDiskSpace()
       {
         ullDSAvailable = GetDiskSpaceAvailable(dsnTemp->szPath);
         if(ullDSAvailable < dsnTemp->ullSpaceRequired)
-          return(ErrorMsgDiskSpace(ullDSAvailable, dsnTemp->ullSpaceRequired, dsnTemp->szPath, FALSE));
+        {
+          hRetValue = ErrorMsgDiskSpace(ullDSAvailable, dsnTemp->ullSpaceRequired, dsnTemp->szPath, FALSE);
+          break;
+        }
 
         dsnTemp = dsnTemp->Next;
       }
     } while((dsnTemp != dsnComponentDSRequirement) && (dsnTemp != NULL));
   }
 
+  DeInitDSNode(&dsnComponentDSRequirement);
 
 #ifdef XXX_SSU
   /* Calculate disk space for destination path */
@@ -2103,7 +2107,7 @@ HRESULT VerifyDiskSpace()
   }
 #endif
 
-  return(FALSE);
+  return(hRetValue);
 }
 
 HRESULT ParseComponentAttributes(char *szAttribute)
@@ -2337,6 +2341,32 @@ void DeInitSiComponents()
     siCTemp = siComponents->Prev;
   }
   SiCNodeDelete(siCTemp);
+}
+
+void DeInitDSNode(dsN **dsnComponentDSRequirement)
+{
+  dsN *dsNTemp;
+  
+  if(*dsnComponentDSRequirement == NULL)
+  {
+    return;
+  }
+  else if(((*dsnComponentDSRequirement)->Prev == NULL) || ((*dsnComponentDSRequirement)->Prev == *dsnComponentDSRequirement))
+  {
+    DsNodeDelete(dsnComponentDSRequirement);
+    return;
+  }
+  else
+  {
+    dsNTemp = (*dsnComponentDSRequirement)->Prev;
+  }
+
+  while(dsNTemp != *dsnComponentDSRequirement)
+  {
+    DsNodeDelete(&dsNTemp);
+    dsNTemp = (*dsnComponentDSRequirement)->Prev;
+  }
+  DsNodeDelete(&dsNTemp);
 }
 
 BOOL ResolveComponentDependency(siCD *siCDInDependency)
