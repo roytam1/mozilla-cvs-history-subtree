@@ -109,6 +109,7 @@
                  primary="true"
                  sort="true"/>
     <outlinerbody id="folderOutlinerBody"
+                  class="folderOutlinerBody"
                   flex="1"
                   tooltip="folderTooltip"
                   datasources="rdf:null"
