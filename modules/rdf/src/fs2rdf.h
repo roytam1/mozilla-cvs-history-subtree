@@ -62,6 +62,7 @@ OSErr		nativeMacPathname(char *fileURL, FSSpec *fss);
 OSErr		getPSNbyTypeSig(ProcessSerialNumber *thePSN, OSType pType, OSType pSignature);
 #endif
 
+void		importForProfile (char *dir, const char *uname);
 void		GuessIEBookmarks(void);
 char *		getVolume(int16 volNum, PRBool afpVols);
 PRDir *		OpenDir(char *name);

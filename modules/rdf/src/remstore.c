@@ -488,8 +488,11 @@ leastRecentlyUsedRDFFile (RDF mcf)
   } else return NULL;
 }
 
- 
-void gcRDFFileInt (RDFFile f) {
+
+
+void
+gcRDFFileInt (RDFFile f)
+{
   int32 n = 0;
   while (n < f->assertionCount) {
     Assertion as = *(f->assertionList + n);
@@ -510,7 +513,9 @@ void gcRDFFileInt (RDFFile f) {
 
 
 
-RDF_Error DeleteRemStore (RDFT db) {
+RDF_Error
+DeleteRemStore (RDFT db)
+{
   RDFFile f = (RDFFile) db->pdata;
   RDFFile next;
   while (f) {
@@ -521,6 +526,7 @@ RDF_Error DeleteRemStore (RDFT db) {
   freeMem(db);
   return 0;
 }
+
 
 
 void
@@ -545,6 +551,8 @@ gcRDFFile (RDFFile f)
   }
   gcRDFFileInt(f);
 }
+
+
 
 static PRBool
 freeSomeRDFSpace (RDF mcf)

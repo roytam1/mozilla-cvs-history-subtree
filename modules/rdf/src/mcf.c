@@ -454,25 +454,46 @@ resourceTypeFromID (char* id)
   } else return 0;
 }
 
-RDF_Resource specialUrlResource (char* id) {
+
+
+RDF_Resource
+specialUrlResource (char* id)
+{
 	if (strcmp(id, "NC:PersonalToolbar") == 0)
 		return RDFUtil_GetPTFolder();
 	return NULL;
 }
 
-RDF_Resource NewRDFResource (char* id) {
-  RDF_Resource existing = (RDF_Resource)getMem(sizeof(struct RDF_ResourceStruct)); 
-  existing->url = copyString(id);
-  PL_HashTableAdd(resourceHash, existing->url, existing);
-  return existing;
+
+
+RDF_Resource
+NewRDFResource (char* id)
+{
+	RDF_Resource	existing;
+	
+	if ((existing = (RDF_Resource)getMem(sizeof(struct RDF_ResourceStruct))) != NULL)
+	{
+		existing->url = copyString(id);
+		PL_HashTableAdd(resourceHash, existing->url, existing);
+	}
+	return(existing);
 }
 
-RDF_Resource QuickGetResource (char* id) {
-	RDF_Resource existing = NULL;
-	existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id);
-	if (existing) return existing;
-	return NewRDFResource(id); 
+
+
+RDF_Resource
+QuickGetResource (char* id)
+{
+	RDF_Resource	existing;
+
+	if ((existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id)) == NULL)
+	{
+		existing = NewRDFResource(id);
+	}
+	return(existing);
 }
+
+
 
 PR_PUBLIC_API(RDF_Resource)
 RDF_GetResource (RDF db, char* id, PRBool createp)

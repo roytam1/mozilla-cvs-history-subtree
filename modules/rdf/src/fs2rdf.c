@@ -31,10 +31,15 @@ extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
 #define IMPORT_LIST_SIZE 8
 
-char* importList[IMPORT_LIST_SIZE] = {"Favorites", "NC:Bookmarks",  
-                       "Recent", "NC:Bookmarks",   "Start Menu", "NC:Bookmarks", "Desktop", "NC:LocalFiles"};
+  	/* XXX localization */
+char	*importList[IMPORT_LIST_SIZE] = {"Favorites", "NC:Bookmarks", "Recent", "NC:Bookmarks",
+					"Start Menu", "NC:Bookmarks", "Desktop", "NC:LocalFiles"};
 
-void importForProfile (char* dir, const char* uname) {
+
+
+void
+importForProfile (char *dir, const char *uname)
+{
   int32 n = 0;
   char* pn = getMem(100 + strlen(dir));
   char* name = getMem(100 + strlen(uname));
@@ -54,13 +59,15 @@ void importForProfile (char* dir, const char* uname) {
 }
 
 
+
 void
 GuessIEBookmarks (void)
 {
 #ifdef XP_WIN
   RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
   PRDir* ProfilesDir = OpenDir("file:///c|/winnt/profiles/");
-  if (!ProfilesDir) { 
+  if (!ProfilesDir) {
+  	/* XXX localization */
     importForProfile("file:///c|/windows/", "Your");
   } else {
     int32 n = PR_SKIP_BOTH;
