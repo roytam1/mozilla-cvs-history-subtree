@@ -573,6 +573,9 @@ nsresult nsPop3Protocol::GetPassword(char ** aPassword, PRBool *okayValue)
   
   if (server)
   {
+    PRBool isAuthenticated;
+    server->GetIsAuthenticated(&isAuthenticated);
+
     // clear the password if the last one failed
     if (TestFlag(POP3_PASSWORD_FAILED))
     {
@@ -592,6 +595,9 @@ nsresult nsPop3Protocol::GetPassword(char ** aPassword, PRBool *okayValue)
     // if the last prompt got us a bad password then show a special dialog
     if (TestFlag(POP3_PASSWORD_FAILED))
     { 
+      // if the user hasn't entered a password, or remembered the password, and this is 
+      // not the first failure, forget the password from wallet.
+      if (!isAuthenticated || m_pop3ConData->logonFailureCount > 1)
       rv = server->ForgetPassword();
       if (NS_FAILED(rv)) return rv;
       mStringService->GetStringByID(POP3_PREVIOUSLY_ENTERED_PASSWORD_IS_INVALID_ETC, getter_Copies(passwordTemplate));
@@ -1319,9 +1325,11 @@ PRInt32 nsPop3Protocol::SendStatOrGurl(PRBool sendStat)
         that the old password was bogus.)
         
           But if we're just checking for new mail (biff) then don't bother
-    prompting the user for a password: just fail silently. */
+        prompting the user for a password: just fail silently. 
+    */
     
     SetFlag(POP3_PASSWORD_FAILED);
+    m_pop3ConData->logonFailureCount++;
     
     // libmsg event sink
     if (m_nsIPop3Sink) 
