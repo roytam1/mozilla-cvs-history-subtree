@@ -5146,12 +5146,20 @@ getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag, int st
 			break;
 	}
 
+	iconIndex += 2*state;
+
 	/* if volatile URL, flush if needed and re-create */
 
 	if (node->flags & HT_VOLATILE_URL_FLAG)
 	{
 		node->url[0] = NULL;
 		node->url[1] = NULL;
+		node->url[2] = NULL;
+		node->url[3] = NULL;
+		node->url[4] = NULL;
+		node->url[5] = NULL;
+		node->url[6] = NULL;
+		node->url[7] = NULL;
 	}
 
 	if (node->url[iconIndex] == NULL)
