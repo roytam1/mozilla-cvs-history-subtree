@@ -36,17 +36,6 @@ window.dialog {
   */
 }
 
-/**
- * removed 2px black border from iframe
- */
-html|iframe {
- min-width: 10px;
- min-height: 10px;
- width: 100px;
- height: 100px;
- border: none;
-}
-
 /**********************************
  * XUL widgets
  **********************************/
@@ -366,7 +355,6 @@ box#status-bar titledbutton:active {
 /******* Splitters *******/
 
 splitter {
-   display: block;
    cursor: arrow;
    min-width: 5px;
    min-height: 5px;
@@ -459,8 +447,7 @@ progressmeter[align="horizontal"] {
 }
 
 progressmeter {
-	color : #9999CC; 
-	background-color: #CCCCCC;        
+	color : #9999CC;
 }
 
 :progressmeter-stripe {
@@ -478,7 +465,6 @@ menu[disabled="true"] {
 }
 
 menuitem {
-	display: block;
 	color: black;
 }
 
@@ -846,7 +832,7 @@ treecell {
 
 treehead treerow treecell { 
  background-color: #CCCCCC; 
- border: none; 
+ border: thin darkgray solid;
  color: black;
 } 
 
@@ -1159,6 +1145,17 @@ scrollbar[align="vertical"] scrollbarbutton[type="increment"][disabled="true"] {
  * HTML components in the window tag
  **********************************/
 
+/**
+ * removed 2px black border from iframe
+ */
+window html|iframe {
+ min-width: 10px;
+ min-height: 10px;
+ width: 100px;
+ height: 100px;
+ border: none;
+}
+
 window html|div.separator[align="horizontal"] { 
 	 width: 100%; 
 	 max-height: 2px; 
@@ -1201,7 +1198,6 @@ window html|legend {
 }
 
 window html|label {
-	display: inline;
 	padding-bottom: 4px;
 	background-color: transparent;
 	white-space: nowrap;
