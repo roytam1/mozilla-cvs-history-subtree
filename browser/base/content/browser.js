@@ -778,12 +778,17 @@ const gPopupBlockerObserver = {
       var blockedPopupsSeparator = document.getElementById("blockedPopupsSeparator");
       blockedPopupsSeparator.removeAttribute("hidden");
       for (var i = 0; i < pageReport.length; ++i) {
+        var popupURIspec = pageReport[i].popupWindowURI.spec;
+        if (popupURIspec == "" || popupURIspec == "about:blank" ||
+            popupURIspec == uri.spec)
+          continue;
+
         var menuitem = document.createElement("menuitem");
         var label = bundle_browser.getFormattedString("popupShowPopupPrefix", 
-                                                      [pageReport[i].popupWindowURI.spec]);
+                                                      [popupURIspec]);
         menuitem.setAttribute("label", label);
         menuitem.setAttribute("requestingWindowURI", pageReport[i].requestingWindowURI.spec);
-        menuitem.setAttribute("popupWindowURI", pageReport[i].popupWindowURI.spec);
+        menuitem.setAttribute("popupWindowURI", popupURIspec);
         menuitem.setAttribute("popupWindowFeatures", pageReport[i].popupWindowFeatures);
         menuitem.setAttribute("oncommand", "gPopupBlockerObserver.showBlockedPopup(event);");
         aEvent.target.appendChild(menuitem);
