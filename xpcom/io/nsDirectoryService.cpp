@@ -93,19 +93,10 @@ static nsresult GetCurrentProcessDirectory(nsILocalFile* aFile)
         if (!(err = GetProcessInformation(&psn, &pInfo)))
         {
             FSSpec appFSSpec = *(pInfo.processAppSpec);
-            long theDirID = appFSSpec.parID;
 
-            Str255 name;
-            CInfoPBRec catInfo;
-            catInfo.dirInfo.ioCompletion = NULL;
-            catInfo.dirInfo.ioNamePtr = (StringPtr)&name;
-            catInfo.dirInfo.ioVRefNum = appFSSpec.vRefNum;
-            catInfo.dirInfo.ioDrDirID = theDirID;
-            catInfo.dirInfo.ioFDirIndex = -1; // -1 = query dir in ioDrDirID
-
-            if (!(err = PBGetCatInfoSync(&catInfo)))
-            {
-                aFileSpec // DO SOMETHING MAC HERE
+        	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(aFile);
+			if (localFileMac) {
+				localFileMac->InitWithFSSpec(&appFSSpec);
                 return NS_OK;
             }
         }
@@ -295,7 +286,7 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
             localFile->AppendPath("component.reg");           
 #endif /* XP_MAC */
     
-            Set(prop, localFile);
+            Set(prop, NS_STATIC_CAST(nsILocalFile*, localFile));
             return localFile->QueryInterface(uuid, result);
         }
         else if (strncmp(prop, "xpcom.currentProcess.componentDirectory", 39) == 0)
