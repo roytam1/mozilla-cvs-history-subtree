@@ -196,12 +196,12 @@ nsReflowTree::Node::Iterator::NextChild()
         return nsnull;
 
 
-    if (mPos < &mCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
+    if (mPos < &mCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE - 1]) {
         mPos++;
     } else {
         mCurrentChunk = mCurrentChunk->mNext;
         if (!mCurrentChunk) {
-            mPos = NS_REINTERPRET_CAST(Node **, &mCurrentChunk);
+            return mNode = nsnull; // terminates iteration.
         } else {
             mPos = &mCurrentChunk->mKids[0];
         }
@@ -244,7 +244,7 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
       } else {
         aCurrentChunk = aCurrentChunk->mNext;
         if (!aCurrentChunk) {
-            aPos = NS_REINTERPRET_CAST(Node **, &mCurrentChunk);
+            return nsnull;
         } else {
             aPos = &mCurrentChunk->mKids[0];
         }
