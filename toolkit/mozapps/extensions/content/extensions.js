@@ -657,6 +657,12 @@ var gExtensionsViewController = {
     case "cmd_homepage":
       return (selectedItem && selectedItem.getAttribute("homepageURL") != "");
     case "cmd_uninstall":
+      if (gWindowState != "extensions") {
+        // uninstall is only available if the selected item isn't the 
+        // default theme.
+        return (selectedItem && 
+                selectedItem.getAttribute("internalName") != KEY_DEFAULT_THEME);
+      }
       return selectedItem && selectedItem.getAttribute("locked") != "true";
     case "cmd_update":
       return true;
@@ -822,8 +828,17 @@ var gExtensionsViewController = {
       
       if (gWindowState == "extensions")
         gExtensionManager.uninstallExtension(stripPrefix(selectedID, gItemType));
-      else if (gWindowState == "themes")
+      else if (gWindowState == "themes") {
+        // If the theme being uninstalled is the current theme, we need to reselect
+        // the default. 
+        var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefBranch);
+        var currentTheme = pref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
+        if (aSelectedItem.getAttribute("internalName") == currentTheme)
+          this.cmd_useTheme(document.getElementById("urn:mozilla:theme:{972ce4c6-7e08-4474-a285-3208198ce6fd}"));
         gExtensionManager.uninstallTheme(stripPrefix(selectedID, gItemType));
+
+      }
       
       gExtensionsView.selected = document.getElementById(nextElement);
     },
