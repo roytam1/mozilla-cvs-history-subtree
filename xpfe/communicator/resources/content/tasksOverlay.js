@@ -46,9 +46,19 @@ function toDownloadManager()
 {
   var dlmgr = Components.classes['@mozilla.org/download-manager;1'].getService();
   dlmgr = dlmgr.QueryInterface(Components.interfaces.nsIDownloadManager);
-  dlmgr.open(window);
+
+  var windowMediator = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
+  windowMediator = windowMediator.QueryInterface(Components.interfaces.nsIWindowMediator);
+
+  var dlmgrWindow = windowMediator.getMostRecentWindow("Download:Manager");
+  if (dlmgrWindow) {
+    dlmgrWindow.focus();
+  }
+  else {
+    dlmgr.open(window);
+  }
 }
-  
+
 function toJavaScriptConsole()
 {
     toOpenWindowByType("global:console", "chrome://global/content/console.xul");
