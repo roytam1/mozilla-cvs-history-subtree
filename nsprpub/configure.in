@@ -188,12 +188,12 @@ alpha-*-linux*)
 
     case "$MOZ_TARGET" in
     winnt)
-	DEFINES="$DEFINES -DWIN32 -DWINNT"
+	DEFINES="$DEFINES -DWIN32 -DWINNT -DWin32_Winsock"
 	MDCPUCFG_H=_winnt.cfg
 	PR_MD_CSRCS="ntmisc.c ntsem.c ntinrval.c ntgc.c ntio.c ntthread.c ntdllmn.c win32_errors.c w32poll.c"
 	;;
     win95)
-	DEFINES="$DEFINES -UWINNT -DWIN32 -DWIN95 -D_PR_GLOBAL_THREADS_ONLY"
+	DEFINES="$DEFINES -UWINNT -DWIN32 -DWIN95 -DWin32_Winsock -D_PR_GLOBAL_THREADS_ONLY"
 	MDCPUCFG_H=_win95.cfg
 	PR_MD_CSRCS="ntmisc.c ntsem.c ntinrval.c ntgc.c w95thred.c w95io.c w95cv.c w95sock.c win32_errors.c w32poll.c w95dllmain.c"
 	;;
