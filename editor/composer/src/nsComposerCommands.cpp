@@ -106,30 +106,8 @@ NS_IMPL_ISUPPORTS_INHERITED0(nsBaseStateUpdatingCommand, nsBaseComposerCommand);
 NS_IMETHODIMP
 nsBaseStateUpdatingCommand::IsCommandEnabled(const char *aCommandName, nsISupports *refCon, PRBool *outCmdEnabled)
 {
-
   nsCOMPtr<nsIEditor> editor = do_QueryInterface(refCon);
   *outCmdEnabled = editor ? PR_TRUE : PR_FALSE;
-
-  #if 0
-  //this did not compile once merging onto the 1.2 branch.
-  //not sure if this is needed or not.
-  nsCOMPtr<nsIEditorShell> editorShell = do_QueryInterface(refCon);
-  *outCmdEnabled = PR_FALSE;  
- 
-  if (editorShell && EditingHTML(editorShell))
-  {
-    *outCmdEnabled = PR_TRUE;
-    // also udpate the command state. 
-    UpdateCommandState(aCommandName, refCon);
-  }
-  else
-  {
-    nsCOMPtr<nsIEditor> editor = do_QueryInterface(refCon);
-    if (editor)
-      *outCmdEnabled = PR_TRUE;
-  }
-  #endif
-  
   return NS_OK;
 }
 
@@ -311,7 +289,7 @@ nsStyleUpdatingCommand::GetCurrentState(nsIEditor *aEditor, const char* aTagName
   
   nsCOMPtr<nsIAtom> styleAtom = getter_AddRefs(NS_NewAtom(aTagName));
   rv = htmlEditor->GetInlineProperty(styleAtom, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""), &firstOfSelectionHasProp, &anyOfSelectionHasProp, &allOfSelectionHasProp);
-  outStyleSet = allOfSelectionHasProp;          // change this to alter the behaviour
+  outStyleSet = allOfSelectionHasProp;			// change this to alter the behaviour
 
   return rv;
 }
@@ -621,12 +599,8 @@ nsIndentCommand::IsCommandEnabled(const char * aCommandName, nsISupports *refCon
     *outCmdEnabled = PR_TRUE;     // can always indent (I guess)
   }
   else
-  {
-    nsCOMPtr<nsIEditor> editor = do_QueryInterface(refCon);
-    if (editor)
-      *outCmdEnabled = PR_TRUE;
-  }
-  
+    *outCmdEnabled = PR_FALSE;
+
   return NS_OK;
 }
 
@@ -686,17 +660,8 @@ nsOutdentCommand::IsCommandEnabled(const char * aCommandName, nsISupports *refCo
     *outCmdEnabled = canOutdent;
   }
   else
-  {
-    nsCOMPtr<nsIHTMLEditor> htmlEditor = do_QueryInterface(refCon);
-    if (htmlEditor)
-    {
-      PRBool canIndent, canOutdent;
-      htmlEditor->GetIndentState(&canIndent, &canOutdent);
-      
-      *outCmdEnabled = canOutdent;
-    }
-  }
-  
+    *outCmdEnabled = PR_FALSE;
+
   return NS_OK;
 }
 
@@ -1283,8 +1248,8 @@ nsRemoveStylesCommand::DoCommandParams(const char *aCommandName, nsICommandParam
   nsCOMPtr<nsIHTMLEditor> editor = do_QueryInterface(refCon);
   if (editor)
     editor->RemoveAllInlineProperties();
-  
-  return DoCommand(aCommandName, refCon);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
