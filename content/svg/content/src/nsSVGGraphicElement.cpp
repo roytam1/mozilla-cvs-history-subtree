@@ -135,9 +135,9 @@ NS_IMETHODIMP nsSVGGraphicElement::GetCTM(nsIDOMSVGMatrix **_retval)
 {
   nsCOMPtr<nsIDOMSVGMatrix> CTM;
 
-  nsCOMPtr<nsIBindingManager> bindingManager;
+  nsIBindingManager *bindingManager = nsnull;
   if (mDocument) {
-    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+    bindingManager = mDocument->GetBindingManager();
   }
 
   nsCOMPtr<nsIContent> parent;
@@ -210,9 +210,9 @@ NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
 {
   nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
 
-  nsCOMPtr<nsIBindingManager> bindingManager;
+  nsIBindingManager *bindingManager = nsnull;
   if (mDocument) {
-    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+    bindingManager = mDocument->GetBindingManager();
   }
 
   nsCOMPtr<nsIContent> parent;

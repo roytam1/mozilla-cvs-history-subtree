@@ -309,6 +309,12 @@ nsSVGElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
   return NS_OK;  
 }
 
+NS_IMETHODIMP_(nsIAtom*)
+nsSVGElement::GetIDAttributeName() const
+{
+  return nsSVGAtoms::id;
+}
+
 NS_IMETHODIMP
 nsSVGElement::NormalizeAttrString(const nsAString& aStr,
                                   nsINodeInfo** aNodeInfo)
@@ -688,9 +694,9 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
 {
   *aOwnerSVGElement = nsnull;
 
-  nsCOMPtr<nsIBindingManager> bindingManager;
+  nsIBindingManager *bindingManager = nsnull;
   if (mDocument) {
-    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+    bindingManager = mDocument->GetBindingManager();
   }
 
   nsCOMPtr<nsIContent> parent;

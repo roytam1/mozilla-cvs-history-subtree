@@ -3042,7 +3042,7 @@ nsDOMClassInfo::doCheckPropertyAccess(JSContext *cx, JSObject *obj, jsval id,
     nsCOMPtr<nsIDocument> doc(do_QueryInterface(native));
     NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
 
-    doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+    sgo = doc->GetScriptGlobalObject();
 
     if (!sgo) {
       // There's no script global in the document. This means that
@@ -3550,9 +3550,44 @@ DOMJSClass_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
     return JS_FALSE;
   }
 
-  if (class_name_struct->mType != nsGlobalNameStruct::eTypeClassProto &&
-      class_name_struct->mType != nsGlobalNameStruct::eTypeInterface) {
-    *bp = (name_struct == class_name_struct);
+  if (name_struct == class_name_struct) {
+    *bp = JS_TRUE;
+
+    return JS_TRUE;
+  }
+
+  const nsIID *class_iid;
+  if (class_name_struct->mType == nsGlobalNameStruct::eTypeInterface ||
+      class_name_struct->mType == nsGlobalNameStruct::eTypeClassProto) {
+    class_iid = &class_name_struct->mIID;
+  } else if (class_name_struct->mType == nsGlobalNameStruct::eTypeClassConstructor) {
+    class_iid =
+      sClassInfoData[class_name_struct->mDOMClassInfoID].mProtoChainInterface;
+  } else if (class_name_struct->mType == nsGlobalNameStruct::eTypeExternalClassInfo) {
+    class_iid = class_name_struct->mData->mProtoChainInterface;
+  } else if (class_name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructorAlias) {
+    const nsGlobalNameStruct* alias_struct =
+      gNameSpaceManager->GetConstructorProto(class_name_struct);
+    if (!alias_struct) {
+      NS_ERROR("Couldn't get constructor prototype.");
+      nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
+
+      return JS_FALSE;
+    }
+
+    if (alias_struct->mType == nsGlobalNameStruct::eTypeClassConstructor) {
+      class_iid =
+        sClassInfoData[alias_struct->mDOMClassInfoID].mProtoChainInterface;
+    } else if (alias_struct->mType == nsGlobalNameStruct::eTypeExternalClassInfo) {
+      class_iid = alias_struct->mData->mProtoChainInterface;
+    } else {
+      NS_ERROR("Expected eTypeClassConstructor or eTypeExternalClassInfo.");
+      nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
+
+      return JS_FALSE;
+    }
+  } else {
+    *bp = JS_FALSE;
 
     return JS_TRUE;
   }
@@ -3592,7 +3627,7 @@ DOMJSClass_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
   PRUint32 count = 0;
   const nsIID* class_interface;
   while ((class_interface = ci_data->mInterfaces[count++])) {
-    if (class_name_struct->mIID.Equals(*class_interface)) {
+    if (class_iid->Equals(*class_interface)) {
       *bp = JS_TRUE;
 
       return JS_TRUE;
@@ -3606,7 +3641,7 @@ DOMJSClass_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
       return JS_FALSE;
     }
 
-    if_info->HasAncestor(&class_name_struct->mIID, bp);
+    if_info->HasAncestor(class_iid, bp);
 
     if (*bp) {
       return JS_TRUE;
@@ -4463,8 +4498,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
     // Get the script global object from the document.
 
-    nsCOMPtr<nsIScriptGlobalObject> sgo;
-    doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+    nsIScriptGlobalObject *sgo = doc->GetScriptGlobalObject();
 
     if (!sgo) {
       // No global object reachable from this document, use the
@@ -4712,8 +4746,7 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   // We must ensure that the XBL Binding is installed before we hand
   // back this object.
 
-  nsCOMPtr<nsIBindingManager> bindingManager;
-  doc->GetBindingManager(getter_AddRefs(bindingManager));
+  nsIBindingManager *bindingManager = doc->GetBindingManager();
   NS_ENSURE_TRUE(bindingManager, NS_ERROR_UNEXPECTED);
 
   nsCOMPtr<nsIXBLBinding> binding;
