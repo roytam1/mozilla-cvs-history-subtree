@@ -380,27 +380,23 @@ function MarkSelectedMessagesFlagged(markFlagged)
 
 function MarkAllMessagesRead(compositeDataSource, folder)
 {
-    dump("fix this\n");
-	// http://home.netscape.com/NC-rdf#MarkAllMessagesRead
+    dump("fix MarkAllMessagesRead()\n");
 }
 
 function DownloadFlaggedMessages(compositeDataSource, folder)
 {
-    dump("fix this\n");
-    // http://home.netscape.com/NC-rdf#DownloadFlaggedMessages
+    dump("fix DownloadFlaggedMessages()\n");
 }
 
 function DownloadSelectedMessages(compositeDataSource, messages, markFlagged)
 {
-    dump("fix this\n");
-	// http://home.netscape.com/NC-rdf#DownloadSelectedMessages
+    dump("fix DownloadSelectedMessages()\n");
 }
 
 function MarkThreadAsRead(compositeDataSource, message)
 {
   gDBView.doCommand(nsMsgViewCommandType.markThreadRead);
 }
-
 
 function ViewPageSource(messages)
 {
