@@ -498,36 +498,7 @@ function ChangeDirectoryByDOMNode(dirNode)
   return;
 }
 
-function RememberResultsTreeSelection()
-{
-  var selectionArray = 0;
-  // fix me
-  if (resultsTree) {
-    var selectedItems = resultsTree.selectedItems;
-    var numSelected = selectedItems.length;
-
-    selectionArray = new Array(numSelected);
-
-    for (var i = 0; i < numSelected; i++) {
-      selectionArray[i] = selectedItems[i].getAttribute("id");
-      dump("selectionArray["+i+"] = " + selectionArray[i] + "\n");
-    }
-  }
-  return selectionArray;
-}
-
-var addrbooksession =Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
-
-function GetResultsTreeChildren()
-{
-  if (resultsTree && resultsTree.childNodes) {
-    for (var index = resultsTree.childNodes.length - 1; index >= 0; index--) {
-      if (resultsTree.childNodes[index].localName == "treechildren")
-        return(resultsTree.childNodes[index]);
-    }
-  }
-  return null;
-}
+var addrbooksession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
 
 function AbSortAscending()
 {
@@ -608,6 +579,12 @@ function UpdateSortIndicators(colID, sortDirection)
     if (currCol) 
       currCol = currCol.nextSibling;
   }
+}
+
+function InvalidateResultsPane()
+{
+  var outliner = GetAbResultsOutliner();
+  outliner.boxObject.invalidate();
 }
 
 function AbNewList(abListItem)
