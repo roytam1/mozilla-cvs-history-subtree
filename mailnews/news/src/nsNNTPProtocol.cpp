@@ -775,9 +775,9 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsNNTPProtocol::OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsNNTPProtocol::OnStopRequest(nsIChannel * aChannel, nsISupports * aContext, nsresult aStatus, const PRUnichar* aMsg)
 {
-	nsMsgProtocol::OnStopRequest(aURL, aStatus, aMsg);
+	nsMsgProtocol::OnStopRequest(aChannel, aContext, aStatus, aMsg);
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
