@@ -92,18 +92,12 @@ function chooseProfileFolder()
 {
   var newProfileRoot;
   
-  try {
-    var dirChooser = C["@mozilla.org/filepicker;1"].createInstance(I.nsIFilePicker);
-    dirChooser.init(window, gProfileManagerBundle.getString("chooseFolder"),
-                    I.nsIFilePicker.modeGetFolder);
-    dirChooser.appendFilters(I.nsIFilePicker.filterAll);
-    dirChooser.show();
-    newProfileRoot = dirChooser.file;
-  }
-  catch(e) {
-    // If something fails, change nothing.
-    return;
-  }
+  var dirChooser = C["@mozilla.org/filepicker;1"].createInstance(I.nsIFilePicker);
+  dirChooser.init(window, gProfileManagerBundle.getString("chooseFolder"),
+                  I.nsIFilePicker.modeGetFolder);
+  dirChooser.appendFilters(I.nsIFilePicker.filterAll);
+  dirChooser.show();
+  newProfileRoot = dirChooser.file;
 
   // Disable the "Default Folder..." button when the default profile folder
   // was selected manually in the File Picker.
