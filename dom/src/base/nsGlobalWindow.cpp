@@ -69,6 +69,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentView.h"
 #include "nsIDOMPkcs11.h"
+#include "nsIEmbeddingSiteWindow.h"
 #include "nsIEventQueueService.h"
 #include "nsIEventStateManager.h"
 #include "nsIHttpProtocolHandler.h"
@@ -1792,8 +1793,12 @@ NS_IMETHODIMP GlobalWindowImpl::Focus()
 {
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
-  if (treeOwnerAsWin)
+  if (treeOwnerAsWin) {
     treeOwnerAsWin->SetVisibility(PR_TRUE);
+    nsCOMPtr<nsIEmbeddingSiteWindow> embeddingWin(do_GetInterface(treeOwnerAsWin));
+    if (embeddingWin)
+      embeddingWin->SetFocus();
+  }
 
   nsCOMPtr<nsIPresShell> presShell;
   if (mDocShell) {
