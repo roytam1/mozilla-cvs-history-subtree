@@ -118,11 +118,10 @@ void    util_DeallocateShareInitContext(void *yourInitContext)
     // right now there is nothing to deallocate
 }
 
-jboolean util_InitStringConstants(JNIEnv *env)
+jboolean util_InitStringConstants()
 {
-	if (nsnull == gVm) { // declared in jni_util.h
-        ::util_GetJavaVM(env, &gVm);  // save this vm reference away for the callback!
-    }
+    util_Assert(gVm);
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
     
     if (nsnull == (SCREEN_X_KEY = 
                    ::util_NewGlobalRef(env, (jobject) 

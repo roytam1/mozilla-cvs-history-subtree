@@ -224,7 +224,7 @@ void    util_DeallocateShareInitContext(void *initContext);
 
  */ 
 
-jboolean util_InitStringConstants(JNIEnv *env);
+jboolean util_InitStringConstants();
 jboolean util_StringConstantsAreInitialized();
 
 void    util_ThrowExceptionToJava (JNIEnv * env, const char * message);

@@ -305,7 +305,7 @@ private UniversalDialog           uniDialog = null;
             prefs.setPref("browser.cache.disk_cache_size", "0");
             //prefs.setPref("network.proxy.http", "webcache-mpk.eng.sun.com");
             Properties prefsProps = prefs.getPrefs();
-            prefsProps.list(System.out);
+            //prefsProps.list(System.out);  // This works, try it!
         }
 		catch (Exception e) {
 		    System.out.println(e.toString());
