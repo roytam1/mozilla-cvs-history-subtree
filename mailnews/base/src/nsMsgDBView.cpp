@@ -49,7 +49,8 @@ nsMsgDBView::nsMsgDBView()
 
 nsMsgDBView::~nsMsgDBView()
 {
-  /* destructor code */
+  if (m_db)
+	  m_db->RemoveListener(this);
 }
 
 NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
@@ -65,15 +66,6 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
   NS_ENSURE_SUCCESS(rv,rv);
 	m_db->AddListener(this);
 #ifdef HAVE_PORT
-	if (viewType == ViewAny)
-		viewType = ViewAllThreads;
-	m_viewType = viewType;
-	if (messageDB && messageDB->GetNeoFolderInfo()->GetFlags() & MSG_FOLDER_PREF_SHOWIGNORED)
-		m_viewFlags = nsMsgViewFlagsType::kShowIgnored | m_viewFlags;
-	if (messageDB && messageDB->GetNeoFolderInfo() 
-		&& (viewType == ViewOnlyNewHeaders))
-		m_viewFlags = nsMsgViewFlagsType::kUnreadOnly | m_viewFlags;
-
 	CacheAdd ();
 #endif
 
@@ -82,7 +74,12 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
 
 NS_IMETHODIMP nsMsgDBView::Close()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  if (m_db)
+  {
+  	m_db->RemoveListener(this);
+    m_db = nsnull;
+  }
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::Init(PRInt32 *pCount)
@@ -1075,6 +1072,7 @@ NS_IMETHODIMP nsMsgDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldPa
 
 NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
 {
+  m_db = nsnull;
   return NS_OK;
 }
 
