@@ -291,6 +291,8 @@ nsPromptService::ConfirmEx(nsIDOMWindow *parent,
   int buttonIDs[] = { eButton0Text, eButton1Text, eButton2Text };
   const PRUnichar* buttonStrings[] = { button0Title, button1Title, button2Title };
 
+  block->SetInt(eDelayButtonEnable, buttonFlags & BUTTON_DELAY_ENABLE);
+
 #define BUTTON_DEFAULT_MASK 0xff000000
 
   switch (buttonFlags & BUTTON_DEFAULT_MASK) {
