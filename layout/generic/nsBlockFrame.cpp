@@ -644,27 +644,9 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
 #ifdef DEBUG
   if (gNoisyReflow) {
-    nsCAutoString reflow;
-
-    if (aReflowState.reason == eReflowReason_Incremental) {
-      nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-
-      if (command) {
-        // We're the target.
-        reflow += " (";
-
-        nsReflowType type;
-        command->GetType(type);
-        reflow += kReflowCommandType[type];
-
-        reflow += ")";
-      }
-    }
-
     IndentBy(stdout, gNoiseIndent);
     ListTag(stdout);
-    printf(": begin %s reflow availSize=%d,%d computedSize=%d,%d\n",
-           reflow.get(),
+    printf(": begin reflow availSize=%d,%d computedSize=%d,%d\n",
            aReflowState.availableWidth, aReflowState.availableHeight,
            aReflowState.mComputedWidth, aReflowState.mComputedHeight);
   }
