@@ -1107,6 +1107,13 @@ static nsresult InitializeProfileService(nsICmdLineService *cmdLineArgs)
     nsCOMPtr<nsINativeAppSupport> nativeApp;
     if (NS_SUCCEEDED(GetNativeAppSupport(getter_AddRefs(nativeApp))))
       nativeApp->GetShouldShowUI(&shouldShowUI);
+    // If we were launched with -silent, we cannot show UI, either.
+    if (shouldShowUI) {
+      nsXPIDLCString arg;
+      if (NS_SUCCEEDED(cmdLineArgs->GetCmdLineValue("-silent", getter_Copies(arg))) && (const char*)arg) {
+        shouldShowUI = PR_FALSE;
+      }
+    }
     nsresult rv;
     nsCOMPtr<nsIAppShellService> appShellService(do_GetService(kAppShellServiceCID, &rv));
     if (NS_FAILED(rv)) return rv;
@@ -1430,9 +1437,11 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
 #else
   rv = DoCommandLines( cmdLineArgs, (argc == 1), &windowOpened );
 #endif /* XP_MAC */
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to process command line");
   if ( NS_FAILED(rv) )
+  {
+    NS_WARNING("failed to process command line");
     return rv;
+  }
 
   // Make sure there exists at least 1 window.
   NS_TIMELINE_ENTER("Ensure1Window");
