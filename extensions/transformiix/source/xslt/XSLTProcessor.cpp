@@ -44,7 +44,7 @@
 #include "XSLTProcessor.h"
 #ifdef MOZ_XSL
 #include "nsIObserverService.h"
-#include "nslog.h"
+//#include "nslog.h"
 #else
 #include "TxLog.h"
 #endif
@@ -883,7 +883,7 @@ void XSLTProcessor::processAction
                 Attr* modeAttr = actionElement->getAttributeNode(MODE_ATTR);
                 if ( modeAttr ) mode = new String(modeAttr->getValue());
                 String selectAtt  = actionElement->getAttribute(SELECT_ATTR);
-                if ( selectAtt.length() == 0 ) selectAtt = "* | text()";
+                if ( selectAtt.length() == 0 ) selectAtt = "node()";
                 pExpr = ps->getPatternExpr(selectAtt);
                 ExprResult* exprResult = pExpr->evaluate(node, ps);
                 NodeSet* nodeSet = 0;
@@ -1723,8 +1723,8 @@ void XSLTProcessor::xslCopyOf(ExprResult* exprResult, ProcessorState* ps) {
 } //-- xslCopyOf
 
 #ifdef MOZ_XSL
-#define PRINTF NS_LOG_PRINTF(XSLT)
-#define FLUSH  NS_LOG_FLUSH(XSLT)
+//#define PRINTF NS_LOG_PRINTF(XSLT)
+//#define FLUSH  NS_LOG_FLUSH(XSLT)
 NS_IMETHODIMP
 XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                nsIDOMNode* aStyleDOM,
@@ -1761,9 +1761,9 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 
         docURL->GetSpec(&urlString);
         String documentBase(urlString);
-        NS_IMPL_LOG(XSLT)
-        PRINTF("Transforming with stylesheet %s",documentBase.toCharArray());
-        FLUSH();
+//        NS_IMPL_LOG(XSLT)
+//        PRINTF("Transforming with stylesheet %s",documentBase.toCharArray());
+//        FLUSH();
         ps->setDocumentBase(documentBase);
         nsCRT::free(urlString);
         NS_IF_RELEASE(docURL);
@@ -1797,7 +1797,7 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
             Node* docElement = resultDocument->getDocumentElement();
             nsIDOMNode* nsDocElement;
             if (docElement) {
-                nsDocElement = docElement->getNSNode();
+                nsDocElement = NS_STATIC_CAST(nsIDOMNode*, docElement->getNSObj());
             }
             else {
                 nsDocElement = nsnull;
