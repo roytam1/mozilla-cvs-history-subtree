@@ -181,6 +181,7 @@ function enableEditableFields()
 var gComposeRecyclingListener = {
   onClose: function() {
     //Reset recipients and attachments
+    ReleaseAutoCompleteState();
     awResetAllRows();
     RemoveAllAttachments();
 
@@ -2174,13 +2175,18 @@ function SetContentAndBodyAsUnmodified()
   gContentChanged = false;
 }
 
-function MsgComposeCloseWindow(recycleIt)
+function ReleaseAutoCompleteState()
 {
   for (i=1; i <= awGetMaxRecipients(); i++) 
     document.getElementById("addressCol2#" + i).removeSession(gLDAPSession);
+
   gSessionAdded = false;
   gLDAPSession = null;  
   gAutocompleteSession = null;
+}
+
+function MsgComposeCloseWindow(recycleIt)
+{
   if (gMsgCompose)
     gMsgCompose.CloseWindow(recycleIt);
 }
