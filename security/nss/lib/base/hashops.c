@@ -45,7 +45,7 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #include "base.h"
 #endif /* BASE_H */
 
-static void * PR_CALLBACK
+static PR_CALLBACK void *
 nss_arena_hash_alloc_table
 (
   void *pool,
@@ -65,7 +65,7 @@ nss_arena_hash_alloc_table
   return nss_ZAlloc(arena, size);
 }
 
-static void PR_CALLBACK
+static PR_CALLBACK void
 nss_arena_hash_free_table
 (
   void *pool, 
@@ -75,7 +75,7 @@ nss_arena_hash_free_table
   (void)nss_ZFreeIf(item);
 }
 
-static PLHashEntry * PR_CALLBACK
+static PR_CALLBACK PLHashEntry *
 nss_arena_hash_alloc_entry
 (
   void *pool,
@@ -95,7 +95,7 @@ nss_arena_hash_alloc_entry
   return nss_ZNEW(arena, PLHashEntry);
 }
 
-static void PR_CALLBACK
+static PR_CALLBACK void
 nss_arena_hash_free_entry
 (
   void *pool,

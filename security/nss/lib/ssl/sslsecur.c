@@ -637,7 +637,7 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     }
 
     /* make sure the key exchange is recognized */
-    if ((kea >= kt_kea_size) || (kea < kt_null)) {
+    if ((kea > kt_kea_size) || (kea < kt_null)) {
 	PORT_SetError(SEC_ERROR_UNSUPPORTED_KEYALG);
 	return SECFailure;
     }
@@ -915,6 +915,65 @@ ssl_SecureConnect(sslSocket *ss, const PRNetAddr *sa)
 }
 
 int
+ssl_SecureSocksConnect(sslSocket *ss, const PRNetAddr *sa)
+{
+    int rv;
+
+    PORT_Assert((ss->socks != 0) && (ss->sec != 0));
+
+    /* First connect to socks daemon */
+    rv = ssl_SocksConnect(ss, sa);
+    if (rv < 0) {
+	return rv;
+    }
+
+    if ( ss->handshakeAsServer ) {
+	ss->securityHandshake = ssl2_BeginServerHandshake;
+    } else {
+	ss->securityHandshake = ssl2_BeginClientHandshake;
+    }
+    
+    return 0;
+}
+
+PRFileDesc *
+ssl_SecureSocksAccept(sslSocket *ss, PRNetAddr *addr)
+{
+#if 0
+    sslSocket *ns;
+    int rv;
+    PRFileDesc *newfd, *fd;
+
+    newfd = ssl_SocksAccept(ss, addr);
+    if (newfd == NULL) {
+	return newfd;
+    }
+
+    /* Create new socket */
+    ns = ssl_FindSocket(newfd);
+    PORT_Assert(ns != NULL);
+
+    /* Make an NSPR socket to give back to app */
+    fd = ssl_NewPRSocket(ns, newfd);
+    if (fd == NULL) {
+	ssl_FreeSocket(ns);
+	PR_Close(newfd);
+	return NULL;
+    }
+
+    if ( ns->handshakeAsClient ) {
+	ns->handshake = ssl2_BeginClientHandshake;
+    } else {
+	ns->handshake = ssl2_BeginServerHandshake;
+    }
+
+    return fd;
+#else
+    return NULL;
+#endif
+}
+
+int
 ssl_SecureClose(sslSocket *ss)
 {
     int rv;
@@ -1020,7 +1079,6 @@ ssl_SecureRead(sslSocket *ss, unsigned char *buf, int len)
     return ssl_SecureRecv(ss, buf, len, 0);
 }
 
-/* Caller holds the SSL Socket's write lock. SSL_LOCK_WRITER(ss) */
 int
 ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 {
@@ -1054,8 +1112,6 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 	return rv;
     }
 
-    if (len > 0) 
-    	ss->writerThread = PR_GetCurrentThread();
     /* If any of these is non-zero, the initial handshake is not done. */
     if (!ss->connected) {
 	ssl_Get1stHandshakeLock(ss);
@@ -1065,16 +1121,13 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 	ssl_Release1stHandshakeLock(ss);
     }
     if (rv < 0) {
-    	ss->writerThread = NULL;
 	return rv;
     }
 
     /* Check for zero length writes after we do housekeeping so we make forward
      * progress.
      */
-    if (len == 0) {
-    	return 0;
-    }
+    if (len == 0) return 0;
     PORT_Assert(buf != NULL);
     
     SSL_TRC(2, ("%d: SSL[%d]: SecureSend: sending %d bytes",
@@ -1087,7 +1140,6 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     ssl_GetXmitBufLock(ss);
     rv = (*sec->send)(ss, buf, len, flags);
     ssl_ReleaseXmitBufLock(ss);
-    ss->writerThread = NULL;
     return rv;
 }
 

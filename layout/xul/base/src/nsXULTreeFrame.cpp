@@ -281,9 +281,6 @@ nsXULTreeFrame::GetRowCount(PRInt32 *aResult)
   nsXULTreeOuterGroupFrame* XULTreeOuterGroup = nsnull;
   GetTreeBody(&XULTreeOuterGroup);
 
-  // initialize out param
-  *aResult = 0;
-
   if (!XULTreeOuterGroup) return NS_OK;
   
   return XULTreeOuterGroup->GetRowCount(aResult);

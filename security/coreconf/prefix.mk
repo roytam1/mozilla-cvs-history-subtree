@@ -57,7 +57,7 @@ endif
 
 
 ifndef DLL_PREFIX
-	ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
+	ifeq ($(OS_ARCH), WINNT)
 		DLL_PREFIX = 
 	else
 		DLL_PREFIX = lib
@@ -67,6 +67,15 @@ endif
 
 ifndef IMPORT_LIB_PREFIX
 	IMPORT_LIB_PREFIX = 
+endif
+
+
+ifndef PURE_LIB_PREFIX
+	ifeq ($(OS_ARCH), WINNT)
+		PURE_LIB_PREFIX =
+	else
+		PURE_LIB_PREFIX = purelib
+	endif
 endif
 
 #

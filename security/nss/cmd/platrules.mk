@@ -40,6 +40,7 @@ show:
 	@echo "OS_ARCH 		= $(OS_ARCH)"
 	@echo "PROGRAM 		= >$(PROGRAM)<"
 	@echo "PROGRAMS 	= $(PROGRAMS)"
+	@echo "PURE_LIBRARY 	= $(PURE_LIBRARY)"
 	@echo "SHARED_LIBRARY 	= $(SHARED_LIBRARY)"
 	@echo "TARGETS 		= >$(TARGETS)<"
 

@@ -67,7 +67,7 @@ extern RSAPrivateKey *RSA_NewKey(int         keySizeInBits,
 */
 extern SECStatus RSA_PublicKeyOp(RSAPublicKey *   key,
 				 unsigned char *  output,
-				 const unsigned char *  input);
+				 unsigned char *  input);
 
 /*
 ** Perform a raw private-key operation 
@@ -75,7 +75,7 @@ extern SECStatus RSA_PublicKeyOp(RSAPublicKey *   key,
 */
 extern SECStatus RSA_PrivateKeyOp(RSAPrivateKey *  key,
 				  unsigned char *  output,
-				  const unsigned char *  input);
+				  unsigned char *  input);
 
 
 
@@ -89,7 +89,7 @@ extern SECStatus RSA_PrivateKeyOp(RSAPrivateKey *  key,
 **	"params" is a pointer to the PQG parameters for the domain
 **	Uses a random seed.
 */
-extern SECStatus DSA_NewKey(const PQGParams *     params, 
+extern SECStatus DSA_NewKey(PQGParams *           params, 
 		            DSAPrivateKey **      privKey);
 
 /* signature is caller-supplied buffer of at least 20 bytes.
@@ -100,26 +100,25 @@ extern SECStatus DSA_NewKey(const PQGParams *     params,
 */
 extern SECStatus DSA_SignDigest(DSAPrivateKey *   key,
 				SECItem *         signature,
-				const SECItem *   digest);
+				SECItem *         digest);
 
 /* signature is caller-supplied buffer of at least 20 bytes.
 ** On input,  signature->len == size of buffer to hold signature.
 **            digest->len    == size of digest.
 */
 extern SECStatus DSA_VerifyDigest(DSAPublicKey *  key,
-				  const SECItem * signature,
-				  const SECItem * digest);
+				  SECItem *       signature,
+				  SECItem *       digest);
 
 /* For FIPS compliance testing. Seed must be exactly 20 bytes long */
-extern SECStatus DSA_NewKeyFromSeed(const PQGParams *params, 
-                                    const unsigned char * seed,
+extern SECStatus DSA_NewKeyFromSeed(PQGParams *params, unsigned char * seed,
                                     DSAPrivateKey **privKey);
 
 /* For FIPS compliance testing. Seed must be exactly 20 bytes. */
 extern SECStatus DSA_SignDigestWithSeed(DSAPrivateKey * key,
-                                        SECItem *       signature,
-                                        const SECItem * digest,
-                                        const unsigned char * seed);
+				        SECItem *       signature,
+				        SECItem *       digest,
+				        unsigned char * seed);
 
 /******************************************************
 ** Diffie Helman key exchange algorithm 
@@ -263,7 +262,7 @@ extern void RC2_DestroyContext(RC2Context *cx, PRBool freeit);
 */
 extern SECStatus RC2_Encrypt(RC2Context *cx, unsigned char *output,
 			    unsigned int *outputLen, unsigned int maxOutputLen,
-			    const unsigned char *input, unsigned int inputLen);
+			    unsigned char *input, unsigned int inputLen);
 
 /*
 ** Perform RC2 decryption.
@@ -278,7 +277,7 @@ extern SECStatus RC2_Encrypt(RC2Context *cx, unsigned char *output,
 */
 extern SECStatus RC2_Decrypt(RC2Context *cx, unsigned char *output,
 			    unsigned int *outputLen, unsigned int maxOutputLen,
-			    const unsigned char *input, unsigned int inputLen);
+			    unsigned char *input, unsigned int inputLen);
 
 /******************************************/
 /*
@@ -318,7 +317,7 @@ extern void RC5_DestroyContext(RC5Context *cx, PRBool freeit);
 */
 extern SECStatus RC5_Encrypt(RC5Context *cx, unsigned char *output,
                             unsigned int *outputLen, unsigned int maxOutputLen,
-                            const unsigned char *input, unsigned int inputLen);
+                            unsigned char *input, unsigned int inputLen);
 
 /*
 ** Perform RC5 decryption.
@@ -334,7 +333,7 @@ extern SECStatus RC5_Encrypt(RC5Context *cx, unsigned char *output,
 
 extern SECStatus RC5_Decrypt(RC5Context *cx, unsigned char *output,
                             unsigned int *outputLen, unsigned int maxOutputLen,
-                            const unsigned char *input, unsigned int inputLen);
+                            unsigned char *input, unsigned int inputLen);
 
 
 
@@ -380,7 +379,7 @@ extern void DES_DestroyContext(DESContext *cx, PRBool freeit);
 */
 extern SECStatus DES_Encrypt(DESContext *cx, unsigned char *output,
 			    unsigned int *outputLen, unsigned int maxOutputLen,
-			    const unsigned char *input, unsigned int inputLen);
+			    unsigned char *input, unsigned int inputLen);
 
 /*
 ** Perform DES decryption.
@@ -397,63 +396,9 @@ extern SECStatus DES_Encrypt(DESContext *cx, unsigned char *output,
 */
 extern SECStatus DES_Decrypt(DESContext *cx, unsigned char *output,
 			    unsigned int *outputLen, unsigned int maxOutputLen,
-			    const unsigned char *input, unsigned int inputLen);
+			    unsigned char *input, unsigned int inputLen);
 
-/******************************************/
-/*
-** AES symmetric block cypher (Rijndael)
-*/
 
-/*
-** Create a new AES context suitable for AES encryption/decryption.
-** 	"key" raw key data
-** 	"keylen" the number of bytes of key data (16, 24, or 32)
-**      "blocklen" is the blocksize to use (16, 24, or 32)
-**                        XXX currently only blocksize==16 has been tested!
-*/
-extern AESContext *
-AES_CreateContext(unsigned char *key, unsigned char *iv, int mode, int encrypt,
-                  unsigned int keylen, unsigned int blocklen);
-
-/*
-** Destroy a AES encryption/decryption context.
-**	"cx" the context
-**	"freeit" if PR_TRUE then free the object as well as its sub-objects
-*/
-extern void 
-AES_DestroyContext(AESContext *cx, PRBool freeit);
-
-/*
-** Perform AES encryption.
-**	"cx" the context
-**	"output" the output buffer to store the encrypted data.
-**	"outputLen" how much data is stored in "output". Set by the routine
-**	   after some data is stored in output.
-**	"maxOutputLen" the maximum amount of data that can ever be
-**	   stored in "output"
-**	"input" the input data
-**	"inputLen" the amount of input data
-*/
-extern SECStatus 
-AES_Encrypt(AESContext *cx, unsigned char *output,
-            unsigned int *outputLen, unsigned int maxOutputLen,
-            const unsigned char *input, unsigned int inputLen);
-
-/*
-** Perform AES decryption.
-**	"cx" the context
-**	"output" the output buffer to store the decrypted data.
-**	"outputLen" how much data is stored in "output". Set by the routine
-**	   after some data is stored in output.
-**	"maxOutputLen" the maximum amount of data that can ever be
-**	   stored in "output"
-**	"input" the input data
-**	"inputLen" the amount of input data
-*/
-extern SECStatus 
-AES_Decrypt(AESContext *cx, unsigned char *output,
-            unsigned int *outputLen, unsigned int maxOutputLen,
-            const unsigned char *input, unsigned int inputLen);
 
 
 /******************************************/
@@ -666,7 +611,7 @@ extern void SHA1_End(SHA1Context *cx, unsigned char *digest,
 /*
 ** trace the intermediate state info of the SHA1 hash.
 */
-extern void SHA1_TraceState(SHA1Context *cx);
+extern void SHA1_TraceState(MD5Context *cx);
 
 /*
  * Return the the size of a buffer needed to flatten the SHA-1 Context into
@@ -788,6 +733,8 @@ extern void PQG_DestroyParams(PQGParams *params);
  *  Free the PQGVerify struct and the things it points to.                *
  **************************************************************************/
 extern void PQG_DestroyVerify(PQGVerify *vfy);
+
+
 
 SEC_END_PROTOS
 

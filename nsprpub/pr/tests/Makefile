@@ -1,35 +1,19 @@
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.1 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 # 
-# The contents of this file are subject to the Mozilla Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/MPL/
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
 # 
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-# 
-# The Original Code is the Netscape Portable Runtime (NSPR).
-# 
-# The Initial Developer of the Original Code is Netscape
-# Communications Corporation.  Portions created by Netscape are 
-# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
-# Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the
-# terms of the GNU General Public License Version 2 or later (the
-# "GPL"), in which case the provisions of the GPL are applicable 
-# instead of those above.  If you wish to allow use of your 
-# version of this file only under the terms of the GPL and not to
-# allow others to use your version of this file under the MPL,
-# indicate your decision by deleting the provisions above and
-# replace them with the notice and other provisions required by
-# the GPL.  If you do not delete the provisions above, a recipient
-# may use your version of this file under either the MPL or the
-# GPL.
-# 
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+#
 
 #! gmake
 
@@ -55,12 +39,10 @@ endif
 CSRCS =             \
 	accept.c		\
 	acceptread.c	\
-	acceptreademu.c	\
 	addrstr.c		\
 	affinity.c		\
 	alarm.c			\
 	anonfm.c		\
-	append.c		\
 	atomic.c		\
 	attach.c		\
 	bigfile.c		\
@@ -74,9 +56,7 @@ CSRCS =             \
 	dceemu.c		\
 	dlltest.c		\
 	dtoa.c			\
-	env.c           \
 	errcodes.c		\
-	errset.c		\
 	exit.c  		\
 	fdcach.c		\
 	fileio.c		\
@@ -89,7 +69,6 @@ CSRCS =             \
 	initclk.c		\
 	inrval.c		\
 	instrumt.c      \
-	intrio.c        \
 	intrupt.c       \
 	io_timeout.c    \
 	ioconthr.c      \
@@ -116,7 +95,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -125,12 +103,9 @@ CSRCS =             \
 	op_nofil.c		\
 	openfile.c		\
 	parent.c    	\
-	peek.c    		\
 	perf.c    		\
 	pipeping.c		\
-	pipeping2.c		\
 	pipepong.c		\
-	pipepong2.c		\
 	pipeself.c		\
 	poll_er.c		\
 	poll_nm.c		\
@@ -139,11 +114,9 @@ CSRCS =             \
 	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
-	primblok.c		\
 	priotest.c		\
 	provider.c		\
 	prpoll.c		\
-	prpollml.c		\
 	ranfile.c       \
 	randseed.c      \
 	rwlocktest.c    \
@@ -152,7 +125,6 @@ CSRCS =             \
 	selct_nm.c	    \
 	selct_to.c	    \
 	select2.c  		\
-	selintr.c  		\
 	sem.c 	  		\
 	sema.c 	  		\
 	semaerr.c 		\
@@ -220,26 +192,26 @@ PROGS = $(addprefix $(OBJDIR)/, $(CSRCS:.c=$(PROG_SUFFIX)))
 
 TARGETS = $(PROGS)
 
-INCLUDES = -I$(includedir) -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(DIST)/include -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
 
 # Setting the variables LDOPTS and LIBPR.  We first initialize
 # them to the default values, then adjust them for some platforms.
-LDOPTS = -L$(libdir)
+LDOPTS = -L$(DIST)/lib
 LIBPR = -lnspr$(MOD_VERSION)
 LIBPLC = -lplc$(MOD_VERSION)
 
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
-  LIBPR = $(libdir)/nspr$(MOD_VERSION).lib
-  LIBPLC= $(libdir)/plc$(MOD_VERSION).lib
+  LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
+  LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
   ifeq ($(OS_TARGET), WIN95)
-    LIBPR = $(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)
-    LIBPLC= $(libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)
+    LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).$(LIB_SUFFIX)
+    LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).$(LIB_SUFFIX)
   else
-    LIBPR = $(libdir)/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
-    LIBPLC= $(libdir)/libplc$(MOD_VERSION).$(LIB_SUFFIX)
+    LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
+    LIBPLC= $(DIST)/lib/libplc$(MOD_VERSION).$(LIB_SUFFIX)
   endif
   ifdef PROFILE                                                                              
     LDOPTS += -PROFILE -MAP                                                                  
@@ -250,8 +222,8 @@ endif
 ifeq ($(OS_ARCH),OS2)
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
   LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
-  LIBPR  = $(libdir)/nspr$(MOD_VERSION).lib
-  LIBPLC = $(libdir)/plc$(MOD_VERSION).lib
+  LIBPR  = $(DIST)/lib/nspr$(MOD_VERSION).lib
+  LIBPLC = $(DIST)/lib/plc$(MOD_VERSION).lib
 else
 ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT),OMF)
   LDOPTS = -Zlinker /PM:VIO
@@ -264,11 +236,11 @@ ifneq ($(OS_ARCH), WINNT)
 # or -rpath linker option or the LD_RUN_PATH environment variable).
 ifeq (,$(patsubst /%,,$(DIST)))
 # $(DIST) is already an absolute pathname.
-ABSOLUTE_LIB_DIR = $(libdir)
+ABSOLUTE_LIB_DIR = $(DIST)/lib
 else
 # $(DIST) is a relative pathname: prepend the current directory.
 PWD = $(shell pwd)
-ABSOLUTE_LIB_DIR = $(PWD)/$(libdir)
+ABSOLUTE_LIB_DIR = $(PWD)/$(DIST)/lib
 endif
 endif
 
@@ -300,8 +272,8 @@ ifeq ($(OS_ARCH), OSF1)
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
     ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
-        LIBPR = $(libdir)/libnspr$(MOD_VERSION).a
-        LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
+        LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).a
+        LIBPLC = $(DIST)/lib/libplc$(MOD_VERSION).a
         EXTRA_LIBS = -lc_r
     else
         LDOPTS += -rpath $(ABSOLUTE_LIB_DIR)
@@ -389,8 +361,8 @@ ifeq ($(OS_ARCH), NEWS-OS)
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
 # option for ld on other platforms.
 #export LD_RUN_PATH = $(ABSOLUTE_LIB_DIR)
-    LIBPR = $(libdir)/libnspr$(MOD_VERSION).a
-    LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
+    LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).a
+    LIBPLC = $(DIST)/lib/libplc$(MOD_VERSION).a
     EXTRA_LIBS = -lsocket -lnsl -lgen -lresolv
 endif
 
@@ -489,7 +461,7 @@ ifeq ($(AIX_PRE_4_2),1)
 $(OBJDIR)/%: $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
 	rm -f $@ $(AIX_TMP)
-	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(libdir)/libnspr$(MOD_VERSION).a
+	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(DIST)/lib/libnspr$(MOD_VERSION).a
 	$(CC) -o $@ $(AIX_TMP) $(AIX_WRAP)
 	rm -f $(AIX_TMP)
 
@@ -528,6 +500,7 @@ endif
 endif
 
 export:: $(TARGETS)
+install:: export
 clean::
 	rm -f $(TARGETS)
 

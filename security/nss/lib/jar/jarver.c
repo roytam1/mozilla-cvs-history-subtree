@@ -46,7 +46,6 @@
 #include "jarevil.h"
 #endif
 #include "cdbhdl.h"
-#include "secder.h"
 
 /* to use huge pointers in win16 */
 

@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /* This turns on UNIX style errors in OT 1.1 headers */
@@ -341,6 +325,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             thread = secret->md.write.thread;
             secret->md.write.thread    = NULL;
             secret->md.write.cookie    = cookie;
+            secret->md.connectionOpen  = PR_TRUE;
             break;
 
         case T_DATA:        // Standard data is available
@@ -362,6 +347,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             err = OTRcvDisconnect(endpoint, &discon);
             PR_ASSERT(err == kOTNoError);
             secret->md.exceptReady     = PR_TRUE;
+            secret->md.connectionOpen  = PR_FALSE;
 
 			// wake up waiting threads, if any
 			result = -3199 - discon.reason; // obtain the negative error code
@@ -394,7 +380,7 @@ static pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResul
             PR_ASSERT(err == kOTNoError);
             secret->md.readReady      = PR_TRUE;   // mark readable (to emulate bsd sockets)
             // remember connection is closed, so we can return 0 on read or receive
-			secret->md.orderlyDisconnect = PR_TRUE;
+			secret->md.connectionOpen = PR_FALSE;
 	
             thread = secret->md.read.thread;
 	        secret->md.read.thread    = NULL;
@@ -1386,8 +1372,7 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
     PRThread *me = _PR_MD_CURRENT_THREAD();
     PRInt32 bytesLeft = amount;
 
-    PR_ASSERT(flags == 0 ||
-        (opCode == kSTREAM_RECEIVE && flags == PR_MSG_PEEK));
+    PR_ASSERT(flags == 0);
     PR_ASSERT(opCode == kSTREAM_SEND || opCode == kSTREAM_RECEIVE);
     
     if (endpoint == NULL) {
@@ -1499,9 +1484,7 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 						goto ErrorExit;				
 					break;
 					
-				case kOTOutStateErr:	// if provider already closed, fall through to handle error
-					if (fd->secret->md.orderlyDisconnect)
-						return 0;
+				case kOTOutStateErr:	// it has been closed, fall through to handle error
 				default:
 					err = result;
 					goto ErrorExit;
@@ -1794,7 +1777,7 @@ void _MD_initfiledesc(PRFileDesc *fd)
 		PR_ASSERT(fd->secret->md.miscLock == NULL);
 		fd->secret->md.miscLock = PR_NewLock();
 		PR_ASSERT(fd->secret->md.miscLock != NULL);
-		fd->secret->md.orderlyDisconnect = PR_FALSE;
+		fd->secret->md.connectionOpen = PR_FALSE;	// starts out closed
 		fd->secret->md.readReady = PR_FALSE;		// let's not presume we have data ready to read
 		fd->secret->md.writeReady = PR_TRUE;		// let's presume we can write unless we hear otherwise
 		fd->secret->md.exceptReady = PR_FALSE;
@@ -1837,20 +1820,6 @@ void _MD_makenonblock(PRFileDesc *fd)
 	// Now that we have a NotifierRoutine installed, we can make the endpoint asynchronous
 	err = OTSetAsynchronous(endpointRef);
 	PR_ASSERT(err == kOTNoError);
-}
-
-
-void _MD_initfdinheritable(PRFileDesc *fd, PRBool imported)
-{
-	/* XXX this function needs to be implemented */
-	fd->secret->inheritable = _PR_TRI_UNKNOWN;
-}
-
-
-void _MD_queryfdinheritable(PRFileDesc *fd)
-{
-	/* XXX this function needs to be implemented */
-	PR_ASSERT(0);
 }
 
 

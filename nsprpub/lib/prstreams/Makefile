@@ -1,35 +1,19 @@
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.1 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 # 
-# The contents of this file are subject to the Mozilla Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/MPL/
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
 # 
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-# 
-# The Original Code is the Netscape Portable Runtime (NSPR).
-# 
-# The Initial Developer of the Original Code is Netscape
-# Communications Corporation.  Portions created by Netscape are 
-# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
-# Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the
-# terms of the GNU General Public License Version 2 or later (the
-# "GPL"), in which case the provisions of the GPL are applicable 
-# instead of those above.  If you wish to allow use of your 
-# version of this file only under the terms of the GPL and not to
-# allow others to use your version of this file under the MPL,
-# indicate your decision by deleting the provisions above and
-# replace them with the notice and other provisions required by
-# the GPL.  If you do not delete the provisions above, a recipient
-# may use your version of this file under either the MPL or the
-# GPL.
-# 
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+#
 
 #! gmake
 
@@ -64,7 +48,7 @@ ifeq ($(OS_ARCH), BeOS)
     CFLAGS += -frtti -fexceptions
 endif
 
-INCLUDES = -I$(includedir)
+INCLUDES = -I$(DIST)/include
 
 HEADERS = $(wildcard *.h)
 
@@ -80,24 +64,24 @@ OBJS = $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX)) $(CXXSRCS:.cpp=.$(OBJ_S
 
 ifeq ($(OS_ARCH), WINNT)
     ifeq ($(OS_TARGET), WIN16)
-        EXTRA_LIBS = $(libdir)/nspr$(MOD_VERSION).lib
+        EXTRA_LIBS = $(DIST)/lib/nspr$(MOD_VERSION).lib
     else
         DLLBASE=/BASE:0x30000000
         RES=$(OBJDIR)/prstrms.res
         RESNAME=prstrms.rc
         OS_LIBS = user32.lib
         ifeq ($(OS_TARGET), WIN95)
-            EXTRA_LIBS = $(libdir)/nspr$(MOD_VERSION).lib
+            EXTRA_LIBS = $(DIST)/lib/nspr$(MOD_VERSION).lib
         else
-            EXTRA_LIBS = $(libdir)/libnspr$(MOD_VERSION).lib
+            EXTRA_LIBS = $(DIST)/lib/libnspr$(MOD_VERSION).lib
         endif
     endif
 else
     ifeq ($(OS_ARCH),OS2)
       ifeq ($(MOZ_OS2_TOOLS),VACPP)
-         EXTRA_LIBS = $(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)
+         EXTRA_LIBS = $(DIST)/lib/nspr$(MOD_VERSION).$(LIB_SUFFIX)
       else
-         EXTRA_LIBS = -L$(libdir) -lnspr$(MOD_VERSION) -lstdcpp
+         EXTRA_LIBS = -L$(DIST)/lib -lnspr$(MOD_VERSION) -lstdcpp
       endif
     else
     ifeq ($(OS_ARCH), AIX)
@@ -119,9 +103,9 @@ else
       endif
     endif
     ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
-        EXTRA_LIBS = -L$(libdir) -lnspr$(MOD_VERSION)_shr
+        EXTRA_LIBS = -L$(DIST)/lib -lnspr$(MOD_VERSION)_shr
     else
-        EXTRA_LIBS = -L$(libdir) -lnspr$(MOD_VERSION)
+        EXTRA_LIBS = -L$(DIST)/lib -lnspr$(MOD_VERSION)
     endif
 endif
 endif
@@ -137,7 +121,7 @@ ifeq ($(OS_ARCH),SCOOS)
     EXTRA_LIBS =
 endif
 ifeq ($(OS_ARCH),BeOS)
-    EXTRA_LIBS = -lstdc++.r4 -L$(libdir) -lnspr$(MOD_VERSION)
+    EXTRA_LIBS = -lstdc++.r4 -L$(DIST)/lib -lnspr$(MOD_VERSION)
 endif
 
 ifeq ($(OS_ARCH), UNIXWARE)
@@ -195,20 +179,21 @@ endif
 #
 
 export:: $(TARGETS) $(HEADERS)
-	$(INSTALL) -m 444 $(HEADERS) $(includedir)
-	$(INSTALL) -m 444 $(TARGETS) $(libdir)
+	$(INSTALL) -m 444 $(HEADERS) $(DIST)/include
+	$(INSTALL) -m 444 $(TARGETS) $(DIST)/lib
 ifeq ($(OS_ARCH),OS2)
-	$(INSTALL) -m 444 $(TARGETS) $(bindir)
+	$(INSTALL) -m 444 $(TARGETS) $(DIST)/bin
 endif
 ifeq ($(OS_ARCH),HP-UX)
 ifdef SHARED_LIBRARY
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(libdir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib
 endif
 endif
 ifeq ($(OS_ARCH),OpenVMS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/lib
 ifdef SHARED_LIBRARY
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/lib
 endif
 endif
 
+install:: export

@@ -41,6 +41,7 @@
 
 #include "pk11func.h"
 #include "cert.h"
+#include "cdbhdl.h"
 #include "cryptohi.h"
 #include "secoid.h"
 #include "secder.h"
@@ -50,7 +51,6 @@
 #include "pqgutil.h"
 #include "certxutl.h"
 #include "secrng.h"	/* for RNG_ */
-#include "nss.h"
 
 
 /* #define TEST           1 */
@@ -61,7 +61,6 @@
 #define SERIAL_FILE    "../serial"
 #define DB_DIRECTORY   ".."
 
-static char *progName;
 
 typedef struct PairStr Pair;
 
@@ -679,6 +678,39 @@ get_serial_number(Pair  *data)
 }
 	
 
+
+
+	       
+static CERTCertDBHandle
+*OpenCertDB(void)
+  /* NOTE: This routine has been modified to allow the libsec/pcertdb.c
+   * routines to automatically find and convert the old cert database
+   * into the new v3.0 format (cert db version 5).
+   */
+{
+    CERTCertDBHandle  *certHandle;
+    SECStatus         rv;
+
+    /* Allocate a handle to fill with CERT_OpenCertDB below */
+    certHandle = (CERTCertDBHandle *)PORT_ZAlloc(sizeof(CERTCertDBHandle));
+    if (!certHandle) {
+	error_out("ERROR: unable to get database handle");
+	return NULL;
+    }
+
+    rv = CERT_OpenCertDB(certHandle, PR_FALSE, SECU_CertDBNameCallback, NULL);
+
+    if (rv) {
+	error_out("ERROR: Could not open certificate database");
+	if (certHandle) free (certHandle);  /* we don't want to leave 
+					       anything behind... */
+	return NULL;
+    } else {
+	CERT_SetDefaultCertDB(certHandle);
+    }
+
+    return certHandle;
+}
 
 typedef SECStatus (* EXTEN_VALUE_ENCODER)
 		(PRArenaPool *extHandle, void *value, SECItem *encodedValue);
@@ -2201,8 +2233,8 @@ done:
 }
 
 
-int
-main(int argc, char **argv)
+void
+main()
 {
     int                    length = 500;
     int                    remaining = 500;
@@ -2240,9 +2272,6 @@ main(int argc, char **argv)
     PRBool                 UChain = PR_FALSE;
 
 
-    progName = strrchr(argv[0], '/');
-    progName = progName ? progName+1 : argv[0];
-
 
 #ifdef TEST
     sleep(20);
@@ -2252,14 +2281,14 @@ main(int argc, char **argv)
 
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
+    SECU_PKCS11Init(PR_FALSE);     
+    SEC_Init();
     PK11_SetPasswordFunc(return_dbpasswd);
-    NSS_InitReadWrite(DBdir);
-    if (status != SECSuccess) {
-	SECU_PrintPRandOSError(progName);
-	return -1;
+    handle = NULL;
+    handle = OpenCertDB();
+    if (handle == NULL) {
+	error_out("Error: Unable to open certificate database");
     }
-    handle = CERT_GetDefaultCertDB();
-
     prefix[0]= '\0';
 #if !defined(OFFLINE)
     form_output = (char*) PORT_Alloc(length);

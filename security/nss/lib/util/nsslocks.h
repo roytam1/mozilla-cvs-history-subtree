@@ -43,24 +43,24 @@
 #define _NSSLOCKS_H_
 
 #include "seccomon.h"
-#include "nssilock.h"
+#include "prlock.h"
 #include "prmon.h"
 
 SEC_BEGIN_PROTOS
 
-/* Given the address of a (global) pointer to a PZLock, 
+/* Given the address of a (global) pointer to a PRLock, 
  * atomicly create the lock and initialize the (global) pointer, 
  * if it is not already created/initialized.
  */
 
-extern SECStatus nss_InitLock(   PZLock    **ppLock, nssILockType ltype );
+extern SECStatus nss_InitLock(   PRLock    **ppLock);
 
-/* Given the address of a (global) pointer to a PZMonitor, 
+/* Given the address of a (global) pointer to a PRMonitor, 
  * atomicly create the monitor and initialize the (global) pointer, 
  * if it is not already created/initialized.
  */
 
-extern SECStatus nss_InitMonitor(PZMonitor **ppMonitor, nssILockType ltype );
+extern SECStatus nss_InitMonitor(PRMonitor **ppMonitor);
 
 SEC_END_PROTOS
 

@@ -20,20 +20,6 @@
 #
 
 DEPTH	= ..
-topsrcdir	= ..
-VPATH		= .
-srcdir		= .
+DIRS	= us
 
-include $(DEPTH)/config/autoconf.mk
-
-DIRS	= langpacks
-
-ifdef MOZ_L10N_TOOLS
-DIRS	+= tools
-endif
-
-ifdef MOZ_L10N_LANG
-DIRS	+= lang
-endif
-
-include $(topsrcdir)/config/rules.mk
+include $(DEPTH)/config/rules.mk

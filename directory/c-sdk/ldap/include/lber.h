@@ -35,9 +35,9 @@ extern "C" {
  * fact, any tag for which the following is true is invalid:
  *     (( tag & 0x00000080 ) != 0 ) && (( tag & 0xFFFFFF00 ) != 0 )
  */
-#define LBER_ERROR		0xffffffffL
-#define LBER_DEFAULT		LBER_ERROR
-#define LBER_END_OF_SEQORSET	0xfffffffeL
+#define LBER_ERROR              0xffffffffUL
+#define LBER_DEFAULT            0xffffffffUL	
+#define LBER_END_OF_SEQORSET	0xfffffffeUL
 
 /* BER classes and mask */
 #define LBER_CLASS_UNIVERSAL    0x00
@@ -72,6 +72,15 @@ extern "C" {
 #define LBER_OPT_BYTES_TO_WRITE		0x10
 #define LBER_OPT_MEMALLOC_FN_PTRS	0x20
 #define LBER_OPT_DEBUG_LEVEL		0x40
+/*
+ * LBER_USE_DER is defined for compatibility with the C LDAP API RFC.
+ * In our implementation, we recognize it (instead of the numerically
+ * identical LBER_OPT_REMAINING_BYTES) in calls to ber_alloc_t() and 
+ * ber_init_w_nullchar() only.  Callers of ber_set_option() or
+ * ber_get_option() must use LBER_OPT_USE_DER instead.  Sorry!
+ */
+#define LBER_USE_DER			0x01
+
 
 /* Sockbuf set/get options */
 #define LBER_SOCKBUF_OPT_TO_FILE		0x001
@@ -87,10 +96,10 @@ extern "C" {
 #define LBER_OPT_OFF	((void *) 0)
 
 
-struct berval {
+typedef struct berval {
 	unsigned long	bv_len;
 	char		*bv_val;
-};
+} BerValue;
 
 typedef struct berelement BerElement;
 typedef struct sockbuf Sockbuf;
@@ -191,13 +200,14 @@ LDAP_API(unsigned long) LDAP_CALL ber_first_element( BerElement *ber,
 	unsigned long *len, char **last );
 LDAP_API(unsigned long) LDAP_CALL ber_next_element( BerElement *ber,
 	unsigned long *len, char *last );
-LDAP_API(unsigned long) LDAP_C ber_scanf( BerElement *ber, char *fmt, ... );
+LDAP_API(unsigned long) LDAP_C ber_scanf( BerElement *ber, const char *fmt,
+	... );
 LDAP_API(void) LDAP_CALL ber_bvfree( struct berval *bv );
 LDAP_API(void) LDAP_CALL ber_bvecfree( struct berval **bv );
-LDAP_API(struct berval *) LDAP_CALL ber_bvdup( struct berval *bv );
+LDAP_API(struct berval *) LDAP_CALL ber_bvdup( const struct berval *bv );
 LDAP_API(void) LDAP_CALL ber_set_string_translators( BerElement *ber,
 	BERTranslateProc encode_proc, BERTranslateProc decode_proc );
-LDAP_API(BerElement *) LDAP_CALL ber_init ( struct berval *bv );
+LDAP_API(BerElement *) LDAP_CALL ber_init( const struct berval *bv );
 
 /*
  * encoding routines
@@ -219,8 +229,9 @@ LDAP_API(int) LDAP_CALL ber_start_seq( BerElement *ber, unsigned long tag );
 LDAP_API(int) LDAP_CALL ber_start_set( BerElement *ber, unsigned long tag );
 LDAP_API(int) LDAP_CALL ber_put_seq( BerElement *ber );
 LDAP_API(int) LDAP_CALL ber_put_set( BerElement *ber );
-LDAP_API(int) LDAP_C ber_printf( BerElement *ber, char *fmt, ... );
-LDAP_API(int) LDAP_CALL ber_flatten( BerElement *ber, struct berval **bvPtr );
+LDAP_API(int) LDAP_C ber_printf( BerElement *ber, const char *fmt, ... );
+LDAP_API(int) LDAP_CALL ber_flatten( BerElement *ber,
+	struct berval **bvPtr );
 
 /*
  * miscellaneous routines

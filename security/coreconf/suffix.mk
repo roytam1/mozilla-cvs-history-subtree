@@ -97,6 +97,19 @@ ifndef IMPORT_LIB_SUFFIX
 endif
 
 
+ifndef PURE_LIB_SUFFIX
+	ifeq ($(OS_ARCH), WINNT)
+		PURE_LIB_SUFFIX =
+	else
+		ifdef DSO_BACKEND
+			PURE_LIB_SUFFIX = .$(DLL_SUFFIX)
+		else
+			PURE_LIB_SUFFIX = .$(LIB_SUFFIX)
+		endif
+	endif
+endif
+
+
 ifndef STATIC_LIB_SUFFIX_FOR_LINKING
 	STATIC_LIB_SUFFIX_FOR_LINKING = $(STATIC_LIB_SUFFIX)
 endif
@@ -115,9 +128,13 @@ endif
 #
 
 ifndef PROG_SUFFIX
-	ifeq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
+	ifeq ($(OS_ARCH), WINNT)
 		PROG_SUFFIX = .exe
 	else
+	    ifeq ($(OS_ARCH), OS2)
+		PROG_SUFFIX = .exe
+	    else
 		PROG_SUFFIX =
+	    endif
 	endif
 endif

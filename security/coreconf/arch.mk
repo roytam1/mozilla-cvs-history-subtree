@@ -138,19 +138,6 @@ ifeq ($(OS_ARCH),Linux)
 	OS_RELEASE := $(basename $(OS_RELEASE))
 endif
 
-#
-# For OS/2
-#
-ifeq ($(OS_ARCH),OS_2)
-	OS_ARCH = OS2
-	OS_RELEASE := $(shell uname -v)
-endif
-
-ifneq (,$(findstring OpenVMS,$(OS_ARCH)))
-	OS_ARCH = OpenVMS
-	OS_RELEASE := $(shell uname -v)
-endif
-
 #######################################################################
 # Master "Core Components" macros for getting the OS target           #
 #######################################################################
@@ -301,5 +288,14 @@ ifdef USE_DEBUG_RTL
 endif
 endif
 endif
+endif
+
+#
+# For OS/2
+#
+ifeq ($(OS_ARCH), OS_2)
+OS_ARCH		:= OS2
+OS_RELEASE	:= $(shell uname -v)
+OS_CONFIG	:= $(OS_ARCH)
 endif
 

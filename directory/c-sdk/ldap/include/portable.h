@@ -21,6 +21,10 @@
  * edit this file.
  */
 
+#if defined(LINUX) || defined ( linux )
+#define LINUX2_1
+#endif
+
 #ifndef SYSV
 #if defined( hpux ) || defined( sunos5 ) || defined ( sgi ) || defined( SVR4 )
 #define SYSV
@@ -124,7 +128,9 @@
  * dns functions
  */
 #if !defined(LDAP_ASYNC_IO)
+#if !defined(_WINDOWS) && !defined(macintosh)
 #define LDAP_ASYNC_IO
+#endif /* _WINDOWS */
 #endif
 
 /*
@@ -153,7 +159,7 @@
  */
 #if !defined(LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED) && \
 	( defined(AIX) || defined(IRIX) || defined(HPUX) || defined(SUNOS4) \
-	|| defined(SOLARIS) || defined(OSF1))
+	|| defined(SOLARIS) || defined(OSF1) ||defined(freebsd)) 
 #define LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #endif
 
@@ -261,12 +267,13 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #if defined(HPUX9) || defined(LINUX1_2) || defined(LINUX2_0) || \
     defined(LINUX2_1) || defined(SUNOS4) || defined(SNI) || \
     defined(SCOOS) || defined(BSDI) || defined(NCR) || \
-    defined(NEC) || ( defined(HPUX10) && !defined(_REENTRANT)) || (defined(AIX) && !defined(USE_REENTRANT_LIBC))
+    defined(NEC) || ( defined(HPUX10) && !defined(_REENTRANT)) || \
+    (defined(AIX) && !defined(USE_REENTRANT_LIBC))
 #define CTIME( c, b, l )		ctime( c )
-#elif defined(HPUX10) && defined(_REENTRANT)
+#elif defined(HPUX10) && defined(_REENTRANT) && !defined(HPUX11)
 #define CTIME( c, b, l )		nsldapi_compat_ctime_r( c, b, l )
 #elif defined( IRIX6_2 ) || defined( IRIX6_3 ) || defined(UNIXWARE) \
-	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux)
+	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux) || defined(HPUX11)
 #define CTIME( c, b, l )                ctime_r( c, b )
 #elif defined( OSF1V3 )
 #define CTIME( c, b, l )		(ctime_r( c, b, l ) ? NULL : b)
@@ -292,10 +299,20 @@ extern char *strdup();
 #define	BSD_TIME	1	/* for servers/slapd/log.h */
 #endif /* sunos4 || osf */
 
-#ifdef SOLARIS
+#if !defined(_WINDOWS) && !defined(macintosh)
 #include <netinet/in.h>
 #include <arpa/inet.h>	/* for inet_addr() */
-#endif /* SOLARIS */
+#endif
+
+/*
+ * Define a portable type for IPv4 style Internet addresses (32 bits):
+ */
+#if ( defined(sunos5) && defined(_IN_ADDR_T)) || \
+    defined(aix) || defined(HPUX11) || defined(OSF1)
+typedef in_addr_t	nsldapi_in_addr_t;
+#else
+typedef unsigned long	nsldapi_in_addr_t;
+#endif
 
 #ifdef SUNOS4
 #include <pcfs/pc_dir.h>	/* for toupper() */

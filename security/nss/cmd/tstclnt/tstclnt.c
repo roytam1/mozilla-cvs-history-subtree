@@ -64,9 +64,6 @@
 #define PRINTF  if (verbose)  printf
 #define FPRINTF if (verbose) fprintf
 
-#define MAX_WAIT_FOR_SERVER 600
-#define WAIT_INTERVAL       100
-
 int ssl2CipherSuites[] = {
     SSL_EN_RC4_128_WITH_MD5,			/* A */
     SSL_EN_RC4_128_EXPORT40_WITH_MD5,		/* B */
@@ -91,12 +88,11 @@ int ssl3CipherSuites[] = {
     SSL_RSA_FIPS_WITH_DES_CBC_SHA,		/* k */
     TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,	/* l */
     TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,	        /* m */
-    SSL_RSA_WITH_RC4_128_SHA,			/* n */
     0
 };
 
 unsigned long __cmp_umuls;
-PRBool verbose;
+PRBool verbose = PR_TRUE;
 
 static char *progName;
 
@@ -124,23 +120,35 @@ void printSecurityInfo(PRFileDesc *fd)
     int    kp0;	/* total key bits */
     int    kp1;	/* secret key bits */
     int    result;
-    SSL3Statistics * ssl3stats = SSL_GetStatistics();
+
+/* statistics from ssl3_SendClientHello (sch) */
+extern long ssl3_sch_sid_cache_hits;
+extern long ssl3_sch_sid_cache_misses;
+extern long ssl3_sch_sid_cache_not_ok;
+
+/* statistics from ssl3_HandleServerHello (hsh) */
+extern long ssl3_hsh_sid_cache_hits;
+extern long ssl3_hsh_sid_cache_misses;
+extern long ssl3_hsh_sid_cache_not_ok;
+
+/* statistics from ssl3_HandleClientHello (hch) */
+extern long ssl3_hch_sid_cache_hits;
+extern long ssl3_hch_sid_cache_misses;
+extern long ssl3_hch_sid_cache_not_ok;
 
     result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
     if (result != SECSuccess)
     	return;
-    fprintf(stderr,
-           "bulk cipher %s, %d secret key bits, %d key bits, status: %d\n"
+    PRINTF("bulk cipher %s, %d secret key bits, %d key bits, status: %d\n"
            "subject DN: %s\n"
 	   "issuer  DN: %s\n", cp, kp1, kp0, op, sp, ip);
     PR_Free(cp);
     PR_Free(ip);
     PR_Free(sp);
 
-    fprintf(stderr,
-    	"%ld cache hits; %ld cache misses, %ld cache not reusable\n",
-    	ssl3stats->hch_sid_cache_hits, ssl3stats->hch_sid_cache_misses,
-	ssl3stats->hch_sid_cache_not_ok);
+    PRINTF("%ld cache hits; %ld cache misses, %ld cache not reusable\n",
+    	ssl3_hch_sid_cache_hits, ssl3_hch_sid_cache_misses,
+	ssl3_hch_sid_cache_not_ok);
 
 }
 
@@ -153,8 +161,8 @@ handshakeCallback(PRFileDesc *fd, void *client_data)
 static void Usage(const char *progName)
 {
     printf(
-"Usage:  %s -h host [-p port] [-d certdir] [-n nickname] [-23Tovx] \n"
-"                   [-c ciphers] [-w passwd] [-q]\n", progName);
+"Usage:  %s -h host [-p port] [-d certdir] [-n nickname] [-23ox] \n"
+"                   [-c ciphers] [-w passwd]\n", progName);
     printf("%-20s Hostname to connect with\n", "-h host");
     printf("%-20s Port number for SSL server\n", "-p port");
     printf("%-20s Directory with cert database (default is ~/.netscape)\n",
@@ -164,9 +172,7 @@ static void Usage(const char *progName)
     printf("%-20s Disable SSL v3.\n", "-3");
     printf("%-20s Disable TLS (SSL v3.1).\n", "-T");
     printf("%-20s Override bad server cert. Make it OK.\n", "-o");
-    printf("%-20s Verbose progress reporting.\n", "-v");
     printf("%-20s Use export policy.\n", "-x");
-    printf("%-20s Ping the server and then exit.\n", "-q");
     printf("%-20s Letter(s) chosen from the following list\n", "-c ciphers");
     printf(
 "A    SSL2 RC4 128 WITH MD5\n"
@@ -189,7 +195,6 @@ static void Usage(const char *progName)
 "k    SSL3 RSA FIPS WITH DES CBC SHA\n"
 "l    SSL3 RSA EXPORT WITH DES CBC SHA\t(new)\n"
 "m    SSL3 RSA EXPORT WITH RC4 56 SHA\t(new)\n"
-"n    SSL3 RSA WITH RC4 128 SHA\n"
 	);
     exit(-1);
 }
@@ -202,22 +207,24 @@ milliPause(PRUint32 milli)
 }
 
 void
-disableAllSSLCiphers(void)
+disableSSL2Ciphers(void)
 {
-    const PRUint16 *cipherSuites = SSL_ImplementedCiphers;
-    int             i            = SSL_NumImplementedCiphers;
-    SECStatus       rv;
+    int i;
+
+    /* disable all the SSL2 cipher suites */
+    for (i = 0; ssl2CipherSuites[i] != 0;  ++i) {
+        SSL_EnableCipher(ssl2CipherSuites[i], SSL_NOT_ALLOWED);
+    }
+}
+
+void
+disableSSL3Ciphers(void)
+{
+    int i;
 
     /* disable all the SSL3 cipher suites */
-    while (--i >= 0) {
-	PRUint16 suite = cipherSuites[i];
-        rv = SSL_CipherPrefSetDefault(suite, PR_FALSE);
-	if (rv != SECSuccess) {
-	    PRErrorCode err = PR_GetError();
-	    printf("SSL_CipherPrefSet didn't like value 0x%04x (i = %d): %s\n",
-	    	   suite, i, SECU_Strerror(err));
-	    exit(2);
-	}
+    for (i = 0; ssl3CipherSuites[i] != 0;  ++i) {
+        SSL_EnableCipher(ssl3CipherSuites[i], SSL_NOT_ALLOWED);
     }
 }
 
@@ -233,6 +240,7 @@ ownBadCertHandler(void * arg, PRFileDesc * socket)
     printf("Bad server certificate: %d, %s\n", err, SECU_Strerror(err));
     return SECSuccess;	/* override, say it's OK. */
 }
+
 
 int main(int argc, char **argv)
 {
@@ -262,19 +270,16 @@ int main(int argc, char **argv)
     PRPollDesc         pollset[2];
     char               buf[PR_NETDB_BUF_SIZE];
     PRBool             useCommandLinePassword = PR_FALSE;
-    PRBool             pingServerFirst = PR_FALSE;
     int                error=0;
-    int                iter;
     PLOptState *optstate;
     PLOptStatus optstatus;
-    PRStatus prStatus;
 
     progName = strrchr(argv[0], '/');
     if (!progName)
 	progName = strrchr(argv[0], '\\');
     progName = progName ? progName+1 : argv[0];
 
-    optstate = PL_CreateOptState(argc, argv, "23Tfc:h:p:d:m:n:oqvw:x");
+    optstate = PL_CreateOptState(argc, argv, "23Tfc:h:p:d:m:n:ow:x");
     while ((optstatus = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	  case '?':
@@ -311,10 +316,6 @@ int main(int argc, char **argv)
 	  case 'o': override = 1; 			break;
 
 	  case 'p': port = strdup(optstate->value);	break;
-
-	  case 'q': pingServerFirst = PR_TRUE;          break;
-
-	  case 'v': verbose++;	 			break;
 
 	  case 'w':
 		password = optstate->value;
@@ -365,7 +366,8 @@ int main(int argc, char **argv)
     /* all the SSL2 and SSL3 cipher suites are enabled by default. */
     if (cipherString) {
 	/* disable all the ciphers, then enable the ones we want. */
-	disableAllSSLCiphers();
+	disableSSL2Ciphers();
+	disableSSL3Ciphers();
     }
 
     /* Lookup host */
@@ -380,51 +382,12 @@ int main(int argc, char **argv)
     }
 
     ip = PR_ntohl(addr.inet.ip);
-    PRINTF("%s: connecting to %s:%d (address=%d.%d.%d.%d)\n",
+    printf("%s: connecting to %s:%d (address=%d.%d.%d.%d)\n",
 	   progName, host, PR_ntohs(addr.inet.port),
 	   (ip >> 24) & 0xff,
 	   (ip >> 16) & 0xff,
 	   (ip >>  8) & 0xff,
 	   (ip >>  0) & 0xff);
-
-    if (pingServerFirst) {
-	int iter = 0;
-	PRErrorCode err;
-	do {
-	    s = PR_NewTCPSocket();
-	    if (s == NULL) {
-		SECU_PrintError(progName, "Failed to create a TCP socket");
-	    }
-	    opt.option             = PR_SockOpt_Nonblocking;
-	    opt.value.non_blocking = PR_FALSE;
-	    prStatus = PR_SetSocketOption(s, &opt);
-	    if (prStatus != PR_SUCCESS) {
-		PR_Close(s);
-		SECU_PrintError(progName, 
-		                "Failed to set blocking socket option");
-		return SECFailure;
-	    }
-	    prStatus = PR_Connect(s, &addr, PR_INTERVAL_NO_TIMEOUT);
-	    if (prStatus == PR_SUCCESS) {
-    		PR_Shutdown(s, PR_SHUTDOWN_BOTH);
-    		PR_Close(s);
-    		NSS_Shutdown();
-    		PR_Cleanup();
-		return SECSuccess;
-	    }
-	    err = PR_GetError();
-	    if ((err != PR_CONNECT_REFUSED_ERROR) && 
-	        (err != PR_CONNECT_RESET_ERROR)) {
-		SECU_PrintError(progName, "TCP Connection failed");
-		return SECFailure;
-	    }
-	    PR_Close(s);
-	    PR_Sleep(PR_MillisecondsToInterval(WAIT_INTERVAL));
-	} while (++iter < MAX_WAIT_FOR_SERVER);
-	SECU_PrintError(progName, 
-                     "Client timed out while waiting for connection to server");
-	return SECFailure;
-    }
 
     /* Create socket */
     s = PR_NewTCPSocket();
@@ -444,13 +407,13 @@ int main(int argc, char **argv)
 	return -1;
     }
 
-    rv = SSL_OptionSet(s, SSL_SECURITY, 1);
+    rv = SSL_Enable(s, SSL_SECURITY, 1);
     if (rv != SECSuccess) {
         SECU_PrintError(progName, "error enabling socket");
 	return -1;
     }
 
-    rv = SSL_OptionSet(s, SSL_HANDSHAKE_AS_CLIENT, 1);
+    rv = SSL_Enable(s, SSL_HANDSHAKE_AS_CLIENT, 1);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "error enabling client handshake");
 	return -1;
@@ -478,30 +441,32 @@ int main(int argc, char **argv)
 	}
     }
 
-    rv = SSL_OptionSet(s, SSL_ENABLE_SSL2, !disableSSL2);
+    rv = SSL_Enable(s, SSL_ENABLE_SSL2, !disableSSL2);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "error enabling SSLv2 ");
 	return -1;
     }
 
-    rv = SSL_OptionSet(s, SSL_ENABLE_SSL3, !disableSSL3);
+    rv = SSL_Enable(s, SSL_ENABLE_SSL3, !disableSSL3);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "error enabling SSLv3 ");
 	return -1;
     }
 
-    rv = SSL_OptionSet(s, SSL_ENABLE_TLS, !disableTLS);
+    rv = SSL_Enable(s, SSL_ENABLE_TLS, !disableTLS);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "error enabling TLS ");
 	return -1;
     }
 
+#if 0
     /* disable ssl2 and ssl2-compatible client hellos. */
-    rv = SSL_OptionSet(s, SSL_V2_COMPATIBLE_HELLO, !disableSSL2);
+    rv = SSL_Enable(s, SSL_V2_COMPATIBLE_HELLO, 0);
     if (rv != SECSuccess) {
 	SECU_PrintError(progName, "error disabling v2 compatibility");
 	return -1;
     }
+#endif
 
     if (useCommandLinePassword) {
 	SSL_SetPKCS11PinArg(s, password);
@@ -519,23 +484,22 @@ int main(int argc, char **argv)
     status = PR_Connect(s, &addr, PR_INTERVAL_NO_TIMEOUT);
     if (status != PR_SUCCESS) {
 	if (PR_GetError() == PR_IN_PROGRESS_ERROR) {
-	    if (verbose)
-		SECU_PrintError(progName, "connect");
+	    SECU_PrintError(progName, "connect");
 	    milliPause(50 * multiplier);
 	    pollset[0].fd = s;
 	    pollset[0].in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
 	    pollset[0].out_flags = 0;
 	    while(1) {
-		PRINTF("%s: about to call PR_Poll for connect completion!\n", progName);
+		printf("%s: about to call PR_Poll for connect completion!\n", progName);
 		filesReady = PR_Poll(pollset, 1, PR_INTERVAL_NO_TIMEOUT);
 		if (filesReady < 0) {
 		    SECU_PrintError(progName, "unable to connect (poll)");
 		    return -1;
 		}
-		PRINTF("%s: PR_Poll returned 0x%02x for socket out_flags.\n",
+		printf("%s: PR_Poll returned 0x%02x for socket out_flags.\n",
 			progName, pollset[0].out_flags);
 		if (filesReady == 0) {	/* shouldn't happen! */
-		    PRINTF("%s: PR_Poll returned zero!\n", progName);
+		    printf("%s: PR_Poll returned zero!\n", progName);
 		    return -1;
 		}
 		/* Must milliPause between PR_Poll and PR_GetConnectStatus,
@@ -577,7 +541,7 @@ int main(int argc, char **argv)
     ** Select on stdin and on the socket. Write data from stdin to
     ** socket, read data from socket and write to stdout.
     */
-    PRINTF("%s: ready...\n", progName);
+    printf("%s: ready...\n", progName);
 
     while (pollset[0].in_flags || pollset[1].in_flags) {
 	char buf[4000];	/* buffer for stdin */
@@ -588,7 +552,7 @@ int main(int argc, char **argv)
 	    pollset[1].out_flags = 0;
 	}
 
-	PRINTF("%s: about to call PR_Poll !\n", progName);
+	printf("%s: about to call PR_Poll !\n", progName);
         if (pollset[1].in_flags && file_read) {
 		filesReady = PR_Poll(pollset, npds, PR_INTERVAL_NO_WAIT);
 		filesReady++;
@@ -601,12 +565,12 @@ int main(int argc, char **argv)
 	   goto done;
 	}
 	if (filesReady == 0) {	/* shouldn't happen! */
-	    PRINTF("%s: PR_Poll returned zero!\n", progName);
+	    printf("%s: PR_Poll returned zero!\n", progName);
 	    return -1;
 	}
-	PRINTF("%s: PR_Poll returned!\n", progName);
+	printf("%s: PR_Poll returned!\n", progName);
 	if (pollset[1].in_flags) {
-	        PRINTF("%s: PR_Poll returned 0x%02x for stdin out_flags.\n",
+	        printf("%s: PR_Poll returned 0x%02x for stdin out_flags.\n",
 		    progName, pollset[1].out_flags);
 #ifndef _WINDOWS 
 	}
@@ -614,7 +578,7 @@ int main(int argc, char **argv)
 #endif
 	    /* Read from stdin and write to socket */
 	    nb = PR_Read(pollset[1].fd, buf, sizeof(buf));
-	    PRINTF("%s: stdin read %d bytes\n", progName, nb);
+	    printf("%s: stdin read %d bytes\n", progName, nb);
 	    if (nb < 0) {
 		if (PR_GetError() != PR_WOULD_BLOCK_ERROR) {
 		    SECU_PrintError(progName, "read from stdin failed");
@@ -625,7 +589,7 @@ int main(int argc, char **argv)
 		pollset[1].in_flags = 0;
 	    } else {
 		char * bufp = buf;
-		PRINTF("%s: Writing %d bytes to server\n", progName, nb);
+		printf("%s: Writing %d bytes to server\n", progName, nb);
 		do {
 		    PRInt32 cc = PR_Write(s, bufp, nb);
 		    if (cc < 0) {
@@ -644,16 +608,16 @@ int main(int argc, char **argv)
 		    	break;
 		    pollset[0].in_flags = PR_POLL_WRITE | PR_POLL_EXCEPT;
 		    pollset[0].out_flags = 0;
-		    PRINTF("%s: about to call PR_Poll on writable socket !\n", progName);
+		    printf("%s: about to call PR_Poll on writable socket !\n", progName);
 		    cc = PR_Poll(pollset, 1, PR_INTERVAL_NO_TIMEOUT);
-		    PRINTF("%s: PR_Poll returned with writable socket !\n", progName);
+		    printf("%s: PR_Poll returned with writable socket !\n", progName);
 		} while (1);
 		pollset[0].in_flags  = PR_POLL_READ;
 	    }
 	}
 
 	if (pollset[0].in_flags) {
-	    PRINTF("%s: PR_Poll returned 0x%02x for socket out_flags.\n",
+	    printf("%s: PR_Poll returned 0x%02x for socket out_flags.\n",
 		   progName, pollset[0].out_flags);
 	}
 	if (   (pollset[0].out_flags & PR_POLL_READ) 
@@ -664,7 +628,7 @@ int main(int argc, char **argv)
 	    ) {
 	    /* Read from socket and write to stdout */
 	    nb = PR_Read(pollset[0].fd, buf, sizeof(buf));
-	    PRINTF("%s: Read from server %d bytes\n", progName, nb);
+	    printf("%s: Read from server %d bytes\n", progName, nb);
 	    if (nb < 0) {
 		if (PR_GetError() != PR_WOULD_BLOCK_ERROR) {
 		    SECU_PrintError(progName, "read from socket failed");

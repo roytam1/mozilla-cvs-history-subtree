@@ -39,9 +39,6 @@
  */
 
 #include "mpi-priv.h"
-#if defined(OSF1)
-#include <c_asm.h>
-#endif
 
 #if MP_LOGTAB
 /*
@@ -340,7 +337,7 @@ void   mp_set(mp_int *mp, mp_digit d)
 mp_err mp_set_int(mp_int *mp, long z)
 {
   int            ix;
-  unsigned long  v = labs(z);
+  unsigned long  v = abs(z);
   mp_err         res;
 
   ARGCHK(mp != NULL, MP_BADARG);
@@ -955,10 +952,8 @@ mp_err mp_div(const mp_int *a, const mp_int *b, mp_int *q, mp_int *r)
 {
   mp_err   res;
   mp_int   *pQ, *pR;
-  mp_int   qtmp, rtmp, btmp;
+  mp_int   qtmp, rtmp;
   int      cmp;
-  mp_sign  signA = MP_SIGN(a);
-  mp_sign  signB = MP_SIGN(b);
 
   ARGCHK(a != NULL && b != NULL, MP_BADARG);
 
@@ -967,47 +962,47 @@ mp_err mp_div(const mp_int *a, const mp_int *b, mp_int *q, mp_int *r)
 
   DIGITS(&qtmp) = 0;
   DIGITS(&rtmp) = 0;
-  DIGITS(&btmp) = 0;
-
   /* Set up some temporaries... */
+  if (!q || q == a || q == b) {
+    if((res = mp_init_copy(&qtmp, a)) != MP_OKAY)
+      return res;
+    pQ = &qtmp;
+  } else {
+    if((res = mp_copy(a, q)) != MP_OKAY)
+      return res;
+    pQ = q;
+  }
   if (!r || r == a || r == b) {
-    MP_CHECKOK( mp_init_copy(&rtmp, a) );
+    if((res = mp_init_copy(&rtmp, b)) != MP_OKAY)
+      goto CLEANUP;
     pR = &rtmp;
   } else {
-    MP_CHECKOK( mp_copy(a, r) );
+    if((res = mp_copy(b, r)) != MP_OKAY)
+      goto CLEANUP;
     pR = r;
   }
 
-  if (!q || q == a || q == b) {
-    MP_CHECKOK( mp_init_size(&qtmp, MP_USED(a)) );
-    pQ = &qtmp;
-  } else {
-    MP_CHECKOK( s_mp_pad(q, MP_USED(a)) );
-    pQ = q;
-    mp_zero(pQ);
-  }
-
   /*
-    If |a| <= |b|, we can compute the solution without division;
+    If a <= b, we can compute the solution without division;
     otherwise, we actually do the work required.
    */
-  if ((cmp = s_mp_cmp(a, b)) <= 0) {
-    if (cmp) {
-      /* r was set to a above. */
-      mp_zero(pQ);
-    } else {
-      mp_set(pQ, 1);
-      mp_zero(pR);
-    }
+  if((cmp = s_mp_cmp(pQ, pR)) < 0) {
+    s_mp_exch(pQ, pR);
+    mp_zero(pQ);
+  } else if(cmp == 0) {
+    mp_set(pQ, 1);
+    mp_zero(pR);
   } else {
-    MP_CHECKOK( mp_init_copy(&btmp, b) );
-    MP_CHECKOK( s_mp_div(pR, &btmp, pQ) );
+    if((res = s_mp_div(pQ, pR)) != MP_OKAY)
+      goto CLEANUP;
   }
 
   /* Compute the signs for the output  */
-  MP_SIGN(pR) = signA;   /* Sr = Sa              */
-  /* Sq = ZPOS if Sa == Sb */ /* Sq = NEG if Sa != Sb */
-  MP_SIGN(pQ) = (signA == signB) ? ZPOS : NEG;
+  SIGN(pR) = SIGN(a); /* Sr = Sa              */
+  if(SIGN(a) == SIGN(b))
+    SIGN(pQ) = ZPOS;  /* Sq = ZPOS if Sa = Sb */
+  else
+    SIGN(pQ) = NEG;   /* Sq = NEG if Sa != Sb */
 
   if(s_mp_cmp_d(pQ, 0) == MP_EQ)
     SIGN(pQ) = ZPOS;
@@ -1022,7 +1017,6 @@ mp_err mp_div(const mp_int *a, const mp_int *b, mp_int *q, mp_int *r)
     s_mp_exch(pR, r);
 
 CLEANUP:
-  mp_clear(&btmp);
   mp_clear(&rtmp);
   mp_clear(&qtmp);
 
@@ -1993,7 +1987,7 @@ mp_size mp_trailing_zeros(const mp_int *mp)
     n += MP_DIGIT_BIT;
   if (!d)
     return 0;	/* shouldn't happen, but ... */
-#if !defined(MP_USE_UINT_DIGIT)
+#if (MP_DIGIT_MAX > MP_32BIT_MAX) 
   if (!(d & 0xffffffffU)) {
     d >>= 32;
     n  += 32;
@@ -2108,7 +2102,7 @@ mp_digit  s_mp_invmod_radix(mp_digit P)
   T *= 2 - (P * T);
   T *= 2 - (P * T);
   T *= 2 - (P * T);
-#if !defined(MP_USE_UINT_DIGIT)
+#if MP_DIGIT_MAX > MP_32BIT_MAX
   T *= 2 - (P * T);
   T *= 2 - (P * T);
 #endif
@@ -2562,45 +2556,6 @@ mp_err  mp_read_radix(mp_int *mp, const char *str, int radix)
   return MP_OKAY;
 
 } /* end mp_read_radix() */
-
-mp_err mp_read_variable_radix(mp_int *a, const char * str, int default_radix)
-{
-  int     radix = default_radix;
-  int     cx;
-  mp_sign sig   = ZPOS;
-  mp_err  res;
-
-  /* Skip leading non-digit characters until a digit or '-' or '+' */
-  while ((cx = *str) != 0 && 
-	(s_mp_tovalue(cx, radix) < 0) && 
-	cx != '-' &&
-	cx != '+') {
-    ++str;
-  }
-
-  if (cx == '-') {
-    sig = NEG;
-    ++str;
-  } else if (cx == '+') {
-    sig = ZPOS; /* this is the default anyway... */
-    ++str;
-  }
-
-  if (str[0] == '0') {
-    if ((str[1] | 0x20) == 'x') {
-      radix = 16;
-      str += 2;
-    } else {
-      radix = 8;
-      str++;
-    }
-  }
-  res = mp_read_radix(a, str, radix);
-  if (res == MP_OKAY) {
-    MP_SIGN(a) = (s_mp_cmp_d(a, 0) == MP_EQ) ? ZPOS : sig;
-  }
-  return res;
-}
 
 /* }}} */
 
@@ -3171,7 +3126,7 @@ CLEANUP:
 /* Add d to |mp| in place                                                 */
 mp_err   s_mp_add_d(mp_int *mp, mp_digit d)    /* unsigned digit addition */
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w, k = 0;
   mp_size   ix = 1;
 
@@ -3228,7 +3183,7 @@ CLEANUP:
 /* Subtract d from |mp| in place, assumes |mp| > d                        */
 mp_err   s_mp_sub_d(mp_int *mp, mp_digit d)    /* unsigned digit subtract */
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w, b = 0;
   mp_size   ix = 1;
 
@@ -3317,7 +3272,7 @@ CLEANUP:
 
 mp_err   s_mp_div_d(mp_int *mp, mp_digit d, mp_digit *r)
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_DIV_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w = 0, q;
 #else
   mp_digit  w, q;
@@ -3352,7 +3307,7 @@ mp_err   s_mp_div_d(mp_int *mp, mp_digit d, mp_digit *r)
   /* Make room for the quotient */
   MP_CHECKOK( mp_init_size(&quot, USED(mp)) );
 
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_DIV_WORD)
+#if !defined(MP_NO_MP_WORD)
   for(ix = USED(mp) - 1; ix >= 0; ix--) {
     w = (w << DIGIT_BIT) | DIGIT(mp, ix);
 
@@ -3429,7 +3384,7 @@ CLEANUP:
 /* Compute a = |a| + |b|                                                  */
 mp_err   s_mp_add(mp_int *a, const mp_int *b)  /* magnitude addition      */
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w = 0;
 #else
   mp_digit  d, sum, carry = 0;
@@ -3454,7 +3409,7 @@ mp_err   s_mp_add(mp_int *a, const mp_int *b)  /* magnitude addition      */
   pb = MP_DIGITS(b);
   used = MP_USED(b);
   for(ix = 0; ix < used; ix++) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa + *pb++;
     *pa++ = ACCUM(w);
     w = CARRYOUT(w);
@@ -3471,7 +3426,7 @@ mp_err   s_mp_add(mp_int *a, const mp_int *b)  /* magnitude addition      */
      sure the carries get propagated upward...  
    */
   used = MP_USED(a);
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   while (w && ix < used) {
     w = w + *pa;
     *pa++ = ACCUM(w);
@@ -3491,7 +3446,7 @@ mp_err   s_mp_add(mp_int *a, const mp_int *b)  /* magnitude addition      */
      it.  We could have done this initially, but why touch the memory
      allocator unless we're sure we have to?
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   if (w) {
     if((res = s_mp_pad(a, used + 1)) != MP_OKAY)
       return res;
@@ -3516,7 +3471,7 @@ mp_err   s_mp_add(mp_int *a, const mp_int *b)  /* magnitude addition      */
 mp_err   s_mp_add_3arg(const mp_int *a, const mp_int *b, mp_int *c)  
 {
   mp_digit *pa, *pb, *pc;
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w = 0;
 #else
   mp_digit  sum, carry = 0, d;
@@ -3548,7 +3503,7 @@ mp_err   s_mp_add_3arg(const mp_int *a, const mp_int *b, mp_int *c)
   pc = MP_DIGITS(c);
   used = MP_USED(b);
   for (ix = 0; ix < used; ix++) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa++ + *pb++;
     *pc++ = ACCUM(w);
     w = CARRYOUT(w);
@@ -3565,7 +3520,7 @@ mp_err   s_mp_add_3arg(const mp_int *a, const mp_int *b, mp_int *c)
      sure the carries get propagated upward...  
    */
   for (used = MP_USED(a); ix < used; ++ix) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa++;
     *pc++ = ACCUM(w);
     w = CARRYOUT(w);
@@ -3579,7 +3534,7 @@ mp_err   s_mp_add_3arg(const mp_int *a, const mp_int *b, mp_int *c)
      it.  We could have done this initially, but why touch the memory
      allocator unless we're sure we have to?
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   if (w) {
     if((res = s_mp_pad(c, used + 1)) != MP_OKAY)
       return res;
@@ -3604,7 +3559,7 @@ mp_err   s_mp_add_3arg(const mp_int *a, const mp_int *b, mp_int *c)
 /* Compute a = |a| + ( |b| * (RADIX ** offset) )             */
 mp_err   s_mp_add_offset(mp_int *a, mp_int *b, mp_size offset)   
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word   w, k = 0;
 #else
   mp_digit  d, sum, carry = 0;
@@ -3628,7 +3583,7 @@ mp_err   s_mp_add_offset(mp_int *a, mp_int *b, mp_size offset)
    */
   lim = USED(b);
   for(ib = 0, ia = offset; ib < lim; ib++, ia++) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = (mp_word)DIGIT(a, ia) + DIGIT(b, ib) + k;
     DIGIT(a, ia) = ACCUM(w);
     k = CARRYOUT(w);
@@ -3644,7 +3599,7 @@ mp_err   s_mp_add_offset(mp_int *a, mp_int *b, mp_size offset)
   /* If we run out of 'b' digits before we're actually done, make
      sure the carries get propagated upward...  
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   for (lim = MP_USED(a); k && (ia < lim); ++ia) {
     w = (mp_word)DIGIT(a, ia) + k;
     DIGIT(a, ia) = ACCUM(w);
@@ -3662,7 +3617,7 @@ mp_err   s_mp_add_offset(mp_int *a, mp_int *b, mp_size offset)
      it.  We could have done this initially, but why touch the memory
      allocator unless we're sure we have to?
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_ADD_WORD)
+#if !defined(MP_NO_MP_WORD)
   if(k) {
     if((res = s_mp_pad(a, USED(a) + 1)) != MP_OKAY)
       return res;
@@ -3691,7 +3646,7 @@ mp_err   s_mp_add_offset(mp_int *a, mp_int *b, mp_size offset)
 mp_err   s_mp_sub(mp_int *a, const mp_int *b)  /* magnitude subtract      */
 {
   mp_digit *pa, *pb, *limit;
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_sword  w = 0;
 #else
   mp_digit  d, diff, borrow = 0;
@@ -3707,7 +3662,7 @@ mp_err   s_mp_sub(mp_int *a, const mp_int *b)  /* magnitude subtract      */
   pb = MP_DIGITS(b);
   limit = pb + MP_USED(b);
   while (pb < limit) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa - *pb++;
     *pa++ = ACCUM(w);
     w >>= MP_DIGIT_BIT;
@@ -3722,7 +3677,7 @@ mp_err   s_mp_sub(mp_int *a, const mp_int *b)  /* magnitude subtract      */
 #endif
   }
   limit = MP_DIGITS(a) + MP_USED(a);
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   while (w && pa < limit) {
     w = w + *pa;
     *pa++ = ACCUM(w);
@@ -3744,7 +3699,7 @@ mp_err   s_mp_sub(mp_int *a, const mp_int *b)  /* magnitude subtract      */
      of our input invariant.  We've already done the work,
      but we'll at least complain about it...
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   return w ? MP_RANGE : MP_OKAY;
 #else
   return borrow ? MP_RANGE : MP_OKAY;
@@ -3757,7 +3712,7 @@ mp_err   s_mp_sub(mp_int *a, const mp_int *b)  /* magnitude subtract      */
 mp_err   s_mp_sub_3arg(const mp_int *a, const mp_int *b, mp_int *c)  
 {
   mp_digit *pa, *pb, *pc;
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_sword  w = 0;
 #else
   mp_digit  d, diff, borrow = 0;
@@ -3782,7 +3737,7 @@ mp_err   s_mp_sub_3arg(const mp_int *a, const mp_int *b, mp_int *c)
   pc = MP_DIGITS(c);
   limit = MP_USED(b);
   for (ix = 0; ix < limit; ++ix) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa++ - *pb++;
     *pc++ = ACCUM(w);
     w >>= MP_DIGIT_BIT;
@@ -3797,7 +3752,7 @@ mp_err   s_mp_sub_3arg(const mp_int *a, const mp_int *b, mp_int *c)
 #endif
   }
   for (limit = MP_USED(a); ix < limit; ++ix) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
     w = w + *pa++;
     *pc++ = ACCUM(w);
     w >>= MP_DIGIT_BIT;
@@ -3817,7 +3772,7 @@ mp_err   s_mp_sub_3arg(const mp_int *a, const mp_int *b, mp_int *c)
      of our input invariant.  We've already done the work,
      but we'll at least complain about it...
    */
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_SUB_WORD)
+#if !defined(MP_NO_MP_WORD)
   return w ? MP_RANGE : MP_OKAY;
 #else
   return borrow ? MP_RANGE : MP_OKAY;
@@ -3833,16 +3788,12 @@ mp_err   s_mp_mul(mp_int *a, const mp_int *b)
 
 /* }}} */
 
-#if defined(MP_USE_UINT_DIGIT) && defined(MP_USE_LONG_LONG_MULTIPLY)
+#if defined(SOLARIS) && (ULONG_MAX == UINT_MAX)
 /* This trick works on Sparc V8 CPUs with the Workshop compilers. */
 #define MP_MUL_DxD(a, b, Phi, Plo) \
   { unsigned long long product = (unsigned long long)a * b; \
     Plo = (mp_digit)product; \
     Phi = (mp_digit)(product >> MP_DIGIT_BIT); }
-#elif defined(OSF1)
-#define MP_MUL_DxD(a, b, Phi, Plo) \
-  { Plo = asm ("mulq %a0, %a1, %v0", a, b);\
-    Phi = asm ("umulh %a0, %a1, %v0", a, b); }
 #else
 #define MP_MUL_DxD(a, b, Phi, Plo) \
   { mp_digit a0b1, a1b0; \
@@ -3865,7 +3816,7 @@ mp_err   s_mp_mul(mp_int *a, const mp_int *b)
 /* c = a * b */
 void s_mpv_mul_d(const mp_digit *a, mp_size a_len, mp_digit b, mp_digit *c)
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_MUL_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_digit   d = 0;
 
   /* Inner product:  Digits of a */
@@ -3897,7 +3848,7 @@ void s_mpv_mul_d(const mp_digit *a, mp_size a_len, mp_digit b, mp_digit *c)
 void s_mpv_mul_d_add(const mp_digit *a, mp_size a_len, mp_digit b, 
 			      mp_digit *c)
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_MUL_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_digit   d = 0;
 
   /* Inner product:  Digits of a */
@@ -3932,7 +3883,7 @@ void s_mpv_mul_d_add(const mp_digit *a, mp_size a_len, mp_digit b,
 /* c += a * b */
 void s_mpv_mul_d_add_prop(const mp_digit *a, mp_size a_len, mp_digit b, mp_digit *c)
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_MUL_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_digit   d = 0;
 
   /* Inner product:  Digits of a */
@@ -3976,35 +3927,11 @@ void s_mpv_mul_d_add_prop(const mp_digit *a, mp_size a_len, mp_digit b, mp_digit
 }
 #endif
 
-#if defined(MP_USE_UINT_DIGIT) && defined(MP_USE_LONG_LONG_MULTIPLY)
-/* This trick works on Sparc V8 CPUs with the Workshop compilers. */
-#define MP_SQR_D(a, Phi, Plo) \
-  { unsigned long long square = (unsigned long long)a * a; \
-    Plo = (mp_digit)square; \
-    Phi = (mp_digit)(square >> MP_DIGIT_BIT); }
-#elif defined(OSF1)
-#define MP_SQR_D(a, Phi, Plo) \
-  { Plo = asm ("mulq  %a0, %a0, %v0", a);\
-    Phi = asm ("umulh %a0, %a0, %v0", a); }
-#else
-#define MP_SQR_D(a, Phi, Plo) \
-  { mp_digit Pmid; \
-    Plo  = (a  & MP_HALF_DIGIT_MAX) * (a  & MP_HALF_DIGIT_MAX); \
-    Phi  = (a >> MP_HALF_DIGIT_BIT) * (a >> MP_HALF_DIGIT_BIT); \
-    Pmid = (a  & MP_HALF_DIGIT_MAX) * (a >> MP_HALF_DIGIT_BIT); \
-    Phi += Pmid >> (MP_HALF_DIGIT_BIT - 1);  \
-    Pmid <<= (MP_HALF_DIGIT_BIT + 1);  \
-    Plo += Pmid;  \
-    if (Plo < Pmid)  \
-      ++Phi;  \
-  }
-#endif
-
 #if !defined(MP_ASSEMBLY_SQUARE)
 /* Add the squares of the digits of a to the digits of b. */
 void s_mpv_sqr_add_prop(const mp_digit *pa, mp_size a_len, mp_digit *ps)
 {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_MUL_WORD)
+#if !defined(MP_NO_MP_WORD)
   mp_word  w;
   mp_digit d;
   mp_size  ix;
@@ -4045,22 +3972,30 @@ void s_mpv_sqr_add_prop(const mp_digit *pa, mp_size a_len, mp_digit *ps)
   mp_digit carry = 0;
   while (a_len--) {
     mp_digit a_i = *pa++;
-    mp_digit a0a0, a1a1;
+    mp_digit a0 = a_i & MP_HALF_DIGIT_MAX;
+    mp_digit a1 = a_i >> MP_HALF_DIGIT_BIT;
+    mp_digit a0a0, a0a1, a1a1;
 
-    MP_SQR_D(a_i, a1a1, a0a0);
+    a0a0 = a0 * a0;
+    a1a1 = a1 * a1;
+    a0a1 = a0 * a1;
 
-    /* here a1a1 and a0a0 constitute a_i ** 2 */
+    a1a1 += a0a1 >> (MP_HALF_DIGIT_BIT - 1);
+    a0a1 <<= (MP_HALF_DIGIT_BIT + 1);
+    a0a0 += a0a1;
+    if (a0a0 < a0a1)
+      ++a1a1;
     a0a0 += carry;
     if (a0a0 < carry)
       ++a1a1;
-
+    /* here a1a1 and a0a0 constitute a_i ** 2 */
     /* now add to ps */
-    a0a0 += a_i = *ps;
-    if (a0a0 < a_i)
+    a0a0 += a0a1 = *ps;
+    if (a0a0 < a0a1)
       ++a1a1;
     *ps++ = a0a0;
-    a1a1 += a_i = *ps;
-    carry = (a1a1 < a_i);
+    a1a1 += a0a1 = *ps;
+    carry = (a1a1 < a0a1);
     *ps++ = a1a1;
   }
   while (carry) {
@@ -4073,8 +4008,7 @@ void s_mpv_sqr_add_prop(const mp_digit *pa, mp_size a_len, mp_digit *ps)
 }
 #endif
 
-#if (defined(MP_NO_MP_WORD) || defined(MP_NO_DIV_WORD)) \
-&& !defined(MP_ASSEMBLY_DIV_2DX1D)
+#if defined(MP_NO_MP_WORD) && !defined(MP_ASSEMBLY_DIV_2DX1D)
 /*
 ** Divide 64-bit (Nhi,Nlo) by 32-bit divisor, which must be normalized 
 ** so its high bit is 1.   This code is from NSPR.
@@ -4145,96 +4079,87 @@ mp_err   s_mp_sqr(mp_int *a)
   Compute a = a / b and b = a mod b.  Assumes b > a.
  */
 
-mp_err   s_mp_div(mp_int *rem, 	/* i: dividend, o: remainder */
-                  mp_int *div, 	/* i: divisor                */
-		  mp_int *quot)	/* i: 0;        o: quotient  */
+mp_err   s_mp_div(mp_int *a, mp_int *b)
 {
-  mp_int   part, t;
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_DIV_WORD)
-  mp_word  q_msd;
+  mp_int   quot, rem, t;
+#if !defined(MP_NO_MP_WORD)
+  mp_word  q;
 #else
-  mp_digit q_msd;
+  mp_digit q;
 #endif
   mp_err   res;
   mp_digit d;
-  mp_digit div_msd;
+  mp_digit b_msd;
   int      ix;
 
-  if(mp_cmp_z(div) == 0)
+  if(mp_cmp_z(b) == 0)
     return MP_RANGE;
 
-  /* Shortcut if divisor is power of two */
-  if((ix = s_mp_ispow2(div)) >= 0) {
-    MP_CHECKOK( mp_copy(rem, quot) );
-    s_mp_div_2d(quot, (mp_digit)ix);
-    s_mp_mod_2d(rem,  (mp_digit)ix);
+  /* Shortcut if b is power of two */
+  if((ix = s_mp_ispow2(b)) >= 0) {
+    mp_copy(a, b);  /* need this for remainder */
+    s_mp_div_2d(a, (mp_digit)ix);
+    s_mp_mod_2d(b, (mp_digit)ix);
 
     return MP_OKAY;
   }
 
-  DIGITS(&t) = 0;
-  MP_SIGN(rem) = ZPOS;
-  MP_SIGN(div) = ZPOS;
+  /* Allocate space to store the quotient */
+  if((res = mp_init_size(&quot, MP_ALLOC(a))) != MP_OKAY)
+    return res;
 
   /* A working temporary for division     */
-  MP_CHECKOK( mp_init_size(&t, MP_ALLOC(rem)));
+  if((res = mp_init_size(&t, MP_ALLOC(a))) != MP_OKAY)
+    goto T;
+
+  /* Allocate space for the remainder     */
+  if((res = mp_init_size(&rem, MP_ALLOC(a))) != MP_OKAY)
+    goto REM;
 
   /* Normalize to optimize guessing       */
-  MP_CHECKOK( s_mp_norm(rem, div, &d) );
-
-  part = *rem;
+  MP_CHECKOK( s_mp_norm(a, b, &d) );
 
   /* Perform the division itself...woo!   */
-  MP_USED(quot) = MP_ALLOC(quot);
+  ix = USED(a) - 1;
 
-  /* Find a partial substring of rem which is at least div */
-  /* If we didn't find one, we're finished dividing    */
-  while (MP_USED(rem) > MP_USED(div) || s_mp_cmp(rem, div) >= 0) {
+  while(ix >= 0) {
     int i;
-    int unusedRem;
 
-    unusedRem = MP_USED(rem) - MP_USED(div);
-    MP_DIGITS(&part) = MP_DIGITS(rem) + unusedRem;
-    MP_ALLOC(&part)  = MP_ALLOC(rem)  - unusedRem;
-    MP_USED(&part)   = MP_USED(div);
-    if (s_mp_cmp(&part, div) < 0) {
-      -- unusedRem;
-#if MP_ARGCHK == 2
-      assert(unusedRem >= 0);
-#endif
-      -- MP_DIGITS(&part);
-      ++ MP_USED(&part);
-      ++ MP_ALLOC(&part);
+    /* Find a partial substring of a which is at least b */
+    while(s_mp_cmp(&rem, b) < 0 && ix >= 0) {
+      MP_CHECKOK( s_mp_lshd(&rem, 1) );
+      MP_CHECKOK( s_mp_lshd(&quot, 1) );
+      DIGIT(&rem, 0) = DIGIT(a, ix);
+      --ix;
     }
+
+    /* If we didn't find one, we're finished dividing    */
+    if(s_mp_cmp(&rem, b) < 0) 
+      break;    
 
     /* Compute a guess for the next quotient digit       */
-    q_msd = MP_DIGIT(&part, MP_USED(&part) - 1);
-    div_msd = MP_DIGIT(div, MP_USED(div) - 1);
-    if (q_msd >= div_msd) {
-      q_msd = 1;
-    } else if (MP_USED(&part) > 1) {
-#if !defined(MP_NO_MP_WORD) && !defined(MP_NO_DIV_WORD)
-      q_msd = (q_msd << MP_DIGIT_BIT) | MP_DIGIT(&part, MP_USED(&part) - 2);
-      q_msd /= div_msd;
-      if (q_msd == RADIX)
-        --q_msd;
+    q = DIGIT(&rem, USED(&rem) - 1);
+    b_msd = DIGIT(b, USED(b) - 1);
+    if (q >= b_msd) {
+      q = 1;
+    } else if (USED(&rem) > 1) {
+#if !defined(MP_NO_MP_WORD)
+      q = (q << DIGIT_BIT) | DIGIT(&rem, USED(&rem) - 2);
+      q /= b_msd;
+      if (q == RADIX)
+        --q;
 #else
       mp_digit r;
-      MP_CHECKOK( s_mpv_div_2dx1d(q_msd, MP_DIGIT(&part, MP_USED(&part) - 2), 
-				  div_msd, &q_msd, &r) );
+      MP_CHECKOK( s_mpv_div_2dx1d(q, DIGIT(&rem, MP_USED(&rem) - 2), 
+				  b_msd, &q, &r) );
 #endif
     } else {
-      q_msd = 0;
+      q = 0;
     }
-#if MP_ARGCHK == 2
-    assert(q_msd > 0); /* This case should never occur any more. */
-#endif
-    if (q_msd <= 0)
-      break;
 
     /* See what that multiplies out to                   */
-    mp_copy(div, &t);
-    MP_CHECKOK( s_mp_mul_d(&t, (mp_digit)q_msd) );
+    mp_copy(b, &t);
+    MP_CHECKOK( s_mp_mul_d(&t, (mp_digit)q) );
 
     /* 
        If it's too big, back it off.  We should not have to do this
@@ -4243,41 +4168,50 @@ mp_err   s_mp_div(mp_int *rem, 	/* i: dividend, o: remainder */
        I didn't implement that here.
      * When using s_mpv_div_2dx1d, we may have to do this 3 times.
      */
-    for (i = 4; s_mp_cmp(&t, &part) > 0 && i > 0; --i) {
-      --q_msd;
-      s_mp_sub(&t, div);	/* t -= div */
+    for (i = 4; s_mp_cmp(&t, &rem) > 0 && i > 0; --i) {
+      --q;
+      s_mp_sub(&t, b);
     }
     if (i < 0) {
       res = MP_RANGE;
       goto CLEANUP;
     }
 
-    /* At this point, q_msd should be the right next digit   */
-    MP_CHECKOK( s_mp_sub(&part, &t) );	/* part -= t */
-    s_mp_clamp(rem);
+    /* At this point, q should be the right next digit   */
+    MP_CHECKOK( s_mp_sub(&rem, &t) );
 
     /*
       Include the digit in the quotient.  We allocated enough memory
       for any quotient we could ever possibly get, so we should not
       have to check for failures here
      */
-    MP_DIGIT(quot, unusedRem) = (mp_digit)q_msd;
+    DIGIT(&quot, 0) = (mp_digit)q;
   }
 
   /* Denormalize remainder                */
   if (d) {
-    s_mp_div_2d(rem, d);
+    s_mp_div_2d(&rem, d);
   }
 
-  s_mp_clamp(quot);
+  s_mp_clamp(&quot);
+  s_mp_clamp(&rem);
+
+  /* Copy quotient back to output         */
+  s_mp_exch(&quot, a);
+  
+  /* Copy remainder back to output        */
+  s_mp_exch(&rem, b);
 
 CLEANUP:
+  mp_clear(&rem);
+REM:
   mp_clear(&t);
+T:
+  mp_clear(&quot);
 
   return res;
 
 } /* end s_mp_div() */
-
 
 /* }}} */
 
@@ -4472,31 +4406,18 @@ int      s_mp_ispow2d(mp_digit d)
 {
   if ((d != 0) && ((d & (d-1)) == 0)) { /* d is a power of 2 */
     int pow = 0;
-#if defined (MP_USE_UINT_DIGIT)
-    if (d & 0xffff0000U)
+#if MP_DIGIT_MAX == MP_32BIT_MAX
+    if (d & 0xffff0000)
       pow += 16;
-    if (d & 0xff00ff00U)
+    if (d & 0xff00ff00)
       pow += 8;
-    if (d & 0xf0f0f0f0U)
+    if (d & 0xf0f0f0f0)
       pow += 4;
-    if (d & 0xccccccccU)
+    if (d & 0xcccccccc)
       pow += 2;
-    if (d & 0xaaaaaaaaU)
+    if (d & 0xaaaaaaaa)
       pow += 1;
-#elif defined(MP_USE_LONG_LONG_DIGIT)
-    if (d & 0xffffffff00000000ULL)
-      pow += 32;
-    if (d & 0xffff0000ffff0000ULL)
-      pow += 16;
-    if (d & 0xff00ff00ff00ff00ULL)
-      pow += 8;
-    if (d & 0xf0f0f0f0f0f0f0f0ULL)
-      pow += 4;
-    if (d & 0xccccccccccccccccULL)
-      pow += 2;
-    if (d & 0xaaaaaaaaaaaaaaaaULL)
-      pow += 1;
-#elif defined(MP_USE_LONG_DIGIT)
+#else
     if (d & 0xffffffff00000000UL)
       pow += 32;
     if (d & 0xffff0000ffff0000UL)
@@ -4509,8 +4430,6 @@ int      s_mp_ispow2d(mp_digit d)
       pow += 2;
     if (d & 0xaaaaaaaaaaaaaaaaUL)
       pow += 1;
-#else
-#error "unknown type for mp_digit"
 #endif
     return pow;
   }
