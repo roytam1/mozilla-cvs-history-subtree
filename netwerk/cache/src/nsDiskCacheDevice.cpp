@@ -556,6 +556,49 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+/**
+ * Helper class for implementing do_QueryElementAt() pattern. Thanks scc!
+ * Eventually this should become part of nsICollection.idl.
+ */
+class do_QueryElementAt : public nsCOMPtr_helper {
+public:
+    do_QueryElementAt(nsICollection* aCollection, PRUint32 aIndex, nsresult* aErrorPtr = 0)
+        :   mCollection(aCollection),
+            mIndex(aIndex),
+            mErrorPtr(aErrorPtr)
+    {
+        // nothing else to do here
+    }
+
+    virtual nsresult operator()( const nsIID& aIID, void** aResult) const
+    {
+        nsresult status;
+        if ( mCollection ) {
+            if ( !NS_SUCCEEDED(status = mCollection->QueryElementAt(mIndex, aIID, aResult)) )
+            *aResult = 0;
+        } else
+            status = NS_ERROR_NULL_POINTER;
+        if ( mErrorPtr )
+            *mErrorPtr = status;
+        return status;
+    }
+    
+private:
+      nsICollection*  mCollection;
+      PRUint32        mIndex;
+      nsresult*       mErrorPtr;
+};
+
+#if 0
+inline const nsQueryElementAt
+do_QueryElementAt( nsICollection* aCollection, PRUint32 aIndex, nsresult* aErrorPtr = 0 )
+{
+    return nsQueryElementAt(aCollection, aIndex, aErrorPtr);
+}
+#endif
+
+// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
@@ -841,7 +884,55 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsCOMPtr<nsISupportsArray> entries;
+    nsresult rv = scanDiskCacheEntries(getter_AddRefs(entries));
+    if (NS_FAILED(rv)) return rv;
+    
+    PRUint32 prefixLength = nsCRT::strlen(clientID);
+    PRUint32 newDataSize = mCacheMap->DataSize();
+    
+    PRUint32 count;
+    entries->Count(&count);
+    for (PRUint32 i = 0; i < count; ++i) {
+        nsCOMPtr<nsICacheEntryInfo> info = do_QueryElementAt(entries, i, &rv);
+        if (NS_SUCCEEDED(rv)) {
+            nsDiskCacheEntryInfo* entryInfo = (nsDiskCacheEntryInfo*) info.get();
+            const char* key = entryInfo->Key();
+            
+            // if filtering by clientID, make sure key prefix and clientID match.
+            if (clientID && nsCRT::strncmp(clientID, key, prefixLength) != 0)
+                continue;
+            
+            // if the entry is currently in use, then doom it rather than evicting right here.
+            nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(key);
+            if (diskEntry) {
+                nsCacheService::GlobalInstance()->DoomEntry_Locked(diskEntry->getCacheEntry());
+                continue;
+            }
+            
+            // delete the metadata file.
+            nsCOMPtr<nsIFile> metaFile;
+            rv = getFileForKey(key, PR_TRUE, 0, getter_AddRefs(metaFile));
+            if (NS_SUCCEEDED(rv)) {
+                rv = metaFile->Delete(PR_FALSE);
+            }
+            
+            // delete the data file
+            nsCOMPtr<nsIFile> dataFile;
+            rv = getFileForKey(key, PR_FALSE, 0, getter_AddRefs(dataFile));
+            if (NS_SUCCEEDED(rv)) {
+                rv = dataFile->Delete(PR_FALSE);
+            }
+
+            // update the cache size.
+            PRUint32 dataSize;
+            info->GetDataSize(&dataSize);
+            newDataSize -= dataSize;
+        }
+    }
+    
+    mCacheMap->DataSize() = newDataSize;
+    return NS_OK;
 }
 
 
@@ -1113,14 +1204,8 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
     rv = file->Exists(&exists);
     if (NS_FAILED(rv) || !exists) return NS_ERROR_NOT_AVAILABLE;
 
-    nsCacheEntry* entry;
-    rv = NS_NewCacheEntry(&entry, key, PR_TRUE, nsICache::STORE_ON_DISK, this);
-    if (NS_FAILED(rv)) return rv;
-    
+    nsCacheEntry* entry = nsnull;
     do {
-        nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-        if (!diskEntry) break;
-
         nsCOMPtr<nsIInputStream> input;
         rv = openInputStream(file, getter_AddRefs(input));
         if (NS_FAILED(rv)) break;
@@ -1134,6 +1219,9 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
         // Ensure that the keys match.
         if (nsCRT::strcmp(key, metaDataFile.mKey) != 0) break;
         
+        rv = NS_NewCacheEntry(&entry, key, PR_TRUE, nsICache::STORE_ON_DISK, this);
+        if (NS_FAILED(rv)) return rv;
+    
         // initialize the entry.
         entry->SetFetchCount(metaDataFile.mFetchCount);
         entry->SetLastFetched(metaDataFile.mLastFetched);
@@ -1148,7 +1236,8 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
         }
         
         // celebrate!        
-        *result = diskEntry;
+        *result = ensureDiskCacheEntry(entry);
+        if (!*result) break;
         return NS_OK;
     } while (0);
 
@@ -1236,45 +1325,6 @@ nsresult nsDiskCacheDevice::scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntr
     }
     
     return NS_OK;
-}
-
-/**
- * Helper class for implementing do_QueryElementAt() pattern. Thanks scc!
- * Eventually this should become part of nsICollection.idl.
- */
-class nsQueryElementAt : public nsCOMPtr_helper {
-public:
-    nsQueryElementAt( nsICollection* aCollection, PRUint32 aIndex, nsresult* aErrorPtr )
-        :   mCollection(aCollection),
-            mIndex(aIndex),
-            mErrorPtr(aErrorPtr)
-    {
-        // nothing else to do here
-    }
-
-    virtual nsresult operator()( const nsIID& aIID, void** aResult) const
-    {
-        nsresult status;
-        if ( mCollection ) {
-            if ( !NS_SUCCEEDED(status = mCollection->QueryElementAt(mIndex, aIID, aResult)) )
-            *aResult = 0;
-        } else
-            status = NS_ERROR_NULL_POINTER;
-        if ( mErrorPtr )
-            *mErrorPtr = status;
-        return status;
-    }
-    
-private:
-      nsICollection*  mCollection;
-      PRUint32        mIndex;
-      nsresult*       mErrorPtr;
-};
-
-inline const nsQueryElementAt
-do_QueryElementAt( nsICollection* aCollection, PRUint32 aIndex, nsresult* aErrorPtr = 0 )
-{
-    return nsQueryElementAt(aCollection, aIndex, aErrorPtr);
 }
 
 nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
