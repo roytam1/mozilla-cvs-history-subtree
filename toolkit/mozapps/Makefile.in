@@ -48,16 +48,17 @@ ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 # XXXben this is temporary, until Thunderbird is converted to Pinstripe on MacOS X. For now, 
 #        continue to use Qute. 
 ifdef MOZ_THUNDERBIRD
-DIRS    += pref/skin downloads/skin
+DIRS    += pref/skin downloads/skin theme-fixup
 else
 # Use Pinstripe on MacOS X
-DIRS	+= pref/skin/mac downloads/skin/mac 
+DIRS	+= pref/skin/mac downloads/skin/mac theme-fixup
 endif
 else
-# Use Qute on Windows and Linux
-DIRS    += pref/skin downloads/skin
+ifndef MOZ_PHOENIX
+# Use Qute on Windows and Linux for non-Phoenix non-Mac apps
+DIRS    += pref/skin downloads/skin theme-fixup
 endif
-
+endif
 
 include $(topsrcdir)/config/rules.mk
 

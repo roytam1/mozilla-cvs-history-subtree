@@ -1,7 +1,3 @@
-#xpinstallIcon {
-  list-style-image: url("chrome://mozapps/skin/xpinstall/xpinstallIcon.png");
-}
-
 #itemList {
   -moz-appearance: listbox;
   margin: 10px 4px 10px 4px;
