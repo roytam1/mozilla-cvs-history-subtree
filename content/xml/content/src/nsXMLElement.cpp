@@ -63,6 +63,7 @@
 #include "nsIPresShell.h"
 #include "nsGUIEvent.h"
 #include "nsIPresContext.h"
+#include "nsIBrowserDOMWindow.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIDOMCSSStyleDeclaration.h"
@@ -244,6 +245,7 @@ nsXMLElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
             do_GetService(NS_PREFSERVICE_CONTRACTID);
 
           PRBool boolPref = PR_FALSE;
+          PRInt32 intPref = nsIBrowserDOMWindow::OPEN_NEWWINDOW;
           if (prefBranch) {
             prefBranch->GetBoolPref("dom.disable_open_during_load", &boolPref);
             if (boolPref) {
@@ -252,10 +254,10 @@ nsXMLElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
               return NS_OK;
             }
 
-            prefBranch->GetBoolPref("browser.block.target_new_window",
-                                    &boolPref);
+            prefBranch->GetIntPref("browser.link.open_newwindow",
+                                    &intPref);
           }
-          if (!boolPref) {
+          if (intPref != nsIBrowserDOMWindow::OPEN_CURRENTWINDOW) {
             // not blocking new windows
             verb = eLinkVerb_New;
           }
@@ -351,12 +353,12 @@ nsXMLElement::HandleDOMEvent(nsIPresContext* aPresContext,
             nsCOMPtr<nsIPrefBranch> prefBranch =
               do_GetService(NS_PREFSERVICE_CONTRACTID);
 
-            PRBool blockNewWindow = PR_FALSE;
+            PRInt32 newWindowTreatment = nsIBrowserDOMWindow::OPEN_NEWWINDOW;
             if (prefBranch) {
-              prefBranch->GetBoolPref("browser.block.target_new_window",
-                                      &blockNewWindow);
+              prefBranch->GetIntPref("browser.link.open_newwindow",
+                                      &newWindowTreatment);
             }
-            if (!blockNewWindow) {
+            if (newWindowTreatment != nsIBrowserDOMWindow::OPEN_CURRENTWINDOW) {
               verb = eLinkVerb_New;
             }
           } else if (show.Equals(NS_LITERAL_STRING("replace"))) {
