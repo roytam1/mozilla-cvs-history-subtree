@@ -30,7 +30,6 @@
 ./xpfe/components/search/datasets/Tech_News.src
 ./xpfe/bootstrap/icons/install.js
 ./xpfe/bootstrap/icons/makefile.win
-./README/user
 ./README/user/unix-distropackage.txt
 ./README/user/unix-tarball.txt
 ./README/user/win32.txt
@@ -44,7 +43,6 @@
 ./content/base/src/mozSanitizingSerializer.cpp
 ./content/base/src/mozSanitizingSerializer.h
 ./content/base/public/mozISanitizingSerializer.h
-./extensions/spellcheck
 ./xpinstall/packager/windows/spellcheck.jst
 ./extensions/spellcheck/src/cattable.h
 ./extensions/spellcheck/src/Makefile.in
