@@ -214,7 +214,7 @@ sub BuildIt {
 	  print LOG "no binary detected, can't delete.\n";
 
 	  # If we're only running tests and have no binary, bail.
-	  unless ($TestOnly) {
+	  if ($TestOnly) {
 		$EarlyExit++;
 	  }
 	}
