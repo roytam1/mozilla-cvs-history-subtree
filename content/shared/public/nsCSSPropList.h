@@ -450,6 +450,7 @@ CSS_PROP_SVGRESET(dominant-baseline, dominant_baseline, DominantBaseline, SVG, m
 CSS_PROP_SVG(fill, fill, Fill, SVG, mFill, eCSSType_Value, PR_FALSE)
 CSS_PROP_SVG(fill-opacity, fill_opacity, FillOpacity, SVG, mFillOpacity, eCSSType_Value, PR_FALSE)
 CSS_PROP_SVG(fill-rule, fill_rule, FillRule, SVG, mFillRule, eCSSType_Value, PR_FALSE)
+CSS_PROP_SVG(pointer-events, pointer_events, PointerEvents, SVG, mPointerEvents, eCSSType_Value, PR_FALSE)
 CSS_PROP_SVG(stroke, stroke, Stroke, SVG, mStroke, eCSSType_Value, PR_FALSE)
 CSS_PROP_SVG(stroke-dasharray, stroke_dasharray, StrokeDasharray, SVG, mStrokeDasharray, eCSSType_Value, PR_FALSE)
 CSS_PROP_SVG(stroke-dashoffset, stroke_dashoffset, StrokeDashoffset, SVG, mStrokeDashoffset, eCSSType_Value, PR_FALSE)

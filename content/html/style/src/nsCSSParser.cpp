@@ -4049,6 +4049,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(nsresult& aErrorCode,
   case eCSSProperty_fill_rule:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kFillRuleKTable);
+  case eCSSProperty_pointer_events:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK,
+                        nsCSSProps::kPointerEventsKTable);
   case eCSSProperty_stroke:
     return ParseVariant(aErrorCode, aValue, VARIANT_HC | VARIANT_NONE,
                         nsnull);

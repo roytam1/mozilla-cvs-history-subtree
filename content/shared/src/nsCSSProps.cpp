@@ -889,6 +889,19 @@ const PRInt32 nsCSSProps::kFillRuleKTable[] = {
   -1, -1
 };
 
+const PRInt32 nsCSSProps::kPointerEventsKTable[] = {
+  eCSSKeyword_visiblepainted, NS_STYLE_POINTER_EVENTS_VISIBLEPAINTED,
+  eCSSKeyword_visiblefill, NS_STYLE_POINTER_EVENTS_VISIBLEFILL,
+  eCSSKeyword_visiblestroke, NS_STYLE_POINTER_EVENTS_VISIBLESTROKE,
+  eCSSKeyword_visible, NS_STYLE_POINTER_EVENTS_VISIBLE,
+  eCSSKeyword_painted, NS_STYLE_POINTER_EVENTS_PAINTED,
+  eCSSKeyword_fill, NS_STYLE_POINTER_EVENTS_FILL,
+  eCSSKeyword_stroke, NS_STYLE_POINTER_EVENTS_STROKE,
+  eCSSKeyword_all, NS_STYLE_POINTER_EVENTS_ALL,
+  eCSSKeyword_none, NS_STYLE_POINTER_EVENTS_NONE,
+  -1, -1
+};
+
 const PRInt32 nsCSSProps::kStrokeLinecapKTable[] = {
   eCSSKeyword_butt, NS_STYLE_STROKE_LINECAP_BUTT,
   eCSSKeyword_round, NS_STYLE_STROKE_LINECAP_ROUND,
@@ -1056,6 +1069,8 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
     return SearchKeywordTable(aValue, kDominantBaselineKTable);
   case eCSSProperty_fill_rule:
     return SearchKeywordTable(aValue, kFillRuleKTable);
+  case eCSSProperty_pointer_events:
+    return SearchKeywordTable(aValue, kPointerEventsKTable);
   case eCSSProperty_stroke_linecap:
     return SearchKeywordTable(aValue, kStrokeLinecapKTable);
   case eCSSProperty_stroke_linejoin:

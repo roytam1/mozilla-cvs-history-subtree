@@ -652,6 +652,17 @@
 #define NS_STYLE_FILL_RULE_NONZERO              0 /* == nsISVGGeometrySource::FILL_RULE_NONZERO */
 #define NS_STYLE_FILL_RULE_EVENODD              1 /* == nsISVGGeometrySource::FILL_RULE_EVENODD */
 
+// pointer-events
+#define NS_STYLE_POINTER_EVENTS_NONE            0
+#define NS_STYLE_POINTER_EVENTS_VISIBLEPAINTED  1
+#define NS_STYLE_POINTER_EVENTS_VISIBLEFILL     2
+#define NS_STYLE_POINTER_EVENTS_VISIBLESTROKE   3
+#define NS_STYLE_POINTER_EVENTS_VISIBLE         4
+#define NS_STYLE_POINTER_EVENTS_PAINTED         5
+#define NS_STYLE_POINTER_EVENTS_FILL            6
+#define NS_STYLE_POINTER_EVENTS_STROKE          7
+#define NS_STYLE_POINTER_EVENTS_ALL             8
+
 // stroke-linecap
 #define NS_STYLE_STROKE_LINECAP_BUTT            0 /* == nsISVGGeometrySource::STROKE_LINECAP_BUTT */
 #define NS_STYLE_STROKE_LINECAP_ROUND           1 /* == nsISVGGeometrySource::STROKE_LINECAP_ROUND */

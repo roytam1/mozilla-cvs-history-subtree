@@ -422,12 +422,50 @@ NS_IMETHODIMP
 nsSVGPathGeometryFrame::GetHittestMask(PRUint16 *aHittestMask)
 {
   *aHittestMask=0;
-  
-  // until we implement the appropriate selection attribs, just use the painted area:
-  if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mFill.mType != eStyleSVGPaintType_None)
-    *aHittestMask |= HITTEST_MASK_FILL;
-  if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mStroke.mType != eStyleSVGPaintType_None)
-    *aHittestMask |= HITTEST_MASK_STROKE;
+
+  switch(((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mPointerEvents) {
+    case NS_STYLE_POINTER_EVENTS_NONE:
+      break;
+    case NS_STYLE_POINTER_EVENTS_VISIBLEPAINTED:
+      // XXX inspect 'visible' property
+      if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mFill.mType != eStyleSVGPaintType_None)
+        *aHittestMask |= HITTEST_MASK_FILL;
+      if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mStroke.mType != eStyleSVGPaintType_None)
+        *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    case NS_STYLE_POINTER_EVENTS_VISIBLEFILL:
+      // XXX inspect 'visible' property
+      *aHittestMask |= HITTEST_MASK_FILL;
+      break;
+    case NS_STYLE_POINTER_EVENTS_VISIBLESTROKE:
+      // XXX inspect 'visible' property
+      *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    case NS_STYLE_POINTER_EVENTS_VISIBLE:
+      // XXX inspect 'visible' property
+      *aHittestMask |= HITTEST_MASK_FILL;
+      *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    case NS_STYLE_POINTER_EVENTS_PAINTED:
+      if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mFill.mType != eStyleSVGPaintType_None)
+        *aHittestMask |= HITTEST_MASK_FILL;
+      if (((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mStroke.mType != eStyleSVGPaintType_None)
+        *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    case NS_STYLE_POINTER_EVENTS_FILL:
+      *aHittestMask |= HITTEST_MASK_FILL;
+      break;
+    case NS_STYLE_POINTER_EVENTS_STROKE:
+      *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    case NS_STYLE_POINTER_EVENTS_ALL:
+      *aHittestMask |= HITTEST_MASK_FILL;
+      *aHittestMask |= HITTEST_MASK_STROKE;
+      break;
+    default:
+      NS_ERROR("not reached");
+      break;
+  }
   
   return NS_OK;
 }

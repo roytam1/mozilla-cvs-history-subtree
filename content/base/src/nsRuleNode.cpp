@@ -4301,6 +4301,15 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
     svg->mFillRule = parentSVG->mFillRule;
   }
   
+  // pointer-events: enum, inherit
+  if (eCSSUnit_Enumerated == SVGData.mPointerEvents.GetUnit()) {
+    svg->mPointerEvents = SVGData.mPointerEvents.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == SVGData.mPointerEvents.GetUnit()) {
+    inherited = PR_TRUE;
+    svg->mPointerEvents = parentSVG->mPointerEvents;
+  }
+
   // stroke: 
   SetSVGPaint(SVGData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
 

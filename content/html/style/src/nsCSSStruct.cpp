@@ -1157,6 +1157,7 @@ nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
       mFill(aCopy.mFill),
       mFillOpacity(aCopy.mFillOpacity),
       mFillRule(aCopy.mFillRule),
+      mPointerEvents(aCopy.mPointerEvents),
       mStroke(aCopy.mStroke),
       mStrokeDasharray(aCopy.mStrokeDasharray),
       mStrokeDashoffset(aCopy.mStrokeDashoffset),
@@ -1187,6 +1188,7 @@ void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
   mFill.AppendToString(buffer, eCSSProperty_fill);
   mFillOpacity.AppendToString(buffer, eCSSProperty_fill_opacity);
   mFillRule.AppendToString(buffer, eCSSProperty_fill_rule);
+  mPointerEvents.AppendToString(buffer, eCSSProperty_pointer_events);
   mStroke.AppendToString(buffer, eCSSProperty_stroke);
   mStrokeDasharray.AppendToString(buffer, eCSSProperty_stroke_dasharray);
   mStrokeDashoffset.AppendToString(buffer, eCSSProperty_stroke_dashoffset);
