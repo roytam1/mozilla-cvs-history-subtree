@@ -57,7 +57,7 @@ var MigrationWizard = {
         var contractID = kProfileMigratorContractIDPrefix + suffix;
         var migrator = Components.classes[contractID].createInstance(kIMig);
         if (!migrator.sourceExists)
-          group.childNodes[i].disabled = true;
+          group.childNodes[i].hidden = true;
       }
     }
     
