@@ -25,7 +25,7 @@ locale/messenger-region,                                  en-US/locale/messenger
 #################################################################################################
 # xpfe extensions (ldap, wallet, etc)
 #################################################################################################
-locale/en-US/mozldap,                                     en-US/locale/en-US/mozldap
+locale/mozldap,                                           en-US/locale/mozldap
 locale/necko,                                             en-US/locale/necko
 
 locale/mozapps,                                           en-US/locale/mozapps
@@ -60,6 +60,10 @@ locale/global-region,                                     en-US/locale/global-re
 locale/communicator,                                      en-US/locale/communicator
 locale/communicator/pref,                                 en-US/locale/communicator/pref
 locale/communicator/wallet,                               en-US/locale/communicator/wallet
+locale/communicator-platform,                             en-US/locale/communicator-platform
+locale/communicator-platform/win,                         en-US/locale/communicator-platform/win
+locale/communicator-platform/mac,                         en-US/locale/communicator-platform/mac
+locale/communicator-platform/unix,                        en-US/locale/communicator-platform/unix
 
 #################################################################################################
 # editor

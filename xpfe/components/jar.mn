@@ -177,5 +177,7 @@ toolkit.jar:
     content/global/filepicker.js				(filepicker/res/content/filepicker.js)
     content/global/filepicker.xul				(filepicker/res/content/filepicker.xul)
 
+#ifndef MOZ_XUL_APP
 en-win.jar:
     locale/en-US/global-platform/nsWindowsHooks.properties      (winhooks/locale/en-US/nsWindowsHooks.properties)
+#endif

@@ -8,10 +8,15 @@
   </RDF:Seq>
 
   <!-- package information -->
+#ifdef MOZ_XUL_APP
+  <RDF:Description about="urn:mozilla:package:communicator-platform"
+                   chrome:platformPackage="true" />
+#else
   <RDF:Description about="urn:mozilla:package:communicator-platform"
         chrome:displayName="Platform Specific Bindings"
         chrome:author="mozilla.org"
         chrome:name="communicator-platform"
 #expand         chrome:localeVersion="__MOZILLA_LOCALE_VERSION__">
   </RDF:Description>
+#endif
 </RDF:RDF>

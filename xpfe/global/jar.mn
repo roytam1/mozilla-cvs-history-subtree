@@ -76,45 +76,38 @@ toolkit.jar:
         content/global/fontpackage.js               (resources/content/fontpackage.js)
         content/global/XPCNativeWrapper.js          (resources/content/XPCNativeWrapper.js) 
 
-#ifdef MOZ_XUL_APP
-# crappy temporary workaround for tbird
-#define LOCLOC locale/global
-#else
-#define LOCLOC locale/en-US/global
-#endif
-
-#filter substitution
+#ifndef MOZ_XUL_APP
 
 en-US.jar:
-*   @LOCLOC@/contents.rdf                (resources/locale/en-US/contents.rdf) 
-    @LOCLOC@/intl.css                    (resources/locale/en-US/intl.css) 
-    @LOCLOC@/dialogOverlay.dtd           (resources/locale/en-US/dialogOverlay.dtd) 
-    @LOCLOC@/commonDialog.dtd            (resources/locale/en-US/commonDialog.dtd) 
-    @LOCLOC@/charsetOverlay.dtd          (resources/locale/en-US/charsetOverlay.dtd) 
-    @LOCLOC@/textcontext.dtd             (resources/locale/en-US/textcontext.dtd) 
-    @LOCLOC@/brand.properties            (resources/locale/en-US/brand.properties) 
-*   @LOCLOC@/brand.dtd                   (resources/locale/en-US/brand.dtd) 
-    @LOCLOC@/tabbrowser.dtd              (resources/locale/en-US/tabbrowser.dtd)
-    @LOCLOC@/tabbrowser.properties       (resources/locale/en-US/tabbrowser.properties)
-    @LOCLOC@/keys.properties             (resources/locale/en-US/keys.properties)
-    @LOCLOC@/config.properties           (resources/locale/en-US/config.properties) 
-    @LOCLOC@/config.dtd                  (resources/locale/en-US/config.dtd) 
-    @LOCLOC@/about.dtd                   (resources/locale/en-US/about.dtd) 
-    @LOCLOC@/accept2locale.properties    (resources/locale/en-US/accept2locale.properties) 
-    @LOCLOC@/languageNames.properties    (resources/locale/en-US/languageNames.properties) 
-    @LOCLOC@/regionNames.properties      (resources/locale/en-US/regionNames.properties) 
-    @LOCLOC@/about.xhtml                 (resources/locale/en-US/about.xhtml) 
-    @LOCLOC@/commonDialogs.properties    (resources/locale/en-US/commonDialogs.properties) 
-    @LOCLOC@/nsTreeSorting.properties    (resources/locale/en-US/nsTreeSorting.properties)
-    @LOCLOC@/dialog.properties           (resources/locale/en-US/dialog.properties)
-    @LOCLOC@/plugins.properties          (/toolkit/locales/en-US/chrome/global/plugins.properties)
-    @LOCLOC@/printdialog.dtd             (resources/locale/en-US/printdialog.dtd)
-    @LOCLOC@/printPageSetup.dtd          (resources/locale/en-US/printPageSetup.dtd)
-    @LOCLOC@/printPageSetup.properties   (resources/locale/en-US/printPageSetup.properties)
-    @LOCLOC@/printProgress.dtd           (resources/locale/en-US/printProgress.dtd)
-    @LOCLOC@/printPreviewProgress.dtd    (resources/locale/en-US/printPreviewProgress.dtd)
-    @LOCLOC@/fontpackage.dtd             (resources/locale/en-US/fontpackage.dtd)
-    @LOCLOC@/fontpackage.properties      (resources/locale/en-US/fontpackage.properties)
+*   locale/en-US/global/contents.rdf                (resources/locale/en-US/contents.rdf) 
+    locale/en-US/global/intl.css                    (resources/locale/en-US/intl.css) 
+    locale/en-US/global/dialogOverlay.dtd           (resources/locale/en-US/dialogOverlay.dtd) 
+    locale/en-US/global/commonDialog.dtd            (resources/locale/en-US/commonDialog.dtd) 
+    locale/en-US/global/charsetOverlay.dtd          (resources/locale/en-US/charsetOverlay.dtd) 
+    locale/en-US/global/textcontext.dtd             (resources/locale/en-US/textcontext.dtd) 
+    locale/en-US/global/brand.properties            (resources/locale/en-US/brand.properties) 
+*   locale/en-US/global/brand.dtd                   (resources/locale/en-US/brand.dtd) 
+    locale/en-US/global/tabbrowser.dtd              (resources/locale/en-US/tabbrowser.dtd)
+    locale/en-US/global/tabbrowser.properties       (resources/locale/en-US/tabbrowser.properties)
+    locale/en-US/global/keys.properties             (resources/locale/en-US/keys.properties)
+    locale/en-US/global/config.properties           (resources/locale/en-US/config.properties) 
+    locale/en-US/global/config.dtd                  (resources/locale/en-US/config.dtd) 
+    locale/en-US/global/about.dtd                   (resources/locale/en-US/about.dtd) 
+    locale/en-US/global/accept2locale.properties    (resources/locale/en-US/accept2locale.properties) 
+    locale/en-US/global/languageNames.properties    (resources/locale/en-US/languageNames.properties) 
+    locale/en-US/global/regionNames.properties      (resources/locale/en-US/regionNames.properties) 
+    locale/en-US/global/about.xhtml                 (resources/locale/en-US/about.xhtml) 
+    locale/en-US/global/commonDialogs.properties    (resources/locale/en-US/commonDialogs.properties) 
+    locale/en-US/global/nsTreeSorting.properties    (resources/locale/en-US/nsTreeSorting.properties)
+    locale/en-US/global/dialog.properties           (resources/locale/en-US/dialog.properties)
+    locale/en-US/global/plugins.properties          (/toolkit/locales/en-US/chrome/global/plugins.properties)
+    locale/en-US/global/printdialog.dtd             (resources/locale/en-US/printdialog.dtd)
+    locale/en-US/global/printPageSetup.dtd          (resources/locale/en-US/printPageSetup.dtd)
+    locale/en-US/global/printPageSetup.properties   (resources/locale/en-US/printPageSetup.properties)
+    locale/en-US/global/printProgress.dtd           (resources/locale/en-US/printProgress.dtd)
+    locale/en-US/global/printPreviewProgress.dtd    (resources/locale/en-US/printPreviewProgress.dtd)
+    locale/en-US/global/fontpackage.dtd             (resources/locale/en-US/fontpackage.dtd)
+    locale/en-US/global/fontpackage.properties      (resources/locale/en-US/fontpackage.properties)
 
 US.jar:
 *   locale/US/global-region/contents.rdf            (resources/locale/en-US/contents-region.rdf) 
@@ -122,7 +115,6 @@ US.jar:
     locale/US/global-region/region.properties       (resources/locale/en-US/region.properties)
     locale/US/global-region/builtinURLs.rdf         (resources/locale/en-US/builtinURLs.rdf) 
 
-#ifndef MOZ_XUL_APP
 en-win.jar:
 *   locale/en-US/global-platform/contents.rdf 		(resources/locale/en-US/win/contents-platform.rdf)
     locale/en-US/global-platform/platformDialogOverlay.dtd (resources/locale/en-US/win/platformDialogOverlay.dtd)

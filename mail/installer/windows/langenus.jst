@@ -2,24 +2,21 @@
 var srDest;
 var err;
 var fProgram;
-var platformNode = getPlatform();
-logComment("initInstall: platformNode=" + platformNode);
+logComment("initInstall");
 
 // end
 // end - OS type detection
 
 // ----LOCALIZATION NOTE: translate only these ------
 var prettyName = "English (US) Language Pack";
-var langcode = "en";
-var chromeNode = langcode + "-US";
+var chromeNode = "en-US";
 // --- END CHANGABLE STUFF ---
 var regName    = "locales/mozilla/" + chromeNode;
 var chromeName = chromeNode + "-mail.jar";
-var platformName = langcode + "-" + platformNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
 srDest = $SpaceRequired$:bin;
-err    = initInstall(prettyName, "en-US", "$Version$"); 
+err    = initInstall(prettyName, chromeNode, "$Version$"); 
 logComment("initInstall: " + err);
 
 fProgram = getFolder("Program");
@@ -52,7 +49,6 @@ if(verifyDiskSpace(fProgram, srDest))
   {
     // register chrome
     var cf = getFolder(fProgram, "chrome/"+chromeName);
-    var pf = getFolder(fProgram, "chrome/"+platformName);
 
     registerChrome(chromeType, cf, "locale/global/");
     registerChrome(chromeType, cf, "locale/global-platform/");
@@ -62,11 +58,10 @@ if(verifyDiskSpace(fProgram, srDest))
 
     registerChrome(chromeType, cf, "locale/necko/");
     registerChrome(chromeType, cf, "locale/autoconfig/");
-    registerChrome(chromeType, cf, localeName + "wallet/");
     registerChrome(chromeType, cf, "locale/pippki/");
     registerChrome(chromeType, cf, "locale/pipnss/");
 
-    registerChrome(chromeType, cf, localeName + "mozldap/");
+    registerChrome(chromeType, cf, "locale/mozldap/");
     registerChrome(chromeType, cf, localeName + "messenger-mdn/");
     registerChrome(chromeType, cf, localeName + "messenger-views/");
     registerChrome(chromeType, cf, localeName + "messenger-smime/");
@@ -78,7 +73,7 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(chromeType, cf, "locale/messenger-region/");
 
     registerChrome(chromeType, cf, "locale/communicator/");
-    registerChrome(chromeType, pf, localeName + "communicator-platform/");
+    registerChrome(chromeType, cf, "locale/communicator-platform/");
     registerChrome(chromeType, cf, "locale/navigator/");
     registerChrome(chromeType, cf, "locale/navigator-platform/");    
 

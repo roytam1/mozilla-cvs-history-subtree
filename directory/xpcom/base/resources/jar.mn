@@ -37,6 +37,8 @@
 comm.jar:
 *	content/mozldap/contents.rdf (content/contents.rdf)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
 *       locale/en-US/mozldap/contents.rdf (locale/en-US/contents.rdf)
         locale/en-US/mozldap/ldap.properties (locale/en-US/ldap.properties)
+#endif
