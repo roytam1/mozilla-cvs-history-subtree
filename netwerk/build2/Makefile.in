@@ -26,6 +26,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# secondary necko protocols
+PROTOCOLS := $(filter data keyword gopher viewsource,$(MOZ_PROTOCOLS))
+
+# we don't need to build anything here at all if there are no protocols
+ifdef PROTOCOLS
 MODULE		= necko2
 LIBRARY_NAME	= necko2
 EXPORT_LIBRARY = 1
@@ -40,9 +45,6 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= nsNetModule2.cpp
-
-# secondary necko protocols
-PROTOCOLS = $(filter data keyword gopher viewsource,$(MOZ_PROTOCOLS))
 
 DEFINES		+= $(foreach d,$(PROTOCOLS),-DMOZ_PROTOCOL_${d})
 
@@ -59,6 +61,7 @@ LOCAL_INCLUDES	= \
 EXTRA_DSO_LDOPTS = \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
+endif
 
 include $(topsrcdir)/config/rules.mk
 
