@@ -757,9 +757,12 @@ const gXPInstallObserver = {
           var brandShortName = brandBundle.GetStringFromName("brandShortName");
           var iconURL, messageKey, buttonKey;
           if (aData == "install-chrome") {
-            iconURL = "chrome://mozapps/skin/extensions/themeGeneric.png";
-            messageKey = "themeWarning";
-            buttonKey = "themeWarningButton";
+            // XXXben - use regular software install warnings for now until we can
+            // properly differentiate themes. It's likely in fact that themes won't
+            // be blocked so this code path will only be reached for extensions.
+            iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
+            messageKey = "xpinstallWarning";
+            buttonKey = "xpinstallWarningButton";
           }
           else {
             iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
