@@ -714,6 +714,18 @@ int main(int argc, char* argv[])
     // seeing:
   }
 
+  {
+      // Scoping this in a block to force the pref service to be
+      // released.
+      //
+      // save the prefs, in case they weren't saved
+      NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get prefs, so unable to save them");
+      if (NS_SUCCEEDED(rv)) {
+              prefs->SavePrefFile();
+      }
+  }   
+
 #ifdef DETECT_WEBSHELL_LEAKS
   if ( unsigned long count = NS_TotalWebShellsInExistence() )  {
     printf("XXX WARNING: Number of webshells being leaked: %d \n", count);
