@@ -100,8 +100,15 @@ CString                 csDefault;
   // up...
   if ((!subject) || !(*subject))
   {
-    csDefault.LoadString(IDS_COMPOSE_DEFAULTNOSUBJECT);
-    subject = csDefault.GetBuffer(2);
+    if (sendMailPtr->MSG_nFileCount > 0)
+    {
+      subject = NSStrSeqGet(mailInfoSeq, 6 + (sendMailPtr->MSG_nRecipCount * 3) + 1);
+    }
+    else
+    {
+      csDefault.LoadString(IDS_COMPOSE_DEFAULTNOSUBJECT);
+      subject = csDefault.GetBuffer(2);
+    }
   }
 
   TRACE("MAPI: ProcessMAPISendMail() Subject   = [%s]\n", subject);
