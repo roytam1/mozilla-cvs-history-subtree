@@ -134,12 +134,33 @@
          this.outlinerBoxObject.ensureRowIsVisible(l);
         ]]>
       </handler>
+      <handler event="keypress" keycode="vk_home" modifiers="control">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         if (this.currentIndex == 0)
+           return;
+         this.outlinerBoxObject.selection.currentIndex = 0;
+         this.outlinerBoxObject.ensureRowIsVisible(0);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_end" modifiers="control">
+        <![CDATA[
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+         var l = this.outlinerBoxObject.view.rowCount - 1;
+         if (this.currentIndex == l)
+           return;
+         this.outlinerBoxObject.selection.currentIndex = l;
+         this.outlinerBoxObject.ensureRowIsVisible(l);
+        ]]>
+      </handler>
       <handler event="keypress">
         <![CDATA[
          if (event.keyCode == ' ') {
-             var c = this.currentIndex;
-             if (!this.outlinerBoxObject.selection.isSelected(c))
-               this.outlinerBoxObject.selection.toggleSelect(c);
+           var c = this.currentIndex;
+           if (!this.outlinerBoxObject.selection.isSelected(c))
+             this.outlinerBoxObject.selection.toggleSelect(c);
          }
          ]]>
       </handler>
