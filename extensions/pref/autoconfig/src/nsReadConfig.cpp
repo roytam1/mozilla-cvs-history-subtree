@@ -248,8 +248,8 @@ nsresult nsReadConfig::readConfigFile()
 } // ReadConfigFile
 
 
-nsresult nsReadConfig::openAndEvaluateJSFile(const char *aFileName, PRBool isEncoded, 
-                                             PRInt32 obscureValue,
+nsresult nsReadConfig::openAndEvaluateJSFile(const char *aFileName, PRInt32 obscureValue,
+                                             PRBool isEncoded, 
                                              PRBool isBinDir)
 {
     nsresult rv;
@@ -307,7 +307,7 @@ nsresult nsReadConfig::openAndEvaluateJSFile(const char *aFileName, PRBool isEnc
         fileURL = NS_LITERAL_CSTRING("file:///") + path;
         rv = EvaluateAdminConfigScript(buf, amt, fileURL.get(), 
                                        PR_FALSE, PR_TRUE, 
-                                       isEncoded ? PR_TRUE:PR_FALSE);
+                                       isEncoded);
     }
     inStr->Close();
     PR_Free(buf);
