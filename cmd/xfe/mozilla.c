@@ -38,6 +38,8 @@
 #include "secnav.h"
 #include "secrng.h"
 #include "mozjava.h"
+#include "nlsxp.h"
+#include "softupdt.h"
 #ifdef NSPR20
 #include "private/prpriv.h"	/* for PR_NewNamedMonitor */
 #endif /* NSPR20 */
@@ -2039,6 +2041,7 @@ main
 
   fe_hack_uid();	/* Do this real early */
 
+  
   /* 
    * Check the environment for MOZILLA_NO_ASYNC_DNS.  It would be nice to
    * make this either a pref or a resource/option.  But, at this point in
@@ -2106,6 +2109,7 @@ main
   mozilla_thread = PR_CurrentThread();
   fdset_lock = PR_NewNamedMonitor("mozilla-fdset-lock");
 
+  NLS_EncInitialize(NULL,NULL);
   /*
   ** Create a pipe used to wakeup mozilla from select. A problem we had
   ** to solve is the case where a non-mozilla thread uses the netlib to
@@ -2365,6 +2369,10 @@ main
     }
 {
     char buf [1024];
+    int32 profile_age;
+    XP_StatStruct statPrefs;
+    int status;
+    
     PR_snprintf (buf, sizeof (buf), "%s/%s", fe_home_dir,
 #ifdef OLD_UNIX_FILES
         ".netscape-preferences"
@@ -2374,8 +2382,13 @@ main
 		);
 
     fe_globalData.user_prefs_file = strdup (buf);
-
+    /* check if preferences previously existed */
+    status=XP_Stat(buf, &statPrefs, xpUserPrefs);
     PREF_Init((char*) fe_globalData.user_prefs_file);
+#ifndef MOZ_LITE
+    if (status!=0)              /* stuff to run the first time a user starts */
+        MSG_WriteNewProfileAge();
+#endif
 }
 
 #ifdef MOZ_MAIL_NEWS
@@ -2786,7 +2799,7 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_REGISTERING_CONVERTERS));
 #endif
-
+  SU_Startup();
   NR_StartupRegistry();
   fe_RegisterConverters ();  /* this must be before InstallPreferences(),
 				and after fe_InitializeGlobalResources(). */
@@ -2819,6 +2832,21 @@ main
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_INITIALIZING_SECURITY_LIBRARY));
 #endif
   SECNAV_Init();
+
+#ifdef SCO_SV
+  {
+     char scoslswitch[] = "D3f3atTh3SC0L1c1";
+     if (scoslswitch[sizeof(scoslswitch)-2] == '1')
+     {
+         /* licensing code is in ns/nspr/src/md_SCOOS.c */
+         sco_license_check();
+         /* now that security has been initialized, we can
+            check for Domestic permission */
+         if (SSL_IsDomestic())
+             sco_domestic_check();
+     }
+  }
+#endif
 
   /* Must be called after ekit, since user agent is configurable */
   /* Must also be called after SECNAV_Init, since crypto is dynamic */
@@ -4178,7 +4206,7 @@ fe_create_composition_widgets(MWContext* context, Widget pane, int *numkids)
     }
  
     *((Widget*) ((char*) data + description[i].offset)) = widget[i];
- 
+
     ac = 0;
     XtSetArg(av[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
     XtSetArg(av[ac], XmNtopAttachment, XmATTACH_FORM); ac++;
