@@ -32,7 +32,6 @@
 #define nsCSSLoader_h__
 
 class CSSLoaderImpl;
-class nsIDOMNode;
 
 #include "nsIURI.h"
 #include "nsIParser.h"
@@ -254,7 +253,7 @@ public:
 private:
   nsresult CheckLoadAllowed(nsIURI* aSourceURI,
                             nsIURI* aTargetURI,
-                            nsIDOMNode* aContext);
+                            nsISupports* aContext);
 
 
   // For inline style, the aURI param is null, but the aLinkingContent

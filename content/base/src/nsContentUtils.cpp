@@ -1693,13 +1693,11 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
   nsIURI *docURI = aLoadingDocument->GetDocumentURI();
 
   PRInt16 decision = nsIContentPolicy::ACCEPT;
-  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(aContext));
-  //don't care if node is null -- just pass null on if it is
 
   nsresult rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_IMAGE,
                                           aURI,
                                           docURI,
-                                          node,
+                                          aContext,
                                           EmptyCString(), //mime guess
                                           nsnull,         //extra
                                           &decision);
@@ -1707,6 +1705,7 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
   return NS_FAILED(rv) ? PR_FALSE : NS_CP_ACCEPTED(decision);
 }
 
+// static
 nsresult
 nsContentUtils::LoadImage(nsIURI* aURI, nsIDocument* aLoadingDocument,
                           imgIDecoderObserver* aObserver,

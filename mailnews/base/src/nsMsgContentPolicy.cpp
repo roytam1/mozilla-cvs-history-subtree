@@ -117,7 +117,7 @@ NS_IMETHODIMP
 nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
                                nsIURI           *aContentLocation,
                                nsIURI           *aRequestingLocation,
-                               nsIDOMNode       *aRequestingNode,
+                               nsISupports      *aRequestingContext,
                                const nsACString &aMimeGuess,
                                nsISupports      *aExtra,
                                PRInt16          *aDecision)
@@ -230,7 +230,7 @@ NS_IMETHODIMP
 nsMsgContentPolicy::ShouldProcess(PRUint32          aContentType,
                                   nsIURI           *aContentLocation,
                                   nsIURI           *aRequestingLocation,
-                                  nsIDOMNode       *aRequestingNode,
+                                  nsISupports      *aRequestingContext,
                                   const nsACString &aMimeGuess,
                                   nsISupports      *aExtra,
                                   PRInt16          *aDecision)
