@@ -217,7 +217,7 @@ public:
     // and so that the Mac could receive the window argument too. For Windows
     // and OS2, it's always been a struct, so there's no change for them.
     NS_IMETHOD
-    HandleEvent(nsPluginEvent* event);
+    HandleEvent(nsPluginEvent* event, PRBool* handled);
 
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginInstance:
@@ -755,10 +755,10 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 NS_METHOD
-SimplePluginInstance::HandleEvent(nsPluginEvent* event)
+SimplePluginInstance::HandleEvent(nsPluginEvent* event, PRBool* handled)
 {
-    PRInt16 eventHandled = PlatformHandleEvent(event);
-    return eventHandled ? NS_OK : NS_ERROR_FAILURE;
+    *handled = (PRBool)PlatformHandleEvent(event);
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
