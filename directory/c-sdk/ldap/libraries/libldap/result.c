@@ -326,8 +326,8 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 			LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
 			return( -1 );	/* connection dead */
 		}
+        LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 	}
-	LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 
 	if ( timeout == NULL ) {
 		tvp = NULL;
