@@ -24,8 +24,11 @@ SHELL	= GBASH.EXE
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 XP_OS2_VACPP = 1
 else
+MOZ_OS2_TOOLS = EMX
 XP_OS2_EMX   = 1
 endif
+
+OBJDIR_TAG := $(addprefix _$(MOZ_OS2_TOOLS), $(OBJDIR_TAG))
 
 ifdef XP_OS2_EMX
 ######################################################################
