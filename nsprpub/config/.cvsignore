@@ -5,4 +5,5 @@ my_overrides.mk
 autoconf.mk
 nsprincl.mk
 nsprincl.sh
+now
 Makefile
