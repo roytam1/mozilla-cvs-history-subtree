@@ -693,9 +693,17 @@ lm_ReallyInitMocha(void)
     lm_crippled_context = lm_crippled_decoder->js_context;
 
 #ifdef OJI
-    NPL_JSJInit();
+    {
+      PRBool  jvmMochaPrefsEnabled = PR_FALSE;
+      if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
+          jvmMochaPrefsEnabled = NPL_JSJInit();
+      }
 
-    JSJ_InitJSContext(lm_crippled_context, JS_GetGlobalObject(lm_crippled_context), NULL);
+      if (jvmMochaPrefsEnabled == PR_TRUE)
+      {
+        JSJ_InitJSContext(lm_crippled_context, JS_GetGlobalObject(lm_crippled_context), NULL);
+      }
+    }
 #elif defined (JAVA)
     LJ_JSJ_Init();
 

@@ -2528,7 +2528,11 @@ XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 
 	ndata = (np_data*) app->np_data;
 	XP_ASSERT(ndata);
-    return np_IsLiveConnected(ndata->instance->handle);
+    if(ndata->instance != NULL)
+    {
+      return np_IsLiveConnected(ndata->instance->handle);
+    }
+    return FALSE;
 #else
     return FALSE;
 #endif
@@ -4551,15 +4555,17 @@ PR_IMPLEMENT(XP_Bool) NPL_IsJVMAndMochaPrefsEnabled(void)
    return bPrefs;
 }
 
-PR_IMPLEMENT(void)NPL_JSJInit(void)
+PR_IMPLEMENT(PRBool)NPL_JSJInit(void)
 {
+    PRBool bJSJInited = PR_FALSE;
 #ifdef OJI
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-        pJVMMgr->JSJInit();
+        bJSJInited = pJVMMgr->JSJInit();
         pJVMMgr->Release();
     }
 #endif
+    return bJSJInited;
 }
 
 PR_IMPLEMENT(JNIEnv *)NPL_EnsureJNIExecEnv(PRThread* thread)
