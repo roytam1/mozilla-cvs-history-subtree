@@ -856,8 +856,6 @@ function MsgPreviousFlaggedMessage()
 	GoNextMessage(nsMsgNavigationType.previousFlagged, true);
 }
 
-var nsMsgViewType = Components.interfaces.nsMsgViewType;
-
 function MsgViewAllMsgs() 
 {
 	//dump("MsgViewAllMsgs\n");

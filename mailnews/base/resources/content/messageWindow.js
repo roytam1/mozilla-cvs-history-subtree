@@ -27,12 +27,12 @@ var compositeDataSourceContractID        = datasourceContractIDPrefix + "composi
 var gCompositeDataSource;
 var gCurrentMessageUri;
 var gCurrentFolderUri;
-
+var gThreadPaneCommandUpdater = null;
 var gCurrentMessageIsDeleted = false;
 
 // the folderListener object
 var folderListener = {
-    OnItemAdded: function(parentItem, item, view) {},
+  OnItemAdded: function(parentItem, item, view) {},
 
 	OnItemRemoved: function(parentItem, item, view)
 	{
@@ -67,12 +67,39 @@ var folderListener = {
 	OnItemPropertyFlagChanged: function(item, property, oldFlag, newFlag) {},
 
     OnItemEvent: function(folder, event) {
-		if (event.GetUnicode() == "DeleteOrMoveMsgCompleted") {
-			HandleDeleteOrMoveMsgCompleted(folder);
-		}     
-                else if (event.GetUnicode() == "DeleteOrMoveMsgFailed") {
-                        HandleDeleteOrMoveMsgFailed(folder);
-                }
+		  if (event.GetUnicode() == "DeleteOrMoveMsgCompleted") {
+			  HandleDeleteOrMoveMsgCompleted(folder);
+		  }     
+      else if (event.GetUnicode() == "DeleteOrMoveMsgFailed") {
+            HandleDeleteOrMoveMsgFailed(folder);
+      }
+    }
+}
+
+function nsMsgDBViewCommandUpdater()
+{}
+
+nsMsgDBViewCommandUpdater.prototype = 
+{
+  updateCommandStatus : function()
+    {
+      // the back end is smart and is only telling us to update command status
+      // when the # of items in the selection has actually changed.
+		  document.commandDispatcher.updateCommands('mail-toolbar');
+    },
+
+  displayMessageChanged : function(aFolder, aSubject)
+  {
+    setTitleFromFolder(aFolder, aSubject);
+  },
+
+  QueryInterface : function(iid)
+   {
+     if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
+	    return this;
+	  
+     throw Components.results.NS_NOINTERFACE;
+     return null;
     }
 }
 
@@ -97,15 +124,15 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 
 function HandleDeleteOrMoveMsgFailed(folder)
 {
-        var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-        if(!folderResource)
-                return;
+  var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
+  if(!folderResource)
+     return;
 
-        var folderUri = folderResource.Value;
-        if((folderUri == gCurrentFolderUri) && gCurrentMessageIsDeleted)
-        {
-                gCurrentMessageIsDeleted = false;
-        }	
+  var folderUri = folderResource.Value;
+  if((folderUri == gCurrentFolderUri) && gCurrentMessageIsDeleted)
+  {
+    gCurrentMessageIsDeleted = false;
+  }	
 }
 
 function OnLoadMessageWindow()
@@ -123,13 +150,15 @@ function OnLoadMessageWindow()
 	// FIX ME - later we will be able to use onload from the overlay
 	OnLoadMsgHeaderPane();
 
-    try {
-        mailSession.AddFolderListener(folderListener);
+  try {
+    mailSession.AddFolderListener(folderListener);
 	} catch (ex) {
-        dump("Error adding to session\n");
-    }
+    dump("Error adding to session\n");
+  }
 
-	if(window.arguments && window.arguments.length == 2)
+  var originalView = null;
+
+	if(window.arguments)
 	{
 		if(window.arguments[0])
 		{
@@ -148,7 +177,27 @@ function OnLoadMessageWindow()
 		{
 			gCurrentFolderUri = null;
 		}
+
+    if (window.arguments[2])
+      originalView = window.arguments[2];      
 	}	
+
+  // extract the sort type, the sort order, 
+  var sortType;
+  var sortOrder;
+  var viewFlags;
+  var viewType;
+
+  if (originalView)
+  {
+    viewType = originalView.viewType;
+    viewFlags = originalView.viewFlags;
+    sortType = originalView.sortType;
+    sortOrder = originalView.sortOrder;
+  }
+  
+  var msgFolder = GetLoadedMsgFolder();
+  CreateBareDBView(msgFolder,viewType, viewFlags, sortType, sortOrder); // create a db view for 
 
   if (gCurrentMessageUri) {
     SetUpToolbarButtons(gCurrentMessageUri);
@@ -157,9 +206,23 @@ function OnLoadMessageWindow()
     SetUpToolbarButtons(gCurrentFolderUri);
   }
     
-  setTimeout("OpenURL(gCurrentMessageUri);", 0);
+  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey);", 0);
   SetupCommandUpdateHandlers();
 
+}
+
+function extractMsgKeyFromURI()
+{
+  var msgKey = -1;
+  var msgService = messenger.messageServiceFromURI(gCurrentMessageUri);
+  if (msgService)
+  {
+    var msgHdr = msgService.messageURIToMsgHdr(gCurrentMessageUri);
+    if (msgHdr)
+      msgKey = msgHdr.messageKey;
+  }
+
+  return msgKey;
 }
 
 function HideMenus()
@@ -448,7 +511,7 @@ var MessageWindowController =
 
 	doCommand: function(command)
 	{
-   		dump("MessageWindowController.doCommand(" + command + ")\n");
+    dump("MessageWindowController.doCommand(" + command + ")\n");
 
 		switch ( command )
 		{
