@@ -61,7 +61,6 @@ REQUIRES	= parse style js layer applet nspr security dbm img util jtools edtplug
 
 include $(topsrcdir)/config/config.mk
 
-ifdef EDITOR
 CSRCS		+= layedit.c \
 		  layfree.c \
 		  layimage.c \
@@ -73,6 +72,7 @@ CSRCS		+= layedit.c \
 		  layutil.c \
 		  $(NULL)
 
+ifdef EDITOR
 CPPSRCS		= streams.cpp \
 		  fsfile.cpp \
 		  editor.cpp \
