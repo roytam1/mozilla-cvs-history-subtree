@@ -2629,7 +2629,7 @@ var nsSetSmiley =
       if (!extElement)
         return;
 	
-      extElement.setAttribute("-moz-smiley", strSml);
+      extElement.setAttribute("class", "moz-smiley-" + strSml);
 
 	
       var intElement = editorShell.CreateElementWithDefaults("span");
