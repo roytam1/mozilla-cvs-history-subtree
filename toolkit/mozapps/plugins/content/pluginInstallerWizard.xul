@@ -39,6 +39,7 @@
 
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://mozapps/content/plugins/pluginInstallerWizard.css"?>
+<?xml-stylesheet href="chrome://mozapps/skin/plugins/pluginInstallerWizard.css"?>
 
 <!DOCTYPE wizard [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
@@ -50,6 +51,7 @@
 <wizard id="plugin-installer-wizard" title="&pluginWizard.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         persist="width height screenX screenY sizeMode"
+        style="width: 50em; min-height: 40em;"
         onload="wizardInit()"
         onwizardfinish="return wizardFinish();">
 
@@ -74,14 +76,7 @@
 
     <description value="&pluginWizard.availablePluginsPage.description.label;"/>
 
-    <grid class="indent">
-      <columns>
-        <column />
-      </columns>
-
-      <rows id="pluginList">
-      </rows>
-    </grid>
+    <vbox id="pluginList" flex="1" align="left" style="overflow: auto;"/>
 
     <vbox id="installerUI" hidden="true">
       <separator />
@@ -98,7 +93,9 @@
               onpagerewound="return gPluginInstaller.showPreviousLicense();">
     <description id="pluginLicenseLabel"> </description>
 
-    <iframe id="licenseIFrame" flex="1" src="" />
+    <vbox id="licenseContainer" flex="1">
+      <iframe id="licenseIFrame" flex="1" src="" />
+    </vbox>
 
     <radiogroup id="licenseRadioGroup">
       <radio label="&pluginWizard.licensePage.accept.label;"/>

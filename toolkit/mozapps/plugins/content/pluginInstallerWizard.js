@@ -135,18 +135,16 @@ nsPluginInstallerWizard.prototype.showPluginList = function (){
     // [plugin image] [Plugin_Name Plugin_Version]
 
     var pluginInfo = this.mPluginInfoArray[pluginInfoItem];
-    var myRow = document.createElement("row");
 
     // create the checkbox
     var myCheckbox = document.createElement("checkbox");
     myCheckbox.setAttribute("checked", "true");
     myCheckbox.setAttribute("oncommand", "gPluginInstaller.toggleInstallPlugin('" + pluginInfo.pid + "', this)");
+    // XXXlocalize (nit)
     myCheckbox.setAttribute("label", pluginInfo.name + " " + (pluginInfo.version ? pluginInfo.version : ""));
     myCheckbox.setAttribute("src", pluginInfo.IconUrl);
 
-    myRow.appendChild(myCheckbox);
-    
-    myPluginList.appendChild(myRow);
+    myPluginList.appendChild(myCheckbox);
     
     if (pluginInfo.InstallerShowsUI == "true")
       hasPluginWithInstallerUI = true;
