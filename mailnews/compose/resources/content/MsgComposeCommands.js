@@ -2370,7 +2370,7 @@ function DisplaySaveFolderDlg(folderURI)
 function encryptMessage()
 {
     if (gCurrentIdentity.encryptionCertName == null) {
-        alert("You must choose an encryption certificate first");
+        alert(gComposeMsgsBundle.getString("chooseEncryptionCertMsg"));
         document.getElementById("menu_securityEncryptAlways").removeAttribute("checked");
         return;
     }
@@ -2388,7 +2388,7 @@ function encryptMessage()
 function signMessage()
 {
     if (gCurrentIdentity.signingCertName == null) {
-        alert("You must choose a signing certificate first");
+        alert(gComposeMsgsBundle.getString("chooseSigningCertMsg"));
         document.getElementById("menu_securitySign").removeAttribute("checked");
         return;
     }
