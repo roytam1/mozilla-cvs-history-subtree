@@ -77,7 +77,7 @@ struct nsDiskCacheEntry {
     void Unswap()       // network to host (disk to memory)
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mHeaderVersion      = ::PR_ntohl(mHeaderSize);
+        mHeaderVersion      = ::PR_ntohl(mHeaderVersion);
         mMetaLocation       = ::PR_ntohl(mMetaLocation);
         mFetchCount         = ::PR_ntohl(mFetchCount);
         mLastFetched        = ::PR_ntohl(mLastFetched);

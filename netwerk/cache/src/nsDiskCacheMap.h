@@ -25,6 +25,8 @@
 #ifndef _nsDiskCacheMap_h_
 #define _nsDiskCacheMap_h_
 
+#include <limits.h>
+
 #include "prtypes.h"
 #include "prnetdb.h"
 #include "nsDebug.h"
@@ -218,7 +220,7 @@ public:
         if (DataFile() == 0)       return DataGeneration();
         else if (MetaFile() == 0)  return MetaGeneration();
         
-        return -1;  // no generation
+        return SHRT_MAX;  // no generation
     }
 
 
@@ -228,7 +230,7 @@ public:
 #if defined(IS_LITTLE_ENDIAN)
         mHashNumber   = ::PR_htonl(mHashNumber);
         mEvictionRank = ::PR_htonl(mEvictionRank);
-        mLocation     = ::PR_htonl(mLocation);
+        mDataLocation = ::PR_htonl(mDataLocation);
         mMetaLocation = ::PR_htonl(mMetaLocation);
 #endif
     }
@@ -238,7 +240,7 @@ public:
 #if defined(IS_LITTLE_ENDIAN)
         mHashNumber   = ::PR_ntohl(mHashNumber);
         mEvictionRank = ::PR_ntohl(mEvictionRank);
-        mLocation     = ::PR_ntohl(mLocation);
+        mDataLocation = ::PR_ntohl(mDataLocation);
         mMetaLocation = ::PR_ntohl(mMetaLocation);
 #endif
     }

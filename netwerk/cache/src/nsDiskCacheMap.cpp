@@ -349,7 +349,7 @@ nsDiskCacheMap::DeleteRecord( nsDiskCacheRecord *  mapRecord)
     if (NS_FAILED(rv))  return rv;
     
     PRUint32 count = bucket->CountRecords();
-    for (int i = 0; i < count; ++i) {        
+    for (PRUint32 i = 0; i < count; ++i) {        
         if (bucket->mRecords[i].HashNumber() == mapRecord->HashNumber()) {
             // found it, now delete it.
             if (i != (count - 1)) { // if not the last record, shift last record into opening
@@ -419,8 +419,6 @@ nsDiskCacheMap::ReadDiskCacheEntry(nsDiskCacheRecord * record, nsDiskCacheEntry 
 {
     nsresult            rv;
     nsDiskCacheEntry *  diskEntry  = nsnull;
-    PRUint16            generation = record->Generation();
-    PRUint32            hashNumber = record->HashNumber();
     PRUint32            metaFile   = record->MetaFile();
     PRFileDesc *        fd         = nsnull;
     *result = nsnull;

@@ -65,11 +65,11 @@ public:
     nsresult  WriteBlocks( char * buffer, PRInt32  startBlock, PRInt32  numBlocks);
     nsresult  ReadBlocks(  char * buffer, PRInt32   startBlock, PRInt32  numBlocks);
     
-// private:
-    virtual nsresult  FlushBitMap();
-    virtual nsresult  ValidateFile();   // called by Open()
-    virtual nsresult  VerifyAllocation( PRInt32 startBlock, PRInt32 numBLocks);
-    virtual PRInt32   LastBlock();
+private:
+    nsresult  FlushBitMap();
+    nsresult  ValidateFile();   // called by Open()
+    nsresult  VerifyAllocation( PRInt32 startBlock, PRInt32 numBLocks);
+    PRInt32   LastBlock();
 
 /**
  *  Data members
