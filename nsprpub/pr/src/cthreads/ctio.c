@@ -1238,7 +1238,7 @@ static PRFileDesc* ct_Accept(
             if (osfd < 0) goto failed;
         }
     }
-#ifdef AIX
+#ifdef RHAPSODY
     /* mask off the first byte of struct sockaddr (the length field) */
     if (addr)
     addr->inet.family &= 0x00ff;
@@ -1495,7 +1495,7 @@ static PRInt32 ct_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
         bytes = ct_Continue(&op);
         syserrno = op.syserrno;
     }
-#ifdef AIX
+#ifdef RHAPSODY
     /* mask off the first byte of struct sockaddr (the length field) */
     if (addr) addr->inet.family &= 0x00ff;
 #endif
@@ -1565,7 +1565,7 @@ static PRStatus ct_GetSockName(PRFileDesc *fd, PRNetAddr *addr)
 
     rv = getsockname(
         fd->secret->md.osfd, (struct sockaddr*)addr, &addr_len);
-#ifdef AIX
+#ifdef RHAPSODY
     /* mask off the first byte of struct sockaddr (the length field) */
     if (addr) addr->inet.family &= 0x00ff;
 #endif
@@ -1592,7 +1592,7 @@ static PRStatus ct_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
     rv = getpeername(
         fd->secret->md.osfd, (struct sockaddr*)addr, &addr_len);
 
-#ifdef AIX
+#ifdef RHAPSODY
     /* mask off the first byte of struct sockaddr (the length field) */
     if (addr) addr->inet.family &= 0x00ff;
 #endif
