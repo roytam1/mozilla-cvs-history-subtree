@@ -58,6 +58,7 @@ class nsIAtom;
 class nsString;
 class nsIEventStateManager;
 class nsIURI;
+class nsIOutputDevice;
 
 #define NS_IPRESCONTEXT_IID   \
 { 0x0a5d12e0, 0x944e, 0x11d1, \
@@ -102,7 +103,7 @@ public:
   /**
    * Initialize the presentation context from a particular device.
    */
-  NS_IMETHOD Init(void) = 0;
+  NS_IMETHOD Init(nsIOutputDevice *aDevice) = 0;
 
   /**
    * Stop the presentation in preperation for destruction.
@@ -227,23 +228,23 @@ public:
   /** 
    * Get the default colors
    */
-  NS_IMETHOD GetDefaultColor(nscolor* aColor) = 0;
-  NS_IMETHOD GetDefaultBackgroundColor(nscolor* aColor) = 0;
+  NS_IMETHOD GetDefaultColor(gfx_color* aColor) = 0;
+  NS_IMETHOD GetDefaultBackgroundColor(gfx_color* aColor) = 0;
   NS_IMETHOD GetDefaultBackgroundImage(nsString& aImage) = 0;
   NS_IMETHOD GetDefaultBackgroundImageRepeat(PRUint8* aRepeat) = 0;
   NS_IMETHOD GetDefaultBackgroundImageOffset(gfx_coord* aX, gfx_coord* aY) = 0;
   NS_IMETHOD GetDefaultBackgroundImageAttachment(PRUint8* aRepeat) = 0;
-  NS_IMETHOD GetDefaultLinkColor(nscolor* aColor) = 0;
-  NS_IMETHOD GetDefaultVisitedLinkColor(nscolor* aColor) = 0;
+  NS_IMETHOD GetDefaultLinkColor(gfx_color* aColor) = 0;
+  NS_IMETHOD GetDefaultVisitedLinkColor(gfx_color* aColor) = 0;
 
-  NS_IMETHOD SetDefaultColor(nscolor aColor) = 0;
-  NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor) = 0;
+  NS_IMETHOD SetDefaultColor(gfx_color aColor) = 0;
+  NS_IMETHOD SetDefaultBackgroundColor(gfx_color aColor) = 0;
   NS_IMETHOD SetDefaultBackgroundImage(const nsString& aImage) = 0;
   NS_IMETHOD SetDefaultBackgroundImageRepeat(PRUint8 aRepeat) = 0;
   NS_IMETHOD SetDefaultBackgroundImageOffset(gfx_coord aX, gfx_coord aY) = 0;
   NS_IMETHOD SetDefaultBackgroundImageAttachment(PRUint8 aRepeat) = 0;
-  NS_IMETHOD SetDefaultLinkColor(nscolor aColor) = 0;
-  NS_IMETHOD SetDefaultVisitedLinkColor(nscolor aColor) = 0;
+  NS_IMETHOD SetDefaultLinkColor(gfx_color aColor) = 0;
+  NS_IMETHOD SetDefaultVisitedLinkColor(gfx_color aColor) = 0;
 
   NS_IMETHOD GetImageGroup(nsIImageGroup** aGroupResult) = 0;
 
@@ -263,7 +264,7 @@ public:
    *      into the transparent areas of the image and no mask is created.
    */
   NS_IMETHOD StartLoadImage(const nsString& aURL,
-                            const nscolor* aBackgroundColor,
+                            const gfx_color* aBackgroundColor,
                             const nsSize* aDesiredSize,
                             nsIFrame* aTargetFrame,
                             nsIFrameImageLoaderCB aCallBack,
@@ -319,17 +320,6 @@ public:
    * Return the page height if this is a paginated context
    */
   NS_IMETHOD GetPageHeight(gfx_dimension* aResult) = 0;
-
-  NS_IMETHOD GetPixelsToTwips(float* aResult) const = 0;
-
-  NS_IMETHOD GetTwipsToPixels(float* aResult) const = 0;
-
-  //XXX this is probably not an ideal name. MMP
-  /** 
-   * Do pixels to twips conversion taking into account
-   * differing size of a "pixel" from device to device.
-   */
-  NS_IMETHOD GetScaledPixelsToTwips(float* aScale) const = 0;
 
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager) = 0;
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection) = 0;
