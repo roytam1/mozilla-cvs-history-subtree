@@ -81,7 +81,7 @@ CONFIG_FILES	+= \
 		  unix/unix.js \
 		  $(NULL)
 
-$(LIBRARY): $(OBJS)
+$(LIBRARY): $(OBJS) $(EXTRA_LIBS)
 
 unix/unixpref.c: unix/jsbuffer.h
  
