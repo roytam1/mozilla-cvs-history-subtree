@@ -26,6 +26,8 @@
 
 package Mozilla::LDAP::Utils;
 
+require Mozilla::LDAP::API;
+
 
 #############################################################################
 # Normalize the DN string (first argument), and return the new, normalized,
@@ -39,7 +41,7 @@ sub normalizeDN
   $dn = $self->{dn} unless $dn;
   return "" if ($dn eq "");
 
-  $vals = Ldapc::ldap_explode_dn(lc $dn, 0);
+  $vals = Mozilla::LDAP::API::ldap_explode_dn(lc $dn, 0);
 
   return join(",", @{$vals});
 }
