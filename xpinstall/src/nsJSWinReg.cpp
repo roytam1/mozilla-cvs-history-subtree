@@ -22,9 +22,12 @@
 #include "nsIScriptContext.h"
 
 #include "nsString.h"
-//#include "nsInstall.h"
+#include "nsInstall.h"
 #include "nsWinReg.h"
 #include "nsJSWinReg.h"
+
+extern JSClass WinRegClass;
+// extern JSClass WinProfileClass;
 
 extern void nsCvrtJSValToStr(nsString&  aString,
                              JSContext* aContext,
@@ -44,6 +47,10 @@ extern PRBool nsCvrtJSValToObj(nsISupports** aSupports,
                                JSContext* aContext,
                                jsval aValue);
 
+
+/***********************************************************************************/
+// Native mothods for WinReg functions
+
 //
 // Native method SetRootKey
 //
@@ -51,8 +58,8 @@ PR_STATIC_CALLBACK(JSBool)
 WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsWinReg *nativeThis  = (nsWinReg*)JS_GetPrivate(cx, obj);
-  JSBool rBool          = JS_FALSE;
-  PRInt32 b0;
+  JSBool   rBool        = JS_FALSE;
+  PRInt32  b0;
 
   *rval = JSVAL_NULL;
 
@@ -72,7 +79,7 @@ WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->SetRootKey(b0, &nativeRet))
+    if(NS_OK != nativeThis->SetRootKey(b0))
     {
       return JS_FALSE;
     }
@@ -181,8 +188,8 @@ WinRegDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 {
   nsWinReg *nativeThis = (nsWinReg*)JS_GetPrivate(cx, obj);
   PRInt32 nativeRet;
-  nsAutoString b0;
-  nsAutoString b1;
+  nsString b0;
+  nsString b1;
 
   *rval = JSVAL_NULL;
 
@@ -269,7 +276,7 @@ PR_STATIC_CALLBACK(JSBool)
 WinRegGetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsWinReg *nativeThis = (nsWinReg*)JS_GetPrivate(cx, obj);
-  PRInt32 nativeRet;
+  nsString* nativeRet;
   nsAutoString b0;
   nsAutoString b1;
 
@@ -335,7 +342,7 @@ WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
     // fix: this parameter is an object, not a string.
-    // A way need to be figured out to convert the JSVAL to this object type
+    // A way needs to be figured out to convert the JSVAL to this object type
 //    nsCvrtJSValToStr(b2, cx, argv[2]);
 
 //    if(NS_OK != nativeThis->SetValue(b0, b1, b2, &nativeRet))
@@ -360,10 +367,10 @@ WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 PR_STATIC_CALLBACK(JSBool)
 WinRegGetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsWinReg     *nativeThis = (nsWinReg*)JS_GetPrivate(cx, obj);
-  PRInt32      nativeRet;
-  nsAutoString b0;
-  nsAutoString b1;
+  nsWinReg      *nativeThis = (nsWinReg*)JS_GetPrivate(cx, obj);
+  nsWinRegValue *nativeRet;
+  nsAutoString  b0;
+  nsAutoString  b1;
 
   *rval = JSVAL_NULL;
 
@@ -404,7 +411,7 @@ PR_STATIC_CALLBACK(JSBool)
 WinRegInstallObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsWinReg     *nativeThis = (nsWinReg*)JS_GetPrivate(cx, obj);
-  PRInt32      nativeRet;
+  nsInstall    *nativeRet;
   nsAutoString b0;
   nsAutoString b1;
 
@@ -418,10 +425,7 @@ WinRegInstallObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   //  public int InstallObject ();
 
-  if(NS_OK != nativeThis->InstallObject(&nativeRet))
-  {
-    return JS_FALSE;
-  }
+  nativeRet = nativeThis->InstallObject();
 
   *rval = INT_TO_JSVAL(nativeRet);
   return JS_TRUE;
