@@ -30,7 +30,7 @@ sub tree_specific_overides {
 	$TreeSpecific::name = 'mozilla';
 	$TreeSpecific::build_target = 'alldep';
 	$TreeSpecific::checkout_target = 'checkout';
-	$TreeSpecific::clobber_target = 'distclean';
+	$TreeSpecific::clobber_target = 'clobber_all';
 	
 }
 
