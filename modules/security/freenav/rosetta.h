@@ -474,8 +474,8 @@
 #define HG17231
 #define HG26576
 #define HG26522
-#define HG87236
-#define HG17236
+#define HG87236 return;
+#define HG17236 return;
 #define HG87211
 #define HG26722
 #define HG27811
@@ -607,7 +607,7 @@
 #define HG10282
 #define HG29081
 #define HG21182
-#define HG93649
+#define HG02030
 
 
 
