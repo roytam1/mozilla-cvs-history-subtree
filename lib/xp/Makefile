@@ -44,18 +44,14 @@ else
 CSRCS =		  xp_stub.c 
 endif
 
-<<<<<<< Makefile
 CSRCS +=          \
 	 	  xp_file.c \
 		  xp_list.c \
 		  xp_hash.c \
 		  allxpstr.c \
 		  $(NULL)
-=======
-REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf network
->>>>>>> 3.2.22.1
 
-REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf
+REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf network
 
 ifeq ($(STAND_ALONE_JAVA),1)
 CSRCS		= xp_qsort.c
