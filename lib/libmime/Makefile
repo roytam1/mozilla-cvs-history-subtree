@@ -20,7 +20,9 @@ DEPTH		= ../..
 MODULE		= mime
 LIBRARY_NAME	= mime
 
-CSRCS		= mimecont.c \
+CSRCS		= \
+		  mimecal.c \
+		  mimecont.c \
 		  mimedrft.c \
 		  mimeebod.c \
 		  mimeenc.c \
