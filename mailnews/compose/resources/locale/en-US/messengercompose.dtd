@@ -142,11 +142,6 @@
 <!ENTITY fileCarbonCopyCmd.accesskey "i">
 <!ENTITY fileHereMenu.label "File Here">
 
-<!ENTITY securityMenu.label "Security">
-<!ENTITY menu_securityEncryptIfPossible.label "Encrypt if Possible">
-<!ENTITY menu_securityEncryptAlways.label "Always Encrypt">
-<!ENTITY menu_securitySign.label "Sign">
-
 <!--LOCALIZATION NOTE Debug Menu Don't translate anything in the Debug menu section -->
 <!-- Debug Menu, imported from editorAppShell.dtd -->
 <!ENTITY debugMenu.label "Debug">
