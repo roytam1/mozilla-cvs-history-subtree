@@ -40,6 +40,7 @@ DIRS= \
 !ifdef MODULAR_NETLIB
 	public \
 	module \
+	pluggable \
 !endif
 	$(NULL)
 
