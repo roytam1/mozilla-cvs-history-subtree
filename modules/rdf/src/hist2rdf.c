@@ -522,8 +522,8 @@ void
 HistPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inversep)
 {
   if ((s ==  gCoreVocab->RDF_parent) && inversep && (rdf == gHistoryStore) &&
-      ((u == gNavCenter->RDF_HistoryByDate) ||  (u ==  gNavCenter->RDF_HistoryBySite))) {
-    /* collateHistory(rdf, gNavCenter->RDF_History, (u == gNavCenter->RDF_HistoryByDate)); */
+      ((u == gNavCenter->RDF_HistoryByDate) ||  (u == gNavCenter->RDF_HistoryBySite))) {
+      /* collateHistory(rdf, gNavCenter->RDF_History, (u == gNavCenter->RDF_HistoryByDate)); */
   } 
 }
 

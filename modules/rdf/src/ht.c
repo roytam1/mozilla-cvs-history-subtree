@@ -26,6 +26,7 @@
 #include "glue.h"
 #include "hist2rdf.h"
 #include "ht.h"
+#include "mcf.h"
 #include "scook.h"
 #include "rdfparse.h"
 
@@ -33,6 +34,7 @@
 	/* globals */
 HT_Icon			urlList = NULL;
 HT_PaneStruct		*gHTTop = NULL;
+HT_Pane			gAutoOpenPane = NULL;
 RDF			gNCDB = NULL;
 PRBool			gInited = PR_FALSE;
 PRBool			gBatchUpdate = false, gAutoEditNewNode = false, gPaneDeletionMode = false;
@@ -1931,12 +1933,19 @@ resynchContainer (HT_Resource container)
 	{
 		refreshContainerIndexes(container);
 		refreshItemList(nc, HT_EVENT_NODE_ADDED);
+
 		if (gAutoEditNewNode == true)
 		{
 			gAutoEditNewNode = false;
 			HT_SetSelection (nc);
 			sendNotification(nc, HT_EVENT_NODE_EDIT);
 		}
+		if ((gAutoOpenPane != NULL) && (gAutoOpenPane == nc->view->pane))
+		{
+			gAutoOpenPane = NULL;
+			HT_SetOpenState(nc, PR_TRUE);
+		}
+
 	}
 	refreshItemList(container, HT_EVENT_VIEW_REFRESH);
 }
@@ -2012,11 +2021,17 @@ addContainerItem (HT_Resource container, RDF_Resource item)
 		}
 
 		refreshItemList(nc, HT_EVENT_NODE_ADDED);
+
 		if (gAutoEditNewNode == true)
 		{
 			gAutoEditNewNode = false;
 			HT_SetSelection (nc);
 			sendNotification(nc, HT_EVENT_NODE_EDIT);
+		}
+		if ((gAutoOpenPane != NULL) && (gAutoOpenPane == nc->view->pane))
+		{
+			gAutoOpenPane = NULL;
+			HT_SetOpenState(nc, PR_TRUE);
 		}
 	}
 	return(nc);
@@ -5432,6 +5447,8 @@ HT_Properties (HT_Resource node)
 		break;
 
 		case	LFS_RT:
+		case    FTP_RT:
+		case    ES_RT:
 		showPermissions = false;
 		if (HT_IsContainer(node))
 		{
@@ -5440,13 +5457,12 @@ HT_Properties (HT_Resource node)
 				showPermissions = true;
 			}
 			dynStr = constructHTML(dynStr, node, (void *)gCoreVocab->RDF_name, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_description, HT_COLUMN_STRING);
 			if (node->node != gNavCenter->RDF_LocalFiles)
 			{
 				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
-#ifdef	NSPR20
-				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_INT);
-#endif
-				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_INT);
+				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_STRING);
+				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_STRING);
 			}
 			else
 			{
@@ -5461,10 +5477,8 @@ HT_Properties (HT_Resource node)
 			dynStr = constructHTML(dynStr, node, (void *)gCoreVocab->RDF_name, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_size, HT_COLUMN_INT);
-#ifdef	NSPR20
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_INT);
-#endif
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_INT);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_STRING);
 		}
 		break;
 
@@ -5491,13 +5505,6 @@ HT_Properties (HT_Resource node)
 			/* XXX should also show calculated expiration date */
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_numAccesses, HT_COLUMN_INT);
 		}
-		break;
-
-		case    FTP_RT:
-		case    ES_RT:
-		showPermissions = false;
-		dynStr = constructHTML(dynStr, node, (void *)gCoreVocab->RDF_name, HT_COLUMN_STRING);
-		dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
 		break;
 
 		case	COOKIE_RT:
@@ -5643,7 +5650,7 @@ setHiddenState (HT_Resource node)
 	}
 	else
 	{
-		/* hide all interior HT nodes */
+		/* show/hide all interior HT nodes */
 
 		while (child != NULL)
 		{
@@ -5706,6 +5713,7 @@ HT_SetOpenState (HT_Resource containerNode, PRBool isOpen)
 		if (isOpen)
 		{
 			containerNode->flags |= HT_OPEN_FLAG;
+			containerNode->flags &= (~HT_HIDDEN_FLAG);
 		}
 		else
 		{
@@ -5974,6 +5982,52 @@ HT_Launch(HT_Resource node, MWContext *context)
 					gNavCenter->RDF_Command, gNavCenter->RDF_Command_Launch,
 					RDF_RESOURCE_TYPE);
 			}
+		}
+	}
+	return(retVal);
+}
+
+
+
+PR_PUBLIC_API(PRBool)
+HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
+{
+	HT_View			view;
+	RDF_Resource		u = NULL;
+	PRBool			retVal = PR_FALSE;
+
+	XP_ASSERT(url != NULL);
+
+	if (pane == NULL)	pane = gHTTop;
+
+	if ((url != NULL) && (pane != NULL))
+	{
+		if (startsWith("ftp://", url) && endsWith("/", url))
+		{
+			u = RDF_GetResource(pane->db, url, 1);
+		}
+	}
+	if ((u != NULL) && (iscontainerp(u)))
+	{
+		if ((view = HT_GetViewType(pane, HT_VIEW_FILES)) != NULL)
+		{
+			if (!remoteStoreHasAssertion(*(pane->db->translators), gNavCenter->RDF_FTP,
+				gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles, RDF_RESOURCE_TYPE,
+				PR_TRUE))
+			{
+				gAutoOpenPane = pane;
+				remoteStoreAdd (*(pane->db->translators), gNavCenter->RDF_FTP,
+					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+					RDF_RESOURCE_TYPE, PR_TRUE);
+				gAutoOpenPane = NULL;
+			}
+			gAutoOpenPane = pane;
+			remoteStoreAdd (*(pane->db->translators), u, gCoreVocab->RDF_parent,
+				gNavCenter->RDF_FTP, RDF_RESOURCE_TYPE, PR_TRUE);
+			gAutoOpenPane = NULL;
+
+			HT_SetSelectedView (pane, view);
+			retVal = PR_TRUE;
 		}
 	}
 	return(retVal);
@@ -6634,6 +6688,10 @@ HT_GetViewType (HT_Pane pane, HT_ViewType viewType)
 
 		case	HT_VIEW_SITEMAP:
 		resToFind = gNavCenter->RDF_Sitemaps;
+		break;
+
+		case	HT_VIEW_FILES:
+		resToFind = gNavCenter->RDF_LocalFiles;
 		break;
 
 		default:

@@ -73,6 +73,7 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource RDF_HTMLURL;
   RDF_Resource RDF_HTMLHeight;
   RDF_Resource RDF_LocalFiles;
+  RDF_Resource RDF_FTP;
   RDF_Resource RDF_Appletalk;
   RDF_Resource RDF_Mail;
   RDF_Resource RDF_Password;

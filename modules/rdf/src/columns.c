@@ -173,6 +173,9 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 		{
 			case	0:	arc = gCoreVocab->RDF_name;		break;
 			case	1:	arc = gWebData->RDF_URL;		break;
+			case	2:	arc = gWebData->RDF_description;	break;
+			case	3:	arc = gWebData->RDF_size;		break;
+			case	4:	arc = gWebData->RDF_lastModifiedDate;	break;
 		}
 		break;
 
@@ -181,11 +184,10 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 		{
 			case	0:	arc = gCoreVocab->RDF_name;		break;
 			case	1:	arc = gWebData->RDF_URL;		break;
-			case	2:	arc = gWebData->RDF_size;		break;
-#ifdef	NSPR20
-			case	3:	arc = gWebData->RDF_creationDate;	break;
-#endif
+			case	2:	arc = gWebData->RDF_description;	break;
+			case	3:	arc = gWebData->RDF_size;		break;
 			case	4:	arc = gWebData->RDF_lastModifiedDate;	break;
+			case	5:	arc = gWebData->RDF_creationDate;	break;
 		}
 		break;
 

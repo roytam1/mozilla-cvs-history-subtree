@@ -127,6 +127,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_HTMLURL = newResource("htmlURL", RDF_HTML_URL_STR);
   gNavCenter->RDF_HTMLHeight = newResource("htmlHeight", RDF_HTML_HEIGHT_STR);
   gNavCenter->RDF_LocalFiles = RDF_GetResource(gCoreDB, "NC:LocalFiles", true);
+  gNavCenter->RDF_FTP = createContainer("NC:FTP");
   gNavCenter->RDF_Appletalk = createContainer("at:");
   setResourceType(gNavCenter->RDF_Appletalk, ATALKVIRTUAL_RT);
   gNavCenter->RDF_Mail = RDF_GetResource(gCoreDB, "NC:Mail", true);

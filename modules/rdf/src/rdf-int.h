@@ -213,6 +213,15 @@ struct XMLNameSpaceStruct {
 
 typedef struct XMLNameSpaceStruct *XMLNameSpace;
 
+#define	RDF_MAX_NUM_FILE_TOKENS		8
+
+struct	RDF_FileStructTokens {
+	RDF_Resource	token;
+	RDF_ValueType	type;
+	int16		tokenNum;
+	char		*data;
+};
+
 struct RDF_FileStruct {
   char* url;
   RDF_Resource currentResource;
@@ -245,7 +254,9 @@ struct RDF_FileStruct {
   RDFT     db;
   void* pdata;
   XMLNameSpace namespaces;
-} ;
+  int16	numFileTokens;
+  struct RDF_FileStructTokens tokens[RDF_MAX_NUM_FILE_TOKENS];
+};
 
 
 

@@ -187,7 +187,7 @@ PR_PUBLIC_API(HT_Error) HT_SetSelectedView (HT_Pane pane, HT_View view);
 
 
 enum    _HT_ViewType	{
-        HT_VIEW_BOOKMARK=0, HT_VIEW_HISTORY, HT_VIEW_SITEMAP
+        HT_VIEW_BOOKMARK=0, HT_VIEW_HISTORY, HT_VIEW_SITEMAP, HT_VIEW_FILES
         } ;
 typedef	enum	_HT_ViewType		HT_ViewType;
 
@@ -394,6 +394,7 @@ PR_PUBLIC_API(HT_Resource)	HT_GetNextSelection(HT_View view, HT_Resource startin
 PR_PUBLIC_API(void)	HT_ToggleSelection(HT_Resource node);
 
 PR_PUBLIC_API(PRBool)	HT_Launch(HT_Resource node, MWContext *context);
+PR_PUBLIC_API(PRBool)	HT_LaunchURL(HT_Pane pane, char *url, MWContext *context);
 
 /*
  * HT_NewCursor, HT_GetNextItem, HT_DeleteCursor
