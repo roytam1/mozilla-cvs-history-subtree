@@ -595,6 +595,13 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     caller = cx->fp->down;
 
+    if ((cx->version == JSVERSION_DEFAULT || cx->version >= JSVERSION_1_4)
+            && (*caller->pc != JSOP_CALLSPECIAL)) {
+	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+			     JSMSG_BAD_INDIRECT_CALL, js_eval_str);
+        return JS_FALSE;
+    }
+
 #if JS_HAS_SCRIPT_OBJECT
     /*
      * Script.prototype.compile/exec and Object.prototype.eval all take an
