@@ -779,7 +779,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 #endif
 	NET_InitTotallyRandomStuffPeopleAddedProtocols();
 
-	NET_InitMailtoProtocol();  /* has a stub for MOZ_MAIL_NEWS */
+	NET_InitMailtoProtocol();
 #ifdef MOZ_MAIL_NEWS    
 	NET_InitNewsProtocol();
 	NET_InitMailboxProtocol();
@@ -5563,7 +5563,7 @@ NET_DestroyEvidence()
 	NET_SetMemoryCacheSize(oldSize); /* set it back up */
 }
 
-#ifndef MOZ_MAIL_NEWS
+#if !defined(MOZ_MAIL_NEWS) && !defined(MOZ_MAIL_COMPOSE)
 
 /* this whole mess should get moved to the mksmtp.c file
  * where it can share the InitMailtoProtocol function
@@ -5852,7 +5852,7 @@ NET_InitMailtoProtocol(void)
         NET_RegisterProtocolImplementation(&mailto_proto_impl, MAILTO_TYPE_URL);
 }
 
-#endif /* MOZ_MAIL_NEWS */
+#endif /* !MOZ_MAIL_NEWS && !MOZ_MAIL_COMPOSE */
 
 #ifdef PROFILE
 #pragma profile off
