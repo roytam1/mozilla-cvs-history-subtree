@@ -10,7 +10,7 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  * 
- * The Original Code is nsMemoryCacheDevice.h, released February 20, 2001.
+ * The Original Code is nsDiskCacheDevice.h, released February 20, 2001.
  * 
  * The Initial Developer of the Original Code is Netscape Communications
  * Corporation.  Portions created by Netscape are
@@ -63,6 +63,8 @@ public:
     virtual nsresult        OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize);
     
     virtual nsresult        Visit(nsICacheVisitor * visitor);
+
+    virtual nsresult        EvictEntries(const char * clientID);
 
 /* private: */
     void                    setPrefsObserver(nsIObserver* observer);
