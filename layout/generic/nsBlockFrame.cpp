@@ -550,6 +550,23 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
 }
 
+struct InlineReflowObjects {
+  nsHTMLReflowState rs;
+  nsHTMLReflowMetrics metrics;
+  nsBlockReflowState brs;
+
+  InlineReflowObjects(nsBlockFrame *aBlockFrame,
+                      nsIRenderingContext *aRenderingContext)
+    : rs(aBlockFrame->GetPresContext(), aBlockFrame, aRenderingContext,
+         nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE))
+    , metrics()
+    , brs(rs, aBlockFrame->GetPresContext(), aBlockFrame, metrics,
+          NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits(),
+          NS_BLOCK_MARGIN_ROOT & aBlockFrame->GetStateBits())
+  {
+  }
+};
+
 void
 nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 {
@@ -557,6 +574,8 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 
 #error "Handle floats"
   // XXX Don't forget floats.  They're the hard part.
+
+  InlineReflowObjects *iro = nsnull;
 
   PRInt32 lineNumber = 0;
   for (line_iterator line = begin_lines(), line_end = end_lines();
@@ -575,14 +594,14 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       // needs reflow for completeness, but this shouldn't ever lead to
       // additional reflow.
 
-      // XXX GET RID OF AS MANY OF THESE AS POSSIBLE
-      // XXX MOVE THEM OUTSIDE THE LOOP!
-      nsHTMLReflowState rs;
-      nsBlockReflowState brs;
-      nsSpaceManager sm;
+      if (!iro) {
+        iro = new InlineReflowObjects(this, aRenderingContext);
+        if (!iro)
+          break;
+      }
 
-      nsLineLayout ll(GetPresContext(), &sm, &rs, PR_TRUE);
-      ll.Init(&brs, brs.mMinLineHeight, lineNumber);
+      nsLineLayout ll(GetPresContext(), &sm, &iro->rs, PR_TRUE);
+      ll.Init(&iro->brs, iro->brs.mMinLineHeight, lineNumber);
       ll.BeginLineReflow(0, 0, NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
                          PR_FALSE, PR_FALSE);
 
@@ -590,17 +609,17 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       // inline frame in the line. FIX ME.
       if ((0 == ll.GetLineNumber()) &&
           (NS_BLOCK_HAS_FIRST_LETTER_STYLE & mState)) {
-        aLineLayout.SetFirstLetterStyleOK(PR_TRUE);
+        ll.SetFirstLetterStyleOK(PR_TRUE);
       }
       nsIFrame *frame = line->mFirstChild;
-      for (PRInt32 i = 0; i < aLine->GetChildCount();
+      for (PRInt32 i = 0; i < line->GetChildCount();
            i++, frame = frame->GetNextSibling()) {
         nsReflowStatus frameReflowStatus;
-        PRBool         pushedFrame;
-        nsresult rv = aLineLayout.ReflowFrame(aFrame, frameReflowStatus,
-                                               nsnull, pushedFrame);
+        PRBool pushedFrame;
+        nsresult rv = ll.ReflowFrame(frame, frameReflowStatus,
+                                     nsnull, pushedFrame);
         if (NS_FAILED(rv)) {
-          return rv;
+          break;
         }
       }
 
@@ -610,7 +629,8 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
       // Mark the line as dirty since we've put in into a fake state.
       // The FrameNeedsReflow call should usually (always?) be a no-op.
       line->MarkDirty();
-      GetPresContext()->PresShell()->FrameNeedsReflow(this, eResize);
+      GetPresContext()->PresShell()->FrameNeedsReflow(this,
+                                                      nsIPresShell::eResize);
     } else {
       line_pref = 0;
       line_min = 0;
@@ -620,6 +640,8 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
     if (line_pref > pref_result)
       pref_result = line_pref;
   }
+
+  delete iro;
 
   mMinWidth = min_result;
   mPrefWidth = pref_result;
