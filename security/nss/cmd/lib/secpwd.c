@@ -46,7 +46,7 @@
 #include <unistd.h>
 #endif
 
-#if( defined(_WINDOWS) && !defined(_WIN32_WCE)) || defined(XP_OS2_VACPP)
+#if defined(_WINDOWS) && !defined(_WIN32_WCE)
 #include <conio.h>
 #include <io.h>
 #define QUIET_FGETS quiet_fgets
@@ -82,7 +82,7 @@ static void echoOn(int fd)
 char *SEC_GetPassword(FILE *input, FILE *output, char *prompt,
 			       PRBool (*ok)(char *))
 {
-#if defined(_WINDOWS)
+#if defined(_WINDOWS) || defined(OS2)
     int isTTY = (input == stdin);
 #define echoOn(x)
 #define echoOff(x)
@@ -155,7 +155,7 @@ PRBool SEC_BlindCheckPassword(char *cp)
 
 /* Get a password from the input terminal, without echoing */
 
-#if defined(_WINDOWS) || defined(XP_OS2_VACPP)
+#ifdef _WINDOWS
 static char * quiet_fgets (char *buf, int length, FILE *input)
   {
   int c;
@@ -164,15 +164,9 @@ static char * quiet_fgets (char *buf, int length, FILE *input)
   /* fflush (input); */
   memset (buf, 0, length);
 
-#ifndef XP_OS2_VACPP
   if (input != stdin) {
      return fgets(buf,length,input);
   }
-#else
-  if (!isatty(fileno(input))) {
-     return fgets(buf,length,input);
-  }
-#endif
 
   while (1)
     {

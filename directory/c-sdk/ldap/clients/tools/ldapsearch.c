@@ -295,8 +295,9 @@ main( int argc, char **argv )
 static void
 options_callback( int option, char *optarg )
 {
-    char *s, *temp_arg, *ps_ptr, *ps_arg;
-
+    char *s, *p, *temp_arg, *ps_ptr, *ps_arg;
+    int i=0;
+    
     switch( option ) {
     case 'u':	/* include UFN */
 	++includeufn;
@@ -443,7 +444,7 @@ options_callback( int option, char *optarg )
 	    fprintf (stderr, "Invalid argument for -C\n");
 	    usage();
 	}
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (temp_arg = strdup( ps_ptr )) == NULL ) {
 	        perror ("strdup");
 	    	exit (LDAP_NO_MEMORY);
@@ -452,13 +453,13 @@ options_callback( int option, char *optarg )
 	    fprintf (stderr, "Invalid argument for -C\n");
 	    usage();
 	}
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (changesonly = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
 	}    
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (return_echg_ctls = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
@@ -515,39 +516,29 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     LDAPVirtualList	vlv_data;
     int			msgid = 0;
     int			length = 0;
-    int			mallocd_filter = 0;
 
-    if ( strstr( filtpatt, "%s" ) == NULL ) {	/* no need to sprintf() */
-	filterp = filtpatt;
+    length = strlen( filtpatt ) + strlen ( value ) +1;
+    if ( length > BUFSIZ ) {
+	if ((filterp = (char *)
+		malloc ( length )) == NULL) {
+		perror( "filter and/or pattern too long?" );
+		exit (LDAP_PARAM_ERROR);
+	}
     } else {
-	length = strlen( filtpatt ) + strlen ( value ) +1;
-	if ( length > BUFSIZ ) {
-	    if ((filterp = (char *)
-		    malloc ( length )) == NULL) {
-		    perror( "filter and/or pattern too long?" );
-		    exit (LDAP_PARAM_ERROR);
-	    }
-	    mallocd_filter = 1;
-	} else {
-	    filterp = filter;
-	}
-     
-#ifdef HAVE_SNPRINTF
-	if ( snprintf( filterp, length, filtpatt, value ) < 0 ) {
-	    perror( "snprintf filter (filter and/or pattern too long?)" );
-	    exit( LDAP_PARAM_ERROR );
-	}
-#else
-	sprintf( filterp, filtpatt, value );
-#endif
+	filterp = filter;
     }
+ 
+#ifdef HAVE_SNPRINTF
+    if ( snprintf( filterp, length, filtpatt, value ) < 0 ) {
+	perror( "snprintf filter (filter and/or pattern too long?)" );
+	exit( LDAP_PARAM_ERROR );
+    }
+#else
+    sprintf( filterp, filtpatt, value );
+#endif
 
     if ( *filterp == '\0' ) {	/* treat empty filter is a shortcut for oc=* */
-	if (mallocd_filter) {
-	    free(filterp);
-	    mallocd_filter = 0;
-	}
-	filterp = "(objectclass=*)";
+	strcpy( filterp, "(objectclass=*)" );
     }
 
     if ( ldaptool_verbose ) {
@@ -563,7 +554,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     }
 
     if ( ldaptool_not ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( LDAP_SUCCESS );
     }
 
@@ -623,7 +615,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	rc = ldap_create_sort_control(ld,keylist,0,&ldctrl);
 	ldap_free_sort_keylist(keylist);
 	if ( rc != LDAP_SUCCESS ) {
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld, "ldap_create_sort_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
 	}
@@ -663,14 +656,16 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	}
 	
 	if ( rc != LDAP_SUCCESS ) {
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld, "ldap_create_sort_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
 	}
 	if (LDAP_SUCCESS != (rc = ldap_create_virtuallist_control(ld,
 		&vlv_data, &ldctrl)))
 	{
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld,
 		"ldap_create_virtuallist_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
@@ -683,7 +678,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     if ( ldap_search_ext( ld, base, scope, filterp, attrs, attrsonly, 
 	    ldaptool_request_ctrls, NULL, NULL, -1, &msgid )
 	    != LDAP_SUCCESS ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( ldaptool_print_lderror( ld, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
@@ -723,7 +719,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
         }
     }
     if ( rc == -1 ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( ldaptool_print_lderror( ld, "ldap_result",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
@@ -746,7 +743,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 		    LDAPTOOL_CHECK4SSL_IF_APPROP );
 	    ldap_controls_free(ctrl_response_array);
 	    ldap_msgfree(res);
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return ( ldap_get_lderrno( ld, NULL, NULL ) );
 	}
 	
@@ -773,7 +771,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 		    LDAPTOOL_CHECK4SSL_IF_APPROP );
 	    ldap_controls_free(ctrl_response_array);
 	    ldap_msgfree(res);
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return ( ldap_get_lderrno( ld, NULL, NULL ) );
 	}
 	
@@ -820,7 +819,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	ldap_value_free( refs );
     }
 
-    if (mallocd_filter) free(filterp);
+    if (filterp != filter)
+	free (filterp);
 
     ldap_msgfree( res );
     return( rc );
@@ -858,7 +858,7 @@ print_entry( ld, entry, attrsonly )
 	LDAPControl	**ectrls;
 	int		chgtype, chgnumpresent;
 	long		chgnum;
-	char		*prevdn, longbuf[ 128 ];
+	char		*prevdn, intbuf[ 128 ];
 
 	if ( ldap_get_entry_controls( ld, entry, &ectrls ) == LDAP_SUCCESS ) {
 	    if ( ldap_parse_entrychange_control( ld, ectrls, &chgtype,
@@ -867,10 +867,10 @@ print_entry( ld, entry, attrsonly )
 			LDAPTOOL_PSEARCH_ATTR_PREFIX "changeType",
 			changetype_num2string( chgtype ), 0 );
 		if ( chgnumpresent ) {
-		    sprintf( longbuf, "%ld", chgnum );
+		    sprintf( intbuf, "%d", chgnum );
 		    write_string_attr_value(
 			    LDAPTOOL_PSEARCH_ATTR_PREFIX "changeNumber",
-			    longbuf, 0 );
+			    intbuf, 0 );
 		}
 		if ( NULL != prevdn ) {
 		    write_string_attr_value(
@@ -910,9 +910,9 @@ print_entry( ld, entry, attrsonly )
 #endif
 		    tmpfp = NULL;
 
-		    if ( LDAPTOOL_MKTEMP( tmpfname ) == NULL ) {
+		    if ( mktemp( tmpfname ) == NULL ) {
 			perror( tmpfname );
-		    } else if (( tmpfp = ldaptool_open_file( tmpfname, mode)) == NULL ) {
+		    } else if (( tmpfp = fopen( tmpfname, mode)) == NULL ) {
 			perror( tmpfname );
 		    } else if ( bvals[ i ]->bv_len > 0 &&
 			    fwrite( bvals[ i ]->bv_val,

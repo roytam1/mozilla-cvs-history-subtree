@@ -172,7 +172,7 @@ DSA_NewKeyFromSeed(const PQGParams *params,
     return rv;
 }
 
-static SECStatus 
+SECStatus 
 dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
                const unsigned char *kb)
 {

@@ -200,7 +200,6 @@ struct CERTOCSPCertIDStr {
     SECItem issuerSHA1KeyHash;		/* keep other hashes around when */
     SECItem issuerMD5KeyHash;              /* we have them */
     SECItem issuerMD2KeyHash;
-    PRArenaPool *poolp;
 };
 
 /*

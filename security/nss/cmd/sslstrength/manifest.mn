@@ -32,7 +32,7 @@
 
 CORE_DEPTH = ../../..
 
-MODULE = nss
+MODULE = security
 
 EXPORTS = 
 
@@ -41,9 +41,9 @@ CSRCS = sslstrength.c	\
 
 PROGRAM =  sslstrength
 
-REQUIRES = dbm seccmd
+REQUIRES = security dbm seccmd
 
-DEFINES += -DDLL_PREFIX=\"$(DLL_PREFIX)\" -DDLL_SUFFIX=\"$(DLL_SUFFIX)\"
+DEFINES = -DNSPR20
 
 PACKAGE_FILES = sslstrength
 

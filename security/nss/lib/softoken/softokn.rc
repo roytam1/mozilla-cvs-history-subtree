@@ -35,6 +35,11 @@
 #include <winver.h>
 
 #define MY_LIBNAME "softokn"
+#ifdef MOZ_CLIENT
+#define CLIENTS " for Clients"
+#else
+#define CLIENTS ""
+#endif
 
 #ifdef REMOTE_DBM
 #define DBM " with Shared Database"
@@ -42,7 +47,7 @@
 #define DBM ""
 #endif
 
-#define MY_FILEDESCRIPTION "NSS PKCS #11 Library" DBM
+#define MY_FILEDESCRIPTION "NSS PKCS #11 Library" CLIENTS DBM
 
 #define STRINGIZE(x) #x
 #define STRINGIZE2(x) STRINGIZE(x)

@@ -552,7 +552,6 @@ nssCryptokiTrust_GetAttributes
 (
   nssCryptokiObject *trustObject,
   nssSession *sessionOpt,
-  NSSItem *sha1_hash,
   nssTrustLevel *serverAuth,
   nssTrustLevel *clientAuth,
   nssTrustLevel *codeSigning,
@@ -565,7 +564,7 @@ nssCryptokiTrust_GetAttributes
     CK_BBOOL isToken;
     CK_TRUST saTrust, caTrust, epTrust, csTrust;
     CK_ATTRIBUTE_PTR attr;
-    CK_ATTRIBUTE trust_template[6];
+    CK_ATTRIBUTE trust_template[5];
     CK_ULONG trust_size;
 
     /* Use the trust object to find the trust settings */
@@ -575,7 +574,6 @@ nssCryptokiTrust_GetAttributes
     NSS_CK_SET_ATTRIBUTE_VAR(attr, CKA_TRUST_CLIENT_AUTH,      caTrust);
     NSS_CK_SET_ATTRIBUTE_VAR(attr, CKA_TRUST_EMAIL_PROTECTION, epTrust);
     NSS_CK_SET_ATTRIBUTE_VAR(attr, CKA_TRUST_CODE_SIGNING,     csTrust);
-    NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_CERT_SHA1_HASH,     sha1_hash);
     NSS_CK_TEMPLATE_FINISH(trust_template, attr, trust_size);
 
     status = nssToken_GetCachedObjectAttributes(trustObject->token, NULL,
@@ -611,8 +609,6 @@ nssCryptokiCRL_GetAttributes
   nssSession *sessionOpt,
   NSSArena *arenaOpt,
   NSSItem *encodingOpt,
-  NSSItem *subjectOpt,
-  CK_ULONG* crl_class,
   NSSUTF8 **urlOpt,
   PRBool *isKRLOpt
 )
@@ -620,15 +616,14 @@ nssCryptokiCRL_GetAttributes
     PRStatus status;
     NSSSlot *slot;
     nssSession *session;
+    CK_BBOOL isToken;
     CK_ATTRIBUTE_PTR attr;
-    CK_ATTRIBUTE crl_template[7];
+    CK_ATTRIBUTE crl_template[5];
     CK_ULONG crl_size;
     PRUint32 i;
 
     NSS_CK_TEMPLATE_START(crl_template, attr, crl_size);
-    if (crl_class) {
-        NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_CLASS);
-    }
+    /* NSS_CK_SET_ATTRIBUTE_VAR(attr, CKA_TOKEN, isToken); */
     if (encodingOpt) {
 	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_VALUE);
     }
@@ -637,9 +632,6 @@ nssCryptokiCRL_GetAttributes
     }
     if (isKRLOpt) {
 	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_NETSCAPE_KRL);
-    }
-    if (subjectOpt) {
-	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_SUBJECT);
     }
     NSS_CK_TEMPLATE_FINISH(crl_template, attr, crl_size);
 
@@ -663,9 +655,6 @@ nssCryptokiCRL_GetAttributes
     }
 
     i=0;
-    if (crl_class) {
-        NSS_CK_ATTRIBUTE_TO_ULONG(&crl_template[i], *crl_class); i++;
-    }
     if (encodingOpt) {
 	NSS_CK_ATTRIBUTE_TO_ITEM(&crl_template[i], encodingOpt); i++;
     }
@@ -674,9 +663,6 @@ nssCryptokiCRL_GetAttributes
     }
     if (isKRLOpt) {
 	NSS_CK_ATTRIBUTE_TO_BOOL(&crl_template[i], *isKRLOpt); i++;
-    }
-    if (subjectOpt) {
-	NSS_CK_ATTRIBUTE_TO_ITEM(&crl_template[i], subjectOpt); i++;
     }
     return PR_SUCCESS;
 }

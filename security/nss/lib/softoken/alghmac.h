@@ -46,14 +46,13 @@ HMAC_Destroy(HMACContext *cx);
  *  hash_alg	the algorithm with which the HMAC is performed.  This 
  *		should be, SEC_OID_MD5, SEC_OID_SHA1, or SEC_OID_MD2.
  *  secret	the secret with which the HMAC is performed.
- *  secret_len	the length of the secret.
- *  isFIPS	true if conforming to FIPS 198.
+ *  secret_len	the length of the secret, limited to at most 64 bytes.
  *
- * NULL is returned if an error occurs.
+ * NULL is returned if an error occurs or the secret is > 64 bytes.
  */
 extern HMACContext *
 HMAC_Create(const SECHashObject *hashObj, const unsigned char *secret, 
-	    unsigned int secret_len, PRBool isFIPS);
+	    unsigned int secret_len);
 
 /* reset HMAC for a fresh round */
 extern void

@@ -32,7 +32,7 @@
 #
 CORE_DEPTH = ../../..
 
-MODULE = nss
+MODULE = security
 
 ifndef FREEBL_RECURSIVE_BUILD
   LIBRARY_NAME = freebl

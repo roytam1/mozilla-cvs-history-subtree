@@ -245,10 +245,9 @@ PK11_ImportDERPrivateKeyInfoAndReturnKey(PK11SlotInfo *slot, SECItem *derPKI,
     SECStatus rv = SECFailure;
 
     temparena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    pki = PORT_ArenaZNew(temparena, SECKEYPrivateKeyInfo);
-    pki->arena = temparena;
+    pki = PORT_ZNew(SECKEYPrivateKeyInfo);
 
-    rv = SEC_ASN1DecodeItem(pki->arena, pki, SECKEY_PrivateKeyInfoTemplate,
+    rv = SEC_ASN1DecodeItem(temparena, pki, SECKEY_PrivateKeyInfoTemplate,
 		derPKI);
     if( rv != SECSuccess ) {
 	goto finish;
@@ -259,8 +258,10 @@ PK11_ImportDERPrivateKeyInfoAndReturnKey(PK11SlotInfo *slot, SECItem *derPKI,
 
 finish:
     if( pki != NULL ) {
-	/* this zeroes the key and frees the arena */
 	SECKEY_DestroyPrivateKeyInfo(pki, PR_TRUE /*freeit*/);
+    }
+    if( temparena != NULL ) {
+	PORT_FreeArena(temparena, PR_TRUE);
     }
     return rv;
 }
@@ -305,7 +306,6 @@ PK11_ImportAndReturnPrivateKey(PK11SlotInfo *slot, SECKEYRawPrivateKey *lpk,
 
     switch (lpk->keyType) {
     case rsaKey:
-	    keyType = CKK_RSA;
 	    PK11_SETATTRS(attrs, CKA_UNWRAP, (keyUsage & KU_KEY_ENCIPHERMENT) ?
 				&cktrue : &ckfalse, sizeof(CK_BBOOL) ); attrs++;
 	    PK11_SETATTRS(attrs, CKA_DECRYPT, (keyUsage & KU_DATA_ENCIPHERMENT) ?
@@ -349,7 +349,6 @@ PK11_ImportAndReturnPrivateKey(PK11SlotInfo *slot, SECKEYRawPrivateKey *lpk,
 				lpk->u.rsa.coefficient.len); attrs++;
 	    break;
     case dsaKey:
-	    keyType = CKK_DSA;
 	    /* To make our intenal PKCS #11 module work correctly with 
 	     * our database, we need to pass in the public key value for 
 	     * this dsa key. We have a netscape only CKA_ value to do this.
@@ -383,7 +382,6 @@ PK11_ImportAndReturnPrivateKey(PK11SlotInfo *slot, SECKEYRawPrivateKey *lpk,
 					lpk->u.dsa.privateValue.len); attrs++;
 	    break;
      case dhKey:
-	    keyType = CKK_DH;
 	    /* To make our intenal PKCS #11 module work correctly with 
 	     * our database, we need to pass in the public key value for 
 	     * this dh key. We have a netscape only CKA_ value to do this.

@@ -209,19 +209,18 @@ EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
 else
 ifeq ($(OS_ARCH), SunOS)
-ifdef SOLARIS_USE_FORTE6
-SOLARIS_CXX_LIB=Crun
-else
-ifeq ($(OS_RELEASE),5.6)
-SOLARIS_CXX_LIB=C
-else
-SOLARIS_CXX_LIB=Crun
-endif
-endif
-EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -l$(SOLARIS_CXX_LIB) \
+OS_VERS		:= $(shell uname -r)
+ifeq ($(OS_VERS),5.6)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
 		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
 	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lCrun \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
 else
 endif
 EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
@@ -315,7 +314,7 @@ ifeq ($(HAVE_LIBNLS), 1)
 # $(NLS_VERSION_FILE)
 	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
 	$(OBJDIR_NAME) ../../../../dist ldapsdk \
-	$(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
 	libnls$(NLS_LIBVERSION) \
 	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
 	../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt

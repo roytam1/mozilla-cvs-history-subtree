@@ -33,7 +33,7 @@
 
 CORE_DEPTH	= ../../..
 
-MODULE = nss
+MODULE = security
 
 CSRCS = p7content.c
 
