@@ -1169,7 +1169,8 @@ static int
 parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	char *msg, int freeit )
 {
-    int		rc, lderr;
+    int		rc, lderr, errno;
+    int		pw_days=0, pw_hrs=0, pw_mins=0, pw_secs=0; /* for pwpolicy */
     char	**refs = NULL;
     LDAPControl	**ctrls;
 
@@ -1180,7 +1181,7 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 	return( rc );
     }
 
-    /* check for authentication response control */
+    /* check for authentication response control & PWPOLICY control*/
     if ( NULL != ctrls ) {
 	int		i;
 	char		*s;
@@ -1196,6 +1197,41 @@ parse_result( LDAP *ld, LDAPMessage *res, struct berval **servercredp,
 		    }
 		fprintf( stderr, "%s: bound as %s\n", ldaptool_progname, s );
 	    }
+
+	    if ( 0 == strcmp( ctrls[i]->ldctl_oid,
+			LDAP_CONTROL_PWEXPIRING )) {
+
+		    /* Warn the user his passwd is to expire */
+		    errno = 0;	
+		    pw_secs = atoi(ctrls[i]->ldctl_value.bv_val);
+		    if ( pw_secs > 0  && errno != ERANGE ) {
+			if ( pw_secs > 86400 ) {
+				pw_days = ( pw_secs / 86400 );
+				pw_secs = ( pw_secs % 86400 );
+			} 
+			if ( pw_secs > 3600 ) {
+				pw_hrs = ( pw_secs / 3600 );
+				pw_secs = ( pw_secs % 3600 );
+			}
+			if ( pw_secs > 60 ) {
+				pw_mins = ( pw_secs / 60 );
+				pw_secs = ( pw_secs % 60 );
+			}
+
+			printf("%s: Warning ! Your password will expire after ", ldaptool_progname);
+			if ( pw_days ) {
+				printf ("%d days, ", pw_days);
+			}
+			if ( pw_hrs ) {
+				printf ("%d hrs, ", pw_hrs);
+			}
+			if ( pw_mins ) {
+				printf ("%d mins, ", pw_mins);
+			}
+			printf("%d seconds.\n", pw_secs);
+			
+		   }
+		}
 	}
 	ldap_controls_free( ctrls );
     }

@@ -119,6 +119,7 @@ extern FILE		*ldaptool_fp;
 extern char		*ldaptool_charset;
 extern char		*ldaptool_convdir;
 extern LDAPControl	*ldaptool_request_ctrls[];
+extern int		pw_expiring;
 
 
 /*
