@@ -1005,7 +1005,10 @@ void CRDFOutliner::SetHTView(HT_View v)
 void CRDFOutliner::DisplayURL()
 {
 	char* url = HT_GetNodeURL(m_Node);
+	
+	// Hacking the window target (Added by Dave on 7/12/98)
 	CAbstractCX * pCX = FEU_GetLastActiveFrameContext();
+
 	ASSERT(pCX != NULL);
 	if (pCX == NULL)
 		return;
@@ -1076,7 +1079,9 @@ void CRDFOutliner::DisplayURL()
 		if (pLocalName)
 			XP_FREE(pLocalName);
 	}
-	else pCX->NormalGetUrl((LPTSTR) url); // Do a normal fetch.
+	else if (m_WindowTarget == "")
+		pCX->NormalGetUrl((LPTSTR) url, "rdftree"); // Do a normal fetch.
+	else pCX->NormalGetUrl((LPTSTR) url, "rdftree", (char*)(const char*)m_WindowTarget);
 }
 
 BOOL CRDFOutliner::TestRowCol(POINT point, int &iRow, int &iCol)
@@ -3897,15 +3902,15 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url)
+CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url, int32 param_count, char** param_names, char** param_values)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	XP_BZERO(ns, sizeof(HT_NotificationStruct));
 	ns->notifyProc = embeddedTreeNotifyProcedure;
 	ns->data = NULL;
-	
+	theApp.m_pRDFCX->TrackRDFWindow(pParent);
 	// Construct the pane and give it our notification struct
-	HT_Pane thePane = HT_PaneFromURL(url, ns, 0);  
+	HT_Pane thePane = HT_PaneFromURL(url, ns, 0, param_count, param_names, param_values);  
 	
 	// Create the windows
 	CRect rClient(xPos, yPos, width, height);
@@ -3922,7 +3927,7 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 
 	// Set our FE data to be the outliner.
 	HT_SetViewFEData(HT_GetSelectedView(thePane), newParent->GetOutliner());
-
+    
 	return (CRDFOutliner*)newParent->GetOutliner();
 }
 

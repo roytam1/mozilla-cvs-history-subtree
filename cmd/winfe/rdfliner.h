@@ -127,6 +127,9 @@ private:
 	CString m_BackgroundImageURL;			// The URL of the background image.
 	CRDFImage* m_pBackgroundImage;	// The image for the background.
 
+	CString m_WindowTarget;			// The target window for this tree view.  If == to "", then the
+									// last active window is assumed.
+
 public:
     CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane = NULL, HT_View theView = NULL);
 	~CRDFOutliner ( );
@@ -139,9 +142,10 @@ public:
 	int GetSortColumn() { return m_nSortColumn; }
 	int GetSortType() { return m_nSortType; }
 	
-	void SetHTView(HT_View v); 
-	
 	// Setters
+	void SetHTView(HT_View v); 
+	void SetWindowTarget(char* target) { m_WindowTarget = target; }
+
 	void SetSortType(int sortType) { m_nSortType = sortType; }
 	void SetSortColumn(int sortColumn) { m_nSortColumn = sortColumn; }
     void SetSelectedColumn(int nColumn) { m_nSelectedColumn = nColumn; }
@@ -427,7 +431,7 @@ public:
 
 	void SwitchHTViews(HT_View htView);
 
-	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url);
+	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url,  int32 param_count, char** param_names, char** param_values);
 		// This function can be called to create an embedded RDF tree view inside another window.
 		// Used to embed the tree in HTML.
 

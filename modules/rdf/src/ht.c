@@ -1143,7 +1143,8 @@ paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool a
 
 		ev->eventType = HT_EVENT_DEFAULT_NOTIFICATION_MASK;
 
-		pane->rns = RDF_AddNotifiable(gNCDB, bmkNotifFunc, ev, pane);
+		pane->rns = RDF_AddNotifiable(db, 
+                                              (autoFlushFlag ? bmkNotifFunc : htrdfNotifFunc), ev, pane);
 		freeMem(ev);
 
 		if ((pane->hash = PL_NewHashTable(500, idenHash, PL_CompareValues,
@@ -1189,14 +1190,18 @@ HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush)
 
 
 PR_PUBLIC_API(HT_Pane)
-HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush)
+HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush, int32 param_count, 
+               char** param_names, char** param_values)
 {
 	HT_Pane			pane = NULL;
 	RDF			db;
 	RDF_Resource		r;
 	char			*dbstr[2];
         char*                   dburl = getBaseURL(url);
-
+        int32                   pn = 0;
+        HT_View                 view;
+	HT_Column		*columnList, column, nextColumn;
+        
 	XP_ASSERT(url != NULL);
 
 	dbstr[0] = dburl;
@@ -1204,12 +1209,29 @@ HT_PaneFromURL(char *url, HT_Notification n, PRBool autoFlush)
 	if ((db = RDF_GetDB(dbstr)) != NULL) {
           if ((r = RDF_GetResource(db, url, 1)) != NULL)
             {
-              readRDFFile (dburl, r, 0, db->translators[0]);
-              pane = paneFromResource(db, r, n, autoFlush, 1, 1);
+              pane = paneFromResource(db, r, n, autoFlush, 1, 0);
+              view = pane->viewList;
             }
 	}
-          freeMem(dburl);        
-          return (pane);
+        columnList = &view->columns;
+        while (pn < param_count) {
+          char* param_name = *(param_names + pn) ;
+          if (!param_name) break;
+          if (strcmp(param_name, "Column") == 0) {
+            char* param_value = *(param_values + pn) ;
+            RDF_Resource r    = RDF_GetResource(db, param_value, 1);
+            column = (HT_Column)getMem(sizeof(HT_ColumnStruct));
+            column->token = r;
+            column->tokenType = HT_COLUMN_STRING;
+            *columnList = column;
+            columnList = &(column->next);
+            column->name = copyString(param_value);
+          }	
+          pn++;
+        }    
+        readRDFFile (dburl, r, 0, db->translators[0]);     
+        freeMem(dburl);        
+        return (pane);
 }
 
 

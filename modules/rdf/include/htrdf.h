@@ -146,7 +146,8 @@ typedef HT_NotificationStruct* HT_Notification;
 
 PR_PUBLIC_API(HT_Pane) HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush);
 
-PR_PUBLIC_API(HT_Pane) HT_PaneFromURL(char* url, HT_Notification n, PRBool autoFlush);
+PR_PUBLIC_API(HT_Pane) HT_PaneFromURL(char* url, HT_Notification n, PRBool autoFlush, int32 param_count,
+                                      char** param_names, char** param_values);
 
 /* NewQuickFilePane
  * Creates a pane consisting of one view.  This view has the RDF resource
