@@ -209,7 +209,7 @@ HICON FetchLocalFileIcon(HT_Resource r);
 CRDFImage* FetchCustomIcon(HT_Resource r, CCustomImageObject* pObject, BOOL largeIcon);
 IconType DetermineIconType(HT_Resource pNode, BOOL largeIcon);
 
-void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int ySrcOffset = -1);
+void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int xSrcOffset=-1, int ySrcOffset=-1);
 		// This function tiles and paints the background image in the tree.
 void ResolveToPaletteColor(COLORREF& color, HPALETTE hPal);
 #endif // RDFACC_H

@@ -561,6 +561,7 @@ BOOL CRDFToolbarButton::OnEraseBkgnd( CDC* pDC )
 
 void CRDFToolbarButton::RemoveButtonFocus(void)
 {
+/*
 	// need to make the parent redraw
 	POINT point;
 	GetCursorPos(&point);
@@ -587,7 +588,7 @@ void CRDFToolbarButton::RemoveButtonFocus(void)
 			}
 		}
 	}
-
+*/
 	CToolbarButton::RemoveButtonFocus();
 }
 
@@ -634,13 +635,6 @@ void CRDFToolbarButton::OnPaint()
 		innerRect.InflateRect(-BORDERSIZE, -BORDERSIZE);
 
 		int oldMode = ::SetBkMode(hMemDC, TRANSPARENT);
-		BOOL transBlt = FALSE;
-
-		// Always begin by filling with the transparent color.
-		// There will be a background. Fill with the handy transparent color.
-		HBRUSH hRegBrush = (HBRUSH) ::CreateSolidBrush(RGB(255,0,255));
-		::FillRect(hMemDC, rcClient, hRegBrush);
-		
 		if (foundOnRDFToolbar())
 		{
 			CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
@@ -654,8 +648,14 @@ void CRDFToolbarButton::OnPaint()
 			}
 			else 
 			{
-				// There will be a background. Note that we want to do a transblt.
-				transBlt = TRUE;
+				// There is a background. Let's do a tile on the rect corresponding to our position
+				// in the parent toolbar.
+				CWnd* pGrandParent = pToolbar->GetParent();
+				CRect offsetRect(rcClient);
+				MapWindowPoints(pGrandParent, &offsetRect);
+
+				// Now we want to fill the given rectangle.
+				PaintBackground(hMemDC, rcClient, pToolbar->GetBackgroundImage(), offsetRect.left, offsetRect.top);
 			}
 		}
 		else
@@ -718,12 +718,9 @@ void CRDFToolbarButton::OnPaint()
 
 		::SetBkMode(hMemDC, oldMode);
 
-		if (!transBlt)
-			::BitBlt(hSrcDC, 0, 0, rcClient.Width(), rcClient.Height(), hMemDC, 0, 0,
+		::BitBlt(hSrcDC, 0, 0, rcClient.Width(), rcClient.Height(), hMemDC, 0, 0,
 						SRCCOPY);
-		else FEU_TransBlt( hSrcDC, 0, 0, rcClient.Width(), rcClient.Height(), hMemDC, 0, 0,
-							WFE_GetUIPalette(NULL), RGB(255,0,255)); 
-
+	
 		::SelectPalette(hMemDC, hOldMemPalette, FALSE);
 		::SelectPalette(hSrcDC, hOldPalette, FALSE);
 
@@ -1382,6 +1379,7 @@ CRDFToolbar::CRDFToolbar(HT_View htView, int nMaxButtons, int nToolbarStyle, int
 	 : CNSToolbar2(nMaxButtons, nToolbarStyle, nPicturesAndTextHeight, nPicturesHeight, nTextHeight)
 {
 	// Set our view and point HT at us.
+	m_pBackgroundImage = NULL;
 	m_ToolbarView = htView;
 	HT_SetViewFEData(htView, this);
 
@@ -1508,7 +1506,12 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	
 	if (buttonSize.cy > m_nRowHeight)
 		m_nRowHeight = buttonSize.cy;
-	
+	else if (buttonSize.cy < m_nRowHeight)
+	{
+		CSize size = pButton->GetBitmapSize();
+		pButton->SetBitmapSize(CSize(size.cx, size.cy + (m_nRowHeight - buttonSize.cy)));
+	}
+
 	AddButtonAtIndex(pButton); // Have to put the button in the array, since the toolbar base class depends on it.
 
 	// Update the button if it's a command.
@@ -2181,7 +2184,7 @@ CIsomorphicCommandMap* CIsomorphicCommandMap::InitializeCommandMap(const CString
 		result->AddItem("command:reload", 2);
 		result->AddItem("command:home", 3);
 		result->AddItem("command:print", 7);
-		result->AddItem("command:stop", 8);
+		result->AddItem("command:stop", 11);
 	}
 	return result;
 }

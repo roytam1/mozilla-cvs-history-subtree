@@ -1827,7 +1827,7 @@ void CRDFOutliner::OnPaint()
 	{
 		int imageHeight = m_pBackgroundImage->bmpInfo->bmiHeader.biHeight;
 		int ySrcOffset = (bgFillRect.top + m_iTopLine*m_itemHeight) % imageHeight;
-		PaintBackground(pdc, bgFillRect, m_pBackgroundImage, ySrcOffset);
+		PaintBackground(pdc, bgFillRect, m_pBackgroundImage, 0, ySrcOffset);
 	}
 	else
 	{
@@ -1897,7 +1897,7 @@ void DrawBGSubimage(CRDFImage* pImage, HDC hDC, int xSrcOffset, int ySrcOffset, 
 	}
 }
 
-void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int ySrcOffset)
+void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int xSrcOffset, int ySrcOffset)
 { 
 	int totalWidth = rect.Width();
 	int totalHeight = rect.Height();
@@ -1912,9 +1912,11 @@ void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int ySrcOffset)
 	int xDstOffset = rect.left;
 	int yDstOffset = rect.top;
 	
-	int xSrcOffset = 0;
 	if (ySrcOffset == -1) // Assume we don't have a scrolled offset in the view we're drawing into.
 	  ySrcOffset = rect.top % imageHeight;
+
+	if (xSrcOffset == -1) // Assume we don't have a scrolled offset in the view we're drawing into.
+	  xSrcOffset = rect.left % imageWidth;
 
 	int xRemainder = imageWidth - xSrcOffset;
 	int yRemainder = imageHeight - ySrcOffset;
