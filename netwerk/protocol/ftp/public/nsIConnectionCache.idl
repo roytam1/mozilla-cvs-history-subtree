@@ -22,16 +22,13 @@
 
 #include "nsISupports.idl"
 
-%{C++
-class nsConnectionCacheObj;
-%}
-
-[ptr] native nsConnectionCacheObj(nsConnectionCacheObj);
+interface nsIFTPChannel;
+interface nsIURI;
 
 [uuid(D40BB480-8709-11d3-A184-0050041CAF44)]
 interface nsIConnectionCache : nsISupports
 {
-    nsConnectionCacheObj RemoveConn(in string aKey);
-    void InsertConn(in string aKey, in nsConnectionCacheObj aConn);
+    nsIFTPChannel RemoveConn(in nsIURI aKey);
+    void InsertConn(in nsIURI aKey, in nsIFTPChannel aConn);
 };
 

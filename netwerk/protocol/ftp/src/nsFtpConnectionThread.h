@@ -84,11 +84,12 @@ typedef enum _FTP_STATE {
 // higher level ftp actions
 typedef enum _FTP_ACTION { GET, PUT, MKDIR, DEL} FTP_ACTION;
 
-class nsFtpConnectionThread : public nsIRunnable,
+class nsFtpConnectionThread : public nsIStreamListener,
                               public nsIRequest {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSIRUNNABLE
+    NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSISTREAMOBSERVER
     NS_DECL_NSIREQUEST
 
     nsFtpConnectionThread();
@@ -108,6 +109,8 @@ public:
 
     // use this to provide a stream to be written to the server.
     nsresult SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount);
+
+    nsresult Connect();
 
 private:
     ///////////////////////////////////
@@ -145,6 +148,9 @@ private:
                                      PRUint32 bufferSegmentSize,
                                      PRUint32 bufferMaxSize,
                                      nsIChannel** o_pTrans);
+
+    nsresult EnsureControlConnection();
+    nsresult ControlAsyncWrite(nsCString& command);
     
     ///////////////////////////////////
     // Private members
@@ -157,11 +163,8 @@ private:
     nsCAutoString       mResponseMsg;       // the last command response text
 
         // ****** channel/transport/stream vars 
-    nsCOMPtr<nsISocketTransportService> mSTS;       // the socket transport service
     nsCOMPtr<nsIChannel>         mCPipe;            // the command channel transport
     nsCOMPtr<nsIChannel>         mDPipe;            // the data channel transport
-    nsCOMPtr<nsIOutputStream>    mCOutStream;       // command channel output
-    nsCOMPtr<nsIInputStream>     mCInStream;        // command channel input
 
         // ****** consumer vars
     nsCOMPtr<nsIStreamListener>     mListener;        // the consumer of our read events
@@ -178,8 +181,6 @@ private:
     nsCAutoString       mCacheKey;      // the key into the cache hash.
     PRBool              mCachedConn;    // is this connection from the cache
     nsCOMPtr<nsIConnectionCache> mConnCache;// the nsISupports proxy ptr to our connection cache
-    nsConnectionCacheObj         *mConn;    // The cached connection.
-    
 
         // ****** protocol interpretation related state vars
     nsAutoString        mUsername;      // username
@@ -198,8 +199,6 @@ private:
     nsXPIDLCString         mPath;       // the url's path
 
         // ****** other vars
-    PRBool                 mConnected;  // are we connected.
-    PRBool                 mSentStart;  // have we sent an OnStartRequest() notification
     PRUint8                mSuspendCount;// number of times we've been suspended.
     PRUint32               mBufferSegmentSize;
     PRUint32               mBufferMaxSize;
@@ -208,10 +207,15 @@ private:
     PRUint32               mWriteCount;    // The amount of data to write to the server.
     PRBool                 mFireCallbacks; // Fire the listener callbacks.
 
-    nsCOMPtr<nsIEventQueue> mEventQueue;
     nsCOMPtr<nsIPrompt>     mPrompter;
     PRBool                  mIPv6Checked;
     char                    *mIPv6ServerAddress; // Server IPv6 address; null if server not IPv6
+
+    // ***** control read gvars
+    PRBool                  mControlReadContinue;
+    PRBool                  mControlReadBrokenLine;
+    nsCAutoString           mControlReadCarryOverBuf;
+  
 };
 
 #define NS_FTP_BUFFER_READ_SIZE             (8*1024)

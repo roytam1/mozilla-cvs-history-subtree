@@ -71,18 +71,18 @@ static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
 static NS_DEFINE_CID(kErrorServiceCID, NS_ERRORSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
+nsFtpProtocolHandler::nsFtpProtocolHandler() {
+        NS_INIT_REFCNT();
+}
 
 nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
-    if (mLock) PR_DestroyLock(mLock);
 }
 
-NS_IMPL_THREADSAFE_ADDREF(nsFtpProtocolHandler);
-NS_IMPL_THREADSAFE_RELEASE(nsFtpProtocolHandler);
-NS_IMPL_QUERY_INTERFACE3(nsFtpProtocolHandler, 
-                         nsIProtocolHandler, 
-                         nsIConnectionCache, 
-                         nsIObserver);
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpProtocolHandler, 
+                              nsIProtocolHandler, 
+                              nsIConnectionCache, 
+                              nsIObserver);
 
 nsresult
 nsFtpProtocolHandler::Init() {
@@ -95,22 +95,15 @@ nsFtpProtocolHandler::Init() {
     mProxySvc = do_GetService(kProtocolProxyServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
    
-    NS_NEWXPCOM(mRootConnectionList, nsHashtable);
+    mRootConnectionList = new nsSupportsHashtable(16, PR_TRUE);  /* xxx what should be the size of this hashtable?? */
     if (!mRootConnectionList) return NS_ERROR_OUT_OF_MEMORY;
-    rv = NS_NewThreadPool(getter_AddRefs(mPool), 
-                          NS_FTP_MIN_CONNECTION_COUNT,
-                          NS_FTP_MAX_CONNECTION_COUNT,
-                          NS_FTP_CONNECTION_STACK_SIZE);
-    if (NS_FAILED(rv)) return rv;
+    NS_LOG_NEW_XPCOM(mRootConnectionList, "nsSupportsHashtable", sizeof(nsSupportsHashtable), __FILE__, __LINE__);
 
     nsCOMPtr<nsIObserverService> obsServ = do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv)) {
         nsAutoString topic; topic.AssignWithConversion(NS_XPCOM_SHUTDOWN_OBSERVER_ID);
         obsServ->AddObserver(this, topic.GetUnicode());
     }
-
-    mLock = PR_NewLock();
-    if (!mLock) return NS_ERROR_OUT_OF_MEMORY;
 
     // XXX hack until xpidl supports error info directly (http://bugzilla.mozilla.org/show_bug.cgi?id=13423)
     nsCOMPtr<nsIErrorService> errorService = do_GetService(kErrorServiceCID, &rv);
@@ -166,18 +159,23 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
     nsresult rv = NS_OK;
 
     PRBool useProxy = PR_FALSE;
-    
-    nsFTPChannel* channel;
-    rv = nsFTPChannel::Create(nsnull, NS_GET_IID(nsIChannel), (void**)&channel);
-    if (NS_FAILED(rv)) return rv;
 
-    rv = channel->Init(url, this, mPool);
+    nsFTPChannel* channel = nsnull;
+    rv = RemoveConn(url, (nsIFTPChannel**)&channel);
+    
+    /* check to see if we have a channel that can be reused */
+    if (NS_FAILED(rv) || !channel)
+    {
+        rv = nsFTPChannel::Create(nsnull, NS_GET_IID(nsIChannel), (void**)&channel);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    rv = channel->Init(url, this);
     if (NS_FAILED(rv)) {
-        NS_RELEASE(channel);
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("nsFtpProtocolHandler::NewChannel() FAILED\n"));
         return rv;
     }
-    
+
     if (NS_SUCCEEDED(mProxySvc->GetProxyEnabled(&useProxy)) && useProxy)
     {
         rv = mProxySvc->ExamineForProxy(url, channel);
@@ -243,27 +241,35 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 
 // nsIConnectionCache methods
 NS_IMETHODIMP
-nsFtpProtocolHandler::RemoveConn(const char *aKey, nsConnectionCacheObj* *_retval) {
+nsFtpProtocolHandler::RemoveConn(nsIURI *aKey, nsIFTPChannel* *_retval) {
     NS_ASSERTION(_retval, "null pointer");
-    nsCStringKey key(aKey);
-    nsAutoLock lock(mLock);
-    *_retval = (nsConnectionCacheObj*)mRootConnectionList->Remove(&key);
+    NS_ASSERTION(aKey, "null pointer");
+    
+    *_retval = nsnull;
+
+    nsXPIDLCString spec;
+    aKey->GetPrePath(getter_Copies(spec));
+    
+    nsCStringKey stringKey(spec);
+    
+    nsISupports* supports;
+    if (mRootConnectionList->Remove(&stringKey, ((nsISupports**)&supports)))
+        NS_ADDREF(*_retval = (nsIFTPChannel*) supports);
+    
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsFtpProtocolHandler::InsertConn(const char *aKey, nsConnectionCacheObj *aConn) {
+nsFtpProtocolHandler::InsertConn(nsIURI *aKey, nsIFTPChannel *aConn) {
     NS_ASSERTION(aConn, "null pointer");
-    nsCStringKey key(aKey);
-    nsAutoLock lock(mLock);
-    mRootConnectionList->Put(&key, aConn);
-    return NS_OK;
-}
+    NS_ASSERTION(aKey, "null pointer");
 
-// cleans up a connection list entry
-static PRBool PR_CALLBACK CleanupConnEntry(nsHashKey *aKey, void *aData, void *closure) {
-    delete (nsConnectionCacheObj*)aData;
-    return PR_TRUE;
+    nsXPIDLCString spec;
+    aKey->GetPrePath(getter_Copies(spec));
+    nsCStringKey stringKey(spec);
+
+    mRootConnectionList->Put(&stringKey, aConn);
+    return NS_OK;
 }
 
 // nsIObserver method
@@ -273,7 +279,6 @@ nsFtpProtocolHandler::Observe(nsISupports     *aSubject,
                               const PRUnichar *someData ) {
     nsresult rv;
     if (mRootConnectionList) {
-        mRootConnectionList->Reset(CleanupConnEntry);
         NS_DELETEXPCOM(mRootConnectionList);
         mRootConnectionList = nsnull;
     }

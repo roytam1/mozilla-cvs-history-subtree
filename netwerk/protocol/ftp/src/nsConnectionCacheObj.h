@@ -37,14 +37,10 @@
 // "HostPort" NOTE: no seperators.
 class nsConnectionCacheObj {
 public:
-    nsConnectionCacheObj(nsIChannel *aChannel,
-                   nsIInputStream *aInputStream,
-                   nsIOutputStream *aOutputStream)
+    nsConnectionCacheObj(nsIChannel *aChannel)
     { 
         MOZ_COUNT_CTOR(nsConnectionCacheObj);
         mSocketTransport = aChannel;
-        mInputStream = aInputStream;
-        mOutputStream = aOutputStream;
         mServerType = 0;
         mList = PR_FALSE;
     }
@@ -52,9 +48,7 @@ public:
         MOZ_COUNT_DTOR(nsConnectionCacheObj);
     }
 
-    nsCOMPtr<nsIChannel>       mSocketTransport;      // the connection
-    nsCOMPtr<nsIInputStream>   mInputStream;          // to read from server
-    nsCOMPtr<nsIOutputStream>  mOutputStream;         // to write to server
+    nsCOMPtr<nsIChannel>  mSocketTransport;      // the connection
     PRUint32         mServerType;           // what kind of server is it.
     nsCAutoString    mCwd;                  // what dir are we in
     PRBool           mList;                 // are we sending LIST or NLST

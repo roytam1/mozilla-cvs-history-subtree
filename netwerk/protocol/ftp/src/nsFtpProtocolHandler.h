@@ -48,9 +48,7 @@ public:
     NS_DECL_NSIOBSERVER
     
     // nsFtpProtocolHandler methods:
-    nsFtpProtocolHandler() {
-        NS_INIT_REFCNT();
-    };
+    nsFtpProtocolHandler();
     virtual ~nsFtpProtocolHandler();
     
     // Define a Create method to be used with a factory:
@@ -58,14 +56,8 @@ public:
     nsresult Init();
     
 protected:
-    nsHashtable*            mRootConnectionList;  // hash of FTP connections
-    nsCOMPtr<nsIThreadPool> mPool;                // thread pool for FTP connections
-    nsCOMPtr<nsIProtocolProxyService>       mProxySvc;
-    PRLock*                 mLock; 
+    nsSupportsHashtable*                mRootConnectionList;  // hash of FTP connections
+    nsCOMPtr<nsIProtocolProxyService>   mProxySvc;
 };
-
-#define NS_FTP_MIN_CONNECTION_COUNT  1
-#define NS_FTP_MAX_CONNECTION_COUNT  4
-#define NS_FTP_CONNECTION_STACK_SIZE 0
 
 #endif /* nsFtpProtocolHandler_h___ */

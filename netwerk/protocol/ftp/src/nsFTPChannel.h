@@ -70,8 +70,7 @@ public:
     // and returns it so the protocol handler can cache it and
     // join() it on shutdown.
     nsresult Init(nsIURI* uri, 
-                  nsIProtocolHandler* aHandler, 
-                  nsIThreadPool* aPool);
+                  nsIProtocolHandler* aHandler);
     
     nsresult SetProxyChannel(nsIChannel *aChannel);
     
@@ -96,8 +95,7 @@ protected:
     nsCOMPtr<nsIStreamObserver>     mObserver;
 
     nsCOMPtr<nsIProtocolHandler>    mHandler;
-    nsCOMPtr<nsIThreadPool>         mPool; // the thread pool we want to use to fire off connections.
-    nsCOMPtr<nsIRequest>            mConnThread;
+    nsFtpConnectionThread*          mConnThread;   
     PRUint32                        mBufferSegmentSize;
     PRUint32                        mBufferMaxSize;
     nsCOMPtr<nsIChannel>            mProxyChannel; // a proxy channel
