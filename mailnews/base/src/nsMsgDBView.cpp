@@ -1831,9 +1831,10 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	else
 		rv = ListIdsInThread(pThread,  index, &numExpanded);
 
-	NoteStartChange(index, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
+	NoteStartChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 
-	NoteEndChange(index, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
+  NoteChange(index + 1, numExpanded , nsMsgViewNotificationCode::insertOrDelete); 
+  NoteEndChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 	if (pNumExpanded != nsnull)
 		*pNumExpanded = numExpanded;
 	return rv;
@@ -1879,6 +1880,7 @@ nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollap
 		}
 		if (pNumCollapsed != nsnull)
 			*pNumCollapsed = numRemoved;	
+    NoteChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete); 
 		NoteEndChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete);
 	}
 	return rv;
