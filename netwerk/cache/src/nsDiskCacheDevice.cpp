@@ -602,7 +602,7 @@ private:
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
-    :   mInitialized(PR_FALSE), mCacheCapacity(0), mCacheMap(nsnull)
+    :   mInitialized(PR_FALSE), mCacheCapacity(0), mCacheMap(nsnull), mCacheStream(nsnull)
 {
 }
 
@@ -610,6 +610,7 @@ nsDiskCacheDevice::~nsDiskCacheDevice()
 {
     Shutdown();
     delete mCacheMap;
+    NS_IF_RELEASE(mCacheStream);
 }
 
 nsresult
@@ -1208,7 +1209,7 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
     nsCacheEntry* entry = diskEntry->getCacheEntry();
     if (entry->IsMetaDataDirty() || entry->IsEntryDirty() || entry->IsDataDirty()) {
         // make sure this disk entry is known to the cache map.
-        rv = updateCacheMap(diskEntry);
+        rv = updateCacheMap(diskEntry, entry->IsBinding());
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIFile> file;
@@ -1560,8 +1561,7 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     return NS_OK;
 }
 
-
-nsresult nsDiskCacheDevice::readCacheMap()
+nsresult nsDiskCacheDevice::openCacheMap()
 {
     nsCOMPtr<nsIFile> file;
     nsresult rv = mCacheDirectory->Clone(getter_AddRefs(file));
@@ -1570,37 +1570,43 @@ nsresult nsDiskCacheDevice::readCacheMap()
     rv = file->Append("_CACHE_MAP_");
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIInputStream> input;
-    rv = openInputStream(file, getter_AddRefs(input));
-    if (NS_FAILED(rv)) return rv;
+    FILE* stream = openFileStream(file, "rwb");
+    if (!stream) return NS_ERROR_OUT_OF_MEMORY;
+    mCacheStream = new nsANSIFileStream(stream);
+    if (!mCacheStream) {
+        ::fclose(stream);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    NS_ADDREF(mCacheStream);
+    return NS_OK;
+}
 
-    rv = mCacheMap->Read(input);
-    input->Close();
-    
+nsresult nsDiskCacheDevice::readCacheMap()
+{
+    nsresult rv;
+    if (!mCacheStream) {
+        rv = openCacheMap();
+        if (NS_FAILED(rv)) return rv;
+    }
+    rv = mCacheMap->Read(mCacheStream);
     return rv;
 }
 
 nsresult nsDiskCacheDevice::writeCacheMap()
 {
-    nsCOMPtr<nsIFile> file;
-    nsresult rv = mCacheDirectory->Clone(getter_AddRefs(file));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = file->Append("_CACHE_MAP_");
-    if (NS_FAILED(rv)) return rv;
-    
-    nsCOMPtr<nsIOutputStream> output;
-    rv = openOutputStream(file, getter_AddRefs(output));
-    if (NS_FAILED(rv)) return rv;
-    
-    rv = mCacheMap->Write(output);
-    output->Close();
-    
+    nsresult rv;
+    if (!mCacheStream) {
+        rv = openCacheMap();
+        if (NS_FAILED(rv)) return rv;
+    }
+    rv = mCacheMap->Write(mCacheStream);
     return rv;
 }
 
-nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
+nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry, PRBool commit)
 {
+    nsresult rv;
+    
     // get a record from the cache map, and use the fetch time for eviction ranking.
     nsDiskCacheRecord* record = mCacheMap->GetRecord(diskEntry->getHashNumber());
     if (record->HashNumber() != diskEntry->getHashNumber()) {
@@ -1618,7 +1624,16 @@ nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
         record->SetEvictionRank(record->EvictionRank() + 1);
     }
     
-    return NS_OK;
+    // make sure the on-disk cache map is kept up to date.
+    if (commit) {
+        if (!mCacheStream) {
+            rv = openCacheMap();
+            if (NS_FAILED(rv)) return rv;
+        }
+        rv = mCacheMap->WriteBucket(mCacheStream, mCacheMap->GetBucketIndex(record));
+    }
+    
+    return rv;
 }
 
 /**
