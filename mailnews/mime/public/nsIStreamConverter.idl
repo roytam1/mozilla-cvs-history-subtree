@@ -18,25 +18,32 @@
 
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
-#include "nsIFileSpec.idl"
-#include "nsIOutputStream.idl"
-
-READ_THIS:
-THIS INTERFACE IS ALL DONE AS SOON AS SOMEONE DEFINES nsIStreamListener 
-IN IDL!
-
 #include "nsIStreamListener.idl"
 
+interface nsIOutputStream;
+interface nsIURI;
 
 %{C++
-#include "nsIStreamListener.h"
-
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
 #define NS_STREAM_CONVERTER_CID  \
     { 0x588595cb, 0x2012, 0x11d3,   \
     { 0x8e, 0xf0, 0x0, 0xa0, 0x24, 0xa7, 0xd1, 0x44 } }
 %}
 
+typedef long nsMimeOutputType;
+
+[scriptable, uuid(7E1C52F7-3594-11d3-988E-001083010E9B)] 
+interface nsMimeOutput
+{ 
+    const long nsMimeMessageSplitDisplay = 0;
+    const long nsMimeMessageHeaderDisplay = 1;
+    const long nsMimeMessageBodyDisplay = 2;
+	  const long nsMimeMessageQuoting = 3;
+	  const long nsMimeMessageRaw = 4;
+	  const long nsMimeMessageDraftOrTemplate = 5;
+	  const long nsMimeMessageEditorTemplate = 6;
+	  const long nsMimeUnknown = 7;
+}; 
 
 [scriptable, uuid(C9CDF8E5-95FA-11d2-8807-00805F5A1FB8)]
 interface nsIStreamConverter : nsIStreamListener {
@@ -45,8 +52,9 @@ interface nsIStreamConverter : nsIStreamListener {
      * This is the output stream where the stream converter will write processed data after 
      * conversion. 
      */
-    void SetOutputStream(in nsIOutputStream outStream, in string url); 
 
+	void SetOutputStream(in nsIOutputStream aOutStream, in nsIURI aURI, in nsMimeOutputType aType, 
+						 out nsMimeOutputType aOutFormat, out string aOutputContentType);
     /*
      * The output listener can be set to allow for the flexibility of having the stream converter 
      * directly notify the listener of the output stream for any processed/converter data. If 
@@ -59,6 +67,6 @@ interface nsIStreamConverter : nsIStreamListener {
      * This is needed by libmime for MHTML link processing...the url is the URL string associated
      * with this input stream
      */ 
-    void SetStreamURL(in string url); 
+    void SetStreamURI(in nsIURI aURI); 
 };
 
