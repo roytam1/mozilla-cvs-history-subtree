@@ -35,4 +35,9 @@ endif
 endif
 endif
 
+
+ifdef MOZ_XRE_APP
+DIRS		+= xre
+endif
+
 include $(topsrcdir)/config/rules.mk
