@@ -10,6 +10,8 @@
 
 /* @(#) $Id$ */
 
+/* This file has been modified from the original distribution */
+
 #ifndef _Z_UTIL_H
 #define _Z_UTIL_H
 
@@ -151,7 +153,9 @@ extern const char *z_errmsg[10]; /* indexed by 2-zlib_error */
          /* functions */
 
 #ifdef HAVE_STRERROR
+#ifndef VMS
    extern char *strerror OF((int));
+#endif
 #  define zstrerror(errnum) strerror(errnum)
 #else
 #  define zstrerror(errnum) ""
