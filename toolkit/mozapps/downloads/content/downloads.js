@@ -8,6 +8,7 @@ var gDownloadManager  = null;
 var gDownloadListener = null;
 var gDownloadsView    = null;
 var gUserInterfered   = false;
+var gActiveDownloads  = [];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions 
@@ -77,18 +78,6 @@ function downloadCompleted(aDownload)
 
     var id = aDownload.target.persistentDescriptor;
     var dlRes = rdf.GetUnicodeResource(id);
-/*
-    var elts = rdfc.GetElements();
-    var insertIndex = 1;
-    while (elts.hasMoreElements()) {
-      var currDL = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      // This is based on the ASSumption that the dlmgr only hashes active downloads. 
-      var dl = gDownloadManager.getDownload(currDL.Value);
-      if (!dl) 
-        break;
-      ++insertIndex;
-    }
-  */
   
     var insertIndex = gDownloadManager.activeDownloadCount + 1;
     // Don't bother inserting the item into the same place!
@@ -98,14 +87,18 @@ function downloadCompleted(aDownload)
         rdfc.AppendElement(dlRes);
       else
         rdfc.InsertElementAt(dlRes, insertIndex, true);      
-
-      if (gDownloadPercentages[id]) {
-        gDownloadPercentages[id] = false;
-        --gDownloadPercentagesMeta.count;
-      }
     }
         
-    if (gDownloadPercentagesMeta.count == 0)
+    // Remove the download from our book-keeping list and if the count
+    // falls to zero, update the title here, since we won't be getting
+    // any more progress notifications in which to do it. 
+    for (var i = 0; i < gActiveDownloads.length; ++i) {
+      if (gActiveDownloads[i] == aDownload) {
+        gActiveDownloads.splice(i, 1);
+        break;
+      }
+    }
+    if (gActiveDownloads.length == 0)
       window.title = document.documentElement.getAttribute("statictitle");    
   }
   catch (e) {
@@ -145,8 +138,7 @@ var gDownloadObserver = {
       break;
     case "dl-start":
       // Add this download to the percentage average tally
-      gDownloadPercentages[dl.target.persistentDescriptor] = true;
-      ++gDownloadPercentagesMeta.count;
+      gActiveDownloads.push(dl);
       
       break;
       
@@ -269,50 +261,35 @@ function onDownloadRetry(aEvent)
 
 // This is called by the progress listener. We don't actually use the event
 // system here to minimize time wastage. 
-var gDownloadPercentages = {};
-var gDownloadPercentagesMeta = {
-  count: 0,
-  lastMean: 0
-};
-
+var gLastComputedMean = 0;
 function onUpdateProgress()
 {
-  var mean = 0;
-  var count = 0;
-  for (var download in gDownloadPercentages) {
-    if (gDownloadPercentages[download]) {
-      var dl = document.getElementById(download);
-      if (dl) { 
-        var progress = parseInt(dl.getAttribute("progress"));
-        if (progress < 100) {
-          ++count;
-          mean += progress;
-        }
-      }
-    }
+  var numActiveDownloads = gActiveDownloads.length;
+  if (numActiveDownloads == 0) {
+    window.title = document.documentElement.getAttribute("statictitle");
+    return;
   }
-  // Refresh count. 
-  gDownloadPercentagesMeta.count = count;
-  
-  if (count == 0)
-    window.title = document.documentElement.getAttribute("statictitle");    
-  else {
-    mean /= gDownloadPercentagesMeta.count;
-    mean = Math.round(mean);
     
-    if (mean != gDownloadPercentagesMeta.lastMean) {
-      gDownloadPercentagesMeta.lastMean = mean;
-      var strings = document.getElementById("downloadStrings");
-      
-      var title = "";
-      if (gDownloadPercentagesMeta.count > 1)
-        title = strings.getFormattedString("downloadsTitleMultiple", [mean, gDownloadPercentagesMeta.count]);
-      else
-        title = strings.getFormattedString("downloadsTitle", [mean]);
+  var mean = 0;
+  for (var i = 0; i < numActiveDownloads; ++i) {
+    var dl = gActiveDownloads[i];
+    var progress = dl.percentComplete;
+    if (progress < 100)
+      mean += progress;
+  }
 
-      window.title = title;
-      gDownloadPercentagesMeta.lastMean = mean;
-    }
+  mean = Math.round(mean / numActiveDownloads);
+  if (mean != gLastComputedMean) {
+    gLastComputedMean = mean;
+    var strings = document.getElementById("downloadStrings");
+    
+    var title;
+    if (numActiveDownloads > 1)
+      title = strings.getFormattedString("downloadsTitleMultiple", [mean, numActiveDownloads]);
+    else
+      title = strings.getFormattedString("downloadsTitle", [mean]);
+
+    window.title = title;
   }
 }
 
@@ -464,19 +441,19 @@ var gDownloadDNDObserver =
 // Command Updating and Command Handlers
 
 var gDownloadViewController = {
-  supportsCommand: function dVC_supportsCommand (aCommand)
+  supportsCommand: function (aCommand)
   {
     return aCommand == "cmd_cleanUp";
   },
   
-  isCommandEnabled: function dVC_isCommandEnabled (aCommand)
+  isCommandEnabled: function (aCommand)
   {
     if (aCommand == "cmd_cleanUp") 
       return gDownloadManager.canCleanUp;
     return false;
   },
   
-  doCommand: function dVC_doCommand (aCommand)
+  doCommand: function (aCommand)
   {
     if (aCommand == "cmd_cleanUp" && this.isCommandEnabled(aCommand)) {
       gDownloadManager.cleanUp();
@@ -484,10 +461,11 @@ var gDownloadViewController = {
     }
   },  
   
-  onCommandUpdate: function dVC_onCommandUpdate ()
+  onCommandUpdate: function ()
   {
     var command = "cmd_cleanUp";
     var enabled = this.isCommandEnabled(command);
     goSetCommandEnabled(command, enabled);
   }
 };
+
