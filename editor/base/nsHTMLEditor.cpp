@@ -533,8 +533,12 @@ NS_IMETHODIMP nsHTMLEditor::EditorKeyPress(nsIDOMUIEvent* aKeyEvent)
         return InsertBreak();  // uses rules to figure out what to insert
     }
       
-    nsAutoString key(character);
-    return InsertText(key);
+    if ((PR_FALSE==altKey) && (PR_FALSE==ctrlKey) 
+    && (PR_FALSE==isShift) && (PR_FALSE==metaKey))
+    {
+      nsAutoString key(character);
+      return InsertText(key);
+    }
   }
   return NS_ERROR_FAILURE;
 }
