@@ -397,10 +397,6 @@ MAKE_DIRS		+= $(MDDEPDIR)
 GARBAGE_DIRS		+= $(MDDEPDIR)
 endif
 
-ifneq ($(XPIDLSRCS),)
-GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
-endif
-
 #
 # Tags: emacs (etags), vi (ctags)
 # TAG_PROGRAM := ctags -L -
@@ -1488,11 +1484,33 @@ ifndef NO_INSTALL
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/autoconfig
 endif
 endif 
+
 ################################################################################
-# Export the elements of $(XPIDLSRCS) & $(SDK_XPIDLSRCS), 
-# generating .h and .xpt files and moving them to the appropriate places.
+# General rules for exporting idl files.
+#
+# WORK-AROUND ONLY, for mozilla/tools/module-deps/bootstrap.pl build.
+# Bug to fix idl dependecy problems w/o this extra build pass is
+#   http://bugzilla.mozilla.org/show_bug.cgi?id=145777
+#
+$(SDK_IDL_DIR) $(IDL_DIR)::
+	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
+
+export-idl:: $(SUBMAKEFILES) $(MAKE_DIRS)
+
+export-idl:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
+ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $^
+endif
+endif
+
+################################################################################
+# Common rules for generating .h & .xpt
+#
 
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
+
+GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
 
 ifndef XPIDL_MODULE
 XPIDL_MODULE		= $(MODULE)
@@ -1506,9 +1524,6 @@ export:: FORCE
 	@echo "so we have a module name to use when creating MODULE.xpt."
 	@echo; sleep 2; false
 endif
-
-$(SDK_IDL_DIR) $(IDL_DIR)::
-	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
 # generate .h files from into $(XPIDL_GEN_DIR), then export to $(PUBLIC);
 # warn against overriding existing .h file. 
@@ -1543,6 +1558,56 @@ endif
 $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) Makefile.in Makefile
 	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
 
+endif # XPIDLSRCS || SDK_XPIDLSRCS
+
+################################################################################
+# Rules for exporting XPIDLSRCS & SDK_XPIDLSRCS
+#
+ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
+# export .idl files to $(IDL_DIR)
+export:: $(XPIDLSRCS) $(SDK_XPIDLSRCS)$(IDL_DIR)
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $^
+endif
+
+export:: $(SDK_XPIDLSRCS) $(SDK_IDL_DIR)
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $^
+endif
+
+install:: $(XPIDLSRCS) $(SDK_XPIDLSRCS)
+ifndef NO_INSTALL
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(idldir)
+endif
+
+endif # XPIDLSRCS || SDK_XPIDLSRCS
+
+################################################################################
+# Add main rule dependencies for building .h & .xpt 
+# from XPIDLSRCS & SDK_XPILDSRCS
+#
+
+ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
+
+export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS) $(SDK_XPIDLSRCS)) $(PUBLIC)
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $^
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
+endif
+
+install:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS) $(SDK_XPIDLSRCS))
+ifndef NO_INSTALL
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(includedir)/$(MODULE)
+endif
+
+ifneq ($(SDK_XPIDLSRCS),)
+export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(SDK_XPIDLSRCS))
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $^ $(SDK_PUBLIC)
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(SDK_PUBLIC),$^))
+endif
+endif # SDK_XPIDLSRCS
+
 libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(DIST)/bin/$(COMPONENTS_PATH)
@@ -1558,85 +1623,7 @@ endif
 endif # NO_INSTALL
 endif # NO_GEN_XPT
 
-GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
-
 endif # XPIDLSRCS || SDK_XPIDLSRCS
-
-ifneq ($(XPIDLSRCS),)
-# export .idl files to $(IDL_DIR)
-export:: $(XPIDLSRCS) $(IDL_DIR)
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^
-endif
-
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^
-	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
-endif
-
-install:: $(XPIDLSRCS)
-ifndef NO_INSTALL
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(idldir)
-endif
-
-install:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS))
-ifndef NO_INSTALL
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(includedir)/$(MODULE)
-endif
-
-endif # XPIDLSRCS
-
-
-
-#
-# General rules for exporting idl files.
-#
-# WORK-AROUND ONLY, for mozilla/tools/module-deps/bootstrap.pl build.
-# Bug to fix idl dependecy problems w/o this extra build pass is
-#   http://bugzilla.mozilla.org/show_bug.cgi?id=145777
-#
-$(IDL_DIR)::
-	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
-
-export-idl:: $(SUBMAKEFILES) $(MAKE_DIRS)
-
-export-idl:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
-ifneq ($(XPIDLSRCS),)
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^
-endif
-endif
-
-ifneq ($(SDK_XPIDLSRCS),)
-# export .idl files to $(IDL_DIR) & $(SDK_IDL_DIR)
-export:: $(IDL_DIR) $(SDK_IDL_DIR)
-
-export:: $(SDK_XPIDLSRCS)
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^ $(IDL_DIR)
-	$(INSTALL) $(IFLAGS1) $^ $(SDK_IDL_DIR)
-endif
-
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(SDK_XPIDLSRCS))
-ifndef NO_DIST_INSTALL
-	$(INSTALL) $(IFLAGS1) $^ $(PUBLIC)
-	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
-	$(INSTALL) $(IFLAGS1) $^ $(SDK_PUBLIC)
-	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(SDK_PUBLIC),$^))
-endif
-
-install:: $(SDK_XPIDLSRCS)
-ifndef NO_INSTALL
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(idldir)
-endif
-
-install:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(SDK_XPIDLSRCS))
-ifndef NO_INSTALL
-	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(includedir)/$(MODULE)
-endif
-
-endif # SDK_XPIDLSRCS
 
 ################################################################################
 # Copy each element of EXTRA_COMPONENTS to $(DIST)/bin/components
