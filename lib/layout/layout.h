@@ -1258,6 +1258,9 @@ extern void lo_ReflectFormElement(MWContext *context,
 extern void lo_ProcessParagraphElement(MWContext *context, lo_DocState **state,
 				       LO_ParagraphStruct *paragraph,
 				       XP_Bool in_relayout);
+extern void lo_ProcessHeadingElement(MWContext *context, lo_DocState *state,
+				       LO_HeadingStruct *heading,
+				       XP_Bool in_relayout);
 
 extern void lo_ProcessCenterElement(MWContext *context, lo_DocState **state,
 				    LO_CenterStruct *center,

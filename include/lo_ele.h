@@ -1168,10 +1168,12 @@ typedef struct LO_Layer_struct {
 } LO_LayerStruct;
 
 typedef struct LO_Heading_struct {
-	LO_Any lo_any;
+  LO_Any lo_any;
 	
-	Bool is_end;
-	int32 alignment;
+  Bool is_end;
+  int32 type;
+  Bool alignment_set;
+  int32 alignment;
 } LO_HeadingStruct;
 
 typedef struct LO_Span_struct {

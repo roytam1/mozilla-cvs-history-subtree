@@ -1499,8 +1499,19 @@ lo_rl_FitLayer( lo_RelayoutState *relay_state, LO_Element *lo_ele )
 static LO_Element *
 lo_rl_FitHeading( lo_RelayoutState *relay_state, LO_Element *lo_ele )
 {
-	XP_ASSERT(0);
-	return lo_tv_GetNextLayoutElement( relay_state->doc_state, lo_ele, TRUE);
+  LO_Element *next = lo_tv_GetNextLayoutElement( relay_state->doc_state, lo_ele, TRUE);
+  lo_DocState *state = relay_state->doc_state;
+
+  lo_ele->lo_any.x = state->x;
+  lo_ele->lo_any.y = state->y;
+  lo_ele->lo_any.ele_id = NEXT_ELEMENT;
+
+  lo_AppendToLineList(relay_state->context, relay_state->doc_state, lo_ele, 0);
+  lo_ProcessHeadingElement(relay_state->context, relay_state->doc_state,
+                           (LO_HeadingStruct*)lo_ele,
+                           TRUE);
+
+  return next;
 }
 
 static LO_Element * 
