@@ -92,7 +92,9 @@ public:
   nsXFormsOutputElement() : mElement(nsnull) {}
 
 private:
-  nsCOMPtr<nsIDOMElement> mHTMLElement;
+  nsCOMPtr<nsIDOMElement> mLabel;
+  nsCOMPtr<nsIDOMElement> mContainer;
+  nsCOMPtr<nsIDOMElement> mValue;
   nsIDOMElement *mElement;
 };
 
@@ -126,15 +128,41 @@ nsXFormsOutputElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
   mElement = node;
   NS_ASSERTION(mElement, "Wrapper is not an nsIDOMElement, we'll crash soon");
 
+  /* input uses <html:label /> as the container, but output does't need the
+     additional features html:label gives, so just use a html:span.
+  */
+
+  // Our anonymous content structure will look like this:
+  //
+  // <span>                        (mContainer)
+  //   <span/>                     (mLabel)
+  //   <span/>                     (mValue)
+  // </span>
+
+  nsCOMPtr<nsIDOMNode> childReturn;
+
   nsCOMPtr<nsIDOMDocument> domDoc;
   rv = node->GetOwnerDocument(getter_AddRefs(domDoc));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  domDoc->CreateElementNS(NS_LITERAL_STRING(NS_NAMESPACE_XHTML),
+                          NS_LITERAL_STRING("span"),
+                          getter_AddRefs(mContainer));
+  NS_ENSURE_STATE(mContainer);
+
   rv = domDoc->CreateElementNS(NS_LITERAL_STRING(NS_NAMESPACE_XHTML),
                                NS_LITERAL_STRING("span"),
-                               getter_AddRefs(mHTMLElement));
+                               getter_AddRefs(mLabel));
+  NS_ENSURE_STATE(mLabel);
 
-  NS_ENSURE_SUCCESS(rv, rv);
+  mContainer->AppendChild(mLabel, getter_AddRefs(childReturn));
+
+  rv = domDoc->CreateElementNS(NS_LITERAL_STRING(NS_NAMESPACE_XHTML),
+                               NS_LITERAL_STRING("span"),
+                               getter_AddRefs(mValue));
+  NS_ENSURE_STATE(mValue);
+
+  mContainer->AppendChild(mValue, getter_AddRefs(childReturn));
 
   return NS_OK;
 }
@@ -144,15 +172,16 @@ nsXFormsOutputElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
 NS_IMETHODIMP
 nsXFormsOutputElement::GetVisualContent(nsIDOMElement **aElement)
 {
-  NS_IF_ADDREF(*aElement = mHTMLElement);
+  NS_IF_ADDREF(*aElement = mContainer);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsOutputElement::GetInsertionPoint(nsIDOMElement **aElement)
 {
-  NS_IF_ADDREF(*aElement = mHTMLElement);
-  return NS_OK;
+  nsCOMPtr<nsIDOMNode> childNode;
+  mContainer->GetFirstChild(getter_AddRefs(childNode));
+  return CallQueryInterface(childNode, aElement);
 }
 
 // nsIXTFElement
@@ -161,8 +190,10 @@ NS_IMETHODIMP
 nsXFormsOutputElement::OnDestroyed()
 {
   mElement = nsnull;
-  mHTMLElement = nsnull;
-  
+  mLabel = nsnull;
+  mContainer = nsnull;
+  mValue = nsnull;
+
   return NS_OK;
 }
 
@@ -221,7 +252,7 @@ nsXFormsOutputElement::Refresh()
 #ifdef DEBUG_XF_OUTPUT
   printf("nsXFormsOutputElement::Refresh()\n");
 #endif
-  if (!mHTMLElement)
+  if (!mValue)
     return NS_OK;
 
   nsresult rv;
@@ -266,9 +297,10 @@ nsXFormsOutputElement::Refresh()
         rv = result->GetStringValue(text);
       }
       NS_ENSURE_SUCCESS(rv, rv);
-      
-      nsCOMPtr<nsIDOM3Node> dom3Node = do_QueryInterface(mHTMLElement);
+
+      nsCOMPtr<nsIDOM3Node> dom3Node = do_QueryInterface(mValue);
       NS_ENSURE_STATE(dom3Node);
+
       rv = dom3Node->SetTextContent(text);
       NS_ENSURE_SUCCESS(rv, rv);
     }
