@@ -68,7 +68,7 @@ static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 #include "nsIFile.h"
 #include "nsIFilePicker.h"
 #include "nsIStringBundle.h"
-#define NS_ERROR_GFX_PRINTER_BUNDLE_URL "chrome://communicator/locale/printing.properties"
+#define NS_ERROR_GFX_PRINTER_BUNDLE_URL "chrome://global/locale/printing.properties"
 
 #include "nsIPref.h"
 
