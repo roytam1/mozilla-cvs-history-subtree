@@ -62,7 +62,7 @@ var ComponentUtils = {
    * not call QueryInterface on newly created objects, but instead
    * check the requested iid against the interface list.
    *
-   * @param ctor : Constructor function. A call 'new ctor()' must
+   * @param ctor : Constructor function. A call 'ctor()' should
    *               return an instance of the class served by this factory.
    * @param interfaces : Optional list of interfaces. If this parameter is not
    *                     given, objects created by 'ctor' must implement a
@@ -75,13 +75,13 @@ var ComponentUtils = {
       createInstance: function(outer, iid) {
         if (outer) throw Components.results.NS_ERROR_NO_AGGREGATION;
         if (!interfaces)
-          return (new ctor()).QueryInterface(iid);
+          return ctor().QueryInterface(iid);
         for (var i=interfaces.length; i>=0; --i) {
           if (iid.equals(interfaces[i])) break;
         }
         if (i<0 && !iid.equals(Components.interfaces.nsISupports))
           throw Components.results.NS_ERROR_NO_INTERFACE;
-        return new ctor();
+        return ctor();
       }
     }
   },
