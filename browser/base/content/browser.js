@@ -1183,6 +1183,11 @@ function delayedStartup()
                            .getService(Components.interfaces.nsIPrefBranch);
   BrowserOffline.init();
   
+  if (document.documentElement.getAttribute("chromehidden").indexOf("toolbar") != -1) {
+    gURLBar.setAttribute("readonly", "true"); 
+    gURLBar.setAttribute("enablehistory", "false");
+  }
+
   if (gIsLoadingBlank)
     prepareForStartup();
 
@@ -4720,9 +4725,9 @@ nsContextMenu.prototype = {
       // POST     application/x-www-form-urlencoded YES
       // POST     text/plain                        NO (a little tricky to do)
       // POST     multipart/form-data               NO
+      // POST     everything else                   YES
       return (method == "GET" || method == "") || 
-             (form.enctype == "application/x-www-form-urlencoded") || 
-             (form.enctype == "");
+             (form.enctype != "text/plain") && (form.enctype != "multipart/form-data");
     },
     
     // Determines whether or not the separator with the specified ID should be 

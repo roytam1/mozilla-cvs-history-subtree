@@ -199,11 +199,13 @@ pref("browser.bookmarks.sort.direction", "descending");
 pref("browser.bookmarks.sort.resource", "rdf:http://home.netscape.com/NC-rdf#Name");
 
 // Scripts & Windows prefs
-pref("dom.disable_open_during_load",        true);
-pref("javascript.options.showInConsole",    false);
-// Make the status bar reliably present and unaffected by pages
-pref("dom.disable_window_open_feature.status", true);
-pref("dom.disable_window_status_change",       true);
+pref("dom.disable_open_during_load",              true);
+pref("javascript.options.showInConsole",          false);
+// Make the location bar reliably present and unaffected by pages
+pref("dom.disable_window_open_feature.location",  true);
+pref("dom.disable_window_status_change",          true);
+
+pref("browser.trim_user_and_password",            true);
 
 // popups.policy 1=allow,2=reject
 pref("privacy.popups.policy",               1);
