@@ -163,7 +163,7 @@ static
 nsOperaProfileMigrator::PREFTRANSFORM gTransforms[] = {
   { "User Prefs", "Download Directory", _OPM(STRING), "browser.download.defaultFolder", _OPM(SetFile), PR_FALSE, -1 },
   { nsnull, "Enable Cookies", _OPM(INT), "network.cookie.cookieBehavior", _OPM(SetCookieBehavior), PR_FALSE, -1 },
-  { nsnull, "Accept Cookies For Session Only", _OPM(BOOL), "network.cookie.enableForCurrentSessionOnly", _OPM(SetBool), PR_FALSE, -1 },
+  { nsnull, "Accept Cookies Session Only", _OPM(BOOL), "network.cookie.enableForCurrentSessionOnly", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Allow script to resize window", _OPM(BOOL), "dom.disable_window_move_resize", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Allow script to move window", _OPM(BOOL), "dom.disable_window_move_resize", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Allow script to raise window", _OPM(BOOL), "dom.disable_window_flip", _OPM(SetBool), PR_FALSE, -1 },
@@ -172,7 +172,7 @@ nsOperaProfileMigrator::PREFTRANSFORM gTransforms[] = {
   { nsnull, "Ignore Unrequested Popups", _OPM(BOOL), "dom.disable_open_during_load", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Load Figures", _OPM(BOOL), "network.image.imageBehavior", _OPM(SetInt), PR_FALSE, -1 },
 
-  { "Visited Link", nsnull, _OPM(COLOR), "browser.visited_color", _OPM(SetString), PR_FALSE, -1 },
+  { "Visited link", nsnull, _OPM(COLOR), "browser.visited_color", _OPM(SetString), PR_FALSE, -1 },
   { "Link", nsnull, _OPM(COLOR), "browser.anchor_color", _OPM(SetString), PR_FALSE, -1 },
   { nsnull, "Underline", _OPM(BOOL), "browser.underline_anchors", _OPM(SetBool), PR_FALSE, -1 },
   { nsnull, "Expiry", _OPM(INT), "browser.history_expire_days", _OPM(SetInt), PR_FALSE, -1 },
@@ -230,14 +230,62 @@ nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
   nsCAutoString path;
   operaPrefs->GetNativePath(path);
   char* pathCopy = ToNewCString(path);
+  if (!pathCopy)
+    return NS_ERROR_OUT_OF_MEMORY;
   nsINIParser* parser = new nsINIParser(pathCopy);
+  if (!parser)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  psvc->ResetPrefs();
-
-  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+  nsCOMPtr<nsIPrefBranch> branch(do_GetService(NS_PREFSERVICE_CONTRACTID));
 
   // Traverse the standard transforms
+  PREFTRANSFORM* transform;
+  PREFTRANSFORM* end = gTransforms + sizeof(gTransforms)/sizeof(PREFTRANSFORM);
+
+  PRInt32 length;
+  char* lastSectionName = nsnull;
+  for (transform = gTransforms; transform < end; ++transform) {
+    if (transform->sectionName)
+      lastSectionName = transform->sectionName;
+
+    if (transform->type == _OPM(COLOR)) {
+      char* colorString = (char*)malloc(sizeof(char) * 8);
+      if (!colorString)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+      nsresult rv = ParseColor(parser, lastSectionName, &colorString);
+      if (NS_SUCCEEDED(rv)) {
+        transform->stringValue = colorString;
+   
+        transform->prefHasValue = PR_TRUE;
+        transform->prefSetterFunc(transform, branch);
+      }
+      nsCRT::free(colorString);
+    }
+    else {
+      char* val = nsnull;
+      PRInt32 err = parser->GetStringAlloc(lastSectionName, transform->keyName, &val, &length);
+      if (err == nsINIParser::OK) {
+        nsCAutoString valStr;
+        PRInt32 strerr;
+        switch (transform->type) {
+        case _OPM(STRING):
+          transform->stringValue = val;
+          break;
+        case _OPM(INT):
+          valStr = val;
+          transform->intValue = valStr.ToInteger(&strerr);
+          break;
+        case _OPM(BOOL):
+          valStr = val;
+          transform->boolValue = valStr.ToInteger(&strerr) != 0;
+          break;
+        }
+        transform->prefHasValue = PR_TRUE;
+        transform->prefSetterFunc(transform, branch);
+      }
+    }
+  }
 
   // Copy Proxy Settings
 
@@ -246,6 +294,41 @@ nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
     CopyUserContentSheet(parser);
 
   nsCRT::free(pathCopy);
+
+  delete parser;
+  parser = nsnull;
+
+  return NS_OK;
+}
+
+nsresult
+nsOperaProfileMigrator::ParseColor(nsINIParser* aParser, char* aSectionName, char** aResult)
+{
+#define CHAR_BUF_LENGTH 5
+  char rbuf[CHAR_BUF_LENGTH], gbuf[CHAR_BUF_LENGTH], bbuf[CHAR_BUF_LENGTH];
+  PRInt32 bufSize = CHAR_BUF_LENGTH;
+  PRInt32 r, g, b;
+
+  nsCAutoString valStr;
+  PRInt32 err, strerr;
+  err = aParser->GetString(aSectionName, "Red", rbuf, &bufSize);
+  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
+  valStr = rbuf;
+  r = valStr.ToInteger(&strerr);
+  
+  bufSize = CHAR_BUF_LENGTH;
+  err = aParser->GetString(aSectionName, "Green", gbuf, &bufSize);
+  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
+  valStr = gbuf;
+  g = valStr.ToInteger(&strerr);
+
+  bufSize = CHAR_BUF_LENGTH;
+  err = aParser->GetString(aSectionName, "Blue", bbuf, &bufSize);
+  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
+  valStr = bbuf;
+  b = valStr.ToInteger(&strerr);
+
+  sprintf(*aResult, "#%02X%02X%02X", r, g, b);
 
   return NS_OK;
 }

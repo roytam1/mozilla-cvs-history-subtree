@@ -87,6 +87,7 @@ public:
 
 protected:
   nsresult CopyPreferences(PRBool aReplace);
+  nsresult ParseColor(nsINIParser* aParser, char* aSectionName, char** aResult);
   nsresult CopyUserContentSheet(nsINIParser* aParser);
 
   nsresult CopyCookies(PRBool aReplace);
