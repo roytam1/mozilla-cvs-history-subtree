@@ -48,16 +48,27 @@
 class nsXFormsModelElement;
 class nsIDOMElement;
 
+#define NS_XFORMSCONTROL_IID \
+{0x49bad098, 0xaa62, 0x49be, {0x98, 0x7b, 0xdb, 0x32, 0x66, 0x92, 0x1e, 0x0a}}
+
 // Common implementation for XForms form controls
 
-class nsXFormsControl : public nsXFormsElement
+class nsXFormsControl : public nsXFormsElement,
+                        public nsISupports
 {
 public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_XFORMSCONTROL_IID)
+
+  NS_DECL_ISUPPORTS
+
+  virtual NS_HIDDEN_(void) Refresh() = 0;
+
   NS_HIDDEN_(nsXFormsModelElement*) GetModelAndBind(nsIDOMElement **aBindElement);
   NS_HIDDEN_(already_AddRefed<nsIDOMNode>) FindInstanceNode();
 
 protected:
   nsCOMPtr<nsIXTFXMLVisualWrapper> mWrapper;
+  nsCOMPtr<nsIDOMNode>             mInstanceNode;
 };
 
 #endif

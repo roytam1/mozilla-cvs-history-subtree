@@ -49,7 +49,8 @@
 #include "nsIDOMXPathEvaluator.h"
 #include "nsIDOMXPathResult.h"
 #include "nsIDOMXPathNSResolver.h"
-#include "nsXFormsModelElement.h"
+
+NS_IMPL_ISUPPORTS1(nsXFormsControl, nsXFormsControl)
 
 nsXFormsModelElement*
 nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)

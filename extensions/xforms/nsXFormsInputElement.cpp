@@ -48,6 +48,8 @@
 #include "nsXFormsControl.h"
 #include "nsISchema.h"
 #include "nsXFormsModelElement.h"
+#include "nsIDOMHTMLInputElement.h"
+#include "nsXFormsAtoms.h"
 
 static const nsIID sScriptingIIDs[] = {
   NS_IDOMELEMENT_IID,
@@ -63,9 +65,11 @@ public:
   NS_DECL_NSIXTFXMLVISUAL
   NS_DECL_NSIXTFELEMENT
 
+  // nsXFormsControl
+  virtual NS_HIDDEN_(void) Refresh();
+
 private:
-  nsCOMPtr<nsIDOMNode>    mInstanceNode;
-  nsCOMPtr<nsIDOMElement> mInput;
+  nsCOMPtr<nsIDOMHTMLInputElement> mInput;
 };
 
 NS_IMPL_ISUPPORTS2(nsXFormsInputElement, nsIXTFXMLVisual, nsIXTFElement)
@@ -76,6 +80,20 @@ NS_IMETHODIMP
 nsXFormsInputElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
 {
   mWrapper = aWrapper;
+
+  nsCOMPtr<nsIDOMElement> node;
+  mWrapper->GetElementNode(getter_AddRefs(node));
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  node->GetOwnerDocument(getter_AddRefs(domDoc));
+
+  nsCOMPtr<nsIDOMElement> inputElement;
+  domDoc->CreateElementNS(NS_LITERAL_STRING("http://www.w3.org/1999/xhtml"),
+                          NS_LITERAL_STRING("input"),
+                          getter_AddRefs(inputElement));
+
+  mInput = do_QueryInterface(inputElement);
+  NS_ENSURE_TRUE(mInput, NS_ERROR_FAILURE);
+
   return NS_OK;
 }
 
@@ -119,7 +137,7 @@ nsXFormsInputElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 NS_IMETHODIMP
 nsXFormsInputElement::GetNotificationMask(PRUint32 *aMask)
 {
-  *aMask = nsIXTFElement::NOTIFY_DOCUMENT_CHANGED;
+  *aMask = nsIXTFElement::NOTIFY_ATTRIBUTE_SET;
   return NS_OK;
 }
 
@@ -132,44 +150,6 @@ nsXFormsInputElement::WillChangeDocument(nsISupports *aNewDocument)
 NS_IMETHODIMP
 nsXFormsInputElement::DocumentChanged(nsISupports *aNewDocument)
 {
-  // For now, just create an HTML input element (type=text).
-
-  // For correct behavior, this should:
-  // - locate the <model> for this control
-  // - get the model's instance data
-  // - evaluate the 'ref' or 'bind' attribute on this control as an 
-  //   xpath expression on the instance data
-  // - check for a "type" model item property on the result node
-  // - construct appropriate UI for xsd:boolean, xsd:date, etc
-
-  mInstanceNode = FindInstanceNode();
-
-  nsCOMPtr<nsIDOMElement> node;
-  mWrapper->GetElementNode(getter_AddRefs(node));
-  nsCOMPtr<nsIDOMDocument> domDoc;
-  node->GetOwnerDocument(getter_AddRefs(domDoc));
-
-  domDoc->CreateElementNS(NS_LITERAL_STRING("http://www.w3.org/1999/xhtml"),
-                          NS_LITERAL_STRING("input"),
-                          getter_AddRefs(mInput));
-
-  nsCOMPtr<nsIDOMElement> bindElement;
-  nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
-
- if (model) {
-    nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
-    nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
-    if (biType) {
-      PRUint16 typeValue = 0;
-      biType->GetBuiltinType(&typeValue);
-
-      if (typeValue == nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN) {
-        mInput->SetAttribute(NS_LITERAL_STRING("type"),
-                             NS_LITERAL_STRING("checkbox"));
-      }
-    }
-  }
-
   return NS_OK;
 }
 
@@ -230,6 +210,11 @@ nsXFormsInputElement::WillSetAttribute(nsIAtom *aName, const nsAString &aValue)
 NS_IMETHODIMP
 nsXFormsInputElement::AttributeSet(nsIAtom *aName, const nsAString &aValue)
 {
+  if (aName == nsXFormsAtoms::bind || aName == nsXFormsAtoms::ref) {
+    mInstanceNode = FindInstanceNode();
+    Refresh();
+  }
+
   return NS_OK;
 }
 
@@ -249,6 +234,47 @@ NS_IMETHODIMP
 nsXFormsInputElement::DoneAddingChildren()
 {
   return NS_OK;
+}
+
+void
+nsXFormsInputElement::Refresh()
+{
+  if (!mInstanceNode)
+    mInstanceNode = FindInstanceNode();
+
+  if (!mInstanceNode || !mInput)
+    return;
+
+  // Fetch our value from the instance data
+  nsCOMPtr<nsIDOM3Node> node = do_QueryInterface(mInstanceNode);
+  NS_ASSERTION(node, "unexpected QI failure");
+
+  nsAutoString textContent;
+  node->GetTextContent(textContent);
+
+  // Revalidate our type
+  nsCOMPtr<nsIDOMElement> bindElement;
+  nsXFormsModelElement *model = GetModelAndBind(getter_AddRefs(bindElement));
+
+  if (model) {
+    nsCOMPtr<nsISchemaType> type = model->GetTypeForControl(this);
+    nsCOMPtr<nsISchemaBuiltinType> biType = do_QueryInterface(type);
+    PRUint16 typeValue = nsISchemaBuiltinType::BUILTIN_TYPE_STRING;
+
+    if (biType)
+      biType->GetBuiltinType(&typeValue);
+
+    if (typeValue == nsISchemaBuiltinType::BUILTIN_TYPE_BOOLEAN) {
+      mInput->SetAttribute(NS_LITERAL_STRING("type"),
+                           NS_LITERAL_STRING("checkbox"));
+
+      mInput->SetChecked(textContent.EqualsASCII("true") ||
+                         textContent.EqualsASCII("1"));
+    } else {
+      mInput->RemoveAttribute(NS_LITERAL_STRING("type"));
+      mInput->SetValue(textContent);
+    }
+  }
 }
 
 NS_HIDDEN_(nsresult)
