@@ -1,7 +1,6 @@
 classic.jar:
   skin/classic/mozapps/extensions/extensions.css                (../../extensions/skin/mac/extensions.css)
   skin/classic/mozapps/extensions/about.css                     (../../extensions/skin/mac/about.css)
-  skin/classic/mozapps/extensions/placeholder.gif               (../../extensions/skin/mac/placeholder.gif)
   skin/classic/mozapps/extensions/extensionAbout.png            (../../extensions/skin/mac/extensionAbout.png)
   skin/classic/mozapps/extensions/extensionHome.png             (../../extensions/skin/mac/extensionHome.png)
   skin/classic/mozapps/extensions/extensionOptions.png          (../../extensions/skin/mac/extensionOptions.png)
