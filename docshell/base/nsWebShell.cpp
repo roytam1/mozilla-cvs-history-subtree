@@ -718,6 +718,15 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
   nsCOMPtr<nsIWebShell> kungFuDeathGrip(this);
   nsDocShell::EndPageLoad(aProgress, channel, aStatus);
 
+  // Test if this is the top frame or a subframe
+  PRBool isTopFrame = PR_TRUE;
+  nsCOMPtr<nsIDocShellTreeItem> targetParentTreeItem;
+  rv = GetSameTypeParent(getter_AddRefs(targetParentTreeItem));
+  if (NS_SUCCEEDED(rv) && targetParentTreeItem) 
+  {
+    isTopFrame = PR_FALSE;
+  }
+
   //
   // If the page load failed, then deal with the error condition...
   // Errors are handled as follows:
@@ -822,32 +831,28 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
       if (aStatus == NS_ERROR_UNKNOWN_HOST ||
           aStatus == NS_ERROR_NET_RESET)
       {
-        // Test if keyword lookup produced a new URI or not
         PRBool doCreateAlternate = PR_TRUE;
-        if (newURI)
-        {
-          PRBool sameURI = PR_FALSE;
-          url->Equals(newURI, &sameURI);
-          if (!sameURI)
-          {
-            // Keyword lookup made a new URI so no need to try an
-            // alternate one.
-            doCreateAlternate = PR_FALSE;
-          }
-        }
-        // Skip fixup for anything except a normal document load operation
-        if (mLoadType != LOAD_NORMAL)
+        
+        // Skip fixup for anything except a normal document load operation on
+        // the topframe.
+        
+        if (mLoadType != LOAD_NORMAL || !isTopFrame)
         {
           doCreateAlternate = PR_FALSE;
         }
         else
         {
-          // Skip fixup for frames & iframes
-          nsCOMPtr<nsIDocShellTreeItem> targetParentTreeItem;
-          rv = GetSameTypeParent(getter_AddRefs(targetParentTreeItem));
-          if (NS_SUCCEEDED(rv) && targetParentTreeItem) 
+          // Test if keyword lookup produced a new URI or not
+          if (newURI)
           {
-            doCreateAlternate = PR_FALSE;
+            PRBool sameURI = PR_FALSE;
+            url->Equals(newURI, &sameURI);
+            if (!sameURI)
+            {
+              // Keyword lookup made a new URI so no need to try an
+              // alternate one.
+              doCreateAlternate = PR_FALSE;
+            }
           }
         }
         if (doCreateAlternate)
@@ -892,7 +897,7 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
     //
 
     // Doc failed to load because the host was not found.
-    if(aStatus == NS_ERROR_UNKNOWN_HOST) {
+    if (aStatus == NS_ERROR_UNKNOWN_HOST && isTopFrame) {
       // throw a DNS failure dialog
       nsCOMPtr<nsIPrompt> prompter;
       nsCOMPtr<nsIStringBundle> stringBundle;
@@ -922,7 +927,7 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
     // Doc failed to load because we couldn't connect to the server.
     // throw a connection failure dialog
     //
-    else if(aStatus == NS_ERROR_CONNECTION_REFUSED) {
+    else if (aStatus == NS_ERROR_CONNECTION_REFUSED && isTopFrame) {
       nsCOMPtr<nsIPrompt> prompter;
       nsCOMPtr<nsIStringBundle> stringBundle;
 
