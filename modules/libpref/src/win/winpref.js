@@ -167,6 +167,10 @@ pref("netinst.profile.show_profile_wizard", true);
 //do *not* place it in the docs...
 pref("netinst.profile.show_dir_overwrite_msg",  true); 
 
+// for mapi
+pref("mapi.blind-send.warn",     true); 
+pref("mapi.blind-send.enabled",  false); 
+
 // Unread mail count timer. Value to be specified in seconds
 // default is 5 minutes, i.e., 5 * 60 seconds = 300
 pref("mail.windows_xp_integration.unread_count_interval", 300);
