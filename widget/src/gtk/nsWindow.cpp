@@ -35,6 +35,7 @@
 #include "nsGtkEventHandler.h"
 #include "nsIAppShell.h"
 #include "nsClipboard.h"
+#include "gtk_moz_window.h"
 
 
 #include "stdio.h"
@@ -217,7 +218,7 @@ gint nsWindow::ConvertBorderStyles(nsBorderStyle bs)
 //-------------------------------------------------------------------------
 NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
 {
-  mWidget = gtk_layout_new(PR_FALSE, PR_FALSE);
+  mWidget = gtk_moz_window_new(PR_FALSE, PR_FALSE);
   GTK_WIDGET_SET_FLAGS(mWidget, GTK_CAN_FOCUS);
   gtk_widget_set_app_paintable(mWidget, PR_TRUE);
 
@@ -332,7 +333,7 @@ void *nsWindow::GetNativeData(PRUint32 aDataType)
   switch(aDataType)
   {
   case NS_NATIVE_WINDOW:
-    return (void *)GTK_LAYOUT(mWidget)->bin_window;
+    return (void *)GTK_MOZ_WINDOW(mWidget)->bin_window;
   case NS_NATIVE_DISPLAY:
     return (void *)GDK_DISPLAY();
   case NS_NATIVE_WIDGET:
@@ -355,9 +356,9 @@ void *nsWindow::GetNativeData(PRUint32 aDataType)
 //-------------------------------------------------------------------------
 NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
-  if (GTK_IS_LAYOUT(mWidget)) {
-    GtkAdjustment* horiz = gtk_layout_get_hadjustment(GTK_LAYOUT(mWidget));
-    GtkAdjustment* vert = gtk_layout_get_vadjustment(GTK_LAYOUT(mWidget));
+  if (GTK_IS_MOZ_WINDOW(mWidget)) {
+    GtkAdjustment* horiz = gtk_moz_window_get_hadjustment(GTK_MOZ_WINDOW(mWidget));
+    GtkAdjustment* vert = gtk_moz_window_get_vadjustment(GTK_MOZ_WINDOW(mWidget));
     horiz->value -= aDx;
     vert->value -= aDy;
     gtk_adjustment_value_changed(horiz);
@@ -626,19 +627,19 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
   }
   else if (mWidget) 
   {
-    GtkWidget *    layout = mWidget->parent;
+    GtkWidget *    moz_window = mWidget->parent;
 
-    GtkAdjustment* ha = gtk_layout_get_hadjustment(GTK_LAYOUT(layout));
-    GtkAdjustment* va = gtk_layout_get_vadjustment(GTK_LAYOUT(layout));
+    GtkAdjustment* ha = gtk_moz_window_get_hadjustment(GTK_MOZ_WINDOW(moz_window));
+    GtkAdjustment* va = gtk_moz_window_get_vadjustment(GTK_MOZ_WINDOW(moz_window));
 
     // See nsWidget::Move() for comments on this correction thing
     PRInt32        x_correction = (PRInt32) ha->value;
     PRInt32        y_correction = (PRInt32) va->value;
     
-    ::gtk_layout_move(GTK_LAYOUT(layout), 
-                      mWidget, 
-                      aX + x_correction, 
-                      aY + y_correction);
+    ::gtk_moz_window_move(GTK_MOZ_WINDOW(moz_window), 
+                          mWidget, 
+                          aX + x_correction, 
+                          aY + y_correction);
   }
 
   return NS_OK;
