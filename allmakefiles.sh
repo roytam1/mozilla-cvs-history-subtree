@@ -925,7 +925,6 @@ toolkit/mozapps/installer/windows/wizard/setuprsc/Makefile
 toolkit/mozapps/installer/windows/wizard/uninstall/Makefile
 toolkit/xre/Makefile
 toolkit/components/passwordmgr/resources/content/contents.rdf
-toolkit/components/passwordmgr/resources/locale/contents.rdf
 toolkit/mozapps/contents-content.rdf
 "
 
