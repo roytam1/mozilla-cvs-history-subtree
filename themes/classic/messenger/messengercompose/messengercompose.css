@@ -122,13 +122,6 @@
   border-right: none;
   -moz-border-top-colors: ThreeDHighlight;
 }
-
-#msgSubject {
-  margin-top: 0px;
-  margin-bottom: 4px;
-}
-
-
 /* ::::: autocomplete icons ::::: */
 
 treechildren:-moz-tree-cell-text(default-match) {
