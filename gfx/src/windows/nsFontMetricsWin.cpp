@@ -354,6 +354,13 @@ nsFontMetricsWin::nsFontMetricsWin()
   
 nsFontMetricsWin::~nsFontMetricsWin()
 {
+  // delete the map of the substitute font since it is not in the gFontMaps hashtable
+  // @see nsFontMetricsWin[A]::LoadSubstituteFont()
+  if (mSubstituteFont && mSubstituteFont->mMap) {
+    PR_Free(mSubstituteFont->mMap);
+    mSubstituteFont->mMap = nsnull;
+  }
+  mSubstituteFont = nsnull; // released below
   mFontHandle = nsnull; // released below
 
   for (PRInt32 i = mLoadedFonts.Count()-1; i >= 0; --i) {
@@ -2277,7 +2284,7 @@ nsFontMetricsWin::FindSubstituteFont(HDC aDC, PRUnichar c)
   }
 
   // if we ever reach here, the replacement char should be changed to a more common char
-  NS_ASSERTION(0, "Could not provide a substititute font");
+  NS_ERROR("Could not provide a substititute font");
   return nsnull;
 }
 
@@ -2301,7 +2308,7 @@ nsFontMetricsWin::LoadSubstituteFont(HDC aDC, nsString* aName)
 
   HFONT hfont = CreateFontHandle(aDC, &logFont);
   if (hfont) {
-    PRUint32* map = (PRUint32*)PR_Calloc(2048, 4); // deleted in ~nsFontWinSubstitute()
+    PRUint32* map = (PRUint32*)PR_Calloc(2048, 4); // deleted in ~nsFontMetricsWin()
     if (map) {
       // XXX 'displayUnicode' has to be initialized based on the desired rendering mode
       PRBool displayUnicode = PR_FALSE;
@@ -2935,7 +2942,6 @@ nsFontMetricsWin::FindGenericFont(HDC aDC, PRUnichar aChar)
 nsFontWin*
 nsFontMetricsWin::FindFont(HDC aDC, PRUnichar aChar)
 {
-NS_ASSERTION(aChar!=0xF006, "RBS BREAK");
   nsFontWin* font = FindUserDefinedFont(aDC, aChar);
   if (!font) {
     font = FindLocalFont(aDC, aChar);
@@ -3780,12 +3786,6 @@ nsFontWinSubstitute::nsFontWinSubstitute(LOGFONT* aLogFont, HFONT aFont,
 
 nsFontWinSubstitute::~nsFontWinSubstitute()
 {
-  // our map is not in the gFontMaps hashtable
-  // @see nsFontMetricsWin::LoadSubstituteFont()
-  if (mMap) {
-    PR_Free(mMap);
-    mMap = nsnull;
-  }
 }
 
 static PRUnichar*
@@ -4091,19 +4091,43 @@ nsFontSubset::~nsFontSubset()
   }
 }
 
+void
+nsFontSubset::Convert(const PRUnichar* aString, PRUint32 aLength,
+  char* aResult /*IN/OUT*/, int* aResultLength /*IN/OUT*/)
+{
+  int len = *aResultLength; // current available len of aResult
+  *aResultLength = 0;
+
+  // Get the number of bytes needed for the conversion
+  int nb = WideCharToMultiByte(mCodePage, 0, aString, aLength,
+                               aResult, 0, nsnull, nsnull);
+  if (!nb) return;
+  if (nb > len) {
+    // Allocate a bigger array that the caller should free
+    aResult = new char[nb];
+    if (!aResult) return;
+  }
+  // Convert the Unicode string to ANSI
+  nb = WideCharToMultiByte(mCodePage, 0, aString, aLength,
+                           aResult, nb, nsnull, nsnull);
+  *aResultLength = nb;
+}
+
 PRInt32
 nsFontSubset::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
 {
-  // XXX allocate on heap if string is too long
-  char str[1024];
-  int len = WideCharToMultiByte(mCodePage, 0, aString, aLength, str,
-    sizeof(str), nsnull, nsnull);
+  char str[CHAR_BUFFER_SIZE];
+  char* pstr = str;
+  int len = CHAR_BUFFER_SIZE;
+  Convert(aString, aLength, pstr, &len);
   if (len) {
     SIZE size;
     ::GetTextExtentPoint32A(aDC, str, len, &size);
+    if (pstr != str) {
+      delete[] pstr;
+    }
     return size.cx;
   }
-
   return 0;
 }
 
@@ -4111,12 +4135,15 @@ void
 nsFontSubset::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
-  // XXX allocate on heap if string is too long
-  char str[1024];
-  int len = WideCharToMultiByte(mCodePage, 0, aString, aLength, str,
-    sizeof(str), nsnull, nsnull);
+  char str[CHAR_BUFFER_SIZE];
+  char* pstr = str;
+  int len = CHAR_BUFFER_SIZE;
+  Convert(aString, aLength, pstr, &len);
   if (len) {
     ::ExtTextOutA(aDC, aX, aY, 0, NULL, str, len, NULL);
+    if (pstr != str) {
+      delete[] pstr;
+    }
   }
 }
 
@@ -4130,18 +4157,9 @@ nsFontSubset::GetBoundingMetrics(HDC                aDC,
   aBoundingMetrics.Clear();
   char str[CHAR_BUFFER_SIZE];
   char* pstr = str;
-  // Get number of bytes needed for the conversion
-  int nb = WideCharToMultiByte(mCodePage, 0, aString, aLength,
-                               pstr, 0, nsnull, nsnull);
-  if (!nb) return NS_ERROR_UNEXPECTED;
-  if (nb > CHAR_BUFFER_SIZE) {
-    pstr = new char[nb];
-    if (!pstr) return NS_ERROR_OUT_OF_MEMORY;
-  }
-  // Convert the string Unicode to ANSI
-  aLength = WideCharToMultiByte(mCodePage, 0, aString, aLength,
-                                pstr, nb, nsnull, nsnull);
-  if (!aLength) return NS_ERROR_UNEXPECTED;
+  int length = CHAR_BUFFER_SIZE;
+  Convert(aString, aLength, pstr, &length);
+  if (!length) return NS_ERROR_UNEXPECTED;
 
   // measure the string
   nscoord descent;
@@ -4159,9 +4177,9 @@ nsFontSubset::GetBoundingMetrics(HDC                aDC,
   aBoundingMetrics.descent = descent;
   aBoundingMetrics.width = gm.gmCellIncX;
 
-  if (1 < aLength) {
+  if (1 < length) {
     // loop over each glyph to get the ascent and descent
-    for (PRUint32 i = 1; i < aLength; ++i) {
+    for (int i = 1; i < length; ++i) {
       len = gGlyphAgent.GetGlyphMetrics(aDC, PRUint8(pstr[0]), &gm);
       if (GDI_ERROR == len) {
         return NS_ERROR_UNEXPECTED;
@@ -4198,6 +4216,41 @@ nsFontSubset::DumpFontInfo()
 #endif // NS_DEBUG
 #endif
 
+class nsFontSubsetSubstitute : public nsFontSubset
+{
+public:
+  nsFontSubsetSubstitute();
+  virtual ~nsFontSubsetSubstitute();
+
+  // overloaded method to convert all chars to the replacement char
+  virtual void Convert(const PRUnichar* aString, PRUint32 aLength,
+                       char* aResult, int* aResultLength);
+};
+
+nsFontSubsetSubstitute::nsFontSubsetSubstitute()
+  : nsFontSubset()
+{
+}
+
+nsFontSubsetSubstitute::~nsFontSubsetSubstitute()
+{
+  if (mMap) {
+    PR_Free(mMap);
+    mMap = nsnull;
+  }
+}
+
+void
+nsFontSubsetSubstitute::Convert(const PRUnichar* aString, PRUint32 aLength,
+  char* aResult, int* aResultLength)
+{
+  nsAutoString tmp;
+  for (PRUint32 i = 0; i < aLength; ++i) {
+    tmp.Append(NS_REPLACEMENT_CHAR);
+  }
+  nsFontSubset::Convert(tmp.get(), aLength, aResult, aResultLength);
+}
+
 nsFontWinA::nsFontWinA(LOGFONT* aLogFont, HFONT aFont, PRUint32* aMap)
   : nsFontWin(aLogFont, aFont, aMap)
 {
@@ -4224,7 +4277,7 @@ nsFontWinA::~nsFontWinA()
 PRInt32
 nsFontWinA::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
 {
-  NS_ASSERTION(0, "must call nsFontSubset's GetWidth");
+  NS_ERROR("must call nsFontSubset's GetWidth");
   return 0;
 }
 
@@ -4232,7 +4285,7 @@ void
 nsFontWinA::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
-  NS_ASSERTION(0, "must call nsFontSubset's DrawString");
+  NS_ERROR("must call nsFontSubset's DrawString");
 }
 
 #ifdef MOZ_MATHML
@@ -4242,7 +4295,7 @@ nsFontWinA::GetBoundingMetrics(HDC                aDC,
                                PRUint32           aLength,
                                nsBoundingMetrics& aBoundingMetrics)
 {
-  NS_ASSERTION(0, "must call nsFontSubset's GetBoundingMetrics");
+  NS_ERROR("must call nsFontSubset's GetBoundingMetrics");
   return NS_ERROR_FAILURE;
 }
 
@@ -4250,7 +4303,7 @@ nsFontWinA::GetBoundingMetrics(HDC                aDC,
 void 
 nsFontWinA::DumpFontInfo()
 {
-  NS_ASSERTION(0, "must call nsFontSubset's DumpFontInfo");
+  NS_ERROR("must call nsFontSubset's DumpFontInfo");
 }
 #endif // NS_DEBUG
 #endif
@@ -4564,14 +4617,98 @@ nsFontMetricsWinA::FindGlobalFont(HDC aDC, PRUnichar c)
 nsFontWin*
 nsFontMetricsWinA::FindSubstituteFont(HDC aDC, PRUnichar aChar)
 {
-  // XXX Write me.
+  // @see nsFontMetricsWin::FindSubstituteFont() for the general idea behind
+  // this function. The fundamental difference here in nsFontMetricsWinA is
+  // that the substitute font is setup as a 'wrapper' around a 'substitute
+  // subset' that has a glyph for the replacement character. This allows
+  // a transparent integration with all the other 'A' functions. 
+
+  if (mSubstituteFont) {
+    nsFontWinA* substituteFont = (nsFontWinA*)mSubstituteFont;
+    ADD_GLYPH(substituteFont->mMap, aChar);
+    ADD_GLYPH(substituteFont->mSubsets[0]->mMap, aChar);
+    return mSubstituteFont;
+  }
+
+  int count = mLoadedFonts.Count();
+  for (int i = 0; i < count; ++i) {
+    nsFontWinA* font = (nsFontWinA*)mLoadedFonts[i];
+    if (FONT_HAS_GLYPH(font->mMap, NS_REPLACEMENT_CHAR)) {
+      nsFontSubset** subset = font->mSubsets;
+      nsFontSubset** endSubsets = subset + font->mSubsetsCount;
+      for (; subset < endSubsets; ++subset) {
+        if ((*subset)->mMap && FONT_HAS_GLYPH((*subset)->mMap, NS_REPLACEMENT_CHAR)) {
+          // make a substitute font from this one
+          nsAutoString name;
+          name.AssignWithConversion(font->mName);
+          nsFontWinA* substituteFont = (nsFontWinA*)LoadSubstituteFont(aDC, &name);
+          if (substituteFont) {
+            nsFontSubset* substituteSubset = substituteFont->mSubsets[0];
+            substituteSubset->mCharset = (*subset)->mCharset;
+            if (substituteSubset->Load(aDC, this, substituteFont)) {
+              ADD_GLYPH(substituteFont->mMap, aChar);
+              ADD_GLYPH(substituteFont->mSubsets[0]->mMap, aChar);
+              mSubstituteFont = (nsFontWin*)substituteFont;
+              return mSubstituteFont;
+            }
+            mLoadedFonts.RemoveElementAt(mLoadedFonts.Count()-1);
+            PR_Free(substituteFont->mMap);
+            substituteFont->mMap = nsnull;
+            delete substituteFont;
+          }
+        }
+      }
+    }
+  }
+
+  // if we ever reach here, the replacement char should be changed to a more common char
+  NS_ERROR("Could not provide a substititute font");
   return nsnull;
 }
 
 nsFontWin*
 nsFontMetricsWinA::LoadSubstituteFont(HDC aDC, nsString* aName)
 {
-  // XXX Write me.
+  PRUint16 weightTable = LookForFontWeightTable(aDC, aName);
+  PRInt32 weight = GetFontWeight(mFont.weight, weightTable);
+
+  LOGFONT logFont;
+  FillLogFont(&logFont, weight);
+
+  logFont.lfFaceName[0] = 0;
+  WideCharToMultiByte(CP_ACP, 0, aName->get(), aName->Length() + 1,
+    logFont.lfFaceName, sizeof(logFont.lfFaceName), nsnull, nsnull);
+
+  HFONT hfont = CreateFontHandle(aDC, &logFont);
+  if (hfont) {
+    HFONT oldFont = (HFONT)::SelectObject(aDC, (HGDIOBJ)hfont);
+    char name[sizeof(logFont.lfFaceName)];
+    if (::GetTextFace(aDC, sizeof(name), name) &&
+        !strcmpi(name, logFont.lfFaceName)) {
+      PRUint32* map = (PRUint32*)PR_Calloc(2048, 4); // deleted in ~nsFontMetricsWin()
+      if (map) {
+        nsFontWinA* font = new nsFontWinA(&logFont, hfont, map);
+        if (font) {
+          font->mSubsets = (nsFontSubset**)PR_Calloc(1, sizeof(nsFontSubset*));
+          if (font->mSubsets) {
+            nsFontSubsetSubstitute* subset = new nsFontSubsetSubstitute();
+            if (subset) {
+              font->mSubsetsCount = 1;
+              font->mSubsets[0] = subset;
+              mLoadedFonts.AppendElement(font);
+              ::SelectObject(aDC, (HGDIOBJ)oldFont);
+              return font;
+            }
+            PR_Free(font->mSubsets);
+            font->mSubsets = nsnull;
+          }
+          delete font;
+        }
+      }
+    }
+    ::SelectObject(aDC, (HGDIOBJ)oldFont);
+    ::DeleteObject(hfont);
+  }
   return nsnull;
 }
 
@@ -4598,7 +4735,7 @@ nsFontMetricsWinA::ResolveForwards(HDC                  aDC,
     // we need to repeatedly get the count here because it can change on the way
     count = mLoadedFonts.Count();
     while (i < count) {
-      nsFontWinA* font = (nsFontWinA*)mLoadedFonts[i];
+      nsFontWinA* font = (nsFontWinA*)mLoadedFonts[i++];
       if (FONT_HAS_GLYPH(font->mMap, *currChar)) {
         subset = font->mSubsets;
         endSubsets = subset + font->mSubsetsCount;
@@ -4617,7 +4754,7 @@ nsFontMetricsWinA::ResolveForwards(HDC                  aDC,
             // of the previous fonts can represent these chars
             j = 0; // in case we don't enter the while loop...
             while (++currChar < lastChar && FONT_HAS_GLYPH(currFont->mMap, *currChar)) {
-              for (j = 0; j < i; ++j) {
+              for (j = 0; j < i-1; ++j) {
                 // NOTE: we are overwriting variables here (we now *know* that we
                 // will break out of the bigger outer loop after the callback...)
                 font = (nsFontWinA*)mLoadedFonts[j];
@@ -4658,16 +4795,11 @@ callback:
           ++subset;
         }
       }
-      else {
-        ++i;
-      }
     }
 
     // load additional fonts, retaining the last font index i from where
     // we will keep advancing
     currFont = (nsFontSubset*)FindFont(aDC, *currChar);
-#if 0
-    //XXX the substitute font is not yet implemented for nsFontMetricsWinA
     if (currFont == mSubstituteFont) {
       // Exception to the font index... the substitute font can be anywhere
       // inside mLoadedFonts[]. When it is returned from the second time onwards,
@@ -4677,7 +4809,6 @@ callback:
       i = mLoadedFonts.IndexOf(mSubstituteFont);
       continue;
     }
-#endif
 
     // bail out if something weird happened
     if (!currFont) return NS_ERROR_FAILURE;

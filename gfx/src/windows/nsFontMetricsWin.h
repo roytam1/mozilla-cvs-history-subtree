@@ -335,6 +335,10 @@ public:
 
   int Load(HDC aDC, nsFontMetricsWinA* aFontMetricsWin, nsFontWinA* aFont);
 
+  // convert a Unicode string to ANSI within our codepage
+  virtual void Convert(const PRUnichar* aString, PRUint32 aLength,
+                       char* aResult /*IN/OUT*/, int* aResultLength /*IN/OUT*/);
+
   BYTE     mCharset;
   PRUint16 mCodePage;
 };

@@ -2001,8 +2001,8 @@ nsRenderingContextWin::GetDimensions(const PRUnichar* aString,
 
   // Post-processing for the ascent and descent
   // There are two things to do:
-  // 1. Determine the ascent and descent of the entire string that fits
-  // 2. Determine the ascent and descent up to where line-breaking may occur
+  // 1. Determine the ascent and descent up to where line-breaking may occur
+  // 2. Determine the ascent and descent of the remainder
 
   nsFontWin* fontWin = (nsFontWin*)fonts.ElementAt(0);
   aDimensions.ascent = fontWin->mMaxAscent;
