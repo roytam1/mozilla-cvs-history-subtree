@@ -291,10 +291,7 @@ VerifyCertDir(char *dir, char *keyName)
      return;
   }
 
-  /* This code is really broken because it makes underlying assumptions about
-   * how the NSS profile directory is laid out, but these names can change
-   * from release to release. */
-  sprintf (fn, "%s/cert8.db", dir);
+  sprintf (fn, "%s/cert7.db", dir);
 
   if (PR_Access (fn, PR_ACCESS_EXISTS))
     {

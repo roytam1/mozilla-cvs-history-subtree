@@ -56,9 +56,6 @@ pk11_certdb_name_cb(void *arg, int dbVersion)
     char *dbname = NULL;
 
     switch (dbVersion) {
-      case 8:
-	dbver = "8";
-	break;
       case 7:
 	dbver = "7";
 	break;
@@ -278,7 +275,7 @@ static int rdbmapflags(int flags);
 static rdbfunc pk11_rdbfunc;
 
 /* NOTE: SHLIB_SUFFIX is defined on the command line */
-#define RDBLIB SHLIB_PREFIX"rdb."SHLIB_SUFFIX
+#define RDBLIB "rdb."SHLIB_SUFFIX
 
 DB * rdbopen(const char *appName, const char *prefix, 
 				const char *type, int flags)

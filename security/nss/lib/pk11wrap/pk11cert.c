@@ -70,8 +70,6 @@
 
 #define PK11_SEARCH_CHUNKSIZE 10
 
-extern const NSSError NSS_ERROR_NOT_FOUND;
-
 CK_OBJECT_HANDLE
 pk11_FindPubKeyByAnyCert(CERTCertificate *cert, PK11SlotInfo **slot, void *wincx);
 
@@ -3724,9 +3722,6 @@ loser:
 	crls = nssTrustDomain_FindCRLsBySubject(td, &subject);
     }
     if (!crls) {
-	if (NSS_GetError() == NSS_ERROR_NOT_FOUND) {
-	    PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
-	}
 	return NULL;
     }
     crl = NULL;
@@ -3739,10 +3734,7 @@ loser:
 	}
     }
     nssCRLArray_Destroy(crls);
-    if (!crl) { 
-	/* CRL collection was found, but no interesting CRL's were on it.
-	 * Not an error */
-	PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
+    if (!crl) {
 	return NULL;
     }
     *slot = PK11_ReferenceSlot(crl->object.instances[0]->token->pk11slot);

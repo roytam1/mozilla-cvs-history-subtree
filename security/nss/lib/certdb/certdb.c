@@ -41,7 +41,6 @@
 #include "prmon.h"
 #include "prtime.h"
 #include "cert.h"
-#include "certi.h"
 #include "secder.h"
 #include "secoid.h"
 #include "secasn1.h"
@@ -863,7 +862,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* set the email address */
-    cert->emailAddr = cert_GetCertificateEmailAddresses(cert);
+    cert->emailAddr = CERT_GetCertificateEmailAddress(cert);
     
     /* initialize the subjectKeyID */
     rv = cert_GetKeyID(cert);

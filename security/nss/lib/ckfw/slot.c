@@ -256,9 +256,6 @@ nssCKFWSlot_Destroy
     return error;
   }
 #endif /* NSSDEBUG */
-  if (fwSlot->fwToken) {
-    nssCKFWToken_Destroy(fwSlot->fwToken);
-  }
 
   (void)nssCKFWMutex_Destroy(fwSlot->mutex);
 
