@@ -3914,6 +3914,7 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 
 	// Get the parent
 	COutlinerParent* newParent = newView->GetOutlinerParent();
+	newParent->SetHTView(HT_GetSelectedView(thePane));
 
 	// Initialize the columns, etc.
 	((CRDFOutlinerParent*)newParent)->Initialize();
