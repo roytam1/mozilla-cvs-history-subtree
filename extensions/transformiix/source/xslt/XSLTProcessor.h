@@ -101,28 +101,31 @@ private:
     static void logMessage(const String& aMessage);
 
     /**
-     * XXX.
+     * Instantiate aAction in the result tree.
+     * Either perform the action associated with the element in the
+     * XSLT namespace, or copy the element as literal result element.
      *
-     * @param aAction YYY
+     * @param aAction literal result element or XSLT element
      * @param aPs the current ProcessorState
      */
     static void processAction(Node* aAction,
                               ProcessorState* aPs);
 
     /**
-     * Processes the attribute sets specified in the use-attribute-sets attribute
-     * of the element specified in aElement
+     * Processes the attribute sets specified in the use-attribute-sets
+     * attribute of the element specified in aElement.
      *
-     * @param aElement YYY
+     * @param aElement Element specifying the attribute sets
      * @param aPs the current ProcessorState
-     * @param aRecursionStack YYY
+     * @param aRecursionStack recursion stack to track attribute sets
+     *                        including themselves, even indirectly
      */
     static void processAttributeSets(Element* aElement, ProcessorState* aPs,
                                      Stack* aRecursionStack = 0);
 
     /**
-     * Processes the children of the specified element using the given context node
-     * and ProcessorState.
+     * Processes the children of the specified element using the given
+     * context node and ProcessorState.
      *
      * @param aElement the template to be processed. Must be != NULL
      * @param aPs the current ProcessorState
@@ -131,12 +134,14 @@ private:
                                 ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Processes the children of the specified element using the given
+     * context node and ProcessorState and append the text data to 
+     * aValue.
      *
-     * @param aElement YYY
+     * @param aElement the template to be processed. Must be != NULL
      * @param aPs the current ProcessorState
-     * @param aOnlyText YYY
-     * @param aValue YYY
+     * @param aOnlyText if true, don't allow for nested content
+     * @param aValue String reference to append the result to
      */
     static void processChildrenAsValue(Element* aElement,
                                        ProcessorState* aPs,
@@ -144,7 +149,7 @@ private:
                                        String& aValue);
 
     /**
-     * Invokes the default template for the specified node
+     * Invokes the default template for the specified node.
      *
      * @param aPs the current ProcessorState
      * @param aMode template mode
@@ -164,12 +169,13 @@ private:
                                ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Instantiate the children of the template aTemplate with the
+     * parameters aParams and the mode aMode.
      *
-     * @param aTemplate YYY
-     * @param aParams YYY
-     * @param aMode YYY
-     * @param aFrame YYY
+     * @param aTemplate xsl:template to instantiate
+     * @param aParams txVariableMap holding the params, if given
+     * @param aMode mode of this template
+     * @param aFrame the current import frame, needed for apply-templates
      * @param aPs the current ProcessorState
      */
     static void processMatchedTemplate(Node* aTemplate,
@@ -182,7 +188,7 @@ private:
      * Processes the xsl:with-param child elements of the given xsl action.
      *
      * @param aAction  the action node that takes parameters (xsl:call-template
-     *                 or xsl:apply-templates
+     *                 or xsl:apply-templates)
      * @param aMap     map to place parsed variables in
      * @param aPs      the current ProcessorState
      * @return         errorcode
@@ -191,10 +197,12 @@ private:
                                       ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Add a stylesheet to the processorstate. If the document element
+     * is a LRE, just add one template with pattern "/". Otherwise,
+     * call processTopLevel with the document element.
      *
-     * @param aStylesheet YYY
-     * @param aImportFrame YYY
+     * @param aStylesheet the document to be added to the ps
+     * @param aImportFrame the import frame to add the stylesheet to
      * @param aPs the current ProcessorState
      */
     static void processStylesheet(Document* aStylesheet,
@@ -204,20 +212,21 @@ private:
 
     /**
      * Processes the specified template using the given context,
-     * ProcessorState, and parameters.
+     * ProcessorState, and parameters. Iterates thru the 
+     * |xsl:param|s and then calls processAction.
      *
-     * @param aTemplate YYY
-     * @param aParams YYY
+     * @param aTemplate xsl:template to process
+     * @param aParams variable map with xsl:with-param values
      * @param aPs the current ProcessorState
      */
     static void processTemplate(Node* aTemplate, txVariableMap* aParams,
                                 ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Processes the top-level children of xsl:stylesheet.
      *
-     * @param aStylesheet YYY
-     * @param aImportFrame YYY
+     * @param aStylesheet the stylesheet
+     * @param aImportFrame the import frame of the stylesheet
      * @param aPs the current ProcessorState
      */
     static void processTopLevel(Element* aStylesheet,
@@ -226,18 +235,20 @@ private:
                                 ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Processes the given xsl:variable.
      *
-     * @param aVariable YYY
+     * @param aVariable the variable element
      * @param aPs the current ProcessorState
      */
     static ExprResult* processVariable(Element* aVariable,
                                        ProcessorState* aPs);
 
     /**
-     * XXX.
+     * Start a new element in the result. Handles the default html
+     * output method.
      *
-     * @param aMethod YYY
+     * @param aName local name of the result element
+     * @param aNsID namespace ID of the result element
      * @param aPs the current ProcessorState
      */
     static void startElement(const String& aName,
@@ -245,18 +256,18 @@ private:
                              ProcessorState* aPs);
 
     /**
-     * Performs the xsl:copy action as specified in the XSLT specification
+     * Performs the xsl:copy action as specified in the XSLT specification.
      *
-     * @param aAction YYY
+     * @param aAction element to copy
      * @param aPs the current ProcessorState
      */
     static void xslCopy(Element* aAction,
                         ProcessorState* aPs);
 
     /**
-     * Performs the xsl:copy-of action as specified in the XSLT specification
+     * Performs the xsl:copy-of action as specified in the XSLT specification.
      *
-     * @param aExprResult YYY
+     * @param aExprResult expression result to copy
      * @param aPs the current ProcessorState
      */
     static void xslCopyOf(ExprResult* aExprResult,
