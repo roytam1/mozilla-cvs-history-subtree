@@ -21,7 +21,8 @@
 #   LINK_SEC    if defined and pointing to a directory containing libsec &
 #               friends, then link them in. Default not set.
 #
-#   LDAP_SRC    place holding the ldap tree.  Default = '$(MOZ_SRC)\ns\netsite
+#   LDAP_SRC    place holding the ldap tree.  Default = 
+#               '$(MOZ_SRC)\mozilla\directory\c-sdk
 #   MSVC2       if defined, you are using Visual C++ 2.x tools, 
 #               else you are using Visual C++ 4.* tools
 #   ALPHA       define to build for DEC Alpha
@@ -60,7 +61,7 @@ LDAP_SRC=l:
 !endif
 
 !if "$(MOZ_BITS)"=="16" && !EXIST( $(LDAP_SRC)\ldap\Makefile )
-!error For Win16 you need to SUBST l: %MOZ_SRC%\ns\netsite
+!error For Win16 you need to SUBST l: %MOZ_SRC%\mozilla\directory\c-sdk
 !endif
 
 !if !defined(LDAP_OUT)
