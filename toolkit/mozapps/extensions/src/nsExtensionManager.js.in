@@ -1009,16 +1009,6 @@ nsExtensionManager.prototype = {
   observe: function (aSubject, aTopic, aData)
   {
     switch (aTopic) {
-    case "profile-after-change":
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Components.interfaces.nsIObserverService);
-      os.removeObserver(this, "profile-after-change");
-      
-      // XXXben this can go away once appstartup/runner code calls us. 
-      this.checkForMismatches();
-
-      this._disableObsoleteExtensions();
-      break;
     case "quit-application-requested":
       if (this._downloadCount > 0) {
         var result;
@@ -1364,6 +1354,8 @@ nsExtensionManager.prototype = {
   {
     var needsRestart = false;
         
+    this._disableObsoleteExtensions();
+
     // Check to see if the version of the application that is being started
     // now is the same one that was started last time. 
     var pref = Components.classes["@mozilla.org/preferences-service;1"]
@@ -1399,7 +1391,6 @@ nsExtensionManager.prototype = {
             }
           }
         }
-        dump("*** incompatible list = " + items + "\n");
         var updates = Components.classes["@mozilla.org/updates/update-service;1"]
                                 .getService(Components.interfaces.nsIUpdateService);
         updates.checkForUpdates(items, items.length, nsIUpdateItem.TYPE_ADDON, 
