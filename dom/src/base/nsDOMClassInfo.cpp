@@ -405,19 +405,19 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
@@ -1549,6 +1549,36 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
   *parentObj = JSVAL_TO_OBJECT(v);
 
   return rv;
+}
+
+
+NS_IMETHODIMP
+nsNodeSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                      JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(native));
+
+  if  (content) {
+    nsCOMPtr<nsIDocument> doc;
+
+#ifdef DEBUG_jst
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    jschar *s = ::JS_GetStringChars(jsstr);
+#endif
+
+    // Use GetOwnerDocument here!
+    content->GetDocument(*getter_AddRefs(doc));
+
+    if (doc) {
+      doc->AddReference(content, wrapper);
+    }
+  }
+
+  return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 

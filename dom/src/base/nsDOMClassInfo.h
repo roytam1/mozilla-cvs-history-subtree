@@ -223,6 +223,8 @@ protected:
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
