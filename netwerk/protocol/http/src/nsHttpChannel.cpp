@@ -30,6 +30,7 @@
 #include "nsHttp.h"
 #include "nsIHttpAuthenticator.h"
 #include "nsIAuthPrompt.h"
+#include "nsIStringBundle.h"
 #include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
@@ -253,12 +254,20 @@ nsHttpChannel::ProcessNormal()
     return mListener->OnStartRequest(this, mListenerContext);
 }
 
+//-----------------------------------------------------------------------------
+// nsHttpChannel <cache>
+//-----------------------------------------------------------------------------
+
 nsresult
 nsHttpChannel::ProcessNotModified()
 {
     NS_NOTREACHED("not implemented");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel <redirect>
+//-----------------------------------------------------------------------------
 
 nsresult
 nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
@@ -366,6 +375,10 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
 
     return NS_OK;
 }
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel <auth>
+//-----------------------------------------------------------------------------
 
 nsresult
 nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
@@ -622,23 +635,58 @@ nsHttpChannel::PromptForUserPass(const char *host,
         return rv;
     }
 
-    // get a sync proxy for the auth prompt to ensure that it is run on the
-    // ui thread only.
-    nsCOMPtr<nsIProxyObjectManager> mgr;
-    rv = nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
-    if (mgr) {
-        nsCOMPtr<nsIAuthPrompt> temp = authPrompt;
-        rv = mgr->GetProxyForObject(NS_UI_THREAD_EVENTQ,
-                                    NS_GET_IID(nsIAuthPrompt),
-                                    temp,
-                                    PROXY_SYNC,
-                                    getter_AddRefs(authPrompt));
-        if (NS_FAILED(rv)) return rv;
-    }
+    nsAutoString realmU;
+    realmU.Assign(NS_LITERAL_STRING("\""));
+    realmU.AppendWithConversion(realm);
+    realmU.Append(NS_LITERAL_STRING("\""));
 
+    // construct the domain string
+    nsCAutoString domain;
+    domain.Assign(host);
+    domain.Append(':');
+    domain.AppendInt(port);
 
+    nsAutoString hostU = NS_ConvertASCIItoUCS2(domain);
 
+    domain.Append(" (");
+    domain.Append(realm);
+    domain.Append(')');
 
+    // construct the message string
+    nsCOMPtr<nsIStringBundleService> bundleSvc =
+            do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIStringBundle> bundle;
+    rv = bundleSvc->CreateBundle(NECKO_MSGS_URL, getter_AddRefs(bundle));
+    if (NS_FAILED(rv)) return rv;
+
+    nsXPIDLString message;
+    const PRUnichar *strings[] = { realmU.GetUnicode(), hostU.GetUnicode() };
+
+    rv = bundle->FormatStringFromName(
+                    NS_LITERAL_STRING("EnterUserPasswordForRealm").get(),
+                    strings, 2,
+                    getter_Copies(message));
+    if (NS_FAILED(rv)) return rv;
+
+    // prompt the user...
+    nsXPIDLString userBuf, passBuf;
+    PRBool retval = PR_FALSE;
+    rv = authPrompt->PromptUsernameAndPassword(nsnull,
+                                               message.get(),
+                                               NS_ConvertASCIItoUCS2(domain).get(),
+                                               nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                               getter_Copies(userBuf),
+                                               getter_Copies(passBuf),
+                                               &retval);
+    if (NS_FAILED(rv))
+        return rv;
+    if (!retval)
+        return NS_ERROR_ABORT;
+
+    user.Assign(userBuf);
+    pass.Assign(passBuf);
     return NS_OK;
 }
 

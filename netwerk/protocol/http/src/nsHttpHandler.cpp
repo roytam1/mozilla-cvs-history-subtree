@@ -193,6 +193,8 @@ nsHttpHandler::Init()
     mAuthCache = new nsHttpAuthCache();
     if (!mAuthCache)
         return NS_ERROR_OUT_OF_MEMORY;
+    rv = mAuthCache->Init();
+    if (NS_FAILED(rv)) return rv;
 
     // Startup the http category
     // Bring alive the objects in the http-protocol-startup category
