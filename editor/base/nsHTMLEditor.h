@@ -571,6 +571,8 @@ protected:
                                       nsCOMPtr<nsISupportsArray> *outNodeList,
                                       PRInt32 aRangeStartHint,
                                       PRInt32 aRangeEndHint);
+  nsresult   ReplacePreNewlines(nsIDOMNode *aNode);
+  nsresult   ReplaceNewlines(nsIDOMNode *aNode);
 
   /** simple utility to handle any error with event listener allocation or registration */
   void HandleEventListenerError();
@@ -674,6 +676,7 @@ protected:
   nsCOMPtr<nsIEditProperty> mEditProperty;
 
   nsCOMPtr<nsIDOMNode> mCachedNode;
+  nsCOMPtr<nsIDOMNode> mCloneBR;  // used by newline replacement code to quickly make br's
   
   PRBool   mCachedBoldStyle;
   PRBool   mCachedItalicStyle;

@@ -49,6 +49,10 @@
 #include "nsIFileChannel.h"
 #include "nsIFrameSelection.h"  // For TABLESELECTION_ defines
 #include "nsIIndependentSelection.h" //domselections answer to frameselection
+#include "nsITextContent.h"
+#define _IMPL_NS_LAYOUT
+#include "nsTextFragment.h"
+#undef _IMPL_NS_LAYOUT
 
 
 #include "nsICSSLoader.h"
@@ -162,6 +166,26 @@ static nsCOMPtr<nsIDOMNode> GetTableParent(nsIDOMNode* aNode)
   return nsnull;
 }
 
+class nsPreFunctor : public nsBoolDomIterFunctor
+{
+  public:
+    virtual PRBool operator()(nsIDOMNode* aNode)  // used to build list of all pre's
+    {
+      if (nsHTMLEditUtils::IsPre(aNode)) return PR_TRUE;
+      return PR_FALSE;
+    }
+};
+
+class nsTextFunctor : public nsBoolDomIterFunctor
+{
+  public:
+    virtual PRBool operator()(nsIDOMNode* aNode)  // used to build list of all pre's
+    {
+      if (nsEditor::IsTextNode(aNode)) return PR_TRUE;
+      return PR_FALSE;
+    }
+};
+
 
 NS_IMETHODIMP nsHTMLEditor::InsertHTML(const nsAReadableString & aInString)
 {
@@ -204,6 +228,12 @@ NS_IMETHODIMP nsHTMLEditor::InsertHTMLWithCharset(const nsAReadableString & aInp
     res = nsrange->CreateContextualFragment(aInputString, getter_AddRefs(docfrag));
     NS_ENSURE_SUCCESS(res, res);
   }
+  
+  // replace any pre newlines with br's, so that user will be able to 
+  // click in any blank lines.
+  res = ReplacePreNewlines(docfrag);
+  NS_ENSURE_SUCCESS(res, res);
+  
   // put the fragment into the document
   // crazy what i have to go through to get the right info for dom insertion
   nsCOMPtr<nsIDOMNode> parent, junk;
@@ -1698,4 +1728,176 @@ nsresult nsHTMLEditor::CreateListOfNodesToPaste(nsIDOMNode  *aFragmentAsNode,
   return res;
 }
 
+nsresult
+nsHTMLEditor::ReplacePreNewlines(nsIDOMNode *aNode)
+{
+  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
+  nsresult res = NS_OK;
+
+  // make a br to clone at will
+  if (!mCloneBR)
+  {
+    nsCOMPtr<nsIDOMDocument> domdoc; 
+    res = GetDocument(getter_AddRefs(domdoc)); 
+    if (NS_FAILED(res)) return res;
+    if (!domdoc) return NS_ERROR_NULL_POINTER;
+    nsCOMPtr<nsIDOMElement> brElem;
+    res = domdoc->CreateElement(NS_LITERAL_STRING("br"), getter_AddRefs(brElem));
+    if (NS_FAILED(res)) return res;
+    if (!brElem) return NS_ERROR_NULL_POINTER;
+    mCloneBR = do_QueryInterface(brElem); 
+    if (!mCloneBR) return NS_ERROR_NULL_POINTER;
+  }
+  
+  // build a list of pre nodes in aNode
+  nsCOMPtr<nsISupportsArray> arrayOfNodes;
+  nsPreFunctor functor;
+  nsDOMIterator iter;
+  res = iter.Init(aNode);
+  if (NS_FAILED(res)) return res;
+  res = iter.MakeList(functor, address_of(arrayOfNodes));
+  if (NS_FAILED(res)) return res;
+      
+  // now that we have the list, process pre's, replacing newlines with br's
+  PRUint32 listCount;
+  PRUint32 j;
+  nsCOMPtr<nsIDOMNode> somenode;
+  nsCOMPtr<nsISupports> isupports;
+
+  arrayOfNodes->Count(&listCount);
+  for (j = 0; j < listCount; j++)
+  {
+    isupports = dont_AddRef(arrayOfNodes->ElementAt(0));
+    somenode = do_QueryInterface(isupports);
+    res = ReplaceNewlines(somenode);
+    if (NS_FAILED(res)) return res;
+    arrayOfNodes->RemoveElementAt(0);
+  }
+  return res;
+}
+
+nsresult
+nsHTMLEditor::ReplaceNewlines(nsIDOMNode *aNode)
+{
+  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
+  nsresult res = NS_OK;
+    
+  // build a list of text nodes in aNode
+  nsCOMPtr<nsISupportsArray> arrayOfNodes;
+  nsTextFunctor functor;
+  nsDOMIterator iter;
+  res = iter.Init(aNode);
+  if (NS_FAILED(res)) return res;
+  res = iter.MakeList(functor, address_of(arrayOfNodes));
+  if (NS_FAILED(res)) return res;
+      
+  // replace newlines with breaks.  
+  PRUint32 nodeCount, j;
+  res = arrayOfNodes->Count(&nodeCount);
+  if (NS_FAILED(res)) return res;
+  for (j = 0; j < nodeCount; j++)
+  {
+    nsCOMPtr<nsISupports> isupports;
+    isupports = dont_AddRef(arrayOfNodes->ElementAt(j));
+    nsCOMPtr<nsIDOMNode> brNode, theNode( do_QueryInterface(isupports) );
+    // find the newlines
+    PRInt32 nodeOffset;
+    nsCOMPtr<nsIDOMCharacterData> textNode(do_QueryInterface(theNode));
+    if (!textNode) return NS_ERROR_NO_INTERFACE;
+    nsCOMPtr<nsITextContent> newTextContent, textContent(do_QueryInterface(theNode));
+    nsCOMPtr<nsIContent> parent, brContent;
+    if (!textContent) return NS_ERROR_NO_INTERFACE;
+    const nsTextFragment *textFrag;
+    res = textContent->GetText(&textFrag);
+    if (NS_FAILED(res)) return res;
+    res = textContent->GetParent(*getter_AddRefs(parent));
+    if (NS_FAILED(res)) return res;
+    if (!parent) return NS_ERROR_NULL_POINTER;
+    parent->IndexOf(textContent, nodeOffset);
+    do 
+    {
+      // scan backwards for newlines
+      PRInt32 len = textFrag->GetLength();
+      if (!len) break; // empty node
+      PRUnichar character = textFrag->CharAt(len-1);
+      if (character == PRUnichar('\n'))
+      {
+        // final char of text node is a newline.  don't need to split
+        // node, just delete newline and insert br after node
+        textNode->DeleteData(len-1, 1);
+        nsCOMPtr<nsIDOMNode> theBR;
+        mCloneBR->CloneNode(PR_FALSE, getter_AddRefs(theBR));
+        brContent = do_QueryInterface(theBR);
+        res = parent->InsertChildAt(brContent, nodeOffset+1, PR_FALSE, PR_FALSE);
+        if (NS_FAILED(res)) return res;
+        continue;
+      }
+      else if (len == 1)
+      {
+        break;  // no more chars to examine
+      }
+      else
+      {
+        // keep scanning for newlines.  If we find one we must split the text node,
+        // unless it's at offset 0.
+        PRInt32 offset = len-2;
+        PRBool didSomething = PR_FALSE;
+        while (offset > 0)
+        {
+          character = textFrag->CharAt(offset);
+          if (character == PRUnichar('\n'))
+          {
+            // delete newline
+            textNode->DeleteData(offset, 1);
+            // create a text node
+            textContent->CloneContent(PR_FALSE, getter_AddRefs(newTextContent));
+            // copy the text into the new node
+            if (textFrag->Is2b())
+            {
+              const PRUnichar* rawText = textFrag->Get2b(); 
+              res = newTextContent->SetText(&(rawText[offset]), (len-offset)-1, PR_FALSE);
+            }
+            else
+            {
+              const char* rawText = textFrag->Get1b(); 
+              res = newTextContent->SetText(&(rawText[offset]), (len-offset)-1, PR_FALSE);
+            }
+            if (NS_FAILED(res)) return res;
+            // delete the text from the old node
+            textNode->DeleteData(offset, len-offset);
+            // put in a new br
+            nsCOMPtr<nsIDOMNode> theBR;
+            mCloneBR->CloneNode(PR_FALSE, getter_AddRefs(theBR));
+            brContent = do_QueryInterface(theBR);
+            res = parent->InsertChildAt(brContent, nodeOffset+1, PR_FALSE, PR_FALSE);
+            if (NS_FAILED(res)) return res;
+            // put in the new text node
+            res = parent->InsertChildAt(newTextContent, nodeOffset+2, PR_FALSE, PR_FALSE);
+            if (NS_FAILED(res)) return res;
+            didSomething = PR_TRUE;
+            break;
+          }
+          --offset;
+        }
+        if (didSomething) continue;  
+        
+        // check 0th character.
+        PRUnichar character = textFrag->CharAt(0);
+        if (character == PRUnichar('\n'))
+        {
+          // first char of text node is a newline.  don't need to split
+          // node, just delete newline and insert br before node
+          textNode->DeleteData(offset, 1);
+          nsCOMPtr<nsIDOMNode> theBR;
+          mCloneBR->CloneNode(PR_FALSE, getter_AddRefs(theBR));
+          brContent = do_QueryInterface(theBR);
+          res = parent->InsertChildAt(brContent, nodeOffset, PR_FALSE, PR_FALSE);
+          if (NS_FAILED(res)) return res;
+        }
+        break;
+      }
+    } while (1);  // break used to exit while loop
+  }
+  return res;
+}
 
