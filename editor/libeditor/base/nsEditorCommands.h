@@ -83,6 +83,7 @@ NS_DECL_EDITOR_COMMAND(nsCopyCommand)
 NS_DECL_EDITOR_COMMAND(nsCopyOrDeleteCommand)
 NS_DECL_EDITOR_COMMAND(nsPasteCommand)
 NS_DECL_EDITOR_COMMAND(nsInsertTextCommand)
+NS_DECL_EDITOR_COMMAND(nsGetContentsCommand)
 NS_DECL_EDITOR_COMMAND(nsDeleteCommand)
 NS_DECL_EDITOR_COMMAND(nsSelectAllCommand)
 

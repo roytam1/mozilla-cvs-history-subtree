@@ -145,6 +145,7 @@ nsresult nsEditorController::RegisterEditorCommands(nsIControllerCommandManager 
   
   NS_REGISTER_ONE_COMMAND(nsPasteCommand, "cmd_paste");
   NS_REGISTER_ONE_COMMAND(nsInsertTextCommand, "cmd_insertText");
+  NS_REGISTER_ONE_COMMAND(nsGetContentsCommand, "cmd_getContents");
   
   NS_REGISTER_FIRST_COMMAND(nsDeleteCommand, "cmd_delete");
   NS_REGISTER_NEXT_COMMAND(nsDeleteCommand, "cmd_deleteCharBackward");

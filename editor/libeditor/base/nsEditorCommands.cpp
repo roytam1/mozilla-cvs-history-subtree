@@ -46,6 +46,7 @@
 #include "nsISelectionController.h"
 #include "nsIPresShell.h"
 #include "nsIClipboard.h"
+#include "nsIDocumentEncoder.h"
 
 #include "nsEditorCommands.h"
 
@@ -415,6 +416,66 @@ nsInsertTextCommand::DoCommandParams(nsICommandParams *aParams, nsISupports *aCo
 
 NS_IMETHODIMP 
 nsInsertTextCommand::GetCommandState(nsICommandParams *aParams, nsISupports *aCommandRefCon)
+{
+  nsString tString;
+  aParams->GetStringValue(COMMAND_NAME,tString);
+  PRBool canUndo;
+  IsCommandEnabled(tString, aCommandRefCon, &canUndo);
+  return aParams->SetBooleanValue(STATE_ENABLED,canUndo);
+}
+
+#pragma mark -
+
+NS_IMETHODIMP
+nsGetContentsCommand::IsCommandEnabled(const nsAString & aCommandName, nsISupports *aCommandRefCon, PRBool *outCmdEnabled)
+{
+  nsCOMPtr<nsIEditor> aEditor = do_QueryInterface(aCommandRefCon);
+  *outCmdEnabled = PR_FALSE;
+  if (aEditor)
+    return aEditor->CanCopy(outCmdEnabled);  // this depends on the selection
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsGetContentsCommand::DoCommand(const nsAString & aCommandName, nsISupports *aCommandRefCon)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsGetContentsCommand::DoCommandParams(nsICommandParams *aParams, nsISupports *aCommandRefCon)
+{
+  nsAutoString tString;
+  aParams->GetStringValue(COMMAND_NAME, tString);
+
+  nsAutoString formatStr;
+  aParams->GetStringValue(NS_LITERAL_STRING("format"), formatStr);
+
+  PRBool selectionOnly = PR_FALSE;
+  aParams->GetBooleanValue(NS_LITERAL_STRING("selection_only"), &selectionOnly);
+  
+  nsCOMPtr<nsIEditor> aEditor = do_QueryInterface(aCommandRefCon);
+  if (!aEditor)
+    return NS_ERROR_FAILURE;
+  
+  PRUint32 flags = 0;
+  if (selectionOnly)
+    flags |= nsIDocumentEncoder::OutputSelectionOnly;
+  if (formatStr.Equals(NS_LITERAL_STRING("text/plain")))
+    flags |= nsIDocumentEncoder::OutputPreformatted;
+
+  nsAutoString selectedText;
+  nsresult rv = aEditor->OutputToString(formatStr, 0, selectedText);
+  if (NS_FAILED(rv))
+    return rv;
+    
+  aParams->SetStringValue(NS_LITERAL_STRING("result"), selectedText);
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsGetContentsCommand::GetCommandState(nsICommandParams *aParams, nsISupports *aCommandRefCon)
 {
   nsString tString;
   aParams->GetStringValue(COMMAND_NAME,tString);

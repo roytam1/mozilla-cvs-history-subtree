@@ -998,7 +998,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanInsertText(PRBool *aCanInsert)
   if (!aCanInsert)
     return NS_ERROR_NULL_POINTER;
 
-  *aCanInsert = !IsModifiable();
+  *aCanInsert = IsModifiable();
   return NS_OK;
 }
 
