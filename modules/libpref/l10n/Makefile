@@ -1,4 +1,3 @@
-#!gmake
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -14,21 +13,23 @@
 # Communications Corporation.  Portions created by Netscape are
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
+# 
 
+DEPTH		= ../../..
 
+REQUIRES	= security nspr
 
-IGNORE_MANIFEST=1
+include $(DEPTH)/config/rules.mk
 
-DEPTH = ..\..
+LIBS		= -L$(DIST)/lib -lhash
 
-## Include support for MOZ_LITE/MOZ_MEDIUM
-include <$(DEPTH)/config/liteness.mak>
+all:: other-stuff $(OBJDIR)/resources $(OBJDIR)/un-obscure
 
-DIRS= \
-    public \
-!ifdef MOZ_ADMIN_LIB
-    admin \
-!endif
-    src
-
-include <$(DEPTH)\config\rules.mak>
+other-stuff:
+	cd $(DEPTH)/config; $(MAKE)
+	cd $(DEPTH)/nspr/include; $(MAKE)
+	cd $(DEPTH)/security/lib/util; $(MAKE) export
+	cd $(DEPTH)/security/lib/hash; $(MAKE)
+	
+$(OBJDIR)/resources: $(OBJDIR)/resources.o
+	$(CC) -o $@ $< $(LIBS)

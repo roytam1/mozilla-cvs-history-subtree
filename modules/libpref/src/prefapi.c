@@ -16,19 +16,6 @@
  * Reserved.
  */
 
-  /** USAGE NOTE: 
-     <font color=red>
-
-     This file (prefapi.c) is being obsoleted, and functions previously declared
-     here are migrating to preffunc.cpp in this module.  If you make changes
-     in this file, please be sure to check preffunc.cpp to ensure that similar
-     changes are made in that file.
-     
-     Currently Windows uses preffunc.cpp and the other platforms use prefapi.c.
-
-     </font>
-  **/
-
 #include "jsapi.h"
 #if defined(XP_MAC)
 #include <stat.h>
@@ -60,8 +47,6 @@
 #include "prlog.h"
 #include "prmem.h"
 #include "prprf.h"
-#include "xpassert.h"
-#include "xp_str.h"
 
 /* WHS TEMPORARY */
 #define XP_QSORT qsort
@@ -183,7 +168,7 @@ void pref_Alert(char* msg);
 int pref_HashPref(const char *key, PrefValue value, PrefType type, PrefAction action);
 
 /* -- Platform specific function extern */
-#if !defined(XP_WIN) && !defined(XP_OS2)
+#if !defined(XP_OS2)
 extern JSBool pref_InitInitialObjects(void);
 #endif
 
@@ -241,7 +226,7 @@ int pref_OpenFile(const char* filename, PRBool is_error_fatal, PRBool verifyHash
 	long fileLength;
 
 	stats.st_size = 0;
-	if ( stat(filename, (struct stat *) &stats) == -1 )
+	if ( stat(filename, &stats) == -1 )
 		return PREF_ERROR;
 
 	fileLength = stats.st_size;
@@ -366,11 +351,7 @@ PREF_Init(char *filename)
 	if (!m_HashTable)
 		return 0;
 
-    if (filename) {
-        if (m_filename) /* happens if PREF_Init is called twice (it is) */
-            free(m_filename);
-        m_filename = strdup(filename);
-    }
+    if (filename) m_filename = strdup(filename);
 
     if (!m_mochaTaskState)
 		m_mochaTaskState = JS_Init((uint32) 0xffffffffL);
@@ -381,30 +362,19 @@ PREF_Init(char *filename)
 			return 0;
 		}
 
-		JS_BeginRequest(m_mochaContext);
-
-		m_GlobalConfigObject = JS_NewObject(m_mochaContext, &global_class, NULL, NULL);
-		if (!m_GlobalConfigObject)  {
-		    JS_EndRequest(m_mochaContext);
-		    return 0;
-                }
-
-                /* MLM - need a global object for set version call now. */
-                JS_SetGlobalObject(m_mochaContext, m_GlobalConfigObject);
-
 		JS_SetVersion(m_mochaContext, JSVERSION_1_2);
 
-		if (!JS_InitStandardClasses(m_mochaContext, 
-					    m_GlobalConfigObject))  {
-		    JS_EndRequest(m_mochaContext);
+		m_GlobalConfigObject = JS_NewObject(m_mochaContext, &global_class, NULL, NULL);
+		if (!m_GlobalConfigObject) 
 		    return 0;
-	 	}
+
+		if (!JS_InitStandardClasses(m_mochaContext, m_GlobalConfigObject))
+		    return 0;
 
 		JS_SetBranchCallback(m_mochaContext, pref_BranchCallback);
 		JS_SetErrorReporter(m_mochaContext, NULL);
 
-		m_mochaPrefObject = JS_DefineObject(m_mochaContext, 
-						    m_GlobalConfigObject, 
+		m_mochaPrefObject = JS_DefineObject(m_mochaContext, m_GlobalConfigObject, 
 						    "PrefConfig",
 						    &autoconf_class, 
 						    NULL, 
@@ -414,14 +384,12 @@ PREF_Init(char *filename)
 		    if (!JS_DefineProperties(m_mochaContext,
 					     m_mochaPrefObject,
 					     autoconf_props)) {
-		        JS_EndRequest(m_mochaContext);
 			return 0;
 		    }
 
 		    if (!JS_DefineFunctions(m_mochaContext,
 					    m_mochaPrefObject,
 					    autoconf_methods)) {
-		        JS_EndRequest(m_mochaContext);
 			return 0;
 		    }
 
@@ -430,8 +398,6 @@ PREF_Init(char *filename)
 #if !defined(XP_PC) && !defined(XP_OS2) && !defined(XP_MAC)
 		ok = pref_InitInitialObjects();
 #endif
-	}  else  {
-	    JS_BeginRequest(m_mochaContext);
 	}
 
 	if (ok && filename) {
@@ -440,7 +406,6 @@ PREF_Init(char *filename)
 	else if (!ok) {
 		m_ErrorOpeningUserPrefs = TRUE;
 	}
-	JS_EndRequest(m_mochaContext);
 	return ok;
 }
 
@@ -450,10 +415,8 @@ PREF_GetConfigContext(JSContext **js_context)
 	if (!js_context) return FALSE;
 
 	*js_context = NULL;
-    if (m_mochaContext)  {
+    if (m_mochaContext)
 		*js_context = m_mochaContext;
-		JS_SetContextThread(m_mochaContext);
-    }
 
 	return TRUE;
 }
@@ -536,7 +499,6 @@ PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
 	if (!m_mochaContext || !scope)
 		return JS_FALSE;
 
-	JS_BeginRequest(m_mochaContext);
 	errReporter = JS_SetErrorReporter(m_mochaContext, pref_ErrorReporter);
 	m_CallbacksEnabled = bCallbacks;
 
@@ -546,7 +508,6 @@ PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
 	m_CallbacksEnabled = TRUE;		/* ?? want to enable after reading user/lock file */
 	JS_SetErrorReporter(m_mochaContext, errReporter);
 	
-	JS_EndRequest(m_mochaContext);
 	return ok;
 }
 
@@ -570,11 +531,9 @@ PREF_QuietEvaluateJSBuffer(const char * js_buffer, size_t length)
 	if (!m_mochaContext || !m_mochaPrefObject)
 		return PREF_NOT_INITIALIZED;
 
-	JS_BeginRequest(m_mochaContext);
 	ok = JS_EvaluateScript(m_mochaContext, m_mochaPrefObject,
 			js_buffer, length, NULL, 0, &result);
 	
-	JS_EndRequest(m_mochaContext);
 	/* Hey, this really returns a JSBool */
 	return ok;
 }
@@ -588,10 +547,8 @@ PREF_QuietEvaluateJSBufferWithGlobalScope(const char * js_buffer, size_t length)
 	if (!m_mochaContext || !m_GlobalConfigObject)
 		return PREF_NOT_INITIALIZED;
 	
-	JS_BeginRequest(m_mochaContext);
 	ok = JS_EvaluateScript(m_mochaContext, m_GlobalConfigObject,
 			js_buffer, length, NULL, 0, &result);
-	JS_EndRequest(m_mochaContext);
 	
 	/* Hey, this really returns a JSBool */
 	return ok;
@@ -1133,7 +1090,7 @@ PREF_GetColorPrefDWord(const char *pref_name, uint32 *colorref)
 {
 	char colstr[8];
 	int iSize = 8;
-	uint8 red=0, green=0, blue=0;
+	uint8 red, green, blue;
 
 	int result = PREF_GetCharPref(pref_name, colstr, &iSize);
 	
@@ -1301,7 +1258,7 @@ PREF_GetDefaultColorPrefDWord(const char *pref_name, uint32 * colorref)
 {
 	char colstr[8];
 	int iSize = 8;
-	uint8 red=0, green=0, blue=0;
+	uint8 red, green, blue;
 
 	int result = PREF_GetDefaultCharPref(pref_name, colstr, &iSize);
 	
@@ -1483,11 +1440,8 @@ static PRBool pref_ValueChanged(PrefValue oldValue, PrefValue newValue, PrefType
 			break;
 			
 		case PREF_BOOL:
-            changed = oldValue.boolVal != newValue.boolVal;
+			changed = oldValue.boolVal != newValue.boolVal;
 			break;
-        default:
-          /* PREF_LOCKED, PREF_USERSET, PREF_CONFIG, PREF_LILOCAL */
-          break;
 	}
 	return changed;
 }
@@ -1826,131 +1780,6 @@ PREF_NextChild(char *child_list, int *index)
 		*index += strlen(child) + 1;
 	return child;
 }
-#if 0 /* LANDING HACK */
-/*----------------------------------------------------------------------------------------
-*	pref_copyTree
-*
-*	A recursive function that copies all the prefs in some subtree to
-*	another subtree. Either srcPrefix or dstPrefix can be empty strings,
-*	but not NULL pointers. Preferences in the destination are created if 
-*	they do not already exist; otherwise the old values are replaced.
-*
-*	Example calls:
-*
-*		Copy all the prefs to another tree:			pref_copyTree("", "temp", "")
-*
-*		Copy all the prefs under mail. to newmail.:	pref_copyTree("mail", "newmail", "mail")
-*
---------------------------------------------------------------------------------------*/ 
-int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *curSrcBranch)
-{
-	int		result = PREF_NOERROR;
-
-	char* 	children = NULL;
-	
-	if ( PREF_CreateChildList(curSrcBranch, &children) == PREF_NOERROR )
-	{	
-		int 	index = 0;
-		int		srcPrefixLen = XP_STRLEN(srcPrefix);
-		char* 	child = NULL;
-		
-		while ( (child = PREF_NextChild(children, &index)) != NULL)
-		{
-			int		prefType;
-			char	*destPrefName = NULL;
-			char	*childStart = (srcPrefixLen > 0) ? (child + srcPrefixLen + 1) : child;
-			
-			XP_ASSERT( XP_STRNCMP(child, curSrcBranch, srcPrefixLen) == 0 );
-							
-			if (*destPrefix > 0)
-				destPrefName = PR_smprintf("%s.%s", destPrefix, childStart);
-			else
-				destPrefName = PR_smprintf("%s", childStart);
-			
-			if (!destPrefName)
-			{
-				result = PREF_OUT_OF_MEMORY;
-				break;
-			}
-			
-			if ( ! PREF_PrefIsLocked(destPrefName) )		/* returns true if the prefs exists, and is locked */
-			{
-				/*	PREF_GetPrefType masks out the other bits of the pref flag, so we only
-					every get the values in the switch.
-				*/
-				prefType = PREF_GetPrefType(child);
-				
-				switch (prefType)
-				{
-					case PREF_STRING:
-						{
-							char	*prefVal = NULL;
-							
-							result = PREF_CopyCharPref(child, &prefVal);
-							if (result == PREF_NOERROR)
-								result = PREF_SetCharPref(destPrefName, prefVal);
-								
-							XP_FREEIF(prefVal);
-						}
-						break;
-					
-					case PREF_INT:
-							{
-							int32 	prefValInt;
-							
-							result = PREF_GetIntPref(child, &prefValInt);
-							if (result == PREF_NOERROR)
-								result = PREF_SetIntPref(destPrefName, prefValInt);
-						}
-						break;
-						
-					case PREF_BOOL:
-						{
-							XP_Bool	prefBool;
-							
-							result = PREF_GetBoolPref(child, &prefBool);
-							if (result == PREF_NOERROR)
-								result = PREF_SetBoolPref(destPrefName, prefBool);
-						}
-						break;
-					
-					case PREF_ERROR:
-						/*	this is probably just a branch. Since we can have both
-							 a.b and a.b.c as valid prefs, this is OK.
-						*/
-						break;
-						
-					default:
-						/* we should never get here */
-						XP_ASSERT(FALSE);
-						break;
-				}
-				
-			}	/* is not locked */
-			
-			XP_FREEIF(destPrefName);
-			
-			/* Recurse */
-			if (result == PREF_NOERROR || result == PREF_VALUECHANGED)
-				result = pref_copyTree(srcPrefix, destPrefix, child);
-		}
-		
-		XP_FREE(children);
-	}
-	
-	return result;
-}
-
-PR_IMPLEMENT(int)
-PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
-{
-	XP_ASSERT(srcRoot != NULL);
-	XP_ASSERT(destRoot != NULL);
-	
-	return pref_copyTree(srcRoot, destRoot, srcRoot);
-}
-#endif /* LANDING HACK */
-
 
 /* Adds a node to the beginning of the callback list. */
 PR_IMPLEMENT(void)
@@ -2099,7 +1928,7 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 PR_IMPLEMENT(int)
 pref_printDebugInfo(PRHashEntry *he, int i, void *arg)
 {
-	char *buf1=NULL, *buf2=NULL;
+	char *buf1, *buf2;
 	PrefValue val;
 	PrefChildIter* pcs = (PrefChildIter*) arg;
 	PrefNode *pref = (PrefNode *) he->value;
@@ -2191,6 +2020,7 @@ pref_ErrorReporter(JSContext *cx, const char *message,
 {
 	char *last;
 
+	int i, j, k, n;
 	const char *s, *t;
 
 	last = PR_sprintf_append(0, "An error occurred reading the startup configuration file.  "

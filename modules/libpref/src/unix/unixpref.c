@@ -27,23 +27,24 @@
 #include "prlog.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
-#include "xpassert.h"
-#include "fe_proto.h"
 
+#ifndef B1M
+#include <Xm/Xm.h>
+#endif
+
+extern PRLibrary* pref_LoadAutoAdminLib(void);
+extern PRLibrary* m_AutoAdminLib;
+
+#include "icondata.h"
 
 static struct fe_icon_type* splash_screen = NULL;
+
 
 /*
  * pref_InitInitialObjects
  * Needed by PREF_Init.
  * Sets the default preferences.
  */
-extern char *fe_GetConfigDirFilename(char *filename);
-
-XP_Bool
-FE_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic);
-char *fe_GetConfigDirFilename(char *filename);
-
 JSBool
 pref_InitInitialObjects(void)
 {
@@ -52,18 +53,6 @@ pref_InitInitialObjects(void)
     PR_ASSERT(pref_init_buffer);
 
     status = PREF_EvaluateJSBuffer(pref_init_buffer, strlen(pref_init_buffer));
-
-    /* these strings never get freed, but that's probably the way it should be */
-    PREF_SetDefaultCharPref("browser.cache.directory", 
-                            fe_GetConfigDirFilename("cache"));
-    PREF_SetDefaultCharPref("browser.sarcache.directory",
-                            fe_GetConfigDirFilename("sarcache"));
-    PREF_SetDefaultCharPref("browser.bookmark_file", 
-                            fe_GetConfigDirFilename("bookmarks.html"));
-    PREF_SetDefaultCharPref("browser.history_file", 
-                            fe_GetConfigDirFilename("history.db"));
-    PREF_SetDefaultCharPref("browser.user_history_file", 
-                            fe_GetConfigDirFilename("history.list"));
 
 #if defined(__sgi) || (defined(__sun) && defined(__svr4__))
     PREF_SetDefaultCharPref("print.print_command", "lp");
@@ -74,14 +63,67 @@ pref_InitInitialObjects(void)
 
 
 /*
+ * PREF_AlterSplashIcon
+ */
+void
+PREF_AlterSplashIcon(struct fe_icon_data* icon)
+{
+    assert(icon);
+
+    if ( PREF_IsAutoAdminEnabled() && 
+         icon && 
+         (splash_screen = (struct fe_icon_type*)
+          PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
+        memcpy(icon, splash_screen, sizeof(*icon));
+    }
+}
+
+#ifndef B1M
+/*
  * PREF_GetLabelAndMnemonic
  */
 PRBool
 PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
 {
-    /* Code moved to where it should have been. */
-    return FE_GetLabelAndMnemonic(name, str, v_xm_str, v_mnemonic);
+    XmString *xm_str = (XmString*)v_xm_str;
+    KeySym *mnemonic = (KeySym*)v_mnemonic;
+    char buf[256];
+    char* _str;
+    char* p1;
+    char* p2;
+
+    PR_ASSERT(name);
+    PR_ASSERT(str);
+    PR_ASSERT(xm_str);
+
+    if ( name == NULL || str == NULL || xm_str == NULL ) return PR_FALSE;
+
+    _str = NULL;
+	*str = NULL;
+    *xm_str = NULL;
+    *mnemonic = '\0';
+
+    strncpy(buf, name, 200);
+    strcat(buf, ".label");
+
+    PREF_CopyConfigString(buf, &_str);
+
+    if ( _str == NULL || *_str == '\0' ) return PR_FALSE;
+
+    /* Strip out ampersands */
+    if ( strchr(_str, '&') != NULL ) {
+        for ( p1 = _str, p2 = _str; *p2; p1++, p2++ ) {
+            if ( *p1 == '&' && *(++p1) != '&' ) *mnemonic = *p1;
+            *p2 = *p1;
+        }
+    }
+
+    *str = _str;
+    *xm_str = XmStringCreateLtoR(_str, XmFONTLIST_DEFAULT_TAG);
+
+    return ( *xm_str != NULL );
 }
+#endif
 
 /*
  * PREF_GetUrl
@@ -105,11 +147,4 @@ PREF_GetUrl(char* name, char** url)
     return ( url != NULL && *url != NULL && **url != '\0' );
 }
 
-XP_Bool
-FE_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
-{
-}
 
-char *fe_GetConfigDirFilename(char *filename)
-{
-}

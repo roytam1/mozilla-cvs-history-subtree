@@ -29,6 +29,8 @@ pref("mail.check_new_mail", true);
 pref("mail.sort_by", 0);
 pref("news.sort_by", 0);
 pref("browser.startup.license_accepted", "");
+pref("browser.cache.directory", "~/.netscape/cache");
+pref("browser.sarcache.directory", "~/.netscape/sarcache");
 pref("browser.cache.memory_cache_size", 3000);
 pref("browser.cache.disk_cache_size", 5000);
 pref("mail.directory", "~/nsmail/");
@@ -42,7 +44,6 @@ pref("mailnews.reply_with_extra_lines", 0);
 pref("browser.startup.default_window", 0);
 pref("security.warn_accept_cookie", false);
 pref("editor.disable_spell_checker", false);
-pref("editor.dont_lock_spell_files", true);
 
 // Instead of "delay_images"
 pref("browser.autoload_images", true);
@@ -56,6 +57,9 @@ pref("mail.sash_geometry", "");
 pref("news.cache_xover", false);
 pref("news.show_first_unread", false);
 pref("news.sash_geometry", "");
+pref("browser.bookmark_file", "~/.netscape/bookmarks.html");
+pref("browser.history_file", "~/.netscape/history.db");
+pref("browser.user_history_file", "~/.netscape/history.list");
 pref("helpers.global_mime_types_file", "/usr/local/lib/netscape/mime.types");
 pref("helpers.global_mailcap_file", "/usr/local/lib/netscape/mailcap");
 pref("helpers.private_mime_types_file", "~/.mime.types");

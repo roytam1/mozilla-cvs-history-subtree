@@ -1,4 +1,3 @@
-#!gmake
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -14,21 +13,38 @@
 # Communications Corporation.  Portions created by Netscape are
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
+# 
 
+DEPTH		= ../../..
 
+ifdef POLARIS
+SHARED_LIBRARY	= $(OBJDIR)/libAutoAdmin.so
+endif
 
-IGNORE_MANIFEST=1
+XFEDIR		= $(DEPTH)/cmd/xfe
 
-DEPTH = ..\..
+CSRCS		= prefldap.c icondata.c
 
-## Include support for MOZ_LITE/MOZ_MEDIUM
-include <$(DEPTH)/config/liteness.mak>
+REQUIRES	= nspr dbm ldap js pref
 
-DIRS= \
-    public \
-!ifdef MOZ_ADMIN_LIB
-    admin \
-!endif
-    src
+include $(DEPTH)/config/rules.mk
 
-include <$(DEPTH)\config\rules.mak>
+INCLUDES	+= -I$(DEPTH)/cmd/xfe/icons -I$(DEPTH)/cmd/xfe/icons/$(OBJDIR)
+DEFINES		+= -DPOLARIS
+GARBAGE		+= icondata.c
+
+ifeq ($(OS_ARCH),AIX)
+MKSHLIB		= svld -berok $(DSO_LDOPTS)
+endif
+
+ifeq ($(OS_ARCH),OSF1)
+MKSHLIB		= $(LD) $(DSO_LDOPTS)
+endif
+
+polaris: $(SHARED_LIBRARY)
+	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
+
+icondata.c:
+	@rm -f icondata.c $(NOSUCHFILE)
+	@cd $(XFEDIR)/icons; $(MAKE)
+	@ln -s $(XFEDIR)/icons/$(OBJDIR)/icondata.c $@
