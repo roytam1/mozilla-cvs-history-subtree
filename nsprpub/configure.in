@@ -1204,6 +1204,7 @@ mips-sony-newsos*)
     DSO_CFLAGS=-fPIC
     MDCPUCFG_H=_openbsd.cfg
     PR_MD_CSRCS=openbsd.c
+    USE_NSPR_THREADS=1
     case "$OS_TEST" in
     alpha|mips|pmax)
         DSO_LDOPTS=-shared ;;
