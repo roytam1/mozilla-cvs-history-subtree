@@ -115,6 +115,7 @@ function ChangeFolderByDOMNode(folderNode)
 }
 */
 
+// we should move these functions elsewhere
 function GetFolderResource(index)
 {
     var outliner = GetFolderOutliner();
@@ -140,7 +141,30 @@ function GetFolderAttribute(source, attribute)
         return target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
 }
 
-// test
+function SetFolderRowAttribute(index, attribute, value)
+{
+    var folderOutliner = GetFolderOutliner();
+    var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+
+    folderOutlinerBuilder.setRowAttribute(index, attribute, value);
+}
+
+function GetFolderRowAttribute(index, attribute)
+{
+    var folderOutliner = GetFolderOutliner();
+    var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+
+    return folderOutlinerBuilder.getRowAttribute(index, attribute);
+}
+
+function GetFolderSelection(startRange, endRange)
+{
+    var outliner = GetFolderOutliner();
+
+    outliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
+    debug('startRange: ' + startRange + ', endRange: ' + endRange);
+}
+
 function ChangeFolderByIndex(index)
 {
     dump('In ChangeFolderByIndex\n');
@@ -151,16 +175,10 @@ function ChangeFolderByIndex(index)
     if (!resource) 
         return null;
 
-/*
-    var sortType = folderNode.getAttribute('sortType');
-    var sortOrder = folderNode.getAttribute('sortOrder');
-    var viewFlags = folderNode.getAttribute('viewFlags');
-    var viewType = folderNode.getAttribute('viewType');
-*/
-    var sortType = '';
-    var sortOrder = '';
-    var viewFlags = '';
-    var viewType = '';
+    var sortType = GetFolderRowAttribute(index, 'sortType');
+    var sortOrder = GetFolderRowAttribute(index, 'sortOrder');
+    var viewFlags = GetFolderRowAttribute(index, 'viewFlags');
+    var viewType = GetFolderRowAttribute(index, 'viewType');
 
     ChangeFolderByURI(resource.Value, viewType, viewFlags, sortType, sortOrder);
 
@@ -693,14 +711,6 @@ function SortFolderPane(column, sortKey)
     //sort styles.
     node.setAttribute("sortActive", "false");
     return true;
-}
-
-function GetOutlinerSelection(startRange, endRange)
-{
-    var outliner = GetFolderOutliner();
-
-    outliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
-    debug('startRange: ' + startRange + ', endRange: ' + endRange);
 }
 
 /* not used

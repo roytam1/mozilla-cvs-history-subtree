@@ -898,9 +898,9 @@ function MsgViewAllMsgs()
 	{
 		gDBView.viewType = nsMsgViewType.eShowAllThreads;
 
-        var folder = GetSelectedFolder();
-        if(folder) {
-            folder.setAttribute("viewType", nsMsgViewType.eShowAllThreads);
+        var folderIndex = GetSelectedFolderIndex();
+        if(folderIndex >= 0) {
+            SetFolderRowAttribute(folderIndex, "viewType", nsMsgViewType.eShowAllThreads);
         }
 	}
 }

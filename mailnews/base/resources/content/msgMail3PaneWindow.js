@@ -679,7 +679,7 @@ function ClearMessagePane()
 	}
 }
 
-
+// this will go away
 function GetSelectedFolder()
 {
   try {
@@ -693,6 +693,14 @@ function GetSelectedFolder()
   catch (ex) {
     return null;
   }
+}
+
+function GetSelectedFolderIndex()
+{
+     var start = {};
+     var end = {};
+     GetFolderSelection(start, end);
+     return start.value;
 }
 
 function FolderPaneOnClick(event)
