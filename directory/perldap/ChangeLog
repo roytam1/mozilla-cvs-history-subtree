@@ -1,5 +1,9 @@
 2004-11-02  Leif Hedstrom  <leif@ogre.com>
 
+	* API.xs (internal_sortcmp_proc): Added support for Perl sort functions.
+	(ldap_multi_sort_entries): Ditto.
+	(ldap_sort_entries): Ditto.
+
 	* Conn.pm: Cleaned up NSPR code, fixed some bugs.
 	(search): Added support for sortattrs, using multisort.
 	(search): Fixed parsing of the attrs.
@@ -7,6 +11,10 @@
 	(getOption): Getter.
 	(setSizelimit): Set the sizelimit.
 	(getSizelimit): Getter.
+	(init): Added the callback, this has at least the potential of making
+	it possible to parse some server controls as returned by the
+	asyncronous bind.
+	(setOption): Added support for hash style arguments.
 
 2004-10-28  Leif Hedstrom  <leif@ogre.com>
 

@@ -37,7 +37,6 @@ $osname   = $Config{'osname'};
 
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
-$ldapsdk_ver = $ENV{"LDAPV3ON"};   # N to exclude LDAP v3 features
 $ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
 
 $libexts = "so|sl|a|lib";
@@ -70,17 +69,6 @@ $include_ldap = $ldapsdk_loc . $dir_sep . "include";
 $include_nspr = $ldapsdk_loc . $dir_sep . "include-nspr";
 $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
 
-print "Using LDAPv3 Developer Kit (default: yes)?  ";
-if (!$ldapsdk_ver)
-{
-   $silent = 0;
-   chomp ($ldapsdk_ver = <STDIN>);
-} else {
-  print "$ldapsdk_ver\n";
-}
-$v3_def = "-DLDAPV3" unless ($ldapsdk_ver =~ /^n/i);
-
-   
 print "Include SSL Support (default: yes)?  ";
 if (!$ldapsdk_ssl)
 {
@@ -238,7 +226,7 @@ WriteMakefile(
 	      'INC'		=> $my_includes,
 	      'LIBS'		=> [$lib_line],
 	      'MYEXTLIB'	=> $my_extlib,
-	      'DEFINE'		=> "$v3_def $ssl_def $pr_def",
+	      'DEFINE'		=> "$ssl_def $pr_def",
 	      'XSOPT'		=> "-nolinenumbers",
 	      @extras
 );

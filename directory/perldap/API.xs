@@ -1,4 +1,3 @@
-/* -*- Mode: c; c-basic-offset: 3  -*- */
 /******************************************************************************
  * $Id$
  *
@@ -94,6 +93,8 @@ SV *ldap_perl_rebindproc = NULL;
 static char *ldap_default_rebind_dn = NULL;
 static char *ldap_default_rebind_pwd = NULL;
 static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
+
+SV *ldap_perl_sortcmp = NULL;
 
 /* Return a Perl List from a char ** in PPCODE */
 #define RET_CPP(cppvar) \
@@ -515,7 +516,6 @@ StrDup(const char *source)
 }
 
 /* internal_rebind_proc - Wrapper to call a PERL rebind process             */
-
 static
 int
 LDAP_CALL
@@ -540,6 +540,7 @@ internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
       *pwp = StrDup(POPp);
       *dnp = StrDup(POPp);
 
+      PUTBACK ;
       FREETMPS ;
       LEAVE ;
    } else {
@@ -556,7 +557,6 @@ internal_rebind_proc(LDAP *ld, char **dnp, char **pwp,
 }
 
 /* NT and internal_rebind_proc hate each other, so they need this... */
-
 static
 int
 LDAP_CALL
@@ -577,6 +577,39 @@ ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
   *auth = ldap_default_rebind_auth;
 
   return LDAP_SUCCESS;
+}
+
+/* internal_sortcmp_proc - Wrapper to call a PERL cmp function */
+static
+int
+LDAP_CALL
+internal_sortcmp_proc(const char *s1, const char *s2)
+{
+  int count;
+  int res;
+
+  dSP;
+  ENTER;
+  SAVETMPS;
+
+  PUSHMARK(SP);
+  XPUSHs(sv_2mortal(newSVpv(s1, 0)));
+  XPUSHs(sv_2mortal(newSVpv(s2, 0)));
+  PUTBACK;
+
+  count = perl_call_sv(ldap_perl_sortcmp, G_SCALAR);
+  SPAGAIN;
+
+  if (count != 1)
+     croak("ldap_perl_sortcmp: Expected an INT to be returned.\n");
+
+  res = POPi;
+
+  PUTBACK;
+  FREETMPS;
+  LEAVE;
+
+  return res;
 }
 
 
@@ -600,16 +633,12 @@ ldap_abandon(ld,msgid)
 	LDAP *		ld
 	int		msgid
 
-#ifdef LDAPV3
-
 int
 ldap_abandon_ext(ld,msgid,serverctrls,clientctrls)
 	LDAP *		ld
 	int		msgid
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
-
-#endif
 
 int
 ldap_add(ld,dn,attrs)
@@ -620,8 +649,6 @@ ldap_add(ld,dn,attrs)
 	
 	if (attrs)
 	  ldap_mods_free(attrs, 1);
-
-#ifdef LDAPV3
 
 int
 ldap_add_ext(ld,dn,attrs,serverctrls,clientctrls,msgidp)
@@ -648,8 +675,6 @@ ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
 	CLEANUP:
 	if (attrs)
 	  ldap_mods_free(attrs, 1);
-
-#endif
 
 int
 ldap_add_s(ld,dn,attrs)
@@ -693,8 +718,6 @@ ldap_compare(ld,dn,attr,value)
 	const char *	attr
 	const char *	value
 
-#ifdef LDAPV3
-
 int
 ldap_compare_ext(ld,dn,attr,bvalue,serverctrls,clientctrls,msgidp)
 	LDAP *		ld
@@ -717,8 +740,6 @@ ldap_compare_ext_s(ld,dn,attr,bvalue,serverctrls,clientctrls)
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 
-#endif
-
 int
 ldap_compare_s(ld,dn,attr,value)
 	LDAP *		ld
@@ -726,13 +747,9 @@ ldap_compare_s(ld,dn,attr,value)
 	const char *	attr
 	const char *	value
 
-#ifdef LDAPV3
-
 void
 ldap_control_free(ctrl)
 	LDAPControl *	ctrl
-
-#endif
 
 #ifdef CONTROLS_COUNT_WORKS
 int
@@ -741,20 +758,14 @@ ldap_controls_count(ctrls)
 
 #endif
 
-#ifdef LDAPV3
-
 void
 ldap_controls_free(ctrls)
 	LDAPControl **	ctrls
-
-#endif
 
 int
 ldap_count_entries(ld,result)
 	LDAP *		ld
 	LDAPMessage *	result
-
-#ifdef LDAPV3
 
 int
 ldap_count_messages(ld,result)
@@ -765,8 +776,6 @@ int
 ldap_count_references(ld,result)
 	LDAP *		ld
 	LDAPMessage *	result
-
-#endif
 
 int
 ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
@@ -781,8 +790,6 @@ ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
 	CLEANUP:
 	if (valwords)
 	  ldap_value_free(valwords);
-
-#ifdef LDAPV3
 
 int
 ldap_create_persistentsearch_control(ld,changetypes,changesonly,return_echg_ctrls,ctrl_iscritical,ctrlp)
@@ -823,14 +830,10 @@ ldap_create_virtuallist_control(ld,ldvlistp,ctrlp)
 	RETVAL
 	ctrlp
 
-#endif
-
 int
 ldap_delete(ld,dn)
 	LDAP *		ld
 	const char *	dn
-
-#ifdef LDAPV3
 
 int
 ldap_delete_ext(ld,dn,serverctrls,clientctrls,msgidp)
@@ -849,8 +852,6 @@ ldap_delete_ext_s(ld,dn,serverctrls,clientctrls)
 	const char *	dn
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
-
-#endif
 
 int
 ldap_delete_s(ld,dn)
@@ -885,8 +886,6 @@ ldap_explode_rdn(dn,notypes)
 	   RET_CPP(MOZLDAP_VAL);
 	}
 
-#ifdef LDAPV3
-
 int
 ldap_extended_operation(ld,requestoid,requestdata,serverctrls,clientctrls,msgidp)
 	LDAP *		ld
@@ -916,8 +915,6 @@ ldap_extended_operation_s(ld,requestoid,requestdata,serverctrls,clientctrls,reto
 	if (retdatap)
 	  ldap_value_free_len(retdatap);
 
-#endif
-
 char *
 ldap_first_attribute(ld,entry,ber)
 	LDAP *		ld
@@ -935,8 +932,6 @@ ldap_first_entry(ld,chain)
 	LDAP *		ld
 	LDAPMessage *	chain
 
-#ifdef LDAPV3
-
 LDAPMessage *
 ldap_first_message(ld,res)
 	LDAP *		ld
@@ -947,19 +942,13 @@ ldap_first_reference(ld,res)
 	LDAP *		ld
 	LDAPMessage *	res
 
-#endif
-
 void
 ldap_free_friendlymap(map)
 	FriendlyMap *	map
 
-#ifdef LDAPV3
-
 void
 ldap_free_sort_keylist(sortKeyList)
 	LDAPsortkey **	sortKeyList
-
-#endif
 
 void
 ldap_free_urldesc(ludp)
@@ -978,8 +967,6 @@ ldap_get_dn(ld,entry)
 	CLEANUP:
 	ldap_memfree(RETVAL);
 
-#ifdef LDAPV3
-
 int
 ldap_get_entry_controls(ld,entry,serverctrlsp)
 	LDAP *		ld
@@ -988,8 +975,6 @@ ldap_get_entry_controls(ld,entry,serverctrlsp)
 	OUTPUT:
 	RETVAL
 	serverctrlsp
-
-#endif
 
 void
 ldap_getfilter_free(lfdp)
@@ -1000,8 +985,6 @@ ldap_getfirstfilter(lfdp,tagpat,value)
 	LDAPFiltDesc *	lfdp
 	char *		tagpat
 	char *		value	
-
-#ifdef LDAPV3
 
 void
 ldap_get_lang_values(ld,entry,target,type)
@@ -1027,9 +1010,6 @@ ldap_get_lang_values_len(ld,entry,target,type)
 	       ldap_get_lang_values_len(ld,entry,target,&type);
 	   RET_BVPP(MOZLDAP_VAL);
 	}
-
-#endif
-
 
 int
 ldap_get_lderrno(ld, ...)
@@ -1119,8 +1099,6 @@ int
 ldap_is_ldap_url(url)
 	char *		url
 
-#ifdef LDAPV3
-
 void
 ldap_memcache_destroy(cache)
 	LDAPMemCache *	cache
@@ -1163,8 +1141,6 @@ void
 ldap_memcache_update(cache)
 	LDAPMemCache *	cache
 
-#endif
-
 void
 ldap_memfree(p)
 	void *		p
@@ -1177,8 +1153,6 @@ ldap_modify(ld,dn,mods)
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
-
-#ifdef LDAPV3
 
 int
 ldap_modify_ext(ld,dn,mods,serverctrls,clientctrls,msgidp)
@@ -1205,8 +1179,6 @@ ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
-
-#endif
 
 int
 ldap_modify_s(ld,dn,mods)
@@ -1270,13 +1242,23 @@ ldap_msgtype(lm)
 	LDAPMessage *	lm
 
 int
-ldap_multisort_entries(ld,chain,attr)
+ldap_multisort_entries(ld,chain,attr,...)
 	LDAP *		ld
 	LDAPMessage *	chain
 	char **		attr
 	CODE:
 	{
-	   RETVAL = ldap_multisort_entries(ld,&chain,attr,StrCaseCmp);
+	   SV		*cmp;
+	   int		(*func)() = &StrCaseCmp;
+
+	   if (items > 3) {
+	      cmp = ST(3);
+	      if (SvTYPE(SvRV(cmp)) == SVt_PVCV) {
+		 func = &internal_sortcmp_proc;
+		 ldap_perl_sortcmp = cmp;
+	      }
+	   }
+	   RETVAL = ldap_multisort_entries(ld,&chain,attr,func);
 	}
 	OUTPUT:
 	RETVAL
@@ -1300,8 +1282,6 @@ LDAPMessage *
 ldap_next_entry(ld,entry)
 	LDAP *		ld
 	LDAPMessage *	entry
-
-#ifdef LDAPV3
 
 LDAPMessage *
 ldap_next_message(ld,msg)
@@ -1403,14 +1383,10 @@ ldap_parse_virtuallist_control(ld,ctrls,target_posp,list_sizep,errcodep)
 	list_sizep
 	errcodep
 
-#endif
-
 void
 ldap_perror(ld,s)
 	LDAP *		ld
 	const char *	s
-
-#ifdef LDAPV3
 
 int
 ldap_rename(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls,msgidp)
@@ -1436,8 +1412,6 @@ ldap_rename_s(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls)
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 
-#endif
-
 int
 ldap_result(ld,msgid,all,timeout,result)
 	LDAP *		ld
@@ -1454,8 +1428,6 @@ ldap_result2error(ld,r,freeit)
 	LDAP *		ld
 	LDAPMessage *	r
 	int		freeit
-
-#ifdef LDAPV3
 
 int
 ldap_sasl_bind(ld,dn,mechanism,cred,serverctrls,clientctrls,msgidp)
@@ -1483,8 +1455,6 @@ ldap_sasl_bind_s(ld,dn,mechanism,cred,serverctrls,clientctrls,servercredp)
 	RETVAL
 	servercredp
 
-#endif
-
 int
 ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	LDAP *		ld
@@ -1496,8 +1466,6 @@ ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	CLEANUP:
 	if (attrs)
 	  ldap_value_free(attrs);
-
-#ifdef LDAPV3
 
 int
 ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,msgidp)
@@ -1538,8 +1506,6 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	CLEANUP:
 	if (attrs)
 	  ldap_value_free(attrs);
-
-#endif
 
 int
 ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
@@ -1650,13 +1616,24 @@ ldap_simple_bind_s(ld,who,passwd)
 	const char *	passwd
 
 int
-ldap_sort_entries(ld,chain,attr)
+ldap_sort_entries(ld,chain,attr,...)
 	LDAP *		ld
 	LDAPMessage *	chain
 	char *		attr
+
 	CODE:
 	{
-	   RETVAL = ldap_sort_entries(ld,&chain,attr,StrCaseCmp);
+	   SV		*cmp;
+	   int		(*func)() = &StrCaseCmp;
+
+	   if (items > 3) {
+	      cmp = ST(3);
+	      if (SvTYPE(SvRV(cmp)) == SVt_PVCV) {
+		 func = &internal_sortcmp_proc;
+		 ldap_perl_sortcmp = cmp;
+	      }
+	   }
+	   RETVAL = ldap_sort_entries(ld,&chain,attr,func);
 	}
 	OUTPUT:
 	RETVAL
@@ -1766,8 +1743,6 @@ ldapssl_client_init(certdbpath,certdbhandle)
 	const char *	certdbpath
 	void *		certdbhandle
 
-#ifdef LDAPV3
-
 int
 ldapssl_clientauth_init(certdbpath,certdbhandle,needkeydb,keydbpath,keydbhandle)
 	char *		certdbpath
@@ -1782,8 +1757,6 @@ ldapssl_enable_clientauth(ld,keynickname,keypasswd,certnickname)
 	char *		keynickname
 	char *		keypasswd
 	char *		certnickname
-
-#endif
 
 LDAP *
 ldapssl_init(host,port,secure)
@@ -1807,7 +1780,6 @@ prldap_install_routines(ld, shared)
 	LDAP *		ld
 	int		shared
 
-
 int
 prldap_set_session_option(ld, sessionarg, option)
 	LDAP *		ld
@@ -1815,3 +1787,12 @@ prldap_set_session_option(ld, sessionarg, option)
 	int		option
 
 #endif
+
+
+
+#
+# local variables:
+# mode: c
+# c-basic-offset: 3
+# indent-tabs-mode:t
+# end:

@@ -82,8 +82,8 @@ it possible to do configuration and installs non-interactively. The
 variables are
 
         LDAPSDKDIR    - Full path to the C SDK base directory
-        LDAPV3ON      - Set to "N" to diable LDAP v3 (on by default)
         LDAPSDKSSL    - Set to "N" to disable SSL (SSL is default)
+	LDAPPR        - Enable prldap_ functionality (off by default)
 
 
 With these variables set, you will not be asked any of the questions above

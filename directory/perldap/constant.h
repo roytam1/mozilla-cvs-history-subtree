@@ -56,10 +56,10 @@ int arg;
 {
     errno = 0;
     if (name[0] == 'L' && name[1] == 'D' && name[2] == 'A' && name[3] == 'P'
-       && name[4] == '_')
+        && name[4] == '_')
     {
       switch (name[5]) {
-       case 'A':
+      case 'A':
         if (strEQ(name, "LDAP_ADMINLIMIT_EXCEEDED"))
 #ifdef LDAP_ADMINLIMIT_EXCEEDED
             return LDAP_ADMINLIMIT_EXCEEDED;
@@ -940,18 +940,18 @@ int arg;
 #endif
         break;
       }
-    } else {
-        if (strEQ(name, "LDAPS_PORT"))
+    } else { /* One-offs */
+      if (strEQ(name, "LDAPS_PORT"))
 #ifdef LDAPS_PORT
-            return LDAPS_PORT;
+          return LDAPS_PORT;
 #else
-            goto not_there;
+          goto not_there;
 #endif
-            if (strEQ(name, "PRLDAP_OPT_IO_MAX_TIMEOUT"))
+      if (strEQ(name, "PRLDAP_OPT_IO_MAX_TIMEOUT"))
 #ifdef PRLDAP_OPT_IO_MAX_TIMEOUT
-            return PRLDAP_OPT_IO_MAX_TIMEOUT;
+          return PRLDAP_OPT_IO_MAX_TIMEOUT;
 #else
-            goto not_there;
+          goto not_there;
 #endif
     }
 

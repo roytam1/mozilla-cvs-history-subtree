@@ -61,9 +61,12 @@ sub new
       $self->{"port"} = $hash->{"port"} if defined($hash->{"port"});
       $self->{"binddn"} = $hash->{"bind"} if defined($hash->{"bind"});
       $self->{"bindpasswd"} = $hash->{"pswd"} if defined($hash->{"pswd"});
+      $self->{"bindpasswd"} = $hash->{"password"} if defined($hash->{"password"});
       $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
-      $self->{"version"} = $hash->{"vers"} || LDAP_VERSION3;
+      $self->{"certdb"} = $hash->{"certificate"} if defined($hash->{"certificate"});
+      $self->{"version"} = $hash->{"vers"} || $hash->{"version"} || LDAP_VERSION3;
       $self->{"usenspr"} = $hash->{"nspr"} if defined($hash->{"nspr"});
+      $self->{"callback"} = $hash->{"callback"} if defined($hash->{"callback"});
     }
   else
     {
@@ -147,9 +150,24 @@ sub init
   }
 
   $self->setVersion($self->{"version"});
-  $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
+  if (defined($self->{"callback"}))
+    {
+      my $result, $ret;
+      my $id = ldap_simple_bind($ld, $self->{"binddn"}, $self->{"bindpasswd"});
 
-  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+      $ret = ldap_result($ld, $id, 0, 1, $result);
+      return 0 unless ($ret == LDAP_RES_BIND);
+
+      # The callback must return  1 or 0 (success or failure on the login).
+      $ret = $self->{"callback"}($self, $result);
+      ldap_msgfree($result);
+      return $ret;
+    }
+  else
+    {
+      $ret = ldap_simple_bind_s($ld, $self->{"binddn"}, $self->{"bindpasswd"});
+      return (($ret == LDAP_SUCCESS) ? 1 : 0);
+    }
 }
 
 
@@ -277,7 +295,7 @@ sub printError
 sub search
 {
   my $self = shift;
-  my ($basedn, $scope, $filter, $attrsonly, $attrs, $res, $sortattrs);
+  my ($basedn, $scope, $filter, $attrsonly, $attrs, $res, $sortattrs, $cmp);
 
   if (ref $_[$[] eq "HASH")
     {
@@ -289,6 +307,7 @@ sub search
       $attrsonly = $hash->{"attrsonly"} || undef;
       $attrs = $hash->{"attrs"} || undef;
       $sortattrs = $hash->{"sortattrs"} || undef;
+      $cmp = $hash->{"cmp"} || undef;
     }
   else
     {
@@ -308,6 +327,7 @@ sub search
         {
           $attrs = undef;
           $sortattrs = undef;
+          $cmp = undef;
         }
     }
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
@@ -337,12 +357,12 @@ sub search
               if (scalar(@{$sortattrs}) > 1)
                 {
                   ldap_multisort_entries($self->{"ld"}, $self->{"ldres"},
-                                         $sortattrs);
+                                         $sortattrs, $cmp);
                 }
               else
                 {
                   ldap_sort_entries($self->{"ld"}, $self->{"ldres"},
-                                    $sortattrs->[0]);
+                                    $sortattrs->[0], $cmp);
                 }
             }
 
@@ -365,12 +385,12 @@ sub search
               if (scalar(@{$sortattrs}) > 1)
                 {
                   ldap_multisort_entries($self->{"ld"}, $self->{"ldres"},
-                                         $sortattrs);
+                                         $sortattrs, $cmp);
                 }
               else
                 {
                   ldap_sort_entries($self->{"ld"}, $self->{"ldres"},
-                                    $sortattrs->[0]);
+                                    $sortattrs->[0], $cmp);
                 }
             }
 
@@ -833,8 +853,20 @@ sub simpleAuth
 #
 sub setOption
 {
-  my ($self, $option, $value) = @_;
-  my $ret;
+  my $self = shift;
+  my ($option, $value, $ret);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my $hash = shift;
+
+      $option = $hash->{"option"};
+      $value = $hash->{"value"};
+    }
+  else
+    {
+      ($option, $value) = @_;
+    }
 
   $ret = ldap_set_option($self->{"ld"}, $option, $value);
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
