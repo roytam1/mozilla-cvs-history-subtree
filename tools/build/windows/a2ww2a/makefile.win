@@ -75,6 +75,7 @@ MODULE=a2ww2a
 MAKE_OBJ_TYPE=DLL
 EXP=$(OBJDIR)\$(MODULE).lib
 DLL=$(OBJDIR)\$(MODULE).dll
+EXCLUDE_LIBS=$(MODULE).lib
 
 #//------------------------------------------------------------------------
 #//
@@ -94,6 +95,6 @@ LCFLAGS=$(LCFLAGS) \
 
 include <$(DEPTH)/config/rules.mak>
 
-libs:: $(DLL)
+export libs:: $(DLL)
     $(MAKE_INSTALL) .\$(DLL) $(DIST)\bin
     $(MAKE_INSTALL) .\$(EXP) $(DIST)\lib

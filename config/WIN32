@@ -239,7 +239,11 @@ EXE_LIBS=$(EXE_LIBS) $(DIST)/lib/trace.lib
 !if "$(OS_TARGET)" == "WINCE"
 DLL_CFLAGS=
 DLL_LFLAGS=$(OS_LFLAGS) /DLL /ENTRY:_DllMainCRTStartup
+!if "$(EXCLUDE_LIBS:a2ww2a.lib=)" == "$(EXCLUDE_LIBS)"
 DLL_LIBS=$(DIST)/lib/a2ww2a.lib
+!else
+DLL_LIBS=
+!endif
 !else
 DLL_CFLAGS=
 DLL_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWS
