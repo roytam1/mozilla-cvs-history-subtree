@@ -103,6 +103,8 @@ CPP_OBJS=                                       \
   ../xslt/$(OBJDIR)/txTextHandler.obj \
   ../xslt/$(OBJDIR)/txTextOutput.obj \
   ../xslt/$(OBJDIR)/txXMLOutput.obj \
+  ../xslt/$(OBJDIR)/txXSLTPatterns.obj \
+  ../xslt/$(OBJDIR)/txPatternParser.obj \
   ../xslt/$(OBJDIR)/VariableBinding.obj \
   ../xslt/$(OBJDIR)/XSLTProcessor.obj \
   ../xslt/functions/$(OBJDIR)/CurrentFunctionCall.obj \
