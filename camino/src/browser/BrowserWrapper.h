@@ -99,6 +99,9 @@
 - (void)setTab: (NSTabViewItem*)tab;
 - (NSTabViewItem*) tab;
 
+- (IBAction)reloadWithNewCharset:(NSString*)charset;
+- (NSString*)currentCharset;
+
 - (NSWindow*)getNativeWindow;
 - (NSMenu*)getContextMenu;
 - (void)setIsBookmarksImport:(BOOL)aIsImport;

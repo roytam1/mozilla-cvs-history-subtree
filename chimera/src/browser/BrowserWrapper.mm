@@ -845,4 +845,16 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   return [[[self getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
 }
 
+
+- (IBAction)reloadWithNewCharset:(NSString*)charset
+{
+  [[self getBrowserView] reloadWithNewCharset:charset];
+}
+
+- (NSString*)currentCharset
+{
+  return [[self getBrowserView] currentCharset];
+}
+
+
 @end

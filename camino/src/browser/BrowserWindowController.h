@@ -259,6 +259,9 @@ typedef enum
 - (IBAction)stop:(id)aSender;
 - (IBAction)home:(id)aSender;
 
+- (IBAction)reloadWithNewCharset:(NSString*)charset;
+- (NSString*)currentCharset;
+
 - (IBAction)frameToNewWindow:(id)sender;
 - (IBAction)frameToNewTab:(id)sender;
 - (IBAction)frameToThisWindow:(id)sender;

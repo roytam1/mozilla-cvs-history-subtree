@@ -2085,6 +2085,18 @@ static NSArray* sToolbarDefaults = nil;
   return nil;
 }
 
+
+- (IBAction)reloadWithNewCharset:(NSString*)charset
+{
+  [mBrowserView reloadWithNewCharset:charset];
+}
+
+- (NSString*)currentCharset
+{
+  return [mBrowserView currentCharset];
+}
+
+
 @end
 
 #pragma mark -

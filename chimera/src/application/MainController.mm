@@ -150,6 +150,8 @@ const int kReuseWindowOnAE = 2;
 
 -(void)dealloc
 {
+  [mCharsets release];
+  
   // Terminate shared menus
   [mSharedMenusObj release];
 
@@ -256,6 +258,10 @@ const int kReuseWindowOnAE = 2;
     while ((itemIndex = [mGoMenu indexOfItemWithTag:kRendezvousRelatedItemTag]) != -1)
       [mGoMenu removeItemAtIndex:itemIndex];
   }
+  
+  // load up the charset dictionary with keys and menu titles.
+  NSString* charsetPath = [NSBundle pathForResource:@"Charset" ofType:@"dict" inDirectory:[[NSBundle mainBundle] bundlePath]];
+  mCharsets = [[NSDictionary dictionaryWithContentsOfFile:charsetPath] retain];
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
@@ -533,6 +539,18 @@ const int kReuseWindowOnAE = 2;
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
     [browserController reload: aSender]; 
+}
+
+-(IBAction) reloadWithCharset:(id)aSender
+{
+  // Figure out which charset to tell gecko to load based on the sender's tag. There
+  // is guaranteed to only be 1 key that matches this tag, so we just take the first one.
+  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  if (browserController) {
+    NSArray* charsetList = [mCharsets allKeysForObject:[NSNumber numberWithInt:[aSender tag]]];
+    NS_ASSERTION([charsetList count] == 1, "OOPS, multiply defined charsets in plist");
+    [browserController reloadWithNewCharset:[charsetList objectAtIndex:0]];
+  }
 }
 
 -(IBAction) doStop:(id)aSender
@@ -918,11 +936,33 @@ const int kReuseWindowOnAE = 2;
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
 
+  // Handle the encoding menu first, since there are many of those items. They're
+  // identifyable because they have a specific tag. 
+  const int kEncodingMenuTag = 10;
+  if ( [aMenuItem tag] >= kEncodingMenuTag ) {
+    if ( browserController ) {
+      NSString* charset = [browserController currentCharset];
+#if DEBUG_CHARSET
+      NSLog(@"charset is %@", charset);
+#endif
+      // given the document's charset, check if it maps to the same int as the
+      // current item's key. If yes, we select this item because it's our charset.
+      // Note that this relies on the key in the nib mapping to the right integer
+      // in the plist.
+      if ( [[NSNumber numberWithInt:[aMenuItem tag]] isEqualToNumber:[mCharsets objectForKey:[charset lowercaseString]]] )
+        [aMenuItem setState:NSOnState];
+      else
+        [aMenuItem setState:NSOffState];
+      return YES;
+    }
+    return NO;
+  }
+
   // disable items that aren't relevant if there's no main browser window open
   SEL action = [aMenuItem action];
 
   //NSLog(@"MainController validateMenuItem for %@ (%s)", [aMenuItem title], action);
-
+  
   if (action == @selector(printPage:) ||
         /* ... many more items go here ... */
         /* action == @selector(goHome:) || */			// always enabled

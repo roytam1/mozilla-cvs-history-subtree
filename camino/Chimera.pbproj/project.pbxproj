@@ -222,6 +222,7 @@
 				F5CA1A1902D3956F01F34900,
 				F5F190BB02D1F81A01026D5D,
 				F5F190BE02D217C201026D5D,
+				3F22CC1303DF42A200026DCE,
 				F56610A1039474CB01A9666E,
 			);
 			isa = PBXGroup;
@@ -285,7 +286,7 @@
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
 				FRAMEWORK_SEARCH_PATHS = "";
-				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ ../ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
+				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ ../ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
@@ -651,6 +652,7 @@
 				F583E3BD03B820AC01A80166,
 				F5F415E403B97C6101A80166,
 				F5F7EF0F03C1F29C01BDD337,
+				3F22CC1503DF42A200026DCE,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -844,6 +846,34 @@
 //2E2
 //2E3
 //2E4
+//3F0
+//3F1
+//3F2
+//3F3
+//3F4
+		3F22CC1303DF42A200026DCE = {
+			isa = PBXFileReference;
+			name = Charset.dict;
+			path = resources/application/Charset.dict;
+			refType = 4;
+		};
+		3F22CC1403DF42A200026DCE = {
+			fileRef = 3F22CC1303DF42A200026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		3F22CC1503DF42A200026DCE = {
+			fileRef = 3F22CC1303DF42A200026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+//3F0
+//3F1
+//3F2
+//3F3
+//3F4
 //4A0
 //4A1
 //4A2
@@ -7699,6 +7729,7 @@
 				F583E3BE03B820AC01A80166,
 				F5F415E503B97C6101A80166,
 				F5F7EF1003C1F29C01BDD337,
+				3F22CC1403DF42A200026DCE,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
