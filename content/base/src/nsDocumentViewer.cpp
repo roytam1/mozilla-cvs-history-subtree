@@ -113,7 +113,7 @@
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMHTMLFrameSetElement.h"
 #ifdef MOZ_XUL
-#include "nsIXULDocument.h"  // Temporary code for Bug 136185
+#include "nsIXULDocument.h"
 #endif
 
 #include "nsIClipboardHelper.h"
@@ -3091,6 +3091,15 @@ DocumentViewerImpl::Print(nsIPrintSettings*       aPrintSettings,
 #ifdef NS_PRINTING
   INIT_RUNTIME_ERROR_CHECKING();
 
+#ifdef MOZ_XUL
+  // Temporary code for Bug 136185 / Bug 240490
+  nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
+  if (xulDoc) {
+    nsPrintEngine::ShowPrintErrorDialog(NS_ERROR_NOT_IMPLEMENTED);
+    return NS_ERROR_FAILURE;
+  }
+#endif
+
   nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mContainer));
   NS_ASSERTION(docShell, "This has to be a docshell");
 
@@ -3182,6 +3191,16 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings,
     nsPrintEngine::CloseProgressDialog(aWebProgressListener);
     return NS_ERROR_FAILURE;
   }
+
+#ifdef MOZ_XUL
+  // Temporary code for Bug 136185 / Bug 240490
+  nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
+  if (xulDoc) {
+    nsPrintEngine::CloseProgressDialog(aWebProgressListener);
+    nsPrintEngine::ShowPrintErrorDialog(NS_ERROR_NOT_IMPLEMENTED, PR_FALSE);
+    return NS_ERROR_FAILURE;
+  }
+#endif
 
   if (!mPrintEngine) {
     mPrintEngine = new nsPrintEngine();
