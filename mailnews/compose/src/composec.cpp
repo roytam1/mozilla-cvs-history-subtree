@@ -372,7 +372,7 @@ mime_init_encryption(mime_crypto_closure *state, PRBool sign_p)
   state->encryption_context = do_CreateInstance(NS_CMSENCODER_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return 0;
 
-  rv = state->encryption_context->Start(state->encryption_cinfo, mime_crypto_write_base64, state); // XXX Fix this later XXX //
+  rv = state->encryption_context->Start(state->encryption_cinfo, mime_crypto_write_base64, state->crypto_encoder_data); // XXX Fix this later XXX //
   if (NS_FAILED(rv)) {
 	  status = PR_GetError();
 	  PR_ASSERT(status < 0);
