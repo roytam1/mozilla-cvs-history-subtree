@@ -122,6 +122,9 @@ interface nsIMsgCompose : nsISupports {
 
 	/* ... */
 	void SendMsg(in MSG_DeliverMode deliverMode, in nsIMsgIdentity identity, in nsIMsgProgress progress);
+	
+	/* ... */
+	void QuoteMessage(in string msgURI);
 
 	/* ... */
   void CloseWindow();

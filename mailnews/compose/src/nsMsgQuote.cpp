@@ -161,7 +161,7 @@ NS_IMETHODIMP nsMsgQuote::GetStreamListener(nsIStreamListener ** aStreamListener
 }
 
 nsresult
-nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, nsIStreamListener * aQuoteMsgStreamListener,
+nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, PRBool headersOnly, nsIStreamListener * aQuoteMsgStreamListener,
                          const char * aMsgCharSet)
 {
   nsresult  rv;
@@ -187,12 +187,7 @@ nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, nsIStreamListe
   aURL->GetSpec(getter_Copies(urlSpec));
   nsCAutoString modifiedUrlSpec(urlSpec);
 
-  PRBool bAutoQuote = PR_TRUE;
-  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &rv));
-  if (NS_SUCCEEDED(rv))
-    prefs->GetBoolPref("mail.auto_quote", &bAutoQuote);
-
-  if (! bAutoQuote) /* We don't need to quote the message body but we still need to extract the headers */
+  if (headersOnly) /* We don't need to quote the message body but we still need to extract the headers */
     modifiedUrlSpec += "?header=only";
   else if (quoteHeaders)
       modifiedUrlSpec += "?header=quote";
@@ -210,10 +205,6 @@ nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, nsIStreamListe
     if (i18nUrl)
       i18nUrl->SetCharsetOverRide(tempStr.get());
   }
-
-  rv = nsComponentManager::CreateInstance(kMsgQuoteListenerCID, nsnull, NS_GET_IID(nsIMsgQuoteListener), getter_AddRefs(mQuoteListener));
-  if (NS_FAILED(rv)) return rv;
-  mQuoteListener->SetMsgQuote(this);
 
   // funky magic go get the isupports for this class which inherits from multiple interfaces.
   nsISupports * supports;

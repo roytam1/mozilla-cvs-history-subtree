@@ -99,6 +99,7 @@ static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kCMimeConverterCID, NS_MIME_CONVERTER_CID);
 static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
+static NS_DEFINE_CID(kMsgQuoteListenerCID, NS_MSGQUOTELISTENER_CID);
 
 static PRInt32 GetReplyOnTop()
 {
@@ -1815,6 +1816,39 @@ NS_IMETHODIMP nsMsgCompose::GetType(MSG_ComposeType *aType)
   return NS_OK;
 }
 
+//Quote message to composer with msgURI
+nsresult
+nsMsgCompose::QuoteMessage(const char *msgURI)
+{
+  nsresult    rv;
+
+  mQuotingToFollow = PR_FALSE;
+  
+  // Create a mime parser (nsIStreamConverter)!
+  mQuote = do_CreateInstance(NS_MSGQUOTE_CONTRACTID, &rv);
+  if (NS_FAILED(rv) || !mQuote)
+    return NS_ERROR_FAILURE;
+
+  // Create the consumer output stream.. this will receive all the HTML from libmime
+  QuoteStreamListener *listener =
+    new QuoteStreamListener(msgURI);
+  
+  if (!listener)
+  {
+#ifdef NS_DEBUG
+    printf("Failed to create listener\n");
+#endif
+    return NS_ERROR_FAILURE;
+  }
+  NS_ADDREF(listener);
+
+  listener->SetComposeObj(this);
+  
+  rv = mQuote->QuoteMessage(msgURI, PR_FALSE, PR_FALSE, listener, m_compFields->GetCharacterSet());
+
+  return rv;
+}
+
 nsresult
 nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // New template
 {
@@ -1846,8 +1880,14 @@ nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // 
   NS_ADDREF(mQuoteStreamListener);
 
   mQuoteStreamListener->SetComposeObj(this);
+ 
+  
+  nsCOMPtr<nsIMsgQuoteListener> quoteListener;
+  rv = nsComponentManager::CreateInstance(kMsgQuoteListenerCID, nsnull, NS_GET_IID(nsIMsgQuoteListener), getter_AddRefs(quoteListener));
+  if (NS_FAILED(rv)) return rv;
+  quoteListener->SetMsgQuote(mQuote);
 
-  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, m_compFields->GetCharacterSet());
+  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, !bAutoQuote, mQuoteStreamListener, m_compFields->GetCharacterSet());
   return rv;
 }
 
@@ -4041,3 +4081,230 @@ nsMsgMailList::nsMsgMailList(nsString listName, nsString listDescription, nsIAbD
 nsMsgMailList::~nsMsgMailList()
 {
 }
+
+//Listener that use to quote message to composer from given URI
+QuoteStreamListener::~QuoteStreamListener() 
+{
+}
+
+QuoteStreamListener::QuoteStreamListener(const char * originalMsgURI)
+{
+  nsresult rv;
+
+  // For the built message body...
+  nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
+  rv = GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
+  if (NS_SUCCEEDED(rv) && originalMsgHdr){
+
+    nsXPIDLString author;
+    rv = originalMsgHdr->GetMime2DecodedAuthor(getter_Copies(author));
+    if (NS_SUCCEEDED(rv)){
+      char * authorName = nsnull;
+      nsCOMPtr<nsIMsgHeaderParser> parser (do_GetService(kHeaderParserCID));
+      
+      if (parser){
+        nsCAutoString utf8Author;
+        utf8Author = NS_ConvertUCS2toUTF8(author);
+        nsAutoString authorStr; authorStr.Assign(author);
+        
+        rv = parser->ExtractHeaderAddressName("UTF-8", utf8Author, &authorName);
+        if (NS_SUCCEEDED(rv))
+        authorStr = NS_ConvertUTF8toUCS2(authorName);
+        
+        if (authorName)
+          PL_strfree(authorName);
+          
+        if (NS_SUCCEEDED(rv) && !authorStr.IsEmpty())
+          mAuthor.Append(authorStr);
+        else
+          mAuthor.Append(author);
+          
+        mAuthor.Append(NS_LITERAL_STRING(" wrote:<br><html>"));
+      }
+    }
+  }
+  NS_INIT_REFCNT(); 
+}
+
+/**
+ * The formatflowed parameter directs if formatflowed should be used in the conversion.
+ * format=flowed (RFC 2646) is a way to represent flow in a plain text mail, without
+ * disturbing the plain text.
+ */
+nsresult
+QuoteStreamListener::ConvertToPlainText(PRBool formatflowed /* = PR_FALSE */)
+{
+  nsresult  rv = NS_OK;
+
+  rv += ConvertBufToPlainText(mQuote, formatflowed);
+  return rv;
+}
+
+NS_IMETHODIMP QuoteStreamListener::OnStartRequest(nsIRequest *request, nsISupports * /* ctxt */)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP QuoteStreamListener::OnStopRequest(nsIRequest *request, nsISupports * /* ctxt */, nsresult status)
+{
+  nsresult rv = NS_OK;
+  nsAutoString aCharset;
+  
+  nsCOMPtr<nsIMsgCompose> compose = do_QueryReferent(mWeakComposeObj);
+  if (compose) {
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+    nsCOMPtr<nsIMsgComposeService> composeService (do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID));
+    composeService->TimeStamp("done with mime. Lets update some UI element", PR_FALSE);
+#endif
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+    composeService->TimeStamp("addressing widget, windows title and focus are now set, time to insert the body", PR_FALSE);
+#endif
+
+    // Now we have an HTML representation of the quoted message.
+    // If we are in plain text mode, we need to convert this to plain
+    // text before we try to insert it into the editor. If we don't, we
+    // just get lots of HTML text in the message...not good.
+    //
+    // XXX not m_composeHTML? /BenB
+    PRBool composeHTML = PR_TRUE;
+    compose->GetComposeHTML(&composeHTML);
+    if (!composeHTML){
+      // Downsampling. The charset should only consist of ascii.
+      char *target_charset = aCharset.ToNewCString();
+      PRBool formatflowed = UseFormatFlowed(target_charset);
+      ConvertToPlainText(formatflowed);
+      Recycle(target_charset);
+    }
+
+    nsCOMPtr<nsIEditorShell>editor;
+    if (NS_SUCCEEDED(compose->GetEditor(getter_AddRefs(editor))) && editor){
+      nsAutoString empty;
+      InsertToCompose(editor, composeHTML);
+    }
+  }
+  return rv;
+}
+
+NS_IMETHODIMP QuoteStreamListener::OnDataAvailable(nsIRequest *request, 
+                                                   nsISupports *ctxt, 
+                                                   nsIInputStream *inStr, 
+                                                   PRUint32 sourceOffset, PRUint32 count)
+{
+  nsresult rv = NS_OK;
+  NS_ENSURE_ARG(inStr);
+
+  char *newBuf = (char *)PR_Malloc(count + 1);
+  if (!newBuf)
+    return NS_ERROR_FAILURE;
+
+  PRUint32 numWritten = 0; 
+  rv = inStr->Read(newBuf, count, &numWritten);
+  if (rv == NS_BASE_STREAM_WOULD_BLOCK)
+    rv = NS_OK;
+    
+  newBuf[numWritten] = '\0';
+  if (NS_SUCCEEDED(rv) && numWritten > 0){
+    PRUnichar       *u = nsnull; 
+    nsAutoString    fmt; fmt.AssignWithConversion("%s");
+
+    u = nsTextFormatter::smprintf(fmt.get(), newBuf); // this converts UTF-8 to UCS-2 
+    if (u){
+      PRInt32   newLen = nsCRT::strlen(u);
+      mQuote.Append(u, newLen);
+      PR_FREEIF(u);
+    }
+    else{
+      mQuote.AppendWithConversion(newBuf, numWritten);
+    }
+  }
+	
+  PR_FREEIF(newBuf);
+  return rv;
+}
+
+nsresult
+QuoteStreamListener::SetComposeObj(nsIMsgCompose *obj)
+{
+  mWeakComposeObj = getter_AddRefs(NS_GetWeakReference(obj));
+  return NS_OK;
+}
+
+NS_IMETHODIMP QuoteStreamListener::InsertToCompose(nsIEditorShell *aEditorShell, PRBool aHTMLEditor)
+{
+  // First, get the nsIEditor interface for future use
+  nsCOMPtr<nsIEditor> editor;
+  nsCOMPtr<nsIDOMNode> nodeInserted;
+
+  TranslateLineEnding(mAuthor);
+  TranslateLineEnding(mQuote);
+
+  aEditorShell->GetEditor(getter_AddRefs(editor));
+
+  // Ok - now we need to figure out the charset of the aBuf we are going to send
+  // into the editor shell. There are I18N calls to sniff the data and then we need
+  // to call the new routine in the editor that will allow us to send in the charset
+  //
+
+  // Now, insert it into the editor...
+  if (editor)
+    editor->EnableUndo(PR_TRUE);
+
+  aEditorShell->BeginBatchChanges();
+
+  if (!mQuote.IsEmpty()){
+    if (!mAuthor.IsEmpty())
+      aEditorShell->InsertSource(mAuthor.get());
+
+    nsAutoString empty;
+    aEditorShell->InsertAsCitedQuotation(mQuote.get(),
+                                         empty.get(),
+                                         PR_TRUE,
+                                         NS_LITERAL_STRING("UTF-8").get(),
+                                         getter_AddRefs(nodeInserted));
+
+  }
+  aEditorShell->EndBatchChanges();
+
+  if (editor){
+    nsCOMPtr<nsIPlaintextEditor> textEditor = do_QueryInterface(editor);
+    if (textEditor){
+      nsCOMPtr<nsISelection> selection = nsnull; 
+      nsCOMPtr<nsIDOMNode>      parent = nsnull; 
+      PRInt32                   offset;
+      nsresult                  rv;
+
+      // get parent and offset of mailcite
+      rv = GetNodeLocation(nodeInserted, address_of(parent), &offset); 
+      if (NS_FAILED(rv) || (!parent)){
+        return rv;
+      }
+
+      // get selection
+      editor->GetSelection(getter_AddRefs(selection));
+      if (selection){
+        // place selection after mailcite
+        selection->Collapse(parent, offset+1);
+        // insert a break at current selection
+        textEditor->InsertLineBreak();
+        // i'm not sure if you need to move the selection back to before the
+        // break. expirement.
+        selection->Collapse(parent, offset+1);
+      }
+      nsCOMPtr<nsISelectionController> selCon;
+      editor->GetSelectionController(getter_AddRefs(selCon));
+
+      if (selCon)
+        selCon->ScrollSelectionIntoView(nsISelectionController::SELECTION_NORMAL, nsISelectionController::SELECTION_ANCHOR_REGION);
+    }
+  }
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  nsCOMPtr<nsIMsgComposeService> composeService (do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID));
+  composeService->TimeStamp("Finished inserting data into the editor. The window is finally ready!", PR_FALSE);
+#endif
+  return NS_OK;
+}
+NS_IMPL_ISUPPORTS1(QuoteStreamListener, nsIStreamListener)
+

@@ -18,6 +18,7 @@
  * Rights Reserved.
  */
 
+const MEDIATOR_CONTRACTID = "@mozilla.org/rdf/datasource;1?name=window-mediator";
 var msgCompDeliverMode = Components.interfaces.nsIMsgCompDeliverMode;
 var msgCompSendFormat = Components.interfaces.nsIMsgCompSendFormat;
 var msgCompConvertible = Components.interfaces.nsIMsgCompConvertible;
@@ -475,7 +476,7 @@ var defaultController =
 
       //Options Menu
       case "cmd_selectAddress"      : if (defaultController.isCommandEnabled(command)) SelectAddress();         break;
-//      case "cmd_quoteMessage"       : if (defaultController.isCommandEnabled(command)) QuoteSelectedMessage();  break;
+      case "cmd_quoteMessage"       : if (defaultController.isCommandEnabled(command)) QuoteSelectedMessage();  break;
       case "cmd_rewrap"             : editorShell.Rewrap(false);                                                break;
 
       default:
@@ -489,6 +490,19 @@ var defaultController =
 //    dump("DefaultController:onEvent\n");
   }
 }
+
+function QuoteSelectedMessage(){
+  if (msgCompose){
+    var mailWindow = Components.classes[MEDIATOR_CONTRACTID].getService(Components.interfaces.nsIWindowMediator).getMostRecentWindow("mail:3pane");
+    if (mailWindow){
+      var selectedURI = mailWindow.GetLoadedMessage();
+      msgCompose.QuoteMessage(selectedURI);
+    }
+  }
+  else
+    dump("Compose has not been created!\n");
+}
+
 
 function SetupCommandUpdateHandlers()
 {

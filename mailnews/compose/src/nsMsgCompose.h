@@ -168,6 +168,26 @@ private:
     nsString                  mCiteReference;
 };
 
+class QuoteStreamListener : public nsIStreamListener
+{
+public:
+    QuoteStreamListener(const char *originalMsgURI);
+    virtual ~QuoteStreamListener(void);
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIREQUESTOBSERVER
+    NS_DECL_NSISTREAMLISTENER
+
+    NS_IMETHOD SetComposeObj(nsIMsgCompose *obj);
+    NS_IMETHOD ConvertToPlainText(PRBool formatflowed = PR_FALSE);
+
+private:
+    NS_IMETHODIMP QuoteStreamListener::InsertToCompose(nsIEditorShell *aEditorShell, PRBool aHTMLEditor);
+    nsWeakPtr                 mWeakComposeObj;
+    nsString       				mAuthor;
+    nsString       				mQuote;
+};
+
 ////////////////////////////////////////////////////////////////////////////////////
 // This is the listener class for the send operation. We have to create this class 
 // to listen for message send completion and eventually notify the caller
