@@ -664,10 +664,6 @@ lm_PrefChangedFunc(const char *pref, void *data)
 
 static JSBool mochaInited = JS_FALSE;
 
-/* nix, where is this */
-extern void 
-JSJ_InitContext(JSContext *context, JSObject *obj); 
-
 /*
  * create the mocha thread, event queues, and stream converters
  */
