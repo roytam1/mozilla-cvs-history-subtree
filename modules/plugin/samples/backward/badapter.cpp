@@ -378,6 +378,11 @@ nsresult fromNPError[] = {
 // pdata.  Get the peer, get the stream, call the function.
 //
 
+////////////////////////////////////////////////////////////////////////////////
+// UNIX-only API calls
+////////////////////////////////////////////////////////////////////////////////
+
+#ifdef XP_UNIX
 char* NPP_GetMIMEDescription(void)
 {
     int freeFac = 0;
@@ -440,6 +445,7 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     //fprintf(stderr, "Done\n");
     return NPERR_NO_ERROR;
 }
+#endif // XP_UNIX
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NPP_Initialize:
@@ -997,7 +1003,11 @@ int varMap[] = {
 NS_METHOD
 CPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 {
+#ifdef XP_UNIX
     return fromNPError[NPN_GetValue(NULL, (NPNVariable)varMap[(int)variable], value)];
+#else
+    return fromNPError[NPERR_GENERIC_ERROR];
+#endif // XP_UNIX
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1007,7 +1017,11 @@ CPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 NS_METHOD
 CPluginManager::SetValue(nsPluginManagerVariable variable, void *value) 
 {
+#ifdef XP_UNIX
     return fromNPError[NPN_SetValue(NULL, (NPPVariable)varMap[(int)variable], value)];
+#else
+    return fromNPError[NPERR_GENERIC_ERROR];
+#endif // XP_UNIX
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1091,7 +1105,11 @@ CPluginInstancePeer::~CPluginInstancePeer(void)
 NS_METHOD
 CPluginInstancePeer::GetValue(nsPluginInstancePeerVariable variable, void *value)
 {
+#ifdef XP_UNIX
     return fromNPError[NPN_GetValue(NULL, (NPNVariable)varMap[(int)variable], value)];
+#else
+    return fromNPError[NPERR_GENERIC_ERROR];
+#endif // XP_UNIX
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1101,7 +1119,11 @@ CPluginInstancePeer::GetValue(nsPluginInstancePeerVariable variable, void *value
 NS_METHOD
 CPluginInstancePeer::SetValue(nsPluginInstancePeerVariable variable, void *value) 
 {
+#ifdef XP_UNIX
     return fromNPError[NPN_SetValue(NULL, (NPPVariable)varMap[(int)variable], value)];
+#else
+    return fromNPError[NPERR_GENERIC_ERROR];
+#endif // XP_UNIX
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
