@@ -37,16 +37,18 @@
    *
    * Normal string clients must _never_ call routines from this interface.
    */
-template <class CharT>
-class nsPrivateSharableString
+class NS_COM nsPrivateSharableString
   {
+    public:
+      typedef PRUnichar char_type;
+
     public:
       virtual ~nsPrivateSharableString() {}
 
-      virtual PRUint32                            GetImplementationFlags() const;
-      virtual const nsBufferHandle<CharT>*        GetFlatBufferHandle() const;
-      virtual const nsBufferHandle<CharT>*        GetBufferHandle() const;
-      virtual const nsSharedBufferHandle<CharT>*  GetSharedBufferHandle() const;
+      virtual PRUint32                                GetImplementationFlags() const;
+      virtual const nsBufferHandle<char_type>*        GetFlatBufferHandle() const;
+      virtual const nsBufferHandle<char_type>*        GetBufferHandle() const;
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
 
         /**
          * |GetBufferHandle()| will return either |0|, or a reasonable pointer.
@@ -56,36 +58,25 @@ class nsPrivateSharableString
          */
   };
 
-template <class CharT>
-const nsSharedBufferHandle<CharT>*
-nsPrivateSharableString<CharT>::GetSharedBufferHandle() const
+class NS_COM nsPrivateSharableCString
   {
-    return 0;
-  }
+    public:
+      typedef char char_type;
 
-template <class CharT>
-const nsBufferHandle<CharT>*
-nsPrivateSharableString<CharT>::GetFlatBufferHandle() const
-  {
-    return GetSharedBufferHandle();
-  }
+    public:
+      virtual ~nsPrivateSharableCString() {}
 
-template <class CharT>
-const nsBufferHandle<CharT>*
-nsPrivateSharableString<CharT>::GetBufferHandle() const
-  {
-    return GetSharedBufferHandle();
-  }
+      virtual PRUint32                                GetImplementationFlags() const;
+      virtual const nsBufferHandle<char_type>*        GetFlatBufferHandle() const;
+      virtual const nsBufferHandle<char_type>*        GetBufferHandle() const;
+      virtual const nsSharedBufferHandle<char_type>*  GetSharedBufferHandle() const;
 
-template <class CharT>
-PRUint32
-nsPrivateSharableString<CharT>::GetImplementationFlags() const
-  {
-    PRUint32 flags = 0;
-    const nsSharedBufferHandle<CharT>* handle = GetSharedBufferHandle();
-    if ( handle )
-      flags = handle->GetImplementationFlags();
-    return flags;
-  }
+        /**
+         * |GetBufferHandle()| will return either |0|, or a reasonable pointer.
+         * The meaning of |0| is that the string points to a non-contiguous or else empty representation.
+         * Otherwise |GetBufferHandle()| returns a handle that points to the single contiguous hunk of characters
+         * that make up this string.
+         */
+  };
 
 #endif // !defined(nsPrivateSharableString_h___)

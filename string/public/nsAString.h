@@ -46,7 +46,7 @@
    */
 
 class NS_COM nsAString
-    : public nsPrivateSharableString<PRUnichar>
+    : public nsPrivateSharableString
   {
     public:
       typedef nsAString                     self_type;
@@ -276,7 +276,7 @@ class NS_COM nsAString
   };
 
 class NS_COM nsACString
-    : public nsPrivateSharableString<char>
+    : public nsPrivateSharableCString
   {
     public:
       typedef nsACString                    self_type;

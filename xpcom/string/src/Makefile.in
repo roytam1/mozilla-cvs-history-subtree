@@ -37,9 +37,12 @@ CPPSRCS		=				\
 		nsAFlatString.cpp		\
 		nsAString.cpp		\
 		nsCommonString.cpp		\
-		nsLocalString.cpp		\
 		nsFragmentedString.cpp		\
+		nsLocalString.cpp		\
 		nsPrintfCString.cpp		\
+		nsPrivateSharableString.cpp		\
+		nsPromiseConcatenation.cpp		\
+		nsPromiseFlatString.cpp		\
 		nsPromiseSubstring.cpp		\
 		nsReadableUtils.cpp		\
 		nsSharedBufferList.cpp		\
