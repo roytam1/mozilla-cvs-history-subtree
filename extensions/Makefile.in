@@ -30,7 +30,7 @@ ifndef MOZ_XRE_APP
 DIRS		= $(MOZ_EXTENSIONS)
 else
 ifdef MOZ_MINOTAUR
-DIRS		= help
+DIRS		= help wallet
 endif
 endif
 
