@@ -446,33 +446,40 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
 
     switch (format) {
     case nsIGFXFormat::RGB:
+    case nsIGFXFormat::BGR:
       decoder->mFrame->SetImageData((PRUint8*)line, bpr, row_num*bpr);
       break;
     case nsIGFXFormat::RGB_A1:
-      cptr = decoder->colorLine;
-      aptr = decoder->alphaLine;
-      memset(aptr, 0, abpr);
-      for (PRUint32 x=0; x<iwidth; x++) {
-        *cptr++ = *line++;
-        *cptr++ = *line++;
-        *cptr++ = *line++;
-        if (*line++)
-          aptr[x>>3] |= 1<<(7-x&0x7);
+    case nsIGFXFormat::BGR_A1:
+      {
+        cptr = decoder->colorLine;
+        aptr = decoder->alphaLine;
+        memset(aptr, 0, abpr);
+        for (PRUint32 x=0; x<iwidth; x++) {
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          if (*line++)
+            aptr[x>>3] |= 1<<(7-x&0x7);
+        }
+        decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
+        decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
       }
-      decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
-      decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
       break;
     case nsIGFXFormat::RGB_A8:
-      cptr = decoder->colorLine;
-      aptr = decoder->alphaLine;
-      for (PRUint32 x=0; x<iwidth; x++) {
-        *cptr++ = *line++;
-        *cptr++ = *line++;
-        *cptr++ = *line++;
-        *aptr++ = *line++;
+    case nsIGFXFormat::BGR_A8:
+      {
+        cptr = decoder->colorLine;
+        aptr = decoder->alphaLine;
+        for (PRUint32 x=0; x<iwidth; x++) {
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          *aptr++ = *line++;
+        }
+        decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
+        decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
       }
-      decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
-      decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
       break;
     }
 
