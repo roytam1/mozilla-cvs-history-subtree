@@ -37,8 +37,6 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 $APPNAM	= "rename";
 $USAGE	= "$APPNAM [-nvI] -b base -h host -D bind -w pswd -P cert filter new_rdn";
 
-@ATTRIBUTES = ("objectclass");
-
 
 #############################################################################
 # Check arguments, and configure some parameters accordingly..

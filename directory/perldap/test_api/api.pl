@@ -12,7 +12,7 @@
 # License for the specific language governing rights and limitations
 # under the License.
 #
-# The Original Code is PerlDAP. The Initial Developer of the Original
+# The Original Code is PerLDAP. The Initial Developer of the Original
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
@@ -43,6 +43,10 @@ if (!$HOST)
    print "Please edit the variables at the top of this file.\n";
    exit -1;
 }
+
+print "\nPerLDAP API TestSuite\n";
+print "\nNote: Failures in earlier tests will cause later tests to fail.\n";
+print "\n";
 
 my $howmany = 10;
 
@@ -132,8 +136,9 @@ foreach my $number (1..$howmany)
 foreach my $number (1..$howmany)
 {
    $entry = {
-	"sn" => {"a",["Test"]},
-	"telephoneNumber" => "800-555-111$number",
+	"sn" => {"ab",["Test"]},
+        "telephoneNumber" => {"ab",[123.456]},
+#	"telephoneNumber" => "800-555-111$number",
    };
    if (ldap_modify_s($ld,"cn=Mozilla $number,$BASE",$entry)
 	  != LDAP_SUCCESS)

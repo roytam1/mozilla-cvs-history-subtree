@@ -21,7 +21,8 @@
 # Contributor(s):
 #
 # DESCRIPTION
-#    Quick Search, like ldapsearch, but in Perl. Look how simple it is.
+#    Search the changelog, and produce an LDIF file suitable for ldapmodify
+#    for instance. This should be merged into LDIF.pm eventually.
 #
 #############################################################################
 
@@ -36,63 +37,82 @@ no strict "vars";
 #################################################################################
 # Constants, shouldn't have to edit these...
 #
-$APPNAM	= "qsearch";
-$USAGE	= "$APPNAM -b base -h host -D bind -w pswd -P cert filter [attr...]";
+$APPNAM	= "changes2ldif";
+$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert [min [max]]";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('b:h:D:p:s:w:P:'))
+if (!getopts('nvb:h:D:p:s:w:P:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;
 }
 %ld = Mozilla::LDAP::Utils::ldapArgs();
+$ld{root} = "cn=changelog" if (!defined($ld{root}) || $ld{root} eq "");
 
 
 #################################################################################
-# Now do all the searches, one by one.
+# Instantiate an LDAP object, which also binds to the LDAP server.
 #
 $conn = new Mozilla::LDAP::Conn(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
-foreach (@ARGV)
+
+#################################################################################
+# Create the search filter.
+#
+$min = $ARGV[$[];
+$max = $ARGV[$[ + 1];
+
+if ($min ne "")
 {
-  if (/\=/)
+  if ($max ne "")
     {
-      push(@srch, $_);
+      $search = "(&(changenumber>=$min)(changenumber<=$max))";
     }
   else
     {
-      push(@attr, $_);
+      $search = "(changenumber>=$min)";
     }
 }
-
-foreach $search (@srch)
+else
 {
-  if ($#attr >= $[)
+  $search = "(changenumber=*)";
+}
+  
+
+#################################################################################
+# Do the searches, and print the results.
+#
+$entry = $conn->search($ld{root}, "ONE", "$search");
+while ($entry)
+{
+  print "dn: ", $entry->{targetdn}[0], "\n";
+  $type = $entry->{changetype}[0];
+  print "changetype: $type\n";
+  if ($type =~ /modify/i)
     {
-      $entry = $conn->search($ld{root}, $ld{scope}, $search, 0, @attr);
+      # Should we filter out modifiersname and modifytimestamp ? We do chop
+      # off the trailing \0 though.
+      chop($entry->{changes}[0]);
+      print $entry->{changes}[0], "\n";
+    }
+  elsif ($type =~ /add/i)
+    {
+      print $entry->{changes}[0], "\n";
     }
   else
     {
-      $entry = $conn->search($ld{root}, $ld{scope}, "$search");
+      print "\n";
     }
 
-  print "Searched for `$search':\n\n";
-  $conn->printError() if $conn->getErrorCode();
-
-  while ($entry)
-    {
-      $entry->printLDIF();
-      $entry = $conn->nextEntry;
-    }
-  print "\n";
+  $entry = $conn->nextEntry;
 }
 
 
 #################################################################################
 # Close the connection.
 #
-$conn->close if $conn;
+$ld{conn}->close if $ld{conn};

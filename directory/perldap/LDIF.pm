@@ -179,8 +179,8 @@ sub readEntries
   my $entry;
   my (@entries);
 
-  return if (($num ne "") && ($num <= 0));
-  $num = -1 unless $num;
+  return if (defined($num) && ($num ne "") && ($num <= 0));
+  $num = (-1) unless defined($num);
 
   do 
     {
@@ -229,11 +229,16 @@ Mozilla::LDAP::LDIF - Read, write and modify LDIF files.
 
 =head1 ABSTRACT
 
-This package is used to read and write LDIF information from files (actually, file handles).
+This package is used to read and write LDIF information from files
+(actually, file handles). It can also be used to generate LDIF modify
+files from changes made to an entry.
 
 =head1 DESCRIPTION
 
-LDIF rules...
+The LDIF format is a simple, yet useful, text representation of an LDAP
+database. The goal of this package is to make it as easy as possible to
+read, parse and use LDIF data, possible generated from other information
+sources.
 
 =head1 EXAMPLES
 
