@@ -23,28 +23,28 @@
  *  Samuel Sieb, samuel@sieb.net, MIRC color codes, munger menu, and various
  */
 
+var warn;
+var ASSERT;
+var TEST;
+
 if (DEBUG)
 {
-    dd = function (m) {
-             dump ("-*- chatzilla: " + m + "\n");
-             // messages that start with ** are warnings, so we'll
-             // show a stack trace here too.
-             if (m.search(/^\*\*/) == 0)
-                 dump(getStackTrace() + "\n");
-         };
-}
+    _dd_pfx = "cz: ";
+    warn = function (msg) { dumpln ("** WARNING " + msg + " **"); }
+    TEST = ASSERT = function (expr, msg) {
+                 if (!expr) {
+                     dump ("** ASSERTION FAILED: " + msg + " **\n" + 
+                           getStackTrace() + "\n"); 
+                     return false;
+                 } else {
+                     return true;
+                 }
+             }
+}    
 else
-{
-    dd = function (){};
-}
+    dd = warn = TEST = ASSERT = function (){};
 
 var client = new Object();
-
-const MSG_CSP       = getMsg ("commaSpace", " ");
-const MSG_NONE      = getMsg ("none");
-const MSG_UNKNOWN   = getMsg ("unknown");
-
-client.defaultNick = getMsg("defaultNick");
 
 client.version = "0.8.34";
 
@@ -85,30 +85,6 @@ client.NO_BROWSER_FOCUS = (navigator.platform.search(/mac|win/i) == -1);
 client.DEFAULT_RESPONSE_CODE = "===";
 
 
-/* XXX maybe move this into css */
-client.responseCodeMap = new Object();
-client.responseCodeMap["HELLO"]  = getMsg("responseCodeMapHello");
-client.responseCodeMap["HELP"]  = getMsg("responseCodeMapHelp");
-client.responseCodeMap["USAGE"]  = getMsg("responseCodeMapUsage");
-client.responseCodeMap["ERROR"]  = getMsg("responseCodeMapError");
-client.responseCodeMap["WARNING"]  = getMsg("responseCodeMapWarning");
-client.responseCodeMap["INFO"]  = getMsg("responseCodeMapInfo");
-client.responseCodeMap["EVAL-IN"]  = getMsg("responseCodeMapEvalIn");
-client.responseCodeMap["EVAL-OUT"]  = getMsg("responseCodeMapEvalOut");
-client.responseCodeMap["JOIN"]  = "-->|";
-client.responseCodeMap["PART"]  = "<--|";
-client.responseCodeMap["QUIT"]  = "|<--";
-client.responseCodeMap["NICK"]  = "=-=";
-client.responseCodeMap["TOPIC"] = "=-=";
-client.responseCodeMap["KICK"]  = "=-=";
-client.responseCodeMap["MODE"]  = "=-=";
-client.responseCodeMap["END_STATUS"] = "---";
-client.responseCodeMap["315"]  = "---"; /* end of WHO */
-client.responseCodeMap["318"]  = "---"; /* end of WHOIS */
-client.responseCodeMap["366"]  = "---"; /* end of NAMES */
-client.responseCodeMap["376"]  = "---"; /* end of MOTD */
-
-client.name = getMsg("clientname");
 client.viewsArray = new Array();
 client.activityList = new Object();
 client.uiState = new Object(); /* state of ui elements (visible/collapsed) */
@@ -116,41 +92,27 @@ client.inputHistory = new Array();
 client.lastHistoryReferenced = -1;
 client.incompleteLine = "";
 client.lastTabUp = new Date();
-client.stalkingVictims = new Array();
 
-CIRCNetwork.prototype.INITIAL_NICK = client.defaultNick;
-CIRCNetwork.prototype.INITIAL_NAME = "chatzilla";
-CIRCNetwork.prototype.INITIAL_DESC = getMsg("circnetworkInitialDesc");
 CIRCNetwork.prototype.INITIAL_CHANNEL = "";
 CIRCNetwork.prototype.MAX_MESSAGES = 100;
 CIRCNetwork.prototype.IGNORE_MOTD = false;
 
 CIRCServer.prototype.READ_TIMEOUT = 0;
-CIRCServer.prototype.VERSION_RPLY = getMsg("circserverVersionRply",
-                                           [client.version,
-                                            navigator.userAgent]);
 CIRCUser.prototype.MAX_MESSAGES = 200;
 
 CIRCChannel.prototype.MAX_MESSAGES = 300;
 
 CIRCChanUser.prototype.MAX_MESSAGES = 200;
 
-window.onresize =
-function ()
-{
-    for (var i = 0; i < client.deck.childNodes.length; i++)
-        scrollDown(client.deck.childNodes[i], true);
-}
-
 function toUnicode (msg, charset)
 {
     if (!("ucConverter" in client))
         return msg;
     
-    if (typeof charset == "undefined")
-        client.ucConverter.charset = client.CHARSET;
-    else
+    if (charset)
         client.ucConverter.charset = charset;
+    else
+        client.ucConverter.charset = client.prefs["charset"];
 
     try
     {
@@ -170,12 +132,23 @@ function fromUnicode (msg, charset)
     if (!("ucConverter" in client))
         return msg;
     
-    if (typeof charset == "undefined")
-        client.ucConverter.charset = client.CHARSET;
-    else
+    if (charset)
         client.ucConverter.charset = charset;
+    else
+        client.ucConverter.charset = client.prefs["charset"];
 
-    return client.ucConverter.ConvertFromUnicode(msg);
+    if ("Finish" in client.ucConverter)
+    {
+        msg = client.ucConverter.ConvertFromUnicode(msg);
+        client.ucConverter.Finish();
+    }
+    else
+    {
+        msg = client.ucConverter.ConvertFromUnicode(msg + " ");
+        msg = msg.substr(0, msg.length - 1);
+    }
+    
+    return msg;
 }
 
 function checkCharset (charset)
@@ -185,7 +158,6 @@ function checkCharset (charset)
     
     try
     {
-        
         const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
         const nsIUnicodeConverter = 
             Components.interfaces.nsIScriptableUnicodeConverter;
@@ -193,7 +165,6 @@ function checkCharset (charset)
             Components.classes[UC_CTRID].getService(nsIUnicodeConverter);
 
         converter.charset = charset;
-        
     }
     catch (ex)
     {
@@ -205,7 +176,7 @@ function checkCharset (charset)
 }
 function setCharset (charset)
 {
-    client.CHARSET = charset;
+    client.prefs["charset"] = charset;
     
     if (!charset)
     {
@@ -235,7 +206,7 @@ function setCharset (charset)
     {
         dd ("Caught exception setting charset to " + charset + "\n" + ex);
         delete client.ucConverter;
-        client.CHARSET = "";
+        client.prefs["charset"] = "";
         client.eventPump.removeHookByName("uc-hook");
         return false;
     }
@@ -243,16 +214,52 @@ function setCharset (charset)
     return true;
 }
 
+function init()
+{
+    client.networks = new Object();
+    client.eventPump = new CEventPump (200);
+
+    if (DEBUG)
+    {
+        /* hook all events EXCEPT server.poll and *.event-end types
+         * (the 4th param inverts the match) */
+        client.debugHook = 
+            client.eventPump.addHook([{type: "poll", set:/^(server|dcc-chat)$/},
+                                    {type: "event-end"}], event_tracer,
+                                    "event-tracer", true /* negate */,
+                                    false /* disable */);
+    }    
+
+    initMessages();
+    initCommands();
+    initMunger();
+    initPrefs();
+    initNetworks();
+    setClientOutput();
+    initStatic();
+    initHandlers();
+    processStartupScripts();
+    processStartupURLs();
+
+    dispatch("networks")
+    dispatch("commands");
+}
+
 function initStatic()
 {
-    var obj;
+    CIRCNetwork.prototype.INITIAL_NICK = client.prefs["nickname"];
+    CIRCNetwork.prototype.INITIAL_NAME = client.prefs["username"];
+    CIRCNetwork.prototype.INITIAL_DESC = client.prefs["desc"];
+    CIRCServer.prototype.VERSION_RPLY  = getMsg(MSG_VERSION_REPLY,
+                                                [client.version,
+                                                 navigator.userAgent]);
 
     const nsISound = Components.interfaces.nsISound;
     client.sound =
         Components.classes["@mozilla.org/sound;1"].createInstance(nsISound);
 
-    if (client.CHARSET)
-        setCharset(client.CHARSET);
+    if (client.prefs["charset"])
+        setCharset(client.prefs["charset"]);
 
     multilineInputMode(client.MULTILINE);
     
@@ -264,27 +271,15 @@ function initStatic()
         client.userAgent = "ChatZilla " + client.version + " [" + 
             navigator.userAgent + "]";
 
-    obj = document.getElementById("input");
-    obj.addEventListener("keypress", onInputKeyPress, false);
-    obj = document.getElementById("multiline-input");
-    obj.addEventListener("keypress", onMultilineInputKeyPress, false);
-    obj = document.getElementById("channel-topicedit");
-    obj.addEventListener("keypress", onTopicKeyPress, false);
-    obj.active = false;
-
-    window.onkeypress = onWindowKeyPress;
-
     setMenuCheck ("menu-dmessages",
                   client.eventPump.getHook ("event-tracer").enabled);
     setMenuCheck ("menu-munger-global", !client.munger.enabled);
     setMenuCheck ("menu-colors", client.enableColors);
 
-    setupMungerMenu(client.munger);
-
     client.uiState["tabstrip"] =
         setMenuCheck ("menu-view-tabstrip", isVisible("view-tabs"));
-    client.uiState["info"] =
-        setMenuCheck ("menu-view-info", isVisible("user-list-box"));
+    client.uiState["userlist"] =
+        setMenuCheck ("menu-view-userlist", isVisible("user-list-box"));
     client.uiState["header"] =
         setMenuCheck ("menu-view-header", isVisible("header-bar-tbox"));
     client.uiState["status"] =
@@ -316,8 +311,68 @@ function initStatic()
      
     setInterval ("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
     
-    if (getBoolPref("logging", false, client.localPrefs))
+    if (client.prefs["log"])
        client.startLogging(client);
+
+    client.rdf = new RDFHelper();
+    
+    client.rdf.initTree("user-list");
+    client.rdf.setTreeRoot("user-list", client.rdf.resNullChan);
+
+    client.localPrefs = client.prefManager.getBranch("viewList.client.");
+    client.defaultCompletion = client.COMMAND_CHAR + "help ";
+}
+
+function initNetworks()
+{
+    client.networks["efnet"] =
+        new CIRCNetwork ("efnet",
+                         [{name: "irc.mcs.net", port: 6667},
+                          {name: "irc.prison.net", port: 6667},
+                          {name: "irc.freei.net", port: 6667},
+                          {name: "irc.magic.ca", port: 6667}],
+                         client.eventPump);
+    client.networks["moznet"] =
+        new CIRCNetwork ("moznet", [{name: "irc.mozilla.org", port: 6667}],
+                         client.eventPump);
+    client.networks["hybridnet"] =
+        new CIRCNetwork ("hybridnet", [{name: "irc.ssc.net", port: 6667}],
+                         client.eventPump);
+    client.networks["slashnet"] =
+        new CIRCNetwork ("slashnet", [{name: "irc.slashnet.org", port:6667}],
+                         client.eventPump);
+    client.networks["dalnet"] =
+        new CIRCNetwork ("dalnet", [{name: "irc.dal.net", port:6667}],
+                         client.eventPump);
+    client.networks["undernet"] =
+        new CIRCNetwork ("undernet", [{name: "irc.undernet.org", port:6667}],
+                         client.eventPump);
+    client.networks["webbnet"] =
+        new CIRCNetwork ("webbnet", [{name: "irc.webbnet.org", port:6667}],
+                         client.eventPump);
+    client.networks["quakenet"] =
+        new CIRCNetwork ("quakenet", [{name: "irc.quakenet.org", port:6667}],
+                         client.eventPump);
+    client.networks["freenode"] =
+        new CIRCNetwork ("freenode",         
+                         [{name: "irc.freenode.net", port:6667}],
+                         client.eventPump);
+
+    client.primNet = client.networks["efnet"];
+}
+
+function processStartupScripts()
+{
+    client.userScripts = new Array();
+    if (client.INITIAL_SCRIPTS)
+    {
+        var urls = client.INITIAL_SCRIPTS.split (";");
+        for (var i = 0; i < urls.length; ++i)
+        {
+            client.userScripts[i] = new Object();
+            client.load(stringTrim(urls[i]), client.userScripts[i]);
+        }
+    }
 }
 
 function processStartupURLs()
@@ -357,6 +412,14 @@ function processStartupURLs()
     }
 }
 
+function destroy()
+{
+    if (client.SAVE_SETTINGS)
+        writePrefs();
+    
+    destroyPrefs();
+}
+
 function setStatus (str)
 {
     client.statusElement.setAttribute ("label", str);
@@ -383,120 +446,10 @@ function isVisible (id)
 {
     var e = document.getElementById(id);
 
-    if (!e)
-    {
-        dd ("** Bogus id ``" + id + "'' passed to isVisible() **");
+    if (!ASSERT(e,"Bogus id ``" + id + "'' passed to isVisible() **"))
         return false;
-    }
     
     return (e.getAttribute ("collapsed") != "true");
-}
-
-function initHost(obj)
-{
-    obj.commands = new CCommandManager();
-    addCommands (obj.commands);
-    
-    obj.networks = new Object();
-    obj.eventPump = new CEventPump (200);
-
-    obj.defaultCompletion = client.COMMAND_CHAR + "help ";
-
-    obj.networks["efnet"] =
-        new CIRCNetwork ("efnet",
-                         [{name: "irc.mcs.net", port: 6667},
-                          {name: "irc.prison.net", port: 6667},
-                          {name: "irc.freei.net", port: 6667},
-                          {name: "irc.magic.ca", port: 6667}],
-                         obj.eventPump);
-    obj.networks["moznet"] =
-        new CIRCNetwork ("moznet", [{name: "irc.mozilla.org", port: 6667}],
-                         obj.eventPump);
-    obj.networks["hybridnet"] =
-        new CIRCNetwork ("hybridnet", [{name: "irc.ssc.net", port: 6667}],
-                         obj.eventPump);
-    obj.networks["slashnet"] =
-        new CIRCNetwork ("slashnet", [{name: "irc.slashnet.org", port:6667}],
-                         obj.eventPump);
-    obj.networks["dalnet"] =
-        new CIRCNetwork ("dalnet", [{name: "irc.dal.net", port:6667}],
-                         obj.eventPump);
-    obj.networks["undernet"] =
-        new CIRCNetwork ("undernet", [{name: "irc.undernet.org", port:6667}],
-                         obj.eventPump);
-    obj.networks["webbnet"] =
-        new CIRCNetwork ("webbnet", [{name: "irc.webbnet.org", port:6667}],
-                         obj.eventPump);
-    obj.networks["quakenet"] =
-        new CIRCNetwork ("quakenet", [{name: "irc.quakenet.org", port:6667}],
-                         obj.eventPump);
-    obj.networks["freenode"] =
-        new CIRCNetwork ("freenode",         
-                         [{name: "irc.freenode.net", port:6667}],
-                         obj.eventPump);
-
-    obj.primNet = obj.networks["efnet"];
-
-    if (DEBUG)
-    {
-        /* hook all events EXCEPT server.poll and *.event-end types
-         * (the 4th param inverts the match) */
-        obj.debugHook = 
-            obj.eventPump.addHook ([{type: "poll", set: /^(server|dcc-chat)$/},
-                                    {type: "event-end"}], event_tracer,
-                                    "event-tracer", true /* negate */,
-                                    false /* disable */);
-    }
-
-    obj.linkRE =
-        /((\w[\w-]+):[^<>\[\]()\'\"\s\u201d]+|www(\.[^.<>\[\]()\'\"\s\u201d]+){2,})/;
-
-    obj.munger = new CMunger();
-    obj.munger.enabled = true;
-    obj.munger.addRule ("quote", /(``|'')/, insertQuote);
-    obj.munger.addRule ("bold", /(?:\s|^)(\*[^*()]*\*)(?:[\s.,]|$)/, 
-                        "chatzilla-bold");
-    obj.munger.addRule ("underline", /(?:\s|^)(\_[^_()]*\_)(?:[\s.,]|$)/,
-                        "chatzilla-underline");
-    obj.munger.addRule ("italic", /(?:\s|^)(\/[^\/()]*\/)(?:[\s.,]|$)/,
-                        "chatzilla-italic");
-    /* allow () chars inside |code()| blocks */
-    obj.munger.addRule ("teletype", /(?:\s|^)(\|[^|]*\|)(?:[\s.,]|$)/,
-                        "chatzilla-teletype");
-    obj.munger.addRule (".mirc-colors", /(\x03((\d{1,2})(,\d{1,2}|)|))/,
-                         mircChangeColor);
-    obj.munger.addRule (".mirc-bold", /(\x02)/, mircToggleBold);
-    obj.munger.addRule (".mirc-underline", /(\x1f)/, mircToggleUnder);
-    obj.munger.addRule (".mirc-color-reset", /(\x0f)/, mircResetColor);
-    obj.munger.addRule (".mirc-reverse", /(\x16)/, mircReverseColor);
-    obj.munger.addRule ("ctrl-char", /([\x01-\x1f])/, showCtrlChar);
-    obj.munger.addRule ("link", obj.linkRE, insertLink);
-    obj.munger.addRule ("mailto",
-       /(?:\s|\W|^)((mailto:)?[^<>\[\]()\'\"\s\u201d]+@[^.<>\[\]()\'\"\s\u201d]+\.[^<>\[\]()\'\"\s\u201d]+)/i,
-                        insertMailToLink);
-    obj.munger.addRule ("bugzilla-link", /(?:\s|\W|^)(bug\s+#?\d{3,6})/i,
-                        insertBugzillaLink);
-    obj.munger.addRule ("channel-link",
-                /(?:\s|\W|^)[@+]?(#[^<>\[\](){}\"\s\u201d]*[^:,.<>\[\](){}\'\"\s\u201d])/i,
-                        insertChannelLink);
-    
-    obj.munger.addRule ("face",
-         /((^|\s)[\<\>]?[\;\=\:]\~?[\-\^\v]?[\)\|\(pP\<\>oO0\[\]\/\\](\s|$))/,
-         insertSmiley);
-    obj.munger.addRule ("ear", /(?:\s|^)(\(\*)(?:\s|$)/, insertEar, false);
-    obj.munger.addRule ("rheet", /(?:\s|\W|^)(rhee+t\!*)(?:\s|$)/i, insertRheet);
-    obj.munger.addRule ("word-hyphenator",
-                        new RegExp ("(\\S{" + client.MAX_WORD_DISPLAY + ",})"),
-                        insertHyphenatedWord);
-
-    obj.rdf = new RDFHelper();
-    
-    obj.rdf.initTree("user-list");
-    obj.rdf.setTreeRoot("user-list", obj.rdf.resNullChan);
-
-    obj.localPrefs =
-        client.prefService.getBranch(obj.prefBranch.root +
-                                     "viewList.client.");
 }
 
 function insertLink (matchText, containerTag)
@@ -579,9 +532,7 @@ function insertMailToLink (matchText, containerTag)
 
 function insertChannelLink (matchText, containerTag, eventData)
 {
-    var encodedMatchText = fromUnicode(matchText + " ");
-    /* bug 114923 */
-    encodedMatchText = encodedMatchText.substr(0, encodedMatchText.length - 1);
+    var encodedMatchText = fromUnicode(matchText);
 
     if (!("network" in eventData) || 
         matchText.search
@@ -823,10 +774,12 @@ function insertHyphenatedWord (longWord, containerTag)
 
 function updateAllStalkExpressions()
 {
+    var list = client.prefs["stalkWords"];
+
     for (var name in client.networks)
     {
         if ("stalkExpression" in client.networks[name])
-            updateStalkExpression(client.networks[name]);
+            updateStalkExpression(client.networks[name], list);
     }
 }
 
@@ -837,8 +790,9 @@ function updateStalkExpression(network)
         return "\\" + ch;
     };
     
-    list = client.stalkingVictims;
-    ary = new Array();
+    var list = client.prefs["stalkWords"];
+
+    var ary = new Array();
 
     ary.push(network.primServ.me.nick.replace(/[^\w\d]/g, escapeChar));
     
@@ -846,7 +800,7 @@ function updateStalkExpression(network)
         ary.push(list[i].replace(/[^\w\d]/g, escapeChar));
 
     var re;
-    if (client.STALK_WHOLE_WORDS)
+    if (client.prefs["stalkWholeWords"])
         re = "(^|[\\W\\s])((" + ary.join(")|(") + "))([\\W\\s]|$)";
     else
         re = "(" + ary.join(")|(") + ")";
@@ -959,6 +913,266 @@ function mainStep()
     setTimeout ("mainStep()", client.STEP_TIMEOUT);
 }
 
+CIRCChannel.prototype.dispatch =
+CIRCNetwork.prototype.dispatch =
+CIRCUser.prototype.dispatch =
+client.dispatch =
+function this_dispatch(text, e, isInteractive, flags)
+{
+    if (!e)
+        e = new Object();
+    
+    if (!("context" in e))
+    {    
+        e.context = getObjectDetails(this);
+    }
+
+    dispatch(text, e, isInteractive, flags);
+}
+
+function dispatch(text, e, isInteractive, flags)
+{
+    if (typeof isInteractive == "undefined")
+        isInteractive = false;
+    
+    if (!e)
+        e = new Object();
+    
+    if (!("context" in e))
+    {    
+        e.context = getObjectDetails(client.currentObject);
+    }
+
+    if (!("isInteractive" in e.context))
+        e.context.isInteractive = isInteractive;
+
+    if (!("inputData" in e))
+        e.inputData = "";
+    
+    /* split command from arguments */
+    var ary = text.match(/(\S+) ?(.*)/);
+    e.commandText = ary[1];
+    e.inputData =  ary[2] ? stringTrim(ary[2]) : "";
+    
+    /* list matching commands */
+    ary = client.commandManager.list(e.commandText, flags);
+    var rv = null;
+    var i;
+    
+    switch (ary.length)
+    {            
+        case 0:
+            /* no match, try again */
+            display(getMsg(MSG_NO_CMDMATCH, e.commandText), MT_ERROR);
+            break;
+            
+        case 1:
+            /* one match, good for you */
+            var ex;
+            try
+            {
+                rv = dispatchCommand(ary[0], e, flags);
+            }
+            catch (ex)
+            {
+                display(getMsg(MSG_ERR_INTERNAL_DISPATCH, ary[0].name),
+                        MT_ERROR);
+                display(formatException(ex), MT_ERROR);
+                dd(formatException(ex), MT_ERROR);
+                if (typeof ex == "object" && "stack" in ex)
+                    dd (ex.stack);
+            }
+            break;
+            
+        default:
+            /* more than one match, show the list */
+            var str = "";
+            for (i in ary)
+                str += (str) ? MSG_COMMASP + ary[i].name : ary[i].name;
+            display(getMsg(MSG_ERR_AMBIGCOMMAND,
+                           [e.commandText, ary.length, str]), MT_ERROR);
+    }
+
+    return rv;
+}
+
+function displayUsageError (e, details)
+{
+    if (!("isInteractive" in e.context) || !e.context.isInteractive)
+    {
+        var caller = Components.stack.caller.caller;
+        if (caller.name == "dispatch")
+            caller = caller.caller;
+        var error = new Error (details);
+        error.fileName = caller.filename;
+        error.lineNumber = caller.lineNumber;
+        error.name = caller.name;
+        display (formatException(error), MT_ERROR);
+    }
+    else
+    {
+        display (details, MT_ERROR);
+    }
+    
+    display (getMsg(MSG_FMT_USAGE, [e.command.name, e.command.usage]),
+             MT_USAGE);
+}
+
+function dispatchCommand (command, e, flags)
+{
+    function callHooks (command, isBefore)
+    {
+        var names, hooks;
+        
+        if (isBefore)
+            hooks = command.beforeHooks;
+        else
+            hooks = command.afterHooks;
+
+        for (var h in hooks)
+        {
+            if ("dbgDispatch" in client && client.dbgDispatch)
+            {
+                dd ("calling " + (isBefore ? "before" : "after") + 
+                    " hook " + h);
+            }
+            try
+            {
+                hooks[h](e);
+            }
+            catch (ex)
+            {
+                if (e.command.name != "hook-session-display")
+                {
+                    display(getMsg(MSG_ERR_INTERNAL_HOOK, h), MT_ERROR);
+                    display(formatException(ex), MT_ERROR);
+                }
+                else
+                {
+                    dd(getMsg(MSG_ERR_INTERNAL_HOOK, h));
+                }
+
+                dd("Caught exception calling " +
+                   (isBefore ? "before" : "after") + " hook " + h);
+                dd(formatException(ex));
+                if (typeof ex == "object" && "stack" in ex)
+                    dd(ex.stack);
+                else
+                    dd(getStackTrace());
+            }
+        }
+    };
+    
+    e.command = command;
+
+    if (e.command.flags & CMD_NEED_NET)
+    {
+        if (!e.context.network)
+        {
+            display(getMsg(MSG_ERR_IMPROPER_VIEW, e.command.name),
+                    MT_ERROR);
+            return null;
+        }
+
+        if (!e.context.network.isConnected())
+        {
+            display(MSG_ERR_NOT_CONNECTED, MT_ERROR);
+            return null;
+        }
+    }
+    
+    if (e.command.flags & CMD_NEED_CHAN)
+    {
+        if (!e.context.channel)
+        {
+            display(getMsg(MSG_ERR_IMPROPER_VIEW, e.command.name), MT_ERROR);
+            return null;
+        }
+    }
+    
+    if (!e.command.enabled)
+    {
+        /* disabled command */
+        display (getMsg(MSG_ERR_DISABLED, e.command.name),
+                 MT_ERROR);
+        return null;
+    }
+    
+    var h, i;
+    
+    if ("beforeHooks" in e.command)
+        callHooks (e.command, true);
+    
+    if (typeof e.command.func == "function")
+    {
+        /* dispatch a real function */
+        if (e.command.usage)
+            client.commandManager.parseArguments (e);
+        if ("parseError" in e)
+        {
+            displayUsageError(e, e.parseError);
+        }
+        else
+        {
+            if ("dbgDispatch" in client && client.dbgDispatch)
+            {
+                var str = "";
+                for (i = 0; i < e.command.argNames.length; ++i)
+                {
+                    var name = e.command.argNames[i];
+                    if (name in e)
+                        str += " " + name + ": " + e[name];
+                    else if (name != ":")
+                        str += " ?" + name;
+                }
+                dd (">>> " + e.command.name + str + " <<<");
+                e.returnValue = e.command.func(e);
+                /* set client.lastEvent *after* dispatching, so the dispatched
+                 * function actually get's a chance to see the last event. */
+                client.lastEvent = e;
+            }
+            else
+            {
+                e.returnValue = e.command.func(e);
+            }
+
+        }
+    }
+    else if (typeof e.command.func == "string")
+    {
+        /* dispatch an alias (semicolon delimited list of subcommands) */
+        var commandList = e.command.func.split(";");
+        for (i = 0; i < commandList.length; ++i)
+        {
+            var newEvent = Clone(e);
+            delete newEvent.command;            
+            commandList[i] = stringTrim(commandList[i]);
+            if (i == commandList.length - 1)
+                dispatch(commandList[i] + " " + e.inputData, newEvent, flags);
+            else
+                dispatch(commandList[i], newEvent, flags);
+        }
+    }
+    else
+    {
+        display (getMsg(MSG_ERR_NOTIMPLEMENTED, e.command.name),
+                 MT_ERROR);
+        return null;
+    }
+
+    if ("afterHooks" in e.command)
+        callHooks (e.command, false);
+
+    return ("returnValue" in e) ? e.returnValue : null;
+}
+
+function feedback(e, message, msgtype)
+{
+    if ("isInteractive" in e && e.isInteractive)
+        display (message, msgtype);
+}
+
+/*
 function getMsg (msgName)
 {
     var restCount = arguments.length - 1;
@@ -994,12 +1208,13 @@ function getMsg (msgName)
         return msgName;
     }
 }
+*/
 
 function openQueryTab (server, nick)
 {    
-    var usr = server.addUser(nick);
-    if (!("messages" in usr))
-        usr.displayHere (getMsg("cli_imsgMsg3", usr.properNick), "INFO");
+    var user = server.addUser(nick);
+    if (!("messages" in user))
+        user.displayHere (getMsg(MSG_QUERY_OPENED, user.properNick));
     server.sendData ("WHO " + nick + "\n");
     return usr;
 }
@@ -1055,14 +1270,19 @@ function getObjectDetails (obj, rv)
     if (!rv)
         rv = new Object();
 
-    if (!obj || (typeof obj != "object"))
+    if (!ASSERT(obj && typeof obj == "object",
+                "INVALID OBJECT passed to getObjectDetails (" + obj + "). **"))
     {
-        dd ("** INVALID OBJECT passed to getObjectDetails (" + obj + "). **");
-        dd (getStackTrace());
+        return rv;
     }
 
-    rv.orig = obj;
+    rv.sourceObject = obj;
     rv.parent = ("parent" in obj) ? obj.parent : null;
+    rv.charset = client.prefs["charset"];
+    rv.user = null;
+    rv.channel = null;
+    rv.server = null;
+    rv.network = null;
     
     switch (obj.TYPE)
     {
@@ -1070,6 +1290,7 @@ function getObjectDetails (obj, rv)
             rv.channel = obj;
             rv.server = rv.channel.parent;
             rv.network = rv.server.parent;
+            rv.charset = rv.channel.charset;
             break;
 
         case "IRCUser":
@@ -1089,6 +1310,8 @@ function getObjectDetails (obj, rv)
             rv.network = obj;
             if ("primServ" in rv.network)
                 rv.server = rv.network.primServ;
+            else
+                rv.server = null;
             break;
 
         case "IRCClient":
@@ -1214,40 +1437,6 @@ function setupMungerMenu(munger)
     }
 }
 
-function joinChannel(e, namelist, key, charset)
-{
-    if (!e.network || !e.network.isConnected())
-    {
-        if (!e.network)
-            client.currentObject.display (getMsg("cli_ijoinMsg"), "ERROR");
-        else
-            client.currentObject.display (getMsg("cli_ijoinMsg2",
-                                                 e.network.name1), "ERROR");
-        return false;
-    }
-
-    var name;
-    for (i in namelist)
-    {
-        name = namelist[i];
-        if (name[0].search(/[#&+!]/) != 0)
-            name = "#" + name;
-
-        e.channel = e.server.addChannel (name, charset);
-        e.channel.join(key);
-
-        if (!("messages" in e.channel))
-        {
-            e.channel.displayHere (getMsg("cli_ijoinMsg3",
-                                          e.channel.unicodeName),
-                                   "INFO");
-        }
-        setCurrentObject(e.channel);
-    }
-    
-    return true;
-}
-    
 var testURLs =
     ["irc:", "irc://", "irc:///", "irc:///help", "irc:///help,needkey",
     "irc://irc.foo.org", "irc://foo:6666",
@@ -1285,6 +1474,9 @@ function parseIRCURL (url)
     rv.target = "";
     rv.port = 6667;
     rv.msg = "";
+    rv.pass = null;
+    rv.key = null;
+    rv.charset = null;
     rv.needpass = false;
     rv.needkey = false;
     rv.isnick = false;
@@ -1426,7 +1618,7 @@ function gotoIRCURL (url)
     
     if (!url)
     {
-        window.alert (getMsg("badIRCURL",url));
+        window.alert (getMsg(MSG_ERR_BAD_IRCURL, url));
         return;
     }
 
@@ -1436,11 +1628,11 @@ function gotoIRCURL (url)
          * urls that don't have a host.  (irc:/// implies a connect to the
          * default network.)
          */
-        onSimulateCommand("/client");
+        dispatch("client");
         return;
     }
 
-    var net;
+    var network;
     var pass = "";
     
     if (url.needpass)
@@ -1448,7 +1640,7 @@ function gotoIRCURL (url)
         if ("pass" in url)
             pass = url.pass;
         else
-            pass = window.prompt (getMsg("gotoIRCURLMsg2",url.spec));
+            pass = window.prompt(getMsg(MSG_URL_PASSWORD, url.spec));
     }
     
     if (url.isserver)
@@ -1457,11 +1649,11 @@ function gotoIRCURL (url)
         for (var n in client.networks)
         {
             if ((client.networks[n].isConnected()) &&
-                (client.networks[n].primServ.connection.host == url.host) &&
-                (client.networks[n].primServ.connection.port == url.port))
+                (client.networks[n].primServ.hostname == url.host) &&
+                (client.networks[n].primServ.port == url.port))
             {
                 /* already connected to this server/port */
-                net = client.networks[n];
+                network = client.networks[n];
                 alreadyThere = true;
                 break;
             }
@@ -1473,29 +1665,29 @@ function gotoIRCURL (url)
             dd ("gotoIRCURL: not already connected to " +
                 "server " + url.host + " trying to connect...");
             */
-            client.onInputServer ({inputData: url.host + " " + url.port +
-                                                  " " + pass});
-            net = client.networks[url.host];
-            if (!("pendingURLs" in net))
-                net.pendingURLs = new Array();
-            net.pendingURLs.unshift (url);            
+            dispatch("server", {hostname: url.host, port: url.port,
+                                password: e.password});
+            network = client.networks[url.host];
+            if (!("pendingURLs" in network))
+                network.pendingURLs = new Array();
+            network.pendingURLs.unshift(url);
             return;
         }
     }
     else
-    /* parsed as a network name */
     {
-        net = client.networks[url.host];
-        if (!net.isConnected())
+        /* parsed as a network name */
+        network = client.networks[url.host];
+        if (!network.isConnected())
         {
             /*
             dd ("gotoIRCURL: not already connected to " +
                 "network " + url.host + " trying to connect...");
             */
-            client.connectToNetwork (url.host, pass);
-            if (!("pendingURLs" in net))
-                net.pendingURLs = new Array();
-            net.pendingURLs.unshift (url);            
+            client.connectToNetwork(url.host);
+            if (!("pendingURLs" in network))
+                network.pendingURLs = new Array();
+            network.pendingURLs.unshift(url);
             return;
         }
     }
@@ -1512,40 +1704,30 @@ function gotoIRCURL (url)
             var nick = url.target;
             var ary = url.target.split("!");
             if (ary)
-            {
                 nick = ary[0];
-            }    
 
-            ev =  {inputData: nick, network: net, server: net.primServ};
-            client.onInputQuery(ev);
-            targetObject = ev.user;
+            targetObject = network.dispatch("query", {nickname: nick});
         }
         else
         {
             /* url points to a channel */
-            var key = "";
+            var key;
             if (url.needkey)
             {
-                if ("key" in url)
+                if (url.key)
                     key = url.key;
                 else
-                    key = window.prompt (getMsg("gotoIRCURLMsg3", url.spec));
+                    key = window.prompt(getMsg(MSG_URL_KEY, url.spec));
             }
 
             var charset;
-            
             if ("charset" in url)
-            {
-                if (checkCharset(url.charset))
-                    charset = url.charset;
-                else
-                    display (getMsg("cli_charsetError", url.charset), "ERROR");
-            }
+                charset = url.charset;
                     
-            ev = {inputData: url.target + " " + key,
-                  network: net, server: net.primServ};
-            joinChannel(ev, [url.target], key, charset)
-            targetObject = ev.channel;
+            targetObject = dispatch("join", { channelName: url.target, key: key,
+                                              charset: charset });
+            if (!targetObject)
+                return;
         }
 
         if (url.msg)
@@ -1553,26 +1735,25 @@ function gotoIRCURL (url)
             var msg;
             if (url.msg.indexOf("\01ACTION") == 0)
             {
-                msg = filterOutput (url.msg, "ACTION", "ME!");
-                targetObject.display (msg, "ACTION", "ME!",
-                                      client.currentObject);
+                msg = filterOutput(url.msg, "ACTION", "ME!");
+                targetObject.display(msg, "ACTION", "ME!",
+                                     client.currentObject);
             }
             else
             {
-                msg = filterOutput (url.msg, "PRIVMSG", "ME!");
-                targetObject.display (msg, "PRIVMSG", "ME!",
-                                      client.currentObject);
+                msg = filterOutput(url.msg, "PRIVMSG", "ME!");
+                targetObject.display(msg, "PRIVMSG", "ME!",
+                                     client.currentObject);
             }
-            targetObject.say (fromUnicode(msg));
-            setCurrentObject (targetObject);
+            targetObject.say(fromUnicode(msg));
+            setCurrentObject(targetObject);
         }
     }
     else
     {
-        if (!net.messages)
-            net.displayHere (getMsg("gotoIRCURLMsg4",net.name),
-                             "INFO");
-        setCurrentObject (net);
+        if (!network.messages)
+            network.displayHere (getMsg(MSG_NETWORK_OPENED, network.name));
+        setCurrentObject(network);
     }
 }
 
@@ -1593,7 +1774,7 @@ function updateNetwork(obj)
 
     var lag = MSG_UNKNOWN;
     var nick = "";
-    if ("server" in o)
+    if (o.server)
     {
         if (o.server.me)
             nick = o.server.me.properNick;
@@ -1617,7 +1798,7 @@ function updateChannel (obj)
 
     var mode = MSG_NONE, users = MSG_NONE, topic = MSG_UNKNOWN;
 
-    if ("channel" in o)
+    if (o.channel)
     {
         mode = o.channel.mode.getModeStr();
         if (!mode)
@@ -1651,41 +1832,39 @@ function updateTitle (obj)
         return;
 
     var tstring;
-    var o = getObjectDetails (client.currentObject);
-    var net = "network" in o ? o.network.name : "";
+    var o = getObjectDetails(client.currentObject);
+    var net = o.network ? o.network.name : "";
     var nick = "";
     
     switch (client.currentObject.TYPE)
     {
         case "IRCNetwork":
             var serv = "", port = "";
-            if ("server" in o)
+            if (client.currentObject.isConnected())
             {
-                serv = o.server.connection.host;
-                port = o.server.connection.port;
+                serv = o.server.hostname;
+                port = o.server.port;
                 if (o.server.me)
                     nick = o.server.me.properNick;
-                tstring = getMsg("updateTitleNetwork", [nick, net, serv, port]);
+                tstring = getMsg(MSG_TITLE_NET_ON, [nick, net, serv, port]);
             }
             else
             {
                 nick = client.currentObject.INITIAL_NICK;
-                tstring = getMsg("updateTitleNetwork2", [nick, net]);
+                tstring = getMsg(MSG_TITLE_NET_OFF, [nick, net]);
             }
             break;
             
         case "IRCChannel":
             var chan = "", mode = "", topic = "";
-            nick = "me" in o.parent ? o.parent.me.properNick : 
-                getMsg ("updateTitleNoNick");
+            nick = "me" in o.parent ? o.parent.me.properNick : MSG_TITLE_NONICK;
             chan = o.channel.unicodeName;
             mode = o.channel.mode.getModeStr();
             if (!mode)
-                mode = getMsg("updateTitleNoMode");
-            topic = o.channel.topic ? o.channel.topic : 
-                                      getMsg("updateTitleNoTopic");
+                mode = MSG_TITLE_NO_MODE;
+            topic = o.channel.topic ? o.channel.topic : MSG_TITLE_NO_TOPIC;
 
-            tstring = getMsg("updateTitleChannel", [nick, chan, mode, topic]);
+            tstring = getMsg(MSG_TITLE_CHANNEL, [nick, chan, mode, topic]);
             break;
 
         case "IRCUser":
@@ -1696,13 +1875,13 @@ function updateTitle (obj)
                 source = client.currentObject.name + "@" +
                     client.currentObject.host;
             }
-            tstring = getMsg("updateTitleUser", [nick, source]);
+            tstring = getMsg(MSG_TITLE_USER, [nick, source]);
             //client.statusBar["channel-topic"].setAttribute("value", tstring);
             client.statusBar["channel-topic"].firstChild.data = tstring;
             break;
 
         default:
-            tstring = getMsg("updateTitleUnknown");
+            tstring = MSG_TITLE_UNKNOWN;
             break;
     }
 
@@ -1713,8 +1892,8 @@ function updateTitle (obj)
             actl.push ((client.activityList[i] == "!") ?
                        (Number(i) + 1) + "!" : (Number(i) + 1));
         if (actl.length > 0)
-            tstring = getMsg("updateTitleWithActivity",
-                              [tstring, actl.join (MSG_CSP)]);
+            tstring = getMsg(MSG_TITLE_ACTIVITY,
+                             [tstring, actl.join (MSG_COMMASP)]);
     }
 
     document.title = tstring;
@@ -1802,8 +1981,8 @@ function newInlineText (data, className, tagName)
             break;
 
         default:
-            dd ("** INVALID TYPE ('" + typeof data + "') passed to " +
-                "newInlineText.");
+            ASSERT(0, "INVALID TYPE ('" + typeof data + "') passed to " +
+                   "newInlineText.");
             break;
             
     }
@@ -1848,11 +2027,8 @@ client.__defineGetter__ ("currentFrame", getFrame);
 
 function setCurrentObject (obj)
 {
-    if (!obj.messages)
-    {
-        dd ("** INVALID OBJECT passed to setCurrentObject **");
+    if (!ASSERT(obj.messages, "INVALID OBJECT passed to setCurrentObject **"))
         return;
-    }
 
     if ("currentObject" in client && client.currentObject == obj)
         return;
@@ -2031,7 +2207,7 @@ function updateUserList()
     {
         node = document.getElementById(colArray[i]);
 	    if (!node)
-		    return false;
+		    return;
         sortDirection = node.getAttribute("sortDirection");
         if (sortDirection != "")
             break;
@@ -2048,7 +2224,7 @@ function sortUserList(node, sortDirection)
     var xulSortService =
         Components.classes[isupports_uri].getService(nsIXULSortService);
     if (!xulSortService)
-        return false;
+        return;
 
     var sortResource = node.getAttribute("resource");
     try
@@ -2153,14 +2329,14 @@ function syncOutputFrame(iframe)
     {
         if ("contentDocument" in iframe && "webProgress" in iframe)
         {
- 
+            var base = client.prefs["outputWindowURL"];
+            var uri = base.replace("%s", client.prefs["style.default"]);
             iframe.addProgressListener (client.progressListener, WINDOW);
-            iframe.loadURI ("chrome://chatzilla/content/outputwindow.html?" + 
-                            client.DEFAULT_STYLE);
+            iframe.loadURI(uri);
         }
         else
         {
-            setTimeout (tryAgain, 500);
+            setTimeout(tryAgain, 500);
         }
     }
     catch (ex)
@@ -2192,12 +2368,8 @@ function getTabForObject (source, create)
 {
     var name;
 
-    if (!source)
-    {
-        dd ("** UNDEFINED passed to getTabForObject **");
-        dd (getStackTrace());
+    if (!ASSERT(source, "UNDEFINED passed to getTabForObject"))
         return null;
-    }
     
     switch (source.TYPE)
     {
@@ -2215,7 +2387,7 @@ function getTabForObject (source, create)
             break;
 
         default:
-            dd ("** INVALID OBJECT passed to getTabForObject **");
+            ASSERT(0, "INVALID OBJECT passed to getTabForObject");
             return null;
     }
 
@@ -2343,34 +2515,34 @@ function tabdnd_dstart (aEvent, aXferData, aDragAction)
 
 function deleteTab (tb)
 {
-    var i, key = Number(tb.getAttribute("viewKey"));
-    
-    if (!isNaN(key))
+    if (!ASSERT(tb.hasAttribute("viewKey"), 
+                "INVALID OBJECT passed to deleteTab (" + tb + ")"))
     {
-        if ("isPermanent" in client.viewsArray[key].source &&
-            client.viewsArray[key].source.isPermanent)
-        {
-            window.alert (getMsg("deleteTabMsg"));
-            return -1;
-        }
-        else
-        {
-            /* re-index higher toolbuttons */
-            for (i = key + 1; i < client.viewsArray.length; i++)
-            {
-                client.viewsArray[i].tb.setAttribute ("viewKey", i - 1);
-            }
-            arrayRemoveAt(client.viewsArray, key);
-            var tbinner = document.getElementById("views-tbar-inner");
-            tbinner.removeChild(tb);
-        }
+        return null;
+    }
+
+    var i;
+    var key = Number(tb.getAttribute("viewKey"));
+    
+    if ("isPermanent" in client.viewsArray[key].source &&
+        client.viewsArray[key].source.isPermanent)
+    {
+        window.alert (getMsg("deleteTabMsg"));
+        return -1;
     }
     else
-        dd  ("*** INVALID OBJECT passed to deleteTab (" + tb + ") " +
-             "no viewKey attribute. (" + key + ")");
+    {
+        /* re-index higher toolbuttons */
+        for (i = key + 1; i < client.viewsArray.length; i++)
+        {
+            client.viewsArray[i].tb.setAttribute ("viewKey", i - 1);
+        }
+        arrayRemoveAt(client.viewsArray, key);
+        var tbinner = document.getElementById("views-tbar-inner");
+        tbinner.removeChild(tb);
+    }
 
     return key;
-
 }
 
 function filterOutput (msg, msgtype)
@@ -2387,38 +2559,50 @@ function filterOutput (msg, msgtype)
     return msg;
 }
 
-client.connectToNetwork =
-function cli_connet (netname, pass)
+client.addNetwork =
+function cli_addnet(name, serverList)
 {
-    if (!(netname in client.networks))
+    client.networks[name] =
+        new CIRCNetwork (name, serverList, client.eventPump);
+}
+
+client.connectToNetwork =
+function cli_connect(name)
+{
+    if (!(name in client.networks))
     {
-        display (getMsg("cli_attachNoNet", netname), "ERROR");
+        display(getMsg(MSG_ERR_UNKNOWN_NETWORK, name), MT_ERROR);
         return false;
     }
     
-    var netobj = client.networks[netname];
+    var network = client.networks[name];
 
-    if (getBoolPref("logging", false, netobj.localPrefs))
-       client.startLogging(netobj);
+    if (!("messages" in network))
+        network.displayHere(getMsg(MSG_NETWORK_OPENED, name));
 
-    if (!("messages" in netobj))
-        netobj.displayHere (getMsg("cli_attachOpened", netname), "INFO");
-    setCurrentObject(netobj);
+    setCurrentObject(network);
 
-    if (netobj.isConnected())
+    if (network.isConnected())
     {
-        netobj.display (getMsg("cli_attachAlreadyThere", netname), "ERROR");
+        netobj.display(getMsg(MSG_ALREADY_CONNECTED, name));
         return true;
     }
     
-    if (CIRCNetwork.prototype.INITIAL_NICK == client.defaultNick)
-        CIRCNetwork.prototype.INITIAL_NICK =
-            prompt (getMsg("cli_attachGetNick"), client.defaultNick);
+    if (network.prefs["log"])
+       client.startLogging(network);
+
+    if (network.prefs["nickname"] == DEFAULT_NICK)
+        network.prefs["nickname"] = prompt(MSG_ENTER_NICK, DEFAULT_NICK);
     
-    if (!("connecting" in netobj))
-        netobj.display (getMsg("cli_attachWorking",netobj.name), "INFO");
-    netobj.connecting = true;
-    netobj.connect(pass);
+    if (!("connecting" in network))
+        network.display(getMsg(MSG_NETWORK_CONNECTING, name));
+
+    network.INITIAL_NICK = network.prefs["nickname"];
+    network.INITIAL_NAME = network.prefs["username"];
+    network.INITIAL_DESC = network.prefs["desc"];
+    network.connecting = true;
+    network.connect();
+
     return true;
 }
 
@@ -2453,7 +2637,6 @@ function cli_load(url, obj)
         client.currentObject.display (msg, "ERROR");        
     }
 }
-
     
 client.sayToCurrentTarget =
 function cli_say(msg)
@@ -2475,7 +2658,7 @@ function cli_say(msg)
             break;
 
         case "IRCClient":
-            client.onInputEval ({inputData: msg});
+            dispatch("eval", {expression: msg});
             break;
 
         default:
@@ -2487,28 +2670,52 @@ function cli_say(msg)
 
 }
 
+CIRCNetwork.prototype.__defineGetter__("prefs", net_getprefs);
+function net_getprefs()
+{
+    if (!this._prefs)
+    {
+        this._prefManager = getNetworkPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefs;
+}
+
+CIRCNetwork.prototype.__defineGetter__("prefManager", net_getprefmgr);
+function net_getprefmgr()
+{
+    if (!this._prefManager)
+    {
+        this._prefManager = getNetworkPrefManager(this);
+        this._prefs = this._prefManager.prefs;
+    }
+    
+    return this._prefManager;
+}
+
 CIRCNetwork.prototype.display =
-function n_display (message, msgtype, sourceObj, destObj)
+function net_display (message, msgtype, sourceObj, destObj)
 {
     var o = getObjectDetails(client.currentObject);
 
     if (client.SLOPPY_NETWORKS && client.currentObject != client &&
         client.currentObject != this && o.network == this &&
-        o.server.connection.isConnected)
+        o.server.isConnected)
         client.currentObject.display (message, msgtype, sourceObj, destObj);
     else
         this.displayHere (message, msgtype, sourceObj, destObj);
 }
 
 CIRCUser.prototype.display =
-function u_display(message, msgtype, sourceObj, destObj)
+function usr_display(message, msgtype, sourceObj, destObj)
 {
     if ("messages" in this)
         this.displayHere (message, msgtype, sourceObj, destObj);
     else
     {
         var o = getObjectDetails(client.currentObject);
-        if (o.server.connection.isConnected &&
+        if (o.server.isConnected &&
             o.network == this.parent.parent &&
             client.currentObject.TYPE != "IRCUser")
             client.currentObject.display (message, msgtype, sourceObj, destObj);
@@ -2559,7 +2766,7 @@ function __display(message, msgtype, sourceObj, destObj)
                              * that might disturb the rest of the layout)     */
     var o = getObjectDetails (this);          /* get the skinny on |this|     */
     var me;
-    if ("server" in o && "me" in o.server)
+    if (o.server && "me" in o.server)
     {
         me = o.server.me;    /* get the object representing the user          */
     }
@@ -2841,7 +3048,7 @@ function __display(message, msgtype, sourceObj, destObj)
 
     if (isImportant && client.COPY_MESSAGES)
     {
-        if ("network" in o && o.network != this)
+        if (o.network != this)
             o.network.displayHere("{" + this.name + "} " + message, msgtype,
                                   sourceObj, destObj);
     }
@@ -3051,7 +3258,7 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
     if (wordStart != 0 || line[0] != client.COMMAND_CHAR)
         return null;
 
-    var matches = client.commands.listNames(word.substr(1));
+    var matches = client.commandManager.listNames(word.substr(1), CMD_CONSOLE);
     if (matches.length == 1 && wordEnd == line.length)
     {
         matches[0] = client.COMMAND_CHAR + matches[0] + " ";
@@ -3063,6 +3270,71 @@ function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
     }
 
     return matches;
+}
+
+client.startLogging =
+function cli_startlog (view)
+{
+    var dir = getSpecialDirectory("ProfD");
+    switch (view.TYPE)
+    {
+        case "IRCNetwork":
+            view.logFile = view.name.replace(/:/, ".") + ".log";
+            break;
+        case "IRCChannel":
+        case "IRCUser":
+            view.logFile = view.parent.parent.name.replace(/:/, ".") +
+                           "," + view.name + ".log";
+            break;
+        case "IRCClient":
+            view.logFile = "client.log";
+            break;
+        default:
+            view.displayHere(getMsg("cli_ilogMsg4"), "ERROR");
+            return;
+    }
+
+    view.logFile = view.logFile.replace(/[^\w\d.,#-_]/g, encodeChar);
+    dir.append(view.logFile);
+    view.logFile = dir.path;
+
+    try
+    {
+        view.logFile = fopen(view.logFile, ">>");
+    }
+    catch (ex)
+    {
+        view.displayHere(getMsg("cli_ilogMsg5", view.logFile), "ERROR");
+        return;
+    }
+
+    view.displayHere(getMsg("cli_ilogMsg6", view.logFile.path));
+    try
+    {
+        view.logFile.write("Logging started at " + new Date() + "\n");
+    }
+    catch (ex)
+    {
+        view.displayHere(getMsg("cli_ilogMsg7", view.logFile.path),
+                         "ERROR");
+        view.logFile.close();
+        return;
+    }
+
+    view.logging = true;
+    view.localPrefs.setBoolPref("logging", true);
+}
+
+client.stopLogging =
+function cli_stoplog (view)
+{
+    if (view.logging)
+    {
+        view.localPrefs.clearUserPref("logging");
+        view.logFile.close();
+        view.logging = false;
+    }
+    view.displayHere(getMsg("cli_ilogMsg3"));
 }
 
 CIRCChannel.prototype.performTabMatch =
@@ -3091,9 +3363,9 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
     {
         /* Ok, not #<tab> or no current channel, so get the full list. */
         
-        if ("users" in details.orig)
+        if ("users" in details.sourceObject)
         {
-            users = details.orig.users;
+            users = details.sourceObject.users;
             for (var n in users)
                 matchList.push (users[n].nick);
         }
@@ -3193,8 +3465,11 @@ function my_graphres ()
 CIRCUser.prototype.getGraphResource =
 function usr_graphres()
 {
-    if (this.TYPE != "IRCChanUser")
-        dd ("** WARNING: cuser.getGraphResource called on wrong object **");
+    if (!ASSERT(this.TYPE == "IRCChanUser",
+                "cuser.getGraphResource called on wrong object"))
+    {
+        return null;
+    }
     
     var rdf = client.rdf;
     
@@ -3233,8 +3508,11 @@ function usr_graphres()
 CIRCUser.prototype.updateGraphResource =
 function usr_updres()
 {
-    if (this.TYPE != "IRCChanUser")
-        dd ("** WARNING: cuser.updateGraphResource called on wrong object **");
+    if (!ASSERT(this.TYPE == "IRCChanUser"),
+        "cuser.updateGraphResource called on wrong object")
+    {
+        return;
+    }
 
     if (!("rdfRes" in this))
         this.getGraphResource();

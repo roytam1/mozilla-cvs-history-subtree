@@ -95,24 +95,24 @@
  *                              <network>
  */
 
-function initPrefs()
+function initReadPrefs()
 {
     client.prefSpecs = {
-        "nickname": ["CIRCNetwork.prototype.INITIAL_NICK",         "IRCMonkey"],
-        "username": ["CIRCNetwork.prototype.INITIAL_NAME",         "chatzilla"],
-        "desc":     ["CIRCNetwork.prototype.INITIAL_DESC",  "New Now Know How"],
+        //"nickname": ["CIRCNetwork.prototype.INITIAL_NICK",     "IRCMonkey"],
+        //"username": ["CIRCNetwork.prototype.INITIAL_NAME",       "chatzilla"],
+        //"desc":     ["CIRCNetwork.prototype.INITIAL_DESC","New Now Know How"],
         "reconnect": ["CIRCNetwork.prototype.stayingPower",               true],
         "multiline":         ["client.MULTILINE",                        false],
         "colorCodes":        ["client.COLORCODES",                       false],
         "defaultNet":        ["client.DEFAULT_NETWORK",               "moznet"],
-        "charset":           ["client.CHARSET",                             ""],
+        //"charset":           ["client.CHARSET",                           ""],
         "initialURLs":       ["client.INITIAL_URLS",                  "irc://"],
         "initialScripts":    ["client.INITIAL_SCRIPTS",                     ""],
         "newTabLimit":       ["client.NEW_TAB_LIMIT",                       15],
         "raiseNewTab":       ["client.RAISE_NEW_TAB",                    false],
         "nickCompleteStr":   ["client.ADDRESSED_NICK_SEP",                ", "],
-        "stalkWords":        ["client.stalkingVictims",                     []],
-        "stalkWholeWords":   ["client.STALK_WHOLE_WORDS",                 true],
+        //"stalkWords":      ["client.stalkingVictims",                     []],
+        //"stalkWholeWords": ["client.STALK_WHOLE_WORDS",                 true],
         "deleteOnPart":      ["client.DELETE_ON_PART",                    true],
         "stalkBeep":         ["client.STALK_BEEP",                      "beep"],
         "msgBeep":           ["client.MSG_BEEP",                   "beep beep"],
@@ -125,8 +125,8 @@ function initPrefs()
         "notify.aggressive": ["client.FLASH_WINDOW",                      true],
         "settings.autoSave": ["client.SAVE_SETTINGS",                     true],
         "debug.tracer"     : ["client.debugHook.enabled",                false],
-        "style.default":     ["client.DEFAULT_STYLE",
-                                  "chrome://chatzilla/skin/output-default.css"],
+        //        "style.default":     ["client.DEFAULT_STYLE",
+        //                      "chrome://chatzilla/skin/output-default.css"],
         "views.collapseMsgs":      ["client.COLLAPSE_MSGS",              false],
         "views.copyMessages":      ["client.COPY_MESSAGES",               true],
         "views.client.maxlines":   ["client.MAX_MESSAGES",                 200],
@@ -146,9 +146,11 @@ function initPrefs()
 
     var internal = client.prefBranch.QueryInterface(nsIPrefBranchInternal);
     internal.addObserver("", client.prefObserver, false);
+
+    readPrefs();
 }
 
-function destroyPrefs()
+function destroyReadPrefs()
 {
     const nsIPrefBranchInternal = Components.interfaces.nsIPrefBranchInternal;
     var internal = client.prefBranch.QueryInterface(nsIPrefBranchInternal);
@@ -162,12 +164,6 @@ function pref_observe (prefService, topic, prefName)
 {
     if (!("prefLock" in client))
         readPref(prefName);
-
-    if (prefName == "stalkWholeWords" || prefName == "stalkWords")
-        updateAllStalkExpressions();
-
-    if (prefName == "style.default")
-        onSimulateCommand("/css " + client.DEFAULT_STYLE);
 }
 
 function readPref(prefName)
@@ -278,7 +274,7 @@ function writePref(prefName)
     else if ((ary = prefName.match(/munger\.(.*)/)) &&
               ary[1] in client.munger.entries)
     {
-        entry = client.munger.entries[ary[1]];
+        var entry = client.munger.entries[ary[1]];
         if (entry.enabled != entry.enabledDefault)
             client.prefBranch.setBoolPref(prefName, entry.enabled);
         else

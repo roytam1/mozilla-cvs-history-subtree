@@ -29,25 +29,58 @@
 var utils = new Object();
 
 var DEBUG = true;
-
-var dumpln;
 var dd;
 
-if (typeof document == "undefined") /* in xpcshell */
-    dumpln = print;
-else
-    if (typeof dump == "function")
-        dumpln = function (str) {dump (str + "\n"); }
-    else if (jsenv.HAS_RHINO)
-        dumpln = function (str) {var out = java.lang.System.out;
-                                 out.println(str); out.flush(); }
-    else
-        dumpln = function () {} /* no suitable function */
-
-if (DEBUG)
-    dd = dumpln;
-else
+if (DEBUG) {
+    var _dd_pfx = "";
+    var _dd_singleIndent = "  ";
+    var _dd_indentLength = _dd_singleIndent.length;
+    var _dd_currentIndent = "";
+    var _dd_lastDumpWasOpen = false;
+    var _dd_timeStack = new Array();
+    var _dd_disableDepth = Number.MAX_VALUE;
+    var _dd_currentDepth = 0;
+    dd = function _dd(str) {
+             if (typeof str != "string") {
+                 dump (str + "\n");
+             } else if (str[str.length - 1] == "{") {
+                 ++_dd_currentDepth;
+                 if (_dd_currentDepth >= _dd_disableDepth)
+                     return;
+                 if (str.indexOf("OFF") == 0)
+                     _dd_disableDepth = _dd_currentDepth;
+                 _dd_timeStack.push (new Date());
+                 if (_dd_lastDumpWasOpen)
+                     dump("\n");
+                 dump (_dd_pfx + _dd_currentIndent + str);
+                 _dd_currentIndent += _dd_singleIndent;
+                 _dd_lastDumpWasOpen = true;
+             } else if (str[0] == "}") {
+                 if (--_dd_currentDepth >= _dd_disableDepth)
+                     return;
+                 _dd_disableDepth = Number.MAX_VALUE;
+                 var sufx = (new Date() - _dd_timeStack.pop()) / 1000 + " sec";
+                 _dd_currentIndent = 
+                     _dd_currentIndent.substr(0, _dd_currentIndent.length -
+                                              _dd_indentLength);
+                 if (_dd_lastDumpWasOpen)
+                     dump(str + " " + sufx + "\n");
+                 else
+                     dump(_dd_pfx + _dd_currentIndent + str + " " +
+                          sufx + "\n");
+                 _dd_lastDumpWasOpen = false;
+             } else {
+                 if (_dd_currentDepth >= _dd_disableDepth)
+                     return;
+                 if (_dd_lastDumpWasOpen)
+                     dump("\n");
+                 dump(_dd_pfx + _dd_currentIndent + str + "\n");
+                 _dd_lastDumpWasOpen = false;
+             }    
+         }
+} else {
     dd = function (){};
+}
 
 var jsenv = new Object();
 jsenv.HAS_SECURITYMANAGER = ((typeof netscape == "object") &&
@@ -176,6 +209,15 @@ function dumpObjectTree (o, recurse, compress, level)
     
     return s;
     
+}
+
+function formatException (ex)
+{
+    if (ex instanceof Error)
+        return getMsg (MSG_FMT_JSEXCEPTION, [ex.name, ex.message, ex.fileName, 
+                                             ex.lineNumber]);
+
+    return String(ex);
 }
 
 /*

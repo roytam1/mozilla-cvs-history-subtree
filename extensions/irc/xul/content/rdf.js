@@ -136,10 +136,9 @@ function rdf_change (n1, a, n2)
 {
 
     var oldN2 = this.ds.GetTarget (n1, a, true);
-    if (!oldN2)
+    if (!ASSERT(oldN2, "Unable to change " + n1.Value + " -[" + a.Value +
+                "]->, " + "because old value was not found."))
     {
-        dd ("** Unable to change " + n1.Value + " -[" + a.Value + "]->, " +
-            "because old value was not found.");
         return null;
     }
     
@@ -175,8 +174,8 @@ function rdf_cleart (n1, a, recurse)
             catch (e)
             {
                 /*
-                dd ("** Caught " + e + " while recursivley clearing " +
-                    n2.Value + " **");
+                ASSERT(0, "Caught " + e + " while recursivley clearing " +
+                       n2.Value + " **");
                 */
             }
         }

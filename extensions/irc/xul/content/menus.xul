@@ -81,9 +81,9 @@
       <!-- View:Show/Hide -->
       <command id="cmd_toggletabstrip"
         oncommand="onToggleVisibility('tabstrip');"/>
-      <command id="cmd_togglelist" oncommand="onToggleVisibility('info');"/>
-      <command id="cmd_toggleheader" oncommand="onToggleVisibility('header');"/>
-      <command id="cmd_togglestatus" oncommand="onToggleVisibility('status');"/>
+      <command id="cmd_togglelist" oncommand="dispatch('userlist');"/>
+      <command id="cmd_toggleheader" oncommand="dispatch('header');"/>
+      <command id="cmd_togglestatus" oncommand="dispatch('statusbar');"/>
 
       <!-- Tasks commands, from overlay -->
       <commandset id="tasksCommands"/>
@@ -221,7 +221,8 @@
                 <menuitem id="menu-view-header" label="&ShowHeaderCmd.label;" 
                   accesskey="&ShowHeaderCmd.aKey;" type="checkbox"
                   key="key_toggleheader" observes="cmd_toggleheader"/>
-                <menuitem id="menu-view-info" label="&ShowUserlistCmd.label;" 
+                <menuitem id="menu-view-userlist"
+                  label="&ShowUserlistCmd.label;" 
                   accesskey="&ShowUserlistCmd.aKey;" type="checkbox"
                   key="key_togglelist" observes="cmd_togglelist"/>
                 <menuitem id="menu-view-status" label="&ShowStatusbarCmd.label;" 
