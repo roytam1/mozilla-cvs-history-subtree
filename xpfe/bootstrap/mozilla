@@ -46,7 +46,7 @@ else
   progname=$0
   curdir=`dirname $progname`
   here=`/bin/pwd`
-  until [ $found != 0 -a -L "$progname" ]; do    
+  until [ $found != 0 -a ! -L "$progname" ]; do    
     run_moz="$curdir/run-mozilla.sh"
     if [ -x $run_moz ]; then
       dist_bin=$curdir
