@@ -185,7 +185,7 @@ jsdb_HandleValToPointer(JSContext *cx, jsval val, JSDBHandleType type)
        !JS_InstanceOf(cx, obj, &jsdb_HandleClass, NULL) ||
        !(p = (JSDBHandle*) JS_GetPrivate(cx, obj)))
     {
-        JS_ASSERT(0);
+/*         JS_ASSERT(0); */
         return NULL;
     }
     JS_ASSERT(p->ptr);
@@ -202,7 +202,11 @@ jsdb_PointerToNewHandleVal(JSContext *cx, void* ptr, JSDBHandleType type)
     char* type_name;
     JSString* name_str;
 
-    if(!ptr || !(p = (JSDBHandle*)malloc(sizeof(JSDBHandle))))
+    /* OK to fail silently on NULL pointer */
+    if(!ptr)
+        return JSVAL_NULL;
+
+    if(!(p = (JSDBHandle*)malloc(sizeof(JSDBHandle))))
     {
         JS_ASSERT(0);
         return JSVAL_NULL;
@@ -363,7 +367,7 @@ IterateScripts(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 || NULL ==(fun = JS_ValueToFunction(cx, argv[0])))
+    if(argc < 1 || !(fun = JS_ValueToFunction(cx, argv[0])))
     {
         JS_ReportError(cx, "IterateScripts requires a function param");
         return JS_FALSE;
@@ -374,10 +378,14 @@ IterateScripts(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     while(NULL != (script = JSD_IterateScripts(data->jsdcTarget, &iterp)))
     {
         jsval retval;
+        JSBool another;
         argv[0] = P2H_SCRIPT(cx, script);
 
-        JS_CallFunction(cx, NULL, fun, argc, argv, &retval);
+        if(!JS_CallFunction(cx, NULL, fun, argc, argv, &retval))
+            break;
         count++ ;
+        if(!JS_ValueToBoolean(cx, retval, &another) || !another)
+            break;
     }
     argv[0] = argv0;
 
@@ -765,7 +773,6 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
         }
     }
 
-
     JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valTrue);
 
     if(JSD_EvaluateScriptInStackFrame(data->jsdcTarget,
@@ -787,6 +794,74 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
             retVal = JS_TRUE;
         }
 
+    }
+
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valFalse);
+
+    return retVal;
+}
+
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+EvaluateScriptInStackFrameToValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    static char default_filename[] = "jsdb_show";
+    JSDStackFrameInfo* jsdframe;
+    jsval foreignAnswerVal;
+    JSString* textJSString;
+    char* filename;
+    int32 lineno;
+    JSBool retVal = JS_FALSE;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
+    {
+        JS_ReportError(cx, "EvaluateScriptInStackFrameToValue requires stackframe handle");
+        return JS_FALSE;
+    }
+
+    if(argc < 2 || !(textJSString = JS_ValueToString(cx, argv[1])))
+    {
+        JS_ReportError(cx, "EvaluateScriptInStackFrameToValue requires source text as a second param");
+        return JS_FALSE;
+    }
+
+    if(argc < 3)
+        filename = default_filename;
+    else
+    {
+        JSString* filenameJSString;
+        if(!(filenameJSString = JS_ValueToString(cx, argv[2])))
+        {
+            JS_ReportError(cx, "EvaluateScriptInStackFrameToValue passed non-string filename as 3rd param");
+            return JS_FALSE;
+        }
+        filename = JS_GetStringBytes(filenameJSString);
+    }
+
+    if(argc < 4)
+        lineno = 1;
+    else
+    {
+        if(!JS_ValueToInt32(cx, argv[3], &lineno))
+        {
+            JS_ReportError(cx, "EvaluateScriptInStackFrameToValue passed non-int lineno as 4th param");
+            return JS_FALSE;
+        }
+    }
+
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valTrue);
+
+    if(JSD_EvaluateScriptInStackFrame(data->jsdcTarget,
+                                      data->jsdthreadstate,
+                                      jsdframe,
+                                      JS_GetStringBytes(textJSString),
+                                      JS_GetStringLength(textJSString),
+                                      filename, lineno, &foreignAnswerVal))
+    {
+        *rval = P2H_VALUE(cx, JSD_NewValue(data->jsdcTarget, foreignAnswerVal));
+        retVal = JS_TRUE;
     }
 
     JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valFalse);
@@ -949,7 +1024,7 @@ IterateSources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
 
-    if(argc < 1 || NULL ==(fun = JS_ValueToFunction(cx, argv[0])))
+    if(argc < 1 || !(fun = JS_ValueToFunction(cx, argv[0])))
     {
         JS_ReportError(cx, "IterateSources requires a function param");
         return JS_FALSE;
@@ -960,10 +1035,15 @@ IterateSources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     while(NULL != (jsdsrc = JSD_IterateSources(data->jsdcTarget, &iterp)))
     {
         jsval retval;
+        JSBool another;
+
         argv[0] = P2H_SOURCETEXT(cx, jsdsrc);
 
-        JS_CallFunction(cx, NULL, fun, argc, argv, &retval);
+        if(!JS_CallFunction(cx, NULL, fun, argc, argv, &retval))
+            break;
         count++ ;
+        if(!JS_ValueToBoolean(cx, retval, &another) || !another)
+            break;
     }
     argv[0] = argv0;
 
@@ -1064,50 +1144,893 @@ GetSourceAlterCount(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     *rval = INT_TO_JSVAL(JSD_GetSourceAlterCount(data->jsdcTarget, jsdsrc));
     return JS_TRUE;
 }
+/***************************************************************************/
+/* Value and Property functions */
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetCallObjectForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDStackFrameInfo* jsdframe;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetCallObjectForStackFrame requires stackframe handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetCallObjectForStackFrame(data->jsdcTarget,
+                                                         data->jsdthreadstate,
+                                                         jsdframe));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetScopeChainForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDStackFrameInfo* jsdframe;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetScopeChainForStackFrame requires stackframe handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetScopeChainForStackFrame(data->jsdcTarget,
+                                                         data->jsdthreadstate,
+                                                         jsdframe));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetThisForStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDStackFrameInfo* jsdframe;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdframe = H2P_STACKFRAMEINFO(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetThisForStackFrame requires stackframe handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetThisForStackFrame(data->jsdcTarget,
+                                                   data->jsdthreadstate,
+                                                   jsdframe));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+RefreshValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "RefreshValue requires value handle");
+        return JS_FALSE;
+    }
+
+    JSD_RefreshValue(data->jsdcTarget, jsdval);
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueObject requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueObject(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueNumber requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueNumber(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueInt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueInt requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueInt(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueDouble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueDouble requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueDouble(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueString requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueString(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueBoolean(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueBoolean requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueBoolean(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueNull(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueNull requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueNull(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueVoid(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueVoid requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueVoid(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValuePrimitive(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValuePrimitive requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValuePrimitive(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueFunction(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueFunction requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueFunction(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IsValueNative(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IsValueNative requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_IsValueNative(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueBoolean(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueBoolean requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = BOOLEAN_TO_JSVAL(JSD_GetValueBoolean(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueInt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueInt requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetValueInt(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueDouble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueDouble requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = DOUBLE_TO_JSVAL(JSD_GetValueDouble(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueString requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = STRING_TO_JSVAL(JSD_GetValueString(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueFunctionName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueFunctionName requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = STRING_TO_JSVAL(JSD_GetValueFunctionName(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetCountOfProperties(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetCountOfProperties requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetCountOfProperties(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IterateProperties(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* iterp = NULL;
+    JSDProperty* jsdprop;
+    JSDValue* jsdval;
+    JSFunction *fun;
+    jsval argv1;
+    int count = 0;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IterateProperties requires value handle first param");
+        return JS_FALSE;
+    }
+
+    if(argc < 2 || !(fun = JS_ValueToFunction(cx, argv[1])))
+    {
+        JS_ReportError(cx, "IterateProperties requires a function second param");
+        return JS_FALSE;
+    }
+
+    /* We pass along any additional args, so patch and leverage argv */
+    argv1 = argv[1];
+    while(NULL != (jsdprop = JSD_IterateProperties(data->jsdcTarget, jsdval, &iterp)))
+    {
+        jsval retval;
+        JSBool another;
+
+        argv[1] = P2H_PROPERTY(cx, jsdprop);
+
+        if(!JS_CallFunction(cx, NULL, fun, argc, argv, &retval))
+            break;
+        count++ ;
+        if(!JS_ValueToBoolean(cx, retval, &another) || !another)
+            break;
+    }
+    argv[1] = argv1;
+
+    *rval = INT_TO_JSVAL(count);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueProperty(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSString* name;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueProperty requires value handle first param");
+        return JS_FALSE;
+    }
+
+    if(argc < 2 || !(name = JS_ValueToString(cx, argv[1])))
+    {
+        JS_ReportError(cx, "GetValueProperty requires name string second param");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_PROPERTY(cx, JSD_GetValueProperty(data->jsdcTarget, jsdval, name));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValuePrototype(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValuePrototype requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetValuePrototype(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueParent requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetValueParent(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueConstructor requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetValueConstructor(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueClassName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    const char* name;
+    JSString* nameStr;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueClassName requires value handle");
+        return JS_FALSE;
+    }
+
+    if(!(name = JSD_GetValueClassName(data->jsdcTarget, jsdval)) || 
+       !(nameStr = JS_NewStringCopyZ(cx, name)))
+        *rval = JSVAL_NULL;
+    else
+        *rval = STRING_TO_JSVAL(nameStr);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetPropertyName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* jsdprop;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdprop = H2P_PROPERTY(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetPropertyName requires property handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetPropertyName(data->jsdcTarget, jsdprop));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetPropertyValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* jsdprop;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdprop = H2P_PROPERTY(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetPropertyValue requires property handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetPropertyValue(data->jsdcTarget, jsdprop));
+    return JS_TRUE;
+}        
+        
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetPropertyAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* jsdprop;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdprop = H2P_PROPERTY(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetPropertyAlias requires property handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetPropertyAlias(data->jsdcTarget, jsdprop));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetPropertyFlags(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* jsdprop;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdprop = H2P_PROPERTY(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetPropertyFlags requires property handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetPropertyFlags(data->jsdcTarget, jsdprop));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetPropertyVarArgSlot(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDProperty* jsdprop;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdprop = H2P_PROPERTY(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetPropertyVarArgSlot requires property handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetPropertyVarArgSlot(data->jsdcTarget, jsdprop));
+    return JS_TRUE;
+}        
+/***************************************************************************/
+/* Object functions */
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+LockObjectSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+    JSD_LockObjectSubsystem(data->jsdcTarget);
+    *rval = JSVAL_TRUE;
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+UnlockObjectSubsystem(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+    JSD_UnlockObjectSubsystem(data->jsdcTarget);
+    *rval = JSVAL_TRUE;
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+IterateObjects(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* iterp = NULL;
+    JSDObject* jsdobj;
+    JSFunction *fun;
+    jsval argv0;
+    int count = 0;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(fun = JS_ValueToFunction(cx, argv[0])))
+    {
+        JS_ReportError(cx, "IterateObjects requires a function param");
+        return JS_FALSE;
+    }
+
+    /* We pass along any additional args, so patch and leverage argv */
+    argv0 = argv[0];
+    while(NULL != (jsdobj = JSD_IterateObjects(data->jsdcTarget, &iterp)))
+    {
+        jsval retval;
+        JSBool another;
+        argv[0] = P2H_OBJECT(cx, jsdobj);
+
+        if(!JS_CallFunction(cx, NULL, fun, argc, argv, &retval))
+            break;
+        count++ ;
+        if(!JS_ValueToBoolean(cx, retval, &another) || !another)
+            break;
+    }
+    argv[0] = argv0;
+
+    *rval = INT_TO_JSVAL(count);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectNewURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    const char* str;
+    JSString* strStr;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectNewURL requires object handle");
+        return JS_FALSE;
+    }
+
+    if(!(str = JSD_GetObjectNewURL(data->jsdcTarget, jsdobj)) || 
+       !(strStr = JS_NewStringCopyZ(cx, str)))
+        *rval = JSVAL_NULL;
+    else
+        *rval = STRING_TO_JSVAL(strStr);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectNewLineNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectNewLineNumber requires object handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetObjectNewLineNumber(data->jsdcTarget, jsdobj));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectConstructorURL(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    const char* str;
+    JSString* strStr;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectConstructorURL requires object handle");
+        return JS_FALSE;
+    }
+
+    if(!(str = JSD_GetObjectConstructorURL(data->jsdcTarget, jsdobj)) || 
+       !(strStr = JS_NewStringCopyZ(cx, str)))
+        *rval = JSVAL_NULL;
+    else
+        *rval = STRING_TO_JSVAL(strStr);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectConstructorLineNumber(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectConstructorLineNumber requires object handle");
+        return JS_FALSE;
+    }
+
+    *rval = INT_TO_JSVAL(JSD_GetObjectConstructorLineNumber(data->jsdcTarget, jsdobj));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectConstructorName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    const char* str;
+    JSString* strStr;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectConstructorName requires object handle");
+        return JS_FALSE;
+    }
+
+    if(!(str = JSD_GetObjectConstructorName(data->jsdcTarget, jsdobj)) || 
+       !(strStr = JS_NewStringCopyZ(cx, str)))
+        *rval = JSVAL_NULL;
+    else
+        *rval = STRING_TO_JSVAL(strStr);
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetObjectForValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDValue* jsdval;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdval = H2P_VALUE(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetObjectForValue requires value handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_OBJECT(cx, JSD_GetObjectForValue(data->jsdcTarget, jsdval));
+    return JS_TRUE;
+}        
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+GetValueForObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSDObject* jsdobj;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 || !(jsdobj = H2P_OBJECT(cx, argv[0])))
+    {
+        JS_ReportError(cx, "GetValueForObject requires object handle");
+        return JS_FALSE;
+    }
+
+    *rval = P2H_VALUE(cx, JSD_GetValueForObject(data->jsdcTarget, jsdobj));
+    return JS_TRUE;
+}
 
 /***************************************************************************/
+
+/* expands to {"x",x,n JSPROP_ENUMERATE}, 
+ * e.g....
+ * FUN_SPEC(GetMajorVersion,0) -> 
+ *      {"GetMajorVersion",GetMajorVersion,0,JSPROP_ENUMERATE},
+ */
+#define FUN_SPEC(x,n) {#x,x,n,JSPROP_ENUMERATE},
+
 static JSFunctionSpec jsd_functions[] = {
 /* High Level calls */
-    {"GetMajorVersion",             GetMajorVersion,            0, JSPROP_ENUMERATE},
-    {"GetMinorVersion",             GetMinorVersion,            0, JSPROP_ENUMERATE},
+    FUN_SPEC(GetMajorVersion, 0)
+    FUN_SPEC(GetMinorVersion, 0)
 /* Script functions */
-    {"LockScriptSubsystem",         LockScriptSubsystem,        0, JSPROP_ENUMERATE},
-    {"UnlockScriptSubsystem",       UnlockScriptSubsystem,      0, JSPROP_ENUMERATE},
-    {"IterateScripts",              IterateScripts,             1, JSPROP_ENUMERATE},
-    {"IsActiveScript",              IsActiveScript,             1, JSPROP_ENUMERATE},
-    {"GetScriptFilename",           GetScriptFilename,          1, JSPROP_ENUMERATE},
-    {"GetScriptFunctionName",       GetScriptFunctionName,      1, JSPROP_ENUMERATE},
-    {"GetScriptBaseLineNumber",     GetScriptBaseLineNumber,    1, JSPROP_ENUMERATE},
-    {"GetScriptLineExtent",         GetScriptLineExtent,        1, JSPROP_ENUMERATE},
-    {"SetScriptHook",               SetScriptHook,              1, JSPROP_ENUMERATE},
-    {"GetScriptHook",               GetScriptHook,              0, JSPROP_ENUMERATE},
-    {"GetClosestPC",                GetClosestPC,               2, JSPROP_ENUMERATE},
-    {"GetClosestLine",              GetClosestLine,             2, JSPROP_ENUMERATE},
+    FUN_SPEC(LockScriptSubsystem, 0)
+    FUN_SPEC(UnlockScriptSubsystem, 0)
+    FUN_SPEC(IterateScripts, 1)
+    FUN_SPEC(IsActiveScript, 1)
+    FUN_SPEC(GetScriptFilename, 1)
+    FUN_SPEC(GetScriptFunctionName, 1)
+    FUN_SPEC(GetScriptBaseLineNumber, 1)
+    FUN_SPEC(GetScriptLineExtent, 1)
+    FUN_SPEC(SetScriptHook, 1)
+    FUN_SPEC(GetScriptHook, 0)
+    FUN_SPEC(GetClosestPC, 2)
+    FUN_SPEC(GetClosestLine, 2)
 /* Execution/Interrupt Hook functions */
-    {"SetExecutionHook",            SetExecutionHook,           1, JSPROP_ENUMERATE},
-    {"GetExecutionHook",            GetExecutionHook,           0, JSPROP_ENUMERATE},
-    {"SendInterrupt",               SendInterrupt,              0, JSPROP_ENUMERATE},
-    {"ClearInterrupt",              ClearInterrupt,             0, JSPROP_ENUMERATE},
-    {"GetCountOfStackFrames",       GetCountOfStackFrames,      0, JSPROP_ENUMERATE},
-    {"GetStackFrame",               GetStackFrame,              0, JSPROP_ENUMERATE},
-    {"GetCallingStackFrame",        GetCallingStackFrame,       1, JSPROP_ENUMERATE},
-    {"GetScriptForStackFrame",      GetScriptForStackFrame,     1, JSPROP_ENUMERATE},
-    {"GetPCForStackFrame",          GetPCForStackFrame,         1, JSPROP_ENUMERATE},
-    {"EvaluateScriptInStackFrame",  EvaluateScriptInStackFrame, 4, JSPROP_ENUMERATE},
-    {"SetTrap",                     SetTrap,                    2, JSPROP_ENUMERATE},
-    {"ClearTrap",                   ClearTrap,                  2, JSPROP_ENUMERATE},
-    {"ClearAllTrapsForScript",      ClearAllTrapsForScript,     1, JSPROP_ENUMERATE},
-    {"ClearAllTraps",               ClearAllTraps,              0, JSPROP_ENUMERATE},
-    {"SetErrorReporterHook",        SetErrorReporterHook,       1, JSPROP_ENUMERATE},
+    FUN_SPEC(SetExecutionHook, 1)
+    FUN_SPEC(GetExecutionHook, 0)
+    FUN_SPEC(SendInterrupt, 0)
+    FUN_SPEC(ClearInterrupt, 0)
+    FUN_SPEC(GetCountOfStackFrames, 0)
+    FUN_SPEC(GetStackFrame, 0)
+    FUN_SPEC(GetCallingStackFrame, 1)
+    FUN_SPEC(GetScriptForStackFrame, 1)
+    FUN_SPEC(GetPCForStackFrame, 1)
+    FUN_SPEC(GetCallObjectForStackFrame, 1)
+    FUN_SPEC(GetScopeChainForStackFrame, 1)
+    FUN_SPEC(GetThisForStackFrame, 1)
+    FUN_SPEC(EvaluateScriptInStackFrame, 4)
+    FUN_SPEC(EvaluateScriptInStackFrameToValue, 4)
+    FUN_SPEC(SetTrap, 2)
+    FUN_SPEC(ClearTrap, 2)
+    FUN_SPEC(ClearAllTrapsForScript, 1)
+    FUN_SPEC(ClearAllTraps, 0)
+    FUN_SPEC(SetErrorReporterHook, 1)
 /* Source Text functions */
-    {"LockSourceTextSubsystem",     LockSourceTextSubsystem,    0, JSPROP_ENUMERATE},
-    {"UnlockSourceTextSubsystem",   UnlockSourceTextSubsystem,  0, JSPROP_ENUMERATE},
-    {"IterateSources",              IterateSources,             1, JSPROP_ENUMERATE},
-    {"FindSourceForURL",            FindSourceForURL,           1, JSPROP_ENUMERATE},
-    {"GetSourceURL",                GetSourceURL,               1, JSPROP_ENUMERATE},
-    {"GetSourceText",               GetSourceText,              1, JSPROP_ENUMERATE},
-    {"GetSourceStatus",             GetSourceStatus,            1, JSPROP_ENUMERATE},
-    {"GetSourceAlterCount",         GetSourceAlterCount,        1, JSPROP_ENUMERATE},
+    FUN_SPEC(LockSourceTextSubsystem, 0)
+    FUN_SPEC(UnlockSourceTextSubsystem, 0)
+    FUN_SPEC(IterateSources, 1)
+    FUN_SPEC(FindSourceForURL, 1)
+    FUN_SPEC(GetSourceURL, 1)
+    FUN_SPEC(GetSourceText, 1)
+    FUN_SPEC(GetSourceStatus, 1)
+    FUN_SPEC(GetSourceAlterCount, 1)
+/* Value and Property functions */
+    FUN_SPEC(RefreshValue, 1)
+    FUN_SPEC(IsValueObject, 1)
+    FUN_SPEC(IsValueNumber, 1)
+    FUN_SPEC(IsValueInt, 1)
+    FUN_SPEC(IsValueDouble, 1)
+    FUN_SPEC(IsValueString, 1)
+    FUN_SPEC(IsValueBoolean, 1)
+    FUN_SPEC(IsValueNull, 1)
+    FUN_SPEC(IsValueVoid, 1)
+    FUN_SPEC(IsValuePrimitive, 1)
+    FUN_SPEC(IsValueFunction, 1)
+    FUN_SPEC(IsValueNative, 1)
+    FUN_SPEC(GetValueBoolean, 1)
+    FUN_SPEC(GetValueInt, 1)
+    FUN_SPEC(GetValueDouble, 1)
+    FUN_SPEC(GetValueString, 1)
+    FUN_SPEC(GetValueFunctionName, 1)
+    FUN_SPEC(GetCountOfProperties, 1)
+    FUN_SPEC(IterateProperties, 2)
+    FUN_SPEC(GetValueProperty, 2)
+    FUN_SPEC(GetValuePrototype, 1)
+    FUN_SPEC(GetValueParent, 1)
+    FUN_SPEC(GetValueConstructor, 1)
+    FUN_SPEC(GetValueClassName, 1)
+    FUN_SPEC(GetPropertyName, 1)
+    FUN_SPEC(GetPropertyValue, 1)
+    FUN_SPEC(GetPropertyAlias, 1)
+    FUN_SPEC(GetPropertyFlags, 1)
+    FUN_SPEC(GetPropertyVarArgSlot, 1)
+/* Object functions */
+    FUN_SPEC(LockObjectSubsystem, 0)
+    FUN_SPEC(UnlockObjectSubsystem, 0)
+    FUN_SPEC(IterateObjects, 1)
+    FUN_SPEC(GetObjectNewURL, 1)
+    FUN_SPEC(GetObjectNewLineNumber, 1)
+    FUN_SPEC(GetObjectConstructorURL, 1)
+    FUN_SPEC(GetObjectConstructorLineNumber, 1)
+    FUN_SPEC(GetObjectConstructorName, 1)
+    FUN_SPEC(GetObjectForValue, 1)
+    FUN_SPEC(GetValueForObject, 1)
     {0}
 };
 
@@ -1120,30 +2043,41 @@ typedef struct ConstProp
     int   val;
 } ConstProp;
 
+/* expands to {"x",x}, e.g. {"JSD_HOOK_INTERRUPTED",JSD_HOOK_INTERRUPTED}, */
+#define CONST_PROP(x) {#x,x},
+
 /* these are used for constants defined in jsdebug.h - they must match! */
-
 static ConstProp const_props[] = {
-    {"JSD_HOOK_INTERRUPTED",            JSD_HOOK_INTERRUPTED     },
-    {"JSD_HOOK_BREAKPOINT",             JSD_HOOK_BREAKPOINT      },
-    {"JSD_HOOK_DEBUG_REQUESTED",        JSD_HOOK_DEBUG_REQUESTED },
-    {"JSD_HOOK_DEBUGGER_KEYWORD",       JSD_HOOK_DEBUGGER_KEYWORD},
 
-    {"JSD_HOOK_RETURN_HOOK_ERROR",      JSD_HOOK_RETURN_HOOK_ERROR    },
-    {"JSD_HOOK_RETURN_CONTINUE",        JSD_HOOK_RETURN_CONTINUE      },
-    {"JSD_HOOK_RETURN_ABORT",           JSD_HOOK_RETURN_ABORT         },
-    {"JSD_HOOK_RETURN_RET_WITH_VAL",    JSD_HOOK_RETURN_RET_WITH_VAL  },
-    {"JSD_HOOK_RETURN_THROW_WITH_VAL",  JSD_HOOK_RETURN_THROW_WITH_VAL},
+    CONST_PROP(JSD_HOOK_INTERRUPTED)
+    CONST_PROP(JSD_HOOK_BREAKPOINT)
+    CONST_PROP(JSD_HOOK_DEBUG_REQUESTED)
+    CONST_PROP(JSD_HOOK_DEBUGGER_KEYWORD)
 
-    {"JSD_SOURCE_INITED",               JSD_SOURCE_INITED   },
-    {"JSD_SOURCE_PARTIAL",              JSD_SOURCE_PARTIAL  },
-    {"JSD_SOURCE_COMPLETED",            JSD_SOURCE_COMPLETED},
-    {"JSD_SOURCE_ABORTED",              JSD_SOURCE_ABORTED  },
-    {"JSD_SOURCE_FAILED",               JSD_SOURCE_FAILED   },
-    {"JSD_SOURCE_CLEARED",              JSD_SOURCE_CLEARED  },
+    CONST_PROP(JSD_HOOK_RETURN_HOOK_ERROR)
+    CONST_PROP(JSD_HOOK_RETURN_CONTINUE)
+    CONST_PROP(JSD_HOOK_RETURN_ABORT)
+    CONST_PROP(JSD_HOOK_RETURN_RET_WITH_VAL)
+    CONST_PROP(JSD_HOOK_RETURN_THROW_WITH_VAL)
 
-    {"JSD_ERROR_REPORTER_PASS_ALONG",   JSD_ERROR_REPORTER_PASS_ALONG},
-    {"JSD_ERROR_REPORTER_RETURN",       JSD_ERROR_REPORTER_RETURN    },
-    {"JSD_ERROR_REPORTER_DEBUG",        JSD_ERROR_REPORTER_DEBUG     },
+    CONST_PROP(JSD_SOURCE_INITED)
+    CONST_PROP(JSD_SOURCE_PARTIAL)
+    CONST_PROP(JSD_SOURCE_COMPLETED)
+    CONST_PROP(JSD_SOURCE_ABORTED)
+    CONST_PROP(JSD_SOURCE_FAILED)
+    CONST_PROP(JSD_SOURCE_CLEARED)
+
+    CONST_PROP(JSD_ERROR_REPORTER_PASS_ALONG)
+    CONST_PROP(JSD_ERROR_REPORTER_RETURN)
+    CONST_PROP(JSD_ERROR_REPORTER_DEBUG)
+
+    CONST_PROP(JSDPD_ENUMERATE)
+    CONST_PROP(JSDPD_READONLY)
+    CONST_PROP(JSDPD_PERMANENT)
+    CONST_PROP(JSDPD_ALIAS)
+    CONST_PROP(JSDPD_ARGUMENT)
+    CONST_PROP(JSDPD_VARIABLE)
+    CONST_PROP(JSDPD_HINTED)
 
     {0}
 };

@@ -48,6 +48,7 @@ function scriptHook(handle, creating)
     else {
         JSDScript.remove(JSDScript.find(handle));
     }
+    return true;
 }
 
 function errorReporterHook(msg, filename, lineno, lineBuf, tokenOffset)
@@ -69,19 +70,19 @@ function errorReporterHook(msg, filename, lineno, lineBuf, tokenOffset)
             case "I":
             case "i":
                 answer = jsd.JSD_ERROR_REPORTER_RETURN;
-                break;                
+                break;
             case "P":
             case "p":
                 answer = jsd.JSD_ERROR_REPORTER_PASS_ALONG;
-                break;                
+                break;
             case "D":
             case "d":
                 answer = jsd.JSD_ERROR_REPORTER_DEBUG;
-                break;                
+                break;
             // let's simplify the user's life
             default:
                 answer = jsd.JSD_ERROR_REPORTER_RETURN;
-                break;                
+                break;
         }
     }
     return answer;
@@ -393,20 +394,20 @@ function rprops(text)
     reval("delete "+name);
 
     return "";
-}    
+}
 
 
 function show(text,filename,lineno)
 {
     print(_reval(arguments));
     return "";
-}    
+}
 
 function reval(text,filename,lineno)
 {
     _reval(arguments);
     return "";
-}    
+}
 
 function _reval(args)
 {
@@ -419,6 +420,24 @@ function _reval(args)
         a[i+1] = args[i];
 
     return jsd.EvaluateScriptInStackFrame.apply(this,a);
+}
+
+function revalToValue(text,filename,lineno)
+{
+    return _revalToValue(arguments);
+}
+
+function _revalToValue(args)
+{
+    if(!args.length)
+        return print("_revalToValue requires at least one arg");
+
+    var a = new Array(args.length+1);
+    a[0] = stack[currentFrame].handle;
+    for(var i = 0; i < args.length; i++)
+        a[i+1] = args[i];
+
+    return new JSDValue(jsd.EvaluateScriptInStackFrameToValue.apply(this,a));
 }
 
 function why()
@@ -447,6 +466,7 @@ function why()
 function sourceIterator(handle)
 {
     print("  "+jsd.GetSourceURL(handle));
+    return true;
 }
 
 function sources()
@@ -462,7 +482,7 @@ function listc()
 function listcw()
 {
     return list(-20,41);
-}    
+}
 
 function list()
 {
@@ -557,7 +577,7 @@ function printLineFormatted(text, filename, lineno)
 function scripts()
 {
     return props(JSDScript.scripts);
-}    
+}
 
 /***************************************************************************/
 /* breakpoints */
@@ -623,7 +643,7 @@ function breakpointManipulatingCallback(handle, url, lineno, set)
                 jsd.ClearTrap(handle, pc);
         }
     }
-    return "";
+    return true;
 }
 
 function setAllBreakpointsForScript(handle)
@@ -664,7 +684,7 @@ function getUrlAndLineFor(args, o)
     }
     print("need a line number");
     return false;
-}    
+}
 
 function trap()
 {
@@ -687,7 +707,7 @@ function writeln(str)
 {
     write(str+"\n");
     return "";
-}    
+}
 
 function print()
 {
@@ -696,8 +716,8 @@ function print()
     for(var i = 0; i < arguments.length; i++) {
         str += (i!=0? " ":"")+arguments[i];
     }
-    if(i && !(arguments.length == 1 && 
-              typeof(arguments[0]) == 'string' && 
+    if(i && !(arguments.length == 1 &&
+              typeof(arguments[0]) == 'string' &&
               arguments[0] == ""))
         str += "\n";
     write(str);
@@ -719,42 +739,42 @@ function doEvalLoop()
             print(safeEval(str+"\n", evalLoopFilename, evalLoopLineno++));
     }
     return resumeCode;
-}    
+}
 
 function prompt(str)
 {
     write(str);
     return gets();
-}    
+}
 
 function abort()
 {
     return resume(jsd.JSD_HOOK_RETURN_ABORT);
-}    
+}
 
 function quit()
 {
     return resume(jsd.JSD_HOOK_RETURN_HOOK_ERROR);
-}    
+}
 
 function returnVal(val)
 {
     jsd.ReturnExpression = val;
     resume(jsd.JSD_HOOK_RETURN_RET_WITH_VAL);
     return "";
-}    
+}
 
 function throwVal(val)
 {
     jsd.ReturnExpression = val;
     resume(jsd.JSD_HOOK_RETURN_THROW_WITH_VAL);
     return "";
-}    
+}
 
 
 function resume(code)
 {
-    if(arguments.length && 
+    if(arguments.length &&
        code >= jsd.JSD_HOOK_RETURN_HOOK_ERROR &&
        code <= jsd.JSD_HOOK_RETURN_THROW_WITH_VAL) {
         resumeCode = code;
@@ -763,30 +783,157 @@ function resume(code)
         resumeCode = jsd.JSD_HOOK_RETURN_CONTINUE;
     }
     return "";
+}
+
+
+/***************************************************************************/
+/* property and value objects */
+
+function JSDValueProto()
+{
+    this.RefreshValue          = function() {this.flags = null; jsd.RefreshValue(this.handle);}
+    this.IsValueObject         = function() {return jsd.IsValueObject(this.handle);}
+    this.IsValueNumber         = function() {return jsd.IsValueNumber(this.handle);}
+    this.IsValueInt            = function() {return jsd.IsValueInt(this.handle);}
+    this.IsValueDouble         = function() {return jsd.IsValueDouble(this.handle);}
+    this.IsValueString         = function() {return jsd.IsValueString(this.handle);}
+    this.IsValueBoolean        = function() {return jsd.IsValueBoolean(this.handle);}
+    this.IsValueNull           = function() {return jsd.IsValueNull(this.handle);}
+    this.IsValueVoid           = function() {return jsd.IsValueVoid(this.handle);}
+    this.IsValuePrimitive      = function() {return jsd.IsValuePrimitive(this.handle);}
+    this.IsValueFunction       = function() {return jsd.IsValueFunction(this.handle);}
+    this.IsValueNative         = function() {return jsd.IsValueNative(this.handle);}
+    this.GetValueBoolean       = function() {return jsd.GetValueBoolean(this.handle);}
+    this.GetValueInt           = function() {return jsd.GetValueInt(this.handle);}
+    this.GetValueDouble        = function() {return jsd.GetValueDouble(this.handle);}
+    this.GetValueString        = function() {return jsd.GetValueString(this.handle);}
+    this.GetValueFunctionName  = function() {return jsd.GetValueFunctionName(this.handle);}
+    this.GetCountOfProperties  = function() {return jsd.GetCountOfProperties(this.handle);}
+    this.GetValuePrototype     = function() {return new JSDValue(jsd.GetValuePrototype(this.handle));}
+    this.GetValueParent        = function() {return new JSDValue(jsd.GetValueParent(this.handle));}
+    this.GetValueConstructor   = function() {return new JSDValue(jsd.GetValueConstructor(this.handle));}
+    this.GetValueClassName     = function() {return jsd.GetValueClassName(this.handle);}
+    this.GetValueProperty      = function(name) {return new JSDProperty(jsd.GetValueProperty(this.handle, name));}
+
+    this.GetProperties = function() {
+        var a = new Array();
+        function cb(ob, prop, a)
+        {
+//            print(new JSDProperty(prop).GetPropertyName().GetValueString());
+            a.push(new JSDProperty(prop));
+            return true;
+        }
+        jsd.IterateProperties(this.handle, cb, a);
+        return a;
+    }
+
+    this.toString = function()
+    {
+        return this.flagString() + 
+               " : " + 
+               this.GetValueString();
+    }
+
+    this.flags = null;
+    this.flagString = function()
+    {
+        if(!this.flags)
+        {
+            this.flags = (this.IsValueObject()    ? "o" : ".") +
+                         (this.IsValueNumber()    ? "n" : ".") +
+                         (this.IsValueInt()       ? "i" : ".") +
+                         (this.IsValueDouble()    ? "d" : ".") +
+                         (this.IsValueString()    ? "s" : ".") +
+                         (this.IsValueBoolean()   ? "b" : ".") +
+                         (this.IsValueNull()      ? "N" : ".") +
+                         (this.IsValueVoid()      ? "V" : ".") +
+                         (this.IsValuePrimitive() ? "p" : ".") +
+                         (this.IsValueFunction()  ? "f" : ".") +
+                         (this.IsValueNative()    ? "n" : ".");
+        }
+        return this.flags;
+    }
+}
+
+function JSDValue(handle)
+{
+    this.handle = handle;
+}
+JSDValue.prototype = new JSDValueProto;
+
+/*********************************************/
+
+function JSDPropertyProto()
+{
+    this.JSDPD_ENUMERATE = jsd.JSDPD_ENUMERATE;
+    this.JSDPD_READONLY  = jsd.JSDPD_READONLY ;
+    this.JSDPD_PERMANENT = jsd.JSDPD_PERMANENT;
+    this.JSDPD_ALIAS     = jsd.JSDPD_ALIAS    ;
+    this.JSDPD_ARGUMENT  = jsd.JSDPD_ARGUMENT ;
+    this.JSDPD_VARIABLE  = jsd.JSDPD_VARIABLE ;
+    this.JSDPD_HINTED    = jsd.JSDPD_HINTED   ;
+
+    this.GetPropertyName       = function() {return new JSDValue(jsd.GetPropertyName(this.handle));}
+    this.GetPropertyValue      = function() {return new JSDValue(jsd.GetPropertyValue(this.handle));}
+    this.GetPropertyAlias      = function() {return new JSDValue(jsd.GetPropertyAlias(this.handle));}
+    this.GetPropertyFlags      = function() {return jsd.GetPropertyFlags(this.handle);}
+    this.GetPropertyVarArgSlot = function() {return jsd.GetPropertyVarArgSlot(this.handle);}
+
+    this.toString = function()
+    {
+        return this.flagString() + 
+               " : " + 
+               this.GetPropertyName().toString() +
+               " : " + 
+               this.GetPropertyValue().toString();
+    }
+    this.flags = null;
+    this.flagString = function()
+    {
+        var f;
+        if(!this.flags)
+        {
+            f = this.GetPropertyFlags();
+            this.flags = (f & jsd.JSDPD_ENUMERATE ? "e" : ".") +
+                         (f & jsd.JSDPD_READONLY  ? "r" : ".") +
+                         (f & jsd.JSDPD_PERMANENT ? "p" : ".") +
+                         (f & jsd.JSDPD_ALIAS     ? "a" : ".") +
+                         (f & jsd.JSDPD_ARGUMENT  ? "A" : ".") +
+                         (f & jsd.JSDPD_VARIABLE  ? "V" : ".") +
+                         (f & jsd.JSDPD_HINTED    ? "H" : ".");
+        }
+        return this.flags;
+    }
 }    
+
+function JSDProperty(handle)
+{
+    this.handle = handle;
+}
+
+JSDProperty.prototype = new JSDPropertyProto;
 
 /***************************************************************************/
 /* User defined... can use load() ! */
 
 function f() {return load('f.js');}
 
-/**                                    
-* function f(){                        
-* //    for(var i = 0; i< 1000; i++) { 
-*     while(1) {                       
-*         why();                       
-*         show('arguments.length');    
-*         up()                         
-*         show('arguments.length');    
-*         up()                         
-*         show('arguments.length');    
-*         up()                         
-*         show('arguments.length');    
-*         step();                      
-*     }                                
+/**
+* function f(){
+* //    for(var i = 0; i< 1000; i++) {
+*     while(1) {
+*         why();
+*         show('arguments.length');
+*         up()
+*         show('arguments.length');
+*         up()
+*         show('arguments.length');
+*         up()
+*         show('arguments.length');
+*         step();
+*     }
 * }
-*/                                     
-
+*/
 /***************************************************************************/
 /* Signal Success */
 
