@@ -44,7 +44,7 @@ nsNetlibService::nsNetlibService()
 
     /* XXX: How should the User Agent get initialized? */
     XP_AppCodeName = strdup("Mozilla");
-    XP_AppVersion = strdup("1.0");
+    XP_AppVersion = strdup("5.0 Netscape/5.0 (Windows;I;x86;en)");
 
 }
 
@@ -166,6 +166,8 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(const char *aUrl,
          */
         URL_s->fe_data = pConn;
 
+/*        printf("+++ Loading %s\n", aUrl); */
+
         /* Start the URL load... */
         NET_GetURL (URL_s,                      /* URL_Struct      */
                     FO_CACHE_AND_PRESENT,       /* FO_Present_type */
@@ -220,6 +222,7 @@ static void bam_exit_routine(URL_Struct *URL_s, int status, MWContext *window_id
     if (NULL != URL_s) {
         nsConnectionInfo *pConn = (nsConnectionInfo *)URL_s->fe_data;
 
+/*        printf("+++ Finished loading %s\n", URL_s->address); */
         PR_ASSERT(pConn);
 
         /* Release the ConnectionInfo object held in the URL_Struct. */
