@@ -39,10 +39,11 @@
 static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-NS_IMPL_ISUPPORTS3(nsMsgProtocol, 
+NS_IMPL_ISUPPORTS4(nsMsgProtocol, 
                    nsIStreamListener, 
                    nsIStreamObserver, 
-                   nsIChannel)
+                   nsIChannel,
+                   nsIRequest)
 
 nsMsgProtocol::nsMsgProtocol(nsIURI * aURL)
 {
