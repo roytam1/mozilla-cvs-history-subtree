@@ -34,7 +34,8 @@
 #endif
 #include "libi18n.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "netstream.h"
+#include "cstream.h"
 #include "mkgeturl.h"
 #include "mkformat.h"
 #include "mime.h"

@@ -51,7 +51,7 @@
 #define GTYPE_MPEG         ';'     /* video/mpeg */
 
 #include "mkgeturl.h"       /* URL Struct */
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkformat.h"       /* for File Format stuff (cinfo) */
 #include "gophurl.h"       /* function prototypes */
 #include "mktcp.h"          /* connect, read, etc. */
@@ -86,7 +86,7 @@ typedef struct _GopherConData {
     char             gopher_type;             /* the gopher type */
     char            *command;           /* the request command */
 	char            *output_buf;        /* temporary output buffer */
-    NET_StreamClass *stream;            /* The output stream */
+    NET_VoidStreamClass *stream;            /* The output stream */
     Bool          pause_for_read;    /* Pause now for next read? */
     Bool destroy_graph_progress;  /* do we need to destroy graph progress? */
     int32   original_content_length; /* the content length at the time of
@@ -96,13 +96,13 @@ typedef struct _GopherConData {
 	TCP_ConData      *tcp_con_data;
 } GopherConData;
 
-#define PUTSTRING(s)     (*connection_data->stream->put_block) \
+#define PUTSTRING(s)     NET_StreamPutBlock \
                					(connection_data->stream, s, PL_strlen(s))
-#define PUTBLOCK(b, l)   (*connection_data->stream->put_block) \
+#define PUTBLOCK(b, l)   NET_StreamPutBlock \
                					(connection_data->stream, b, l)
-#define COMPLETE_STREAM  (*connection_data->stream->complete) \
+#define COMPLETE_STREAM  NET_StreamComplete \
                					(connection_data->stream)
-#define ABORT_STREAM(s)  (*connection_data->stream->abort) \
+#define ABORT_STREAM(s)  NET_StreamAbort \
                					(connection_data->stream, s)
 
 /* helpful shortcut names
@@ -628,7 +628,7 @@ net_pull_gopher_data(ActiveEntry * cur_entry)
 
     /* check to see if the stream is ready for writing
      */
-    write_ready = (*CD_STREAM->is_write_ready)(CD_STREAM);
+    write_ready = NET_StreamIsWriteReady(CD_STREAM);
 
     if(write_ready < 1)
       {
@@ -847,7 +847,7 @@ net_GopherLoad (ActiveEntry * cur_entry)
             break;
     }
 
-    CD_STREAM = NET_StreamBuilder(cur_entry->format_out, CE_URL_S, CE_WINDOW_ID);
+    CD_STREAM = NET_VoidStreamBuilder(cur_entry->format_out, CE_URL_S, CE_WINDOW_ID);
 
     if (!CD_STREAM) 
       {
@@ -1115,7 +1115,7 @@ net_ProcessGopher(ActiveEntry * cur_entry)
                                         CD_ORIGINAL_CONTENT_LENGTH,
 										CE_BYTES_RECEIVED);
             PR_FREEIF(CD_COMMAND);
-            PR_FREEIF(CD_STREAM);  	/* don't forget the stream */
+            NET_StreamFree(CD_STREAM);  	/* don't forget the stream */
 			PR_FREEIF(CD_OUTPUT_BUF);
             PR_FREEIF(CD_DATA_BUF);
             if(CD_TCP_CON_DATA)

@@ -10,7 +10,7 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "pa_parse.h"
 #include "xpgetstr.h"
 #include "layout.h"

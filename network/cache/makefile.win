@@ -84,6 +84,7 @@ LINCS= \
     -I$(XPDIST)\public\java 	\
     -I$(XPDIST)\public\fileurl 	\
     -I$(XPDIST)\public\security \
+    -I$(XPDIST)\public\cstream \
     -I$(XPDIST)\public\jtools
 #!endif
 

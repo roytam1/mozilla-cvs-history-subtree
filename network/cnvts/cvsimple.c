@@ -27,6 +27,7 @@
 #include "cvsimple.h"
 #include "xp.h"
 #include "prmem.h"
+#include "cstream.h"
 
 typedef void (*simple_complete_t)(void* bytes, int32 bytes_written);
 

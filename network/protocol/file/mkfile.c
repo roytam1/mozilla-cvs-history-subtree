@@ -29,11 +29,11 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkformat.h"
 #include "mkparse.h"
 #include "mkfsort.h"
-#include "mkfile.h"
+#include "fileurl.h"
 #include "merrors.h"
 #include "glhist.h"
 
@@ -106,7 +106,7 @@ typedef struct _FILEConData {
     XP_File           file_ptr;
     XP_Dir            dir_ptr;
     net_FileStates    next_state;
-    NET_StreamClass * stream;
+    NET_VoidStreamClass * stream;
     char            * filename;
     Bool           is_dir;
     SortStruct      * sort_base;
@@ -142,16 +142,18 @@ typedef struct _FILEConData {
 #define CD_BYTERANGE_STRING         connection_data->byterange_string
 #define CD_RANGE_LENGTH             connection_data->range_length
 
-#define PUTS(s)           (*connection_data->stream->put_block) \
-                                 (connection_data->stream, s, PL_strlen(s))
-#define IS_WRITE_READY    (*connection_data->stream->is_write_ready) \
+#define PUTS(s)           NET_StreamPutBlock \
+				(connection_data->stream, s, PL_strlen(s))
+#define IS_WRITE_READY    NET_StreamIsWriteReady \
                                  (connection_data->stream)
-#define PUTB(b,l)         (*connection_data->stream->put_block) \
+#define PUTB(b,l)         NET_StreamPutBlock \
                                 (connection_data->stream, b, l)
-#define COMPLETE_STREAM   (*connection_data->stream->complete) \
+#define COMPLETE_STREAM   NET_StreamComplete \
                                  (connection_data->stream)
-#define ABORT_STREAM(s)   (*connection_data->stream->abort) \
+#define ABORT_STREAM(s)   NET_StreamAbort \
                                  (connection_data->stream, s)
+#define FREE_STREAM   NET_StreamFree \
+                                 (connection_data->stream)
 
 /* try and open the URL path as a normal file
  * if it fails set the next state to try and open
@@ -443,7 +445,7 @@ net_file_setup_stream(ActiveEntry * cur_entry)
  		StrAllocCopy(CE_URL_S->content_type, APPLICATION_HTTP_INDEX);
 	}
 
-        CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, CE_URL_S, CE_WINDOW_ID);
+        CD_STREAM = NET_VoidStreamBuilder(CE_FORMAT_OUT, CE_URL_S, CE_WINDOW_ID);
 
         if(!CD_STREAM)
 		  {
@@ -754,7 +756,7 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 	  }
 	}
 
-    CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, CE_URL_S, CE_WINDOW_ID);
+    CD_STREAM = NET_VoidStreamBuilder(CE_FORMAT_OUT, CE_URL_S, CE_WINDOW_ID);
 
     if(!CD_STREAM)
 	  {
@@ -861,6 +863,9 @@ net_read_file_chunk(ActiveEntry * cur_entry)
 		  {
 			/* go get more byte ranges */
 			COMPLETE_STREAM;
+			FREE_STREAM;
+			CD_STREAM = NULL;
+			
 			CD_NEXT_STATE = NET_SETUP_FILE_STREAM;
             if (!CE_URL_S->load_background)
                 NET_Progress(CE_WINDOW_ID, XP_GetString( XP_READING_SEGMENT ) );
@@ -1242,7 +1247,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
                 break;
     
             case NET_PRINT_DIRECTORY:
-				if((*CD_STREAM->is_write_ready)(CD_STREAM))
+				if(NET_StreamIsWriteReady(CD_STREAM))
 				{
 					CE_STATUS = NET_PrintDirectory(&CD_SORT_BASE, CD_STREAM, CD_FILENAME, CE_URL_S);
 					CD_NEXT_STATE = NET_FILE_DONE;
@@ -1263,13 +1268,20 @@ net_ProcessFile (ActiveEntry * cur_entry)
     
             case NET_FILE_DONE:
     			if(CD_STREAM)
+				{
                		COMPLETE_STREAM;
+					FREE_STREAM;
+					CD_STREAM = NULL;
+				}
                 CD_NEXT_STATE = NET_FILE_FREE;
                 break;
     
             case NET_FILE_ERROR_DONE:
                 if(CD_STREAM)
+				{
                     ABORT_STREAM(CE_STATUS);
+		    		FREE_STREAM;
+				}
                 if(CD_DIR_PTR)
                     XP_CloseDir(CD_DIR_PTR);
                 if(CD_FILE_PTR)
@@ -1294,7 +1306,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
                                             CD_ORIGINAL_CONTENT_LENGTH,
 											CE_BYTES_RECEIVED);
 				PR_Free(CD_FILENAME);
-				PR_FREEIF(CD_STREAM);
+				NET_StreamFree(CD_STREAM);
 				PR_Free(cur_entry->con_data);
 
 #ifndef NSPR20_DISABLED
@@ -1353,7 +1365,7 @@ PRIVATE int net_IdxConvWriteReady(NET_StreamClass *stream)
 #define PD_PUTS(s)  \
 do { \
 if(status > -1) \
-        status = (*stream->put_block)(stream, s, PL_strlen(s)); \
+        status = NET_StreamPutBlock(stream, s, PL_strlen(s)); \
 } while(0)
 
 /* take the parsed data and generate HTML */
@@ -1364,14 +1376,14 @@ PRIVATE void net_IdxConvComplete(NET_StreamClass *inputStream)
     NET_FileEntryInfo * file_entry;
 	int32  max_name_length, i, status = 0, window_width, len;
 	char   out_buf[3096], *name, *date, *ptr;
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 	NET_cinfo * cinfo;
 	char *base_url=NULL, *path=NULL;
 
 	/* direct the stream to the html parser */
 	StrAllocCopy(obj->URL_s->content_type, TEXT_HTML);
 
-	stream = NET_StreamBuilder(obj->format_out,
+	stream = NET_VoidStreamBuilder(obj->format_out,
 								obj->URL_s,
 								obj->context);
 	if(!stream)

@@ -29,6 +29,7 @@
 #include "libmocha.h"		/* For the onHelp handler */
 #include "prefapi.h"		/* For the onHelp handler */
 #include "fe_proto.h"
+#include "cstream.h"
 
 extern char * INTL_ResourceCharSet(void);
 
