@@ -43,60 +43,6 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPCWrappedJSClass, nsIXPCWrappedJSClass)
 // the value of this variable is never used - we use its address as a sentinel
 static uint32 zero_methods_descriptor;
 
-static inline JSExceptionState* DoPreScriptEvaluated(JSContext* cx)
-{
-    if(JS_GetContextThread(cx))
-        JS_BeginRequest(cx);
-
-    // Saving the exception state keeps us from interfering with another script
-    // that may also be running on this context.  This occurred first with the
-    // js debugger, as described in
-    // http://bugzilla.mozilla.org/show_bug.cgi?id=88130 but presumably could
-    // show up in any situation where a script calls into a wrapped js component
-    // on the same context, while the context has a nonzero exception state.
-    // Because JS_SaveExceptionState/JS_RestoreExceptionState use malloc
-    // and addroot, we avoid them if possible by returning null (as opposed to
-    // a JSExceptionState with no information) when there is no pending
-    // exception.
-    if(JS_IsExceptionPending(cx))
-    {
-        JSExceptionState* state = JS_SaveExceptionState(cx);
-        JS_ClearPendingException(cx);
-        return state;
-    }
-    return nsnull;
-}
-
-static inline void DoPostScriptEvaluated(JSContext* cx, JSExceptionState* state)
-{
-    if(state)
-        JS_RestoreExceptionState(cx, state);
-    else
-        JS_ClearPendingException(cx);
-
-    if(JS_GetContextThread(cx))
-        JS_EndRequest(cx);
-
-    // If this is a JSContext that has a private context that provides a
-    // nsIXPCScriptNotify interface, then notify the object the script has
-    // been executed.
-    //
-    // Note: We rely on the rule that if any JSContext in our JSRuntime has
-    // private data that points to an nsISupports subclass, it has also set
-    // the JSOPTION_PRIVATE_IS_NSISUPPORTS option.
-
-    nsISupports *supports =
-        (JS_GetOptions(cx) & JSOPTION_PRIVATE_IS_NSISUPPORTS)
-        ? NS_STATIC_CAST(nsISupports*, JS_GetContextPrivate(cx))
-        : nsnull;
-    if(supports)
-    {
-        nsCOMPtr<nsIXPCScriptNotify> scriptNotify = 
-            do_QueryInterface(supports);
-        if(scriptNotify)
-            scriptNotify->ScriptExecuted();
-    }
-}
 
 // It turns out that some errors may be not worth reporting. So, this
 // function is factored out to manage that.
@@ -597,7 +543,7 @@ nsXPCWrappedJSClass::GetRootJSObject(XPCCallContext& ccx, JSObject* aJSObj)
     return result ? result : aJSObj;
 }
 
-JS_STATIC_DLL_CALLBACK(void)
+void JS_DLL_CALLBACK
 xpcWrappedJSErrorReporter(JSContext *cx, const char *message,
                           JSErrorReport *report)
 {

@@ -82,6 +82,14 @@ OBJS=					\
 	.\$(OBJDIR)\xpcwrappednativejsops.obj	\
 	.\$(OBJDIR)\xpcwrappednativeproto.obj	\
 	.\$(OBJDIR)\xpcwrappednativescope.obj	\
+!ifdef XPC_IDISPATCH_SUPPORT
+	.\$(OBJDIR)\xpccomobject.obj	\
+	.\$(OBJDIR)\XPCCOMIDispatchInfo.obj	\
+	.\$(OBJDIR)\XPCCOMIDispatchInterface.obj	\
+	.\$(OBJDIR)\XPCCOMConvert.obj \
+	.\$(OBJDIR)\XPCCOMTypeInfo.obj	\
+	.\$(OBJDIR)\XPCIDArray.obj \
+!endif
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpconnect -I$(PUBLIC)\xpcom -I$(PUBLIC)\js \
@@ -93,6 +101,9 @@ LCFLAGS = \
         $(PCHFLAGS) \
 !ifdef XPC_TOOLS_SUPPORT
         -DXPC_TOOLS_SUPPORT \
+!endif
+!ifdef XPC_IDISPATCH_SUPPORT
+        -DXPC_IDISPATCH_SUPPORT \
 !endif
         $(NULL)
 

@@ -1444,7 +1444,13 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
 
     aTearOff->SetInterface(aInterface);
     aTearOff->SetNative(obj);
-
+#ifdef XPC_IDISPATCH_SUPPORT
+    // Are we building a tearoff for IDispatch?
+    if(ccx.GetXPConnect()->IsIDispatchSupported() && iid->Equals(NSID_IDISPATCH))
+    {
+        aTearOff->SetIDispatch(ccx);
+    }  
+#endif
     if(needJSObject && !InitTearOffJSObject(ccx, aTearOff))
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -1473,18 +1479,6 @@ static JSBool Throw(uintN errNum, XPCCallContext& ccx)
 {
     XPCThrower::Throw(errNum, ccx);
     return JS_FALSE;
-}
-
-static JSBool ThrowBadParam(nsresult rv, uintN paramNum, XPCCallContext& ccx)
-{
-    XPCThrower::ThrowBadParam(rv, paramNum, ccx);
-    return JS_FALSE;
-}
-
-static void ThrowBadResult(nsresult result, XPCCallContext& ccx)
-{
-    XPCThrower::ThrowBadResult(NS_ERROR_XPC_NATIVE_RETURNED_FAILURE,
-                               result, ccx);
 }
 
 static JSBool ReportOutOfMemory(XPCCallContext& ccx)

@@ -61,6 +61,9 @@ nsXPConnect::nsXPConnect()
         mDefaultSecurityManager(nsnull),
         mDefaultSecurityManagerFlags(0),
         mShuttingDown(JS_FALSE)
+#ifdef XPC_IDISPATCH_SUPPORT
+        ,mIsIDispatchSupported(JS_TRUE)
+#endif
 {
     NS_INIT_ISUPPORTS();
 
@@ -221,7 +224,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
         {
             FILE* oldFileHandle = js_DumpGCHeap;
             js_DumpGCHeap = stdout;
-            JS_GC(ccx);
+            js_ForceGC(ccx);
             js_DumpGCHeap = oldFileHandle;
         }
 #endif
@@ -391,16 +394,52 @@ static nsresult FindInfo(InfoTester tester, const void* data,
     return NS_ERROR_NO_INTERFACE;
 }    
 
+static const char* IDISPATCH_NAME = "IDispatch";
+
 nsresult
 nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
 {
-    return FindInfo(IIDTester, aIID, mInterfaceInfoManager, info);
+    nsresult rv = FindInfo(IIDTester, aIID, mInterfaceInfoManager, info);
+    // See if we were looking up info on IDispatch, if so, return our
+    // specialized interface info
+#ifdef XPC_IDISPATCH_SUPPORT
+    if (NS_FAILED(rv))
+    {
+        if (aIID->Equals(NSID_IDISPATCH))
+        {
+            *info = new XPCCOMIDispatchInfo();
+            if (*info)
+            {
+                NS_ADDREF(*info);
+                rv = NS_OK;
+            }
+        }
+    }
+#endif
+    return rv;
 }
 
 nsresult
 nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
 {
-    return FindInfo(NameTester, name, mInterfaceInfoManager, info);
+    nsresult rv = FindInfo(NameTester, name, mInterfaceInfoManager, info);
+    // See if we were looking up info on IDispatch, if so, return our
+    // specialized interface info
+#ifdef XPC_IDISPATCH_SUPPORT
+    if (NS_FAILED(rv))
+    {
+        if (strcmp(name, IDISPATCH_NAME) == 0)
+        {
+            *info = new XPCCOMIDispatchInfo();
+            if (*info)
+            {
+                NS_ADDREF(*info);
+                rv = NS_OK;
+            }
+        }
+    }
+#endif
+    return rv;
 }
 
 /***************************************************************************/
@@ -441,6 +480,13 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
+#ifdef XPC_IDISPATCH_SUPPORT
+    // Add IDispatch support objects
+    if (IsIDispatchSupported())
+    {
+        XPCCOMObject::IDispatchRegisterCOMObject(ccx, aGlobalJSObj);
+    }
+#endif
     return NS_OK;
 }
 

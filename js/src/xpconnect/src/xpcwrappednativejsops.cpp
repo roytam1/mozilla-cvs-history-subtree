@@ -227,6 +227,10 @@ XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
     return JS_TRUE;
 }
 
+/******************************************************************************
+ * IDispatch callbacks
+ */
+
 /***************************************************************************/
 
 // This is our shared function to define properties on our JSObjects.
@@ -255,7 +259,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     JSBool found;
     const char* name;
     jsid id;
-
+#ifdef XPC_IDISPATCH_SUPPORT
+    XPCCOMIDispatchInterface::Member * IDispatchMember = 0;
+#endif
     if(set)
     {
         if(iface)
@@ -268,6 +274,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     if(!found)
     {
+        AutoMarkingNativeInterfacePtr iface2(ccx);
+        XPCWrappedNativeTearOff* to;
+        JSObject* jso;
         HANDLE_POSSIBLE_NAME_CASE_ERROR(ccx, set, iface, idval);
 
         if(reflectToStringAndToSource)
@@ -316,29 +325,26 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
         if(wrapperToReflectInterfaceNames)
         {
-            AutoMarkingNativeInterfacePtr iface2(ccx);
-            XPCWrappedNativeTearOff* to;
-            JSObject* jso;
-
             if(JSVAL_IS_STRING(idval) &&
-               nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
-               (iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
-               nsnull != (to = wrapperToReflectInterfaceNames->
-                                    FindTearOff(ccx, iface2, JS_TRUE)) &&
-               nsnull != (jso = to->GetJSObject()))
-
+               nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))))
             {
-                AutoResolveName arn(ccx, idval);
-                if(resolved)
-                    *resolved = JS_TRUE;
-                return JS_ValueToId(ccx, idval, &id) &&
-                       OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
-                                           nsnull, nsnull,
-                                           propFlags & ~JSPROP_ENUMERATE,
-                                           nsnull);
+                if ((iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
+                    nsnull != (to = wrapperToReflectInterfaceNames->
+                                        FindTearOff(ccx, iface2, JS_TRUE)) &&
+                    nsnull != (jso = to->GetJSObject()))
+
+                {
+                    AutoResolveName arn(ccx, idval);
+                    if(resolved)
+                        *resolved = JS_TRUE;
+                    return JS_ValueToId(ccx, idval, &id) &&
+                           OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
+                                               nsnull, nsnull,
+                                               propFlags & ~JSPROP_ENUMERATE,
+                                               nsnull);
+                }
             }
         }
-
         // This *might* be a double wrapped JSObject
         if(wrapperToReflectDoubleWrap &&
            idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
@@ -373,12 +379,35 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                        propFlags, nsnull);
         }
 
-        if(resolved)
-            *resolved = JS_FALSE;
-        return JS_TRUE;
+#ifdef XPC_IDISPATCH_SUPPORT
+        // Check to see if there's an IDispatch tearoff     
+        if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() &&
+                wrapperToReflectInterfaceNames && 
+                (iface = XPCNativeInterface::GetNewOrUsed(ccx, "IDispatch")) != nsnull &&
+                (to = wrapperToReflectInterfaceNames->FindTearOff(ccx,
+                                                                 iface,
+                                                                 JS_TRUE)) != nsnull &&
+                (jso = to->GetJSObject()) != nsnull)
+        {
+            XPCCOMIDispatchInterface * pInfo = to->GetIDispatchInfo();
+            IDispatchMember = pInfo->FindMember(idval);
+        }
+        else
+        {
+#endif
+            if(resolved)
+                *resolved = JS_FALSE;
+            return JS_TRUE;
+#ifdef XPC_IDISPATCH_SUPPORT
+        }
+#endif
     }
 
-    if(!member)
+    if(!member 
+#ifdef XPC_IDISPATCH_SUPPORT
+        && !IDispatchMember
+#endif
+      )
     {
         if(wrapperToReflectInterfaceNames)
         {
@@ -405,7 +434,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         return JS_TRUE;
     }
 
-    if(member->IsConstant())
+    if(member && member->IsConstant())
     {
         jsval val;
         AutoResolveName arn(ccx, idval);
@@ -423,9 +452,18 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         propFlags &= ~JSPROP_ENUMERATE;
 
     jsval funval;
-    if(!member->GetValue(ccx, iface, &funval))
-        return JS_FALSE;
-
+    if (member)
+    {
+        if(!member->GetValue(ccx, iface, &funval))
+            return JS_FALSE;
+    }
+#ifdef XPC_IDISPATCH_SUPPORT
+    else
+    {
+        if (!IDispatchMember->GetValue(ccx, iface, &funval))
+            return JS_FALSE;
+    }
+#endif
     JSObject* funobj = JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval), obj);
     if(!funobj)
         return JS_FALSE;
@@ -438,7 +476,11 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     }
 #endif
 
-    if(member->IsMethod())
+    if((member && member->IsMethod()) 
+#ifdef XPC_IDISPATCH_SUPPORT
+        || (IDispatchMember && IDispatchMember->IsFunction())
+#endif
+      )
     {
         AutoResolveName arn(ccx, idval);
         if(resolved)
@@ -450,10 +492,16 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     // else...
 
-    NS_ASSERTION(member->IsAttribute(), "way broken!");
-
+    NS_ASSERTION(!member || member->IsAttribute(), "way broken!");
+#ifdef XPC_IDISPATCH_SUPPORT
+    NS_ASSERTION(!IDispatchMember || IDispatchMember->IsProperty(), "way broken!");
+#endif
     propFlags |= JSPROP_GETTER | JSPROP_SHARED;
-    if(member->IsWritableAttribute())
+    if((member && member->IsWritableAttribute()) 
+#ifdef XPC_IDISPATCH_SUPPORT
+        || (IDispatchMember && IDispatchMember->IsSetter())
+#endif
+      )
     {
         propFlags |= JSPROP_SETTER;
         propFlags &= ~JSPROP_READONLY;
@@ -582,7 +630,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
     PRUint16 interface_count = set->GetInterfaceCount();
     XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
-    for(PRUint16 i = 0; i < interface_count; i++)
+    for(PRUint32 i = 0; i < interface_count; i++)
     {
         XPCNativeInterface* interface = interfaceArray[i];
         PRUint16 member_count = interface->GetMemberCount();
@@ -600,6 +648,28 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
                 return JS_FALSE;
         }
     }
+#ifdef XPC_IDISPATCH_SUPPORT
+    if (nsXPConnect::GetXPConnect()->IsIDispatchSupported())
+    {
+        XPCNativeInterface* iface = XPCNativeInterface::GetNewOrUsed(ccx, &NSID_IDISPATCH);
+        if (iface)
+        {
+            XPCWrappedNativeTearOff* tearoff = wrapper->FindTearOff(ccx, iface);
+            if (tearoff)
+            {
+                XPCCOMIDispatchInterface* pInfo = tearoff->GetIDispatchInfo();
+                PRUint32 members = pInfo->GetMemberCount();
+                for (PRUint32 index = 0; index < members; ++index)
+                {
+                    XPCCOMIDispatchInterface::Member & member = pInfo->GetMember(index);
+                    jsval name = member.GetName();
+                    if (!xpc_ForcePropertyResolve(cx, obj, name))
+                        return JS_FALSE;
+                }
+            }
+        }
+    }
+#endif
     return JS_TRUE;
 }
 

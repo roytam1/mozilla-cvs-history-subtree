@@ -82,7 +82,14 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
         return NS_OK;
     }
-
+#ifdef XPC_IDISPATCH_SUPPORT
+    else if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
+    {
+        NS_ADDREF(this);
+        *aInstancePtr = (void*) NS_STATIC_CAST(IDispatch*, this);
+        return NS_OK;
+    }
+#endif
     nsISupports* outer = GetAggregatedNativeObject();
     if(outer)
         return outer->QueryInterface(aIID, aInstancePtr);
@@ -304,6 +311,9 @@ nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
       mRoot(root ? root : this),
       mNext(nsnull),
       mOuter(root ? nsnull : aOuter)
+#ifdef XPC_IDISPATCH_SUPPORT
+      ,mCOMTypeInfo(0)
+#endif
 {
 #ifdef DEBUG_stats_jband
     static int count = 0;
