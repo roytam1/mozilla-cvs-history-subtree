@@ -628,11 +628,6 @@ process_buffered_gif_input_data(gif_struct* gs)
     state = gs->state;
     if (gs->destroy_pending &&
         ((state == gif_done) || (state == gif_error) || (state == gif_oom))) {
-
-        /* test, stop loopers if error */
-        if( state == gif_error)
-            ic->loop_count = 0;
-
         il_gif_abort(ic);
         il_image_complete(ic);
     }
@@ -648,8 +643,8 @@ gif_delay_time_callback(void *closure)
     gs->delay_timeout = NULL;
 
     if (gs->ic->state == IC_ABORT_PENDING)
-        return;
-    
+        return;                                        
+
     gs->delay_time = 0;         /* Reset for next image */
 
     if (gs->state == gif_delay) {
@@ -708,7 +703,7 @@ gif_clear_screen(gif_struct *gs)
         int src_trans_pixel_index;
         uint8 *rowbuf = gs->rowbuf;
         NI_PixmapHeader *src_header = ic->src_header;
-        IL_IRGB *saved_src_trans_pixel, *saved_img_trans_pixel;
+        IL_IRGB *saved_src_trans_pixel;
 
         /* Catch images that fall outside the logical screen. */
         if ((erase_x_offset + erase_width) > gs->screen_width)
@@ -716,15 +711,12 @@ gif_clear_screen(gif_struct *gs)
 
         /* We have to temporarily pretend the image is transparent
            so we can clear using the context's background color. */
-        saved_img_trans_pixel = ic->image->header.transparent_pixel;
         saved_src_trans_pixel = src_header->transparent_pixel;
         src_header->transparent_pixel = NULL;
-        ic->image->header.transparent_pixel = NULL;
 
         /* Pick an index for the source image's temporary transparent pixel.
            The actual choice is immaterial since it will only be used for
            the clear screen operation. */
-
         src_trans_pixel_index = 0;
         if (!il_gif_init_transparency(ic, src_trans_pixel_index))
             return MK_OUT_OF_MEMORY;
@@ -744,7 +736,6 @@ gif_clear_screen(gif_struct *gs)
         /* Reset the source image's transparent pixel to its former state. */
         il_gif_destroy_transparency(ic);
         src_header->transparent_pixel = saved_src_trans_pixel;
-        ic->image->header.transparent_pixel = saved_img_trans_pixel;
     }
     return 0;
 }

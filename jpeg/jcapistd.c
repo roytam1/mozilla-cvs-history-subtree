@@ -1,7 +1,7 @@
 /*
  * jcapistd.c
  *
- * Copyright (C) 1994-1996, Thomas G. Lane.
+ * Copyright (C) 1994-1995, Thomas G. Lane.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -15,6 +15,7 @@
  */
 
 #define JPEG_INTERNALS
+#include "xp_core.h"/*defines of int32 ect*/
 #include "jinclude.h"
 #include "jpeglib.h"
 
@@ -34,7 +35,7 @@
  * wrong thing.
  */
 
-GLOBAL(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
 {
   if (cinfo->global_state != CSTATE_START)
@@ -73,7 +74,7 @@ jpeg_start_compress (j_compress_ptr cinfo, boolean write_all_tables)
  * when using a multiple-scanline buffer.
  */
 
-GLOBAL(JDIMENSION)
+GLOBAL PR_PUBLIC_API(JDIMENSION)
 jpeg_write_scanlines (j_compress_ptr cinfo, JSAMPARRAY scanlines,
 		      JDIMENSION num_lines)
 {
@@ -86,8 +87,8 @@ jpeg_write_scanlines (j_compress_ptr cinfo, JSAMPARRAY scanlines,
 
   /* Call progress monitor hook if present */
   if (cinfo->progress != NULL) {
-    cinfo->progress->pass_counter = (long) cinfo->next_scanline;
-    cinfo->progress->pass_limit = (long) cinfo->image_height;
+    cinfo->progress->pass_counter = (int32) cinfo->next_scanline;
+    cinfo->progress->pass_limit = (int32) cinfo->image_height;
     (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
   }
 
@@ -116,7 +117,7 @@ jpeg_write_scanlines (j_compress_ptr cinfo, JSAMPARRAY scanlines,
  * Processes exactly one iMCU row per call, unless suspended.
  */
 
-GLOBAL(JDIMENSION)
+GLOBAL JDIMENSION
 jpeg_write_raw_data (j_compress_ptr cinfo, JSAMPIMAGE data,
 		     JDIMENSION num_lines)
 {
@@ -131,8 +132,8 @@ jpeg_write_raw_data (j_compress_ptr cinfo, JSAMPIMAGE data,
 
   /* Call progress monitor hook if present */
   if (cinfo->progress != NULL) {
-    cinfo->progress->pass_counter = (long) cinfo->next_scanline;
-    cinfo->progress->pass_limit = (long) cinfo->image_height;
+    cinfo->progress->pass_counter = (int32) cinfo->next_scanline;
+    cinfo->progress->pass_limit = (int32) cinfo->image_height;
     (*cinfo->progress->progress_monitor) ((j_common_ptr) cinfo);
   }
 

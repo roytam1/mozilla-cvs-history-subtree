@@ -44,9 +44,6 @@ pref("general.title_tips",                  true);
 pref("general.help_source.site",            1); // 0 = Netscape, 1 = installed, 2 = custom
 pref("general.help_source.url",             "");
 
-pref("general.fullcircle_enable",           true);
-pref("general.fullcircle_collect_ns_data",  false);
-
 pref("browser.enable_style_sheets",         true);
 pref("browser.startup.page",                1);     // 0 = blank, 1 = home, 2 = last
 pref("browser.startup.homepage",            "http://home.netscape.com/");
@@ -161,7 +158,6 @@ pref("network.enableUrlMatch",              true);
 pref("network.max_connections",             4);
 pref("network.speed_over_ui",               true);
 pref("network.file_sort_method",            0);     // NAME 0, TYPE 1, SIZE 2, DATE 3
-pref("network.ftp.passive",		    true);
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 pref("network.hosts.nntp_server",           "news");
@@ -189,12 +185,9 @@ pref("network.accept_cookies",              0);     // 0 = Always, 1 = warn, 2 =
 pref("network.foreign_cookies",             0); // 0 = Accept, 1 = Don't accept
 pref("network.cookie.cookieBehavior",       0); // 0-Accept, 1-dontAcceptForeign, 2-dontUse
 pref("network.cookie.warnAboutCookies",     false);
-pref("network.signon.rememberSignons",                  false);
-pref("network.cookie.filterName",			"");
 pref("network.sendRefererHeader",           true);
 pref("network.enablePad",                   false); // Allow client to do proxy autodiscovery
-pref("network.padPacURL",                   ""); // The proxy autodiscovery url
-pref("privacy.warn_no_policy",              false); // Warn when submitting to site without policy
+pref("network.padPacURL",                   "http://supernova:8080"); // The proxy autodiscovery url
 
 pref("messages.new_window",                 true); // ML obsolete; use mailnews.message_in_thread_window
 pref("intl.accept_languages",               "en");
@@ -227,7 +220,6 @@ localDefPref("news.directory",                  "");
 localDefPref("security.directory",              "");
 
 pref("autoupdate.enabled",              true);
-pref("autoupdate.confirm_install",				false);
 
 pref("imap.io.mac.logging", false);
 

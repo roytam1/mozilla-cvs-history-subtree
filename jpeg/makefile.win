@@ -61,10 +61,10 @@ DEFFILE=$(DLLNAME).def
 #//     (ie. LCFLAGS, LLFLAGS, LLIBS, LINCS)
 #//  -Zi -GM needed to compile mmx functions in assembly.
 LCFLAGS = -Zi -GM
-LINCS = -I$(PUBLIC)/java
-
-!if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
+!ifdef MOZ_JAVA
+LINCS = -I$(PUBLIC)/java -I$(DEPTH)/sun-java/include
+!else
+LINCS = -I$(DIST)/include
 !endif
 
 #//------------------------------------------------------------------------
@@ -88,6 +88,7 @@ JPEG_OBJS=        .\$(OBJDIR)\jdapimin.obj \
 		  .\$(OBJDIR)\jidctfst.obj \
 		  .\$(OBJDIR)\jidctflt.obj \
 		  .\$(OBJDIR)\jidctint.obj \
+		  .\$(OBJDIR)\jidctred.obj \
 		  .\$(OBJDIR)\jdsample.obj \
 		  .\$(OBJDIR)\jdcolor.obj \
 		  .\$(OBJDIR)\jquant1.obj \
@@ -142,12 +143,11 @@ MAPFILE= $(DLLNAME).map
 #//------------------------------------------------------------------------
 include <$(DEPTH)/config/rules.mak>
 
-export:: 
-libs:: $(DLL)
+export:: $(DLL)
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
     $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 
-install:: export libs
+install:: export
 
 clobber::
 	$(RM) $(JPEG_OBJS)

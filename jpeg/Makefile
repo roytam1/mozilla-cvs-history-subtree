@@ -1,3 +1,4 @@
+#!gmake
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -13,6 +14,7 @@
 # Communications Corporation.  Portions created by Netscape are
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
+
 #
 
 DEPTH		= ..
@@ -40,6 +42,7 @@ CSRCS		= jdapimin.c \
 		  jidctfst.c \
 		  jidctflt.c \
 		  jidctint.c \
+		  jidctred.c \
 		  jdsample.c \
 		  jdcolor.c \
 		  jquant1.c \
@@ -79,4 +82,3 @@ TARGETS		= $(LIBRARY)
 endif
 
 include $(DEPTH)/config/rules.mk
-

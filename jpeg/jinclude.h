@@ -17,7 +17,15 @@
 
 /* Include auto-config file to find out which system include files we need. */
 
-#include "jconfig.h"		/* auto configuration options */
+#ifdef __MWERKS__
+# include "jconfig-mac-cw.h"
+#elif defined(_WINDOWS)
+# include "jwinfig.h"
+#elif defined(XP_OS2)
+# include "jos2fig.h"
+#else
+# include "jconfig.h"         /* auto configuration options */
+#endif
 #define JCONFIG_INCLUDED	/* so that jpeglib.h doesn't do it again */
 
 /*
@@ -44,6 +52,15 @@
 #endif
 
 #include <stdio.h>
+
+/*
+ * SunOS 4.x doesn't do a very good job providing prototypes.
+ */
+#ifdef SUNOS4
+int fread(void *, size_t, size_t, FILE *);
+void *memset(void *, int, size_t);
+int sscanf(const char *, const char *, ...);
+#endif
 
 /*
  * We need memory copying and zeroing functions, plus strncpy().

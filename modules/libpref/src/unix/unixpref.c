@@ -20,13 +20,17 @@
  unixpref.c
  **********************************************************************/
 
+#include <stdio.h>
+#include <assert.h>
 #include "prefapi.h"
 #include "prlink.h"
+#include "prlog.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
-#include "xpassert.h"
 
+#ifndef B1M
 #include <Xm/Xm.h>
+#endif
 
 extern PRLibrary* pref_LoadAutoAdminLib(void);
 extern PRLibrary* m_AutoAdminLib;
@@ -46,7 +50,7 @@ pref_InitInitialObjects(void)
 {
     JSBool status;
 
-    XP_ASSERT(pref_init_buffer);
+    PR_ASSERT(pref_init_buffer);
 
     status = PREF_EvaluateJSBuffer(pref_init_buffer, strlen(pref_init_buffer));
 
@@ -69,21 +73,16 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
     if ( PREF_IsAutoAdminEnabled() && 
          icon && 
          (splash_screen = (struct fe_icon_type*)
-#ifndef NSPR20
-          PR_FindSymbol("_POLARIS_SplashPro", m_AutoAdminLib)) != NULL ) {
-#else
           PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
-#endif
-
         memcpy(icon, splash_screen, sizeof(*icon));
     }
 }
 
-
+#ifndef B1M
 /*
  * PREF_GetLabelAndMnemonic
  */
-XP_Bool
+PRBool
 PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
 {
     XmString *xm_str = (XmString*)v_xm_str;
@@ -93,11 +92,11 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     char* p1;
     char* p2;
 
-    XP_ASSERT(name);
-    XP_ASSERT(str);
-    XP_ASSERT(xm_str);
+    PR_ASSERT(name);
+    PR_ASSERT(str);
+    PR_ASSERT(xm_str);
 
-    if ( name == NULL || str == NULL || xm_str == NULL ) return FALSE;
+    if ( name == NULL || str == NULL || xm_str == NULL ) return PR_FALSE;
 
     _str = NULL;
 	*str = NULL;
@@ -109,7 +108,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
 
     PREF_CopyConfigString(buf, &_str);
 
-    if ( _str == NULL || *_str == '\0' ) return FALSE;
+    if ( _str == NULL || *_str == '\0' ) return PR_FALSE;
 
     /* Strip out ampersands */
     if ( strchr(_str, '&') != NULL ) {
@@ -124,19 +123,19 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
 
     return ( *xm_str != NULL );
 }
-
+#endif
 
 /*
  * PREF_GetUrl
  */
-XP_Bool
+PRBool
 PREF_GetUrl(char* name, char** url)
 {
     char buf[256];
 
-    XP_ASSERT(name);
+    PR_ASSERT(name);
 
-    if ( name == NULL || url == NULL ) return FALSE;
+    if ( name == NULL || url == NULL ) return PR_FALSE;
 
     strncpy(buf, name, 200);
     strcat(buf, ".url");

@@ -1,7 +1,7 @@
 /*
  * jdapimin.c
  *
- * Copyright (C) 1994-1998, Thomas G. Lane.
+ * Copyright (C) 1994-1995, Thomas G. Lane.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -19,7 +19,6 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
-
 #include "xp_core.h"
 
 #ifdef XP_WIN32
@@ -32,8 +31,8 @@ int mmxsupport();
  * The error manager must already be set up (in case memory manager fails).
  */
 
-GLOBAL(void)
-jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
+GLOBAL PR_PUBLIC_API(void)
+jpeg_create_decompress (j_decompress_ptr cinfo)
 {
   int i;
 
@@ -50,27 +49,10 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
   /* For debugging purposes, zero the whole master structure.
    * But error manager pointer is already there, so save and restore it.
    */
-
-  /* Guard against version mismatches between library and caller. */
-  cinfo->mem = NULL;		/* so jpeg_destroy knows mem mgr not called */
-  if (version != JPEG_LIB_VERSION)
-    ERREXIT2(cinfo, JERR_BAD_LIB_VERSION, JPEG_LIB_VERSION, version);
-  if (structsize != SIZEOF(struct jpeg_decompress_struct))
-    ERREXIT2(cinfo, JERR_BAD_STRUCT_SIZE, 
-	     (int) SIZEOF(struct jpeg_decompress_struct), (int) structsize);
-
-  /* For debugging purposes, we zero the whole master structure.
-   * But the application has already set the err pointer, and may have set
-   * client_data, so we have to save and restore those fields.
-   * Note: if application hasn't set client_data, tools like Purify may
-   * complain here.
-   */
   {
     struct jpeg_error_mgr * err = cinfo->err;
-    void * client_data = cinfo->client_data; /* ignore Purify complaint here */
     MEMZERO(cinfo, SIZEOF(struct jpeg_decompress_struct));
     cinfo->err = err;
-    cinfo->client_data = client_data;
   }
   cinfo->is_decompressor = TRUE;
 
@@ -92,7 +74,6 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
   /* Initialize marker processor so application can override methods
    * for COM, APPn markers before calling jpeg_read_header.
    */
-  cinfo->marker_list = NULL;
   jinit_marker_reader(cinfo);
 
   /* And initialize the overall input controller. */
@@ -107,7 +88,7 @@ jpeg_CreateDecompress (j_decompress_ptr cinfo, int version, size_t structsize)
  * Destruction of a JPEG decompression object
  */
 
-GLOBAL(void)
+GLOBAL PR_PUBLIC_API(void)
 jpeg_destroy_decompress (j_decompress_ptr cinfo)
 {
   jpeg_destroy((j_common_ptr) cinfo); /* use common routine */
@@ -119,17 +100,35 @@ jpeg_destroy_decompress (j_decompress_ptr cinfo)
  * but don't destroy the object itself.
  */
 
-GLOBAL(void)
+GLOBAL void
 jpeg_abort_decompress (j_decompress_ptr cinfo)
 {
   jpeg_abort((j_common_ptr) cinfo); /* use common routine */
 }
 
+
+/*
+ * Install a special processing method for COM or APPn markers.
+ */
+
+GLOBAL PR_PUBLIC_API(void)
+jpeg_set_marker_processor (j_decompress_ptr cinfo, int marker_code,
+			   jpeg_marker_parser_method routine)
+{
+  if (marker_code == JPEG_COM)
+    cinfo->marker->process_COM = routine;
+  else if (marker_code >= JPEG_APP0 && marker_code <= JPEG_APP0+15)
+    cinfo->marker->process_APPn[marker_code-JPEG_APP0] = routine;
+  else
+    ERREXIT1(cinfo, JERR_UNKNOWN_MARKER, marker_code);
+}
+
+
 /*
  * Set default decompression parameters.
  */
 
-LOCAL(void)
+LOCAL void
 default_decompress_parms (j_decompress_ptr cinfo)
 {
   /* Guess the input colorspace, and set output colorspace accordingly. */
@@ -256,7 +255,7 @@ default_decompress_parms (j_decompress_ptr cinfo)
  * extra error checking.
  */
 
-GLOBAL(int)
+GLOBAL PR_PUBLIC_API(int)
 jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
 {
   int retcode;
@@ -302,7 +301,7 @@ jpeg_read_header (j_decompress_ptr cinfo, boolean require_image)
  * method.
  */
 
-GLOBAL(int)
+GLOBAL PR_PUBLIC_API(int)
 jpeg_consume_input (j_decompress_ptr cinfo)
 {
   int retcode = JPEG_SUSPENDED;
@@ -349,7 +348,7 @@ jpeg_consume_input (j_decompress_ptr cinfo)
  * Have we finished reading the input file?
  */
 
-GLOBAL(boolean)
+GLOBAL boolean
 jpeg_input_complete (j_decompress_ptr cinfo)
 {
   /* Check for valid jpeg object */
@@ -364,7 +363,7 @@ jpeg_input_complete (j_decompress_ptr cinfo)
  * Is there more than one scan?
  */
 
-GLOBAL(boolean)
+GLOBAL PR_PUBLIC_API(boolean)
 jpeg_has_multiple_scans (j_decompress_ptr cinfo)
 {
   /* Only valid after jpeg_read_header completes */
@@ -384,7 +383,7 @@ jpeg_has_multiple_scans (j_decompress_ptr cinfo)
  * a suspending data source is used.
  */
 
-GLOBAL(boolean)
+GLOBAL PR_PUBLIC_API(boolean)
 jpeg_finish_decompress (j_decompress_ptr cinfo)
 {
   if ((cinfo->global_state == DSTATE_SCANNING ||
@@ -412,7 +411,6 @@ jpeg_finish_decompress (j_decompress_ptr cinfo)
   jpeg_abort((j_common_ptr) cinfo);
   return TRUE;
 }
-
 
 #ifdef XP_WIN32
 

@@ -118,13 +118,13 @@ il_reconnect_abort(NET_StreamClass *stream, int status)
     NS_RELEASE(reader);
     stream->data_object = NULL;
 }
+
 unsigned int
 il_write_ready(NET_StreamClass *stream)
 {
     ilINetReader *reader = (ilINetReader *)stream->data_object;
 
 	return reader->WriteReady();
-
 }
 
 int 
@@ -202,12 +202,11 @@ NET_StreamClass *
 IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
               OPAQUE_CONTEXT *cx)
 {
-    NET_StreamClass *stream = nil, 
-                    *viewstream = nil;
-    il_container *ic = nil;
-    ilINetReader *reader = nil;
-    ilIURL *iurl;
-    char *org_content_type;	
+    NET_StreamClass *stream = nil, *viewstream;
+	il_container *ic = nil;
+	ilINetReader *reader = nil;
+	ilIURL *iurl;
+	char *org_content_type;
     char *image_url;
 
 	/* multi-part reconnect hack */
@@ -216,11 +215,7 @@ IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
 	    reader = iurl->GetReader();
 		if(reader)
 		{
-           /* Extreme editor hack! This value is used when loading images
-              so we use the converter we did in 4.06 code.
-              If we don't, this code triggers parsing of the image URL,
-              which has very bad effects in the editor! */
-		    if( reader->IsMulti() ) {
+		    if(reader->IsMulti()) {
 			    NS_RELEASE(reader);
 				return IL_NewStream(format_out, IL_UNKNOWN, urls, cx);
 			}

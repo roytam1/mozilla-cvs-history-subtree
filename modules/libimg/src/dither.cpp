@@ -21,8 +21,8 @@
 
 #include "jinclude.h"
 #include "jpeglib.h"
-#include "jerror.h"
 #include "jpegint.h"
+#include "jerror.h"
 
 
 /* BEGIN code adapted from jpeg library */
@@ -64,7 +64,7 @@ il_setup_quantize(void)
 	the_sample_range_limit = table;
 
 	/* First segment of "simple" table: limit[x] = 0 for x < 0 */
-	XP_BZERO(table - (MAXJSAMPLE+1), (MAXJSAMPLE+1) * SIZEOF(JSAMPLE));
+	MEMZERO(table - (MAXJSAMPLE+1), (MAXJSAMPLE+1) * SIZEOF(JSAMPLE));
 
 	/* Main part of "simple" table: limit[x] = x */
 	for (i = 0; i <= MAXJSAMPLE; i++)
@@ -77,9 +77,9 @@ il_setup_quantize(void)
 		table[i] = MAXJSAMPLE;
 
 	/* Second half of post-IDCT table */
-	XP_BZERO(table + (2 * (MAXJSAMPLE+1)),
+	MEMZERO(table + (2 * (MAXJSAMPLE+1)),
 			(2 * (MAXJSAMPLE+1) - CENTERJSAMPLE) * SIZEOF(JSAMPLE));
-	XP_MEMCPY(table + (4 * (MAXJSAMPLE+1) - CENTERJSAMPLE),
+	MEMCOPY(table + (4 * (MAXJSAMPLE+1) - CENTERJSAMPLE),
 			the_sample_range_limit, CENTERJSAMPLE * SIZEOF(JSAMPLE));
 
 	return TRUE;

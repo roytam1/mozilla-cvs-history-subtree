@@ -1,7 +1,7 @@
 /*
  * djpeg.c
  *
- * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Copyright (C) 1991-1995, Thomas G. Lane.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -30,8 +30,7 @@
 
 #ifdef USE_CCOMMAND		/* command-line reader for Macintosh */
 #ifdef __MWERKS__
-#include <SIOUX.h>              /* Metrowerks needs this */
-#include <console.h>		/* ... and this */
+#include <SIOUX.h>              /* Metrowerks declares it here */
 #endif
 #ifdef THINK_C
 #include <console.h>		/* Think declares it here */
@@ -86,7 +85,7 @@ static const char * progname;	/* program name for error messages */
 static char * outfilename;	/* for -outfile switch */
 
 
-LOCAL(void)
+LOCAL void
 usage (void)
 /* complain about bad command line */
 {
@@ -158,7 +157,7 @@ usage (void)
 }
 
 
-LOCAL(int)
+LOCAL int
 parse_switches (j_decompress_ptr cinfo, int argc, char **argv,
 		int last_file_arg_seen, boolean for_real)
 /* Parse optional switches.
@@ -344,13 +343,13 @@ parse_switches (j_decompress_ptr cinfo, int argc, char **argv,
 
 
 /*
- * Marker processor for COM and interesting APPn markers.
+ * Marker processor for COM markers.
  * This replaces the library's built-in processor, which just skips the marker.
- * We want to print out the marker as text, to the extent possible.
+ * We want to print out the marker as text, if possible.
  * Note this code relies on a non-suspending data source.
  */
 
-LOCAL(unsigned int)
+LOCAL unsigned int
 jpeg_getc (j_decompress_ptr cinfo)
 /* Read next byte */
 {
@@ -365,8 +364,8 @@ jpeg_getc (j_decompress_ptr cinfo)
 }
 
 
-METHODDEF(boolean)
-print_text_marker (j_decompress_ptr cinfo)
+METHODDEF boolean
+COM_handler (j_decompress_ptr cinfo)
 {
   boolean traceit = (cinfo->err->trace_level >= 1);
   INT32 length;
@@ -377,13 +376,8 @@ print_text_marker (j_decompress_ptr cinfo)
   length += jpeg_getc(cinfo);
   length -= 2;			/* discount the length word itself */
 
-  if (traceit) {
-    if (cinfo->unread_marker == JPEG_COM)
-      fprintf(stderr, "Comment, length %ld:\n", (long) length);
-    else			/* assume it is an APPn otherwise */
-      fprintf(stderr, "APP%d, length %ld:\n",
-	      cinfo->unread_marker - JPEG_APP0, (long) length);
-  }
+  if (traceit)
+    fprintf(stderr, "Comment, length %ld:\n", (long) length);
 
   while (--length >= 0) {
     ch = jpeg_getc(cinfo);
@@ -420,7 +414,7 @@ print_text_marker (j_decompress_ptr cinfo)
  * The main program.
  */
 
-int
+GLOBAL int
 main (int argc, char **argv)
 {
   struct jpeg_decompress_struct cinfo;
@@ -450,15 +444,8 @@ main (int argc, char **argv)
   jerr.addon_message_table = cdjpeg_message_table;
   jerr.first_addon_message = JMSG_FIRSTADDONCODE;
   jerr.last_addon_message = JMSG_LASTADDONCODE;
-
-  /* Insert custom marker processor for COM and APP12.
-   * APP12 is used by some digital camera makers for textual info,
-   * so we provide the ability to display it as text.
-   * If you like, additional APPn marker types can be selected for display,
-   * but don't try to override APP0 or APP14 this way (see libjpeg.doc).
-   */
-  jpeg_set_marker_processor(&cinfo, JPEG_COM, print_text_marker);
-  jpeg_set_marker_processor(&cinfo, JPEG_APP0+12, print_text_marker);
+  /* Insert custom COM marker processor. */
+  jpeg_set_marker_processor(&cinfo, JPEG_COM, COM_handler);
 
   /* Now safe to enable signal catcher. */
 #ifdef NEED_SIGNAL_CATCHER

@@ -448,8 +448,6 @@ il_size(il_container *ic)
     NI_PixmapHeader *src_header = ic->src_header; /* Source image header. */
     NI_PixmapHeader *img_header = &ic->image->header; /* Destination image
                                                          header. */
-    uint32 req_w=0, req_h=0;  /* store requested values for printing.*/
-
     
     /* Get the dimensions of the source image. */
     src_width = src_header->width;
@@ -466,13 +464,6 @@ il_size(il_container *ic)
 	ic->state = IC_SIZED;
 	if (ic->state == IC_MULTI)
 		return 0;
-
-    if(ic->display_type == IL_Printer){
-		req_w = ic->dest_width;
-		req_h = ic->dest_height;
-		ic->dest_width = 0;   /*to decode natural size*/
-		ic->dest_height = 0;
-	}
 
     /* For now, we don't allow an image to change output size on the
      * fly, but we do allow the source image size to change, and thus
@@ -653,11 +644,6 @@ il_size(il_container *ic)
 			ILTRACE(0,("il: MEM il_init_quantize"));
 			return MK_OUT_OF_MEMORY;
 		}
-	}
-
-    if((ic->display_type == IL_Printer)&& (req_w || req_h)){
-		ic->dest_width = req_w;
-		ic->dest_height = req_h;
 	}
 
 	return 0;
@@ -1869,11 +1855,9 @@ IL_GetImage(const char* image_url,
 #endif /* M12N */
     }        
     
-#if 0
     /* Add the referer to the URL. */
     ic->net_cx->AddReferer(url);
-#endif
-
+    
     ic->is_looping = FALSE;
     ic->url = url;
 	/* Record the fact that we are calling NetLib to load a URL. */
@@ -2196,8 +2180,7 @@ IL_DisplaySubImage(IL_ImageReq *image_req, int x, int y, int x_offset,
                                           width, height);
 #else
             IMGCBIF_DisplayPixmap(img_cx->img_cb, dpy_cx, ic->image, ic->mask,
-                                  x, y, x_offset, y_offset, width, height, 
-                                  ic->dest_width, ic->dest_height);
+                                  x, y, x_offset, y_offset, width, height, ic->dest_width, ic->dest_height);
 #endif /* STANDALONE_IMAGE_LIB */
         }
     }
