@@ -67,8 +67,6 @@ struct PRMJTime {
 /* Some handy constants */
 #define PRMJ_USEC_PER_SEC	1000000L
 #define PRMJ_USEC_PER_MSEC	1000L
-#define PRMJ_MSEC_PER_SEC	1000L
-
 
 /* Return the current local time in micro-seconds */
 extern JSInt64
@@ -76,7 +74,7 @@ PRMJ_Now(void);
 
 /* get the difference between this time zone and  gmt timezone in seconds */
 extern JSInt32
-PRMJ_LocalGMTDifference(int64 t);
+PRMJ_LocalGMTDifference(void);
 
 /* Format a time value into a buffer. Same semantics as strftime() */
 extern size_t
