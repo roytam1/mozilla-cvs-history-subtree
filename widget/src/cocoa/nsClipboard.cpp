@@ -235,8 +235,11 @@ nsClipboard :: PutOnClipboard ( ResType inFlavor, const void* inData, PRInt32 in
   
 #if TARGET_CARBON
   ScrapRef scrap;
-  ::GetCurrentScrap(&scrap);
-  ::PutScrapFlavor( scrap, inFlavor, kScrapFlavorMaskNone, inLen, inData );
+  OSStatus err;
+  err = ::GetCurrentScrap(&scrap);
+  NS_ASSERTION(err == noErr, "GetCurrentScrap returned error");
+  err =::PutScrapFlavor( scrap, inFlavor, kScrapFlavorMaskNone, inLen, inData );
+  NS_ASSERTION(err == noErr, "PutScrapFlavor returned error");
 #else
   long numBytes = ::PutScrap ( inLen, inFlavor, inData );
   if ( numBytes != noErr )
