@@ -33,6 +33,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.MutableTreeNode;
 
 import org.mozilla.webclient.BookmarkEntry;
+import org.mozilla.webclient.UnimplementedException;
 
 public abstract class RDFTreeNode extends ISupportsPeer implements MutableTreeNode
 {
@@ -161,9 +162,7 @@ public Enumeration children()
 
 public boolean getAllowsChildren()
 {
-    boolean result = true;
-
-    return result;
+    throw new UnimplementedException("\nUnimplementedException-----\n API Function RDFTreeNode.getAllowsChildren() has not yet been implemented.\n");
 }
  
 public TreeNode getChildAt(int childIndex)
@@ -264,17 +263,17 @@ public void insert(MutableTreeNode child, int index)
 
 public void remove(int index) 
 {
-
+    throw new UnimplementedException("\nUnimplementedException-----\n API Function RDFTreeNode.remove(int) has not yet been implemented.\n");
 }
 
 public void remove(MutableTreeNode node) 
 {
-
+    throw new UnimplementedException("\nUnimplementedException-----\n API Function RDFTreeNode.remove(MutableTreeNode) has not yet been implemented.\n");
 }
 
 public void removeFromParent() 
 {
-
+    throw new UnimplementedException("\nUnimplementedException-----\n API Function RDFTreeNode.removeFromParent() has not yet been implemented.\n");
 }
 
 public void setParent(MutableTreeNode newParent) 
@@ -286,7 +285,7 @@ public void setParent(MutableTreeNode newParent)
 
 public void setUserObject(Object object) 
 {
-
+    throw new UnimplementedException("\nUnimplementedException-----\n API Function RDFTreeNode.setUserObject(Object) has not yet been implemented.\n");
 }
 
 //
