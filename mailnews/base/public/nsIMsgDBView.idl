@@ -232,7 +232,6 @@ interface nsIMsgDBView : nsISupports
 
     void getURIsForSelection([array, size_is(count)] out string uris, out unsigned long count);
 
-    string generateURIForMsgKey(in nsMsgKey aMsgKey);
     /**
      * temporary, so we can inspect from js
      */

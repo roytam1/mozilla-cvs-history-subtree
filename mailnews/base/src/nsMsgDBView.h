@@ -95,7 +95,8 @@ protected:
   nsresult RestoreSelection(nsMsgKeyArray * aMsgKeyArray);
 
   nsresult GetSelectedIndices(nsUInt32Array *selection);
-  // routines used in building up view
+  nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, nsIMsgFolder *folder, char ** aURI);
+// routines used in building up view
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
   virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
   PRBool GetShowingIgnored() {return (m_viewFlags & nsMsgViewFlagsType::kShowIgnored) != 0;}
@@ -104,6 +105,7 @@ protected:
   nsMsgViewIndex GetIndexForThread(nsIMsgDBHdr *hdr);
   virtual nsresult GetThreadContainingIndex(nsMsgViewIndex index, nsIMsgThread **thread);
   virtual nsresult GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr);
+  virtual nsresult GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **folder);
 
   virtual nsresult InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex);
 

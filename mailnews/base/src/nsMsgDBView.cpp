@@ -245,10 +245,11 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
+nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, nsIMsgFolder *folder, char ** aURI)
 {
+  NS_ENSURE_ARG(folder);
   nsXPIDLCString baseURI;
-  m_folder->GetBaseMessageURI(getter_Copies(baseURI));
+  folder->GetBaseMessageURI(getter_Copies(baseURI));
   nsCAutoString uri;
   uri.Assign(baseURI);
 
@@ -335,7 +336,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
       // get the msgkey for the message
       nsMsgKey msgkey = m_keys.GetAt(startRange);
       nsXPIDLCString uri;
-      rv = GenerateURIForMsgKey(msgkey, getter_Copies(uri));
+      rv = GenerateURIForMsgKey(msgkey, m_folder, getter_Copies(uri));
       NS_ENSURE_SUCCESS(rv,rv);
       mMessengerInstance->OpenURL(uri);
     }
@@ -431,6 +432,13 @@ nsresult nsMsgDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **
   nsresult rv = NS_OK;
   nsMsgKey key = m_keys.GetAt(index);
   return m_db->GetMsgHdrForKey(key, msgHdr);
+}
+
+nsresult nsMsgDBView::GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **aFolder)
+{
+  *aFolder = m_folder;
+  NS_IF_ADDREF(*aFolder);
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
@@ -713,11 +721,16 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
   PRUint32 numIndicies = *length;
   if (!numIndicies) return NS_OK;
 
+  nsCOMPtr <nsIMsgFolder> folder = m_folder;
   char **outArray, **next;
   next = outArray = (char **)nsMemory::Alloc(numIndicies * sizeof(char *));
   if (!outArray) return NS_ERROR_OUT_OF_MEMORY;
-  for (PRUint32 i=0;i<numIndicies;i++) {
-    rv = GenerateURIForMsgKey(m_keys[selection.GetAt(i)],next);
+  for (PRUint32 i=0;i<numIndicies;i++) 
+  {
+    nsMsgViewIndex selectedIndex = selection.GetAt(i);
+    if (!m_folder)
+      GetFolderForViewIndex(selectedIndex, getter_AddRefs(folder));
+    rv = GenerateURIForMsgKey(m_keys[selectedIndex], folder, next);
     NS_ENSURE_SUCCESS(rv,rv);
     if (!*next) return NS_ERROR_OUT_OF_MEMORY;
     next++;
