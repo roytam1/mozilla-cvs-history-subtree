@@ -1757,7 +1757,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
 
       // Don't paint off our cell.
       if (level == maxLevel)
-        aRenderingContext.DrawLine(x - mIndentation, y + mRowHeight / 2, x, y + mRowHeight /2);
+        aRenderingContext.DrawLine(x - mIndentation + 16, y + mRowHeight / 2, x, y + mRowHeight /2);
 
       PRBool clipState;
       aRenderingContext.PopState(clipState);
