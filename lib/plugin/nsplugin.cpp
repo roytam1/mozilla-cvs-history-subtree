@@ -54,6 +54,7 @@ static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID);
 static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
 static NS_DEFINE_IID(kISeekablePluginStreamPeerIID, NS_ISEEKABLEPLUGINSTREAMPEER_IID);
 static NS_DEFINE_IID(kIPluginStreamPeerIID, NS_IPLUGINSTREAMPEER_IID);
+static NS_DEFINE_IID(kIFileUtilitiesIID, NS_IFILEUTILITIES_IID);
 
 ////////////////////////////////////////////////////////////////////////////////
 // THINGS IMPLEMENTED BY THE BROWSER...
@@ -267,6 +268,34 @@ nsPluginManager::SupportsURLProtocol(const char* protocol)
 
 ////////////////////////////////////////////////////////////////////////////////
 // File Utilities Interface
+
+nsFileUtilities::nsFileUtilities(nsISupports* outer)
+    : fProgramPath(NULL)
+{
+    NS_INIT_AGGREGATED(outer);
+}
+
+nsFileUtilities::~nsFileUtilities(void)
+{
+}
+
+NS_IMPL_AGGREGATED(nsFileUtilities);
+
+NS_METHOD
+nsFileUtilities::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
+{
+    if (NULL == aInstancePtr) {
+        return NS_ERROR_NULL_POINTER;
+    }
+    if (aIID.Equals(kIFileUtilitiesIID) || 
+        aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = (void*) this; 
+        AddRef(); 
+        return NS_OK; 
+    } 
+    return NS_NOINTERFACE;
+}
+
 
 NS_METHOD_(const char*)
 nsFileUtilities::GetProgramPath(void)
