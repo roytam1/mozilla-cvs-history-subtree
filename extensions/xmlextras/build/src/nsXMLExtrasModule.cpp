@@ -27,11 +27,7 @@
 #include "nsIAppStartupNotifier.h"
 #include "nsICategoryManager.h"
 #include "nsIObserver.h"
-#include "nsIScriptExternalNameSet.h"
-#include "nsIScriptNameSetRegistry.h"
 #include "nsIScriptNameSpaceManager.h"
-#include "nsIScriptContext.h"
-#include "nsIRegistry.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "nsDOMCID.h"
@@ -63,16 +59,14 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsDefaultSOAPEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTTPSOAPTransport)
 #endif
 
-class nsXMLExtrasNameset : public nsIScriptExternalNameSet {
+class nsXMLExtrasNameset : public nsISupports
+{
 public:
   nsXMLExtrasNameset();
   virtual ~nsXMLExtrasNameset();
 
   // nsISupports
   NS_DECL_ISUPPORTS
-
-  // nsIScriptExternalNameSet
-  NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);
 };
 
 nsXMLExtrasNameset::nsXMLExtrasNameset()
@@ -84,13 +78,12 @@ nsXMLExtrasNameset::~nsXMLExtrasNameset()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsXMLExtrasNameset, nsIScriptExternalNameSet)
+NS_INTERFACE_MAP_BEGIN(nsXMLExtrasNameset)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
 
-NS_IMETHODIMP
-nsXMLExtrasNameset::InitializeClasses(nsIScriptContext* aScriptContext)
-{
-  return NS_OK;
-}
+NS_IMPL_ADDREF(nsXMLExtrasNameset)
+NS_IMPL_RELEASE(nsXMLExtrasNameset)
 
 #define NS_XML_EXTRAS_CID                          \
  { /* 33e569b0-40f8-11d4-9a41-000064657374 */      \
