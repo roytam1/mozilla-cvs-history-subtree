@@ -941,7 +941,7 @@ net_build_http_request (URL_Struct * URL_s,
 	 */
 	switch(URL_s->method)
 	  {
-		HG29399
+		HG29398
 		case URL_MKDIR_METHOD:
 #define MKDIR_WORD "MKDIR "
         	BlockAllocCopy(*command, MKDIR_WORD, 5);
