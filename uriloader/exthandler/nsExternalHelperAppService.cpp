@@ -71,6 +71,7 @@
 #if defined(XP_MAC) || defined (XP_MACOSX)
 #include "nsILocalFileMac.h"
 #include "nsIInternetConfigService.h"
+#include "nsIPref.h"
 #endif // defined(XP_MAC) || defined (XP_MACOSX)
 #ifdef XP_MAC
 #include "nsIAppleFileDecoder.h"
@@ -1434,7 +1435,19 @@ nsresult nsExternalAppHandler::ExecuteDesiredAction()
         // Source and dest dirs should be == so this should just do a rename
         rv = MoveFile(mFinalFileDestination);
         if (NS_SUCCEEDED(rv))
-          rv = OpenWithApplication(nsnull);
+        {
+#if defined(XP_MAC) || defined (XP_MACOSX)
+          PRBool autoDispatch = PR_FALSE;
+          
+          // See if pref enabled to allow automatic helper app dispatch
+          nsCOMPtr<nsIPref> prefService (do_GetService(NS_PREF_CONTRACTID));
+          if (prefService)
+            prefService->GetBoolPref("browser.download.autoDispatch", &autoDispatch);
+  
+          if (autoDispatch)
+#endif
+            rv = OpenWithApplication(nsnull);
+        }
       }
     }
   }

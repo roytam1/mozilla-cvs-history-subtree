@@ -231,17 +231,17 @@ CHBrowserService::CreateChromeWindow(nsIWebBrowserChrome *parent,
 NS_IMETHODIMP
 CHBrowserService::Show(nsIHelperAppLauncher* inLauncher, nsISupports* inContext)
 {
-  PRBool autoHelperDispatch = PR_FALSE;
+  PRBool autoDownload = PR_FALSE;
   
-  // See if pref enabled to allow automatic helper app dispatch on a download
+  // See if pref enabled to allow automatic download
   nsCOMPtr<nsIPref> prefService (do_GetService(NS_PREF_CONTRACTID));
   if (prefService) {
-    prefService->GetBoolPref("browser.download.autoDispatch", &autoHelperDispatch);
+    prefService->GetBoolPref("browser.download.autoDownload", &autoDownload);
   }
   
-  if (autoHelperDispatch) {
+  if (autoDownload) {
     // Pref is enabled so just save the file to disk in download folder
-    // then invoke the default helper app
+    // If browser.download.autoDownload is set to true helper app will be called by uriloader
     // XXX fix me. When we add UI to enable this pref it needs to be clear it carries
     // a security risk
     return inLauncher->LaunchWithApplication(nsnull, PR_FALSE);

@@ -68,5 +68,6 @@ pref("general.useragent.vendorSub", "0.6+");
 pref("network.dir.generate_html", true);
 pref("browser.chrome.favicons", true);
 
-// Default to auto download and helper dispatch disabled
+// Default to auto download enabled but auto helper dispatch disabled
+pref("browser.download.autoDownload", true);
 pref("browser.download.autoDispatch", false);
