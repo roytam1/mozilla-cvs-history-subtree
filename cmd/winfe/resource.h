@@ -2026,6 +2026,7 @@
 #define IDC_ADDBOOK                     2667
 #define IDC_LOGINNAME                   2668
 #define IDC_PASSWORD                    2669
+/*Mail and News has reserved resource ID's 10,0000 to 15,000. */
 #define FIRST_HISTORY_MENU_ID           16384
 #define LAST_HISTORY_MENU_ID            16600
 #define FIRST_HT_MENU_ID                16601
