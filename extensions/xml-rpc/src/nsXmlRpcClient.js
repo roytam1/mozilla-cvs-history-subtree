@@ -125,7 +125,7 @@ nsXmlRpcClient.prototype = {
 
         debug('Do the deed.');
 
-        var input = channel.openInputStream();
+        var input = channel.open(0, 0, 0);
         input = toScriptableStream(input);
         
         var now = new Date()
@@ -220,7 +220,7 @@ nsXmlRpcClient.prototype = {
         var chann = this._getChannel(requestBody);
 
         // And...... call!
-        chann.asyncRead(this, context);
+        chann.asyncOpen(this, context);
     },
 
     // Return a HTTP channel ready for POSTing.
