@@ -73,11 +73,6 @@ char *getTrustString(unsigned int trust)
     return "CKT_NETSCAPE_VALID"; /* not reached */
 }
 
-static const SEC_ASN1Template serialTemplate[] = {
-    { SEC_ASN1_INTEGER, offsetof(CERTCertificate,serialNumber) },
-    { 0 }
-};
-
 static SECStatus
 ConvertCertificate(SECItem *sdder, char *nickname, CERTCertTrust *trust)
 {
@@ -85,14 +80,9 @@ ConvertCertificate(SECItem *sdder, char *nickname, CERTCertTrust *trust)
     CERTCertificate *cert;
     unsigned char sha1_hash[SHA1_LENGTH];
     unsigned char md5_hash[MD5_LENGTH];
-    SECItem *serial = NULL;
 
     cert = CERT_DecodeDERCertificate(sdder, PR_FALSE, nickname);
     if (!cert) {
-	return SECFailure;
-    }
-    serial = SEC_ASN1EncodeItem(NULL,NULL,cert,serialTemplate);
-    if (!serial) {
 	return SECFailure;
     }
 
@@ -111,7 +101,7 @@ ConvertCertificate(SECItem *sdder, char *nickname, CERTCertTrust *trust)
     dumpbytes(cert->derIssuer.data,cert->derIssuer.len);
     printf("END\n");
     printf("CKA_SERIAL_NUMBER MULTILINE_OCTAL\n");
-    dumpbytes(serial->data,serial->len);
+    dumpbytes(cert->serialNumber.data,cert->serialNumber.len);
     printf("END\n");
     printf("CKA_VALUE MULTILINE_OCTAL\n");
     dumpbytes(sdder->data,sdder->len);
@@ -136,7 +126,7 @@ ConvertCertificate(SECItem *sdder, char *nickname, CERTCertTrust *trust)
     dumpbytes(cert->derIssuer.data,cert->derIssuer.len);
     printf("END\n");
     printf("CKA_SERIAL_NUMBER MULTILINE_OCTAL\n");
-    dumpbytes(serial->data,serial->len);
+    dumpbytes(cert->serialNumber.data,cert->serialNumber.len);
     printf("END\n");
     
     printf("CKA_TRUST_SERVER_AUTH CK_TRUST %s\n",
