@@ -2500,8 +2500,7 @@ int StartIB(/*CString parms, WIDGET *curWidget*/)
 	char *fgetsrv;
 	int rv = TRUE;
 	char	olddir[1024];
-	CString curVersion, curLanguage, localePath,
-		strLang, strRegion, strREGION;
+	CString curVersion, localePath,	strLang, strRegion, strREGION;
 
 	componentOrder = 0;
 	rootPath = GetModulePath();
