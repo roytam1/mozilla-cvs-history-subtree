@@ -21,7 +21,7 @@
  * Contributor(s):
  *  Ben Goodger    <ben@mozilla.org>     (Clients, Mail, New Default Browser)
  *  Joe Hewitt     <hewitt@netscape.com> (Set Background)
- *  Blake Ross     <blake@blakeross.com> (Desktop Color)
+ *  Blake Ross     <blake@cs.stanford.edu (Desktop Color, DDE support)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -999,7 +999,7 @@ NS_IMETHODIMP
 nsWindowsShellService::Observe(nsISupports* aObject, const char* aTopic, const PRUnichar* aMessage)
 {
   PRBool isDefault;
-  IsDefaultBrowser(PR_TRUE, &isDefault);
+  IsDefaultBrowser(PR_FALSE, &isDefault);
   if (!isDefault)
     return NS_OK;
 
