@@ -1552,8 +1552,8 @@ nsMenuPopupFrame::HideChain()
   // Stop capturing rollups
   // (must do this during Hide, which happens before the menu item is executed,
   // since this reinstates normal event handling.)
-  if (nsMenuFrame::sDismissalListener)
-    nsMenuFrame::sDismissalListener->Unregister();
+  if (nsMenuFrame::mDismissalListener)
+    nsMenuFrame::mDismissalListener->Unregister();
   
   nsIFrame* frame;
   GetParent(&frame);
@@ -1587,8 +1587,8 @@ nsMenuPopupFrame::DismissChain()
     return NS_OK;
 
   // Stop capturing rollups
-  if (nsMenuFrame::sDismissalListener)
-    nsMenuFrame::sDismissalListener->Unregister();
+  if (nsMenuFrame::mDismissalListener)
+    nsMenuFrame::mDismissalListener->Unregister();
   
   // Get our menu parent.
   nsIFrame* frame;
@@ -1633,7 +1633,7 @@ nsMenuPopupFrame::CreateDismissalListener()
 {
   nsMenuDismissalListener *listener = new nsMenuDismissalListener();
   if (!listener) return NS_ERROR_OUT_OF_MEMORY;
-  nsMenuFrame::sDismissalListener = listener;
+  nsMenuFrame::mDismissalListener = listener;
   NS_ADDREF(listener);
   return NS_OK;
 }
@@ -1957,8 +1957,8 @@ void
 nsMenuPopupFrame::EnableRollup(PRBool aShouldRollup)
 {
   if (!aShouldRollup) {
-    if (nsMenuFrame::sDismissalListener)
-      nsMenuFrame::sDismissalListener->Unregister();
+    if (nsMenuFrame::mDismissalListener)
+      nsMenuFrame::mDismissalListener->Unregister();
   }
   else
     CreateDismissalListener();

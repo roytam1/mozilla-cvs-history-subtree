@@ -443,8 +443,8 @@ nsPopupSetFrame::OpenPopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
 
     // Unregister, but not if we're a tooltip
     if (aEntry->mPopupType != NS_LITERAL_STRING("tooltip") ) {
-      if (nsMenuFrame::sDismissalListener)
-        nsMenuFrame::sDismissalListener->Unregister();
+      if (nsMenuFrame::mDismissalListener)
+        nsMenuFrame::mDismissalListener->Unregister();
     }
     
     // Remove any keyboard navigators
@@ -665,7 +665,7 @@ nsPopupSetFrame::OnDestroyed(nsIContent* aPopupContent)
 void
 nsPopupSetFrame::UpdateDismissalListener(nsIMenuParent* aMenuParent)
 {
-  if (!nsMenuFrame::sDismissalListener) {
+  if (!nsMenuFrame::mDismissalListener) {
     if (!aMenuParent)
        return;
     // Create the listener and attach it to the outermost window.
@@ -674,7 +674,7 @@ nsPopupSetFrame::UpdateDismissalListener(nsIMenuParent* aMenuParent)
   
   // Make sure the menu dismissal listener knows what the current
   // innermost menu popup frame is.
-  nsMenuFrame::sDismissalListener->SetCurrentMenuParent(aMenuParent);
+  nsMenuFrame::mDismissalListener->SetCurrentMenuParent(aMenuParent);
 }
 
 NS_IMETHODIMP
