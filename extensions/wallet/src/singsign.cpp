@@ -1380,7 +1380,7 @@ si_PutReject(const char * passwordRealm, const nsString& userName, PRBool save) 
  * This routine is called only if signon pref is enabled!!!
  */
 PRIVATE void
-si_PutData(const char * passwordRealm, nsVoidArray * signonData, PRBool save) {
+si_PutData(const char *passwordRealm, nsVoidArray *signonData, PRBool save) {
   PRBool added_to_list = PR_FALSE;
   si_SignonURLStruct * url;
   si_SignonUserStruct * user;
@@ -1909,12 +1909,37 @@ si_SaveSignonDataLocked() {
  * Processing Signon Forms *
  ***************************/
 
+PRIVATE PRBool
+si_ExtractRealm(nsIURI *uri, nsCString &realm)
+{
+  nsCAutoString hostPort;
+
+  /* Security check: if URI is of a scheme that doesn't support hostnames,
+   * we have no host to get the signon data from, so we must not attempt to
+   * build a valid realm from the URI (bug 159484) */
+  nsresult rv = uri->GetHostPort(hostPort);
+  if (NS_FAILED(rv) || hostPort.IsEmpty())
+    return PR_FALSE;
+
+  nsCAutoString scheme;
+  rv = uri->GetScheme(scheme);
+  if (NS_FAILED(rv) || scheme.IsEmpty())
+    return PR_FALSE;
+
+  realm = scheme + NS_LITERAL_CSTRING("://") + hostPort;
+  return PR_TRUE;
+}
+
 /* Ask user if it is ok to save the signon data */
 PRIVATE PRBool
-si_OkToSave(const char *passwordRealm, const nsString& userName, nsIDOMWindowInternal* window) {
+si_OkToSave(const char *passwordRealm, const char *legacyRealm,
+            const nsString& userName, nsIDOMWindowInternal* window) {
 
   /* if url/user already exists, then it is safe to save it again */
   if (si_CheckForUser(passwordRealm, userName)) {
+    return PR_TRUE;
+  }
+  if (legacyRealm && si_CheckForUser(legacyRealm, userName)) {
     return PR_TRUE;
   }
 
@@ -1933,6 +1958,9 @@ si_OkToSave(const char *passwordRealm, const nsString& userName, nsIDOMWindowInt
 #endif
 
   if (si_CheckForReject(passwordRealm, userName)) {
+    return PR_FALSE;
+  }
+  if (legacyRealm && si_CheckForReject(legacyRealm, userName)) {
     return PR_FALSE;
   }
 
@@ -1956,8 +1984,8 @@ si_OkToSave(const char *passwordRealm, const nsString& userName, nsIDOMWindowInt
  */
 PRIVATE void
 si_RememberSignonData
-    (nsIPrompt* dialog, const char* passwordRealm, nsVoidArray * signonData,
-     nsIDOMWindowInternal* window)
+    (nsIPrompt* dialog, const char* passwordRealm, const char* legacyRealm,
+     nsVoidArray * signonData, nsIDOMWindowInternal* window)
 {
   int passwordCount = 0;
   int pswd[3];
@@ -1998,7 +2026,11 @@ si_RememberSignonData
     if (j<signonData->Count()) {
       data2 = NS_STATIC_CAST(si_SignonDataStruct*, signonData->ElementAt(j));
 
-      if (si_OkToSave(passwordRealm, data2->value, window)) {
+      if (si_OkToSave(passwordRealm, legacyRealm, data2->value, window)) {
+        // remove legacy password entry if found
+        if (legacyRealm && si_CheckForUser(legacyRealm, data2->value)) {
+          si_RemoveUser(legacyRealm, data2->value, PR_TRUE);
+        }
         Wallet_GiveCaveat(window, nsnull);
         for (j=0; j<signonData->Count(); j++) {
           data2 = NS_STATIC_CAST(si_SignonDataStruct*, signonData->ElementAt(j));
@@ -2074,29 +2106,24 @@ SINGSIGN_RememberSignonData
      nsIDOMWindowInternal* window)
 {
     
-  nsCAutoString strippedRealm;
   nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID);
   if (!ioService) return;
 
-  /* Hacky security check: If address is of a scheme that
-      doesn't support hostnames, we have no host to get the signon data from,
-      so we must not attempt to restore the signon data (bug 159484)
-  */
   nsCOMPtr<nsIURI> uri;
   nsresult result = ioService->NewURI(nsDependentCString(passwordRealm),
                                       nsnull, nsnull, getter_AddRefs(uri));
-  if (NS_FAILED(result)) {
-      return;
-  }
-  nsCAutoString tempHost;
-  result = uri->GetHost(tempHost);
-  if (NS_FAILED(result)) {
-      return;
-  }
+  if (NS_FAILED(result))
+    return;
 
-  ioService->ExtractUrlPart(nsDependentCString(passwordRealm), nsIIOService::url_Host, strippedRealm);
-  if (!strippedRealm.IsEmpty()) {
-    si_RememberSignonData(dialog, strippedRealm.get(), signonData, window);
+  nsCAutoString realm, legacyRealm;
+  if (!si_ExtractRealm(uri, realm))
+    return;
+
+  if (NS_FAILED(uri->GetHost(legacyRealm)))
+    return;
+
+  if (!realm.IsEmpty()) {
+    si_RememberSignonData(dialog, realm.get(), legacyRealm.get(), signonData, window);
   }
 }
 
@@ -2126,8 +2153,7 @@ si_RestoreSignonData(nsIPrompt* dialog, const char* passwordRealm, const PRUnich
    *   first character position
    */
   if (*name == '\\') {
-    correctedName = nsAutoString('\\');
-    correctedName.Append(name);
+    correctedName = NS_LITERAL_STRING("\\") + nsDependentString(name);
   } else {
     correctedName = name;
   }
@@ -2206,28 +2232,26 @@ si_RestoreSignonData(nsIPrompt* dialog, const char* passwordRealm, const PRUnich
 
 PUBLIC void
 SINGSIGN_RestoreSignonData(nsIPrompt* dialog, const char* passwordRealm, const PRUnichar* name, PRUnichar** value, PRUint32 elementNumber) {
-  nsCAutoString strippedRealm;
   nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID);
   if (!ioService) return;
 
-  /* Hacky security check: If address is of a scheme that
-      doesn't support hostnames, we have no host to get the signon data from,
-      so we must not attempt to restore the signon data (bug 159484)
-  */
   nsCOMPtr<nsIURI> uri;
   nsresult result = ioService->NewURI(nsDependentCString(passwordRealm),
                                       nsnull, nsnull, getter_AddRefs(uri));
-  if (NS_FAILED(result)) {
-      return;
-  }
-  nsCAutoString tempHost;
-  result = uri->GetHost(tempHost);
-  if (NS_FAILED(result)) {
-      return;
-  }
+  if (NS_FAILED(result))
+    return;
 
-  ioService->ExtractUrlPart(nsDependentCString(passwordRealm), nsIIOService::url_Host, strippedRealm);
-  si_RestoreSignonData(dialog, (char*)strippedRealm.get(), name, value, elementNumber);
+  nsCAutoString realm;
+  if (!si_ExtractRealm(uri, realm))
+    return;
+  
+  si_RestoreSignonData(dialog, realm.get(), name, value, elementNumber);
+  if (*value == nsnull) {
+    // try the old style host-only key format
+    nsresult rv = uri->GetHost(realm);
+    if (NS_SUCCEEDED(rv))
+      si_RestoreSignonData(dialog, realm.get(), name, value, elementNumber);
+  }
 }
 
 /*
