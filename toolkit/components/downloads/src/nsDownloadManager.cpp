@@ -54,6 +54,7 @@
 #include "nsIWebBrowserPersist.h"
 #include "nsIWindowWatcher.h"
 #include "nsIStringBundle.h"
+#include "nsISupportsPrimitives.h"
 #include "nsCRT.h"
 #include "nsIWindowMediator.h"
 #include "nsIPromptService.h"
@@ -154,6 +155,7 @@ nsDownloadManager::Init()
   if (NS_FAILED(rv)) return rv;
   
   gObserverService->AddObserver(this, "quit-application", PR_FALSE);
+  gObserverService->AddObserver(this, "quit-application-requested", PR_FALSE);
 
   rv = CallGetService(kRDFServiceCID, &gRDFService);
   if (NS_FAILED(rv)) return rv;                                                 
@@ -302,8 +304,6 @@ nsDownloadManager::GetDataSource(nsIRDFDataSource** aDataSource)
 NS_IMETHODIMP
 nsDownloadManager::SaveState()
 {
-  nsresult rv;
-
   nsCOMPtr<nsISupports> supports;
   nsCOMPtr<nsIRDFResource> res;
   nsCOMPtr<nsIRDFInt> intLiteral;
@@ -329,7 +329,7 @@ nsDownloadManager::SaveState()
     }
   }
 
-  return rv;
+  return NS_OK;
 }
 
 nsresult
@@ -871,6 +871,8 @@ NS_IMETHODIMP
 nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUnichar* aData)
 {
   nsresult rv;
+  PRInt32 currDownloadCount = 0;
+
   if (nsCRT::strcmp(aTopic, "oncancel") == 0) {
     nsCOMPtr<nsIProgressDialog> dialog = do_QueryInterface(aSubject);
     nsCOMPtr<nsILocalFile> target;
@@ -895,6 +897,52 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
 
     // Now go and update the datasource so that we "cancel" all paused downloads. 
     SaveState();
+  }
+  else if (nsCRT::strcmp(aTopic, "quit-application-requested") == 0 && 
+           (currDownloadCount = mCurrDownloads.Count())) {
+    nsXPIDLString title, message, quitButton;
+    
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
+    nsCOMPtr<nsIStringBundle> bundle;
+    if (bundleService)
+      rv = bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(bundle));
+    if (bundle) {
+      bundle->GetStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertTitle").get(), getter_Copies(title));    
+
+      nsAutoString countString;
+      countString.AppendInt(currDownloadCount);
+      const PRUnichar* strings[1] = { countString.get() };
+#ifndef XP_MACOSX
+      if (currDownloadCount > 1)
+        bundle->FormatStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertMsgMultiple").get(), strings, 1, getter_Copies(message));
+      else
+        bundle->GetStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertMsg").get(), getter_Copies(message));
+#else
+      if (currDownloadCount > 1)
+        bundle->FormatStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertMsgMacMultiple").get(), strings, 1, getter_Copies(message));
+      else
+        bundle->GetStringFromName(NS_LITERAL_STRING("quitCancelDownloadsAlertMsgMac").get(), getter_Copies(message));
+#endif
+      bundle->FormatStringFromName(NS_LITERAL_STRING("quitCancelDownloadsOKText").get(), strings, 1, getter_Copies(quitButton));
+    }
+
+    // Get Download Manager window, to be parent of alert.
+    nsCOMPtr<nsIWindowMediator> wm = do_GetService(NS_WINDOWMEDIATOR_CONTRACTID, &rv);
+    nsCOMPtr<nsIDOMWindowInternal> dmWindow;
+    if (wm)
+      wm->GetMostRecentWindow(NS_LITERAL_STRING("Download:Manager").get(), getter_AddRefs(dmWindow));
+
+    // Show alert.
+    nsCOMPtr<nsIPromptService> prompter(do_GetService("@mozilla.org/embedcomp/prompt-service;1"));
+    if (prompter) {
+      PRInt32 flags = (nsIPromptService::BUTTON_TITLE_IS_STRING * nsIPromptService::BUTTON_POS_0) + (nsIPromptService::BUTTON_TITLE_CANCEL * nsIPromptService::BUTTON_POS_1);
+      PRBool nothing = PR_FALSE;
+      PRInt32 button;
+      prompter->ConfirmEx(dmWindow, title, message, flags, quitButton.get(), nsnull, nsnull, nsnull, &nothing, &button);
+
+      nsCOMPtr<nsISupportsPRBool> theBool(do_QueryInterface(aSubject));
+      theBool->SetData(button == 1);
+    }
   }
   return NS_OK;
 }
@@ -1093,7 +1141,7 @@ nsDownload::OnStatusChange(nsIWebProgress *aWebProgress,
     if (bundleService)
       rv = bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(bundle));
     if (bundle)
-      bundle->GetStringFromName(NS_LITERAL_STRING("alertTitle").get(), getter_Copies(title));    
+      bundle->GetStringFromName(NS_LITERAL_STRING("downloadErrorAlertTitle").get(), getter_Copies(title));    
 
     // Get Download Manager window, to be parent of alert.
     nsCOMPtr<nsIWindowMediator> wm = do_GetService(NS_WINDOWMEDIATOR_CONTRACTID, &rv);

@@ -98,7 +98,13 @@
         </getter>
       </property>
       
-      <method name="pauseResume"/>
+      <method name="pauseResume">
+        <body>
+        <![CDATA[
+          // Do nothing.
+        ]]>
+        </body>
+      </method>
       
       <constructor>
       <![CDATA[
