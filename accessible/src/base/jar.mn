@@ -1,4 +1,0 @@
-#ifndef MOZ_XUL_APP
-en-US.jar:
-  locale/en-US/global/accessible.properties (/toolkit/locales/en-US/chrome/global/accessible.properties)
-#endif
