@@ -37,7 +37,7 @@ CSRCS=libfont.c
 LIBRARY_NAME=font 
 EXPORTS=nf.h coremem.h 
 REQUIRES=libfont java jtools dbm nspr img layer util pref js htmldlgs \
-    security 
+    security cstream
 JMC_HEADERS=$(JMC_GEN_DIR)\Mcf.h $(JMC_GEN_DIR)\Mcfb.h \
     $(JMC_GEN_DIR)\Mcfmi.h $(JMC_GEN_DIR)\Mcrc.h $(JMC_GEN_DIR)\Mcdoer.h 
 JMC_STUBS=$(JMC_GEN_DIR)\Mcf.c $(JMC_GEN_DIR)\Mcfb.c \
@@ -59,7 +59,9 @@ LINCS=-I$(XPDIST)\public\libfont -I$(XPDIST)\public\java \
     -I$(XPDIST)\public\nspr -I$(XPDIST)\public\img \
     -I$(XPDIST)\public\layer -I$(XPDIST)\public\util \
     -I$(XPDIST)\public\pref -I$(XPDIST)\public\js \
-    -I$(XPDIST)\public\htmldlgs -I$(XPDIST)\public\security 
+    -I$(XPDIST)\public\htmldlgs -I$(XPDIST)\public\security \
+    -I$(XPDIST)\public\cstream
+	
 !endif
 
 !if !defined (MOZ_JAVA)
