@@ -19,6 +19,10 @@
  * 
  * Contributor(s): 
  *   Darin Fisher <darin@netscape.com> (original author)
+ *   Gagan Saksena <gagan@netscape.com>
+ *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   Christopher Blizzard <blizzard@mozilla.org>
+ *   Adrian Havill <havill@redhat.com>
  */
 
 #include "nsHttp.h"

@@ -18,7 +18,8 @@
  * Rights Reserved.
  * 
  * Contributor(s): 
- *   Darin Fisher <darin@netscape.com> (original author)
+ *   Gagan Saksena <gagan@netscape.com> (original author)
+ *   Darin Fisher <darin@netscape.com>
  */
 
 #include "nsISupports.idl"
