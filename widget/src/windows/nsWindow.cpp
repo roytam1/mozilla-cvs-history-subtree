@@ -1999,6 +1999,7 @@ PRBool nsWindow::DispatchKeyEvent(PRUint32 aEventType, WORD aCharCode, UINT aVir
   //printf("Type: %s charCode %d  keyCode %d ",  (aEventType == NS_KEY_UP?"Up":"Down"), event.charCode, event.keyCode);
   //printf("Shift: %s Control %s Alt: %s \n",  (mIsShiftDown?"D":"U"), (mIsControlDown?"D":"U"), (mIsAltDown?"D":"U"));
 
+  event.isMeta   = PR_FALSE;
   event.isShift   = mIsShiftDown;
   event.isControl = mIsControlDown;
   event.isAlt     = mIsAltDown;
@@ -3269,6 +3270,7 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   nsMouseEvent event;
   InitEvent(event, aEventType, aPoint);
 
+  event.isMeta   = PR_FALSE;
   event.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
   event.isControl = IS_VK_DOWN(NS_VK_CONTROL);
   event.isAlt     = IS_VK_DOWN(NS_VK_ALT);
@@ -3700,6 +3702,7 @@ nsWindow::HandleTextEvent(HIMC hIMEContext)
   MapDBCSAtrributeArrayToUnicodeOffsets(&(event.rangeCount),&(event.rangeArray));
 
   event.theText = mIMECompositionUniString;
+  event.isMeta	= PR_FALSE;
   event.isShift	= mIsShiftDown;
   event.isControl = mIsControlDown;
   event.isAlt = mIsAltDown;
