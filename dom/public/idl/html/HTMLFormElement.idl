@@ -1,9 +1,0 @@
-   interface HTMLFormElement : HTMLElement {
-     attribute HTMLCollection  elements;
-     attribute wstring         name;
-     attribute wstring         acceptCharset;
-     attribute wstring         action;
-     attribute wstring         enctype;
-     attribute wstring         method;
-     attribute wstring         target;
-   };
