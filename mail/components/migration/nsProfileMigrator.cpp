@@ -44,6 +44,7 @@
 #include "nsIToolkitProfileService.h"
 
 #include "nsDirectoryServiceDefs.h"
+#include "nsProfileMigrator.h"
 
 #include "NSReg.h"
 #include "nsReadableUtils.h"
@@ -62,31 +63,10 @@
 #endif
 #endif
 
-class nsProfileImport : public nsIProfileMigrator
-{
-public:
-  NS_DECL_NSIPROFILEMIGRATOR
-  NS_DECL_ISUPPORTS
-
-  nsProfileImport() { };
-
-protected:
-  ~nsProfileImport() { };
-
-  /**
-   * Import profiles from ~/.firefox/ or ~/.phoenix/
-   * @return PR_TRUE if any profiles imported.
-   */
-  PRBool ImportRegistryProfiles(const nsACString& aAppName);
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// nsIProfileMigrator
-
-NS_IMPL_ISUPPORTS1(nsProfileImport, nsIProfileMigrator)
+NS_IMPL_ISUPPORTS1(nsProfileMigrator, nsIProfileMigrator)
 
 NS_IMETHODIMP
-nsProfileImport::Migrate(nsIProfileStartup* aStartup)
+nsProfileMigrator::Migrate(nsIProfileStartup* aStartup)
 {
   // we don't do migration, only import
 
@@ -94,7 +74,7 @@ nsProfileImport::Migrate(nsIProfileStartup* aStartup)
 }
 
 NS_IMETHODIMP
-nsProfileImport::Import()
+nsProfileMigrator::Import()
 {
   if (ImportRegistryProfiles(NS_LITERAL_CSTRING("Thunderbird")))
     return NS_OK;
@@ -103,7 +83,7 @@ nsProfileImport::Import()
 }
 
 PRBool
-nsProfileImport::ImportRegistryProfiles(const nsACString& aAppName)
+nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
 {
   nsresult rv;
 
@@ -199,17 +179,14 @@ cleanup:
 
 // Make this into a component
 
-#define NS_THUNDERBIRD_PROFILEIMPORT_CID \
-{ 0xb3c78baf, 0x3a52, 0x41d2, { 0x97, 0x18, 0xc3, 0x19, 0xbe, 0xf9, 0xaf, 0xfc } }
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileImport)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
 
 static const nsModuleComponentInfo components[] =
 {
   { "Profile Importer",
     NS_THUNDERBIRD_PROFILEIMPORT_CID,
     NS_PROFILEMIGRATOR_CONTRACTID,
-    nsProfileImportConstructor },
+    nsProfileMigratorConstructor },
 };
 
-NS_IMPL_NSGETMODULE(nsMailProfileImportModule, components)
+NS_IMPL_NSGETMODULE(nsMailProfileMigratorModule, components)

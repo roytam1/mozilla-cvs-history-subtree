@@ -5,11 +5,11 @@ VPATH=@srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE=mailprofileimport
-LIBRARY_NAME = profileimport
+MODULE=mailprofilemigration
+LIBRARY_NAME = profilemigration
 EXPORT_LIBRARY = 1
 IS_COMPONENT = 1
-MODULE_NAME = nsMailProfileImportModule
+MODULE_NAME = nsMailProfileMigratorModule
 
 REQUIRES = \
 	string \
@@ -19,7 +19,7 @@ REQUIRES = \
 	toolkitcomps \
 	$(NULL)
 
-CPPSRCS = nsProfileImport.cpp
+CPPSRCS = nsProfileMigrator.cpp
 
 EXTRA_DSO_LDOPTS += \
 	$(MOZ_XPCOM_OBSOLETE_LIBS) \
