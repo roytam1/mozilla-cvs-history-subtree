@@ -285,15 +285,19 @@ struct CERTCertificateStr {
      */
     CERTSubjectList *subjectList;
 
+    /* these belong in the static section, but are here to maintain
+     * the structure's integrity
+     */
+    CERTAuthKeyID * authKeyID;  /* x509v3 authority key identifier */
+    PRBool isRoot;              /* cert is the end of a chain */
+
     /* these fields are used by client GUI code to keep track of ssl sockets
      * that are blocked waiting on GUI feedback related to this cert.
      * XXX - these should be moved into some sort of application specific
      *       data structure.  They are only used by the browser right now.
      */
-    struct SECSocketNode *socketlist;
-    int socketcount;
     struct SECSocketNode *authsocketlist;
-    int authsocketcount;
+    int series; /* was int authsocketcount; record the series of the pkcs11ID */
 
     /* This is PKCS #11 stuff. */
     PK11SlotInfo *slot;		/*if this cert came of a token, which is it*/
@@ -367,6 +371,7 @@ struct CERTCertListStr {
 #define CERT_LIST_HEAD(l) ((CERTCertListNode *)PR_LIST_HEAD(&l->list))
 #define CERT_LIST_NEXT(n) ((CERTCertListNode *)n->links.next)
 #define CERT_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
+#define CERT_LIST_EMPTY(l) CERT_LIST_END(CERT_LIST_HEAD(l), l)
 
 struct CERTCrlEntryStr {
     SECItem serialNumber;
@@ -384,6 +389,7 @@ struct CERTCrlStr {
     SECItem nextUpdate;				/* optional for x.509 CRL  */
     CERTCrlEntry **entries;
     CERTCertExtension **extensions;    
+    /* can't add anything there for binary backwards compatibility reasons */
 };
 
 struct CERTCrlKeyStr {
@@ -408,6 +414,7 @@ struct CERTSignedCrlStr {
     SECItem *derCrl;
     PK11SlotInfo *slot;
     CK_OBJECT_HANDLE pkcs11ID;
+    void* opaque; /* do not touch */
 };
 
 
@@ -472,6 +479,23 @@ typedef enum SECCertUsageEnum {
     certUsageStatusResponder = 10,
     certUsageAnyCA = 11
 } SECCertUsage;
+
+typedef PRInt64 SECCertificateUsage;
+
+#define certificateUsageSSLClient              (0x0001)
+#define certificateUsageSSLServer              (0x0002)
+#define certificateUsageSSLServerWithStepUp    (0x0004)
+#define certificateUsageSSLCA                  (0x0008)
+#define certificateUsageEmailSigner            (0x0010)
+#define certificateUsageEmailRecipient         (0x0020)
+#define certificateUsageObjectSigner           (0x0040)
+#define certificateUsageUserCertImport         (0x0080)
+#define certificateUsageVerifyCA               (0x0100)
+#define certificateUsageProtectedObjectSigner  (0x0200)
+#define certificateUsageStatusResponder        (0x0400)
+#define certificateUsageAnyCA                  (0x0800)
+
+#define certificateUsageHighest certificateUsageAnyCA
 
 /*
  * Does the cert belong to the user, a peer, or a CA.

@@ -73,7 +73,11 @@ static char consoleName[] =  {
     "/dev/tty"
 #endif
 #else
+#ifdef XP_OS2
+    "\\DEV\\CON"
+#else
     "CON:"
+#endif
 #endif
 };
 
@@ -680,7 +684,7 @@ static void secu_Newline(FILE *out)
 }
 
 void
-SECU_PrintAsHex(FILE *out, SECItem *data, char *m, int level)
+SECU_PrintAsHex(FILE *out, SECItem *data, const char *m, int level)
 {
     unsigned i;
     int column;
@@ -1886,6 +1890,11 @@ secu_PrintSignerInfo(FILE *out, SEC_PKCS7SignerInfo *info, char *m, int level)
     }
 }
 
+/* callers of this function must make sure that the CERTSignedCrl
+   from which they are extracting the CERTCrl has been fully-decoded.
+   Otherwise it will not have the entries even though the CRL may have
+   some */
+
 void
 SECU_PrintCRLInfo(FILE *out, CERTCrl *crl, char *m, int level)
 {
@@ -1922,7 +1931,8 @@ SECU_PrintCRLInfo(FILE *out, CERTCrl *crl, char *m, int level)
 **   Pretty print a PKCS7 signed data type (up to version 1).
 */
 static int
-secu_PrintPKCS7Signed(FILE *out, SEC_PKCS7SignedData *src, char *m, int level)
+secu_PrintPKCS7Signed(FILE *out, SEC_PKCS7SignedData *src,
+		      const char *m, int level)
 {
     SECAlgorithmID *digAlg;		/* digest algorithms */
     SECItem *aCert;			/* certificate */
@@ -2001,7 +2011,7 @@ secu_PrintPKCS7Signed(FILE *out, SEC_PKCS7SignedData *src, char *m, int level)
 */
 static void
 secu_PrintPKCS7Enveloped(FILE *out, SEC_PKCS7EnvelopedData *src,
-			 char *m, int level)
+			 const char *m, int level)
 {
     SEC_PKCS7RecipientInfo *recInfo;   /* pointer for signer information */
     int iv;
@@ -2032,7 +2042,7 @@ secu_PrintPKCS7Enveloped(FILE *out, SEC_PKCS7EnvelopedData *src,
 static int
 secu_PrintPKCS7SignedAndEnveloped(FILE *out,
 				  SEC_PKCS7SignedAndEnvelopedData *src,
-				  char *m, int level)
+				  const char *m, int level)
 {
     SECAlgorithmID *digAlg;  /* pointer for digest algorithms */
     SECItem *aCert;           /* pointer for certificate */
@@ -2152,7 +2162,7 @@ SECU_PrintCrl (FILE *out, SECItem *der, char *m, int level)
 */
 static void
 secu_PrintPKCS7Encrypted(FILE *out, SEC_PKCS7EncryptedData *src,
-			 char *m, int level)
+			 const char *m, int level)
 {
     SECU_Indent(out, level); fprintf(out, "%s:\n", m);
     SECU_PrintInteger(out, &(src->version), "Version", level + 1);
@@ -2167,7 +2177,7 @@ secu_PrintPKCS7Encrypted(FILE *out, SEC_PKCS7EncryptedData *src,
 */
 static void
 secu_PrintPKCS7Digested(FILE *out, SEC_PKCS7DigestedData *src,
-			char *m, int level)
+			const char *m, int level)
 {
     SECU_Indent(out, level); fprintf(out, "%s:\n", m);
     SECU_PrintInteger(out, &(src->version), "Version", level + 1);
@@ -2188,7 +2198,7 @@ static int
 secu_PrintPKCS7ContentInfo(FILE *out, SEC_PKCS7ContentInfo *src,
 			   char *m, int level)
 {
-    char *desc;
+    const char *desc;
     SECOidTag kind;
     int rv;
 
@@ -2581,7 +2591,6 @@ void
 SECU_PrintPRandOSError(char *progName) 
 {
     char buffer[513];
-    PRErrorCode err    = PR_GetError();
     PRInt32     errLen = PR_GetErrorTextLength();
     if (errLen > 0 && errLen < sizeof buffer) {
         PR_GetErrorText(buffer);

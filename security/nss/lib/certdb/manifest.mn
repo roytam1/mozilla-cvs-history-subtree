@@ -42,9 +42,10 @@ PRIVATE_EXPORTS = \
 	genname.h \
 	xconst.h \
 	certxutl.h \
+	certi.h \
 	$(NULL)
 
-MODULE = security
+MODULE = nss
 
 CSRCS = \
 	alg1485.c \
@@ -61,7 +62,7 @@ CSRCS = \
 	xconst.c \
 	$(NULL)
 
-REQUIRES = security dbm
+REQUIRES = dbm
 
 LIBRARY_NAME = certdb
 
