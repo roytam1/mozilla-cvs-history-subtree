@@ -1026,7 +1026,7 @@ nsImapProtocol::TellThreadToDie(PRBool isSafeToClose)
   if (m_currentServerCommandTagNumber > 0)
   {
     if (TestFlag(IMAP_CONNECTION_IS_OPEN) && m_idle)
-      EndIdle();
+      EndIdle(PR_FALSE);
 
     if (closeNeeded && GetDeleteIsMoveToTrash() &&
         TestFlag(IMAP_CONNECTION_IS_OPEN) && m_outputStream)
@@ -6726,7 +6726,10 @@ void nsImapProtocol::Idle()
   }
 }
 
-void nsImapProtocol::EndIdle()
+// until we can fix the hang on shutdown waiting for server
+// responses, we need to not wait for the server response
+// on shutdown.
+void nsImapProtocol::EndIdle(PRBool waitForResponse /* = PR_TRUE */)
 {
   // clear the async wait - otherwise, we seem to have trouble doing a blocking read
   nsCOMPtr <nsIAsyncInputStream> asyncInputStream = do_QueryInterface(m_inputStream);
@@ -6736,6 +6739,7 @@ void nsImapProtocol::EndIdle()
   if (NS_SUCCEEDED(rv))
   {
     m_idle = PR_FALSE;
+    if (waitForResponse)
     ParseIMAPandCheckForNewMail();
   }
   m_imapMailFolderSink = nsnull;
