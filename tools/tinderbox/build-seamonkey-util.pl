@@ -1586,7 +1586,7 @@ sub run_all_tests {
                           "FAILED", 0, 0);  # Timeout means failure.
     }
 
-    # XpcomGlue test
+    # XpcomGlue test.  Do not run this on MacOSX.
     if ($Settings::XpcomGlueTest and $test_result eq 'success') {
       $test_result =
         FileBasedTest("XpcomGlueTest", $build_dir, $binary_dir,
