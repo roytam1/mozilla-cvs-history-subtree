@@ -222,8 +222,14 @@ nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir,
   PRBool exists = PR_FALSE;
   PRUint32 count = 1;
   nsXPIDLString profileName;
+  nsAutoString profileNameStr(aSuggestedName);
+  
+  nsCOMPtr<nsIFile> newProfileDir;
+  aProfilesDir->Clone(getter_AddRefs(newProfileDir));
+  newProfileDir->Append(profileNameStr);
+  newProfileDir->Exists(&exists);
 
-  do {
+  while (exists) {
     nsAutoString countString;
     countString.AppendInt(count);
     const PRUnichar* strings[2] = { aSuggestedName, countString.get() };
@@ -234,11 +240,11 @@ nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir,
     newProfileDir->Append(profileName);
     newProfileDir->Exists(&exists);
 
+    profileNameStr = profileName.get();
     ++count;
-  } 
-  while (exists);
-  
-  *aUniqueName = ToNewUnicode(profileName);
+  }
+
+  *aUniqueName = ToNewUnicode(profileNameStr);
 }
 
 
