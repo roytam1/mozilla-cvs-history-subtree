@@ -197,28 +197,6 @@ struct nsPaintEvent : public nsGUIEvent {
 };
 
 /**
- * @struct nsMouseScrollEvent
- *
- * @attention NEED DOCS
- */
-struct nsMouseScrollEvent : public nsInputEvent {
-  PRInt32                 deltaLines;
-};
-
-/**
- * Scrollbar event
- * @struct nsScrollbarEvent
- * @deprecated no more real native scrollbars
- */
-struct nsScrollbarEvent : public nsGUIEvent {
-  /**
-   * ranges between scrollbar 0 and (maxRange - thumbSize).
-   * @see nsIScrollbar
-   */
-  PRUint32        position; 
-};
-
-/**
  * Scrollbar event
  * @struct nsScrollPortEvent
  * @note what is this used for???
@@ -288,6 +266,31 @@ struct nsKeyEvent : public nsInputEvent {
   /// indicates whether the event signifies a printable character
   PRBool    isChar;      
 };
+
+
+/**
+ * @struct nsMouseScrollEvent
+ *
+ * @attention NEED DOCS
+ */
+struct nsMouseScrollEvent : public nsInputEvent {
+  PRInt32                 deltaLines;
+};
+
+/**
+ * Scrollbar event
+ * @struct nsScrollbarEvent
+ * @deprecated no more real native scrollbars
+ */
+struct nsScrollbarEvent : public nsGUIEvent {
+  /**
+   * ranges between scrollbar 0 and (maxRange - thumbSize).
+   * @see nsIScrollbar
+   */
+  PRUint32        position; 
+};
+
+
 
 /**
  * IME related events

@@ -77,8 +77,8 @@ nsChildWindow::~nsChildWindow()
 NS_IMETHODIMP nsChildWindow::Init(nsIWindow *aParent,
                                   gfx_coord aX,
                                   gfx_coord aY,
-                                  gfx_width aWidth,
-                                  gfx_height aHeight)
+                                  gfx_dimension aWidth,
+                                  gfx_dimension aHeight)
 {
 
   if (!aParent) {

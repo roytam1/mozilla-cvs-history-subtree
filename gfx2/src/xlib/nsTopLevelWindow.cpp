@@ -80,8 +80,8 @@ nsTopLevelWindow::~nsTopLevelWindow()
 NS_IMETHODIMP nsTopLevelWindow::Init(nsIWindow *aParent,
                                      gfx_coord aX,
                                      gfx_coord aY,
-                                     gfx_width aWidth,
-                                     gfx_height aHeight)
+                                     gfx_dimension aWidth,
+                                     gfx_dimension aHeight)
 {
   mBounds.SetRect(aX, aY, aWidth, aHeight);
   mDepth = 24; // this could be wrong :)
@@ -125,6 +125,13 @@ NS_IMETHODIMP nsTopLevelWindow::Init(nsIWindow *aParent,
   return NS_OK;
 }
 
+
+/* void bringToTop (); */
+NS_IMETHODIMP nsTopLevelWindow::BringToTop()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 /* attribute wstring title; */
 NS_IMETHODIMP nsTopLevelWindow::GetTitle(PRUnichar * *aTitle)
 {
@@ -145,18 +152,24 @@ NS_IMETHODIMP nsTopLevelWindow::SetTitle(const PRUnichar * aTitle)
   return NS_OK;
 }
 
-/* void setIcon (in nsIImage image, in nsIImage mask); */
-NS_IMETHODIMP nsTopLevelWindow::SetIcon(nsIImage *image, nsIImage *mask)
+/* void setIcon (in nsIImage image); */
+NS_IMETHODIMP nsTopLevelWindow::SetIcon(nsIImage *image)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* attribute string windowClass; */
 NS_IMETHODIMP nsTopLevelWindow::GetWindowClass(char * *aWindowClass)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP nsTopLevelWindow::SetWindowClass(const char * aWindowClass)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void setTransparency (in nsIPixmap mask); */
+NS_IMETHODIMP nsTopLevelWindow::SetTransparency(nsIPixmap *mask)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

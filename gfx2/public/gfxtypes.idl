@@ -36,21 +36,7 @@
 typedef float               gfx_dimension;
 
 /**
- * @var typedef gfx_dimension gfx_width
- * @deprecated you should use gfx_dimension
- * @see gfx_dimension
- */
-typedef gfx_dimension       gfx_width;
-
-/**
- * @var typedef gfx_dimension gfx_height
- * @deprecated you should use gfx_dimension
- * @see gfx_dimension
- */
-typedef gfx_dimension       gfx_height;
-
-/**
- * gfx_dimension should be used for x and y coordinates
+ * gfx_coord should be used for x and y coordinates
  * @var typedef float gfx_coord
  */
 typedef float               gfx_coord;
@@ -62,7 +48,7 @@ typedef float               gfx_coord;
 typedef float               gfx_angle;
 
 /**
- * typedef that should be used for angles
+ * typedef that should be used for colors
  * @var typedef unsigned long gfx_color
  */
 typedef unsigned long       gfx_color;

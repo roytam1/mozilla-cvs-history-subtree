@@ -192,10 +192,10 @@ struct nsRect {
   }
 
   nsRect& operator*=(const float aScale) {
-    x = GFXToCoordRound(x * aScale); 
-    y = GFXToCoordRound(y * aScale); 
-    width = GFXToCoordRound(width * aScale); 
-    height = GFXToCoordRound(height * aScale); 
+    x = x * aScale;
+    y = y * aScale;
+    width = width * aScale;
+    height = height * aScale;
     return *this;
   }
 

@@ -36,14 +36,14 @@ nsImage::~nsImage()
   /* destructor code */
 }
 
-/* void init (in gfx_dim aWidth, in gfx_dim aHeight, in gfx_format aFormat); */
-NS_IMETHODIMP nsImage::Init(gfx_dim aWidth, gfx_dim aHeight, gfx_format aFormat)
+/* void init (in gfx_dimension aWidth, in gfx_dimension aHeight, in gfx_format aFormat); */
+NS_IMETHODIMP nsImage::Init(gfx_dimension aWidth, gfx_dimension aHeight, gfx_format aFormat)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* void initFromDrawable (in nsIDrawable aDrawable, in gfx_coord aX, in gfx_coord aY, in gfx_dim aWidth, in gfx_dim aHeight); */
-NS_IMETHODIMP nsImage::InitFromDrawable(nsIDrawable *aDrawable, gfx_coord aX, gfx_coord aY, gfx_dim aWidth, gfx_dim aHeight)
+/* void initFromDrawable (in nsIDrawable aDrawable, in gfx_coord aX, in gfx_coord aY, in gfx_dimension aWidth, in gfx_dimension aHeight); */
+NS_IMETHODIMP nsImage::InitFromDrawable(nsIDrawable *aDrawable, gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -84,14 +84,14 @@ NS_IMETHODIMP nsImage::GetBits(PRUint8 *aBits)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* readonly attribute gfx_dim width; */
-NS_IMETHODIMP nsImage::GetWidth(gfx_dim *aWidth)
+/* readonly attribute gfx_dimension width; */
+NS_IMETHODIMP nsImage::GetWidth(gfx_dimension *aWidth)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* readonly attribute gfx_dim height; */
-NS_IMETHODIMP nsImage::GetHeight(gfx_dim *aHeight)
+/* readonly attribute gfx_dimension height; */
+NS_IMETHODIMP nsImage::GetHeight(gfx_dimension *aHeight)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

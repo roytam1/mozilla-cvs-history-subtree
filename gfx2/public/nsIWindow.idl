@@ -83,8 +83,8 @@ interface nsIWindow : nsISupports
    * @param aHeight the new height expressed in the parent's coordinate system
    * @param aRepaint whether the window should be repainted
    */
-  void resize(in gfx_width aWidth,
-              in gfx_height aHeight,
+  void resize(in gfx_dimension aWidth,
+              in gfx_dimension aHeight,
               in boolean aRepaint);
 
   /**
@@ -98,8 +98,8 @@ interface nsIWindow : nsISupports
    */
   void moveResize(in gfx_coord aX,
                   in gfx_coord aY,
-                  in gfx_width aWidth,
-                  in gfx_height aHeight,
+                  in gfx_dimension aWidth,
+                  in gfx_dimension aHeight,
                   in boolean aRepaint);
 
   /**
@@ -112,8 +112,8 @@ interface nsIWindow : nsISupports
    */
   void getBounds(out gfx_coord aX,
                  out gfx_coord aY,
-                 out gfx_width aWidth,
-                 out gfx_height aHeight);
+                 out gfx_dimension aWidth,
+                 out gfx_dimension aHeight);
 
 
   /**

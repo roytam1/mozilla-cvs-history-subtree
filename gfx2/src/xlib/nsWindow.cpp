@@ -149,8 +149,8 @@ NS_IMETHODIMP nsWindow::Move(gfx_coord aX, gfx_coord aY)
   return NS_OK;
 }
 
-/* void resize (in gfx_width aWidth, in gfx_height aHeight, in boolean aRepaint); */
-NS_IMETHODIMP nsWindow::Resize(gfx_width aWidth, gfx_height aHeight, PRBool aRepaint)
+/* void resize (in gfx_dimension aWidth, in gfx_dimension aHeight, in boolean aRepaint); */
+NS_IMETHODIMP nsWindow::Resize(gfx_dimension aWidth, gfx_dimension aHeight, PRBool aRepaint)
 {
   /* should we set these here or wait until the ConfigureNotify comes in? */
   mBounds.SizeTo(aWidth, aHeight);
@@ -160,8 +160,8 @@ NS_IMETHODIMP nsWindow::Resize(gfx_width aWidth, gfx_height aHeight, PRBool aRep
   return NS_OK;
 }
 
-/* void moveResize (in gfx_coord aX, in gfx_coord aY, in gfx_width aWidth, in gfx_height aHeight, in boolean aRepaint); */
-NS_IMETHODIMP nsWindow::MoveResize(gfx_coord aX, gfx_coord aY, gfx_width aWidth, gfx_height aHeight, PRBool aRepaint)
+/* void moveResize (in gfx_coord aX, in gfx_coord aY, in gfx_dimension aWidth, in gfx_dimension aHeight, in boolean aRepaint); */
+NS_IMETHODIMP nsWindow::MoveResize(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight, PRBool aRepaint)
 {
   /* should we set these here or wait until the ConfigureNotify comes in? */
   mBounds.SetRect(aX, aY, aWidth, aHeight);
@@ -171,8 +171,8 @@ NS_IMETHODIMP nsWindow::MoveResize(gfx_coord aX, gfx_coord aY, gfx_width aWidth,
   return NS_OK;
 }
 
-/* void getBounds (out gfx_coord aX, out gfx_coord aY, out gfx_width aWidth, out gfx_height aHeight); */
-NS_IMETHODIMP nsWindow::GetBounds(gfx_coord *aX, gfx_coord *aY, gfx_width *aWidth, gfx_height *aHeight)
+/* void getBounds (out gfx_coord aX, out gfx_coord aY, out gfx_dimension aWidth, out gfx_dimension aHeight); */
+NS_IMETHODIMP nsWindow::GetBounds(gfx_coord *aX, gfx_coord *aY, gfx_dimension *aWidth, gfx_dimension *aHeight)
 {
   *aX = mBounds.x;
   *aY = mBounds.y;

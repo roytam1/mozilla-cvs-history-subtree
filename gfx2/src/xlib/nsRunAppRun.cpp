@@ -17,7 +17,6 @@
 #include "nsKeyCode.h"
 
 #include "nsIServiceManager.h"
-#include "../../../widget/public/nsIDragSessionXlib.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -206,7 +205,7 @@ nsRunAppRun::HandleMotionNotifyEvent(const XEvent *aEvent, nsWindow *aWindow)
     HandleDragMotionEvent(aEvent, aWindow);
   }
 
-  mevent.widget = aWindow;
+  mevent.window = aWindow;
   mevent.time = 0;
   mevent.point.x = aEvent->xmotion.x;
   mevent.point.y = aEvent->xmotion.y;
@@ -266,7 +265,7 @@ nsRunAppRun::HandleButtonEvent(const XEvent *event, nsWindow *aWindow)
     case 5:
       scrollEvent.deltaLines = (event->xbutton.button == 4) ? -3 : 3;
       scrollEvent.message = NS_MOUSE_SCROLL;
-      scrollEvent.widget = aWindow;
+      scrollEvent.window = aWindow;
       scrollEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
 
       scrollEvent.point.x = event->xbutton.x;
@@ -302,7 +301,7 @@ nsRunAppRun::HandleButtonEvent(const XEvent *event, nsWindow *aWindow)
     break;
   }
 
-  mevent.widget = aWindow;
+  mevent.window = aWindow;
   mevent.point.x = event->xbutton.x;
   mevent.point.y = event->xbutton.y;
   mevent.time = PR_Now();
@@ -363,7 +362,7 @@ nsRunAppRun::HandleExposeEvent(const XEvent *event, nsWindow *aWindow)
 
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
-  pevent.widget = aWindow;
+  pevent.window = aWindow;
   pevent.eventStructType = NS_PAINT_EVENT;
   pevent.rect = dirtyRect;
 
@@ -410,7 +409,7 @@ nsRunAppRun::HandleConfigureNotifyEvent(const XEvent *aEvent, nsWindow *aWindow)
 
   nsSizeEvent sevent;
   sevent.message = NS_SIZE;
-  sevent.widget = aWindow;
+  sevent.window = aWindow;
   sevent.eventStructType = NS_SIZE_EVENT;
   sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
                                   event->xconfigure.width, event->xconfigure.height);
@@ -501,7 +500,7 @@ nsRunAppRun::HandleKeyPressEvent(const XEvent *event, nsWindow *aWindow)
   keyEvent.point.x = 0;
   keyEvent.point.y = 0;
   keyEvent.message = NS_KEY_DOWN;
-  keyEvent.widget = focusWidget;
+  keyEvent.window = focusWidget;
   keyEvent.eventStructType = NS_KEY_EVENT;
 
   //  printf("keysym = %x, keycode = %x, vk = %x\n",
@@ -521,7 +520,7 @@ nsRunAppRun::HandleKeyPressEvent(const XEvent *event, nsWindow *aWindow)
   keyEvent.point.x = 0;
   keyEvent.point.y = 0;
   keyEvent.message = NS_KEY_PRESS;
-  keyEvent.widget = focusWidget;
+  keyEvent.window = focusWidget;
   keyEvent.eventStructType = NS_KEY_EVENT;
 
   focusWidget->DispatchEvent(&keyEvent);
@@ -575,7 +574,7 @@ nsRunAppRun::HandleKeyReleaseEvent(const XEvent *event, nsWindow *aWindow)
   keyEvent.point.x = event->xkey.x;
   keyEvent.point.y = event->xkey.y;
   keyEvent.message = NS_KEY_UP;
-  keyEvent.widget = aWindow;
+  keyEvent.window = aWindow;
   keyEvent.eventStructType = NS_KEY_EVENT;
 
   aWindow->DispatchEvent(&keyEvent);
@@ -589,7 +588,7 @@ nsRunAppRun::HandleFocusInEvent(const XEvent *event, nsWindow *aWindow)
   nsGUIEvent focusEvent;
   
   focusEvent.message = NS_GOTFOCUS;
-  focusEvent.widget  = aWindow;
+  focusEvent.window  = aWindow;
   
   focusEvent.eventStructType = NS_GUI_EVENT;
   
@@ -615,7 +614,7 @@ nsRunAppRun::HandleFocusOutEvent(const XEvent *event, nsWindow *aWindow)
   nsGUIEvent focusEvent;
   
   focusEvent.message = NS_DEACTIVATE;
-  focusEvent.widget  = aWindow;
+  focusEvent.window  = aWindow;
   
   focusEvent.eventStructType = NS_GUI_EVENT;
   
@@ -637,11 +636,11 @@ nsRunAppRun::HandleEnterEvent(const XEvent *event, nsWindow *aWindow)
     HandleDragEnterEvent(event, aWindow);
   }
 
-  enterEvent.widget  = aWindow;
+  enterEvent.window  = aWindow;
   
   enterEvent.time = event->xcrossing.time;
-  enterEvent.point.x = nscoord(event->xcrossing.x);
-  enterEvent.point.y = nscoord(event->xcrossing.y);
+  enterEvent.point.x = gfx_coord(event->xcrossing.x);
+  enterEvent.point.y = gfx_coord(event->xcrossing.y);
   
   enterEvent.message = NS_MOUSE_ENTER;
   enterEvent.eventStructType = NS_MOUSE_EVENT;
@@ -661,11 +660,11 @@ nsRunAppRun::HandleLeaveEvent(const XEvent *event, nsWindow *aWindow)
     HandleDragLeaveEvent(event, aWindow);
   }
 
-  leaveEvent.widget  = aWindow;
+  leaveEvent.window  = aWindow;
   
   leaveEvent.time = event->xcrossing.time;
-  leaveEvent.point.x = nscoord(event->xcrossing.x);
-  leaveEvent.point.y = nscoord(event->xcrossing.y);
+  leaveEvent.point.x = gfx_coord(event->xcrossing.x);
+  leaveEvent.point.y = gfx_coord(event->xcrossing.y);
   
   leaveEvent.message = NS_MOUSE_EXIT;
   leaveEvent.eventStructType = NS_MOUSE_EVENT;
@@ -727,7 +726,7 @@ void nsRunAppRun::HandleSelectionRequestEvent(const XEvent *event, nsWindow *aWi
 {
   nsGUIEvent ev;
 
-  ev.widget = (nsIWindow *)aWindow;
+  ev.window = (nsIWindow *)aWindow;
   ev.nativeMsg = (void *)event;
 
   aWindow->DispatchEvent(&ev);
@@ -739,6 +738,7 @@ void nsRunAppRun::HandleDragMotionEvent(const XEvent *event, nsWindow *aWindow)
   PRBool currentlyDragging = PR_FALSE;
 
 
+#if 0
   nsCOMPtr<nsIDragService> dragService = do_GetService("component://netscape/widget/dragservice", &rv);
   nsCOMPtr<nsIDragSessionXlib> dragServiceXlib;
   if (NS_SUCCEEDED(rv)) {
@@ -751,7 +751,7 @@ void nsRunAppRun::HandleDragMotionEvent(const XEvent *event, nsWindow *aWindow)
   if (currentlyDragging) {
     nsMouseEvent mevent;
     dragServiceXlib->UpdatePosition(event->xmotion.x, event->xmotion.y);
-    mevent.widget = aWindow;
+    mevent.window = aWindow;
     mevent.point.x = event->xmotion.x;
     mevent.point.y = event->xmotion.y;
 
@@ -760,6 +760,7 @@ void nsRunAppRun::HandleDragMotionEvent(const XEvent *event, nsWindow *aWindow)
 
     aWindow->DispatchEvent(&mevent);
   }
+#endif
 }
 
 void nsRunAppRun::HandleDragEnterEvent(const XEvent *event, nsWindow *aWindow)
@@ -769,6 +770,7 @@ void nsRunAppRun::HandleDragEnterEvent(const XEvent *event, nsWindow *aWindow)
 
   nsCOMPtr<nsIDragService> dragService = do_GetService("component://netscape/widget/dragservice", &rv);
 
+#if 0
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIDragSessionXlib> dragServiceXlib;
     dragServiceXlib = do_QueryInterface(dragService);
@@ -779,7 +781,7 @@ void nsRunAppRun::HandleDragEnterEvent(const XEvent *event, nsWindow *aWindow)
 
   if (currentlyDragging) {
     nsMouseEvent enterEvent;
-    enterEvent.widget  = aWindow;
+    enterEvent.window  = aWindow;
   
     enterEvent.point.x = event->xcrossing.x;
     enterEvent.point.y = event->xcrossing.y;
@@ -789,6 +791,7 @@ void nsRunAppRun::HandleDragEnterEvent(const XEvent *event, nsWindow *aWindow)
 
     aWindow->DispatchEvent(&enterEvent);
   }
+#endif
 }
 
 void nsRunAppRun::HandleDragLeaveEvent(const XEvent *event, nsWindow *aWindow)
@@ -798,6 +801,7 @@ void nsRunAppRun::HandleDragLeaveEvent(const XEvent *event, nsWindow *aWindow)
   
   nsCOMPtr<nsIDragService> dragService = do_GetService("component://netscape/widget/dragservice", &rv);
 
+#if 0
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIDragSessionXlib> dragServiceXlib;
     dragServiceXlib = do_QueryInterface(dragService);
@@ -808,7 +812,7 @@ void nsRunAppRun::HandleDragLeaveEvent(const XEvent *event, nsWindow *aWindow)
 
   if (currentlyDragging) {
     nsMouseEvent leaveEvent;
-    leaveEvent.widget  = aWindow;
+    leaveEvent.window  = aWindow;
   
     leaveEvent.point.x = event->xcrossing.x;
     leaveEvent.point.y = event->xcrossing.y;
@@ -818,6 +822,7 @@ void nsRunAppRun::HandleDragLeaveEvent(const XEvent *event, nsWindow *aWindow)
 
     aWindow->DispatchEvent(&leaveEvent);
   }
+#endif
 }
 
 void nsRunAppRun::HandleDragDropEvent(const XEvent *event, nsWindow *aWindow)
@@ -827,6 +832,7 @@ void nsRunAppRun::HandleDragDropEvent(const XEvent *event, nsWindow *aWindow)
 
   nsCOMPtr<nsIDragService> dragService = do_GetService("component://netscape/widget/dragservice", &rv);
 
+#if 0
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIDragSessionXlib> dragServiceXlib;
     dragServiceXlib = do_QueryInterface(dragService);
@@ -837,7 +843,7 @@ void nsRunAppRun::HandleDragDropEvent(const XEvent *event, nsWindow *aWindow)
 
   if (currentlyDragging) {
     nsMouseEvent mevent;
-    mevent.widget = aWindow;
+    mevent.window = aWindow;
     mevent.point.x = event->xbutton.x;
     mevent.point.y = event->xbutton.y;
   
@@ -846,4 +852,5 @@ void nsRunAppRun::HandleDragDropEvent(const XEvent *event, nsWindow *aWindow)
 
     aWindow->DispatchEvent(&mevent);
   }
+#endif
 }

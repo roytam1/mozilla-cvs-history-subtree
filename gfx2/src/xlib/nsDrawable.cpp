@@ -29,8 +29,6 @@
 
 #include "nsCOMPtr.h"
 
-#include <gdk/gdkx.h>
-
 nsGCCache *nsDrawable::sGCCache = new nsGCCache();
 
 NS_IMPL_ISUPPORTS2(nsDrawable, nsIDrawable, nsPIDrawableXlib)

@@ -156,8 +156,8 @@ inline PRInt32 GFXAngleToIntRound(gfx_angle aValue)
  * other... ?
  */
 
-
-inline nscoord NSToCoordRoundExclusive(float aValue)
+#if 0
+inline gfx_coord NSToCoordRoundExclusive(float aValue)
 {
   return ((0.0f <= aValue) ? nscoord(aValue + ROUND_EXCLUSIVE_CONST_FLOAT) :
                              nscoord(aValue - ROUND_EXCLUSIVE_CONST_FLOAT));
@@ -169,7 +169,7 @@ inline PRInt32 NSToIntRoundExclusive(float aValue)
                              PRInt32(aValue - ROUND_EXCLUSIVE_CONST_FLOAT));
 }
 
-
+#endif
 
 
 #endif

@@ -47,7 +47,7 @@ nsPixmap::~nsPixmap()
     ::XFreePixmap(mDisplay, mPixmap);
 }
 
-NS_IMETHODIMP nsPixmap::Init(nsIWindow *aParent, gfx_width width, gfx_height height, gfx_depth depth)
+NS_IMETHODIMP nsPixmap::Init(nsIWindow *aParent, gfx_dimension width, gfx_dimension height, gfx_depth depth)
 {
   mBounds.SizeTo(width, height);
   mDepth = depth;

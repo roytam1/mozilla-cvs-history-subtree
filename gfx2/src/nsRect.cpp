@@ -170,10 +170,10 @@ void nsRect::Deflate(const nsMargin &aMargin)
 // scale the rect but round to smallest containing rect
 nsRect& nsRect::ScaleRoundOut(const float aScale) 
 {
-  gfx_coord right = NSToCoordCeil(float(x + width) * aScale);
-  gfx_coord bottom = NSToCoordCeil(float(y + height) * aScale);
-  x = NSToCoordFloor(float(x) * aScale);
-  y = NSToCoordFloor(float(y) * aScale);
+  gfx_coord right = GFXCoordCeil((x + width) * aScale);
+  gfx_coord bottom = GFXCoordCeil((y + height) * aScale);
+  x = GFXCoordFloor(x * aScale);
+  y = GFXCoordFloor(y * aScale);
   width = (right - x);
   height = (bottom - y);
   return *this;
@@ -182,10 +182,10 @@ nsRect& nsRect::ScaleRoundOut(const float aScale)
 // scale the rect but round to largest contained rect
 nsRect& nsRect::ScaleRoundIn(const float aScale) 
 {
-  gfx_coord right = NSToCoordFloor(float(x + width) * aScale);
-  gfx_coord bottom = NSToCoordFloor(float(y + height) * aScale);
-  x = NSToCoordCeil(float(x) * aScale);
-  y = NSToCoordCeil(float(y) * aScale);
+  gfx_coord right = GFXCoordFloor((x + width) * aScale);
+  gfx_coord bottom = GFXCoordFloor((y + height) * aScale);
+  x = GFXCoordCeil(x * aScale);
+  y = GFXCoordCeil(y * aScale);
   width = (right - x);
   height = (bottom - y);
   return *this;

@@ -227,7 +227,7 @@ NS_IMETHODIMP nsRegion::GetBoundingBox(gfx_coord *aX, gfx_coord *aY, gfx_dimensi
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRegion::Offset(gfx_coord aXOffset, gfx_coord aYOffset)
+NS_IMETHODIMP nsRegion::OffsetBy(gfx_coord aXOffset, gfx_coord aYOffset)
 {
   if (mRegion) {
     ::XOffsetRegion(mRegion, GFXCoordToIntRound(aXOffset), GFXCoordToIntRound(aYOffset));

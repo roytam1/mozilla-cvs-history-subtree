@@ -56,8 +56,8 @@ interface nsIChildWindow : nsISupports
   void init(in nsIWindow aParent,
             in gfx_coord aX,
             in gfx_coord aY,
-            in gfx_width aWidth,
-            in gfx_height aHeight);
+            in gfx_dimension aWidth,
+            in gfx_dimension aHeight);
 
 
 

@@ -47,8 +47,8 @@ interface nsIPixmap : nsISupports
    * @param aDepth   the bit depth to create the pixmap at.
    */
   void init(in nsIWindow aParent,
-            in gfx_width aWidth,
-            in gfx_height aHeight,
+            in gfx_dimension aWidth,
+            in gfx_dimension aHeight,
             in gfx_depth aDepth);
 };
 
