@@ -161,6 +161,30 @@ nsJVMMgr::NotifyJVMStatusChange(nsJVMError error)
 
 
 ///////////////////////////LiveConnect callbacks//////////////////////////////////////////////////////
+
+template <class T>
+class ThreadLocalStorage {
+public:
+	ThreadLocalStorage(PRThreadPrivateDTOR dtor) : mIndex(0), mValid(PR_FALSE)
+	{
+		mValid = (PR_NewThreadPrivateIndex(&mIndex, dtor) == PR_SUCCESS);
+	}
+	
+	void set(T value)
+	{
+		if (mValid) PR_SetThreadPrivate(mIndex, value);
+	}
+	
+	T get()
+	{
+		return (T) (mValid ? PR_GetThreadPrivate(mIndex) : 0);
+	}
+
+private:
+	PRUintn mIndex;
+	PRBool mValid;
+};
+
 PR_BEGIN_EXTERN_C
 
 #include "jscntxt.h"
@@ -219,6 +243,12 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
     return cx;
 }
 
+	static void PR_CALLBACK detach_jsjava_thread_state(void* env)
+	{
+		JSJavaThreadState *jsj_env = (JSJavaThreadState*)env;
+		JSJ_DetachCurrentThreadFromJava(jsj_env);
+	}
+
 /*
 ** This callback is called to map a JSContext to a JSJavaThreadState which
 ** is a wrapper around JNIEnv. Hence this callback essentially maps a JSContext
@@ -235,8 +265,13 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
         *errp = strdup("ET_InitMoja(0) failed.");
         return NULL;
     }
+    
+    static ThreadLocalStorage<JSJavaThreadState*> localThreadState(&detach_jsjava_thread_state);
+    JSJavaThreadState* jsj_env = localThreadState.get();
+	if (jsj_env != NULL)
+		return jsj_env;
+    
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
-
     if (pJVMMgr != NULL) {
         if (pJVMMgr->GetJSJavaVM() == NULL)
         {
@@ -246,7 +281,10 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
         pJVMMgr->Release();
     }
 
-    return JSJ_AttachCurrentThreadToJava(pJVMMgr->GetJSJavaVM(), NULL, NULL);
+    jsj_env = JSJ_AttachCurrentThreadToJava(pJVMMgr->GetJSJavaVM(), NULL, NULL);
+    localThreadState.set(jsj_env);
+    
+    return jsj_env;
 }
 
 /*
@@ -1106,12 +1144,26 @@ JVM_GetJavaVM(void)
     return jnijvm;
 }
 
+static void PR_CALLBACK detach_JNIEnv(void* env)
+{
+	JNIEnv* jenv = (JNIEnv*)env;
+	JavaVM* vm = NULL;
+	jenv->GetJavaVM(&vm);
+	vm->DetachCurrentThread();
+}
+
 PR_IMPLEMENT(JNIEnv*)
 JVM_GetJNIEnv(void)
 {
-    JNIEnv* env = NULL;
+	/* Use NSPR thread private data to manage the per-thread JNIEnv* association. */
+	static ThreadLocalStorage<JNIEnv*> localEnv(&detach_JNIEnv);
+
+    JNIEnv* env = localEnv.get();
+	if (env != NULL)
+		return env;
+
     nsIJVMPlugin* jvm = GetRunningJVM();
-    nsIJNIPlugin* jnijvm;
+    nsIJNIPlugin* jnijvm = NULL;
     if (jvm) {
         if (jvm->QueryInterface(kIJNIPluginIID, (void**)&jnijvm) == NS_OK) {
             env = jnijvm->GetJNIEnv();
@@ -1119,6 +1171,10 @@ JVM_GetJNIEnv(void)
         }
         jvm->Release();
     }
+
+	/* Associate the JNIEnv with the current thread. */
+	localEnv.set(env);
+	
     return env;
 }
 
