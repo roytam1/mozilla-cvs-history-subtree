@@ -1205,6 +1205,13 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
         return NS_OK;
     }
 
+    //-- Some callers do not allow loading javascript: or data: URLs
+    if ((aFlags & nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA) &&
+        (targetScheme.Equals("javascript") || targetScheme.Equals("data")))
+    {
+       return NS_ERROR_DOM_BAD_URI;
+    }
+
     //-- If the schemes don't match, the policy is specified in this table.
     enum Action { AllowProtocol, DenyProtocol, PrefControlled, ChromeProtocol };
     static const struct
