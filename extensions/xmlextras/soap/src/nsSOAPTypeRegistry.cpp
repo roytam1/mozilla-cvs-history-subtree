@@ -78,7 +78,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddType(nsISOAPType *aType)
   nsAutoString typeID;
   nsAutoString schemaID;
   aType->GetTypeID(typeID);
-  aType->GetSchemaID(typeID);
+  aType->GetSchemaID(schemaID);
   nsStringKey typeKey(typeID);
   nsStringKey schemaKey(schemaID);
   if (mTypeIDs->Exists(&typeKey) ||
