@@ -72,7 +72,7 @@ public CurrentPageImpl(WrapperFactory yourFactory,
     super(yourFactory, yourBrowserControl);
     // force the class to be loaded, thus loading the JNI library
     if (!domInitialized) {
-        DOMAccessor.initialize();
+        //        DOMAccessor.initialize();
     }
 }
 
