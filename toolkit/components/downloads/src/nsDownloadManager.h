@@ -97,7 +97,9 @@ protected:
   nsresult GetInternalListener(nsIDownloadProgressListener** aListener);
   nsresult PauseResumeDownload(const PRUnichar* aPath, PRBool aPause);
   nsresult RemoveDownload(nsIRDFResource* aDownload);
-  nsresult OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent);
+
+  static void     OpenTimerCallback(nsITimer* aTimer, void* aClosure);
+  static nsresult OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownload, nsIDOMWindow* aParent);
 
   PRBool   NeedsUIUpdate() { return mListener != nsnull; }
   PRInt32  GetRetentionBehavior();
@@ -108,8 +110,16 @@ private:
   nsCOMPtr<nsIRDFContainer> mDownloadsContainer;
   nsCOMPtr<nsIRDFContainerUtils> mRDFContainerUtils;
   nsCOMPtr<nsIStringBundle> mBundle;
+  nsCOMPtr<nsITimer> mDMOpenTimer;
   PRInt32 mBatches;
   nsHashtable mCurrDownloads;
+  
+  enum { 
+    kDownloadWindowCacheDelay = 2000  // The delay before the Download Manager 
+                                      // window pops up after a link, to prevent
+                                      // the window from showing if the download
+                                      // is instantaneous (e.g. from cache)
+  };
 
   friend class nsDownload;
 };

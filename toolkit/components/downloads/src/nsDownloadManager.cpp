@@ -61,6 +61,7 @@
 #include "nsIObserverService.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
+#include "nsVoidArray.h"
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -839,7 +840,17 @@ nsDownloadManager::GetDatasource(nsIRDFDataSource** aDatasource)
 NS_IMETHODIMP
 nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
 {
-  // 1). Retrieve the download object for the supplied path. 
+  // 1). First check to see if we should open at all, based on the user's
+  //     preferences. 
+  PRBool showDM = PR_TRUE;
+  nsCOMPtr<nsIPrefBranch> pref(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  if (pref)
+    pref->GetBoolPref("browser.download.showWhenStarting", &showDM);
+
+  if (!showDM)
+    return NS_OK;
+
+  // 2). Retrieve the download object for the supplied path. 
   nsStringKey key(aPath);
   if (!mCurrDownloads.Exists(&key))
     return NS_ERROR_FAILURE;
@@ -850,12 +861,50 @@ nsDownloadManager::Open(nsIDOMWindow* aParent, const PRUnichar* aPath)
   if (!download)
     return NS_ERROR_FAILURE;
 
-  // 2). Update the DataSource. 
+  // 3). Update the DataSource. 
   AssertProgressInfoFor(aPath);
 
-  // 3). Look for an existing Download Manager window, if we find one we just tell it that a new 
-  // download has begun (we don't focus, that's annoying), otherwise we need to open the window. 
-  return OpenDownloadManager(PR_FALSE, download, aParent);
+  nsVoidArray* params = new nsVoidArray();
+  if (!params)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  params->AppendElement((void*)aParent);
+  params->AppendElement((void*)internalDownload);
+
+  // 4). Look for an existing Download Manager window, if we find one we just 
+  //     tell it that a new download has begun (we don't focus, that's 
+  //     annoying), otherwise we need to open the window. We do this on a timer 
+  //     so that we can see if the download has already completed, if so, don't 
+  //     bother opening the window. 
+  mDMOpenTimer = do_CreateInstance("@mozilla.org/timer;1");
+  return mDMOpenTimer->InitWithFuncCallback(OpenTimerCallback, 
+                                       (void*)params, 
+                                       kDownloadWindowCacheDelay, 
+                                       nsITimer::TYPE_ONE_SHOT);
+}
+
+void
+nsDownloadManager::OpenTimerCallback(nsITimer* aTimer, void* aClosure)
+{
+  nsVoidArray* params = (nsVoidArray*)aClosure;
+  nsIDOMWindow* parent = (nsIDOMWindow*)params->ElementAt(0);
+  nsDownload* download = (nsDownload*)params->ElementAt(1);
+  
+  PRInt32 complete;
+  download->GetPercentComplete(&complete);
+  
+  // We only show the download window if the download is taking more than a non-tiny
+  // amount of time to complete. 
+  if (complete < 100) {
+    PRBool focusDM = PR_FALSE;
+    nsCOMPtr<nsIPrefBranch> pref(do_GetService(NS_PREFSERVICE_CONTRACTID));
+    if (pref)
+      pref->GetBoolPref("browser.download.focusWhenStarting", &focusDM);
+
+    nsDownloadManager::OpenDownloadManager(focusDM, download, parent);
+  }
+
+  delete params;
 }
 
 nsresult
@@ -884,7 +933,13 @@ nsDownloadManager::OpenDownloadManager(PRBool aShouldFocus, nsIDownload* aDownlo
     // pass the datasource to the window
     nsCOMPtr<nsISupportsArray> params;
     NS_NewISupportsArray(getter_AddRefs(params));
-    params->AppendElement(mDataSource);
+
+    // I love static members. 
+    nsCOMPtr<nsIDownloadManager> dlMgr(do_GetService("@mozilla.org/download-manager;1"));
+    nsCOMPtr<nsIRDFDataSource> ds;
+    dlMgr->GetDatasource(getter_AddRefs(ds));
+
+    params->AppendElement(ds);
     params->AppendElement(aDownload);
     
     nsCOMPtr<nsIDOMWindow> newWindow;

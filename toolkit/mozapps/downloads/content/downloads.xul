@@ -113,22 +113,42 @@
   </vbox>
   
   <popup id="downloadContextMenu" onpopupshowing="return buildContextMenu(event);"/>
-  
+
   <vbox id="downloadView" flex="1" style="overflow: auto;"
-        
         datasources="rdf:null" ref="NC:DownloadsRoot"
         ondragover="nsDragAndDrop.dragOver(event, gDownloadDNDObserver);"
         ondragdrop="nsDragAndDrop.drop(event, gDownloadDNDObserver);">
     <template>
       <rule>
-          <download uri="rdf:*" context="downloadContextMenu"
-                    image="moz-icon:rdf:http://home.netscape.com/NC-rdf#File"
-                    animated="rdf:http://home.netscape.com/NC-rdf#DownloadAnimated"
-                    target="rdf:http://home.netscape.com/NC-rdf#Name"
-                    progress="rdf:http://home.netscape.com/NC-rdf#ProgressPercent"
-                    state="rdf:http://home.netscape.com/NC-rdf#DownloadState"
-                    status="rdf:http://home.netscape.com/NC-rdf#DownloadStatus"
-                    file="rdf:http://home.netscape.com/NC-rdf#File"/>
+        <conditions>
+          <content uri="?uri"/>
+          <member container="?uri" child="?download"/>
+          <triple subject="?download"
+                  predicate="http://home.netscape.com/NC-rdf#File"
+                  object="?file"/>
+          <triple subject="?download"   
+                  predicate="http://home.netscape.com/NC-rdf#Name"
+                  object="?target"/>
+          <triple subject="?download"   
+                  predicate="http://home.netscape.com/NC-rdf#DownloadState"
+                  object="?state"/>
+        </conditions>
+        <bindings>
+          <binding subject="?download"
+                   predicate="http://home.netscape.com/NC-rdf#DownloadAnimated"
+                   object="?animated"/>
+          <binding subject="?download"
+                   predicate="http://home.netscape.com/NC-rdf#DownloadStatus"
+                   object="?status"/>
+          <binding subject="?download"
+                   predicate="http://home.netscape.com/NC-rdf#ProgressPercent"
+                   object="?progress-percent"/>
+        </bindings>            
+        <action>
+          <download uri="?download" context="downloadContextMenu"
+                    image="moz-icon:?file" file="?file" target="?target" state="?state"
+                    animated="?animated" status="?status" progress="?progress-percent"/>
+        </action>
       </rule>
     </template>
   </vbox>

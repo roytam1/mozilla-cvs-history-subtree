@@ -367,7 +367,6 @@ function Shutdown()
 {
   gDownloadManager.listener = null;
 
-  // Save the status messages.
   saveStatusMessages();
   
   // Assert the current progress for all the downloads in case the window is reopened
@@ -381,6 +380,8 @@ function Shutdown()
   observerService.removeObserver(gDownloadObserver, "dl-start");  
 }
 
+// Saves the status messages of paused downloads so that when the window is reopened
+// in the same session the progress meter and other UI is up-to-date.
 function saveStatusMessages()
 {
   gDownloadManager.startBatchUpdate();
@@ -393,8 +394,7 @@ function saveStatusMessages()
   
   for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
     var currItem = gDownloadsView.childNodes[i];
-    if (currItem.localName == "download" && 
-        currItem.getAttribute("state") == "4")
+    if (currItem.localName == "download" && currItem.paused)
       setRDFProperty(currItem.id, "DownloadStatus", 
                      currItem.getAttribute("status-internal"));
   }
@@ -406,7 +406,7 @@ function saveStatusMessages()
 // View Context Menus
 var gContextMenus = [ 
   ["menuitem_pause", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"],
-  ["menuitem_open", "menuitem_show", "menuseparator_properties", "menuitem_properties"],
+  ["menuitem_open", "menuitem_show", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_retry", "menuitem_remove", "menuseparator_properties", "menuitem_properties"],
   ["menuitem_resume", "menuitem_cancel", "menuseparator_properties", "menuitem_properties"]
@@ -487,10 +487,7 @@ var gDownloadViewController = {
       var canCleanUp = false;
       for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
         var currDownload = gDownloadsView.childNodes[i];
-        if (currDownload.localName == "download" &&
-            (currDownload.getAttribute("state") != "0" && 
-             currDownload.getAttribute("state") != "-1" && 
-             currDownload.getAttribute("state") != "4"))
+        if (currDownload.localName == "download" && currDownload.removable)
           canCleanUp = true;
       }
       

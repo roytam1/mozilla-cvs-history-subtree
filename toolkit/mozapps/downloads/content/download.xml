@@ -66,6 +66,13 @@
         ]]>
         </body>
       </method>
+      <property name="paused">
+        <getter>
+        <![CDATA[
+          return this.getAttribute("state") == "4";
+        ]]>
+        </getter>
+      </property>
       <property name="openable">
         <getter>
         <![CDATA[
@@ -224,6 +231,10 @@
             aDownload.fireEvent('animated');
             return;
           }
+
+          // Don't even bother if we're going away. 
+          if (!aContent.ownerDocument)
+            return;
             
           aDownload._adlStep += aDownload._adl_kIncrement;
           aContent.setAttribute("style", "-moz-opacity: " + aDownload._adlStep + "!important;");
