@@ -31,7 +31,6 @@
  * --------------------------------------------------------------------
  */
 #include <fcntl.h>
-#include <errno.h>
 
 #if defined(XP_WIN)
 #include <io.h>
@@ -39,7 +38,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 
 #include "reg.h"

@@ -41,9 +41,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
-#include <errno.h>
 
 #ifdef SUNOS4
   #include <unistd.h>  /* for SEEK_SET */
@@ -52,26 +50,14 @@
 #include "reg.h"
 #include "NSReg.h"
 
+#if defined(XP_UNIX)
 #ifndef MAX_PATH
-#if defined(XP_WIN) || defined(XP_OS2)
-#define MAX_PATH _MAX_PATH
-#endif
-#ifdef XP_UNIX
-#if defined(HPUX) || defined(SCO)
-/*
-** HPUX: PATH_MAX is defined in <limits.h> to be 1023, but they
-**       recommend that it not be used, and that pathconf() be
-**       used to determine the maximum at runtime.
-** SCO:  This is what MAXPATHLEN is set to in <arpa/ftp.h> and
-**       NL_MAXPATHLEN in <nl_types.h>.  PATH_MAX is defined in
-**       <limits.h> to be 256, but the comments in that file
-**       claim the setting is wrong.
-*/
 #define MAX_PATH 1024
-#else
-#define MAX_PATH PATH_MAX
 #endif
-#endif
+#elif defined(XP_WIN)
+#include <windows.h>
+#elif defined(XP_MAC)
+#define MAX_PATH 512
 #endif
 
 
