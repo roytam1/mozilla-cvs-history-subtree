@@ -938,7 +938,11 @@ nsImapUrl::GetURI(char** aURI)
     {
         *aURI = nsnull;
         PRUint32 key = m_listOfMessageIds ? atoi(m_listOfMessageIds) : 0;
-        return nsBuildImapMessageURI(m_file, key, aURI);
+		nsXPIDLCString theFile;
+		// mscott --> this is probably wrong (the part about getting the file part)
+		// we may need to extract it from a different part of the uri.
+		GetFileName(getter_Copies(theFile));
+        return nsBuildImapMessageURI(theFile, key, aURI);
     }
     return rv;
 }
