@@ -101,7 +101,7 @@ private:
 
 // ее funcs
 			OSErr				InitCodeResource(NPNetscapeFuncs * funcs, _np_handle* handle);
-			void				CloseCodeResource();
+			void				CloseCodeResource(_np_handle* handle = NULL);
 			void				ResetPlugFuncTable();
 			void				OpenPluginResourceFork(Int16 inPrivileges);
 			
@@ -346,7 +346,7 @@ CPluginHandler::CPluginHandler(FSSpec& plugFile)
 
 CPluginHandler::~CPluginHandler()			// This code never gets called
 {
-	CloseCodeResource();
+	// CloseCodeResource();
 	
 	if (fFile)
 		delete fFile;
@@ -422,19 +422,21 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 			// PCB:  Let's factor this into an XP function, please!
 			nsFactoryProc nsGetFactory = (nsFactoryProc) PR_FindSymbol(fLibrary, "NSGetFactory");
 			if (nsGetFactory != NULL) {
-				nsresult res = nsPluginError_NoError;
+				nsresult res = NS_OK;
 			    if (thePluginManager == NULL) {
 			    	// For now, create the plugin manager on demand.
 			        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 			        res = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
-			    	ThrowIf_(res != nsPluginError_NoError || thePluginManager == NULL);
+			    	ThrowIf_(res != NS_OK || thePluginManager == NULL);
 			    }
 				static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 				nsIPlugin* plugin = NULL;
 				res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
-			    ThrowIf_(res != nsPluginError_NoError || plugin == NULL);
+			    ThrowIf_(res != NS_OK || plugin == NULL);
+			    // beard: establish the primary reference.
+			    plugin->AddRef();
 			    res = plugin->Initialize(thePluginManager);
-			    ThrowIf_(res != nsPluginError_NoError);
+			    ThrowIf_(res != NS_OK);
 				handle->userPlugin = plugin;
 			} else {
 #ifndef NSPR20
@@ -482,7 +484,7 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 }
 
 // Dispose of the code
-void CPluginHandler::CloseCodeResource()
+void CPluginHandler::CloseCodeResource(_np_handle* handle)
 {
 	// Already unloaded?
 	if (fRefCount == 0)
@@ -492,7 +494,14 @@ void CPluginHandler::CloseCodeResource()
 	fRefCount--;
 	if (fRefCount > 0)
 		return;
-	
+
+	if (handle != NULL) {
+		nsIPlugin* userPlugin = handle->userPlugin;
+		if (userPlugin != NULL) {
+			userPlugin->Release();
+			handle->userPlugin = NULL;
+		}
+	} else
 	if (fUnloadFunc != NULL)
 		CallNPP_ShutdownProc(fUnloadFunc);
 
@@ -868,8 +877,7 @@ NPPluginFuncs * FE_LoadPlugin(void *plugin, NPNetscapeFuncs * funcs, struct _np_
 
 void FE_UnloadPlugin(void *plugin, struct _np_handle* handle)
 {
-#pragma unused(handle)	// PCB: for now.
-	((CPluginHandler*)plugin)->CloseCodeResource();
+	((CPluginHandler*)plugin)->CloseCodeResource(handle);
 }
 
 //
