@@ -1262,23 +1262,21 @@ BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, N
 
   // if there is only one item being dragged (or, if items are contiguous),
   // prevent drops which would not affect the final order
-  if (haveCommonParent)
+  if (haveCommonParent && (commonDragParent == proposedParent))
   {
-    // are we contiguous?
-    // XXX bail for now if > 1 being dragged
+    // XXX bail for now if > 1 being dragged. For the correct feedback when > 1 item is
+    // selected, we should reject drags when the source items are contiguous (under the
+    // same parent), and the target is within their range.
     if ([draggedItems count] == 1)
     {
       BookmarkItem* draggedItem = [draggedItems objectAtIndex:0];
       nsCOMPtr<nsIContent> parentContent;
       [draggedItem contentNode]->GetParent(*getter_AddRefs(parentContent));
-      if (parentContent)
+      PRInt32 childIndex;
+      if (parentContent && NS_SUCCEEDED(parentContent->IndexOf([draggedItem contentNode], childIndex)))
       {
-        PRInt32 childIndex;
-        if (NS_SUCCEEDED(parentContent->IndexOf([draggedItem contentNode], childIndex)))
-        {
-          if (childIndex == index || childIndex + 1 == index)
-            return false;
-        }
+        if (childIndex == index || (childIndex + 1) == index)
+          return false;
       }
     }
   }

@@ -45,7 +45,7 @@
     contentIds = [pboard propertyListForType: @"MozBookmarkType"];
     if (contentIds) {
       for (unsigned int i = 0; i < [contentIds count]; ++i) {
-        BookmarkItem* item = [BookmarksService::gDictionary objectForKey: [contentIds objectAtIndex:i]];
+        BookmarkItem* item = BookmarksService::GetWrapperFor([[contentIds objectAtIndex:i] unsignedIntValue]);
         nsCOMPtr<nsIDOMElement> bookmarkElt = do_QueryInterface([item contentNode]);
         BookmarksService::DeleteBookmark(bookmarkElt);
       }

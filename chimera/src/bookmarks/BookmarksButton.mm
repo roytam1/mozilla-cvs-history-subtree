@@ -308,4 +308,25 @@
                     event: aEvent pasteboard: pboard source: self slideBack: YES];
 }
 
+
+- (void)draggedImage:(NSImage *)anImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)operation
+{
+  if (operation == NSDragOperationDelete)
+  {
+    NSArray* contentIds = nil;
+    NSPasteboard* pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+    contentIds = [pboard propertyListForType: @"MozBookmarkType"];
+    if (contentIds)
+    {
+      for (unsigned int i = 0; i < [contentIds count]; ++i)
+      {
+        BookmarkItem* item = BookmarksService::GetWrapperFor([[contentIds objectAtIndex:i] unsignedIntValue]);
+        nsCOMPtr<nsIDOMElement> bookmarkElt = do_QueryInterface([item contentNode]);
+        BookmarksService::DeleteBookmark(bookmarkElt);
+      }
+    }
+  }
+
+}
+
 @end

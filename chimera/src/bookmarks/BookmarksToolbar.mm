@@ -164,47 +164,59 @@
   [self reflowButtonsStartingAtIndex: 0];
 }
 
+#define kBookmarkButtonHeight            16.0
+#define kMinBookmarkButtonWidth          16.0
+#define kMaxBookmarkButtonWidth         150.0
+#define kBookmarkButtonHorizPadding       2.0
+#define kBookmarkButtonVerticalPadding    1.0
+
 -(void)reflowButtonsStartingAtIndex: (int)aIndex
 {
+  // coordinates for this view are flipped, making it easier to lay out from top left
+  // to bottom right.
   float oldHeight = [self frame].size.height;
-  float computedHeight = 18;
-  int count = [mButtons count];
-  float currY = 1.0;
-  float prevX = 2.0;
-  if (aIndex > 0) {
-    BookmarksButton* prevButton = [mButtons objectAtIndex: (aIndex-1)];
-    prevX += [prevButton frame].origin.x + [prevButton frame].size.width;
-    currY = [prevButton frame].origin.y;
-  }
-  for (int i = aIndex; i < count; i++) {
+  int   count         = [mButtons count];
+  float curRowYOrigin = 0.0;
+  float curX          = 0.0;
+  
+  for (int i = 0; i < count; i ++)
+  {
     BookmarksButton* button = [mButtons objectAtIndex: i];
-    [button sizeToFit];
-    float width = [button frame].size.width;
-    float height = [button frame].size.height;
-    if (width > 150)
-      width = 150;
-    if (height < 16)
-      height = 16; // Our folder tiff is only 15 pixels for some reason.
-    [button setFrame: NSMakeRect(prevX, currY, width, height)];
-
-    prevX += [button frame].size.width + 2;
-
-    if ([self bounds].size.width < prevX) {
-      // The previous button didn't fit.  We need to make a new row. There's no need to adjust the
-      // view's frame yet, we'll do that below.
-      currY += 18;
-      computedHeight += 18;
-      
-      prevX = 2;
-      [button setFrame: NSMakeRect(prevX, currY, width, height)];
-      prevX += [button frame].size.width + 2;
+    NSRect           buttonRect;
+  
+    if (i < aIndex)
+    {
+      buttonRect = [button frame];
+      curRowYOrigin = NSMinY(buttonRect) - kBookmarkButtonVerticalPadding;
+      curX = NSMaxX(buttonRect) + kBookmarkButtonHorizPadding;
     }
- 
-    [button setNeedsDisplay: YES];
+    else
+    {
+      [button sizeToFit];
+      float width = [button frame].size.width;
+  
+      if (width > kMaxBookmarkButtonWidth)
+        width = kMaxBookmarkButtonWidth;
+  
+      buttonRect = NSMakeRect(curX, curRowYOrigin + kBookmarkButtonVerticalPadding, width, kBookmarkButtonHeight);
+      curX += NSWidth(buttonRect) + kBookmarkButtonHorizPadding;
+      
+      if (NSMaxX(buttonRect) > NSWidth([self bounds]))
+      {
+        curRowYOrigin += (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding);
+        buttonRect = NSMakeRect(0.0, curRowYOrigin + kBookmarkButtonVerticalPadding, width, kBookmarkButtonHeight);
+        curX = NSWidth(buttonRect);
+      }
+      
+      [button setFrame: buttonRect];
+    }
   }
   
+  float computedHeight = curRowYOrigin + (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding);
+  
   // our size has changed, readjust our view's frame and the content area
-  if (computedHeight != oldHeight) {
+  if (computedHeight != oldHeight)
+  {
     [self setFrame: NSMakeRect([self frame].origin.x, [self frame].origin.y + (oldHeight - computedHeight),
                                [self frame].size.width, computedHeight)];
     [self setNeedsDisplay: [self isShown]];
@@ -213,7 +225,7 @@
     float sizeChange = computedHeight - oldHeight;
     NSView* view = [[[self window] windowController] getTabBrowser];
     [view setFrame: NSMakeRect([view frame].origin.x, [view frame].origin.y,
-                               [view frame].size.width, [view frame].size.height - sizeChange)];  
+                               [view frame].size.width, [view frame].size.height - sizeChange)];
   }
 }
 
@@ -287,7 +299,6 @@
   NSPoint   dragLocation  = [sender draggingLocation];
   NSPoint   superviewLoc  = [[self superview] convertPoint:dragLocation fromView:nil]; // convert from window
   NSButton* sourceButton  = [sender draggingSource];
-  int       count         = [mButtons count];
   
   mDragInsertionButton = nsnull;
   mDragInsertionPosition = BookmarksService::CHInsertAfter;
