@@ -52,7 +52,7 @@ nsContentHTTPStartup::Observe( nsISupports *aSubject,
     rv = http->SetProduct(PRODUCT_NAME);
     if (NS_FAILED(rv)) return rv;
     
-    rv = http->SetProductSub(PRODUCT_VERSION);
+    rv = http->SetProductSub((char*) PRODUCT_VERSION);
     if (NS_FAILED(rv)) return rv;
     
     return NS_OK;
