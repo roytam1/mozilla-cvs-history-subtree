@@ -261,7 +261,8 @@ int colorCubeSize = 216;
 #endif
 
 // The Event Handler for the top-level bookmarks menu in a frame.
-static void qfNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+static void qfNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened,
+				void *token, uint32 tokenType) 
 {
 	if (whatHappened == HT_EVENT_NODE_OPENCLOSE_CHANGED)
 	{
@@ -297,8 +298,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 			// Get the top level menu going.
 			// Construct the notification struct used by HT
 			HT_Notification ns = new HT_NotificationStruct;
+			XP_BZERO(ns, sizeof(HT_NotificationStruct));
 			ns->notifyProc = qfNotifyProcedure;
-			ns->columnNotifyProc = NULL;
 			ns->data = this;
 			m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 		}
@@ -507,8 +508,8 @@ void CMainFrame::BeginStreamingOfRDFToolbars()
 		// Get the top level menu going.
 		// Construct the notification struct used by HT
 		HT_Notification ns = new HT_NotificationStruct;
+		XP_BZERO(ns, sizeof(HT_NotificationStruct));
 		ns->notifyProc = qfNotifyProcedure;
-		ns->columnNotifyProc = NULL;
 		ns->data = this;
 		m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 	}

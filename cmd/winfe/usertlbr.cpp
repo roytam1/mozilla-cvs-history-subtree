@@ -1254,7 +1254,8 @@ BOOL CRDFToolbarDropTarget::OnDrop(CWnd * pWnd, COleDataObject * pDataObject,
 #define SPACE_BETWEEN_ROWS 2
 
 // The Event Handler for HT notifications on the toolbars
-static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+static void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened,
+					void *token, uint32 tokenType) 
 {
 	static int toolbarIDCounter = 0;
 
@@ -2208,8 +2209,8 @@ CRDFToolbarHolder::~CRDFToolbarHolder()
 void CRDFToolbarHolder::InitializeRDFData()
 {
 	HT_Notification ns = new HT_NotificationStruct;
+	XP_BZERO(ns, sizeof(HT_NotificationStruct));
 	ns->notifyProc = toolbarNotifyProcedure;
-	ns->columnNotifyProc = NULL;
 	ns->data = this;
 	
 	// Construct the pane and give it our notification struct

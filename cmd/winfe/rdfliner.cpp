@@ -3888,7 +3888,8 @@ void CRDFContentView::SwitchHTViews(HT_View newView)
 
 // The event handler.  Only cares about tree events, so we'll just pass everything to the
 // tree view.
-void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened,
+					void *token, uint32 tokenType) 
 {
 	CRDFOutliner* theOutliner = (CRDFOutliner*)HT_GetViewFEData(HT_GetView(n));
 	if (theOutliner)
@@ -3898,8 +3899,8 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height)
 {
 	HT_Notification ns = new HT_NotificationStruct;
+	XP_BZERO(ns, sizeof(HT_NotificationStruct));
 	ns->notifyProc = embeddedTreeNotifyProcedure;
-	ns->columnNotifyProc = NULL;
 	ns->data = NULL;
 	
 	// Construct the pane and give it our notification struct

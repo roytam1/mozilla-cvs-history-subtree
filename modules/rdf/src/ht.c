@@ -1938,7 +1938,7 @@ sendNotification (HT_Resource node, HT_Event whatHappened)
   
 	if (pane->mask & whatHappened) 
 	{
-		(*ns->notifyProc)(ns, node, whatHappened);
+		(*ns->notifyProc)(ns, node, whatHappened, NULL, 0L);
 	}
 	pane->dirty = TRUE;
 }
@@ -2705,11 +2705,11 @@ sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event wh
 	if (view == NULL)			return;
 	if ((pane = view->pane) == NULL)	return;
 	if ((ns = pane->ns) == NULL)		return;
-	if (ns->columnNotifyProc == NULL)	return;
+	if (ns->notifyProc == NULL)	return;
   
 	if (pane->mask & whatHappened) 
 	{
-		(*ns->columnNotifyProc)(ns, HT_TopNode(view), whatHappened, token, tokenType);
+		(*ns->notifyProc)(ns, HT_TopNode(view), whatHappened, token, tokenType);
 	}
 }
 
@@ -3006,8 +3006,8 @@ HT_SetSortColumn(HT_View view, void *token, uint32 tokenType, PRBool descendingF
 	view->sortTokenType = tokenType;
 	view->descendingFlag = descendingFlag;
 
-	/* sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED); */
-	refreshItemList(HT_TopNode(view), HT_EVENT_VIEW_SORTING_CHANGED);
+	refreshItemList(HT_TopNode(view), 0);
+	sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED);
 }
 
 
@@ -8088,7 +8088,7 @@ HT_SetSelectedView (HT_Pane pane, HT_View view)
 					if (ns->notifyProc != NULL)
 					{
 						(*ns->notifyProc)(ns, NULL,
-							HT_EVENT_VIEW_SELECTED);
+							HT_EVENT_VIEW_SELECTED, NULL, 0L);
 					}
 				}
 			}

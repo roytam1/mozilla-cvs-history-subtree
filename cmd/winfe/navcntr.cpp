@@ -49,7 +49,8 @@ static char THIS_FILE[] = __FILE__;
 
 // The Main Event Handler for the NavCenter.  Handles events on the selector bar AND within the tree
 // views.
-void notifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened) 
+void notifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened,
+			void *token, uint32 tokenType) 
 {
 	CSelector* theSelector = (CSelector*)ns->data;
 	if (theSelector == NULL)
@@ -624,8 +625,8 @@ void CSelector::PopulatePane()
 {
 	// Construct the notification struct used by HT
 	HT_Notification ns = new HT_NotificationStruct;
+	XP_BZERO(ns, sizeof(HT_NotificationStruct));
 	ns->notifyProc = notifyProcedure;
-	ns->columnNotifyProc = NULL;
 	ns->data = this;
 	m_Notification = ns;
 	
