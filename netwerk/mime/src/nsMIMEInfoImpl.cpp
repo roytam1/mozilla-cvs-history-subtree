@@ -40,7 +40,7 @@
 #include "nsReadableUtils.h"
 
 // nsISupports methods
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsMIMEInfoImpl, nsIMIMEInfo);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsMIMEInfoImpl, nsIMIMEInfo)
 
 // nsMIMEInfoImpl methods
 nsMIMEInfoImpl::nsMIMEInfoImpl() {

@@ -116,8 +116,8 @@ nsHTMLPreElement::~nsHTMLPreElement()
 }
 
 
-NS_IMPL_ADDREF_INHERITED(nsHTMLPreElement, nsGenericElement);
-NS_IMPL_RELEASE_INHERITED(nsHTMLPreElement, nsGenericElement);
+NS_IMPL_ADDREF_INHERITED(nsHTMLPreElement, nsGenericElement)
+NS_IMPL_RELEASE_INHERITED(nsHTMLPreElement, nsGenericElement)
 
 
 // QueryInterface implementation for nsHTMLPreElement

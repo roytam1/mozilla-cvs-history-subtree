@@ -120,8 +120,8 @@ nsHTMLMenuElement::~nsHTMLMenuElement()
 }
 
 
-NS_IMPL_ADDREF_INHERITED(nsHTMLMenuElement, nsGenericElement);
-NS_IMPL_RELEASE_INHERITED(nsHTMLMenuElement, nsGenericElement);
+NS_IMPL_ADDREF_INHERITED(nsHTMLMenuElement, nsGenericElement)
+NS_IMPL_RELEASE_INHERITED(nsHTMLMenuElement, nsGenericElement)
 
 
 // QueryInterface implementation for nsHTMLMenuElement

@@ -1327,7 +1327,7 @@ void InitializeElementTable(void) {
       /*special props, prop-range*/       kNone, kBodyPropRange,                      
       /*special parents,kids,skip*/       &gInNoframes,&gBodyKids,eHTMLTag_unknown);
   }//if
-};
+}
 
 void DeleteElementTable(void) {
   if(gHTMLElements) {

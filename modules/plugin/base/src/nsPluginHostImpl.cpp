@@ -2601,7 +2601,7 @@ NS_IMPL_ISUPPORTS7(nsPluginHostImpl,
                    nsIFileUtilities,
                    nsICookieStorage,
                    nsIObserver,
-                   nsPIPluginHost);
+                   nsPIPluginHost)
 ////////////////////////////////////////////////////////////////////////
 NS_METHOD
 nsPluginHostImpl::Create(nsISupports* aOuter, REFNSIID aIID, void** aResult)

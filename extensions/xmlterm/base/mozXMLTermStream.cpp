@@ -61,7 +61,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(mozXMLTermStream, 
                               mozIXMLTermStream,
-                              nsIInputStream);
+                              nsIInputStream)
 
 mozXMLTermStream::mozXMLTermStream() :
   mUTF8Buffer(""),

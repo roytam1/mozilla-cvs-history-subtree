@@ -60,7 +60,7 @@
 
 static NS_DEFINE_CID(kCTextServicesDocumentCID, NS_TEXTSERVICESDOCUMENT_CID);
 
-NS_IMPL_ISUPPORTS1(nsEditorSpellCheck, nsIEditorSpellCheck);
+NS_IMPL_ISUPPORTS1(nsEditorSpellCheck, nsIEditorSpellCheck)
 
 nsEditorSpellCheck::nsEditorSpellCheck()
   : mSuggestedWordIndex(0)

@@ -53,7 +53,7 @@ inPNGEncoder::~inPNGEncoder()
 {
 }
 
-NS_IMPL_ISUPPORTS1(inPNGEncoder, inIPNGEncoder);
+NS_IMPL_ISUPPORTS1(inPNGEncoder, inIPNGEncoder)
 
 ///////////////////////////////////////////////////////////////////////////////
 

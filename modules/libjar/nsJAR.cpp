@@ -1052,7 +1052,7 @@ nsJARItem::~nsJARItem()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsJARItem, nsIZipEntry);
+NS_IMPL_ISUPPORTS1(nsJARItem, nsIZipEntry)
 
 void nsJARItem::Init(nsZipItem* aZipItem)
 {

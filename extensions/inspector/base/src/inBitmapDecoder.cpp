@@ -30,8 +30,8 @@
 #include "nsIComponentManager.h"
 #include "nsRect.h"
 
-NS_IMPL_THREADSAFE_ADDREF(inBitmapDecoder);
-NS_IMPL_THREADSAFE_RELEASE(inBitmapDecoder);
+NS_IMPL_THREADSAFE_ADDREF(inBitmapDecoder)
+NS_IMPL_THREADSAFE_RELEASE(inBitmapDecoder)
 
 NS_INTERFACE_MAP_BEGIN(inBitmapDecoder)
    NS_INTERFACE_MAP_ENTRY(imgIDecoder)

@@ -1179,8 +1179,8 @@ nsBoxToBlockAdaptor::CanSetMaxElementWidth(nsBoxLayoutState& aState, nsReflowRea
       return PR_FALSE;
 }
 
-NS_IMPL_ADDREF_INHERITED(nsBoxToBlockAdaptor, nsBox);
-NS_IMPL_RELEASE_INHERITED(nsBoxToBlockAdaptor, nsBox);
+NS_IMPL_ADDREF_INHERITED(nsBoxToBlockAdaptor, nsBox)
+NS_IMPL_RELEASE_INHERITED(nsBoxToBlockAdaptor, nsBox)
 
 //
 // QueryInterface

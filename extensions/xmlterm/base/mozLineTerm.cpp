@@ -63,7 +63,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(mozLineTerm)
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(mozLineTerm, 
                               mozILineTerm,
-                              mozILineTermAux);
+                              mozILineTermAux)
 
 
 PRBool mozLineTerm::mLoggingEnabled = PR_FALSE;

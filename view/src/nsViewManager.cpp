@@ -406,7 +406,7 @@ nsViewManager::~nsViewManager()
 
 NS_IMPL_QUERY_INTERFACE1(nsViewManager, nsIViewManager)
 
-  NS_IMPL_ADDREF(nsViewManager);
+  NS_IMPL_ADDREF(nsViewManager)
 
 nsrefcnt nsViewManager::Release(void)
 {
@@ -2917,7 +2917,8 @@ PRBool nsViewManager::CanScrollWithBitBlt(nsView* aView)
 
   // (Of course it's possible that aView's parent is actually in front of aView (if aView has a negative
   // z-index) but if so, this code still does the right thing. Yay for the display list based approach!)
-  OptimizeDisplayList(nsRegion(r), finalTransparentRect, opaqueRegion);
+  nsRegion regionFromRect(r);
+  OptimizeDisplayList(regionFromRect, finalTransparentRect, opaqueRegion);
 
   PRBool anyUnscrolledViews = PR_FALSE;
   PRBool anyUnblittableViews = PR_FALSE;
@@ -3393,7 +3394,8 @@ NS_IMETHODIMP nsViewManager::Display(nsIView* aView, nscoord aX, nscoord aY, con
 
   // Paint the view. The clipping rect was set above set don't clip again.
   //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
-  RenderViews(view, *localcx, nsRegion(trect), result);
+  nsRegion regionFromRect(trect);
+  RenderViews(view, *localcx, regionFromRect, result);
 
   NS_RELEASE(localcx);
 

@@ -199,8 +199,8 @@ NS_INTERFACE_MAP_BEGIN(nsXULAttribute)
 NS_INTERFACE_MAP_END
 
 
-NS_IMPL_ADDREF(nsXULAttribute);
-NS_IMPL_RELEASE(nsXULAttribute);
+NS_IMPL_ADDREF(nsXULAttribute)
+NS_IMPL_RELEASE(nsXULAttribute)
 
 
 // nsIDOMNode interface
@@ -601,7 +601,7 @@ NS_INTERFACE_MAP_BEGIN(nsXULAttributes)
     NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULNamedNodeMap)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_ADDREF(nsXULAttributes);
+NS_IMPL_ADDREF(nsXULAttributes)
 
 // Custom release method to go through the fixed-size allocator
 nsrefcnt

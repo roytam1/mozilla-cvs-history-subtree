@@ -328,7 +328,7 @@ private:
   nsCOMPtr<nsIPrincipal> mPrincipal;
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(BackstagePass, nsIScriptObjectPrincipal, nsIXPCScriptable);
+NS_IMPL_THREADSAFE_ISUPPORTS2(BackstagePass, nsIScriptObjectPrincipal, nsIXPCScriptable)
 
 #else
 
@@ -345,7 +345,7 @@ public:
   virtual ~BackstagePass() { }
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable);
+NS_IMPL_THREADSAFE_ISUPPORTS1(BackstagePass, nsIXPCScriptable)
 
 #endif
 
@@ -414,7 +414,7 @@ mozJSComponentLoader::~mozJSComponentLoader()
 {
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(mozJSComponentLoader, nsIComponentLoader);
+NS_IMPL_THREADSAFE_ISUPPORTS1(mozJSComponentLoader, nsIComponentLoader)
 
 NS_IMETHODIMP
 mozJSComponentLoader::GetFactory(const nsIID &aCID,

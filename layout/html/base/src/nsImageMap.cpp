@@ -769,7 +769,7 @@ NS_IMPL_ISUPPORTS4(nsImageMap,
                    nsIDocumentObserver,
                    nsIDOMFocusListener,
                    nsIDOMEventListener,
-                   nsIImageMap);
+                   nsIImageMap)
 
 NS_IMETHODIMP
 nsImageMap::GetBoundsForAreaContent(nsIContent *aContent, 

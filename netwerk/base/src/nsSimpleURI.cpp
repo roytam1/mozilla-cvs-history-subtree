@@ -68,7 +68,7 @@ nsSimpleURI::~nsSimpleURI()
 {
 }
 
-NS_IMPL_AGGREGATED(nsSimpleURI);
+NS_IMPL_AGGREGATED(nsSimpleURI)
 
 NS_IMETHODIMP
 nsSimpleURI::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)

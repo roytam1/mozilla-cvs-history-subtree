@@ -111,13 +111,13 @@ class nsCookieEnumerator : public nsISimpleEnumerator
 
 };
 
-NS_IMPL_ISUPPORTS1(nsCookieEnumerator, nsISimpleEnumerator);
+NS_IMPL_ISUPPORTS1(nsCookieEnumerator, nsISimpleEnumerator)
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsCookieManager Implementation
 
-NS_IMPL_ISUPPORTS3(nsCookieManager, nsICookieManager, nsICookieManager2, nsISupportsWeakReference);
+NS_IMPL_ISUPPORTS3(nsCookieManager, nsICookieManager, nsICookieManager2, nsISupportsWeakReference)
 
 nsCookieManager::nsCookieManager()
 {

@@ -172,7 +172,7 @@ nsresult nsCollationUnix::Initialize(nsILocale* locale)
   }
 
   return NS_OK;
-};
+}
  
 
 nsresult nsCollationUnix::GetSortKeyLen(const nsCollationStrength strength, 

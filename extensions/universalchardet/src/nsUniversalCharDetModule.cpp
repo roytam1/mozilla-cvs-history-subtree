@@ -58,8 +58,8 @@
 static NS_DEFINE_CID(kUniversalDetectorCID,  NS_UNIVERSAL_DETECTOR_CID);
 static NS_DEFINE_CID(kUniversalStringDetectorCID,  NS_UNIVERSAL_STRING_DETECTOR_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsUniversalXPCOMDetector);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsUniversalXPCOMStringDetector);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUniversalXPCOMDetector)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUniversalXPCOMStringDetector)
 
 //----------------------------------------
 static NS_METHOD nsUniversalCharDetectorRegistrationProc(nsIComponentManager *aCompMgr,

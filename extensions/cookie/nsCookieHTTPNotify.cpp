@@ -68,7 +68,7 @@ static NS_DEFINE_CID(kINetModuleMgrCID, NS_NETMODULEMGR_CID);
 ///////////////////////////////////
 // nsISupports
 
-NS_IMPL_ISUPPORTS2(nsCookieHTTPNotify, nsIHttpNotify, nsINetNotify);
+NS_IMPL_ISUPPORTS2(nsCookieHTTPNotify, nsIHttpNotify, nsINetNotify)
 
 ///////////////////////////////////
 // nsCookieHTTPNotify Implementation

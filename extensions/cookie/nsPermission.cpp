@@ -42,7 +42,7 @@
 
 // nsPermission Implementation
 
-NS_IMPL_ISUPPORTS2(nsPermission, nsIPermission, nsISupportsWeakReference);
+NS_IMPL_ISUPPORTS2(nsPermission, nsIPermission, nsISupportsWeakReference)
 
 nsPermission::nsPermission()
 {

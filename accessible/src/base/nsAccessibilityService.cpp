@@ -119,7 +119,7 @@ nsAccessibilityService::~nsAccessibilityService()
   nsAccessNodeWrap::ShutdownAccessibility();
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsAccessibilityService, nsIAccessibilityService, nsIObserver);
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsAccessibilityService, nsIAccessibilityService, nsIObserver)
 
 // nsIObserver
 

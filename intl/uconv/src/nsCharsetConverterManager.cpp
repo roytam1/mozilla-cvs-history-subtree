@@ -75,7 +75,7 @@ static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsCharsetConverterManager,
                               nsICharsetConverterManager, 
-                              nsICharsetConverterManager2);
+                              nsICharsetConverterManager2)
 
 nsCharsetConverterManager::nsCharsetConverterManager() 
   :mDataBundle(NULL), mTitleBundle(NULL)

@@ -41,7 +41,7 @@
 
 // nsCookie Implementation
 
-NS_IMPL_ISUPPORTS2(nsCookie, nsICookie, nsISupportsWeakReference);
+NS_IMPL_ISUPPORTS2(nsCookie, nsICookie, nsISupportsWeakReference)
 
 nsCookie::nsCookie()
 : cookieName(0),

@@ -27,7 +27,7 @@
 //////////////////////////////////////////////////////////////////////////////
 // MNG Decoder Implementation
 
-NS_IMPL_ISUPPORTS1(nsMNGDecoder, imgIDecoder);
+NS_IMPL_ISUPPORTS1(nsMNGDecoder, imgIDecoder)
 
 nsMNGDecoder::nsMNGDecoder()
 {

@@ -67,7 +67,7 @@ static const char kCookieFileName2[] = "cookies.txt";
 // nsCookieService Implementation
 
 NS_IMPL_ISUPPORTS4(nsCookieService, nsICookieService,
-                   nsIObserver, nsIWebProgressListener, nsISupportsWeakReference);
+                   nsIObserver, nsIWebProgressListener, nsISupportsWeakReference)
 
 PRBool gCookieIconVisible = PR_FALSE;
 

@@ -2507,5 +2507,5 @@ static PRBool DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
   nsIMIMEInfo *entry = (nsIMIMEInfo*) aData;
 	NS_RELEASE(entry);
   return PR_TRUE;   
-};
+}
 

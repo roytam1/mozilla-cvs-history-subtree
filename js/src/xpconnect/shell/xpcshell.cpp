@@ -665,7 +665,7 @@ public:
   FullTrustSecMan();
 };
 
-NS_IMPL_ISUPPORTS1(FullTrustSecMan, nsIXPCSecurityManager);
+NS_IMPL_ISUPPORTS1(FullTrustSecMan, nsIXPCSecurityManager)
 
 FullTrustSecMan::FullTrustSecMan()
 {

@@ -54,7 +54,7 @@ inBitmap::~inBitmap()
   delete mBits;
 }
 
-NS_IMPL_ISUPPORTS1(inBitmap, inIBitmap);
+NS_IMPL_ISUPPORTS1(inBitmap, inIBitmap)
 
 ///////////////////////////////////////////////////////////////////////////////
 // inIBitmap

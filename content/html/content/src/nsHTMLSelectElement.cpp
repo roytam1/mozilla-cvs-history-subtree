@@ -484,8 +484,8 @@ nsHTMLSelectElement::~nsHTMLSelectElement()
 
 // ISupports
 
-NS_IMPL_ADDREF_INHERITED(nsHTMLSelectElement, nsGenericElement);
-NS_IMPL_RELEASE_INHERITED(nsHTMLSelectElement, nsGenericElement);
+NS_IMPL_ADDREF_INHERITED(nsHTMLSelectElement, nsGenericElement)
+NS_IMPL_RELEASE_INHERITED(nsHTMLSelectElement, nsGenericElement)
 
 
 // QueryInterface implementation for nsHTMLSelectElement

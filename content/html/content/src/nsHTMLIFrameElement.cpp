@@ -166,8 +166,8 @@ nsHTMLIFrameElement::~nsHTMLIFrameElement()
 }
 
 
-NS_IMPL_ADDREF(nsHTMLIFrameElement);
-NS_IMPL_RELEASE(nsHTMLIFrameElement);
+NS_IMPL_ADDREF(nsHTMLIFrameElement)
+NS_IMPL_RELEASE(nsHTMLIFrameElement)
 
 // QueryInterface implementation for nsHTMLIFrameElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement,

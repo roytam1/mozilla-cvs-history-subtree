@@ -58,10 +58,10 @@ static NS_DEFINE_CID(kJAClassicStringDetectorCID,   NS_JA_CLASSIC_STRING_DETECTO
 static NS_DEFINE_CID(kKOClassicDetectorCID,         NS_KO_CLASSIC_DETECTOR_CID);
 static NS_DEFINE_CID(kKOClassicStringDetectorCID,   NS_KO_CLASSIC_STRING_DETECTOR_CID);
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsJACharsetClassicDetector);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsJAStringCharsetClassicDetector);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsKOCharsetClassicDetector);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsKOStringCharsetClassicDetector);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsJACharsetClassicDetector)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsJAStringCharsetClassicDetector)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsKOCharsetClassicDetector)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsKOStringCharsetClassicDetector)
 
 static const nsModuleComponentInfo components[] = {
   { "Classic JA Charset Detector", NS_JA_CLASSIC_DETECTOR_CID,
@@ -74,5 +74,5 @@ static const nsModuleComponentInfo components[] = {
      NS_STRCDETECTOR_CONTRACTID_BASE "koclassic", nsKOStringCharsetClassicDetectorConstructor}
 };
 
-NS_IMPL_NSGETMODULE(nsCharDetModuleClassic, components);
+NS_IMPL_NSGETMODULE(nsCharDetModuleClassic, components)
 

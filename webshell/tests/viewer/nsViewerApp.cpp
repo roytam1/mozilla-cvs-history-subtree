@@ -224,7 +224,7 @@ public:
 
 
 
-NS_IMPL_ISUPPORTS1(nsTestFormProcessor, nsIFormProcessor);
+NS_IMPL_ISUPPORTS1(nsTestFormProcessor, nsIFormProcessor)
 
 nsTestFormProcessor::nsTestFormProcessor()
 {

@@ -44,8 +44,8 @@
 
 static NS_DEFINE_IID(kParserServiceCID, NS_PARSERSERVICE_CID);
 
-NS_IMPL_ADDREF(nsEditorParserObserver);
-NS_IMPL_RELEASE(nsEditorParserObserver);
+NS_IMPL_ADDREF(nsEditorParserObserver)
+NS_IMPL_RELEASE(nsEditorParserObserver)
 
 NS_INTERFACE_MAP_BEGIN(nsEditorParserObserver)
       NS_INTERFACE_MAP_ENTRY(nsIElementObserver)

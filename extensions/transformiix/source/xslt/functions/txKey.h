@@ -82,7 +82,7 @@ struct txKeyValueHashEntry : public PLDHashEntryHdr
     NodeSet mNodeSet;
 };
 
-DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&);
+DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&)
 
 class txIndexedKeyHashKey
 {
@@ -116,7 +116,7 @@ struct txIndexedKeyHashEntry : public PLDHashEntryHdr
 };
 
 DECL_DHASH_WRAPPER(txIndexedKeyHash, txIndexedKeyHashEntry,
-                   txIndexedKeyHashKey&);
+                   txIndexedKeyHashKey&)
 
 /**
  * Class holding all <xsl:key>s of a particular expanded name in the

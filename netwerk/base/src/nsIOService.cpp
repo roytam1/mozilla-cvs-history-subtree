@@ -257,7 +257,7 @@ nsIOService::~nsIOService()
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsIOService,
                               nsIIOService,
                               nsIObserver,
-                              nsISupportsWeakReference);
+                              nsISupportsWeakReference)
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -1321,7 +1321,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS5(nsNSSComponent,
                               nsIEntropyCollector,
                               nsINSSComponent,
                               nsIObserver,
-                              nsISupportsWeakReference);
+                              nsISupportsWeakReference)
 
 //---------------------------------------------
 // Functions Implementing nsISignatureVerifier
@@ -2189,7 +2189,7 @@ getPSMContentType(const char * aContentType)
 
 NS_IMPL_ISUPPORTS2(PSMContentListener,
                    nsIURIContentListener,
-                   nsISupportsWeakReference); 
+                   nsISupportsWeakReference) 
 
 PSMContentListener::PSMContentListener()
 {

@@ -1851,7 +1851,7 @@ nsFormControlList::RemoveElementFromTable(nsIFormControl* aChild,
 }
 
 // nsFormControlEnumerator
-NS_IMPL_ISUPPORTS1(nsFormControlEnumerator, nsISimpleEnumerator);
+NS_IMPL_ISUPPORTS1(nsFormControlEnumerator, nsISimpleEnumerator)
 
 nsFormControlEnumerator::nsFormControlEnumerator(nsHTMLFormElement* aForm)
   : mForm(aForm), mElementsIndex(0), mNotInElementsIndex(0)

@@ -51,7 +51,7 @@
 
 static const PRUint32 kDefaultPolicy = nsIPermissionManager::ALLOW_ACTION;
 
-NS_IMPL_ISUPPORTS1(nsCookiePermission, nsICookiePermission);
+NS_IMPL_ISUPPORTS1(nsCookiePermission, nsICookiePermission)
 
 nsCookiePermission::nsCookiePermission()
  : mPermissionManager(nsnull)

@@ -209,7 +209,7 @@ CompositeEnumeratorImpl::~CompositeEnumeratorImpl(void)
 
 NS_IMPL_ADDREF(CompositeEnumeratorImpl)
 NS_IMPL_RELEASE_WITH_DESTROY(CompositeEnumeratorImpl, Destroy())
-NS_IMPL_QUERY_INTERFACE1(CompositeEnumeratorImpl, nsISimpleEnumerator);
+NS_IMPL_QUERY_INTERFACE1(CompositeEnumeratorImpl, nsISimpleEnumerator)
 
 NS_IMETHODIMP
 CompositeEnumeratorImpl::HasMoreElements(PRBool* aResult)
@@ -647,7 +647,7 @@ CompositeDataSourceImpl::CompositeDataSourceImpl(void)
 // nsISupports interface
 //
 
-NS_IMPL_THREADSAFE_ADDREF(CompositeDataSourceImpl);
+NS_IMPL_THREADSAFE_ADDREF(CompositeDataSourceImpl)
 
 NS_IMETHODIMP_(nsrefcnt)
 CompositeDataSourceImpl::Release()

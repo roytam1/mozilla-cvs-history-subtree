@@ -410,7 +410,7 @@ nsDOMEventRTTearoff::nsDOMEventRTTearoff(nsIContent *aContent)
 
 nsDOMEventRTTearoff::~nsDOMEventRTTearoff()
 {
-};
+}
 
 
 NS_IMETHODIMP

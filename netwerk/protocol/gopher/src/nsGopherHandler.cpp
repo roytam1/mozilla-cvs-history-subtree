@@ -60,7 +60,7 @@ nsGopherHandler::~nsGopherHandler() {
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsGopherHandler,
                               nsIProxiedProtocolHandler,
-                              nsIProtocolHandler);
+                              nsIProtocolHandler)
 
 NS_METHOD
 nsGopherHandler::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult) {

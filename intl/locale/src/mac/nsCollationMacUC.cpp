@@ -45,7 +45,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-NS_IMPL_ISUPPORTS1(nsCollationMacUC, nsICollation);
+NS_IMPL_ISUPPORTS1(nsCollationMacUC, nsICollation)
 
 
 nsCollationMacUC::nsCollationMacUC() 

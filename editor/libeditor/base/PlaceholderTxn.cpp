@@ -296,7 +296,7 @@ NS_IMETHODIMP PlaceholderTxn::EndPlaceHolderBatch()
   
   // remember our selection state.
   return RememberEndingSelection();
-};
+}
 
 NS_IMETHODIMP PlaceholderTxn::ForwardEndBatchTo(nsIAbsorbingTransaction *aForwardingAddress)
 {   

@@ -79,7 +79,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS6(nsGopherChannel,
                               nsIStreamListener,
                               nsIRequestObserver,
                               nsIDirectoryListing,
-                              nsITransportEventSink);
+                              nsITransportEventSink)
 
 nsresult
 nsGopherChannel::Init(nsIURI* uri, nsIProxyInfo* proxyInfo)

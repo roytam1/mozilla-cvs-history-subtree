@@ -688,9 +688,9 @@ public:
 PRInt32 DummyParserRequest::gRefCnt;
 nsIURI* DummyParserRequest::gURI;
 
-NS_IMPL_ADDREF(DummyParserRequest);
-NS_IMPL_RELEASE(DummyParserRequest);
-NS_IMPL_QUERY_INTERFACE2(DummyParserRequest, nsIRequest, nsIChannel);
+NS_IMPL_ADDREF(DummyParserRequest)
+NS_IMPL_RELEASE(DummyParserRequest)
+NS_IMPL_QUERY_INTERFACE2(DummyParserRequest, nsIRequest, nsIChannel)
 
 nsresult
 DummyParserRequest::Create(nsIRequest** aResult, nsIHTMLContentSink* aSink)
@@ -1085,7 +1085,7 @@ nsHTMLElementFactory::~nsHTMLElementFactory()
 }
 
 NS_IMPL_ISUPPORTS2(nsHTMLElementFactory, nsIElementFactory,
-                   nsISupportsWeakReference);
+                   nsISupportsWeakReference)
 
 NS_IMETHODIMP
 nsHTMLElementFactory::CreateInstanceByTag(nsINodeInfo *aNodeInfo,

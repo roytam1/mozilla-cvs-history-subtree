@@ -79,7 +79,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 ///////////////////////////////////////////////////////////////////////////////
 // ns4xPluginStreamListener Methods
 
-NS_IMPL_ISUPPORTS1(ns4xPluginStreamListener, nsIPluginStreamListener);
+NS_IMPL_ISUPPORTS1(ns4xPluginStreamListener, nsIPluginStreamListener)
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -950,8 +950,8 @@ NS_INTERFACE_MAP_BEGIN(CSSRuleListImpl)
 NS_INTERFACE_MAP_END
 
 
-NS_IMPL_ADDREF(CSSRuleListImpl);
-NS_IMPL_RELEASE(CSSRuleListImpl);
+NS_IMPL_ADDREF(CSSRuleListImpl)
+NS_IMPL_RELEASE(CSSRuleListImpl)
 
 
 NS_IMETHODIMP    
@@ -1042,8 +1042,8 @@ NS_INTERFACE_MAP_BEGIN(DOMMediaListImpl)
 NS_INTERFACE_MAP_END
 
 
-NS_IMPL_ADDREF(DOMMediaListImpl);
-NS_IMPL_RELEASE(DOMMediaListImpl);
+NS_IMPL_ADDREF(DOMMediaListImpl)
+NS_IMPL_RELEASE(DOMMediaListImpl)
 
 
 DOMMediaListImpl::DOMMediaListImpl(nsISupportsArray *aArray,
@@ -1387,8 +1387,8 @@ NS_INTERFACE_MAP_BEGIN(CSSImportsCollectionImpl)
 NS_INTERFACE_MAP_END
 
 
-NS_IMPL_ADDREF(CSSImportsCollectionImpl);
-NS_IMPL_RELEASE(CSSImportsCollectionImpl);
+NS_IMPL_ADDREF(CSSImportsCollectionImpl)
+NS_IMPL_RELEASE(CSSImportsCollectionImpl)
 
 
 NS_IMETHODIMP
@@ -3062,8 +3062,8 @@ CSSRuleProcessor::~CSSRuleProcessor(void)
   ClearRuleCascades();
 }
 
-NS_IMPL_ADDREF(CSSRuleProcessor);
-NS_IMPL_RELEASE(CSSRuleProcessor);
+NS_IMPL_ADDREF(CSSRuleProcessor)
+NS_IMPL_RELEASE(CSSRuleProcessor)
 
 nsresult 
 CSSRuleProcessor::QueryInterface(REFNSIID aIID, void** aInstancePtrResult)

@@ -109,7 +109,7 @@ nsImageWin :: ~nsImageWin()
 }
 
 
-NS_IMPL_ISUPPORTS1(nsImageWin, nsIImage);
+NS_IMPL_ISUPPORTS1(nsImageWin, nsIImage)
 
 
 /** ---------------------------------------------------

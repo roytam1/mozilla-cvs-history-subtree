@@ -96,8 +96,8 @@ static PRInt32 PR_CALLBACK ProxyPrefsCallback(const char* pref, void* instance)
     return 0;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsProtocolProxyService, nsIProtocolProxyService);
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsProtocolProxyService::nsProxyInfo, nsIProxyInfo);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsProtocolProxyService, nsIProtocolProxyService)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsProtocolProxyService::nsProxyInfo, nsIProxyInfo)
 
 
 nsProtocolProxyService::nsProtocolProxyService()

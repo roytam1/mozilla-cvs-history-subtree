@@ -778,7 +778,7 @@ jsds_ScriptHookProc (JSDContext* jsdc, JSDScript* jsdscript, JSBool creating,
 
 /* Contexts */
 /*
-NS_IMPL_THREADSAFE_ISUPPORTS1(jsdContext, jsdIContext); 
+NS_IMPL_THREADSAFE_ISUPPORTS1(jsdContext, jsdIContext)
 
 NS_IMETHODIMP
 jsdContext::GetJSDContext(JSDContext **_rval)
@@ -789,7 +789,7 @@ jsdContext::GetJSDContext(JSDContext **_rval)
 */
 
 /* Objects */
-NS_IMPL_THREADSAFE_ISUPPORTS1(jsdObject, jsdIObject); 
+NS_IMPL_THREADSAFE_ISUPPORTS1(jsdObject, jsdIObject)
 
 NS_IMETHODIMP
 jsdObject::GetJSDContext(JSDContext **_rval)
@@ -857,7 +857,7 @@ jsdObject::GetValue(jsdIValue **_rval)
 }
 
 /* Properties */
-NS_IMPL_THREADSAFE_ISUPPORTS2(jsdProperty, jsdIProperty, jsdIEphemeral);
+NS_IMPL_THREADSAFE_ISUPPORTS2(jsdProperty, jsdIProperty, jsdIEphemeral)
 
 jsdProperty::jsdProperty (JSDContext *aCx, JSDProperty *aProperty) :
     mCx(aCx), mProperty(aProperty)
@@ -955,7 +955,7 @@ jsdProperty::GetVarArgSlot(PRUint32 *_rval)
 }
 
 /* Scripts */
-NS_IMPL_THREADSAFE_ISUPPORTS2(jsdScript, jsdIScript, jsdIEphemeral); 
+NS_IMPL_THREADSAFE_ISUPPORTS2(jsdScript, jsdIScript, jsdIEphemeral)
 
 jsdScript::jsdScript (JSDContext *aCx, JSDScript *aScript) : mValid(PR_FALSE),
                                                              mTag(0),
@@ -1420,7 +1420,7 @@ jsdScript::ClearAllBreakpoints()
 }
 
 /* Contexts */
-NS_IMPL_THREADSAFE_ISUPPORTS2(jsdContext, jsdIContext, jsdIEphemeral);
+NS_IMPL_THREADSAFE_ISUPPORTS2(jsdContext, jsdIContext, jsdIEphemeral)
 
 jsdIContext *
 jsdContext::FromPtr (JSDContext *aJSDCx, JSContext *aJSCx)
@@ -1620,7 +1620,7 @@ jsdContext::SetScriptsEnabled (PRBool _rval)
 }
 
 /* Stack Frames */
-NS_IMPL_THREADSAFE_ISUPPORTS2(jsdStackFrame, jsdIStackFrame, jsdIEphemeral);
+NS_IMPL_THREADSAFE_ISUPPORTS2(jsdStackFrame, jsdIStackFrame, jsdIEphemeral)
 
 jsdStackFrame::jsdStackFrame (JSDContext *aCx, JSDThreadState *aThreadState,
                               JSDStackFrameInfo *aStackFrameInfo) :
@@ -1902,7 +1902,7 @@ jsdStackFrame::Eval (const nsAString &bytes, const char *fileName,
 }        
 
 /* Values */
-NS_IMPL_THREADSAFE_ISUPPORTS2(jsdValue, jsdIValue, jsdIEphemeral);
+NS_IMPL_THREADSAFE_ISUPPORTS2(jsdValue, jsdIValue, jsdIEphemeral)
 jsdIValue *
 jsdValue::FromPtr (JSDContext *aCx, JSDValue *aValue)
 {
@@ -2242,7 +2242,7 @@ jsdValue::GetWrappedValue()
 /******************************************************************************
  * debugger service implementation
  ******************************************************************************/
-NS_IMPL_THREADSAFE_ISUPPORTS1(jsdService, jsdIDebuggerService); 
+NS_IMPL_THREADSAFE_ISUPPORTS1(jsdService, jsdIDebuggerService)
 
 NS_IMETHODIMP
 jsdService::GetJSDContext(JSDContext **_rval)
@@ -3222,7 +3222,7 @@ jsdService::GetService ()
     return gJsds;
 }
 
-NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(jsdService, jsdService::GetService);
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(jsdService, jsdService::GetService)
 
 /* app-start observer.  turns on the debugger at app-start.  this is inserted
  * and/or removed from the app-start category by the jsdService::initAtStartup
@@ -3239,7 +3239,7 @@ class jsdASObserver : public nsIObserver
     }    
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(jsdASObserver, nsIObserver); 
+NS_IMPL_THREADSAFE_ISUPPORTS1(jsdASObserver, nsIObserver)
 
 NS_IMETHODIMP
 jsdASObserver::Observe (nsISupports *aSubject, const char *aTopic,
@@ -3270,14 +3270,14 @@ jsdASObserver::Observe (nsISupports *aSubject, const char *aTopic,
     return rv;
 }
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(jsdASObserver);
+NS_GENERIC_FACTORY_CONSTRUCTOR(jsdASObserver)
 
 static const nsModuleComponentInfo components[] = {
     {"JSDService", JSDSERVICE_CID,     jsdServiceCtrID, jsdServiceConstructor},
     {"JSDASObserver",  JSDASO_CID,  jsdASObserverCtrID, jsdASObserverConstructor}
 };
 
-NS_IMPL_NSGETMODULE(JavaScript_Debugger, components);
+NS_IMPL_NSGETMODULE(JavaScript_Debugger, components)
 
 /********************************************************************************
  ********************************************************************************

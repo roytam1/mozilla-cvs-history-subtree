@@ -89,7 +89,7 @@ NS_IMPL_ISUPPORTS4(nsP3PService,
                    nsICookieConsent,
                    nsIHttpNotify,
                    nsINetNotify,
-                   nsIObserver);
+                   nsIObserver)
 
 nsP3PService::nsP3PService() 
   : mCompactPolicy(nsnull)

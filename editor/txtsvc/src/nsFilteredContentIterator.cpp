@@ -78,7 +78,7 @@ nsFilteredContentIterator::~nsFilteredContentIterator()
 }
 
 //------------------------------------------------------------
-NS_IMPL_ISUPPORTS1(nsFilteredContentIterator, nsIContentIterator);
+NS_IMPL_ISUPPORTS1(nsFilteredContentIterator, nsIContentIterator)
 
 //------------------------------------------------------------
 NS_IMETHODIMP 

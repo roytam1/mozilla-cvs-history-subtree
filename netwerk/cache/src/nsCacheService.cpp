@@ -108,7 +108,7 @@ private:
     PRInt32                 mMemoryCacheCapacity;
 };
 
-NS_IMPL_ISUPPORTS1(nsCacheProfilePrefObserver, nsIObserver);
+NS_IMPL_ISUPPORTS1(nsCacheProfilePrefObserver, nsIObserver)
 
 
 nsresult
@@ -385,7 +385,7 @@ nsCacheProfilePrefObserver::MemoryCacheEnabled()
 
 nsCacheService *   nsCacheService::gService = nsnull;
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsCacheService, nsICacheService);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCacheService, nsICacheService)
 
 nsCacheService::nsCacheService()
     : mCacheServiceLock(nsnull),

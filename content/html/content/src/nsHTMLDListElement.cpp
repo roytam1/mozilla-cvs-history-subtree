@@ -112,8 +112,8 @@ nsHTMLDListElement::~nsHTMLDListElement()
 }
 
 
-NS_IMPL_ADDREF(nsHTMLDListElement);
-NS_IMPL_RELEASE(nsHTMLDListElement);
+NS_IMPL_ADDREF(nsHTMLDListElement)
+NS_IMPL_RELEASE(nsHTMLDListElement)
 
 
 // QueryInterface implementation for nsHTMLDListElement

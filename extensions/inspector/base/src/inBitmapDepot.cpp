@@ -52,7 +52,7 @@ inBitmapDepot::~inBitmapDepot()
 {
 }
 
-NS_IMPL_ISUPPORTS1(inBitmapDepot, inIBitmapDepot);
+NS_IMPL_ISUPPORTS1(inBitmapDepot, inIBitmapDepot)
 
 ///////////////////////////////////////////////////////////////////////////////
 // inIBitmapDepot
