@@ -25,18 +25,17 @@
 
 //The eventual goal is for this file to go away and for the functions to either be brought into
 //mailCommands.js or into 3pane specific code.
+
 var gFolderJustSwitched = false;
 var gBeforeFolderLoadTime;
 var gRDFNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+
 function OpenURL(url)
 {
   //dump("\n\nOpenURL from XUL\n\n\n");
   messenger.SetWindow(window, msgWindow);
   messenger.OpenURL(url);
 }
-
-
-
 
 function GetMsgFolderFromNode(folderNode)
 {
@@ -309,7 +308,16 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
 
   // now create the db view, which will sort it.
+
   CreateDBView(newFolder, isThreaded, viewType, sortID, sortDirection);
+  // that should have initialized gDBView, now re-root the thread pane
+  var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+  if (outlinerView)
+  {     
+    var outliner = GetThreadOutliner();
+    outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
+    dump('set outliner view\n');
+  }
 
   // Since SetSentFolderColumns() may alter the template's structure,
   // we need to explicitly force the builder to recompile its rules.
@@ -595,6 +603,7 @@ function CreateDBView(msgFolder, isThreaded, viewType, sortKey, sortDirection)
 
     var count = new Object;
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+
     dump("XXX count = " + count.value + "\n");
 }
 
