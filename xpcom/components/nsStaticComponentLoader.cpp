@@ -196,7 +196,7 @@ nsStaticComponentLoader::GetFactory(const nsCID &aCID, const char *aLocation,
                                         (void **)_retval);
 }
 
-NS_IMETHODIMP
+nsresult
 NS_NewStaticComponentLoader(nsIComponentLoader **retval)
 {
     *retval = NS_STATIC_CAST(nsIComponentLoader *, 
