@@ -1069,15 +1069,31 @@ pref_DeleteItem(PLHashEntry *he, int i, void *arg)
 PrefResult
 PREF_DeleteBranch(const char *branch_name)
 {
-    char* branch_dot = PR_smprintf("%s.", branch_name);
-    if (!branch_dot)
-        return PREF_OUT_OF_MEMORY;      
+    char* branch_dot;
+    int len = (int)PL_strlen(branch_name);
+
     if (!gHashTable)
         return PREF_NOT_INITIALIZED;
 
+    /* The following check insures that if the branch name already has a "."
+     * at the end, we don't end up with a "..". This fixes an incompatibility
+     * between nsIPref, which needs the period added, and nsIPrefBranch which
+     * does not. When nsIPref goes away this function should be fixed to 
+     * never add the period at all.
+     */
+    if ((len > 1) && (branch_name[len - 1] == '.'))
+        branch_dot = (char *)branch_name;
+    else
+    {
+        branch_dot = PR_smprintf("%s.", branch_name);
+        if (!branch_dot)
+            return PREF_OUT_OF_MEMORY;
+    }
+
     PR_HashTableEnumerateEntries(gHashTable, pref_DeleteItem, (void*) branch_dot);
     
-    PR_Free(branch_dot);
+    if (branch_dot != branch_name)
+        PR_Free(branch_dot);
     return PREF_NOERROR;
 }
 
@@ -1930,7 +1946,12 @@ pref_ErrorReporter(JSContext *cx, const char *message,
     last = PR_sprintf_append(0, "An error occurred reading the startup configuration file.  "
         "Please contact your administrator.");
 
+#if defined(XP_MAC)
+    // StandardAlert doesn't handle linefeeds. Use spaces to avoid garbage characters.
+    last = PR_sprintf_append(last, "  ");
+#else
     last = PR_sprintf_append(last, LINEBREAK LINEBREAK);
+#endif
     if (!report)
         last = PR_sprintf_append(last, "%s\n", message);
     else
@@ -1974,7 +1995,7 @@ void pref_Alert(char* msg)
     SInt16 itemHit;
     pmsg[0] = PL_strlen(msg);
     BlockMoveData(msg, pmsg + 1, pmsg[0]);
-    StandardAlert(kAlertPlainAlert, "\pNetscape -- JS Preference Warning", pmsg, NULL, &itemHit);
+    StandardAlert(kAlertPlainAlert, "\pConfiguration Warning", pmsg, NULL, &itemHit);
 }
 
 #else
@@ -1989,9 +2010,9 @@ void pref_Alert(char* msg)
     fputs(msg, stderr);
 #endif
 #if defined(XP_WIN)
-      MessageBox (NULL, msg, "Netscape -- JS Preference Warning", MB_OK);
+      MessageBox (NULL, msg, "Configuration Warning", MB_OK);
 #elif defined(XP_OS2)
-      WinMessageBox (HWND_DESKTOP, 0, msg, "Netscape -- JS Preference Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
+      WinMessageBox (HWND_DESKTOP, 0, msg, "Configuration Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
 #endif
 }
 
