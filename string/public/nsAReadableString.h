@@ -188,6 +188,13 @@ class nsReadingIterator
           return mFragment;
         }
 
+      const basic_nsAReadableString<CharT>&
+      string() const
+        {
+          NS_ASSERTION(mOwningString, "iterator not attached to a string (|mOwningString| == 0)");
+          return *mOwningString;
+        }
+
       difference_type
       size_forward() const
         {
@@ -515,7 +522,7 @@ inline
 PRBool
 basic_nsAReadableString<CharT>::Equals( const basic_nsAReadableString<CharT>& rhs ) const
   {
-    return Compare(rhs) == 0;
+    return Length() == rhs.Length() && Compare(rhs) == 0;
   }
 
 template <class CharT>
@@ -723,14 +730,6 @@ basic_nsAReadableString<CharT>::FindChar( CharT aChar, PRUint32 aOffset ) const
     return -1;
   }
 
-template <class CharT>
-inline
-int
-basic_nsAReadableString<CharT>::Compare( const basic_nsAReadableString<CharT>& rhs ) const
-  {
-    return ::Compare(*this, rhs);
-  }
-
 
 
 
@@ -837,16 +836,6 @@ basic_nsLiteralString<CharT>::Length() const
   }
 
 
-// XXX Note that these are located here because some compilers are
-// sensitive to the ordering of declarations with regard to templates.
-template <class CharT>
-inline
-PRBool
-basic_nsAReadableString<CharT>::Equals( const CharT* rhs ) const
-  {
-    return Compare(basic_nsLiteralString<CharT>(rhs)) == 0;
-  }
-
 #if 0
 template <class CharT>
 inline
@@ -856,14 +845,6 @@ basic_nsAReadableString<CharT>::Equals( const CharT* rhs, PRUint32 rhs_length ) 
     return Compare(basic_nsLiteralString<CharT>(rhs, rhs_length)) == 0;
   }
 #endif
-
-template <class CharT>
-inline
-int
-basic_nsAReadableString<CharT>::Compare( const CharT* rhs ) const
-  {
-    return ::Compare(*this, NS_READABLE_CAST(CharT, basic_nsLiteralString<CharT>(rhs)));
-  }
 
 #if 0
 template <class CharT>
@@ -1167,8 +1148,8 @@ class nsPromiseSubstring
           // nothing else to do here
         }
 
-      nsPromiseSubstring( const basic_nsAReadableString<CharT>& aString, const nsReadingIterator<CharT>& aStart, const nsReadingIterator<CharT>& aEnd )
-          : mString(aString)
+      nsPromiseSubstring( const nsReadingIterator<CharT>& aStart, const nsReadingIterator<CharT>& aEnd )
+          : mString(aStart.string())
         {
           nsReadingIterator<CharT> zeroPoint;
           mString.BeginReading(zeroPoint);
@@ -1278,18 +1259,32 @@ SameImplementation( const basic_nsAReadableString<CharT>& lhs, const basic_nsARe
     return imp_tag && (imp_tag==rhs.Implementation());
   }
 
-template <class CharT>
-nsPromiseSubstring<CharT>
-Substring( const basic_nsAReadableString<CharT>& aString, PRUint32 aStartPos, PRUint32 aSubstringLength )
+inline
+nsPromiseSubstring<char>
+Substring( const basic_nsAReadableString<char>& aString, PRUint32 aStartPos, PRUint32 aSubstringLength )
   {
-    return nsPromiseSubstring<CharT>(aString, aStartPos, aSubstringLength);
+    return nsPromiseSubstring<char>(aString, aStartPos, aSubstringLength);
   }
 
-template <class CharT>
-nsPromiseSubstring<CharT>
-Substring( const basic_nsAReadableString<CharT>& aString, const nsReadingIterator<CharT>& aStart, const nsReadingIterator<CharT>& aEnd )
+inline
+nsPromiseSubstring<PRUnichar>
+Substring( const basic_nsAReadableString<PRUnichar>& aString, PRUint32 aStartPos, PRUint32 aSubstringLength )
   {
-    return nsPromiseSubstring<CharT>(aString, aStart, aEnd);
+    return nsPromiseSubstring<PRUnichar>(aString, aStartPos, aSubstringLength);
+  }
+
+inline
+nsPromiseSubstring<char>
+Substring( const nsReadingIterator<char>& aStart, const nsReadingIterator<char>& aEnd )
+  {
+    return nsPromiseSubstring<char>(aStart, aEnd);
+  }
+
+inline
+nsPromiseSubstring<PRUnichar>
+Substring( const nsReadingIterator<PRUnichar>& aStart, const nsReadingIterator<PRUnichar>& aEnd )
+  {
+    return nsPromiseSubstring<PRUnichar>(aStart, aEnd);
   }
 
 template <class CharT>
@@ -1349,6 +1344,32 @@ int
 Compare( const CharT* lhs, const basic_nsAReadableString<CharT>& rhs )
   {
     return Compare(NS_READABLE_CAST(CharT, basic_nsLiteralString<CharT>(lhs)), rhs);
+  }
+
+// XXX Note that these are located here because some compilers are
+// sensitive to the ordering of declarations with regard to templates.
+template <class CharT>
+inline
+int
+basic_nsAReadableString<CharT>::Compare( const basic_nsAReadableString<CharT>& rhs ) const
+  {
+    return ::Compare(*this, rhs);
+  }
+
+template <class CharT>
+inline
+PRBool
+basic_nsAReadableString<CharT>::Equals( const CharT* rhs ) const
+  {
+    return Compare(basic_nsLiteralString<CharT>(rhs)) == 0;
+  }
+
+template <class CharT>
+inline
+int
+basic_nsAReadableString<CharT>::Compare( const CharT* rhs ) const
+  {
+    return ::Compare(*this, NS_READABLE_CAST(CharT, basic_nsLiteralString<CharT>(rhs)));
   }
 
 

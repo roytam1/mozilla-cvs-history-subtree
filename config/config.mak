@@ -134,6 +134,10 @@ CFLAGS=$(MOZ_JAVA_FLAG) -DEDITOR $(OS_CFLAGS) $(MOZ_CFLAGS)
 CFLAGS=$(MOZ_JAVA_FLAG) $(OS_CFLAGS) $(MOZ_CFLAGS)
 !endif
 
+!ifdef IBMBIDI
+CFLAGS=$(CFLAGS) -DIBMBIDI
+!endif
+
 LFLAGS=$(OS_LFLAGS) $(LLFLAGS) $(MOZ_LFLAGS)
 
 # This compiles in heap dumping utilities and other good stuff 
@@ -297,7 +301,9 @@ SPLITSYM = $(MOZ_TOOLS)\bin\splitsym
 !endif
 
 # use find
-FIND = $(MOZ_TOOLS)\bin\find.exe
+!ifndef FIND
+FIND = find.exe
+!endif
 
 MASM = $(MOZ_TOOLS)\bin\ml.exe
 

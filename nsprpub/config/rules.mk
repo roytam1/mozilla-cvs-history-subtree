@@ -152,6 +152,10 @@ OBJS += $(RES)
 endif
 endif
 
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+EXTRA_LIBS := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_LIBS))
+endif
+
 ALL_TRASH		= $(TARGETS) $(OBJS) $(filter-out . .., $(OBJDIR)) LOGS TAGS $(GARBAGE) \
 			  $(NOSUCHFILE) \
 			  so_locations
@@ -275,7 +279,7 @@ $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
-	$(AR) $(subst /,\\,$(OBJS)) $(AR_EXTRA_ARGS)
+	$(AR) $(subst /,\\,$(OBJS)) $(AR_FLAGS)
 else
 ifdef USE_AUTOCONF
 	$(AR) $(AR_FLAGS) $(OBJS) $(AR_EXTRA_ARGS)
@@ -342,9 +346,8 @@ ifeq ($(OS_TARGET), OpenVMS)
 	@if test ! -f $(OBJDIR)/VMSuni.opt; then \
 	    echo "Creating universal symbol option file $(OBJDIR)/VMSuni.opt";\
 	    create_opt_uni $(OBJS); \
-	    mv VMSuni.opt $(OBJDIR); \
 	fi
-	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(OBJDIR)/VMSuni.opt
+	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OBJDIR)/VMSuni.opt
 	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
 else	# OpenVMS
 ifdef USE_AUTOCONF

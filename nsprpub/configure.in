@@ -321,6 +321,10 @@ if test "$OS_ARCH" = "IRIX64"; then
     OS_ARCH=IRIX
 fi
 
+if test "$OS_ARCH" = "POSIX_for_OpenVMS_AXP"; then
+    OS_ARCH=OpenVMS
+fi
+
 #######################################################################
 # Master "Core Components" macros for getting the OS target           #
 #######################################################################
@@ -353,10 +357,16 @@ if test "$OS_ARCH" = "WIN95"; then
 elif test "$OS_ARCH" = 'Windows_95'; then
     OS_ARCH=Windows_NT
     OS_TARGET=WIN95
+elif test "$OS_ARCH" = 'Windows_98'; then
+    OS_ARCH=Windows_NT
+    OS_TARGET=WIN95
 elif test "$OS_ARCH" = "CYGWIN_95-4.0"; then
     OS_ARCH='CYGWIN_NT-4.0'
     OS_TARGET=WIN95
-elif test "$OS_ARCH" = "OS2"; then
+elif test "$OS_ARCH" = "CYGWIN_98-4.10"; then
+    OS_ARCH='CYGWIN_NT-4.0'
+    OS_TARGET=WIN95
+elif test "$OS_ARCH" = "OS_2"; then
     OS_ARCH=OS2
     OS_TARGET=OS2
 fi
@@ -453,6 +463,8 @@ case "$host" in
     ;;
 *-beos*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE"
+    ;;
+*os2*)
     ;;
 *)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
@@ -635,6 +647,7 @@ case "$target" in
     ;;
 
 *-freebsd*)
+    AC_DEFINE(XP_UNIX)
     AC_DEFINE(FREEBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
     CFLAGS="$CFLAGS $(DSO_CFLAGS) -ansi -Wall -pipe"
@@ -1147,13 +1160,19 @@ mips-sony-newsos*)
     AC_DEFINE(VMS)
     AC_DEFINE(VMS_AS_IS)
     AC_DEFINE(GENERIC_PTHREAD_REDEFINES)
+    RESOLVE_LINK_SYMBOLS=1
     CROSS_COMPILE=1
+    _HAVE_PTHREADS=1
     HOST_CC=c89
     HOST_CXX=cxx
     HOST_CFLAGS=-O
     HOST_CXXFLAGS=-O
+    CC=ccc
+    CXX=ccc
     CFLAGS="$CFLAGS -Wc,names=\(short,as\)"
     CXXFLAGS="$CXXFLAGS -Wc,names=\(short,as\)"
+    MDCPUCFG_H=_openvms.cfg
+    PR_MD_CSRCS=openvms.c
     MKSHLIB='vmsld $(OPTIMIZER)'
     ;;
 
@@ -1362,6 +1381,77 @@ mips-sony-newsos*)
     fi
     DSO_LDOPTS=-G
     CPU_ARCH=x86
+    ;;
+
+*-os2*)
+    AC_DEFINE(XP_OS2)
+    AC_DEFINE(BSD_SELECT)
+    AC_DEFINE(XP_PC)
+    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+    OBJ_SUFFIX=obj
+    LIB_SUFFIX=lib
+    DLL_SUFFIX=dll
+    DLLTOOL=''
+    RC=rc.exe
+    PR_MD_ARCH_DIR=os2
+    PROG_SUFFIX=.exe
+    NSINSTALL=nsinstall
+    MDCPUCFG_H=_os2.cfg
+    RESOLVE_LINK_SYMBOLS=1
+
+    case "$target" in
+    *-os2_emx)
+        AC_DEFINE(XP_OS2_EMX)
+        AC_DEFINE(OS2)
+        AR=emxomfar
+        AR_FLAGS='-p256 r $@'
+        CFLAGS="-Zmtd -Zomf"
+        HOST_CFLAGS="$CFLAGS"
+        CXXFLAGS="-Zmtd -Zomf"
+        OS_LIBS="-lsocket -lemxio"
+        LD='$(CC)'
+        IMPLIB='emximp -o'
+        FILTER='emxexp'
+        _OPTIMIZE_FLAGS=-O3
+        _DEBUG_FLAGS=-g
+        if test -n "$MOZ_DEBUG"; then
+          DLLFLAGS='-g'
+          EXEFLAGS='-g $(OMF_FLAG) -Zmtd -L$(DIST)/lib -o $@'
+        else
+          DLLFLAGS=
+          EXEFLAGS='-Zmtd -o $@'
+        fi
+        ;;
+    *-os2_vacpp)
+        AC_DEFINE(XP_OS2_VACPP)
+        AC_DEFINE(OS2,4)
+        AC_DEFINE(TCPV40HDRS)
+        AC_DEFINE(_X86_)
+        AR=-ilib
+        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
+        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl-'
+        HOST_CFLAGS="$CFLAGS"
+        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Ge- /Tl-'
+        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Ge+ /Tl-'
+        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl-'
+        OS_LIBS='so32dll.lib tcp32dll.lib'
+        LD='-ilink'
+        LDFLAGS='/FREE /DE /NOE /LINENUMBERS /nologo'
+        MKSHLIB='$(LD) $(DSO_LDOPTS)'
+        IMPLIB='implib -nologo -noignorecase'
+        FILTER='cppfilt -q -B -P'
+        _OPTIMIZE_FLAGS=/O+
+        _DEBUG_FLAGS=/Ti+ 
+        if test -n "$MOZ_DEBUG"; then
+          DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /nologo /DEBUG /NOE'
+          EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /nologo /DEBUG /NOE'
+        else
+          DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /nologo'
+          EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /nologo'
+        fi
+        ;;
+    esac
+
     ;;
 
 *)
@@ -1791,6 +1881,8 @@ AC_SUBST(WINDRES)
 AC_SUBST(RANLIB)
 AC_SUBST(PERL)
 AC_SUBST(STRIP)
+AC_SUBST(FILTER)
+AC_SUBST(IMPLIB)
 
 AC_SUBST(OS_LIBS)
 AC_SUBST(RESOLVE_LINK_SYMBOLS)
@@ -1807,6 +1899,7 @@ AC_SUBST(OPTIMIZER)
 AC_SUBST(RC)
 AC_SUBST(CPU_ARCH_TAG)
 AC_SUBST(DLLFLAGS)
+AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
 
 dnl ========================================================
