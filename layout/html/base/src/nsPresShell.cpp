@@ -844,7 +844,7 @@ protected:
 
 IncrementalReflow::~IncrementalReflow()
 {
-  for (PRInt32 i = mRoots.Count(); i >= 0; --i)
+  for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i)
     delete NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
 }
 
