@@ -21,11 +21,7 @@
 // CComposeAddressTableView.cp
 
 #include "abcom.h"
-#ifdef MOZ_NEWADDR
-#include "addbook.h"
-#else
 #include "addrbook.h"
-#endif //MOZ_NEWADDR
 #include "CComposeAddressTableView.h"
 
 #include <LDropFlag.h>
