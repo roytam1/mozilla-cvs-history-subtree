@@ -149,12 +149,12 @@ public:
      * main thread needs to process events while waiting for network activity to
      * complete.
      *
-     * @param result - a boolean indicating whether an event was processed on the
+     * @param bEventHandled - a boolean indicating whether an event was processed on the
      * main thread. If not on the main browser thread, PR_FALSE is returned.
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    ProcessNextEvent(PRBool *result) = 0;
+    ProcessNextEvent(PRBool *bEventHandled) = 0;
 
 };
 
