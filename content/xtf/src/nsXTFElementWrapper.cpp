@@ -96,8 +96,20 @@ nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
                                  PRBool aCompileEventHandlers)
 {
   GetXTFElement()->WillChangeDocument(aDocument);
+  // XXX For some reason we often get 2 SetDocument notifications with
+  // identical aDocument (one when expat encounters the element and
+  // another when the element is appended to its parent). We want to
+  // make sure that we only route notifications if the document has
+  // actually changed.
+  bool docReallyChanged = false;
+  if (aDocument!=mDocument) docReallyChanged = true;
+
+  if (docReallyChanged)
+    GetXTFElement()->WillChangeDocument(aDocument);
   nsXTFElementWrapperBase::SetDocument(aDocument, aDeep, aCompileEventHandlers);
   GetXTFElement()->DocumentChanged(aDocument);
+  if (docReallyChanged)
+    GetXTFElement()->DocumentChanged(aDocument);
 }
 
 void
