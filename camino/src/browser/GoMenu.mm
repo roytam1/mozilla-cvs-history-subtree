@@ -64,7 +64,7 @@ static const unsigned int kMaxTitleLength = 80;
   if (!wrapper) return nsnull;
   CHBrowserView* view = [wrapper getBrowserView];
   if (!view) return nsnull;
-  nsCOMPtr<nsIWebBrowser> webBrowser = [view getWebBrowser];
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([view getWebBrowser]);
   if (!webBrowser) return nsnull;
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(webBrowser));
   return webNav.get();
