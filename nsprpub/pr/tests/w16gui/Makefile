@@ -69,7 +69,6 @@ endif
 
 export:: $(TARGETS)
 
-install:: export
 
 clean::
 	rm -rf $(TARGETS)

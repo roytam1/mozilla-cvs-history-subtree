@@ -222,7 +222,6 @@ endif
 endif
 
 export:: $(TARGETS)
-install:: export
 clean::
 	rm -f $(TARGETS)
 

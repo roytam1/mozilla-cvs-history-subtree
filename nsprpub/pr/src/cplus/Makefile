@@ -48,4 +48,3 @@ HEADERS = $(wildcard *.h)
 
 export:: $(TARGETS)
 
-install:: export
