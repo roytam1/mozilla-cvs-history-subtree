@@ -520,11 +520,11 @@ void	    NP_LOADDS	NPP_Print(NPP instance, NPPrint* platformPrint);
 int16       NP_LOADDS	NPP_HandleEvent(NPP instance, void* event);
 void	    NP_LOADDS	NPP_URLNotify(NPP instance, const char* url,
 									  NPReason reason, void* notifyData);
-jref	    NP_LOADDS			NPP_GetJavaClass(void);
-NPError			NP_LOADDS	NPP_GetValue(void *instance, NPPVariable variable,
-									 void *value);
-NPError			NP_LOADDS	NPP_SetValue(void *instance, NPNVariable variable,
-									 void *value);
+jref	    NP_LOADDS	NPP_GetJavaClass(void);
+NPError		NP_LOADDS	NPP_GetValue(NPP instance, NPPVariable variable,
+                                     void *value);
+NPError		NP_LOADDS	NPP_SetValue(NPP instance, NPNVariable variable,
+                                     void *value);
 
 /*
  * NPN_* functions are provided by the navigator and called by the plugin.
