@@ -24,6 +24,7 @@
 #include "nsFileSpec.h"
 #include "nsIFileSpec.h"
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 
 class nsMailboxUrl : public nsIMailboxUrl, public nsMsgMailNewsUrl, public nsIMsgUriUrl
 {
@@ -71,6 +72,7 @@ protected:
 	char		*m_messageID;
 	PRUint32	m_messageSize;
 	nsMsgKey	m_messageKey;
+	nsXPIDLCString m_file;
 
 	// used by save message to disk
 	nsCOMPtr<nsIFileSpec> m_messageFileSpec;
