@@ -645,7 +645,7 @@ nsCachedNetData::GetInUse(PRBool *aInUse)
     rv = GetUpdateInProgress(aInUse);
     if (NS_FAILED(rv)) return rv;
     if (!*aInUse)
-        *aInUse = (mChannelCount != 0);
+        *aInUse = (mTransportCount != 0);
     return NS_OK;
 }
 
@@ -1122,24 +1122,22 @@ nsCachedNetData::GetCache(nsINetDataCache* *aCache)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::NewChannel(nsILoadGroup* aLoadGroup, nsIChannel* *aChannel)
+nsCachedNetData::NewTransport(nsILoadGroup* aLoadGroup, nsITransport* *aTransport)
 {
     nsresult rv;
-    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsITransport> transport;
 
     CHECK_AVAILABILITY();
 
-    rv =  mRecord->NewChannel(0, getter_AddRefs(channel));
+    rv =  mRecord->NewTransport(0, getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
-    nsCacheEntryChannel *cacheEntryChannel;
-    cacheEntryChannel = new nsCacheEntryChannel(this, channel, aLoadGroup);
-    if (!cacheEntryChannel)
+    nsCacheEntryTransport *cacheEntryTransport;
+    cacheEntryTransport = new nsCacheEntryTransport(this, transport, aLoadGroup);
+    if (!cacheEntryTransport)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    *aChannel = cacheEntryChannel;
-    NS_ADDREF(*aChannel);
-
+    NS_ADDREF(*aTransport = cacheEntryTransport);
     return NS_OK;
 }
 
@@ -1175,10 +1173,10 @@ public:
         // Just in case the protocol handler forgot to set this flag...
         mCacheEntry->SetFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
 
-        rv = mCacheEntry->NewChannel(0, getter_AddRefs(mChannel));
+        rv = mCacheEntry->NewTransport(nsnull, getter_AddRefs(mTransport));
         if (NS_FAILED(rv)) return rv;
 
-        return mChannel->OpenOutputStream(aStartingOffset, -1, getter_AddRefs(mCacheStream));
+        return mTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mCacheStream));
     }
 
     NS_DECL_ISUPPORTS
@@ -1303,7 +1301,7 @@ private:
     nsCOMPtr<nsIOutputStream>    mCacheStream;
 
     nsCOMPtr<nsIInputStream>     mOriginalStream;
-    nsCOMPtr<nsIChannel>         mChannel;
+    nsCOMPtr<nsITransport>       mTransport;
 };
 
 

@@ -26,29 +26,31 @@
 #define _nsCacheEntryChannel_h_
 
 #include "nsCOMPtr.h"
-#include "nsIChannel.h"
+#include "nsITransport.h"
 #include "nsCachedNetData.h"
 #include "nsILoadGroup.h"
 
 class nsIStreamListener;
 
-// Override several nsIChannel methods so that they interact with the cache manager
-class nsCacheEntryChannel : public nsIChannel{
+// Override several nsITransport methods so that they interact with the cache manager
+class nsCacheEntryTransport : public nsITransport {
 
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSICHANNEL
+    NS_DECL_NSITRANSPORT
 
 protected:
-    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
-    virtual ~nsCacheEntryChannel();
+    nsCacheEntryTransport(nsCachedNetData* aCacheEntry,
+                          nsITransport* aTransport,
+                          nsILoadGroup* aLoadGroup);
+    virtual ~nsCacheEntryTransport();
 
     friend class nsCachedNetData;
 
 private:
     nsCOMPtr<nsCachedNetData>    mCacheEntry;
     nsCOMPtr<nsILoadGroup>       mLoadGroup;
-    nsCOMPtr<nsIChannel>         mChannel;
+    nsCOMPtr<nsITransport>       mTransport;
 };
 
 #endif // _nsCacheEntryChannel_h_

@@ -30,33 +30,33 @@
 #include "nsIStreamListener.h"
 #include "nsMemory.h"
 
-nsCacheEntryChannel::nsCacheEntryChannel(
+nsCacheEntryTransport::nsCacheEntryTransport(
         nsCachedNetData* aCacheEntry, 
-        nsIChannel* aChannel,
+        nsITransport* aTransport,
         nsILoadGroup* aLoadGroup):
     mCacheEntry(aCacheEntry), 
     mLoadGroup(aLoadGroup),
-    mChannel(aChannel)
+    mTransport(aTransport)
 {
-    NS_ASSERTION(aCacheEntry->mChannelCount < 0xFF, "Overflowed channel counter");
-    mCacheEntry->mChannelCount++;
+    NS_ASSERTION(aCacheEntry->mTransportCount < 0xFF, "Overflowed transport counter");
+    mCacheEntry->mTransportCount++;
     NS_INIT_REFCNT();
 }
 
-nsCacheEntryChannel::~nsCacheEntryChannel()
+nsCacheEntryTransport::~nsCacheEntryTransport()
 {
-    mCacheEntry->mChannelCount--;
+    mCacheEntry->mTransportCount--;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsCacheEntryChannel, 
-                              nsIChannel)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCacheEntryTransport, 
+                              nsITransport)
 
 // A proxy for nsIOutputStream
 class CacheOutputStream : public nsIOutputStream {
 
 public:
     CacheOutputStream(nsIOutputStream *aOutputStream, 
-            nsCachedNetData *aCacheEntry):
+                      nsCachedNetData *aCacheEntry):
         mOutputStream(aOutputStream), 
         mCacheEntry(aCacheEntry), 
         mStartTime(PR_IntervalNow())
@@ -134,12 +134,18 @@ protected:
 NS_IMPL_THREADSAFE_ISUPPORTS1(CacheOutputStream, nsIOutputStream)
 
 NS_IMETHODIMP
-nsCacheEntryChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream* *aOutputStream)
+nsCacheEntryTransport::OpenOutputStream(PRUint32 transferOffset,
+                                        PRUint32 transferCount,
+                                        PRUint32 transferFlags,
+                                        nsIOutputStream* *aOutputStream)
 {
     nsresult rv;
     nsCOMPtr<nsIOutputStream> baseOutputStream;
     
-    rv = mChannel->OpenOutputStream(transferOffset, transferCount, getter_AddRefs(baseOutputStream));
+    rv = mTransport->OpenOutputStream(transferOffset,
+                                      transferCount,
+                                      transferFlags,
+                                      getter_AddRefs(baseOutputStream));
     if (NS_FAILED(rv)) return rv;
 
     mCacheEntry->NoteAccess();
@@ -153,16 +159,26 @@ nsCacheEntryChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transfer
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream* *aInputStream)
+nsCacheEntryTransport::OpenInputStream(PRUint32 transferOffset,
+                                       PRUint32 transferCount,
+                                       PRUint32 transferFlags,
+                                       nsIInputStream* *aInputStream)
 {
     mCacheEntry->NoteAccess();
 
-    return mChannel->OpenInputStream(transferOffset, transferCount, aInputStream);
+    return mTransport->OpenInputStream(transferOffset,
+                                       transferCount,
+                                       transferFlags,
+                                       aInputStream);
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext,
-                               PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsCacheEntryTransport::AsyncRead(nsIStreamListener *aListener,
+                                 nsISupports *aContext,
+                                 PRUint32 transferOffset,
+                                 PRUint32 transferCount,
+                                 PRUint32 transferFlags,
+                                 nsIRequest **_retval)
 {
     nsresult rv;
 
@@ -170,53 +186,59 @@ nsCacheEntryChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aConte
 
     mCacheEntry->NoteAccess();
 
-    rv = mChannel->AsyncRead(aListener, aContext, transferOffset, transferCount, _retval);
+    rv = mTransport->AsyncRead(aListener,
+                               aContext,
+                               transferOffset,
+                               transferCount,
+                               transferFlags,
+                               _retval);
 
     return rv;
 }
 
 // No async writes allowed to the cache yet
 NS_IMETHODIMP
-nsCacheEntryChannel::AsyncWrite(nsIStreamProvider *aProvider,
-                                nsISupports *ctxt, 
-                                PRUint32 transferOffset, 
-                                PRUint32 transferCount, 
-                                nsIRequest **_retval)
+nsCacheEntryTransport::AsyncWrite(nsIStreamProvider *aProvider,
+                                  nsISupports *ctxt, 
+                                  PRUint32 transferOffset, 
+                                  PRUint32 transferCount, 
+                                  PRUint32 transferFlags,
+                                  nsIRequest **_retval)
 {
-    NS_NOTREACHED("nsCacheEntryChannel::AsyncWrite");
+    NS_NOTREACHED("nsCacheEntryTransport::AsyncWrite");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-
+#if 0
 NS_IMETHODIMP 
-nsCacheEntryChannel::SetLoadGroup(nsILoadGroup * aLoadGroup)
+nsCacheEntryTransport::SetLoadGroup(nsILoadGroup * aLoadGroup)
 {
-    return mChannel->SetLoadGroup(aLoadGroup);
+    return mTransport->SetLoadGroup(aLoadGroup);
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
+nsCacheEntryTransport::GetLoadGroup(nsILoadGroup* *aLoadGroup)
 {
     *aLoadGroup = mLoadGroup;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
+nsCacheEntryTransport::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
 {
-    return mChannel->GetLoadAttributes(aLoadAttributes);
+    return mTransport->GetLoadAttributes(aLoadAttributes);
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::SetLoadAttributes(nsLoadFlags aLoadAttributes)
+nsCacheEntryTransport::SetLoadAttributes(nsLoadFlags aLoadAttributes)
 {
-    return mChannel->SetLoadAttributes(aLoadAttributes);
+    return mTransport->SetLoadAttributes(aLoadAttributes);
 }
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMETHODIMP
-nsCacheEntryChannel::GetURI(nsIURI * *aURI)
+nsCacheEntryTransport::GetURI(nsIURI * *aURI)
 {
     char* spec;
     nsresult rv;
@@ -233,52 +255,65 @@ nsCacheEntryChannel::GetURI(nsIURI * *aURI)
 }
 
 NS_IMETHODIMP
-nsCacheEntryChannel::SetURI(nsIURI * aOriginalURI) 
+nsCacheEntryTransport::SetURI(nsIURI * aOriginalURI) 
 { 
-    return mChannel->SetURI(aOriginalURI); 
+    return mTransport->SetURI(aOriginalURI); 
 } 
 
 
 NS_IMETHODIMP
-nsCacheEntryChannel::SetOriginalURI(nsIURI * aOriginalURI) 
+nsCacheEntryTransport::SetOriginalURI(nsIURI * aOriginalURI) 
 { 
-    return mChannel->SetOriginalURI(aOriginalURI); 
+    return mTransport->SetOriginalURI(aOriginalURI); 
 } 
 
 NS_IMETHODIMP
-nsCacheEntryChannel::GetOriginalURI(nsIURI * *aURI)
+nsCacheEntryTransport::GetOriginalURI(nsIURI * *aURI)
 {
-    // FIXME - should return original URI passed into NewChannel() ?
-    NS_NOTREACHED("nsCacheEntryChannel::GetOriginalURI");
+    // FIXME - should return original URI passed into NewTransport() ?
+    NS_NOTREACHED("nsCacheEntryTransport::GetOriginalURI");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP 
-nsCacheEntryChannel::GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) 
+nsCacheEntryTransport::GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) 
 { 
-    return mChannel->GetNotificationCallbacks(aNotificationCallbacks); 
+    return mTransport->GetNotificationCallbacks(aNotificationCallbacks); 
 }
 
 NS_IMETHODIMP 
-nsCacheEntryChannel::SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) 
+nsCacheEntryTransport::SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) 
 { 
-    return mChannel->SetNotificationCallbacks(aNotificationCallbacks); 
+    return mTransport->SetNotificationCallbacks(aNotificationCallbacks); 
 } 
 
 NS_IMETHODIMP 
-nsCacheEntryChannel::GetOwner(nsISupports * *aOwner) 
+nsCacheEntryTransport::GetOwner(nsISupports * *aOwner) 
 { 
-    return mChannel->GetOwner(aOwner); 
+    return mTransport->GetOwner(aOwner); 
 }
 
 NS_IMETHODIMP 
-nsCacheEntryChannel::SetOwner(nsISupports * aOwner) 
+nsCacheEntryTransport::SetOwner(nsISupports * aOwner) 
 { 
-    return mChannel->SetOwner(aOwner); 
+    return mTransport->SetOwner(aOwner); 
 }
+#endif
 
 NS_IMETHODIMP 
-nsCacheEntryChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
+nsCacheEntryTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
-    return mChannel->GetSecurityInfo(aSecurityInfo);
+    return mTransport->GetSecurityInfo(aSecurityInfo);
+}
+
+NS_IMETHODIMP
+nsCacheEntryTransport::GetProgressEventSink(nsIProgressEventSink **aResult)
+{
+    return mTransport->GetProgressEventSink(aResult);
+}
+
+NS_IMETHODIMP
+nsCacheEntryTransport::SetProgressEventSink(nsIProgressEventSink *aProgress)
+{
+    return mTransport->SetProgressEventSink(aProgress);
 }

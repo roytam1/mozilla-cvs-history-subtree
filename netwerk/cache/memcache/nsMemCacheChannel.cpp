@@ -33,10 +33,13 @@
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUESERVICE_CID);
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsMemCacheChannel, nsIChannel, nsIRequest)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsMemCacheTransport,
+                              nsITransport,
+                              nsITransportRequest,
+                              nsIRequest)
 
 void
-nsMemCacheChannel::NotifyStorageInUse(PRInt32 aBytesUsed)
+nsMemCacheTransport::NotifyStorageInUse(PRInt32 aBytesUsed)
 {
     mRecord->mCache->mOccupancy += aBytesUsed;
 }
@@ -50,7 +53,7 @@ class AsyncReadStreamAdaptor : public nsIInputStream,
                                public nsIStreamListener
 {
 public:
-    AsyncReadStreamAdaptor(nsMemCacheChannel* aChannel, nsIInputStream *aSyncStream):
+    AsyncReadStreamAdaptor(nsMemCacheTransport* aChannel, nsIInputStream *aSyncStream):
         mSyncStream(aSyncStream), mDataAvailCursor(0),
         mRemaining((PRUint32)-1), mAvailable(0), mChannel(aChannel), mAbortStatus(NS_OK), mSuspended(PR_FALSE)
         {
@@ -230,7 +233,8 @@ public:
 
     nsresult
     AsyncRead(nsIStreamListener* aListener, nsISupports* aContext,
-              PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) {
+              PRUint32 transferOffset, PRUint32 transferCount, 
+              PRUint32 flags, nsIRequest **_retval) {
 
         nsresult rv;
         nsIEventQueue *eventQ;
@@ -313,7 +317,7 @@ private:
     PRUint32                    mRemaining;      // Size of AsyncRead request less bytes for
                                                  //   consumer OnDataAvailable's that were fired
     PRUint32                    mAvailable;      // Number of bytes for which OnDataAvailable fired
-    nsMemCacheChannel*          mChannel;        // Associated memory cache channel, strong link
+    nsMemCacheTransport*          mChannel;        // Associated memory cache channel, strong link
                                                  //   but can not use nsCOMPtr
     nsresult                    mAbortStatus;    // Abort() has been called
     PRBool                      mSuspended;      // Suspend() has been called
@@ -326,7 +330,7 @@ NS_IMPL_ISUPPORTS3(AsyncReadStreamAdaptor, nsIInputStream,
 // overall occupancy as new data flows into the cache entry.
 class MemCacheWriteStreamWrapper : public nsIOutputStream {
 public:
-    MemCacheWriteStreamWrapper(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream):
+    MemCacheWriteStreamWrapper(nsMemCacheTransport* aChannel, nsIOutputStream *aBaseStream):
         mBaseStream(aBaseStream), mChannel(aChannel)
         {
             NS_INIT_REFCNT();
@@ -336,7 +340,7 @@ public:
     virtual ~MemCacheWriteStreamWrapper() { NS_RELEASE(mChannel); };
     
     static nsresult
-    Create(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream, nsIOutputStream* *aWrapper) {
+    Create(nsMemCacheTransport* aChannel, nsIOutputStream *aBaseStream, nsIOutputStream* *aWrapper) {
         MemCacheWriteStreamWrapper *wrapper =
             new MemCacheWriteStreamWrapper(aChannel, aBaseStream);
         if (!wrapper) return NS_ERROR_OUT_OF_MEMORY;
@@ -399,33 +403,32 @@ public:
 
 private:
     nsCOMPtr<nsIOutputStream>   mBaseStream;
-    nsMemCacheChannel*          mChannel;
+    nsMemCacheTransport*          mChannel;
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(MemCacheWriteStreamWrapper, nsIOutputStream)
 
-nsMemCacheChannel::nsMemCacheChannel(nsMemCacheRecord *aRecord, nsILoadGroup *aLoadGroup)
-    : mRecord(aRecord), mStartOffset(0), mStatus(NS_OK),
-      mLoadAttributes(nsIChannel::LOAD_NORMAL)
+nsMemCacheTransport::nsMemCacheTransport(nsMemCacheRecord *aRecord, nsILoadGroup *aLoadGroup)
+    : mRecord(aRecord), mStartOffset(0), mStatus(NS_OK)
 {
     NS_INIT_REFCNT();
-    mRecord->mNumChannels++;
+    mRecord->mNumTransports++;
 }
 
-nsMemCacheChannel::~nsMemCacheChannel()
+nsMemCacheTransport::~nsMemCacheTransport()
 {
-    mRecord->mNumChannels--;
+    mRecord->mNumTransports--;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetName(PRUnichar* *result)
+nsMemCacheTransport::GetName(PRUnichar* *result)
 {
-    NS_NOTREACHED("nsMemCacheChannel::GetName");
+    NS_NOTREACHED("nsMemCacheTransport::GetName");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::IsPending(PRBool* aIsPending)
+nsMemCacheTransport::IsPending(PRBool* aIsPending)
 {
     *aIsPending = PR_FALSE;
     if (!mAsyncReadStream)
@@ -434,14 +437,14 @@ nsMemCacheChannel::IsPending(PRBool* aIsPending)
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetStatus(nsresult *status)
+nsMemCacheTransport::GetStatus(nsresult *status)
 {
     *status = mStatus;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::Cancel(nsresult status)
+nsMemCacheTransport::Cancel(nsresult status)
 {
     mStatus = status;
     if (!mAsyncReadStream)
@@ -450,7 +453,7 @@ nsMemCacheChannel::Cancel(nsresult status)
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::Suspend(void)
+nsMemCacheTransport::Suspend(void)
 {
     if (!mAsyncReadStream)
         return NS_ERROR_FAILURE;
@@ -458,47 +461,52 @@ nsMemCacheChannel::Suspend(void)
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::Resume(void)
+nsMemCacheTransport::Resume(void)
 {
     if (!mAsyncReadStream)
         return NS_ERROR_FAILURE;
     return mAsyncReadStream->Resume();
 }
 
+#if 0
 NS_IMETHODIMP
-nsMemCacheChannel::GetOriginalURI(nsIURI* *aURI)
+nsMemCacheTransport::GetOriginalURI(nsIURI* *aURI)
 {
     // Not required
-    NS_NOTREACHED("nsMemCacheChannel::GetOriginalURI");
+    NS_NOTREACHED("nsMemCacheTransport::GetOriginalURI");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetOriginalURI(nsIURI* aURI)
+nsMemCacheTransport::SetOriginalURI(nsIURI* aURI)
 {
     // Not required
-    NS_NOTREACHED("nsMemCacheChannel::SetOriginalURI");
+    NS_NOTREACHED("nsMemCacheTransport::SetOriginalURI");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetURI(nsIURI* *aURI)
+nsMemCacheTransport::GetURI(nsIURI* *aURI)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::GetURI");
+    NS_NOTREACHED("nsMemCacheTransport::GetURI");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetURI(nsIURI* aURI)
+nsMemCacheTransport::SetURI(nsIURI* aURI)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::SetURI");
+    NS_NOTREACHED("nsMemCacheTransport::SetURI");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+#endif
 
 NS_IMETHODIMP
-nsMemCacheChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream* *aResult)
+nsMemCacheTransport::OpenInputStream(PRUint32 transferOffset,
+                                     PRUint32 transferCount,
+                                     PRUint32 transferFlags,
+                                     nsIInputStream* *aResult)
 
 {
     nsresult rv;
@@ -514,7 +522,10 @@ nsMemCacheChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCou
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream* *aResult)
+nsMemCacheTransport::OpenOutputStream(PRUint32 transferOffset,
+                                      PRUint32 transferCount,
+                                      PRUint32 transferFlags,
+                                      nsIOutputStream* *aResult)
 {
     nsresult rv;
     NS_ENSURE_ARG(aResult);
@@ -532,11 +543,15 @@ nsMemCacheChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCo
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext,
-                             PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsMemCacheTransport::AsyncRead(nsIStreamListener *aListener,
+                               nsISupports *aContext,
+                               PRUint32 transferOffset,
+                               PRUint32 transferCount,
+                               PRUint32 transferFlags,
+                               nsIRequest **_retval)
 {
     nsCOMPtr<nsIInputStream> inputStream;
-    nsresult rv = OpenInputStream(0, -1, getter_AddRefs(inputStream));
+    nsresult rv = OpenInputStream(0, 0, 0, getter_AddRefs(inputStream));
     if (NS_FAILED(rv)) return rv;
     
     AsyncReadStreamAdaptor *asyncReadStreamAdaptor;
@@ -547,7 +562,10 @@ nsMemCacheChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext
     mAsyncReadStream = asyncReadStreamAdaptor;
 
     rv = asyncReadStreamAdaptor->AsyncRead(aListener, aContext,
-                                           transferOffset, transferCount, getter_AddRefs(mCurrentReadRequest));
+                                           transferOffset,
+                                           transferCount,
+                                           transferFlags,
+                                           getter_AddRefs(mCurrentReadRequest));
     if (NS_FAILED(rv)) {
         mAsyncReadStream = nsnull;
         NS_RELEASE(asyncReadStreamAdaptor);
@@ -558,29 +576,35 @@ nsMemCacheChannel::AsyncRead(nsIStreamListener *aListener, nsISupports *aContext
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt,
-                              PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsMemCacheTransport::AsyncWrite(nsIStreamProvider *provider,
+                                nsISupports *ctxt,
+                                PRUint32 transferOffset,
+                                PRUint32 transferCount,
+                                PRUint32 transferFlags,
+                                nsIRequest **_retval)
 {
     // Not required to be implemented
-    NS_NOTREACHED("nsMemCacheChannel::AsyncWrite");
+    NS_NOTREACHED("nsMemCacheTransport::AsyncWrite");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+#if 0
 NS_IMETHODIMP
-nsMemCacheChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
+nsMemCacheTransport::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
 {
     *aLoadAttributes = mLoadAttributes;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetLoadAttributes(nsLoadFlags aLoadAttributes)
+nsMemCacheTransport::SetLoadAttributes(nsLoadFlags aLoadAttributes)
 {
     mLoadAttributes = aLoadAttributes;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetOwner(nsISupports* *aOwner)
+nsMemCacheTransport::GetOwner(nsISupports* *aOwner)
 {
     *aOwner = mOwner.get();
     NS_IF_ADDREF(*aOwner);
@@ -588,7 +612,7 @@ nsMemCacheChannel::GetOwner(nsISupports* *aOwner)
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetOwner(nsISupports* aOwner)
+nsMemCacheTransport::SetOwner(nsISupports* aOwner)
 {
     // Not required to be implemented, since it is implemented by cache manager
     mOwner = aOwner;
@@ -596,52 +620,75 @@ nsMemCacheChannel::SetOwner(nsISupports* aOwner)
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
+nsMemCacheTransport::GetLoadGroup(nsILoadGroup* *aLoadGroup)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::GetLoadGroup");
+    NS_NOTREACHED("nsMemCacheTransport::GetLoadGroup");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetLoadGroup(nsILoadGroup* aLoadGroup)
+nsMemCacheTransport::SetLoadGroup(nsILoadGroup* aLoadGroup)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::SetLoadGroup");
+    NS_NOTREACHED("nsMemCacheTransport::SetLoadGroup");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
+nsMemCacheTransport::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::GetNotificationCallbacks");
+    NS_NOTREACHED("nsMemCacheTransport::GetNotificationCallbacks");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsMemCacheChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
+nsMemCacheTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
     // Not required to be implemented, since it is implemented by cache manager
-    NS_NOTREACHED("nsMemCacheChannel::SetNotificationCallbacks");
+    NS_NOTREACHED("nsMemCacheTransport::SetNotificationCallbacks");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+#endif
 
 NS_IMETHODIMP 
-nsMemCacheChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
+nsMemCacheTransport::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
     *aSecurityInfo = nsnull;
     return NS_OK;
 }
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsMemCacheChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsMemCacheChannel::SetParent(nsISupports * aParent)
+NS_IMETHODIMP
+nsMemCacheTransport::GetProgressEventSink(nsIProgressEventSink **aResult)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsMemCacheTransport::SetProgressEventSink(nsIProgressEventSink *aProgress)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+#if 0
+/* attribute nsISupports parent; */
+NS_IMETHODIMP nsMemCacheTransport::GetParent(nsISupports * *aParent)
+{
+    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
+    return NS_OK;
+}
+NS_IMETHODIMP nsMemCacheTransport::SetParent(nsISupports * aParent)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+#endif
+
+NS_IMETHODIMP
+nsMemCacheTransport::GetTransport(nsITransport **result)
+{
+    NS_ENSURE_ARG_POINTER(result);
+    NS_ADDREF(*result = this);
+    return NS_OK;
+}
