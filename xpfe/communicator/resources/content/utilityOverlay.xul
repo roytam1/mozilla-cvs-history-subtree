@@ -232,7 +232,7 @@
  <menu id="menu_Help" label="&menuHelp.label;" accesskey="&menuHelp.accesskey;">
    <menupopup>
      <menuitem label="About Ishmail" accesskey="A"
-               oncommand="alert('Ismail 1.0 - Copyright 2002 Netscape Communications Corporation\n' + navigator.userAgent);"/>
+               oncommand="alert('Ishmail 1.0 - Copyright 2002 Netscape Communications Corporation\n' + navigator.userAgent);"/>
    </menupopup>
  </menu>    
 
