@@ -244,7 +244,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     if (!handle)
         return NULL;
     handle->js_obj = js_obj;
-    handle->cx = cx;
+    handle->rt = JS_GetRuntime(cx);
 
     /* Create a new Java object that wraps the JavaScript object by storing its
        address in a private integer field. */
@@ -1260,19 +1260,17 @@ JNIEXPORT void JNICALL
 Java_netscape_javascript_JSObject_finalize(JNIEnv *jEnv, jobject java_wrapper_obj)
 {
     JSBool success;
-    JSContext *cx;
     JSObjectHandle *handle;
 
     success = JS_FALSE;
- 
+
     handle = (JSObjectHandle *)((*jEnv)->GetIntField(jEnv, java_wrapper_obj, njJSObject_internal));
     JS_ASSERT(handle);
     if (!handle)
         return;
-    cx = handle->cx;
 
-    success = JS_RemoveRoot(cx, &handle->js_obj);
-    JS_free(cx, handle);
+    success = JS_RemoveRootRT(handle->rt, &handle->js_obj);
+    free(handle);
 
     JS_ASSERT(success);
 }

@@ -219,7 +219,7 @@ typedef struct JavaToJSSavedState JavaToJSSavedState;
    objects hold a reference to native JSObjects. */
 struct JSObjectHandle {
     JSObject *js_obj;
-    JSContext *cx;      /* Creating context, needed for finalization */
+    JSRuntime *rt;
 };
 typedef struct JSObjectHandle JSObjectHandle;
 
