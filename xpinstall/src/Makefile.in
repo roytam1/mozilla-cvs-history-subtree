@@ -51,6 +51,7 @@ CPPSRCS = \
     nsSoftwareUpdateStream.cpp  \
     ScheduledTasks.cpp          \
     nsWinReg.cpp                \
+    nsJSWinReg.cpp              \
     nsWinRegItem.cpp            \
     nsWinRegValue.cpp           \
     $(NULL)
