@@ -1376,6 +1376,10 @@ nsMsgAccountManager::UpgradePrefs()
 	rv = MigrateNewsAccounts(identity);
     if (NS_FAILED(rv)) return rv;
 
+    // we're done migrating, let's save the prefs
+    rv = m_prefs->SavePrefFile();
+    if (NS_FAILED(rv)) return rv;
+
     // remove dummy migration identity
     return NS_OK;
 }
