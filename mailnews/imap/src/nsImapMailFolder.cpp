@@ -2193,9 +2193,8 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
                 nsFileURL  fileURL(filePath);
                 char * message_path_url = PL_strdup(fileURL.GetAsString());
                 
-#ifdef NECKO_CONVERTERS                
-				res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE, nsURLReloadBypassCache, 0);
-#endif                 
+              
+				res = webShell->LoadURL(nsAutoString(message_path_url).GetUnicode(), nsnull, PR_TRUE);               
 				if (NS_SUCCEEDED(res))
 				{
 					// now mark the message as read in the db.
