@@ -37,6 +37,7 @@ EXPORTS		= \
 		nsStyleUtil.h \
 		nsICSSLoaderObserver.h \
 		nsIComputedDOMStyle.h \
+		nsICSSPseudoComparator.h \
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

@@ -205,6 +205,10 @@ protected:
   PRBool ParseSingleValueProperty(PRInt32& aErrorCode, nsCSSValue& aValue, 
                                   nsCSSProperty aPropID);
 
+#ifdef INCLUDE_XUL
+  PRBool ParseOutlinerPseudoElement(PRInt32& aErrorCode, nsCSSSelector& aSelector);
+#endif
+
   // Property specific parsing routines
   PRBool ParseAzimuth(PRInt32& aErrorCode, nsCSSValue& aValue);
   PRBool ParseBackground(PRInt32& aErrorCode, nsICSSDeclaration* aDeclaration, PRInt32& aChangeHint);
@@ -1355,6 +1359,20 @@ static PRBool IsSinglePseudoClass(const nsCSSSelector& aSelector)
                 (aSelector.mPseudoClassList->mNext == nsnull));
 }
 
+#ifdef INCLUDE_XUL
+static PRBool IsOutlinerPseudoElement(const nsString& aPseudo)
+{
+  return !(aPseudo.CompareWithConversion("-moz-outliner-", PR_FALSE, 14));
+}
+
+static PRBool IsOutlinerPseudoElement(nsIAtom* aPseudo)
+{
+  nsAutoString str;
+  aPseudo->ToString(str);
+  return !(str.CompareWithConversion(":-moz-outliner-", PR_FALSE, 15));
+}
+#endif
+
 PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
                                          SelectorList*& aList)
 {
@@ -1403,6 +1421,15 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
           list->AddSelector(selector);
           pseudoClassList->mAtom = nsnull;
           listSel->mOperator = PRUnichar('>');
+          if (IsOutlinerPseudoElement(selector.mTag)) {
+            // Take the remaining "pseudoclasses" that we parsed
+            // inside the outliner pseudoelement's ()-list, and
+            // make our new selector have these pseudoclasses
+            // in its pseudoclass list.
+            selector.mPseudoClassList = pseudoClassList->mNext;
+            pseudoClassList->mNext = nsnull;
+          }
+
           if (nsnull == prevList) { // delete list entry
             listSel->mPseudoClassList = pseudoClassList->mNext;
           }
@@ -1674,9 +1701,16 @@ PRBool CSSParserImpl::ParseSelector(PRInt32& aErrorCode,
         return PR_FALSE;
       }
       if (eCSSToken_Ident != mToken.mType) {  // malformed selector
-        REPORT_UNEXPECTED_TOKEN();
-        UngetToken();
-        return PR_FALSE;
+#ifdef INCLUDE_XUL
+        if (eCSSToken_Function != mToken.mType || 
+            !IsOutlinerPseudoElement(mToken.mIdent)) {
+#endif
+          REPORT_UNEXPECTED_TOKEN();
+          UngetToken();
+          return PR_FALSE;
+#ifdef INCLUDE_XUL
+        }
+#endif
       }
       mToken.AppendToString(aSource);
       buffer.Truncate();
@@ -1695,6 +1729,18 @@ PRBool CSSParserImpl::ParseSelector(PRInt32& aErrorCode,
           dataMask |= SEL_MASK_PELEM;
           aSelector.AddPseudoClass(pseudo); // store it here, it gets pulled later
           NS_RELEASE(pseudo);
+
+#ifdef INCLUDE_XUL
+          if (eCSSToken_Function == mToken.mType && 
+              IsOutlinerPseudoElement(mToken.mIdent)) {
+            // We have encountered a pseudoelement of the form
+            // -moz-outliner-xxxx(a,b,c).  We parse (a,b,c) and add each
+            // item in the list to the pseudoclass list.  They will be pulled
+            // from the list later along with the pseudoelement.
+            if (!ParseOutlinerPseudoElement(aErrorCode, aSelector))
+              return PR_FALSE;
+          }
+#endif
 
           // ensure selector ends here, must be followed by EOF, space, '{' or ','
           if (GetToken(aErrorCode, PR_FALSE)) { // premature eof is ok (here!)
@@ -2059,6 +2105,31 @@ PRBool CSSParserImpl::ParseColorComponent(PRInt32& aErrorCode,
   }
   return PR_FALSE;
 }
+
+#ifdef INCLUDE_XUL
+PRBool CSSParserImpl::ParseOutlinerPseudoElement(PRInt32& aErrorCode,
+                                                 nsCSSSelector& aSelector)
+{
+  if (ExpectSymbol(aErrorCode, '(', PR_FALSE)) {
+    while (!ExpectSymbol(aErrorCode, ')', PR_TRUE)) {
+      if (!GetToken(aErrorCode, PR_TRUE)) {
+        return PR_FALSE;
+      }
+      else if (eCSSToken_Ident == mToken.mType) {
+        nsCOMPtr<nsIAtom> pseudo = getter_AddRefs(NS_NewAtom(mToken.mIdent));
+        aSelector.AddPseudoClass(pseudo);
+      }
+      else if (eCSSToken_Symbol == mToken.mType) {
+        if (!mToken.IsSymbol(','))
+          return PR_FALSE;
+      }
+      else return PR_FALSE;
+    }
+    return PR_TRUE;
+  }
+  return PR_FALSE; 
+}
+#endif
 
 //----------------------------------------------------------------------
 

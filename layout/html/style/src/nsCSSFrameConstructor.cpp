@@ -162,6 +162,7 @@ static PRBool gNoisyInlineConstruction = PR_FALSE;
 #include "nsXULTreeCellFrame.h"
 #include "nsMenuFrame.h"
 #include "nsPopupSetFrame.h"
+#include "nsOutlinerColFrame.h"
 
 //------------------------------------------------------------------
 
@@ -236,6 +237,9 @@ NS_NewMenuFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRUint32 aFlag
 
 nsresult
 NS_NewMenuBarFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+
+nsresult
+NS_NewOutlinerBodyFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
 nsresult
 NS_NewTreeScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
@@ -5219,15 +5223,14 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       // BOX CONSTRUCTION
     if (aTag == nsXULAtoms::box || aTag == nsXULAtoms::vbox || aTag == nsXULAtoms::hbox || aTag == nsXULAtoms::tabbox || 
         aTag == nsXULAtoms::tabpage || aTag == nsXULAtoms::tabcontrol
-        || aTag == nsXULAtoms::treecell  
+        || aTag == nsXULAtoms::treecell  || aTag == nsXULAtoms::outliner
         ) {
       processChildren = PR_TRUE;
       isReplaced = PR_TRUE;
 
       if (aTag == nsXULAtoms::treecell)
         rv = NS_NewXULTreeCellFrame(aPresShell, &newFrame);
-      else
-
+      
       // create a box. Its not root, its layout manager is default (nsnull) which is "sprocket" and
       // its default orientation is horizontal for hbox and vertical for vbox
       rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull, aTag != nsXULAtoms::vbox);
@@ -5365,7 +5368,15 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       isReplaced = PR_TRUE;
       rv = NS_NewSpringFrame(aPresShell, &newFrame);
     }
-    
+    else if (aTag == nsXULAtoms::outlinerbody) {
+      isReplaced = PR_TRUE;
+      rv = NS_NewOutlinerBodyFrame(aPresShell, &newFrame);
+    }
+    else if (aTag == nsXULAtoms::outlinercol) {
+      isReplaced = PR_TRUE;
+      processChildren = PR_TRUE;
+      rv = NS_NewOutlinerColFrame(aPresShell, &newFrame);
+    }
     // TEXT CONSTRUCTION
     else if (aTag == nsXULAtoms::text) {
         processChildren = PR_TRUE;

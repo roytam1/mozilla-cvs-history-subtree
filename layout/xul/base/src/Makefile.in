@@ -26,6 +26,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+DIRS		= outliner
+
 MODULE		= layout
 LIBRARY_NAME	= gkxulbase_s
 REQUIRES	= xpcom dom locale js widget view caps timer docshell uriloader necko editor htmlparser webshell pref rdf intl
