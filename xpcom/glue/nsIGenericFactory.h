@@ -105,11 +105,13 @@ struct nsModuleComponentInfo {
 };
 
 typedef void (PR_CALLBACK *nsModuleDestructorProc) (nsIModule *self);
+typedef nsresult (PR_CALLBACK *nsModuleConstructorProc) (nsIModule *self);
 
 extern NS_COM nsresult
 NS_NewGenericModule(const char* moduleName,
                     PRUint32 componentCount,
                     nsModuleComponentInfo* components,
+                    nsModuleConstructorProc ctor,
                     nsModuleDestructorProc dtor,
                     nsIModule* *result);
 
@@ -123,27 +125,33 @@ NS_NewGenericModule(const char* moduleName,
 #  define NSGETMODULE_COMPONENTS_COUNT(_name) NSGetModule_components_count
 #endif
 
-#define NS_IMPL_NSGETMODULE(_name, _components)                              \
-    NS_IMPL_NSGETMODULE_WITH_DTOR(_name, _components, nsnull)
+#define NS_IMPL_NSGETMODULE(_name, _components)                               \
+    NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(_name, _components, nsnull, nsnull)
 
-#define NS_IMPL_NSGETMODULE_WITH_DTOR(_name, _components, _dtor)             \
-                                                                             \
-PRUint32                                                                     \
-   NSGETMODULE_COMPONENTS_COUNT(_name) =                                     \
-           sizeof(_components) / sizeof(_components[0]);                     \
-                                                                             \
-                                                                             \
-nsModuleComponentInfo* NSGETMODULE_COMPONENTS(_name) = (_components);        \
-                                                                             \
-extern "C" NS_EXPORT nsresult                                                \
-NSGETMODULE_ENTRY_POINT(_name) (nsIComponentManager *servMgr,                \
-                                nsIFile* location,                           \
-                                nsIModule** result)                          \
-{                                                                            \
-    return NS_NewGenericModule((#_name),                                     \
-                               NSGETMODULE_COMPONENTS_COUNT(_name),          \
-                               NSGETMODULE_COMPONENTS(_name),                \
-                               _dtor, result);                               \
+#define NS_IMPL_NSGETMODULE_WITH_CTOR(_name, _components, _ctor)              \
+    NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(_name, _components, _ctor, nsnull)
+
+#define NS_IMPL_NSGETMODULE_WITH_DTOR(_name, _components, _dtor)              \
+    NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(_name, _components, nsnull, _dtor)
+
+#define NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(_name, _components, _ctor, _dtor)  \
+                                                                              \
+PRUint32                                                                      \
+   NSGETMODULE_COMPONENTS_COUNT(_name) =                                      \
+           sizeof(_components) / sizeof(_components[0]);                      \
+                                                                              \
+                                                                              \
+nsModuleComponentInfo* NSGETMODULE_COMPONENTS(_name) = (_components);         \
+                                                                              \
+extern "C" NS_EXPORT nsresult                                                 \
+NSGETMODULE_ENTRY_POINT(_name) (nsIComponentManager *servMgr,                 \
+                                nsIFile* location,                            \
+                                nsIModule** result)                           \
+{                                                                             \
+    return NS_NewGenericModule((#_name),                                      \
+                               NSGETMODULE_COMPONENTS_COUNT(_name),           \
+                               NSGETMODULE_COMPONENTS(_name),                 \
+                               _ctor, _dtor, result);                         \
 }
 
 ////////////////////////////////////////////////////////////////////////////////
