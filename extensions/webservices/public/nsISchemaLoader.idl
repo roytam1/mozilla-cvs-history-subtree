@@ -44,7 +44,7 @@ interface nsIDOMElement;
 interface nsISchemaLoadListener;
 interface nsIURI;
 
-[scriptable, uuid(3c14a032-6f4e-11d5-9b46-000064657374)]
+[scriptable, uuid(447f0445-89b7-4c3d-8862-1488172689c0)]
 interface nsISchemaLoader : nsISupports {
   nsISchema load(in AString schemaURI, in nsIURI baseURI);
   void loadAsync(in AString schemaURI, in nsIURI baseURI,
