@@ -4050,11 +4050,15 @@ if test "$MOZ_SVG"; then
     MOZ_LIBART_CFLAGS='-I${DIST}/include/libart_lgpl'
     MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'
   else
-    AM_PATH_LIBART($LIBART_VERSION,,
-      AC_MSG_ERROR(SVG requires at least version $LIBART_VERSION of libart))
-
-    MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
-    MOZ_LIBART_LIBS=$LIBART_LIBS
+dnl Disable system libart until the pixel format changes are merged upstream
+    AC_MSG_ERROR([SVG requires a modified version of libart. To pull and build
+this LGPL library, set MOZ_INTERNAL_LIBART_LGPL, and then rerun the
+checkout stage])
+dnl    AM_PATH_LIBART($LIBART_VERSION,
+dnl      AC_MSG_ERROR(SVG requires at least version $LIBART_VERSION of libart))
+dnl
+dnl    MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
+dnl    MOZ_LIBART_LIBS=$LIBART_LIBS
   fi
 fi
 

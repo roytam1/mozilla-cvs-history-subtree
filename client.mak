@@ -41,9 +41,6 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
 
-# yes, we're building mozilla with svg:
-MOZ_SVG=1
-
 # pull the svg mini-branch:
 MOZ_BRANCH=SVG_20010721_BRANCH
 # we pull the head revision if a file is not tagged: 
@@ -63,7 +60,9 @@ SVG_BRANCH_FILES = \
 	aclocal.m4 \
 	allmakefiles.sh \
 	build/autoconf/libart.m4 \
+	build/mac/build_scripts/MozillaBuildFlags.txt \
 	build/mac/build_scripts/MozillaBuildList.pm \
+	build/mac/build_scripts/MozillaCheckoutList.txt \
 	client.mk \
 	client.mak \
 	config/autoconf.mk.in \
@@ -314,7 +313,7 @@ CVSCO_GFX2 = cvs $(CVS_FLAGS) co $(GFX2_CO_FLAGS)
 !if defined(MOZ_SVG) && !defined(MOZ_INTERNAL_LIBART_LGPL)
 ERR_MESSAGE = ^
 You are trying to build Mozilla with SVG support (MOZ_SVG=1), but you ^
-haven't specified that mozilla/other-licenses/libart_lgpl should be ^
+haven not specified that mozilla/other-licenses/libart_lgpl should be ^
 pulled and built. At the moment Mozilla SVG builds need this patched ^
 version of libart. You either need to disable SVG support (unset MOZ_SVG) ^
 or enable pulling and building by setting MOZ_INTERNAL_LIBART_LGPL=1.^

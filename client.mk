@@ -347,7 +347,9 @@ SVG_BRANCH_FILES := \
 	aclocal.m4 \
 	allmakefiles.sh \
 	build/autoconf/libart.m4 \
+	build/mac/build_scripts/MozillaBuildFlags.txt \
 	build/mac/build_scripts/MozillaBuildList.pm \
+	build/mac/build_scripts/MozillaCheckoutList.txt \
 	client.mk \
 	client.mak \
 	config/autoconf.mk.in \

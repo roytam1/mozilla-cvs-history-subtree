@@ -711,10 +711,6 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:layout:html:base:src:MANIFEST",                  "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:forms:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:table:public:MANIFEST",              "$distdirectory:layout:");
-    #if ($main::options{svg})
-    #{
-    #    InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
-    #}
     InstallFromManifest(":mozilla:layout:xul:base:public:Manifest",                "$distdirectory:layout:");
 
     #GFX
@@ -737,11 +733,15 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:public:idl:views:MANIFEST_IDL",              "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xbl:MANIFEST_IDL",                "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xul:MANIFEST_IDL",                "$distdirectory:idl:");
-        
-	# SVG
-	if ($main::options{svg}) {
-		InstallFromManifest(":mozilla:dom:public:idl:svg:MANIFEST_IDL",				"$distdirectory:idl:");
-	}
+    
+    # SVG
+    if ($main::options{libart_lgpl}) {
+        InstallFromManifest(":mozilla:other-licenses:libart_lgpl:MANIFEST",            "$distdirectory:include:");
+    }
+    if ($main::options{svg}) {
+        InstallFromManifest(":mozilla:content:svg:content:src:MANIFEST",               "$distdirectory:content:");
+        InstallFromManifest(":mozilla:layout:svg:base:src:MANIFEST",                   "$distdirectory:layout:");
+    }
     
     InstallFromManifest(":mozilla:dom:public:MANIFEST",                            "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:base:MANIFEST",                       "$distdirectory:dom:");
@@ -909,10 +909,10 @@ sub BuildClientDist()
         InstallFromManifest(":mozilla:js:jsd:MANIFEST", "$distdirectory:jsdebug:");
     }
 
-	# SVG
-	if ($main::options{svg}) {
-		InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
-	}
+    # libart
+    if ($main::options{libart_lgpl}) {
+        InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
+    }
 
     print("--- Client Dist export complete ----\n");
 }
@@ -1620,9 +1620,8 @@ sub BuildLayoutProjects()
     BuildProject(":mozilla:content:macbuild:contentshared.mcp",                 "contentshared$D.o");
     MakeAlias(":mozilla:content:macbuild:contentshared$D.o",                    ":mozilla:dist:content:");
 
-	if ($main::options{svg})
+    if ($main::options{svg})
     {
-    	BuildOneProject(":mozilla:content:macbuild:contentsharedsvg.mcp",             "contentsharedsvg$D.o", 0, 0, 0);
         BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o", 0, 0, 0);
     }
     else
@@ -1639,11 +1638,12 @@ sub BuildLayoutProjects()
     {
         BuildProject(":mozilla:layout:macbuild:layoutmathml.mcp",                "layoutmathml$D.o stub");
     }
+    if ($main::options{libart_lgpl})
+    {
+        BuildOneProject(":mozilla:other-licenses:libart_lgpl:macbuild:libart.mcp",     "libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    }
     if ($main::options{svg})
     {
-    	BuildProject(":mozilla:modules:libart_lgpl:macbuild:libart.mcp",			"libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
-    	copy(":mozilla:modules:libart_lgpl:macbuild:libart$D.shlb",$dist_dir."Essential Files:libart$D.shlb");
-    	
         BuildProject(":mozilla:layout:macbuild:layoutsvg.mcp",                   "layoutsvg$D.o");
     }
     else
