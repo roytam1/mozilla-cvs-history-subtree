@@ -321,7 +321,7 @@ urlEquals (const char* url1, const char* url2)
 PRBool
 isSeparator (RDF_Resource r)
 {
-  return (startsWith("separator", resourceID(r))) ;
+  return (startsWith("separator", resourceID(r)) || startsWith("nc:separator", resourceID(r))) ;
 }
 
 
