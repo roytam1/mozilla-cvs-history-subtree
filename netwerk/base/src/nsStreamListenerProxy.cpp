@@ -97,9 +97,6 @@ nsStreamListenerProxy::nsStreamListenerProxy()
     : mListenerStatus(NS_OK)
     , mLMonitor(nsnull)
     , mCMonitor(nsnull)
-#ifdef HAVE_BROKEN_PIPE_IMPL
-    , mPendingEvents(0)
-#endif
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
@@ -159,9 +156,6 @@ nsOnDataAvailableEvent::HandleEvent()
     nsIStreamListener *listener = listenerProxy->GetListener();
     if (!listener) {
         PRINTF("Already called OnStopRequest (listener is NULL)\n");
-#ifdef HAVE_BROKEN_PIPE_IMPL
-        PR_AtomicDecrement(&listenerProxy->mPendingEvents);
-#endif
         return NS_ERROR_FAILURE;
     }
 
@@ -199,42 +193,10 @@ nsOnDataAvailableEvent::HandleEvent()
 
         PRINTF("HandleEvent -- done with the consumer's OnDataAvailable [rv=%x]\n", rv);FLUSH();
 
-#ifdef HAVE_BROKEN_PIPE_IMPL
-        //
-        // Stoke the pipe observer if it doesn't appear to have run.
-        //
-        PR_EnterMonitor(listenerProxy->mCMonitor);
-        listenerProxy->mPendingEvents--;
-        if (listenerProxy->mChannelToResume && (listenerProxy->mPendingEvents == 0)) {
 #ifdef DEBUG
-            PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
-            PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
+        PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
+        PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
 #endif
-            PRUint32 avail;
-            mSource->Available(&avail);
-            if (avail && (NS_SUCCEEDED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK)) {
-                PRINTF("HandleEvent -- listener did not consume all data [avail=%u, rv=%x]\n",
-                    avail, rv);
-                NS_WARNING("listener did not consume all data");
-            }
-
-            PRINTF("HandleEvent -- stoking pipe observer...\n");FLUSH();
-            NS_WARNING("stoking pipe observer");
-
-            //
-            // Must exit the monitor before calling OnEmpty.
-            //
-            PR_ExitMonitor(listenerProxy->mCMonitor);
-            listenerProxy->OnEmpty(mSource);
-        }
-        else
-            PR_ExitMonitor(listenerProxy->mCMonitor);
-#endif
-
-//#ifdef DEBUG
-//        // For this event, we are done with the pipe
-//        mSource->Close();
-//#endif
 
         //
         // We must honor the listener's desire to suspend the channel.
@@ -385,19 +347,9 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
                                    aOffset, bytesWritten);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
-#ifdef HAVE_BROKEN_PIPE_IMPL
-    //
-    // Increment the pending events counter
-    //
-    mPendingEvents++;
-#endif
-
     rv = ev->FireEvent(mEventQueue);
     if (NS_FAILED(rv)) {
         delete ev;
-#ifdef HAVE_BROKEN_PIPE_IMPL
-        mPendingEvents--;
-#endif
         return rv;
     }
     return NS_OK;
