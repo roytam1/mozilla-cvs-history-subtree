@@ -307,6 +307,8 @@ function OnLoadEditList()
   var listName = document.getElementById('ListName');
   if ( listName )
     listName.focus();
+
+  moveToAlertPosition();
 }
 
 function AppendnewRowAndSetFocus()
