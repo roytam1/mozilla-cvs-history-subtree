@@ -103,11 +103,11 @@ Document* txLoadedDocumentsHash::Get(const nsAString& aURI)
 }
 
 txExecutionState::txExecutionState(txStylesheet* aStylesheet)
-    : mStylesheet(aStylesheet),
+    : mTemplateParams(nsnull),
+      mStylesheet(aStylesheet),
       mNextInstruction(nsnull),
       mLocalVariables(nsnull),
       mRecursionDepth(0),
-      mTemplateParams(nsnull),
       mTemplateRules(nsnull),
       mTemplateRulesBufferSize(0),
       mTemplateRuleCount(0),

@@ -651,7 +651,6 @@ txProcessingInstruction::txProcessingInstruction(nsAutoPtr<Expr> aName)
 nsresult
 txProcessingInstruction::execute(txExecutionState& aEs)
 {
-    nsresult rv = NS_OK;
     txTextHandler* handler =
         NS_STATIC_CAST(txTextHandler*, aEs.popResultHandler());
     XMLUtils::normalizePIValue(handler->mValue);

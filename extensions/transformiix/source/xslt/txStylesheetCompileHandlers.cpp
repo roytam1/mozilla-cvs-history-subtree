@@ -1347,7 +1347,7 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     aState.popSorter();
 
     instr = NS_STATIC_CAST(txInstruction*, aState.popObject()); // txApplyTemplates
-    nsAutoPtr<txLoopNodeSet> loop = new txLoopNodeSet(instr);
+    nsAutoPtr<txLoopNodeSet> loop(new txLoopNodeSet(instr));
     NS_ENSURE_TRUE(loop, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1717,8 +1717,6 @@ txFnStartFallback(PRInt32 aNamespaceID,
                   PRInt32 aAttrCount,
                   txStylesheetCompilerState& aState)
 {
-    nsresult rv = NS_OK;
-
     aState.mSearchingForFallback = PR_FALSE;
 
     return aState.pushHandlerTable(gTxTemplateHandler);
@@ -1792,7 +1790,7 @@ txFnEndForEach(txStylesheetCompilerState& aState)
     txInstruction* pnullrule =
         NS_STATIC_CAST(txInstruction*, aState.popPtr());
 
-    nsAutoPtr<txInstruction> instr = new txLoopNodeSet(pnullrule);
+    nsAutoPtr<txInstruction> instr(new txLoopNodeSet(pnullrule));
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -2563,8 +2561,6 @@ txFnStartUnknownInstruction(PRInt32 aNamespaceID,
                             PRInt32 aAttrCount,
                             txStylesheetCompilerState& aState)
 {
-    nsresult rv = NS_OK;
-
     NS_ASSERTION(!aState.mSearchingForFallback,
                  "bad nesting of unknown-instruction and fallback handlers");
     aState.mSearchingForFallback = PR_TRUE;
