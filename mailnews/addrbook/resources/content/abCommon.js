@@ -170,6 +170,7 @@ function AbEditCard()
     else {
       var updateFunc = ("gUpdateCardView" in top) ? top.gUpdateCardView : null;
       goEditCardDialog(resultsTree.getAttribute("ref"), card, updateFunc, uri);
+      SortToPreviousSettings();
     }
   }
 }
