@@ -1954,9 +1954,15 @@ PSFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
   }
 
   /* Determine if this is a fullpage plugin */
+#ifdef OJ
+  if ((embed_struct->attributes.n > 0) &&
+      (!strcmp(embed_struct->attributes.names[0], "src")) &&
+      (!strcmp(embed_struct->attributes.values[0], "internal-external-plugin")))
+#else
   if ((embed_struct->attribute_cnt > 0) &&
       (!strcmp(embed_struct->attribute_list[0], "src")) &&
       (!strcmp(embed_struct->value_list[0], "internal-external-plugin")))
+#endif
     {
       embed_struct->width = context->prInfo->page_width;
       embed_struct->height = context->prInfo->page_height;
