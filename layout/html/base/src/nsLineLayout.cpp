@@ -952,11 +952,13 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
             psd->mFrame->mFrame : mBlockReflowState->frame;
           if (rc->IsATarget(parentFrame)) {
             reason = eReflowReason_StyleChange;
+            rs->SetCurrentReflowNode(nsnull); // XXX probably correct
           }
         }
         else if (type == eReflowType_ReflowDirty &&
                  (state & NS_FRAME_IS_DIRTY)) {          
           reason = eReflowReason_Dirty;
+          rs->SetCurrentReflowNode(nsnull); // XXX probably correct
         }
       }
     }
