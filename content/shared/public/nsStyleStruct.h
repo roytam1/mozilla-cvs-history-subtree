@@ -1156,19 +1156,19 @@ struct nsStyleSVG : public nsStyleStruct {
 
   nsChangeHint CalcDifference(const nsStyleSVG& aOther) const;
 
-  nsStyleSVGPaint  mFill;             // [inherit]
-  float            mFillOpacity;      // [inherit]
-  PRUint8          mFillRule;         // [inherit], see nsStyleConsts.h
-  nsStyleSVGPaint  mStroke;           // [inherit]
-  nsString         mStrokeDasharray;  // [inherit] XXX we want a parsed value here
-  float            mStrokeDashoffset; // [inherit]
-  PRUint8          mStrokeLinecap;    // [inherit] see nsStyleConsts.h
-  PRUint8          mStrokeLinejoin;   // [inherit] see nsStyleConsts.h
-  float            mStrokeMiterlimit; // [inherit]
-  float            mStrokeOpacity;    // [inherit]
-  float            mStrokeWidth;      // [inherit], in pixels
-  PRUint8          mTextAnchor;       // [inherit], see nsStyleConsts.h
-  PRUint8          mTextRendering;    // [inherit], see nsStyleConsts.h
+  nsStyleSVGPaint  mFill;             // [inherited]
+  float            mFillOpacity;      // [inherited]
+  PRUint8          mFillRule;         // [inherited] see nsStyleConsts.h
+  nsStyleSVGPaint  mStroke;           // [inherited]
+  nsString         mStrokeDasharray;  // [inherited] XXX we want a parsed value here
+  float            mStrokeDashoffset; // [inherited]
+  PRUint8          mStrokeLinecap;    // [inherited] see nsStyleConsts.h
+  PRUint8          mStrokeLinejoin;   // [inherited] see nsStyleConsts.h
+  float            mStrokeMiterlimit; // [inherited]
+  float            mStrokeOpacity;    // [inherited]
+  float            mStrokeWidth;      // [inherited] in pixels
+  PRUint8          mTextAnchor;       // [inherited] see nsStyleConsts.h
+  PRUint8          mTextRendering;    // [inherited] see nsStyleConsts.h
 };
 
 struct nsStyleSVGReset : public nsStyleStruct {
@@ -1190,7 +1190,7 @@ struct nsStyleSVGReset : public nsStyleStruct {
 
   PRInt32 CalcDifference(const nsStyleSVGReset& aOther) const;
 
-  PRUint8          mDominantBaseline; // [reset], see nsStyleConsts.h
+  PRUint8          mDominantBaseline; // [reset] see nsStyleConsts.h
 };
 #endif
 
@@ -1245,10 +1245,5 @@ inline nsBorderEdges::nsBorderEdges()
   mMaxBorderWidth.SizeTo(0,0,0,0);
   mOutsideEdge = PR_TRUE;
 };
-
-// typesafe mechanisms for accessing style data, global function
-// templates |GetStyleData(nsIFrame*, const T**)| and
-// |GetStyleData(nsStyleContext*, const T**)|, where T is derived from
-// nsStyleStruct, are located in nsStyleContext.h and nsIFrame.h
 
 #endif /* nsStyleStruct_h___ */

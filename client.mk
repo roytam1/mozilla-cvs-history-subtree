@@ -886,6 +886,9 @@ statictag_svg:
 diff_svg:
 	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES)
 
+status_svg:
+	cvs -z3 status $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES) | grep -A7 "File:.*Status: [^U]"
+
 # write the file 'svg_branch_files' which can then be used in greps,
 # etc.  
 create_file_list_svg:

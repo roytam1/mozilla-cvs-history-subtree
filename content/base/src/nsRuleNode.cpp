@@ -208,22 +208,29 @@ nscoord CalcLength(const nsCSSValue& aValue,
     return aValue.GetLengthTwips();
   }
   nsCSSUnit unit = aValue.GetUnit();
+  if (unit == eCSSUnit_Pixel) {
+    float p2t;
+    aPresContext->GetScaledPixelsToTwips(&p2t);
+    return NSFloatPixelsToTwips(aValue.GetFloatValue(), p2t);
+  }
+  // Common code for all units other than pixels:
+  aInherited = PR_TRUE;
+  const nsFont* font;
+  if (aStyleContext) {
+    font = &aStyleContext->GetStyleFont()->mFont;
+  } else {
+    font = aFont;
+  }
   switch (unit) {
     case eCSSUnit_EM:
     case eCSSUnit_Char: {
-      aInherited = PR_TRUE;
-      const nsFont* font = aStyleContext ? &(((nsStyleFont*)aStyleContext->GetStyleData(eStyleStruct_Font))->mFont) : aFont;
       return NSToCoordRound(aValue.GetFloatValue() * (float)font->size);
       // XXX scale against font metrics height instead?
     }
     case eCSSUnit_EN: {
-      aInherited = PR_TRUE;
-      const nsFont* font = aStyleContext ? &(((nsStyleFont*)aStyleContext->GetStyleData(eStyleStruct_Font))->mFont) : aFont;
       return NSToCoordRound((aValue.GetFloatValue() * (float)font->size) / 2.0f);
     }
     case eCSSUnit_XHeight: {
-      aInherited = PR_TRUE;
-      const nsFont* font = aStyleContext ? &(((nsStyleFont*)aStyleContext->GetStyleData(eStyleStruct_Font))->mFont) : aFont;
       nsCOMPtr<nsIFontMetrics> fm;
       aPresContext->GetMetricsFor(*font, getter_AddRefs(fm));
       nscoord xHeight;
@@ -232,15 +239,9 @@ nscoord CalcLength(const nsCSSValue& aValue,
     }
     case eCSSUnit_CapHeight: {
       NS_NOTYETIMPLEMENTED("cap height unit");
-      aInherited = PR_TRUE;
-      const nsFont* font = aStyleContext ? &(((nsStyleFont*)aStyleContext->GetStyleData(eStyleStruct_Font))->mFont) : aFont;
       nscoord capHeight = ((font->size / 3) * 2); // XXX HACK!
       return NSToCoordRound(aValue.GetFloatValue() * (float)capHeight);
     }
-    case eCSSUnit_Pixel:
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      return NSFloatPixelsToTwips(aValue.GetFloatValue(), p2t);
     default:
       NS_NOTREACHED("unexpected unit");
       break;
@@ -1901,7 +1902,8 @@ SetFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
       case eSystemFont_Button:
       case eSystemFont_List:
         // Assumption: system defined font is proportional
-        aFont->mSize = PR_MAX(defaultVariableFont->size - NSIntPointsToTwips(2), 0);
+        aFont->mSize = nsStyleFont::ZoomText(aPresContext,
+             PR_MAX(defaultVariableFont->size - NSIntPointsToTwips(2), 0));
         break;
     }
 #endif
@@ -2108,7 +2110,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
   nsStyleContext* higherContext = aContext->GetParent();
   while (higherContext) {
     contextPath.AppendElement(higherContext);
-    const nsStyleFont* higherFont = (const nsStyleFont*)higherContext->GetStyleData(eStyleStruct_Font);
+    const nsStyleFont* higherFont = higherContext->GetStyleFont();
     if (higherFont && higherFont->mFlags & aGenericFontID) {
       // done walking up the higher contexts
       break;
@@ -2129,7 +2131,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
   PRInt32 i = contextPath.Count() - 1;
   if (higherContext) {
     nsStyleContext* context = (nsStyleContext*)contextPath[i];
-    nsStyleFont* tmpFont = (nsStyleFont*)context->GetStyleData(eStyleStruct_Font);
+    const nsStyleFont* tmpFont = context->GetStyleFont();
     parentFont.mFlags = tmpFont->mFlags;
     parentFont.mFont = tmpFont->mFont;
     parentFont.mSize = tmpFont->mSize;
@@ -2212,8 +2214,7 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
        (fontData.mSize.IsRelativeLengthUnit() &&
         fontData.mSize.GetUnit() != eCSSUnit_Pixel) ||
        fontData.mSize.GetUnit() == eCSSUnit_Percent))
-    parentFont = NS_STATIC_CAST(const nsStyleFont*,
-                               parentContext->GetStyleData(eStyleStruct_Font));
+    parentFont = parentContext->GetStyleFont();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -2335,8 +2336,7 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentText = NS_STATIC_CAST(const nsStyleText*,
-                               parentContext->GetStyleData(eStyleStruct_Text));
+    parentText = parentContext->GetStyleText();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -2364,8 +2364,7 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
   // line-height: normal, number, length, percent, inherit
   if (eCSSUnit_Percent == textData.mLineHeight.GetUnit()) {
     aInherited = PR_TRUE;
-    const nsStyleFont* font = NS_STATIC_CAST(const nsStyleFont*,
-                                    aContext->GetStyleData(eStyleStruct_Font));
+    const nsStyleFont* font = aContext->GetStyleFont();
     text->mLineHeight.SetCoordValue((nscoord)((float)(font->mSize) *
                                      textData.mLineHeight.GetPercentValue()));
   } else {
@@ -2458,13 +2457,13 @@ nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData,
     text = new (mPresContext) nsStyleTextReset(*NS_STATIC_CAST(nsStyleTextReset*, aStartData));
   else
     text = new (mPresContext) nsStyleTextReset();
-  nsStyleTextReset* parentText = text;
+  const nsStyleTextReset* parentText = text;
 
   if (parentContext && 
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentText = (nsStyleTextReset*)parentContext->GetStyleData(eStyleStruct_TextReset);
+    parentText = parentContext->GetStyleTextReset();
   PRBool inherited = aInherited;
   
   // vertical-align: enum, length, percent, inherit
@@ -2533,15 +2532,14 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
                                      PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUserInterface* ui = nsnull;
   const nsStyleUserInterface* parentUI = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentUI = NS_STATIC_CAST(const nsStyleUserInterface*,
-                      parentContext->GetStyleData(eStyleStruct_UserInterface));
+    parentUI = parentContext->GetStyleUserInterface();
   if (aStartData)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -2644,7 +2642,7 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUIReset* ui;
   if (aStartData)
@@ -2659,8 +2657,7 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentUI = NS_STATIC_CAST(const nsStyleUIReset*,
-                            parentContext->GetStyleData(eStyleStruct_UIReset));
+    parentUI = parentContext->GetStyleUIReset();
   PRBool inherited = aInherited;
   
   // user-select: none, enum, inherit
@@ -2734,7 +2731,7 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleDisplay* display;
   if (aStartStruct)
@@ -2754,8 +2751,7 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
         aRuleDetail != eRulePartialReset &&
         aRuleDetail != eRuleNone) ||
        generatedContent))
-    parentDisplay = NS_STATIC_CAST(const nsStyleDisplay*,
-                            parentContext->GetStyleData(eStyleStruct_Display));
+    parentDisplay = parentContext->GetStyleDisplay();
   PRBool inherited = aInherited;
 
   // display: enum, none, inherit
@@ -2992,15 +2988,14 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleVisibility* visibility = nsnull;
   const nsStyleVisibility* parentVisibility = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentVisibility = NS_STATIC_CAST(const nsStyleVisibility*,
-                         parentContext->GetStyleData(eStyleStruct_Visibility));
+    parentVisibility = parentContext->GetStyleVisibility();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -3089,15 +3084,14 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleColor* color = nsnull;
   const nsStyleColor* parentColor = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentColor = NS_STATIC_CAST(const nsStyleColor*,
-                              parentContext->GetStyleData(eStyleStruct_Color));
+    parentColor = parentContext->GetStyleColor();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -3146,7 +3140,7 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleBackground* bg;
   if (aStartStruct)
@@ -3161,8 +3155,7 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentBG = NS_STATIC_CAST(const nsStyleBackground*,
-                         parentContext->GetStyleData(eStyleStruct_Background));
+    parentBG = parentContext->GetStyleBackground();
   PRBool inherited = aInherited;
   // save parentFlags in case bg == parentBG and we clobber them later
   PRUint8 parentFlags = parentBG->mBackgroundFlags;
@@ -3336,7 +3329,7 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleMargin* margin;
   if (aStartStruct)
@@ -3351,8 +3344,7 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentMargin = NS_STATIC_CAST(const nsStyleMargin*,
-                             parentContext->GetStyleData(eStyleStruct_Margin));
+    parentMargin = parentContext->GetStyleMargin();
   PRBool inherited = aInherited;
 
   // margin: length, percent, auto, inherit
@@ -3393,7 +3385,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleBorder* border;
   if (aStartStruct)
@@ -3408,8 +3400,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentBorder = NS_STATIC_CAST(const nsStyleBorder*,
-                             parentContext->GetStyleData(eStyleStruct_Border));
+    parentBorder = parentContext->GetStyleBorder();
   PRBool inherited = aInherited;
 
   // border-size: length, enum, inherit
@@ -3493,9 +3484,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
           // used.  We can ensure that the data for the parent are fully
           // computed (unlike for the element where this will be used, for
           // which the color could be specified on a more specific rule).
-          const nsStyleColor *parentColor;
-          ::GetStyleData(parentContext, &parentColor);
-          border->SetBorderColor(side, parentColor->mColor);
+          border->SetBorderColor(side, parentContext->GetStyleColor()->mColor);
         } else
           border->SetBorderColor(side, borderColor);
       }
@@ -3561,7 +3550,7 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStylePadding* padding;
   if (aStartStruct)
@@ -3576,8 +3565,7 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentPadding = NS_STATIC_CAST(const nsStylePadding*,
-                            parentContext->GetStyleData(eStyleStruct_Padding));
+    parentPadding = parentContext->GetStylePadding();
   PRBool inherited = aInherited;
 
   // padding: length, percent, inherit
@@ -3618,7 +3606,7 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleOutline* outline;
   if (aStartStruct)
@@ -3633,8 +3621,7 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentOutline = NS_STATIC_CAST(const nsStyleOutline*,
-                            parentContext->GetStyleData(eStyleStruct_Outline));
+    parentOutline = parentContext->GetStyleOutline();
   PRBool inherited = aInherited;
 
   // outline-width: length, enum, inherit
@@ -3691,15 +3678,14 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataList& listData = NS_STATIC_CAST(const nsRuleDataList&, aData);
   nsStyleList* list = nsnull;
   const nsStyleList* parentList = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentList = NS_STATIC_CAST(const nsStyleList*,
-                               parentContext->GetStyleData(eStyleStruct_List));
+    parentList = parentContext->GetStyleList();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -3808,7 +3794,7 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataPosition& posData = NS_STATIC_CAST(const nsRuleDataPosition&, aData);
   nsStylePosition* pos;
   if (aStartStruct)
@@ -3823,8 +3809,7 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentPos = NS_STATIC_CAST(const nsStylePosition*,
-                           parentContext->GetStyleData(eStyleStruct_Position));
+    parentPos = parentContext->GetStylePosition();
   PRBool inherited = aInherited;
 
   // box offsets: length, percent, auto, inherit
@@ -3917,7 +3902,7 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTable* table;
   if (aStartStruct)
@@ -3932,8 +3917,7 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentTable = NS_STATIC_CAST(const nsStyleTable*,
-                              parentContext->GetStyleData(eStyleStruct_Table));
+    parentTable = parentContext->GetStyleTable();
   PRBool inherited = aInherited;
 
   // table-layout: auto, enum, inherit
@@ -3988,15 +3972,14 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTableBorder* table = nsnull;
   const nsStyleTableBorder* parentTable = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentTable = NS_STATIC_CAST(const nsStyleTableBorder*,
-                        parentContext->GetStyleData(eStyleStruct_TableBorder));
+    parentTable = parentContext->GetStyleTableBorder();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -4087,7 +4070,7 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleContent* content;
   if (aStartStruct)
@@ -4102,8 +4085,7 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentContent = NS_STATIC_CAST(const nsStyleContent*,
-                            parentContext->GetStyleData(eStyleStruct_Content));
+    parentContent = parentContext->GetStyleContent();
   PRBool inherited = aInherited;
 
   // content: [string, url, counter, attr, enum]+, inherit
@@ -4283,15 +4265,14 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleQuotes* quotes = nsnull;
   const nsStyleQuotes* parentQuotes = nsnull;
   PRBool inherited = aInherited;
 
   if (parentContext && aRuleDetail != eRuleFullReset)
-    parentQuotes = NS_STATIC_CAST(const nsStyleQuotes*,
-                             parentContext->GetStyleData(eStyleStruct_Quotes));
+    parentQuotes = parentContext->GetStyleQuotes();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
@@ -4376,7 +4357,7 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsStyleContext* parentContext = aContext->GetParent();
-  
+
   const nsRuleDataXUL& xulData = NS_STATIC_CAST(const nsRuleDataXUL&, aData);
   nsStyleXUL* xul = nsnull;
   
@@ -4392,8 +4373,7 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentXUL = NS_STATIC_CAST(const nsStyleXUL*,
-                                parentContext->GetStyleData(eStyleStruct_XUL));
+    parentXUL = parentContext->GetStyleXUL();
 
   PRBool inherited = aInherited;
 
@@ -4526,29 +4506,32 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
 {
   nsStyleContext* parentContext = aContext->GetParent();
 
-  nsStyleSVG* svg = nsnull;
-  nsStyleSVG* parentSVG = svg;
-  PRBool inherited = aInherited;
   const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
+  nsStyleSVG* svg = nsnull;
+  const nsStyleSVG* parentSVG = nsnull;
+  PRBool inherited = aInherited;
 
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentSVG = parentContext->GetStyleSVG();
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
-    svg = new (mPresContext) nsStyleSVG(*NS_STATIC_CAST(nsStyleSVG*,aStartStruct));
+    svg = new (mPresContext) nsStyleSVG(*NS_STATIC_CAST(nsStyleSVG*, aStartStruct));
   else {
-    if (aRuleDetail != eRuleFullMixed) {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
       // No question. We will have to inherit. Go ahead and init
       // with inherited vals from parent.
       inherited = PR_TRUE;
-      if (parentContext)
-        parentSVG = (nsStyleSVG*)parentContext->GetStyleData(eStyleStruct_SVG);
       if (parentSVG)
         svg = new (mPresContext) nsStyleSVG(*parentSVG);
     }
   }
 
   if (!svg)
-    svg = parentSVG = new (mPresContext) nsStyleSVG();
+    svg = new (mPresContext) nsStyleSVG();
+  if (!parentSVG)
+    parentSVG = svg;
 
   // fill: 
   SetSVGPaint(SVGData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
