@@ -123,9 +123,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   filedlg.pszTitle = title;
 
   if (mMode == modeGetFolder) {
-    if (!initialDir.IsEmpty()) {
-      strcpy(filedlg.szFullFile, initialDir.get());
-    }
+    PL_strncat(filedlg.szFullFile, initialDir.get(), MAX_PATH);
     PL_strncat(filedlg.szFullFile, "\\", 1);
     PL_strncat(filedlg.szFullFile, "^", 1);
     filedlg.fl = FDS_OPEN_DIALOG | FDS_CENTER;
@@ -142,10 +140,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     }
   }
   else {
-    if (initialDir && *initialDir) {
-      PL_strncpy(filedlg.szFullFile, initialDir, MAX_PATH);
-      PL_strncat(filedlg.szFullFile, "\\", 1);
-    }
+    PL_strncpy(filedlg.szFullFile, initialDir.get(), MAX_PATH);
+    PL_strncat(filedlg.szFullFile, "\\", 1);
     PL_strncat(filedlg.szFullFile, fileBuffer, MAX_PATH);
     filedlg.fl = FDS_CENTER;
     if (mMode == modeSave) {
@@ -254,9 +250,6 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     free(pmydata);
   }
 
-  if (initialDir)
-    nsMemory::Free(initialDir);
-
   if (title)
     nsMemory::Free( title );
 
@@ -274,9 +267,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
       if (localDir) {
         nsCAutoString newDir;
         localDir->GetNativePath(newDir);
-        if(!newDir.IsEmpty()) {
+        if(!newDir.IsEmpty())
           PL_strncpyz(mLastUsedDirectory, newDir.get(), MAX_PATH+1);
-        }
         // Update mDisplayDirectory with this directory, also.
         // Some callers rely on this.
         mDisplayDirectory->InitWithNativePath( nsDependentCString(mLastUsedDirectory) );
