@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
  
 #include "nsFileSpec.h"
+#include "nsIFileStream.h"
 
 #include "nsDebug.h"
 #include "nsEscape.h"
@@ -910,7 +911,7 @@ void nsFileSpec::MakeUnique()
 //----------------------------------------------------------------------------------------
 {
     nsCOMPtr<nsISupports> file;
-    nsresult rv = NS_NewIOFileStream(getter_AddRefs(file), this, 
+    nsresult rv = NS_NewIOFileStream(getter_AddRefs(file), *this, 
                                      PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0600);
     if (NS_SUCCEEDED(rv))
         return; // the stream will be closed automatically
@@ -936,7 +937,7 @@ void nsFileSpec::MakeUnique()
         char newName[nsFileSpecHelpers::kMaxFilenameLength + 1];
         sprintf(newName, "%s-%d%s", leafName, indx, suffix);
         SetLeafName(newName);
-        rv = NS_NewIOFileStream(getter_AddRefs(file), this, 
+        rv = NS_NewIOFileStream(getter_AddRefs(file), *this, 
                                 PR_WRONLY | PR_CREATE_FILE | PR_EXCL | PR_TRUNCATE, 0600);
         if (NS_SUCCEEDED(rv))
             break;
