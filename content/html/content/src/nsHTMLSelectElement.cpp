@@ -1319,11 +1319,13 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
     if (domDoc) {
       nsCOMPtr<nsIDOMEvent> selectEvent;
       domDoc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(selectEvent));
-      selectEvent->InitEvent(NS_LITERAL_STRING("selectedItemChanged"),
-                             PR_TRUE, PR_TRUE);
-      nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(NS_STATIC_CAST(nsIDOMNode*, this)));
-      PRBool noDefault;
-      target->DispatchEvent(selectEvent, &noDefault);
+      if (selectEvent) {
+        selectEvent->InitEvent(NS_LITERAL_STRING("selectedItemChanged"),
+                               PR_TRUE, PR_TRUE);
+        nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(NS_STATIC_CAST(nsIDOMNode*, this)));
+        PRBool noDefault;
+        target->DispatchEvent(selectEvent, &noDefault);
+      }
     }
   }
 
