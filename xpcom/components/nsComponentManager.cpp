@@ -102,7 +102,6 @@ nsFactoryEntry::Init(nsHashtable* dllCollection,
     nsCStringKey key(aLibrary);
 
     // If dll not already in dllCollection, add it.
-    // PR_EnterMonitor(mMon);
     dll = (nsDll *) dllCollection->Get(&key);
     // PR_ExitMonitor(mMon);
     	
@@ -126,9 +125,7 @@ nsFactoryEntry::Init(nsHashtable* dllCollection,
                    ("nsComponentManager: Adding New dll \"%s\" to mDllStore.",
                     aLibrary));
 
-            // PR_EnterMonitor(mMon);
             dllCollection->Put(&key, (void *)dll);
-            // PR_ExitMonitor(mMon);
         }
     }
     else {
@@ -177,12 +174,12 @@ nsComponentManagerImpl::nsComponentManagerImpl()
 nsresult nsComponentManagerImpl::Init(void) 
 {
     if (mFactories == NULL) {
-        mFactories = new nsHashtable(256, PR_TRUE);
+        mFactories = new nsHashtable(256, /* Thread Safe */ PR_TRUE);
         if (mFactories == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
     if (mProgIDs == NULL) {
-        mProgIDs = new nsHashtable(256, PR_TRUE);
+        mProgIDs = new nsHashtable(256, /* Thread Safe */ PR_TRUE);
         if (mProgIDs == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -192,7 +189,7 @@ nsresult nsComponentManagerImpl::Init(void)
             return NS_ERROR_OUT_OF_MEMORY;
     }
     if (mDllStore == NULL) {
-        mDllStore = new nsHashtable(256, PR_TRUE);
+        mDllStore = new nsHashtable(256, /* Thead Safe */ PR_TRUE);
         if (mDllStore == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -276,9 +273,9 @@ nsresult nsComponentManagerImpl::Init(void)
     // Check the version of registry. Nuke old versions.
     PlatformVersionCheck();
 
-	// Open common registry keys here to speed access
-	// Do this after PlatformVersionCheck as it may re-create our keys
-	nsresult rv;
+    // Open common registry keys here to speed access
+    // Do this after PlatformVersionCheck as it may re-create our keys
+    nsresult rv;
     rv = mRegistry->AddSubtree(nsIRegistry::Common, xpcomKeyName, &mXPCOMKey);
     		
     if (NS_FAILED(rv))
@@ -291,8 +288,6 @@ nsresult nsComponentManagerImpl::Init(void)
     {        
         return rv;
     }
-
-
 #endif
 
     return NS_OK;
@@ -903,9 +898,6 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
                ("\t\tnot found in factory cache. Looking in registry"));
         nsresult rv = PlatformFind(aClass, &entry);
 
-        // XXX This should go into PlatformFind(), and PlatformFind()
-        // should just become a static method on nsComponentManager.
-
         // If we got one, cache it in our hashtable
         if (NS_SUCCEEDED(rv))
         {
@@ -1164,14 +1156,18 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
         NS_RELEASE(old);
         if (!aReplace)
         {
+#ifdef NS_DEBUG
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tFactory already registered."));
+#endif /* NS_DEBUG */
             return NS_ERROR_FACTORY_EXISTS;
         }
         else
         {
+#ifdef NS_DEBUG
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tdeleting old Factory Entry."));
+#endif /* NS_DEBUG */
         }
     }
     	
@@ -1205,15 +1201,19 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
             // CreateInstance(..progid..) is the more used one.
             //
             PR_ExitMonitor(mMon);
+#ifdef NS_DEBUG
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tFactory register succeeded. PROGID->CLSID mapping failed."));
+#endif /* NS_DEBUG */
             return (rv);
         }
     }
     PR_ExitMonitor(mMon);
     	
+#ifdef NS_DEBUG
     PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
            ("\t\tFactory register succeeded."));
+#endif /* NS_DEBUG */
     	
     return NS_OK;
 }
@@ -1245,14 +1245,18 @@ nsComponentManagerImpl::RegisterComponent(const nsCID &aClass,
         NS_RELEASE(old);
         if (!aReplace)
         {
+#ifdef NS_DEBUG
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tFactory already registered."));
+#endif /* NS_DEBUG */
             return NS_ERROR_FACTORY_EXISTS;
         }
         else
         {
+#ifdef NS_DEBUG
             PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
                    ("\t\tdeleting registered Factory."));
+#endif /* NS_DEBUG */
         }
     }
     	
