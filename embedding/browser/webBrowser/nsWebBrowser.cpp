@@ -74,7 +74,7 @@ static NS_DEFINE_IID(kDeviceContextCID,       NS_DEVICE_CONTEXT_CID);
 //*****************************************************************************
 
 nsWebBrowser::nsWebBrowser() : mDocShellTreeOwner(nsnull), 
-   mInitInfo(nsnull), mContentType(typeContentWrapper),
+   mInitInfo(nsnull), mContentType(typeContentWrapper), mActivating(PR_FALSE),
    mParentNativeWindow(nsnull), mParentWidget(nsnull), mParent(nsnull),
    mProgressListener(nsnull), mListenerArray(nsnull),
    mBackgroundColor(0)
@@ -1400,6 +1400,11 @@ NS_IMETHODIMP nsWebBrowser::GetPrimaryContentWindow(nsIDOMWindowInternal **aDOMW
 /* void activate (); */
 NS_IMETHODIMP nsWebBrowser::Activate(void)
 {
+  // stop infinite recursion from windows with onfocus handlers that
+  // reactivate the window
+  if (mActivating)
+    return NS_OK;
+
   // try to set focus on the last focused window as stored in the
   // focus controller object.
   nsCOMPtr<nsIDOMWindow> domWindowExternal;
@@ -1413,6 +1418,9 @@ NS_IMETHODIMP nsWebBrowser::Activate(void)
   if (!piWin) {
     return NS_ERROR_FAILURE;
   }
+
+  mActivating = PR_TRUE;
+
   piWin->GetRootFocusController(getter_AddRefs(focusController));
   PRBool needToFocus = PR_TRUE;
   if (focusController) {
@@ -1464,6 +1472,7 @@ NS_IMETHODIMP nsWebBrowser::Activate(void)
     }
   }
 
+  mActivating = PR_FALSE;
   return NS_OK;
 }
 

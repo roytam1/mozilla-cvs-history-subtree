@@ -134,6 +134,7 @@ protected:
    nsCOMPtr<nsIWindowWatcher> mWWatch;
    nsWebBrowserInitInfo*      mInitInfo;
    PRUint32                   mContentType;
+   PRBool                     mActivating;
    nativeWindow               mParentNativeWindow;
    nsIWebBrowserPersistProgress *mProgressListener;
    nsCOMPtr<nsIWebProgress>      mWebProgress;
