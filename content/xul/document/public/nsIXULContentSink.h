@@ -23,6 +23,7 @@
 
 #include "nsIXMLContentSink.h"
 
+class nsIDocument;
 class nsIXULPrototypeDocument;
 
 // {E49AA620-C16C-11d2-A6AA-00104BDE6048}
@@ -35,7 +36,12 @@ class nsIXULContentSink : public nsIXMLContentSink
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_IXULCONTENTSINK_IID; return iid; }
 
-    NS_IMETHOD Init(nsIXULPrototypeDocument* aDocument) = 0;
+    /**
+     * Initialize the content sink, giving it an nsIDocument object
+     * with which to communicate with the outside world, and an
+     * nsIXULPrototypeDocument to build.
+     */
+    NS_IMETHOD Init(nsIDocument* aDocument, nsIXULPrototypeDocument* aPrototype) = 0;
 };
 
 
