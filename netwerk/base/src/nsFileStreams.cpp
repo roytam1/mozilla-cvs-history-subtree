@@ -519,7 +519,7 @@ nsSafeFileOutputStream::Init(nsIFile* file, PRInt32 ioFlags, PRInt32 perm,
             tempLocal->SetFollowLinks(PR_TRUE);
 
         // XP_UNIX ignores SetFollowLinks(), so we have to normalize.
-        rv = tempResult->Normalize();
+        tempResult->Normalize();
     }
 
     if (NS_SUCCEEDED(rv) && mTargetFileExists) {
