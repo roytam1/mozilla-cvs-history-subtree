@@ -192,23 +192,17 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aD
   if (!aData || !aAttributes)
     return;
 
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      text->mTextAlign = value.GetIntValue();
+  if (aData->mTextData && aData->mSID == eStyleStruct_Text) {
+    if (aData->mTextData->mTextAlign.GetUnit() == eCSSUnit_Null) {
+      // align: enum
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+      if (value.GetUnit() == eHTMLUnit_Enumerated)
+        aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -231,7 +225,7 @@ nsHTMLParagraphElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& 
                                                      nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

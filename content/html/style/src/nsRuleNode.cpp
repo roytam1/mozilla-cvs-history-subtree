@@ -457,6 +457,14 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
   switch (aSID) {
   case eStyleStruct_Display:
     return CheckDisplayProperties((const nsCSSDisplay&)aCSSStruct);
+  case eStyleStruct_Text:
+    return CheckTextProperties((const nsCSSText&)aCSSStruct);
+  case eStyleStruct_TextReset:
+    return CheckTextResetProperties((const nsCSSText&)aCSSStruct);
+  case eStyleStruct_UserInterface:
+    return CheckUIProperties((const nsCSSUserInterface&)aCSSStruct);
+  case eStyleStruct_UIReset:
+    return CheckUIResetProperties((const nsCSSUserInterface&)aCSSStruct);
   case eStyleStruct_Visibility:
     return CheckVisibilityProperties((const nsCSSDisplay&)aCSSStruct);
   case eStyleStruct_Font:
@@ -518,6 +526,49 @@ nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, nsIMutableStyleContext*
   return WalkRuleTree(eStyleStruct_Visibility, aContext, aMutableContext, &ruleData, &displayData);
 }
 
+const nsStyleStruct*
+nsRuleNode::GetTextData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSText textData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Text, mPresContext, aContext);
+  ruleData.mTextData = &textData;
+
+  return WalkRuleTree(eStyleStruct_Text, aContext, aMutableContext, &ruleData, &textData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetTextResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSText textData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_TextReset, mPresContext, aContext);
+  ruleData.mTextData = &textData;
+
+  return WalkRuleTree(eStyleStruct_TextReset, aContext, aMutableContext, &ruleData, &textData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetUIData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSUserInterface uiData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_UserInterface, mPresContext, aContext);
+  ruleData.mUIData = &uiData;
+
+  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_UserInterface, aContext, aMutableContext, &ruleData, &uiData);
+  uiData.mCursor = nsnull;
+  return res;
+}
+
+const nsStyleStruct*
+nsRuleNode::GetUIResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSUserInterface uiData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_UIReset, mPresContext, aContext);
+  ruleData.mUIData = &uiData;
+
+  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_UIReset, aContext, aMutableContext, &ruleData, &uiData);
+  uiData.mKeyEquivalent = nsnull;
+  return res;
+}
 
 const nsStyleStruct*
 nsRuleNode::GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
@@ -786,7 +837,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
       // it never has to go back to the rule tree for data.  Instead the style context tree
       // should be walked to find the data.
       const nsStyleStruct* parentStruct = parentContext->GetStyleData(aSID);
-      aContext->AddInheritBit(bit);
+      aContext->AddStyleBit(bit);
       aMutableContext->SetStyle(aSID, *parentStruct);
       return parentStruct;
     }
@@ -832,6 +883,18 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       nsStyleVisibility* vis = new (mPresContext) nsStyleVisibility(mPresContext);
       aMutableContext->SetStyle(eStyleStruct_Visibility, *vis);
       return vis;
+    }
+    case eStyleStruct_Text:
+    {
+      nsStyleText* text = new (mPresContext) nsStyleText();
+      aMutableContext->SetStyle(eStyleStruct_Text, *text);
+      return text;
+    }
+    case eStyleStruct_TextReset:
+    {
+      nsStyleTextReset* text = new (mPresContext) nsStyleTextReset();
+      aMutableContext->SetStyle(eStyleStruct_TextReset, *text);
+      return text;
     }
     case eStyleStruct_Color:
     {
@@ -905,6 +968,18 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       aMutableContext->SetStyle(eStyleStruct_Quotes, *quotes);
       return quotes;
     }
+    case eStyleStruct_UserInterface:
+    {
+      nsStyleUserInterface* ui = new (mPresContext) nsStyleUserInterface();
+      aMutableContext->SetStyle(eStyleStruct_UserInterface, *ui);
+      return ui;
+    }
+    case eStyleStruct_UIReset:
+    {
+      nsStyleUIReset* ui = new (mPresContext) nsStyleUIReset();
+      aMutableContext->SetStyle(eStyleStruct_UIReset, *ui);
+      return ui;
+    }
 
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
@@ -970,6 +1045,18 @@ nsRuleNode::ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartS
                               aContext, aMutableContext, aHighestNode, aRuleDetail);
   case eStyleStruct_Quotes:
     return ComputeQuotesData((nsStyleQuotes*)aStartStruct, (const nsCSSContent&)aStartData, 
+                              aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Text:
+    return ComputeTextData((nsStyleText*)aStartStruct, (const nsCSSText&)aStartData,
+                           aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_TextReset:
+    return ComputeTextResetData((nsStyleTextReset*)aStartStruct, (const nsCSSText&)aStartData,
+                                aContext, aMutableContext, aHighestNode, aRuleDetail);;
+  case eStyleStruct_UserInterface:
+    return ComputeUIData((nsStyleUserInterface*)aStartStruct, (const nsCSSUserInterface&)aStartData,
+                         aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_UIReset:
+    return ComputeUIResetData((nsStyleUIReset*)aStartStruct, (const nsCSSUserInterface&)aStartData,
                               aContext, aMutableContext, aHighestNode, aRuleDetail);
 #ifdef INCLUDE_XUL
   case eStyleStruct_XUL:
@@ -1342,6 +1429,379 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
 }
 
 const nsStyleStruct*
+nsRuleNode::ComputeTextData(nsStyleText* aStartData, const nsCSSText& aTextData, 
+                            nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                            nsRuleNode* aHighestNode,
+                            const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TEXT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleText* text = nsnull;
+  nsStyleText* parentText = text;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    text = new (mPresContext) nsStyleText(*aStartData);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentText = (nsStyleText*)parentContext->GetStyleData(eStyleStruct_Text);
+      if (parentText) {
+        text = new (mPresContext) nsStyleText(*parentText);
+
+        // Percentage line heights are not inherited.  We need to change the value
+        // of line-height to inherit.
+        nsStyleUnit unit = text->mLineHeight.GetUnit();
+        if (unit != eStyleUnit_Normal && unit != eStyleUnit_Factor && unit != eStyleUnit_Coord)
+          text->mLineHeight.SetInheritValue();
+      }
+    }
+  }
+
+  if (!text)
+    text = parentText = new (mPresContext) nsStyleText();
+
+    // letter-spacing: normal, length, inherit
+  SetCoord(aTextData.mLetterSpacing, text->mLetterSpacing, parentText->mLetterSpacing,
+           SETCOORD_LH | SETCOORD_NORMAL, aContext, mPresContext, inherited);
+
+  // line-height: normal, number, length, percent, inherit
+  SetCoord(aTextData.mLineHeight, text->mLineHeight, parentText->mLineHeight,
+           SETCOORD_LPFHN, aContext, mPresContext, inherited);
+
+  // text-align: enum, string, inherit
+  if (eCSSUnit_Enumerated == aTextData.mTextAlign.GetUnit()) {
+    text->mTextAlign = aTextData.mTextAlign.GetIntValue();
+  }
+  else if (eCSSUnit_String == aTextData.mTextAlign.GetUnit()) {
+    NS_NOTYETIMPLEMENTED("align string");
+  }
+  else if (eCSSUnit_Inherit == aTextData.mTextAlign.GetUnit()) {
+    inherited = PR_TRUE;
+    text->mTextAlign = parentText->mTextAlign;
+  }
+
+  // text-indent: length, percent, inherit
+  SetCoord(aTextData.mTextIndent, text->mTextIndent, parentText->mTextIndent,
+           SETCOORD_LPH, aContext, mPresContext, inherited);
+
+  // text-transform: enum, none, inherit
+  if (eCSSUnit_Enumerated == aTextData.mTextTransform.GetUnit()) {
+    text->mTextTransform = aTextData.mTextTransform.GetIntValue();
+  }
+  else if (eCSSUnit_None == aTextData.mTextTransform.GetUnit()) {
+    text->mTextTransform = NS_STYLE_TEXT_TRANSFORM_NONE;
+  }
+  else if (eCSSUnit_Inherit == aTextData.mTextTransform.GetUnit()) {
+    inherited = PR_TRUE;
+    text->mTextTransform = parentText->mTextTransform;
+  }
+
+  // white-space: enum, normal, inherit
+  if (eCSSUnit_Enumerated == aTextData.mWhiteSpace.GetUnit()) {
+    text->mWhiteSpace = aTextData.mWhiteSpace.GetIntValue();
+  }
+  else if (eCSSUnit_Normal == aTextData.mWhiteSpace.GetUnit()) {
+    text->mWhiteSpace = NS_STYLE_WHITESPACE_NORMAL;
+  }
+  else if (eCSSUnit_Inherit == aTextData.mWhiteSpace.GetUnit()) {
+    inherited = PR_TRUE;
+    text->mWhiteSpace = parentText->mWhiteSpace;
+  }
+
+  // word-spacing: normal, length, inherit
+  SetCoord(aTextData.mWordSpacing, text->mWordSpacing, parentText->mWordSpacing,
+           SETCOORD_LH | SETCOORD_NORMAL, aContext, mPresContext, inherited);
+
+#ifdef IBMBIDI
+  // unicode-bidi: enum, normal, inherit
+  // normal means that override prohibited
+  if (eCSSUnit_Normal == aTextData.mUnicodeBidi.GetUnit() ) {
+    text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
+  }
+  else {
+    if (eCSSUnit_Enumerated == aTextData.mUnicodeBidi.GetUnit() ) {
+      text->mUnicodeBidi = aTextData.mUnicodeBidi.GetIntValue();
+    }
+    if (NS_STYLE_UNICODE_BIDI_INHERIT == text->mUnicodeBidi) {
+      inherited = PR_TRUE;
+      text->mUnicodeBidi = parentText->mUnicodeBidi;
+    }
+  }
+#endif // IBMBIDI
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Text, *text);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mTextData = text;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_TEXT, aHighestNode);
+  }
+
+  return text;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeTextResetData(nsStyleTextReset* aStartData, const nsCSSText& aTextData, 
+                                 nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                 nsRuleNode* aHighestNode,
+                                 const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TEXT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleTextReset* text;
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    text = new (mPresContext) nsStyleTextReset(*aStartData);
+  else
+    text = new (mPresContext) nsStyleTextReset();
+  nsStyleTextReset* parentText = text;
+
+  if (parentContext)
+    parentText = (nsStyleTextReset*)parentContext->GetStyleData(eStyleStruct_TextReset);
+  PRBool inherited = PR_FALSE;
+  
+  // vertical-align: enum, length, percent, inherit
+  SetCoord(aTextData.mVerticalAlign, text->mVerticalAlign, parentText->mVerticalAlign,
+           SETCOORD_LPH | SETCOORD_ENUMERATED, aContext, mPresContext, inherited);
+
+  // text-decoration: none, enum (bit field), inherit
+  if (eCSSUnit_Enumerated == aTextData.mDecoration.GetUnit()) {
+    PRInt32 td = aTextData.mDecoration.GetIntValue();
+    text->mTextDecoration = td;
+  }
+  else if (eCSSUnit_None == aTextData.mDecoration.GetUnit()) {
+    text->mTextDecoration = NS_STYLE_TEXT_DECORATION_NONE;
+  }
+  else if (eCSSUnit_Inherit == aTextData.mDecoration.GetUnit()) {
+    inherited = PR_TRUE;
+    text->mTextDecoration = parentText->mTextDecoration;
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_TextReset, *text);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mTextData = text;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_TEXT_RESET, aHighestNode);
+  }
+
+  return text;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeUIData(nsStyleUserInterface* aStartData, const nsCSSUserInterface& aUIData, 
+                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                          nsRuleNode* aHighestNode,
+                          const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TEXT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleUserInterface* ui = nsnull;
+  nsStyleUserInterface* parentUI = ui;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    ui = new (mPresContext) nsStyleUserInterface(*aStartData);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentUI = (nsStyleUserInterface*)parentContext->GetStyleData(eStyleStruct_UserInterface);
+      if (parentUI)
+        ui = new (mPresContext) nsStyleUserInterface(*parentUI);
+    }
+  }
+
+  if (!ui)
+    ui = parentUI = new (mPresContext) nsStyleUserInterface();
+
+  // cursor: enum, auto, url, inherit
+  nsCSSValueList*  list = aUIData.mCursor;
+  if (nsnull != list) {
+    // XXX need to deal with multiple URL values
+    if (eCSSUnit_Enumerated == list->mValue.GetUnit()) {
+      ui->mCursor = list->mValue.GetIntValue();
+    }
+    else if (eCSSUnit_Auto == list->mValue.GetUnit()) {
+      ui->mCursor = NS_STYLE_CURSOR_AUTO;
+    }
+    else if (eCSSUnit_URL == list->mValue.GetUnit()) {
+      list->mValue.GetStringValue(ui->mCursorImage);
+    }
+    else if (eCSSUnit_Inherit == list->mValue.GetUnit()) {
+      inherited = PR_TRUE;
+      ui->mCursor = parentUI->mCursor;
+    }
+  }
+
+  // user-input: auto, none, enum, inherit
+  if (eCSSUnit_Enumerated == aUIData.mUserInput.GetUnit()) {
+    ui->mUserInput = aUIData.mUserInput.GetIntValue();
+  }
+  else if (eCSSUnit_Auto == aUIData.mUserInput.GetUnit()) {
+    ui->mUserInput = NS_STYLE_USER_INPUT_AUTO;
+  }
+  else if (eCSSUnit_None == aUIData.mUserInput.GetUnit()) {
+    ui->mUserInput = NS_STYLE_USER_INPUT_NONE;
+  }
+  else if (eCSSUnit_Inherit == aUIData.mUserInput.GetUnit()) {
+    inherited = PR_TRUE;
+    ui->mUserInput = parentUI->mUserInput;
+  }
+
+  // user-modify: enum, inherit
+  if (eCSSUnit_Enumerated == aUIData.mUserModify.GetUnit()) {
+    ui->mUserModify = aUIData.mUserModify.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aUIData.mUserModify.GetUnit()) {
+    inherited = PR_TRUE;
+    ui->mUserModify = parentUI->mUserModify;
+  }
+
+  // user-focus: none, normal, enum, inherit
+  if (eCSSUnit_Enumerated == aUIData.mUserFocus.GetUnit()) {
+    ui->mUserFocus = aUIData.mUserFocus.GetIntValue();
+  }
+  else if (eCSSUnit_None == aUIData.mUserFocus.GetUnit()) {
+    ui->mUserFocus = NS_STYLE_USER_FOCUS_NONE;
+  }
+  else if (eCSSUnit_Normal == aUIData.mUserFocus.GetUnit()) {
+    ui->mUserFocus = NS_STYLE_USER_FOCUS_NORMAL;
+  }
+  else if (eCSSUnit_Inherit == aUIData.mUserFocus.GetUnit()) {
+    inherited = PR_TRUE;
+    ui->mUserFocus = parentUI->mUserFocus;
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_UserInterface, *ui);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mUIData = ui;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_UI, aHighestNode);
+  }
+
+  return ui;
+}
+
+const nsStyleStruct*
+nsRuleNode::ComputeUIResetData(nsStyleUIReset* aStartData, const nsCSSUserInterface& aUIData, 
+                               nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                               nsRuleNode* aHighestNode,
+                               const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TEXT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleUIReset* ui;
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    ui = new (mPresContext) nsStyleUIReset(*aStartData);
+  else
+    ui = new (mPresContext) nsStyleUIReset();
+  nsStyleUIReset* parentUI = ui;
+
+  if (parentContext)
+    parentUI = (nsStyleUIReset*)parentContext->GetStyleData(eStyleStruct_UIReset);
+  PRBool inherited = PR_FALSE;
+  
+  // user-select: none, enum, inherit
+  if (eCSSUnit_Enumerated == aUIData.mUserSelect.GetUnit()) {
+    ui->mUserSelect = aUIData.mUserSelect.GetIntValue();
+  }
+  else if (eCSSUnit_None == aUIData.mUserSelect.GetUnit()) {
+    ui->mUserSelect = NS_STYLE_USER_SELECT_NONE;
+  }
+  else if (eCSSUnit_Inherit == aUIData.mUserSelect.GetUnit()) {
+    inherited = PR_TRUE;
+    ui->mUserSelect = parentUI->mUserSelect;
+  }
+
+  // key-equivalent: none, enum XXX, inherit
+  nsCSSValueList*  keyEquiv = aUIData.mKeyEquivalent;
+  if (keyEquiv) {
+    // XXX need to deal with multiple values
+    if (eCSSUnit_Enumerated == keyEquiv->mValue.GetUnit()) {
+      ui->mKeyEquivalent = PRUnichar(0);  // XXX To be implemented
+    }
+    else if (eCSSUnit_None == keyEquiv->mValue.GetUnit()) {
+      ui->mKeyEquivalent = PRUnichar(0);
+    }
+    else if (eCSSUnit_Inherit == keyEquiv->mValue.GetUnit()) {
+      inherited = PR_TRUE;
+      ui->mKeyEquivalent = parentUI->mKeyEquivalent;
+    }
+  }
+  // resizer: auto, none, enum, inherit
+  if (eCSSUnit_Enumerated == aUIData.mResizer.GetUnit()) {
+    ui->mResizer = aUIData.mResizer.GetIntValue();
+  }
+  else if (eCSSUnit_Auto == aUIData.mResizer.GetUnit()) {
+    ui->mResizer = NS_STYLE_RESIZER_AUTO;
+  }
+  else if (eCSSUnit_None == aUIData.mResizer.GetUnit()) {
+    ui->mResizer = NS_STYLE_RESIZER_NONE;
+  }
+  else if (eCSSUnit_Inherit == aUIData.mResizer.GetUnit()) {
+    inherited = PR_TRUE;
+    ui->mResizer = parentUI->mResizer;
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_UIReset, *ui);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mUIData = ui;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_UI_RESET, aHighestNode);
+  }
+
+  return ui;
+}
+
+const nsStyleStruct*
 nsRuleNode::ComputeDisplayData(nsStyleDisplay* aStartDisplay, const nsCSSDisplay& aDisplayData, 
                                nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                nsRuleNode* aHighestNode,
@@ -1604,7 +2064,7 @@ nsRuleNode::ComputeVisibilityData(nsStyleVisibility* aStartVisibility, const nsC
   if (inherited)
     // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
     // style context.
-    aMutableContext->SetStyle(eStyleStruct_Color, *visibility);
+    aMutableContext->SetStyle(eStyleStruct_Visibility, *visibility);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData.mInheritedData)
@@ -3593,6 +4053,188 @@ nsRuleNode::CheckQuotesProperties(const nsCSSContent& aData)
   return eRulePartialMixed;
 }
 
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckTextProperties(const nsCSSText& aData)
+{
+  const PRUint32 numProps = 8;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aData.mLineHeight.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mLineHeight.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mUnicodeBidi.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mUnicodeBidi.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mTextIndent.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mTextIndent.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mTextAlign.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mTextAlign.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mTextTransform.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mTextTransform.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mWordSpacing.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mWordSpacing.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mLetterSpacing.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mLetterSpacing.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mWhiteSpace.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mWhiteSpace.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckTextResetProperties(const nsCSSText& aData)
+{
+  const PRUint32 numProps = 2;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aData.mDecoration.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mDecoration.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mVerticalAlign.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mVerticalAlign.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckUIProperties(const nsCSSUserInterface& aData)
+{
+  const PRUint32 numProps = 4;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aData.mUserInput.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mUserInput.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mUserModify.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mUserModify.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mUserFocus.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mUserFocus.GetUnit())
+      inheritCount++;
+  }
+
+  if (aData.mCursor) {
+    totalCount++;
+    if (aData.mCursor->mValue.GetUnit() == eCSSUnit_Inherit)
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckUIResetProperties(const nsCSSUserInterface& aData)
+{
+  const PRUint32 numProps = 3;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aData.mUserSelect.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mUserSelect.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mResizer.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mResizer.GetUnit())
+      inheritCount++;
+  }
+
+  if (aData.mKeyEquivalent) {
+    totalCount++;
+    if (aData.mKeyEquivalent->mValue.GetUnit() == eCSSUnit_Inherit)
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
 #ifdef INCLUDE_XUL
 inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
@@ -3683,6 +4325,14 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
       return GetContentData(aContext, aMutableContext);
     case eStyleStruct_Quotes:
       return GetQuotesData(aContext, aMutableContext);
+    case eStyleStruct_Text:
+      return GetTextData(aContext, aMutableContext);
+    case eStyleStruct_TextReset:
+      return GetTextResetData(aContext, aMutableContext);
+    case eStyleStruct_UserInterface:
+      return GetUIData(aContext, aMutableContext);
+    case eStyleStruct_UIReset:
+      return GetUIResetData(aContext, aMutableContext);
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
       return GetXULData(aContext, aMutableContext);

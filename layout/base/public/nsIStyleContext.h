@@ -67,6 +67,8 @@ public:
                                 nsIRuleNode* aRules,
                                 nsIStyleContext*& aResult) = 0;
 
+  virtual PRBool HasTextDecorations()=0;
+
   // Fill a style struct with data
   NS_IMETHOD GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct) = 0;
 
@@ -76,7 +78,8 @@ public:
   NS_IMETHOD CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint, PRBool aStopAtFirst = PR_FALSE) = 0;
 
   NS_IMETHOD GetRuleNode(nsIRuleNode** aResult)=0;
-  NS_IMETHOD AddInheritBit(const PRUint32& aInheritBit)=0;
+  NS_IMETHOD AddStyleBit(const PRUint32& aBit)=0;
+  NS_IMETHOD GetStyleBits(PRUint32* aBits)=0;
 
   // debugging
   virtual void  List(FILE* out, PRInt32 aIndent) = 0;

@@ -257,50 +257,37 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  NS_PRECONDITION(aContext, "no style context");
-  NS_PRECONDITION(aPresContext, "no pres context");
-
-  if (aAttributes && aPresContext && aContext) {
+  else if (aData->mDisplayData) {
     nsHTMLValue value;
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aContext->GetMutableStyleData(eStyleStruct_Display);
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (eHTMLUnit_Enumerated == value.GetUnit()) {
-      switch (value.GetIntValue()) {
-      case NS_STYLE_TEXT_ALIGN_LEFT:
-        display->mFloats = NS_STYLE_FLOAT_LEFT;
-        break;
-      case NS_STYLE_TEXT_ALIGN_RIGHT:
-        display->mFloats = NS_STYLE_FLOAT_RIGHT;
-        break;
-      default:
-        break;
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      PRUint8 align = (PRUint8)(value.GetIntValue());
+      if (aData->mDisplayData && aData->mDisplayData->mFloat.GetUnit() == eCSSUnit_Null) {
+        if (align == NS_STYLE_TEXT_ALIGN_LEFT)
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_LEFT, eCSSUnit_Enumerated);
+        else if (align == NS_STYLE_TEXT_ALIGN_RIGHT)
+          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_RIGHT, eCSSUnit_Enumerated);
       }
     }
 
-    aAttributes->GetAttribute(nsHTMLAtoms::type, value);
-    if (eHTMLUnit_String == value.GetUnit()) {
-      nsAutoString tmp;
-      value.GetStringValue(tmp);
-      if (tmp.EqualsIgnoreCase("line") ||
-          tmp.EqualsIgnoreCase("vert") ||
-          tmp.EqualsIgnoreCase("vertical") ||
-          tmp.EqualsIgnoreCase("block")) {
-        // This is not strictly 100% compatible: if the spacer is given
-        // a width of zero then it is basically ignored.
-        display->mDisplay = NS_STYLE_DISPLAY_BLOCK;
+    if (aData->mDisplayData->mDisplay == eCSSUnit_Null) {
+      aAttributes->GetAttribute(nsHTMLAtoms::type, value);
+      if (eHTMLUnit_String == value.GetUnit()) {
+        nsAutoString tmp;
+        value.GetStringValue(tmp);
+        if (tmp.EqualsIgnoreCase("line") ||
+            tmp.EqualsIgnoreCase("vert") ||
+            tmp.EqualsIgnoreCase("vertical") ||
+            tmp.EqualsIgnoreCase("block")) {
+          // This is not strictly 100% compatible: if the spacer is given
+          // a width of zero then it is basically ignored.
+          aData->mDisplayData->mDisplay = NS_STYLE_DISPLAY_BLOCK;
+        }
       }
     }
   }
+  
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 
@@ -331,7 +318,7 @@ nsHTMLSpacerElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMa
                                                  nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -481,38 +481,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   if (!aAttributes || !aData)
     return;
 
+  nsGenericHTMLElement::MapAlignAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  nsHTMLValue value;
-
-  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-
-  if (eHTMLUnit_Enumerated == value.GetUnit()) {
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aContext->GetMutableStyleData(eStyleStruct_Display);
-    nsStyleText* text = (nsStyleText*)
-      aContext->GetMutableStyleData(eStyleStruct_Text);
-    switch (value.GetIntValue()) {
-    case NS_STYLE_TEXT_ALIGN_LEFT:
-      display->mFloats = NS_STYLE_FLOAT_LEFT;
-
-      break;
-    case NS_STYLE_TEXT_ALIGN_RIGHT:
-      display->mFloats = NS_STYLE_FLOAT_RIGHT;
-
-      break;
-    default:
-      text->mVerticalAlign.SetIntValue(value.GetIntValue(),
-                                       eStyleUnit_Enumerated);
-      break;
-    }
-  }
 }
 
 NS_IMETHODIMP
@@ -540,7 +510,7 @@ nsHTMLTextAreaElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& a
                                                     nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

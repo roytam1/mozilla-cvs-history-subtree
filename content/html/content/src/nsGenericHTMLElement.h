@@ -295,10 +295,8 @@ public:
   static PRBool GetImageAlignAttributeImpact(const nsIAtom* aAttribute,
                                              PRInt32& aHint);
 
-  static void MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
-                                                 nsIMutableStyleContext* aContext,
-                                                 nsIPresContext* aPresContext);
-
+  static void MapAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
+                                    nsRuleData* aData);
   static void MapImageBorderAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
                                           nsRuleData* aData);
   static void MapImageMarginAttributeInto(const nsIHTMLMappedAttributes* aAttributes,

@@ -3122,31 +3122,30 @@ nsGenericHTMLElement::GetImageMappedAttributesImpact(const nsIAtom* aAttribute,
 }
 
 void
-nsGenericHTMLElement::MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
-                                                 nsIMutableStyleContext* aContext,
-                                                 nsIPresContext* aPresContext)
+nsGenericHTMLElement::MapAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
+                                            nsRuleData* aRuleData)
 {
-  nsHTMLValue value;
-  aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-  if (value.GetUnit() == eHTMLUnit_Enumerated) {
-    PRUint8 align = (PRUint8)(value.GetIntValue());
-    nsStyleDisplay* display = (nsStyleDisplay*)
-      aContext->GetMutableStyleData(eStyleStruct_Display);
-    nsStyleText* text = (nsStyleText*)
-      aContext->GetMutableStyleData(eStyleStruct_Text);
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsStyleCoord three(NSIntPixelsToTwips(3, p2t));
-    switch (align) {
-      case NS_STYLE_TEXT_ALIGN_LEFT:
-        display->mFloats = NS_STYLE_FLOAT_LEFT;
-        break;
-      case NS_STYLE_TEXT_ALIGN_RIGHT:
-        display->mFloats = NS_STYLE_FLOAT_RIGHT;
-        break;
-      default:
-        text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
-        break;
+  if (aRuleData->mSID == eStyleStruct_Display || aRuleData->mSID == eStyleStruct_Text) {
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      PRUint8 align = (PRUint8)(value.GetIntValue());
+      if (aRuleData->mDisplayData && aRuleData->mDisplayData->mFloat.GetUnit() == eCSSUnit_Null) {
+        if (align == NS_STYLE_TEXT_ALIGN_LEFT)
+          aRuleData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_LEFT, eCSSUnit_Enumerated);
+        else if (align == NS_STYLE_TEXT_ALIGN_RIGHT)
+          aRuleData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_RIGHT, eCSSUnit_Enumerated);
+      }
+      else if (aRuleData->mTextData && aRuleData->mTextData->mVerticalAlign.GetUnit() == eCSSUnit_Null) {
+        switch (align) {
+        case NS_STYLE_TEXT_ALIGN_LEFT:
+        case NS_STYLE_TEXT_ALIGN_RIGHT:
+          break;
+        default:
+          aRuleData->mTextData->mVerticalAlign = nsCSSValue(align, eCSSUnit_Enumerated);
+          break;
+        }
+      }
     }
   }
 }

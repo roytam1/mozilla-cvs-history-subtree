@@ -161,6 +161,22 @@ protected:
                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                          nsRuleNode* aHighestNode,
                                          const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeTextData(nsStyleText* aStartData, const nsCSSText& aData, 
+                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                       nsRuleNode* aHighestNode,
+                                       const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeTextResetData(nsStyleTextReset* aStartData, const nsCSSText& aData, 
+                                            nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                            nsRuleNode* aHighestNode,
+                                            const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeUIData(nsStyleUserInterface* aStartData, const nsCSSUserInterface& aData, 
+                                     nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                     nsRuleNode* aHighestNode,
+                                     const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeUIResetData(nsStyleUIReset* aStartData, const nsCSSUserInterface& aData, 
+                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsRuleNode* aHighestNode,
+                                          const RuleDetail& aRuleDetail);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
@@ -184,6 +200,11 @@ protected:
   RuleDetail CheckTableBorderProperties(const nsCSSTable& aTable);
   RuleDetail CheckContentProperties(const nsCSSContent& aContent);
   RuleDetail CheckQuotesProperties(const nsCSSContent& aContent);
+  RuleDetail CheckTextProperties(const nsCSSText& aText);
+  RuleDetail CheckTextResetProperties(const nsCSSText& aText);
+  RuleDetail CheckUIProperties(const nsCSSUserInterface& aUI);
+  RuleDetail CheckUIResetProperties(const nsCSSUserInterface& aUI);
+
 #ifdef INCLUDE_XUL
   RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
 #endif
@@ -204,6 +225,10 @@ protected:
   const nsStyleStruct* GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetContentData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetQuotesData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetTextData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetTextResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetUIData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetUIResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #endif

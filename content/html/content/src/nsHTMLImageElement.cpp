@@ -521,57 +521,13 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
 {
   if (!aData || !aAttributes)
     return;
-
-  if (aData->mSID == eStyleStruct_Display) {
-    if (aData->mDisplayData->mFloat.GetUnit() == eCSSUnit_Null) {
-      nsHTMLValue value;
-      aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-      if (value.GetUnit() == eHTMLUnit_Enumerated) {
-        PRUint8 align = value.GetIntValue();
-        switch (align) {
-        case NS_STYLE_TEXT_ALIGN_LEFT:
-          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_LEFT, eCSSUnit_Enumerated);
-          break;
-        case NS_STYLE_TEXT_ALIGN_RIGHT:
-          aData->mDisplayData->mFloat = nsCSSValue(NS_STYLE_FLOAT_RIGHT, eCSSUnit_Enumerated);
-          break;
-        default:
-          break;
-        }
-      }
-    }
-  }
-
+  nsGenericHTMLElement::MapAlignAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRUint8 align = value.GetIntValue();
-      switch (align) {
-      case NS_STYLE_TEXT_ALIGN_LEFT:
-      case NS_STYLE_TEXT_ALIGN_RIGHT:
-        break;
-      default: {
-        nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-        text->mVerticalAlign.SetIntValue(align, eStyleUnit_Enumerated);
-        break;
-      }
-      }
-    }
-  }
-}
 
 NS_IMETHODIMP
 nsHTMLImageElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
@@ -599,7 +555,7 @@ nsHTMLImageElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMap
                                                  nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -274,21 +274,6 @@ NS_IMETHODIMP
 BodyRule::MapFontStyleInto(nsIMutableStyleContext* aContext,
                            nsIPresContext* aPresContext)
 {
-  // set up the basefont (defaults to 3)
-  nsStyleFont* font = (nsStyleFont*)aContext->GetMutableStyleData(eStyleStruct_Font);
-  PRInt32 scaler;
-  aPresContext->GetFontScaler(&scaler);
-  float scaleFactor = nsStyleUtil::GetScalingFactor(scaler);
-  // apply font scaling to the body
-  font->mFont.size = NSToCoordFloor(float(font->mFont.size) * scaleFactor);
-  if (font->mFont.size < 1) {
-    font->mFont.size = 1;
-  }
-  font->mFixedFont.size = NSToCoordFloor(float(font->mFixedFont.size) * scaleFactor);
-  if (font->mFixedFont.size < 1) {
-    font->mFixedFont.size = 1;
-  }
-
   return NS_OK;
 }
 

@@ -220,52 +220,31 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
         aData->mPositionData->mWidth = nsCSSValue((float)value.GetIntValue(), eCSSUnit_Char);
     }
   }
-
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-
-    // wrap: empty
-    aAttributes->GetAttribute(nsHTMLAtoms::wrap, value);
-    if (value.GetUnit() != eHTMLUnit_Null) {
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      text->mWhiteSpace = NS_STYLE_WHITESPACE_MOZ_PRE_WRAP;
-    }
+  else if (aData->mTextData && aData->mSID == eStyleStruct_Text) {
+    if (aData->mTextData->mWhiteSpace.GetUnit() == eCSSUnit_Null) {
+      nsHTMLValue value;
+      // wrap: empty
+      aAttributes->GetAttribute(nsHTMLAtoms::wrap, value);
+      if (value.GetUnit() != eHTMLUnit_Null)
+        aData->mTextData->mWhiteSpace = nsCSSValue(NS_STYLE_WHITESPACE_MOZ_PRE_WRAP, eCSSUnit_Enumerated);
       
-    // cols: int (nav4 attribute)
-    aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) {
-      // Force wrap property on since we want to wrap at a width
-      // boundary not just a newline.
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      text->mWhiteSpace = NS_STYLE_WHITESPACE_MOZ_PRE_WRAP;
-    }
-
-    // width: int (html4 attribute == nav4 cols)
-    aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) {
-      // Force wrap property on since we want to wrap at a width
-      // boundary not just a newline.
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      text->mWhiteSpace = NS_STYLE_WHITESPACE_MOZ_PRE_WRAP;
-    }
-
-    // tabstop: int
-    aAttributes->GetAttribute(nsHTMLAtoms::tabstop, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) {
-      // XXX set
+      // cols: int (nav4 attribute)
+      aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
+      if (value.GetUnit() == eHTMLUnit_Integer)
+        // Force wrap property on since we want to wrap at a width
+        // boundary not just a newline.
+        aData->mTextData->mWhiteSpace = nsCSSValue(NS_STYLE_WHITESPACE_MOZ_PRE_WRAP, eCSSUnit_Enumerated);
+      
+      // width: int (html4 attribute == nav4 cols)
+      aAttributes->GetAttribute(nsHTMLAtoms::width, value);
+      if (value.GetUnit() == eHTMLUnit_Integer)
+        // Force wrap property on since we want to wrap at a width
+        // boundary not just a newline.
+        aData->mTextData->mWhiteSpace = nsCSSValue(NS_STYLE_WHITESPACE_MOZ_PRE_WRAP, eCSSUnit_Enumerated);
     }
   }
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -293,7 +272,7 @@ nsHTMLPreElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRu
                                                nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

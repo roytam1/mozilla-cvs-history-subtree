@@ -39,28 +39,34 @@
 
 class nsIFrame;
 
-#define NS_STYLE_INHERIT_FONT             0x00001
-#define NS_STYLE_INHERIT_COLOR            0x00002
-#define NS_STYLE_INHERIT_BACKGROUND       0x00004
-#define NS_STYLE_INHERIT_LIST             0x00008
-#define NS_STYLE_INHERIT_POSITION         0x00010
-#define NS_STYLE_INHERIT_TEXT             0x00020
-#define NS_STYLE_INHERIT_DISPLAY          0x00040
-#define NS_STYLE_INHERIT_VISIBILITY       0x00080
-#define NS_STYLE_INHERIT_TABLE            0x00100
-#define NS_STYLE_INHERIT_TABLE_BORDER     0x00200
-#define NS_STYLE_INHERIT_CONTENT          0x00400
-#define NS_STYLE_INHERIT_QUOTES           0x00800
-#define NS_STYLE_INHERIT_UI               0x01000
-#define NS_STYLE_INHERIT_MARGIN           0x02000
-#define NS_STYLE_INHERIT_PADDING          0x04000
-#define NS_STYLE_INHERIT_BORDER           0x08000
-#define NS_STYLE_INHERIT_OUTLINE          0x01000
-#define NS_STYLE_INHERIT_XUL              0x20000
+// Bits for each struct.
+#define NS_STYLE_INHERIT_FONT             0x000001
+#define NS_STYLE_INHERIT_COLOR            0x000002
+#define NS_STYLE_INHERIT_BACKGROUND       0x000004
+#define NS_STYLE_INHERIT_LIST             0x000008
+#define NS_STYLE_INHERIT_POSITION         0x000010
+#define NS_STYLE_INHERIT_TEXT             0x000020
+#define NS_STYLE_INHERIT_TEXT_RESET       0x000040
+#define NS_STYLE_INHERIT_DISPLAY          0x000080
+#define NS_STYLE_INHERIT_VISIBILITY       0x000100
+#define NS_STYLE_INHERIT_TABLE            0x000200
+#define NS_STYLE_INHERIT_TABLE_BORDER     0x000400
+#define NS_STYLE_INHERIT_CONTENT          0x000800
+#define NS_STYLE_INHERIT_QUOTES           0x001000
+#define NS_STYLE_INHERIT_UI               0x002000
+#define NS_STYLE_INHERIT_UI_RESET         0x004000
+#define NS_STYLE_INHERIT_MARGIN           0x008000
+#define NS_STYLE_INHERIT_PADDING          0x010000
+#define NS_STYLE_INHERIT_BORDER           0x020000
+#define NS_STYLE_INHERIT_OUTLINE          0x040000
+#define NS_STYLE_INHERIT_XUL              0x080000
 
 // A bit to test whether or not a style context can be shared
 // by siblings.
-#define NS_STYLE_UNIQUE_CONTEXT           0x80000
+#define NS_STYLE_UNIQUE_CONTEXT           0x100000
+
+// A bit to test whether or not we have any text decorations.
+#define NS_STYLE_HAS_TEXT_DECORATIONS     0x200000
 
 enum nsStyleStructID {
   eStyleStruct_Font           = 1,
@@ -69,20 +75,22 @@ enum nsStyleStructID {
   eStyleStruct_List           = 4,
   eStyleStruct_Position       = 5,
   eStyleStruct_Text           = 6,
-  eStyleStruct_Display        = 7,
-  eStyleStruct_Visibility     = 8,
-  eStyleStruct_Content        = 9,
-  eStyleStruct_Quotes         = 10,
-  eStyleStruct_UserInterface  = 11,
-  eStyleStruct_Table          = 12,
-  eStyleStruct_TableBorder    = 13,
-  eStyleStruct_Margin         = 14,
-  eStyleStruct_Padding        = 15,
-  eStyleStruct_Border         = 16,
-  eStyleStruct_Outline        = 17,
-  eStyleStruct_XUL            = 18,
+  eStyleStruct_TextReset      = 7,
+  eStyleStruct_Display        = 8,
+  eStyleStruct_Visibility     = 9,
+  eStyleStruct_Content        = 10,
+  eStyleStruct_Quotes         = 11,
+  eStyleStruct_UserInterface  = 12,
+  eStyleStruct_UIReset        = 13,
+  eStyleStruct_Table          = 14,
+  eStyleStruct_TableBorder    = 15,
+  eStyleStruct_Margin         = 16,
+  eStyleStruct_Padding        = 17,
+  eStyleStruct_Border         = 18,
+  eStyleStruct_Outline        = 19,
+  eStyleStruct_XUL            = 20,
   eStyleStruct_Max            = eStyleStruct_XUL,
-  eStyleStruct_BorderPaddingShortcut = 19       // only for use in GetStyle()
+  eStyleStruct_BorderPaddingShortcut = 21       // only for use in GetStyle()
 };
 
 // The actual structs start here
@@ -478,12 +486,42 @@ struct nsStylePosition : public nsStyleStruct {
   nsStyleCoord  mZIndex;                // [reset] 
 };
 
+struct nsStyleTextReset : public nsStyleStruct {
+  nsStyleTextReset(void);
+  nsStyleTextReset(const nsStyleTextReset& aOther);
+  ~nsStyleTextReset(void);
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleTextReset), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleTextReset& aOther) const;
+  
+  PRUint8 mTextDecoration;              // [reset] see nsStyleConsts.h
+  nsStyleCoord  mVerticalAlign;         // [reset] see nsStyleConsts.h for enums
+};
+
 struct nsStyleText : public nsStyleStruct {
   nsStyleText(void);
+  nsStyleText(const nsStyleText& aOther);
   ~nsStyleText(void);
 
-  PRUint8 mTextDecorations;             // [inherited/special] caches all decorations seen so far 
-  PRUint8 mTextDecoration;              // [reset] see nsStyleConsts.h
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleText), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleText& aOther) const;
+
   PRUint8 mTextAlign;                   // [inherited] see nsStyleConsts.h
   PRUint8 mTextTransform;               // [inherited] see nsStyleConsts.h
   PRUint8 mWhiteSpace;                  // [inherited] see nsStyleConsts.h
@@ -495,8 +533,7 @@ struct nsStyleText : public nsStyleStruct {
   nsStyleCoord  mLineHeight;            // [inherited] 
   nsStyleCoord  mTextIndent;            // [inherited] 
   nsStyleCoord  mWordSpacing;           // [inherited] 
-  nsStyleCoord  mVerticalAlign;         // [reset] see nsStyleConsts.h for enums
-
+  
   PRBool WhiteSpaceIsSignificant() const {
     return mWhiteSpace == NS_STYLE_WHITESPACE_PRE;
   }
@@ -851,19 +888,47 @@ protected:
   nsStyleCounterData* mResets;
 };
 
+struct nsStyleUIReset: public nsStyleStruct {
+  nsStyleUIReset(void);
+  nsStyleUIReset(const nsStyleUIReset& aOther);
+  ~nsStyleUIReset(void);
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleUIReset), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleUIReset& aOther) const;
+
+  PRUint8   mUserSelect;      // [reset] (selection-style)
+  PRUnichar mKeyEquivalent;   // [reset] XXX what type should this be?
+  PRUint8   mResizer;         // [reset]
+};
+
 struct nsStyleUserInterface: public nsStyleStruct {
   nsStyleUserInterface(void);
+  nsStyleUserInterface(const nsStyleUserInterface& aOther);
   ~nsStyleUserInterface(void);
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleUserInterface), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleUserInterface& aOther) const;
 
   PRUint8   mUserInput;       // [inherited]
   PRUint8   mUserModify;      // [inherited] (modify-content)
-  PRUint8   mUserSelect;      // [reset] (selection-style)
   PRUint8   mUserFocus;       // [inherited] (auto-select)
-  PRUnichar mKeyEquivalent;   // [reset] XXX what type should this be?
-  PRUint8   mResizer;         // [reset]
   
-  // These properties are treated as inherited.  See bugzilla bug 51113.  This is
-  // not (strictly speaking) the correct behavior.
   PRUint8 mCursor;                // [inherited] See nsStyleConsts.h NS_STYLE_CURSOR_*
   nsString mCursorImage;          // [inherited] url string
 };
@@ -880,7 +945,7 @@ struct nsStyleXUL : public nsStyleStruct {
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
-    aContext->FreeToShell(sizeof(nsStyleList), this);
+    aContext->FreeToShell(sizeof(nsStyleXUL), this);
   };
 
   PRInt32 CalcDifference(const nsStyleXUL& aOther) const;

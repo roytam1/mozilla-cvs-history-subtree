@@ -1696,39 +1696,42 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
   nscolor underColor;
   nscolor strikeColor;
   nsIStyleContext*  context = aStyleContext;
-
-  const nsStyleText* styleText = 
-      (const nsStyleText*)context->GetStyleData(eStyleStruct_Text);
-    
-  PRUint8 decorations = styleText->mTextDecorations; // All the decorations.
-  PRUint8 decorMask = decorations;
+  
+  PRUint8 decorations = NS_STYLE_TEXT_DECORATION_NONE; // Begin with no decorations
+  PRUint8 decorMask = NS_STYLE_TEXT_DECORATION_UNDERLINE | NS_STYLE_TEXT_DECORATION_OVERLINE |
+                      NS_STYLE_TEXT_DECORATION_LINE_THROUGH; // A mask of all possible decorations.
+  PRBool hasDecorations = context->HasTextDecorations();
 
   NS_ADDREF(context);
   do {  // find decoration colors
-    const nsStyleText* styleText = 
-      (const nsStyleText*)context->GetStyleData(eStyleStruct_Text);
+    const nsStyleTextReset* styleText = 
+      (const nsStyleTextReset*)context->GetStyleData(eStyleStruct_TextReset);
     if (decorMask & styleText->mTextDecoration) {  // a decoration defined here
       const nsStyleColor* styleColor =
         (const nsStyleColor*)context->GetStyleData(eStyleStruct_Color);
       if (NS_STYLE_TEXT_DECORATION_UNDERLINE & decorMask & styleText->mTextDecoration) {
         underColor = styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_UNDERLINE;
+        decorations |= NS_STYLE_TEXT_DECORATION_UNDERLINE;
       }
       if (NS_STYLE_TEXT_DECORATION_OVERLINE & decorMask & styleText->mTextDecoration) {
         overColor = styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_OVERLINE;
+        decorations |= NS_STYLE_TEXT_DECORATION_OVERLINE;
       }
       if (NS_STYLE_TEXT_DECORATION_LINE_THROUGH & decorMask & styleText->mTextDecoration) {
         strikeColor = styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
+        decorations |= NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
       }
     }
     if (0 != decorMask) {
       nsIStyleContext*  lastContext = context;
       context = context->GetParent();
+      hasDecorations = context->HasTextDecorations();
       NS_RELEASE(lastContext);
     }
-  } while ((nsnull != context) && (0 != decorMask));
+  } while ((nsnull != context) && hasDecorations && (0 != decorMask));
   NS_IF_RELEASE(context);
 
   nscoord offset;

@@ -262,12 +262,12 @@ nsTextBoxFrame::PaintTitle(nsIPresContext*      aPresContext,
         return NS_OK;
 
     // paint the title
-    // This is a total hack.  We should really support all the text decorations by painting
+    // XXX This is a total hack.  We should really support all the text decorations by painting
     // them ourselves.
     nsStyleFont* fontStyle = (nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
-    const nsStyleText* textStyle = (const nsStyleText*)mStyleContext->GetStyleData(eStyleStruct_Text);
+    const nsStyleTextReset* textStyle = (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_TextReset);
     PRUint8 oldDec = fontStyle->mFont.decorations;
-    fontStyle->mFont.decorations = textStyle->mTextDecorations;
+    fontStyle->mFont.decorations = textStyle->mTextDecoration;
 
     aRenderingContext.SetFont(fontStyle->mFont);
 

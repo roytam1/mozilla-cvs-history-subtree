@@ -61,205 +61,6 @@
 // #define NOISY_DEBUG
 #endif
 
-// --------------------------------------
-// Macros for getting style data structs
-// - if using external data, get from
-//   the member style data instance
-// - if internal, get the data member
-#define GETSCDATA(data) m##data
-
-// --------------------
-// nsStyleText
-//
-
-nsStyleText::nsStyleText(void) { }
-nsStyleText::~nsStyleText(void) { }
-
-struct StyleTextImpl: public nsStyleText {
-  StyleTextImpl(void) { }
-
-  void ResetFrom(const nsStyleText* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleText& aSource);
-  void CopyTo(nsStyleText& aDest) const;
-  PRInt32 CalcDifference(const StyleTextImpl& aOther) const;
-  
-private:  // These are not allowed
-  StyleTextImpl(const StyleTextImpl& aOther);
-  StyleTextImpl& operator=(const StyleTextImpl& aOther);
-};
-
-void StyleTextImpl::ResetFrom(const nsStyleText* aParent, nsIPresContext* aPresContext)
-{
-  // These properties not inherited
-  mVerticalAlign.SetIntValue(NS_STYLE_VERTICAL_ALIGN_BASELINE, eStyleUnit_Enumerated);
-//  mVerticalAlign.Reset(); TBI
-
-  if (nsnull != aParent) {
-    mTextAlign = aParent->mTextAlign;
-    mTextTransform = aParent->mTextTransform;
-    mWhiteSpace = aParent->mWhiteSpace;
-    mLetterSpacing = aParent->mLetterSpacing;
-
-    // Inherit everything except percentage line-height values
-    nsStyleUnit unit = aParent->mLineHeight.GetUnit();
-    if ((eStyleUnit_Normal == unit) || (eStyleUnit_Factor == unit) ||
-        (eStyleUnit_Coord == unit)) {
-      mLineHeight = aParent->mLineHeight;
-    }
-    else {
-      mLineHeight.SetInheritValue();
-    }
-    mTextIndent = aParent->mTextIndent;
-    mTextDecorations = aParent->mTextDecorations;
-    mTextDecoration = NS_STYLE_TEXT_DECORATION_NONE;
-    mWordSpacing = aParent->mWordSpacing;
-#ifdef IBMBIDI
-    mUnicodeBidi = aParent->mUnicodeBidi;
-#endif // IBMBIDI
-  }
-  else {
-    mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
-    mTextTransform = NS_STYLE_TEXT_TRANSFORM_NONE;
-    mWhiteSpace = NS_STYLE_WHITESPACE_NORMAL;
-
-    mLetterSpacing.SetNormalValue();
-    mLineHeight.SetNormalValue();
-    mTextIndent.SetCoordValue(0);
-    mTextDecorations = mTextDecorations = NS_STYLE_TEXT_DECORATION_NONE;
-    mWordSpacing.SetNormalValue();
-#ifdef IBMBIDI
-    mUnicodeBidi = NS_STYLE_UNICODE_BIDI_INHERIT;
-#endif // IBMBIDI
-  }
-}
-
-void StyleTextImpl::SetFrom(const nsStyleText& aSource)
-{
-  nsCRT::memcpy((nsStyleText*)this, &aSource, sizeof(nsStyleText));
-}
-
-void StyleTextImpl::CopyTo(nsStyleText& aDest) const
-{
-  nsCRT::memcpy(&aDest, (const nsStyleText*)this, sizeof(nsStyleText));
-}
-
-PRInt32 StyleTextImpl::CalcDifference(const StyleTextImpl& aOther) const
-{
-  if ((mTextAlign == aOther.mTextAlign) &&
-      (mTextTransform == aOther.mTextTransform) &&
-      (mWhiteSpace == aOther.mWhiteSpace) &&
-      (mLetterSpacing == aOther.mLetterSpacing) &&
-      (mLineHeight == aOther.mLineHeight) &&
-      (mTextIndent == aOther.mTextIndent) &&
-      (mWordSpacing == aOther.mWordSpacing) &&
-#ifdef IBMBIDI
-      (mUnicodeBidi == aOther.mUnicodeBidi) &&
-#endif // IBMBIDI
-      (mVerticalAlign == aOther.mVerticalAlign)) {
-    if (mTextDecorations != aOther.mTextDecorations)
-      return NS_STYLE_HINT_VISUAL;
-    return NS_STYLE_HINT_NONE;
-  }
-  return NS_STYLE_HINT_REFLOW;
-}
-
-//-----------------------
-// nsStyleUserInterface
-//
-
-nsStyleUserInterface::nsStyleUserInterface(void) { }
-nsStyleUserInterface::~nsStyleUserInterface(void) { }
-
-struct StyleUserInterfaceImpl: public nsStyleUserInterface {
-  StyleUserInterfaceImpl(void)  { }
-
-  void ResetFrom(const nsStyleUserInterface* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleUserInterface& aSource);
-  void CopyTo(nsStyleUserInterface& aDest) const;
-  PRInt32 CalcDifference(const StyleUserInterfaceImpl& aOther) const;
-  
-private:  // These are not allowed
-  StyleUserInterfaceImpl(const StyleUserInterfaceImpl& aOther);
-  StyleUserInterfaceImpl& operator=(const StyleUserInterfaceImpl& aOther);
-};
-
-void StyleUserInterfaceImpl::ResetFrom(const nsStyleUserInterface* aParent, nsIPresContext* aPresContext)
-{
-  if (aParent) {
-    mUserInput = aParent->mUserInput;
-    mUserModify = aParent->mUserModify;
-    mUserFocus = aParent->mUserFocus;
-    mCursor = aParent->mCursor; // fix for bugzilla bug 51113
-    mCursorImage = aParent->mCursorImage; // fix for bugzilla bug 51113
-  }
-  else {
-    mUserInput = NS_STYLE_USER_INPUT_AUTO;
-    mUserModify = NS_STYLE_USER_MODIFY_READ_ONLY;
-    mUserFocus = NS_STYLE_USER_FOCUS_NONE;
-
-    mCursor = NS_STYLE_CURSOR_AUTO; // fix for bugzilla bug 51113
-  }
-
-  mUserSelect = NS_STYLE_USER_SELECT_AUTO;
-  mKeyEquivalent = PRUnichar(0); // XXX what type should this be?
-  mResizer = NS_STYLE_RESIZER_AUTO;
-}
-
-void StyleUserInterfaceImpl::SetFrom(const nsStyleUserInterface& aSource)
-{
-  mUserInput = aSource.mUserInput;
-  mUserModify = aSource.mUserModify;
-  mUserFocus = aSource.mUserFocus;
-
-  mUserSelect = aSource.mUserSelect;
-  mKeyEquivalent = aSource.mKeyEquivalent;
-  mResizer = aSource.mResizer;
-  
-  mCursor = aSource.mCursor;
-  mCursorImage = aSource.mCursorImage;
-}
-
-void StyleUserInterfaceImpl::CopyTo(nsStyleUserInterface& aDest) const
-{
-  aDest.mUserInput = mUserInput;
-  aDest.mUserModify = mUserModify;
-  aDest.mUserFocus = mUserFocus;
-
-  aDest.mUserSelect = mUserSelect;
-  aDest.mKeyEquivalent = mKeyEquivalent;
-  aDest.mResizer = mResizer;
-  
-  aDest.mCursor = mCursor;
-  aDest.mCursorImage = mCursorImage;
-}
-
-PRInt32 StyleUserInterfaceImpl::CalcDifference(const StyleUserInterfaceImpl& aOther) const
-{
-  if ((mCursor != aOther.mCursor) ||
-      (mCursorImage != aOther.mCursorImage))
-    return NS_STYLE_HINT_VISUAL;
-
-  if ((mUserInput == aOther.mUserInput) && 
-      (mResizer == aOther.mResizer)) {
-    if ((mUserModify == aOther.mUserModify) && 
-        (mUserSelect == aOther.mUserSelect)) {
-      if ((mKeyEquivalent == aOther.mKeyEquivalent) &&
-          (mUserFocus == aOther.mUserFocus) &&
-          (mResizer == aOther.mResizer)) {
-        return NS_STYLE_HINT_NONE;
-      }
-      return NS_STYLE_HINT_CONTENT;
-    }
-    return NS_STYLE_HINT_VISUAL;
-  }
-  if ((mUserInput != aOther.mUserInput) &&
-      ((NS_STYLE_USER_INPUT_NONE == mUserInput) || 
-       (NS_STYLE_USER_INPUT_NONE == aOther.mUserInput))) {
-    return NS_STYLE_HINT_FRAMECHANGE;
-  }
-  return NS_STYLE_HINT_VISUAL;
-}
-
 //----------------------------------------------------------------------
 
 class StyleContextImpl : public nsIStyleContext,
@@ -284,7 +85,8 @@ public:
                                 nsIStyleContext*& aResult);
 
   virtual PRBool    Equals(const nsIStyleContext* aOther) const;
-  
+  virtual PRBool    HasTextDecorations() { return mBits & NS_STYLE_HAS_TEXT_DECORATIONS; };
+
   NS_IMETHOD RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse = PR_TRUE);
 
   NS_IMETHOD GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding);
@@ -293,7 +95,8 @@ public:
   NS_IMETHOD SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct);
 
   NS_IMETHOD GetRuleNode(nsIRuleNode** aResult) { *aResult = mRuleNode; NS_IF_ADDREF(*aResult); return NS_OK; };
-  NS_IMETHOD AddInheritBit(const PRUint32& aInheritBit) { mInheritBits |= aInheritBit; return NS_OK; };
+  NS_IMETHOD AddStyleBit(const PRUint32& aBit) { mBits |= aBit; return NS_OK; };
+  NS_IMETHOD GetStyleBits(PRUint32* aBits) { *aBits = mBits; return NS_OK; };
 
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID);
   virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID);
@@ -323,13 +126,9 @@ protected:
 
   nsIAtom*          mPseudoTag;
 
-  PRUint32                mInheritBits; // Which structs are inherited from the parent context.
+  PRUint32                mBits; // Which structs are inherited from the parent context.
   nsIRuleNode*            mRuleNode; // Weak. Rules can't go away without us going away.
   nsCachedStyleData       mCachedStyleData; // Our cached style data.
-
-  // the style data...
-  StyleTextImpl           mText;
-  StyleUserInterfaceImpl  mUserInterface;
 };
 
 static PRInt32 gLastDataCode;
@@ -342,10 +141,8 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mChild(nsnull),
     mEmptyChild(nsnull),
     mPseudoTag(aPseudoTag),
-    mInheritBits(0),
-    mRuleNode(aRuleNode),
-    mText(),
-    mUserInterface()
+    mBits(0),
+    mRuleNode(aRuleNode)
 {
   NS_INIT_REFCNT();
   NS_IF_ADDREF(mPseudoTag);
@@ -355,6 +152,33 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
   if (nsnull != mParent) {
     NS_ADDREF(mParent);
     mParent->AppendChild(this);
+  }
+
+  // See if we have any text decorations.
+  // First see if our parent has text decorations.  If our parent does, then we inherit the bit.
+  if (mParent && mParent->HasTextDecorations())
+    mBits |= NS_STYLE_HAS_TEXT_DECORATIONS;
+  else {
+    // We might have defined a decoration.
+    const nsStyleTextReset* text = (const nsStyleTextReset*)GetStyleData(eStyleStruct_TextReset);
+    if (text->mTextDecoration != NS_STYLE_TEXT_DECORATION_NONE)
+      mBits |= NS_STYLE_HAS_TEXT_DECORATIONS;
+  }
+
+  // Correct tables.
+  const nsStyleDisplay* disp = (const nsStyleDisplay*)GetStyleData(eStyleStruct_Display);
+  if (disp->mDisplay == NS_STYLE_DISPLAY_TABLE) {
+    // -moz-center and -moz-right are used for HTML's alignment
+    // This is covering the <div align="right"><table>...</table></div> case.
+    // In this case, we don't want to inherit the text alignment into the table.
+    const nsStyleText* text = (const nsStyleText*)GetStyleData(eStyleStruct_Text);
+    
+    if (text->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER ||
+        text->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_RIGHT)
+    {
+      nsStyleText* uniqueText = (nsStyleText*)GetUniqueStyleData(aPresContext, eStyleStruct_Text);
+      uniqueText->mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
+    }
   }
 }
 
@@ -373,7 +197,7 @@ StyleContextImpl::~StyleContextImpl()
   if (mCachedStyleData.mResetData || mCachedStyleData.mInheritedData) {
     nsCOMPtr<nsIPresContext> presContext;
     mRuleNode->GetPresContext(getter_AddRefs(presContext));
-    mCachedStyleData.Destroy(mInheritBits, presContext);
+    mCachedStyleData.Destroy(mBits, presContext);
   }
 }
 
@@ -516,7 +340,7 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
       if (nsnull != mEmptyChild) {
         child = mEmptyChild;
         do {
-          if ((!(child->mInheritBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
+          if ((!(child->mBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
               (aPseudoTag == child->mPseudoTag)) {
             aResult = child;
             break;
@@ -532,7 +356,7 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
       child = mChild;
       
       do {
-        if ((!(child->mInheritBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
+        if ((!(child->mBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
             (child->mRuleNode == aRuleNode) &&
             (child->mPseudoTag == aPseudoTag)) {
           aResult = child;
@@ -559,7 +383,7 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
     if (mParent != other->mParent) {
       result = PR_FALSE;
     }
-    else if (mInheritBits != other->mInheritBits) {
+    else if (mBits != other->mBits) {
       result = PR_FALSE;
     }
     else if (mPseudoTag != other->mPseudoTag) {
@@ -576,42 +400,10 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
 
 const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
 {
-  nsStyleStruct*  result = nsnull;
-      
-  switch (aSID) {
-    case eStyleStruct_Display:
-    case eStyleStruct_Visibility:
-    case eStyleStruct_Font:
-    case eStyleStruct_Color:
-    case eStyleStruct_Background:
-    case eStyleStruct_Margin:
-    case eStyleStruct_Border:
-    case eStyleStruct_Padding:
-    case eStyleStruct_Outline:
-    case eStyleStruct_List:
-    case eStyleStruct_Content:
-    case eStyleStruct_Quotes:
-    case eStyleStruct_Position:
-    case eStyleStruct_Table:
-    case eStyleStruct_TableBorder:
-    case eStyleStruct_XUL: {
-      const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
-      if (cachedData)
-        return cachedData; // We have computed data stored on this node in the context tree.
-      return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
-    }
-    case eStyleStruct_Text:
-      result = & GETSCDATA(Text);
-      break;
-    case eStyleStruct_UserInterface:
-      result = & GETSCDATA(UserInterface);
-      break;
-    default:
-      NS_ERROR("Invalid style struct id");
-      break;
-  }
-
-  return result;
+  const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
+  if (cachedData)
+    return cachedData; // We have computed data stored on this node in the context tree.
+  return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
 }
 
 NS_IMETHODIMP
@@ -649,6 +441,17 @@ StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyle
     }
     break;
   }
+  case eStyleStruct_Text: {
+    if (mCachedStyleData.mInheritedData && mCachedStyleData.mInheritedData->mTextData)
+      result = mCachedStyleData.mInheritedData->mTextData;
+    else {
+      const nsStyleText* text = (const nsStyleText*)GetStyleData(aSID);
+      nsStyleText* newText = new (aPresContext) nsStyleText(*text);
+      SetStyle(aSID, *newText);
+      result = newText;
+    }
+    break;
+  }
   default:
     NS_ERROR("Struct type not supported.  Please find another way to do this if you can!\n");
   }
@@ -659,39 +462,8 @@ StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyle
 nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
 {
   // XXXdwh ELIMINATE ME!!!
-  nsStyleStruct*  result = nsnull;
-
-    switch (aSID) {
-    case eStyleStruct_Font:
-    case eStyleStruct_Color:
-    case eStyleStruct_Background:
-    case eStyleStruct_Border:
-    case eStyleStruct_Margin:
-    case eStyleStruct_Padding:
-    case eStyleStruct_Outline:
-    case eStyleStruct_List:
-    case eStyleStruct_Content:
-    case eStyleStruct_Quotes:
-    case eStyleStruct_XUL:
-    case eStyleStruct_Position:
-    case eStyleStruct_Table:
-    case eStyleStruct_TableBorder:
-    case eStyleStruct_Display:
-    case eStyleStruct_Visibility:
-      NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
-      return nsnull;
-    case eStyleStruct_Text:
-      result = & GETSCDATA(Text);
-      break;
-    case eStyleStruct_UserInterface:
-      result = & GETSCDATA(UserInterface);
-      break;
-    default:
-      NS_ERROR("Invalid style struct id");
-      break;
-  }
-
-  return result;
+  NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
+  return nsnull;
 }
 
 NS_IMETHODIMP
@@ -737,7 +509,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       mCachedStyleData.mResetData->mPositionData = (nsStylePosition*)(const nsStylePosition*)(&aStruct);
       break;
     case eStyleStruct_Text:
-      GETSCDATA(Text).SetFrom((const nsStyleText&)aStruct);
+      mCachedStyleData.mInheritedData->mTextData = (nsStyleText*)(const nsStyleText*)(&aStruct);
+      break;
+    case eStyleStruct_TextReset:
+      mCachedStyleData.mResetData->mTextData = (nsStyleTextReset*)(const nsStyleTextReset*)(&aStruct);
       break;
     case eStyleStruct_Display:
       mCachedStyleData.mResetData->mDisplayData = (nsStyleDisplay*)(const nsStyleDisplay*)(&aStruct);
@@ -758,7 +533,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       mCachedStyleData.mInheritedData->mQuotesData = (nsStyleQuotes*)(const nsStyleQuotes*)(&aStruct);
       break;
     case eStyleStruct_UserInterface:
-      GETSCDATA(UserInterface).SetFrom((const nsStyleUserInterface&)aStruct);
+      mCachedStyleData.mInheritedData->mUIData = (nsStyleUserInterface*)(const nsStyleUserInterface*)(&aStruct);
+      break;
+    case eStyleStruct_UIReset:
+      mCachedStyleData.mResetData->mUIData = (nsStyleUIReset*)(const nsStyleUIReset*)(&aStruct);
       break;
     case eStyleStruct_Margin:
       mCachedStyleData.mResetData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
@@ -818,60 +596,13 @@ static void MapStyleRule(MapStyleData* aData, nsIRuleNode* aCurrNode)
 NS_IMETHODIMP
 StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 {
-  if (nsnull != mParent) {
-    GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
-    GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
-  }
-  else {
-    GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
-    GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
-  }
-
-  PRBool isRoot = PR_FALSE;
-  mRuleNode->IsRoot(&isRoot);
-  if (!isRoot) {
-    MapStyleData  data(this, aPresContext);
-    MapStyleRule(&data, mRuleNode);
-  }
-
-
-  // Even in strict mode, we still have to support one "quirky" thing
-  // for tables.  HTML's alignment attributes have always worked
-  // so they don't inherit into tables, but instead align the
-  // tables.  We should keep doing this, because HTML alignment
-  // is just weird, and we shouldn't force it to match CSS.
-  nsStyleDisplay* disp = (nsStyleDisplay*)GetStyleData(eStyleStruct_Display);
-  if (disp->mDisplay == NS_STYLE_DISPLAY_TABLE) {
-    // -moz-center and -moz-right are used for HTML's alignment
-    if ((GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER) ||
-        (GETSCDATA(Text).mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_RIGHT))
-    {
-      GETSCDATA(Text).mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
-    }
-  }
-   
-  if (aRecurse) {
-    if (nsnull != mChild) {
-      StyleContextImpl* child = mChild;
-      do {
-        child->RemapStyle(aPresContext);
-        child = child->mNextSibling;
-      } while (mChild != child);
-    }
-    if (nsnull != mEmptyChild) {
-      StyleContextImpl* child = mEmptyChild;
-      do {
-        child->RemapStyle(aPresContext);
-        child = child->mNextSibling;
-      } while (mEmptyChild != child);
-    }
-  }
+  // XXXdwh This function can presumably be removed.
   return NS_OK;
 }
 
 void StyleContextImpl::ForceUnique(void)
 {
-  mInheritBits |= NS_STYLE_UNIQUE_CONTEXT;
+  mBits |= NS_STYLE_UNIQUE_CONTEXT;
 }
 
 NS_IMETHODIMP
@@ -971,12 +702,26 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Text).CalcDifference(other->GETSCDATA(Text));
-      if (aHint < hint) {
-        aHint = hint;
+      const nsStyleText* text = (const nsStyleText*)GetStyleData(eStyleStruct_Text);
+      const nsStyleText* otherText = (const nsStyleText*)aOther->GetStyleData(eStyleStruct_Text);
+      if (text != otherText) {
+        hint = text->CalcDifference(*otherText);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleTextReset* text = (const nsStyleTextReset*)GetStyleData(eStyleStruct_TextReset);
+      const nsStyleTextReset* otherText = (const nsStyleTextReset*)aOther->GetStyleData(eStyleStruct_TextReset);
+      if (text != otherText) {
+        hint = text->CalcDifference(*otherText);
+        if (aHint < hint)
+          aHint = hint;
+      }
+    }
+
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleVisibility* vis = (const nsStyleVisibility*)GetStyleData(eStyleStruct_Visibility);
@@ -1058,9 +803,23 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
 
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(UserInterface).CalcDifference(other->GETSCDATA(UserInterface));
-      if (aHint < hint) {
-        aHint = hint;
+      const nsStyleUserInterface* ui = (const nsStyleUserInterface*)GetStyleData(eStyleStruct_UserInterface);
+      const nsStyleUserInterface* otherUI = (const nsStyleUserInterface*)aOther->GetStyleData(eStyleStruct_UserInterface);
+      if (ui != otherUI) {
+        hint = ui->CalcDifference(*otherUI);
+        if (aHint < hint) 
+          aHint = hint;
+      }
+    }
+
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleUIReset* ui = (const nsStyleUIReset*)GetStyleData(eStyleStruct_UIReset);
+      const nsStyleUIReset* otherUI = (const nsStyleUIReset*)aOther->GetStyleData(eStyleStruct_UIReset);
+      if (ui != otherUI) {
+        hint = ui->CalcDifference(*otherUI);
+        if (aHint < hint) 
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
@@ -1123,21 +882,6 @@ void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
 void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 {
   NS_ASSERTION(aSizeOfHandler != nsnull, "SizeOf handler cannot be null");
-
-  static PRBool bDetailDumpDone = PR_FALSE;
-  if (!bDetailDumpDone) {
-    bDetailDumpDone = PR_TRUE;
-    PRUint32 totalSize=0;
-
-    printf( "Detailed StyleContextImpl dump: basic class sizes of members\n" );
-    printf( "*************************************\n");
-    printf( " - StyleTextImpl:          %ld\n", (long)sizeof(GETSCDATA(Text)) );
-    totalSize += (long)sizeof(GETSCDATA(Text));
-    printf( " - StyleUserInterfaceImpl: %ld\n", (long)sizeof(GETSCDATA(UserInterface)) );
-    totalSize += (long)sizeof(GETSCDATA(UserInterface));
-	  printf( " - Total:                  %ld\n", (long)totalSize);
-    printf( "*************************************\n");
-  }
 
   // first get the unique items collection
   UNIQUE_STYLE_ITEMS(uniqueItems);

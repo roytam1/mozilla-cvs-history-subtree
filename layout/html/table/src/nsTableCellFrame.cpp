@@ -503,8 +503,8 @@ void nsTableCellFrame::VerticallyAlignChild(nsIPresContext*          aPresContex
                                             const nsHTMLReflowState& aReflowState,
                                             nscoord                  aMaxAscent)
 {
-  const nsStyleText* textStyle =
-      (const nsStyleText*)mStyleContext->GetStyleData(eStyleStruct_Text);
+  const nsStyleTextReset* textStyle =
+      (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_Text);
   /* XXX: remove tableFrame when border-collapse inherits */
   nsTableFrame* tableFrame = nsnull;
   (void) nsTableFrame::GetTableFrame(this, tableFrame);
@@ -580,8 +580,8 @@ void nsTableCellFrame::VerticallyAlignChild(nsIPresContext*          aPresContex
 PRBool
 nsTableCellFrame::HasVerticalAlignBaseline()
 {
-  const nsStyleText* textStyle;
-  GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&)textStyle);
+  const nsStyleTextReset* textStyle;
+  GetStyleData(eStyleStruct_TextReset, (const nsStyleStruct*&)textStyle);
   if (textStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated) {
     PRUint8 verticalAlignFlags = textStyle->mVerticalAlign.GetIntValue();
     if (verticalAlignFlags == NS_STYLE_VERTICAL_ALIGN_TOP ||
@@ -994,8 +994,8 @@ void nsTableCellFrame::MapBorderPadding(nsIPresContext* aPresContext)
  * as outlined in Bugzilla bug report 1802 and 915 */
 void nsTableCellFrame::MapVAlignAttribute(nsIPresContext* aPresContext, nsTableFrame *aTableFrame)
 {
-  const nsStyleText* textStyle;
-  GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)textStyle);
+  const nsStyleTextReset* textStyle;
+  GetStyleData(eStyleStruct_TextReset,(const nsStyleStruct *&)textStyle);
   // check if valign is set on the cell
   // this condition will also be true if we inherited valign from the row or rowgroup
   if (textStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated) {
@@ -1007,17 +1007,17 @@ void nsTableCellFrame::MapVAlignAttribute(nsIPresContext* aPresContext, nsTableF
   GetColIndex(colIndex);
   nsTableColFrame* colFrame = aTableFrame->GetColFrame(colIndex);
   if (colFrame) {
-    const nsStyleText* colTextStyle;
-    colFrame->GetStyleData(eStyleStruct_Text,(const nsStyleStruct *&)colTextStyle);
+    const nsStyleTextReset* colTextStyle;
+    colFrame->GetStyleData(eStyleStruct_TextReset,(const nsStyleStruct *&)colTextStyle);
     if (colTextStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated) {
-      nsStyleText* cellTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
+      nsStyleTextReset* cellTextStyle = (nsStyleTextReset*)mStyleContext->GetMutableStyleData(eStyleStruct_TextReset);
       cellTextStyle->mVerticalAlign.SetIntValue(colTextStyle->mVerticalAlign.GetIntValue(), eStyleUnit_Enumerated);
       return; // valign set from COL info
     }
   }
 
   // otherwise, set the vertical align attribute to the HTML default
-  nsStyleText* cellTextStyle = (nsStyleText*)mStyleContext->GetMutableStyleData(eStyleStruct_Text);
+  nsStyleTextReset* cellTextStyle = (nsStyleTextReset*)mStyleContext->GetMutableStyleData(eStyleStruct_TextReset);
   cellTextStyle->mVerticalAlign.SetIntValue(NS_STYLE_VERTICAL_ALIGN_MIDDLE, eStyleUnit_Enumerated);
 }
 

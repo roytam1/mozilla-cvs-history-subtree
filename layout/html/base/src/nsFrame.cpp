@@ -997,8 +997,8 @@ nsFrame::IsSelectable(PRBool* aSelectable, PRUint8* aSelectStyle) const
   nsIFrame* frame      = (nsIFrame*)this;
 
   while (frame && NS_SUCCEEDED(result)) {
-    const nsStyleUserInterface* userinterface;
-    frame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)userinterface);
+    const nsStyleUIReset* userinterface;
+    frame->GetStyleData(eStyleStruct_UIReset, (const nsStyleStruct*&)userinterface);
     if (userinterface) {
       switch (userinterface->mUserSelect) {
         case NS_STYLE_USER_SELECT_NONE:

@@ -442,53 +442,42 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       }
     }
   }
-  
-  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
+  else if (aData->mTextData) {
+    if (aData->mSID == eStyleStruct_Text) {
+      if (aData->mTextData->mTextAlign.GetUnit() == eCSSUnit_Null) {
+        // align: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated)
+          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+      }
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  NS_PRECONDITION(nsnull!=aContext, "bad style context arg");
-  NS_PRECONDITION(nsnull!=aPresContext, "bad presentation context arg");
-
-  if (nsnull!=aAttributes) {
-    nsHTMLValue value;
-    nsHTMLValue widthValue;
-    nsStyleText* textStyle = nsnull;
-
-    // align: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-      textStyle->mTextAlign = value.GetIntValue();
+      if (aData->mTextData->mWhiteSpace.GetUnit() == eCSSUnit_Null) {
+        // nowrap: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::nowrap, value);
+        if (value.GetUnit() != eHTMLUnit_Null) {
+          // See if our width is not a pixel width.
+          nsHTMLValue widthValue;
+          aAttributes->GetAttribute(nsHTMLAtoms::width, widthValue);
+          if (widthValue.GetUnit() != eHTMLUnit_Pixel)
+            aData->mTextData->mWhiteSpace = nsCSSValue(NS_STYLE_WHITESPACE_NOWRAP, eCSSUnit_Enumerated);
+        }
+      }
     }
-  
-    // valign: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      if (nsnull==textStyle)
-        textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-      textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
-    }
-
-    // nowrap
-    // nowrap depends on the width attribute, so be sure to handle it
-    // after width is mapped!
-
-    aAttributes->GetAttribute(nsHTMLAtoms::nowrap, value);
-
-    if (value.GetUnit() != eHTMLUnit_Null) {
-      if (widthValue.GetUnit() != eHTMLUnit_Pixel) {
-        if (nsnull==textStyle)
-          textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-        textStyle->mWhiteSpace = NS_STYLE_WHITESPACE_NOWRAP;
+    else {
+      if (aData->mTextData->mVerticalAlign.GetUnit() == eCSSUnit_Null) {
+        // valign: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated) 
+          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
       }
     }
   }
+  
+  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -515,14 +504,12 @@ nsHTMLTableCellElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
   return NS_OK;
 }
 
-
-
 NS_IMETHODIMP
 nsHTMLTableCellElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                      nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

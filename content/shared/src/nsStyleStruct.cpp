@@ -1063,3 +1063,161 @@ nsStyleQuotes::CalcDifference(const nsStyleQuotes& aOther) const
   }
   return NS_STYLE_HINT_REFLOW;
 }
+
+// --------------------
+// nsStyleTextReset
+//
+
+nsStyleTextReset::nsStyleTextReset(void) 
+{ 
+  mVerticalAlign.SetIntValue(NS_STYLE_VERTICAL_ALIGN_BASELINE, eStyleUnit_Enumerated);
+  mTextDecoration = NS_STYLE_TEXT_DECORATION_NONE;
+}
+
+nsStyleTextReset::nsStyleTextReset(const nsStyleTextReset& aSource) 
+{ 
+  nsCRT::memcpy((nsStyleTextReset*)this, &aSource, sizeof(nsStyleTextReset));
+}
+
+nsStyleTextReset::~nsStyleTextReset(void) { }
+
+PRInt32 nsStyleTextReset::CalcDifference(const nsStyleTextReset& aOther) const
+{
+  if (mVerticalAlign == aOther.mVerticalAlign) {
+    if (mTextDecoration != aOther.mTextDecoration)
+      return NS_STYLE_HINT_VISUAL;
+    return NS_STYLE_HINT_NONE;
+  }
+  return NS_STYLE_HINT_REFLOW;
+}
+
+// --------------------
+// nsStyleText
+//
+
+nsStyleText::nsStyleText(void) 
+{ 
+  mTextAlign = NS_STYLE_TEXT_ALIGN_DEFAULT;
+  mTextTransform = NS_STYLE_TEXT_TRANSFORM_NONE;
+  mWhiteSpace = NS_STYLE_WHITESPACE_NORMAL;
+
+  mLetterSpacing.SetNormalValue();
+  mLineHeight.SetNormalValue();
+  mTextIndent.SetCoordValue(0);
+  mWordSpacing.SetNormalValue();
+#ifdef IBMBIDI
+  mUnicodeBidi = NS_STYLE_UNICODE_BIDI_INHERIT;
+#endif // IBMBIDI
+}
+
+nsStyleText::nsStyleText(const nsStyleText& aSource) 
+{ 
+  nsCRT::memcpy((nsStyleText*)this, &aSource, sizeof(nsStyleText));
+}
+
+nsStyleText::~nsStyleText(void) { }
+
+PRInt32 nsStyleText::CalcDifference(const nsStyleText& aOther) const
+{
+  if ((mTextAlign == aOther.mTextAlign) &&
+      (mTextTransform == aOther.mTextTransform) &&
+      (mWhiteSpace == aOther.mWhiteSpace) &&
+      (mLetterSpacing == aOther.mLetterSpacing) &&
+      (mLineHeight == aOther.mLineHeight) &&
+      (mTextIndent == aOther.mTextIndent) &&
+#ifdef IBMBIDI
+      (mUnicodeBidi == aOther.mUnicodeBidi) &&
+#endif // IBMBIDI
+      (mWordSpacing == aOther.mWordSpacing))
+    return NS_STYLE_HINT_NONE;
+  return NS_STYLE_HINT_REFLOW;
+}
+
+//-----------------------
+// nsStyleUserInterface
+//
+
+nsStyleUserInterface::nsStyleUserInterface(void) 
+{ 
+  mUserInput = NS_STYLE_USER_INPUT_AUTO;
+  mUserModify = NS_STYLE_USER_MODIFY_READ_ONLY;
+  mUserFocus = NS_STYLE_USER_FOCUS_NONE;
+
+  mCursor = NS_STYLE_CURSOR_AUTO; // fix for bugzilla bug 51113
+}
+
+nsStyleUserInterface::nsStyleUserInterface(const nsStyleUserInterface& aSource) 
+{ 
+  mUserInput = aSource.mUserInput;
+  mUserModify = aSource.mUserModify;
+  mUserFocus = aSource.mUserFocus;
+  
+  mCursor = aSource.mCursor;
+  mCursorImage = aSource.mCursorImage;
+}
+
+nsStyleUserInterface::~nsStyleUserInterface(void) 
+{ 
+}
+
+PRInt32 nsStyleUserInterface::CalcDifference(const nsStyleUserInterface& aOther) const
+{
+  if ((mCursor != aOther.mCursor) ||
+      (mCursorImage != aOther.mCursorImage))
+    return NS_STYLE_HINT_VISUAL;
+
+  if (mUserInput == aOther.mUserInput) {
+    if (mUserModify == aOther.mUserModify) {
+      if (mUserFocus == aOther.mUserFocus) {
+        return NS_STYLE_HINT_NONE;
+      }
+      return NS_STYLE_HINT_CONTENT;
+    }
+    return NS_STYLE_HINT_VISUAL;
+  }
+  
+  if ((mUserInput != aOther.mUserInput) &&
+      ((NS_STYLE_USER_INPUT_NONE == mUserInput) || 
+       (NS_STYLE_USER_INPUT_NONE == aOther.mUserInput))) {
+    return NS_STYLE_HINT_FRAMECHANGE;
+  }
+
+  return NS_STYLE_HINT_VISUAL;
+}
+
+//-----------------------
+// nsStyleUIReset
+//
+
+nsStyleUIReset::nsStyleUIReset(void) 
+{ 
+  mUserSelect = NS_STYLE_USER_SELECT_AUTO;
+  mKeyEquivalent = PRUnichar(0); // XXX what type should this be?
+  mResizer = NS_STYLE_RESIZER_AUTO;
+}
+
+nsStyleUIReset::nsStyleUIReset(const nsStyleUIReset& aSource) 
+{
+  mUserSelect = aSource.mUserSelect;
+  mKeyEquivalent = aSource.mKeyEquivalent;
+  mResizer = aSource.mResizer;
+}
+
+nsStyleUIReset::~nsStyleUIReset(void) 
+{ 
+}
+
+PRInt32 nsStyleUIReset::CalcDifference(const nsStyleUIReset& aOther) const
+{
+  if (mResizer == aOther.mResizer) {
+    if (mUserSelect == aOther.mUserSelect) {
+      if (mKeyEquivalent == aOther.mKeyEquivalent) {
+        return NS_STYLE_HINT_NONE;
+      }
+      return NS_STYLE_HINT_CONTENT;
+    }
+    return NS_STYLE_HINT_VISUAL;
+  }
+  
+  return NS_STYLE_HINT_VISUAL;
+}

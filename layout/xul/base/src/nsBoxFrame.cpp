@@ -504,8 +504,8 @@ nsBoxFrame::GetInitialVAlignment(nsBoxFrame::Valignment& aValign)
 
   
              // look at vertical alignment
-      const nsStyleText* textStyle =
-        (const nsStyleText*)mStyleContext->GetStyleData(eStyleStruct_Text);
+      const nsStyleTextReset* textStyle =
+        (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_TextReset);
 
       if (textStyle->mVerticalAlign.GetUnit() == eStyleUnit_Enumerated) {
 

@@ -2173,8 +2173,8 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
     }
 
     // Get vertical-align property
-    const nsStyleText* textStyle;
-    frame->GetStyleData(eStyleStruct_Text, (const nsStyleStruct*&)textStyle);
+    const nsStyleTextReset* textStyle;
+    frame->GetStyleData(eStyleStruct_TextReset, (const nsStyleStruct*&)textStyle);
     nsStyleUnit verticalAlignUnit = textStyle->mVerticalAlign.GetUnit();
 #ifdef DEBUG
     if (eStyleUnit_Inherit == verticalAlignUnit) {

@@ -3065,8 +3065,8 @@ nsSelection::FrameOrParentHasSpecialSelectionStyle(nsIFrame* aFrame, PRUint8 aSe
   
   while (thisFrame)
   {
-	  const nsStyleUserInterface* userinterface;
-	  thisFrame->GetStyleData(eStyleStruct_UserInterface, (const nsStyleStruct*&)userinterface);
+	  const nsStyleUIReset* userinterface;
+	  thisFrame->GetStyleData(eStyleStruct_UIReset, (const nsStyleStruct*&)userinterface);
   
     if (userinterface->mUserSelect == aSelectionStyle)
     {

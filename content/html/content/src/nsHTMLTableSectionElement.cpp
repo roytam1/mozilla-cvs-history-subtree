@@ -342,41 +342,29 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       }
     }
   }
-
-  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  NS_PRECONDITION(nsnull!=aContext, "bad style context arg");
-  NS_PRECONDITION(nsnull!=aPresContext, "bad presentation context arg");
-
-  if (aAttributes) {
-    nsHTMLValue value;
-    nsHTMLValue widthValue;
-    nsStyleText* textStyle = nsnull;
-
-    // align: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-      textStyle->mTextAlign = value.GetIntValue();
+  else if (aData->mTextData) {
+    if (aData->mSID == eStyleStruct_Text) {
+      if (aData->mTextData->mTextAlign.GetUnit() == eCSSUnit_Null) {
+        // align: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated)
+          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+      }
     }
-  
-    // valign: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      if (nsnull==textStyle)
-        textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-      textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(),
-                                            eStyleUnit_Enumerated);
+    else {
+      if (aData->mTextData->mVerticalAlign.GetUnit() == eCSSUnit_Null) {
+        // valign: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated) 
+          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+      }
     }
   }
 
+  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -403,7 +391,7 @@ nsHTMLTableSectionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFun
                                                         nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -646,8 +646,9 @@ PRBool nsTableFrame::HasGroupRules() const
 // this won't work until bug 12948 is resolved and col groups are considered 
 void nsTableFrame::ProcessGroupRules(nsIPresContext* aPresContext)
 {
-  /* The RULES code below has been disabled because collapsing borders have been disabled 
-     and RULES depend on collapsing borders
+#if 0
+  // The RULES code below has been disabled because collapsing borders have been disabled 
+  // and RULES depend on collapsing borders
   PRInt32 numCols = GetColCount();
 
   // process row groups
@@ -688,7 +689,7 @@ void nsTableFrame::ProcessGroupRules(nsIPresContext* aPresContext)
     }
     NS_IF_RELEASE(frameType);
   }
-  */
+#endif
 }
 
 

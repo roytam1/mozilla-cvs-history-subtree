@@ -297,31 +297,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
-
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-
-    // color: color
-    if (NS_CONTENT_ATTR_NOT_THERE !=
-        aAttributes->GetAttribute(nsHTMLAtoms::color, value)) {
-      nsStyleText* text = (nsStyleText*)
-        aContext->GetMutableStyleData(eStyleStruct_Text);
-      if (((eHTMLUnit_Color == value.GetUnit())) ||
-          (eHTMLUnit_ColorName == value.GetUnit())) {
-        
-        // XXXdwh don't forget this when you convert. re-apply inherited text decoration, so colors sync
-        text->mTextDecoration = text->mTextDecorations;
-      }
-    }
-  }
 }
 
 NS_IMETHODIMP
@@ -350,7 +326,7 @@ nsHTMLFontElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapR
                                                 nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -43,6 +43,8 @@ struct nsInheritedStyleData
   nsStyleTableBorder* mTableData;
   nsStyleColor* mColorData;
   nsStyleQuotes* mQuotesData;
+  nsStyleText* mTextData;
+  nsStyleUserInterface* mUIData;
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
@@ -62,12 +64,17 @@ struct nsInheritedStyleData
       mColorData->Destroy(aContext);
     if (mQuotesData && !(aBits & NS_STYLE_INHERIT_QUOTES))
       mQuotesData->Destroy(aContext);
+    if (mTextData && !(aBits & NS_STYLE_INHERIT_TEXT))
+      mTextData->Destroy(aContext);
+    if (mUIData && !(aBits & NS_STYLE_INHERIT_UI))
+      mUIData->Destroy(aContext);
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
     :mVisibilityData(nsnull), mFontData(nsnull), mListData(nsnull), 
-     mTableData(nsnull), mColorData(nsnull), mQuotesData(nsnull) {};
+     mTableData(nsnull), mColorData(nsnull), mQuotesData(nsnull), mTextData(nsnull), mUIData(nsnull)
+  {};
 };
 
 struct nsResetStyleData
@@ -75,7 +82,7 @@ struct nsResetStyleData
   nsResetStyleData()
     :mDisplayData(nsnull), mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
      mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull), mBackgroundData(nsnull),
-     mContentData(nsnull)
+     mContentData(nsnull), mTextData(nsnull), mUIData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
@@ -106,6 +113,10 @@ struct nsResetStyleData
       mBackgroundData->Destroy(aContext);
     if (mContentData && !(aBits & NS_STYLE_INHERIT_CONTENT))
       mContentData->Destroy(aContext);
+    if (mTextData && !(aBits & NS_STYLE_INHERIT_TEXT_RESET))
+      mTextData->Destroy(aContext);
+    if (mUIData && !(aBits & NS_STYLE_INHERIT_UI_RESET))
+      mUIData->Destroy(aContext);
 #ifdef INCLUDE_XUL
     if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
@@ -122,7 +133,8 @@ struct nsResetStyleData
   nsStyleTable* mTableData;
   nsStyleBackground* mBackgroundData;
   nsStyleContent* mContentData;
-
+  nsStyleTextReset* mTextData;
+  nsStyleUIReset* mUIData;
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
 #endif
@@ -142,6 +154,8 @@ struct nsCachedStyleData
       case eStyleStruct_TableBorder:
       case eStyleStruct_Color:
       case eStyleStruct_Quotes:
+      case eStyleStruct_Text:
+      case eStyleStruct_UserInterface:
         return PR_FALSE; 
       case eStyleStruct_Display: // [Reset]
       case eStyleStruct_Margin: 
@@ -153,6 +167,8 @@ struct nsCachedStyleData
       case eStyleStruct_Background:
       case eStyleStruct_Content:
       case eStyleStruct_XUL:
+      case eStyleStruct_TextReset:
+      case eStyleStruct_UIReset:
     	  return PR_TRUE;
     }
 
@@ -176,6 +192,8 @@ struct nsCachedStyleData
         return NS_STYLE_INHERIT_POSITION;
       case eStyleStruct_Text:
         return NS_STYLE_INHERIT_TEXT;
+      case eStyleStruct_TextReset:
+        return NS_STYLE_INHERIT_TEXT_RESET;
       case eStyleStruct_Display:
         return NS_STYLE_INHERIT_DISPLAY;
       case eStyleStruct_Table:
@@ -186,6 +204,8 @@ struct nsCachedStyleData
         return NS_STYLE_INHERIT_CONTENT;
       case eStyleStruct_UserInterface:
         return NS_STYLE_INHERIT_UI;
+      case eStyleStruct_UIReset:
+        return NS_STYLE_INHERIT_UI_RESET;
       case eStyleStruct_Margin:
     	  return NS_STYLE_INHERIT_MARGIN;
       case eStyleStruct_Padding:
@@ -236,6 +256,14 @@ struct nsCachedStyleData
         return mResetData ? mResetData->mContentData : nsnull;
       case eStyleStruct_Quotes:
         return mInheritedData ? mInheritedData->mQuotesData : nsnull;
+      case eStyleStruct_Text:
+        return mInheritedData ? mInheritedData->mTextData : nsnull;
+      case eStyleStruct_TextReset:
+        return mResetData ? mResetData->mTextData : nsnull;
+      case eStyleStruct_UserInterface:
+        return mInheritedData ? mInheritedData->mUIData : nsnull;
+      case eStyleStruct_UIReset:
+        return mResetData ? mResetData->mUIData : nsnull;
 #ifdef INCLUDE_XUL
       case eStyleStruct_XUL:
         return mResetData ? mResetData->mXULData : nsnull;
@@ -272,6 +300,8 @@ struct nsRuleData
   nsCSSTable* mTableData;
   nsCSSColor* mColorData;
   nsCSSContent* mContentData;
+  nsCSSText* mTextData;
+  nsCSSUserInterface* mUIData;
 
 #ifdef INCLUDE_XUL
   nsCSSXUL* mXULData;
@@ -280,7 +310,8 @@ struct nsRuleData
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
      mAttributes(nsnull), mDisplayData(nsnull), mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), 
-     mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull), mContentData(nsnull)
+     mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull), mContentData(nsnull), mTextData(nsnull),
+     mUIData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;

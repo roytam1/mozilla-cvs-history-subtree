@@ -851,10 +851,6 @@ static PRBool SetCoord(const nsCSSValue& aValue, nsStyleCoord& aCoord,
                        PRInt32 aMask, const nsFont& aFont, 
                        nsIPresContext* aPresContext);
 
-static void MapDeclarationInto(nsICSSDeclaration* aDeclaration, 
-                               nsIMutableStyleContext* aContext, 
-                               nsIPresContext* aPresContext);
-
 // New map helpers shared by both important and regular rules.
 static nsresult MapFontForDeclaration(nsICSSDeclaration* aDecl, nsCSSFont& aFont);
 static nsresult MapDisplayForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSDisplay& aDisplay);
@@ -864,6 +860,8 @@ static nsresult MapListForDeclaration(nsICSSDeclaration* aDecl, nsCSSList& aList
 static nsresult MapPositionForDeclaration(nsICSSDeclaration* aDecl, nsCSSPosition& aPosition);
 static nsresult MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSTable& aTable);
 static nsresult MapContentForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSContent& aContent);
+static nsresult MapTextForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSText& aContent);
+static nsresult MapUIForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSUserInterface& aContent);
 
 #ifdef INCLUDE_XUL
 static nsresult MapXULForDeclaration(nsICSSDeclaration* aDecl, nsCSSXUL& aXUL);
@@ -960,7 +958,6 @@ CSSImportantRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresCont
 NS_IMETHODIMP
 CSSImportantRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  MapDeclarationInto(mDeclaration, aContext, aPresContext);
   return NS_OK;
 }
 
@@ -986,6 +983,10 @@ CSSImportantRule::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
   else if (aRuleData->mContentData)
     return MapContentForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mContentData);
+  else if (aRuleData->mTextData)
+    return MapTextForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTextData);
+  else if (aRuleData->mUIData)
+    return MapUIForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mUIData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
@@ -1799,7 +1800,6 @@ CSSStyleRuleImpl::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresCont
 NS_IMETHODIMP
 CSSStyleRuleImpl::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  MapDeclarationInto(mDeclaration, aContext, aPresContext);
   return NS_OK;
 }
 
@@ -1825,6 +1825,10 @@ CSSStyleRuleImpl::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
   else if (aRuleData->mContentData)
     return MapContentForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mContentData);
+  else if (aRuleData->mTextData)
+    return MapTextForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTextData);
+  else if (aRuleData->mUIData)
+    return MapUIForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mUIData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
@@ -2215,111 +2219,54 @@ MapContentForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, n
   return NS_OK;
 }
 
-static void 
-MapDeclarationTextInto(nsICSSDeclaration* aDeclaration, 
-                       nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                       nsStyleFont* aFont, nsIPresContext* aPresContext)
+static nsresult
+MapTextForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSText& aText)
 {
-  const nsStyleFont* parentFont = aFont;
-  if (nsnull != aParentContext) {
-    parentFont = (const nsStyleFont*)aParentContext->GetStyleData(eStyleStruct_Font);
-  }
+  if (!aDecl)
+    return NS_OK; // The rule must have a declaration.
 
-  nsCSSText*  ourText;
-  if (NS_OK == aDeclaration->GetData(kCSSTextSID, (nsCSSStruct**)&ourText)) {
-    if (nsnull != ourText) {
-      // Get our text style and our parent's text style
-      nsStyleText* text = (nsStyleText*) aContext->GetMutableStyleData(eStyleStruct_Text);
-      const nsStyleText* parentText = text;
-      if (nsnull != aParentContext) {
-        parentText = (const nsStyleText*)aParentContext->GetStyleData(eStyleStruct_Text);
-      }
+  nsCSSText* ourText;
+  aDecl->GetData(kCSSTextSID, (nsCSSStruct**)&ourText);
+  if (!ourText)
+    return NS_OK; // We don't have any rules for text.
 
-      // letter-spacing: normal, length, inherit
-      SetCoord(ourText->mLetterSpacing, text->mLetterSpacing, parentText->mLetterSpacing,
-               SETCOORD_LH | SETCOORD_NORMAL, aFont->mFont, aPresContext);
+  if (aID == eStyleStruct_Text) {
+    if (aText.mLetterSpacing.GetUnit() == eCSSUnit_Null && ourText->mLetterSpacing.GetUnit() != eCSSUnit_Null)
+      aText.mLetterSpacing = ourText->mLetterSpacing;
 
-      // line-height: normal, number, length, percent, inherit
-      SetCoord(ourText->mLineHeight, text->mLineHeight, parentText->mLineHeight,
-               SETCOORD_LPFHN, aFont->mFont, aPresContext);
+    if (aText.mLineHeight.GetUnit() == eCSSUnit_Null && ourText->mLineHeight.GetUnit() != eCSSUnit_Null)
+      aText.mLineHeight = ourText->mLineHeight;
 
-      // text-align: enum, string, inherit
-      if (eCSSUnit_Enumerated == ourText->mTextAlign.GetUnit()) {
-        text->mTextAlign = ourText->mTextAlign.GetIntValue();
-      }
-      else if (eCSSUnit_String == ourText->mTextAlign.GetUnit()) {
-        NS_NOTYETIMPLEMENTED("align string");
-      }
-      else if (eCSSUnit_Inherit == ourText->mTextAlign.GetUnit()) {
-        text->mTextAlign = parentText->mTextAlign;
-      }
+    if (aText.mTextIndent.GetUnit() == eCSSUnit_Null && ourText->mTextIndent.GetUnit() != eCSSUnit_Null)
+      aText.mTextIndent = ourText->mTextIndent;
 
-      // text-indent: length, percent, inherit
-      SetCoord(ourText->mTextIndent, text->mTextIndent, parentText->mTextIndent,
-               SETCOORD_LPH, aFont->mFont, aPresContext);
+    if (aText.mTextTransform.GetUnit() == eCSSUnit_Null && ourText->mTextTransform.GetUnit() != eCSSUnit_Null)
+      aText.mTextTransform = ourText->mTextTransform;
 
-      // text-decoration: none, enum (bit field), inherit
-      if (eCSSUnit_Enumerated == ourText->mDecoration.GetUnit()) {
-        PRInt32 td = ourText->mDecoration.GetIntValue();
-        text->mTextDecorations = parentText->mTextDecorations | td;
-        text->mTextDecoration = td;
-      }
-      else if (eCSSUnit_None == ourText->mDecoration.GetUnit()) {
-        text->mTextDecorations = parentText->mTextDecorations;
-        text->mTextDecoration = NS_STYLE_TEXT_DECORATION_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourText->mDecoration.GetUnit()) {
-        text->mTextDecorations = parentText->mTextDecorations;
-        text->mTextDecoration = parentText->mTextDecoration;
-      }
+    if (aText.mTextAlign.GetUnit() == eCSSUnit_Null && ourText->mTextAlign.GetUnit() != eCSSUnit_Null)
+      aText.mTextAlign = ourText->mTextAlign;
 
-      // text-transform: enum, none, inherit
-      if (eCSSUnit_Enumerated == ourText->mTextTransform.GetUnit()) {
-        text->mTextTransform = ourText->mTextTransform.GetIntValue();
-      }
-      else if (eCSSUnit_None == ourText->mTextTransform.GetUnit()) {
-        text->mTextTransform = NS_STYLE_TEXT_TRANSFORM_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourText->mTextTransform.GetUnit()) {
-        text->mTextTransform = parentText->mTextTransform;
-      }
+    if (aText.mWhiteSpace.GetUnit() == eCSSUnit_Null && ourText->mWhiteSpace.GetUnit() != eCSSUnit_Null)
+      aText.mWhiteSpace = ourText->mWhiteSpace;
 
-      // vertical-align: enum, length, percent, inherit
-      if (! SetCoord(ourText->mVerticalAlign, text->mVerticalAlign, parentText->mVerticalAlign,
-                     SETCOORD_LPH | SETCOORD_ENUMERATED, aFont->mFont, aPresContext)) {
-      }
+    if (aText.mWordSpacing.GetUnit() == eCSSUnit_Null && ourText->mWordSpacing.GetUnit() != eCSSUnit_Null)
+      aText.mWordSpacing = ourText->mWordSpacing;
 
-      // white-space: enum, normal, inherit
-      if (eCSSUnit_Enumerated == ourText->mWhiteSpace.GetUnit()) {
-        text->mWhiteSpace = ourText->mWhiteSpace.GetIntValue();
-      }
-      else if (eCSSUnit_Normal == ourText->mWhiteSpace.GetUnit()) {
-        text->mWhiteSpace = NS_STYLE_WHITESPACE_NORMAL;
-      }
-      else if (eCSSUnit_Inherit == ourText->mWhiteSpace.GetUnit()) {
-        text->mWhiteSpace = parentText->mWhiteSpace;
-      }
-
-      // word-spacing: normal, length, inherit
-      SetCoord(ourText->mWordSpacing, text->mWordSpacing, parentText->mWordSpacing,
-               SETCOORD_LH | SETCOORD_NORMAL, aFont->mFont, aPresContext);
 #ifdef IBMBIDI
-      // unicode-bidi: enum, normal, inherit
-      // normal means that override prohibited
-      if (eCSSUnit_Normal == ourText->mUnicodeBidi.GetUnit() ) {
-        text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_NORMAL;
-      }
-      else {
-        if (eCSSUnit_Enumerated == ourText->mUnicodeBidi.GetUnit() ) {
-          text->mUnicodeBidi = ourText->mUnicodeBidi.GetIntValue();
-        }
-        if (NS_STYLE_UNICODE_BIDI_INHERIT == text->mUnicodeBidi) {
-          text->mUnicodeBidi = parentText->mUnicodeBidi;
-        }
-      }
-#endif // IBMBIDI
-    }
+    if (aText.mUnicodeBidi.GetUnit() == eCSSUnit_Null && ourText->mUnicodeBidi.GetUnit() != eCSSUnit_Null)
+      aText.mUnicodeBidi = ourText->mUnicodeBidi;
+#endif
   }
+  else if (aID == eStyleStruct_TextReset) {
+    if (aText.mVerticalAlign.GetUnit() == eCSSUnit_Null && ourText->mVerticalAlign.GetUnit() != eCSSUnit_Null)
+      aText.mVerticalAlign = ourText->mVerticalAlign;
+
+    if (aText.mDecoration.GetUnit() == eCSSUnit_Null && ourText->mDecoration.GetUnit() != eCSSUnit_Null)
+      aText.mDecoration = ourText->mDecoration;
+  }
+
+  return NS_OK;
+
 }
 
 static nsresult 
@@ -2387,131 +2334,45 @@ MapDisplayForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, n
   return NS_OK;
 }
 
-static void 
-MapDeclarationUIInto(nsICSSDeclaration* aDeclaration, 
-                     nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                     nsStyleFont* /*aFont*/, nsIPresContext* aPresContext)
+static nsresult
+MapUIForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSUserInterface& aUI)
 {
-  nsCSSUserInterface*  ourUI;
-  if (NS_OK == aDeclaration->GetData(kCSSUserInterfaceSID, (nsCSSStruct**)&ourUI)) {
-    if (nsnull != ourUI) {
-      // Get our user interface style and our parent's user interface style
-      nsStyleUserInterface* ui = (nsStyleUserInterface*) aContext->GetMutableStyleData(eStyleStruct_UserInterface);
-      const nsStyleUserInterface* parentUI = ui;
-      if (nsnull != aParentContext) {
-        parentUI = (const nsStyleUserInterface*)aParentContext->GetStyleData(eStyleStruct_UserInterface);
-      }
+  if (!aDecl)
+    return NS_OK; // The rule must have a declaration.
 
-      // cursor: enum, auto, url, inherit
-      nsCSSValueList*  list = ourUI->mCursor;
-      if (nsnull != list) {
-        // XXX need to deal with multiple URL values
-        if (eCSSUnit_Enumerated == list->mValue.GetUnit()) {
-          ui->mCursor = list->mValue.GetIntValue();
-        }
-        else if (eCSSUnit_Auto == list->mValue.GetUnit()) {
-          ui->mCursor = NS_STYLE_CURSOR_AUTO;
-        }
-        else if (eCSSUnit_URL == list->mValue.GetUnit()) {
-          list->mValue.GetStringValue(ui->mCursorImage);
-        }
-        else if (eCSSUnit_Inherit == list->mValue.GetUnit()) {
-          ui->mCursor = parentUI->mCursor;
-        }
-      }
+  nsCSSUserInterface* ourUI;
+  aDecl->GetData(kCSSUserInterfaceSID, (nsCSSStruct**)&ourUI);
+  if (!ourUI)
+    return NS_OK; // We don't have any rules for UI.
 
-      // user-input: auto, none, enum, inherit
-      if (eCSSUnit_Enumerated == ourUI->mUserInput.GetUnit()) {
-        ui->mUserInput = ourUI->mUserInput.GetIntValue();
-      }
-      else if (eCSSUnit_Auto == ourUI->mUserInput.GetUnit()) {
-        ui->mUserInput = NS_STYLE_USER_INPUT_AUTO;
-      }
-      else if (eCSSUnit_None == ourUI->mUserInput.GetUnit()) {
-        ui->mUserInput = NS_STYLE_USER_INPUT_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourUI->mUserInput.GetUnit()) {
-        ui->mUserInput = parentUI->mUserInput;
-      }
-
-      // user-modify: enum, inherit
-      if (eCSSUnit_Enumerated == ourUI->mUserModify.GetUnit()) {
-        ui->mUserModify = ourUI->mUserModify.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourUI->mUserModify.GetUnit()) {
-        ui->mUserModify = parentUI->mUserModify;
-      }
-
-      // user-select: none, enum, inherit
-      if (eCSSUnit_Enumerated == ourUI->mUserSelect.GetUnit()) {
-        ui->mUserSelect = ourUI->mUserSelect.GetIntValue();
-      }
-      else if (eCSSUnit_None == ourUI->mUserSelect.GetUnit()) {
-        ui->mUserSelect = NS_STYLE_USER_SELECT_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourUI->mUserSelect.GetUnit()) {
-        ui->mUserSelect = parentUI->mUserSelect;
-      }
-
-      // key-equivalent: none, enum XXX, inherit
-      nsCSSValueList*  keyEquiv = ourUI->mKeyEquivalent;
-      if (keyEquiv) {
-        // XXX need to deal with multiple values
-        if (eCSSUnit_Enumerated == keyEquiv->mValue.GetUnit()) {
-          ui->mKeyEquivalent = PRUnichar(0);  // XXX To be implemented
-        }
-        else if (eCSSUnit_None == keyEquiv->mValue.GetUnit()) {
-          ui->mKeyEquivalent = PRUnichar(0);
-        }
-        else if (eCSSUnit_Inherit == keyEquiv->mValue.GetUnit()) {
-          ui->mKeyEquivalent = parentUI->mKeyEquivalent;
-        }
-      }
-
-      // user-focus: none, normal, enum, inherit
-      if (eCSSUnit_Enumerated == ourUI->mUserFocus.GetUnit()) {
-        ui->mUserFocus = ourUI->mUserFocus.GetIntValue();
-      }
-      else if (eCSSUnit_None == ourUI->mUserFocus.GetUnit()) {
-        ui->mUserFocus = NS_STYLE_USER_FOCUS_NONE;
-      }
-      else if (eCSSUnit_Normal == ourUI->mUserFocus.GetUnit()) {
-        ui->mUserFocus = NS_STYLE_USER_FOCUS_NORMAL;
-      }
-      else if (eCSSUnit_Inherit == ourUI->mUserFocus.GetUnit()) {
-        ui->mUserFocus = parentUI->mUserFocus;
-      }
-
-      // resizer: auto, none, enum, inherit
-      if (eCSSUnit_Enumerated == ourUI->mResizer.GetUnit()) {
-        ui->mResizer = ourUI->mResizer.GetIntValue();
-      }
-      else if (eCSSUnit_Auto == ourUI->mResizer.GetUnit()) {
-        ui->mResizer = NS_STYLE_RESIZER_AUTO;
-      }
-      else if (eCSSUnit_None == ourUI->mResizer.GetUnit()) {
-        ui->mResizer = NS_STYLE_RESIZER_NONE;
-      }
-      else if (eCSSUnit_Inherit == ourUI->mResizer.GetUnit()) {
-        ui->mResizer = parentUI->mResizer;
-      }
-
-    }
-  }
-}
-
-void MapDeclarationInto(nsICSSDeclaration* aDeclaration, 
-                        nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  if (nsnull != aDeclaration) {
-    nsIStyleContext* parentContext = aContext->GetParent();
-    nsStyleFont* font = (nsStyleFont*)aContext->GetStyleData(eStyleStruct_Font);
-
-    MapDeclarationTextInto(aDeclaration, aContext, parentContext, font, aPresContext);
-    MapDeclarationUIInto(aDeclaration, aContext, parentContext, font, aPresContext);
+  if (aID == eStyleStruct_UserInterface) {
+    if (aUI.mUserFocus.GetUnit() == eCSSUnit_Null && ourUI->mUserFocus.GetUnit() != eCSSUnit_Null)
+      aUI.mUserFocus = ourUI->mUserFocus;
     
-    NS_IF_RELEASE(parentContext);
+    if (aUI.mUserInput.GetUnit() == eCSSUnit_Null && ourUI->mUserInput.GetUnit() != eCSSUnit_Null)
+      aUI.mUserInput = ourUI->mUserInput;
+
+    if (aUI.mUserModify.GetUnit() == eCSSUnit_Null && ourUI->mUserModify.GetUnit() != eCSSUnit_Null)
+      aUI.mUserModify = ourUI->mUserModify;
+
+    if (!aUI.mCursor && ourUI->mCursor)
+      aUI.mCursor = ourUI->mCursor;
+
+
   }
+  else if (aID == eStyleStruct_UIReset) {
+    if (aUI.mUserSelect.GetUnit() == eCSSUnit_Null && ourUI->mUserSelect.GetUnit() != eCSSUnit_Null)
+      aUI.mUserSelect = ourUI->mUserSelect;
+   
+    if (!aUI.mKeyEquivalent && ourUI->mKeyEquivalent)
+      aUI.mKeyEquivalent = ourUI->mKeyEquivalent;
+
+    if (aUI.mResizer.GetUnit() == eCSSUnit_Null && ourUI->mResizer.GetUnit() != eCSSUnit_Null)
+      aUI.mResizer = ourUI->mResizer;
+  }
+
+  return NS_OK;
+
 }
 
 NS_IMETHODIMP

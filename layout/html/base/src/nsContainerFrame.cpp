@@ -498,7 +498,6 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsIPresContext* aPresContext,
     }
   
     const nsStyleBackground* bg;
-    const nsStyleUserInterface* ui;
     const nsStyleVisibility* vis;
     const nsStyleDisplay* display;
     aFrame->GetStyleData(eStyleStruct_Background, (const nsStyleStruct*&)bg);
