@@ -3131,7 +3131,7 @@ void wfe_Progress(MWContext *pContext, const char *pMessage);
 void CWinCX::OnMouseMoveCX(UINT uFlags, CPoint cpPoint, BOOL &bReturnImmediately)	
 {
 #ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
+  return;
 #else
 	//	Must have a view to continue.
 	if(GetPane() == NULL)	{
