@@ -444,9 +444,10 @@
             // range. 
             var nextRow = oldRanges[0].min;
             var maxCount = this.treeBoxObject.view.rowCount;
-            if (nextRow < maxCount) {
+            if (nextRow >= maxCount)
+              nextRow = maxCount-1;
+            if (nextRow >= 0)
               newRanges.push({min: nextRow, max: nextRow});
-            }
             break;
           // [Category 2] - Commands that insert rows
           case "cmd_paste":

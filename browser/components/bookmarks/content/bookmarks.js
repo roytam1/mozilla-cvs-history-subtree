@@ -1046,7 +1046,7 @@ var BookmarksController = {
       type0 = aSelection.type[0];
     }
 
-    if (type0 == "PersonalToolbarFolder")
+    if (type0 == "PersonalToolbarFolder" && aTarget == null)
       realTarget = { parent: resource0, index: -1 };
     else
       realTarget = aTarget;
@@ -1420,11 +1420,16 @@ var BookmarksUtils = {
       // if aTargetIndex is -1, then we prefix the ++,
       // to get this thing to go to the end.  Otherwise,
       // our caller already chose a +1'd index for us (e.g.
-      // drag and drop)
-      if (aTargetIndex == -1)
-        transaction.index [i] = (++index);
-      else
-        transaction.index [i] = (index++);
+      // drag and drop).  If the desired target is -1,
+      // then we pass the -1 down.
+      if (aTarget.index == -1) {
+        transaction.index[i] = -1;
+      } else {
+        if (aTargetIndex == -1)
+          transaction.index [i] = (++index);
+        else
+          transaction.index [i] = (index++);
+      }
     }
     BMSVC.transactionManager.doTransaction(transaction);
   },
