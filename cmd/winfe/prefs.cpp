@@ -75,6 +75,7 @@ extern int MK_MSG_REMOVE_MAILHOST_CONFIRM;
 };
 #include "nethelp.h"
 #include "ngdwtrst.h"
+#include "pllist.h"
 
 BOOL	g_bReloadAllWindows;
 
@@ -145,13 +146,13 @@ class CEnumHelpers : public IEnumHelpers {
 
 	private:
 		ULONG		m_uRef;
-		XP_List	   *m_pInfoList;
+		PLListEntry	   *m_pInfoList;
 };
 
 CEnumHelpers::CEnumHelpers()
 {
 	m_uRef = 0;
-	m_pInfoList = cinfo_MasterListPointer();
+	m_pInfoList = PL_ListFirstEntry(cinfo_MasterListPointer());
 }
 
 STDMETHODIMP
@@ -190,7 +191,12 @@ CEnumHelpers::Next(NET_cdataStruct **ppcdata)
 {
 	CHelperApp	*pHelperApp;
 
-	while ((*ppcdata = (NET_cdataStruct *)XP_ListNextObject(m_pInfoList))) {
+  for (; m_pInfoList; m_pInfoList = PL_ListEntryNext(m_pInfoList)) {
+    *ppcdata = (NET_cdataStruct *)PL_ListEntryValue(m_pInfoList);
+    if (!*ppcdata) {
+      continue;
+    }
+
 		// Ignore items that don't have a MIME type
 		if (!(*ppcdata)->ci.type)
 			continue;
@@ -237,7 +243,7 @@ CEnumHelpers::Next(NET_cdataStruct **ppcdata)
 STDMETHODIMP
 CEnumHelpers::Reset()
 {
-	m_pInfoList = cinfo_MasterListPointer();
+	m_pInfoList = PL_ListFirstEntry(cinfo_MasterListPointer());
 	return NOERROR;
 }
 

@@ -1495,7 +1495,7 @@ void ImageHack( MWContext *pContext ){
                 pId->align = (ED_Alignment)0;
             }
 
-			int bKeepImages;
+			PRBool bKeepImages;
 			PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
             EDT_SetImageData( pContext, pId, bKeepImages );
             EDT_FreeImageData( pId );
@@ -2164,7 +2164,7 @@ BOOL CNetscapeEditView::DoPasteItem(COleDataObject* pDataObject,
             // First resolve (convert to relative) URL
             CString csURL = pURL;
             char *pTitleText = pTitle;
-			int bKeepLinks;
+			PRBool bKeepLinks;
 			PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
             if ( FE_ResolveLinkURL(pMWContext, csURL,bKeepLinks) ){
@@ -2182,7 +2182,7 @@ BOOL CNetscapeEditView::DoPasteItem(COleDataObject* pDataObject,
                         // We just need to set the URL
                         pEdtData->pSrc = pURL;
 
-						int bKeepImages;
+						PRBool bKeepImages;
 						PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 
                         EDT_InsertImage(pMWContext, pEdtData,bKeepImages);
@@ -2464,7 +2464,7 @@ void CNetscapeEditView::DropFiles( HDROP hDropInfo, BOOL bGetDropPoint)
                      0 == csExt.CompareNoCase(".shtml") ) {
                     // Use filename to paste a link
                     // Convert to relative URL
-					int bKeepLinks;
+					PRBool bKeepLinks;
 					PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
                     if ( FE_ResolveLinkURL(pMWContext, csFilename, bKeepLinks) ){
                         char * pRelative = (char*)LPCSTR(csFilename);
@@ -2508,7 +2508,7 @@ void CNetscapeEditView::DropFiles( HDROP hDropInfo, BOOL bGetDropPoint)
                         pEdtData->pSrc = XP_STRDUP(csFilename);
                         // Paste the image file:
                         if ( pEdtData->pSrc ) {
-						    int bKeepImages;
+						    PRBool bKeepImages;
 						    PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 
                             EDT_InsertImage(pMWContext, pEdtData,bKeepImages);
@@ -2585,9 +2585,9 @@ void CNetscapeEditView::OnOpenNavigatorWindow()
 //
 void CNetscapeEditView::OnFileSaveAs()
 {
-	int bKeepImages;
+  PRBool bKeepImages;
 	PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-	int bKeepLinks;
+	PRBool bKeepLinks;
 	PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
     SaveDocumentAs( bKeepImages,bKeepLinks );
@@ -2836,9 +2836,9 @@ BOOL CNetscapeEditView::SaveDocument()
             {
            	    if( XP_ConvertUrlToLocalFile( hist_entry->address, &pLocalFile ) )
                 {
-				    int bKeepImages;
+				    PRBool bKeepImages;
 				    PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-				    int bKeepLinks;
+				    PRBool bKeepLinks;
 				    PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
                     HCURSOR hOldCursor = SetCursor(theApp.LoadStandardCursor(IDC_WAIT));
@@ -2890,9 +2890,9 @@ BOOL CNetscapeEditView::SaveDocument()
             }
             // If we didn't save above, fall through to do SaveAs
             //  (new page or unknown URL type)
-			int bKeepImages;
+			PRBool bKeepImages;
 			PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-			int bKeepLinks;
+			PRBool bKeepLinks;
 			PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
             return SaveDocumentAs( bKeepImages,bKeepLinks );
@@ -3006,11 +3006,11 @@ BOOL CNetscapeEditView::SaveRemote()
             if( pLocation )
             {
                 // Get Pulishing params from preferences
-                int bKeepImages;
+                PRBool bKeepImages;
                 PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-                int bKeepLinks;
+                PRBool bKeepLinks;
                 PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
-                XP_Bool bRemberPassword;
+                PRBool bRemberPassword;
                 PREF_GetBoolPref("editor.publish_save_password",&bRemberPassword);
         
                 // Get list of included image files with respective "leave image at original location" values
@@ -3124,9 +3124,9 @@ void CNetscapeEditView::OnPublish()
     CPublishDlg dlg(this, pMWContext, pSrcURL);
 
     if( IDOK == dlg.DoModal() ) {
-        int bKeepImages;
+        PRBool bKeepImages;
         PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
-        int bKeepLinks;
+        PRBool bKeepLinks;
         PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
 
         EDT_PublishFile(pMWContext,ED_FINISHED_REVERT_BUFFER, pSrcURL, 
@@ -3358,7 +3358,7 @@ FE_ImageDoneCallBack(CONVERT_IMGCONTEXT *p_outputimageContext,int16 p_numoutputs
         XP_FREE(p_outputimageContext);
         // Paste the image file:
         if ( pEdtData->pSrc ) {
-			int bKeepImages;
+			PRBool bKeepImages;
 			PREF_GetBoolPref("editor.publish_keep_images",&bKeepImages);
 
             EDT_InsertImage(t_mwcontext, pEdtData,bKeepImages);

@@ -202,10 +202,13 @@ STDMETHODIMP
 CPublishPrefs::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
-		PREF_GetBoolPref("editor.publish_keep_links",&m_bAutoAdjustLinks);
-    	PREF_GetBoolPref("editor.publish_keep_images",&m_bKeepImagesWithDoc);
-	    PREF_GetStringPref("editor.publish_location",m_strPublishLocation);
-	    PREF_GetStringPref("editor.publish_browse_location",m_strBrowseLocation);
+    PRBool prefBool;
+		PREF_GetBoolPref("editor.publish_keep_links",&prefBool);
+    m_bAutoAdjustLinks = prefBool;
+    PREF_GetBoolPref("editor.publish_keep_images",&prefBool);
+    m_bKeepImagesWithDoc = prefBool;
+	  PREF_GetStringPref("editor.publish_location",m_strPublishLocation);
+	  PREF_GetStringPref("editor.publish_browse_location",m_strBrowseLocation);
 	}
 
 	return CEditorPropertyPage::Activate(hwndParent, lprc, bModal);
@@ -224,8 +227,8 @@ CPublishPrefs::DoTransfer(BOOL bSaveAndValidate)
 BOOL
 CPublishPrefs::ApplyChanges()
 {
-    PREF_SetBoolPref("editor.publish_keep_links",(XP_Bool)m_bAutoAdjustLinks);
-    PREF_SetBoolPref("editor.publish_keep_images",(XP_Bool)m_bKeepImagesWithDoc);
+    PREF_SetBoolPref("editor.publish_keep_links",(PRBool)m_bAutoAdjustLinks);
+    PREF_SetBoolPref("editor.publish_keep_images",(PRBool)m_bKeepImagesWithDoc);
     PREF_SetCharPref("editor.publish_location",LPCSTR(m_strPublishLocation));
 	PREF_SetCharPref("editor.publish_browse_location",LPCSTR(m_strBrowseLocation));
 	return TRUE;
@@ -252,7 +255,9 @@ STDMETHODIMP
 CEditorPrefs2::Activate(HWND hwndParent, LPCRECT lprc, BOOL bModal)
 {
 	if (!m_bHasBeenActivated) {
-		PREF_GetBoolPref("editor.page_updown_move_cursor",&m_bUpDownMoveCursor);
+    PRBool prefBool;
+		PREF_GetBoolPref("editor.page_updown_move_cursor",&prefBool);
+    m_bUpDownMoveCursor = prefBool;
 	}
 
 	return CEditorPropertyPage::Activate(hwndParent, lprc, bModal);
@@ -268,7 +273,7 @@ CEditorPrefs2::DoTransfer(BOOL bSaveAndValidate)
 BOOL
 CEditorPrefs2::ApplyChanges()
 {
-    PREF_SetBoolPref("editor.page_updown_move_cursor",(XP_Bool)m_bUpDownMoveCursor);
+    PREF_SetBoolPref("editor.page_updown_move_cursor",(PRBool)m_bUpDownMoveCursor);
 	return TRUE;
 }
 

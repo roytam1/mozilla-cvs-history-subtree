@@ -376,7 +376,7 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
-    $(DIST)\lib\img32.lib \
+    $(DIST)\lib\img$(MOZ_BITS).lib \
 !ifdef MOZ_JAVA
     $(DIST)\lib\jmc.lib \
 !endif
@@ -412,12 +412,12 @@ LINK_LIBS= \
     $(DIST)\lib\jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib \
     $(DIST)\lib\dbm$(MOZ_BITS).lib \
 !endif
-!if "$(WINOS)" == "WIN95"
-    $(DIST)\lib\xpcom$(MOZ_BITS).lib
-!else
-    $(DIST)\lib\xpcom$(MOZ_BITS).lib \
-    $(NULL)
-!endif
+#!if "$(WINOS)" == "WIN95"
+#    $(DIST)\lib\xpcom$(MOZ_BITS).lib
+#!else
+#    $(DIST)\lib\xpcom$(MOZ_BITS).lib \
+#    $(NULL)
+#!endif
 
 ##      Specify MFC libs before other libs and before .obj files,
 ##              such that _CrtDumpMemoryLeaks will be called
@@ -1068,6 +1068,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libstyle\csslex.c
 	$(DEPTH)\lib\libstyle\csstab.c
 	$(DEPTH)\lib\libstyle\csstojs.c
+	$(DEPTH)\lib\libnet\pllist.c 
+	$(DEPTH)\lib\libnet\plstr2.c 
 	$(DEPTH)\lib\libstyle\jssrules.c
 	$(DEPTH)\lib\libstyle\stystack.c
 	$(DEPTH)\lib\libstyle\stystruc.c
@@ -1781,6 +1783,17 @@ install:    \
 	   $(OUTDIR)\spellchk\$(SPELLCHK_DLL)    \
 !ENDIF
 !endif
+!ifdef MOZ_RAPTOR
+!IF EXIST($(DIST)\bin\xpcom$(MOZ_BITS).dll)
+	    $(OUTDIR)\xpcom$(MOZ_BITS).dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\libreg$(MOZ_BITS).dll)
+	    $(OUTDIR)\libreg$(MOZ_BITS).dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll)
+	    $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll    \
+!ENDIF
+!endif
 !ifdef EDITOR
 !IF EXIST($(SPELLCHK_DATA)\pen4s324.dat)
 	   $(OUTDIR)\spellchk\pen4s324.dat    \
@@ -1933,6 +1946,17 @@ $(OUTDIR)\trackgdi.dll:   $(DIST)\bin\trackgdi.dll
     @IF EXIST $(DIST)\bin\trackgdi.dll copy $(DIST)\bin\trackgdi.dll $(OUTDIR)\trackgdi.dll
 !endif
 
+!endif
+
+!ifdef MOZ_RAPTOR
+$(OUTDIR)\xpcom$(MOZ_BITS).dll:   $(DIST)\bin\xpcom$(MOZ_BITS).dll
+    @IF EXIST $(DIST)\bin\xpcom$(MOZ_BITS).dll copy $(DIST)\bin\xpcom$(MOZ_BITS).dll $(OUTDIR)\xpcom$(MOZ_BITS).dll
+
+$(OUTDIR)\libreg$(MOZ_BITS).dll:   $(DIST)\bin\libreg$(MOZ_BITS).dll
+    @IF EXIST $(DIST)\bin\libreg$(MOZ_BITS).dll copy $(DIST)\bin\libreg$(MOZ_BITS).dll $(OUTDIR)\libreg$(MOZ_BITS).dll
+
+$(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll:   $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll
+    @IF EXIST $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll copy $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll
 $(OUTDIR)\java\bin\jbn32$(VERSION_NUMBER).dll:   $(DIST)\bin\jbn32$(VERSION_NUMBER).dll
     @IF NOT EXIST "$(OUTDIR)\java/$(NULL)" mkdir "$(OUTDIR)\java"
     @IF NOT EXIST "$(OUTDIR)\java\bin/$(NULL)" mkdir "$(OUTDIR)\java\bin"

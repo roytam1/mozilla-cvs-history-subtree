@@ -27,6 +27,7 @@ int PR_CALLBACK prefWatcher(const char *pPrefName, void *pData)
 	BOOL		bReload = FALSE;
 	COLORREF	rgbForegroundColor = prefInfo.m_rgbForegroundColor;
 	COLORREF	rgbBackgroundColor = prefInfo.m_rgbBackgroundColor;
+  PRBool prefBool;
 
 	switch ((int)pData) {
 		case 1:
@@ -49,7 +50,8 @@ int PR_CALLBACK prefWatcher(const char *pPrefName, void *pData)
 			break;
 
 		case 4:
-			PREF_GetBoolPref("browser.wfe.use_windows_colors", &prefInfo.m_bUseWindowsColors);
+			PREF_GetBoolPref("browser.wfe.use_windows_colors", &prefBool);
+      prefInfo.m_bUseWindowsColors = prefBool;
 			if (prefInfo.m_bUseWindowsColors) {
 				rgbForegroundColor = ::GetSysColor(COLOR_WINDOWTEXT);
 				rgbBackgroundColor = ::GetSysColor(COLOR_WINDOW);
@@ -69,13 +71,15 @@ int PR_CALLBACK prefWatcher(const char *pPrefName, void *pData)
 			break;
 
 		case 7:
-			PREF_GetBoolPref("browser.use_document_colors", &prefInfo.m_bUseDocumentColors);
+			PREF_GetBoolPref("browser.use_document_colors", &prefBool);
+      prefInfo.m_bUseDocumentColors = prefBool;
 			LO_SetUserOverride(!prefInfo.m_bUseDocumentColors);
 			bReload = TRUE;
 			break;
 
 		case 8:
-			PREF_GetBoolPref("general.always_load_images",&prefInfo.m_bAutoLoadImages);
+			PREF_GetBoolPref("general.always_load_images",&prefBool);
+      prefInfo.m_bAutoLoadImages = prefBool;
 
 			CGenericFrame *pGenFrame;
 			for(pGenFrame = theApp.m_pFrameList; pGenFrame; pGenFrame = pGenFrame->m_pNext) {
@@ -191,6 +195,7 @@ void CPrefInfo::SysColorChange()
 void CPrefInfo::Initialize()
 {
 	int32 prefInt;
+  PRBool prefBool;
 
 	// Unvisited link color
 	PREF_GetColorPrefDWord("browser.anchor_color", &m_rgbAnchorColor);
@@ -209,7 +214,8 @@ void CPrefInfo::Initialize()
 	 */
     
 	// Text and background color. See if we should use the Windows colors
-	PREF_GetBoolPref("browser.wfe.use_windows_colors", &m_bUseWindowsColors);
+	PREF_GetBoolPref("browser.wfe.use_windows_colors", &prefBool);
+  m_bUseWindowsColors = prefBool;
     PREF_RegisterCallback("browser.wfe.use_windows_colors", prefWatcher, (void *)4);
 	
 	if (m_bUseWindowsColors) {
@@ -227,12 +233,14 @@ void CPrefInfo::Initialize()
 	PREF_RegisterCallback("browser.background_color", prefWatcher, (void *)6);
 	
 	// See if the user's choices override the document
-	PREF_GetBoolPref("browser.use_document_colors", &m_bUseDocumentColors);
+	PREF_GetBoolPref("browser.use_document_colors", &prefBool);
+  m_bUseDocumentColors = prefBool;
     LO_SetUserOverride(!m_bUseDocumentColors);
 	PREF_RegisterCallback("browser.use_document_colors", prefWatcher, (void *)7);
 	
 	// Always Load Images
-	PREF_GetBoolPref("general.always_load_images", &m_bAutoLoadImages);
+	PREF_GetBoolPref("general.always_load_images", &prefBool);
+  m_bAutoLoadImages = prefBool;
     PREF_RegisterCallback("general.always_load_images", prefWatcher, (void *)8);
 
 	   // type of toolbar buttons

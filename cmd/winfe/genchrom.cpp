@@ -788,7 +788,7 @@ void CGenericChrome::ShowToolbar(UINT nToolbarID, BOOL bShow)
 				!theApp.m_ParentAppWindow && !theApp.m_bKioskMode)
 			{
 				// Show the selector if the pref says we should.
-				BOOL bSelVisible;
+				PRBool bSelVisible;
 				PREF_GetBoolPref(gPrefSelectorVisible, &bSelVisible);
 				if (bSelVisible && bShow)
 					theApp.CreateNewNavCenter(genFrame);
@@ -867,9 +867,13 @@ void CGenericChrome::LoadToolbarConfiguration(UINT nToolbarID, CString &csToolba
 			FEU_ReplaceChar(pBuffer, ' ', '_');
 			prefName.ReleaseBuffer();
 
-			PREF_GetBoolPref(prefName + ".open", &bOpen);
+      PRBool prBOpen;
+			PREF_GetBoolPref(prefName + ".open", &prBOpen);
+      bOpen = prBOpen;
 			PREF_GetIntPref(prefName + ".position", &nPos);
-			PREF_GetBoolPref(prefName + ".showing", &bShowing);
+      PRBool prBShowing;
+			PREF_GetBoolPref(prefName + ".showing", &prBShowing);
+      bShowing = prBShowing;
 		}
 	}
 
@@ -901,8 +905,8 @@ void CGenericChrome::SaveToolbarConfiguration(UINT nToolbarID, CString &csToolba
 			prefName.ReleaseBuffer();
 
 			PREF_SetIntPref(prefName + ".position", nPos);
-			PREF_SetBoolPref(prefName + ".showing", bShowing);
-			PREF_SetBoolPref(prefName + ".open", bOpen);
+			PREF_SetBoolPref(prefName + ".showing", (PRBool)bShowing);
+			PREF_SetBoolPref(prefName + ".open", (PRBool)bOpen);
 		}
 	}
 }

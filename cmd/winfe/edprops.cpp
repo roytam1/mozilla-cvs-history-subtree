@@ -1032,7 +1032,7 @@ CColorPicker::CColorPicker(CWnd      * pParent,
         {
             // Get the "Default" color used by the Browser
 	        COLORREF tmpColor,defColor;
-	        XP_Bool bCust;
+	        PRBool bCust;
 	        PREF_GetColorPrefDWord("browser.foreground_color",&tmpColor);
 	        PREF_GetDefaultColorPrefDWord("browser.foreground_color",&defColor);
 	        PREF_GetBoolPref("browser.custom_text_color",&bCust);
@@ -2518,14 +2518,14 @@ void CHRuleDlg::OnOK()
 		PREF_SetIntPref("editor.hrule.height",m_iHeight);
 		PREF_SetIntPref("editor.hrule.width",m_iWidth);
         if( m_iWidthType == 0 ){
-			PREF_SetBoolPref("editor.hrule.width_percent",TRUE);
+			PREF_SetBoolPref("editor.hrule.width_percent",PR_TRUE);
         } else {
-			PREF_SetBoolPref("editor.hrule.width_percent",FALSE);
+			PREF_SetBoolPref("editor.hrule.width_percent",PR_FALSE);
         }
         if( m_bShading ){
-			PREF_SetBoolPref("editor.hrule.shading",TRUE);
+			PREF_SetBoolPref("editor.hrule.shading",PR_TRUE);
         } else {
-			PREF_SetBoolPref("editor.hrule.shading",FALSE);
+			PREF_SetBoolPref("editor.hrule.shading",PR_FALSE);
         }
 		PREF_SetIntPref("editor.hrule.align",m_pData->align);
     }
@@ -3365,7 +3365,7 @@ BOOL CDocColorPage::OnSetActive()
     }
 
 	COLORREF tmpColor,defColor;
-	XP_Bool bCust;
+	PRBool bCust;
     // Get Browser preference colors
 	PREF_GetColorPrefDWord("browser.foreground_color",&tmpColor);
 	PREF_GetDefaultColorPrefDWord("browser.foreground_color",&defColor);
@@ -3626,14 +3626,14 @@ void CDocColorPage::OnOK()
         // Save current settings to Preferences
         if( ((CButton*)GetDlgItem(IDC_BKGRND_USE_IMAGE))->GetCheck() &&
             !m_csBackgroundImage.IsEmpty() ){
-		    PREF_SetBoolPref("editor.use_background_image",TRUE);
+		    PREF_SetBoolPref("editor.use_background_image",PR_TRUE);
 		    PREF_SetCharPref("editor.background_image",LPCSTR(m_csBackgroundImage));
         } else {
-		    PREF_SetBoolPref("editor.use_background_image",FALSE);
+		    PREF_SetBoolPref("editor.use_background_image",PR_FALSE);
         }
 
 	    if ( m_bCustomColors ) {
-		    PREF_SetBoolPref("editor.use_custom_colors",TRUE);
+		    PREF_SetBoolPref("editor.use_custom_colors",PR_TRUE);
 		    PREF_SetCharPref("editor.color_scheme",(char*)LPCSTR(m_csSelectedScheme));
 
 		    PREF_SetColorPrefDWord("editor.text_color",m_crCustomText);
@@ -3643,7 +3643,7 @@ void CDocColorPage::OnOK()
 		    PREF_SetColorPrefDWord("editor.background_color",m_crCustomBackground);
         } else {
             // Note: don't change previous color preferences
-		    PREF_SetBoolPref("editor.use_custom_colors",FALSE);
+		    PREF_SetBoolPref("editor.use_custom_colors",PR_FALSE);
         }
     }
 }
@@ -4463,7 +4463,7 @@ BOOL CCharacterPage::OnSetActive()
     
     // Get the "Default" color used by the Browser
 	COLORREF tmpColor,defColor;
-	XP_Bool bCust;
+	PRBool bCust;
 	PREF_GetColorPrefDWord("browser.foreground_color",&tmpColor);
 	PREF_GetDefaultColorPrefDWord("browser.foreground_color",&defColor);
 	PREF_GetBoolPref("browser.custom_text_color",&bCust);
@@ -7570,7 +7570,7 @@ void CLinkPage::ValidateHref()
     // Strip off "#named_anchor" part and place in 
     //  separate string???
 
-	XP_Bool bKeepLinks;
+	PRBool bKeepLinks;
 	PREF_GetBoolPref("editor.publish_keep_links",&bKeepLinks);
     if ( FE_ResolveLinkURL(m_pMWContext, m_csHref,bKeepLinks) ) {
         // Save this as a valid reference

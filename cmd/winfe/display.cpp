@@ -32,6 +32,7 @@
 #include "prefapi.h"
 #include "extgen.h"
 #include "viewerse.h"
+#include "pllist.h"
 
 extern "C" int MK_DISK_FULL;  // defined in allxpstr.h
 extern "C" int MK_OUT_OF_MEMORY;  // defined in allxpstr.h
@@ -335,7 +336,7 @@ NET_StreamClass *external_viewer_disk_stream(int iFormatOut, void *pDataObj, URL
 		if(iDlg == IDCANCEL)	{
 			//	User hit cancel.  Abort the load.
 			if (pHelper && pHelper->cd_item && isNewHelper) {
-				if (XP_ListRemoveObject(cinfo_MasterListPointer(), pHelper->cd_item)) {
+				if (PL_ListRemove(cinfo_MasterListPointer(), pHelper->cd_item)) {
 					if (pHelper->cd_item) {
 						if (pHelper->cd_item->ci.type) {
 							theApp.m_HelperListByType.RemoveKey(pHelper->cd_item->ci.type);
