@@ -418,7 +418,7 @@ private:
    // ConditionRect is used to fix coordinate overflow problems for
    // rectangles after they are transformed to screen coordinates
    
-   void ConditionRect(nscoord &x, nscoord &y, nscoord &w, nscoord &h) {
+   inline void ConditionRect(nscoord &x, nscoord &y, nscoord &w, nscoord &h) {
 	   if ( y < -32766 )
 		   y = -32766;
 	   if ( y + h > 32766 )

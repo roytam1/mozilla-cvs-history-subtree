@@ -100,6 +100,9 @@ PtWidgetClass_t *PtCreateMozillaClass( void );
 	PtWidgetClassRef_t *PtMozilla = &__PtMozilla; 
 #endif
 
+/* globals */
+char *g_Print_Left_Header_String, *g_Print_Right_Header_String, *g_Print_Left_Footer_String, *g_Print_Right_Footer_String;
+
 void 
 MozSetPreference(PtWidget_t *widget, int type, char *pref, void *data)
 {
@@ -148,6 +151,20 @@ MozLoadURL(PtMozillaWidget_t *moz, char *url)
 	moz->EmbedRef->LoadCurrentURI();
 }
 
+/* watch for an Ph_EV_INFO event in order to detect an Ph_OFFSCREEN_INVALID */
+static int EvInfo( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
+{
+	if( cbinfo->event && cbinfo->event->type == Ph_EV_INFO && cbinfo->event->subtype == Ph_OFFSCREEN_INVALID ) {
+		PtMozillaWidget_t *moz = ( PtMozillaWidget_t * ) widget;
+		nsIPref *pref = moz->EmbedRef->GetPrefs();
+		PRBool displayInternalChange = PR_FALSE;
+		pref->GetBoolPref("browser.display.internaluse.graphics_changed", &displayInternalChange);
+		pref->SetBoolPref("browser.display.internaluse.graphics_changed", !displayInternalChange);
+		}
+	return Pt_CONTINUE;
+}
+
+
 // defaults function, called on creation of a widget
 static void 
 mozilla_defaults( PtWidget_t *widget )
@@ -159,9 +176,11 @@ mozilla_defaults( PtWidget_t *widget )
 	moz->EmbedRef = new EmbedPrivate();
 	moz->EmbedRef->Init(widget);
 	moz->EmbedRef->Setup();
-//JPB
 	moz->disable_new_windows = 0;
 	moz->disable_exception_dlg = 0;
+	moz->text_zoom = 100;
+	moz->actual_text_zoom = 100;
+	moz->old_style_text_zoom = 0;
 
 	// widget related
 	basic->flags = Pt_ALL_OUTLINES | Pt_ALL_BEVELS | Pt_FLAT_FILL;
@@ -170,6 +189,8 @@ mozilla_defaults( PtWidget_t *widget )
 			Pt_BOTTOM_ANCHORED_TOP | Pt_RIGHT_ANCHORED_LEFT | Pt_ANCHORS_INVALID;
 
 	cntr->flags |= Pt_CHILD_GETTING_FOCUS;
+
+	PtAddEventHandler( widget, Ph_EV_INFO, EvInfo, NULL );
 }
 
 // widget destroy function
@@ -517,19 +538,22 @@ mozilla_get_info(PtWidget_t *widget, PtArg_t *argt)
 			mozilla_get_pref( widget, (char*)argt->len, (char*) argt->value );
 			break;
 
-		case Pt_ARG_MOZ_GET_CONTEXT:
-			if ( moz->rightClickUrl ) 
-				strcpy( (char*) argt->value, moz->rightClickUrl );
-			else 
-				*(char*) argt->value = 0;
+		case Pt_ARG_MOZ_GET_CONTEXT: {
+			if( argt->len & Pt_MOZ_CONTEXT_LINK )
+				*(char**) argt->value = moz->rightClickUrl_link;
+			else if( argt->len & Pt_MOZ_CONTEXT_IMAGE )
+				*(char**) argt->value = moz->rightClickUrl_image;
+			else *(char**) argt->value = moz->rightClickUrl_link;
+			}
 			break;
 
 		case Pt_ARG_MOZ_ENCODING: 
 			{
 			PRUnichar *charset = nsnull;
+			static char encoding[256];
 			pref->GetLocalizedUnicharPref( "intl.charset.default", &charset );
-
-			strcpy( (char*)argt->value, NS_ConvertUCS2toUTF8(charset).get() );
+			strcpy( encoding, NS_ConvertUCS2toUTF8(charset).get() );
+			*(char**)argt->value = encoding;
 			}
 			break;
 
@@ -574,7 +598,6 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 	nsIPref *pref = moz->EmbedRef->GetPrefs();
 	char buffer[1024];
 
-
 	mozilla_get_pref( widget, option, buffer );
 	if( buffer[0] && !strcmp( value, buffer ) ) 
 		return; /* the option is already set */
@@ -604,18 +627,30 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 		pref->SetBoolPref( "browser.underline_anchors", !stricmp( value, "TRUE" ) ? PR_TRUE : PR_FALSE );
 		}
 	else if( !strcmp( option, "iUserTextSize" ) ) {
-		int n = atoi( value );
-		/* map our n= 0...4 value into a mozilla font value */
-		/* see xpfe/components/prefwindow/resources/content/pref-fonts.xul, they are also hard-coded there */
-		switch( n ) {
-			case 0: n = VOYAGER_TEXTSIZE0; break;
-			case 1: n = VOYAGER_TEXTSIZE1; break;
-			case 2: n = VOYAGER_TEXTSIZE2; break;
-			case 3: n = VOYAGER_TEXTSIZE3; break;
-			case 4: n = VOYAGER_TEXTSIZE4; break;
+		int v = atoi( value );
+
+		if( v < 5 ) { /* old style text size */
+			/* fix up old values */
+			switch( v ) {
+				case 0: moz->text_zoom = 80; break;
+				case 1: moz->text_zoom = 90; break;
+				case 2: moz->text_zoom = 100; break;
+				case 3: moz->text_zoom = 120; break;
+				case 4: moz->text_zoom = 150; break;
+				default: moz->text_zoom = 100; break;
+				}
+			moz->old_style_text_zoom = 1;
 			}
-//		moz->MyBrowser->mPrefs->SetIntPref( "font.size.fixed.x-western", n );
-		pref->SetIntPref( "font.size.variable.x-western", n );
+		else moz->text_zoom = v;
+
+		nsCOMPtr<nsIDOMWindow> domWindow;
+		moz->EmbedRef->mWindow->mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+		if(domWindow) {
+			domWindow->SetTextZoom( moz->text_zoom/100. );
+			float vv;
+			domWindow->GetTextZoom( &vv );
+			moz->actual_text_zoom = (int) ( vv * 100 );
+			}
 		}
 	else if( !strcmp( option, "BODY font-family" ) ) {
 		/* set the current font */
@@ -628,38 +663,53 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 		sprintf( preference, "font.name.%s.x-western", font_default );
 		pref->SetCharPref( preference, value );
 		}
-	else if( !strcmp( option, "PRE font-family" ) || !strcmp( option, "H* font-family" ) ) {
-		/* do not set these - use the BODY font-family instead */
-		}
+  else if( !strcmp( option, "PRE font-family" ) ) {
+    pref->SetCharPref( "font.name.monospace.x-western", value );
+    }
+  else if( !strcmp( option, "H* font-family" ) ) {
+    /* do not set these - use the BODY font-family instead */
+    }
 
 /* SOCKS options */
-	else if( !strcmp( option, "socks_server" ) )
-		pref->SetCharPref( "network.hosts.socks_server", value );
-	else if( !strcmp( option, "socks_port" ) )
-		pref->SetCharPref( "network.hosts.socks_serverport", value );
-	else if( !strcmp( option, "socks_user" ) ) 		; /* not used */
-	else if( !strcmp( option, "socks_app" ) ) 		; /* not used */
+	else if( !strcmp( option, "socks_server" ) )  ; /* not used */
+	else if( !strcmp( option, "socks_port" ) )    ; /* not used */
+	else if( !strcmp( option, "socks_user" ) )    ; /* not used */
+	else if( !strcmp( option, "socks_app" ) )     ; /* not used */
 
 /* HTTP options */
-	else if( !strcmp( option, "http_proxy_host" ) )
-		pref->SetCharPref( "network.proxy.http", value );
-	else if( !strcmp( option, "http_proxy_port" ) )
-		pref->SetCharPref( "network.proxy.http_port", value );
-	else if( !strcmp( option, "proxy_overrides" ) )
-		pref->SetCharPref( "network.proxy.no_proxies_on", value );
+  else if( !strcmp( option, "enable_proxy" ) ) {
+    if( value && !stricmp( value, "yes" ) )
+      pref->SetIntPref( "network.proxy.type", 1 );
+      else pref->SetIntPref( "network.proxy.type", 0 );
+    }
+  else if( !strcmp( option, "http_proxy_host" ) ) {
+    pref->SetCharPref( "network.proxy.http", value );
+    }
+  else if( !strcmp( option, "http_proxy_port" ) ) {
+    pref->SetIntPref( "network.proxy.http_port", atoi(value) );
+    }
+  else if( !strcmp( option, "proxy_overrides" ) ) {
+    pref->SetCharPref( "network.proxy.no_proxies_on", value );
+    }
+  else if( !strcmp( option, "https_proxy_host" ) ) {
+    pref->SetCharPref( "network.proxy.ssl", value );
+    }
+  else if( !strcmp( option, "https_proxy_port" ) ) {
+    pref->SetIntPref( "network.proxy.ssl_port", atoi(value) );
+    }
 
 /* FTP options */
 	else if( !strcmp( option, "ftp_proxy_host" ) )
 		pref->SetCharPref( "network.proxy.ftp", value );
 	else if( !strcmp( option, "ftp_proxy_port" ) )
-		pref->SetCharPref( "network.proxy.ftp_port", value );
+		pref->SetIntPref( "network.proxy.ftp_port", atoi(value) );
 	else if( !strcmp( option, "email_address" ) )		; /* not used */
 
 /* Gopher options */
 	else if( !strcmp( option, "gopher_proxy_host" ) )
 		pref->SetCharPref( "network.proxy.gopher", value );
 	else if( !strcmp( option, "gopher_proxy_port" ) )
-		pref->SetCharPref( "network.proxy.gopher_port", value );
+		pref->SetIntPref( "network.proxy.gopher_port", atoi(value) );
 
 /* TCP/IP options */
 	else if( !strcmp( option, "socket_timeout" ) )
@@ -685,6 +735,13 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 	else if( !strcmp( option, "main_index_file" ) ) 		; /* not used */
 	else if( !strcmp( option, "clear_main_cache_on_exit" ) ) 		; /* not used */
 	else if( !strcmp( option, "keep_index_file_updated" ) ) 		; /* not used */
+
+/* memory cache options */
+  else if( !strcmp( option, "memory_cache_kb_size" ) || !strcmp( option, "image_cache_size_KB" ) ) {
+    int kb = atoi( value );
+    if( kb <= 0 ) kb = 100; /* have a minimum threshold */
+    pref->SetIntPref( "browser.cache.memory.capacity", kb );
+    }
 
 /* Miscellaneous options */
 	else if( !strcmp( option, "History_Expire" ) )
@@ -747,10 +804,22 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 /* Print options */
 	else if( !strcmp( option, "Print_Header_Font" ) ) 		; /* not used */
 	else if( !strcmp( option, "Print_Header_Font_Size" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Left_Header_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Right_Header_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Left_Footer_String" ) ) 		; /* not used */
-	else if( !strcmp( option, "Print_Right_Footer_String" ) ) 		; /* not used */
+  else if( !strcmp( option, "Print_Left_Header_String" ) ) {
+    if( g_Print_Left_Header_String ) free( g_Print_Left_Header_String );
+    g_Print_Left_Header_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Right_Header_String" ) ) {
+    if( g_Print_Right_Header_String ) free( g_Print_Right_Header_String );
+    g_Print_Right_Header_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Left_Footer_String" ) ) {
+    if( g_Print_Left_Footer_String ) free( g_Print_Left_Footer_String );
+    g_Print_Left_Footer_String = strdup( value );
+    }
+  else if( !strcmp( option, "Print_Right_Footer_String" ) ) {
+    if( g_Print_Right_Footer_String ) free( g_Print_Right_Footer_String );
+    g_Print_Right_Footer_String = strdup( value );
+    }
 
 
 /* Miscellaneous options */
@@ -770,6 +839,13 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 	else if( !strcmp( option, "Use_Anti_Alias" ) ) 		; /* not used */
 	else if( !strcmp( option, "Use_Explicit_Accept_Headers" ) ) 		; /* not used */
 	else if( !strcmp( option, "Visitation_Horizon" ) ) 		; /* not used */
+
+  else if( !strcmp( option, "Print_Frame" ) )
+    pref->SetCharPref( "user.print.print_frame", value );
+  else if( !strcmp( option, "SetPrintBGColors" ) )
+    pref->SetCharPref( "user.print.SetPrintBGColors", value );
+  else if( !strcmp( option, "SetPrintBGImages" ) )
+    pref->SetCharPref( "user.print.SetPrintBGImages", value );
 
 	pref->SavePrefFile( nsnull );
 	}
@@ -804,111 +880,114 @@ static void mozilla_get_pref( PtWidget_t *widget, char *option, char *value ) {
 		pref->GetBoolPref( "browser.display.use_document_colors", &val );
 		sprintf( value, "%s", val == PR_TRUE ? "FALSE" : "TRUE" );
 		}
-//JPB
 	else if( !strcmp( option, "disable_new_windows" ) ) {
 		sprintf( value, "%s", (moz->disable_new_windows == 1) ? "TRUE" : "FALSE" );
 		}
 	else if( !strcmp( option, "disable_exception_dlg" ) ) {
 		sprintf( value, "%s", (moz->disable_exception_dlg == 1) ? "TRUE" : "FALSE" );
 		}
-//JPB
 	else if( !strcmp( option, "bUnderlineLinks" ) ) {
 		PRBool val;
 		pref->GetBoolPref( "browser.underline_anchors", &val );
 		sprintf( value, "%s", val == PR_TRUE ? "TRUE" : "FALSE" );
 		}
 	else if( !strcmp( option, "iUserTextSize" ) ) {
-		int n;
-//		moz->MyBrowser->mPrefs->GetIntPref( "font.size.fixed.x-western", &n );
-		pref->GetIntPref( "font.size.variable.x-western", &n );
-		/* map our n= 0...4 value into a mozilla font value */
-		/* see xpfe/components/prefwindow/resources/content/pref-fonts.xul, they are also hard-coded there */
-		switch( n ) {
-			case VOYAGER_TEXTSIZE0: n = 0; break;
-			case VOYAGER_TEXTSIZE1: n = 1; break;
-			case VOYAGER_TEXTSIZE2: n = 2; break;
-			case VOYAGER_TEXTSIZE3: n = 3; break;
-			case VOYAGER_TEXTSIZE4: n = 4; break;
+		int v;
+
+		if( moz->old_style_text_zoom ) {
+   		/* fix up old values */
+			if( moz->text_zoom <= 80 ) v = 0;
+			else if( moz->text_zoom <= 90 ) v = 1;
+			else if( moz->text_zoom <= 100 ) v = 2;
+			else if( moz->text_zoom <= 120 ) v = 3;
+			else if( moz->text_zoom <= 150 ) v = 4;
+			else v = 2;
 			}
-		sprintf( value, "%d", n );
-		}
-	else if( !strcmp( option, "BODY font-family" ) || !strcmp( option, "PRE font-family" ) || !strcmp( option, "H* font-family" ) ) {
-		/* set the current font */
-		char *font_default = NULL, *font = NULL;
-		char preference[256];
+		else v = moz->text_zoom;
 
-		pref->CopyCharPref( "font.default", &font_default );
-		if( !font_default ) font_default = "serif";
+		sprintf( value, "%d", v );
+		}
+  else if( !strcmp( option, "BODY font-family" ) || !strcmp( option, "H* font-family" ) ) {
+    /* set the current font */
+    char *font_default = NULL, *font = NULL;
+    char preference[256];
 
-		sprintf( preference, "font.name.%s.x-western", font_default );
-		pref->CopyCharPref( preference, &font );
-		strcpy( value, font );
-		}
+    pref->CopyCharPref( "font.default", &font_default );
+    if( !font_default ) font_default = "serif";
 
-/* SOCKS options */
-  else if( !strcmp( option, "socks_server" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.hosts.socks_server", &s );
-		if( s ) strcpy( value, s );
-		}
-  else if( !strcmp( option, "socks_port" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.hosts.socks_serverport", &s );
-		if( s ) strcpy( value, s );
-		}
+    sprintf( preference, "font.name.%s.x-western", font_default );
+    pref->CopyCharPref( preference, &font );
+    strcpy( value, font );
+    }
+  else if( !strcmp( option, "PRE font-family" ) ) {
+    /* set the current font */
+    char *font = NULL;
+    pref->CopyCharPref( "font.name.monospace.x-western", &font );
+    strcpy( value, font );
+    }
 
 /* HTTP options */
   else if( !strcmp( option, "http_proxy_host" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.http", &s );
-		if( s ) strcpy( value, s );
-		}
+    char *s = NULL;
+    pref->CopyCharPref( "network.proxy.http", &s );
+    if( s ) strcpy( value, s );
+    }
   else if( !strcmp( option, "http_proxy_port" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.http_port", &s );
-		if( s ) strcpy( value, s );
-		}
+    int n;
+    pref->GetIntPref( "network.proxy.http_port", &n );
+    sprintf( value, "%d", n );
+    }
   else if( !strcmp( option, "proxy_overrides" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.no_proxies_on", &s );
-		if( s ) strcpy( value, s );
-		}
+    char *s = NULL;
+    pref->CopyCharPref( "network.proxy.no_proxies_on", &s );
+    if( s ) strcpy( value, s );
+    }
+  else if( !strcmp( option, "https_proxy_host" ) ) {
+    char *s = NULL;
+    pref->CopyCharPref( "network.proxy.ssl", &s );
+    if( s ) strcpy( value, s );
+    }
+  else if( !strcmp( option, "https_proxy_port" ) ) {
+    int n;
+    pref->GetIntPref( "network.proxy.ssl_port", &n );
+    sprintf( value, "%d", n );
+    }
 
 /* FTP options */
   else if( !strcmp( option, "ftp_proxy_host" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.ftp", &s );
-		if( s ) strcpy( value, s );
-		}
+    char *s = NULL;
+    pref->CopyCharPref( "network.proxy.ftp", &s );
+    if( s ) strcpy( value, s );
+    }
   else if( !strcmp( option, "ftp_proxy_port" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.ftp_port", &s );
-		if( s ) strcpy( value, s );
-		}
+    int n;
+    pref->GetIntPref( "network.proxy.ftp_port", &n );
+    sprintf( value, "%d", n );
+    }
 
 /* Gopher options */
   else if( !strcmp( option, "gopher_proxy_host" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "network.proxy.gopher", &s );
-		if( s ) strcpy( value, s );
-		}
+    char *s = NULL;
+    pref->CopyCharPref( "network.proxy.gopher", &s );
+    if( s ) strcpy( value, s );
+    }
   else if( !strcmp( option, "gopher_proxy_port" ) ) {
-		char *s = NULL;
-		pref->CopyCharPref( "gopher_proxy_port", &s );
-		if( s ) strcpy( value, s );
-		}
+    int n;
+    pref->GetIntPref( "gopher_proxy_port", &n );
+    sprintf( value, "%d", n );
+    }
 
 /* TCP/IP options */
   else if( !strcmp( option, "socket_timeout" ) ) {
-		int n;
-		pref->GetIntPref( "network.http.connect.timeout", &n );
-		sprintf( value, "%d", n );
-		}
+    int n;
+    pref->GetIntPref( "network.http.connect.timeout", &n );
+    sprintf( value, "%d", n );
+    }
   else if( !strcmp( option, "max_connections" ) ) {
-		int n;
-		pref->GetIntPref( "network.http.max-connections", &n );
-		sprintf( value, "%d", n );
-		}
+    int n;
+    pref->GetIntPref( "network.http.max-connections", &n );
+    sprintf( value, "%d", n );
+    }
 
 /* Disk-cache options */
   else if( !strcmp( option, "main_cache_kb_size" ) ) {
@@ -944,98 +1023,96 @@ static void mozilla_get_pref( PtWidget_t *widget, char *option, char *value ) {
 		sprintf( value, "%d", n );
 		}
 
-	else if( !strcmp( option, "clear_main_cache_on_exit" ) ) {
-		strcpy( value, "FALSE" ); /* even if not used, match this with the default value */
-		}
-	else if( !strcmp( option, "quantize_jpegs" ) ) {
-		strcpy( value, "FALSE" ); /* even if not used, match this with the default value */
-		}
-	else *value = 0;
+  else if( !strcmp( option, "clear_main_cache_on_exit" ) ) {
+    strcpy( value, "FALSE" ); /* even if not used, match this with the default value */
+    }
+  else if( !strcmp( option, "quantize_jpegs" ) ) {
+    strcpy( value, "FALSE" ); /* even if not used, match this with the default value */
+    }
+  else if( !strcmp( option, "ServerId" ) ) {
+    strcpy( value, "mozserver" );
+    }
+  else *value = 0;
 
 	}
 
-/* static */
-static int
-StartupProfile(char *sProfileDir, char *sProfileName)
+int sProfileDirCreated;
+static int StartupProfile( char *sProfileDir )
 {
-  	// initialize profiles
-  	if (sProfileDir && sProfileName) 
-	{
-		nsresult rv;
-		nsCOMPtr<nsILocalFile> profileDir;
-		PRBool exists = PR_FALSE;
-		PRBool isDir = PR_FALSE;
-		profileDir = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);
-		rv = profileDir->InitWithNativePath(nsDependentCString(sProfileDir));
-		if (NS_FAILED(rv))
-		  	return NS_ERROR_FAILURE;
-		profileDir->Exists(&exists);
-		profileDir->IsDirectory(&isDir);
-		// if it exists and it isn't a directory then give up now.
-		if (!exists) 
-		{
-		  	rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
-		  	if NS_FAILED(rv)
-				return NS_ERROR_FAILURE;
-		}
-		else if (exists && !isDir)
-		  	return NS_ERROR_FAILURE;
+  // initialize profiles
+  if(sProfileDir)
+  {
+    nsresult rv;
+    nsCOMPtr<nsILocalFile> profileDir;
+    PRBool exists = PR_FALSE;
+    PRBool isDir = PR_FALSE;
+    profileDir = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);
+    rv = profileDir->InitWithNativePath(nsDependentCString(sProfileDir));
+    if (NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
+    profileDir->Exists(&exists);
+    profileDir->IsDirectory(&isDir);
+    // if it exists and it isn't a directory then give up now.
+    if (!exists)
+    {
+      rv = profileDir->Create(nsIFile::DIRECTORY_TYPE, 0700);
+      if( NS_FAILED(rv) )
+        return NS_ERROR_FAILURE;
+      sProfileDirCreated = 1;
+    }
+    else if (exists && !isDir)
+      return NS_ERROR_FAILURE;
 
-		nsCOMPtr<nsProfileDirServiceProvider> locProvider;
-		NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(locProvider));
-		if (!locProvider)
-		  return NS_ERROR_FAILURE;
+    nsCOMPtr<nsProfileDirServiceProvider> locProvider;
+    NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(locProvider));
+    if (!locProvider)
+      return NS_ERROR_FAILURE;
 
-		// Directory service holds an strong reference to any
-		// provider that is registered with it. Let it hold the
-		// only ref. locProvider won't die when we leave this scope.
-		rv = locProvider->Register();
-		if (NS_FAILED(rv))
-		  return rv;
-		rv = locProvider->SetProfileDir(profileDir);
-		if (NS_FAILED(rv))
-		  return rv;
+    // Directory service holds an strong reference to any
+    // provider that is registered with it. Let it hold the
+    // only ref. locProvider won't die when we leave this scope.
+    rv = locProvider->Register();
+    if (NS_FAILED(rv))
+      return rv;
+    rv = locProvider->SetProfileDir(profileDir);
+    if (NS_FAILED(rv))
+      return rv;
+    }
 
-  	}
-  
-	return NS_OK;
-}
+  return NS_OK;
+	}
 
 // startup the mozilla embedding engine
-static int
-StartupEmbedding()
+static int StartupEmbedding()
 {
-    nsresult rv;
-	char *profile_dir;
+  nsresult rv;
 
 #ifdef _BUILD_STATIC_BIN
   // Initialize XPCOM's module info table
   NSGetStaticModuleInfo = ph_getModuleInfo;
 #endif
-    
-    rv = NS_InitEmbedding(nsnull, nsnull);
-    if (NS_FAILED(rv))
+
+  rv = NS_InitEmbedding(nsnull, nsnull);
+  if( NS_FAILED( rv ) ) return -1;
+
+  char *profile_dir;
+  profile_dir = (char *)alloca(strlen(getenv("HOME")) + strlen("/.ph/mozilla") + 1);
+  sprintf(profile_dir, "%s/.ph/mozilla", getenv("HOME"));
+  rv = StartupProfile( profile_dir );
+  if( NS_FAILED( rv ) )
+    NS_WARNING("Warning: Failed to start up profiles.\n");
+
+  nsCOMPtr<nsIAppShell> appShell;
+  appShell = do_CreateInstance(kAppShellCID);
+  if( !appShell ) {
+      NS_WARNING("Failed to create appshell in EmbedPrivate::PushStartup!\n");
       return (-1);
-
-	profile_dir = (char *)alloca(strlen(getenv("HOME")) + strlen("/.ph") + 1);
-	sprintf(profile_dir, "%s/.ph", getenv("HOME"));
-    rv = StartupProfile(profile_dir, "mozilla");
-    if (NS_FAILED(rv))
-      	NS_WARNING("Warning: Failed to start up profiles.\n");
-    
-    nsCOMPtr<nsIAppShell> appShell;
-    appShell = do_CreateInstance(kAppShellCID);
-    if (!appShell) 
-	{
-	    NS_WARNING("Failed to create appshell in EmbedPrivate::PushStartup!\n");
-    	return (-1);
-    }
-    nsIAppShell * sAppShell = appShell.get();
-    NS_ADDREF(sAppShell);
-    sAppShell->Create(0, nsnull);
-    sAppShell->Spinup();
-
-	return (0);
+      }
+  nsIAppShell * sAppShell = appShell.get();
+  NS_ADDREF(sAppShell);
+  sAppShell->Create(0, nsnull);
+  sAppShell->Spinup();
+  return 0;
 }
 
 /* the translation string that is passed by voyager ( Pt_ARG_WEB_ENCODING ) ( taken from /usr/photon/translations/charsets ->mime field ) */

@@ -48,7 +48,6 @@ REQUIRES    = xpcom \
 			  $(NULL)	
 			  
 CPPSRCS		= \
-		nsDragService.cpp \
 		PtRawDrawContainer.cpp \
 		nsAppShell.cpp \
 		nsClipboard.cpp \
@@ -65,6 +64,10 @@ CPPSRCS		= \
 ifdef MOZ_ENABLE_XREMOTE
 REQUIRES += xremoteservice
 CPPSRCS += nsPhMozRemoteHelper.cpp
+endif
+
+ifdef PHOTON_DND
+CPPSRCS += nsDragService.cpp
 endif
 
 SHARED_LIBRARY_LIBS = $(DIST)/lib/libxpwidgets_s.a

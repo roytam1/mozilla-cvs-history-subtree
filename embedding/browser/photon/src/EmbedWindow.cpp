@@ -489,13 +489,14 @@ NS_IMETHODIMP
 EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
 			   const PRUnichar *aTipText)
 {
+#if 0
   nsAutoString tipText ( aTipText );
-  const char* tipString = ToNewCString(tipText);
+  const char* tipString = ToNewCString(tipText), *font = "TextFont08";
   PtArg_t args[10];
   PhRect_t extent;
   PhDim_t dim;
   PhPoint_t pos = {0, 0};
-  int n = 0;
+  int n = 0, w, h;
 
   if (sTipWindow)
     PtDestroyWidget(sTipWindow);
@@ -506,22 +507,27 @@ EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
   PtWidget_t *window;
   window = NS_STATIC_CAST(PtWidget_t *, mainWidget->GetNativeData(NS_NATIVE_WINDOW));
 
-  PgExtentText(&extent, &pos, NULL, tipString, 0);
-  dim.w = extent.lr.x - extent.ul.x + 1;
-  dim.h = extent.lr.y - extent.ul.y + 1;
+  PgExtentText(&extent, &pos, font, tipString, 0);
+  w = extent.lr.x - extent.ul.x + 1;
+  h = extent.lr.y - extent.ul.y + 1;
 
-  pos.x = aXCoords;
-  pos.y = aYCoords; 
   n = 0;
+  pos.x = aXCoords;
+  pos.y = aYCoords + 10; /* we add 10 so that we don't position it right under the mouse */
+	dim.w = w + 6; dim.h = h + 6;
   PtSetArg(&args[n++], Pt_ARG_POS, &pos, 0);
   PtSetArg(&args[n++], Pt_ARG_DIM, &dim, 0);
+	PtSetArg( &args[n++], Pt_ARG_REGION_OPAQUE,   Ph_EV_EXPOSE, Ph_EV_EXPOSE);
   sTipWindow = PtCreateWidget(PtRegion, window, n, args);
+
   n = 0;
   pos.x = pos.y = 0;
+	dim.w = w; dim.h = h;
   PtSetArg(&args[n++], Pt_ARG_POS, &pos, 0);
   PtSetArg(&args[n++], Pt_ARG_DIM, &dim, 0);
   PtSetArg(&args[n++], Pt_ARG_FLAGS, Pt_HIGHLIGHTED, -1 );
   PtSetArg(&args[n++], Pt_ARG_FILL_COLOR, 0xfeffb1, 0);
+  PtSetArg(&args[n++], Pt_ARG_TEXT_FONT, font, 0);
   PtSetArg(&args[n++], Pt_ARG_TEXT_STRING, tipString, 0);
   PtSetArg(&args[n++], Pt_ARG_BASIC_FLAGS, Pt_STATIC_GRADIENT | Pt_TOP_OUTLINE | Pt_LEFT_OUTLINE |
       Pt_RIGHT_OUTLINE | Pt_BOTTOM_OUTLINE, -1 );
@@ -532,8 +538,10 @@ EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
 
   nsMemory::Free( (void*)tipString );
 
+#endif
   return NS_OK;
 }
+
 
 NS_IMETHODIMP
 EmbedWindow::OnHideTooltip(void)
@@ -635,47 +643,49 @@ NS_IMETHODIMP EmbedWindow::OnShowContextMenu(PRUint32 aContextFlags, nsIDOMEvent
 
     PtInvokeCallbackList(cb, (PtWidget_t *)moz, &cbinfo);
 
-    /* store the url we clicked on */
-    nsAutoString rightClickUrl;
-
-    if (aContextFlags & CONTEXT_IMAGE)
+    if( aContextFlags & CONTEXT_IMAGE )
     {
+    		/* store the url we clicked on */
+    		nsAutoString rightClickUrl;
+
         // Get the IMG SRC
         nsresult rv = NS_OK;
         nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(aNode, &rv));
-        if (NS_FAILED(rv))
-            return NS_OK;
+        if(NS_FAILED(rv)) return NS_OK;
 
         rv = imgElement->GetSrc(rightClickUrl);
-        if(NS_FAILED(rv)) 
-        {
-            if( moz->rightClickUrl ) 
-                free( moz->rightClickUrl );
-            moz->rightClickUrl = NULL;
-            return NS_OK;
-        }
+
+    		if( moz->rightClickUrl_image ) free( moz->rightClickUrl_image );
+
+        if(NS_FAILED(rv))  moz->rightClickUrl_image = NULL;
+    		else moz->rightClickUrl_image = ToNewCString(rightClickUrl);
     }
-    else
+
+		if( aContextFlags & CONTEXT_LINK )
     {
+				/* CONTEXT_IMAGE|CONTEXT_LINK is set for an <IMG>  with an <A> as an ancestor */
+				if( aContextFlags & CONTEXT_IMAGE ) {
+					nsIDOMNode *parent;
+					aNode->GetParentNode( &parent );
+					if( parent ) aNode = parent;
+					}
+
+    		/* store the url we clicked on */
+    		nsAutoString rightClickUrl;
+
         nsresult rv = NS_OK;
         nsCOMPtr<nsIDOMHTMLAnchorElement> linkElement(do_QueryInterface(aNode, &rv));
-        if(NS_FAILED(rv)) 
-            return NS_OK;
+
+        if(NS_FAILED(rv)) return NS_OK;
 
         // Note that this string is in UCS2 format
         rv = linkElement->GetHref( rightClickUrl );
-        if(NS_FAILED(rv)) 
-        {
-            if( moz->rightClickUrl ) 
-                free( moz->rightClickUrl );
-            moz->rightClickUrl = NULL;
-            return NS_OK;
-        }
-    }
 
-    if( moz->rightClickUrl ) 
-        free( moz->rightClickUrl );
-    moz->rightClickUrl = ToNewCString(rightClickUrl);
+				if( moz->rightClickUrl_link ) free( moz->rightClickUrl_link );
+
+        if(NS_FAILED(rv)) moz->rightClickUrl_link = NULL;
+				else moz->rightClickUrl_link = ToNewCString(rightClickUrl);
+    }
 
     return NS_OK;
 }

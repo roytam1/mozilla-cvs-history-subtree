@@ -450,26 +450,36 @@ NS_IMETHODIMP nsRenderingContextPh :: CreateDrawingSurface( const nsRect &aBound
 
 NS_IMETHODIMP nsRenderingContextPh :: DrawLine( nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1 ) 
 {
+	nscoord diffX, diffY;
+
 	mTranMatrix->TransformCoord( &aX0, &aY0 );
 	mTranMatrix->TransformCoord( &aX1, &aY1 );
 
-	if( aY0 != aY1 ) aY1--;
-	if( aX0 != aX1 ) aX1--;
+	diffX = aX1 - aX0;
+	diffY = aY1 - aY0;
+
+	if( diffX != 0 ) diffX = ( diffX > 0 ? 1 : -1 );
+	if( diffY != 0 ) diffY = ( diffY > 0 ? 1 : -1 );
 	
 	UpdateGC();
 	
-	PgDrawILine( aX0, aY0, aX1, aY1 );
+	PgDrawILine( aX0, aY0, aX1-diffX, aY1-diffY );
 	return NS_OK;
 }
 
 NS_IMETHODIMP nsRenderingContextPh :: DrawStdLine( nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1 ) 
 {
-	if( aY0 != aY1 ) aY1--;
-	if( aX0 != aX1 ) aX1--;
+	nscoord diffX, diffY;
+
+	diffX = aX1 - aX0;
+	diffY = aY1 - aY0;
+
+	if( diffX != 0 ) diffX = ( diffX > 0 ? 1 : -1 );
+	if( diffY != 0 ) diffY = ( diffY > 0 ? 1 : -1 );
 	
 	UpdateGC();
 	
-	PgDrawILine( aX0, aY0, aX1, aY1 );
+	PgDrawILine( aX0, aY0, aX1-diffX, aY1-diffY );
 	return NS_OK;
 }
 
@@ -775,39 +785,32 @@ NS_IMETHODIMP nsRenderingContextPh::DrawString(const char *aString, PRUint32 aLe
 	
 	PgSetFont( mPhotonFontName );
 
-
-#if 0 /* turn this feature off since it has problems */
 	if( !aSpacing ) {
-#endif
 		mTranMatrix->TransformCoord( &aX, &aY );
 		PhPoint_t pos = { aX, aY };
 		PgDrawTextChars( aString, aLength, &pos, Pg_TEXT_LEFT);
-#if 0 /* turn this feature off since it has problems */
 		}
 	else {
-		nscoord* trSpacing;
-		nscoord trSpacingArray[500];
-		if( aLength > 500 )
-			trSpacing = new nscoord[aLength];
-		else trSpacing = trSpacingArray;
+    nscoord x = aX;
+    nscoord y = aY;
+    const char* end = aString + aLength;
+    while( aString < end ) {
+			const char *ch = aString;
+			int charlen = utf8len( aString, aLength );
+			if( charlen <= 0 )
+				break;
 
-		mTranMatrix->ScaleXCoords(aSpacing, aLength, trSpacing);
+			aString += charlen;
+			aLength -= charlen;
 
-		nscoord x = aX;
-		nscoord y = aY;
-		mTranMatrix->TransformCoord(&x, &y);
-		PhPoint_t pos = { x, y };
-
-		const char *current = aString;
-		for( int i=0; i<aLength; i++ ) {
-			PgDrawText( current++, 1, &pos, Pg_TEXT_LEFT);
-			pos.x += trSpacing[i];
+      nscoord xx = x;
+      nscoord yy = y;
+      mTranMatrix->TransformCoord(&xx, &yy);
+      PhPoint_t pos = { xx, yy };
+			PgDrawText( ch, charlen, &pos, Pg_TEXT_LEFT);
+			x += *aSpacing++;
+			}
 		}
-
-	if( trSpacing != trSpacingArray )
-		delete [] trSpacing;
-	}
-#endif
 
 	return NS_OK;
 }

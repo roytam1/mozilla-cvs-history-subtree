@@ -41,7 +41,9 @@
 #include "nsBaseWidget.h"
 #include "nsIKBStateControl.h"
 #include "nsIRegion.h"
+#ifdef PHOTON_DND
 #include "nsIDragService.h"
+#endif
 
 class nsILookAndFeel;
 class nsIAppShell;
@@ -289,8 +291,10 @@ protected:
 		return ConvertStatus(status);
 		}
 
+#ifdef PHOTON_DND
 	void DispatchDragDropEvent( PRUint32 aEventType, PhPoint_t *pos );
 	void ProcessDrag( PhEvent_t *event, PRUint32 aEventType, PhPoint_t *pos );
+#endif
 
   // this is the "native" destroy code that will destroy any
   // native windows / widgets for this logical widget
@@ -303,7 +307,6 @@ protected:
   //////////////////////////////////////////////////////////////////
   static int      RawEventHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   inline PRBool		HandleEvent( PtWidget_t *, PtCallbackInfo_t* aCbInfo );
-  PRBool          DispatchMouseEvent(PhPoint_t &aPos, PRUint32 aEvent);
   PRBool          DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent);
 
   inline void ScreenToWidgetPos( PhPoint_t &pt )
@@ -323,7 +326,7 @@ protected:
 
 
   /* Convert Photon key codes to Mozilla key codes */
-  PRUint32   nsConvertKey(unsigned long keysym, PRBool *aIsChar);
+  PRUint32   nsConvertKey( unsigned long keysym, unsigned long keymods, PRBool *aIsChar );
 
   //Enable/Disable Photon Damage		  
 	inline void EnableDamage( PtWidget_t *widget, PRBool enable )
@@ -344,7 +347,9 @@ protected:
   static int  GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   static int  LostFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   static int  DestroyedCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
+#ifdef PHOTON_DND
   static int  DndCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
+#endif
 
   PtWidget_t          *mWidget;
   nsIWidget						*mParent;
@@ -359,7 +364,9 @@ protected:
   static PRBool    sJustGotActivated; //For getting rid of the ASSERT ERROR due to reducing suppressing of focus.
   
   static nsILookAndFeel *sLookAndFeel;
+#ifdef PHOTON_DND
 	static nsIDragService *sDragService;
+#endif
   static PRUint32 sWidgetCount;
 };
 

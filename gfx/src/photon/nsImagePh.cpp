@@ -46,135 +46,6 @@
 #include <photon/PxImage.h>
 #include "photon/PhRender.h"
 
-/*******************************************************************/
-#define GR_FPMUL(a,b)	((((uint64_t)(a)) * ((uint64_t)(b))) >> 16)
-#define GR_FPDIV(a,b)	((((uint64_t)(a)) << 16) / ((uint64_t)(b)))
-
-PhImage_t *MyPiResizeImage(PhImage_t *image,PhRect_t const *bounds,short w,short h,int flags)
-{
-	PhRect_t oldRect,newRect,srcRect;
-	PhPoint_t dst,src;
-	PhImage_t *newImage;
-	unsigned long value,xScale,yScale,xScaleInv = 0,yScaleInv = 0;
-	char *ptr,*new_mask_ptr;
-	char const *old_mask_ptr;
-	struct
-	{
-		unsigned long x,y;
-	} next;
-
-	if(bounds)
-		srcRect = *bounds;
-	else
-	{
-		srcRect.ul.x = srcRect.ul.y = 0;
-		srcRect.lr.x = image->size.w - 1;
-		srcRect.lr.y = image->size.h - 1;
-	}
-
-	oldRect.ul.x = oldRect.ul.y = 0;
-	oldRect.lr.x = w - 1;
-	oldRect.lr.y = h - 1;
-
-#ifdef DEBUG_Adrian
-printf( "MyPiResizeImage\n" );
-#endif
-			
-	if(!(newImage = PiInitImage(image,(PhRect_t const*)(&oldRect),&newRect,image->type,flags | Pi_USE_COLORS,image->colors)))
-		return(NULL);
-
-	memset(newImage->image, 0x22, newImage->bpl*newImage->size.h);
-	
-	if((xScale = GR_FPDIV(newImage->size.w << 16,(srcRect.lr.x - srcRect.ul.x + 1) << 16)) <= 0x10000)
-		xScaleInv = GR_FPDIV((srcRect.lr.x - srcRect.ul.x + 1) << 16,newImage->size.w << 16);
-	if((yScale = GR_FPDIV(newImage->size.h << 16,(srcRect.lr.y - srcRect.ul.y + 1) << 16)) <= 0x10000)
-		yScaleInv = GR_FPDIV((srcRect.lr.y - srcRect.ul.y + 1) << 16,newImage->size.h << 16);
-
-	for(dst.y = 0,next.y = srcRect.ul.y << 16,src.y = srcRect.ul.y,ptr = newImage->image,old_mask_ptr = image->mask_bm,new_mask_ptr = newImage->mask_bm;
-	  dst.y < newImage->size.h;
-	  dst.y++,ptr += newImage->bpl,new_mask_ptr += newImage->mask_bpl)
-	{
-		if(yScaleInv)
-		{
-			src.y = next.y >> 16;
-			next.y += yScaleInv;
-		}
-		else
-		{
-			if(dst.y < (next.y >> 16) || src.y > srcRect.lr.y)
-			{
-				memcpy(ptr,ptr - newImage->bpl,newImage->bpl);
-				if(newImage->mask_bm)
-					memcpy(new_mask_ptr,new_mask_ptr - newImage->mask_bpl,newImage->mask_bpl);
-
-				continue;
-			}
-			else
-				next.y += yScale;
-		}
-
-		if(newImage->mask_bm)
-			old_mask_ptr = image->mask_bm + (src.y * image->mask_bpl);
-
-		if(xScaleInv)
-		{
-			for(dst.x = 0,next.x = srcRect.ul.x << 16,src.x = srcRect.ul.x;
-			  dst.x < newImage->size.w;dst.x++,next.x += xScaleInv)
-			{
-				src.x = next.x >> 16;
-				PiGetPixel((const PhImage_t *)image,src.x,src.y,&value);
-				PiSetPixel(newImage,dst.x,dst.y,value);
-				
-				if(newImage->mask_bm && !PiGetPixelFromData((const uint8_t *)old_mask_ptr,Pg_BITMAP_TRANSPARENT,src.x,&value))
-				{
-					if(!value)
-						PiSetPixelInData((uint8_t *)new_mask_ptr,Pg_BITMAP_TRANSPARENT,dst.x,0);
-				}
-			}
-		}
-		else
-		{
-			unsigned long color = 0;
-			
-			for(dst.x = 0,next.x = srcRect.ul.x << 16,src.x = srcRect.ul.x;
-			  dst.x < newImage->size.w;dst.x++)
-			{
-				if(dst.x == (next.x >> 16) && src.y <= srcRect.lr.y)
-				{
-					if(!PiGetPixel((const PhImage_t *)image,src.x,src.y,&color) && (!newImage->mask_bm || PiGetPixelFromData((const uint8_t *)old_mask_ptr,Pg_BITMAP_TRANSPARENT,src.x,&value)))
-						value = 1;
-
-					next.x += xScale;
-					
-					src.x++;
-				}
-					
-				PiSetPixel(newImage,dst.x,dst.y,color);
-				
-				if(!value)
-					PiSetPixelInData((uint8_t *)new_mask_ptr,Pg_BITMAP_TRANSPARENT,dst.x,0);
-			}
-		}
-		
-		if(!yScaleInv)
-			src.y++;
-	}
-
-	/* Calculate CRC tags for new image */
-
-	if(!(flags & Pi_SUPPRESS_CRC))
-		newImage->image_tag = PtCRC(newImage->image,newImage->bpl * newImage->size.h);
-
-	if(flags & Pi_FREE)
-	{
-		image->flags |= Ph_RELEASE_IMAGE | Ph_RELEASE_PALETTE | Ph_RELEASE_TRANSPARENCY_MASK | Ph_RELEASE_GHOST_BITMAP;
-		PhReleaseImage(image);
-	}
-
-	return(newImage);	
-}
-/*******************************************************************/
-
 //#define ALLOW_PHIMAGE_CACHEING
 #define IsFlagSet(a,b) (a & b)
 
@@ -502,8 +373,8 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 
 					/* this is trying to estimate the image data size of the zoom image */
 					if (( mPhImage.bpl * scaled_w * scaled_h / mPhImage.size.w ) < IMAGE_SHMEM_THRESHOLD)
-						mPhImageZoom = MyPiResizeImage( &mPhImage, NULL, scaled_w, scaled_h, Pi_USE_COLORS);
-					else mPhImageZoom = MyPiResizeImage( &mPhImage, NULL, scaled_w, scaled_h, Pi_USE_COLORS|Pi_SHMEM);
+						mPhImageZoom = PiResizeImage( &mPhImage, NULL, scaled_w, scaled_h, Pi_USE_COLORS);
+					else mPhImageZoom = PiResizeImage( &mPhImage, NULL, scaled_w, scaled_h, Pi_USE_COLORS|Pi_SHMEM);
 
 ///* ATENTIE */ printf( "\t\t\tzoom from=%d,%d to=%d,%d\n", mPhImage.size.w, mPhImage.size.h, scaled_w, scaled_h );
 					}
@@ -802,9 +673,9 @@ NS_IMETHODIMP nsImagePh::DrawToImage(nsIImage* aDstImage,
 		{
 			release = 1;
 			if ((aDHeight * mPhImage.bpl) < IMAGE_SHMEM_THRESHOLD)
-				pimage = MyPiResizeImage(&mPhImage, NULL, aDWidth, aDHeight, Pi_USE_COLORS);
+				pimage = PiResizeImage(&mPhImage, NULL, aDWidth, aDHeight, Pi_USE_COLORS);
 			else
-				pimage = MyPiResizeImage(&mPhImage, NULL, aDWidth, aDHeight, Pi_USE_COLORS|Pi_SHMEM);
+				pimage = PiResizeImage(&mPhImage, NULL, aDWidth, aDHeight, Pi_USE_COLORS|Pi_SHMEM);
 			if( !pimage ) pimage = &mPhImage;
 		}
 		else pimage = &mPhImage;

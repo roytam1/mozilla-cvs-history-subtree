@@ -95,12 +95,6 @@ extern PtWidgetClassRef_t *PtMozilla;
 	(d)[MAX_URL_LENGTH-1] = 0;\
 	}
 
-#define VOYAGER_TEXTSIZE0         14
-#define VOYAGER_TEXTSIZE1         16
-#define VOYAGER_TEXTSIZE2         18
-#define VOYAGER_TEXTSIZE3         20
-#define VOYAGER_TEXTSIZE4         24
-
 typedef enum
 {
   MOZ_EMBED_FLAG_RELOADNORMAL = 0,
@@ -329,10 +323,18 @@ typedef struct Pt_mozilla_client_widget
 
 	char				url[MAX_URL_LENGTH];
 	int 				navigate_flags;
-	int 				disable_exception_dlg;
-	int 				disable_new_windows;
+	char        disable_exception_dlg, disable_new_windows, old_style_text_zoom, spare[1];
 
-	char				*rightClickUrl; /* keep the url the user clicked on, to provide it latter for Pt_ARG_WEB_GET_CONTEXT */
+  /* text_zoom is the text zooming as set by the client ( 100 = 100% ) */
+  short int   text_zoom;
+  /* actual_text_zoom is the text zooming as returned by the browser - when a window is being created
+    the client tries to set the text zooming, but there is no content loaded. Use actual_text_zoom
+    to remember to set the zooming when the content is loaded */
+  short int actual_text_zoom;
+
+  char *rightClickUrl_image; /* keep the url the user clicked on, to provide it latter for Pt_ARG_WEB_GET_CONTEXT */
+  char *rightClickUrl_link; /* keep the url the user clicked on, to provide it latter for Pt_ARG_WEB_GET_CONTEXT */
+
 	char				*download_dest;
 
 	PtMozillaAuthCtrl_t *moz_auth_ctrl;

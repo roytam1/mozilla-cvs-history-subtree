@@ -229,8 +229,10 @@ NS_IMETHODIMP nsAppShell::Create(int *bac, char **bav)
 		mPtInited = PR_TRUE;
 
 #ifdef MOZ_ENABLE_XREMOTE
-		/* create a connector for the xremote control */
-		PtConnectorCreate( RemoteServerName, client_connect, NULL );
+		if( argc > 0 && argv && argv[0] ) { /* the embedded mozserver will not attach a remote connector */
+			/* create a connector for the xremote control */
+			PtConnectorCreate( RemoteServerName, client_connect, NULL );
+			}
 #endif
 	}
 
@@ -255,8 +257,7 @@ NS_METHOD nsAppShell::Spinup()
   }
 
   //Get the event queue for the thread.
-  //rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
-  rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &mEventQueue);
+	rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
 
   // If we got an event queue, use it.
   if (mEventQueue)
@@ -270,8 +271,7 @@ NS_METHOD nsAppShell::Spinup()
   }
 
   // Ask again nicely for the event queue now that we have created one.
-  //rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
-  rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &mEventQueue);
+	rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
 
   // XXX shouldn't this be automatic?
  done:

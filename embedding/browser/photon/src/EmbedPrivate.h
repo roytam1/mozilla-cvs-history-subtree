@@ -177,6 +177,7 @@ nsCOMPtr<nsISupports> context;
   void GetListener    (void);
   void AttachListeners(void);
   void DetachListeners(void);
+	void PrintHeaderFooter_FormatSpecialCodes(const char *original, nsString& aNewStr);
 
 };
 

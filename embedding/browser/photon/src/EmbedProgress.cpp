@@ -39,6 +39,8 @@
 #include <netCore.h>
 #include "nsGfxCIID.h"
 
+#include "nsIDOMWindow.h"
+
 #include "EmbedWindow.h"
 #include "EmbedPrivate.h"
 
@@ -185,6 +187,17 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
 
 			if( ( cb = moz->complete_cb ) )
 				PtInvokeCallbackList(cb, (PtWidget_t *) moz, &cbinfo);
+
+      if( moz->text_zoom != moz->actual_text_zoom ) {
+        nsCOMPtr<nsIDOMWindow> domWindow;
+        moz->EmbedRef->mWindow->mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+        if(domWindow) {
+          domWindow->SetTextZoom( moz->text_zoom/100. );
+          float vv;
+          domWindow->GetTextZoom( &vv );
+          moz->actual_text_zoom = (int) ( vv * 100 );
+          }
+        }
     	}
 	}
 

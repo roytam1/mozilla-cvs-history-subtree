@@ -42,7 +42,7 @@
 #include <Pt.h>
 #include <photon/PtServer.h>
 #include "PtRawDrawContainer.h"
-#include "nsCRT.h"					/* JPB - Added to get around nsCRT undeclared issues... */
+#include "nsCRT.h"
 
 #include "nsWindow.h"
 #include "nsWidgetsCID.h"
@@ -346,12 +346,14 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
 
 	  	int	fields = Ph_REGION_PARENT|Ph_REGION_HANDLE| Ph_REGION_FLAGS|Ph_REGION_ORIGIN|Ph_REGION_EV_SENSE|Ph_REGION_EV_OPAQUE|Ph_REGION_RECT;
 	  	int sense =  Ph_EV_BUT_PRESS | Ph_EV_BUT_RELEASE | Ph_EV_BUT_REPEAT;
+			PtCallback_t cb_destroyed = { MenuRegionDestroyed, NULL };
 
       PtSetArg( &arg[arg_count++], Pt_ARG_REGION_FIELDS,   fields, fields );
       PtSetArg( &arg[arg_count++], Pt_ARG_REGION_PARENT,   Ph_ROOT_RID, 0 );
       PtSetArg( &arg[arg_count++], Pt_ARG_REGION_SENSE,    sense | Ph_EV_DRAG|Ph_EV_EXPOSE, sense | Ph_EV_DRAG|Ph_EV_EXPOSE);
-      PtSetArg( &arg[arg_count++], Pt_ARG_REGION_OPAQUE,   sense | Ph_EV_DRAG|Ph_EV_EXPOSE|Ph_EV_DRAW, sense |Ph_EV_DRAG|Ph_EV_EXPOSE|Ph_EV_DRAW);
+      PtSetArg( &arg[arg_count++], Pt_ARG_REGION_OPAQUE,   sense | Ph_EV_DRAG|Ph_EV_EXPOSE|Ph_EV_DRAW|Ph_EV_BLIT, sense |Ph_EV_DRAG|Ph_EV_EXPOSE|Ph_EV_DRAW|Ph_EV_BLIT);
       PtSetArg( &arg[arg_count++], Pt_ARG_FLAGS, Pt_DELAY_REALIZE, Pt_GETS_FOCUS | Pt_DELAY_REALIZE);
+			PtSetArg( &arg[arg_count++], Pt_CB_DESTROYED, &cb_destroyed, 0 );
       mWidget = PtCreateWidget( PtRegion, parentWidget, arg_count, arg);
 
     	// Must also create the client-area widget
@@ -371,7 +373,7 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
 		PtSetArg( &arg[arg_count++], Pt_ARG_FLAGS, Pt_DELAY_REALIZE, Pt_DELAY_REALIZE);
 		PtSetArg( &arg[arg_count++], Pt_ARG_WINDOW_RENDER_FLAGS, render_flags, -1 );
 		PtSetArg( &arg[arg_count++], Pt_ARG_WINDOW_MANAGED_FLAGS, 0, Ph_WM_CLOSE );
-		PtSetArg( &arg[arg_count++], Pt_ARG_WINDOW_NOTIFY_FLAGS, Ph_WM_CLOSE|Ph_WM_MOVE, ~0 );
+		PtSetArg( &arg[arg_count++], Pt_ARG_WINDOW_NOTIFY_FLAGS, Ph_WM_CLOSE|Ph_WM_CONSWITCH|Ph_WM_FOCUS, ~0 );
 		PtSetArg( &arg[arg_count++], Pt_ARG_FILL_COLOR, Pg_TRANSPARENT, 0 );
 
 		PtRawCallback_t cb_raw = { Ph_EV_INFO, EvInfo, NULL };
@@ -392,7 +394,7 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
       	PtAddCallback(mWidget, Pt_CB_RESIZE, ResizeHandler, nsnull ); 
       	PtAddEventHandler( mWidget,
       	  Ph_EV_PTR_MOTION_BUTTON | Ph_EV_PTR_MOTION_NOBUTTON |
-      	  Ph_EV_BUT_PRESS | Ph_EV_BUT_RELEASE |Ph_EV_BOUNDARY|Ph_EV_DRAG /* | Ph_EV_WM | Ph_EV_EXPOSE */
+      	  Ph_EV_BUT_PRESS | Ph_EV_BUT_RELEASE |Ph_EV_BOUNDARY|Ph_EV_DRAG
       	  , RawEventHandler, this );
 	
     		PtArg_t arg;
@@ -407,10 +409,10 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
     else if( mWindowType == eWindowType_popup ) {
       		PtAddEventHandler( mClientWidget,
       			 	Ph_EV_PTR_MOTION_BUTTON | Ph_EV_PTR_MOTION_NOBUTTON | 
-      		  	Ph_EV_BUT_PRESS | Ph_EV_BUT_RELEASE |Ph_EV_BOUNDARY | Ph_EV_WM /*| Ph_EV_EXPOSE*/,
+      		  	Ph_EV_BUT_PRESS | Ph_EV_BUT_RELEASE |Ph_EV_BOUNDARY,
       			  RawEventHandler, this );
 
-      		PtAddEventHandler( mWidget, Ph_EV_DRAG /*| Ph_EV_EXPOSE*/, RawEventHandler, this );
+      		PtAddEventHandler( mWidget, Ph_EV_DRAG, RawEventHandler, this );
 
       		PtArg_t arg;
       		PtRawCallback_t callback;
@@ -433,6 +435,9 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
     result = NS_OK;
   	}
 
+  /* force SetCursor to actually set the cursor, even though our internal state indicates that we already
+     have the standard cursor */
+  mCursor = eCursor_wait;
   SetCursor( mCursor );
 
   return result;
@@ -619,9 +624,6 @@ int nsWindow::WindowWMHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t 
 {
 	PhWindowEvent_t *we = (PhWindowEvent_t *) cbinfo->cbdata;
 	switch( we->event_f ) {
-		case Ph_WM_MOVE:
-			gConsoleRectValid = PR_FALSE; /* force a call tp PhWindowQueryVisible() next time, since we might have moved this window into a different console */
-			break;
 		case Ph_WM_CLOSE:
 		  {
 				nsWindow * win = (nsWindow*) data;
@@ -644,6 +646,19 @@ int nsWindow::WindowWMHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t 
 			  NS_RELEASE(win);
 		  }
 		break;
+
+		case Ph_WM_CONSWITCH:
+			gConsoleRectValid = PR_FALSE; /* force a call tp PhWindowQueryVisible() next time, since we might have moved this window into a different console */
+      /* rollup the menus */
+      if( gRollupWidget && gRollupListener ) gRollupListener->Rollup();
+			break;
+
+		case Ph_WM_FOCUS:
+			if( we->event_state == Ph_WM_EVSTATE_FOCUSLOST ) {
+      	/* rollup the menus */
+      	if( gRollupWidget && gRollupListener ) gRollupListener->Rollup();
+				}
+			break;
 	}
 	
 	return Pt_CONTINUE;
@@ -827,16 +842,12 @@ int nsWindow::EvInfo( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
 //
 //-------------------------------------------------------------------------
 NS_METHOD nsWindow::Move( PRInt32 aX, PRInt32 aY ) {
-	PRInt32 origX, origY;
 
-
-	if( mWindowType != eWindowType_popup && (mBounds.x == aX) && (mBounds.y == aY) ) {
+	if( mWindowType != eWindowType_popup && (mBounds.x == aX) && (mBounds.y == aY) )
 		return NS_OK;
-		}
 
-	/* Keep an untouched version of the coordinates laying around for comparison */
-	origX=aX;
-	origY=aY;
+	mBounds.x = aX;
+	mBounds.y = aY;
 
 	switch( mWindowType ) {
 		case eWindowType_popup:
@@ -877,16 +888,14 @@ NS_METHOD nsWindow::Move( PRInt32 aX, PRInt32 aY ) {
 			break;
 		}
 
-	/* Call my base class */
-	nsresult res = nsWidget::Move(aX, aY);
+  if( mWidget ) {
+    if(( mWidget->area.pos.x != aX ) || ( mWidget->area.pos.y != aY )) {
+      PhPoint_t pos = { aX, aY };
+      PtSetResource( mWidget, Pt_ARG_POS, &pos, 0 );
+    	}
+  	}
 
-	/* If I am a top-level window my origin should always be 0,0 */
-	if( mWindowType != eWindowType_child ) {
-		mBounds.x = origX;
-		mBounds.y = origY;
-		}
-
-	return res;
+	return NS_OK;
 	}
 
 int nsWindow::MenuRegionCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo ) {
@@ -932,4 +941,19 @@ inline nsIRegion *nsWindow::GetRegion()
   NS_ASSERTION(NULL != region, "Null region context");
   
   return region;  
+}
+
+/*
+	widget is a PtRegion representing the native widget for a menu - reset the mParent->mLastMenu
+	since it points to an widget being destroyed
+*/
+int nsWindow::MenuRegionDestroyed( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
+{
+	nsWindow *pWin = (nsWindow *) GetInstance( widget );
+	if( pWin ) {
+		nsWindow *parent = ( nsWindow * ) pWin->mParent;
+		if( parent && parent->mLastMenu == widget )
+			parent->mLastMenu = nsnull;
+		}
+	return Pt_CONTINUE;
 }
