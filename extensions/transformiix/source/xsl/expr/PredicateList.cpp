@@ -116,7 +116,7 @@ void PredicateList::evaluatePredicates(NodeSet* nodes, ContextState* cs) {
  * returns true if this predicate list is empty
 **/
 MBool PredicateList::isEmpty() {
-    return (MBool)(predicates.getLength()>0);
+    return (MBool)(predicates.getLength() == 0);
 } //-- isEmpty
 
 /**
