@@ -34,6 +34,10 @@
 #define __LITTLE_ENDIAN
 #endif
 
+#ifdef X86_LINUX
+#define __LITTLE_ENDIAN
+#endif
+
 /* End here. The rest is the standard file. */
 
 #ifdef __NEWVALID	/* special setup for Sun test regime */
