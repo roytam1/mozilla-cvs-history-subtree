@@ -53,7 +53,7 @@ CMT_DoEncryptionRequest(CMTItem *message)
   /* Initialize */
   request.keyid.data = 0;
   request.data.data = 0;
-  reply.item.data;
+  reply.item.data = 0;
 
   /* Decode incoming message */
   rv = CMT_DecodeMessage(EncryptRequestTemplate, &request, message);
