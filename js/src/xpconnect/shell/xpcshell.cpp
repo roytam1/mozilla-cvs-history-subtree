@@ -765,7 +765,8 @@ NS_IMETHODIMP TestGlobal::Squawk() {return NS_OK;}
 
 #endif
 
-#define TEST_TranslateThis
+// uncomment to install the test 'this' translator
+// #define TEST_TranslateThis
 
 #ifdef TEST_TranslateThis
 
