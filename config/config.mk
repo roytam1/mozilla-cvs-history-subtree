@@ -262,6 +262,15 @@ OS_CFLAGS += $(DEBUG_FLAGS)
 OS_CXXFLAGS += $(DEBUG_FLAGS)
 
 #
+# List known meta modules and their dependent libs
+#
+_ALL_META_COMPONENTS=mail crypto
+
+MOZ_META_COMPONENTS_mail = nsMsgBaseModule IMAP_factory nsVCardModule mime_services nsMimeEmitterModule nsMsgNewsModule  nsMsgComposeModule local_mail_services nsAbSyncModule nsImportServiceModule nsTextImportModule nsAbModule nsMsgDBModule
+MOZ_META_COMPONENTS_mail_comps = mailnews msgimap mime mimeemitter msgnews msgcompose localmail absyncsvc import addrbook impText vcard msgdb #smime
+MOZ_META_COMPONENTS_mail_libs = msgbaseutil
+
+#
 # Build using PIC by default
 # Do not use PIC if not building a shared lib (see exceptions below)
 #
@@ -272,9 +281,24 @@ endif
 
 ifdef IS_COMPONENT
 ifneq (,$(MOZ_STATIC_COMPONENT_LIBS)$(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
+ifdef COMPONENT_NAME
 DEFINES += -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT=1
 FORCE_STATIC_LIB=1
 endif
+endif
+endif
+
+# Determine if module being compiled is destined 
+# to be merged into a meta module in the future
+ifneq (, $(findstring $(META_COMPONENT), $(MOZ_META_COMPONENTS)))
+ifdef IS_COMPONENT
+ifdef COMPONENT_NAME
+DEFINES += -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT=1
+endif
+endif
+EXPORT_LIBRARY=
+FORCE_STATIC_LIB=1
+_ENABLE_PIC=1
 endif
 
 #
