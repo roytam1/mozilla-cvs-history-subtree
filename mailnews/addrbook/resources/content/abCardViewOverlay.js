@@ -156,20 +156,26 @@ gPrefs = gPrefs.QueryInterface(Components.interfaces.nsIPrefBranch);
 	
 function DisplayCardViewPane(card)
 {
-	var generatedName = card.getGeneratedName(gPrefs.getIntPref("mail.addr_book.lastnamefirst"));
+  var generatedName = card.getGeneratedName(gPrefs.getIntPref("mail.addr_book.lastnamefirst"));
 		
-	var data = top.cvData;
-	var visible;
+  var data = top.cvData;
+  var visible;
 
-	// set fields in card view pane
+  var titleString;
+  if (generatedName == "")
+    titleString = card.primaryEmail;  // if no generatedName, use email
+  else
+    titleString = generatedName;
+
+  // set fields in card view pane
   if (card.isMailList)
-  	cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewListTitle", [generatedName]));
-	else
-    cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewCardTitle", [generatedName]));
+    cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewListTitle", [generatedName]));
+  else
+    cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewCardTitle", [titleString]));
 	
-	// Name section
-	cvSetNode(data.cvhName, generatedName);
-	cvSetNodeWithLabel(data.cvNickname, zNickname, card.nickName);
+  // Name section
+  cvSetNode(data.cvhName, titleString);
+  cvSetNodeWithLabel(data.cvNickname, zNickname, card.nickName);
 
   if (card.isMailList) {
     // email1 and display name always hidden when a mailing list.
