@@ -353,11 +353,7 @@ CAdvancedCategory::CSpecifyAdvancedPageObjects::GetPageObjects(CAPPAGE *pPages)
 	if (!pPages)
 		return ResultFromScode(E_POINTER);
 
-#ifdef MOZ_MAIL_NEWS
-	pPages->cElems = 4;
-#else
 	pPages->cElems = 3;
-#endif /* MOZ_MAIL_NEWS */
 	pPages->pElems = (LPPROPERTYPAGE *)CoTaskMemAlloc(pPages->cElems * sizeof(LPPROPERTYPAGE));
 	if (!pPages->pElems)
 		return ResultFromScode(E_OUTOFMEMORY);
@@ -365,9 +361,6 @@ CAdvancedCategory::CSpecifyAdvancedPageObjects::GetPageObjects(CAPPAGE *pPages)
 	pPages->pElems[0] = new CAdvancedPrefs;
 	pPages->pElems[1] = new CCachePrefs;
 	pPages->pElems[2] = new CProxiesPrefs;
-#ifdef MOZ_MAIL_NEWS   
-	pPages->pElems[3] = new CDiskSpacePrefs;
-#endif /* MOZ_MAIL_NEWS */
 	
 	for (ULONG i = 0; i < pPages->cElems; i++)
 		pPages->pElems[i]->AddRef();
