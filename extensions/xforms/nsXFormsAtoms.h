@@ -46,6 +46,13 @@ class nsXFormsAtoms
   static nsIAtom *src;
   static nsIAtom *bind;
   static nsIAtom *nodeset;
+  static nsIAtom *type;
+  static nsIAtom *readonly;
+  static nsIAtom *required;
+  static nsIAtom *relevant;
+  static nsIAtom *calculate;
+  static nsIAtom *constraint;
+  static nsIAtom *p3ptype;
 
   static NS_HIDDEN_(void) InitAtoms();
 

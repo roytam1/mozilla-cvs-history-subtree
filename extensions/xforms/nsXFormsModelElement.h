@@ -44,8 +44,6 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMDocument.h"
-#include "nsClassHashtable.h"
-#include "nsIDocumentObserver.h"
 
 #include "nsISchemaLoader.h"
 
@@ -54,8 +52,7 @@ class nsIDOMXPathEvaluator;
 class nsXFormsModelElement : public nsIXTFGenericElement,
                              public nsIXFormsModelElement,
                              public nsISchemaLoadListener,
-                             public nsIDOMLoadListener,
-                             public nsIDocumentObserver
+                             public nsIDOMLoadListener
 {
 public:
   nsXFormsModelElement() NS_HIDDEN;
@@ -66,7 +63,6 @@ public:
   NS_DECL_NSIXFORMSMODELELEMENT
   NS_DECL_NSISCHEMALOADLISTENER
   NS_DECL_NSIDOMEVENTLISTENER
-  NS_DECL_NSIDOCUMENTOBSERVER
 
   // nsIDOMLoadListener
   NS_IMETHOD Load(nsIDOMEvent* aEvent);
@@ -78,6 +74,10 @@ public:
   NS_HIDDEN_(nsresult) DispatchEvent(const char *aEvent,
                                      PRBool aCanBubble, PRBool aCanCancel,
                                      PRBool *aDefaultPrevented);
+
+  // Called after nsXFormsAtoms is registered
+  static NS_HIDDEN_(void) Startup();
+
 private:
   class ModelItemProperties;
 
@@ -91,7 +91,6 @@ private:
   nsCOMPtr<nsIContent> mContent;
   nsCOMArray<nsISchema> mSchemas;
   nsCOMPtr<nsIDOMDocument> mInstanceDocument;
-  nsClassHashtable<nsISupportsHashKey,ModelItemProperties> mProperties;
 
   PRInt32 mSchemaCount;
   PRBool  mInstanceDataLoaded;

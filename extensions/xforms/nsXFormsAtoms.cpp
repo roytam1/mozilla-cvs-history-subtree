@@ -44,13 +44,27 @@ nsIAtom* nsXFormsAtoms::instance;
 nsIAtom* nsXFormsAtoms::src;
 nsIAtom* nsXFormsAtoms::bind;
 nsIAtom* nsXFormsAtoms::nodeset;
+nsIAtom* nsXFormsAtoms::type;
+nsIAtom* nsXFormsAtoms::readonly;
+nsIAtom* nsXFormsAtoms::required;
+nsIAtom* nsXFormsAtoms::relevant;
+nsIAtom* nsXFormsAtoms::calculate;
+nsIAtom* nsXFormsAtoms::constraint;
+nsIAtom* nsXFormsAtoms::p3ptype;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "schema",   &nsXFormsAtoms::schema },
-  { "instance", &nsXFormsAtoms::instance },
-  { "src",      &nsXFormsAtoms::src },
-  { "bind",     &nsXFormsAtoms::bind },
-  { "nodeset",  &nsXFormsAtoms::nodeset }
+  { "schema",     &nsXFormsAtoms::schema },
+  { "instance",   &nsXFormsAtoms::instance },
+  { "src",        &nsXFormsAtoms::src },
+  { "bind",       &nsXFormsAtoms::bind },
+  { "nodeset",    &nsXFormsAtoms::nodeset },
+  { "type",       &nsXFormsAtoms::type },
+  { "readonly",   &nsXFormsAtoms::readonly },
+  { "required",   &nsXFormsAtoms::required },
+  { "relevant",   &nsXFormsAtoms::relevant },
+  { "calculate",  &nsXFormsAtoms::calculate },
+  { "constraint", &nsXFormsAtoms::constraint },
+  { "p3ptype",    &nsXFormsAtoms::p3ptype }
 };
 
 void

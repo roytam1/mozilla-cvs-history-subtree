@@ -39,6 +39,7 @@
 #include "nsIGenericFactory.h"
 #include "nsXFormsElementFactory.h"
 #include "nsXFormsAtoms.h"
+#include "nsXFormsModelElement.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsElementFactory)
 
@@ -53,6 +54,7 @@ PR_STATIC_CALLBACK(nsresult)
 XFormsModuleCtor(nsIModule* aSelf)
 {
   nsXFormsAtoms::InitAtoms();
+  nsXFormsModelElement::Startup();
   return NS_OK;
 }
 

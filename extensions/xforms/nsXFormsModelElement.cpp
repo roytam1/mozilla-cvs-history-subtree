@@ -105,22 +105,29 @@ EVENT_HELPER_NC(LinkException, "link-exception", PR_TRUE)
 EVENT_HELPER_NC(LinkError, "link-error", PR_TRUE)
 EVENT_HELPER_NC(ComputeException, "compute-exception", PR_TRUE)
 
+enum ModelItemPropName
+{
+  eModel_type,
+  eModel_readonly,
+  eModel_required,
+  eModel_relevant,
+  eModel_calculate,
+  eModel_constraint,
+  eModel_p3ptype,
+  eModel__count
+};
+
+static nsIAtom* sModelPropsList[eModel__count];
+
 struct nsXFormsModelElement::ModelItemProperties
 {
-  nsCOMPtr<nsIDOMXPathExpression> type;
-  nsCOMPtr<nsIDOMXPathExpression> readonly;
-  nsCOMPtr<nsIDOMXPathExpression> required;
-  nsCOMPtr<nsIDOMXPathExpression> relevant;
-  nsCOMPtr<nsIDOMXPathExpression> calculate;
-  nsCOMPtr<nsIDOMXPathExpression> constraint;
-  nsCOMPtr<nsIDOMXPathExpression> p3ptype;
+  nsCOMPtr<nsIDOMXPathExpression> properties[eModel__count];
 };
 
 nsXFormsModelElement::nsXFormsModelElement()
   : mSchemaCount(0),
     mInstanceDataLoaded(PR_FALSE)
 {
-  mProperties.Init();  // XXX tune default size
 }
 
 NS_IMPL_ADDREF(nsXFormsModelElement)
@@ -133,7 +140,6 @@ NS_INTERFACE_MAP_BEGIN(nsXFormsModelElement)
   NS_INTERFACE_MAP_ENTRY(nsISchemaLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
-  NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXTFElement)
 NS_INTERFACE_MAP_END
 
@@ -515,52 +521,6 @@ nsXFormsModelElement::Error(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-// nsIDocumentObserver
-NS_IMPL_NSIDOCUMENTOBSERVER_CORE_STUB(nsXFormsModelElement)
-NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(nsXFormsModelElement)
-NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(nsXFormsModelElement)
-NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(nsXFormsModelElement)
-NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(nsXFormsModelElement)
-
-void
-nsXFormsModelElement::CharacterDataChanged(nsIDocument *aDocument,
-                                           nsIContent  *aContent,
-                                           PRBool       aAppend)
-{
-}
-
-void
-nsXFormsModelElement::AttributeChanged(nsIDocument *aDocument,
-                                       nsIContent  *aContent,
-                                       PRInt32      aNameSpaceID,
-                                       nsIAtom     *aAttribute,
-                                       PRInt32      aModType)
-{
-}
-
-void
-nsXFormsModelElement::ContentAppended(nsIDocument *aDocument,
-                                      nsIContent  *aContent,
-                                      PRInt32      aNewIndexInContainer)
-{
-}
-
-void
-nsXFormsModelElement::ContentInserted(nsIDocument *aDocument,
-                                      nsIContent  *aContainer,
-                                      nsIContent  *aChild,
-                                      PRInt32      aIndexInContainer)
-{
-}
-
-void
-nsXFormsModelElement::ContentRemoved(nsIDocument *aDocument,
-                                     nsIContent  *aContainer,
-                                     nsIContent  *aChild,
-                                     PRInt32      aIndexInContainer)
-{
-}
-
 // internal methods
 
 nsresult
@@ -595,27 +555,79 @@ nsXFormsModelElement::FinishConstruction()
   return NS_OK;
 }
 
+static void
+ReleaseExpr(void    *aElement,
+            nsIAtom *aPropertyName,
+            void    *aPropertyValue,
+            void    *aData)
+{
+  nsIDOMXPathExpression *expr = NS_STATIC_CAST(nsIDOMXPathExpression*,
+                                               aElement);
+
+  NS_RELEASE(expr);
+}
+
 PRBool
 nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
                                   nsIContent *aBindElement)
 {
+  // Get the expression for the nodes that this <bind> applies to.
   nsAutoString expr;
   aBindElement->GetAttr(kNameSpaceID_None, nsXFormsAtoms::nodeset, expr);
   if (expr.IsEmpty())
     return PR_TRUE;
 
-  // nodeset is an XPath PathExpr that refers to a set of nodes.
-  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aBindElement);
   nsCOMPtr<nsIDOMXPathNSResolver> resolver;
-  aEvaluator->CreateNSResolver(node, getter_AddRefs(resolver));
+  aEvaluator->CreateNSResolver(nsCOMPtr<nsIDOMNode>(do_QueryInterface(aBindElement)),
+                               getter_AddRefs(resolver));
+
+  // Get the model item properties specified by this <bind>.
+  nsCOMPtr<nsIDOMXPathExpression> props[eModel__count];
+  nsAutoString exprString;
+  PRInt32 propCount = 0;
+  nsresult rv = NS_OK;
+
+  for (int i = 0; i < eModel__count; ++i) {
+    if (aBindElement->GetAttr(kNameSpaceID_None, sModelPropsList[i], exprString) != NS_CONTENT_ATTR_NOT_THERE) {
+      rv = aEvaluator->CreateExpression(exprString, resolver,
+                                        getter_AddRefs(props[i]));
+      if (NS_FAILED(rv))
+        return PR_FALSE;
+
+      ++propCount;
+    }
+  }
+
+  if (propCount == 0)
+    return PR_TRUE;  // successful, but nothing to do
 
   nsCOMPtr<nsIDOMXPathResult> result;
-  nsresult rv = aEvaluator->Evaluate(expr, mInstanceDocument, resolver,
-                                     nsIDOMXPathResult::ANY_TYPE, nsnull,
-                                     getter_AddRefs(result));
+  rv = aEvaluator->Evaluate(expr, mInstanceDocument, resolver,
+                            nsIDOMXPathResult::ORDERED_NODE_ITERATOR_TYPE,
+                            nsnull, getter_AddRefs(result));
   if (NS_FAILED(rv))
     return PR_FALSE;
 
+  nsCOMPtr<nsIDOMNode> node;
+  while (NS_SUCCEEDED(result->IterateNext(getter_AddRefs(node))) && node) {
+    // We must check whether the properties already exist on the node.
+    for (int j = 0; j < eModel__count; ++j) {
+      if (props[j]) {
+        nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+        nsIDOMXPathExpression *expr = props[j];
+
+        NS_ADDREF(expr);
+
+        rv = content->SetProperty(sModelPropsList[j], expr, ReleaseExpr);
+
+        if (rv == NS_PROPTABLE_PROP_OVERWRITTEN) {
+          return PR_FALSE;
+        }
+      }
+    }
+  }
+
+  
   return PR_TRUE;
 }
 
@@ -633,6 +645,18 @@ nsXFormsModelElement::DispatchEvent(const char *aEvent,
 
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mContent);
   return target->DispatchEvent(event, aDefaultPrevented);
+}
+
+/* static */ void
+nsXFormsModelElement::Startup()
+{
+  sModelPropsList[eModel_type] = nsXFormsAtoms::type;
+  sModelPropsList[eModel_readonly] = nsXFormsAtoms::readonly;
+  sModelPropsList[eModel_required] = nsXFormsAtoms::required;
+  sModelPropsList[eModel_relevant] = nsXFormsAtoms::relevant;
+  sModelPropsList[eModel_calculate] = nsXFormsAtoms::calculate;
+  sModelPropsList[eModel_constraint] = nsXFormsAtoms::constraint;
+  sModelPropsList[eModel_p3ptype] = nsXFormsAtoms::p3ptype;
 }
 
 nsresult
