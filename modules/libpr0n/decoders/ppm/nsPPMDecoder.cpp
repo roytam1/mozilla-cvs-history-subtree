@@ -29,8 +29,6 @@
 
 #include "nspr.h"
 
-#include "nsUnitConverters.h"
-
 #include "nsIComponentManager.h"
 
 #include "nsRect.h"
