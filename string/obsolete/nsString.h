@@ -127,12 +127,6 @@ public:
     Accessor methods...
    *********************************************************************/
 
-
-   /**
-     * Retrieve const ptr to internal buffer; DO NOT TRY TO FREE IT!
-     */
-  const char* GetBuffer() const { return get(); } // to be deprecated, prefer |get()|
-
   PRBool SetCharAt(PRUnichar aChar,PRUint32 anIndex);
 
   /**********************************************************************
@@ -535,22 +529,13 @@ class NS_COM NS_ConvertUCS2toUTF8
 
       explicit NS_ConvertUCS2toUTF8( const nsAString& aString );
 
-      const char* get() const
-        {
-          return mStr;
-        }
-
-      operator const char*() const  // to be deprecated, prefer |get()|
-        {
-          return get();
-        }
-
     protected:
       void Append( const PRUnichar* aString, PRUint32 aLength );
 
     private:
         // NOT TO BE IMPLEMENTED
       NS_ConvertUCS2toUTF8( char );
+      operator const char*() const;  // use |get()|
   };
 
 

@@ -77,7 +77,7 @@ protected:
   virtual PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 );
 
 public:
-  virtual const PRUnichar* get() const { return mUStr; }
+  virtual const PRUnichar* get() const { return GetUnicode(); }
 
 
 public:
@@ -591,13 +591,6 @@ class NS_COM NS_ConvertASCIItoUCS2
       NS_ConvertASCIItoUCS2( const char*, PRUint32 );
       explicit NS_ConvertASCIItoUCS2( char );
 
-      const PRUnichar* get() const { return GetUnicode(); }
-
-      operator const PRUnichar*() const
-        {
-          return GetUnicode();
-        }
-
 #if 0
       operator const nsLocalString() const
         {
@@ -652,11 +645,6 @@ class NS_COM NS_ConvertUTF8toUCS2
       NS_ConvertUTF8toUCS2( char aChar )
         {
           Init( &aChar, 1 );
-        }
-
-      operator const PRUnichar*() const
-        {
-          return GetUnicode();
         }
 
     protected:
