@@ -48,18 +48,38 @@ typedef struct _SelectorCBStruct {
   HT_View view;
 } SelectorCBStruct;
 
+
+// Selector bar images list
+/* static */ RDFImageList * 
+XFE_NavCenterView::selectorBarImagesCache = NULL;
+
+/* static */ int 
+XFE_NavCenterView::m_numRDFImagesLoaded = 0;
+//////////////////////////////////////////////////////////////////////////
+
+// Max number of images in cache - to be replaced with very clerver hash table
+/* static */ const unsigned int 
+XFE_NavCenterView::MaxRdfImages = 30;
+
 // Initialize the selector bar images list. This s'd someday be a hash list
-RDFImageList * XFE_NavCenterView::selectorBarImagesCache = new RDFImageList[MaxRdfImages];
-int XFE_NavCenterView::m_numRDFImagesLoaded = 0;
-
-
-
+/* static */ void 
+XFE_NavCenterView::imageCacheInitialize()
+{
+	if (selectorBarImagesCache == NULL)
+	{
+		selectorBarImagesCache= new RDFImageList[MaxRdfImages];
+	}
+}
+//////////////////////////////////////////////////////////////////////////
 XFE_NavCenterView::XFE_NavCenterView(XFE_Component *toplevel_component,
                                      Widget parent, XFE_View *parent_view,
                                      MWContext *context)
   : XFE_View(toplevel_component, parent_view, context)
 {
   D(printf("XFE_NavCenterView Constructor\n"););
+
+  // Make sure the cache is up and running.
+  XFE_NavCenterView::imageCacheInitialize();
 
   // This may need to become a constructor argument,
   // but this is good enough for now.

@@ -33,8 +33,6 @@
 class XFE_HTMLView;
 class XFE_RDFView;
 
-#define MaxRdfImages 30
-
 typedef struct _RDFImageList {
   XFE_RDFImage * rdfImage;
   Widget  widget;
@@ -73,6 +71,10 @@ private:
 
   static RDFImageList * selectorBarImagesCache;
   static int     m_numRDFImagesLoaded;
+
+  static void imageCacheInitialize();
+
+  static const unsigned int MaxRdfImages;
 };
 
 static void notify_cb(HT_Notification ns, HT_Resource n, 
