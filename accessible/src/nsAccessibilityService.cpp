@@ -400,7 +400,7 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
             nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(ps));
             //printf("################################## CreateHTMLIFrameAccessible\n");
 
-            nsCOMPtr<nsIAccessible> root = new nsIFrameRootAccessible(wr,node);
+            nsCOMPtr<nsIAccessible> root = new nsHTMLIFrameRootAccessible(wr,node);
             *_retval = new nsHTMLIFrameAccessible(presShell, node, root);
             NS_ADDREF(*_retval);
             return NS_OK;
