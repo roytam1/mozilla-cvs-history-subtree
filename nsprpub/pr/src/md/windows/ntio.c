@@ -2329,6 +2329,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
     int rv, err;
     LONG hiOffset = 0;
     LONG loOffset;
+    LARGE_INTEGER   offset; /* use for a normalized add of len to offset */
 
     if (!fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -2432,7 +2433,11 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
                 _PR_MD_MAP_WRITE_ERROR(me->md.blocked_io_error);
                 return -1;
             }
-
+            
+            /* add, normalized, len to the initial file offset for new offset */
+            offset.LowPart = me->md.overlapped.overlapped.Offset;
+            offset.HighPart = me->md.overlapped.overlapped.OffsetHigh;
+            offset.QuadPart += len;
             SetFilePointer((HANDLE)f, me->md.blocked_io_bytes, 0, FILE_CURRENT);
     
             PR_ASSERT(me->io_pending == PR_FALSE);
