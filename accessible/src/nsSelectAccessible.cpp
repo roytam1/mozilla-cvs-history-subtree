@@ -17,7 +17,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Original Author: David W. Hyatt (hyatt@netscape.com)
+ * Original Author: Eric Vaughan (evaughan@netscape.com)
  *
  * Contributor(s): 
  */
