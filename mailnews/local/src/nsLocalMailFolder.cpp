@@ -647,9 +647,7 @@ nsresult nsMsgLocalMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
       }
       else
       {
-        //We must have loaded the folder so send a notification
-        NotifyFolderEvent(mFolderLoadedAtom);
-        //Otherwise we have a valid database so lets extract necessary info.
+        // We have a valid database so lets extract necessary info.
         UpdateSummaryTotals(PR_TRUE);
       }
     }
