@@ -631,11 +631,18 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
+  // Crypto classes
   NS_DEFINE_CLASSINFO_DATA(Crypto, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CRMFObject, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Pkcs11, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+
+  // XML extras classes
+  NS_DEFINE_CLASSINFO_DATA(DOMSerializer, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(DOMParser, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   NS_DEFINE_CLASSINFO_DATA_TAIL
@@ -959,6 +966,8 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID,
                     "Multiple GetIIDs function for the same nsDOMClassInfoID");
 
   nsISupports *classinfo = sClassInfoData[aID].mCachedClassInfo;
+
+  NS_ADDREF(classinfo);
 
   return classinfo;
 }

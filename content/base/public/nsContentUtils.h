@@ -118,6 +118,10 @@ private:
                                            Get##_class##IIDs,                 \
                                            #_name);                           \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+                                                                              \
+    *aInstancePtr = foundInterface;                                           \
+                                                                              \
+    return NS_OK;                                                             \
   } else
 
 

@@ -26,6 +26,7 @@
 #include "nsIClassInfo.h"
 #include "nsVoidArray.h"
 
+
 typedef void (*GetDOMClassIIDsFnc)(nsVoidArray& aArray);
 
 class nsIDOMClassInfo : public nsIClassInfo
@@ -163,6 +164,10 @@ public:
     eCRMFObject_id,
     ePkcs11_id,
 
+    // XML extras classes
+    eDOMSerializer_id,
+    eDOMParser_id,
+
     eDOMClassInfoIDCount // This one better be the last one in this list
   };
 };
@@ -188,5 +193,28 @@ void Get##_class##IIDs(nsVoidArray& aArray)                                   \
 
 #define NS_CLASSINFO_MAP_END                                                  \
 }
+
+
+#include "nsIServiceManager.h"
+#include "nsIDOMScriptObjectFactory.h"
+#include "nsDOMCID.h"
+
+#define NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(_class)                          \
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
+    static NS_DEFINE_CID(kDOMSOF_CID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);      \
+                                                                              \
+    nsCOMPtr<nsIDOMScriptObjectFactory> sof(do_GetService(kDOMSOF_CID));      \
+    if (sof) {                                                                \
+      foundInterface =                                                        \
+        sof->GetClassInfoInstance(nsIDOMClassInfo::e##_class##_id,            \
+                                  Get##_class##IIDs, #_class);                \
+                                                                              \
+      if (foundInterface) {                                                   \
+        *aInstancePtr = foundInterface;                                       \
+                                                                              \
+        return NS_OK;                                                         \
+      }                                                                       \
+    }                                                                         \
+  } else
 
 #endif /* nsIDOMClassInfo_h___ */
