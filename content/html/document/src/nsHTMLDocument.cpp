@@ -2614,6 +2614,10 @@ nsHTMLDocument::GetScriptObject(nsIScriptContext *aContext, void** aScriptObject
 PRBool    
 nsHTMLDocument::Resolve(JSContext *aContext, JSObject *aObj, jsval aID)
 {
+  if (!JSVAL_IS_STRING(aID)) {
+    return PR_TRUE;
+  }
+
   nsresult result;
   nsCOMPtr<nsIDOMElement> element;
   char* str = JS_GetStringBytes(JSVAL_TO_STRING(aID));
