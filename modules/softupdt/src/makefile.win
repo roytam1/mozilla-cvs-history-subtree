@@ -65,8 +65,6 @@ OBJS= \
 	.\$(OBJDIR)\su_instl.obj	\
     .\$(OBJDIR)\su_mocha.obj    \
 	.\$(OBJDIR)\su_win.obj		\
-	.\$(OBJDIR)\vr_java.obj		\
-	.\$(OBJDIR)\su_wjava.obj	\
 	.\$(OBJDIR)\nsFolderSpec.obj	\
 	.\$(OBJDIR)\nsInstallDelete.obj	\
 	.\$(OBJDIR)\nsInstallExecute.obj	\

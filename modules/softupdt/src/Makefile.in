@@ -50,7 +50,6 @@ CSRCS		= softupdt.c \
 		  su_folderspec.c \
 		  su_instl.c \
           su_mocha.c \
-		  vr_java.c \
 		  nsFolderSpec.c \
 		  nsInstallDelete.c \
 		  nsInstallExecute.c \

@@ -40,7 +40,6 @@ CSRCS		= \
 		  su_patch.c \
 		  su_folderspec.c \
 		  su_instl.c \
-		  vr_java.c \
 		  nsFolderSpec.c \
 		  nsVersionInfo.c \
 		  nsInstallDelete.c \
