@@ -320,7 +320,8 @@ BOOL CInterpret::ShowSection(WIDGET *curWidget)
 	// belong in some section.
 	for (int i = 0; i < GlobalArrayIndex; i++)
 	{
-		if (!GlobalWidgetArray[i].showinsection.IsEmpty()) 
+		// If the control is created and the ShowInSection tag exists, hide or unhide the control.
+		if (GlobalWidgetArray[i].control && !GlobalWidgetArray[i].showinsection.IsEmpty()) 
 		{
 			// Belongs in this section.
 			if (GlobalWidgetArray[i].showinsection.Compare(Section) == 0)
