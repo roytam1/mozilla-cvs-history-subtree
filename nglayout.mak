@@ -72,9 +72,15 @@ XPCOM_BRANCH =
 CVSCO_LIBPREF = $(CVSCO)
 CVSCO_PLUGIN = $(CVSCO)
 !else
+!if defined(MOZ_BRANCH)
+# CVS commands to pull the appropriate branch versions
+CVSCO_LIBPREF = $(CVSCO)
+CVSCO_PLUGIN = $(CVSCO)
+!else
 # CVS commands to pull the appropriate branch versions
 CVSCO_LIBPREF = $(CVSCO) -A
 CVSCO_PLUGIN = $(CVSCO) -A
+!endif
 !endif
 
 CVSCO_XPCOM = $(CVSCO)
