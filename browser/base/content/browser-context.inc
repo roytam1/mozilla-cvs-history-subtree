@@ -224,6 +224,11 @@
                 label="&metadataCmd.label;"
                 accesskey="&metadataCmd.accesskey;"
                 oncommand="gContextMenu.showMetadata();"/>
+      <menuseparator hidden="true" id="context-sep-bidi"/>
+      <menuitem hidden="true" id="context-bidi-text-direction-toggle"
+                label="&bidiSwitchTextDirectionItem.label;"
+                accesskey="&bidiSwitchTextDirectionItem.accesskey;"
+                oncommand="SwitchTextEntryDirection(gContextMenu.target)"/>
     </popup>
     
     

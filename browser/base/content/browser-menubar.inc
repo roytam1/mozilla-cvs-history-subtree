@@ -114,6 +114,12 @@
                 <menuseparator/>
                 <menuitem label="&findOnCmd.label;" accesskey="&findOnCmd.accesskey;" key="key_find" command="cmd_find"/>
                 <menuitem label="&findAgainCmd.label;" accesskey="&findAgainCmd.accesskey;" key="key_findAgain" command="cmd_findAgain"/>
+                <menuseparator hidden="true" id="textfieldDirection-separator"/>
+                <menuitem hidden="true" id="textfieldDirection-swap" 
+                          label="&bidiSwitchTextDirectionItem.label;"
+                          key="key_SwitchTextDirection"
+                          accesskey="&bidiSwitchTextDirectionItem.accesskey;"
+                          command="cmd_SwitchTextDirection"/>
 #ifdef XP_UNIX
 #ifndef XP_MACOSX
                 <menuseparator/>
@@ -263,9 +269,13 @@
                 </menu>
                 <menuseparator/>
                 <menuitem accesskey="&pageSourceCmd.accesskey;" label="&pageSourceCmd.label;" key="key_viewSource" command="View:PageSource"/>
-                  <menuitem accesskey="&fullScreenCmd.accesskey;"
-                            label="&fullScreenCmd.label;" key="key_fullScreen"
-                            command="View:FullScreen"/>
+                <menuitem accesskey="&fullScreenCmd.accesskey;"
+                          label="&fullScreenCmd.label;" key="key_fullScreen"
+                          command="View:FullScreen"/>
+                <menuseparator hidden="true" id="documentDirection-separator"/>
+                <menuitem hidden="true" id="documentDirection-swap" 
+                          label="&bidiSwitchPageDirectionItem.label;" accesskey="&bidiSwitchPageDirectionItem.accesskey;"
+                          oncommand="SwitchDocumentDirection()"/>
               </menupopup>
             </menu>
   

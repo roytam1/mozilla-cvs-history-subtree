@@ -122,6 +122,9 @@
     <command id="cmd_selectAll"
              oncommand="goDoCommand('cmd_selectAll')"
              disabled="true"/>
+    <command id="cmd_SwitchTextDirection"
+             oncommand="SwitchFocusedTextEntryDirection()"
+             disabled="true"/>
 
     <command id="View:PageSource" oncommand="BrowserViewSourceOfDocument(_content.document);"/>
     <command id="View:PageInfo" oncommand="BrowserPageInfo();"/>
@@ -286,6 +289,7 @@
     <key                          key="&textZoomEnlargeCmd.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key                          key="&textZoomResetCmd.commandkey;"    oncommand="ZoomManager.prototype.getInstance().reset();"   modifiers="accel"/>
     
+    <key id="key_SwitchTextDirection" key="&bidiSwitchTextDirectionItem.commandkey;" command="cmd_SwitchTextDirection" modifiers="accel,shift" />
 #ifdef XP_MACOSX
     <key id="key_minimizeWindow" command="minimizeWindow" key="&minimizeWindow.key;" modifiers="accel"/>
 #endif
