@@ -79,9 +79,15 @@ typedef PRBool
 (*PR_CALLBACK nsHashtableEnumFunc)(nsHashKey *aKey, void *aData, void* aClosure);
 
 typedef nsresult
-(*PR_CALLBACK nsHashtableReadEntryFunc)(nsIObjectInputStream* aStream,
+(*PR_CALLBACK nsHashtableReadEntryFunc)(nsIObjectInputStream *aStream,
                                         nsHashKey **aKey,
                                         void **aData);
+
+// NB: may be called with null aKey or aData, to free just one of the two.
+typedef void
+(*PR_CALLBACK nsHashtableFreeEntryFunc)(nsIObjectInputStream *aStream,
+                                        nsHashKey *aKey,
+                                        void *aData);
 
 typedef nsresult
 (*PR_CALLBACK nsHashtableWriteDataFunc)(nsIObjectOutputStream *aStream,
@@ -107,8 +113,11 @@ class NS_COM nsHashtable {
     void Enumerate(nsHashtableEnumFunc aEnumFunc, void* aClosure = NULL);
     void Reset();
     void Reset(nsHashtableEnumFunc destroyFunc, void* aClosure = NULL);
-    nsresult Read(nsIObjectInputStream* aStream,
-                  nsHashtableReadEntryFunc aReadEntryFunc);
+
+    nsHashtable(nsIObjectInputStream* aStream,
+                nsHashtableReadEntryFunc aReadEntryFunc,
+                nsHashtableFreeEntryFunc aFreeEntryFunc,
+                nsresult *aRetVal);
     nsresult Write(nsIObjectOutputStream* aStream,
                    nsHashtableWriteDataFunc aWriteDataFunc) const;
 };

@@ -396,29 +396,61 @@ void nsHashtable::Reset(nsHashtableEnumFunc destroyFunc, void* aClosure)
     PL_HashTableEnumerateEntries(&mHashtable, _hashEnumerateRemove, thunkp);
 }
 
-nsresult
-nsHashtable::Read(nsIObjectInputStream* aStream,
-                  nsHashtableReadEntryFunc aReadEntryFunc)
+// nsISerializable helpers
+
+nsHashtable::nsHashtable(nsIObjectInputStream* aStream,
+                         nsHashtableReadEntryFunc aReadEntryFunc,
+                         nsHashtableFreeEntryFunc aFreeEntryFunc,
+                         nsresult *aRetVal)
+  : mLock(nsnull),
+    mEnumerating(PR_FALSE)
 {
-    nsresult rv;
-    PRUint32 count;
-
-    rv = aStream->Read32(&count);
-    if (NS_FAILED(rv)) return rv;
-
-    for (PRUint32 i = 0; i < count; i++) {
-        nsHashKey* key;
-        void *data;
-
-        rv = aReadEntryFunc(aStream, &key, &data);
-        if (NS_SUCCEEDED(rv)) {
-            if (!Put(key, data))
+    PRBool threadSafe;
+    nsresult rv = aStream->ReadBoolean(&threadSafe);
+    if (NS_SUCCEEDED(rv)) {
+        if (threadSafe) {
+            mLock = PR_NewLock();
+            if (!mLock)
                 rv = NS_ERROR_OUT_OF_MEMORY;
-            delete key; // XXXbe too bad we can't just put key in this table
         }
-        if (NS_FAILED(rv)) return rv;
+
+        if (NS_SUCCEEDED(rv)) {
+            PRUint32 count;
+            rv = aStream->Read32(&count);
+
+            if (NS_SUCCEEDED(rv)) {
+                PRStatus status = PL_HashTableInit(&mHashtable,
+                                                   count,
+                                                   _hashValue,
+                                                   _hashKeyCompare,
+                                                   _hashValueCompare,
+                                                   &_hashAllocOps,
+                                                   NULL);
+                if (status != PR_SUCCESS) {
+                    rv = NS_ERROR_OUT_OF_MEMORY;
+                } else {
+                    for (PRUint32 i = 0; i < count; i++) {
+                        nsHashKey* key;
+                        void *data;
+
+                        rv = aReadEntryFunc(aStream, &key, &data);
+                        if (NS_SUCCEEDED(rv)) {
+                            if (!Put(key, data)) {
+                                rv = NS_ERROR_OUT_OF_MEMORY;
+                                aFreeEntryFunc(aStream, key, data);
+                            } else {
+                                // XXXbe must we clone key? can't we hand off
+                                aFreeEntryFunc(aStream, key, nsnull);
+                            }
+                            if (NS_FAILED(rv))
+                                break;
+                        }
+                    }
+                }
+            }
+        }
     }
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aRetVal = rv;
 }
 
 struct WriteEntryArgs {
@@ -445,9 +477,13 @@ nsresult
 nsHashtable::Write(nsIObjectOutputStream* aStream,
                    nsHashtableWriteDataFunc aWriteDataFunc) const
 {
+    PRBool threadSafe = (mLock != nsnull);
+    nsresult rv = aStream->WriteBoolean(threadSafe);
+    if (NS_FAILED(rv)) return rv;
+
     // Write the entry count first, so we know how many key/value pairs to read.
     PRUint32 count = mHashtable.nentries;
-    nsresult rv = aStream->Write32(count);
+    rv = aStream->Write32(count);
     if (NS_FAILED(rv)) return rv;
 
     // Write all key/value pairs in the table.
