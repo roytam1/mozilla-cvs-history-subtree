@@ -166,12 +166,14 @@ static PRBool CheckBooleanAttr(nsIFrame* aFrame, nsIAtom* aAtom)
 {
   if (!aFrame)
     return PR_FALSE;
+
+  nsIContent* content = aFrame->GetContent();
+  if (content->IsContentOfType(nsIContent::eHTML))
+    return content->HasAttr(kNameSpaceID_None, aAtom);
+
   nsAutoString attr;
-  nsresult res = aFrame->GetContent()->GetAttr(kNameSpaceID_None, aAtom, attr);
-  if (res == NS_CONTENT_ATTR_NO_VALUE ||
-      (res != NS_CONTENT_ATTR_NOT_THERE && attr.IsEmpty()))
-    return PR_TRUE; // This handles the HTML case (an attr with no value is like a true val)
-  return attr.EqualsIgnoreCase("true"); // This handles the XUL case.
+  content->GetAttr(kNameSpaceID_None, aAtom, attr);
+  return attr.Equals(NS_LITERAL_STRING("true")); // This handles the XUL case.
 }
 
 static PRInt32 CheckIntegerAttr(nsIFrame *aFrame, nsIAtom *aAtom)
