@@ -235,7 +235,7 @@ nsSOAPUtils::GetNextSibling(nsIDOMNode* aSibling, nsIDOMNode **aNext)
   *aNext = current;
   NS_IF_ADDREF(*aNext);
 }
-  
+#if 0
 nsresult 
 GetNamespacePrefix(nsIDOMNode* aNode,
                    const nsAReadableString & aURI,
@@ -298,7 +298,7 @@ GetNamespaceURI(nsIDOMElement* aElement,
   aURI = nsSOAPUtils::kEmpty;
   return NS_OK;
 }
-
+#endif
 
 void
 nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry, 

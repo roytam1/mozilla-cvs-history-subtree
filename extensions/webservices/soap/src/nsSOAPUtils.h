@@ -23,6 +23,7 @@
 #ifndef nsSOAPUtils_h__
 #define nsSOAPUtils_h__
 
+#include "nsString.h"
 #include "nsIDOMElement.h"
 #include "jsapi.h"
 
@@ -46,12 +47,14 @@ public:
 
   static void GetNextSibling(nsIDOMNode* aSibling, 
                              nsIDOMNode **aNext);
+#if 0
   static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
   static nsresult GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aPrefix, 
                                   nsAWritableString & aURI);
+#endif
   static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
                                         nsAWritableString & aEncodingStyle);
   static JSContext* GetSafeContext();
