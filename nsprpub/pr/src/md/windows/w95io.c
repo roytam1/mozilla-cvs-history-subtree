@@ -30,12 +30,21 @@
 struct _MDLock               _pr_ioq_lock;
 
 /*
- * NSPR-to-NT access right mapping table for files and directories.
+ * NSPR-to-NT access right mapping table for files.
  */
 static DWORD fileAccessTable[] = {
-    GENERIC_READ,
-    GENERIC_WRITE,
-    GENERIC_EXECUTE
+    FILE_GENERIC_READ,
+    FILE_GENERIC_WRITE,
+    FILE_GENERIC_EXECUTE
+};
+
+/*
+ * NSPR-to-NT access right mapping table for directories.
+ */
+static DWORD dirAccessTable[] = {
+    FILE_GENERIC_READ,
+    FILE_GENERIC_WRITE|FILE_DELETE_CHILD,
+    FILE_GENERIC_EXECUTE
 };
 
 /*
@@ -949,7 +958,7 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
 
-    if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
+    if (_PR_NT_MakeSecurityDescriptorACL(mode, dirAccessTable,
             &pSD, &pACL) == PR_SUCCESS) {
         sa.nLength = sizeof(sa);
         sa.lpSecurityDescriptor = pSD;
