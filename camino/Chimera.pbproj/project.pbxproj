@@ -261,6 +261,7 @@
 				F6BD650A01B3184301A962F7,
 				F5949A4A030D58F5014E8430,
 				F6BD651901B3184301A962F7,
+				F5A70925036DB55501202892,
 				F6BD651F01B3184301A962F7,
 				F507BA520213C22C01D93544,
 				F6BD652301B3184301A962F7,
@@ -620,7 +621,6 @@
 				F5F190BF02D217C201026D5D,
 				F5CA1A1B02D3957001F34900,
 				F5EB9377030C92450100010C,
-				F5949A48030D58A2014E8430,
 				F520BECB036041D501026D5D,
 				F520BECC036041D501026D5D,
 			);
@@ -5638,12 +5638,6 @@
 			path = xhtml11.dtd;
 			refType = 4;
 		};
-		F5949A48030D58A2014E8430 = {
-			fileRef = F5949A47030D58A1014E8430;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F5949A49030D58A2014E8430 = {
 			fileRef = F5949A47030D58A1014E8430;
 			isa = PBXBuildFile;
@@ -5830,6 +5824,301 @@
 		};
 		F5A6185202E5E3A6018E99BF = {
 			fileRef = F5A8CE4602DFF039013CA8EC;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70906036DB46201202892 = {
+			children = (
+				F5A70907036DB4B201202892,
+				F5A70908036DB4B201202892,
+				F5A70909036DB4B201202892,
+				F5A7090A036DB4B201202892,
+				F5A7090B036DB4B201202892,
+				F5A7090C036DB4B201202892,
+				F5A7090D036DB4B201202892,
+				F5A7090E036DB4B201202892,
+				F5A7090F036DB4B201202892,
+				F5A70910036DB4B201202892,
+			);
+			isa = PBXGroup;
+			name = html;
+			refType = 4;
+		};
+		F5A70907036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-audio.gif";
+			path = "../dist/Embed/res/html/gopher-audio.gif";
+			refType = 2;
+		};
+		F5A70908036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-binary.gif";
+			path = "../dist/Embed/res/html/gopher-binary.gif";
+			refType = 2;
+		};
+		F5A70909036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-find.gif";
+			path = "../dist/Embed/res/html/gopher-find.gif";
+			refType = 2;
+		};
+		F5A7090A036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-image.gif";
+			path = "../dist/Embed/res/html/gopher-image.gif";
+			refType = 2;
+		};
+		F5A7090B036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-menu.gif";
+			path = "../dist/Embed/res/html/gopher-menu.gif";
+			refType = 2;
+		};
+		F5A7090C036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-movie.gif";
+			path = "../dist/Embed/res/html/gopher-movie.gif";
+			refType = 2;
+		};
+		F5A7090D036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-sound.gif";
+			path = "../dist/Embed/res/html/gopher-sound.gif";
+			refType = 2;
+		};
+		F5A7090E036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-telnet.gif";
+			path = "../dist/Embed/res/html/gopher-telnet.gif";
+			refType = 2;
+		};
+		F5A7090F036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-text.gif";
+			path = "../dist/Embed/res/html/gopher-text.gif";
+			refType = 2;
+		};
+		F5A70910036DB4B201202892 = {
+			isa = PBXFileReference;
+			name = "gopher-unknown.gif";
+			path = "../dist/Embed/res/html/gopher-unknown.gif";
+			refType = 2;
+		};
+		F5A7091B036DB4B201202892 = {
+			fileRef = F5A70907036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7091C036DB4B201202892 = {
+			fileRef = F5A70908036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7091D036DB4B201202892 = {
+			fileRef = F5A70909036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7091E036DB4B201202892 = {
+			fileRef = F5A7090A036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7091F036DB4B201202892 = {
+			fileRef = F5A7090B036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70920036DB4B201202892 = {
+			fileRef = F5A7090C036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70921036DB4B201202892 = {
+			fileRef = F5A7090D036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70922036DB4B201202892 = {
+			fileRef = F5A7090E036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70923036DB4B201202892 = {
+			fileRef = F5A7090F036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70924036DB4B201202892 = {
+			fileRef = F5A70910036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70925036DB55501202892 = {
+			buildActionMask = 2147483647;
+			dstPath = res/html;
+			dstSubfolderSpec = 6;
+			files = (
+				F5A70926036DB5C601202892,
+				F5A70927036DB5C601202892,
+				F5A70928036DB5C601202892,
+				F5A70929036DB5C601202892,
+				F5A7092A036DB5C601202892,
+				F5A7092B036DB5C601202892,
+				F5A7092C036DB5C601202892,
+				F5A7092D036DB5C601202892,
+				F5A7092E036DB5C601202892,
+				F5A7092F036DB5C601202892,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5A70926036DB5C601202892 = {
+			fileRef = F5A70907036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70927036DB5C601202892 = {
+			fileRef = F5A70908036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70928036DB5C601202892 = {
+			fileRef = F5A70909036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70929036DB5C601202892 = {
+			fileRef = F5A7090A036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092A036DB5C601202892 = {
+			fileRef = F5A7090B036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092B036DB5C601202892 = {
+			fileRef = F5A7090C036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092C036DB5C601202892 = {
+			fileRef = F5A7090D036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092D036DB5C601202892 = {
+			fileRef = F5A7090E036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092E036DB5C601202892 = {
+			fileRef = F5A7090F036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7092F036DB5C601202892 = {
+			fileRef = F5A70910036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70930036DB66E01202892 = {
+			buildActionMask = 2147483647;
+			dstPath = res/html;
+			dstSubfolderSpec = 6;
+			files = (
+				F5A70931036DB68701202892,
+				F5A70932036DB68701202892,
+				F5A70933036DB68701202892,
+				F5A70934036DB68701202892,
+				F5A70935036DB68701202892,
+				F5A70936036DB68701202892,
+				F5A70937036DB68701202892,
+				F5A70938036DB68701202892,
+				F5A70939036DB68701202892,
+				F5A7093A036DB68701202892,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5A70931036DB68701202892 = {
+			fileRef = F5A70907036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70932036DB68701202892 = {
+			fileRef = F5A70908036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70933036DB68701202892 = {
+			fileRef = F5A70909036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70934036DB68701202892 = {
+			fileRef = F5A7090A036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70935036DB68701202892 = {
+			fileRef = F5A7090B036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70936036DB68701202892 = {
+			fileRef = F5A7090C036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70937036DB68701202892 = {
+			fileRef = F5A7090D036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70938036DB68701202892 = {
+			fileRef = F5A7090E036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A70939036DB68701202892 = {
+			fileRef = F5A7090F036DB4B201202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5A7093A036DB68701202892 = {
+			fileRef = F5A70910036DB4B201202892;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -6239,6 +6528,7 @@
 				F5BAAC1602AC69DA01A967F3,
 				F5949A4C030D595B014E8430,
 				F5BAAC1902AC69DA01A967F3,
+				F5A70930036DB66E01202892,
 				F5BAAC1F02AC69DA01A967F3,
 				F5BAAC2202AC69DA01A967F3,
 				F5BAAC2402AC6AA201A967F3,
@@ -6600,6 +6890,16 @@
 				F5949A49030D58A2014E8430,
 				F520BEC9036041D501026D5D,
 				F520BECA036041D501026D5D,
+				F5A7091B036DB4B201202892,
+				F5A7091C036DB4B201202892,
+				F5A7091D036DB4B201202892,
+				F5A7091E036DB4B201202892,
+				F5A7091F036DB4B201202892,
+				F5A70920036DB4B201202892,
+				F5A70921036DB4B201202892,
+				F5A70922036DB4B201202892,
+				F5A70923036DB4B201202892,
+				F5A70924036DB4B201202892,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9921,6 +10221,7 @@
 				F6BD64C801B3172601A962F7,
 				F6BD64D701B3172601A962F7,
 				F6BD64DD01B3172601A962F7,
+				F5A70906036DB46201202892,
 				F6BD64DE01B3172601A962F7,
 				F6BD64DF01B3172601A962F7,
 				F6BD64E001B3172601A962F7,

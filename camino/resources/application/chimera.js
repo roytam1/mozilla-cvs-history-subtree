@@ -67,3 +67,4 @@ pref("chimera.enable_plugins", true);
 pref("general.useragent.vendor", "Chimera");
 pref("general.useragent.vendorSub", "0.5+");
 
+pref("network.dir.generate_html", true);
