@@ -57,32 +57,26 @@ nsresult CopyFile(nsCOMPtr<nsIFile> fromDir,
 {
     nsresult rv;
 
-    printf("4.1\n");
     nsCOMPtr<nsIFile> fromFile;
     rv = fromDir->Clone(getter_AddRefs(fromFile));
     if (NS_FAILED(rv))
         return rv;
-    printf("4.2\n");
     rv = fromFile->Append(fileSubPath);
     if (NS_FAILED(rv))
         return rv;
 
-    printf("4.3\n");
     nsCOMPtr<nsIFile> toFileOld;
     rv = toDir->Clone(getter_AddRefs(toFileOld));
     if (NS_FAILED(rv))
         return rv;
-    printf("4.4\n");
     rv = toFileOld->Append(fileSubPath);
     if (NS_FAILED(rv))
         return rv;
 
-    printf("4.5\n");
     PRBool exists;
     rv = fromFile->Exists(&exists);
     if (NS_FAILED(rv))
         return rv;
-    printf("4.6\n");
 
     nsXPIDLCString path1, path2;
     fromFile->GetNativePath(path1);
@@ -91,11 +85,9 @@ nsresult CopyFile(nsCOMPtr<nsIFile> fromDir,
 
     if (exists)
     {
-        printf("4.7\n");
         rv = toFileOld->Remove(PR_FALSE);  // XXX needed?
         if (NS_FAILED(rv))
             printf("couldn't remove\n");
-        printf("4.8\n");
         rv = fromFile->CopyTo(toDir, fileSubPath);
     }
     else
@@ -103,8 +95,7 @@ nsresult CopyFile(nsCOMPtr<nsIFile> fromDir,
         printf("source file not found\n");
         rv = NS_ERROR_FILE_NOT_FOUND;
     }
-
-	return rv;
+    return rv;
 }
 
 void AppendElementsToStrArray(nsCStringArray& target, nsCStringArray& source)
@@ -162,18 +153,15 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
         return rv;
     }
 
-    printf("3.1\n");
     nsCOMPtr<nsILocalFile> lf;  // getting around dumb getter
     rv = NS_NewNativeLocalFile(NS_ConvertUCS2toUTF8(remoteDirPref), PR_FALSE,
                          getter_AddRefs(lf));
     if (NS_FAILED(rv))
         return rv;
-    printf("3.5\n");
     mRemoteDir = do_QueryInterface(lf, &rv);
     if (NS_FAILED(rv))
         return rv;
 
-    printf("3.6\n");
     nsXPIDLCString path;
     rv = lf->GetNativePath(path);
     if (NS_FAILED(rv))
@@ -184,7 +172,6 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
     if (!mProfileDir)
         return NS_ERROR_FILE_NOT_FOUND;
 
-    printf("3.7\n");
     mProfileDir->GetNativePath(path);
     printf("profile dir: -%s-\n", path.get());
 
@@ -245,15 +232,23 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
         {
           if (!remoteExists)
             continue;
-          else if (!profileExists)
+          else if (!remoteExists)
+          {
             copyfiles.AppendCString(file);
+            continue;
+            /* actually, this code is not needed given how the last modified
+               code below works, but for readability and just in case... */
+          }
         }
         else
         {
           if (!profileExists)
             continue;
           else if (!remoteExists)
+          {
             copyfiles.AppendCString(file);
+            continue;
+          }
         }
 
         PRInt64 profileTime = 0;

@@ -4,9 +4,6 @@ To do:
     - column headings
     - width
   - listing progressmeter doesn't work
-- error handling
-  - copy protocol
-    - no remote files yet
 
 Later:
 - nsiprogresseventsink comment
