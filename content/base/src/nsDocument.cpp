@@ -2971,7 +2971,7 @@ nsDocument::SetDir(const nsAString& aDirection)
 NS_IMETHODIMP
 nsDocument::GetNodeName(nsAString& aNodeName)
 {
-  aNodeName.Assign(NS_LITERAL_STRING("#document"));
+  aNodeName.AssignLiteral("#document");
 
   return NS_OK;
 }
@@ -3573,7 +3573,7 @@ nsDocument::GetXmlVersion(nsAString& aXmlVersion)
   // If there is no declaration, the value is "1.0".
 
   // XXX We only support "1.0", so always output "1.0" until that changes.
-  aXmlVersion.Assign(NS_LITERAL_STRING("1.0"));
+  aXmlVersion.AssignLiteral("1.0");
 
   return NS_OK;
 }
@@ -4056,7 +4056,7 @@ nsDocument::GetXMLDeclaration(nsAString& aVersion, nsAString& aEncoding,
   }
 
   // always until we start supporting 1.1 etc.
-  aVersion.Assign(NS_LITERAL_STRING("1.0"));
+  aVersion.AssignLiteral("1.0");
 
   if (mXMLDeclarationBits & XML_DECLARATION_BITS_ENCODING_EXISTS) {
     // This is what we have stored, not necessarily what was written
@@ -4066,9 +4066,9 @@ nsDocument::GetXMLDeclaration(nsAString& aVersion, nsAString& aEncoding,
 
   if (mXMLDeclarationBits & XML_DECLARATION_BITS_STANDALONE_EXISTS) {
     if (mXMLDeclarationBits & XML_DECLARATION_BITS_STANDALONE_YES) {
-      aStandalone.Assign(NS_LITERAL_STRING("yes"));
+      aStandalone.AssignLiteral("yes");
     } else {
-      aStandalone.Assign(NS_LITERAL_STRING("no"));
+      aStandalone.AssignLiteral("no");
     }
   }
 }
