@@ -26,13 +26,16 @@
 
 package Mozilla::LDAP::Utils;
 
-use Mozilla::LDAP::API qw(:constant);
+use Mozilla::LDAP::API 1.3 qw(:constant);
 use Mozilla::LDAP::Conn;
-use vars qw(@ISA %EXPORT_TAGS);
+use Exporter;
 
-require Exporter;
+use strict;
+use vars qw($VERSION @ISA %EXPORT_TAGS);
 
 @ISA = qw(Exporter);
+$VERSION = "1.3";
+
 %EXPORT_TAGS = (
 		all => [qw(normalizeDN
 			   isUrl
@@ -272,7 +275,7 @@ sub unixCrypt
 sub userCredentials
 {
   my ($ld) = @_;
-  my ($conn, $entry, $pswd);
+  my ($conn, $entry, $pswd, $search);
 
   if ($ld->{"bind"} eq "")
     {
