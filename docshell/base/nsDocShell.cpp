@@ -111,6 +111,7 @@
 // for embedding
 #include "nsIEmbeddingSiteWindow.h"
 #include "nsIWebBrowserChromeFocus.h"
+#include "nsISelectionDisplay.h"
 
 static NS_DEFINE_IID(kDeviceContextCID, NS_DEVICE_CONTEXT_CID);
 static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
@@ -350,6 +351,14 @@ NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
         *aSink = mFind;
         NS_ADDREF((nsISupports*)*aSink);
         return NS_OK;
+    }
+    else if (aIID.Equals(NS_GET_IID(nsISelectionDisplay))) {
+       nsCOMPtr<nsIPresShell> presShell;
+       nsresult rv = GetPresShell(getter_AddRefs(presShell));
+       if (NS_SUCCEEDED(rv) && presShell)
+       {
+          return presShell->QueryInterface(aIID,aSink);
+       }
     }
     else {
         return QueryInterface(aIID, aSink);

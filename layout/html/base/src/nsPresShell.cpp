@@ -1439,7 +1439,7 @@ PresShell::PresShell():mAnonymousContentTable(nsnull),
   mIsDestroying = PR_FALSE;
   mDidInitialReflow = PR_FALSE;
   mCaretEnabled = PR_FALSE;
-  mDisplayNonTextSelection = nsISelectionController::DISPLAY_TEXT;
+  mDisplayNonTextSelection = nsISelectionDisplay::DISPLAY_TEXT;
   mCurrentEventContent = nsnull;
   mCurrentEventFrame = nsnull;
   EnableScrolling();

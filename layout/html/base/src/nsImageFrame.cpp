@@ -1261,9 +1261,9 @@ nsImageFrame::Paint(nsIPresContext*      aPresContext,
   result = shell->GetSelectionFlags(&displaySelection);
   if (NS_FAILED(result))
     return result;
-  if (!(displaySelection & nsISelectionController::DISPLAY_IMAGES))
+  if (!(displaySelection & nsISelectionDisplay::DISPLAY_IMAGES))
     return NS_OK;//no need to check the blue border, we cannot be drawn selected
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer,nsISelectionController::DISPLAY_IMAGES);
+  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer,nsISelectionDisplay::DISPLAY_IMAGES);
 }
 
 nsImageMap*

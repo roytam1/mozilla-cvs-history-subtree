@@ -56,6 +56,7 @@ XPIDLSRCS=					\
 		.\nsIContentPolicy.idl		\
 		.\nsIDiskDocument.idl		\
 		.\nsISelectionController.idl	\
+		.\nsISelectionDisplay.idl	\
 		.\nsISelectionListener.idl	\
 		.\nsISelection.idl		\
 		.\nsISelectionPrivate.idl	\

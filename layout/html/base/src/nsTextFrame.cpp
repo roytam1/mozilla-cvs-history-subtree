@@ -1956,7 +1956,7 @@ nsresult nsTextFrame::GetTextInfoForPainting(nsIPresContext*          aPresConte
 
   PRInt16 textSel=0; 
   (*aSelectionController)->GetSelectionFlags(&textSel);
-  if (!(textSel & nsISelectionController::DISPLAY_TEXT))
+  if (!(textSel & nsISelectionDisplay::DISPLAY_TEXT))
     aDisplayingSelection = false;
 
 

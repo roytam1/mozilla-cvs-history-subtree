@@ -711,13 +711,13 @@ nsFrame::Paint(nsIPresContext*      aPresContext,
   if (NS_FAILED(result))
     return result;
 
-  PRInt16 displaySelection = nsISelectionController::DISPLAY_ALL;
-  if (aFlags != nsISelectionController::DISPLAY_IMAGES)
+  PRInt16 displaySelection = nsISelectionDisplay::DISPLAY_ALL;
+  if (aFlags != nsISelectionDisplay::DISPLAY_IMAGES)
   {
     result = shell->GetSelectionFlags(&displaySelection);
     if (NS_FAILED(result))
       return result;
-    if (!(displaySelection == nsISelectionController::DISPLAY_FRAMES))
+    if (!(displaySelection & nsISelectionDisplay::DISPLAY_FRAMES))
       return NS_OK;
   }
 
@@ -1093,7 +1093,7 @@ nsFrame::HandlePress(nsIPresContext* aPresContext,
   PRInt16 isEditor = 0;
   shell->GetSelectionFlags ( &isEditor );
   //weaaak. only the editor can display frame selction not just text and images
-  isEditor = isEditor == nsISelectionController::DISPLAY_ALL;
+  isEditor = isEditor == nsISelectionDisplay::DISPLAY_ALL;
   nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
   if (!isEditor && !keyEvent->isAlt) {
     nsCOMPtr<nsIContent> content;
@@ -2980,13 +2980,13 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
 
         //special check. if we allow non-text selection then we can allow a hit location to fall before a table. 
         //otherwise there is no way to get and click signal to fall before a table (it being a line iterator itself)
-        PRInt16 isEditor = PR_FALSE;
+        PRInt16 isEditor = 0;
         nsCOMPtr<nsIPresShell> shell;
         aPresContext->GetShell(getter_AddRefs(shell));
         if (!shell)
           return NS_ERROR_FAILURE;
         shell->GetSelectionFlags ( &isEditor );
-        isEditor = isEditor == nsISelectionController::DISPLAY_ALL;
+        isEditor = isEditor == nsISelectionDisplay::DISPLAY_ALL;
         if ( isEditor ) 
         {
           nsIAtom *resultFrameType;

@@ -24,6 +24,7 @@
 
 #include "nsISupports.idl"
 #include "nsISelection.idl"
+#include "nsISelectionDisplay.idl"
 
 %{C++
 
@@ -33,10 +34,10 @@ typedef short SelectionRegion;
 %}
 
 interface nsIDOMNode;
-
+interface nsISelectionDisplay;
 
 [scriptable, uuid(D2D1D179-85A7-11d3-9932-00108301233C)]
-interface nsISelectionController : nsISupports
+interface nsISelectionController : nsISelectionDisplay
 {
    const short SELECTION_NONE=0;
    const short SELECTION_NORMAL=1;
@@ -57,10 +58,6 @@ interface nsISelectionController : nsISupports
    const short SELECTION_ON = 2;
    const short SELECTION_DISABLED = 3;
 
-   const short DISPLAY_TEXT = 1;   //display text selected.
-   const short DISPLAY_IMAGES = 2; //show images selected
-   const short DISPLAY_FRAMES = 4; //display hrules ect.
-   const short DISPLAY_ALL = 7; //display all. used for isEditor as well
    /**
    * SetDisplaySelection will set the display mode for the selection. OFF,ON,DISABLED
    */
@@ -70,18 +67,6 @@ interface nsISelectionController : nsISupports
    * GetDisplaySelection will get the display mode for the selection. OFF,ON,DISABLED
    */
     short   getDisplaySelection();
-
-   /**
-   * SetSelectionFlags used to set whether you want to see HRULES/IMAGES with border.
-   * also used to tell if the presshell is an editor right now. this should change
-   */
-    void setSelectionFlags(in short toggle);
-
-   /**
-   * GetSelectionFlags used to get whether you want to see HRULES/IMAGES with border.
-   * also used to tell if the presshell is an editor right now. this should change
-   */
-    short getSelectionFlags();
 
    /**
    * GetSelection will return the selection that the presentation

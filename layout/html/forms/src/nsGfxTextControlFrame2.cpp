@@ -699,7 +699,7 @@ nsTextInputSelectionImpl::SetSelectionFlags(PRInt16 aTextSel)
 NS_IMETHODIMP
 nsTextInputSelectionImpl::GetSelectionFlags(PRInt16 *aTextSel)
 {
-  *aTextSel = nsISelectionController::DISPLAY_TEXT;
+  *aTextSel = nsISelectionDisplay::DISPLAY_TEXT;
   return NS_OK;
 }
 
