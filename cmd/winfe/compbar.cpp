@@ -1866,7 +1866,56 @@ BOOL CComposeBar::ProcessVCardData(COleDataObject * pDataObject, CPoint &point)
    return retVal;
 }
 
+BOOL CComposeBar::AddURLToAddressPane(COleDataObject * pDataObject, CPoint &point, LPSTR szURL)
+{
+  if(!pDataObject->IsDataAvailable(RegisterClipboardFormat(NETSCAPE_BOOKMARK_FORMAT)))
+    return FALSE;
 
+  CWnd * pWnd = GetFocus();
+  CComposeFrame *pCompose = (CComposeFrame *)GetParentFrame();
+  ApiApiPtr(api);
+  LPUNKNOWN pUnk = api->CreateClassInstance(
+  APICLASS_ADDRESSCONTROL, NULL, (APISIGNATURE)pCompose);
+  LPADDRESSCONTROL pIAddressControl = NULL;
+
+  if(pUnk == NULL)
+    return FALSE;
+
+  HRESULT hRes = pUnk->QueryInterface(IID_IAddressControl,(LPVOID*)&pIAddressControl);
+  ASSERT(hRes==NOERROR);
+
+  if(pIAddressControl == NULL)
+    return FALSE;
+
+  CListBox * pListBox = pIAddressControl->GetListBox();
+  char * szName = NULL;
+  char * szType = NULL;
+  BOOL bOutside = FALSE;
+  int iPlace = pListBox->ItemFromPoint(point, bOutside);
+
+  pIAddressControl->GetEntry(iPlace, &szType, &szName); 
+  
+  if(iPlace == pListBox->GetCount() - 1)
+  {
+    if(!szName || !strlen(szName))
+      if(pListBox->GetCount() == 1)
+        pListBox->ResetContent();
+      else
+        pIAddressControl->DeleteEntry(iPlace);
+  }
+
+  CString type;
+  type.LoadString(IDS_ADDRESSNEWSGROUP);
+
+  pIAddressControl->AppendEntry(FALSE, type, szURL, IDB_NEWSART);
+
+  pUnk->Release();
+
+  if(pWnd && ::IsWindow(pWnd->m_hWnd))
+    pWnd->SetFocus();
+
+  return TRUE;
+}
 //////////////////////////////////////////////////////////////////////////////
 // CNSCollapser
 
