@@ -190,3 +190,48 @@ A2WW2A_API BOOL CreateProcessA_CE(LPCSTR pszImageName, LPCSTR pszCmdLine, LPSECU
     return retval;
 }
 
+A2WW2A_API int GetLocaleInfoA(LCID Locale, LCTYPE LCType, LPSTR lpLCData, int cchData)
+{
+    int retval = 0;
+    int neededChars = 0;
+
+    neededChars = GetLocaleInfoW(Locale, LCType, NULL, 0);
+    if(0 != neededChars)
+    {
+        LPWSTR buffer = NULL;
+
+        buffer = (LPWSTR)malloc(neededChars * sizeof(WCHAR));
+        if(NULL != buffer)
+        {
+            int gotChars = 0;
+
+            gotChars = GetLocaleInfoW(Locale, LCType, buffer, neededChars);
+            if(0 != gotChars)
+            {
+                if(0 == cchData)
+                {
+                    retval = WideCharToMultiByte(
+                        CP_ACP,
+                        WC_COMPOSITECHECK,
+                        buffer,
+                        neededChars,
+                        NULL,
+                        0,
+                        NULL,
+                        NULL
+                        );
+
+                }
+                else
+                {
+                    retval = w2a_buffer(buffer, neededChars, lpLCData, cchData);
+                }
+            }
+
+            free(buffer);
+        }
+    }
+
+    return retval;
+}
+

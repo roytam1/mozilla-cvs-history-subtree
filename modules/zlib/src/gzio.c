@@ -11,6 +11,11 @@
 
 #include "zutil.h"
 
+#if defined(WINCE)
+#include <windows.h>
+#include "a2ww2a.h"
+#endif
+
 struct internal_state {int dummy;}; /* for buggy compilers */
 
 #ifndef Z_BUFSIZE
@@ -152,8 +157,23 @@ local gzFile gz_open (path, mode, fd)
     }
     s->stream.avail_out = Z_BUFSIZE;
 
+#if !defined(WINCE)
     errno = 0;
     s->file = fd < 0 ? F_OPEN(path, fmode) : (FILE*)fdopen(fd, fmode);
+#else
+    {
+        WCHAR wmode[16];
+
+        if(a2w_buffer(fmode, 01, wmode, sizeof(wmode) / sizeof(WCHAR)))
+        {
+            s->file = fd < 0 ? F_OPEN(path, fmode) : (FILE*)_wfdopen(fd, wmode);
+        }
+        else
+        {
+            s->file = NULL;
+        }
+    }
+#endif
 
     if (s->file == NULL) {
         return destroy(s), (gzFile)Z_NULL;
@@ -238,7 +258,9 @@ local int get_byte(s)
 {
     if (s->z_eof) return EOF;
     if (s->stream.avail_in == 0) {
+#if !defined(WINCE)
 	errno = 0;
+#endif
 	s->stream.avail_in = fread(s->inbuf, 1, Z_BUFSIZE, s->file);
 	if (s->stream.avail_in == 0) {
 	    s->z_eof = 1;
@@ -334,8 +356,10 @@ local int destroy (s)
 	}
     }
     if (s->file != NULL && fclose(s->file)) {
+#if !defined(WINCE)
 #ifdef ESPIPE
 	if (errno != ESPIPE) /* fclose is broken for pipes in HP/UX */
+#endif
 #endif
 	    err = Z_ERRNO;
     }
@@ -396,7 +420,9 @@ int ZEXPORT gzread (file, buf, len)
 	}
         if (s->stream.avail_in == 0 && !s->z_eof) {
 
+#if !defined(WINCE)
             errno = 0;
+#endif
             s->stream.avail_in = fread(s->inbuf, 1, Z_BUFSIZE, s->file);
             if (s->stream.avail_in == 0) {
                 s->z_eof = 1;
@@ -752,7 +778,11 @@ int ZEXPORT gzrewind (file)
     s->crc = crc32(0L, Z_NULL, 0);
 	
     if (s->startpos == 0) { /* not a compressed file */
+#if !defined(WINCE)
 	rewind(s->file);
+#else
+    fseek(s->file, 0, SEEK_SET);
+#endif
 	return 0;
     }
 
@@ -862,7 +892,11 @@ const char*  ZEXPORT gzerror (file, errnum)
     *errnum = s->z_err;
     if (*errnum == Z_OK) return (const char*)"";
 
+#if !defined(WINCE)
     m =  (char*)(*errnum == Z_ERRNO ? zstrerror(errno) : s->stream.msg);
+#else
+    m =  (char*)(*errnum == Z_ERRNO ? "Z_ERRNO" : s->stream.msg); // lame wince support
+#endif
 
     if (m == NULL || *m == '\0') m = (char*)ERR_MSG(s->z_err);
 

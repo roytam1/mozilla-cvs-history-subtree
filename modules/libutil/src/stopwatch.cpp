@@ -1,6 +1,8 @@
 #include "stopwatch.h"
 #include <stdio.h>
+#if !defined(WINCE)
 #include <time.h>
+#endif
 #ifdef XP_UNIX
 #include <unistd.h>
 #include <sys/times.h>
@@ -197,6 +199,8 @@ double Stopwatch::GetCPUTime(){
    return (double)(cpt.tms_utime+cpt.tms_stime) / gTicks;
 #elif defined(R__VMS)
    return(double)clock()/gTicks;
+#elif defined(WINCE)
+   return GetRealTime();
 #elif defined(WIN32)
 
   OSVERSIONINFO OsVersionInfo;

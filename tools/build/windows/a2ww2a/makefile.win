@@ -71,11 +71,11 @@ OBJS= \
 #//
 #//------------------------------------------------------------------------
 
-MODULE=a2ww2a
+THENAME=a2ww2a
 MAKE_OBJ_TYPE=DLL
-EXP=$(OBJDIR)\$(MODULE).lib
-DLL=$(OBJDIR)\$(MODULE).dll
-EXCLUDE_LIBS=$(MODULE).lib
+EXP=$(OBJDIR)\$(THENAME).lib
+DLL=$(OBJDIR)\$(THENAME).dll
+EXCLUDE_LIBS=$(THENAME).lib
 
 #//------------------------------------------------------------------------
 #//
@@ -84,7 +84,7 @@ EXCLUDE_LIBS=$(MODULE).lib
 #//
 #//------------------------------------------------------------------------
 LCFLAGS=$(LCFLAGS) \
-    /DBUILD_$(MODULE) \
+    /DBUILD_$(THENAME) \
     $(NULL)
 
 LLFLAGS=$(LLFALGS) \

@@ -146,7 +146,7 @@ nsPlatformCharset::GetDefaultCharsetForLocale(const PRUnichar* localeName, PRUni
 
   if (NS_FAILED(result)) { *_retValue = ToNewUnicode(charset); return result; }
 
-  if (GetLocaleInfo(localeAsLCID,LOCALE_IDEFAULTANSICODEPAGE,acp_name,sizeof(acp_name))==0) { 
+  if (GetLocaleInfoA(localeAsLCID,LOCALE_IDEFAULTANSICODEPAGE,acp_name,sizeof(acp_name))==0) { 
     *_retValue = ToNewUnicode(charset); 
     return NS_ERROR_FAILURE; 
   }
