@@ -42,7 +42,7 @@
 
 #include "FullPath.h"
 #include "MoreFilesExtras.h"
-#include "FSpCompat_fopen.h"
+#include "FSp_fopen.h"
 
 /* compiler headers */
 #include "DropInCompilerLinker.h"
@@ -296,7 +296,7 @@ FILE* std::fopen(const char* filename, const char *mode)
 	} while (0);
 
 	// if all went well, we have a file to open.
-	return (err == noErr ? FSpCompat_fopen(&filespec, mode) : NULL);
+	return (err == noErr ? FSp_fopen(&filespec, mode) : NULL);
 }
 
 /**

@@ -49,7 +49,7 @@
 #include "mac_strings.h"
 #include "FullPath.h"
 #include "MoreFilesExtras.h"
-#include "FSpCompat_fopen.h"
+#include "FSp_fopen.h"
 
 /* use standard CodeWarrior debugger */
 #define kDebuggerCreator	'MWDB'
@@ -181,7 +181,7 @@ FILE* std::fopen(const char* filename, const char *mode)
 	CWFileSpec& fileDir = (mode[0] == 'r' ? gObjectCodeDirectory : gOutputDirectory);
 	FSSpec fileSpec = { fileDir.vRefNum, fileDir.parID };
 	c2p_strcpy(fileSpec.name, filename);
-	return FSpCompat_fopen(&fileSpec, mode);
+	return FSp_fopen(&fileSpec, mode);
 }
 
 static CWResult GetSettings(CWPluginContext context, XPIDLSettings& settings)
@@ -255,7 +255,7 @@ static CWResult LinkHeaders(CWPluginContext context, XPIDLSettings& settings)
 	
 	// create the target file in the output directory.
 	BlockMoveData(settings.output, outputDir.name, 1 + settings.output[0]);
-	FILE* outputFile = FSpCompat_fopen(&outputDir, "w");
+	FILE* outputFile = FSp_fopen(&outputDir, "w");
 	if (outputFile != NULL) fclose(outputFile);
 
 	return err;
