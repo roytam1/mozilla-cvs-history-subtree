@@ -339,6 +339,8 @@ jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
         }
         return NULL;
     }
+    /* need to assign the context field. */
+    jsj_env->cx = cx;
     if (envp)
         *envp = jsj_env->jEnv;
     return jsj_env;
