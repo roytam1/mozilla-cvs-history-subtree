@@ -1070,17 +1070,74 @@ function BrowserChangeTextSize(newSize)
     }
   }
 
-// IBMBIDI
-  function BrowserSetBidi(member, value)
+  function BrowserSetBidiDirection(aDirection)
   {
     if (appCore != null) {
-      appCore.SetDocumentBidi(member, value);
+      appCore.SetBidiDirection(aDirection);
       window.content.location.reload();
     } else {
       dump("BrowserAppCore has not been created!\n");
     }
   }
-// IBMBIDI
+
+  function BrowserSetBidiTextType(aTextType)
+  {
+    if (appCore != null) {
+      appCore.SetBidiTextType(aTextType);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+  
+  function BrowserSetBidiControlsMode(aControlsMode)
+  {
+    if (appCore != null) {
+      appCore.SetBidiControlsMode(aControlsMode);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+  
+  function BrowserSetBidiClipboardMode(aClipboardMode)
+  {
+    if (appCore != null) {
+      appCore.SetBidiClipboardMode(aClipboardMode);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+  function BrowserSetBidiNumeralShape(aNumeralShape)
+  {
+    if (appCore != null) {
+      appCore.SetBidiNumeralShape(aNumeralShape);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+  
+  function BrowserSetBidiSupport(aSupport)
+  {
+    if (appCore != null) {
+      appCore.SetBidiSupport(aSupport);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+  
+  function BrowserSetBidiCharset(aCharset)
+  {
+    if (appCore != null) {
+      appCore.SetBidiCharset(aCharset);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
 
   function BrowserClose()
   {

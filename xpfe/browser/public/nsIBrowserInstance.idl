@@ -75,9 +75,14 @@ interface nsIBrowserInstance : nsISupports {
     void copy();
     void selectAll();
 
-#ifdef IBMBIDI
-    void   SetDocumentBidi(in PRUint8 member, in PRUint8 value);
-#endif
+    //ahmed
+    void   SetBidiDirection(in PRUint8 aBidiDirection);
+    void   SetBidiTextType(in PRUint8 aBidiTextType);
+    void   SetBidiControlsMode(in PRUint8 aBidiControlsMode);
+    void   SetBidiClipboardMode(in PRUint8 aBidiClipboardMode);
+    void   SetBidiNumeralShape(in PRUint8 aBidiNumeralShape);
+    void   SetBidiSupport(in PRUint8 aBidiSupport);
+    void   SetBidiCharset(in PRUint8 aBidiCharset);
     
     // Search.
     void find();

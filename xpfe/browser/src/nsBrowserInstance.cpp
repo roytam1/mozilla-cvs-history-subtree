@@ -1218,43 +1218,119 @@ nsBrowserInstance::SetDocumentCharset(const PRUnichar *aCharset)
   return NS_OK;
 }
 
-#ifdef IBMBIDI
 NS_IMETHODIMP    
-nsBrowserInstance::SetDocumentBidi(const PRUint8 member, const PRUint8 value)
+nsBrowserInstance::SetBidiDirection( const PRUint8 aBidiDirection)
 {
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
 
-		switch (member)
-	{
-	case IBMBIDI_TEXTDIRECTION:
-		this->mBidi.mdirection = value;
-		break;
-	case IBMBIDI_TEXTTYPE:
-		this->mBidi.mtexttype = value;
-		break;
-	case IBMBIDI_CONTROLSTEXTMODE:
-		this->mBidi.mcontrolstextmode = value;
-		break;
-	case IBMBIDI_CLIPBOARDTEXTMODE:
-		this->mBidi.mclipboardtextmode = value;
-		break;
-	case IBMBIDI_NUMERAL:
-		this->mBidi.mnumeral = value;
-		break;
-	case IBMBIDI_SUPPORTMODE:
-		this->mBidi.msupport = value;
-		break;
-	case IBMBIDI_CHARSET:
-		this->mBidi.mcharacterset = value;
-		break;
-	}
-	if (mWebShellWin != nsnull)
-	{
-		mWebShellWin->SetDocumentBidi(member, value);
-	}
-	return NS_OK;
+  this->mBidi.mdirection = aBidiDirection;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
 }
-#endif //IBMBIDI
 
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiTextType(const PRUint8 aBidiTextType)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+
+  this->mBidi.mtexttype = aBidiTextType;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiControlsMode(const PRUint8 aControlsMode)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+
+  this->mBidi.mcontrolstextmode = aControlsMode;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiClipboardMode( const PRUint8 aClipboardMode)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+  this->mBidi.mclipboardtextmode = aClipboardMode;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiNumeralShape(const PRUint8 aBidiNumeralShape)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+
+  this->mBidi.mnumeral = aBidiNumeralShape;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiSupport(const PRUint8 aBidiSupport)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+
+  this->mBidi.msupport = aBidiSupport;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+NS_IMETHODIMP    
+nsBrowserInstance::SetBidiCharset(const PRUint8 aBidiCharset)
+{
+#ifdef IBMBIDI
+  if (mWebShellWin != nsnull){
+    nsBidiOptions bidiOp;
+    mWebShellWin->GetBidi(&bidiOp);
+    this->mBidi=bidiOp;
+  }
+  this->mBidi.mcharacterset = aBidiCharset;
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBidi(mBidi);
+#endif
+  return NS_OK;
+}
+
+///////////////////////////////////////////
 
 // XXX isolate the common code in the next two methods into a common method
 
@@ -1294,6 +1370,7 @@ nsBrowserInstance::SetForcedCharset(const PRUnichar * aCharset)
 
   return NS_OK;
 }
+
 
 NS_IMETHODIMP    
 nsBrowserInstance::SetForcedDetector()

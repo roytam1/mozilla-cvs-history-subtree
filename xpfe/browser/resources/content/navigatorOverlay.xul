@@ -263,43 +263,43 @@ Contributor(s): Blake Ross <BlakeR1234@aol.com>. -->
         <menupopup>
           <menu value="&directionBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="directionBidiMenu" value="&directionLTRBidiCmd.label;" oncommand="BrowserSetBidi(1, 1)"/>
-              <menuitem type="radio" name="directionBidiMenu" value="&directionRTLBidiCmd.label;" oncommand="BrowserSetBidi(1, 2)"/>
+              <menuitem type="radio" name="directionBidiMenu" value="&directionLTRBidiCmd.label;" oncommand="BrowserSetBidiDirection(1)"/>
+              <menuitem type="radio" name="directionBidiMenu" value="&directionRTLBidiCmd.label;" oncommand="BrowserSetBidiDirection(2)"/>
             </menupopup>
           </menu>
           <menu value="&texttypeBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="texttypeBidiMenu" value="&charsettexttypeBidiCmd.label;" oncommand="BrowserSetBidi(2, 1)"/>
-              <menuitem type="radio" name="texttypeBidiMenu" value="&logicaltexttypeBidiCmd.label;" oncommand="BrowserSetBidi(2, 2)"/>
-              <menuitem type="radio" name="texttypeBidiMenu" value="&visualtexttypeBidiCmd.label;" oncommand="BrowserSetBidi(2, 3)"/>
+              <menuitem type="radio" name="texttypeBidiMenu" value="&charsettexttypeBidiCmd.label;" oncommand="BrowserSetBidiTextType(1)"/>
+              <menuitem type="radio" name="texttypeBidiMenu" value="&logicaltexttypeBidiCmd.label;" oncommand="BrowserSetBidiTextType(2)"/>
+              <menuitem type="radio" name="texttypeBidiMenu" value="&visualtexttypeBidiCmd.label;" oncommand="BrowserSetBidiTextType(3)"/>
             </menupopup>
           </menu>
           <menu value="&numeralBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="numeralBidiMenu" value="&regularcontextnumeralBidiCmd.label;" oncommand="BrowserSetBidi(5, 1)"/>
-              <menuitem type="radio" name="numeralBidiMenu" value="&arabicnumeralBidiCmd.label;" oncommand="BrowserSetBidi(5, 3)"/>
-              <menuitem type="radio" name="numeralBidiMenu" value="&hindinumeralBidiCmd.label;" oncommand="BrowserSetBidi(5, 4)"/>
-              <menuitem type="radio" name="numeralBidiMenu" value="&hindicontextnumeralBidiCmd.label;" oncommand="BrowserSetBidi(5, 2)"/>
+              <menuitem type="radio" name="numeralBidiMenu" value="&regularcontextnumeralBidiCmd.label;" oncommand="BrowserSetBidiNumeralShape(1)"/>
+              <menuitem type="radio" name="numeralBidiMenu" value="&arabicnumeralBidiCmd.label;" oncommand="BrowserSetBidiNumeralShape(3)"/>
+              <menuitem type="radio" name="numeralBidiMenu" value="&hindinumeralBidiCmd.label;" oncommand="BrowserSetBidiNumeralShape(4)"/>
+              <menuitem type="radio" name="numeralBidiMenu" value="&hindicontextnumeralBidiCmd.label;" oncommand="BrowserSetBidiNumeralShape(2)"/>
             </menupopup>
           </menu>
           <menu value="&controlstextmodeBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&containercontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidi(3, 3)"/>
-              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&logicalcontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidi(3, 1)"/>
-              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&visiualcontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidi(3, 2)"/>
+              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&containercontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidiControlsMode(3)"/>
+              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&logicalcontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidiControlsMode(1)"/>
+              <menuitem type="radio" name="controlstextmodeBidiMenu" value="&visiualcontrolstextmodeBidiCmd.label;" oncommand="BrowserSetBidiControlsMode(2)"/>
             </menupopup>
           </menu>
           <menu value="&clipboardtextmodeBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&sourceclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidi(4, 3)"/>
-              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&logicalclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidi(4, 1)"/>
-              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&visiualclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidi(4, 2)"/>
+              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&sourceclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidiClipboardMode(3)"/>
+              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&logicalclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidiClipboardMode(1)"/>
+              <menuitem type="radio" name="clipboardtextmodeBidiMenu" value="&visiualclipboardtextmodeBidiCmd.label;" oncommand="BrowserSetBidiClipboardMode(2)"/>
             </menupopup>
           </menu>
           <menu value="&charactersetBidiMenu.label;">
             <menupopup>
-              <menuitem type="radio" name="charactersetBidiMenu" value="&doccharactersetBidiCmd.label;" oncommand="BrowserSetBidi(7, 1)"/>
-              <menuitem type="radio" name="charactersetBidiMenu" value="&defaultcharactersetBidiCmd.label;" oncommand="BrowserSetBidi(7, 2)"/>
+              <menuitem type="radio" name="charactersetBidiMenu" value="&doccharactersetBidiCmd.label;" oncommand="BrowserSetBidiCharset(1)"/>
+              <menuitem type="radio" name="charactersetBidiMenu" value="&defaultcharactersetBidiCmd.label;" oncommand="BrowserSetBidiCharset(2)"/>
             </menupopup>
           </menu>
         </menupopup>
