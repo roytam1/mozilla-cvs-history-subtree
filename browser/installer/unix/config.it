@@ -122,7 +122,7 @@ GRE Private Key=Software\mozilla.org\GRE_$GreUniqueID$_PRIVATE_$ProductNameInter
 ; Controls the display of the banner image in the download and install progress dialogs.
 ; Default value is TRUE.
 Show Banner Image=TRUE
-Header Image=header.xpm
+Header Image=header.png
 
 ; Controls the check to see if user is installing on top of a previous
 ; installation of the product. If so, then prompt the user that cleanup
@@ -191,7 +191,7 @@ Message0=@SETUP_MESSAGE0@
 Message1=@SETUP_MESSAGE1_UNIX@
 Message2=@SETUP_MESSAGE2@
 Message3=@SETUP_MESSAGE3@
-Watermark=watermark.xpm
+Watermark=watermark.png
 
 [Dialog License]
 Show Dialog=TRUE

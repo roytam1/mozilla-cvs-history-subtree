@@ -10,8 +10,8 @@ $exe_suffix = '';
 @wizard_files = (
 		 "mozilla-installer",
                  "mozilla-installer-bin",
-		 "watermark.xpm",
-		 "header.xpm"
+		 "watermark.png",
+		 "header.png"
 		 );
 
 sub BuildPlatformInstaller
