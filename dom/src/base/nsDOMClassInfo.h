@@ -72,16 +72,7 @@ protected:
   static PRUint32 sInstanceCount;
 
   // nsIXPCScriptable code
-  nsresult DoDefineStaticJSIds(JSContext *cx);
-
-  inline nsresult DefineStaticJSIds(JSContext *cx)
-  {
-    if (sLocation_id) {
-      return NS_OK;
-    }
-
-    return DoDefineStaticJSIds(cx);
-  }
+  static nsresult DefineStaticJSStrings(JSContext *cx);
 
   static JSString *sTop_id;
   static JSString *sScrollbars_id;
@@ -199,12 +190,22 @@ protected:
   {
   }
 
-  inline PRBool canBeEventName(JSString *jsstr)
+  static PRBool ReallyIsEventName(JSString *str);
+
+  static inline PRBool IsEventName(JSString *jsstr)
   {
     jschar *str = ::JS_GetStringChars(jsstr);
 
-    return str[0] == 'o' && str[1] == 'n';
+    if (str[0] == 'o' && str[1] == 'n' && str[2]) {
+      return ReallyIsEventName(jsstr);
+    }
+
+    return PR_FALSE;
   }
+
+  nsresult RegisterCompileEventHandler(nsIXPConnectWrappedNative *wrapper,
+                                       JSContext *cx, JSObject *obj, jsval id,
+                                       jsval *vp, PRBool aCompile);
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,

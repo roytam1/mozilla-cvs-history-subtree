@@ -27,6 +27,7 @@
 
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
+#include "nsIJSContextStack.h"
 #include "nsIScriptContext.h"
 #include "nsContentUtils.h"
 
@@ -205,7 +206,7 @@ JSString *nsDOMClassInfo::sOnscroll_id        = nsnull;
 
 // static
 nsresult
-nsDOMClassInfo::DoDefineStaticJSIds(JSContext *cx)
+nsDOMClassInfo::DefineStaticJSStrings(JSContext *cx)
 {
   sTop_id = ::JS_InternString(cx, "top");
 
@@ -283,6 +284,24 @@ NS_INTERFACE_MAP_END
 nsresult
 nsDOMClassInfo::Init()
 {
+  if (!sLocation_id) {
+    // This method better be called from JS through XPConnect, if not
+    // we're out of luck!
+    nsresult rv;
+    nsCOMPtr<nsIJSContextStack> stack =
+      do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    JSContext *cx = nsnull;
+
+    rv = stack->Peek(&cx);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Initialize static JSString's
+    DefineStaticJSStrings(cx);
+  }
+
+
   NS_DEFINE_CLASSINFO_DATA_HEAD;
 
   // This list of NS_DEFINE_CLASSINFO_DATA macros is what gives the
@@ -539,7 +558,7 @@ nsDOMClassInfo::Init()
     if (!d->mConstructorFptr) {
       NS_ERROR("Class info data out of sync, you forgot to update "
                "nsDOMClassInfo.h and nsDOMClassInfo.cpp! Fix this, "
-               "mozilla will now crash!");
+               "mozilla will not work without this fixed!");
 
       PRInt32 *foo = nsnull;
       *foo = 0;
@@ -886,8 +905,6 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
                         JSObject * obj, jsval id, jsval * vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    DefineStaticJSIds(cx);
-
     // Look for a child frame with the name of the property we're
     // getting, if we find one we'll return that child frame.
 
@@ -1180,8 +1197,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (JSVAL_IS_STRING(id)) {
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
 
-    DefineStaticJSIds(cx);
-
     JSString *str = JSVAL_TO_STRING(id);
 
     nsCOMPtr<nsISupports> native;
@@ -1343,20 +1358,97 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
 // EventProp helper
 
+// static
+PRBool
+nsEventPropSH::ReallyIsEventName(JSString *jsstr)
+{
+  if (jsstr == sOnmousedown_id ||
+      jsstr == sOnmouseup_id   ||
+      jsstr == sOnclick_id     ||
+      jsstr == sOnmouseover_id ||
+      jsstr == sOnmouseout_id  ||
+      jsstr == sOnkeydown_id   ||
+      jsstr == sOnkeyup_id     ||
+      jsstr == sOnkeypress_id  ||
+      jsstr == sOnmousemove_id ||
+      jsstr == sOnfocus_id     ||
+      jsstr == sOnblur_id      ||
+      jsstr == sOnsubmit_id    ||
+      jsstr == sOnreset_id     ||
+      jsstr == sOnchange_id    ||
+      jsstr == sOnselect_id    ||
+      jsstr == sOnload_id      ||
+      jsstr == sOnunload_id    ||
+      jsstr == sOnabort_id     ||
+      jsstr == sOnerror_id     ||
+      jsstr == sOnpaint_id     ||
+      jsstr == sOnresize_id    ||
+      jsstr == sOnscroll_id) {
+    return PR_TRUE;
+  }
+
+  return PR_FALSE;
+}
+
+nsresult
+nsEventPropSH::RegisterCompileEventHandler(nsIXPConnectWrappedNative *wrapper,
+                                           JSContext *cx, JSObject *obj,
+                                           jsval id, jsval *vp,
+                                           PRBool aCompile)
+{
+  JSString *str = JSVAL_TO_STRING(id);
+
+  if (IsEventName(str)) {
+    nsCOMPtr<nsIScriptContext> script_cx;
+    nsresult rv =
+      nsJSUtils::nsGetStaticScriptContext(cx, obj,
+                                          getter_AddRefs(script_cx));
+
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+    NS_ABORT_IF_FALSE(native, "No native!");
+
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(native));
+
+    if (receiver) {
+      nsCOMPtr<nsIEventListenerManager> manager;
+
+      receiver->GetListenerManager(getter_AddRefs(manager));
+
+      if (manager) {
+        const PRUnichar *ustr =
+          NS_REINTERPRET_CAST(const PRUnichar *, ::JS_GetStringChars(str));
+
+        nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
+        NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
+
+        if (aCompile) {
+          rv = manager->CompileScriptEventListener(script_cx, receiver, atom);
+        } else {
+          rv = manager->RegisterScriptEventListener(script_cx, receiver, atom);
+        }
+
+        if (NS_FAILED(rv)) {
+          return rv;
+        }
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                            JSObject *obj, jsval id, jsval *vp,
                            PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    JSString *str = JSVAL_TO_STRING(id);
-
-    if (canBeEventName(str)) {
-      NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
-      // event code goes here...
-
-    }
+    return RegisterCompileEventHandler(wrapper, cx, obj, id, vp, PR_TRUE);
   }
 
   return NS_OK;
@@ -1367,72 +1459,8 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                            JSObject *obj, jsval id, jsval *vp,
                            PRBool *_retval)
 {
-  if (::JS_TypeOfValue(cx, *vp) != JSTYPE_FUNCTION || !JSVAL_IS_STRING(id)) {
-    return NS_OK;
-  }
-
-  JSString *str = JSVAL_TO_STRING(id);
-
-  if (canBeEventName(str)) {
-    DefineStaticJSIds(cx);
-
-    if (str == sOnmousedown_id ||
-        str == sOnmouseup_id   ||
-        str == sOnclick_id     ||
-        str == sOnmouseover_id ||
-        str == sOnmouseout_id  ||
-        str == sOnkeydown_id   ||
-        str == sOnkeyup_id     ||
-        str == sOnkeypress_id  ||
-        str == sOnmousemove_id ||
-        str == sOnfocus_id     ||
-        str == sOnblur_id      ||
-        str == sOnsubmit_id    ||
-        str == sOnreset_id     ||
-        str == sOnchange_id    ||
-        str == sOnselect_id    ||
-        str == sOnload_id      ||
-        str == sOnunload_id    ||
-        str == sOnabort_id     ||
-        str == sOnerror_id     ||
-        str == sOnpaint_id     ||
-        str == sOnresize_id    ||
-        str == sOnscroll_id) {
-      nsCOMPtr<nsIScriptContext> script_cx;
-      nsresult rv =
-        nsJSUtils::nsGetStaticScriptContext(cx, obj,
-                                            getter_AddRefs(script_cx));
-
-      if (NS_FAILED(rv)) {
-        return rv;
-      }
-
-      nsCOMPtr<nsISupports> native;
-      wrapper->GetNative(getter_AddRefs(native));
-      NS_ABORT_IF_FALSE(native, "No native!");
-
-      nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(native));
-
-      if (receiver) {
-        nsCOMPtr<nsIEventListenerManager> manager;
-
-        receiver->GetListenerManager(getter_AddRefs(manager));
-
-        if (manager) {
-          const PRUnichar *ustr =
-            NS_REINTERPRET_CAST(const PRUnichar *, ::JS_GetStringChars(str));
-
-          nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
-          NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
-
-          rv = manager->RegisterScriptEventListener(script_cx, native, atom);
-
-          if (NS_FAILED(rv)) {
-            return rv;
-          }
-        }
-      }
-    }
+  if (::JS_TypeOfValue(cx, *vp) == JSTYPE_FUNCTION || JSVAL_IS_STRING(id)) {
+    return RegisterCompileEventHandler(wrapper, cx, obj, id, vp, PR_FALSE);
   }
 
   return NS_OK;
@@ -1647,8 +1675,6 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    DefineStaticJSIds(cx);
-
     JSString *jsstr = JSVAL_TO_STRING(id);
 
     if (jsstr == sLocation_id && JSVAL_IS_STRING(*vp)) {
