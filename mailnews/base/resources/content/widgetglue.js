@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Jan Varga (varga@utcru.sk)
+ *   Hakan Waara (hwaara@chello.se)
  */
 
 /*
@@ -42,45 +46,26 @@ function ConvertDOMListToResourceArray(nodeList)
 
 function GetSelectedFolderURI()
 {
-	var uri = null;
-	var selectedFolder = null;
-	try {
-		var folderTree = GetFolderTree(); 
-		var selectedFolderList = folderTree.selectedItems;
-	
-		//  you can only select one folder / server to add new folder / subscribe to
-		if (selectedFolderList.length == 1) {
-			selectedFolder = selectedFolderList[0];
-		}
-		else {
-			//dump("number of selected folder was " + selectedFolderList.length + "\n");
-		}
-	}
-	catch (ex) {
-		// dump("failed to get the selected folder\n");
-		uri = null;
-	}
+    var folderOutliner = GetFolderOutliner();
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
+    {
+        var folderResource = GetFolderResource(startIndex.value);
+        return folderResource.Value;
+    }
 
-	try {
-       		if (selectedFolder) {
-			uri = selectedFolder.getAttribute('id');
-			// dump("folder to preselect: " + preselectedURI + "\n");
-		}
-	}
-	catch (ex) {
-		uri = null;
-	}
-
-	return uri;
+    return null;
 }
 
 
 function MsgRenameFolder() 
 {
 	var preselectedURI = GetSelectedFolderURI();
-	var folderTree = GetFolderTree();
+	var folderOutliner = GetFolderOutliner();
 
-	var name = GetFolderNameFromUri(preselectedURI, folderTree);
+	var name = GetFolderNameFromUri(preselectedURI, folderOutliner);
 
 	dump("preselectedURI = " + preselectedURI + "\n");
 	var dialog = window.openDialog(
@@ -94,8 +79,8 @@ function MsgRenameFolder()
 function RenameFolder(name,uri)
 {
     dump("uri,name = " + uri + "," + name + "\n");
-    var folderTree = GetFolderTree();
-    if (folderTree)
+    var folderOutliner = GetFolderOutliner();
+    if (folderOutliner)
     {
 	if (uri && (uri != "") && name && (name != "")) {
                 var selectedFolder = GetResourceFromUri(uri);
@@ -111,7 +96,7 @@ function RenameFolder(name,uri)
 
                 ClearThreadPane();
                 ClearMessagePane();
-                folderTree.clearItemSelection();
+                folderOutliner.outlinerBoxObject.selection.clearSelection();
         }
         else {
                 dump("no name or nothing selected\n");
@@ -232,9 +217,9 @@ function MsgFolderProperties()
 {
 	var preselectedURI = GetSelectedFolderURI();
 	var serverType = GetMsgFolderFromUri(preselectedURI).server.type;
-	var folderTree = GetFolderTree();
+	var folderOutliner = GetFolderOutliner();
 
-	var name = GetFolderNameFromUri(preselectedURI, folderTree);
+	var name = GetFolderNameFromUri(preselectedURI, folderOutliner);
 
 	var windowTitle = gMessengerBundle.getString("folderProperties");
 	var dialog = window.openDialog(
