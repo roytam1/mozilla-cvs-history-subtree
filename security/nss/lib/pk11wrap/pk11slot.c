@@ -1562,7 +1562,10 @@ PK11_VerifySlotMechanisms(PK11SlotInfo *slot)
     	mechList = (CK_MECHANISM_TYPE *)
 			    PORT_Alloc(count *sizeof(CK_MECHANISM_TYPE));
 	alloced = PR_TRUE;
-	if (mechList == NULL) return PR_FALSE;
+	if (mechList == NULL) {
+	    PK11_FreeSlot(intern);
+	    return PR_FALSE;
+	}
     }
     /* get the list */
     if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
@@ -1822,6 +1825,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 					random_bytes, sizeof(random_bytes));
 	        PK11_ExitSlotMonitor(slot);
 	    }
+	    PK11_FreeSlot(int_slot);
 	}
     }
 
@@ -1888,7 +1892,7 @@ PK11_InitSlot(SECMODModule *mod,CK_SLOT_ID slotID,PK11SlotInfo *slot)
 	 (char *)slotInfo.slotDescription, sizeof(slotInfo.slotDescription));
     slot->isHW = (PRBool)((slotInfo.flags & CKF_HW_SLOT) == CKF_HW_SLOT);
 #define ACTIVE_CARD "ActivCard SA"
-    slot->isActiveCard = (PRBool)(PORT_Strncmp(slotInfo.manufacturerID,
+    slot->isActiveCard = (PRBool)(PORT_Strncmp((char *)slotInfo.manufacturerID,
 				ACTIVE_CARD, sizeof(ACTIVE_CARD)-1) == 0);
     if ((slotInfo.flags & CKF_REMOVABLE_DEVICE) == 0) {
 	slot->isPerm = PR_TRUE;

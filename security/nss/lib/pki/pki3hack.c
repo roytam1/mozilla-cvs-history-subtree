@@ -87,16 +87,6 @@ STAN_GetDefaultCryptoContext()
     return g_default_crypto_context;
 }
 
-NSS_IMPLEMENT NSSToken *
-STAN_GetDefaultCryptoToken
-(
-  void
-)
-{
-    PK11SlotInfo *pk11slot = PK11_GetInternalSlot();
-    return PK11Slot_GetNSSToken(pk11slot);
-}
-
 NSS_IMPLEMENT PRStatus
 STAN_LoadDefaultNSS3TrustDomain
 (
@@ -162,7 +152,9 @@ STAN_RemoveModuleFromDefaultTrustDomain
     for (i=0; i<module->slotCount; i++) {
 	token = PK11Slot_GetNSSToken(module->slots[i]);
 	if (token) {
+	    nssToken_NotifyCertsNotVisible(token);
 	    nssList_Remove(td->tokenList, token);
+	    PK11Slot_SetNSSToken(module->slots[i], NULL);
 	    nssToken_Destroy(token);
  	}
     }
@@ -596,7 +588,6 @@ fill_CERTCertificateFields(NSSCertificate *c, CERTCertificate *cc, PRBool forced
 	int nicklen, tokenlen, len;
 	NSSUTF8 *tokenName = NULL;
 	char *nick;
-	nicklen = nssUTF8_Size(stanNick, &nssrv);
 	if (instance && !PK11_IsInternal(instance->token->pk11slot)) {
 	    tokenName = nssToken_GetName(instance->token);
 	    tokenlen = nssUTF8_Size(tokenName, &nssrv);
@@ -604,16 +595,21 @@ fill_CERTCertificateFields(NSSCertificate *c, CERTCertificate *cc, PRBool forced
 	    /* don't use token name for internal slot; 3.3 didn't */
 	    tokenlen = 0;
 	}
-	len = tokenlen + nicklen;
-	cc->nickname = PORT_ArenaAlloc(cc->arena, len);
-	nick = cc->nickname;
-	if (tokenName) {
-	    memcpy(nick, tokenName, tokenlen-1);
-	    nick += tokenlen-1;
-	    *nick++ = ':';
+	if (stanNick) {
+	    nicklen = nssUTF8_Size(stanNick, &nssrv);
+	    len = tokenlen + nicklen;
+	    cc->nickname = PORT_ArenaAlloc(cc->arena, len);
+	    nick = cc->nickname;
+	    if (tokenName) {
+		memcpy(nick, tokenName, tokenlen-1);
+		nick += tokenlen-1;
+		*nick++ = ':';
+	    }
+	    memcpy(nick, stanNick, nicklen-1);
+	    cc->nickname[len-1] = '\0';
+	} else {
+	    cc->nickname = NULL;
 	}
-	memcpy(nick, stanNick, nicklen-1);
-	cc->nickname[len-1] = '\0';
     }
     if (context) {
 	/* trust */
@@ -857,6 +853,11 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
 	     * object in order to store trust.  forcing it to be perm
 	     */
 	    NSSUTF8 *nickname = nssCertificate_GetNickname(c, NULL);
+	    NSSASCII7 *email = NULL;
+
+	    if (PK11_IsInternal(tok->pk11slot)) {
+		email = c->email;
+	    }
 	    newInstance = nssToken_ImportCertificate(tok, NULL,
 	                                             NSSCertificateType_PKIX,
 	                                             &c->id,
@@ -865,6 +866,7 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
 	                                             &c->issuer,
 	                                             &c->subject,
 	                                             &c->serial,
+						     email,
 	                                             PR_TRUE);
 	    if (!newInstance) {
 		return PR_FAILURE;

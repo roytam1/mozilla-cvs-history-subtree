@@ -675,6 +675,14 @@ CERT_FinishExtensions;
 CERT_StartCertExtensions;
 DER_AsciiToTime;
 PK11_ImportCert;
+PORT_Strdup;
+SECMOD_CanDeleteInternalModule;
+;+    local:
+;+       *;
+;+};
+;+NSS_3.6 { 	# cert creation APIs used by certutil
+;+    global:
+PK11_GetPBEIV;
 ;+    local:
 ;+       *;
 ;+};

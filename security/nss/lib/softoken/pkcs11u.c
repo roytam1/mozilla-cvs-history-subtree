@@ -389,18 +389,37 @@ static NSSLOWCERTCertificate *
 pk11_getCert(PK11TokenObject *object)
 {
     NSSLOWCERTCertificate *cert;
+    CK_OBJECT_CLASS objClass = object->obj.objclass;
 
-    if ((object->obj.objclass != CKO_CERTIFICATE) &&
-	 		(object->obj.objclass != CKO_NETSCAPE_TRUST)) {
+    if ((objClass != CKO_CERTIFICATE) && (objClass != CKO_NETSCAPE_TRUST)) {
 	return NULL;
     }
-    if (object->obj.objectInfo) {
+    if (objClass == CKO_CERTIFICATE && object->obj.objectInfo) {
 	return (NSSLOWCERTCertificate *)object->obj.objectInfo;
     }
     cert = nsslowcert_FindCertByKey(object->obj.slot->certDB,&object->dbKey);
-    object->obj.objectInfo = (void *)cert;
-    object->obj.infoFree = (PK11Free) nsslowcert_DestroyCertificate ;
+    if (objClass == CKO_CERTIFICATE) {
+	object->obj.objectInfo = (void *)cert;
+	object->obj.infoFree = (PK11Free) nsslowcert_DestroyCertificate ;
+    }
     return cert;
+}
+
+static NSSLOWCERTTrust *
+pk11_getTrust(PK11TokenObject *object)
+{
+    NSSLOWCERTTrust *trust;
+
+    if (object->obj.objclass != CKO_NETSCAPE_TRUST) {
+	return NULL;
+    }
+    if (object->obj.objectInfo) {
+	return (NSSLOWCERTTrust *)object->obj.objectInfo;
+    }
+    trust = nsslowcert_FindTrustByKey(object->obj.slot->certDB,&object->dbKey);
+    object->obj.objectInfo = (void *)trust;
+    object->obj.infoFree = (PK11Free) nsslowcert_DestroyTrust ;
+    return trust;
 }
 
 static NSSLOWKEYPublicKey *
@@ -881,10 +900,8 @@ pk11_FindSMIMEAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 static PK11Attribute *
 pk11_FindTrustAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 {
-    NSSLOWCERTCertificate *cert;
+    NSSLOWCERTTrust *trust;
     unsigned char hash[SHA1_LENGTH];
-    SECItem *item;
-    PK11Attribute *attr;
     unsigned int trustFlags;
 
     switch (type) {
@@ -897,38 +914,29 @@ pk11_FindTrustAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
     default:
 	break;
     }
-    cert = pk11_getCert(object);
-    if (cert == NULL) {
+    trust = pk11_getTrust(object);
+    if (trust == NULL) {
 	return NULL;
     }
     switch (type) {
     case CKA_CERT_SHA1_HASH:
-	SHA1_HashBuf(hash,cert->derCert.data,cert->derCert.len);
-	return pk11_NewTokenAttribute(type,hash,SHA1_LENGTH, PR_TRUE);
+	SHA1_HashBuf(hash,trust->derCert->data,trust->derCert->len);
+	return pk11_NewTokenAttribute(type, hash, SHA1_LENGTH, PR_TRUE);
     case CKA_CERT_MD5_HASH:
-	MD5_HashBuf(hash,cert->derCert.data,cert->derCert.len);
-	return pk11_NewTokenAttribute(type,hash,MD5_LENGTH, PR_TRUE);
-    case CKA_ISSUER:
-	return pk11_NewTokenAttribute(type,cert->derIssuer.data,
-						cert->derIssuer.len, PR_FALSE);
-    case CKA_SERIAL_NUMBER:
-	item = SEC_ASN1EncodeItem(NULL,NULL,cert,pk11_SerialTemplate);
-	if (item == NULL) break;
-	attr = pk11_NewTokenAttribute(type, item->data, item->len, PR_TRUE);
-	SECITEM_FreeItem(item,PR_TRUE);
-	return attr;
+	MD5_HashBuf(hash,trust->derCert->data,trust->derCert->len);
+	return pk11_NewTokenAttribute(type, hash, MD5_LENGTH, PR_TRUE);
     case CKA_TRUST_CLIENT_AUTH:
-	trustFlags = cert->trust->sslFlags & CERTDB_TRUSTED_CLIENT_CA ?
-		cert->trust->sslFlags | CERTDB_TRUSTED_CA : 0 ;
+	trustFlags = trust->trust->sslFlags & CERTDB_TRUSTED_CLIENT_CA ?
+		trust->trust->sslFlags | CERTDB_TRUSTED_CA : 0 ;
 	goto trust;
     case CKA_TRUST_SERVER_AUTH:
-	trustFlags = cert->trust->sslFlags;
+	trustFlags = trust->trust->sslFlags;
 	goto trust;
     case CKA_TRUST_EMAIL_PROTECTION:
-	trustFlags = cert->trust->emailFlags;
+	trustFlags = trust->trust->emailFlags;
 	goto trust;
     case CKA_TRUST_CODE_SIGNING:
-	trustFlags = cert->trust->objectSigningFlags;
+	trustFlags = trust->trust->objectSigningFlags;
 trust:
 	if (trustFlags & CERTDB_TRUSTED_CA ) {
 	    return (PK11Attribute *)&pk11_StaticTrustedDelegatorAttr;
@@ -952,6 +960,28 @@ trust:
     default:
 	break;
     }
+
+#ifdef notdef
+    switch (type) {
+    case CKA_ISSUER:
+	cert = pk11_getCertObject(object);
+	if (cert == NULL) break;
+	attr = pk11_NewTokenAttribute(type,cert->derIssuer.data,
+						cert->derIssuer.len, PR_FALSE);
+	
+    case CKA_SERIAL_NUMBER:
+	cert = pk11_getCertObject(object);
+	if (cert == NULL) break;
+	item = SEC_ASN1EncodeItem(NULL,NULL,cert,pk11_SerialTemplate);
+	if (item == NULL) break;
+	attr = pk11_NewTokenAttribute(type, item->data, item->len, PR_TRUE);
+	SECITEM_FreeItem(item,PR_TRUE);
+    }
+    if (cert) {
+	NSSLOWCERTDestroyCertificate(cert);	
+	return attr;
+    }
+#endif
     return NULL;
 }
 
@@ -1114,7 +1144,7 @@ pk11_FindAttribute(PK11Object *object,CK_ATTRIBUTE_TYPE type)
     }
 
     PK11_USE_THREADS(PZ_Lock(sessObject->attributeLock);)
-    pk11queue_find(attribute,type,sessObject->head,ATTRIBUTE_HASH_SIZE);
+    pk11queue_find(attribute,type,sessObject->head, sessObject->hashSize);
 #ifdef PKCS11_REF_COUNT_ATTRIBUTES
     if (attribute) {
 	/* atomic increment would be nice here */
@@ -1150,7 +1180,7 @@ pk11_hasAttribute(PK11Object *object,CK_ATTRIBUTE_TYPE type)
     }
 
     PK11_USE_THREADS(PZ_Lock(sessObject->attributeLock);)
-    pk11queue_find(attribute,type,sessObject->head,ATTRIBUTE_HASH_SIZE);
+    pk11queue_find(attribute,type,sessObject->head, sessObject->hashSize);
     PK11_USE_THREADS(PZ_Unlock(sessObject->attributeLock);)
 
     return (PRBool)(attribute != NULL);
@@ -1167,7 +1197,7 @@ pk11_AddAttribute(PK11Object *object,PK11Attribute *attribute)
     if (sessObject == NULL) return;
     PK11_USE_THREADS(PZ_Lock(sessObject->attributeLock);)
     pk11queue_add(attribute,attribute->handle,
-				sessObject->head,ATTRIBUTE_HASH_SIZE);
+				sessObject->head, sessObject->hashSize);
     PK11_USE_THREADS(PZ_Unlock(sessObject->attributeLock);)
 }
 
@@ -1180,7 +1210,6 @@ pk11_Attribute2SSecItem(PLArenaPool *arena,SECItem *item,PK11Object *object,
                                       CK_ATTRIBUTE_TYPE type)
 {
     PK11Attribute *attribute;
-    unsigned char *start;
 
     item->data = NULL;
 
@@ -1211,9 +1240,9 @@ pk11_DeleteAttribute(PK11Object *object, PK11Attribute *attribute)
     }
     PK11_USE_THREADS(PZ_Lock(sessObject->attributeLock);)
     if (pk11queue_is_queued(attribute,attribute->handle,
-				sessObject->head,ATTRIBUTE_HASH_SIZE)) {
+				sessObject->head, sessObject->hashSize)) {
 	pk11queue_delete(attribute,attribute->handle,
-				sessObject->head,ATTRIBUTE_HASH_SIZE);
+				sessObject->head, sessObject->hashSize);
     }
     PK11_USE_THREADS(PZ_Unlock(sessObject->attributeLock);)
     pk11_FreeAttribute(attribute);
@@ -1261,6 +1290,50 @@ pk11_nullAttribute(PK11Object *object,CK_ATTRIBUTE_TYPE type)
     }
     pk11_FreeAttribute(attribute);
 }
+
+static CK_RV
+pk11_SetCertAttribute(PK11TokenObject *to, CK_ATTRIBUTE_TYPE type, 
+						void *value, unsigned int len)
+{
+    NSSLOWCERTCertificate *cert;
+    char *nickname = NULL;
+    SECStatus rv;
+
+    /* we can't change the ID or the EMAIL values, but let the
+     * upper layers feel better about the fact we tried to set these */
+    if ((type == CKA_ID) || (type == CKA_NETSCAPE_EMAIL)) {
+	return CKR_OK;
+    }
+
+    if (to->obj.slot->certDB == NULL) {
+	return CKR_TOKEN_WRITE_PROTECTED;
+    }
+
+    if (type != CKA_LABEL)  {
+	return CKR_ATTRIBUTE_READ_ONLY;
+    }
+
+    cert = pk11_getCert(to);
+    if (cert == NULL) {
+	return CKR_OBJECT_HANDLE_INVALID;
+    }
+
+    if (value != NULL) {
+	nickname = PORT_ZAlloc(len+1);
+	if (nickname == NULL) {
+	    return CKR_HOST_MEMORY;
+	}
+	PORT_Memcpy(nickname,value,len);
+	nickname[len] = 0;
+    }
+    rv = nsslowcert_AddPermNickname(to->obj.slot->certDB, cert, nickname);
+    if (nickname) PORT_Free(nickname);
+    if (rv != SECSuccess) {
+	return CKR_DEVICE_ERROR;
+    }
+    return CKR_OK;
+}
+
 static CK_RV
 pk11_SetPrivateKeyAttribute(PK11TokenObject *to, CK_ATTRIBUTE_TYPE type, 
 						void *value, unsigned int len)
@@ -1381,6 +1454,7 @@ pk11_forceTokenAttribute(PK11Object *object,CK_ATTRIBUTE_TYPE type,
     switch (object->objclass) {
     case CKO_CERTIFICATE:
 	/* change NICKNAME, EMAIL,  */
+	crv = pk11_SetCertAttribute(to,type,value,len);
 	break;
     case CKO_NETSCAPE_CRL:
 	/* change URL */
@@ -1713,51 +1787,51 @@ pk11_tokenKeyUnlock(PK11Slot *slot) {
 
 
 /* allocation hooks that allow us to recycle old object structures */
-#ifdef MAX_OBJECT_LIST_SIZE
 static PK11Object * objectFreeList = NULL;
 static PZLock *objectLock = NULL;
 static int object_count = 0;
-#endif
+
 PK11Object *
-pk11_GetObjectFromList(PRBool *hasLocks) {
+pk11_GetObjectFromList(PRBool *hasLocks, PRBool optimizeSpace, 
+						unsigned int hashSize) {
     PK11Object *object;
 
-#if MAX_OBJECT_LIST_SIZE
-    if (objectLock == NULL) {
-	objectLock = PZ_NewLock(nssILockObject);
+    if (!optimizeSpace) {
+	if (objectLock == NULL) {
+	    objectLock = PZ_NewLock(nssILockObject);
+	}
+
+	PK11_USE_THREADS(PZ_Lock(objectLock));
+	object = objectFreeList;
+	if (object) {
+	    objectFreeList = object->next;
+	    object_count--;
+	}    	
+	PK11_USE_THREADS(PZ_Unlock(objectLock));
+	if (object) {
+	    object->next = object->prev = NULL;
+            *hasLocks = PR_TRUE;
+	    return object;
+	}
     }
 
-    PK11_USE_THREADS(PZ_Lock(objectLock));
-    object = objectFreeList;
-    if (object) {
-	objectFreeList = object->next;
-	object_count--;
-    }    	
-    PK11_USE_THREADS(PZ_Unlock(objectLock));
-    if (object) {
-	object->next = object->prev = NULL;
-        *hasLocks = PR_TRUE;
-	return object;
-    }
-#endif
-
-    object  = (PK11Object*)PORT_ZAlloc(sizeof(PK11SessionObject));
+    object  = (PK11Object*)PORT_ZAlloc(sizeof(PK11SessionObject) + 
+		hashSize * sizeof(PK11Attribute *));
+    ((PK11SessionObject *)object)->hashSize = hashSize;
     *hasLocks = PR_FALSE;
     return object;
 }
 
 static void
 pk11_PutObjectToList(PK11SessionObject *object) {
-#ifdef MAX_OBJECT_LIST_SIZE
-    if (object_count < MAX_OBJECT_LIST_SIZE) {
+    if (!object->optimizeSpace && (object_count < MAX_OBJECT_LIST_SIZE)) {
 	PK11_USE_THREADS(PZ_Lock(objectLock));
 	object->obj.next = objectFreeList;
 	objectFreeList = &object->obj;
 	object_count++;
 	PK11_USE_THREADS(PZ_Unlock(objectLock));
 	return;
-     }
-#endif
+    }
     PK11_USE_THREADS(PZ_DestroyLock(object->attributeLock);)
     PK11_USE_THREADS(PZ_DestroyLock(object->obj.refLock);)
     object->attributeLock = object->obj.refLock = NULL;
@@ -1775,7 +1849,6 @@ pk11_freeObjectData(PK11Object *object) {
 void
 pk11_CleanupFreeLists()
 {
-#ifdef MAX_OBJECT_LIST_SIZE
     PK11Object *object;
 
     if (!objectLock) {
@@ -1794,7 +1867,6 @@ pk11_CleanupFreeLists()
     PK11_USE_THREADS(PZ_Unlock(objectLock));
     PZ_DestroyLock(objectLock);
     objectLock = NULL;
-#endif
 }
 
 
@@ -1808,10 +1880,13 @@ pk11_NewObject(PK11Slot *slot)
     PK11SessionObject *sessObject;
     PRBool hasLocks = PR_FALSE;
     int i;
+    unsigned int hashSize = 0;
 
+    hashSize = (slot->optimizeSpace) ? SPACE_ATTRIBUTE_HASH_SIZE :
+				TIME_ATTRIBUTE_HASH_SIZE;
 
 #ifdef PKCS11_STATIC_ATTRIBUTES
-    object = pk11_GetObjectFromList(&hasLocks);
+    object = pk11_GetObjectFromList(&hasLocks, slot->optimizeSpace, hashSize);
     if (object == NULL) {
 	return NULL;
     }
@@ -1828,7 +1903,8 @@ pk11_NewObject(PK11Slot *slot)
     arena = PORT_NewArena(2048);
     if (arena == NULL) return NULL;
 
-    object = (PK11Object*)PORT_ArenaAlloc(arena,sizeof(PK11SessionObject));
+    object = (PK11Object*)PORT_ArenaAlloc(arena,sizeof(PK11SessionObject)
+		+hashSize * sizeof(PK11Attribute *));
     if (object == NULL) {
 	PORT_FreeArena(arena,PR_FALSE);
 	return NULL;
@@ -1836,7 +1912,9 @@ pk11_NewObject(PK11Slot *slot)
     object->arena = arena;
 
     sessObject = (PK11SessionObject *)object;
+    sessObject->hashSize = hashSize;
 #endif
+    sessObject->optimizeSpace = slot->optimizeSpace;
 
     object->handle = 0;
     object->next = object->prev = NULL;
@@ -1872,7 +1950,7 @@ pk11_NewObject(PK11Slot *slot)
     sessObject->attributeLock = NULL;
     object->refLock = NULL;
 #endif
-    for (i=0; i < ATTRIBUTE_HASH_SIZE; i++) {
+    for (i=0; i < sessObject->hashSize; i++) {
 	sessObject->head[i] = NULL;
     }
     object->objectInfo = NULL;
@@ -1903,7 +1981,7 @@ pk11_DestroySessionObjectData(PK11SessionObject *so)
 	/* clean out the attributes */
 	/* since no one is referencing us, it's safe to walk the chain
 	 * without a lock */
-	for (i=0; i < ATTRIBUTE_HASH_SIZE; i++) {
+	for (i=0; i < so->hashSize; i++) {
 	    PK11Attribute *ap,*next;
 	    for (ap = so->head[i]; ap != NULL; ap = next) {
 		next = ap->next;
@@ -1986,7 +2064,7 @@ pk11_ObjectFromHandleOnSlot(CK_OBJECT_HANDLE handle, PK11Slot *slot)
     lock = slot->objectLock;
 
     PK11_USE_THREADS(PZ_Lock(lock);)
-    pk11queue_find(object,handle,head,TOKEN_OBJECT_HASH_SIZE);
+    pk11queue_find(object,handle,head,slot->tokObjHashSize);
     if (object) {
 	pk11_ReferenceObject(object);
     }
@@ -2040,8 +2118,7 @@ void
 pk11_AddSlotObject(PK11Slot *slot, PK11Object *object)
 {
     PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
-    pk11queue_add(object,object->handle,slot->tokObjects,
-							TOKEN_OBJECT_HASH_SIZE);
+    pk11queue_add(object,object->handle,slot->tokObjects,slot->tokObjHashSize);
     PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
 }
 
@@ -2084,7 +2161,7 @@ pk11_DeleteObject(PK11Session *session, PK11Object *object)
 	PK11_USE_THREADS(PZ_Unlock(session->objectLock);)
 	PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
 	pk11queue_delete(object,object->handle,slot->tokObjects,
-						TOKEN_OBJECT_HASH_SIZE);
+						slot->tokObjHashSize);
 	PK11_USE_THREADS(PZ_Unlock(slot->objectLock);)
 	pk11_FreeObject(object); /* reduce it's reference count */
     } else {
@@ -2160,7 +2237,7 @@ pk11_CopyObject(PK11Object *destObject,PK11Object *srcObject)
     }
 
     PK11_USE_THREADS(PZ_Lock(src_so->attributeLock);)
-    for(i=0; i < ATTRIBUTE_HASH_SIZE; i++) {
+    for(i=0; i < src_so->hashSize; i++) {
 	attribute = src_so->head[i];
 	do {
 	    if (attribute) {
@@ -2233,14 +2310,15 @@ pk11_objectMatch(PK11Object *object,CK_ATTRIBUTE_PTR theTemplate,int count)
  * in the object list.
  */
 CK_RV
-pk11_searchObjectList(PK11SearchResults *search,PK11Object **head,
-        PZLock *lock, CK_ATTRIBUTE_PTR theTemplate, int count, PRBool isLoggedIn)
+pk11_searchObjectList(PK11SearchResults *search,PK11Object **head, 
+	unsigned int size, PZLock *lock, CK_ATTRIBUTE_PTR theTemplate, 
+						int count, PRBool isLoggedIn)
 {
     int i;
     PK11Object *object;
     CK_RV crv = CKR_OK;
 
-    for(i=0; i < TOKEN_OBJECT_HASH_SIZE; i++) {
+    for(i=0; i < size; i++) {
         /* We need to hold the lock to copy a consistant version of
          * the linked list. */
         PK11_USE_THREADS(PZ_Lock(lock);)
@@ -2323,7 +2401,7 @@ pk11_update_all_states(PK11Slot *slot)
     int i;
     PK11Session *session;
 
-    for (i=0; i < SESSION_HASH_SIZE; i++) {
+    for (i=0; i < slot->sessHashSize; i++) {
 	PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,i));)
 	for (session = slot->head[i]; session; session = session->next) {
 	    pk11_update_state(slot,session);
@@ -2440,7 +2518,7 @@ pk11_SessionFromHandle(CK_SESSION_HANDLE handle)
     PK11Session *session;
 
     PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,handle));)
-    pk11queue_find(session,handle,slot->head,SESSION_HASH_SIZE);
+    pk11queue_find(session,handle,slot->head,slot->sessHashSize);
     if (session) session->refCount++;
     PK11_USE_THREADS(PZ_Unlock(PK11_SESSION_LOCK(slot,handle));)
 
