@@ -175,13 +175,11 @@ inline void CalcSidesFor(const nsIFrame* aFrame, const nsStyleSides& aSides,
 nsStyleFont::nsStyleFont()
   : mFont(nsnull, NS_FONT_STYLE_NORMAL, NS_FONT_VARIANT_NORMAL,
             NS_FONT_WEIGHT_NORMAL, NS_FONT_DECORATION_NONE, 0),
-    mFlags(NS_STYLE_FONT_DEFAULT),
     mSize(0)
 { }
 
 nsStyleFont::nsStyleFont(const nsFont& aFont)
-  : mFont(aFont),
-    mFlags(NS_STYLE_FONT_DEFAULT)
+  : mFont(aFont)
 {
   mSize = aFont.size;
 }
@@ -189,7 +187,6 @@ nsStyleFont::nsStyleFont(const nsFont& aFont)
 nsStyleFont::nsStyleFont(const nsStyleFont& aSrc)
 :mFont(aSrc.mFont)
 {
-  mFlags = aSrc.mFlags;
   mSize = aSrc.mSize;
 }
 
@@ -210,7 +207,7 @@ nsStyleFont::Destroy(nsIPresContext* aContext) {
 
 PRInt32 nsStyleFont::CalcDifference(const nsStyleFont& aOther) const
 {
-  if (mFlags == aOther.mFlags) {
+  if (mSize == aOther.mSize) {
     return CalcFontDifference(mFont, aOther.mFont);
   }
   return NS_STYLE_HINT_REFLOW;

@@ -349,11 +349,6 @@
 #define NS_STYLE_FONT_STRETCH_WIDER             10
 #define NS_STYLE_FONT_STRETCH_NARROWER          -10
 
-// See nsStyleFont mFlags
-#define NS_STYLE_FONT_DEFAULT                   0x00
-#define NS_STYLE_FONT_SIZE_EXPLICIT             0x01
-#define NS_STYLE_FONT_FACE_EXPLICIT             0x02
-
 // See nsStyleFont - system fonts
 #define NS_STYLE_FONT_CAPTION                   1		// css2
 #define NS_STYLE_FONT_ICON                      2

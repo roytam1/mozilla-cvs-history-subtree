@@ -1127,7 +1127,6 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       // now set to defaults
       aFont->mFont.name = aDefaultFont.name;
     }
-    aFont->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
   }
   else if (eCSSUnit_Enumerated == aFontData.mFamily.GetUnit()) {
     nsSystemAttrID sysID;
@@ -1164,7 +1163,6 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
         aFont->mFont.name = defaultVariableFont.name;
       }
       aFont->mSize = aFont->mFont.size; // this becomes our cascading size
-      aFont->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
     }
 
     // NavQuirks uses sans-serif instead of whatever the native font is
@@ -1247,6 +1245,8 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
           aFont->mFont.name.Assign(NS_LITERAL_STRING("serif"));
           aFont->mSize = defaultVariableFont.size;
           break;
+        default:
+          NS_ERROR("unexpected SID"); 
       }
     }
 #endif
@@ -1254,8 +1254,6 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
   else if (eCSSUnit_Inherit == aFontData.mFamily.GetUnit()) {
     aInherited = PR_TRUE;
     aFont->mFont.name = aParentFont->mFont.name;
-    aFont->mFlags &= ~NS_STYLE_FONT_FACE_EXPLICIT;
-    aFont->mFlags |= aParentFont->mFlags & NS_STYLE_FONT_FACE_EXPLICIT;
   }
   else if (eCSSUnit_Initial == aFontData.mFamily.GetUnit()) {
     aFont->mFont.name = defaultVariableFont.name;
@@ -1346,23 +1344,17 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       nscoord smallerSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
       aFont->mSize = PR_MIN(smallerSize, aParentFont->mSize);
     }
-    // this does NOT explicitly set font size
-    aFont->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
   }
   else if (aFontData.mSize.IsLengthUnit()) {
     aFont->mSize = CalcLength(aFontData.mSize, &aParentFont->mFont, nsnull, aPresContext, aInherited);
-    aFont->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
   }
   else if (eCSSUnit_Percent == aFontData.mSize.GetUnit()) {
     aInherited = PR_TRUE;
     aFont->mSize = (nscoord)((float)(aParentFont->mSize) * aFontData.mSize.GetPercentValue());
-    aFont->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
   }
   else if (eCSSUnit_Inherit == aFontData.mSize.GetUnit()) {
     aInherited = PR_TRUE;
     aFont->mSize = aParentFont->mSize;
-    aFont->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
-    aFont->mFlags |= (aParentFont->mFlags & NS_STYLE_FONT_SIZE_EXPLICIT);
   }
   else if (eCSSUnit_Initial == aFontData.mSize.GetUnit()) {
     aFont->mSize = defaultVariableFont.size;
@@ -1445,12 +1437,10 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
     nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
     nsStyleFont* tmpFont = (nsStyleFont*)context->GetStyleData(eStyleStruct_Font);
     parentFont.mFont = tmpFont->mFont;
-    parentFont.mFlags = tmpFont->mFlags ;
     parentFont.mSize = tmpFont->mSize;
     --i;
   }
   aFont->mFont = parentFont.mFont;
-  aFont->mFlags = parentFont.mFlags ;
   aFont->mSize = parentFont.mSize;
 
   PRBool dummy;
@@ -1493,7 +1483,6 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       (ruleData.mPostResolveCallback)((nsStyleStruct*)aFont, &ruleData);
 
     parentFont.mFont = aFont->mFont;
-    parentFont.mFlags = aFont->mFlags;
     parentFont.mSize = aFont->mSize;
   }
 
