@@ -42,7 +42,6 @@ public:
 	NS_IMETHOD GetMessageKey(nsMsgKey* aMessageKey);
     NS_IMETHOD GetMessageSize(PRUint32 *aMessageSize);
 	NS_IMETHOD SetMessageSize(PRUint32 aMessageSize);
-	NS_IMETHOD GetMessageSize(PRUint32 * aMessageSize);
 	NS_IMPL_CLASS_GETSET(MailboxAction, nsMailboxAction, m_mailboxAction);
 
 	// used by save message to disk....
