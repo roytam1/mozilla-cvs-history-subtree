@@ -52,7 +52,9 @@
 
 
 #ifdef JAVA
+#ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"	/* software update converters */
+#endif
 #endif
 
 #include "m_cvstrm.h"

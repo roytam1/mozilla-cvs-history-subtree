@@ -27,7 +27,9 @@
 #include "lm.h"
 #include "prefapi.h"
 #include "VerReg.h"
+#ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
+#endif
 #include "gui.h"	/* XP_AppPlatform */
 
 JSBool PR_CALLBACK asd_Version(JSContext *cx, JSObject *obj, uint argc, jsval *argv, jsval *rval);
