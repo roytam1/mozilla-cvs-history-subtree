@@ -395,6 +395,8 @@ NS_IMETHODIMP nsDeviceContextMac :: GetSystemFont(nsSystemFontID aID, nsFont *aF
 
   }
 
+  aFont->systemFont = PR_TRUE;
+
   return status;
 }
 
