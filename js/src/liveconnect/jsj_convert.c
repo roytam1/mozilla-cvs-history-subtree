@@ -431,6 +431,8 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
         if (!JSVAL_IS_BOOLEAN(v)) {
             if (!JS_ConvertValue(cx, v, JSTYPE_BOOLEAN, &v))
                 goto conversion_error;
+	    if (JSVAL_IS_VOID(v))
+		goto conversion_error;
             (*cost)++;
         }
         if (java_value)
@@ -681,7 +683,7 @@ jsj_ConvertJavaObjectToJSBoolean(JSContext *cx, JNIEnv *jEnv,
         return JS_TRUE;
     }
     java_class = class_descriptor->java_class;
-    booleanValue = (*jEnv)->GetMethodID(jEnv, java_obj, "booleanValue", "()Z");
+    booleanValue = (*jEnv)->GetMethodID(jEnv, java_class, "booleanValue", "()Z");
 
     /* Non-null Java object does not have a booleanValue() method, so
        it converts to true. */
