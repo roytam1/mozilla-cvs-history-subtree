@@ -612,6 +612,9 @@ BOOL CInterpret::interpret(char *cmds, WIDGET *curWidget)
 
 BOOL CInterpret::interpret(CString cmds, WIDGET *curWidget)
 {
+
+ 	CString quotes = "\"";	
+	
 	// Make modifiable copy of string's buffer
 	char buf[MAX_SIZE];
 	strcpy(buf, (char *)(LPCTSTR) cmds);
@@ -1212,7 +1215,8 @@ BOOL CInterpret::interpret(CString cmds, WIDGET *curWidget)
 				//Create an updated .che
 				theApp.CreateNewCache();
 
-			        CString exec_command = "ibengine.exe -c " + CachePath;
+			        CString exec_command = "ibengine.exe -c " + quotes 
+					+ CachePath + quotes;
 
 				CNewDialog newprog;
 				newprog.Create(IDD_NEW_DIALOG,NULL );
