@@ -38,8 +38,6 @@
 #include "nsView.h"
 #include "nsIWidget.h"
 #include "nsViewManager.h"
-#include "nsIFrame.h"
-#include "nsIPresContext.h"
 #include "nsIWidget.h"
 #include "nsIButton.h"
 #include "nsGUIEvent.h"
