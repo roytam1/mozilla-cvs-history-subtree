@@ -361,7 +361,7 @@ nsXmlRpcClient.prototype = {
 
             case this.STRING:
                 uuid.value = Components.interfaces.nsISupportsCString
-                return createInstance(SUPPORTSID + 'string;1',
+                return createInstance(SUPPORTSID + 'cstring;1',
                     'nsISupportsCString');
 
             case this.DOUBLE:
