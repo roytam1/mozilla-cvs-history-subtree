@@ -35,6 +35,7 @@ REQUIRES	= xpcom \
 		  necko \
 		  dom \
 		  appshell \
+		  browser \
 		  uconv \
 		  intl \
 		  htmlparser \
