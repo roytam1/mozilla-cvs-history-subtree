@@ -1164,7 +1164,7 @@ CSSLoaderImpl::InsertSheetInDoc(nsICSSStyleSheet* aSheet,
     rv = linkingNode->CompareDocumentPosition(sheetOwner, &comparisonFlags);
     // If we can't get the order right, just bail...
     NS_ENSURE_SUCCESS(rv, rv);
-    NS_ASSERTION(!(comparisonFlags & nsIDOMNode::DOCUMENT_POSITION_DISCONNECTED),
+    NS_ASSERTION(!(comparisonFlags & nsIDOM3Node::DOCUMENT_POSITION_DISCONNECTED),
                  "Why are these elements in different documents?");
 #ifdef DEBUG
     {
@@ -1173,7 +1173,7 @@ CSSLoaderImpl::InsertSheetInDoc(nsICSSStyleSheet* aSheet,
       NS_ASSERTION(!sameNode, "Why do we still have our old sheet?");
     }
 #endif // DEBUG
-    if (comparisonFlags & nsIDOMNode::DOCUMENT_POSITION_PRECEDING) {
+    if (comparisonFlags & nsIDOM3Node::DOCUMENT_POSITION_PRECEDING) {
       // The current sheet comes before us, and it better be the first
       // such, because now we break
       break;
