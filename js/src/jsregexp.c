@@ -1267,6 +1267,9 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 	op = REOP_FLAT1;
 	goto do_first_char;
 
+      case REOP_EOLONLY:
+        break;
+
       case REOP_DOTSTAR:
 	/*
 	 * ".*" is anchored by definition when at the front of a list.
