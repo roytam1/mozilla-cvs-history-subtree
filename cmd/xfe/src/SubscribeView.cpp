@@ -30,6 +30,7 @@
 #include "SubNewView.h"
 #include "ViewGlue.h"
 
+#include "proto.h"
 #include "xfe.h"
 #include "msgcom.h"
 #include "xp_mem.h"
