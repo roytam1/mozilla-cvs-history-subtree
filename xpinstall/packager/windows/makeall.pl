@@ -117,6 +117,7 @@ $ENV{WIZ_userAgentShort}       = "0.8.1";
 $ENV{WIZ_xpinstallVersion}     = "0.8.1";
 $ENV{WIZ_nameCompany}          = "Beonex";
 $ENV{WIZ_nameProduct}          = "Beonex Communicator";
+$ENV{WIZ_nameProductNoVersion} = "Beonex Communicator";
 $ENV{WIZ_fileMainExe}          = "beonex-comm.exe";
 $ENV{WIZ_fileUninstall}        = $seuFileNameSpecific;
 $ENV{WIZ_fileUninstallZip}     = $seuzFileNameSpecific;

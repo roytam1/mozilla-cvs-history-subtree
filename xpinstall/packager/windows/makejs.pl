@@ -72,8 +72,9 @@ $outTempFile      = $inJstFileSplit[0];
 $outTempFile     .= ".template";
 $foundLongFiles   = 0;
 
-print "copy \"$ENV{MOZ_SRC}\\mozilla\\xpinstall\\packager\\common\\share.t\" $outTempFile\n";
+print "\ncopy \"$ENV{MOZ_SRC}\\mozilla\\xpinstall\\packager\\common\\share.t\" $outTempFile\n";
 system("copy \"$ENV{MOZ_SRC}\\mozilla\\xpinstall\\packager\\common\\share.t\" $outTempFile");
+print "\ntype $inJstFile >> $outTempFile";
 system("type $inJstFile >> $outTempFile");
 
 # Open the input .template file
@@ -81,6 +82,7 @@ open(fpInTemplate, $outTempFile) || die "\ncould not open $outTempFile: $!\n";
 
 # Open the output .js file
 open(fpOutJs, ">$outJsFile") || die "\nCould not open $outJsFile: $!\n";
+print "\nOutput js file is %outJsFile";
 
 # While loop to read each line from input file
 while($line = <fpInTemplate>)

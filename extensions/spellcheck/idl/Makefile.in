@@ -52,5 +52,10 @@ XPIDLSRCS =                 \
 		mozISpellI18NManager.idl \
 		$(NULL)
 
-include $(topsrcdir)/config/rules.mk
+export::
+	mkdir -p _xpidlgen
+#HACK HACK HACK!!!! lol I have no idea why this dir doesn't get created
+#automatically nor do I have the passion or time to find it out now.
+#this works for me (TM).
 
+include $(topsrcdir)/config/rules.mk

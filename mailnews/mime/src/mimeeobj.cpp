@@ -181,9 +181,9 @@ MimeExternalObject_parse_begin (MimeObject *obj)
     // Don't bother showing all headers on this part if it's the only
     // part in the message: in that case, we've already shown these
     // headers.
-    obj->options->state &&
-    obj->options->state->root == obj->parent)
-    all_headers_p = PR_FALSE;
+       obj->options->state &&
+       obj->options->state->root == obj->parent)
+        all_headers_p = PR_FALSE;
     
     newopt.fancy_headers_p = PR_TRUE;
     newopt.headers = (all_headers_p ? MimeHeadersAll : MimeHeadersSome);    
@@ -196,7 +196,6 @@ GOTTA STILL DO THIS FOR QUOTING!
                                                  obj->encoding,
                                                  id_name? id_name : id, id_url, 0)
 *****/
-
     // obj->options really owns the storage for this.
     newopt.part_to_load = nsnull;
     newopt.default_charset = nsnull;
