@@ -70,6 +70,10 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIPrefBranch.h"
 #include "nsIServiceManagerUtils.h"
+#include "nsIRDFRemoteDataSource.h"
+#include "nsIURI.h"
+#include "nsIURIFixup.h"
+#include "nsIBrowserHistory.h"
 
 #include <QuickTime/QuickTime.h>
 
@@ -241,6 +245,15 @@ static NSArray* sToolbarDefaults = nil;
         mProgressSuperview = nil;
         mBookmarkToolbarItem = nil;
         mSidebarToolbarItem = nil;
+
+        nsCOMPtr<nsIBrowserHistory> globalHist = do_GetService("@mozilla.org/browser/global-history;1");
+        mGlobalHistory = globalHist;
+        if ( mGlobalHistory )
+          NS_ADDREF(mGlobalHistory);
+        nsCOMPtr<nsIURIFixup> fixer ( do_GetService("@mozilla.org/docshell/urifixup;1") );
+        mURIFixer = fixer;
+        if ( fixer )
+          NS_ADDREF(mURIFixer);
     }
     return self;
 }
@@ -302,6 +315,12 @@ static NSArray* sToolbarDefaults = nil;
   [self stopThrobber];
   [mThrobberImages release];
   [mURLFieldEditor release];
+
+  nsCOMPtr<nsIRDFRemoteDataSource> dataSource ( do_QueryInterface(mGlobalHistory) );
+  if ( dataSource )
+    dataSource->Flush();
+  NS_IF_RELEASE(mGlobalHistory);
+  NS_IF_RELEASE(mURIFixer);
   
   [super dealloc];
 }
@@ -810,6 +829,22 @@ static NSArray* sToolbarDefaults = nil;
   NSMutableString *theURL = [[NSMutableString alloc] initWithString:[sender stringValue]];
   CFStringTrimWhitespace((CFMutableStringRef)theURL);
   [self loadURL:theURL referrer:nil activate:YES];
+    
+  // global history needs to know the user typed this url so it can present it
+  // in autocomplete. We use the URI fixup service to strip whitespace and remove
+  // invalid protocols, etc.
+  if ( mGlobalHistory && mURIFixer ) {
+    nsCOMPtr<nsIURI> fixedURI;
+    nsAutoString url;
+    [theURL assignTo_nsAString:url];
+    mURIFixer->CreateFixupURI(url.get(), 0, getter_AddRefs(fixedURI));
+    if ( fixedURI ) {
+      nsCAutoString spec;
+      fixedURI->GetSpec(spec);
+      mGlobalHistory->MarkPageAsTyped(spec.get());
+    }
+  }
+  
   [theURL release];
 }
 

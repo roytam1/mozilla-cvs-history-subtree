@@ -40,6 +40,10 @@
 #import "Find.h"
 #import "BookmarksToolbar.h"
 
+#include "nsIBrowserHistory.h"
+
+class nsIURIFixup;
+class nsIBrowserHistory;
 class nsIDOMEvent;
 class nsIDOMNode;
 
@@ -170,6 +174,9 @@ typedef enum
   // could be an outlet, but i figure it's easier to get it at runtime thereby saving
   // someone from messing up in the nib when making changes.
   NSView* mProgressSuperview;                // WEAK ptr
+  
+  nsIURIFixup* mURIFixer;                   // [STRONG] should be nsCOMPtr, but can't
+  nsIBrowserHistory* mGlobalHistory;        // [STRONG] should be nsCOMPtr, but can't
 }
 
 - (void)dealloc;

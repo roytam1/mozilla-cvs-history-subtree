@@ -312,9 +312,18 @@ nsGlobalHistory::MatchExpiration(nsIMdbRow *row, PRInt64* expirationDate)
   
   // hidden and typed urls always match because they're invalid,
   // so we want to expire them asap.  (if they were valid, they'd
-  // have been unhidden -- see AddExistingPageToDatabase)
-  if (HasCell(mEnv, row, kToken_HiddenColumn) && HasCell(mEnv, row, kToken_TypedColumn))
-    return PR_TRUE;
+  // have been unhidden -- see AddExistingPageToDatabase). The exception
+  // to this is a redirect which will have been explicitly hidden
+  // by the docshell. To distinguish this from an invalid page, we
+  // check the page visit count and if it's non-zero, we know the
+  // page really does exist and we should keep it around for the
+  // autocomplete result pool.
+  if (HasCell(mEnv, row, kToken_HiddenColumn) && HasCell(mEnv, row, kToken_TypedColumn)) {
+    PRInt32 visitCount = 0;
+    rv = GetRowValue(row, kToken_VisitCountColumn, &visitCount);
+    if ( !visitCount )
+      return PR_TRUE;
+  }
 
   PRInt64 lastVisitedTime;
   rv = GetRowValue(row, kToken_LastVisitDateColumn, &lastVisitedTime);
