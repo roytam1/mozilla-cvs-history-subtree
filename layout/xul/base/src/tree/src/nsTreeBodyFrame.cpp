@@ -2351,9 +2351,14 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
     }
 
     // use -moz-appearance if provided.
-    if (useTheme) 
-      theme->DrawWidgetBackground(&aRenderingContext, this, 
+    if (useTheme) {
+      if (primaryX1 > rowRect.x) {
+      }
+      rowRect.width -= primaryX2 - rowRect.x;
+      rowRect.x = primaryX2;
+      theme->DrawWidgetBackground(&aRenderingContext, this,
                                   displayData->mAppearance, rowRect, aDirtyRect); 
+    }
     else {
       // Get border style
       const nsStyleBorder* borderStyle = (const nsStyleBorder*)separatorContext->GetStyleData(eStyleStruct_Border);
