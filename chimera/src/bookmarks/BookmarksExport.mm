@@ -51,14 +51,6 @@
 #include "nsIDOMDocument.h"
 #include "nsIContent.h"
 
-const char* const gPrologue = "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n"
-  "<!-- This is an automatically generated file.\n"
-  "It will be read and overwritten.\n"
-  "Do Not Edit! -->\n"
-  "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n"
-  "<TITLE>Bookmarks</TITLE>\n"
-  "<H1>Bookmarks</H1>\n";
-
 /*
   Netscape HTML bookmarks format is:
   
@@ -75,44 +67,60 @@ const char* const gPrologue = "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n"
 */
 
 
-nsresult
-BookmarksExport::ExportBookmarksToHTML(nsIDOMDocument* inBookmarksDoc, const nsAString& inFilePath)
+BookmarksExport::BookmarksExport(nsIDOMDocument* inBookmarksDoc, const char* inLinebreakStr)
+: mBookmarksDocument(inBookmarksDoc)
+, mLinebreakStr(inLinebreakStr)
+,	mWriteStatus(NS_OK)
 {
-  nsresult rv;
-  
-  nsCOMPtr<nsILocalFile> destFile;
-  rv = NS_NewLocalFile(inFilePath, PR_FALSE, getter_AddRefs(destFile));
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIOutputStream> outputStream;
-  rv = NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), destFile);
-  if (NS_FAILED(rv)) return rv;
-
-  PRUint32 bytesWritten;
-  rv = outputStream->Write(gPrologue, strlen(gPrologue), &bytesWritten);
-  
-  if (inBookmarksDoc)
-  {
-    nsCOMPtr<nsIDOMElement> docElement;
-    inBookmarksDoc->GetDocumentElement(getter_AddRefs(docElement));
-    
-    rv = WriteItem(outputStream, docElement, 0, PR_TRUE);
-  }
-  
-  rv = outputStream->Close();
-
-  return NS_OK;
 }
 
+BookmarksExport::~BookmarksExport()
+{
+  if (mOutputStream)
+    (void)mOutputStream->Close();
+}
 
 nsresult
-BookmarksExport::WriteChildren(nsIOutputStream* outputStream, nsIDOMElement* inElement, PRInt32 inDepth)
+BookmarksExport::ExportBookmarksToHTML(const nsAString& inFilePath)
+{
+  if (!mBookmarksDocument)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  nsresult rv = SetupOutputStream(inFilePath);
+  if (NS_FAILED(rv)) return rv;
+
+  WritePrologue();
+  nsCOMPtr<nsIDOMElement> docElement;
+  mBookmarksDocument->GetDocumentElement(getter_AddRefs(docElement));
+  WriteItem(docElement, 0, PR_TRUE);
+
+  CloseOutputStream();
+  return mWriteStatus;
+}
+
+nsresult
+BookmarksExport::SetupOutputStream(const nsAString& inFilePath)
+{
+  nsCOMPtr<nsILocalFile> destFile;
+  nsresult rv = NS_NewLocalFile(inFilePath, PR_FALSE, getter_AddRefs(destFile));
+  if (NS_FAILED(rv)) return rv;
+
+	return NS_NewLocalFileOutputStream(getter_AddRefs(mOutputStream), destFile);
+}
+
+void
+BookmarksExport::CloseOutputStream()
+{
+	(void)mOutputStream->Close();
+  mOutputStream = nsnull;
+}
+
+bool
+BookmarksExport::WriteChildren(nsIDOMElement* inElement, PRInt32 inDepth)
 {
   nsCOMPtr<nsIContent> curContent = do_QueryInterface(inElement);
-  if (!curContent) return NS_ERROR_FAILURE;
-  
-  nsresult rv = NS_OK;
-  
+  if (!curContent) return false;
+    
   // recurse to children
   PRInt32 numChildren;
   curContent->ChildCount(numChildren);
@@ -122,22 +130,19 @@ BookmarksExport::WriteChildren(nsIOutputStream* outputStream, nsIDOMElement* inE
     curContent->ChildAt(i, *getter_AddRefs(curChild));
     
     nsCOMPtr<nsIDOMElement> curElt = do_QueryInterface(curChild);
-    rv = WriteItem(outputStream, curElt, inDepth);
-    if (NS_FAILED(rv)) break;
+    if (!WriteItem(curElt, inDepth))
+      return false;
   }
 
-  return rv;
+  return true;
 }
   
-nsresult
-BookmarksExport::WriteItem(nsIOutputStream* outputStream, nsIDOMElement* inElement, PRInt32 inDepth, PRBool isRoot)
+bool
+BookmarksExport::WriteItem(nsIDOMElement* inElement, PRInt32 inDepth, PRBool isRoot)
 {
   nsCOMPtr<nsIContent> curContent = do_QueryInterface(inElement);
-  if (!inElement || !curContent) return NS_ERROR_FAILURE;
-
-  nsresult rv;
-  
-  PRUint32 bytesWritten;
+  if (!inElement || !curContent)
+    return false;
   
   nsCOMPtr<nsIAtom> tagName;
   curContent->GetTag(*getter_AddRefs(tagName));
@@ -155,47 +160,52 @@ BookmarksExport::WriteItem(nsIOutputStream* outputStream, nsIDOMElement* inEleme
   {
     if (!isRoot)
     {
-      rv = outputStream->Write(indentString, strlen(indentString), &bytesWritten);
+      WriteString(indentString, strlen(indentString));
   
       const char* const prefixString = "<DT><H3";
-      rv = outputStream->Write(prefixString, strlen(prefixString), &bytesWritten);
+      WriteString(prefixString, strlen(prefixString));
   
       nsAutoString typeAttribute;
       inElement->GetAttribute(NS_LITERAL_STRING("type"), typeAttribute);
       if (typeAttribute.Equals(NS_LITERAL_STRING("toolbar")))
       {
         const char* persToolbar = " PERSONAL_TOOLBAR_FOLDER=\"true\"";
-        rv = outputStream->Write(persToolbar, strlen(persToolbar), &bytesWritten);
+        WriteString(persToolbar, strlen(persToolbar));
       }
   
-      rv = outputStream->Write(">", 1, &bytesWritten);
+      WriteString(">", 1);
   
       inElement->GetAttribute(NS_LITERAL_STRING("name"), title);
   
       NS_ConvertUCS2toUTF8 titleConverter(title);
       const char* utf8String = titleConverter.get();
   
-      rv = outputStream->Write(utf8String, strlen(utf8String), &bytesWritten);
+      // we really need to convert entities in the title, like < > etc.
+      WriteString(utf8String, strlen(utf8String));
   
-      rv = outputStream->Write("</H3>\n", 6, &bytesWritten);
+      WriteString("</H3>", 5);
+      WriteLinebreak();
     }
     
-    rv = outputStream->Write(indentString, strlen(indentString), &bytesWritten);
-    rv = outputStream->Write("<DL><p>\n", 8, &bytesWritten);    
+    WriteString(indentString, strlen(indentString));
+    WriteString("<DL><p>", 7);    
+    WriteLinebreak();
   
-    rv = WriteChildren(outputStream, inElement, inDepth + 1);
-
-    rv = outputStream->Write(indentString, strlen(indentString), &bytesWritten);
-    rv = outputStream->Write("</DL><p>\n", 9, &bytesWritten);    
+    if (!WriteChildren(inElement, inDepth + 1))
+      return false;
+    
+    WriteString(indentString, strlen(indentString));
+    WriteString("</DL><p>", 8);
+    WriteLinebreak();
   }
   else
   {
     if (tagName == BookmarksService::gBookmarkAtom)
     {
-      rv = outputStream->Write(indentString, strlen(indentString), &bytesWritten);
+      WriteString(indentString, strlen(indentString));
 
       const char* const bookmarkPrefix = "<DT><A HREF=\"";
-      rv = outputStream->Write(bookmarkPrefix, strlen(bookmarkPrefix), &bytesWritten);
+      WriteString(bookmarkPrefix, strlen(bookmarkPrefix));
 
       inElement->GetAttribute(NS_LITERAL_STRING("href"), href);
       inElement->GetAttribute(NS_LITERAL_STRING("name"), title);
@@ -203,24 +213,64 @@ BookmarksExport::WriteItem(nsIOutputStream* outputStream, nsIDOMElement* inEleme
       NS_ConvertUCS2toUTF8 hrefConverter(href);
       const char* utf8String = hrefConverter.get();
       
-      rv = outputStream->Write(utf8String, strlen(utf8String), &bytesWritten);
-      outputStream->Write("\">", 2, &bytesWritten);
+      WriteString(utf8String, strlen(utf8String));
+      WriteString("\">", 2);
       
       NS_ConvertUCS2toUTF8 titleConverter(title);
       utf8String = titleConverter.get();
 
-      rv = outputStream->Write(utf8String, strlen(utf8String), &bytesWritten);
-      rv = outputStream->Write("</A>\n", 5, &bytesWritten);
+      WriteString(utf8String, strlen(utf8String));
+      WriteString("</A>", 4);
+      WriteLinebreak();
     }
     else if (tagName == BookmarksService::gSeparatorAtom)
     {
-      rv = outputStream->Write(indentString, strlen(indentString), &bytesWritten);
-      const char* const hrString = "<HR>\n";
-      rv = outputStream->Write(hrString, strlen(hrString), &bytesWritten);
+      WriteString(indentString, strlen(indentString));
+      WriteString("<HR>", 4);
+      WriteLinebreak();
     }
-  
   }
   
-  return rv;
+  return true;
 }
+
+void
+BookmarksExport::WritePrologue()
+{
+  const char* const gPrologueLines[] = {
+    "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
+    "<!-- This is an automatically generated file.",
+    "It will be read and overwritten.",
+    "Do Not Edit! -->",
+    "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">",
+    "<TITLE>Bookmarks</TITLE>",
+    "<H1>Bookmarks</H1>",
+    "",
+    nil
+  };
+
+  char* const *linePtr = gPrologueLines;
+
+  while (*linePtr)
+  {
+    WriteString(*linePtr, strlen(*linePtr));
+    WriteLinebreak();
+    linePtr++;
+  }
+}
+
+void
+BookmarksExport::WriteString(const char*inString, PRInt32 inLen)
+{
+  PRUint32 bytesWritten;
+  if (mWriteStatus == NS_OK)
+    mWriteStatus = mOutputStream->Write(inString, inLen, &bytesWritten);
+}
+
+void
+BookmarksExport::WriteLinebreak()
+{
+  WriteString(mLinebreakStr, strlen(mLinebreakStr));
+}
+  
 

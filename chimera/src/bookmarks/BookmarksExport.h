@@ -42,23 +42,40 @@
 
 #include "nsString.h"
 
-class nsIDOMElement;
-class nsIDOMDocument;
+#include "nsIDOMDocument.h"
+#include "nsIOutputStream.h"
 
-class nsIOutputStream;
+class nsIDOMElement;
 
 class BookmarksExport
 {
 public:
+  
+                    BookmarksExport(nsIDOMDocument* inBookmarksDoc, const char* inLinebreakStr = "\n");
+                    ~BookmarksExport();
+  
+  // at some point we could use subclassing to support different export formats
+  nsresult          ExportBookmarksToHTML(const nsAString& inFilePath);
 
-  static nsresult ExportBookmarksToHTML(nsIDOMDocument* inBookmarksDoc, const nsAString& inFilePath);
+protected:
 
+  nsresult          SetupOutputStream(const nsAString& inFilePath);
+  void              CloseOutputStream();
+  
+  // return false on failure (mWriteStatus set)
+  bool              WriteChildren(nsIDOMElement* inElement, PRInt32 inDepth);
+  bool              WriteItem(nsIDOMElement* inElement, PRInt32 inDepth, PRBool isRoot = PR_FALSE);
 
-private:
+  void              WritePrologue();
+  void              WriteString(const char*inString, PRInt32 inLen);
+  void              WriteLinebreak();
 
-  static nsresult WriteChildren(nsIOutputStream* outputStream, nsIDOMElement* inElement, PRInt32 inDepth);
-  static nsresult WriteItem(nsIOutputStream* outputStream, nsIDOMElement* inElement, PRInt32 inDepth, PRBool isRoot = PR_FALSE);
+protected:
 
+  nsCOMPtr<nsIDOMDocument>  mBookmarksDocument;
+  nsCOMPtr<nsIOutputStream> mOutputStream;
+  const char*               mLinebreakStr;
+  nsresult                  mWriteStatus;
   
 };
 

@@ -608,7 +608,14 @@ nsresult
 BookmarksService::ExportBookmarksToHTML(const nsAString& inFilePath)
 {
   nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(gBookmarksDocument);
-  return BookmarksExport::ExportBookmarksToHTML(domDoc, inFilePath);
+  
+  nsresult rv = NS_ERROR_OUT_OF_MEMORY;
+  BookmarksExport* exporter = new BookmarksExport(domDoc);
+  if (exporter)
+    rv = exporter->ExportBookmarksToHTML(inFilePath);
+  
+  delete exporter;
+  return rv;
 }
 
 void
