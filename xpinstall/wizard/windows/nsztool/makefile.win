@@ -22,7 +22,7 @@
 DEPTH=..\..\..\..
 
 MAKE_OBJ_TYPE   = EXE
-USE_STATIC_LIBS = 1
+USE_NON_MT_LIBS = 1
 
 MODULE          = nsztool
 PROGRAM         = .\$(OBJDIR)\$(MODULE).exe
@@ -49,4 +49,5 @@ install:: $(PROGRAM)
 
 clobber_all::
     $(RM) $(DIST)\install\$(MODULE).exe
+    $(RM) $(DIST)\install\nszip.exe
 
