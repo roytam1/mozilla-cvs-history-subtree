@@ -154,6 +154,15 @@ gfx/src/xlibrgb/Makefile
 gfx/tests/Makefile
 "
 
+MAKEFILES_gfx2="
+gfx2/Makefile
+gfx2/public/Makefile
+gfx2/src/Makefile
+gfx2/src/gtk/Makefile
+gfx2/src/xlib/Makefile
+gfx2/src/mac/Makefile
+"
+
 MAKEFILES_htmlparser="
 htmlparser/Makefile
 htmlparser/robot/Makefile
@@ -326,6 +335,16 @@ modules/libimg/gifcom/Makefile
 modules/libimg/jpgcom/Makefile
 modules/libimg/pngcom/Makefile
 modules/libimg/mngcom/Makefile
+"
+
+MAKEFILES_libpr0n="
+modules/libpr0n/Makefile
+modules/libpr0n/public/Makefile
+modules/libpr0n/src/Makefile
+modules/libpr0n/decoders/Makefile
+modules/libpr0n/decoders/png/Makefile
+modules/libpr0n/decoders/ppm/Makefile
+modules/libpr0n/decoders/jpeg/Makefile
 "
 
 MAKEFILES_libjar="
@@ -1003,6 +1022,7 @@ $MAKEFILES_expat
 $MAKEFILES_extensions
 $MAKEFILES_gc
 $MAKEFILES_gfx
+$MAKEFILES_gfx2
 $MAKEFILES_htmlparser
 $MAKEFILES_intl
 $MAKEFILES_java_supplement
@@ -1018,6 +1038,7 @@ $MAKEFILES_content
 $MAKEFILES_layout
 $MAKEFILES_libreg
 $MAKEFILES_libimg
+$MAKEFILES_libpr0n
 $MAKEFILES_libjar
 $MAKEFILES_libpref
 $MAKEFILES_libutil
