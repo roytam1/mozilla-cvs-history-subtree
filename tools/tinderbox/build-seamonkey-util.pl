@@ -894,8 +894,15 @@ sub run_all_tests {
 	# Mail bloat/leak test.
 	# Needs -DBUILD_MAIL_SMOKETEST set in mozconfig
 	#
+	# 1) Create pop account qatest03/Ne!s-pe
+	# 2) cp http://www.mozilla.org/mailnews/bloat_Inbox to profile
+	# 3) mozilla -P <profile> -mail
+	# 4) timeout
+	# 5) exit on success
+	#
     if ($Settings::MailBloatTest and $test_result eq 'success') {
 	  print_log "MailBloatTest ... goes here\n";
+	  
 	}
 
 
