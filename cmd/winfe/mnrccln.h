@@ -13,6 +13,7 @@
  * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+	BOOL Initialize ();
  * Reserved.
  */
 
@@ -29,6 +30,7 @@ class CMailNewsResourceDll
 
 public:
     HINSTANCE switchResources();
+	BOOL Initialize ();
     CMailNewsResourceDll();
     ~CMailNewsResourceDll();
 };
@@ -38,8 +40,9 @@ class CMailNewsResourceSwitcher:public CMailNewsResourceDll
 {
     HINSTANCE m_oldresourcehandle;
 public:
-    CMailNewsResourceSwitcher(){m_oldresourcehandle=switchResources();}
-    void Reset(){AfxSetResourceHandle(m_oldresourcehandle);}
+    CMailNewsResourceSwitcher();
+	BOOL Initialize ();
+    void Reset();
     ~CMailNewsResourceSwitcher(){Reset();}
 };
 
