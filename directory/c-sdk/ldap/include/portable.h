@@ -98,7 +98,7 @@
  * some systems don't have the BSD re_comp and re_exec routines
  */
 #ifndef NEED_BSDREGEX
-#if ( defined( SYSV ) || defined( VMS ) || defined( netbsd ) || defined( freebsd ) || defined( linux )) && !defined(sgi)
+#if ( defined( SYSV ) || defined( VMS ) || defined( netbsd ) || defined( freebsd ) || defined( linux ) || defined( DARWIN )) && !defined(sgi)
 #define NEED_BSDREGEX
 #endif
 #endif
@@ -234,7 +234,7 @@ int strncasecmp(const char *, const char *, size_t);
 #endif /* LINUX1_2 */
 #endif /* SNI || LINUX1_2 */
 
-#if defined(_WINDOWS) || defined(macintosh) || defined(XP_OS2)
+#if defined(_WINDOWS) || defined(macintosh) || defined(XP_OS2) || defined(DARWIN)
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #define CTIME( c, b, l )		ctime( c )
 #define STRTOK( s1, s2, l )		strtok( s1, s2 )

@@ -48,7 +48,7 @@ extern "C" {
 #ifdef macintosh
 # include "ldap-macos.h"
 #else /* macintosh */
-#if !defined(BSDI)
+#if !defined(BSDI) && !defined(DARWIN)
 # include <malloc.h>
 #endif
 # include <errno.h>
@@ -68,7 +68,7 @@ extern "C" {
 /* #  include <sys/varargs.h> */
 #  include <sys/socket.h>
 #  include <netinet/in.h>
-#if !defined(XP_OS2)
+#if !defined(XP_OS2) && !defined(DARWIN)
 #  include <unistd.h>
 #endif
 # endif /* defined( _WINDOWS ) */
