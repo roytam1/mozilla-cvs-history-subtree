@@ -55,6 +55,10 @@
 #include "nsIMsgHdr.h"
 #include "nsMsgUtils.h"
 
+// needed by the content load policy manager
+#include "nsIExternalProtocolService.h"
+#include "nsCExternalHandlerService.h"
+
 static const char kBlockRemoteImages[] = "mailnews.message_display.disable_remote_image";
 static const char kRemoteImagesUseWhiteList[] = "mailnews.message_display.disable_remote_images.useWhitelist";
 static const char kRemoteImagesWhiteListURI[] = "mailnews.message_display.disable_remote_images.whiteListAbURI";
@@ -169,10 +173,10 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
                                PRInt16          *aDecision)
 {
   nsresult rv = NS_OK;
-  *aDecision = nsIContentPolicy::ACCEPT;
+  *aDecision = nsIContentPolicy::REJECT_REQUEST;
 
-  if (!aContentLocation) 
-      return rv;
+  NS_ENSURE_ARG_POINTER(aContentLocation);
+  NS_ENSURE_ARG_POINTER(aRequestingLocation);
 
   if (aContentType == nsIContentPolicy::TYPE_OBJECT)
   {
@@ -182,29 +186,48 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
   }
   else 
   {
-    PRBool isFtp = PR_FALSE;
-    rv = aContentLocation->SchemeIs("ftp", &isFtp);
+    // if aRequestingLocation is chrome, about or resource, allow aContentLocation to load
+    PRBool isChrome = PR_FALSE;
+    PRBool isRes = PR_FALSE;
+    PRBool isAbout = PR_FALSE;
 
-    if (isFtp) 
+    rv = aRequestingLocation->SchemeIs("chrome", &isChrome);
+    rv |= aRequestingLocation->SchemeIs("resource", &isRes);
+    rv |= aRequestingLocation->SchemeIs("about", &isAbout);
+
+    if (NS_SUCCEEDED(rv) && (isChrome || isRes || isAbout))
     {
-      // never allow ftp for mail messages, 
-      // because we don't want to send the users email address
-      // as the anonymous password
-      *aDecision = nsIContentPolicy::REJECT_REQUEST;
+      *aDecision = nsIContentPolicy::ACCEPT;
+      return rv;
     }
-    else 
-    {
-      PRBool needToCheck = PR_FALSE;
-      rv = aContentLocation->SchemeIs("http", &needToCheck);
+
+    // if aContentLocation is a protocol we handle (imap, pop3, mailbox, etc) or is a chrome url, then allowe the load
+    nsCAutoString contentScheme;
+    PRBool isExposedProtocol = PR_FALSE;
+    rv = aContentLocation->GetScheme(contentScheme);
       NS_ENSURE_SUCCESS(rv,rv);
 
-      if (!needToCheck) {
-        rv = aContentLocation->SchemeIs("https", &needToCheck);
+    nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID);
+    rv = extProtService->IsExposedProtocol(contentScheme.get(), &isExposedProtocol);
         NS_ENSURE_SUCCESS(rv,rv);
+    aContentLocation->SchemeIs("chrome", &isChrome);    
+    
+    if (isExposedProtocol || isChrome)
+    {
+      *aDecision = nsIContentPolicy::ACCEPT;
+      return rv;
       }
 
-      // Consider blocking remote image requests if the image url is http or https
-      if (needToCheck) 
+    // for unexposed protocols, we never try to load any of them with the exception of http and https. 
+    // this means we never even try to load urls that we don't handle ourselves like ftp and gopher.
+    PRBool isHttp = PR_FALSE;
+    PRBool isHttps = PR_FALSE;
+
+    rv = aContentLocation->SchemeIs("http", &isHttp);
+    rv |= aContentLocation->SchemeIs("https", &isHttps);
+
+    // Look into http and https more closely to determine if the load should be allowed
+    if (NS_SUCCEEDED(rv) && (isHttp || isHttps)) 
       {
         // default to blocking remote content 
         *aDecision = mBlockRemoteImages ? nsIContentPolicy::REJECT_REQUEST : nsIContentPolicy::ACCEPT;
@@ -276,10 +299,9 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
           NS_ENSURE_SUCCESS(rv, rv);
 
           msgHdrSink->OnMsgHasRemoteContent(msgHdr); // notify the UI to show the remote content hdr bar so the user can overide
-        } // if mBlockRemoteImages
       } // if need to check the url for a remote image policy
-        }
-  } // if aContentType == nsIContentPolicy::TYPE_IMAGE
+    }  // if isHttp
+  }
 
   return rv;
 }
