@@ -544,11 +544,16 @@ nsMsgSendPart::Write(PRBool   aMultiPartRelatedWithAttachmentsMessage,
       if (!NS_SUCCEEDED(res))
         goto FAIL;
       
-      myURLUtil->ScanHTMLForURLs(m_buffer, &tmp);
-      if (tmp) 
+      const char* charset = GetCharsetName();
+      if (!nsCRT::strcasecmp("us-ascii", charset) ||
+          !nsCRT::strcasecmp("ISO-8859-1", charset))
       {
-        SetBuffer(tmp);
-        PR_Free(tmp);
+        myURLUtil->ScanHTMLForURLs(m_buffer, &tmp);
+        if (tmp) 
+        {
+          SetBuffer(tmp);
+          PR_Free(tmp);
+        }
       }
     }
   }
