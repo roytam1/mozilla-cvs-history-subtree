@@ -64,7 +64,7 @@
                 <menuseparator/>
 #endif
                 <menuitem id="goOfflineMenuitem"
-                          label="&goOfflineCmd.label;" accesskey="&goOfflineCmd.accesskey;" 
+                          label="&goOfflineCmd.label;" accesskey="&goOfflineCmd.accesskey;"  hidden="true"
                           type="checkbox" oncommand="BrowserOffline.toggleOfflineStatus();"/>
                 <menuitem id="menu_FileQuitItem" 
 #ifdef XP_WIN
