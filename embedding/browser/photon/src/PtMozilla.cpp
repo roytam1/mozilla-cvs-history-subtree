@@ -967,7 +967,7 @@ StartupProfile(char *sProfileDir, char *sProfileName)
 		PRBool exists = PR_FALSE;
 		PRBool isDir = PR_FALSE;
 		profileDir = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);
-		rv = profileDir->InitWithPath(sProfileDir);
+		rv = profileDir->InitWithNativePath(nsDependentCString(sProfileDir));
 		if (NS_FAILED(rv))
 		  	return NS_ERROR_FAILURE;
 		profileDir->Exists(&exists);
@@ -1014,8 +1014,7 @@ StartupEmbedding()
 
 	profile_dir = (char *)alloca(strlen(getenv("HOME")) + strlen("/.ph") + 1);
 	sprintf(profile_dir, "%s/.ph", getenv("HOME"));
-    //rv = StartupProfile(profile_dir, "mozilla");
-    rv = StartupProfile("/home/briane", ".mozilla");
+    rv = StartupProfile(profile_dir, "mozilla");
     if (NS_FAILED(rv))
       	NS_WARNING("Warning: Failed to start up profiles.\n");
     
