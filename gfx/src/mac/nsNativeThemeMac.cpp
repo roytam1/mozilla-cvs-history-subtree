@@ -998,6 +998,7 @@ nsNativeThemeMac::GetMinimumWidgetSize(nsIRenderingContext* aContext, nsIFrame* 
       SInt32 scrollbarWidth = 0;
       ::GetThemeMetric(kThemeMetricScrollBarWidth, &scrollbarWidth);
       aResult->SizeTo(scrollbarWidth, scrollbarWidth);
+      *aIsOverridable = PR_FALSE;
       break;
     }
 
