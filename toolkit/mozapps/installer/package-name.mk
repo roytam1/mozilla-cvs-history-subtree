@@ -48,34 +48,34 @@ MOZ_PKG_VERSION = $(MOZ_APP_VERSION)
 endif
 
 ifndef MOZ_PKG_PLATFORM
-MOZ_PKG_PLATFORM = $(TARGET_OS)-$(TARGET_CPU)
+MOZ_PKG_PLATFORM := $(TARGET_OS)-$(TARGET_CPU)
 
 # TARGET_OS/TARGET_CPU may be unintuitive, so we hardcode some special formats
 ifeq ($(OS_ARCH),WINNT)
-MOZ_PKG_PLATFORM = win$(MOZ_BITS)
+MOZ_PKG_PLATFORM := win$(MOZ_BITS)
 endif
 ifeq ($(OS_ARCH),Darwin)
-MOZ_PKG_PLATFORM = mac
+MOZ_PKG_PLATFORM := mac
 endif
 ifeq ($(TARGET_OS),linux-gnu)
-MOZ_PKG_PLATFORM = linux-$(TARGET_CPU)
+MOZ_PKG_PLATFORM := linux-$(TARGET_CPU)
 endif
 
 # GTK2 is the default, so we mark gtk1 builds
 ifeq ($(MOZ_WIDGET_TOOLKIT),gtk)
-MOZ_PKG_PLATFORM += -gtk1
+MOZ_PKG_PLATFORM := $(MOZ_PKG_PLATFORM)-gtk1
 endif
 
 ifdef MOZ_SVG
-MOZ_PKG_PLATFORM += -svg
+MOZ_PKG_PLATFORM := $(MOZ_PKG_PLATFORM)-svg
 ifdef MOZ_SVG_RENDERER_GDIPLUG
-MOZ_PKG_PLATFORM += -gdiplus
+MOZ_PKG_PLATFORM := $(MOZ_PKG_PLATFORM)-gdiplus
 endif
 ifdef MOZ_SVG_RENDERER_LIBART
-MOZ_PKG_PLATFORM += -libart
+MOZ_PKG_PLATFORM := $(MOZ_PKG_PLATFORM)-libart
 endif
 ifdef MOZ_SVG_RENDERER_CAIRO
-MOZ_PKG_PLATFORM += -cairo
+MOZ_PKG_PLATFORM := $(MOZ_PKG_PLATFORM)-cairo
 endif
 endif #MOZ_SVG
 endif #MOZ_PKG_PLATFORM
