@@ -274,5 +274,29 @@ _MD_CreateFileA(
     return retval;
 }
 
+BOOL
+WINAPI
+_MD_DeleteFileA(
+    LPCSTR lpFileName
+    )
+{
+    BOOL retval = FALSE;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpFileName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = DeleteFileW(
+            wideStr
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
 
 #endif /* WINCE */

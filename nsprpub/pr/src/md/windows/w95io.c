@@ -616,7 +616,7 @@ _PR_MD_DELETE(const char *name)
 #if !defined(WINCE)
         DeleteFile(name)
 #else
-        DeleteFileA(name)
+        _MD_DeleteFileA(name)
 #endif
         ) {
         return 0;

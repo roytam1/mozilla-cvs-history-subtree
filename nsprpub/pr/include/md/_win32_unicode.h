@@ -68,6 +68,7 @@ LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars);
  *  the linkage by prepending _imp_ ## functioname to make things happen.
  * We need to provide our own linkage symbol for all this to work out.
  */
+
 HANDLE
 WINAPI
 _MD_CreateFileA(
@@ -79,6 +80,13 @@ _MD_CreateFileA(
     DWORD dwFlagsAndAttributes,
     HANDLE hTemplateFile
     );
+
+BOOL
+WINAPI
+_MD_DeleteFileA(
+    LPCSTR lpFileName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */
