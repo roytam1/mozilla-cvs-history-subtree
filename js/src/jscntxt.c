@@ -182,7 +182,7 @@ js_ReportErrorVA(JSContext *cx, uintN flags, const char *format, va_list ap)
 	/* XXXshaver still fill out report here for flags? */
 	reportp = NULL;
     }
-    last = PR_vsmprintf(format, ap);
+    last = JS_vsmprintf(format, ap);
     if (!last)
 	return;
 
@@ -293,7 +293,7 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
 	    = "No error message available for error number %d";
 	size_t nbytes = strlen(defaultErrorMessage) + 16;
 	*messagep = (char *)malloc(nbytes);
-	PR_snprintf(*messagep, nbytes, defaultErrorMessage, errorNumber);
+	JS_snprintf(*messagep, nbytes, defaultErrorMessage, errorNumber);
     }
     return JS_TRUE;
 }

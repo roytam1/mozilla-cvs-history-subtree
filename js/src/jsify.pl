@@ -34,6 +34,17 @@
 "PR_ARENA_MARK",
 "PR_ARENA_RELEASE",
 
+"PR_smprintf",
+"PR_smprintf_free",
+"PR_snprintf",
+"PR_sprintf_append",
+"PR_sscanf",
+"PR_sxprintf",
+"PR_vsmprintf",
+"PR_vsnprintf",
+"PR_vsprintf_append",
+"PR_vsxprintf",
+
 "PRCList",
 "PRCListStr",
 "PRCLists",
@@ -394,6 +405,8 @@ sub convert_includes {
 	$line  = '#include "js.msg"' . "\n";
     } elsif ($line =~ /shellmsg\.def/) {
 	$line  = '#include "jsshell.msg"' . "\n";
+    } elsif ($line =~ /jsopcode\.def/) {
+	$line  = '#include "jsopcode.tbl"' . "\n";
     }
     return $line;
 }

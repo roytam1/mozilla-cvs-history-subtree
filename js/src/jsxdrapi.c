@@ -178,7 +178,7 @@ mem_seek(JSXDRState *xdr, int32 offset, JSXDRWhence whence)
 	return JS_TRUE;
       default: {
 	char numBuf[12];
-	PR_snprintf(numBuf, sizeof numBuf, "%d", whence);
+	JS_snprintf(numBuf, sizeof numBuf, "%d", whence);
 	JS_ReportErrorNumber(xdr->cx, js_GetErrorMessage, NULL,
 			     JSMSG_WHITHER_WHENCE, numBuf);
 	return JS_FALSE;
@@ -492,7 +492,7 @@ JS_XDRValue(JSXDRState *xdr, jsval *vp)
 		*vp = INT_TO_JSVAL(i);
 	    break;
 	}
-	PR_snprintf(numBuf, sizeof numBuf, "%#lx", type);
+	JS_snprintf(numBuf, sizeof numBuf, "%#lx", type);
 	JS_ReportErrorNumber(xdr->cx, js_GetErrorMessage, NULL,
 			     JSMSG_BAD_JVAL_TYPE, type);
 	return JS_FALSE;

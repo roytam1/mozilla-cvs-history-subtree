@@ -2566,7 +2566,7 @@ PR_cnvtf(char *buf,int bufsz, int prcsn,double fval)
 			*bufp++ = *nump++;
 	    }
 	    *bufp++ = 'e';
-	    PR_snprintf(bufp,bufsz - (bufp - buf), "%+d",decpt-1);
+	    JS_snprintf(bufp,bufsz - (bufp - buf), "%+d",decpt-1);
 	}
 	else if(decpt >= 0){
 	    if (decpt == 0){

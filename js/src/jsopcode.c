@@ -79,7 +79,7 @@ char *js_incop_str[]        = {"++", "--"};
 JSCodeSpec FAR js_CodeSpec[] = {
 #define OPDEF(op,val,name,token,length,nuses,ndefs,prec,format) \
     {name,token,length,nuses,ndefs,prec,format},
-#include "jsopcode.def"
+#include "jsopcode.tbl"
 #undef OPDEF
 };
 
@@ -119,8 +119,8 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
     op = (JSOp)*pc;
     if (op >= JSOP_LIMIT) {
 	char numBuf1[12], numBuf2[12];
-	PR_snprintf(numBuf1, sizeof numBuf1, "%d", op);
-	PR_snprintf(numBuf2, sizeof numBuf2, "%d", JSOP_LIMIT);
+	JS_snprintf(numBuf1, sizeof numBuf1, "%d", op);
+	JS_snprintf(numBuf2, sizeof numBuf2, "%d", JSOP_LIMIT);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_BYTECODE_TOO_BIG, numBuf1, numBuf2);
 	return 0;
@@ -234,7 +234,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
 
       default: {
 	char numBuf[12];
-	PR_snprintf(numBuf, sizeof numBuf, "%lx", (unsigned long) cs->format);
+	JS_snprintf(numBuf, sizeof numBuf, "%lx", (unsigned long) cs->format);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_UNKNOWN_FORMAT, numBuf);
 	return 0;
@@ -310,7 +310,7 @@ Sprint(Sprinter *sp, const char *format, ...)
     ptrdiff_t offset;
 
     va_start(ap, format);
-    bp = PR_vsmprintf(format, ap);	/* XXX vsaprintf */
+    bp = JS_vsmprintf(format, ap);	/* XXX vsaprintf */
     va_end(ap);
     if (!bp) {
 	JS_ReportOutOfMemory(sp->context);
@@ -479,7 +479,7 @@ js_printf(JSPrinter *jp, char *format, ...)
     }
 
     /* Allocate temp space, convert format, and put. */
-    bp = PR_vsmprintf(format, ap);	/* XXX vsaprintf */
+    bp = JS_vsmprintf(format, ap);	/* XXX vsaprintf */
     if (!bp) {
 	JS_ReportOutOfMemory(jp->sprinter.context);
 	return -1;

@@ -313,7 +313,7 @@ js_EnterSharpObject(JSContext *cx, JSObject *obj, JSIdArray **idap,
     if (sharpid == 0) {
 	*sp = NULL;
     } else {
-	len = PR_snprintf(buf, sizeof buf, "#%u%c",
+	len = JS_snprintf(buf, sizeof buf, "#%u%c",
 			  sharpid >> 1, (sharpid & SHARP_BIT) ? '#' : '=');
 	*sp = js_InflateString(cx, buf, len);
 	if (!*sp) {
@@ -2032,7 +2032,7 @@ js_DefaultValue(JSContext *cx, JSObject *obj, JSType hint, jsval *vp)
 	     * and valueOf fail to produce a primitive value.
 	     */
 	    if (!JSVAL_IS_PRIMITIVE(v) && cx->version == JSVERSION_1_2) {
-		char *bytes = PR_smprintf("[object %s]",
+		char *bytes = JS_smprintf("[object %s]",
 					  OBJ_GET_CLASS(cx, obj)->name);
 		if (!bytes)
 		    return JS_FALSE;
@@ -2493,7 +2493,7 @@ js_XDRObject(JSXDRState *xdr, JSObject **objp)
 	    clasp = JS_FindClassById(xdr, classId);
 	    if (!clasp) {
 		char numBuf[12];
-		PR_snprintf(numBuf, sizeof numBuf, "%ld", (long)classId);
+		JS_snprintf(numBuf, sizeof numBuf, "%ld", (long)classId);
 		JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				     JSMSG_CANT_FIND_CLASS, numBuf);
 		ok = JS_FALSE;

@@ -298,9 +298,9 @@ $(OBJDIR)/jscpucfg: $(OBJDIR)/jscpucfg.o
 endif
 
 #
-# Hardwire dependencies on jsopcode.def
+# Hardwire dependencies on jsopcode.tbl
 #
-jsopcode.h jsopcode.c: jsopcode.def
+jsopcode.h jsopcode.c: jsopcode.tbl
 
 -include $(DEPENDENCIES)
 

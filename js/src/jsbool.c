@@ -57,7 +57,7 @@ bool_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     v = OBJ_GET_SLOT(cx, obj, JSSLOT_PRIVATE);
     if (!JSVAL_IS_BOOLEAN(v))
 	return js_obj_toSource(cx, obj, argc, argv, rval);
-    PR_snprintf(buf, sizeof buf, "(new %s(%s))",
+    JS_snprintf(buf, sizeof buf, "(new %s(%s))",
 		boolean_class.name,
 		js_boolean_str[JSVAL_TO_BOOLEAN(v) ? 1 : 0]);
     str = JS_NewStringCopyZ(cx, buf);

@@ -2612,7 +2612,7 @@ js_Interpret(JSContext *cx, jsval *result)
 	    rval = sp[-1];
 	    if (JSVAL_IS_PRIMITIVE(rval)) {
 		char numBuf[12];
-		PR_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
+		JS_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
 		JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				     JSMSG_BAD_SHARP_DEF, numBuf);
 		ok = JS_FALSE;
@@ -2636,7 +2636,7 @@ js_Interpret(JSContext *cx, jsval *result)
 	    }
 	    if (!JSVAL_IS_OBJECT(rval)) {
 		char numBuf[12];
-		PR_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
+		JS_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
 		JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				     JSMSG_BAD_SHARP_USE, numBuf);
 		ok = JS_FALSE;
@@ -2747,7 +2747,7 @@ js_Interpret(JSContext *cx, jsval *result)
 
 	  default: {
 	    char numBuf[12];
-	    PR_snprintf(numBuf, sizeof numBuf, "%d", op);
+	    JS_snprintf(numBuf, sizeof numBuf, "%d", op);
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				 JSMSG_BAD_BYTECODE, numBuf);
 	    ok = JS_FALSE;

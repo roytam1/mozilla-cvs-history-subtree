@@ -28,7 +28,6 @@
 #define jslong_h___
 
 #include "jstypes.h"
-#include "jsosdep.h"
 
 JS_BEGIN_EXTERN_C
 

@@ -33,7 +33,7 @@ JS_BEGIN_EXTERN_C
 typedef enum JSOp {
 #define OPDEF(op,val,name,token,length,nuses,ndefs,prec,format) \
     op = val,
-#include "jsopcode.def"
+#include "jsopcode.tbl"
 #undef OPDEF
     JSOP_LIMIT
 } JSOp;

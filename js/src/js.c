@@ -1282,15 +1282,15 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     }
 
     if (report->filename)
-	prefix = PR_smprintf("%s:", report->filename);
+	prefix = JS_smprintf("%s:", report->filename);
     if (report->lineno) {
 	tmp = prefix;
-	prefix = PR_smprintf("%s%u: ", tmp ? tmp : "", report->lineno);
+	prefix = JS_smprintf("%s%u: ", tmp ? tmp : "", report->lineno);
 	JS_free(cx, tmp);
     }
     if (JSREPORT_IS_WARNING(report->flags)) {
 	tmp = prefix;
-	prefix = PR_smprintf("%swarning: ", tmp ? tmp : "");
+	prefix = JS_smprintf("%swarning: ", tmp ? tmp : "");
 	JS_free(cx, tmp);
     }
 
@@ -1401,7 +1401,7 @@ global_resolve(JSContext *cx, JSObject *obj, jsval id)
     ok = JS_TRUE;
     for (comp = strtok(path, ":"); comp; comp = strtok(NULL, ":")) {
 	if (*comp != '\0') {
-	    full = PR_smprintf("%s/%s", comp, name);
+	    full = JS_smprintf("%s/%s", comp, name);
 	    if (!full) {
 		JS_ReportOutOfMemory(cx);
 		ok = JS_FALSE;

@@ -315,22 +315,22 @@ exn_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	privateData = JSVAL_TO_PRIVATE(v);
 	report = privateData->errorReport;
 
-	msgbuf = PR_smprintf("%s:", name);
+	msgbuf = JS_smprintf("%s:", name);
 
 	if (report->filename) {
 	    tmp = msgbuf;
-	    msgbuf = PR_smprintf("%s%s:", tmp, report->filename);
+	    msgbuf = JS_smprintf("%s%s:", tmp, report->filename);
 	    JS_free(cx, tmp);
 	}
 	if (report->lineno) {
 	    tmp = msgbuf;
-	    msgbuf = PR_smprintf("%s%u: ", tmp ? tmp : "", report->lineno);
+	    msgbuf = JS_smprintf("%s%u: ", tmp ? tmp : "", report->lineno);
 	    if (tmp)
 		JS_free(cx, tmp);
 	}
 	JS_ASSERT(privateData->message);
 	tmp = msgbuf;
-	msgbuf = PR_smprintf("%s%s", tmp ? tmp : "", privateData->message);
+	msgbuf = JS_smprintf("%s%s", tmp ? tmp : "", privateData->message);
 	if(tmp)
 	    JS_free(cx, tmp);
 

@@ -614,7 +614,7 @@ js_GetAtom(JSContext *cx, JSAtomMap *map, jsatomid i)
     JS_ASSERT(map->vector && i < map->length);
     if (!map->vector || i >= map->length) {
 	char numBuf[12];
-	PR_snprintf(numBuf, sizeof numBuf, "%lu", (unsigned long)i);
+	JS_snprintf(numBuf, sizeof numBuf, "%lu", (unsigned long)i);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_BAD_ATOMIC_NUMBER, numBuf);
 	return NULL;

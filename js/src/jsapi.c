@@ -123,7 +123,7 @@ JS_ConvertArguments(JSContext *cx, uintN argc, jsval *argv, const char *format,
 		fun = js_ValueToFunction(cx, &argv[-2], JS_FALSE);
 		if (fun) {
 		    char numBuf[12];
-		    PR_snprintf(numBuf, sizeof numBuf, "%u", argc);
+		    JS_snprintf(numBuf, sizeof numBuf, "%u", argc);
 		    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 					 JSMSG_MORE_ARGS_NEEDED,
 					 JS_GetFunctionName(fun), numBuf,
@@ -256,7 +256,7 @@ JS_ConvertValue(JSContext *cx, jsval v, JSType type, jsval *vp)
 	break;
       default: {
 	char numBuf[12];
-	PR_snprintf(numBuf, sizeof numBuf, "%d", (int)type);
+	JS_snprintf(numBuf, sizeof numBuf, "%d", (int)type);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_BAD_TYPE,
 			     numBuf);
 	ok = JS_FALSE;
@@ -388,8 +388,8 @@ JS_NewRuntime(uint32 maxbytes)
 #ifdef DEBUG
     JS_BEGIN_MACRO
     /*
-     * This code asserts that the numbers associated with the error names in 
-     * js.msg are monotonically increasing.  It uses values for the error
+     * This code asserts that the numbers associated with the error names in
+     * jsmsg.def are monotonically increasing.  It uses values for the error
      * names enumerated in jscntxt.c.  It's not a compiletime check, but it's
      * better than nothing.
      */
@@ -1717,7 +1717,7 @@ JS_AliasElement(JSContext *cx, JSObject *obj, const char *name, jsint alias)
     if (obj2 != obj || !OBJ_IS_NATIVE(obj2)) {
 	char numBuf[12];
 	OBJ_DROP_PROPERTY(cx, obj2, prop);
-	PR_snprintf(numBuf, sizeof numBuf, "%ld", (long)alias);
+	JS_snprintf(numBuf, sizeof numBuf, "%ld", (long)alias);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_CANT_ALIAS,
 			     numBuf, name, OBJ_GET_CLASS(cx, obj2)->name);
 	return JS_FALSE;
@@ -2740,13 +2740,13 @@ BOOL WINAPI DllMain (HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
 
 #else  /* !_WIN32 */
 
-int DLL_CALLBACK LibMain( HINSTANCE hInst, WORD wDataSeg,
+int CALLBACK LibMain( HINSTANCE hInst, WORD wDataSeg,
 		      WORD cbHeapSize, LPSTR lpszCmdLine )
 {
     return TRUE;
 }
 
-BOOL DLL_CALLBACK __loadds WEP(BOOL fSystemExit)
+BOOL CALLBACK __loadds WEP(BOOL fSystemExit)
 {
     return TRUE;
 }

@@ -59,7 +59,7 @@ script_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     script = JS_GetPrivate(cx, obj);
 
     /* Let n count the source string length, j the "front porch" length. */
-    j = PR_snprintf(buf, sizeof buf, "(new %s(", js_ScriptClass.name);
+    j = JS_snprintf(buf, sizeof buf, "(new %s(", js_ScriptClass.name);
     n = j + 2;
     if (!script) {
 	/* Let k count the constructor argument string length. */

@@ -1370,14 +1370,14 @@ date_toGMTString(JSContext *cx, JSObject *obj, uintN argc,
 	return JS_FALSE;
 
     if (!JSDOUBLE_IS_FINITE(*date)) {
-	PR_snprintf(buf, sizeof buf, js_NaN_date_str);
+	JS_snprintf(buf, sizeof buf, js_NaN_date_str);
     } else {
 	jsdouble temp = *date;
 
 	/* Avoid dependence on PRMJ_FormatTimeUSEnglish, because it
 	 * requires a PRMJTime... which only has 16-bit years.  Sub-ECMA.
 	 */
-	PR_snprintf(buf, sizeof buf, "%s, %.2d %s %.4d %.2d:%.2d:%.2d GMT",
+	JS_snprintf(buf, sizeof buf, "%s, %.2d %s %.4d %.2d:%.2d:%.2d GMT",
 		    days[WeekDay(temp)],
 		    DateFromTime(temp),
 		    months[MonthFromTime(temp)],
@@ -1448,7 +1448,7 @@ date_format(JSContext *cx, jsdouble date, jsval *rval)
     PRMJTime split;
 
     if (!JSDOUBLE_IS_FINITE(date)) {
-	PR_snprintf(buf, sizeof buf, js_NaN_date_str);
+	JS_snprintf(buf, sizeof buf, js_NaN_date_str);
     } else {
 	jsdouble local = LocalTime(date);
 
@@ -1477,7 +1477,7 @@ date_format(JSContext *cx, jsdouble date, jsval *rval)
 	/* Avoid dependence on PRMJ_FormatTimeUSEnglish, because it
 	 * requires a PRMJTime... which only has 16-bit years.  Sub-ECMA.
 	 */
-	PR_snprintf(buf, sizeof buf, "%s %s %.2d %.2d:%.2d:%.2d GMT%+.4d %s%.4d",
+	JS_snprintf(buf, sizeof buf, "%s %s %.2d %.2d:%.2d:%.2d GMT%+.4d %s%.4d",
 		    days[WeekDay(local)],
 		    months[MonthFromTime(local)],
 		    DateFromTime(local),
@@ -1513,7 +1513,7 @@ date_toLocaleString(JSContext *cx, JSObject *obj, uintN argc,
 	return JS_FALSE;
 
     if (!JSDOUBLE_IS_FINITE(*date)) {
-	PR_snprintf(buf, sizeof buf, js_NaN_date_str);
+	JS_snprintf(buf, sizeof buf, js_NaN_date_str);
     } else {
 	intN result_len;
 	jsdouble local = LocalTime(*date);
@@ -1559,7 +1559,7 @@ date_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 	return JS_FALSE;
 
     PR_cnvtf(buf, sizeof buf, 20, *date);
-    bytes = PR_smprintf("(new %s(%s))", date_class.name, buf);
+    bytes = JS_smprintf("(new %s(%s))", date_class.name, buf);
     if (!bytes) {
 	JS_ReportOutOfMemory(cx);
 	return JS_FALSE;

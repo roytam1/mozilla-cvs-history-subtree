@@ -457,7 +457,7 @@ js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
     JSString *linestr;
 
     va_start(ap, format);
-    message = PR_vsmprintf(format, ap);
+    message = JS_vsmprintf(format, ap);
     va_end(ap);
     if (!message) {
 	JS_ReportOutOfMemory(cx);

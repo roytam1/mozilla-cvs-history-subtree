@@ -1023,19 +1023,19 @@ static int FuncStuff(SprintfState *ss, const char *sp, JSUint32 len)
     return 0;
 }
 
-IMPLEMENT(JSUint32) PR_sxprintf(JSStuffFunc func, void *arg, 
+IMPLEMENT(JSUint32) JS_sxprintf(JSStuffFunc func, void *arg, 
                                  const char *fmt, ...)
 {
     va_list ap;
     int rv;
 
     va_start(ap, fmt);
-    rv = PR_vsxprintf(func, arg, fmt, ap);
+    rv = JS_vsxprintf(func, arg, fmt, ap);
     va_end(ap);
     return rv;
 }
 
-IMPLEMENT(JSUint32) PR_vsxprintf(JSStuffFunc func, void *arg, 
+IMPLEMENT(JSUint32) JS_vsxprintf(JSStuffFunc func, void *arg, 
                                   const char *fmt, va_list ap)
 {
     SprintfState ss;
@@ -1089,26 +1089,26 @@ static int GrowStuff(SprintfState *ss, const char *sp, JSUint32 len)
 /*
 ** sprintf into a malloc'd buffer
 */
-IMPLEMENT(char *) PR_smprintf(const char *fmt, ...)
+IMPLEMENT(char *) JS_smprintf(const char *fmt, ...)
 {
     va_list ap;
     char *rv;
 
     va_start(ap, fmt);
-    rv = PR_vsmprintf(fmt, ap);
+    rv = JS_vsmprintf(fmt, ap);
     va_end(ap);
     return rv;
 }
 
 /*
-** Free memory allocated, for the caller, by PR_smprintf
+** Free memory allocated, for the caller, by JS_smprintf
 */
-IMPLEMENT(void) PR_smprintf_free(char *mem)
+IMPLEMENT(void) JS_smprintf_free(char *mem)
 {
 	JS_DELETE(mem);
 }
 
-IMPLEMENT(char *) PR_vsmprintf(const char *fmt, va_list ap)
+IMPLEMENT(char *) JS_vsmprintf(const char *fmt, va_list ap)
 {
     SprintfState ss;
     int rv;
@@ -1148,7 +1148,7 @@ static int LimitStuff(SprintfState *ss, const char *sp, JSUint32 len)
 ** sprintf into a fixed size buffer. Make sure there is a NUL at the end
 ** when finished.
 */
-IMPLEMENT(JSUint32) PR_snprintf(char *out, JSUint32 outlen, const char *fmt, ...)
+IMPLEMENT(JSUint32) JS_snprintf(char *out, JSUint32 outlen, const char *fmt, ...)
 {
     va_list ap;
     int rv;
@@ -1159,12 +1159,12 @@ IMPLEMENT(JSUint32) PR_snprintf(char *out, JSUint32 outlen, const char *fmt, ...
     }
 
     va_start(ap, fmt);
-    rv = PR_vsnprintf(out, outlen, fmt, ap);
+    rv = JS_vsnprintf(out, outlen, fmt, ap);
     va_end(ap);
     return rv;
 }
 
-IMPLEMENT(JSUint32) PR_vsnprintf(char *out, JSUint32 outlen,const char *fmt,
+IMPLEMENT(JSUint32) JS_vsnprintf(char *out, JSUint32 outlen,const char *fmt,
                                   va_list ap)
 {
     SprintfState ss;
@@ -1189,18 +1189,18 @@ IMPLEMENT(JSUint32) PR_vsnprintf(char *out, JSUint32 outlen,const char *fmt,
     return n ? n - 1 : n;
 }
 
-IMPLEMENT(char *) PR_sprintf_append(char *last, const char *fmt, ...)
+IMPLEMENT(char *) JS_sprintf_append(char *last, const char *fmt, ...)
 {
     va_list ap;
     char *rv;
 
     va_start(ap, fmt);
-    rv = PR_vsprintf_append(last, fmt, ap);
+    rv = JS_vsprintf_append(last, fmt, ap);
     va_end(ap);
     return rv;
 }
 
-IMPLEMENT(char *) PR_vsprintf_append(char *last, const char *fmt, va_list ap)
+IMPLEMENT(char *) JS_vsprintf_append(char *last, const char *fmt, va_list ap)
 {
     SprintfState ss;
     int rv;

@@ -117,7 +117,7 @@ str_escape(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	    mask & ~(URL_XALPHAS | URL_XPALPHAS | URL_PATH))
 	{
 	    char numBuf[12];
-	    PR_snprintf(numBuf, sizeof numBuf, "%lx", (unsigned long) mask);
+	    JS_snprintf(numBuf, sizeof numBuf, "%lx", (unsigned long) mask);
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 				 JSMSG_BAD_STRING_MASK, numBuf);
 	    return JS_FALSE;
@@ -373,7 +373,7 @@ str_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     str = js_QuoteString(cx, JSVAL_TO_STRING(v), '"');
     if (!str)
 	return JS_FALSE;
-    j = PR_snprintf(buf, sizeof buf, "(new %s(", string_class.name);
+    j = JS_snprintf(buf, sizeof buf, "(new %s(", string_class.name);
     s = str->chars;
     k = str->length;
     n = j + k + 2;

@@ -114,7 +114,7 @@ UpdateDepth(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t target)
     cg->stackDepth -= nuses;
     if (cg->stackDepth < 0) {
 	char numBuf[12];
-	PR_snprintf(numBuf, sizeof numBuf, "%d", target);
+	JS_snprintf(numBuf, sizeof numBuf, "%d", target);
 	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 			     JSMSG_STACK_UNDERFLOW,
 			     cg->filename ? cg->filename : "stdin", numBuf);
@@ -775,7 +775,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		    !JSVAL_IS_STRING(pn3->pn_val) &&
 		    !JSVAL_IS_BOOLEAN(pn3->pn_val)) {
 		    char numBuf[12];
-		    PR_snprintf(numBuf, sizeof numBuf, "%u",
+		    JS_snprintf(numBuf, sizeof numBuf, "%u",
 		    		pn4->pn_pos.begin.lineno);
 		    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
 					 JSMSG_BAD_CASE,

@@ -181,11 +181,11 @@ num_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!JSVAL_IS_NUMBER(v))
 	return js_obj_toSource(cx, obj, argc, argv, rval);
     d = JSVAL_IS_INT(v) ? (jsdouble)JSVAL_TO_INT(v) : *JSVAL_TO_DOUBLE(v);
-    i = PR_snprintf(buf, sizeof buf, "(new %s(", number_class.name);
+    i = JS_snprintf(buf, sizeof buf, "(new %s(", number_class.name);
 
     PR_cnvtf(buf + i, sizeof buf - i, 20, d);
     i = strlen(buf);
-    PR_snprintf(buf + i, sizeof buf - i, "))");
+    JS_snprintf(buf + i, sizeof buf - i, "))");
     str = JS_NewStringCopyZ(cx, buf);
     if (!str)
 	return JS_FALSE;
@@ -214,7 +214,7 @@ num_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	    return JS_FALSE;
 	if (base < 2 || base > 36) {
 	    char numBuf[12];
-	    PR_snprintf(numBuf, sizeof numBuf, "%ld", (long) base);
+	    JS_snprintf(numBuf, sizeof numBuf, "%ld", (long) base);
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL, JSMSG_BAD_RADIX,
 	    			 numBuf);
 	    return JS_FALSE;
@@ -431,7 +431,7 @@ js_NumberToString(JSContext *cx, jsdouble d)
     char buf[32];
 
     if (JSDOUBLE_IS_INT(d, i)) {
-	PR_snprintf(buf, sizeof buf, "%ld", (long)i);
+	JS_snprintf(buf, sizeof buf, "%ld", (long)i);
     } else {
 	PR_cnvtf(buf, sizeof buf, 20, d);
     }
