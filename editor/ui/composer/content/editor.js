@@ -2336,20 +2336,6 @@ function RemoveInapplicableUIElements()
     RemoveItem("sep_find");
   }
 
-   // if no spell checker, remove spell checker ui
-  if (!IsSpellCheckerInstalled())
-  {
-    HideItem("spellingButton");
-    HideItem("menu_checkspelling");
-    RemoveItem("sep_checkspelling");
-  }
-  else
-  {
-    SetElementEnabled(document.getElementById("menu_checkspelling"), true);
-    SetElementEnabled(document.getElementById("spellingButton"), true);
-    SetElementEnabled(document.getElementById("checkspellingkb"), true);
-  }
-
   // Remove menu items (from overlay shared with HTML editor) in PlainText editor
   if (editorShell.editorType == "text")
   {
