@@ -16,6 +16,7 @@ mailattachcount { display: none; }
  **************************************************/
 
 header                  { display: none; text-align: left; }
+headerdisplayname       { font-weight: bold; }
 
 header[field=DATE]:before { font-weight: bold; }
 header[field=DATE { display: block; text-align:left; }

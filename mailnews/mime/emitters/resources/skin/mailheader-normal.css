@@ -15,6 +15,7 @@ mailattachcount { display: none; }
  * from being displayed.
  **************************************************/
 
+headerdisplayname       { font-weight: bold; }
 header                  { display: none; text-align: left; }
 
 header[field=DATE]:before {font-weight: bold; }
