@@ -55,7 +55,7 @@ nsTextWidget::~nsTextWidget()
 // Create the native Entry widget
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsTextWidget::CreateNative(GtkWidget *parentWindow)
+NS_IMETHODIMP nsTextWidget::CreateNative(GtkObject *parentWindow)
 {
   PRBool oldIsReadOnly;
   mWidget = gtk_entry_new();
