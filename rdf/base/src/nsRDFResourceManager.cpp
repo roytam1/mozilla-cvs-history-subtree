@@ -23,6 +23,7 @@
 #include "nsString.h"
 #include "plhash.h"
 #include "plstr.h"
+#include "prlog.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -51,21 +52,12 @@ public:
     NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
     NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
+
+    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
+    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase);
+    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase);
+
     void ReleaseNode(const ResourceImpl* resource);
-
-    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase)  {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-
 };
 
 
@@ -355,6 +347,28 @@ ResourceManagerImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
     *literal = result;
     NS_ADDREF(result);
     return NS_OK;
+}
+
+NS_IMETHODIMP
+ResourceManagerImpl::GetDataSource(const char* uri, nsIRDFDataSource** dataSource)
+{
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+ResourceManagerImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
+{
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+NS_IMETHODIMP
+ResourceManagerImpl::GetBrowserDatabase(nsIRDFDataBase** dataBase)
+{
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
