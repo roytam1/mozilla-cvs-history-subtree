@@ -829,7 +829,7 @@ NS_IMETHODIMP nsProfile::GetProfileDir(const PRUnichar *profileName, nsIFile **p
                 // none we need to populate this folder provided the folder is not in the trash.
                 if (!inTrash)
                 {
-                    rv = PopulateIfEmptyDir(aProfileDir);
+                    rv = PopulateIfEmptyDir(profileName, aProfileDir);
                     NS_ENSURE_SUCCESS(rv, rv);
                 }
             }
@@ -879,7 +879,21 @@ NS_IMETHODIMP nsProfile::GetProfileDir(const PRUnichar *profileName, nsIFile **p
             // Return new file spec. 
             aProfileDir = tmpLocalFile;
 #endif
- 
+	
+	        // creating a new profile, add the indirection
+            rv = AddLevelOfIndirection(aProfileDir);
+            if (NS_FAILED(rv)) return rv;
+
+			// since we might be changing the location of
+			// profile dir, reset it in the registry.
+			// see bug #56002 for details
+			rv = SetProfileDir(profileName, aProfileDir);
+            if (NS_FAILED(rv)) return rv;
+
+            // update the registry
+            gProfileDataAccess->mProfileDataChanged = PR_TRUE;
+            gProfileDataAccess->UpdateRegistry(nsnull);
+
             // Copy contents from defaults folder.
             rv = profDefaultsDir->Exists(&exists);
             if (NS_SUCCEEDED(rv) && exists)
@@ -963,6 +977,114 @@ NS_IMETHODIMP nsProfile::GetCurrentProfileDir(nsIFile **profileDir)
 
     return NS_OK;
 }
+
+#define SALT_SIZE 8
+#define TABLE_SIZE 36
+#define SALT_EXTENSION ".slt"
+
+const char table[] = 
+	{ 'a','b','c','d','e','f','g','h','i','j',
+	  'k','l','m','n','o','p','q','r','s','t',
+	  'u','v','w','x','y','z','0','1','2','3',
+	  '4','5','6','7','8','9'};
+
+// for security, add a level of indirection:
+// an extra directory with a hard to guess name.
+
+nsresult
+nsProfile::AddLevelOfIndirection(nsIFile *aDir)
+{
+  nsresult rv;
+  PRBool exists = PR_FALSE;
+  if (!aDir) return NS_ERROR_NULL_POINTER;
+
+  // check if aDir/prefs.js exists, if so, use it.
+  // else, check if aDir/*.slt exists, if so, use it.
+  // else, do the salt
+  nsCOMPtr<nsIFile> prefFile;
+  rv = aDir->Clone(getter_AddRefs(prefFile));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = prefFile->Append("prefs.js");
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = prefFile->Exists(&exists);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  if (exists) {
+	// there is a prefs.js file in aDir, so just use aDir and don't salt
+	return NS_OK;
+  }
+
+  // no prefs.js, now search for a .slt directory
+  PRBool hasMore = PR_FALSE;
+  PRBool isDir = PR_FALSE;
+  nsCOMPtr<nsISimpleEnumerator> dirIterator;
+  rv = aDir->GetDirectoryEntries(getter_AddRefs(dirIterator));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = dirIterator->HasMoreElements(&hasMore);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr<nsIFile> dirEntry;
+
+  while (hasMore) {
+    rv = dirIterator->GetNext((nsISupports**)getter_AddRefs(dirEntry));
+    if (NS_SUCCEEDED(rv)) {
+      rv = dirEntry->IsDirectory(&isDir);
+      if (NS_SUCCEEDED(rv) && isDir) {
+        nsXPIDLCString leafName;
+        rv = dirEntry->GetLeafName(getter_Copies(leafName));
+	 	if (NS_SUCCEEDED(rv) && (const char *)leafName) {
+		  PRUint32 length = nsCRT::strlen((const char *)leafName);
+		  // check if the filename is the right length, len("xxxxxxxx.slt")
+		  if (length == (SALT_SIZE + nsCRT::strlen(SALT_EXTENSION))) {
+			// check that the filename ends with ".slt"
+			if (nsCRT::strncmp((const char *)leafName + SALT_SIZE, SALT_EXTENSION, nsCRT::strlen(SALT_EXTENSION)) == 0) {
+			  // found a salt directory, use it
+			  rv = aDir->Append((const char *)leafName);
+			  return rv;
+			}
+		  }
+		}
+      }
+    }
+    rv = dirIterator->HasMoreElements(&hasMore);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  
+  // if we get here, we need to add the extra directory
+
+  // turn PR_Now() into milliseconds since epoch
+  // and salt rand with that.
+  double fpTime;
+  LL_L2D(fpTime, PR_Now());
+  srand((uint)(fpTime * 1e-6 + 0.5));	// use 1e-6, granularity of PR_Now() on the mac is seconds
+
+  nsCAutoString saltStr;
+  PRInt32 i;
+  for (i=0;i<SALT_SIZE;i++) {
+  	saltStr.Append(table[rand()%TABLE_SIZE]);
+  }
+  saltStr.Append(SALT_EXTENSION);
+#ifdef DEBUG_profile_verbose
+  printf("directory name: %s\n",(const char *)saltStr);
+#endif
+
+  rv = aDir->Append((const char *)saltStr);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  exists = PR_FALSE;
+  rv = aDir->Exists(&exists);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!exists) {
+    rv = aDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+	
+  return NS_OK;
+}
+
 
 /*
  * Setters
@@ -1071,6 +1193,7 @@ nsProfile::CreateNewProfile(const PRUnichar* profileName,
         profileDir->AppendUnicode(profileName);
     }
 
+
     // Make profile directory unique only when the user 
     // decides to not use an already existing profile directory
     if (!useExistingDir) {
@@ -1092,6 +1215,10 @@ nsProfile::CreateNewProfile(const PRUnichar* profileName,
         if (NS_FAILED(rv)) return rv;
         useExistingDir = PR_FALSE;
     }
+
+    // since the directory didn't exist, add the indirection
+    rv = AddLevelOfIndirection(profileDir);
+    if (NS_FAILED(rv)) return rv;
 
     // Set the directory value and add the entry to the registry tree.
     // Creates required user directories.
@@ -1161,7 +1288,7 @@ nsresult nsProfile::CreateUserDirectories(nsILocalFile *profileDir)
         "Cache"
     };
     
-    for (int i = 0; i < sizeof(subDirNames) / sizeof(char *); i++)
+    for (PRUint32 i = 0; i < sizeof(subDirNames) / sizeof(char *); i++)
     {
       PRBool exists;
       
@@ -1546,6 +1673,10 @@ nsProfile::MigrateProfile(const PRUnichar* profileName, PRBool showProgressAsMod
     rv = newProfDir->CreateUnique(suggestedName, nsIFile::DIRECTORY_TYPE, 0775);
     if (NS_FAILED(rv)) return rv;
     
+    // always create level indirection when migrating
+    rv = AddLevelOfIndirection(newProfDir);
+    if (NS_FAILED(rv)) return rv;
+
     // Call migration service to do the work.
     nsCOMPtr <nsIPrefMigration> pPrefMigrator;
 
@@ -2143,7 +2274,7 @@ nsresult nsProfile::CloneProfileDirectorySpec(nsILocalFile **aLocalFile)
 }
 
 // If the profile folder is empty, dump all default profile files.
-nsresult nsProfile::PopulateIfEmptyDir(nsILocalFile *aProfileDir)
+nsresult nsProfile::PopulateIfEmptyDir(const PRUnichar *profileName, nsILocalFile *aProfileDir)
 {
     nsresult rv;
     PRBool hasContents = PR_FALSE;
@@ -2164,11 +2295,26 @@ nsresult nsProfile::PopulateIfEmptyDir(nsILocalFile *aProfileDir)
         nsCOMPtr<nsIFile> profDefaultsDir;
         rv = NS_GetSpecialDirectory(NS_APP_PROFILE_DEFAULTS_50_DIR, getter_AddRefs(profDefaultsDir));
         if (NS_FAILED(rv)) return rv;
+ 
+        // Add the indirection
+        rv = AddLevelOfIndirection(aProfileDir);
+        if (NS_FAILED(rv)) return rv;
+
+        // since we might be changing the location of
+        // profile dir, reset it in the registry.
+        // see bug #56002 for details
+        rv = SetProfileDir(profileName, aProfileDir);
+        if (NS_FAILED(rv)) return rv;
+
+        // we need to update the registry to remember the indirection
+        // otherwise, the next time we start we won't be pointing at the salt directory
+        gProfileDataAccess->mProfileDataChanged = PR_TRUE;
+        gProfileDataAccess->UpdateRegistry(nsnull);
         
         // Copy contents from defaults folder.
         rv = profDefaultsDir->Exists(&exists);
         if (NS_SUCCEEDED(rv) && exists) {
-        rv = RecursiveCopy(profDefaultsDir, aProfileDir);
+          rv = RecursiveCopy(profDefaultsDir, aProfileDir);
         }
     }
     return rv;
