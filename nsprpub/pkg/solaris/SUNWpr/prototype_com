@@ -21,8 +21,11 @@ i depend
 #
 # source locations relative to the prototype file
 #
-# SUNWnsprx
+# SUNWpr
 #
 d none usr 755 root sys
 d none usr/lib 755 root bin
 d none usr/lib/mps 755 root bin
+f none usr/lib/mps/libnspr4.so 755 root bin
+f none usr/lib/mps/libplc4.so 755 root bin
+f none usr/lib/mps/libplds4.so 755 root bin

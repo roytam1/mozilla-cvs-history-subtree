@@ -26,7 +26,7 @@
 # source locations relative to the prototype file
 #
 #
-# SUNWnsprx
+# SUNWprx
 #
 s none usr/lib/mps/64=sparcv9
 d none usr/lib/mps/sparcv9 755 root bin
