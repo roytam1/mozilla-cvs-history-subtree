@@ -4712,12 +4712,20 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
 
   PRInt32 containerPref = nsIBrowserDOMWindow::OPEN_NEWWINDOW;
 
+  nsCOMPtr<nsIURI> tabURI;
+  if (!aUrl.IsEmpty()) {
+    PRBool whoCares;
+    BuildURIfromBase(url.get(), getter_AddRefs(tabURI), &whoCares, 0);
+  }
+
   if (divertOpen) { // no such named window
     divertOpen = PR_FALSE; // more tests to pass:
     if (!aExtraArgument) {
       nsCOMPtr<nsIDOMChromeWindow> thisChrome =
         do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
-      if (!thisChrome) {
+      PRBool chromeTab = PR_FALSE;
+      tabURI->SchemeIs("chrome", &chromeTab);
+      if (!thisChrome && !chromeTab) {
 
         PRInt32 restrictionPref = 0;
         gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
@@ -4749,12 +4757,6 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
 #ifdef DEBUG
     printf("divert window.open to new tab\n");
 #endif
-      nsCOMPtr<nsIURI> tabURI;
-      if (!aUrl.IsEmpty()) {
-        PRBool whoCares;
-        BuildURIfromBase(url.get(), getter_AddRefs(tabURI), &whoCares, 0);
-      }
-
       // get nsIBrowserDOMWindow interface
 
       nsCOMPtr<nsIBrowserDOMWindow> bwin;
