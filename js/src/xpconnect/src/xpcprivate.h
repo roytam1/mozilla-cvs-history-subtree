@@ -321,7 +321,6 @@ private:
     NativeSetMap*            mNativeSetMap;
     PRLock* mMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
-
 };
 
 /***************************************************************************/
@@ -498,10 +497,6 @@ public:
 
     void SystemIsBeingShutDown();
 
-    // ?
-    // operator XPCContext*() const {return mXPCContext;}
-    // operator JSContext*() const {return mXPCContext->GetJSContext();}
-
 private:
 
     // no copy ctor or assignment allowed
@@ -604,7 +599,7 @@ public:
     static void
     DebugDumpAllScopes(PRInt16 depth);
 
-    NS_IMETHOD
+    void
     DebugDump(PRInt16 depth);
 
     JSBool
@@ -1539,6 +1534,8 @@ public:
                                             const nsIID* iid);
     static XPCNativeInterface* GetNewOrUsed(XPCCallContext& ccx,
                                             nsIInterfaceInfo* info);
+    static XPCNativeInterface* GetNewOrUsed(XPCCallContext& ccx,
+                                            const char* name);
 
     // inherited from public class
     // inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
@@ -1558,6 +1555,8 @@ public:
     void DealWithDyingGCThings(JSContext* cx)
         {for(PRUint16 i = 0; i < mMemberCount; i++) 
             mMembers[i].DealWithDyingGCThings(cx);}
+
+    void DebugDump(PRInt16 depth);
 
 private:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,
@@ -1629,6 +1628,8 @@ public:
 
     XPCNativeInterface* GetInterfaceAt(PRUint16 i)
         {NS_ASSERTION(i < mInterfaceCount, "bad index"); return mInterfaces[i];}
+
+    void DebugDump(PRInt16 depth);
 
 private:
     static XPCNativeSet* NewInstance(XPCNativeInterface** array, PRUint16 count);
@@ -1730,6 +1731,8 @@ public:
         {NS_ASSERTION(!mScriptableInfo, "leak here!"); mScriptableInfo = si;}
 
     void JSProtoObjectFinalized(JSContext *cx, JSObject *obj);
+
+    void DebugDump(PRInt16 depth);
 
 private:
     // disable copy ctor and assignment

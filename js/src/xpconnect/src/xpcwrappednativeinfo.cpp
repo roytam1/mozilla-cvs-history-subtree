@@ -255,6 +255,22 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
     return iface;
 }
 
+// static 
+XPCNativeInterface* 
+XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
+{
+    nsCOMPtr<nsIInterfaceInfoManager> iimgr =
+        dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+    if(!iimgr)
+        return nsnull;
+
+    nsCOMPtr<nsIInterfaceInfo> info;
+    if(NS_FAILED(iimgr->GetInfoForName(name, getter_AddRefs(info))) || !info)
+        return nsnull;
+                
+    return GetNewOrUsed(ccx, info);
+}
+
 XPCNativeInterface::XPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID)
     : nsIXPCNativeInterface(aInfo, aNameID)
 {
@@ -458,6 +474,19 @@ XPCNativeInterface::GetMemberName(XPCCallContext& ccx,
     return nsnull;
 }
 
+void 
+XPCNativeInterface::DebugDump(PRInt16 depth)
+{
+#ifdef DEBUG
+    depth--;
+    XPC_LOG_ALWAYS(("XPCNativeInterface @ %x", this));
+        XPC_LOG_INDENT();
+        XPC_LOG_ALWAYS(("name is %s", GetName()));
+        XPC_LOG_ALWAYS(("mMemberCount is %d", mMemberCount));
+        XPC_LOG_ALWAYS(("mInfo @ %x", mInfo.get()));
+        XPC_LOG_OUTDENT();
+#endif
+}
 
 /***************************************************************************/
 // XPCNativeSet
@@ -699,3 +728,23 @@ XPCNativeSet::DestroyInstance(XPCNativeSet* inst)
     inst->~XPCNativeSet();
     delete [] (char*) inst;
 }
+
+void 
+XPCNativeSet::DebugDump(PRInt16 depth)
+{
+#ifdef DEBUG
+    depth--;
+    XPC_LOG_ALWAYS(("XPCNativeSet @ %x", this));
+        XPC_LOG_INDENT();
+        
+        XPC_LOG_ALWAYS(("mInterfaceCount of %d", mInterfaceCount));
+        if(depth)
+        {
+            for(PRUint16 i = 0; i < mInterfaceCount; i++)
+                mInterfaces[i]->DebugDump(depth);            
+        }
+        XPC_LOG_ALWAYS(("mMemberCount of %d", mMemberCount));
+        XPC_LOG_OUTDENT();
+#endif
+}
+

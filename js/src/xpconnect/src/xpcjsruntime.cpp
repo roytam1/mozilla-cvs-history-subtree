@@ -161,7 +161,7 @@ JS_STATIC_DLL_CALLBACK(intN)
 DEBUG_WrapperChecker(JSHashEntry *he, intN i, void *arg)
 {
 // XXX fix this
-//    NS_ASSERTION(!((nsXPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
+    NS_ASSERTION(!((XPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
     ++ *((int*)arg);
     return HT_ENUMERATE_NEXT;
 }
@@ -467,10 +467,9 @@ WrappedJSMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 JS_STATIC_DLL_CALLBACK(intN)
-WrappedNativeClassMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+NativeSetDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// XXX fix this
-//    ((nsXPCWrappedNativeClass*)he->value)->DebugDump(*(PRInt16*)arg);
+    ((XPCNativeSet*)he->value)->DebugDump(*(PRInt16*)arg);
     return HT_ENUMERATE_NEXT;
 }
 #endif
@@ -485,6 +484,11 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mXPConnect @ %x", mXPConnect));
         XPC_LOG_ALWAYS(("mJSRuntime @ %x", mJSRuntime));
         XPC_LOG_ALWAYS(("mMapLock @ %x", mMapLock));
+        XPC_LOG_ALWAYS(("mJSRuntimeService @ %x", mJSRuntimeService));
+
+        XPC_LOG_ALWAYS(("mWrappedJSToReleaseArray @ %x with %d wrappers(s)", \
+                         &mWrappedJSToReleaseArray, 
+                         mWrappedJSToReleaseArray.Count()));
 
         XPC_LOG_ALWAYS(("mContextMap @ %x with %d context(s)", \
                          mContextMap, mContextMap ? mContextMap->Count() : 0));
@@ -517,19 +521,24 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
             XPC_LOG_OUTDENT();
         }
 
-// XXX fix this
-#if 0
-        XPC_LOG_ALWAYS(("mWrappedNativeClassMap @ %x with %d wrapperclasses(s)", \
-                         mWrappedNativeClassMap, mWrappedNativeClassMap ? \
-                                            mWrappedNativeClassMap->Count() : 0));
-        // iterate wrappersclasses...
-        if(depth && mWrappedNativeClassMap && mWrappedNativeClassMap->Count())
+        XPC_LOG_ALWAYS(("mIID2NativeInterfaceMap @ %x with %d interface(s)", \
+                         mIID2NativeInterfaceMap, mIID2NativeInterfaceMap ? \
+                                    mIID2NativeInterfaceMap->Count() : 0));
+
+        XPC_LOG_ALWAYS(("mClassInfo2NativeSetMap @ %x with %d sets(s)", \
+                         mClassInfo2NativeSetMap, mClassInfo2NativeSetMap ? \
+                                    mClassInfo2NativeSetMap->Count() : 0));
+
+        XPC_LOG_ALWAYS(("mNativeSetMap @ %x with %d sets(s)", \
+                         mNativeSetMap, mNativeSetMap ? \
+                                    mNativeSetMap->Count() : 0));
+        // iterate sets...
+        if(depth && mNativeSetMap && mNativeSetMap->Count())
         {
             XPC_LOG_INDENT();
-            mWrappedNativeClassMap->Enumerate(WrappedNativeClassMapDumpEnumerator, &depth);
+            mNativeSetMap->Enumerate(NativeSetDumpEnumerator, &depth);
             XPC_LOG_OUTDENT();
         }
-#endif
 
         XPC_LOG_OUTDENT();
 #endif

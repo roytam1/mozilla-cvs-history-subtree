@@ -229,11 +229,33 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                            nsnull);
             }
 
-            // XXX This *might* be an nsIFoo that this not yet part of our
-            // set. Do we want to grovel through the interface names (from
-            // the InterfaceInfoManager) to look for a match? I think we want
-            // to *not* do this. They only find a named tearoff if it is
-            // already part of the set.
+            // This *might* be a tearoff name that is not yet part of our
+            // set. Let's lookup the name and see if it is the name of an 
+            // interface. Then we'll see if the object actually *does* this
+            // interface and add a tearoff as necessary.
+
+            if(wrapperToReflectInterfaceNames)
+            {
+                jsval idval;
+                const char* name;
+                XPCWrappedNativeTearOff* to;
+                JSObject* jso;
+                
+                if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
+                   nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+                   nsnull != (iface = XPCNativeInterface::GetNewOrUsed(ccx, name)) &&
+                   nsnull != (to = wrapperToReflectInterfaceNames->
+                                        FindTearOff(ccx, iface, JS_TRUE)) &&
+                   nsnull != (jso = to->GetJSObject()))
+
+                {
+                    AutoResolveID arid(ccx, id);
+                    return OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
+                                               nsnull, nsnull, 
+                                               propFlags & ~JSPROP_ENUMERATE, 
+                                               nsnull);
+                }
+            }
         }
         return JS_TRUE;    
     }
@@ -523,22 +545,35 @@ XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 /*
     Here are the cases:
 
-    if( helper want NO enumerate )
-        if( DON_ENUM_STATICS )
+    set jsclass enumerate to stub (unless noted otherwise)
+
+    if( helper wants NO enumerate )
+        if( DONT_ENUM_STATICS )
             use enumerate stub - don't use this JSOp thing at all
         else
             do shared enumerate - don't use this JSOp thing at all
-    else        
-
-
-
-
-
-
-
-
-
-
+    else if( helper wants old enumerate )
+        use this JSOp
+        if( DONT_ENUM_STATICS )
+            call scriptable enumerate
+            call stub
+        else
+            if( set not mutated )
+                call scriptable enumerate
+                call stub
+            else
+                call shared enumerate
+                call scriptable enumerate
+                call stub
+    else // if( helper wants new enumerate )
+        if( DONT_ENUM_STATICS )
+            forward to scriptable enumerate
+        else
+            if( set not mutated )
+                forward to scriptable enumerate
+            else
+                call shared enumerate
+                forward to scriptable enumerate
 */
 
     

@@ -368,8 +368,10 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 
     XPC_LOG_ALWAYS(("chain of %d XPCWrappedNativeScope(s)", count));
     XPC_LOG_INDENT();
-        for(cur = gScopes; cur; cur = cur->mNext)
-            cur->DebugDump(depth);
+        XPC_LOG_ALWAYS(("gDyingScopes @ %x", gDyingScopes));
+        if(depth)
+            for(cur = gScopes; cur; cur = cur->mNext)
+                cur->DebugDump(depth);
     XPC_LOG_OUTDENT();
 #endif
 }        
@@ -378,24 +380,30 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
-//    ((XPCWrappedNative*)he->value)->DebugDump(*(PRInt16*)arg);
+    ((XPCWrappedNative*)he->value)->DebugDump(*(PRInt16*)arg);
+    return HT_ENUMERATE_NEXT;
+}
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeProtoMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNativeProto*)he->value)->DebugDump(*(PRInt16*)arg);
     return HT_ENUMERATE_NEXT;
 }
 #endif
 
-NS_IMETHODIMP 
+void
 XPCWrappedNativeScope::DebugDump(PRInt16 depth)
 {
 #ifdef DEBUG
     depth-- ;
-//    XPC_LOG_ALWAYS(("XPCWrappedNativeScope @ %x with mRefCnt = %d", this, mRefCnt));
+    XPC_LOG_ALWAYS(("XPCWrappedNativeScope @ %x", this));
     XPC_LOG_INDENT();
         XPC_LOG_ALWAYS(("mRuntime @ %x", mRuntime));
         XPC_LOG_ALWAYS(("mNext @ %x", mNext));
+        XPC_LOG_ALWAYS(("mComponents @ %x", mComponents));
+        XPC_LOG_ALWAYS(("mGlobalJSObject @ %x", mGlobalJSObject));
+        XPC_LOG_ALWAYS(("mPrototypeJSObject @ %x", mPrototypeJSObject));
 
-// fix this
-/*
         XPC_LOG_ALWAYS(("mWrappedNativeMap @ %x with %d wrappers(s)", \
                          mWrappedNativeMap, \
                          mWrappedNativeMap ? mWrappedNativeMap->Count() : 0));
@@ -406,10 +414,18 @@ XPCWrappedNativeScope::DebugDump(PRInt16 depth)
             mWrappedNativeMap->Enumerate(WrappedNativeMapDumpEnumerator, &depth);
             XPC_LOG_OUTDENT();
         }
-*/
 
+        XPC_LOG_ALWAYS(("mWrappedNativeProtoMap @ %x with %d protos(s)", \
+                         mWrappedNativeProtoMap, \
+                         mWrappedNativeProtoMap ? mWrappedNativeProtoMap->Count() : 0));
+        // iterate contexts...
+        if(depth && mWrappedNativeProtoMap && mWrappedNativeProtoMap->Count())
+        {
+            XPC_LOG_INDENT();
+            mWrappedNativeProtoMap->Enumerate(WrappedNativeProtoMapDumpEnumerator, &depth);
+            XPC_LOG_OUTDENT();
+        }
     XPC_LOG_OUTDENT();
 #endif
-    return NS_OK;
 }        
 

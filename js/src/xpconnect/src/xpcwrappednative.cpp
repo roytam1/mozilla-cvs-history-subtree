@@ -285,7 +285,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
  *    finalization of mFlatJSObject.
  *
  *  - The wrapper has a pointer to the nsISupports 'view' of the wrapped native
- *    object i.e... mIdentity. This is help until the wrapper's refcount goes
+ *    object i.e... mIdentity. This is held until the wrapper's refcount goes
  *    to zero and the wrapper is released.
  *
  *  - The wrapper also has 'tearoffs'. It has one tearoff for each interface
@@ -294,7 +294,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
  *    of that we've had to QueryInterface in order to actually make a call
  *    into the wrapped object via the pointer for the given interface.
  *
- *  - Each tearoff's 'mNative' member (if non-null) indicated one reference 
+ *  - Each tearoff's 'mNative' member (if non-null) indicates one reference 
  *    held by our wrapper on the wrapped native for the given interface
  *    associated with the tearoff. If we release that reference then we set
  *    the tearoff's 'mNative' to null.  
@@ -302,8 +302,8 @@ NS_INTERFACE_MAP_END_THREADSAFE
  *  - We use the occasion of the JavaScript GCCallback for the JSGC_MARK_END
  *    event to scan the tearoffs of all wrappers for non-null mNative members
  *    that represent unused references. We can tell that a given tearoff's 
- *    mNative is unused by noting that the tearoff's mJSObject is null *and* 
- *    that no live XPCCallContexts hold a pointer to the tearoff.
+ *    mNative is unused by noting that no live XPCCallContexts hold a pointer 
+ *    to the tearoff.
  *
  *  - As a time/space tradeoff we may decide to not do this scanning on 
  *    *every* JavaScript GC. We *do* want to do this *sometimes* because
@@ -324,38 +324,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
  *    tearoff mJSObjects. Note that we must clear the private of any lingering
  *    mJSObjects at this point because we have no guarentee of the *order* of
  *    finalization within a given gc cycle.
- *
- *  - The other critical function of mJSObject (and its properties) is that 
- *    mFlatJSObject will Use newresolve to expose those properties its own
- *    in cases where the wrapper has been QI'd to interfaces not already in
- *    the set of the wrapper's prototype. That is... By default the wrapper
- *    delegates to its proto all requests for methods/attributes/consts that
- *    were declared in idl. However, if the individual wrapper has been QI'd
- *    to expose additional interfaces then property lookup for mFlatJSObject
- *    must find any additional properties on *some* object. The specific 
- *    tearoff's mJSObject does double duty to provide a location for such 
- *    properties.
- *
  */
-
-/*
- * A note on Tearoff states...
- *
- * Tearoffs have 4 pieces of data: mInterface, mWrapper, mNative, and mJSObject.
- * 
- * - If mInterface is null then the tearoff is not in use.
- * - When the tearoff is first used we set mInterface.
- * - mNative is set when the tearoof is holding a reference to that interface
- *   pointer on the wrapped object. And cleared if that reference is realease.
- * - mJSObject is set when we have created a JSObject to relect the interface
- *   into JS. mWrapper is set at that time also to povide a back pointer to 
- *   the wrapper (since the JSObject's private data points only to the tearoff).
- * - mInterface is held for the lifetime of mJSObject. EXCEPT if the wrapper's
- *   mFlatJSObject is collected. Then it is release and null'd. Since 
- *   mFlatJSObject is the parent of mJSObject this case only happens if
- *   mJSObject is also about to be colleded.
- */
-
 
 nsrefcnt
 XPCWrappedNative::AddRef(void)
@@ -1395,7 +1364,34 @@ NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsid nameID, nsIXPCNativeI
 /* void debugDump (in short depth); */
 NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+#ifdef DEBUG
+    depth-- ;
+    XPC_LOG_ALWAYS(("XPCWrappedNative @ %x with mRefCnt = %d", this, mRefCnt));
+    XPC_LOG_INDENT();
+
+        if(depth && mProto)
+            mProto->DebugDump(depth);
+        else
+            XPC_LOG_ALWAYS(("mProto @ %x", mProto));
+        
+        if(depth && mSet)
+            mSet->DebugDump(depth);
+        else
+            XPC_LOG_ALWAYS(("mSet @ %x", mSet));
+        
+        XPC_LOG_ALWAYS(("mFlatJSObject of %x", mFlatJSObject));
+        XPC_LOG_ALWAYS(("mScriptableInfo @ %x", mScriptableInfo));
+        if(depth && mScriptableInfo)
+        {
+            XPC_LOG_INDENT();
+            XPC_LOG_ALWAYS(("mScriptable @ %x", mScriptableInfo->GetScriptable()));
+            XPC_LOG_ALWAYS(("mFlags of %x", mScriptableInfo->GetFlags()));
+            XPC_LOG_ALWAYS(("mJSClass @ %x", mScriptableInfo->GetJSClass()));
+            XPC_LOG_OUTDENT();
+        }
+    XPC_LOG_OUTDENT();
+#endif
+    return NS_OK;
 }
 
 /***************************************************************************/

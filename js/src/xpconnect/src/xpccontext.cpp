@@ -97,6 +97,11 @@ XPCContext::DebugDump(PRInt16 depth)
         {
             // XXX show the exception here...                
         }
+
+        XPC_LOG_ALWAYS(("mCallingLangType of %s", 
+                         mCallingLangType == LANG_UNKNOWN ? "LANG_UNKNOWN" :
+                         mCallingLangType == LANG_JS      ? "LANG_JS" :
+                                                            "LANG_NATIVE"));
         XPC_LOG_OUTDENT();
 #endif
 }

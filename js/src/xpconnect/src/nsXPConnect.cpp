@@ -192,7 +192,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
 #ifdef XPC_DUMP_AT_SHUTDOWN
         // NOTE: to see really interesting stuff turn on the prlog stuff.
         // See the comment at the top of xpclog.h to see how to do that.
-        xpc->DebugDump(4);
+        xpc->DebugDump(7);
 #endif
         nsrefcnt cnt;
         NS_RELEASE2(xpc, cnt);
@@ -748,10 +748,19 @@ nsXPConnect::DebugDump(PRInt16 depth)
     depth-- ;
     XPC_LOG_ALWAYS(("nsXPConnect @ %x with mRefCnt = %d", this, mRefCnt));
     XPC_LOG_INDENT();
+        XPC_LOG_ALWAYS(("gSelf @ %x", gSelf));
+        XPC_LOG_ALWAYS(("gOnceAliveNowDead is %d", (int)gOnceAliveNowDead));
+        XPC_LOG_ALWAYS(("mDefaultSecurityManager @ %x", mDefaultSecurityManager));
+        XPC_LOG_ALWAYS(("mDefaultSecurityManagerFlags of %x", mDefaultSecurityManagerFlags));
         XPC_LOG_ALWAYS(("mInterfaceInfoManager @ %x", mInterfaceInfoManager));
         XPC_LOG_ALWAYS(("mContextStack @ %x", mContextStack));
         if(mRuntime)
-            mRuntime->DebugDump(depth);
+        {
+            if(depth)
+                mRuntime->DebugDump(depth);
+            else
+                XPC_LOG_ALWAYS(("XPCJSRuntime @ %x", mRuntime));
+        }
         else
             XPC_LOG_ALWAYS(("mRuntime is null"));
         XPCWrappedNativeScope::DebugDumpAllScopes(depth);
