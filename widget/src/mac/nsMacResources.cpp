@@ -70,6 +70,14 @@ pascal void __terminateResources(void)
 
 nsresult nsMacResources::OpenLocalResourceFile()
 {
+#ifdef MACOSX
+  // XXX quick and dirty hack to make resources available so we don't crash.
+	if (mRefNum == kResFileNotOpened) {
+    FSSpec spec = { 0, 0, "\plibwidget.rsrc" };
+    if (FindFolder(kUserDomain, kDomainLibraryFolderType, false, &spec.vRefNum, &spec.parID) == noErr)
+      mRefNum = FSpOpenResFile(&spec, fsRdPerm);
+  }
+#endif
 	if (mRefNum == kResFileNotOpened)
 		return NS_ERROR_NOT_INITIALIZED;
 
