@@ -24,7 +24,8 @@
 
 static NS_DEFINE_IID(kIBidiKeyboardIID, NS_IBIDIKEYBOARD_IID);
 
-NS_IMPL_ISUPPORTS(nsBidiKeyboard, NS_IBIDIKEYBOARD_IID)
+//NS_IMPL_ISUPPORTS(nsBidiKeyboard, NS_IBIDIKEYBOARD_IID)
+NS_IMPL_ISUPPORTS(nsBidiKeyboard, NS_GET_IID(nsBidiKeyboard))
 nsBidiKeyboard::nsBidiKeyboard() : nsIBidiKeyboard()
 {
   NS_INIT_REFCNT();
