@@ -26,7 +26,7 @@ public:
         variable
     };
 
-    virtual type getType();
+    virtual type getType() = 0;
 };
 
 class txInstructionContainer : public txToplevelItem

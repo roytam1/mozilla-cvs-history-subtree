@@ -22,7 +22,7 @@ struct txElementHandler {
 };
 
 struct txHandlerTableData {
-    txElementHandler* mHandlers;
+    txElementHandler mHandlers[20]; // XXX find a better solution for this
     txElementHandler mOtherHandler;
     txElementHandler mLREHandler;
     HandleTextFn mTextHandler;

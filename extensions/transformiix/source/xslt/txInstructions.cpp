@@ -125,6 +125,8 @@ nsresult txLREAttribute::execute(txExecutionState& aEs)
     delete exprRes;
 
     aEs.mResultHandler->attribute(String(nodeName), mNamespaceID, value);
+
+    return NS_OK;
 }
 
 txInsertAttrSet::txInsertAttrSet(const txExpandedName& aName)
@@ -166,7 +168,6 @@ txValueOfInstruction::~txValueOfInstruction()
     delete mExpr;
 }
 
-
 nsresult txValueOfInstruction::execute(txExecutionState& aEs)
 {
     ExprResult* exprRes = mExpr->evaluate(aEs.getEvalContext());
@@ -178,3 +179,21 @@ nsresult txValueOfInstruction::execute(txExecutionState& aEs)
 
     aEs.mResultHandler->characters(value, mDOE);
 }
+
+txRecursionCheckpointStart::txRecursionCheckpointStart(const String& aName)
+    : mName(aName)
+{
+}
+
+nsresult txRecursionCheckpointStart::execute(txExecutionState& aEs)
+{
+    // XXX will this work? what if the context is in two different states
+    return aEs.enterRecursionCheckpoint(this, aEs.getEvalContext());
+}
+
+nsresult txRecursionCheckpointEnd::execute(txExecutionState& aEs)
+{
+    aEs.leaveRecursionCheckpoint();
+    return NS_OK;
+}
+

@@ -47,6 +47,7 @@ REQUIRES	= string \
 endif
 
 CPPSRCS = Names.cpp \
+        txExecutionState.cpp \
         txInstructions.cpp \
         txOutputFormat.cpp \
         txRtfHandler.cpp \
@@ -58,6 +59,7 @@ CPPSRCS = Names.cpp \
         txXSLTNumber.cpp \
         txXSLTNumberCounters.cpp \
         txXSLTPatterns.cpp \
+        txXSLTProcessor.cpp \
         txPatternParser.cpp \
         txUnknownHandler.cpp
 

@@ -132,3 +132,17 @@ public:
     PRBool mDOE;
 };
 
+class txRecursionCheckpointStart : public txInstruction
+{
+public:
+    txRecursionCheckpointStart(const String& aName);
+    TX_DECL_TXINSTRUCTION
+    
+    String mName;
+};
+
+class txRecursionCheckpointEnd : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};

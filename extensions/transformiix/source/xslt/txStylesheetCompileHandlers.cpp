@@ -475,7 +475,6 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
  * Table Datas
  */
 
-#if 0
 txHandlerTableData gTxIgnoreTableData = {
   // Handlers
   { { 0, 0, 0, 0 } },
@@ -489,13 +488,13 @@ txHandlerTableData gTxIgnoreTableData = {
 
 txHandlerTableData gTxRootTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "stylesheet", txFnStylesheetStart, txFnStylesheetEnd },
-    { kNameSpaceID_XSLT, "transform", txFnStylesheetStart, txFnStylesheetEnd },
+  { { kNameSpaceID_XSLT, "stylesheet", txFnStartStylesheet, txFnEndStylesheet },
+    { kNameSpaceID_XSLT, "transform", txFnStartStylesheet, txFnEndStylesheet },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementError, txFnEndElementError },
   // LRE
-  { 0, 0, txFnStartElementError, txFnEndElementError },
+  { 0, 0, txFnStartElementError, txFnEndElementError }, // XXX enable fcp if version attribute is missing
   // Text
   txFnTextError
 };
@@ -505,9 +504,9 @@ txHandlerTableData gTxTopTableData = {
   { { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
     { 0, 0, 0, 0 } },
   // Other
-  { 0, 0, txFnStartTopOther, txFnEndTopOther },
+  { 0, 0, txFnStartOtherTop, txFnEndOtherTop },
   // LRE
-  { 0, 0, txFnStartTopOther, txFnEndTopOther },
+  { 0, 0, txFnStartOtherTop, txFnEndOtherTop },
   // Text
   txFnTextIgnore
 };
@@ -552,8 +551,8 @@ txHandlerTable::init(txHandlerTableData* aTableData)
     nsresult rv = NS_OK;
 
     mTextHandler = aTableData->mTextHandler;
-    mLREHandler = aTableData->mLREHandler;
-    mOtherHandler = aTableData->mOtherHandler;
+    mLREHandler = &aTableData->mLREHandler;
+    mOtherHandler = &aTableData->mOtherHandler;
 
     txElementHandler* handler = aTableData->mHandlers;
     while (handler->mLocalName) {
@@ -566,6 +565,7 @@ txHandlerTable::init(txHandlerTableData* aTableData)
 
         handler++;
     }
+    return NS_OK;
 }
 
 txElementHandler*
@@ -584,12 +584,13 @@ txHandlerTable::find(PRInt32 aNamespaceID, txAtom* aLocalName)
     if (!gTx##_name##Handler)                               \
         return MB_FALSE;                                    \
                                                             \
-    rv = gTx##_name##Handler->init(gTx##_name##TableData);  \
+    rv = gTx##_name##Handler->init(&gTx##_name##TableData); \
     if (NS_FAILED(rv))                                      \
         return MB_FALSE
 
 #define SHUTDOWN_HANDLER(_name)                             \
-    delete gTx##_name##Handler;
+    delete gTx##_name##Handler;                             \
+    gTx##_name##Handler = nsnull
 
 // static
 MBool
@@ -607,6 +608,7 @@ txHandlerTable::init()
 }
 
 // static
+void
 txHandlerTable::shutdown()
 {
     SHUTDOWN_HANDLER(Root);
@@ -615,5 +617,3 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Template);
     SHUTDOWN_HANDLER(Text);
 }
-
-#endif

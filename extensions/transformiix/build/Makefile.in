@@ -116,13 +116,14 @@ LOBJS =../source/base/ArrayList.$(OBJ_SUFFIX) \
   ../source/xml/parser/XMLParser.$(OBJ_SUFFIX) \
   ../source/xslt/txOutputFormat.$(OBJ_SUFFIX) \
   ../source/xslt/Names.$(OBJ_SUFFIX) \
+  ../source/xslt/txExecutionState.$(OBJ_SUFFIX) \
   ../source/xslt/txInstructions.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaTextOutput.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaXSLTProcessor.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaXMLOutput.$(OBJ_SUFFIX) \
   ../source/xslt/txRtfHandler.$(OBJ_SUFFIX) \
   ../source/xslt/txStylesheet.$(OBJ_SUFFIX) \
-  ../source/xslt/txStylesheetCompilerHandlers.$(OBJ_SUFFIX) \
+  ../source/xslt/txStylesheetCompileHandlers.$(OBJ_SUFFIX) \
   ../source/xslt/txStylesheetCompiler.$(OBJ_SUFFIX) \
   ../source/xslt/txTextHandler.$(OBJ_SUFFIX) \
   ../source/xslt/txToplevelItems.$(OBJ_SUFFIX) \
@@ -130,6 +131,7 @@ LOBJS =../source/base/ArrayList.$(OBJ_SUFFIX) \
   ../source/xslt/txXSLTNumber.$(OBJ_SUFFIX) \
   ../source/xslt/txXSLTNumberCounters.$(OBJ_SUFFIX) \
   ../source/xslt/txXSLTPatterns.$(OBJ_SUFFIX) \
+  ../source/xslt/txXSLTProcessor.$(OBJ_SUFFIX) \
   ../source/xslt/txPatternParser.$(OBJ_SUFFIX) \
   ../source/xslt/functions/CurrentFunctionCall.$(OBJ_SUFFIX) \
   ../source/xslt/functions/DocumentFunctionCall.$(OBJ_SUFFIX) \

@@ -36,64 +36,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TXEXECUTIONSTATE_H
-#define TRANSFRMX_TXEXECUTIONSTATE_H
+#include "txExecutionState.h"
 
-#include "txError.h"
-#include "baseutils.h"
-#include "txXMLEventHandler.h"
-#include "nsCOMPtr.h"
-#include "Stack.h"
-#include "XMLUtils.h"
-
-class txInstruction;
-class txIOutputHandlerFactory;
-class txIEvalContext;
-class ExprResult;
-class txStylesheet;
-class txRecursionCheckpointStart;
-class txExpandedNameMap;
-
-class txExecutionState
+nsresult
+txExecutionState::init(Node* aNode,
+                       txExpandedNameMap* aGlobalParams)
 {
-public:
-    nsresult init(Node* aNode, txExpandedNameMap* aGlobalParams);
-
-    // Stack functions
-    nsresult pushEvalContext(txIEvalContext* aContext);
-    txIEvalContext* popEvalContext();
-    nsresult pushExprResult(ExprResult* aExprResult);
-    ExprResult* popExprResult();
-    nsresult pushString(const nsAString& aStr);
-    void popString(nsAString& aStr);
-    nsresult pushInt(PRInt32 aInt);
-    PRInt32 popInt();
-
-    // state-getting functions
-    txIEvalContext* getEvalContext();
-    txInstruction* getAttributeSet(const txExpandedName& aName);
-    txInstruction* getNextInstruction();
-
-    // state-modification functions
-    nsresult runTemplate(txInstruction* aInstruction);
-    nsresult gotoInstruction(txInstruction* aNext);
-
-    // Other
-    nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
-                                      txIEvalContext* aContext);
-    void leaveRecursionCheckpoint();
-
-#ifdef TX_EXE
-    txIOutputXMLEventHandler* mOutputHandler;
-#else
-    nsCOMPtr<txIOutputXMLEventHandler> mOutputHandler;
-#endif
-    txXMLEventHandler* mResultHandler;
-    txIOutputHandlerFactory* mOutputHandlerFactory;
-
-private:
-    txStylesheet* mStylesheet;
-    Stack mStack;
-};
-
-#endif
+    // set initial and global eval-context
+    // set initial instruction
+    // set global parameters
+    
+    return NS_OK;
+}
