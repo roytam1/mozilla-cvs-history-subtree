@@ -102,7 +102,8 @@ public:
 			   LPCTSTR pButtonText, LPCTSTR pToolTipText, 
 			   LPCTSTR pStatusText,
 			   CSize bitmapSize, int nMaxTextChars, int nMinTextChars, 
-			   HT_Resource pNode, DWORD dwButtonStyle = 0, CView* view = NULL, CPaneCX* pane = NULL);
+			   HT_Resource pNode, DWORD dwButtonStyle = 0, CView* view = NULL, 
+               CPaneCX* pane = NULL, HT_View theView = NULL);
 
 	void SetDepressed(BOOL b) { m_bDepressed = b; Invalidate(); }
 
