@@ -5068,8 +5068,7 @@ nsTextFrame::Reflow(nsIPresContext* aPresContext,
       aData.Mid(aText, mContentOffset, mContentLength);
 
       // Set the font
-      nsStyleFont font;
-      mStyleContext->GetStyle(eStyleStruct_Font, font);
+      const nsStyleFont* font = (const nsStyleFont*)mStyleContext->GetStyle(eStyleStruct_Font);
       aReflowState.rendContext->SetFont(font.mFont);
 
       // Now get the exact bounding metrics of the text
