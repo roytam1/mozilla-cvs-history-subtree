@@ -43,7 +43,6 @@
 #include "nsIDocument.h"
 #include "nsIJSContextStack.h"
 #include "nsXPIDLString.h"
-#include "nsDOMPropEnums.h"
 #include "nsDOMError.h"
 #include "nsDOMClassInfo.h"
 

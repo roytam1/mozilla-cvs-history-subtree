@@ -44,7 +44,6 @@
 // Other Classes
 #include "nsIEventListenerManager.h"
 #include "nsEscape.h"
-#include "nsDOMPropEnums.h"
 #include "nsStyleCoord.h"
 #include "nsHTMLReflowState.h"
 #include "nsMimeTypeArray.h"
