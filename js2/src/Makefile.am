@@ -21,6 +21,7 @@ libjs2_a_SOURCES = \
 	parser.cpp \
 	reader.cpp \
 	strings.cpp \
+	tracer.cpp \
 	token.cpp \
 	utilities.cpp \
 	world.cpp
