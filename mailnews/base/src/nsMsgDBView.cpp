@@ -35,6 +35,8 @@
 #include "nsIMsgImapMailFolder.h"
 #include "nsImapCore.h"
 
+#include "nsIDOMElement.h"
+
 /* Implementation file */
 
 NS_IMPL_ADDREF(nsMsgDBView)
@@ -177,8 +179,65 @@ NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement *elt)
+NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement * aElement)
 {
+  // if the header is a sortable column then we want to call Sort
+  // otherwise, we'll do something else =)
+
+  nsMsgViewSortTypeValue sortType = nsMsgViewSortType::bySubject;
+  nsMsgViewSortOrderValue sortOrder = nsMsgViewSortOrder::descending;
+  PRBool performSort = PR_FALSE;
+  nsAutoString colID;
+  aElement->GetAttribute(NS_LITERAL_STRING("id"), colID);
+
+  nsAutoString sortOrderValue;
+  aElement->GetAttribute(NS_LITERAL_STRING("sortDirection"), sortOrderValue);
+  if (!sortOrderValue.IsEmpty() && sortOrderValue.Equals(NS_LITERAL_STRING("ascending")))
+     sortOrder = nsMsgViewSortOrder::ascending;
+
+  switch (colID[0])
+  {
+  case 's':
+    if (colID[1] == 'u') // sort the subject
+    {
+      sortType = nsMsgViewSortType::bySubject;
+      performSort = PR_TRUE;
+    }
+    else // sort by sender
+    {
+      sortType = nsMsgViewSortType::byAuthor;
+      performSort = PR_TRUE;
+    }
+    break;
+
+  case 'd':  // date
+    sortType = nsMsgViewSortType::byDate;
+    performSort = PR_TRUE;
+    break;
+
+  default:
+    break;
+  }
+  
+  if (performSort)
+  {
+    // if we are already sorted by the same order, then toggle ascending / descending.
+    if (m_sortType == sortType)
+    {
+      if (sortOrder == nsMsgViewSortOrder::ascending)
+        sortOrder = nsMsgViewSortOrder::descending;
+      else
+        sortOrder = nsMsgViewSortOrder::ascending;
+    }
+
+    Sort(sortType, sortOrder);
+
+    if (sortOrder == nsMsgViewSortOrder::ascending)
+      aElement->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("ascending"));
+    else
+      aElement->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("descending"));
+  } // if performSort
+
   return NS_OK;
 }
 
