@@ -109,6 +109,8 @@
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
 #include "nsIJSContextStack.h"
+#include "nsContentCID.h"
+static NS_DEFINE_CID(kHTMLStyleSheetCID,NS_HTMLSTYLESHEET_CID);
 
 
 #define DETECTOR_CONTRACTID_MAX 127
