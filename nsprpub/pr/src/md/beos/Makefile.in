@@ -24,7 +24,7 @@ CSRCS += $(MDCSRCS)
 
 TARGETS		= $(OBJS)
 
-INCLUDES = -I$(DIST)/include -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(DIST)/include -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 include $(topsrcdir)/config/rules.mk
 
