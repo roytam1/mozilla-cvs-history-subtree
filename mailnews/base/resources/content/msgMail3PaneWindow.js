@@ -68,6 +68,8 @@ var gHaveLoadedMessage;
 
 var gDisplayStartupPage = false;
 
+var gNotifyDefaultInboxLoadedOnStartup = false;
+
 // the folderListener object
 var folderListener = {
     OnItemAdded: function(parentItem, item, view) { },
@@ -180,6 +182,17 @@ var folderListener = {
                  }
                }
                SetBusyCursor(window, false);
+             }
+             if (gNotifyDefaultInboxLoadedOnStartup && (folder.flags & 0x1000))
+             {
+                var defaultAccount = accountManager.defaultAccount;
+                defaultServer = defaultAccount.incomingServer;
+                var inboxFolder = GetInboxFolder(defaultServer);
+                if (inboxFolder && inboxFolder.URI == folder.URI)
+                {
+                  NotifyObservers("defaultInboxLoadedOnStartup");
+                  gNotifyDefaultInboxLoadedOnStartup = false;
+                }
              }
              //folder loading is over, now issue quick search if there is an email address
              if (gEmailAddress)
@@ -504,10 +517,9 @@ function OnLoadMessenger()
   OnLoadMsgHeaderPane();
 
   gHaveLoadedMessage = false;
-
+  gNotifyDefaultInboxLoadedOnStartup = true;
   //Set focus to the Thread Pane the first time the window is opened.
   SetFocusThreadPane();
-  NotifyObservers("mail3paneWindow-loaded");
 }
 
 function OnUnloadMessenger()
