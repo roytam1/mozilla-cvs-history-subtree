@@ -54,9 +54,22 @@
 #include "nsIFileStream.h" // for nsIRandomAccessStore
 
 #include "prerror.h"
-#include "nsFileSpec.h"
 #include "plstr.h"
 #include "nsReadableUtils.h"
+#include "nsCRT.h"
+
+#define NS_FILE_RESULT(x) ns_file_convert_result((PRInt32)x)
+nsresult ns_file_convert_result(PRInt32 nativeErr);
+#define NS_FILE_FAILURE NS_FILE_RESULT(-1)
+
+static nsresult ns_file_convert_result(PRInt32 nativeErr)
+{
+    return nativeErr ?
+        NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_FILES,((nativeErr)&0xFFFF))
+        : NS_OK;
+}
+ 
+
 
 //========================================================================================
 class BasicStringImpl
