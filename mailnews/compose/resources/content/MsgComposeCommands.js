@@ -1875,6 +1875,11 @@ function OutputFormatMenuSelect(target)
   if (gMsgCompose)
   {
     var msgCompFields = gMsgCompose.compFields;
+    var toolbar = document.getElementById("FormatToolbar");
+    var format_menubar = document.getElementById("formatMenu");
+    var insert_menubar = document.getElementById("insertMenu");
+    var show_menuitem = document.getElementById("menu_showFormatToolbar");
+
     if (msgCompFields)
       switch (target.getAttribute('id'))
       {
@@ -1883,6 +1888,12 @@ function OutputFormatMenuSelect(target)
         case "format_html":  gSendFormat = nsIMsgCompSendFormat.HTML;        break;
         case "format_both":  gSendFormat = nsIMsgCompSendFormat.Both;        break;
       }
+    var hideMenus = (gSendFormat == nsIMsgCompSendFormat.PlainText);
+    format_menubar.hidden = hideMenus;
+    insert_menubar.hidden = hideMenus;
+    show_menuitem.hidden = hideMenus;
+    toolbar.hidden = hideMenus ||
+      (show_menuitem.getAttribute("checked") == "false");
   }
 }
 
