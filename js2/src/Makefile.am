@@ -1,9 +1,8 @@
-CFLAGS=-Wall -Wconversion
-CPPFLAGS=-Wall -Wconversion
-
 include $(top_srcdir)/common.mk
 
 noinst_LIBRARIES = libjs2.a
+
+libjs2_a_DEPENDENCIES = $(LIBFDLIBM)
 
 libjs2_a_SOURCES = \
 	bytecodegen.cpp \
