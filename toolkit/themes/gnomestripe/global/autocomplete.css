@@ -40,6 +40,7 @@ textbox {
 
 .autocomplete-textbox-container {
   -moz-appearance: menulist-textfield;
+  -moz-box-align: center;
   border: 2px solid;
   -moz-border-top-colors: ThreeDShadow ThreeDDarkShadow;
   -moz-border-right-colors: ThreeDHighlight ThreeDLightShadow;
