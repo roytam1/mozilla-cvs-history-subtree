@@ -143,7 +143,11 @@ typedef struct PrintSetup_ PrintSetup;
 /*
 	mother of data structures
 */
+#ifndef OPAQUE_MWCONTEXT
 typedef struct MWContext_ MWContext;
+#else
+typedef void MWContext;
+#endif
 
 /*
 	Chrome structure
