@@ -23,15 +23,17 @@ MODULE		= softupdate
 LIBRARY_NAME	= softupdate
 
 REQUIRES	= softupdt js java net dbm nspr img util layer pref jar security  \
-#if defined(MOZ_OJI)
-		  oji npj
-#elseif defined(MOZ_JAVA)
-		  applet \
-#endif
 		  lay style libreg
 
+ifeq ($(MOZ_OJI),1)
+REQUIRES	+= oji npj
+endif
+ifeq ($(MOZ_JAVA),1)
+REQUIRES	+= applet
+endif
+
 JRI_GEN		= netscape.softupdate.FolderSpec \
-          netscape.softupdate.InstallObject \
+		  netscape.softupdate.InstallObject \
 		  netscape.softupdate.InstallFile \
 		  netscape.softupdate.InstallPatch \
 		  netscape.softupdate.InstallExecute \
