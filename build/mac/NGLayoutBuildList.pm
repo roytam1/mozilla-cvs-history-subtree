@@ -197,8 +197,8 @@ sub Checkout()
 	# activate MacCVS
 	ActivateApplication('Mcvs');
 
-	my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
-	my($branch_tag) = "SeaMonkey_M15_BRANCH";
+	my($nsprpub_tag) = "SeaMonkey_M15_RELEASE";
+	my($branch_tag) = "SeaMonkey_M15_RELEASE";
 	
 	#//
 	#// Checkout commands
