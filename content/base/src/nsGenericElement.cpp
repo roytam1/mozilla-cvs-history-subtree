@@ -529,7 +529,10 @@ nsGenericElement::GetLocalName(nsAWritableString& aLocalName)
 NS_IMETHODIMP
 nsGenericElement::GetNodeValue(nsAWritableString& aNodeValue)
 {
+  // XXX: Null string
+
   aNodeValue.Truncate();
+
   return NS_OK;
 }
 
@@ -797,7 +800,12 @@ nsGenericElement::GetAttribute(const nsAReadableString& aName,
   ni->GetNamespaceID(nsid);
   ni->GetNameAtom(*getter_AddRefs(nameAtom));
 
-  NS_STATIC_CAST(nsIContent *, this)->GetAttribute(nsid, nameAtom, aReturn);
+  nsresult rv = NS_STATIC_CAST(nsIContent *,
+                               this)->GetAttribute(nsid, nameAtom, aReturn);
+
+  if (rv = NS_CONTENT_ATTR_NOT_THERE) {
+    // XXX: Null aReturn
+  }
 
   return NS_OK;
 }
