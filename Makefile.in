@@ -124,10 +124,6 @@ ifdef MOZ_JPROF
 DIRS        += tools/jprof
 endif
 
-ifdef MOZ_BUILD_XPFE
-DIRS		+= xpfe
-endif
-
 DIRS		+= xpinstall
 
 ifdef MOZ_PSM
@@ -140,6 +136,10 @@ endif
 
 ifdef MOZ_MAIL_NEWS
 DIRS		+= mailnews
+endif
+
+ifdef MOZ_BUILD_XPFE
+DIRS		+= xpfe
 endif
 
 ifdef MOZ_LEAKY
