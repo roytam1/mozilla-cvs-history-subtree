@@ -16,7 +16,11 @@ $(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))
 
 $(TARGETS): $(OBJS) 
 	@$(MAKE_OBJDIR)                                                           
-	$(LINK_EXE) -OUT:$@ $(OBJS) 
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+else
+	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+endif
 endif
 
 export:: $(TARGETS)

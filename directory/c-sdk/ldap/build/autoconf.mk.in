@@ -38,6 +38,11 @@ MOZ_LITE	=
 MOZ_MEDIUM	=
 NO_SECURITY	=
 
+# This is where OS/2 Mozilla Client build DIST & LIB .
+# while DIST is where Security build put it LIB & INCLUDE
+MOZ_DIST           =  $(ldaptopsrcdir)/../../../dist
+
+
 # we have to cope if nspr was built using autoconf (which we only know is
 # is true if our configure was passed --enable-nspr-autoconf -- which 
 # the top-level configure does automagically, as appropriate).

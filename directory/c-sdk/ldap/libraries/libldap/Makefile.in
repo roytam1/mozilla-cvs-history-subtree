@@ -90,6 +90,10 @@ DEFINES		+= $(DEFS) -DFILTERFILE=./ldapfilter.conf \
 		   -DTEMPLATEFILE=./ldaptemplates.conf \
 		   -DNDEBUG -UMOZILLA_CLIENT
 
+ifeq ($(OS_ARCH), OS2)
+INCLUDES	+=  -I$(MOZ_DIST)/include
+endif
+
 # So we actually get the definition of hostent_data....
 ifeq ($(OS_ARCH),AIX)
 DEFINES               += -D_THREAD_SAFE
