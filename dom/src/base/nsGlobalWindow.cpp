@@ -1771,41 +1771,7 @@ GlobalWindowImpl::Prompt(nsAWritableString& aReturn)
     }
   }
 
-  nsCOMPtr<nsIAuthPrompt> prompter(do_GetInterface(mDocShell));
-
-  NS_ENSURE_TRUE(prompter, NS_ERROR_FAILURE);
-
-  // Before bringing up the window, unsuppress painting and flush
-  // pending reflows.
-  EnsureReflowFlushAndPaint(mDocShell);
-
-  PRBool b;
-  PRUnichar *uniResult = nsnull;
-  rv = prompter->Prompt(title.GetUnicode(), message.GetUnicode(), nsnull,
-                        savePassword, initial.GetUnicode(), &uniResult, &b);
-
-  if (NS_SUCCEEDED(rv) && uniResult && b) {
-    JSString *jsret =
-      ::JS_NewUCStringCopyZ(cx, NS_REINTERPRET_CAST(const jschar *, uniResult));
-
-    if (!jsret) {
-      nsMemory::Free(uniResult);
-
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    aReturn.Assign(NS_REINTERPRET_CAST(const PRUnichar *,
-                                       ::JS_GetStringChars(jsret)),
-                   ::JS_GetStringLength(jsret));
-  }
-  else {
-    aReturn.Truncate(); // XXX: null string
-  }
-
-  if (uniResult)
-    nsMemory::Free(uniResult);
-
-  return rv;
+  return Prompt(message, initial, title, savePassword, aReturn);
 }
 
 NS_IMETHODIMP GlobalWindowImpl::Focus()
