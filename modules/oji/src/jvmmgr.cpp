@@ -668,8 +668,8 @@ nsJVMMgr::StartupJVM(void)
         nsIJRIPlugin* jriJVM;
         if (fJVM->QueryInterface(kIJRIPluginIID, (void**)&jriJVM) == NS_OK) {
             JRIEnv* env;
-            nsresult err = jriJVM->GetJRIEnv(&env);
-            if (err == NS_OK) {
+            (void)jriJVM->GetJRIEnv(&env);
+            if (env != NULL) {
                 SU_Initialize(env);
                 if (JRI_ExceptionOccurred(env)) {
 #ifdef DEBUG
@@ -809,7 +809,7 @@ nsJVMMgr::AddToClassPath(const char* dirPath)
     }
 
     /* Also add the directory to the classpath: */
-    fClassPathAdditions->Add((void*)dirPath);
+    fClassPathAdditions->Add((void*)PL_strdup(dirPath));
     if (jvm) {
         jvm->AddToClassPath(dirPath);
         jvm->Release();
