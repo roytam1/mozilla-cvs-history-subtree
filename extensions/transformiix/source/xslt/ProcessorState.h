@@ -52,9 +52,7 @@
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
-class ProcessorState : public ContextState,
-                       public NamespaceResolver
-{
+class ProcessorState : public ContextState {
 
 public:
 
@@ -292,6 +290,11 @@ public:
      * Returns the namespace URI for the given name
     **/ 
     void getNameSpaceURI(const String& name, String& nameSpaceURI);
+
+    /**
+     * Returns the namespace URI for the given namespace prefix
+    **/
+    void getNameSpaceURIFromPrefix(const String& prefix, String& nameSpaceURI);
 
 private:
 

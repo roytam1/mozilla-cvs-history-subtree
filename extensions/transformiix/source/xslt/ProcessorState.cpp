@@ -412,8 +412,16 @@ Element* ProcessorState::getNamedTemplate(String& name) {
 **/
 void ProcessorState::getNameSpaceURI(const String& name, String& nameSpaceURI) {
     String prefix;
-
     XMLUtils::getNameSpace(name, prefix);
+    getNameSpaceURIFromPrefix(prefix, nameSpaceURI);
+
+} //-- getNameSpaceURI
+
+/**
+ * Returns the namespace URI for the given namespace prefix
+**/
+void ProcessorState::getNameSpaceURIFromPrefix(const String& prefix, String& nameSpaceURI) {
+
     if (prefix.length() == 0) {
         nameSpaceURI.clear();
         nameSpaceURI.append(*(String*)defaultNameSpaceURIStack.peek());
