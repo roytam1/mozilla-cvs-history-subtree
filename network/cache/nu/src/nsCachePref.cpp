@@ -22,6 +22,9 @@
 static const PRUint32 MEM_CACHE_SIZE_DEFAULT = 1024*1024;
 static const PRUint32 DISK_CACHE_SIZE_DEFAULT = 5*MEM_CACHE_SIZE_DEFAULT;
 static const PRUint32 BKG_THREAD_SLEEP = 15*60; /*in seconds, 15 minutes */
+static const PRUint16 BUGS_FOUND_SO_FAR = 0;
+/* Find a bug in NU_CACHE, get these many chocolates */
+static const PRUint16 CHOCOLATES_PER_BUG_FOUND = 2^BUGS_FOUND_SO_FAR; 
 
 static nsCachePref ThePrefs;
 

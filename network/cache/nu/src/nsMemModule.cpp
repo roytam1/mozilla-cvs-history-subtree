@@ -61,6 +61,7 @@ PRBool nsMemModule::AddObject(nsCacheObject* io_pObject)
 
     if (io_pObject)
 	{
+        ModuleLocker ml(this);
 		if (m_pFirstObject) 
 		{
 			LastObject()->Next(new nsMemCacheObject(io_pObject)); 
@@ -80,6 +81,8 @@ PRBool nsMemModule::AddObject(nsCacheObject* io_pObject)
 
 PRBool nsMemModule::Contains(const char* i_url) const
 {
+    ModuleLocker ml((nsMemModule*)this);
+
     if (m_pFirstObject && i_url && *i_url)
     {
         nsMemCacheObject* pObj = m_pFirstObject;
@@ -104,8 +107,30 @@ PRBool nsMemModule::Contains(nsCacheObject* i_pObject) const
     return 0;
 }
 
+void nsMemModule::GarbageCollect(void)
+{
+    ModuleLocker ml(this);
+    if (m_Entries > 0)
+    {
+        nsEnumeration* pEnum = Enumeration();
+        PRUint32 index = 0;
+        while (pEnum->HasMoreElements())
+        {
+            nsCacheObject* pObj = (nsCacheObject*) pEnum->NextElement();
+            PR_ASSERT(pObj);
+            if (pObj->IsExpired())
+            {
+                PRBool status = Remove(index);
+                PR_ASSERT(status == PR_TRUE);
+            }
+            ++index;
+        }
+    }
+}
+
 nsCacheObject* nsMemModule::GetObject(const PRUint32 i_index) const
 {
+    ModuleLocker ml((nsMemModule*)this);
 	nsMemCacheObject* pNth = 0;
 	if (m_pFirstObject)
 	{
@@ -121,7 +146,8 @@ nsCacheObject* nsMemModule::GetObject(const PRUint32 i_index) const
 
 nsCacheObject* nsMemModule::GetObject(const char* i_url) const
 {
-	if (m_pFirstObject && i_url && *i_url)
+	ModuleLocker ml((nsMemModule*)this);
+    if (m_pFirstObject && i_url && *i_url)
 	{
 		nsMemCacheObject* pObj = m_pFirstObject;
 		int inlen = PL_strlen(i_url);
@@ -138,7 +164,8 @@ nsCacheObject* nsMemModule::GetObject(const char* i_url) const
 
 nsMemCacheObject* nsMemModule::LastObject(void) const
 {
-	nsMemCacheObject* pLast = 0;
+	ModuleLocker ml((nsMemModule*)this);
+    nsMemCacheObject* pLast = 0;
 	if (m_pFirstObject)
 	{
 		pLast = m_pFirstObject;
@@ -164,26 +191,6 @@ PRBool nsMemModule::Remove(const PRUint32 i_index)
 {
     //TODO
     return PR_FALSE;
-}
-
-void nsMemModule::GarbageCollect(void)
-{
-    if (m_Entries > 0)
-    {
-        nsEnumeration* pEnum = Enumeration();
-        PRUint32 index = 0;
-        while (pEnum->HasMoreElements())
-        {
-            nsCacheObject* pObj = (nsCacheObject*) pEnum->NextElement();
-            PR_ASSERT(pObj);
-            if (pObj->IsExpired())
-            {
-                PRBool status = Remove(index);
-                PR_ASSERT(status == PR_TRUE);
-            }
-            ++index;
-        }
-    }
 }
 
 /*

@@ -45,7 +45,7 @@ PR_BEGIN_EXTERN_C
        accessing them directly thru the C++ api or let me know. 
        Check nsCacheManager.h for details on these functions.*/
     extern PRBool           CacheManager_Contains(const char* i_url);
-    extern PRUint32         CacheManager_Entries(void);
+    extern PRInt16          CacheManager_Entries(void);
     extern void*            CacheManager_GetObject(const char* i_url);
     extern PRBool           CacheManager_IsOffline(void);
     extern void             CacheManager_Offline(PRBool bSet);
@@ -77,7 +77,8 @@ PR_BEGIN_EXTERN_C
     extern void             CacheObject_SetLastModified(void* pThis, const PRIntervalTime i_Time);
     extern void             CacheObject_SetModule(void* pThis, const PRInt16 i_Module);
     extern void             CacheObject_SetSize(void* pThis, const PRUint32 i_Size);
-    extern PRUint32         CacheObject_Write(void* pThis, const char* i_buffer, const PRUint32 i_lenth);
+    extern PRBool           CacheObject_Synch(void* pThis);
+    extern PRUint32         CacheObject_Write(void* pThis, const char* i_buffer, const PRUint32 i_length);
 
     /* Cache Prefs- check nsCachePref.h for details on these functions */
     extern PRUint32         CachePref_GetDiskCacheSize(void);

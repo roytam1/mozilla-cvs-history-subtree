@@ -28,8 +28,8 @@
 //#include <nsISupports.h>
 #include "nsCacheObject.h"
 #include "nsEnumeration.h"
-
-/* Why the hell is forward decl. not working? */
+#include "prmon.h"
+/* Why in the world is forward decl. not working? */
 //class nsCacheObject;
 
 /*
@@ -106,6 +106,9 @@ public:
 
 protected:
 
+    PRBool              Lock(void);
+    void                Unlock(void);
+
     PRUint32            m_Entries;
     PRUint32            m_Size;
     PRUint32            m_SizeInUse;
@@ -114,10 +117,20 @@ protected:
     nsCacheIterator*    m_pIterator;
     nsCacheModule*      m_pNext;
 
+    class ModuleLocker
+    {
+    public:
+        ModuleLocker(nsCacheModule* pThis): m_pModule(pThis) { if (m_pModule) m_pModule->Lock();}
+        ~ModuleLocker() { if (m_pModule) m_pModule->Unlock();}
+    private:
+        nsCacheModule* m_pModule;
+    };
+
+    friend ModuleLocker;
 private:
     nsCacheModule(const nsCacheModule& cm);
     nsCacheModule& operator=(const nsCacheModule& cm);
-
+    PRMonitor*          m_pMonitor;
 };
 
 inline void nsCacheModule::Enable(PRBool i_Enable)
@@ -153,6 +166,19 @@ inline PRBool nsCacheModule::IsReadOnly(void) const
     return PR_FALSE;
 }
 
+inline
+PRBool nsCacheModule::Lock(void)
+{
+    if (!m_pMonitor)
+    {
+        m_pMonitor = PR_NewMonitor();
+        if (!m_pMonitor)
+            return PR_FALSE;
+    }
+    PR_EnterMonitor(m_pMonitor);
+    return PR_TRUE;
+}
+
 inline nsCacheModule* nsCacheModule::Next(void) const 
 {
     return m_pNext;
@@ -176,6 +202,14 @@ inline void nsCacheModule::SetSize(const PRUint32 size)
 inline PRUint32 nsCacheModule::SizeInUse(void) const
 {
     return m_SizeInUse;
+}
+
+inline
+void nsCacheModule::Unlock(void)
+{
+    PR_ASSERT(m_pMonitor);
+    if (m_pMonitor)
+        PR_ExitMonitor(m_pMonitor);
 }
 
 #endif // nsCacheModule_h__

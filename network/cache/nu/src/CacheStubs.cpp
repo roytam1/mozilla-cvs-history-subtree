@@ -45,10 +45,10 @@ Cache_Shutdown(void)
 PRBool
 CacheManager_Contains(const char* i_url)
 {
-    return CACHEMGR->Entries();
+    return CACHEMGR->Contains(i_url);
 }
 
-PRUint32 
+PRInt16 
 CacheManager_Entries()
 {
     return CACHEMGR->Entries();
@@ -121,6 +121,12 @@ CacheObject_GetExpires(const void* pThis)
     return pThis ? ((nsCacheObject*)pThis)->Expires() : 0;
 }
 
+const char*      
+CacheObject_GetFilename(const void* pThis)
+{
+    return pThis ? ((nsCacheObject*)pThis)->Filename() : 0;
+}
+    
 PRIntervalTime
 CacheObject_GetLastAccessed(const void* pThis)
 {
@@ -199,6 +205,13 @@ CacheObject_SetExpires(void *pThis, const PRIntervalTime i_Time)
 }
 
 void
+CacheObject_SetFilename(void* pThis, const char* i_Filename)
+{
+    if (pThis)
+        ((nsCacheObject*)pThis)->Filename(i_Filename);
+}
+
+void
 CacheObject_SetLastModified(void* pThis, const PRIntervalTime i_Time)
 {
     if (pThis)
@@ -217,6 +230,24 @@ CacheObject_SetSize(void* pThis, const PRUint32 i_Size)
 {
     if (pThis)
         ((nsCacheObject*)pThis)->Size(i_Size);
+}
+
+PRBool
+CacheObject_Synch(void* pThis)
+{
+    if (pThis)
+    {
+        nsCacheObject* pObj = (nsCacheObject*) pThis;
+        PRBool bStatus = CACHEMGR->GetModule(pObj->Module())->AddObject(pObj);
+        return bStatus;
+    }
+    return PR_FALSE;
+}
+
+PRUint32
+CacheObject_Write(void* pThis, const char* i_buffer, const PRUint32 i_length)
+{
+    return i_length;
 }
 
 void

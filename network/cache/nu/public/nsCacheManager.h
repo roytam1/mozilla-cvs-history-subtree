@@ -54,43 +54,41 @@ public:
     nsCacheManager();
     ~nsCacheManager();
 
-    PRInt32         AddModule(nsCacheModule* i_cacheModule);
+    PRInt32                 AddModule(nsCacheModule* i_cacheModule);
     
-    PRBool          Contains(const char* i_url) const;
+    PRBool                  Contains(const char* i_url) const;
     
     /* Number of modules in the cache manager */
-    PRInt32         Entries() const;
+    PRInt16                 Entries() const;
     
     /* Singleton */
-    static nsCacheManager* 
-                    GetInstance();
+    static nsCacheManager*  GetInstance();
     
-    nsCacheObject*  GetObj(const char* i_url) const;
+    nsCacheObject*          GetObj(const char* i_url) const;
 
-    nsCacheModule*  GetModule(PRInt32 i_index) const;
+    nsCacheModule*          GetModule(PRInt16 i_index) const;
 
-    nsMemModule*    GetMemModule() const;
-    nsDiskModule*   GetDiskModule() const;
+    nsMemModule*            GetMemModule() const;
+    nsDiskModule*           GetDiskModule() const;
 
-    PRBool          IsOffline(void) const;
+    PRBool                  IsOffline(void) const;
 
-    void            Offline(PRBool bSet);
+    void                    Offline(PRBool bSet);
 
-    PRBool          Remove(const char* i_url);
+    PRBool                  Remove(const char* i_url);
 
-    const char*     Trace() const;
+    const char*             Trace() const;
 
     /* Performance measure- microseconds */
-    PRUint32        WorstCaseTime(void) const;
+    PRUint32                WorstCaseTime(void) const;
 
 protected:
     
-    PRBool          ContainsExactly(const char* i_url) const;
+    PRBool                  ContainsExactly(const char* i_url) const;
 
-    void            Init();
+    void                    Init();
     
-    nsCacheModule*
-                    LastModule() const;
+    nsCacheModule*          LastModule() const;
 
 private:
     nsCacheModule*  m_pFirstModule;

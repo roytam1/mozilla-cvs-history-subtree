@@ -35,6 +35,8 @@
 
 nsCacheModule::nsCacheModule(const PRUint32 i_size=DEFAULT_SIZE):
     m_Size(i_size),
+    m_pEnumeration(0),
+    m_pMonitor(0),
     m_pNext(0),
     m_Entries(0)
 {

@@ -60,7 +60,7 @@ void nsCacheBkgThd::Run(void)
     PR_ASSERT(pCM);
     if (pCM->IsOffline())
         return; /* Dont update entries if offline */
-    PRUint32 i = pCM->Entries();
+    PRInt16 i = pCM->Entries();
     while (i>0)
     {
         nsCacheModule* pModule = pCM->GetModule(--i);

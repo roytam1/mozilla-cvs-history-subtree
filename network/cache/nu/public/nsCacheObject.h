@@ -53,56 +53,55 @@ public:
 
 */
 
-    void        Address(const char* i_url);
-    const char* Address(void) const;
+    void            Address(const char* i_url);
+    const char*     Address(void) const;
 
-    void        ContentLength(PRUint32 i_len);
-    PRUint32    ContentLength(void) const;
+    void            ContentLength(PRUint32 i_len);
+    PRUint32        ContentLength(void) const;
     
-    void        ContentType(const char* i_Type);
-    const char* ContentType(void) const;
+    void            ContentType(const char* i_Type);
+    const char*     ContentType(void) const;
 
-    void        Etag(const char* i_etag);
-    const char* Etag(void) const;
+    void            Etag(const char* i_etag);
+    const char*     Etag(void) const;
 
-    PRIntervalTime
-                Expires(void) const;
-    void        Expires(PRIntervalTime i_Expires);
+    void            Expires(PRIntervalTime i_Expires);
+    PRIntervalTime  Expires(void) const;
 
-    PRUint16    Hits(void) const;
+    void            Filename(const char* i_Filename);
+    const char*     Filename(void) const;
+
+    PRUint16        Hits(void) const;
 
     /* Read and write info about this cache object */
-    void*       Info(void) const;
-    PRBool      Info(void*);
+    void*           Info(void) const;
+    PRBool          Info(void* /*, PRUint32 len */);
 
-    PRUint32    InfoSize(void) const;
+    PRUint32        InfoSize(void) const;
 
-    PRBool      IsExpired(void) const;
+    PRBool          IsExpired(void) const;
 
-    PRBool      IsPartial(void) const;
+    PRBool          IsPartial(void) const;
 
-    PRIntervalTime
-                LastAccessed(void) const;
+    PRIntervalTime  LastAccessed(void) const;
 
-    PRIntervalTime
-                LastModified(void) const;
-    void        LastModified(PRIntervalTime i_lastModified);
+    PRIntervalTime  LastModified(void) const;
+    void            LastModified(PRIntervalTime i_lastModified);
 
-    PRInt16     Module(void) const;
-    void        Module(PRUint16 i_m);
+    PRInt16         Module(void) const;
+    void            Module(PRUint16 i_m);
 
-    const char* PostData(void) const;
-    void        PostData(const char* i_data, PRUint32 i_Len);
+    const char*     PostData(void) const;
+    void            PostData(const char* i_data, PRUint32 i_Len);
 
-    PRUint32    Read(char* o_Buffer, PRUint32 len);
+    PRUint32        Read(char* o_Buffer, PRUint32 len);
 
-    PRUint32    Size(void) const;
-    void        Size(PRUint32 i_Size);
+    PRUint32        Size(void) const;
+    void            Size(PRUint32 i_Size);
 
-    const char*     
-                Trace() const;
+    const char*     Trace() const;
 
-    PRUint32    Write(const char* i_Buffer, const PRUint32 len);
+    PRUint32        Write(const char* i_Buffer, const PRUint32 len);
 //	virtual	void getReadStream();
 //	virtual void getWriteStream();
 
@@ -116,6 +115,7 @@ protected:
     PRIntervalTime
                 m_Expires;
     int         m_Flags;
+    char*       m_Filename;
     PRUint16    m_Hits;
     PRIntervalTime
                 m_LastAccessed, m_LastModified;
@@ -129,88 +129,111 @@ private:
     nsCacheObject& operator=(const nsCacheObject& x);
 };
 
-inline const char* nsCacheObject::Address(void) const
+inline 
+const char* nsCacheObject::Address(void) const
 {
 	return m_Url;
 };
 
-inline PRUint32 nsCacheObject::ContentLength(void) const
+inline 
+PRUint32 nsCacheObject::ContentLength(void) const
 {
 	return m_ContentLength;
 };
 
-inline void nsCacheObject::ContentLength(PRUint32 i_Size)
+inline 
+void nsCacheObject::ContentLength(PRUint32 i_Size)
 {
 	m_ContentLength = i_Size;
 };
 
-inline const char* nsCacheObject::ContentType(void) const
+inline 
+const char* nsCacheObject::ContentType(void) const
 {
 	return m_ContentType;
 };
 
-inline const char* nsCacheObject::Etag(void) const 
+inline 
+const char* nsCacheObject::Etag(void) const 
 {
 	return m_Etag;
 };
 
-inline PRIntervalTime nsCacheObject::Expires(void) const
+inline 
+PRIntervalTime nsCacheObject::Expires(void) const
 {
 	return m_Expires;
 };
 
-inline void nsCacheObject::Expires(PRIntervalTime i_Expires)
+inline 
+void nsCacheObject::Expires(PRIntervalTime i_Expires)
 {
 	m_Expires = i_Expires;
 };
 
-inline PRUint16 nsCacheObject::Hits(void) const
+inline
+const char* nsCacheObject::Filename(void) const
+{
+    return m_Filename;
+}
+
+inline 
+PRUint16 nsCacheObject::Hits(void) const
 {
 	return m_Hits;
 };
 
-inline PRBool nsCacheObject::IsExpired(void) const
+inline 
+PRBool nsCacheObject::IsExpired(void) const
 {
 	PRIntervalTime now = PR_IntervalNow();
 	return (m_Expires <= now);
 };
 
-inline PRBool nsCacheObject::IsPartial(void) const
+inline 
+PRBool nsCacheObject::IsPartial(void) const
 {
 	return (m_Flags & nsCacheObject::PARTIAL);
 };
 
-inline PRIntervalTime nsCacheObject::LastAccessed(void) const
+inline 
+PRIntervalTime nsCacheObject::LastAccessed(void) const
 {
 	return m_LastAccessed;
 };
 
-inline PRIntervalTime nsCacheObject::LastModified(void) const
+inline 
+PRIntervalTime nsCacheObject::LastModified(void) const
 {
 	return m_LastModified;
 };
 
-inline void nsCacheObject::LastModified(PRIntervalTime i_LastModified)
+inline 
+void nsCacheObject::LastModified(PRIntervalTime i_LastModified)
 {
 	m_LastModified = i_LastModified;
 };
 
-inline PRInt16 nsCacheObject::Module(void) const
+inline 
+PRInt16 nsCacheObject::Module(void) const
 {
     return m_Module;
 };
 
-inline void nsCacheObject::Module(PRUint16 i_Module) 
+inline 
+void nsCacheObject::Module(PRUint16 i_Module) 
 {
     m_Module = i_Module;
 };
 
-inline PRUint32 nsCacheObject::Size(void) const
+inline 
+PRUint32 nsCacheObject::Size(void) const
 {
 	return m_Size;
 };
 
-inline void nsCacheObject::Size(PRUint32 i_Size)
+inline 
+void nsCacheObject::Size(PRUint32 i_Size)
 {
 	m_Size = i_Size;
 };

@@ -124,7 +124,7 @@ typedef struct _CacheDataObject {
     void*           cache_object;
 #else
     net_CacheObject *cache_object;
-#endif
+#endif /* NU_CACHE */
 } CacheDataObject;
 
 PRIVATE void net_RemoveAllDiskCacheObjects(void);
@@ -138,7 +138,7 @@ NET_IsCacheTraceOn(void)
     return CacheTrace_IsEnabled();
 #else
     return NET_CacheTraceOn;
-#endif
+#endif /* NU_CACHE */
 }
 
 /* return the size of the file on
@@ -466,13 +466,12 @@ net_StoreDiskCacheSize(void)
 /* returns TRUE if the object gets stored
  * FALSE if not
  */
-#ifndef NU_CACHE
 PRIVATE XP_Bool
 net_CacheStore(net_CacheObject * obj,  
 			   URL_Struct      * URL_s, 
 			   XP_Bool		         accept_partial_files,
 			   store_type_enum 	 store_type)
-#if 0
+#ifdef NU_CACHE
 {
     if (!obj || !URL_s || !URL_s->address)
         return FALSE;
@@ -848,7 +847,6 @@ net_CacheStore(net_CacheObject * obj,
 	return TRUE;
 
 }
-#endif /* 0 */
 #endif /* NU_CACHE */
 
 #ifndef NU_CACHE
@@ -1300,9 +1298,7 @@ NET_SetDiskCacheSize(int32 new_size)
 	  {
 		net_RemoveAllDiskCacheObjects();
 	  }
-#endif
-
-    return;
+#endif /* NU_CACHE */
 }
 
 /* remove the last disk cache object if one exists
@@ -1322,7 +1318,10 @@ net_RemoveAllDiskCacheObjects(void)
 	DBT data;
 	DBT key;
 
-	if(!cache_database)
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be called */
+#endif
+    if(!cache_database)
 		return;
 
 	if(0 != (*cache_database->seq)(cache_database, &key, &data, R_FIRST))
@@ -1466,9 +1465,11 @@ PRIVATE void net_CacheComplete (NET_StreamClass *stream)
 {
     CacheDataObject* obj = stream->data_object;
     PR_ASSERT(obj && obj->cache_object);
-    
-    /* TODO - Something to trigger the save here */
-    PR_ASSERT(0);
+
+    /*Write it out to the module */
+    CacheObject_Synch(obj->cache_object);
+
+    (obj->cache_object);
     /* Plugins can use this file */
     /* If object is in memory GetFilename will return null so this is ok */
     if (obj->URL_s && CacheObject_GetFilename(obj->cache_object))
@@ -1644,7 +1645,7 @@ NET_CacheConverter (FO_Present_Types format_out,
     void*  cache_object=0;
 #else
     net_CacheObject * cache_object=0;
-#endif
+#endif /* NU_CACHE */
     NET_StreamClass * stream=0;
     char *filename=0, *new_filename=0;
 	char *org_content_type = 0;
@@ -1707,11 +1708,21 @@ NET_CacheConverter (FO_Present_Types format_out,
 			|| ( (URL_s->content_length>0) && ((uint32) URL_s->content_length < (net_MaxDiskCacheSize/4)) )
 		   )
 	   )
-	  {
+    {
 		/* set a flag to say that we want to cache */
 		want_to_cache = TRUE;
-	  }
-		
+    }
+    else
+    {
+		/* bypass the whole cache mechanism
+	 	 */
+	    if(format_out != FO_CACHE_ONLY)
+        {
+            format_out = CLEAR_CACHE_BIT(format_out);
+            return(next_stream);
+        }
+        return NULL; 
+    }
 	/* set a flag if we should disk cache it based
  	 * on whether the cache setting is non-zero and
 	 * the cache database is open
@@ -1720,8 +1731,7 @@ NET_CacheConverter (FO_Present_Types format_out,
 	HG52980
     TRACEMSG(("cache: want_to_cache is %s", want_to_cache ? "TRUE" : "FALSE"));
 
-	if(want_to_cache 
-	   && (HG73896 
+	if((HG73896 
 			PL_strncasecmp(URL_s->address, "https:", 6))
 	   && !URL_s->dont_cache
 	   && (net_MaxDiskCacheSize > 0 || URL_s->must_cache)
@@ -1743,7 +1753,7 @@ NET_CacheConverter (FO_Present_Types format_out,
     if (!cache_object)
         return 0;
     
-    CacheObject_SetModule(cache_object, do_disk_cache ? DISK_MODULE_ID : MEM_MODULE_ID);
+    CacheObject_SetModule(cache_object, (PRInt16) (do_disk_cache ? DISK_MODULE_ID : MEM_MODULE_ID));
     CacheObject_SetExpires(cache_object, URL_s->expires);
     CacheObject_SetEtag(cache_object, URL_s->etag);
     CacheObject_SetLastModified(cache_object, URL_s->last_modified);
@@ -1754,9 +1764,56 @@ NET_CacheConverter (FO_Present_Types format_out,
     CacheObject_SetContentEncoding(cache_object, URL_s->content_encoding);
     CacheObject_SetPageServicesURL(cache_object, URL_s->page_services_url);
     */ /* Not implemented as yet- TODO - Gagan */
+
+    data_object = PR_NEW(CacheDataObject);
+    if (!data_object)
+    {
+        CacheObject_Destroy(cache_object);
+        return NULL;
+    }
+
+    /* init the object */
+    memset(data_object, 0, sizeof(CacheDataObject));
+
+	/* assign the cache object to the stream data object
+	 */
+    data_object->cache_object = cache_object;
+
+	/* save the URL struct since we will
+	 * need to use some data from it later
+	 * XXX if converter_obj is non-null it is a flag telling us not
+	 * XXX to hold a pointer to the URL struct.
+	 */
+	if (dont_hold_URL_s == FALSE)
+		data_object->URL_s = URL_s;
+    data_object->fp = 0 /* fp */; /* TODO -Gagan */
+
+    stream = PR_NEW(NET_StreamClass);
+    if (!stream)
+    {
+        CacheObject_Destroy(cache_object);
+        PR_Free(data_object);
+        return NULL;
+    }
+
+    stream->name            = "Nu Cache Stream";
+    stream->complete        = (MKStreamCompleteFunc) net_CacheComplete;
+    stream->abort           = (MKStreamAbortFunc) net_CacheAbort;
+    stream->put_block       = (MKStreamWriteFunc) net_CacheWrite;
+    stream->is_write_ready  = (MKStreamWriteReadyFunc) net_CacheWriteReady;
+    stream->data_object     = data_object;  /* document info object */
+    stream->window_id       = window_id;
+    
+    if (format_out != FO_CACHE_ONLY)
+        data_object->next_stream = next_stream;
+
+    PR_APPEND_LINK(&data_object->links, &active_cache_data_objects); /* verify */
+    
+    return stream;
     
 #else
-	/* malloc and init all the necessary structs
+    PR_ASSERT(0); /* This shouldn't be reached */
+    /* malloc and init all the necessary structs
 	 * do_disk_cache will be set false on error
 	 */
 	if(do_disk_cache)
@@ -2086,6 +2143,8 @@ NET_CacheConverter (FO_Present_Types format_out,
 		  }
 
 	  }
+        PR_ASSERT(0); /* This shouldn't be reached */
+
 #endif /* NU_CACHE */
 	return(NULL);
 
@@ -2234,7 +2293,9 @@ NET_IsURLInDiskCache(URL_Struct *URL_s)
 	DBT *key;
 	DBT data;
 	int status;
-
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should be getting called */
+#endif
 	if(!cache_database)
 	  {
 		TRACEMSG(("Cache database not open"));
@@ -2392,12 +2453,13 @@ NET_IsPartialCacheFile(URL_Struct *URL_s)
 	else
 		return(0);
 }
-#endif
+#endif /* NU_CACHE */
 
 PUBLIC int
 NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 #ifdef NU_CACHE
 {
+
     if (!URL_s || !URL_s->address)
         return 0;
     
@@ -2741,6 +2803,9 @@ NET_FindURLInCache(URL_Struct * URL_s, MWContext *ctxt)
 PUBLIC void
 NET_ReadCacheFAT(char * cachefatfile, XP_Bool stat_files)
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Shouldn't be getting called */
+#endif
     if(net_MaxDiskCacheSize > 0)
     	net_OpenCacheFatDB();
 
@@ -2769,6 +2834,10 @@ NET_CacheInit(void)
 PUBLIC void
 NET_WriteCacheFAT(char *filename, XP_Bool final_call)
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Shouldn't be getting called */
+#endif
+    
 	net_StoreDiskCacheSize();
 
 	if(!cache_database)

@@ -207,7 +207,11 @@ void nsCacheObject::Address(const char* i_url)
 
 void nsCacheObject::ContentType(const char* i_Type) 
 {
-    PR_ASSERT(i_Type && *i_Type);
+    if (!i_Type)
+    {
+        /* Reset to empty */ // TODO 
+        return;
+    }
     if (m_ContentType)
         delete[] m_ContentType;
     m_ContentType = new char[strlen(i_Type) + 1];
@@ -216,11 +220,22 @@ void nsCacheObject::ContentType(const char* i_Type)
 
 void nsCacheObject::Etag(const char* i_etag) 
 {
-    PR_ASSERT(i_etag && *i_etag);
+    if (!i_etag)
+        return;
     if (m_Etag)
         delete[] m_Etag;
     m_Etag = new char[strlen(i_etag) + 1];
     strcpy(m_Etag, i_etag);
+}
+
+void nsCacheObject::Filename(const char* i_Filename)
+{
+    if (!i_Filename)
+        return;
+    if (m_Filename)
+        delete[] m_Filename;
+    m_Filename = new char[strlen(i_Filename) +1];
+    strcpy(m_Filename, i_Filename);
 }
 
 void* nsCacheObject::Info(void) const
@@ -238,7 +253,7 @@ void* nsCacheObject::Info(void) const
         PR_Free(tmpBuff);
 */
         pThis->m_info_size = sizeof(nsCacheObject);
-        pThis->m_info_size -= sizeof(void*); //m_info is not being serialized
+        pThis->m_info_size -= sizeof(void*); //m_info itself is not being serialized
 
         //Add the strings sizes
         pThis->m_info_size += PL_strlen(m_Etag)+1;

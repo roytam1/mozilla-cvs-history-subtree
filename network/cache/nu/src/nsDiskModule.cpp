@@ -71,6 +71,7 @@ PRBool nsDiskModule::AddObject(nsCacheObject* io_pObject)
 
     if (io_pObject && io_pObject->Address())
     {
+        ModuleLocker ml(this);
         static DBT key,data;
         
         io_pObject->Module(nsCacheManager::DISK);
@@ -99,6 +100,8 @@ PRBool nsDiskModule::Contains(nsCacheObject* io_pObject) const
 {
 
     CHECK_INIT;
+    ModuleLocker ml((nsDiskModule*)this);
+
     if (!m_pDB || !io_pObject)
         return PR_FALSE;
 
@@ -115,6 +118,7 @@ PRBool nsDiskModule::Contains(const char* i_url) const
 {
 
     CHECK_INIT;
+    ModuleLocker ml((nsDiskModule*)this);
 
     if (!m_pDB || !i_url || !*i_url)
         return PR_FALSE;
@@ -132,13 +136,14 @@ PRBool nsDiskModule::Contains(const char* i_url) const
 
 void nsDiskModule::GarbageCollect(void)
 {
+    ModuleLocker ml(this);
     PR_ASSERT(PR_TRUE);
 }
 
 nsCacheObject* nsDiskModule::GetObject(const PRUint32 i_index) const
 {
     CHECK_INIT;
-
+    ModuleLocker ml((nsDiskModule*)this);
     if (!m_pDB)
         return 0;
 
@@ -148,6 +153,7 @@ nsCacheObject* nsDiskModule::GetObject(const PRUint32 i_index) const
 nsCacheObject* nsDiskModule::GetObject(const char* i_url) const
 {
     CHECK_INIT;
+    ModuleLocker ml((nsDiskModule*)this);
 
     if (!m_pDB || !i_url || !*i_url)
         return 0;
@@ -242,6 +248,7 @@ PRBool nsDiskModule::Revalidate(void)
 
 void nsDiskModule::SetSize(const PRUint32 i_Size)
 {
+    ModuleLocker ml(this);
     m_Size = i_Size;
     if (m_Size >0)
     {

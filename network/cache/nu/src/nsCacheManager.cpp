@@ -100,8 +100,10 @@ nsCacheManager::Contains(const char* i_url) const
     if (!bStatus)
     {
         // try alternate stuff
+        /*
         char* extraBytes;
         char extraBytesSeparator;
+        */
     }
     return bStatus;
 }
@@ -142,12 +144,12 @@ nsCacheManager::GetObj(const char* i_url) const
     return 0;
 }
 
-PRInt32 
+PRInt16 
 nsCacheManager::Entries() const
 {
     if (m_pFirstModule) 
     {
-        PRInt32 count=1;
+        PRInt16 count=1;
         nsCacheModule* pModule = m_pFirstModule;
         while (pModule = pModule->Next()) 
         {
@@ -159,13 +161,13 @@ nsCacheManager::Entries() const
 }
 
 nsCacheModule* 
-nsCacheManager::GetModule(PRInt32 i_index) const
+nsCacheManager::GetModule(PRInt16 i_index) const
 {
     if ((i_index < 0) || (i_index >= Entries()))
         return 0;
     nsCacheModule* pModule = m_pFirstModule;
     PR_ASSERT(pModule);
-    for (PRInt32 i=0; i<i_index; pModule = pModule->Next())
+    for (PRInt16 i=0; i<i_index; pModule = pModule->Next())
     {
         i++;
         PR_ASSERT(pModule);
