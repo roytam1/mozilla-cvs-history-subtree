@@ -316,7 +316,10 @@ nsresult nsPluginHostImpl :: LoadPlugins(void)
                     if (nsnull == plugintag->mDescription)
                       break;
                     else
-                      strcpy(plugintag->mDescription, buf);
+                    {
+                      strncpy(plugintag->mDescription, buf, blen);
+                      plugintag->mDescription[blen] = 0;
+                    }
                   }
 
                   ::VerQueryValue(verbuf,
@@ -332,7 +335,10 @@ nsresult nsPluginHostImpl :: LoadPlugins(void)
                     if (nsnull == plugintag->mMimeType)
                       break;
                     else
-                      strcpy(plugintag->mMimeType, buf);
+                    {
+                      strncpy(plugintag->mMimeType, buf, blen);
+                      plugintag->mMimeType[blen] = 0;
+                    }
 
                     buf = plugintag->mMimeType;
 
@@ -386,7 +392,10 @@ nsresult nsPluginHostImpl :: LoadPlugins(void)
                     if (nsnull == plugintag->mMimeDescription)
                       break;
                     else
-                      strcpy(plugintag->mMimeDescription, buf);
+                    {
+                      strncpy(plugintag->mMimeDescription, buf, blen);
+                      plugintag->mMimeDescription[blen] = 0;
+                    }
 
                     buf = plugintag->mMimeDescription;
 
@@ -441,7 +450,10 @@ nsresult nsPluginHostImpl :: LoadPlugins(void)
                     if (nsnull == plugintag->mExtensions)
                       break;
                     else
-                      strcpy(plugintag->mExtensions, buf);
+                    {
+                      strncpy(plugintag->mExtensions, buf, blen);
+                      plugintag->mExtensions[blen] = 0;
+                    }
 
                     buf = plugintag->mExtensions;
 
@@ -514,7 +526,7 @@ printf("plugin %s added to list %s\n", plugintag->mName, (plugintag->mFlags & NS
   }
 
 #else
-  printf("Don't know how to locate plugins directory on Unix yet...\n");
+  fprintf(stderr, "Don't know how to locate plugins directory on Unix yet...\n");
 #endif
 
   return NS_OK;
