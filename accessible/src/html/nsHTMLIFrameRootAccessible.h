@@ -33,9 +33,9 @@ class nsIWeakReference;
 class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, 
                                public nsIAccessibleDocument,
                                public nsIAccessibleDocumentInternal,
-                               public nsDocAccessible
+                               public nsDocAccessibleMixin
 {
-  NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIACCESSIBLEDOCUMENT
   NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 

@@ -59,6 +59,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsHTMLBlockAccessible)
 NS_IMPL_ADDREF_INHERITED(nsHTMLIFrameAccessible, nsHTMLBlockAccessible);
 NS_IMPL_RELEASE_INHERITED(nsHTMLIFrameAccessible, nsHTMLBlockAccessible);
 
+
 NS_IMETHODIMP
 nsHTMLIFrameAccessible::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
@@ -78,8 +79,9 @@ nsHTMLIFrameAccessible::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsHTMLBlockAccessible::QueryInterface(aIID, aInstancePtr); 
 }
 
+
 nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *aDoc):
-  nsHTMLBlockAccessible(aNode, aShell), mRootAccessible(aRoot), nsDocAccessible(aDoc)
+  nsHTMLBlockAccessible(aNode, aShell), mRootAccessible(aRoot), nsDocAccessibleMixin(aDoc)
 {
 }
 
@@ -123,32 +125,32 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetURL(PRUnichar **aURL)
 {
-  return nsDocAccessible::GetURL(aURL);
+  return nsDocAccessibleMixin::GetURL(aURL);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetTitle(PRUnichar **aTitle)
 {
-  return nsDocAccessible::GetTitle(aTitle);
+  return nsDocAccessibleMixin::GetTitle(aTitle);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetMimeType(PRUnichar **aMimeType)
 {
-  return nsDocAccessible::GetMimeType(aMimeType);
+  return nsDocAccessibleMixin::GetMimeType(aMimeType);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetDocType(PRUnichar **aDocType)
 {
-  return nsDocAccessible::GetDocType(aDocType);
+  return nsDocAccessibleMixin::GetDocType(aDocType);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
 {
-  return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
+  return nsDocAccessibleMixin::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
 }
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetDocument(nsIDocument **doc)
 {
-  return nsDocAccessible::GetDocument(doc);
+  return nsDocAccessibleMixin::GetDocument(doc);
 }
 
 //=============================//

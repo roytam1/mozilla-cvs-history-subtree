@@ -61,7 +61,7 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell), nsDocAccessible(aShell)
+nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell), nsDocAccessibleMixin(aShell)
 {
   mListener = nsnull;
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -317,51 +317,51 @@ NS_IMETHODIMP nsRootAccessible::Input(nsIDOMEvent* aEvent) { return NS_OK; }
 
 NS_IMETHODIMP nsRootAccessible::GetURL(PRUnichar **aURL)
 {
-  return nsDocAccessible::GetURL(aURL);
+  return nsDocAccessibleMixin::GetURL(aURL);
 }
 
 NS_IMETHODIMP nsRootAccessible::GetTitle(PRUnichar **aTitle)
 {
-  return nsDocAccessible::GetTitle(aTitle);
+  return nsDocAccessibleMixin::GetTitle(aTitle);
 }
 
 NS_IMETHODIMP nsRootAccessible::GetMimeType(PRUnichar **aMimeType)
 {
-  return nsDocAccessible::GetMimeType(aMimeType);
+  return nsDocAccessibleMixin::GetMimeType(aMimeType);
 }
 
 NS_IMETHODIMP nsRootAccessible::GetDocType(PRUnichar **aDocType)
 {
-  return nsDocAccessible::GetDocType(aDocType);
+  return nsDocAccessibleMixin::GetDocType(aDocType);
 }
 
 NS_IMETHODIMP nsRootAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
 {
-  return nsDocAccessible::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
+  return nsDocAccessibleMixin::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
 }
 
 NS_IMETHODIMP nsRootAccessible::GetDocument(nsIDocument **doc)
 {
-  return nsDocAccessible::GetDocument(doc);
+  return nsDocAccessibleMixin::GetDocument(doc);
 }
 
 
-nsDocAccessible::nsDocAccessible(nsIDocument *aDoc):mDocument(aDoc)
+nsDocAccessibleMixin::nsDocAccessibleMixin(nsIDocument *aDoc):mDocument(aDoc)
 {
 }
 
-nsDocAccessible::nsDocAccessible(nsIWeakReference *aPresShell)
+nsDocAccessibleMixin::nsDocAccessibleMixin(nsIWeakReference *aPresShell)
 {
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(aPresShell));
   NS_ASSERTION(shell,"Shell is gone!!! What are we doing here?");
   shell->GetDocument(getter_AddRefs(mDocument));
 }
 
-nsDocAccessible::~nsDocAccessible()
+nsDocAccessibleMixin::~nsDocAccessibleMixin()
 {
 }
 
-NS_IMETHODIMP nsDocAccessible::GetURL(PRUnichar **aURL)
+NS_IMETHODIMP nsDocAccessibleMixin::GetURL(PRUnichar **aURL)
 {  
   nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
   char *path;
@@ -370,7 +370,7 @@ NS_IMETHODIMP nsDocAccessible::GetURL(PRUnichar **aURL)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocAccessible::GetTitle(PRUnichar **aTitle)
+NS_IMETHODIMP nsDocAccessibleMixin::GetTitle(PRUnichar **aTitle)
 {
   const nsString* docTitle = mDocument->GetDocumentTitle();
   if (docTitle && !docTitle->IsEmpty())
@@ -379,7 +379,7 @@ NS_IMETHODIMP nsDocAccessible::GetTitle(PRUnichar **aTitle)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocAccessible::GetMimeType(PRUnichar **aMimeType)
+NS_IMETHODIMP nsDocAccessibleMixin::GetMimeType(PRUnichar **aMimeType)
 {
   *aMimeType = nsnull;
   if (mDocument) {
@@ -392,7 +392,7 @@ NS_IMETHODIMP nsDocAccessible::GetMimeType(PRUnichar **aMimeType)
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsDocAccessible::GetDocType(PRUnichar **aDocType)
+NS_IMETHODIMP nsDocAccessibleMixin::GetDocType(PRUnichar **aDocType)
 {
   *aDocType = nsnull;
   nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
@@ -415,7 +415,7 @@ NS_IMETHODIMP nsDocAccessible::GetDocType(PRUnichar **aDocType)
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsDocAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+NS_IMETHODIMP nsDocAccessibleMixin::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
 {
   *aNameSpaceURI = nsnull;
   if (mDocument) {
@@ -432,7 +432,7 @@ NS_IMETHODIMP nsDocAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnic
 }
 
 
-NS_IMETHODIMP nsDocAccessible::GetDocument(nsIDocument **doc)
+NS_IMETHODIMP nsDocAccessibleMixin::GetDocument(nsIDocument **doc)
 {
   *doc = mDocument;
   if (mDocument) {

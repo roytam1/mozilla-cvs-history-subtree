@@ -337,9 +337,6 @@ nsMenuListenerAccessible::~nsMenuListenerAccessible()
 NS_IMETHODIMP nsMenuListenerAccessible::Create(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_TRUE;
-#ifdef DEBUG
-  printf("Open\n");
-#endif
 
   /* TBD send state change event */ 
 

@@ -32,12 +32,12 @@
 #include "nsIDocument.h"
 #include "nsIAccessibleDocumentInternal.h"
 
-class nsDocAccessible
+class nsDocAccessibleMixin
 {
   public:
-    nsDocAccessible(nsIDocument *doc);
-    nsDocAccessible(nsIWeakReference *aShell);
-    virtual ~nsDocAccessible();
+    nsDocAccessibleMixin(nsIDocument *doc);
+    nsDocAccessibleMixin(nsIWeakReference *aShell);
+    virtual ~nsDocAccessibleMixin();
 
     NS_DECL_NSIACCESSIBLEDOCUMENT
     NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
@@ -47,7 +47,7 @@ class nsDocAccessible
 };
 
 class nsRootAccessible : public nsAccessible,
-                         public nsDocAccessible,
+                         public nsDocAccessibleMixin,
                          public nsIAccessibleDocument,
                          public nsIAccessibleDocumentInternal,
                          public nsIAccessibleEventReceiver,
