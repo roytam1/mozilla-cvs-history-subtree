@@ -2284,7 +2284,7 @@ npn_getJavaClass(np_handle* handle)
     else if (handle && handle->f) {
         JNIEnv* env = npn_getJavaEnv(NULL);		/* may start up the java runtime */
         if (env == NULL) return NULL;
-        return (jclass) env->NewGlobalRef(handle->f->javaClass);
+        return (jclass) env->NewGlobalRef((jobject)handle->f->javaClass);
     }
 #elif defined(JAVA)
     if (handle->userPlugin) {
@@ -2502,6 +2502,8 @@ XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 	ndata = (np_data*) app->np_data;
 	XP_ASSERT(ndata);
     return np_IsLiveConnected(ndata->instance->handle);
+#else
+    return FALSE;
 #endif
 }
 
@@ -2582,7 +2584,7 @@ np_UnloadPluginClass(np_handle *handle)
 		/* Don't get the environment unless there is a Java class,
 		   because this would cause the java runtime to start up. */
 		JNIEnv* env = npn_getJavaEnv(NULL);
-		env->DeleteGlobalRef(handle->f->javaClass);
+		env->DeleteGlobalRef((jobject)handle->f->javaClass);
 		handle->f->javaClass = NULL;
 	}
 #elif defined(JAVA)
