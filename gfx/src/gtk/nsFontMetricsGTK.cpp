@@ -213,7 +213,7 @@ static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 
 static nsStringMap* gAliases = nsnull;
 static nsStringMap* gCharSetMaps = nsnull;
-static nsHashtable* gFamilies = nsnull;
+static nsStringMap* gFamilies = nsnull;
 static nsHashtable* gNodes = nsnull;
 // gCachedFFRESearches holds the "already looked up"
 // FFRE (Foundry Family Registry Encoding) font searches
@@ -615,7 +615,7 @@ FreeCharSetMap(const char* aKey, void* aData, void* aClosure)
 }
 
 static PRBool
-FreeFamily(nsHashKey* aKey, void* aData, void* aClosure)
+FreeFamily(const char* aKey, void* aData, void* aClosure)
 {
   delete (nsFontFamily*) aData;
 
@@ -845,7 +845,7 @@ InitGlobals(void)
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gFamilies = new nsHashtable();
+  gFamilies = new nsStringMap;
   if (!gFamilies) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
@@ -3297,8 +3297,7 @@ GetAllFontNames(void)
 static nsFontFamily*
 FindFamily(nsCString* aName)
 {
-  nsCStringKey key(*aName);
-  nsFontFamily* family = (nsFontFamily*) gFamilies->Get(&key);
+  nsFontFamily* family = (nsFontFamily*) gFamilies->Get(aName->get());
   if (!family) {
     family = new nsFontFamily();
     if (family) {
@@ -3306,7 +3305,9 @@ FindFamily(nsCString* aName)
       PR_snprintf(pattern, sizeof(pattern), "-*-%s-*-*-*-*-*-*-*-*-*-*-*-*",
         aName->get());
       GetFontNames(pattern, &family->mNodes);
-      gFamilies->Put(&key, family);
+      // I think I need to copy the string into the hash here, but I am
+      // really not sure.  Better safe than sorry
+      gFamilies->Put(aName->get(), family, PR_TRUE);
     }
   }
 
