@@ -407,53 +407,6 @@ private:
 
 
 /***************************************************************************/
-// XXX This class was abstracted out of XPCWrappedNativeTearOff because I
-// thought I nneded to expose it via nsIXPCScriptable. It looks like that
-// will not be necessay. I'm moving it back here to privateland. It could
-// probably be merged back into XPCWrappedNativeTearOff (and users fixed!)
-
-// no virtuals
-class nsIXPCWrappedNativeTearOff
-    {
-public:
-    inline nsIXPConnectWrappedNative* GetWrapper()   const {return mWrapper;}
-    inline JSObject*                  GetJSObject()  const {return mJSObject;}
-    inline nsISupports*               GetNative()    const {return mNative;}
-    inline nsIXPCNativeInterface*     GetInterface() const {return mInterface;}
-
-    inline JSBool IsFlattenedObject() const {return nsnull == mInterface;}
-
-protected:
-    nsIXPCWrappedNativeTearOff()
-        : mWrapper(nsnull), mJSObject(nsnull), 
-          mNative(nsnull), mInterface(nsnull) {}
-    ~nsIXPCWrappedNativeTearOff() {}
-
-    nsIXPCWrappedNativeTearOff(const nsIXPCWrappedNativeTearOff& r); // not implemented
-    nsIXPCWrappedNativeTearOff& operator= (const nsIXPCWrappedNativeTearOff& r); // not implemented
-
-protected:
-    nsIXPConnectWrappedNative*  mWrapper;
-    JSObject*                   mJSObject;
-    nsISupports*                mNative;
-    nsIXPCNativeInterface*      mInterface;
-};
-
-/***********************************************/
-
-class XPCWrappedNativeTearOff : public nsIXPCWrappedNativeTearOff
-{
-public:
-    inline XPCWrappedNative* GetPrivateWrapper() const ;
-    inline XPCNativeInterface* GetPrivateInterface() const ;
-
-    inline void SetWrapper(XPCWrappedNative*  Wrapper) ;
-    inline void SetJSObject(JSObject*  JSObject);
-    inline void SetNative(nsISupports*  Native);
-    inline void SetInterface(XPCNativeInterface*  Interface);
-};
-
-/***************************************************************************/
 
 #define NATIVE_CALLER  XPCContext::LANG_NATIVE
 #define JS_CALLER      XPCContext::LANG_JS
@@ -1519,7 +1472,7 @@ public:
 
     void Cleanup(XPCCallContext& ccx);
 
-    void GC(JSContext* cx)
+    void DealWithDyingGCThings(JSContext* cx)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
            JS_IsAboutToBeFinalized(cx, JSVAL_TO_GCTHING(mVal)))
            {mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
@@ -1572,8 +1525,9 @@ public:
     XPCNativeMember* GetMemberAt(PRUint16 i)
         {NS_ASSERTION(i < mMemberCount, "bad index"); return &mMembers[i];}
 
-    void GC(JSContext* cx)
-        {for(PRUint16 i = 0; i < mMemberCount; i++) mMembers[i].GC(cx);}
+    void DealWithDyingGCThings(JSContext* cx)
+        {for(PRUint16 i = 0; i < mMemberCount; i++) 
+            mMembers[i].DealWithDyingGCThings(cx);}
 
 private:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,
@@ -1761,21 +1715,48 @@ private:
     XPCNativeScriptableInfo* mScriptableInfo;
 };
 
-#define XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK 3
 
+/***********************************************/
+
+class XPCWrappedNativeTearOff
+{
+public:
+    XPCWrappedNative*   GetWrapper()   const {return mWrapper;}
+    JSObject*           GetJSObject()  const {return mJSObject;}
+    nsISupports*        GetNative()    const {return mNative;}
+    XPCNativeInterface* GetInterface() const {return mInterface;}
+
+    void SetWrapper(XPCWrappedNative*  Wrapper)       {mWrapper = Wrapper;}
+    void SetJSObject(JSObject*  JSObject)             {mJSObject = JSObject;}
+    void SetNative(nsISupports*  Native)              {mNative = Native;}
+    void SetInterface(XPCNativeInterface*  Interface) {mInterface = Interface;}
+
+    XPCWrappedNativeTearOff()
+        : mWrapper(nsnull), mJSObject(nsnull), 
+          mNative(nsnull), mInterface(nsnull) {}
+    ~XPCWrappedNativeTearOff() {}
+
+private:
+    XPCWrappedNativeTearOff(const XPCWrappedNativeTearOff& r); // not implemented
+    XPCWrappedNativeTearOff& operator= (const XPCWrappedNativeTearOff& r); // not implemented
+
+private:
+    XPCWrappedNative*   mWrapper;
+    JSObject*           mJSObject;
+    nsISupports*        mNative;
+    XPCNativeInterface* mInterface;
+};
+
+/***********************************************/
+
+#define XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK 3
 
 class XPCWrappedNativeTearOffChunk
 {
-public:
+friend class XPCWrappedNative;
+private:
     XPCWrappedNativeTearOffChunk() : mNextChunk(nsnull) {}
-
-    inline JSBool HasInterfaceNoQI(XPCNativeInterface* aInterface);
-    inline JSBool HasInterfaceNoQI(const nsIID& iid);
-
-    inline XPCWrappedNativeTearOff*
-    FindTearOff(XPCCallContext& ccx,
-                XPCNativeInterface* aInterface,
-                XPCWrappedNative* aWrappedNative);
+    ~XPCWrappedNativeTearOffChunk() {delete mNextChunk;}
 
 private:
     XPCWrappedNativeTearOff mTearOffs[XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK];
@@ -1854,15 +1835,11 @@ public:
     static JSBool SetAttribute(XPCCallContext& ccx)
         {return CallMethod(ccx, CALL_SETTER);}
 
-    JSBool HasInterfaceNoQI(XPCNativeInterface* aInterface)
-        {return mFirstChunk.HasInterfaceNoQI(aInterface);}
-                       
-    JSBool HasInterfaceNoQI(const nsIID& iid)
-        {return mFirstChunk.HasInterfaceNoQI(iid);}
+    inline JSBool HasInterfaceNoQI(XPCNativeInterface* aInterface);
+    inline JSBool HasInterfaceNoQI(const nsIID& iid);
 
-    XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx, 
-                                         XPCNativeInterface* aInterface)
-        {return mFirstChunk.FindTearOff(ccx, aInterface, this);}
+    inline XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx, 
+                                                XPCNativeInterface* aInterface);
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
 
@@ -1877,9 +1854,9 @@ private:
 
 private:
     XPCWrappedNativeProto* mProto;
-    XPCNativeSet*   mSet;
-    nsISupports*    mIdentity;          // only addref'd when necessary
-    JSObject*       mFlatJSObject;
+    XPCNativeSet*          mSet;
+    nsISupports*           mIdentity;
+    JSObject*              mFlatJSObject;
 
     XPCNativeScriptableInfo* mScriptableInfo;
 

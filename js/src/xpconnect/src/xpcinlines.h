@@ -377,51 +377,13 @@ inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 
 /***************************************************************************/
 
-inline XPCWrappedNative*
-XPCWrappedNativeTearOff::GetPrivateWrapper() const
-{
-    return NS_REINTERPRET_CAST(XPCWrappedNative*, mWrapper);
-}
-
-inline XPCNativeInterface*
-XPCWrappedNativeTearOff::GetPrivateInterface() const
-{
-    return NS_REINTERPRET_CAST(XPCNativeInterface*, mInterface);
-}
-
-inline void
-XPCWrappedNativeTearOff::SetWrapper(XPCWrappedNative*  Wrapper)
-{
-    mWrapper = Wrapper;
-}
-
-inline void
-XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObject)
-{
-    mJSObject = JSObject;
-}
-
-inline void
-XPCWrappedNativeTearOff::SetNative(nsISupports*  Native)
-{
-    mNative = Native;
-}
-
-inline void
-XPCWrappedNativeTearOff::SetInterface(XPCNativeInterface*  Interface)
-{
-    mInterface = Interface;
-}
-
-/***************************************************************************/
-
 inline JSBool 
-XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(XPCNativeInterface* aInterface)
+XPCWrappedNative::HasInterfaceNoQI(XPCNativeInterface* aInterface)
 {
     // XXX locking !
  
     XPCWrappedNativeTearOffChunk* chunk;
-    for(chunk = this; chunk; chunk = chunk->mNextChunk)
+    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
     {
         XPCWrappedNativeTearOff* to = chunk->mTearOffs;
         for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
@@ -434,17 +396,17 @@ XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(XPCNativeInterface* aInterface)
 }
 
 inline JSBool 
-XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(const nsIID& iid)
+XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
 {
     // XXX locking !
  
     XPCWrappedNativeTearOffChunk* chunk;
-    for(chunk = this; chunk; chunk = chunk->mNextChunk)
+    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
     {
         const XPCWrappedNativeTearOff* to = chunk->mTearOffs;
         for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
         {
-            XPCNativeInterface* iface = to->GetPrivateInterface();
+            XPCNativeInterface* iface = to->GetInterface();
             if(iface)
             {
                 const nsIID* curIID = iface->GetIID();
@@ -457,16 +419,15 @@ XPCWrappedNativeTearOffChunk::HasInterfaceNoQI(const nsIID& iid)
 }
 
 inline XPCWrappedNativeTearOff*
-XPCWrappedNativeTearOffChunk::FindTearOff(XPCCallContext& ccx,
-                                          XPCNativeInterface* aInterface,
-                                          XPCWrappedNative* aWrappedNative)
+XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
+                              XPCNativeInterface* aInterface)
 {
     // XXX locking !
     XPCWrappedNativeTearOff* firstAvailable = nsnull;
 
     XPCWrappedNativeTearOffChunk* lastChunk;
     XPCWrappedNativeTearOffChunk* chunk;
-    for(lastChunk = chunk = this;
+    for(lastChunk = chunk = &mFirstChunk;
         chunk;
         lastChunk = chunk, chunk = chunk->mNextChunk)
     {
@@ -483,15 +444,15 @@ XPCWrappedNativeTearOffChunk::FindTearOff(XPCCallContext& ccx,
     // We need to determine if the object really does this interface...
 
     const nsIID* iid = aInterface->GetIID();
-    nsISupports* identity = aWrappedNative->GetIdentityObject();
+    nsISupports* identity = GetIdentityObject();
     nsISupports* obj;
 
     identity->QueryInterface(*iid, (void**)&obj);
     if(!obj)
         return nsnull;
 
-    if(!aWrappedNative->GetSet()->HasInterface(aInterface) &&
-       !aWrappedNative->ExtendSet(ccx, aInterface))
+    if(!GetSet()->HasInterface(aInterface) &&
+       !ExtendSet(ccx, aInterface))
         return nsnull;
 
     if(!firstAvailable)
@@ -504,10 +465,10 @@ XPCWrappedNativeTearOffChunk::FindTearOff(XPCCallContext& ccx,
             return nsnull;
         }
         lastChunk->mNextChunk = newChunk;
-        firstAvailable = chunk->mTearOffs;
+        firstAvailable = newChunk->mTearOffs;
     }
 
-    firstAvailable->SetWrapper(aWrappedNative);
+    firstAvailable->SetWrapper(this);
     firstAvailable->SetInterface(aInterface);
     firstAvailable->SetNative(obj);
 

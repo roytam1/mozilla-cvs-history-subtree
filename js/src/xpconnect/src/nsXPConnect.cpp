@@ -392,9 +392,9 @@ static JSClass xpcTempGlobalClass = {
 };
 
 
-/* nsIXPConnectJSObjectHolder initClassesWithNewWrappedGlobal (in JSContextPtr aJSContext, in nsISupports aCOMObj, in nsIIDRef aIID); */
+/* nsIXPConnectJSObjectHolder initClassesWithNewWrappedGlobal (in JSContextPtr aJSContext, in nsISupports aCOMObj, in nsIIDRef aIID, in PRBool aCallJS_InitStandardClasses); */
 NS_IMETHODIMP 
-nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports *aCOMObj, const nsIID & aIID, nsIXPConnectJSObjectHolder **_retval)
+nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports *aCOMObj, const nsIID & aIID, PRBool aCallJS_InitStandardClasses, nsIXPConnectJSObjectHolder **_retval)
 {
     NS_ENSURE_ARG_POINTER(aJSContext);
     NS_ENSURE_ARG_POINTER(aCOMObj);
@@ -404,6 +404,8 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     // init it with all the Components object junk just so we have a 
     // parent with an xpc scope to use when wrapping the object that will 
     // become the 'real' global.  
+
+    XPCCallContext ccx(NATIVE_CALLER, aJSContext);
 
     JSObject* tempGlobal = JS_NewObject(aJSContext, &xpcTempGlobalClass, 
                                         nsnull, nsnull);
@@ -424,7 +426,34 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     if(NS_FAILED(holder->GetJSObject(&aGlobalJSObj)) || !aGlobalJSObj)
         return NS_ERROR_FAILURE;
 
+    // voodoo to fixup scoping and parenting...
+
     JS_SetParent(aJSContext, aGlobalJSObj, nsnull);
+    JS_SetGlobalObject(aJSContext, aGlobalJSObj);
+
+    if(aCallJS_InitStandardClasses &&
+       !JS_InitStandardClasses(aJSContext, aGlobalJSObj))
+        return NS_ERROR_FAILURE;
+
+    XPCWrappedNative* wrapper = 
+        NS_REINTERPRET_CAST(XPCWrappedNative*, holder.get());
+    XPCWrappedNativeScope* scope = wrapper->GetScope();
+    
+    if(!scope)
+        return NS_ERROR_FAILURE;
+
+    scope->SetGlobal(ccx, aGlobalJSObj);
+    
+    XPCWrappedNativeProto* proto = wrapper->GetProto();
+    if(!proto)
+        return NS_ERROR_FAILURE;
+
+    JSObject* protoJSObject = proto->GetJSProtoObject();
+    if(protoJSObject)
+    {
+        JS_SetParent(aJSContext, protoJSObject, aGlobalJSObj);
+        JS_SetPrototype(aJSContext, protoJSObject, scope->GetPrototypeJSObject());
+    }
 
     if(NS_FAILED(InitClasses(aJSContext, aGlobalJSObj)))
         return NS_ERROR_FAILURE;

@@ -72,7 +72,7 @@ XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 void 
 XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 {
-    NS_ASSERTION(!mGlobalJSObject && aGlobal, "bad");
+//    NS_ASSERTION(!mGlobalJSObject && aGlobal, "bad");
     mGlobalJSObject = aGlobal;
 
     JSContext* cx = ccx.GetJSContext();

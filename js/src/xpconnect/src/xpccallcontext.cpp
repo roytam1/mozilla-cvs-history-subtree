@@ -144,7 +144,7 @@ XPCCallContext::SetJSID(jsid id)
     if(mTearOff)
     {
         mSet = nsnull;
-        mInterface = mTearOff->GetPrivateInterface();
+        mInterface = mTearOff->GetInterface();
         mMember = mInterface->FindMember(id);
         mStaticMemberIsLocal = JS_TRUE;
         if(mMember && !mMember->IsConstant())
@@ -191,7 +191,7 @@ XPCCallContext::SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter)
     // by id.
 
     // don't be tricked if method is called with wrong 'this'
-    if(mTearOff && mTearOff->GetPrivateInterface() != ci->GetInterface())
+    if(mTearOff && mTearOff->GetInterface() != ci->GetInterface())
         mTearOff = nsnull;
 
     mSet = nsnull;

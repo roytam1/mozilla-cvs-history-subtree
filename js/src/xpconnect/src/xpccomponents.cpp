@@ -143,8 +143,6 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 {
     nsIEnumerator* e;
 
-    *_retval = JS_TRUE;
-
     switch(enum_op)
     {
         case JSENUMERATE_INIT:
@@ -204,8 +202,6 @@ nsXPCComponents_Interfaces::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                        jsval id, PRUint32 flags, 
                                        JSObject * *objp, PRBool *_retval)
 {
-    *_retval = JS_TRUE;
-
     const char* name = nsnull;
 
     if(JSVAL_IS_STRING(id) &&
@@ -335,8 +331,6 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 {
     nsIEnumerator* e;
 
-    *_retval = JS_TRUE;
-
     switch(enum_op)
     {
         case JSENUMERATE_INIT:
@@ -400,8 +394,6 @@ nsXPCComponents_Classes::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                     JSObject * *objp, PRBool *_retval)
 
 {
-    *_retval = JS_TRUE;
-
     const char* name = nsnull;
 
     if(JSVAL_IS_STRING(id) &&
@@ -491,8 +483,6 @@ nsXPCComponents_ClassesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 {
     nsIEnumerator* e;
 
-    *_retval = JS_TRUE;
-
     switch(enum_op)
     {
         case JSENUMERATE_INIT:
@@ -571,8 +561,6 @@ nsXPCComponents_ClassesByID::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                         jsval id, PRUint32 flags, 
                                         JSObject * *objp, PRBool *_retval)
 {
-    *_retval = JS_TRUE;
-
     const char* name = nsnull;
 
     if(JSVAL_IS_STRING(id) &&
@@ -664,8 +652,6 @@ nsXPCComponents_Results::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
                                       PRUint32 enum_op, jsval * statep,
                                       jsid * idp, PRBool *_retval)
 {
-    *_retval = JS_TRUE;
-
     void** iter;
 
     switch(enum_op)
@@ -709,8 +695,6 @@ nsXPCComponents_Results::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                     jsval id, PRUint32 flags, 
                                     JSObject * *objp, PRBool *_retval)
 {
-    *_retval = JS_TRUE;
-
     const char* name = nsnull;
 
     if(JSVAL_IS_STRING(id) &&
@@ -853,7 +837,6 @@ nsXPCComponents_ID::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
     if(vp)
         *vp = OBJECT_TO_JSVAL(newobj);
 
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -865,7 +848,6 @@ nsXPCComponents_ID::HasInstance(nsIXPConnectWrappedNative *wrapper,
 {
     if(bp)
         *bp = JSValIsInterfaceOfType(cx, val, NS_GET_IID(nsIJSID));
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1028,7 +1010,6 @@ nsXPCComponents_Exception::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
     if(vp)
         *vp = OBJECT_TO_JSVAL(newObj);
 
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1041,7 +1022,6 @@ nsXPCComponents_Exception::HasInstance(nsIXPConnectWrappedNative *wrapper,
 {
     if(bp)
         *bp = JSValIsInterfaceOfType(cx, val, NS_GET_IID(nsIXPCException));
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1221,7 +1201,6 @@ nsXPCConstructor::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
         }
     }
 
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1450,7 +1429,6 @@ nsXPCComponents_Constructor::CallOrConstruct(nsIXPConnectWrappedNative *wrapper,
     if(vp)
         *vp = OBJECT_TO_JSVAL(newObj);
 
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1463,7 +1441,6 @@ nsXPCComponents_Constructor::HasInstance(nsIXPConnectWrappedNative *wrapper,
 {
     if(bp)
         *bp = JSValIsInterfaceOfType(cx, val, NS_GET_IID(nsIXPCConstructor));
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1586,8 +1563,6 @@ nsXPCComponents::NewResolve(nsIXPConnectWrappedNative *wrapper,
     if(!rt)
         return NS_ERROR_FAILURE;
 
-    *_retval = JS_TRUE;
-
     jsid idid;
     if(!JS_ValueToId(cx, id, &idid))
         return NS_ERROR_OUT_OF_MEMORY;
@@ -1641,7 +1616,6 @@ nsXPCComponents::GetProperty(nsIXPConnectWrappedNative *wrapper,
             return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    *_retval = JS_TRUE;
     return NS_OK;
 }
 
@@ -1670,7 +1644,6 @@ nsXPCComponents::SetProperty(nsIXPConnectWrappedNative *wrapper,
         {
             xpcc->SetPendingResult(rv);
             xpcc->SetLastResult(rv);
-            *_retval = JS_TRUE;
             return NS_OK;
         }
         return NS_ERROR_FAILURE;

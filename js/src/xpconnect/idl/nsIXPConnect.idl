@@ -315,7 +315,8 @@ interface nsIXPConnect : nsISupports
     initClassesWithNewWrappedGlobal(
                   in JSContextPtr aJSContext,
                   in nsISupports  aCOMObj,
-                  in nsIIDRef     aIID);
+                  in nsIIDRef     aIID,
+                  in PRBool       aCallJS_InitStandardClasses);
 
     /**
     * wrapNative will create a new JSObject or return an existing one. 

@@ -178,7 +178,7 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
     if(HasSharedProto())
     {
         XPCNativeScriptableInfo* si = mProto->GetScriptableInfo();
-        if(si->GetScriptable())
+        if(si && si->GetScriptable())
         {
             if(si->DontAskInstanceForScriptable())
                 mScriptableInfo = si;
@@ -268,12 +268,78 @@ NS_INTERFACE_MAP_BEGIN(XPCWrappedNative)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXPConnectWrappedNative)
 NS_INTERFACE_MAP_END_THREADSAFE
 
+
+/* 
+ *  Wrapped Native lifetime management is messy!
+ *
+ *  - At creation we push the refcount to 2 (only one of which is owned by
+ *    the native caller that caused the wrapper creation).
+ *  - Whenever the refcount goes from 1 -> 2 we root mFlatJSObject.
+ *  - Whenever the refcount goes from 2 -> 1 we unroot mFlatJSObject
+ *    (in this state *no* native callers own a reference to the wrapper).
+ *  - The *only* thing that can make the wrapper get destroyed is the
+ *    finalization of mFlatJSObject.
+ *
+ *  - The wrapper has a pointer to the nsISupports 'view' of the wrapped native
+ *    object i.e... mIdentity. This is help until the wrapper's refcount goes
+ *    to zero and the wrapper is released.
+ *
+ *  - The wrapper also has 'tearoffs'. It has one tearoff for each interface
+ *    that is actually used on the native object. 'Used' means we have either
+ *    needed to QueryInterface to verify the availability of that interface
+ *    of that we've had to QueryInterface in order to actually make a call
+ *    into the wrapped object via the pointer for the given interface.
+ *
+ *  - Each tearoff's 'mNative' member (if non-null) indicated one reference 
+ *    held by our wrapper on the wrapped native for the given interface
+ *    associated with the tearoff. If we release that reference then we set
+ *    the tearoff's 'mNative' to null.  
+ *
+ *  - We use the occasion of the JavaScript GCCallback for the JSGC_MARK_END
+ *    event to scan the tearoffs of all wrappers for non-null mNative members
+ *    that represent unused references. We can tell that a given tearoff's 
+ *    mNative is unused by noting that the tearoff's mJSObject is null *and* 
+ *    that no live XPCCallContexts hold a pointer to the tearoff.
+ *
+ *  - As a time/space tradeoff we may decide to not do this scanning on 
+ *    *every* JavaScript GC. We *do* want to do this *sometimes* because
+ *    we want to allow for wrapped native's to do their own tearoff patterns.
+ *    So, we want to avoid holding references to interfaces that we don't need.
+ *    At the same time, we don't want to be bracketing every call into a
+ *    wrapped native object with a QueryInterface/Release pair. And we *never*
+ *    make a call into the object except via the correct interface for which 
+ *    we've QI'd.
+ *
+ *  - Each tearoff *can* have a mJSObject whose lazily resolved properties
+ *    represent the methods/attributes/constants of that specific interface.
+ *    This is optionally reflected into JavaScript as "foo.nsIFoo" when "foo"
+ *    is the name of mFlatJSObject and "nsIFoo" is the name of the given 
+ *    interface associated with the tearoff. When we create the tearoff's
+ *    mJSObject we set it's parent to be mFlatJSObject. This way we know that
+ *    when mFlatJSObject get's collected there are no outstanding reachable
+ *    tearoff mJSObjects. Note that we must clear the private of any lingering
+ *    mJSObjects at this point because we have no guarentee of the *order* of
+ *    finalization within a given gc cycle.
+ *
+ *  - The other critical function of mJSObject (and its properties) is that 
+ *    mFlatJSObject will Use newresolve to expose those properties its own
+ *    in cases where the wrapper has been QI'd to interfaces not already in
+ *    the set of the wrapper's prototype. That is... By default the wrapper
+ *    delegates to its proto all requests for methods/attributes/consts that
+ *    were declared in idl. However, if the individual wrapper has been QI'd
+ *    to expose additional interfaces then property lookup for mFlatJSObject
+ *    must find any additional properties on *some* object. The specific 
+ *    tearoff's mJSObject does double duty to provide a location for such 
+ *    properties.
+ *
+ */
+
 nsrefcnt
 XPCWrappedNative::AddRef(void)
 {
     nsrefcnt cnt = (nsrefcnt) PR_AtomicIncrement((PRInt32*)&mRefCnt);
     NS_LOG_ADDREF(this, cnt, "XPCWrappedNative", sizeof(*this));
-    if(2 == cnt)
+    if(2 == cnt && IsValid())
     {
         XPCCallContext ccx(NATIVE_CALLER);
         if(ccx.IsValid())
@@ -294,7 +360,7 @@ XPCWrappedNative::Release(void)
         NS_DELETEXPCOM(this);
         return 0;
     }
-    if(1 == cnt)
+    if(1 == cnt && IsValid())
     {
         XPCJSRuntime* rt = GetRuntime();
         if(rt)
@@ -306,21 +372,15 @@ XPCWrappedNative::Release(void)
 void
 XPCWrappedNative::JSObjectFinalized(JSContext *cx, JSObject *obj)
 {
-    // XXX fix this...
-/*
-    nsIXPCScriptable* ds;
-    nsIXPCScriptable* as;
-    if(nsnull != (ds = GetDynamicScriptable()) &&
-       nsnull != (as = GetArbitraryScriptable()))
-        ds->Finalize(cx, obj, this, as);
+    // XXX fix me to deal with tearoff issues
 
-    // pass through to the real JSObject finalization code
-*/
-    // XXX fix this
     NS_ASSERTION(mFlatJSObject == obj, "huh?");
     mFlatJSObject = nsnull;
     Release();
 }
+
+
+
 
 /***************************************************************************/
 
@@ -355,7 +415,7 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
                 (XPCWrappedNativeTearOff*) JS_GetPrivate(cx, cur);
             if(pTearOff)
                 *pTearOff = to;
-            return to->GetPrivateWrapper();
+            return to->GetWrapper();
         }
 
         cur = JS_GetPrototype(cx, cur);

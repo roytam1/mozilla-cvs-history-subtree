@@ -378,8 +378,6 @@ nsJSIID::NewResolve(nsIXPConnectWrappedNative *wrapper,
                     jsval id, PRUint32 flags, 
                     JSObject * *objp, PRBool *_retval)
 {
-    *_retval = JS_TRUE;
-
     XPCCallContext ccx(JS_CALLER, cx);
 
     XPCNativeInterface* iface =
@@ -418,8 +416,6 @@ nsJSIID::Enumerate(nsIXPConnectWrappedNative *wrapper,
 {
     // In this case, let's just eagerly resolve...
 
-    *_retval = JS_TRUE;
-
     XPCCallContext ccx(JS_CALLER, cx);
 
     XPCNativeInterface* iface =
@@ -450,7 +446,6 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
                      jsval val, PRBool *bp, PRBool *_retval)
 {
     *bp = JS_FALSE;
-    *_retval = JS_TRUE;
     nsresult rv = NS_OK;
 
     if(!JSVAL_IS_PRIMITIVE(val))

@@ -84,7 +84,7 @@ ToStringGuts(XPCCallContext& ccx)
         if(to)
         {
             const char* fmt = name ? " (%s)" : "%s";
-            name = JS_sprintf_append(name, fmt, to->GetPrivateInterface()->GetName());
+            name = JS_sprintf_append(name, fmt, to->GetInterface()->GetName());
         }    
         else if(!name)
         {
@@ -211,7 +211,7 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 }
 
 JS_STATIC_DLL_CALLBACK(void)
-XPC_WN_Shared_Finalize(JSContext *cx, JSObject *obj)
+XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
 {
     XPCWrappedNative* p = (XPCWrappedNative*) JS_GetPrivate(cx, obj);
     if(!p)
@@ -278,6 +278,23 @@ XPC_WN_NoHelper_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
     // We can use XPCCallContext::SetJSID and if we discover that the id
     // needs to be in a tearoff then we can do a resolve on the tearoff and
     // return.
+
+#if 0
+    // XXX hacky test...
+
+    JSObject* o = JS_NewObject(cx, &XPC_WN_Tearoff_JSClass, nsnull, obj);
+    *objp = o;
+    const char test[] = "this is the prop";
+    jsid idid;
+    return JS_ValueToId(cx, id, &idid) &&
+           OBJ_DEFINE_PROPERTY(cx, o, idid,
+                               STRING_TO_JSVAL(JS_NewStringCopyZ(cx,test)),
+                               nsnull, nsnull,
+                               JSPROP_ENUMERATE |
+                               JSPROP_READONLY |
+                               JSPROP_PERMANENT,
+                               nsnull);
+#endif
     return JS_TRUE;
 }
 
@@ -297,7 +314,7 @@ JSClass XPC_WN_NoHelper_JSClass = {
     (JSEnumerateOp) XPC_WN_NoHelper_NewEnumerate, // enumerate;
     (JSResolveOp) XPC_WN_NoHelper_NewResolve,     // resolve;
     XPC_WN_Shared_Convert,            // convert;
-    XPC_WN_Shared_Finalize,           // finalize;
+    XPC_WN_NoHelper_Finalize,         // finalize;
 
     /* Optionally non-null members start here. */
     nsnull,                         // getObjectOps;
@@ -363,7 +380,7 @@ XPC_WN_MaybeResolvingPropertyStub(JSContext *cx, JSObject *obj, jsval id, jsval 
     XPCWrappedNative* wrapper =                                              \
         XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);               \
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);                            \
-    PRBool retval;                                                           \
+    PRBool retval = JS_TRUE;                                                 \
     nsresult rv = wrapper->GetScriptable()->
 
 #define POST_HELPER_STUB                                                     \
@@ -459,11 +476,11 @@ XPC_WN_Helper_HasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
 JS_STATIC_DLL_CALLBACK(void)
 XPC_WN_Helper_Finalize(JSContext *cx, JSObject *obj)
 {
-    XPCWrappedNative* p = (XPCWrappedNative*) JS_GetPrivate(cx, obj);
-    if(!p)
+    XPCWrappedNative* wrapper = (XPCWrappedNative*) JS_GetPrivate(cx, obj);
+    if(!wrapper)
         return;
-    p->GetScriptable()->Finalize(p, cx, obj);
-    p->JSObjectFinalized(cx, obj);
+    wrapper->GetScriptable()->Finalize(wrapper, cx, obj);
+    wrapper->JSObjectFinalized(cx, obj);
 }
 
 JS_STATIC_DLL_CALLBACK(uint32)
@@ -523,7 +540,7 @@ XPC_WN_Helper_NewEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
-                           JSObject **objp)
+                         JSObject **objp)
 {
     XPCCallContext ccx(JS_CALLER, cx, obj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
@@ -660,7 +677,7 @@ XPCNativeScriptableInfo::NewInfo(nsIXPCScriptable* scriptable,
     if(self->WantFinalize())
         clazz->finalize = XPC_WN_Helper_Finalize;
     else
-        clazz->finalize = XPC_WN_Shared_Finalize;
+        clazz->finalize = XPC_WN_NoHelper_Finalize;
 
     // We let the rest default to nsnull unless the helper wants them...
     if(self->WantCheckAccess())

@@ -90,7 +90,7 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
 {
-    ((XPCNativeInterface*)he->value)->GC((JSContext*) arg);
+    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings((JSContext*) arg);
     return HT_ENUMERATE_NEXT;
 }
 
