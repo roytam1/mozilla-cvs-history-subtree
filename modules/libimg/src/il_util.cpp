@@ -47,6 +47,10 @@
 #include "il_util.h"            /* Public API. */
 #include "il_utilp.h"           /* Private header file. */
 
+/*	ebb - begin */
+#include "icc_profile_types.h"
+/*	ebb - end */
+
 /************************* Colormap utilities ********************************/
 
 /* Create a new color cube with the specified dimensions, starting at the
@@ -149,6 +153,61 @@ il_NewColorCube(uint32 red_size, uint32 green_size, uint32 blue_size,
 
     return cmap;
 }
+
+/*	ebb - begin */
+/*	---------------------------------------------------------------------------
+	il_NewColorSpace
+	
+	Desc:	Creates color space according to passed parameters.
+			Called by
+				IL_CreateTrueColorSpace
+				IL_CreatePseudoColorSpace
+				IL_CreateGreyScaleColorSpace
+*/
+static IL_ColorSpace *
+il_NewColorSpace(	NI_ColorSpaceType	type,
+					uint8				depth )
+{
+    IL_ColorSpace *color_space = PR_NEWZAP(IL_ColorSpace);
+    if (!color_space)
+        return NULL;
+
+    color_space->type = type;
+    color_space->pixmap_depth = depth; /* Destination image depth. */
+
+    /* Create the private part of the color_space */
+    color_space->private_data = (void *)PR_NEWZAP(il_ColorSpaceData);
+    if (!color_space->private_data) {
+        PR_FREEIF(color_space);
+        return NULL;
+    }
+    
+    /*
+    	Set a default icc profile reference.  Callers can override.
+    	In the future, we want to be able to have a MWContext
+    	'know' which display its window is being displayed upon.  This
+    	will allow us to assign profiles by AVID (i.e. display ID).
+    	For now, since there is no intelligence on this, we're simply
+    	assigning the 'system' profile to each *color* color space.
+    */
+    switch	(type) {
+    	case	NI_TrueColor:
+    		color_space->icc_profile_ref = (void*) kICCProfileRef_SystemProfile;
+    		break;
+    	case	NI_PseudoColor:
+    		if (depth == 8)
+    			color_space->icc_profile_ref = (void*) kICCProfileRef_SystemProfile;
+    		break;
+    	case	NI_GreyScale:
+    	default:
+    		color_space->icc_profile_ref = (void*) kICCProfileRef_NoProfile;
+    		break;
+    }
+        
+    color_space->ref_count = 1;
+    return color_space;
+}
+/*	ebb - end */
 
 /* Determine allocation of desired colors to components, and fill in Ncolors[]
    array to indicate choice.  Return value is total number of colors (product
@@ -351,26 +410,17 @@ IL_IMPLEMENT(IL_ColorSpace *)
 IL_CreateTrueColorSpace(IL_RGBBits *rgb, uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
+/*	ebb - begin */
+	/* Call generic routine */
+    color_space = il_NewColorSpace(NI_TrueColor, pixmap_depth);
+/*	ebb - end */
 
-    color_space = PR_NEWZAP(IL_ColorSpace);
     if (!color_space)
         return NULL;
-
-    color_space->type = NI_TrueColor;
 
     /* RGB bit allocation and offsets. */
     XP_MEMCPY(&color_space->bit_alloc.rgb, rgb, sizeof(IL_RGBBits));
 
-    color_space->pixmap_depth = pixmap_depth; /* Destination image depth. */
-
-    /* Create the private part of the color_space */
-    color_space->private_data = (void *)PR_NEWZAP(il_ColorSpaceData);
-    if (!color_space->private_data) {
-        PR_FREEIF(color_space);
-        return NULL;
-    }
-        
-    color_space->ref_count = 1;
     return color_space;
 }
 
@@ -390,26 +440,19 @@ IL_CreatePseudoColorSpace(IL_ColorMap *cmap, uint8 index_depth,
                           uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
-
-    color_space = PR_NEWZAP(IL_ColorSpace);
+/*	ebb - begin */
+	/* Call generic routine */
+    color_space = il_NewColorSpace(NI_PseudoColor, pixmap_depth);
+/*	ebb - end */
     if (!color_space)
         return NULL;
 
-    color_space->type = NI_PseudoColor;
     color_space->bit_alloc.index_depth = index_depth;
-    color_space->pixmap_depth = pixmap_depth;
 
    /* Copy the contents of the IL_ColorMap structure.  This copies the map
       and table pointers, not the arrays themselves. */
     XP_MEMCPY(&color_space->cmap, cmap, sizeof(IL_ColorMap)); 
     PR_FREEIF(cmap);
-
-    /* Create the private part of the color_space */
-    color_space->private_data = (void *)PR_NEWZAP(il_ColorSpaceData);
-    if (!color_space->private_data) {
-        PR_FREEIF(color_space);
-        return NULL;
-    }
 
     color_space->ref_count = 1;
     return color_space;
@@ -423,24 +466,10 @@ IL_IMPLEMENT(IL_ColorSpace *)
 IL_CreateGreyScaleColorSpace(uint8 index_depth, uint8 pixmap_depth)
 {
     IL_ColorSpace *color_space;
-
-    color_space = PR_NEWZAP(IL_ColorSpace);
-    if (!color_space)
-        return NULL;
-
-    color_space->type = NI_GreyScale;
-    color_space->bit_alloc.index_depth = index_depth;
-    color_space->pixmap_depth = pixmap_depth;
-    color_space->cmap.num_colors = (1 << index_depth);
-
-    /* Create the private part of the color_space */
-    color_space->private_data = (void *)PR_NEWZAP(il_ColorSpaceData);
-    if (!color_space->private_data) {
-        PR_FREEIF(color_space);
-        return NULL;
-    }
-
-    color_space->ref_count = 1;
+/*	ebb - begin */
+	/* Call generic routine */
+    color_space = il_NewColorSpace(NI_GreyScale, pixmap_depth);
+/*	ebb - end */
     return color_space;
 }
 
