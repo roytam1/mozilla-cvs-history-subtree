@@ -55,6 +55,8 @@
   
  */
 
+#include <ctype.h> // for toupper()
+#include <stdio.h>
 #include "nscore.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
@@ -69,7 +71,6 @@
 #include "nsIRDFService.h"
 #include "plhash.h"
 #include "plstr.h"
-#include "stdio.h"
 #include "prmem.h"
 #include "prio.h"
 
@@ -496,7 +497,7 @@ public:
         NS_IF_RELEASE(mAccount);
     }
 
-    nsresult MailFolder::ReadSummaryFile (char* url);
+    nsresult ReadSummaryFile (char* url);
 
     nsresult 
     AddMessage(char* uri, MailFolder* folder,
