@@ -99,6 +99,7 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
   /* Fill in the request */
   request.keyid = CMT_CopyDataToItem(key, keyLen);
   request.data = CMT_CopyDataToItem(data, dataLen);
+  request.ctx = CMT_CopyPtrToItem((void *)0);
 
   reply.item.data = 0;
   reply.item.len = 0;
@@ -133,6 +134,7 @@ loser:
   if (message.data) free(message.data);
   if (request.keyid.data) free(request.keyid.data);
   if (request.data.data) free(request.data.data);
+  if (request.ctx.data) free(request.ctx.data);
   if (reply.item.data) free(reply.item.data);
 
   return rv; /* need return value */
@@ -144,18 +146,20 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
 {
   CMTStatus rv;
   CMTItem message;
-  SingleItemMessage request;
+  DecryptRequestMessage request;
   SingleItemMessage reply;
 
   /* Fill in the request */
-  request.item = CMT_CopyDataToItem(data, dataLen);
+  request.data = CMT_CopyDataToItem(data, dataLen);
+  request.ctx = CMT_CopyPtrToItem((void*)0);
+
   reply.item.data = 0;
   reply.item.len = 0;
   message.data = 0;
   message.len = 0;
 
   /* Encode */
-  rv = CMT_EncodeMessage(SingleItemMessageTemplate, &message, &request);
+  rv = CMT_EncodeMessage(DecryptRequestTemplate, &message, &request);
   if (rv != CMTSuccess) {
     goto loser;
   }
@@ -180,7 +184,8 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
 
 loser:
   if (message.data) free(message.data);
-  if (request.item.data) free(request.item.data);
+  if (request.data.data) free(request.data.data);
+  if (request.ctx.data) free(request.ctx.data);
   if (reply.item.data) free(reply.item.data);
 
   return rv; /* need return value */
