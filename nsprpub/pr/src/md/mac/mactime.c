@@ -23,7 +23,7 @@
 
 #include "mactime.h"
 
-PR_IMPLEMENT(UnsignedWide) dstLocalBaseMicroseconds;
+PR_IMPLEMENT(uint64) dstLocalBaseMicroseconds;
 PR_IMPLEMENT(unsigned long) gJanuaryFirst1970Seconds;
 
 /*
@@ -88,14 +88,14 @@ void MacintoshInitializeTime(void)
 	 * time.
 	 */
 	{
-	UnsignedWide			upTime;
+	uint64			upTime;
 	unsigned long			currentLocalTimeSeconds,
 							startupTimeSeconds;
 	uint64					startupTimeMicroSeconds;
 	uint32					upTimeSeconds;	
 	uint64					oneMillion, upTimeSecondsLong, microSecondsToSeconds;
 
-	Microseconds(&upTime);
+	Microseconds((UnsignedWide *)&upTime);
 	
 	GetDateTime(&currentLocalTimeSeconds);
 	
