@@ -35,8 +35,8 @@
 // This file currently has the implementation for all the interfaces
 // which are required of an app embedding Gecko
 // Implementation of other optional interfaces are in separate files
-// so as to avoid cluttering this one. For ex, implementation of
-// nsIPrompt is in BrowserImplPrompt.cpp etc.
+// to avoid cluttering this one and to demonstrate other embedding
+// principles. For example, nsIPrompt is implemented in a separate DLL.
 // 
 //	nsIWebBrowserChrome	- This is a required interface to be implemented
 //						  by embeddors
@@ -84,7 +84,7 @@ CBrowserImpl::~CBrowserImpl()
 // Call on this Init() method with proper values after creation
 //
 NS_METHOD CBrowserImpl::Init(PBROWSERFRAMEGLUE pBrowserFrameGlue, 
-							  nsIWebBrowser* aWebBrowser)
+                             nsIWebBrowser* aWebBrowser)
 {
 	  m_pBrowserFrameGlue = pBrowserFrameGlue;
 	  
@@ -104,10 +104,10 @@ NS_INTERFACE_MAP_BEGIN(CBrowserImpl)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIWebBrowserChrome)
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
    NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome)
+   NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChromeFocus)
    NS_INTERFACE_MAP_ENTRY(nsIEmbeddingSiteWindow)
    NS_INTERFACE_MAP_ENTRY(nsIWebProgressListener)
    NS_INTERFACE_MAP_ENTRY(nsIContextMenuListener)
-   NS_INTERFACE_MAP_ENTRY(nsIPrompt)
    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
 NS_INTERFACE_MAP_END
 
@@ -242,6 +242,20 @@ NS_IMETHODIMP CBrowserImpl::ExitModalEventLoop(nsresult aStatus)
 }
 
 //*****************************************************************************
+// CBrowserImpl::nsIWebBrowserChromeFocus
+//*****************************************************************************
+
+NS_IMETHODIMP CBrowserImpl::FocusNextElement()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP CBrowserImpl::FocusPrevElement()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//*****************************************************************************
 // CBrowserImpl::nsIEmbeddingSiteWindow
 //*****************************************************************************   
 
@@ -292,7 +306,15 @@ NS_IMETHODIMP CBrowserImpl::GetDimensions(PRUint32 aFlags, PRInt32 *x, PRInt32 *
 
 NS_IMETHODIMP CBrowserImpl::GetSiteWindow(void** aSiteWindow)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
+  if (!aSiteWindow)
+    return NS_ERROR_NULL_POINTER;
+
+  *aSiteWindow = 0;
+  if (m_pBrowserFrameGlue) {
+    HWND w = m_pBrowserFrameGlue->GetBrowserFrameNativeWnd();
+    *aSiteWindow = NS_REINTERPRET_CAST(void *, w);
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP CBrowserImpl::SetFocus()

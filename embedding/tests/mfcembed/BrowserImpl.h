@@ -25,34 +25,35 @@
 #define _BROWSERIMPL_H
 
 #include "IBrowserFrameGlue.h"
+#include "nsIWebBrowserChromeFocus.h"
 
 class CBrowserImpl : public nsIInterfaceRequestor,
 					 public nsIWebBrowserChrome,
+                     public nsIWebBrowserChromeFocus,
 					 public nsIEmbeddingSiteWindow,
 					 public nsIWebProgressListener,
 					 public nsIContextMenuListener,
-					 public nsIPrompt,
 					 public nsSupportsWeakReference
 {
 public:
     CBrowserImpl();
     ~CBrowserImpl();
-	NS_METHOD Init(PBROWSERFRAMEGLUE pBrowserFrameGlue,
-					nsIWebBrowser* aWebBrowser);
+    NS_METHOD Init(PBROWSERFRAMEGLUE pBrowserFrameGlue,
+                   nsIWebBrowser* aWebBrowser);
 
     NS_DECL_ISUPPORTS
-	NS_DECL_NSIINTERFACEREQUESTOR
+    NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSIWEBBROWSERCHROME
+    NS_DECL_NSIWEBBROWSERCHROMEFOCUS
     NS_DECL_NSIEMBEDDINGSITEWINDOW
     NS_DECL_NSIWEBPROGRESSLISTENER
-	NS_DECL_NSICONTEXTMENULISTENER
-	NS_DECL_NSIPROMPT
+    NS_DECL_NSICONTEXTMENULISTENER
 
 protected:
 
-	PBROWSERFRAMEGLUE m_pBrowserFrameGlue;
+    PBROWSERFRAMEGLUE  m_pBrowserFrameGlue;
 
-	nsCOMPtr<nsIWebBrowser> mWebBrowser;
+    nsCOMPtr<nsIWebBrowser> mWebBrowser;
 };
 
 #endif //_BROWSERIMPL_H

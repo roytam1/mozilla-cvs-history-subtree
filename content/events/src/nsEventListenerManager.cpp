@@ -366,6 +366,8 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
                                          nsHashKey* aKey,
                                          PRInt32 aFlags)
 {
+  NS_ENSURE_TRUE(aListener, NS_ERROR_FAILURE);
+
   nsVoidArray* listeners = GetListenersByType(aType, aKey, PR_TRUE);
 
   //We asked the GetListenersByType to create the array if it had to.  If it didn't

@@ -206,7 +206,7 @@ void prettyPrintMessage(CMTItem *msg)
   /*Try printing out 8 bytes at a time. */
   LOG("\n**********************************************************\n");
   LOG("About to pretty Print Message\n\n");
-  curBuffer[9] = '\0';
+  curBuffer[8] = '\0';
   hexArray[24] = '\0';
   hexVal[2] = '\0';
   string[1] = '\0';
@@ -324,7 +324,7 @@ loser:
 CMTStatus CMT_TransmitMessage(PCMT_CONTROL control, CMTItem * message)
 {
     CMTMessageHeader header;
-	CMUint32 sent, rv;
+	CMUint32 sent;
 
     /* Set up the message header */
     header.type = htonl(message->type);
@@ -356,7 +356,7 @@ loser:
 CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
 {
     CMTMessageHeader header;
-    CMUint32 numread, rv;
+    CMUint32 numread;
 
     /* Get the message header */
     numread = CMT_ReadThisMany(control, control->sock, 
@@ -368,7 +368,7 @@ CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
     response->type = ntohl(header.type);
     response->len = ntohl(header.len);
     response->data = (unsigned char *) malloc(response->len);
-    if (response->data == NULL) {
+    if (response->data == NULL && response->len != 0) {
         goto loser;
     }
 

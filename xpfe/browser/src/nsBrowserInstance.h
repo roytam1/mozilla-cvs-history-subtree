@@ -45,7 +45,6 @@
 
 class nsIDocShell;
 class nsIScriptContext;
-class nsIDOMWindow;
 class nsIDOMWindowInternal;
 class nsIDOMNode;
 class nsIURI;

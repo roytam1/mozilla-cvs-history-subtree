@@ -24,6 +24,7 @@
 
 #include <nsString.h>
 #include <nsIWebBrowserChrome.h>
+#include <nsIWebBrowserChromeFocus.h>
 #include <nsIEmbeddingSiteWindow.h>
 #include <nsITooltipListener.h>
 #include <nsIPrompt.h>
@@ -38,6 +39,7 @@
 class EmbedPrivate;
 
 class EmbedWindow : public nsIWebBrowserChrome,
+		    public nsIWebBrowserChromeFocus,
                     public nsIEmbeddingSiteWindow,
                     public nsITooltipListener,
                     public nsIPrompt,
@@ -56,6 +58,8 @@ class EmbedWindow : public nsIWebBrowserChrome,
   NS_DECL_ISUPPORTS
 
   NS_DECL_NSIWEBBROWSERCHROME
+
+  NS_DECL_NSIWEBBROWSERCHROMEFOCUS
 
   NS_DECL_NSIEMBEDDINGSITEWINDOW
 

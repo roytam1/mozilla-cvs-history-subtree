@@ -629,6 +629,13 @@ NS_IMETHODIMP nsWebBrowser::SetProperty(PRUint32 aId, PRUint32 aValue)
            mDocShell->SetAllowMetaRedirects(aValue);
         }
         break;
+    case nsIWebBrowserSetup::SETUP_ALLOW_SUBFRAMES:
+        {
+           NS_ENSURE_STATE(mDocShell);
+           NS_ENSURE_TRUE((aValue == PR_TRUE || aValue == PR_FALSE), NS_ERROR_INVALID_ARG);
+           mDocShell->SetAllowSubframes(aValue);
+        }
+        break;
     default:
         return NS_ERROR_INVALID_ARG;
   
@@ -1184,7 +1191,8 @@ NS_IMETHODIMP nsWebBrowser::SetFocus()
 }
 
 NS_IMETHODIMP nsWebBrowser::FocusAvailable(nsIBaseWindow* aCurrentFocus,
-   PRBool* aTookFocus)
+                                           PRBool aForward,
+                                           PRBool* aTookFocus)
 {
    NS_ENSURE_ARG_POINTER(aTookFocus);
 
@@ -1198,7 +1206,8 @@ NS_IMETHODIMP nsWebBrowser::FocusAvailable(nsIBaseWindow* aCurrentFocus,
    if(aCurrentFocus == NS_STATIC_CAST(nsIBaseWindow*, this))
       {
       if(nextCallWin)
-         return nextCallWin->FocusAvailable(aCurrentFocus, aTookFocus);
+         return nextCallWin->FocusAvailable(aCurrentFocus,
+                                            aForward, aTookFocus);
       return NS_OK;
       }
 

@@ -55,7 +55,7 @@
 
 #include "newproto.h"
 
-char SSMVersionString[] = "1.3";
+char SSMVersionString[] = "1.5";
 
 CMT_Alloc_fn cmt_alloc = malloc;
 CMT_Free_fn cmt_free = free;
@@ -78,6 +78,7 @@ char* SSM_GetVersionString(void)
     }
     return newString;
 }
+
 
 /*************************************************************
  *

@@ -1721,7 +1721,6 @@ nsHTMLDocument::GetBaseURI(nsAWritableString &aURI)
   return NS_OK;
 }
 
-
 //
 // nsIDOMHTMLDocument interface implementation
 //

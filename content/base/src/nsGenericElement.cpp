@@ -2249,6 +2249,10 @@ nsGenericElement::doReplaceChild(nsIDOMNode* aNewChild,
       return res;
     }
 
+    nsCOMPtr<nsIDocument> old_doc;
+
+    newContent->GetDocument(*getter_AddRefs(old_doc));
+
     /*
      * Remove the element from the old parent if one exists, since oldParent
      * is a nsIDOMNode this will do the right thing even if the parent of
@@ -2288,6 +2292,9 @@ nsGenericElement::doReplaceChild(nsIDOMNode* aNewChild,
         }
       }
     }
+
+    nsContentUtils::ReparentContentWrapper(newContent, this, mDocument,
+                                           old_doc);
 
     res = ReplaceChildAt(newContent, oldPos, PR_TRUE, PR_TRUE);
 

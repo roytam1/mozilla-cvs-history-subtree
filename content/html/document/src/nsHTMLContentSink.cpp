@@ -19,6 +19,7 @@
  * 
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   Peter Annema <disttsc@bart.nl>
  */
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
@@ -118,6 +119,11 @@
 #include "nsIPrompt.h"
 #include "nsIDOMWindowInternal.h"
 
+#include "nsLayoutCID.h"
+#include "nsIFrameManager.h"
+#include "nsILayoutHistoryState.h"
+static NS_DEFINE_CID(kLayoutHistoryStateCID, NS_LAYOUT_HISTORY_STATE_CID);
+
 #ifdef ALLOW_ASYNCH_STYLE_SHEETS
 const PRBool kBlockByDefault=PR_FALSE;
 #else
@@ -133,9 +139,9 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 #ifdef NS_DEBUG
 static PRLogModuleInfo* gSinkLogModuleInfo;
 
-#define SINK_TRACE_CALLS        0x1
-#define SINK_TRACE_REFLOW       0x2
-#define SINK_ALWAYS_REFLOW      0x4
+#define SINK_TRACE_CALLS              0x1
+#define SINK_TRACE_REFLOW             0x2
+#define SINK_ALWAYS_REFLOW            0x4
 
 #define SINK_LOG_TEST(_lm,_bit) (PRIntn((_lm)->level) & (_bit))
 
@@ -156,6 +162,9 @@ static PRLogModuleInfo* gSinkLogModuleInfo;
 #undef SINK_NO_INCREMENTAL
 
 //----------------------------------------------------------------------
+
+#define NS_SINK_FLAG_SCRIPT_ENABLED   0x8
+#define NS_SINK_FLAG_FRAMES_ENABLED   0x10
 
 class SinkContext;
 
@@ -212,8 +221,7 @@ public:
   NS_IMETHOD CloseFrameset(const nsIParserNode& aNode);
   NS_IMETHOD OpenMap(const nsIParserNode& aNode);
   NS_IMETHOD CloseMap(const nsIParserNode& aNode);
-  NS_IMETHOD OpenNoscript(const nsIParserNode& aNode);
-  NS_IMETHOD CloseNoscript(const nsIParserNode& aNode);
+  NS_IMETHOD GetPref(PRInt32 aTag,PRBool& aPref);
 
 
   NS_IMETHOD DoFragment(PRBool aFlag);
@@ -350,6 +358,7 @@ public:
   nsICSSLoader*       mCSSLoader;
   PRInt32             mInsideNoXXXTag;
   PRInt32             mInMonolithicContainer;
+  PRUint32            mFlags;
 
   void StartLayout();
 
@@ -1649,6 +1658,33 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
         mSink->mInNotification--;
       }
       
+      // Create a temp layoutHistoryState to store the childrens' state
+      nsCOMPtr<nsIPresShell> presShell;
+      nsCOMPtr<nsIPresContext> presContext;
+      nsCOMPtr<nsIFrameManager> frameManager;
+      nsCOMPtr<nsILayoutHistoryState> tempFrameState = do_CreateInstance(kLayoutHistoryStateCID);
+      if (mSink && mSink->mDocument) {
+        PRInt32 ns = mSink->mDocument->GetNumberOfShells();
+        if (ns > 0) {
+          presShell = dont_AddRef(mSink->mDocument->GetShellAt(0));
+          if (presShell) {
+            presShell->GetFrameManager(getter_AddRefs(frameManager));
+            presShell->GetPresContext(getter_AddRefs(presContext));
+          }
+        }
+      }
+      NS_ASSERTION(presShell && frameManager && presContext && tempFrameState,
+                  "SinkContext::DemoteContainer() Error storing frame state!");
+
+      // Store children frames state before removing them from old parent
+      nsIFrame* frame = nsnull;
+      if (frameManager && presContext && tempFrameState) {
+        presShell->GetPrimaryFrameFor(container, &frame);
+        if (frame) {
+          frameManager->CaptureFrameState(presContext, frame, tempFrameState);
+        }
+      }
+
       if (NS_SUCCEEDED(result)) {
         // Move all of the demoted containers children to its parent
         PRInt32 i, count;
@@ -1705,6 +1741,15 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
         }
         mStackPos--;
       }
+
+      // Restore frames state after adding it to new parent
+      if (frameManager && presContext && tempFrameState && frame) {
+        presShell->GetPrimaryFrameFor(parent, &frame);
+        if (frame) {
+          frameManager->RestoreFrameState(presContext, frame, tempFrameState);
+        }
+      }
+
     }
     NS_RELEASE(container);
 
@@ -2201,6 +2246,7 @@ HTMLContentSink::HTMLContentSink() {
   mInNotification = 0;
   mInMonolithicContainer = 0;
   mInsideNoXXXTag  = 0;
+  mFlags=0;
 }
 
 HTMLContentSink::~HTMLContentSink()
@@ -2303,19 +2349,34 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   mWebShell = aContainer;
   NS_ADDREF(aContainer);
 
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
+  PRBool enabled = PR_TRUE;
+  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+  NS_ASSERTION(prefs, "oops no prefs!");
+  if (prefs) {
+    prefs->GetBoolPref("javascript.enabled", &enabled);
+    if (enabled) {
+      mFlags |= NS_SINK_FLAG_SCRIPT_ENABLED;
+    }
+  }
 
-  if (NS_FAILED(rv)) {
-    MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Init()\n"));
-    MOZ_TIMER_STOP(mWatch);
-    return rv;
+  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mWebShell));
+  NS_ASSERTION(docShell,"oops no docshell!");
+  if (docShell) {
+    docShell->GetAllowSubframes(&enabled);
+    if (enabled) {
+      mFlags |= NS_SINK_FLAG_FRAMES_ENABLED;
+    }
   }
 
   mNotifyOnTimer = PR_TRUE;
-  prefs->GetBoolPref("content.notify.ontimer", &mNotifyOnTimer);
+  if (prefs) {
+    prefs->GetBoolPref("content.notify.ontimer", &mNotifyOnTimer);
+  }
 
   mBackoffCount = -1; // never
-  prefs->GetIntPref("content.notify.backoffcount", &mBackoffCount);
+  if (prefs) {
+    prefs->GetIntPref("content.notify.backoffcount", &mBackoffCount);
+  }
 
   // The mNotificationInterval has a dramatic effect on how long it 
   // takes to initially display content for slow connections.
@@ -2325,10 +2386,14 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   // it starts to impact page load performance.
   // see bugzilla bug 72138 for more info.
   mNotificationInterval = 250000;
-  prefs->GetIntPref("content.notify.interval", &mNotificationInterval);
+  if (prefs) {
+    prefs->GetIntPref("content.notify.interval", &mNotificationInterval);
+  }
 
   mMaxTextRun = 8192;
-  prefs->GetIntPref("content.maxtextrun", &mMaxTextRun);
+  if (prefs) {
+    prefs->GetIntPref("content.maxtextrun", &mMaxTextRun);
+  }
 
   nsIHTMLContentContainer* htmlContainer = nsnull;
   if (NS_SUCCEEDED(aDoc->QueryInterface(NS_GET_IID(nsIHTMLContentContainer), (void**)&htmlContainer))) {
@@ -3005,7 +3070,8 @@ HTMLContentSink::OpenFrameset(const nsIParserNode& aNode)
                   mCurrentContext->mStackPos, this);
 
   nsresult rv = mCurrentContext->OpenContainer(aNode);
-  if ((NS_OK == rv) && (nsnull == mFrameset)) {
+  if ((NS_SUCCEEDED(rv)) && (!mFrameset) && 
+      (mFlags & NS_SINK_FLAG_FRAMES_ENABLED)) {
     mFrameset = mCurrentContext->mStack[mCurrentContext->mStackPos-1].mContent;
     NS_ADDREF(mFrameset);
   }
@@ -3029,7 +3095,8 @@ HTMLContentSink::CloseFrameset(const nsIParserNode& aNode)
   nsresult rv = sc->CloseContainer(aNode);
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::CloseFrameset()\n"));
   MOZ_TIMER_STOP(mWatch);
-  if (done) {
+
+  if (done && (mFlags & NS_SINK_FLAG_FRAMES_ENABLED)) {
     StartLayout();
   }
   return rv;
@@ -3071,84 +3138,21 @@ HTMLContentSink::CloseMap(const nsIParserNode& aNode)
   return rv;
 }
 
-/**
- *  From the pref determine if the noscript content should be
- *  processed or not.  If java script is enabled then inform
- *  DTD that the content should be treated as an alternate content,i.e.,
- *  the content should not be treated as a regular content.
- *
- *  harishd 08/24/00
- *  @param  aNode - The noscript node
- *  return  NS_OK if succeeded else ERROR
- */
-
 NS_IMETHODIMP
-HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
-  nsresult result=NS_OK;
-
-  MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::OpenNoscript()\n"));
-  MOZ_TIMER_START(mWatch);
-  SINK_TRACE_NODE(SINK_TRACE_CALLS,
-                  "HTMLContentSink::OpenNoscript", aNode, 
-                   mCurrentContext->mStackPos, this);
-
-  nsCOMPtr<nsIPref> prefs(do_GetService("@mozilla.org/preferences;1", &result));
-  if(NS_SUCCEEDED(result)) {
-    PRBool jsEnabled;
-    result=prefs->GetBoolPref("javascript.enabled", &jsEnabled);
-    if(NS_SUCCEEDED(result)){
-      // If JS is disabled then we want to lose the noscript element
-      // ,and therefore don't OpenContainer, so that the noscript contents 
-      // get handled as if noscript  wasn't present.
-      if(jsEnabled) {
-
-        result=mCurrentContext->OpenContainer(aNode);
-
-        if(NS_SUCCEEDED(result)) {
-          mInsideNoXXXTag++;            // To indicate that no processing should be done to this content
-          result=NS_HTMLPARSER_ALTERNATECONTENT; // Inform DTD that the noscript content should be treated as CDATA.
-        }
-      }
-    }
+HTMLContentSink::GetPref(PRInt32 aTag,PRBool& aPref) {
+  nsHTMLTag theHTMLTag = nsHTMLTag(aTag);
+    
+  if (theHTMLTag == eHTMLTag_script) {
+    aPref = mFlags & NS_SINK_FLAG_SCRIPT_ENABLED;
+  } 
+  else if (theHTMLTag == eHTMLTag_frameset) {
+    aPref = mFlags & NS_SINK_FLAG_FRAMES_ENABLED;
   }
-
-  MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::OpenNoscript()\n"));
-  MOZ_TIMER_STOP(mWatch);
-  
-  return result;
-}
-
-/**
- *  Close noscript and enable processing for rest of the content,
- *  outside noscript
- *
- *  harishd 08/24/00
- *  @param  aNode - The noscript node
- *  return  NS_OK if succeeded else ERROR
- */
-NS_IMETHODIMP
-HTMLContentSink::CloseNoscript(const nsIParserNode& aNode) {
-
-  // When JS is diabled this method wouldn't get called because
-  // noscript element will not be present then.
-
-  MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::CloseNoscript()\n"));
-  MOZ_TIMER_START(mWatch);
-  SINK_TRACE_NODE(SINK_TRACE_CALLS,
-                  "HTMLContentSink::CloseNoscript", aNode, 
-                  mCurrentContext->mStackPos-1, this);
- 
-  nsresult result=mCurrentContext->CloseContainer(aNode);
-  if(NS_SUCCEEDED(result)) {
-    NS_ASSERTION((mInsideNoXXXTag > -1), "mInsideNoXXXTag underflow");
-    if (mInsideNoXXXTag > 0) {
-      mInsideNoXXXTag--;
-    }
+  else {
+    aPref = PR_FALSE;
   }
-  
-  MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::CloseNoscript()\n"));
-  MOZ_TIMER_STOP(mWatch);
-  return result;
+   
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -3159,11 +3163,11 @@ HTMLContentSink::OpenContainer(const nsIParserNode& aNode)
   nsresult rv = NS_OK;
   // XXX work around parser bug
   if (eHTMLTag_frameset == aNode.GetNodeType()) {
-    MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::OpenContainer()\n"));
-    MOZ_TIMER_STOP(mWatch);
-    return OpenFrameset(aNode);
+    rv = OpenFrameset(aNode);
   }
-  rv = mCurrentContext->OpenContainer(aNode);
+  else {
+    rv = mCurrentContext->OpenContainer(aNode);
+  }
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::OpenContainer()\n"));
   MOZ_TIMER_STOP(mWatch);
   return rv;
@@ -4290,15 +4294,14 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                                        *getter_AddRefs(nodeInfo));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsIHTMLContent* it;
-    rv = NS_NewHTMLMetaElement(&it, nodeInfo);
+    nsCOMPtr<nsIHTMLContent> it;
+    rv = NS_NewHTMLMetaElement(getter_AddRefs(it), nodeInfo);
     if (NS_OK == rv) {
       // Add in the attributes and add the meta content object to the
       // head container.
       it->SetDocument(mDocument, PR_FALSE, PR_TRUE);
       rv = AddAttributes(aNode, it);
-      if (NS_OK != rv) {
-        NS_RELEASE(it);
+      if (NS_FAILED(rv)) {
         return rv;
       }
       parent->AppendChildTo(it, PR_FALSE, PR_FALSE);
@@ -4320,7 +4323,6 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
           }//if (result.Length() > 0) 
         }//if (header.Length() > 0) 
       }//if(!mInsideNoXXXTag)
-      NS_RELEASE(it);
     }//if (NS_OK == rv) 
   }//if (nsnull != parent)
 
@@ -4367,42 +4369,6 @@ HTMLContentSink::ProcessHeaderData(nsIAtom* aHeader,nsString& aValue,nsIHTMLCont
   
   // see if we have a refresh "header".
   if (aHeader == nsHTMLAtoms::refresh) {
-    // Refresh headers are parsed with the following format in mind
-    // <META HTTP-EQUIV=REFRESH CONTENT="5; URL=http://uri">
-    // By the time we are here, the following is true:
-    // header = "REFRESH"
-    // result = "5; URL=http://uri" // note the URL attribute is
-    // optional, if it is absent, the currently loaded url is used.
-    // Also note that the second and URL seperator can be either a ';'
-    // or a ','. This breaks some websites. The ',' seperator should be
-    // illegal but CNN is using it.
-    
-    // 
-    // We need to handle the following strings.
-    //  - X is a set of digits
-    //  - URI is either a relative or absolute URI
-    //  - FOO is any text
-    //
-    // "" 
-    //  empty string. use the currently loaded URI
-    //  and refresh immediately.
-    // "X"
-    //  Refresh the currently loaded URI in X milliseconds.
-    // "X; URI"
-    //  Refresh using URI as the destination in X milliseconds.
-    // "X; URI; Blah"
-    //  Refresh using URI as the destination in X milliseconds,
-    //  ignoring "Blah"
-    // "URI"
-    //  Refresh immediately using URI as the destination.
-    // "URI; Blah"
-    //  Refresh immediately using URI as the destination,
-    //  ignoring "Blah"
-    // 
-    // Note that we need to remove any tokens wrapping the URI.
-    // These tokens currently include spaces, double and single
-    // quotes.
-    
     // first get our baseURI
     nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(mWebShell, &rv);
     if (NS_FAILED(rv)) return rv;
@@ -4411,96 +4377,12 @@ HTMLContentSink::ProcessHeaderData(nsIAtom* aHeader,nsString& aValue,nsIHTMLCont
     nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(docShell);
     rv = webNav->GetCurrentURI(getter_AddRefs(baseURI));
     if (NS_FAILED(rv)) return rv;
-    
-    PRInt32 millis = -1;
-    nsAutoString uriAttrib;
-    
-    PRInt32 semiColon = aValue.FindCharInSet(";,");
-    nsAutoString token;
-    if (semiColon > -1)
-      aValue.Left(token, semiColon);
-    else
-      token = aValue;
-    
-    PRBool done = PR_FALSE;
-    while (!done && !token.IsEmpty()) {
-      token.CompressWhitespace();
-      // Ref. bug 22886
-      // Apparently CONTENT can also start with a period (.).
-      // Ex: <meta http-equiv = "refresh" content=".1; url=./recommendations1.html">
-      // So let's relax a little bit otherwise http://www.mozillazine.org/resources/
-      // wouldn't get redirected to the correct URL.
-      if (millis == -1 && (nsCRT::IsAsciiDigit(token.First()) || token.First()==PRUnichar('.'))) {
-        PRBool tokenIsANumber = PR_TRUE;
-        nsReadingIterator<PRUnichar> doneIterating; token.EndReading(doneIterating);
-        nsReadingIterator<PRUnichar> iter;          token.BeginReading(iter);
-        while ( iter != doneIterating ) {
-          if (!(tokenIsANumber = nsCRT::IsAsciiDigit(*iter)) && *iter!=PRUnichar('.'))
-            break;
-          ++iter;
-        }
-        
-        if (tokenIsANumber) {
-          PRInt32 err;
-          millis = token.ToInteger(&err) * 1000;
-        } 
-        else {
-          done = PR_TRUE;
-        }
-      } 
-      else {
-        done = PR_TRUE;
-      }
-      if (done) {
-        PRInt32 loc = token.FindChar('=');
-        if (loc > -1)
-          token.Cut(0, loc+1);
-        token.Trim(" \"'");
-        uriAttrib.Assign(token);
-      } 
-      else {
-        // Increment to the next token.
-        if (semiColon > -1) {
-          semiColon++;
-          PRInt32 semiColon2 = aValue.FindCharInSet(";,", semiColon);
-          if (semiColon2 == -1) semiColon2 = aValue.Length();
-          aValue.Mid(token, semiColon, semiColon2 - semiColon);
-          semiColon = semiColon2;
-        } 
-        else {
-          done = PR_TRUE;
-        }
-      }
-    } // end while
-    
-    nsCOMPtr<nsIURI> uri;
-    if (uriAttrib.Length() == 0) {
-      uri = baseURI;
-    } else {
-      rv = NS_NewURI(getter_AddRefs(uri), 
-        uriAttrib, baseURI);
+
+    nsCOMPtr<nsIRefreshURI> reefer = do_QueryInterface(mWebShell);
+    if (reefer) {
+      rv = reefer->RefreshURIFromHeader(baseURI, aValue);
+      if (NS_FAILED(rv)) return rv;
     }
-    
-    if (NS_SUCCEEDED(rv)) {
-      NS_WITH_SERVICE(nsIScriptSecurityManager,
-        securityManager, 
-        NS_SCRIPTSECURITYMANAGER_CONTRACTID,
-        &rv);
-      if (NS_SUCCEEDED(rv)) {
-        rv = securityManager->CheckLoadURI(baseURI,
-          uri,
-          nsIScriptSecurityManager::DISALLOW_FROM_MAIL);
-        if (NS_SUCCEEDED(rv)) {
-          nsCOMPtr<nsIRefreshURI> reefer = 
-            do_QueryInterface(mWebShell);
-          if (reefer) {
-            if (millis == -1) millis = 0;
-            rv = reefer->RefreshURI(uri, millis,PR_FALSE, PR_TRUE);
-            if (NS_FAILED(rv)) return rv;
-          }//if (reefer)
-        }//if (NS_SUCCEEDED(rv)) {
-      }//if (NS_SUCCEEDED(rv)) {
-    }//if (NS_SUCCEEDED(rv)) {
   } // END refresh
   else if (aHeader == nsHTMLAtoms::setcookie) {
     nsCOMPtr<nsIDocShell> docShell = do_QueryInterface(mWebShell, &rv);

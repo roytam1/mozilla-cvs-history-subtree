@@ -310,7 +310,7 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
       }
 
       gfx_format format = gfxIFormats::RGB;
-#ifdef XP_PC
+#if defined(XP_PC) || defined(XP_BEOS)
       format = gfxIFormats::BGR;
 #endif
 
@@ -340,7 +340,7 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
                                            JPOOL_IMAGE,
                                            row_stride, 1);
 
-#if defined(XP_PC) || defined(XP_MAC)
+#if defined(XP_PC) || defined(XP_BEOS) || defined(XP_MAC)
     // allocate buffer to do byte flipping if needed
     if (mInfo.output_components == 3) {
       mRGBPadRow = (PRUint8*) PR_MALLOC(row_stride);
@@ -524,7 +524,7 @@ nsJPEGDecoder::OutputScanlines(int num_scanlines)
         samples = mSamples3[0];
       } else {
         /* 24-bit color image */
-#ifdef XP_PC
+#if defined(XP_PC) || defined(XP_BEOS)
         memset(mRGBPadRow, 0, mInfo.output_width * 4);
         PRUint8 *ptrOutputBuf = mRGBPadRow;
 
@@ -537,8 +537,7 @@ nsJPEGDecoder::OutputScanlines(int num_scanlines)
         }
 
         samples = mRGBPadRow;
-#else
-#ifdef XP_MAC
+#elif defined(XP_MAC)
         memset(mRGBPadRow, 0, mInfo.output_width * 4);
         PRUint8 *ptrOutputBuf = mRGBPadRow;
 
@@ -554,7 +553,6 @@ nsJPEGDecoder::OutputScanlines(int num_scanlines)
         samples = mRGBPadRow;
 #else
         samples = mSamples[0];
-#endif
 #endif
       }
 

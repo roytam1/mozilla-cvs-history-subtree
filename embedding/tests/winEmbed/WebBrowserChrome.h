@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -26,6 +26,7 @@
 #include "nsIGenericFactory.h"
 #include "nsString.h"
 #include "nsIWebBrowserChrome.h"
+#include "nsIWebBrowserChromeFocus.h"
 
 #include "nsIDocShell.h"
 #include "nsIContentViewer.h"
@@ -35,7 +36,6 @@
 #include "nsIWebNavigation.h"
 #include "nsIWebProgressListener.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsIPrompt.h"
 #include "nsIWebBrowser.h"
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
@@ -57,12 +57,14 @@ public:
     static void ShowContextMenu(nsIWebBrowserChrome *aChrome, PRUint32 aContextFlags, nsIDOMEvent *aEvent, nsIDOMNode *aNode);
     static void ShowTooltip(nsIWebBrowserChrome *aChrome, PRInt32 aXCoords, PRInt32 aYCoords, const PRUnichar *aTipText);
     static void HideTooltip(nsIWebBrowserChrome *aChrome);
+    static void ShowWindow(nsIWebBrowserChrome *aChrome, PRBool aShow);
+    static void SizeTo(nsIWebBrowserChrome *aChrome, PRInt32 aWidth, PRInt32 aHeight);
 };
 
 class WebBrowserChrome   : public nsIWebBrowserChrome,
+                           public nsIWebBrowserChromeFocus,
                            public nsIWebProgressListener,
                            public nsIEmbeddingSiteWindow,
-                           public nsIPrompt,
                            public nsIInterfaceRequestor,
                            public nsISHistoryListener,
                            public nsIObserver,
@@ -77,9 +79,9 @@ public:
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBBROWSERCHROME
+    NS_DECL_NSIWEBBROWSERCHROMEFOCUS
     NS_DECL_NSIWEBPROGRESSLISTENER
     NS_DECL_NSIEMBEDDINGSITEWINDOW
-    NS_DECL_NSIPROMPT
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSISHISTORYLISTENER
     NS_DECL_NSIOBSERVER
@@ -88,15 +90,22 @@ public:
 
     nsresult CreateBrowser(PRInt32 aX, PRInt32 aY, PRInt32 aCX, PRInt32 aCY,
                            nsIWebBrowser **aBrowser);
+
+    void     SetParent(nsIWebBrowserChrome *aParent)
+               { mDependentParent = aParent; }
    
 protected:
     nsresult SendHistoryStatusMessage(nsIURI * aURI, char * operation, PRInt32 info1=0, PRUint32 info2=0);
 
+    void ContentFinishedLoading();
+
     nativeWindow mNativeWindow;
     PRUint32     mChromeFlags;
+    PRBool       mContinueModalLoop;
+    PRBool       mSizeSet;
 
     nsCOMPtr<nsIWebBrowser> mWebBrowser;
-    nsCOMPtr<nsIWebBrowserChrome> mTopWindow;
+    nsCOMPtr<nsIWebBrowserChrome> mDependentParent; // opener (for dependent windows only)
 };
 
 #endif /* __WebBrowserChrome__ */

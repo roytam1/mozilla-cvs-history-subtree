@@ -3595,7 +3595,6 @@ nsXULDocument::GetBaseURI(nsAWritableString &aURI)
   return NS_OK;
 }
 
-
 //----------------------------------------------------------------------
 //
 // nsIHTMLContentContainer interface
