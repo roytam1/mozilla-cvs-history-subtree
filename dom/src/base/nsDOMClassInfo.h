@@ -278,12 +278,35 @@ public:
 };
 
 
-// FomrControlList scriptable helper
+// NamedArray helper
 
-class nsFormControlListSH : public nsArraySH
+class nsNamedArraySH : public nsArraySH
 {
 protected:
-  nsFormControlListSH(nsDOMClassInfoID aID) : nsArraySH(aID)
+  nsNamedArraySH(nsDOMClassInfoID aID) : nsArraySH(aID)
+  {
+  }
+
+  virtual ~nsNamedArraySH()
+  {
+  }
+
+  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult) = 0;
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+};
+
+
+// FomrControlList helper
+
+class nsFormControlListSH : public nsNamedArraySH
+{
+protected:
+  nsFormControlListSH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
   {
   }
 
@@ -296,11 +319,11 @@ protected:
   virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
                              PRUint32 aIndex, nsISupports **aResult);
 
-public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp,
-                         PRBool *_retval);
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult);
 
+public:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsFormControlListSH(aID);
@@ -406,6 +429,66 @@ public:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsHTMLOptionCollectionSH(aID);
+  }
+};
+
+
+// PluginArray helper
+
+class nsPluginArraySH : public nsNamedArraySH
+{
+protected:
+  nsPluginArraySH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  {
+  }
+
+  virtual ~nsPluginArraySH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult);
+
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsPluginArraySH(aID);
+  }
+};
+
+
+// MimeTypeArray helper
+
+class nsMimeTypeArraySH : public nsNamedArraySH
+{
+protected:
+  nsMimeTypeArraySH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  {
+  }
+
+  virtual ~nsMimeTypeArraySH()
+  {
+  }
+
+  // Override nsArraySH::GetItemAt() since our list isn't a
+  // nsIDOMNodeList
+  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult);
+
+  // Override nsNamedArraySH::GetNamedItem()
+  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult);
+
+public:
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsMimeTypeArraySH(aID);
   }
 };
 

@@ -52,7 +52,13 @@
 #include "nsIScriptObjectOwner.h"
 #include "nsIJSNativeInitializer.h"
 
-// DOM includes
+// DOM base includes
+#include "nsIDOMPluginArray.h"
+#include "nsIDOMPlugin.h"
+#include "nsIDOMMimeTypeArray.h"
+#include "nsIDOMMimeType.h"
+
+// DOM core includes
 #include "nsDOMError.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
@@ -73,17 +79,6 @@
 // Event related includes
 #include "nsIEventListenerManager.h"
 #include "nsIDOMEventReceiver.h"
-
-
-// XXX most of these can be removed once I merge with the tip.
-
-#include "nsIDOMMouseListener.h"
-#include "nsIDOMKeyListener.h"
-#include "nsIDOMMouseMotionListener.h"
-#include "nsIDOMFocusListener.h"
-#include "nsIDOMFormListener.h"
-#include "nsIDOMLoadListener.h"
-#include "nsIDOMPaintListener.h"
 
 // XBL related includes.
 #include "nsIXBLService.h"
@@ -147,6 +142,10 @@
   WANT_NEWRESOLVE |                                                           \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
+
+#define ARRAY_SCRIPTABLE_FLAGS                                                \
+  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
+  WANT_GETPROPERTY
 
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
@@ -360,12 +359,12 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(PluginArray, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(PluginArray, nsPluginArraySH::Create,
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(MimeType, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(MimeTypeArray, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(MimeTypeArray, nsMimeTypeArraySH::Create,
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(BarProp, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(History, nsDOMGenericSH::Create,
@@ -401,7 +400,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
@@ -421,15 +420,13 @@ nsDOMClassInfo::Init()
                            DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLCollection,
                            nsArraySH::Create, // XXX????
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY |
-                           WANT_SETPROPERTY);
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
                            nsHTMLOptionCollectionSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY |
-                           WANT_SETPROPERTY);
+                           ARRAY_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(HTMLFormControlCollection,
                            nsFormControlListSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
+                           ARRAY_SCRIPTABLE_FLAGS);
 
   // HTML element classes
   NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsElementSH::Create,
@@ -587,7 +584,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsArraySH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
+                           ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
@@ -1609,7 +1606,34 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 }
 
 
-// FomrControlList scriptable helper
+// Named Array helper
+
+NS_IMETHODIMP
+nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, jsval *vp,
+                            PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    nsCOMPtr<nsISupports> item;
+
+    nsresult rv = GetNamedItem(wrapper, id, getter_AddRefs(item));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Do we wanto fall through to nsArraySH::GetProperty() here if
+    // item is null?
+
+    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
+                    NS_GET_IID(nsISupports), vp);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+  }
+
+  return nsArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+
+// FomrControlList helper
 
 nsresult
 nsFormControlListSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
@@ -1629,39 +1653,24 @@ nsFormControlListSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
   return rv;
 }
 
-NS_IMETHODIMP
-nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
-                                 JSContext *cx, JSObject *obj, jsval id,
-                                 jsval *vp, PRBool *_retval)
+nsresult
+nsFormControlListSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                  nsISupports **aResult)
 {
-  if (JSVAL_IS_STRING(id)) {
-    JSString *jsstr = JSVAL_TO_STRING(id);
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
 
-    nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
-                                             ::JS_GetStringChars(jsstr)),
-                         ::JS_GetStringLength(jsstr));
+  nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(native));
+  NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
+  JSString *jsstr = JSVAL_TO_STRING(id);
 
-    nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(native));
-    NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
+  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                           ::JS_GetStringChars(jsstr)),
+                       ::JS_GetStringLength(jsstr));
 
-    nsCOMPtr<nsISupports> item;
-
-    nsresult rv = list->NamedItem(name, getter_AddRefs(item));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
-                    NS_GET_IID(nsISupports), vp);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return NS_OK;
-  }
-
-  return nsArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  return list->NamedItem(name, aResult);
 }
-
 
 // Document helper for document.location and document.on*
 
@@ -1896,5 +1905,97 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   NS_ENSURE_TRUE(oc, NS_ERROR_UNEXPECTED);
 
   return oc->SetOption(JSVAL_TO_INT(id), new_option);
+}
+
+
+// PluginArray helper
+
+nsresult
+nsPluginArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                           PRUint32 aIndex, nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(native));
+  NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
+
+  nsIDOMPlugin *plugin = nsnull;
+  nsresult rv = array->Item(aIndex, &plugin);
+
+  *aResult = plugin;
+
+  return rv;
+}
+
+nsresult
+nsPluginArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                              nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(native));
+  NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
+
+  JSString *jsstr = JSVAL_TO_STRING(id);
+
+  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                           ::JS_GetStringChars(jsstr)),
+                       ::JS_GetStringLength(jsstr));
+
+  nsIDOMPlugin *plugin = nsnull;
+
+  nsresult rv = array->NamedItem(name, &plugin);
+
+  *aResult = plugin;
+
+  return rv;
+}
+
+
+// PluginArray helper
+
+nsresult
+nsMimeTypeArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
+                             PRUint32 aIndex, nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(native));
+  NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
+
+  nsIDOMMimeType *mime_type = nsnull;
+  nsresult rv = array->Item(aIndex, &mime_type);
+
+  *aResult = mime_type;
+
+  return rv;
+}
+
+nsresult
+nsMimeTypeArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+                                nsISupports **aResult)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(native));
+  NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
+
+  JSString *jsstr = JSVAL_TO_STRING(id);
+
+  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
+                                           ::JS_GetStringChars(jsstr)),
+                       ::JS_GetStringLength(jsstr));
+
+  nsIDOMMimeType *mime_type = nsnull;
+
+  nsresult rv = array->NamedItem(name, &mime_type);
+
+  *aResult = mime_type;
+
+  return rv;
 }
 
