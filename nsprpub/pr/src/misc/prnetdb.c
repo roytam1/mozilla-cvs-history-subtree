@@ -1099,14 +1099,21 @@ static const unsigned char index_hex[256] = {
     XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
 };
 
+/*
+ * StringToV6Addr() returns 1 if the conversion succeeds,
+ * or 0 if the input is not a valid IPv6 address string.
+ * (Same as inet_pton(AF_INET6, string, addr).)
+ */
 static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
 {
-    unsigned char *s = (unsigned char *)string;
-    int section = 0;
-    int double_colon = -1;
-    int val;
+    const unsigned char *s = (const unsigned char *)string;
+    int section = 0;        /* index of the current section (a 16-bit
+                             * piece of the address */
+    int double_colon = -1;  /* index of the section after the first
+                             * 16-bit group of zeros represented by
+                             * the double colon */
+    unsigned int val;
     int len;
-    PRUint32 v4addr;
 
     /* Handle initial (double) colon */
     if (*s == ':') {
@@ -1117,6 +1124,7 @@ static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
     }
 
     while (*s) {
+        if (section == 8) return 0; /* too long */
         if (*s == ':') {
             if (double_colon != -1) return 0; /* two double colons */
             addr->_pr_s6_addr16[section++] = 0;
@@ -1127,37 +1135,22 @@ static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
         for (len = val = 0; len < 4 && index_hex[*s] != XX; len++) {
             val = (val << 4) + index_hex[*s++];
         }
-        if (*s == '.') break;
+        if (*s == '.') {
+            if (len == 0) return 0; /* nothing between : and . */
+            break;
+        }
         if (*s == ':') {
             s++;
             if (!*s) return 0; /* cannot end with single colon */
         } else if (*s) {
             return 0; /* bad character */
         }
-        addr->_pr_s6_addr16[section++] = htons(val);
-        if (section == 8 && *s) return 0; /* too long */
+        addr->_pr_s6_addr16[section++] = htons((unsigned short)val);
     }
     
     if (*s == '.') {
         /* Have a trailing v4 format address */
-        if (double_colon != -1) {
-            /*
-             * Stretch the double colon, leaving the last 32 bits
-             * for the v4 address
-             */
-            int tosection;
-            int ncopy = section - double_colon;
-            if (section > 6) return 0; /* not enough room */
-            for (tosection = 5; ncopy--; tosection--) {
-                addr->_pr_s6_addr16[tosection] = 
-                    addr->_pr_s6_addr16[double_colon + ncopy];
-            }
-            while (tosection >= double_colon) {
-                addr->_pr_s6_addr16[tosection--] = 0;
-            }
-        } else if (section != 6) {
-            return 0; /* not in the right place */
-        }
+        if (section > 6) return 0; /* not enough room */
 
         /*
          * The number before the '.' is decimal, but we parsed it
@@ -1166,39 +1159,39 @@ static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
          */
         if (val > 0x0255 || (val & 0xf0) > 0x90 || (val & 0xf) > 9) return 0;
         val = (val >> 8) * 100 + ((val >> 4) & 0xf) * 10 + (val & 0xf);
-        v4addr = val << 24;
+        addr->_pr_s6_addr[2 * section] = val;
 
         s++;
         val = index_hex[*s++];
-        if (val < 0 || val > 9) return 0;
+        if (val > 9) return 0;
         while (*s >= '0' && *s <= '9') {
             val = val * 10 + *s++ - '0';
             if (val > 255) return 0;
         }
         if (*s != '.') return 0; /* must have exactly 4 decimal numbers */
-        v4addr += val << 16;
+        addr->_pr_s6_addr[2 * section + 1] = val;
+        section++;
 
         s++;
         val = index_hex[*s++];
-        if (val < 0 || val > 9) return 0;
+        if (val > 9) return 0;
         while (*s >= '0' && *s <= '9') {
             val = val * 10 + *s++ - '0';
             if (val > 255) return 0;
         }
         if (*s != '.') return 0; /* must have exactly 4 decimal numbers */
-        v4addr += val << 8;
+        addr->_pr_s6_addr[2 * section] = val;
 
         s++;
         val = index_hex[*s++];
-        if (val < 0 || val > 9) return 0;
+        if (val > 9) return 0;
         while (*s >= '0' && *s <= '9') {
             val = val * 10 + *s++ - '0';
             if (val > 255) return 0;
         }
         if (*s) return 0; /* must have exactly 4 decimal numbers */
-        v4addr += val;
-        addr->_pr_s6_addr32[3] = htonl(v4addr);
-        return 1;
+        addr->_pr_s6_addr[2 * section + 1] = val;
+        section++;
     }
     
     if (double_colon != -1) {
@@ -1221,18 +1214,29 @@ static int StringToV6Addr(const char *string, PRIPv6Addr *addr)
             
 static const char *basis_hex = "0123456789abcdef";
 
-static int V6AddrToString(const PRIPv6Addr *addr, char *buf, PRUint32 size)
+/*
+ * V6AddrToString() returns a pointer to the buffer containing
+ * the text string if the conversion succeeds, and NULL otherwise.
+ * (Same as inet_ntop(AF_INET6, addr, buf, size).)
+ */
+static const char *V6AddrToString(
+    const PRIPv6Addr *addr, char *buf, PRUint32 size)
 {
 #define STUFF(c) do { \
-    if (!size--) return 0; \
+    if (!size--) goto failed; \
     *buf++ = (c); \
 } while (0)
 
-    int double_colon = -1;
-    int double_colon_length = 1;
+    int double_colon = -1;          /* index of the first 16-bit
+                                     * group of zeros represented
+                                     * by the double colon */
+    int double_colon_length = 1;    /* use double colon only if
+                                     * there are two or more 16-bit
+                                     * groups of zeros */
     int zero_length;
     int section;
-    int val;
+    unsigned int val;
+    const char *bufcopy = buf;
 
     /* Scan to find the placement of the double colon */
     for (section = 0; section < 8; section++) {
@@ -1243,6 +1247,7 @@ static int V6AddrToString(const PRIPv6Addr *addr, char *buf, PRUint32 size)
                 zero_length++;
                 section++;
             }
+            /* Select the longest sequence of zeros */
             if (zero_length > double_colon_length) {
                 double_colon = section - zero_length;
                 double_colon_length = zero_length;
@@ -1282,7 +1287,7 @@ static int V6AddrToString(const PRIPv6Addr *addr, char *buf, PRUint32 size)
             if (addr->_pr_s6_addr[15] > 9) STUFF((addr->_pr_s6_addr[15]%100)/10 + '0');
             STUFF(addr->_pr_s6_addr[15]%10 + '0');
             STUFF('\0');
-            return 1;
+            return bufcopy;
         }
     }
 
@@ -1308,7 +1313,11 @@ static int V6AddrToString(const PRIPv6Addr *addr, char *buf, PRUint32 size)
         if (section < 8 && section != double_colon) STUFF(':');
     }
     STUFF('\0');
-    return 1;
+    return bufcopy;
+
+failed:
+    errno = ENOSPC; /* the size of the result buffer is inadequate */
+    return NULL;
 #undef STUFF    
 }
 
@@ -1375,10 +1384,10 @@ PR_IMPLEMENT(PRStatus) PR_NetAddrToString(
 #if defined(_PR_INET6)
         if (NULL == inet_ntop(AF_INET6, &addr->ipv6.ip, string, size))
 #else
-        if (!V6AddrToString(&addr->ipv6.ip, string, size))
+        if (NULL == V6AddrToString(&addr->ipv6.ip, string, size))
 #endif
         {
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, errno);
+            PR_SetError(PR_BUFFER_OVERFLOW_ERROR, errno);
             return PR_FAILURE;
         }
     }
