@@ -129,6 +129,7 @@ if (!$silent)
    chomp ($lib_line = <STDIN>);
    $lib_line = $lline unless $lib_line =~ /\S/;
 } else {
+  $lib_line = $lline;
   print "\n";
 }
 
