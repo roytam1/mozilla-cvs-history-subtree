@@ -653,16 +653,11 @@ function MsgOpenNewWindowForFolder(folderUri)
 
 function MsgOpenSelectedMessages()
 {
-  var threadTree = GetThreadTree();
-  var selectedMessages = threadTree.selectedItems;
+  var selectedMessages = GetSelectedMessages();
   var numMessages = selectedMessages.length;
 
-  for(var i = 0; i < numMessages; i++) {
-    var messageNode = selectedMessages[i];
-    messageUri = messageNode.getAttribute("id");
-    if(messageUri) {
-      MsgOpenNewWindowForMessage(messageUri, null);
-    }
+  for (var i = 0; i < numMessages; i++) {
+    MsgOpenNewWindowForMessage(selectedMessages[i], null);
   }
 }
 
