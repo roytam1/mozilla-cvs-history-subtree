@@ -105,6 +105,10 @@
 #include "nsLeakDetector.h"
 #endif
 
+#ifdef DEBUG
+extern void _FreeAutoLockStatics();
+#endif
+
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kMemoryCID, NS_MEMORY_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -608,7 +612,6 @@ nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
     nsComponentManagerImpl::gComponentManager = nsnull;
 
 #ifdef DEBUG
-    extern void _FreeAutoLockStatics();
     _FreeAutoLockStatics();
 #endif
 
