@@ -222,7 +222,7 @@ PRInt32 ScheduleFileForDeletion(nsIFile *filename)
 
 PRInt32 ReplaceFileNow(nsIFile* aReplacementFile, nsIFile* aDoomedFile )
 {
-    PRBool flagExists, flagIsEqual;
+    PRBool flagExists, flagRenamedDoomedFileExists, flagIsEqual;
     nsCOMPtr<nsIFile> replacementFile;
     nsresult rv;
 
@@ -247,8 +247,8 @@ PRInt32 ReplaceFileNow(nsIFile* aReplacementFile, nsIFile* aDoomedFile )
     nsCOMPtr<nsILocalFile> tmpLocalFile;
     
     aDoomedFile->Clone(getter_AddRefs(renamedDoomedFile));
-    renamedDoomedFile->Exists(&flagExists);
-    if ( flagExists )
+    renamedDoomedFile->Exists(&flagRenamedDoomedFileExists);
+    if ( flagRenamedDoomedFileExists )
     {
 #ifdef XP_MACOSX
         // If we clone an nsIFile, and move the clone, the FSRef of the *original*
@@ -355,9 +355,12 @@ PRInt32 ReplaceFileNow(nsIFile* aReplacementFile, nsIFile* aDoomedFile )
 
     if (NS_SUCCEEDED(rv))
     {
-        // we replaced the old file OK, now we have to
-        // get rid of it if it was renamed out of the way
-        result = DeleteFileNowOrSchedule( renamedDoomedFile );
+        if (flagRenamedDoomedFileExists)
+        {
+            // we replaced the old file OK, now we have to
+            // get rid of it if it was renamed out of the way
+            result = DeleteFileNowOrSchedule( renamedDoomedFile );
+        }
     }
     else
     {
