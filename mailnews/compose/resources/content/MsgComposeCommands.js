@@ -672,21 +672,21 @@ function ComposeStartup()
       if (args.preselectid)
         params.identity = getIdentityForKey(args.preselectid);
   		if (args.to)
-  			composeFields.SetTo(args.to);
+  			composeFields.to = args.to;
   		if (args.cc)
-  			composeFields.SetCc(args.cc);
+  			composeFields.cc = args.cc;
   		if (args.bcc)
-  			composeFields.SetBcc(args.bcc);
+  			composeFields.bcc = args.bcc;
   		if (args.newsgroups)
-  			composeFields.SetNewsgroups(args.newsgroups);
+  			composeFields.newsgroups = args.newsgroups;
   		if (args.subject)
-  			composeFields.SetSubject(args.subject);
+  			composeFields.subject = args.subject;
   		if (args.attachment)
-  			composeFields.SetAttachments(args.attachment);
+  			composeFields.attachments = args.attachment;
 			if (args.newshost)
-				composeFields.SetNewshost(args.newshost);
+				composeFields.newshost = args.newshost;
 			if (args.body)
-         composeFields.SetBody(args.body);
+         composeFields.body = args.body;
     }
   }
   
@@ -763,7 +763,7 @@ function ComposeStartup()
     	{    	  
         if (params.bodyIsLink)
         {
-          var body = msgCompFields.GetBody();
+          var body = msgCompFields.body;
           if (msgCompose.composeHTML)
           {
             var cleanBody;
@@ -771,19 +771,18 @@ function ComposeStartup()
               cleanBody = unescape(body);
             } catch(e) { cleanBody = body;}
 
-            msgCompFields.SetBody("<BR><A HREF=\"" + body +
-                                  "\">" + cleanBody + "</A><BR>");
+            msgCompFields.body = "<BR><A HREF=\"" + body + "\">" + cleanBody + "</A><BR>";
           }
           else
-            msgCompFields.SetBody("\n<" + body + ">\n");
+            msgCompFields.body = "\n<" + body + ">\n";
         }
 
-				var subjectValue = msgCompFields.GetSubject();
+				var subjectValue = msgCompFields.subject;
 				if (subjectValue != "") {
 					document.getElementById("msgSubject").value = subjectValue;
 				}
 
-        var attachmentValue = msgCompFields.GetAttachments();
+        var attachmentValue = msgCompFields.attachments;
         if (attachmentValue != "") {
            var atts =  attachmentValue.split(",");
             for (var i=0; i < atts.length; i++)
@@ -914,7 +913,7 @@ function SetDefaultMailSendCharacterSet()
 
 function InitCharsetMenuCheckMark()
 {
-  // dump("msgCompose.compFields is " + msgCompose.compFields.GetCharacterSet() + "\n");
+  // dump("msgCompose.compFields is " + msgCompose.compFields.characterSet + "\n");
   // return if the charset is already set explitily
   if (currentMailSendCharset != null) {
     dump("already set to " + currentMailSendCharset + "\n");
@@ -938,7 +937,7 @@ function InitCharsetMenuCheckMark()
 //  send_default_charset = send_default_charset.toUpperCase();
   dump("send_default_charset is " + send_default_charset + "\n");
 
-  var compFieldsCharset = msgCompose.compFields.GetCharacterSet();
+  var compFieldsCharset = msgCompose.compFields.characterSet;
 //  compFieldsCharset = compFieldsCharset.toUpperCase();
   dump("msgCompose.compFields is " + compFieldsCharset + "\n");
 
@@ -963,7 +962,7 @@ function InitCharsetMenuCheckMark()
 
 function GetCharsetUIString()
 {
-  var charset = msgCompose.compFields.GetCharacterSet();
+  var charset = msgCompose.compFields.characterSet;
   if (g_send_default_charset == null) {
     try {
       prefs = Components.classes['@mozilla.org/preferences;1'];
@@ -1018,10 +1017,10 @@ function GenericSendMessage( msgType )
 	    {
 			Recipients2CompFields(msgCompFields);
 			var subject = document.getElementById("msgSubject").value;
-			msgCompFields.SetSubject(subject);
+			msgCompFields.subject = subject;
 			dump("attachments = " + GenerateAttachmentsString() + "\n");
 			try {
-				msgCompFields.SetAttachments(GenerateAttachmentsString());
+				msgCompFields.attachments = GenerateAttachmentsString();
 			}
 			catch (ex) {
 				dump("failed to SetAttachments\n");
@@ -1047,7 +1046,7 @@ function GenericSendMessage( msgType )
         					result
         					))
         				{
-        					msgCompFields.SetSubject(result.value);
+        					msgCompFields.subject = result.value;
         					var subjectInputElem = document.getElementById("msgSubject");
         					subjectInputElem.value = result.value;
         				}
@@ -1077,16 +1076,16 @@ function GenericSendMessage( msgType )
 				switch (action)
 				{
 					case msgCompSendFormat.PlainText:
-						msgCompFields.SetTheForcePlainText(true);
-						msgCompFields.SetUseMultipartAlternativeFlag(false);
+						msgCompFields.forcePlainText = true;
+						msgCompFields.useMultipartAlternative = false;
 						break;
 					case msgCompSendFormat.HTML:
-						msgCompFields.SetTheForcePlainText(false);
-						msgCompFields.SetUseMultipartAlternativeFlag(false);
+						msgCompFields.forcePlainText = false;
+						msgCompFields.useMultipartAlternative = false;
 						break;
 					case msgCompSendFormat.Both:
-						msgCompFields.SetTheForcePlainText(false);
-						msgCompFields.SetUseMultipartAlternativeFlag(true);
+						msgCompFields.forcePlainText = false;
+						msgCompFields.useMultipartAlternative = true;
 						break;	    
 				   default: dump("\###SendMessage Error: invalid action value\n"); return;
 				}
@@ -1179,14 +1178,14 @@ function MessageFcc(menuItem)
 		var msgCompFields = msgCompose.compFields;
 		if (msgCompFields)
 		{
-			if (msgCompFields.GetFcc2() == destUri)
+			if (msgCompFields.fcc2 == destUri)
 			{
-				msgCompFields.SetFcc2("nocopy://");
+				msgCompFields.fcc2 = "nocopy://";
 				dump("FCC2: none\n");
 			}
 			else
 			{
-				msgCompFields.SetFcc2(destUri);
+				msgCompFields.fcc2 = destUri;
 				dump("FCC2: " + destUri + "\n");
 			}
 		}
@@ -1200,7 +1199,7 @@ function PriorityMenuSelect(target)
 	{
 		var msgCompFields = msgCompose.compFields;
 		if (msgCompFields)
-			msgCompFields.SetPriority(target.getAttribute('id'));
+			msgCompFields.priority = target.getAttribute('id');
 	}
 }
 
@@ -1211,15 +1210,13 @@ function ReturnReceiptMenuSelect()
 		var msgCompFields = msgCompose.compFields;
 		if (msgCompFields)
 		{
-			if (msgCompFields.GetReturnReceipt())
+			if (msgCompFields.returnReceipt)
 			{
-				dump("Set Return Receipt to FALSE\n");
-				msgCompFields.SetReturnReceipt(false);
+				msgCompFields.returnReceipt = false;
 			}
 			else
 			{
-				dump("Set Return Receipt to TRUE\n");
-				msgCompFields.SetReturnReceipt(true);
+				msgCompFields.returnReceipt = true;
 			}
 		}
 	}
@@ -1251,9 +1248,9 @@ function SelectAddress()
 	
 	Recipients2CompFields(msgCompFields);
 	
-	var toAddress = msgCompFields.GetTo();
-	var ccAddress = msgCompFields.GetCc();
-	var bccAddress = msgCompFields.GetBcc();
+	var toAddress = msgCompFields.to;
+	var ccAddress = msgCompFields.cc;
+	var bccAddress = msgCompFields.bcc;
 	
 	dump("toAddress: " + toAddress + "\n");
 	window.openDialog("chrome://messenger/content/addressbook/abSelectAddressesDialog.xul",
@@ -1628,7 +1625,7 @@ function DetermineHTMLAction(convertible)
         } catch(ex)
         {
             var msgCompFields = msgCompose.compFields;
-            noHtmlRecipients = msgCompFields.GetTo() + "," + msgCompFields.GetCc() + "," + msgCompFields.GetBcc();
+            noHtmlRecipients = msgCompFields.to + "," + msgCompFields.cc + "," + msgCompFields.bcc;
             preferFormat = abPreferMailFormat.unknown;
         }
         dump("DetermineHTMLAction: preferFormat = " + preferFormat + ", noHtmlRecipients are " + noHtmlRecipients + "\n");
@@ -1638,7 +1635,7 @@ function DetermineHTMLAction(convertible)
             noHtmlnewsgroups = msgCompose.GetNoHtmlNewsgroups(null);
         } catch(ex)
         {
-           noHtmlnewsgroups = msgCompose.compFields.GetNewsgroups();
+           noHtmlnewsgroups = msgCompose.compFields.newsgroups;
         }
         
         if (noHtmlRecipients != "" || noHtmlnewsgroups != "")

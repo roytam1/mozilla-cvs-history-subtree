@@ -771,11 +771,9 @@ nsresult nsMsgCompose::SetEditor(nsIEditorShell * aEditor)
     m_editor->RegisterDocumentStateListener(mDocumentListener);
 
     // Set the charset
-    nsXPIDLString msgCharSet;
-    m_compFields->GetCharacterSet(getter_Copies(msgCharSet));
-    if (msgCharSet) {
-        m_editor->SetDocumentCharacterSet(msgCharSet);
-    }
+    nsAutoString msgCharSet;
+    msgCharSet.AssignWithConversion(m_compFields->GetCharacterSet());
+    m_editor->SetDocumentCharacterSet(msgCharSet.GetUnicode());
 
     // Now, lets init the editor here!
     // Just get a blank editor started...
@@ -1053,7 +1051,8 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
         
           // Setup quoting callbacks for later...
           mQuotingToFollow = PR_FALSE;	//We don't need to quote the original message.
-          m_compFields->SetAttachments(originalMsgURI);
+          //Fix this, need to go direcly from char * to char *
+          m_compFields->SetAttachments(nsAutoCString(nsAutoString(originalMsgURI)));
         
           break;
         }
@@ -1308,7 +1307,7 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
         if (! newgroups.IsEmpty())
         {
           if ((type != nsIMsgCompType::Reply) && (type != nsIMsgCompType::ReplyToSender))
-            compFields->SetNewsgroups(newgroups.GetUnicode());
+            compFields->SetNewsgroups(nsAutoCString(newgroups));
           if (type == nsIMsgCompType::ReplyToGroup)
             compFields->SetTo(&emptyUnichar);
         }
@@ -1316,7 +1315,7 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
         if (! followUpTo.IsEmpty())
         {
 		       if (type != nsIMsgCompType::ReplyToSender)
-			      compFields->SetNewsgroups(followUpTo.GetUnicode());
+			      compFields->SetNewsgroups(nsAutoCString(followUpTo));
            if (type == nsIMsgCompType::Reply)
             compFields->SetTo(&emptyUnichar);
         }
@@ -1324,7 +1323,7 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
         if (! references.IsEmpty())
           references.AppendWithConversion(' ');
         references += messageId;
-        compFields->SetReferences(references.GetUnicode());
+        compFields->SetReferences(nsAutoCString(references));
         
         if (needToRemoveDup)
         {
@@ -1487,10 +1486,11 @@ nsMsgCompose::QuoteOriginalMessage(const PRUnichar *originalMsgURI, PRInt32 what
   NS_ADDREF(this);
   mQuoteStreamListener->SetComposeObj(this);
 
-  nsXPIDLString msgCharSet;
-  m_compFields->GetCharacterSet(getter_Copies(msgCharSet));
+//Fix this, msgCharSet need to go from char* to char*
+  nsAutoString msgCharSet;
+  msgCharSet.AssignWithConversion(m_compFields->GetCharacterSet());
 
-  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, msgCharSet);
+  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, msgCharSet.GetUnicode());
   return rv;
 }
 

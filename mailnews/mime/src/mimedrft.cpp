@@ -180,7 +180,7 @@ mime_dump_attachments ( attachmentList );
   nsMsgAttachmentData *curAttachment = attachmentList;
   if (curAttachment)
   {
-	nsString attachments;
+	nsCAutoString attachments;
 	char* spec = nsnull;
 
 	while (curAttachment && curAttachment->real_name)
@@ -189,15 +189,15 @@ mime_dump_attachments ( attachmentList );
 		if (NS_SUCCEEDED(rv) && spec)
 		  {
 			if (attachments.Length())
-			  attachments.AppendWithConversion(',');
-			attachments.AppendWithConversion(spec);
+			  attachments.Append(',');
+			attachments.Append(spec);
 			nsCRT::free(spec);
 			spec = nsnull;
 		  }
 		curAttachment++;
 	  }
 	if (attachments.Length())
-	  compFields->SetAttachments(attachments.GetUnicode());
+	  compFields->SetAttachments(attachments);
   }
 
   NS_WITH_SERVICE(nsIMsgComposeService, msgComposeService,
@@ -268,7 +268,7 @@ CreateCompositionFields(const char        *from,
   NS_ADDREF(cFields);
 
   // Now set all of the passed in stuff...
-  cFields->SetCharacterSet(NS_ConvertASCIItoUCS2(charset).GetUnicode());
+  cFields->SetCharacterSet(charset);
   cFields->SetFrom(mime_decode_string(from).GetUnicode());
   cFields->SetSubject(mime_decode_string(subject).GetUnicode());
   cFields->SetReplyTo(mime_decode_string(reply_to).GetUnicode());
@@ -276,14 +276,14 @@ CreateCompositionFields(const char        *from,
   cFields->SetCc(mime_decode_string(cc).GetUnicode());
   cFields->SetBcc(mime_decode_string(bcc).GetUnicode());
   cFields->SetFcc(mime_decode_string(fcc).GetUnicode());
-  cFields->SetNewsgroups(mime_decode_string(newsgroups).GetUnicode());
-  cFields->SetFollowupTo(mime_decode_string(followup_to).GetUnicode());
+  cFields->SetNewsgroups(nsAutoCString(mime_decode_string(newsgroups)));
+  cFields->SetFollowupTo(nsAutoCString(mime_decode_string(followup_to)));
   cFields->SetOrganization(mime_decode_string(organization).GetUnicode());
-  cFields->SetReferences(mime_decode_string(references).GetUnicode());
+  cFields->SetReferences(nsAutoCString(mime_decode_string(references)));
   cFields->SetOtherRandomHeaders(mime_decode_string(other_random_headers).GetUnicode());
-  cFields->SetPriority(mime_decode_string(priority).GetUnicode());
-  cFields->SetAttachments(mime_decode_string(attachment).GetUnicode());
-  cFields->SetNewspostUrl(mime_decode_string(newspost_url).GetUnicode());
+  cFields->SetPriority(nsAutoCString(mime_decode_string(priority)));
+  cFields->SetAttachments(nsAutoCString(mime_decode_string(attachment)));
+  cFields->SetNewspostUrl(nsAutoCString(mime_decode_string(newspost_url)));
 
   return cFields;
 }
@@ -1218,28 +1218,22 @@ mime_parse_stream_complete (nsMIMESession *stream)
     {
       char *parm = 0;
       parm = MimeHeaders_get_parameter(draftInfo, "vcard", NULL, NULL);
-      if (parm && !nsCRT::strcmp(parm, "1"))
-        fields->SetBoolHeader(nsMsg_ATTACH_VCARD_BOOL_HEADER_MASK, PR_TRUE);
-      else
-        fields->SetBoolHeader(nsMsg_ATTACH_VCARD_BOOL_HEADER_MASK, PR_FALSE);
+      fields->SetAttachVCard(parm && !nsCRT::strcmp(parm, "1"));
       
       PR_FREEIF(parm);
       parm = MimeHeaders_get_parameter(draftInfo, "receipt", NULL, NULL);
       if (parm && !nsCRT::strcmp(parm, "0"))
-        fields->SetBoolHeader(nsMsg_RETURN_RECEIPT_BOOL_HEADER_MASK, PR_FALSE); 
+        fields->SetReturnReceipt(PR_FALSE); 
       else
       {
         int receiptType = 0;
-        fields->SetBoolHeader(nsMsg_RETURN_RECEIPT_BOOL_HEADER_MASK, PR_TRUE); 
+        fields->SetReturnReceipt(PR_TRUE); 
         sscanf(parm, "%d", &receiptType);
         fields->SetReturnReceipt((PRInt32) receiptType);
       }
       PR_FREEIF(parm);
       parm = MimeHeaders_get_parameter(draftInfo, "uuencode", NULL, NULL);
-      if (parm && !nsCRT::strcmp(parm, "1"))
-        fields->SetBoolHeader(nsMsg_UUENCODE_BINARY_BOOL_HEADER_MASK, PR_TRUE);
-      else
-        fields->SetBoolHeader(nsMsg_UUENCODE_BINARY_BOOL_HEADER_MASK, PR_FALSE);
+      fields->SetUuEncodeAttachments(parm && !nsCRT::strcmp(parm, "1"));
       PR_FREEIF(parm);
       parm = MimeHeaders_get_parameter(draftInfo, "html", NULL, NULL);
       if (parm)
@@ -1374,8 +1368,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
           CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, composeFormat, mdd->identity);
         else
         {
-          nsString urlStr; urlStr.AssignWithConversion(mdd->url_name);
-          fields->SetDraftId(urlStr.GetUnicode());
+          fields->SetDraftId(mdd->url_name);
           CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, composeFormat, mdd->identity);
         }
       }
@@ -1405,8 +1398,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
           CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, nsIMsgCompFormat::Default, mdd->identity);
         else
         {
-          nsString urlStr; urlStr.AssignWithConversion(mdd->url_name);
-          fields->SetDraftId(urlStr.GetUnicode());
+          fields->SetDraftId(mdd->url_name);
           CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, nsIMsgCompFormat::Default, mdd->identity);
         }
       }

@@ -134,11 +134,14 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
   	  if (originalMsgURI && *originalMsgURI)
   		  if (type == nsIMsgCompType::NewsPost) 
         {
-          nsAutoString newsURI;
-          nsAutoString group;
-          nsAutoString host;
+          nsCAutoString newsURI;
+          nsCAutoString group;
+          nsCAutoString host;
         
-          newsURI.Assign(originalMsgURI);
+          //Fix this. originalMsgURI should be passed as char*
+          nsAutoString tempUnicode(originalMsgURI);
+          
+          newsURI = nsAutoCString(tempUnicode);
           PRInt32 slashpos = newsURI.FindChar('/');
           if (slashpos > 0 )
           {
@@ -147,11 +150,10 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
             newsURI.Right(group, newsURI.Length() - slashpos - 1);
           }
           else
-            group.Assign(originalMsgURI);
+            group = nsAutoCString(tempUnicode);
 
-          
-          pMsgCompFields->SetNewsgroups(group.GetUnicode());
-          pMsgCompFields->SetNewshost(host.GetUnicode());
+          pMsgCompFields->SetNewsgroups(group);
+          pMsgCompFields->SetNewshost(host);
   		}
   		else
         pMsgComposeParams->SetOriginalMsgURI(originalMsgURI);
@@ -238,9 +240,11 @@ nsresult nsMsgComposeService::OpenComposeWindowWithValues(const PRUnichar *msgCo
 		if (to)			    {pCompFields->SetTo(to);}
 		if (cc)			    {pCompFields->SetCc(cc);}
 		if (bcc)		    {pCompFields->SetBcc(bcc);}
-		if (newsgroups)	{pCompFields->SetNewsgroups(newsgroups);}
+		//Fix this, need to go from char* to char * directly
+		if (newsgroups)	{pCompFields->SetNewsgroups(nsAutoCString(nsAutoString(newsgroups)));}
 		if (subject)	  {pCompFields->SetSubject(subject);}
-		if (attachment)	{pCompFields->SetAttachments(attachment);}
+		//Fix this, need to go from char* to char * directly
+		if (attachment)	{pCompFields->SetAttachments(nsAutoCString(nsAutoString(attachment)));}
 		if (body)		    {pCompFields->SetBody(body);}
 	
 		rv = OpenComposeWindowWithCompFields(msgComposeWindowURL, type, format, pCompFields, identity);

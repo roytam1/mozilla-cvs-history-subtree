@@ -252,7 +252,7 @@ public:
   // Setup the composition fields
   //
   nsresult    InitCompositionFields(nsMsgCompFields *fields);
-  int         SetMimeHeader(MSG_HEADER_SET header, const char *value);
+  int         SetMimeHeader(nsMsgCompFields::MsgHeaderID header, const char *value);
   NS_IMETHOD  GetBodyFromEditor();
 
   // methods for listener array processing...
