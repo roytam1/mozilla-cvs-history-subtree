@@ -63,7 +63,7 @@ sub normalizeDN
   my ($dn) = @_;
   my (@vals);
 
-  return "" if ($dn eq "");
+  return "" unless (defined($dn) && ($dn ne ""));
 
   @vals = Mozilla::LDAP::API::ldap_explode_dn(lc $dn, 0);
 
@@ -213,7 +213,7 @@ sub ldapArgs
 
   $main::opt_v = $main::opt_n if defined($main::opt_n);
   $main::opt_p = LDAPS_PORT unless (defined($main::opt_p) ||
-				    ($main::opt_p eq ""));
+				    ($main::opt_P eq ""));
 
   $ld{"host"} = $main::opt_h || "ldap";
   $ld{"port"} = $main::opt_p || LDAP_PORT;
@@ -293,6 +293,12 @@ sub answer
   return "Y" if /^[yY]/;
   return "N" if /^[nN]/;
 }
+
+
+#############################################################################
+# Mandatory TRUE return value.
+#
+1;
 
 
 #############################################################################
