@@ -395,8 +395,6 @@ endif
 ifeq ($(ARCH), SOLARIS)
 ifeq ($(USE_64), 1)
 LINK_EXE += -xarch=v9 -L/usr/lib/sparcv9 -lCrun
-else
-LINK_EXE += -xarch=v8
 endif
 endif
 
