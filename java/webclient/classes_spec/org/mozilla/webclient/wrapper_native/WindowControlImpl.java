@@ -30,6 +30,8 @@ import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
+import org.mozilla.webclient.UnimplementedException;
+
 import java.awt.Rectangle;
 
 public class WindowControlImpl extends ImplObjectNative implements WindowControl
