@@ -111,6 +111,7 @@ XSLTProcessor::XSLTProcessor() {
     xslTypes.put(FOR_EACH,        new XSLType(XSLType::FOR_EACH));
     xslTypes.put(IF,              new XSLType(XSLType::IF));
     xslTypes.put(INCLUDE,         new XSLType(XSLType::INCLUDE));
+    xslTypes.put(KEY,             new XSLType(XSLType::KEY));
     xslTypes.put(MESSAGE,         new XSLType(XSLType::MESSAGE));
     xslTypes.put(NUMBER,          new XSLType(XSLType::NUMBER));
     xslTypes.put(OTHERWISE,       new XSLType(XSLType::OTHERWISE));
@@ -481,6 +482,17 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                     }
                     break;
 
+                }
+                case XSLType::KEY :
+                {
+                    if (!aPs->addKey(element)) {
+                        String err("error adding key '");
+                        err.append(element->getAttribute(NAME_ATTR));
+                        err.append("'");
+                        notifyError(err);
+                    }
+                    break;
+                    
                 }
                 case XSLType::OUTPUT :
                 {

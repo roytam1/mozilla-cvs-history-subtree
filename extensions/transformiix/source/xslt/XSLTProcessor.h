@@ -378,6 +378,7 @@ public:
         ELEMENT,
         IF,
         INCLUDE,
+        KEY,
         FOR_EACH,
         LITERAL,
         NUMBER,

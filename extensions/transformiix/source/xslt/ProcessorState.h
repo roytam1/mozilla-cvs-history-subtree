@@ -40,6 +40,8 @@
 #include "StringList.h"
 #include "OutputFormat.h"
 
+class txXSLKey;
+
 /**
  * Class used for keeping the current state of the XSL Processor
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
@@ -252,6 +254,17 @@ public:
     **/
     Document* getLoadedDocument(String& url);
 
+    /**
+     * Adds the supplied xsl:key to the set of keys
+    **/
+    MBool addKey(Element* xslKey);
+
+    /**
+     * Returns the key with the supplied name
+     * returns NULL if no such key exists
+    **/
+    txXSLKey* getKey(String& keyName);
+
     //-------------------------------------/
     //- Virtual Methods from ContextState -/
     //-------------------------------------/
@@ -399,6 +412,11 @@ private:
      * the set of loaded documents
     **/
     NamedMap       loadedDocuments;
+    
+    /**
+     * The set of all available keys
+    **/
+    NamedMap       xslKeys;
 
 
     XSLTAction*    currentAction;
