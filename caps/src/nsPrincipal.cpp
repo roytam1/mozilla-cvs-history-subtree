@@ -60,9 +60,14 @@ PRInt32 nsPrincipal::sCapabilitiesOrdinal = 0;
 const char nsPrincipal::sInvalid[] = "Invalid";
 
 
-NS_IMPL_QUERY_INTERFACE2_CI(nsPrincipal,
-                            nsIPrincipal,
-                            nsISerializable)
+NS_INTERFACE_MAP_BEGIN(nsPrincipal)
+  NS_INTERFACE_MAP_ENTRY(nsIPrincipal)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISerializable, nsIPrincipal)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIPrincipal)
+  NS_INTERFACE_MAP_ENTRY(nsIPrincipalObsolete)
+  NS_IMPL_QUERY_CLASSINFO(nsPrincipal)
+NS_INTERFACE_MAP_END
+
 NS_IMPL_CI_INTERFACE_GETTER2(nsPrincipal,
                              nsIPrincipal,
                              nsISerializable)
@@ -850,5 +855,46 @@ nsPrincipal::Write(nsIObjectOutputStream* aStream)
     return rv;
   }
 
+  return NS_OK;
+}
+
+// nsIPrincipalObsolete interface
+
+NS_IMETHODIMP
+nsPrincipal::ToString(char **aResult)
+{
+  if (mCert)
+    return nsPrincipal::GetCertificateID(aResult);
+
+  return nsPrincipal::GetOrigin(aResult);
+}
+
+NS_IMETHODIMP
+nsPrincipal::ToUserVisibleString(char **aResult)
+{
+  if (mCert)
+    return nsPrincipal::GetCommonName(aResult);
+
+  return nsPrincipal::GetOrigin(aResult);
+}
+
+NS_IMETHODIMP
+nsPrincipal::Equals(nsIPrincipalObsolete *aOther, PRBool *aResult)
+{
+  nsCOMPtr<nsIPrincipal> princ = do_QueryInterface(aOther);
+  return nsPrincipal::Equals(princ, aResult);
+}
+
+NS_IMETHODIMP
+nsPrincipal::HashValue(PRUint32 *aResult)
+{
+  return nsPrincipal::GetHashValue(aResult);
+}
+
+NS_IMETHODIMP
+nsPrincipal::GetJSPrincipals(JSPrincipals **aResult)
+{
+  *aResult = &mJSPrincipals;
+  JSPRINCIPALS_HOLD(nsnull, *aResult);
   return NS_OK;
 }

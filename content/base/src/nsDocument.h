@@ -493,6 +493,7 @@ public:
   NS_DECL_NSIDOM3EVENTTARGET
 
   // nsIScriptObjectPrincipal
+  NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete **aPrincipal);
   NS_IMETHOD GetPrincipal(nsIPrincipal **aPrincipal);
 
   virtual nsresult Init();

@@ -37,12 +37,19 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsISupports.idl"
-#include "nsIPrincipal.idl"
+#include "nsIPrincipalObsolete.idl"
 #include "nsIXPCSecurityManager.idl"
 interface nsIURI;
 
-[scriptable, uuid(18158378-b632-436a-9ced-c52ded350bde)]
-interface nsIScriptSecurityManager : nsIXPCSecurityManager
+/**
+ * This interface exists for compatibility with pre-Mozilla 1.6.
+ * It deals with the backwards-compatible nsIPrincipalObsolete interface
+ * instead of the current nsIPrincipal interface.
+ * DO NOT USE THIS INTERFACE in new code.
+ */
+
+[scriptable, uuid(58df5780-8006-11d2-bd91-00805f8ae3f4)]
+interface nsIScriptSecurityManagerObsolete : nsIXPCSecurityManager
 {
     ///////////////// Security Checks //////////////////
     /**
@@ -126,7 +133,7 @@ interface nsIScriptSecurityManager : nsIXPCSecurityManager
      * execute scripts.
      */
     [noscript] boolean canExecuteScripts(in JSContextPtr cx,
-                                         in nsIPrincipal principal);
+                                         in nsIPrincipalObsolete principal);
 
     ///////////////// Principals /////////////////////// 
     /**
@@ -134,31 +141,31 @@ interface nsIScriptSecurityManager : nsIXPCSecurityManager
      * executing script. Will return null if there is no script 
      * currently executing.
      */
-    [noscript] nsIPrincipal getSubjectPrincipal();
+    [noscript] nsIPrincipalObsolete getSubjectPrincipal();
 
     /**
      * Return the all-powerful system principal.
      */
-    [noscript] nsIPrincipal getSystemPrincipal();
+    [noscript] nsIPrincipalObsolete getSystemPrincipal();
 
     /**
      * Return a principal with the specified certificate ID and codebase URI.
      */
-    [noscript] nsIPrincipal getCertificatePrincipal(in string CertID, in nsIURI aURI);
+    [noscript] nsIPrincipalObsolete getCertificatePrincipal(in string CertID, in nsIURI aURI);
 
     /**
      * Return a principal that has the same origin as aURI.
      */
-    [noscript] nsIPrincipal getCodebasePrincipal(in nsIURI aURI);
+    [noscript] nsIPrincipalObsolete getCodebasePrincipal(in nsIURI aURI);
 
     ///////////////// Capabilities API /////////////////////
     /**
      * Request that 'capability' can be enabled by scripts or applets
      * running with 'principal'. Will prompt user if
-     * necessary. Returns nsIPrincipal::ENABLE_GRANTED or
-     * nsIPrincipal::ENABLE_DENIED based on user's choice.
+     * necessary. Returns nsIPrincipalObsolete::ENABLE_GRANTED or
+     * nsIPrincipalObsolete::ENABLE_DENIED based on user's choice.
      */
-    [noscript] short requestCapability(in nsIPrincipal principal,
+    [noscript] short requestCapability(in nsIPrincipalObsolete principal,
                                        in string capability);
     
     /**
@@ -197,7 +204,7 @@ interface nsIScriptSecurityManager : nsIXPCSecurityManager
     /**
      * Return the principal of the specified object in the specified context.
      */
-    [noscript] nsIPrincipal getObjectPrincipal(in JSContextPtr cx,
+    [noscript] nsIPrincipalObsolete getObjectPrincipal(in JSContextPtr cx,
                                                in JSObjectPtr obj);
 
     /**
@@ -224,14 +231,14 @@ interface nsIScriptSecurityManager : nsIXPCSecurityManager
      * Returns OK if aSourcePrincipal and aTargetPrincipal
      * have the same "origin" (scheme, host, and port).
      */
-    [noscript] void checkSameOriginPrincipal(in nsIPrincipal aSourcePrincipal,
-                                             in nsIPrincipal aTargetPrincipal);
+    [noscript] void checkSameOriginPrincipal(in nsIPrincipalObsolete aSourcePrincipal,
+                                             in nsIPrincipalObsolete aTargetPrincipal);
 
     /**
      * Returns the principal of the global object of the given context, or null
      * if no global or no principal.
      */
-    [noscript] nsIPrincipal getPrincipalFromContext(in JSContextPtr cx);
+    [noscript] nsIPrincipalObsolete getPrincipalFromContext(in JSContextPtr cx);
 
     /**
      * Utility method for comparing two URIs.  For security purposes, two URIs

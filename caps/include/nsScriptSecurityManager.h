@@ -42,6 +42,7 @@
 #define nsScriptSecurityManager_h__
 
 #include "nsIScriptSecurityManager.h"
+#include "nsIScriptSecurityManagerObsolete.h"
 #include "nsIPrincipal.h"
 #include "jsapi.h"
 #include "jsdbgapi.h"
@@ -63,6 +64,7 @@ class nsIIOService;
 class nsIXPConnect;
 class nsIStringBundle;
 class nsSystemPrincipal;
+class nsIPrincipalObsolete;
 struct ClassPolicy;
 
 #if defined(DEBUG_mstoltz) || defined(DEBUG_caillon)
@@ -310,6 +312,7 @@ private:
 { 0xba, 0x18, 0x00, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
 
 class nsScriptSecurityManager : public nsIScriptSecurityManager,
+                                public nsIScriptSecurityManagerObsolete,
                                 public nsIObserver
 {
 public:
@@ -321,6 +324,25 @@ public:
     NS_DECL_NSISCRIPTSECURITYMANAGER
     NS_DECL_NSIXPCSECURITYMANAGER
     NS_DECL_NSIOBSERVER
+
+    // nsIScriptSecurityManagerObsolete methods
+    NS_IMETHOD CanExecuteScripts(JSContext *aContext,
+                                 nsIPrincipalObsolete *aPrincipal,
+                                 PRBool *aResult);
+    NS_IMETHOD GetSubjectPrincipal(nsIPrincipalObsolete **aResult);
+    NS_IMETHOD GetSystemPrincipal(nsIPrincipalObsolete **aResult);
+    NS_IMETHOD GetCertificatePrincipal(const char *aCertID, nsIURI *aURI,
+                                       nsIPrincipalObsolete **aResult);
+    NS_IMETHOD GetCodebasePrincipal(nsIURI *aURI,
+                                    nsIPrincipalObsolete **aResult);
+    NS_IMETHOD RequestCapability(nsIPrincipalObsolete *aPrincipal,
+                                 const char *aCapability, PRInt16 *aResult);
+    NS_IMETHOD GetObjectPrincipal(JSContext *aContext, JSObject *aObject,
+                                  nsIPrincipalObsolete **aResult);
+    NS_IMETHOD CheckSameOriginPrincipal(nsIPrincipalObsolete *aSource,
+                                        nsIPrincipalObsolete *aTarget);
+    NS_IMETHOD GetPrincipalFromContext(JSContext *aContext,
+                                       nsIPrincipalObsolete **aResult);
 
     static nsScriptSecurityManager*
     GetScriptSecurityManager();

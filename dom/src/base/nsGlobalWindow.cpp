@@ -139,6 +139,7 @@
 #include "nsIControllerContext.h"
 #include "nsGlobalWindowCommands.h"
 #include "nsAutoPtr.h"
+#include "nsIPrincipalObsolete.h"
 
 #include "plbase64.h"
 
@@ -1036,6 +1037,19 @@ GlobalWindowImpl::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 //*****************************************************************************
 // GlobalWindowImpl::nsIScriptObjectPrincipal
 //*****************************************************************************
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetPrincipalObsolete(nsIPrincipalObsolete** result)
+{
+  nsCOMPtr<nsIPrincipal> principal;
+  nsresult rv = GlobalWindowImpl::GetPrincipal(getter_AddRefs(principal));
+  if (principal)
+    CallQueryInterface(principal, result);
+  else
+    *result = nsnull;
+
+  return rv;
+}
 
 NS_IMETHODIMP
 GlobalWindowImpl::GetPrincipal(nsIPrincipal** result)

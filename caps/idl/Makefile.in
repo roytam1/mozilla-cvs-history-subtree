@@ -34,6 +34,8 @@ XPIDLSRCS	= \
 		nsIPrincipal.idl \
 		nsISignatureVerifier.idl \
 		nsISecurityCheckedComponent.idl \
+		nsIPrincipalObsolete.idl \
+		nsIScriptSecurityManagerObsolete.idl \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
