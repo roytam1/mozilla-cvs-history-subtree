@@ -26,7 +26,18 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src
+MODULE		= rdfutil
+LIBRARY_NAME	= rdfutil_s
+REQUIRES	= xpcom \
+		  string \
+		  rdf \
+		  $(NULL)
+
+CPPSRCS		= src/nsRDFResource.cpp
+EXPORTS		= public/nsRDFResource.h
+
+# we don't want the shared lib, but we want to force the creation of a static lib.
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 
