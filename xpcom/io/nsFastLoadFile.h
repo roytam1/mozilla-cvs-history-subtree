@@ -187,7 +187,7 @@ class NS_COM nsFastLoadDependencyArray : public nsVoidArray {
 
 /**
  * Inherit from the concrete class nsBinaryInputStream, which inherits from
- * abstract nsIObjectInputStream but does not implement its direct method.
+ * abstract nsIObjectInputStream but does not implement its direct methods.
  * Though the names are not as clear as I'd like, this seems to be the best
  * way to share nsBinaryStream.cpp code.
  */
@@ -305,7 +305,7 @@ NS_NewFastLoadFileReader(nsIObjectInputStream* *aResult,
 
 /**
  * Inherit from the concrete class nsBinaryInputStream, which inherits from
- * abstract nsIObjectInputStream but does not implement its direct method.
+ * abstract nsIObjectInputStream but does not implement its direct methods.
  * Though the names are not as clear as I'd like, this seems to be the best
  * way to share nsBinaryStream.cpp code.
  */
