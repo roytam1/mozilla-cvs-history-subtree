@@ -2789,7 +2789,7 @@ NS_IMETHODIMP nsDocShell::CreateFixupURI(const PRUnichar* aStringURI,
    uriString.Trim(" ");  // Cleanup the empty spaces that might be on each end.
 
    // Just try to create an URL out of it
-   NS_NewURI(aURI, uriString.GetUnicode(), nsnull);
+   NS_NewURI(aURI, uriString, nsnull);
    if(*aURI)
       return NS_OK;
 
@@ -2822,7 +2822,7 @@ NS_IMETHODIMP nsDocShell::CreateFixupURI(const PRUnichar* aStringURI,
       else 
          uriString.InsertWithConversion("http://", 0, 7);
    } // end if checkprotocol
-   return NS_NewURI(aURI, uriString.GetUnicode(), nsnull);
+   return NS_NewURI(aURI, uriString, nsnull);
 }
 
 NS_IMETHODIMP nsDocShell::FileURIFixup(const PRUnichar* aStringURI, 
@@ -3355,7 +3355,7 @@ nsDocShell::OnNewURI(nsIURI *aURI, nsIChannel *aChannel, nsDocShellInfoLoadType 
         nsCOMPtr<nsIURI> baseURI = mCurrentURI;
 
         PRInt32 millis = -1;
-        PRUnichar *uriAttrib = nsnull;
+        nsAutoString uriAttrib;
         nsString result; result.AssignWithConversion (refreshHeader);
 
         PRInt32 semiColon = result.FindCharInSet(";,");
@@ -3392,7 +3392,7 @@ nsDocShell::OnNewURI(nsIURI *aURI, nsIChannel *aChannel, nsDocShellInfoLoadType 
                     if (loc > -1)
                         token.Cut(0, loc+1);
                      token.Trim(" \"'");
-                     uriAttrib = token.ToNewUnicode();
+                     uriAttrib = token;
             } else {
                 // Increment to the next token.
                     if (semiColon > -1) {
@@ -3408,11 +3408,10 @@ nsDocShell::OnNewURI(nsIURI *aURI, nsIChannel *aChannel, nsDocShellInfoLoadType 
         } // end while
 
         nsCOMPtr<nsIURI> uri;
-        if (!uriAttrib) {
+        if (!uriAttrib.Length()) {
             uri = baseURI;
         } else {
             NS_NewURI(getter_AddRefs(uri), uriAttrib, baseURI);
-            nsMemory::Free(uriAttrib);
         }
 
         RefreshURI (uri, millis, PR_FALSE);

@@ -128,8 +128,8 @@ nsHTMLContentSinkStream::nsHTMLContentSinkStream()
 
 NS_IMETHODIMP
 nsHTMLContentSinkStream::Initialize(nsIOutputStream* aOutStream, 
-                                    nsString* aOutString,
-                                    const nsString* aCharsetOverride,
+                                    nsAWritableString* aOutString,
+                                    const nsAReadableString* aCharsetOverride,
                                     PRUint32 aFlags)
 {
   mDoFormat = (aFlags & nsIDocumentEncoder::OutputFormatted) ? PR_TRUE
@@ -157,7 +157,7 @@ nsHTMLContentSinkStream::Initialize(nsIOutputStream* aOutStream,
   mStream = aOutStream;
   mString = aOutString;
   if (aCharsetOverride != nsnull)
-    mCharsetOverride.AssignWithConversion(aCharsetOverride->GetUnicode());
+    mCharsetOverride.AssignWithConversion(nsAutoString(*aCharsetOverride).GetUnicode());
 
   mPreLevel = 0;
 
@@ -374,7 +374,7 @@ void nsHTMLContentSinkStream::Write(const char* aData)
   }
   if (mString)
   {
-    mString->AppendWithConversion(aData);
+    mString->Append(NS_ConvertASCIItoUCS2(aData));
   }
 }
 
@@ -390,7 +390,7 @@ void nsHTMLContentSinkStream::Write(char aData)
   }
   if (mString)
   {
-    mString->AppendWithConversion(aData);
+    mString->Append(NS_ConvertASCIItoUCS2(aData));
   }
 }
 
