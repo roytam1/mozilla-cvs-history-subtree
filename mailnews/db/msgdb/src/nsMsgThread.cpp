@@ -190,10 +190,12 @@ NS_IMETHODIMP nsMsgThread::AddChild(nsIMsgDBHdr *child, nsIMsgDBHdr *inReplyTo, 
 	nsMsgKey newHdrKey = 0;
 	PRBool parentKeyNeedsSetting = PR_TRUE;
 	
+  if (m_flags & MSG_FLAG_IGNORED && m_mdbDB)
+    m_mdbDB->MarkHdrRead(child, PR_TRUE, nsnull);
+
 	nsIMdbRow *hdrRow = hdr->GetMDBRow();
 	hdr->GetFlags(&newHdrFlags);
 	hdr->GetMessageKey(&newHdrKey);
-
 
 	PRUint32 numChildren;
 	PRUint32 childIndex = 0;
