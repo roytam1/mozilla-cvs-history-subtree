@@ -14,8 +14,7 @@ $TreeSpecific::name = $TreeSpecific::checkout_target = $TreeSpecific::checkout_c
 
 $::Version = '$Revision$ ';
 
-{
-    $ENV{CVSROOT} = ":pserver:$ENV{USER}%netscape.com\@cvs.mozilla.org:/cvsroot" if !defined($ENV{CVSROOT});
+{    
     TinderUtils::Setup();
     tree_specific_overides();
     TinderUtils::Build();
