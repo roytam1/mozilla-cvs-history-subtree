@@ -90,7 +90,8 @@ sub STORE
   return unless (defined($val) && ($val ne ""));
   return unless (defined($attr) && ($attr ne ""));
 
-  if ($attr =~ /^_.+_$/)        # Don't track "internal" values
+  # We don't "track" internal values, or DNs...
+  if (($attr =~ /^_.+_$/) || ($attr eq "dn"))
     {
       $self->{$attr} = $val;
       return;
@@ -108,7 +109,7 @@ sub STORE
     if defined($self->{"_${attr}_deleted_"});
 
   # Potentially add the attribute to the OC order list.
-  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
+  if (! grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
       $self->{"_oc_numattr_"}++;
@@ -236,6 +237,7 @@ sub attrModified
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
   return 0 if defined($self->{"_${attr}_deleted_"});
+  return 0 if ($attr eq "dn");
 
   $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
     unless defined($self->{"_${attr}_save_"});
@@ -259,6 +261,7 @@ sub attrClean
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
   return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 if ($attr eq "dn");
 
   delete $self->{"_${attr}_modified_"}
     if defined($self->{"_${attr}_modified_"});
@@ -358,7 +361,7 @@ sub rename
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValue($new, @{$self->{$old}}) || return 0;
+  $self->setValues($new, @{$self->{$old}}) || return 0;
   $self->remove($old);
 
   return 1;
@@ -377,7 +380,7 @@ sub copy
   return 0 if ($self->isAttr($new) && (!defined($force) || !$force));
   return 0 unless $self->isAttr($old);
 
-  $self->setValue($new, @{$self->{$old}}) || return 0;
+  $self->setValues($new, @{$self->{$old}}) || return 0;
 
   return 1;
 }
@@ -393,6 +396,7 @@ sub unRemove
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
+  return 0 if ($attr eq "dn");
 
   # ToDo: We need to verify that this sucker works...
   delete $self->{"_${attr}_deleted_"};
@@ -426,6 +430,7 @@ sub removeValue
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
+  return 0 if ($attr eq "dn");
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
   $self->{"_${attr}_save_"} = [ @{$self->{$attr}} ] unless
@@ -483,6 +488,7 @@ sub addValue
 
   return 0 unless (defined($val) && ($val ne ""));
   return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 if ($attr eq "dn");
 
   if (defined($self->{$attr}) && (!defined($force) || !$force))
     {
@@ -519,7 +525,7 @@ sub addValue
     }
 
   # Potentially add the attribute to the OC order list.
-  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
+  if (! grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
       $self->{"_oc_numattr_"}++;
@@ -550,7 +556,7 @@ sub addDNValue
 # The arguments are the name of the attribute, and then one or more values,
 # passed as scalar or an array (not pointer).
 #
-sub setValue
+sub setValues
 {
   my ($self, $attr) = (shift, lc shift);
   my (@vals) = @_;
@@ -559,6 +565,7 @@ sub setValue
 
   return 0 unless (defined(@vals) && ($#vals >= $[));
   return 0 unless (defined($attr) && ($attr ne ""));
+  return 0 if ($attr eq "dn");
 
   $self->{$attr} = [ @vals ];
   $self->{"_${attr}_modified_"} = 1;
@@ -566,7 +573,7 @@ sub setValue
   delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
 
-  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
+  if (! grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
       $self->{"_oc_numattr_"}++;
@@ -574,6 +581,23 @@ sub setValue
 
   return 1;
 }
+*setValue = \*setValues;
+
+
+#############################################################################
+# Get the entire array of attribute values. This returns the array, not
+# the pointer to the array...
+#
+sub getValues
+{
+  my ($self, $attr) = (shift, lc shift);
+
+  return unless (defined($attr) && ($attr ne ""));
+  return unless defined($self->{$attr});
+
+  return @{$self->{$attr}};
+}
+*getValue = \*getValues;
 
 
 #############################################################################
@@ -978,20 +1002,20 @@ attribute. For instance
 will only add the DN for "uid=leif" if it does not exist as a DN in the
 uniqueMember attribute.
 
-=item B<setValue>
+=item B<setValues>
 
 Set the specified attribute to the new value (or values), overwriting
 whatever old values it had before. This is a little dangerous, since you
 can lose attribute values you didn't intend to remove. Therefore, it's
-usually recommended to use B<removeValue()> and B<setValue()>. If you know
+usually recommended to use B<removeValue()> and B<setValues()>. If you know
 exactly what the new values should be like, you can use this method like
 
-    $entry->setValue("cn", "Leif Hedstrom", "The Swede");
-    $entry->setValue("mail", @mailAddresses);
+    $entry->setValues("cn", "Leif Hedstrom", "The Swede");
+    $entry->setValues("mail", @mailAddresses);
 
 or if it's a single value attribute,
 
-    $entry->setValue("uidNumber", "12345");
+    $entry->setValues("uidNumber", "12345");
 
 =item B<hasValue>
 
