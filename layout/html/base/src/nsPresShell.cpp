@@ -5066,8 +5066,10 @@ PresShell::EndReflowBatching(PRBool aFlushPendingReflows)
 {  
   nsresult rv = NS_OK;
   mBatchReflows = PR_FALSE;
+#ifdef DEBUG
   fprintf(stderr,"Releasing %d reflows batched\n",
           mReflowCommands.Count() + mTimeoutReflowCommands.Count());
+#endif
   if (aFlushPendingReflows) {
     rv = FlushPendingNotifications(PR_FALSE);
   }
@@ -6336,7 +6338,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
       nsReflowTree::Node *n = tree.MergeCommand(curr);
       int i;
-#ifdef DEBUG
+#ifdef 0
       fprintf(stderr, "Initial path dump:\n");
       DumpPath(curr_path,0);
 #endif
@@ -6351,7 +6353,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
         if (!n)
           continue;         // can't be merged...try next?
         
-#ifdef DEBUG
+#ifdef 0
         fprintf(stderr, "Path dump (merged):\n");
         DumpPath(command->GetPath(),0);
 #endif
