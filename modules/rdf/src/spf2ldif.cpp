@@ -1,3 +1,22 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+
 /* 
  * spf2ldif.cpp
  *
@@ -96,16 +115,17 @@ char *backslashEscape(char *sourceString, const char *specialChars, int destroy)
    char *destPtr = destString;
    while( *sourcePtr )
    {
-      for( const char *specialCharPtr = specialChars; 
-         *specialCharPtr && (*sourcePtr != *specialCharPtr); specialCharPtr++ );
-      if( *specialCharPtr )
+      const char* specialPtr;
+      for( specialPtr = specialChars; 
+         *specialPtr && (*sourcePtr != *specialPtr); specialPtr++ );
+      if( *specialPtr )
       { // It's a special character, prepend a backslash
          *destPtr = '\\'; destPtr++;
       }
       *destPtr = *sourcePtr; destPtr++;
       sourcePtr++;
    }
-   *destPtr = NULL;
+   *destPtr = (char)NULL;
    if( destroy ) delete[] sourceString;
    return destString;
 }
@@ -137,9 +157,6 @@ VocabElement::~VocabElement()
    delete[] elementName;
 }
 
-void VocabElement::RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh)
-{}
-
 ArcToString::ArcToString(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res) :
 VocabElement(_xmlnamespace, _elementName, _rdf, _res)
 {}
@@ -159,11 +176,6 @@ void ArcToString::RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry
          next = rdf2.getNext();
       }
    }
-/*
-   char* next = getSlotValue(Parent);
-   if(next)
-      ldif.pushAttribute(getTagSuffix(), next);
- */      
 }
 
 ArcToResource::ArcToResource(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res) :
@@ -172,10 +184,6 @@ VocabElement(_xmlnamespace, _elementName, _rdf, _res)
 
 ArcToResource::~ArcToResource()
 {}
-
-void ArcToResource::RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh)
-{
-}
 
 Resource::Resource(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res) :
 VocabElement(_xmlnamespace, _elementName, _rdf, _res),
@@ -188,8 +196,7 @@ Resource::~Resource()
       delete[] ldiftitle;
 }
 
-void Resource::RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh)
-{}
+#define MANHATTAN_TITLE_PROHIBITED_CHARS ",+\"<>;\\~`!@#$%^&*()=+':;/?. "
 
 char* Resource::constructLDIFTitle(char* title)
 {
@@ -205,16 +212,30 @@ char* Resource::constructLDIFTitle(char* title)
        */
       while(*s != (char)NULL){
          *t = tolower(*s);
-//         if(*t == ' ')
-//            *t = '_';
-         if(*t != ',' && *t != ' ')
-            t++;
+         char *bad = MANHATTAN_TITLE_PROHIBITED_CHARS;
+         while(*bad)
+         {
+            if(*t == *bad++)
+            {
+               t--;
+               break;
+            }
+         }
+         t++;
          s++;
       }
       *t = (char)NULL;
    }
    ldiftitle = ldapDnEscape(ldiftitle, TRUE);
    return ldiftitle;
+}
+
+char* Resource::ldifTitle(char* title) 
+{
+   char* beginID = strchr(id, '#');
+   if(beginID) beginID++;
+
+   return ldiftitle ? ldiftitle : constructLDIFTitle(beginID ? beginID : title);
 }
 
 
@@ -273,7 +294,6 @@ time_t DC_date::makeTime(char* DateString)
    struct tm newtime = {0};
 #ifndef XP_WIN
    extern time_t timezone; // difference, in seconds, between Coordinated Universal Time and the local standard time
-   extern time_t daylight;
 #endif
    // newtime.tm_sec   =  Seconds after minute (0 – 59)
    // newtime.tm_min   =  Minutes after hour (0 – 59)
@@ -731,6 +751,17 @@ void SP_Organization::RDF_to_LDIF(Vocabulary& vocab, PRFileDesc* ldif_fh, PRFile
    }
 
    ldif.write();
+}
+
+char* SP_Organization::constructLDIFTitle(char* title)
+{
+   const char* org = "org_";
+   Resource::constructLDIFTitle(title);
+   char *buf = new char[strlen(ldiftitle) + strlen(org) +1];
+   sprintf(buf, "%s%s", org, ldiftitle);
+   delete[] ldiftitle;
+   ldiftitle = buf;
+   return ldiftitle;
 }
 
 SP_section::SP_section(RDF_Wrapper& rdf, RDF_Resource r, char* elementName) :

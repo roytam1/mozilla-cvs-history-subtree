@@ -1,3 +1,22 @@
+/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+
 #ifndef _SPF2LDIF_
   #define _SPF2LDIF_
 
@@ -51,11 +70,11 @@ public:
       return current ? current->value : (T*)NULL;
    }
    inline T* getNext() {
-      current = current ? current->next : NULL;
+      current = current ? current->next : (Node*)NULL;
       return current ? current->value : (T*)NULL;
    }
    inline T* getPrev() {
-      current = current ? current->prev : NULL;
+      current = current ? current->prev : (Node*)NULL;
       return current ? current->value : (T*)NULL;
    }
 public:
@@ -155,11 +174,11 @@ class VocabElement
 public:
     VocabElement(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res);
    virtual ~VocabElement();
-   virtual void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh);
+   virtual inline void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh) {}
    inline char* getTagName() {return elementName; }
    inline char* getTagSuffix() {
        char* end = strrchr(elementName, '/');
-       return end ? end + 1 : NULL;
+       return end ? end + 1 : (char*)NULL;
    }
    inline operator RDF_Resource() { return res; }
    inline operator char*() { return id; }
@@ -188,7 +207,7 @@ protected:
   ArcToResource(char* _xmlnamespace, char* _elementName, RDF_Wrapper& _rdf, RDF_Resource _res);
   virtual ~ArcToResource();
 public:
-  virtual void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh);
+  virtual inline void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh) {}
   inline RDF_Resource getSlotValue(RDF_Resource Parent) {
       return rdf.getSlotResource(Parent, *this);
   }
@@ -202,16 +221,14 @@ protected:
   char* ldiftitle;
   virtual char* constructLDIFTitle(char* title);
 public:
-  virtual void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh);
+  virtual inline void RDF_to_LDIF(RDF_Resource Parent, Vocabulary& vocab, LDIF_Entry& ldif, PRFileDesc* fetch_fh) {}
   inline RDF_Resource getSlotValue(ArcToResource& arc) {
     return rdf.getSlotResource(*this, arc);
   }
   inline char* getSlotValue(ArcToString& arc) {
     return rdf.getSlotValue(*this, arc);
   }
-  virtual inline char* ldifTitle(char* title=NULL) {
-      return ldiftitle ? ldiftitle : constructLDIFTitle(title);
-  }
+  virtual char* ldifTitle(char* title=NULL);
 };
 
 class DublinCore
@@ -346,6 +363,8 @@ class SP_Organization : public SitePreview, public Resource
 public:
    SP_Organization(RDF_Wrapper& rdf, RDF_Resource r = NULL, char* elementName = "Organization");
    virtual void RDF_to_LDIF(Vocabulary& vocab, PRFileDesc* ldif_fh, PRFileDesc* fetch_fh);
+protected:
+   virtual char* constructLDIFTitle(char* title);
 };
 class SP_section : public SitePreview, public ArcToResource
 {
