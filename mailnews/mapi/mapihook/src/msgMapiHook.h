@@ -55,6 +55,8 @@ class nsMapiHook
                                         nsIMsgCompFields * aCompFields) ;
         static nsresult PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompFields, 
                                         ULONG aFlags, LPTSTR aDelimChar, LPTSTR aFilePaths) ;
+        static nsresult HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 aFileCount, 
+                                        lpnsMapiFileDesc aFiles, BOOL aIsUnicode) ;
         static void CleanUp();
 
         static PRBool isMapiService;
