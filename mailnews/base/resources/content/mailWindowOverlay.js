@@ -1574,3 +1574,48 @@ function SetupUndoRedoCommand(command)
     return canUndoOrRedo;
 }
 
+function OnMsgLoaded(folder, msgURI)
+{
+    var currentMsgFolder = folder.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var imapServer = currentMsgFolder.server.QueryInterface(Components.interfaces.nsIImapIncomingServer);
+    var storeReadMailInPFC = imapServer.storeReadMailInPFC;
+    if (storeReadMailInPFC)
+    {
+      var messageID;
+
+      var copyToOfflineFolder = true;
+
+      // look in read mail PFC for msg with same msg id - if we find one,
+      // don't put this message in the read mail pfc.
+      var outputPFC = imapServer.GetReadMailPFC(true);
+      var messageURI = GetLoadedMessage();
+      if (messageURI != msgURI)
+      {
+        dump("not loading msg into this window - loaded message = " + messageURI + "loading " + msgURI + "\n");
+//        return;
+      }
+      var msgHdr = messenger.messageServiceFromURI(messageURI).messageURIToMsgHdr(messageURI);
+      if (msgHdr)
+      {
+        messageID = msgHdr.messageId;
+        if (messageID.length > 0)
+        {
+          var readMailDB = outputPFC.getMsgDatabase(msgWindow);
+          if (readMailDB)
+          {
+            var hdrInDestDB = readMailDB.getMsgHdrForMessageID(messageID);
+            if (hdrInDestDB)
+              copyToOfflineFolder = false;
+          }
+        }
+      }
+      if (copyToOfflineFolder)
+      {
+		    var messages = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
+        messages.AppendElement(msgHdr);
+
+        res = outputPFC.copyMessages(currentMsgFolder, messages, false /*isMove*/, msgWindow /* nsIMsgWindow */, null /* listener */, false /* isFolder */, false /*allowUndo*/ );
+      }
+     }
+}
+

@@ -62,7 +62,10 @@ var folderListener = {
     else if (event.GetUnicode() == "DeleteOrMoveMsgFailed") {
       HandleDeleteOrMoveMsgFailed(folder);
     }
-  }
+   else if (event.GetUnicode() == "msgLoaded") {
+    OnMsgLoaded(folder, gCurrentMessageUri);
+   }
+ }
 }
 
 function nsMsgDBViewCommandUpdater()
