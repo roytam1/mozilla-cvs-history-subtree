@@ -179,13 +179,13 @@ NS_IMETHODIMP FileImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   // of nsISupports), one through
   // nsIOutputStream, the other through nsIInputStream.  Resolve this
   // by giving them a specific one
-  if (aIID.Equals(nsIBaseStream::IID()))
+  if (aIID.Equals(nsIOutputStream::nsIBaseStream::IID()))
   {
       *aInstancePtr = (void*)((nsIBaseStream*)(nsIOutputStream*)this);
       NS_ADDREF_THIS();
       return NS_OK;
   }
-  if (aIID.Equals(nsISupports::IID()))
+  if (aIID.Equals(nsIOutputStream::nsISupports::IID()))
   {
       *aInstancePtr = (void*)((nsISupports*)(nsIOutputStream*)this);
       NS_ADDREF_THIS();
