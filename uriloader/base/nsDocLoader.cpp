@@ -45,6 +45,7 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStringBundle.h"
+#include "nsIScriptSecurityManager.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
@@ -1487,6 +1488,23 @@ NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsIHttpChannel *aOldChannel, nsIChanne
 {
   if (aOldChannel)
   {
+    nsresult rv;
+    nsCOMPtr<nsIURI> oldURI, newURI;
+
+    rv = aOldChannel->GetOriginalURI(getter_AddRefs(oldURI));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = aNewChannel->GetURI(getter_AddRefs(newURI));
+    if (NS_FAILED(rv)) return rv;
+
+    // verify that this is a legal redirect
+    NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager,
+                    NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    rv = securityManager->CheckLoadURI(oldURI, newURI,
+                                       nsIScriptSecurityManager::DISALLOW_FROM_MAIL);
+    if (NS_FAILED(rv)) return rv;
+
     nsLoadFlags loadFlags = 0;
     PRInt32 stateFlags = nsIWebProgressListener::STATE_REDIRECTING |
                          nsIWebProgressListener::STATE_IS_REQUEST;
