@@ -886,8 +886,12 @@ nsWindowWatcher::GetActiveWindow(nsIDOMWindow **aActiveWindow)
 NS_IMETHODIMP
 nsWindowWatcher::SetActiveWindow(nsIDOMWindow *aActiveWindow)
 {
-  mActiveWindow = aActiveWindow;
-  return NS_OK;
+  if (FindWindowEntry(aActiveWindow)) {
+    mActiveWindow = aActiveWindow;
+    return NS_OK;
+  }
+  NS_ASSERTION(0, "invalid active window");
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
