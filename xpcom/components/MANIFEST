@@ -1,7 +1,0 @@
-nsIGenericFactory.h
-nsIRegistryUtils.h
-nsIServiceManager.h
-nsRepository.h
-nsXPComFactory.h
-nsComponentManagerUtils.h
-nsStaticComponent.h
