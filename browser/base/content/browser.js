@@ -1010,6 +1010,8 @@ function Startup()
 {
   gBrowser = document.getElementById("content");
 
+  window.tryToClose = WindowIsClosing;
+
   var uriToLoad = null;
   // Check for window.arguments[0]. If present, use that for uriToLoad.
   if ("arguments" in window && window.arguments.length >= 1 && window.arguments[0])
@@ -1989,6 +1991,13 @@ function BrowserCloseTabOrWindow()
   }
 
   BrowserCloseWindow();
+}
+
+function BrowserTryToCloseWindow()
+{
+  //give tryToClose a chance to veto if it is defined
+  if (typeof(window.tryToClose) != "function" || window.tryToClose())
+    BrowserCloseWindow();
 }
 
 function BrowserCloseWindow() 
