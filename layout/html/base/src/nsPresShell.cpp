@@ -5562,9 +5562,49 @@ PresShell::HandleEvent(nsIView         *aView,
       if (NS_IS_KEY_EVENT(aEvent) || NS_IS_IME_EVENT(aEvent) || aEvent->message == NS_CONTEXTMENU_KEY) { 
         //Key events go to the focused frame, not point based.
         manager->GetFocusedContent(&mCurrentEventContent);
-        if (mCurrentEventContent)
+        if (mCurrentEventContent) {
           GetPrimaryFrameFor(mCurrentEventContent, &mCurrentEventFrame);
-        else {
+#if DEBUG_katakai
+          printf("focus exists, mCurrentEventContent = %x\n", mCurrentEventContent);
+#endif
+        } else {
+          nsCOMPtr<nsIFocusController> focusController;
+          nsCOMPtr<nsIScriptGlobalObject> ourGlobal;
+          mDocument->GetScriptGlobalObject(getter_AddRefs(ourGlobal));
+          nsCOMPtr<nsPIDOMWindow> ourWindow = do_QueryInterface(ourGlobal);
+          if (ourWindow) {
+            ourWindow->GetRootFocusController(getter_AddRefs(focusController));
+            if (focusController) {
+              PRBool active = PR_FALSE;
+              // check input focus is in Mozilla
+              focusController->GetActive(&active);
+              if (!active) {
+                // if not, search pre-focused element
+                nsCOMPtr<nsIDOMElement> focusedElement;
+                focusController->GetFocusedElement(getter_AddRefs(focusedElement));
+                if(focusedElement) {
+                  // get mCurrentEventContent from focusedElement
+                  focusedElement->QueryInterface(NS_GET_IID(nsIContent),
+                                                (void **)&mCurrentEventContent);
+#if DEBUG_katakai
+                  printf("No focus, try to get last focused mCurrentEventContent = %x\n",
+                                                                  mCurrentEventContent);
+#endif
+                }
+              }
+#if DEBUG_katakai
+              else {
+                  printf("focus exists");
+              }
+#endif
+            }
+          }
+
+          if (!mCurrentEventContent) {
+            // fallback, call existing codes
+            mDocument->GetRootContent(&mCurrentEventContent);
+          }
+
           // XXX This is the way key events seem to work?  Why?????
           // They spend time doing calls to GetFrameForPoint with the
           // point as (0,0) (or sometimes something else).
@@ -5590,7 +5630,6 @@ PresShell::HandleEvent(nsIView         *aView,
                 // On the Mac it is possible to be running with no windows open, only the native menu bar.
                 // In this situation, we need to handle key board events but there are no frames, so
                 // we set mCurrentEventContent and that works itself out in HandleEventInternal.
-                mDocument->GetRootContent(&mCurrentEventContent);
                 mCurrentEventFrame = nsnull;
 /*#else
 								if (aForceHandle) {
