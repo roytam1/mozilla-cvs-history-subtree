@@ -1368,9 +1368,13 @@ nsHTMLDocument::CreateElement(const nsAString& aTagName,
                               nsIDOMElement** aReturn)
 {
   *aReturn = nsnull;
+  nsresult rv;
 
-  nsresult rv = nsContentUtils::CheckQName(aTagName, PR_FALSE);
-  NS_ENSURE_SUCCESS(rv, rv);
+  // if we are in quirks, don't validate the tag name
+  if (mCompatMode != eCompatibility_NavQuirks){
+    rv = nsContentUtils::CheckQName(aTagName, PR_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }  
 
   nsAutoString tmp(aTagName);
 
