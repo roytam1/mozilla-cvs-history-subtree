@@ -837,6 +837,55 @@ SECNAV_ComputeFortezzaProxyChallengeResponse(MWContext *context,
 
 
 
+unsigned char *
+SECNAV_CopySSLSocketStatus(unsigned char *status)
+{
+    MOZ_FUNCTION_STUB;
+    return(NULL);
+}
+
+unsigned char *
+SECNAV_SSLSocketStatus(PRFileDesc *fd, int *return_security_level)
+{
+    return(NULL);
+}
+
+unsigned int
+SECNAV_SSLSocketStatusLength(unsigned char *status)
+{
+    MOZ_FUNCTION_STUB;
+    return 0;
+}
+
+
+char *
+SECNAV_PrettySecurityStatus(int level, unsigned char *status)
+{
+    MOZ_FUNCTION_STUB;
+    return(NULL);
+}
+
+char *
+SECNAV_SSLSocketCertString(unsigned char *status)
+{
+    MOZ_FUNCTION_STUB;
+    return NULL;
+}
+
+
+PRBool
+SECNAV_CompareCertsForRedirection(unsigned char *status1,
+				  unsigned char *status2)
+{
+    MOZ_FUNCTION_STUB;
+    return(PR_FALSE);
+}
+
+
+
+
+
+
 #if defined(USE_JS_STUBS)
 /*
  *---------------------------------------------------------------------------
