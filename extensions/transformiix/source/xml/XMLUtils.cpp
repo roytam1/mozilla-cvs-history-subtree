@@ -67,6 +67,21 @@ nsresult txExpandedName::init(const nsAString& aQName,
  //- Implementation of XMLUtils -/
 //------------------------------/
 
+void XMLUtils::splitXMLName(const nsAString& aName, nsIAtom** aPrefix,
+                            nsIAtom** aLocalName)
+{
+    PRInt32 idx = aName.FindChar(':');
+    if (idx == kNotFound) {
+        *aPrefix = nsnull;
+        *aLocalName = NS_NewAtom(aName);
+    }
+    else {
+        *aPrefix = NS_NewAtom(Substring(aName, 0, idx));
+        *aLocalName = NS_NewAtom(Substring(aName, idx + 1,
+                                           aName.Length() - (idx + 1)));
+    }
+}
+
 void XMLUtils::getPrefix(const nsAString& src, nsIAtom** dest)
 {
     // Anything preceding ':' is the namespace part of the name
