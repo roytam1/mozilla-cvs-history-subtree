@@ -2014,7 +2014,9 @@ function s2v_scrollto (sourceTab, line, align)
     
     var window = sourceTab.iframe.contentWindow;
     var viewportHeight = window.innerHeight;
-    var documentHeight = window.document.height;
+    var style = window.getComputedStyle(sourceTab.content, null);
+    var cssValue = style.getPropertyCSSValue("height");
+    var documentHeight = cssValue.getFloatValue(CSSPrimitiveValue.CSS_PX);
     var lineCount = sourceTab.sourceText.lines.length;
     var lineHeight = documentHeight / lineCount;
 
@@ -2265,8 +2267,9 @@ function s2v_tabunloaded (sourceTab, status)
 console.views.source2.onSourceTabLoaded =
 function s2v_tabloaded (sourceTab, status)
 {
-    sourceTab.content = 
-        sourceTab.iframe.contentDocument.getElementById ("source-listing");
+    var collection = 
+        sourceTab.iframe.contentDocument.getElementsByTagName ("source-listing");
+    sourceTab.content = collection[0];
 
     if (!sourceTab.content)
     {
@@ -2589,7 +2592,10 @@ console.views.source2.showTab =
 function s2v_showtab (index)
 {
     //dd ("show tab " + index);
-    this.tabs.selectedItem = this.tabs.childNodes[index];
+    if (this.tabs)
+        this.tabs.selectedItem = this.tabs.childNodes[index];
+    else
+        this.lastSelectedTab = index;
 }
 
 console.views.source2.progressListener = new Object();

@@ -73,7 +73,7 @@ function mmgr_hookpop (node)
 MenuManager.prototype.showPopup =
 function mmgr_showpop (event)
 {
-    dd ("showPopup {");
+    //dd ("showPopup {");
     /* returns true if the command context has the properties required to
      * execute the command associated with |menuitem|.
      */
@@ -192,7 +192,7 @@ function mmgr_showpop (event)
         
     } while ((menuitem = menuitem.nextSibling));
 
-    dd ("}");
+    //dd ("}");
     
     return true;
 }

@@ -450,8 +450,8 @@ function vmgr_getlocation (element)
             if (beforeNode.hasAttribute("grout"))
                 beforeNode = beforeNode.nextSibling;
             
-        if (ASSERT(beforeNode, "nothing before the grout?"))
-            before = beforeNode.getAttribute("id");
+            if (ASSERT(beforeNode, "nothing before the grout?"))
+                before = beforeNode.getAttribute("id");
         }
     }
 

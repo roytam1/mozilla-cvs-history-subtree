@@ -790,8 +790,8 @@ function con_respondsourcetext (response, sourceText)
         }
         else
         {
-            //resultSource += "</source-listing>";
-            resultSource += "</source-listing></body></html>";
+            resultSource += "</source-listing>";
+            //resultSource += "</source-listing></body></html>";
             response.append(resultSource);
             response.end();
             sourceText.markup = resultSource;
@@ -804,7 +804,7 @@ function con_respondsourcetext (response, sourceText)
         
         if ("markup" in sourceText)
         {
-            //response.channel.contentType = "text/xml";
+            response.channel.contentType = "text/xml";
             response.start();
             response.append(sourceText.markup);
             response.end();
@@ -814,19 +814,18 @@ function con_respondsourcetext (response, sourceText)
             sourceLines = sourceText.lines;
             maxDigits = Math.floor(Math.log(sourceLines.length) / Math.LN10);
             dd ("building response {");
-            /*
             response.channel.contentType = "text/xml";
             resultSource = "<?xml version='1.0'?>\n" +
                 "<?xml-stylesheet type='text/css' href='" +
                 console.prefs["services.source.css"] + "' ?>\n" +
-                "<source-listing>\n";
-            */
+                "<source-listing id='source-listing'>\n";
 
+            /*
             resultSource = "<html><head>\n" +
                 "<link rel='stylesheet' type='text/css' href='" +
                 console.prefs["services.source.css"] + "'><body>\n" +
                 "<source-listing id='source-listing'>\n";
-
+            */
             response.start();
 
             processSourceChunk (0);

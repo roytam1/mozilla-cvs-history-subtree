@@ -1121,7 +1121,7 @@ function cmdProps (e)
     if (!(v instanceof jsdIValue) || v.jsType != jsdIValue.TYPE_OBJECT)
     {
         var str = (v instanceof jsdIValue) ? formatValue(v) : String(v)
-        display (getMsg(MSN_ERR_INVALID_PARAM, [MSG_VAL_EXPR, str]),
+        display (getMsg(MSN_ERR_INVALID_PARAM, [MSG_VAL_EXPRESSION, str]),
                  MT_ERROR);
         return false;
     }
@@ -1295,7 +1295,7 @@ function cmdSaveProfile (e)
 function cmdScope ()
 {
     if (getCurrentFrame().scope.propertyCount == 0)
-        display (getMsg (MSN_NO_PROPERTIES, MSG_WORD_SCOPE));
+        display (getMsg (MSN_NO_PROPERTIES, MSG_VAL_SCOPE));
     else
         displayProperties (getCurrentFrame().scope);
     

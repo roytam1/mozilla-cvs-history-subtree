@@ -1042,7 +1042,6 @@ function debugTrap (frame, type, rv)
 
             console.currentException = rv.value;
             retcode = jsdIExecutionHook.RETURN_CONTINUE_THROW;
-            rv.value = {message: "my test exception"};
             
             tn = MSG_VAL_THROW;
             break;
@@ -1085,9 +1084,6 @@ function debugTrap (frame, type, rv)
     
     console.trapType = type;
     
-    window.focus();
-    window.getAttention();
-
     try
     {    
         console.jsds.enterNestedEventLoop({onNest: eventLoopNested}); 
@@ -1117,6 +1113,9 @@ function debugTrap (frame, type, rv)
 
 function eventLoopNested ()
 {
+    window.focus();
+    window.getAttention();
+
     dispatch ("hook-debug-stop");
 }
 
