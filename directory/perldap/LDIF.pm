@@ -102,14 +102,9 @@ sub continue_line
 sub unpack_LDIF
 {
     my ($str, $read_ref, $option) = @_;
-    if ((defined $option) and ("comments" eq lc $option)) {
-	# Move comments down to the end of a complete value:
-	while ($str =~ s"((^#.*$/)+)(( .*$/)+)"$3$1"m) {}
-	$str =~ s"((^#.*$/)+)( .*$)"$3$/$1"m;
-    } else {
-	$str =~ s"^#.*($/|$)""gm; # ignore comments
-    }
     $str =~ s"$/ ""g; # combine continuation lines
+    $str =~ s"^#.*($/|$)""gm # ignore comments
+	unless ((defined $option) and ("comments" eq lc $option));
     my (@record, $attr, $value);
     local $_;
     foreach $_ (split $/, $str) {
@@ -135,7 +130,7 @@ sub unpack_LDIF
     return @record;
 }
 
-use vars qw($_std_encode); $_std_encode = "^[:< ]|[^ -\x7E]";
+use vars qw($_std_encode); $_std_encode = '^[:< ]|[^ -\x7E]| $';
 
 sub pack_LDIF
 {
