@@ -40,12 +40,7 @@
     <!-- tabbed browsing -->
     <expander id="tabbedBrowsing" label="&tabbedBrowsing.label;"
               open="true" persist="open" clearhidden="true">
-#ifdef XP_WIN
-      <!-- windows-only until other platforms' back ends catch up -->
       <groupbox align="start">
-#else
-      <groupbox align="start" hidden="true">
-#endif
         <caption label="&openExternalLinksIn.label;"/>
         <radiogroup id="tabbedExternalLinks"
                     prefstring="browser.link.open_external">
