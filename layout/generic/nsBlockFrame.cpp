@@ -731,42 +731,15 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   // overflow line lists being cleared out between reflow passes.
   DrainOverflowLines();
 
-  switch (aReflowState.reason) {
-  case eReflowReason_Initial:
-#ifdef NOISY_REFLOW_REASON
-    ListTag(stdout);
-    printf(": reflow=initial\n");
-#endif
-    rv = PrepareInitialReflow(state);
-    mState &= ~NS_FRAME_FIRST_REFLOW;
-    break;  
-
-  case eReflowReason_Dirty:
-    // Do nothing; the dirty lines will already have been marked.
-    break;
-
-  case eReflowReason_StyleChange:
-    rv = PrepareStyleChangedReflow(state);
-    break;
-
-  case eReflowReason_Resize:
-  default:
-#ifdef NOISY_REFLOW_REASON
-    ListTag(stdout);
-    printf(": reflow=resize (%d)\n", aReflowState.reason);
-#endif
-    rv = PrepareResizeReflow(state);
-    break;
-  }
-
-  NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
-  if (NS_FAILED(rv)) return rv;
+  mState &= ~NS_FRAME_FIRST_REFLOW;
 
   // Now reflow...
   PRBool didSomething;
   rv = ReflowDirtyLines(state, &didSomething);
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
+
+  didSomething |= (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
 
   // If the block is complete, put continuted floats in the closest ancestor 
   // block that uses the same space manager and leave the block complete; this 
@@ -1333,13 +1306,6 @@ nsBlockFrame::ComputeCombinedArea(const nsHTMLReflowState& aReflowState,
 }
 
 nsresult
-nsBlockFrame::PrepareInitialReflow(nsBlockReflowState& aState)
-{
-  PrepareResizeReflow(aState);
-  return NS_OK;
-}
-
-nsresult
 nsBlockFrame::MarkLineDirty(line_iterator aLine)
 {
   // Mark aLine dirty
@@ -1369,140 +1335,6 @@ nsBlockFrame::MarkLineDirty(line_iterator aLine)
 #endif
   }
 
-  return NS_OK;
-}
-
-nsresult
-nsBlockFrame::PrepareStyleChangedReflow(nsBlockReflowState& aState)
-{
-  // Mark everything dirty
-  for (line_iterator line = begin_lines(), line_end = end_lines();
-       line != line_end;
-       ++line)
-  {
-    line->MarkDirty();
-  }
-  return rv;
-}
-
-nsresult
-nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
-{
-  // See if we can try and avoid marking all the lines as dirty
-  PRBool  tryAndSkipLines = PR_FALSE;
-
-  // we need to calculate if any part of then block itself 
-  // is impacted by a float (bug 19579)
-  aState.GetAvailableSpace();
-
-  // See if this is a constrained resize reflow that is not impacted by floats
-  if ((! aState.IsImpactedByFloat()) &&
-      (aState.mReflowState.reason == eReflowReason_Resize) &&
-      (NS_UNCONSTRAINEDSIZE != aState.mReflowState.availableWidth)) {
-
-    // If the text is left-aligned, then we try and avoid reflowing the lines
-    const nsStyleText* styleText = GetStyleText();
-
-    if ((NS_STYLE_TEXT_ALIGN_LEFT == styleText->mTextAlign) ||
-        ((NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign) &&
-         (NS_STYLE_DIRECTION_LTR == aState.mReflowState.mStyleVisibility->mDirection))) {
-      tryAndSkipLines = PR_TRUE;
-    }
-  }
-
-#ifdef DEBUG
-  if (gDisableResizeOpt) {
-    tryAndSkipLines = PR_FALSE;
-  }
-  if (gNoisyReflow) {
-    if (!tryAndSkipLines) {
-      const nsStyleText* styleText = GetStyleText();
-      IndentBy(stdout, gNoiseIndent);
-      ListTag(stdout);
-      printf(": marking all lines dirty: reason=%d availWidth=%d textAlign=%d\n",
-             aState.mReflowState.reason,
-             aState.mReflowState.availableWidth,
-             styleText->mTextAlign);
-    }
-  }
-#endif
-
-  if (tryAndSkipLines) {
-    nscoord newAvailWidth = aState.mReflowState.mComputedBorderPadding.left;
-     
-    if (NS_SHRINKWRAPWIDTH == aState.mReflowState.mComputedWidth) {
-      if (NS_UNCONSTRAINEDSIZE != aState.mReflowState.mComputedMaxWidth) {
-        newAvailWidth += aState.mReflowState.mComputedMaxWidth;
-      }
-      else {
-        newAvailWidth += aState.mReflowState.availableWidth;
-      }
-    } else {
-      if (NS_UNCONSTRAINEDSIZE != aState.mReflowState.mComputedWidth) {
-        newAvailWidth += aState.mReflowState.mComputedWidth;
-      }
-      else {
-        newAvailWidth += aState.mReflowState.availableWidth;
-      }
-    }
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != newAvailWidth, "bad math, newAvailWidth is infinite");
-
-#ifdef DEBUG
-    if (gNoisyReflow) {
-      IndentBy(stdout, gNoiseIndent);
-      ListTag(stdout);
-      printf(": trying to avoid marking all lines dirty\n");
-    }
-#endif
-
-    for (line_iterator line = begin_lines(), line_end = end_lines();
-         line != line_end;
-         ++line)
-    {
-      // We let child blocks make their own decisions the same
-      // way we are here.
-      if (line->IsBlock() ||
-          // XXXldb We need HasPercentageDescendant, not HasPercentageChild!!!
-          line->HasPercentageChild() || 
-          line->HasFloats() ||
-          (line != mLines.back() && !line->HasBreakAfter()) ||
-          line->ResizeReflowOptimizationDisabled() ||
-          line->IsImpactedByFloat() ||
-          (line->mBounds.XMost() > newAvailWidth)) {
-        line->MarkDirty();
-      }
-
-#ifdef REALLY_NOISY_REFLOW
-      if (!line->IsBlock()) {
-        printf("PrepareResizeReflow thinks line %p is %simpacted by floats\n", 
-        line, line->IsImpactedByFloat() ? "" : "not ");
-      }
-#endif
-#ifdef DEBUG
-      if (gNoisyReflow && !line->IsDirty()) {
-        IndentBy(stdout, gNoiseIndent + 1);
-        printf("skipped: line=%p next=%p %s %s%s%s breakTypeBefore/After=%d/%d xmost=%d\n",
-           NS_STATIC_CAST(void*, line.get()),
-           NS_STATIC_CAST(void*, (line.next() != end_lines() ? line.next().get() : nsnull)),
-           line->IsBlock() ? "block" : "inline",
-           line->HasBreakAfter() ? "has-break-after " : "",
-           line->HasFloats() ? "has-floats " : "",
-           line->IsImpactedByFloat() ? "impacted " : "",
-           line->GetBreakTypeBefore(), line->GetBreakTypeAfter(),
-           line->mBounds.XMost());
-      }
-#endif
-    }
-  }
-  else {
-    // Mark everything dirty
-    for (line_iterator line = begin_lines(), line_end = end_lines();
-         line != line_end;
-         ++line)
-    {
-      line->MarkDirty();
-    }
-  }
   return NS_OK;
 }
 
@@ -1720,6 +1552,8 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
     aState.mReflowState.reason == eReflowReason_Incremental ||
     aState.mReflowState.reason == eReflowReason_Dirty ||
     aState.mReflowState.reason == eReflowReason_Resize;
+
+  PRBool selfDirty = (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
   
     // the amount by which we will slide the current line if it is not
     // dirty
@@ -1758,10 +1592,13 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
     }
 #endif
 
+    if (selfDirty)
+      line->MarkDirty();
+
     // This really sucks, but we have to look inside any blocks that have clear
     // elements inside them.
     // XXX what can we do smarter here?
-    if (line->IsBlock() &&
+    if (!line->IsDirty() && line->IsBlock() &&
         (line->mFirstChild->GetStateBits() & NS_BLOCK_HAS_CLEAR_CHILDREN)) {
       line->MarkDirty();
     }

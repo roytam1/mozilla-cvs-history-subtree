@@ -364,17 +364,6 @@ protected:
   static void DoRemoveOutOfFlowFrame(nsPresContext* aPresContext,
                                      nsIFrame*       aFrame);
 
-  /** set up the conditions necessary for an initial reflow */
-  nsresult PrepareInitialReflow(nsBlockReflowState& aState);
-
-  /** set up the conditions necessary for an styleChanged reflow */
-  nsresult PrepareStyleChangedReflow(nsBlockReflowState& aState);
-
-  /** set up the conditions necessary for an resize reflow
-    * the primary task is to mark the minimumly sufficient lines dirty. 
-    */
-  nsresult PrepareResizeReflow(nsBlockReflowState& aState);
-
   /** reflow all lines that have been marked dirty */
   nsresult ReflowDirtyLines(nsBlockReflowState& aState, PRBool* aALineWasDirty);
 
