@@ -26,7 +26,7 @@ struct txHandlerTableData {
     txElementHandler mOtherHandler;
     txElementHandler mLREHandler;
     HandleTextFn mTextHandler;
-}
+};
 
 class txHandlerTable
 {

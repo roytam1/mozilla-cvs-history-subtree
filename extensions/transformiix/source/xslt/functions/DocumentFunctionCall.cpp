@@ -36,7 +36,6 @@
  * A representation of the XSLT additional function: document()
  */
 
-#include "ProcessorState.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
 #include "XMLDOMUtils.h"
@@ -106,10 +105,10 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
                 if (!baseURISet) {
                     // if the second argument wasn't specified, use
                     // the baseUri of node itself
-                    nodeSet->add(mProcessorState->retrieveDocument(uriStr, node->getBaseURI()));
+                    //nodeSet->add(mProcessorState->retrieveDocument(uriStr, node->getBaseURI()));
                 }
                 else {
-                    nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
+                    //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
                 }
             }
         }
@@ -118,11 +117,11 @@ ExprResult* DocumentFunctionCall::evaluate(txIEvalContext* aContext)
             String uriStr;
             exprResult1->stringValue(uriStr);
             if (!baseURISet) {
-                nodeSet->add(mProcessorState->retrieveDocument(uriStr,
-                                                               mBaseURI));
+                //nodeSet->add(mProcessorState->retrieveDocument(uriStr,
+                //                                               mBaseURI));
             }
             else {
-                nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
+                //nodeSet->add(mProcessorState->retrieveDocument(uriStr, baseURI));
             }
         }
         delete exprResult1;

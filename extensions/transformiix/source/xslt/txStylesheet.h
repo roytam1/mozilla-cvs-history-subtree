@@ -2,13 +2,20 @@
 #define TRANSFRMX_TXSTYLESHEET_H
 
 #include "txOutputFormat.h"
+#include "txExpandedNameMap.h"
+#include "List.h"
+#include "Expr.h"
 
 class txToplevelItem;
+class txPattern;
+class txInstruction;
+class txTemplateItem;
 
 class txStylesheet
 {
 public:
     ~txStylesheet();
+    nsresult init();
 
     friend class txStylesheetCompilerState;
 
@@ -17,11 +24,11 @@ public:
      */
     class ImportFrame {
     public:
-        ImportFrame(ImportFrame* aFirstNotImported);
+        ImportFrame();
         ~ImportFrame();
 
-        // List of items
-        txList mItems;
+        // List of toplevel items
+        txList mToplevelItems;
 
         // Map of template modes, each item in the map is a txList
         // of templates
@@ -37,11 +44,6 @@ public:
      * Called by the stylesheet compiler once all stylesheets has been read.
      */
     nsresult doneCompiling();
-    
-    /**
-     * Add a toplevel item
-     */
-    addToplevelItem(txToplevelItem* aItem, ImportFrame* aFrame);
 
     /**
      * Add a key to the stylesheet
@@ -65,8 +67,9 @@ private:
         double mPriority;
     };
 
-    addTemplate(txTemplate* aTemplate);
-    
+    nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
+
+
     // List of ImportFrames
     txList mImportFrames;
     
@@ -76,11 +79,17 @@ private:
     // List of first instructions of templates. This is the owner of all
     // instructions used in templates
     txList mTemplateInstructions;
+    
+    // Root importframe
+    ImportFrame* mRootFrame;
+    
+    // Named templates
+    txExpandedNameMap mNamedTemplates;
 };
 
 
 /**
- * txNameTestItem holds both an ElementExpr and a bool for use in
+ * txNameTestItem holds both an txNameTest and a bool for use in
  * whitespace stripping.
  */
 class txNameTestItem {

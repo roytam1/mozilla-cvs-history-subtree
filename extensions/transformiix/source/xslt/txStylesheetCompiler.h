@@ -9,15 +9,19 @@
 #include "txXSLTPatterns.h"
 #include "Expr.h"
 #include "XMLUtils.h"
+#include "txIXPathContext.h"
 
 class txHandlerTable;
 class txElementContext;
 class txStylesheet;
+class txInstructionContainer;
+class txInstruction;
+class txToplevelItem;
 
-class txStylesheetCompilerState : class txIParseContext
+class txStylesheetCompilerState : public txIParseContext
 {
 public:
-    txStylesheetCompilerState(String aBase, txStylesheet* aStylesheet);
+    txStylesheetCompilerState(const String& aBase, txStylesheet* aStylesheet);
     ~txStylesheetCompilerState();
 
     // Stack functions
@@ -37,6 +41,12 @@ public:
 
     // State-checking functions
     MBool fcp();
+    
+    // stylesheet functions
+    nsresult addToplevelItem(txToplevelItem* aItem);
+    nsresult openInstructionContainer(txInstructionContainer* aContainer);
+    void closeInstructionContainer();
+    nsresult addInstruction(txInstruction* aInstruction);
 
     // txIParseContext
     nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
@@ -53,6 +63,8 @@ public:
 private:
     Stack mObjectStack;
     Stack mOtherStack;
+    txInstruction** mNextInstrPtr;
+    txListIterator mToplevelIterator;
 };
 
 struct txStylesheetAttr
@@ -78,8 +90,6 @@ public:
     void cancel(nsresult aError);
 
 private:
-    txStylesheetCompiler(const String& aBaseURI,
-                         txStylesheetCompiler* aParent);
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
 

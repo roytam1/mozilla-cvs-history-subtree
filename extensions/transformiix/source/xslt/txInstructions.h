@@ -37,6 +37,13 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txError.h"
+#include "txExecutionState.h"
+#include "nsCOMPtr.h"
+#include "TxObject.h"
+#include "nsIAtom.h"
+#include "XMLUtils.h"
+
+class Expr;
 
 class txInstruction : public TxObject
 {
@@ -60,6 +67,7 @@ public:
 
 class txStartLREElement : public txInstruction
 {
+public:
     txStartLREElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                       nsIAtom* aPrefix);
 
@@ -72,11 +80,13 @@ class txStartLREElement : public txInstruction
 
 class txEndLREElement : public txInstruction
 {
+public:
     TX_DECL_TXINSTRUCTION
 };
 
 class txLREAttribute : public txInstruction
 {
+public:
     txLREAttribute(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                    nsIAtom* aPrefix, Expr* aValue);
     virtual ~txLREAttribute();
@@ -91,6 +101,7 @@ class txLREAttribute : public txInstruction
 
 class txInsertAttrSet : public txInstruction
 {
+public:
     txInsertAttrSet(const txExpandedName& aName);
 
     TX_DECL_TXINSTRUCTION
@@ -100,6 +111,7 @@ class txInsertAttrSet : public txInstruction
 
 class txTextInstruction : public txInstruction
 {
+public:
     txTextInstruction(const String& aStr, PRBool aDOE);
 
     TX_DECL_TXINSTRUCTION
@@ -110,6 +122,7 @@ class txTextInstruction : public txInstruction
 
 class txValueOfInstruction : public txInstruction
 {
+public:
     txValueOfInstruction(Expr* aExpr, PRBool aDOE);
     ~txValueOfInstruction();
 

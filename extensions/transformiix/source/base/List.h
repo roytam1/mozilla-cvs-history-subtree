@@ -207,7 +207,7 @@ public:
     /**
      * Sets value at current position
      */
-    nsresult setValue(void* aValue);
+    void setValue(void* aValue);
 
 private:
 

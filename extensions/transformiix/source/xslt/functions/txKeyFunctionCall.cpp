@@ -63,9 +63,9 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
 
     txExpandedName keyName;
     txXSLKey* key = 0;
-    nsresult rv = keyName.init(keyQName, mQNameResolveNode, MB_FALSE);
+    nsresult rv = keyName.init(keyQName, mMappings, MB_FALSE);
     if (NS_SUCCEEDED(rv)) {
-        key = mProcessorState->getKey(keyName);
+        //key = mProcessorState->getKey(keyName);
     }
 
     if (!key) {

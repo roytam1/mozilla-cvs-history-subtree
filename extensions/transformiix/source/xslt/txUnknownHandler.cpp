@@ -75,22 +75,11 @@ void txUnknownHandler::attribute(const String& aName,
     // XXX ErrorReport: Signal this?
 }
 
-void txUnknownHandler::characters(const String& aData)
+void txUnknownHandler::characters(const String& aData, PRBool aDOE)
 {
     txOneStringTransaction* transaction =
-        new txOneStringTransaction(txOutputTransaction::eCharacterTransaction,
-                                   aData);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!");
-        return;
-    }
-    addTransaction(transaction);
-}
-
-void txUnknownHandler::charactersNoOutputEscaping(const String& aData)
-{
-    txOneStringTransaction* transaction =
-        new txOneStringTransaction(txOutputTransaction::eCharacterNoOETransaction,
+        new txOneStringTransaction(aDOE ? txOutputTransaction::eCharacterNoOETransaction :
+                                          txOutputTransaction::eCharacterTransaction,
                                    aData);
     if (!transaction) {
         NS_ASSERTION(0, "Out of memory!");
@@ -220,27 +209,20 @@ nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
     mPs->mOutputHandler = handler;
     mPs->mResultHandler = handler;
 
-    MBool hasDOE = handler->hasDisableOutputEscaping();
-
     PRUint32 counter;
     for (counter = 0; counter < mTotal; ++counter) {
         switch (mArray[counter]->mType) {
             case txOutputTransaction::eCharacterTransaction:
             {
                 txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
-                handler->characters(transaction->mString);
+                handler->characters(transaction->mString, PR_FALSE);
                 delete transaction;
                 break;
             }
             case txOutputTransaction::eCharacterNoOETransaction:
             {
                 txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
-                if (hasDOE) {
-                    handler->charactersNoOutputEscaping(transaction->mString);
-                }
-                else {
-                    handler->characters(transaction->mString);
-                }
+                handler->characters(transaction->mString, PR_TRUE);
                 delete transaction;
                 break;
             }

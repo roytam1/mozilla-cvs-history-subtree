@@ -105,20 +105,21 @@ OBJS =../base/ArrayList.$(OBJ_SUFFIX) \
   ../xml/parser/XMLParser.$(OBJ_SUFFIX) \
   ../xslt/txOutputFormat.$(OBJ_SUFFIX) \
   ../xslt/Names.$(OBJ_SUFFIX) \
-  ../xslt/ProcessorState.$(OBJ_SUFFIX) \
   ../xslt/txHTMLOutput.$(OBJ_SUFFIX) \
+  ../xslt/txInstructions.$(OBJ_SUFFIX) \
   ../xslt/txRtfHandler.$(OBJ_SUFFIX) \
+  ../xslt/txStylesheet.$(OBJ_SUFFIX) \
+  ../xslt/txStylesheetCompileHandlers.$(OBJ_SUFFIX) \
   ../xslt/txStylesheetCompiler.$(OBJ_SUFFIX) \
-  ../xslt/txStylesheetCompilerHandlers.$(OBJ_SUFFIX) \
   ../xslt/txTextHandler.$(OBJ_SUFFIX) \
   ../xslt/txTextOutput.$(OBJ_SUFFIX) \
+  ../xslt/txToplevelItems.$(OBJ_SUFFIX) \
   ../xslt/txUnknownHandler.$(OBJ_SUFFIX) \
   ../xslt/txXMLOutput.$(OBJ_SUFFIX) \
   ../xslt/txXSLTNumber.$(OBJ_SUFFIX) \
   ../xslt/txXSLTNumberCounters.$(OBJ_SUFFIX) \
   ../xslt/txXSLTPatterns.$(OBJ_SUFFIX) \
   ../xslt/txPatternParser.$(OBJ_SUFFIX) \
-  ../xslt/XSLTProcessor.$(OBJ_SUFFIX) \
   ../xslt/txStandaloneXSLTProcessor.$(OBJ_SUFFIX) \
   ../xslt/functions/CurrentFunctionCall.$(OBJ_SUFFIX) \
   ../xslt/functions/DocumentFunctionCall.$(OBJ_SUFFIX) \

@@ -433,9 +433,8 @@ void txListIterator::resetToEnd() {
 /**
  * Sets value at current position
  */
-nsresult txListIterator::setValue(void* aValue)
+void txListIterator::setValue(void* aValue)
 {
-    NS_ENSURE_TRUE(currentItem, NS_ERROR_FAILURE);
+    NS_PRECONDITION(currentItem, "can't set value outside of list");
     currentItem->objPtr = aValue;
-    return NS_OK;
 }

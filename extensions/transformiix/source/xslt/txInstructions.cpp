@@ -36,8 +36,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "txInstructions.h"
 #include "txError.h"
 #include "TxString.h"
+#include "Expr.h"
+#include "ExprResult.h"
 
 txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
                                      nsIAtom* aLocalName,
@@ -63,7 +66,7 @@ nsresult txStartLREElement::execute(txExecutionState& aEs)
         mLocalName->ToString(nodeName);
     }
 
-    aEs.mResultHander->startElement(nodeName, mNamespaceID);
+    aEs.mResultHandler->startElement(nodeName, mNamespaceID);
 
     nsresult rv = aEs.pushString(nodeName);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -80,7 +83,7 @@ nsresult txEndLREElement::execute(txExecutionState& aEs)
     String nodeName;
     aEs.popString(nodeName);
 
-    aEs.mResultHander->endElement(nodeName, namespaceID);
+    aEs.mResultHandler->endElement(nodeName, namespaceID);
 
     return NS_OK;
 }
@@ -106,7 +109,7 @@ nsresult txLREAttribute::execute(txExecutionState& aEs)
     if (mPrefix) {
         mPrefix->ToString(nodeName);
         nsAutoString localName;
-        nodeName.Append(':');
+        nodeName.Append((PRUnichar)':');
         mLocalName->ToString(localName);
         nodeName.Append(localName);
     }
@@ -114,14 +117,14 @@ nsresult txLREAttribute::execute(txExecutionState& aEs)
         mLocalName->ToString(nodeName);
     }
 
-    ExprResult* exprRes = mValue.evaluate(aEs.getEvalContext());
+    ExprResult* exprRes = mValue->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
     String value;
     exprRes->stringValue(value);
     delete exprRes;
 
-    aEs.mResultHander->attribute(String(nodeName), mNamespaceID, value);
+    aEs.mResultHandler->attribute(String(nodeName), mNamespaceID, value);
 }
 
 txInsertAttrSet::txInsertAttrSet(const txExpandedName& aName)
@@ -129,7 +132,7 @@ txInsertAttrSet::txInsertAttrSet(const txExpandedName& aName)
 {
 }
 
-nsresult txLREAttribute::execute(txExecutionState& aEs)
+nsresult txInsertAttrSet::execute(txExecutionState& aEs)
 {
     txInstruction* instr = aEs.getAttributeSet(mName);
     NS_ENSURE_TRUE(instr, NS_ERROR_XSLT_EXECUTION_FAILURE);
@@ -148,8 +151,8 @@ txTextInstruction::txTextInstruction(const String& aStr, PRBool aDOE)
 
 nsresult txTextInstruction::execute(txExecutionState& aEs)
 {
-    // XXX d-o-e should be an argument on txXMLEventHandler::characters
-    return aEs.mResultHandler(mStr, mDOE);
+    aEs.mResultHandler->characters(mStr, mDOE);
+    return NS_OK;
 }
 
 txValueOfInstruction::txValueOfInstruction(Expr* aExpr, PRBool aDOE)
@@ -158,7 +161,7 @@ txValueOfInstruction::txValueOfInstruction(Expr* aExpr, PRBool aDOE)
 {
 }
 
-txValueOfInstruction::txValueOfInstruction()
+txValueOfInstruction::~txValueOfInstruction()
 {
     delete mExpr;
 }
@@ -166,12 +169,12 @@ txValueOfInstruction::txValueOfInstruction()
 
 nsresult txValueOfInstruction::execute(txExecutionState& aEs)
 {
-    ExprResult* exprRes = mValue.evaluate(aEs.getEvalContext());
+    ExprResult* exprRes = mExpr->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
     String value;
     exprRes->stringValue(value);
     delete exprRes;
 
-    aEs.mResultHander->characters(value, mDOE);
+    aEs.mResultHandler->characters(value, mDOE);
 }

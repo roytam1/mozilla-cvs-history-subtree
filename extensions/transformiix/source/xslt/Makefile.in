@@ -47,18 +47,19 @@ REQUIRES	= string \
 endif
 
 CPPSRCS = Names.cpp \
+        txInstructions.cpp \
         txOutputFormat.cpp \
-        ProcessorState.cpp \
         txRtfHandler.cpp \
+        txStylesheet.cpp \
+        txStylesheetCompileHandlers.cpp \
         txStylesheetCompiler.cpp \
-        txStylesheetCompilerHandlers.cpp \
         txTextHandler.cpp \
+        txToplevelItems.cpp \
         txXSLTNumber.cpp \
         txXSLTNumberCounters.cpp \
         txXSLTPatterns.cpp \
         txPatternParser.cpp \
-        txUnknownHandler.cpp \
-        XSLTProcessor.cpp
+        txUnknownHandler.cpp
 
 ifdef TX_EXE
 CPPSRCS += txHTMLOutput.cpp	\

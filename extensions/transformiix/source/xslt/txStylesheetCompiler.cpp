@@ -1,9 +1,14 @@
+#if 0
 #include "txStylesheetCompiler.h"
-#include "txStylesheetCompilerHandlers.h"
+#include "txStylesheetCompileHandlers.h"
 #include "txAtoms.h"
 #include "txURIUtils.h"
 #include "Tokenizer.h"
 #include "txStylesheet.h"
+#include "txInstructions.h"
+#include "txToplevelItems.h"
+#include "ExprParser.h"
+#include "txPatternParser.h"
 
 txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI)
     : mState(aBaseURI, nsnull)
@@ -35,7 +40,7 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
 
             if (attr->mLocalName == txXMLAtoms::xmlns) {
                 mState.mElementContext->
-                    mMappings.addNamespace(0, attr->mValue);
+                    mMappings.addNamespace(nsnull, attr->mValue);
             }
             else {
                 mState.mElementContext->
@@ -143,7 +148,7 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
                   mState.mHandlerTable->mLREHandler;
 
         rv = (handler->mStartFunction)(aNamespaceID, aLocalName, aPrefix,
-                                       aAttributes, mState);
+                                       aAttributes, aAttrCount, mState);
     } while (rv == NS_ERROR_XSLT_GET_NEW_HANDLER);
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -233,17 +238,31 @@ txStylesheetCompiler::ensureNewElementContext()
  */
 
 
-txStylesheetCompilerState::txStylesheetCompilerState(const String& aBase,
+txStylesheetCompilerState::txStylesheetCompilerState(const String& aBaseURI,
                                                      txStylesheet* aStylesheet)
-    mStylesheet(aStylesheet)
+    : mStylesheet(aStylesheet),
+      mToplevelIterator(nsnull)
 {
+    nsresult rv = NS_OK;
+
     if (!mStylesheet) {
         mStylesheet = new txStylesheet;
         if (!mStylesheet) {
             // XXX invalidate
             return;
         }
+        
+        rv = mStylesheet->init();
+        if (NS_FAILED(rv)) {
+            // XXX invalidate
+            return;
+        }
+        
+        txListIterator tmpIter(&mStylesheet->mRootFrame->mToplevelItems);
+        mToplevelIterator = tmpIter;
+        mToplevelIterator.next(); // go to the end of the list
     }
+
     
     // XXX Embedded stylesheets have another handler. Probably
     mHandlerTable = gTxRootHandler;
@@ -258,7 +277,7 @@ txStylesheetCompilerState::txStylesheetCompilerState(const String& aBase,
     mElementContext->mForwardsCompatibleParsing = MB_TRUE;
     mElementContext->mBaseURI = aBaseURI;
     mElementContext->mDepth = 0;
-    nsresult rv = mElementContext->
+    rv = mElementContext->
         mInstructionNamespaces.add(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
     if (NS_FAILED(rv)) {
         // XXX invalidate
@@ -331,12 +350,49 @@ txStylesheetCompilerState::fcp()
     return mElementContext->mForwardsCompatibleParsing;
 }
 
+nsresult
+txStylesheetCompilerState::addToplevelItem(txToplevelItem* aItem)
+{
+    nsresult rv = mToplevelIterator.addBefore(aItem);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mToplevelIterator.next();
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::openInstructionContainer(txInstructionContainer* aContainer)
+{
+    NS_PRECONDITION(!mNextInstrPtr, "can't nest instruction-containers");
+    NS_ENSURE_FALSE(mNextInstrPtr, NS_ERROR_UNEXPECTED);
+
+    mNextInstrPtr = &aContainer->mFirstInstruction;
+    return NS_OK;
+}
+
+void
+txStylesheetCompilerState::closeInstructionContainer()
+{
+    mNextInstrPtr = 0;
+}
+
+nsresult
+txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
+{
+    NS_PRECONDITION(mNextInstrPtr, "adding instruction outside container");
+    NS_ENSURE_TRUE(mNextInstrPtr, NS_ERROR_UNEXPECTED);
+
+    *mNextInstrPtr = aInstruction;
+    mNextInstrPtr = &aInstruction->mNext;
+
+    return NS_OK;
+}
 
 nsresult
 txStylesheetCompilerState::parsePattern(const String& aPattern,
                                         txPattern** aResult)
 {
-    *aResult = txPatternParser::createPattern(aPattern, this)
+    *aResult = txPatternParser::createPattern(aPattern, this);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
 
     return NS_OK;
@@ -345,7 +401,7 @@ txStylesheetCompilerState::parsePattern(const String& aPattern,
 nsresult
 txStylesheetCompilerState::parseExpr(const String& aExpr, Expr** aResult)
 {
-    *aResult = ExprParser::createExpr(aExpr, this)
+    *aResult = ExprParser::createExpr(aExpr, this);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
 
     return NS_OK;
@@ -354,7 +410,7 @@ txStylesheetCompilerState::parseExpr(const String& aExpr, Expr** aResult)
 nsresult
 txStylesheetCompilerState::parseAVT(const String& aExpr, Expr** aResult)
 {
-    *aResult = ExprParser::createAttributeValueTemplate(aExpr, this)
+    *aResult = ExprParser::createAttributeValueTemplate(aExpr, this);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
 
     return NS_OK;
@@ -381,17 +437,17 @@ txStylesheetCompilerState::resolveNamespacePrefix(txAtom* aPrefix,
         return NS_OK;
     }
 #endif
-    aID = mElementContext->mMappings->lookupNamespace(aPrefix);
+    aID = mElementContext->mMappings.lookupNamespace(aPrefix);
     return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }
 
-
 #define CHECK_FN(_name) aName == txXSLTAtoms::_name
+
 nsresult
 txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
 {
-   aFunction = 0;
+   aFunction = nsnull;
 
    if (aID != kNameSpaceID_None) {
        return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
@@ -460,3 +516,4 @@ txStylesheetCompilerState::receiveError(const String& aMsg, nsresult aRes)
 {
     // XXX implement me
 }
+#endif

@@ -41,6 +41,7 @@
 #include "primitives.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
+#include "txStylesheet.h"
 #include <math.h>
 
 #ifndef TX_EXE
@@ -96,7 +97,7 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
             formatName.mNamespaceID = kNameSpaceID_Unknown;
     }
 
-    txDecimalFormat* format = mStylesheet->getDecimalFormat(formatName);
+    txDecimalFormat* format = nsnull; //mStylesheet->getDecimalFormat(formatName);
     if (!format) {
         String err("unknown decimal format for: ");
         toString(err);

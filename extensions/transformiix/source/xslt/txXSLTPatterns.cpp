@@ -441,7 +441,7 @@ MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
     else
         contextDoc = aNode->getOwnerDocument();
     // What to do here?
-    //txXSLKey* key = mProcessorState->getKey(mName);
+    txXSLKey* key = 0; //mProcessorState->getKey(mName);
     const NodeSet* nodes = key->getNodes(mValue, contextDoc);
     if (!nodes || nodes->isEmpty())
         return MB_FALSE;

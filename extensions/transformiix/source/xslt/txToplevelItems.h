@@ -1,6 +1,10 @@
 #include "txError.h"
 #include "txOutputFormat.h"
+#include "XMLUtils.h"
+#include "txStylesheet.h"
 
+class txPattern;
+class Expr;
 class txInstruction;
 
 class txToplevelItem
@@ -13,12 +17,13 @@ public:
     enum type {
         attributeSet,
         dummy,
+        import,
         //namespaceAlias,
         output,
         param,
         stripSpace, //also used for preserve-space
-        variable,
-        templ
+        templ,
+        variable
     };
 
     virtual type getType();
@@ -26,15 +31,15 @@ public:
 
 class txInstructionContainer : public txToplevelItem
 {
+public:
     txInstructionContainer() : mFirstInstruction(0)
     {
     }
 
     virtual ~txInstructionContainer();
 
-public:
     txInstruction* mFirstInstruction;
-}
+};
 
 // xsl:attribute-set
 class txAttributeSetItem : public txInstructionContainer
@@ -50,6 +55,23 @@ public:
     }
 
     txExpandedName mName;
+};
+
+// xsl:import
+class txImportItem : public txToplevelItem
+{
+public:
+    ~txImportItem()
+    {
+        delete mFrame;
+    }
+
+    virtual txToplevelItem::type getType()
+    {
+        return txToplevelItem::import;
+    }
+
+    txStylesheet::ImportFrame* mFrame;
 };
 
 // xsl:output
@@ -107,6 +129,25 @@ private:
     txList mNameTestItems;
 };
 
+// xsl:template
+class txTemplateItem : public txInstructionContainer
+{
+public:
+    txTemplateItem(txPattern* aMatch, const txExpandedName& aName,
+                   const txExpandedName& aMode, double aPrio);
+    virtual ~txTemplateItem();
+
+    virtual txToplevelItem::type getType()
+    {
+        return txToplevelItem::templ;
+    }
+    
+    txPattern* mMatch;
+    txExpandedName mName;
+    txExpandedName mMode;
+    double mPrio;
+};
+
 // xsl:variable at top level
 class txVariableItem : public txInstructionContainer
 {
@@ -123,22 +164,3 @@ public:
     txExpandedName mName;
 };
 
-// xsl:template
-class txTemplateItem : public txInstructionContainer
-{
-public:
-    txTemplate(txPattern* aMatch, const txExpandedName& aName,
-               const txExpandedName& aMode, double aPrio);
-    txTemplate(const txTemplate& aOther);
-    virtual ~txTemplateItem();
-
-    virtual txToplevelItem::type getType()
-    {
-        return txToplevelItem::templ;
-    }
-    
-    txPattern* mMatch;
-    txExpandedName mName;
-    txExpandedName mMode;
-    double mPrio;
-};

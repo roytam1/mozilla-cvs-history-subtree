@@ -34,10 +34,12 @@
 #include "Expr.h"
 #include "Map.h"
 #include "NodeSet.h"
+#include "txNamespaceMap.h"
 
 class NamedMap;
 class ProcessorState;
 class txPattern;
+class txStylesheet;
 
 /**
  * The definition for the XSLT document() function
@@ -232,9 +234,6 @@ public:
     CurrentFunctionCall();
 
     TX_DECL_FUNCTION;
-
-private:
-    ProcessorState* mPs;
 };
 
 /**

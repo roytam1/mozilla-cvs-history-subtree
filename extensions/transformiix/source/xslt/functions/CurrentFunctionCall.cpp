@@ -9,8 +9,7 @@
 /**
  * Creates a new current function call
 **/
-CurrentFunctionCall::CurrentFunctionCall(ProcessorState* aPs) 
-    : mPs(aPs)
+CurrentFunctionCall::CurrentFunctionCall() 
 {
 }
 
@@ -22,7 +21,9 @@ CurrentFunctionCall::CurrentFunctionCall(ProcessorState* aPs)
  */
 ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
 {
-    return new NodeSet(mPs->getEvalContext()->getContextNode());
+//    return new NodeSet(mPs->getEvalContext()->getContextNode());
+    // XXX
+    return new NodeSet;
 }
 
 nsresult CurrentFunctionCall::getNameAtom(txAtom** aAtom)

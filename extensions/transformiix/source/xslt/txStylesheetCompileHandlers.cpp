@@ -1,8 +1,27 @@
 #include "txStylesheetCompiler.h"
-#include "txStylesheetCompilerHandlers.h"
+#include "txStylesheetCompileHandlers.h"
 #include "Tokenizer.h"
+#include "txInstructions.h"
+#include "txAtoms.h"
+#include "primitives.h"
+#include "txStylesheet.h"
+#include "txToplevelItems.h"
 
-#if 0
+txHandlerTable* gTxIgnoreHandler = 0;
+txHandlerTable* gTxRootHandler = 0;
+txHandlerTable* gTxTopHandler = 0;
+txHandlerTable* gTxTemplateHandler = 0;
+txHandlerTable* gTxTextHandler = 0;
+
+txStylesheetAttr*
+getStyleAttr(txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             nsIAtom* aName);
+txStylesheetAttr*
+getStyleAttr(txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             PRInt32 aNamespace,
+             nsIAtom* aName);
 
 #define TX_ENSURE_SUCCESS_OR_FCP(_rv, _state)                               \
     NS_ENSURE_TRUE(NS_SUCCEEDED(_rv) || _state.fcp(), _rv)
@@ -81,7 +100,7 @@ txFnStartElementError(PRInt32 aNamespaceID,
 nsresult
 txFnEndElementError(txStylesheetCompilerState& aState)
 {
-    NS_ASSERTION("txFnEndElementError shouldn't be called"); 
+    NS_ERROR("txFnEndElementError shouldn't be called"); 
     return NS_ERROR_XSLT_PARSE_FAILURE;
 }
 
@@ -127,7 +146,7 @@ txFnStartOtherTop(PRInt32 aNamespaceID,
         return NS_ERROR_XSLT_PARSE_FAILURE;
     }
     
-    return aState.pushHandlerTable(gTxIgnoreHandlerTable);
+    return aState.pushHandlerTable(gTxIgnoreHandler);
 }
 
 nsresult
@@ -150,7 +169,7 @@ txFnStartTemplate(PRInt32 aNamespaceID,
     NS_ENSURE_SUCCESS(rv, rv);
     
     txStylesheetAttr* attr = 0;
-    
+
     txExpandedName name;
     if ((attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::name))) {
         rv = aState.parseQName(attr->mValue, name, MB_FALSE);
@@ -167,7 +186,7 @@ txFnStartTemplate(PRInt32 aNamespaceID,
     if ((attr = getStyleAttr(aAttributes, aAttrCount,
                              txXSLTAtoms::priority))) {
         prio = Double::toDouble(attr->mValue);
-        if (Double::isNaN(prio) && !aState->fcp()) {
+        if (Double::isNaN(prio) && !aState.fcp()) {
             return NS_ERROR_XSLT_PARSE_FAILURE;
         }
     }
@@ -183,15 +202,16 @@ txFnStartTemplate(PRInt32 aNamespaceID,
         delete match;
         return NS_ERROR_OUT_OF_MEMORY;
     }
+
     
-    rv = aState.mStylesheet->addToplevelItem(templ);
-    if (NS_FAILED(rv) {
+    rv = aState.addToplevelItem(templ);
+    if (NS_FAILED(rv)) {
         delete templ;
         return rv;
     }
     
     aState.openInstructionContainer(templ);
-    
+
     return NS_OK;
 }
 
@@ -231,7 +251,6 @@ txFnStartKey(PRInt32 aNamespaceID,
     rv = aState.parsePattern(attr->mValue, &match);
     NS_ENSURE_SUCCESS(rv, rv);
 
-
     Expr* use = 0;
     attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::use);
     if (!attr) {
@@ -246,7 +265,7 @@ txFnStartKey(PRInt32 aNamespaceID,
     }
 
     rv = aState.mStylesheet->addKey(name, match, use);
-    if (NS_FAILED(rv) {
+    if (NS_FAILED(rv)) {
         delete match;
         delete use;
         return rv;
@@ -256,9 +275,8 @@ txFnStartKey(PRInt32 aNamespaceID,
 }
 
 nsresult
-txFnEndTemplate(txStylesheetCompilerState& aState)
+txFnEndKey(txStylesheetCompilerState& aState)
 {
-    aState.setInstructionContainer(0);
     aState.popHandlerTable();
 
     return NS_OK;
@@ -282,7 +300,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
                                                  aPrefix);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState->addInstruction(instr);
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txStylesheetAttr* attr = 0;
@@ -302,7 +320,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
             instr = new txInsertAttrSet(name);
             NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-            rv = aState->addInstruction(instr);
+            rv = aState.addInstruction(instr);
             NS_ENSURE_SUCCESS(rv, rv);
         }
     }
@@ -311,7 +329,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
     for (i = 0; i < aAttrCount; ++i) {
         attr = aAttributes + i;
         
-        if (attr->mNamespace == kNameSpaceID_XSLT) {
+        if (attr->mNamespaceID == kNameSpaceID_XSLT) {
             continue;
         }
         
@@ -326,7 +344,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
             return NS_ERROR_OUT_OF_MEMORY;
         }
         
-        rv = aState->addInstruction(instr);
+        rv = aState.addInstruction(instr);
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
@@ -339,7 +357,7 @@ txFnEndLRE(txStylesheetCompilerState& aState)
     txInstruction* instr = new txEndLREElement;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    nsresult rv = aState->addInstruction(instr);
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -353,7 +371,7 @@ txFnText(const String& aStr, txStylesheetCompilerState& aState)
     txInstruction* instr = new txTextInstruction(aStr, MB_FALSE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    nsresult rv = aState->addInstruction(instr);
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -369,6 +387,8 @@ txFnStartText(PRInt32 aNamespaceID,
               txStylesheetCompilerState& aState)
 {
     txStylesheetAttr* attr = 0;
+
+    NS_ASSERTION(!aState.mDOE, "nested d-o-e elements should not happen");
 
     if ((attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::disableOutputEscaping))) {
         if (attr->mValue.isEqual(String("yes"))) {
@@ -396,7 +416,7 @@ txFnTextText(const String& aStr, txStylesheetCompilerState& aState)
     txInstruction* instr = new txTextInstruction(aStr, aState.mDOE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    nsresult rv = aState->addInstruction(instr);
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -429,16 +449,16 @@ txFnStartValueOf(PRInt32 aNamespaceID,
     attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::select);
     NS_ENSURE_TRUE(attr, NS_ERROR_XSLT_PARSE_FAILURE);
 
-    rv = aState.parseExpr(attr->mValue, &select);
+    nsresult rv = aState.parseExpr(attr->mValue, &select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txValueOfInstruction(instr, doe);
+    txInstruction* instr = new txValueOfInstruction(select, doe);
     if (!instr) {
         delete select;
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    nsresult rv = aState->addInstruction(instr);
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxIgnoreHandler);
@@ -455,7 +475,7 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
  * Table Datas
  */
 
-txHandlerTable* gTxIgnoreHandler = 0;
+#if 0
 txHandlerTableData gTxIgnoreTableData = {
   // Handlers
   { { 0, 0, 0, 0 } },
@@ -467,7 +487,6 @@ txHandlerTableData gTxIgnoreTableData = {
   txFnTextIgnore
 };
 
-txHandlerTable* gTxRootHandler = 0;
 txHandlerTableData gTxRootTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "stylesheet", txFnStylesheetStart, txFnStylesheetEnd },
@@ -481,7 +500,6 @@ txHandlerTableData gTxRootTableData = {
   txFnTextError
 };
 
-txHandlerTable* gTxTopHandler = 0;
 txHandlerTableData gTxTopTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
@@ -494,7 +512,6 @@ txHandlerTableData gTxTopTableData = {
   txFnTextIgnore
 };
 
-txHandlerTable* gTxTemplateHandler = 0;
 txHandlerTableData gTxTemplateTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "fallback", txFnStartElementSetIgnore, txFnEndElementSetIgnore },
@@ -506,10 +523,9 @@ txHandlerTableData gTxTemplateTableData = {
   // LRE
   { 0, 0, txFnStartLRE, txFnEndLRE },
   // Text
-  txFnTextIgnore
+  txFnText
 };
 
-txHandlerTable* gTxTextHandler = 0;
 txHandlerTableData gTxTextTableData = {
   // Handlers
   { { 0, 0, 0, 0 } },
