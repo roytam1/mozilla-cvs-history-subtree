@@ -138,7 +138,6 @@ bin/components/xultmpl.xpt
 bin/components/gklayout.dll
 bin/components/gkparser.dll
 bin/components/gkplugin.dll
-bin/components/gkview.dll
 bin/components/imgmng.dll
 bin/components/imglib2.dll
 bin/components/imglib2.xpt
@@ -148,7 +147,6 @@ bin/components/intl.xpt
 bin/components/chardet.xpt
 bin/components/jar.xpt
 bin/components/jsconsole-clhandler.js
-bin/components/jsurl.dll
 bin/components/jsurl.xpt
 bin/components/layout_base.xpt
 bin/components/layout_xul.xpt
@@ -194,7 +192,6 @@ bin/components/rdf.dll
 bin/components/rdf.xpt
 bin/components/regviewer.xpt
 bin/components/regviewr.dll
-bin/components/shistory.dll
 bin/components/shistory.xpt
 bin/components/sidebar.xpt
 bin/components/signonviewer.xpt
@@ -206,7 +203,6 @@ bin/components/mozuconv.dll
 bin/components/uconv.xpt
 bin/components/ucvmath.dll
 bin/components/unicharutil.xpt
-bin/components/urildr.dll
 bin/components/uriloader.xpt
 bin/components/exthandler.xpt
 bin/components/util.xpt
