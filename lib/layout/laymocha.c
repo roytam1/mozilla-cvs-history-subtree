@@ -30,6 +30,7 @@
 #include "jsjava.h"
 #elif defined (OJI)
 #include "jsjava.h"
+#include "np2.h"
 #endif
 #include "layers.h"
 
@@ -570,13 +571,8 @@ LO_GetAppletByIndex(MWContext *context, int32 layer_id, uint index)
 
 
 #ifdef OJI
-    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-        jvmMochaPrefsEnabled = PR_TRUE;
-    }
-    if (jvmMochaPrefsEnabled == PR_FALSE) {
+    if (!NPL_IsJVMAndMochaPrefsEnabled())
         return NULL;
-    }
 #else
     /* XXX */
     if (!JSJ_IsEnabled())
@@ -618,13 +614,8 @@ LO_EnumerateApplets(MWContext *context, int32 layer_id)
     lo_DocLists *doc_lists;
 
 #ifdef OJI
-    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-        jvmMochaPrefsEnabled = PR_TRUE;
-    }
-    if (jvmMochaPrefsEnabled == PR_FALSE) {
+    if (!NPL_IsJVMAndMochaPrefsEnabled())
         return NULL;
-    }
 #else
     /* XXX */
     if (!JSJ_IsEnabled())
@@ -668,13 +659,8 @@ LO_GetEmbedByIndex(MWContext *context, int32 layer_id, uint index)
     lo_DocLists *doc_lists;
 
 #ifdef OJI
-    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-        jvmMochaPrefsEnabled = PR_TRUE;
-    }
-    if (jvmMochaPrefsEnabled == PR_FALSE) {
+    if (!NPL_IsJVMAndMochaPrefsEnabled())
         return NULL;
-    }
 #else
     /* XXX */
     if (!JSJ_IsEnabled())
@@ -717,13 +703,8 @@ LO_EnumerateEmbeds(MWContext *context, int32 layer_id)
     lo_DocLists *doc_lists;
 
 #ifdef OJI
-    PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-    if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-        jvmMochaPrefsEnabled = PR_TRUE;
-    }
-    if (jvmMochaPrefsEnabled == PR_FALSE) {
+    if (!NPL_IsJVMAndMochaPrefsEnabled())
         return NULL;
-    }
 #else
     /* XXX */
     if (!JSJ_IsEnabled())
