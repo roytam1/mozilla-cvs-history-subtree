@@ -587,11 +587,17 @@ gc_root_marker(JSHashEntry *he, intN i, void *arg)
 #ifdef DEBUG
 	JSArena *a;
 	JSRuntime *rt = (JSRuntime *)arg;
+    JSBool root_points_to_gcArenaPool = JS_FALSE;
 
-	for (a = rt->gcArenaPool.first.next; a; a = a->next) {
-	    JS_ASSERT(!rp ||
-		      (*rp >= (void *)a->base && *rp <= (void *)a->avail));
-	}
+    if (rp && *rp) {
+        for (a = rt->gcArenaPool.first.next; a; a = a->next) {
+            if (*rp >= (void *)a->base && *rp <= (void *)a->avail) {
+                root_points_to_gcArenaPool = JS_TRUE;
+                break;
+            }
+        }
+        JS_ASSERT(root_points_to_gcArenaPool);
+    }
 #endif
 	GC_MARK(arg, *rp, he->value ? he->value : "root", NULL);
     }
