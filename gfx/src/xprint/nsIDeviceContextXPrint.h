@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -21,7 +21,6 @@
  */
 
 #include "nsISupports.h"
-#include "nsIDeviceContext.h"
 
 #ifndef __nsIDeviceContextXP_h
 #define __nsIDeviceContextXP_h
@@ -31,9 +30,7 @@
   {0x35efd8b6, 0x13cc, 0x11d3, \
     {0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01}}
 
-class nsXPrintContext;
-
-class nsIDeviceContextXP : public DeviceContextImpl
+class nsIDeviceContextXP : public nsISupports
 {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDEVICECONTEXTXP_IID);
@@ -42,12 +39,6 @@ public:
 
   NS_IMETHOD InitDeviceContextXP(nsIDeviceContext *aCreatingDeviceContext,
                                  nsIDeviceContext *aPrinterContext) = 0;
-
-  NS_IMETHOD GetPrintContext(nsXPrintContext*& aContext) = 0;
-
-  NS_IMETHOD GetMetricsFor(const nsFont& aFont, nsIFontMetrics*& aMetrics) = 0;
-  NS_IMETHOD GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup,
-                           nsIFontMetrics*& aMetrics) = 0;
 };
 
 

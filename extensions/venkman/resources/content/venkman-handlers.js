@@ -42,59 +42,45 @@ function con_load (e)
 
     init();
     
+    display ("testing 1 2 3", "TEST");
+    display ("{ line1\n  line2\nline3 }", "TEST");
+    display ("testing 1 2 3", "TEST");
+    
 }
 
 console.onInputCommand =
 function con_icommand (e)
 {
     
-    var ary = console._commands.list (e.command);
+    var ary = console.commands.list (e.command);
     
     switch (ary.length)
     {            
         case 0:
-            display (getMsg(MSN_ERR_NO_COMMAND, e.command), MT_ERROR);
+            display ("Unknown command ``" + e.command + "''.", "ERROR");
             break;
             
         case 1:
             if (typeof console[ary[0].func] == "undefined")        
-                display (getMsg(MSN_ERR_NOTIMPLEMENTED, ary[0].name), MT_ERROR);
+                display ("Sorry, ``" + ary[0].name +
+                         "'' has not been implemented.", "ERROR");
             else
             {
                 e.commandEntry = ary[0];
-                console[ary[0].func](e)
+                if (!console[ary[0].func](e))
+                    display ("USAGE" + ary[0].name + " " + ary[0].usage,
+                             "USAGE");
             }
             break;
             
         default:
+            display ("Ambiguous command: ``" + e.command + "''", "ERROR");
             var str = "";
             for (var i in ary)
                 str += str ? ", " + ary[i].name : ary[i].name;
-            display (getMsg (MSN_ERR_AMBIGCOMMAND, [e.command, ary.length, str]),
-                     MT_ERROR);
+            display (ary.length + " commands match: " + str, "ERROR");
     }
 
-}
-
-console.onInputCommands =
-function cli_icommands (e)
-{
-    displayCommands (e.inputData);
-    return true;
-}
-
-console.onInputCont =
-function cli_icommands (e)
-{
-    if (!console.frames)
-    {
-        display (MSG_ERR_NO_STACK, MT_ERROR);
-        return false;
-    }
-
-    console.jsds.exitNestedEventLoop();
-
-    return true;
 }
     
 console.onInputCompleteLine =
@@ -109,140 +95,49 @@ function con_icline (e)
     console._lastHistoryReferenced = -1;
     console._incompleteLine = "";
 
-    var ary = e.line.match (/(\S+)? ?(.*)/);
-    var command = ary[1];
+    if (e.line[0] == console.prefs["input.commandchar"])
+    {   /* starts with a '/', look up the command */
+        var ary = e.line.substr(1, e.line.length).match (/(\S+)? ?(.*)/);
+        var command = ary[1];
 
-    e.command = command;
-    e.inputData =  ary[2] ? stringTrim(ary[2]) : "";
-    e.line = e.line;
-    console.onInputCommand (e);
+        e.command = command;
+        e.inputData =  ary[2] ? stringTrim(ary[2]) : "";
+        e.line = e.line;
+        console.onInputCommand (e);
+    }
+    else /* no command character */
+    {
+        e.inputData = e.line;
+        console.onInputEval (e);
+    }
 
 }
 
 console.onInputEval =
 function con_ieval (e)
 {
-    if (e.inputData)
-        evalInTargetScope (e.inputData)
-    return true;
-}
-
-console.onInputEvalD =
-function con_ievald (e)
-{
-    if (e.inputData)
-        evalInDebuggerScope (e.inputData)
-    return true;
-}
-
-console.onInputFrame =
-function con_iframe (e)
-{
-    if (!console.frames)
+    try
     {
-        display (MSG_ERR_NO_STACK, MT_ERROR);
-        return false;
+        display (e.inputData, "EVAL-IN");
+        var rv = String(console.doEval (e.inputData));
+        display (rv, "EVAL-OUT");
     }
-
-    var idx = parseInt(e.inputData);
-    
-    if (idx >= 0)
+    catch (ex)
     {
-        console.currentFrameIndex = idx;
-        displayFrame (console.frames[idx], idx);
-    }
-    else
-        displayFrame (console.frames[console.currentFrameIndex]);
-    
-    return true;
-}
-            
-console.onInputHelp =
-function cli_ihelp (e)
-{
-    var ary = console._commands.list (e.inputData);
- 
-    if (ary.length == 0)
-    {
-        display (getMsg(MSN_ERR_NO_COMMAND, e.inputData), MT_ERROR);
-        return false;
-    }
-
-    for (var i in ary)
-    {        
-        display (ary[i].name + " " + ary[i].usage, MT_USAGE);
-        display (ary[i].help, MT_HELP);
-    }
-
-    return true;    
-}
-
-console.onInputProps =
-function con_iprops (e, forceDebuggerScope)
-{
-    if (!e.inputData)
-    {
-        display (getMsg(MSN_ERR_REQUIRED_PARAM, MSG_VAL_EXPR));
-        return false;
-    }
-
-    var v;
-    
-    if (forceDebuggerScope)
-        v = evalInDebuggerScope (e.inputData);
-    else
-        v = evalInTargetScope (e.inputData);
-
-    if (!(v instanceof jsdIValue))
-    {
-        display (getMsg(MSN_ERR_INVALID_PARAM, [MSG_VAL_EXPR, String(v)]),
-                 MT_ERROR);
-        return false;
+        var str = "";
+        
+        if ("name" in ex && "fileName" in ex && "lineNumber" in ex &&
+            "message" in ex)
+            /* if it looks like a normal exception, print all the bits */
+            str = ex.name + ": " + ex.fileName + ", line " + ex.lineNumber +
+                ": " + ex.message;
+        else
+            /* otherwise, just convert to a string */
+            str = String(ex);
+        
+        display (str, "ERROR");
     }
     
-    displayProperties(v);
-    return true;
-}
-
-console.onInputPropsD =
-function con_ipropsd (e)
-{
-    return console.onInputProps (e, true);
-}
-            
-console.onInputScope =
-function con_iscope ()
-{
-    if (!console.frames)
-    {
-        display (MSG_ERR_NO_STACK, MT_ERROR);
-        return false;
-    }
-    
-    if (console.frames[console.currentFrameIndex].scope.propertyCount == 0)
-        display (getMsg (MSN_NO_PROPERTIES, MSG_WORD_SCOPE + " 0"));
-    else
-        displayProperties (console.frames[console.currentFrameIndex].scope);
-    
-    return true;
-}
-
-console.onInputQuit =
-function con_iquit ()
-{
-    window.close();
-}
-
-console.onInputWhere =
-function con_iwhere ()
-{
-    if (!console.frames)
-    {
-        display (MSG_ERR_NO_STACK, MT_ERROR);
-        return false;
-    }
-    
-    displayCallStack();
     return true;
 }
 
@@ -281,117 +176,16 @@ function con_slkeypress (e)
             
             break;
             
-        case 33: /* pgup */
-            w = window.frames[0];
-            newOfs = w.pageYOffset - (w.innerHeight / 2);
-            if (newOfs > 0)
-                w.scrollTo (w.pageXOffset, newOfs);
-            else
-                w.scrollTo (w.pageXOffset, 0);
-            break;
-            
-        case 34: /* pgdn */
-            w = window.frames[0];
-            newOfs = w.pageYOffset + (w.innerHeight / 2);
-            if (newOfs < (w.innerHeight + w.pageYOffset))
-                w.scrollTo (w.pageXOffset, newOfs);
-            else
-                w.scrollTo (w.pageXOffset, (w.innerHeight + w.pageYOffset));
-            break;
-
-        case 9: /* tab */
-            e.preventDefault();
-            console.onTabCompleteRequest(e);
-            break;       
-
         default:
             console._incompleteLine = e.target.value;
             break;
     }
 }
 
-console.onTabCompleteRequest =
-function con_tabcomplete (e)
-{
-    var selStart = e.target.selectionStart;
-    var selEnd   = e.target.selectionEnd;            
-    var v        = e.target.value;
-    
-    if (selStart != selEnd) 
-    {
-        /* text is highlighted, just move caret to end and exit */
-        e.target.selectionStart = e.target.selectionEnd = v.length;
-        return;
-    }
-
-    var firstSpace = v.indexOf(" ");
-    if (firstSpace == -1)
-        firstSpace = v.length;
-
-    var pfx;
-    var d;
-    
-    if ((selStart <= firstSpace))
-    {
-        /* The cursor is positioned before the first space, so we're completing
-         * a command
-         */
-        var partialCommand = v.substring(0, firstSpace).toLowerCase();
-        var cmds = console._commands.listNames(partialCommand);
-
-        if (!cmds)
-            /* partial didn't match a thing */
-            display (getMsg(MSN_NO_CMDMATCH, partialCommand), MT_ERROR);
-        else if (cmds.length == 1)
-        {
-            /* partial matched exactly one command */
-            pfx = cmds[0];
-            if (firstSpace == v.length)
-                v =  pfx + " ";
-            else
-                v = pfx + v.substr (firstSpace);
-            
-            e.target.value = v;
-            e.target.selectionStart = e.target.selectionEnd = pfx.length + 1;
-        }
-        else if (cmds.length > 1)
-        {
-            /* partial matched more than one command */
-            d = new Date();
-            if ((d - console._lastTabUp) <= console.prefs["input.dtab.time"])
-                display (getMsg (MSN_CMDMATCH,
-                                 [partialCommand, "[" + cmds.join(", ") + "]"]));
-            else
-                console._lastTabUp = d;
-            
-            pfx = getCommonPfx(cmds);
-            if (firstSpace == v.length)
-                v =  pfx;
-            else
-                v = pfx + v.substr (firstSpace);
-            
-            e.target.value = v;
-            e.target.selectionStart = e.target.selectionEnd = pfx.length;
-            
-        }
-                
-    }
-
-}
-
 console.onUnload =
 function con_unload (e)
 {
     dd ("Application venkman, 'JavaScript Debugger' unloaded.");
-
-    detachDebugger();
-}
-
-console.onWindowKeyPress =
-function con_windowkpress (e)
-{
-    if (e.keyCode == 9) /* tab */
-        console._slInputElement.focus();
 }
 
 window.onresize =

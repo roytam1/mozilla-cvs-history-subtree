@@ -1791,7 +1791,6 @@ nsXULElement::GetXMLBaseURI(nsIURI **aURI)
   return NS_OK;
 }
 
-#if 0
 NS_IMETHODIMP
 nsXULElement::GetBaseURI(nsAWritableString &aURI)
 {
@@ -1806,7 +1805,6 @@ nsXULElement::GetBaseURI(nsAWritableString &aURI)
   }
   return rv;
 }
-#endif
 
 
 //----------------------------------------------------------------------

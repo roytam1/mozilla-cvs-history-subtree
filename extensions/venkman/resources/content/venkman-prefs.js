@@ -39,9 +39,8 @@ function initPrefs()
 {
     console.prefs = new Object();
 
-    //    console.addPref ("input.commandchar", "/");    
+    console.addPref ("input.commandchar", "/");    
     console.addPref ("input.history.max", 20);
-    console.addPref ("input.dtab.time", 500);
     console.addPref ("output.wordbreak.length", 40);
 
 }
@@ -49,7 +48,7 @@ function initPrefs()
 console.prefs.save =
 function pfs_save ()
 {
-    throw BadMojo(ERR_NOT_IMPLEMENTED);
+    throw new Foo("Not Implemented.");
 }
 
 console.addPref =

@@ -208,11 +208,7 @@ public:
     }
   }
 
-  GdkGC *GetGC() {
-    if (!mGC)
-      UpdateGC();
-    return gdk_gc_ref(mGC);
-  }
+  GdkGC *GetGC() { return gdk_gc_ref(mGC); }
 
   // handle drawing 8 bit data with a 16 bit font
   static void Widen8To16AndDraw(GdkDrawable *drawable,

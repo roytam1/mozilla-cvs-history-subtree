@@ -1980,20 +1980,13 @@ nsFontMetricsWin::LoadFont(HDC aDC, nsString* aName)
 nsFontWin*
 nsFontMetricsWin::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
 {
-  LOGFONT logFont;
-  HFONT hfont;
-
-  FillLogFont(&logFont, aGlobalFontItem->logFont.lfWeight);
-  logFont.lfCharSet = aGlobalFontItem->logFont.lfCharSet;
-  logFont.lfPitchAndFamily = aGlobalFontItem->logFont.lfPitchAndFamily;
-  strcpy(logFont.lfFaceName, aGlobalFontItem->logFont.lfFaceName);;
-  hfont = ::CreateFontIndirect(&logFont);
+  HFONT hfont = ::CreateFontIndirect(&(aGlobalFontItem->logFont));
 
   if (hfont) {
     if (mLoadedFontsCount == mLoadedFontsAlloc) {
       int newSize = 2 * (mLoadedFontsAlloc ? mLoadedFontsAlloc : 1);
-      nsFontWin** newPointer = (nsFontWin**) PR_Realloc(mLoadedFonts,
-        newSize * sizeof(nsFontWin*));
+      nsFontWinA** newPointer = (nsFontWinA**) PR_Realloc(mLoadedFonts,
+        newSize * sizeof(nsFontWinA*));
       if (newPointer) {
         mLoadedFonts = (nsFontWin**) newPointer;
         mLoadedFontsAlloc = newSize;
@@ -2005,18 +1998,17 @@ nsFontMetricsWin::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
     }
 
     nsFontWin* font = nsnull;
-  
     if (mIsUserDefined) {
-      font = new nsFontWinNonUnicode(&logFont, hfont, gUserDefinedMap,
+      font = new nsFontWinNonUnicode(&(aGlobalFontItem->logFont), hfont, gUserDefinedMap,
                                      gUserDefinedConverter);
     }
     else if (NS_FONT_TYPE_UNICODE == aGlobalFontItem->fonttype) {
-      font = new nsFontWinUnicode(&logFont, hfont, aGlobalFontItem->map);
+      font = new nsFontWinUnicode(&(aGlobalFontItem->logFont), hfont, aGlobalFontItem->map);
     }
     else if (NS_FONT_TYPE_NON_UNICODE == aGlobalFontItem->fonttype) {
-      nsIUnicodeEncoder* converter = GetConverter(logFont.lfFaceName);
+      nsIUnicodeEncoder* converter = GetConverter(aGlobalFontItem->logFont.lfFaceName);
       if (converter) {
-        font = new nsFontWinNonUnicode(&logFont, hfont, aGlobalFontItem->map, converter);
+        font = new nsFontWinNonUnicode(&(aGlobalFontItem->logFont), hfont, aGlobalFontItem->map, converter);
       }
     }
 
@@ -2179,6 +2171,7 @@ nsFontMetricsWin::FindGlobalFont(HDC aDC, PRUnichar c)
         }
       }
       if (FONT_HAS_GLYPH(gGlobalFonts[i].map, c)) {
+        //return LoadFont(aDC, gGlobalFonts[i].name);
         return LoadGlobalFont(aDC, &(gGlobalFonts[i]));
       }
     }
@@ -4211,14 +4204,7 @@ nsFontMetricsWinA::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
    * According to http://msdn.microsoft.com/library/
    * CreateFontIndirectW is only supported on NT/2000
    */
-  LOGFONT logFont;
-  HFONT hfont;
-
-  FillLogFont(&logFont, aGlobalFontItem->logFont.lfWeight);
-  logFont.lfCharSet = aGlobalFontItem->logFont.lfCharSet;
-  logFont.lfPitchAndFamily = aGlobalFontItem->logFont.lfPitchAndFamily;
-  strcpy(logFont.lfFaceName, aGlobalFontItem->logFont.lfFaceName);;
-  hfont = ::CreateFontIndirect(&logFont);
+  HFONT hfont = ::CreateFontIndirect(&(aGlobalFontItem->logFont));
 
   if (hfont) {
     if (mLoadedFontsCount == mLoadedFontsAlloc) {
@@ -4235,7 +4221,7 @@ nsFontMetricsWinA::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
       }
     }
 
-	nsFontWinA* font = new nsFontWinA(&logFont, hfont, aGlobalFontItem->map);
+	nsFontWinA* font = new nsFontWinA(&(aGlobalFontItem->logFont), hfont, aGlobalFontItem->map);
     if (!font)
 	  return nsnull;
 

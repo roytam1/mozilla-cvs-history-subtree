@@ -76,7 +76,6 @@ Rights Reserved.
   <commandset id="mailFileMenuItems"/>
   <commandset id="mailViewMenuItems"/>
   <commandset id="mailEditMenuItems"/>
-  <commandset id="mailEditContextMenuItems"/>
   <commandset id="mailSearchMenuItems"/>
   <commandset id="mailGoMenuItems"/>
   <commandset id="mailMessageMenuItems"/>
@@ -112,7 +111,7 @@ Rights Reserved.
       <menuitem label="&SendMailTo.label;"
                 accesskey="&SendMailTo.accesskey;"
                 oncommand="SendMailToNode(document.popupNode)"/>
-      <menuitem label="&CopyEmailAddress.label;"
+      <menuitem value="&CopyEmailAddress.label;"
                 accesskey="&CopyEmailAddress.accesskey;"
                 oncommand="CopyEmailAddress(document.popupNode)"/>
   </popup>

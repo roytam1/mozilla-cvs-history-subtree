@@ -97,12 +97,7 @@ public:
 class CSharedParserObjects {
 public:
 
-  CSharedParserObjects()
-  :mDTDDeque(0), 
-   mHasViewSourceDTD(PR_FALSE),
-   mHasXMLDTD(PR_FALSE),
-   mOtherDTD(nsnull)
-  {
+  CSharedParserObjects() : mDTDDeque(0) {
 
     //Note: To cut down on startup time/overhead, we defer the construction of non-html DTD's. 
 
@@ -116,10 +111,6 @@ public:
     }
 
     NS_NewNavHTMLDTD(&theDTD);    //do this as a default HTML DTD...
-    
-    // please handle allocation failure
-    NS_ASSERTION(theDTD, "Failed to create DTD");
-    
     mDTDDeque.Push(theDTD);
      
     mHasViewSourceDTD=PR_FALSE;

@@ -430,6 +430,7 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
     nsresult OpenForm(const nsIParserNode *aNode);
     nsresult OpenMap(const nsCParserNode *aNode);
     nsresult OpenFrameset(const nsCParserNode *aNode);
+    nsresult OpenNoscript(const nsCParserNode *aNode,nsEntryStack* aStyleStack=0);
     nsresult OpenContainer(const nsCParserNode *aNode,eHTMLTags aTag,PRBool aClosedByStartTag,nsEntryStack* aStyleStack=0);
 
     /**
@@ -445,6 +446,7 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
     nsresult CloseForm(const nsIParserNode *aNode);
     nsresult CloseMap(const nsIParserNode *aNode);
     nsresult CloseFrameset(const nsIParserNode *aNode);
+    nsresult CloseNoscript(const nsIParserNode *aNode);
     
     /**
      * The special purpose methods automatically close
@@ -491,37 +493,41 @@ protected:
     nsresult        HandleSavedTokens(PRInt32 anIndex);
     nsresult        HandleKeyGen(nsIParserNode *aNode);
     void            RecycleNodes(nsEntryStack *aNodeStack);
-    
-    nsDeque             mMisplacedContent;
-    nsDeque             mSkippedContent;
+
     nsIHTMLContentSink* mSink;
-    nsTokenAllocator*   mTokenAllocator;
+
     nsDTDContext*       mBodyContext;
     nsDTDContext*       mTempContext;
+
     PRInt32             mOpenHeadCount;
     PRInt32             mOpenMapCount;
-    nsParser*           mParser;
-    nsITokenizer*       mTokenizer;
-    nsDTDMode           mDTDMode;
-    eParserDocType      mDocType;
-    eParserCommands     mParserCommand;   //tells us to viewcontent/viewsource/viewerrors...
-    eHTMLTags           mSkipTarget;
-    nsresult            mDTDState;
-    PRUint16            mFlags;
+    PRInt32             mAlternateTagOpenCount;  //true when NOFRAMES, NOSCRIPT, NOEMBED, NOLAYER are open
     PRInt32             mLineNumber;
-    nsString            mScratch;  //used for various purposes; non-persistent
-    nsAutoString        mMimeType;  //ok as an autostring; these are short.
-    nsNodeAllocator     mNodeAllocator;
-    nsString            mFilename; 
 
-#ifdef NS_DEBUG
-    nsIDTDDebug*        mDTDDebug;
-#endif
-    
-#ifdef ENABLE_CRC
     PRUint32            mComputedCRC32;
     PRUint32            mExpectedCRC32;
-#endif
+
+    PRUint16            mFlags;
+
+    nsString            mFilename;
+    nsString            mScratch;  //used for various purposes; non-persistent
+    nsAutoString        mMimeType;  //ok as an autostring; these are short.
+   
+    nsIDTDDebug*		    mDTDDebug;
+    nsITokenizer*       mTokenizer;
+        
+    nsParser*           mParser;
+    nsTokenAllocator*   mTokenAllocator;
+    nsNodeAllocator     mNodeAllocator;
+    nsDeque             mMisplacedContent;
+    nsDeque             mSkippedContent;
+    nsresult            mDTDState;
+    nsDTDMode           mDTDMode;
+
+    eHTMLTags           mSkipTarget;
+    eParserCommands     mParserCommand;   //tells us to viewcontent/viewsource/viewerrors...
+    eParserDocType      mDocType;
+
 };
 
 inline nsresult NS_NewNavHTMLDTD(nsIDTD** aInstancePtrResult)

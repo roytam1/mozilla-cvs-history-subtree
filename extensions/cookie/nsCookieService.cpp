@@ -161,20 +161,16 @@ nsCookieService::SetCookieString(nsIURI *aURL, nsIPrompt* aPrompt, const char * 
 }
 
 NS_IMETHODIMP
-nsCookieService::SetCookieStringFromHttp(nsIURI *aURL, nsIURI *aFirstURL, nsIPrompt *aPrompter, const char *aCookie, const char *aExpires) 
-{
+nsCookieService::SetCookieStringFromHttp(nsIURI *aURL, nsIURI *aFirstURL, nsIPrompt *aPrompter, const char *aCookie, const char *aExpires) {
   char *spec = NULL;
   nsresult rv = aURL->GetSpec(&spec);
   if (NS_FAILED(rv)) return rv;
-  NS_ASSERTION(aFirstURL,"aFirstURL is null");
-  if (aFirstURL) {
-    char *firstSpec = NULL;
-    rv = aFirstURL->GetSpec(&firstSpec);
-    if (NS_FAILED(rv)) return rv;
-    COOKIE_SetCookieStringFromHttp(spec, firstSpec, aPrompter, (char *)aCookie, (char *)aExpires);
-    nsCRT::free(firstSpec);
-  }
+  char *firstSpec = NULL;
+  rv = aFirstURL->GetSpec(&firstSpec);
+  if (NS_FAILED(rv)) return rv;
+  COOKIE_SetCookieStringFromHttp(spec, firstSpec, aPrompter, (char *)aCookie, (char *)aExpires);
   nsCRT::free(spec);
+  nsCRT::free(firstSpec);
   return NS_OK;
 }
 

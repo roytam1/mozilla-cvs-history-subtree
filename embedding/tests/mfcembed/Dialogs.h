@@ -26,6 +26,103 @@
 
 #include "resource.h"
 
+class CPromptDialog : public CDialog
+{
+public:
+    CPromptDialog(CWnd* pParent, const char* pTitle, const char* pText,
+                  const char* pInitPromptText,
+                  BOOL bHasCheck, const char* pCheckText, int initCheckVal);
+	
+	// Dialog Data
+    //{{AFX_DATA(CPromptDialog)
+    enum { IDD = IDD_PROMPT_DIALOG };
+    CString m_csPromptAnswer;
+    //}}AFX_DATA
+
+    CString m_csDialogTitle;
+	CString m_csPromptText;
+	BOOL m_bHasCheckBox;
+	CString m_csCheckBoxText;
+	int m_bCheckBoxValue;
+    
+	// ClassWizard generated virtual function overrides
+	//{{AFX_VIRTUAL(CPromptDialog)
+	protected:
+    virtual void DoDataExchange(CDataExchange* pDX);
+	//}}AFX_VIRTUAL
+
+	//{{AFX_MSG(CPromptDialog)
+	virtual BOOL OnInitDialog();
+	//}}AFX_MSG
+    DECLARE_MESSAGE_MAP()
+};
+
+class CPromptPasswordDialog : public CDialog
+{
+public:
+    CPromptPasswordDialog(CWnd* pParent, const char* pTitle, const char* pText,
+                          const char* pInitPasswordText,
+                          BOOL bHasCheck, const char* pCheckText, int initCheckVal);
+	
+	// Dialog Data
+    //{{AFX_DATA(CPromptPasswordDialog)
+    enum { IDD = IDD_PROMPT_PASSWORD_DIALOG };
+    //}}AFX_DATA
+
+    CString m_csDialogTitle;
+	CString m_csPromptText;
+	CString m_csPassword;
+	BOOL m_bHasCheckBox;
+	CString m_csCheckBoxText;
+	int m_bCheckBoxValue;
+
+	// ClassWizard generated virtual function overrides
+	//{{AFX_VIRTUAL(CPromptPasswordDialog)		
+	protected:
+    virtual void DoDataExchange(CDataExchange* pDX);
+	//}}AFX_VIRTUAL
+
+	//{{AFX_MSG(CPromptPasswordDialog)
+	virtual BOOL OnInitDialog();
+	//}}AFX_MSG
+    DECLARE_MESSAGE_MAP()
+};
+
+class CPromptUsernamePasswordDialog : public CDialog
+{
+public:
+    CPromptUsernamePasswordDialog(CWnd* pParent, const char* pTitle, const char* pText,
+                                  const char* pInitUsername, const char* pInitPassword, 
+		                          BOOL bHasCheck, const char* pCheckText, int initCheckVal);
+	
+	// Dialog Data
+    //{{AFX_DATA(CPromptUsernamePasswordDialog)
+    enum { IDD = IDD_PROMPT_USERPASS_DIALOG };
+    //}}AFX_DATA
+
+    CString m_csDialogTitle;
+	CString m_csPromptText;
+	CString m_csUserNameLabel;
+	CString m_csPasswordLabel;
+	CString m_csPassword;
+	CString m_csUserName;
+	BOOL m_bHasCheckBox;
+	CString m_csCheckBoxText;
+	int m_bCheckBoxValue;
+
+	// ClassWizard generated virtual function overrides
+	//{{AFX_VIRTUAL(CPromptUsernamePasswordDialog)	
+	protected:
+    virtual void DoDataExchange(CDataExchange* pDX);
+	//}}AFX_VIRTUAL
+
+	//{{AFX_MSG(CPromptUsernamePasswordDialog)
+	virtual BOOL OnInitDialog();
+	//}}AFX_MSG
+
+    DECLARE_MESSAGE_MAP()
+};
+
 class CBrowserView;
 
 class CFindDialog : public CFindReplaceDialog	

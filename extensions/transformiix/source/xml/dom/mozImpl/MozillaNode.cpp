@@ -384,40 +384,11 @@ MBool Node::hasChildNodes() const
 **/
 String Node::getBaseURI()
 {
-    Node* node=this;
-    ArrayList baseUrls;
+    NSI_FROM_TX(Node)
     String url;
-    Node* xbAttr;
 
-    while(node) {
-        switch(node->getNodeType()) {
-         case Node::ELEMENT_NODE :
-            xbAttr = ((Element*)node)->getAttributeNode(XMLBASE_ATTR);
-            if(xbAttr)
-                baseUrls.add(new String(xbAttr->getNodeValue()));
-            break;
-
-         case Node::DOCUMENT_NODE :
-            baseUrls.add(new String(((Document*)node)->getBaseURI()));
-            break;
-
-         default:
-            break;
-        }
-        node = node->getParentNode();
-    }
-
-    if(baseUrls.size()) {
-        url = *((String*)baseUrls.get(baseUrls.size()-1));
-
-        for(int i=baseUrls.size()-2;i>=0;i--) {
-            String dest;
-            URIUtils::resolveHref(*(String*)baseUrls.get(i), url, dest);
-            url = dest;
-        }
-    }
-
-    baseUrls.clear(MB_TRUE);
-
+    if (nsNode)
+        nsNode->GetBaseURI(url.getNSString());
+   
     return url;
 }

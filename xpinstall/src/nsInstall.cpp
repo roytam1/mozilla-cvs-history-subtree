@@ -2532,7 +2532,7 @@ nsInstall::Confirm(nsString& string, PRBool* aReturn)
 
     PRUnichar *title = GetTranslatedString(NS_ConvertASCIItoUCS2("Confirm").get());
     
-    return proxiedDialog->Confirm(mParent, title, string.GetUnicode(), aReturn);
+    return dialog->Confirm(mParent, title, string.GetUnicode(), aReturn);
 }
 
 

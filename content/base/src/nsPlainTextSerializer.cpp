@@ -463,6 +463,18 @@ nsPlainTextSerializer::CloseFrameset(const nsIParserNode& aNode)
 }
 
 NS_IMETHODIMP 
+nsPlainTextSerializer::OpenNoscript(const nsIParserNode& aNode)
+{
+  return OpenContainer(aNode);
+}
+
+NS_IMETHODIMP 
+nsPlainTextSerializer::CloseNoscript(const nsIParserNode& aNode)
+{
+  return CloseContainer(aNode);
+}
+
+NS_IMETHODIMP 
 nsPlainTextSerializer::DoFragment(PRBool aFlag)
 {
   return NS_OK;

@@ -49,7 +49,7 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   onload="console.onLoad();" onunload="console.onUnload();"
   persist="width height screenX screenY" title="&vkm.MainWindow.title;"
-  onkeypress="console.onWindowKeyPress(event)" windowtype="mozapp:venkman">
+  windowtype="mozapp:venkman">
 
   <script>
     <![CDATA[
@@ -57,17 +57,6 @@
     var DEBUG = true;
     ]]>
   </script>
-
-  <script src="chrome://navigator/content/tooltip.js"/>
-  <script src="chrome://global/content/nsJSSupportsUtils.js"/>
-  <script src="chrome://global/content/nsJSComponentManager.js"/>
-  <script src="chrome://global/content/nsUserSettings.js"/>
-  <script src="chrome://global/content/nsTransferable.js"/>
-  <script src="chrome://global/content/nsClipboard.js"/>
-  <script src="chrome://global/content/nsDragAndDrop.js"/>
-  <script src="chrome://communicator/content/contentAreaUtils.js"/>
-  <script src="chrome://communicator/content/contentAreaDD.js"/>
-  <script src="chrome://global/content/strres.js"/>
 
   <script src="chrome://venkman/content/html-consts.js"/>
   <script src="chrome://venkman/content/command-manager.js"/>
@@ -78,8 +67,6 @@
   <script src="chrome://venkman/content/venkman-debugger.js"/>
   <script src="chrome://venkman/content/venkman-commands.js"/>
   <script src="chrome://venkman/content/venkman-prefs.js"/>
-  <script src="chrome://venkman/content/venkman-eval.js"/>
-  <script src="chrome://venkman/content/venkman-msg.js"/>
 
   <commandset id="tasksCommands">
     <command id="cmd_close" oncommand="window.close();"/>
@@ -101,13 +88,6 @@
       modifiers="control alt" key="R"/>
   </keyset>
 
-  <popupset id="tooltip-set">
-    <popup id="tooltip-popup" class="tooltip" 
-      oncreate="return fillInTooltip(document.tooltipNode);">
-      <box id="tooltipBox" orient="vertical"/>
-    </popup>
-  </popupset>
-
   <toolbox>
     <menubar id="main-menubar" persist="collapsed">
       <menu id="menu_File">
@@ -124,8 +104,7 @@
   </toolbox>
 
   <box flex="1" orient="vertical">
-    <iframe id="output-iframe" flex="1" tooltip="tooltip-popup"
-      ondraggesture="nsDragAndDrop.startDrag(event, contentAreaDNDObserver);"
+    <html:iframe id="output-iframe" flex="1"
       src="chrome://venkman/content/venkman-output-window.html" type="content"/>
     <textbox id="input-single-line" class="input-widget"
       onkeypress="console.onSingleLineKeypress(event);"/>

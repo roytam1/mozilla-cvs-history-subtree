@@ -1215,14 +1215,33 @@ CheckConfirmDialog(JSContext* cx, const PRUnichar *szMessage, const PRUnichar *s
     }
     
     PRInt32 buttonPressed = 1; /* in case user exits dialog by clicking X */
-    nsAutoString dialogTitle;
-    if (NS_FAILED(res = Localize("Titleline", dialogTitle)))
+    nsAutoString yes, no, titleline;
+    if (NS_FAILED(res = Localize("Yes", yes)))
+        return PR_FALSE;
+    if (NS_FAILED(res = Localize("No", no)))
+        return PR_FALSE;
+    if (NS_FAILED(res = Localize("Titleline", titleline)))
         return PR_FALSE;
     
-    res = prompter->ConfirmEx(dialogTitle.GetUnicode(), szMessage,
-                              (nsIPrompt::BUTTON_TITLE_YES * nsIPrompt::BUTTON_POS_0) +
-                              (nsIPrompt::BUTTON_TITLE_NO * nsIPrompt::BUTTON_POS_1),
-                              nsnull, szCheckMessage, checkValue, &buttonPressed);
+    res = prompter->UniversalDialog(
+        nsnull, /* title message */
+        titleline.GetUnicode(), /* title text in top line of window */
+        szMessage, /* this is the main message */
+        szCheckMessage, /* This is the checkbox message */
+        yes.GetUnicode(), /* first button text */
+        no.GetUnicode(), /* second button text */
+        nsnull, /* third button text */
+        nsnull, /* fourth button text */
+        nsnull, /* first edit field label */
+        nsnull, /* second edit field label */
+        nsnull, /* first edit field initial and final value */
+        nsnull, /* second edit field initial and final value */
+        nsnull,  /* icon: question mark by default */
+        checkValue, /* initial and final value of checkbox */
+        2, /* number of buttons */
+        0, /* number of edit fields */
+        0, /* is first edit field a password field */
+        &buttonPressed);
     
     if (NS_FAILED(res)) {
         *checkValue = 0;

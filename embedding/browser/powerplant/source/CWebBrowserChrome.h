@@ -46,6 +46,7 @@ class CBrowserShell;
 class CWebBrowserChrome : public nsIWebBrowserChrome,
                            public nsIWebProgressListener,
                            public nsIEmbeddingSiteWindow,
+                           public nsIPrompt,
                            public nsIInterfaceRequestor,
                            public nsIContextMenuListener,
                            public nsITooltipListener,
@@ -58,6 +59,7 @@ public:
    NS_DECL_NSIWEBBROWSERCHROME
    NS_DECL_NSIWEBPROGRESSLISTENER
    NS_DECL_NSIEMBEDDINGSITEWINDOW
+   NS_DECL_NSIPROMPT
    NS_DECL_NSIINTERFACEREQUESTOR
    NS_DECL_NSICONTEXTMENULISTENER
    NS_DECL_NSITOOLTIPLISTENER

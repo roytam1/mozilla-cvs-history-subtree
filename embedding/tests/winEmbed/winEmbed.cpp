@@ -149,10 +149,10 @@ int main(int argc, char *argv[])
     }
 
 	// Now register an observer to watch for profile changes
-    nsCOMPtr<nsIObserverService> observerService(do_GetService(NS_OBSERVERSERVICE_CONTRACTID));
-
-    ProfileChangeObserver *observer = new ProfileChangeObserver;
-    observer->AddRef();
+	nsresult rv;
+	NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+	ProfileChangeObserver *observer = new ProfileChangeObserver;
+	observer->AddRef();
     observerService->AddObserver(NS_STATIC_CAST(nsIObserver *, observer), NS_LITERAL_STRING("profile-approve-change").get());
     observerService->AddObserver(NS_STATIC_CAST(nsIObserver *, observer), NS_LITERAL_STRING("profile-change-teardown").get());
     observerService->AddObserver(NS_STATIC_CAST(nsIObserver *, observer), NS_LITERAL_STRING("profile-after-change").get());
@@ -165,16 +165,43 @@ int main(int argc, char *argv[])
 	// Main message loop.
     // NOTE: We use a fake event and a timeout in order to process idle stuff for
     //       Mozilla every 1/10th of a second.
-    PRBool runCondition = PR_TRUE;
-    WPARAM rv;
-    rv = AppCallbacks::RunEventLoop(runCondition);
+	MSG msg;
+	HANDLE hFakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    while (1)
+    {
+		// Process pending messages
+		while (::PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
+		{
+			if (!::GetMessage(&msg, NULL, 0, 0))
+			{
+				// WM_QUIT
+				goto end_msg_loop;
+			}
 
-    observer->Release();
+			PRBool wasHandled = PR_FALSE;
+			NS_HandleEmbeddingEvent(msg, wasHandled);
+			if (wasHandled)
+			{
+				continue;
+			}
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		// Do idle stuff
+		NS_DoIdleEmbeddingStuff();
+
+		MsgWaitForMultipleObjects(1, &hFakeEvent, FALSE, 100, QS_ALLEVENTS);
+    }
+	CloseHandle(hFakeEvent);
+
+end_msg_loop:
+	observer->Release();
 
     // Close down Embedding APIs
     NS_TermEmbedding();
 
-    return rv;
+	return msg.wParam;
 }
 
 //-----------------------------------------------------------------------------
@@ -280,11 +307,9 @@ nsresult OpenWebPage(const char *url)
     // destruction (via Win32UI::Destroy)
 
     nsIWebBrowserChrome *chrome = nsnull;
-    rv = AppCallbacks::CreateBrowserWindow(nsIWebBrowserChrome::CHROME_ALL,
-           nsnull, &chrome);
+    rv = CreateBrowserWindow(nsIWebBrowserChrome::CHROME_ALL, nsnull, &chrome);
     if (NS_SUCCEEDED(rv))
     {
-        WebBrowserChromeUI::ShowWindow(chrome, PR_TRUE);
         // Start loading a page
         nsCOMPtr<nsIWebBrowser> newBrowser;
         chrome->GetWebBrowser(getter_AddRefs(newBrowser));
@@ -295,6 +320,36 @@ nsresult OpenWebPage(const char *url)
 
     return rv;
 }   
+
+
+nsresult CreateBrowserWindow(PRUint32 aChromeFlags, nsIWebBrowserChrome *aParent, nsIWebBrowserChrome **aNewWindow)
+{
+    WebBrowserChrome * chrome = new WebBrowserChrome();
+    if (!chrome)
+    {
+        return NS_ERROR_FAILURE;
+    }
+
+    CallQueryInterface(NS_STATIC_CAST(nsIWebBrowserChrome*, chrome), aNewWindow);
+
+    chrome->SetChromeFlags(aChromeFlags);
+
+    // Insert the browser
+    nsCOMPtr<nsIWebBrowser> newBrowser;
+    chrome->CreateBrowser(-1, -1, -1, -1, getter_AddRefs(newBrowser));
+    if (!newBrowser)
+    return NS_ERROR_FAILURE;
+
+    // Place it where we want it.
+    ResizeEmbedding(NS_STATIC_CAST(nsIWebBrowserChrome*, chrome));
+
+    // Subscribe new window to profile changes so it can kill itself when one happens
+    nsresult rv;
+    NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+    observerService->AddObserver(NS_STATIC_CAST(nsIObserver *, chrome), NS_LITERAL_STRING("profile-change-teardown").get());
+
+    return NS_OK;
+}
 
 //
 //  FUNCTION: GetBrowserFromChrome()
@@ -409,7 +464,7 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
 //
 //  FUNCTION: ResizeEmbedding()
 //
-//  PURPOSE: Resizes the webbrowser window to fit its container.
+//  PURPOSE: Resizes the webbrowser window to fit it's container.
 //
 nsresult ResizeEmbedding(nsIWebBrowserChrome* chrome)
 {
@@ -1003,8 +1058,7 @@ nativeWindow WebBrowserChromeUI::CreateNativeWindow(nsIWebBrowserChrome* chrome)
   if (chromeFlags & nsIWebBrowserChrome::CHROME_MENUBAR) {
     HMENU hmenuDlg = LoadMenu(ghInstanceResources, MAKEINTRESOURCE(IDC_WINEMBED));
     SetMenu(hwndDialog, hmenuDlg);
-  } else
-    SetMenu(hwndDialog, 0);
+  }
 
   // Add some interesting URLs to the address drop down
   HWND hwndAddress = GetDlgItem(hwndDialog, IDC_ADDRESS);
@@ -1033,32 +1087,37 @@ nativeWindow WebBrowserChromeUI::CreateNativeWindow(nsIWebBrowserChrome* chrome)
 //
 void WebBrowserChromeUI::Destroy(nsIWebBrowserChrome* chrome)
 {
-  nsCOMPtr<nsIWebBrowser> webBrowser;
-  nsCOMPtr<nsIWebNavigation> webNavigation;
+    nsCOMPtr<nsIWebBrowser> webBrowser;
+    nsCOMPtr<nsIWebNavigation> webNavigation;
 
-  chrome->GetWebBrowser(getter_AddRefs(webBrowser));
-  webNavigation = do_QueryInterface(webBrowser);
-  if (webNavigation)
-    webNavigation->Stop();
+    chrome->GetWebBrowser(getter_AddRefs(webBrowser));
+    webNavigation = do_QueryInterface(webBrowser);
 
-  chrome->ExitModalEventLoop(NS_OK);
+    if (webNavigation)
+    {
+        webNavigation->Stop();
+    }
 
-  HWND hwndDlg = GetBrowserDlgFromChrome(chrome);
-  if (hwndDlg == NULL)
-    return;
+    HWND hwndDlg = GetBrowserDlgFromChrome(chrome);
+	if (hwndDlg == NULL)
+	{
+		return;
+	}
 
-  // Explicitly destroy the embedded browser and then the chrome
+	// Explicitly destroy the embedded browser and then the chrome
 
-  // First the browser
-  nsCOMPtr<nsIWebBrowser> browser = nsnull;
-  chrome->GetWebBrowser(getter_AddRefs(browser));
-  nsCOMPtr<nsIBaseWindow> browserAsWin = do_QueryInterface(browser);
-  if (browserAsWin)
-    browserAsWin->Destroy();
+	// First the browser
+	nsCOMPtr<nsIWebBrowser> browser = nsnull;
+	chrome->GetWebBrowser(getter_AddRefs(browser));
+	nsCOMPtr<nsIBaseWindow> browserAsWin = do_QueryInterface(browser);
+	if (browserAsWin)
+	{
+		browserAsWin->Destroy();
+	}
 
-      // Now the chrome
-  chrome->SetWebBrowser(nsnull);
-  NS_RELEASE(chrome);
+	// Now the chrome
+    chrome->SetWebBrowser(nsnull);
+	NS_RELEASE(chrome);
 }
 
 
@@ -1208,21 +1267,6 @@ void WebBrowserChromeUI::HideTooltip(nsIWebBrowserChrome *aChrome)
     // TODO code to hide a tooltip should go here
 }
 
-void WebBrowserChromeUI::ShowWindow(nsIWebBrowserChrome *aChrome, PRBool aShow)
-{
-  HWND win = GetBrowserDlgFromChrome(aChrome);
-  ::ShowWindow(win, aShow ? SW_RESTORE : SW_HIDE);
-}
-
-void WebBrowserChromeUI::SizeTo(nsIWebBrowserChrome *aChrome, PRInt32 aWidth, PRInt32 aHeight)
-{
-  HWND win = GetBrowserDlgFromChrome(aChrome);
-  RECT winRect;
-
-  ::GetWindowRect(win, &winRect);
-  ::MoveWindow(win, winRect.left, winRect.top, aWidth, aHeight, TRUE);
-}
-
 //
 //  FUNCTION: GetResourceStringByID()
 //
@@ -1242,76 +1286,3 @@ void WebBrowserChromeUI::GetResourceStringById(PRInt32 aID, char ** aReturn)
     return;
 }
 
-//-----------------------------------------------------------------------------
-// AppCallbacks
-//-----------------------------------------------------------------------------
-
-nsresult AppCallbacks::CreateBrowserWindow(PRUint32 aChromeFlags,
-           nsIWebBrowserChrome *aParent,
-           nsIWebBrowserChrome **aNewWindow)
-{
-  WebBrowserChrome * chrome = new WebBrowserChrome();
-  if (!chrome)
-    return NS_ERROR_FAILURE;
-
-  CallQueryInterface(NS_STATIC_CAST(nsIWebBrowserChrome*, chrome), aNewWindow);
-
-  chrome->SetChromeFlags(aChromeFlags);
-  chrome->SetParent(aParent);
-
-  // Insert the browser
-  nsCOMPtr<nsIWebBrowser> newBrowser;
-  chrome->CreateBrowser(-1, -1, -1, -1, getter_AddRefs(newBrowser));
-  if (!newBrowser)
-    return NS_ERROR_FAILURE;
-
-  // Place it where we want it.
-  ResizeEmbedding(NS_STATIC_CAST(nsIWebBrowserChrome*, chrome));
-
-  // Subscribe new window to profile changes so it can kill itself when one happens
-  nsCOMPtr<nsIObserverService> observerService(do_GetService(NS_OBSERVERSERVICE_CONTRACTID));
-  if (observerService)
-    observerService->AddObserver(NS_STATIC_CAST(nsIObserver *, chrome),
-                       NS_LITERAL_STRING("profile-change-teardown").get());
-
-  return NS_OK;
-}
-
-void AppCallbacks::EnableChromeWindow(nsIWebBrowserChrome *aWindow,
-                      PRBool aEnabled)
-{
-  HWND hwnd = GetBrowserDlgFromChrome(aWindow);
-  ::EnableWindow(hwnd, aEnabled ? TRUE : FALSE);
-}
-
-PRUint32 AppCallbacks::RunEventLoop(PRBool &aRunCondition)
-{
-  MSG msg;
-  HANDLE hFakeEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
-
-  while (aRunCondition ) {
-    // Process pending messages
-    while (::PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
-      if (!::GetMessage(&msg, NULL, 0, 0)) {
-        // WM_QUIT
-        aRunCondition = PR_FALSE;
-        break;
-      }
-
-      PRBool wasHandled = PR_FALSE;
-      ::NS_HandleEmbeddingEvent(msg, wasHandled);
-      if (wasHandled)
-        continue;
-
-      ::TranslateMessage(&msg);
-      ::DispatchMessage(&msg);
-    }
-
-    // Do idle stuff
-    ::NS_DoIdleEmbeddingStuff();
-
-    ::MsgWaitForMultipleObjects(1, &hFakeEvent, FALSE, 100, QS_ALLEVENTS);
-  }
-  ::CloseHandle(hFakeEvent);
-  return msg.wParam;
-}

@@ -19,6 +19,9 @@
  * Contributor(s):
  */
 
+// XXX Windows.h should not be needed. This file is meant to be platform neutral
+#include <windows.h> // for cheesy nsIPrompt implementation
+
 // Mozilla Includes
 #include "nsIGenericFactory.h"
 #include "nsString.h"
@@ -27,7 +30,6 @@
 #include "nsIWebProgress.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDOMWindow.h"
-#include "nsIDOMWindowInternal.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIRequest.h"
 #include "nsIChannel.h"
@@ -47,7 +49,6 @@ WebBrowserChrome::WebBrowserChrome()
 {
     NS_INIT_REFCNT();
     mNativeWindow = nsnull;
-    mSizeSet = PR_FALSE;
 }
 
 WebBrowserChrome::~WebBrowserChrome()
@@ -117,6 +118,7 @@ NS_INTERFACE_MAP_BEGIN(WebBrowserChrome)
    NS_INTERFACE_MAP_ENTRY(nsISHistoryListener)
    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
    NS_INTERFACE_MAP_ENTRY(nsIObserver)
+   NS_INTERFACE_MAP_ENTRY(nsIPrompt)
    NS_INTERFACE_MAP_ENTRY(nsIContextMenuListener)
    NS_INTERFACE_MAP_ENTRY(nsITooltipListener)
 NS_INTERFACE_MAP_END
@@ -191,16 +193,11 @@ NS_IMETHODIMP WebBrowserChrome::CreateBrowserWindow(PRUint32 aChromeFlags,
 
     nsresult rv;
 
-    nsIWebBrowserChrome *parent = aChromeFlags & nsIWebBrowserChrome::CHROME_DEPENDENT ? this : 0;
-
     nsIWebBrowserChrome *newChrome = nsnull;
-    rv = AppCallbacks::CreateBrowserWindow(aChromeFlags, parent, &newChrome);
+    rv = ::CreateBrowserWindow(nsIWebBrowserChrome::CHROME_ALL, nsnull, &newChrome);
     if (NS_SUCCEEDED(rv))
     {
         newChrome->GetWebBrowser(_retval);
-        // leave chrome windows hidden until the chrome is loaded
-        if (!(aChromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_CHROME))
-          WebBrowserChromeUI::ShowWindow(this, PR_TRUE);
     }
 
     return rv;
@@ -216,27 +213,13 @@ NS_IMETHODIMP WebBrowserChrome::DestroyBrowserWindow(void)
 
 NS_IMETHODIMP WebBrowserChrome::SizeBrowserTo(PRInt32 aCX, PRInt32 aCY)
 {
-  /* This isn't exactly correct: we're setting the whole window to
-     the size requested for the browser. At time of writing, though,
-     it's fine and useful for winEmbed's purposes. */
-  WebBrowserChromeUI::SizeTo(this, aCX, aCY);
-  mSizeSet = PR_TRUE;
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP WebBrowserChrome::ShowAsModal(void)
 {
-  if (mDependentParent)
-    AppCallbacks::EnableChromeWindow(mDependentParent, PR_FALSE);
-
-  mContinueModalLoop = PR_TRUE;
-  AppCallbacks::RunEventLoop(mContinueModalLoop);
-
-  if (mDependentParent)
-    AppCallbacks::EnableChromeWindow(mDependentParent, PR_TRUE);
-
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP WebBrowserChrome::IsWindowModal(PRBool *_retval)
@@ -247,8 +230,7 @@ NS_IMETHODIMP WebBrowserChrome::IsWindowModal(PRBool *_retval)
 
 NS_IMETHODIMP WebBrowserChrome::ExitModalEventLoop(nsresult aStatus)
 {
-  mContinueModalLoop = PR_FALSE;
-  return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 //*****************************************************************************
@@ -276,7 +258,6 @@ NS_IMETHODIMP WebBrowserChrome::OnStateChange(nsIWebProgress *progress, nsIReque
         WebBrowserChromeUI::UpdateBusyState(this, PR_FALSE);
         WebBrowserChromeUI::UpdateProgress(this, 0, 100);
         WebBrowserChromeUI::UpdateStatusBarText(this, nsnull);
-        ContentFinishedLoading();
     }
 
     return NS_OK;
@@ -437,22 +418,6 @@ WebBrowserChrome::SendHistoryStatusMessage(nsIURI * aURI, char * operation, PRIn
     return NS_OK;
 }
 
-void WebBrowserChrome::ContentFinishedLoading()
-{
-  // if it was a chrome window and no one has already specified a size,
-  // size to content
-  if (mWebBrowser && !mSizeSet &&
-     (mChromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_CHROME)) {
-    nsCOMPtr<nsIDOMWindow> contentWin;
-    mWebBrowser->GetContentDOMWindow(getter_AddRefs(contentWin));
-    nsCOMPtr<nsIDOMWindowInternal> contentIWin(do_QueryInterface(contentWin));
-    if (contentIWin)
-      contentIWin->SizeToContent();
-    WebBrowserChromeUI::ShowWindow(this, PR_TRUE);
-  }
-}
-
-
 //*****************************************************************************
 // WebBrowserChrome::nsIEmbeddingSiteWindow
 //*****************************************************************************   
@@ -563,4 +528,91 @@ NS_IMETHODIMP WebBrowserChrome::OnHideTooltip()
 {
     WebBrowserChromeUI::HideTooltip(this);
     return NS_OK;
+}
+
+
+//*****************************************************************************
+// WebBrowserChrome::nsIPrompt
+//*****************************************************************************   
+/* Simple, cheesy, partial implementation of nsIPrompt.
+A real app would want better. */
+
+NS_IMETHODIMP WebBrowserChrome::Alert(const PRUnichar* dialogTitle, const PRUnichar *text)
+{
+    nsAutoString stext(text);
+    nsAutoString stitle(dialogTitle);
+    char *ctext = stext.ToNewCString();
+    char *ctitle = stitle.ToNewCString();
+    // XXX platform specific user-interface code should happen in WebBrowserChromeUI
+    ::MessageBox((HWND)mNativeWindow, ctext, ctitle, MB_OK | MB_ICONEXCLAMATION);
+    nsMemory::Free(ctitle);
+    nsMemory::Free(ctext);
+    return NS_OK;
+}
+
+NS_IMETHODIMP WebBrowserChrome::AlertCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue)
+{
+    nsAutoString stext(text);
+    nsAutoString stitle(dialogTitle);
+    char *ctext = stext.ToNewCString();
+    char *ctitle = stitle.ToNewCString();
+    // XXX platform specific user-interface code should happen in WebBrowserChromeUI
+    ::MessageBox((HWND)mNativeWindow, ctext, ctitle, MB_OK | MB_ICONEXCLAMATION);
+    *checkValue = PR_FALSE; // yeah, well, it's not a real implementation
+    delete ctitle;
+    delete ctext;
+    return NS_OK;
+}
+
+NS_IMETHODIMP WebBrowserChrome::Confirm(const PRUnichar* dialogTitle, const PRUnichar *text, PRBool *_retval)
+{
+    nsAutoString stext(text);
+    nsAutoString stitle(dialogTitle);
+    char *ctext = stext.ToNewCString();
+    char *ctitle = stitle.ToNewCString();
+    // XXX platform specific user-interface code should happen in WebBrowserChromeUI
+    int answer = ::MessageBox((HWND)mNativeWindow, ctext, ctitle, MB_YESNO | MB_ICONQUESTION);
+    delete ctitle;
+    delete ctext;
+    *_retval = answer == IDYES ? PR_TRUE : PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP WebBrowserChrome::ConfirmCheck(const PRUnichar* dialogTitle, const PRUnichar *text, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+    nsAutoString stext(text);
+    nsAutoString stitle(dialogTitle);
+    char *ctext = stext.ToNewCString();
+    char *ctitle = stitle.ToNewCString();
+    // XXX platform specific user-interface code should happen in WebBrowserChromeUI
+    int answer = ::MessageBox((HWND)mNativeWindow, ctext, ctitle, MB_YESNO | MB_ICONQUESTION);
+    delete ctitle;
+    delete ctext;
+    *_retval = answer == IDYES ? PR_TRUE : PR_FALSE;
+    return NS_OK;
+}
+
+NS_IMETHODIMP WebBrowserChrome::Prompt(const PRUnichar *dialogTitle, const PRUnichar *text, PRUnichar **answer, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+ 
+NS_IMETHODIMP WebBrowserChrome::PromptUsernameAndPassword(const PRUnichar *dialogTitle, const PRUnichar *text, PRUnichar **username, PRUnichar **password, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+ 
+NS_IMETHODIMP WebBrowserChrome::PromptPassword(const PRUnichar *dialogTitle, const PRUnichar *text, PRUnichar **password, const PRUnichar *checkMsg, PRBool *checkValue, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP WebBrowserChrome::Select(const PRUnichar *inDialogTitle, const PRUnichar *inMsg, PRUint32 inCount, const PRUnichar **inList, PRInt32 *outSelection, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP WebBrowserChrome::UniversalDialog(const PRUnichar *titleMessage, const PRUnichar *dialogTitle, const PRUnichar *text, const PRUnichar *checkboxMsg, const PRUnichar *button0Text, const PRUnichar *button1Text, const PRUnichar *button2Text, const PRUnichar *button3Text, const PRUnichar *editfield1Msg, const PRUnichar *editfield2Msg, PRUnichar **editfield1Value, PRUnichar **editfield2Value, const PRUnichar *iconURL, PRBool *checkboxState, PRInt32 numberButtons, PRInt32 numberEditfields, PRInt32 editField1Password, PRInt32 *buttonPressed)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -376,11 +376,6 @@ iframe {
   border: 2px inset;
 }
 
-noframes {
-  display: block;
-}
-
-
 /* focusable content */
 
 /* links */
@@ -403,9 +398,9 @@ noframes {
 }
 
 /* hidden elements */
-area, base, basefont, head, meta, script, style, title,
-noembed, noscript, param, :-moz-comment, :-moz-pi {
-   display: none;
+area, base, basefont, head, meta, script, style, title, noembed,
+noscript, noframes, param, :-moz-comment, :-moz-pi {
+  display: none;
 }
 
 

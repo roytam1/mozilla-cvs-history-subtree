@@ -59,14 +59,16 @@ DoFlo(Display *display,
   float coeffs[6];
   XieConstant constant;
   XiePhototag idx = 0, src;
+  /*  static PRBool firsttime = PR_TRUE;
+      static XiePhotomap pmap;
+  */
 
   /* create the pretty flo graph */
 
 
+
   /* import */
-  XieFloImportDrawable(&photoElement[idx], aSrc,
-                       aSX, aSY, aSWidth, aSHeight,
-                       0, PR_FALSE);
+  XieFloImportDrawable(&photoElement[idx], aSrc, aSX, aSY, aSWidth, aSHeight, 0, PR_FALSE);
   ++idx;
   src = idx;
 
@@ -153,7 +155,7 @@ DrawScaledImageXIE(Display *display,
 
     photoElement = XieAllocatePhotofloGraph(3);
 
-    /* XXX we want to destroy this at shutdown
+    /* we want to destroy this at shutdown
        XieDestroyPhotospace(display, photospace);
     */
   }
@@ -168,11 +170,9 @@ DrawScaledImageXIE(Display *display,
     alphaMask = gdk_pixmap_new(aSrcMask, aDWidth, aDHeight, 1);
     destMask = GDK_WINDOW_XWINDOW(alphaMask);
     gc = gdk_gc_new(alphaMask);
-    /* run the flo on the alpha mask to get a scaled alpha mask */
-    DoFlo(display, destMask, GDK_GC_XGC(gc), GDK_WINDOW_XWINDOW(aSrcMask),
-          aSrcWidth, aSrcHeight,
-          aSX, aSY, aSWidth, aSHeight,
-          aDX, aDY, aDWidth, aDHeight);
+    DoFlo(display, destMask, GDK_GC_XGC(gc), GDK_WINDOW_XWINDOW(aSrcMask), aSrcWidth, aSrcHeight,
+	  aSX, aSY, aSWidth, aSHeight,
+	  aDX, aDY, aDWidth, aDHeight);
     gdk_gc_unref(gc);
 
     gc = gdk_gc_new(aDest);
@@ -187,11 +187,9 @@ DrawScaledImageXIE(Display *display,
     gdk_gc_ref(gc);
   }
 
-  /* run the flo on the image to get a the scaled image */
-  DoFlo(display, exportDrawable, GDK_GC_XGC(gc), importDrawable,
-        aSrcWidth, aSrcHeight,
-        aSX, aSY, aSWidth, aSHeight,
-        aDX, aDY, aDWidth, aDHeight);
+  DoFlo(display, exportDrawable, GDK_GC_XGC(gc), importDrawable, aSrcWidth, aSrcHeight,
+	aSX, aSY, aSWidth, aSHeight,
+	aDX, aDY, aDWidth, aDHeight);
 
   if (alphaMask)
     gdk_pixmap_unref(alphaMask);

@@ -28,7 +28,6 @@
 #ifdef USE_IMG2
 #include "imgIRequest.h"
 #include "imgILoader.h"
-#include "imgIContainer.h"
 #else
 #include "nsIImageGroup.h"
 #include "nsIImageRequest.h"
@@ -471,25 +470,14 @@ nsresult nsImageDocument::UpdateTitle( void )
     nsCOMPtr<nsILocale> locale = nsnull;
     rv = stringService->CreateBundle(NSIMAGEDOCUMENT_PROPERTIES_URI, locale, getter_AddRefs(bundle));
   }
+  // XXX this shouldn't be ifndef'd
+#ifndef USE_IMG2
   if (NS_SUCCEEDED(rv) && bundle) {
     nsAutoString key;
     nsXPIDLString valUni;
     if (mImageRequest) {
       PRUint32 width, height;
-#ifdef USE_IMG2
-      imgIContainer* imgContainer;
-      rv = mImageRequest->GetImage(&imgContainer);
-      if (NS_SUCCEEDED(rv) && imgContainer) {
-        nscoord w = 0, h = 0;
-        imgContainer->GetWidth(&w);
-        imgContainer->GetHeight(&h);
-        width = w;
-        height = h;
-        NS_RELEASE(imgContainer);
-      }
-#else
-      mImageRequest->GetNaturalImageSize(&width, &height);
-#endif
+      mImageRequest->GetNaturalDimensions(&width, &height);
       // if we got a valid size (sometimes we do not) then display it
       if (width != 0 && height != 0){
         key.AssignWithConversion("ImageTitleWithDimensions");
@@ -510,5 +498,6 @@ nsresult nsImageDocument::UpdateTitle( void )
       SetTitle(titleStr);
     }
   }
+#endif
   return NS_OK;
 }

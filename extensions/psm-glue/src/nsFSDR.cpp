@@ -174,6 +174,7 @@ wallet_GetString(nsAutoString& result, PRUnichar * szMessage, PRUnichar * szMess
   i++;
   }
 
+  nsAutoString password;
   nsresult res;  
   nsCOMPtr<nsIPrompt> dialog;
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
@@ -184,25 +185,43 @@ wallet_GetString(nsAutoString& result, PRUnichar * szMessage, PRUnichar * szMess
   }
 
   PRUnichar* pwd = NULL;
-  PRUnichar * prompt_string = Wallet_Localize("PromptForPassword");  
-  PRBool confirmed;  
-  res = dialog->PromptPassword(prompt_string, szMessage, &pwd, nsnull, nsnull, &confirmed);
+  PRInt32 buttonPressed = 1; /* in case user exits dialog by clickin X */
+  PRUnichar * prompt_string = Wallet_Localize("PromptForPassword");
 
-  if (prompt_string)
-    nsMemory::Free(prompt_string);
+  res = dialog->UniversalDialog(
+    NULL, /* title message */
+    prompt_string, /* title text in top line of window */
+    szMessage, /* this is the main message */
+    NULL, /* This is the checkbox message */
+    NULL, /* first button text, becomes OK by default */
+    NULL, /* second button text, becomes CANCEL by default */
+    NULL, /* third button text */
+    NULL, /* fourth button text */
+    szMessage1, /* first edit field label */
+    NULL, /* second edit field label */
+    &pwd, /* first edit field initial and final value */
+    NULL, /* second edit field initial and final value */
+    NULL,  /* icon: question mark by default */
+    NULL, /* initial and final value of checkbox */
+    2, /* number of buttons */
+    1, /* number of edit fields */
+    1, /* is first edit field a password field */
+    &buttonPressed);
+
+  Recycle(prompt_string);
 
   if (NS_FAILED(res)) {
     return res;
   }
+  password = pwd;
+  delete[] pwd;
 
-  if (confirmed) {
-    if (pwd) {  // This had better not be nsnull! If so, fall through
-      result = pwd;
-      nsMemory::Free(pwd);
-      return NS_OK;
-    }
+  if (buttonPressed == 0) {
+    result = password;
+    return NS_OK;
+  } else {
+    return NS_ERROR_FAILURE; /* user pressed cancel */
   }
-  return NS_ERROR_FAILURE;
 }
 
 nsresult
@@ -227,32 +246,48 @@ wallet_GetDoubleString(nsAutoString& result, PRUnichar * szMessage, PRUnichar * 
     return NS_ERROR_FAILURE;
   }
 
-  // NOTE: This method used to use UniversalDialog in order do get a confirmed password.
-  // Since we don't have that ability anymore, just do a normal password prompt. This file
-  // is supposedly obsolete - this was done just to get it to compile until removed from build.
-  
   PRUnichar* pwd = NULL;
-  PRUnichar * prompt_string = Wallet_Localize("PromptForPassword");  
-  PRBool confirmed;  
-  res = dialog->PromptPassword(prompt_string, szMessage, &pwd, nsnull, nsnull, &confirmed);
+  PRUnichar* pwd2 = NULL;
+  PRInt32 buttonPressed = 1; /* in case user exits dialog by clickin X */
+  PRUnichar * prompt_string = Wallet_Localize("PromptForPassword");
 
-  if (prompt_string)
-    nsMemory::Free(prompt_string);
+  res = dialog->UniversalDialog(
+    NULL, /* title message */
+    prompt_string, /* title text in top line of window */
+    szMessage, /* this is the main message */
+    NULL, /* This is the checkbox message */
+    NULL, /* first button text, becomes OK by default */
+    NULL, /* second button text, becomes CANCEL by default */
+    NULL, /* third button text */
+    NULL, /* fourth button text */
+    szMessage1, /* first edit field label */
+    szMessage2, /* second edit field label */
+    &pwd, /* first edit field initial and final value */
+    &pwd2, /* second edit field initial and final value */
+    NULL,  /* icon: question mark by default */
+    NULL, /* initial and final value of checkbox */
+    2, /* number of buttons */
+    2, /* number of edit fields */
+    1, /* is first edit field a password field */
+    &buttonPressed);
+
+  Recycle(prompt_string);
 
   if (NS_FAILED(res)) {
     return res;
   }
-  matched = PR_TRUE;
-  
-  if (confirmed) {
-    if (pwd) {  // This had better not be nsnull! If so, fall through
-      password = pwd;
-      password2 = pwd;
-      nsMemory::Free(pwd);
-      return NS_OK;
-    }
+  password = pwd;
+  password2 = pwd2;
+  delete[] pwd;
+  delete[] pwd2;
+  matched = (password == password2);
+
+  if (buttonPressed == 0) {
+    result = password;
+    return NS_OK;
+  } else {
+    return NS_ERROR_FAILURE; /* user pressed cancel */
   }
-  return NS_ERROR_FAILURE;
 }
 
 /************************ PREFERENCES ***************************************/

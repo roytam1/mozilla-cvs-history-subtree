@@ -74,7 +74,7 @@ nsPrefService::nsPrefService()
 
   NS_INIT_REFCNT();
 
-  rootBranch = new nsPrefBranch("", PR_FALSE); 
+  rootBranch = new nsPrefBranch("", FALSE); 
   mRootBranch = (nsIPrefBranch *)rootBranch;
 
 }
@@ -323,11 +323,10 @@ static nsresult openPrefFileSpec(nsIFileSpec* aFilespec, PRBool aIsErrorFatal, P
   nsresult rv;
   char* readBuf;
 
-  // TODO: Validate this entire function, I seriously doubt it does what it is 
-  //       supposed to. Note for instance that gErrorOpeningUserPrefs will only
-  //       be set if the evaluation of the config script fails AND aIsErrorFatal
-  //       is set to PR_TRUE... the readBuf test is irrelavent because it will
-  //       bail at the GetFileContents call if it fails.
+  // TODO: Validate this entire function, I seriously doubt it does what it is supposed to.
+  //       Note for instance that gErrorOpeningUserPrefs will only be set if the evaluation
+  //       of the config script fails AND aIsErrorFatal is set TRUE... the readBuf test is
+  //       irrelavent because it will bail at the GetFileContents call if it fails.
 
   // TODO: Convert the rest of this code to nsIFile and avoid this conversion to nsIFileSpec
   rv = aFilespec->ResolveSymlink();
@@ -689,13 +688,12 @@ extern "C" JSBool pref_InitInitialObjects()
 #endif /* DEBUG_prefs */
   nsCOMPtr<nsIFile> aFile3;
 
-  // Finally, parse any other special files (platform-specific ones).
-  for (k = 1; k < (int) (sizeof(specialFiles) / sizeof(char*)); k++) {
-    // we must get the directory every time so we can append the child
-    // because SetLeafName will not work here.
-    rv = NS_GetSpecialDirectory(NS_APP_PREF_DEFAULTS_50_DIR, getter_AddRefs(aFile3));
-    if (NS_SUCCEEDED(rv)) {
-      rv = aFile3->Append((char*)specialFiles[k]);
+  rv = NS_GetSpecialDirectory(NS_APP_PREF_DEFAULTS_50_DIR, getter_AddRefs(aFile3));
+  if (NS_SUCCEEDED(rv)) {
+    // Finally, parse any other special files (platform-specific ones).
+    for (k = 1; k < (int) (sizeof(specialFiles) / sizeof(char*)); k++)
+    {
+      rv = aFile3->SetLeafName((char*)specialFiles[k]);
       if (NS_SUCCEEDED(rv)) {
 #ifdef DEBUG_prefs
         printf("Parsing %s\n", specialFiles[k]);
@@ -708,6 +706,7 @@ extern "C" JSBool pref_InitInitialObjects()
     }
   }
 
+done:
   JS_MaybeGC(gMochaContext);
   return JS_TRUE;
 }
@@ -725,7 +724,7 @@ extern "C" JSRuntime* PREF_GetJSRuntime()
       return rt;
     }
   }
-  NS_WARNING("nsJSRuntimeService is missing");
+  NS_ASSERTION(NS_SUCCEEDED(rv), "nsJSRuntimeService is missing");
   return nsnull;
 }
 
