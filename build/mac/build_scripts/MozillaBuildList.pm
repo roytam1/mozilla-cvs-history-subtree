@@ -2003,7 +2003,11 @@ sub BuildMozilla()
 
     StartBuildModule("apprunner");
 
-    BuildOneProject(":mozilla:xpfe:bootstrap:macbuild:apprunner.mcp",           "apprunner$C$D", 0, 0, 1);
+    if ($main::options{static_build}) {
+        BuildOneProject(":mozilla:xpfe:bootstrap:macbuild:StaticMerge.mcp",    "StaticMerge$D.o", 0, 0, 0);
+    }
+    
+    BuildOneProject(":mozilla:xpfe:bootstrap:macbuild:apprunner.mcp",          "apprunner$C$D", 0, 0, 1);
 
     # build tool to create Component Registry in release builds only.
     if (!($main::DEBUG)) {
