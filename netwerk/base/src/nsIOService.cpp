@@ -181,6 +181,7 @@ nsIOService::ExtractScheme(const char* inURI, PRUint32 *startPos, PRUint32 *endP
                 nsCRT::memcpy(str, &inURI[start], length);
                 str[length] = '\0';
                 *scheme = str;
+                ToLowerCase(*scheme);
             }
             return NS_OK;
         }
@@ -409,6 +410,18 @@ nsIOService::SetOffline(PRBool offline)
         if (NS_FAILED(rv2)) return rv2;
     }
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsIOService::URLEscape(const char* str, PRInt16 mask, char **result)
+{
+    return nsURLEscape((char*)str,mask,result);
+}
+
+NS_IMETHODIMP 
+nsIOService::URLUnescape(const char* str, char **result)
+{
+    return nsURLUnescape((char*)str,result);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
