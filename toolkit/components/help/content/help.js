@@ -1,42 +1,42 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
- * The Original Code is Mozilla Application Suite.
- *
- * The Initial Developer of the Original Code is
- * Ian Oeschger.
- * Portions created by the Initial Developer are Copyright (C) 2003
- * the Initial Developer. All Rights Reserved.
- *
- * Contributor(s):
- *      brantgurganus2001@cherokeescouting.org
- *      rlk@trfenv.com
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# The Original Code is Mozilla Application Suite.
+#
+# The Initial Developer of the Original Code is
+# Ian Oeschger.
+# Portions created by the Initial Developer are Copyright (C) 2003
+# the Initial Developer. All Rights Reserved.
+#
+# Contributor(s):
+#      brantgurganus2001@cherokeescouting.org
+#      rlk@trfenv.com
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK ***** */
 
-// Global Variables
+# Global Variables
 var helpBrowser;
 var helpWindow;
 var helpSearchPanel;
@@ -47,14 +47,14 @@ var helpTocPanel;
 var helpIndexPanel;
 var helpGlossaryPanel;
 
-// Namespaces
+# Namespaces
 const NC = "http://home.netscape.com/NC-rdf#";
 const SN = "rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const XML = "http://www.w3.org/XML/1998/namespace#"
 const MAX_LEVEL = 40; // maximum depth of recursion in search datasources.
 const MAX_HISTORY_MENU_ITEMS = 6;
 
-// Resources
+# Resources
 const RDF = Components.classes["@mozilla.org/rdf/rdf-service;1"]
     .getService(Components.interfaces.nsIRDFService);
 const RDF_ROOT = RDF.GetResource("urn:root");
@@ -83,23 +83,23 @@ var RE;
 
 var helpFileURI;
 var helpFileDS;
-// Set from nc:base attribute on help rdf file. It may be used for prefix
-// reduction on all links within the current help set.
+# Set from nc:base attribute on help rdf file. It may be used for prefix
+# reduction on all links within the current help set.
 var helpBaseURI;
 
 const defaultHelpFile = "chrome://help/locale/help.rdf";
-// Set from nc:defaulttopic. It is used when the requested uri has no topic
-// specified.
+# Set from nc:defaulttopic. It is used when the requested uri has no topic
+# specified.
 const defaultTopic = "use-help";
 var searchDatasources = "rdf:null";
 var searchDS = null;
 
 const NSRESULT_RDF_SYNTAX_ERROR = 0x804e03f7;
 
-// This function is called by dialogs/windows that want to display
-// context-sensitive help
-// These dialogs/windows should include the script
-// chrome://help/content/contextHelp.js
+# This function is called by dialogs/windows that want to display
+# context-sensitive help
+# These dialogs/windows should include the script
+# chrome://help/content/contextHelp.js
 function displayTopic(topic) {
     // Get the page to open.
     var uri = getLink(topic);
@@ -113,7 +113,7 @@ function displayTopic(topic) {
     loadURI(uri);
 }
 
-// Initialize the Help window
+# Initialize the Help window
 function init() {
     // Cache panel references.
     helpWindow = document.getElementById("help");
@@ -134,10 +134,7 @@ function init() {
         helpTopic = window.arguments[0].GetString(1);
     }
 
-    // Load content pack.
     loadHelpRDF();
-
-    // Display topic.
     displayTopic(helpTopic);
 
     // Move to Center of Screen
@@ -172,7 +169,7 @@ function init() {
     // Set the text of the sidebar toolbar button to "Hide Sidebar" taken the properties file.
     // This is needed so that it says "Toggle Sidebar" in toolbar customization, but outside
     // of it, it says either "Show Sidebar" or "Hide Sidebar".
-    document.getElementById("sidebar-button").label =
+    document.getElementById("help-sidebar-button").label =
            document.getElementById("bundle_help").getString("hideSidebarLabel");
 }
 
@@ -203,7 +200,7 @@ function loadHelpRDF() {
                 var datasources = getAttribute(helpFileDS, panelDef,
                     NC_DATASOURCES, "rdf:none");
                 datasources = normalizeLinks(helpBaseURI, datasources);
-                // Cache Additional Datsources to Augment Search Datasources.
+                // Cache Additional Datasources to Augment Search Datasources.
                 if (panelID == "search") {
                     emptySearchText = getAttribute(helpFileDS, panelDef,
                         NC_EMPTY_SEARCH_TEXT, null) || "No search items found.";
@@ -216,13 +213,8 @@ function loadHelpRDF() {
 
                 // Cache TOC Datasources for Use by ID Lookup.
                 var tree = document.getElementById("help-" + panelID + "-panel");
+                loadDatabasesBlocking(datasources);
                 tree.setAttribute("datasources", datasources);
-                //if (panelID == "toc") {
-                if (tree.database) {
-                    loadDatabases(tree.database, datasources);
-                    tree.builder.rebuild();
-                }
-                //}
             }
         } catch (e) {
             log(e + "");
@@ -230,8 +222,8 @@ function loadHelpRDF() {
     }
 }
 
-function loadDatabases(compositeDatabase, datasources) {
-    var ds = datasources.split(/\s+/);
+function loadDatabasesBlocking(datasources) {
+	var ds = datasources.split(/\s+/);
     for (var i=0; i < ds.length; ++i) {
         if (ds[i] == "rdf:null" || ds[i] == "")
             continue;
@@ -239,17 +231,14 @@ function loadDatabases(compositeDatabase, datasources) {
             // We need blocking here to ensure the database is loaded so
             // getLink(topic) works.
             var datasource = RDF.GetDataSourceBlocking(ds[i]);
-            if (datasource) {
-                compositeDatabase.AddDataSource(datasource);
-            }
         } catch (e) {
             log("Datasource: " + ds[i] + " was not found.");
         }
     }
 }
 
-// Prepend helpBaseURI to list of space separated links if the don't start with
-// "chrome:"
+# Prepend helpBaseURI to list of space separated links if the don't start with
+# "chrome:"
 function normalizeLinks(helpBaseURI, links) {
     if (!helpBaseURI) {
         return links;
@@ -310,8 +299,8 @@ function getLink(ID) {
     return null;
 }
 
-// Called by contextHelp.js to determine if this window is displaying the
-// requested help file.
+# Called by contextHelp.js to determine if this window is displaying the
+# requested help file.
 function getHelpFileURI() {
     return helpFileURI;
 }
@@ -413,7 +402,7 @@ function createMenuItem( aParent, aIndex, aLabel)
 function deleteHistoryItems(aParent)
 {
   var children = aParent.childNodes;
-  for (var i = 0; i < children.length; i++)
+  for (var i = children.length - 1; i >= 0; --i)
     {
       var index = children[i].getAttribute("index");
       if (index)
@@ -522,7 +511,7 @@ function getMarkupDocumentViewer() {
     return helpBrowser.markupDocumentViewer;
 }
 
-//Show the selected sidebar panel
+# Show the selected sidebar panel
 function showPanel(panelId) {
     //hide other sidebar panels and show the panel name taken in.
     helpSearchPanel.setAttribute("hidden", "true");
@@ -563,39 +552,20 @@ function findParentNode(node, parentNode)
   return null;
 }
 
-function onselect_loadURI(tree, columnName) {
+function onselect_loadURI(tree) {
     try {
-        var row = tree.treeBoxObject.view.selection.currentIndex;
-        var properties = Components.classes["@mozilla.org/supports-array;1"]
-            .createInstance(Components.interfaces.nsISupportsArray);
-        tree.treeBoxObject.view.getCellProperties(row, columnName, properties);
-        if (!properties) {
-            return;
-        }
-        var uri = getPropertyValue(properties, "link-");
-        if (uri) {
-            loadURI(uri);
+        var resource = tree.view.getResourceAtIndex(tree.currentIndex);
+	var link = tree.database.GetTarget(resource, NC_LINK, true);
+	if (link) {
+            link = link.QueryInterface(Components.interfaces.nsIRDFLiteral);
+            loadURI(link.Value);
         }
     } catch (e) {
     }// when switching between tabs a spurious row number is returned.
 }
 
-/** Search properties nsISupportsArray for an nsIAtom which starts with the
-    given property name. **/
-function getPropertyValue(properties, propName) {
-    for (var i=0; i< properties.Count(); ++i) {
-        var atom = properties.GetElementAt(i)
-            .QueryInterface(Components.interfaces.nsIAtom);
-        var atomValue = atom.toString();
-        if (atomValue.substr(0, propName.length) == propName) {
-            return atomValue.substr(propName.length);
-        }
-    }
-    return null;
-}
-
-//doFind - Searches the help files for what is located in findText and outputs into
-//	the find search tree.
+# doFind - Searches the help files for what is located in findText and outputs into
+#	the find search tree.
 function doFind() {
     var searchTree = document.getElementById("help-search-tree");
     var findText = document.getElementById("findText");
@@ -742,8 +712,8 @@ function isMatch(text) {
 }
 
 function loadCompositeDS(datasources) {
-    // We can't search on each individual datasource's - only the aggregate
-    // (for each sidebar tab) has the appropriate structure.
+# We can't search on each individual datasource's - only the aggregate
+# (for each sidebar tab) has the appropriate structure.
     var compositeDS =  Components.classes["@mozilla.org/rdf/datasource;1?name=composite-datasource"]
         .createInstance(Components.interfaces.nsIRDFCompositeDataSource);
 
@@ -785,15 +755,15 @@ function getLiteralValue(literal, defaultValue) {
     return null;
 }
 
-// Write debug string to javascript console.
+# Write debug string to javascript console.
 function log(aText) {
     CONSOLE_SERVICE.logStringMessage(aText);
 }
 
-//INDEX OPENING FUNCTION -- called in oncommand for index pane
-// iterate over all the items in the outliner;
-// open the ones at the top-level (i.e., expose the headings underneath
-// the letters in the list.
+# INDEX OPENING FUNCTION -- called in oncommand for index pane
+#  iterate over all the items in the outliner;
+#  open the ones at the top-level (i.e., expose the headings underneath
+#  the letters in the list.
 function expandAllIndexEntries() {
     var treeview = helpIndexPanel.view;
     var i = treeview.rowCount;
@@ -804,12 +774,12 @@ function expandAllIndexEntries() {
     }
 }
 
-//toggleSidebarStatus - Toggles the visibility of the sidebar.
+# toggleSidebarStatus - Toggles the visibility of the sidebar.
 function toggleSidebar()
 {
     var sidebar = document.getElementById("helpsidebar-box");
     var separator = document.getElementById("helpsidebar-splitter");
-    var sidebarButton = document.getElementById("sidebar-button");
+    var sidebarButton = document.getElementById("help-sidebar-button");
 
     //Use the string bundle to retrieve the text "Hide Sidebar"
     //and "Show Sidebar" from the locale directory.
