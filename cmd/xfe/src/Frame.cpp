@@ -21,6 +21,10 @@
  */
 
 
+#ifndef NO_SECURITY
+#include "ssl.h"
+#endif
+
 #include "rosetta.h"
 #include "Frame.h"
 
@@ -74,10 +78,6 @@
 #include "XmL/Grid.h"
 
 #include <Xfe/Xfe.h>
-
-#ifndef NO_SECURITY
-#include "ssl.h" // For Security Status defines: SSL_SECURITY_STATUS_*
-#endif /* ! NO_SECURITY */
 
 #ifdef EDITOR
 #include "xeditor.h"
