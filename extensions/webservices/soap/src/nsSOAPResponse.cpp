@@ -23,11 +23,7 @@
 #include "nsSOAPResponse.h"
 #include "nsSOAPUtils.h"
 #include "nsSOAPFault.h"
-#include "jsapi.h"
 #include "nsISOAPParameter.h"
-#include "nsIComponentManager.h"
-#include "nsMemory.h"
-
 
 nsSOAPResponse::nsSOAPResponse()
 {

@@ -34,41 +34,42 @@
 #include "nsISOAPJSValue.h"
 #include "nsIXPConnect.h"
 
-const nsString nsSOAPUtils::kSOAPEnvURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/envelope/"));
-const nsString nsSOAPUtils::kSOAPEncodingURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/encoding/"));
-const nsString nsSOAPUtils::kSOAPEnvPrefix(NS_LITERAL_STRING("SOAP-ENV"));
-const nsString nsSOAPUtils::kSOAPEncodingPrefix(NS_LITERAL_STRING("SOAP-ENC"));
-const nsString nsSOAPUtils::kXSIURI(NS_LITERAL_STRING("http://www.w3.org/1999/XMLSchema-instance"));
-const nsString nsSOAPUtils::kXSDURI(NS_LITERAL_STRING("http://www.w3.org/1999/XMLSchema"));
-const nsString nsSOAPUtils::kXSIPrefix(NS_LITERAL_STRING("xsi"));
-const nsString nsSOAPUtils::kXSDPrefix(NS_LITERAL_STRING("xsd"));
-const nsString nsSOAPUtils::kEncodingStyleAttribute(NS_LITERAL_STRING("encodingStyle"));
-const nsString nsSOAPUtils::kEnvelopeTagName(NS_LITERAL_STRING("Envelope"));
-const nsString nsSOAPUtils::kHeaderTagName(NS_LITERAL_STRING("Header"));
-const nsString nsSOAPUtils::kBodyTagName(NS_LITERAL_STRING("Body"));
-const nsString nsSOAPUtils::kFaultTagName(NS_LITERAL_STRING("Fault"));
-const nsString nsSOAPUtils::kFaultCodeTagName(NS_LITERAL_STRING("faultcode"));
-const nsString nsSOAPUtils::kFaultStringTagName(NS_LITERAL_STRING("faultstring"));
-const nsString nsSOAPUtils::kFaultActorTagName(NS_LITERAL_STRING("faultactor"));
-const nsString nsSOAPUtils::kFaultDetailTagName(NS_LITERAL_STRING("detail"));
+NS_NAMED_LITERAL_STRING(kSOAPEnvURI,"http://schemas.xmlsoap.org/soap/envelope/");
+NS_NAMED_LITERAL_STRING(kSOAPEncodingURI,"http://schemas.xmlsoap.org/soap/encoding/");
+NS_NAMED_LITERAL_STRING(kSOAPEnvPrefix,"SOAP-ENV");
+NS_NAMED_LITERAL_STRING(kSOAPEncodingPrefix,"SOAP-ENC");
+NS_NAMED_LITERAL_STRING(kXSIURI,"http://www.w3.org/1999/XMLSchema-instance");
+NS_NAMED_LITERAL_STRING(kXSDURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kXSIPrefix,"xsi");
+NS_NAMED_LITERAL_STRING(kXSDPrefix,"xsd");
+NS_NAMED_LITERAL_STRING(kEncodingStyleAttribute,"encodingStyle");
+NS_NAMED_LITERAL_STRING(kEnvelopeTagName,"Envelope");
+NS_NAMED_LITERAL_STRING(kHeaderTagName,"Header");
+NS_NAMED_LITERAL_STRING(kBodyTagName,"Body");
+NS_NAMED_LITERAL_STRING(kFaultTagName,"Fault");
+NS_NAMED_LITERAL_STRING(kFaultCodeTagName,"faultcode");
+NS_NAMED_LITERAL_STRING(kFaultStringTagName,"faultstring");
+NS_NAMED_LITERAL_STRING(kFaultActorTagName,"faultactor");
+NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
 
-const nsString nsSOAPUtils::kSOAPCallType(NS_LITERAL_STRING("#nsSOAPUtils::kSOAPCallType"));
-const nsString nsSOAPUtils::kEmpty(NS_LITERAL_STRING(""));
+NS_NAMED_LITERAL_STRING(kSOAPCallType,"#nsSOAPUtils::kSOAPCallType");
+NS_NAMED_LITERAL_STRING(kEmpty,"");
 
-const nsString nsSOAPUtils::kWStringType(NS_LITERAL_STRING("#DOMString"));
-const nsString nsSOAPUtils::kPRBoolType(NS_LITERAL_STRING("#boolean"));
-const nsString nsSOAPUtils::kDoubleType(NS_LITERAL_STRING("#double"));
-const nsString nsSOAPUtils::kFloatType(NS_LITERAL_STRING("#float"));
-const nsString nsSOAPUtils::kPRInt64Type(NS_LITERAL_STRING("#long"));
-const nsString nsSOAPUtils::kPRInt32Type(NS_LITERAL_STRING("#int"));
-const nsString nsSOAPUtils::kPRInt16Type(NS_LITERAL_STRING("#short"));
-const nsString nsSOAPUtils::kCharType(NS_LITERAL_STRING("#byte"));
-const nsString nsSOAPUtils::kArrayType(NS_LITERAL_STRING("#array"));
-const nsString nsSOAPUtils::kJSObjectTypePrefix(NS_LITERAL_STRING("#js#"));
-const nsString nsSOAPUtils::kTypeSeparator(NS_LITERAL_STRING("#"));
-const nsString nsSOAPUtils::kIIDObjectTypePrefix(NS_LITERAL_STRING("#iid#"));
-const nsString nsSOAPUtils::kNullType(NS_LITERAL_STRING("#null"));
-const nsString nsSOAPUtils::kVoidType(NS_LITERAL_STRING("#void"));
+NS_NAMED_LITERAL_STRING(kWStringType,"#DOMString");
+NS_NAMED_LITERAL_STRING(kPRBoolType,"#boolean");
+NS_NAMED_LITERAL_STRING(kDoubleType,"#double");
+NS_NAMED_LITERAL_STRING(kFloatType,"#float");
+NS_NAMED_LITERAL_STRING(kPRInt64Type,"#long");
+NS_NAMED_LITERAL_STRING(kPRInt32Type,"#int");
+NS_NAMED_LITERAL_STRING(kPRInt16Type,"#short");
+NS_NAMED_LITERAL_STRING(kCharType,"#byte");
+NS_NAMED_LITERAL_STRING(kArrayType,"#array");
+NS_NAMED_LITERAL_STRING(kJSObjectTypePrefix,"#js#");
+NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
+NS_NAMED_LITERAL_STRING(kIIDObjectTypePrefix,"#iid#");
+NS_NAMED_LITERAL_STRING(kNullType,"#null");
+NS_NAMED_LITERAL_STRING(kVoidType,"#void");
+NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");
 
 void 
 nsSOAPUtils::GetSpecificChildElement(
@@ -234,6 +235,70 @@ nsSOAPUtils::GetNextSibling(nsIDOMNode* aSibling, nsIDOMNode **aNext)
   *aNext = current;
   NS_IF_ADDREF(*aNext);
 }
+  
+nsresult 
+GetNamespacePrefix(nsIDOMNode* aNode,
+                   const nsAReadableString & aURI,
+                   nsAWritableString & aPrefix)
+{
+  nsCOMPtr<nsIDOMNode> scope = aNode;
+  for (;;) {
+    nsCOMPtr<nsIDOMNamedNodeMap> attrs;
+    scope->GetAttributes(getter_AddRefs(attrs));
+    if (attrs) {
+      PRUint32 i = 0;
+      for (;;)
+      {
+        nsCOMPtr<nsIDOMAttr> attr;
+        attrs->Item(i++, attr);
+        if (!attr)
+          break;
+        nsAutoString temp;
+        attr->GetNamespaceURI(temp);
+        if (!tmp.Equals(kNamespaceNamespaceURI))
+          continue;
+        attr->GetValue(temp);
+        if (!localName.Equals(aURI))
+          continue;
+        attr->GetLocalName(aPrefix);
+        return NS_OK;
+      }
+    }
+    nsCOMPtr<nsIDOMNode> next;
+    scope->GetParentNode(getter_AddRefs(next));
+    if (next)
+      scope = next;
+    else
+      break;
+  }
+  aPrefix = nsSOAPUtils::kEmpty;
+  return NS_OK;
+}
+
+nsresult 
+GetNamespaceURI(nsIDOMElement* aElement,
+                const nsAReadableString & aPrefix, 
+                nsAWritableString & aURI)
+{
+  nsCOMPtr<nsIDOMElement> scope = aElement;
+  for (;;) {
+    PRBool exists
+    scope->GetAttributeExistsNS(aPrefix, kNamespaceNamespaceURI, &exists);
+    if (exists) {
+      scope->GetAttributeNS(aPrefix, kNamespaceNamespaceURIi, aURI);
+      return NS_OK;
+    }
+    nsCOMPtr<nsIDOMNode> next;
+    scope->GetParentNode(getter_AddRefs(next));
+    if (next)
+      scope = next;
+    else
+      break;
+  }
+  aURI = nsSOAPUtils::kEmpty;
+  return NS_OK;
+}
+
 
 void
 nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
@@ -293,7 +358,7 @@ nsSOAPUtils::GetCurrentContext()
 nsresult 
 nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext, 
                                  nsISupports* aValue, 
-                                 nsAReadableString & aType,
+                                 const nsAReadableString & aType,
                                  jsval* vp)
 {
 
@@ -560,11 +625,37 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
       NS_ADDREF(*aValue);
     }
     else {
-      aType = kJSObjectTypePrefix;
       nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID, &rc);
       if (NS_FAILED(rc)) return rc;
 
-      value->SetValue(jsobj);
+// Look for a constructor name on the current object or a prototype
+
+      for (;;) {
+        JSObject* constructor = JS_GetConstructor(aContext, jsobj);
+        jsobj = JS_GetPrototype(aContext, jsobj);
+        jsval cname;
+        if (constructor
+          && JS_GetProperty(aContext, constructor, "name", &cname)
+          && JSVAL_IS_STRING(cname))
+        {
+          JSString* jsstr = JSVAL_TO_STRING(cname);
+          if (jsstr) {
+            PRUnichar* data = NS_REINTERPRET_CAST(PRUnichar*, 
+                                            JS_GetStringChars(jsstr));
+            if (data) {
+              aType = kJSObjectTypePrefix;
+              aType.Append(data);
+              jsobj = nsnull;
+              break;
+            }
+          }
+        }
+        if (!jsobj) {
+          aType = kJSObjectTypePrefix;
+          break;
+        }
+      }
+
       *aValue = value;
       NS_ADDREF(*aValue);
     }

@@ -22,17 +22,10 @@
 
 #include "nsSOAPCall.h"
 #include "nsSOAPResponse.h"
-#include "nsSOAPParameter.h"
 #include "nsSOAPUtils.h"
-#include "nsCRT.h"
-#include "jsapi.h"
-#include "nsISOAPParameter.h"
 #include "nsISOAPTransport.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
-#include "nsXPIDLString.h"
-#include "nsIXPConnect.h"
-#include "nsIJSContextStack.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 

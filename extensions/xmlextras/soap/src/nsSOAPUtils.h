@@ -46,13 +46,19 @@ public:
 
   static void GetNextSibling(nsIDOMNode* aSibling, 
                              nsIDOMNode **aNext);
+  static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
+                                     const nsAReadableString & aURI,
+                                     nsAWritableString & aPrefix);
+  static nsresult GetNamespaceURI(nsIDOMElement* aElement,
+                                  const nsAReadableString & aPrefix, 
+                                  nsAWritableString & aURI);
   static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
                                         nsAWritableString & aEncodingStyle);
   static JSContext* GetSafeContext();
   static JSContext* GetCurrentContext();
   static nsresult ConvertValueToJSVal(JSContext* aContext, 
                                       nsISupports* aValue, 
-                                      nsAReadableString & aType,
+                                      const nsAReadableString & aType,
                                       jsval* vp);
   static nsresult ConvertJSValToValue(JSContext* aContext,
                                       jsval val, 
@@ -92,6 +98,7 @@ public:
   static const nsString kIIDObjectTypePrefix;
   static const nsString kNullType;
   static const nsString kVoidType;
+  static const nsString kUnknownType;
 };
 
 #endif
