@@ -248,20 +248,9 @@ function openTopWin( url )
         url = "about:blank";
     }
 
-    var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
-    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
-
-    var topWindowOfType = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
-    if ( topWindowOfType )
-    {
-        topWindowOfType.focus();
-        topWindowOfType.loadURI(url);
-        return topWindowOfType;
-    }
-    else
-    {
-        return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
-    }
+    var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+    messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+    messenger.OpenURL(url);
 }
 
 function goAboutDialog()
