@@ -616,7 +616,7 @@ public:
   NS_IMETHOD SetSelectionFlags(PRInt16 aInEnable);
   NS_IMETHOD GetSelectionFlags(PRInt16 *aOutEnable);
   NS_IMETHOD GetSelection(PRInt16 type, nsISelection **_retval);
-  NS_IMETHOD ScrollSelectionIntoView(PRInt16 type, PRInt16 region);
+  NS_IMETHOD ScrollSelectionIntoView(PRInt16 aType, PRInt16 aRegion, PRBool aIsSynchronous);
   NS_IMETHOD RepaintSelection(PRInt16 type);
   NS_IMETHOD RepaintSelection(nsIPresContext* aPresContext, SelectionType aSelectionType);
   NS_IMETHOD SetCaretEnabled(PRBool enabled);
@@ -752,10 +752,10 @@ nsTextInputSelectionImpl::GetSelection(PRInt16 type, nsISelection **_retval)
 }
 
 NS_IMETHODIMP
-nsTextInputSelectionImpl::ScrollSelectionIntoView(PRInt16 type, PRInt16 region)
+nsTextInputSelectionImpl::ScrollSelectionIntoView(PRInt16 aType, PRInt16 aRegion, PRBool aIsSynchronous)
 {
   if (mFrameSelection)
-    return mFrameSelection->ScrollSelectionIntoView(type, region);
+    return mFrameSelection->ScrollSelectionIntoView(aType, aRegion, aIsSynchronous);
   return NS_ERROR_NULL_POINTER;
 }
 
@@ -1860,8 +1860,7 @@ nsGfxTextControlFrame2::SetInitialValue()
     // immediate reflows during any editor calls.
 
     rv = mEditor->SetFlags(editorFlags |
-                           nsIPlaintextEditor::eEditorDisableForcedUpdatesMask |
-                           nsIPlaintextEditor::eEditorDisableForcedReflowsMask);
+                           nsIPlaintextEditor::eEditorUseAsyncUpdatesMask);
 
     if (NS_FAILED(rv))
       return rv;
@@ -2044,8 +2043,13 @@ nsGfxTextControlFrame2::CreateAnonymousContent(nsIPresContext* aPresContext,
   if (IsPasswordTextControl())
     editorFlags |= nsIPlaintextEditor::eEditorPasswordMask;
 
-  //all gfxtextcontrolframe2's are widgets
+  // All gfxtextcontrolframe2's are widgets
   editorFlags |= nsIPlaintextEditor::eEditorWidgetMask;
+
+  // Use async reflow and painting for text widgets to improve
+  // performance.
+
+  editorFlags |= nsIPlaintextEditor::eEditorUseAsyncUpdatesMask;
 
   // Now initialize the editor.
   //
