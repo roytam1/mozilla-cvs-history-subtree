@@ -480,34 +480,29 @@ function loadStartFolder(initialUri)
 
 function OpenTwistyForServer(server)
 {
-  var rowIndex = GetRowIndexForServerURI(server.serverURI); 
+    var folderIndex = GetFolderIndexForServerURI(server.serverURI); 
 
-  if (rowIndex >= 0) {
-    var folderOutliner = GetFolderOutliner();
-    var isContainerOpen = folderOutliner.outlinerBoxObject.view.isContainerOpen(rowIndex);
-    if (! isContainerOpen)
-      folderOutliner.outlinerBoxObject.view.toggleOpenState(rowIndex);
-  }
+    if (folderIndex >= 0)
+    {
+        var folderOutliner = GetFolderOutliner();
+        var isContainerOpen = folderOutliner.outlinerBoxObject.view.isContainerOpen(folderIndex);
+        if (! isContainerOpen)
+            folderOutliner.outlinerBoxObject.view.toggleOpenState(folderIndex);
+    }
 }
 
 
-function GetRowIndexForServerURI(serverURI)
+function GetFolderIndexForServerURI(serverURI)
 {
-  var rowIndex = -1;
-
-  var folderOutliner = GetFolderOutliner();     
-
-  // Iterate through folder outliner to find the index associated with given serverURI
-  for (var i = 0; i < folderOutliner.outlinerBoxObject.view.rowCount; i++) {
-    var resource = GetFolderResource(i);
-    var isServer = GetFolderAttribute(resource, 'IsServer');
-    if (isServer == "true" && resource.Value == serverURI) {
-      rowIndex = i;
-      break;
+    var folderResource = RDF.GetResource(serverURI);
+    var isServer = GetFolderAttribute(folderResource, 'IsServer');
+    if (isServer == "true")
+    {
+        var folderIndex = GetFolderIndex(folderResource);
+        return folderIndex;
     }
-  }
-
-  return rowIndex;
+    else
+        return -1;
 }
 
 function TriggerGetMessages(server)
