@@ -449,6 +449,19 @@ protected:
     static PRBool               gFastLoadDone;
     static nsXULDocument*       gFastLoadList;
 
+    void RemoveFromFastLoadList() {
+        nsXULDocument** docp = &gFastLoadList;
+        nsXULDocument* doc;
+        while ((doc = *docp) != nsnull) {
+            if (doc == this) {
+                *docp = doc->mNextFastLoad;
+                doc->mNextFastLoad = nsnull;
+                break;
+            }
+            docp = &doc->mNextFastLoad;
+        }
+    }
+
     nsresult PrepareToLoad(nsISupports* aContainer,
                            const char* aCommand,
                            nsIChannel* aChannel,

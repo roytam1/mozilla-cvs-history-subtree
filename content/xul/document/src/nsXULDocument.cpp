@@ -478,11 +478,11 @@ nsXULDocument::~nsXULDocument()
     }
 
     if (mCSSLoader) {
-      mCSSLoader->DropDocumentReference();
+        mCSSLoader->DropDocumentReference();
     }
 
     if (mScriptLoader) {
-      mScriptLoader->DropDocumentReference();
+        mScriptLoader->DropDocumentReference();
     }
 
     delete mTemplateBuilderTable;
@@ -521,6 +521,9 @@ nsXULDocument::~nsXULDocument()
     if (mNodeInfoManager) {
         mNodeInfoManager->DropDocumentReference();
     }
+
+    if (mIsFastLoad)
+        RemoveFromFastLoadList();
 }
 
 
@@ -4573,22 +4576,13 @@ nsXULDocument::EndFastLoad()
     // Exclude all non-chrome loads and XUL cache hits right away.
     if (! mIsFastLoad)
         return rv;
-    mIsFastLoad = PR_FALSE;
 
     // Remove this document from the global FastLoad list.  We use the list's
     // emptiness instead of a counter, to decide when the FastLoad process has
     // finally completed.  We use a singly-linked list because there won't be
     // more than a handful of master XUL documents racing, worst case.
-    nsXULDocument** docp = &gFastLoadList;
-    nsXULDocument* doc;
-    while ((doc = *docp) != nsnull) {
-        if (doc == this) {
-            *docp = doc->mNextFastLoad;
-            doc->mNextFastLoad = nsnull;
-            break;
-        }
-        docp = &doc->mNextFastLoad;
-    }
+    mIsFastLoad = PR_FALSE;
+    RemoveFromFastLoadList();
 
     // Fetch the current input (if FastLoad file existed) or output (if we're
     // creating the FastLoad file during this app startup) stream.
