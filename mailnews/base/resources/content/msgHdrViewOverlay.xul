@@ -79,9 +79,15 @@ Rights Reserved.
       </hbox>
     </column>
 
-    <column id = "collapseddateBox" collapsed="true">
+    <column id="collapseddateBox" collapsed="true">
       <hbox align="start">
         <label id="collapseddateValue" class="collapsedHeaderValue"/>
+      </hbox>
+    </column>
+
+    <column id="collapsedKeywordBox">
+      <hbox align="start">
+      <image id="collapsedKeywordImage" class="collapsedAttachmentKeywordImage"/>  
       </hbox>
     </column>
 
@@ -114,7 +120,7 @@ Rights Reserved.
 
    <vbox id="expandedKeywordBox">
      <spacer flex="1"/>
-     <image id="expandedKeywordImage" class="keyword-part"/>
+     <image id="expandedKeywordImage" class="expandedAttachmentKeywordImage"/>
      <spacer flex="1"/>  
    </vbox>
    

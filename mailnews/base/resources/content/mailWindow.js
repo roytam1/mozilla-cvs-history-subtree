@@ -588,7 +588,7 @@ function SetKeywords(aKeywords)
     return;
 
   // these are the UI elements who care about keywords
-  var ids = ["expandedKeywordImage","expandedHeaderView","msgHeaderView","collapsedHeaderView"];
+  var ids = ["expandedKeywordImage","expandedHeaderView","msgHeaderView","collapsedHeaderView","collapsedKeywordImage"];
   for (i in ids) {
     var element = document.getElementById(ids[i]);
     if (element)
