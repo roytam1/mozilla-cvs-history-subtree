@@ -366,7 +366,8 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
     } else if ( JSJ_callbacks->get_java_vm != NULL ) {
         char* err_msg = NULL;
         java_vm = JSJ_callbacks->get_java_vm(&err_msg);
-        if ((*java_vm)->AttachCurrentThread(java_vm, &jEnv, NULL) < 0) {
+        PR_ASSERT( java_vm );
+        if (java_vm && (*java_vm)->AttachCurrentThread(java_vm, &jEnv, NULL) < 0) {
             jsj_LogError("Failed to attach to Java VM thread\n");
             free(jsjava_vm);
             return NULL;
