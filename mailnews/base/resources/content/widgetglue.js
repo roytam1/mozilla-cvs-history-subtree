@@ -55,7 +55,7 @@ function GetSelectedFolderURI()
     folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
     
     //  you can only select one folder / server to add new folder / subscribe to
-    if (folderOutliner.outlinerBoxObject.selection.count <= 1)
+    if (folderOutliner.outlinerBoxObject.selection.count == 1)
     {
         var resource = GetFolderResource(startRange.value);
         if (resource)
@@ -102,14 +102,13 @@ function RenameFolder(name,uri)
 
                 ClearThreadPane();
                 ClearMessagePane();
-                folderOutliner.outlinerBoxObject.selection.clearSelection();
         }
         else {
                 dump("no name or nothing selected\n");
         }   
     }
     else {
-    dump("no folder tree\n");
+    dump("no folder outliner available");
     }
 }
 
@@ -150,7 +149,7 @@ function MsgCompactFolder(isAll)
         var folderList = GetSelectedMsgFolders();
         if (folderList)
         {
-            var selctedFolderUri = "";
+            var selectedFolderUri = "";
             var isImap = false;
             if (folderList.length == 1)
             {
@@ -191,7 +190,6 @@ function MsgCompactFolder(isAll)
                     document.getElementById(selectedFolderUri);
                 ChangeSelection(tree, selectedFolder);
                 */
-                outliner.outlinerBoxObject.selection.clearSelection();
             }
         }
     }
