@@ -1462,6 +1462,8 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
 
   nsIPresShell *shell = aPresContext->PresShell();
 
+  nsCOMPtr<nsIContent> content;
+
   if (eStyleContentType_Image == type) {
     if (!data.mContent.mImage) {
       // CSS had something specified that couldn't be converted to an
@@ -1478,7 +1480,6 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
                                               kNameSpaceID_None,
                                               getter_AddRefs(nodeInfo));
 
-    nsCOMPtr<nsIContent> content;
     nsresult rv = NS_NewGenConImageContent(getter_AddRefs(content), nodeInfo,
                                            data.mContent.mImage);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1544,9 +1545,9 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
         nsresult rv = NS_ERROR_FAILURE;
         if (attrName) {
           nsIFrame*   textFrame = nsnull;
-          nsCOMPtr<nsIContent> content;
           rv = NS_NewAttributeContent(aContent, attrNameSpace, attrName,
                                       getter_AddRefs(content));
+          NS_ENSURE_SUCCESS(rv, rv);
 
           // Set aContent as the parent content so that event handling works.
           content->SetParent(aContent);
@@ -1563,7 +1564,6 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
           *aFrame = textFrame;
           rv = NS_OK;
         }
-        return rv;
       }
       break;
   
@@ -1601,30 +1601,48 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
     } // switch
   
 
-    // Create a text content node
-    nsIFrame* textFrame = nsnull;
-    nsCOMPtr<nsITextContent> textContent;
-    NS_NewTextNode(getter_AddRefs(textContent));
-    if (textContent) {
-      // Set the text
-      textContent->SetText(contentString, PR_TRUE);
+    if (!content) {
+      // Create a text content node
+      nsIFrame* textFrame = nsnull;
+      nsCOMPtr<nsITextContent> textContent;
+      NS_NewTextNode(getter_AddRefs(textContent));
+      if (textContent) {
+        // Set the text
+        textContent->SetText(contentString, PR_TRUE);
 
-      if (textPtr)
-        *textPtr = do_QueryInterface(textContent);
-  
-      // Set aContent as the parent content so that event handling works.
-      textContent->SetParent(aContent);
-      textContent->SetDocument(aDocument, PR_TRUE, PR_TRUE);
-      textContent->SetNativeAnonymous(PR_TRUE);
-      textContent->SetBindingParent(textContent);
-      
-      // Create a text frame and initialize it
-      NS_NewTextFrame(shell, &textFrame);
-      textFrame->Init(aPresContext, textContent, aParentFrame, aStyleContext, nsnull);
+        if (textPtr)
+          *textPtr = do_QueryInterface(textContent);
+
+        // Set aContent as the parent content so that event handling works.
+        textContent->SetParent(aContent);
+        textContent->SetDocument(aDocument, PR_TRUE, PR_TRUE);
+        textContent->SetNativeAnonymous(PR_TRUE);
+        textContent->SetBindingParent(textContent);
+
+        // Create a text frame and initialize it
+        NS_NewTextFrame(shell, &textFrame);
+        if (!textFrame) {
+          return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        textFrame->Init(aPresContext, textContent, aParentFrame, aStyleContext, nsnull);
+
+        content = textContent;
+      }
+
+      // Return the text frame
+      *aFrame = textFrame;
     }
-  
-    // Return the text frame
-    *aFrame = textFrame;
+  }
+
+  if (content) {
+    nsCOMPtr<nsISupportsArray> anonymousItems;
+    nsresult rv = NS_NewISupportsArray(getter_AddRefs(anonymousItems));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    anonymousItems->AppendElement(content);
+
+    shell->SetAnonymousContentFor(aContent, anonymousItems);
   }
 
   return NS_OK;
@@ -2722,7 +2740,7 @@ nsCSSFrameConstructor::ConstructTableRowGroupFrame(nsIPresShell*            aPre
   rv = aTableCreator.CreateTableRowGroupFrame(&aNewFrame);
 
   nsIFrame* scrollFrame = nsnull;
-  if (IsScrollable(aPresContext, styleDisplay)) {
+  if (styleDisplay->IsScrollableOverflow()) {
     // Create an area container for the frame
     BuildScrollFrame(aPresShell, aPresContext, aState, aContent, aStyleContext, 
                      aNewFrame, parentFrame, nsnull, scrollFrame, aStyleContext);
@@ -3355,6 +3373,21 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIPresShell*        aPresS
   return NS_OK;
 }
 
+static PRBool CheckOverflow(nsPresContext* aPresContext,
+                            const nsStyleDisplay* aDisplay)
+{
+  if (aDisplay->mOverflowX == NS_STYLE_OVERFLOW_VISIBLE)
+    return PR_FALSE;
+
+  if (aDisplay->mOverflowX == NS_STYLE_OVERFLOW_CLIP)
+    aPresContext->SetViewportOverflowOverride(NS_STYLE_OVERFLOW_HIDDEN,
+                                              NS_STYLE_OVERFLOW_HIDDEN);
+  else
+    aPresContext->SetViewportOverflowOverride(aDisplay->mOverflowX,
+                                              aDisplay->mOverflowY);
+  return PR_TRUE;
+}
+
 /**
  * This checks the root element and the HTML BODY, if any, for an "overflow" property
  * that should be applied to the viewport. If one is found then we return the
@@ -3368,7 +3401,8 @@ nsIContent*
 nsCSSFrameConstructor::PropagateScrollToViewport(nsPresContext* aPresContext)
 {
   // Set default
-  aPresContext->SetViewportOverflowOverride(NS_STYLE_OVERFLOW_AUTO);
+  aPresContext->SetViewportOverflowOverride(NS_STYLE_OVERFLOW_AUTO,
+                                            NS_STYLE_OVERFLOW_AUTO);
 
   // We never mess with the viewport scroll state
   // when printing or in print preview
@@ -3380,14 +3414,12 @@ nsCSSFrameConstructor::PropagateScrollToViewport(nsPresContext* aPresContext)
 
   // Check the style on the document root element
   nsStyleSet *styleSet = aPresContext->PresShell()->StyleSet();
-  nsRefPtr<nsStyleContext> styleContext;
-  styleContext = styleSet->ResolveStyleFor(docElement, nsnull);
-  if (!styleContext) {
+  nsRefPtr<nsStyleContext> rootStyle;
+  rootStyle = styleSet->ResolveStyleFor(docElement, nsnull);
+  if (!rootStyle) {
     return nsnull;
   }
-  const nsStyleDisplay* display = styleContext->GetStyleDisplay();
-  if (display->mOverflow != NS_STYLE_OVERFLOW_VISIBLE) {
-    aPresContext->SetViewportOverflowOverride(display->mOverflow);
+  if (CheckOverflow(aPresContext, rootStyle->GetStyleDisplay())) {
     // tell caller we stole the overflow style from the root element
     return docElement;
   }
@@ -3413,15 +3445,13 @@ nsCSSFrameConstructor::PropagateScrollToViewport(nsPresContext* aPresContext)
     return nsnull;
   }
 
-  nsRefPtr<nsStyleContext> bodyContext;
-  bodyContext = styleSet->ResolveStyleFor(bodyElement, styleContext);
-  if (!bodyContext) {
+  nsRefPtr<nsStyleContext> bodyStyle;
+  bodyStyle = styleSet->ResolveStyleFor(bodyElement, rootStyle);
+  if (!bodyStyle) {
     return nsnull;
   }
 
-  display = bodyContext->GetStyleDisplay();
-  if (display->mOverflow != NS_STYLE_OVERFLOW_VISIBLE) {
-    aPresContext->SetViewportOverflowOverride(display->mOverflow);
+  if (CheckOverflow(aPresContext, bodyStyle->GetStyleDisplay())) {
     // tell caller we stole the overflow style from the body element
     return bodyElement;
   }
@@ -3525,6 +3555,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     if (resolveStyle) {
       styleContext = aPresShell->StyleSet()->ResolveStyleFor(aDocElement,
                                                              nsnull);
+      display = styleContext->GetStyleDisplay();
     }
   }
 
@@ -3535,7 +3566,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
   // The document root should not be scrollable in any paginated context,
   // even in print preview.
-  PRBool isScrollable = IsScrollable(aPresContext, display)
+  PRBool isScrollable = display->IsScrollableOverflow()
     && !aPresContext->IsPaginated()
     && !propagatedScrollToViewport;
 
@@ -3810,7 +3841,6 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   // for print-preview, but not when printing), then create a scroll frame that
   // will act as the scrolling mechanism for the viewport. 
   // XXX Do we even need a viewport when printing to a printer?
-  PRBool isScrollable = PR_TRUE;
 
   //isScrollable = PR_FALSE;
 
@@ -3819,12 +3849,10 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   // the viewport.
   //
   // Threre are three possible values stored in the docshell:
-  //  1) NS_STYLE_OVERFLOW_HIDDEN = no scrollbars
-  //  2) NS_STYLE_OVERFLOW_AUTO = scrollbars appear if needed
-  //  3) NS_STYLE_OVERFLOW_SCROLL = scrollbars always
+  //  1) nsIScrollable::Scrollbar_Never = no scrollbars
+  //  2) nsIScrollable::Scrollbar_Auto = scrollbars appear if needed
+  //  3) nsIScrollable::Scrollbar_Always = scrollbars always
   // Only need to create a scroll frame/view for cases 2 and 3.
-  // Currently OVERFLOW_SCROLL isn't honored, as
-  // scrollportview::SetScrollPref is not implemented.
 
   PRBool isHTML = aDocElement->IsContentOfType(nsIContent::eHTML);
   PRBool isXUL = PR_FALSE;
@@ -3834,12 +3862,21 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   }
 
   // Never create scrollbars for XUL documents
-#ifdef MOZ_XUL
-  if (isXUL) {
-    isScrollable = PR_FALSE;
-  } else 
-#endif
-  {
+  PRBool isScrollable = !isXUL;
+
+  // Never create scrollbars for frameset documents.
+  if (isHTML) {
+    nsCOMPtr<nsIHTMLDocument> htmlDoc = do_QueryInterface(mDocument);
+    if (htmlDoc && htmlDoc->GetIsFrameset())
+      isScrollable = PR_FALSE;
+  }
+
+  // Don't create a scrollframe when we're inside a frame or iframe with
+  // scrolling="no".  This makes the frame hierarchy inconsistent and is
+  // unnecessary for correctness (since
+  // nsGfxScrollFrameInner::GetScrollbarStyles handles all the necessary
+  // cases), but it seems to be needed for performance.
+  if (isScrollable) {
     nsresult rv;
     if (aPresContext) {
       nsCOMPtr<nsISupports> container = aPresContext->GetContainer();
@@ -3847,12 +3884,13 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
         nsCOMPtr<nsIScrollable> scrollableContainer = do_QueryInterface(container, &rv);
         if (NS_SUCCEEDED(rv) && scrollableContainer) {
           PRInt32 scrolling = -1;
-          // XXX We should get prefs for X and Y and deal with these independently!
-          scrollableContainer->GetCurrentScrollbarPreferences(nsIScrollable::ScrollOrientation_Y,&scrolling);
-          if (NS_STYLE_OVERFLOW_HIDDEN == scrolling) {
-            isScrollable = PR_FALSE;
+          scrollableContainer->GetDefaultScrollbarPreferences(nsIScrollable::ScrollOrientation_Y,&scrolling);
+          if (nsIScrollable::Scrollbar_Never == scrolling) {
+            scrollableContainer->GetDefaultScrollbarPreferences(nsIScrollable::ScrollOrientation_X,&scrolling);
+            if (nsIScrollable::Scrollbar_Never == scrolling) {
+              isScrollable = PR_FALSE;
+            }
           }
-          // XXX NS_STYLE_OVERFLOW_SCROLL should create 'always on' scrollbars
         }
       }
     }
@@ -5032,8 +5070,8 @@ LocateAnonymousFrame(nsPresContext* aPresContext,
     // We must take into account if the parent is a scrollframe. If it is, we
     // need to bypass the scrolling mechanics and get at the true frame.
     nsCOMPtr<nsIScrollableFrame> scrollFrame ( do_QueryInterface(aParentFrame) );
-    if ( scrollFrame )
-      scrollFrame->GetScrolledFrame ( aPresContext, *aResult );
+    if (scrollFrame)
+      *aResult = scrollFrame->GetScrolledFrame();
     else
       *aResult = aParentFrame;
     return;
@@ -5111,10 +5149,15 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
     return NS_OK;
 
 #ifdef MOZ_XTF
+  PRBool registerWithShell = PR_TRUE;
   PRBool forceBindingParent = PR_FALSE;
   nsCOMPtr<nsIXTFVisualWrapperPrivate> xtfElem = do_QueryInterface(aParent);
-  if (xtfElem && xtfElem->ApplyDocumentStyleSheets()) 
-    forceBindingParent = PR_TRUE;
+  if (xtfElem) {
+    // no need to track XTF anonymous content by the shell:
+    registerWithShell = PR_FALSE;
+    if (xtfElem->ApplyDocumentStyleSheets()) 
+      forceBindingParent = PR_TRUE;
+  }
 #endif
 
   nsCOMPtr<nsISupportsArray> anonymousItems;
@@ -5149,6 +5192,9 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
       aPresShell->SetAnonymousContentFor(aParent, nsnull);
     }
 
+#ifdef MOZ_XTF
+    if (registerWithShell)
+#endif
     // Inform the pres shell about the anonymous content
     aPresShell->SetAnonymousContentFor(aParent, anonymousItems);
 
@@ -5507,7 +5553,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         }
 
         // Boxes can scroll.
-        if (IsScrollable(aPresContext, display)) {
+        if (display->IsScrollableOverflow()) {
 
           nsIFrame* scrollPort = nsnull;
           if (listboxScrollPort) {
@@ -5607,7 +5653,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 #endif
     }
 
-    if (mayBeScrollable && IsScrollable(aPresContext, display)) {
+    if (mayBeScrollable && display->IsScrollableOverflow()) {
       // set the top to be the newly created scrollframe
       BuildScrollFrame(aPresShell, aPresContext, aState, aContent,
                        aStyleContext, newFrame, aParentFrame, nsnull,
@@ -6115,7 +6161,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
   // XXX Ignore tables for the time being
   if (aDisplay->IsBlockLevel() &&
       aDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE &&
-      IsScrollable(aPresContext, aDisplay) &&
+      aDisplay->IsScrollableOverflow() &&
       !propagatedScrollToViewport) {
 
     if (!pseudoParent && !aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
@@ -6520,25 +6566,6 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
 
   return rv;
 }
-
-
-PRBool
-nsCSSFrameConstructor::IsScrollable(nsPresContext*       aPresContext,
-                                    const nsStyleDisplay* aDisplay)
-{
-  // For the time being it's scrollable if the overflow property is auto or
-  // scroll, regardless of whether the width or height is fixed in size
-  switch (aDisplay->mOverflow) {
-    case NS_STYLE_OVERFLOW_SCROLL:
-    case NS_STYLE_OVERFLOW_AUTO:
-    case NS_STYLE_OVERFLOW_HIDDEN:
-    case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
-    case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
-      return PR_TRUE;
-  }
-  return PR_FALSE;
-}
-
 
 nsresult 
 nsCSSFrameConstructor::InitAndRestoreFrame(nsPresContext*          aPresContext,
@@ -7402,6 +7429,7 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
       if (resolveStyle) {
         styleContext = ResolveStyleContext(aPresContext, aParentFrame,
                                            aContent);
+        display = styleContext->GetStyleDisplay();
       }
 
       nsCOMPtr<nsIAtom> baseTag;
@@ -10111,9 +10139,7 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
     if (frame) {
       nsresult res;
 
-      void* dummy = propTable->GetProperty(frame,
-                                           nsLayoutAtoms::changeListProperty,
-                                           &res);
+      propTable->GetProperty(frame, nsLayoutAtoms::changeListProperty, &res);
 
       if (NS_PROPTABLE_PROP_NOT_THERE == res)
         continue;
@@ -10311,8 +10337,7 @@ nsCSSFrameConstructor::AttributeChanged(nsPresContext* aPresContext,
   if (aAttribute == nsXULAtoms::tooltiptext ||
       aAttribute == nsXULAtoms::tooltip) 
   {
-    nsIFrame* rootFrame = nsnull;
-    shell->GetRootFrame(&rootFrame);
+    nsIFrame* rootFrame = shell->FrameManager()->GetRootFrame();
     if (rootFrame)
       rootFrame = rootFrame->GetFirstChild(nsnull);
     nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
@@ -11448,7 +11473,7 @@ nsCSSFrameConstructor::GetInsertionPoint(nsIPresShell* aPresShell,
       nsIScrollableFrame* scroll = nsnull;
       CallQueryInterface(insertionPoint, &scroll);
       if (scroll)
-        scroll->GetScrolledFrame(nsnull, insertionPoint);
+        insertionPoint = scroll->GetScrolledFrame();
 
       if (insertionPoint != aParentFrame) 
         GetInsertionPoint(aPresShell, insertionPoint, aChildContent, aInsertionPoint, aMultiple);
