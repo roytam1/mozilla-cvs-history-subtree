@@ -80,18 +80,24 @@
 	<string>English</string>
 	<key>CFBundleExecutable</key>
 	<string>MRJPlugin</string>
+	<key>CFBundleGetInfoString</key>
+	<string>MRJ Plugin 1.0fc3, © 2002 The Mozilla Organization</string>
 	<key>CFBundleIconFile</key>
 	<string></string>
 	<key>CFBundleIdentifier</key>
 	<string>com.netscape.MRJPlugin</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>MRJ Plugin</string>
 	<key>CFBundlePackageType</key>
 	<string>NSPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0fc3</string>
 	<key>CFBundleSignature</key>
 	<string>MOSS</string>
 	<key>CFBundleVersion</key>
-	<string>1.0fc2</string>
+	<string>1.0fc3</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
 </dict>
