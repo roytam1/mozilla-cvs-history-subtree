@@ -760,6 +760,18 @@ nsGenericDOMDataNode::SetParent(nsIContent* aParent)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsGenericDOMDataNode::IsAnonymous() const
+{
+  nsIContent* parent = GetParentWeak();
+  return parent && parent->IsAnonymous();
+}
+
+NS_IMETHODIMP_(void)
+nsGenericDOMDataNode::SetAnonymous(PRBool aAnonymous)
+{
+}
+
 NS_IMETHODIMP
 nsGenericDOMDataNode::GetNameSpaceID(PRInt32& aID) const
 {

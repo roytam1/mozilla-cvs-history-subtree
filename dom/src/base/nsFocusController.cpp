@@ -29,7 +29,7 @@
 #include "nsIDOMNSHTMLInputElement.h"
 #include "nsIDOMNSHTMLTextAreaElement.h"
 #include "nsIDOMUIEvent.h"
-#include "nsIPrivateDOMEvent.h"
+#include "nsIDOMNSEvent.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDocument.h"
 #include "nsIPresContext.h"
@@ -260,9 +260,10 @@ nsFocusController::Focus(nsIDOMEvent* aEvent)
 
   nsCOMPtr<nsIDOMEventTarget> t;
 
-  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aEvent));
-  if (privateEvent)
-    privateEvent->GetOriginalTargetTrusted(getter_AddRefs(t));
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
+  if (nsevent) {
+    nsevent->GetOriginalTarget(getter_AddRefs(t));
+  }
 
   nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(t);
   if (domElement && (domElement != mCurrentElement)) {
@@ -315,10 +316,11 @@ nsFocusController::Blur(nsIDOMEvent* aEvent)
 
   nsCOMPtr<nsIDOMEventTarget> t;
 
-  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aEvent));
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
 
-  if (privateEvent)
-    privateEvent->GetOriginalTargetTrusted(getter_AddRefs(t));
+  if (nsevent) {
+    nsevent->GetOriginalTarget(getter_AddRefs(t));
+  }
 
   nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(t);
   if (domElement) {
