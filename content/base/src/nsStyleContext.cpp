@@ -890,7 +890,6 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
 const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
 {
   nsStyleStruct*  result = nsnull;
-  const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
       
   switch (aSID) {
     case eStyleStruct_Font:
@@ -904,13 +903,20 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_Position:
     case eStyleStruct_Table:
     case eStyleStruct_TableBorder:
-    case eStyleStruct_XUL: 
-      if (cachedData) // First look to see if we have computed data.
-        return cachedData;  // We do. Just return it.
-      if (mParent && (mInheritBits & nsCachedStyleData::GetBitForSID(aSID))) // Now check inheritance
-        return mParent->GetStyleData(aSID); // We inherit from our parent in the style context tree.
-      else
-        return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
+    case eStyleStruct_XUL: {
+      StyleContextImpl* curr = this;
+      if (mParent) {
+        PRUint32 bit = nsCachedStyleData::GetBitForSID(aSID); // Check inheritance
+        while (curr && (curr->mInheritBits & bit))
+          curr = curr->mParent;
+      }
+
+      const nsStyleStruct* cachedData = curr->mCachedStyleData.GetStyleData(aSID); 
+      if (cachedData)
+        return cachedData; // We have computed data stored on this node in the context tree.
+
+      return curr->mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
+    }
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
       break;
