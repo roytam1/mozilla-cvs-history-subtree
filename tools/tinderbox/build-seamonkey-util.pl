@@ -764,12 +764,10 @@ sub run_all_tests {
 
 	# Layout performance test.
     if ($Settings::LayoutPerformanceTest and $test_result eq 'success') {
-      print_log "Page-loader performance test goes here.\n";
-	  print_log "Running LayoutPerformanceTest ...\n";
 	  $test_result = AliveTest("LayoutPerformanceTest", $build_dir,
 							   $binary, 
 							   "\"http://jrgm.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0\"",
-							   900);
+							   $Settings::LayoutPerformanceTestTimeout);
     }
 	# "http://jrgm.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0", 
     return $test_result;
