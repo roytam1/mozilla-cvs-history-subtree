@@ -34,7 +34,7 @@ CPPSRCS		= \
 		nsAccessible.cpp \
 		nsAccessibilityService.cpp \
 		nsRootAccessible.cpp \
-		nsIFrameRootAccessible.cpp \
+		nsHTMLIFrameRootAccessible.cpp \
 		nsHTMLFormControlAccessible.cpp \
 		nsHTMLTextAccessible.cpp \
 		nsHTMLTableAccessible.cpp \

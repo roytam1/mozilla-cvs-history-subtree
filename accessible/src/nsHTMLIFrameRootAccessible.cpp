@@ -20,7 +20,7 @@
  * Contributor(s): 
  */
 
-#include "nsIFrameRootAccessible.h"
+#include "nsHTMLIFrameRootAccessible.h"
 #include "nsCOMPtr.h"
 #include "nsIDocument.h"
 #include "nsIPresShell.h"

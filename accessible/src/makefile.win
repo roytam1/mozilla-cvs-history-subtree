@@ -26,7 +26,7 @@ LIBRARY_NAME=accessibility_s
 CPP_OBJS=\
         .\$(OBJDIR)\nsAccessible.obj    \
         .\$(OBJDIR)\nsRootAccessible.obj    \
-        .\$(OBJDIR)\nsIFrameRootAccessible.obj    \
+        .\$(OBJDIR)\nsHTMLIFrameRootAccessible.obj    \
         .\$(OBJDIR)\nsAccessibilityService.obj    \
         .\$(OBJDIR)\nsSelectAccessible.obj    \
         .\$(OBJDIR)\nsGenericAccessible.obj    \

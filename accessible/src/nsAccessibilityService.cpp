@@ -44,7 +44,7 @@
 
 // IFrame
 #include "nsIDocShell.h"
-#include "nsIFrameRootAccessible.h"
+#include "nsHTMLIFrameRootAccessible.h"
 
 //--------------------
 
