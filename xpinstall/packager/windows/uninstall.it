@@ -110,6 +110,8 @@ YesToAll=Y&es to all
 ; This section attempts to restore/undo the desktop integration performed by the browser/mail
 [Restore Desktop Integration]
 Enabled=TRUE
+; 94 stands for 0.9.4
+Mapi version installed=94
 
 ; This section attempts to cleanup the UnreadMail registry keys set up by mail.
 [Cleanup Mail Integration]
