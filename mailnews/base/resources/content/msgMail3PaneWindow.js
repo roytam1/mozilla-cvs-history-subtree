@@ -702,57 +702,32 @@ function FolderPaneOnClick(event)
     var col = {};
     var elt = {};
     folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
-    var folderResource = GetFolderResource(row.value);
- /*
-  var t = event.originalTarget;
-  var item;
-  var uri;
 
-    if (t.getAttribute('twisty') == 'true') {
-        // The twisty is nested three below the treeitem:
-        // <treeitem>
-        //   <treerow>
-        //     <treecell>
-        //         <button class="tree-cell-twisty"> <!-- anonymous -->
-        var treeitem = t.parentNode.parentNode.parentNode;
-		var open = treeitem.getAttribute('open');
-		if(open == "true") {
-			//dump("twisty open\n");
-
-			item = t.parentNode.parentNode.parentNode;
-			if (item.localName == "treeitem") {
-				var isServer = (treeitem.getAttribute('IsServer') == "true");
-				if (isServer) {
-	    			uri = treeitem.getAttribute("id");
-					var server = GetServer(uri);
-					if (server) {
-						server.PerformExpand(msgWindow);
-					}
-				}
-				else {
-					var isImap = (treeitem.getAttribute('ServerType') == "imap");
-					if (isImap) {
-		    			uri = treeitem.getAttribute("id");
-						var folder = GetMsgFolderFromUri(uri);
-						if (folder) {
-							var imapFolder = folder.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
-							if (imapFolder) {
-								imapFolder.performExpand(msgWindow);
-							}
-						}
-					}
-				}
-			}
-		}
+    if (elt.value == "twisty")
+    {
+        var view = folderOutliner.outlinerBoxObject.view;
+        if (! view.isContainerOpen(row.value))
+        {
+            var folderResource = GetFolderResource(row.value);
+            var isServer = GetFolderAttribute(folderResource, "IsServer");
+            if (isServer == "true")
+            {
+                var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+                var server = msgFolder.server;
+                server.PerformExpand(msgWindow);
+            }
+            else
+            {
+                var serverType = GetFolderAttribute(folderResource, "ServerType");
+                if (serverType == "imap")
+                {
+                    var imapFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
+                    imapFolder.performExpand(msgWindow);
+                }
+            }
+        }
     }
-	else if(event.detail == 2)
-	{
-		item = t.parentNode.parentNode;
-		if (item.localName == "treeitem")
-			FolderPaneDoubleClick(item);
-	}
-*/
-    if (event.detail == 2)
+    else if (event.detail == 2)
         FolderPaneDoubleClick(row.value);
 }
 
