@@ -27,13 +27,15 @@
 /*  LIBLDAP url.c -- LDAP URL related routines
  *
  *  LDAP URLs look like this:
- *    l d a p : / / hostport / dn [ ? attributes [ ? scope [ ? filter ] ] ]
+ *    l d a p : / / [ hostport ] [ / dn [ ? [ attributes ] [ ? [ scope ]
+ *			[ ? [ filter ] [ ? extensions ] ] ] ] ]
  *
  *  where:
  *   hostport is a host or a host:port list that can be space-separated.
  *   attributes is a comma separated list
  *   scope is one of these three strings:  base one sub (default=base)
- *   filter is an string-represented filter as in RFC 1558
+ *   filter is a string-represented filter as in RFC 2254
+ *   extensions is a comma-separated list of name=value pairs.
  *
  *  e.g.,  ldap://ldap.itd.umich.edu/c=US?o,description?one?o=umich
  *
@@ -116,6 +118,8 @@ skip_url_prefix( const char **urlp, int *enclosedp, int *securep )
 }
 
 
+
+
 int
 LDAP_CALL
 ldap_url_parse( const char *url, LDAPURLDesc **ludpp )
@@ -135,6 +139,8 @@ ldap_url_parse( const char *url, LDAPURLDesc **ludpp )
 		if ( *((*ludpp)->lud_dn) == '\0' ) {
 			(*ludpp)->lud_dn = NULL;
 		}
+	} else if ( rc == LDAP_URL_UNRECOGNIZED_CRITICAL_EXTENSION ) {
+		rc = LDAP_URL_ERR_PARAM;	/* mapped for backwards compatibility */
 	}
 
 	return( rc );
@@ -148,15 +154,18 @@ ldap_url_parse( const char *url, LDAPURLDesc **ludpp )
  *   2) no defaults are set for lud_scope and lud_filter (they are set to -1
  *	and NULL respectively if no SCOPE or FILTER are present in the URL).
  *   3) when there is a zero-length DN in a URL we do not set lud_dn to NULL.
- *   4) if an LDAPv3 URL extensions are included, 
+ *
+ * note that LDAPv3 URL extensions are ignored unless they are marked
+ * critical, in which case an LDAP_URL_UNRECOGNIZED_CRITICAL_EXTENSION error
+ * is returned.
  */
 int
 nsldapi_url_parse( const char *url, LDAPURLDesc **ludpp, int dn_required )
 {
 
 	LDAPURLDesc	*ludp;
-	char		*urlcopy, *attrs, *p, *q;
-	int		enclosed, secure, i, nattrs;
+	char		*urlcopy, *attrs, *scope, *extensions = NULL, *p, *q;
+	int		enclosed, secure, i, nattrs, at_start;
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_url_parse(%s)\n", url, 0, 0 );
 
@@ -256,23 +265,38 @@ nsldapi_url_parse( const char *url, LDAPURLDesc **ludpp, int dn_required )
 			 * '?' that marks end of scope and begin. of filter
 			 */
 			*p++ = '\0';
+			scope = p;
 
-			if (( q = strchr( p, '?' )) != NULL ) {
+			if (( p = strchr( scope, '?' )) != NULL ) {
 				/* terminate scope; point to start of filter */
-				*q++ = '\0';
-				if ( *q != '\0' ) {
-					ludp->lud_filter = q;
-					nsldapi_hex_unescape( ludp->lud_filter );
+				*p++ = '\0';
+				if ( *p != '\0' ) {
+					ludp->lud_filter = p;
+					/*
+					 * scan for the '?' that marks the end
+					 * of the filter and the start of any
+					 * extensions
+					 */
+					if (( p = strchr( ludp->lud_filter, '?' ))
+					    != NULL ) {
+						*p++ = '\0'; /* term. filter */
+						extensions = p;
+					}
+					if ( *ludp->lud_filter == '\0' ) {
+						ludp->lud_filter = NULL;
+					} else {
+						nsldapi_hex_unescape( ludp->lud_filter );
+					}
 				}
 			}
 
-			if ( strcasecmp( p, "one" ) == 0 ) {
+			if ( strcasecmp( scope, "one" ) == 0 ) {
 				ludp->lud_scope = LDAP_SCOPE_ONELEVEL;
-			} else if ( strcasecmp( p, "base" ) == 0 ) {
+			} else if ( strcasecmp( scope, "base" ) == 0 ) {
 				ludp->lud_scope = LDAP_SCOPE_BASE;
-			} else if ( strcasecmp( p, "sub" ) == 0 ) {
+			} else if ( strcasecmp( scope, "sub" ) == 0 ) {
 				ludp->lud_scope = LDAP_SCOPE_SUBTREE;
-			} else if ( *p != '\0' ) {
+			} else if ( *scope != '\0' ) {
 				ldap_free_urldesc( ludp );
 				return( LDAP_URL_ERR_BADSCOPE );
 			}
@@ -306,6 +330,23 @@ nsldapi_url_parse( const char *url, LDAPURLDesc **ludpp, int dn_required )
 				*p++ ='\0';
 			}
 			nsldapi_hex_unescape( ludp->lud_attrs[ i ] );
+		}
+	}
+
+	/* if extensions list was included, check for critical ones */
+	if ( extensions != NULL && *extensions != '\0' ) {
+		/* Note: at present, we do not recognize ANY extensions */
+		at_start = 1;
+		for ( p = extensions; *p != '\0'; ++p ) {
+			if ( at_start ) {
+				if ( *p == '!' ) {	/* critical extension */
+					ldap_free_urldesc( ludp );
+					return( LDAP_URL_UNRECOGNIZED_CRITICAL_EXTENSION );
+				}
+				at_start = 0;
+			} else if ( *p == ',' ) {
+				at_start = 1;
+			}
 		}
 	}
 
