@@ -47,7 +47,7 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <netdb.h>
-#if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX)
+#if !defined(hpux) && !defined(SUNOS4)
 # include <sys/select.h>
 #endif /* !defined(hpux) and others */
 #endif /* _WINDOWS */
@@ -82,7 +82,7 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(LINUX) && !defined(BSDI)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 

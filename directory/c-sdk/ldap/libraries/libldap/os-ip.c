@@ -33,33 +33,20 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 #endif
 
-/* we currently have a problem with the max number of filedescriptors due */
-/* to the usage of select().  Since I don't have time to do a proper fix */
-/* at the moment and since we are not able to test a poll fix immediately */
-/* I will allow for the continued use of select() by uppping FD_SETSIZE */
-/* See the document fdsetsize.txt in this directory for a description of */
-/* the setting of FD_SETSIZE for the OS'es we care about.  Note that the */
-/* Linux documentation was a bit weak on this subject */
-/* (mhein) */
-
-#ifdef SOLARIS
-#define FD_SETSIZE	65536
-#endif
-
-#ifdef HPUX
-#define FD_SETSIZE	30000
-#endif
-
-#ifdef OSF1
-#define FD_SETSIZE	65536
-#endif
-
-#ifdef AIX
-#define FD_SETSIZE	30000
-#endif
-
-#ifdef _WINDOWS
-#define FD_SETSIZE	30000
+/*
+ * On platforms where poll() does not exist, we use select().
+ * Therefore, we should increase the number of file descriptors
+ * we can use by #defining FD_SETSIZE to a large number before
+ * we include <sys/select.h> or its equivalent.  We do not need
+ * to do this for Windows, because on that platform there is no
+ * relationship between FD_SETSIZE and the highest numbered file
+ * descriptor we can use.  See the document fdsetsize.txt in
+ * this directory for a description of the setting of FD_SETSIZE
+ * for the OS'es we care about.
+ */
+#ifndef NSLDAPI_HAVE_POLL
+/* XXX value for BSDI? */
+/* XXX value for macintosh (if applicable)? */
 #endif
 
 #include "ldap-int.h"
@@ -261,18 +248,23 @@ static int
 nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 	int salen, int msec)
 {
-#ifndef _WINDOWS
-	int		flags;
-#endif /* _WINDOWS */
 	int		n, error;
 	int		len;
-	fd_set		rset, wset;
-	struct timeval	tval;
 #ifdef _WINDOWS
 	int		nonblock = 1;
 	int		block = 0;
-	fd_set		eset;
+#else
+	int		flags;
 #endif /* _WINDOWS */
+#ifdef NSLDAPI_HAVE_POLL
+	struct pollfd   pfd;
+#else
+	struct timeval	tval;
+	fd_set		rset, wset;
+#ifdef _WINDOWS
+	fd_set		eset;
+#endif
+#endif /* NSLDAPI_HAVE_POLL */
 
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_nonblock timeout: %d (msec)\n",
@@ -304,6 +296,10 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 	if (n == 0)
 		goto done;
 
+#ifdef NSLDAPI_HAVE_POLL
+	pfd.fd = sockfd;
+	pfd.events = POLLOUT;
+#else
 	FD_ZERO(&rset);
 	FD_SET(sockfd, &rset);
 	wset = rset;
@@ -311,20 +307,41 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #ifdef _WINDOWS
 	eset = rset;
 #endif /* _WINDOWS */
+#endif /* NSLDAPI_HAVE_POLL */
 
 	if (msec < 0 && msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) {
 		LDAPDebug( LDAP_DEBUG_TRACE, "Invalid timeout value detected.."
 			"resetting connect timeout to default value "
 			"(LDAP_X_IO_TIMEOUT_NO_TIMEOUT\n", 0, 0, 0);
 		msec = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
+#ifndef NSLDAPI_HAVE_POLL
 	} else {
 		if (msec != 0)
 			tval.tv_sec = msec / 1000;
 		else
 			tval.tv_sec = 0;
 		tval.tv_usec = 0;
+#endif /* NSLDAPI_HAVE_POLL */
 	}
 
+#ifdef NSLDAPI_HAVE_POLL
+	if ((n = poll(&pfd, 1,
+		(msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) ? msec : -1)) == 0) {
+		errno = ETIMEDOUT;
+		return (-1);
+	}
+	if (pfd.revents & POLLOUT) {
+		len = sizeof(error);
+		if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (char *)&error, &len)
+			< 0)
+			return (-1);
+#ifdef LDAP_DEBUG
+	} else if ( ldap_debug & LDAP_DEBUG_TRACE ) {
+		perror("poll error: sockfd not set");
+#endif
+	}
+
+#else /* NSLDAPI_HAVE_POLL */
 	/* if timeval structure == NULL, select will block indefinitely */
 	/* 			!= NULL, and value == 0, select will */
 	/* 			         not block */
@@ -375,6 +392,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #endif
 	}
 #endif /* _WINDOWS */
+#endif /* NSLDAPI_HAVE_POLL */
 
 done:
 #ifdef _WINDOWS
@@ -1068,6 +1086,7 @@ nsldapi_iostatus_free( LDAP *ld )
 }
 
 
+#ifndef NSLDAPI_HAVE_POLL
 static int
 nsldapi_get_select_table_size( void )
 {
@@ -1094,6 +1113,7 @@ nsldapi_get_select_table_size( void )
 
 	return( tblsize );
 }
+#endif /* !NSLDAPI_HAVE_POLL */
 
 static int
 nsldapi_tv2ms( struct timeval *tv )
