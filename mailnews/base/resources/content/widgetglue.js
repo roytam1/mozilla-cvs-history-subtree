@@ -118,8 +118,9 @@ function MsgEmptyTrash()
 
     if (folderList)
     {
-        var folder;
-        folder = folderList[0];
+        var folder = folderList[0];
+        var resource = GetFolderResource(folder);
+
         if (folder)
         {
             var trashUri = GetSelectTrashUri(index);
@@ -134,11 +135,11 @@ function MsgEmptyTrash()
                 
                 var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
                 if(trashSelected)
-                    outliner.clearSelection();
+                    outliner.outlinerBoxObject.selection.clearSelection();
 
                 try 
                 {
-                    messenger.EmptyTrash(tree.database, folder.resource);
+                    messenger.EmptyTrash(GetFolderDatasource(), GetSelectedFolderURI());
                 }
                 catch(e)
                 {  
@@ -148,7 +149,7 @@ function MsgEmptyTrash()
                 {
                     trashElement = document.getElementById(trashUri);
                     if (trashElement)
-                        ChangeSelection(tree, trashElement);
+                        ChangeSelection(outliner, trashElement);
                 }
             }
         }
@@ -158,10 +159,10 @@ function MsgEmptyTrash()
 function MsgCompactFolder(isAll) 
 {
     //get the selected elements
-    var tree = GetFolderTree();
-    if (tree)
+    var outliner = GetFolderOutliner();
+    if (outliner)
     {
-        var folderList = tree.selectedItems;
+        var folderList = GetSelectedMsgFolders();
         if (folderList)
         {
             var selctedFolderUri = "";
@@ -191,7 +192,7 @@ function MsgCompactFolder(isAll)
                     dump("folder = " + folder.localName + "\n"); 
                     try
                     {
-                      messenger.CompactFolder(tree.database, folder.resource, isAll);
+                      messenger.CompactFolder(GetFolderDatasource(), folder.resource, isAll);
                     }
                     catch(e)
                     {

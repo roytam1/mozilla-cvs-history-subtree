@@ -193,7 +193,7 @@ function ChangeFolderByIndex(index)
     gCurrentFolderIndex = index;
 }
 
-function setTitleFromFolder(msgfolder, subject)
+function SetTitleFromFolder(msgfolder, subject)
 {
     if (!msgfolder)
         return;
