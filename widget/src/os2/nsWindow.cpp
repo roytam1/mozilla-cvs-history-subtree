@@ -656,6 +656,13 @@ MRESULT EXPENTRY fnwpNSWindow( HWND hwnd, ULONG msg, MPARAM mp1, MPARAM mp2)
       }
    }
 
+    // hold on to the window for the life of this method, in case it gets
+    // deleted during processing. yes, it's a double hack, since someWindow
+    // is not really an interface.
+    nsCOMPtr<nsISupports> kungFuDeathGrip;
+    if (!wnd->mIsDestroying) // not if we're in the destructor!
+      kungFuDeathGrip = do_QueryInterface((nsBaseWidget*)wnd);
+
    MRESULT mRC = 0;
 
    if( wnd)
