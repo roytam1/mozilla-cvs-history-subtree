@@ -37,6 +37,7 @@
 
 #include <Foundation/NSUserDefaults.h>
 #include <mach-o/dyld.h>
+#include <sys/utsname.h>
 
 #import "MainController.h"
 #import "BrowserWindowController.h"
@@ -862,6 +863,15 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
 - (void) updatePrebinding
 {
+  // For MacOS 10.2 and higher, don't do anything, since
+  // the OS updates our prebinding automatically.
+  struct utsname u;
+  uname(&u);
+
+  float osVersion = atof(u.release);
+  if (osVersion >= 6.0)   // MacOS 10.2 is based on Darwin 6.0
+    return;
+
   // Check our prebinding status.  If we didn't launch prebound,
   // fork the update script.
 
