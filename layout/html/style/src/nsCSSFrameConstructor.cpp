@@ -2886,7 +2886,14 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
     // pass in null tableCreator so ProcessChildren will not call TableProcessChildren
     rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, aNewCellInnerFrame, 
                          PR_TRUE, childItems, PR_TRUE, nsnull);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) {
+      // Clean up
+      aNewCellInnerFrame->Destroy(aPresContext);
+      aNewCellInnerFrame = nsnull;
+      aNewCellOuterFrame->Destroy(aPresContext);
+      aNewCellOuterFrame = nsnull;
+      return rv;
+    }
 
     aNewCellInnerFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aState.mFloatedItems.childList) {
@@ -6372,7 +6379,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableCaptionFrame(aPresShell, aPresContext, aState, aContent, 
                                       parentFrame, aStyleContext, tableCreator, 
                                       aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6384,7 +6391,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableRowGroupFrame(aPresShell, aPresContext, aState, aContent, 
                                        adjParentFrame, aStyleContext, tableCreator, 
                                        PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6393,7 +6400,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableColGroupFrame(aPresShell, aPresContext, aState, aContent, 
                                        adjParentFrame, aStyleContext, tableCreator, 
                                        PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6402,7 +6409,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableColFrame(aPresShell, aPresContext, aState, aContent, 
                                   adjParentFrame, aStyleContext, tableCreator, 
                                   PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6411,7 +6418,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableRowFrame(aPresShell, aPresContext, aState, aContent, 
                                   adjParentFrame, aStyleContext, tableCreator, 
                                   PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6422,7 +6429,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
         rv = ConstructTableCellFrame(aPresShell, aPresContext, aState, aContent, 
                                      adjParentFrame, aStyleContext, tableCreator, 
                                      PR_FALSE, aFrameItems, newFrame, innerTable, pseudoParent);
-        if (!pseudoParent) {
+        if (NS_SUCCEEDED(rv) && !pseudoParent) {
           aFrameItems.AddChild(newFrame);
         }
         return rv;
