@@ -30,6 +30,7 @@
 #include "nsIURI.h"
 #include "nsHashtable.h"
 #include "nsIComponentManager.h"
+#include "nsINetDataDiskCache.h"
 
 // Limit the number of entries in the cache to conserve memory space
 // in the nsReplacementPolicy code
@@ -468,3 +469,28 @@ nsCacheManager::GetDiskCacheCapacity(PRUint32* aCapacity)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsCacheManager::SetDiskCacheFolder(nsIFileSpec* aFolder)
+{
+    NS_ENSURE_ARG(aFolder);
+
+    if (!mFileCache)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    nsCOMPtr<nsINetDataDiskCache> fileCache;
+    fileCache = do_QueryInterface(mFileCache);
+    return fileCache->SetDiskCacheFolder(aFolder);
+}
+
+NS_IMETHODIMP
+nsCacheManager::GetDiskCacheFolder(nsIFileSpec* *aFolder)
+{
+    NS_ENSURE_ARG(aFolder);
+
+    if (!mFileCache)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    nsCOMPtr<nsINetDataDiskCache> fileCache;
+    fileCache = do_QueryInterface(mFileCache);
+    return fileCache->GetDiskCacheFolder(aFolder);
+}

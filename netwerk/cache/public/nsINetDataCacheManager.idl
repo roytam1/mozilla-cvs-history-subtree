@@ -27,6 +27,7 @@ interface nsICachedNetData;
 interface nsINetDataCache;
 interface nsINetDataDiskCache;
 interface nsIURI;
+interface nsIFileSpec;
 
 /**
  * The network-response cache manager is partly responsible for the caching of
@@ -149,6 +150,11 @@ interface nsINetDataCacheManager : nsISupports
      * accomodate the requested capacity.
      */
     attribute PRUint32 memCacheCapacity;
+
+	/**
+	 * This attribute must be set before attempting to store into the disk cache.
+	 */
+    attribute nsIFileSpec diskCacheFolder;
 };
 
 %{ C++
