@@ -366,7 +366,7 @@ nsTableRowGroupFrame::GetFrameForPoint(const nsPoint& aPoint, nsIFrame** aFrame)
         return kid->GetFrameForPoint(tmp, aFrame);
       }
     }
-    else if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == childDisplay->mDisplay) {
+    else {
       if (kidRect.Contains(aPoint)) {
         tmp.MoveTo(aPoint.x - kidRect.x, aPoint.y - kidRect.y);
         return kid->GetFrameForPoint(tmp, aFrame);
@@ -667,13 +667,7 @@ void nsTableRowGroupFrame::CalculateRowHeights(nsIPresContext& aPresContext,
     {
       const nsStyleDisplay *childDisplay;
       rowFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)childDisplay));
-      if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == childDisplay->mDisplay) {
-        // Only for the tree widget does this code fire.
-        nsSize rowGroupSize;
-        rowFrame->GetSize(rowGroupSize);
-        rowGroupHeight += rowGroupSize.height;
-      }
-      else if (NS_STYLE_DISPLAY_TABLE_ROW == childDisplay->mDisplay)
+      if (NS_STYLE_DISPLAY_TABLE_ROW == childDisplay->mDisplay)
       {
         if (gsDebug) printf("TRGF CalcRowH: Step 2 for row %d (%p)...\n",
                             rowIndex + startRowIndex, rowFrame);
@@ -779,6 +773,13 @@ void nsTableRowGroupFrame::CalculateRowHeights(nsIPresContext& aPresContext,
         rowGroupHeight += rowHeights[rowIndex];
         rowIndex++;
       }
+      else {
+        // Anything that isn't a row contributes to the row group's total height.
+        nsSize frameSize;
+        rowFrame->GetSize(frameSize);
+        rowGroupHeight += frameSize.height;
+      }
+      
       // Get the next rowgroup child (row frame)
       rowFrame->GetNextSibling(&rowFrame);
     }
