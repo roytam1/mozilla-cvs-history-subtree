@@ -617,7 +617,7 @@ char * TextFrame::CompressWhiteSpace(char            * aBuffer,
         col++;
       }
     }
-  } else { // is TEXT_IS_PRE
+  } else { // is NOT TEXT_IS_PRE
 
     if ((mFlags & TEXT_HAS_MULTIBYTE) != 0) {
       // XXX to be written
@@ -676,6 +676,7 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
 
   if (doc->GetDisplaySelection() == PR_FALSE)
   {
+
     // Skip leading space if necessary
     Text* txt = (Text*) mContent;
     const PRUnichar* cp = txt->mText + mContentOffset;
@@ -741,14 +742,13 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
         // 1.The fixed size buffers causes the application to CRASH.
         // 2 These statements do not appear to do anything.
 
-        char cmpBuf[256];
-        char sBuf[256];
+        char cmpBuf[512];
+        char sBuf[512];
         int len = s - s0;
         strncpy(cmpBuf, compressedStr, compressedStrLen);
         cmpBuf[compressedStrLen] = 0;
         strncpy(sBuf, s0, len);
-        cmpBuf[compressedStrLen] = 0;
-
+        sBuf[len] = 0;
         if (compressedStrLen != (PRUint32)len ||
             strcmp(cmpBuf, sBuf)) {
           int x = 0;
@@ -879,8 +879,25 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
 
 		    nscoord textLen = fm->GetWidth(deviceContext, textStr);
 
-		    aRenderingContext.SetColor(NS_RGB(255,0,0));
-		    aRenderingContext.DrawLine(textLen, 0, textLen, mRect.height);
+        // Draw little blue triangle
+		    aRenderingContext.SetColor(NS_RGB(0,0,255));
+        nsPoint pnts[4];
+        nscoord ox = mRect.height / 4;
+        nscoord oy = ox;
+        nscoord yy = mRect.height;
+
+        pnts[0].x = textLen-ox;
+        pnts[0].y = yy;
+        pnts[1].x = textLen;
+        pnts[1].y = yy-oy;
+        pnts[2].x = textLen+ox;
+        pnts[2].y = yy;
+        pnts[3].x = textLen-ox;
+        pnts[3].y = yy;
+
+        //aRenderingContext.DrawPolygon(pnts, 4);
+        aRenderingContext.FillPolygon(pnts, 4);
+		    //aRenderingContext.DrawLine(textLen, mRect.height-(mRect.height/3), textLen, mRect.height);
         NS_RELEASE(fm);
       }
       NS_IF_RELEASE(startContent);
@@ -1096,7 +1113,7 @@ TextFrame::PaintRegularText(nsIPresContext& aPresContext,
         if (endPnt->GetOffset() == mContentOffset+mContentLength) {
           endOffset = compressedStrLen;
         } else {
-          if (endPnt->GetOffset() == compressedStrLen) {
+          if (endPnt->GetOffset() == (PRInt32)compressedStrLen) {
             endOffset = compressedStrLen;
           } else {
             endOffset = indexes[endPnt->GetOffset()-mContentOffset]-mContentOffset;
