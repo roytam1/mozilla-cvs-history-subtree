@@ -38,6 +38,7 @@ toolkit.jar:
         content/global/printProgress.js             (resources/content/printProgress.js)
         content/global/printPreviewProgress.xul     (resources/content/printPreviewProgress.xul)
         content/global/printPreviewProgress.js      (resources/content/printPreviewProgress.js)
+        content/global/plugins.html                 (resources/content/plugins.html)
         content/global/fullScreen.js                (resources/content/fullScreen.js)
         content/global/build.dtd                    (build.dtd)
         content/global/MPL-1.1.html                 (resources/content/MPL-1.1.html)

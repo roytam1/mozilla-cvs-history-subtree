@@ -27,7 +27,6 @@ comm.jar:
     content/communicator/findUtils.js                    (resources/content/findUtils.js)
     content/communicator/printPreviewBindings.xml        (resources/content/printPreviewBindings.xml)
     content/communicator/printing.js                     (resources/content/printing.js)
-    content/communicator/plugins.html                    (resources/content/plugins.html)
     content/communicator/popupManager.js                 (resources/content/popupManager.js)
     content/communicator/popupManager.xul                (resources/content/popupManager.xul)
     content/communicator/aboutPopups.xul                 (resources/content/aboutPopups.xul)
