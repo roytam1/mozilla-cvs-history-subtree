@@ -111,7 +111,7 @@ namespace JavaScript {
 
     struct VariableBinding: ParseNode {
         VariableBinding *next;          // Next binding in a linked list of variable or parameter bindings
-        ExprNode *name;                 // The variable's name;
+        const StringAtom *name;         // The variable's name;
                                         // nil if omitted, which currently can only happen for ... parameters
         ExprNode *type;                 // Type expression or nil if not provided
         ExprNode *initializer;          // Initial value expression or nil if not provided
@@ -119,7 +119,7 @@ namespace JavaScript {
 
         JS2Runtime::Property *prop;     // the sematics/codegen passes stuff their data in here.
 
-        VariableBinding(size_t pos, ExprNode *name, ExprNode *type, ExprNode *initializer, bool constant):
+        VariableBinding(size_t pos, const StringAtom *name, ExprNode *type, ExprNode *initializer, bool constant):
                 ParseNode(pos), next(0), name(name), type(type), initializer(initializer), constant(constant) {}
 
         void print(PrettyPrinter &f, bool printConst) const;
@@ -144,7 +144,7 @@ namespace JavaScript {
             parentheses,                // UnaryExprNode        (<op>)
             numUnit,                    // NumUnitExprNode      <num> "<str>" or <num><str>
             exprUnit,                   // ExprUnitExprNode     (<op>) "<str>"  or  <op><str>
-            qualify,                    // BinaryExprNode       <op1> :: <op2>   (<op2> must be identifier)
+            qualify,                    // QualifyExprNode      <qualifier> :: <name>
 
             objectLiteral,              // PairListExprNode     {<field>:<value>, <field>:<value>, ..., <field>:<value>}
             arrayLiteral,               // PairListExprNode     [<value>, <value>, ..., <value>]
@@ -285,6 +285,15 @@ namespace JavaScript {
 
         IdentifierExprNode(size_t pos, Kind kind, const StringAtom &name): ExprNode(pos, kind), name(name) {}
         explicit IdentifierExprNode(const Token &t): ExprNode(t.getPos(), identifier), name(t.getIdentifier()) {}
+
+        void print(PrettyPrinter &f) const;
+    };
+
+    struct QualifyExprNode: IdentifierExprNode {
+        ExprNode *qualifier;            // The qualifier expression; non-nil only
+
+        QualifyExprNode(size_t pos, ExprNode *qualifier, const StringAtom &name):
+                IdentifierExprNode(pos, qualify, name), qualifier(qualifier) {ASSERT(qualifier);}
 
         void print(PrettyPrinter &f) const;
     };
@@ -434,9 +443,8 @@ namespace JavaScript {
             Const,          // VariableStmtNode     <attributes> const <bindings> ;
             Var,            // VariableStmtNode     <attributes> var <bindings> ;
             Function,       // FunctionStmtNode     <attributes> function <function>
-            Class,          // ClassStmtNode        <attributes> class <name> extends <superclass> implements <supers> <body>
-            Interface,      // ClassStmtNode        <attributes> interface <name> extends <supers> <body>
-            Namespace,      // NamespaceStmtNode    <attributes> namespace <name> extends <supers>
+            Class,          // ClassStmtNode        <attributes> class <name> extends <superclass> <body>
+            Namespace,      // NamespaceStmtNode    <attributes> namespace <name>
             Language,       // LanguageStmtNode     language <language> ;
             Package,        // PackageStmtNode      package <packageName> <body>
             Debugger        // ExprStmtNode         debugger ;
@@ -661,11 +669,10 @@ namespace JavaScript {
     };
 
     struct NamespaceStmtNode: AttributeStmtNode {
-        ExprNode *name;                 // The namespace's, interfaces, or class's name; non-nil only
-        ExprList *supers;               // Linked list of supernamespace or superinterface expressions
+        const StringAtom &name;         // The namespace's or class's name
 
-        NamespaceStmtNode(size_t pos, Kind kind, ExprList *attributes, ExprNode *name, ExprList *supers):
-                AttributeStmtNode(pos, kind, attributes), name(name), supers(supers) {ASSERT(name);}
+        NamespaceStmtNode(size_t pos, Kind kind, ExprList *attributes, const StringAtom &name):
+                AttributeStmtNode(pos, kind, attributes), name(name) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
     };
@@ -676,9 +683,8 @@ namespace JavaScript {
 
         JS2Runtime::JSType *mType;      // used by backend
 
-        ClassStmtNode(size_t pos, Kind kind, ExprList *attributes, ExprNode *name, ExprNode *superclass,
-                      ExprList *superinterfaces, BlockStmtNode *body):
-                NamespaceStmtNode(pos, kind, attributes, name, superinterfaces), superclass(superclass), body(body) {}
+        ClassStmtNode(size_t pos, ExprList *attributes, const StringAtom &name, ExprNode *superclass, BlockStmtNode *body):
+                NamespaceStmtNode(pos, Class, attributes, name), superclass(superclass), body(body) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
     };
@@ -758,7 +764,7 @@ namespace JavaScript {
         struct StackedSubexpression;
 
         ExprNode *makeIdentifierExpression(const Token &t) const;
-        ExprNode *parseIdentifier();
+        const StringAtom &parseIdentifier();
         ExprNode *parseIdentifierQualifiers(ExprNode *e, bool &foundQualifiers, bool preferRegExp);
         ExprNode *parseParenthesesAndIdentifierQualifiers(const Token &tParen, bool noComma, bool &foundQualifiers, bool preferRegExp);
         ExprNode *parseQualifiedIdentifier(const Token &t, bool preferRegExp);
@@ -787,24 +793,23 @@ namespace JavaScript {
         const StringAtom &parseTypedIdentifier(ExprNode *&type);
         ExprNode *parseTypeBinding(Token::Kind kind, bool noIn);
         ExprList *parseTypeListBinding(Token::Kind kind);
-        VariableBinding *parseVariableBinding(bool noQualifiers, bool noIn, bool constant);
-        VariableBinding *parseFunctionParameter();
+        VariableBinding *parseVariableBinding(size_t pos, bool noIn, bool constant);
+        VariableBinding *parseParameter();
         void parseFunctionName(FunctionName &fn);
         void parseFunctionSignature(FunctionDefinition &fd);
 
-        enum SemicolonState {semiNone, semiNoninsertable, semiInsertable};
         enum AttributeStatement {asAny, asBlock, asConstVar};
         StmtNode *parseBlockContents(bool inSwitch, bool noCloseBrace);
-        BlockStmtNode *parseBody(SemicolonState *semicolonState);
+        BlockStmtNode *parseBody(bool *semicolonWanted);
         ExprNode::Kind validateOperatorName(const Token &name);
-        StmtNode *parseAttributeStatement(size_t pos, ExprList *attributes, const Token &t, bool noIn, SemicolonState &semicolonState);
-        StmtNode *parseAttributesAndStatement(size_t pos, ExprNode *e, AttributeStatement as, SemicolonState &semicolonState);
-        StmtNode *parseFor(size_t pos, SemicolonState &semicolonState);
+        StmtNode *parseDefinition(size_t pos, ExprList *attributes, const Token &t, bool noIn, bool &semicolonWanted);
+        StmtNode *parseAttributesAndDefinition(size_t pos, ExprNode *e, AttributeStatement as, bool &semicolonWanted);
+        StmtNode *parseFor(size_t pos, bool &semicolonWanted);
         StmtNode *parseTry(size_t pos);
 
       public:
-        StmtNode *parseStatement(bool directive, bool inSwitch, SemicolonState &semicolonState);
-        StmtNode *parseStatementAndSemicolon(SemicolonState &semicolonState);
+        StmtNode *parseDirective(bool substatement, bool inSwitch, bool &semicolonWanted);
+        StmtNode *parseSubstatement(bool &semicolonWanted);
         StmtNode *parseProgram() {return parseBlockContents(false, true);}
     };
 }

@@ -562,25 +562,22 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             VariableBinding *v = vs->bindings;
             bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
-                if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                    if (v->initializer) {
-                        IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                        Reference *ref = mScopeChain->getName(i->name, CURRENT_ATTR, Write);
-                        ASSERT(ref);    // must have been added previously by collectNames
-                        if (isStatic && (static_cg != NULL)) {
-                            ref->emitImplicitLoad(static_cg);
-                            static_cg->genExpr(v->initializer);
-                            ref->emitCodeSequence(static_cg);
-                            static_cg->addOp(PopOp);
-                        }
-                        else {
-                            ref->emitImplicitLoad(this);
-                            genExpr(v->initializer);
-                            ref->emitCodeSequence(this);
-                            addOp(PopOp);
-                        }
-                        delete ref;
+                if (v->initializer) {
+                    Reference *ref = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
+                    ASSERT(ref);    // must have been added previously by collectNames
+                    if (isStatic && (static_cg != NULL)) {
+                        ref->emitImplicitLoad(static_cg);
+                        static_cg->genExpr(v->initializer);
+                        ref->emitCodeSequence(static_cg);
+                        static_cg->addOp(PopOp);
                     }
+                    else {
+                        ref->emitImplicitLoad(this);
+                        genExpr(v->initializer);
+                        ref->emitCodeSequence(this);
+                        addOp(PopOp);
+                    }
+                    delete ref;
                 }
                 v = v->next;
             }
@@ -654,8 +651,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             if (f->initializer->getKind() == StmtNode::Var) {
                 VariableStmtNode *vs = static_cast<VariableStmtNode *>(f->initializer);
                 VariableBinding *v = vs->bindings;
-                IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                Reference *value = mScopeChain->getName(i->name, CURRENT_ATTR, Write);
+                Reference *value = mScopeChain->getName(*v->name, CURRENT_ATTR, Write);
                 
                 uint32 breakLabel = getLabel(Label::BreakLabel);
                 uint32 labelAtTopOfBlock = getLabel();

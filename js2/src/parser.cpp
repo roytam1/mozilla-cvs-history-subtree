@@ -110,13 +110,12 @@ JS::ExprNode *JS::Parser::makeIdentifierExpression(const Token &t) const
 
 // Parse and return an Identifier.  If the token has been peeked, it should have
 // been done with preferRegExp set to true.
-JS::ExprNode *JS::Parser::parseIdentifier()
+const JS::StringAtom &JS::Parser::parseIdentifier()
 {
     const Token &t = lexer.get(true);
-    ExprNode *e = makeIdentifierExpression(t);
-    if (!e)
+    if (!t.hasIdentifierKind())
         syntaxError("Identifier expected");
-    return e;
+    return t.getIdentifier();
 }
 
 
@@ -136,7 +135,7 @@ JS::ExprNode *JS::Parser::parseIdentifierQualifiers(ExprNode *e, bool &foundQual
 
     foundQualifiers = true;
     size_t pos = tDoubleColon->getPos();
-    return new(arena) BinaryExprNode(pos, ExprNode::qualify, e, parseIdentifier());
+    return new(arena) QualifyExprNode(pos, e, parseIdentifier());
 }
 
 
@@ -606,7 +605,7 @@ bool JS::Parser::expressionIsAttribute(const ExprNode *e)
             return true;
 
           case ExprNode::qualify:
-            return static_cast<const BinaryExprNode *>(e)->op1->hasKind(ExprNode::identifier);
+            return static_cast<const QualifyExprNode *>(e)->qualifier->hasKind(ExprNode::identifier);
 
           case ExprNode::call:
           case ExprNode::index:
@@ -1012,32 +1011,19 @@ JS::ExprList *JS::Parser::parseTypeListBinding(Token::Kind kind)
 }
 
 
-// Parse and return a VariableBinding.
-// If noQualifiers is false, allow a QualifiedIdentifier as the variable name;
-// otherwise, restrict the variable name to be a simple Identifier.
-// If noIn is false, allow the in operator.
-// The value of the constant parameter is stored in the result VariableBinding.
+// Parse and return a VariableBinding.  pos is the position of the binding or its first attribute, if any.
+// If noIn is false, allow the in operator.  The value of the constant parameter is stored in the returned
+// VariableBinding.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
 // After parseVariableBinding finishes, the next token might have been peeked with preferRegExp set to true.
 // The reason preferRegExp is true is to correctly parse the following case of semicolon insertion:
 //    var a
 //    /regexp/
-JS::VariableBinding *JS::Parser::parseVariableBinding(bool noQualifiers, bool noIn, bool constant)
+JS::VariableBinding *JS::Parser::parseVariableBinding(size_t pos, bool noIn, bool constant)
 {
-    const Token &t = lexer.get(true);
-    size_t pos = t.getPos();
-
-    ExprNode *name;
-    if (noQualifiers) {
-        name = makeIdentifierExpression(t);
-        if (!name)
-            syntaxError("Identifier expected");
-    } else
-        name = parseQualifiedIdentifier(t, true);
-
+    const StringAtom &name = parseIdentifier();
     ExprNode *type = parseTypeBinding(Token::colon, noIn);
-
     ExprNode *initializer = 0;
     if (lexer.eat(true, Token::assignment)) {
         initializer = parseAssignmentExpression(noIn);
@@ -1045,7 +1031,7 @@ JS::VariableBinding *JS::Parser::parseVariableBinding(bool noQualifiers, bool no
                                   // it can't be the next token.
     }
 
-    return new(arena) VariableBinding(pos, name, type, initializer, constant);
+    return new(arena) VariableBinding(pos, &name, type, initializer, constant);
 }
 
 
@@ -1053,10 +1039,17 @@ JS::VariableBinding *JS::Parser::parseVariableBinding(bool noQualifiers, bool no
 // preceded by the const attribute.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
-// After parseFunctionParameter finishes, the next token might have been peeked with preferRegExp set to true.
-JS::VariableBinding *JS::Parser::parseFunctionParameter()
+// After parseParameter finishes, the next token might have been peeked with preferRegExp set to true.
+JS::VariableBinding *JS::Parser::parseParameter()
 {
-    return parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
+    const Token &t = lexer.peek(true);
+    size_t pos = t.getPos();
+    bool constant = false;
+    if (t.hasKind(Token::Const)) {
+        lexer.get(true);
+        constant = true;
+    }
+    return parseVariableBinding(pos, false, constant);
 }
 
 
@@ -1090,8 +1083,7 @@ void JS::Parser::parseFunctionName(FunctionName &fn)
 
 // Parse a FunctionSignature and initialize fd with the result.
 //
-// If the first token was peeked, it should be have been done with
-// preferRegExp set to true.
+// If the first token was peeked, it should be have been done with preferRegExp set to true.
 // After parseFunctionSignature finishes, the next token might have been
 // peeked with preferRegExp set to true.
 void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
@@ -1108,14 +1100,14 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
                 if (t1.hasKind(Token::closeParenthesis))
                     restParameter = new(arena) VariableBinding(t1.getPos(), 0, 0, 0, false);
                 else
-                    restParameter = parseFunctionParameter();
+                    restParameter = parseParameter();
                 if (!optParameters)
                     optParameters = restParameter;
                 parameters += restParameter;
                 require(true, Token::closeParenthesis);
                 break;
             } else {
-                VariableBinding *b = parseFunctionParameter();
+                VariableBinding *b = parseParameter();
                 if (b->initializer) {
                     if (!optParameters)
                         optParameters = b;
@@ -1139,23 +1131,23 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
 }
 
 
-// Parse a list of statements ending with a '}'.  Return these statements as a
+// Parse a list of Directives ending with a '}'.  Return these directives as a
 // linked list threaded through the StmtNodes' next fields.  The opening '{'
 // has already been read.  If noCloseBrace is true, an end-of-input terminates
 // the block; the end-of-input token is not read.
-// If inSwitch is true, allow case <expr>: and default: statements.
+// If inSwitch is true, only allow case <expr>: and default: statements or Substatements.
 // If noCloseBrace is true, after parseBlockContents finishes the next token might
 // have been peeked with preferRegExp set to true.
 JS::StmtNode *JS::Parser::parseBlockContents(bool inSwitch, bool noCloseBrace)
 {
     NodeQueue<StmtNode> q;
-    SemicolonState semicolonState = semiNone;
+    bool semicolonWanted = false;
 
     while (true) {
         const Token *t = &lexer.peek(true);
-        if (t->hasKind(Token::semicolon) && semicolonState != semiNone) {
+        if (t->hasKind(Token::semicolon) && semicolonWanted) {
             lexer.get(true);
-            semicolonState = semiNone;
+            semicolonWanted = false;
             t = &lexer.peek(true);
         }
         if (noCloseBrace) {
@@ -1165,59 +1157,55 @@ JS::StmtNode *JS::Parser::parseBlockContents(bool inSwitch, bool noCloseBrace)
             lexer.get(true);
             return q.first;
         }
-        if (!(semicolonState == semiNone ||
-              semicolonState == semiInsertable && lineBreakBefore(*t)))
+        if (semicolonWanted && !lineBreakBefore(*t))
             syntaxError("';' expected", 0);
-
-        StmtNode *s = parseStatement(!inSwitch, inSwitch, semicolonState);
-        if (inSwitch && !q.first && !s->hasKind(StmtNode::Case))
+        if (inSwitch && !q.first && !(t->hasKind(Token::Case) || t->hasKind(Token::Default)))
             syntaxError("First statement in a switch block must be 'case expr:' or 'default:'", 0);
+
+        StmtNode *s = parseDirective(inSwitch, inSwitch, semicolonWanted);
         q += s;
     }
 }
 
 
-// Parse an optional block of statements beginning with a '{' and ending with a '}'.
-// Return these statements as a BlockStmtNode.
-// If semicolonState is nil, the block is required; otherwise, the block is
-// optional and if it is omitted, *semicolonState is set to semiInsertable.
+// Parse an optional block of Directives beginning with a '{' and ending with a '}'.
+// Return these directives as a BlockStmtNode.
+// If semicolonWanted is nil, the block is required; otherwise, the block is
+// optional and if it is omitted, *semicolonWanted is set to true.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
 // After parseBody finishes, the next token might have been peeked with preferRegExp set to true.
-JS::BlockStmtNode *JS::Parser::parseBody(SemicolonState *semicolonState)
+JS::BlockStmtNode *JS::Parser::parseBody(bool *semicolonWanted)
 {
     const Token *tBrace = lexer.eat(true, Token::openBrace);
     if (tBrace) {
         size_t pos = tBrace->getPos();
         return new(arena) BlockStmtNode(pos, StmtNode::block, 0, parseBlockContents(false, false));
     } else {
-        if (!semicolonState)
+        if (!semicolonWanted)
             syntaxError("'{' expected", 0);
-        *semicolonState = semiInsertable;
+        *semicolonWanted = true;
         return 0;
     }
 }
 
 
-// Parse and return a statement that takes zero or more initial attributes,
-// which have already been parsed. If noIn is false, allow the in operator.
+// Parse and return a Directive that takes zero or more initial attributes, which is either
+// a Definition or an AnnotatedBlock.  The initial attributes have already been parsed.
+// If noIn is false, allow the in operator.
 //
-// If the statement ends with an optional semicolon, then that semicolon is not parsed.
-// Instead, parseAttributeStatement returns in semicolonState one of three values:
-//    semiNone:             No semicolon is needed to close the statement
-//    semiNoninsertable:    A NoninsertableSemicolon is needed to close the
-//                          statement; a line break is not enough
-//    semiInsertable:       A Semicolon is needed to close the statement; a
-//                          line break is also sufficient
+// If the directive ends with an optional Semicolon production, then that semicolon is not parsed.
+// Instead, parseDefinition returns true in semicolonWanted when either a semicolon, a line break (in
+// non-strict mode), or some other closer such as a '}', 'else', or 'while' of a do-while is needed to
+// end the directive.
 //
-// pos is the position of the beginning of the statement (its first attribute if it has attributes).
-// The first token of the statement has already been read and is provided in t.
-// After parseAttributeStatement finishes, the next token might have been peeked with
+// pos is the position of the beginning of the directive (its first attribute if it has attributes).
+// The first token of the directive has already been read and is provided in t.
+// After parseDefinition finishes, the next token might have been peeked with
 // preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseAttributeStatement(size_t pos, ExprList *attributes, const Token &t, bool noIn,
-                                                  SemicolonState &semicolonState)
+JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprList *attributes, const Token &t, bool noIn, bool &semicolonWanted)
 {
-    semicolonState = semiNone;
+    semicolonWanted = false;
     StmtNode::Kind sKind;
 
     switch (t.getKind()) {
@@ -1233,51 +1221,32 @@ JS::StmtNode *JS::Parser::parseAttributeStatement(size_t pos, ExprList *attribut
         {
             NodeQueue<VariableBinding> bindings;
 
-            do bindings += parseVariableBinding(false, noIn, sKind == StmtNode::Const);
+            do bindings += parseVariableBinding(lexer.peek(true).getPos(), noIn, sKind == StmtNode::Const);
             while (lexer.eat(true, Token::comma));
-            semicolonState = semiInsertable;
+            semicolonWanted = true;
             return new(arena) VariableStmtNode(pos, sKind, attributes, bindings.first);
         }
 
       case Token::Function:
-        sKind = StmtNode::Function;
         {
-            FunctionStmtNode *f = new(arena) FunctionStmtNode(pos, sKind, attributes);
+            FunctionStmtNode *f = new(arena) FunctionStmtNode(pos, StmtNode::Function, attributes);
             parseFunctionName(f->function);
             parseFunctionSignature(f->function);
-            f->function.body = parseBody(&semicolonState);
+            f->function.body = parseBody(&semicolonWanted);
             return f;
         }
 
-      case Token::Interface:
-        sKind = StmtNode::Interface;
-        goto classOrInterface;
       case Token::Class:
-        sKind = StmtNode::Class;
-      classOrInterface:
         {
-            ExprNode *name = parseQualifiedIdentifier(lexer.get(true), true);
-            ExprNode *superclass = 0;
-            if (sKind == StmtNode::Class)
-                superclass = parseTypeBinding(Token::Extends, false);
-            ExprList *superinterfaces =
-                parseTypeListBinding(sKind == StmtNode::Class ? Token::Implements : Token::Extends);
-            BlockStmtNode *body =
-                parseBody(superclass || superinterfaces ? 0 : &semicolonState);
-            return new(arena) ClassStmtNode(pos, sKind, attributes, name, superclass, superinterfaces, body);
+            const StringAtom &name = parseIdentifier();
+            ExprNode *superclass = parseTypeBinding(Token::Extends, false);
+            BlockStmtNode *body = parseBody(superclass ? 0 : &semicolonWanted);
+            return new(arena) ClassStmtNode(pos, attributes, name, superclass, body);
         }
 
       case Token::Namespace:
-        {
-            const Token &t2 = lexer.get(false);
-            ExprNode *name;
-            if (lineBreakBefore(t2) || !(name = makeIdentifierExpression(t2)))
-                syntaxError("Namespace name expected");
-            ExprList *supernamespaces =
-                parseTypeListBinding(Token::Extends);
-            semicolonState = semiInsertable;
-            return new(arena) NamespaceStmtNode(pos, StmtNode::Namespace, attributes, name, supernamespaces);
-        }
+        semicolonWanted = true;
+        return new(arena) NamespaceStmtNode(pos, StmtNode::Namespace, attributes, parseIdentifier());
 
       default:
         syntaxError("Bad declaration");
@@ -1286,20 +1255,20 @@ JS::StmtNode *JS::Parser::parseAttributeStatement(size_t pos, ExprList *attribut
 }
 
 
-// Parse and return a statement that takes initial attributes.
-// semicolonState behaves as in parseAttributeStatement.
-// as restricts the kinds of statements that are allowed after the attributes:
-//   asAny      Any statements that takes attributes can follow
+// Parse and return a Directive that takes initial attributes.
+// semicolonWanted behaves as in parseDefinition.
+// as restricts the kinds of definitions that are allowed after the attributes:
+//   asAny      Any definitions, including blocks, that take attributes can follow
 //   asBlock    Only a block can follow
-//   asConstVar Only a const or var declaration can follow, and the 'in'
+//   asConstVar Only a const or var definition can follow, and the 'in'
 //              operator is not allowed at its top level
 //
 // The first attribute has already been read and is provided in e.
 // pos is the position of the first attribute.
 // If the next token was peeked, it should be have been done with preferRegExp set to true.
-// After parseAttributesAndStatement finishes, the next token might have been peeked with
+// After parseAttributesAndDefinition finishes, the next token might have been peeked with
 // preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseAttributesAndStatement(size_t pos, ExprNode *e, AttributeStatement as, SemicolonState &semicolonState)
+JS::StmtNode *JS::Parser::parseAttributesAndDefinition(size_t pos, ExprNode *e, AttributeStatement as, bool &semicolonWanted)
 {
     NodeQueue<ExprList> attributes;
     while (true) {
@@ -1323,21 +1292,19 @@ JS::StmtNode *JS::Parser::parseAttributesAndStatement(size_t pos, ExprNode *e, A
                     syntaxError("const or var expected");
                 break;
             }
-            return parseAttributeStatement(pos, attributes.first, t, as == asConstVar, semicolonState);
+            return parseDefinition(pos, attributes.first, t, as == asConstVar, semicolonWanted);
         }
         e = parseAttribute(t);
     }
 }
 
 
-// Parse and return a ForStatement.  The 'for' token has already been read;
-// its position is pos. If the statement ends with an optional semicolon,
-// that semicolon is not parsed. Instead, parseFor returns a semicolonState
-// with the same meaning as that in parseStatement.
+// Parse and return a ForStatement.  The 'for' token has already been read; its position is pos.
+// If the statement ends with an optional semicolon, that semicolon might not be parsed.
+// Instead, parseFor returns a semicolonWanted with the same meaning as that in parseDirective.
 //
-// After parseFor finishes, the next token might have been peeked with
-// preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseFor(size_t pos, SemicolonState &semicolonState)
+// After parseFor finishes, the next token might have been peeked with preferRegExp set to true.
+JS::StmtNode *JS::Parser::parseFor(size_t pos, bool &semicolonWanted)
 {
     require(true, Token::openParenthesis);
     const Token &t = lexer.get(true);
@@ -1354,16 +1321,18 @@ JS::StmtNode *JS::Parser::parseFor(size_t pos, SemicolonState &semicolonState)
 
       case Token::Const:
       case Token::Var:
-        initializer = parseAttributeStatement(tPos, 0, t, true, semicolonState);
+        initializer = parseDefinition(tPos, 0, t, true, semicolonWanted);
         break;
 
       case Token::Abstract:
       case Token::Final:
       case Token::Static:
       case Token::Volatile:
+        // Token::Private, Token::Public, Token::True, Token::False, and other attributes are
+        // handled by the default case below.
         expr1 = new(arena) IdentifierExprNode(t);
       makeAttribute:
-        initializer = parseAttributesAndStatement(tPos, expr1, asConstVar, semicolonState);
+        initializer = parseAttributesAndDefinition(tPos, expr1, asConstVar, semicolonWanted);
         expr1 = 0;
         break;
 
@@ -1382,7 +1351,7 @@ JS::StmtNode *JS::Parser::parseFor(size_t pos, SemicolonState &semicolonState)
     }
 
     if (lexer.eat(true, Token::semicolon))
-        threeExpr: {
+      threeExpr: {
         if (!lexer.eat(true, Token::semicolon)) {
             expr2 = parseListExpression(false);
             require(false, Token::semicolon);
@@ -1409,13 +1378,12 @@ JS::StmtNode *JS::Parser::parseFor(size_t pos, SemicolonState &semicolonState)
         syntaxError("';' or 'in' expected", 0);
 
     require(false, Token::closeParenthesis);
-    return new(arena) ForStmtNode(pos, sKind, initializer, expr2, expr3, parseStatement(false, false, semicolonState));
+    return new(arena) ForStmtNode(pos, sKind, initializer, expr2, expr3, parseDirective(true, false, semicolonWanted));
 }
 
 
-// Parse and return a TryStatement.  The 'try' token has already been read;
-// its position is pos. After parseTry finishes, the next token might have
-// been peeked with preferRegExp set to true.
+// Parse and return a TryStatement.  The 'try' token has already been read; its position is pos.
+// After parseTry finishes, the next token might have been peeked with preferRegExp set to true.
 JS::StmtNode *JS::Parser::parseTry(size_t pos)
 {
     StmtNode *tryBlock = parseBody(0);
@@ -1440,21 +1408,17 @@ JS::StmtNode *JS::Parser::parseTry(size_t pos)
 }
 
 
-// Parse and return a Directive.  If directive is false, allow only Statements.
+// Parse and return a Directive (if substatement is false) or a Substatement (if substatement is true).
 // If inSwitch is true, allow case <expr>: and default: statements.
 //
-// If the statement ends with an optional semicolon, that semicolon is not
-// parsed.
-// Instead, parseStatement returns in semicolonState one of three values:
-//    semiNone:             No semicolon is needed to close the statement
-//    semiNoninsertable:    A NoninsertableSemicolon is needed to close the
-//                          statement; a line break is not enough
-//    semiInsertable:       A Semicolon is needed to close the statement; a
-//                          line break is also sufficient
+// If the Directive ends with an optional Semicolon production, parseDirective may or may not read a
+// semicolon if one is present.  If it does not read a semicolon, parseDirective will set semicolonWanted
+// to indicate to the outer parser that either a semicolon, a line break (in non-strict mode), or some other
+// closer such as a '}', 'else', or 'while' of a do-while is needed to end the directive.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
-// After parseStatement finishes, the next token might have been peeked with preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, SemicolonState &semicolonState)
+// After parseDirective finishes, the next token might have been peeked with preferRegExp set to true.
+JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool &semicolonWanted)
 {
     StmtNode *s;
     ExprNode *e = 0;
@@ -1462,7 +1426,7 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
     const Token &t = lexer.get(true);
     const Token *t2;
     size_t pos = t.getPos();
-    semicolonState = semiNone;
+    semicolonWanted = false;
 
     checkStackSize();
     switch (t.getKind()) {
@@ -1471,20 +1435,21 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
         break;
 
       case Token::openBrace:
+      case Token::Import:
+      case Token::Export:
       case Token::Const:
       case Token::Var:
       case Token::Function:
       case Token::Class:
-      case Token::Interface:
       case Token::Namespace:
-        s = parseAttributeStatement(pos, 0, t, false, semicolonState);
+        s = parseDefinition(pos, 0, t, false, semicolonWanted);
         break;
 
       case Token::If:
         e = parseParenthesizedListExpression();
-        s = parseStatementAndSemicolon(semicolonState);
+        s = parseSubstatement(semicolonWanted);
         if (lexer.eat(true, Token::Else))
-            s = new(arena) BinaryStmtNode(pos, StmtNode::IfElse, e, s, parseStatement(false, false, semicolonState));
+            s = new(arena) BinaryStmtNode(pos, StmtNode::IfElse, e, s, parseDirective(true, false, semicolonWanted));
         else {
             sKind = StmtNode::If;
             goto makeUnary;
@@ -1515,8 +1480,8 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
 
       case Token::Do:
         {
-            SemicolonState semiState2;      // Ignore semiState2.
-            s = parseStatementAndSemicolon(semiState2);
+            bool semicolonWanted2;      // Ignore semicolonWanted2.
+            s = parseSubstatement(semicolonWanted2);
             require(true, Token::While);
             e = parseParenthesizedListExpression();
             sKind = StmtNode::DoWhile;
@@ -1532,13 +1497,13 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
         sKind = StmtNode::While;
       makeWhileWith:
         e = parseParenthesizedListExpression();
-        s = parseStatement(false, false, semicolonState);
+        s = parseDirective(true, false, semicolonWanted);
       makeUnary:
         s = new(arena) UnaryStmtNode(pos, sKind, e, s);
         break;
 
       case Token::For:
-        s = parseFor(pos, semicolonState);
+        s = parseFor(pos, semicolonWanted);
         break;
 
       case Token::Continue:
@@ -1591,16 +1556,16 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
       case Token::Volatile:
         e = new(arena) IdentifierExprNode(t);
       makeAttribute:
-        s = parseAttributesAndStatement(pos, e, asAny, semicolonState);
+        s = parseAttributesAndDefinition(pos, e, asAny, semicolonWanted);
         break;
 
       case CASE_TOKEN_NONRESERVED:
         t2 = &lexer.peek(false);
         if (t2->hasKind(Token::colon)) {
             lexer.get(false);
-            // Must do this now because parseStatement can invalidate t.
+            // Must do this now because parseDirective can invalidate t.
             const StringAtom &name = t.getIdentifier();
-            s = new(arena) LabelStmtNode(pos, name, parseStatement(false, false, semicolonState));
+            s = new(arena) LabelStmtNode(pos, name, parseDirective(true, false, semicolonWanted));
             break;
         }
       default:
@@ -1617,19 +1582,25 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
       makeExprStmtNode:
         s = new(arena) ExprStmtNode(pos, sKind, e);
       insertableSemicolon:
-        semicolonState = semiInsertable;
+        semicolonWanted = true;
         break;
     }
     return s;
 }
 
 
-// Same as parseStatement but also swallow the following semicolon if one is present.
-JS::StmtNode *JS::Parser::parseStatementAndSemicolon(SemicolonState &semicolonState)
+// Parse and return a Substatement.  If the substatement ends with an optional semicolon,
+// that semicolon *is* parsed.  parseSubstatement returns true in semicolonWanted only if the
+// a Semicolon is needed to close the substatement but one wasn't found.  In other cases
+// semicolonWanted is set to false.
+//
+// If the first token was peeked, it should be have been done with preferRegExp set to true.
+// After parseSubstatement finishes, the next token might have been peeked with preferRegExp set to true.
+JS::StmtNode *JS::Parser::parseSubstatement(bool &semicolonWanted)
 {
-    StmtNode *s = parseStatement(false, false, semicolonState);
-    if (semicolonState != semiNone && lexer.eat(true, Token::semicolon))
-        semicolonState = semiNone;
+    StmtNode *s = parseDirective(true, false, semicolonWanted);
+    if (semicolonWanted && lexer.eat(true, Token::semicolon))
+        semicolonWanted = false;
     return s;
 }
 
@@ -1638,23 +1609,15 @@ JS::StmtNode *JS::Parser::parseStatementAndSemicolon(SemicolonState &semicolonSt
 // Parser Utilities
 //
 
-// Print extra parentheses around subexpressions?
-const bool debugExprNodePrint = true;
-// Size of one level of statement indentation
-const int32 basicIndent = 4;
-// Indentation before a case or default statement
-const int32 caseIndent = basicIndent/2;
-// Indentation of var or const statement bindings
-const int32 varIndent = 2;
-// Size of one level of expression indentation
-const int32 subexpressionIndent = 4;
-// Indentation of function signature
-const int32 functionHeaderIndent = 9;
-// Indentation of class, interface, or namespace header
-const int32 namespaceHeaderIndent = 4;
+const bool debugExprNodePrint = true;   // Print extra parentheses around subexpressions?
+const int32 basicIndent = 4;            // Size of one level of statement indentation
+const int32 caseIndent = basicIndent/2; // Indentation before a case or default statement
+const int32 varIndent = 2;              // Indentation of var or const statement bindings
+const int32 subexpressionIndent = 4;    // Size of one level of expression indentation
+const int32 functionHeaderIndent = 9;   // Indentation of function signature
+const int32 namespaceHeaderIndent = 4;  // Indentation of class, interface, or namespace header
 
-
-static const char functionPrefixNames[3][5] = {"", "get ", "set " };
+static const char functionPrefixNames[3][5] = {"", "get ", "set "};
 
 
 // Print this onto f.  name must be non-nil.
@@ -1665,8 +1628,7 @@ void JS::FunctionName::print(PrettyPrinter &f) const
 }
 
 
-// Print this onto f.  if printConst is false, inhibit printing of the
-// const keyword.
+// Print this onto f.  if printConst is false, inhibit printing of the const keyword.
 void JS::VariableBinding::print(PrettyPrinter &f, bool printConst) const
 {
     PrettyPrinter::Block b(f);
@@ -1674,7 +1636,7 @@ void JS::VariableBinding::print(PrettyPrinter &f, bool printConst) const
     if (printConst && constant)
         f << "const ";
     if (name)
-        f << name;
+        f << *name;
     PrettyPrinter::Indent i(f, subexpressionIndent);
     if (type) {
         f.fillBreak(0);
@@ -1690,10 +1652,8 @@ void JS::VariableBinding::print(PrettyPrinter &f, bool printConst) const
 
 
 // Print this onto f.  If attributes is null, this is a function expression;
-// if attributes is non-null, this is a function statement with the given
-// attributes.
-// When there is no function body, print a trailing semicolon unless noSemi is
-// true.
+// if attributes is non-null, this is a function statement with the given attributes.
+// When there is no function body, print a trailing semicolon unless noSemi is true.
 void JS::FunctionDefinition::print(PrettyPrinter &f, const AttributeStmtNode *attributes, bool noSemi) const
 {
     PrettyPrinter::Block b(f);
@@ -1762,7 +1722,7 @@ const char *const JS::ExprNode::kindNames[kindsEnd] = {
     0,                      // parentheses
     0,                      // numUnit
     0,                      // exprUnit
-    "::",                   // qualify
+    0,                      // qualify
 
     0,                      // objectLiteral
     0,                      // arrayLiteral
@@ -1850,6 +1810,11 @@ void JS::ExprNode::print(PrettyPrinter &f) const
 void JS::IdentifierExprNode::print(PrettyPrinter &f) const
 {
     f << name;
+}
+
+void JS::QualifyExprNode::print(PrettyPrinter &f) const
+{
+    f << qualifier << "::" << name;
 }
 
 void JS::NumberExprNode::print(PrettyPrinter &f) const
@@ -1990,18 +1955,18 @@ void JS::UnaryExprNode::print(PrettyPrinter &f) const
 
 void JS::BinaryExprNode::print(PrettyPrinter &f) const
 {
-    if (debugExprNodePrint && !hasKind(qualify))
+    if (debugExprNodePrint)
         f << '(';
     PrettyPrinter::Block b(f);
     f << op1;
-    uint32 nSpaces = hasKind(dot) || hasKind(dotParen) || hasKind(qualify) ? (uint32)0 : (uint32)1;
+    uint32 nSpaces = hasKind(dot) || hasKind(dotParen) ? (uint32)0 : (uint32)1;
     f.fillBreak(nSpaces);
     f << kindName(getKind());
     f.fillBreak(nSpaces);
     f << op2;
     if (hasKind(dotParen))
         f << ')';
-    if (debugExprNodePrint && !hasKind(qualify))
+    if (debugExprNodePrint)
         f << ')';
 }
 
@@ -2030,6 +1995,7 @@ void JS::TernaryExprNode::print(PrettyPrinter &f) const
 //
 
 
+// ***** DEAD CODE *****
 // Print a comma-separated ExprList on to f.  Since a method can't be called
 // on nil, the list has at least one element.
 void JS::ExprList::printCommaList(PrettyPrinter &f) const
@@ -2047,6 +2013,7 @@ void JS::ExprList::printCommaList(PrettyPrinter &f) const
 }
 
 
+// ***** DEAD CODE *****
 // If list is nil, do nothing.  Otherwise, emit a linear line break of size 1,
 // the name, a space, and the contents of list separated by commas.
 void JS::ExprList::printOptionalCommaList(PrettyPrinter &f, const char *name, const ExprList *list)
@@ -2130,9 +2097,9 @@ void JS::StmtNode::printSemi(PrettyPrinter &f, bool noSemi)
 // the 'while' of a do-while statement.  If this statement is a block without
 // attributes, print a space and the continuation after the closing brace;
 // otherwise print the continuation on a new line.
-// If noSemi is true, do not print the semicolon unless it is required by the
-// statement. The caller must have placed this call inside a
-// PrettyPrinter::Block scope that encloses the containining statement.
+// If noSemi is true, do not print the semicolon unless it is required by the statement.
+// The caller must have placed this call inside a PrettyPrinter::Block scope that encloses
+// the containining statement.
 void JS::StmtNode::printSubstatement(PrettyPrinter &f, bool noSemi, const char *continuation) const
 {
     if (hasKind(block) &&
@@ -2165,9 +2132,9 @@ void JS::AttributeStmtNode::printAttributes(PrettyPrinter &f) const
 
 
 // Print this block, including attributes, onto f.
-// If loose is false, do not insist on each statement being on a separate
-// line; instead, make breaks between statements be linear breaks in the
-// enclosing PrettyPrinter::Block scope.
+// If loose is false, do not insist on each statement being on a separate line;
+// instead, make breaks between statements be linear breaks in the enclosing
+// PrettyPrinter::Block scope.
 // The caller must have placed this call inside a PrettyPrinter::Block scope.
 void JS::BlockStmtNode::printBlock(PrettyPrinter &f, bool loose) const
 {
@@ -2177,8 +2144,7 @@ void JS::BlockStmtNode::printBlock(PrettyPrinter &f, bool loose) const
 
 
 // Print this onto f.
-// If noSemi is true, do not print the trailing semicolon unless it is
-// required by the statement.
+// If noSemi is true, do not print the trailing semicolon unless it is required by the statement.
 void JS::StmtNode::print(PrettyPrinter &f, bool /*noSemi*/) const
 {
     ASSERT(hasKind(empty));
@@ -2424,9 +2390,7 @@ void JS::NamespaceStmtNode::print(PrettyPrinter &f, bool noSemi) const
     ASSERT(hasKind(Namespace));
 
     PrettyPrinter::Block b(f, namespaceHeaderIndent);
-    f << "namespace ";
-    f << name;
-    ExprList::printOptionalCommaList(f, "extends", supers);
+    f << "namespace " << name;
     printSemi(f, noSemi);
 }
 
@@ -2434,27 +2398,16 @@ void JS::NamespaceStmtNode::print(PrettyPrinter &f, bool noSemi) const
 void JS::ClassStmtNode::print(PrettyPrinter &f, bool noSemi) const
 {
     printAttributes(f);
-    ASSERT(hasKind(Class) || hasKind(Interface));
+    ASSERT(hasKind(Class));
 
     {
         PrettyPrinter::Block b(f, namespaceHeaderIndent);
-        const char *keyword;
-        const char *superlistKeyword;
-        if (hasKind(Class)) {
-            keyword = "class ";
-            superlistKeyword = "implements";
-        } else {
-            keyword = "interface ";
-            superlistKeyword = "extends";
-        }
-        f << keyword;
-        f << name;
+        f << "class " << name;
         if (superclass) {
             f.linearBreak(1);
             f << "extends ";
             f << superclass;
         }
-        ExprList::printOptionalCommaList(f, superlistKeyword, supers);
     }
     if (body) {
         f.requiredBreak();

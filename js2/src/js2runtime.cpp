@@ -1367,9 +1367,7 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::Class:
         {
             ClassStmtNode *classStmt = static_cast<ClassStmtNode *>(p);
-            ASSERT(classStmt->name->getKind() == ExprNode::identifier);     // XXX need to handle qualified names!!!
-            IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
-            const StringAtom& name = className->name;
+            const StringAtom& name = classStmt->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
             if (hasAttribute(classStmt->attributes, m_cx->FixedKeyWord))
                 thisClass->mIsDynamic = false;
@@ -1436,13 +1434,10 @@ void ScopeChain::collectNames(StmtNode *p)
             VariableBinding *v = vs->bindings;
             bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
-                if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                    IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                    if (isStatic)
-                        v->prop = defineStaticVariable(i->name, vs->attributes, NULL);
-                    else
-                        v->prop = defineVariable(i->name, vs->attributes, NULL);
-                }
+                if (isStatic)
+                    v->prop = defineStaticVariable(*v->name, vs->attributes, NULL);
+                else
+                    v->prop = defineVariable(*v->name, vs->attributes, NULL);
                 v = v->next;
             }
         }
@@ -1626,10 +1621,9 @@ void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
     mScopeChain->addScope(fnc->mParameterBarrel);
     VariableBinding *v = f.parameters;
     while (v) {
-        if (v->name && (v->name->getKind() == ExprNode::identifier)) {
+        if (v->name) {
             JSType *pType = mScopeChain->extractType(v->type);
-            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-            mScopeChain->defineVariable(i->name, NULL, pType);       // XXX attributes?
+            mScopeChain->defineVariable(*v->name, NULL, pType);       // XXX attributes?
         }
         v = v->next;
     }
@@ -1698,10 +1692,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             VariableBinding *v = vs->bindings;
 //            bool isStatic = hasAttribute(vs->attributes, Token::Static);
             while (v)  {
-                if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                    JSType *type = mScopeChain->extractType(v->type);
-                    v->prop->mType = type;
-                }
+                JSType *type = mScopeChain->extractType(v->type);
+                v->prop->mType = type;
                 v = v->next;
             }
         }
