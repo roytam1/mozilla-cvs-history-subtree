@@ -42,6 +42,7 @@ CPPSRCS = \
 	nsID.cpp		\
 	nsRepository.cpp	\
 	nsSupportsArray.cpp	\
+	nsMalloc.cpp    	\
 
 CPP_OBJS = \
 	.\$(OBJDIR)\nsDebug.obj		\
