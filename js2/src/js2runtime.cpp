@@ -37,6 +37,9 @@
 #pragma warning(disable: 4786)
 #endif
 
+#include <stdio.h>
+#include <string.h>
+
 #include <algorithm>
 
 #include "parser.h"
@@ -785,7 +788,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
 JSValue numberAdd(Context *cx, JSValue *argv, uint32 argc)
 {
-    return (argv[0].f64 + argv[1].f64);
+    return JSValue(argv[0].f64 + argv[1].f64);
 }
 
 JSValue objectAdd(Context *cx, JSValue *argv, uint32 argc)
