@@ -865,7 +865,7 @@ public:
                                 nsISupports** aResult) const;
   NS_IMETHOD GetPlaceholderFrameFor(nsIFrame*  aFrame,
                                     nsIFrame** aPlaceholderFrame) const;
-  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty);
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty);
   NS_IMETHOD CancelAllPendingReflows();
   NS_IMETHOD IsSafeToFlush(PRBool& aIsSafeToFlush);
   NS_IMETHOD FlushPendingNotifications(mozFlushType aType);
@@ -3216,7 +3216,7 @@ PresShell::EndLoad(nsIDocument *aDocument)
 }
 
 NS_IMETHODIMP
-PresShell::FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty)
+PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty)
 {
   NS_PRECONDITION(aFrame->GetStateBits() &
                     (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN),
@@ -3244,7 +3244,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty)
   }  
 #endif
 
-  if (aIntrinsicDirty) {
+  if (aIntrinsicDirty != eResize) {
     // Mark the intrinsic widths as dirty on the frame, all of its ancestors,
     // and all of its descendants:
 
@@ -3254,7 +3254,9 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty)
          a && (!(a->GetStateBits() & NS_FRAME_REFLOW_ROOT) || a == aFrame);
          a = a->GetParent())
       a->MarkIntrinsicWidthsDirty();
+  }
 
+  if (aIntrinsicDirty == eStyleChange) {
     // Mark all descendants dirty (using an nsVoidArray stack rather than
     // recursion).
     nsVoidArray stack;
