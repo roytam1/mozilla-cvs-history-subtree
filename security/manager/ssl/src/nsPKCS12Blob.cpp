@@ -495,6 +495,29 @@ nsPKCS12Blob::inputToDecoder(SEC_PKCS12DecoderContext *dcx, nsILocalFile *file)
   return NS_OK;
 }
 
+#ifdef XP_MAC
+
+OSErr ConvertMacPathToUnixPath(const char *macPath, char **unixPath)
+{
+  PRIntn len;
+  char *cursor;
+  
+  len = PL_strlen(macPath);
+  cursor = (char*)PR_Malloc(len+2);
+  if (!cursor)
+    return memFullErr;
+    
+  memcpy(cursor+1, macPath, len+1);
+  *unixPath = cursor;
+  *cursor = '/';
+  while ((cursor = PL_strchr(cursor, ':')) != NULL) {
+    *cursor = '/';
+    cursor++;
+  }
+  return noErr;
+}
+#endif
+
 //
 // C callback methods
 //
