@@ -15,4 +15,4 @@ Also look
 Win32
 
 Similar to Unix, but s/.sh/.bat/
-The build environment options are in file build.win32.env. You will have to adjust system-specifics like |Path|.
+The build environment options are in file build.win32.env, but they are old. You will have to adjust system-specifics like |Path|.
