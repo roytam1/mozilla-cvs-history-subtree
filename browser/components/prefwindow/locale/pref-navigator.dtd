@@ -1,9 +1,0 @@
-<!ENTITY  lHeader                   "General">
-
-<!ENTITY  header2.label             "Home Page">
-<!ENTITY  location.label            "Location:">
-<!ENTITY  location.accesskey        "a">
-<!ENTITY  useCurrent.label          "Use Current Page">
-<!ENTITY  useCurrent.accesskey      "U">
-<!ENTITY  useBlank.label            "Use Blank Page">
-<!ENTITY  useBlank.accesskey        "B">
