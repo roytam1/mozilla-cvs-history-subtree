@@ -22,4 +22,4 @@ JDK=/share/builds/components/jdk/1.1.7/Linux
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/md \
 	      -I$(JDK)/include/genunix
 
-OTHER_LIBS += -L$(JDK)/lib/i386/green_threads -ljava
+OTHER_LIBS += -L$(JDK)/lib/i386/native_threads -ljava
