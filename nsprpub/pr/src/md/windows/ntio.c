@@ -37,6 +37,7 @@
 #include "primpl.h"
 #include "pprmwait.h"
 #include <direct.h>
+#include <mbstring.h>
 
 static HANDLE                _pr_completion_port;
 static PRThread             *_pr_io_completion_thread;
@@ -2301,7 +2302,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
 {
     PRInt32 f = fd->secret->md.osfd;
     PRUint32 bytes;
-    int rv, err;
+    int rv, err, rc;
+    LONG hiOffset = 0;
 
     if (_nt_use_async && !fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -2313,7 +2315,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
 
         memset(&(me->md.overlapped.overlapped), 0, sizeof(OVERLAPPED));
 
-        me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, 0, FILE_CURRENT);
+        me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
+        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() != NO_ERROR));
 
         if (fd->secret->inheritable) {
             rv = ReadFile((HANDLE)f, 
@@ -2322,7 +2325,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
                           &bytes, 
                           &me->md.overlapped.overlapped);
             if (rv != 0) {
-                SetFilePointer((HANDLE)f, bytes, 0, FILE_CURRENT);
+                rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
                 return bytes;
             }
             err = GetLastError();
@@ -2330,7 +2334,8 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
                 rv = GetOverlappedResult((HANDLE)f,
                         &me->md.overlapped.overlapped, &bytes, TRUE);
                 if (rv != 0) {
-                    SetFilePointer((HANDLE)f, bytes, 0, FILE_CURRENT);
+                    rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                    PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
                     return bytes;
                 }
                 err = GetLastError();
@@ -2447,7 +2452,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
 {
     PRInt32 f = fd->secret->md.osfd;
     PRInt32 bytes;
-    int rv, err;
+    int rv, err, rc;
+    LONG hiOffset = 0;
 
     if (_nt_use_async && !fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -2459,7 +2465,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
 
         memset(&(me->md.overlapped.overlapped), 0, sizeof(OVERLAPPED));
 
-        me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, 0, FILE_CURRENT);
+        me->md.overlapped.overlapped.Offset = SetFilePointer((HANDLE)f, 0, &me->md.overlapped.overlapped.OffsetHigh, FILE_CURRENT);
+        PR_ASSERT((me->md.overlapped.overlapped.Offset != 0xffffffff) || (GetLastError() != NO_ERROR));
 
         if (fd->secret->inheritable) {
             rv = WriteFile((HANDLE)f, 
@@ -2468,7 +2475,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
                           &bytes, 
                           &me->md.overlapped.overlapped);
             if (rv != 0) {
-                SetFilePointer((HANDLE)f, bytes, 0, FILE_CURRENT);
+                rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
                 return bytes;
             }
             err = GetLastError();
@@ -2476,7 +2484,8 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
                 rv = GetOverlappedResult((HANDLE)f,
                         &me->md.overlapped.overlapped, &bytes, TRUE);
                 if (rv != 0) {
-                    SetFilePointer((HANDLE)f, bytes, 0, FILE_CURRENT);
+                    rc = SetFilePointer((HANDLE)f, bytes, &hiOffset, FILE_CURRENT);
+                    PR_ASSERT((rc != 0xffffffff) || (GetLastError() != NO_ERROR));
                     return bytes;
                 }
                 err = GetLastError();
@@ -2781,12 +2790,12 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
 void FlipSlashes(char *cp, int len)
 {
     while (--len >= 0) {
-    if (cp[0] == '/') {
-        cp[0] = PR_DIRECTORY_SEPARATOR;
+        if (cp[0] == '/') {
+            cp[0] = PR_DIRECTORY_SEPARATOR;
+        }
+        cp = _mbsinc(cp);
     }
-    cp++;
-    }
-}
+} /* end FlipSlashes() */
 
 /*
 **
@@ -3085,7 +3094,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
      * FindFirstFile() expands wildcard characters.  So
      * we make sure the pathname contains no wildcard.
      */
-    if (NULL != strpbrk(fn, "?*")) {
+    if (NULL != _mbspbrk(fn, "?*")) {
         PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
         return -1;
     }
@@ -3107,7 +3116,7 @@ _PR_MD_GETFILEINFO64(const char *fn, PRFileInfo64 *info)
          * If the pathname does not contain ., \, and /, it cannot be
          * a root directory or a pathname that ends in a slash.
          */
-        if (NULL == strpbrk(fn, ".\\/")) {
+        if (NULL == _mbspbrk(fn, ".\\/")) {
             _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
             return -1;
         } 
