@@ -160,7 +160,12 @@ export:: #$(MDCPUCFG_H)
 #	$(INSTALL) -m 444 $(MDCPUCFG_H) $(MOZ_INCL)
 #	mv -f $(DIST)/include/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
 #else
-	cp -f $(srcdir)/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h
+	@if cmp -s $(srcdir)/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h; then \
+	  echo $(DIST)/include/prcpucfg.h unchanged; \
+	else \
+	  echo cp -f $(srcdir)/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h; \
+	  cp -f $(srcdir)/$(MDCPUCFG_H) $(DIST)/include/prcpucfg.h; \
+	fi
 #endif
 ifeq ($(OS_ARCH),OpenVMS)
 # mv'ing a link causes the file itself to move, not the link, so fix it.
