@@ -467,8 +467,7 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
 #ifdef DEBUG
   // some debug stuff:
 //   {
-//     nsRect r;
-//     aPresContext->GetVisibleArea(r);
+//     nsRect r=aPresContext->GetVisibleArea();
 //     printf("******* aw: %d, ah: %d visiw: %d, visih: %d\n",
 //            aReflowState.availableWidth,
 //            aReflowState.availableHeight,
@@ -1119,7 +1118,7 @@ nsSVGOuterSVGFrame::CalculateAvailableSpace(nsRect *maxRect,
                                             nsIPresContext* aPresContext,
                                             const nsHTMLReflowState& aReflowState)
 {
-  aPresContext->GetVisibleArea(*preferredRect);
+  *preferredRect = aPresContext->GetVisibleArea();
   
   if (aReflowState.availableWidth != NS_INTRINSICSIZE)
     maxRect->width = aReflowState.availableWidth;
