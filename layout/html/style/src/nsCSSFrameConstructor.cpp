@@ -4540,7 +4540,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
                                          nsFrameItems&            aFrameItems,
                                          PRBool                   aXBLBaseTag,
                                          PRBool&                  aHaltProcessing)
-{ 
+{
   PRBool    primaryFrameSet = PR_FALSE;
   PRBool    processChildren = PR_FALSE;  // whether we should process child content
   nsresult  rv = NS_OK;

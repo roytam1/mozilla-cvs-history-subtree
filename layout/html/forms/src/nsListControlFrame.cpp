@@ -1795,8 +1795,8 @@ nsListControlFrame::Reset(nsIPresContext* aPresContext)
 
     nsCOMPtr<nsISupportsPRInt32> thisVal;
     PRInt32 j=0;
-    for (PRUint32 i=0; i<count; i++) {
-      nsCOMPtr<nsISupports> suppval = getter_AddRefs(value->ElementAt(i));
+    for (PRUint32 k=0; k<count; k++) {
+      nsCOMPtr<nsISupports> suppval = getter_AddRefs(value->ElementAt(k));
       thisVal = do_QueryInterface(suppval);
       if (thisVal) {
         res = thisVal->GetData(&j);

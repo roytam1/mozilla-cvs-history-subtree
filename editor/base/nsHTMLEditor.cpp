@@ -6772,7 +6772,6 @@ nsHTMLEditor::MoveContiguousContentIntoNewParent(nsIDOMNode  *aStartNode,
   nsresult result = NS_OK;
   nsCOMPtr<nsIDOMNode>startNode, endNode;
   PRInt32 startOffset = aStartOffset; // this will be the left edge of what we change
-  PRInt32 endOffset = aEndOffset;     // this will be the right edge of what we change
   nsCOMPtr<nsIDOMNode>newLeftNode;  // this will be the middle text node
   if (IsTextNode(aStartNode))
   {

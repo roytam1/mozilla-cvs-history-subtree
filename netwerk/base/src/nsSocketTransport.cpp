@@ -136,12 +136,12 @@ nsSocketTransport::nsSocketTransport():
     mStatus(NS_OK),
     mSuspendCount(0),
     mWriteCount(0),
-    mWriteBuffer(nsnull),
-    mWriteBufferIndex(0),
-    mWriteBufferLength(0),
     mBytesExpected(-1),
     mReuseCount(0),
-    mLastReuseCount(0)
+    mLastReuseCount(0),
+    mWriteBuffer(nsnull),
+    mWriteBufferIndex(0),
+    mWriteBufferLength(0)
 {
   NS_INIT_REFCNT();
 
