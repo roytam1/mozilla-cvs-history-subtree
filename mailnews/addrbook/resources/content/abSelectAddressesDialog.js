@@ -256,7 +256,6 @@ function ResultsPaneSelectionChanged()
   var bccButton = document.getElementById("bccButton");
 
   var numSelected = GetNumSelectedCards();
-  dump("XXX numSelected = " + numSelected + "\n");
   if (numSelected > 0)
   {
     if (numSelected == 1)

@@ -316,7 +316,6 @@ function GetSelectedAddresses()
 function GetNumSelectedCards()
 {
  try {
-   dump("XXX gAbView = " + gAbView.URI + "\n");
    var outlinerSelection = gAbView.selection;
    return outlinerSelection.count;
  }
