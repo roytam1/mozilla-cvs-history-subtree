@@ -1426,35 +1426,13 @@ MimeGetStringByIDREAL(PRInt32 stringID)
   }
 
   res = pService->NewURI(propertyURL, nsnull, getter_AddRefs(pURI));
-  if (NS_FAILED(res))
-  {
-    nsIURI      *url = nsnull;
-    nsILocale   *locale = nsnull;
-
-#if 1
-    nsIStringBundle* sBundle = nsnull;
-    res = sBundleService->CreateBundle(propertyURL, locale, &sBundle);
-#else
-    res = pNetService->CreateURL(&url, nsString(propertyURL), nsnull, nsnull, nsnull);
-    // Cleanup property URL
-    if (propertyURL != MIME_URL)
-      PR_FREEIF(propertyURL);
-    return PL_strdup("???");   // Don't I18N this string...failsafe return value
-  }
-
-  if (propertyURL != MIME_URL)
-  {
-    PR_FREEIF(propertyURL);
-    propertyURL = nsnull;
-  }
 
   NS_WITH_SERVICE(nsIStringBundleService, sBundleService, kStringBundleServiceCID, &res); 
   if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
   {
     nsILocale   *locale = nsnull;
     nsIStringBundle* sBundle = nsnull;
-    res = sBundleService->CreateBundle(pURI, locale, &sBundle);
-#endif
+    res = sBundleService->CreateBundle(propertyURL, locale, &sBundle);
 
     if (NS_FAILED(res)) 
     {
@@ -1469,6 +1447,7 @@ MimeGetStringByIDREAL(PRInt32 stringID)
 #else
     res = sBundle->GetStringFromID(stringID, v);
 #endif
+ 
     if (NS_FAILED(res)) 
     {
       char    buf[128];
