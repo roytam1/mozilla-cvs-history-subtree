@@ -27,8 +27,7 @@
 #include "nsHttpHandler.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttp.h"
-#include "netCore.h"
-#include "nsNetCID.h"
+#include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
 
@@ -71,6 +70,7 @@ nsHttpChannel::Init(nsIURI *uri,
     NS_PRECONDITION(uri, "null uri");
 
     mURI = uri;
+    mOriginalURI = uri;
     mCapabilities = caps;
 
     rv = mURI->GetSpec(getter_Copies(mSpec));
@@ -210,6 +210,8 @@ nsHttpChannel::ProcessResponse()
         // XXX store response headers in cache
         // XXX close cache entry
         rv = ProcessRedirection(httpStatus);
+        if (NS_FAILED(rv))
+            rv = ProcessNormal();
         break;
     case 302:
     case 303:
@@ -217,6 +219,8 @@ nsHttpChannel::ProcessResponse()
     case 307:
         // XXX doom cache entry
         rv = ProcessRedirection(httpStatus);
+        if (NS_FAILED(rv))
+            rv = ProcessNormal();
         break;
     case 304:
         rv = ProcessNotModified();
@@ -250,10 +254,99 @@ nsHttpChannel::ProcessNotModified()
 }
 
 nsresult
-nsHttpChannel::ProcessRedirection(PRUint32 httpStatus)
+nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
 {
-    NS_NOTREACHED("not implemented");
-    return ProcessNormal();
+    LOG(("nsHttpChannel::ProcessRedirection [this=%x type=%u]\n",
+        this, redirectType));
+
+    NS_PRECONDITION(mResponseHead, "wtf");
+    NS_PRECONDITION(mTransaction, "wtf");
+
+    const char *location = mResponseHead->PeekHeader(nsHttp::Location);
+
+    // if a location header was not given, then we can't perform the redirect,
+    // so just carry on as though this were a normal response.
+    if (!location)
+        return NS_ERROR_FAILURE;
+
+    // create a new URI using the location header and the current URL
+    // as a base...
+    nsresult rv;
+    nsCOMPtr<nsIURI> newURI;
+
+    nsCOMPtr<nsIIOService> serv = do_GetIOService(&rv);
+    if (NS_FAILED(rv)) return rv;
+
+    if (redirectType == 305) {
+        // XXX create a new http proxy channel
+        NS_NOTREACHED("not implemented");
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    else {
+        rv = serv->NewURI(location, mURI, getter_AddRefs(newURI));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // move the reference of the old location to the new one if the new
+    // one has none.
+    nsCOMPtr<nsIURL> newURL = do_QueryInterface(newURI, &rv);
+    if (NS_SUCCEEDED(rv)) {
+        nsXPIDLCString ref;
+        rv = newURL->GetRef(getter_Copies(ref));
+        if (NS_SUCCEEDED(rv) && !ref) {
+            nsCOMPtr<nsIURL> baseURL = do_QueryInterface(mURI, &rv);
+            if (NS_SUCCEEDED(rv)) {
+                baseURL->GetRef(getter_Copies(ref));
+                if (ref)
+                    newURL->SetRef(ref);
+            }
+        }
+    }
+
+#if defined(PR_LOGGING)
+    {
+        nsXPIDLCString spec;
+        newURI->GetSpec(getter_Copies(spec));
+        LOG(("nsHttpChannel::ProcessRedirection [this=%x newURL=%s]\n",
+            this, (const char *) spec));
+    }
+#endif
+
+    // build the new channel
+    nsCOMPtr<nsIChannel> newChannel;
+    rv = NS_OpenURI(getter_AddRefs(newChannel), newURI, serv, mLoadGroup,
+                    mCallbacks, mLoadFlags | LOAD_REPLACE);
+    if (NS_FAILED(rv)) return rv;
+    rv = newChannel->SetOriginalURI(mOriginalURI);
+    if (NS_FAILED(rv)) return rv;
+
+    // convey the referrer if one was used for this channel to the next one
+    if (mReferrer) {
+        nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(newChannel);
+        if (httpChannel)
+            httpChannel->SetReferrer(mReferrer);
+    }
+
+    // call out to the event sink to notify it of this redirection.
+    if (mHttpEventSink) {
+        rv = mHttpEventSink->OnRedirect(this, newChannel);
+        if (NS_FAILED(rv)) return rv;
+    }
+    // XXX we used to talk directly with the script security manager, but that
+    // should really be handled by the event sink implementation.
+
+    // begin loading the new channel
+    rv = newChannel->AsyncOpen(mListener, mListenerContext);
+    if (NS_FAILED(rv)) return rv;
+
+    // close down this channel
+    mTransaction->Cancel(NS_BINDING_REDIRECTED);
+
+    // disconnect from our listener
+    mListener = 0;
+    mListenerContext = 0;
+
+    return NS_OK;
 }
 
 nsresult
@@ -361,12 +454,16 @@ nsHttpChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 NS_IMETHODIMP
 nsHttpChannel::GetOriginalURI(nsIURI **originalURI)
 {
-    return GetURI(originalURI);
+    NS_ENSURE_ARG_POINTER(originalURI);
+    *originalURI = mOriginalURI;
+    NS_IF_ADDREF(*originalURI);
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetOriginalURI(nsIURI *originalURI)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    mOriginalURI = originalURI;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -404,7 +501,9 @@ nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
 {
     mCallbacks = callbacks;
 
+    mHttpEventSink = do_GetInterface(mCallbacks);
     mProgressSink = do_GetInterface(mCallbacks);
+
     if (mProgressSink) {
         nsCOMPtr<nsIProgressEventSink> temp = mProgressSink;
         return nsHttpHandler::get()->GetProxyForObject(NS_CURRENT_EVENTQ,
@@ -413,7 +512,6 @@ nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
                                                        PROXY_ASYNC | PROXY_ALWAYS,
                                                        getter_AddRefs(mProgressSink));
     }
-
     return NS_OK;
 }
 
@@ -720,7 +818,6 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
         this, status));
 
-    NS_PRECONDITION(mListener, "null listener");
     NS_PRECONDITION(mTransaction, "null transaction");
 
     mIsPending = PR_FALSE;
@@ -730,7 +827,8 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     NS_RELEASE(mTransaction);
     mTransaction = nsnull;
 
-    mListener->OnStopRequest(this, mListenerContext, status);
+    if (mListener)
+        mListener->OnStopRequest(this, mListenerContext, status);
 
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, nsnull, status);
@@ -747,10 +845,13 @@ nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
                                nsIInputStream *input,
                                PRUint32 offset, PRUint32 count)
 {
-    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
     LOG(("nsHttpChannel::OnDataAvailable [this=%x offset=%u count=%u]\n",
         this, offset, count));
-    return mListener->OnDataAvailable(this, mListenerContext, input, offset, count);
+
+    if (mListener)
+        return mListener->OnDataAvailable(this, mListenerContext, input, offset, count);
+
+    return NS_BASE_STREAM_CLOSED;
 }
 
 //-----------------------------------------------------------------------------

@@ -26,6 +26,7 @@
 
 #include "nsHttpRequestHead.h"
 #include "nsIHttpChannel.h"
+#include "nsIHttpEventSink.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
 #include "nsILoadGroup.h"
@@ -82,6 +83,7 @@ private:
     nsresult ProcessAuthentication(PRUint32 httpStatus);
 
 private:
+    nsCOMPtr<nsIURI>                mOriginalURI;
     nsCOMPtr<nsIURI>                mURI;
     nsCOMPtr<nsIStreamListener>     mListener;
     nsCOMPtr<nsISupports>           mListenerContext;
@@ -89,6 +91,7 @@ private:
     nsCOMPtr<nsISupports>           mOwner;
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsIProgressEventSink>  mProgressSink;
+    nsCOMPtr<nsIHttpEventSink>      mHttpEventSink;
     nsCOMPtr<nsIURI>                mReferrer;
     nsCOMPtr<nsIInputStream>        mUploadStream;
 

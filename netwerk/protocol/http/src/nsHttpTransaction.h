@@ -80,7 +80,7 @@ public:
 
 private:
     nsresult ParseLine(char *line);
-    nsresult ParseHeaders(char *, PRUint32 count, PRUint32 *countRead);
+    nsresult ParseHead(char *, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
 
 private:

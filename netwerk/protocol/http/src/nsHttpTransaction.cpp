@@ -193,9 +193,9 @@ nsHttpTransaction::ParseLine(char *line)
 }
 
 nsresult
-nsHttpTransaction::ParseHeaders(char *buf,
-                                PRUint32 count,
-                                PRUint32 *countRead)
+nsHttpTransaction::ParseHead(char *buf,
+                             PRUint32 count,
+                             PRUint32 *countRead)
 {
     char *eol;
 
@@ -231,6 +231,7 @@ nsHttpTransaction::ParseHeaders(char *buf,
     }
 
     if (!mHaveAllHeaders && (count > *countRead)) {
+        LOG(("partial line\n"));
         // remember this partial line
         mLineBuf.Assign(buf, count - *countRead);
         *countRead = count;
@@ -458,7 +459,7 @@ nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
     while (count) {
         bytesConsumed = 0;
 
-        rv = ParseHeaders(buf + offset, count, &bytesConsumed);
+        rv = ParseHead(buf + offset, count, &bytesConsumed);
         if (NS_FAILED(rv)) return rv;
 
         count -= bytesConsumed;
