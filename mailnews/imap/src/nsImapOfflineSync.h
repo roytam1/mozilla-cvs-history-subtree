@@ -49,7 +49,8 @@ public:												// set to one folder to playback one folder only
   void      SetWindow(nsIMsgWindow *window);
 private:
 	PRBool		CreateOfflineFolders();
-	void 		AdvanceToNextFolder();
+  nsresult  AdvanceToNextServer();
+	nsresult  AdvanceToNextFolder();
 	void		AdvanceToFirstIMAPFolder();
 	void 		DeleteAllOfflineOpsForCurrentDB();
 	
@@ -63,6 +64,11 @@ private:
 	nsCOMPtr <nsIMsgFolder>	m_currentFolder;
 	nsCOMPtr <nsIMsgFolder> m_singleFolderToUpdate;
   nsCOMPtr <nsIMsgWindow> m_window;
+  nsCOMPtr <nsISupportsArray> m_allServers;
+  nsCOMPtr <nsISupportsArray> m_allFolders;
+  nsCOMPtr <nsIMsgIncomingServer> m_currentServer;
+  nsCOMPtr <nsIEnumerator> m_serverEnumerator;
+
 	nsMsgKeyArray				m_CurrentKeys;
 	PRUint32					m_KeyIndex;
 	nsCOMPtr <nsIMsgDatabase>				m_currentDB;

@@ -2766,6 +2766,18 @@ NS_IMETHODIMP nsImapMailFolder::SetImapFlags(const char *uids, PRInt32 flags, ns
   return rv;
 }
 
+// "this" is the parent folder
+NS_IMETHODIMP nsImapMailFolder::PlaybackOfflineFolderCreate(const PRUnichar *folderName, nsIMsgWindow *aWindow, nsIURI **url)
+{
+    nsresult rv = NS_ERROR_NULL_POINTER;
+    if (!folderName) return rv;
+    NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
+    if (NS_SUCCEEDED(rv))
+        rv = imapService->CreateFolder(m_eventQueue, this, 
+                                       folderName, this, url);
+    return rv;
+}
+
 NS_IMETHODIMP nsImapMailFolder::ReplayOfflineMoveCopy(const char *uids, PRBool isMove, nsIMsgFolder *aDstFolder,
                          nsIUrlListener *aUrlListener, nsIMsgWindow *aWindow)
 {

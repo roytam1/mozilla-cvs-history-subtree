@@ -42,7 +42,7 @@ interface nsIMsgImapMailFolder : nsISupports {
   void SetImapFlags(in string uids, in long flags, out nsIURI url);
   void ReplayOfflineMoveCopy(in string uids, in boolean isMove, in nsIMsgFolder aDstFolder,
                          in nsIUrlListener aUrlListener, in nsIMsgWindow aWindow);
-
+  void PlaybackOfflineFolderCreate(in wstring folderName, in nsIMsgWindow aWindow, out nsIURI url);
 
   attribute boolean verifiedAsOnlineFolder;
   attribute boolean explicitlyVerify;

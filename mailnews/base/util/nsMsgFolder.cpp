@@ -2489,4 +2489,27 @@ NS_IMETHODIMP nsMsgFolder::GetMessageHeader(nsMsgKey msgKey, nsIMsgDBHdr **aMsgH
   return rv;
 }
 
+// this gets the deep sub-folders too, e.g., the children of the children
+NS_IMETHODIMP nsMsgFolder::ListDescendents(nsISupportsArray *descendents)
+{
+  NS_ENSURE_ARG(descendents);
+	PRUint32 cnt;
+  nsresult rv = mSubFolders->Count(&cnt);
+  if (NS_FAILED(rv)) return rv;
+  for (PRUint32 index = 0; index < cnt; index++)
+	{
+    nsresult rv;
+		nsCOMPtr<nsISupports> supports = getter_AddRefs(mSubFolders->ElementAt(index));
+		nsCOMPtr<nsIMsgFolder> child(do_QueryInterface(supports, &rv));
 
+    if (NS_SUCCEEDED(rv))
+    {
+      rv = descendents->AppendElement(supports);
+		  if(NS_SUCCEEDED(rv))
+		  {
+			  rv = child->ListDescendents(descendents);  // recurse
+		  }
+    }
+	}
+  return rv;
+} 
