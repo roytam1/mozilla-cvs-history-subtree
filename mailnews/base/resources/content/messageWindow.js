@@ -433,6 +433,7 @@ var MessageWindowController =
 			case "cmd_shiftDelete":
       case "button_print":
 			case "cmd_print":
+		  case "cmd_printSetup":
 			case "cmd_saveAsFile":
 			case "cmd_saveAsTemplate":
 			case "cmd_viewPageSource":
@@ -519,6 +520,8 @@ var MessageWindowController =
       case "button_file":
 			case "cmd_file":
 				return ( gCurrentMessageUri != null);
+			case "cmd_printSetup":
+			  return true;
 			case "cmd_getNewMessages":
       case "button_getNewMessages":
       case "cmd_getMsgsForAuthAccounts":
@@ -609,6 +612,9 @@ var MessageWindowController =
 				break;
 			case "button_delete":
 				MsgDeleteMessageFromMessageWindow(false, true);
+				break;
+			case "cmd_printSetup":
+				goPageSetup();
 				break;
 			case "cmd_print":
 				PrintEnginePrint();

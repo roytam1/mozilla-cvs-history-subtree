@@ -783,6 +783,11 @@ function BrowserPrintPreview()
   // implement me
 }
 
+function BrowserPrintSetup()
+{
+  goPageSetup();  // from utilityOverlay.js
+}
+
 function BrowserPrint()
 {
   // using _content.print() until printing becomes scriptable on docShell
