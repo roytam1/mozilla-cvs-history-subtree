@@ -3,6 +3,7 @@
 
 <window
   id    = "sample"
+  title = "Sample App"
   xmlns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <vbox>
