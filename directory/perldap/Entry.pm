@@ -345,15 +345,15 @@ sub remove
 
 
 #############################################################################
-# Rename an attribute, return TRUE or FALSE depending on the outcome. The
-# first argument is the name of the old attribute (e.g. CN), and the last
+# Move (rename) an attribute, return TRUE or FALSE depending on the outcome.
+# The first argument is the name of the old attribute (e.g. CN), and the last
 # argument is the new name (e.g. SN). Note that the "new" attribute can not
 # already exist, and the old attribute must exist.
 #
 # The "force" argument can be used to override the check if the new
 # attribute already exists. This is potentially dangerous.
 #
-sub rename
+sub move
 {
   my ($self, $old, $new, $force) = ($_[$[], lc $_[$[ + 1], lc $_[$[ + 2],
 				    $_[$[ + 3]);
@@ -366,6 +366,7 @@ sub rename
 
   return 1;
 }
+*rename = \*move;
 
 
 #############################################################################
