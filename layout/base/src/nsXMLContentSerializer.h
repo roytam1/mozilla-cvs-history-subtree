@@ -63,6 +63,8 @@ class nsXMLContentSerializer : public nsIContentSerializer {
   NS_IMETHOD AppendElementEnd(nsIDOMElement *aElement,
                               nsAWritableString& aStr);
 
+  NS_IMETHOD Flush(nsAWritableString& aStr) { return NS_OK; }
+
  protected:
   virtual void AppendToString(const PRUnichar* aStr,
                               PRInt32 aLength,

@@ -316,6 +316,15 @@ nsPlainTextSerializer::AppendElementEnd(nsIDOMElement *aElement,
   return rv;
 }
 
+NS_IMETHODIMP 
+nsPlainTextSerializer::Flush(nsAWritableString& aStr)
+{
+  mOutputString = &aStr;
+  FlushLine();
+  mOutputString = nsnull;
+  return NS_OK;
+}
+
 NS_IMETHODIMP
 nsPlainTextSerializer::OpenContainer(const nsIParserNode& aNode)
 {
@@ -323,7 +332,7 @@ nsPlainTextSerializer::OpenContainer(const nsIParserNode& aNode)
   const nsString&   namestr = aNode.GetText();
   nsCOMPtr<nsIAtom> name = dont_AddRef(NS_NewAtom(namestr));
 
-  mParserNode = &aNode;
+  mParserNode = NS_CONST_CAST(nsIParserNode *, &aNode);
   return DoOpenContainer(type, name);
 }
 
@@ -334,7 +343,7 @@ nsPlainTextSerializer::CloseContainer(const nsIParserNode& aNode)
   const nsString&   namestr = aNode.GetText();
   nsCOMPtr<nsIAtom> name = dont_AddRef(NS_NewAtom(namestr));
   
-  mParserNode = &aNode;
+  mParserNode = NS_CONST_CAST(nsIParserNode *, &aNode);
   return DoCloseContainer(type, name);
 }
  
@@ -344,7 +353,7 @@ nsPlainTextSerializer::AddLeaf(const nsIParserNode& aNode)
   PRInt32 type = aNode.GetNodeType();
   const nsString& text = aNode.GetText();
 
-  mParserNode = &aNode;
+  mParserNode = NS_CONST_CAST(nsIParserNode *, &aNode);
   return DoAddLeaf(type, text);
 }
 

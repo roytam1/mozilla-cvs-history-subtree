@@ -65,6 +65,7 @@ public:
                                 nsAWritableString& aStr); 
   NS_IMETHOD AppendElementEnd(nsIDOMElement *aElement,
                               nsAWritableString& aStr);
+  NS_IMETHOD Flush(nsAWritableString& aStr);
 
   // nsIContentSink
   NS_IMETHOD WillBuildModel(void) { return NS_OK; }

@@ -336,21 +336,19 @@ static nsresult ChildAt(nsIDOMNode* aNode, PRInt32 aIndex, nsIDOMNode** aChild)
   return NS_OK;
 }
 
-static PRInt32 IndexOf(nsIDOMNodeList* aNodeList, nsIDOMNode* aChild)
+static PRInt32 IndexOf(nsIDOMNode* aParent, nsIDOMNode* aChild)
 {
-  nsCOMPtr<nsIDOMNode> node;
-  PRInt32 i = 0;
+  nsCOMPtr<nsIContent> parent(do_QueryInterface(aParent));
+  nsCOMPtr<nsIContent> child(do_QueryInterface(aChild));
 
-  while (1) {
-    aNodeList->Item(i, getter_AddRefs(node));
+  if (!aParent || !aChild)
+    return -1;
 
-    if (node.get() == aChild)
-      return i;
+  PRInt32 indx = 0;
 
-    i++;
-  }
+  parent->IndexOf(child, indx);
 
-  return -1;
+  return indx;
 }
 
 static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
@@ -396,11 +394,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
       else
         aIndexArray.RemoveElementAt(count - 1);
     } else {
-      nsCOMPtr<nsIDOMNodeList> children;
-      parent->GetChildNodes(getter_AddRefs(children));
-      NS_ENSURE_TRUE(children, NS_ERROR_FAILURE);
-
-      PRInt32 indx = IndexOf(children, aNode);
+      PRInt32 indx = IndexOf(parent, aNode);
 
       ChildAt(parent, indx + 1, &aNextNode);
 
@@ -618,6 +612,9 @@ nsDocumentEncoder::EncodeToString(nsAWritableString& aOutputString)
 
     rv = SerializeToStringRecursive(doc, aOutputString);
   }
+
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = mSerializer->Flush(aOutputString);
 
   return rv;
 }
