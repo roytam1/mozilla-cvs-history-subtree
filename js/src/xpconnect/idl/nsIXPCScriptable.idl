@@ -61,8 +61,8 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 USE_JSSTUB_FOR_DELPROPERTY       = 1 << 17;
     const PRUint32 USE_JSSTUB_FOR_SETPROPERTY       = 1 << 18;
     const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 19;
-    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 20;
-    const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 21;
+    const PRUint32 DONT_ENUM_QUERY_INTERFACE        = 1 << 20;
+    const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 21;
     const PRUint32 CLASSINFO_INTERFACES_ONLY        = 1 << 22;
     const PRUint32 ALLOW_PROP_MODS_DURING_RESOLVE   = 1 << 23;
     const PRUint32 ALLOW_PROP_MODS_TO_PROTOTYPE     = 1 << 24;

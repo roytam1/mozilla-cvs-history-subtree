@@ -1,3 +1,4 @@
+
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
@@ -465,7 +466,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                                    propFlags, nsnull);
     }
 
-    if(scriptableInfo && scriptableInfo->HideQueryInterface() &&
+    if(scriptableInfo && scriptableInfo->DontEnumQueryInterface() &&
        idval == rt->GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE))
         propFlags &= ~JSPROP_ENUMERATE;
 
