@@ -114,6 +114,9 @@ we are adding the mailTasksOverlay.xul which has some menus moved over from the 
                   accesskey="&CreateFilter.accesskey;"
                   oncommand="CreateFilter(document.popupNode)"
                   observes="cmd_createFilterFromPopup"/>  
+        <menuseparator id="aimEmailAddressSeparator"/>
+        <menuitem id="sendIMForAddress" label="&SendInstantMessage.label;" oncommand="SendIMTo(document.popupNode)"/>
+        <menuitem id="addAddressToBuddyList" label="&AddToBuddyList.label;" oncommand="AddToBuddyListFor(document.popupNode)"/>                   
     </popup>
 
     <popup id="allHeadersPopup"  onpopupshowing="return fillAllHeadersPopup(document.popupNode);" popupanchor="bottomleft">

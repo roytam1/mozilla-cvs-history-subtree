@@ -527,6 +527,7 @@ Rights Reserved.
 <!ENTITY folderContextProperties.accesskey "P">
 <!ENTITY folderContextCopyLocation.label "Copy Folder Location">
 <!ENTITY folderContextCopyLocation.accesskey "C">
+
 <!-- Message Header View Popup -->
 <!ENTITY AddToAddressBook.label "Add to Address Book...">
 <!ENTITY AddToAddressBook.accesskey "B">
@@ -538,6 +539,8 @@ Rights Reserved.
 <!ENTITY CreateFilter.accesskey "F">
 <!ENTITY BlockAddress.label "Block Address">
 <!ENTITY BlockAddress.accesskey "A">
+<!ENTITY SendInstantMessage.label "Send Instant Message">
+<!ENTITY AddToBuddyList.label "Add To Buddy List">
 
 <!---SearchBar-->
 <!-- also used by addressbook -->

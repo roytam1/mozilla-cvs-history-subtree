@@ -38,6 +38,8 @@ var abAddressCollectorContractID	 = "@mozilla.org/addressbook/services/addressCo
 var atomService = Components.classes["@mozilla.org/atom-service;1"].getService().QueryInterface(Components.interfaces.nsIAtomService);
 var gMsgLoadedAtom = atomService.getAtom("msgLoaded").QueryInterface(Components.interfaces.nsISupports);
 
+var gPAB;
+var gPABDirectory;
 
 var gViewAllHeaders = false;
 var gNumAddressesToShow = 3;
@@ -679,6 +681,37 @@ function OutputEmailAddresses(headerEntry, emailAddresses)
   } // if msgheader parser
 }
 
+function GetScreenNameFromEmailAddress(emailAddress)
+{
+  if (!gPAB) {
+    var addressBook = Components.classes["@mozilla.org/addressbook;1"].getService(Components.interfaces.nsIAddressBook);
+    gPAB = addressBook.getAbDatabaseFromURI("moz-abmdbdirectory://abook.mab");
+    var RDF = Components.classes['@mozilla.org/rdf/rdf-service;1'].getService(Components.interfaces.nsIRDFService);
+    gPABDirectory = RDF.GetResource("moz-abmdbdirectory://abook.mab").QueryInterface(Components.interfaces.nsIAbDirectory);
+  }
+
+  var card = gPAB.getCardFromAttribute(gPABDirectory, "PrimaryEmail", emailAddress, false);
+  if (card && card.aimScreenName)
+    return card.aimScreenName; 
+  else {
+    var addressParts = emailAddress.split("@");
+    var domain = addressParts[1];
+    if (domain == "aol.com" || 
+        domain == "netscape.net" || 
+        domain == "cs.com")
+      return addressParts[0];
+    else
+      return null;
+  }
+}
+
+function GetUrlForAIMPresence(emailAddress)
+{
+  var aimScreenName = GetScreenNameFromEmailAddress(emailAddress);
+
+  return "http://big.oscar.aol.com:80/" + (aimScreenName ? aimScreenName : emailAddress) + "?on_url=http://ncmail.netscape.com/include/nc/images/online.gif&off_url=http://ncmail.netscape.com/include/nc/images/offline.gif";
+}
+
 function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, displayName, useShortView)
 {
   if (useShortView && displayName)
@@ -688,9 +721,7 @@ function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, dis
   emailAddressNode.setTextAttribute("emailAddress", emailAddress);
   emailAddressNode.setTextAttribute("fullAddress", fullAddress);  
   emailAddressNode.setTextAttribute("displayName", displayName);  
-  
-  if (this.AddExtraAddressProcessing != undefined)
-    AddExtraAddressProcessing(emailAddress, emailAddressNode);
+  emailAddressNode.src = GetUrlForAIMPresence(emailAddress);
 }
 
 function AddNodeToAddressBook (emailAddressNode)
@@ -718,6 +749,37 @@ function SendMailToNode(emailAddressNode)
         messenger.OpenURL("mailto:" + emailAddress );
   }
 }
+
+function SendIMTo(emailAddressNode)
+{
+  if (emailAddressNode)
+  {
+     var emailAddress = emailAddressNode.getAttribute("emailAddress");
+     if (emailAddress) {
+       var aimScreenName = GetScreenNameFromEmailAddress(emailAddress);
+       if (aimScreenName)
+         messenger.OpenURL("aim:goim?screenname=" + aimScreenName);
+       else
+         dump("no screenname\n");
+     }
+  }
+}
+
+function AddToBuddyListFor(emailAddressNode)
+{
+  if (emailAddressNode)
+  {
+     var emailAddress = emailAddressNode.getAttribute("emailAddress");
+     if (emailAddress) {
+       var aimScreenName = GetScreenNameFromEmailAddress(emailAddress);
+       if (aimScreenName)
+         messenger.OpenURL("aim:addbuddy?screenname=" + aimScreenName);
+       else
+         dump("no screenname\n");
+     }
+  }
+}
+
 
 // CopyEmailAddress takes the email address title button, extracts
 // the email address we stored in there and copies it to the clipboard

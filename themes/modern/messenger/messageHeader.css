@@ -90,7 +90,7 @@
 
 .headerName {
   margin: 0 .5em 0 0;
-  min-height: 18px;
+  min-height: 16px;
   font-weight: bold;
   text-align: right;
 }
@@ -119,6 +119,7 @@
 }
 
 .emailDisplayImage {
+  height: 16px;
   padding-left: 2px;
   -moz-box-pack: end;
 }
