@@ -46,10 +46,6 @@ content/communicator/XPCNativeWrapper.js,             comm/content/communicator/
 
 # from xpfe\components jar.mn
 content/communicator/alerts,                          comm/content/communicator/alerts
-content/communicator/pref/pref-themes.xul,            comm/content/communicator/pref/pref-themes.xul
-content/communicator/pref/pref-themes.js,             comm/content/communicator/pref/pref-themes.js
-content/communicator/pref/pref-extensions.xul,        comm/content/communicator/pref/pref-extensions.xul
-content/communicator/pref/pref-extensions.js,         comm/content/communicator/pref/pref-extensions.js
 content/communicator/pref/pref-fonts.js,              comm/content/communicator/pref/pref-fonts.js
 content/communicator/pref/pref-fonts.xul,             comm/content/communicator/pref/pref-fonts.xul
 content/communicator/pref/pref.xul,                   comm/content/communicator/pref/pref.xul
@@ -60,9 +56,6 @@ content/communicator/pref/pref-calibrate-screen.xul,  comm/content/communicator/
 content/help/contextHelp.js,                          comm/content/help/contextHelp.js
 content/help/contents.rdf,                            comm/content/help/contents.rdf
 
-# from profile
-content/communicator/profile,                         comm/content/communicator/profile
-
 # from layout
 content/xbl-marquee,                                  comm/content/xbl-marquee
 content/necko,                                        comm/content/necko
@@ -70,9 +63,6 @@ content/mozldap,                                      comm/content/mozldap
 
 # from navigator
 content/navigator-region,                             comm/content/navigator-region
-
-# from xpinstall for theme installations
-content/communicator/xpinstall,                       comm/content/communicator/xpinstall
 
 # from the password manager
 content/communicator/wallet/SignonViewer.xul,         comm/content/communicator/wallet/SignonViewer.xul
