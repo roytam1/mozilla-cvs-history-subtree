@@ -276,6 +276,8 @@ struct nsCachedStyleData
       mResetData->Destroy(aBits, aContext);
     if (mInheritedData)
       mInheritedData->Destroy(aBits, aContext);
+    mResetData = nsnull;
+    mInheritedData = nsnull;
   }
 
   nsCachedStyleData() :mInheritedData(nsnull), mResetData(nsnull) {};

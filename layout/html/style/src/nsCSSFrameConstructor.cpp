@@ -85,6 +85,7 @@
 #include "nsIDocShell.h"
 #include "nsFormControlHelper.h"
 #include "nsObjectFrame.h"
+#include "nsIRuleNode.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -9876,6 +9877,31 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
               }
             }
           } 
+
+          // check for inline style.  we need to clear the data at the style context's rule
+          // node whenever the inline style property changes.
+          if (aAttribute == nsHTMLAtoms::style) {
+            nsCOMPtr<nsIHTMLContent> html(do_QueryInterface(aContent));
+            if (html) {
+              nsHTMLValue val;
+              html->GetHTMLAttribute(nsHTMLAtoms::style, val);
+              if (eHTMLUnit_ISupports == val.GetUnit()) {
+                // This style rule exists and we need to blow away any computed data that this
+                // rule cached in the rule tree.
+                nsCOMPtr<nsIStyleRule> rule = getter_AddRefs((nsIStyleRule*)val.GetISupportsValue());
+                nsCOMPtr<nsIStyleContext> context;
+                primaryFrame->GetStyleContext(getter_AddRefs(context));
+                nsCOMPtr<nsIRuleNode> ruleNode;
+                context->GetRuleNode(getter_AddRefs(ruleNode));
+                ruleNode->ClearCachedData(rule); // XXXdwh.  If we're willing to *really* special case
+                                                 // inline style, we could only invalidate the struct data
+                                                 // that actually changed.  For example, if someone changes
+                                                 // style.left, we really only need to blow away cached
+                                                 // data in the position struct.
+              }
+            }
+          }
+
           // let the frame deal with it, since we don't know how to
           result = primaryFrame->AttributeChanged(aPresContext, aContent, aNameSpaceID, aAttribute, maxHint);
         default:
