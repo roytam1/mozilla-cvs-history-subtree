@@ -408,10 +408,11 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI,
         if (NS_SUCCEEDED(newChannel->GetLoadFlags(&loadFlags)))
             newChannel->SetLoadFlags(loadFlags | nsICachingChannel::LOAD_ONLY_IF_MODIFIED);
 
+      }
         rv = CreateNewProxyForRequest(request, aLoadGroup, aObserver, aCX,
                                       requestFlags, aRequest, _retval);
 
-        httpValidateChecker *hvc = new httpValidateChecker(request, aCX);
+      imgCacheValidator *hvc = new imgCacheValidator(request, aCX);
         if (!hvc) {
           NS_RELEASE(request);
           return NS_ERROR_OUT_OF_MEMORY;
@@ -430,11 +431,6 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI,
         NS_RELEASE(request);
 
         return openRes;
-
-      }
-      // If it isn't caching channel, use the cached version.
-      // XXX we should probably do something more intelligent for local files.
-      bValidateRequest = PR_FALSE;
     }
   } else if (!request) {
     /* Case #1: no request from the cache.  do a new load */
@@ -885,9 +881,9 @@ NS_IMETHODIMP ProxyListener::OnDataAvailable(nsIRequest *aRequest, nsISupports *
  * http validate class.  check a channel for a 304
  */
 
-NS_IMPL_ISUPPORTS2(httpValidateChecker, nsIStreamListener, nsIRequestObserver)
+NS_IMPL_ISUPPORTS2(imgCacheValidator, nsIStreamListener, nsIRequestObserver)
 
-httpValidateChecker::httpValidateChecker(imgRequest *request, void *aContext) :
+imgCacheValidator::imgCacheValidator(imgRequest *request, void *aContext) :
   mContext(aContext)
 {
   NS_INIT_ISUPPORTS();
@@ -897,13 +893,13 @@ httpValidateChecker::httpValidateChecker(imgRequest *request, void *aContext) :
   NS_ADDREF(mRequest);
 }
 
-httpValidateChecker::~httpValidateChecker()
+imgCacheValidator::~imgCacheValidator()
 {
   /* destructor code */
   NS_IF_RELEASE(mRequest);
 }
 
-void httpValidateChecker::AddProxy(imgRequestProxy *aProxy)
+void imgCacheValidator::AddProxy(imgRequestProxy *aProxy)
 {
   mProxies.AppendElement(aProxy);
 }
@@ -911,7 +907,7 @@ void httpValidateChecker::AddProxy(imgRequestProxy *aProxy)
 /** nsIRequestObserver methods **/
 
 /* void onStartRequest (in nsIRequest request, in nsISupports ctxt); */
-NS_IMETHODIMP httpValidateChecker::OnStartRequest(nsIRequest *aRequest, nsISupports *ctxt)
+NS_IMETHODIMP imgCacheValidator::OnStartRequest(nsIRequest *aRequest, nsISupports *ctxt)
 {
   nsCOMPtr<nsICachingChannel> cacheChan(do_QueryInterface(aRequest));
   if (cacheChan) {
@@ -934,8 +930,8 @@ NS_IMETHODIMP httpValidateChecker::OnStartRequest(nsIRequest *aRequest, nsISuppo
       mRequest = nsnull;
 
       return NS_OK;
-      // we're set.  do nothing.
-    } else {
+    }
+  }
       // fun stuff.
       nsCOMPtr<nsIChannel> channel(do_QueryInterface(aRequest));
       nsCOMPtr<nsICacheEntryDescriptor> entry;
@@ -987,8 +983,8 @@ NS_IMETHODIMP httpValidateChecker::OnStartRequest(nsIRequest *aRequest, nsISuppo
       }
 
       NS_RELEASE(request);
-    }
-  }
+  
+  
 
   if (!mDestListener)
     return NS_OK;
@@ -997,7 +993,7 @@ NS_IMETHODIMP httpValidateChecker::OnStartRequest(nsIRequest *aRequest, nsISuppo
 }
 
 /* void onStopRequest (in nsIRequest request, in nsISupports ctxt, in nsresult status); */
-NS_IMETHODIMP httpValidateChecker::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt, nsresult status)
+NS_IMETHODIMP imgCacheValidator::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt, nsresult status)
 {
   if (!mDestListener)
     return NS_OK;
@@ -1018,7 +1014,7 @@ static NS_METHOD dispose_of_data(nsIInputStream* in, void* closure,
 }
 
 /* void onDataAvailable (in nsIRequest request, in nsISupports ctxt, in nsIInputStream inStr, in unsigned long sourceOffset, in unsigned long count); */
-NS_IMETHODIMP httpValidateChecker::OnDataAvailable(nsIRequest *aRequest, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
+NS_IMETHODIMP imgCacheValidator::OnDataAvailable(nsIRequest *aRequest, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
 #ifdef DEBUG
   nsCOMPtr<nsICachingChannel> cacheChan(do_QueryInterface(aRequest));
