@@ -46,9 +46,37 @@
  * dependency on the implementation details of the abstract string types.
  */
 
-#include "nsStringFwd.h"
-
+#include "nscore.h"
 #define NS_STRINGAPI(x) extern "C" NS_COM x
+
+/* ------------------------------------------------------------------------- */
+
+/**
+ * There are dummy class definitions for the abstract string types used in
+ * XPIDL generated header files.  Do not count on the structure of these
+ * classes, and do not try to mix these definitions with the internal 
+ * definition of these classes used within the mozilla codebase.
+ */
+
+#ifndef nsAString_external
+#define nsAString_external nsAString
+#endif
+
+class nsAString_external
+  {
+    private:
+      void *v;
+  };
+
+#ifndef nsACString_external
+#define nsACString_external nsACString
+#endif
+
+class nsACString_external
+  {
+    private:
+      void *v;
+  };
 
 /* ------------------------------------------------------------------------- */
 
@@ -106,21 +134,16 @@
  *     }
  *   }
  */
-class nsStringContainer
-{
-  private:
-    void    *d1,*d2;
-    PRUint32 d3, d4;
+class nsStringContainer : public nsAString_external
+  {
+    private:
+      void     *d1;
+      PRUint32  d2;
+      void     *d3;
 
-  public:
-    /**
-     * A nsStringContainer can be automatically cast to a nsAString.
-     */
-    operator const nsAString&() const
-      { return *NS_REINTERPRET_CAST(const nsAString *, this); }
-    operator nsAString&()
-      { return *NS_REINTERPRET_CAST(nsAString *, this); }
-};
+    public:
+      nsStringContainer() {} // MSVC6 needs this
+  };
 
 /**
  * NS_StringContainerInit
@@ -234,21 +257,16 @@ NS_StringCopy(nsAString &aDest, const nsAString &aSrc,
  *
  * @see nsStringContainer for use cases and further documentation.
  */
-class nsCStringContainer
-{
-  private:
-    void    *d1,*d2;
-    PRUint32 d3, d4;
+class nsCStringContainer : public nsACString_external
+  {
+    private:
+      void    *d1;
+      PRUint32 d2;
+      void    *d3;
 
-  public:
-    /**
-     * A nsStringContainer can be automatically cast to a nsAString.
-     */
-    operator const nsACString&() const
-      { return *NS_REINTERPRET_CAST(const nsACString *, this); }
-    operator nsACString&()
-      { return *NS_REINTERPRET_CAST(nsACString *, this); }
-};
+    public:
+      nsCStringContainer() {} // MSVC6 needs this
+  };
 
 /**
  * NS_CStringContainerInit

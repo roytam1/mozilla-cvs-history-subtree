@@ -340,7 +340,7 @@ class NS_COM nsTAString_CharT
         /**
          * we can be converted to a const nsTStringBase (dependent on this)
          */
-      inline const string_base_type ToString() const;
+      const string_base_type ToString() const;
 
     private:
 

@@ -35,10 +35,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsStringAPI.h"
 #include "nsString.h"
 #include "nsString2.h"
 #include "nsCharTraits.h"
+
+#define nsAString_external nsAString_external_
+#define nsACString_external nsACString_external_
+
+#include "nsStringAPI.h"
 
 /* ------------------------------------------------------------------------- */
 

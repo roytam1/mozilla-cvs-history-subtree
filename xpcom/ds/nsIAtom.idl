@@ -24,7 +24,6 @@
 #include "nsISupports.idl"
 
 %{C++
-#include "nsAString.h"
 #include "nsCOMPtr.h"
 %}
 

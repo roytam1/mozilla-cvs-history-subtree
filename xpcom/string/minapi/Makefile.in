@@ -42,10 +42,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= string
+MODULE		= embedstring
 LIBRARY_NAME	= string_minapi_s
 
 REQUIRES	= xpcom \
+		  string \
 		  $(NULL)
 
 CPPSRCS		=			\

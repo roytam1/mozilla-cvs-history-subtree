@@ -49,10 +49,10 @@
 #include "nsXPCOMGlue.h"
 #include "nsXPCOMPrivate.h"
 #include "nsIServiceManager.h"
-#include "nsIFile.h"
+#include "nsILocalFile.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryService.h"
-#include "nsEmbedString.h"
+#include "nsStringAPI.h"
+#include "prlink.h"
 #else
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsINativeComponentLoader.h"

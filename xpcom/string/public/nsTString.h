@@ -42,7 +42,7 @@
    * promise null-terminated storage.  Instances of this class allocate
    * strings on the heap.
    */
-class nsTString_CharT : public nsTStringBase_CharT
+class NS_COM nsTString_CharT : public nsTStringBase_CharT
   {
     public:
 

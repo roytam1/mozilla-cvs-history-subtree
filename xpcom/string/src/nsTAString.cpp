@@ -413,3 +413,11 @@ nsTAString_CharT::IsDependentOn(const char_type* start, const char_type *end) co
 
     return ToString().IsDependentOn(start, end);
   }
+
+const nsTAString_CharT::string_base_type
+nsTAString_CharT::ToString() const
+  {
+    const char_type* data;
+    size_type length = GetReadableBuffer(&data);
+    return string_base_type(NS_CONST_CAST(char_type*, data), length, 0);
+  }

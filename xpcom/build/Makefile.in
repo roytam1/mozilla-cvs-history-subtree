@@ -41,6 +41,7 @@ endif
 GRE_MODULE	= 1
 
 REQUIRES	= string \
+		  embedstring \
 		  $(NULL)
 
 # pull in MoreFiles for MacOSX

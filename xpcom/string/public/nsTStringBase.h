@@ -368,20 +368,3 @@ class NS_COM nsTStringBase_CharT : public nsTAString_CharT
           F_FIXED      = 1 << 4   // mData is pointing at nsTAutoString::mFixedBuf
         };
   };
-
-
-
-  /**
-   * nsTAString::ToString
-   *
-   * defined here since it depends on nsStringBase class definition.
-   */
-
-inline
-const nsTAString_CharT::string_base_type
-nsTAString_CharT::ToString() const
-  {
-    const char_type* data;
-    size_type length = GetReadableBuffer(&data);
-    return string_base_type(NS_CONST_CAST(char_type*, data), length, 0);
-  }

@@ -31,10 +31,10 @@ CPPSRCS		= regxpcom.cpp
 
 DEFINES		+= -DXPCOM_GLUE 
 
-REQUIRES	= string \
+REQUIRES	= \
+		  string \
 		  embedstring \
 		  $(NULL)
-
 
 LOCAL_INCLUDES	= \
 		-I$(srcdir)/../../build \

@@ -42,11 +42,8 @@
 
 #include "nsStringAPI.h"
 
-class nsEmbedString
+class nsEmbedString : public nsStringContainer
   {
-    protected:
-      nsStringContainer mImpl;
-
     public:
       typedef PRUnichar        char_type;
       typedef nsEmbedString    self_type;
@@ -56,73 +53,62 @@ class nsEmbedString
     
       nsEmbedString()
         {
-          NS_StringContainerInit(mImpl);
+          NS_StringContainerInit(*this);
         }
 
       nsEmbedString(const self_type& aString)
         {
-          NS_StringContainerInit(mImpl);
-          NS_StringCopy(mImpl, aString);
+          NS_StringContainerInit(*this);
+          NS_StringCopy(*this, aString);
         }
 
       explicit
       nsEmbedString(const abstract_string_type& aReadable)
         {
-          NS_StringContainerInit(mImpl);
-          NS_StringCopy(mImpl, aReadable);
+          NS_StringContainerInit(*this);
+          NS_StringCopy(*this, aReadable);
         }
 
       explicit
       nsEmbedString(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
-          //NS_StringContainerInit(mImpl, aData, aLength);
-          NS_StringContainerInit(mImpl);
-          NS_StringSetData(mImpl, aData, aLength);
+          NS_StringContainerInit(*this);
+          NS_StringSetData(*this, aData, aLength);
         }
       
       ~nsEmbedString()
         {
-          NS_StringContainerFinish(mImpl);
+          NS_StringContainerFinish(*this);
         }
 
-      operator const abstract_string_type&() const
-        {
-          return mImpl;
-        }
-
-      operator abstract_string_type&()
-        {
-          return mImpl;
-        }
-      
       const char_type* get() const
         {
-          return NS_StringGetDataPtr(mImpl);
+          return NS_StringGetDataPtr(*this);
         }
 
       size_type Length() const
         {
-          return NS_StringGetLength(mImpl);
+          return NS_StringGetLength(*this);
         }
       
       void Assign(const self_type& aString)
         {
-          NS_StringCopy(mImpl, aString);
+          NS_StringCopy(*this, aString);
         }
 
       void Assign(const abstract_string_type& aReadable)
         {
-          NS_StringCopy(mImpl, aReadable);
+          NS_StringCopy(*this, aReadable);
         }
 
       void Assign(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
-          NS_StringSetData(mImpl, aData, aLength);
+          NS_StringSetData(*this, aData, aLength);
         }
 
       void Assign(char_type aChar)
         {
-          NS_StringSetData(mImpl, &aChar, 1);
+          NS_StringSetData(*this, &aChar, 1);
         }
       
       self_type& operator=(const self_type& aString)              { Assign(aString);   return *this; }
@@ -131,11 +117,8 @@ class nsEmbedString
       self_type& operator=(char_type aChar)                       { Assign(aChar);     return *this; }
   };
 
-class nsEmbedCString
+class nsEmbedCString : public nsCStringContainer
   {
-    protected:
-      nsCStringContainer mImpl;
-
     public:
       typedef char             char_type;
       typedef nsEmbedCString   self_type;
@@ -145,73 +128,62 @@ class nsEmbedCString
     
       nsEmbedCString()
         {
-          NS_CStringContainerInit(mImpl);
+          NS_CStringContainerInit(*this);
         }
 
       nsEmbedCString(const self_type& aString)
         {
-          NS_CStringContainerInit(mImpl);
-          NS_CStringCopy(mImpl, aString);
+          NS_CStringContainerInit(*this);
+          NS_CStringCopy(*this, aString);
         }
 
       explicit
       nsEmbedCString(const abstract_string_type& aReadable)
         {
-          NS_CStringContainerInit(mImpl);
-          NS_CStringCopy(mImpl, aReadable);
+          NS_CStringContainerInit(*this);
+          NS_CStringCopy(*this, aReadable);
         }
 
       explicit
       nsEmbedCString(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
-          //NS_CStringContainerInit(mImpl, aData, aLength);
-          NS_CStringContainerInit(mImpl);
-          NS_CStringSetData(mImpl, aData, aLength);
+          NS_CStringContainerInit(*this);
+          NS_CStringSetData(*this, aData, aLength);
         }
       
       ~nsEmbedCString()
         {
-          NS_CStringContainerFinish(mImpl);
+          NS_CStringContainerFinish(*this);
         }
 
-      operator const abstract_string_type&() const
-        {
-          return mImpl;
-        }
-
-      operator abstract_string_type&()
-        {
-          return mImpl;
-        }
-      
       const char_type* get() const
         {
-          return NS_CStringGetDataPtr(mImpl);
+          return NS_CStringGetDataPtr(*this);
         }
 
       size_type Length() const
         {
-          return NS_CStringGetLength(mImpl);
+          return NS_CStringGetLength(*this);
         }
       
       void Assign(const self_type& aString)
         {
-          NS_CStringCopy(mImpl, aString);
+          NS_CStringCopy(*this, aString);
         }
 
       void Assign(const abstract_string_type& aReadable)
         {
-          NS_CStringCopy(mImpl, aReadable);
+          NS_CStringCopy(*this, aReadable);
         }
 
       void Assign(const char_type* aData, size_type aLength = PR_UINT32_MAX)
         {
-          NS_CStringSetData(mImpl, aData, aLength);
+          NS_CStringSetData(*this, aData, aLength);
         }
 
       void Assign(char_type aChar)
         {
-          NS_CStringSetData(mImpl, &aChar, 1);
+          NS_CStringSetData(*this, &aChar, 1);
         }
       
       self_type& operator=(const self_type& aString)              { Assign(aString);   return *this; }

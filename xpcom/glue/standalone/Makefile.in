@@ -87,5 +87,3 @@ export:: $(XPCOM_GLUE_SRC_CSRCS)
 	$(INSTALL) $^ .
 
 DEFINES		+= -DXPCOM_GLUE
-
-
