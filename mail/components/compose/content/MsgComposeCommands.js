@@ -1761,7 +1761,7 @@ function GenericSendMessage( msgType )
           gSendOrSaveOperationInProgress = true;
         }
         msgWindow.SetDOMWindow(window);
-
+        msgWindow.rootDocShell.allowAuth = true;
         gMsgCompose.SendMsg(msgType, getCurrentIdentity(), getCurrentAccountKey(), msgWindow, progress);
       }
       catch (ex) {
