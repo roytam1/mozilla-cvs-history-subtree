@@ -41,9 +41,7 @@
 
 #include "nscore.h"
 #include "nsComObsolete.h"
-
-class nsString;
-class nsAString;
+#include "nsStringFwd.h"
 
 // A color is a 32 bit unsigned integer with four components: R, G, B
 // and A.
@@ -87,6 +85,8 @@ typedef PRUint32 nscolor;
 // otherwise return false.
 // This accepts only 3, 6 or 9 digits
 extern "C" NS_GFX_(PRBool) NS_HexToRGB(const nsString& aBuf, nscolor* aResult);
+extern "C" NS_GFX_(PRBool) NS_ASCIIHexToRGB(const nsCString& aBuf,
+                                            nscolor* aResult);
 
 // Translate a hex string to a color. Return true if it parses ok,
 // otherwise return false.
@@ -96,6 +96,8 @@ extern "C" NS_GFX_(PRBool) NS_LooseHexToRGB(const nsString& aBuf, nscolor* aResu
 // Translate a color to a hex string and prepend a '#'.
 // The returned string is always 7 characters including a '#' character.
 extern "C" NS_GFX_(void) NS_RGBToHex(nscolor aColor, nsAString& aResult);
+extern "C" NS_GFX_(void) NS_RGBToASCIIHex(nscolor aColor,
+                                          nsAFlatCString& aResult);
 
 // Translate a color name to a color. Return true if it parses ok,
 // otherwise return false.

@@ -440,7 +440,7 @@ CHECKOUT_STANDALONE_COMPOSER:= true
 endif
 
 ####################################
-# CVS defines for mozilla/toolkit (pulled and built if MOZ_XUL_APP is set)
+# CVS defines for mozilla/toolkit
 #
 
 TOOLKIT_CO_FLAGS := -P
@@ -452,13 +452,8 @@ ifdef TOOLKIT_CO_TAG
 endif
 
 CVSCO_MOZTOOLKIT := $(CVS) $(CVS_FLAGS) co $(TOOLKIT_CO_FLAGS) $(CVS_CO_DATE_FLAGS)  mozilla/toolkit mozilla/chrome
-ifdef MOZ_XUL_APP
 FASTUPDATE_MOZTOOLKIT := fast_update $(CVSCO_MOZTOOLKIT)
 CHECKOUT_MOZTOOLKIT := cvs_co $(CVSCO_MOZTOOLKIT)
-else
-FASTUPDATE_MOZTOOLKIT := true
-CHECKOUT_MOZTOOLKIT := true
-endif
 
 ####################################
 # CVS defines for codesighs (pulled and built if MOZ_MAPINFO is set)
