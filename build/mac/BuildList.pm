@@ -260,7 +260,8 @@ sub DistMozilla()
 		InstallFromManifest(":mozilla:lib:libstyle:MANIFEST",							":mozilla:dist:libstyle:");
 		
 		#PLUGIN
-		InstallFromManifest(":mozilla:lib:plugin:MANIFEST",								":mozilla:dist:plugin:");
+		InstallFromManifest(":mozilla:modules:plugin:public:MANIFEST",					":mozilla:dist:plugin:");
+		InstallFromManifest(":mozilla:modules:plugin:src:MANIFEST",						":mozilla:dist:plugin:");
 		
 		#LIBHOOK
 		InstallFromManifest(":mozilla:modules:libhook:public:MANIFEST",					":mozilla:dist:libhook:");
@@ -289,6 +290,7 @@ sub DistMozilla()
 		InstallFromManifest(":mozilla:sun-java:stubs:macjri:MANIFEST",					":mozilla:dist:sun-java:");
 
 		#OJI
+		InstallFromManifest(":mozilla:modules:oji:public:MANIFEST",						":mozilla:dist:oji:");
 		InstallFromManifest(":mozilla:modules:oji:src:MANIFEST",						":mozilla:dist:oji:");
 	}
 
