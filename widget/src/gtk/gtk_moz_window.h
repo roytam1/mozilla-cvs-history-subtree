@@ -8,76 +8,94 @@
  * Software distributed under the MPL is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the MPL
  * for the specific language governing rights and limitations under the
- * NPL.
+ * MPL.
+ *
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU Library General Public License (the "LGPL"), in
+ * which case the provisions of the LGPL are applicable instead of
+ * those above.  If you wish to allow use of your version of this file
+ * only under the terms of the LGPL and not to allow others to use
+ * your version of this file under the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice and
+ * other provisions required by the LGPL.  If you do not delete the
+ * provisions above, a recipient may use your version of this file
+ * under either the MPL or the LGPL.
+ */
+
+/* Copyright (C) 1999 Christopher Blizzard, All Rights Reserved.
  */
 
 #ifndef __GTK_MOZ_WINDOW_H
 #define __GTK_MOZ_WINDOW_H
 
-#include <gdk/gdk.h>
-#include <gtk/gtkcontainer.h>
-#include <gtk/gtkadjustment.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-#define GTK_TYPE_MOZ_WINDOW             (gtk_moz_window_get_type())
-#define GTK_MOZ_WINDOW(obj)             (GTK_CHECK_CAST((obj), GTK_TYPE_MOZ_WINDOW, GtkMozWindow))
-#define GTK_MOZ_WINDOW_CLASS(klass)     (GTK_CHECK_CLASS_CAST((klass), GTK_TYPE_MOZ_WINDOW, GtkMozWindowClass))
-#define GTK_IS_MOZ_WINDOW(obj)          (GTK_CHECK_TYPE((obj), GTK_TYPE_MOZ_WINDOW))
-#define GTK_IS_MOZ_WINDOW_CLASS(klass)  (GTK_CHECK_CLASS_TYPE((klass), GTK_TYPE_MOZ_WINDOW))
+#include <gdk/gdk.h>
+#include <gtk/gtkadjustment.h>
+#include <gtk/gtkcontainer.h>
 
-typedef struct _GtkMozWindow       GtkMozWindow;
-typedef struct _GtkMozWindowClass  GtkMozWindowClass;
-typedef struct _GtkMozWindowChild  GtkMozWindowChild;
+#define GTK_TYPE_MOZ_WINDOW            (gtk_moz_window_get_type())
+#define GTK_MOZ_WINDOW(obj)            (GTK_CHECK_CAST((obj), GTK_TYPE_MOZ_WINDOW, GtkMozWindow))
+#define GTK_MOZ_WINDOW_CLASS(klass)    (GTK_CHECK_CLASS_CASE((klass), GTK_TYPE_MOZ_WINDOW, GtkMozWindowClass))
+#define GTK_IS_MOZ_WINDOW(obj)         (GTK_CHECK_TYPE((obj), GTK_TYPE_MOZ_WINDOW))
+#define GTK_IS_MOZ_WINDOW_CLASS(klass) (GTK_CHECK_CLASS_TYPE((klass), GTK_TYPE_MOZ_WINDOW))
+
+typedef struct _GtkMozWindow      GtkMozWindow;
+typedef struct _GtkMozWindowClass GtkMozWindowClass;
 
 struct _GtkMozWindow {
-  GtkContainer  container;
-  GList         *children;
-  GtkAdjustment *hadjustment;
-  GtkAdjustment *vadjustment;
-  gint           xoffset;
-  gint           yoffset;
+  GtkContainer        container;
+  GList              *children;
+  guint               width;
+  guint               height;
+  guint               xoffset;
+  guint               yoffset;
+  GtkAdjustment      *hadjustment;
+  GtkAdjustment      *vadjustment;
+  GdkWindow          *bin_window;
+  GdkVisibilityState  visibility;
+  gulong              configure_serial;
+  gint                scroll_x;
+  gint                scroll_y;
+  
 };
 
 struct _GtkMozWindowClass {
   GtkContainerClass parent_class;
-  void (*set_scroll_adjustments)  (GtkMozWindow  *moz_window,
-				   GtkAdjustment *hadjustment,
-				   GtkAdjustment *vadjustment);
+  void (*set_scroll_adjustments ) (GtkMozWindow  *moz_window,
+                                   GtkAdjustment *hadjustment,
+                                   GtkAdjustment *vadjustment);
 };
 
-struct _GtkMozWindowChild {
-  GtkWidget *widget;
-  gint16 x;
-  gint16 y;
-};
+GtkType         gtk_moz_window_get_type        (void);
+GtkWidget      *gtk_moz_window_new             (GtkAdjustment *hadjustment,
+                                                GtkAdjustment *vadjustment);
+void            gtk_moz_window_put             (GtkMozWindow *moz_window,
+                                                GtkWidget *child_widget,
+                                                gint x,
+                                                gint y);
+void            gtk_moz_window_move            (GtkMozWindow *moz_window,
+                                                GtkWidget *child_widget,
+                                                gint x,
+                                                gint y);
+void            gtk_moz_window_set_size        (GtkMozWindow *moz_window,
+                                                guint width,
+                                                guint height);
 
-GtkType        gtk_moz_window_get_type        (void);
-GtkWidget     *gtk_moz_window_new             (void);
-void           gtk_moz_window_put             (GtkMozWindow     *moz_window,
-					       GtkWidget        *widget,
-					       gint16            x,
-					       gint16            y);
-void           gtk_moz_window_move            (GtkMozWindow     *moz_window,
-					       GtkWidget        *widget,
-					       gint16            x,
-					       gint16            y);
-GtkAdjustment *gtk_moz_window_get_hadjustment (GtkMozWindow *moz_window);
-GtkAdjustment *gtk_moz_window_get_vadjustment (GtkMozWindow *moz_window);
-void           gtk_moz_window_set_hadjustment (GtkMozWindow  *moz_window,
-					       GtkAdjustment *adjustment);
-void           gtk_moz_window_set_vadjustment (GtkMozWindow  *moz_window,
-					       GtkAdjustment *adjustment);
+GtkAdjustment  *gtk_moz_window_get_hadjustment (GtkMozWindow *moz_window);
+GtkAdjustment  *gtk_moz_window_get_vadjustment (GtkMozWindow *moz_window);
+void            gtk_moz_window_set_hadjustment (GtkMozWindow *moz_window,
+                                                GtkAdjustment *adjustment);
+void            gtk_moz_window_set_vadjustment (GtkMozWindow *moz_window,
+                                                GtkAdjustment *adjustment);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
 #endif /* __GTK_MOZ_WINDOW_H */
-
-
 
 
 
