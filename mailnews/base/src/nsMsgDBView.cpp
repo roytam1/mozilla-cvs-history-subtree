@@ -1865,7 +1865,6 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 
 	NoteStartChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 
-  NoteChange(index + 1, numExpanded , nsMsgViewNotificationCode::insertOrDelete); 
   NoteEndChange(index + 1, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 	if (pNumExpanded != nsnull)
 		*pNumExpanded = numExpanded;
@@ -1912,7 +1911,6 @@ nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollap
 		}
 		if (pNumCollapsed != nsnull)
 			*pNumCollapsed = numRemoved;	
-    NoteChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete); 
 		NoteEndChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete);
 	}
 	return rv;
@@ -2415,6 +2413,8 @@ void	nsMsgDBView::NoteStartChange(nsMsgViewIndex firstlineChanged, PRInt32 numCh
 void	nsMsgDBView::NoteEndChange(nsMsgViewIndex firstlineChanged, PRInt32 numChanged, 
 							 nsMsgViewNotificationCodeValue changeType)
 {
+  // send the notification now.
+  NoteChange(firstlineChanged, numChanged, changeType);
 }
 
 NS_IMETHODIMP nsMsgDBView::GetViewFlags(nsMsgViewFlagsTypeValue *aViewFlags)
