@@ -246,7 +246,7 @@ nsPrefLDAP::CallJSFunction(PRUnichar * aResults)
     // Convert results to a JS String. 
     //
     if (aResults) {
-        JSString * str = JS_NewUCStringCopyZ(prefContext, aResults);
+        JSString * str = JS_NewUCStringCopyZ(prefContext, (const jschar *)aResults);
         if (str) {
             argv = STRING_TO_JSVAL(str);
         }
