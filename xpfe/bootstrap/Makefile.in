@@ -79,7 +79,6 @@ LIBS		+= \
 		-lexpat \
 		-lxmltok \
 		-ljsdom \
-		-ljsurl \
 		-lsecfree \
 		-lmozjs \
 		$(OJI_LIBS) \
