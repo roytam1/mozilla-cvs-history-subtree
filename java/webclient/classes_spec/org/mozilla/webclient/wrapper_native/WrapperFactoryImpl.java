@@ -114,7 +114,7 @@ public Object newImpl(String interfaceName,
                                              interfaceName + 
                                              ": not implemented.");
         }
-        System.out.println("debug: edburns: native library does implement " +
+        System.out.println("native library does implement " +
                            interfaceName);
         if (BrowserControl.WINDOW_CONTROL_NAME == interfaceName) {
             result = new WindowControlImpl(this, browserControl);
