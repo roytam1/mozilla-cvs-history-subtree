@@ -2,6 +2,7 @@ classic.jar:
         skin/classic/mozapps/contents.rdf
         skin/classic/mozapps/downloads/downloadIcon.png               (downloads/downloadIcon.png)
         skin/classic/mozapps/downloads/downloadCleanup.png            (downloads/downloadCleanup.png)
+        skin/classic/mozapps/downloads/downloadCleanupDisabled.png            (downloads/downloadCleanupDisabled.png)
         skin/classic/mozapps/downloads/downloadOptions.png            (downloads/downloadOptions.png)
         skin/classic/mozapps/downloads/downloads.css                  (downloads/downloads.css)
         skin/classic/mozapps/downloads/downloads.xml                  (downloads/downloads.xml)
@@ -36,3 +37,4 @@ classic.jar:
         skin/classic/mozapps/update/warning.gif                       (update/warning.gif)
         skin/classic/mozapps/xpinstall/xpinstallConfirm.css           (xpinstall/xpinstallConfirm.css)
         skin/classic/mozapps/xpinstall/xpinstallItemGeneric.png       (xpinstall/xpinstallItemGeneric.png)
+		

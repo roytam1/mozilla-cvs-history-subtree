@@ -40,6 +40,10 @@ textbox.padded {
   padding: 1px 0px 1px 2px;
 }
 
+.autocomplete-textbox-container {
+  -moz-box-align: center;
+}
+
 .textbox-input-box {
   margin: 0 3px;
   -moz-box-align: center;

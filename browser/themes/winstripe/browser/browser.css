@@ -75,10 +75,10 @@ toolbarbutton.bookmark-item[open="true"] {
   display: none;
 }
 
-.toolbarpaletteitem-box[type="bookmarks-toolbar"][place="palette"] {
-  width: 32px;
-  height: 32px;
-  background: url("chrome://browser/skin/Bookmarks-folder.png") no-repeat;
+#wrapper-personal-bookmarks .toolbarpaletteitem-box {
+  width: 16px;
+  height: 16px;
+  background: url("chrome://browser/skin/Bookmarks-folder.png") no-repeat !important;
 }
 
 .bookmarks-toolbar-customize {
@@ -206,7 +206,6 @@ toolbar[mode="icons"] .toolbarbutton-text {
   display: none;
 }
 
-toolbar[mode="text"] .toolbarbutton-menubutton-dropmarker,
 toolbar[mode="text"] .toolbarbutton-icon {
   display: none;
 }
@@ -803,11 +802,10 @@ toolbar[mode="text"] #navigator-throbber[busy="true"] {
 
 .tabs-closebutton {
   list-style-image: url("chrome://browser/skin/Close-tab.png");
-	-moz-appearance: none;
+  -moz-appearance: none;
   -moz-image-region: rect(0px, 16px, 16px, 0px);
-  padding-right: 2px !important;
-  padding-left: 2px !important;
-	border: none !important;
+  padding: 4px 2px;
+  border: none !important;
 }
 
 .tabs-closebutton:hover {
@@ -816,7 +814,6 @@ toolbar[mode="text"] #navigator-throbber[busy="true"] {
 
 .tabs-closebutton:hover:active {
   -moz-image-region: rect(0px, 48px, 16px, 32px);
-	padding-top: 1px !important;
 }
 
 #sidebar-box .tabs-closebutton {
@@ -834,8 +831,16 @@ toolbarbutton.chevron {
   list-style-image: url("chrome://global/skin/toolbar/chevron.gif") !important;
 }
 
+toolbarbutton.chevron > .toolbarbutton-text {
+  display: none; /* hide chevron label */
+}
+
 toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
   display: none;
+}
+
+toolbar[mode="text"] toolbarbutton.chevron > .toolbarbutton-icon {
+  display: -moz-box; /* display chevron icon in text mode */
 }
 
 toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-icon {
@@ -934,14 +939,15 @@ toolbar[mode="text"] > #window-controls > toolbarbutton > .toolbarbutton-text {
 #find-status-icon
 {
 	list-style-image: none;
-  margin: 1px 0px 0px 12px;
+  margin: 2px 0px 0px 12px;
   width: 16px;
   height: 16px;
 }
 
 #find-status
 {
-  margin: 1px 0px 0px 5px;
+  margin: 0px 0px 0px 3px;
+  padding: 2px;
 }
 
 #find-status-icon[status="notfound"]
