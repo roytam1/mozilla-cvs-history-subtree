@@ -24,6 +24,7 @@
 
 #include "rdf-int.h"
 #include "xpassert.h"
+#include "fs2rdf.h"
 #include "glue.h"
 #include "vocab.h"
 #include "vocabint.h"
@@ -59,7 +60,9 @@ newNavCenterDB()
 }
 
 
-void walkThroughAllBookmarks (RDF_Resource u) {
+void
+walkThroughAllBookmarks (RDF_Resource u)
+{
 #ifdef MOZILLA_CLIENT
   RDF_Cursor c = RDF_GetSources(gNCDB, u, gCoreVocab->RDF_parent, RDF_RESOURCE_TYPE, true);
   RDF_Resource next;
@@ -68,7 +71,8 @@ void walkThroughAllBookmarks (RDF_Resource u) {
   }
 #endif
 }
-        
+
+
 
 PR_PUBLIC_API(RDF_Error)
 RDF_Init(RDF_InitParams params)
@@ -164,4 +168,3 @@ RDF_Shutdown ()
   
   return 0;
 }
-

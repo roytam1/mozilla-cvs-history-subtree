@@ -22,8 +22,10 @@
    For more information on RDF, look at the RDF section of www.mozilla.org
 */
 
+#include "fs2rdf.h"
 #include "utils.h"
 #include "nlcstore.h"
+#include "vocabint.h"
 
 
 	/* globals */
@@ -405,11 +407,22 @@ resourceID(RDF_Resource r)
 char *
 makeResourceName (RDF_Resource node)
 {
-  char* name;
-  name =  resourceID(node);
-  if (startsWith("http:", name)) return copyString(&name[7]);
-  if (startsWith("file:", name)) return copyString(&name[8]);
-  return copyString(name);
+	char		*name = NULL;
+
+	name =  resourceID(node);
+	if (startsWith("http:", resourceID(node)))
+	{
+		name = &name[7];
+	}
+	else if (startsWith("file:", resourceID(node)))
+	{
+		name = &name[FS_URL_OFFSET];
+	}
+	else
+	{
+		name = getResourceDefaultName(node);
+	}
+	return ((name != NULL) ? copyString(name) : NULL);
 }
 
 
@@ -529,6 +542,8 @@ RDFT gCookieStore = 0;
 PUBLIC void
 NET_InitRDFCookieResources (void) ;
 
+
+
 PR_PUBLIC_API(void)
 RDF_AddCookieResource(char* name, char* path, char* host, char* expires) {
   char* url = getMem(strlen(name) + strlen(host));
@@ -547,6 +562,8 @@ RDF_AddCookieResource(char* name, char* path, char* host, char* expires) {
   remoteStoreAdd(gCookieStore, ru, gCoreVocab->RDF_parent, hostUnit, RDF_RESOURCE_TYPE, 1);  
 }
 
+
+
 PRBool
 CookieUnassert (RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type) {
   if (resourceType(u) == COOKIE_RT) {
@@ -555,6 +572,8 @@ CookieUnassert (RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType t
     return 1;
   } else return 0;
 }
+
+
 
 RDF_Cursor
 CookieGetSlotValues(RDFT rdf, RDF_Resource u, RDF_Resource s,
@@ -584,6 +603,8 @@ CookieGetSlotValues(RDFT rdf, RDF_Resource u, RDF_Resource s,
 	}
 	return(c);
 }
+
+
 
 #define	COOKIE_CMD_PREFIX	"CookieCommand:"
 #define	COOKIE_CMD_HOSTS	"CookieCommand:TBD"	/* actual cmd name */
@@ -621,6 +642,8 @@ CookieGetNextValue(RDFT rdf, RDF_Cursor c)
 	return(data);
 }
 
+
+
 RDF_Error
 CookieDisposeCursor(RDFT rdf, RDF_Cursor c)
 {
@@ -645,6 +668,8 @@ CookieDisposeCursor(RDFT rdf, RDF_Cursor c)
 	}
 	return(err);
 }
+
+
 
 PRBool
 CookieAssert(RDFT rdf, RDF_Resource u, RDF_Resource s, void *v,
@@ -671,6 +696,8 @@ CookieAssert(RDFT rdf, RDF_Resource u, RDF_Resource s, void *v,
 	return(retVal);
 }
 
+
+
 void *
 CookieGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s,
 	RDF_ValueType type, PRBool inversep, PRBool tv)
@@ -689,6 +716,8 @@ CookieGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s,
 	}
 	return(data);
 }
+
+
 
 RDFT
 MakeCookieStore (char* url)

@@ -50,6 +50,7 @@ void			createCoreVocab ();
 void			createNavCenterVocab ();
 void			createWebDataVocab ();
 RDF_Resource		newResource(char *id, int optionalNameStrID);
+char			*getResourceDefaultName(RDF_Resource r);
 
 XP_END_PROTOS
 
