@@ -353,7 +353,10 @@ typedef enum {
   NPNVisOfflineBool,
 
   /* 10 and over are available on Mozilla builds starting with 0.9.4 */
-  NPNVserviceManager = 10
+  NPNVserviceManager = 10,
+  NPNVDOMElement     = 11,   /* available in Mozilla 1.2 */
+  NPNVDOMDocument    = 12,
+  NPNVDOMWindow      = 13
 } NPNVariable;
 
 /*
