@@ -704,6 +704,7 @@ static const double two31 = 2147483648.0;
         case object_tag: return object->getType();
         case undefined_tag: return Void_Type;
         case null_tag: return Object_Type;
+        case function_tag: return Function_Type;
         default: NOT_REACHED("bad type"); return NULL;
         }
     }
