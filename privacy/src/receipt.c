@@ -177,10 +177,8 @@ void
 rt_saveFormElement(MWContext *context, LO_FormElementData *ele)
 {
   
-#ifdef DEBUG_dfm
 #define E(x,y) (ele->ele_##x.y)
 #define ES(x,y) (((lo_FormElementOptionData *)ele->ele_select.options)[x].y)
-#endif
 
   if (ele == NULL) return;
 
