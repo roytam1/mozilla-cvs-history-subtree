@@ -3307,9 +3307,9 @@ LO_SubmitForm(MWContext *context, LO_FormElementStruct *form_element)
 #endif /* PRIVACY_POLICIES */
 
 #ifdef TRANSACTION_RECEIPTS
-
+#ifdef DEBUG_dfm
 	RT_SaveDocument(context, form_element);
-
+#endif
 #endif /* TRANSACTION_RECEIPTS */
 
 	return(submit_data);
