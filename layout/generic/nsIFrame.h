@@ -182,7 +182,7 @@ typedef PRUint32 nsFrameState;
 #define NS_FRAME_IS_UNFLOWABLE                        0x00000800
 
 // If this bit is set, the frame has dirty descendants.
-#define NS_FRAME_HAS_DIRTY_DESCENDANTS                0x00001000
+#define NS_FRAME_HAS_DIRTY_CHILDREN                   0x00001000
 
 // If this bit is set, the frame has an associated view
 #define NS_FRAME_HAS_VIEW                             0x00002000
