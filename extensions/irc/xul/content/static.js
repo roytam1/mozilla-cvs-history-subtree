@@ -31,7 +31,7 @@ var client = new Object();
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre1";
+client.version = "0.8.5-pre2";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -771,6 +771,15 @@ function setClientOutput(doc)
 
 function createHighlightMenu()
 {
+    /* Look for "special" highlighting rules int he motif.  These special rules
+     * are in the format ``.chatzilla-highlight[name="<display-name>"] { ... }''
+     * where <display-name> is a textual description to be placed in the
+     * Highlight submenu of the message area context menu.  The body of
+     * these rules can be applied by the user to different irc messages.  They
+     * are special becaus they do not actually match an element in the content
+     * model.  The style body is copied into a new rule that matches a pettern
+     * determined by the user.
+     */
     function processStyleRules(rules)
     {
         for (var i = 0; i < rules.length; ++i)
@@ -801,6 +810,7 @@ function createHighlightMenu()
     var menu = document.getElementById("highlightMenu");
     while (menu.firstChild)
         menu.removeChild(menu.firstChild);
+
     var menuitem = document.createElement("menuitem");
     menuitem.setAttribute ("label", getMsg("noStyle"));
     menuitem.setAttribute ("class", "highlight-menu-item");

@@ -1702,7 +1702,7 @@ function cli_ieval (e)
         client.currentObject.doEval = function (__s) { return eval(__s); }
         client.currentObject.display (e.inputData, "EVAL-IN");
         
-        rv = String(client.currentObject.doEval (e.inputData));
+        var rv = String(client.currentObject.doEval (e.inputData));
         
         client.currentObject.display (rv, "EVAL-OUT");
 
@@ -1892,7 +1892,7 @@ function cli_itopic (e)
 client.onInputAbout =
 function cli_iabout (e)
 {
-    client.currentObject.display (CIRCServer.prototype.VERSION_REPLY, "ABOUT");
+    client.currentObject.display (CIRCServer.prototype.VERSION_RPLY, "ABOUT");
     client.currentObject.display (getMsg("aboutHomepage"), "ABOUT");
     return true;
 }
