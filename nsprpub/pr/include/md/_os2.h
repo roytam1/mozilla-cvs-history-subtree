@@ -97,7 +97,6 @@ APIRET _Optlink SemReleasex86(PRAMSEM, ULONG);
 #define _PR_SI_ARCHITECTURE   "x86"    /* XXXMB hardcode for now */
 
 #define HAVE_DLL
-#define _PR_GLOBAL_THREADS_ONLY
 #undef  HAVE_THREAD_AFFINITY
 #define _PR_HAVE_THREADSAFE_GETHOST
 #define _PR_HAVE_ATOMIC_OPS
@@ -255,9 +254,6 @@ extern PRInt32 _MD_CloseFile(PRInt32 osfd);
 
 /* --- Socket IO stuff --- */
 
-#define TCPV40HDRS
-#define BSD_SELECT
-
 /* The ones that don't map directly may need to be re-visited... */
 #ifdef XP_OS2_VACPP
 #define EPIPE                     EBADF
@@ -326,6 +322,7 @@ extern PRInt32 _MD_SELECT(int nfds, fd_set *readfds, fd_set *writefds,
 #define _MD_INIT_IO                   (_PR_MD_INIT_IO)
 #define _MD_PR_POLL                   (_PR_MD_PR_POLL)
 
+/* win95 doesn't have async IO */
 #define _MD_SOCKET                    (_PR_MD_SOCKET)
 extern PRInt32 _MD_SocketAvailable(PRFileDesc *fd);
 #define _MD_SOCKETAVAILABLE           _MD_SocketAvailable
