@@ -141,54 +141,17 @@ CFLAGS          += $(MOZ_GTK_CFLAGS) $(MOZ_GTK2_CFLAGS)
 
 ifdef BUILD_STATIC_LIBS
 
-# This is so sick! We'll work backwards from the embedding manifest to
-# produce the set of components that we need to link in to a
-# ``minimal'' embedding harness.
-ifdef MINIMO
-EMBED_MANIFEST=$(topsrcdir)/embedding/config/minimo-unix
-else
-EMBED_MANIFEST=$(topsrcdir)/embedding/config/basebrowser-unix
-endif
-
 ifdef MOZ_FAT_EMBED
-EMBED_LINK_COMPS=$(FINAL_LINK_COMPS)
 EMBED_LINK_COMP_NAMES=$(FINAL_LINK_COMP_NAMES)
 else
-EMBED_LINK_COMPS=embed-link-comps
 EMBED_LINK_COMP_NAMES=embed-link-comp-names
 endif
 
-# Create a map that we can use to go from library name to component
-# symbol. N.B. that this will break if the $(FINAL_LINK_COMP_NAMES)
-# and $(FINAL_LINK_COMPS) somehow get out-of-sync and aren't in
-# _exactly_ the same order. (Hey, this is a hack!)
-components: $(FINAL_LINK_COMPS) $(FINAL_LINK_COMP_NAMES)
-	paste $(FINAL_LINK_COMPS) $(FINAL_LINK_COMP_NAMES) | sort -k 1,1 > $@
-
-# Compute the embedding libs by extracting them from the embedding
-# manifest.
-#
-# We start by selecting anything that starts with `components/', as
-# these are the component libraries. We print the `first' field to
-# strip off any crap after the library name. Next, we select for files
-# ending with `.so' so we end up with only the libraries. We then rip
-# off the `components/lib' prefix and the `.so' suffix, leaving just
-# the library name. This list is sorted, and joined with the list of
-# components that were actually _built_ to cull out anything that's
-# included in the manifest, but wasn't built.
-embed-link-comps: $(EMBED_MANIFEST) components
-	grep '^components/' $< | \
-		awk '{ print $$1; }' | \
-		grep '\.so$$' | \
-		sed -e 's.^components/lib..' -e 's/\.so//' | \
-		sort | \
-		join -o 1.1 - components > $@
-
-# Compute the symbols we'll need for the ``minimal embedding client''
-# by joining the compoent list with the sorted list of embedding
-# components.
-embed-link-comp-names: embed-link-comps components
-	sort embed-link-comps | join -o 2.2 - components > $@
+# We need to get a list of modules to include as static components,
+# from the packaging system.
+embed-link-comp-names:
+	$(PERL) $(topsrcdir)/build/package/static-comps.pl -o $(DEPTH) -l $(topsrcdir)/build/package/packages.list -vv -m $@ -i embed-link-comps gtkembed
+	sed -i -e 's/^$(LIB_PREFIX)//' -e 's/\.$(LIB_SUFFIX)$$//' embed-link-comps
 
 EmbedComponents.cpp: EmbedComponents.cpp.in Makefile Makefile.in $(EMBED_LINK_COMP_NAMES)
 	cat $< | \
@@ -196,7 +159,5 @@ EmbedComponents.cpp: EmbedComponents.cpp.in Makefile Makefile.in $(EMBED_LINK_CO
 	sed -e "s|%MODULE_LIST%|$(foreach m, $(shell cat $(EMBED_LINK_COMP_NAMES)),MODULE($(m)),)|" \
 	> $@
 
-GARBAGE += EmbedComponents.cpp embed-link-comp-names embed-link-comps components
+GARBAGE += EmbedComponents.cpp embed-link-comp-names
 endif
-
-

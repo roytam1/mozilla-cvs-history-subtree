@@ -95,7 +95,7 @@ sub _verbosePrint {
     print STDOUT @_ if ($vlevel <= $MozPackager::verbosity);
 }
 
-my $cansymlink = ($^O eq 'cygwin') ? 1 : eval {symlink('', ''); 1; };
+my $cansymlink = ($^O eq 'cygwin') ? 0 : eval {symlink('', ''); 1; };
 
 # global var may be set by clients who want to force a copy
 # instead of a symlink
@@ -202,17 +202,17 @@ sub calcDiskSpace {
 sub realDiskSpace {
     my ($path) = @_;
 
-    my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
+#    my $dsProg = File::Spec->catfile('dist', 'install', 'ds32.exe');
 
     my $spaceRequired = 0;
 
-    if (-e $dsProg) {
-        # We're on win32, use ds32.exe
-        my $command = "$dsProg /D /L0 /A /S /C 32768 $path";
-        $spaceRequired = `$command`;
-        die("Program failed: '$command' returned code ". ($? <<8))
-            if ($?);
-    } else {
+#    if (-e $dsProg) {
+#        # We're on win32, use ds32.exe
+#        my $command = "$dsProg /D /L0 /A /S /C 32768 $path";
+#        $spaceRequired = `$command`;
+#        die("Program failed: '$command' returned code ". ($? >>8))
+#            if ($?);
+#    } else {
         opendir(my $dirHandle, $path) ||
             die("Could not open directory $path for listing.");
 
@@ -226,7 +226,7 @@ sub realDiskSpace {
             }
         }
         closedir($dirHandle);
-    }
+#    }
 
     return $spaceRequired;
 }
@@ -1020,19 +1020,18 @@ sub getComponents {
         return ( );
     }
 
-    return map( { 'name' => $_,
-                  %{$parser->{'staticcomps'}->{$_}} },
-                keys %{$parser->{'staticcomps'}} );
+    return map({'name' => $_,
+                %{$parser->{'staticcomps'}->{$_}}},
+               keys %{$parser->{'staticcomps'}});
 }
 
 sub _commandFunc {
     my ($parser, $args, $file, $filename) = @_;
 
-    my ($compName, $compLib, $extra) = split ' ', $args, 3;
+    my ($compLib, $compName, $extra) = split ' ', $args, 3;
 
     die("At $filename, line $.: unrecognized staticcomp options \"$args\".")
-        if (!$compName || $extra);
-
+        if ((!$compLib) || (!$compName) || $extra);
 
     MozParser::_checkFile("dist/lib/components/$compLib", $filename, $.);
     MozPackager::_verbosePrint(2, "Static Component: $compName library $compLib");

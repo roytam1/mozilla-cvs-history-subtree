@@ -69,7 +69,6 @@ MAPPINGS = dist/bin=bin xpiroot/=
 MACAPP_MAPPINGS = dist/bin=Contents/MacOS approot=Contents
 
 dump-packages:
-	cd $(DEPTH);
 	@$(PERL) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -u $(PACKAGE_FLAGS)
 
 # This rule will stage any one package. If you need to stage multiple packages or

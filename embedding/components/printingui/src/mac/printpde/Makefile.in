@@ -47,6 +47,7 @@ else
 BUILDSTYLE	= Deployment
 endif
 
+MODULE       = printpde
 PACKAGE_FILE = printpde.pkg
 
 include $(topsrcdir)/config/rules.mk

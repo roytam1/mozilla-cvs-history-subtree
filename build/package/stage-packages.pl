@@ -45,7 +45,7 @@ sub PrintUsage
 
 Usage
 
-  perl make-packages.pl [options] packages...
+  perl stage-packages.pl [options] packages...
 
   -c, --command-handler=handler[,handler...]
     Specify a comma-separated list of command handlers. Currently

@@ -37,11 +37,10 @@
 sub PrintUsage
 {
     print
-"stage-packages.pl
+"dump-packages.pl
 
-  Parses package list and package files, and copies (stages) the files
-  for a set of packages to a staging area. It will optionally also
-  create a tarball from the package.
+  Dumps (for debugging purposes) all of the packages/package contents
+  from the package files in dist/packages.
 
 Usage
 
@@ -70,7 +69,7 @@ Usage
   -w, --warn-missing
     Issue a warning when a file listed in a package is missing. The
     default behavior is to abort.\n";
-    exit;
+    exit 1;
 }
 
 use File::Spec;
@@ -144,6 +143,7 @@ foreach my $package (keys %MozPackages::packages) {
     $parser->addMapping("dist/include", "dist/include");
     $parser->addMapping("dist/idl", "dist/idl");
     $parser->addMapping("xpiroot", "xpiroot");
+    $parser->addMapping("approot", "approot");
     $parser->addMapping("installer", "installer");
     $parser->parse($packagesDir, $package);
 

@@ -117,7 +117,7 @@ export:: .nss.cleaned
 .nss.checkout:
 	touch $(srcdir)/$@
 
-dependclean export::
+dependclean export packages chrome::
 	$(MAKE) -C boot $@
 	$(MAKE) -C ssl $@
 ifdef MOZ_XUL

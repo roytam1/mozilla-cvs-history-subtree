@@ -30,6 +30,8 @@ MODULE_NAME	= nsWidgetMacModule
 XPIDL_MODULE	= widget_mac
 GRE_MODULE	= 1
 
+PACKAGE_FILE = widget_mac.pkg
+
 REQUIRES	= xpcom \
 		  gfx \
 		  string \

@@ -119,6 +119,7 @@ xpfe-mailnews-xpi      : xpfe-mailnews
 
 # some use a separately-installed GRE
 mfcembed               : gre-support walletviewers
+mfcembed-xpi           : mfcembed
 
 # some don't use a GRE (yet, maybe ever)
 minimo                 : gecko nss psm psm-support
