@@ -332,7 +332,10 @@ PRBool nsMapiRegistryUtils::IsDefaultMailClient()
 
     //first try to get the users default mail client
     nsCAutoString name; 
-    GetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "", name);
+    // old mail clients like netscape 4.x never channge the current user key, so it is possible for them to become
+    // the default mail client and we don't notice because we see that thunderbird still owns the HKCU key...
+    // doh!
+    // GetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "", name);
 
     //if that fails then get the machine's default client
     if(name.IsEmpty()){
