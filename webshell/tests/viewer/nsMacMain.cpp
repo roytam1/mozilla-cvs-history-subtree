@@ -245,7 +245,9 @@ nsNativeBrowserWindow::CreateMenuBar(PRInt32 aWidth)
 {
 	for (int i = menu_First; i <= menu_Last; i++)
 	{
-		InsertMenu(GetMenu(i), 0);
+    MenuHandle menu = GetMenu(i);
+    NS_ASSERTION(menu, "menu failed to load");
+    if (menu) InsertMenu(menu, 0);
 	}
 	InsertMenu(GetMenu(submenu_Print), -1);
 	InsertMenu(GetMenu(submenu_CompatibilityMode), -1);
@@ -419,7 +421,7 @@ nsNativeBrowserWindow::DispatchMenuItem(PRInt32 aID)
 /**
  * Quit AppleEvent handler.
  */
-static pascal OSErr handleQuitApplication(const AppleEvent*, AppleEvent*, UInt32)
+static pascal OSErr handleQuitApplication(const AppleEvent*, AppleEvent*, long)
 {
 	if (gTheApp != nsnull) {
 		gTheApp->Exit();
@@ -436,13 +438,31 @@ int main(int argc, char **argv)
 #if !TARGET_CARBON
 	// Set up the toolbox and (if DEBUG) the console
 	InitializeMacToolbox();
+#endif
 
 	// Install an a Quit AppleEvent handler.
 	OSErr err = AEInstallEventHandler(kCoreEventClass, kAEQuitApplication,
-									NewAEEventHandlerProc(handleQuitApplication), 0, false);
+                                    NewAEEventHandlerUPP(handleQuitApplication), 0, false);
 	NS_ASSERTION((err==noErr), "AEInstallEventHandler failed");
 
+#ifdef MACOSX
+  // use the location of the executable to learn where everything is, this
+  // is because the current working directory is ill-defined when the
+  // application is double-clicked from the Finder.
+  {
+    char* path = strdup(argv[0]);
+    char* lastSlash = strrchr(path, '/');
+    if (lastSlash) {
+      *lastSlash = '\0';
+      setenv("MOZILLA_FIVE_HOME", path, 1);
+    }
+    free(path);
+
+    for (int i = 0; i < argc; i++)
+      printf("arg[%d] = %s\n", i, argv[i]);
+  }
 #endif
+
 	// Start up XPCOM?
  	nsresult rv = NS_InitXPCOM(nsnull, nsnull);
 	NS_ASSERTION(NS_SUCCEEDED(rv), "NS_InitXPCOM failed");
