@@ -2928,10 +2928,6 @@ nsresult nsChromeRegistry::LoadProfileDataSource()
     rv = AddToCompositeDataSource(PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
-    // We have to flush the chrome cache!
-    rv = FlushCaches();
-    if (NS_FAILED(rv)) return rv;
-
     // XXX this sucks ASS. This is a temporary hack until we get
     // around to fixing the skin switching bugs.
     // Select and Remove skins based on a pref set in a previous session.
@@ -2945,6 +2941,10 @@ nsresult nsChromeRegistry::LoadProfileDataSource()
           pref->DeleteBranch("general.skins.selectedSkin");
       }
     }
+
+    // We have to flush the chrome cache!
+    rv = FlushCaches();
+    if (NS_FAILED(rv)) return rv;
 
     rv = LoadStyleSheet(getter_AddRefs(mScrollbarSheet), nsCAutoString("chrome://global/skin/scrollbars.css"));
     // This must always be the last line of profile initialization!
