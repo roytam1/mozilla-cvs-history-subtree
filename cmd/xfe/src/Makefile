@@ -220,7 +220,7 @@ CPPSRCS		+= \
 		  PrefsPageAddress.cpp \
 		  PrefsPageMessages.cpp \
 		  PrefsPageNServer.cpp \
-		  Progress.cpp \
+		  ProgressFrame.cpp \
 		  SubUpgradeDialog.cpp \
 		  $(NULL)
 endif
