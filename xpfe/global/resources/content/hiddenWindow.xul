@@ -42,6 +42,8 @@ Contributor(s): ______________________________________. -->
 %buildDTD;
 <!ENTITY % navigatorDTD SYSTEM "chrome://navigator/locale/navigator.dtd" >
 %navigatorDTD;
+<!ENTITY % mainWindowDTD SYSTEM "chrome://navigator/locale/mainWindow.dtd" >
+%mainWindowDTD;
 ]>
 
 <window xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"

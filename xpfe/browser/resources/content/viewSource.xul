@@ -9,6 +9,8 @@
   %brandDTD;
   <!ENTITY % viewSourceDTD SYSTEM "chrome://navigator/locale/viewSource.dtd" >
   %viewSourceDTD;
+  <!ENTITY % mainWindowDTD SYSTEM "chrome://navigator/locale/mainWindow.dtd" >
+  %mainWindowDTD;
 ]>            
 
 <window id="main-window" xmlns:html="http://www.w3.org/1999/xhtml"
