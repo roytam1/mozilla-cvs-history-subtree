@@ -22,6 +22,9 @@
    For more information on RDF, look at the RDF section of www.mozilla.org
 */
 
+#define	HT_RAPTOR	1
+
+#ifndef	HT_RAPTOR
 #include "fs2rdf.h"
 #include "glue.h"
 #include "hist2rdf.h"
@@ -37,6 +40,11 @@
 #include "allxpstr.h"
 #endif
 /* END NEW_STRING_LIB*/
+
+#else
+#include "ht.h"
+#endif
+
 
 	/* globals */
 HT_Icon			urlList = NULL;
@@ -106,16 +114,21 @@ HT_Startup()
 	if (gInited == PR_FALSE)
 	{
 		gInited = PR_TRUE;
+
+#ifndef	HT_RAPTOR
 		gMissionControlEnabled = false;
 		PREF_GetBoolPref(MISSION_CONTROL_RDF_PREF, &gMissionControlEnabled);
+#endif
 		
 		/* Initialize the HT templates. */
 		gChromeTemplate = newTemplatePane("NC:ChromeDefaults");
 		gNavigationTemplate = newTemplatePane("NC:NavigationDefaults");
 		gManagementTemplate = newTemplatePane("NC:ManagementDefaults");
 
+#ifndef	HT_RAPTOR
 		/* HT timer every 12 seconds */
 		htTimerID = FE_SetTimeout(htTimerRoutine, NULL, 1000 * 12);
+#endif
 	}
 }
 
@@ -137,11 +150,14 @@ HT_Shutdown()
 	freeMenuCommandList();
 	gInited = PR_FALSE;
 	gMissionControlEnabled = false;
+
+#ifndef	HT_RAPTOR
 	if (htTimerID != NULL)
 	{
 		FE_ClearTimeout(htTimerID);
 		htTimerID = NULL;
 	}
+#endif
 }
 
 
@@ -243,9 +259,11 @@ htTimerRoutine(void *timerData)
 		}
 	}
 
+#ifndef	HT_RAPTOR
 	/* if found/updated something, try again a bit (half second later),
 	   otherwise try again in 12 seconds */
 	htTimerID = FE_SetTimeout(htTimerRoutine, NULL, ((foundFlag == PR_TRUE) ? (500) : (1000 * 12)));
+#endif
 }
 
 
@@ -257,7 +275,7 @@ possiblyUpdateView(HT_View view)
 	PRBool		foundFlag = PR_FALSE;
 	uint32		theIndex;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 	if (view == NULL)	return(foundFlag);
 
 	/* walk the list backwards */
@@ -293,7 +311,7 @@ updateViewItem(HT_Resource node)
 	RDF_Resource		r;
 	PRBool			foundFlag;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 	if (node == NULL)	return;
 
 	/* mark children as dirty and inited */
@@ -399,7 +417,7 @@ HT_IsLocalData (HT_Resource node)
 	PRBool		isLocal = PR_TRUE;
 	char		*origin;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -422,7 +440,7 @@ HT_DataSource (HT_Resource node)
 {
 	char		*dataSource = NULL;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -438,8 +456,8 @@ newHTEntry (HT_View view, RDF_Resource node)
 {
 	HT_Resource		existing, nr;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(node != NULL);
 
 	if ((nr = (HT_Resource)getMem(sizeof(HT_ResourceStruct))) != NULL)
 	{
@@ -475,8 +493,8 @@ addWorkspace(HT_Pane pane, RDF_Resource r, void *feData)
 {
 	HT_View			view;
 
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(r != NULL);
 
 	/* if view has been deleted (false assertion), don't reassert it */
 
@@ -495,8 +513,8 @@ deleteWorkspace(HT_Pane pane, RDF_Resource r)
 	HT_Resource		parent;
 	HT_View			view, nextView;
 
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(r != NULL);
 
 	/* find appropriate view(s) and delete them */
 
@@ -538,9 +556,9 @@ htrdfNotifFunc (RDF_Event ns, void* pdata)
 	RDF_Resource		vu;
 
 	pane = (HT_Pane)pdata;
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	hash = pane->hash;
-	PR_ASSERT(hash != NULL);
+	XP_ASSERT(hash != NULL);
 
 	switch (ns->eventType) 
 	{     
@@ -684,9 +702,9 @@ bmkNotifFunc (RDF_Event ns, void* pdata)
 	RDF_UnassertEvent	uev = NULL;
 
 	pane = (HT_Pane)pdata;
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	hash = pane->hash;
-	PR_ASSERT(hash != NULL);
+	XP_ASSERT(hash != NULL);
 
 	switch (ns->eventType) 
 	{
@@ -805,10 +823,10 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 	char		*node1Name = NULL, *node2Name = NULL;
 	char		*id, *pos1 = NULL, *pos2 = NULL;
 	RDF_Resource	pos1Resource, pos2Resource;
-	time_t		date1, date2;
+	time_t		date1=0, date2=0;
 
-	PR_ASSERT(node1 != NULL);
-	PR_ASSERT(node2 != NULL);
+	XP_ASSERT(node1 != NULL);
+	XP_ASSERT(node2 != NULL);
 
 	if (((*node1) == NULL) || ((*node2) == NULL))
 	{
@@ -841,8 +859,10 @@ nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 			if ((sortTokenType == HT_COLUMN_STRING) &&
 				(data1 != NULL) && (data2 != NULL))
 			{
+#ifndef	HT_RAPTOR
 				date1 = (time_t)XP_ParseTimeString((char *)data1, FALSE);
 				date2 = (time_t)XP_ParseTimeString((char *)data2, FALSE);
+#endif
 				if ((date1 != 0) && (date2 != 0))
 				{
 					data1 = (void *)date1;
@@ -969,8 +989,10 @@ sortNodes(HT_View view, HT_Resource parent, HT_Resource *children, uint32 numChi
 	uint32			sortTokenType = 0;
 	uint32			startIndex, loop;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(parent != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(parent != NULL);
+
+#ifndef	HT_RAPTOR
 
 	containerType = resourceType(parent->node);
 	if ((view->sortToken == NULL) && (containerType != RDF_RT) && 0)
@@ -1025,6 +1047,7 @@ sortNodes(HT_View view, HT_Resource parent, HT_Resource *children, uint32 numChi
 		view->sortTokenType = sortTokenType;
 		view->descendingFlag = descendingFlag;
 	}
+#endif
 }
 
 
@@ -1036,8 +1059,8 @@ refreshItemList1(HT_View view, HT_Resource node)
 	HT_Resource		*r;
 	uint32			loop, numElements=0, numGrandChildren=0;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node == NULL)	return(0);
 	node->view = view;
@@ -1101,9 +1124,9 @@ refreshItemList1(HT_View view, HT_Resource node)
 void
 refreshItemList (HT_Resource node, HT_Event whatHappened)
 {
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
-	PR_ASSERT(node->view->top != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
+	XP_ASSERT(node->view->top != NULL);
 
 	if ((node == NULL) || (node->view == NULL) || (node->view->top == NULL))
 	{
@@ -1166,7 +1189,7 @@ HT_GetContainerItem(HT_Resource parent, uint32 childNum)
 {
 	HT_Resource	child = NULL;
 
-	PR_ASSERT(parent != NULL);
+	XP_ASSERT(parent != NULL);
 
 	if (parent != NULL)
 	{
@@ -1187,7 +1210,7 @@ HT_GetCountDirectChildren(HT_Resource node)
 {
 	uint32		count = 0;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (HT_IsContainer(node) && HT_IsContainerOpen(node))
 	{
@@ -1203,7 +1226,7 @@ HT_GetCountVisibleChildren(HT_Resource node)
 {
 	uint32		count=0;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (HT_IsContainer(node) && HT_IsContainerOpen(node))
 	{
@@ -1222,7 +1245,7 @@ initToolbars (HT_Pane pane)
 	RDF_Resource		n;
 	PRBool			err = false;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	if ((c = RDF_GetSources(pane->db, gNavCenter->RDF_Toolbar, gCoreVocab->RDF_parent,
 				RDF_RESOURCE_TYPE, 1)) != NULL)
@@ -1393,16 +1416,18 @@ HT_PaneFromURL(void *pContext, char *url, char* templateType, HT_Notification n,
         char*                   topUrl = NULL;
         char*                   title = NULL;
 
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(url != NULL);
         while (pn < param_count) {
           char* param_name = *(param_names + pn) ;
           if (!param_name) break;
-          if (RDF_STRCMP(param_name, "root") == 0) {
+          if (strcmp(param_name, "root") == 0) {
             topUrl = *(param_values + pn);
           }
-          if (RDF_STRCMP(param_name, "title") == 0) {
+          if (strcmp(param_name, "title") == 0) {
             title = *(param_values + pn);
-	    PR_ASSERT(IsUTF8String(title));		
+#ifndef	HT_RAPTOR
+	    XP_ASSERT(IsUTF8String(title));		
+#endif
           }
           pn++;
         }
@@ -1430,7 +1455,7 @@ HT_PaneFromURL(void *pContext, char *url, char* templateType, HT_Notification n,
         while ((db->translators[0]) && (pn < param_count)) {
           char* param_name = *(param_names + pn) ;
           if (!param_name) break;
-          if (RDF_STRCMP(param_name, "Column") == 0) {
+          if (strcmp(param_name, "Column") == 0) {
             char* param_value = *(param_values + pn) ;
             RDF_Resource r    = RDF_GetResource(db, param_value, 1);
             column = (HT_Column)getMem(sizeof(HT_ColumnStruct));
@@ -1438,7 +1463,7 @@ HT_PaneFromURL(void *pContext, char *url, char* templateType, HT_Notification n,
             column->tokenType = HT_COLUMN_STRING;
             *columnList = column;
             columnList = &(column->next);
-            column->name = (RDF_STRCHR(param_value, ':') ? copyString(strchr(param_value, ':')+1) :
+            column->name = (strchr(param_value, ':') ? copyString(strchr(param_value, ':')+1) :
                             copyString(param_value));
             HT_SetColumnVisibility(view, r,  HT_COLUMN_STRING, 1);
           } 
@@ -1509,12 +1534,14 @@ HT_AddToContainer (HT_Resource container, char *url, char *optionalTitle)
 	RDF_Resource            r;
 	RDF             	db;
 
-	PR_ASSERT(container != NULL);
-	PR_ASSERT(container->view != NULL);
-	PR_ASSERT(container->view->pane != NULL);
-	PR_ASSERT(container->view->pane->db != NULL);
-	PR_ASSERT(url != NULL);
-	PR_ASSERT(IsUTF8String(optionalTitle));		
+	XP_ASSERT(container != NULL);
+	XP_ASSERT(container->view != NULL);
+	XP_ASSERT(container->view->pane != NULL);
+	XP_ASSERT(container->view->pane->db != NULL);
+	XP_ASSERT(url != NULL);
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(optionalTitle));		
+#endif
 
 	db = container->view->pane->db;
 
@@ -1527,11 +1554,12 @@ HT_AddToContainer (HT_Resource container, char *url, char *optionalTitle)
 		}
 		htSetBookmarkAddDateToNow(r);
 		RDF_Assert(db, r, gCoreVocab->RDF_parent, container->node, RDF_RESOURCE_TYPE);
-		/* htLookInCacheForMetaTags(url); */
 	}
 }
 
 
+
+#ifndef	HT_RAPTOR
 
 PR_PUBLIC_API(void)
 HT_LayoutComplete(MWContext *context, TagList *metaTags, char *url)
@@ -1561,11 +1589,11 @@ struct	{
 	matches[7].name = "toolbarDisabledIcon";	matches[7].r = gNavCenter->toolbarDisabledIcon;
 	matches[8].name = NULL;			matches[8].r = NULL;
 
-	PR_ASSERT(context != NULL);
+	XP_ASSERT(context != NULL);
 	if (context == NULL)	return;
-	PR_ASSERT(metaTags != NULL);
+	XP_ASSERT(metaTags != NULL);
 	if (metaTags == NULL)	return;
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(url != NULL);
 	if (url == NULL)	return;
 
 	intl_csi = LO_GetDocumentCharacterSetInfo(context);
@@ -1587,7 +1615,7 @@ struct	{
 				{
 					for (matchNum=0; matches[matchNum].name != NULL; matchNum++)
 					{
-						if (!RDF_STRCMP((char *)name, matches[matchNum].name))
+						if (!strcmp((char *)name, matches[matchNum].name))
 						{
 							/* if already exists, don't change */
 							if ((temp = RDF_GetSlotValue(gNCDB, r,
@@ -1610,92 +1638,6 @@ struct	{
 		metaList = metaList->next;
 	}
 }
-
-
-
-#if 0
-void
-htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx)
-{
-	NET_AllHeaders		*headers;
-	RDF_Resource		r;
-	char			*temp;
-	unsigned long		headerNum=0,matchNum;
-
-struct	{
-	char		*name;
-	RDF_Resource	r;
-	} matches[9];
-
-	/* Note: if more elements are added, adjust the size of the array above! */
-
-	matches[0].name = "description";	matches[0].r = gWebData->RDF_description;
-	matches[1].name = "keyword";		matches[1].r = gWebData->RDF_keyword;
-	matches[2].name = "smallIcon";		matches[2].r = gNavCenter->RDF_smallIcon;
-	matches[3].name = "largeIcon";		matches[3].r = gNavCenter->RDF_largeIcon;
-	matches[4].name = "smallPressedIcon";	matches[4].r = gNavCenter->RDF_smallPressedIcon;
-	matches[5].name = "largePressedIcon";	matches[5].r = gNavCenter->RDF_largePressedIcon;
-	matches[6].name = "smallRolloverIcon";	matches[6].r = gNavCenter->RDF_smallRolloverIcon;
-	matches[7].name = "largeRolloverIcon";	matches[7].r = gNavCenter->RDF_largeRolloverIcon;
-	matches[8].name = NULL;			matches[8].r = NULL;
-
-	if (urls != NULL)
-	{
-		if ((headers = &(urls->all_headers)) != NULL)
-		{
-			if ((r = RDF_GetResource(gNCDB, urls->address, 1)) != NULL)
-			{
-				while (headers->key[headerNum] != NULL)
-				{
-					for (matchNum=0; matches[matchNum].name != NULL; matchNum++)
-					{
-						if (!RDF_STRCMP(headers->key[headerNum], matches[matchNum].name))
-						{
-							if (headers->value[headerNum] != NULL)
-							{
-								/* if already exists, don't change */
-								if ((temp = RDF_GetSlotValue(gNCDB, r,
-									matches[matchNum].r, RDF_STRING_TYPE,
-									PR_FALSE, PR_TRUE)) != NULL)
-								{
-									freeMem(temp);
-								}
-								else
-								{
-									RDF_Assert(gNCDB, r, matches[matchNum].r,
-										headers->value[headerNum],
-										RDF_STRING_TYPE);
-								}
-							}
-						}
-					}
-					++headerNum;
-				}
-			}
-		}
-	}
-}
-#endif
-
-
-
-#if 0
-void
-htLookInCacheForMetaTags(char *url)
-{
-	URL_Struct      	*urls;
-
-	PR_ASSERT(url != NULL);
-
-	if (url != NULL)
-	{
-		if ((urls = NET_CreateURLStruct(url,  NET_DONT_RELOAD)) != NULL)
-		{
-			NET_GetURL(urls, FO_ONLY_FROM_CACHE_AND_PRESENT,
-				gRDFMWContext(NULL), htMetaTagURLExitFunc);
-		}
-	}
-}
 #endif
 
 
@@ -1705,8 +1647,10 @@ HT_AddBookmark (char *url, char *optionalTitle)
 {
 	RDF_Resource		nbFolder, r;
 
-	PR_ASSERT(url != NULL);
-	PR_ASSERT( IsUTF8String(optionalTitle));		
+	XP_ASSERT(url != NULL);
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(optionalTitle));		
+#endif
 
 	if ((nbFolder = RDFUtil_GetNewBookmarkFolder()) != NULL)
 	{
@@ -1733,9 +1677,10 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 	struct tm	*time;
 	uint32		now;
 
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(r != NULL);
 	if (r == NULL)	return;
 
+#ifndef	HT_RAPTOR
 	if ((temp = RDF_GetSlotValue(gNCDB, r, gNavCenter->RDF_bookmarkAddDate,
 		RDF_STRING_TYPE, PR_FALSE, PR_TRUE)) != NULL)
 	{
@@ -1759,6 +1704,7 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 				(void *)copyString(buffer), RDF_STRING_TYPE);
 		}
 	}
+#endif
 }
 
 
@@ -1781,7 +1727,7 @@ HTRDF_GetDB(HT_Pane pane)
 
 	PREF_SetDefaultCharPref("browser.NavCenter", "http://rdf.netscape.com/rdf/navcntr.rdf");
 	PREF_CopyCharPref("browser.NavCenter", &navCenterURL);
-	if (!RDF_STRCHR(navCenterURL, ':'))
+	if (!strchr(navCenterURL, ':'))
 	{
 		navCenterURL = makeDBURL(navCenterURL);
 	}
@@ -1879,7 +1825,7 @@ initViews (HT_Pane pane)
 	RDF_Resource		n;
 	PRBool			err = false;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	if ((c = RDF_GetSources(pane->db, gNavCenter->RDF_Top, gCoreVocab->RDF_parent,
 				RDF_RESOURCE_TYPE, 1)) != NULL)
@@ -1904,8 +1850,8 @@ htNewWorkspace(HT_Pane pane, char *id, char *optionalTitle, uint32 workspacePos)
 {
 	RDF_Resource		r;
 
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(id != NULL);
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(id != NULL);
 	if (pane == NULL)	return;
 	if (id == NULL)		return;
 
@@ -1940,9 +1886,12 @@ htNewWorkspace(HT_Pane pane, char *id, char *optionalTitle, uint32 workspacePos)
 PR_PUBLIC_API(void)
 HT_NewWorkspace(HT_Pane pane, char *id, char *optionalTitle)
 {
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(id != NULL);
-	PR_ASSERT( IsUTF8String(optionalTitle));		
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(id != NULL);
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(optionalTitle));		
+#endif
+
 	if (pane == NULL)	return;
 	if (id == NULL)		return;
 
@@ -1978,8 +1927,8 @@ htSetWorkspaceOrder(RDF_Resource src, RDF_Resource dest, PRBool afterDestFlag)
 	HT_View			*viewList, *prevViewList, srcView, *srcViewList;
 	PRBool			foundSrc, foundDest;
 
-	PR_ASSERT(src != NULL);
-	PR_ASSERT(dest != NULL);
+	XP_ASSERT(src != NULL);
+	XP_ASSERT(dest != NULL);
 	if ((src == NULL) || (dest == NULL))	return;
 
 	paneList = gHTTop;
@@ -2074,11 +2023,11 @@ htSetWorkspaceOrder(RDF_Resource src, RDF_Resource dest, PRBool afterDestFlag)
 PR_PUBLIC_API(void)
 HT_SetWorkspaceOrder(HT_View src, HT_View dest, PRBool afterDestFlag)
 {
-	PR_ASSERT(src != NULL);
-	PR_ASSERT(src->pane != NULL);
-	PR_ASSERT(dest != NULL);
-	PR_ASSERT(dest->pane != NULL);
-	PR_ASSERT(src->pane == dest->pane);
+	XP_ASSERT(src != NULL);
+	XP_ASSERT(src->pane != NULL);
+	XP_ASSERT(dest != NULL);
+	XP_ASSERT(dest->pane != NULL);
+	XP_ASSERT(src->pane == dest->pane);
 
 	if ((src == NULL) || (dest == NULL))	return;
 
@@ -2174,7 +2123,11 @@ HT_NewView (RDF_Resource topNode, HT_Pane pane, PRBool useColumns, void *feData,
 			column->token = gCoreVocab->RDF_name;
 			column->tokenType = HT_COLUMN_STRING;
 			column->width = 10000;
+#ifndef	HT_RAPTOR
 			column->name = copyString(XP_GetString(RDF_DEFAULTCOLUMNNAME));
+#else
+			column->name = copyString("Name");
+#endif
 
 			view->columns = column;
 		}
@@ -2300,9 +2253,9 @@ sendNotification (HT_Resource node, HT_Event whatHappened, RDF_Resource s, HT_Co
 	HT_Pane			pane;
 	HT_Notification		ns;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
-	PR_ASSERT(node->view->pane != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
+	XP_ASSERT(node->view->pane != NULL);
 
 	if (node->view == NULL)			return;
 	if ((pane = node->view->pane) == NULL)	return;
@@ -2327,8 +2280,8 @@ deleteHTNode(HT_Resource node)
 	ldiv_t			cdiv;
 	uint32			bucketNum, itemListIndex, offset;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
 
 	/* HT_SetSelectedState(node, false); */
 
@@ -2495,7 +2448,7 @@ HT_DeleteView (HT_View view)
 	HT_Resource		**r;
 	uint32			loop, viewIndex;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if (view->top != NULL)					/* delete nodes */
 	{
@@ -2579,14 +2532,16 @@ HT_GetViewName(HT_View view)
 {
 	char		*name = NULL;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(view->top != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(view->top != NULL);
 
 	if (view != NULL)
 	{
 		HT_GetNodeData (view->top, gCoreVocab->RDF_name, HT_COLUMN_STRING, &name);
 	}
-	PR_ASSERT( IsUTF8String(name));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(name));		
+#endif
 	return(name);
 }
 
@@ -2598,7 +2553,7 @@ saveWorkspaceOrder(HT_Pane pane)
 	HT_View			view;
 	uint32			viewListIndex=1, workspacePos;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	if (pane == NULL)	return;
 
 	view = pane->viewList;
@@ -2627,7 +2582,7 @@ htDeletePane(HT_Pane pane, PRBool saveWorkspaceOrderFlag)
 	HT_Pane			*paneList;
 	HT_View			view;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	if (pane == NULL)	return;
 
 	if (saveWorkspaceOrderFlag == PR_TRUE)
@@ -2674,7 +2629,7 @@ htDeletePane(HT_Pane pane, PRBool saveWorkspaceOrderFlag)
 PR_PUBLIC_API(HT_Error)
 HT_DeletePane (HT_Pane pane)
 {
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	htDeletePane(pane, PR_TRUE);
 	return (HT_NoErr);
@@ -2687,7 +2642,7 @@ HT_TopNode (HT_View view)
 {
 	HT_Resource		top = NULL;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if (view != NULL)
 	{
@@ -2704,7 +2659,7 @@ resynchItem (HT_Resource node, void *token, void *data, PRBool assertAction)
 {
 	HT_Value		*value, *nextValue, tempValue;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	value = &(node->values);
 	while ((*value) != NULL)
@@ -3126,10 +3081,10 @@ fillContainer (HT_Resource node)
 	char			*advertURL;
 #endif
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
-	PR_ASSERT(node->view->pane != NULL);
-	PR_ASSERT(node->view->pane->db != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
+	XP_ASSERT(node->view->pane != NULL);
+	XP_ASSERT(node->view->pane->db != NULL);
 
 #if defined(WIN32) || defined(XP_MAC)
 	advertURL = RDF_GetSlotValue (node->view->pane->db, node->node, 
@@ -3174,8 +3129,8 @@ sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event wh
 	HT_Pane			pane;
 	HT_Notification		ns;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(view->pane != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(view->pane != NULL);
 
 	if (view == NULL)			return;
 	if ((pane = view->pane) == NULL)	return;
@@ -3196,8 +3151,8 @@ HT_NewCursor (HT_Resource node)
 	HT_Cursor		c = NULL;
 	PRBool			openFlag = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
 
 	if ((node==NULL) /* || (!HT_IsContainer(node)) */)
 	{
@@ -3260,7 +3215,7 @@ HT_NewColumnCursor (HT_View view)
 {
 	HT_Cursor		cursor;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if ((cursor = (HT_Cursor)getMem(sizeof(HT_CursorStruct))) != NULL)
 	{
@@ -3277,13 +3232,15 @@ HT_GetNextColumn(HT_Cursor cursor, char **colName, uint32 *colWidth,
 {
 	HT_Column		column;
 
-	PR_ASSERT(cursor != NULL);
+	XP_ASSERT(cursor != NULL);
 
 	if ((column = cursor->columns) == NULL)	return(false);
 
 	if (colName != NULL) {
 		*colName = column->name;
-		PR_ASSERT( IsUTF8String(*colName));		
+#ifndef	HT_RAPTOR
+		XP_ASSERT( IsUTF8String(*colName));		
+#endif
 	}
 	if (colWidth != NULL)	*colWidth = column->width;
 	if (token != NULL)	*token = column->token;
@@ -3298,7 +3255,7 @@ HT_GetNextColumn(HT_Cursor cursor, char **colName, uint32 *colWidth,
 PR_PUBLIC_API(void)
 HT_DeleteColumnCursor(HT_Cursor cursor)
 {
-	PR_ASSERT(cursor != NULL);
+	XP_ASSERT(cursor != NULL);
 
 	freeMem(cursor);
 }
@@ -3310,9 +3267,9 @@ HT_SetColumnOrder(HT_View view, void *srcColToken, void *destColToken, PRBool af
 {
 	HT_Column	*columnList, *srcCol = NULL, *destCol = NULL, temp;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(srcColToken != NULL);
-	PR_ASSERT(destColToken != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(srcColToken != NULL);
+	XP_ASSERT(destColToken != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3356,8 +3313,8 @@ HT_GetColumnWidth(HT_View view, void *token, uint32 tokenType)
 	HT_Column	*columnList;
 	uint32		width = 0;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3384,8 +3341,8 @@ HT_SetColumnWidth(HT_View view, void *token, uint32 tokenType, uint32 width)
 {
 	HT_Column	*columnList;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3410,8 +3367,8 @@ HT_GetColumnVisibility(HT_View view, void *token, uint32 tokenType)
 	HT_Column	*columnList;
 	PRBool		isHiddenFlag = PR_TRUE;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3436,8 +3393,8 @@ HT_SetColumnVisibility(HT_View view, void *token, uint32 tokenType, PRBool isHid
 	HT_Column	*columnList;
 	HT_Event	theEvent;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3479,7 +3436,7 @@ HT_HideColumn(HT_View view, void *token, uint32 tokenType)
 PR_PUBLIC_API(void)
 HT_SetSortColumn(HT_View view, void *token, uint32 tokenType, PRBool descendingFlag)
 {
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	view->sortToken = token;
 	view->sortTokenType = tokenType;
@@ -3496,8 +3453,8 @@ HT_SetColumnFEData(HT_View view, void *token, void *data)
 {
 	HT_Column	*columnList;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3521,8 +3478,8 @@ HT_GetColumnFEData (HT_View view, void *token)
 	HT_Column	*columnList;
 	void		*data = NULL;
 
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((columnList = &(view->columns)) != NULL)
 	{
@@ -3575,7 +3532,7 @@ HT_ContainerSupportsNaturalOrderSort(HT_Resource container)
 PR_PUBLIC_API(HT_Error)
 HT_DeleteCursor (HT_Cursor cursor)
 {
-	PR_ASSERT(cursor != NULL);
+	XP_ASSERT(cursor != NULL);
 
 	if (cursor != NULL)
 	{
@@ -3591,7 +3548,7 @@ HT_GetNextItem (HT_Cursor cursor)
 {
 	HT_Resource		ans = NULL;
 
-	PR_ASSERT(cursor != NULL);
+	XP_ASSERT(cursor != NULL);
 
 	if (cursor != NULL)
 	{
@@ -3612,7 +3569,7 @@ HT_NewContextMenuCursor (HT_Resource node)
 {
 	HT_Cursor		cursor;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if ((cursor = (HT_Cursor)getMem(sizeof(HT_CursorStruct))) != NULL)
 	{
@@ -4234,8 +4191,8 @@ HT_NextContextMenuItem (HT_Cursor cursor, HT_MenuCmd *menuCmd)
 	PRBool			sepFlag = false, enableFlag = false;
 	int16			menuIndex;
 
-	PR_ASSERT(cursor != NULL);
-	PR_ASSERT(menuCmd != NULL);
+	XP_ASSERT(cursor != NULL);
+	XP_ASSERT(menuCmd != NULL);
 
 	if (cursor->commandExtensions == PR_FALSE)
 	{
@@ -4360,7 +4317,7 @@ HT_NextContextMenuItem (HT_Cursor cursor, HT_MenuCmd *menuCmd)
 PR_PUBLIC_API(void)
 HT_DeleteContextMenuCursor(HT_Cursor cursor)
 {
-	PR_ASSERT(cursor != NULL);
+	XP_ASSERT(cursor != NULL);
 
 	if (cursor != NULL)
 	{
@@ -4392,6 +4349,7 @@ HT_GetMenuCmdName(HT_MenuCmd menuCmd)
 	HT_MenuCommand		menuCommand;
 	char			*menuName = NULL;
 
+#ifndef	HT_RAPTOR
 	if (menuCmd < NUM_MENU_CMDS)
 	{
 		menuName = XP_GetString(RDF_CMD_0 + menuCmd);
@@ -4409,7 +4367,8 @@ HT_GetMenuCmdName(HT_MenuCmd menuCmd)
 			menuCommand = menuCommand->next;
 		} 
 	}
-	PR_ASSERT( IsUTF8String(menuName));		
+	XP_ASSERT( IsUTF8String(menuName));		
+#endif
 	return(menuName);
 }
 
@@ -4418,11 +4377,11 @@ HT_GetMenuCmdName(HT_MenuCmd menuCmd)
 void
 exportCallbackWrite(PRFileDesc *fp, char *str)
 {
-	PR_ASSERT(fp != NULL);
+	XP_ASSERT(fp != NULL);
 
 	if (str != NULL)
 	{
-		PR_Write(fp, str, RDF_STRLEN(str));
+		PR_Write(fp, str, strlen(str));
 	}
 }
 
@@ -4434,7 +4393,7 @@ exportCallback(MWContext *context, char *filename, RDF_Resource node)
 	PRFileDesc	*fp;
 	char		*fileURL;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (filename != NULL)
 	{
@@ -4464,6 +4423,8 @@ exportCallback(MWContext *context, char *filename, RDF_Resource node)
 PR_PUBLIC_API(HT_Error)
 HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 {
+#ifndef	HT_RAPTOR
+
 	Chrome			chrome;
 	HT_Error		error = 0;
 	HT_MenuCommand		menuCommand;
@@ -4480,9 +4441,9 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 	char		*password1, *password2;
 #endif
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	view = HT_GetSelectedView(pane);
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	gBatchUpdate = true;
 	switch(menuCmd)
@@ -4519,7 +4480,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 			if ((url != NULL) && (title = FE_Prompt(((MWContext *)gRDFMWContext(NULL)),
 					XP_GetString(RDF_NEWWORKSPACEPROMPT), "")) != NULL)
 			{
-				if (!RDF_STRCMP(title, "about"))
+				if (!strcmp(title, "about"))
 				{
 					XP_FREE(title);
 					title = NULL;
@@ -4634,7 +4595,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 					if ((url = FE_Prompt(((MWContext *)gRDFMWContext(NULL)),
 							"URL:", "http://")) == NULL)	break;
 
-					if (!RDF_STRCMP(url, "about"))
+					if (!strcmp(url, "about"))
 					{
 						XP_FREE(url);
 						url = PR_smprintf("http://people.netscape.com/rjc/about.rdf#root");
@@ -5018,7 +4979,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 								XP_GetString(RDF_NEWPASSWORD))) == NULL)	break;
 				if ((password2 = FE_PromptPassword(((MWContext *)gRDFMWContext(NULL)),
 								XP_GetString(RDF_CONFIRMPASSWORD))) == NULL)	break;
-				if (RDF_STRCMP(password1, password2))
+				if (strcmp(password1, password2))
 				{
 					FE_Alert(((MWContext *)gRDFMWContext(NULL)), XP_GetString(RDF_MISMATCHPASSWORD));
 					break;
@@ -5073,6 +5034,9 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 	gBatchUpdate = false;
 
 	return(error);
+#else
+	return(0);
+#endif
 }
 
 
@@ -5083,7 +5047,7 @@ htEmptyClipboard(RDF_Resource parent)
 	RDF_Cursor		c;
 	RDF_Resource		node;
 
-	PR_ASSERT(parent != NULL);
+	XP_ASSERT(parent != NULL);
 
 	if (parent != NULL)
 	{
@@ -5108,8 +5072,8 @@ htCopyReference(RDF_Resource original, RDF_Resource newParent, PRBool empty)
 	RDF_Cursor		c;
 	RDF_Resource		node;
 
-	PR_ASSERT(original != NULL);
-	PR_ASSERT(newParent != NULL);
+	XP_ASSERT(original != NULL);
+	XP_ASSERT(newParent != NULL);
 
 	if (empty == PR_TRUE)
 	{
@@ -5160,7 +5124,7 @@ HT_GetNodeIndex(HT_View view, HT_Resource node)
 {
 	uint32		itemListIndex = 0;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -5177,7 +5141,7 @@ HT_GetViewIndex(HT_View view)
 	HT_View		viewList = NULL;
 	uint32		viewListIndex = 0;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if (view != NULL)
 	{
@@ -5198,7 +5162,7 @@ HT_GetViewIndex(HT_View view)
 PR_PUBLIC_API(PRBool)
 HT_ItemHasForwardSibling(HT_Resource r)
 {
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(r != NULL);
 
 	return ((r != NULL) && (r->next) ? true : false);
 }
@@ -5210,7 +5174,7 @@ HT_ItemHasBackwardSibling(HT_Resource r)
 {
 	PRBool		flag = false;
 
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(r != NULL);
 
 	if ((r != NULL) && r->parent && (r->parent->child != r))
 	{
@@ -5226,7 +5190,7 @@ HT_GetItemIndentation (HT_Resource r)
 {
 	uint16		depth = 0;
 
-	PR_ASSERT(r != NULL);
+	XP_ASSERT(r != NULL);
 
 	if (r != NULL)
 	{
@@ -5242,7 +5206,7 @@ HT_GetItemListCount (HT_View v)
 {
 	uint32		count = 0;
 
-	PR_ASSERT(v != NULL);
+	XP_ASSERT(v != NULL);
 
 	if (v != NULL)
 	{
@@ -5258,7 +5222,7 @@ HT_GetViewListCount (HT_Pane p)
 {
 	uint32		count = 0;
 
-	PR_ASSERT(p != NULL);
+	XP_ASSERT(p != NULL);
 
 	if (p != NULL)
 	{
@@ -5274,7 +5238,7 @@ HT_GetNthView (HT_Pane pane, uint32 theIndex)
 {
 	HT_View		view = NULL;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	if (pane != NULL)
 	{
@@ -5293,7 +5257,7 @@ HT_GetNthView (HT_Pane pane, uint32 theIndex)
 PR_PUBLIC_API(HT_Resource)
 HT_GetParent (HT_Resource node)
 {
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (!node) return NULL;
 	return (node->parent);
@@ -5320,7 +5284,7 @@ HT_IsEnabled (HT_Resource node)
 {
 	PRBool			isSelected = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -5336,7 +5300,7 @@ HT_IsSelected (HT_Resource node)
 {
 	PRBool			isSelected = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -5352,7 +5316,7 @@ HT_IsContainer (HT_Resource node)
 {
 	PRBool			isContainer = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -5368,7 +5332,7 @@ HT_IsContainerOpen (HT_Resource node)
 {
 	PRBool			isOpen = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -5401,8 +5365,8 @@ HT_IsSeparator (HT_Resource node)
 {
 	PRBool			isSep = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
 
 	if ((node != NULL) && (node->node != NULL))
 	{
@@ -5419,8 +5383,8 @@ ht_isURLReal(HT_Resource node)
 	RDF_BT			type;
 	PRBool			validFlag = true;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
 
 	type = resourceType(node->node);
 /*
@@ -5450,7 +5414,7 @@ ht_isURLReal(HT_Resource node)
 PR_PUBLIC_API(HT_Pane)
 HT_GetTemplate(int templateType)
 {
-	PR_ASSERT(templateType == ht_template_chrome ||
+	XP_ASSERT(templateType == ht_template_chrome ||
 		templateType == ht_template_management ||
 		templateType == ht_template_navigation);
 	switch(templateType) {
@@ -5510,7 +5474,7 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 	PRBool			foundData = false;
 	void			*data = NULL;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (token != NULL && nodeData != NULL)
 	{
@@ -5581,11 +5545,13 @@ htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data)
 	char			*msg;
 	PRBool			ok = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+#ifndef	HT_RAPTOR
+
+	XP_ASSERT(node != NULL);
 	if (node == NULL)	return(PR_FALSE);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(token != NULL);
 	if (token == NULL)	return(PR_FALSE);
-	PR_ASSERT(data != NULL);
+	XP_ASSERT(data != NULL);
 	if (data == NULL)	return(PR_FALSE);
 
 	if ((c = RDF_Find(gNavCenter->RDF_URLShortcut, gCoreVocab->RDF_stringEquals,
@@ -5611,6 +5577,7 @@ htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, char *data)
 		}
 		RDF_DisposeCursor(c);
 	}
+#endif
 	return(ok);
 }
 
@@ -5623,8 +5590,8 @@ HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 	PRBool			dirty = PR_TRUE;
 	char			*temp;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(token != NULL);
 
 	if (HT_IsNodeDataEditable(node, token, tokenType))
 	{
@@ -5640,7 +5607,7 @@ HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 			}
 			else if (data != NULL && oldData != NULL)
 			{
-				if (!RDF_STRCMP(data, oldData))
+				if (!strcmp(data, oldData))
 				{
 					dirty = PR_FALSE;
 				}
@@ -5707,7 +5674,7 @@ HT_SetNodeData (HT_Resource node, void *token, uint32 tokenType, void *data)
 PR_PUBLIC_API(HT_Error)
 HT_SetNodeName(HT_Resource node, void *data)
 {
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	return(HT_SetNodeData(node, gCoreVocab->RDF_name, HT_COLUMN_STRING, data));
 }
@@ -5720,9 +5687,9 @@ HT_IsNodeDataEditable(HT_Resource node, void *token, uint32 tokenType)
 	RDF_BT			type;
 	PRBool			canEditFlag = false;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
+	XP_ASSERT(token != NULL);
 
 	if (!HT_IsSeparator(node))
 	{
@@ -5817,7 +5784,7 @@ HT_GetTreeStateForButton(HT_Resource node)
 	
 	if (HT_GetTemplateData(node, gNavCenter->buttonTreeState, HT_COLUMN_STRING, &answer))
 	{
-		if (!RDF_STRCASECMP(answer, "Docked"))
+		if (!XP_STRCASECMP(answer, "Docked"))
 			return HT_DOCKED_WINDOW;
 	}
 
@@ -5860,8 +5827,8 @@ HT_GetWindowType(HT_Pane pane)
 PR_PUBLIC_API(HT_Error)
 HT_SetWindowType(HT_Pane pane, int windowType)
 {
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(pane->selectedView != NULL);
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(pane->selectedView != NULL);
 
 	pane->windowType = windowType;
 	sendNotification(HT_TopNode(pane->selectedView), HT_EVENT_VIEW_MODECHANGED,
@@ -5873,6 +5840,7 @@ HT_SetWindowType(HT_Pane pane, int windowType)
 
 /* XXX HT_NodeDisplayString is obsolete! Don't use. */
 
+#ifndef	HT_RAPTOR
 PR_PUBLIC_API(HT_Error)
 HT_NodeDisplayString (HT_Resource node, char *buffer, int bufferLen)
 {
@@ -5880,7 +5848,7 @@ HT_NodeDisplayString (HT_Resource node, char *buffer, int bufferLen)
 	memset(buffer, '\0', bufferLen);
 	if (name != NULL)
 	{
-	  	if (RDF_STRLEN(name) < (unsigned)bufferLen)
+	  	if (strlen(name) < (unsigned)bufferLen)
 	  	{
 	  		strcpy(buffer, name);
 	  	}
@@ -5890,14 +5858,16 @@ HT_NodeDisplayString (HT_Resource node, char *buffer, int bufferLen)
 			name[bufferLen-1]='\0';
 		}
 	}  
-	PR_ASSERT( IsUTF8String(buffer));		
+	XP_ASSERT( IsUTF8String(buffer));		
 	return HT_NoErr;
 }
+#endif
 
 
 
 /* XXX HT_ViewDisplayString is obsolete! Don't use. */
 
+#ifndef	HT_RAPTOR
 PR_PUBLIC_API(HT_Error)
 HT_ViewDisplayString (HT_View view, char *buffer, int bufferLen)
 {
@@ -5905,7 +5875,7 @@ HT_ViewDisplayString (HT_View view, char *buffer, int bufferLen)
 	memset(buffer, '\0', bufferLen);
 	if (name != NULL)
 	{
-		if (RDF_STRLEN(name) < (unsigned)bufferLen)
+		if (strlen(name) < (unsigned)bufferLen)
 		{
 			strcpy(buffer, name);
 		}
@@ -5915,9 +5885,10 @@ HT_ViewDisplayString (HT_View view, char *buffer, int bufferLen)
 			name[bufferLen-1]='\0';
 		}
 	}  
-	PR_ASSERT( IsUTF8String(buffer));		
+	XP_ASSERT( IsUTF8String(buffer));		
 	return HT_NoErr;
 }
+#endif
 
 
 
@@ -5929,8 +5900,8 @@ buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,
 	RDF_BT			targetType;
 	char			buffer[128], *object="", *objectType="", *objectInfo="", *objectState="";
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(volatileURLFlag != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(volatileURLFlag != NULL);
 
 	*volatileURLFlag = false;
 	targetType = resourceType(node->node);
@@ -6061,7 +6032,7 @@ buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,
 	{
 		if ((*urlEntry)->name)
 		{
-			if (!RDF_STRCMP((*urlEntry)->name, buffer))
+			if (!strcmp((*urlEntry)->name, buffer))
 			{
 				return((*urlEntry)->name);
 			}
@@ -6091,8 +6062,8 @@ getIconURL( HT_Resource node, PRBool toolbarIconFlag, PRBool workspaceFlag, int 
 	PRBool		volatileURLFlag;
 	int		iconIndex;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
 
 	iconIndex = 0;
 	if (toolbarIconFlag)
@@ -6182,7 +6153,7 @@ HT_GetNodeSmallIconURL (HT_Resource r)
 PR_PUBLIC_API(char *)
 HT_GetWorkspaceLargeIconURL (HT_View view)
 {
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	return (getIconURL( view->top, false, true, 0));
 }
@@ -6192,7 +6163,7 @@ HT_GetWorkspaceLargeIconURL (HT_View view)
 PR_PUBLIC_API(char *)
 HT_GetWorkspaceSmallIconURL (HT_View view)
 {
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	return (getIconURL( view->top, false, true, 0));
 }
@@ -6260,6 +6231,7 @@ htIsPropertyInMoreOptions(RDF_Resource r)
 
 
 
+#ifndef	HT_RAPTOR
 static PRBool
 rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
@@ -6276,7 +6248,7 @@ rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsign
 			htmlElement = htmlElementList;
 			while (htmlElement != NULL)
 			{
-				if (RDF_STRCMP( resourceID(htmlElement->token), argv[loop]))
+				if (strcmp( resourceID(htmlElement->token), argv[loop]))
 				{
 					htmlElement = htmlElement->next;
 					continue;
@@ -6299,7 +6271,7 @@ rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsign
 								dirty = TRUE;
 							}
 						}
-						else if (RDF_STRCMP(data,argv[loop+1]))
+						else if (strcmp(data,argv[loop+1]))
 						{
 							dirty = TRUE;
 						}
@@ -6355,17 +6327,21 @@ rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsign
 
 	return(retVal);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 static XPDialogInfo rdfColorPropDialogInfo = {
 	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
 	rdfColorProcDialogHandler,
 	500, 400
 };
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 static PRBool
 rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
@@ -6417,7 +6393,7 @@ rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 			htmlElement = htmlElementList;
 			while (htmlElement != NULL)
 			{
-				if (RDF_STRCMP( resourceID(htmlElement->token), argv[loop]))
+				if (strcmp( resourceID(htmlElement->token), argv[loop]))
 				{
 					htmlElement = htmlElement->next;
 					continue;
@@ -6454,7 +6430,7 @@ rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 								dirty = TRUE;
 							}
 						}
-						else if (RDF_STRCMP(data,argv[loop+1]))
+						else if (strcmp(data,argv[loop+1]))
 						{
 							dirty = TRUE;
 						}
@@ -6580,9 +6556,11 @@ rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 	}
 	return(retVal);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 static XPDialogInfo rdfPropDialogInfo = {
 	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
 	rdfProcDialogHandler,
@@ -6593,6 +6571,7 @@ static XPDialogInfo rdfWorkspacePropDialogInfo = {
 	rdfProcDialogHandler,
 	500, 400
 };
+#endif
 
 
 
@@ -6668,6 +6647,7 @@ freeHtmlElement(void *token)
 
 
 
+#ifndef	HT_RAPTOR
 char *
 constructHTMLTagData(char *dynStr, int strID, char *data)
 {
@@ -6695,9 +6675,11 @@ constructHTMLTagData(char *dynStr, int strID, char *data)
 	}
 	return(dynStr);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 char *
 constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType)
 {
@@ -6708,8 +6690,8 @@ constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType)
 	char			*data = NULL, *tokenName;
 	char			buffer[128];
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(token != NULL);
 
 	if (findHtmlElement(token) != NULL)	return(dynStr);
 
@@ -6850,18 +6832,20 @@ constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType)
 	}
 	return(dynStr);
 }
+#endif
 
 
 
+#ifndef	 HT_RAPTOR
 char *
 constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char *text)
 {
 	char			*html, *temp1, *temp2;
 	PRBool			enabledFlag = false;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(token != NULL);
-	PR_ASSERT(text != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(token != NULL);
+	XP_ASSERT(text != NULL);
 
 	html=XP_GetString(RDF_HTML_STR_4);
 	if (html != NULL)
@@ -6885,6 +6869,7 @@ constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char
 	}
 	return(dynStr);
 }
+#endif
 
 
 
@@ -6893,8 +6878,8 @@ htIsOpLocked(HT_Resource node, RDF_Resource token)
 {
 	PRBool			lockedFlag = false;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(token != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(token != NULL);
 
 	if ((node != NULL) && (node->node != NULL) && (token != NULL))
 	{
@@ -6907,6 +6892,7 @@ htIsOpLocked(HT_Resource node, RDF_Resource token)
 
 
 
+#ifndef	HT_RAPTOR
 PRBool
 rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
@@ -6971,9 +6957,11 @@ rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 	}
 	return(retVal);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 #ifdef	XP_MAC
 static XPDialogInfo rdfFindDialogInfo = {
 	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
@@ -6987,9 +6975,11 @@ static XPDialogInfo rdfFindDialogInfo = {
 	450, 150
 };
 #endif
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 char *
 constructBasicHTML(char *dynStr, int strID, char *data1, char *data2)
 {
@@ -7015,9 +7005,11 @@ constructBasicHTML(char *dynStr, int strID, char *data1, char *data2)
 	}
 	return(newDynStr);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 PR_PUBLIC_API(void)
 HT_Find(char *hint)
 {
@@ -7025,7 +7017,7 @@ HT_Find(char *hint)
 	char			*dynStr = NULL, *postHTMLdynStr = NULL;
 	MWContext		*context;
 
-	PR_ASSERT( IsUTF8String(hint));		
+	XP_ASSERT( IsUTF8String(hint));		
 	dynStr = constructBasicHTML(dynStr, RDF_FIND_STR1, "", "");
 
 	/* build location select */
@@ -7128,9 +7120,11 @@ HT_Find(char *hint)
 	if (dynStr != NULL)	XP_FREE(dynStr);
 	if (strings != NULL)	XP_FreeDialogStrings(strings);
 }
+#endif
 
 
 
+#ifndef	HT_RAPTOR
 PR_PUBLIC_API(void)
 HT_Properties (HT_Resource node)
 {
@@ -7143,8 +7137,8 @@ HT_Properties (HT_Resource node)
 	char			*dynStr = NULL, *postHTMLdynStr = NULL, *title;
 	MWContext		*context;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
 
 	type = resourceType(node->node);
 	if (!(isContainer=HT_IsContainer(node)))
@@ -7360,6 +7354,7 @@ HT_Properties (HT_Resource node)
 	if (dynStr != NULL)	XP_FREE(dynStr);
 	if (strings != NULL)	XP_FreeDialogStrings(strings);
 }
+#endif
 
 
 
@@ -7368,7 +7363,7 @@ HT_GetRDFResource (HT_Resource node)
 {
 	RDF_Resource		r = NULL;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -7384,8 +7379,8 @@ HT_GetNodeDisplayURL(HT_Resource node)
 {
 	char		*retVal = NULL, *ans;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
   
 	ans = RDF_GetSlotValue(node->view->pane->db, node->node, gNavCenter->displayURL, 
 	          RDF_STRING_TYPE, 0, 1);
@@ -7407,8 +7402,8 @@ HT_GetNodeURL(HT_Resource node)
 {
 	char		*retVal = NULL;
 	
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
 
 	if (node != NULL)
 	{
@@ -7427,13 +7422,15 @@ HT_GetNodeName(HT_Resource node)
 {
 	char		*name = NULL;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
 		HT_GetNodeData (node, gCoreVocab->RDF_name, HT_COLUMN_STRING, &name);
 	}
-	PR_ASSERT( IsUTF8String(name));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(name));		
+#endif
 	return(name);
 }
 
@@ -7442,7 +7439,7 @@ HT_GetNodeName(HT_Resource node)
 PR_PUBLIC_API(void)
 HT_SetTopVisibleNodeIndex(HT_View view, uint32 topNodeIndex)
 {
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if (view != NULL)
 	{
@@ -7457,7 +7454,7 @@ HT_GetTopVisibleNodeIndex(HT_View view)
 {
 	uint32		topNodeIndex = 0, listCount;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	if (view != NULL)
 	{
@@ -7514,7 +7511,7 @@ setHiddenState (HT_Resource node)
 PR_PUBLIC_API(HT_Error)
 HT_SetAutoFlushOpenState (HT_Resource containerNode, PRBool isOpen)
 {
-	PR_ASSERT(containerNode != NULL);
+	XP_ASSERT(containerNode != NULL);
 
 	sendNotification(containerNode,  HT_EVENT_NODE_OPENCLOSE_CHANGING,
 		NULL, HT_COLUMN_UNKNOWN);
@@ -7543,7 +7540,7 @@ HT_SetOpenState (HT_Resource containerNode, PRBool isOpen)
 {
 	SBProvider		sb;
 
-	PR_ASSERT(containerNode != NULL);
+	XP_ASSERT(containerNode != NULL);
 
 	if ((isOpen && (!HT_IsContainerOpen(containerNode))) ||
 	   ((!isOpen) && (HT_IsContainerOpen(containerNode))))
@@ -7601,7 +7598,7 @@ HT_SetEnabledState(HT_Resource node, PRBool isEnabled)
 {
 	HT_Event		theEvent;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if ((isEnabled && (!HT_IsEnabled(node))) ||
 	   ((!isEnabled) && (HT_IsEnabled(node))))
@@ -7626,7 +7623,7 @@ HT_SetEnabledState(HT_Resource node, PRBool isEnabled)
 PR_PUBLIC_API(HT_Error)
 HT_SetSelectedState (HT_Resource node, PRBool isSelected)
 {
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if ((isSelected && (!HT_IsSelected(node))) ||
 	   ((!isSelected) && (HT_IsSelected(node))))
@@ -7650,7 +7647,7 @@ HT_SetSelectedState (HT_Resource node, PRBool isSelected)
 PR_PUBLIC_API(HT_Error)
 HT_SetNotificationMask (HT_Pane pane, HT_NotificationMask mask)
 {
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	pane->mask = mask;
 	return (HT_NoErr);
@@ -7661,8 +7658,8 @@ HT_SetNotificationMask (HT_Pane pane, HT_NotificationMask mask)
 PR_PUBLIC_API(HT_Error)
 HT_GetOpenState (HT_Resource containerNode, PRBool *openState)
 {
-	PR_ASSERT(containerNode != NULL);
-	PR_ASSERT(openState != NULL);
+	XP_ASSERT(containerNode != NULL);
+	XP_ASSERT(openState != NULL);
 
 	*openState = (containerNode->flags & HT_OPEN_FLAG) ? PR_TRUE:PR_FALSE;
 	return (HT_NoErr);
@@ -7673,8 +7670,8 @@ HT_GetOpenState (HT_Resource containerNode, PRBool *openState)
 PR_PUBLIC_API(HT_Error)
 HT_GetEnabledState (HT_Resource node, PRBool *enabledState)
 {
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(enabledState != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(enabledState != NULL);
 
 	if ((node != NULL) && (enabledState != NULL))
 	{
@@ -7688,8 +7685,8 @@ HT_GetEnabledState (HT_Resource node, PRBool *enabledState)
 PR_PUBLIC_API(HT_Error)
 HT_GetSelectedState (HT_Resource node, PRBool *selectedState)
 {
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(selectedState != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(selectedState != NULL);
 
 	if ((node != NULL) && (selectedState != NULL))
 	{
@@ -7712,9 +7709,9 @@ HT_SetSelection (HT_Resource node)
 	HT_View		view;
 	uint32		itemListCount,theIndex;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 	view = HT_GetView(node);
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	itemListCount = HT_GetItemListCount(view);
 	for (theIndex=0; theIndex<itemListCount; theIndex++)
@@ -7741,7 +7738,7 @@ HT_SetSelectionAll (HT_View view, PRBool selectedState)
 	HT_Resource	res;
 	uint32		itemListCount,theIndex;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	itemListCount = HT_GetItemListCount(view);
 	for (theIndex=0; theIndex<itemListCount; theIndex++)
@@ -7771,13 +7768,13 @@ HT_SetSelectionRange (HT_Resource node1, HT_Resource node2)
 	uint32		itemListCount,theIndex;
 	PRBool		selectionState = false, invertState;
 
-	PR_ASSERT(node1 != NULL);
-	PR_ASSERT(node2 != NULL);
+	XP_ASSERT(node1 != NULL);
+	XP_ASSERT(node2 != NULL);
 	view = HT_GetView(node1);
 	view2 = HT_GetView(node2);
-	PR_ASSERT(view != NULL);
-	PR_ASSERT(view2 != NULL);
-	PR_ASSERT(view == view2);
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(view2 != NULL);
+	XP_ASSERT(view == view2);
 
 	itemListCount = HT_GetItemListCount(view);
 	for (theIndex=0; theIndex<itemListCount; theIndex++)
@@ -7818,7 +7815,7 @@ HT_GetNextSelection(HT_View view, HT_Resource startingNode)
 	uint32		itemListCount,theIndex;
 	PRBool		selectedState;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 
 	itemListCount = HT_GetItemListCount(view);
 
@@ -7861,7 +7858,7 @@ HT_ToggleSelection(HT_Resource node)
 {
 	PRBool		selectedState;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	HT_GetSelectedState (node, &selectedState);
 	HT_SetSelectedState (node, !selectedState);
@@ -7875,7 +7872,7 @@ HT_Launch(HT_Resource node, MWContext *context)
 	HT_DropAction		dropAction;
 	PRBool			retVal = PR_FALSE;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
@@ -7910,6 +7907,7 @@ HT_Launch(HT_Resource node, MWContext *context)
 
 
 
+#ifndef	HT_RAPTOR
 void
 htSetFindResourceName(RDF db, RDF_Resource u)
 {
@@ -7917,14 +7915,14 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 	char		*attribute = NULL, *method = NULL;
 	char		*temp, *value, *name, *id, *p;
 
-	PR_ASSERT(u != NULL);
+	XP_ASSERT(u != NULL);
 	if (u == NULL)	return;
 
 	if ((temp = copyString(resourceID(u))) != NULL)
 	{
 		if ((value = strcasestr(temp, "attribute=")) != NULL)
 		{
-			value += RDF_STRLEN("attribute=");
+			value += strlen("attribute=");
 			if ((p = strstr(value, "&")) != NULL)	*p = '\0';
 			if ((name = unescapeURL(value)) != NULL)
 			{
@@ -7945,7 +7943,7 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 	{
 		if ((value = strcasestr(temp, "method=")) != NULL)
 		{
-			value += RDF_STRLEN("method=");
+			value += strlen("method=");
 			if ((p = strstr(value, "&")) != NULL)	*p = '\0';
 			if ((name = unescapeURL(value)) != NULL)
 			{
@@ -7967,7 +7965,7 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 	{
 		if ((value = strcasestr(temp, "value=")) != NULL)
 		{
-			value += RDF_STRLEN("value=");
+			value += strlen("value=");
 			if ((p = strstr(value, "&")) != NULL)	*p = '\0';
 			if ((name = unescapeURL(value)) != NULL)
 			{
@@ -7997,6 +7995,7 @@ htSetFindResourceName(RDF db, RDF_Resource u)
 		method = NULL;
 	}
 }
+#endif
 
 
 
@@ -8008,9 +8007,9 @@ htOpenTo(HT_View view, RDF_Resource u, PRBool selectView)
 	RDF_Resource		r;
 	char			*id, *tempID, *p;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 	if (view == NULL)	return;
-	PR_ASSERT(u != NULL);
+	XP_ASSERT(u != NULL);
 	if (u == NULL)		return;
 
 	if ((pane = HT_GetPane(view)) == NULL)	return;
@@ -8037,7 +8036,7 @@ htOpenTo(HT_View view, RDF_Resource u, PRBool selectView)
 		}
 		if ((tempID = copyString(id)) != NULL)
 		{
-			while ((p = RDF_STRRCHR(tempID, '/')) != NULL)
+			while ((p = strrchr(tempID, '/')) != NULL)
 			{
 				*(p+1) = '\0';
 
@@ -8083,6 +8082,7 @@ htOpenTo(HT_View view, RDF_Resource u, PRBool selectView)
 
 
 
+#ifndef	HT_RAPTOR
 PR_PUBLIC_API(PRBool)
 HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 {
@@ -8092,7 +8092,7 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 	RDF_Resource		u = NULL, parent = NULL, r;
 	PRBool			isShortcut = PR_FALSE, retVal = PR_FALSE;
 
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(url != NULL);
 
 	/* Note: if pane is NULL, bypass trying to load info into Aurora
 	   but DO try shortcut matching */
@@ -8197,14 +8197,15 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 	}
 	return(retVal);
 }
+#endif
 
 
 
 PR_PUBLIC_API(HT_Error)
 HT_GetNotificationMask (HT_Pane pane, HT_NotificationMask *mask)
 {
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(mask != NULL);
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(mask != NULL);
 
 	*mask = pane->mask;
 	return (HT_NoErr);
@@ -8215,7 +8216,7 @@ HT_GetNotificationMask (HT_Pane pane, HT_NotificationMask *mask)
 PRBool
 mutableContainerp (RDF_Resource node)
 {
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	return (containerp(node) && (resourceType(node) == RDF_RT));
 }
@@ -8240,7 +8241,9 @@ HT_MakeNewContainer(HT_Resource parent, char* name)
 	double			doubletm;
 #endif
 
-	PR_ASSERT( IsUTF8String(name));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(name));		
+#endif
 	if (mutableContainerp(parent->node))
 	{
 		db = parent->view->pane->db;
@@ -8343,7 +8346,9 @@ HT_DropURLAndTitleOn(HT_Resource dropTarget, char* url, char *title)
 	HT_DropAction		ac;
 	char			*newTitle;
 
-	PR_ASSERT( IsUTF8String(title));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(title));		
+#endif
 	newTitle = possiblyCleanUpTitle(title);
 	ac = dropURLOn(dropTarget, url, newTitle, 0);
 	if (newTitle != NULL)
@@ -8366,8 +8371,8 @@ HT_CanDropHTRAtPos(HT_Resource dropTarget, HT_Resource obj, PRBool before)
 	HT_Pane			pane;
 	HT_DropAction		action = DROP_NOT_ALLOWED;
 
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(obj != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(obj != NULL);
 	if (dropTarget == NULL)	return(action);
 	if (obj == NULL)	return(action);
 	if ( dropTarget == obj ) return(DROP_NOT_ALLOWED);
@@ -8469,8 +8474,8 @@ HT_CanDropURLAtPos(HT_Resource dropTarget, char *url, PRBool before)
 	HT_Resource		dropParent;
 	HT_DropAction		action = DROP_NOT_ALLOWED;
 
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(url != NULL);
 	if (dropTarget == NULL)	return(DROP_NOT_ALLOWED);
 	if (url == NULL)	return(DROP_NOT_ALLOWED);
 
@@ -8497,8 +8502,8 @@ HT_DropHTRAtPos(HT_Resource dropTarget, HT_Resource obj, PRBool before)
 	HT_DropAction		action = DROP_NOT_ALLOWED;
 	uint32			workspacePos;
 
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(obj != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(obj != NULL);
 	if (dropTarget == NULL)	return(DROP_NOT_ALLOWED);
 	if (obj == NULL)	return(DROP_NOT_ALLOWED);
 	if ( dropTarget == obj ) return(DROP_NOT_ALLOWED);
@@ -8552,7 +8557,9 @@ HT_DropURLAndTitleAtPos(HT_Resource dropTarget, char* url, char *title, PRBool b
 	HT_DropAction		ac;
 	char			*newTitle;
 
-	PR_ASSERT( IsUTF8String(title));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(title));		
+#endif
 	newTitle = possiblyCleanUpTitle(title);
 	ac = copyRDFLinkURLAt(dropTarget, url, newTitle, before);
 	if (newTitle != NULL)
@@ -8596,6 +8603,7 @@ htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash)
 	}
 
 	type = resourceType(child->node);
+#ifndef	HT_RAPTOR
 	if ((type == LFS_RT) || (type == ES_RT) || (type == FTP_RT))
 	{
 		if (moveToTrash == false)
@@ -8638,6 +8646,7 @@ htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash)
 			return(false);
 		}
 	}
+#endif
 
 	/* assert into trash? */
 
@@ -8722,8 +8731,8 @@ ht_SetPassword(HT_Resource node, char *newPassword)
 {
 	char		*activePassword;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(newPassword != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(newPassword != NULL);
 
 	if ((activePassword = RDF_GetSlotValue(node->view->pane->db, node->node,
 			gNavCenter->RDF_Password, RDF_STRING_TYPE, false, true)) != NULL)
@@ -8771,11 +8780,11 @@ ht_checkPassword(HT_Resource node, PRBool alwaysCheck)
 	char		*activePassword, *userPassword, *name;
 	PRBool		granted = PR_TRUE;
 
-	PR_ASSERT(node != NULL);
-	PR_ASSERT(node->view != NULL);
-	PR_ASSERT(node->view->pane != NULL);
-	PR_ASSERT(node->view->pane->db != NULL);
-	PR_ASSERT(node->node != NULL);
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->view != NULL);
+	XP_ASSERT(node->view->pane != NULL);
+	XP_ASSERT(node->view->pane->db != NULL);
+	XP_ASSERT(node->node != NULL);
 
 
 	if ((alwaysCheck == false) && (node->flags & HT_PASSWORDOK_FLAG))	return(granted);
@@ -8796,7 +8805,7 @@ ht_checkPassword(HT_Resource node, PRBool alwaysCheck)
 						PR_smprintf(XP_GetString(RDF_ENTERPASSWORD),
 						name))) != NULL)
 			{
-				if (!RDF_STRCMP(activePassword, userPassword))
+				if (!strcmp(activePassword, userPassword))
 				{
 					node->flags |= HT_PASSWORDOK_FLAG;
 					granted = PR_TRUE;
@@ -8826,9 +8835,9 @@ HT_SetSelectedView (HT_Pane pane, HT_View view)
 	char			*advertURL;
 #endif
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 	if (pane == NULL)	return(HT_NoErr);
-	PR_ASSERT(pane->db != NULL);
+	XP_ASSERT(pane->db != NULL);
 
 	if (pane->selectedView != view)
 	{
@@ -8893,7 +8902,7 @@ HT_GetSelectedView (HT_Pane pane)
 {
 	HT_View		view = NULL;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	if (pane != NULL)
 	{
@@ -8911,7 +8920,7 @@ HT_GetViewType (HT_Pane pane, HT_ViewType viewType)
 	HT_View		view = NULL;
 	RDF_Resource	resToFind = NULL;
 
-	PR_ASSERT(pane != NULL);
+	XP_ASSERT(pane != NULL);
 
 	switch(viewType)
 	{
@@ -8964,7 +8973,7 @@ HT_GetPane (HT_View view)
 {
 	HT_Pane		pane = NULL;
 
-	PR_ASSERT(view != NULL);
+	XP_ASSERT(view != NULL);
 	
 	if (view != NULL)
 	{
@@ -8983,9 +8992,11 @@ HT_TypeTo(HT_Pane pane, char *typed)
 	uint32		count, loop;
 	char		*name;
 
-	PR_ASSERT(pane != NULL);
-	PR_ASSERT(typed != NULL);
-	PR_ASSERT( IsUTF8String(typed));		
+	XP_ASSERT(pane != NULL);
+	XP_ASSERT(typed != NULL);
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(typed));		
+#endif
 
 	if ((pane == NULL) || (typed == NULL))	return;
 	if ((view = HT_GetSelectedView(pane)) == NULL)	return;
@@ -9020,12 +9031,14 @@ htLaunchSmartNode(HT_Resource dropTarget, char *fullURL)
 	HT_DropAction		dropAction = DROP_NOT_ALLOWED;
 	MWContext		*context;
 	RDF_Resource		postR;
-	URL_Struct		*urls;
 	char			*data, *value, *url;
 	char			*methodType = NULL, *resultType = NULL, *prompt = NULL;
 	char			*postData = NULL, *postStr, *temp;
 	uint32			postIndex = 0;
 	PRBool			freeURLFlag = PR_FALSE;
+
+#ifndef	HT_RAPTOR
+	URL_Struct		*urls;
 
 	if (fullURL == NULL)
 	{
@@ -9092,7 +9105,7 @@ htLaunchSmartNode(HT_Resource dropTarget, char *fullURL)
 					NET_NORMAL_RELOAD)) != NULL)
 				{
 					urls->post_data = postData;
-					urls->post_data_size = (postData != NULL) ? RDF_STRLEN(postData) : 0;
+					urls->post_data_size = (postData != NULL) ? strlen(postData) : 0;
 					urls->post_headers = PR_smprintf("Content-type: application/x-www-form-urlencoded\r\nContent-length: %lu\r\n",
 						urls->post_data_size);
 					urls->method = URL_POST_METHOD;
@@ -9132,6 +9145,7 @@ htLaunchSmartNode(HT_Resource dropTarget, char *fullURL)
 			XP_FREE(fullURL);
 		}
 	}
+#endif
 	return(dropAction);
 }
 
@@ -9454,8 +9468,8 @@ Win32FileCopyMove(HT_Resource dropTarget, HT_Resource dropObject)
 	XP_ConvertUrlToLocalFile(from, &lffrom) ;
 	XP_ConvertUrlToLocalFile(to, &lfto);
 
-	fl = RDF_STRLEN(lffrom);
-	ft = RDF_STRLEN(lfto);
+	fl = strlen(lffrom);
+	ft = strlen(lfto);
 
 	finalFrom = (char *)getMem(fl+2);
 	finalTo = (char *)getMem(ft+2);
@@ -9491,8 +9505,8 @@ copyMoveRDFLink (HT_Resource dropTarget, HT_Resource dropObject)
 	PRBool			moveAction;
 	char			*name;
 
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(dropObject != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(dropObject != NULL);
 	if ((dropTarget == NULL) || (dropObject == NULL))	return(DROP_NOT_ALLOWED);
 
 	origin = dropObject->parent;
@@ -9653,8 +9667,8 @@ copyMoveRDFLinkAtPos (HT_Resource dropx, HT_Resource dropObject, PRBool before)
 HT_DropAction
 uploadLFS (HT_Resource dropTarget, HT_Resource dropObject)
 {
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(dropObject != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(dropObject != NULL);
 
 	if ((dropTarget != NULL) && (dropObject != NULL))
 	{
@@ -9779,9 +9793,9 @@ replacePipeWithColon(char* url)
 {
 	size_t			n=0, size;
 
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(url != NULL);
 
-	size = RDF_STRLEN(url);
+	size = strlen(url);
 	n = 0;
 	while (n < size)
 	{
@@ -9838,7 +9852,7 @@ copyRDFLinkURLAt (HT_Resource dropx, char* objURL, char *objTitle, PRBool before
 	char			*id, *pos, posString[16];
 	unsigned long		itemNum, itemPos=0;
 
-	PR_ASSERT(dropx != NULL);
+	XP_ASSERT(dropx != NULL);
 	if (dropx == NULL)	return(DROP_NOT_ALLOWED);
 
 	dropTarget = dropx->parent;
@@ -9907,8 +9921,8 @@ uploadLFSURL (HT_Resource dropTarget, char* objURL)
 {
 	RDF_Resource		r;
 
-	PR_ASSERT(dropTarget != NULL);
-	PR_ASSERT(objURL != NULL);
+	XP_ASSERT(dropTarget != NULL);
+	XP_ASSERT(objURL != NULL);
 
 	if ((dropTarget != NULL) && (objURL != NULL))
 	{
@@ -9991,7 +10005,9 @@ HT_AddSitemapFor(HT_Pane htPane, char *pUrl, char *pSitemapUrl, char* name)
 	RDFT				sp;
 	char				*nm;
 	
-	PR_ASSERT( IsUTF8String(name));		
+#ifndef	HT_RAPTOR
+	XP_ASSERT( IsUTF8String(name));		
+#endif
 	sp = htPane->htdb;
 	if (sp == NULL) return;
 	nu = RDF_GetResource(htPane->db, pSitemapUrl, 1);
@@ -10003,7 +10019,11 @@ HT_AddSitemapFor(HT_Pane htPane, char *pUrl, char *pSitemapUrl, char* name)
 		nm = copyString(name);
 	}
 	else {
+#ifndef	HT_RAPTOR
 		nm = copyString(XP_GetString(RDF_SITEMAPNAME));
+#else
+		nm = copyString("Sitemap");
+#endif
 	}
 	nsmp->siteToolType = RDF_SITEMAP;
     if (name) nsmp->name = copyString(name);
@@ -10112,7 +10132,7 @@ populateSBProviders (HT_Pane htPane)
 	RDF				db;
 	SBProvider			sb;
 
-	PR_ASSERT(htPane != NULL);
+	XP_ASSERT(htPane != NULL);
 
 	db = htPane->db;
 	c =  RDF_GetSources(htPane->db,  gNavCenter->RDF_SBProviders,
@@ -10138,7 +10158,7 @@ SBProviderOfNode (HT_Resource node)
 	HT_Pane			htPane;
 	SBProvider		prov;
 
-	PR_ASSERT(node != NULL);
+	XP_ASSERT(node != NULL);
 
 	htPane = node->view->pane;
 	prov = htPane->smartBrowsingProviders;
@@ -10160,9 +10180,9 @@ implicitDomainURL (char* url)
 {
 	uint16			n = 7, size;
 
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(url != NULL);
 
-	size = RDF_STRLEN(url);
+	size = strlen(url);
 	while (n < size)
 	{
 		if (url[n] == '/') return 1;
@@ -10179,11 +10199,11 @@ domainMatches (char *dom, char *url)
 {
 	size_t n = 0, m = 0, ns, ms;
 
-	PR_ASSERT(dom != NULL);
-	PR_ASSERT(url != NULL);
+	XP_ASSERT(dom != NULL);
+	XP_ASSERT(url != NULL);
 
-	ns = RDF_STRLEN(dom);
-	ms = RDF_STRLEN(url);
+	ns = strlen(dom);
+	ms = strlen(url);
 	while ((n < ns) && (m < ms))
 	{
 		if (dom[n] == '*')
@@ -10222,7 +10242,7 @@ nextDomain (char* dom, size_t *n)
 	uint16			ns;
 	char			c;
 
-	ns = RDF_STRLEN(gRLForbiddenDomains);
+	ns = strlen(gRLForbiddenDomains);
 	memset(dom, '\0', 100);
 	while (*n < ns)
 	{
@@ -10247,7 +10267,7 @@ relatedLinksEnabledURL (char* url)
 	char			dom[100];
 
 	if (url == NULL) return 0;
-	if (RDF_STRLEN(url) > 100) return 0; 
+	if (strlen(url) > 100) return 0; 
 	if (!startsWith("http:", url))
 	{
 		return 0;
@@ -10258,7 +10278,7 @@ relatedLinksEnabledURL (char* url)
 	}
 	else if (gRLForbiddenDomains != NULL)
 	{
-		ns = RDF_STRLEN(gRLForbiddenDomains);
+		ns = strlen(gRLForbiddenDomains);
 		while (n < ns)
 		{
 			nextDomain(dom, &n);
@@ -10291,7 +10311,7 @@ HT_AddRelatedLinksFor(HT_Pane htPane, char *pUrl)
 	prov = htPane->smartBrowsingProviders;
 	while (prov)
 	{
-		buffer = getMem(RDF_STRLEN(prov->url) + strlen(pUrl));
+		buffer = getMem(strlen(prov->url) + strlen(pUrl));
 		sprintf(buffer, "%s%s", prov->url,  &pUrl[7]);
 		nu = RDF_GetResource(htPane->db, buffer, 1);
 		setContainerp(nu, prov->containerp);
@@ -10321,7 +10341,7 @@ HT_HasHTMLPane(HT_View htView)
 	PRBool			hasHTML = PR_FALSE;
 	char			*url = NULL;
   
-	PR_ASSERT(htView != NULL);
+	XP_ASSERT(htView != NULL);
 
 	if (htView != NULL)
 	{
@@ -10346,7 +10366,7 @@ HT_HTMLPaneHeight(HT_View htView)
 	PRBool			hasHTML = PR_FALSE;
 	char			*paneHeightStr = NULL;
   
-	PR_ASSERT(htView != NULL);
+	XP_ASSERT(htView != NULL);
 
 	if (htView != NULL)
 	{
@@ -10360,3 +10380,4 @@ HT_HTMLPaneHeight(HT_View htView)
 	}
 	return(paneHeightStr);
 }
+

@@ -20,6 +20,7 @@
 #define	_RDF_HT_H_
 
 
+#ifndef	HT_RAPTOR
 #include "xpassert.h"
 #include "xp_qsort.h"
 #include "xp_time.h"
@@ -49,6 +50,20 @@
 #include "pm2rdf.h"
 #endif
 
+#else
+#include "prprf.h"
+#include "plhash.h"
+#include "xp_core.h"
+#include "rdf.h"
+#include "rdf-int.h"
+#include "mcf.h"
+#include "htrdf.h"
+#include "vocab.h"
+
+#define	MWContext	void
+#endif
+
+
 /* HT data structures and defines */
 
 #define ITEM_LIST_SIZE			500		/* XXX ITEM_LIST_SIZE should be dynamic */
@@ -63,6 +78,7 @@
 
 #define HTDEL				remoteStoreRemove
 
+#ifndef	HT_RAPTOR
 	/* external string references in allxpstr */
 extern	int	RDF_HTML_STR, RDF_HTML_STR_1, RDF_HTML_STR_2, RDF_HTML_STR_3;
 extern	int	RDF_HTML_STR_4, RDF_HTML_STR_5, RDF_HTML_STR_NUMBER;
@@ -88,6 +104,8 @@ extern	int	RDF_FIND_TITLE, RDF_FIND_FULLNAME_STR, RDF_SHORTCUT_CONFLICT_STR, RDF
 #ifdef	HT_PASSWORD_RTNS
 extern	int	RDF_NEWPASSWORD, RDF_CONFIRMPASSWORD;
 extern	int	RDF_MISMATCHPASSWORD, RDF_ENTERPASSWORD;
+#endif
+
 #endif
 
 
@@ -253,7 +271,7 @@ typedef struct _HT_URLSiteMapAssoc {
 
 /* HT function prototypes */
 
-NSPR_BEGIN_EXTERN_C
+XP_BEGIN_PROTOS
 
 void				HT_Startup();
 void				HT_Shutdown();
@@ -275,8 +293,6 @@ void				refreshItemList (HT_Resource node, HT_Event whatHappened);
 void				refreshPanes();
 PRBool				initToolbars (HT_Pane pane);
 HT_Pane				paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag, PRBool useColumns);
-void				htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx);
-void				htLookInCacheForMetaTags(char *url);
 void				htSetBookmarkAddDateToNow(RDF_Resource r);
 RDF				newHTPaneDB();
 RDF				HTRDF_GetDB();
@@ -319,7 +335,6 @@ char *				constructHTMLTagData(char *dynStr, int strID, char *data);
 char *				constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType);
 char *				constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char *permText);
 PRBool				htIsOpLocked(HT_Resource node, RDF_Resource token);
-PRBool				rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button);
 char *				constructBasicHTML(char *dynStr, int strID, char *data1, char *data2);
 void				setHiddenState (HT_Resource node);
 void				htSetFindResourceName(RDF db, RDF_Resource r);
@@ -361,6 +376,11 @@ void				cleanupInt (HT_Pane htPane, HT_URLSiteMapAssoc *nsmp, RDF_Resource paren
 HT_Pane				newTemplatePane(char* templateName);
 void				PaneDeleteSBPCleanup (HT_Pane htPane);
 
-NSPR_END_EXTERN_C
+#ifndef	HT_RAPTOR
+PRBool				rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button);
+#endif
+
+XP_END_PROTOS
 
 #endif
+
