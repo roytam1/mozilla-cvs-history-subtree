@@ -126,7 +126,7 @@
 /*----------------------------------------------------------------------*/
 
 #define NP_VERSION_MAJOR 0
-#define NP_VERSION_MINOR 13
+#define NP_VERSION_MINOR 14
 
 
 /* The OS/2 version of Netscape uses RC_DATA to define the
@@ -187,7 +187,7 @@ typedef unsigned short uint16;
 #endif
 
 #ifndef _UINT32
-#    if defined(__alpha)
+#    if defined(__alpha) || defined(__amd64__) || defined(__x86_64__)
 typedef unsigned int uint32;
 #    else  /* __alpha */
 typedef unsigned long uint32;
@@ -203,7 +203,7 @@ typedef short int16;
 #endif
 
 #ifndef _INT32
-#    if defined(__alpha)
+#    if defined(__alpha) || defined(__amd64__) || defined(__x86_64__)
 typedef int int32;
 #    else  /* __alpha */
 typedef long int32;
@@ -388,7 +388,10 @@ typedef enum {
   /* 12 and over are available on Mozilla builds starting with 0.9.9 */
   NPPVjavascriptPushCallerBool = 12,
   NPPVpluginKeepLibraryInMemory = 13,   /* available in Mozilla 1.0 */
-  NPPVpluginNeedsXEmbed         = 14
+  NPPVpluginNeedsXEmbed         = 14,
+
+  /* Get the NPObject for scripting the plugin. */
+  NPPVpluginScriptableNPObject  = 15
 } NPPVariable;
 
 /*
@@ -407,7 +410,13 @@ typedef enum {
   NPNVDOMElement     = (11 | NP_ABI_MASK),   /* available in Mozilla 1.2 */
   NPNVDOMWindow      = (12 | NP_ABI_MASK),
   NPNVToolkit        = (13 | NP_ABI_MASK),
-  NPNVSupportsXEmbedBool = 14
+  NPNVSupportsXEmbedBool = 14,
+
+  /* Get the NPObject wrapper for the browser window. */
+  NPNVWindowNPObject = 15,
+
+  /* Get the NPObject wrapper for the plugins DOM element. */
+  NPNVPluginElementNPObject = 16
 } NPNVariable;
 
 /*
@@ -654,6 +663,9 @@ void    NP_LOADDS NPP_URLNotify(NPP instance, const char* url,
 jref    NP_LOADDS NPP_GetJavaClass(void);
 #endif
 NPError NP_LOADDS NPP_GetValue(NPP instance, NPPVariable variable, void *value);
+/*
+ * Uh, shouldn't NPP_SetValue() take an NPPVariable and not an NPNVariable?
+ */
 NPError NP_LOADDS NPP_SetValue(NPP instance, NPNVariable variable, void *value);
 
 /*
