@@ -82,6 +82,8 @@ NS_IMETHODIMP nsMsgSearchDBView::Close()
   for(PRInt32 i = 0; i < count; i++)
     m_dbToUseList[i]->RemoveListener(this);
 
+  m_dbToUseList.Clear();
+
   return NS_OK;
 }
 
@@ -217,6 +219,12 @@ nsMsgSearchDBView::OnNewSearch()
 
 //    mSearchResults->Clear();
     return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgSearchDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
+{
+  m_dbToUseList.RemoveObject(NS_STATIC_CAST(nsIMsgDatabase *, instigator));
+  return nsMsgDBView::OnAnnouncerGoingAway(instigator);
 }
 
 nsresult nsMsgSearchDBView::GetFolders(nsISupportsArray **aFolders)
