@@ -2599,11 +2599,27 @@ JSValue Math_log(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 }
 JSValue Math_max(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    float64 result = argv[0].toNumber(cx).f64;
+    for (uint32 i = 1; i < argc; ++i) {
+        float64 arg = argv[i].toNumber(cx).f64;
+        if (arg > result)
+            result = arg;
+    }
+    return JSValue(result);
 }
 JSValue Math_min(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    float64 result = argv[0].toNumber(cx).f64;
+    for (uint32 i = 1; i < argc; ++i) {
+        float64 arg = argv[i].toNumber(cx).f64;
+        if (arg < result)
+            result = arg;
+    }
+    return JSValue(result);
 }
 JSValue Math_pow(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
