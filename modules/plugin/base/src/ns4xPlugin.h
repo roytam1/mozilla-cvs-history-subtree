@@ -122,6 +122,7 @@ public:
   static nsresult
   CreatePlugin(nsIServiceManager* aServiceMgr,
                const char* aFileName,
+               const char* aFullPath,
                PRLibrary* aLibrary,
                nsIPlugin** aResult);
 

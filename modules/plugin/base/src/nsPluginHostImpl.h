@@ -36,6 +36,7 @@
 #include "nsICookieStorage.h"
 #include "nsPluginsDir.h"
 #include "nsVoidArray.h"  // array for holding "active" streams
+#include "nsIDirectoryService.h"
 
 class ns4xPlugin;
 class nsFileSpec;
@@ -416,14 +417,22 @@ private:
   RegisterPluginMimeTypesWithLayout(nsPluginTag *pluginTag, nsIComponentManager * compManager, nsIFile * layoutPath);
 
   nsresult
-  ScanPluginsDirectory(nsPluginsDir& pluginsDir, 
+  ScanPluginsDirectory(nsIFile * pluginsDir, 
                        nsIComponentManager * compManager, 
                        nsIFile * layoutPath,
                        PRBool checkForUnwantedPlugins = PR_FALSE);
+                       
+  nsresult
+  ScanPluginsDirectoryList(nsISimpleEnumerator * dirEnum,
+                           nsIComponentManager * compManager, 
+                           nsIFile * layoutPath,
+                           PRBool checkForUnwantedPlugins = PR_FALSE);
 
   PRBool IsRunningPlugin(nsPluginTag * plugin);
   void AddToUnusedLibraryList(PRLibrary * aLibrary);
   void CleanUnusedLibraries();
+
+  nsresult EnsurePrivateDirServiceProvider();
 
   char        *mPluginPath;
   nsPluginTag *mPlugins;
@@ -433,6 +442,8 @@ private:
 
   nsActivePluginList mActivePluginList;
   nsUnusedLibrary *mUnusedLibraries;
+
+  nsCOMPtr<nsIDirectoryServiceProvider> mPrivateDirServiceProvider;  
 };
 
 #endif
