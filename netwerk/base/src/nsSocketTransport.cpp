@@ -127,7 +127,7 @@ nsSocketTransport::nsSocketTransport():
     mCurrentState(eSocketState_Created),
     mHostName(nsnull),
     mLoadAttributes(LOAD_NORMAL),
-    mLock(nsnull),
+    mMonitor(nsnull),
     mOperation(eSocketOperation_None),
     mPort(0),
     mPrintHost(nsnull),
@@ -219,9 +219,9 @@ nsSocketTransport::~nsSocketTransport()
     mSocketFD = nsnull;
   }
 
-  if (mLock) {
-    PR_DestroyLock(mLock);
-    mLock = nsnull;
+  if (mMonitor) {
+    PR_DestroyMonitor(mMonitor);
+    mMonitor = nsnull;
   }
 
 }
@@ -275,8 +275,8 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
   // Create the lock used for synchronizing access to the transport instance.
   //
   if (NS_SUCCEEDED(rv)) {
-    mLock = PR_NewLock();
-    if (!mLock) {
+    mMonitor = PR_NewMonitor();
+    if (!mMonitor) {
       rv = NS_ERROR_OUT_OF_MEMORY;
     }
   }
@@ -298,7 +298,7 @@ nsresult nsSocketTransport::CheckForTimeout(PRIntervalTime aCurrentTime)
   PRIntervalTime idleInterval;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   idleInterval = aCurrentTime - mLastActiveTime;
 
@@ -329,7 +329,7 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
   // Enter the socket transport lock...  
   // This lock protects access to socket transport member data...
   //
-  PR_Lock(mLock);
+  PR_EnterMonitor(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::Process() [%s:%d %x].\t"
@@ -580,7 +580,7 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
           "CurrentState = %d\n\n",
           mHostName, mPort, this, mStatus, mCurrentState));
 
-  PR_Unlock(mLock);
+  PR_ExitMonitor(mMonitor);
   return mStatus;
 }
 
@@ -626,19 +626,8 @@ nsresult nsSocketTransport::doResolveHost(void)
                     &rv);
     if (NS_FAILED(rv)) return rv;
 
-    //
-    // Give up the SocketTransport lock.  This allows the DNS thread to call the
-    // nsIDNSListener notifications without blocking...
-    //
-    PR_Unlock(mLock);
-
     rv = pDNSService->Lookup(mHostName, this, nsnull, 
                              getter_AddRefs(mDNSRequest));
-    //
-    // Aquire the SocketTransport lock again...
-    //
-    PR_Lock(mLock);
-
     if (NS_SUCCEEDED(rv)) {
       //
       // The DNS lookup has finished...  It has either failed or succeeded.
@@ -942,10 +931,10 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   // lock which could cause a deadlock by blocking the socket transport 
   // thread
   //
-  PR_Unlock(mLock);
+  PR_ExitMonitor(mMonitor);
   rv = mReadPipeOut->WriteSegments(nsReadFromSocket, (void*)mSocketFD, 
                                    MAX_IO_TRANSFER_SIZE, &totalBytesWritten);
-  PR_Lock(mLock);
+  PR_EnterMonitor(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("WriteSegments [fd=%x].  rv = %x. Bytes read =%d\n",
@@ -1104,7 +1093,7 @@ nsresult nsSocketTransport::doWriteFromBuffer(PRUint32 *aCount)
   // lock which could cause a deadlock by blocking the socket transport 
   // thread
   //
-  PR_Unlock(mLock);
+  PR_ExitMonitor(mMonitor);
   
   //
   // Write the data to the network...
@@ -1116,7 +1105,7 @@ nsresult nsSocketTransport::doWriteFromBuffer(PRUint32 *aCount)
   //
   rv = mWritePipeIn->ReadSegments(nsWriteToSocket, (void*)mSocketFD, 
                                   transferCount, aCount);
-  PR_Lock(mLock);
+  PR_EnterMonitor(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
         ("ReadSegments [fd=%x].  rv = %x. Bytes written =%d\n",
@@ -1252,7 +1241,7 @@ nsSocketTransport::Cancel(void)
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   mCancelOperation = PR_TRUE;
   //
@@ -1274,7 +1263,7 @@ nsSocketTransport::Suspend(void)
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   mSuspendCount += 1;
   //
@@ -1302,7 +1291,7 @@ nsSocketTransport::Resume(void)
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   if (mSuspendCount) {
     mSuspendCount -= 1;
@@ -1352,7 +1341,7 @@ nsSocketTransport::OnFull(nsIPipe* aPipe)
   nsresult rv = aPipe->GetInputStream(getter_AddRefs(in));
   if (NS_SUCCEEDED(rv) && in == mReadPipeIn) {
     // Enter the socket transport lock...
-    nsAutoLock aLock(mLock);
+    nsAutoMonitor mon(mMonitor);
 
     NS_ASSERTION(!GetFlag(eSocketRead_Wait), "Already waiting!"); 
 
@@ -1385,7 +1374,7 @@ nsSocketTransport::OnWrite(nsIPipe* aPipe, PRUint32 aCount)
   rv = aPipe->GetInputStream(getter_AddRefs(in));
   if (NS_SUCCEEDED(rv) && in == mWritePipeIn) {
     // Enter the socket transport lock...
-    nsAutoLock aLock(mLock);
+    nsAutoMonitor mon(mMonitor);
 
     if (GetFlag(eSocketWrite_Wait)) { 
       ClearFlag(eSocketWrite_Wait); 
@@ -1418,7 +1407,7 @@ nsSocketTransport::OnEmpty(nsIPipe* aPipe)
   rv = aPipe->GetInputStream(getter_AddRefs(in));
   if (NS_SUCCEEDED(rv) && in == mReadPipeIn) {
     // Enter the socket transport lock... 
-    nsAutoLock aLock(mLock); 
+    nsAutoMonitor mon(mMonitor); 
   
     if (GetFlag(eSocketRead_Wait)) {
       ClearFlag(eSocketRead_Wait);
@@ -1457,7 +1446,7 @@ nsSocketTransport::OnFound(nsISupports *aContext,
                            nsHostEnt *aHostEnt) 
 {
   // Enter the socket transport lock...
-  nsAutoLock lock(mLock);
+  nsAutoMonitor mon(mMonitor);
   nsresult rv = NS_OK;
 
   if (aHostEnt->hostEnt.h_addr_list
@@ -1495,7 +1484,7 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
                                 nsresult aStatus)
 {
   // Enter the socket transport lock...
-  nsAutoLock lock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("nsSocketTransport::OnStopLookup(...) [%s:%d %x]."
@@ -1551,7 +1540,7 @@ nsSocketTransport::AsyncOpen(nsIStreamObserver *observer, nsISupports* ctxt)
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::AsyncOpen() [%s:%d %x]\n", 
@@ -1595,7 +1584,7 @@ nsSocketTransport::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
   nsresult rv = NS_OK;
   
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::AsyncRead() [%s:%d %x]\t"
@@ -1656,7 +1645,7 @@ nsSocketTransport::AsyncWrite(nsIInputStream* aFromStream,
   nsresult rv = NS_OK;
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::AsyncWrite() [%s:%d %x]\t"
@@ -1707,7 +1696,7 @@ nsSocketTransport::OpenInputStream(PRUint32 startPosition, PRInt32 readCount,
   NS_ASSERTION(startPosition == 0, "fix me");
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::OpenInputStream() [%s:%d %x].\n", 
@@ -1758,7 +1747,7 @@ nsSocketTransport::OpenOutputStream(PRUint32 startPosition, nsIOutputStream* *re
   NS_ASSERTION(startPosition == 0, "fix me");
 
   // Enter the socket transport lock...
-  nsAutoLock aLock(mLock);
+  nsAutoMonitor mon(mMonitor);
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
          ("+++ Entering nsSocketTransport::OpenOutputStream() [%s:%d %x].\n", 
