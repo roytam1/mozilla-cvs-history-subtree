@@ -14,9 +14,9 @@
 			<bookmark name="Salon.com" href="http://www.salon.com/" />
 		</folder>
 		<folder name="Mac News Tabs" group="true">
+			<bookmark name="MacCentral Online" href="http://www.maccentral.com/" />
 			<bookmark name="MacNN | The Macintosh News Network" href="http://www.macnn.com/" />
 			<bookmark name="MacInTouch: Mac news, information and analysis" href="http://www.macintouch.com/" />
-			<bookmark name="MacCentral Online" href="http://www.maccentral.com/" />
 		</folder>
 		<bookmark name="Google" href="http://www.google.com/" keyword="google" id="google" description="" />
 	</folder>
@@ -27,20 +27,21 @@
 	</folder>
 	<folder name="Mac News">
 		<bookmark name="MacSurfer's Headline News" href="http://www.macsurfer.com/" />
+		<bookmark name="MacCentral Online" href="http://maccentral.macworld.com/" />
 		<bookmark name="MacNN | The Macintosh News Network" href="http://www.macnn.com/" />
 		<bookmark name="MacInTouch: Mac news, information and analysis" href="http://www.macintouch.com/" />
-		<bookmark name="MacCentral Online" href="http://maccentral.macworld.com/" />
 		<bookmark name="TidBITS Electronic Publishing" href="http://www.tidbits.com/" />
 	</folder>
 	<folder name="Mac Support">
 		<bookmark name="Apple Support" href="http://www.info.apple.com/" />
-		<bookmark name="OSXFAQ" href="http://www.osxfaq.com/" />
+		<bookmark name="MacFixIt - Troubleshooting Solution for the Macintosh" href="http://www.macfixit.com/" />
 		<bookmark name="Mac OS X Hints" href="http://www.macosxhints.com/" />
+		<bookmark name="OSXFAQ" href="http://www.osxfaq.com/" />
 	</folder>
 	<folder name="Mac Software">
 		<bookmark name="Apple - Mac OS X - Downloads" href="http://www.apple.com/downloads/macosx/" />
-		<bookmark name="VersionTracker: Mac OS X Software" href="http://www.versiontracker.com/macosx/" />
 		<bookmark name="Mac OS X Apps" href="http://www.macosxapps.com/" />
+		<bookmark name="VersionTracker: Mac OS X Software" href="http://www.versiontracker.com/macosx/" />
 	</folder>
 	<folder name="Tech News">
 		<bookmark name="CNet" href="http://www.cnet.com" />
@@ -60,4 +61,5 @@
 	</folder>
 	<bookmark name="Netscape.com" href="http://www.netscape.com/" />
 	<bookmark name="Yahoo!" href="http://www.yahoo.com/" />
+	<bookmark name="dmoz - Open Directory Project" href="http://dmoz.org/" />
 </bookmarks>
