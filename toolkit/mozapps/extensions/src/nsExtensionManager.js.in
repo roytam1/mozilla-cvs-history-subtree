@@ -236,6 +236,7 @@ function ensureExtensionsFiles(aIsProfile)
                                 [DIR_DEFAULTS_EXTENSIONS, FILE_EXTENSIONS]);
       defaultFile.copyTo(extensionsFile.parent, extensionsFile.leafName);
 
+#ifdef DEBUG
       try {      
         (getFile(getDirKey(aIsProfile), [DIR_CR_CHROME, FILE_CR_CHROMEDS])).remove(false);
         (getDir(getDirKey(aIsProfile), [DIR_CR_CHROME, DIR_CR_OVERLAYINFO])).remove(true);
@@ -243,6 +244,7 @@ function ensureExtensionsFiles(aIsProfile)
       catch (e) { 
         dump("Extension System Warning: failed to remove chrome.rdf/overlay info because: " + e + "\n"); 
       }
+#endif
     }
   }
   catch (e) { 
@@ -3134,7 +3136,6 @@ WSProxy.prototype = {
   
   onError: function nsExtensionItemUpdater_onError (aStatus, aMessage)
   {
-    dump("*** status = " + aStatus + ", message = " + aMessage + "\n");
     this._os.notifyObservers(null, 
                              this._updater._getMessage("Item-Error"), 
                              aStatus.toString());
