@@ -668,18 +668,27 @@ nsIOService::NewChannelFromURI(nsIURI *aURI, nsIChannel **result)
             rv = mProxyService->ExamineForProxy(aURI, getter_Copies(host), &port, getter_Copies(type));
             if (NS_SUCCEEDED(rv) && type.get())
             {
-                // we are going to proxy this channel and the only protocol that can do proxying is http
-                rv = GetProtocolHandler("http", getter_AddRefs(handler));
-                if (NS_FAILED(rv)) return rv;
-                
-                nsCOMPtr<nsIHttpProtocolHandler> httpHandler = do_QueryInterface(handler, &rv);
-                if (NS_FAILED(rv)) 
-                    return rv;
-
-                if (!httpHandler)
-                    return NS_ERROR_NULL_POINTER;
-
-                return httpHandler->NewProxyChannel(aURI, host, port, type, result);
+                // HACK: We need to rearchitect stuff to get socks to work with
+                // non-http/https. So only proxy stuff which isn't socks, or is http
+                // Yes, this is ugly. See bug #89500 - bbaetz
+                if (PL_strcmp(type.get(), "socks") ||
+                    !PL_strcmp(scheme.get(), "http") ||
+                    !PL_strcmp(scheme.get(), "https"))
+                {
+                    // we are going to proxy this channel using http.
+                    // Hope this is what we wanted...
+                    rv = GetProtocolHandler("http", getter_AddRefs(handler));
+                    if (NS_FAILED(rv)) return rv;
+                    
+                    nsCOMPtr<nsIHttpProtocolHandler> httpHandler = do_QueryInterface(handler, &rv);
+                    if (NS_FAILED(rv)) 
+                        return rv;
+                    
+                    if (!httpHandler)
+                        return NS_ERROR_NULL_POINTER;
+                    
+                    return httpHandler->NewProxyChannel(aURI, host, port, type, result);
+                }
             }
         }
     }
