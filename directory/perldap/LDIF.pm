@@ -100,24 +100,33 @@ sub continue_line
 
 sub unpack_LDIF
 {
-    my ($str, $read_ref) = @_;
-    $str =~ s"^#.*($/|$)""gm; # ignore comments
+    my ($str, $read_ref, $option) = @_;
+    if ((defined $option) and ("comments" eq lc $option)) {
+	# Move comments down to the end of a complete value:
+	$str =~ s"(^#.*$/)( .*($/|$))"$2$1"gm;
+    } else { # Ignore comments:
+	$str =~ s"^#.*($/|$)""gm;
+    }
     $str =~ s"$/ ""g; # combine continuation lines
-    my @record;
+    my (@record, $attr, $value);
     local $_;
     foreach $_ (split $/, $str) {
     	last if ($_ eq ""); # blank line
-	my ($attr, $value) = split /:/, $_, 2;
-	if (not defined ($value)) {
-	    warn "$0 non-LDIF line: $_\n" if (($attr ne "-") and $^W);
-	} elsif ($value =~ s/^: *//) {
-	    $value = decode_base64 ($value);
-	} elsif ($value =~ s/^< *//) {
-	    my $temp = $value;
-	    $value = \$temp;
-	    if (defined $read_ref) { &$read_ref ($value); }
+	if ((substr $_, 0, 1) eq "#") { # comment
+	    ($attr, $value) = ($_, undef);
 	} else {
-	    $value =~ s/^ *//;
+	    ($attr, $value) = split /:/, $_, 2;
+	    if (not defined ($value)) {
+		warn "$0 non-LDIF line: $_\n" if ($^W and $attr ne "-");
+	    } elsif ($value =~ s/^: *//) {
+		$value = decode_base64 ($value);
+	    } elsif ($value =~ s/^< *//) {
+		my $temp = $value;
+		$value = \$temp;
+		if (defined $read_ref) { &$read_ref ($value); }
+	    } else {
+		$value =~ s/^ *//;
+	    }
 	}
 	push @record, ($attr, $value);
     }
@@ -175,7 +184,7 @@ sub pack_LDIF
 
 sub get_LDIF
 {
-    my ($fh, $eof, $read_ref) = @_;
+    my ($fh, $eof, @options) = @_;
     $fh = *STDIN unless defined $fh;
     my (@record, $localEOF);
 
@@ -195,7 +204,7 @@ sub get_LDIF
 	        last;            # empty line
 	    }
 	}
-	@record = unpack_LDIF ($str, $read_ref);
+	@record = unpack_LDIF ($str, @options);
     } until (@record or $$eof);
     return @record;
 }
@@ -229,9 +238,9 @@ sub new
 	} else {
 	    my $p2 = $_[$[+2];
 	    my $p2type = ref $p2;
-	    if ($p2type eq "CODE") {
+	    if ($p2type eq "CODE" or (@_ > 3 and not defined $p2)) {
 		$self->{"_rw_"} = "r";
-		$self->{"read_reference"} = $p2;
+		$self->{"options"} = [$p2, $_[$[+3]];
 	    } else {
 		$self->{"_rw_"} = "w";
 		$self->{"options"} = ($p2type eq "ARRAY") ? [@$p2] : $p2;
@@ -264,8 +273,10 @@ sub get1
     	return unless ($self->{"_rw_"} eq "rw");
     	$self->{"_rw_"} = "r";
     }
-    my (@record, $eof);
-    @record = get_LDIF ($self->{"_fh_"}, $eof, $self->{"read_reference"});
+    my $options = $self->{"options"};
+    my $eof;
+    my @record = get_LDIF ($self->{"_fh_"}, $eof,
+			   defined $options ? @$options : ());
     if ($eof) { $self->{"_rw_"} = "eof"; }
     return @record;
 }
@@ -644,7 +655,7 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
        sort_attributes references enlist_values delist_values
        read_v1 read_v0 read_file_URL_or_name);
 
- $ldif = new Mozilla::LDAP::LDIF (*FILEHANDLE, \&read_reference);
+ $ldif = new Mozilla::LDAP::LDIF (*FILEHANDLE, \&read_reference, $comments);
  @record = get $ldif;
  @records = get $ldif ($maximum_number);
  $entry = set_Entry (\entry, \@record);
@@ -657,13 +668,13 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
  $success = writeOneEntry $ldif (\entry);
  $success = writeEntries  $ldif (\entry, \entry ...);
 
- @record = get_LDIF (*FILEHANDLE, $eof, \&read_reference);
+ @record = get_LDIF (*FILEHANDLE, $eof, \&read_reference, $comments);
  @record = get_LDIF; # *STDIN
 
  $success = put_LDIF (*FILEHANDLE, $options, @record);
  $success = put_LDIF (*FILEHANDLE, $options, \@record, \object ...);
 
- @record = unpack_LDIF ($string, \&read_reference);
+ @record = unpack_LDIF ($string, \&read_reference, $comments);
 
  $string = pack_LDIF ($options, @record);
  $string = pack_LDIF ($options, \@record, \object ...);
@@ -706,6 +717,7 @@ An LDIF record like this:
     objectClass: organizatio
      nalPerson
     jpegPhoto:< file:foobar.jpg
+    # comment
 
 corresponds (in this module) to a Perl array like this:
 
@@ -713,7 +725,8 @@ corresponds (in this module) to a Perl array like this:
      cn => "Foo Bar",
      Sn => "Bar",
      objectClass => [ "person", "organizationalPerson" ],
-     jpegPhoto => \"file:foobar.jpg"
+     jpegPhoto => \"file:foobar.jpg",
+     '# comment', undef
     )
 
 URLs or file names are read by a separate function.
@@ -739,7 +752,7 @@ on any object.
 
 =over 4
 
-=item B<new> Mozilla::LDAP::LDIF (*FILEHANDLE, \&read_reference)
+=item B<new> Mozilla::LDAP::LDIF (*FILEHANDLE, \&read_reference, $comments)
 
 Create and return an object to read LDIF from the given file.
 If *FILEHANDLE is not defined, return an object to read from *STDIN.
@@ -749,10 +762,12 @@ to another data source, with ${$_[$[]} equal to the reference.
 The function should copy the referent (for example, the contents of
 the named file) into $_[$[].
 
+Ignore LDIF comment lines, unless $comments eq "comments".
+
 =item B<get> $ldif
 
-Read an LDIF record from the given file.  Ignore comments,
-combine continuation lines and base64-decode attribute values.
+Read an LDIF record from the given file.
+Combine continuation lines and base64-decode attribute values.
 Return an array of strings, representing the record.  Return a
 false value if end of file is encountered before an LDIF record.
 
@@ -784,7 +799,7 @@ See B<get> (above) for more information.
 Set the DN and attributes of the given Mozilla::LDAP::Entry object
 from the given LDIF record.  Return a reference to the entry.
 
-=item B<get_LDIF> (*FILEHANDLE, $eof, \&read_reference)
+=item B<get_LDIF> (*FILEHANDLE, $eof, \&read_reference, $comments)
 
 Read an LDIF record from the given file.
 Return an array of strings, representing the record.  Return a
@@ -802,7 +817,9 @@ to another data source, with ${$_[$[]} equal to the reference.
 The function should copy the referent (for example, the contents of
 the named file) into $_[$[].
 
-=item B<unpack_LDIF> ($string, \&read_reference)
+Ignore LDIF comment lines, unless $comments eq "comments".
+
+=item B<unpack_LDIF> ($string, \&read_reference, $comments)
 
 Read one LDIF record from the given string.
 Return an array of strings, representing the record.  Return a
@@ -812,6 +829,8 @@ If \&read_reference is defined, call it when reading each reference
 to another data source, with ${$_[$[]} equal to the reference.
 The function should copy the referent (for example, the contents of
 the named file) into $_[$[].
+
+Ignore LDIF comment lines, unless $comments eq "comments".
 
 =item B<read_v1> (\$url)
 
