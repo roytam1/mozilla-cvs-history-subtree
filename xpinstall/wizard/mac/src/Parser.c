@@ -1198,7 +1198,13 @@ find_contents:
 	if (*txt == START_SECTION &&
 	    !(txt == *ioTxt || *(txt-1) == MAC_EOL || *(txt-1) == WIN_EOL))
 	{
-	    txt++;
+		if( kSectionMaxLen-1 >= cnt++)	/* prevent from falling of end of outSection buffer */				
+		{
+			*sbuf = *txt;
+			sbuf++; txt++;
+		}
+		else
+			txt++;
 	    goto find_contents;
 	}
 	
