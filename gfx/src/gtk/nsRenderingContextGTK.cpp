@@ -2011,6 +2011,7 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
   nsRect2 sr;
 
 	pt = *aDestPoint;
+  //printf("{\n %f, %f, %f, %f\n", pt.x, pt.y, aSrcRect->x, aSrcRect->y);
   mTranMatrix->Transform(&pt.x, &pt.y);
 
   sr = *aSrcRect;
@@ -2042,12 +2043,25 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
 
   PRInt32 x = GFXCoordToIntFloor(sr.x);
   PRInt32 y = GFXCoordToIntFloor(sr.y);
-
+#if 0
+  GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
+#endif
   gdk_draw_rgb_image(mSurface->GetDrawable(), mGC,
                      pt.x + x, pt.y + y, width, height,
                      GDK_RGB_DITHER_MAX,
                      bits + PRInt32(y * bpr), bpr);
 
+#if 0
+  printf(" (%f, %f), (%i, %i), %i, %i\n}\n", pt.x, pt.y, x, y, width, height);
+
+  gdk_window_copy_area(GDK_ROOT_PARENT(), mGC, 0, 0,
+                       image, 0, 0, width, height);
+
+  gdk_window_copy_area(mSurface->GetDrawable(), mGC, pt.x + x, pt.y + y,
+                       image, sr.x, 0, sr.width, height);
+
+  gdk_pixmap_unref(image);
+#endif
   return NS_OK;
 }
 
