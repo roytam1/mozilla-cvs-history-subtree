@@ -44,7 +44,7 @@ C_OBJS = \
 
 include <$(DEPTH)\config\rules.mak>
 
-libs:: $(LIBRARY)
+export:: $(LIBRARY)
 	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
 
 clobber::
