@@ -263,6 +263,7 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 NS_IMETHODIMP
 nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
 {
+    NS_NOTREACHED("nsXULPrototypeDocument::Read");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -272,10 +273,8 @@ nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
 {
     nsresult rv;
 
-#if 0
-    rv = aStream->WriteSingleRefObject(mURI);
+    rv = aStream->WriteObject(mURI, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
-#endif
 
     nsCOMPtr<nsIScriptContext> scriptContext;
     rv = mGlobalObject->GetContext(getter_AddRefs(scriptContext));
@@ -291,6 +290,14 @@ nsXULPrototypeDocument::Write(nsIObjectOutputStream* aStream)
 
     nsCOMPtr<nsIScriptGlobalObject> mGlobalObject;
 #endif
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::GetCID(nsCID* aResult)
+{
+    NS_NOTREACHED("nsXULPrototypeDocument::GetCID");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
