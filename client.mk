@@ -53,7 +53,7 @@
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 MOZ_CO_TAG = ANGELON_MOZ12_BRANCH 
-NSPR_CO_TAG = ANGELON_MOZ12_BRANCH 
+NSPR_CO_TAG = NSPR_4_3_RTM
 PSM_CO_TAG = ANGELON_MOZ12_BRANCH
 NSS_CO_TAG = NSS_3_7_7_RTM
 LDAPCSDK_CO_TAG = ANGELON_MOZ12_BRANCH
