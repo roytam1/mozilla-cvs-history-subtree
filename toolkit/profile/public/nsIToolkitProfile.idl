@@ -48,6 +48,8 @@ interface nsIToolkitProfile;
 interface nsIProfileLock : nsISupports
 {
     readonly attribute nsILocalFile directory;
+
+    void unlock();
 };
 
 [scriptable, uuid(87cea5c2-b9ed-44f9-8984-e75bc9f7134a)]

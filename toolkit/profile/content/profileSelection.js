@@ -74,6 +74,7 @@ function startup()
       catch(e) { }
     }
 
+    autoSelectLastProfile.checked = gProfileService.startWithLastProfile;
     profilesElement.focus();
   }
   catch(e) {

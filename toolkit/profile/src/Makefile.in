@@ -36,17 +36,20 @@ REQUIRES = \
 		appcomps \
 		$(NULL)
 
-LOCAL_INCLUDES = -I$(srcdir)/../../xre
+LOCAL_INCLUDES = \
+		-I$(srcdir)/../../xre \
+		-I$(topsrcdir)/profile/dirserviceprovider/src \
+		$(NULL)
 
 CPPSRCS = \
+		nsProfileLock.cpp \
 		nsToolkitProfileService.cpp \
 		nsINIParser.cpp \
 		$(NULL)
 
-# ifdef ENABLE_TESTS
-# CPPSRCS += INIParserTest.cpp
-# 
-# SIMPLE_PROGRAMS = INIParserTest$(BIN_SUFFIX)
-# endif
+GARBAGE += nsProfileLock.cpp
 
 include $(topsrcdir)/config/rules.mk
+
+export:: $(topsrcdir)/profile/dirserviceprovider/src/nsProfileLock.cpp
+	$(INSTALL) $^ .
