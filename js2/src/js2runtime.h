@@ -151,7 +151,7 @@ static const double two31 = 2147483648.0;
         float64& operator=(float64 f64)                 { return (tag = f64_tag, this->f64 = f64); }
         JSObject*& operator=(JSObject* object)          { return (tag = object_tag, this->object = object); }
         JSType*& operator=(JSType* type)                { return (tag = type_tag, this->type = type); }
-        JSFunction*& operator=(JSFunction* slot)        { return (tag = function_tag, this->function = function); }
+        JSFunction*& operator=(JSFunction* function)    { return (tag = function_tag, this->function = function); }
         bool& operator=(bool boolean)                   { return (tag = boolean_tag, this->boolean = boolean); }
         
         bool isObject() const                           { return (tag == object_tag); }
@@ -264,22 +264,22 @@ static const double two31 = 2147483648.0;
 
         virtual bool isConstructor()    { return false; }   // XXX cheaper than RTTI ? (or is that on anyway)
 
-        virtual void emitImplicitLoad(ByteCodeGen *bcg) { } 
+        virtual void emitImplicitLoad(ByteCodeGen *) { } 
 
         virtual void emitInvokeSequence(ByteCodeGen *bcg)   { emitCodeSequence(bcg); }
 
-        virtual bool emitPreAssignment(ByteCodeGen *bcg)    { return false; }
+        virtual bool emitPreAssignment(ByteCodeGen *)    { return false; }
 
-        virtual void emitCodeSequence(ByteCodeGen *bcg) 
+        virtual void emitCodeSequence(ByteCodeGen *) 
                 { throw Exception(Exception::internalError, "gen code for base ref"); }
 
-        virtual bool getValue(Context *cx)
+        virtual bool getValue(Context *)
                 { throw Exception(Exception::internalError, "get value(cx) for base ref"); }
         
-        virtual bool setValue(Context *cx)
+        virtual bool setValue(Context *)
                 { throw Exception(Exception::internalError, "set value(cx) for base ref"); }
 
-        virtual uint32 baseExpressionDepth()
+        virtual int32 baseExpressionDepth()
                 { return 0; }
 
         virtual void emitTypeOf(ByteCodeGen *bcg);
@@ -327,7 +327,7 @@ static const double two31 = 2147483648.0;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
+        int32 baseExpressionDepth() { return 1; }
     };
     // a static field
     class StaticFieldReference : public Reference {
@@ -339,7 +339,7 @@ static const double two31 = 2147483648.0;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
+        int32 baseExpressionDepth() { return 1; }
     };
     // a static function
     class StaticFunctionReference : public Reference {
@@ -349,7 +349,7 @@ static const double two31 = 2147483648.0;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitInvokeSequence(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
+        int32 baseExpressionDepth() { return 1; }
     };
     class StaticGetterMethodReference : public StaticFunctionReference {
     public:
@@ -374,7 +374,7 @@ static const double two31 = 2147483648.0;
         void emitCodeSequence(ByteCodeGen *bcg);
         virtual bool needsThis() { return true; }
         virtual void emitImplicitLoad(ByteCodeGen *bcg);
-        virtual uint32 baseExpressionDepth() { return 1; }
+        virtual int32 baseExpressionDepth() { return 1; }
         void emitInvokeSequence(ByteCodeGen *bcg);
     };
     class GetterMethodReference : public MethodReference {
@@ -408,7 +408,7 @@ static const double two31 = 2147483648.0;
         bool isConstructor()    { return true; }
         bool needsThis() { return false; }          // i.e. there is no 'this' specified by the
                                                     // the call sequence (it's a static function)
-        uint32 baseExpressionDepth() { return 1; }
+        int32 baseExpressionDepth() { return 1; }
     };
     // a getter function
     class GetterFunctionReference : public Reference {
@@ -435,7 +435,7 @@ static const double two31 = 2147483648.0;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitInvokeSequence(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return 1; }
+        int32 baseExpressionDepth() { return 1; }
         bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
         void emitDelete(ByteCodeGen *bcg);
@@ -460,21 +460,21 @@ static const double two31 = 2147483648.0;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
         void emitTypeOf(ByteCodeGen *bcg);
-        bool getValue(Context *cx)
+        bool getValue(Context *)
                 { throw Exception(Exception::internalError, "get value for name ref"); }
-        bool setValue(Context *cx)
+        bool setValue(Context *)
                 { throw Exception(Exception::internalError, "set value for name ref"); }
         void emitDelete(ByteCodeGen *bcg);
     };
 
     class ElementReference : public Reference {
     public:
-        ElementReference(Access acc, uint32 depth)
+        ElementReference(Access acc, int32 depth)
             : mAccess(acc), mDepth(depth), Reference(Object_Type) { }
         Access mAccess;
-        uint32 mDepth;
+        int32 mDepth;
         void emitCodeSequence(ByteCodeGen *bcg);
-        uint32 baseExpressionDepth() { return mDepth; }
+        int32 baseExpressionDepth() { return mDepth; }
     };
 
 
@@ -667,7 +667,7 @@ static const double two31 = 2147483648.0;
             return prop;
         }
 
-        virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
+        virtual Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -1079,7 +1079,7 @@ static const double two31 = 2147483648.0;
 
     class JSArrayInstance : public JSInstance {
     public:
-        JSArrayInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
+        JSArrayInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
 
         // XXX maybe could have implemented length as a getter/setter pair?
         bool setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
@@ -1103,7 +1103,7 @@ static const double two31 = 2147483648.0;
 
     class JSStringInstance : public JSInstance {
     public:
-        JSStringInstance(Context *cx, JSType *type) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
+        JSStringInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)String_Type; }
 
         bool getProperty(Context *cx, const String &name, AttributeList *attr);
 
@@ -1135,7 +1135,7 @@ static const double two31 = 2147483648.0;
         {
         }
 
-        Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 depth)
+        Reference *genReference(const String& name, AttributeList *attr, Access acc, uint32 /*depth*/)
         {
             PropertyIterator i;
             if (hasProperty(name, attr, acc, &i)) {
@@ -1246,7 +1246,7 @@ static const double two31 = 2147483648.0;
     class ScopeChain {
     public:
 
-        ScopeChain(Context *cx, World &world) :
+        ScopeChain(Context *cx, World &) :
               m_cx(cx)
         {
         }
@@ -1448,7 +1448,7 @@ static const double two31 = 2147483648.0;
 
         JSFunction(Context *cx, JSType *resultType,
                          uint32 argCount, ScopeChain *scopeChain,
-                         bool isConstructor = false) 
+                         bool /*isConstructor*/ = false) 
 
                     : mByteCode(NULL), 
                         mCode(NULL), 
@@ -1615,7 +1615,7 @@ static const double two31 = 2147483648.0;
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
 
-        void switchToFunction(JSFunction *f)
+        void switchToFunction(JSFunction *)
         {
             ASSERT(false);  // somebody should write some code here one day
         }
@@ -1997,7 +1997,7 @@ static const double two31 = 2147483648.0;
         defineMethod(name, attr, f->getResultType(), f);
     }
 
-    inline void JSInstance::initInstance(Context *cx, JSType *type)
+    inline void JSInstance::initInstance(Context *, JSType *type)
     {
         if (type->mVariableCount)
             mInstanceValues = new JSValue[type->mVariableCount];
