@@ -800,7 +800,12 @@ case "$target" in
         MDCPUCFG_H=_irix32.cfg
     fi
     case "${target_os}" in
+    irix6*)
+           AC_DEFINE(IRIX6)
+	   USE_PTHREADS=1
+           ;;
     irix5*)
+           AC_DEFINE(IRIX5)
 	   USE_NSPR_THREADS=1
 	   ;;
     *)
