@@ -3677,7 +3677,7 @@
 		F56F242902AC706801A967F3 = {
 			isa = PBXFileReference;
 			name = libnslocale.a;
-			path = ../intl/locale/src/unix/libnslocale.a;
+			path = ../intl/locale/src/mac/libnslocale.a;
 			refType = 2;
 		};
 		F56F242A02AC706801A967F3 = {
@@ -9493,8 +9493,8 @@
 		};
 		F6BD64BC01B316DA01A962F7 = {
 			isa = PBXFileReference;
-			name = unixcharset.properties;
-			path = ../dist/Embed/res/unixcharset.properties;
+			name = maccharset.properties;
+			path = ../dist/Embed/res/maccharset.properties;
 			refType = 2;
 		};
 		F6BD64C201B316DA01A962F7 = {
