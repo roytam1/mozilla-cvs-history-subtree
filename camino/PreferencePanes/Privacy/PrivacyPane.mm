@@ -68,6 +68,7 @@ const int kDisableAllCookies = 2;
   if ( !cookiesEnabled ) {
     [mAskAboutCookies setEnabled:NO];
     [mEditSitesButton setEnabled:NO];
+    [mEditSitesText setTextColor:[NSColor lightGrayColor]];
   }
   PRBool warnAboutCookies = PR_TRUE;
   mPrefService->GetBoolPref("network.cookie.warnAboutCookies", &warnAboutCookies);
@@ -122,6 +123,7 @@ const int kDisableAllCookies = 2;
   // update the buttons
   [mAskAboutCookies setEnabled:enabled];
   [mEditSitesButton setEnabled:enabled];
+  [mEditSitesText setTextColor:(enabled ? [NSColor blackColor] : [NSColor lightGrayColor])];
 }
 
 
@@ -282,9 +284,19 @@ const int kDisableAllCookies = 2;
 
 -(IBAction) launchKeychainAccess:(id)sender
 {
+  FSRef fsRef;
+  CFURLRef urlRef;
+  OSErr err = ::LSGetApplicationForInfo('APPL', 'kcmr', NULL, kLSRolesAll, &fsRef, &urlRef);
+  if ( !err ) {
+    CFStringRef fileSystemURL = ::CFURLCopyFileSystemPath(urlRef, kCFURLPOSIXPathStyle);
+    [[NSWorkspace sharedWorkspace] launchApplication:(NSString*)fileSystemURL];
+    CFRelease(fileSystemURL);
+  }
+#if 0
   if ([[NSWorkspace sharedWorkspace] launchApplication:NSLocalizedString(@"Keychain Access", @"Keychain Access")] == NO) {
     // XXXw. pop up a dialog warning that Keychain couldn't be launched?
     NSLog(@"Failed to launch Keychain.");
   }
+#endif
 }
 @end

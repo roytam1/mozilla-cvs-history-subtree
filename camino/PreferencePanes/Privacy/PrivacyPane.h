@@ -13,6 +13,7 @@ class nsISupportsArray;
   IBOutlet NSButton* mAskAboutCookies;
   IBOutlet id mCookieSitePanel;
   IBOutlet NSButton* mEditSitesButton;
+  IBOutlet NSTextField* mEditSitesText;
   
   IBOutlet NSButton* mStorePasswords;
   IBOutlet NSButton* mAutoFillPasswords;

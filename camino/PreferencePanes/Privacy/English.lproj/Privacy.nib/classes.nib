@@ -32,6 +32,7 @@
                 mCookieSitePanel = id; 
                 mCookiesEnabled = NSButton; 
                 mEditSitesButton = NSButton; 
+                mEditSitesText = NSTextField; 
                 mSiteTable = NSTableView; 
                 mStorePasswords = NSButton; 
             }; 
