@@ -64,7 +64,7 @@ nsUNIXCharset::nsUNIXCharset()
           if(NS_FAILED(res)) {
               nsAutoString localeKey("locale.all.");
               localeKey.Append(locale);
-              res = info->Get(localeKey, mCharset);
+              nsresult res = info->Get(localeKey, mCharset);
               if(NS_SUCCEEDED(res))  {
                   delete info;
                   return; // succeeded
