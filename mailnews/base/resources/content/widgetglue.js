@@ -135,7 +135,7 @@ function MsgEmptyTrash()
         var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
         if(trashSelected)
         {
-            dump("FIXME: reload thread pane after empty trash\n");
+            dump("FIXME (maybe not): reload thread pane after empty trash\n");
         }
     }
 }
