@@ -22,4 +22,4 @@ JDK_DIR=/usr/lib/jdk-1.1.5
 INCLUDES   += -I$(JDK_DIR)/include -I$(JDK_DIR)/include/md \
 	      -I$(JDK_DIR)/include/genunix
 
-OTHER_LIBS = -L../$(OBJDIR) -ljs $(JDK_DIR)/lib/i386/green_threads/libjava.so
+OTHER_LIBS += -L../$(OBJDIR) -ljs $(JDK_DIR)/lib/i386/green_threads/libjava.so

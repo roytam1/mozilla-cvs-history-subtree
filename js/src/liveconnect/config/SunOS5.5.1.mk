@@ -20,4 +20,4 @@ JDK = /u/rchinta/util/java/jdk1.1.5
 
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/solaris
 
-OTHER_LIBS = -L../$(OBJDIR) -ljs $(JDK)/lib/sparc/native_threads/libjava.so 
+OTHER_LIBS += -L../$(OBJDIR) -ljs $(JDK)/lib/sparc/native_threads/libjava.so 
