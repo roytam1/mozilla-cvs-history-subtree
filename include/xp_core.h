@@ -201,7 +201,7 @@
 #define MIN(a, b)     min((a), (b))
 #endif
 
-#if defined(XP_OS2)
+#if defined(XP_OS2_VACPP)
 #ifndef MIN
 #define MIN(a, b)     min((a), (b))
 #endif
