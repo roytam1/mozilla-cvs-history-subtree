@@ -49,6 +49,9 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 int	ldap_debug;
 #endif
 
+#ifdef _WINDOWS
+#define USE_WINDOWS_TLS /* thread local storage */
+#endif
 
 /*
  * global defaults for callbacks are stored here.  callers of the API set
@@ -69,11 +72,18 @@ struct nsldapi_ldap_error {
         char    *le_matched;
         char    *le_errmsg;
 };
-#else
+#elif defined (USE_WINDOWS_TLS)
+static DWORD dwTlsIndex;
+struct nsldapi_ldap_error {
+	int	le_errno;
+	char	*le_matched;
+	char	*le_errmsg;
+};
+#else /* use static tls */
 __declspec ( thread ) int	nsldapi_gldaperrno;
 __declspec ( thread ) char	*nsldapi_gmatched = NULL;
 __declspec ( thread ) char	*nsldapi_gldaperror = NULL; 
-#endif /* _WINDOWS */
+#endif /* USE_WINDOWS_TLS */
 
 
 #ifdef _WINDOWS
@@ -145,6 +155,55 @@ set_errno( int Errno )
 	errno = Errno;
 }
 
+#ifdef USE_WINDOWS_TLS
+static void
+set_ld_error( int err, char *matched, char *errmsg, void *dummy )
+{
+	struct nsldapi_ldap_error *le;
+	void *tsd;
+
+	le = TlsGetValue( dwTlsIndex );
+
+	if (le == NULL) {
+		tsd = (void *)calloc(1, sizeof(struct nsldapi_ldap_error));
+		TlsSetValue( dwTlsIndex, tsd );
+	}
+
+	le = TlsGetValue ( dwTlsIndex );
+
+	if (le == NULL)
+		return;
+
+	le->le_errno = err;
+
+	if ( le->le_matched != NULL ) {
+		ldap_memfree( le->le_matched );
+	}
+	le->le_matched = matched;
+
+	if ( le->le_errmsg != NULL ) {
+		ldap_memfree( le->le_errmsg );
+	}
+	le->le_errmsg = errmsg;
+}
+
+static in
+get_ld_error ( char **matched, char **errmsg, void *dummy )
+{
+	struct nsldapi_ldap_error *le;
+
+	le = TlsGetValue( dwTlsIndex );
+	if ( matched != NULL ) {
+		*matched = le->le_matched;
+	}
+
+	if ( errmsg != NULL ) {
+		*errmsg = le->le_errmgs;
+	}
+
+	return( le->le_errno );
+}
+#else
 static int
 get_ld_error( char **LDMatched, char **LDError, void * Args )
 {
@@ -177,7 +236,8 @@ set_ld_error( int LDErrno, char *  LDMatched, char *  LDError,
 	nsldapi_gmatched    = LDMatched;
 	nsldapi_gldaperror  = LDError;
 }
-#else
+#endif /* USE_WINDOWS_TLS */
+#else /* IF ! _WINDOWS */
 static void *
 pthread_mutex_alloc( void )
 {
@@ -253,7 +313,7 @@ get_errno( void )
 {
         return( errno );
 }
-#endif /* _WINDOWS */
+#endif /* ! _WINDOWS */
 
 static struct ldap_thread_fns
 	nsldapi_default_thread_fns = {
@@ -289,7 +349,9 @@ nsldapi_initialize_defaults( void )
         if ( pthread_key_create(&nsldapi_key, free ) != 0) {
                 perror("pthread_key_create");
         }
-#endif /* _WINDOWS */
+#elif defined(USE_WINDOWS_TLS)
+	dwTlsIndex = TlsAlloc();
+#endif /* USE_WINDOWS_TLS */
 
 	nsldapi_initialized = 1;
 	memset( &nsldapi_memalloc_fns, 0, sizeof( nsldapi_memalloc_fns ));
