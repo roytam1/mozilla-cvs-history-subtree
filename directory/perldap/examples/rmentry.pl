@@ -77,7 +77,7 @@ foreach $search (@ARGV)
 	{
 	  if (! $opt_n)
 	    {
-	      $conn->delete($entry->{dn});
+	      $conn->delete($entry);
 	      $conn->printError() if $conn->getErrorCode();
 	    }
 	  print "Deleted $entry->{dn}\n" if $opt_v;
