@@ -70,7 +70,7 @@ rmtree(["$DEPTH/stage"],0,0) if(-d "$DEPTH/stage");
 # The destination cannot be a sub directory of the source.
 # pkgcp.pl will get very unhappy.
 
-mkdir("$DEPTH/stage", 775);
+mkdir("$DEPTH/stage");
 system("perl $cwdPackager/pkgcp.pl -s $cwdDistWin -d $DEPTH/stage -f $cwdPackager/packages-win -o dos -v");
 
 chdir("$cwdPackager/windows");
