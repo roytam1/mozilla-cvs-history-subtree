@@ -231,6 +231,8 @@ NS_IMETHODIMP nsImageFrame::SetImageData(const PRUint8 *data, PRUint32 length, P
 
   memcpy(mImageData.data + offset, data, length);
 
+  mImageData.dataChanged = PR_TRUE;
+
   return NS_OK;
 }
 
@@ -277,6 +279,8 @@ NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, P
 
   memcpy(mAlphaData->data + offset, data, length);
 
+  mAlphaData->dataChanged = PR_TRUE;
+
   return NS_OK;
 }
 
@@ -287,7 +291,11 @@ nsImageFrame::GetAlphaBitmap()
   if (!mAlphaData)
     return nsnull;
 
-  GdkBitmap *bitmap = gdk_pixmap_new(nsnull, mRect.width, mRect.height, 1);
+  if (!mAlphaData->pixmap)
+    mAlphaData->pixmap = gdk_pixmap_new(nsnull, mRect.width, mRect.height, 1);
+
+  if (!mAlphaData->dataChanged)
+    return gdk_pixmap_ref(mAlphaData->pixmap);
 
   XImage *x_image = nsnull;
   Pixmap xpixmap = 0;
@@ -295,7 +303,7 @@ nsImageFrame::GetAlphaBitmap()
   Visual *visual = nsnull;
 
   /* get the X primitives */
-  dpy = GDK_WINDOW_XDISPLAY(bitmap);
+  dpy = GDK_WINDOW_XDISPLAY(mAlphaData->pixmap);
 
   /* this is the depth of the pixmap that we are going to draw to.
      It's always a bitmap.  We're doing alpha here folks. */
@@ -333,9 +341,9 @@ nsImageFrame::GetAlphaBitmap()
 
   // Write into the pixemap that is underneath gdk's mAlphaPixmap
   // the image we just created.
-  xpixmap = GDK_WINDOW_XWINDOW(bitmap);
+  xpixmap = GDK_WINDOW_XWINDOW(mAlphaData->pixmap);
 
-  GdkGC *gc1bit = gdk_gc_new(bitmap);
+  GdkGC *gc1bit = gdk_gc_new(mAlphaData->pixmap);
 
   XPutImage(dpy, xpixmap, GDK_GC_XGC(gc1bit), x_image, 0, 0, 0, 0,
             mRect.width, mRect.height);
@@ -346,7 +354,9 @@ nsImageFrame::GetAlphaBitmap()
   x_image->data = 0;          /* Don't free the IL_Pixmap's bits. */
   XDestroyImage(x_image);
 
-  return bitmap;
+  mAlphaData->dataChanged = PR_FALSE;
+
+  return gdk_pixmap_ref(mAlphaData->pixmap);
 }
 
 
@@ -389,8 +399,8 @@ nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsR
   return NS_OK;
 }
 
-#define USE_XIE 1
-//#define USE_PIXBUF 1
+//#define USE_XIE 1
+#define USE_PIXBUF 1
 
 nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
@@ -402,14 +412,20 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC,
 
   trans.TransformCoord(&source.x, &source.y, &source.width, &source.height);
 
+
+
 #ifdef USE_XIE
+  if (!mImageData.pixmap)
+    mImageData.pixmap = gdk_pixmap_new(aDrawable, mRect.width, mRect.height, gdk_rgb_get_visual()->depth);
+
   Display *display = GDK_WINDOW_XDISPLAY(aDrawable);
 
-  GdkPixmap *gdkpixmap = gdk_pixmap_new(aDrawable, mRect.width, mRect.height, gdk_rgb_get_visual()->depth);
+  
+
   GdkGC *gdkgc = gdk_gc_new(aDrawable);
-  gdk_draw_rgb_image(gdkpixmap, gdkgc,
-                     0, 0,
-                     mRect.width, mRect.height,
+  gdk_draw_rgb_image(mImageData.pixmap, gdkgc,
+                     0, source.y,
+                     mRect.width, source.height,
                      GDK_RGB_DITHER_MAX,
                      mImageData.data,
                      mImageData.bytesPerRow);
@@ -417,7 +433,8 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC,
 
   GdkBitmap *alphaMask = GetAlphaBitmap();
 
-  DrawScaledImageXIE(display, aDrawable, NS_CONST_CAST(GdkGC*, aGC), gdkpixmap, alphaMask,
+  DrawScaledImageXIE(display, aDrawable, NS_CONST_CAST(GdkGC*, aGC),
+                     mImageData.pixmap, alphaMask,
                      mRect.width, mRect.height,
                      source.x, source.y, source.width, source.height,
                      dest.x, dest.y, dest.width, dest.height);
@@ -427,57 +444,40 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC,
     gdk_pixmap_unref(alphaMask);
 
   gdk_gc_unref(gdkgc);
-  gdk_pixmap_unref(gdkpixmap);
 
 #endif
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #ifdef USE_PIXBUF
 
-  GdkPixbuf *pb =
-    gdk_pixbuf_new_from_data(mImageData.data + (source.y * mImageData.bytesPerRow),
-                             GDK_COLORSPACE_RGB,
-                             PR_FALSE,
-                             8,
-                             mRect.width, source.height,
-                             mImageData.bytesPerRow,
-                             NULL, NULL);
-
+  if (!mImageData.pixbuf)
+    mImageData.pixbuf = gdk_pixbuf_new_from_data(mImageData.data,
+                                                 GDK_COLORSPACE_RGB,
+                                                 PR_FALSE,
+                                                 8,
+                                                 mRect.width, mRect.height,
+                                                 mImageData.bytesPerRow,
+                                                 NULL, NULL);
 
   GdkPixbuf *npb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, PR_FALSE, 8, dest.width, dest.height);
 
-  gdk_pixbuf_scale(pb, npb,
+  gdk_pixbuf_scale(mImageData.pixbuf, npb,
                    0, 0,
                    dest.width, dest.height,
                    0, 0,
                    double(double(aDestRect->width) / double(mRect.width)),
                    double(double(aDestRect->height) / double(mRect.height)),
-                   //                   GDK_INTERP_BILINEAR);
+                   //                    GDK_INTERP_BILINEAR);
                    GDK_INTERP_NEAREST);
 
 
-  gdk_pixbuf_unref(pb);
+  GdkBitmap *alphaMask = GetAlphaBitmap();
 
   gdk_pixbuf_render_to_drawable(npb,
                                 aDrawable, NS_CONST_CAST(GdkGC*, aGC),
-                                0, 0,
-                                (aDestRect->x + aSrcRect->x),
-                                (aDestRect->y + aSrcRect->y),
-                                dest.width, dest.height,
+                                aSrcRect->x, aSrcRect->y,
+                                aDestRect->x, aDestRect->y,
+                                aSrcRect->width, aSrcRect->height,
                                 GDK_RGB_DITHER_MAX,
                                 0, 0);
 

@@ -29,6 +29,8 @@
 
 #include <gdk/gdk.h>
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
+
 #define NS_IMAGEFRAME_CID \
 { /* 3d25862e-1dd2-11b2-9d51-be9a25210304 */         \
      0x3d25862e,                                     \
@@ -39,14 +41,22 @@
 
 struct ImageData
 {
-  ImageData() : bytesPerRow(0), data(nsnull), length(0), depth(0) {}
+  ImageData() : bytesPerRow(0), data(nsnull), length(0), depth(0), dataChanged(PR_FALSE),
+    pixmap(nsnull), pixbuf(nsnull) {}
   ~ImageData() {
     delete[] data;
+    if (pixmap) gdk_pixmap_unref(pixmap);
+    if (pixbuf) gdk_pixbuf_unref(pixbuf);
   }
   PRUint32 bytesPerRow; // bytes per row
   PRUint8 *data;
   PRUint32 length; // length of the data in bytes
   gfx_depth depth;
+  PRPackedBool dataChanged;
+
+  /* union? */
+  GdkPixmap *pixmap;
+  GdkPixbuf *pixbuf;
 };
 
 class nsImageFrame : public nsIImageFrame

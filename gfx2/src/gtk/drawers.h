@@ -21,7 +21,6 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nspr.h"
 #include "prtypes.h"
 
 #include <gdk/gdk.h>

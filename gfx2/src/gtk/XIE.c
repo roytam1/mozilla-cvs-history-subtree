@@ -24,12 +24,18 @@
 
 #include "drawers.h"
 
+#include <stdio.h>
+
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 
 #include <X11/extensions/XIElib.h>
 
+/*#define DEBUG_XIE 1*/
+
 static PRBool inited = PR_FALSE;
+static XiePhotospace gPhotospace;
+static XiePhotoElement *photoElement;
 
 static void
 DoFlo(Display *display,
@@ -48,19 +54,22 @@ DoFlo(Display *display,
       PRInt32 aDHeight)
 {
   XieExtensionInfo *info;
-  XiePhotoElement *photoElement;
-  XiePhotospace photospace;
   float coeffs[6];
   XieConstant constant;
-  XiePhototag idx = 0;
+  XiePhototag idx = 0, src;
+  /*  static PRBool firsttime = PR_TRUE;
+      static XiePhotomap pmap;
+  */
 
   /* create the pretty flo graph */
-  photoElement = XieAllocatePhotofloGraph(3);
+
+
 
   /* import */
-  XieFloImportDrawable(&photoElement[idx], aSrc, 0, 0, aSrcWidth, aSrcHeight, 0, PR_FALSE);
+  XieFloImportDrawable(&photoElement[idx], aSrc, aSX, aSY, aSWidth, aSHeight, 0, PR_FALSE);
   ++idx;
-  
+  src = idx;
+
   /* do the scaling stuff */
   coeffs[0] = (float)aSrcWidth / (float)aDWidth;
   coeffs[1] = 0.0;
@@ -73,33 +82,32 @@ DoFlo(Display *display,
   constant[1] = 128.0;
   constant[2] = 128.0;
 
-  XieFloGeometry(&photoElement[idx], idx, aDWidth, aDHeight,
-		 coeffs,
-		 constant,
-		 0x07,
-		 xieValGeomNearestNeighbor,
-		 NULL);
+  XieFloGeometry(&photoElement[idx], src, aDWidth, aDHeight,
+                 coeffs,
+                 constant,
+                 0x07,
+                 xieValGeomNearestNeighbor,
+                 NULL);
   ++idx;
 
   /* export */
   XieFloExportDrawable(&photoElement[idx], idx, aDest, aGC,
-                       (aDX + aSX),
-                       (aDY + aSY));
+                       (aDX - aSX),
+                       (aDY - aSY));
   ++idx;
 
 
-  /* create the photospace (we only need to do this once) */
-  photospace = XieCreatePhotospace(display);
-
   /* do the scale thing baby */
-  XieExecuteImmediate(display, photospace, 1, PR_FALSE, photoElement, idx);
+  XieExecuteImmediate(display, gPhotospace, 1, PR_FALSE, photoElement, idx);
 
 
-  XieDestroyPhotospace(display, photospace);
-  XieFreePhotofloGraph(photoElement, 3);
+  /*
+    XieFreePhotofloGraph(photoElement, 3);
+  */
 
-
+#ifdef DEBUG_XIE
   gdk_flush();
+#endif
 }
 
 
@@ -107,20 +115,20 @@ DoFlo(Display *display,
 
 PRBool 
 DrawScaledImageXIE(Display *display,
-		   GdkDrawable *aDest,
-		   GdkGC *aGC,
-		   GdkDrawable *aSrc,
-		   GdkDrawable *aSrcMask,
-		   PRInt32 aSrcWidth,
-		   PRInt32 aSrcHeight,
-		   PRInt32 aSX,
-		   PRInt32 aSY,
-		   PRInt32 aSWidth,
-		   PRInt32 aSHeight,
-		   PRInt32 aDX,
-		   PRInt32 aDY,
-		   PRInt32 aDWidth,
-		   PRInt32 aDHeight)
+                   GdkDrawable *aDest,
+                   GdkGC *aGC,
+                   GdkDrawable *aSrc,
+                   GdkDrawable *aSrcMask,
+                   PRInt32 aSrcWidth,
+                   PRInt32 aSrcHeight,
+                   PRInt32 aSX,
+                   PRInt32 aSY,
+                   PRInt32 aSWidth,
+                   PRInt32 aSHeight,
+                   PRInt32 aDX,
+                   PRInt32 aDY,
+                   PRInt32 aDWidth,
+                   PRInt32 aDHeight)
 {
   Drawable importDrawable = GDK_WINDOW_XWINDOW(aSrc);
   Drawable exportDrawable = GDK_WINDOW_XWINDOW(aDest);
@@ -129,19 +137,32 @@ DrawScaledImageXIE(Display *display,
 
   GdkGC *gc = NULL;
 
+#ifdef DEBUG_XIE
   printf("DrawScaledImageXIE\n");
+#endif
 
   if (!inited) {
     XieExtensionInfo *info;
     inited = PR_TRUE;
     if (!XieInitialize(display, &info))
       return PR_FALSE;
+
+    /* create the photospace (we only need to do this once) */
+    gPhotospace = XieCreatePhotospace(display);
+
+    photoElement = XieAllocatePhotofloGraph(3);
+
+    /* we want to destroy this at shutdown
+       XieDestroyPhotospace(display, photospace);
+    */
   }
 
   if (aSrcMask) {
     Drawable destMask;
-    
+
+#ifdef DEBUG_XIE    
     fprintf(stderr, "DrawScaledImageXIE with alpha mask\n");
+#endif
 
     alphaMask = gdk_pixmap_new(aSrcMask, aDWidth, aDHeight, 1);
     destMask = GDK_WINDOW_XWINDOW(alphaMask);
