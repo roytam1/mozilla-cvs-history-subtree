@@ -74,12 +74,14 @@
 #include "nsStackLayout.h"
 #endif
 #include "nsContentPolicyUtils.h"
+#include "nsIGenericFactory.h"
 
 static nsLayoutModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule_nsLayoutModule(nsIComponentManager *servMgr,
-                                          nsIFile* location,
-                                          nsIModule** return_cobj)
+extern "C" NS_EXPORT nsresult
+NSGETMODULE_ENTRY_POINT(nsLayoutModule) (nsIComponentManager *servMgr,
+                                         nsIFile* location,
+                                         nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 
