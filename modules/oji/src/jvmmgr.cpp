@@ -155,12 +155,10 @@ PR_BEGIN_EXTERN_C
 #ifdef MOCHA
 
 extern "C" JSContext *lm_crippled_context; /* XXX kill me */
-
 PR_IMPLEMENT(JSContext *)
 map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 {
-	// beard:  use crippled context if none other can be found.
-    JSContext *cx = lm_crippled_context;
+    JSContext *cx    = lm_crippled_context;
     jobject   loader;
     PRBool    mayscript = PR_FALSE;
     PRBool    jvmMochaPrefsEnabled = PR_FALSE;
@@ -172,23 +170,25 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
       jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
       if (pJVMPI != NULL) {
        jobject javaObject = pJVMPI->AttachThreadToJavaObject(env);
-        nsIPluginInstance* pPIT = 
-          pJVMPI->GetPluginInstance(javaObject);
-          if (pPIT != NULL) {
-               nsIJVMPluginInstance* pJVMPIT;
+        if (javaObject != NULL) {
+          nsIPluginInstance* pPIT = 
+            pJVMPI->GetPluginInstance(javaObject);
+            if (pPIT != NULL) {
+                 nsIJVMPluginInstance* pJVMPIT;
 NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
-               if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
-                           (void**)&pJVMPIT) == NS_OK) {
-                 nsPluginInstancePeer* pPITP = 
-                      (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                 if (pPITP != NULL) {
-                   cx = pPITP->GetJSContext();
-                   pPITP->Release();
+                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
+                             (void**)&pJVMPIT) == NS_OK) {
+                   nsPluginInstancePeer* pPITP = 
+                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
+                   if (pPITP != NULL) {
+                     cx = pPITP->GetJSContext();
+                     pPITP->Release();
+                   }
+                   pJVMPIT->Release();
                  }
-                 pJVMPIT->Release();
-               }
-           pPIT->Release();
-          }
+             pPIT->Release();
+            }
+        }
         pJVMPI->Release();
       }
       pJVMMgr->Release();
@@ -316,8 +316,10 @@ NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
 
 
     if (!cx || (cx->type != MWContextBrowser && cx->type != MWContextPane))
+    {
         *errp = strdup("JSObject.getWindow() can only be called in MWContextBrowser or MWContextPane");
         return 0;
+    }
 
     decoder = LM_GetMochaDecoder(cx);
 

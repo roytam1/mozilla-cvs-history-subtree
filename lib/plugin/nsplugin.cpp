@@ -499,7 +499,7 @@ nsPluginInstancePeer::GetJSContext(void)
     {
        return 0;
     }
-    if( pMWCX->mocha_context == NULL)
+    if( pMWCX->mocha_context != NULL)
     {
       pJSCX = pMWCX->mocha_context;
     }

@@ -291,7 +291,13 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 #endif
 
 #ifdef OJI
-    /* XXX */
+ 	for (count = 0; count < (uint32)embed->attributes.n; count++)
+  	{
+     if (  (XP_STRCASECMP(embed->attributes.names[count], PARAM_MAYSCRIPT) == 0) 
+            &&(embed->attributes.values[count] == NULL) ) {
+           StrAllocCopy(embed->attributes.values[count], "true");
+     }
+   }
 #else
 	/*
 	 * Look through the parameters and replace "id"
@@ -808,7 +814,7 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
                        *ppDoclistList = (LO_CommonPluginStruct *)embed;
                    else
                        prev_embed->nextEmbed = embed;
-                   *pDoclistCount++;
+                   (*pDoclistCount)++;
                    break;
                }
                prev_embed = cur_embed;
@@ -818,7 +824,7 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
        else {
            embed->nextEmbed = (LO_EmbedStruct *)*ppDoclistList;
            *ppDoclistList = (LO_CommonPluginStruct *)embed;
-           *pDoclistCount++;
+           (*pDoclistCount)++;
        }
     }
 

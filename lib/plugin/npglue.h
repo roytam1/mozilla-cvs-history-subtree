@@ -475,6 +475,7 @@ public:
     NS_DECL_AGGREGATED
 
     nsIPluginInstance* GetUserInstance(void) {
+        userInst->AddRef();
         return userInst;
     }
 
