@@ -228,7 +228,9 @@ void nsMsgMailboxParser::UpdateStatusText (PRUint32 stringID)
 		if (stringID == LOCAL_STATUS_SELECTING_MAILBOX)
 		{
             nsCOMPtr<nsIStringBundle> bundle;
-            mStringService->GetBundle(getter_AddRefs(bundle));
+            rv = mStringService->GetBundle(getter_AddRefs(bundle));
+	    if (NS_FAILED(rv))
+		return;
             const PRUnichar * stringArray[] = { m_folderName.GetUnicode() };
             rv = bundle->FormatStringFromID(stringID, stringArray, 1,
                                                    getter_Copies(finalString));
