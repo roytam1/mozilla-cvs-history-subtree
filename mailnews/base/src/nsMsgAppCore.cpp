@@ -48,7 +48,6 @@
 
 #include "nsIDOMXULTreeElement.h"
 #include "nsIRDFCompositeDataSource.h"
-#include "nsIRDFResource.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
 
@@ -115,7 +114,7 @@ static nsresult ConvertDOMListToResourceArray(nsIDOMNodeList *nodeList, nsISuppo
 	PRUint32 listLength;
 	nsIDOMNode *node;
 	nsIDOMXULTreeElement *xulElement;
-	nsIRDFResource *resource;
+	nsISupports *resource;
 
 	if(!resourceArray)
 		return NS_ERROR_NULL_POINTER;
@@ -519,7 +518,7 @@ nsMsgAppCore::DeleteMessage(nsIDOMXULTreeElement *tree, nsIDOMNodeList *nodeList
 		return rv;
 
 	nsIRDFService* gRDFService = nsnull;
-	nsIRDFResource* deleteResource;
+	nsISupports* deleteResource;
 	rv = nsServiceManager::GetService(kRDFServiceCID,
 												nsIRDFService::GetIID(),
 												(nsISupports**) &gRDFService);

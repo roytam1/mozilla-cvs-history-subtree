@@ -26,8 +26,11 @@
 #include "nsDBFolderInfo.h"
 #include "nsISupportsArray.h"
 #include "nsIPref.h"
+#include "nsIRDFService.h"
+#include "nsRDFCID.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
@@ -35,7 +38,7 @@ static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 nsMsgFolder::nsMsgFolder(void)
-  : nsRDFResource(), mFlags(0),
+  : mFlags(0),
     mNumUnreadMessages(-1),	mNumTotalMessages(0),
     mCsid(0),
     mDepth(0), 
@@ -83,7 +86,7 @@ nsMsgFolder::~nsMsgFolder(void)
 
 }
 
-NS_IMPL_ISUPPORTS_INHERITED(nsMsgFolder, nsRDFResource, nsIMsgFolder)
+NS_IMPL_ISUPPORTS(nsMsgFolder, nsIMsgFolder::GetIID())
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -422,6 +425,20 @@ NS_IMETHODIMP nsMsgFolder::Enumerate(nsIEnumerator* *result)
 NS_IMETHODIMP nsMsgFolder::Clear(void)
 {
   return mSubFolders->Clear();
+}
+
+NS_IMETHODIMP nsMsgFolder::GetURI(char* *name)
+{
+  nsresult rv;
+  NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  const char* uri;
+  rv = rdf->GetURI((nsIMsgFolder*)this, &uri);
+  if (NS_FAILED(rv)) return rv;
+  *name = nsCRT::strdup(uri);
+  if (*name == nsnull)
+    return NS_ERROR_OUT_OF_MEMORY;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgFolder::GetName(char **name)
@@ -1364,7 +1381,7 @@ NS_IMETHODIMP nsMsgFolder::GetHostName(char **hostName)
 #include "prprf.h"
 #include "prsystem.h"
 
-static const char kMsgRootFolderPref[] = "mail.rootFolder";
+static const char kMsgRootFolderPref[] = "mailnews.rootFolder";
 
 char* gMailboxRoot = nsnull;
 
@@ -1413,7 +1430,7 @@ nsGetMailFolderSeparator(nsString& result)
 }
 
 nsresult
-nsURI2Path(const char* rootURI, char* uriStr, nsFileSpec& pathResult)
+nsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
 {
   nsresult rv;
 
@@ -1533,7 +1550,7 @@ nsPath2URI(const char* rootURI, nsFileSpec& spec, char* *uri)
 }
 
 nsresult
-nsURI2Name(const char* rootURI, char* uriStr, nsString& name)
+nsURI2Name(const char* rootURI, const char* uriStr, nsString& name)
 {
   nsAutoString uri = uriStr;
   if (uri.Find(rootURI) != 0)     // if doesn't start with rootURI

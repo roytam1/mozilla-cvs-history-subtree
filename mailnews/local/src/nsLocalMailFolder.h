@@ -31,7 +31,7 @@
 #include "nsIDBChangeListener.h"
 
 class nsMsgLocalMailFolder : public nsMsgFolder, public nsIMsgLocalMailFolder,
-															public nsIDBChangeListener
+                             public nsIDBChangeListener
 {
 public:
 	nsMsgLocalMailFolder(void);

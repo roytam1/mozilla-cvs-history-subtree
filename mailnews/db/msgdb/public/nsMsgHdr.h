@@ -20,7 +20,6 @@
 #define _nsMsgHdr_H
 
 #include "nsIMessage.h"
-#include "nsRDFResource.h"
 #include "nsString.h"
 #include "MailNewsTypes.h"
 #include "xp.h"
@@ -32,7 +31,7 @@ class nsMsgDatabase;
 // but I don't intend it to be a public interface. I'll just
 // declare AddRef and Release as methods..
 
-class nsMsgHdr : public nsRDFResource, public nsIMessage {
+class nsMsgHdr : public nsIMessage {
 public:
 
     ////////////////////////////////////////////////////////////////////////////
@@ -78,14 +77,11 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
     // nsMsgHdr methods:
-    nsMsgHdr(nsMsgDatabase *db, nsIMdbRow *dbRow);
-	nsMsgHdr();
-
-    void		Init();
-	void		Init(nsMsgDatabase *db, nsIMdbRow *dbRow);
+    nsMsgHdr();
+    void		Init(nsMsgDatabase *db, nsIMdbRow *dbRow);
     virtual		~nsMsgHdr();
 
-    NS_DECL_ISUPPORTS_INHERITED
+    NS_DECL_ISUPPORTS
 
     void		SetCSID(PRUint16 csid) {m_csID = csid;}
     PRInt16		GetCSID();

@@ -48,38 +48,38 @@ public:
 
   NS_IMETHOD GetURI(const char* *uri) const;
 
-  NS_IMETHOD GetSource(nsIRDFResource* property,
-                       nsIRDFNode* target,
+  NS_IMETHOD GetSource(nsISupports* property,
+                       nsISupports* target,
                        PRBool tv,
-                       nsIRDFResource** source /* out */);
+                       nsISupports** source /* out */);
 
-  NS_IMETHOD GetTarget(nsIRDFResource* source,
-                       nsIRDFResource* property,
+  NS_IMETHOD GetTarget(nsISupports* source,
+                       nsISupports* property,
                        PRBool tv,
-                       nsIRDFNode** target);
+                       nsISupports** target);
 
-  NS_IMETHOD GetSources(nsIRDFResource* property,
-                        nsIRDFNode* target,
+  NS_IMETHOD GetSources(nsISupports* property,
+                        nsISupports* target,
                         PRBool tv,
                         nsIRDFAssertionCursor** sources);
 
-  NS_IMETHOD GetTargets(nsIRDFResource* source,
-                        nsIRDFResource* property,    
+  NS_IMETHOD GetTargets(nsISupports* source,
+                        nsISupports* property,    
                         PRBool tv,
                         nsIRDFAssertionCursor** targets);
 
-  NS_IMETHOD Assert(nsIRDFResource* source,
-                    nsIRDFResource* property, 
-                    nsIRDFNode* target,
+  NS_IMETHOD Assert(nsISupports* source,
+                    nsISupports* property, 
+                    nsISupports* target,
                     PRBool tv);
 
-  NS_IMETHOD Unassert(nsIRDFResource* source,
-                      nsIRDFResource* property,
-                      nsIRDFNode* target);
+  NS_IMETHOD Unassert(nsISupports* source,
+                      nsISupports* property,
+                      nsISupports* target);
 
-  NS_IMETHOD HasAssertion(nsIRDFResource* source,
-                          nsIRDFResource* property,
-                          nsIRDFNode* target,
+  NS_IMETHOD HasAssertion(nsISupports* source,
+                          nsISupports* property,
+                          nsISupports* target,
                           PRBool tv,
                           PRBool* hasAssertion);
 
@@ -87,26 +87,26 @@ public:
 
   NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
-  NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
+  NS_IMETHOD ArcLabelsIn(nsISupports* node,
                          nsIRDFArcsInCursor** labels);
 
-  NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
+  NS_IMETHOD ArcLabelsOut(nsISupports* source,
                           nsIRDFArcsOutCursor** labels); 
 
   NS_IMETHOD GetAllResources(nsIRDFResourceCursor** aCursor);
 
   NS_IMETHOD Flush();
 
-  NS_IMETHOD GetAllCommands(nsIRDFResource* source,
-                            nsIEnumerator/*<nsIRDFResource>*/** commands);
+  NS_IMETHOD GetAllCommands(nsISupports* source,
+                            nsIEnumerator** commands);
 
-  NS_IMETHOD IsCommandEnabled(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                              nsIRDFResource*   aCommand,
-                              nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+  NS_IMETHOD IsCommandEnabled(nsISupportsArray* aSources,
+                              nsISupports*   aCommand,
+                              nsISupportsArray* aArguments);
 
-  NS_IMETHOD DoCommand(nsISupportsArray/*<nsIRDFResource>*/* aSources,
-                       nsIRDFResource*   aCommand,
-                       nsISupportsArray/*<nsIRDFResource>*/* aArguments);
+  NS_IMETHOD DoCommand(nsISupportsArray* aSources,
+                       nsISupports*   aCommand,
+                       nsISupportsArray* aArguments);
 
   NS_IMETHOD OnItemAdded(nsIFolder *parentFolder, nsISupports *item);
 
@@ -117,29 +117,29 @@ public:
   // caching frequently used resources
 protected:
 
-	nsresult  NotifyObservers(nsIRDFResource *subject, nsIRDFResource *property,
-														nsIRDFNode *object, PRBool assert);
+	nsresult  NotifyObservers(nsISupports *subject, nsISupports *property,
+														nsISupports *object, PRBool assert);
 	nsresult  GetSenderName(nsAutoString& sender, nsAutoString *senderUserName);
 	nsresult  GetFolderFromMessage(nsIMessage *message, nsIMsgFolder** folder);
 
 
-  static nsIRDFResource* kNC_Child;
-  static nsIRDFResource* kNC_MessageChild;
-  static nsIRDFResource* kNC_Folder;
-  static nsIRDFResource* kNC_Name;
-  static nsIRDFResource* kNC_Columns;
-  static nsIRDFResource* kNC_MSGFolderRoot;
-  static nsIRDFResource* kNC_SpecialFolder;
+  static nsISupports* kNC_Child;
+  static nsISupports* kNC_MessageChild;
+  static nsISupports* kNC_Folder;
+  static nsISupports* kNC_Name;
+  static nsISupports* kNC_Columns;
+  static nsISupports* kNC_MSGFolderRoot;
+  static nsISupports* kNC_SpecialFolder;
 
-  static nsIRDFResource* kNC_Subject;
-  static nsIRDFResource* kNC_Sender;
-  static nsIRDFResource* kNC_Date;
-  static nsIRDFResource* kNC_Status;
+  static nsISupports* kNC_Subject;
+  static nsISupports* kNC_Sender;
+  static nsISupports* kNC_Date;
+  static nsISupports* kNC_Status;
 
   // commands
-  static nsIRDFResource* kNC_Delete;
-  static nsIRDFResource* kNC_Reply;
-  static nsIRDFResource* kNC_Forward;
+  static nsISupports* kNC_Delete;
+  static nsISupports* kNC_Reply;
+  static nsISupports* kNC_Forward;
 
 };
 

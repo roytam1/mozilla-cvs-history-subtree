@@ -45,6 +45,8 @@
 #include "nsMsgCompPrefs.h"
 #include "nsIDOMMsgAppCore.h"
 #include "nsIMessage.h"
+#include "nsIRDFService.h"
+#include "nsRDFCID.h"
 
 #include "nsMsgCompCID.h"
 #include "nsIMsgCompose.h"
@@ -54,7 +56,6 @@
 // jefft
 #include "nsIXULWindowCallbacks.h"
 #include "nsIDocumentViewer.h"
-#include "nsIRDFResource.h"
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
 
@@ -71,7 +72,7 @@ static NS_DEFINE_IID(kIMsgSendIID, NS_IMSGSEND_IID);
 static NS_DEFINE_CID(kMsgSendCID, NS_MSGSEND_CID);
 
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_IID(kIRDFResourceIID, NS_IRDFRESOURCE_IID);
+static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 NS_BEGIN_EXTERN_C
 
@@ -567,7 +568,7 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
 	if (tree && nodeList && msgAppCore) {
 		nsCOMPtr<nsISupports> object;
 		rv = msgAppCore->GetRDFResourceForMessage(tree, nodeList,
-                                                   getter_AddRefs(object));
+                                                  getter_AddRefs(object));
 		if ((NS_SUCCEEDED(rv)) && object) {
 			nsCOMPtr<nsIMessage> message;
 			rv = object->QueryInterface(nsIMessage::GetIID(),
@@ -610,14 +611,14 @@ nsComposeAppCore::NewMessage(nsAutoString& aUrl,
                     bString += "]";
                     mMsgCompFields->SetSubject(bString.ToNewCString(), NULL);
                     /* We need to get more information out from the message. */
-                    nsCOMPtr<nsIRDFResource> rdfResource;
-                    rv = object->QueryInterface(kIRDFResourceIID,
-                                                getter_AddRefs(rdfResource));
-                    if (rdfResource)
-                    {	
-                        const char *uri = 0;
-                        rdfResource->GetValue(&uri);
-                        nsString messageUri = uri;
+                    const char* uri;
+                    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
+                    if (NS_SUCCEEDED(rv)) {
+                        rv = rdf->GetURI(object, &uri);
+                        if (NS_SUCCEEDED(rv)) {
+                            nsString messageUri = uri;
+                            // XXX is something missing here?
+                        }
                     }
                     if (messageType == 2)
                         HackToGetBody(0);

@@ -18,7 +18,7 @@
   {0x5F0E8DC0, 0xBAD1, 0x11d2, \
     { 0x95, 0x78, 0x00, 0x80, 0x5F, 0x8A, 0xC6, 0x15 }}
 
-class nsIMsgRDFFolder : public nsIRDFResource {
+class nsIMsgRDFFolder : public nsISupports {
  public: 
   static const nsIID& GetIID() {
     static nsIID iid = NS_IMSGRDFFOLDER_IID;

@@ -25,49 +25,25 @@
 // that multiply inherits from nsISupports
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
-NS_IMPL_ISUPPORTS_INHERITED(nsMsgHdr, nsRDFResource, nsIMessage)
+NS_IMPL_ISUPPORTS(nsMsgHdr, nsIMessage::GetIID())
 
-nsMsgHdr::nsMsgHdr(nsMsgDatabase *db, nsIMdbRow *dbRow)
-    : nsRDFResource()
+nsMsgHdr::nsMsgHdr()
 {
     NS_INIT_REFCNT();
-	m_mdb = db;
-	if(m_mdb)
-		m_mdb->AddRef();
-	Init();
-	m_mdbRow = dbRow;
 }
 
-
-void nsMsgHdr::Init()
+void nsMsgHdr::Init(nsMsgDatabase *db, nsIMdbRow *dbRow)
 {
-
+	m_mdb = db;
+    NS_IF_ADDREF(m_mdb);
 	m_statusOffset = -1;
 	m_messageKey = nsMsgKey_None;
 	m_date = 0;
 	m_messageSize = 0;
 	m_csID = 0;
 	m_flags = 0;
-	m_mdbRow = NULL;
-
-}
-
-//The next two functions are temporary changes until we remove RDF from nsMsgHdr
-nsMsgHdr::nsMsgHdr()
-    : nsRDFResource()
-{
-    NS_INIT_REFCNT();
-	Init();
-}
-
-void nsMsgHdr::Init(nsMsgDatabase *db, nsIMdbRow *dbRow)
-{
-	m_mdb = db;
-	if(m_mdb)
-		m_mdb->AddRef();
 	m_mdbRow = dbRow;
 }
-
 
 nsMsgHdr::~nsMsgHdr()
 {
@@ -80,14 +56,6 @@ nsMsgHdr::~nsMsgHdr()
 		}
 	}
 }
-
-#if 0
-NS_IMETHODIMP nsMsgHdr::GetMessageSize(PRUint32 *result)
-{
-    *result = m_messageSize;
-    return NS_OK;
-}
-#endif
 
 NS_IMETHODIMP nsMsgHdr::GetMessageKey(nsMsgKey *result)
 {

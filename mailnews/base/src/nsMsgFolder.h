@@ -27,8 +27,6 @@
 
 #include "msgCore.h"
 #include "nsIMsgFolder.h" /* include the interface we are going to support */
-#include "nsRDFResource.h"
-#include "nsIRDFResourceFactory.h"
 #include "nsDBFolderInfo.h"
 #include "nsMsgDatabase.h"
 
@@ -36,13 +34,13 @@
   * MsgFolder
   */ 
 
-class nsMsgFolder: public nsRDFResource, public nsIMsgFolder
+class nsMsgFolder: public nsIMsgFolder
 {
 public: 
   nsMsgFolder(void);
   virtual ~nsMsgFolder(void);
 
-  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_ISUPPORTS
 
   // nsICollection methods:
   NS_IMETHOD_(PRUint32) Count(void) const;
@@ -52,7 +50,7 @@ public:
   NS_IMETHOD Clear(void);
 
   // nsIFolder methods:
-  NS_IMETHOD GetURI(char* *name) { return nsRDFResource::GetValue((const char**)&name); }
+  NS_IMETHOD GetURI(char* *name);
   NS_IMETHOD GetName(char **name);
   NS_IMETHOD SetName(char *name);
   NS_IMETHOD GetChildNamed(const char *name, nsISupports* *result);

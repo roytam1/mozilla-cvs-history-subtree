@@ -303,7 +303,7 @@
 </html:div>
 
 <html:div id="3panemail">
-<html:iframe src="3panemail.html" name="browser.3panemail" width="100%" height="700" > </html:iframe>
+<html:iframe src="3panemail.html" name="browser.3panemail" width="100%" height="500" > </html:iframe>
 </html:div>
 
 <html:div id="footer">

@@ -136,7 +136,9 @@ nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
         continue;
 
       nsAutoString uri;
-      uri.Append(mURI);
+      const char* thisURI;
+      rv = rdf->GetURI((nsIMsgLocalMailFolder*)this, &thisURI);
+      uri.Append(thisURI);
       uri.Append('/');
 
       uri.Append(currentFolderName);
@@ -145,7 +147,7 @@ nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
         return NS_ERROR_OUT_OF_MEMORY;
 	
       // XXX trim off .sbd from uriStr
-      nsIRDFResource* res;
+      nsISupports* res;
       rv = rdf->GetResource(uriStr, &res);
       if (NS_FAILED(rv))
         return rv;
@@ -666,8 +668,16 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetName(char **name)
       //Need to read the name from the database
     }
   }
+
+  nsresult rv;
+  NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  const char* uri;
+  rv = rdf->GetURI((nsIMsgLocalMailFolder*)this, &uri);
+  if (NS_FAILED(rv)) return rv;
+    
 	nsAutoString folderName;
-	nsURI2Name(kMailboxRootURI, mURI, folderName);
+	nsURI2Name(kMailboxRootURI, uri, folderName);
 	*name = folderName.ToNewCString();
 
   return NS_OK;
@@ -921,7 +931,14 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetPath(nsFileSpec& aPathName)
 {
   nsFileSpec nopath("");
   if (mPath == nopath) {
-    nsresult rv = nsURI2Path(kMailboxRootURI, mURI, mPath);
+    nsresult rv;
+    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    const char* uri;
+    rv = rdf->GetURI((nsIMsgLocalMailFolder*)this, &uri);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = nsURI2Path(kMailboxRootURI, uri, mPath);
     if (NS_FAILED(rv)) return rv;
   }
   aPathName = mPath;
@@ -952,7 +969,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::OnKeyDeleted(nsMsgKey aKeyChanged, int32 aFl
 	nsISupports *msgSupports;
 	if(NS_SUCCEEDED(pMessage->QueryInterface(kISupportsIID, (void**)&msgSupports)))
 	{
-		for(int i = 0; i < mListeners->Count(); i++)
+		for(PRUint32 i = 0; i < mListeners->Count(); i++)
 		{
 			nsIFolderListener *listener = (nsIFolderListener*)mListeners->ElementAt(i);
 			listener->OnItemRemoved(this, msgSupports);
@@ -973,7 +990,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::OnKeyAdded(nsMsgKey aKeyChanged, int32 aFlag
 	nsISupports *msgSupports;
 	if(pMessage && NS_SUCCEEDED(pMessage->QueryInterface(kISupportsIID, (void**)&msgSupports)))
 	{
-		for(int i = 0; i < mListeners->Count(); i++)
+		for(PRUint32 i = 0; i < mListeners->Count(); i++)
 		{
 			nsIFolderListener *listener = (nsIFolderListener*)mListeners->ElementAt(i);
 			listener->OnItemAdded(this, msgSupports);

@@ -25,7 +25,6 @@
 #include "nsIEnumerator.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
-#include "nsIRDFResource.h"
 
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 
@@ -46,33 +45,13 @@ static NS_DEFINE_CID(kIMBBCID, NS_IMBB_IID);
 
 const int kMsgDBVersion = 1;
 
-#if 0
-//Temporary function to create a URI so that nsMsgHdr functions with RDF.
-//This will get removed.
-static char* CreateURI(nsFileSpec path, nsMsgKey key)
-{
-	nsString uri = "mailmess://";
-	uri+=path;
-
-	char keyBuffer[50];
-	PR_snprintf(keyBuffer, 50, "%u", key);
-
-	uri+=keyBuffer;
-	return uri.ToNewCString();
-}
-#endif
-
 nsresult
 nsMsgDatabase::CreateMsgHdr(nsIMdbRow* hdrRow, nsFileSpec& path, nsMsgKey key, nsIMessage* *result,
 							PRBool getKeyFromHeader)
 {
     nsresult rv;
 
-	nsIRDFService *rdf;
-	rv = nsServiceManager::GetService(kRDFServiceCID, 
-										nsIRDFService::GetIID(), 
-                                     (nsISupports**)&rdf);
-
+    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     char *folderURI;
@@ -82,18 +61,20 @@ nsMsgDatabase::CreateMsgHdr(nsIMdbRow* hdrRow, nsFileSpec& path, nsMsgKey key, n
     char* msgURI = PR_smprintf("%s#%d", folderURI, key);
     delete[] folderURI;
 
-    nsIRDFResource* res;
+    nsISupports* res;
     rv = rdf->GetResource(msgURI, &res);
     delete[] msgURI;
     if (NS_FAILED(rv)) return rv;
     
-    nsMsgHdr* msgHdr = (nsMsgHdr*)res;
+    nsIMessage* msg;
+    rv = res->QueryInterface(nsIMessage::GetIID(), (void**)&msg);
+    if (NS_FAILED(rv)) return rv;
+
+    nsMsgHdr* msgHdr = (nsMsgHdr*)msg;
     msgHdr->Init(this, hdrRow);
     msgHdr->SetMessageKey(key);
-    *result = msgHdr;
+    *result = msg;
   
-    nsServiceManager::ReleaseService(kRDFServiceCID, rdf);
-
     return rv;
 }
 
@@ -1379,7 +1360,7 @@ NS_IMETHODIMP nsMsgDBEnumerator::Next(void)
         mResultHdr = nsnull;
         rv = mRowCursor->NextRow(mDB->GetEnv(), &hdrRow, &rowPos);
 		if (!hdrRow)
-			rv = NS_ERROR_RDF_CURSOR_EMPTY;
+            rv = NS_ERROR_FAILURE;
         if (NS_FAILED(rv)) {
             mDone = PR_TRUE;
             return rv;

@@ -31,6 +31,7 @@
 #include "nsParseMailbox.h"
 #include "nsPop3Service.h"
 #include "nsCOMPtr.h"
+#include "nsMsgHdr.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kCMailboxUrl, NS_MAILBOXURL_CID);
@@ -237,6 +238,7 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) goto done;
 
+  // register our RDF resource factories:
   rv = compMgr->RegisterComponent(kMailNewsMessageResourceCID,
                                   "Mail/News Resource Factory",
                                   NS_RDF_RESOURCE_FACTORY_PROGID_PREFIX "mailbox_message",
@@ -277,6 +279,9 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
   if (NS_FAILED(rv)) goto done;
 
   rv = compMgr->UnregisterComponent(kMailNewsResourceCID, path);
+  if (NS_FAILED(rv)) goto done;
+
+  rv = compMgr->UnregisterComponent(kMailNewsMessageResourceCID, path);
   if (NS_FAILED(rv)) goto done;
 
   done:
