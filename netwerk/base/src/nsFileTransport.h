@@ -38,7 +38,6 @@
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIStreamIO.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIFile.h"
 #include "prlog.h"

@@ -41,10 +41,9 @@ nsDateTimeChannel::nsDateTimeChannel() {
 nsDateTimeChannel::~nsDateTimeChannel() {
 }
 
-NS_IMPL_ISUPPORTS5(nsDateTimeChannel, 
+NS_IMPL_ISUPPORTS4(nsDateTimeChannel, 
                    nsIChannel, 
                    nsIRequest, 
-                   nsIStreamContentInfo,
                    nsIStreamListener, 
                    nsIStreamObserver)
 
@@ -127,19 +126,6 @@ nsDateTimeChannel::Resume(void)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* attribute nsISupports parent; */
-NS_IMETHODIMP
-nsDateTimeChannel::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent=(nsISupports*)(nsIChannel*)this);
-    return NS_OK;
-}
-NS_IMETHODIMP
-nsDateTimeChannel::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChannel methods:
 
@@ -174,65 +160,50 @@ nsDateTimeChannel::SetURI(nsIURI* aURI)
 }
 
 NS_IMETHODIMP
-nsDateTimeChannel::OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval)
+nsDateTimeChannel::Open(nsIInputStream **_retval)
 {
     nsresult rv = NS_OK;
 
     NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIChannel> channel;
-    rv = socketService->CreateTransport(mHost, mPort, nsnull, -1, 32, 32, getter_AddRefs(channel));
+    nsCOMPtr<nsITransport> transport;
+    rv = socketService->CreateTransport(mHost, mPort, nsnull, -1, 32, 32, getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
-    rv = channel->SetNotificationCallbacks(mCallbacks);
-    if (NS_FAILED(rv)) return rv;
+    if (mCallbacks) {
+        nsCOMPtr<nsIProgressEventSink> sink;
+        (void)mCallbacks->GetInterface(NS_GET_IID(nsIProgressEventSink),
+                                       getter_Addrefs(sink));
+        (void)transport->SetProgressEventSink(sink);
+    }
 
-    return channel->OpenInputStream(transferOffset, transferCount, _retval);
+    return transport->OpenInputStream(0, 0, 0, _retval);
 }
 
 NS_IMETHODIMP
-nsDateTimeChannel::OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval)
-{
-    NS_NOTREACHED("nsDateTimeChannel::OpenOutputStream");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsDateTimeChannel::AsyncRead(nsIStreamListener *aListener,
-                             nsISupports *ctxt, 
-                             PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
+nsDateTimeChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
 {
     nsresult rv = NS_OK;
 
     NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIChannel> channel;
-    rv = socketService->CreateTransport(mHost, mPort, nsnull, 0, 32, 32, getter_AddRefs(channel));
+    nsCOMPtr<nsITransport> transport;
+    rv = socketService->CreateTransport(mHost, mPort, nsnull, 0, 32, 32, getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
-    rv = channel->SetNotificationCallbacks(mCallbacks);
-    if (NS_FAILED(rv)) return rv;
+    if (mCallbacks) {
+        nsCOMPtr<nsIProgressEventSink> sink;
+        (void)mCallbacks->GetInterface(NS_GET_IID(nsIProgressEventSink),
+                                       getter_Addrefs(sink));
+        (void)transport->SetProgressEventSink(sink);
+    }
 
     mListener = aListener;
     
     nsCOMPtr<nsIRequest> request;
-    rv = channel->AsyncRead(this, ctxt, transferOffset, transferCount, getter_AddRefs(request));
-
-    if (NS_SUCCEEDED(rv))
-        NS_ADDREF(*_retval=this);
-    
-    return rv;
-}
-
-NS_IMETHODIMP
-nsDateTimeChannel::AsyncWrite(nsIStreamProvider *provider,
-                              nsISupports *ctxt,
-                              PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
-{
-    NS_NOTREACHED("nsDateTimeChannel::AsyncWrite");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return transport->AsyncRead(this, ctxt, 0, 0, 0, getter_AddRefs(request));
 }
 
 NS_IMETHODIMP
@@ -330,13 +301,6 @@ NS_IMETHODIMP
 nsDateTimeChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
     mCallbacks = aNotificationCallbacks;
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsDateTimeChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
-{
-    *aSecurityInfo = nsnull;
     return NS_OK;
 }
 

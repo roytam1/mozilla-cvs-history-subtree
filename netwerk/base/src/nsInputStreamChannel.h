@@ -24,7 +24,6 @@
 #define nsInputStreamChannel_h__
 
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIInputStream.h"
 #include "nsIURI.h"
 #include "nsCRT.h"
