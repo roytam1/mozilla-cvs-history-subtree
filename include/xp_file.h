@@ -262,20 +262,23 @@ typedef enum XP_FileType {
 } XP_FileType;
 
 #if defined(XP_UNIX) || defined(XP_MAC)
-#define XP_NATIVE_DIRECTORY_SEPARATOR   '/'
-#define XP_NATIVE_PATH_SEPARATOR        ':'
+#define DIRECTORY_SEPARATOR   '/'
+#define PATH_SEPARATOR        ':'
+#define PATH_SEPARATOR_STR    ":"
 #elif defined(XP_WIN) || defined(XP_OS2)
-#define XP_NATIVE_DIRECTORY_SEPARATOR   '\\'
-#define XP_NATIVE_PATH_SEPARATOR        ';'
+#define DIRECTORY_SEPARATOR   '\\'
+#define PATH_SEPARATOR        ';'
+#define PATH_SEPARATOR_STR    ";"
 #else
 #error
 #endif
 
 /*
- * For backward compatibility.  The XP_NATIVE_ versions are preferred.
+ * For backward compatibility.
  */
-#define PR_DIRECTORY_SEPARATOR   XP_NATIVE_DIRECTORY_SEPARATOR
-#define PR_PATH_SEPARATOR        XP_NATIVE_PATH_SEPARATOR
+#define PR_DIRECTORY_SEPARATOR   DIRECTORY_SEPARATOR
+#define PR_PATH_SEPARATOR        PATH_SEPARATOR
+#define PR_PATH_SEPARATOR_STR    PATH_SEPARATOR_STR
 
 #define XP_FILE_READ             "r"
 #define XP_FILE_READ_BIN         "rb"
