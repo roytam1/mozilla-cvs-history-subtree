@@ -1948,15 +1948,11 @@ pk11_DestroyObject(PK11Object *object)
     if (so) {
 	pk11_PutObjectToList(so);
     } else {
-	if (object->refLock) {
-	    PK11_USE_THREADS(PZ_DestroyLock(object->refLock);)
-	}
-	PORT_Free(to);
+	PK11_USE_THREADS(PZ_DestroyLock(object->refLock);)
+	PORT_Free(to);;
     }
 #else
-    if (object->refLock) {
-        PK11_USE_THREADS(PZ_DestroyLock(object->refLock);)
-    }
+    PK11_USE_THREADS(PZ_DestroyLock(object->refLock);)
     arena = object->arena;
     PORT_FreeArena(arena,PR_FALSE);
 #endif
@@ -2561,7 +2557,7 @@ pk11_NewTokenObject(PK11Slot *slot, SECItem *dbKey, CK_OBJECT_HANDLE handle)
     arena = PORT_NewArena(2048);
     if (arena == NULL) return NULL;
 
-    object = (PK11Object*)PORT_ArenaZAlloc(arena,sizeof(PK11TokenObject));
+    object = (PK11Object*)PORT_ArenaAlloc(arena,sizeof(PK11TokenObject));
     if (object == NULL) {
 	PORT_FreeArena(arena,PR_FALSE);
 	return NULL;
@@ -2572,6 +2568,7 @@ pk11_NewTokenObject(PK11Slot *slot, SECItem *dbKey, CK_OBJECT_HANDLE handle)
 
     object->objclass = handleToClass(handle);
     object->handle = handle;
+    object->refCount = 1;
     object->slot = slot;
     object->objectInfo = NULL;
     object->infoFree = NULL;
@@ -2596,12 +2593,11 @@ pk11_NewTokenObject(PK11Slot *slot, SECItem *dbKey, CK_OBJECT_HANDLE handle)
 	goto loser;
     }
 #endif
-    object->refCount = 1;
 
     return object;
 loser:
     if (object) {
-	(void) pk11_DestroyObject(object);
+	pk11_FreeObject(object);
     }
     return NULL;
 

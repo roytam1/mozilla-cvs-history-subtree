@@ -891,9 +891,7 @@ case "$target" in
     DLL_SUFFIX=sl
     DSO_LDOPTS='-b +h $(notdir $@)'
     PR_MD_CSRCS=hpux.c
-    if test "$OS_TEST" != "ia64"; then
-        PR_MD_ASFILES=os_HPUX.s
-    fi
+    PR_MD_ASFILES=os_HPUX.s
     if test -n "$USE_64"; then
         MDCPUCFG_H=_hpux64.cfg
     else
@@ -932,7 +930,7 @@ case "$target" in
         AC_DEFINE(HAVE_INT_LOCALTIME_R)
     fi
 
-    if echo "$OS_RELEASE" | egrep '^(B.10.30|B.11.00|B.11.11|B.11.20)' >/dev/null; then
+    if echo "$OS_RELEASE" | egrep '^(B.10.30|B.11.00|B.11.11)' >/dev/null; then
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
     fi
 
@@ -967,7 +965,7 @@ case "$target" in
         DEFAULT_IMPL_STRATEGY=_PTH
     fi
 
-    if echo "$OS_RELEASE" | egrep '^(B.11.00|B.11.11|B.11.20)' >/dev/null; then
+    if echo "$OS_RELEASE" | egrep '^(B.11.00|B.11.11)' >/dev/null; then
         AC_DEFINE(HPUX10)
         AC_DEFINE(HPUX11)
         AC_DEFINE(_LARGEFILE64_SOURCE)
@@ -975,21 +973,11 @@ case "$target" in
         AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         if test -z "$GNU_CC"; then
             if test -z "$USE_64"; then
-                if test "$OS_TEST" = "ia64"; then
-                    CFLAGS="$CFLAGS +DD32"
-                    CXXFLAGS="$CXXFLAGS +DD32"
-                else
-                    CFLAGS="$CFLAGS +DAportable +DS2.0"
-                    CXXFLAGS="$CXXFLAGS +DAportable +DS2.0"
-                fi
+                CFLAGS="$CFLAGS +DAportable +DS2.0"
+                CXXFLAGS="$CXXFLAGS +DAportable +DS2.0"
             else
-                if test "$OS_TEST" = "ia64"; then
-                    CFLAGS="$CFLAGS +DD64"
-                    CXXFLAGS="$CXXFLAGS +DD64"
-                else
-                    CFLAGS="$CFLAGS +DA2.0W +DS2.0"
-                    CXXFLAGS="$CXXFLAGS +DA2.0W +DS2.0"
-                fi
+                CFLAGS="$CFLAGS +DA2.0W +DS2.0"
+                CXXFLAGS="$CXXFLAGS +DA2.0W +DS2.0"
             fi
         fi
         DEFAULT_IMPL_STRATEGY=_PTH
@@ -1121,6 +1109,7 @@ case "$target" in
     AC_DEFINE(_LARGEFILE64_SOURCE)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
     AC_DEFINE(LINUX)
+    AC_DEFINE(linux)
     CFLAGS="$CFLAGS -ansi -Wall"
     CXXFLAGS="$CXXFLAGS -ansi -Wall"
     MDCPUCFG_H=_linux.cfg

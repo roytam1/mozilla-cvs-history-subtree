@@ -305,94 +305,19 @@ loser:
     return NULL;
 }
 
-static void
-ssl_DestroyLocks(sslSocket *ss)
-{
-
-    /* Destroy locks. */
-    if (ss->firstHandshakeLock) {
-    	PZ_DestroyMonitor(ss->firstHandshakeLock);
-	ss->firstHandshakeLock = NULL;
-    }
-    if (ss->ssl3HandshakeLock) {
-    	PZ_DestroyMonitor(ss->ssl3HandshakeLock);
-	ss->ssl3HandshakeLock = NULL;
-    }
-    if (ss->specLock) {
-    	NSSRWLock_Destroy(ss->specLock);
-	ss->specLock = NULL;
-    }
-
-    if (ss->recvLock) {
-    	PZ_DestroyLock(ss->recvLock);
-	ss->recvLock = NULL;
-    }
-    if (ss->sendLock) {
-    	PZ_DestroyLock(ss->sendLock);
-	ss->sendLock = NULL;
-    }
-    if (ss->xmitBufLock) {
-    	PZ_DestroyMonitor(ss->xmitBufLock);
-	ss->xmitBufLock = NULL;
-    }
-    if (ss->recvBufLock) {
-    	PZ_DestroyMonitor(ss->recvBufLock);
-	ss->recvBufLock = NULL;
-    }
-}
-
-/* Caller holds any relevant locks */
-static void
-ssl_DestroySocketContents(sslSocket *ss)
-{
-    /* "i" should be of type SSLKEAType, but CC on IRIX complains during
-     * the for loop.
-     */
-    int        i;
-
-    /* Free up socket */
-    ssl_DestroySecurityInfo(&ss->sec);
-
-    ssl3_DestroySSL3Info(ss->ssl3);
-
-    PORT_Free(ss->saveBuf.buf);
-    PORT_Free(ss->pendingBuf.buf);
-    ssl_DestroyGather(&ss->gs);
-
-    if (ss->peerID != NULL)
-	PORT_Free(ss->peerID);
-    if (ss->url != NULL)
-	PORT_Free((void *)ss->url);	/* CONST */
-    if (ss->cipherSpecs) {
-	PORT_Free(ss->cipherSpecs);
-	ss->cipherSpecs     = NULL;
-	ss->sizeCipherSpecs = 0;
-    }
-
-    /* Clean up server configuration */
-    for (i=kt_null; i < kt_kea_size; i++) {
-	sslServerCerts * sc = ss->serverCerts + i;
-	if (sc->serverCert != NULL)
-	    CERT_DestroyCertificate(sc->serverCert);
-	if (sc->serverCertChain != NULL)
-	    CERT_DestroyCertificateList(sc->serverCertChain);
-	if (sc->serverKey != NULL)
-	    SECKEY_DestroyPrivateKey(sc->serverKey);
-    }
-    if (ss->stepDownKeyPair) {
-	ssl3_FreeKeyPair(ss->stepDownKeyPair);
-	ss->stepDownKeyPair = NULL;
-    }
-}
-
 /*
  * free an sslSocket struct, and all the stuff that hangs off of it
  */
 void
 ssl_FreeSocket(sslSocket *ss)
 {
-#ifdef DEBUG
+    /* "i" should be of type SSLKEAType, but CC on IRIX complains during
+     * the for loop.
+     */
+    int        i;
+
     sslSocket *fs;
+#ifdef DEBUG
     sslSocket  lSock;
 #endif
 
@@ -412,10 +337,37 @@ ssl_FreeSocket(sslSocket *ss)
     *fs = *ss;				/* Copy the old socket structure, */
     PORT_Memset(ss, 0x1f, sizeof *ss);  /* then blast the old struct ASAP. */
 #else
-#define fs ss
+    fs = ss;
 #endif
 
-    ssl_DestroySocketContents(fs);
+    /* Free up socket */
+    ssl_DestroySecurityInfo(fs->sec);
+    ssl3_DestroySSL3Info(fs->ssl3);
+    PORT_Free(fs->saveBuf.buf);
+    PORT_Free(fs->pendingBuf.buf);
+    if (fs->gather) {
+	ssl_DestroyGather(fs->gather);
+    }
+    if (fs->peerID != NULL)
+	PORT_Free(fs->peerID);
+    if (fs->url != NULL)
+	PORT_Free((void *)fs->url);	/* CONST */
+
+    /* Clean up server configuration */
+    for (i=kt_null; i < kt_kea_size; i++) {
+	sslServerCerts * sc = fs->serverCerts + i;
+	if (sc->serverCert != NULL)
+	    CERT_DestroyCertificate(sc->serverCert);
+	if (sc->serverCertChain != NULL)
+	    CERT_DestroyCertificateList(sc->serverCertChain);
+	if (sc->serverKey != NULL)
+	    SECKEY_DestroyPrivateKey(sc->serverKey);
+    }
+    if (fs->stepDownKeyPair) {
+	ssl3_FreeKeyPair(fs->stepDownKeyPair);
+	fs->stepDownKeyPair = NULL;
+    }
+
 
     /* Release all the locks acquired above.  */
     SSL_UNLOCK_READER(fs);
@@ -426,12 +378,45 @@ ssl_FreeSocket(sslSocket *ss)
     ssl_ReleaseXmitBufLock(fs);
     ssl_ReleaseSpecWriteLock(fs);
 
-    ssl_DestroyLocks(fs);
+    /* Destroy locks. */
+    if (fs->firstHandshakeLock) {
+    	PZ_DestroyMonitor(fs->firstHandshakeLock);
+	fs->firstHandshakeLock = NULL;
+    }
+    if (fs->ssl3HandshakeLock) {
+    	PZ_DestroyMonitor(fs->ssl3HandshakeLock);
+	fs->ssl3HandshakeLock = NULL;
+    }
+    if (fs->specLock) {
+    	NSSRWLock_Destroy(fs->specLock);
+	fs->specLock = NULL;
+    }
+
+    if (fs->recvLock) {
+    	PZ_DestroyLock(fs->recvLock);
+	fs->recvLock = NULL;
+    }
+    if (fs->sendLock) {
+    	PZ_DestroyLock(fs->sendLock);
+	fs->sendLock = NULL;
+    }
+    if (fs->xmitBufLock) {
+    	PZ_DestroyMonitor(fs->xmitBufLock);
+	fs->xmitBufLock = NULL;
+    }
+    if (fs->recvBufLock) {
+    	PZ_DestroyMonitor(fs->recvBufLock);
+	fs->recvBufLock = NULL;
+    }
+    if (fs->cipherSpecs) {
+	PORT_Free(fs->cipherSpecs);
+	fs->cipherSpecs     = NULL;
+	fs->sizeCipherSpecs = 0;
+    }
 
     PORT_Free(ss);	/* free the caller's copy, not ours. */
     return;
 }
-#undef fs
 
 /************************************************************************/
 SECStatus 
@@ -460,6 +445,13 @@ static SECStatus
 PrepareSocket(sslSocket *ss)
 {
     SECStatus     rv = SECSuccess;
+
+    if (ss->useSecurity) {
+	rv = ssl_CreateSecurityInfo(ss);
+	if (rv != SECSuccess) {
+	    return rv;
+	}
+    }
 
     ssl_ChooseOps(ss);
     return rv;
@@ -1280,11 +1272,15 @@ ssl_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
 SECStatus
 ssl_GetPeerInfo(sslSocket *ss)
 {
-    PRFileDesc *      osfd;
-    int               rv;
+    sslConnectInfo *  ci;
     PRNetAddr         sin;
+    int               rv;
+    PRFileDesc *      osfd;
+
+    PORT_Assert((ss->sec != 0));
 
     osfd = ss->fd->lower;
+    ci   = &ss->sec->ci;
 
     PORT_Memset(&sin, 0, sizeof(sin));
     rv = osfd->methods->getpeername(osfd, &sin);
@@ -1292,15 +1288,14 @@ ssl_GetPeerInfo(sslSocket *ss)
 	return SECFailure;
     }
     ss->TCPconnected = 1;
-    if (sin.inet.family == PR_AF_INET) {
-        PR_ConvertIPv4AddrToIPv6(sin.inet.ip, &ss->sec.ci.peer);
-	ss->sec.ci.port = sin.inet.port;
-    } else if (sin.ipv6.family == PR_AF_INET6) {
-	ss->sec.ci.peer = sin.ipv6.ip;
-	ss->sec.ci.port = sin.ipv6.port;
+    /* we have to mask off the high byte because AIX is lame */
+    if ((sin.inet.family & 0xff) == PR_AF_INET) {
+        PR_ConvertIPv4AddrToIPv6(sin.inet.ip, &ci->peer);
+	ci->port = sin.inet.port;
     } else {
-	PORT_SetError(PR_ADDRESS_NOT_SUPPORTED_ERROR);
-    	return SECFailure;
+        PORT_Assert(sin.ipv6.family == PR_AF_INET6);
+	ci->peer = sin.ipv6.ip;
+	ci->port = sin.ipv6.port;
     }
     return SECSuccess;
 }
@@ -1801,11 +1796,14 @@ ssl_NewSocket(void)
 {
     sslSocket *ss;
 #ifdef DEBUG
-#if defined(XP_UNIX) || defined(XP_WIN32) || defined(XP_BEOS)
     static int firsttime = 1;
+#endif
 
+#ifdef DEBUG
+#if defined(XP_UNIX) || defined(XP_WIN32) || defined(XP_BEOS)
     if (firsttime) {
 	firsttime = 0;
+
 	{
 	    char *ev = getenv("SSLDEBUG");
 	    if (ev && ev[0]) {
@@ -1833,7 +1831,6 @@ ssl_NewSocket(void)
 	 * complains during the for loop.
 	 */
 	int i;
-	SECStatus status;
  
 	ss->useSecurity        = ssl_defaults.useSecurity;
 	ss->useSocks           = PR_FALSE;
@@ -1880,31 +1877,14 @@ ssl_NewSocket(void)
 	ssl3_InitSocketPolicy(ss);
 
 	ss->firstHandshakeLock = PZ_NewMonitor(nssILockSSL);
-	if (!ss->firstHandshakeLock) goto loser;
 	ss->ssl3HandshakeLock  = PZ_NewMonitor(nssILockSSL);
-	if (!ss->ssl3HandshakeLock) goto loser;
 	ss->specLock           = NSSRWLock_New(SSL_LOCK_RANK_SPEC, NULL);
-	if (!ss->specLock) goto loser;
 	ss->recvBufLock        = PZ_NewMonitor(nssILockSSL);
-	if (!ss->recvBufLock) goto loser;
 	ss->xmitBufLock        = PZ_NewMonitor(nssILockSSL);
-	if (!ss->xmitBufLock) goto loser;
 	ss->writerThread       = NULL;
 	if (ssl_lock_readers) {
 	    ss->recvLock       = PZ_NewLock(nssILockSSL);
-	    if (!ss->recvLock) goto loser;
 	    ss->sendLock       = PZ_NewLock(nssILockSSL);
-	    if (!ss->sendLock) goto loser;
-	}
-	status = ssl_CreateSecurityInfo(ss);
-	if (status != SECSuccess) goto loser;
-	status = ssl_InitGather(&ss->gs);
-	if (status != SECSuccess) {
-loser:
-	    ssl_DestroySocketContents(ss);
-	    ssl_DestroyLocks(ss);
-	    PORT_Free(ss);
-	    ss = NULL;
 	}
     }
     return ss;

@@ -48,10 +48,6 @@
 #include "pkitm.h"
 #include "pki3hack.h"
 
-
-CERTSignedCrl * crl_storeCRL (PK11SlotInfo *slot,char *url,
-                  CERTSignedCrl *newCrl, SECItem *derCrl, int type);
-
 PRBool
 CERT_MatchNickname(char *name1, char *name2) {
     char *nickname1= NULL;
@@ -741,7 +737,6 @@ CERTSignedCrl * CERT_ImportCRL
     CERTCertificate *caCert;
     CERTSignedCrl *newCrl, *crl;
     SECStatus rv;
-    PK11SlotInfo *slot;
 
     newCrl = crl = NULL;
 
@@ -784,15 +779,16 @@ CERTSignedCrl * CERT_ImportCRL
 	    break;
 	}
 
-	slot = PK11_GetInternalKeySlot();
-	crl = crl_storeCRL(slot, url, newCrl, derCRL, type);
-	PK11_FreeSlot(slot);
+#ifdef FIXME
+	/* Do CRL validation and add to the dbase if this crl is more present then the one
+	   in the dbase, if one exists.
+	 */
+	crl = cert_DBInsertCRL (handle, url, newCrl, derCRL, type);
+#endif
 
     } while (0);
 
-    if (crl == NULL) {
-	SEC_DestroyCrl (newCrl);
-    }
+    SEC_DestroyCrl (newCrl);
     return (crl);
 }
 

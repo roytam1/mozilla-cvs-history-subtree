@@ -58,7 +58,7 @@
 #endif
 
 #if defined(HPUX)
-#include <sys/mpctl.h>
+#include <sys/mp.h>
 #endif
 
 #if defined(XP_UNIX)
@@ -66,7 +66,7 @@
 #include <sys/utsname.h>
 #endif
 
-PR_IMPLEMENT(char) PR_GetDirectorySeparator(void)
+PR_IMPLEMENT(char) PR_GetDirectorySeparator()
 {
     return PR_DIRECTORY_SEPARATOR;
 }  /* PR_GetDirectorySeparator */
@@ -74,7 +74,7 @@ PR_IMPLEMENT(char) PR_GetDirectorySeparator(void)
 /*
 ** OBSOLETE -- the function name is misspelled.
 */
-PR_IMPLEMENT(char) PR_GetDirectorySepartor(void)
+PR_IMPLEMENT(char) PR_GetDirectorySepartor()
 {
 #if defined(DEBUG)
     static PRBool warn = PR_TRUE;
@@ -150,6 +150,7 @@ PR_IMPLEMENT(PRStatus) PR_GetSystemInfo(PRSysInfo cmd, char *buf, PRUint32 bufle
 	  default:
 			PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
 			return PR_FAILURE;
+			break;
     }
     return PR_SUCCESS;
 }

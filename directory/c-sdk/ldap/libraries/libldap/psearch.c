@@ -85,6 +85,7 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
     BerElement		*ber;
     int			rc, i, changetype;
     unsigned long	len;
+    long		along;
     char		*previousdn;
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
@@ -125,11 +126,12 @@ ldap_parse_entrychange_control( LDAP *ld, LDAPControl **ctrls, int *chgtypep,
 	goto report_error_and_return;
     }		
 
-    if ( ber_scanf( ber, "{e", &changetype ) == LBER_ERROR ) {
+    if ( ber_scanf( ber, "{e", &along ) == LBER_ERROR ) {
 	ber_free( ber, 1 );
 	rc = LDAP_DECODING_ERROR;
 	goto report_error_and_return;
     }
+    changetype = (int)along;	/* XXX lossy cast */
 
     if ( changetype == LDAP_CHANGETYPE_MODDN ) {
 	if ( ber_scanf( ber, "a", &previousdn ) == LBER_ERROR ) {
