@@ -42,13 +42,6 @@
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
-#if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_BEOS)
-
-#define WC_ITOA(intVal, buf, radix) sprintf(buf, "%d", intVal)
-#else
-#define WC_ITOA(intVal, buf, radix) itoa(intVal, buf, radix)
-#endif
-
 jobject gPromptProperties = nsnull;
 
 

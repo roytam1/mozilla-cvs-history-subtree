@@ -29,6 +29,7 @@ import org.mozilla.util.ParameterCheck;
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.WrapperFactory;
 import org.mozilla.webclient.Preferences;
+import org.mozilla.webclient.PrefChangedCallback;
 
 import java.util.Properties;
 
@@ -52,6 +53,8 @@ public class PreferencesImpl extends ImplObjectNative implements Preferences
 
 // Relationship Instance Variables
 
+private Properties props;
+
 //
 // Constructors and Initializers    
 //
@@ -60,6 +63,7 @@ public PreferencesImpl(WrapperFactory yourFactory,
                      BrowserControl yourBrowserControl)
 {
     super(yourFactory, yourBrowserControl);
+    props = null;
 }
 
 /**
@@ -117,7 +121,17 @@ public void setPref(String prefName, String prefValue)
  
 public Properties getPrefs()
 {
-    return null;
+    props = nativeGetPrefs(nativeWebShell, props);
+    return props;
+}
+
+public void registerPrefChangedCallback(PrefChangedCallback cb,
+                                       String prefName, Object closure)
+{
+    ParameterCheck.nonNull(cb);
+    ParameterCheck.nonNull(prefName);
+    
+    nativeRegisterPrefChangedCallback(nativeWebShell, cb, prefName, closure);
 }
 
 
@@ -128,6 +142,11 @@ public Properties getPrefs()
 public native void nativeSetUnicharPref(String prefName, String prefValue);
 public native void nativeSetIntPref(String prefName, int prefValue);
 public native void nativeSetBoolPref(String prefName, boolean prefValue);
+public native Properties nativeGetPrefs(int nativeWebShell, Properties props);
+public native void nativeRegisterPrefChangedCallback(int nativeWebShell, 
+                                                     PrefChangedCallback cb,
+                                                     String prefName,
+                                                     Object closure);
 
 // ----VERTIGO_TEST_START
 

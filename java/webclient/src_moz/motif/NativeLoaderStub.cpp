@@ -116,6 +116,8 @@ jint (* nativeNewRDFNode)  (JNIEnv *, jobject, jint, jstring, jboolean);
 void (* nativeSetUnicharPref) (JNIEnv *, jobject, jstring, jstring);
 void (* nativeSetIntPref) (JNIEnv *, jobject, jstring, jint);
 void (* nativeSetBoolPref) (JNIEnv *, jobject, jstring, jboolean);
+jobject (* nativeGetPrefs) (JNIEnv *env, jobject obj, jint webShellPtr, jobject props);
+void (* nativeRegisterPrefChangedCallback) (JNIEnv *env, jobject obj, jint webShellPtr, jobject callback, jstring prefName, jobject closure);
 // from CurrentPageImpl.h
 void (* nativeCopyCurrentSelectionToSystemClipboard) (JNIEnv *, jobject, jint);
 void (* nativeFindInPage) (JNIEnv *, jobject, jint, jstring, jboolean, jboolean);
@@ -406,7 +408,14 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeSetBoolPref) {
       printf("got dlsym error %s\n", dlerror());
   }
-
+  nativeGetPrefs = (jobject (*) (JNIEnv *env, jobject obj, jint webShellPtr, jobject props)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeGetPrefs");
+  if (!nativeGetPrefs) {
+      printf("got dlsym error %s\n", dlerror());
+  }
+  nativeRegisterPrefChangedCallback = (void (*) (JNIEnv *env, jobject obj, jint webShellPtr, jobject callback, jstring prefName, jobject closure)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeRegisterPrefChangedCallback");
+  if (!nativeRegisterPrefChangedCallback) {
+      printf("got dlsym error %s\n", dlerror());
+  }
   nativeAddListener = (void (*) (JNIEnv *, jobject, jint, jobject, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NativeEventThread_nativeAddListener");
   if (!nativeAddListener) {
     printf("got dlsym error %s\n", dlerror());
@@ -538,6 +547,22 @@ Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref
 (JNIEnv *env, jobject obj, jstring prefName, jboolean prefValue)
 {
     (* nativeSetBoolPref) (env, obj, prefName, prefValue);
+}
+
+JNIEXPORT jobject JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeGetPrefs
+(JNIEnv *env, jobject obj, jint webShellPtr, jobject props)
+{
+    return (* nativeGetPrefs) (env, obj, webShellPtr, props);
+}
+
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeRegisterPrefChangedCallback
+(JNIEnv *env, jobject obj, jint webShellPtr, 
+ jobject callback, jstring prefName, jobject closure)
+{
+    (* nativeRegisterPrefChangedCallback) (env, obj, webShellPtr, callback,
+                                           prefName, closure);
 }
 
 // CurrentPageImpl

@@ -22,14 +22,9 @@
 
 package org.mozilla.webclient;
 
-import java.util.Properties;
-
-public interface Preferences
+public interface PrefChangedCallback
 {
-  public void setPref(String prefName, String prefValue);
-  public Properties getPrefs();
-  public void registerPrefChangedCallback(PrefChangedCallback cb,
-                                          String prefName, Object closure);
+    public int prefChanged(String prefName, Object closure);
 } 
-// end of interface Preferences
+// end of interface PrefChangedCallback
 

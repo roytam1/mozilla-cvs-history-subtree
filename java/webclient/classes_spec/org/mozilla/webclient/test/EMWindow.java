@@ -63,7 +63,7 @@ import java.io.FileInputStream;
 
  */
 
-public class EMWindow extends Frame implements DialogClient, ActionListener, DocumentLoadListener, MouseListener, Prompt {
+public class EMWindow extends Frame implements DialogClient, ActionListener, DocumentLoadListener, MouseListener, Prompt, PrefChangedCallback {
     static final int defaultWidth = 640;
     static final int defaultHeight = 480;
 
@@ -298,10 +298,14 @@ private UniversalDialog           uniDialog = null;
                 browserControl.queryInterface(BrowserControl.HISTORY_NAME);
             prefs = (Preferences)
                 browserControl.queryInterface(BrowserControl.PREFERENCES_NAME);
+            prefs.registerPrefChangedCallback(this, 
+                                              "network.cookie.warnAboutCookies",
+                                              "This IS the Closure!");
             prefs.setPref("network.cookie.warnAboutCookies", "true");
             prefs.setPref("browser.cache.disk_cache_size", "0");
             //prefs.setPref("network.proxy.http", "webcache-mpk.eng.sun.com");
-            
+            Properties prefsProps = prefs.getPrefs();
+            prefsProps.list(System.out);
         }
 		catch (Exception e) {
 		    System.out.println(e.toString());
@@ -865,6 +869,14 @@ public boolean universalDialog(String titleMessage,
     return true;
 }
 
+//
+// PrefChangedCallback
+//
+public int prefChanged(String prefName, Object closure)
+{
+    System.out.println("prefChanged: " + prefName + " closure: " + closure);
+    return 0;
+}
 
 class HistoryActionListener implements ActionListener
 {
