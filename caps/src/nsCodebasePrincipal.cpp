@@ -117,6 +117,7 @@ nsCodebasePrincipal::Equals(nsIPrincipal * other, PRBool * result)
 nsCodebasePrincipal::nsCodebasePrincipal()
 {
   NS_INIT_ISUPPORTS();
+  itsURL = nsnull;
 }
 
 NS_IMETHODIMP
