@@ -3246,7 +3246,10 @@ nsMsgLocalMailFolder::SetFlagsOnDefaultMailboxes(PRUint32 flags)
     setSubfolderFlag("Inbox", MSG_FOLDER_FLAG_INBOX);
 
   if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+  {
     setSubfolderFlag("Sent", MSG_FOLDER_FLAG_SENTMAIL);
+    setSubfolderFlag("Sent Mail", MSG_FOLDER_FLAG_SENTMAIL);
+  }
   
   if (flags & MSG_FOLDER_FLAG_DRAFTS)
     setSubfolderFlag("Drafts", MSG_FOLDER_FLAG_DRAFTS);
