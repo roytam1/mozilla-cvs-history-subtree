@@ -123,7 +123,7 @@ possiblyUpdateView(HT_View view)
 	uint32		theIndex;
 
 	XP_ASSERT(view != NULL);
-	if (view == NULL)	return;
+	if (view == NULL)	return(foundFlag);
 
 	/* walk the list backwards */
 
@@ -150,7 +150,7 @@ possiblyUpdateView(HT_View view)
 void
 updateViewItem(HT_Resource node)
 {
-	HT_Resource		child, newNode, nextChild;
+	HT_Resource		child, nextChild;
 	RDF_Cursor		c;
 	RDF_Resource		r;
 	PRBool			foundFlag;
