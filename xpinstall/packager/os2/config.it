@@ -134,14 +134,13 @@ Description Long=Program will be installed with the minimal options.
 ; this Setup Type is selected.
 C0=Component XPCOM
 C1=Component Navigator
-C2=Component PSM
-C3=Component US English Profile Defaults
-C4=Component En US lang pack
-C5=Component US region pack
-C6=Component Uninstaller
+C2=Component US English Profile Defaults
+C3=Component En US lang pack
+C4=Component US region pack
+C5=Component Uninstaller
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C7=Component QFA
+;C6=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -155,18 +154,17 @@ Description Long=Program will be installed with the most common options.
 C0=Component XPCOM
 C1=Component Navigator
 C2=Component MailNews
-C3=Component PSM
-C4=Component Spellchecker
-C5=Component Chatzilla
-C6=Component Venkman
-C7=Component US English Profile Defaults
-C8=Component En US lang pack
-C9=Component US region pack
-C10=Component DOM Inspector
-C11=Component Uninstaller
+C3=Component Spellchecker
+C4=Component Chatzilla
+C5=Component Venkman
+C6=Component US English Profile Defaults
+C7=Component En US lang pack
+C8=Component US region pack
+C9=Component DOM Inspector
+C10=Component Uninstaller
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C12=Component QFA
+;C11=Component QFA
 
 [Setup Type2]
 ;*** LOCALIZE ME BABY ***
@@ -182,18 +180,17 @@ Description Long=You may choose the options you want to install.  Recommended fo
 C0=Component XPCOM
 C1=Component Navigator
 C2=Component MailNews
-C3=Component PSM
-C4=Component Spellchecker
-C5=Component Chatzilla
-C6=Component Venkman
-C7=Component US English Profile Defaults
-C8=Component En US lang pack
-C9=Component US region pack
-C10=Component DOM Inspector
-C11=Component Uninstaller
+C3=Component Spellchecker
+C4=Component Chatzilla
+C5=Component Venkman
+C6=Component US English Profile Defaults
+C7=Component En US lang pack
+C8=Component US region pack
+C9=Component DOM Inspector
+C10=Component Uninstaller
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C12=Component QFA
+;C11=Component QFA
 
 
 
@@ -539,17 +536,6 @@ $InstallSize$:regus
 $InstallSizeArchive$:regus.xpi
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\Chrome\US.jar
-
-[Component PSM]
-Description Short=Personal Security Manager
-;*** LOCALIZE ME BABY ***
-Description Long=for secure browsing and email; required for SSL(https) and S/MIME
-Archive=psm.xpi
-$InstallSize$:psm
-$InstallSizeArchive$:psm.xpi
-Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
-Force Upgrade File0=[SETUP PATH]\Components\pipnss.dll
-Force Upgrade File1=[SETUP PATH]\psm.exe
 
 [Core]
 Source=[XPI PATH]\xpcom.xpi

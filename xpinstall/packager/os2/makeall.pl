@@ -24,7 +24,7 @@
 # 
 
 #
-# This perl script builds the xpi, config.ini, and js files.
+# This perl script builds the xpi and config.ini files.
 #
 
 use Cwd;
@@ -33,9 +33,7 @@ use File::Path;
 use File::Basename;
 use Getopt::Long;
 
-Getopt::Long::Configure ("bundling");
-
-$DEPTH = "../../.";
+$DEPTH = "../../..";
 $topsrcdir = GetTopSrcDir();
 
 # ensure that Packager.pm is in @INC, since we might not be called from
@@ -49,28 +47,44 @@ GetOptions('help|h|?'              => \&PrintUsage,
            'archive-uri|aurl|a=s'  => \$inXpiURL,
            'verbose|v+'            => \$MozPackager::verbosity);
 
+$verboseFlags = '';
+if ($MozPackager::verbosity) {
+    for(my $i = 0; $i < $MozPackager::verbosity; ++$i) {
+        $verboseFlags .= ' -v ';
+    }
+}
+
+$seiFileNameGeneric       = "stubinstall.exe";
+$seiFileNameGenericRes    = "stubinstall.res";
+$seiFileNameSpecific      = "mozilla-os2-installer.exe";
+$seiStubRootName          = "mozilla-os2-stub-installer";
+$seiFileNameSpecificStub  = "$seiStubRootName.exe";
+$seuFileNameSpecific      = "MozillaUninstall.exe";
+$seuzFileNameSpecific     = "mozillauninstall.zip";
+$seiGreFileNameSpecific   = "gre-os2-installer.exe";
+$seizGreFileNameSpecific  = "gre-os2-installer.zip";
+
 $topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
 $inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
 $inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
 
+# because we change directory to stage the XPI packages, make all paths absolute
 $topobjdir   = File::Spec->rel2abs($topobjdir);
 $inStagePath = File::Spec->rel2abs($inStagePath);
-
+  
 chdir $topobjdir;
 
-$seiFileNameGeneric   = "stubinstall.exe";
-$seiFileNameGenericRes   = "stubinstall.res";
-$seiFileNameSpecific  = "mozilla-os2-installer.exe";
-$seiStubRootName = "mozilla-os2-stub-installer";
-$seiFileNameSpecificStub  = "$seiStubRootName.exe";
-
-$seuFileNameSpecific  = "MozillaUninstall.exe";
-$seuzFileNameSpecific = "mozillauninstall.zip";
-
+MozPackager::_verbosePrint(2,
+"os2/makeall.pl
+topobjdir  : $topobjdir
+topsrcdir  : $topsrcdir
+inStagePath: $inStagePath");
 
 $gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
 
-# gDefaultProductVersion has the form maj.min.release.bld where maj, min, release
+MozPackager::_verbosePrint(1, "Raw version id: $gDefaultProductVersion");
+
+# $gDefaultProductVersion has the form maj.min.release.bld where maj, min, release
 #   and bld are numerics representing version information.
 # Other variables need to use parts of the version info also so we'll
 #   split out the dot separated values into the array @versionParts
@@ -83,7 +97,7 @@ $gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsr
 @versionParts = split /\./, $gDefaultProductVersion;
 
 # We allow non-numeric characters to be included as the last 
-#   characters in fields of $ARG[0] for display purposes (mostly to
+#   characters in fields of $gDefaultProductVersion for display purposes (mostly to
 #   show that we have moved past a certain version by adding a '+'
 #   character).  Non-numerics must be stripped out of $gDefaultProductVersion,
 #   however, since this variable is used to identify the the product 
@@ -101,18 +115,16 @@ else
   $versionMain = "$versionParts[0].$versionParts[1].$versionParts[2]";
 }
 
-$versionLanguage = "en";
+$versionLanguage               = "en";
 
-MozPackager::_verbosePrint(1, "
+MozPackager::_verbosePrint(2, "
 Display version  : $versionMain
 Xpinstall version: $gDefaultProductVersion");
 
 $gDirPackager         = "$topsrcdir/xpinstall/packager";
-$gDirInstall          = "$gDirInstall";
-$gDirDistProduct      = "$gDirInstall-seamonkey";
+$gDirInstall          = "$topobjdir/dist/install";
+$gDirDistProduct      = "$topobjdir/dist/install-seamonkey";
 $gDirStageProduct     = "$inStagePath/seamonkey";
-
-$gStripCmd = "$gDirPackager/os2/strip.cmd";
 
 MozPackager::makeDirEmpty($gDirStageProduct);
 MozPackager::makeDirEmpty($gDirDistProduct);
@@ -128,8 +140,9 @@ $ENV{XPI_PRODUCTNAME}          = "Mozilla";
 # product name without the version string
 $ENV{XPI_PRODUCTNAMEINTERNAL}  = "Mozilla";
 $ENV{XPI_MAINEXEFILE}          = "Mozilla.exe";
-$ENV{XPI_MAINICOFILE}          = "Mozilla.ico";
-$ENV{XPI_XPINSTALLVERSION}     = "$gDefaultProductVersion";
+$ENV{XPI_UNINSTALLFILE}        = $seuFileNameSpecific;
+$ENV{XPI_UNINSTALLFILEZIP}     = $seuzFileNameSpecific;
+$ENV{XPI_XPINSTALLVERSION}     = $gDefaultProductVersion;
 
 # The following variables are for displaying version info in the 
 # the installer.
@@ -149,11 +162,15 @@ $ENV{XPI_USERAGENTSHORT}       = "$versionMain";
               'inspector-xpi'          => 'inspector',
               'chatzilla-xpi'          => 'chatzilla',
               'spellcheck-enUS-xpi'    => 'spellcheck',
-              'talkback-xpi'           => 'talkback',
               'xpi-bootstrap'          => 'xpcom');
 
+$dummyFile = "$gDirStageProduct/dummy.touch";
+unlink $dummyFile if (-e $dummyFile);
+system('touch', $dummyFile);
+MozPackages::parsePackageList("$topsrcdir/build/package/packages.list");
+
 foreach $package (keys %gPackages) {
-  MozPackager::_verbosePrint(1, "Making $gPackages{$package}.xpi");
+  MozPackager::_verbosePrint(2, "Making $gPackages{$package}.xpi");
   my $packageStageDir = "$gDirStageProduct/$gPackages{$package}";
   my $packageDistPath = "$gDirDistProduct/xpi/$gPackages{$package}.xpi";
 
@@ -168,70 +185,79 @@ foreach $package (keys %gPackages) {
   my @packages = map(MozPackages::getPackagesFor($_), split(' ', $package));
   $parser->parse("$topobjdir/dist/packages", @packages);
 
-  MozStage::stage($parser, $packageStageDir, $gStripCmd, 'so', '');
+  MozStage::stage($parser, $packageStageDir);
   MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
   MozPackager::calcDiskSpace($packageStageDir);
   MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
-  MozParser::Exec::exec($parser, $packageStageDir); 
+  MozParser::Exec::exec($parser, $packageStageDir);
   MozStage::makeZIP($packageStageDir, $packageDistPath);
 
   # We can't remove the stage, because makecfgini needs it to
   # compute space.
 }
 
-# Make the "truncated res" file, which is used by both the installer and the uninstaller
-MozPackager::doCopy(, "$gDirStageProduct/install-truncated.res");
-$size = -s "$gDirStageProduct/install-truncated.res";
-truncate("$gDirInstall/$seiFileNameGeneric", "$size-1");
+MozPackager::system("perl -w $gDirPackager/makeuninstallini.pl $gDefaultProductVersion < $gDirPackager/os2/uninstall.it > $gDirDistProduct/uninstall/uninstall.ini");
 
-# Make uninstall.ini file
-MozPackager::system("perl -w makeuninstallini.pl $gDefaultProductVersion < $gDirPackager/os2/uninstall.it > $gDirDistProduct/uninstall/uninstall.ini"))
-
-# Copy the uninstall executable
+#MozPackager::doCopy("$gDirPackager/os2/defaults_info.ini", "$gDirDistProduct/uninstall");
 MozPackager::doCopy("$gDirInstall/uninstall.exe", "$gDirDistProduct/uninstall");
 
+# build the self-extracting .exe (uninstaller) file.
+MozPackager::_verbosePrint(1, "Building self-extracting uninstaller ($seuFileNameSpecific)");
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirStageProduct/$seuFileNameSpecific");
+#MozPackager::system("$gDirInstall/nsztool.exe $gDirStageProduct/$seuFileNameSpecific $gDirDistProduct/uninstall/*.*");
 addFileResources("$gDirStageProduct/$seuFileNameSpecific",
                  "$gDirDistProduct/uninstall");
 
 MakeExeZip($gDirStageProduct, $seuFileNameSpecific, "$gDirDistProduct/xpi/$seuzFileNameSpecific");
+
 unlink "$gDirStageProduct/$seuFileNameSpecific";
 
 # Make config.ini file
-MozPackager::system("perl makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/config.it > $gDirDistProduct/setup/config.ini");
+print "XXXXX perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/config.it > $gDirDistProduct/setup/config.ini";
+MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/config.it > $gDirDistProduct/setup/config.ini");
 
 # Make install.ini file
-MozPackager::system("perl makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/install.it > $gDirDistProduct/setup/install.ini");
+MozPackager::system("perl -w $gDirPackager/makecfgini.pl $gDefaultProductVersion $gDirStageProduct $gDirDistProduct/xpi $inXpiURL < $gDirPackager/os2/install.it > $gDirDistProduct/setup/install.ini");
 
+# copy necessary setup files
 MozPackager::doCopy("$gDirInstall/setup.exe", "$gDirDistProduct/setup");
-MozPackager::doCopy("$gDirInstall/setuprsc.exe", "$gDirDistProduct/setup");
+MozPackager::doCopy("$gDirInstall/setuprsc.dll", "$gDirDistProduct/setup");
 MozPackager::doCopy("$topsrcdir/LICENSE", "$gDirDistProduct/setup/license.txt");
-MozPackager::doCopy("$topsrcdir/README.TXT", "$gDirDistProduct/setup/readme.txt");
+
+MozPackager::_verbosePrint(1, "Creating stub installer $gDirDistProduct/$seiFileNameSpecificStub");
 
 # build the self-extracting .exe (installer) file.
-print "\nbuilding self-extracting stub installer ($seiFileNameSpecificStub)...\n";
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecificStub");
 
+#MozPackager::system("$gDirInstall/nsztool.exe $gDirDistProduct/$seiFileNameSpecificStub $gDirDistProduct/setup/*.*");
 addFileResources("$gDirDistProduct/$seiFileNameSpecificStub",
                  "$gDirDistProduct/setup");
 
-{
-  my $parser = new MozParser;
-  MozParser::Preprocess::add($parser);
-  $parser->addMapping('xpiroot/', '');
-  $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor('seamonkey-installer-stub-en-xpi'));
-  MozStage::stage($parser, "$gDirStageProduct/$seiStubRootName");
-  MozPackager::calcDiskSpace("$gDirStageProduct/$seiStubRootName");
-  MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", "$gDirStageProduct/$seiStubRootName");
-  MozStage::makeZIP("$gDirStageProduct/$seiStubRootName", "$gDirDistProduct/$seiStubRootName.xpi");
-}
+# create the xpi for launching the stub installer
+MozPackager::_verbosePrint(1, "Creating stub installer XPI $gDirDistProduct/$seiStubRootName.xpi");
+
+$parser = new MozParser;
+MozParser::Preprocess::add($parser);
+$parser->addMapping('xpiroot/', '');
+$parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor('seamonkey-installer-stub-en-xpi'));
+MozStage::stage($parser, "$gDirStageProduct/$seiStubRootName");
+MozPackager::calcDiskSpace("$gDirStageProduct/$seiStubRootName");
+MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", "$gDirStageProduct/$seiStubRootName");
+MozStage::makeZIP("$gDirStageProduct/$seiStubRootName", "$gDirDistProduct/$seiStubRootName.xpi");
+
+MozPackager::_verbosePrint(1, "Staging compact disc files to $gDirDistProduct/cd");
+
+mkdir("$gDirDistProduct/cd", 0775);
 
 foreach $file (<$gDirDistProduct/setup/*.*>, <$gDirDistProduct/xpi/*.*>) {
   MozPackager::doCopy($file, "$gDirDistProduct/cd");
 }
 
+MozPackager::_verbosePrint(1, "Creating full installer $gDirDistProduct/$seiFileNameSpecific");
+
 MozPackager::doCopy("$gDirInstall/$seiFileNameGeneric", "$gDirDistProduct/$seiFileNameSpecific");
 
+#MozPackager::system("$gDirInstall/nsztool.exe $gDirDistProduct/$seiFileNameSpecific $gDirDistProduct/setup/*.* $gDirDistProduct/xpi/*.*");
 addFileResources("$gDirDistProduct/$seiFileNameSpecific",
                  "$gDirDistProduct/cd");
 
@@ -256,27 +282,27 @@ sub addFileResources {
   foreach $entry ( @stubFiles ) 
   {
     $filename = basename($entry);
-    print OUTPUTFILE "$currentResourceID \"$filename\"\n";
+    print $oFile "$currentResourceID \"$filename\"\n";
     $currentResourceID++;
   }
-  print OUTPUTFILE "END\n";
+  print $oFile "END\n";
   $currentResourceID = 10000+1;
   foreach $entry ( @stubFiles ) 
   {
-    print OUTPUTFILE "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
+    print $oFile "RESOURCE RT_RCDATA $currentResourceID \"$entry\"\n";
     $currentResourceID++;
   }
-  close(OUTPUTFILE);
+  close($oFile);
   system("rc -r $resStageDir/stubfiles.rc $resStageDir/stubfiles.res");
 
   # we need to chomp off the final byte of stubinstall.res and join it with our stubfiles.res
   MozPackager::doCopy("$gDirInstall/$seiFileNameGenericRes", $resStageDir);
   my $resSize = -s "$resStageDir/$seiFileNameGenericRes";
-  truncate("$resStageDir/$seiFileNameGenericRes", $size - 1);
+  truncate("$resStageDir/$seiFileNameGenericRes", $resSize - 1);
 
   MozPackager::system("cat $resStageDir/$seiFileNameGenericRes $resStageDir/stubfiles.res > $resStageDir/complete.res");
 
-  system("rc $binary $resStageDir/complete.res");
+  system("rc $resStageDir/complete.res $binary");
 }
 
 sub MakeExeZip
@@ -284,13 +310,11 @@ sub MakeExeZip
   my($aSrcDir, $aExeFile, $aZipFile) = @_;
   my($saveCwdir);
 
+  my $qFlag = ($MozPackager::verbosity > 1) ? '' : '-q';
+
   $saveCwdir = cwd();
   chdir($aSrcDir);
-  if(system("zip $inDistPath/xpi/$aZipFile $aExeFile"))
-  {
-    chdir($saveCwdir);
-    die "\n Error: zip $inDistPath/xpi/$aZipFile $aExeFile";
-  }
+  MozPackager::system("zip -9 $qFlag $aZipFile $aExeFile");
   chdir($saveCwdir);
 }
 
@@ -315,4 +339,15 @@ sub PrintUsage
 
            -v                        : verbose. Will increase message output. May be repeated.
        \n";
+}
+
+sub GetTopSrcDir
+{
+  my($rootDir) = dirname($0) . "/$DEPTH";
+  my($savedCwdDir) = cwd();
+
+  chdir($rootDir);
+  $rootDir = cwd();
+  chdir($savedCwdDir);
+  return($rootDir);
 }
