@@ -1745,8 +1745,9 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     //-- create a new ProcessorState
     ProcessorState* ps = new ProcessorState(*xslDocument, *resultDocument);
 
+    // XXX HACK, baseURI is something to be done in the DOM
     nsIURI* docURL = nsnull;
-    nsCOMPtr<nsIDocument> sourceNsDocument = do_QueryInterface(sourceDOMDocument);
+    nsCOMPtr<nsIDocument> sourceNsDocument = do_QueryInterface(styleDOMDocument);
     sourceNsDocument->GetBaseURL(docURL);
     if (docURL) {
         char* urlString;
