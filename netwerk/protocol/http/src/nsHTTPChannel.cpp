@@ -168,7 +168,7 @@ nsHTTPChannel::nsHTTPChannel(nsIURI *aURL, nsHTTPHandler *aHandler)
 
     PRBool isHTTPS = PR_FALSE;
     if (NS_SUCCEEDED(mURI->SchemeIs("https", &isHTTPS)) && isHTTPS)
-        mLoadFlags |= INHIBIT_PERSISTENT_CACHING; 
+        mLoadFlags |= nsIRequest::INHIBIT_PERSISTENT_CACHING; 
 }
 
 nsHTTPChannel::~nsHTTPChannel()
@@ -397,11 +397,6 @@ NS_IMETHODIMP
 nsHTTPChannel::SetLoadFlags(PRUint32 aLoadFlags)
 {
     mLoadFlags = aLoadFlags;
-
-    PRBool isHTTPS = PR_FALSE;
-    if (NS_SUCCEEDED(mURI->SchemeIs("https", &isHTTPS)) && isHTTPS)
-        mLoadFlags |= INHIBIT_PERSISTENT_CACHING; 
-
     return NS_OK;
 }
 
@@ -1418,9 +1413,9 @@ nsHTTPChannel::CheckCache()
             return rv;
 
         PRUint32 cacheFlags;
-        if (mLoadFlags & CACHE_AS_FILE)
+        if (mLoadFlags & nsIRequest::CACHE_AS_FILE)
             cacheFlags = nsINetDataCacheManager::CACHE_AS_FILE;
-        else if (mLoadFlags & INHIBIT_PERSISTENT_CACHING)
+        else if (mLoadFlags & nsIRequest::INHIBIT_PERSISTENT_CACHING)
             cacheFlags = nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE;
         else
             cacheFlags = 0;
@@ -2519,7 +2514,7 @@ nsHTTPChannel::Authenticate(const char *aChallenge, PRBool aProxyAuth)
     // go thru each to see if we support that. 
     for (const char *eol = aChallenge-1; eol != 0;) {
         const char* bol = eol+1;
-        eol = PL_strchr(bol, nsCRT::LF);
+        eol = PL_strchr(bol, LF);
         if (eol)
             authLine.Assign(bol, eol-bol);
         else
@@ -2677,7 +2672,7 @@ nsHTTPChannel::Authenticate(const char *aChallenge, PRBool aProxyAuth)
     // not cached, except perhaps in the memory cache.
     // XXX if we had username and passwd in user-auth, and the interaction
     // XXX was standard, then it's safe to cache, I think (shaver)
-    mLoadFlags |= INHIBIT_PERSISTENT_CACHING;
+    mLoadFlags |= nsIRequest::INHIBIT_PERSISTENT_CACHING;
 
     // This smells like a clone function... maybe there is a 
     // benefit in doing that, think. TODO.
