@@ -786,7 +786,7 @@ var BookmarksController = {
       return length > 0;
     case "cmd_bm_cut":
     case "cmd_bm_delete":
-      return length > 0 && aSelection.containsMutable;
+      return length > 0 && aSelection.containsMutable && !aSelection.containsPTF;
     case "cmd_bm_selectAll":
       return true;
     case "cmd_bm_open":
