@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -67,10 +67,10 @@ static PRBool Init()
     return PR_TRUE;
 }
 
-void   
+void
 XPC_Log_Finish()
 {
-    if(g_InitState == 1) 
+    if(g_InitState == 1)
     {
         delete g_Spaces;
         // we'd like to properly cleanup the LogModule, but nspr owns that

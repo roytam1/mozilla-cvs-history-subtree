@@ -44,7 +44,7 @@
 /***************************************************************************/
 // XPCNativeMember
 
-// XXX We want to phase this out and have direct private slots on the funobj. 
+// XXX We want to phase this out and have direct private slots on the funobj.
 // See: http://bugzilla.mozilla.org/show_bug.cgi?id=73843
 
 // Tight. No virtual methods.
@@ -70,9 +70,9 @@ private:
     XPCNativeMember*    mMember;
 };
 
-// static 
-JSBool 
-XPCNativeMember::GetCallInfo(XPCCallContext& ccx, 
+// static
+JSBool
+XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
                              JSObject* funobj,
                              XPCNativeInterface** pInterface,
                              XPCNativeMember**    pMember)
@@ -87,19 +87,19 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
 
 #ifdef HACK_NEW_PRIVATE_SLOTS
 
-    jsval ifaceVal; 
-    jsval memberVal; 
+    jsval ifaceVal;
+    jsval memberVal;
 
     if(!JS_GetReservedSlot(ccx, realFunObj, 0, &ifaceVal) ||
        !JS_GetReservedSlot(ccx, realFunObj, 1, &memberVal) ||
        !JSVAL_IS_INT(ifaceVal) || !JSVAL_IS_INT(memberVal))
-    {     
+    {
         return JS_FALSE;
     }
 
     *pInterface = (XPCNativeInterface*) JSVAL_TO_PRIVATE(ifaceVal);
     *pMember = (XPCNativeMember*) JSVAL_TO_PRIVATE(memberVal);
-    
+
     return JS_TRUE;
 
 #else
@@ -124,7 +124,7 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
 }
 
 void
-XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
+XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt,
                                      JSObject* funobj)
 {
 #ifndef HACK_NEW_PRIVATE_SLOTS
@@ -221,7 +221,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
     mVal = OBJECT_TO_JSVAL(funobj);
 
 #ifdef HACK_NEW_PRIVATE_SLOTS
-    
+
     if(!JS_SetReservedSlot(ccx, funobj, 0, PRIVATE_TO_JSVAL(iface))||
        !JS_SetReservedSlot(ccx, funobj, 1, PRIVATE_TO_JSVAL(this)))
         return JS_FALSE;
@@ -245,7 +245,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 #endif
 
     mFlags |= RESOLVED;
-    
+
     return JS_TRUE;
 }
 
@@ -274,7 +274,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         iface = map->Find(*iid);
     }
 
@@ -295,7 +295,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         XPCNativeInterface* iface2 = map->Add(iface);
         if(!iface2)
         {
@@ -306,7 +306,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         else if(iface2 != iface)
         {
             DestroyInstance(ccx, rt, iface);
-            iface = iface2;        
+            iface = iface2;
         }
     }
 
@@ -330,7 +330,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         iface = map->Find(*iid);
     }
 
@@ -342,7 +342,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         XPCNativeInterface* iface2 = map->Add(iface);
         if(!iface2)
         {
@@ -353,15 +353,15 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
         else if(iface2 != iface)
         {
             DestroyInstance(ccx, rt, iface);
-            iface = iface2;        
+            iface = iface2;
         }
     }
 
     return iface;
 }
 
-// static 
-XPCNativeInterface* 
+// static
+XPCNativeInterface*
 XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
 {
     nsCOMPtr<nsIInterfaceInfoManager> iimgr;
@@ -372,12 +372,12 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
     nsCOMPtr<nsIInterfaceInfo> info;
     if(NS_FAILED(iimgr->GetInfoForName(name, getter_AddRefs(info))) || !info)
         return nsnull;
-                
+
     return GetNewOrUsed(ccx, info);
 }
 
-// static 
-XPCNativeInterface* 
+// static
+XPCNativeInterface*
 XPCNativeInterface::GetISupports(XPCCallContext& ccx)
 {
     // XXX We should optimize this to cache this common XPCNativeInterface.
@@ -464,7 +464,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
             break;
         }
         name = STRING_TO_JSVAL(str);
-        
+
         if(info->IsSetter())
         {
             NS_ASSERTION(realTotalCount,"bad setter");
@@ -576,7 +576,7 @@ XPCNativeInterface::GetMemberName(XPCCallContext& ccx,
     return JS_GetStringBytes(JSVAL_TO_STRING(member->GetName()));
 }
 
-void 
+void
 XPCNativeInterface::DebugDump(PRInt16 depth)
 {
 #ifdef DEBUG
@@ -612,7 +612,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         set = map->Find(&key);
     }
 
@@ -624,7 +624,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         XPCNativeSet* set2 = map->Add(&key, set);
         if(!set2)
         {
@@ -635,7 +635,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         else if(set2 != set)
         {
             DestroyInstance(set);
-            set = set2;        
+            set = set2;
         }
     }
 
@@ -654,7 +654,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         set = map->Find(classInfo);
     }
 
@@ -709,9 +709,9 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
                     goto out;
 
                 XPCNativeSetKey key(set, nsnull, 0);
-                
+
                 {   // scoped lock
-                    XPCAutoLock lock(rt->GetMapLock());  
+                    XPCAutoLock lock(rt->GetMapLock());
                     XPCNativeSet* set2 = map2->Add(&key, set);
                     if(!set2)
                     {
@@ -736,7 +736,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
 
     if(set)
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         XPCNativeSet* set2 = map->Add(classInfo, set);
         NS_ASSERTION(set2, "failed to add our set!");
         NS_ASSERTION(set2 == set, "hashtables inconsistent!");
@@ -767,7 +767,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
     XPCNativeSetKey key(otherSet, newInterface, position);
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         set = map->Find(&key);
     }
 
@@ -783,7 +783,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
 
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         XPCNativeSet* set2 = map->Add(&key, set);
         if(!set2)
         {
@@ -794,7 +794,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
         else if(set2 != set)
         {
             DestroyInstance(set);
-            set = set2;        
+            set = set2;
         }
     }
 
@@ -803,8 +803,8 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
 
 // static
 XPCNativeSet*
-XPCNativeSet::NewInstance(XPCCallContext& ccx, 
-                          XPCNativeInterface** array, 
+XPCNativeSet::NewInstance(XPCCallContext& ccx,
+                          XPCNativeInterface** array,
                           PRUint16 count)
 {
     XPCNativeSet* obj = nsnull;
@@ -825,7 +825,7 @@ XPCNativeSet::NewInstance(XPCCallContext& ccx,
 
     for(i = 0, cur = *array; i < count; i++, cur++)
         if(cur == isup)
-            slots--;       
+            slots--;
 
     // Use placement new to create an object with the right amount of space
     // to hold the members array
@@ -842,7 +842,7 @@ XPCNativeSet::NewInstance(XPCCallContext& ccx,
         XPCNativeInterface** inp = array;
         XPCNativeInterface** outp = (XPCNativeInterface**) &obj->mInterfaces;
         PRUint16 memberCount = 1;   // for the one member in nsISupports
-        
+
         *(outp++) = isup;
 
         for(i = 0; i < count; i++)
@@ -918,19 +918,19 @@ XPCNativeSet::DestroyInstance(XPCNativeSet* inst)
     delete [] (char*) inst;
 }
 
-void 
+void
 XPCNativeSet::DebugDump(PRInt16 depth)
 {
 #ifdef DEBUG
     depth--;
     XPC_LOG_ALWAYS(("XPCNativeSet @ %x", this));
         XPC_LOG_INDENT();
-        
+
         XPC_LOG_ALWAYS(("mInterfaceCount of %d", mInterfaceCount));
         if(depth)
         {
             for(PRUint16 i = 0; i < mInterfaceCount; i++)
-                mInterfaces[i]->DebugDump(depth);            
+                mInterfaces[i]->DebugDump(depth);
         }
         XPC_LOG_ALWAYS(("mMemberCount of %d", mMemberCount));
         XPC_LOG_OUTDENT();

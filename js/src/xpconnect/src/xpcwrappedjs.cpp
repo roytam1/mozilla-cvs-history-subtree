@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
@@ -41,7 +41,7 @@
 // NOTE: much of the fancy footwork is done in xpcstubs.cpp
 
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
     NS_ASSERTION(IsAggregatedToNative(), "bad AggregatedQueryInterface call");
@@ -51,7 +51,7 @@ nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
 
     // Put this here rather that in DelegatedQueryInterface because it needs
     // to be in QueryInterface before the possible delegation to 'outer', but
-    // we don't want to do this check twice in one call in the normal case: 
+    // we don't want to do this check twice in one call in the normal case:
     // once in QueryInterface and once in DelegatedQueryInterface.
     if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)))
     {
@@ -95,22 +95,22 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 
 
 // Refcounting is now similar to that used in the chained (pre-flattening)
-// wrappednative system. 
+// wrappednative system.
 //
 // We are now holding an extra refcount for nsISupportsWeakReference support.
 //
-// Non-root wrappers remove themselves from the chain in their destructors. 
-// We root the JSObject as the refcount transitions from 1->2. And we unroot 
+// Non-root wrappers remove themselves from the chain in their destructors.
+// We root the JSObject as the refcount transitions from 1->2. And we unroot
 // the JSObject when the refcount transitions from 2->1.
-// 
-// When the transition from 2->1 is made and no one holds a weak ref to the 
-// (aggregated) object then we decrement the refcount again to 0 (and 
-// destruct) . However, if a weak ref is held at the 2->1 transition, then we 
-// leave the refcount at 1 to indicate that state. This leaves the JSObject 
-// no longer rooted by us and (as far as we know) subject to possible 
-// collection. Code in XPCJSRuntime watches for JS gc to happen and will do 
-// the final release on wrappers whose JSObjects get finalized. Note that 
-// even after tranistioning to this refcount-of-one state callers might do 
+//
+// When the transition from 2->1 is made and no one holds a weak ref to the
+// (aggregated) object then we decrement the refcount again to 0 (and
+// destruct) . However, if a weak ref is held at the 2->1 transition, then we
+// leave the refcount at 1 to indicate that state. This leaves the JSObject
+// no longer rooted by us and (as far as we know) subject to possible
+// collection. Code in XPCJSRuntime watches for JS gc to happen and will do
+// the final release on wrappers whose JSObjects get finalized. Note that
+// even after tranistioning to this refcount-of-one state callers might do
 // an addref and cause us to re-root the JSObject and continue on more normally.
 
 nsrefcnt
@@ -119,7 +119,7 @@ nsXPCWrappedJS::AddRef(void)
     NS_PRECONDITION(mRoot, "bad root");
     nsrefcnt cnt = (nsrefcnt) PR_AtomicIncrement((PRInt32*)&mRefCnt);
     NS_LOG_ADDREF(this, cnt, "nsXPCWrappedJS", sizeof(*this));
-    
+
     if(2 == cnt && IsValid())
     {
         XPCCallContext ccx(NATIVE_CALLER);
@@ -159,8 +159,8 @@ do_decrement:
                 JS_RemoveRootRT(rt->GetJSRuntime(), &mJSObj);
         }
 
-        // If we are not the root wrapper or if we are not being used from a 
-        // weak reference, then this extra ref is not needed and we can let 
+        // If we are not the root wrapper or if we are not being used from a
+        // weak reference, then this extra ref is not needed and we can let
         // ourself be deleted.
         // Note: HasWeakReferences() could only return true for the root.
         if(!HasWeakReferences())
@@ -222,7 +222,7 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
 
     // look for the root wrapper
     {   // scoped lock
-        XPCAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());
         root = map->Find(rootJSObj);
     }
     if(root)
@@ -240,11 +240,11 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
         if(rootJSObj == aJSObj)
         {
             // the root will do double duty as the interface wrapper
-            wrapper = root = new nsXPCWrappedJS(ccx, aJSObj, clazz, nsnull, 
+            wrapper = root = new nsXPCWrappedJS(ccx, aJSObj, clazz, nsnull,
                                                 aOuter);
             if(root)
             {   // scoped lock
-                XPCAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());
                 map->Add(root);
             }
             goto return_wrapper;
@@ -264,7 +264,7 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
             if(!root)
                 goto return_wrapper;
             {   // scoped lock
-                XPCAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());
                 map->Add(root);
             }
         }
@@ -290,7 +290,7 @@ return_wrapper:
 
     if(!wrapper)
         return NS_ERROR_FAILURE;
-    
+
     *wrapperResult = wrapper;
     return NS_OK;
 }
@@ -349,8 +349,8 @@ nsXPCWrappedJS::~nsXPCWrappedJS()
     else
     {
         NS_ASSERTION(!mNext, "root wrapper with non-empty chain being deleted");
-    
-        // Let the nsWeakReference object (if present) know of our demise.    
+
+        // Let the nsWeakReference object (if present) know of our demise.
         ClearWeakReferences();
 
         // remove this root wrapper from the map
@@ -360,7 +360,7 @@ nsXPCWrappedJS::~nsXPCWrappedJS()
             JSObject2WrappedJSMap* map = rt->GetWrappedJSMap();
             if(map)
             {
-                XPCAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());
                 map->Remove(this);
             }
         }
@@ -436,23 +436,23 @@ nsXPCWrappedJS::GetIID(nsIID** iid)
     return *iid ? NS_OK : NS_ERROR_UNEXPECTED;
 }
 
-void 
+void
 nsXPCWrappedJS::SystemIsBeingShutDown(JSRuntime* rt)
 {
-    // XXX It turns out that it is better to leak here then to do any Releases 
+    // XXX It turns out that it is better to leak here then to do any Releases
     // and have them propagate into all sorts of mischief as the system is being
-    // shutdown. This was learned the hard way :(    
-    
+    // shutdown. This was learned the hard way :(
+
     // mJSObj == nsnull is used to indicate that the wrapper is no longer valid
-    // and that calls should fail without trying to use any of the 
+    // and that calls should fail without trying to use any of the
     // xpconnect mechanisms. 'IsValid' is implemented by checking this pointer.
 
-    // NOTE: that mClass is retained so that GetInterfaceInfo can continue to 
+    // NOTE: that mClass is retained so that GetInterfaceInfo can continue to
     // work (and avoid crashing some platforms).
     mJSObj = nsnull;
-    
+
     // There is no reason to keep this root any longer. Since we've cleared
-    // mJSObj our dtor will not remove the root later. So, we do it now. 
+    // mJSObj our dtor will not remove the root later. So, we do it now.
     JS_RemoveRootRT(rt, &mJSObj);
 
     // Notify other wrappers in the chain.

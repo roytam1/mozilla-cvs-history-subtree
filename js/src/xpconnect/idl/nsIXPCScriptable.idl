@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -71,16 +71,16 @@ interface nsIXPCScriptable : nsISupports
     readonly attribute string   className;
     readonly attribute PRUint32 scriptableFlags;
 
-    void   preCreate(in nsISupports nativeObj, in JSContextPtr cx, 
+    void   preCreate(in nsISupports nativeObj, in JSContextPtr cx,
                      in JSObjectPtr globalObj, out JSObjectPtr parentObj);
 
-    void   create(in nsIXPConnectWrappedNative wrapper, 
+    void   create(in nsIXPConnectWrappedNative wrapper,
                   in JSContextPtr cx, in JSObjectPtr obj);
 
     PRBool addProperty(in nsIXPConnectWrappedNative wrapper,
-                       in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, 
+                       in JSContextPtr cx, in JSObjectPtr obj, in JSVal id,
                        in JSValPtr vp);
-            
+
     PRBool delProperty(in nsIXPConnectWrappedNative wrapper,
                        in JSContextPtr cx, in JSObjectPtr obj, in JSVal id,
                        in JSValPtr vp);
@@ -107,7 +107,7 @@ interface nsIXPCScriptable : nsISupports
     PRBool convert(in nsIXPConnectWrappedNative wrapper,
                    in JSContextPtr cx, in JSObjectPtr obj,
                    in PRUint32 type, in JSValPtr vp);
-                   
+
     void   finalize(in nsIXPConnectWrappedNative wrapper,
                     in JSContextPtr cx, in JSObjectPtr obj);
 
@@ -116,11 +116,11 @@ interface nsIXPCScriptable : nsISupports
                        in PRUint32 mode, in JSValPtr vp);
 
     PRBool call(in nsIXPConnectWrappedNative wrapper,
-                in JSContextPtr cx, in JSObjectPtr obj, 
+                in JSContextPtr cx, in JSObjectPtr obj,
                 in PRUint32 argc, in JSValPtr argv, in JSValPtr vp);
-    
+
     PRBool construct(in nsIXPConnectWrappedNative wrapper,
-                     in JSContextPtr cx, in JSObjectPtr obj, 
+                     in JSContextPtr cx, in JSObjectPtr obj,
                      in PRUint32 argc, in JSValPtr argv, in JSValPtr vp);
 
     PRBool hasInstance(in nsIXPConnectWrappedNative wrapper,
@@ -129,4 +129,4 @@ interface nsIXPCScriptable : nsISupports
 
     PRUint32 mark(in nsIXPConnectWrappedNative wrapper,
                   in JSContextPtr cx, in JSObjectPtr obj, in voidPtr arg);
-};    
+};

@@ -200,7 +200,7 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 NS_IMETHODIMP
 nsXPCComponents_Interfaces::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                        JSContext * cx, JSObject * obj,
-                                       jsval id, PRUint32 flags, 
+                                       jsval id, PRUint32 flags,
                                        JSObject * *objp, PRBool *_retval)
 {
     const char* name = nsnull;
@@ -393,7 +393,7 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 NS_IMETHODIMP
 nsXPCComponents_Classes::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                     JSContext * cx, JSObject * obj,
-                                    jsval id, PRUint32 flags, 
+                                    jsval id, PRUint32 flags,
                                     JSObject * *objp, PRBool *_retval)
 
 {
@@ -563,7 +563,7 @@ IsRegisteredCLSID(const char* str)
 NS_IMETHODIMP
 nsXPCComponents_ClassesByID::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                         JSContext * cx, JSObject * obj,
-                                        jsval id, PRUint32 flags, 
+                                        jsval id, PRUint32 flags,
                                         JSObject * *objp, PRBool *_retval)
 {
     const char* name = nsnull;
@@ -698,7 +698,7 @@ nsXPCComponents_Results::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 NS_IMETHODIMP
 nsXPCComponents_Results::NewResolve(nsIXPConnectWrappedNative *wrapper,
                                     JSContext * cx, JSObject * obj,
-                                    jsval id, PRUint32 flags, 
+                                    jsval id, PRUint32 flags,
                                     JSObject * *objp, PRBool *_retval)
 {
     const char* name = nsnull;
@@ -1566,8 +1566,8 @@ nsXPCComponents::GetManager(nsIComponentManager * *aManager)
 /* PRBool newResolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in PRUint32 flags, out JSObjectPtr objp); */
 NS_IMETHODIMP
 nsXPCComponents::NewResolve(nsIXPConnectWrappedNative *wrapper,
-                            JSContext * cx, JSObject * obj, 
-                            jsval id, PRUint32 flags, 
+                            JSContext * cx, JSObject * obj,
+                            jsval id, PRUint32 flags,
                             JSObject * *objp, PRBool *_retval)
 {
     XPCJSRuntime* rt = nsXPConnect::GetRuntime();
@@ -1580,9 +1580,9 @@ nsXPCComponents::NewResolve(nsIXPConnectWrappedNative *wrapper,
         idid = rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT);
     else if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_RETURN_CODE))
         idid = rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE);
-    else   
+    else
         return NS_OK;
-    
+
     *objp = obj;
     *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, JSVAL_VOID,
                                    nsnull, nsnull,
@@ -1678,7 +1678,7 @@ nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx,
         return JS_FALSE;
 
     nsCOMPtr<XPCWrappedNative> wrapper;
-    XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface, 
+    XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface,
                                    getter_AddRefs(wrapper));
     if(!wrapper)
         return JS_FALSE;

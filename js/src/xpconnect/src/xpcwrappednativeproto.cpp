@@ -68,7 +68,7 @@ XPCWrappedNativeProto::~XPCWrappedNativeProto()
     PR_AtomicDecrement(&gDEBUG_LiveProtoCount);
 #endif
 
-    delete mScriptableInfo;    
+    delete mScriptableInfo;
 }
 
 JSBool
@@ -85,7 +85,7 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx,
             return JS_FALSE;
     }
 
-    JSClass* jsclazz = mScriptableInfo && 
+    JSClass* jsclazz = mScriptableInfo &&
                        mScriptableInfo->AllowPropModsToPrototype() ?
                             &XPC_WN_ModsAllowed_Proto_JSClass :
                             &XPC_WN_NoMods_Proto_JSClass;
@@ -94,7 +94,7 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx,
                                   mScope->GetPrototypeJSObject(),
                                   mScope->GetGlobalJSObject());
 
-    JSBool retval = mJSProtoObject && JS_SetPrivate(ccx, mJSProtoObject, this); 
+    JSBool retval = mJSProtoObject && JS_SetPrivate(ccx, mJSProtoObject, this);
 
     if(retval)
     {
@@ -105,18 +105,18 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx,
     return retval;
 }
 
-void                     
+void
 XPCWrappedNativeProto::AddRef()
 {
     (void)PR_AtomicIncrement((PRInt32*)&mRefCnt);
-}       
- 
-void                     
+}
+
+void
 XPCWrappedNativeProto::Release()
 {
     if(0 == PR_AtomicDecrement((PRInt32*)&mRefCnt))
-        delete this;        
-}        
+        delete this;
+}
 
 void
 XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
@@ -126,7 +126,7 @@ XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
     {
         ClassInfo2WrappedNativeProtoMap* map = mScope->GetWrappedNativeProtoMap();
         {   // scoped lock
-            XPCAutoLock lock(mScope->GetRuntime()->GetMapLock());  
+            XPCAutoLock lock(mScope->GetRuntime()->GetMapLock());
             map->Remove(mClassInfo);
         }
     }
@@ -134,7 +134,7 @@ XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
     Release();
 }
 
-void 
+void
 XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
     // Note that the instance might receive this call multiple times
@@ -144,11 +144,11 @@ XPCWrappedNativeProto::SystemIsBeingShutDown(XPCCallContext& ccx)
         // short circuit future finalization
         JS_SetPrivate(ccx, mJSProtoObject, nsnull);
         mJSProtoObject = nsnull;
-        // We *must* leak the scriptable because it holds a dynamically 
+        // We *must* leak the scriptable because it holds a dynamically
         // allocated JSClass that the JS engine might try to use.
         mScriptableInfo = nsnull;
         Release();
-    }    
+    }
 }
 
 // static
@@ -163,7 +163,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     ClassInfo2WrappedNativeProtoMap* map = Scope->GetWrappedNativeProtoMap();
 
     {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
         proto = map->Find(ClassInfo);
         if(proto)
         {
@@ -187,7 +187,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     proto->AddRef();
 
     {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
         map->Add(ClassInfo, proto);
     }
 
@@ -237,6 +237,6 @@ XPCWrappedNativeProto::DebugDump(PRInt16 depth)
         }
     XPC_LOG_OUTDENT();
 #endif
-}        
+}
 
 

@@ -18,7 +18,7 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -66,14 +66,14 @@ static nsJSRuntimeServiceImpl* gJSRuntimeService = nsnull;
 nsJSRuntimeServiceImpl*
 nsJSRuntimeServiceImpl::GetSingleton()
 {
-    if(!gJSRuntimeService) 
+    if(!gJSRuntimeService)
     {
         gJSRuntimeService = new nsJSRuntimeServiceImpl();
-        // hold an extra reference to lock it down    
+        // hold an extra reference to lock it down
         NS_IF_ADDREF(gJSRuntimeService);
     }
     NS_IF_ADDREF(gJSRuntimeService);
-    
+
     return gJSRuntimeService;
 }
 

@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -367,7 +367,7 @@ public:
         return (nsIXPCFunctionThisTranslator*) JS_HashTableLookup(mTable, &iid);
     }
 
-    inline nsIXPCFunctionThisTranslator* Add(REFNSIID iid, 
+    inline nsIXPCFunctionThisTranslator* Add(REFNSIID iid,
                                              nsIXPCFunctionThisTranslator* Obj)
     {
         nsID* newID = (nsID*) nsMemory::Clone(&iid, sizeof(nsID));
@@ -377,12 +377,12 @@ public:
         if(!he)
             return nsnull;
 
-        nsIXPCFunctionThisTranslator* current = 
+        nsIXPCFunctionThisTranslator* current =
             (nsIXPCFunctionThisTranslator*) he->value;
 
         // We have recycled the hash entry, our key was not absorbed.
         if(current != Obj)
-        {    
+        {
             NS_IF_RELEASE(Obj);
             nsMemory::Free(newID);
         }

@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -46,7 +46,7 @@ XPCContext::newXPCContext(XPCJSRuntime* aRuntime,
 {
     NS_PRECONDITION(aRuntime,"bad param");
     NS_PRECONDITION(aJSContext,"bad param");
-    NS_ASSERTION(JS_GetRuntime(aJSContext) == aRuntime->GetJSRuntime(), 
+    NS_ASSERTION(JS_GetRuntime(aJSContext) == aRuntime->GetJSRuntime(),
                  "XPConnect can not be used on multiple JSRuntimes!");
 
     return new XPCContext(aRuntime, aJSContext);
@@ -64,7 +64,7 @@ XPCContext::XPCContext(XPCJSRuntime* aRuntime,
         mCallingLangType(LANG_UNKNOWN)
 {
     MOZ_COUNT_CTOR(XPCContext);
-    JS_AddArgumentFormatter(mJSContext, 
+    JS_AddArgumentFormatter(mJSContext,
                             XPC_ARG_FORMATTER_FORMAT_STR,
                             XPC_JSArgumentFormatter);
 }
@@ -95,10 +95,10 @@ XPCContext::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mException @ %x", mException));
         if(depth && mException)
         {
-            // XXX show the exception here...                
+            // XXX show the exception here...
         }
 
-        XPC_LOG_ALWAYS(("mCallingLangType of %s", 
+        XPC_LOG_ALWAYS(("mCallingLangType of %s",
                          mCallingLangType == LANG_UNKNOWN ? "LANG_UNKNOWN" :
                          mCallingLangType == LANG_JS      ? "LANG_JS" :
                                                             "LANG_NATIVE"));

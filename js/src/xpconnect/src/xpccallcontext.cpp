@@ -72,14 +72,14 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 
     if(!mJSContext)
     {
-        // This is slightly questionable. If called without an explicit 
+        // This is slightly questionable. If called without an explicit
         // JSContext (generally a call to a wrappedJS) we will use the JSContext
-        // on the top of the JSContext stack - if there is one - *before* 
+        // on the top of the JSContext stack - if there is one - *before*
         // falling back on the safe JSContext.
         // This is good AND bad because it makes calls from JS -> native -> JS
         // have JS stack 'continuity' for purposes of stack traces etc.
         // Note: this *is* what the pre-XPCCallContext xpconnect did too.
-         
+
         if(topJSContext)
             mJSContext = topJSContext;
         else if(NS_FAILED(stack->GetSafeJSContext(&mJSContext)) || !mJSContext)
@@ -185,7 +185,7 @@ XPCCallContext::SetName(jsval name)
 }
 
 void
-XPCCallContext::SetCallInfo(XPCNativeInterface* iface, XPCNativeMember* member, 
+XPCCallContext::SetCallInfo(XPCNativeInterface* iface, XPCNativeMember* member,
                             JSBool isSetter)
 {
     // We are going straight to the method info and need not do a lookup
@@ -235,7 +235,7 @@ XPCCallContext::CanCallNow()
     {
         // Refresh in case FindTearOff extended the set
         mSet = mWrapper->GetSet();
-        
+
         mState = READY_TO_CALL;
         return JS_TRUE;
     }
@@ -340,7 +340,7 @@ XPCCallContext::GetCalleeWrapper(nsIXPConnectWrappedNative * *aCalleeWrapper)
 }
 
 /* readonly attribute XPCNativeInterface CalleeInterface; */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCCallContext::GetCalleeInterface(nsIInterfaceInfo * *aCalleeInterface)
 {
     nsIInterfaceInfo* temp = mInterface->GetInterfaceInfo();
@@ -350,7 +350,7 @@ XPCCallContext::GetCalleeInterface(nsIInterfaceInfo * *aCalleeInterface)
 }
 
 /* readonly attribute nsIClassInfo CalleeClassInfo; */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCCallContext::GetCalleeClassInfo(nsIClassInfo * *aCalleeClassInfo)
 {
     nsIClassInfo* temp = mWrapper->GetClassInfo();

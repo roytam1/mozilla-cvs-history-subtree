@@ -886,7 +886,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
                 return JS_FALSE;
 
             XPCWrappedNative* wrapper;
-            nsresult rv = XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope, 
+            nsresult rv = XPCWrappedNative::GetNewOrUsed(ccx, src, xpcscope,
                                                          iface, &wrapper);
             if(pErr)
                 *pErr = rv;
@@ -1002,7 +1002,7 @@ XPCConvert::ConstructException(nsresult rv, const char* message,
 /********************************/
 
 // static
-nsresult 
+nsresult
 XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                                 jsval s,
                                 const char* ifaceName,
@@ -1077,7 +1077,7 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                 if(nsnull != (xpcc = nsXPConnect::GetContext(cx)))
                 {
                     nsXPCWrappedJS* wrapper;
-                    nsresult rv = 
+                    nsresult rv =
                         nsXPCWrappedJS::GetNewOrUsed(ccx, obj,
                                                 NS_GET_IID(nsIXPCException),
                                                 nsnull, &wrapper);

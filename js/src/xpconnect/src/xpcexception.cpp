@@ -18,7 +18,7 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -46,7 +46,7 @@
 *  in some more global way at runtime.
 */
 
-static struct ResultMap 
+static struct ResultMap
 {nsresult rv; const char* name; const char* format;} map[] = {
 #define XPC_MSG_DEF(val, format) \
     {(val), #val, format},
@@ -103,8 +103,8 @@ nsXPCException::IterateNSResults(nsresult* rv,
     return p;
 }
 
-// static 
-PRUint32 
+// static
+PRUint32
 nsXPCException::GetNSResultCount()
 {
     return RESULT_COUNT;
@@ -113,8 +113,8 @@ nsXPCException::GetNSResultCount()
 /***************************************************************************/
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCException, 
-                              nsIXPCException, 
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCException,
+                              nsIXPCException,
                               nsISecurityCheckedComponent)
 #else
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPCException, nsIXPCException)
@@ -377,7 +377,7 @@ nsXPCException::NewException(const char *aMessage,
 
     if(!e)
         return NS_ERROR_FAILURE;
-    
+
     *exception = NS_STATIC_CAST(nsIXPCException*, e);
     return NS_OK;
 }
@@ -386,11 +386,11 @@ nsXPCException::NewException(const char *aMessage,
 static char* CloneAllAccess()
 {
     static const char allAccess[] = "AllAccess";
-    return (char*)nsMemory::Clone(allAccess, sizeof(allAccess));        
+    return (char*)nsMemory::Clone(allAccess, sizeof(allAccess));
 }
 
 /* string canCreateWrapper (in nsIIDPtr iid); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCException::CanCreateWrapper(const nsIID * iid, char **_retval)
 {
     // If you have to ask, then the answer is NO
@@ -399,11 +399,11 @@ nsXPCException::CanCreateWrapper(const nsIID * iid, char **_retval)
 }
 
 /* string canCallMethod (in nsIIDPtr iid, in wstring methodName); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCException::CanCallMethod(const nsIID * iid, const PRUnichar *methodName, char **_retval)
 {
     static const NS_NAMED_LITERAL_STRING(s_toString, "toString");
-    
+
     const nsLiteralString name(methodName);
 
     if(name.Equals(s_toString))
@@ -414,7 +414,7 @@ nsXPCException::CanCallMethod(const nsIID * iid, const PRUnichar *methodName, ch
 }
 
 /* string canGetProperty (in nsIIDPtr iid, in wstring propertyName); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCException::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
 {
     static const NS_NAMED_LITERAL_STRING(s_message, "message");
@@ -433,7 +433,7 @@ nsXPCException::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName,
 }
 
 /* string canSetProperty (in nsIIDPtr iid, in wstring propertyName); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCException::CanSetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
 {
     // If you have to ask, then the answer is NO

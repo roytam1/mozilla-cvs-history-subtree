@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -41,10 +41,10 @@
 
 XPCJSContextStack::XPCJSContextStack()
     : mStack(nsnull),
-      mSafeJSContext(nsnull),  
-      mOwnSafeJSContext(nsnull)  
+      mSafeJSContext(nsnull),
+      mOwnSafeJSContext(nsnull)
 {
-    // empty...        
+    // empty...
 }
 
 XPCJSContextStack::~XPCJSContextStack()
@@ -56,9 +56,9 @@ XPCJSContextStack::~XPCJSContextStack()
         mOwnSafeJSContext = nsnull;
         SyncJSContexts();
     }
-}        
+}
 
-void 
+void
 XPCJSContextStack::SyncJSContexts()
 {
     nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
@@ -67,7 +67,7 @@ XPCJSContextStack::SyncJSContexts()
 }
 
 /* readonly attribute PRInt32 count; */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::GetCount(PRInt32 *aCount)
 {
     *aCount = mStack.GetSize();
@@ -75,7 +75,7 @@ XPCJSContextStack::GetCount(PRInt32 *aCount)
 }
 
 /* JSContext peek (); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::Peek(JSContext * *_retval)
 {
     *_retval = (JSContext*) mStack.Peek();
@@ -83,7 +83,7 @@ XPCJSContextStack::Peek(JSContext * *_retval)
 }
 
 /* JSContext pop (); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::Pop(JSContext * *_retval)
 {
     NS_ASSERTION(mStack.GetSize() > 0, "ThreadJSContextStack underflow");
@@ -96,7 +96,7 @@ XPCJSContextStack::Pop(JSContext * *_retval)
 }
 
 /* void push (in JSContext cx); */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::Push(JSContext * cx)
 {
     mStack.Push(cx);
@@ -118,13 +118,13 @@ static JSClass global_class = {
 };
 
 /* attribute JSContext safeJSContext; */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
 {
     if(!mSafeJSContext)
     {
         JSRuntime *rt;
-        nsCOMPtr<nsIJSRuntimeService> rtsvc = 
+        nsCOMPtr<nsIJSRuntimeService> rtsvc =
             do_GetService("@mozilla.org/js/xpc/RuntimeService;1");
         if(rtsvc && NS_SUCCEEDED(rtsvc->GetRuntime(&rt)) && rt)
         {
@@ -134,17 +134,17 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
                 mSafeJSContext = JS_NewContext(rt, 8192);
                 if(mSafeJSContext)
                 {
-                    // scoped JS Request  
-                    AutoJSRequestWithNoCallContext req(mSafeJSContext); 
+                    // scoped JS Request
+                    AutoJSRequestWithNoCallContext req(mSafeJSContext);
                     JSObject *glob;
                     glob = JS_NewObject(mSafeJSContext, &global_class, NULL, NULL);
-                    if(!glob || 
+                    if(!glob ||
                        NS_FAILED(xpc->InitClasses(mSafeJSContext, glob)))
                     {
                         // Explicitly end the request since we are about to kill
                         // the JSContext that 'req' will try to use when it
                         // goes out of scope.
-                        req.EndRequest(); 
+                        req.EndRequest();
                         JS_DestroyContext(mSafeJSContext);
                         mSafeJSContext = nsnull;
                     }
@@ -164,10 +164,10 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
     return mSafeJSContext ? NS_OK : NS_ERROR_UNEXPECTED;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 XPCJSContextStack::SetSafeJSContext(JSContext * aSafeJSContext)
 {
-    if(mOwnSafeJSContext && 
+    if(mOwnSafeJSContext &&
        mOwnSafeJSContext == mSafeJSContext &&
        mOwnSafeJSContext != aSafeJSContext)
     {
@@ -185,12 +185,12 @@ XPCJSContextStack::SetSafeJSContext(JSContext * aSafeJSContext)
 /*
  * nsXPCThreadJSContextStackImpl holds state that we don't want to lose!
  *
- * The plan is that once created nsXPCThreadJSContextStackImpl never goes 
- * away until FreeSingleton is called. We do an intentional extra addref at 
+ * The plan is that once created nsXPCThreadJSContextStackImpl never goes
+ * away until FreeSingleton is called. We do an intentional extra addref at
  * construction to keep it around even if no one is using it.
  */
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCThreadJSContextStackImpl, 
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCThreadJSContextStackImpl,
         nsIThreadJSContextStack, nsIJSContextStack)
 
 static nsXPCThreadJSContextStackImpl* gXPCThreadJSContextStack = nsnull;
@@ -212,11 +212,11 @@ nsXPCThreadJSContextStackImpl::GetSingleton()
     if(!gXPCThreadJSContextStack)
     {
         gXPCThreadJSContextStack = new nsXPCThreadJSContextStackImpl();
-        // hold an extra reference to lock it down    
+        // hold an extra reference to lock it down
         NS_IF_ADDREF(gXPCThreadJSContextStack);
     }
     NS_IF_ADDREF(gXPCThreadJSContextStack);
-    
+
     return gXPCThreadJSContextStack;
 }
 
@@ -283,7 +283,7 @@ nsXPCThreadJSContextStackImpl::Pop(JSContext * *_retval)
             *_retval = nsnull;
         return NS_ERROR_FAILURE;
     }
-    
+
     return myStack->Pop(_retval);
 }
 
@@ -300,7 +300,7 @@ nsXPCThreadJSContextStackImpl::Push(JSContext * cx)
 }
 
 /* readonly attribute JSContext SafeJSContext; */
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCThreadJSContextStackImpl::GetSafeJSContext(JSContext * *aSafeJSContext)
 {
     NS_ASSERTION(aSafeJSContext, "loser!");
@@ -317,7 +317,7 @@ nsXPCThreadJSContextStackImpl::GetSafeJSContext(JSContext * *aSafeJSContext)
 }
 
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsXPCThreadJSContextStackImpl::SetSafeJSContext(JSContext * aSafeJSContext)
 {
     XPCJSContextStack* myStack = GetStackForCurrentThread();
@@ -352,7 +352,7 @@ XPCPerThreadData::XPCPerThreadData()
     }
 }
 
-void 
+void
 XPCPerThreadData::Cleanup()
 {
     NS_IF_RELEASE(mException);
@@ -381,10 +381,10 @@ XPCPerThreadData::~XPCPerThreadData()
                 if(cur->mNextThread == this)
                 {
                     cur->mNextThread = mNextThread;
-                    break;            
+                    break;
                 }
-                cur = cur->mNextThread;    
-            }        
+                cur = cur->mNextThread;
+            }
         }
     }
 
@@ -403,7 +403,7 @@ xpc_ThreadDataDtorCB(void* ptr)
         delete data;
 }
 
-// static 
+// static
 XPCPerThreadData*
 XPCPerThreadData::GetData()
 {
@@ -415,14 +415,14 @@ XPCPerThreadData::GetData()
         if(!gLock)
             return nsnull;
     }
-    
+
     if(gTLSIndex == BAD_TLS_INDEX)
     {
         nsAutoLock lock(gLock);
         // check again now that we have the lock...
         if(gTLSIndex == BAD_TLS_INDEX)
         {
-            if(PR_FAILURE == 
+            if(PR_FAILURE ==
                PR_NewThreadPrivateIndex(&gTLSIndex, xpc_ThreadDataDtorCB))
             {
                 NS_ASSERTION(0, "PR_NewThreadPrivateIndex failed!");
@@ -439,7 +439,7 @@ XPCPerThreadData::GetData()
         if(!data || !data->IsValid())
         {
             NS_ASSERTION(0, "new XPCPerThreadData() failed!");
-            if(data) 
+            if(data)
                 delete data;
             return nsnull;
         }
@@ -453,8 +453,8 @@ XPCPerThreadData::GetData()
     return data;
 }
 
-// static 
-void 
+// static
+void
 XPCPerThreadData::CleanupAllThreads()
 {
     if(gLock)
@@ -468,11 +468,11 @@ XPCPerThreadData::CleanupAllThreads()
         PR_SetThreadPrivate(gTLSIndex, nsnull);
 }
 
-// static 
-XPCPerThreadData* 
+// static
+XPCPerThreadData*
 XPCPerThreadData::IterateThreads(XPCPerThreadData** iteratorp)
 {
     *iteratorp = (*iteratorp == nsnull) ? gThreads : (*iteratorp)->mNextThread;
     return *iteratorp;
-}        
+}
 

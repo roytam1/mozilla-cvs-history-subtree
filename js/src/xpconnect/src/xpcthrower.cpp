@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -39,8 +39,8 @@
 
 JSBool XPCThrower::sVerbose = JS_TRUE;
 
-// static 
-void 
+// static
+void
 XPCThrower::Throw(nsresult rv, JSContext* cx)
 {
     const char* format;
@@ -49,8 +49,8 @@ XPCThrower::Throw(nsresult rv, JSContext* cx)
     BuildAndThrowException(cx, rv, format);
 }
 
-// static 
-void 
+// static
+void
 XPCThrower::Throw(nsresult rv, XPCCallContext& ccx)
 {
     char* sz;
@@ -71,8 +71,8 @@ XPCThrower::Throw(nsresult rv, XPCCallContext& ccx)
 }
 
 
-// static 
-void 
+// static
+void
 XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
 {
     char* sz;
@@ -94,7 +94,7 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
         if(e)
         {
             xpc->SetPendingException(nsnull);
-            
+
             nsresult e_result;
             if(NS_SUCCEEDED(e->GetResult(&e_result)) && e_result == result)
             {
@@ -124,8 +124,8 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
         JS_smprintf_free(sz);
 }
 
-// static 
-void 
+// static
+void
 XPCThrower::ThrowBadParam(nsresult rv, uintN paramNum, XPCCallContext& ccx)
 {
     char* sz;
@@ -146,8 +146,8 @@ XPCThrower::ThrowBadParam(nsresult rv, uintN paramNum, XPCCallContext& ccx)
 }
 
 
-// static 
-void 
+// static
+void
 XPCThrower::Verbosify(XPCCallContext& ccx,
                       char** psz, PRBool own)
 {
@@ -170,8 +170,8 @@ XPCThrower::Verbosify(XPCCallContext& ccx,
     }
 }
 
-// static 
-void 
+// static
+void
 XPCThrower::BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz)
 {
     JSBool success = JS_FALSE;
@@ -189,8 +189,8 @@ XPCThrower::BuildAndThrowException(JSContext* cx, nsresult rv, const char* sz)
         JS_ReportOutOfMemory(cx);
 }
 
-// static 
-JSBool 
+// static
+JSBool
 XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
 {
     JSBool success = JS_FALSE;
@@ -201,10 +201,10 @@ XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
         {
             // XXX funky
             JSObject* glob = JS_GetGlobalObject(cx);
-    
+
             nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-            nsresult rv = xpc->WrapNative(cx, glob, e, 
-                                          NS_GET_IID(nsIXPCException), 
+            nsresult rv = xpc->WrapNative(cx, glob, e,
+                                          NS_GET_IID(nsIXPCException),
                                           getter_AddRefs(holder));
             if(NS_SUCCEEDED(rv) && holder)
             {

@@ -352,7 +352,7 @@ nsJSIID::NewID(const char* str)
 NS_IMETHODIMP
 nsJSIID::NewResolve(nsIXPConnectWrappedNative *wrapper,
                     JSContext * cx, JSObject * obj,
-                    jsval id, PRUint32 flags, 
+                    jsval id, PRUint32 flags,
                     JSObject * *objp, PRBool *_retval)
 {
     XPCCallContext ccx(JS_CALLER, cx);
@@ -696,7 +696,7 @@ nsJSCID::GetService(nsISupports **_retval)
     nsCOMPtr<nsISupports> srvc;
     nsresult rv;
 
-    rv = nsServiceManager::GetService(*mDetails.GetID(), iid, 
+    rv = nsServiceManager::GetService(*mDetails.GetID(), iid,
                                       getter_AddRefs(srvc), nsnull);
     NS_ASSERTION(NS_FAILED(rv) || srvc, "service manager returned success, but service is null!");
     if(NS_FAILED(rv) || !srvc)

@@ -18,7 +18,7 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -140,7 +140,7 @@ XPCJSStackFrame::~XPCJSStackFrame()
 NS_IMPL_THREADSAFE_ISUPPORTS1(XPCJSStackFrame, nsIJSStackFrameLocation)
 
 nsresult
-XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp, 
+XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp,
                              XPCJSStackFrame** stack)
 {
     XPCJSStackFrame* self = new XPCJSStackFrame();
@@ -151,7 +151,7 @@ XPCJSStackFrame::CreateStack(JSContext* cx, JSStackFrame* fp,
 
         if(fp->down)
         {
-            if(NS_FAILED(CreateStack(cx, fp->down, 
+            if(NS_FAILED(CreateStack(cx, fp->down,
                          (XPCJSStackFrame**) &self->mCaller)))
                 failed = JS_TRUE;
         }

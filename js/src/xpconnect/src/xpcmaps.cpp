@@ -18,7 +18,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -121,7 +121,7 @@ compare_NativeSets(const void *v1, const void *v2)
 
     if(Set1 == Set2)
         return 1;
-    
+
     PRUint16 count = Set1->GetInterfaceCount();
     if(count != Set2->GetInterfaceCount())
         return 0;
@@ -132,8 +132,8 @@ compare_NativeSets(const void *v1, const void *v2)
     {
         if(*(Current1++) != *(Current2++))
             return 0;
-    }   
-    
+    }
+
     return 1;
 }
 
@@ -141,15 +141,15 @@ JS_STATIC_DLL_CALLBACK(intN)
 compare_NativeKeyToSet(const void *v1, const void *v2)
 {
     XPCNativeSetKey* Key = (XPCNativeSetKey*) v1;
-    
+
     // See the comment in the XPCNativeSetKey declaration in xpcprivate.h.
     if(!Key->IsAKey())
         return compare_NativeSets(v1, v2);
-    
+
     XPCNativeSet*       SetInTable = (XPCNativeSet*) v2;
     XPCNativeSet*       Set        = Key->GetBaseSet();
     XPCNativeInterface* Addition   = Key->GetAddition();
-    
+
     if(!Set)
     {
         // This is a special case to deal with the invariant that says:
@@ -161,7 +161,7 @@ compare_NativeKeyToSet(const void *v1, const void *v2)
         // it would end up really being a set with two interfaces (except for
         // the case where the one interface happened to be nsISupports).
 
-        return (intN) 
+        return (intN)
                ((SetInTable->GetInterfaceCount() == 1 &&
                  SetInTable->GetInterfaceAt(0) == Addition) ||
                 (SetInTable->GetInterfaceCount() == 2 &&
@@ -170,11 +170,11 @@ compare_NativeKeyToSet(const void *v1, const void *v2)
 
     if(!Addition && Set == SetInTable)
         return 1;
-    
+
     PRUint16 count = Set->GetInterfaceCount() + (Addition ? 1 : 0);
     if(count != SetInTable->GetInterfaceCount())
         return 0;
-    
+
     PRUint16 Position = Key->GetPosition();
     XPCNativeInterface** CurrentInTable = SetInTable->GetInterfaceArray();
     XPCNativeInterface** Current = Set->GetInterfaceArray();
@@ -190,8 +190,8 @@ compare_NativeKeyToSet(const void *v1, const void *v2)
             if(*(Current++) != *(CurrentInTable++))
                 return 0;
         }
-    }   
-    
+    }
+
     return 1;
 }
 
@@ -201,15 +201,15 @@ hash_NativeKey(const void *key)
     XPCNativeSetKey* Key = (XPCNativeSetKey*) key;
 
     JSHashNumber h = 0;
-    
+
     XPCNativeSet*       Set      = Key->GetBaseSet();
     XPCNativeInterface* Addition = Key->GetAddition();
     PRUint16            Position = Key->GetPosition();
-    
+
     if(!Set)
     {
         NS_ASSERTION(Addition, "bad key");
-        h ^= (JSHashNumber) Addition;    
+        h ^= (JSHashNumber) Addition;
     }
     else
     {
@@ -218,12 +218,12 @@ hash_NativeKey(const void *key)
         for(PRUint16 i = 0; i < count; i++)
         {
             if(Addition && i == Position)
-                h ^= (JSHashNumber) Addition;    
+                h ^= (JSHashNumber) Addition;
             else
                 h ^= (JSHashNumber) *(Current++);
-        }   
+        }
     }
-    
+
     return h;
 }
 
@@ -469,7 +469,7 @@ AllocEntry(void *priv, const void *key)
 JS_STATIC_DLL_CALLBACK(void)
 FreeEntry(void *priv, JSHashEntry *he, uintN flag)
 {
-    nsIXPCFunctionThisTranslator* obj = 
+    nsIXPCFunctionThisTranslator* obj =
         (nsIXPCFunctionThisTranslator*) he->value;
     NS_IF_RELEASE(obj);
 

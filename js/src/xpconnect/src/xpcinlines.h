@@ -157,7 +157,7 @@ XPCCallContext::GetWrapper() const
     return mWrapper;
 }
 
-inline JSBool                       
+inline JSBool
 XPCCallContext::CanGetTearOff() const
 {
     return mState >= HAVE_OBJECT;
@@ -177,7 +177,7 @@ XPCCallContext::GetScriptableInfo() const
     return mScriptableInfo;
 }
 
-inline JSBool                       
+inline JSBool
 XPCCallContext::CanGetSet() const
 {
     return mState >= HAVE_NAME;
@@ -281,14 +281,14 @@ XPCCallContext::SetResolveName(jsval name)
     return mThreadData->SetResolveName(name);
 }
 
-inline XPCWrappedNative* 
+inline XPCWrappedNative*
 XPCCallContext::GetResolvingWrapper() const
 {
     CHECK_STATE(HAVE_OBJECT);
     return mThreadData->GetResolvingWrapper();
 }
 
-inline XPCWrappedNative* 
+inline XPCWrappedNative*
 XPCCallContext::SetResolvingWrapper(XPCWrappedNative* w)
 {
     CHECK_STATE(HAVE_OBJECT);
@@ -311,21 +311,21 @@ XPCCallContext::SetMethodIndex(PRUint16 index)
 
 /***************************************************************************/
 
-inline const nsIID* 
+inline const nsIID*
 XPCNativeInterface::GetIID() const
 {
     const nsIID* iid;
     return NS_SUCCEEDED(mInfo->GetIIDShared(&iid)) ? iid : nsnull;
 }
 
-inline const char* 
+inline const char*
 XPCNativeInterface::GetNameString() const
 {
     const char* name;
     return NS_SUCCEEDED(mInfo->GetNameShared(&name)) ? name : nsnull;
 }
 
-inline XPCNativeMember* 
+inline XPCNativeMember*
 XPCNativeInterface::FindMember(jsval name) const
 {
     const XPCNativeMember* member = mMembers;
@@ -335,7 +335,7 @@ XPCNativeInterface::FindMember(jsval name) const
     return nsnull;
 }
 
-inline JSBool 
+inline JSBool
 XPCNativeInterface::HasAncestor(const nsIID* iid) const
 {
     PRBool found = PR_FALSE;
@@ -343,7 +343,7 @@ XPCNativeInterface::HasAncestor(const nsIID* iid) const
     return found;
 }
 
-inline void 
+inline void
 XPCNativeInterface::DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
 {
     XPCNativeMember* member = mMembers;
@@ -367,9 +367,9 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
     {
         if(name == (*iface)->GetName())
         {
-            if(pMember) 
+            if(pMember)
                 *pMember = nsnull;
-            if(pInterfaceIndex) 
+            if(pInterfaceIndex)
                 *pInterfaceIndex = (PRUint16) i;
             return JS_TRUE;
         }
@@ -381,9 +381,9 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
         XPCNativeMember* member = (*iface)->FindMember(name);
         if(member)
         {
-            if(pMember) 
+            if(pMember)
                 *pMember = member;
-            if(pInterfaceIndex) 
+            if(pInterfaceIndex)
                 *pInterfaceIndex = (PRUint16) i;
             return JS_TRUE;
         }
@@ -402,8 +402,8 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
     return JS_TRUE;
 }
 
-inline JSBool 
-XPCNativeSet::FindMember(jsval name, 
+inline JSBool
+XPCNativeSet::FindMember(jsval name,
                          XPCNativeMember** pMember,
                          XPCNativeInterface** pInterface,
                          XPCNativeSet* protoSet,
@@ -419,17 +419,17 @@ XPCNativeSet::FindMember(jsval name,
     *pMember = Member;
     *pInterface = Interface;
 
-    *pIsLocal = 
+    *pIsLocal =
         !Member ||
         (protoSet != this &&
          !protoSet->MatchesSetUpToInterface(this, Interface) &&
           (!protoSet->FindMember(name, &protoMember, (PRUint16*)nsnull) ||
            protoMember != Member));
-    
+
     return JS_TRUE;
 }
 
-inline XPCNativeInterface* 
+inline XPCNativeInterface*
 XPCNativeSet::FindNamedInterface(jsval name) const
 {
     XPCNativeInterface* const * pp = mInterfaces;
@@ -444,7 +444,7 @@ XPCNativeSet::FindNamedInterface(jsval name) const
     return nsnull;
 }
 
-inline XPCNativeInterface* 
+inline XPCNativeInterface*
 XPCNativeSet::FindInterfaceWithIID(const nsIID& iid) const
 {
     XPCNativeInterface* const * pp = mInterfaces;
@@ -459,7 +459,7 @@ XPCNativeSet::FindInterfaceWithIID(const nsIID& iid) const
     return nsnull;
 }
 
-inline JSBool 
+inline JSBool
 XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 {
     XPCNativeInterface* const * pp = mInterfaces;
@@ -472,7 +472,7 @@ XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
     return JS_FALSE;
 }
 
-inline JSBool 
+inline JSBool
 XPCNativeSet::HasInterfaceWithAncestor(XPCNativeInterface* aInterface) const
 {
     const nsIID* iid = aInterface->GetIID();
@@ -486,19 +486,19 @@ XPCNativeSet::HasInterfaceWithAncestor(XPCNativeInterface* aInterface) const
     // This is rare, so check last.
     if(iid == &NS_GET_IID(nsISupports))
         return PR_TRUE;
-    
+
     return JS_FALSE;
 }
 
-inline JSBool 
-XPCNativeSet::MatchesSetUpToInterface(const XPCNativeSet* other, 
+inline JSBool
+XPCNativeSet::MatchesSetUpToInterface(const XPCNativeSet* other,
                                       XPCNativeInterface* iface) const
 {
     int count = JS_MIN((int)mInterfaceCount, (int)other->mInterfaceCount);
-    
+
     XPCNativeInterface* const * pp1 = mInterfaces;
     XPCNativeInterface* const * pp2 = other->mInterfaces;
-    
+
     for(int i = (int) count; i > 0; i--, pp1++, pp2++)
     {
         XPCNativeInterface* cur = (*pp1);
@@ -519,7 +519,7 @@ inline void XPCNativeSet::Mark()
 
     for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
         (*pp)->Mark();
-    
+
     MarkSelfOnly();
 }
 
@@ -527,7 +527,7 @@ inline void XPCNativeSet::Mark()
 inline void XPCNativeSet::ASSERT_NotMarked()
 {
     NS_ASSERTION(!IsMarked(), "bad");
-    
+
     XPCNativeInterface* const * pp = mInterfaces;
 
     for(int i = (int) mInterfaceCount; i > 0; i--, pp++)
@@ -537,13 +537,13 @@ inline void XPCNativeSet::ASSERT_NotMarked()
 
 /***************************************************************************/
 
-inline JSBool 
+inline JSBool
 XPCWrappedNative::HasInterfaceNoQI(XPCNativeInterface* aInterface)
 {
     return GetSet()->HasInterface(aInterface);
 }
 
-inline JSBool 
+inline JSBool
 XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
 {
     return nsnull != GetSet()->FindInterfaceWithIID(iid);
@@ -569,7 +569,7 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         {
             if(to->GetInterface() == aInterface)
             {
-                if(needJSObject && !to->GetJSObject() && 
+                if(needJSObject && !to->GetJSObject() &&
                    !InitTearOffJSObject(ccx, to))
                    return nsnull;
                 return to;
@@ -592,7 +592,7 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
     if(!InitTearOff(ccx, firstAvailable, aInterface, needJSObject))
         return nsnull;
 
-    return firstAvailable;    
+    return firstAvailable;
 }
 
 inline void
@@ -608,7 +608,7 @@ XPCWrappedNative::SweepTearOffs()
             to->Unmark();
             if(marked)
                 continue;
-            
+
             // If this tearoff does not have a live dedicated JSObject,
             // then let's recycle it.
             if(!to->GetJSObject())
@@ -616,7 +616,7 @@ XPCWrappedNative::SweepTearOffs()
                 nsISupports* obj = to->GetNative();
                 if(obj)
                 {
-                    obj->Release();    
+                    obj->Release();
                     to->SetNative(nsnull);
                 }
                 to->SetInterface(nsnull);

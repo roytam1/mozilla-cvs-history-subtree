@@ -89,8 +89,8 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
 
 struct CX_AND_XPCRT_Data
 {
-    JSContext* cx; 
-    XPCJSRuntime* rt;      
+    JSContext* cx;
+    XPCJSRuntime* rt;
 };
 
 JS_STATIC_DLL_CALLBACK(intN)
@@ -113,7 +113,7 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
     }
 
 #ifdef XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
-    printf("- Destroying XPCNativeInterface for %s\n", 
+    printf("- Destroying XPCNativeInterface for %s\n",
             JS_GetStringBytes(JSVAL_TO_STRING(iface->GetName())));
 #endif
 
@@ -121,7 +121,7 @@ NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_REMOVE;
 }
 
-// *Some* NativeSets are referenced from mClassInfo2NativeSetMap. 
+// *Some* NativeSets are referenced from mClassInfo2NativeSetMap.
 // *All* NativeSets are referenced from mNativeSetMap.
 // So, in mClassInfo2NativeSetMap we just clear references to the unmarked.
 // In mNativeSetMap we clear the references to the unmarked *and* delete them.
@@ -172,7 +172,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             case JSGC_BEGIN:
             {
                 // do nothing (yet)...
-                break;    
+                break;
             }
             case JSGC_MARK_END:
             {
@@ -198,9 +198,9 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Find dying scopes...
                 XPCWrappedNativeScope::FinishedMarkPhaseOfGC(cx, self);
-                
+
                 break;
-            }        
+            }
             case JSGC_FINALIZE_END:
             {
 
@@ -218,7 +218,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // Do the marking...
                 XPCWrappedNativeScope::MarkAllInterfaceSets();
 
-                // Mark the sets used in the call contexts. There is a small 
+                // Mark the sets used in the call contexts. There is a small
                 // chance that a wrapper's set will change *while* a call is
                 // happening which uses that wrapper's old interfface set. So,
                 // we need to do this marking to avoid collecting those sets
@@ -230,11 +230,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 if(!self->GetXPConnect()->IsShuttingDown())
                 { // scoped lock
                     nsAutoLock lock(XPCPerThreadData::GetLock());
-                    
+
                     XPCPerThreadData* iterp = nsnull;
                     XPCPerThreadData* thread;
 
-                    while(nsnull != (thread = 
+                    while(nsnull != (thread =
                                      XPCPerThreadData::IterateThreads(&iterp)))
                     {
                         XPCCallContext* ccxp = thread->GetCallContext();
@@ -242,7 +242,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                         {
                             // Deal with the strictness of callcontext that
                             // complains if you ask for a set when
-                            // it is in a state where the set could not 
+                            // it is in a state where the set could not
                             // possibly be valid.
                             if(ccxp->CanGetSet())
                             {
@@ -250,11 +250,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                                 if(set)
                                     set->Mark();
                             }
-                            ccxp = ccxp->GetPrevCallContext();    
-                        }    
+                            ccxp = ccxp->GetPrevCallContext();
+                        }
                     }
                 }
-                
+
                 // Do the sweeping...
                 self->mClassInfo2NativeSetMap->
                     Enumerate(NativeUnMarkedSetRemover, nsnull);
@@ -275,9 +275,9 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 printf("\n");
                 printf("XPCNativeSets:        before: %d  collected: %d  remaining: %d\n",
-                       setsBefore, setsBefore - setsAfter, setsAfter);  
+                       setsBefore, setsBefore - setsAfter, setsAfter);
                 printf("XPCNativeInterfaces:  before: %d  collected: %d  remaining: %d\n",
-                       ifacesBefore, ifacesBefore - ifacesAfter, ifacesAfter);  
+                       ifacesBefore, ifacesBefore - ifacesAfter, ifacesAfter);
                 printf("--------------------------------------------------------------\n");
 #endif
 
@@ -285,12 +285,12 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(cx);
 
                 // Now we are going to recycle any unused WrappedNativeTearoffs.
-                // We do this by iterating all the live callcontexts (on all 
-                // threads!) and marking the tearoffs in use. And then we 
+                // We do this by iterating all the live callcontexts (on all
+                // threads!) and marking the tearoffs in use. And then we
                 // iterate over all the WrappedNative wrappers and sweep their
                 // tearoffs.
                 //
-                // This allows us to perhaps minimize the growth of the 
+                // This allows us to perhaps minimize the growth of the
                 // tearoffs. And also makes us not hold references to interfaces
                 // on our wrapped natives that we are not actually using.
                 //
@@ -306,11 +306,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 { // scoped lock
                     nsAutoLock lock(XPCPerThreadData::GetLock());
-                    
+
                     XPCPerThreadData* iterp = nsnull;
                     XPCPerThreadData* thread;
 
-                    while(nsnull != (thread = 
+                    while(nsnull != (thread =
                                      XPCPerThreadData::IterateThreads(&iterp)))
                     {
                         XPCCallContext* ccxp = thread->GetCallContext();
@@ -318,7 +318,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                         {
                             // Deal with the strictness of callcontext that
                             // complains if you ask for a tearoff when
-                            // it is in a state where the tearoff could not 
+                            // it is in a state where the tearoff could not
                             // possibly be valid.
                             if(ccxp->CanGetTearOff())
                             {
@@ -326,8 +326,8 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                                 if(to)
                                     to->Mark();
                             }
-                            ccxp = ccxp->GetPrevCallContext();    
-                        }    
+                            ccxp = ccxp->GetPrevCallContext();
+                        }
                     }
                 }
 
@@ -357,7 +357,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                     NS_RELEASE(wrapper);
                 }
                 dyingWrappedJSArray->Clear();
-                
+
                 break;
             }
             default:
@@ -715,7 +715,7 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mJSRuntimeService @ %x", mJSRuntimeService));
 
         XPC_LOG_ALWAYS(("mWrappedJSToReleaseArray @ %x with %d wrappers(s)", \
-                         &mWrappedJSToReleaseArray, 
+                         &mWrappedJSToReleaseArray,
                          mWrappedJSToReleaseArray.Count()));
 
         XPC_LOG_ALWAYS(("mContextMap @ %x with %d context(s)", \

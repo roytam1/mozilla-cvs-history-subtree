@@ -18,7 +18,7 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *   John Bandhauer <jband@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the
@@ -40,8 +40,8 @@
 XPCWrappedNativeScope* XPCWrappedNativeScope::gScopes = nsnull;
 XPCWrappedNativeScope* XPCWrappedNativeScope::gDyingScopes = nsnull;
 
-// static 
-XPCWrappedNativeScope* 
+// static
+XPCWrappedNativeScope*
 XPCWrappedNativeScope::GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal)
 {
 
@@ -51,7 +51,7 @@ XPCWrappedNativeScope::GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal)
     return scope;
 }
 
-XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx, 
+XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
                                              JSObject* aGlobal)
     :   mRuntime(ccx.GetRuntime()),
         mWrappedNativeMap(Native2WrappedNativeMap::newMap(XPC_NATIVE_MAP_SIZE)),
@@ -63,7 +63,7 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 {
     // add ourselves to the scopes list
     {   // scoped lock
-        XPCAutoLock lock(mRuntime->GetMapLock());  
+        XPCAutoLock lock(mRuntime->GetMapLock());
 
 #ifdef DEBUG
         for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
@@ -76,9 +76,9 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 
     if(aGlobal)
         SetGlobal(ccx, aGlobal);
-}        
+}
 
-void 
+void
 XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 {
     NS_IF_ADDREF(aComponents);
@@ -86,12 +86,12 @@ XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
     mComponents = aComponents;
 }
 
-void 
+void
 XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 {
     // We allow for calling this more than once. This feature is used by
     // nsXPConnect::InitClassesWithNewWrappedGlobal.
-    
+
     mGlobalJSObject = aGlobal;
 
     // Lookup 'globalObject.Object.prototype' for our wrapper's proto
@@ -117,7 +117,7 @@ XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 #endif
         }
     }
-}        
+}
 
 XPCWrappedNativeScope::~XPCWrappedNativeScope()
 {
@@ -126,30 +126,30 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
     if(mWrappedNativeMap)
     {
         NS_ASSERTION(0 == mWrappedNativeMap->Count(), "scope has non-empty map");
-        delete mWrappedNativeMap;    
+        delete mWrappedNativeMap;
     }
 
     if(mWrappedNativeProtoMap)
     {
         NS_ASSERTION(0 == mWrappedNativeProtoMap->Count(), "scope has non-empty map");
-        delete mWrappedNativeProtoMap;    
+        delete mWrappedNativeProtoMap;
     }
 
     // XXX we should assert that we are dead or that xpconnect has shutdown
     // XXX might not want to do this at xpconnect shutdown time???
     NS_IF_RELEASE(mComponents);
-}        
+}
 
 
-// static 
-void 
+// static
+void
 XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
 {
     // Hold the lock until return...
-    XPCAutoLock lock(rt->GetMapLock());  
+    XPCAutoLock lock(rt->GetMapLock());
 
     // Since the JSGC_END call happens outside of a lock,
-    // it is possible for us to get called here twice before the FinshedGC 
+    // it is possible for us to get called here twice before the FinshedGC
     // call happens. So, we allow for gDyingScopes not being null.
 
     XPCWrappedNativeScope* cur = gScopes;
@@ -157,37 +157,37 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
     while(cur)
     {
         XPCWrappedNativeScope* next = cur->mNext;
-        if(cur->mGlobalJSObject && 
+        if(cur->mGlobalJSObject &&
            JS_IsAboutToBeFinalized(cx, cur->mGlobalJSObject))
         {
             // XXX some wrapper invalidation is in order here...
-            
+
 
             cur->mGlobalJSObject = nsnull;
-            
+
             // Move this scope from the live list to the dying list.
             if(prev)
                 prev->mNext = next;
             else
                 gScopes = next;
             cur->mNext = gDyingScopes;
-            gDyingScopes = cur;            
+            gDyingScopes = cur;
             cur = nsnull;
         }
-        else if(cur->mPrototypeJSObject && 
+        else if(cur->mPrototypeJSObject &&
                 JS_IsAboutToBeFinalized(cx, cur->mPrototypeJSObject))
         {
             // XXX do I want to be warned about this odd case?
-            cur->mPrototypeJSObject = nsnull;                
+            cur->mPrototypeJSObject = nsnull;
         }
         if(cur)
             prev = cur;
         cur = next;
     }
-}        
+}
 
-// static 
-void 
+// static
+void
 XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
 {
     XPCJSRuntime* rt = nsXPConnect::GetRuntime();
@@ -195,9 +195,9 @@ XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
         return;
 
     // Hold the lock until return...
-    XPCAutoLock lock(rt->GetMapLock());  
+    XPCAutoLock lock(rt->GetMapLock());
     KillDyingScopes();
-}        
+}
 
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
@@ -206,7 +206,7 @@ WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
-// We need to explicitly mark all the protos too because some protos may be 
+// We need to explicitly mark all the protos too because some protos may be
 // alive in the hashtable but not currently in use by any wrapper
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeProtoSetMarker(JSHashEntry *he, intN i, void *arg)
@@ -215,7 +215,7 @@ WrappedNativeProtoSetMarker(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
-// static 
+// static
 void
 XPCWrappedNativeScope::MarkAllInterfaceSets()
 {
@@ -241,7 +241,7 @@ ASSERT_WrappedNativeProtoSetNotMarked(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
-// static 
+// static
 void
 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
 {
@@ -262,16 +262,16 @@ WrappedNativeTearoffSweeper(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
-// static 
+// static
 void
 XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs()
 {
     for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         cur->mWrappedNativeMap->Enumerate(WrappedNativeTearoffSweeper, nsnull);
-}        
+}
 
-// static 
-void 
+// static
+void
 XPCWrappedNativeScope::KillDyingScopes()
 {
     // always called inside the lock!
@@ -283,7 +283,7 @@ XPCWrappedNativeScope::KillDyingScopes()
         cur = next;
     }
     gDyingScopes = nsnull;
-}        
+}
 
 struct ShutdownData
 {
@@ -299,7 +299,7 @@ WrappedNativeShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
 {
     ShutdownData* data = (ShutdownData*) arg;
     XPCWrappedNative* wrapper = (XPCWrappedNative*) he->value;
-    
+
     if(wrapper->IsValid())
     {
         if(!wrapper->HasSharedProto())
@@ -315,24 +315,24 @@ WrappedNativeProtoShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
 {
     ShutdownData* data = (ShutdownData*) arg;
     XPCWrappedNativeProto* proto = (XPCWrappedNativeProto*) he->value;
-    
+
     proto->SystemIsBeingShutDown(data->ccx);
     data->protoCount++;
     return HT_ENUMERATE_REMOVE;
 }
 
 //static
-void 
+void
 XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
     int liveScopeCount = 0;
-    
+
     ShutdownData data(ccx);
 
     XPCWrappedNativeScope* cur;
-    
+
     // First move all the scopes to the dying list.
-    
+
     cur = gScopes;
     while(cur)
     {
@@ -343,7 +343,7 @@ XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
         liveScopeCount++;
     }
     gScopes = nsnull;
-    
+
     // Walk the unified dying list and call shutdown on all wrappers and protos
 
     for(cur = gDyingScopes; cur; cur = cur->mNext)
@@ -372,8 +372,8 @@ XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 
 /***************************************************************************/
 
-static 
-XPCWrappedNativeScope* 
+static
+XPCWrappedNativeScope*
 GetScopeOfObject(JSContext* cx, JSObject* obj)
 {
     JSClass* clazz;
@@ -433,13 +433,13 @@ void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj,
 #else
     NS_ERROR(msg);
 #endif
-}        
+}
 #else
 #define DEBUG_CheckForComponentsInScope(ccx, obj, OKIfNotInitialized) ((void)0)
 #endif
 
-// static 
-XPCWrappedNativeScope* 
+// static
+XPCWrappedNativeScope*
 XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
                                            JSBool OKIfNotInitialized)
 {
@@ -447,16 +447,16 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
 
     if(!obj)
         return nsnull;
-    
-    // If this object is itself a wrapped native then we can get the 
-    // scope directly. 
-    
+
+    // If this object is itself a wrapped native then we can get the
+    // scope directly.
+
     scope = GetScopeOfObject(ccx, obj);
     if(scope)
         return scope;
 
     // Else we'll have to look up the parent chain to get the scope
-    
+
     JSObject* parent;
 
     while(nsnull != (parent = JS_GetParent(ccx, obj)))
@@ -465,7 +465,7 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
     // XXX We are assuming that the scope count is low enough that traversing
     // the linked list is more reasonable then doing a hashtable lookup.
     {   // scoped lock
-        XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());
         for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         {
             if(obj == cur->GetGlobalJSObject())
@@ -478,13 +478,13 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
 
     // Failure to find the scope is only OK if the caller told us it might fail.
     // This flag would only be set in the call from
-    // XPCWrappedNativeScope::GetNewOrUsed 
+    // XPCWrappedNativeScope::GetNewOrUsed
     NS_ASSERTION(OKIfNotInitialized, "No scope has this global object!");
     return nsnull;
-}        
+}
 
 
-// static 
+// static
 void
 XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 {
@@ -505,7 +505,7 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
                 cur->DebugDump(depth);
     XPC_LOG_OUTDENT();
 #endif
-}        
+}
 
 #ifdef DEBUG
 JS_STATIC_DLL_CALLBACK(intN)
@@ -558,5 +558,5 @@ XPCWrappedNativeScope::DebugDump(PRInt16 depth)
         }
     XPC_LOG_OUTDENT();
 #endif
-}        
+}
 
