@@ -29,16 +29,18 @@
 #include "pratom.h"
 #include "nsMsgCompCID.h"
 
+
+
 /* Include all of the interfaces our factory can generate components for */
 #include "nsMsgSendFact.h"
 #include "nsMsgCompFieldsFact.h"
 #include "nsMsgSendLaterFact.h"
+
 #include "nsMsgComposeFact.h"
 #include "nsMsgSendLater.h"
-
+#include "nsSmtpUrl.h"
 #include "nsISmtpService.h"
 #include "nsSmtpService.h"
-#include "nsSmtpUrl.h"
 #include "nsMsgComposeService.h"
 #include "nsMsgCompose.h"
 #include "nsMsgSend.h"
@@ -223,6 +225,7 @@ NS_IMPL_ISUPPORTS1(nsModule, nsIModule)
 NS_IMPL_MODULE_GETCLASSOBJECT(nsModule, components)
 NS_IMPL_MODULE_REGISTERSELF(nsModule, components)
 NS_IMPL_MODULE_UNREGISTERSELF(nsModule, components)
+NS_IMPL_MODULE_CANUNLOAD(nsModule)
   
 #if 0
 	nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &rv));
