@@ -886,10 +886,10 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 		m_pTreeView = CNSNavFrame::CreateFramedRDFViewFromResource(NULL, point.x, point.y, 300, 500, m_Node);
 		SetDepressed(TRUE);
 		m_pTreeView->SetRDFButton(this);
-		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(GetParent()->GetParent());
+		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(GetParent()->GetParent()->GetParent());
 		if (pHolder->GetCurrentButton() != NULL)
 		{
-			pHolder->GetCurrentButton()->m_pTreeView->DeleteNavCenter();
+			pHolder->GetCurrentButton()->GetTreeView()->DeleteNavCenter();
 			pHolder->SetCurrentButton(this);
 		}
 	}

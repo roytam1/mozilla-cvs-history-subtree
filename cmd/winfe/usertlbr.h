@@ -86,6 +86,8 @@ public:
 											  // classes could have different behavior, but base-class buttons
 											  // make the assumption that they sit on an RDF toolbar.
 
+	CNSNavFrame* GetTreeView() { return m_pTreeView; }
+
 	virtual void OnAction(void);
 	virtual CSize GetButtonSizeFromChars(CString s, int c);
     virtual CSize GetMinimalButtonSize();

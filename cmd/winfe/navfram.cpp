@@ -203,7 +203,7 @@ void CNSNavFrame::DeleteNavCenter()
 	{
 		m_pButton->SetDepressed(FALSE);
 		m_pButton->Invalidate();
-		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(m_pButton->GetParent()->GetParent());
+		CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)(m_pButton->GetParent()->GetParent()->GetParent());
 		pHolder->SetCurrentButton(NULL);
 		m_pButton = NULL;
 	}
@@ -363,10 +363,6 @@ void CNSNavFrame::StartDrag(CPoint pt, BOOL mapDesktop)
 	if (XP_IsNavCenterDocked(GetHTPane()) || pOutliner->IsPopup()) 
 	{
 		pOutliner->SetIsPopup(FALSE);
-		
-		m_pButton->SetDepressed(FALSE);
-		m_pButton = NULL;
-	
 		ForceFloat(FALSE);		
 	}
 	else ShowWindow(SW_HIDE);
@@ -525,7 +521,7 @@ void CNSNavFrame::CalcClientArea(RECT* lpRectClient, CNSGenFrame * pParentFrame)
 void CNSNavFrame::ForceFloat(BOOL show)
 {
 	CFrameWnd *pLayout = GetParentFrame();
-	m_pButton = NULL;
+	
 	nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_CHILD, WS_OVERLAPPEDWINDOW);
 	nsModifyStyle( GetSafeHwnd(), GWL_EXSTYLE, 0, WS_EX_CLIENTEDGE);
 	
@@ -536,8 +532,12 @@ void CNSNavFrame::ForceFloat(BOOL show)
 	else ShowWindow(SW_HIDE);
 
 	SetParent(NULL);
-	m_DragWnd->DestroyWindow();
-	m_DragWnd = NULL;
+
+	if (m_DragWnd)
+	{
+		m_DragWnd->DestroyWindow();
+		m_DragWnd = NULL;
+	}
 
 	m_dwOverDockStyle = DOCKSTYLE_FLOATING;
 	
@@ -549,10 +549,11 @@ void CNSNavFrame::ForceFloat(BOOL show)
     XP_UndockNavCenter(GetHTPane());
     
     // Tell ParentFrame that we are not docked anymore.
-    pLayout->RecalcLayout();
+    if (pLayout)
+		pLayout->RecalcLayout();
 
 	// Select a new view if we were formerly collapsed.
-	if (m_pSelector->GetCurrentButton() == NULL)
+	if (m_pSelector && m_pSelector->GetCurrentButton() == NULL)
 		m_pSelector->SelectNthView(0);
 
 /*
@@ -723,7 +724,17 @@ void CNSNavFrame::EndDrag(CPoint pt)             // drop
 	{
 		// Float this frame.
 		MoveWindow( m_rectDrag);
-	//	m_nsContent->CalcChildSizes();
+		
+		// If it had a button associated with it, now it doesn't.
+		if (m_pButton)
+		{
+			CRDFToolbarHolder* pHolder = (CRDFToolbarHolder*)
+					(m_pButton->GetParent()->GetParent()->GetParent());
+			pHolder->SetCurrentButton(NULL);
+			m_pButton->SetDepressed(FALSE);
+			m_pButton->Invalidate();
+			m_pButton = NULL;
+		}
 	}
 
 	ShowWindow(SW_SHOW);
@@ -1160,11 +1171,9 @@ void CNSNavFrame::Dump(CDumpContext& dc) const
 
 HT_Pane CNSNavFrame::GetHTPane()
 {
-    HT_Pane htRetval = NULL;
-    if(m_pSelector) {
-        htRetval = m_pSelector->GetHTPane();
-    }
-    return(htRetval);
+    if(m_Node)
+		return HT_GetPane(HT_GetView(m_Node));
+    return NULL;
 }
 
 void CNSNavFrame::OnNcLButtonDown( UINT nHitTest, CPoint point )
