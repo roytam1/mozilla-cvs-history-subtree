@@ -17,83 +17,64 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
  */
 
-#ifndef nsStopwatch_h__
-#define nsStopwatch_h__
+#ifndef __nsStopWatch_H
+#define __nsStopWatch_H
+#include "prlog.h"
+#include "nsDeque.h"
 
-#include "nsIStopwatch.h"
+//
+// nsStopWatch
+//
+// All times stored and returned are in millisecs
+//
 
-#ifdef  NS_ENABLE_STOPWATCH
+class nsStopWatch {
 
-#include "nsHashtable.h"
+private:
+    enum EState { kUndefined, kStopped, kRunning };
 
-////////////////////////////////////////////////////////////////////////////////
-
-class nsStopwatchService : public nsIStopwatchService
-{
+    // All state variables store time in millisecs
+    double         fStartRealTime;   //wall clock start time
+    double         fStopRealTime;    //wall clock stop time
+    double         fStartCpuTime;    //cpu start time
+    double         fStopCpuTime;     //cpu stop time
+    double         fTotalCpuTime;    //total cpu time
+    double         fTotalRealTime;   //total real time
+    EState         fState;           //nsStopWatch state
+    nsDeque*       mSavedStates;     //stack of saved states
+    PRBool         mCreatedStack;    //Initially false.  Set to true in first SaveState() call.
+    
 public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIPROPERTIES
-    NS_DECL_NSISTOPWATCHSERVICE
-
-    nsStopwatchService();
-    virtual ~nsStopwatchService();
-
-    static NS_METHOD
-    Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
-
-    nsresult Init();
-
-protected:
-    nsSupportsHashtable         mStopwatches;
+    nsStopWatch();
+    virtual ~nsStopWatch();
+    
+    // Stop watch controls: Start, Stop, Continue, Reset
+    // Start : Starts the stopwatch
+    // Stop : Stops the stopwatch
+    // Continue : Undo the last Stop command on the stopwatch.
+    // Reset : Resets the stopwatch to 0
+    void Start(PRBool reset = PR_TRUE);
+    void Stop();
+    void Continue();
+    void Reset() { ResetCpuTime(); ResetRealTime(); }
+    void ResetCpuTime(double aTime = 0) { Stop();  fTotalCpuTime = aTime; }
+    void ResetRealTime(double aTime = 0) { Stop(); fTotalRealTime = aTime; }
+    
+    // Returns real and CPU times in millisecs elapsed in the current stopWatch
+    int  GetTime(double *realTime, double *cpuTime);
+    void Print(PRLogModuleInfo* log = NULL);
+    
+    // State management functions. The current state of the stopwatch
+    // can be pushed into a stack and retrieved.
+    void SaveState();
+    void RestoreState();
+    
+private:
+    // static functions that get the real and cpu time from the system
+    static double GetSystemRealTime();
+    static double GetSystemCPUTime();
+    static int    GetSystemTime(double *real, double *cpu);
 };
-
-////////////////////////////////////////////////////////////////////////////////
-
-class nsTimingData {
-public:
-    nsTimingData()
-        : mStartTime(0),
-          mTotalTime(0),
-          mTotalSquaredTime(0),
-          mCount(0) {
-    }
-    PRIntervalTime              mStartTime;
-    double                      mTotalTime;
-    double                      mTotalSquaredTime;
-    double                      mCount;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-
-class nsStopwatch : public nsIStopwatch
-{
-public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSISTOPWATCH
-
-    nsStopwatch();
-    virtual ~nsStopwatch();
-
-    static NS_METHOD
-    Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
-
-    void TimeUnits(double timeInMilliSeconds,
-                   double *adjustedValue, const char* *adjustedUnits,
-                   double *factor);
-
-protected:
-    char*                       mName;
-    char*                       mCountUnits;
-    PRBool                      mPerThread;
-    PRUintn                     mThreadTimingDataIndex;
-    nsTimingData                mTimingData;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-
-#endif // NS_ENABLE_STOPWATCH
-
-#endif // nsStopwatch_h__
+#endif

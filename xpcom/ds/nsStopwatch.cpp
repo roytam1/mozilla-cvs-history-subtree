@@ -17,388 +17,293 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
  */
 
-#include "nsStopwatch.h"
+#include "nsStopWatch.h"
+#include <stdio.h>
+#include <time.h>
+#ifdef XP_UNIX
+#include <unistd.h>
+#include <sys/times.h>
+#endif
+#ifdef XP_WIN
+#include "windows.h"
+#endif
 
-#ifdef  NS_ENABLE_STOPWATCH
+// All state variables store time in millesecs
 
-#include "nsILoggingService.h"
-#include "prthread.h"
-#include <math.h>
+// gTicks : is the number of clock ticks in a second. All system calls
+// 			are expected to return time in ticks
+//
+#if defined(XP_UNIX)
+static const double gTicks = CLK_TCK;
+#elif defined(XP_WIN)
+// System returns time as a number of 100 nanoticks
+static const double gTicks = 10e+7;
+#else
+static const double gTicks = 10e-4;
+#endif /* XP_UNIX */
 
-extern NS_DECL_LOG(LogInfo);
+#define NS_TICKS_TO_MILLISECS(tick) ((tick) * (1000L / gTicks))
+#define NS_MILLISECS_TO_SECS(millisecs) (millisecs * 1000L)
 
-////////////////////////////////////////////////////////////////////////////////
-// nsStopwatchService
-
-nsStopwatchService::nsStopwatchService()
-    : mStopwatches(16)
+nsStopWatch::nsStopWatch()
 {
-    NS_INIT_REFCNT();
+    fState         = kUndefined;
+    fTotalCpuTime  = 0;
+    fTotalRealTime = 0;
+    mCreatedStack = PR_FALSE;
+    mSavedStates = nsnull;
+    Start();
 }
 
-nsStopwatchService::~nsStopwatchService()
+nsStopWatch::~nsStopWatch()
 {
-    DescribeTimings(LogInfo);
-}
-
-NS_IMPL_ISUPPORTS1(nsStopwatchService, nsIStopwatchService)
-
-nsresult
-nsStopwatchService::Init()
-{
-    return NS_OK;
-}
-
-NS_METHOD
-nsStopwatchService::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
-{
-    nsresult rv;
-    if (outer)
-        return NS_ERROR_NO_AGGREGATION;
-
-    nsStopwatchService* sw = new nsStopwatchService();
-    if (sw == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    rv = sw->Init();
-    if (NS_FAILED(rv)) {
-        delete sw;
-        return rv; 
-    }
-
-    rv = sw->QueryInterface(aIID, aInstancePtr);
-    if (NS_FAILED(rv)) {
-        delete sw;
-        return rv;
-    }
-    return rv;
-}
-
-NS_IMETHODIMP
-nsStopwatchService::CreateStopwatch(const char* name, const char* countUnits, 
-                                    PRBool perThread, nsIStopwatch* *result)
-{
-    nsStopwatch* sw = new nsStopwatch();
-    if (sw == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(sw);
-    nsresult rv = sw->Init(name, countUnits, perThread);
-    if (NS_FAILED(rv)) goto done;
-    rv = Define(name, sw);
-    if (NS_FAILED(rv)) goto done;
-    *result = sw;
-    NS_ADDREF(*result);
-  done:
-    NS_RELEASE(sw);
-    return rv;
-}
-
-NS_IMETHODIMP
-nsStopwatchService::Define(const char *prop, nsISupports *initialValue)
-{
-    nsStringKey key(prop);
-    nsCOMPtr<nsIStopwatch> prev = (nsStopwatch*)mStopwatches.Get(&key);
-    NS_ASSERTION(prev == nsnull, "stopwatch redefinition");
-    if (prev != nsnull)
-        return NS_ERROR_FAILURE;
-
-    mStopwatches.Put(&key, initialValue);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatchService::Undefine(const char *prop)
-{
-    nsStringKey key(prop);
-    nsCOMPtr<nsIStopwatch> prev = (nsStopwatch*)mStopwatches.Get(&key);
-    NS_ASSERTION(prev != nsnull, "stopwatch undefined");
-    if (prev == nsnull)
-        return NS_ERROR_FAILURE;
-
-    mStopwatches.Remove(&key);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatchService::Get(const char *prop, const nsIID & uuid, void * *result)
-{
-    nsStringKey key(prop);
-    nsCOMPtr<nsISupports> sw = (nsStopwatch*)mStopwatches.Get(&key);
-    NS_ASSERTION(sw != nsnull, "stopwatch undefined");
-    if (sw == nsnull)
-        return NS_ERROR_FAILURE;
-    return sw->QueryInterface(uuid, result);
-}
-
-NS_IMETHODIMP
-nsStopwatchService::Set(const char *prop, nsISupports *value)
-{
-    nsStringKey key(prop);
-    nsCOMPtr<nsISupports> prev = (nsStopwatch*)mStopwatches.Get(&key);
-    NS_ASSERTION(prev != nsnull, "stopwatch undefined");
-    if (prev == nsnull)
-        return NS_ERROR_FAILURE;
-
-    mStopwatches.Put(&key, value);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatchService::Has(const char *prop, const nsIID & uuid, nsISupports *value, 
-                        PRBool *result)
-{
-    return NS_OK;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// nsStopwatch
-
-nsStopwatch::nsStopwatch()
-    : mName(nsnull),
-      mCountUnits(nsnull),
-      mPerThread(PR_TRUE),
-      mThreadTimingDataIndex(0)
-{
-    NS_INIT_REFCNT();
-}
-
-nsStopwatch::~nsStopwatch()
-{
-    if (mName) nsCRT::free(mName);
-    if (mCountUnits) nsCRT::free(mCountUnits);
-}
-
-NS_IMPL_ISUPPORTS1(nsStopwatch, nsIStopwatch)
-
-NS_METHOD
-nsStopwatch::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
-{
-    nsresult rv;
-    if (outer)
-        return NS_ERROR_NO_AGGREGATION;
-
-    nsStopwatch* sw = new nsStopwatch();
-    if (sw == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF(sw);
-    rv = sw->QueryInterface(aIID, aInstancePtr);
-    NS_RELEASE(sw);
-    return rv;
-}
-
-void 
-nsStopwatch::TimeUnits(double timeInMilliSeconds,
-                       double *adjustedValue, const char* *adjustedUnits,
-                       double *factorResult)
-{
-    double time = timeInMilliSeconds;
-    const char* units = "ms";
-    double factor = 1;
-    if (time < 1) {
-        time *= 1000;
-        factor *= 1000;
-        units = "us";
-        if (time < 1) {
-            time *= 1000;
-            factor *= 1000;
-            units = "ns";
+    EState* state = 0;
+    if (mSavedStates)
+    {
+        while ((state = (EState*) mSavedStates->Pop()))
+        {
+            delete state;
         }
+        delete mSavedStates;
     }
-    else if (time > 1000) {
-        time /= 1000;
-        factor /= 1000;
-        units = "sec";
-        if (time > 60) {
-            time /= 60;
-            factor /= 60;
-            units = "min";
-            if (time > 60) {
-                time /= 60;
-                factor /= 60;
-                units = "hours";
-                if (time > 24) {
-                    time /= 24;
-                    factor /= 24;
-                    units = "days";
-                }
-            }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// StopWatch controls: Start, Stop, Continue
+
+void nsStopWatch::Start(PRBool reset)
+{
+    if (reset)
+    {
+        fTotalCpuTime  = 0;
+        fTotalRealTime = 0;
+    }
+    if (fState != kRunning)
+    {
+        GetSystemTime(&fStartRealTime, &fStartCpuTime);
+        fState = kRunning;
+    }
+}
+
+void nsStopWatch::Stop() {
+    GetSystemTime(&fStopRealTime, &fStopCpuTime);
+    if (fState == kRunning)
+    {
+        fTotalCpuTime  += fStopCpuTime  - fStartCpuTime;
+        fTotalRealTime += fStopRealTime - fStartRealTime;
+    }
+    fState = kStopped;
+}
+
+
+void nsStopWatch::Continue()
+{
+    if (fState != kUndefined)
+    {
+        if (fState == kStopped)
+        {
+            fTotalCpuTime  -= fStopCpuTime  - fStartCpuTime;
+            fTotalRealTime -= fStopRealTime - fStartRealTime;
         }
+        fState = kRunning;
     }
-    *adjustedValue = time;
-    *adjustedUnits = units;
-    *factorResult = factor;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+// Getters
 
-static void PR_CALLBACK
-DeleteTimingData(void *priv)
+int nsStopWatch::GetTime(double *realStopWatchTime, double *cpuStopWatchTime)
 {
-    nsTimingData* data = (nsTimingData*)priv;
-    delete data;
-}
+    double realTime = 0;
+    double cpuTime = 0;
 
-NS_IMETHODIMP
-nsStopwatch::Init(const char *name, const char* countUnits, PRBool perThread)
-{
-    if (mName) nsCRT::free(mName);
-    if (mCountUnits) nsCRT::free(mCountUnits);
-    Reset();
+    if (fState == kUndefined)
+        return -1;
 
-    mName = nsCRT::strdup(name);
-    if (mName == nsnull) 
-        return NS_ERROR_OUT_OF_MEMORY;
-    mCountUnits = nsCRT::strdup(countUnits);
-    if (mCountUnits == nsnull) 
-        return NS_ERROR_OUT_OF_MEMORY;
-    mPerThread = perThread;
-    PRStatus status = PR_NewThreadPrivateIndex(&mThreadTimingDataIndex,
-                                               DeleteTimingData);
-    if (status != PR_SUCCESS)
-        return NS_ERROR_FAILURE;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatch::GetName(char * *aName)
-{
-    *aName = nsCRT::strdup(mName);
-    return *aName ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}
-
-NS_IMETHODIMP
-nsStopwatch::Start(void)
-{
-    nsTimingData* data;
-    if (mPerThread) {
-        data = (nsTimingData*)PR_GetThreadPrivate(mThreadTimingDataIndex);
-        if (data == nsnull) {
-            data = new nsTimingData;
-            if (data == nsnull) 
-                return NS_ERROR_OUT_OF_MEMORY;
-            PRStatus status = PR_SetThreadPrivate(mThreadTimingDataIndex, data);
-            if (status != PR_SUCCESS)
-                return NS_ERROR_FAILURE;
-        }
+    if (fState == kStopped)
+    {
+        realTime = fTotalRealTime;
+        cpuTime = fTotalCpuTime;
     }
-    else {
-        data = &mTimingData;
-    } 
-
-    PR_ASSERT(data->mStartTime == 0);
-    if (data->mStartTime != 0)
-        return NS_ERROR_FAILURE;
-    data->mStartTime = PR_IntervalNow();
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatch::Stop(double count, PRIntervalTime *elapsedTime)
-{
-    nsTimingData* data;
-    if (mPerThread)
-        data = (nsTimingData*)PR_GetThreadPrivate(mThreadTimingDataIndex);
     else
-        data = &mTimingData;
-    
-    PR_ASSERT(data->mStartTime != 0);
-    if (data->mStartTime == 0)
-        return NS_ERROR_FAILURE;
-    PRIntervalTime elapsed = PR_IntervalNow();
-    elapsed -= data->mStartTime;
-    data->mStartTime = 0;
-    data->mCount++;
-    data->mTotalTime += elapsed;
-    data->mTotalSquaredTime += elapsed * elapsed;
-    *elapsedTime = elapsed;
-
-    if (mPerThread) {
-        // dump per-thread data into per-log data:
-        mTimingData.mTotalTime += data->mTotalTime;
-        mTimingData.mTotalSquaredTime += data->mTotalSquaredTime;
-        mTimingData.mCount += data->mCount;
-
-        // destroy TLS:
-        PRStatus status = PR_SetThreadPrivate(mThreadTimingDataIndex, nsnull);
-        if (status != PR_SUCCESS)
-            return NS_ERROR_FAILURE;
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatch::Reset(void)
-{
-    mTimingData.mStartTime = 0;
-    mTimingData.mTotalTime = 0;
-    mTimingData.mTotalSquaredTime = 0;
-    mTimingData.mCount = 0;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatch::GetRealTimeStats(double *realTimeSamples, double *realTimeMean, double *realTimeStdDev)
-{
-    PRUint32 tps = PR_TicksPerSecond();
-
-    *realTimeSamples = mTimingData.mCount;
-    double mean = mTimingData.mTotalTime / mTimingData.mCount;
-    *realTimeMean = (PRIntervalTime)mean * 1000 / tps;
-    double variance = fabs(mTimingData.mTotalSquaredTime / mTimingData.mCount - mean * mean);
-    *realTimeStdDev = sqrt(variance) * 1000 / tps;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStopwatch::GetCPUTimeStats(double *cpuTimeSamples, double *cpuTimeMean, double *cpuTimeStdDev)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsStopwatch::Describe(nsILog *out, const char* msg)
-{
-    nsresult rv;
-
-    double realTimeSamples, realTimeMean, realTimeStdDev;
-    rv = GetRealTimeStats(&realTimeSamples, &realTimeMean, &realTimeStdDev);
-    if (NS_FAILED(rv)) return rv;
-
-    double mean, factor, stdDev;
-    const char* timeUnits;
-    TimeUnits(realTimeMean, &mean, &timeUnits, &factor);
-    stdDev = realTimeStdDev * factor;
-
-    if (realTimeSamples > 1) {
-        NS_LOG(out, STDOUT, ("%s elapsed time: %.2f +/- %.2f %s (%d %s) [%s]\n", 
-                             mName, mean, stdDev, timeUnits,
-                             (PRUint32)realTimeSamples, mCountUnits, msg));
-    }
-    else {
-        NS_LOG(out, STDOUT, ("%s elapsed time: %.2f %s [%s]\n", 
-                             mName, mean, timeUnits, msg));
+    {
+        // We haven't stopped. Just snapshot the current time.
+        GetSystemTime(&realTime, &cpuTime);
+        realTime = fTotalRealTime + realTime - fStartRealTime;
+        cpuTime = fTotalCpuTime + cpuTime - fStartCpuTime;
     }
 
-    TimeUnits(1/realTimeMean, &mean, &timeUnits, &factor);
-    NS_LOG(out, STDOUT, ("==> %.2f %s/%s\n", mean, mCountUnits, timeUnits));
+    if (realStopWatchTime) *realStopWatchTime = realTime;
+    if (cpuStopWatchTime) *cpuStopWatchTime = cpuTime;
 
-    double cpuTimeSamples, cpuTimeMean, cpuTimeStdDev;
-    rv = GetCPUTimeStats(&cpuTimeSamples, &cpuTimeMean, &cpuTimeStdDev);
-    if (NS_SUCCEEDED(rv)) {
-        TimeUnits(cpuTimeMean, &mean, &timeUnits, &factor);
-        stdDev = cpuTimeStdDev * factor;
-        NS_LOG(out, STDOUT, ("%s cpu time: %.2f +/- %.2f %s (%d %s)\n", 
-                             mName, mean, stdDev, timeUnits,
-                             cpuTimeSamples, mCountUnits));
-    }
-
-    return NS_OK;
+    return 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+// Print
 
-#endif // NS_ENABLE_STOPWATCH
+void nsStopWatch::Print(PRLogModuleInfo* log)
+{
+    // Print the real and cpu time passed between the start and stop events.
+    double  realt, cput;
+    GetTime(&realt, &cput);
+
+    int  hours = int(realt / 3600000);
+    realt -= hours * 3600000;
+    int  min   = int(realt / 60000);
+    realt -= min * 60000;
+    int  sec   = int(realt/1000);
+    realt -= sec * 1000;
+    int ms     = int(realt);
+    if (log)
+        PR_LOG(log, PR_LOG_DEBUG,
+               ("Real time %d:%d:%d.%d, CP time %.3f\n", hours, min, sec, ms, cput));
+    else
+        printf("Real time %d:%d:%d.%d, CP time %.3f\n", hours, min, sec, ms, cput);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// State save and restore functions
+
+void nsStopWatch::SaveState()
+{
+    if (!mCreatedStack)
+    {
+        mSavedStates = new nsDeque(nsnull);
+        mCreatedStack = PR_TRUE;
+    }
+    EState* state = new EState();
+    *state = fState;
+    mSavedStates->PushFront((void*) state);
+}
+
+
+void nsStopWatch::RestoreState()
+{
+    EState* state = nsnull;
+    state = (EState*) mSavedStates->Pop();
+    if (state)
+    {
+        if (*state == kRunning && fState == kStopped)
+            Start(PR_FALSE);
+        else if (*state == kStopped && fState == kRunning)
+            Stop();
+        delete state;
+    }
+    else
+    {
+        PR_ASSERT("nsStopWatch::RestoreState(): The saved state stack is empty.\n");
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Static functions to get time in millisecs from the system
+
+//
+// GetSystemTime()
+// returns both real and cpu times in one shot.
+int nsStopWatch::GetSystemTime(double *real, double *cpu)
+{
+#if defined(XP_UNIX)
+    double realSysTime, cpuSysTime;
+    struct tms cpt;
+    realSysTime = NS_TICKS_TO_MILLISECS(times(&cpt));
+    cpuSysTime = NS_TICKS_TO_MILLISECS((cpt.tms_utime+cpt.tms_stime));
+    if (real) *real = realSysTime;
+    if (cpu) *cpu = cpuSysTime;
+#else
+    if (real) *real = GetSystemRealTime();
+    if (cpu) *cpu = GetSystemCpuTime();
+#endif
+    return 0;
+}
+
+double nsStopWatch::GetSystemRealTime()
+{
+#if defined(XP_MAC)
+    return(double)clock() / 1000000L;
+#elif defined(XP_UNIX)
+    struct tms cpt;
+    times(&cpt);
+    return NS_TICKS_TO_MILLISECS((double)times(&cpt));
+#elif defined(R__VMS)
+    return(double)clock()/gTicks;
+#elif defined(XP_WIN)
+    union {
+        FILETIME ftFileTime;
+        __int64  ftInt64;
+    } ftRealTime; // time the process has spent in kernel mode
+    SYSTEMTIME st;
+    GetSystemTime(&st);
+    SystemTimeToFileTime(&st,&ftRealTime.ftFileTime);
+    return NS_TICKS_TO_MILLISECS((double)ftRealTime.ftInt64);
+#endif
+}
+
+
+double nsStopWatch::GetSystemCPUTime()
+{
+#if defined(XP_MAC)
+   return(double)clock();
+#elif defined(XP_UNIX)
+   struct tms cpt;
+   times(&cpt);
+   return NS_TICKS_TO_MILLISECS((double)(cpt.tms_utime+cpt.tms_stime));
+#elif defined(R__VMS)
+   return(double)clock()/gTicks;
+#elif defined(XP_WIN)
+
+  OSVERSIONINFO OsVersionInfo;
+
+//*-*         Value                      Platform
+//*-*  ----------------------------------------------------
+//*-*  VER_PLATFORM_WIN32_WINDOWS       Win32 on Windows 95
+//*-*  VER_PLATFORM_WIN32_NT            Windows NT
+//*-*
+  OsVersionInfo.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
+  GetVersionEx(&OsVersionInfo);
+  if (OsVersionInfo.dwPlatformId == VER_PLATFORM_WIN32_NT)
+  {
+      DWORD       ret;
+      FILETIME    ftCreate;       // when the process was created
+      FILETIME    ftExit;         // when the process exited
+
+      union {
+          FILETIME ftFileTime;
+          __int64  ftInt64;
+      } ftKernel; // time the process has spent in kernel mode
+
+    union {
+        FILETIME ftFileTime;
+        __int64  ftInt64;
+    } ftUser;   // time the process has spent in user mode
+
+    HANDLE hProcess = GetCurrentProcess();
+    ret = GetProcessTimes (hProcess, &ftCreate, &ftExit,
+                           &ftKernel.ftFileTime,
+                           &ftUser.ftFileTime);
+    if (ret != PR_TRUE)
+    {
+        ret = GetLastError ();
+        printf("%s 0x%lx\n"," Error on GetProcessTimes", (int)ret);
+    }
+
+    /*
+     * Process times are returned in a 64-bit structure, as the number of
+     * 100 nanosecond ticks since 1 January 1601.  User mode and kernel mode
+     * times for this process are in separate 64-bit structures.
+     * To convert to floating point seconds, we will:
+     *
+     *          Convert sum of high 32-bit quantities to 64-bit int
+     */
+
+      return NS_TICKS_TO_MILLISECS((double) (ftKernel.ftInt64 + ftUser.ftInt64));
+  }
+  else
+      return GetSystemRealTime();
+
+#endif
+}
+
