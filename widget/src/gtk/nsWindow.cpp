@@ -61,7 +61,6 @@ nsWindow::nsWindow()
   mFont = nsnull;
   
   mMenuBar = nsnull;
-  mIsTooSmall = PR_FALSE;
   mMozArea = 0;
   mSuperWin = 0;
 }
@@ -534,10 +533,6 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
   mShown = bState;
 
 
-  // don't show if we are too small
-  if (mIsTooSmall && bState == PR_FALSE)
-    return NS_OK;
-
   // show
   if (bState)
   {
@@ -554,7 +549,7 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
              this,
              bState, mWindowType);
 #endif
-
+      gtk_widget_show(mMozArea);
       gtk_widget_show(mShell);
     }
   }
@@ -567,14 +562,10 @@ NS_IMETHODIMP nsWindow::Show(PRBool bState)
     if (mIsToplevel && mShell)
     {
       gtk_widget_hide(mShell);
+      gtk_widget_hide(mMozArea);
     } 
-
     gdk_window_hide(mSuperWin->shell_window);
     gdk_window_hide(mSuperWin->bin_window);
-   
-    // For some strange reason, gtk_widget_hide() does not seem to
-    // unmap the window.
-    //    gtk_widget_unmap(mWidget);
   }
 
   mShown = bState;
@@ -660,7 +651,6 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
 
 NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
-  PRBool nNeedToShow = PR_FALSE;
 
 #if 0
   printf("nsWindow::Resize %s (%p) to %d %d\n",
@@ -672,38 +662,6 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   mBounds.width  = aWidth;
   mBounds.height = aHeight;
 
-  // code to keep the window from showing before it has been moved or resized
-
-  // if we are resized to 1x1 or less, we will hide the window.  Show(TRUE) will be ignored until a
-  // larger resize has happened
-  if (aWidth <= 1 || aHeight <= 1)
-  {
-    if (mIsToplevel && mShell)
-    {
-      aWidth = 1;
-      aHeight = 1;
-      mIsTooSmall = PR_TRUE;
-      if (GTK_WIDGET_VISIBLE(mShell))
-        gtk_widget_hide(mShell);
-    }
-    else
-    {
-      aWidth = 1;
-      aHeight = 1;
-      mIsTooSmall = PR_TRUE;
-      gdk_window_hide(mSuperWin->shell_window);
-    }
-  }
-  else
-  {
-    if (mIsTooSmall)
-    {
-      // if we are not shown, we don't want to force a show here, so check and see if Show(TRUE) has been called
-      nNeedToShow = mShown;
-      mIsTooSmall = PR_FALSE;
-    }
-  }
-
   if (mSuperWin) {
     // toplevel window?  if so, we should resize it as well.
     if (mIsToplevel && mShell)
@@ -712,7 +670,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
     }
     gdk_superwin_resize(mSuperWin, aWidth, aHeight);
   }
-
+#if 0
   // XXX pav
   // call the size allocation handler directly to avoid code duplication
   // note, this could be a problem as this will make layout think that it
@@ -726,16 +684,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   alloc.x = 0;
   alloc.y = 0;
   handle_size_allocate(mWidget, &alloc, this);
-
-  if (nNeedToShow)
-  {
-    if (mIsToplevel && mShell)
-      gtk_widget_show(mShell);
-    else {
-      gdk_window_show(mSuperWin->bin_window);
-      gdk_window_show(mSuperWin->shell_window);
-    }
-  }
+#endif
   return NS_OK;
 }
 
@@ -880,13 +829,14 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
     if (config_event.type == ConfigureNotify) 
       {
         *event = config_event;
-        
+#if 0        
         g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
                 event->xconfigure.window,
                 event->xconfigure.x, 
                 event->xconfigure.y,
                 event->xconfigure.width, 
                 event->xconfigure.height);
+#endif
       }
   }
 
@@ -922,7 +872,6 @@ nsWindow::GetRenderWindow(GtkObject * aGtkObject)
   }
   return renderWindow;
 }
-
 
 ChildWindow::ChildWindow()
 {
