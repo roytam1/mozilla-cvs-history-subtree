@@ -18,8 +18,8 @@
  * content will be inside it.
  */
 window { 
-  background-color:#CCCCDD;
-  font: 3mm tahoma,arial,helvetica,sans-serif;
+  background-color: white;
+  font: 8pt arial,helvetica,sans-serif;
   padding: 0px;
 }
 
@@ -27,6 +27,7 @@ window {
  * This is a special class of window used for dialogs
  */
 window.dialog { 
+  background-color: #CCCCCC;
   /* There is a bug preventing this so this will not work property.
   padding-left: 11px;
   padding-right: 10px;
@@ -35,11 +36,22 @@ window.dialog {
   */
 }
 
+/**
+ * removed 2px black border from iframe
+ */
+html|iframe {
+ min-width: 10px;
+ min-height: 10px;
+ width: 100px;
+ height: 100px;
+ border: none;
+}
+
 /**********************************
  * XUL widgets
  **********************************/
 
-/******** Box *********
+/******** Box *********/
 
 
 /* Conditional debug */
@@ -99,24 +111,114 @@ window.dialog {
 /******* ToolBox & ToolBar *******/
 
 toolbox { 
-      background-color:darkgray;
+      background-color: #003366;
 }
 
 :toolbox-normal {
-	background-color: #666699;
-	background-image: url("chrome://global/skin/taskbar-tab.gif");
+	background-color: transparent;
+	background-image: url("chrome://global/skin/toolbar-begincap.gif");
 	background-repeat: no-repeat;
-	color: lightgray;
-	border: solid darkGray 1px;
-
+	border: none;
 }
 
 :toolbox-rollover {
-	background-color: #ccccff;
-	background-image: url("chrome://global/skin/taskbar-tab-hover.gif");
+	background-color: #99CCFF;
+	background-image: none;
+	border: none;
+}
+
+toolbar.standard {
+	color: white;
+	background-color: #003366;
+	padding: 0px;
+	margin: 0px;
+	border: none;
+	min-height: 46px;
+}
+
+/**
+ * normal buttons used in 'standard toolbar'
+ */
+toolbar.standard titledbutton {
+	background-image:none;
 	background-repeat: no-repeat;
-	color: green;
-	border: outset #ccccff 1px;
+	background-position: 50% 4px;
+	background-color: transparent;
+	color: #CCFFFF;
+	border: none;
+	padding: 0px;
+	min-width: 40px;
+	margin: 3px 1px 1px 1px;
+	font-size: smaller;
+}
+
+toolbar.standard titledbutton:hover {
+	background-image:url("chrome://global/skin/otherbutton28-bg-hover.gif");
+	color: #FFFFFF;
+	text-decoration: none;
+	border: none;
+}
+
+toolbar.standard titledbutton:active {
+	background-image:url("chrome://global/skin/otherbutton28-bg-active.gif");
+	color: #FFFFFF;
+	text-decoration: none;
+	margin: 4px 0px 0px 2px;
+}
+
+toolbar.standard titledbutton[disabled="true"] { 
+	margin: 1px;
+}
+
+/**
+ * round buttons used in 'standard toolbar'
+ */
+toolbar.standard titledbutton.button28 {
+	background-image:url("chrome://global/skin/button28-bg.gif");
+}
+
+toolbar.standard titledbutton.button28[disabled="true"] {
+	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
+}
+
+toolbar.standard titledbutton.button28[disabled="true"]:hover {
+	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
+}
+
+toolbar.standard titledbutton.button28[disabled="true"]:active {
+	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
+}
+
+toolbar.standard titledbutton.button28:hover {
+	background-image:url("chrome://global/skin/button28-bg-hover.gif");
+}
+
+toolbar.standard titledbutton.button28:active {
+	background-image:url("chrome://global/skin/button28-bg-active.gif");
+}
+
+
+/**
+ * Throbber
+ */
+/* FIX ME - move these gifs to global */
+titledbutton#Throbber
+{
+	list-style-image:url("chrome://navigator/skin/animthrob_single.gif");
+}
+
+titledbutton#Throbber[busy="true"] {
+	list-style-image:url("chrome://navigator/skin/animthrob.gif");
+}
+
+
+toolbar.standard #thobber-box{ 
+	background-color: #CCCCCC;
+	min-width: 59px;
+	max-width: 59px;
+	background-image: url("chrome://global/skin/n-box.gif");
+	background-repeat: no-repeat;
+	background-position: 100% 0%;
 }
 
 toolbar,menubar {
@@ -163,6 +265,49 @@ toolbar titledbutton[disabled="true"]:active {
 	border: 1px solid transparent;
 	padding: 2px;
 }
+
+/******* Splitters *******/
+
+/**
+ * gray horizontal splitter for pane views
+ */
+splitter.gray-horizontal-splitter { 
+	min-height: 8px;
+	background-color: #CCCCCC;
+	border: none;
+	padding: 0px;
+}
+
+splitter.gray-horizontal-splitter grippy{ 
+	margin: 0px;
+	border: 2px solid #CCCCCC;
+	padding: 0px;
+	background-color: #6699CC;
+	list-style-image: none;
+}
+splitter.gray-horizontal-splitter grippy:hover{ 
+	background-color: #003366;
+}
+
+splitter.gray-horizontal-splitter grippy:active{ 
+	background-color: #003366;
+}
+
+splitter.gray-horizontal-splitter #begincap{ 
+	min-width: 8px;
+	max-width: 8px;
+	background-image: url("chrome://global/skin/gray-bottomleft.gif");
+	background-repeat: no-repeat;
+	background-position: 0% 100%;
+}
+splitter.gray-horizontal-splitter #endcap { 
+	min-width: 8px;
+	max-width: 8px;
+	background-image: url("chrome://global/skin/gray-bottomright.gif");
+	background-repeat: no-repeat;
+	background-position: 100% 100%;
+}
+
 
 /****** Progress Meter ********/
 

@@ -91,6 +91,7 @@ install::
 	$(MAKE_INSTALL) gray-bottomright.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) gray-topright.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) otherbutton28-bg-hover.gif $(DISTBROWSER)
+	$(MAKE_INSTALL) otherbutton28-bg-active.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) toolbar-begincap.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) toolbar-endcap.gif $(DISTBROWSER)
 	$(MAKE_INSTALL) n-box.gif $(DISTBROWSER)

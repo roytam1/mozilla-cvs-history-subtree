@@ -43,15 +43,49 @@ iframe {
  height: 100px;
 }
 
-
-titledbutton#Throbber
-{
-	list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
+/**
+ * toolbar button images
+ */
+#getmsg-btn {
+	list-style-image:url("chrome://messenger/skin/getmsg.gif");
 }
 
-titledbutton#Throbber[busy="true"] {
-	list-style-image:url(chrome://navigator/skin/animthrob.gif);
+#newmsg-btn{
+	list-style-image:url("chrome://messenger/skin/newmsg.gif");
 }
+
+#reply-btn{
+	list-style-image:url("chrome://messenger/skin/reply.gif");
+}
+
+#replyall-btn{
+	list-style-image:url("chrome://messenger/skin/replyall.gif");
+}
+
+#forward-btn{
+	list-style-image:url("chrome://messenger/skin/forward.gif");
+}
+
+#file-btn{
+	list-style-image:url("chrome://messenger/skin/file.gif");
+}
+
+#next-btn{
+	list-style-image:url("chrome://messenger/skin/next.gif");
+}
+
+#delete-btn{
+	list-style-image:url("chrome://messenger/skin/trash.gif");
+}
+
+#print-btn{
+	list-style-image:url("chrome://messenger/skin/print.gif");
+}
+
+#stop-btn{
+	list-style-image:url("chrome://messenger/skin/stop.gif");
+}
+
 
 .folderMenuItem > .menu-left {
  list-style-image: url("chrome://messenger/skin/Folder.gif");

@@ -74,5 +74,9 @@ tree[class="abResults"] treeitem > treerow > treecell > .tree-icon {
 
 titledbutton#Throbber
 {
-        list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
+	list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
 } 
+
+#button_stop {
+	list-style-image:url("chrome://messenger/skin/stop.gif");
+}
