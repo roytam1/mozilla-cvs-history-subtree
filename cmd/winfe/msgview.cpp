@@ -78,7 +78,9 @@ BOOL CAttachmentDataSource::OnRenderFileData(LPFORMATETC lpFormatEtc, CFile *pFi
 	BOOL bRes = FALSE;
 
 	if (pFile) {
+#ifdef NEW_CXSAVE
 		bRes = CSaveCX::SaveToFile(pFile, m_csURL, m_csName);
+#endif
 	}
 
 	return bRes;
