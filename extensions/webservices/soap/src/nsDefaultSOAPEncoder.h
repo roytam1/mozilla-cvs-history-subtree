@@ -25,7 +25,7 @@
 
 #include "nsSOAPEncoding.h"
 
-class nsDefaultSOAPEncoder : nsSOAPEncoding
+class nsDefaultSOAPEncoder : public nsSOAPEncoding
 {
 public:
   nsDefaultSOAPEncoder();

@@ -173,7 +173,7 @@ interface nsISOAPEncoding : nsISupports {
 };
 
 %{ C++
-#define NS_SOAPENCODING_CID                            \
+#define NS_DEFAULTSOAPENCODER_CID                            \
 { /* 06fb035c-1dd2-11b2-bc30-f6d8e314d6b9 */        \
   0x06fb035c, 0x1dd2, 0x11b2,                       \
  {0xbc, 0x30, 0xf6, 0xd8, 0xe3, 0x14, 0xd6, 0xb9} }
