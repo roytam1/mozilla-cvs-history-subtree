@@ -63,30 +63,9 @@
   <overlaytarget id="menu-overlay-target"/>
   <overlaytarget id="views-overlay-target"/>
 
-  <viewcontainer flex="1" id="initial-container" type="horizontal"/>
-
-<!--
-  <vbox flex="1">
-    <hbox flex="1" id="top-hbox" persist="height">
-      <vbox id="view-container-1" flex="1" view-container="true"
-        persist="width height"/>
-
-      <splitter collapse="before"><grippy/></splitter>
-
-      <vbox flex="1">
-
-        <hbox id="view-container-2" flex="1" view-container="true"
-          persist="width height"/>
-
-        <splitter collapse="after" persist="top"><grippy/></splitter>
-
-        <hbox id="view-container-3" view-container="true"
-          persist="width height"/>
-
-      </vbox>
-    </hbox>
-  </vbox>
--->
+  <viewcontainer id="root-container" flex="1" type="horizontal">
+    <viewcontainer id="initial-container" type="vertical" flex="1"/>
+  </viewcontainer>
 
   <overlaytarget id="statusbar-overlay-target"/>
 

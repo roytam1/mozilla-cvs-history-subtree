@@ -65,7 +65,6 @@ function initPrefs()
     {
         if (!(list[p] in console.prefs))
         {
-            dd ("pref list " + list[p]);
             console.addPref(list[p]);
         }
     }                                                 

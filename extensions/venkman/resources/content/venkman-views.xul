@@ -46,8 +46,7 @@
 
     <!-- breakpoint view -->
 
-    <floatingview id="breaks" title="&Break.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-1">
+    <floatingview id="breaks" title="&Break.label;" flex="1">
       <vbox id="break-view-content" flex="1">
         <tree flex="1" id="break-tree" persist="height" hidecolumnpicker="true"
           ondblclick="console.views.breaks.onDblClick(event);"
@@ -70,8 +69,7 @@
 
     <!-- locals view -->
     
-    <floatingview id="locals" title="&Locals.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-1">
+    <floatingview id="locals" title="&Locals.label;" flex="1">
       <vbox id="locals-view-content" flex="1">
         <tree flex="1" id="locals-tree" persist="height"
           ondblclick="console.views.locals.onDblClick(event);"
@@ -99,11 +97,10 @@
 
     <!-- session view -->
 
-    <floatingview id="session" title="&Session.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-3">
+    <floatingview id="session" title="&Session.label;" flex="1">
       <vbox id="session-view-content" flex="1" persist="width">
 
-         <iframe id="session-output-iframe" flex="1" type="content"
+         <iframe id="session-output-iframe" flex="1" type="content-primary"
            src="chrome://venkman/content/venkman-output-window.html"
            context="context:session"/>
          <textbox id="session-sl-input" class="input-widget"
@@ -114,8 +111,7 @@
 
     <!-- scripts view -->
 
-    <floatingview id="scripts" title="&Scripts.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-2">
+    <floatingview id="scripts" title="&Scripts.label;" flex="1">
       <vbox id="scripts-view-content" flex="1">
         <tree flex="1" id="scripts-tree" persist="height"
           ondblclick="console.views.scripts.onDblClick(event);"
@@ -138,10 +134,17 @@
       </vbox>
     </floatingview>
 
+    <!-- source2 view -->
+    <floatingview id="source2" title="&Source.label;" flex="1">
+      <vbox id="source2-view-content" flex="1">
+        <iframe id="source2-iframe" flex="1" type="content-primary"
+          src="chrome://venkman/content/venkman-source2-window.html"/>
+      </vbox>
+    </floatingview>
+
     <!-- source view -->
 
-    <floatingview id="source" title="&Source.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-2">
+    <floatingview id="source" title="&Source.label;" flex="1">
       <vbox id="source-view-content" flex="1">
         <toolbox>
           <toolbar id="source-header" grippytooltiptext="&SourceHeader.tip;">
@@ -154,11 +157,11 @@
           context="context:source">
 
           <treecols>
-            <treecol id="source:col-0" width="20px" display="&SourceCol0.display;"
-              persist="hidden width"/>
+            <treecol id="source:col-0" width="20px"
+              display="&SourceCol0.display;" persist="hidden width"/>
             <splitter class="tree-splitter"/>
-            <treecol id="source:col-1" width="50px" display="&SourceCol1.display;"
-              persist="hidden width"/>
+            <treecol id="source:col-1" width="50px"
+              display="&SourceCol1.display;" persist="hidden width"/>
             <splitter class="tree-splitter"/>
             <treecol id="source:col-2" flex="1" display=""
               ignoreincolumnpicker="true" persist="hidden width"/>
@@ -173,7 +176,6 @@
     <!-- stack view -->
 
     <floatingview id="stack" title="&Stack.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-3"
       grippytooltiptext="&Stack.label;">
       <vbox id="stack-view-content" flex="1">
         <tree flex="2" id="stack-tree" persist="width"
@@ -196,8 +198,7 @@
 
     <!-- watch view -->
 
-    <floatingview id="watches" title="&Watch.label;" flex="1"
-     splitter-collapse="after" default-container="view-container-1">
+    <floatingview id="watches" title="&Watch.label;" flex="1">
       <vbox id="watch-view-content" flex="1">
         <tree flex="1" id="watch-tree" persist="height"
           ondblclick="console.views.watches.onDblClick(event);"
@@ -225,8 +226,7 @@
 
     <!-- windows view -->
 
-    <floatingview id="windows" title="&Windows.label;" flex="1"
-      splitter-collapse="after" default-container="view-container-1">
+    <floatingview id="windows" title="&Windows.label;" flex="1">
       <vbox id="windows-view-content" flex="1">
         <tree flex="1" id="windows-tree" persist="height"
           ondblclick="console.views.windows.onDblClick(event);"

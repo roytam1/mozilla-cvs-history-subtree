@@ -44,7 +44,7 @@ function CommandRecord (name, func, usage, help, label, flags, keystr)
     this.flags = flags;
     this._enabled = true;
     this.keyNodes = new Array();
-    this.keystr = keystr ? keystr : MSG_VAL_NA;
+    this.keystr = keystr;
     this.uiElements = new Array();
 
 }
@@ -97,7 +97,7 @@ function cr_scanusage()
     var capNext = false;
     
     this._usage = spec;
-    this.argNames = new Array();    
+    this.argNames = new Array();
 
     for (var i = 0; i < len; ++i)
     {
@@ -142,7 +142,7 @@ function cr_getdocs(flagFormatter)
     var str;
     str  = getMsg(MSN_DOC_COMMANDLABEL,
                   [this.label.replace("&", ""), this.name]) + "\n";
-    str += getMsg(MSN_DOC_KEY, this.keystr) + "\n";
+    str += getMsg(MSN_DOC_KEY, this.keystr ? this.keystr : MSG_VAL_NA) + "\n";
     str += getMsg(MSN_DOC_SYNTAX, [this.name, this.usage]) + "\n";
     str += MSG_DOC_NOTES + "\n";
     str += (flagFormatter ? flagFormatter(this.flags) : this.flags) + "\n\n";
@@ -153,17 +153,20 @@ function cr_getdocs(flagFormatter)
 
 CommandRecord.prototype.argNames = new Array();
 
-function CommandManager ()
+function CommandManager (defaultBundle)
 {
     this.commands = new Object();
+    this.defaultBundle = defaultBundle;
 }
 
 CommandManager.prototype.defineCommands =
 function cmgr_defcmds (cmdary)
 {
     var len = cmdary.length;
-    var bundle = cmdary.stringBundle;
     var commands = new Object();
+    var bundle =  ("stringBundle" in cmdary ?
+                   cmdary.stringBundle : 
+                   this.defaultBundle);
     
     for (var i = 0; i < len; ++i)
     {
@@ -207,7 +210,11 @@ function cmgr_instkeys (document, commands)
 {
     var parentElem = document.getElementById("dynamic-keys");
     if (!parentElem)
-        parentElem = document.createElement("dynamic-keys");
+    {
+        parentElem = document.createElement("keyset");
+        parentElem.setAttribute ("id", "dynamic-keys");
+        document.firstChild.appendChild (parentElem);
+    }
 
     if (!commands)
         commands = this.commands;
@@ -229,7 +236,7 @@ function cmgr_instkey (parentElem, command)
 {
     if (!command.keystr)
         return;
-    
+
     var ary = command.keystr.match (/(.*\s)?([\S]+)$/);
     if (!ASSERT(ary, "couldn't parse key string ``" + command.keystr +
                 "'' for command ``" + command.name + "''"))

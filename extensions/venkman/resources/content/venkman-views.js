@@ -33,26 +33,31 @@
  *
  */
 
+const DEFAULT_VURLS =
+(
+ ("x-vloc:/mainwindow?target=container&type=horizontal&id=outer; " +
+  ("x-vloc:/mainwindow/outer?target=container&type=vertical&id=vleft; " +
+   ("x-vloc:/mainwindow/vleft?target=view&id=windows; " +
+    "x-vloc:/mainwindow/vleft?target=view&id=breaks; " +
+    "x-vloc:/mainwindow/vleft?target=view&id=locals; " +
+    "x-vloc:/mainwindow/vleft?target=view&id=watches; ")
+   ) +
+  ("x-vloc:/mainwindow/outer?target=container&type=vertical&id=vright; " +
+   ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=topright; " +
+    ("x-vloc:/mainwindow/topright?target=view&id=source; " +
+     "x-vloc:/mainwindow/topright?target=view&id=scripts; ")) +
+   ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=bottomright; " +
+    ("x-vloc:/mainwindow/bottomright?target=view&id=session; " +
+     "x-vloc:/mainwindow/bottomright?target=view&id=stack"))
+   )
+  )
+ );
+
+
 function initViews(mainWindow)
 {
-    const DEFAULT_VURLS =
-        (
-         ("x-vloc:/mainwindow?target=container&type=vertical&id=vleft; " +
-          ("x-vloc:/mainwindow/vleft?target=view&id=windows; " +
-           "x-vloc:/mainwindow/vleft?target=view&id=breaks; " +
-           "x-vloc:/mainwindow/vleft?target=view&id=locals; " +
-           "x-vloc:/mainwindow/vleft?target=view&id=watches; ")) +
-         ("x-vloc:/mainwindow?target=container&type=vertical&id=vright; " +
-          ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=topright; " +
-           ("x-vloc:/mainwindow/topright?target=view&id=source; " +
-            "x-vloc:/mainwindow/topright?target=view&id=scripts; ")) +
-          ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=bottomright; " +
-           ("x-vloc:/mainwindow/bottomright?target=view&id=session; " +
-            "x-vloc:/mainwindow/bottomright?target=view&id=stack; "))
-          )
-         );
-
     console.addPref ("defaultVURLs", DEFAULT_VURLS);
+    console.addPref ("saveLayoutOnExit", true);
 
     const ATOM_CTRID = "@mozilla.org/atom-service;1";
     const nsIAtomService = Components.interfaces.nsIAtomService;
@@ -60,8 +65,24 @@ function initViews(mainWindow)
         Components.classes[ATOM_CTRID].getService(nsIAtomService);
 
     console.viewManager = new ViewManager (console.commandManager, mainWindow);
-    console.viewManager.realizeViews (console.views);
+    console.viewManager.realizeViews (console.views,
+                                      console.menuSpecs["popup:showhide"]);
     console.views = console.viewManager.views;
+
+    for (var viewId in console.views)
+    {
+        var toggleCommand = "toggle-" + viewId;
+        if (toggleCommand in console.commandManager.commands)
+        {
+            var entry = [toggleCommand,
+                    {
+                        type: "checkbox",
+                        checkedif: "'currentContent' in console.views." + viewId
+                    }];
+                         
+            console.menuSpecs["popup:showhide"].items.push(entry);
+        }
+    }
 }
 
 function destroyViews()
@@ -191,223 +212,22 @@ function initContextMenu (document, id)
     }
 }
 
-console.viewProxyIcon = new Object();
+console.viewProxyTitle = new Object();
 
-console.viewProxyIcon.onDragStart =
-Prophylactic(console.viewProxyIcon, vpxy_dragstart);
+console.viewProxyTitle.onDragStart =
+Prophylactic(console.viewProxyTitle, vpxy_dragstart);
 function vpxy_dragstart (event, transferData, action)
 {
-    var viewId = event.originalTarget.getAttribute("parentid");
-    if (!ASSERT(viewId in console.views, "unknown view " + viewId))
-        return false;
-    
-    var view = console.views[viewId];
-    
-    if (!ASSERT("currentContent" in view, "view is not visible " + viewId))
-        return false;
-    
-    var locationURL = console.viewManager.computeLocation (view.currentContent);
-    transferData.data = new TransferData();
-    transferData.data.addDataForFlavour("text/x-vloc", locationURL);
+    console.viewManager.onTitleDragStart (event, transferData, action);
     return true;
 }
 
 console.viewProxy = new Object();
 
-console.viewProxy.containerSequence = 0;
-
-console.viewProxy.findFloatingView =
-function vpxy_findview (element)
-{
-    while (element && element.localName != "floatingview")
-        element = element.parentNode;
-    
-    return element;
-}
-
-console.viewProxy.getDropDirection =
-function vpxy_getdrop (event, floatingView)
-{
-    var eventX = event.screenX - floatingView.boxObject.screenX;
-    var eventY = event.screenY - floatingView.boxObject.screenY;
-    var viewW = floatingView.boxObject.width;
-    var viewH = floatingView.boxObject.height;
-
-    var rv;
-    var dir;
-
-    var m = viewH / viewW;
-    if (eventY < m * eventX)
-        dir = -1;
-    else
-        dir = 1;
-    
-    m = -m;
-    
-    if (eventY < m * eventX + viewH)
-    {
-        if (dir < 0)
-            rv = "up";
-        else
-            rv = "left";
-    }
-    else
-    {
-        if (dir < 0)
-            rv = "right";
-        else
-            rv = "down";
-    }
-
-    return rv;
-}
-
 console.viewProxy.onDrop =
 function vpxy_drop (event, transferData, session)
 {
-    /* get next container, based on dir.  if no container is found,
-     * make one of the requested type. */
-    function getNextContainer (child, type)
-    {
-        var next = child.nextSibling;
-        
-        while (next && next.localName != "viewcontainer")
-            next = next.nextSibling;
-
-        if (next)
-            return next;
-        
-        var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
-        var last;
-        if (child.parentNode.localName == "viewcontainer")
-            last = child.parentNode.lastChild;
-        else
-            last = child;
-        var url = console.viewManager.computeLocation (last);
-        var parsedLocation = console.viewManager.parseLocation (url);
-
-        dd ("getNextContainer: making new container: " + type);
-        return console.viewManager.createContainer (parsedLocation, id, type);
-    };
-
-    function getPreviousContainer (child, type)
-    {
-        var prev = child.previousSibling;
-        
-        while (prev && prev.localName != "viewcontainer")
-            prev = prev.previousSibling;
-
-        if (prev)
-            return prev;
-        
-        var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
-        var first;
-        if (child.parentNode.localName == "viewcontainer")
-            first = child.parentNode.firstChild;
-        else
-            first = child;
-        var url = console.viewManager.computeLocation (first);
-        var parsedLocation = console.viewManager.parseLocation (url);
-        parsedLocation.before = parsedLocation.id;
-
-        dd ("getPreviousContainer: making new container: " + type);
-        return console.viewManager.createContainer (parsedLocation, id, type);
-    };
-            
-    var floatingView = this.findFloatingView (event.originalTarget);
-    var viewId = floatingView.getAttribute ("id");
-    var view = console.views[viewId];
-    if (!ASSERT("currentContent" in view, "view is not visible " + viewId))
-        return false;
-    
-    var parsedSource = console.viewManager.parseLocation(transferData.data);
-    if (!ASSERT(parsedSource, "unable to parse " + transferData.data))
-        return false;
-    
-    var currentContent = view.currentContent;
-    var currentContainer = currentContent.parentNode;
-    var targetURL = console.viewManager.computeLocation (currentContent);
-    var parsedTarget = console.viewManager.parseLocation(targetURL);
-    if (!ASSERT(parsedTarget, "unable to parse " + targetURL))
-        return false;
-
-    if (parsedSource.id == viewId)
-    {
-        dd ("wanker");
-        return false;
-    }
-
-    var direction = this.getDropDirection (event, floatingView);
-
-    var destContainer;
-    var destBefore;
-    
-    dd ("parent container is ``" + 
-        currentContent.parentNode.getAttribute("type") + "''");
-    
-    if (currentContent.parentNode.getAttribute("type") == "vertical")
-    {
-        switch (direction)
-        {
-            case "up":
-                destContainer = currentContainer;
-                destBefore = currentContent;
-                break;
-                
-            case "down":
-                dd ("down {");
-                destContainer = currentContainer;
-                destBefore = currentContent.nextSibling;
-                if (destBefore && destBefore.hasAttribute("grout"))
-                    destBefore = destBefore.nextSibling;
-                dd ("}");
-                break;
-                
-            case "left":
-                destContainer = getPreviousContainer (currentContainer,
-                                                      "horizontal");
-                break;
-                
-            case "right":
-                destContainer = getNextContainer (currentContainer,
-                                                  "horizontal");
-                break;
-        }
-    }
-    else
-    {
-        switch (direction)
-        {
-            case "up":
-                destContainer = getPreviousContainer (currentContainer,
-                                                      "vertical");
-                break;
-                
-            case "down":
-                destContainer = getNextContainer (currentContainer,
-                                                  "vertical");
-                break;
-                
-            case "left":
-                destContainer = currentContainer;
-                destBefore = currentContent;
-                break;
-                
-            case "right":
-                destContainer = currentContainer;
-                destBefore = currentContent.nextSibling;
-                if (destBefore && destBefore.hasAttribute("grout"))
-                    destBefore = destBefore.nextSibling;
-                break;
-        }
-    }
-
-    var dest = new Object();
-    dest.windowId = parsedTarget.windowId;
-    dest.containerId = destContainer.getAttribute ("id");
-    dest.before = destBefore ? destBefore.getAttribute("id") : null;
-    console.viewManager.moveView (dest, parsedSource.id);
-
+    console.viewManager.onViewDrop (event, transferData, session);
     /* when moving into a new view, the parent view won't repaint until
      * the mouse moves, or we do call the paintHack.
      */
@@ -418,45 +238,20 @@ function vpxy_drop (event, transferData, session)
 console.viewProxy.onDragOver =
 function vpxy_dragover (event, flavor, session)
 {
-    session.canDrop = false;
-    
-    if (flavor.contentType != "text/x-vloc")
-        return false;
-
-    var target = this.findFloatingView(event.originalTarget);
-    if (!target)
-        return false;
-
-    /* COVER YOUR EYES!! */
-    var data = nsTransferable.get (this.getSupportedFlavours(),
-                                   console.dnd.getDragData, true);
-    data = data.first.first;
-    
-    var parsedLocation = console.viewManager.parseLocation(data.data);
-    if (target.getAttribute("id") == parsedLocation.id)
-        return false;
-    
-    var proxyIcon = target.proxyIcon;
-    proxyIcon.setAttribute ("dragover", this.getDropDirection(event, target));
-
-    session.canDrop = true;
+    console.viewManager.onViewDragOver (event, flavor, session);
     return true;
 }
 
 console.viewProxy.onDragExit =
 function vpxy_dragexit (event, session)
 {
-    var target = this.findFloatingView(event.originalTarget);
-    if (target)
-        target.proxyIcon.removeAttribute ("dragover");
+    console.viewManager.onViewDragExit (event, session);
 }
         
 console.viewProxy.getSupportedFlavours =
 function vpxy_getflavors ()
 {
-    var flavours = new FlavourSet();
-    flavours.appendFlavour("text/x-vloc");
-    return flavours;
+    return console.viewManager.getSupportedFlavours();
 }
 
 console.views = new Object();
@@ -955,7 +750,7 @@ function lv_refresh()
 
 console.views.scripts = new XULTreeView ();
 
-const VIEW_SCRIPTS = "script";
+const VIEW_SCRIPTS = "scripts";
 console.views.scripts.viewId = VIEW_SCRIPTS;
 
 console.views.scripts.init =
@@ -1362,7 +1157,6 @@ function ss_init ()
     this.outputTable = null;
     this.outputWindow = null;
     this.outputDocument = null;
-    this.outputElement = null;
     this.intputElement = null;
 
     this.munger = new CMunger();
@@ -1499,7 +1293,6 @@ function ss_hide ()
     this.outputTable = null;
     this.outputWindow = null;
     this.outputDocument = null;
-    this.outputElement = null;
     this.intputElement = null;
 }
 
@@ -1817,6 +1610,212 @@ function sv_cellprops (index, colID, properties)
 
     return;
 }
+
+/*******************************************************************************
+ * Source2 View
+ *******************************************************************************/
+
+console.views.source2 = new Object();
+
+const VIEW_SOURCE2 = "source2";
+console.views.source2.viewId = VIEW_SOURCE2;
+
+console.views.source2.init =
+function ss_init ()
+{
+    console.addPref ("source2View.maxSourceCache", 10);
+    this.outputTBody = null;
+    this.outputTable = null;
+    this.outputWindow = null;
+    this.outputDocument = null;
+    this.sourceCache = new Array();
+}
+
+console.views.source2.getCachedTBody =
+function s2v_getcache (sourceText)
+{
+    for (var i in this.sourceCache)
+    {
+        if (this.sourceCache[i].sourceText == sourceText)
+        {
+            var tbody = this.sourceCache[i];
+            if (i > 0)
+            {
+                arrayRemoveAt(this.sourceCache[i]);
+                this.sourceCache.unshift(tbody);
+            }
+            return tbody;
+        }
+    }
+
+    return null;
+}
+
+console.views.source2.cacheTBody =
+function s2v_cache (tbody)
+{
+    this.sourceCache.unshift(tbody);
+
+    var max = console.prefs["source2View.maxSourceCache"];
+    if (this.sourceCache.length > max)
+        this.sourceCache.length = max;
+}
+
+console.views.source2.populateTBody =
+function s2v_poptbody (tbody, sourceText)
+{
+    const CHUNK_SIZE = 250;
+    const CHUNK_DELAY = 100;
+    
+    var source2View = this;
+    
+    function populateChunk (tbody, lines, start)
+    {
+        dd ("chunk " + start + " / " + lines.length);
+        
+        var stop = lines.length - start;
+        for (var i = 0; i < CHUNK_SIZE && i < stop; ++i)
+        {
+            var line = start + i;
+            var tr = htmlTR ({"id": line + 1});
+
+            var td = htmlTD ({"class": "source2-margin"});
+            tr.appendChild (td);
+            
+            td = htmlTD ({"class": "source2-linenumber"});
+            td.appendChild (htmlText(zeroPad(line + 1, 4)));
+            tr.appendChild (td);
+            
+            td = htmlTD ({"class": "source2-text"});
+            td.appendChild (htmlText(lines[line]));
+            tr.appendChild(td);
+            
+            tbody.appendChild (tr);
+        }
+
+        if (start + i < lines.length)
+        {
+            setTimeout (populateChunk, CHUNK_DELAY, tbody, lines, start + i);
+        }
+        else
+        {
+            source2View.outputTable.appendChild(tbody);
+            source2View.outputTBody = tbody;
+        }
+        
+    };
+    
+    this.outputTable.setAttribute ("style", "display: hidden;");
+    populateChunk (tbody, sourceText.lines, 0);
+}
+
+console.views.source2.displaySourceText =
+function s2v_display (sourceText)
+{
+    if (this.outputTBody && "sourceText" in this.outputTBody &&
+        this.outputTBody.sourceText == sourceText)
+    {
+        dd ("source2: already there");
+        return;
+    }
+
+    this.lastSourceText = sourceText;
+    if (!this.outputTable)
+        return;
+
+    if (this.outputTable.firstChild)
+        this.outputTable.removeChild(this.outputTable.firstChild);
+    
+    var tbody = this.getCachedTBody (sourceText);
+    if (!tbody)
+    {
+        tbody = htmlTBody ({id: "source2-tbody"});
+        tbody.sourceText = sourceText;
+        this.populateTBody (tbody, sourceText);
+        this.cacheTBody(tbody);
+    }
+    else
+    {
+        this.outputTable.appendChild(tbody);
+        this.outputTBody = tbody;
+    }
+}
+
+
+console.views.source2.hooks = new Object();
+
+console.views.source2.hooks["hook-window-resized"] =
+function ss_hookResize (e)
+{
+    //XXXconsole.views.source2.scrollDown();
+}
+
+console.views.source2.hooks["hook-display-sourcetext"] =
+console.views.source2.hooks["hook-display-sourcetext-soft"] =
+function s2v_hookDisplay (e)
+{
+    console.views.source2.displaySourceText (e.sourceText);
+}
+
+console.views.source2.onShow =
+function s2v_show ()
+{
+    var source2View = this;
+    function tryAgain ()
+    {
+        //dd ("source2 view trying again...");
+        source2View.onShow();
+    };
+
+    var doc = this.currentContent.ownerDocument;
+    
+    try
+    {
+        if ("contentDocument" in doc.getElementById("source2-iframe"))
+        {
+            this.outputDocument = 
+                doc.getElementById("source2-iframe").contentDocument;
+
+            var win = this.currentContent.ownerWindow;
+            for (var f = 0; f < win.frames.length; ++f)
+            {
+                if (win.frames[f].document == this.outputDocument)
+                {
+                    this.outputWindow = win.frames[f];
+                    break;
+                }
+            }
+
+            this.outputTable =
+                this.outputDocument.getElementById("source2-table");
+        }
+    }
+    catch (ex)
+    {
+        //dd ("caught exception showing source2 view...");
+        //dd (dumpObjectTree(ex));
+    }
+    
+    if (!this.outputDocument || !this.outputTable)
+    {
+        setTimeout (tryAgain, 500);
+        return;
+    }
+
+    if ("lastSourceText" in this)
+        this.displaySourceText (this.lastSourceText);
+}
+
+console.views.source2.onHide =
+function ss_hide ()
+{
+    this.outputTable.removeChild(this.outputTBody);
+    this.outputTBody = null;
+    this.outputTable = null;
+    this.outputWindow = null;
+    this.outputDocument = null;
+}
+
 
 /*******************************************************************************
  * Source View
@@ -2358,11 +2357,9 @@ function wv_init()
         [
          ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
          ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
-         ["watch-property", cmdWatchProperty,      0]
+         ["watch-property", cmdWatchProperty,      0],
         ];
 
-    this.cmdary.stringBundle = console.defaultBundle;
-    
     console.menuSpecs["context:watches"] = {
         getContext: this.getContext,
         items:

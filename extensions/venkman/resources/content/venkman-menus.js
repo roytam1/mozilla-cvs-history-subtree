@@ -35,11 +35,6 @@
 
 function initMenus()
 {    
-    function isVisible (view)
-    {
-        return "'currentContent' in console.views." + view;
-    };
-
     function onMenuCommand (event)
     {
         var commandName = event.originalTarget.getAttribute("commandname");
@@ -97,7 +92,12 @@ function initMenus()
          ["-"],
          ["toggle-chrome",
                  {type: "checkbox",
-                  checkedif: "console.enableChromeFilter"}]
+                  checkedif: "console.enableChromeFilter"}],
+         ["-"],
+         ["save-layout"],
+         ["toggle-save-layout",
+                 {type: "checkbox",
+                  checkedif: "console.prefs['saveLayoutOnExit']"}]
         ]
     };
     
@@ -168,25 +168,7 @@ function initMenus()
 
     console.menuSpecs["popup:showhide"] = {
         label: MSG_MNU_SHOWHIDE,
-        items:
-        [
-         ["toggle-breaks", 
-                 {type: "checkbox", checkedif: isVisible("breaks")}],
-         ["toggle-stack",
-                 {type: "checkbox", checkedif: isVisible("stack")}],
-         ["toggle-session",
-                 {type: "checkbox", checkedif: isVisible("session")}],
-         ["toggle-locals",
-                 {type: "checkbox", checkedif: isVisible("locals")}],
-         ["toggle-scripts",
-                 {type: "checkbox", checkedif: isVisible("scripts")}],
-         ["toggle-windows",
-                 {type: "checkbox", checkedif: isVisible("windows")}],
-         ["toggle-source",
-                 {type: "checkbox", checkedif: isVisible("source")}],
-         ["toggle-watch",
-                 {type: "checkbox", checkedif: isVisible("watches")}]
-        ]
+        items: [ /* filled by initViews() */ ]
     };
 }
 

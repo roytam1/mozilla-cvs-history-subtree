@@ -58,10 +58,17 @@ if (DEBUG) {
     var _dd_currentIndent = "";
     var _dd_lastDumpWasOpen = false;
     var _dd_timeStack = new Array();
+    var _dd_disableDepth = Number.MAX_VALUE;
+    var _dd_currentDepth = 0;
     dd = function _dd (str) {
              if (typeof str != "string") {
                  dumpln (str);
              } else if (str[str.length - 1] == "{") {
+                 ++_dd_currentDepth;
+                 if (_dd_currentDepth >= _dd_disableDepth)
+                     return;
+                 if (str.indexOf("OFF") == 0)
+                     _dd_disableDepth = _dd_currentDepth;
                  _dd_timeStack.push (new Date());
                  if (_dd_lastDumpWasOpen)
                      dump("\n");
@@ -69,6 +76,9 @@ if (DEBUG) {
                  _dd_currentIndent += _dd_singleIndent;
                  _dd_lastDumpWasOpen = true;
              } else if (str[0] == "}") {
+                 if (--_dd_currentDepth >= _dd_disableDepth)
+                     return;
+                 _dd_disableDepth = Number.MAX_VALUE;
                  var sufx = (new Date() - _dd_timeStack.pop()) / 1000 + " sec";
                  _dd_currentIndent = 
                      _dd_currentIndent.substr (0, _dd_currentIndent.length -
@@ -79,6 +89,8 @@ if (DEBUG) {
                      dumpln (_dd_pfx + _dd_currentIndent + str + " " + sufx);
                  _dd_lastDumpWasOpen = false;
              } else {
+                 if (_dd_currentDepth >= _dd_disableDepth)
+                     return;
                  if (_dd_lastDumpWasOpen)
                      dump ("\n");
                  dumpln (_dd_pfx + _dd_currentIndent + str);

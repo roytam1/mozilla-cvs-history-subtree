@@ -38,9 +38,9 @@ const CMD_NEED_STACK = 0x02; // command only works if we're stopped
 const CMD_NO_STACK   = 0x04; // command only works if we're *not* stopped
 const CMD_NO_HELP    = 0x08; // don't whine if there is no help for this command
 
-function initCommands()
+function initCommands(mainWindow)
 {
-    console.commandManager = new CommandManager(getCommandContext);
+    console.commandManager = new CommandManager(console.defaultBundle);
     
     var cmdary =
         [/* "real" commands */
@@ -89,10 +89,13 @@ function initCommands()
          ["propsd",         cmdProps,              CMD_CONSOLE],
          ["quit",           cmdQuit,               CMD_CONSOLE],
          ["reload",         cmdReload,             CMD_CONSOLE],
+         ["revert-layout",  cmdRevertLayout,       CMD_CONSOLE],
+         ["save-layout",    cmdSaveLayout,         CMD_CONSOLE],
          ["save-source",    cmdSaveSource,         CMD_CONSOLE],
          ["save-profile",   cmdSaveProfile,        CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
          ["toggle-float",   cmdToggleFloat,        CMD_CONSOLE],
+         ["toggle-save-layout", cmdToggleSaveLayout, CMD_CONSOLE],
          ["toggle-view",    cmdToggleView,         CMD_CONSOLE],
          ["startup-init",   cmdStartupInit,        CMD_CONSOLE],
          ["step",           cmdStep,               CMD_CONSOLE | CMD_NEED_STACK],
@@ -112,14 +115,6 @@ function initCommands()
          ["em-ignore",      "emode ignore",         0],
          ["em-trace",       "emode trace",          0],
          ["em-break",       "emode break",          0],
-         ["toggle-breaks",  "toggle-view breaks",   0],
-         ["toggle-locals",  "toggle-view locals",   0],
-         ["toggle-scripts", "toggle-view scripts",  0],
-         ["toggle-session", "toggle-view session",  0],
-         ["toggle-source",  "toggle-view source",   0],
-         ["toggle-stack",   "toggle-view stack",    0],
-         ["toggle-watch",   "toggle-view watches",  0],
-         ["toggle-windows", "toggle-view windows",  0],
          ["tm-cycle",       "tmode cycle",          0],
          ["tm-ignore",      "tmode ignore",         0],
          ["tm-trace",       "tmode trace",          0],
@@ -162,6 +157,10 @@ function initCommands()
     console.commandManager.argTypes.__aliasTypes__ (["scriptText", "windowFlags",
                                                      "expression", "prefValue"],
                                                      "rest");
+
+    console.commandManager.installKeys(mainWindow.document,
+                                       console.commandManager.commands);
+
 }
 
 /**
@@ -230,6 +229,14 @@ function formatCommandFlags (f)
         ary.push(MSG_NOTE_NOSTACK);
     
     return ary.length ? ary.join ("\n") : MSG_VAL_NA;
+}
+
+function getToggle (toggle, currentState)
+{
+    if (toggle == "toggle")
+        toggle = !currentState;
+
+    return toggle;
 }
 
 /********************************************************************************
@@ -307,9 +314,7 @@ function cmdChromeFilter (e)
     
     if (e.toggle != null)
     {
-        if (e.toggle == "toggle")
-            e.toggle = !currentState;
-
+        e.toggle = getToggle (e.toggle, currentState);
         if (e.toggle != currentState)
         {
             if (e.toggle)
@@ -999,15 +1004,8 @@ function cmdPPrint (e)
     
     if (e.toggle != null)
     {
-        if (e.toggle == "toggle")
-        {
-            e.toggle = console.prefs["prettyprint"] = 
-                !console.prefs["prettyprint"];
-        }
-        else
-        {
-            console.prefs["prettyprint"] = e.toggle;
-        }
+        e.toggle = getToggle (e.toggle, console.prefs["prettyprint"]);
+        console.prefs["prettyprint"] = e.toggle;
         
         var tb = document.getElementById("maintoolbar:toggle-pprint");
         if (e.toggle)
@@ -1067,13 +1065,17 @@ function cmdPref (e)
 
 function cmdProfile(e)
 {
-    if (e.toggle && e.toggle == "toggle")
-        e.toggle = !(console.jsds.flags & COLLECT_PROFILE_DATA);
-    
+    var currentState = console.jsds.flags & COLLECT_PROFILE_DATA;
+
     if (e.toggle != null)
+    {
+        e.toggle = getToggle (e.toggle, currentState);
         setProfileState(e.toggle);
+    }
     else
-        e.toggle = console.jsds.flags & COLLECT_PROFILE_DATA;
+    {
+        e.toggle = currentState;
+    }
     
     feedback (e, getMsg(MSN_PROFILE_STATE,
                         [e.toggle ? MSG_VAL_ON : MSG_VAL_OFF]));
@@ -1120,6 +1122,19 @@ function cmdReload()
         disableReloadCommand();
         console.currentSourceText.reloadSource(cb);
     }
+}
+
+function cmdRevertLayout ()
+{
+    console.prefs["defaultVURLs"] = DEFAULT_VURLS;
+    console.viewManager.destroyWindows();
+    console.viewManager.reconstituteVURLs (DEFAULT_VURLS.split (/\s*;\s*/));
+}
+
+function cmdSaveLayout (e)
+{
+    var ary = console.viewManager.getLayoutState ();
+    console.prefs["defaultVURLs"] = ary.join ("; ");
 }
 
 function cmdSaveSource (e)
@@ -1256,10 +1271,8 @@ function cmdStartupInit (e)
 {
     if (e.toggle != null)
     {
-        if (e.toggle == "toggle")
-            console.jsds.initAtStartup = !console.jsds.initAtStartup;
-        else
-            console.jsds.initAtStartup = e.toggle;
+        e.toggle = getToggle (e.toggle, console.jsds.initAtStartup);
+        console.jsds.initAtStartup = e.toggle;
     }
 
     display (getMsg(MSN_IASMODE,
@@ -1380,6 +1393,13 @@ function cmdToggleFloat (e)
     dispatch ("move-view", { viewId: e.viewId, locationUrl: url });
 }
 
+function cmdToggleSaveLayout (e)
+{
+    var state = !console.prefs["saveLayoutOnExit"];
+    console.prefs["saveLayoutOnExit"] = state;
+    feedback (e, getMsg (MSN_SAVE_LAYOUT, state ? MSG_VAL_ON : MSG_VAL_OFF));
+}
+                     
 function cmdToggleView (e)
 {
     if (!e.viewId in console.views || typeof console.views[e.viewId] != "object")

@@ -52,7 +52,7 @@
             <xul:toolbarbutton class="view-title-pop"
               xbl:inherits="parentid=id containertype"
               oncommand="console.dispatch('toggle-float', { viewId: this.getAttribute('parentid')});"
-              ondraggesture="console.dnd.startDrag(event, console.viewProxyIcon);"/>
+              ondraggesture="console.dnd.startDrag(event, console.viewProxyTitle);"/>
             <xul:hbox class="view-title-grippy" flex="1">
               <xul:hbox flex="1" class="view-title-margin-left"/>
               <xul:label id="view-title-text" xbl:inherits="value=title"/>

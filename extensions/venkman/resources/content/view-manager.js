@@ -50,6 +50,7 @@ function ViewManager(commandManager, mainWindow)
 {
     this.commandManager = commandManager;    
     this.floaterSequence = 0;
+    this.containerSequence = 0;
     this.windows = new Object();
     this.mainWindow = mainWindow;
     this.windows[VMGR_MAINWINDOW] = mainWindow;
@@ -73,9 +74,22 @@ function vmgr_realizeviews (views)
 ViewManager.prototype.realizeView =
 function vmgr_realizeview (view)
 {
+    var entry;
     var key = view.viewId;
     this.views[key] = view;
     view.init();
+    
+    var toggleName = "toggle-" + key;
+    if (!(key in this.commandManager.commands))
+    {
+        entry = [toggleName, "toggle-view " + key, 0];
+        
+        if ("cmdary" in view)
+            view.cmdary.unshift(entry);
+        else
+            view.cmdary = [entry];
+    }
+    
     if ("cmdary" in view)
     {
         var commands = this.commandManager.defineCommands(view.cmdary);
@@ -109,6 +123,16 @@ function vmgr_getwindow (windowId)
 ViewManager.prototype.createWindow =
 function vmgr_createwindow (windowId, cb)
 {
+    var viewManager = this;
+    
+    function onWindowLoaded (window)
+    {
+        var cm = viewManager.commandManager;
+        cm.installKeys (window.document, cm.commands);
+        if (typeof cb == "function")
+            cb(window);
+    };
+    
     if (!ASSERT(!(windowId in this.windows), "window " + windowId +
                 " already exists"))
     {
@@ -117,7 +141,8 @@ function vmgr_createwindow (windowId, cb)
     
     var win = openDialog ("chrome://venkman/content/venkman-floater.xul?id=" +
                           escape(windowId), "_blank",
-                          "chrome,menubar,toolbar,resizable,dialog=no", cb);
+                          "chrome,menubar,toolbar,resizable,dialog=no",
+                          onWindowLoaded);
     this.windows[windowId] = win;
     return win;
 }
@@ -144,16 +169,33 @@ function vmgr_destroywindow (windowId)
     
     for (var viewId in this.views)
     {
-        var view = this.views[viewId];
-        
-        if ("currentContent" in view &&
-            view.currentContent.ownerDocument == document)
+        try
         {
-            this.moveViewURL(VMGR_VURL_HIDDEN, viewId);
+            var view = this.views[viewId];
+            
+            if ("currentContent" in view &&
+                view.currentContent.ownerDocument == document)
+            {
+                this.moveViewURL(VMGR_VURL_HIDDEN, viewId);
+            }
+        }
+        catch (ex)
+        {
+            dd ("caught exception while moving view ``" + ex + "''");
         }
     }
 
-    delete this.windows[windowId];
+    var container = document.getElementById (VMGR_DEFAULT_CONTAINER);
+    var child = container.firstChild;
+    while (child)
+    {
+        var next = child.nextSibling;
+        container.removeChild (child);
+        child = next;
+    }
+
+    if (windowId != VMGR_MAINWINDOW)
+        delete this.windows[windowId];
 }
 
 ViewManager.prototype.createContainer =
@@ -176,7 +218,7 @@ function vmgr_createcontainer (parsedLocation, containerId, type)
         container.setAttribute ("width", parsedLocation.width);
     if ("height" in parsedLocation)
         container.setAttribute ("height", parsedLocation.height);
-
+    container.setAttribute ("collapsed", "true");
     var before;
     if ("before" in parsedLocation)
         before = getChildById(parentContainer, parsedLocation.before);
@@ -263,6 +305,21 @@ function getwindowid (window)
     return null;
 }   
 
+ViewManager.prototype.getLayoutState =
+function vmgr_getlayout ()
+{
+    var ary = new Array();
+    
+    for (var w in this.windows)
+    {
+        var container = 
+            this.windows[w].document.getElementById (VMGR_DEFAULT_CONTAINER);
+        this.getContainerContents (container, true, ary);
+    }
+    
+    return ary;
+}        
+        
 ViewManager.prototype.getContainerContents =
 function vmgr_getcontents (container, recurse, ary)
 {
@@ -272,19 +329,29 @@ function vmgr_getcontents (container, recurse, ary)
     
     while (child)
     {
-        ary.push (this.computeLocation(child));
-        if (child.localName == "viewcontainer" && recurse)
-            this.getContainerContents(child, true, ary);
+        if (child.localName == "viewcontainer" && "viewCount" in child &&
+            child.viewCount > 0)
+        {
+            ary.push (this.computeLocation(child));
+            if (recurse)
+                this.getContainerContents(child, true, ary);
+        }
+        else if (child.localName == "floatingview")
+        {
+            ary.push (this.computeLocation(child));
+        }
         child = child.nextSibling;
     }
+
+    return ary;
 }
 
 ViewManager.prototype.reconstituteVURLs =
 function vmgr_remake (ary)
 {
-    for (i in ary)
+    for (var i = 0; i < ary.length; ++i)
     {
-        var parsedLocation = console.viewManager.parseLocation (ary[i]);
+        var parsedLocation = this.parseLocation (ary[i]);
         if (!ASSERT(parsedLocation, "can't parse " + ary[i]) ||
             !ASSERT("target" in parsedLocation, "no target in " + ary[i]) ||
             !ASSERT("id" in parsedLocation, "no id in " + ary[i]))
@@ -316,30 +383,23 @@ function vmgr_getlocation (element)
     if (!element.parentNode)
         return VMGR_VURL_HIDDEN;
     
-    var result = VMGR_VURL_SCHEME;
-
+    var target;
+    var containerId;
+    var type;
+    
     if (element.localName == "floatingview")
     {
+        target = "view";
         if (element.parentNode.localName != "viewcontainer")
-            return VMGR_VURL_HIDDEN;
-
-        result += ("/" + this.getWindowId(element.ownerWindow) +
-                   "/" + element.parentNode.getAttribute("id") +
-                   "?target=view" +
-                   "&id=" + element.getAttribute("id") +
-                   "&height=" + element.getAttribute("height") +
-                   "&width=" + element.getAttribute("width"));
-
+            containerId = VMGR_HIDDEN;
+        else
+            containerId = element.parentNode.getAttribute("id");
     }
     else if (element.localName == "viewcontainer")
     {
-        result += ("/" + this.getWindowId(element.ownerWindow) +
-                   "/" + element.parentNode.getAttribute("id") +
-                   "?target=container" +
-                   "&type=" + element.getAttribute("type") +
-                   "&id=" + element.getAttribute("id") +
-                   "&height=" + element.getAttribute("height") +
-                   "&width=" + element.getAttribute("width"));
+        target      = "container";
+        containerId = element.parentNode.getAttribute("id");
+        type        = element.getAttribute("type");
     }
     else
     {
@@ -347,15 +407,46 @@ function vmgr_getlocation (element)
         return null;
     }
 
-    var beforeNode = element.nextSibling;
-    if (beforeNode)
+    var before;
+    
+    if (containerId != VMGR_HIDDEN)
     {
-        if (beforeNode.hasAttribute("grout"))
-            beforeNode = beforeNode.nextSibling;
-        
+        var beforeNode = element.nextSibling;
+        if (beforeNode)
+        {
+            if (beforeNode.hasAttribute("grout"))
+                beforeNode = beforeNode.nextSibling;
+            
         if (ASSERT(beforeNode, "nothing before the grout?"))
-            result += "&before=" + beforeNode.getAttribute("id");
+            before = beforeNode.getAttribute("id");
+        }
     }
+
+    var windowId = this.getWindowId(element.ownerWindow);
+    var id       = element.getAttribute("id");
+    var height   = element.getAttribute("height");
+    var width    = element.getAttribute("width");
+    var url      = VMGR_VURL_SCHEME + "/" + windowId + "/" + containerId +
+        "?target=" + target + "&id=" + id;
+    if (height)
+        url += "&height=" + height;
+    if (width)
+        url += "&width=" + width;
+    if (before)
+        url += "&before=" + before;
+    if (type)
+        url += "&type=" + type;
+        
+    var result = new String(url);
+    result.url = url;
+    result.windowId = windowId;
+    result.containerId = containerId;
+    result.target = target;
+    result.id = id;
+    result.height = height;
+    result.width = width;
+    result.before = before;
+    result.type = type;
 
     return result;
 }
@@ -376,12 +467,18 @@ ViewManager.prototype.getLocation =
 function vmgr_getlocation (parsedLocation)
 {
     if (parsedLocation.windowId == VMGR_HIDDEN)
+    {
+        dd ("getLocation: location is hidden");
         return null;
+    }
     
     var window = this.getWindowById(parsedLocation.windowId);
-    if (!window)
+    if (!ASSERT(window, "unknown window id " + parsedLocation.windowId))
         return false;
 
+    if (!parsedLocation.containerId)
+        parsedLocation.containerId = VMGR_DEFAULT_CONTAINER;
+    
     var container = window.document.getElementById(parsedLocation.containerId);
     return container;
 }    
@@ -425,8 +522,6 @@ function vmgr_moveurl (locationURL, viewId)
 ViewManager.prototype.moveView =
 function vmgr_move (parsedLocation, viewId)
 {
-    dd ("moving: ``" + viewId + "''\n" + dumpObjectTree(parsedLocation));
-    
     var viewManager = this;
     
     function moveContent (content, newParent, before)
@@ -438,7 +533,7 @@ function vmgr_move (parsedLocation, viewId)
             content.originalParent = content.parentNode;
         }
         
-        dd ("moveContent {");
+        dd ("OFF moveContent {");
         
         var previousParent = content.parentNode;
         previousParent.removeChild(content);
@@ -492,7 +587,6 @@ function vmgr_move (parsedLocation, viewId)
             beforeNode = window.document.getElementById(parsedLocation.before);
             if (beforeNode && beforeNode.parentNode.localName != "viewcontainer")
             {
-                dd ("before is not visible");
                 beforeNode = null;
             }
         }
@@ -546,7 +640,6 @@ function vmgr_move (parsedLocation, viewId)
             }
         }
         
-        dd ("moving to new location");
         moveContent (content, container, beforeNode);
         view.currentContent = content;
         
@@ -554,7 +647,7 @@ function vmgr_move (parsedLocation, viewId)
             view.onShow();
     };
 
-    var view = console.views[viewId];
+    var view = this.views[viewId];
     var currentContent = ("currentContent" in view ?
                           view.currentContent : null);
     if (currentContent)
@@ -565,7 +658,7 @@ function vmgr_move (parsedLocation, viewId)
 }
 
 ViewManager.prototype.groutContainer =
-function vmgr_groutcontainer (container)
+function vmgr_groutcontainer (container, noclose)
 {
     var type = container.getAttribute ("type");
     
@@ -575,14 +668,14 @@ function vmgr_groutcontainer (container)
         return;
     }
     
-    this.groutFunctions[type](this, container);
+    this.groutFunctions[type](this, container, noclose);
 }
 
 ViewManager.prototype.groutFunctions = new Object();
 
 ViewManager.prototype.groutFunctions["horizontal"] =
 ViewManager.prototype.groutFunctions["vertical"] =
-function vmgr_groutbox (viewManager, container)
+function vmgr_groutbox (viewManager, container, noclose)
 {
     function closeWindow (window)
     {
@@ -603,7 +696,7 @@ function vmgr_groutbox (viewManager, container)
     ASSERT(container.localName == "viewcontainer",
            "Attempt to grout something that is not a view container");
 
-    dd ("grouting: " + container.getAttribute("id") +" {");
+    dd ("OFF grouting: " + container.getAttribute("id") +" {");
 
     var lastViewCount = ("viewCount" in container) ? container.viewCount : 0;
     container.viewCount = 0;
@@ -669,12 +762,11 @@ function vmgr_groutbox (viewManager, container)
     {
         dd ("container is empty, hiding");
         container.setAttribute("collapsed", "true");
-        if (container.parentNode.localName == "window" &&
+        if (!noclose && container.parentNode.localName == "window" &&
             container.ownerWindow != viewManager.mainWindow &&
             !("isClosing" in container.ownerWindow) &&
             lastViewCount > 0)
         {
-            //container.ownerWindow.close();
             setTimeout (closeWindow, 1, container.ownerWindow);
             dd ("} no children, closing window");
             return;
@@ -692,4 +784,247 @@ function vmgr_groutbox (viewManager, container)
     dd ("} " + container.getAttribute("id") +
         " view count: " + container.viewCount);
 
+}
+
+ViewManager.prototype.findFloatingView =
+function vmgr_findview (element)
+{
+    while (element && element.localName != "floatingview")
+        element = element.parentNode;
+    
+    return element;
+}
+
+ViewManager.prototype.getDropDirection =
+function vmgr_getdropdir (event, floatingView)
+{
+    var eventX = event.screenX - floatingView.boxObject.screenX;
+    var eventY = event.screenY - floatingView.boxObject.screenY;
+    var viewW = floatingView.boxObject.width;
+    var viewH = floatingView.boxObject.height;
+
+    var rv;
+    var dir;
+
+    var m = viewH / viewW;
+    if (eventY < m * eventX)
+        dir = -1;
+    else
+        dir = 1;
+    
+    m = -m;
+    
+    if (eventY < m * eventX + viewH)
+    {
+        if (dir < 0)
+            rv = "up";
+        else
+            rv = "left";
+    }
+    else
+    {
+        if (dir < 0)
+            rv = "right";
+        else
+            rv = "down";
+    }
+
+    return rv;
+}
+
+ViewManager.prototype.onTitleDragStart =
+function vmgr_dragstart (event, transferData, action)
+{
+    var floatingView = this.findFloatingView (event.target);
+    if (!floatingView)
+        return false;
+    
+    var viewId = floatingView.getAttribute("id");
+    if (!ASSERT(viewId in this.views, "unknown view " + viewId))
+        return false;
+    
+    var view = this.views[viewId];
+    
+    if (!ASSERT("currentContent" in view, "view is not visible " + viewId))
+        return false;
+    
+    var locationURL = this.computeLocation (view.currentContent);
+    transferData.data = new TransferData();
+    transferData.data.addDataForFlavour("text/x-vloc", locationURL);
+
+    return true;
+}
+
+ViewManager.prototype.getSupportedFlavours =
+function vmgr_nicename ()
+{
+    var flavours = new FlavourSet();
+    flavours.appendFlavour("text/x-vloc");
+    return flavours;
+}
+
+ViewManager.prototype.onViewDragOver =
+function vmgr_dragover (event, flavor, session)
+{
+    session.canDrop = false;
+    
+    if (flavor.contentType != "text/x-vloc")
+        return false;
+
+    var target = this.findFloatingView(event.originalTarget);
+    if (!target)
+        return false;
+
+    /* COVER YOUR EYES!! */
+    var data = nsTransferable.get (this.getSupportedFlavours(),
+                                   nsDragAndDrop.getDragData, true);
+    data = data.first.first;
+    
+    var parsedLocation = this.parseLocation(data.data);
+    if (target.getAttribute("id") == parsedLocation.id)
+        return false;
+    
+    var proxyIcon = target.proxyIcon;
+    proxyIcon.setAttribute ("dragover", this.getDropDirection(event, target));
+
+    session.canDrop = true;
+    return true;
+}
+
+ViewManager.prototype.onViewDragExit =
+function vmgr_dragexit (event, session)
+{
+    var target = this.findFloatingView(event.originalTarget);
+    if (target)
+        target.proxyIcon.removeAttribute ("dragover");
+}
+
+ViewManager.prototype.onViewDrop =
+function vmgr_ondrop (event, transferData, session)
+{
+    var viewManager = this;
+    
+    function callProcessDrop ()
+    {
+        viewManager.processDrop (sourceView, targetView, direction);
+    };
+    
+    var floatingView = this.findFloatingView (event.originalTarget);
+    var viewId = floatingView.getAttribute ("id");
+    var targetView = this.views[viewId];
+    if (!ASSERT("currentContent" in targetView, "view is not visible " + viewId))
+        return false;
+
+    var parsedSource = this.parseLocation(transferData.data);
+    if (!ASSERT(parsedSource, "unable to parse " + transferData.data))
+        return false;
+    
+    if (parsedSource.id == viewId)
+    {
+        dd ("wanker");
+        return false;
+    }
+
+    var sourceView = this.views[parsedSource.id];
+    
+    var direction = this.getDropDirection (event, floatingView);
+
+    /* performing the actual drop action may involve moving DOM nodes
+     * that are involved in the actual drag-drop operation.  Mozilla
+     * doesn't like it when you do that before drag-drop is done, so we
+     * call ourselves back on a timer, to allow the drag-drop wind down before
+     * modifying the DOM.
+     */
+    setTimeout (callProcessDrop, 1);
+    return true;
+}
+
+ViewManager.prototype.processDrop =
+function vmgr_dewdropinn (sourceView, targetView, direction)
+{    
+    var viewManager = this;
+
+    function reparent (child, type)
+    {
+        if (!ASSERT(child.parentNode.localName == "viewcontainer",
+                    "can't reparent child with unknown parent"))
+        {
+            return null;
+        }
+        
+        var childLocation = viewManager.computeLocation(child);
+        var id = "vm-container-" + ++viewManager.containerSequence;
+        
+        var container = viewManager.createContainer (childLocation, id, type);
+        var newLocation = { windowId: parsedTarget.windowId, containerId: id };
+        viewManager.moveView (newLocation, childLocation.id);
+
+        return container;
+    };
+    
+    var destContainer;
+    var destBefore;
+    var currentContent   = targetView.currentContent;
+    var parsedTarget     = this.computeLocation (currentContent);
+    var currentContainer = currentContent.parentNode;
+    var parentType       = currentContainer.getAttribute("type");
+    
+    if (parentType == "vertical")
+    {
+        switch (direction)
+        {
+            case "up":
+                destContainer = currentContainer;
+                destBefore = currentContent;
+                break;
+                
+            case "down":
+                destContainer = currentContainer;
+                destBefore = currentContent.nextSibling;
+                if (destBefore && destBefore.hasAttribute("grout"))
+                    destBefore = destBefore.nextSibling;
+                break;
+                
+            case "left":
+                destContainer = reparent (currentContent, "horizontal");
+                destBefore = currentContent;
+                break;
+                
+            case "right":
+                destContainer = reparent (currentContent, "horizontal");
+                break;
+        }
+    }
+    else
+    {
+        switch (direction)
+        {
+            case "up":
+                destContainer = reparent (currentContent, "vertical");
+                destBefore = currentContent;
+                break;
+                
+            case "down":
+                destContainer = reparent (currentContent, "vertical");
+                break;
+                
+            case "left":
+                destContainer = currentContainer;
+                destBefore = currentContent;
+                break;
+                
+            case "right":
+                destContainer = currentContainer;
+                destBefore = currentContent.nextSibling;
+                if (destBefore && destBefore.hasAttribute("grout"))
+                    destBefore = destBefore.nextSibling;
+                break;
+        }
+    }
+
+    var dest = new Object();
+    dest.windowId = parsedTarget.windowId;
+    dest.containerId = destContainer.getAttribute ("id");
+    dest.before = destBefore ? destBefore.getAttribute("id") : null;
+    this.moveView (dest, sourceView.viewId);
 }

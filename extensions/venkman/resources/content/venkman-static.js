@@ -431,7 +431,7 @@ function init()
 
     initMsgs();
     initPrefs();
-    initCommands();
+    initCommands(window);
 
     /* Some commonly used commands, cached now, for use with dispatchCommand. */
     var cm = console.commandManager;
@@ -516,6 +516,9 @@ function init()
 
 function destroy ()
 {
+    if (console.prefs["saveLayoutOnExit"])
+        dispatch ("save-layout");
+    
     destroyViews();
     destroyHandlers();
     detachDebugger();
