@@ -683,7 +683,7 @@ PRINTDLG::~PRINTDLG ()
     delete mPQBuf [cnt];
 }
 
-PRINTDLG::RefreshPrintQueue ()
+void PRINTDLG::RefreshPrintQueue()
 {
   ULONG newQueueCount = 0;
   ULONG TotalQueues = 0;
