@@ -105,7 +105,7 @@ namespace JS2Runtime {
                 Enumerable  = 0x1000, 
                 Public      = 0x2000, 
                 Private     = 0x4000, 
-                Final       = 0x8000, 
+                Final       = 0x8000
         };
 
         

@@ -536,8 +536,8 @@ JSInstance *JSType::newInstance(Context *cx)
     return result;
 }
 
-// this function gets executed each time a new instance is created
-void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
+// the function 'f' gets executed each time a new instance is created
+void JSType::setInstanceInitializer(Context * /*cx*/, JSFunction *f)
 {
     mInstanceInitializer = f;
 }
