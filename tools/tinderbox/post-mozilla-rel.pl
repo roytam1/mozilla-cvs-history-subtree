@@ -49,6 +49,35 @@ sub shorthost {
   return $host;
 }
 
+sub stagesymbols {
+  my $builddir = shift;
+  my $symbolstagedir = shift;
+  TinderUtils::run_shell_command "rm -rf $builddir/../symbols";
+  TinderUtils::run_shell_command "mkdir $builddir/../symbols";
+  TinderUtils::run_shell_command "make -C $builddir deliver";
+  TinderUtils::run_shell_command "mv $builddir/dist/symbols $builddir/../symbols";
+  
+}
+
+sub maketalkbackglue {
+  my $builddir = shift;
+  # should go in config
+  my $moforoot = "leaf\%mozilla.org\@cvs.mozilla.org:/mofo"; 
+  TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co -d fullsoft talkback/fullsoft";
+  TinderUtils::run_shell_command "cd $builddir/fullsoft; make";
+}
+
+sub processtalkback {
+  # first argument is whether to make a new talkback build on server
+  # second argument is where we're building our tree
+  my $uploadsymbols = shift;
+  my $builddir      = shift;   
+  # put symbols in builddir/../symbols
+  stagesymbols($builddir, "$builddir/../symbols"); 
+  maketalkbackglue($builddir);
+
+}
+
 sub packit {
   my ($packaging_dir, $package_location, $url, $stagedir) = @_;
   my $status;
@@ -182,7 +211,7 @@ sub reportRelease {
                         "$Settings::OS $Settings::ProductName Build available at: \n" .
                         "$url \n";
     open(TMPMAIL, ">tmpmail.txt");
-    print TMPMAIL "$donemessage \n";
+    prunt TMPMAIL "$donemessage \n";
     close(TMPMAIL);
 
     TinderUtils::print_log ("$donemessage \n");
@@ -279,6 +308,8 @@ sub main {
     $cachebuild = 0;
   }
 
+  processtalkback($cachebuild, $objdir);
+
   $upload_directory = $package_location . "/" . $upload_directory;
 
   unless (packit($package_creation_path,$package_location,$url_path,$upload_directory)) {
@@ -290,7 +321,7 @@ sub main {
     return returnStatus("Pushing package $upload_directory failed", ("testfailed"));
   }
 
-  if (cacheit($c_hour,$c_yday,$Settings::build_hour,$last_build_day)) { 
+  if ($cachebuild) { 
     open BLAH, ">last-built"; 
     close BLAH;
     return reportRelease ("$url_path\/", "$datestamp");

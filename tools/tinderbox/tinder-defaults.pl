@@ -7,7 +7,7 @@ $DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
-$BuildDepend       = 1;      # Depend or Clobber
+$BuildDepend       = 0;      # Depend or Clobber
 $BuildDebug        = 0;      # Debug or Opt (Darwin)
 $ReportStatus      = 1;      # Send results to server, or not
 $ReportFinalStatus = 1;      # Finer control over $ReportStatus.
@@ -22,7 +22,7 @@ $CleanProfile             = 0;
 $ResetHomeDirForTests     = 1;
 $ProductName              = "Mozilla";
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 $JavaTest                 = 0;
@@ -142,6 +142,23 @@ $ShellOverride = '';
 
 # allow override of timezone value (for win32 POSIX::strftime)
 $Timezone = '';
+
+# Release build options
+$ReleaseBuild  = 1;
+$build_hour    = "8";
+$package_creation_path = "/xpinstall/packager";
+$ssh_version   = "1";
+$ssh_user      = "cltbld -i ~/.ssh/cltbld/.ssh/identity";
+$ssh_server    = "stage.mozilla.org";
+$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
+$tbox_ftp_path = $ftp_path;
+$tbox_url_path = $url_path;
+$milestone     = "trunk";
+$notify_list   = "leaf\@mozilla.org";
+$stub_installer = 1;
+$sea_installer = 1;
+$archive       = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
