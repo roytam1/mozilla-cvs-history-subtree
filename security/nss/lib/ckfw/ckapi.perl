@@ -70,10 +70,7 @@ $copyright = '/* THIS IS A GENERATED FILE */
 
 $count = -1;
 $i = 0;
-
-open(INPUT, "<$ARGV[0]") || die "Can't open $ARGV[0]: $!";
-
-while(<INPUT>) {
+while(<>) {
   s/^((?:[^"#]+|"[^"]*")*)(\s*#.*$)/$1/;
   next if (/^\s*$/);
 
@@ -99,8 +96,6 @@ while(<INPUT>) {
     }
   }
 }
-
-close INPUT;
 
 # dodump();
 doprint();

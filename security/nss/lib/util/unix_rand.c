@@ -76,8 +76,7 @@ static size_t CopyLowBits(void *dst, size_t dstlen, void *src, size_t srclen)
     return dstlen;
 }
 
-#if defined(SCO) || defined(UNIXWARE) || defined(BSDI) || defined(FREEBSD) \
-    || defined(NETBSD)
+#if defined(SCO) || defined(UNIXWARE) || defined(BSDI)
 #include <sys/times.h>
 
 #define getdtablesize() sysconf(_SC_OPEN_MAX)
@@ -264,6 +263,8 @@ GiveSystemInfo(void)
 
 #if defined(__linux)
 #include <linux/kernel.h>
+
+int putenv(const char *);
 
 static size_t
 GetHighResClock(void *buf, size_t maxbytes)

@@ -46,14 +46,10 @@
 #include "hasht.h"
 #include "secoid.h"
 #include "pkcs7t.h"
-#include "cmsreclist.h"
 
 #include "certdb.h"
 #include "secerr.h"
 #include "sslerr.h"
-
-#define NSSCKT_H /* we included pkcs11t.h, so block ckt.h from including nssckt.h */
-#include "ckt.h"
 
 #define PK11_SEARCH_CHUNKSIZE 10
 
@@ -399,126 +395,6 @@ CERTCertificate
     return cert;
 }
 
-CK_TRUST
-pk11_GetTrustField(PK11SlotInfo *slot, PRArenaPool *arena, 
-                   CK_OBJECT_HANDLE id, CK_ATTRIBUTE_TYPE type)
-{
-  CK_TRUST rv = 0;
-  SECItem item;
-
-  item.data = NULL;
-  item.len = 0;
-
-  if( SECSuccess == PK11_ReadAttribute(slot, id, type, arena, &item) ) {
-    PORT_Assert(item.len == sizeof(CK_TRUST));
-    PORT_Memcpy(&rv, item.data, sizeof(CK_TRUST));
-    /* Damn, is there an endian problem here? */
-    return rv;
-  }
-
-  return 0;
-}
-
-PRBool
-pk11_HandleTrustObject(PK11SlotInfo *slot, CERTCertificate *cert, CERTCertTrust *trust)
-{
-  PRArenaPool *arena;
-
-  CK_ATTRIBUTE tobjTemplate[] = {
-    { CKA_CLASS, NULL, 0 },
-    { CKA_CERT_SHA1_HASH, NULL, 0 },
-  };
-
-  CK_OBJECT_CLASS tobjc = CKO_NETSCAPE_TRUST;
-  CK_OBJECT_HANDLE tobjID;
-  unsigned char sha1_hash[SHA1_LENGTH];
-
-  CK_TRUST digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment,
-    keyAgreement, keyCertSign, crlSign, serverAuth, clientAuth, codeSigning,
-    emailProtection, ipsecEndSystem, ipsecTunnel, ipsecUser, timeStamping;
-
-  SECItem item;
-
-  PK11_HashBuf(SEC_OID_SHA1, sha1_hash, cert->derCert.data, cert->derCert.len);
-
-  PK11_SETATTRS(&tobjTemplate[0], CKA_CLASS, &tobjc, sizeof(tobjc));
-  PK11_SETATTRS(&tobjTemplate[1], CKA_CERT_SHA1_HASH, sha1_hash, 
-                SHA1_LENGTH);
-
-  tobjID = pk11_FindObjectByTemplate(slot, tobjTemplate, 
-                                     sizeof(tobjTemplate)/sizeof(tobjTemplate[0]));
-  if( CK_INVALID_KEY == tobjID ) {
-    return PR_FALSE;
-  }
-
-  arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-  if( NULL == arena ) return PR_FALSE;
-
-  /* Unfortunately, it seems that PK11_GetAttributes doesn't deal
-   * well with nonexistant attributes.  I guess we have to check 
-   * the trust info fields one at a time.
-   */
-
-  /* We could verify CKA_CERT_HASH here */
-
-  /* We could verify CKA_EXPIRES here */
-
-  /* "Usage" trust information */
-  /* digitalSignature = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_DIGITAL_SIGNATURE); */
-  /* nonRepudiation   = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_NON_REPUDIATION); */
-  /* keyEncipherment  = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_KEY_ENCIPHERMENT); */
-  /* dataEncipherment = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_DATA_ENCIPHERMENT); */
-  /* keyAgreement     = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_KEY_AGREEMENT); */
-  /* keyCertSign      = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_KEY_CERT_SIGN); */
-  /* crlSign          = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_CRL_SIGN); */
-
-  /* "Purpose" trust information */
-  serverAuth       = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_SERVER_AUTH);
-  /* clientAuth       = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_CLIENT_AUTH); */
-  codeSigning      = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_CODE_SIGNING);
-  emailProtection  = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_EMAIL_PROTECTION);
-  /* ipsecEndSystem   = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_IPSEC_END_SYSTEM); */
-  /* ipsecTunnel      = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_IPSEC_TUNNEL); */
-  /* ipsecUser        = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_IPSEC_USER); */
-  /* timeStamping     = pk11_GetTrustField(slot, arena, tobjID, CKA_TRUST_TIME_STAMPING); */
-
-  /* Here's where the fun logic happens.  We have to map back from the key usage,
-   * extended key usage, purpose, and possibly other trust values into the old
-   * trust-flags bits.
-   */
-
-  /* First implementation: keep it simple for testing.  We can study what other
-   * mappings would be appropriate and add them later.. fgmr 20000724 */
-
-  if( serverAuth & CKT_NETSCAPE_TRUSTED ) {
-    trust->sslFlags |= CERTDB_VALID_PEER | CERTDB_TRUSTED;
-  }
-
-  if( serverAuth & CKT_NETSCAPE_TRUSTED_DELEGATOR ) {
-    trust->sslFlags |= CERTDB_VALID_CA | CERTDB_TRUSTED_CA | CERTDB_NS_TRUSTED_CA;
-  }
-
-  if( emailProtection & CKT_NETSCAPE_TRUSTED ) {
-    trust->emailFlags |= CERTDB_VALID_PEER | CERTDB_TRUSTED;
-  }
-
-  if( emailProtection & CKT_NETSCAPE_TRUSTED_DELEGATOR ) {
-    trust->emailFlags |= CERTDB_VALID_CA | CERTDB_TRUSTED_CA | CERTDB_NS_TRUSTED_CA;
-  }
-
-  if( codeSigning & CKT_NETSCAPE_TRUSTED ) {
-    trust->objectSigningFlags |= CERTDB_VALID_PEER | CERTDB_TRUSTED;
-  }
-
-  if( codeSigning & CKT_NETSCAPE_TRUSTED_DELEGATOR ) {
-    trust->objectSigningFlags |= CERTDB_VALID_CA | CERTDB_TRUSTED_CA | CERTDB_NS_TRUSTED_CA;
-  }
-
-  /* There's certainly a lot more logic that can go here.. */
-
-  return PR_TRUE;
-}
-
 /*
  * Build an CERTCertificate structure from a PKCS#11 object ID.... certID
  * Must be a CertObject. This code does not explicitly checks that.
@@ -565,14 +441,6 @@ PK11_MakeCertFromHandle(PK11SlotInfo *slot,CK_OBJECT_HANDLE certID,
 	PORT_Memset(trust,0, sizeof(CERTCertTrust));
 	cert->trust = trust;
 	/* build some cert trust flags */
-
-    /* First, see if there's a trust object for this cert. */
-    /* For the first implementation, we'll just check this slot
-     * and worry about overriding trust info later. */
-    if( pk11_HandleTrustObject(slot, cert, trust) ) {
-      ;
-    } else
-
 	if (CERT_IsCACert(cert, &type)) {
 	    unsigned int trustflags = CERTDB_VALID_CA;
 	   
@@ -1610,105 +1478,6 @@ pk11_FindCertObjectByTemplate(PK11SlotInfo **slotPtr,
 /*
  * We're looking for a cert which we have the private key for that's on the
  * list of recipients. This searches one slot.
- * this is the new version for NSS SMIME code
- * this stuff should REALLY be in the SMIME code, but some things in here are not public
- * (they should be!)
- */
-static CK_OBJECT_HANDLE
-pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipientlist, int *rlIndex)
-{
-    CK_OBJECT_HANDLE certHandle;
-    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
-    CK_OBJECT_CLASS peerClass ;
-    CK_ATTRIBUTE searchTemplate[] = {
-	{ CKA_CLASS, NULL, 0 },
-	{ CKA_ISSUER, NULL, 0 },
-	{ CKA_SERIAL_NUMBER, NULL, 0}
-    };
-    int count = sizeof(searchTemplate)/sizeof(CK_ATTRIBUTE);
-    NSSCMSRecipient *ri = NULL;
-    CK_ATTRIBUTE *attrs;
-    int i;
-
-    peerClass = CKO_PRIVATE_KEY;
-    if (!PK11_IsLoggedIn(slot,NULL) && PK11_NeedLogin(slot)) {
-	peerClass = CKO_PUBLIC_KEY;
-    }
-
-    for (i=0; (ri = recipientlist[i]) != NULL; i++) {
-	/* XXXXX fixme - not yet implemented! */
-	if (ri->kind == RLSubjKeyID)
-	    continue;
-
-    	attrs = searchTemplate;
-
-	PK11_SETATTRS(attrs, CKA_CLASS, &certClass,sizeof(certClass)); attrs++;
-	PK11_SETATTRS(attrs, CKA_ISSUER, ri->id.issuerAndSN->derIssuer.data, 
-				ri->id.issuerAndSN->derIssuer.len); attrs++;
-	PK11_SETATTRS(attrs, CKA_SERIAL_NUMBER, 
-	  ri->id.issuerAndSN->serialNumber.data,ri->id.issuerAndSN->serialNumber.len);
-
-	certHandle = pk11_FindObjectByTemplate(slot,searchTemplate,count);
-	if (certHandle != CK_INVALID_KEY) {
-	    CERTCertificate *cert = pk11_fastCert(slot,certHandle,NULL,NULL);
-	    if (PK11_IsUserCert(slot,cert,certHandle)) {
-		/* we've found a cert handle, now let's see if there is a key
-	         * associated with it... */
-		ri->slot = PK11_ReferenceSlot(slot);
-		*rlIndex = i;
-	
-		CERT_DestroyCertificate(cert);       
-		return certHandle;
-	    }
-	    CERT_DestroyCertificate(cert);       
-	}
-    }
-    *rlIndex = -1;
-    return CK_INVALID_KEY;
-}
-
-/*
- * This function is the same as above, but it searches all the slots.
- * this is the new version for NSS SMIME code
- * this stuff should REALLY be in the SMIME code, but some things in here are not public
- * (they should be!)
- */
-static CK_OBJECT_HANDLE
-pk11_AllFindCertObjectByRecipientNew(NSSCMSRecipient **recipientlist, void *wincx, int *rlIndex)
-{
-    PK11SlotList *list;
-    PK11SlotListElement *le;
-    CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
-    PK11SlotInfo *slot = NULL;
-    SECStatus rv;
-
-    /* get them all! */
-    list = PK11_GetAllTokens(CKM_INVALID_MECHANISM,PR_FALSE,PR_TRUE,wincx);
-    if (list == NULL) {
-	if (list) PK11_FreeSlotList(list);
-    	return CK_INVALID_KEY;
-    }
-
-    /* Look for the slot that holds the Key */
-    for (le = list->head ; le; le = le->next) {
-	if ( !PK11_IsFriendly(le->slot)) {
-	    rv = PK11_Authenticate(le->slot, PR_TRUE, wincx);
-	    if (rv != SECSuccess) continue;
-	}
-
-	certHandle = pk11_FindCertObjectByRecipientNew(le->slot, recipientlist, rlIndex);
-	if (certHandle != CK_INVALID_KEY)
-	    break;
-    }
-
-    PK11_FreeSlotList(list);
-
-    return (le == NULL) ? CK_INVALID_KEY : certHandle;
-}
-
-/*
- * We're looking for a cert which we have the private key for that's on the
- * list of recipients. This searches one slot.
  */
 static CK_OBJECT_HANDLE
 pk11_FindCertObjectByRecipient(PK11SlotInfo *slot, 
@@ -1861,63 +1630,6 @@ PK11_FindCertAndKeyByRecipientList(PK11SlotInfo **slotPtr,
 	return NULL;
     }
     return cert;
-}
-
-/*
- * This is the new version of the above function for NSS SMIME code
- * this stuff should REALLY be in the SMIME code, but some things in here are not public
- * (they should be!)
- */
-int
-PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *wincx)
-{
-    CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
-    CK_OBJECT_HANDLE keyHandle = CK_INVALID_KEY;
-    SECStatus rv;
-    NSSCMSRecipient *rl;
-    int rlIndex;
-
-    certHandle = pk11_AllFindCertObjectByRecipientNew(recipientlist, wincx, &rlIndex);
-    if (certHandle == CK_INVALID_KEY) {
-	return NULL;
-    }
-
-    rl = recipientlist[rlIndex];
-
-    /* at this point, rl->slot is set */
-
-    /* authenticate to the token */
-    if (PK11_Authenticate(rl->slot, PR_TRUE, wincx) != SECSuccess) {
-	PK11_FreeSlot(rl->slot);
-	rl->slot = NULL;
-	return -1;
-    }
-
-    /* try to get a private key handle for the cert we found */
-    keyHandle = PK11_MatchItem(rl->slot, certHandle, CKO_PRIVATE_KEY);
-    if (keyHandle == CK_INVALID_KEY) { 
-	PK11_FreeSlot(rl->slot);
-	rl->slot = NULL;
-	return -1;
-    }
-
-    /* make a private key out of the handle */
-    rl->privkey = PK11_MakePrivKey(rl->slot, nullKey, PR_TRUE, keyHandle, wincx);
-    if (rl->privkey == NULL) {
-	PK11_FreeSlot(rl->slot);
-	rl->slot = NULL;
-	return -1;
-    }
-    /* make a cert from the cert handle */
-    rl->cert = PK11_MakeCertFromHandle(rl->slot, certHandle, NULL);
-    if (rl->cert == NULL) {
-	PK11_FreeSlot(rl->slot);
-	SECKEY_DestroyPrivateKey(rl->privkey);
-	rl->slot = NULL;
-	rl->privkey = NULL;
-	return NULL;
-    }
-    return rlIndex;
 }
 
 CERTCertificate *

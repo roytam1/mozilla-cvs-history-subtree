@@ -38,7 +38,6 @@
 #include "certdb.h"
 #include "certt.h"
 #include "cert.h"
-#include "certxutl.h"
 
 /*
  * Find all user certificates that match the given criteria.
@@ -512,7 +511,6 @@ CollectDistNames( CERTCertificate *cert, SECItem *k, void *data)
 
 	/* copy the name */
 	node->name.len = len = cert->derSubject.len;
-	node->name.type = siBuffer;
 	node->name.data = (unsigned char*)PORT_ArenaAlloc(names->arena, len);
 	if ( node->name.data == NULL ) {
 	    return(SECFailure);

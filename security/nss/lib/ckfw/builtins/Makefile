@@ -33,70 +33,11 @@
 MAKEFILE_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 
 include manifest.mn
-include $(CORE_DEPTH)/coreconf/config.mk
 include config.mk
-# can't do this in manifest.mn because OS_ARCH isn't defined there.
-ifeq ($(OS_ARCH), WINNT)
-
-EXTRA_LIBS = \
-        $(DIST)/lib/nssckfw.lib \
-        $(DIST)/lib/nssb.lib \
-	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plc4_s.lib \
-	$(DIST)/lib/$(NSPR31_LIB_PREFIX)plds4_s.lib \
-	wsock32.lib \
-	winmm.lib \
-	$(NULL)
-
-else
-
-# OSF 1 linker is very agressive. It includes the entire archive,
-# not just the .o's that we need from that archive.
-#
-ifneq ($(OS_ARCH), OSF1)
-
-ifeq ($(OS_ARCH), OS2)
-PLC_STATIC_LIB = $(DIST)/lib/plc4.$(LIB_SUFFIX)
-PLDS_STATIC_LIB = $(DIST)/lib/plds4.$(LIB_SUFFIX)
-else
-PLC_STATIC_LIB = $(DIST)/lib/libplc4.$(LIB_SUFFIX)
-PLDS_STATIC_LIB = $(DIST)/lib/libplds4.$(LIB_SUFFIX)
-endif
-
-EXTRA_LIBS += \
-        $(DIST)/lib/libnssckfw.$(LIB_SUFFIX) \
-        $(DIST)/lib/libnssb.$(LIB_SUFFIX) \
-	$(PLC_STATIC_LIB) \
-	$(PLDS_STATIC_LIB) \
-	$(NULL)
-
-endif
-endif
-
-
-
+include $(CORE_DEPTH)/coreconf/config.mk
 include $(CORE_DEPTH)/coreconf/rules.mk
-
-certdata.c: certdata.txt certdata.perl
-	perl certdata.perl < certdata.txt
 
 # This'll need some help from a build person.
 
-
-ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
-DSO_LDOPTS              = -bM:SRE -bh:4 -bnoentry
-EXTRA_DSO_LDOPTS        = -lc
-MKSHLIB                 = xlC $(DSO_LDOPTS)
-
-$(SHARED_LIBRARY): $(OBJS)
-	@$(MAKE_OBJDIR)
-	rm -f $@
-	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DSO_LDOPTS)
-	chmod +x $@
-
-endif
-
-ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.2)
-LD      += -G
-endif 
-
-
+certdata.c: certdata.txt certdata.perl
+	perl certdata.perl < certdata.txt

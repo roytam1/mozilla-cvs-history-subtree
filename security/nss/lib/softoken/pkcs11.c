@@ -316,7 +316,6 @@ static struct mechanismList mechanisms[] = {
      {CKM_CAST5_MAC_GENERAL,	{1, 16, CKF_SN_VR},		PR_FALSE}, 
      {CKM_CAST5_CBC_PAD,	{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
 #endif
-#if NSS_SOFTOKEN_DOES_RC5
      /* ------------------------- RC5 Operations --------------------------- */
      {CKM_RC5_KEY_GEN,		{1, 255, CKF_GENERATE}, 	PR_FALSE},
      {CKM_RC5_ECB,		{1, 255, CKF_EN_DE_WR_UN},	PR_FALSE},
@@ -324,9 +323,8 @@ static struct mechanismList mechanisms[] = {
      {CKM_RC5_MAC,		{1, 255, CKF_SN_VR},  		PR_FALSE},
      {CKM_RC5_MAC_GENERAL,	{1, 255, CKF_SN_VR},  		PR_FALSE},
      {CKM_RC5_CBC_PAD,		{1, 255, CKF_EN_DE_WR_UN}, 	PR_FALSE},
-#endif
-#ifdef PK11_IDEA_SUPPORTED
      /* ------------------------- IDEA Operations -------------------------- */
+#ifdef PK11_IDEA_SUPPORTED
      {CKM_IDEA_KEY_GEN,		{16, 16, CKF_GENERATE}, 	PR_FALSE}, 
      {CKM_IDEA_ECB,		{16, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_IDEA_CBC,		{16, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
@@ -1015,9 +1013,7 @@ validateSecretKey(PK11Object *object, CK_KEY_TYPE key_type, PRBool isFIPS)
     case CKK_GENERIC_SECRET:
     case CKK_RC2:
     case CKK_RC4:
-#if NSS_SOFTOKEN_DOES_RC5
     case CKK_RC5:
-#endif
     case CKK_CAST:
     case CKK_CAST3:
     case CKK_CAST5:

@@ -346,12 +346,12 @@ extern SECStatus RC5_Decrypt(RC5Context *cx, unsigned char *output,
 ** Create a new DES context suitable for DES encryption/decryption.
 ** 	"key" raw key data
 ** 	"len" the number of bytes of key data
-** 	"iv" is the CBC initialization vector (if mode is NSS_DES_CBC or
+** 	"iv" is the CBC initialization vector (if mode is SEC_DES_CBC or
 ** 	   mode is DES_EDE3_CBC)
-** 	"mode" one of NSS_DES, NSS_DES_CBC, NSS_DES_EDE3 or NSS_DES_EDE3_CBC
+** 	"mode" one of SEC_DES, SEC_DES_CBC, SEC_DES_EDE3 or SEC_DES_EDE3_CBC
 **	"encrypt" is PR_TRUE if the context will be used for encryption
 **
-** When mode is set to NSS_DES_CBC or NSS_DES_EDE3_CBC then the DES
+** When mode is set to SEC_DES_CBC or SEC_DES_EDE3_CBC then the DES
 ** cipher is run in "cipher block chaining" mode.
 */
 extern DESContext *DES_CreateContext(unsigned char *key, unsigned char *iv,
@@ -643,13 +643,10 @@ extern SHA1Context * SHA1_Resurrect(unsigned char *space, void *arg);
 */
 
 /*
-** Initialize the global RNG context and give it some seed input taken
-** from the system.  This function is thread-safe and will only allow
-** the global context to be initialized once.  The seed input is likely
-** small, so it is imperative that RNG_RandomUpdate() be called with
-** additional seed data before the generator is used.  A good way to
-** provide the generator with additional entropy is to call
-** RNG_SystemInfoForRNG().  Note that NSS_Init() does exactly that.
+** Reset the random number generator to its initial state. The seed data
+** is not reset. This causes the random number generator to output the
+** exact same sequence of random numbers as it originally output.
+**	"cx" the context
 */
 extern SECStatus RNG_RNGInit(void);
 
@@ -665,10 +662,7 @@ extern SECStatus RNG_RandomUpdate(void *data, size_t bytes);
 */
 extern SECStatus RNG_GenerateGlobalRandomBytes(void *dest, size_t len);
 
-/* Destroy the global RNG context.  After a call to RNG_RNGShutdown()
-** a call to RNG_RNGInit() is required in order to use the generator again,
-** along with seed data (see the comment above RNG_RNGInit()).
-*/
+
 extern void  RNG_RNGShutdown(void);
 
 

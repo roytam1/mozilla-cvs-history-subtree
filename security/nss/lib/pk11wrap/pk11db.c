@@ -118,7 +118,7 @@ SECMODModule *SECMOD_NewInternal(void) {
 	{ 1, SECMOD_RSA_FLAG|SECMOD_DSA_FLAG|SECMOD_RC2_FLAG|
 	SECMOD_RC4_FLAG|SECMOD_DES_FLAG|SECMOD_RANDOM_FLAG|
 	SECMOD_SHA1_FLAG|SECMOD_MD5_FLAG|SECMOD_MD2_FLAG|
-	SECMOD_SSL_FLAG|SECMOD_TLS_FLAG, -1, 30, 0 };
+	SECMOD_SSL_FLAG|SECMOD_TLS_FLAG, -1, 30 };
 
     intern = SECMOD_NewModule();
     if (intern == NULL) {
@@ -310,8 +310,7 @@ struct secmodSlotDataStr {
     unsigned char defaultFlags[4];
     unsigned char timeout[4];
     unsigned char askpw;
-    unsigned char hasRootCerts;
-    unsigned char reserved[18]; /* this makes it a round 32 bytes */
+    unsigned char reserved[19]; /* this makes it a round 32 bytes */
 };
 
 #define SECMOD_DB_VERSION_MAJOR 0
@@ -400,7 +399,6 @@ static SECStatus secmod_EncodeData(DBT *data, SECMODModule * module) {
 					     module->slots[i]->defaultFlags);
 	    SECMOD_PUTLONG(slot[si].timeout,module->slots[i]->timeout);
 	    slot[si].askpw = module->slots[i]->askpw;
-	    slot[si].hasRootCerts = module->slots[i]->hasRootCerts;
 	    PORT_Memset(slot[si].reserved, 0, sizeof(slot[si].reserved));
 	    si++;
 	}
@@ -412,7 +410,6 @@ static SECStatus secmod_EncodeData(DBT *data, SECMODModule * module) {
 					module->slotInfo[i].defaultFlags);
 	    SECMOD_PUTLONG(slot[i].timeout,module->slotInfo[i].timeout);
 	    slot[i].askpw = module->slotInfo[i].askpw;
-	    slot[i].hasRootCerts = module->slotInfo[i].hasRootCerts;
 	    PORT_Memset(slot[i].reserved, 0, sizeof(slot[i].reserved));
 	}
     }
@@ -495,7 +492,6 @@ static SECMODModule *secmod_DecodeData(DBT *data) {
 	}
 	module->slotInfo[i].timeout = SECMOD_GETLONG(slots[i].timeout);
 	module->slotInfo[i].askpw = slots[i].askpw;
-	module->slotInfo[i].hasRootCerts = slots[i].hasRootCerts;
 	if (module->slotInfo[i].askpw == 0xff) {
 	   module->slotInfo[i].askpw = -1;
 	}

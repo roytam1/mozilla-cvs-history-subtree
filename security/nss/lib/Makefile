@@ -83,7 +83,6 @@ export::
 		    $(INSTALL) -m 444 $$file crypto; \
 		fi; \
 	    done;  \
-	    $(INSTALL) -m 444 freebl/sha_fast.c crypto; \
-	    $(INSTALL) -m 444 freebl/sha_fast.h crypto; \
+	    $(INSTALL) -m 444 crypto/nscertinit.c certdb; \
 	fi
 endif

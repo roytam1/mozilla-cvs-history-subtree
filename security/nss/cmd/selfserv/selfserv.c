@@ -114,7 +114,6 @@ int ssl3CipherSuites[] = {
     0
 };
 
-int     requestCert;
 int	stopping;
 int	verbose;
 SECItem	bigBuf;
@@ -233,7 +232,7 @@ errWarn(char * funcString)
     PRErrorCode  perr      = PR_GetError();
     const char * errString = SECU_Strerror(perr);
 
-    fprintf(stderr, "selfserv: %s returned error %d:\n%s\n",
+    fprintf(stderr, "exit after %s with error %d:\n%s\n",
             funcString, perr, errString);
     return errString;
 }
@@ -300,16 +299,16 @@ mySSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
 
     peerCert = SSL_PeerCertificate(fd);
 
-    PRINTF("selfserv: Subject: %s\nselfserv: Issuer : %s\n",
+    PRINTF("Subject: %s\nIssuer : %s\n",
            peerCert->subjectName, peerCert->issuerName);
 
     rv = SSL_AuthCertificate(arg, fd, checkSig, isServer);
 
     if (rv == SECSuccess) {
-	fputs("selfserv: -- SSL3: Certificate Validated.\n", stderr);
+	fputs("-- SSL3: Certificate Validated.\n", stderr);
     } else {
     	int err = PR_GetError();
-	FPRINTF(stderr, "selfserv: -- SSL3: Certificate Invalid, err %d.\n%s\n", 
+	FPRINTF(stderr, "-- SSL3: Certificate Invalid, err %d.\n%s\n", 
                 err, SECU_Strerror(err));
     }
     FLUSH;
@@ -341,24 +340,21 @@ extern long ssl3_hch_sid_cache_hits;
 extern long ssl3_hch_sid_cache_misses;
 extern long ssl3_hch_sid_cache_not_ok;
 
-    PRINTF("selfserv: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
+    result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
+    if (result != SECSuccess)
+    	return;
+    PRINTF("bulk cipher %s, %d secret key bits, %d key bits, status: %d\n"
+           "subject DN: %s\n"
+	   "issuer  DN: %s\n", cp, kp1, kp0, op, sp, ip);
+    PR_Free(cp);
+    PR_Free(ip);
+    PR_Free(sp);
+
+    PRINTF("%ld cache hits; %ld cache misses, %ld cache not reusable\n",
     	ssl3_hch_sid_cache_hits, ssl3_hch_sid_cache_misses,
 	ssl3_hch_sid_cache_not_ok);
-
-    result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
-    if (result == SECSuccess) {
-	PRINTF(
-    "selfserv: bulk cipher %s, %d secret key bits, %d key bits, status: %d\n",
-		cp, kp1, kp0, op);
-	if (requestCert) {
-	    PRINTF("selfserv: subject DN: %s\n"
-		   "selfserv: issuer  DN: %s\n",  sp, ip);
-	}
-	PR_Free(cp);
-	PR_Free(ip);
-	PR_Free(sp);
-    }
     FLUSH;
+
 }
 
 /**************************************************************************
@@ -459,7 +455,7 @@ launch_thread(
 				      PR_JOINABLE_THREAD, 0);
     if (slot->prThread == NULL) {
 	PR_Unlock(threadLock);
-	printf("selfserv: Failed to launch thread!\n");
+	printf("Failed to launch thread!\n");
 	return SECFailure;
     } 
 
@@ -467,7 +463,7 @@ launch_thread(
     slot->running = 1;
     ++numRunning;
     PR_Unlock(threadLock);
-    PRINTF("selfserv: Launched thread in slot %d \n", i);
+    PRINTF("Launched thread in slot %d \n", i);
     FLUSH;
 
     return SECSuccess;
@@ -488,7 +484,7 @@ reap_threads(void)
 	    slot = threads + i;
 	    if (slot->running == rs_zombie)  {
 		/* Handle cleanup of thread here. */
-		PRINTF("selfserv: Thread in slot %d returned %d\n", i, slot->rv);
+		PRINTF("Thread in slot %d returned %d\n", i, slot->rv);
 
 		/* Now make sure the thread has ended OK. */
 		PR_JoinThread(slot->prThread);
@@ -505,7 +501,7 @@ reap_threads(void)
     for (i = 0; i < numUsed; ++i) {
 	slot = threads + i;
     	if (slot->running != rs_idle)  {
-	    FPRINTF(stderr, "selfserv: Thread in slot %d is in state %d!\n", 
+	    FPRINTF(stderr, "Thread in slot %d is in state %d!\n", 
 	            i, slot->running);
     	}
     }
@@ -621,7 +617,7 @@ do_writes(
 	    errWarn("PR_Write bigBuf");
 	    break;
 	}
-	FPRINTF(stderr, "selfserv: PR_Write wrote %d bytes from bigBuf\n", count );
+	FPRINTF(stderr, "PR_Write wrote %d bytes from bigBuf\n", count );
 	sent += count;
     }
     if (count >= 0) {	/* last write didn't fail. */
@@ -684,7 +680,7 @@ handle_fdx_connection(
 	    errWarn("FDX PR_Read");
 	    break;
 	}
-	FPRINTF(stderr, "selfserv: FDX PR_Read read %d bytes.\n", count );
+	FPRINTF(stderr, "FDX PR_Read read %d bytes.\n", count );
 	if (firstTime) {
 	    firstTime = 0;
 	    printSecurityInfo(ssl_sock);
@@ -720,7 +716,6 @@ handle_connection(
     int                bufRem;			/* unused bytes at end of buf */
     int                bufDat;			/* characters received in buf */
     int                newln    = 0;		/* # of consecutive newlns */
-    int                firstTime = 1;
     int                i;
     int                rv;
     PRSocketOptionData opt;
@@ -756,16 +751,11 @@ handle_connection(
 	i     = 0;
 	rv = PR_Read(ssl_sock, pBuf, bufRem);
 	if (rv == 0) {
-	    errWarn("HDX PR_Read hit EOF");
 	    break;
 	}
 	if (rv < 0) {
 	    errWarn("HDX PR_Read");
 	    goto cleanup;
-	}
-	if (firstTime) {
-	    firstTime = 0;
-	    printSecurityInfo(ssl_sock);
 	}
 
 	pBuf   += rv;
@@ -847,7 +837,7 @@ handle_connection(
 		} else {
 		    bytes -= sizeof outHeader - 1;
 		    FPRINTF(stderr, 
-			    "selfserv: PR_TransmitFile wrote %d bytes from %s\n",
+			    "PR_TransmitFile wrote %d bytes from %s\n",
 			    bytes, buf + 4);
 		}
 		PR_Close(local_file_fd);
@@ -905,7 +895,7 @@ send_answer:
 		break;
 	    }
 	} else {
-	    if (verbose > 1) fwrite(buf, 1, i, stdout);	/* display it */
+	    fwrite(buf, 1, i, stdout);	/* display it */
 	    rv = PR_Write(ssl_sock, buf, i);
 	    if (rv < 0) {
 		errWarn("PR_Write");
@@ -952,7 +942,7 @@ do_accepts(
 	PRFileDesc *tcp_sock;
 	SECStatus   result;
 
-	FPRINTF(stderr, "\n\n\nselfserv: About to call accept.\n");
+	FPRINTF(stderr, "\n\n\nAbout to call accept.\n");
 	tcp_sock = PR_Accept(listen_sock, &addr, PR_INTERVAL_NO_TIMEOUT);
 	if (tcp_sock == NULL) {
 	    errWarn("PR_Accept");
@@ -970,7 +960,7 @@ do_accepts(
         }
     }
 
-    fprintf(stderr, "selfserv: Closing listen socket.\n");
+    fprintf(stderr, "Closing listen socket.\n");
     PR_Close(listen_sock);
     return SECSuccess;
 }
@@ -1177,6 +1167,7 @@ main(int argc, char **argv)
     char *               tmp;
     CERTCertificate *    cert   [kt_kea_size] = { NULL };
     SECKEYPrivateKey *   privKey[kt_kea_size] = { NULL };
+    int                  requestCert = 0;
     unsigned short       port        = 0;
     SECStatus            rv;
     PRBool               useExportPolicy = PR_FALSE;
@@ -1293,13 +1284,13 @@ main(int argc, char **argv)
 
 	cert[kt_rsa] = PK11_FindCertFromNickname(nickName, passwd);
 	if (cert[kt_rsa] == NULL) {
-	    fprintf(stderr, "selfserv: Can't find certificate %s\n", nickName);
+	    fprintf(stderr, "Can't find certificate %s\n", nickName);
 	    exit(1);
 	}
 
 	privKey[kt_rsa] = PK11_FindKeyByAnyCert(cert[kt_rsa], passwd);
 	if (privKey[kt_rsa] == NULL) {
-	    fprintf(stderr, "selfserv: Can't find Private Key for cert %s\n", nickName);
+	    fprintf(stderr, "Can't find Private Key for cert %s\n", nickName);
 	    exit(1);
 	}
 
@@ -1307,7 +1298,7 @@ main(int argc, char **argv)
     if (fNickName) {
 	cert[kt_fortezza] = PK11_FindCertFromNickname(fNickName, NULL);
 	if (cert[kt_fortezza] == NULL) {
-	    fprintf(stderr, "selfserv: Can't find certificate %s\n", fNickName);
+	    fprintf(stderr, "Can't find certificate %s\n", fNickName);
 	    exit(1);
 	}
 

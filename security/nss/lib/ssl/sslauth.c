@@ -225,7 +225,7 @@ SSL_AuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig, PRBool isServer)
     CERTCertDBHandle * handle;
     sslSocket *        ss;
     SECCertUsage       certUsage;
-    const char *             hostname    = NULL;
+    char *             hostname    = NULL;
     
     ss = ssl_FindSocket(fd);
     PORT_Assert(ss != NULL);

@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -361,8 +345,6 @@ typedef PRStatus (PR_CALLBACK *PRSetsocketoptionFN)(
 typedef PRInt32 (PR_CALLBACK *PRSendfileFN)(
 	PRFileDesc *networkSocket, PRSendFileData *sendData,
 	PRTransmitFileFlags flags, PRIntervalTime timeout);
-typedef PRStatus (PR_CALLBACK *PRConnectcontinueFN)(
-    PRFileDesc *fd, PRInt16 out_flags);
 typedef PRIntn (PR_CALLBACK *PRReservedFN)(PRFileDesc *fd);
 
 struct PRIOMethods {
@@ -399,8 +381,7 @@ struct PRIOMethods {
     PRSetsocketoptionFN setsocketoption;
                                     /* Set value of specified option            */
     PRSendfileFN sendfile;			/* Send a (partial) file with header/trailer*/
-    PRConnectcontinueFN connectcontinue;
-                                    /* Continue a nonblocking connect */
+    PRReservedFN reserved_fn_4;		/* reserved for future use */
     PRReservedFN reserved_fn_3;		/* reserved for future use */
     PRReservedFN reserved_fn_2;		/* reserved for future use */
     PRReservedFN reserved_fn_1;		/* reserved for future use */
@@ -468,7 +449,6 @@ NSPR_API(PRFileDesc*) PR_GetSpecialFD(PRSpecialFD id);
  **************************************************************************
  */
 
-#define PR_IO_LAYER_HEAD (PRDescIdentity)-3
 #define PR_INVALID_IO_LAYER (PRDescIdentity)-1
 #define PR_TOP_IO_LAYER (PRDescIdentity)-2
 #define PR_NSPR_IO_LAYER (PRDescIdentity)0
@@ -499,22 +479,6 @@ NSPR_API(const PRIOMethods *) PR_GetDefaultIOMethods(void);
  */
 NSPR_API(PRFileDesc*) PR_CreateIOLayerStub(
     PRDescIdentity ident, const PRIOMethods *methods);
-
-/*
- **************************************************************************
- * Creating a layer
- *
- * A new stack may be created by calling PR_CreateIOLayer(). The
- * file descriptor returned will point to the top of the stack, which has
- * the layer 'fd' as the topmost layer.
- * 
- * NOTE: This function creates a new style stack, which has a fixed, dummy
- * header. The old style stack, created by a call to PR_PushIOLayer,
- * results in modifying contents of the top layer of the stack, when
- * pushing and popping layers of the stack.
- **************************************************************************
- */
-NSPR_API(PRFileDesc*) PR_CreateIOLayer(PRFileDesc* fd);
 
 /*
  **************************************************************************
@@ -1221,42 +1185,6 @@ NSPR_API(PRStatus) PR_Connect(
 
 /*
  *************************************************************************
- * FUNCTION: PR_ConnectContinue
- * DESCRIPTION:
- *     Continue a nonblocking connect.  After a nonblocking connect
- *     is initiated with PR_Connect() (which fails with
- *     PR_IN_PROGRESS_ERROR), one should call PR_Poll() on the socket,
- *     with the in_flags PR_POLL_WRITE | PR_POLL_EXCEPT.  When
- *     PR_Poll() returns, one calls PR_ConnectContinue() on the
- *     socket to determine whether the nonblocking connect has
- *     completed or is still in progress.  Repeat the PR_Poll(),
- *     PR_ConnectContinue() sequence until the nonblocking connect
- *     has completed.
- * INPUTS:
- *     PRFileDesc *fd
- *         the file descriptor representing a socket
- *     PRInt16 out_flags
- *         the out_flags field of the poll descriptor returned by
- *         PR_Poll()
- * RETURN: PRStatus
- *     If the nonblocking connect has successfully completed,
- *     PR_GetConnectStatus returns PR_SUCCESS.  If PR_GetConnectStatus()
- *     returns PR_FAILURE, call PR_GetError():
- *     - PR_IN_PROGRESS_ERROR: the nonblocking connect is still in
- *       progress and has not completed yet.  The caller should poll
- *       on the file descriptor for the in_flags
- *       PR_POLL_WRITE|PR_POLL_EXCEPT and retry PR_ConnectContinue
- *       later when PR_Poll() returns.
- *     - Other errors: the nonblocking connect has failed with this
- *       error code.
- */
-
-NSPR_API(PRStatus)    PR_ConnectContinue(PRFileDesc *fd, PRInt16 out_flags);
-
-/*
- *************************************************************************
- * THIS FUNCTION IS DEPRECATED.  USE PR_ConnectContinue INSTEAD.
- *
  * FUNCTION: PR_GetConnectStatus
  * DESCRIPTION:
  *     Get the completion status of a nonblocking connect.  After
@@ -1398,7 +1326,7 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *     PRInt32 amount
  *       the size of 'buf' (in bytes)
  *     PRIntn flags
- *       must be zero or PR_MSG_PEEK.
+ *        (OBSOLETE - must always be zero)
  *     PRIntervalTime timeout
  *       Time limit for completion of the receive operation.
  * OUTPUTS:
@@ -1410,8 +1338,6 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *         by calling PR_GetError().
  **************************************************************************
  */
-
-#define PR_MSG_PEEK 0x2
 
 NSPR_API(PRInt32)    PR_Recv(PRFileDesc *fd, void *buf, PRInt32 amount,
                 PRIntn flags, PRIntervalTime timeout);
@@ -1805,15 +1731,9 @@ NSPR_API(PRFileMap *) PR_CreateFileMap(
     PRInt64 size,
     PRFileMapProtect prot);
 
-/*
- * return the alignment (in bytes) of the offset argument to PR_MemMap
- */
-NSPR_API(PRInt32) PR_GetMemMapAlignment(void);
-
 NSPR_API(void *) PR_MemMap(
     PRFileMap *fmap,
-    PROffset64 offset,  /* must be aligned and sized according to the
-                         * return value of PR_GetMemMapAlignment() */
+    PROffset64 offset,  /* must be aligned and sized to whole pages */
     PRUint32 len);
 
 NSPR_API(PRStatus) PR_MemUnmap(void *addr, PRUint32 len);
@@ -1884,12 +1804,9 @@ struct PRPollDesc {
 ** returned unless a timeout occurs in which case zero is returned.
 **
 ** PRPollDesc.in_flags should be set to the desired request
-** (read/write/except or some combination). Upon successful return from
-** this call PRPollDesc.out_flags will be set to indicate what kind of
-** i/o can be performed on the respective descriptor. PR_Poll() uses the
-** out_flags fields as scratch variables during the call. If PR_Poll()
-** returns 0 or -1, the out_flags fields do not contain meaningful values
-** and must not be used.
+** (read/write/except or some combination). Upon return from this call
+** PRPollDesc.out_flags will be set to indicate what kind of i/o can be
+** performed on the respective descriptor.
 **
 ** INPUTS:
 **      PRPollDesc *pds         A pointer to an array of PRPollDesc
@@ -1907,8 +1824,9 @@ struct PRPollDesc {
 ** RETURN:
 **      PRInt32                 Number of PRPollDesc's with events or zero
 **                              if the function timed out or -1 on failure.
-**                              The reason for the failure is obtained by
-**                              calling PR_GetError().
+**                              The reason for the failure is obtained by calling 
+**                              PR_GetError().
+** XXX can we implement this on windoze and mac?
 **************************************************************************
 */
 NSPR_API(PRInt32) PR_Poll(

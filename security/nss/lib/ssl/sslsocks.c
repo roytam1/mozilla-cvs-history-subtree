@@ -711,15 +711,11 @@ SocksStartGather(sslSocket *ss)
 /************************************************************************/
 
 
-/* BSDI etc. ain't got no cuserid() */
-#if defined(__386BSD__) || defined(FREEBSD)
-#define NEED_CUSERID 1
-#endif
-
-#ifdef NEED_CUSERID
+/* BSDI ain't got no cuserid() */
+#ifdef __386BSD__
 #include <pwd.h>
-static char *
-my_cuserid(char *b)
+char *
+bsdi_cuserid(char *b)
 {
     struct passwd *pw = getpwuid(getuid());
 
@@ -789,8 +785,8 @@ ssl_SocksConnect(sslSocket *ss, const PRNetAddr *sa)
     if (!direct) {
 	/* Find user */
 #ifdef XP_UNIX
-#ifdef NEED_CUSERID
-	user = my_cuserid(NULL);
+#ifdef __386BSD__
+	user = bsdi_cuserid(NULL);
 #else
 	user = cuserid(NULL);
 #endif
@@ -814,14 +810,8 @@ ssl_SocksConnect(sslSocket *ss, const PRNetAddr *sa)
 	ss->nextHandshake = 0;
 
 	/* save up who we're really talking to so we can index the cache */
-	if ((sa->inet.family & 0xff) == PR_AF_INET) {
-	     PR_ConvertIPv4AddrToIPv6(sa->inet.ip, &ss->peer);
-	     ss->port = sa->inet.port;
-	} else {
-	     PORT_Assert(sa->ipv6.family == PR_AF_INET6);
-	     ss->peer = sa->ipv6.ip;
-	     ss->port = sa->ipv6.port;
-	}
+	ss->peer = sa->inet.ip;
+	ss->port = sa->inet.port;
     }
     return 0;
 }
@@ -915,8 +905,8 @@ ssl_SocksBind(sslSocket *ss, const PRNetAddr *sa)
 
 	/* Find user */
 #ifdef XP_UNIX
-#ifdef NEED_CUSERID
-	user = my_cuserid(NULL);
+#ifdef __386BSD__
+	user = bsdi_cuserid(NULL);
 #else
 	user = cuserid(NULL);
 #endif

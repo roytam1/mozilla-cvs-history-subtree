@@ -33,8 +33,8 @@
 MAKEFILE_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 
 include manifest.mn
-include $(CORE_DEPTH)/coreconf/config.mk
 include config.mk
+include $(CORE_DEPTH)/coreconf/config.mk
 include $(CORE_DEPTH)/coreconf/rules.mk
 
 # This'll need some help from a build person.
@@ -42,8 +42,5 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 nssckepv.h: ck.api ckapi.perl
 nssckft.h: ck.api ckapi.perl
 nssckg.h: ck.api ckapi.perl
-nssck.api: ck.api ckapi.perl
-	perl ckapi.perl ck.api
-
-export:: private_export
+	perl ckapi.perl < ck.api
 

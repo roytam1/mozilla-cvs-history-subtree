@@ -46,7 +46,6 @@
 #include "secmodt.h"
 #include "seccomon.h"
 #include "pkcs7t.h"
-#include "cmsreclist.h"
 
 SEC_BEGIN_PROTOS
 
@@ -90,8 +89,6 @@ SECStatus PK11_Logout(PK11SlotInfo *slot);
 void PK11_LogoutAll(void);
 void PK11_EnterSlotMonitor(PK11SlotInfo *);
 void PK11_ExitSlotMonitor(PK11SlotInfo *);
-void PK11_CleanKeyList(PK11SlotInfo *slot);
-
 
 
 /************************************************************
@@ -155,7 +152,6 @@ SECMODModuleID PK11_GetModuleID(PK11SlotInfo *slot);
 SECStatus PK11_GetSlotInfo(PK11SlotInfo *slot, CK_SLOT_INFO *info);
 SECStatus PK11_GetTokenInfo(PK11SlotInfo *slot, CK_TOKEN_INFO *info);
 PRBool PK11_IsDisabled(PK11SlotInfo *slot);
-PRBool PK11_HasRootCerts(PK11SlotInfo *slot);
 PK11DisableReasons PK11_GetDisabledReason(PK11SlotInfo *slot);
 /* Prevents the slot from being used, and set disable reason to user-disable */
 /* NOTE: Mechanisms that were ON continue to stay ON */
@@ -355,8 +351,6 @@ CERTCertificate * PK11_FindCertByIssuerAndSN(PK11SlotInfo **slot,
 CERTCertificate * PK11_FindCertAndKeyByRecipientList(PK11SlotInfo **slot,
 	SEC_PKCS7RecipientInfo **array, SEC_PKCS7RecipientInfo **rip,
 				SECKEYPrivateKey**privKey, void *wincx);
-int PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist,
-				void *wincx);
 CK_BBOOL PK11_HasAttributeSet( PK11SlotInfo *slot,
 			       CK_OBJECT_HANDLE id,
 			       CK_ATTRIBUTE_TYPE type );

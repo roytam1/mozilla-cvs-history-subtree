@@ -628,15 +628,8 @@ sec_asn1d_parse_identifier (sec_asn1d_state *state,
 	 */
 	state->pending = 1;
     } else {
-	if (byte == 0 && state->parent != NULL &&
-		    (state->parent->indefinite ||
-			(
-			    (state->parent->place == afterImplicit ||
-			     state->parent->place == afterPointer)
-			    && state->parent->parent != NULL && state->parent->parent->indefinite
-			)
-		    )
-	    ) {
+	if (byte == 0 && state->parent != NULL
+		      && state->parent->indefinite) {
 	    /*
 	     * Our parent has indefinite-length encoding, and the
 	     * entire tag found is 0, so it seems that we have hit the
@@ -1737,7 +1730,7 @@ sec_asn1d_next_in_sequence (sec_asn1d_state *state)
 	 */
 	sec_asn1d_notify_before (state->top, child->dest, child->depth);
 
-	if (child_missing) { /* if previous child was missing, copy the tag data we already have */
+	if (child_missing) {
 	    child_found_tag_modifiers = child->found_tag_modifiers;
 	    child_found_tag_number = child->found_tag_number;
 	}
@@ -1935,7 +1928,6 @@ sec_asn1d_absorb_child (sec_asn1d_state *state)
 		     || state->place == afterPointer);
 	state->found_tag_number = state->child->found_tag_number;
 	state->found_tag_modifiers = state->child->found_tag_modifiers;
-	state->endofcontents = state->child->endofcontents;
     }
 
     /*
@@ -2129,9 +2121,6 @@ sec_asn1d_during_choice
   PORT_Assert((sec_asn1d_state *)NULL != child);
 
   if( child->missing ) {
-    unsigned char child_found_tag_modifiers = 0;
-    unsigned long child_found_tag_number = 0;
-
     child->theTemplate++;
 
     if( 0 == child->theTemplate->kind ) {
@@ -2160,24 +2149,14 @@ sec_asn1d_during_choice
 
     child->consumed = 0;
     sec_asn1d_scrub_state(child);
-
-    /* move it on top again */
-    state->top->current = child;
-
-    child_found_tag_modifiers = child->found_tag_modifiers;
-    child_found_tag_number = child->found_tag_number;
-
     child = sec_asn1d_init_state_based_on_template(child);
     if( (sec_asn1d_state *)NULL == child ) {
       return (sec_asn1d_state *)NULL;
     }
 
-    /* copy our findings to the new top */
-    child->found_tag_modifiers = child_found_tag_modifiers;
-    child->found_tag_number = child_found_tag_number;
-
     child->optional = PR_TRUE;
     child->place = afterIdentifier;
+    state->top->current = child;
 
     return child;
   } else {

@@ -81,7 +81,6 @@ void SECMOD_DestroyListLock(SECMODListLock *lock) {
  */
 void SECMOD_GetReadLock(SECMODListLock *modLock) {
 #ifdef PKCS11_USE_THREADS
-    if (modLock == NULL) return;
     PR_EnterMonitor(modLock->monitor);
     while (modLock->state & ISWRITING) {
 	PR_Wait(modLock->monitor,PR_INTERVAL_NO_TIMEOUT); /* wait until woken up */
@@ -97,7 +96,6 @@ void SECMOD_GetReadLock(SECMODListLock *modLock) {
  */
 void SECMOD_ReleaseReadLock(SECMODListLock *modLock) {
 #ifdef PKCS11_USE_THREADS
-    if (modLock == NULL) return;
     PR_EnterMonitor(modLock->monitor);
     modLock->count--;
     if (modLock->count == 0) {
@@ -116,7 +114,6 @@ void SECMOD_ReleaseReadLock(SECMODListLock *modLock) {
  */
 void SECMOD_GetWriteLock(SECMODListLock *modLock) {
 #ifdef PKCS11_USE_THREADS
-    if (modLock == NULL) return;
     PR_EnterMonitor(modLock->monitor);
     while (modLock->state & ISLOCKED) {
 	modLock->state |= WANTWRITE;
@@ -134,7 +131,6 @@ void SECMOD_GetWriteLock(SECMODListLock *modLock) {
  */
 void SECMOD_ReleaseWriteLock(SECMODListLock *modLock) {
 #ifdef PKCS11_USE_THREADS
-    if (modLock == NULL) return;
     PR_EnterMonitor(modLock->monitor);
     modLock->state = 0;
     PR_NotifyAll(modLock->monitor); /* enable all the readers */

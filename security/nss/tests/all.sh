@@ -3,7 +3,7 @@
 # Run all our tests
 #
 CURDIR=`pwd`
-TESTS="sdr ssl cipher smime"
+TESTS="ssl"
 cd common
 . ./init.sh
 export MOZILLA_ROOT

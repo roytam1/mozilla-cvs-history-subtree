@@ -35,17 +35,14 @@
 ifeq ($(OS_ARCH), WINNT)
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
-CRYPTOLIB=$(DIST)/lib/freebl.lib
 ifdef MOZILLA_SECURITY_BUILD
 	CRYPTOLIB=$(DIST)/lib/crypto.lib
 endif
 ifdef MOZILLA_BSAFE_BUILD
-	CRYPTOLIB+=$(DIST)/lib/bsafe$(BSAFEVER).lib
-	CRYPTOLIB+=$(DIST)/lib/freebl.lib
+	CRYPTOLIB=$(DIST)/lib/bsafe41.lib
 endif
 
 EXTRA_LIBS += \
-	$(DIST)/lib/smime.lib \
 	$(DIST)/lib/ssl.lib \
 	$(DIST)/lib/jar.lib \
 	$(DIST)/lib/zlib.lib \
@@ -58,7 +55,9 @@ EXTRA_LIBS += \
 	$(DIST)/lib/pk11wrap.lib \
 	$(DIST)/lib/certdb.lib \
 	$(DIST)/lib/softoken.lib \
+	$(DIST)/lib/freebl.lib \
 	$(CRYPTOLIB) \
+	$(DIST)/lib/freebl.lib \
 	$(DIST)/lib/swfci.lib \
 	$(DIST)/lib/secutil.lib \
 	$(DIST)/lib/dbm.lib \
@@ -75,16 +74,13 @@ OS_LIBS += \
 else
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
-CRYPTOLIB=$(DIST)/lib/libfreebl.$(LIB_SUFFIX)
 ifdef MOZILLA_SECURITY_BUILD
 	CRYPTOLIB=$(DIST)/lib/libcrypto.$(LIB_SUFFIX)
 endif
 ifdef MOZILLA_BSAFE_BUILD
-	CRYPTOLIB+=$(DIST)/lib/libbsafe.$(LIB_SUFFIX)
-	CRYPTOLIB+=$(DIST)/lib/libfreebl.$(LIB_SUFFIX)
+	CRYPTOLIB=$(DIST)/lib/libbsafe.$(LIB_SUFFIX)
 endif
 EXTRA_LIBS += \
-	$(DIST)/lib/libsmime.$(LIB_SUFFIX) \
 	$(DIST)/lib/libssl.$(LIB_SUFFIX) \
 	$(DIST)/lib/libjar.$(LIB_SUFFIX) \
 	$(DIST)/lib/libzlib.$(LIB_SUFFIX) \
@@ -100,7 +96,9 @@ EXTRA_LIBS += \
 	$(DIST)/lib/libsoftoken.$(LIB_SUFFIX) \
 	$(DIST)/lib/libcertdb.$(LIB_SUFFIX) \
 	$(DIST)/lib/libswfci.$(LIB_SUFFIX) \
+	$(DIST)/lib/libfreebl.$(LIB_SUFFIX) \
 	$(CRYPTOLIB) \
+	$(DIST)/lib/libfreebl.$(LIB_SUFFIX) \
 	$(DIST)/lib/libsecutil.$(LIB_SUFFIX) \
 	$(DIST)/lib/libdbm.$(LIB_SUFFIX) \
 	$(NULL)

@@ -387,11 +387,11 @@ nssCKFWSlot_GetSlotDescription
         goto done;
       }
     } else {
-      fwSlot->slotDescription = (NSSUTF8 *) "";
+      fwSlot->slotDescription = "";
     }
   }
 
-  (void)nssUTF8_CopyIntoFixedBuffer(fwSlot->slotDescription, (char *)slotDescription, 64, ' ');
+  (void)nssUTF8_CopyIntoFixedBuffer(fwSlot->slotDescription, slotDescription, 64, ' ');
   error = CKR_OK;
 
  done:
@@ -437,11 +437,11 @@ nssCKFWSlot_GetManufacturerID
         goto done;
       }
     } else {
-      fwSlot->manufacturerID = (NSSUTF8 *) "";
+      fwSlot->manufacturerID = "";
     }
   }
 
-  (void)nssUTF8_CopyIntoFixedBuffer(fwSlot->manufacturerID, (char *)manufacturerID, 32, ' ');
+  (void)nssUTF8_CopyIntoFixedBuffer(fwSlot->manufacturerID, manufacturerID, 32, ' ');
   error = CKR_OK;
 
  done:

@@ -44,11 +44,7 @@ EXPORTS = \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
-	secmpi.h \
 	$(NULL)
-
-MPI_HDRS = mpi-config.h mpi.h mpi-priv.h mplogic.h mpprime.h logtab.h
-MPI_SRCS = mpprime.c mpmontg.c mplogic.c mpi.c 
 
 ifdef MOZILLA_BSAFE_BUILD
 CSRCS = \
@@ -56,26 +52,15 @@ CSRCS = \
 	sha_fast.c \
 	md2.c \
 	md5.c \
-	blapi_bsf.c \
-	$(MPI_SRCS) \
 	dh.c \
+	blapi_bsf.c \
 	$(NULL)
 else
 CSRCS = \
-	prng_fips1861.c \
 	sha_fast.c \
 	md2.c \
 	md5.c \
 	alg2268.c \
-	arcfour.c \
-	desblapi.c \
-	des.c \
-	dh.c \
-	pqg.c \
-	dsa.c \
-	rsa.c \
-	$(MPI_SRCS) \
 	$(NULL)
 endif
 
-#DEFINES += -DUSE_MPI_EXPT_D

@@ -35,21 +35,3 @@ CONFIG_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 ifdef BUILD_IDG
 DEFINES += -DNSSDEBUG
 endif
-
-#
-# Hack to see if everything still builds
-#
-
-
-#
-#  Override TARGETS variable so that only static libraries
-#  are specifed as dependencies within rules.mk.
-#
-
-TARGETS        = $(LIBRARY)
-SHARED_LIBRARY =
-IMPORT_LIBRARY =
-PURE_LIBRARY   =
-PROGRAM        =
-
-

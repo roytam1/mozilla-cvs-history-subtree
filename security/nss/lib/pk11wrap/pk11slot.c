@@ -48,9 +48,6 @@
 #include "prtime.h"
 #include "prlong.h"
 #include "secerr.h"
-#define NSSCKT_H /* we included pkcs11t.h, so block ckt.h from including nssckt.h */
-#include "ckt.h"
-
 
 /*************************************************************
  * local static and global data
@@ -438,7 +435,6 @@ PK11_NewSlotInfo(void)
     slot->authTime = LL_ZERO;
     slot->minPassword = 0;
     slot->maxPassword = 0;
-    slot->hasRootCerts = PR_FALSE;
     return slot;
 }
     
@@ -1150,11 +1146,6 @@ PK11_InitSlotLists(void)
 PK11SlotList *
 PK11_GetSlotList(CK_MECHANISM_TYPE type)
 {
-/* XXX a workaround for Bugzilla bug #55267 */
-#if defined(HPUX) && defined(__LP64__)
-    if (CKM_INVALID_MECHANISM == type)
-        return NULL;
-#endif
     switch (type) {
     case CKM_DES_CBC:
     case CKM_DES_ECB:
@@ -1220,7 +1211,6 @@ PK11_LoadSlotList(PK11SlotInfo *slot, PK11PreSlotInfo *psi, int count)
     slot->defaultFlags = psi[i].defaultFlags;
     slot->askpw = psi[i].askpw;
     slot->timeout = psi[i].timeout;
-    slot->hasRootCerts = psi[i].hasRootCerts;
 
     /* if the slot is already disabled, don't load them into the
      * default slot lists. We get here so we can save the default
@@ -1719,27 +1709,6 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     return SECSuccess;
 }
 
-static PRBool
-pk11_isRootSlot(PK11SlotInfo *slot) 
-{
-    CK_ATTRIBUTE findTemp[1];
-    CK_ATTRIBUTE *attrs;
-    CK_OBJECT_CLASS oclass = CKO_NETSCAPE_BUILTIN_ROOT_LIST;
-    int tsize;
-    CK_OBJECT_HANDLE handle;
-
-    attrs = findTemp;
-    PK11_SETATTRS(attrs, CKA_CLASS, &oclass, sizeof(oclass)); attrs++;
-    tsize = attrs - findTemp;
-    PORT_Assert(tsize <= sizeof(findTemp)/sizeof(CK_ATTRIBUTE));
-
-    handle = pk11_FindObjectByTemplate(slot,findTemp,tsize);
-    if (handle == CK_INVALID_KEY) {
-	return PR_FALSE;
-    }
-    return PR_TRUE;
-}
-
 /*
  * Initialize the slot :
  * This initialization code is called on each slot a module supports when
@@ -1796,9 +1765,6 @@ PK11_InitSlot(SECMODModule *mod,CK_SLOT_ID slotID,PK11SlotInfo *slot)
 	    slot->disabled = PR_TRUE;
 	    slot->reason = PK11_DIS_COULD_NOT_INIT_TOKEN;
 	}
-    }
-    if (pk11_isRootSlot(slot)) {
-	slot->hasRootCerts= PR_TRUE;
     }
 }
 
@@ -1910,10 +1876,6 @@ PRBool PK11_UserEnableSlot(PK11SlotInfo *slot) {
     slot->disabled = PR_FALSE;
     slot->reason = PK11_DIS_NONE;
     return PR_TRUE;
-}
-
-PRBool PK11_HasRootCerts(PK11SlotInfo *slot) {
-    return slot->hasRootCerts;
 }
 
 /* Get the module this slot is attatched to */

@@ -4206,7 +4206,6 @@ SEC_OpenPermCertDB(CERTCertDBHandle *handle, PRBool readOnly,
 	} else if ( versionEntry->common.version != CERT_DB_FILE_VERSION ) {
 	    /* wrong version number, can't update in place */
 	    DestroyDBEntry((certDBEntry *)versionEntry);
-	    PORT_Free(certdbname);
 	    return(SECFailure);
 	}
 
@@ -4301,8 +4300,6 @@ SEC_OpenPermCertDB(CERTCertDBHandle *handle, PRBool readOnly,
     }
 
     rv = CERT_AddNewCerts(handle);
-
-    PORT_Free(certdbname);
     
     return (SECSuccess);
     
@@ -4314,8 +4311,6 @@ loser:
 	certdb_Close(handle->permCertDB);
 	handle->permCertDB = 0;
     }
-
-    PORT_Free(certdbname);
 
     return(SECFailure);
 }
@@ -4645,17 +4640,6 @@ CERT_GetCertTrust(CERTCertificate *cert, CERTCertTrust *trust)
     return(rv);
 }
 
-static char *
-cert_parseNickname(char *nickname)
-{
-	char *cp;
-
-	for (cp=nickname; *cp && *cp != ':'; cp++);
-
-	if (*cp == ':') return cp++;
-	return nickname;
-}
-
 /*
  * Change the trust attributes of a certificate and make them permanent
  * in the database.
@@ -4679,10 +4663,6 @@ CERT_ChangeCertTrust(CERTCertDBHandle *handle, CERTCertificate *cert,
     *cert->trust = *trust;
     if ( cert->dbEntry == NULL ) {
 	ret = SECSuccess; /* not in permanent database */
-	if ((cert->slot)  && PK11_IsReadOnly(cert->slot)) {
-	    char *nickname = cert_parseNickname(cert->nickname);
-	    ret = CERT_AddTempCertToPerm(cert, nickname, trust);
-	} 
 	goto done;
     }
     
@@ -4817,7 +4797,7 @@ loser:
 static char *
 certDBFilenameCallback(void *arg, int dbVersion)
 {
-    return(PORT_Strdup((char *)arg));
+    return((char *)arg);
 }
 
 SECStatus

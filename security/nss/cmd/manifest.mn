@@ -39,7 +39,6 @@ REQUIRES = security nspr libdbm
 DIRS = lib  \
  zlib \
  atob  \
- bltest \
  btoa  \
  certcgi \
  certutil  \
@@ -56,13 +55,11 @@ DIRS = lib  \
  p7verify  \
  pp  \
  rngtest \
- sdrtest \
  selfserv  \
  ssltap  \
  strsclnt \
  swfort  \
  tstclnt  \
- smimetools  \
  modutil \
  $(NULL)
 

@@ -161,7 +161,6 @@ struct PQGParamsStr {
     SECItem prime;    /* p */
     SECItem subPrime; /* q */
     SECItem base;     /* g */
-    /* XXX chrisk: this needs to be expanded to hold j and validationParms (RFC2459 7.3.2) */
 };
 typedef struct PQGParamsStr PQGParams;
 
