@@ -271,6 +271,9 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         void addPosition(size_t pos)    { mPC_Map->push_back(PC_Position(mBuffer->size(), pos)); }
 
+        // Add in the opcode effect as usual, but also stretch the
+        // execution stack by N, as the opcode has that effect during
+        // execution.
         void addOpStretchStack(uint8 op, int32 n)        
         {
             addByte(op);
@@ -283,7 +286,16 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         void adjustStack(int32 n)
         {
             mStackTop += n;
+            if ((mStackTop + n) > mStackMax)
+                mStackMax = mStackTop + n;
             ASSERT(mStackTop >= 0);
+        }
+
+        // Make sure there's room for n more operands on the stack
+        void stretchStack(uint32 n)
+        {
+            if ((mStackTop + n) > mStackMax)
+                mStackMax = mStackTop + n;
         }
 
         // these routines assume the depth is being reduced

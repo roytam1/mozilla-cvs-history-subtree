@@ -226,7 +226,7 @@ void JSObject::getProperty(Context *cx, const String &name, AttributeList *attr)
             cx->pushValue(*prop->mData.vp);
             break;
         case FunctionPair:
-            cx->switchToFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0);
+             cx->pushValue(cx->invokeFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0));
             break;
         case Constructor:
         case Method:
@@ -298,14 +298,14 @@ void JSInstance::getProperty(Context *cx, const String &name, AttributeList *att
             cx->pushValue(*prop->mData.vp);
             break;
         case FunctionPair:
-            cx->switchToFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0);
+            cx->pushValue(cx->invokeFunction(prop->mData.fPair.getterF, JSValue(this), NULL, 0));
             break;
         case Constructor:
         case Method:
             cx->pushValue(JSValue(mType->mMethods[prop->mData.index]));
             break;
         case IndexPair:
-            cx->switchToFunction(mType->mMethods[prop->mData.iPair.getterI], JSValue(this), NULL, 0);
+            cx->pushValue(cx->invokeFunction(mType->mMethods[prop->mData.iPair.getterI], JSValue(this), NULL, 0));
             break;
         default:
             ASSERT(false);  // XXX more to implement
@@ -332,7 +332,7 @@ void JSObject::setProperty(Context *cx, const String &name, AttributeList *attr,
         case FunctionPair:
             {
                 JSValue argv = v;
-                cx->switchToFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
+                cx->pushValue(cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1));
             }
             break;
         default:
@@ -360,13 +360,13 @@ void JSInstance::setProperty(Context *cx, const String &name, AttributeList *att
         case FunctionPair: 
             {
                 JSValue argv = v;
-                cx->switchToFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1);
+                cx->pushValue(cx->invokeFunction(prop->mData.fPair.setterF, JSValue(this), &argv, 1));
             }
             break;
         case IndexPair: 
             {
                 JSValue argv = v;
-                cx->switchToFunction(mType->mMethods[prop->mData.iPair.setterI], JSValue(this), &argv, 1);
+                cx->pushValue(cx->invokeFunction(mType->mMethods[prop->mData.iPair.setterI], JSValue(this), &argv, 1));
             }
             break;
         default:
@@ -1354,6 +1354,29 @@ static JSValue Function_toString(Context *, const JSValue& thisValue, JSValue * 
     return JSValue(new String(widenCString("function () { }")));
 }
 
+static JSValue Function_hasInstance(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(argc == 1);
+    JSValue v = argv[0];
+    if (!v.isObject())
+        return kFalseValue;
+
+    ASSERT(thisValue.isFunction());
+    thisValue.function->getProperty(cx, widenCString("prototype"), CURRENT_ATTR);
+    JSValue p = cx->popValue();
+
+    if (!p.isObject())
+        cx->reportError(Exception::typeError, "HasInstance: Function has non-object prototype");
+
+    JSObject *V = v.object->mPrototype;
+    while (V) {
+        if (V == p.object)
+            return kTrueValue;
+        V = V->mPrototype;
+    }
+    return kFalseValue;
+}
+
 static JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue v = thisValue;
@@ -1477,8 +1500,9 @@ void Context::initBuiltins()
     };
     ProtoFunDef functionProtos[] = 
     {
-        { "toString", String_Type, 0, Function_toString },
-        { "toSource", String_Type, 0, Function_toString },
+        { "toString",    String_Type, 0, Function_toString },
+        { "toSource",    String_Type, 0, Function_toString },
+        { "hasInstance", Boolean_Type, 1, Function_hasInstance },
         { NULL }
     };
     ProtoFunDef numberProtos[] = 

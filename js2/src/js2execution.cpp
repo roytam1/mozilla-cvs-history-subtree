@@ -252,17 +252,15 @@ JSFunction *Context::getOperator(Operator which, JSType *t1, JSType *t2)
     return NULL;
 }
 
-void Context::switchToFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc)
+// Invokes either the native or bytecode implementation. Causes another interpreter loop
+// to begin execution, and does nothing to clean up the incoming arguments (which need
+// not even be on the execution stack).
+JSValue Context::invokeFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (target->isNative()) {
-        JSValue result = target->getNativeCode()(this, thisValue, argv, argc);
-        resizeStack(stackSize() - argc);
-        pushValue(result);
-    }
-    else {
-        JSValue result = interpret(target->getByteCode(), target->getScopeChain(), thisValue, argv, argc);
-        pushValue(result);
-    }
+    if (target->isNative())
+        return target->getNativeCode()(this, thisValue, argv, argc);
+    else
+        return interpret(target->getByteCode(), target->getScopeChain(), thisValue, argv, argc);
 }
 
 JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 /*argc*/)
@@ -288,12 +286,6 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeCha
     mStackTop = 0;
 
     JSValue result = interpret(pc, endPC);
-
-    // ***** FIX ME -- The C++ standard requires thisValue to be const because in some places a
-    // temporary value is supplied to interpret.
-    // interpret shouldn't change the value of thisValue.
-    //thisValue = mThis;                      // copy 'this' back out in case it got constructed
-    //ASSERT(thisValue == mThis);
 
     Activation *prev = mActivationStack.top();
     mActivationStack.pop();
@@ -465,9 +457,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             ASSERT("More work needed");
                         }
                         else
-                            reportError(Exception::referenceError, 
-                                                "Not a function", 
-                                                    mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                            reportError(Exception::referenceError, "Not a function");
                     }
                     else {
                         target = targetValue->function;
@@ -657,9 +647,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                                                             // NULL is not a member of type t
                     }
                     else
-                        reportError(Exception::typeError, 
-                                            "As needs type", 
-                                                mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                        reportError(Exception::typeError, "As needs type");
                 }
                 break;
             case IsOp:
@@ -690,9 +678,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             pushValue(kTrueValue);
                         }
                         else
-                            reportError(Exception::typeError, 
-                                                "InstanceOf needs object", 
-                                                    mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                            reportError(Exception::typeError, "InstanceOf needs object");
                     }
                 }
                 break;
@@ -700,15 +686,22 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     JSValue t = popValue();
                     JSValue v = popValue();
-                    if (t.isObject() && t.isFunction()) {
-                        NOT_REACHED("implement me");
-                        // XXX prove that t->function["prototype"] is on t.object->mPrototype chain
-                        pushValue(kTrueValue);
+                    if (t.isFunction()) {
+                        JSFunction *obj = t.function;                        
+                        PropertyIterator i;
+                        JSFunction *target = NULL;
+                        if (obj->hasProperty(widenCString("hasInstance"), CURRENT_ATTR, Read, &i)) {
+                            JSValue hi = obj->getPropertyValue(i);
+                            if (hi.isFunction())
+                                target = hi.function;
+                        }
+                        if (target)
+                            pushValue(invokeFunction(target, t, &v, 1));
+                        else
+                            reportError(Exception::typeError, "InstanceOf couldn't find [[hasInstance]]");
                     }
                     else
-                        reportError(Exception::typeError, 
-                                            "InstanceOf needs object", 
-                                                mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                        reportError(Exception::typeError, "InstanceOf needs function object");
                 }
                 break;
             case GetNameOp:
@@ -971,8 +964,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             }
                         }
                         else            
-                            reportError(Exception::referenceError, 
-                                                "Not a type or a prototype function");
+                            reportError(Exception::referenceError, "Not a type or a prototype function");
                     }
                     else {
                         // if the type has an operator "new" use that, 
@@ -992,12 +984,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     for (uint32 i = argCount; i < expectedArgCount; i++) {
                         pushValue(kUndefinedValue);
                     }
-                    switchToFunction(target, newThis, getBase(argBase), expectedArgCount);
+                    
                     if (isPrototypeFunctionCall)
-                        popValue();     // don't care what it returns, we have the 'this' already
+                        // don't care what it returns, we have the 'this' already
+                        invokeFunction(target, newThis, getBase(argBase), expectedArgCount);
                     else
-                        newThis = popValue();   // constructor has potentially made the 'this'
-                    popValue();         // don't need the type anymore
+                        // constructor has potentially made the 'this', so retain it
+                        newThis = invokeFunction(target, newThis, getBase(argBase), expectedArgCount);
+                    resizeStack(stackSize() - expectedArgCount);
+                    popValue();             // don't need the type anymore
                     pushValue(newThis);
                  }
                 break;
@@ -1254,9 +1249,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         pushValue(x);
                     }
                     else
-                        reportError(Exception::uncaughtError, 
-                                            "No handler for throw", 
-                                                mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                        reportError(Exception::uncaughtError, "No handler for throw");
                 }
                 break;
             case ClassOp:
@@ -1269,9 +1262,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 
 
             default:
-                reportError(Exception::internalError, 
-                                    "Bad Opcode", 
-                                        mCurModule->getPositionForPC(pc - mCurModule->mCodeBase));
+                reportError(Exception::internalError, "Bad Opcode");
             }
         }
         catch (Exception x) {
@@ -1540,7 +1531,7 @@ void Context::initOperators()
         { Equal, Object_Type, Object_Type, objectEqual, Boolean_Type },
     };
 
-    for (int i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
+    for (uint32 i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
         JSFunction *f = new JSFunction(this, OpTable[i].imp, OpTable[i].resType);
         OperatorDefinition *op = new OperatorDefinition(OpTable[i].op1, OpTable[i].op2, f);
         mOperatorTable[OpTable[i].which].push_back(op);

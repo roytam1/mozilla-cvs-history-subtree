@@ -1926,7 +1926,11 @@ BinaryOpEquals:
                 argCount++;
                 p = p->next;
             }
-            addOpAdjustDepth(NewInstanceOp, -(argCount - 1));
+            // A NewInstanceOp actually ends up adding one more
+            // value onto the stack, before removing the arguments
+            // and type value
+            stretchStack(1);
+            addOpAdjustDepth(NewInstanceOp, -argCount);
             addLong(argCount);
             return type;
         }

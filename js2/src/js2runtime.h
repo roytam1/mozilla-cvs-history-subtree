@@ -1366,7 +1366,7 @@ static const double two31 = 2147483648.0;
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
 
-        void switchToFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc);
+        JSValue invokeFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc);
 
         void setReader(Reader *r)           { mReader = r; }
 
