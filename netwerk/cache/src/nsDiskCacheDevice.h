@@ -73,11 +73,12 @@ public:
 
     nsresult visitEntries(nsICacheVisitor * visitory);
     
-    nsresult updateDiskCacheEntries();
-    nsresult updateDiskCacheEntry(nsCacheEntry * entry);
     nsresult readDiskCacheEntry(nsCString * key, nsCacheEntry ** entry);
 
+    nsresult updateDiskCacheEntries();
+    nsresult updateDiskCacheEntry(nsDiskCacheEntry * diskEntry);
     nsresult deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry);
+    
     nsresult scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntry);
 
     nsresult scanDiskCacheEntries(nsISupportsArray ** result);

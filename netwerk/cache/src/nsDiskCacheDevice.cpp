@@ -322,7 +322,6 @@ struct MetaDataHeader {
     PRInt32         mFetchCount;
     PRUint32        mLastFetched;
     PRUint32        mLastModified;
-    PRUint32        mLastValidated;     // NOT NEEDED
     PRUint32        mExpirationTime;
     PRUint32        mDataSize;
     PRUint32        mKeySize;
@@ -334,7 +333,6 @@ struct MetaDataHeader {
             mFetchCount(0),
             mLastFetched(0),
             mLastModified(0),
-            mLastValidated(0),
             mExpirationTime(0),
             mDataSize(0),
             mKeySize(0),
@@ -347,7 +345,6 @@ struct MetaDataHeader {
             mFetchCount(entry->FetchCount()),
             mLastFetched(entry->LastFetched()),
             mLastModified(entry->LastModified()),
-            mLastValidated(entry->LastValidated()),
             mExpirationTime(entry->ExpirationTime()),
             mDataSize(entry->DataSize()),
             mKeySize(entry->Key()->Length() + 1),
@@ -506,8 +503,7 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastValidated(PRUint32 *aLastValidated)
 {
-    *aLastValidated = mMetaDataFile.mLastValidated;
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
@@ -613,16 +609,19 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     if (!diskEntry) {
         nsresult rv = readDiskCacheEntry(key, &entry);
         if (NS_FAILED(rv)) return nsnull;
-        rv = mBoundEntries.AddEntry(ensureDiskCacheEntry(entry));
+        diskEntry = ensureDiskCacheEntry(entry);
+        rv = mBoundEntries.AddEntry(diskEntry);
         if (NS_FAILED(rv)) {
             delete entry;
             return nsnull;
         }
     } else {
+        // XXX need to make sure this is an exact match, not just
+        // a hash code match.
         entry = diskEntry->getCacheEntry();
+        if (nsCRT::strcmp(entry->Key()->get(), key->get()) != 0)
+            return nsnull;
     }
-
-    // XXX find eviction element and move it to the tail of the queue
     return entry;
 }
 
@@ -637,7 +636,7 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
             return NS_ERROR_INVALID_POINTER;
 
         // commit any changes about this entry to disk.
-        updateDiskCacheEntry(entry);
+        updateDiskCacheEntry(diskEntry);
 
         // XXX eventually, as a performance enhancement, keep entries around for a while before deleting them.
         // XXX right now, to prove correctness, destroy the entries eagerly.
@@ -712,7 +711,7 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
         OnDataSizeChange(newEntry, dataSize);
 
     // XXX Need to make this entry known to other entries?
-    return updateDiskCacheEntry(newEntry);
+    return updateDiskCacheEntry(newDiskEntry);
 }
 
 
@@ -952,7 +951,7 @@ public:
     
     virtual PRBool VisitEntry(nsDiskCacheEntry * diskEntry)
     {
-        mDevice->updateDiskCacheEntry(diskEntry->getCacheEntry());
+        mDevice->updateDiskCacheEntry(diskEntry);
         return PR_TRUE;
     }
 };
@@ -964,12 +963,10 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntries()
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsCacheEntry* entry)
+nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
 {
+    nsCacheEntry* entry = diskEntry->getCacheEntry();
     if (entry->IsMetaDataDirty() || entry->IsEntryDirty()) {
-        nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-        if (!diskEntry) return NS_ERROR_OUT_OF_MEMORY;
-        
         nsresult rv;
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
         nsCOMPtr<nsITransport>& transport = diskEntry->getMetaTransport(nsICache::ACCESS_WRITE);
@@ -1088,8 +1085,7 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(nsCString* key, nsCacheEntry ** r
         // initialize the entry.
         entry->SetFetchCount(metaDataFile.mFetchCount);
         entry->SetLastFetched(metaDataFile.mLastFetched);
-        entry->SetLastValidated(metaDataFile.mLastValidated);
-        entry->SetLastValidated(metaDataFile.mLastValidated);
+        entry->SetLastModified(metaDataFile.mLastModified);
         entry->SetExpirationTime(metaDataFile.mExpirationTime);
         entry->SetDataSize(metaDataFile.mDataSize);
         
