@@ -95,7 +95,7 @@ sub _verbosePrint {
     print STDOUT @_ if ($vlevel <= $MozPackager::verbosity);
 }
 
-my $cansymlink = eval {symlink('', ''); 1; };
+my $cansymlink = ($^O eq 'cygwin') ? 1 : eval {symlink('', ''); 1; };
 
 # global var may be set by clients who want to force a copy
 # instead of a symlink
@@ -797,19 +797,53 @@ sub _commandFunc {
 package MozParser::Touch;
 
 sub add {
-    my ($parser, $dummyPath) = @_;
+    my ($parser) = @_;
 
     $parser->addCommand("touch", \&_commandFunc);
-    $parser->{"touchFile"} = $dummyPath;
+    $parser->{'touchFiles'} = { };
 }
+
+sub touchTo {
+    my ($parser, $stageDir) = @_;
+
+    foreach my $file (keys %{$parser->{'touchFiles'}}) {
+        my $stagedFile = MozPackager::joinfile($stageDir, $file);
+        MozPackager::_verbosePrint(2, "Touching file '$stagedFile'");
+
+        open my $outFile, ">$stagedFile" ||
+            die ("Couldn't open '$stagedFile' for writing.");
+
+        print $outFile $parser->{'touchFiles'}->{$file};
+        close $outFile;
+    }
+}
+        
 
 sub _commandFunc {
     my ($parser, $args, $file, $filename) = @_;
 
-    my @args = split ' ', $args;
-    scalar(@args) == 1 || die("At $filename, line $.: unrecognized !touch options \"$args\".");
+    (my $touchpath, $args) = split(' ', $args, 2);
 
-    $parser->_addFile($parser->{"touchFile"}, $args[0], $filename);
+    MozPackager::_verbosePrint(2, "Marking file '$touchpath' for touching.");
+
+    my $command = "";
+    my $readchars;
+
+    while(1) {
+        $command .= $args if ($args);
+
+        my $bang;
+        $readchars = read($file, $bang, 2);
+        last if ($readchars != 2 || $bang ne '!=');
+    } continue {
+        $args = <$file>;
+    }
+
+    # reset the filepos back two chars
+    seek($file, 0-$readchars, 1) || die("Couldn't seek backwards!")
+        if $readchars;
+
+    $parser->{'touchFiles'}->{$parser->findMapping($touchpath, $filename)} = $command;
 }
 
 # preprocesses into the destination path

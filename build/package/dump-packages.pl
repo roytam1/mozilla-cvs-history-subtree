@@ -70,6 +70,7 @@ Usage
   -w, --warn-missing
     Issue a warning when a file listed in a package is missing. The
     default behavior is to abort.\n";
+    exit;
 }
 
 use File::Spec;

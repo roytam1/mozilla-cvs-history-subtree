@@ -103,6 +103,7 @@ Usage
     the actual file resulting from the merge. The default places the
     merged XPT file into dist/bin/components in the package, using the
     name of the first package on the command line.\n";
+    exit;
 }
 
 use File::Spec;
@@ -178,6 +179,7 @@ my $parser = new MozParser;
 my $xptMerge = 0;
 my $preprocess = 0;
 my $doExec = 0;
+my $doTouch = 0;
 
 HANDLER: foreach my $handler (@handlers) {
     if ($handler eq "xptmerge") {
@@ -191,8 +193,8 @@ HANDLER: foreach my $handler (@handlers) {
     }
     if ($handler eq "touch") {
         my $dummyFile = File::Spec->catfile("dist", "dummy-file");
-        system ("touch", $dummyFile);
-        MozParser::Touch::add($parser, $dummyFile);
+        MozParser::Touch::add($parser);
+        $doTouch = 1;
         next HANDLER;
     }
     if ($handler eq "preprocess") {
@@ -226,6 +228,10 @@ MozStage::stage($parser, $stageDir);
 
 if ($xptMerge) {
     MozParser::XPTMerge::mergeTo($parser, MozPackager::joinfile($stageDir, $parser->findMapping($xptMergeFile)));
+}
+
+if ($doTouch) {
+    MozParser::Touch::touchTo($parser, $stageDir);
 }
 
 if ($calcDiskSpace) {

@@ -46,8 +46,15 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/rules.mk
 
+ifdef MOZ_DEBUG
+APP_NAME = MozillaDebug
+else
+APP_NAME = Mozilla
+endif
+
 # override these variables in special situations
 STAGE_DIR        = $(DEPTH)/stage$(if $*,/$*)
+STAGE_MACAPP_DIR = $(DEPTH)/stage$(if $*,/$*)/$(APP_NAME).app
 XPI_FILE         = $(DIST)/xpi/$*.xpi
 ZIP_FILE         = $(DIST)/$*.zip
 TGZ_FILE         = $(DIST)/$*.tar.gz
@@ -59,6 +66,8 @@ PACKAGE_FLAGS =
 HANDLERS = xptmerge touch optional preprocess exec
 MAPPINGS = dist/bin=bin xpiroot/=
 
+MACAPP_MAPPINGS = dist/bin=Contents/MacOS approot/=
+
 dump-packages:
 	cd $(DEPTH);
 	@$(PERL) $(srcdir)/dump-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -u $(PACKAGE_FLAGS)
@@ -68,6 +77,9 @@ dump-packages:
 # on the command line
 stage-%:
 	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) -d $(PACKAGE_FLAGS) $*
+
+stagemacapp-%:
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_MACAPP_DIR) $(addprefix -m ,$(MACAPP_MAPPINGS)) $(addprefix -c ,$(HANDLERS)) -d $(PACKAGE_FLAGS) $*
 
 makexpi-%:
 	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $*
@@ -82,7 +94,7 @@ makebz2-%:
 	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package bz2=$(BZ2_FILE) -d $(PACKAGE_FLAGS) $*
 
 makedmg-%:
-	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package dmg=$(DMG_FILE) -d $(PACKAGE_FLAGS) $*
+	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MACAPP_MAPPINGS)) $(addprefix -c ,$(HANDLERS)) --make-package dmg=$(DMG_FILE) -d $(PACKAGE_FLAGS) $*
 
 ifndef PACKAGES
 stage-packages makexpi-packages:
@@ -96,4 +108,3 @@ makexpi-packages:
 	$(PERL) $(srcdir)/stage-packages.pl -o $(DEPTH) -l $(PACKAGE_LIST) -s $(STAGE_DIR) $(addprefix -m ,$(MAPPINGS)) $(apprefix -c ,$(HANDLERS)) --make-package xpi=$(XPI_FILE) -d $(PACKAGE_FLAGS) $(PACKAGES)
 
 endif
-

@@ -14,3 +14,5 @@
 @topsrcdir@/xpfe/bootstrap/macbuild/Contents/English.lproj/InfoPlist.strings approot/Resources/English.lproj/InfoPlist.strings
 
 dist/package/mozillaSuite.rsrc   approot/Contents/Resources/@PROGRAM@.rsrc
+
+!touch approot/Contents/PkgInfo APPLMOZZ

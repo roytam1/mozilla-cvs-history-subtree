@@ -163,9 +163,6 @@ mkdir "$gDirDistGre/xpi", 0775 || die("Could not make directory '$gDirDistGre/xp
 %gPackages = ('gre-xpi'                => 'gre',
               'xpi-bootstrap'          => 'xpcom');
 
-$dummyFile = "$gDirStageProduct/dummy.touch";
-unlink $dummyFile if (-e $dummyFile);
-system('touch', $dummyFile);
 MozPackages::parsePackageList("$topsrcdir/build/package/packages.list");
 
 foreach $package (keys %gPackages) {
@@ -175,7 +172,7 @@ foreach $package (keys %gPackages) {
 
   my $parser = new MozParser;
   MozParser::XPTMerge::add($parser);
-  MozParser::Touch::add($parser, $dummyFile);
+  MozParser::Touch::add($parser);
   MozParser::Preprocess::add($parser);
   MozParser::Optional::add($parser);
   MozParser::Exec::add($parser);
@@ -185,6 +182,7 @@ foreach $package (keys %gPackages) {
   $parser->parse("$topobjdir/dist/packages", MozPackages::getPackagesFor($package));
   MozStage::stage($parser, $packageStageDir);
   MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
+  MozParser::Touch::touchTo($parser, $packageStageDir);
   MozPackager::calcDiskSpace($packageStageDir);
   MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
   MozParser::Exec::exec($parser, $packageStageDir);
