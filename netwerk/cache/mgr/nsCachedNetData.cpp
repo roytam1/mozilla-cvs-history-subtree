@@ -310,11 +310,13 @@ nsCachedNetData::CommitFlags()
     rv = GetRecord(getter_AddRefs(record));
     if (NS_FAILED(rv)) return rv;
 
-    Resurrect(record);
+    PRUint16 saveFlags = mFlags;
+
+    rv = Resurrect(record);
+    if (NS_FAILED(rv)) return rv;
     NS_ADDREF(thisAlias);
 
-    rv = Deserialize(false);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Deserialize() failed");
+    mFlags = saveFlags &~ DORMANT;
     
     NS_RELEASE(thisAlias);
     return rv;
