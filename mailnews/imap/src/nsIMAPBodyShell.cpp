@@ -1196,6 +1196,11 @@ PRBool	nsIMAPBodypartMessage::PreflightCheckAllInline()
   if (!ShouldFetchInline())
     return PR_FALSE;
   
+  // we may want to control this with a pref - in 4.x, if you
+  // click on the ? sig, we fetch the whole message.
+  // if it's signed, then we need to fetch the whole message.
+  if (!PL_strcasecmp(m_body->GetBodySubType(), "signed"))
+    return PR_TRUE;
   return m_body->PreflightCheckAllInline();
 }
 
