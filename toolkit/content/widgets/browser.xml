@@ -910,11 +910,11 @@
         <setter>
           <![CDATA[
             if (val != "") {
-              this._buttonElement.hidden = false;
+              this._buttonElement.removeAttribute("style");
               this._buttonElement.setAttribute("label", val);
             }
             else
-              this._buttonElement.hidden = true;
+              this._buttonElement.setAttribute("style", "max-width: 1px; visibility: hidden;");
             return val;
           ]]>        
         </setter>
