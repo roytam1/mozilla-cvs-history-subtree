@@ -165,7 +165,6 @@
                               command="cmd_textZoomReset"/>
                   </menupopup>
                 </menu>
-#ifdef SHOW_ALT_SS_UI
                 <menu label="&pageStyleMenu.label;" accesskey="&pageStyleMenu.accesskey;">
                   <menupopup onpopupshowing="stylesheetFillPopup(this);"
                              oncommand="stylesheetSwitchAll(window._content, event.target.getAttribute('data')); setStyleDisabled(false);">
@@ -175,7 +174,6 @@
                     <menuseparator/>
                   </menupopup>
                 </menu>
-#endif
                 <menu label="&charsetMenu.label;" accesskey="&charsetMenu.accesskey;"
                       datasources="rdf:charset-menu" ref="NC:BrowserCharsetMenuRoot"
                       oncommand="MultiplexHandler(event)" onpopupshowing="CreateMenu('browser');UpdateMenus(event)" onpopupshown="CreateMenu('more-menu');">

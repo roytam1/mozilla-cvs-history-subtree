@@ -125,9 +125,7 @@ function loadEventHandlers(event)
     UpdateBookmarksLastVisitedDate(event);
     checkForDirectoryListing();
     charsetLoadListener(event);
-#ifdef SHOW_ALT_SS_UI
     updatePageStyles();
-#endif
     updatePageLivemarks();
   }
 
@@ -3442,9 +3440,7 @@ nsBrowserStatusHandler.prototype =
     gMissingPluginInstaller.clearMissingPlugins(getBrowser().selectedTab);
        
     setTimeout(function () { updatePageLivemarks(); }, 0);
-#ifdef SHOW_ALT_SS_UI
     setTimeout(function () { updatePageStyles(); }, 0);
-#endif
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
@@ -5175,7 +5171,6 @@ function ShowWindowFromResource( node )
 }
 #endif
 
-#ifdef SHOW_ALT_SS_UI
 /* Begin Page Style Functions */
 function getStyleSheetArray(frame)
 {
@@ -5330,7 +5325,6 @@ function updatePageStyles(evt)
   browser.userTypedClear = userTypedClear;
 }
 /* End of the Page Style functions */
-#endif
 
 function clearObsoletePrefs()
 {  
