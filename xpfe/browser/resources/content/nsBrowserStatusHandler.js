@@ -305,6 +305,10 @@ nsBrowserStatusHandler.prototype =
       var userTypedValue = browser.userTypedValue;
       if (userTypedValue === null) {
         this.urlBar.value = location;
+        if (this.urlBar.value != location) {
+          this.urlBar.value = ""; // hack for bug 249322
+          this.urlBar.value = location;
+        }
         SetPageProxyState("valid", aLocation);
 
         // Setting the urlBar value in some cases causes userTypedValue to
