@@ -169,7 +169,7 @@ nsNewsURI2Path(const char* rootURI, const char* uriStr, nsFileSpec& pathResult)
 
 /* parses NewsMessageURI */
 nsresult 
-nsParseNewsMessageURI(const char* uri, nsCString& messageUriWithoutKey, PRUint32 *key)
+nsParseNewsMessageURI(const char* uri, nsCString& folderURI, PRUint32 *key)
 {
 	if(!key)
 		return NS_ERROR_NULL_POINTER;
@@ -181,7 +181,8 @@ nsParseNewsMessageURI(const char* uri, nsCString& messageUriWithoutKey, PRUint32
     PRInt32 keyEndSeparator = uriStr.FindCharInSet("?&", 
                                                    keySeparator); 
 
-		uriStr.Left(messageUriWithoutKey, keySeparator);
+		uriStr.Left(folderURI, keySeparator);
+        folderURI.Cut(4, 8);    // cut out the _message part of news_message:
 
 		nsCAutoString keyStr;
     if (keyEndSeparator != -1)

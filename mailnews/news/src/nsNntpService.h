@@ -68,6 +68,7 @@ protected:
   nsresult ConvertNewsMessageURI2NewsURI(const char *messageURI,
                                          nsCString &newsURI,
                                          nsCString &newsgroupName,
+                                         nsIMsgNewsFolder **outFolder,
                                          nsMsgKey *aKey);
   
   nsresult SetUpNntpUrlForPosting(nsINntpUrl * nntpUrl, const char *newsgroupNames, const char *newshost, char **newsUrlSpec);
@@ -81,7 +82,7 @@ protected:
   // a convience routine to run news urls
   nsresult RunNewsUrl (nsIURI * aUrl, nsIMsgWindow *aMsgWindow, nsISupports * aConsumer);
   static PRBool findNewsServerWithGroup(nsISupports *aElement, void *data);
- 
+  nsresult DecomposeNewsMessageURI(const char * aMessageURI, nsIMsgFolder ** aFolder, nsMsgKey *aMsgKey);
 
   PRBool            mPrintingOperation; // Flag for printing operations
   PRBool			mOpenAttachmentOperation; // Flag for opening attachments

@@ -59,6 +59,7 @@
 #include "nsIWebNavigation.h"
 #include "nsIIOService.h"
 #include "nsIPrompt.h"
+#include "nsIRDFService.h"
 
 #undef GetPort  // XXX Windows!
 #undef SetPort  // XXX Windows!
@@ -119,14 +120,18 @@ nsNntpService::SaveMessageToDisk(const char *aMessageURI,
     printf("nsNntpService::SaveMessageToDisk(%s,...)\n",aMessageURI);
 #endif
 
-    nsCAutoString uri(aMessageURI);
+    nsCAutoString uri;
     nsCAutoString newsgroupName;
     nsMsgKey key = nsMsgKey_None;
     
-    if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen) == 0)
-	    rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, &key);
-    else
-        return NS_ERROR_UNEXPECTED;
+    if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen) == 0) {
+	    rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, nsnull, &key);
+        NS_ENSURE_SUCCESS(rv,rv);
+    }
+    else {
+        rv = NS_ERROR_UNEXPECTED;
+        NS_ENSURE_SUCCESS(rv,rv);
+    }
 
     // now create a url with this uri spec
     nsCOMPtr<nsIURI> myuri;
@@ -161,36 +166,24 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
                                        nsIMsgWindow *aMsgWindow, nsIUrlListener * aUrlListener, const PRUnichar * aCharsetOverride, nsIURI ** aURL)
 {
   nsresult rv = NS_OK;
-  
-  if (!aMessageURI) {
-    return NS_ERROR_NULL_POINTER;
-  }
+  NS_ENSURE_ARG_POINTER(aMessageURI);
 
-#ifdef DEBUG_NEWS
-  printf("nsNntpService::DisplayMessage(%s,...)\n",aMessageURI);
-#endif
-
-  nsCAutoString uri(aMessageURI);
-  nsCAutoString newsGroupNameUri(aMessageURI);
+  nsCAutoString uri;
   nsCAutoString newsgroupName;
   nsMsgKey key = nsMsgKey_None;
- 
+  nsCOMPtr <nsIMsgNewsFolder> newsFolder;
   if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen) == 0) {
-	rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, &key);
-	NS_ASSERTION(NS_SUCCEEDED(rv),"failed to convert the news_message:// uri");
+	rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, getter_AddRefs(newsFolder), &key);
+    NS_ENSURE_SUCCESS(rv,rv);
   }
   else {
-	// todo:  if we get here, make sure uri really a news article url (example:  "news://host/aa@bb")
+#ifdef DEBUG_seth
+        printf("todo:  if we get here, make sure uri really a news article url (example:  news://host/aa@bb\n");
+#endif
+        uri = aMessageURI;
   }
 
-  newsGroupNameUri.ReplaceSubstring("news_message:", "news:");
-  PRInt32 poundPos = newsGroupNameUri.RFindChar('#', PR_FALSE);
-  nsCOMPtr <nsIMsgNewsFolder> newsFolder;
-  if (poundPos != -1)
-  {
-    newsGroupNameUri.Truncate(poundPos);
-    nsGetNewsGroupFromUri(newsGroupNameUri, getter_AddRefs(newsFolder));
-  }
+
   // now create a url with this uri spec
   nsCOMPtr<nsIURI> myuri;
 
@@ -292,117 +285,97 @@ NS_IMETHODIMP nsNntpService::OpenAttachment(const char *aContentType,
 NS_IMETHODIMP nsNntpService::GetUrlForUri(const char *aMessageURI, nsIURI **aURL, nsIMsgWindow *aMsgWindow) 
 {
   nsresult rv = NS_OK;
-  nsCAutoString uri(aMessageURI);
+  nsCAutoString uri;
   nsCAutoString newsgroupName;
   nsMsgKey key = nsMsgKey_None;
     
   if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen) == 0)
   {
-	  rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, &key);
-    if (NS_SUCCEEDED(rv))
+	  rv = ConvertNewsMessageURI2NewsURI(aMessageURI, uri, newsgroupName, nsnull, &key);
+      NS_ENSURE_SUCCESS(rv,rv);
+
       rv = ConstructNntpUrl(uri, newsgroupName, key, nsnull, aMsgWindow, aURL);
+      NS_ENSURE_SUCCESS(rv,rv);
   }
-  else 
+  else {
     rv = NS_ERROR_UNEXPECTED;
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
 
   return rv;
 
 }
 
-nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, nsCString &newsURI, nsCString &newsgroupName, nsMsgKey *key)
+nsresult
+nsNntpService::DecomposeNewsMessageURI(const char * aMessageURI, nsIMsgFolder ** aFolder, nsMsgKey *aMsgKey)
 {
-  nsCAutoString hostname;
-  nsCAutoString messageUriWithoutKey;
+    NS_ENSURE_ARG_POINTER(aMessageURI);
+    NS_ENSURE_ARG_POINTER(aFolder);
+    NS_ENSURE_ARG_POINTER(aMsgKey);
+
+    nsresult rv = NS_OK;
+    nsCAutoString folderURI;
+    rv = nsParseNewsMessageURI(aMessageURI, folderURI, aMsgKey);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr <nsIRDFService> rdf = do_GetService("@mozilla.org/rdf/rdf-service;1",&rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIRDFResource> res;
+    rv = rdf->GetResource(folderURI, getter_AddRefs(res));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **) aFolder);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    return NS_OK;
+}
+
+// turn news_message://news.mozilla.org/netscape.test#1
+// into something like news://news.mozilla.org/3A413309.4080507%40netscape.com
+nsresult nsNntpService::ConvertNewsMessageURI2NewsURI(const char *messageURI, nsCString &newsURI, nsCString &newsgroupName, nsIMsgNewsFolder **outFolder, nsMsgKey *key)
+{
+  NS_ENSURE_ARG_POINTER(messageURI);
+  NS_ENSURE_ARG_POINTER(key);
+
   nsresult rv = NS_OK;
+  nsCOMPtr <nsIMsgFolder> folder;
 
-  // messageURI is of the form:  "news_message://news.mcom.com/mcom.linux#1"
-  // if successful, we should get
-  // messageUriWithoutKey = "news_message://news.mcom.com/mcom.linux"
-  // key = 1
-  rv = nsParseNewsMessageURI(messageURI, messageUriWithoutKey, key);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  rv = DecomposeNewsMessageURI(messageURI, getter_AddRefs(folder), key);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  // turn news_message://news.mcom.com/mcom.linux -> news.mcom.com/mcom.linux
-  // stick "news.mcom.com/mcom.linux" in hostname.
-  messageUriWithoutKey.Right(hostname, messageUriWithoutKey.Length() - kNewsMessageRootURILen - 1);
-
-  // take news.mcom.com/mcom.linux (in hostname) and put
-  // "mcom.linux" into newsgroupName and truncate to leave
-  // "news.mcom.com" in hostname
-  PRInt32 hostEnd = hostname.FindChar('/');
-  if (hostEnd > 0) {
-    hostname.Right(newsgroupName, hostname.Length() - hostEnd - 1);
-    hostname.Truncate(hostEnd);
-  }
-  else {
-    // error!
-    // we didn't find a "/" in something we thought looked like this:
-    // news.mcom.com/mcom.linux
-    return NS_ERROR_FAILURE;
-  }
-
-#ifdef DEBUG_NEWS
-  printf("ConvertNewsMessageURI2NewsURI(%s,??) -> %s %u\n", messageURI, newsgroupName.GetBuffer(), *key);
-#endif
-
-  nsFileSpec pathResult;
-
-  rv = nsNewsURI2Path(kNewsMessageRootURI, messageUriWithoutKey, pathResult);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCOMPtr<nsIMsgDatabase> newsDBFactory;
-  nsCOMPtr<nsIMsgDatabase> newsDB;
-  
-  rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(newsDBFactory));
-  if (NS_FAILED(rv) || (!newsDBFactory)) {
-    return rv;
-  }
-
-  nsCOMPtr <nsIFileSpec> dbFileSpec;
-  NS_NewFileSpecWithSpec(pathResult, getter_AddRefs(dbFileSpec));
-  rv = newsDBFactory->Open(dbFileSpec, PR_TRUE, PR_FALSE, getter_AddRefs(newsDB));
-    
-  if (NS_FAILED(rv) || (!newsDB)) {
-    return rv;
-  }
-
-  nsCOMPtr<nsIMsgDBHdr> msgHdr;
-  
-  rv = newsDB->GetMsgHdrForKey((nsMsgKey) *key, getter_AddRefs(msgHdr));
-  if (NS_FAILED(rv) || (!msgHdr)) {
-    return rv;
-  }
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = folder->GetMessageHeader(*key, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv,rv);
 
   nsXPIDLCString messageId;
   rv = msgHdr->GetMessageId(getter_Copies(messageId));
+  NS_ENSURE_SUCCESS(rv,rv);
 
-#ifdef DEBUG_NEWS
-  PRUint32 bytes;
-  PRUint32 lines;
-  rv = msgHdr->GetMessageSize(&bytes);
-  rv = msgHdr->GetLineCount(&lines);
+  nsCOMPtr <nsIMsgIncomingServer> server;
+  rv = folder->GetServer(getter_AddRefs(server));
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  printf("bytes = %u\n",bytes);
-  printf("lines = %u\n",lines);
-#endif
+  nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(folder, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  nsXPIDLCString name; 
+  rv = newsFolder->GetAsciiName(getter_Copies(name));
+  NS_ENSURE_SUCCESS(rv,rv);
+  newsgroupName = (const char *) name;
 
-  newsURI = kNewsRootURI;
-  newsURI += "/";
-  newsURI += hostname;
+  nsXPIDLCString serverURI; 
+  rv = server->GetServerURI(getter_Copies(serverURI));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  newsURI = (const char *)serverURI;
   newsURI += "/";
   newsURI += (const char*)messageId;
 
-#ifdef DEBUG_NEWS
-  printf("newsURI = %s\n", (const char *)nsCAutoString(newsURI));
-#endif
+  if (outFolder) {
+    *outFolder = newsFolder;
+    NS_IF_ADDREF(*outFolder);
+  }
 
   return NS_OK;
 }
@@ -1635,5 +1608,17 @@ nsNntpService::HandleContent(const char * aContentType, const char * aCommand, c
 NS_IMETHODIMP
 nsNntpService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(uri);
+  NS_ENSURE_ARG_POINTER(_retval);
+  nsresult rv = NS_OK;
+
+  nsCOMPtr <nsIMsgFolder> folder;
+  nsMsgKey msgKey;
+
+  rv = DecomposeNewsMessageURI(uri, getter_AddRefs(folder), &msgKey);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = folder->GetMessageHeader(msgKey, _retval);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
 }
