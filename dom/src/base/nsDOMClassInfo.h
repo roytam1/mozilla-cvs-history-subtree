@@ -51,6 +51,7 @@ class nsIPluginInstance;
 class nsIForm;
 class nsIDOMNodeList;
 class nsIDOMDocument;
+class nsIHTMLDocument;
 
 struct nsDOMClassInfoData;
 
@@ -200,6 +201,7 @@ protected:
 
   static PRBool sIsInitialized;
   static PRBool sDisableDocumentAllSupport;
+  static PRBool sDisableGlobalScopePollutionSupport;
 
   static jsval sTop_id;
   static jsval sParent_id;
@@ -357,8 +359,23 @@ public:
   NS_IMETHOD Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                       JSObject *obj);
 
-  static nsresult CacheDocumentProperty(JSContext *cx, JSObject *obj,
-                                        nsIDOMWindow *window);
+  static nsresult OnDocumentChanged(JSContext *cx, JSObject *obj,
+                                    nsIDOMWindow *window);
+
+  static JSBool JS_DLL_CALLBACK GlobalScopePolluterNewResolve(JSContext *cx,
+                                                              JSObject *obj,
+                                                              jsval id,
+                                                              uintN flags,
+                                                              JSObject **objp);
+  static JSBool JS_DLL_CALLBACK GlobalScopePolluterGetProperty(JSContext *cx,
+                                                               JSObject *obj,
+                                                               jsval id,
+                                                               jsval *vp);
+  static JSBool JS_DLL_CALLBACK SecurityCheckOnSetProp(JSContext *cx,
+                                                       JSObject *obj, jsval id,
+                                                       jsval *vp);
+  static nsresult InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
+                                             nsIHTMLDocument *doc);
 
   static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
   {
@@ -435,7 +452,7 @@ protected:
 
 public:
   NS_IMETHOD PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                    JSObject *obj);
+                        JSObject *obj);
 
   static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
   {
