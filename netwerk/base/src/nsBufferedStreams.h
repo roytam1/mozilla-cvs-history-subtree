@@ -26,6 +26,7 @@
 #include "nsIFileStreams.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
+#include "nsIStreamBufferAccess.h"
 #include "nsCOMPtr.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,14 +70,18 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 
 class nsBufferedInputStream : public nsBufferedStream,
-                              public nsIBufferedInputStream
+                              public nsIBufferedInputStream,
+                              public nsIStreamBufferAccess
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED
     NS_DECL_NSIINPUTSTREAM
     NS_DECL_NSIBUFFEREDINPUTSTREAM
+    NS_DECL_NSISTREAMBUFFERACCESS
 
-    nsBufferedInputStream() : nsBufferedStream() {}
+    nsBufferedInputStream() : nsBufferedStream(),
+                              mBufferDisabled(PR_FALSE),
+                              mGetBufferCount(0) {}
     virtual ~nsBufferedInputStream() {}
 
     static NS_METHOD
@@ -89,6 +94,10 @@ public:
 protected:
     NS_IMETHOD Fill();
     NS_IMETHOD Flush() { return NS_OK; } // no-op for input streams
+
+private:
+    PRPackedBool mBufferDisabled;
+    PRUint8      mGetBufferCount;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
