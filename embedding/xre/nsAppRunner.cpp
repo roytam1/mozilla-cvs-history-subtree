@@ -1056,7 +1056,12 @@ static nsresult Ensure1Window( nsICmdLineService* cmdLineArgs)
       if ((const char*)tempString)
         PR_sscanf(tempString, "%d", &height);
 
+#ifdef MOZ_MINOTAUR
+      PRBool windowOpened;
+      rv = LaunchApplication("mail", height, width, &windowOpened);
+#else
       rv = OpenBrowserWindow(height, width);
+#endif
     }
   }
   return rv;
