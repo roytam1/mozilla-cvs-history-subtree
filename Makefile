@@ -41,6 +41,8 @@ ifndef NO_SECURITY
 DIRS		+= security
 endif
 
+DIRS		+= perf
+
 ifdef MOZ_PRIVACY
 DIRS		+= privacy
 endif
