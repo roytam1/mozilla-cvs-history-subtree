@@ -2996,8 +2996,7 @@ NS_IMETHODIMP nsHTMLEditor::Paste()
       nsAutoString htmlFlavor(kHTMLMime);
       nsAutoString textFlavor(kTextMime);
 
-#warning fix me.
-      if (1)  // This should only happen in html editors, not plaintext
+      if ((mFlags & eEditorPlaintextMask) == 0)  // This should only happen in html editors, not plaintext
       {
         trans->AddDataFlavor(&imageFlavor);
         trans->AddDataFlavor(&htmlFlavor);

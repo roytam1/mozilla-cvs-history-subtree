@@ -69,7 +69,6 @@ nsTextEditRules::Init(nsHTMLEditor *aEditor)
 {
   if (!aEditor) { return NS_ERROR_NULL_POINTER; }
 
-#warning fix me
   mEditor = aEditor;  // we hold a non-refcounted reference back to our editor
   nsCOMPtr<nsIDOMSelection> selection;
   mEditor->GetSelection(getter_AddRefs(selection));
