@@ -62,7 +62,7 @@ struct CapturedJSError {
  * the entry is removed from the table, and a JavaScript GC root for the JS
  * object is removed.
  */
-static JSHashTable *js_obj_reflections = NULL;
+static PRHashTable *js_obj_reflections = NULL;
 
 #ifdef JS_THREADSAFE
 /*
@@ -81,15 +81,15 @@ jsj_init_js_obj_reflections_table()
     {
       return JS_TRUE;
     }
-    js_obj_reflections = JS_NewHashTable(128, NULL, JS_CompareValues,
-                                         JS_CompareValues, NULL, NULL);
+    js_obj_reflections = PR_NewHashTable(128, NULL, PR_CompareValues,
+                                         PR_CompareValues, NULL, NULL);
     if (!js_obj_reflections)
         return JS_FALSE;
 
 #ifdef JS_THREADSAFE
     js_obj_reflections_monitor = PR_NewNamedMonitor("js_obj_reflections");
     if (!js_obj_reflections_monitor) {
-        JS_HashTableDestroy(js_obj_reflections);
+        PR_HashTableDestroy(js_obj_reflections);
         return JS_FALSE;
     }
 #endif  /* JS_THREADSAFE */
@@ -113,7 +113,7 @@ jobject
 jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 {
     jobject java_wrapper_obj;
-    JSHashEntry *he, **hep;
+    PRHashEntry *he, **hep;
 
     java_wrapper_obj = NULL;
 
@@ -123,7 +123,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 
     /* First, look in the hash table for an existing reflection of the same
        JavaScript object.  If one is found, return it. */
-    hep = JS_HashTableRawLookup(js_obj_reflections, (JSHashNumber)js_obj, js_obj);
+    hep = PR_HashTableRawLookup(js_obj_reflections, (PRHashNumber)js_obj, js_obj);
 
     /* If the same JSObject is reflected into Java more than once then we should
        return the same Java object, both for efficiency and so that the '=='
@@ -135,15 +135,21 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     he = *hep;
     if (he) {
         java_wrapper_obj = (jobject)he->value;
-        JS_ASSERT(java_wrapper_obj);
+        PR_ASSERT(java_wrapper_obj);
         if (java_wrapper_obj)
             goto done;
     }
 
     /* No existing reflection found, so create a new Java object that wraps
        the JavaScript object by storing its address in a private integer field. */
+#if 0
     java_wrapper_obj =
         (*jEnv)->NewObject(jEnv, njJSObject, njJSObject_JSObject, (jint)js_obj);
+#else
+    if (JSJ_callbacks->get_java_wrapper != NULL) {
+        java_wrapper_obj = JSJ_callbacks->get_java_wrapper(jEnv, (jint)js_obj);
+    }
+#endif /*! OJI */
     if (!java_wrapper_obj) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't create new instance of "
                                           "netscape.javascript.JSObject");
@@ -151,7 +157,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     }
 
     /* Add the new reflection to the hash table. */
-    he = JS_HashTableRawAdd(js_obj_reflections, hep, (JSHashNumber)js_obj,
+    he = PR_HashTableRawAdd(js_obj_reflections, hep, (PRHashNumber)js_obj,
                             js_obj, java_wrapper_obj);
     if (he) {
         /* Tell the JavaScript GC about this object since the only reference
@@ -187,7 +193,7 @@ done:
 JSBool
 jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
 {
-    JSHashEntry *he, **hep;
+    PRHashEntry *he, **hep;
     JSBool success = JS_FALSE;
 
 #ifdef JS_THREADSAFE
@@ -195,16 +201,16 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
 #endif
 
     /* Get the hash-table entry for this wrapper object */
-    hep = JS_HashTableRawLookup(js_obj_reflections, (JSHashNumber)js_obj, js_obj);
+    hep = PR_HashTableRawLookup(js_obj_reflections, (PRHashNumber)js_obj, js_obj);
     he = *hep;
 
-    JS_ASSERT(he);
+    PR_ASSERT(he);
     if (he) {
         /* Tell the JS GC that Java no longer keeps a reference to this
            JS object. */
         success = JS_RemoveRoot(cx, (void *)&he->key);
 
-        JS_HashTableRawRemove(js_obj_reflections, hep, he);
+        PR_HashTableRawRemove(js_obj_reflections, hep, he);
     }
 
 #ifdef JS_THREADSAFE
@@ -216,12 +222,6 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
 
 #else /* !PRESERVE_JSOBJECT_IDENTITY */
 
-/* This object provides is the "anchor" by which netscape.javscript.JSObject
-   objects hold a reference to native JSObjects. */
-typedef struct JSObjectRoot {
-    JSObject *js_obj;
-    JSContext *cx;      /* Creating context, needed for finalization */
-} JSObjectHandle;
 
 /*
  * The caller must call DeleteLocalRef() on the returned object when no more
@@ -243,8 +243,14 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 
     /* No existing reflection found, so create a new Java object that wraps
        the JavaScript object by storing its address in a private integer field. */
+#if 0
     java_wrapper_obj =
         (*jEnv)->NewObject(jEnv, njJSObject, njJSObject_JSObject, (jint)handle);
+#else
+    if (JSJ_callbacks->get_java_wrapper != NULL) {
+        java_wrapper_obj = JSJ_callbacks->get_java_wrapper(jEnv, (jint)handle);
+    }
+#endif /*! OJI */
     if (!java_wrapper_obj) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't create new instance of "
                                           "netscape.javascript.JSObject");
@@ -264,7 +270,7 @@ jsj_UnwrapJSObjectWrapper(JNIEnv *jEnv, jobject java_wrapper_obj)
     JSObjectHandle *handle;
 
     handle = (JSObjectHandle*)((*jEnv)->GetIntField(jEnv, java_wrapper_obj, njJSObject_internal));
-    JS_ASSERT(handle);
+    PR_ASSERT(handle);
     if (!handle)
         return NULL;
     return handle->js_obj;
@@ -309,7 +315,7 @@ destroy_saved_js_error(JNIEnv *jEnv, CapturedJSError *error)
  * into JavaScript, in which case the error will be re-reported as a JavaScript
  * error.
  */
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 capture_js_error_reports_for_java(JSContext *cx, const char *message,
                                   JSErrorReport *report)
 {
@@ -369,7 +375,7 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
 abort:
 out_of_memory:
     /* No recovery action possible */
-    JS_ASSERT(0);
+    PR_ASSERT(0);
     destroy_saved_js_error(jEnv, new_error);
     return;
 }
@@ -395,52 +401,18 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     jstring message_jstr, linebuf_jstr, filename_jstr;
     jint index, lineno;
     JSErrorReport *report;
-    jsval pending_exception; 
-    jobject java_obj;
-    int dummy_cost;
-    JSBool dummy_bool;
     jthrowable java_exception;
 
     /* Get the Java JNI environment */
     jEnv = jsj_env->jEnv;
 
-    /* Get the pending JS exception if it exists */
-    if (JS_IsExceptionPending(jsj_env->cx)) {
-        if (!JS_GetPendingException(jsj_env->cx, &pending_exception))
-            return;
-        
-        /* Convert jsval exception to a java object and then use it to
-           create an instance of JSException. */ 
-        if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, 
-                                            pending_exception, 
-                                            jsj_get_jlObject_descriptor(jsj_env->cx, jEnv),
-                                            &dummy_cost, &java_obj, 
-                                            &dummy_bool))
-            goto done;
-        
-        java_exception = (*jEnv)->NewObject(jEnv, njJSException, 
-                                            njJSException_JSException_wrap,
-                                            java_obj);
-        if (!java_exception) 
-            goto out_of_memory;
-        
-        /* Throw the newly-created JSException */
-        if ((*jEnv)->Throw(jEnv, java_exception) < 0) {
-            JS_ASSERT(0);
-            jsj_LogError("Couldn't throw JSException\n");
-            goto done;
-        }    
-        JS_ClearPendingException(jsj_env->cx);
-        return;
-    }
-    
     if (!jsj_env->pending_js_errors) {
 #ifdef DEBUG
         /* Any exception should be cleared as soon as it's detected, so there
            shouldn't be any pending. */
         if ((*jEnv)->ExceptionOccurred(jEnv)) {
             /* A Java exception occurred, but nobody in JS-land noticed. */
-            JS_ASSERT(0);
+            PR_ASSERT(0);
             (*jEnv)->ExceptionClear(jEnv);
         }
 #endif
@@ -501,7 +473,7 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
 
     /* Throw the newly-created JSException */
     if ((*jEnv)->Throw(jEnv, java_exception) < 0) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         jsj_LogError("Couldn't throw JSException\n");
         goto done;
     }
@@ -519,7 +491,7 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
 
 out_of_memory:
     /* No recovery possible */
-    JS_ASSERT(0);
+    PR_ASSERT(0);
     jsj_LogError("Out of memory while attempting to throw JSException\n");
 
 done:
@@ -612,7 +584,7 @@ done:
 
 JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp)
+         JSContext **cxp, JSObject **js_objp, JavaToJSSavedState* saved_state)
 {
     JSContext *cx;
     char *err_msg;
@@ -637,7 +609,7 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
         js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_wrapper_obj);
 #endif  /* PRESERVE_JSOBJECT_IDENTITY */
 
-        JS_ASSERT(js_obj);
+        PR_ASSERT(js_obj);
         if (!js_obj)
             goto error;
         *js_objp = js_obj;
@@ -659,7 +631,7 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
             if (!cx)
                 goto error;
         } else {
-            err_msg = JS_smprintf("Unable to find/create JavaScript execution "
+            err_msg = PR_smprintf("Unable to find/create JavaScript execution "
                                   "context for JNI thread 0x%08x", jEnv);
             goto error;
         }
@@ -670,8 +642,8 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
      * Capture all JS error reports so that they can be thrown into the Java
      * caller as an instance of netscape.javascript.JSException.
      */
-    *old_error_reporterp =
-        JS_SetErrorReporter(cx, capture_js_error_reports_for_java);
+    saved_state->error_reporter = JS_SetErrorReporter(cx, capture_js_error_reports_for_java);
+    saved_state->java_jsj_env = jsj_SetJavaJSJEnv(jsj_env);
 
     return jsj_env;
 
@@ -696,19 +668,20 @@ entry_failure:
  * This utility function is called just prior to returning into Java from JS.
  */
 JSBool
-jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter original_reporter)
+jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JavaToJSSavedState* original_state)
 {
     JNIEnv *jEnv;
 
     /* Restore the JS error reporter */
-    JS_SetErrorReporter(cx, original_reporter);
+    JS_SetErrorReporter(cx, original_state->error_reporter);
+    jsj_SetJavaJSJEnv(original_state->java_jsj_env);
 
     jEnv = jsj_env->jEnv;
 
 #ifdef DEBUG
     /* Any Java exceptions should have been noticed and reported already */
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         jsj_LogError("Unhandled Java exception detected");
         return JS_FALSE;
     }
@@ -775,19 +748,18 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
     JSBool dummy_bool;
     const jchar *property_name_ucs2;
     jsize property_name_len;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jobject member;
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return NULL;
 
     property_name_ucs2 = NULL;
     if (!property_name_jstr) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                                JSJMSG_NULL_MEMBER_NAME);
+        JS_ReportError(cx, "illegal null member name");
         member = NULL;
         goto done;
     }
@@ -795,7 +767,7 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
     /* Get the Unicode string for the JS property name */
     property_name_ucs2 = (*jEnv)->GetStringChars(jEnv, property_name_jstr, &is_copy);
     if (!property_name_ucs2) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         goto done;
     }
     property_name_len = (*jEnv)->GetStringLength(jEnv, property_name_jstr);
@@ -803,14 +775,13 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
     if (!JS_GetUCProperty(cx, js_obj, property_name_ucs2, property_name_len, &js_val))
         goto done;
 
-    jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, 
-                                   jsj_get_jlObject_descriptor(cx, jEnv),
+    jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, jsj_get_jlObject_descriptor(cx, jEnv),
                                    &dummy_cost, &member, &dummy_bool);
 
 done:
     if (property_name_ucs2)
         (*jEnv)->ReleaseStringChars(jEnv, property_name_jstr, property_name_ucs2);
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return member;
@@ -831,11 +802,11 @@ Java_netscape_javascript_JSObject_getSlot(JNIEnv *jEnv,
     jsval js_val;
     int dummy_cost;
     JSBool dummy_bool;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jobject member;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return NULL;
     
@@ -847,7 +818,7 @@ Java_netscape_javascript_JSObject_getSlot(JNIEnv *jEnv,
         goto done;
 
 done:
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return member;
@@ -869,25 +840,24 @@ Java_netscape_javascript_JSObject_setMember(JNIEnv *jEnv,
     jsval js_val;
     const jchar *property_name_ucs2;
     jsize property_name_len;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return;
     
     property_name_ucs2 = NULL;
     if (!property_name_jstr) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                            JSJMSG_NULL_MEMBER_NAME);
+        JS_ReportError(cx, "illegal null member name");
         goto done;
     }
 
     /* Get the Unicode string for the JS property name */
     property_name_ucs2 = (*jEnv)->GetStringChars(jEnv, property_name_jstr, &is_copy);
     if (!property_name_ucs2) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         goto done;
     }
     property_name_len = (*jEnv)->GetStringLength(jEnv, property_name_jstr);
@@ -900,7 +870,7 @@ Java_netscape_javascript_JSObject_setMember(JNIEnv *jEnv,
 done:
     if (property_name_ucs2)
         (*jEnv)->ReleaseStringChars(jEnv, property_name_jstr, property_name_ucs2);
-    jsj_exit_js(cx, jsj_env, saved_reporter);
+    jsj_exit_js(cx, jsj_env, &saved_state);
 }
 
 /*
@@ -917,10 +887,10 @@ Java_netscape_javascript_JSObject_setSlot(JNIEnv *jEnv,
     JSContext *cx;
     JSObject *js_obj;
     jsval js_val;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return;
     
@@ -929,7 +899,7 @@ Java_netscape_javascript_JSObject_setSlot(JNIEnv *jEnv,
     JS_SetElement(cx, js_obj, slot, &js_val);
 
 done:
-    jsj_exit_js(cx, jsj_env, saved_reporter);
+    jsj_exit_js(cx, jsj_env, &saved_state);
 }
 
 /*
@@ -947,23 +917,22 @@ Java_netscape_javascript_JSObject_removeMember(JNIEnv *jEnv,
     jsval js_val;
     const jchar *property_name_ucs2;
     jsize property_name_len;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return;
     
     if (!property_name_jstr) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                            JSJMSG_NULL_MEMBER_NAME);
+        JS_ReportError(cx, "illegal null member name");
         goto done;
     }
     /* Get the Unicode string for the JS property name */
     property_name_ucs2 = (*jEnv)->GetStringChars(jEnv, property_name_jstr, &is_copy);
     if (!property_name_ucs2) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         goto done;
     }
     property_name_len = (*jEnv)->GetStringLength(jEnv, property_name_jstr);
@@ -973,7 +942,7 @@ Java_netscape_javascript_JSObject_removeMember(JNIEnv *jEnv,
     (*jEnv)->ReleaseStringChars(jEnv, property_name_jstr, property_name_ucs2);
 
 done:
-    jsj_exit_js(cx, jsj_env, saved_reporter);
+    jsj_exit_js(cx, jsj_env, &saved_state);
     return;
 }
 
@@ -995,31 +964,32 @@ Java_netscape_javascript_JSObject_call(JNIEnv *jEnv, jobject java_wrapper_obj,
     JSBool dummy_bool;
     const jchar *function_name_ucs2;
     jsize function_name_len;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jboolean is_copy;
     jobject result;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return NULL;
     
     function_name_ucs2 = NULL;
     result = NULL;
     if (!function_name_jstr) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                                    JSJMSG_NULL_FUNCTION_NAME);
+        JS_ReportError(cx, "illegal null JavaScript function name");
         goto done;
     }
 
     /* Get the function name to eval as raw Unicode characters */
     function_name_ucs2 = (*jEnv)->GetStringChars(jEnv, function_name_jstr, &is_copy);
     if (!function_name_ucs2) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         goto done;
     }
     function_name_len = (*jEnv)->GetStringLength(jEnv, function_name_jstr);
     
+    /* FIXME: What about security stuff ? Don't principals need to be set here ? */
+
     /* Allocate space for JS arguments */
     if (java_args) {
         argc = (*jEnv)->GetArrayLength(jEnv, java_args);
@@ -1058,7 +1028,7 @@ cleanup_argv:
 done:
     if (function_name_ucs2)
         (*jEnv)->ReleaseStringChars(jEnv, function_name_jstr, function_name_ucs2);
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return result;
@@ -1084,27 +1054,26 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
     JSBool dummy_bool;
     const jchar *eval_ucs2;
     jsize eval_len;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jboolean is_copy;
     jobject result;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return NULL;
     
     result = NULL;
     eval_ucs2 = NULL;
     if (!eval_jstr) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_NULL_EVAL_ARG);
+        JS_ReportError(cx, "illegal null string eval argument");
         goto done;
     }
 
     /* Get the string to eval as raw Unicode characters */
     eval_ucs2 = (*jEnv)->GetStringChars(jEnv, eval_jstr, &is_copy);
     if (!eval_ucs2) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         goto done;
     }
     eval_len = (*jEnv)->GetStringLength(jEnv, eval_jstr);
@@ -1112,7 +1081,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
     /* Set up security stuff */
     principals = NULL;
     if (JSJ_callbacks->get_JSPrincipals_from_java_caller)
-        principals = JSJ_callbacks->get_JSPrincipals_from_java_caller(jEnv, cx);
+        principals = JSJ_callbacks->get_JSPrincipals_from_java_caller(jEnv, cx, NULL, 0, NULL);
     codebase = principals ? principals->codebase : NULL;
 
     /* Have the JS engine evaluate the unicode string */
@@ -1129,7 +1098,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
 done:
     if (eval_ucs2)
         (*jEnv)->ReleaseStringChars(jEnv, eval_jstr, eval_ucs2);
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return result;
@@ -1148,10 +1117,10 @@ Java_netscape_javascript_JSObject_toString(JNIEnv *jEnv,
     JSContext *cx;
     JSObject *js_obj;
     JSString *jsstr;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_state);
     if (!jsj_env)
         return NULL;
     
@@ -1162,7 +1131,7 @@ Java_netscape_javascript_JSObject_toString(JNIEnv *jEnv,
     if (!result)
         result = (*jEnv)->NewStringUTF(jEnv, "*JavaObject*");
 
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return result;
@@ -1184,11 +1153,11 @@ Java_netscape_javascript_JSObject_getWindow(JNIEnv *jEnv,
     jsval js_val;
     int dummy_cost;
     JSBool dummy_bool;
-    JSErrorReporter saved_reporter;
+    JavaToJSSavedState saved_state;
     jobject java_obj;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, NULL, &cx, NULL, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, NULL, &cx, NULL, &saved_state);
     if (!jsj_env)
         return NULL;
     
@@ -1206,7 +1175,7 @@ Java_netscape_javascript_JSObject_getWindow(JNIEnv *jEnv,
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, jsj_get_jlObject_descriptor(cx, jEnv),
                                    &dummy_cost, &java_obj, &dummy_bool);
 done:
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
+    if (!jsj_exit_js(cx, jsj_env, &saved_state))
         return NULL;
     
     return java_obj;
@@ -1227,7 +1196,7 @@ Java_netscape_javascript_JSObject_finalize(JNIEnv *jEnv, jobject java_wrapper_ob
     success = JS_FALSE;
  
     handle = (JSObjectHandle *)((*jEnv)->GetIntField(jEnv, java_wrapper_obj, njJSObject_internal));
-    JS_ASSERT(handle);
+    PR_ASSERT(handle);
     if (!handle)
         return;
     cx = handle->cx;
@@ -1235,7 +1204,7 @@ Java_netscape_javascript_JSObject_finalize(JNIEnv *jEnv, jobject java_wrapper_ob
     success = JS_RemoveRoot(cx, &handle->js_obj);
     JS_free(cx, handle);
 
-    JS_ASSERT(success);
+    PR_ASSERT(success);
 }
 
 /*
@@ -1266,4 +1235,3 @@ Java_netscape_javascript_JSObject_equals(JNIEnv *jEnv,
     return (js_obj1 == js_obj2);
 #endif  /* PRESERVE_JSOBJECT_IDENTITY */
 }
-

@@ -37,7 +37,6 @@
 #include <string.h>
 
 #include "jsj_private.h"        /* LiveConnect internals */
-#include "jscntxt.h"            /* for error reporting */
 
 static JSBool
 JavaClass_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
@@ -58,7 +57,7 @@ JavaClass_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         /* Convert '/' to '.' so that it looks like Java language syntax. */
         if (!class_descriptor->name)
             break;
-        name = JS_smprintf("[JavaClass %s]", class_descriptor->name);
+        name = PR_smprintf("[JavaClass %s]", class_descriptor->name);
         if (!name) {
             JS_ReportOutOfMemory(cx);
             return JS_FALSE;
@@ -105,9 +104,9 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     if (!member_descriptor) {
         JS_IdToValue(cx, id, &idval);
         if (!JSVAL_IS_STRING(idval)) {
-            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                            JSJMSG_BAD_JCLASS_EXPR);
-	    return JS_FALSE;
+            JS_ReportError(cx, "invalid JavaClass property expression. "
+                "(methods and fields of a JavaClass object can only be identified by their name)");
+            return JS_FALSE;
         }
 
         member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
@@ -118,8 +117,7 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
             return JS_TRUE;
         }
 
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                        JSJMSG_MISSING_NAME,
+        JS_ReportError(cx, "Java class %s has no public static field or method named \"%s\"",
                        class_descriptor->name, member_name);
         return JS_FALSE;
     }
@@ -128,7 +126,7 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     return JS_TRUE;
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jsval idval;
@@ -158,7 +156,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         if (!member_descriptor->methods) {
             return jsj_GetJavaFieldValue(cx, jEnv, member_descriptor->field, java_class, vp);
         } else {
-            JS_ASSERT(0);
+            PR_ASSERT(0);
         }
     } else {
         JSFunction *function;
@@ -176,7 +174,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     return JS_TRUE;
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 JavaClass_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jclass java_class;
@@ -211,8 +209,7 @@ JavaClass_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 no_such_field:
     JS_IdToValue(cx, id, &idval);
     member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
-    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                   JSJMSG_MISSING_STATIC,
+    JS_ReportError(cx, "No static field named \"%s\" in Java class %s",
                    member_name, class_descriptor->name);
     return JS_FALSE;
 }
@@ -220,7 +217,7 @@ no_such_field:
 /*
  * Free the private native data associated with the JavaPackage object.
  */
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 JavaClass_finalize(JSContext *cx, JSObject *obj)
 {
     JNIEnv *jEnv;
@@ -275,8 +272,7 @@ JavaClass_defineProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
                          JSPropertyOp getter, JSPropertyOp setter,
                          uintN attrs, JSProperty **propp)
 {
-    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                    JSJMSG_JCLASS_PROP_DEFINE);
+    JS_ReportError(cx, "Cannot define a new property in a JavaClass");
     return JS_FALSE;
 }
 
@@ -295,7 +291,7 @@ JavaClass_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 {
     /* We don't maintain JS property attributes for Java class members */
     if (*attrsp != (JSPROP_PERMANENT|JSPROP_ENUMERATE)) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -311,8 +307,7 @@ JavaClass_deleteProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     *vp = JSVAL_FALSE;
 
     if (!JSVERSION_IS_ECMA(version)) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
-                                            JSJMSG_JCLASS_PROP_DELETE);
+        JS_ReportError(cx, "Properties of JavaClass objects may not be deleted");
         return JS_FALSE;
     } else {
         /* Attempts to delete permanent properties are silently ignored
@@ -372,7 +367,7 @@ JavaClass_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         return JS_TRUE;
 
     default:
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -383,13 +378,11 @@ JavaClass_checkAccess(JSContext *cx, JSObject *obj, jsid id,
 {
     switch (mode) {
     case JSACC_WATCH:
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                            JSJMSG_JCLASS_PROP_WATCH);
+        JS_ReportError(cx, "Cannot place watchpoints on JavaClass object properties");
         return JS_FALSE;
 
     case JSACC_IMPORT:
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                            JSJMSG_JCLASS_PROP_EXPORT);
+        JS_ReportError(cx, "Cannot export a JavaClass object's properties");
         return JS_FALSE;
 
     default:
@@ -417,8 +410,7 @@ JavaClass_hasInstance(JSContext *cx, JSObject *obj, jsval candidate_jsval,
     has_instance = JS_FALSE;
     class_descriptor = JS_GetPrivate(cx, obj);
     if (!class_descriptor) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                    JSJMSG_BAD_OP_JCLASS);
+        JS_ReportError(cx, "illegal operation on JavaClass prototype object");
         return JS_FALSE;
     }
 
@@ -429,15 +421,18 @@ JavaClass_hasInstance(JSContext *cx, JSObject *obj, jsval candidate_jsval,
     if (!JSVAL_IS_OBJECT(candidate_jsval))
         goto done;
     candidate_obj = JSVAL_TO_OBJECT(candidate_jsval);
+#ifdef JS_THREADSAFE
+    js_class = JS_GetClass(cx, candidate_obj);
+#else
     js_class = JS_GetClass(candidate_obj);
+#endif
     if ((js_class != &JavaObject_class) && (js_class != &JavaArray_class))
         goto done;
 
     java_class = class_descriptor->java_class;
     java_wrapper = JS_GetPrivate(cx, candidate_obj);
     if (!java_wrapper) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_BAD_OP_PROTO);
+        JS_ReportError(cx, "illegal operation on prototype object");
         return JS_FALSE;
     }
     java_obj = java_wrapper->java_obj;
@@ -555,15 +550,13 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     !(obj_arg = JSVAL_TO_OBJECT(argv[0])) ||
     (!JS_InstanceOf(cx, obj_arg, &JavaObject_class, 0) &&
          !JS_InstanceOf(cx, obj_arg, &JavaArray_class, 0))) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_NEED_JOBJECT_ARG);
-	return JS_FALSE;
+        JS_ReportError(cx, "getClass expects a Java object argument");
+    return JS_FALSE;
     }
 
     java_wrapper = JS_GetPrivate(cx, obj_arg);
     if (!java_wrapper) {
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_PROTO_GETCLASS);
+        JS_ReportError(cx, "getClass called on prototype object");
         return JS_FALSE;
     }
 
@@ -576,7 +569,7 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-extern JS_FRIEND_DATA(JSObjectOps) js_ObjectOps;
+extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
 jsj_init_JavaClass(JSContext *cx, JSObject *global_obj)

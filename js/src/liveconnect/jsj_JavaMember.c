@@ -64,14 +64,13 @@ JavaMember_finalize(JSContext *cx, JSObject *obj)
     JavaMethodOrFieldValue *member_val;
     JNIEnv *jEnv;
 
-    member_val = JS_GetPrivate(cx, obj);
-    if (!member_val)
-        return;
-
     jsj_MapJSContextToJSJThread(cx, &jEnv);
     if (!jEnv)
         return;
 
+    member_val = JS_GetPrivate(cx, obj);
+    if (!member_val)
+        return;
     JS_RemoveRoot(cx, &member_val->method_val);
     if (JSVAL_IS_GCTHING(member_val->method_val))
         JS_RemoveRoot(cx, &member_val->method_val);
@@ -108,7 +107,7 @@ JavaMember_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         return JS_TRUE;
 
     default:
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -119,6 +118,8 @@ JSClass JavaMember_class = {
     JS_EnumerateStub, JS_ResolveStub, 
     JavaMember_convert, JavaMember_finalize
 };
+
+extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
 jsj_init_JavaMember(JSContext *cx, JSObject *global_obj)

@@ -121,7 +121,7 @@
 #ifdef _WIN32
 #    define JS_IMPORT_DATA(__x)      _declspec(dllimport) __x
 #else
-#    define JS_IMPORT_DATA(__x)      __x
+#    define JS_IMPORT_DATA(__x)     JS_EXPORT_DATA(__x)
 #endif
 
 /*
@@ -144,7 +144,7 @@
 #ifdef _WIN32
 #   define JS_INLINE __inline
 #elif defined(__GNUC__)
-#   define JS_INLINE inline
+#   define JS_INLINE
 #else
 #   define JS_INLINE
 #endif

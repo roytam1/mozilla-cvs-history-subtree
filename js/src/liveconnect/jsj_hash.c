@@ -30,10 +30,13 @@
 #include <string.h>
 
 #include "jsj_hash.h"
-#include "jstypes.h"
-/* Removed by JSIFY: #    include "prlog.h" */
-#include "jsutil.h" /* Added by JSIFY */
-#    include "jsbit.h"
+#include "prtypes.h"
+#ifdef NSPR20
+#    include "prlog.h"
+#    include "prbit.h"
+#else
+#    include "prassert.h"
+#endif
 
 /* Compute the number of buckets in ht */
 #define NBUCKETS(ht)    (1 << (JSJ_HASH_BITS - (ht)->shift))
@@ -82,7 +85,7 @@ DefaultAllocEntry(void *pool, const void *key)
 }
 
 static void
-DefaultFreeEntry(void *pool, JSJHashEntry *he, JSUintn flag)
+DefaultFreeEntry(void *pool, JSJHashEntry *he, PRUintn flag)
 {
 #if defined(XP_MAC)
 #pragma unused (pool)
@@ -97,19 +100,19 @@ static JSJHashAllocOps defaultHashAllocOps = {
     DefaultAllocEntry, DefaultFreeEntry
 };
 
-JS_EXPORT_API(JSJHashTable *)
-JSJ_NewHashTable(JSUint32 n, JSJHashFunction keyHash,
+PR_IMPLEMENT(JSJHashTable *)
+JSJ_NewHashTable(PRUint32 n, JSJHashFunction keyHash,
                 JSJHashComparator keyCompare, JSJHashComparator valueCompare,
                 JSJHashAllocOps *allocOps, void *allocPriv)
 {
     JSJHashTable *ht;
-    JSUint32 nb;
+    PRUint32 nb;
 
     if (n <= MINBUCKETS) {
         n = MINBUCKETSLOG2;
     } else {
-        n = JS_CeilingLog2(n);
-        if ((JSInt32)n < 0)
+        n = PR_CeilingLog2(n);
+        if ((PRInt32)n < 0)
             return 0;
     }
 
@@ -143,10 +146,10 @@ JSJ_NewHashTable(JSUint32 n, JSJHashFunction keyHash,
     return ht;
 }
 
-JS_EXPORT_API(void)
+PR_IMPLEMENT(void)
 JSJ_HashTableDestroy(JSJHashTable *ht)
 {
-    JSUint32 i, n;
+    PRUint32 i, n;
     JSJHashEntry *he, *next;
     JSJHashAllocOps *allocOps = ht->allocOps;
     void *allocPriv = ht->allocPriv;
@@ -173,7 +176,7 @@ JSJ_HashTableDestroy(JSJHashTable *ht)
 */
 #define GOLDEN_RATIO    0x9E3779B9U
 
-JS_EXPORT_API(JSJHashEntry **)
+PR_IMPLEMENT(JSJHashEntry **)
 JSJ_HashTableRawLookup(JSJHashTable *ht, JSJHashNumber keyHash, const void *key, void *arg)
 {
     JSJHashEntry *he, **hep, **hep0;
@@ -203,14 +206,14 @@ JSJ_HashTableRawLookup(JSJHashTable *ht, JSJHashNumber keyHash, const void *key,
     return hep;
 }
 
-JS_EXPORT_API(JSJHashEntry *)
+PR_IMPLEMENT(JSJHashEntry *)
 JSJ_HashTableRawAdd(JSJHashTable *ht, JSJHashEntry **hep,
                     JSJHashNumber keyHash, const void *key, void *value,
                     void *arg)
 {
-    JSUint32 i, n;
+    PRUint32 i, n;
     JSJHashEntry *he, *next, **oldbuckets;
-    JSUint32 nb;
+    PRUint32 nb;
 
     /* Grow the table if it is overloaded */
     n = NBUCKETS(ht);
@@ -236,7 +239,7 @@ JSJ_HashTableRawAdd(JSJHashTable *ht, JSJHashEntry **hep,
             for (he = oldbuckets[i]; he; he = next) {
                 next = he->next;
                 hep = JSJ_HashTableRawLookup(ht, he->keyHash, he->key, arg);
-                JS_ASSERT(*hep == 0);
+                PR_ASSERT(*hep == 0);
                 he->next = 0;
                 *hep = he;
             }
@@ -261,7 +264,7 @@ JSJ_HashTableRawAdd(JSJHashTable *ht, JSJHashEntry **hep,
     return he;
 }
 
-JS_EXPORT_API(JSJHashEntry *)
+PR_IMPLEMENT(JSJHashEntry *)
 JSJ_HashTableAdd(JSJHashTable *ht, const void *key, void *value, void *arg)
 {
     JSJHashNumber keyHash;
@@ -283,12 +286,12 @@ JSJ_HashTableAdd(JSJHashTable *ht, const void *key, void *value, void *arg)
     return JSJ_HashTableRawAdd(ht, hep, keyHash, key, value, arg);
 }
 
-JS_EXPORT_API(void)
+PR_IMPLEMENT(void)
 JSJ_HashTableRawRemove(JSJHashTable *ht, JSJHashEntry **hep, JSJHashEntry *he, void *arg)
 {
-    JSUint32 i, n;
+    PRUint32 i, n;
     JSJHashEntry *next, **oldbuckets;
-    JSUint32 nb;
+    PRUint32 nb;
 
     *hep = he->next;
     (*ht->allocOps->freeEntry)(ht->allocPriv, he, HT_FREE_ENTRY);
@@ -313,7 +316,7 @@ JSJ_HashTableRawRemove(JSJHashTable *ht, JSJHashEntry **hep, JSJHashEntry *he, v
             for (he = oldbuckets[i]; he; he = next) {
                 next = he->next;
                 hep = JSJ_HashTableRawLookup(ht, he->keyHash, he->key, arg);
-                JS_ASSERT(*hep == 0);
+                PR_ASSERT(*hep == 0);
                 he->next = 0;
                 *hep = he;
             }
@@ -325,7 +328,7 @@ JSJ_HashTableRawRemove(JSJHashTable *ht, JSJHashEntry **hep, JSJHashEntry *he, v
     }
 }
 
-JS_EXPORT_API(JSBool)
+PR_IMPLEMENT(PRBool)
 JSJ_HashTableRemove(JSJHashTable *ht, const void *key, void *arg)
 {
     JSJHashNumber keyHash;
@@ -334,14 +337,14 @@ JSJ_HashTableRemove(JSJHashTable *ht, const void *key, void *arg)
     keyHash = (*ht->keyHash)(key, arg);
     hep = JSJ_HashTableRawLookup(ht, keyHash, key, arg);
     if ((he = *hep) == 0)
-        return JS_FALSE;
+        return PR_FALSE;
 
     /* Hit; remove element */
     JSJ_HashTableRawRemove(ht, hep, he, arg);
-    return JS_TRUE;
+    return PR_TRUE;
 }
 
-JS_EXPORT_API(void *)
+PR_IMPLEMENT(void *)
 JSJ_HashTableLookup(JSJHashTable *ht, const void *key, void *arg)
 {
     JSJHashNumber keyHash;
@@ -357,14 +360,14 @@ JSJ_HashTableLookup(JSJHashTable *ht, const void *key, void *arg)
 
 /*
 ** Iterate over the entries in the hash table calling func for each
-** entry found. Stop if "f" says to (return value & JS_ENUMERATE_STOP).
+** entry found. Stop if "f" says to (return value & PR_ENUMERATE_STOP).
 ** Return a count of the number of elements scanned.
 */
-JS_EXPORT_API(int)
+PR_IMPLEMENT(int)
 JSJ_HashTableEnumerateEntries(JSJHashTable *ht, JSJHashEnumerator f, void *arg)
 {
     JSJHashEntry *he, **hep;
-    JSUint32 i, nbuckets;
+    PRUint32 i, nbuckets;
     int rv, n = 0;
     JSJHashEntry *todo = 0;
 
@@ -401,12 +404,12 @@ out:
 #include <math.h>
 #include <stdio.h>
 
-JS_EXPORT_API(void)
+PR_IMPLEMENT(void)
 JSJ_HashTableDumpMeter(JSJHashTable *ht, JSJHashEnumerator dump, FILE *fp)
 {
     double mean, variance;
-    JSUint32 nchains, nbuckets;
-    JSUint32 i, n, maxChain, maxChainLen;
+    PRUint32 nchains, nbuckets;
+    PRUint32 i, n, maxChain, maxChainLen;
     JSJHashEntry *he;
 
     variance = 0;
@@ -447,7 +450,7 @@ JSJ_HashTableDumpMeter(JSJHashTable *ht, JSJHashEnumerator dump, FILE *fp)
 }
 #endif /* HASHMETER */
 
-JS_EXPORT_API(int)
+PR_IMPLEMENT(int)
 JSJ_HashTableDump(JSJHashTable *ht, JSJHashEnumerator dump, FILE *fp)
 {
     int count;
@@ -459,7 +462,7 @@ JSJ_HashTableDump(JSJHashTable *ht, JSJHashEnumerator dump, FILE *fp)
     return count;
 }
 
-JS_EXPORT_API(JSJHashNumber)
+PR_IMPLEMENT(JSJHashNumber)
 JSJ_HashString(const void *key)
 {
     JSJHashNumber h;
@@ -471,13 +474,13 @@ JSJ_HashString(const void *key)
     return h;
 }
 
-JS_EXPORT_API(int)
+PR_IMPLEMENT(int)
 JSJ_CompareStrings(const void *v1, const void *v2)
 {
     return strcmp(v1, v2) == 0;
 }
 
-JS_EXPORT_API(int)
+PR_IMPLEMENT(int)
 JSJ_CompareValues(const void *v1, const void *v2)
 {
     return v1 == v2;

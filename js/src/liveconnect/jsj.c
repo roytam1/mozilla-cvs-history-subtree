@@ -43,18 +43,20 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
     const char *error_msg, *java_error_msg;
 
     java_error_msg = NULL;
-
+#if 0   /* This can never work here, because jsj_GetJavaErrorMessage relies on 
+           jlThrowable_toString which is set up by the initialization that calls 
+           this function. */
     if (jEnv) {
         java_error_msg = jsj_GetJavaErrorMessage(jEnv);
         (*jEnv)->ExceptionClear(jEnv);
     }
-
+#endif
     if (java_error_msg) { 
-        error_msg = JS_smprintf("initialization error: %s (%s)\n",
+        error_msg = PR_smprintf("initialization error: %s (%s)\n",
                                 js_error_msg, java_error_msg);
         free((void*)java_error_msg);
     } else {
-        error_msg = JS_smprintf("initialization error: %s\n",
+        error_msg = PR_smprintf("initialization error: %s\n",
                                 js_error_msg);
     }
 
@@ -114,7 +116,6 @@ jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashCode() *
 jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
 jmethodID njJSException_JSException;    /* netscape.javascript.JSexception constructor */
-jmethodID njJSException_JSException_wrap;/*netscape.javascript.JSexception constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -122,7 +123,6 @@ jfieldID njJSException_lineno;          /* netscape.javascript.JSException.linen
 jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-jfieldID njJSException_wrappedException; /* netscape.javascript.JSException.wrappedException */
 
 /* Obtain a reference to a Java class */
 #define LOAD_CLASS(qualified_name, class)                                    \
@@ -263,7 +263,7 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     return JS_TRUE;
 }
 
-#if defined(XP_MAC) || !defined(OJI) 
+#if XP_MAC
 
 /**
  * Workaround for the fact that MRJ loads a different instance of the shared library.
@@ -271,12 +271,13 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 
 #include "netscape_javascript_JSObject.h"
 
-static JSBool
-JSObject_RegisterNativeMethods(JNIEnv* jEnv)
+static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 {
     // Manually load the required native methods.
     static JNINativeMethod nativeMethods[] = {
         "initClass", "()V", (void*)&Java_netscape_javascript_JSObject_initClass,
+
+#if 0        
         "getMember", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getMember,
         "getSlot", "(I)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getSlot,
         "setMember", "(Ljava/lang/String;Ljava/lang/Object;)V", (void*)&Java_netscape_javascript_JSObject_setMember,
@@ -284,21 +285,23 @@ JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         "removeMember", "(Ljava/lang/String;)V", (void*)&Java_netscape_javascript_JSObject_removeMember,
         "call", "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_call,
         "eval", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_eval,
-        
+#endif
+
         "toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
+
+#if 0        
         "getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
         "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
-        "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals
+        /* "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals */
+#endif
     };
     (*jEnv)->RegisterNatives(jEnv, njJSObject, nativeMethods, sizeof(nativeMethods) / sizeof(JNINativeMethod));
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
         report_java_initialization_error(jEnv, "Couldn't initialize JSObject native methods.");
         (*jEnv)->ExceptionClear(jEnv);
-        return JS_FALSE;
     }
     /* call the initClass method, since we nailed the static initializer for testing. */
     Java_netscape_javascript_JSObject_initClass(jEnv, njJSObject);
-    return JS_TRUE;
 }
 
 #endif
@@ -311,7 +314,7 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_CLASS(netscape/javascript/JSException, njJSException);
     LOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
 
-#if defined(XP_MAC) || !defined(OJI) 
+#if XP_MAC
     JSObject_RegisterNativeMethods(jEnv);
 #endif
 
@@ -319,10 +322,7 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                                             JSObject,           "(I)V",                         njJSObject);
     LOAD_CONSTRUCTOR(netscape.javascript.JSException,
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
-    /* Load second constructor for wrapping JS exception objects inside JSExceptions */                                                                                            njJSException);
-    _LOAD_METHOD(netscape.javascript.JSException,<init>,
-                                            JSException_wrap,   "(Ljava/lang/Object;)V",        njJSException, JS_FALSE)
-
+                                                                                                njJSException);
     LOAD_FIELDID(netscape.javascript.JSObject,  
                                             internal,           "I",                            njJSObject);
     LOAD_FIELDID(netscape.javascript.JSException,  
@@ -356,10 +356,10 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
     JSJavaVM *jsjava_vm;
     JNIEnv *jEnv;
 
-    JS_ASSERT(JSJ_callbacks);
-    JS_ASSERT(JSJ_callbacks->attach_current_thread);
-    JS_ASSERT(JSJ_callbacks->detach_current_thread);
-    JS_ASSERT(JSJ_callbacks->get_java_vm);
+    PR_ASSERT(JSJ_callbacks);
+    PR_ASSERT(JSJ_callbacks->attach_current_thread);
+    PR_ASSERT(JSJ_callbacks->detach_current_thread);
+    PR_ASSERT(JSJ_callbacks->get_java_vm);
 
     jsjava_vm = (JSJavaVM*)malloc(sizeof(JSJavaVM));
     if (!jsjava_vm)
@@ -378,9 +378,9 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
         }
     }
     else {
-        JSBool ok;
-        JS_ASSERT(JSJ_callbacks->create_java_vm);
-        JS_ASSERT(JSJ_callbacks->destroy_java_vm);
+        PRBool ok;
+        PR_ASSERT(JSJ_callbacks->create_java_vm);
+        PR_ASSERT(JSJ_callbacks->destroy_java_vm);
 
         ok = JSJ_callbacks->create_java_vm(&java_vm, &jEnv, initargs);
         if (!ok || java_vm == NULL) {
@@ -425,7 +425,7 @@ JSJCallbacks *JSJ_callbacks = NULL;
 void
 JSJ_Init(JSJCallbacks *callbacks)
 {
-    JS_ASSERT(callbacks);
+    PR_ASSERT(callbacks);
     JSJ_callbacks = callbacks;
 }
 
@@ -518,7 +518,7 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
             break;
         }
     }
-    JS_ASSERT(j);
+    PR_ASSERT(j);
     
     free(jsjava_vm);
 }
@@ -572,7 +572,7 @@ find_jsjava_thread(JNIEnv *jEnv)
     return jsj_env;
 }
 
-JS_EXPORT_API(JSJavaThreadState *)
+PR_IMPLEMENT(JSJavaThreadState *)
 JSJ_AttachCurrentThreadToJava(JSJavaVM *jsjava_vm, const char *name, JNIEnv **java_envp)
 {
     JNIEnv *jEnv;
@@ -642,7 +642,7 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
     /* Get our private JavaVM data */
     jsjava_vm = map_java_vm_to_jsjava_vm(java_vm);
     if (!jsjava_vm) {
-        *errp = JS_smprintf("Total weirdness:   No JSJavaVM wrapper ever created "
+        *errp = PR_smprintf("Total weirdness:   No JSJavaVM wrapper ever created "
                             "for JavaVM 0x%08x", java_vm);
         return NULL;
     }
@@ -663,7 +663,7 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
  * before Java is invoked on that thread.)  The return value is the previous
  * context associated with the given Java thread.
  */
-JS_EXPORT_API(JSContext *)
+PR_IMPLEMENT(JSContext *)
 JSJ_SetDefaultJSContextForJavaThread(JSContext *cx, JSJavaThreadState *jsj_env)
 {
     JSContext *old_context;
@@ -672,7 +672,7 @@ JSJ_SetDefaultJSContextForJavaThread(JSContext *cx, JSJavaThreadState *jsj_env)
     return old_context;
 }
 
-JS_EXPORT_API(JSBool)
+PR_IMPLEMENT(JSBool)
 JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
 {
     SystemJavaVM *java_vm;
@@ -744,12 +744,12 @@ default_map_jsj_thread_to_js_context(JSJavaThreadState *jsj_env, JNIEnv *jEnv, c
 
 /* Trivial implementation of callback function */
 static JSObject *
-default_map_java_object_to_js_object(JNIEnv *jEnv, void *hint, char **errp)
+default_map_java_object_to_js_object(JNIEnv *jEnv, jobject hint, char **errp)
 {
     return the_global_js_obj;
 }
 
-static JSBool JS_DLL_CALLBACK
+static PRBool PR_CALLBACK
 default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
 {
     jint err;
@@ -765,12 +765,12 @@ default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
     /* Prepend the classpath argument to the default JVM classpath */
     if (user_classpath) {
 #ifdef XP_UNIX
-        const char *full_classpath = JS_smprintf("%s:%s", user_classpath, vm_args.classpath);
+        const char *full_classpath = PR_smprintf("%s:%s", user_classpath, vm_args.classpath);
 #else
-        const char *full_classpath = JS_smprintf("%s;%s", user_classpath, vm_args.classpath);
+        const char *full_classpath = PR_smprintf("%s;%s", user_classpath, vm_args.classpath);
 #endif
         if (!full_classpath) {
-            return JS_FALSE;
+            return PR_FALSE;
         }
         vm_args.classpath = (char*)full_classpath;
     }
@@ -779,7 +779,7 @@ default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
     return err == 0;
 }
 
-static JSBool JS_DLL_CALLBACK
+static PRBool PR_CALLBACK
 default_destroy_java_vm(SystemJavaVM* jvm, JNIEnv* initialEnv)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
@@ -787,16 +787,16 @@ default_destroy_java_vm(SystemJavaVM* jvm, JNIEnv* initialEnv)
     return err == 0;
 }
 
-static JNIEnv* JS_DLL_CALLBACK
+static JNIEnv* PR_CALLBACK
 default_attach_current_thread(SystemJavaVM* jvm)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
     JNIEnv* env = NULL;
-    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+    jint err = (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
     return env;
 }
 
-static JSBool JS_DLL_CALLBACK
+static PRBool PR_CALLBACK
 default_detach_current_thread(SystemJavaVM* jvm, JNIEnv* env)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
@@ -805,11 +805,11 @@ default_detach_current_thread(SystemJavaVM* jvm, JNIEnv* env)
     return err == 0;
 }
 
-static SystemJavaVM* JS_DLL_CALLBACK
+static SystemJavaVM* PR_CALLBACK
 default_get_java_vm(JNIEnv* env)
 {
     JavaVM* java_vm = NULL;
-    (*env)->GetJavaVM(env, &java_vm);
+    jint err = (*env)->GetJavaVM(env, &java_vm);
     return (SystemJavaVM*)java_vm;
 }
 
@@ -818,7 +818,6 @@ JSJCallbacks jsj_default_callbacks = {
     default_map_jsj_thread_to_js_context,
     default_map_js_context_to_jsj_thread,
     default_map_java_object_to_js_object,
-    NULL,
     NULL,
     NULL,
     NULL,
@@ -842,12 +841,12 @@ JSJ_SimpleInit(JSContext *cx, JSObject *global_obj, SystemJavaVM *java_vm, const
 {
     JNIEnv *jEnv;
 
-    JSJ_Init(&jsj_default_callbacks);
-
-    JS_ASSERT(!the_jsj_vm);
+    PR_ASSERT(!the_jsj_vm);
     the_jsj_vm = JSJ_ConnectToJavaVM(java_vm, (void*)classpath);
     if (!the_jsj_vm)
         return JS_FALSE;
+
+    JSJ_Init(&jsj_default_callbacks);
 
     if (!JSJ_InitJSContext(cx, global_obj, NULL))
         goto error;
@@ -869,10 +868,10 @@ error:
  * Free up all LiveConnect resources.  Destroy the Java VM if it was
  * created by LiveConnect.
  */
-JS_EXPORT_API(void)
+PR_IMPLEMENT(void)
 JSJ_SimpleShutdown()
 {
-    JS_ASSERT(the_jsj_vm);
+    PR_ASSERT(the_jsj_vm);
     JSJ_DisconnectFromJavaVM(the_jsj_vm);
     the_jsj_vm = NULL;
     the_cx = NULL;

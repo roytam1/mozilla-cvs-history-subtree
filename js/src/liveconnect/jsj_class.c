@@ -99,7 +99,7 @@ get_signature_type(JSContext *cx, JavaClassDescriptor *class_descriptor)
 
     /* Get UTF8 encoding of class name */
     java_class_name = class_descriptor->name;
-    JS_ASSERT(java_class_name);
+    PR_ASSERT(java_class_name);
     if (!java_class_name)
         return JAVA_SIGNATURE_UNKNOWN;
 
@@ -121,20 +121,10 @@ get_signature_type(JSContext *cx, JavaClassDescriptor *class_descriptor)
         type = JAVA_SIGNATURE_BOOLEAN;
     else if (!strcmp(java_class_name, "void"))
         type = JAVA_SIGNATURE_VOID;
-    else if (!strcmp(java_class_name, "java.lang.Boolean"))
-        type = JAVA_SIGNATURE_JAVA_LANG_BOOLEAN;
-    else if (!strcmp(java_class_name, "java.lang.Double"))
-        type = JAVA_SIGNATURE_JAVA_LANG_DOUBLE;
-    else if (!strcmp(java_class_name, "java.lang.String"))
-        type = JAVA_SIGNATURE_JAVA_LANG_STRING;
-    else if (!strcmp(java_class_name, "java.lang.Object"))
-        type = JAVA_SIGNATURE_JAVA_LANG_OBJECT;
-    else if (!strcmp(java_class_name, "java.lang.Class"))
-        type = JAVA_SIGNATURE_JAVA_LANG_CLASS;
-    else if (!strcmp(java_class_name, "netscape.javascript.JSObject"))
-        type = JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT;
     else
-        type = JAVA_SIGNATURE_OBJECT;
+        /* Well, I guess it's a Java class, then. */
+        type = JAVA_SIGNATURE_CLASS;
+    
     return type;
 }
 
@@ -194,16 +184,6 @@ compute_java_class_signature(JSContext *cx, JNIEnv *jEnv, JavaSignature *signatu
 }
 
 /*
- * Convert from JavaSignatureChar enumeration to single-character
- * signature used by the JDK and JNI methods.
- */
-static const char
-get_jdk_signature_char(JavaSignatureChar type)
-{
-    return "XVZCBSIJFD[LLLLLL"[(int)type];
-}
-
-/*
  * Convert a JavaSignature object into a string format as used by
  * the JNI functions, e.g. java.lang.Object ==> "Ljava/lang/Object;"
  * The caller is responsible for freeing the resulting string.
@@ -215,9 +195,9 @@ jsj_ConvertJavaSignatureToString(JSContext *cx, JavaSignature *signature)
 {
     char *sig;
 
-    if (IS_OBJECT_TYPE(signature->type)) {
+    if (signature->type == JAVA_SIGNATURE_CLASS) {
         /* A non-array object class */
-        sig = JS_smprintf("L%s;", signature->name);
+        sig = PR_smprintf("L%s;", signature->name);
         if (sig)
             jsj_MakeJNIClassname(sig);
 
@@ -229,12 +209,12 @@ jsj_ConvertJavaSignatureToString(JSContext *cx, JavaSignature *signature)
             jsj_ConvertJavaSignatureToString(cx, signature->array_component_signature);
         if (!component_signature_string)
             return NULL;
-        sig = JS_smprintf("[%s", component_signature_string);
+        sig = PR_smprintf("[%s", component_signature_string);
         JS_free(cx, (char*)component_signature_string);
 
     } else {
         /* A primitive class */
-        sig = JS_smprintf("%c", get_jdk_signature_char(signature->type));
+        sig = PR_smprintf("%c", (char)signature->type);
     }
 
     if (!sig) {
@@ -266,7 +246,7 @@ jsj_ConvertJavaSignatureToHRString(JSContext *cx,
             jsj_ConvertJavaSignatureToHRString(cx, acs);
         if (!component_signature_string)
             return NULL;
-        sig = JS_smprintf("%s[]", component_signature_string);
+        sig = PR_smprintf("%s[]", component_signature_string);
         JS_free(cx, (char*)component_signature_string);
 
     } else {
@@ -370,8 +350,8 @@ error:
 }
 
 /* Trivial helper for jsj_DiscardJavaClassReflections(), below */
-static JSIntn
-enumerate_remove_java_class(JSJHashEntry *he, JSIntn i, void *arg)
+static PRIntn
+enumerate_remove_java_class(JSJHashEntry *he, PRIntn i, void *arg)
 {
     JNIEnv *jEnv = (JNIEnv*)arg;
     jclass java_class;
@@ -411,7 +391,7 @@ jsj_GetJavaClassDescriptor(JSContext *cx, JNIEnv *jEnv, jclass java_class)
     if (!class_descriptor)
         return new_class_descriptor(cx, jEnv, java_class);
 
-    JS_ASSERT(class_descriptor->ref_count > 0);
+    PR_ASSERT(class_descriptor->ref_count > 0);
     class_descriptor->ref_count++;
     return class_descriptor;
 }

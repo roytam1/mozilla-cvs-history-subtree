@@ -55,8 +55,9 @@ convert_js_obj_to_JSObject_wrapper(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj
 {
     if (!njJSObject) {
         if (java_value)
-            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_CANT_LOAD_JSOBJECT);
+            JS_ReportError(cx, "Couldn't convert JavaScript object to an "
+                               "instance of netscape.javascript.JSObject "
+                               "because that class could not be loaded.");
         return JS_FALSE;
     }
 
@@ -99,7 +100,8 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
     JSString *jsstr;
     jclass target_java_class;
     
-    JS_ASSERT(IS_REFERENCE_TYPE(signature->type));
+    PR_ASSERT(signature->type == JAVA_SIGNATURE_CLASS ||
+        signature->type == JAVA_SIGNATURE_ARRAY);
 
     /* Initialize to default case, in which no new Java object is
        synthesized to perform the conversion and, therefore, no JNI local
@@ -155,7 +157,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
             
             /* Check if target type is netscape.javascript.JSObject wrapper class */
             if (convert_js_obj_to_JSObject_wrapper(cx, jEnv, js_obj, signature, cost, java_value)) {
-                if (java_value && *java_value)
+                if (*java_value)
                     *is_local_refp = JS_TRUE;
                 return JS_TRUE;
             }
@@ -175,8 +177,6 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                reference is passed to the original JS object by wrapping it
                inside an instance of netscape.javascript.JSObject */
             if (convert_js_obj_to_JSObject_wrapper(cx, jEnv, js_obj, signature, cost, java_value))             {
-                if (java_value && *java_value)
-                    *is_local_refp = JS_TRUE;
                 return JS_TRUE;
             }
             
@@ -420,9 +420,6 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
     switch (type) {
     case JAVA_SIGNATURE_BOOLEAN:
         if (!JSVAL_IS_BOOLEAN(v)) {
-            /* Suppress useless conversion from object to boolean type */
-            if (JSVAL_IS_OBJECT(v))
-                goto conversion_error;
             if (!JS_ConvertValue(cx, v, JSTYPE_BOOLEAN, &v))
                 goto conversion_error;
             (*cost)++;
@@ -487,17 +484,15 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
         }
         break;
 
-    /* Non-primitive (reference) type */
-    default:
-        JS_ASSERT(IS_REFERENCE_TYPE(type));
+    case JAVA_SIGNATURE_CLASS:
+    case JAVA_SIGNATURE_ARRAY:
         if (!jsj_ConvertJSValueToJavaObject(cx, jEnv, v, signature, cost,
             &java_value->l, is_local_refp))
             goto conversion_error;
         break;
 
-    case JAVA_SIGNATURE_UNKNOWN:
-    case JAVA_SIGNATURE_VOID:
-        JS_ASSERT(0);
+    default:
+        PR_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -521,8 +516,9 @@ conversion_error:
         if (!jsval_string)
             jsval_string = "";
         
-        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                    JSJMSG_CANT_CONVERT_JS, jsval_string, signature->name);
+        JS_ReportError(cx, "Unable to convert JavaScript value %s to "
+                           "Java value of type %s",
+                       jsval_string, signature->name);
         return JS_FALSE;
     }
     return success;
@@ -724,7 +720,7 @@ jsj_ConvertJavaObjectToJSValue(JSContext *cx, JNIEnv *jEnv,
 #else
         js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_obj);
 #endif
-        JS_ASSERT(js_obj);
+        PR_ASSERT(js_obj);
         if (!js_obj)
             return JS_FALSE;
         *vp = OBJECT_TO_JSVAL(js_obj);
@@ -798,15 +794,13 @@ jsj_ConvertJavaValueToJSValue(JSContext *cx, JNIEnv *jEnv,
     case JAVA_SIGNATURE_DOUBLE:
         return JS_NewDoubleValue(cx, java_value->d, vp);
 
-    case JAVA_SIGNATURE_UNKNOWN:
-        JS_ASSERT(0);
-        return JS_FALSE;
-        
-    /* Non-primitive (reference) type */
-    default:
-        JS_ASSERT(IS_REFERENCE_TYPE(signature->type));
+    case JAVA_SIGNATURE_CLASS:
+    case JAVA_SIGNATURE_ARRAY:
         return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value->l, vp);
 
+    default:
+        PR_ASSERT(0);
+        return JS_FALSE;
     }
 }
 

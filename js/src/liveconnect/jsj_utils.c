@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -35,10 +35,10 @@
  * This is a hash-table utility routine that computes the hash code of a Java
  * object by calling java.lang.System.identityHashCode()
  */
-JS_DLL_CALLBACK JSJHashNumber
+PR_CALLBACK JSJHashNumber
 jsj_HashJavaObject(const void *key, void* env)
 {
-    JSHashNumber hash_code;
+    PRHashNumber hash_code;
     jobject java_obj;
     JNIEnv *jEnv;
 
@@ -46,7 +46,7 @@ jsj_HashJavaObject(const void *key, void* env)
     jEnv = (JNIEnv*) env;
     hash_code = (*jEnv)->CallStaticIntMethod(jEnv, jlSystem,
                                              jlSystem_identityHashCode, java_obj);
-    JS_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
+    PR_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
     return hash_code;
 }
 
@@ -57,7 +57,7 @@ jsj_HashJavaObject(const void *key, void* env)
  * or handles (though they may be in some JVM implementations).  Instead,
  * use the JNI routine for comparing the two objects.
  */
-JS_DLL_CALLBACK intN
+PR_CALLBACK intN
 jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg)
 {
     jobject java_obj1, java_obj2;
@@ -129,7 +129,7 @@ jsj_ClassNameOfJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_object)
     java_class = (*jEnv)->GetObjectClass(jEnv, java_object);
 
     if (!java_class) {
-        JS_ASSERT(0);
+        PR_ASSERT(0);
         return NULL;
     }
 
@@ -213,48 +213,20 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     const char *java_stack_trace;
     const char *java_error_msg;
     jthrowable java_exception;
-    jobject java_obj;
-    jsval js_exception;
-    
+        
     java_error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
-    if (java_exception) {
-
-        /* Check for JSException */
-        if (njJSException && 
-            (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
-
-            /* Check for wrappedException */
-            java_obj = (*jEnv)->GetObjectField(jEnv, java_exception, 
-                                               njJSException_wrappedException);
-            
-            if (java_obj == NULL) {
-                jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
-                return;
-            } else 
-                if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
-                                                    &js_exception)) {
-                    goto do_report;
-                }
-
-        /* Check for internal exception */
-        } else { 
-            if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
-                                                &js_exception)) {
-                goto do_report;
-            }
-        }
-    
-        /* Set pending JS exception and clear the java exception. */
-        JS_SetPendingException(cx, js_exception);                        
-        (*jEnv)->ExceptionClear(jEnv);  
+    if (java_exception && njJSException && 
+        (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
+        (*jEnv)->ExceptionClear(jEnv);
+        jsj_ReportUncaughtJSException(cx, jEnv, java_exception);
         return;
     }
-do_report:
-    js_error_msg = JS_vsmprintf(format, ap);
+
+    js_error_msg = PR_vsmprintf(format, ap);
 
     if (!js_error_msg) {
-        JS_ASSERT(0);       /* Out-of-memory */
+        PR_ASSERT(0);       /* Out-of-memory */
         return;
     }
 
@@ -262,10 +234,10 @@ do_report:
 
     java_stack_trace = get_java_stack_trace(cx, jEnv, java_exception);
     if (java_stack_trace) {
-        error_msg = JS_smprintf("%s\n%s", js_error_msg, java_stack_trace);
+        error_msg = PR_smprintf("%s\n%s", js_error_msg, java_stack_trace);
         free((char*)java_stack_trace);
         if (!error_msg) {
-            JS_ASSERT(0);       /* Out-of-memory */
+            PR_ASSERT(0);       /* Out-of-memory */
             return;
         }
     } else
@@ -274,7 +246,7 @@ do_report:
     {
         java_error_msg = jsj_GetJavaErrorMessage(jEnv);
         if (java_error_msg) {
-            error_msg = JS_smprintf("%s (%s)\n", js_error_msg, java_error_msg);
+            error_msg = PR_smprintf("%s (%s)\n", js_error_msg, java_error_msg);
             free((char*)java_error_msg);
             free(js_error_msg);
         } else {
@@ -285,9 +257,8 @@ do_report:
     JS_ReportError(cx, error_msg);
     
     /* Important: the Java exception must not be cleared until the reporter
-     *  has been called, because the capture_js_error_reports_for_java(),
-     *  called from JS_ReportError(), needs to read the exception from the JVM 
-     */
+       has been called, because the capture_js_error_reports_for_java(),
+       called from JS_ReportError(), needs to read the exception from the JVM */
     (*jEnv)->ExceptionClear(jEnv);
     free(error_msg);
 }
@@ -313,7 +284,7 @@ jsj_UnexpectedJavaError(JSContext *cx, JNIEnv *env, const char *format, ...)
     const char *format2;
 
     va_start(ap, format);
-    format2 = JS_smprintf("internal error: %s", format);
+    format2 = PR_smprintf("internal error: %s", format);
     if (format2) {
         vreport_java_error(cx, env, format2, ap);
         free((void*)format2);
@@ -334,41 +305,6 @@ jsj_LogError(const char *error_msg)
         JSJ_callbacks->error_print(error_msg);
     else
         fputs(error_msg, stderr);
-}
-
-/*
-	Error number handling. 
-
-	jsj_ErrorFormatString is an array of format strings mapped
-	by error number. It is initialized by the contents of jsj.msg
-
-	jsj_GetErrorMessage is invoked by the engine whenever it wants 
-	to convert an error number into an error format string.
-*/
-/*
-        this define needs to go somewhere sensible
-*/
-#define JSJ_HAS_DFLT_MSG_STRINGS 1
-
-JSErrorFormatString jsj_ErrorFormatString[JSJ_Err_Limit] = {
-#if JSJ_HAS_DFLT_MSG_STRINGS
-#define MSG_DEF(name, number, count, format) \
-    { format, count } ,
-#else
-#define MSG_DEF(name, number, count, format) \
-    { NULL, count } ,
-#endif
-#include "jsj.msg"
-#undef MSG_DEF
-};
-
-const JSErrorFormatString *
-jsj_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
-{
-    if ((errorNumber > 0) && (errorNumber < JSJ_Err_Limit))
-	    return &jsj_ErrorFormatString[errorNumber];
-	else
-	    return NULL;
 }
 
 jsize

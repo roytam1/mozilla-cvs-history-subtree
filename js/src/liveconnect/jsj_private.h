@@ -29,15 +29,22 @@
 #ifndef _JSJAVA_PVT_H
 #define _JSJAVA_PVT_H
 
-#include "jstypes.h"
+#include "prtypes.h"
 
 /* NSPR1 compatibility definitions */
-#   include "jsprf.h"
-#   include "jsutil.h"
-#   include "jshash.h"
+#ifdef NSPR20
+#   include "prprf.h"
+#   include "prlog.h"
+#   include "plhash.h"          /* NSPR hash-tables      */
+#else
+#   include "prprintf.h"
+#   include "prassert.h"
+#   include "prhash.h"          /* NSPR hash-tables      */
+#   define PRHashNumber prhashcode
+#endif
 
 #ifdef XP_MAC
-#    include "jsosdep.h"
+#include "macstdlibextras.h"  /* for strdup() */
 #endif
 
 #include "jsj_hash.h"        /* Hash tables */
@@ -57,42 +64,23 @@ typedef struct CapturedJSError CapturedJSError;
 typedef struct JavaMemberVal JavaMemberVal;
 
 /*
- * This enum uses a method similar to the JDK to specify
- * Java type signatures, but the classification of Java
- * object types is more fine-grained.
+ * This enum uses the same character encoding used by the JDK to encode
+ * Java type signatures, but the enum is easier to debug/compile with.
  */
 typedef enum {
-    JAVA_SIGNATURE_UNKNOWN,
-    JAVA_SIGNATURE_VOID,
-
-    /* Primitive types */
-    JAVA_SIGNATURE_BOOLEAN,
-    JAVA_SIGNATURE_CHAR,
-    JAVA_SIGNATURE_BYTE,
-    JAVA_SIGNATURE_SHORT,
-    JAVA_SIGNATURE_INT,
-    JAVA_SIGNATURE_LONG,
-    JAVA_SIGNATURE_FLOAT,
-    JAVA_SIGNATURE_DOUBLE,
-
-    /* Reference types */
-    JAVA_SIGNATURE_ARRAY,              /* Any array class */
-    JAVA_SIGNATURE_OBJECT,             /* non-array object, but not one of the
-                                          more specific types below */
-    JAVA_SIGNATURE_JAVA_LANG_BOOLEAN,
-    JAVA_SIGNATURE_JAVA_LANG_CLASS,
-    JAVA_SIGNATURE_JAVA_LANG_DOUBLE,
-    JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT,
-    JAVA_SIGNATURE_JAVA_LANG_OBJECT,
-    JAVA_SIGNATURE_JAVA_LANG_STRING,
-
-    JAVA_SIGNATURE_LIMIT
+    JAVA_SIGNATURE_ARRAY    =   '[',
+    JAVA_SIGNATURE_BYTE     =   'B',
+    JAVA_SIGNATURE_CHAR     =   'C',
+    JAVA_SIGNATURE_CLASS    =   'L',
+    JAVA_SIGNATURE_FLOAT    =   'F',
+    JAVA_SIGNATURE_DOUBLE   =   'D',
+    JAVA_SIGNATURE_INT      =   'I',
+    JAVA_SIGNATURE_LONG     =   'J',
+    JAVA_SIGNATURE_SHORT    =   'S',
+    JAVA_SIGNATURE_VOID     =   'V',
+    JAVA_SIGNATURE_BOOLEAN  =   'Z',
+    JAVA_SIGNATURE_UNKNOWN  =    0
 } JavaSignatureChar;
-
-#define IS_REFERENCE_TYPE(sig) ((int)(sig) >= (int)JAVA_SIGNATURE_ARRAY)
-#define IS_OBJECT_TYPE(sig)    ((int)(sig) >= (int)JAVA_SIGNATURE_OBJECT)
-#define IS_PRIMITIVE_TYPE(sig)                                               \
-    (((int)(sig) >= (int)JAVA_SIGNATURE_BYTE) && !IS_REFERENCE_TYPE(sig))                                    \
 
 /* The signature of a Java method consists of the signatures of all its
    arguments and its return type signature. */
@@ -199,6 +187,22 @@ struct JSJavaThreadState {
     JSJavaThreadState * next;           /* next thread state among all created threads */
 };
 
+struct JavaToJSSavedState {
+	JSErrorReporter error_reporter;
+	JSJavaThreadState* java_jsj_env;
+};
+typedef struct JavaToJSSavedState JavaToJSSavedState;
+
+
+/* This object provides is the "anchor" by which netscape.javscript.JSObject
+   objects hold a reference to native JSObjects. */
+struct JSObjectHandle {
+    JSObject *js_obj;
+    JSContext *cx;      /* Creating context, needed for finalization */
+};
+typedef struct JSObjectHandle JSObjectHandle;
+
+
 /******************************** Globals ***********************************/
 
 extern JSJCallbacks *JSJ_callbacks;
@@ -258,8 +262,7 @@ extern jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashC
 
 extern jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
-extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException constructor */
-extern jmethodID njJSException_JSException_wrap;/*netscape.javascipt.JSException constructor */
+extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSexception constructor */
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -267,7 +270,7 @@ extern jfieldID njJSException_lineno;          /* netscape.javascript.JSExceptio
 extern jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 extern jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 extern jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-extern jfieldID njJSException_wrappedException; /* netscape.javascript.JSException.wrappedException */
+
 
 /**************** Java <==> JS conversions and Java types *******************/
 extern JSBool
@@ -327,9 +330,9 @@ jsj_ConvertJavaObjectToJSBoolean(JSContext *cx, JNIEnv *jEnv,
                                  jobject java_obj, jsval *vp);
 extern JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp);
+         JSContext **cxp, JSObject **js_objp, JavaToJSSavedState* saved_state);
 extern JSBool
-jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter old_error_reporterp);
+jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JavaToJSSavedState* original_state);
 
 extern JavaClassDescriptor *
 jsj_get_jlObject_descriptor(JSContext *cx, JNIEnv *jEnv);
@@ -338,7 +341,7 @@ extern JSBool
 jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj);
 
 extern JSBool
-jsj_init_js_obj_reflections_table(void);
+jsj_init_js_obj_reflections_table();
 
 /************************ Java package reflection **************************/
 extern JSBool
@@ -404,7 +407,7 @@ jsj_GetClassStaticMembers(JSContext *cx, JNIEnv *jEnv,
                           JavaClassDescriptor *class_descriptor);
 
 extern JSBool
-jsj_InitJavaClassReflectionsTable(void);
+jsj_InitJavaClassReflectionsTable();
 
 /************************* Java field reflection ***************************/
 
@@ -514,13 +517,10 @@ jsj_GetJavaErrorMessage(JNIEnv *env);
 extern void
 jsj_LogError(const char *error_msg);
 
-extern const JSErrorFormatString * 
-jsj_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber);
-
-JS_DLL_CALLBACK JSJHashNumber
+PR_CALLBACK JSJHashNumber
 jsj_HashJavaObject(const void *key, void* env);
 
-JS_DLL_CALLBACK intN
+PR_CALLBACK intN
 jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg);
 
 extern JSJavaThreadState *
@@ -544,24 +544,17 @@ jsj_DupJavaStringUTF(JSContext *cx, JNIEnv *jEnv, jstring jstr);
 JSJavaThreadState *
 jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp);
 
+JSJavaThreadState *
+jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env);
+
 #ifdef DEBUG
 #define DEBUG_LOG(args) printf args
 #endif
 
 #define JS_FREE_IF(cx, x)                                                   \
-    JS_BEGIN_MACRO                                                          \
+    PR_BEGIN_MACRO                                                          \
         if (x)                                                              \
             JS_free(cx, x);                                                 \
-    JS_END_MACRO
-
-
-enum JSJErrNum {
-#define MSG_DEF(name, number, format, count) \
-    name = number,
-#include "jsj.msg"
-#undef MSG_DEF
-    JSJ_Err_Limit
-#undef MSGDEF
-};
+    PR_END_MACRO
 
 #endif   /* _JSJAVA_PVT_H */

@@ -238,7 +238,7 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     is_static_field = field_spec->modifiers & ACC_STATIC;
 
 #define GET_JAVA_FIELD(Type,member)                                          \
-    JS_BEGIN_MACRO                                                           \
+    PR_BEGIN_MACRO                                                           \
     if (is_static_field)                                                     \
         java_value.member =                                                  \
             (*jEnv)->GetStatic##Type##Field(jEnv, java_obj, fieldID);        \
@@ -249,7 +249,7 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
         jsj_UnexpectedJavaError(cx, jEnv, "Error reading Java field");           \
         return JS_FALSE;                                                     \
     }                                                                        \
-    JS_END_MACRO
+    PR_END_MACRO
 
     signature = field_spec->signature;
     field_type = signature->type;
@@ -285,20 +285,17 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     case JAVA_SIGNATURE_DOUBLE:
         GET_JAVA_FIELD(Double,d);
         break;
-     
-    case JAVA_SIGNATURE_UNKNOWN:
-    case JAVA_SIGNATURE_VOID:
-        JS_ASSERT(0);        /* Unknown java type signature */
-        return JS_FALSE;
-        
-    /* Non-primitive (reference) type */
-    default:
-        JS_ASSERT(IS_REFERENCE_TYPE(field_type));
+
+    case JAVA_SIGNATURE_CLASS:
+    case JAVA_SIGNATURE_ARRAY:
         GET_JAVA_FIELD(Object,l);
         break;
-    }
-    
+
 #undef GET_JAVA_FIELD
+    default:
+        PR_ASSERT(0);        /* Unknown java type signature */
+        return JS_FALSE;
+    }
 
     return jsj_ConvertJavaValueToJSValue(cx, jEnv, signature, &java_value, vp);
 }
@@ -317,7 +314,7 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     is_static_field = field_spec->modifiers & ACC_STATIC;
 
 #define SET_JAVA_FIELD(Type,member)                                          \
-    JS_BEGIN_MACRO                                                           \
+    PR_BEGIN_MACRO                                                           \
     if (is_static_field) {                                                   \
         (*jEnv)->SetStatic##Type##Field(jEnv, java_obj, fieldID,             \
                                         java_value.member);                  \
@@ -328,7 +325,7 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
         jsj_UnexpectedJavaError(cx, jEnv, "Error assigning to Java field");      \
         return JS_FALSE;                                                     \
     }                                                                        \
-    JS_END_MACRO
+    PR_END_MACRO
 
     signature = field_spec->signature;
     if (!jsj_ConvertJSValueToJavaValue(cx, jEnv, js_val, signature, &dummy_cost,
@@ -368,22 +365,19 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     case JAVA_SIGNATURE_DOUBLE:
         SET_JAVA_FIELD(Double,d);
         break;
-        
-    /* Non-primitive (reference) type */
-    default:
-        JS_ASSERT(IS_REFERENCE_TYPE(field_type));
+
+    case JAVA_SIGNATURE_CLASS:
+    case JAVA_SIGNATURE_ARRAY:
         SET_JAVA_FIELD(Object,l);
         if (is_local_ref)
             (*jEnv)->DeleteLocalRef(jEnv, java_value.l);
         break;
 
-    case JAVA_SIGNATURE_UNKNOWN:
-    case JAVA_SIGNATURE_VOID:
-        JS_ASSERT(0);        /* Unknown java type signature */
+#undef SET_JAVA_FIELD
+    default:
+        PR_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
-
-#undef SET_JAVA_FIELD
     
     return JS_TRUE;
 }

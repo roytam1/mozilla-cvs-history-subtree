@@ -1,4 +1,4 @@
-/* -*- Mode: Java; tab-width: 8; c-basic-offset: 4 -*-
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -25,10 +25,10 @@ public class JSUtil {
     /* Return the stack trace of an exception or error as a String */
     public static String getStackTrace(Throwable t) {
 	ByteArrayOutputStream captureStream;
-	PrintWriter p;
+	PrintStream p;
 	
 	captureStream = new ByteArrayOutputStream();
-	p = new PrintWriter(captureStream);
+	p = new PrintStream(captureStream);
 
 	t.printStackTrace(p);
 	p.flush();
