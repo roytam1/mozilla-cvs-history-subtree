@@ -2339,18 +2339,30 @@ function SetPageProxyState(aState, aURI)
     gURLBar.addEventListener("input", UpdatePageProxyState, false);
 
     if (gBrowser.mCurrentBrowser.mFavIconURL != null) {
-      gProxyFavIcon.setAttribute("src", gBrowser.mCurrentBrowser.mFavIconURL);
-      gProxyDeck.selectedIndex = 1;
+      PageProxySetIcon (gBrowser.mCurrentBrowser.mFavIconURL);
     } else {
-      gProxyDeck.selectedIndex = 0;
-      gProxyFavIcon.removeAttribute("src");
+      PageProxyClearIcon ();
     }
   } else if (aState == "invalid") {
     gURLBar.removeEventListener("input", UpdatePageProxyState, false);
-    gProxyDeck.selectedIndex = 0;
-    gProxyFavIcon.removeAttribute("src");
+    PageProxyClearIcon ();
   }
+}
 
+function PageProxySetIcon (aURL)
+{
+  if (gProxyFavIcon.getAttribute("src") != aURL)
+    gProxyFavIcon.setAttribute("src", aURL);
+  else if (gProxyDeck.selectedIndex != 1)
+    gProxyDeck.selectedIndex = 1;
+}
+
+function PageProxyClearIcon ()
+{
+  if (gProxyDeck.selectedIndex != 0)
+    gProxyDeck.selectedIndex = 0;
+  if (gProxyFavIcon.hasAttribute("src"))
+    gProxyFavIcon.removeAttribute("src");
 }
 
 function PageProxyDragGesture(aEvent)
@@ -3248,8 +3260,9 @@ nsBrowserStatusHandler.prototype =
   {
     if (gProxyFavIcon &&
         gBrowser.mCurrentBrowser == aBrowser &&
-        getBrowser().userTypedValue === null) {
-      gProxyFavIcon.setAttribute("src", aHref);
+        getBrowser().userTypedValue === null)
+    {
+      PageProxySetIcon (aHref);
     }
 
     aBrowser.mFavIconURL = aHref;
@@ -3404,9 +3417,6 @@ nsBrowserStatusHandler.prototype =
 
       if (findField)
         setTimeout(function() { findField.value = browser.findString; }, 0, findField, browser); 
-
-      // reset any favicon set for the browser
-      browser.mFavIconURL = null;
 
       //XXXBlake don't we have to reinit this.urlBar, etc.
       //         when the toolbar changes?
@@ -5773,18 +5783,11 @@ function updatePageFavIcon(aBrowser, aListener) {
       aListener.mIcon = aBrowser.mFavIconURL;
   }
 
-  if (aBrowser == gBrowser.mCurrentBrowser) {
-      if (gProxyFavIcon.src != aBrowser.mFavIconURL) {
-          gProxyFavIcon.setAttribute("src", aBrowser.mFavIconURL);
-          gProxyDeck.selectedIndex = 0;
-      } else {
-          gProxyDeck.selectedIndex = 1;
-      }
-  }
+  if (aBrowser == gBrowser.mCurrentBrowser)
+    PageProxySetIcon (aBrowser.mFavIconURL);
 
-  if (aBrowser.mFavIconURL != null) {
+  if (aBrowser.mFavIconURL != null)
     BookmarksUtils.loadFavIcon(uri.spec, aBrowser.mFavIconURL);
-  }
 }
 
 function getUILink(item)

@@ -156,6 +156,7 @@
               catch (e) {
               }
             }
+            this.mFavIconURL = null;
             this.webNavigation.loadURI(aURI, aFlags, aReferrerURI, null, null);
           ]]>
         </body>
@@ -463,7 +464,9 @@
       
       <field name="isShowingMessage">
         false
-      </field> 
+      </field>
+
+      <field name="mFavIconURL">null</field>
 
       <constructor>
         <![CDATA[
