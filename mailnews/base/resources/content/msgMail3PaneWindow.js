@@ -875,17 +875,7 @@ function GetLoadedMsgFolder()
 
 function GetLoadedMessage()
 {
-	if(gCurrentDisplayedMessage)
-	{
-		var messageResource = RDF.GetResource(gCurrentDisplayedMessage);
-		if(messageResource)
-		{
-			var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-			return message;
-		}
-	}
-	return null;
-
+    return gCurrentDisplayedMessage;
 }
 
 //Clear everything related to the current message. called after load start page.

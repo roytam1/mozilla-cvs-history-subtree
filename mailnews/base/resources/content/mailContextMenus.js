@@ -22,13 +22,13 @@
 
 function fillThreadPaneContextMenu()
 {
-	var selectedMessages = GetSelectedMessages();
-	var numSelected = selectedMessages ? selectedMessages.length : 0;
+	var numSelected = GetNumSelectedMessages();
 
 	var isNewsgroup = false;
 	var selectedMessage = null;
+
 	if(numSelected >= 0) {
-		selectedMessage = selectedMessages[0];
+		selectedMessage = GetFirstSelectedMessage();
 		isNewsgroup = IsNewsMessage(selectedMessage);
 	}
 
@@ -313,7 +313,7 @@ function fillMessagePaneContextMenu(contextMenu)
 
 	var isNewsgroup = false;
 
-	if(numSelected == 1) {
+	if (numSelected == 1) {
 		isNewsgroup = IsNewsMessage(message);
     }
 
