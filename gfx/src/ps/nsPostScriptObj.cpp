@@ -388,7 +388,7 @@ nsPostScriptObj::Init( nsIDeviceContextSpecPS *aSpec )
          * static buffer again.
          */
         PR_SetEnv("MOZ_PRINTER_NAME=dummy_value_to_make_putenv_happy");
-        PRInt32 nchars = snprintf(envvar, ARG_MAX,
+        PRInt32 nchars = PR_snprintf(envvar, ARG_MAX,
                                   "MOZ_PRINTER_NAME=%s", printername);
         if (nchars < 0 || nchars >= ARG_MAX)
             sprintf(envvar, "MOZ_PRINTER_NAME=");
