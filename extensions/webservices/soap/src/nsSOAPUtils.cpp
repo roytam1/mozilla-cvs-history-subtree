@@ -53,12 +53,11 @@ NS_NAMED_LITERAL_STRING(kBooleanType,"#boolean");
 NS_NAMED_LITERAL_STRING(kDoubleType,"#double");
 NS_NAMED_LITERAL_STRING(kFloatType,"#float");
 NS_NAMED_LITERAL_STRING(kLongType,"#long");
-NS_NAMED_LITERAL_STRING(kPRIntType,"#int");
+NS_NAMED_LITERAL_STRING(kIntType,"#int");
 NS_NAMED_LITERAL_STRING(kShortType,"#short");
 NS_NAMED_LITERAL_STRING(kByteType,"#byte");
 NS_NAMED_LITERAL_STRING(kArrayType,"#array");
 NS_NAMED_LITERAL_STRING(kStructType,"#struct");
-NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
 NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
 NS_NAMED_LITERAL_STRING(kNullType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidType,"#void");
@@ -70,7 +69,7 @@ NS_NAMED_LITERAL_STRING(kBooleanSchemaType,"#schema#http://www.w3.org/1999/XMLSc
 NS_NAMED_LITERAL_STRING(kDoubleSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#double");
 NS_NAMED_LITERAL_STRING(kFloatSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#float");
 NS_NAMED_LITERAL_STRING(kLongSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#long");
-NS_NAMED_LITERAL_STRING(kPRIntSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#int");
+NS_NAMED_LITERAL_STRING(kIntSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#int");
 NS_NAMED_LITERAL_STRING(kShortSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#short");
 NS_NAMED_LITERAL_STRING(kByteSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#byte");
 NS_NAMED_LITERAL_STRING(kArraySchemaType,"#schema#http://www.w3.org/1999/XMLSchema#array");
@@ -80,6 +79,7 @@ NS_NAMED_LITERAL_STRING(kNullSchemaType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidSchemaType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownSchemaType,"#unknown");
 
+NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
 NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaIDPrefix, "#schema#");
 NS_NAMED_LITERAL_STRING(kXMLNameSchemaIDPrefix, "#name#");
 

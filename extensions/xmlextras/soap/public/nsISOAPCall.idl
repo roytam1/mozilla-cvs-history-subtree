@@ -55,7 +55,7 @@ interface nsISOAPCall : nsISOAPMessage {
    * Synchronously invoke the call. The method returns only when 
    * we receive a response (or an error occurs).  The
    * <code>transportURI</code> must have been set, the 
-   * parameter list (even if empty) must have been marshalled,
+   * parameter list (even if empty) must have been encoded,
    * and the transportURI must use some known protocol.  A
    * synchronous call assumes that there will be exactly one
    * response per call.
@@ -68,12 +68,12 @@ interface nsISOAPCall : nsISOAPMessage {
   
   /**
    * Asynchronously invoke the call. At this point, the document
-   * rooted by the Envelope element is marshalled to form the body
+   * rooted by the Envelope element is encoded to form the body
    * of the SOAP message. The method returns immediately, and the
    * listener is invoked when we eventually receive a response
    * (or error or successful completion). The
    * <code>transportURI</code> must have been set, the 
-   * parameter list (even if empty) must have been marshalled,
+   * parameter list (even if empty) must have been encoded,
    * and the transportURI must use some known protocol.
    *
    * If not, an error is returned in the status of the response.

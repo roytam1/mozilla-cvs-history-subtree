@@ -27,8 +27,8 @@
 #include "nsISupportsArray.h"
 #include "jsapi.h"
 #include "nsISOAPMessage.h"
-#include "nsISOAPMarshaller.h"
-#include "nsISOAPUnmarshaller.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 
 class nsDefaultSOAPEncoder
 {
@@ -39,7 +39,7 @@ protected:
   static nsresult MakeNamespacePrefix(nsIDOMElement* aScope,
 		                      nsAReadableString & aURI,
 				      nsAWritableString & aPrefix);
-  static nsresult MarshallValue(
+  static nsresult EncodeValue(
 	                              const nsAReadableString & aValue, 
 		                      const nsAReadableString & aDefaultTag, 
 		                      nsISOAPParameter * aSource, 

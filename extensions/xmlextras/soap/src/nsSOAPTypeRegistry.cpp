@@ -107,7 +107,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::QueryBySchemaID(const nsAReadableString & aEnc
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsIDOMNode* aDestination)
+NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPMessage *aMessage, nsISOAPParameter *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsIDOMNode* aDestination)
 {
   nsAutoString typeID(aTypeID);
   nsCOMPtr<nsISOAPType> type;
@@ -125,17 +125,17 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISOAPPara
       return NS_ERROR_NOT_IMPLEMENTED;
     typeID.Left(typeID, i);
   }
-  nsCOMPtr<nsISOAPMarshaller> marshaller;
+  nsCOMPtr<nsISOAPEncoder> encoder;
   type->GetSchemaID(schemaID);
-  type->GetMarshallConfiguration(getter_AddRefs(configuration));
-  type->GetMarshaller(getter_AddRefs(marshaller));
-  if (!marshaller)
+  type->GetEncodeConfiguration(getter_AddRefs(configuration));
+  type->GetEncoder(getter_AddRefs(encoder));
+  if (!encoder)
     return NS_ERROR_NOT_IMPLEMENTED;
-  return marshaller->Marshall(aMessage, aSource, aEncodingStyleURI, aTypeID, schemaID, configuration, aDestination);
+  return encoder->Encode(aMessage, aSource, aEncodingStyleURI, aTypeID, schemaID, configuration, aDestination);
 }
 
-/* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID); */
-NS_IMETHODIMP nsSOAPTypeRegistry::Unmarshall(nsISOAPMessage *aMessage, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, nsISOAPParameter **_retval)
+/* nsISupports decode (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID); */
+NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPMessage *aMessage, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, nsISOAPParameter **_retval)
 {
   *_retval = nsnull;
   nsAutoString schemaID(aSchemaID);
@@ -158,13 +158,13 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Unmarshall(nsISOAPMessage *aMessage, nsIDOMNod
     schemaID.Left(schemaID, i);
 #endif
   }
-  nsCOMPtr<nsISOAPUnmarshaller> unmarshaller;
+  nsCOMPtr<nsISOAPDecoder> decoder;
   type->GetTypeID(typeID);
-  type->GetUnmarshallConfiguration(getter_AddRefs(configuration));
-  type->GetUnmarshaller(getter_AddRefs(unmarshaller));
-  if (!unmarshaller)
+  type->GetDecodeConfiguration(getter_AddRefs(configuration));
+  type->GetDecoder(getter_AddRefs(decoder));
+  if (!decoder)
     return NS_ERROR_NOT_IMPLEMENTED;
-  return unmarshaller->Unmarshall(aMessage, aSource, aEncodingStyleURI, aSchemaID, typeID, configuration, _retval);
+  return decoder->Decode(aMessage, aSource, aEncodingStyleURI, aSchemaID, typeID, configuration, _retval);
 }
 
 static const char* kAllAccess = "AllAccess";

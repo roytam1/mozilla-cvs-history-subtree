@@ -78,7 +78,7 @@ NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
 {
   nsCOMPtr<nsISupportsArray> params;
-  nsresult rc = UnmarshallParameters(getter_AddRefs(params));
+  nsresult rc = DecodeParameters(getter_AddRefs(params));
   if (NS_FAILED(rc))
     return rc;
   if (params)

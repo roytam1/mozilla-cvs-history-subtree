@@ -30,11 +30,11 @@ interface nsISOAPTypeRegistry;
 
 /**
  * This interface controls all SOAP messages. It permits easy
- * construction of a message, typically through marshalling of
+ * construction of a message, typically through encoding of
  * parameters and certain properties settable on this interface
  * or through deserialization of a transport stream.  It
  * permits easy processing of a message typically through
- * unmarshalling of parameters and certain properties available
+ * decoding of parameters and certain properties available
  * on this interface.  It also encapsulates protocol information
  * interpreted by the transport.
  */
@@ -44,16 +44,16 @@ interface nsISOAPMessage : nsISupports {
   /**
    * The document which captures the message, if any.  A simple 
    * sending application passes parameters to the method
-   * marshallSOAPParameters, which calls parameter marshallers 
+   * encodeSOAPParameters, which calls parameter encoders 
    * to construct this document along with all contained elements.  
    *
    * But an application may create and set the message directly
-   * instead of invoking marshallSOAPParameters to use marshallers
+   * instead of invoking encodeSOAPParameters to use encoders
    * or access and manipulate the message after it has been 
-   * constructed by marshallSOAPParameters.  If the message has 
+   * constructed by encodeSOAPParameters.  If the message has 
    * not been set, invoking a call will fail.  A message reciever 
    * may also use this accessor to get the document to avoid using 
-   * unmarshallers.
+   * decoders.
    */
   attribute nsIDOMDocument message;
 
@@ -90,17 +90,17 @@ interface nsISOAPMessage : nsISupports {
   /**
    * An optional URI that can be used to add a SOAPAction HTTP
    * header field to the protocol parameters during parameter
-   * marshalling. If this attribute is NULL (the default case),
+   * encoding. If this attribute is NULL (the default case),
    * no SOAPAction header will be added.
    */
   attribute AString actionURI;
 
   /**
    * The encodingStyle to be used for the envelope. This URI is used
-   * by the marshaller to set the initial encoding style of the
+   * by the encoder to set the initial encoding style of the
    * envelope.  This should be set by applications desiring alternate
    * encodings.  It will also be used as a key to select specific 
-   * marshallers for the encoding.
+   * encoders for the encoding.
    *
    * If this has not been set by a calling application, it will be the 
    * default SOAP encoding style for RPC style calls.
@@ -109,13 +109,13 @@ interface nsISOAPMessage : nsISupports {
 
   /**
    * The name of the method being invoked. The methodName is used 
-   * during marshalling as the tagname of the single child of body
+   * during encoding as the tagname of the single child of body
    * of RPC-style messages.  This should be set by RPC-style
-   * applications.  Unmarshalling also tests whether this attribute
-   * is null to determine whether to unmarshall RPC-style or
-   * message style.  Before unmarshalling, RPC-style applications
+   * applications.  Decoding also tests whether this attribute
+   * is null to determine whether to decode RPC-style or
+   * message style.  Before decoding, RPC-style applications
    * should make certain that this has some non-null string
-   * value, which will be replaced if the unmarshalling is
+   * value, which will be replaced if the decoding is
    * successful.
    *
    * For example, if the <code>targetObjectURI</code> is 
@@ -128,8 +128,8 @@ interface nsISOAPMessage : nsISupports {
    * </code>
    *
    * If this has not been set by a calling application (or by a
-   * recipient calling unmarshallParameters), it will be null.
-   * If this is null, marshalling or unmarshalling parameters 
+   * recipient calling decodeParameters), it will be null.
+   * If this is null, encoding or decoding parameters 
    * will produce
    * a non-RPC-style message.
    */
@@ -137,10 +137,10 @@ interface nsISOAPMessage : nsISupports {
 
   /**
    * The target object on which the method is being invoked. This URI
-   * is used during marshalling as the namespace to qualify the tagname 
+   * is used during encoding as the namespace to qualify the tagname 
    * of the single child of body of RPC-style messages.  This should
    * be set by RPC-style applications.  When the methodName attribute 
-   * is not null unmarshalling parameters causes this to be set to the 
+   * is not null decoding parameters causes this to be set to the 
    * namespaceURI of the single child of body of the message.
    *
    * For example, if the <code>targetObjectURI</code> is 
@@ -153,33 +153,33 @@ interface nsISOAPMessage : nsISupports {
    * </code>
    *
    * If this has not been set by a calling application
-   * or by unmarshalling where the methodName is not null,
+   * or by decoding where the methodName is not null,
    * will be null.  If this is null and method is not null, 
-   * marshalling parameters fails.
+   * encoding parameters fails.
    */
   attribute AString targetObjectURI;
 
   /**
-   * Marshalls the specified parameters into this message, if
+   * Encodes the specified parameters into this message, if
    * this message type supports it.
    *
    * @param SOAPParameters An array containing the parameters to
-   * be attached to the message by marshallers.
+   * be attached to the message by encoders.
    */
-  [noscript] void marshallParameters(in nsISupportsArray SOAPParameters);
+  [noscript] void encodeParameters(in nsISupportsArray SOAPParameters);
 
   /**
-   * Unmarshalls the parameters from this message, if
+   * Decodes the parameters from this message, if
    * this message type supports it.
    *
    * @return An array containing the parameters that were
-   * returned in the message and unmarshalled.
+   * returned in the message and decoded.
    */
-  [noscript] nsISupportsArray unmarshallParameters();
+  [noscript] nsISupportsArray decodeParameters();
 
   /**
-   * The status returned by an operation such as marshalling,
-   * unmarshalling, or invocation.
+   * The status returned by an operation such as encoding,
+   * decoding, or invocation.
    */
   readonly attribute unsigned long status;
   
@@ -189,8 +189,8 @@ interface nsISOAPMessage : nsISupports {
    *  additional mime attachments.  A given protocol ignores any
    *  headers with names or types it does not understand.
    *  Initially this attribute is null in any message.  This
-   *  will be replaced by an empty container as marshalling begins
-   *  so that it is correctly produced by the marshalling process.
+   *  will be replaced by an empty container as encoding begins
+   *  so that it is correctly produced by the encoding process.
    *  When a transport places a message into the message object,
    *  it provides this container of protocol parameters.
    */

@@ -59,16 +59,16 @@ NS_NAMED_LITERAL_STRING(kZero,"0");
 
 #define DECLARE_ENCODER(name) \
 class ns##name##Encoder : \
-  public nsISOAPMarshaller, \
-  public nsISOAPUnmarshaller, \
+  public nsISOAPEncoder, \
+  public nsISOAPDecoder, \
   public nsDefaultSOAPEncoder \
 {\
 public:\
   ns##name##Encoder();\
   virtual ~ns##name##Encoder();\
   NS_DECL_ISUPPORTS\
-  NS_DECL_NSISOAPMARSHALLER\
-  NS_DECL_NSISOAPUNMARSHALLER\
+  NS_DECL_NSISOAPENCODER\
+  NS_DECL_NSISOAPDECODER\
 };\
 ns##name##Encoder::ns##name##Encoder() {NS_INIT_ISUPPORTS();}\
 ns##name##Encoder::~ns##name##Encoder() {}
@@ -79,9 +79,9 @@ ns##name##Encoder::~ns##name##Encoder() {}
   nsCOMPtr<nsISOAPType> type = new nsSOAPType();\
   ns##name##Encoder *handler = new ns##name##Encoder();\
   nsAutoString temp;\
-  rc = type->SetMarshaller(handler);\
+  rc = type->SetEncoder(handler);\
   if (NS_FAILED(rc)) return rc;\
-  rc = type->SetUnmarshaller(handler);\
+  rc = type->SetDecoder(handler);\
   if (NS_FAILED(rc)) return rc;\
   rc = type->SetTypeID(nsSOAPUtils::k##name##Type);\
   if (NS_FAILED(rc)) return rc;\
@@ -160,7 +160,7 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 
 //  Here is the main SOAP call
 
-NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsSOAPCallEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -247,13 +247,13 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage,
     if (NS_FAILED(rv)) return rv;
     rv = param->GetHeader(&isHeader);
     if (NS_FAILED(rv)) return rv;
-    rv = types->Marshall(aMessage, param, encodingStyleURI, type, isHeader ? header : body);
+    rv = types->Encode(aMessage, param, encodingStyleURI, type, isHeader ? header : body);
     if (NS_FAILED(rv)) return rv;
   }
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsSOAPCallEncoder::Decode(nsISOAPMessage *aMessage, 
 		                            nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
 					    const nsAReadableString & aSchemaID, 
@@ -338,7 +338,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage,
 	current->GetLocalName(t1);
 	type.Append(t1);
       }
-      rv = types->Unmarshall(aMessage, current, encoding, type, getter_AddRefs(param));
+      rv = types->Decode(aMessage, current, encoding, type, getter_AddRefs(param));
       if (NS_FAILED(rv)) return rv;
       if (param) {
 	rv = param->SetHeader(isHeader);
@@ -362,7 +362,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage,
 
 //  Generic handling of primitive values
 
-NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallValue(
+NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 		                          const nsAReadableString & aValue, 
 		                          const nsAReadableString & aDefaultTag, 
 		                          nsISOAPParameter * aSource, 
@@ -414,7 +414,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallValue(
 
 //  String
 
-NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -432,7 +432,7 @@ NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->GetData(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kStringElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -443,7 +443,7 @@ NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRBool
 
-NS_IMETHODIMP nsBooleanEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -460,7 +460,7 @@ NS_IMETHODIMP nsBooleanEncoder::Marshall(nsISOAPMessage *aMessage,
   PRBool b;
   rc = object->GetData(&b);
   if (NS_FAILED(rc)) return rc;
-  return MarshallValue(b ? kOne : kZero, 
+  return EncodeValue(b ? kOne : kZero, 
 		       kBooleanElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -471,7 +471,7 @@ NS_IMETHODIMP nsBooleanEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  Double
 
-NS_IMETHODIMP nsDoubleEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -489,7 +489,7 @@ NS_IMETHODIMP nsDoubleEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kDoubleElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -500,7 +500,7 @@ NS_IMETHODIMP nsDoubleEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  Float
 
-NS_IMETHODIMP nsFloatEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -518,7 +518,7 @@ NS_IMETHODIMP nsFloatEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kFloatElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -529,7 +529,7 @@ NS_IMETHODIMP nsFloatEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt64
 
-NS_IMETHODIMP nsLongEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -547,7 +547,7 @@ NS_IMETHODIMP nsLongEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kLongElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -558,7 +558,7 @@ NS_IMETHODIMP nsLongEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt32
 
-NS_IMETHODIMP nsIntEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -576,7 +576,7 @@ NS_IMETHODIMP nsIntEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kIntElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -587,7 +587,7 @@ NS_IMETHODIMP nsIntEncoder::Marshall(nsISOAPMessage *aMessage,
 
 //  PRInt16
 
-NS_IMETHODIMP nsShortEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -605,7 +605,7 @@ NS_IMETHODIMP nsShortEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kShortElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -614,9 +614,9 @@ NS_IMETHODIMP nsShortEncoder::Marshall(nsISOAPMessage *aMessage,
 		       aDestination);
 }
 
-//  Char
+//  Byte
 
-NS_IMETHODIMP nsByteEncoder::Marshall(nsISOAPMessage *aMessage, 
+NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPMessage *aMessage, 
 		                          nsISOAPParameter *aSource, 
 					  const nsAReadableString & aEncodingStyleURI, 
 					  const nsAReadableString & aTypeID, 
@@ -634,7 +634,7 @@ NS_IMETHODIMP nsByteEncoder::Marshall(nsISOAPMessage *aMessage,
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
-  return MarshallValue(string, 
+  return EncodeValue(string, 
 		       kByteElementName,
                        aSource, 
 		       aEncodingStyleURI,
@@ -643,7 +643,25 @@ NS_IMETHODIMP nsByteEncoder::Marshall(nsISOAPMessage *aMessage,
 		       aDestination);
 }
 
-NS_IMETHODIMP nsStringEncoder::Unmarshall(nsISOAPMessage *aMessage, 
+/*
+SOAPCall
+String
+Boolean
+Double
+Float
+Long
+Int
+Short
+Byte
+Array
+Struct
+Literal
+Null
+Void
+Unknown
+*/
+
+NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPMessage *aMessage, 
 		                            nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
 					    const nsAReadableString & aSchemaID, 

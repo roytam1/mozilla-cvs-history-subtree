@@ -27,20 +27,20 @@ interface nsISOAPMessage;
 interface nsISOAPParameter;
 
 /**
- * This interface supplies unmarshalling of a specific
+ * This interface supplies decoding of a specific
  * part of a message XML DOM into appropriate objects
  * for the script or application.
  */
 
 [scriptable, uuid(4c2e02ae-1dd2-11b2-b1cd-c79dea3d46db)]
-interface nsISOAPUnmarshaller : nsISupports {
+interface nsISOAPDecoder : nsISupports {
 
 /**
- * Unmarshall the source DOM node or data
+ * Decode the source DOM node or data
  *
- * @param aMessage The message supplying the data to be unmarshalled
+ * @param aMessage The message supplying the data to be decoded
  *
- * @param aSource The DOM node to be unmarshalled.
+ * @param aSource The DOM node to be decoded.
  *
  * @param aEncodingStyleURI The encoding style
  *
@@ -49,13 +49,13 @@ interface nsISOAPUnmarshaller : nsISupports {
  * @param aTypeID The type ID of the parameter or object to create
  *
  * @param aConfiguration Configuration object which may specify more
- *   details used by the unmarshaller.
+ *   details used by the decodeer.
  *
- * @return The unmarshalled parameter or object, which is null if 
+ * @return The decoded parameter or object, which is null if 
  *   the operation failed or did not return a result.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
-nsISOAPParameter unmarshall(
+nsISOAPParameter decode(
     in nsISOAPMessage aMessage, in nsIDOMNode aSource,
     in AString aEncodingStyleURI, in AString aSchemaID, 
     in AString aTypeID, in nsISupports aConfiguration);

@@ -21,13 +21,13 @@
  */
 
 #include "nsISupports.idl"
-#include "nsISOAPMarshaller.idl"
-#include "nsISOAPUnmarshaller.idl"
+#include "nsISOAPEncoder.idl"
+#include "nsISOAPDecoder.idl"
 
 /**
  * This interface keeps all the info about a type mapping: the encoding style,
- * the XML element type, the marshalling type and the constructor that is
- * supposed to create the type for unmarshalling.
+ * the XML element type, the encoding type and the constructor that is
+ * supposed to create the type for decoding.
  */
 [scriptable, uuid(2c1c105c-1dd2-11b2-8b8a-f5137f365679)]
 interface nsISOAPType : nsISupports {
@@ -43,29 +43,29 @@ interface nsISOAPType : nsISupports {
   attribute AString typeID;
 
 /**
- * ID of schema of marshalled DOM node or data
+ * ID of schema of encoded DOM node or data
  */
   attribute AString schemaID;
 
 /**
- * Service which can marshal this parameter or object
+ * Service which can encode this parameter or object
  */
-  attribute nsISOAPMarshaller marshaller;
+  attribute nsISOAPEncoder encoder;
 
 /**
- * Service which can unmarshal this DOM node or data
+ * Service which can decode this DOM node or data
  */
-  attribute nsISOAPUnmarshaller unmarshaller;
+  attribute nsISOAPDecoder decoder;
 
 /**
- * Configuration object that may contain more info on the marshalling
+ * Configuration object that may contain more info on the encoding
  */
-  attribute nsISupports marshallConfiguration;
+  attribute nsISupports encodeConfiguration;
 
 /**
- * Configuration object that may contain more info on the unmarshalling
+ * Configuration object that may contain more info on the decoding
  */
-  attribute nsISupports unmarshallConfiguration;
+  attribute nsISupports decodeConfiguration;
 
 };
 %{ C++

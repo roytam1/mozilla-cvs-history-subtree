@@ -27,8 +27,8 @@
 #include "nsISOAPType.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"
-#include "nsISOAPMarshaller.h"
-#include "nsISOAPUnmarshaller.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 #include "nsCOMPtr.h"
 
 class nsSOAPType : public nsISOAPType,
@@ -50,10 +50,10 @@ protected:
   nsString mEncodingStyleURI;
   nsString mTypeID;
   nsString mSchemaID;
-  nsCOMPtr<nsISOAPMarshaller> mMarshaller;
-  nsCOMPtr<nsISOAPUnmarshaller> mUnmarshaller;
-  nsCOMPtr<nsISupports> mMarshallConfiguration;
-  nsCOMPtr<nsISupports> mUnmarshallConfiguration;
+  nsCOMPtr<nsISOAPEncoder> mEncoder;
+  nsCOMPtr<nsISOAPDecoder> mDecoder;
+  nsCOMPtr<nsISupports> mEncodeConfiguration;
+  nsCOMPtr<nsISupports> mDecodeConfiguration;
 
 };
 

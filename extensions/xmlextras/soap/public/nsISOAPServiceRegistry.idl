@@ -69,7 +69,7 @@ interface nsISOAPServiceRegistry {
   void addService(in nsISOAPService aService);
 
 /**
- * Registry identifying how to marshall and unmarshall
+ * Registry identifying how to encode and decode
  *   messages containing specific types, automatically
  *   added to messages sent to services in this
  *   registry.

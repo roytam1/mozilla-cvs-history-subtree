@@ -76,59 +76,59 @@ NS_IMETHODIMP nsSOAPType::SetSchemaID(const nsAReadableString & aSchemaID)
   return NS_OK;
 }
 
-/* attribute nsISOAPMarshaller marshaller; */
-NS_IMETHODIMP nsSOAPType::GetMarshaller(nsISOAPMarshaller * *aMarshaller)
+/* attribute nsISOAPEncoder encoder; */
+NS_IMETHODIMP nsSOAPType::GetEncoder(nsISOAPEncoder * *aEncoder)
 {
-  NS_ENSURE_ARG_POINTER(aMarshaller);
-  *aMarshaller = mMarshaller;
-  NS_IF_ADDREF(*aMarshaller);
+  NS_ENSURE_ARG_POINTER(aEncoder);
+  *aEncoder = mEncoder;
+  NS_IF_ADDREF(*aEncoder);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPType::SetMarshaller(nsISOAPMarshaller * aMarshaller)
+NS_IMETHODIMP nsSOAPType::SetEncoder(nsISOAPEncoder * aEncoder)
 {
-  mMarshaller = aMarshaller;
-  return NS_OK;
-}
-
-/* attribute nsISOAPUnmarshaller unmarshaller; */
-NS_IMETHODIMP nsSOAPType::GetUnmarshaller(nsISOAPUnmarshaller * *aUnmarshaller)
-{
-  NS_ENSURE_ARG_POINTER(aUnmarshaller);
-  *aUnmarshaller = mUnmarshaller;
-  NS_IF_ADDREF(*aUnmarshaller);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPType::SetUnmarshaller(nsISOAPUnmarshaller * aUnmarshaller)
-{
-  mUnmarshaller = aUnmarshaller;
+  mEncoder = aEncoder;
   return NS_OK;
 }
 
-/* attribute nsISupports marshallConfiguration; */
-NS_IMETHODIMP nsSOAPType::GetMarshallConfiguration(nsISupports * *aMarshallConfiguration)
+/* attribute nsISOAPDecoder decoder; */
+NS_IMETHODIMP nsSOAPType::GetDecoder(nsISOAPDecoder * *aDecoder)
 {
-  NS_ENSURE_ARG_POINTER(aMarshallConfiguration);
-  *aMarshallConfiguration = mMarshallConfiguration;
-  NS_IF_ADDREF(*aMarshallConfiguration);
+  NS_ENSURE_ARG_POINTER(aDecoder);
+  *aDecoder = mDecoder;
+  NS_IF_ADDREF(*aDecoder);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPType::SetMarshallConfiguration(nsISupports * aMarshallConfiguration)
+NS_IMETHODIMP nsSOAPType::SetDecoder(nsISOAPDecoder * aDecoder)
 {
-  mMarshallConfiguration = aMarshallConfiguration;
+  mDecoder = aDecoder;
   return NS_OK;
 }
 
-/* attribute nsISupports unmarshallConfiguration; */
-NS_IMETHODIMP nsSOAPType::GetUnmarshallConfiguration(nsISupports * *aUnmarshallConfiguration)
+/* attribute nsISupports encodeConfiguration; */
+NS_IMETHODIMP nsSOAPType::GetEncodeConfiguration(nsISupports * *aEncodeConfiguration)
 {
-  NS_ENSURE_ARG_POINTER(aUnmarshallConfiguration);
-  *aUnmarshallConfiguration = mUnmarshallConfiguration;
-  NS_IF_ADDREF(*aUnmarshallConfiguration);
+  NS_ENSURE_ARG_POINTER(aEncodeConfiguration);
+  *aEncodeConfiguration = mEncodeConfiguration;
+  NS_IF_ADDREF(*aEncodeConfiguration);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPType::SetUnmarshallConfiguration(nsISupports * aUnmarshallConfiguration)
+NS_IMETHODIMP nsSOAPType::SetEncodeConfiguration(nsISupports * aEncodeConfiguration)
 {
-  mUnmarshallConfiguration = aUnmarshallConfiguration;
+  mEncodeConfiguration = aEncodeConfiguration;
+  return NS_OK;
+}
+
+/* attribute nsISupports decodeConfiguration; */
+NS_IMETHODIMP nsSOAPType::GetDecodeConfiguration(nsISupports * *aDecodeConfiguration)
+{
+  NS_ENSURE_ARG_POINTER(aDecodeConfiguration);
+  *aDecodeConfiguration = mDecodeConfiguration;
+  NS_IF_ADDREF(*aDecodeConfiguration);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPType::SetDecodeConfiguration(nsISupports * aDecodeConfiguration)
+{
+  mDecodeConfiguration = aDecodeConfiguration;
   return NS_OK;
 }
 

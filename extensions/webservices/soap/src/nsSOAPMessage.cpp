@@ -27,8 +27,8 @@
 #include "nsSOAPMessage.h"
 #include "nsSOAPParameter.h"
 #include "nsSOAPTypeRegistry.h"
-#include "nsISOAPMarshaller.h"
-#include "nsISOAPUnmarshaller.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 #include "nsSOAPJSValue.h"
 
 /////////////////////////////////////////////
@@ -177,8 +177,8 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
   return NS_OK;
 }
 
-/* void marshallParameters (in nsISupportsArray SOAPParameters); */
-NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
+/* void encodeParameters (in nsISupportsArray SOAPParameters); */
+NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
 {
   nsCOMPtr<nsISOAPParameter> param = new nsSOAPParameter();
   nsresult rc = param->SetValue(SOAPParameters);
@@ -186,15 +186,15 @@ NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters
 
 //  We ought to set the type, but no one checks anyway.
 
-  return mTypes->Marshall(this, param, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsnull);
+  return mTypes->Encode(this, param, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsnull);
 }
 
-/* nsISupportsArray unmarshallParameters (); */
-NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
+/* nsISupportsArray decodeParameters (); */
+NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
 {
   *_retval = nsnull;
   nsCOMPtr<nsISOAPParameter> result;
-  nsresult rc = mTypes->Unmarshall(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallSchemaType, getter_AddRefs(result));
+  nsresult rc = mTypes->Decode(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallSchemaType, getter_AddRefs(result));
   if (NS_FAILED(rc)) return rc;
   if (result) {
     //  We ought to check the type here, but no one is setting it right now.
@@ -256,11 +256,11 @@ NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)
                             nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
 #include "xpc_map_end.h" /* This will #undef the above */
 
-NS_NAMED_LITERAL_STRING(marshallparameters, "marshallparameters");
-NS_NAMED_LITERAL_STRING(unmarshallparameters, "unmarshallparameters");
+NS_NAMED_LITERAL_STRING(encodeparameters, "encodeparameters");
+NS_NAMED_LITERAL_STRING(decodeparameters, "decodeparameters");
 
 static JSBool PR_CALLBACK
-MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+encodeJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval)
 {
   nsCOMPtr<nsISupports> value;
@@ -285,7 +285,7 @@ MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
       message = do_QueryInterface(native);
       if (message) {
         array = do_QueryInterface(value);
-        nsresult rc = message->MarshallParameters(array);
+        nsresult rc = message->EncodeParameters(array);
         if (!NS_FAILED(rc))
           return JS_TRUE;
       }
@@ -295,7 +295,7 @@ MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 }
 
 static JSBool PR_CALLBACK
-UnmarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+DecodeJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval)
 {
   nsCOMPtr<nsISupportsArray> value;
@@ -316,7 +316,7 @@ UnmarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
       nsCOMPtr<nsISOAPMessage> message;
       message = do_QueryInterface(native);
       if (message) {
-        rc = message->UnmarshallParameters(getter_AddRefs(value));
+        rc = message->DecodeParameters(getter_AddRefs(value));
       }
     }
   }
@@ -339,16 +339,16 @@ nsSOAPMessage::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   JSString *str = JSVAL_TO_STRING(id);
   nsDependentString name(JS_GetStringChars(str));
-  if (name.Equals(marshallparameters)) {
+  if (name.Equals(encodeparameters)) {
     JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
-                                        MarshallJSParameters, 0, JSPROP_READONLY);
+                                        encodeJSParameters, 0, JSPROP_READONLY);
     if (!f) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
 
-  } else if (name.Equals(unmarshallparameters)) {
+  } else if (name.Equals(decodeparameters)) {
     JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
-                                        UnmarshallJSParameters, 0, JSPROP_READONLY);
+                                        DecodeJSParameters, 0, JSPROP_READONLY);
     if (!f) {
       return NS_ERROR_OUT_OF_MEMORY;
     }

@@ -28,8 +28,8 @@
 #include "nsISOAPTypeRegistry.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"
-#include "nsISOAPMarshaller.h"
-#include "nsISOAPUnmarshaller.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 

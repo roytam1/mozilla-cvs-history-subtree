@@ -27,18 +27,18 @@ interface nsISOAPParameter;
 interface nsIDOMNode;
 
 /**
- * This interface permits marshalling of SOAP parameters.
+ * This interface permits encoding of SOAP parameters.
  */
 
 [scriptable, uuid(fc33ffd6-1dd1-11b2-8750-fa62430a38b4)]
-interface nsISOAPMarshaller : nsISupports {
+interface nsISOAPEncoder : nsISupports {
 
 /**
- * Marshall the source parameter or object
+ * Encode the source parameter or object
  *
- * @param aMessage The message receiving the marshalled data
+ * @param aMessage The message receiving the encoded data
  *
- * @param aSource The parameter or object to be marshalled
+ * @param aSource The parameter or object to be encoded
  *
  * @param aEncodingStyleURI The encoding style
  *
@@ -51,9 +51,9 @@ interface nsISOAPMarshaller : nsISupports {
  *   explicitly attached to the message.
  *
  * @param aConfiguration Configuration object which may specify more
- *   details used by the marshaller.
+ *   details used by the encoder.
  */
-void marshall(
+void encode(
     in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
     in AString aEncodingStyleURI, in AString aTypeID, 
     in AString aSchemaID, in nsISupports aConfiguration,

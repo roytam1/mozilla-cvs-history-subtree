@@ -1,0 +1,61 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ */
+
+#include "nsISupports.idl"
+
+interface nsISOAPMessage;
+interface nsISOAPParameter;
+interface nsIDOMNode;
+
+/**
+ * This interface permits encoding of SOAP parameters.
+ */
+
+[scriptable, uuid(fc33ffd6-1dd1-11b2-8750-fa62430a38b4)]
+interface nsISOAPEncoder : nsISupports {
+
+/**
+ * Encode the source parameter or object
+ *
+ * @param aMessage The message receiving the encoded data
+ *
+ * @param aSource The parameter or object to be encoded
+ *
+ * @param aEncodingStyleURI The encoding style
+ *
+ * @param aTypeID The type ID of the source parameter or object
+ *
+ * @param aSchemaID The schema ID of the DOM node or data to create
+ *
+ * @param aDestination The node scope, if any, where the result 
+ *   will live.  If this is null, then the result must be 
+ *   explicitly attached to the message.
+ *
+ * @param aConfiguration Configuration object which may specify more
+ *   details used by the encoder.
+ */
+void encode(
+    in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
+    in AString aEncodingStyleURI, in AString aTypeID, 
+    in AString aSchemaID, in nsISupports aConfiguration,
+    in nsIDOMNode aDestination);
+};
