@@ -86,17 +86,16 @@ nsPrefWindow.prototype =
       onOK:
         function ()
           {
-            for( var i = 0; i < hPrefWindow.okHandlers.length; i++ )
-              {
-                hPrefWindow.okHandlers[i]();
-              }
-              
             var tag = document.getElementById( hPrefWindow.contentFrame ).getAttribute("tag");
             if( tag == "" )
               {
                 tag = document.getElementById( hPrefWindow.contentFrame ).getAttribute("src");
               }
             hPrefWindow.wsm.savePageData( tag );
+            for( var i = 0; i < hPrefWindow.okHandlers.length; i++ )
+              {
+                hPrefWindow.okHandlers[i]();
+              }
             hPrefWindow.savePrefs();
           },
         
@@ -376,9 +375,13 @@ nsPrefWindow.prototype =
         {
           var panelTree = document.getElementById( "prefsTree" );
           var selectItem = document.getElementById( aSelectItem );
-          var index = panelTree.contentView.getIndexOfItem( selectItem );
-          if ( !panelTree.view.isContainerOpen( index ) )
-            panelTree.view.toggleOpenState(index);
+          var selectItemroot = document.getElementById( aComponentName );
+          var parentIndex = panelTree.contentView.getIndexOfItem( selectItemroot );
+          if (parentIndex != -1 && !panelTree.view.isContainerOpen(parentIndex))
+             panelTree.view.toggleOpenState(parentIndex);
+          var index = panelTree.view.getIndexOfItem( selectItem );
+          if (index == -1)
+            return;
           panelTree.treeBoxObject.selection.select( index );
         }
 
