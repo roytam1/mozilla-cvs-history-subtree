@@ -125,6 +125,8 @@ void nsGraphicState::Clear()
 
   mOffx						= 0;
   mOffy						= 0;
+  mSaveOffx       = 0;
+  mSaveOffy       = 0;
   mColor 					= NS_RGB(255,255,255);
 	mFont						= 0;
   mFontMetrics		= nsnull;
@@ -195,6 +197,9 @@ void nsGraphicState::Duplicate(nsGraphicState* aGS)
 
 	mOffx						= aGS->mOffx;
 	mOffy						= aGS->mOffy;
+
+  mSaveOffx       = aGS->mSaveOffx;
+  mSaveOffy       = aGS->mSaveOffy;
 
 	mMainRegion			= DuplicateRgn(aGS->mMainRegion, mMainRegion);
 	mClipRegion			= DuplicateRgn(aGS->mClipRegion, mClipRegion);
