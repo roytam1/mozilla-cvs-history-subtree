@@ -2,7 +2,7 @@ pref("general.useragent.security",       "U");
 
 pref("security.enable_ssl2",             true);
 pref("security.enable_ssl3",             true);
-pref("security.enable_tls",		 true);
+pref("security.enable_tls",		 false);
 
 pref("security.ssl2.des_64",        true);
 pref("security.ssl2.des_ede3_192",  true);
