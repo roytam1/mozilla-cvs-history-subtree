@@ -97,6 +97,7 @@
 -(IBAction) pageSetup:(id)aSender;
 -(IBAction) printPage:(id)aSender;
 -(IBAction) toggleOfflineMode:(id)aSender;
+-(IBAction) sendURL:(id)aSender;
 
 // Edit menu actions.
 -(IBAction) findInPage:(id)aSender;

@@ -394,6 +394,27 @@ const int kReuseWindowOnAE = 2;
     [[NSNotificationCenter defaultCenter] postNotificationName:@"offlineModeChanged" object:nil];
 }
 
+//Send URL to default mail app
+- (IBAction)sendURL:(id)aSender
+{
+  NSString* titleString;
+  NSString* urlString;
+
+  [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
+  
+  NSString* mailtoURLString = [NSString stringWithFormat:@"mailto:?subject=%@&body=%@", titleString, urlString];
+
+  CFStringRef myString = CFStringCreateWithCString(NULL, [mailtoURLString UTF8String], kCFStringEncodingUTF8);
+  CFStringRef escapedString = CFURLCreateStringByAddingPercentEscapes(NULL, myString, NULL, NULL, kCFStringEncodingUTF8);
+
+  [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:(NSString *)escapedString]];
+
+  CFRelease(myString);
+  CFRelease(escapedString);
+}
+
+
+
 // Edit menu actions.
 
 
@@ -901,6 +922,14 @@ const int kReuseWindowOnAE = 2;
       return NO;
   }
   
+  if ( action == @selector(sendURL:) )
+  {
+    NSString* titleString;
+    NSString* urlString;
+    [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
+    return [urlString length] > 0 && ![urlString isEqualToString:@"about:blank"];
+  }
+
   // default return
   return YES;
 }
@@ -1065,6 +1094,7 @@ const int kReuseWindowOnAE = 2;
   [self openNewWindowOrTabWithURL:urlString andReferrer:nil];
 }
 
+// currently unused
 - (void)pumpGeckoEventQueue
 {
   nsCOMPtr<nsIEventQueueService> service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);

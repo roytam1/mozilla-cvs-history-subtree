@@ -39,6 +39,7 @@
                 previousTab = id; 
                 printPage = id; 
                 savePage = id; 
+                sendURL = id; 
                 showAboutBox = id; 
                 smallerTextSize = id; 
                 toggleBookmarksToolbar = id; 
