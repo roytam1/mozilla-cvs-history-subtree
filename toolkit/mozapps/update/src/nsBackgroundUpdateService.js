@@ -557,6 +557,24 @@ nsVersionChecker.prototype = {
       return 0;
     return integer;
   },
+  
+  isValidVersion: function (aVersion)
+  {
+    var parts = aVersion.split(".");
+    if (parts.length == 0)
+      return false;
+    for (var i = 0; i < parts.length; ++i) {
+      var part = parts[i];
+      if (i == parts.length - 1) {
+        if (part.lastIndexOf("+") != -1) 
+          parts[i] = part.substr(0, part.length - 1);
+      }
+      var integer = parseInt(part);
+      if (isNaN(integer))
+        return false;
+    }
+    return true;
+  },
 
   /////////////////////////////////////////////////////////////////////////////
   // nsISupports
