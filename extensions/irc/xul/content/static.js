@@ -1366,7 +1366,7 @@ function updateChannel (obj)
     
     client.statusBar["channel-mode"].setAttribute("value", mode);
     client.statusBar["channel-users"].setAttribute("value", users);
-    client.statusBar["channel-topic"].setAttribute("value", topic);
+    client.statusBar["channel-topic"].firstChild.data = topic;
 
 }
 
@@ -1422,7 +1422,8 @@ function updateTitle (obj)
                     client.currentObject.host;
             }
             tstring = getMsg("updateTitleUser", [nick, source]);
-            client.statusBar["channel-topic"].setAttribute("value", tstring);
+            //client.statusBar["channel-topic"].setAttribute("value", tstring);
+            client.statusBar["channel-topic"].firstChild.data = tstring;
             break;
 
         default:
@@ -1639,176 +1640,6 @@ function scrollDown ()
     window.frames[0].scrollTo(0, window.frames[0].document.height);
 }
 
-function addHistory (source, obj, mergeData, collapseRow)
-{
-    var tbody;
-    
-    if (!("messages" in source))
-    {
-        source.messages =
-            document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                      "html:table");
-
-        source.messages.setAttribute ("class", "msg-table");
-        source.messages.setAttribute ("view-type", source.TYPE);
-        tbody = document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                          "html:tbody");
-        source.messages.appendChild (tbody);
-    }
-    else
-    {
-        tbody = source.messages.firstChild;
-    }
-
-    var needScroll = false;
-    var w = window.frames[0];
-    
-    if (client.PRINT_DIRECTION == 1)
-    {
-        if (mergeData || collapseRow)
-        {
-            var thisUserCol = obj.firstChild;
-            var thisMessageCol = thisUserCol.nextSibling;
-            var ci = findPreviousColumnInfo(source.messages);
-            var nickColumns = ci.nickColumns;
-            var rowExtents = ci.extents;
-            var nickColumnCount = nickColumns.length;
-            var sameNick = (nickColumnCount > 0 &&
-                            nickColumns[nickColumnCount - 1].
-                            getAttribute("msg-user") ==
-                            thisUserCol.getAttribute("msg-user"));
-            var lastRowSpan = (nickColumnCount > 0) ?
-                Number(nickColumns[0].getAttribute("rowspan")) : 0;
-            if (sameNick && mergeData)
-            {
-                if (obj.getAttribute("important"))
-                {
-                    nickColumns[nickColumnCount - 1].setAttribute ("important",
-                                                                   true);
-                }
-                /* message is from the same person as last time,
-                 * strip the nick first... */
-                obj.removeChild(obj.firstChild);
-                /* Adjust height of previous cells, maybe. */
-                for (i = 0; i < rowExtents.length - 1; ++i)
-                {
-                    var myLastData = 
-                        rowExtents[i].childNodes[nickColumnCount - 1];
-                    var myLastRowSpan = (myLastData) ?
-                        myLastData.getAttribute("rowspan") : 0;
-                    if (myLastData && myLastRowSpan > 1)
-                    {
-                        myLastData.removeAttribute("rowspan");
-                    }
-                }
-                /* then add one to the colspan for the previous user columns */
-                if (!lastRowSpan)
-                    lastRowSpan = 1;
-                for (var i = 0; i < nickColumns.length; ++i)
-                    nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
-            }
-            else if (!sameNick && collapseRow && nickColumnCount > 0 &&
-                     nickColumnCount < client.MAX_MSG_PER_ROW)
-            {
-                /* message is from a different person, but is elegible to
-                 * be contained by the previous row. */
-                var tr = nickColumns[0].parentNode;
-                for (i = 0; i < rowExtents.length; ++i)
-                    rowExtents[i].lastChild.removeAttribute("colspan");
-                obj.firstChild.setAttribute ("rowspan", lastRowSpan);
-                tr.appendChild (obj.firstChild);
-                var lastColSpan =
-                    Number(rowExtents[0].lastChild.getAttribute("colspan"));
-                obj.lastChild.setAttribute ("colspan", lastColSpan - 2);
-                obj.lastChild.setAttribute ("rowspan", lastRowSpan);
-                tr.appendChild (obj.lastChild);
-                obj = null;
-            }   
-        }
-        
-        if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
-            (w.innerHeight / 3))
-            needScroll = true;
-        if (obj)
-            tbody.appendChild (obj);
-    }
-    else
-        tbody.insertBefore (obj, source.messages.firstChild);
-    
-    if (source.MAX_MESSAGES)
-    {
-        if (typeof source.messageCount != "number")
-            source.messageCount = 1;
-        else
-            source.messageCount++;
-
-        if (source.messageCount > source.MAX_MESSAGES)
-            if (client.PRINT_DIRECTION == 1)
-            {
-                tbody.removeChild (tbody.firstChild);
-                --source.messageCount;
-                while (tbody.firstChild &&
-                       tbody.firstChild.firstChild.getAttribute("class") ==
-                       "msg-data")
-                {
-                    --source.messageCount;
-                    tbody.removeChild (tbody.firstChild);
-                }
-            }
-            else
-            {
-                tbody.removeChild (tbody.lastChild);
-                --source.messageCount;
-                while (tbody.lastChild &&
-                       tbody.lastChild.firstChild.getAttribute("class") ==
-                       "msg-data")
-                {
-                    --source.messageCount;
-                    tbody.removeChild (tbody.lastChild);
-                }
-            }
-    }
-
-    if ("currentObject" in client && client.currentObject == source &&
-        needScroll)
-    {
-        scrollDown();
-        setTimeout ("scrollDown()", 500);
-        setTimeout ("scrollDown()", 1000);
-        setTimeout ("scrollDown()", 2000);
-    }                    
-    
-}
-
-function findPreviousColumnInfo (table)
-{
-    var extents = new Array();
-    var tr = table.firstChild.lastChild;
-    var className = tr ? tr.firstChild.getAttribute("class") : "";
-    while (tr && className.search(/msg-user|msg-type|msg-nested-td/) == -1)
-    {
-        extents.push(tr);
-        tr = tr.previousSibling;
-        if (tr)
-            className = tr.firstChild.getAttribute("class");
-    }
-    
-    if (!tr || className != "msg-user")
-        return {extents: [], nickColumns: []};
-    
-    extents.push(tr);
-    var nickCol = tr.firstChild;
-    var nickCols = new Array();
-    while (nickCol)
-    {
-        if (nickCol.getAttribute("class") == "msg-user")
-            nickCols.push (nickCol);
-        nickCol = nickCol.nextSibling.nextSibling;
-    }
-
-    return {extents: extents, nickColumns: nickCols};
-}
-    
 function notifyActivity (source)
 {
     if (typeof source != "object")
@@ -2450,6 +2281,176 @@ function __display(message, msgtype, sourceObj, destObj)
     else
         notifyActivity (this);
 }
+
+function addHistory (source, obj, mergeData, collapseRow)
+{
+    var tbody;
+    
+    if (!("messages" in source) || source.messages == null)
+    {
+        source.messages =
+            document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                      "html:table");
+
+        source.messages.setAttribute ("class", "msg-table");
+        source.messages.setAttribute ("view-type", source.TYPE);
+        tbody = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                          "html:tbody");
+        source.messages.appendChild (tbody);
+    }
+    else
+    {
+        tbody = source.messages.firstChild;
+    }
+
+    var needScroll = false;
+    var w = window.frames[0];
+    
+    if (client.PRINT_DIRECTION == 1)
+    {
+        if (mergeData || collapseRow)
+        {
+            var thisUserCol = obj.firstChild;
+            var thisMessageCol = thisUserCol.nextSibling;
+            var ci = findPreviousColumnInfo(source.messages);
+            var nickColumns = ci.nickColumns;
+            var rowExtents = ci.extents;
+            var nickColumnCount = nickColumns.length;
+            var sameNick = (nickColumnCount > 0 &&
+                            nickColumns[nickColumnCount - 1].
+                            getAttribute("msg-user") ==
+                            thisUserCol.getAttribute("msg-user"));
+            var lastRowSpan = (nickColumnCount > 0) ?
+                Number(nickColumns[0].getAttribute("rowspan")) : 0;
+            if (sameNick && mergeData)
+            {
+                if (obj.getAttribute("important"))
+                {
+                    nickColumns[nickColumnCount - 1].setAttribute ("important",
+                                                                   true);
+                }
+                /* message is from the same person as last time,
+                 * strip the nick first... */
+                obj.removeChild(obj.firstChild);
+                /* Adjust height of previous cells, maybe. */
+                for (i = 0; i < rowExtents.length - 1; ++i)
+                {
+                    var myLastData = 
+                        rowExtents[i].childNodes[nickColumnCount - 1];
+                    var myLastRowSpan = (myLastData) ?
+                        myLastData.getAttribute("rowspan") : 0;
+                    if (myLastData && myLastRowSpan > 1)
+                    {
+                        myLastData.removeAttribute("rowspan");
+                    }
+                }
+                /* then add one to the colspan for the previous user columns */
+                if (!lastRowSpan)
+                    lastRowSpan = 1;
+                for (var i = 0; i < nickColumns.length; ++i)
+                    nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
+            }
+            else if (!sameNick && collapseRow && nickColumnCount > 0 &&
+                     nickColumnCount < client.MAX_MSG_PER_ROW)
+            {
+                /* message is from a different person, but is elegible to
+                 * be contained by the previous row. */
+                var tr = nickColumns[0].parentNode;
+                for (i = 0; i < rowExtents.length; ++i)
+                    rowExtents[i].lastChild.removeAttribute("colspan");
+                obj.firstChild.setAttribute ("rowspan", lastRowSpan);
+                tr.appendChild (obj.firstChild);
+                var lastColSpan =
+                    Number(rowExtents[0].lastChild.getAttribute("colspan"));
+                obj.lastChild.setAttribute ("colspan", lastColSpan - 2);
+                obj.lastChild.setAttribute ("rowspan", lastRowSpan);
+                tr.appendChild (obj.lastChild);
+                obj = null;
+            }   
+        }
+        
+        if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
+            (w.innerHeight / 3))
+            needScroll = true;
+        if (obj)
+            tbody.appendChild (obj);
+    }
+    else
+        tbody.insertBefore (obj, source.messages.firstChild);
+    
+    if (source.MAX_MESSAGES)
+    {
+        if (typeof source.messageCount != "number")
+            source.messageCount = 1;
+        else
+            source.messageCount++;
+
+        if (source.messageCount > source.MAX_MESSAGES)
+            if (client.PRINT_DIRECTION == 1)
+            {
+                tbody.removeChild (tbody.firstChild);
+                --source.messageCount;
+                while (tbody.firstChild &&
+                       tbody.firstChild.firstChild.getAttribute("class") ==
+                       "msg-data")
+                {
+                    --source.messageCount;
+                    tbody.removeChild (tbody.firstChild);
+                }
+            }
+            else
+            {
+                tbody.removeChild (tbody.lastChild);
+                --source.messageCount;
+                while (tbody.lastChild &&
+                       tbody.lastChild.firstChild.getAttribute("class") ==
+                       "msg-data")
+                {
+                    --source.messageCount;
+                    tbody.removeChild (tbody.lastChild);
+                }
+            }
+    }
+
+    if ("currentObject" in client && client.currentObject == source &&
+        needScroll)
+    {
+        scrollDown();
+        setTimeout ("scrollDown()", 500);
+        setTimeout ("scrollDown()", 1000);
+        setTimeout ("scrollDown()", 2000);
+    }                    
+    
+}
+
+function findPreviousColumnInfo (table)
+{
+    var extents = new Array();
+    var tr = table.firstChild.lastChild;
+    var className = tr ? tr.firstChild.getAttribute("class") : "";
+    while (tr && className.search(/msg-user|msg-type|msg-nested-td/) == -1)
+    {
+        extents.push(tr);
+        tr = tr.previousSibling;
+        if (tr)
+            className = tr.firstChild.getAttribute("class");
+    }
+    
+    if (!tr || className != "msg-user")
+        return {extents: [], nickColumns: []};
+    
+    extents.push(tr);
+    var nickCol = tr.firstChild;
+    var nickCols = new Array();
+    while (nickCol)
+    {
+        if (nickCol.getAttribute("class") == "msg-user")
+            nickCols.push (nickCol);
+        nickCol = nickCol.nextSibling.nextSibling;
+    }
+
+    return {extents: extents, nickColumns: nickCols};
+}    
 
 client.getConnectionCount =
 function cli_gccount ()

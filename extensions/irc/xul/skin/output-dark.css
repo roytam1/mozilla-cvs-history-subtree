@@ -79,7 +79,7 @@ a.chatzilla-link:visited {
 .msg-user {                                 /* msg-user = nickname portion of */
     color: white !important;                /* a message (channel and query   */
 }                                           /* views)                         */
- 
+
 .msg-data[mark="even"] {                    /* use even/odd marks to create a */
     color: white;                           /* subtle brightness change when  */
 }                                           /* the speaker changes.           */

@@ -143,8 +143,8 @@
                   </hbox>
                   <hbox flex="1">
                     <hbox flex="1">
-                      <text class="header-data" id="channel-topic" flex="1"
-                        crop="right" onclick="onTopicEditStart()"/>
+                      <label class="header-data" id="channel-topic" flex="1"
+                        crop="right" onclick="onTopicEditStart()">text</label>
                       <textbox flex="1" id="channel-topicedit" collapsed="true"/>
                     </hbox>
                   </hbox>

@@ -546,8 +546,7 @@ function onClearCurrentView()
     if (client.output.firstChild)
         client.output.removeChild (client.output.firstChild);
 
-    client.currentObject.messages = (void 0);
-    delete client.currentObject.messages;
+    client.currentObject.messages = null;
 
     client.currentObject.display (getMsg("onClearCurrentViewMsg"), "INFO");
 
@@ -894,6 +893,7 @@ function onWindowKeyPress (e)
                 w.scrollTo (w.pageXOffset, newOfs);
             else
                 w.scrollTo (w.pageXOffset, 0);
+            e.preventDefault();
             break;
             
         case 34: /* pgdn */
@@ -903,6 +903,7 @@ function onWindowKeyPress (e)
                 w.scrollTo (w.pageXOffset, newOfs);
             else
                 w.scrollTo (w.pageXOffset, (w.innerHeight + w.pageYOffset));
+            e.preventDefault();
             break;
 
         case 9: /* tab */
@@ -1637,11 +1638,11 @@ function cli_iquery (e)
 
     var tab = openQueryTab (e.server, ary[1]);
     setCurrentObject (tab);
-    
+
     if (ary[2])
     {
         var msg = filterOutput(ary[2], "PRIVMSG", "ME!");
-        tab.display (msg, "PRIVMSG", "ME!", usr);
+        tab.display (msg, "PRIVMSG", "ME!", tab);
         tab.say (ary[2]);
     }
     

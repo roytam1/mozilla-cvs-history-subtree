@@ -509,9 +509,9 @@ a.chatzilla-link:hover {
 .msg-user[view-type="IRCUser"]:after {
     content: "}";
 }
-.msg-user[view-type$="IRCUser"][msg-user="ME!"]:before {
+.msg-user[view-type="IRCUser"][msg-user$="ME!"]:before {
     content: "{";
 }
-.msg-user[view-type$="IRCUser"][msg-user="ME!"]:after {
+.msg-user[view-type="IRCUser"][msg-user$="ME!"]:after {
     content: "}";
 }

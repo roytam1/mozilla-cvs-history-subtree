@@ -102,6 +102,10 @@ window {
     margin-left: 5px;
 }
 
+#channel-topic {
+    cursor: default;
+}
+
 #channel-topic[editable="true"] {
     cursor: text;
 }
