@@ -30,6 +30,11 @@
 #include "nsHashtableEnumerator.h"
 #include "nsXPIDLString.h"
 
+#ifdef  XP_MAC  // sdagley dougt fix
+#include <Files.h>
+#include <Errors.h>
+#endif
+
 #define PRINT_CRITICAL_ERROR_TO_SCREEN 1
 #define USE_REGISTRY 1
 #define XPCOM_USE_NSGETFACTORY 1
@@ -669,8 +674,13 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
     // rjc - on Mac, check the file's type code (skip checking the creator code)
     nsCOMPtr<nsIFile>  fs = component;
 
+/*
+!!!!!!!!!!!! Danger Will Robinson !!!!!!!!!!!!!
+*/
+DebugStr("\pnsLocalFile doesn't have a GetCatInfo call - yet");
+
     CInfoPBRec  catInfo;
-    OSErr       err = fs.GetCatInfo(catInfo);
+    OSErr       err = fnfErr; // fs.GetCatInfo(catInfo);	Stub to fnfErr for now
     if (!err)
     {
         // on Mac, Mozilla shared libraries are of type 'shlb'

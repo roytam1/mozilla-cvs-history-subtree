@@ -69,6 +69,12 @@ private:
     // The Mac data structure for a file system object
     FSSpec    mSpec;
     
+    // Is the mSpec member valid?
+    PRBool	haveValidSpec;
+    
+    // Do we have to create the path hierarchy before the spec is usable?
+    PRBool	mustCreate;
+    
     void MakeDirty();
 
     nsresult CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move);

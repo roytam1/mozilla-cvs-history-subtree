@@ -40,12 +40,15 @@
 #endif
 
 nsDll::nsDll(const char *codeDllName, int type)
-  : m_dllName(NULL), m_dllSpec(NULL), m_modDate(0), m_size(0),
+  : m_dllName(NULL), m_dllSpec(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
 
 {
+	m_modDate = LL_Zero();
+	m_size = LL_Zero();
+	
     if (!codeDllName || !*codeDllName)
     {
         m_status = DLL_INVALID_PARAM;
@@ -60,11 +63,14 @@ nsDll::nsDll(const char *codeDllName, int type)
 }
 
 nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation)
-  : m_dllName(NULL), m_dllSpec(dllSpec), m_modDate(0), m_size(0),
+  : m_dllName(NULL), m_dllSpec(dllSpec),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL), m_markForUnload(PR_FALSE)
 
 {
+	m_modDate = LL_Zero();
+	m_size = LL_Zero();
+
     m_registryLocation = nsCRT::strdup(registryLocation);
     Init(dllSpec);
     // Populate m_modDate and m_size
@@ -75,11 +81,14 @@ nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation)
 }
 
 nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation, PRInt64* modDate, PRInt64* fileSize)
-  : m_dllName(NULL), m_dllSpec(dllSpec), m_modDate(0), m_size(0),
+  : m_dllName(NULL), m_dllSpec(dllSpec),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL), m_markForUnload(PR_FALSE)
 
 {
+    m_modDate = LL_Zero();
+    m_size = LL_Zero();
+
     m_registryLocation = nsCRT::strdup(registryLocation);
     Init(dllSpec);
 
@@ -96,12 +105,15 @@ nsDll::nsDll(nsIFile *dllSpec, const char *registryLocation, PRInt64* modDate, P
 }
 
 nsDll::nsDll(const char *libPersistentDescriptor)
-  : m_dllName(NULL), m_dllSpec(NULL), m_modDate(0), m_size(0),
+  : m_dllName(NULL), m_dllSpec(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
 
 {
+    m_modDate = LL_Zero();
+    m_size = LL_Zero();
+
     Init(libPersistentDescriptor);
     // Populate m_modDate and m_size
     if (NS_FAILED(Sync()))
@@ -111,12 +123,15 @@ nsDll::nsDll(const char *libPersistentDescriptor)
 }
 
 nsDll::nsDll(const char *libPersistentDescriptor, PRInt64* modDate, PRInt64* fileSize)
-  : m_dllName(NULL), m_dllSpec(NULL), m_modDate(0), m_size(0),
+  : m_dllName(NULL), m_dllSpec(NULL),
     m_instance(NULL), m_status(DLL_OK), m_moduleObject(NULL),
     m_persistentDescriptor(NULL), m_nativePath(NULL),
     m_markForUnload(PR_FALSE), m_registryLocation(0)
 
 {
+    m_modDate = LL_Zero();
+    m_size = LL_Zero();
+
     Init(libPersistentDescriptor);
 
     // and overwrite the modData and fileSize
@@ -162,8 +177,8 @@ void
 nsDll::Init(const char *libPersistentDescriptor)
 {
     nsresult rv;
-    m_modDate = 0;
-	m_size = 0;
+    m_modDate = LL_Zero();
+    m_size = LL_Zero();
 	
 	if (libPersistentDescriptor == NULL)
 	{

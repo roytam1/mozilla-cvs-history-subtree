@@ -56,6 +56,7 @@
 
 #include "nsFileSpecImpl.h"
 
+#include "nsILocalFile.h"
 #include "nsLocalFile.h"
 #include "nsDirectoryService.h"
 

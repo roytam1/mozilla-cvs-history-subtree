@@ -284,10 +284,17 @@ nsLocalFile::InitWithPath(const char *filePath)
 }
 
 NS_IMETHODIMP  
-nsLocalFile::Open(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
+nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 {
    return NS_ERROR_FAILURE;
 }
+
+NS_IMETHODIMP  
+nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
+{
+   return NS_ERROR_FAILURE;
+}
+
 
 NS_IMETHODIMP  
 nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
@@ -598,7 +605,10 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
 
     PRBool isDir;
     IsDirectory(&isDir);
-    if (!isDir)
+    PRBool isSymlink;
+    IsSymlink(&isSymlink);
+
+    if (!isDir || (isSymlink && !followSymlinks))
     {
         rv = CopySingleFile(this, newParentDir, newName, followSymlinks, move);
         if (NS_FAILED(rv))
@@ -607,9 +617,12 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
     else
     {
         // create a new target destination in the new parentDir;
-        nsCOMPtr<nsILocalFile> target;
-        newParentDir->Clone(getter_AddRefs(target));
-
+        nsCOMPtr<nsIFile> target;
+        rv = newParentDir->Clone(getter_AddRefs(target));
+        
+        if (NS_FAILED(rv)) 
+            return rv;
+        
         char *allocatedNewName;
         if (!newName)
         {
@@ -653,7 +666,10 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
 
             if (move)
             {
-                rv = file->MoveTo(target, nsnull);
+                if (followSymlinks)
+                    rv = NS_ERROR_FAILURE;
+                else
+                    rv = file->MoveTo(target, nsnull);
             }
             else
             {   
@@ -675,13 +691,13 @@ nsLocalFile::CopyMove(nsIFile *newParentDir, const char *newName, PRBool followS
         {
             char *aFileName;
             GetLeafName(&aFileName);
-            InitWithFile(newParentDir);
+           // InitWithFile(newParentDir);
             AppendPath(aFileName); 
             nsAllocator::Free(aFileName);
         }
         else
         {
-            InitWithFile(newParentDir);
+           // InitWithFile(newParentDir);
             AppendPath(newName);
         }
         MakeDirty();
@@ -719,6 +735,31 @@ nsLocalFile::Spawn(const char *args)
 
 
     return NS_ERROR_FILE_EXECUTION_FAILED;
+}
+
+NS_IMETHODIMP  
+nsLocalFile::Load(PRLibrary * *_retval)
+{
+    PRBool isFile;
+    nsresult rv = IsFile(&isFile);
+
+    if (NS_FAILED(rv))
+        return rv;
+    
+    if (! isFile)
+        return NS_ERROR_FILE_IS_DIRECTORY;
+	
+	// Use the new PR_LoadLibraryWithFlags which allows us to use a FSSpec
+	PRLibSpec	libSpec;
+    libSpec.type = PR_LibSpec_MacIndexedFragment;
+    libSpec.value.mac_indexed_fragment.fsspec = &mSpec;
+    libSpec.value.mac_indexed_fragment.index = 0;
+    *_retval =  PR_LoadLibraryWithFlags(libSpec, 0);
+    
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_NULL_POINTER;
 }
 
 NS_IMETHODIMP  
@@ -966,7 +1007,11 @@ NS_IMETHODIMP
 nsLocalFile::IsFile(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
-    *_retval = PR_FALSE;
+    
+    if (haveValidSpec /* && testforfile */)
+    	*_retval = PR_TRUE;
+    else
+    	*_retval = PR_FALSE;
 
     return NS_OK;
 }
