@@ -99,8 +99,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
     JSString *jsstr;
     jclass target_java_class;
     
-    JS_ASSERT(signature->type == JAVA_SIGNATURE_CLASS ||
-        signature->type == JAVA_SIGNATURE_ARRAY);
+    JS_ASSERT(IS_REFERENCE_TYPE(signature->type));
 
     /* Initialize to default case, in which no new Java object is
        synthesized to perform the conversion and, therefore, no JNI local
@@ -421,6 +420,9 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
     switch (type) {
     case JAVA_SIGNATURE_BOOLEAN:
         if (!JSVAL_IS_BOOLEAN(v)) {
+            /* Suppress useless conversion from object to boolean type */
+            if (JSVAL_IS_OBJECT(v))
+                goto conversion_error;
             if (!JS_ConvertValue(cx, v, JSTYPE_BOOLEAN, &v))
                 goto conversion_error;
             (*cost)++;
@@ -485,14 +487,16 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
         }
         break;
 
-    case JAVA_SIGNATURE_CLASS:
-    case JAVA_SIGNATURE_ARRAY:
+    /* Non-primitive (reference) type */
+    default:
+        JS_ASSERT(IS_REFERENCE_TYPE(type));
         if (!jsj_ConvertJSValueToJavaObject(cx, jEnv, v, signature, cost,
             &java_value->l, is_local_refp))
             goto conversion_error;
         break;
 
-    default:
+    case JAVA_SIGNATURE_UNKNOWN:
+    case JAVA_SIGNATURE_VOID:
         JS_ASSERT(0);
         return JS_FALSE;
     }
@@ -794,13 +798,15 @@ jsj_ConvertJavaValueToJSValue(JSContext *cx, JNIEnv *jEnv,
     case JAVA_SIGNATURE_DOUBLE:
         return JS_NewDoubleValue(cx, java_value->d, vp);
 
-    case JAVA_SIGNATURE_CLASS:
-    case JAVA_SIGNATURE_ARRAY:
-        return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value->l, vp);
-
-    default:
+    case JAVA_SIGNATURE_UNKNOWN:
         JS_ASSERT(0);
         return JS_FALSE;
+        
+    /* Non-primitive (reference) type */
+    default:
+        JS_ASSERT(IS_REFERENCE_TYPE(signature->type));
+        return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value->l, vp);
+
     }
 }
 

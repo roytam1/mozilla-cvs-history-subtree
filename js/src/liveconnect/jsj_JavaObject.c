@@ -110,7 +110,7 @@ jsj_WrapJavaObject(JSContext *cx,
     if (class_descriptor->type == JAVA_SIGNATURE_ARRAY) {
         js_class = &JavaArray_class;
     } else {
-        JS_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS);
+        JS_ASSERT(IS_OBJECT_TYPE(class_descriptor->type));
         js_class = &JavaObject_class;
     }
     
@@ -323,8 +323,7 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     }
 
     class_descriptor = java_wrapper->class_descriptor;
-    JS_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS ||
-              class_descriptor->type == JAVA_SIGNATURE_ARRAY);
+    JS_ASSERT(IS_REFERENCE_TYPE(class_descriptor->type));
 
     member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
     if (!member_descriptor) {

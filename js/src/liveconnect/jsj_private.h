@@ -57,23 +57,42 @@ typedef struct CapturedJSError CapturedJSError;
 typedef struct JavaMemberVal JavaMemberVal;
 
 /*
- * This enum uses the same character encoding used by the JDK to encode
- * Java type signatures, but the enum is easier to debug/compile with.
+ * This enum uses a method similar to the JDK to specify
+ * Java type signatures, but the classification of Java
+ * object types is more fine-grained.
  */
 typedef enum {
-    JAVA_SIGNATURE_ARRAY    =   '[',
-    JAVA_SIGNATURE_BYTE     =   'B',
-    JAVA_SIGNATURE_CHAR     =   'C',
-    JAVA_SIGNATURE_CLASS    =   'L',
-    JAVA_SIGNATURE_FLOAT    =   'F',
-    JAVA_SIGNATURE_DOUBLE   =   'D',
-    JAVA_SIGNATURE_INT      =   'I',
-    JAVA_SIGNATURE_LONG     =   'J',
-    JAVA_SIGNATURE_SHORT    =   'S',
-    JAVA_SIGNATURE_VOID     =   'V',
-    JAVA_SIGNATURE_BOOLEAN  =   'Z',
-    JAVA_SIGNATURE_UNKNOWN  =    0
+    JAVA_SIGNATURE_UNKNOWN,
+    JAVA_SIGNATURE_VOID,
+
+    /* Primitive types */
+    JAVA_SIGNATURE_BOOLEAN,
+    JAVA_SIGNATURE_CHAR,
+    JAVA_SIGNATURE_BYTE,
+    JAVA_SIGNATURE_SHORT,
+    JAVA_SIGNATURE_INT,
+    JAVA_SIGNATURE_LONG,
+    JAVA_SIGNATURE_FLOAT,
+    JAVA_SIGNATURE_DOUBLE,
+
+    /* Reference types */
+    JAVA_SIGNATURE_ARRAY,              /* Any array class */
+    JAVA_SIGNATURE_OBJECT,             /* non-array object, but not one of the
+                                          more specific types below */
+    JAVA_SIGNATURE_JAVA_LANG_BOOLEAN,
+    JAVA_SIGNATURE_JAVA_LANG_CLASS,
+    JAVA_SIGNATURE_JAVA_LANG_DOUBLE,
+    JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT,
+    JAVA_SIGNATURE_JAVA_LANG_OBJECT,
+    JAVA_SIGNATURE_JAVA_LANG_STRING,
+
+    JAVA_SIGNATURE_LIMIT
 } JavaSignatureChar;
+
+#define IS_REFERENCE_TYPE(sig) ((int)(sig) >= (int)JAVA_SIGNATURE_ARRAY)
+#define IS_OBJECT_TYPE(sig)    ((int)(sig) >= (int)JAVA_SIGNATURE_OBJECT)
+#define IS_PRIMITIVE_TYPE(sig)                                               \
+    (((int)(sig) >= (int)JAVA_SIGNATURE_BYTE) && !IS_REFERENCE_TYPE(sig))                                    \
 
 /* The signature of a Java method consists of the signatures of all its
    arguments and its return type signature. */
@@ -240,6 +259,7 @@ extern jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashC
 extern jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
 extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException constructor */
+extern jmethodID njJSException_JSException_wrap;/*netscape.javascipt.JSException constructor */
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */

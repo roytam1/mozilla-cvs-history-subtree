@@ -121,10 +121,20 @@ get_signature_type(JSContext *cx, JavaClassDescriptor *class_descriptor)
         type = JAVA_SIGNATURE_BOOLEAN;
     else if (!strcmp(java_class_name, "void"))
         type = JAVA_SIGNATURE_VOID;
+    else if (!strcmp(java_class_name, "java.lang.Boolean"))
+        type = JAVA_SIGNATURE_JAVA_LANG_BOOLEAN;
+    else if (!strcmp(java_class_name, "java.lang.Double"))
+        type = JAVA_SIGNATURE_JAVA_LANG_DOUBLE;
+    else if (!strcmp(java_class_name, "java.lang.String"))
+        type = JAVA_SIGNATURE_JAVA_LANG_STRING;
+    else if (!strcmp(java_class_name, "java.lang.Object"))
+        type = JAVA_SIGNATURE_JAVA_LANG_OBJECT;
+    else if (!strcmp(java_class_name, "java.lang.Class"))
+        type = JAVA_SIGNATURE_JAVA_LANG_CLASS;
+    else if (!strcmp(java_class_name, "netscape.javascript.JSObject"))
+        type = JAVA_SIGNATURE_NETSCAPE_JAVASCRIPT_JSOBJECT;
     else
-        /* Well, I guess it's a Java class, then. */
-        type = JAVA_SIGNATURE_CLASS;
-    
+        type = JAVA_SIGNATURE_OBJECT;
     return type;
 }
 
@@ -184,6 +194,16 @@ compute_java_class_signature(JSContext *cx, JNIEnv *jEnv, JavaSignature *signatu
 }
 
 /*
+ * Convert from JavaSignatureChar enumeration to single-character
+ * signature used by the JDK and JNI methods.
+ */
+static const char
+get_jdk_signature_char(JavaSignatureChar type)
+{
+    return "XVZCBSIJFD[LLLLLL"[(int)type];
+}
+
+/*
  * Convert a JavaSignature object into a string format as used by
  * the JNI functions, e.g. java.lang.Object ==> "Ljava/lang/Object;"
  * The caller is responsible for freeing the resulting string.
@@ -195,7 +215,7 @@ jsj_ConvertJavaSignatureToString(JSContext *cx, JavaSignature *signature)
 {
     char *sig;
 
-    if (signature->type == JAVA_SIGNATURE_CLASS) {
+    if (IS_OBJECT_TYPE(signature->type)) {
         /* A non-array object class */
         sig = JS_smprintf("L%s;", signature->name);
         if (sig)
@@ -214,7 +234,7 @@ jsj_ConvertJavaSignatureToString(JSContext *cx, JavaSignature *signature)
 
     } else {
         /* A primitive class */
-        sig = JS_smprintf("%c", (char)signature->type);
+        sig = JS_smprintf("%c", get_jdk_signature_char(signature->type));
     }
 
     if (!sig) {

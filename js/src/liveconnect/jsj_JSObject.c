@@ -419,7 +419,7 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
             goto done;
         
         java_exception = (*jEnv)->NewObject(jEnv, njJSException, 
-                                            njJSException_JSException,
+                                            njJSException_JSException_wrap,
                                             java_obj);
         if (!java_exception) 
             goto out_of_memory;

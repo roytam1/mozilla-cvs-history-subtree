@@ -114,6 +114,7 @@ jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashCode() *
 jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
 jmethodID njJSException_JSException;    /* netscape.javascript.JSexception constructor */
+jmethodID njJSException_JSException_wrap;/*netscape.javascript.JSexception constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -270,7 +271,8 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 
 #include "netscape_javascript_JSObject.h"
 
-static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
+static JSBool
+JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 {
     // Manually load the required native methods.
     static JNINativeMethod nativeMethods[] = {
@@ -292,9 +294,11 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
         report_java_initialization_error(jEnv, "Couldn't initialize JSObject native methods.");
         (*jEnv)->ExceptionClear(jEnv);
+        return JS_FALSE;
     }
     /* call the initClass method, since we nailed the static initializer for testing. */
     Java_netscape_javascript_JSObject_initClass(jEnv, njJSObject);
+    return JS_TRUE;
 }
 
 #endif
@@ -315,7 +319,10 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                                             JSObject,           "(I)V",                         njJSObject);
     LOAD_CONSTRUCTOR(netscape.javascript.JSException,
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
-                                                                                                njJSException);
+    /* Load second constructor for wrapping JS exception objects inside JSExceptions */                                                                                            njJSException);
+    _LOAD_METHOD(netscape.javascript.JSException,<init>,
+                                            JSException_wrap,   "(Ljava/lang/Object;)V",        njJSException, JS_FALSE)
+
     LOAD_FIELDID(netscape.javascript.JSObject,  
                                             internal,           "I",                            njJSObject);
     LOAD_FIELDID(netscape.javascript.JSException,  

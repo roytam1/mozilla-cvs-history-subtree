@@ -285,17 +285,20 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     case JAVA_SIGNATURE_DOUBLE:
         GET_JAVA_FIELD(Double,d);
         break;
-
-    case JAVA_SIGNATURE_CLASS:
-    case JAVA_SIGNATURE_ARRAY:
-        GET_JAVA_FIELD(Object,l);
-        break;
-
-#undef GET_JAVA_FIELD
-    default:
+     
+    case JAVA_SIGNATURE_UNKNOWN:
+    case JAVA_SIGNATURE_VOID:
         JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
+        
+    /* Non-primitive (reference) type */
+    default:
+        JS_ASSERT(IS_REFERENCE_TYPE(field_type));
+        GET_JAVA_FIELD(Object,l);
+        break;
     }
+    
+#undef GET_JAVA_FIELD
 
     return jsj_ConvertJavaValueToJSValue(cx, jEnv, signature, &java_value, vp);
 }
@@ -365,19 +368,22 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     case JAVA_SIGNATURE_DOUBLE:
         SET_JAVA_FIELD(Double,d);
         break;
-
-    case JAVA_SIGNATURE_CLASS:
-    case JAVA_SIGNATURE_ARRAY:
+        
+    /* Non-primitive (reference) type */
+    default:
+        JS_ASSERT(IS_REFERENCE_TYPE(field_type));
         SET_JAVA_FIELD(Object,l);
         if (is_local_ref)
             (*jEnv)->DeleteLocalRef(jEnv, java_value.l);
         break;
 
-#undef SET_JAVA_FIELD
-    default:
+    case JAVA_SIGNATURE_UNKNOWN:
+    case JAVA_SIGNATURE_VOID:
         JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
+
+#undef SET_JAVA_FIELD
     
     return JS_TRUE;
 }
