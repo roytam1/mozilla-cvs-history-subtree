@@ -19,35 +19,6 @@
 #ifndef __NS_JSWINREG_H__
 #define __NS_JSWINREG_H__
 
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegGetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegGetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegInstallObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegFinalCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegFinalDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegFinalDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegFinalSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-//PR_STATIC_CALLBACK(JSBool)
-//WinRegFinalSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
-
 PRInt32
 InitWinRegPrototype(JSContext *jscontext, JSObject *global, JSObject **winRegPrototype);
 
