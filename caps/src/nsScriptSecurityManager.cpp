@@ -405,6 +405,16 @@ nsScriptSecurityManager::CheckSameOriginURI(nsIURI* aSourceURI,
                                    0, PR_FALSE /* do not check for privileges */);
 }
 
+NS_IMETHODIMP
+nsScriptSecurityManager::CheckSameOriginPrincipal(nsIPrincipal* aSourcePrincipal,
+                                                  nsIPrincipal* aTargetPrincipal)
+{
+    return CheckSameOriginInternal(aSourcePrincipal, aTargetPrincipal,
+                                   nsIXPCSecurityManager::ACCESS_SET_PROPERTY,
+                                   PR_TRUE);
+}
+
+
 nsresult
 nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
                                                  nsIXPCNativeCallContext* aCallContext,

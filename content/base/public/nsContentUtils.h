@@ -46,7 +46,8 @@ class nsIScriptGlobalObject;
 class nsIXPConnect;
 class nsIContent;
 class nsIDocument;
-
+class nsIScriptSecurityManager;
+class nsIDOMNode;
 
 class nsContentUtils
 {
@@ -91,6 +92,19 @@ public:
                                                    const nsAString& aValue);
 
   static void Shutdown();
+  
+  /**
+   * Checks whether two nodes come from the same origin. aTrustedNode is
+   * considered 'safe' in that a user can operate on it and that it isn't
+   * a js-object that implements nsIDOMNode.
+   * Never call this function with the first node provided by script, it
+   * must always be known to be a 'real' node!
+   */
+  static nsresult CheckSameOrigin(nsIDOMNode* aTrustedNode,
+                                  nsIDOMNode* aUnTrustedNode);
+
+  // Check if the (JS) caller can access aNode.
+  static PRBool CanCallerAccess(nsIDOMNode *aNode);
 
 private:
   static nsresult doReparentContentWrapper(nsIContent *aChild,
@@ -103,6 +117,8 @@ private:
   static nsIDOMScriptObjectFactory *sDOMScriptObjectFactory;
 
   static nsIXPConnect *sXPConnect;
+
+  static nsIScriptSecurityManager *sSecurityManager;
 };
 
 #define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(_class)                      \

@@ -935,12 +935,15 @@ NS_IMETHODIMP
 nsXULElement::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
     if (mDocument) {
-        return mDocument->QueryInterface(NS_GET_IID(nsIDOMDocument), (void**) aOwnerDocument);
+        return CallQueryInterface(mDocument, aOwnerDocument);
     }
-    else {
-        *aOwnerDocument = nsnull;
-        return NS_OK;
+    nsCOMPtr<nsIDocument> doc;
+    NodeInfo()->GetDocument(*getter_AddRefs(doc));
+    if (doc) {
+        return CallQueryInterface(doc, aOwnerDocument);
     }
+    *aOwnerDocument = nsnull;
+    return NS_OK;
 }
 
 
@@ -1001,7 +1004,9 @@ nsXULElement::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
 
     // aRefChild may be null; that means "append".
 
-    nsresult rv;
+    nsresult rv = nsContentUtils::CheckSameOrigin(this, aNewChild);
+    if (NS_FAILED(rv))
+        return rv;
 
     nsCOMPtr<nsIContent> newcontent = do_QueryInterface(aNewChild);
     NS_ASSERTION(newcontent != nsnull, "not an nsIContent");
@@ -1079,7 +1084,9 @@ nsXULElement::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild,
     if (! aOldChild)
         return NS_ERROR_NULL_POINTER;
 
-    nsresult rv;
+    nsresult rv = nsContentUtils::CheckSameOrigin(this, aNewChild);
+    if (NS_FAILED(rv))
+        return rv;
 
     nsCOMPtr<nsIContent> oldelement = do_QueryInterface(aOldChild);
     NS_ASSERTION(oldelement != nsnull, "not an nsIContent");

@@ -372,6 +372,14 @@ nsDOMImplementation::CreateDocument(const nsAString& aNamespaceURI,
   NS_ENSURE_ARG_POINTER(aReturn);
   
   *aReturn = nsnull;
+  
+  if (aDoctype) {
+    nsCOMPtr<nsIDOMDocument> owner;
+    aDoctype->GetOwnerDocument(getter_AddRefs(owner));
+    if (owner) {
+      return NS_ERROR_DOM_WRONG_DOCUMENT_ERR;
+    }
+  }
 
   return NS_NewDOMDocument(aReturn, aNamespaceURI, aQualifiedName, aDoctype,
                            mBaseURI);
@@ -526,7 +534,6 @@ nsDocument::~nsDocument()
     }
   }
 
-  NS_IF_RELEASE(mDocumentURL);
   NS_IF_RELEASE(mPrincipal);
   mDocumentLoadGroup = nsnull;
 
@@ -604,6 +611,10 @@ nsDocument::~nsDocument()
   if (mNodeInfoManager) {
     mNodeInfoManager->DropDocumentReference();
   }
+
+  // Do this after notifying the nodeinfo manager that we're going away since
+  // it will save our url before dropping the reference.
+  NS_IF_RELEASE(mDocumentURL);
 }
 
 PRBool gCheckedForXPathDOM = PR_FALSE;
@@ -2414,6 +2425,11 @@ nsDocument::ImportNode(nsIDOMNode* aImportedNode,
 {
   NS_ENSURE_ARG(aImportedNode);
   NS_ENSURE_ARG_POINTER(aReturn);
+  
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aImportedNode);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   return aImportedNode->CloneNode(aDeep, aReturn);
 }
@@ -2421,6 +2437,11 @@ nsDocument::ImportNode(nsIDOMNode* aImportedNode,
 NS_IMETHODIMP
 nsDocument::AddBinding(nsIDOMElement* aContent, const nsAString& aURL)
 {
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aContent);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
   nsCOMPtr<nsIBindingManager> bm;
   GetBindingManager(getter_AddRefs(bm));
   nsCOMPtr<nsIContent> content(do_QueryInterface(aContent));
@@ -2431,6 +2452,11 @@ nsDocument::AddBinding(nsIDOMElement* aContent, const nsAString& aURL)
 NS_IMETHODIMP
 nsDocument::RemoveBinding(nsIDOMElement* aContent, const nsAString& aURL)
 {
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aContent);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
   if (mBindingManager) {
     nsCOMPtr<nsIContent> content(do_QueryInterface(aContent));
     return mBindingManager->RemoveLayeredBinding(content, aURL);
@@ -2571,6 +2597,12 @@ nsDocument::CreateTreeWalker(nsIDOMNode *aRoot,
                              PRBool aEntityReferenceExpansion,
                              nsIDOMTreeWalker **_retval)
 {
+  *_retval = nsnull;
+  
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aRoot);
+  if(NS_FAILED(rv))
+    return rv;
+
   return NS_NewTreeWalker(aRoot,
                           aWhatToShow,
                           aFilter,
@@ -3015,6 +3047,11 @@ nsDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
     return NS_ERROR_NULL_POINTER;
   }
 
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aNewChild);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
   // If it's a child type we can't handle (per DOM spec), or if it's an
   // element and we already have a root (our addition to DOM spec), throw
   // HIERARCHY_REQUEST_ERR.
@@ -3082,6 +3119,11 @@ nsDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNod
 
   if ((nsnull == aNewChild) || (nsnull == aOldChild)) {
     return NS_ERROR_NULL_POINTER;
+  }
+
+  result = nsContentUtils::CheckSameOrigin(this, aNewChild);
+  if (NS_FAILED(result)) {
+    return result;
   }
 
   aNewChild->GetNodeType(&nodeType);
