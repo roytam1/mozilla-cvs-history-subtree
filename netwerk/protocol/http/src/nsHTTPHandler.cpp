@@ -601,7 +601,9 @@ nsHTTPHandler::nsHTTPHandler():
     mCapabilities     (DEFAULT_ALLOWED_CAPABILITIES ),
     mKeepAliveTimeout (DEFAULT_KEEP_ALIVE_TIMEOUT),
     mMaxConnections   (MAX_NUMBER_OF_OPEN_TRANSPORTS),
-    mReferrerLevel(0)
+    mReferrerLevel  (0),
+    mRequestTimeout (DEFAULT_HTTP_REQUEST_TIMEOUT),
+    mConnectTimeout (DEFAULT_HTTP_CONNECT_TIMEOUT)
 {
     NS_INIT_REFCNT ();
     SetAcceptEncodings (DEFAULT_ACCEPT_ENCODINGS);
@@ -970,13 +972,21 @@ nsresult nsHTTPHandler::CreateTransport(const char* host,
 {
     nsresult rv;
 
-    NS_WITH_SERVICE(nsISocketTransportService, sts, 
-                    kSocketTransportServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
+    NS_WITH_SERVICE (nsISocketTransportService, sts, kSocketTransportServiceCID, &rv);
+    if (NS_FAILED (rv))
+        return rv;
 
-    return sts->CreateTransport(host, port, aPrintHost,
-                                bufferSegmentSize, bufferMaxSize,
-                                o_pTrans);
+    rv = sts -> CreateTransport (host, port, aPrintHost, bufferSegmentSize, bufferMaxSize, o_pTrans);
+    if (NS_SUCCEEDED (rv))
+    {
+        nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (*o_pTrans, &rv);
+        if (NS_SUCCEEDED (rv))
+        {
+            trans -> SetSocketTimeout        (mRequestTimeout);
+            trans -> SetSocketConnectTimeout (mConnectTimeout);
+        }
+    }
+    return rv;
 }
 
 nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabilities)
@@ -1224,6 +1234,9 @@ nsHTTPHandler::PrefsChanged(const char* pref)
         else
             mCapabilities &= ~ALLOW_PROXY_PIPELINING;
     }
+
+    mPrefs -> GetIntPref ("network.http.connect.timeout", &mConnectTimeout);
+    mPrefs -> GetIntPref ("network.http.request.timeout", &mRequestTimeout);
 
     // Things read only during initialization...
     if (bChangedAll) // intl.accept_languages

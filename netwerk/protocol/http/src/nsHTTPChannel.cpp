@@ -97,7 +97,8 @@ nsHTTPChannel::nsHTTPChannel(nsIURI* i_URL, nsHTTPHandler* i_Handler):
     mBufferSegmentSize(0),
     mBufferMaxSize(0),
     mStatus(NS_OK),
-    mPipeliningAllowed (PR_TRUE)
+    mPipeliningAllowed (PR_TRUE),
+    mPipelinedRequest (nsnull)
 {
     NS_INIT_REFCNT();
 
@@ -1327,17 +1328,24 @@ nsHTTPChannel::Open(void)
 
         if (NS_ERROR_BUSY == rv)
         {
-            mPipelinedRequest = pReq;
+            if (!mPipelinedRequest)
+            {
+                mPipelinedRequest = pReq;
+                NS_RELEASE (pReq);
+            }
+
             mState = HS_WAITING_FOR_OPEN;
             return NS_OK;
         }
         
+        if (!mPipelinedRequest)
+            NS_RELEASE (pReq);
+
         if (NS_FAILED (rv)) 
         {
             ResponseCompleted (mResponseDataListener, rv, nsnull);
             return rv;
         }
-        NS_RELEASE (pReq);
     }
     
     mState = HS_WAITING_FOR_RESPONSE;

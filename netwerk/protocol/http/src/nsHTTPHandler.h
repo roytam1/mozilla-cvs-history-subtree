@@ -61,6 +61,9 @@ class nsHTTPChannel;
 // because of HTTP/1.1 is default now
 #define DEFAULT_ALLOWED_CAPABILITIES    (DEFAULT_PROXY_CAPABILITIES|DEFAULT_SERVER_CAPABILITIES)
 
+#define DEFAULT_HTTP_REQUEST_TIMEOUT    30
+#define DEFAULT_HTTP_CONNECT_TIMEOUT    30
+
 class   nsHTTPPipelinedRequest;
 class   nsIHTTPChannel;
 
@@ -155,6 +158,9 @@ protected:
 private:
 
     nsHashtable mCapTable;
+    PRInt32     mRequestTimeout;
+    PRInt32     mConnectTimeout;
+
     PRUint32 getCapabilities (const char *host, PRInt32 port, PRUint32 cap);
     void     setCapabilities (nsIChannel* i_pTrans, PRUint32 aCapabilities);
 

@@ -220,7 +220,8 @@ nsHTTPServerListener::nsHTTPServerListener(nsHTTPChannel* aChannel, nsHTTPHandle
                       mCompressHeaderChecked (PR_FALSE),
                       mChunkHeaderEOF(PR_FALSE),
                       mChunkHeaderChecked (PR_FALSE),
-                      mPipelinedRequest (request)
+                      mPipelinedRequest (request),
+                      mDataReceived (PR_FALSE)
 {
     nsHTTPRequest * req = nsnull;    
     mChannel -> mHTTPServerListener = this;
@@ -263,6 +264,9 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
            ("nsHTTPServerListener::OnDataAvailable [this=%x].\n"
             "\tstream=%x. \toffset=%d. \tlength=%d.\n",
             this, i_pStream, i_SourceOffset, i_Length));
+
+    if (i_Length > 0)
+        mDataReceived = PR_TRUE;
 
     if (!mResponse)
     {
@@ -486,6 +490,7 @@ nsHTTPServerListener::OnStartRequest (nsIChannel* channel, nsISupports* i_pConte
     mCompressHeaderChecked = PR_FALSE;
     mChunkHeaderEOF        = PR_FALSE;
     mChunkHeaderChecked    = PR_FALSE;
+    mDataReceived          = PR_FALSE;
     mBytesReceived     = 0;
     mBodyBytesReceived = 0;
     mHeaderBuffer.Truncate ();
@@ -522,6 +527,19 @@ nsHTTPServerListener::OnStopRequest (nsIChannel* channel, nsISupports* i_pContex
     PR_LOG(gHTTPLog, PR_LOG_ALWAYS, 
            ("nsHTTPServerListener::OnStopRequest [this=%x]."
             "\tStatus = %x\n", this, i_Status));
+
+    if (!mDataReceived)
+    {
+        // no data has been received from the channel at all - must be due to the fact that the
+        // server has dropped the connection on keep-alive
+
+        if (mPipelinedRequest)
+        {
+            nsresult rv = mPipelinedRequest -> RestartRequest ();
+            if (NS_SUCCEEDED (rv))
+                return rv;
+        }
+    }
 
     if (NS_SUCCEEDED(rv) && !mHeadersDone)
     {

@@ -579,9 +579,12 @@ nsHTTPPipelinedRequest::WriteRequest ()
 
     if (!mTransport)
     {
+        PRUint32 tMode = mAttempts ? TRANSPORT_OPEN_ALWAYS : TRANSPORT_REUSE_ALIVE;
+        if (mPostDataStream)
+            tMode &= ~(TRANSPORT_REUSE_ALIVE);
+
         rv = mHandler -> RequestTransport (req -> mURI, req -> mConnection, mBufferSegmentSize, mBufferMaxSize, 
-                                           getter_AddRefs (mTransport),
-                                           mAttempts ? TRANSPORT_OPEN_ALWAYS : TRANSPORT_REUSE_ALIVE);
+                                           getter_AddRefs (mTransport), tMode);
 
         if (NS_FAILED (rv))
         {
@@ -669,9 +672,12 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     nsresult rv;
     nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (mTransport, &rv);
     
+    mOnStopDone = PR_TRUE;
     nsHTTPRequest * req = (nsHTTPRequest *) mRequests -> ElementAt (0);
     
     rv = iStatus;
+
+    PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("\nnsHTTPRequest::OnStopRequest () [this=%x], iStatus=%u\n", this, iStatus));
 
     if (NS_SUCCEEDED (rv))
     {
@@ -715,7 +721,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
                     else
                         rv = NS_ERROR_OUT_OF_MEMORY;
                 }
-                mOnStopDone = PR_TRUE;
+
                 WriteRequest ();    // write again to see if anything else is queued up
             }
         }
@@ -739,7 +745,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     //
     if (NS_FAILED (rv))
     {
-        if (mListener == nsnull)
+        if (mTotalProcessed == 0 && mAttempts == 0)
         {
             // the pipeline just started - we still can attempt to recover
 
@@ -755,7 +761,6 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
             {
                 mAttempts++;
                 mTotalWritten = 0;
-                mOnStopDone = PR_TRUE;
 
                 rv = WriteRequest ();
             
@@ -765,6 +770,11 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
                     return rv;
                 }
             }
+        }
+        else
+        {
+            mHandler   -> ReleaseTransport (mTransport, 0);
+            mTransport = null_nsCOMPtr ();
         }
 
         // Notify the HTTPChannel that the request has finished
@@ -782,6 +792,43 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     // mRequestBuffer.Truncate ();
     mPostDataStream = null_nsCOMPtr ();
 
+    return rv;
+}
+
+nsresult
+nsHTTPPipelinedRequest::RestartRequest ()
+{
+    nsresult rv = NS_ERROR_FAILURE;
+
+    PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("\nnsHTTPPipelinedRequest::RestartRequest () [this=%x], mTotalProcessed=%u\n", this, mTotalProcessed));
+
+    if (mTotalProcessed == 0)
+    {
+        // the pipeline just started - we still can attempt to recover
+
+        nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (mTransport, &rv);
+        PRUint32 wasKeptAlive = 0;
+
+        if (trans)
+            trans  -> GetReuseCount (&wasKeptAlive);
+
+        if (wasKeptAlive && mAttempts == 0)
+        {
+            rv = NS_OK;
+            mListener = nsnull;
+
+            if (mOnStopDone)
+            {
+                mHandler   -> ReleaseTransport (mTransport, 0);
+                mTransport = null_nsCOMPtr ();
+
+                mTotalWritten = 0;
+
+                mAttempts++;
+                rv = WriteRequest ();
+            }
+        }
+    }
     return rv;
 }
 
