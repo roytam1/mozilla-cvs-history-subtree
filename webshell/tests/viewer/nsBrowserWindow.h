@@ -156,6 +156,8 @@ public:
   void DestroyThrobberImages();
   virtual nsEventStatus DispatchMenuItem(PRInt32 aID) = 0;
 
+  void HandleCommand(const PRUnichar* commandName);
+
   void DoFileOpen();
   void DoCopy();
   void DoPaste();

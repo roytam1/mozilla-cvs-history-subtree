@@ -40,10 +40,8 @@
 
 #include "nsError.h"
 
-class nsIDOMDocument;
-class nsIPresShell;
+class nsIDocShell;
 
-extern nsresult NS_InitEditorMode(nsIDOMDocument * aDOMDocument, nsIPresShell* aPresShell);
-extern nsresult NS_DoEditorTest(PRInt32 aCommandID);
+extern nsresult NS_DoEditorTest(nsIDocShell *aDocShell, PRInt32 aCommandID);
 
 #endif //nsEditorMode_h__

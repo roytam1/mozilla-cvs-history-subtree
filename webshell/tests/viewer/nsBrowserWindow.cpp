@@ -82,6 +82,8 @@
 #include "nsGUIEvent.h"
 #include "nsIWebProgress.h"
 #include "nsIWebBrowserSetup.h"
+#include "nsICommandManager.h"
+#include "nsIEditingSession.h"
 
 #include "nsCWebBrowser.h"
 
@@ -818,6 +820,14 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
     }
     break;
   
+  case VIEWER_EDIT_UNDO:
+    HandleCommand(NS_LITERAL_STRING("cmd_undo").get());
+    break;
+        
+  case VIEWER_EDIT_SELECTALL:
+    HandleCommand(NS_LITERAL_STRING("cmd_selectAll").get());
+    break;  
+  
   case VIEWER_EDIT_COPY:
     DoCopy();
     break;
@@ -1055,9 +1065,23 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
   }
 
   // Any menu IDs that the editor uses will be processed here
-  DoEditorTest(mDocShell, aID);
+  //DoEditorTest(mDocShell, aID);
 
   return nsEventStatus_eIgnore;
+}
+
+void
+nsBrowserWindow::HandleCommand(const PRUnichar* commandName)
+{
+  nsresult  rv = NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsICommandManager> commandHandler = do_GetInterface(mDocShell);
+  if (commandHandler)
+  {
+    rv = commandHandler->DoCommand(nsDependentString(commandName), nsnull);
+  }  
+  
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to handle command");
 }
 
 void
@@ -1201,7 +1225,6 @@ static void* GetItemsNativeData(nsISupports* aObject)
 //---------------------------------------------------------------
 NS_IMETHODIMP nsBrowserWindow::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
 {
-  // Insert find code here.
 
   return NS_OK;
 }
@@ -1571,10 +1594,24 @@ nsBrowserWindow::SetWebCrawler(nsWebCrawler* aCrawler)
 }
 
 // XXX This sort of thing should be in a resource
+#ifdef XP_MAC
+
+#define TOOL_BAR_FONT      "Geneva"
+#define TOOL_BAR_FONT_SIZE 9
+
+#define STATUS_BAR_FONT      "Geneva"
+#define STATUS_BAR_FONT_SIZE 9
+
+
+#else
+
 #define TOOL_BAR_FONT      "Helvetica"
 #define TOOL_BAR_FONT_SIZE 12
+
 #define STATUS_BAR_FONT      "Helvetica"
 #define STATUS_BAR_FONT_SIZE 10
+
+#endif
 
 nsresult
 nsBrowserWindow::CreateToolBar(PRInt32 aWidth)
@@ -2413,72 +2450,47 @@ nsBrowserWindow::DoPrefs()
 void
 nsBrowserWindow::DoEditorMode(nsIDocShell *aDocShell)
 {
-  PRInt32 i, n;
-  if (nsnull != aDocShell) {
-    nsIContentViewer* mCViewer;
-    aDocShell->GetContentViewer(&mCViewer);
-    if (nsnull != mCViewer) {
-      nsIDocumentViewer* mDViewer;
-      if (NS_OK == mCViewer->QueryInterface(kIDocumentViewerIID, (void**) &mDViewer)) 
-      {
-        nsIDocument* mDoc;
-        mDViewer->GetDocument(mDoc);
-        if (nsnull != mDoc) {
-          nsIDOMDocument* mDOMDoc;
-          if (NS_OK == mDoc->QueryInterface(kIDOMDocumentIID, (void**) &mDOMDoc)) 
-          {
-            nsIPresShell* shell = GetPresShellFor(aDocShell);
-            NS_InitEditorMode(mDOMDoc, shell);
-            NS_RELEASE(mDOMDoc);
-            NS_IF_RELEASE(shell);
-          }
-          NS_RELEASE(mDoc);
-        }
-        NS_RELEASE(mDViewer);
-      }
-      NS_RELEASE(mCViewer);
-    }
-    
-    nsCOMPtr<nsIDocShellTreeNode> docShellAsNode(do_QueryInterface(aDocShell));
-    docShellAsNode->GetChildCount(&n);
-    for (i = 0; i < n; i++) {
-      nsCOMPtr<nsIDocShellTreeItem> child;
-      docShellAsNode->GetChildAt(i, getter_AddRefs(child));
-      nsCOMPtr<nsIDocShell> childAsShell(do_QueryInterface(child));
-      DoEditorMode(childAsShell);
+  if (!aDocShell) return;
+  
+  nsCOMPtr<nsIDOMWindow>        domWindow       = do_GetInterface(aDocShell);
+  nsCOMPtr<nsIEditingSession>   editingSession  = do_GetInterface(aDocShell);
+  if (!editingSession || !domWindow)
+    return;
+  
+  nsresult rv = editingSession->MakeWindowEditable(domWindow, PR_FALSE);
+  // this can fail for the root (if it's a frameset), but we still want
+  // to make children editable
+  
+  nsCOMPtr<nsISimpleEnumerator> docShellEnumerator;
+  aDocShell->GetDocShellEnumerator( nsIDocShellTreeItem::typeContent,
+                                    nsIDocShell::ENUMERATE_FORWARDS,
+                                    getter_AddRefs(docShellEnumerator));  
+  if (docShellEnumerator)
+  {
+    PRBool hasMore;
+    while (NS_SUCCEEDED(docShellEnumerator->HasMoreElements(&hasMore)) && hasMore)
+    {
+        nsCOMPtr<nsISupports> curSupports;
+        rv = docShellEnumerator->GetNext(getter_AddRefs(curSupports));
+        if (NS_FAILED(rv)) break;
+
+        nsCOMPtr<nsIDocShell> curShell = do_QueryInterface(curSupports, &rv);
+        if (NS_FAILED(rv)) break;
+
+        nsCOMPtr<nsIDOMWindow> childWindow = do_GetInterface(curShell);
+        if (childWindow)
+          editingSession->MakeWindowEditable(childWindow, PR_FALSE);
     }
   }
+  
 }
 
 // Same as above, but calls NS_DoEditorTest instead of starting an editor
 void
 nsBrowserWindow::DoEditorTest(nsIDocShell *aDocShell, PRInt32 aCommandID)
 {
-  if (nsnull != aDocShell) {
-    nsIContentViewer* mCViewer;
-    aDocShell->GetContentViewer(&mCViewer);
-    if (nsnull != mCViewer) {
-      nsIDocumentViewer* mDViewer;
-      if (NS_OK == mCViewer->QueryInterface(kIDocumentViewerIID, (void**) &mDViewer)) 
-      {
-        nsIDocument* mDoc;
-        mDViewer->GetDocument(mDoc);
-        if (nsnull != mDoc) {
-          nsIDOMDocument* mDOMDoc;
-          if (NS_OK == mDoc->QueryInterface(kIDOMDocumentIID, (void**) &mDOMDoc)) 
-          {
-            NS_DoEditorTest(aCommandID);
-            NS_RELEASE(mDOMDoc);
-          }
-          NS_RELEASE(mDoc);
-        }
-        NS_RELEASE(mDViewer);
-      }
-      NS_RELEASE(mCViewer);
-    }
-    // Do we need to do all the children as in DoEditorMode?
-    // Its seems to work if we don't do that
-  }
+  DoEditorMode(aDocShell);
+  NS_DoEditorTest(aDocShell, aCommandID);
 }
 
 

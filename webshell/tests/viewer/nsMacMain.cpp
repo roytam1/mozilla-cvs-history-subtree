@@ -261,6 +261,12 @@ nsNativeBrowserWindow::CreateMenuBar(PRInt32 aWidth)
 	InsertMenu(GetMenu(submenu_CompatibilityMode), -1);
 	AppendResMenu(GetMenuHandle(menu_Apple), 'DRVR');
 	DrawMenuBar();
+	
+	// set the port to the window here
+	WindowPtr wind = (WindowPtr)mWindow->GetNativeData(NS_NATIVE_DISPLAY);
+	if (wind)
+	  SetPortWindowPort(wind);
+
 	return NS_OK;
 }
 
