@@ -509,7 +509,7 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
   
   nsCOMPtr<nsIStyleRule> rule = mRule;
   nsRuleNode* ruleNode = this;
-  nsRuleNode* highestNode = this;
+  nsRuleNode* highestNode = nsnull;
   nsRuleNode* rootNode = this;
   RuleDetail detail = eRuleNone;
   while (ruleNode) {
