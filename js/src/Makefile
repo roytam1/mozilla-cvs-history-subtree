@@ -203,7 +203,7 @@ else
 	ld -r -o $@ $(JSMATH_PRELINK) $(FDLIBM_LIBRARY)
 endif
 
-$(JSMATH_PRELINK): jsmath.c
+$(JSMATH_PRELINK): jsmath.c jslibmath.h
 	@$(MAKE_OBJDIR)
 ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
 	$(CC) -Fo$@ -c $(CFLAGS) $<
