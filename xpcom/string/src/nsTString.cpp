@@ -40,7 +40,11 @@ void
 nsTAutoString_CharT::Init( const CBufDescriptor& desc )
   {
     mData = CBufDescriptorReader<CharT>().read(desc);
-    mLength = desc.mLength;
+
+    if (desc.mLength < 0)
+      mLength = char_traits::length(mData);
+    else
+      mLength = desc.mLength;
  
     if (desc.mFlags & CBufDescriptor::F_CONST)
       {
