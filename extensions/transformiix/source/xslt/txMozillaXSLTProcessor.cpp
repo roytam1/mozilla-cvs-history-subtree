@@ -301,6 +301,8 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
+    es.end();
+
 
     return NS_OK;
 }
@@ -366,6 +368,7 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
+    es.end();
 
     es.mOutputHandler->getOutputDocument(aResult);
 
@@ -414,6 +417,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
+    es.end();
 
     return NS_OK;
 }

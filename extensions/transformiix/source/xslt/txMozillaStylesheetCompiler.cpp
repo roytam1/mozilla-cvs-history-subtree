@@ -228,6 +228,7 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
 NS_IMETHODIMP
 txStylesheetSink::HandleEndElement(const PRUnichar *aName)
 {
+    mNameSpaceStack.RemoveObjectAt(mNameSpaceStack.Count() - 1);
     return mCompiler->endElement();
 }
 

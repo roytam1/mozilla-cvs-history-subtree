@@ -92,8 +92,6 @@ txXSLTProcessor::execute(txExecutionState& aEs)
         rv = instr->execute(aEs);
         NS_ENSURE_SUCCESS(rv, rv);
     }
-    // XXX This should be an instruction.
-    aEs.end();
 
     return NS_OK;
 }
