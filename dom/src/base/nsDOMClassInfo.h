@@ -183,7 +183,7 @@ protected:
                                             jsval *rval);
 
   static nsresult GlobalResolve(nsIXPConnectWrappedNative *wrapper,
-                                JSContext *cx, JSObject *obj, jsval id,
+                                JSContext *cx, JSObject *obj, JSString *str,
                                 PRUint32 flags, JSObject **objp,
                                 PRBool *_retval);
 
@@ -191,6 +191,8 @@ public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, PRUint32 flags,

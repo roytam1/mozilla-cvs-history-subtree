@@ -1020,58 +1020,19 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    // Look for a child frame with the name of the property we're
-    // getting, if we find one we'll return that child frame.
-
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-
-    nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(native));
-
-    nsCOMPtr<nsIDocShell> docShell;
-
-    global->GetDocShell(getter_AddRefs(docShell));
-
-    nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(docShell));
-
-    PRInt32 count;
-
-    nsresult rv = dsn->GetChildCount(&count);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (count) {
-      nsCOMPtr<nsIDocShellTreeItem> child;
-
-      JSString *str = JSVAL_TO_STRING(id);
-      const jschar *chars = ::JS_GetStringChars(str);
-
-      rv = dsn->FindChildWithName(NS_REINTERPRET_CAST(const PRUnichar*, chars),
-                                  PR_FALSE, PR_FALSE, nsnull,
-                                  getter_AddRefs(child));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      if (child) {
-        nsCOMPtr<nsIDOMWindow> child_window(do_GetInterface(child));
-        NS_ENSURE_TRUE(child_window, NS_ERROR_UNEXPECTED);
-
-        // We found a subframe of the right name.  The rest of this code
-        // is to get its script object.
-
-        return WrapNative(cx, obj, child_window, NS_GET_IID(nsIDOMWindow), vp);
-      }
-    }
-
     if (JSVAL_TO_STRING(id) == s_content_id) {
       // Map window._content to window.content for backwards
       // compatibility, this should spit out an message on the JS
       // console.
 
+      nsCOMPtr<nsISupports> native;
       wrapper->GetNative(getter_AddRefs(native));
 
       nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
-      nsCOMPtr<nsIDOMWindow> content;
+      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
 
-      rv = window->GetContent(getter_AddRefs(content));
+      nsCOMPtr<nsIDOMWindow> content;
+      nsresult rv = window->GetContent(getter_AddRefs(content));
       NS_ENSURE_SUCCESS(rv, rv);
 
       return WrapNative(cx, obj, content, NS_GET_IID(nsISupports), vp);
@@ -1079,6 +1040,63 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   return nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+NS_IMETHODIMP
+nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString *str = JSVAL_TO_STRING(id);
+
+    if (str == sLocation_id) {
+      JSString *val = JS_ValueToString(cx, *vp);
+      NS_ENSURE_TRUE(val, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsISupports> native;
+      wrapper->GetNative(getter_AddRefs(native));
+
+      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
+      NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMLocation> location;
+      nsresult rv = window->GetLocation(getter_AddRefs(location));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsLiteralString href(NS_REINTERPRET_CAST(PRUnichar *,
+                                               ::JS_GetStringChars(val)),
+                           ::JS_GetStringLength(val));
+
+      return location->SetHref(href);
+    }
+
+    if (str == sTop_id          ||
+        str == sScrollbars_id   ||
+        str == s_content_id     ||
+        str == sContent_id      ||
+        str == sSidebar_id      ||
+        str == sPrompter_id     ||
+        str == sMenubar_id      ||
+        str == sToolbar_id      ||
+        str == sLocationbar_id  ||
+        str == sPersonalbar_id  ||
+        str == sStatusbar_id    ||
+        str == sDirectories_id  ||
+        str == sControllers_id  ||
+        str == sLength_id) {
+      // A "replaceable" property is being set, define the property on
+      // obj.
+
+      *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                       ::JS_GetStringLength(str),
+                                       *vp, nsnull, nsnull,
+                                       JSPROP_ENUMERATE);
+
+      return *_retval ? NS_OK : NS_ERROR_FAILURE;
+    }
+  }
+
+  return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 // static
@@ -1143,20 +1161,14 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
 
 nsresult
 nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                          JSObject *obj, jsval id, PRUint32 flags,
+                          JSObject *obj, JSString *str, PRUint32 flags,
                           JSObject **objp, PRBool *_retval)
 {
-  if (!JSVAL_IS_STRING(id)) {
-    return NS_OK;
-  }
-
   extern nsScriptNameSpaceManager *gNameSpaceManager;
 
   NS_ENSURE_TRUE(gNameSpaceManager, NS_ERROR_NOT_INITIALIZED);
 
   nsresult rv = NS_OK;
-
-  nsIScriptContext *script_cx = (nsIScriptContext *)::JS_GetContextPrivate(cx);
 
   nsCOMPtr<nsIScriptContext> my_context;
   nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(my_context));
@@ -1168,10 +1180,9 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     return NS_OK;
   }
 
-  JSString* jsstr = JSVAL_TO_STRING(id);
   nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar*,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
+                                           ::JS_GetStringChars(str)),
+                       ::JS_GetStringLength(str));
 
   const nsGlobalNameStruct *name_struct = nsnull;
 
@@ -1184,7 +1195,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (name_struct->mType == nsGlobalNameStruct::eTypeConstructor) {
     // If there was a JS_DefineUCFunction() I could use it here, but
     // no big deal...
-    JSFunction *f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(jsstr),
+    JSFunction *f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(str),
                                         StubConstructor, 0, JSPROP_READONLY);
 
     *_retval = !!f;
@@ -1219,8 +1230,8 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     NS_ENSURE_SUCCESS(rv, rv);
 
-    *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(jsstr),
-                                     ::JS_GetStringLength(jsstr),
+    *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                     ::JS_GetStringLength(str),
                                      prop_val, nsnull, nsnull,
                                      JSPROP_ENUMERATE | JSPROP_READONLY);
     *objp = obj;
@@ -1262,9 +1273,36 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (JSVAL_IS_STRING(id)) {
     JSString *str = JSVAL_TO_STRING(id);
 
+    if (str == sLocation_id) {
+      if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                 ::JS_GetStringLength(str), JSVAL_VOID, nsnull,
+                                 nsnull, 0)) {
+        return NS_ERROR_FAILURE;
+      }
+
+      *objp = obj;
+
+      return NS_OK;
+    }
+
+    const JSObject *o = *objp;
+
+    nsresult rv = GlobalResolve(wrapper, cx, obj, str, flags, objp, _retval);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (o != *objp) {
+      // GlobalResolve() resolved something, we're done here then.
+
+      return NS_OK;
+    }
+
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
     NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
+
+    // Hmm, we do an aweful lot of QI's here, maybe we should add a
+    // method on an interface that would let us just call into the
+    // window code directly...
 
     nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(native));
     NS_ENSURE_TRUE(global, NS_ERROR_UNEXPECTED);
@@ -1294,8 +1332,14 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         // on the wrapper so that ::NewResolve() doesn't get called
         // for again for this property name.
 
+        jsval v;
+
+        rv = WrapNative(cx, ::JS_GetGlobalObject(cx), child,
+                        NS_GET_IID(nsISupports), &v);
+        NS_ENSURE_SUCCESS(rv, rv);
+
         if (!::JS_DefineUCProperty(cx, obj, chars, ::JS_GetStringLength(str),
-                                   JSVAL_VOID, nsnull, nsnull, 0)) {
+                                   v, nsnull, nsnull, 0)) {
           return NS_ERROR_FAILURE;
         }
 
@@ -1304,11 +1348,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         return NS_OK;
       }
     }
-
-    JSObject *o = *objp;
-
-    nsresult rv = GlobalResolve(wrapper, cx, obj, id, flags, objp, _retval);
-    NS_ENSURE_SUCCESS(rv, rv);
 
     if (o == *objp && JSVAL_TO_STRING(id) == s_content_id) {
       // Map window._content to window.content for backwards
