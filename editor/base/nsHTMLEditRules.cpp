@@ -1846,6 +1846,7 @@ nsHTMLEditRules::WillDeleteSelection(nsISelection *aSelection,
   // adjust surrounding whitespace in preperation to delete selection
   if (!bPlaintext)
   {
+    nsAutoTxnsConserveSelection dontSpazMySelection(mHTMLEditor);
     res = nsWSRunObject::PrepareToDeleteRange(mHTMLEditor,
                                             address_of(startNode), &startOffset, 
                                             address_of(endNode), &endOffset);
