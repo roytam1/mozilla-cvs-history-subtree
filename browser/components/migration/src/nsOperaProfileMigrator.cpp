@@ -92,7 +92,6 @@ nsOperaProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnicha
   COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
   COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
   COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
-  COPY_DATA(CopyFormData,     aReplace, nsIBrowserProfileMigrator::FORMDATA,  NS_LITERAL_STRING("formdata").get());
   COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
   COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
   COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
@@ -521,13 +520,6 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
   }
   while (moreData);
 
-  return NS_OK;
-}
-
-nsresult
-nsOperaProfileMigrator::CopyFormData(PRBool aReplace)
-{
-  printf("*** copy opera form data\n");
   return NS_OK;
 }
 

@@ -94,7 +94,6 @@ protected:
 
   nsresult CopyCookies(PRBool aReplace);
   nsresult CopyHistory(PRBool aReplace);
-  nsresult CopyFormData(PRBool aReplace);
   nsresult CopyPasswords(PRBool aReplace);
   nsresult CopyOtherData(PRBool aReplace);
 
