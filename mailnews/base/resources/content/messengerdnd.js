@@ -30,7 +30,7 @@ var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getSer
 function debugDump(msg)
 {
   // uncomment for noise
-  dump(msg+"\n");
+  // dump(msg+"\n");
 }
 
 var folderObserver = {
