@@ -532,7 +532,7 @@ sub modifyRDN
 sub update
 {
   my ($self, $entry) = @_;
-  my (@vals, @arr, %mod, %new);
+  my ($vals, @add, @remove, %mod, %new);
   my ($key, $val);
   my ($ret) = 1;
   local $_;
@@ -541,55 +541,56 @@ sub update
     {
       next if (($key eq "dn") || ($key =~ /^_.+_$/));
 
-      if (defined($entry->{"_${key}_modified_"}))
-	{
-	  undef @vals;
-	  @vals = @{$entry->{$key}} if defined($entry->{$key});
-	  if ($#vals == $[)
-	    {
-	      $mod{$key} = { "rb", [$vals[$[]] };
-	    }
-	  else
-	    {
-	      @arr = ();
-	      undef %new;
-	      grep(($new{$_} = 1), @vals);
-	      if (defined($entry->{"_${key}_save_"}))
-		  {
-		    foreach (@{$entry->{"_${key}_save_"}})
-		      {
-			if (! $new{$_})
-			  {
-			    push(@arr, $_);
-			  }
-			$new{$_} = 0;
-		      }
-		  }
-	      $mod{$key}{"db"} = [@arr] if ($#arr >= $[);
+      $vals = defined($entry->{$key}) ?
+                $entry->{$key}        :
+                [ ];
 
-	      @arr = ();
-	      foreach (@vals)
-		{
-		  push(@arr, $_) if ($new{$_} == 1);
-		}
-	      $mod{$key}{"ab"} = [@arr] if ($#arr >= $[);
-	    }
+      if (defined($entry->{"_${key}_deleted_"}))
+        {
+          $mod{$key} = { "db", [] };
+        }
+      elsif (defined($entry->{"_${key}_modified_"}))
+        {
+          @remove = ();
+          undef %new;
+          grep(($new{$_} = 1), @{$vals});
+          if (defined($entry->{"_${key}_save_"}))
+            {
+              foreach (@{$entry->{"_${key}_save_"}})
+                {
+                  if (! $new{$_})
+                    {
+                      push(@remove, $_);
+                    }
+                  $new{$_} = 0;
+                }
+            }
 
-	}
-      elsif (defined($entry->{"_${key}_deleted_"}))
-	{
-	  $mod{$key} = { "db", [] };
-	}
+          @add = ();
+          foreach (@{$vals})
+            {
+              push(@add, $_) if ($new{$_} == 1);
+            }
+
+          if ((scalar(@remove) + scalar(@add)) < scalar(@{$vals}))
+            {
+              $mod{$key}{"db"} = [ @remove ] if ($#remove >= $[);
+              $mod{$key}{"ab"} = [ @add ] if ($#add >= $[);
+            }
+          else
+            {
+              $mod{$key}{"rb"} = [ @{$vals} ];
+            }
+        }
       $entry->attrClean($key);
     }
 
-  @arr = keys %mod;
   # This is here for debug purposes only...
   if ($main::LDAP_DEBUG)
     {
       my ($op);
 
-      foreach $key (@arr)
+      foreach $key (keys(%mod))
 	{
 	  print "Working on $key\n";
 	  foreach $op (keys %{$mod{$key}})
@@ -604,7 +605,7 @@ sub update
     }
 
   $ret = ldap_modify_s($self->{"ld"}, $entry->{"dn"}, \%mod)
-    if ($#arr >= $[);
+    if (scalar(keys(%mod)));
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
