@@ -623,8 +623,10 @@ net_RegisterDefaultDecoders (void)
 									NULL, NET_CacheConverter);
 #endif /* CRAWLER */
 #ifdef JAVA
+#ifdef MOZ_SMARTUPDATE
   NET_RegisterContentTypeConverter("*", FO_SOFTWARE_UPDATE, NULL, SU_NewStream);
   NET_RegisterContentTypeConverter(APPLICATION_JAVAARCHIVE, FO_PRESENT, NULL, SU_NewStream);
+#endif
   NET_cdataCommit(APPLICATION_JAVAARCHIVE, ".jar");
 #endif
 

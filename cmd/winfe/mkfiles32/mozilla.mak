@@ -405,7 +405,9 @@ LINK_LIBS= \
 !endif
     $(DIST)\lib\unicvt32.lib \
 !ifdef MOZ_JAVA
+!ifdef MOZ_SMARTUPDATE
     $(DIST)\lib\softup32.lib \
+!endif
 !ifndef NO_SECURITY
     $(DIST)\lib\jsl32.lib \
 !endif
@@ -1339,6 +1341,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !ifdef MOZ_LOC_INDEP
 	$(DEPTH)\cmd\winfe\winli.cpp
 !endif
+!ifdef MOZ_SMARTUPDATE
+	$(DEPTH)\cmd\winfe\winprog.cpp
+!endif
 	$(DEPTH)\cmd\winfe\resdll\resdll.c
 !if "$(MOZ_BITS)"=="32"
 	$(DEPTH)\cmd\winfe\talk.cpp
@@ -1615,6 +1620,9 @@ install:    \
 !IF EXIST($(DIST)\bin\xppref32.dll)
 	    $(OUTDIR)\xppref32.dll    \
 !ENDIF
+!IF EXIST($(DIST)\bin\libreg32.dll)
+	    $(OUTDIR)\libreg32.dll    \
+!ENDIF
 !IF EXIST($(DIST)\bin\sched32.dll)
 	    $(OUTDIR)\sched32.dll    \
 !ENDIF
@@ -1719,6 +1727,9 @@ install:    \
 !ENDIF
 !IF EXIST($(DIST)\bin\xppref16.dll)
 	    $(OUTDIR)\xppref16.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\libreg16.dll)
+	    $(OUTDIR)\libreg16.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\sched16.dll)
 	    $(OUTDIR)\sched16.dll    \
@@ -1871,6 +1882,9 @@ $(OUTDIR)\jsj32$(VERSION_NUMBER).dll:   $(DIST)\bin\jsj32$(VERSION_NUMBER).dll
 $(OUTDIR)\xppref32.dll:   $(DIST)\bin\xppref32.dll
     @IF EXIST $(DIST)\bin\xppref32.dll copy $(DIST)\bin\xppref32.dll $(OUTDIR)\xppref32.dll
 
+$(OUTDIR)\libreg32.dll:   $(DIST)\bin\libreg32.dll
+    @IF EXIST $(DIST)\bin\libreg32.dll copy $(DIST)\bin\libreg32.dll $(OUTDIR)\libreg32.dll
+
 $(OUTDIR)\sched32.dll:   $(DIST)\bin\sched32.dll
     @IF EXIST $(DIST)\bin\sched32.dll copy $(DIST)\bin\sched32.dll $(OUTDIR)\sched32.dll
 
@@ -1945,6 +1959,9 @@ $(OUTDIR)\jsj16$(VERSION_NUMBER).dll:   $(DIST)\bin\jsj16$(VERSION_NUMBER).dll
 
 $(OUTDIR)\xppref16.dll:   $(DIST)\bin\xppref16.dll
     @IF EXIST $(DIST)\bin\xppref16.dll copy $(DIST)\bin\xppref16.dll $(OUTDIR)\xppref16.dll
+
+$(OUTDIR)\libreg16.dll:   $(DIST)\bin\libreg16.dll
+    @IF EXIST $(DIST)\bin\libreg16.dll copy $(DIST)\bin\libreg16.dll $(OUTDIR)\libreg16.dll
 
 $(OUTDIR)\sched16.dll:   $(DIST)\bin\sched16.dll
     @IF EXIST $(DIST)\bin\sched16.dll copy $(DIST)\bin\sched16.dll $(OUTDIR)\sched16.dll
@@ -2204,14 +2221,16 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\nsn16.lib +
     $(DIST)\lib\li16.lib +
 	$(DIST)\lib\prgrss16.lib +
+    $(DIST)\lib\libreg16.lib +
 !ifdef EDITOR
 !ifdef MOZ_JAVA
     $(DIST)\lib\edtplug.lib +
 !endif
 !endif
+!ifdef MOZ_SMARTUPDATE
     $(DIST)\lib\softup16.lib +
+!endif
 !else
-    $(DIST)\lib\libreg16.lib +
     $(DIST)\lib\libsjs16.lib +
     $(DIST)\lib\libnjs16.lib +
 !endif
@@ -2577,8 +2596,8 @@ exports:
     -xcopy $(DEPTH)\lib\plugin\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
     -xcopy $(DEPTH)\modules\applet\include\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(DEPTH)\modules\libreg\include\*.h $(EXPORTINC) $(XCF)
 !endif
+    -xcopy $(DEPTH)\modules\libreg\include\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\modules\libutil\public\xp_obs.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\modules\libimg\public\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\modules\libpref\public\*.h $(EXPORTINC) $(XCF)
@@ -2597,8 +2616,8 @@ exports:
     -xcopy $(XPDIST)\public\security\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
     -xcopy $(XPDIST)\public\applet\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(XPDIST)\public\libreg\*.h $(EXPORTINC) $(XCF)
 !endif
+    -xcopy $(XPDIST)\public\libreg\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\hook\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\pref\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
@@ -2660,6 +2679,7 @@ ns.zip:
 !endif
 		brpref32.dll		\
 		lipref32.dll		\
+        libreg32.dll        \
 		unicvt32.dll		\
 		uni3200.dll		\
 		resdll.dll		\

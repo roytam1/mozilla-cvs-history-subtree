@@ -22,6 +22,7 @@ include $(DEPTH)/config/config.mk
 
 DIRS		= \
 	libhook \
+	libreg \
 	libpref \
 	libutil \
 	libimg \
@@ -30,6 +31,9 @@ DIRS		= \
 	rdf \
 	xml \
 	schedulr \
+    li \
+    progress \
+    zlib \
 	$(NULL)
 
 ifdef NO_SECURITY
@@ -37,19 +41,20 @@ DIRS +=	security
 endif
 
 ifdef MOZ_JAVA
-DIRS		+= libreg softupdt zlib li progress
 
-ifdef EDITOR
-DIRS		+= edtplug spellchk
+ifdef MOZ_SMARTUPDATE
+DIRS		+= softupdt
 endif
 
-else  # MOZ_JAVA
-DIRS            += zlib li progress
 ifdef EDITOR
-DIRS		+= spellchk
+DIRS		+= edtplug
 endif
 
 endif # MOZ_JAVA
+
+ifdef MOZ_SPELLCHK
+DIRS        += spellchk
+endif
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
 DIRS	+= spellchk
