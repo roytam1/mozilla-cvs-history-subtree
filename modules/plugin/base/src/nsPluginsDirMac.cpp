@@ -360,7 +360,6 @@ nsresult nsPluginFile::FreePluginInfo(nsPluginInfo& info)
       delete[] info.fMimeDescriptionArray;
     }
 
-    delete[] info.fMimeDescriptionArray;
     delete[] info.fExtensionArray;
     delete[] info.fFileName;
     delete[] info.fFullPath;
