@@ -36,7 +36,7 @@
  *   Item
  *   NamedItem
  * */
-class nsGenericDOMHTMLCollection : public nsIDOMHTMLCollection 
+class nsGenericDOMHTMLCollection : public nsIDOMHTMLCollection
 {
 public:
   nsGenericDOMHTMLCollection();

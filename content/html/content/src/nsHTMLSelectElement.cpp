@@ -73,9 +73,10 @@ public:
   // nsIDOMNSHTMLOptionCollection interface, can't use the macro
   // NS_DECL_NSIDOMNSHTMLOPTIONLIST here since GetLength() is defined
   // in mode than one interface
-  NS_IMETHOD    SetLength(PRUint32 aLength);
-  NS_IMETHOD    GetSelectedIndex(PRInt32 *aSelectedIndex);
-  NS_IMETHOD    SetSelectedIndex(PRInt32 aSelectedIndex);
+  NS_IMETHOD SetLength(PRUint32 aLength);
+  NS_IMETHOD GetSelectedIndex(PRInt32 *aSelectedIndex);
+  NS_IMETHOD SetSelectedIndex(PRInt32 aSelectedIndex);
+  NS_IMETHOD SetOption(PRInt32 aIndex, nsIDOMHTMLOptionElement *aOption);
 
   // nsIDOMHTMLCollection interface
   NS_DECL_NSIDOMHTMLCOLLECTION
@@ -1558,29 +1559,28 @@ nsHTMLOptionCollection::DropReference()
   mSelect = nsnull;
 }
 
-// ISupports
+// nsISupports
+
+
+// XPConnect interface list for nsHTMLOptionCollection
+NS_CLASSINFO_MAP_BEGIN(HTMLOptionCollection)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLOptionCollection)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for nsHTMLOptionCollection
+NS_INTERFACE_MAP_BEGIN(nsHTMLOptionCollection)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLOptionCollection)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLCollection)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNSHTMLOptionCollection)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLOptionCollection)
+NS_INTERFACE_MAP_END
+
 
 NS_IMPL_ADDREF_INHERITED(nsHTMLOptionCollection, nsGenericDOMHTMLCollection)
 NS_IMPL_RELEASE_INHERITED(nsHTMLOptionCollection, nsGenericDOMHTMLCollection)
 
-nsresult
-nsHTMLOptionCollection::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  NS_ENSURE_ARG_POINTER(aInstancePtr);
-
-  nsISupports *inst = nsnull;
-
-  if (aIID.Equals(NS_GET_IID(nsIDOMNSHTMLOptionCollection))) {
-    inst = NS_STATIC_CAST(nsIDOMNSHTMLOptionCollection *, this);
-  } else {
-    return nsGenericDOMHTMLCollection::QueryInterface(aIID, aInstancePtr);
-  }
-
-  *aInstancePtr = inst;
-  NS_ADDREF(inst);
-
-  return NS_OK;
-}
 
 // nsIDOMNSHTMLOptionCollection interface
 
@@ -1613,35 +1613,76 @@ nsHTMLOptionCollection::SetLength(PRUint32 aLength)
 }
 
 NS_IMETHODIMP
-nsHTMLOptionCollection::GetSelectedIndex(PRInt32 *aSelectedIndex)
+nsHTMLOptionCollection::SetOption(PRInt32 aIndex,
+                                  nsIDOMHTMLOptionElement *aOption)
 {
-  nsresult result = NS_ERROR_UNEXPECTED;
-
-  if (mSelect) {
-    if (mDirty) {
-      GetOptions();
-    }  
-
-    result = mSelect->GetSelectedIndex(aSelectedIndex);
+  if (!mSelect) {
+    return NS_OK;
   }
 
-  return result;  
+  nsresult rv;
+
+  // Update the options list
+  if (mDirty) {
+    GetOptions();
+  }
+
+  PRInt32 length = mElements.Count();
+
+  // If the indx is within range
+  if ((aIndex >= 0) && (aIndex <= length)) {
+    // if the new option is null, remove this option
+    if (!aOption) {
+      mSelect->Remove(aIndex);
+
+      // We're done.
+
+      return NS_OK;
+    }
+
+    nsCOMPtr<nsIDOMNode> ret;
+
+    if (aIndex == length) {
+      rv = mSelect->AppendChild(aOption, getter_AddRefs(ret));
+    } else {
+      nsIDOMNode *refChild = (nsIDOMNode*)mElements.ElementAt(aIndex);
+      NS_ENSURE_TRUE(refChild, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMNode> parent;
+
+      refChild->GetParentNode(getter_AddRefs(parent));
+
+      if (parent) {
+        rv = parent->ReplaceChild(aOption, refChild, getter_AddRefs(ret));
+      }
+    }
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsHTMLOptionCollection::GetSelectedIndex(PRInt32 *aSelectedIndex)
+{
+  NS_ENSURE_TRUE(mSelect, NS_ERROR_UNEXPECTED);
+
+  if (mDirty) {
+    GetOptions();
+  }  
+
+  return mSelect->GetSelectedIndex(aSelectedIndex);
 }
 
 NS_IMETHODIMP
 nsHTMLOptionCollection::SetSelectedIndex(PRInt32 aSelectedIndex)
 {
-  nsresult result = NS_ERROR_UNEXPECTED;
+  NS_ENSURE_TRUE(mSelect, NS_ERROR_UNEXPECTED);
 
-  if (mSelect) {
-    if (mDirty) {
-      GetOptions();
-    }
-
-    result = mSelect->SetSelectedIndex(aSelectedIndex);
+  if (mDirty) {
+    GetOptions();
   }
 
-  return result;
+  return mSelect->SetSelectedIndex(aSelectedIndex);
 }
 
 NS_IMETHODIMP
@@ -1715,32 +1756,27 @@ nsHTMLOptionCollection::AddOption(nsIContent* aOption)
 void 
 nsHTMLOptionCollection::RemoveOption(nsIContent* aOption)
 {
-  nsCOMPtr<nsIDOMHTMLOptionElement> option;
+  nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(aOption));
 
-  if (aOption &&
-      NS_SUCCEEDED(aOption->QueryInterface(NS_GET_IID(nsIDOMHTMLOptionElement),
-                                           getter_AddRefs(option)))) {
-    if (mElements.RemoveElement(option)) {
-    }
+  if (option) {
+    mElements.RemoveElement(option);
   }
 }
 
 PRInt32
 nsHTMLOptionCollection::IndexOf(nsIContent* aOption)
 {
-  nsCOMPtr<nsIDOMHTMLOptionElement> option;
+  nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(aOption));
 
   if (mDirty && mSelect) {
     GetOptions();
   }
 
-  if (aOption &&
-    NS_SUCCEEDED(aOption->QueryInterface(NS_GET_IID(nsIDOMHTMLOptionElement),
-                                         getter_AddRefs(option)))) {
-    return mElements.IndexOf(option);
+  if (!option) {
+    return -1;
   }
 
-  return -1;
+  return mElements.IndexOf(option);
 }
 
 #if 0
