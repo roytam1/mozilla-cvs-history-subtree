@@ -152,7 +152,8 @@ public:
         static const int KIDS_CHUNKED = 1;
         static const int NODE_IS_TARGET = 2;
 
-        bool HasSingleChild() { return !(mFlags & KIDS_CHUNKED); }
+        bool HasMultipleChildren() { return (mFlags & KIDS_CHUNKED); }
+        bool HasChildren() { return mKidU.mChild ? PR_TRUE : PR_FALSE; }
         
         friend class ChildChunk;
         friend class Iterator;
