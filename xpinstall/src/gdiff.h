@@ -22,8 +22,7 @@
  *--------------------------------------------------------------*/
 
 
-#include "xp_core.h"
-//#include "xp_file.h"
+#include "prio.h"
 #include "nsFileSpec.h"
 
 #define GDIFF_MAGIC         "\xD1\xFF\xD1\xFF"
@@ -109,8 +108,8 @@ typedef struct _diffdata {
     uint8       checksumLength;
     uchar*      oldChecksum;
     uchar*      newChecksum;
-    XP_Bool     bMacAppleSingle;
-    XP_Bool     bWin32BoundImage;
+    PRBool      bMacAppleSingle;
+    PRBool      bWin32BoundImage;
     uchar*      databuf;
     uint32      bufsize;
 } DIFFDATA;
