@@ -117,8 +117,9 @@ protected:
 							   nsMsgViewNotificationCodeValue changeType);
 
   // for commands
-  nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
+  nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsIMsgWindow *window, nsMsgViewIndex* indices,
 					PRInt32 numIndices);
+  nsresult DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool deleteStorage);
   nsresult ToggleReadByIndex(nsMsgViewIndex index);
   nsresult SetReadByIndex(nsMsgViewIndex index, PRBool read);
   nsresult SetThreadOfMsgReadByIndex(nsMsgViewIndex index, nsMsgKeyArray &keysMarkedRead, PRBool read);

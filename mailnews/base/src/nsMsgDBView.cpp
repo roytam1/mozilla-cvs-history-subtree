@@ -410,7 +410,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsIMsgWindow *window, nsMsgViewCommandTypeV
 //		FEEnd();
 //		calledFEEnd = TRUE;
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
-		ApplyCommandToIndices(command, indices, numIndices);
+		ApplyCommandToIndices(command, window, indices, numIndices);
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
 
     break;
@@ -473,7 +473,7 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, n
 }
 
 nsresult
-nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
+nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsIMsgWindow *window, nsMsgViewIndex* indices,
 					PRInt32 numIndices)
 {
 	nsresult rv = NS_OK;
@@ -481,13 +481,11 @@ nsMsgDBView::ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewI
 
   nsCOMPtr <nsIMsgImapMailFolder> imapFolder = do_QueryInterface(m_folder);
 	PRBool thisIsImapFolder = (imapFolder != nsnull);
-#ifdef PORTED_YET
   if (command == nsMsgViewCommandType::deleteMsg)
-		rv = TrashMessages (indices, numIndices);
+		rv = DeleteMessages (window, indices, numIndices, PR_FALSE);
 	else if (command == nsMsgViewCommandType::deleteNoTrash)
-		rv = DeleteMessages(m_folder, indices, numIndices);
+		rv = DeleteMessages(window, indices, numIndices, PR_TRUE);
 	else
-#endif /* PORTED YET */
 	{
 		for (int32 i = 0; i < numIndices; i++)
 		{
@@ -580,6 +578,17 @@ nsresult nsMsgDBView::RemoveByIndex(nsMsgViewIndex index)
 	m_levels.RemoveAt(index);
 	NoteChange(index, -1, nsMsgViewNotificationCode::insertOrDelete);
 	return NS_OK;
+}
+
+nsresult nsMsgDBView::DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool deleteStorage)
+{
+  nsresult rv = NS_OK;
+	nsCOMPtr<nsISupportsArray> messageArray;
+	NS_NewISupportsArray(getter_AddRefs(messageArray));
+  // ### TODO populate messageArray, probably with nsIMsgDBHdrs, not nsIMessages.
+  // but will need to change move/copy/delete to handle nsIMsgDBHdrs.
+  m_folder->DeleteMessages(messageArray, window, deleteStorage, PR_FALSE);
+  return rv;
 }
 
 
