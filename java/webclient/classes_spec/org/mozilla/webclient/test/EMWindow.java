@@ -427,15 +427,7 @@ public void actionPerformed (ActionEvent evt)
 public void dialogDismissed(Dialog d) {
   if(findDialog.wasClosed()) {
     System.out.println("Find Dialog Closed");
-	try {
-	CurrentPage currentPage = (CurrentPage)
-	  browserControl.queryInterface(BrowserControl.CURRENT_PAGE_NAME);
-	currentPage.resetFind();
-	}
-	catch (Exception e) {
-	System.out.println(e.getMessage());
-      }
-	}
+  }
   else {
     String searchString = findDialog.getTextField().getText();
     if(searchString == null) {
@@ -444,6 +436,14 @@ public void dialogDismissed(Dialog d) {
     }
     else if(searchString.equals("")) {
       System.out.println("Clear button selected");
+      try {
+          CurrentPage currentPage = (CurrentPage)
+              browserControl.queryInterface(BrowserControl.CURRENT_PAGE_NAME);
+          currentPage.resetFind();
+      }
+      catch (Exception e) {
+          System.out.println(e.getMessage());
+      }
     }
     else {
       System.out.println("Tring to Find String   -  " + searchString);
@@ -462,14 +462,6 @@ public void dialogDismissed(Dialog d) {
 
 public void dialogCancelled(Dialog d) {
   System.out.println("Find Dialog Closed");
-	try {
-	CurrentPage currentPage = (CurrentPage)
-	  browserControl.queryInterface(BrowserControl.CURRENT_PAGE_NAME);
-	currentPage.resetFind();
-	}
-	catch (Exception e) {
-	System.out.println(e.getMessage());
-    }
 }
       
 
