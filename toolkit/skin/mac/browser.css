@@ -11,8 +11,16 @@ tab:not([selected="true"]) > .tab-image-middle > .tab-icon {
   /* background: url("chrome://global/skin/inactivetab-icon-black.png") repeat; */
 }
 
-tab:not([selected="true"]) > .tab-image-middle > .tab-icon > .tab-extra-status {
-        background: url("chrome://global/skin/inactivetab-icon-grey.png") repeat;
+tab:not([selected="true"]):hover {
+  background: url("chrome://global/skin/10pct_transparent_grey.png") repeat;
+}
+
+tab:not([selected="true"]) > .tab-image-middle > .tab-icon {
+   -moz-opacity: 0.5;
+}
+
+tab:not([selected="true"]):hover > .tab-image-middle > .tab-icon {
+   -moz-opacity: 1.0;
 }
 
 tab:hover > .tab-image-middle > .tab-icon > .tab-extra-status {
@@ -47,7 +55,6 @@ tab {
   -moz-box-pack: center;
   margin: 0px 0px 3px 0px;
   padding: 0px;
-  background: url("chrome://global/skin/10pct_transparent_pixel.png") repeat;
   border: none !important;
   height: 22px !important;
 }

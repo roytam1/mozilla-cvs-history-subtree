@@ -35,30 +35,12 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH   = ../..
+DEPTH   = ../../../..
 topsrcdir = @top_srcdir@
 srcdir    = @srcdir@
 VPATH   = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-
-DIRS = downloads extensions update xpinstall
-
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-# XXXben this is temporary, until Thunderbird is converted to Pinstripe on MacOS X. For now, 
-#        continue to use Qute. 
-ifdef MOZ_THUNDERBIRD
-DIRS    += pref/skin downloads/skin theme-fixup
-else
-# Use Pinstripe on MacOS X
-DIRS	+= pref/skin/mac downloads/skin/mac theme-fixup/mac
-endif
-else
-ifndef MOZ_PHOENIX
-# Use Qute on Windows and Linux for non-Phoenix non-Mac apps
-DIRS    += pref/skin downloads/skin theme-fixup
-endif
-endif
 
 include $(topsrcdir)/config/rules.mk
 
