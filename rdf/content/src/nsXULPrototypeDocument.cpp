@@ -217,11 +217,11 @@ nsXULPrototypeDocument::GetOverlayReferences(nsVoidArray& aResult)
     aResult.Clear();
 
     PRUint32 cnt;
-    rv = mStyleSheets->Count(&cnt);
+    rv = mOverlayReferences->Count(&cnt);
     if (NS_FAILED(rv)) return rv;
 
     for (PRInt32 i = 0; i < PRInt32(cnt); ++i) {
-        nsIURI* ref = NS_REINTERPRET_CAST(nsIURI*, mStyleSheets->ElementAt(i));
+        nsIURI* ref = NS_REINTERPRET_CAST(nsIURI*, mOverlayReferences->ElementAt(i));
         aResult.AppendElement(ref);
         NS_RELEASE(ref);
     }
