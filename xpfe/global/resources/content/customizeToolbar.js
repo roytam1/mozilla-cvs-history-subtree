@@ -212,27 +212,36 @@ function wrapToolbarItems()
 /**
  * Unwraps all items in all customizable toolbars in a toolbox.
  */
-function unwrapToolbarItems()
+ function unwrapToolbarItems()
 {
-  var paletteItems = gToolbox.getElementsByTagName("toolbarpaletteitem");
-  var paletteItem;
-  while ((paletteItem = paletteItems.item(0)) != null) {  
-    var toolbarItem = paletteItem.firstChild;
+  for (var i = 0; i < gToolbox.childNodes.length; ++i) {
+    var toolbar = getToolbarAt(i);
+    if (isCustomizableToolbar(toolbar)) {
+      for (var k = 0; k < toolbar.childNodes.length; ++k) {
+        var paletteItem = toolbar.childNodes[k];
+        var toolbarItem = paletteItem.firstChild;
 
-    if (paletteItem.hasAttribute("itemdisabled"))
-      toolbarItem.disabled = true;
+        if (isToolbarItem(toolbarItem)) {
+          var nextSibling = paletteItem.nextSibling;
 
-    if (paletteItem.hasAttribute("itemcommand"))
-      toolbarItem.setAttribute("command", paletteItem.getAttribute("itemcommand"));
-    if (paletteItem.hasAttribute("itemobserves"))
-      toolbarItem.setAttribute("observes", paletteItem.getAttribute("itemobserves"));
+          if (paletteItem.hasAttribute("itemcommand"))
+            toolbarItem.setAttribute("command", paletteItem.getAttribute("itemcommand"));
+          if (paletteItem.hasAttribute("itemobserves"))
+            toolbarItem.setAttribute("observes", paletteItem.getAttribute("itemobserves"));
 
-    // We need the removeChild here because replaceChild and XBL no workee
-    // together.  See bug 193298.
-    paletteItem.removeChild(toolbarItem);
-    paletteItem.parentNode.replaceChild(toolbarItem, paletteItem);
+          paletteItem.removeChild(toolbarItem); 
+          paletteItem.parentNode.removeChild(paletteItem);
+
+          if (nextSibling)
+            toolbar.insertBefore(toolbarItem, nextSibling);
+          else
+            toolbar.appendChild(toolbarItem);
+        }
+      }
+    }
   }
 }
+
 
 /**
  * Creates a wrapper that can be used to contain a toolbaritem and prevent
