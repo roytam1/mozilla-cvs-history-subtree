@@ -3980,31 +3980,18 @@
 			path = ../dist/Embed/chrome/pipnss.jar;
 			refType = 2;
 		};
-		F54EF7EE022A2F9C01A80165 = {
-			isa = PBXFileReference;
-			name = pippki.jar;
-			path = ../dist/Embed/chrome/pippki.jar;
-			refType = 2;
-		};
 		F54EF7EF022A2F9D01A80165 = {
 			buildActionMask = 2147483647;
 			dstPath = chrome;
 			dstSubfolderSpec = 6;
 			files = (
 				F54EF7F0022A2F9D01A80165,
-				F54EF7F1022A2F9D01A80165,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F54EF7F0022A2F9D01A80165 = {
 			fileRef = F54EF7ED022A2F9C01A80165;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F54EF7F1022A2F9D01A80165 = {
-			fileRef = F54EF7EE022A2F9C01A80165;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -9227,19 +9214,12 @@
 			dstSubfolderSpec = 6;
 			files = (
 				F5BAAC3502AC6AA201A967F3,
-				F5BAAC3602AC6AA201A967F3,
 			);
 			isa = PBXCopyFilesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F5BAAC3502AC6AA201A967F3 = {
 			fileRef = F54EF7ED022A2F9C01A80165;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F5BAAC3602AC6AA201A967F3 = {
-			fileRef = F54EF7EE022A2F9C01A80165;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -11969,7 +11949,6 @@
 			children = (
 				F6BD650001B3184301A962F7,
 				F54EF7ED022A2F9C01A80165,
-				F54EF7EE022A2F9C01A80165,
 				F5DA444A027DD5AA01A80166,
 			);
 			isa = PBXGroup;
