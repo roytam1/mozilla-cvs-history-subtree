@@ -324,6 +324,7 @@ endif
 
 else
 
+ifndef USE_AUTOCONF
 ifeq ($(OS_ARCH), BeOS)
 	include $(srcdir)/md/beos/objs.mk
 	include $(srcdir)/bthreads/objs.mk
@@ -331,7 +332,7 @@ else
 	# Unix
 	include $(srcdir)/md/unix/objs.mk
 endif
-
+endif # !USE_AUTOCONF
 endif
 
 LIBRARY_NAME = nspr
