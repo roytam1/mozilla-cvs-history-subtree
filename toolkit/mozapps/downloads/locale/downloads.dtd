@@ -11,7 +11,7 @@
 
 <!ENTITY done.label                       "Done">
 <!ENTITY cancel.label                     "Cancel">
-<!ENTITY canceled.label                   "Cancelled">
+<!ENTITY canceled.label                   "Canceled">
 <!ENTITY launch.label                     "Launch">
 <!ENTITY divider.label                    "-">
 <!ENTITY show.label                       "Show">
@@ -36,10 +36,8 @@
 <!ENTITY cmd.show.accesskey               "s">
 <!ENTITY cmd.open.label                   "Open">
 <!ENTITY cmd.open.accesskey               "o">
-<!ENTITY cmd.openWith.label               "Open With">
+<!ENTITY cmd.openWith.label               "Open With...">
 <!ENTITY cmd.openWith.accesskey           "h">
-<!ENTITY cmd.openWithBrowse.label         "Choose Application...">
-<!ENTITY cmd.openWithBrowse.accesskey     "c">
 <!ENTITY cmd.retry.label                  "Retry">
 <!ENTITY cmd.retry.accesskey              "r">
 <!ENTITY cmd.remove.label                 "Remove">
@@ -49,9 +47,8 @@
 
 <!ENTITY cmd.close.commandKey             "w">
 <!ENTITY cmd.cleanUp.label                "Clean Up">
-<!ENTITY cmd.cleanUp.tooltip              "Removes completed downloads from the list">
+<!ENTITY cmd.cleanUp.tooltip              "Removes completed, canceled or failed downloads from the list">
 <!ENTITY cmd.cleanUp.accesskey            "a">
-<!ENTITY cmd.cleanUp.commandKey           "VK_DELETE">
 
 <!ENTITY closeWhenDone.label              "Close when downloads complete">
 <!ENTITY closeWhenDone.tooltip            "Closes the Downloads window when all files are done downloading">

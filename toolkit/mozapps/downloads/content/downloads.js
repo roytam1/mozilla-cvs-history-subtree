@@ -1,14 +1,64 @@
+# -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# 
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# 
+# The Original Code is Mozilla.org Code.
+# 
+# The Initial Developer of the Original Code is
+# Doron Rosenberg.
+# Portions created by the Initial Developer are Copyright (C) 2001
+# the Initial Developer. All Rights Reserved.
+# 
+# Contributor(s):
+#   Ben Goodger <ben@bengoodger.com> (v2.0) 
+#   Blake Ross <blakeross@telocity.com>
+# 
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+# 
+# ***** END LICENSE BLOCK *****
+
+
 const kObserverServiceProgID = "@mozilla.org/observer-service;1";
 const NC_NS = "http://home.netscape.com/NC-rdf#";
 
 var gDownloadManager;
 var gDownloadListener;
+var gDownloadsView;
+
+function fireEventForElement(aElement, aEventType)
+{
+  var e = document.createEvent("Events");
+  e.initEvent("download-" + aEventType, false, true);
+  
+  aElement.dispatchEvent(e);
+}
 
 function onDownloadCancel(aEvent)
 {
   gDownloadManager.cancelDownload(aEvent.target.id);
 
   setRDFProperty(aEvent.target.id, "DownloadAnimated", "false");
+
+  gDownloadViewController.onCommandUpdate();
 }
 
 function onDownloadPause(aEvent)
@@ -25,8 +75,11 @@ function onDownloadResume(aEvent)
 
 function onDownloadRemove(aEvent)
 {
-  if (canRemoveDownload(aEvent.target))
+  if (canRemoveDownload(aEvent.target)) {
     gDownloadManager.removeDownload(aEvent.target.id);
+    
+    gDownloadViewController.onCommandUpdate();
+  }
 }
 
 function onDownloadShow(aEvent)
@@ -34,19 +87,44 @@ function onDownloadShow(aEvent)
   var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
   f.initWithPath(aEvent.target.id);
 
-  if (f.exists())
+  if (f.exists()) {
+#ifdef XP_UNIX
+    // on unix, open a browser window rooted at the parent
+    var parent = f.parent;
+    if (parent) {
+      var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+      var browserURL = pref.copyCharPref("browser.chromeURL");                          
+      window.openDialog(browserURL, "_blank", "chrome,all,dialog=no", parent.path);
+    }
+#else
     f.reveal();
+#endif
+  }
 }
 
 function onDownloadOpen(aEvent)
 {
-  var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
-  f.initWithPath(aEvent.target.id);
+  if (aEvent.target.localName == "download") {
+    var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+    f.initWithPath(aEvent.target.id);
 
-  if (f.exists()) {
-    // XXXben security check!  
-    f.launch();
+    if (f.exists()) {
+      // XXXben security check!  
+      f.launch();
+    }
   }
+}
+
+function onDownloadOpenWith(aEvent)
+{
+  
+}
+
+function onDownloadProperties(aEvent)
+{
+  window.openDialog("chrome://mozapps/content/downloads/downloadProperties.xul",
+                    "_blank", "modal,centerscreen,chrome,resizable=no", aEvent.target.id);
 }
 
 function setRDFProperty(aID, aProperty, aValue)
@@ -66,38 +144,43 @@ function setRDFProperty(aID, aProperty, aValue)
 
 function onDownloadAnimated(aEvent)
 {
+  gDownloadViewController.onCommandUpdate();    
+
   setRDFProperty(aEvent.target.id, "DownloadAnimated", "true");
 }
 
 function onDownloadRetry(aEvent)
 {
 
+  gDownloadViewController.onCommandUpdate();
 }
 
 function Startup() 
 {
-  var downloadView = document.getElementById("downloadView");
+  gDownloadsView = document.getElementById("downloadView");
 
   const dlmgrContractID = "@mozilla.org/download-manager;1";
   const dlmgrIID = Components.interfaces.nsIDownloadManager;
   gDownloadManager = Components.classes[dlmgrContractID].getService(dlmgrIID);
 
-  downloadView.addEventListener("download-cancel",  onDownloadCancel,   false);
-  downloadView.addEventListener("download-pause",   onDownloadPause,    false);
-  downloadView.addEventListener("download-resume",  onDownloadResume,   false);
-  downloadView.addEventListener("download-remove",  onDownloadRemove,   false);
-  downloadView.addEventListener("download-show",    onDownloadShow,     false);
-  downloadView.addEventListener("download-open",    onDownloadOpen,     false);
-  downloadView.addEventListener("download-retry",   onDownloadRetry,    false);
-  downloadView.addEventListener("download-animated",onDownloadAnimated, false);
-  downloadView.addEventListener("dblclick",         onDownloadOpen,     false);
+  gDownloadsView.addEventListener("download-cancel",  onDownloadCancel,   false);
+  gDownloadsView.addEventListener("download-pause",   onDownloadPause,    false);
+  gDownloadsView.addEventListener("download-resume",  onDownloadResume,   false);
+  gDownloadsView.addEventListener("download-remove",  onDownloadRemove,   false);
+  gDownloadsView.addEventListener("download-show",    onDownloadShow,     false);
+  gDownloadsView.addEventListener("download-open",    onDownloadOpen,     false);
+  gDownloadsView.addEventListener("download-retry",   onDownloadRetry,    false);
+  gDownloadsView.addEventListener("download-animated",onDownloadAnimated, false);
+  gDownloadsView.addEventListener("dblclick",         onDownloadOpen,     false);
+  
+  gDownloadsView.controllers.appendController(gDownloadViewController);
 
   var ds = gDownloadManager.datasource;
 
-  downloadView.database.AddDataSource(ds);
-  downloadView.builder.rebuild();
+  gDownloadsView.database.AddDataSource(ds);
+  gDownloadsView.builder.rebuild();
   
-  downloadView.focus();
+  gDownloadsView.focus();
   
   var downloadStrings = document.getElementById("downloadStrings");
   gDownloadListener = new DownloadProgressListener(document, downloadStrings);
@@ -121,14 +204,14 @@ function saveStatusMessages()
   
   var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 
-  var downloadView = document.getElementById("downloadView");
   var db = gDownloadManager.datasource;
   
   var statusArc = rdf.GetResource(NC_NS + "DownloadStatus");
   
-  for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
-    var currItem = downloadView.childNodes[i];
-    if (currItem.getAttribute("state") == "4")
+  for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
+    var currItem = gDownloadsView.childNodes[i];
+    if (currItem.localName == "download" && 
+        currItem.getAttribute("state") == "4")
       setRDFProperty(currItem.id, "DownloadStatus", 
                      currItem.getAttribute("status-internal"));
   }
@@ -149,14 +232,12 @@ function buildContextMenu(aEvent)
   if (aEvent.target.id != "downloadContextMenu")
     return;
     
-  var downloadView = document.getElementById("downloadView");
-  
   var popup = document.getElementById("downloadContextMenu");
   while (popup.hasChildNodes())
     popup.removeChild(popup.firstChild);
   
-  if (downloadView.selected) {
-    var idx = parseInt(downloadView.selected.getAttribute("state"));
+  if (gDownloadsView.selected) {
+    var idx = parseInt(gDownloadsView.selected.getAttribute("state"));
     if (idx < 0)
       idx = 0;
     
@@ -170,7 +251,7 @@ function buildContextMenu(aEvent)
   return false;
 }
 
-var downloadDNDObserver =
+var gDownloadDNDObserver =
 {
   onDragOver: function (aEvent, aFlavour, aDragSession)
   {
@@ -201,114 +282,51 @@ var downloadDNDObserver =
 function onSelect(aEvent) {
   window.updateCommands("list-select");
 }
-  
-var downloadViewController = {
+
+var gDownloadViewController = {
   supportsCommand: function dVC_supportsCommand (aCommand)
   {
     switch (aCommand) {
-    case "cmd_properties":
-    case "cmd_remove":
-    case "cmd_openfile":
-    case "cmd_showinshell":
-    case "cmd_selectAll":
+    case "cmd_cleanUp":
       return true;
     }
     return false;
   },
   
   isCommandEnabled: function dVC_isCommandEnabled (aCommand)
-  {    
-    // XXXben
-    return false;
-    if (!selectionCount) return false;
-
-    var selectedItem = gDownloadHistoryView.selectedItem;
+  {
     switch (aCommand) {
-    case "cmd_openfile":
-    case "cmd_showinshell":
-    case "cmd_properties":
-      return selectionCount == 1;
-    case "cmd_remove":
-      return selectionCount;
-    case "cmd_selectAll":
-      return gDownloadHistoryView.getRowCount() != selectionCount;
-    default:
-      return false;
+    case "cmd_cleanUp": 
+      var canCleanUp = false;
+      for (var i = 0; i < gDownloadsView.childNodes.length; ++i) {
+        var currDownload = gDownloadsView.childNodes[i];
+        if (currDownload.localName == "download" &&
+            (currDownload.getAttribute("state") != "0" && 
+             currDownload.getAttribute("state") != "-1" && 
+             currDownload.getAttribute("state") != "4"))
+          canCleanUp = true;
+      }
+      
+      return canCleanUp;
     }
+    return false;
   },
   
   doCommand: function dVC_doCommand (aCommand)
   {
-    var selectedItem, selectedItems, file, i;
-
     switch (aCommand) {
-    case "cmd_openfile":
-      selectedItem = gDownloadHistoryView.selectedItem;
-      file = getFileForItem(selectedItem);
-      file.launch();
+    case "cmd_cleanUp":
+      if (this.isCommandEnabled(aCommand))
+        cleanUpDownloadsList();
       break;
-    case "cmd_showinshell":
-      selectedItem = gDownloadHistoryView.selectedItem;
-      file = getFileForItem(selectedItem);
-      
-#ifdef XP_UNIX
-      // on unix, open a browser window rooted at the parent
-      file = file.QueryInterface(Components.interfaces.nsIFile);
-      var parent = file.parent;
-      if (parent) {
-        //XXXBlake use chromeUrlForTask pref here
-        const browserURL = "chrome://browser/content/browser.xul";
-        window.openDialog(browserURL, "_blank", "chrome,all,dialog=no", parent.path);
-      }
-#else
-      file.reveal();
-#endif
-      break;
-    case "cmd_properties":
-      selectedItem = gDownloadHistoryView.selectedItem;
-      window.openDialog("chrome://browser/content/downloads/downloadProperties.xul",
-                        "_blank", "modal,centerscreen,chrome,resizable=no", selectedItem.id);
-      break;
-    case "cmd_remove":
-      selectedItems = gDownloadHistoryView.selectedItems;
-      var selectedIndex = gDownloadHistoryView.selectedIndex;
-      gDownloadManager.startBatchUpdate();
-      
-      // Notify the datasource that we're about to begin a batch operation
-      gDownloadManager.datasource.beginUpdateBatch();
-      for (i = 0; i <= selectedItems.length - 1; ++i) {
-        gDownloadManager.removeDownload(selectedItems[i].id);
-      }
-      gDownloadManager.datasource.endUpdateBatch();
-
-      gDownloadManager.endBatchUpdate();
-      var rowCount = gDownloadHistoryView.getRowCount();
-      if (selectedIndex > ( rowCount- 1))
-        selectedIndex = rowCount - 1;
-
-      gDownloadHistoryView.selectedIndex = selectedIndex;
-      break;
-    case "cmd_selectAll":
-      gDownloadHistoryView.selectAll();
-      break;
-    default:
     }
   },  
   
-  onEvent: function dVC_onEvent (aEvent)
-  {
-    switch (aEvent) {
-    case "list-select":
-      this.onCommandUpdate();
-    }
-  },
-
   onCommandUpdate: function dVC_onCommandUpdate ()
   {
-    var cmds = ["cmd_properties", "cmd_remove",
-                "cmd_openfile", "cmd_showinshell"];
-    for (var command in cmds)
-      goUpdateCommand(cmds[command]);
+    var command = "cmd_cleanUp";
+    var enabled = this.isCommandEnabled(command);
+    goSetCommandEnabled(command, enabled);
   }
 };
 
@@ -326,18 +344,19 @@ function createLocalFile(aFilePath)
   return lf;
 }
 
-function cleanUpDownloads()
+function cleanUpDownloadsList()
 {
   gDownloadManager.startBatchUpdate();
 
-  var downloadView = document.getElementById("downloadView");
-  for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
-    var currItem = downloadView.childNodes[i];
-    if (canRemoveDownload(currItem))
+  for (var i = gDownloadsView.childNodes.length - 1; i >= 0; --i) {
+    var currItem = gDownloadsView.childNodes[i];
+    if (currItem.localName == "download" && canRemoveDownload(currItem))
       gDownloadManager.removeDownload(currItem.id);
   }
   
   gDownloadManager.endBatchUpdate();
+
+  gDownloadViewController.onCommandUpdate();
 }
 
 function canRemoveDownload(aDownload)

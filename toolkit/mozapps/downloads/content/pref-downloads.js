@@ -321,8 +321,8 @@ function fileHandlerListSelectionChanged(aEvent)
     
     for (var j = min.value; j <= max.value; ++j) {
       var item = cv.getItemAtIndex(j);
-      var editable = getLiteralValue(item.id, "editable") == "true";
-      var handleInternal = getLiteralValue(item.id, "handleInternal");
+      var editable = gHelperApps.getLiteralValue(item.id, "editable") == "true";
+      var handleInternal = gHelperApps.getLiteralValue(item.id, "handleInternal");
       
       if (!editable || handleInternal) 
         canRemove = false;
