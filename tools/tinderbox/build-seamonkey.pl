@@ -386,7 +386,7 @@ sub BuildIt {
     $StartTime = time;
     
     if ($UseTimeStamp) {
-      $BuildStart = `date '+%m/%d/%Y %H:%M'`;
+      $BuildStart = `date`;
       chomp($BuildStart);
       $CVSCO .= " -D '$BuildStart'";
     }
