@@ -3013,7 +3013,7 @@ nsXULDocument::Init()
     }
 
     // Create a new nsISupportsArray for dealing with overlay references
-    rv = NS_NewISupportsArray(getter_AddRefs(mOverlays));
+    rv = NS_NewISupportsArray(getter_AddRefs(mUnloadedOverlays));
     if (NS_FAILED(rv)) return rv;
 
     // Create a new nsISupportsArray that will hold owning references
@@ -3814,15 +3814,6 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand, nsIPar
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create parser");
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIDTD> dtd;
-    rv = nsComponentManager::CreateInstance(kWellFormedDTDCID,
-                                            nsnull,
-                                            NS_GET_IID(nsIDTD),
-                                            getter_AddRefs(dtd));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to construct DTD");
-    if (NS_FAILED(rv)) return rv;
-
-    parser->RegisterDTD(dtd);
     parser->SetCommand(aCommand);
 
     nsAutoString utf8("UTF-8");
@@ -4106,13 +4097,17 @@ nsXULDocument::PrepareToWalk()
     // elements aren't yanked from beneath us.
     mPrototypes->AppendElement(mCurrentPrototype);
 
-    // Push the overlay references onto our overlay processing stack.
+    // Push the overlay references onto our overlay processing
+    // stack. GetOverlayReferences() will return an ordered array of
+    // overlay references...
     nsVoidArray overlays;
     rv = mCurrentPrototype->GetOverlayReferences(overlays);
     if (NS_FAILED(rv)) return rv;
 
+    // ...and we preserve this ordering by appending to our
+    // mUnloadedOverlays array in reverse order
     for (PRInt32 i = overlays.Count() - 1; i >= 0; --i) {
-        mOverlays->InsertElementAt(NS_REINTERPRET_CAST(nsIURI*, overlays[i]), 0);
+        mUnloadedOverlays->AppendElement(NS_REINTERPRET_CAST(nsIURI*, overlays[i]));
     }
 
     // Get the prototype's root element and initialize the context
@@ -4357,13 +4352,17 @@ nsXULDocument::ResumeWalk()
         // If we're not already, mark us as now processing overlays.
         mState = eState_Overlay;
 
-        nsCOMPtr<nsIURI> uri = dont_AddRef(NS_REINTERPRET_CAST(nsIURI*, mOverlays->ElementAt(0)));
+        PRUint32 count;
+        mUnloadedOverlays->Count(&count);
 
-        // If there are no overlay URIs in the queue, then we're done.
-        if (! uri)
+        // If there are no overlay URIs, then we're done.
+        if (! count)
             break;
 
-        mOverlays->RemoveElementAt(0);
+        nsCOMPtr<nsIURI> uri =
+            dont_AddRef(NS_REINTERPRET_CAST(nsIURI*, mUnloadedOverlays->ElementAt(count - 1)));
+
+        mUnloadedOverlays->RemoveElementAt(count - 1);
 
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gXULLog, PR_LOG_DEBUG)) {

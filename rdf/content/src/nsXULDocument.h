@@ -564,9 +564,12 @@ protected:
     State mState;
 
     /**
-     * An array of overlay nsIURIs that have yet to be resolved.
+     * An array of overlay nsIURIs that have yet to be resolved. The
+     * order of the array is significant: overlays at the _end_ of the
+     * array are resolved before overlays earlier in the array (i.e.,
+     * it is a stack).
      */
-    nsCOMPtr<nsISupportsArray> mOverlays;
+    nsCOMPtr<nsISupportsArray> mUnloadedOverlays;
 
     /**
      * Load the transcluded script at the specified URI. If the
