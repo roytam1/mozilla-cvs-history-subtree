@@ -39,6 +39,7 @@
 #include "nsIWebShell.h"
 #include "nsLayoutCID.h"
 #include "nsRDFContentSink.h"
+#include "nsRDFContentUtils.h"
 #include "nsINameSpaceManager.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -211,46 +212,6 @@ nsRDFDocumentContentSink::DidBuildModel(PRInt32 aQualityLevel)
     //StartLayout();
     mDocument->EndLoad();
     return NS_OK;
-}
-
-
-static nsresult
-rdf_GetQuotedAttributeValue(nsString& aSource, 
-                            const nsString& aAttribute,
-                            nsString& aValue)
-{
-static const char kQuote = '\"';
-static const char kApostrophe = '\'';
-
-    PRInt32 offset;
-    PRInt32 endOffset = -1;
-    nsresult result = NS_OK;
-
-    offset = aSource.Find(aAttribute);
-    if (-1 != offset) {
-        offset = aSource.Find('=', offset);
-
-        PRUnichar next = aSource.CharAt(++offset);
-        if (kQuote == next) {
-            endOffset = aSource.Find(kQuote, ++offset);
-        }
-        else if (kApostrophe == next) {
-            endOffset = aSource.Find(kApostrophe, ++offset);	  
-        }
-  
-        if (-1 != endOffset) {
-            aSource.Mid(aValue, offset, endOffset-offset);
-        }
-        else {
-            // Mismatched quotes - return an error
-            result = NS_ERROR_FAILURE;
-        }
-    }
-    else {
-        aValue.Truncate();
-    }
-
-    return result;
 }
 
 

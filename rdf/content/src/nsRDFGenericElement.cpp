@@ -42,6 +42,7 @@
 #include "nsINameSpaceManager.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsISupportsArray.h"
+#include "nsRDFContentUtils.h"
 #include "nsString.h"
 #include "prlog.h"
 
@@ -295,8 +296,6 @@ RDFGenericElementImpl::GetParentNode(nsIDOMNode** aParentNode)
 NS_IMETHODIMP
 RDFGenericElementImpl::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
-    // XXX put me in a header file somewhere
-    extern nsresult NS_NewRDFDOMNodeList(nsIDOMNodeList** aChildNodes, nsIContent* aElement);
     return NS_NewRDFDOMNodeList(aChildNodes, this);
 }
 

@@ -72,6 +72,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFCID.h"
+#include "nsRDFContentUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -365,8 +366,6 @@ RDFResourceElementImpl::GetParentNode(nsIDOMNode** aParentNode)
 NS_IMETHODIMP
 RDFResourceElementImpl::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
-    // XXX put me in a header file somewhere
-    extern nsresult NS_NewRDFDOMNodeList(nsIDOMNodeList** aChildNodes, nsIContent* aElement);
     return NS_NewRDFDOMNodeList(aChildNodes, this);
 }
 
