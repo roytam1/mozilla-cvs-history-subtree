@@ -1065,8 +1065,19 @@ PRBool nsXULWindow::LoadSizeStateFromXUL()
       sizeMode = nsSizeMode_Minimized;
     */
     if (stateString.Equals(SIZEMODE_MAXIMIZED)) {
-      mIntrinsicallySized = PR_FALSE;
-      sizeMode = nsSizeMode_Maximized;
+      PRBool sizable = PR_TRUE;
+      nsCOMPtr<nsIWebBrowserChrome> chrome(do_GetInterface(
+                                      NS_STATIC_CAST(nsIXULWindow *, this)));
+      if (chrome) {
+        PRUint32 chromeFlags;
+        chrome->GetChromeFlags(&chromeFlags);
+        sizable = chromeFlags & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE;
+      }
+
+      if (sizable) {
+        mIntrinsicallySized = PR_FALSE;
+        sizeMode = nsSizeMode_Maximized;
+      }
     }
     // the widget had better be able to deal with not becoming visible yet
     mWindow->SetSizeMode(sizeMode);
