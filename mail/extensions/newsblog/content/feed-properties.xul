@@ -46,7 +46,7 @@
   ondialogaccept="return onOk();">
 
   <script type="application/x-javascript" src="feed-properties.js"/>
-   <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
+  <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 
   <grid flex="1">
     <columns>
