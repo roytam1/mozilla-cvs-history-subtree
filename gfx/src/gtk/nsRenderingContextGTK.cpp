@@ -1290,6 +1290,9 @@ nsRenderingContextGTK::GetWidth(const PRUnichar* aString, PRUint32 aLength,
     g_return_val_if_fail(aString != NULL, NS_ERROR_FAILURE);
 
     nsFontMetricsGTK* metrics = (nsFontMetricsGTK*) mFontMetrics;
+
+    g_return_val_if_fail(metrics != NULL, NS_ERROR_FAILURE);
+
     nsFontGTK* prevFont = nsnull;
     gint rawWidth = 0;
     PRUint32 start = 0;
