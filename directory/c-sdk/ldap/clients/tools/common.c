@@ -26,8 +26,10 @@
 
 #include "ldaptool.h"
 
+#ifdef LDAP_TOOL_ARGPIN
 #include "argpin.h"
 #include "ntuserpin.h"
+#endif /* LDAP_TOOL_ARGPIN */
 
 #include <nspr.h>	/* for PR_Cleanup() */
 #include <stdlib.h>
@@ -83,14 +85,14 @@ ldaptool_common_usage( int two_hosts )
 	fprintf( stderr, "    -p port\tLDAP server TCP port number (default: %d)\n", LDAP_PORT );
     }
     fprintf( stderr,
-	    "    -V n\tLDAP protocol version number (%d or %d; default is %d)\n",
+	    "    -V n\tLDAP protocol version number (%d or %d; default: %d)\n",
 	    LDAP_VERSION2, LDAP_VERSION3, LDAP_VERSION3 );
 #if defined(NET_SSL)
     fprintf( stderr, "    -Z\t\tmake an SSL-encrypted connection\n" );
-    fprintf( stderr, "    -P pathname\tpath to SSL certificate database (default: .)\n" );
+    fprintf( stderr, "    -P pathname\tpath to SSL certificate database (default: current directory)\n" );
     fprintf( stderr, "    -N\t\tname of certificate to use for SSL client authentication\n" );
     fprintf( stderr, "    -K pathname\tpath to key database to use for SSL client authentication\n" );
-    fprintf( stderr, "    (default: path to SSL certificate database provided with -P option\n" );
+    fprintf( stderr, "    \t\t(default: path to certificate database provided with -P option)\n" );
     fprintf( stderr, "    -m pathname\tpath to security module database\n");
     fprintf( stderr, "    -W\t\tSSL key password\n" );
 
@@ -106,7 +108,7 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -d level\tset LDAP debugging level to `level'\n" );
 #endif
     fprintf( stderr, "    -R\t\tdo not automatically follow referrals\n" );
-    fprintf( stderr, "    -O hop lim\tmaximum number of referral hops to traverse\n" );
+    fprintf( stderr, "    -O limit\tmaximum number of referral hops to traverse (default: %d)\n", LDAPTOOL_DEFREFHOPLIMIT );
     fprintf( stderr, "    -M\t\tmanage references (treat them as regular entries)\n" );
     fprintf( stderr, "    -0\t\tignore LDAP library version mismatches\n" );
 
@@ -114,7 +116,7 @@ ldaptool_common_usage( int two_hosts )
     fprintf( stderr, "    -C cfgfile\tuse local database described by cfgfile\n" );
 #endif
     fprintf( stderr, "    -i charset\tcharacter set for command line input (default taken from locale)\n" );
-    fprintf( stderr, "    -k dir\tconversion routine directory (default is .)\n" );
+    fprintf( stderr, "    -k dir\tconversion routine directory (default: current directory)\n" );
 #if 0
 /*
  * Suppress usage for -y (old proxied authorization control) even though
@@ -156,7 +158,7 @@ static int		user_specified_port2 = 0;
 static int		chase_referrals = 1;
 static int		lib_version_mismatch_is_fatal = 1;
 static int		ldversion = -1;	/* use default */
-static int		refhoplim = 0;
+static int		refhoplim = LDAPTOOL_DEFREFHOPLIMIT;
 static int		send_manage_dsait_ctrl = 0;
 
 #ifndef NO_LIBLCACHE
@@ -203,7 +205,8 @@ static char		*fortezza_pin = NULL;
  * Note the the H option is included here but handled via the
  * extra_opt_callback function (along with any "extra_opts" ).
  *
- * Return: final value for optind (if fatal errors occur, we exit here).
+ * Return: final value for optind or -1 if usage should be displayed (for
+ * some fatal errors, we call exit here).
  */
 int
 ldaptool_process_args( int argc, char **argv, char *extra_opts,
@@ -594,6 +597,7 @@ print_library_info( const LDAPAPIInfo *aip, FILE *fp )
 
 
 
+#ifdef LDAP_TOOL_ARGPIN
 static int PinArgRegistration( void )
 {
     
@@ -684,6 +688,7 @@ static int PinArgRegistration( void )
     return LDAP_SUCCESS;
     
 }
+#endif /* LDAP_TOOL_ARGPIN */
 
 
 /*
@@ -741,9 +746,11 @@ ldaptool_ldap_init( int second_host )
     PR_Cleanup();
 #endif
     } else if (secure) {
+#ifdef LDAP_TOOL_ARGPIN
 	if (PinArgRegistration( )) {
 	    exit( LDAP_LOCAL_ERROR);
 	}
+#endif /* LDAP_TOOL_ARGPIN */
 	if ( !user_port ) {
 	    port = LDAPS_PORT;
 	}
@@ -791,9 +798,7 @@ ldaptool_ldap_init( int second_host )
 	LDAP_OPT_OFF );
     if ( chase_referrals ) {
 	ldap_set_rebind_proc( ld, get_rebind_credentials, NULL );
-	if ( refhoplim != 0 ) {
-	    ldap_set_option( ld, LDAP_OPT_REFERRAL_HOP_LIMIT, &refhoplim );
-	}
+	ldap_set_option( ld, LDAP_OPT_REFERRAL_HOP_LIMIT, &refhoplim );
     }
 
     if ( ldversion == -1 ) {	/* not set with -V and not using local db */

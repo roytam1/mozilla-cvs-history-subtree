@@ -46,6 +46,7 @@ all:	FORCE
 	@echo "   BUILD_OPT=1		for optimized build"
 	@echo "   USE_PTHREADS=1	for using pthreads"
 	@echo "   USE_64=1		for building 64 bit versions"
+	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo 
 	@echo iPlanet internal options
 	@echo
@@ -53,7 +54,6 @@ all:	FORCE
 	@echo "   gmake PullSDKComponents"
 	@echo "   gmake pkgLdapSDK"
 	@echo
-	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo "   HAVE_LIBNLS=1	for building/linking with LIBNLS"
 	@echo "   HAVE_CCONF=1		for building with components"
 	@echo "   HAVE_SVRCORE=1	for building with svrcore"
