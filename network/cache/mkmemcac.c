@@ -23,7 +23,6 @@
  */
 
 /* Please leave outside of ifdef for windows precompiled headers */
-#undef OPAQUE_MWCONTEXT
 #include "xp.h"
 
 #ifdef MOZILLA_CLIENT
