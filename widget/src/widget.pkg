@@ -10,10 +10,12 @@ dist/bin/components/@DLLP@wdgtos2@DLLS@
 #endif
 #if MOZ_WIDGET_TOOLKIT==mac
 dist/bin/components/@DLLP@widget_mac@DLLS@
+!xpt dist/bin/components/widget_mac.xpt
 dist/bin/libwidget.rsrc
 #endif
 #if MOZ_WIDGET_TOOLKIT==cocoa
 dist/bin/components/@DLLP@widget_cocoa@DLLS@
+!xpt dist/bin/components/widget_mac.xpt
 dist/bin/libwidget.rsrc
 #endif
 #if MOZ_WIDGET_TOOLKIT==windows
