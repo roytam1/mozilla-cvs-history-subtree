@@ -41,7 +41,7 @@
 
 #include "baseutils.h"
 #include "txError.h"
-#include "Stack.h"
+#include "txStack.h"
 #include "txXSLTPatterns.h"
 #include "Expr.h"
 #include "XMLUtils.h"
@@ -97,8 +97,8 @@ public:
     MBool mDOE;
     
 private:
-    Stack mObjectStack;
-    Stack mOtherStack;
+    txStack mObjectStack;
+    txStack mOtherStack;
     txInstruction** mNextInstrPtr;
     txListIterator mToplevelIterator;
 };
@@ -126,11 +126,12 @@ public:
 
     void cancel(nsresult aError);
 
+    txStylesheetCompilerState mState;
+
 private:
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
 
-    txStylesheetCompilerState mState;
     nsString mCharacters;
 };
 

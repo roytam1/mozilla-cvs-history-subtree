@@ -141,7 +141,9 @@ txExecutionState::pushString(const nsAString& aStr)
 void
 txExecutionState::popString(nsAString& aStr)
 {
-    mStringStack.StringAt(mStringStack.Count() - 1, aStr);
+    PRInt32 count = mStringStack.Count() - 1;
+    mStringStack.StringAt(count, aStr);
+    mStringStack.RemoveStringAt(count);
 }
 
 nsresult

@@ -40,7 +40,7 @@
 #include "txStylesheetCompileHandlers.h"
 #include "txAtoms.h"
 #include "txURIUtils.h"
-#include "Tokenizer.h"
+#include "txTokenizer.h"
 #include "txStylesheet.h"
 #include "txInstructions.h"
 #include "txToplevelItems.h"
@@ -135,10 +135,8 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
 
             txTokenizer tok(attr->mValue);
             while (tok.hasMoreTokens()) {
-                nsAutoString prefix;
-                tok.nextToken(prefix);
                 PRInt32 namespaceID = mState.mElementContext->
-                    mMappings.lookupNamespaceWithDefault(prefix);
+                    mMappings.lookupNamespaceWithDefault(tok.nextToken());
                 
                 if (namespaceID == kNameSpaceID_Unknown)
                     return NS_ERROR_XSLT_PARSE_FAILURE;
@@ -291,6 +289,7 @@ txStylesheetCompiler::ensureNewElementContext()
 txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
                                                      txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
+      mNextInstrPtr(nsnull),
       mToplevelIterator(nsnull)
 {
     nsresult rv = NS_OK;
@@ -348,7 +347,7 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
 txStylesheetCompilerState::~txStylesheetCompilerState()
 {
     delete mElementContext;
-    while (!mObjectStack.empty()) {
+    while (!mObjectStack.isEmpty()) {
         delete popObject();
     }
 }

@@ -43,7 +43,7 @@
 #include "baseutils.h"
 #include "txXMLEventHandler.h"
 #include "nsCOMPtr.h"
-#include "Stack.h"
+#include "txStack.h"
 #include "XMLUtils.h"
 #include "nsVoidArray.h"
 #include "txIXPathContext.h"
@@ -97,9 +97,9 @@ public:
     txStylesheet* mStylesheet;
 
 private:
-    Stack mReturnStack;
-    Stack mEvalContextStack;
-    Stack mIntStack;
+    txStack mReturnStack;
+    txStack mEvalContextStack;
+    txStack mIntStack;
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
     

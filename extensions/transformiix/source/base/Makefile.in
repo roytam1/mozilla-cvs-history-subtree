@@ -47,8 +47,6 @@ CPPSRCS	= Double.cpp \
 	Map.cpp \
 	NamedMap.cpp \
 	SimpleErrorObserver.cpp \
-	Stack.cpp \
-	Tokenizer.cpp \
 	txAtoms.cpp \
 	txExpandedNameMap.cpp \
 	txNamespaceMap.cpp \

@@ -38,7 +38,7 @@
 
 #include "txStylesheetCompiler.h"
 #include "txStylesheetCompileHandlers.h"
-#include "Tokenizer.h"
+#include "txTokenizer.h"
 #include "txInstructions.h"
 #include "txAtoms.h"
 #include "primitives.h"
@@ -368,11 +368,8 @@ txFnStartLRE(PRInt32 aNamespaceID,
     if (attr) {
         txTokenizer tok(attr->mValue);
         while (tok.hasMoreTokens()) {
-            nsAutoString qname;
-            tok.nextToken(qname);
-
             txExpandedName name;
-            rv = aState.parseQName(qname, name, MB_FALSE);
+            rv = aState.parseQName(tok.nextToken(), name, MB_FALSE);
             NS_ENSURE_SUCCESS(rv, rv);
 
             instr = new txInsertAttrSet(name);
@@ -663,7 +660,7 @@ txHandlerTable::init()
     INIT_HANDLER(Template);
     INIT_HANDLER(Text);
 
-    return MB_FALSE;
+    return MB_TRUE;
 }
 
 // static
