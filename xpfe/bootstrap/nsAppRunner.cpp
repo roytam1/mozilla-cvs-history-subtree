@@ -104,7 +104,7 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 // header file for profile manager
 #include "nsIProfileInternal.h"
 
-#ifdef NO_SHARED_LIB
+#ifdef MOZ_STATIC_COMPONENT_LIBS
 #include "nsStaticComponent.h"
 static NSGetModuleInfoFunc getModuleInfo;
 #endif
@@ -1286,7 +1286,7 @@ int main(int argc, char* argv[])
     splash->Show();
   }
 
-#ifdef NO_SHARED_LIB
+#ifdef MOZ_STATIC_COMPONENT_LIBS
   // Initialize XPCOM's module info table
   NSGetModuleInfo = getModuleInfo;
 #endif
@@ -1331,7 +1331,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
 }
 #endif // XP_PC && WIN32
 
-#ifdef NO_SHARED_LIB
+#ifdef MOZ_STATIC_COMPONENT_LIBS
 
 #define MODULE(name) { "NSGetModule_" #name, NSGETMODULE_ENTRY_POINT(name) }
 #define DECL_MODULE(name) extern "C" nsGetModuleProc NSGETMODULE_ENTRY_POINT(name);
@@ -1514,4 +1514,4 @@ getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count)
   return NS_OK;
 }
 
-#endif // NO_SHARED_LIB
+#endif // MOZ_STATIC_COMPONENT_LIBS

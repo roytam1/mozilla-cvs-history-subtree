@@ -43,7 +43,7 @@ CPPSRCS		= \
 		$(NULL)
 
 # XXX not really right.
-ifdef NO_SHARED_LIB
+ifdef MOZ_STATIC_COMPONENT_LIBS
 CPPSRCS         += nsStaticComponentLoader.cpp
 endif
 

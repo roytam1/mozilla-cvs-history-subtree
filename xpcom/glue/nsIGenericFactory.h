@@ -113,7 +113,7 @@ NS_NewGenericModule(const char* moduleName,
                     nsModuleDestructorProc dtor,
                     nsIModule* *result);
 
-#ifdef NO_SHARED_LIB
+#ifdef MOZ_STATIC_COMPONENT_LIBS
 #  define NSGETMODULE_ENTRY_POINT(_name) NSGetModule_##_name
 #else
 #  define NSGETMODULE_ENTRY_POINT(_name) NSGetModule
