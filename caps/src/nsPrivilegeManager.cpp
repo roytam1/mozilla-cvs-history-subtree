@@ -26,12 +26,7 @@
 #include "jpermission.h"
 #include "rdf.h"
 
-#ifdef DEBUG_raman_xxx
-/* ifdef'ed out ADMIN UI until we merge changes with rdf branch.
- * All these changes are under DEBUG_raman_xxx
- */
 #include "jsec2rdf.h"
-#endif /* DEBUG_raman_xxx */
 
 static nsPrivilegeManager * thePrivilegeManager = NULL;
 
@@ -58,11 +53,9 @@ nsPrivilegeTable *gPrivilegeTable;
 
 static PRBool getPrincipalString(nsHashKey *aKey, void *aData);
 
-#ifdef DEBUG_raman_xxx
 static nsPrincipal *RDF_getPrincipal(JSec_Principal jsec_pr);
 static PRBool RDF_RemovePrincipal(nsPrincipal *prin);
 static PRBool RDF_RemovePrincipalsPrivilege(nsPrincipal *prin, nsTarget *target);
-#endif /* DEBUG_raman_xxx */
 
 
 PR_BEGIN_EXTERN_C
@@ -213,9 +206,7 @@ PRBool nsPrivilegeManager::unregisterPrincipal(nsPrincipal *prin)
   itsPrinNameToPrincipalTable->Remove(&prinNameKey);
 
   /* remove the principal from RDF also */
-#ifdef DEBUG_raman_xxx
   RDF_RemovePrincipal(prin);
-#endif /* DEBUG_raman_xxx */
 
   nsCaps_unlock();
   if ((old_prin == NULL) && (old_prin1 == NULL)) {
@@ -857,9 +848,7 @@ void nsPrivilegeManager::remove(nsPrincipal *prin, nsTarget *target)
   mpt->remove(target);
 
   /* remove the prin/target from RDF also */
-#ifdef DEBUG_raman_xxx
   RDF_RemovePrincipalsPrivilege(prin, target);
-#endif /* DEBUG_raman_xxx */
 
   /* Regenerate the expnaded prvileges for this principal */
   nsPrivilegeTable *pt = (nsPrivilegeTable *)itsPrinToPrivTable->Get(&prinKey);
@@ -1202,8 +1191,7 @@ nsPrivilegeManager::getPrivilegeTableFromStack(PRInt32 callerDepth,
   return privTable;
 }
 
-#ifdef DEBUG_raman_xxx
-JSec_Principal 
+static JSec_Principal 
 RDF_CreatePrincipal(nsPrincipal *prin)
 {
   /* For certificate principals we should convert the key into string, because 
@@ -1275,7 +1263,7 @@ RDF_getPrincipal(JSec_Principal jsec_pr)
   return prin;
 }
 
-JSec_Target 
+static JSec_Target 
 RDF_CreateTarget(nsTarget *target)
 {
   char *targetName = target->getName();
@@ -1284,7 +1272,7 @@ RDF_CreateTarget(nsTarget *target)
   return RDFJSec_NewTarget(targetName, pr);
 }
 
-nsTarget *
+static nsTarget *
 RDF_getTarget(JSec_Target jsec_target)
 {
   char *targetName = RDFJSec_GetTargetName(jsec_target);
@@ -1343,7 +1331,6 @@ RDF_RemovePrincipalsPrivilege(nsPrincipal *prin, nsTarget *target)
   nsCaps_unlock();
   return found;
 }
-#endif /* DEBUG_raman_xxx */
 
 
 /* The following methods are used to save and load the persistent store */
@@ -1356,7 +1343,6 @@ void nsPrivilegeManager::save(nsPrincipal *prin,
   if (prin->equals(getSystemPrincipal())) {
     return;
   }
-#ifdef DEBUG_raman_xxx
   nsCaps_lock();
   RDFJSec_InitPrivilegeDB();
   JSec_Principal pr = RDF_CreatePrincipal(prin);
@@ -1366,7 +1352,6 @@ void nsPrivilegeManager::save(nsPrincipal *prin,
   RDFJSec_AddPrincipalUse(pr, prUse);
   
   nsCaps_unlock();
-#endif /* DEBUG_raman_xxx */
 }
 
 /* The following routine should be called after setting up the system targets 
@@ -1374,7 +1359,6 @@ void nsPrivilegeManager::save(nsPrincipal *prin,
  */
 void nsPrivilegeManager::load(void)
 {
-#ifdef DEBUG_raman_xxx
   nsCaps_lock();
   RDFJSec_InitPrivilegeDB();
   RDF_Cursor prin_cursor = RDFJSec_ListAllPrincipals();
@@ -1412,7 +1396,6 @@ void nsPrivilegeManager::load(void)
 
   RDFJSec_ReleaseCursor(prin_cursor);
   nsCaps_unlock();
-#endif /* DEBUG_raman_xxx */
 }
 
 
@@ -1435,12 +1418,8 @@ PRBool nsPrivilegeManagerInitialize(void)
   theUnknownPrincipalArray->Add(theUnknownPrincipal);
 
   thePrivilegeManager = new nsPrivilegeManager();
-#ifdef DEBUG_raman_xxx
   RDFJSec_InitPrivilegeDB();
-#endif /* DEBUG_raman_xxx */
   return PR_FALSE;
 }
 
 PRBool nsPrivilegeManager::theInited = nsPrivilegeManagerInitialize();
-
-
