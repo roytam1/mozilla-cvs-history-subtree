@@ -203,7 +203,7 @@ NS_IMETHODIMP nsAddrDatabase::AddListener(nsIAddrDBListener *listener)
 {
   if (!listener)
     return NS_ERROR_NULL_POINTER;
-  if (m_ChangeListeners == nsnull) 
+  if (!m_ChangeListeners) 
 	{
     m_ChangeListeners = new nsVoidArray();
     if (!m_ChangeListeners) 
@@ -222,7 +222,7 @@ NS_IMETHODIMP nsAddrDatabase::AddListener(nsIAddrDBListener *listener)
 
 NS_IMETHODIMP nsAddrDatabase::RemoveListener(nsIAddrDBListener *listener)
 {
-    if (m_ChangeListeners == nsnull) 
+    if (!m_ChangeListeners) 
 		return NS_OK;
 
 	PRInt32 count = m_ChangeListeners->Count();
@@ -241,7 +241,7 @@ NS_IMETHODIMP nsAddrDatabase::RemoveListener(nsIAddrDBListener *listener)
 
 NS_IMETHODIMP nsAddrDatabase::NotifyCardAttribChange(PRUint32 abCode, nsIAddrDBListener *instigator)
 {
-  if (m_ChangeListeners == nsnull)
+  if (!m_ChangeListeners)
 	  return NS_OK;
 	PRInt32 i;
 	for (i = 0; i < m_ChangeListeners->Count(); i++)
@@ -257,7 +257,7 @@ NS_IMETHODIMP nsAddrDatabase::NotifyCardAttribChange(PRUint32 abCode, nsIAddrDBL
 
 NS_IMETHODIMP nsAddrDatabase::NotifyCardEntryChange(PRUint32 abCode, nsIAbCard *card, nsIAddrDBListener *instigator)
 {
-  if (m_ChangeListeners == nsnull)
+  if (!m_ChangeListeners)
 	  return NS_OK;
   PRInt32 i;
   PRInt32 count = m_ChangeListeners->Count();
@@ -298,7 +298,7 @@ nsresult nsAddrDatabase::NotifyListEntryChange(PRUint32 abCode, nsIAbDirectory *
 
 NS_IMETHODIMP nsAddrDatabase::NotifyAnnouncerGoingAway(void)
 {
-  if (m_ChangeListeners == nsnull)
+  if (!m_ChangeListeners)
 	return NS_OK;
 	// run loop backwards because listeners remove themselves from the list 
 	// on this notification
@@ -2080,7 +2080,10 @@ NS_IMETHODIMP nsAddrDatabase::GetCardValue(nsIAbCard *card, const PRUnichar *col
   // XXX fix me, avoid extra copying and allocations (did dmb already do this on the trunk?)
   nsAutoString tempString;
   rv = GetStringColumn(cardRow, token, tempString);
-  NS_ENSURE_SUCCESS(rv,rv);
+  if (NS_FAILED(rv)) {
+    *value = nsnull;
+    return NS_OK;
+  }
 
   *value = nsCRT::strdup(tempString.get());
   if (!*value) return NS_ERROR_OUT_OF_MEMORY;
@@ -2113,7 +2116,7 @@ NS_IMETHODIMP nsAddrDatabase::EditCard(nsIAbCard *card, PRBool notify)
 	NS_ENSURE_SUCCESS(err, err);
 
 	if (notify) 
-		NotifyCardEntryChange(AB_NotifyPropertyChanged, card, NULL);
+		NotifyCardEntryChange(AB_NotifyPropertyChanged, card, nsnull);
 
 	pCardRow->CutStrongRef(GetEnv());
 	return NS_OK;
@@ -2310,7 +2313,7 @@ NS_IMETHODIMP nsAddrDatabase::AddLdifListMember(nsIMdbRow* listRow, const char* 
 
 void nsAddrDatabase::GetCharStringYarn(char* str, struct mdbYarn* strYarn)
 {
-	strYarn->mYarn_Grow = NULL;
+	strYarn->mYarn_Grow = nsnull;
 	strYarn->mYarn_Buf = str;
 	strYarn->mYarn_Size = PL_strlen((const char *) strYarn->mYarn_Buf) + 1;
 	strYarn->mYarn_Fill = strYarn->mYarn_Size - 1;
@@ -2330,7 +2333,7 @@ void nsAddrDatabase::GetIntYarn(PRUint32 nValue, struct mdbYarn* intYarn)
 	intYarn->mYarn_Size = sizeof(intYarn->mYarn_Buf);
 	intYarn->mYarn_Fill = intYarn->mYarn_Size;
 	intYarn->mYarn_Form = 0;
-	intYarn->mYarn_Grow = NULL;
+	intYarn->mYarn_Grow = nsnull;
 
 	PR_snprintf((char*)intYarn->mYarn_Buf, intYarn->mYarn_Size, "%lx", nValue);
 	intYarn->mYarn_Fill = PL_strlen((const char *) intYarn->mYarn_Buf);
@@ -3108,7 +3111,7 @@ NS_IMETHODIMP nsAddrDatabase::EnumerateCards(nsIAbDirectory *directory, nsIEnume
 {
     nsAddrDBEnumerator* e = new nsAddrDBEnumerator(this);
 	m_dbDirectory = directory;
-    if (e == nsnull)
+    if (!e)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(e);
     *result = e;
@@ -3170,7 +3173,7 @@ NS_IMETHODIMP nsAddrDatabase::EnumerateListAddresses(nsIAbDirectory *directory, 
 
     nsListAddressEnumerator* e = new nsListAddressEnumerator(this, rowID);
 	m_dbDirectory = directory;
-    if (e == nsnull)
+    if (!e)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(e);
     *result = e;
@@ -3570,9 +3573,8 @@ NS_IMETHODIMP nsAddrDatabase::RemoveExtraCardsInCab(PRUint32 cardTotal, PRUint32
 		err = DeleteRow(m_mdbPabTable, findRow);
 
 		if (card)
-		{				
-			NotifyCardEntryChange(AB_NotifyDeleted, card, NULL);
-		}
+			NotifyCardEntryChange(AB_NotifyDeleted, card, nsnull);
+
 		findRow->CutStrongRef(GetEnv());
 	}
 	return NS_OK;
