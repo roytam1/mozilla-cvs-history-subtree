@@ -1313,7 +1313,10 @@ nsMenuFrame::Notify(nsITimer* aTimer)
     if (!mMenuOpen && mMenuParent) {
       // make sure we didn't open a context menu in the meantime
       // (i.e. the user right-clicked while hovering over a submenu)
-      if (!nsMenuFrame::IsContextMenuActive()) {
+      // or that we're a submenu of the context menu itself
+      PRBool weAreContextMenu = PR_FALSE;
+      mMenuParent->GetIsContextMenu(weAreContextMenu);
+      if (weAreContextMenu || !nsMenuFrame::IsContextMenuActive()) {
         nsAutoString active;
         mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, active);
         if (active.Equals(NS_LITERAL_STRING("true"))) {
@@ -2114,7 +2117,6 @@ nsMenuFrame::GetContextMenu(nsIMenuParent** aContextMenu)
   menuParent->GetIsContextMenu(isContextMenu);
   if (isContextMenu) {
     *aContextMenu = menuParent;
-    NS_ADDREF(*aContextMenu);
   }
 }
 
