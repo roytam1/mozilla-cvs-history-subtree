@@ -241,6 +241,8 @@ Rights Reserved.
 		
 			<box id="status-bar">
 				<!-- replace spring with real stuff later -->
+				<spring style="width:10px"/>
+				<html:div>Status Bar</html:div>
 				<spring flex="100%"/>
 			</box>
 

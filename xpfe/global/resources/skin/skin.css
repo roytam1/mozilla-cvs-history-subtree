@@ -111,19 +111,25 @@ html|iframe {
 /******* ToolBox & ToolBar *******/
 
 toolbox { 
-      background-color: #999999;
-}
+      background-color:#999999; 
+} 
 
-:toolbox-normal {
-	background-color: transparent;
-	border: none;
-}
+:toolbox-normal { 
+ background-color: #003366; 
+ background-image: url("chrome://global/skin/taskbar-tab.gif"); 
+ background-repeat: no-repeat; 
+ color: lightgray; 
+ border: solid #003366 1px; 
 
-:toolbox-rollover {
-	background-color: #99CCCC;
-	background-image: none;
-	border: none;
-}
+} 
+
+:toolbox-rollover { 
+ background-color: #99cccc; 
+ background-image: url("chrome://global/skin/taskbar-tab-hover.gif"); 
+ background-repeat: no-repeat; 
+ color: green; 
+ border: outset #99cccc 1px; 
+} 
 
 toolbar.standard {
 	color: white;

@@ -175,8 +175,8 @@ toolbar#nav-bar #navbar-endcap {
 }
 
 /**
- * removing image from toolbox
+ * toolbox
  */
-:toolbox-normal {
-	background-image: none;
-}
+:toolbox-normal { 
+	background-color: #003366; 
+} 
