@@ -44,7 +44,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
  * this directory for a description of the setting of FD_SETSIZE
  * for the OS'es we care about.
  */
-#ifndef NSLDAPI_HAVE_POLL
+#ifndef NOPOLL
 /* XXX value for BSDI? */
 /* XXX value for macintosh (if applicable)? */
 #endif
@@ -56,10 +56,9 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 
 #ifdef HPUX
 #define FD_SETSIZE    30000
-#undef	NSLDAPI_HAVE_POLL
 #endif
 
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 #include <poll.h>
 #endif
 
@@ -77,19 +76,19 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 /*
  * Structures and union for tracking status of network sockets
  */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL 
 struct nsldapi_os_statusinfo {		/* used with native OS poll() */
 	struct pollfd		*ossi_pollfds;
 	int			ossi_pollfds_size;
 };
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 struct nsldapi_os_statusinfo {		/* used with native OS select() */
 	fd_set			ossi_readfds;
 	fd_set			ossi_writefds;
 	fd_set			ossi_use_readfds;
 	fd_set			ossi_use_writefds;
 };
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 
 struct nsldapi_cb_statusinfo {		/* used with ext. I/O poll() callback */
     LDAP_X_PollFD		*cbsi_pollfds;
@@ -123,14 +122,14 @@ struct nsldapi_iostatus_info {
 };
 
 #ifndef NSLDAPI_AVOID_OS_SOCKETS
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 static int nsldapi_add_to_os_pollfds( int fd,
     struct nsldapi_os_statusinfo *pip, short events );
 static int nsldapi_clear_from_os_pollfds( int fd,
     struct nsldapi_os_statusinfo *pip, short events );
 static int nsldapi_find_in_os_pollfds( int fd,
     struct nsldapi_os_statusinfo *pip, short revents );
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 static int nsldapi_iostatus_init_nolock( LDAP *ld );
@@ -232,7 +231,7 @@ nsldapi_os_socket( LDAP *ld, int secure, int domain, int type, int protocol )
 		invalid_socket = 1;
 	} else {	/* valid socket -- check for overflow */
 		invalid_socket = 0;
-#if !defined(NSLDAPI_HAVE_POLL) && !defined(_WINDOWS)
+#if !defined(NOPOLL) && !defined(_WINDOWS)
 		/* not on Windows and do not have poll() */
 		if ( s >= FD_SETSIZE ) {
 			errmsg = "can't use socket >= FD_SETSIZE";
@@ -273,7 +272,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #else
 	int		flags;
 #endif /* _WINDOWS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 	struct pollfd   pfd;
 #else
 	struct timeval	tval;
@@ -281,7 +280,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #ifdef _WINDOWS
 	fd_set		eset;
 #endif
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_connect_nonblock timeout: %d (msec)\n",
@@ -313,7 +312,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 	if (n == 0)
 		goto done;
 
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 	pfd.fd = sockfd;
 	pfd.events = POLLOUT;
 #else
@@ -324,14 +323,14 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #ifdef _WINDOWS
 	eset = rset;
 #endif /* _WINDOWS */
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 
 	if (msec < 0 && msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) {
 		LDAPDebug( LDAP_DEBUG_TRACE, "Invalid timeout value detected.."
 			"resetting connect timeout to default value "
 			"(LDAP_X_IO_TIMEOUT_NO_TIMEOUT\n", 0, 0, 0);
 		msec = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
-#ifndef NSLDAPI_HAVE_POLL
+#ifndef NOPOLL
 	} else {
 		if (msec != 0) {
 			tval.tv_sec = msec / 1000;
@@ -340,10 +339,10 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 			tval.tv_sec = 0;
 		}
 		tval.tv_usec = 0;
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 	}
 
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 	if ((n = poll(&pfd, 1,
 		(msec != LDAP_X_IO_TIMEOUT_NO_TIMEOUT) ? msec : -1)) == 0) {
 		errno = ETIMEDOUT;
@@ -360,7 +359,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #endif
 	}
 
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 	/* if timeval structure == NULL, select will block indefinitely */
 	/* 			!= NULL, and value == 0, select will */
 	/* 			         not block */
@@ -411,7 +410,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 #endif
 	}
 #endif /* _WINDOWS */
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 
 done:
 #ifdef _WINDOWS
@@ -804,19 +803,19 @@ nsldapi_iostatus_interest_write( LDAP *ld, Sockbuf *sb )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		if ( nsldapi_add_to_os_pollfds( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo, POLLOUT )) {
 			++iosp->ios_write_count;
 		}
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 		if ( !FD_ISSET( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo.ossi_writefds )) {
 			FD_SET( sb->sb_sd,
 			    &iosp->ios_status.ios_osinfo.ossi_writefds );
 			++iosp->ios_write_count;
 		}
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -860,19 +859,19 @@ nsldapi_iostatus_interest_read( LDAP *ld, Sockbuf *sb )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		if ( nsldapi_add_to_os_pollfds( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo, POLLIN )) {
 			++iosp->ios_read_count;
 		}
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 		if ( !FD_ISSET( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo.ossi_readfds )) {
 			FD_SET( sb->sb_sd,
 			    &iosp->ios_status.ios_osinfo.ossi_readfds );
 			++iosp->ios_read_count;
 		}
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -915,7 +914,7 @@ nsldapi_iostatus_interest_clear( LDAP *ld, Sockbuf *sb )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		if ( nsldapi_clear_from_os_pollfds( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo, POLLOUT )) {
 			--iosp->ios_write_count;
@@ -924,7 +923,7 @@ nsldapi_iostatus_interest_clear( LDAP *ld, Sockbuf *sb )
 		    &iosp->ios_status.ios_osinfo, POLLIN )) {
 			--iosp->ios_read_count;
 		}
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 		if ( FD_ISSET( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo.ossi_writefds )) {
 			FD_CLR( sb->sb_sd,
@@ -937,7 +936,7 @@ nsldapi_iostatus_interest_clear( LDAP *ld, Sockbuf *sb )
 			    &iosp->ios_status.ios_osinfo.ossi_readfds );
 			--iosp->ios_read_count;
 		}
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -977,7 +976,7 @@ nsldapi_iostatus_is_write_ready( LDAP *ld, Sockbuf *sb )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return 0;
 #else  /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		/*
 		 * if we are using poll() we do something a little tricky: if
 		 * any bits in the socket's returned events field other than
@@ -989,10 +988,10 @@ nsldapi_iostatus_is_write_ready( LDAP *ld, Sockbuf *sb )
 		rc = nsldapi_find_in_os_pollfds( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo, ~POLLIN );
 
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 		rc = FD_ISSET( sb->sb_sd,
 			&iosp->ios_status.ios_osinfo.ossi_use_writefds );
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -1027,7 +1026,7 @@ nsldapi_iostatus_is_read_ready( LDAP *ld, Sockbuf *sb )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return 0;
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		/*
 		 * if we are using poll() we do something a little tricky: if
 		 * any bits in the socket's returned events field other than
@@ -1039,10 +1038,10 @@ nsldapi_iostatus_is_read_ready( LDAP *ld, Sockbuf *sb )
 		rc = nsldapi_find_in_os_pollfds( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo, ~POLLOUT );
 
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 		rc = FD_ISSET( sb->sb_sd,
 		    &iosp->ios_status.ios_osinfo.ossi_use_readfds );
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -1086,10 +1085,10 @@ nsldapi_iostatus_init_nolock( LDAP *ld )
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-#ifndef NSLDAPI_HAVE_POLL
+#ifndef NOPOLL
 		FD_ZERO( &iosp->ios_status.ios_osinfo.ossi_readfds );
 		FD_ZERO( &iosp->ios_status.ios_osinfo.ossi_writefds );
-#endif /* !NSLDAPI_HAVE_POLL */
+#endif /* !NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else {
@@ -1122,13 +1121,13 @@ nsldapi_iostatus_free( LDAP *ld )
 		NSLDAPIIOStatus	*iosp = ld->ld_iostatus;
 
 		if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 			if ( iosp->ios_status.ios_osinfo.ossi_pollfds
 			    != NULL ) {
 				NSLDAPI_FREE(
 				    iosp->ios_status.ios_osinfo.ossi_pollfds );
 			}
-#endif /* NSLDAPI_HAVE_POLL */
+#endif /* NOPOLL */
 
 		} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
 			if ( iosp->ios_status.ios_cbinfo.cbsi_pollfds
@@ -1148,7 +1147,7 @@ nsldapi_iostatus_free( LDAP *ld )
 
 
 
-#if !defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
+#if !defined(NOPOLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
 static int
 nsldapi_get_select_table_size( void )
 {
@@ -1175,7 +1174,7 @@ nsldapi_get_select_table_size( void )
 
 	return( tblsize );
 }
-#endif /* !defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS) */
+#endif /* !defined(NOPOLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS) */
 
 
 static int
@@ -1206,13 +1205,13 @@ nsldapi_iostatus_poll( LDAP *ld, struct timeval *timeout )
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifndef NSLDAPI_AVOID_OS_SOCKETS
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 
 		rc = NSLDAPI_POLL( iosp->ios_status.ios_osinfo.ossi_pollfds,
 		    iosp->ios_status.ios_osinfo.ossi_pollfds_size,
 		    nsldapi_tv2ms( timeout ));
 
-#else /* NSLDAPI_HAVE_POLL */
+#else /* NOPOLL */
 
 		/* two (potentially large) struct copies */
 		iosp->ios_status.ios_osinfo.ossi_use_readfds
@@ -1231,7 +1230,7 @@ nsldapi_iostatus_poll( LDAP *ld, struct timeval *timeout )
 		    &iosp->ios_status.ios_osinfo.ossi_use_writefds,
 		    NULL, timeout );
 #endif /* else HPUX9 */
-#endif /* else NSLDAPI_HAVE_POLL */
+#endif /* else NOPOLL */
 #endif /* NSLDAPI_AVOID_OS_SOCKETS */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_CALLBACK ) {
@@ -1255,7 +1254,7 @@ nsldapi_iostatus_poll( LDAP *ld, struct timeval *timeout )
 	return( rc );
 }
 
-#if defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
+#if defined(NOPOLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS)
 /*
  * returns 1 if "fd" was added to pollfds.
  * returns 1 if some of the bits in "events" were added to pollfds.
@@ -1371,7 +1370,7 @@ nsldapi_find_in_os_pollfds( int fd, struct nsldapi_os_statusinfo *pip,
 
 	return( 0 );	/* "fd" was not found */
 }
-#endif /* !defined(NSLDAPI_HAVE_POLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS) */
+#endif /* !defined(NOPOLL) && !defined(NSLDAPI_AVOID_OS_SOCKETS) */
 
 /*
  * returns 1 if "sb" was added to pollfds.
@@ -1653,7 +1652,7 @@ nsldapi_compat_socket( LDAP *ld, int secure, int domain, int type,
 	if ( s >= 0 ) {
 		char				*errmsg = NULL;
 
-#ifdef NSLDAPI_HAVE_POLL
+#ifdef NOPOLL
 		if ( ld->ld_io_fns_ptr->liof_select != NULL
 			    && s >= FD_SETSIZE ) {
 			errmsg = "can't use socket >= FD_SETSIZE";
