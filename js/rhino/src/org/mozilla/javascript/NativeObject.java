@@ -141,6 +141,53 @@ public class NativeObject extends ScriptableObject {
     {
         return thisObj;
     }
+
+    public static Object jsFunction_hasOwnProperty(Context cx, 
+                                                   Scriptable thisObj,
+                                                   Object[] args,
+                                                   Function funObj)
+    {
+        if (args.length != 0)
+            if (thisObj.has(ScriptRuntime.toString(args[0]), thisObj))
+                return Boolean.TRUE;
+        return Boolean.FALSE;
+    }
+
+    public static Object jsFunction_propertyIsEnumerable(Context cx,
+                                                         Scriptable thisObj,
+                                                         Object[] args,
+                                                         Function funObj)
+    {
+        try {
+            if (args.length != 0) {
+                String name = ScriptRuntime.toString(args[0]);
+                if (thisObj.has(name, thisObj)) {
+                    int a = ((ScriptableObject)thisObj).getAttributes(name, thisObj);
+                    if ((a & ScriptableObject.DONTENUM) == 0)
+                        return Boolean.TRUE;
+                }
+            }
+        }
+        catch (PropertyException x) {
+        }
+        catch (ClassCastException x) {
+        }
+        return Boolean.FALSE;
+    }
+
+    public static Object jsFunction_isPrototypeOf(Context cx, Scriptable thisObj,
+                                                   Object[] args, Function funObj)
+    {
+        if (args.length != 0 && args[0] instanceof Scriptable) {
+            Scriptable v = (Scriptable) args[0];
+            do {
+                v = v.getPrototype();
+                if (v == thisObj)
+                    return Boolean.TRUE;
+            } while (v != null);
+        }
+        return Boolean.FALSE;
+    }
 }
 
 
