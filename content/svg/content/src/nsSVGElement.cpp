@@ -230,7 +230,7 @@ nsSVGElement::DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const
 }
 #endif // DEBUG
 
-NS_IMETHODIMP
+nsresult
 nsSVGElement::SetBindingParent(nsIContent* aParent)
 {
   nsresult rv = nsGenericElement::SetBindingParent(aParent);

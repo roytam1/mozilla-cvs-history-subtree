@@ -117,23 +117,7 @@ public:
 
   virtual const nsAttrName* InternalGetExistingAttrNameFromQName(const nsAString& aStr) const;
 
-  // NS_IMETHOD RangeAdd(nsIDOMRange& aRange);
-//   NS_IMETHOD RangeRemove(nsIDOMRange& aRange);
-//   NS_IMETHOD GetRangeList(nsVoidArray** aResult) const;
-//   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext,
-//                             nsEvent* aEvent,
-//                             nsIDOMEvent** aDOMEvent,
-//                             PRUint32 aFlags,
-//                             nsEventStatus* aEventStatus);
-//   NS_IMETHOD GetContentID(PRUint32* aID);
-//   NS_IMETHOD SetContentID(PRUint32 aID);
-//   NS_IMETHOD SetFocus(nsIPresContext* aContext);
-//   NS_IMETHOD RemoveFocus(nsIPresContext* aContext);
-//   NS_IMETHOD GetBindingParent(nsIContent** aContent);
-   NS_IMETHOD SetBindingParent(nsIContent* aParent);
-
-  // nsIXMLContent
-//   NS_IMETHOD MaybeTriggerAutoLink(nsIDocShell *aShell);
+  virtual nsresult SetBindingParent(nsIContent* aParent);
 
   // nsIStyledContent
   NS_IMETHOD GetID(nsIAtom** aResult) const;
