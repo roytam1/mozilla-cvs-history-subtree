@@ -37,14 +37,19 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsCOMPtr.h"
 #include "nsContentDLF.h"
+#include "nsGenericHTMLElement.h"
+#include "nsHTMLAtoms.h"
 #include "nsIComponentManager.h"
 #include "nsICategoryManager.h"
 #include "nsIDocumentLoader.h"
 #include "nsIDocumentLoaderFactory.h"
 #include "nsIDocument.h"
 #include "nsIDocumentViewer.h"
+#include "nsIHTMLContent.h"
 #include "nsIURL.h"
 #include "nsICSSStyleSheet.h"
+#include "nsNodeInfo.h"
+#include "nsNodeInfoManager.h"
 #include "nsString.h"
 #include "nsContentCID.h"
 #include "prprf.h"
@@ -73,7 +78,7 @@ static NS_DEFINE_IID(kXULDocumentCID, NS_XULDOCUMENT_CID);
 
 extern nsresult NS_NewDocumentViewer(nsIDocumentViewer** aResult);
 
-static char* gHTMLTypes[] = {
+static const char* const gHTMLTypes[] = {
   "text/html",
   "text/plain",
   "text/css",
@@ -87,7 +92,7 @@ static char* gHTMLTypes[] = {
   0
 };
   
-static char* gXMLTypes[] = {
+static const char* const gXMLTypes[] = {
   "text/xml",
   "application/xml",
   "application/xhtml+xml",
@@ -105,7 +110,7 @@ static char* gSVGTypes[] = {
 };
 #endif
 
-static char* gRDFTypes[] = {
+static const char* const gRDFTypes[] = {
   "text/rdf",
   "application/vnd.mozilla.xul+xml",
   "mozilla.application/cached-xul",
@@ -114,7 +119,7 @@ static char* gRDFTypes[] = {
   0
 };
 
-static char* gImageTypes[] = {
+static const char* const gImageTypes[] = {
   "image/gif",
   "image/jpeg",
   "image/jpg",
@@ -311,6 +316,60 @@ nsContentDLF::CreateInstanceForDocument(nsISupports* aContainer,
   return rv;
 }
 
+NS_IMETHODIMP
+nsContentDLF::CreateBlankDocument(nsIDocument **aDocument)
+{
+  *aDocument = nsnull;
+
+  nsCOMPtr<nsIDocument> blankDoc(do_CreateInstance(kHTMLDocumentCID));
+  if (!blankDoc)
+    return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsINodeInfoManager> nim;
+  blankDoc->GetNodeInfoManager(*getter_AddRefs(nim));
+
+  nsCOMPtr<nsINodeInfo> htmlNodeInfo;
+
+  // generate an html html element
+  nsCOMPtr<nsIHTMLContent> htmlElement;
+  nim->GetNodeInfo(nsHTMLAtoms::html, 0, kNameSpaceID_None,
+                   *getter_AddRefs(htmlNodeInfo));
+  NS_NewHTMLHtmlElement(getter_AddRefs(htmlElement), htmlNodeInfo);
+
+  // generate an html head element
+  nsCOMPtr<nsIHTMLContent> headElement;
+  nim->GetNodeInfo(nsHTMLAtoms::html, 0, kNameSpaceID_None,
+                   *getter_AddRefs(htmlNodeInfo));
+  NS_NewHTMLHeadElement(getter_AddRefs(headElement), htmlNodeInfo);
+
+  // generate an html body element
+  nsCOMPtr<nsIHTMLContent> bodyElement;
+  nim->GetNodeInfo(nsHTMLAtoms::body, 0, kNameSpaceID_None,
+                   *getter_AddRefs(htmlNodeInfo));
+  NS_NewHTMLBodyElement(getter_AddRefs(bodyElement), htmlNodeInfo);
+
+  // hook it all up
+  if (htmlElement && headElement && bodyElement) {
+    htmlElement->SetDocument(blankDoc, PR_FALSE, PR_TRUE);
+    blankDoc->SetRootContent(htmlElement);
+
+    headElement->SetDocument(blankDoc, PR_FALSE, PR_TRUE);
+    htmlElement->AppendChildTo(headElement, PR_FALSE, PR_FALSE);
+
+    PRInt32 id;
+    blankDoc->GetAndIncrementContentID(&id);
+    bodyElement->SetContentID(id);
+    bodyElement->SetDocument(blankDoc, PR_FALSE, PR_TRUE);
+    htmlElement->AppendChildTo(bodyElement, PR_FALSE, PR_FALSE);
+
+    *aDocument = blankDoc;
+    NS_ADDREF(*aDocument);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
+
 nsresult
 nsContentDLF::CreateDocument(const char* aCommand,
                              nsIChannel* aChannel,
@@ -502,12 +561,12 @@ RegisterTypes(nsIComponentManager* aCompMgr,
               nsIFile* aPath,
               const char *aLocation,
               const char *aType,
-              char** aTypes)
+              const char* const* aTypes)
 {
   nsresult rv = NS_OK;
   while (*aTypes) {
     char contractid[500];
-    char* contentType = *aTypes++;
+    const char* contentType = *aTypes++;
     PR_snprintf(contractid, sizeof(contractid),
                 NS_DOCUMENT_LOADER_FACTORY_CONTRACTID_PREFIX "%s;1?type=%s",
                 aCommand, contentType);

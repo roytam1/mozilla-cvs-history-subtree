@@ -2607,16 +2607,6 @@ MOZ_ARG_DISABLE_BOOL(mailnews,
     MOZ_MAIL_NEWS= )
 AC_SUBST(MOZ_MAIL_NEWS)
 
-dnl Libeditor can be build as plaintext-only,
-dnl or as a full html and text editing component.
-dnl We build both by default.
-MOZ_PLAINTEXT_EDITOR_ONLY=
-MOZ_ARG_ENABLE_BOOL(plaintext-editor-only,
-[ --enable-plaintext-editor-only     Allow only plaintext editing],
-  MOZ_PLAINTEXT_EDITOR_ONLY=1 )
-dnl Note the #define is MOZILLA, not MOZ, for compat with the Mac build.
-AC_SUBST(MOZ_PLAINTEXT_EDITOR_ONLY)
-
 dnl =========================================================
 dnl = LDAP
 dnl =========================================================
@@ -2731,6 +2721,19 @@ MOZ_ARG_DISABLE_BOOL(accessibility,
 if test "$ACCESSIBILITY"; then
     AC_DEFINE(ACCESSIBILITY)
 fi
+
+dnl ========================================================
+dnl Libeditor can be build as plaintext-only,
+dnl or as a full html and text editing component.
+dnl We build both by default.
+dnl ========================================================
+MOZ_PLAINTEXT_EDITOR_ONLY=
+MOZ_ARG_ENABLE_BOOL(plaintext-editor-only,
+[  --enable-plaintext-editor-only
+                          Allow only plaintext editing],
+  MOZ_PLAINTEXT_EDITOR_ONLY=1 )
+dnl Note the #define is MOZILLA, not MOZ, for compat with the Mac build.
+AC_SUBST(MOZ_PLAINTEXT_EDITOR_ONLY)
 
 dnl ========================================================
 dnl = Enable compilation of specific extension modules
@@ -3321,7 +3324,7 @@ if test -z "$with_user_appdir" && test "$enable_homedir"; then
     with_user_appdir=$enable_homedir
 fi
 MOZ_ARG_WITH_STRING(user-appdir,
-[  --with-user-appdir=DIR     Set user-specific appdir (default=.mozilla)],
+[  --with-user-appdir=DIR  Set user-specific appdir (default=.mozilla)],
 [ val=`echo $withval`
 if echo "$val" | grep "\/" >/dev/null; then
     AC_MSG_ERROR("Homedir must be single relative path.")
@@ -4070,7 +4073,12 @@ else
 fi
 
 AC_DEFINE(JS_THREADSAFE)
+AC_DEFINE(NS_PRINT_PREVIEW)
 
+if test "$MOZ_DEBUG"; then
+    AC_DEFINE(MOZ_REFLOW_PERF)
+    AC_DEFINE(MOZ_REFLOW_PERF_DSP)
+fi
 
 # Used for LD_LIBRARY_PATH of run_viewer target
 LIBS_PATH=
