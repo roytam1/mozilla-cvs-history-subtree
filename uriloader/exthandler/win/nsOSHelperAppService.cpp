@@ -389,8 +389,12 @@ nsresult nsOSHelperAppService::GetMIMEInfoForMimeTypeFromOS(const char *aMIMETyp
     GetExtensionFrom4xRegistryInfo(aMIMEType, fileExtension);
 
   // now look up based on the file extension.
-  if (!fileExtension.IsEmpty())
-    return GetFromExtension(fileExtension.get(), _retval);
+  if (!fileExtension.IsEmpty()) {
+    nsresult rv = GetFromExtension(fileExtension.get(), _retval);
+    if (NS_SUCCEEDED(rv) && *_retval)
+      (*_retval)->SetMIMEType(aMIMEType);
+    return rv;
+  }
 
   return NS_ERROR_FAILURE;
 }
