@@ -670,7 +670,12 @@ nsScriptSecurityManager::CheckSameOriginInternal(nsIPrincipal* aSubject,
         return NS_ERROR_FAILURE;
 
     if (isSameOrigin)
-    {   // If either the subject or the object has changed its principal by
+    {
+        // isSameOrigin is all we need if we're not doing strict checking
+        if (!mStrictDomainCheckEnabled)
+            return NS_OK;
+
+        // If either the subject or the object has changed its principal by
         // explicitly setting document.domain then the other must also have
         // done so in order to be considered the same origin. This prevents
         // DNS spoofing based on document.domain (154930)
@@ -2264,7 +2269,8 @@ nsScriptSecurityManager::nsScriptSecurityManager(void)
       mIsMailJavaScriptEnabled(PR_FALSE),
       mIsWritingPrefs(PR_FALSE),
       mNameSetRegistered(PR_FALSE),
-      mPolicyPrefsChanged(PR_TRUE)
+      mPolicyPrefsChanged(PR_TRUE),
+      mStrictDomainCheckEnabled(PR_TRUE)
 
 {
     NS_ASSERTION(sizeof(long) == sizeof(void*), "long and void* have different lengths on this platform. This may cause a security failure.");
@@ -2766,6 +2772,7 @@ nsScriptSecurityManager::InitPrincipals(PRUint32 aPrefCount, const char** aPrefN
 
 const char* nsScriptSecurityManager::sJSEnabledPrefName = "javascript.enabled";
 const char* nsScriptSecurityManager::sJSMailEnabledPrefName = "javascript.allow.mailnews";
+const char* nsScriptSecurityManager::sJSStrictDomainCheckPrefName = "javascript.strict_domain_checking";
 
 inline void
 nsScriptSecurityManager::JSEnabledPrefChanged(nsISecurityPref* aSecurityPref)
@@ -2777,8 +2784,13 @@ nsScriptSecurityManager::JSEnabledPrefChanged(nsISecurityPref* aSecurityPref)
 
     if (NS_FAILED(mSecurityPref->SecurityGetBoolPref(sJSMailEnabledPrefName,
                                                      &mIsMailJavaScriptEnabled)))
+        // Default to disabled.
+        mIsMailJavaScriptEnabled = PR_FALSE;
+
+    if (NS_FAILED(mSecurityPref->SecurityGetBoolPref(sJSStrictDomainCheckPrefName,
+                                                     &mStrictDomainCheckEnabled)))
         // Default to enabled.
-        mIsMailJavaScriptEnabled = PR_TRUE;
+        mStrictDomainCheckEnabled = PR_TRUE;
 }
 
 nsresult
@@ -2799,6 +2811,7 @@ nsScriptSecurityManager::InitPrefs()
     // set observer callbacks in case the value of the prefs change
     prefBranchInternal->AddObserver(sJSEnabledPrefName, this, PR_FALSE);
     prefBranchInternal->AddObserver(sJSMailEnabledPrefName, this, PR_FALSE);
+    prefBranchInternal->AddObserver(sJSStrictDomainCheckPrefName, this, PR_FALSE);
     PRUint32 prefCount;
     char** prefNames;
 
