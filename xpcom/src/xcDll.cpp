@@ -28,11 +28,14 @@
 #include "plstr.h"	// strdup and strfree
 
 Dll::Dll(const char *libFullPath) : m_instance(NULL), m_status(DLL_OK),
-	m_fullpath(NULL), m_lastModTime(0), m_size(0)
+	m_fullpath(NULL)
 {
+	// XXX No initializer for PRTime's
+	// m_lastModTime = 0;
+	LL_I2L(m_size, 0);
 	if (libFullPath == NULL)
 	{
-		m_status == DLL_INVALID_PARAM;
+		m_status = DLL_INVALID_PARAM;
 		return;
 	}
 	m_fullpath = PL_strdup(libFullPath);
