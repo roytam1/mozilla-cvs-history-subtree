@@ -180,7 +180,7 @@ nsHTMLSpanElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFun
   nsCOMPtr<nsIAtom> tag;
   GetTag(*getter_AddRefs(tag) ); 
 
-  if (nsHTMLAtoms::bdo == tag)
+  if (nsHTMLAtoms::bdo == tag.get())
     aMapFunc = &MapBdoAttributesInto;
   else
 #endif // IBMBIDI
