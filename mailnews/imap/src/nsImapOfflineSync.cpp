@@ -307,17 +307,21 @@ nsImapOfflineSync::ProcessAppendMsgOperation(nsIMsgOfflineImapOperation *current
                     if (!inputBuffer)
                       inputBufferSize /= 2;
                   }
-                  PRUint32 bytesLeft, bytesRead, bytesWritten;
+                  PRInt32 bytesLeft;
+                  PRUint32 bytesRead, bytesWritten;
                   bytesLeft = messageSize;
                   rv = NS_OK;
                   while (bytesLeft > 0 && NS_SUCCEEDED(rv))
                   {
-                    rv = offlineStoreInputStream->Read(inputBuffer, inputBufferSize, &bytesRead);
+                    PRInt32 bytesToRead = PR_MIN(inputBufferSize, bytesLeft);
+                    rv = offlineStoreInputStream->Read(inputBuffer, bytesToRead, &bytesRead);
                     if (NS_SUCCEEDED(rv) && bytesRead > 0)
                     {
                       rv = outputStream->Write(inputBuffer, bytesRead, &bytesWritten);
                       NS_ASSERTION(bytesWritten == bytesRead, "wrote out correct number of bytes");
                     }
+                    else
+                      break;
                     bytesLeft -= bytesRead;
                   }
                   outputStream->Flush();
