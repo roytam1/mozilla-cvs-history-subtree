@@ -77,7 +77,7 @@ if (! $entry || $conn->nextEntry())
 
 if (! $opt_I)
 {
-  print "Rename ", $entry->getDN(), "with $rdn [N]? ";
+  print "Rename ", $entry->getDN(), " with $rdn [N]? ";
   $key = Mozilla::LDAP::Utils::answer("N") unless $opt_I;
 }
 
