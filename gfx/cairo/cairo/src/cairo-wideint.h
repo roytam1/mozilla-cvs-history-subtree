@@ -38,7 +38,15 @@
 #ifndef CAIRO_WIDEINT_H
 #define CAIRO_WIDEINT_H
 
-#include <stdint.h>
+#if defined (__SVR4) && defined (__sun)
+# include <sys/int_types.h>
+#else
+# if defined (__OpenBSD__) || defined (_AIX)
+#  include <inttypes.h>
+# else 
+#  include <stdint.h>
+# endif
+#endif
 
 /*
  * 64-bit datatypes.  Two separate implementations, one using
