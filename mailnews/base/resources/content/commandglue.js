@@ -72,6 +72,7 @@ function GetServer(uri)
 
 function LoadMessageByUri(uri)
 {  
+    dump("XXX LoadMessageByUri " + uri + " vs " + gCurrentDisplayedMessage + "\n");
 	if(uri != gCurrentDisplayedMessage)
 	{
         dump("fix this, get the nsIMsgDBHdr and the nsIMsgFolder from the uri...\n");

@@ -355,9 +355,6 @@ function MsgGetNextNMessages()
 
 function MsgDeleteMessage(reallyDelete, fromToolbar)
 {
-    dump("fix this or remove this\n");
-    if(reallyDelete)
-        dump("reallyDelete\n");
     var srcFolder = GetLoadedMsgFolder();
     // if from the toolbar, return right away if this is a news message
     // only allow cancel from the menu:  "Edit | Cancel / Delete Message"
@@ -365,20 +362,19 @@ function MsgDeleteMessage(reallyDelete, fromToolbar)
     {
         var folderResource = srcFolder.QueryInterface(Components.interfaces.nsIRDFResource);
         var uri = folderResource.Value;
-        if (isNewsURI(uri))
-        {
-            //dump("delete ignored!\n");
+        if (isNewsURI(uri)) {
+            // if news, don't delete
             return;
         }
     }
-    //dump("tree is valid\n");
-    //get the selected elements
-
-    var compositeDataSource = GetCompositeDataSource("DeleteMessages");
-    var messages = GetSelectedMessages();
 
     SetNextMessageAfterDelete();
-    DeleteMessages(compositeDataSource, srcFolder, messages, reallyDelete);
+    if (reallyDelete) {
+        gDBView.doCommand(nsMsgViewCommandType.deleteNoTrash);
+    }
+    else {
+        gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
+    }
 }
 
 function MsgCopyMessage(destFolder)

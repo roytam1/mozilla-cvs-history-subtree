@@ -895,7 +895,12 @@ function GetLoadedMsgFolder()
 
 function GetLoadedMessage()
 {
-    return gCurrentDisplayedMessage;
+    try {
+        return gDBView.URIForFirstSelectedMessage;
+    }
+    catch (ex) {
+        return null;
+    }
 }
 
 //Clear everything related to the current message. called after load start page.

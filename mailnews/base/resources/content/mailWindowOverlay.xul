@@ -36,7 +36,7 @@ Rights Reserved.
 <!-- Context menu -->
 <script language="javascript">
   // Global variable that holds the nsContextMenu instance.
-  var contextMenu = null;
+  var gMessagePaneContextMenu = null;
 </script>
 
 <script src="chrome://messenger/content/mailCommands.js"/>
@@ -471,16 +471,16 @@ Rights Reserved.
 	</popup>
 
 	<popup id="messagePaneContext"   
-	 oncreate="contextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu(contextMenu);" 
-	 ondestroy="contextMenu.onDestroy(); contextMenu = null;">
+	 oncreate="gMessagePaneContextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu(gMessagePaneContextMenu);"
+     ondestroy="contextMenu.onDestroy(); contextMenu = null;">
         <menuitem id="context-openlink"
                   value="&openLinkCmd.label;"
                   accesskey="&openLinkCmd.accesskey;"
-                  oncommand="contextMenu.openLink();"/>
+                  oncommand="gMessagePaneContextMenu.openLink();"/>
         <menuitem id="context-editlink"
                   value="&editLinkCmd.label;"
                   accesskey="&editLinkCmd.accesskey;"
-                  oncommand="contextMenu.editLink();"/>
+                  oncommand="gMessagePaneContextMenu.editLink();"/>
         <menuseparator id="messagePaneContext-sep-link"/>
         <menuitem id="context-selectall"
                   value="&selectAllCmd.label;"
@@ -661,29 +661,29 @@ Rights Reserved.
         <menuitem id="context-viewimage"
                   value="&viewImageCmd.label;"
                   accesskey="&viewImageCmd.accesskey;"
-                  oncommand="contextMenu.viewImage();"/>
+                  oncommand="gMessagePaneContextMenu.viewImage();"/>
         <menuseparator id="messagePaneContext-sep-image"/>
         <menuitem id="context-copylink"
                   value="&copyLinkCmd.label;"
                   accesskey="&copyLinkCmd.accesskey;"
-                  oncommand="contextMenu.copyLink();"/>
+                  oncommand="gMessagePaneContextMenu.copyLink();"/>
         <menuitem id="context-copyimage"
                   value="&copyImageCmd.label;"
                   accesskey="&copyImageCmd.accesskey;"
-                  oncommand="contextMenu.copyImage();"/>
+                  oncommand="gMessagePaneContextMenu.copyImage();"/>
         <menuseparator id="messagePaneContext-sep-copy"/>
         <menuitem id="context-savelink"
                   value="&saveLinkCmd.label;"
                   accesskey="&saveLinkCmd.accesskey;"
-                  oncommand="contextMenu.saveLink();"/>
+                  oncommand="gMessagePaneContextMenu.saveLink();"/>
         <menuitem id="context-saveimage"
                   accesskey="&saveImageCmd.accesskey;"
-                  oncommand="contextMenu.saveImage();"/>
+                  oncommand="gMessagePaneContextMenu.saveImage();"/>
         <menuitem id="context-bookmarklink"
                   value="&bookmarkLinkCmd.label;"
                   accesskey="&bookmarkLinkCmd.accesskey;"
-                  oncommand="addBookmark(contextMenu.linkURL(),
-                                         contextMenu.linkText());"/>
+                  oncommand="addBookmark(gMessagePaneContextMenu.linkURL(),
+                                         gMessagePaneContextMenu.linkText());"/>
 
 </popup>
 

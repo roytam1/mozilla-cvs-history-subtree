@@ -487,8 +487,7 @@ var MessageWindowController =
 				MsgEditMessageAsNew();
 				break;
 			case "cmd_delete":
-        gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
-				// MsgDeleteMessage(false, false);
+				MsgDeleteMessage(false, false);
 				break;
 			case "cmd_shiftDelete":
 				MsgDeleteMessage(true, false);
