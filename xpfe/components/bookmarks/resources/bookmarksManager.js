@@ -28,6 +28,8 @@ function Startup()
 {
   const windowNode = document.getElementById("bookmark-window");
   const bookmarksView = document.getElementById("bookmarks-view");
+  bookmarksView.treeBoxObject.selection.select(0);
+
   var titleString;
 
   // If we've been opened with a parameter, root the tree on it.
@@ -49,14 +51,18 @@ function Startup()
   }
   else {
     titleString = BookmarksUtils.getLocaleString("bookmarks_title", title);
+    // always open the bookmark top root folder
+    if (!bookmarksView.treeBoxObject.view.isContainerOpen(0))
+      bookmarksView.treeBoxObject.view.toggleOpenState(0);
   }
 
   windowNode.setAttribute("title", titleString);
 
   gBMtxmgr = BookmarksUtils.getTransactionManager();
  
-  bookmarksView.treeBoxObject.selection.select(0);
+  document.getElementById("CommandUpdate_Bookmarks").setAttribute("commandupdater","true");
   bookmarksView.tree.focus();
+
 }
 
 function Shutdown ()

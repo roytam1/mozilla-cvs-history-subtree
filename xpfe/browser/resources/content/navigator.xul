@@ -264,7 +264,7 @@ Contributor(s):
                      persist="hidden" label="&bookmarksButton.label;"
                      datasources="rdf:bookmarks rdf:files rdf:localsearch rdf:internetsearch"
                      ref="NC:BookmarksRoot" container="true" flags="dont-test-empty"
-                     oncommand="OpenBookmarkURL(event.target, this.database)" 
+                     oncommand="BookmarksMenu.loadBookmark(event.target, this.database)" 
                      template="bookmarksMenuTemplate"
                      ondraggesture="if (event.target.id=='bookmarks-button') event.preventBubble()">
         <menupopup onpopupshowing="updateGroupmarkMenuitem('PT_bookmarks_groupmark');">
@@ -282,7 +282,7 @@ Contributor(s):
             context="bookmarks-context-menu" template="bookmarksMenuTemplate"
             datasources="rdf:bookmarks rdf:files rdf:localsearch rdf:internetsearch"
             ref="NC:PersonalToolbarFolder" flags="dont-test-empty"
-            oncommand="OpenBookmarkURL(event.target, this.database)"
+            oncommand="BookmarksMenu.loadBookmark(event.target, this.database)"
             rdf:type="http://home.netscape.com/NC-rdf#Folder">
       </hbox>
     </toolbar>

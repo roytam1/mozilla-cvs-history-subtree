@@ -323,26 +323,6 @@
         ]]></body>
       </method>
 
-      <method name="getIndexOfResourceInContainer">
-        <parameter name="aItem"/>
-        <parameter name="aParent"/>
-        <body><![CDATA[
-          if (!aParent)
-            return -1;
-          var index = this.treeBuilder.getIndexOfResource(aParent)
-          if (index == -1 && !aParent.EqualsNode(RDF.GetResource("NC:BookmarksRoot")))
-            return -1;
-          if (index != -1 && !this.treeBoxObject.view.isContainerOpen(index))
-            return -1;
-          while (++index < this.treeBoxObject.view.rowCount) {
-            if (this.treeBuilder.getResourceAtIndex(index) == aItem &&
-                this.getParentResource(index) == aParent)
-              return index;
-          }
-          return -1;
-        ]]></body>
-      </method>
-
       <field name="_selection">null</field>
       <field name="_target">   null</field>
 
@@ -501,9 +481,7 @@
         <body><![CDATA[
           this.treeBoxObject.selection.clearSelection();
           for (var i=0; i<this._itemToBeToggled.length; ++i) {
-            // getIndexOfResource does not handle duplicate resource!!!
-            // it only picks up the first occurence in the tree -->
-            index = this.getIndexOfResourceInContainer(this._itemToBeToggled[i], this._parentToBeToggled[i]);
+            index = this.treeBuilder.getIndexOfResource(this._itemToBeToggled[i]);
             if (index != -1 && !this.treeBoxObject.selection.isSelected(index))
               this.treeBoxObject.selection.toggleSelect(index);
           }
@@ -520,9 +498,9 @@
         ]]></body>
       </method>
 
-      <method name="openItem">
-      <parameter name="aEvent"/>
-      <parameter name="aClickCount"/>
+      <method name="openItemClick">
+        <parameter name="aEvent"/>
+        <parameter name="aClickCount"/>
         <body><![CDATA[
           if (aEvent.button == 2 || aEvent.originalTarget.localName != "treechildren")
             return;
@@ -561,11 +539,14 @@
         ]]></body>
       </method>
 
-      <method name="loadBookmarkBrowser">
-      <parameter name="aEvent"/>
+      <method name="openItemKey">
         <body><![CDATA[
-          var browserTarget = BookmarksUtils.getBrowserTargetFromEvent(aEvent);
-          BookmarksCommand.openBookmark(this._selection, browserTarget, this.db)
+          if (this._selection.length != 1) {
+            SOUND.beep();
+            return;
+          }
+          if (!this._selection.isContainer[0])
+            BookmarksCommand.openBookmark(this._selection, "current", this.db)
         ]]></body>
       </method>
 
@@ -677,7 +658,11 @@
         },
         canDropBeforeAfter: function(index, before)
         {
-          return true;
+          if (index != 0)
+            return true;
+          if (this.mOuter.getRowResource(index).Value != "NC:BookmarksRoot")
+            return true;
+          return before? false:this.mOuter.treeBoxObject.view.isContainerOpen(0)
         },
         onDrop: function(row, orientation)
         {  
@@ -841,9 +826,9 @@
       <vbox flex="1">
         <tree anonid="bookmarks-tree" flex="1" class="plain" enableColumnDrag="true"
                   datasources="rdf:bookmarks rdf:internetsearch rdf:localsearch" ref="NC:BookmarksTopRoot" flags="dont-build-content"
-                  onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.loadBookmarkBrowser(event);"
-                  onclick="this.parentNode.parentNode.openItem(event, 1);"
-                  ondblclick="this.parentNode.parentNode.openItem(event, 2);"
+                  onkeypress="if (event.keyCode == 13) this.parentNode.parentNode.openItemKey();"
+                  onclick="this.parentNode.parentNode.openItemClick(event, 1);"
+                  ondblclick="this.parentNode.parentNode.openItemClick(event, 2);"
                   ondraggesture="if (event.originalTarget.localName == 'treechildren') nsDragAndDrop.startDrag(event, this.parentNode.parentNode.DNDObserver);"
                   onselect="this.treeBoxObject.view.selectionChanged();">
           <template xmlns:nc="http://home.netscape.com/NC-rdf#">

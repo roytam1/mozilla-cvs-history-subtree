@@ -102,7 +102,6 @@ var BookmarksMenu = {
     switch (aNode.id) {
     case "bookmarks-ptf":
       parent = "NC:PersonalToolbarFolder";
-      item = BookmarksToolbar.getLastVisibleBookmark();
       break;
     case "BookmarksMenu":
       parent = "NC:BookmarksRoot";
@@ -190,8 +189,7 @@ var BookmarksMenu = {
         target.parentNode.localName != "menupopup")
       return BookmarksUtils.DROP_ON;
     if (target.id == "bookmarks-ptf") {
-      return target.hasChildNodes()?
-             BookmarksUtils.DROP_AFTER:BookmarksUtils.DROP_ON;
+      return BookmarksUtils.DROP_ON;
     }
 
     var overButtonBoxObject = target.boxObject.QueryInterface(Components.interfaces.nsIBoxObject);
@@ -253,11 +251,20 @@ var BookmarksMenu = {
     var selection = this._selection;
     var target    = this._target;
     BookmarksController.onCommandUpdate(selection, target);
-    if (document.popupNode.id == "NC:PersonalToolbarFolder") {
-      // disabling 'copy' on the empty area of the personal toolbar
-      var commandNode = document.getElementById("cmd_bm_copy");
+    if (document.popupNode.id == "bookmarks-ptf") {
+      // disabling 'cut' and 'copy' on the empty area of the personal toolbar
+      var commandNode = document.getElementById("cmd_bm_cut");
+      commandNode.setAttribute("disabled", "true");
+      commandNode = document.getElementById("cmd_bm_copy");
       commandNode.setAttribute("disabled", "true");
     }
+  },
+
+  loadBookmark: function (aTarget, aDS)
+  {
+    var rSource   = RDF.GetResource(aTarget.id);
+    var selection = BookmarksUtils.getSelectionFromResource(rSource);
+    BookmarksCommand.openBookmark(selection, "current", aDS)
   }
 }
 
@@ -551,9 +558,8 @@ var BookmarksMenuDNDObserver = {
       clearTimeout(this.loadTimer);
       if (aTarget == aDragSession.sourceNode)
         return;
-      //XXX Hack: see bug 139645
-      var thisHack = this;
-      this.loadTimer=setTimeout(function () {thisHack.onDragLoadTarget(targetToBeLoaded)}, this.springLoadedMenuDelay);
+      var This = this;
+      this.loadTimer=setTimeout(function () {This.onDragLoadTarget(targetToBeLoaded)}, This.springLoadedMenuDelay);
     } else {
       var now = new Date().getTime();
       this.loadTimer  = now;
@@ -565,10 +571,10 @@ var BookmarksMenuDNDObserver = {
   {
     if (this.isPlatformNotSupported)
       return;
-    var thisHack = this;
+    var This = this;
     if (this.isTimerSupported) {
       clearTimeout(this.closeTimer)
-      this.closeTimer=setTimeout(function () {thisHack.onDragCloseTarget()}, this.springLoadedMenuDelay);
+      this.closeTimer=setTimeout(function () {This.onDragCloseTarget()}, This.springLoadedMenuDelay);
     } else {
       var now = new Date().getTime();
       this.closeTimer  = now;
@@ -583,7 +589,7 @@ var BookmarksMenuDNDObserver = {
       // The if statement in the function has been introduced to deal with rare but reproducible
       // missing Exit events.
       if (aDragSession.sourceNode.localName != "menuitem" && aDragSession.sourceNode.localName != "menu")
-        setTimeout(function () { if (thisHack.mCurrentDragOverTarget) {thisHack.onDragRemoveFeedBack(thisHack.mCurrentDragOverTarget); thisHack.mCurrentDragOverTarget=null} thisHack.loadTimer=null; thisHack.onDragCloseTarget() }, 0);
+        setTimeout(function () { if (This.mCurrentDragOverTarget) {This.onDragRemoveFeedBack(This.mCurrentDragOverTarget); This.mCurrentDragOverTarget=null} This.loadTimer=null; This.onDragCloseTarget() }, 0);
     }
   },
 
@@ -621,13 +627,12 @@ var BookmarksMenuDNDObserver = {
             break;
         }
         break;
-      case "hbox"     : 
-        // hit between the last visible bookmark and the chevron
-        var newTarget = BookmarksToolbar.getLastVisibleBookmark();
+      case "toolbar": 
+        var newTarget = document.getElementById("bookmarks-ptf").lastChild;
         if (newTarget)
           newTarget.setAttribute("dragover-right", "true");
         break;
-      case "stack"    :
+      case "hbox":
       case "menupopup": break; 
      default: dump("No feedback for: "+aTarget.localName+"\n");
     }
@@ -637,15 +642,10 @@ var BookmarksMenuDNDObserver = {
   { 
     var newTarget;
     var bt;
-    if (aTarget.id == "bookmarks-ptf") { 
-      // hit when dropping in the bt or between the last visible bookmark 
-      // and the chevron
-      newTarget = BookmarksToolbar.getLastVisibleBookmark();
+    if (aTarget.id == "PersonalToolbar" || aTarget.id == "bookmarks-ptf") { 
+      newTarget = document.getElementById("bookmarks-ptf").lastChild;
       if (newTarget)
         newTarget.removeAttribute("dragover-right");
-    } else if (aTarget.id == "bookmarks-stack") {
-      newTarget = BookmarksToolbar.getLastVisibleBookmark();
-      newTarget.removeAttribute("dragover-right");
     } else {
       aTarget.removeAttribute("dragover-left");
       aTarget.removeAttribute("dragover-right");
@@ -708,34 +708,5 @@ var BookmarksToolbar =
       tooltipUrl.setAttribute("hidden", "true");
     }
     return true; // show tooltip
-  }
-}
-
-// Implement nsIRDFObserver so we can update our overflow state when items get
-// added/removed from the toolbar
-var BookmarksToolbarRDFObserver =
-{
-  onAssert: function (aDataSource, aSource, aProperty, aTarget)
-  {
-    this.setOverflowTimeout(aSource, aProperty);
-  },
-  onUnassert: function (aDataSource, aSource, aProperty, aTarget)
-  {
-    this.setOverflowTimeout(aSource, aProperty);
-  },
-  onChange: function (aDataSource, aSource, aProperty, aOldTarget, aNewTarget) {},
-  onMove: function (aDataSource, aOldSource, aNewSource, aProperty, aTarget) {},
-  beginUpdateBatch: function (aDataSource) {},
-  endUpdateBatch:   function (aDataSource) {},
-
-  _overflowTimerInEffect: false,
-  setOverflowTimeout: function (aSource, aProperty)
-  {
-    if (this._overflowTimerInEffect)
-      return;
-    if (aSource.Value != "NC:PersonalToolbarFolder" || aProperty.Value == NC_NS+"LastModifiedDate")
-      return;
-    this._overflowTimerInEffect = true;
-    setTimeout(BookmarksToolbar.resizeFunc, 0);
   }
 }

@@ -291,7 +291,7 @@ var BookmarksCommand = {
                   "bm_properties"];
       break;
     case "FolderGroup":
-      commands = ["bm_openfolder", "bm_expandfolder", "bm_separator",
+      commands = ["bm_open", "bm_expandfolder", "bm_separator",
                   "bm_newfolder", "bm_separator",
                   "bm_cut", "bm_copy", "bm_paste", "bm_separator",
                   "bm_delete", "bm_separator",
@@ -514,11 +514,7 @@ var BookmarksCommand = {
       return;
     for (var i=0; i<aSelection.length; ++i) {
       var type = aSelection.type[i];
-      if (aTargetBrowser == "save") {
-        var item = aSelection.item[i];
-        saveURL(item.Value, BookmarksUtils.getProperty(item, "Name"), null, true);
-      }      
-      else if (type == "Bookmark" || type == "")
+      if (type == "Bookmark" || type == "")
         this.openOneBookmark(aSelection.item[i].Value, aTargetBrowser, aDS);
       else if (type == "FolderGroup" || type == "Folder" || type == "PersonalToolbarFolder")
         this.openGroupBookmark(aSelection.item[i].Value, aTargetBrowser);
@@ -588,7 +584,7 @@ var BookmarksCommand = {
       // Select the first tab in the group if we aren't loading in the background.
       if (!PREF.getBoolPref("browser.tabs.loadInBackground")) {
         var tabs = browser.mTabContainer.childNodes;
-        browser.selectedTab = tabs[index];
+        browser.selectedTab = tabs[tabCount];
       }
     } else {
       dump("Open Group in new window: not implemented...\n");
@@ -727,7 +723,6 @@ var BookmarksController = {
     case "cmd_bm_openinnewwindow":
     case "cmd_bm_openinnewtab":
     case "cmd_bm_expandfolder":
-    case "cmd_bm_openfolder":
     case "cmd_bm_managefolder":
     case "cmd_bm_newbookmark":
     case "cmd_bm_newfolder":
@@ -759,7 +754,6 @@ var BookmarksController = {
       item0 = aSelection.item[0].Value;
       type0 = aSelection.type[0];
     }
-    var isValidTarget = BookmarksUtils.isValidTargetContainer(aTarget.parent)
     var i;
 
     switch(aCommand) {
@@ -769,7 +763,7 @@ var BookmarksController = {
     case "cmd_bm_redo":
       return true;
     case "cmd_bm_paste":
-      if (!isValidTarget)
+      if (!BookmarksUtils.isValidTargetContainer(aTarget.parent))
         return false;
       const kClipboardContractID = "@mozilla.org/widget/clipboard;1";
       const kClipboardIID = Components.interfaces.nsIClipboard;
@@ -801,21 +795,6 @@ var BookmarksController = {
       return length == 1;
     case "cmd_bm_openinnewwindow":
     case "cmd_bm_openinnewtab":
-      return true;
-    case "cmd_bm_openfolder":
-      for (i=0; i<length; ++i) {
-        if (aSelection.type[i] == ""         ||
-            aSelection.type[i] == "Bookmark" ||
-            aSelection.type[i] == "BookmarkSeparator")
-          return false;
-        RDFC.Init(BMDS, aSelection.item[i]);
-        var children = RDFC.GetElements();
-        while (children.hasMoreElements()) {
-          if (BookmarksUtils.resolveType(children.getNext()) == "Bookmark")
-            return true;
-        }
-      }
-      return false;
     case "cmd_bm_find":
     case "cmd_bm_import":
     case "cmd_bm_export":
@@ -823,7 +802,7 @@ var BookmarksController = {
     case "cmd_bm_newbookmark":
     case "cmd_bm_newfolder":
     case "cmd_bm_newseparator":
-      return isValidTarget;
+      return BookmarksUtils.isValidTargetContainer(aTarget.parent);
     case "cmd_bm_properties":
     case "cmd_bm_rename":
       return length == 1;
@@ -867,9 +846,6 @@ var BookmarksController = {
       break;
     case "cmd_bm_openinnewtab":
       BookmarksCommand.openBookmark(aSelection, "tab");
-      break;
-    case "cmd_bm_openfolder":
-      BookmarksCommand.openBookmark(aSelection, "current");
       break;
     case "cmd_bm_managefolder":
       BookmarksCommand.manageFolder(aSelection);
@@ -933,7 +909,7 @@ var BookmarksController = {
                     "cmd_bm_setpersonaltoolbarfolder", 
                     "cmd_bm_setnewbookmarkfolder",
                     "cmd_bm_setnewsearchfolder", "cmd_bm_movebookmark", 
-                    "cmd_bm_openfolder", "cmd_bm_managefolder"];
+                    "cmd_bm_managefolder"];
     for (var i = 0; i < commands.length; ++i) {
       var enabled = this.isCommandEnabled(commands[i], aSelection, aTarget);
       var commandNode = document.getElementById(commands[i]);
@@ -1249,7 +1225,6 @@ var BookmarksUtils = {
   // Returns true if aSelection can be inserted in aFolder
   isValidTargetContainer: function (aFolder, aSelection)
   {
-
     if (!aFolder)
       return false;
     if (aFolder.Value == "NC:BookmarksRoot")
@@ -1588,15 +1563,7 @@ var BookmarksUtils = {
       // into the default bookmark folder.
       BMSVC.addBookmarkImmediately(aURL, aTitle, kBMSVCIID.BOOKMARK_DEFAULT_TYPE, aCharset);
     }
-  },                                                                          
-
-  loadBookmarkBrowser: function (aEvent, aTarget, aDS)
-  {
-    var rSource   = RDF.GetResource(aTarget.id);
-    var selection = BookmarksUtils.getSelectionFromResource(rSource);
-    BookmarksCommand.openBookmark(selection, "current", aDS)
   }
-
 }
 
 

@@ -74,7 +74,6 @@
 
   <commands id="commands">
     <commandset id="CommandUpdate_Bookmarks"
-                commandupdater="true"
                 events="focus,tree-select"
                 oncommandupdate="document.getElementById('bookmarks-view').onCommandUpdate();">
     </commandset>
