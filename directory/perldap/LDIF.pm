@@ -130,7 +130,7 @@ sub unpack_LDIF
     return @record;
 }
 
-use vars qw($_std_encode); $_std_encode = '^[:< ]|[^ -\x7E]| $';
+use vars qw($_std_encode); $_std_encode = '^[:< ]|[^ -\x7E]';
 
 sub pack_LDIF
 {
