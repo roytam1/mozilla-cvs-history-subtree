@@ -1682,6 +1682,7 @@ HT_NewView (RDF_Resource topNode, HT_Pane pane, PRBool useColumns, void *feData,
 			}	
 			RDF_DisposeCursor(cursor);
 		}
+		}
 
 		/* if no columns defined, force one (name) to exist */
 
@@ -1699,7 +1700,7 @@ HT_NewView (RDF_Resource topNode, HT_Pane pane, PRBool useColumns, void *feData,
 
 			view->columns = column;
 		}
-		}
+		
 
 		/*
 			add into view list, taking into account any defined
