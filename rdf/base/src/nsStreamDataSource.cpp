@@ -279,11 +279,8 @@ StreamDataSourceImpl::~StreamDataSourceImpl(void)
     if (NS_SUCCEEDED(nsServiceManager::GetService(kRDFServiceCID,
                                                   kIRDFServiceIID,
                                                   (nsISupports**) &rdfService))) {
-        const char* uri;
-        if (NS_SUCCEEDED(GetURI(&uri))) {
-            rdfService->UnRegisterNamedDataSource(uri);
-            nsServiceManager::ReleaseService(kRDFServiceCID, rdfService);
-        }
+        rdfService->UnregisterDataSource(this);
+        nsServiceManager::ReleaseService(kRDFServiceCID, rdfService);
     }
 
     Flush();
@@ -367,7 +364,7 @@ StreamDataSourceImpl::Init(const char* uri)
                                                     (nsISupports**) &rdfService)))
         goto done;
 
-    if (NS_FAILED(rv = rdfService->RegisterNamedDataSource(uri, this)))
+    if (NS_FAILED(rv = rdfService->RegisterDataSource(this)))
         goto done;
 
     if (NS_FAILED(rv = nsRepository::CreateInstance(kNameSpaceManagerCID,

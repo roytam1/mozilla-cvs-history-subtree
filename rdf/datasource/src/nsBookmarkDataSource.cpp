@@ -521,10 +521,7 @@ BookmarkDataSourceImpl::~BookmarkDataSourceImpl(void)
     if (NS_SUCCEEDED(rv = nsServiceManager::GetService(kRDFServiceCID,
                                                        kIRDFServiceIID,
                                                        (nsISupports**) &rdfService))) {
-        const char* uri;
-        if (NS_SUCCEEDED(rv = mInner->GetURI(&uri))) {
-            rdfService->UnRegisterNamedDataSource(uri);
-        }
+        rdfService->UnregisterDataSource(this);
         nsServiceManager::ReleaseService(kRDFServiceCID, rdfService);
     }
     Flush();
@@ -555,7 +552,7 @@ BookmarkDataSourceImpl::Init(const char* uri)
     if (NS_SUCCEEDED(rv = nsServiceManager::GetService(kRDFServiceCID,
                                                        kIRDFServiceIID,
                                                        (nsISupports**) &rdfService))) {
-        rdfService->RegisterNamedDataSource(uri, this);
+        rdfService->RegisterDataSource(this);
         nsServiceManager::ReleaseService(kRDFServiceCID, rdfService);
     }
 

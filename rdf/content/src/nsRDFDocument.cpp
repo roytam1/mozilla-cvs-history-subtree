@@ -471,23 +471,23 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
 
     (void)aURL->GetURLGroup(&mDocumentURLGroup);
 
-    nsIHTMLStyleSheet* sheet = nsnull;
-    const char* uri;
-
     // Create an HTML style sheet for the HTML content.
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kHTMLStyleSheetCID,
-                                                    nsnull,
-                                                    kIHTMLStyleSheetIID,
-                                                    (void**) &sheet)))
-        goto done;
+    nsIHTMLStyleSheet* sheet;
+    if (NS_SUCCEEDED(rv = nsRepository::CreateInstance(kHTMLStyleSheetCID,
+                                                       nsnull,
+                                                       kIHTMLStyleSheetIID,
+                                                       (void**) &sheet))) {
+        if (NS_SUCCEEDED(rv = sheet->Init(aURL, this))) {
+            mAttrStyleSheet = sheet;
+            NS_ADDREF(mAttrStyleSheet);
 
-    if (NS_FAILED(rv = sheet->Init(aURL, this)))
-        goto done;
+            AddStyleSheet(mAttrStyleSheet);
+        }
+        NS_RELEASE(sheet);
+    }
 
-    mAttrStyleSheet = sheet;
-    NS_ADDREF(mAttrStyleSheet);
-
-    AddStyleSheet(mAttrStyleSheet);
+    if (NS_FAILED(rv))
+        return rv;
       
     // XXX a raw in-memory store is not appropriate, because it allows
     // changes to be made to the data store and won't flush them. It'd
@@ -502,17 +502,18 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
                                                     nsnull,
                                                     kIRDFDataSourceIID,
                                                     (void**) &mLocalDataSource)))
-        goto done;
+        return rv;
 
     if (NS_FAILED(rv = mDB->AddDataSource(mLocalDataSource)))
-        goto done;
+        return rv;
 
+    const char* uri;
     if (NS_FAILED(rv = aURL->GetSpec(&uri)))
-        goto done;
+        return rv;
 
-    if (NS_SUCCEEDED(rv = mRDFService->GetNamedDataSource(uri, &mDocumentDataSource))) {
+    if (NS_SUCCEEDED(rv = mRDFService->GetDataSource(uri, &mDocumentDataSource))) {
         if (NS_FAILED(rv = mDB->AddDataSource(mDocumentDataSource)))
-            goto done;
+            return rv;
 
         // we found the data source already loaded locally. Load it's
         // style sheets and attempt to include any named data sources
@@ -553,7 +554,7 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
                                                             kIRDFDataSourceIID,
                                                             (void**) &mDocumentDataSource))) {
         if (NS_FAILED(rv = mDB->AddDataSource(mDocumentDataSource)))
-            goto done;
+            return rv;
 
         // We need to construct a new stream and load it. The stream
         // will automagically register itself as a named data source,
@@ -568,16 +569,13 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         }
 
         if (NS_FAILED(rv = mDocumentDataSource->Init(uri)))
-            goto done;
+            return rv;
     }
     else {
         // an error occurred
-        goto done;
+        PR_ASSERT(0);
     }
-
-done:
-    NS_IF_RELEASE(sheet);
-    return rv;
+    return NS_OK;
 }
 
 const nsString*
@@ -1788,7 +1786,7 @@ RDFDocumentImpl::AddNamedDataSource(const char* uri)
     nsresult rv;
     nsIRDFDataSource* ds = nsnull;
 
-    if (NS_FAILED(rv = mRDFService->GetNamedDataSource(uri, &ds)))
+    if (NS_FAILED(rv = mRDFService->GetDataSource(uri, &ds)))
         goto done;
 
     if (NS_FAILED(rv = mDB->AddDataSource(ds)))

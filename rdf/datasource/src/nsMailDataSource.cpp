@@ -184,7 +184,7 @@ MailDataSource::MailDataSource(void)
 
 MailDataSource::~MailDataSource (void)
 {
-    gRDFService->UnRegisterNamedDataSource(mURI);
+    gRDFService->UnregisterDataSource(this);
 
     PL_strfree(mURI);
     if (mObservers) {
@@ -266,7 +266,7 @@ MailDataSource::Init(const char* uri)
         return rv;
 
     // register this as a named data source with the service manager
-    if (NS_FAILED(rv = gRDFService->RegisterNamedDataSource(uri, this)))
+    if (NS_FAILED(rv = gRDFService->RegisterDataSource(this)))
         return rv;
 
     return NS_OK;
