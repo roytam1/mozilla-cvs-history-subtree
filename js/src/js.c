@@ -1260,15 +1260,9 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 	return;
     }
 
-    /*
-     * Conditionally ignore reported warnings, and ignore error reports for
-     * which a JavaScript exception has been thrown, except when we're in
-     * a toplevel compile.
-     */
-    if ((JSREPORT_IS_WARNING(report->flags) && !reportWarnings) ||
-	(JSREPORT_IS_EXCEPTION(report->flags))) {
+    /* Conditionally ignore reported warnings. */
+    if ((JSREPORT_IS_WARNING(report->flags) && !reportWarnings))
 	return;
-    }
 
     if (report->filename)
 	prefix = JS_smprintf("%s:", report->filename);
