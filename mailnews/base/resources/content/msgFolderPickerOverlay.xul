@@ -38,6 +38,10 @@ Rights Reserved.
     datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
     ref="msgaccounts:/">
         <template>
+
+<!-- hack -->
+    <rule nc:ServerType="imap"/>
+
           <rule nc:CanCreateSubfolders="true" nc:CanCreateFoldersOnServer="true" iscontainer="true" isempty="false">
             <menupopup class="menulist-menupopup">
               <menu uri="..." class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
