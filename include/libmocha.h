@@ -569,6 +569,9 @@ LM_GetJSPrincipalsFromJavaCaller(JSContext *cx, void *principalsArray, void *pNS
 extern JSBool
 LM_CanAccessTargetStr(JSContext *cx, const char *target);
 
+extern const char *
+LM_GetCodebaseFromTopOfJSStack(JSContext *cx);
+
 /*
  * LM_RegisterPrincipals will verify and register a set of principals 
  * in the decoder, modifying decoder->principals in the process. It
