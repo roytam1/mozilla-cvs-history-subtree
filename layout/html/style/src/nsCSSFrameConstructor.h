@@ -46,7 +46,9 @@ class nsIFrameManager;
 class nsFrameConstructorState;
 class nsIDOMHTMLSelectElement;
 
-class nsCSSFrameConstructor : public nsIStyleFrameConstruction, public nsICSSFrameConstructor {
+class nsCSSFrameConstructor : public nsIStyleFrameConstruction,
+                              public nsICSSFrameConstructor
+{
 public:
   nsCSSFrameConstructor(void);
   virtual ~nsCSSFrameConstructor(void);
@@ -143,6 +145,12 @@ public:
                                  nsIContent*      aContent,
                                  nsIFrame**       aFrame,
                                  nsFindFrameHint* aHint);
+
+  // Get the XBL insertion point for a child
+  NS_IMETHOD GetInsertionPoint(nsIPresShell* aPresShell,
+                               nsIFrame*     aParentFrame,
+                               nsIContent*   aChildContent,
+                               nsIFrame**    aInsertionPoint);
 
   NS_IMETHOD CreateTreeWidgetContent(nsIPresContext* aPresContext,
                                         nsIFrame*       aParentFrame,
@@ -485,15 +493,6 @@ protected:
                                   PRBool&                  aFrameHasBeenInitialized,
                                   PRBool                   aIsFixedPositioned);
 
-   nsresult ConstructTitledBoxFrame(nsIPresShell*        aPresShell, 
-                                  nsIPresContext*          aPresContext,
-                                  nsFrameConstructorState& aState,
-                                  nsIContent*              aContent,
-                                  nsIFrame*                aParentFrame,
-                                  nsIAtom*                 aTag,
-                                  nsIStyleContext*         aStyleContext,
-                                  nsIFrame*&               aNewFrame);
-
   nsresult ConstructFrameByTag(nsIPresShell*            aPresShell, 
                                nsIPresContext*          aPresContext,
                                nsFrameConstructorState& aState,
@@ -563,14 +562,14 @@ protected:
 // SVG - rods
 #ifdef MOZ_SVG
   nsresult ConstructSVGFrame(nsIPresShell*            aPresShell,
-                             nsIPresContext*          aPresContext,
-                             nsFrameConstructorState& aState,
-                             nsIContent*              aContent,
-                             nsIFrame*                aParentFrame,
-                             nsIAtom*                 aTag,
-                             PRInt32                  aNameSpaceID,
-                             nsIStyleContext*         aStyleContext,
-                             nsFrameItems&            aFrameItems);
+                                nsIPresContext*          aPresContext,
+                                nsFrameConstructorState& aState,
+                                nsIContent*              aContent,
+                                nsIFrame*                aParentFrame,
+                                nsIAtom*                 aTag,
+                                PRInt32                  aNameSpaceID,
+                                nsIStyleContext*         aStyleContext,
+                                nsFrameItems&            aFrameItems);
 #endif
 
   nsresult ConstructFrameByDisplayType(nsIPresShell* aPresShell, 
