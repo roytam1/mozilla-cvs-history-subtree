@@ -505,7 +505,13 @@ nsGenericDOMDataNode::AppendData(const nsAString& aData)
 
   mText.AppendTo(old_data);
 
-  rv = SetText(old_data + aData, PR_FALSE);
+  // XXXjag We'd like to just say |old_data + aData|, but due
+  // to issues with dependent concatenation and sliding (sub)strings
+  // we'll just have to copy for now. See bug 121841 for details.
+  nsAutoString text(old_data);
+  text.Append(aData);
+
+  rv = SetText(text, PR_FALSE);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Trigger a reflow
