@@ -845,6 +845,8 @@ extensions/typeaheadfind/Makefile
 MAKEFILES_phoenix="
 browser/Makefile
 browser/app/Makefile
+browser/app/profile/Makefile
+browser/app/profile/chrome/Makefile
 browser/base/Makefile
 browser/components/Makefile
 browser/components/bookmarks/Makefile
@@ -854,11 +856,13 @@ browser/components/build/Makefile
 browser/components/downloads/Makefile
 browser/components/downloads/public/Makefile
 browser/components/downloads/src/Makefile
+browser/components/history/Makefile
 browser/components/prefwindow/Makefile
 browser/components/prefwindow/content/Makefile
 browser/components/prefwindow/locale/Makefile
 browser/components/search/Makefile
 browser/components/search/resources/Makefile
+browser/components/security/Makefile
 "
 
 MAKEFILES_xulapp="
@@ -866,10 +870,17 @@ toolkit/Makefile
 toolkit/components/autocomplete/Makefile
 toolkit/components/autocomplete/public/Makefile
 toolkit/components/autocomplete/src/Makefile
+toolkit/components/Makefile
 toolkit/components/build/Makefile
+toolkit/components/console/Makefile
+toolkit/components/filepicker/Makefile
+toolkit/components/history/Makefile
+toolkit/components/history/public/Makefile
+toolkit/components/history/src/Makefile
 toolkit/components/satchel/Makefile
 toolkit/components/satchel/public/Makefile
 toolkit/components/satchel/src/Makefile
+toolkit/components/viewsource/Makefile
 toolkit/content/mac/Makefile
 toolkit/skin/mac/Makefile
 toolkit/skin/unix/Makefile
