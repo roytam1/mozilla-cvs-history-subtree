@@ -2341,7 +2341,7 @@ nsresult nsMsgDBView::CollapseAll()
     {
         PRUint32 numExpanded;
         PRUint32 flags = m_flags[i];
-        if (!(flags & MSG_FLAG_ELIDED))
+        if (!(flags & MSG_FLAG_ELIDED) && (flags & MSG_VIEW_FLAG_HASCHILDREN))
             CollapseByIndex(i, &numExpanded);
     }
     return NS_OK;
