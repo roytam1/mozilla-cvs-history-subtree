@@ -23,7 +23,6 @@
  *
  */
 
-/* #define USE_SECURITY_STUBS */
 /* #define USE_JS_STUBS */
 /* #define USE_PREF_STUBS */
 #include "depend.h"
@@ -35,16 +34,11 @@
 #include "prefapi.h"
 #include "xp_file.h"
 
-#if defined(USE_SECURITY_STUBS)
-#include "key.h"
-#else
 #include "secnav.h"
-#endif
 
 #include "xp_reg.h"
 #include "libi18n.h"
 #include "libevent.h"
-/* #include "layout.h" */
 #include "mkgeturl.h"
 
 /*
@@ -373,7 +367,7 @@ XP_FileOpen(const char * name, XP_FileType type, const XP_FilePerm perm)
 
 /*
 //
-// Return 0 on success, -1 on failure.  Silly unix weenies
+// Return 0 on success, -1 on failure.  
 //
 */
 PUBLIC int 
@@ -880,30 +874,6 @@ LM_NewJSPrincipals(URL_Struct *archive, char *id, const char *codebase)
 }
 
 
-#if defined(USE_SECURITY_STUBS)
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/util/alg1113.c
- *---------------------------------------------------------------------------
- */
-
-char *
-BTOA_DataToAscii(const unsigned char *anything, unsigned int ilen)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-unsigned char *
-ATOB_AsciiToData(const char *anything, unsigned int *olenp)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-#endif /* USE_SECURITY_STUBS */
-
 /*
  *---------------------------------------------------------------------------
  * From ns/security/lib/util/algrand.c
@@ -915,37 +885,6 @@ RNG_GenerateGlobalRandomBytes(void *data, size_t bytes)
     MOZ_FUNCTION_STUB;
     return SECFailure;
 }
-
-
-#if defined(USE_SECURITY_STUBS)
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/util/secalg.c
- *---------------------------------------------------------------------------
- */
-
-SECOidTag
-SECOID_GetAlgorithmTag(SECAlgorithmID *id)
-{
-    MOZ_FUNCTION_STUB;
-    return SEC_OID_UNKNOWN;
-}
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/key/seckey.c
- *---------------------------------------------------------------------------
- */
-
-void
-SECKEY_DestroyPrivateKey(SECKEYPrivateKey *privk)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-#endif /* USE_SECURITY_STUBS */
 
 
 /*
@@ -984,149 +923,6 @@ CERT_GetDefaultCertDB(void)
 }
 
 
-#if defined(USE_SECURITY_STUBS)
-/*
-** CERT_CertChainFromCert
-**
-** Construct a CERTCertificateList consisting of the given certificate and all
-** of the issuer certs until we either get to a self-signed cert or can't find
-** an issuer.  Since we don't know how many certs are in the chain we have to
-** build a linked list first as we count them.
-*/
-
-CERTCertificateList *
-CERT_CertChainFromCert(CERTCertDBHandle *handle, CERTCertificate *cert)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-void
-CERT_DestroyCertificateList(CERTCertificateList *list)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/cypto/secsign.c
- *---------------------------------------------------------------------------
- */
-
-
-/*
-** Sign a block of data returning in result a bunch of bytes that are the
-** signature. Returns zero on success, an error code on failure.
-*/
-SECStatus
-SEC_SignData(SECItem *res, unsigned char *buf, int len,
-             SECKEYPrivateKey *pk, SECOidTag algid)
-{
-    MOZ_FUNCTION_STUB;
-    return SECFailure;
-}
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/hash/algsha.c
- *---------------------------------------------------------------------------
- */
-
-SHA1Context *
-SHA1_NewContext(void)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-void
-SHA1_DestroyContext(SHA1Context *cx, PRBool freeit)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-void
-SHA1_Begin(SHA1Context *ctx)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-void
-SHA1_Update(SHA1Context *ctx, const unsigned char *dataIn, unsigned len)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-void
-SHA1_End(SHA1Context *ctx, unsigned char *hashout,
-         unsigned int *pDigestLen, unsigned int maxDigestLen)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/pkcs11/pk11slot.c
- *---------------------------------------------------------------------------
- */
-
-
-SECStatus
-PK11_GenerateRandom(unsigned char *data,int len) {
-    MOZ_FUNCTION_STUB;
-    return SECFailure;
-}
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/pkcs11/pk11cert.c
- *---------------------------------------------------------------------------
- */
-
-SECKEYPrivateKey *
-PK11_FindKeyByAnyCert(CERTCertificate *cert, void *wincx)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-CERTCertificate *
-PK11_FindCertFromNickname(char *nickname, void *wincx) {
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/security/nav/secmoz.c
- *---------------------------------------------------------------------------
- */
-
-SECStatus 
-SECNAV_GetDefProxyCert(char **proxycertname)
-{
-    MOZ_FUNCTION_STUB;
-
-    *proxycertname = NULL;
-    return SECSuccess;
-}
-
-#endif /* USE_SECURITY_STUBS */
 
 PRBool
 SECNAV_SecurityDialog(MWContext *context, int state)
@@ -1152,70 +948,6 @@ SECNAV_ComputeFortezzaProxyChallengeResponse(MWContext *context,
     return(SECFailure);
 }
 
-#if defined(USE_SECURITY_STUBS)
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/security/nav/premime.c
- *---------------------------------------------------------------------------
- */
-
-/*
- * set the fd in our object to access SSLSocket if needed 
- */
-void
-SECNAV_SetPreencryptedSocket(void *data, PRFileDesc *fd)
-{
-    MOZ_FUNCTION_STUB;
-}
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/ssl/sslsock.c
- *---------------------------------------------------------------------------
- */
-int
-SSL_Enable(PRFileDesc *s, int which, int on)
-{
-    MOZ_FUNCTION_STUB;
-    return -1;
-}
-
-
-PRFileDesc *
-SSL_ImportFD(PRFileDesc *model, PRFileDesc *fd)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/ssl/sslsocks.c
- *---------------------------------------------------------------------------
- */
-int
-SSL_ConfigSockd(PRFileDesc *s, unsigned long host, short port)
-{
-    MOZ_FUNCTION_STUB;
-    return -1;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/ssl/sslsecur.c
- *---------------------------------------------------------------------------
- */
-int
-SSL_ForceHandshake(PRFileDesc *fd)
-{
-    MOZ_FUNCTION_STUB;
-    return 0;
-}
-#endif /* USE_SECURITY_STUBS */
 
 
 #if defined(USE_JS_STUBS)
@@ -1765,14 +1497,3 @@ CERT_CompareCertsForRedirection(CERTCertificate *c1, CERTCertificate *c2)
 }
 
 
-
-
-void HACK_SetAppCodeName(char *name)
-{
-	XP_AppCodeName = strdup(name);
-}
-
-void HACK_SetAppVersion(char *ver)
-{
-	XP_AppVersion = strdup(ver);
-}

@@ -20,11 +20,7 @@
 
 #include "nspr.h"
 #include "libi18n.h"
-#if 0
-#include "key.h"
-#else
 #include "secnav.h"
-#endif
 #include "xp_hash.h"
 #include "libimg.h"
 #include "il_strm.h"
@@ -293,20 +289,6 @@ PA_BeginParseMDL(FO_Present_Types format_out,
 }
 
 
-#if 0
-/*
- *---------------------------------------------------------------------------
- * From ns/security/lib/cert/certdb.c
- *---------------------------------------------------------------------------
- */
-PRBool
-CERT_CompareCertsForRedirection(CERTCertificate *c1, CERTCertificate *c2)
-{
-    MOZ_FUNCTION_STUB;
-    return PR_FALSE;
-}
-
-#endif /* 0 */
 
 /*
  *---------------------------------------------------------------------------
@@ -354,21 +336,6 @@ MD5_HashBuf(unsigned char *dest, const unsigned char *src, uint32 src_length)
     return SECFailure;
 }
 
-
-#if 0
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/security/nav/secmoz.c
- *---------------------------------------------------------------------------
- */
-int
-SECNAV_SetupSecureSocket(PRFileDesc *fd, char *url, MWContext *cx)
-{
-    MOZ_FUNCTION_STUB;
-    return -1;
-}
-
-#endif /* 0 */
 
 void
 SECNAV_HandleInternalSecURL(URL_Struct *url, MWContext *cx)
@@ -418,70 +385,6 @@ SECNAV_SecHandleSecurityAdvisorURL(MWContext *cx, const char *which)
     return -1;
 }
 
-
-#if 0
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/security/nav/premime.c
- *---------------------------------------------------------------------------
- */
-
-/*
- * set up a stream for reading in preencrypted files
- */
-NET_StreamClass * 
-SECNAV_MakePreencryptedStream(FO_Present_Types format_out, void *data,
-                              URL_Struct *url, MWContext *window_id)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/security/nav/certmime.c
- *---------------------------------------------------------------------------
- */
-
-/*
- * set up a stream for downloading certificates
- */
-NET_StreamClass *
-SECNAV_CrlStream(FO_Present_Types format_out, void *data,
-                 URL_Struct *urls, MWContext *cx)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-
-/*
- * set up a stream for downloading revocation information
- */
-NET_StreamClass *
-SECNAV_RevocationStream(FO_Present_Types format_out, void *data,
-                        URL_Struct *urls, MWContext *cx)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-
-/*
- * set up a stream for downloading certificates
- */
-NET_StreamClass *
-SECNAV_CertificateStream(FO_Present_Types format_out, void *data,
-                         URL_Struct *urls, MWContext *cx)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-#endif /* 0 */
 
 
 /*
@@ -725,7 +628,6 @@ XP_HashListFindObject (XP_HashList * hash_struct, void * ele)
 }
 
 
-/* derived from Dragon book, p436 */
 PUBLIC uint32
 XP_StringHash (const void *xv)
 { 
@@ -1089,13 +991,6 @@ XP_HandleHTMLDialog(URL_Struct *url)
  *---------------------------------------------------------------------------
  */
 
-#if 0
-JRI_PUBLIC_API(void)
-NSN_RegisterJavaConverter(void)
-{
-    MOZ_FUNCTION_STUB;
-}
-#endif
 
 /*
  *---------------------------------------------------------------------------
@@ -1128,113 +1023,6 @@ PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
     return JS_FALSE;
 }
 
-
-#if 0
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/netcast/src/_jri/netscape_netcast_NSMimeConnection.c
- *---------------------------------------------------------------------------
- */
-
-JRI_PUBLIC_API(struct netscape_netcast_NSMimeConnection*)
-netscape_netcast_NSMimeConnection_new(JRIEnv* env, struct java_lang_Class* clazz, struct java_lang_String *a) 
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-JRI_PUBLIC_API(struct java_lang_Class*)
-register_netscape_netcast_NSMimeConnection(JRIEnv* env)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/netcast/src/_jri/netscape_netcast_NSTunerConnection.c
- *---------------------------------------------------------------------------
- */
-
-JRI_PUBLIC_API(struct netscape_netcast_NSTunerConnection*)
-netscape_netcast_NSTunerConnection_new(JRIEnv* env, struct java_lang_Class* clazz, jint a, struct java_lang_String *b) 
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-JRI_PUBLIC_API(struct java_lang_Class*)
-register_netscape_netcast_NSTunerConnection(JRIEnv* env)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/netcast/src/_jri/netscape_netcast_NSCastanetEnvironment.c
- *---------------------------------------------------------------------------
- */
-
-JRI_PUBLIC_API(struct java_lang_Class*)
-register_netscape_netcast_NSCastanetEnvironment(JRIEnv* env)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/netcast/src/_jri/netscape_netcast_NSMD5.c
- *---------------------------------------------------------------------------
- */
-
-JRI_PUBLIC_API(struct java_lang_Class*)
-register_netscape_netcast_NSMD5(JRIEnv* env)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/sun-java/runtime/jrijdk.c
- *---------------------------------------------------------------------------
- */
-/* !!! This is a non-jump-table entry point: */
-JRI_PUBLIC_API(const JRIEnvInterface**)
-JRI_GetCurrentEnv(void)
-{
-    MOZ_FUNCTION_STUB;
-    return NULL;
-}
-
-
-/*
- *---------------------------------------------------------------------------
- * From ns/modules/applet/src/lj_init.c
- *---------------------------------------------------------------------------
- */
-
-/*
-** Start up java. This reflects the mozilla nspr thread into java. It
-** also prepares the interpreter for execution, and does all of the misc
-** initialization the java runtime needs.
-*/
-JRI_PUBLIC_API(LJJavaStatus) LJ_StartupJava(void)
-{
-    MOZ_FUNCTION_STUB;
-    return LJJavaStatus_Failed;
-}
-
-#endif /* 0 */
 
 
 }; /* end of extern "C" */
