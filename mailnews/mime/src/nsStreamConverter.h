@@ -66,7 +66,8 @@ public:
   // method is called whenver data is written into the input stream by the
   // networking library...
   //
-  NS_IMETHOD OnDataAvailable(nsISupports    *ctxt, 
+  NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, 
+							 nsISupports    *ctxt, 
                              nsIInputStream *inStr, 
                              PRUint32       sourceOffset, 
                              PRUint32       count);
@@ -78,13 +79,13 @@ public:
   // Notify the observer that the URL has started to load.  This method is
   // called only once, at the beginning of a URL load.
   //
-  NS_IMETHOD OnStartRequest(nsISupports *ctxt);
+  NS_IMETHOD OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt);
 
   //
   // Notify the observer that the URL has finished loading.  This method is 
   // called once when the networking library has finished processing the 
   //
-  NS_IMETHOD OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+  NS_IMETHOD OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
 
 
   ////////////////////////////////////////////////////////////////////////////
