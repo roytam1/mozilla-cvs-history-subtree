@@ -55,7 +55,7 @@
 #define MAX_PATH 1024
 #endif
 #elif defined(XP_WIN)
-#include <windows.h>
+#include <windef.h>  /* for MAX_PATH */
 #elif defined(XP_MAC)
 #define MAX_PATH 512
 #endif
