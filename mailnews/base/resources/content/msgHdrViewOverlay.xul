@@ -112,7 +112,9 @@ Rights Reserved.
    </vbox>
 
    <vbox id="expandedKeywordBox">
+     <spacer flex="1"/>
      <image id="expandedKeywordImage" class="keyword-part"/>  
+     <spacer flex="1"/>
    </vbox>
 
    <vbox id="editMessageBox" class="header-part1" collapsed="true">
