@@ -22,13 +22,19 @@
  * ntsec.c
  *
  * Implement the POSIX-style mode bits (access permissions) for
- * files and other securable objects in Windows NT using the
- * Windows NT security model.
+ * files and other securable objects in Windows NT using Windows
+ * NT's security descriptors with appropriate discretionary
+ * access-control lists.
  */
 
 /*
  * The security identifiers (SIDs) for owner, primary group,
  * and the Everyone (World) group.
+ *
+ * These SIDs are looked up during NSPR initialization and
+ * saved in this global structure (see _PR_NT_InitSids) so
+ * that _PR_NT_MakeSecurityDescriptorACL doesn't need to
+ * look them up every time.
  */
 static struct {
     PSID owner;
@@ -159,7 +165,13 @@ _PR_NT_MakeSecurityDescriptorACL(
         goto failed;
     }
 
-    /* Initialize a new ACL. */
+    /*
+     * Construct a discretionary access-control list with three
+     * access-control entries, one each for owner, primary group,
+     * and Everyone.  The read, write, and execute bits in the
+     * specified mode get mapped to NT's GENERIC_READ,
+     * GENERIC_WRITE, and GENERIC_EXECUTE access rights.
+     */
 
     pACL = (PACL) LocalAlloc(LPTR, cbACL);
     if (pACL == NULL) {
