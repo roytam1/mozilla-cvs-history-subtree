@@ -641,6 +641,13 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 	else if( !strcmp( option, "clear_main_cache_on_exit" ) ) 		; /* not used */
 	else if( !strcmp( option, "keep_index_file_updated" ) ) 		; /* not used */
 
+/* memory cache options */
+  else if( !strcmp( option, "memory_cache_kb_size" ) || !strcmp( option, "image_cache_size_KB" ) ) {
+    int kb = atoi( value );
+    if( kb <= 0 ) kb = 100; /* have a minimum threshold */
+    pref->SetIntPref( "browser.cache.memory.capacity", kb );
+    }
+
 /* Miscellaneous options */
 	else if( !strcmp( option, "History_Expire" ) )
 		pref->SetIntPref( "browser.history_expire_days", atoi( value ) );
@@ -725,6 +732,13 @@ mozilla_set_pref( PtWidget_t *widget, char *option, char *value )
 	else if( !strcmp( option, "Use_Anti_Alias" ) ) 		; /* not used */
 	else if( !strcmp( option, "Use_Explicit_Accept_Headers" ) ) 		; /* not used */
 	else if( !strcmp( option, "Visitation_Horizon" ) ) 		; /* not used */
+
+  else if( !strcmp( option, "Print_Frame" ) )
+    pref->SetCharPref( "user.print.print_frame", value );
+  else if( !strcmp( option, "SetPrintBGColors" ) )
+    pref->SetCharPref( "user.print.SetPrintBGColors", value );
+  else if( !strcmp( option, "SetPrintBGImages" ) )
+    pref->SetCharPref( "user.print.SetPrintBGImages", value );
 
 	pref->SavePrefFile( nsnull );
 	}
