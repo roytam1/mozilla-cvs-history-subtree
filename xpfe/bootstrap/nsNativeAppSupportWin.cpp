@@ -2000,13 +2000,7 @@ nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
   static PRBool firstTime = PR_TRUE;
   if ( firstTime ) {
     firstTime = PR_FALSE;
-    // Check pref for whether to set ddeexec subkey entries.
-    nsCOMPtr<nsIPref> prefService( do_GetService( NS_PREF_CONTRACTID ) );
-    PRBool supportDDEExec = PR_FALSE;
-    if ( prefService ) {
-        prefService->GetBoolPref( "advanced.system.supportDDEExec", &supportDDEExec );
-    }
-    if ( supportDDEExec && handlingHTTP() ) {
+    if ( handlingHTTP() ) {
 #if MOZ_DEBUG_DDE
 printf( "Setting ddexec subkey entries\n" );
 #endif
