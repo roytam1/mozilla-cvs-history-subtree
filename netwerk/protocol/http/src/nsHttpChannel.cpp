@@ -660,8 +660,11 @@ nsHttpChannel::ProcessResponse()
     gHttpHandler->OnExamineResponse(this);
   
     // handle unused username and password in url (see bug 232567)
-    if (httpStatus != 401 && httpStatus != 407)
+    if (httpStatus != 401 && httpStatus != 407) {
         CheckForSuperfluousAuth();
+        if (mCanceled)
+            return CallOnStartRequest();
+    }
 
     // handle different server response categories
     switch (httpStatus) {
