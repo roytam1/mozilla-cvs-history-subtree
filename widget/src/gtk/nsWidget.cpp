@@ -1218,7 +1218,7 @@ PRBool nsWidget::DispatchFocus(nsGUIEvent &aEvent)
 
 #ifdef NS_DEBUG
 PRInt32
-nsWidget::debug_GetRenderXID(GtkWidget * aGtkWidget)
+nsWidget::debug_GetRenderXID(GtkObject * aGtkWidget)
 {
   GdkWindow * renderWindow = GetRenderWindow(aGtkWidget);
   
@@ -1227,12 +1227,27 @@ nsWidget::debug_GetRenderXID(GtkWidget * aGtkWidget)
   return (PRInt32) xid;
 }
 
+PRInt32
+nsWidget::debug_GetRenderXID(GtkWidget * aGtkWidget)
+{
+  return debug_GetRenderXID(GTK_OBJECT(aGtkWidget));
+}
+
+nsCAutoString
+nsWidget::debug_GetName(GtkObject * aGtkWidget)
+{
+  if (nsnull != aGtkWidget && GTK_IS_WIDGET(aGtkWidget))
+    return debug_GetName(GTK_WIDGET(aGtkWidget));
+  
+  return nsCAutoString("null");
+}
+
 nsCAutoString
 nsWidget::debug_GetName(GtkWidget * aGtkWidget)
 {
   if (nsnull != aGtkWidget)
-    return nsCAutoString(gtk_widget_get_name(aGtkWidget));
-  
+    return debug_GetName(GTK_WIDGET(aGtkWidget));
+
   return nsCAutoString("null");
 }
 
@@ -2440,11 +2455,11 @@ nsWidget::GetWindowForSetBackground()
 }
 
 /* virtual */ GdkWindow *
-nsWidget::GetRenderWindow(GtkWidget * aGtkWidget)
+nsWidget::GetRenderWindow(GtkObject * aGtkWidget)
 {
   GdkWindow * renderWindow = nsnull;
 
-  if (aGtkWidget)
+  if (aGtkWidget && GTK_IS_WIDGET(aGtkWidget))
   {
     if (GTK_IS_LAYOUT(aGtkWidget))
     {
@@ -2452,7 +2467,7 @@ nsWidget::GetRenderWindow(GtkWidget * aGtkWidget)
     }
     else
     {
-      renderWindow = aGtkWidget->window;
+      renderWindow = GTK_WIDGET(aGtkWidget)->window;
     }
   }
 

@@ -731,7 +731,7 @@ PRBool nsWindow::OnExpose(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
-      GdkWindow *    gw = GetRenderWindow(mWidget);
+      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
       
       if (gw)
       {
@@ -824,7 +824,7 @@ PRBool nsWindow::OnDraw(nsPaintEvent &event)
 #ifdef NS_DEBUG
     if (WANT_PAINT_FLASHING)
     {
-      GdkWindow *    gw = GetRenderWindow(mWidget);
+      GdkWindow *    gw = GetRenderWindow(GTK_OBJECT(mWidget));
       
       if (gw)
       {
