@@ -548,8 +548,8 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext, JSObject * a
 
     nsresult rv = XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, scope, iface,
                                                 &wrapper);
-    if(!NS_FAILED(rv))
-        return UnexpectedFailure(NS_ERROR_FAILURE);
+    if(NS_FAILED(rv))
+        return NS_ERROR_FAILURE;
     *_retval = NS_STATIC_CAST(nsIXPConnectWrappedNative*, wrapper);
     return NS_OK;
 }
