@@ -40,6 +40,17 @@
 XPCWrappedNativeScope* XPCWrappedNativeScope::gScopes = nsnull;
 XPCWrappedNativeScope* XPCWrappedNativeScope::gDyingScopes = nsnull;
 
+// static 
+XPCWrappedNativeScope* 
+XPCWrappedNativeScope::GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal)
+{
+
+    XPCWrappedNativeScope* scope = FindInJSObjectScope(ccx, aGlobal, JS_TRUE);
+    if(!scope)
+        scope = new XPCWrappedNativeScope(ccx, aGlobal);
+    return scope;
+}
+
 XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx, 
                                              JSObject* aGlobal)
     :   mRuntime(ccx.GetRuntime()),
@@ -393,8 +404,12 @@ GetScopeOfObject(JSContext* cx, JSObject* obj)
 
 
 #ifdef DEBUG
-void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj)
+void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj,
+                                     JSBool OKIfNotInitialized)
 {
+    if(OKIfNotInitialized)
+        return;
+
     const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
     jsval prop;
     if(JS_LookupProperty(ccx, obj, name, &prop) && !JSVAL_IS_PRIMITIVE(prop))
@@ -419,12 +434,13 @@ void DEBUG_CheckForComponentsInScope(XPCCallContext& ccx, JSObject* obj)
 #endif
 }        
 #else
-#define DEBUG_CheckForComponentsInScope(ccx, obj) ((void)0)
+#define DEBUG_CheckForComponentsInScope(ccx, obj, OKIfNotInitialized) ((void)0)
 #endif
 
 // static 
 XPCWrappedNativeScope* 
-XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
+XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj,
+                                           JSBool OKIfNotInitialized)
 {
     XPCWrappedNativeScope* scope;
 
@@ -445,8 +461,6 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
     while(nsnull != (parent = JS_GetParent(ccx, obj)))
         obj = parent;
 
-#if 1 /* Use new scope lookup */
-
     // XXX We are assuming that the scope count is low enough that traversing
     // the linked list is more reasonable then doing a hashtable lookup.
     {   // scoped lock
@@ -455,30 +469,17 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
         {
             if(obj == cur->GetGlobalJSObject())
             {
-                DEBUG_CheckForComponentsInScope(ccx, obj);
+                DEBUG_CheckForComponentsInScope(ccx, obj, OKIfNotInitialized);
                 return cur;
             }
         }
     }
-    NS_ERROR("No scope has this global object!");
+
+    // Failure to find the scope is only OK if the caller told us it might fail.
+    // This flag would only be set in the call from
+    // XPCWrappedNativeScope::GetNewOrUsed 
+    NS_ASSERTION(OKIfNotInitialized, "No scope has this global object!");
     return nsnull;
-#else
-    // Else, we will have to lookup the 'Components' object and ask it for
-    // the scope. 
-
-    const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
-    jsval prop;
-    JSObject* compobj;
-    if(!JS_LookupProperty(ccx, obj, name, &prop) ||
-       JSVAL_IS_PRIMITIVE(prop) ||
-       !(compobj = JSVAL_TO_OBJECT(prop)))
-    {
-        NS_ASSERTION(0,"No 'Components' in scope!");
-        return nsnull;
-    }
-
-    return GetScopeOfObject(ccx, compobj);
-#endif
 }        
 
 

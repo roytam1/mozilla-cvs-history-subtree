@@ -335,7 +335,9 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!nsXPCWrappedJSClass::InitClasses(ccx, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
-    XPCWrappedNativeScope* scope = new XPCWrappedNativeScope(ccx, aGlobalJSObj);
+    XPCWrappedNativeScope* scope = 
+        XPCWrappedNativeScope::GetNewOrUsed(ccx, aGlobalJSObj);
+    
     if(!scope)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 

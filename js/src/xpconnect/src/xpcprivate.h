@@ -717,6 +717,10 @@ private:
 class XPCWrappedNativeScope
 {
 public:
+
+    static XPCWrappedNativeScope* 
+    GetNewOrUsed(XPCCallContext& ccx, JSObject* aGlobal);
+
     XPCJSRuntime*
     GetRuntime() const {return mRuntime;}
 
@@ -736,7 +740,8 @@ public:
     GetPrototypeJSObject() const {return mPrototypeJSObject;}
 
     static XPCWrappedNativeScope*
-    FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj);
+    FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj, 
+                        JSBool OKIfNotInitialized = JS_FALSE);
 
     static void 
     SystemIsBeingShutDown(XPCCallContext& ccx);
@@ -770,9 +775,9 @@ public:
     void SetComponents(nsXPCComponents* aComponents);
     void SetGlobal(XPCCallContext& ccx, JSObject* aGlobal);
 
+private:
     XPCWrappedNativeScope(XPCCallContext& ccx, JSObject* aGlobal);
     virtual ~XPCWrappedNativeScope();
-private:
 
     static void KillDyingScopes();
 
