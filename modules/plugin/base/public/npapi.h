@@ -18,7 +18,6 @@
 
 
 /*
- *  npapi.h $Revision$
  *  Netscape client plug-in API spec
  */
 

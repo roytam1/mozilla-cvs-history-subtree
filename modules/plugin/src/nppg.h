@@ -17,7 +17,6 @@
  */
 
 /*
- *  nppg.h $Revision$
  *  Prototypes for functions exported by the FEs and called by libplugin.
  *  Some (perhaps all) of these prototypes could be moved to fe_proto.h.
  *  Protypes for functions exported by libplugin are in np.h.
