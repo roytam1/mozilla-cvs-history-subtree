@@ -1672,7 +1672,7 @@ JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
         limitV = argv[1];
     
     if (limitV.isUndefined())
-        lim = two32minus1;
+        lim = (uint32)two32minus1;
     else
         lim = (uint32)(limitV.toUInt32(cx).f64);
 
@@ -1705,7 +1705,8 @@ JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc
 step11:
         if (q == s) {
             String *T = new String(*S.string, p, (s - p));
-            A->setProperty(cx, *numberToString(A->mLength), NULL, JSValue(T));
+            JSValue v(T);
+            A->setProperty(cx, *numberToString(A->mLength), NULL, v);
             return JSValue(A);
         }
         MatchResult z;
@@ -1720,7 +1721,8 @@ step11:
             goto step11;
         }
         String *T = new String(*S.string, p, (q - p));
-        A->setProperty(cx, *numberToString(A->mLength), NULL, JSValue(T));
+        JSValue v(T);
+        A->setProperty(cx, *numberToString(A->mLength), NULL, v);
         if (A->mLength == lim)
             return JSValue(A);
         p = e;
