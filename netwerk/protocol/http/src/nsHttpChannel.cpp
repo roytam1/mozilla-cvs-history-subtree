@@ -532,7 +532,9 @@ nsHttpChannel::ProcessResponse()
         }
         break;
     case 303:
-    case 305:
+#if 0
+    case 305: // disabled as a security measure (see bug 187996).
+#endif
         // these redirects cannot be cached
         CloseCacheEntry(NS_ERROR_ABORT);
 
@@ -1422,29 +1424,6 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
     nsCOMPtr<nsIChannel> newChannel;
     nsCOMPtr<nsIURI> newURI;
 
-    if (redirectType == 305) {
-        // we must repeat the request via the proxy specified by location
- 
-        PRInt32 proxyPort;
-        
-        // location is of the form "host:port"
-        char *p = (char *)strchr(location, ':');
-        if (p) {
-            *p = 0;
-            proxyPort = atoi(p+1);
-        }
-        else
-            proxyPort = 80;
-
-        nsCOMPtr<nsIProxyInfo> pi;
-        rv = NS_NewProxyInfo("http", location, proxyPort, getter_AddRefs(pi));
-
-        // talk to the http handler directly for this case
-        rv = nsHttpHandler::get()->
-                NewProxiedChannel(mURI, pi, getter_AddRefs(newChannel));
-        if (NS_FAILED(rv)) return rv;
-    }
-    else {
         // create a new URI using the location header and the current URL
         // as a base...
         nsCOMPtr<nsIIOService> ioService;
@@ -1507,7 +1486,6 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
         rv = NS_NewChannel(getter_AddRefs(newChannel), newURI, ioService, mLoadGroup,
                            mCallbacks, newLoadFlags);
         if (NS_FAILED(rv)) return rv;
-    }
 
     // convey the original uri
     rv = newChannel->SetOriginalURI(mOriginalURI);
