@@ -25,6 +25,15 @@
 #ifndef _nsCacheManager_h_
 #define _nsCacheManager_h_
 
+// 2030f0b0-9567-11d3-90d3-0040056a906e
+#define NS_CACHE_MANAGER_CID                              \
+    {                                                     \
+        0x2030f0b0,                                       \
+        0x9567,                                           \
+        0x11d3,                                           \
+        {0x90, 0xd3, 0x00, 0x40, 0x05, 0x6a, 0x90, 0x6e}  \
+    }
+
 #include "nsINetDataCacheManager.h"
 #include "nsCOMPtr.h"
 
@@ -34,6 +43,7 @@ class nsCachedNetData;
 
 class nsCacheManager : public nsINetDataCacheManager {
 
+public:
     nsCacheManager();
     ~nsCacheManager();
 
@@ -83,6 +93,7 @@ protected:
     static nsresult LimitDiskCacheSize();
 
     friend class nsCachedNetData;
+    friend class CacheOutputStream;
 };
 
 #endif // _nsCacheManager_h_
