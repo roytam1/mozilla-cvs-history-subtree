@@ -445,3 +445,6 @@ pref("mailnews.fakeaccount.server", "");
 // message display properties
 pref("mailnews.message_display.disable_remote_image", false);
 pref("mailnews.message_display.allow.plugins", true);
+
+// auto absync
+pref("mail.absync.performAutoSync", true);
