@@ -113,7 +113,7 @@ int IsMapiMozMapi(BOOL *bIsMozMapi)
   HINSTANCE hLib;
   char szMapiFilePath[MAX_BUF];
   int iRv = WIZ_ERROR_UNDEFINED;
-  int (PASCAL *GetMapiDllversion)(void);
+  int (PASCAL *GetMapiDllVersion)(void);
   char szMapiVersionKey[] = "MAPI version installed";
   char szBuf[MAX_BUF];
   int  iMapiVersionInstalled;
@@ -136,9 +136,9 @@ int IsMapiMozMapi(BOOL *bIsMozMapi)
   {
     iRv = WIZ_OK;
     *bIsMozMapi = FALSE;
-    if(((FARPROC)GetMapiDllversion = GetProcAddress(hLib, "GetMapiDllversion")) != NULL)
+    if(((FARPROC)GetMapiDllVersion = GetProcAddress(hLib, "GetMapiDllVersion")) != NULL)
     {
-      if(iMapiVersionInstalled == GetMapiDllversion())
+      if(iMapiVersionInstalled == GetMapiDllVersion())
         *bIsMozMapi = TRUE;
     }
     FreeLibrary(hLib);
@@ -322,7 +322,7 @@ void RestoreMozMapi()
    *
    * bFileIsMozMapi is TRUE in the following conditions:
    *   * mapi32.dll is not found
-   *   * mapi32.dll loads and GetMapiDllversion() exists
+   *   * mapi32.dll loads and GetMapiDllVersion() exists
    *     _and_ returns the same version indicated in the uninstall.ini file:
    *
    *       [Restore Desktop Integration]
