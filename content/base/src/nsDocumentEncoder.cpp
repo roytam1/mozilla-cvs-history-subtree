@@ -963,8 +963,13 @@ nsHTMLCopyEncoder::EncodeToStringWithContext(nsAWritableString& aEncodedString,
   // understood by the paste code would be a lot more work to do.  As a practical matter,
   // selections are single range, and the ones that aren't are table cell selections
   // where all the cells are in the same table.
-  PRInt32 i = mCommonAncestors.Count();
+
+  // leaf of ancestors might be text node.  If so discard it.
   nsCOMPtr<nsIDOMNode> node;
+  node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(0));
+  if (node && IsTextNode(node)) mCommonAncestors.RemoveElementAt(0);
+  
+  PRInt32 i = mCommonAncestors.Count();
 
   node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(--i));
 
