@@ -50,7 +50,7 @@ AB_CD = $(MOZ_UI_LOCALE)
 
 APP_VERSION := $(shell cat $(srcdir)/../config/version.txt)
 
-DEFINES += -DAB_CD=$(AB_CD)
+DEFINES += -DAB_CD=$(AB_CD) -DAPP_VERSION=$(MOZ_APP_VERSION)
 
 ifeq (,$(filter-out pref,$(MOZ_EXTENSIONS)))
 DEFINES += -DEXTENSION_PREF
