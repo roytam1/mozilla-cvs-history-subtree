@@ -376,6 +376,9 @@ nsSVGElement::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                       nsIAtom** aPrefix,
                       nsAString& aResult) const
 {
+  NS_ASSERTION(aNameSpaceID != kNameSpaceID_Unknown,
+               "must have a real namespace ID!");
+
   return mAttributes->GetAttr(aNameSpaceID, aName, aPrefix, aResult);
 }
 
@@ -389,6 +392,8 @@ nsSVGElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 NS_IMETHODIMP_(PRBool)
 nsSVGElement::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
 {
+  NS_ASSERTION(aNameSpaceID != kNameSpaceID_Unknown,
+               "must have a real namespace ID!");
   return mAttributes->HasAttr(aNameSpaceID, aName);
 }
 

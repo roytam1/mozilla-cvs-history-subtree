@@ -42,6 +42,7 @@
 #include "nsIHttpChannel.h"
 #include "nsString.h"
 #include "nsLiteralString.h"
+#include "nsReadableUtils.h"
 
 NS_INTERFACE_MAP_BEGIN(nsSVGDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGDocument)
@@ -82,7 +83,7 @@ nsSVGDocument::StartDocumentLoad(const char* aCommand,
     nsCAutoString referrer;
     rv = httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("referrer"), referrer);
     if (NS_SUCCEEDED(rv)) {
-      mReferrer = NS_ConvertUTF8toUCS2(referrer);
+      CopyUTF8toUTF16(referrer, mReferrer);
     }
   }
 
@@ -104,30 +105,29 @@ nsSVGDocument::GetReferrer(nsAString& aReferrer) {
 
 NS_IMETHODIMP
 nsSVGDocument::GetDomain(nsAString& aDomain) {
-  if (!mDocumentURL) {
-    aDomain.Truncate();
-  } else {
-    nsCAutoString domain;
+  nsCAutoString domain;
+
+  if (mDocumentURL) {
     nsresult rv = mDocumentURL->GetHost(domain);
     if (NS_FAILED(rv)) return rv;
-    
-    aDomain.Assign(NS_ConvertUTF8toUCS2(domain));
   }
+
+  CopyUTF8toUTF16(domain, aDomain);
   
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsSVGDocument::GetURL(nsAString& aURL) {
-  if (!mDocumentURL) {
-    aURL.Truncate();
-  } else {
-    nsCAutoString url;
+  nsCAutoString url;
+
+  if (mDocumentURL) {
     nsresult rv = mDocumentURL->GetSpec(url);
     if (NS_FAILED(rv)) return rv;    
-    aURL.Assign(NS_ConvertUTF8toUCS2(url));
   }
-  
+
+  CopyUTF8toUTF16(url, aURL);
+
   return NS_OK;
 }
 

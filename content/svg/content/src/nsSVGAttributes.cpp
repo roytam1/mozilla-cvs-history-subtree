@@ -647,12 +647,32 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
                          PRBool aNotify)
 {
   NS_ENSURE_ARG_POINTER(aNodeInfo);
-  PRBool modification = PR_FALSE;
   nsAutoString oldValue;
-  nsresult rv = NS_ERROR_OUT_OF_MEMORY;
 
-  nsCOMPtr<nsIAtom> name = aNodeInfo->GetNameAtom();
+  nsCOMPtr<nsIDocument> document;
+  if (mContent)
+    mContent->GetDocument(getter_AddRefs(document));
+  
+  nsSVGAttribute* attr = nsnull;
+  PRInt32 index;
+  PRInt32 count;
+
+  count = Count();
+  for (index = 0; index < count; index++) {
+    attr = ElementAt(index);
+    if (attr->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) {
+      attr->GetValue()->GetValueString(oldValue);
+      NS_ASSERTION(attr->GetNodeInfo()==aNodeInfo, "svg attribute's prefix changed. XXX is this allowed to happen?");
+      if (oldValue.Equals(aValue)) {
+        // Do nothing if the value is not changing
+        return NS_OK;
+      }
+      break;
+    }
+  }
+
   PRInt32 nameSpaceID = aNodeInfo->GetNamespaceID();
+  nsCOMPtr<nsIAtom> name = aNodeInfo->GetNameAtom();
 
 #ifdef DEBUG
 //   {
@@ -663,53 +683,36 @@ nsSVGAttributes::SetAttr(nsINodeInfo* aNodeInfo,
 //   }
 #endif
 
-  nsCOMPtr<nsIDocument> document;
-  if (mContent)
-    mContent->GetDocument(getter_AddRefs(document));
-  
+  // Send the notification before making any updates
   if (aNotify && document) {
     document->BeginUpdate();
     document->AttributeWillChange(mContent, nameSpaceID, name);
   }
 
-  nsSVGAttribute* attr;
-  PRInt32 index;
-  PRInt32 count;
+  nsresult rv = NS_OK;
 
-  count = Count();
-  for (index = 0; index < count; index++) {
-    attr = ElementAt(index);
-    if (attr->GetNodeInfo()->NameAndNamespaceEquals(aNodeInfo)) {
-      attr->GetValue()->GetValueString(oldValue);
-      modification = PR_TRUE;
-      if (attr->GetNodeInfo()!=aNodeInfo) {
-        // XXX can this ever happen??
-        NS_ERROR("svg attribute's prefix changed");
-        attr->mNodeInfo = aNodeInfo;
-      }
-      attr->GetValue()->SetValueString(aValue);
-      rv = NS_OK;
-      break;
-    }
-  }
-  
-  if (index >= count) { // didn't find it
+  PRBool modification = PR_FALSE;
 
+  if (index < count) {  // found the attr in the list
+    NS_ASSERTION(attr, "How did we get here with a null attr pointer?");
+    modification = PR_TRUE;
+    attr->GetValue()->SetValueString(aValue);
+  } else  { // didn't find it
+    // GetMappedAttribute and nsSVGAttribute::Create both addref, so we release
+    // after this if block.  It's safe to use attr after the Release(), since
+    // AppendElement also addrefs it.
     if (GetMappedAttribute(aNodeInfo, &attr)) {
       if (attr->GetNodeInfo()!=aNodeInfo) {
         attr->mNodeInfo = aNodeInfo;
       }
-      AppendElement(attr);
       attr->GetValue()->SetValueString(aValue);
     }
     else {
       rv = nsSVGAttribute::Create(aNodeInfo, aValue, &attr);
       NS_ENSURE_TRUE(attr, rv);
-      AppendElement(attr);
     }
-    
+    AppendElement(attr);
     attr->Release();
-    rv = NS_OK;
   }
 
   // if this is an svg presentation attribute we need to map it into
