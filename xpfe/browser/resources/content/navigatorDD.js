@@ -426,8 +426,9 @@ var bookmarksButtonObserver = {
   getSupportedFlavours: function ()
     {
       var flavourSet = new FlavourSet();
-      flavourSet.appendFlavour("application/x-moz-file", "nsIFile");
-      flavourSet.appendFlavour("text/x-moz-url");
+      // temporary blocking of feature for the smooth release of ns6.2.1
+      // flavourSet.appendFlavour("application/x-moz-file", "nsIFile");
+      // flavourSet.appendFlavour("text/x-moz-url");
       return flavourSet;
     }
 };
