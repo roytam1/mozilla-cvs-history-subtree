@@ -104,7 +104,7 @@ NET_DownloadAutoAdminCfgFile()
 	char* url = NULL;
     MWContext* context;
 
-#ifndef MOZ_LITE
+#ifndef MOZ_OFFLINE
 	if ( NET_IsOffline() ) return;
 #endif
 
