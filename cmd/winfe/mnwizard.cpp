@@ -339,21 +339,14 @@ LRESULT CReceiveMailPage::OnWizardNext()
 
 void CReceiveMailPage::DoFinish()
 {
-<<<<<<< mnwizard.cpp
     char text[BUFSZ];
 	text[0] = '\0';
     GetDlgItemText(IDC_EDIT_USER_NAME, text, BUFSZ);
 	PREF_SetCharPref("mail.pop_name", text);
 	
-=======
-	char text[BUFSZ];
->>>>>>> 3.1.16.1
 	text[0] = '\0';
-<<<<<<< mnwizard.cpp
     GetDlgItemText(IDC_EDIT_MAIL_SERVER, text, BUFSZ);  
 	PREF_SetCharPref("network.hosts.pop_server", text);
-=======
->>>>>>> 3.1.16.1
 
 	if (IsDlgButtonChecked(IDC_RADIO_IMAP)) 
 	{	// IMAP server
