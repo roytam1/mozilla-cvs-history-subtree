@@ -28,12 +28,12 @@
 <head>
 <script type="application/x-javascript">
   var strBundleService = Components.classes["@mozilla.org/intl/stringbundle;1"].getService(Components.interfaces.nsIStringBundleService);
-  var pluginsbundle = strBundleService.createBundle("chrome://communicator/locale/plugins.properties");
-  var regionbundle = strBundleService.createBundle("chrome://communicator-region/locale/region.properties");
+  var pluginsbundle = strBundleService.createBundle("chrome://global/locale/plugins.properties");
+  var regionbundle = strBundleService.createBundle("chrome://global-region/locale/region.properties");
 
   document.writeln("<title>" + pluginsbundle.GetStringFromName("title_label") + "<\/title>");
 </script>
-<link rel="stylesheet" type="text/css" href="chrome://communicator/skin/plugins.css">
+<link rel="stylesheet" type="text/css" href="chrome://global/skin/plugins.css">
 </head>
 <body>
 <div id="outside">
