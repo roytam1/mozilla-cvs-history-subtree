@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -209,6 +209,7 @@ protected:
                                                    // the input stream becomes unblocked
   PRUint32                  mSuspendedReadBytesPostPeriod; // # of bytes which need processed after we insert a '.' before 
                                                            // the input stream becomes unblocked.
+  virtual nsresult CloseSocket(); 
 };
 
 #endif /* nsMsgProtocol_h__ */
