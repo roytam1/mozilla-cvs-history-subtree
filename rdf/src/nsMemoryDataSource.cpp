@@ -527,6 +527,7 @@ nsMemoryDataSource::GetTargets(nsIRDFNode* source,
     if (! (targets = u->GetProperties(property, tv)))
         return NS_ERROR_OUT_OF_MEMORY;
 
+    NS_ADDREF(targets);
     return NS_OK;
 }
 
@@ -618,6 +619,7 @@ nsMemoryDataSource::ArcLabelsOut(nsIRDFNode* source,
     if (! (labels = u->GetArcLabelsOut()))
         return NS_ERROR_OUT_OF_MEMORY;
 
+    NS_ADDREF(labels);
     return NS_OK;
 }
 
