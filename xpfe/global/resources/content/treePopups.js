@@ -91,7 +91,7 @@ function ToggleColumnState(popupElement, doc)
   if (colNode) {
     var checkedState = popupElement.getAttribute("checked");
     if (checkedState == "true")
-      colNode.removeAttribute("hidden");
+      colNode.setAttribute("hidden", "false");
     else
       colNode.setAttribute("hidden", "true");
   }
