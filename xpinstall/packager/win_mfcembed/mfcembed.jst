@@ -68,7 +68,7 @@ function createRootRegKey(winreg)
     winreg.createKey(subkey,"");
   }
 
-  winreg.createKey(subkey + "\\$UserAgent$","");
+  winreg.createKey(subkey + "\\@XPI_USERAGENT@","");
 }
 
 function registerMainKeys(winreg)
@@ -76,18 +76,18 @@ function registerMainKeys(winreg)
   var subkey;  //the name of the subkey you are poking around in
   var err;
 
-  err     = winreg.setValueString(regRootKey, "CurrentVersion", "$UserAgent$");
+  err     = winreg.setValueString(regRootKey, "CurrentVersion", "@XPI_USERAGENT@");
 
-  winreg.createKey(regRootKey + "\\$UserAgent$", "");
+  winreg.createKey(regRootKey + "\\@XPI_USERAGENT@", "");
 
-  subkey  = regRootKey + "\\$UserAgent$\\Main";
+  subkey  = regRootKey + "\\@XPI_USERAGENT@\\Main";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Install Directory", fProgram);
 
-  subkey  = regRootKey + "\\$UserAgent$\\Uninstall";
+  subkey  = regRootKey + "\\@XPI_USERAGENT@\\Uninstall";
   winreg.createKey(subkey,"");
   err     = winreg.setValueString(subkey, "Uninstall Log Folder", fProgram + "Uninstall");
-  err     = winreg.setValueString(subkey, "Description", "$ProductName$ ($UserAgentShort$)");
+  err     = winreg.setValueString(subkey, "Description", "@XPI_PRODUCTNAME@ (@XPI_USERAGENTSHORT@)");
 }
 
 function registerMozillaKeys(winreg)
@@ -98,13 +98,13 @@ function registerMozillaKeys(winreg)
 
   regKey = "Software\\Mozilla";
   winreg.createKey(regKey, "");
-  winreg.createKey(regKey + "\\MfcEmbed $UserAgent$", "");
+  winreg.createKey(regKey + "\\MfcEmbed @XPI_USERAGENT@", "");
 
-  subkey = regKey + "\\MfcEmbed $UserAgent$\\bin";
+  subkey = regKey + "\\MfcEmbed @XPI_USERAGENT@\\bin";
   winreg.createKey(subkey, "");
-  err   = winreg.setValueString(subkey, "PathToExe", fProgram + "$MainExeFile$");
+  err   = winreg.setValueString(subkey, "PathToExe", fProgram + "@XPI_MAINEXEFILE@");
 
-  subkey = regKey + "\\MfcEmbed $UserAgent$\\Extensions";
+  subkey = regKey + "\\MfcEmbed @XPI_USERAGENT@\\Extensions";
   winreg.createKey(subkey, "");
   err   = winreg.setValueString(subkey, "Components", fProgram + "\\Components");
   err   = winreg.setValueString(subkey, "Plugins",    fProgram + "\\Plugins");
@@ -123,10 +123,10 @@ var restrictedAccess;
 var fileToRegister;
 var regRootKey;
 
-regRootKey = new String("Software\\$CompanyName$\\MFCEmbed");
+regRootKey = new String("Software\\@XPI_COMPANYNAME@\\MFCEmbed");
 
-srDest = @XPI_SPACEREQUIRED@:bin;
-err    = initInstall("$ProductName$", "MFCEmbed", "$Version$"); 
+srDest = @XPI_SPACEREQUIRED_BIN@;
+err    = initInstall("@XPI_PRODUCTNAME@", "MFCEmbed", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -138,15 +138,7 @@ if(verifyDiskSpace(fProgram, srDest))
 
   err = addDirectory("",
                      "",
-                     "gre_app_support", // dir name in jar to extract 
-                     fProgram,      // Where to put this file (Returned from GetFolder) 
-                     "",            // subdir name to create relative to fProgram
-                     true);         // Force Flag 
-  logComment("addDirectory() of Program returned: " + err);
-
-  err = addDirectory("",
-                     "",
-                     "Embed",      // dir name in jar to extract 
+                     "bin",        // dir name in jar to extract 
                      fProgram,     // Where to put this file (Returned from GetFolder) 
                      "",           // subdir name to create relative to fProgram
                      true);        // Force Flag 
