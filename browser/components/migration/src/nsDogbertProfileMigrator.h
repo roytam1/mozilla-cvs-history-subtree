@@ -45,8 +45,6 @@
 
 class nsIFile;
 
-#define NEED_TO_FIX_4X_COOKIES 1
-
 class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
 {
 public:

@@ -58,10 +58,8 @@
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
 #define NEED_TO_FIX_4X_COOKIES 1
-#endif /* XP_MAC */
-#ifdef NEED_TO_FIX_4X_COOKIES
 #define SECONDS_BETWEEN_1900_AND_1970 2208988800UL
-#endif
+#endif /* XP_MAC */
 
 #define PREF_FILE_HEADER_STRING "# Mozilla User Preferences    " 
 
@@ -69,24 +67,24 @@
 #define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("preferences.js")
 #define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("cookies")
 #define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("bookmarks.html")
-#define PSM_CERT7_DB              "cert7.db"
-#define PSM_KEY3_DB               "key3.db"
-#define PSM_SECMODULE_DB          "secmodule.db"
+#define PSM_CERT7_DB              NS_LITERAL_STRING("cert7.db")
+#define PSM_KEY3_DB               NS_LITERAL_STRING("key3.db")
+#define PSM_SECMODULE_DB          NS_LITERAL_STRING("secmodule.db")
 #elif defined(XP_MAC) || defined(XP_MACOSX)
 #define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("Netscape Preferences")
 #define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("MagicCookie")
 #define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("Bookmarks.html")
 #define SECURITY_PATH             "Security"
-#define PSM_CERT7_DB              "Certificates7"
-#define PSM_KEY3_DB               "Key Database3"
-#define PSM_SECMODULE_DB          "Security Modules"
+#define PSM_CERT7_DB              NS_LITERAL_STRING("Certificates7")
+#define PSM_KEY3_DB               NS_LITERAL_STRING("Key Database3")
+#define PSM_SECMODULE_DB          NS_LITERAL_STRING("Security Modules")
 #else /* XP_WIN || XP_OS2 */
 #define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("prefs.js")
 #define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("cookies.txt")
 #define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("bookmark.htm")
-#define PSM_CERT7_DB              "cert7.db"
-#define PSM_KEY3_DB               "key3.db"
-#define PSM_SECMODULE_DB          "secmod.db"
+#define PSM_CERT7_DB              NS_LITERAL_STRING("cert7.db")
+#define PSM_KEY3_DB               NS_LITERAL_STRING("key3.db")
+#define PSM_SECMODULE_DB          NS_LITERAL_STRING("secmod.db")
 #endif /* XP_UNIX */
 
 #define COOKIES_FILE_NAME_IN_5x   NS_LITERAL_STRING("cookies.txt")
@@ -251,12 +249,10 @@ nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir,
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
 {
-  nsresult rv;
+  nsresult rv = NS_OK;
 
   // 1) Copy Preferences
-  rv = CopyFile(PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
-  if (NS_FAILED(rv)) return rv;
-
+  rv |= CopyFile(PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
 
 #if 0
   /* Copy the old prefs file to the new profile directory for modification and reading.  
@@ -293,9 +289,12 @@ nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
   rv = newPrefsFile->Rename(PREF_FILE_NAME_IN_5x);
 #endif
 
-
   // 2) Copy Certficates
-  return NS_OK;
+  rv |= CopyFile(PSM_CERT7_DB,      PSM_CERT7_DB);
+  rv |= CopyFile(PSM_KEY3_DB,       PSM_KEY3_DB);
+  rv |= CopyFile(PSM_SECMODULE_DB,  PSM_SECMODULE_DB);
+
+  return rv;
 }
 
 nsresult
@@ -354,14 +353,14 @@ nsDogbertProfileMigrator::FixDogbertCookies()
     nsresult rv = lineInputStream->ReadLine(buffer, &moreData);
     if (NS_FAILED(rv)) return rv;
 
-    /* skip line if it is a comment or null line */
+    // skip line if it is a comment or null line
     if (buffer.IsEmpty() || buffer.CharAt(0) == '#' ||
         buffer.CharAt(0) == nsCRT::CR || buffer.CharAt(0) == nsCRT::LF) {
       fileOutputStream->Write((const char*)buffer.get(), buffer.Length(), &written);
       continue;
     }
 
-    /* locate expire field, skip line if it does not contain all its fields */
+    // locate expire field, skip line if it does not contain all its fields
     int hostIndex, isDomainIndex, pathIndex, xxxIndex, expiresIndex, nameIndex, cookieIndex;
     hostIndex = 0;
     if ((isDomainIndex = buffer.FindChar('\t', hostIndex)+1) == 0 ||
@@ -372,26 +371,25 @@ nsDogbertProfileMigrator::FixDogbertCookies()
         (cookieIndex = buffer.FindChar('\t', nameIndex)+1) == 0 )
       continue;
 
-    /* separate the expires field from the rest of the cookie line */
+    // separate the expires field from the rest of the cookie line
     nsAutoString prefix, expiresString, suffix;
     buffer.Mid(prefix, hostIndex, expiresIndex-hostIndex-1);
     buffer.Mid(expiresString, expiresIndex, nameIndex-expiresIndex-1);
     buffer.Mid(suffix, nameIndex, buffer.Length()-nameIndex);
 
-    /* correct the expires field */
+    // correct the expires field
     char* expiresCString = ToNewCString(expiresString);
     unsigned long expires = strtoul(expiresCString, nsnull, 10);
     nsCRT::free(expiresCString);
 
-    /* if the cookie is supposed to expire at the end of the session
-     * expires == 0.  don't adjust those cookies.
-     */
+    // if the cookie is supposed to expire at the end of the session
+    // expires == 0.  don't adjust those cookies.
     if (expires)
     	expires -= SECONDS_BETWEEN_1900_AND_1970;
     char dateString[36];
     PR_snprintf(dateString, sizeof(dateString), "%lu", expires);
 
-    /* generate the output buffer and write it to file */
+    // generate the output buffer and write it to file
     outBuffer = prefix;
     outBuffer.Append(PRUnichar('\t'));
     outBuffer.AppendWithConversion(dateString);
@@ -403,7 +401,7 @@ nsDogbertProfileMigrator::FixDogbertCookies()
   while (moreData);
 }
 
-#endif /* NEED_TO_FIX_4X_COOKIES */
+#endif // NEED_TO_FIX_4X_COOKIES
 
 
 nsresult
