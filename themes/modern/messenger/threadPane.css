@@ -37,6 +37,11 @@ outlinercol.flagColumnHeader {
   list-style-image: url("chrome://messenger/skin/flaggedmail.gif");
 }
 
+:-moz-outliner-cell-text(unread)
+{
+  font-weight: bold;
+}
+
 /* end temporary outliner styles */
 
 
