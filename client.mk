@@ -139,6 +139,8 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/src/nsXTFWeakTearoff.h \
 	content/xtf/src/nsXTFXMLVisualWrapper.cpp \
 	content/xtf/src/nsXTFXMLVisualWrapper.h \
+	content/xtf/src/nsXTFXULVisualWrapper.cpp \
+	content/xtf/src/nsXTFXULVisualWrapper.h \
 	content/xtf/tests/Makefile.in \
 	content/xtf/tests/canvas/Makefile.in \
 	content/xtf/tests/canvas/canvas.js \
