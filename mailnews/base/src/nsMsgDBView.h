@@ -78,6 +78,7 @@ protected:
   // also cleans up the attributes on the previously sorted column.
   nsresult UpdateSortUI(nsIDOMElement * aNewSortColumn);
 
+  nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI);
 
   // routines used in building up view
   virtual PRBool WantsThisThread(nsIMsgThread * thread);

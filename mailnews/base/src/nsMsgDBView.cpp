@@ -145,6 +145,21 @@ nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
   return NS_OK;
 }
 
+nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
+{
+  nsXPIDLCString baseURI;
+  m_folder->GetBaseMessageURI(getter_Copies(baseURI));
+  nsCAutoString uri;
+  uri.Assign(baseURI);
+
+  // append a "#" followed by the message key.
+  uri.Append('#');
+  uri.AppendInt(aMsgKey);
+
+  *aURI = uri.ToNewCString();
+  return NS_OK;
+}
+
 nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
 {
   nsAutoString currentView;
@@ -153,12 +168,17 @@ nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
   if (currentView.Equals(NS_LITERAL_STRING("threaded")))
   {
     aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("unthreaded"));
+
   }
   else
-   aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("threaded"));
+  {
+     aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("threaded"));
+  }
 
   // i think we need to create a new view and switch it in this circumstance since
   // we are toggline between threaded and non threaded mode.
+
+
   return NS_OK;
 }
 
@@ -194,6 +214,29 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
 
 NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
+  // if the currentSelection changed then we have a message to display
+  PRInt32 selectionCount; 
+  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
+  NS_ENSURE_SUCCESS(rv, NS_OK); // outliner doesn't care if we failed
+
+  // if only one item is selected then we want to display a message
+  if (selectionCount == 1)
+  {
+    PRInt32 startRange;
+    PRInt32 endRange;
+    rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
+    NS_ENSURE_SUCCESS(rv, NS_OK); // outliner doesn't care if we failed
+
+    if (startRange >= 0 && startRange == endRange)
+    {
+      // get the msgkey for the message
+      nsMsgKey msgkey = m_keys.GetAt(startRange);
+      nsXPIDLCString uri;
+      GenerateURIForMsgKey(msgkey, getter_Copies(uri));
+      mMessengerInstance->OpenURL(uri);
+    }
+  }
+
   return NS_OK;
 }
 
