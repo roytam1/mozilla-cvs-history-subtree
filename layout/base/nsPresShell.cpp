@@ -806,251 +806,9 @@ nsDummyLayoutRequest::Cancel(nsresult status)
   nsresult rv = NS_OK;
   nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
   if (presShell) {
-    rv = presShell->CancelAllReflowCommands();
+    rv = presShell->CancelAllPendingReflows();
   }
   return rv;
-}
-
-// ----------------------------------------------------------------------------
-
-/**
- * Used to build and maintain the incremental reflow tree, and
- * dispatch incremental reflows to individual reflow roots.
- */
-class IncrementalReflow
-{
-public:
-  ~IncrementalReflow();
-
-  /**
-   * Add a reflow command to the set of commands that are to be
-   * dispatched in the incremental reflow.
-   */
-  enum AddCommandResult {
-    eEnqueued, // the command was successfully added
-    eTryLater, // the command could not be added; try again
-    eCancel,   // the command was not added; delete it
-    eOOM       // Out of memory.
-  };
-  AddCommandResult
-  AddCommand(nsPresContext      *aPresContext,
-             nsHTMLReflowCommand *aCommand);
-
-  /**
-   * Dispatch the incremental reflow.
-   */
-  void
-  Dispatch(nsPresContext      *aPresContext,
-           nsHTMLReflowMetrics &aDesiredSize,
-           const nsSize        &aMaxSize,
-           nsIRenderingContext &aRendContext);
-
-#ifdef NS_DEBUG
-  /**
-   * Dump the incremental reflow state.
-   */
-  void
-  Dump(nsPresContext *aPresContext) const;
-#endif
-
-protected:
-  /**
-   * The set of incremental reflow roots.
-   */
-  nsAutoVoidArray mRoots;
-};
-
-IncrementalReflow::~IncrementalReflow()
-{
-  for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i)
-    delete NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
-}
-
-void
-IncrementalReflow::Dispatch(nsPresContext      *aPresContext,
-                            nsHTMLReflowMetrics &aDesiredSize,
-                            const nsSize        &aMaxSize,
-                            nsIRenderingContext &aRendContext)
-{
-  for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i) {
-    // Send an incremental reflow notification to the first frame in the
-    // path.
-    nsReflowPath *path = NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
-    nsIFrame *first = path->mFrame;
-
-    nsIFrame* root = aPresContext->PresShell()->FrameManager()->GetRootFrame();
-
-    first->WillReflow(aPresContext);
-    nsContainerFrame::PositionFrameView(first);
-
-    // If the first frame in the path is the root of the frame
-    // hierarchy, then use all the available space. If it's simply a
-    // `reflow root', then use the first frame's size as the available
-    // space.
-    nsSize size;
-    if (first == root)
-      size = aMaxSize;
-    else
-      size = first->GetSize();
-
-    nsHTMLReflowState reflowState(aPresContext, first, path,
-                                  &aRendContext, size);
-
-    nsReflowStatus status;
-    first->Reflow(aPresContext, aDesiredSize, reflowState, status);
-
-    // If an incremental reflow is initiated at a frame other than the
-    // root frame, then its desired size had better not change!
-    NS_ASSERTION(first == root ||
-                 (aDesiredSize.width == size.width && aDesiredSize.height == size.height),
-                 "non-root frame's desired size changed during an incremental reflow");
-
-    first->SetSize(nsSize(aDesiredSize.width, aDesiredSize.height));
-
-    nsContainerFrame::SyncFrameViewAfterReflow(aPresContext, first, first->GetView(),
-                                               &aDesiredSize.mOverflowArea);
-
-    first->DidReflow(aPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
-  }
-}
-
-IncrementalReflow::AddCommandResult
-IncrementalReflow::AddCommand(nsPresContext      *aPresContext,
-                              nsHTMLReflowCommand *aCommand)
-{
-  nsIFrame *frame;
-  aCommand->GetTarget(frame);
-  NS_ASSERTION(frame != nsnull, "reflow command with no target");
-
-  // Construct the reflow path by walking up the through the frames'
-  // parent chain until we reach either a `reflow root' or the root
-  // frame in the frame hierarchy.
-  nsAutoVoidArray path;
-  do {
-    path.AppendElement(frame);
-  } while (!(frame->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
-           (frame = frame->GetParent()) != nsnull);
-
-  // Pop off the root, add it to the set if it's not there already.
-  PRInt32 lastIndex = path.Count() - 1;
-  nsIFrame *rootFrame = NS_STATIC_CAST(nsIFrame *, path[lastIndex]);
-  path.RemoveElementAt(lastIndex);
-
-  // Prevent an incremental reflow from being posted inside a reflow
-  // root if the reflow root's container has not yet been reflowed.
-  // This can cause problems like bug 228156.
-  if (rootFrame->GetParent() &&
-      (rootFrame->GetParent()->GetStateBits() & NS_FRAME_FIRST_REFLOW)) {
-    return eCancel;
-  }
-
-  nsReflowPath *root = nsnull;
-
-  PRInt32 i;
-  for (i = mRoots.Count() - 1; i >= 0; --i) {
-    nsReflowPath *r = NS_STATIC_CAST(nsReflowPath *, mRoots[i]);
-    if (r->mFrame == rootFrame) {
-      root = r;
-      break;
-    }
-  }
-
-  if (! root) {
-    root = new nsReflowPath(rootFrame);
-    if (! root)
-      return eOOM;
-
-    root->mReflowCommand = nsnull;
-    mRoots.AppendElement(root);
-  }
-
-  // Now walk the path from the root to the leaf, adding to the reflow
-  // tree as necessary.
-  nsReflowPath *target = root;
-  for (i = path.Count() - 1; i >= 0; --i) {
-    nsIFrame *f = NS_STATIC_CAST(nsIFrame *, path[i]);
-    target = target->EnsureSubtreeFor(f);
-
-    // Out of memory. Ugh.
-    if (! target)
-      return eOOM;
-  }
-
-  // Place the reflow command in the leaf, if one isn't there already.
-  if (target->mReflowCommand) {
-    // XXXwaterson it's probably possible to have some notion of
-    // `promotion' here that would avoid any re-queuing; for example,
-    // promote a dirty reflow to a style changed. For now, let's punt
-    // and not worry about it.
-#ifdef NS_DEBUG
-    if (gVerifyReflowFlags & VERIFY_REFLOW_NOISY_RC)
-      printf("requeuing command %p because %p was already scheduled "
-             "for the same frame",
-             (void*)aCommand, (void*)target->mReflowCommand);
-#endif
-
-    return eTryLater;
-  }
-
-  target->mReflowCommand = aCommand;
-  return eEnqueued;
-}
-
-
-#ifdef NS_DEBUG
-void
-IncrementalReflow::Dump(nsPresContext *aPresContext) const
-{
-  for (PRInt32 i = mRoots.Count() - 1; i >= 0; --i)
-    NS_STATIC_CAST(nsReflowPath *, mRoots[i])->Dump(aPresContext, stdout, 0);
-}
-#endif
-
-// ----------------------------------------------------------------------------
-
-struct ReflowCommandEntry : public PLDHashEntryHdr
-{
-  nsHTMLReflowCommand* mCommand;
-};
-
-PR_STATIC_CALLBACK(const void *)
-ReflowCommandHashGetKey(PLDHashTable *table, PLDHashEntryHdr *entry)
-{
-  ReflowCommandEntry *e = NS_STATIC_CAST(ReflowCommandEntry *, entry);
-  
-  return e->mCommand;
-}
-
-PR_STATIC_CALLBACK(PLDHashNumber)
-ReflowCommandHashHashKey(PLDHashTable *table, const void *key)
-{
-  const nsHTMLReflowCommand* command =
-    NS_STATIC_CAST(const nsHTMLReflowCommand*, key);
-  
-  // The target is going to be reasonably unique, if we shift out the
-  // always-zero low-order bits, the type comes from an enum and we just don't
-  // have that many types, and the child list name is either null or has the
-  // same high-order bits as all the other child list names.
-  return
-    (NS_PTR_TO_INT32(command->GetTarget()) >> 2) ^
-    (command->GetType() << 17) ^
-    (NS_PTR_TO_INT32(command->GetChildListName()) << 20);
-}
-
-PR_STATIC_CALLBACK(PRBool)
-ReflowCommandHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
-                            const void *key)
-{
-   const ReflowCommandEntry *e =
-     NS_STATIC_CAST(const ReflowCommandEntry *, entry);
-   const nsHTMLReflowCommand *command = e->mCommand;
-   const nsHTMLReflowCommand *command2 =
-     NS_STATIC_CAST(const nsHTMLReflowCommand *, key);
-
-   return
-     command->GetTarget() == command2->GetTarget() &&
-     command->GetType() == command2->GetType() &&
-     command->GetChildListName() == command2->GetChildListName();
 }
 
 // ----------------------------------------------------------------------------
@@ -1110,7 +868,8 @@ public:
                                 nsISupports** aResult) const;
   NS_IMETHOD GetPlaceholderFrameFor(nsIFrame*  aFrame,
                                     nsIFrame** aPlaceholderFrame) const;
-  NS_IMETHOD FramesNeedReflow();
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame);
+  NS_IMETHOD CancelAllPendingReflows();
   NS_IMETHOD IsSafeToFlush(PRBool& aIsSafeToFlush);
   NS_IMETHOD FlushPendingNotifications(mozFlushType aType);
 
@@ -1314,20 +1073,13 @@ protected:
 
   void UnsuppressAndInvalidate();
 
-  // This method should be called after a reflow commands have been
-  // removed from the queue, but after the state in the presshell is
-  // such that it's safe to flush (i.e. mIsReflowing == PR_FALSE)
-  // If we are not reflowing and ther are no load-crated reflow commands, then
-  // the dummyLayoutRequest is removed
-  void DoneRemovingReflowCommands();
-
   nsresult AddDummyLayoutRequest(void);
   nsresult RemoveDummyLayoutRequest(void);
 
   void     WillCauseReflow() {}
   nsresult DidCauseReflow();
   void     DidDoReflow();
-  nsresult ProcessReflowCommands();
+  nsresult ProcessReflowCommands(PRBool aInterruptible);
   nsresult ClearReflowEventStatus();  
   void     PostReflowEvent();
 
@@ -1367,8 +1119,8 @@ protected:
 #ifdef DEBUG
   PRUint32                  mUpdateCount;
 #endif
-
-  PRPackedBool mReflowPending;
+  // reflow roots that need to be reflowed, as both a queue and a hashtable
+  nsVoidArray mDirtyRoots;
 
   PRPackedBool mDocumentLoading;
   PRPackedBool mIsReflowing;
@@ -1676,25 +1428,6 @@ PresShell::Init(nsIDocument* aDocument,
   NS_ADDREF(mPresContext);
   aPresContext->SetShell(this);
 
-  // Create our reflow command hashtable
-  static PLDHashTableOps reflowCommandOps =
-    {
-      PL_DHashAllocTable,
-      PL_DHashFreeTable,
-      ReflowCommandHashGetKey,
-      ReflowCommandHashHashKey,
-      ReflowCommandHashMatchEntry,
-      PL_DHashMoveEntryStub,
-      PL_DHashClearEntryStub,
-      PL_DHashFinalizeStub
-    };
-
-  if (!PL_DHashTableInit(&mReflowCommandTable, &reflowCommandOps,
-                         nsnull, sizeof(ReflowCommandEntry), 16)) {
-    mReflowCommandTable.ops = nsnull;
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  
   // Now we can initialize the style set.
   nsresult result = aStyleSet->Init(aPresContext);
   NS_ENSURE_SUCCESS(result, result);
@@ -1916,15 +1649,10 @@ PresShell::Destroy()
                                            getter_AddRefs(eventQueue));
   eventQueue->RevokeEvents(this);
 
-  CancelAllReflowCommands();
+  CancelAllPendingReflows();
 
   KillResizeEventTimer();
 
-  // Now that mReflowCommandTable won't be accessed anymore, finish it
-  if (mReflowCommandTable.ops) {
-    PL_DHashTableFinish(&mReflowCommandTable);
-  }
-  
   mHaveShutDown = PR_TRUE;
 
   return NS_OK;
@@ -2992,8 +2720,7 @@ NS_IMETHODIMP
 PresShell::NotifyDestroyingFrame(nsIFrame* aFrame)
 {
   if (!mIgnoreFrameDestruction) {
-    // Cancel any pending reflow commands targeted at this frame
-    CancelReflowCommandInternal(aFrame, nsnull);
+    mDirtyRoots.RemoveElement(aFrame);
 
     // Notify the frame manager
     FrameManager()->NotifyDestroyingFrame(aFrame);
@@ -3493,7 +3220,7 @@ PresShell::EndLoad(nsIDocument *aDocument)
 }
 
 NS_IMETHODIMP
-PresShell::FramesNeedReflow()
+PresShell::FrameNeedsReflow(nsIFrame *aFrame)
 {
   // If we've not yet done the initial reflow, then don't bother
   // enqueuing a reflow command yet.
@@ -3518,7 +3245,14 @@ PresShell::FramesNeedReflow()
   }  
 #endif
 
-  mReflowPending = PR_TRUE;
+  // XXX Add to the set of roots needing reflow!
+  nsIFrame reflowRoot = aFrame;
+  do {
+    reflowRoot = reflowRoot->GetParent();
+  } while (!(frame->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
+           (frame = frame->GetParent()) != nsnull);
+  if (mDirtyRoots.IndexOf(reflowRoot) == -1)
+    mDirtyRoots.AppendElement(reflowRoot);
 
   // XXX Need to add the dummy layout request if it's during document load!
 
@@ -3596,6 +3330,13 @@ PresShell::GetViewToScroll(nsLayoutUtils::Direction aDirection)
     }
   }
   return scrollView;
+}
+
+NS_IMETHODIMP
+PresShell::CancelAllPendingReflows()
+{
+  mDirtyRoots.Clear();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -4579,7 +4320,7 @@ PresShell::UnsuppressPainting()
   // the reflows and get all the frames where we want them
   // before actually unlocking the painting.  Otherwise
   // go ahead and unlock now.
-  if (mReflowPending)
+  if (mDirtyRoots.Count() > 0)
     mShouldUnsuppressPainting = PR_TRUE;
   else
     UnsuppressAndInvalidate();
@@ -4842,7 +4583,7 @@ PresShell::FlushPendingNotifications(mozFlushType aType)
     }
 
     if (aType & Flush_OnlyReflow) {
-      ProcessReflowCommands();
+      ProcessReflowCommands(PR_FALSE);
     }
 
     PRUint32 updateFlags = NS_VMREFRESH_NO_SYNC;
@@ -5954,7 +5695,7 @@ struct ReflowEvent : public PLEvent {
         nsCOMPtr<nsIViewManager> viewManager = presShell->GetViewManager();
 
         viewManager->BeginUpdateViewBatch();
-        ps->ProcessReflowCommands();
+        ps->ProcessReflowCommands(PR_TRUE);
         viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 
         // Now, explicitly release the pres shell before the view manager
@@ -6001,7 +5742,8 @@ PresShell::PostReflowEvent()
   mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
                                            getter_AddRefs(eventQueue));
 
-  if (eventQueue != mReflowEventQueue && !mIsReflowing && mReflowPending) {
+  if (eventQueue != mReflowEventQueue &&
+      !mIsReflowing && mDirtyRoots.Count() > 0) {
     ReflowEvent* ev = new ReflowEvent(NS_STATIC_CAST(nsIPresShell*, this));
     if (NS_FAILED(eventQueue->PostEvent(ev))) {
       NS_ERROR("failed to post reflow event");
@@ -6045,12 +5787,12 @@ PresShell::DidDoReflow()
 }
 
 nsresult
-PresShell::ProcessReflowCommands()
+PresShell::ProcessReflowCommands(PRBool aInterruptible)
 {
   MOZ_TIMER_DEBUGLOG(("Start: Reflow: PresShell::ProcessReflowCommands(), this=%p\n", this));
   MOZ_TIMER_START(mReflowWatch);  
 
-  if (mReflowPending) {
+  if (0 != mDirtyRoots.Count()) {
     nsHTMLReflowMetrics   desiredSize(nsnull);
     nsIRenderingContext*  rcx;
     nsIFrame*             rootFrame = FrameManager()->GetRootFrame();
@@ -6065,16 +5807,12 @@ PresShell::ProcessReflowCommands()
         printf("ProcessReflowCommands: begin incremental reflow\n");
       }
     }
-    if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {   
-      PRInt32 i, n = mReflowCommands.Count();
-      printf("\nPresShell::ProcessReflowCommands: this=%p, count=%d\n", (void*)this, n);
-      for (i = 0; i < n; i++) {
-        nsHTMLReflowCommand* rc = (nsHTMLReflowCommand*)
-          mReflowCommands.ElementAt(i);
-        rc->List(stdout);
-      }
-    }
 #endif
+
+    // If reflow is interruptible, then make a note of our deadline.
+    const PRIntervalTime deadline = aInterruptible
+        ? PR_IntervalNow() + PR_MicrosecondsToInterval(gMaxRCProcessingTime)
+        : (PRIntervalTime)0;
 
     // force flushing of any pending notifications
     mDocument->BeginUpdate(UPDATE_ALL);
@@ -6082,9 +5820,51 @@ PresShell::ProcessReflowCommands()
 
     mIsReflowing = PR_TRUE;
 
-    IncrementalReflow reflow;
-    // Dispatch an incremental reflow.
-    reflow.Dispatch(mPresContext, desiredSize, maxSize, *rcx);
+    do {
+      // Send an incremental reflow notification to the target frame.
+      PRInt32 idx = mDirtyRoots.Count() - 1;
+      nsIFrame *target = NS_STATIC_CAST(nsIFrame*, mDirtyRoots[idx]);
+      mDirtyRoots.RemoveElementAt(idx);
+
+      nsIFrame* root = mPresContext->FrameManager()->GetRootFrame();
+
+      target->WillReflow(mPresContext);
+      nsContainerFrame::PositionFrameView(target);
+
+      // If the target frame is the root of the frame hierarchy, then
+      // use all the available space. If it's simply a `reflow root',
+      // then use the target frame's size as the available space.
+      nsSize size;
+      if (target == root)
+        size = maxSize;
+      else
+        size = target->GetSize();
+
+      nsHTMLReflowState reflowState(mPresContext, target, rcx, size);
+
+      nsReflowStatus status;
+      target->Reflow(mPresContext, desiredSize, reflowState, status);
+
+      // If an incremental reflow is initiated at a frame other than the
+      // root frame, then its desired size had better not change!
+      NS_ASSERTION(target == root ||
+                   (desiredSize.width == size.width &&
+                    desiredSize.height == size.height),
+                   "non-root frame's desired size changed during an "
+                   "incremental reflow");
+
+      target->SetSize(nsSize(desiredSize.width, desiredSize.height));
+
+      nsContainerFrame::SyncFrameViewAfterReflow(mPresContext, target,
+                                                 target->GetView(),
+                                                 &desiredSize.mOverflowArea);
+
+      target->DidReflow(mPresContext, nsnull, NS_FRAME_REFLOW_FINISHED);
+
+      // Keep going until we're out of reflow commands, or we've run
+      // past our deadline.
+    } while (mDirtyRoots.Count() &&
+             (!aInterruptible || PR_IntervalNow() < deadline));
 
     // XXXwaterson for interruptible reflow, examine the tree and
     // re-enqueue any unflowed reflow targets.
@@ -6095,7 +5875,7 @@ PresShell::ProcessReflowCommands()
 
     // If any new reflow commands were enqueued during the reflow,
     // schedule another reflow event to process them.
-    if (mReflowCommands.Count())
+    if (mDirtyRoots.Count())
       PostReflowEvent();
     
 #ifdef DEBUG
@@ -6126,7 +5906,7 @@ PresShell::ProcessReflowCommands()
                ok ? "ok" : "failed");
       }
 
-      if (mReflowPending) {
+      if (0 != mDirtyRoots.Count()) {
         printf("XXX yikes! reflow commands queued during verify-reflow\n");
       }
     }
@@ -6134,7 +5914,9 @@ PresShell::ProcessReflowCommands()
 
     // If there are no more reflow commands in the queue, we'll want
     // to remove the ``dummy request''.
-    DoneRemovingReflowCommands();
+    if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest && !mIsReflowing) {
+      RemoveDummyLayoutRequest();
+    }
 
     DidDoReflow();
   }
@@ -6142,7 +5924,7 @@ PresShell::ProcessReflowCommands()
   MOZ_TIMER_DEBUGLOG(("Stop: Reflow: PresShell::ProcessReflowCommands(), this=%p\n", this));
   MOZ_TIMER_STOP(mReflowWatch);  
 
-  if (mShouldUnsuppressPainting && !mReflowPending) {
+  if (mShouldUnsuppressPainting && mDirtyRoots.Count() == 0) {
     // We only unlock if we're out of reflows.  It's pointless
     // to unlock if reflows are still pending, since reflows
     // are just going to thrash the frames around some more.  By
@@ -6159,15 +5941,6 @@ PresShell::ClearReflowEventStatus()
 {
   mReflowEventQueue = nsnull;
   return NS_OK;
-}
-
-// XXX XXX Who's responsible for calling this in the normal case now?
-void
-PresShell::DoneRemovingReflowCommands()
-{
-  if (mRCCreatedDuringLoad == 0 && mDummyLayoutRequest && !mIsReflowing) {
-    RemoveDummyLayoutRequest();
-  }
 }
 
 nsresult

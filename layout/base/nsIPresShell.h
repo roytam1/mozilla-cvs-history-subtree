@@ -320,10 +320,12 @@ public:
                                     nsIFrame** aPlaceholderFrame) const = 0;
 
   /**
-   * Tell the pres shell that some frames are dirty (as indicated by bits)
-   * and need Reflow.
+   * Tell the pres shell that a frame is dirty (as indicated by bits)
+   * and needs Reflow.  It's OK if this is an ancestor of the frame needing
+   * reflow as long as the ancestor chain between them doesn't cross a reflow
+   * root.
    */
-  NS_IMETHOD FramesNeedReflow() = 0;
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame) = 0;
 
   /**
    * Recreates the frames for a node
