@@ -26,7 +26,6 @@
 #include <strings.h>
 #include "nsRenderingContextXP.h"
 #include "nsFontMetricsXlib.h"
-#include "libimg.h"
 #include "nsDeviceContextXP.h"
 #include "nsXPrintContext.h"
 #include "nsICharRepresentable.h"
