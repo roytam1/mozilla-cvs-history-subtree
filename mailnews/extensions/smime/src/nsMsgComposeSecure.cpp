@@ -548,7 +548,7 @@ nsresult nsMsgComposeSecure::MimeInitMultipartSigned(PRBool aOuter, nsIMsgSendRe
 										&mMultipartSignedBoundary);
   if (NS_FAILED(rv)) goto FAIL;
 
-  L = nsCRT::strlen(header);
+  L = strlen(header);
 
   if (aOuter){
 	  /* If this is the outer block, write it to the file. */
@@ -602,7 +602,7 @@ nsresult nsMsgComposeSecure::MimeInitEncryption(PRBool aSign, nsIMsgSendReport *
 				MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION);
   PRInt32 L;
   if (!s) return NS_ERROR_OUT_OF_MEMORY;
-  L = nsCRT::strlen(s);
+  L = strlen(s);
   if (PRInt32(mStream->write(s, L)) < L) {
 	  return NS_ERROR_FAILURE;
   }
@@ -714,7 +714,7 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter, nsIMsgSen
 		goto FAIL;
 	}
 
-	L = nsCRT::strlen(header);
+	L = strlen(header);
 	if (aOuter) {
 		/* If this is the outer block, write it to the file. */
     if (PRInt32(mStream->write(header, L)) < L) {
@@ -790,7 +790,7 @@ nsresult nsMsgComposeSecure::MimeFinishMultipartSigned (PRBool aOuter, nsIMsgSen
 		rv = NS_ERROR_OUT_OF_MEMORY;
 		goto FAIL;
 	}
-	L = nsCRT::strlen(header);
+	L = strlen(header);
 	if (aOuter) {
 		/* If this is the outer block, write it to the file. */
 		if (PRInt32(mStream->write(header, L)) < L)
@@ -899,12 +899,16 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
 
   pHeader->ExtractHeaderAddressMailboxes(nsnull,aRecipients, &all_mailboxes);
   pHeader->RemoveDuplicateAddresses(nsnull, all_mailboxes, 0, PR_FALSE /*removeAliasesToMe*/, &mailboxes);
-  PR_FREEIF(all_mailboxes);
+  if (all_mailboxes) {
+    nsMemory::Free(all_mailboxes);
+    all_mailboxes = nsnull;
+  }
 
   if (mailboxes) {
 	  pHeader->ParseHeaderAddresses (nsnull, mailboxes, 0, &mailbox_list, &count);
+    nsMemory::Free(mailboxes);
+    mailboxes = nsnull;
   }
-  PR_FREEIF(mailboxes);
   if (count < 0) return count;
 
   /* If the message is to be encrypted, then get the recipient certs */
@@ -954,7 +958,9 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
       }
 
       mCerts->AppendElement(cert);
-		  mailbox += nsCRT::strlen(mailbox) + 1;
+      // To understand this loop, especially the "+= strlen +1", look at the documentation
+      // of ParseHeaderAddresses. Basically, it returns a list of zero terminated strings.
+      mailbox += strlen(mailbox) + 1;
 	  }
     
     if (!already_added_self_cert) {
@@ -962,7 +968,9 @@ nsresult nsMsgComposeSecure::MimeCryptoHackCerts(const char *aRecipients,
     }
 	}
 FAIL:
-  PR_FREEIF(mailbox_list);
+  if (mailbox_list) {
+    nsMemory::Free(mailbox_list);
+  }
   return res;
 }
 
