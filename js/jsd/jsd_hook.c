@@ -117,6 +117,8 @@ jsd_CallExecutionHook(JSDContext* jsdc,
             return JSTRAP_ERROR;
         case JSD_HOOK_RETURN_RET_WITH_VAL:
             return JSTRAP_RETURN;
+        case JSD_HOOK_RETURN_THROW_WITH_VAL:
+            return JSTRAP_THROW;
         case JSD_HOOK_RETURN_CONTINUE:
             break;
         default:

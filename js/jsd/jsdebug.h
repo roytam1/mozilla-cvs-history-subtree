@@ -510,6 +510,7 @@ JSD_AddFullSourceText(JSDContext* jsdc,
 #define JSD_HOOK_RETURN_CONTINUE        1
 #define JSD_HOOK_RETURN_ABORT           2
 #define JSD_HOOK_RETURN_RET_WITH_VAL    3
+#define JSD_HOOK_RETURN_THROW_WITH_VAL  4
 
 /*
 * Implement a callback of this form in order to hook execution.

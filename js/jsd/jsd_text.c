@@ -511,8 +511,10 @@ jsd_StartingEvalUsingFilename(JSDContext* jsdc, const char* url)
     jsdsrc = jsd_FindSourceForURL(jsdc, url);
     if(jsdsrc)
     {
+#if 0
 #ifndef JSD_LOWLEVEL_SOURCE
         JS_ASSERT(! jsdsrc->doingEval);
+#endif
 #endif
         jsdsrc->doingEval = JS_TRUE;
     }
@@ -528,6 +530,7 @@ jsd_FinishedEvalUsingFilename(JSDContext* jsdc, const char* url)
     jsdsrc = jsd_FindSourceForURL(jsdc, url);
     if(jsdsrc)
     {
+#if 0
 #ifndef JSD_LOWLEVEL_SOURCE
         /*
         * when using this low level source addition, this jsdsrc might 
@@ -535,6 +538,7 @@ jsd_FinishedEvalUsingFilename(JSDContext* jsdc, const char* url)
         * this flag set!)
         */
         JS_ASSERT(jsdsrc->doingEval);
+#endif
 #endif
         jsdsrc->doingEval = JS_FALSE;
     }
