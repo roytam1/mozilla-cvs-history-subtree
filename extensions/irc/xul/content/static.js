@@ -1607,8 +1607,8 @@ function addHistory (source, obj, mergeData, collapseRow)
         tbody.appendChild (obj);
 
         
-        //if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
-        //    (w.innerHeight))
+        if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
+            (w.innerHeight / 3))
             needScroll = true;
     }
     else
