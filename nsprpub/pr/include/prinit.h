@@ -46,7 +46,6 @@ PR_BEGIN_EXTERN_C
 */
 #define PR_VERSION  "4.0 Beta"
 #define PR_VMAJOR   4
-#define PR_VMAJOR_STR "4"
 #define PR_VMINOR   0
 #define PR_VPATCH   0
 #define PR_BETA     PR_TRUE
