@@ -343,7 +343,7 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
         }
     }
 
-    // this is a remote addresbook, set the class name so the autocomplete 
+    // this is a remote addressbook, set the class name so the autocomplete 
     // item can be styled to show this
     //
     rv = item->SetClassName("remote-err");

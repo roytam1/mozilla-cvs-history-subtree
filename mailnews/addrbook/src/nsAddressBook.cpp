@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Seth Spitzer <sspitzer@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -70,22 +71,6 @@
 #include "nsIFilePicker.h"
 #include "nsIPref.h"
 #include "nsVoidArray.h"
-#include "nsILocale.h"
-#include "nsLocaleCID.h"
-#include "nsILocaleService.h"
-#include "nsCollationCID.h"
-
-static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
-static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRDATABASE_CID);
-static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
-static NS_DEFINE_CID(kAbCardPropertyCID, NS_ABCARDPROPERTY_CID);
-static NS_DEFINE_CID(kAB4xUpgraderServiceCID, NS_AB4xUPGRADER_CID);
-/* Had hoped to replace this with the preferable contractid but 
- * unable to locate it.
- */
-static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
-
 
 static nsresult ConvertDOMListToResourceArray(nsIDOMNodeList *nodeList, nsISupportsArray **resourceArray)
 {
@@ -147,37 +132,6 @@ NS_IMPL_QUERY_INTERFACE2(nsAddressBook, nsIAddressBook, nsICmdLineHandler);
 //
 // nsIAddressBook
 //
-
-NS_IMETHODIMP nsAddressBook::DeleteCards
-(nsIDOMXULElement *tree, nsIDOMXULElement *srcDirectory, nsIDOMNodeList *nodeList)
-{
-	nsresult rv;
-
-	if(!tree || !srcDirectory || !nodeList)
-		return NS_ERROR_NULL_POINTER;
-
-	nsCOMPtr<nsIRDFCompositeDataSource> database;
-	nsCOMPtr<nsISupportsArray> resourceArray, dirArray;
-	nsCOMPtr<nsIRDFResource> resource;
-
-	rv = srcDirectory->GetResource(getter_AddRefs(resource));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	rv = tree->GetDatabase(getter_AddRefs(database));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	rv = ConvertDOMListToResourceArray(nodeList, getter_AddRefs(resourceArray));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	rv = NS_NewISupportsArray(getter_AddRefs(dirArray));
-	NS_ENSURE_SUCCESS(rv, rv);
-
-	dirArray->AppendElement(resource);
-	
-	rv = DoCommand(database, NC_RDF_DELETECARD, dirArray, resourceArray);
-
-	return rv;
-}
 
 NS_IMETHODIMP nsAddressBook::NewAddressBook
 (nsIRDFCompositeDataSource* db, nsIDOMXULElement *srcDirectory, PRUint32 prefCount, const char **prefName, const PRUnichar **prefValue)
@@ -241,18 +195,11 @@ nsresult nsAddressBook::DoCommand(nsIRDFCompositeDataSource* db,
 
 NS_IMETHODIMP nsAddressBook::PrintCard()
 {
-#ifdef DEBUG_seth
-  printf("nsAddressBook::PrintCard()\n");
-#endif
-
   nsresult rv = NS_ERROR_FAILURE;
   nsCOMPtr<nsIContentViewer> viewer;
 
   if (!mDocShell) {
-#ifdef DEBUG_seth
-        printf("can't print, there is no docshell\n");
-#endif
-        return rv;
+    return NS_ERROR_FAILURE;
   }
 
   mDocShell->GetContentViewer(getter_AddRefs(viewer));
@@ -263,26 +210,13 @@ NS_IMETHODIMP nsAddressBook::PrintCard()
     if (viewerFile) {
       rv = viewerFile->Print(PR_FALSE,nsnull);
     }
-#ifdef DEBUG_seth
-    else {
-      printf("content viewer does not support printing\n");
-    }
-#endif
   }
-#ifdef DEBUG_seth
-  else {
-    printf("failed to get the viewer for printing\n");
-  }
-#endif
 
   return rv;  
 }
 
 NS_IMETHODIMP nsAddressBook::PrintAddressbook()
 {
-#ifdef DEBUG_seth
-	printf("nsAddressBook::PrintAddressbook()\n");
-#endif
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -317,7 +251,7 @@ NS_IMETHODIMP nsAddressBook::GetAbDatabaseFromURI(const char *uri, nsIAddrDataba
     nsFileSpec* dbPath = nsnull;
     
     nsCOMPtr<nsIAddrBookSession> abSession = 
-      do_GetService(kAddrBookSessionCID, &rv); 
+      do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
     if(NS_SUCCEEDED(rv))
       abSession->GetUserProfileDirectory(&dbPath);
     
@@ -330,7 +264,7 @@ NS_IMETHODIMP nsAddressBook::GetAbDatabaseFromURI(const char *uri, nsIAddrDataba
       (*dbPath) += file;
       
       nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
-        do_GetService(kAddressBookDBCID, &rv);
+        do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
       
       if (NS_SUCCEEDED(rv) && addrDBFactory)
         rv = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(database), PR_TRUE);
@@ -358,7 +292,7 @@ nsresult nsAddressBook::GetAbDatabaseFromFile(char* pDbFile, nsIAddrDatabase **d
 		nsFileSpec* dbPath = nsnull;
 
 		nsCOMPtr<nsIAddrBookSession> abSession = 
-		         do_GetService(kAddrBookSessionCID, &rv); 
+		         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 		if(NS_SUCCEEDED(rv))
 			abSession->GetUserProfileDirectory(&dbPath);
 		
@@ -366,7 +300,7 @@ nsresult nsAddressBook::GetAbDatabaseFromFile(char* pDbFile, nsIAddrDatabase **d
 		(*dbPath) += file;
 
 		nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
-		         do_GetService(kAddressBookDBCID, &rv);
+		         do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
 		if (NS_SUCCEEDED(rv) && addrDBFactory)
 			rv = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(database), PR_TRUE);
 
@@ -428,29 +362,6 @@ NS_IMETHODIMP nsAddressBook::MailListNameExists(const PRUnichar *name, PRBool *e
 		}
 	}
     return NS_OK;
-}
-
-NS_IMETHODIMP nsAddressBook::GetTotalCards(const char *URI, PRUint32 *count)
-{
-  NS_ENSURE_ARG_POINTER(count);
-  *count = 0;
-
-  nsresult rv;
-
-  nsCOMPtr<nsIRDFService> rdfService = do_GetService (NS_RDF_CONTRACTID "/rdf-service;1", &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIRDFResource> resource;
-  rv = rdfService->GetResource(URI, getter_AddRefs(resource));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIAbDirectory> directory = do_QueryInterface(resource, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = directory->GetTotalCards (PR_FALSE, count);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return rv;
 }
 
 typedef enum
@@ -568,7 +479,7 @@ nsresult AddressBookParser::ParseFile()
 	char* fileName = PR_smprintf("%s.mab", leafName);
 
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if(NS_SUCCEEDED(rv))
 		abSession->GetUserProfileDirectory(&dbPath);
 	
@@ -577,7 +488,7 @@ nsresult AddressBookParser::ParseFile()
 	{
 		(*dbPath) += fileName;
 		nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
-		         do_GetService(kAddressBookDBCID, &rv);
+		         do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
 		if (NS_SUCCEEDED(rv) && addrDBFactory)
 			rv = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(mDatabase), PR_TRUE);
 	}
@@ -599,7 +510,7 @@ nsresult AddressBookParser::ParseFile()
 	if (PL_strcmp(fileName, kPersonalAddressbook) == 0)
 	{
 		// This is the personal address book, get name from prefs
-		nsCOMPtr<nsIPref> pPref(do_GetService(kPrefCID, &rv)); 
+		nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
 		if (NS_FAILED(rv) || !pPref) 
 			return nsnull;
 		
@@ -1609,61 +1520,6 @@ NS_IMETHODIMP nsAddressBook::ImportAddressBook()
   	NS_ENSURE_SUCCESS(rv, rv);
 	}
     return rv;
-}
-
-/* void createCollationKey (in wstring source, out wstring result); */
-NS_IMETHODIMP nsAddressBook::CreateCollationKey(const PRUnichar *source,
-	PRUnichar **result)
-{
-	nsresult rv;
-	if (!mCollationKeyGenerator)
-	{
-
-		nsCOMPtr<nsILocaleService> localeSvc = do_GetService(NS_LOCALESERVICE_CONTRACTID,&rv); 
-		NS_ENSURE_SUCCESS(rv, rv);
-
-		nsCOMPtr<nsILocale> locale; 
-		rv = localeSvc->GetApplicationLocale(getter_AddRefs(locale));
-		NS_ENSURE_SUCCESS(rv, rv);
-
-		nsCOMPtr <nsICollationFactory> factory;
-		rv = nsComponentManager::CreateInstance(kCollationFactoryCID,
-			NULL,
-			NS_GET_IID(nsICollationFactory), 
-			getter_AddRefs(factory)); 
-		NS_ENSURE_SUCCESS(rv, rv);
-
-		rv = factory->CreateCollation(locale,
-			getter_AddRefs(mCollationKeyGenerator));
-		NS_ENSURE_SUCCESS(rv, rv);
-	}
-
-	nsAutoString sourceString(source);
-	PRUint32 aLength;
-	rv = mCollationKeyGenerator->GetSortKeyLen(kCollationCaseInSensitive, sourceString, &aLength);
-	NS_ENSURE_SUCCESS(rv, rv);
-
-	PRUint8* aKey = (PRUint8* ) nsMemory::Alloc (aLength + 3);    // plus three for null termination
-	if (!aKey)
-		return NS_ERROR_OUT_OF_MEMORY;
-
-	rv = mCollationKeyGenerator->CreateRawSortKey(kCollationCaseInSensitive,
-			sourceString, aKey, &aLength);
-	if (NS_FAILED(rv))
-	{
-		nsMemory::Free (aKey);
-		return rv;
-	}
-
-	// Generate a null terminated unicode string.
-	// Note using PRUnichar* to store collation key is not recommented since the key may contains 0x0000.
-	aKey[aLength] = 0;
-	aKey[aLength+1] = 0;
-	aKey[aLength+2] = 0;
-
-	*result = (PRUnichar *) aKey;
-
-	return rv;
 }
 
 CMDLINEHANDLER_IMPL(nsAddressBook,"-addressbook","general.startup.addressbook","chrome://messenger/content/addressbook/addressbook.xul","Start with the addressbook.",NS_ADDRESSBOOKSTARTUPHANDLER_CONTRACTID,"Addressbook Startup Handler",PR_FALSE,"", PR_TRUE)

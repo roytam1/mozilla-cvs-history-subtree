@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -37,7 +38,7 @@
 
 var editCard;
 var gOnSaveListeners = new Array;
-
+var gOkCallback = null;
 var gAddressBookBundle;
 
 function OnLoadNewCard()
@@ -46,11 +47,9 @@ function OnLoadNewCard()
 
   doSetOKCancel(NewCardOKButton, 0);
 
-  var cardproperty = Components.classes["@mozilla.org/addressbook/cardproperty;1"].createInstance();
-  cardproperty = cardproperty.QueryInterface(Components.interfaces.nsIAbCard);
+  var cardproperty = Components.classes["@mozilla.org/addressbook/cardproperty;1"].createInstance(Components.interfaces.nsIAbCard);
 
   editCard.card = cardproperty;
-  editCard.okCallback = 0;
   editCard.titleProperty = "newCardTitle"
 
   if ("arguments" in window && window.arguments[0])
@@ -107,6 +106,22 @@ function OnLoadNewCard()
 }
 
 
+function EditCardOKButton()
+{
+  SetCardValues(editCard.card, document);
+
+  editCard.card.editCardToDatabase(editCard.abURI);
+  
+  NotifySaveListeners();
+
+  // callback to allow caller to update
+  if (gOkCallback)
+    gOkCallback();
+
+  return true;  // close the window
+}
+
+
 function OnLoadEditCard()
 {
   InitEditCard();
@@ -118,11 +133,9 @@ function OnLoadEditCard()
     if ( window.arguments[0].card )
       editCard.card = window.arguments[0].card;
     if ( window.arguments[0].okCallback )
-      editCard.okCallback = window.arguments[0].okCallback;
+      gOkCallback = window.arguments[0].okCallback;
     if ( window.arguments[0].abURI )
       editCard.abURI = window.arguments[0].abURI;
-    if ( window.arguments[0].abCardURI )
-      editCard.abCardURI = window.arguments[0].abCardURI;
   }
 
   // set global state variables
@@ -141,13 +154,15 @@ function OnLoadEditCard()
                                                            [ displayName ]);
 }
 
+// XXX is this used by the commercial tree?  if not, remove it.  if so, fix it, and then remove it.
 function RegisterSaveListener(func)
 {
   var length = gOnSaveListeners.length;
   gOnSaveListeners[length] = func;
 }
 
-function CallSaveListeners()
+// XXX is this used by the commercial tree?  if not, remove it.  if so, fix it, and then remove it.
+function NotifySaveListeners()
 {
   for ( var i = 0; i < gOnSaveListeners.length; i++ )
     gOnSaveListeners[i]();
@@ -177,8 +192,8 @@ function InitEditCard()
     try {
       editCard.displayLastNameFirst = prefs.getBoolPref("mail.addr_book.displayName.lastnamefirst");
       editCard.generateDisplayName = prefs.getBoolPref("mail.addr_book.displayName.autoGeneration");
-      editCard.lastFirstSeparator = ", ";
-      editCard.firstLastSeparator = " ";
+      editCard.lastFirstSeparator = gAddressBookBundle.getString("lastFirstSeparator");
+      editCard.firstLastSeparator = gAddressBookBundle.getString("firstLastSeparator");
     }
     catch (ex) {
       dump("failed to get pref\n");
@@ -202,28 +217,17 @@ function NewCardOKButton()
     if ( editCard.card )
     {
       SetCardValues(editCard.card, document);
-      editCard.card.addCardToDatabase(uri);
-        CallSaveListeners();
+
+      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+      var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+      directory.addCard(editCard.card);
+
+      NotifySaveListeners();
     }
   }
 
   return true;  // close the window
 }
-
-function EditCardOKButton()
-{
-  SetCardValues(editCard.card, document);
-
-  editCard.card.editCardToDatabase(editCard.abURI);
-    CallSaveListeners();
-
-  // callback to allow caller to update
-  if ("okCallback" in editCard)
-    editCard.okCallback();
-
-  return true;  // close the window
-}
-
 
 // Move the data from the cardproperty to the dialog
 function GetCardValues(cardproperty, doc)
@@ -362,16 +366,13 @@ function GenerateDisplayName()
     var lastNameField = document.getElementById('LastName');
     var displayNameField = document.getElementById('DisplayName');
 
-    /* todo: i18N work todo here */
-    /* this used to be XP_GetString(MK_ADDR_FIRST_LAST_SEP) */
-
     var separator = "";
     if ( lastNameField.value && firstNameField.value )
     {
       if ( editCard.displayLastNameFirst )
-        separator = editCard.lastFirstSeparator;
+        separator = editCard.lastFirstSeparator; // comes from addressBook.properties
       else
-        separator = editCard.firstLastSeparator;
+        separator = editCard.firstLastSeparator; // comes from addressBook.properties
     }
 
     if ( editCard.displayLastNameFirst )

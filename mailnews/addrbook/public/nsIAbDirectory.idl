@@ -90,7 +90,6 @@ interface nsIAbDirectory : nsISupports {
 	// Delete the array of cards
 	void deleteCards(in nsISupportsArray cards);
 
-
 	// Check if directory contains card
 	// If the implementation is asynchronous the card
 	// may not yet have arrived. If it is in the process
@@ -102,10 +101,8 @@ interface nsIAbDirectory : nsISupports {
 	// Check if directory contains directory
 	boolean hasDirectory(in nsIAbDirectory dir);
 
-	// Creates a new card in the directory
-	// with the properties defined by card
-	nsIAbCard  addCard(in nsIAbCard card);
-	nsIAbCard  dropCard(in nsIAbCard card);
+	void addCard(in nsIAbCard card);
+	void dropCard(in nsIAbCard card);
 
 
 	// Mail list specific
@@ -118,18 +115,12 @@ interface nsIAbDirectory : nsISupports {
 	attribute nsISupportsArray addressLists;
 
 	// Specific to a directory which stores mail lists
-	//
 
 	// Creates a new mailing list in the directory
 	// with the properties defined by list
 	void addMailList (in nsIAbDirectory list);
 
 	// Specific to a directory which is a mail list
-	//
-
-	// listName is not needed, dirName could be used
-	// instead
-	attribute wstring listName;
 	attribute wstring listNickName;
 	attribute wstring description;
 
@@ -139,7 +130,9 @@ interface nsIAbDirectory : nsISupports {
 
 	// Edits an existing mail in the directory
 	// defined by the uri
-	void editMailListToDatabase(in string uri);
+	//
+	// if we are editing from the results pane, pass in the card for the list
+	void editMailListToDatabase(in string uri, in nsIAbCard listCard);
 
 	// Copies mail list properties from the srcList
 	void copyMailList(in nsIAbDirectory srcList);
@@ -157,13 +150,5 @@ interface nsIAbDirectory : nsISupports {
 	void createNewDirectory(in unsigned long prefCount,[array, size_is(prefCount)] in string prefName, [array, size_is(prefCount)] in wstring prefValue);
 
     /* create a directory by passing the display name and address book uri */
-	void CreateDirectoryByURI(in wstring displayName, in string uri, in boolean migrating);
-
-	// Returns the total number of cards
-	// If the implementation is asynchronous the total number
-	// is representative of the current number of cards obtained
-	// For example a search on LDAP will return card asynchronously
-	// and may take n seconds to complete the search.
-	unsigned long getTotalCards(in boolean subDirectoryCount);
-
+	void createDirectoryByURI(in wstring displayName, in string uri, in boolean migrating);
 };

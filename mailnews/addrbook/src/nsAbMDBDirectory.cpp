@@ -38,7 +38,6 @@
 
 #include "nsAbMDBDirectory.h"	 
 #include "nsIRDFService.h"
-#include "nsIRDFResource.h"
 #include "nsIServiceManager.h"
 #include "nsRDFCID.h"
 #include "nsXPIDLString.h"
@@ -63,12 +62,10 @@
 #include "prprf.h"
 #include "prmem.h"
 
+// XXX fix me, -1,0,1 for mailing list crap.
 
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kAbCardCID, NS_ABMDBCARD_CID);
-
-nsAbMDBDirectory::nsAbMDBDirectory(void)
-  :  nsAbMDBRDFResource(),
+nsAbMDBDirectory::nsAbMDBDirectory(void):
+     nsRDFResource(),
      mInitialized(PR_FALSE),
 	 mIsMailingList(-1),
      mIsQueryURI(PR_FALSE),
@@ -84,7 +81,7 @@ nsAbMDBDirectory::~nsAbMDBDirectory(void)
 		nsresult rv = NS_OK;
 
 		nsCOMPtr<nsIAddrDatabase> database;
-		nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);;
+		nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
 		if (NS_SUCCEEDED(rv) && addressBook)
 		{
 			rv = addressBook->GetAbDatabaseFromURI(mURI, getter_AddRefs(database));
@@ -103,7 +100,11 @@ nsAbMDBDirectory::~nsAbMDBDirectory(void)
 	}
 }
 
-NS_IMPL_ISUPPORTS_INHERITED3(nsAbMDBDirectory, nsAbMDBRDFResource, nsIAbDirectory, nsIAbMDBDirectory, nsIAbDirectorySearch)
+NS_IMPL_ISUPPORTS_INHERITED4(nsAbMDBDirectory, nsRDFResource,
+                             nsIAbDirectory,
+                             nsIAbMDBDirectory,
+                             nsIAbDirectorySearch,
+                             nsIAddrDBListener)
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -116,7 +117,7 @@ nsresult nsAbMDBDirectory::AddMailList(const char *uriName)
 		return NS_ERROR_NULL_POINTER;
 
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
+	nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
 	NS_ENSURE_SUCCESS(rv, rv);
 	
 	nsCOMPtr<nsIRDFResource> res;
@@ -180,10 +181,10 @@ NS_IMETHODIMP nsAbMDBDirectory::DeleteDirectory(nsIAbDirectory *directory)
   NS_ENSURE_SUCCESS(rv, rv);
 
 	nsCOMPtr<nsIAddrDatabase> database;
-	nsCOMPtr<nsIAddressBook> addresBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);;
+	nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
 	if (NS_SUCCEEDED(rv))
 	{
-		rv = addresBook->GetAbDatabaseFromURI((const char *)uri, getter_AddRefs(database));				
+		rv = addressBook->GetAbDatabaseFromURI((const char *)uri, getter_AddRefs(database));				
 
 		if (NS_SUCCEEDED(rv))
 			rv = database->DeleteMailList(directory, PR_TRUE);
@@ -202,16 +203,27 @@ NS_IMETHODIMP nsAbMDBDirectory::DeleteDirectory(nsIAbDirectory *directory)
 	return rv;
 }
 
-nsresult nsAbMDBDirectory::NotifyPropertyChanged(const char *property, PRUnichar* oldValue, PRUnichar* newValue)
+nsresult nsAbMDBDirectory::NotifyItemChanged(nsISupports *item)
+{
+  nsresult rv;
+	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+	rv = abSession->NotifyItemPropertyChanged(item, nsnull, nsnull, nsnull);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return rv;
+}
+
+nsresult nsAbMDBDirectory::NotifyPropertyChanged(const char *property, const PRUnichar* oldValue, const PRUnichar* newValue)
 {
 	nsCOMPtr<nsISupports> supports;
 	if(NS_SUCCEEDED(QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports))))
 	{
-		//Notify listeners who listen to every folder
 		nsresult rv;
-		nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);;
-		if(NS_SUCCEEDED(rv))
-			abSession->NotifyItemPropertyChanged(supports, property, oldValue, newValue);
+		nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv,rv);
+    rv = abSession->NotifyItemPropertyChanged(supports, property, oldValue, newValue);
+    NS_ENSURE_SUCCESS(rv,rv);
 	}
 
 	return NS_OK;
@@ -220,7 +232,7 @@ nsresult nsAbMDBDirectory::NotifyPropertyChanged(const char *property, PRUnichar
 nsresult nsAbMDBDirectory::NotifyItemAdded(nsISupports *item)
 {
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);;
+	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
 	if(NS_SUCCEEDED(rv))
 		abSession->NotifyDirectoryItemAdded(this, item);
 	return NS_OK;
@@ -229,7 +241,7 @@ nsresult nsAbMDBDirectory::NotifyItemAdded(nsISupports *item)
 nsresult nsAbMDBDirectory::NotifyItemDeleted(nsISupports *item)
 {
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);;
+	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
 	if(NS_SUCCEEDED(rv))
 		abSession->NotifyDirectoryItemDeleted(this, item);
 
@@ -237,17 +249,13 @@ nsresult nsAbMDBDirectory::NotifyItemDeleted(nsISupports *item)
 }
 
 
-
-
-
-
-
-// nsIRDFResaource methods
+// nsIRDFResource methods
 
 NS_IMETHODIMP nsAbMDBDirectory::Init(const char* aURI)
 {
 	nsresult rv;
-	rv = nsAbMDBRDFResource::Init (aURI);
+
+  rv = nsRDFResource::Init(aURI);
 	NS_ENSURE_SUCCESS(rv, rv);
 
 	mURINoQuery = aURI;
@@ -291,7 +299,7 @@ NS_IMETHODIMP nsAbMDBDirectory::Init(const char* aURI)
 
 NS_IMETHODIMP nsAbMDBDirectory::ClearDatabase()
 { 			
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	if (mDatabase)
@@ -304,7 +312,7 @@ NS_IMETHODIMP nsAbMDBDirectory::ClearDatabase()
 
 NS_IMETHODIMP nsAbMDBDirectory::RemoveElementsFromAddressList()
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	if (m_AddressList)
@@ -322,7 +330,7 @@ NS_IMETHODIMP nsAbMDBDirectory::RemoveElementsFromAddressList()
 
 NS_IMETHODIMP nsAbMDBDirectory::RemoveEmailAddressAt(PRUint32 aIndex)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	if (m_AddressList)
@@ -333,47 +341,16 @@ NS_IMETHODIMP nsAbMDBDirectory::RemoveEmailAddressAt(PRUint32 aIndex)
 		return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::AddChildCards(const char *uriName, nsIAbCard **childCard)
-{
-	if (mIsQueryURI == PR_TRUE)
-		return NS_ERROR_NOT_IMPLEMENTED;
-
-	if(!childCard)
-		return NS_ERROR_NULL_POINTER;
-
-	nsresult rv = NS_OK;
-	nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsCOMPtr<nsIRDFResource> res;
-	rv = rdf->GetResource(uriName, getter_AddRefs(res));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsCOMPtr<nsIAbCard> personCard(do_QueryInterface(res, &rv));
-	if (NS_FAILED(rv))
-	{
-		rv = nsComponentManager::CreateInstance(kAbCardCID, nsnull, NS_GET_IID(nsIAbCard), getter_AddRefs(personCard));
-    NS_ENSURE_SUCCESS(rv, rv);
-		if (!personCard)
-			return NS_ERROR_NULL_POINTER;
-	}
-
-	*childCard = personCard;
-	NS_ADDREF(*childCard);
-
-	return rv;
-}
-
 NS_IMETHODIMP nsAbMDBDirectory::AddDirectory(const char *uriName, nsIAbDirectory **childDir)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	if (!childDir || !uriName)
 		return NS_ERROR_NULL_POINTER;
 
 	nsresult rv = NS_OK;
-	nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
+	nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
   NS_ENSURE_SUCCESS(rv, rv);
 	
 	nsCOMPtr<nsIRDFResource> res;
@@ -410,7 +387,7 @@ NS_IMETHODIMP nsAbMDBDirectory::GetDirUri(char **uri)
 
 NS_IMETHODIMP nsAbMDBDirectory::GetChildNodes(nsIEnumerator* *result)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 	{
 		nsCOMPtr<nsISupportsArray> array;
 		NS_NewISupportsArray(getter_AddRefs(array));
@@ -435,7 +412,7 @@ PR_STATIC_CALLBACK(PRBool) enumerateSearchCache(nsHashKey *aKey, void *aData, vo
 
 NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsIEnumerator* *result)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 	{
 		nsresult rv;
 		rv =  StartSearch ();
@@ -454,7 +431,7 @@ NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsIEnumerator* *result)
 	{
 		nsAutoString file; file.AssignWithConversion(&(mURI[PL_strlen(kMDBDirectoryRoot)]));
 		PRInt32 pos = file.Find("/");
-		if (pos != -1)
+		if (pos != kNotFound)
 			mIsMailingList = 1;
 		else
 			mIsMailingList = 0;
@@ -477,7 +454,7 @@ NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsIEnumerator* *result)
 // Not called
 nsresult nsAbMDBDirectory::DeleteDirectoryCards(nsIAbDirectory* directory, DIR_Server *server)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	if (!server->fileName)  // file name does not exist
@@ -490,7 +467,7 @@ nsresult nsAbMDBDirectory::DeleteDirectoryCards(nsIAbDirectory* directory, DIR_S
 	nsCOMPtr<nsIAddrDatabase> database;
 
 
-	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);;
+	nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
 	if(NS_SUCCEEDED(rv))
 		abSession->GetUserProfileDirectory(&dbPath);
 	
@@ -499,7 +476,7 @@ nsresult nsAbMDBDirectory::DeleteDirectoryCards(nsIAbDirectory* directory, DIR_S
 		(*dbPath) += server->fileName;
 
 		// close file before delete it
-		nsCOMPtr<nsIAddrDatabase> addrDBFactory = do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);;
+		nsCOMPtr<nsIAddrDatabase> addrDBFactory = do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
 
 		if (NS_SUCCEEDED(rv) && addrDBFactory)
 			rv = addrDBFactory->Open(dbPath, PR_FALSE, getter_AddRefs(database), PR_TRUE);
@@ -556,7 +533,7 @@ nsresult nsAbMDBDirectory::DeleteDirectoryCards(nsIAbDirectory* directory, DIR_S
 
 NS_IMETHODIMP nsAbMDBDirectory::DeleteCards(nsISupportsArray *cards)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	nsresult rv = NS_OK;
@@ -623,7 +600,7 @@ NS_IMETHODIMP nsAbMDBDirectory::DeleteCards(nsISupportsArray *cards)
 						{
 							nsresult rv = NS_OK;
 							nsCOMPtr<nsIRDFService> rdfService = 
-							         do_GetService(kRDFServiceCID, &rv);
+							         do_GetService("@mozilla.org/rdf/rdf-service;1", &rv);
 
 							if(NS_SUCCEEDED(rv))
 								{
@@ -670,7 +647,7 @@ NS_IMETHODIMP nsAbMDBDirectory::HasCard(nsIAbCard *cards, PRBool *hasCard)
 	if(!hasCard)
 		return NS_ERROR_NULL_POINTER;
 
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 	{
 		nsVoidKey key (NS_STATIC_CAST(void*, cards));
 		*hasCard = mSearchCache.Exists (&key);
@@ -708,10 +685,10 @@ NS_IMETHODIMP nsAbMDBDirectory::HasDirectory(nsIAbDirectory *dir, PRBool *hasDir
 		rv = dbdir->GetDirUri(getter_Copies(uri));
         NS_ENSURE_SUCCESS(rv, rv);
 		nsCOMPtr<nsIAddrDatabase> database;
-	    nsCOMPtr<nsIAddressBook> addresBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);;
+	    nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
 		if (NS_SUCCEEDED(rv))
 		{
-			rv = addresBook->GetAbDatabaseFromURI((const char *)uri, getter_AddRefs(database));				
+			rv = addressBook->GetAbDatabaseFromURI((const char *)uri, getter_AddRefs(database));				
 		}
 		if(NS_SUCCEEDED(rv) && database)
 		{
@@ -738,7 +715,7 @@ NS_IMETHODIMP nsAbMDBDirectory::CreateDirectoryByURI(const PRUnichar *dirName, c
 
 NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	nsresult rv = NS_OK;
@@ -784,9 +761,9 @@ NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
 	return rv;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card, nsIAbCard **_retval)
+NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	nsresult rv = NS_OK;
@@ -799,13 +776,16 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card, nsIAbCard **_retval)
 	nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv));
 	if (NS_FAILED(rv) || !dbcard)
 	{
-		nsAbMDBCardProperty* dbcardproperty = new nsAbMDBCardProperty ();
-		NS_ADDREF(dbcardproperty);
-		nsCOMPtr<nsIAbCard> newcard = getter_AddRefs(NS_STATIC_CAST(nsIAbCard*, dbcardproperty));
-		newcard->Copy (card);
+    dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv,rv);
+
+		nsCOMPtr<nsIAbCard> newcard = do_QueryInterface(dbcard, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = newcard->Copy(card);
+    NS_ENSURE_SUCCESS(rv,rv);
+
 		card = newcard;
-		dbcard = do_QueryInterface(card);
-		rv = NS_OK;
 	}
 	
 	dbcard->SetAbDatabase (mDatabase);
@@ -815,30 +795,13 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card, nsIAbCard **_retval)
 		mDatabase->CreateNewCardAndAddToDB(card, PR_TRUE);
 	mDatabase->Commit(kLargeCommit);
 
-	// Return the RDF resource instance of the card
-	// which was added to the database
-	//
-  nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsXPIDLCString uri;
-	rv = dbcard->GetCardURI(getter_Copies (uri));
-
-	nsCOMPtr<nsIRDFResource> resource;
-	rv = rdf->GetResource(uri, getter_AddRefs(resource));
-	
-	nsCOMPtr<nsIAbCard> cardInstance (do_QueryInterface (resource, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	*_retval = cardInstance;
-	NS_ADDREF(*_retval);
-
-	return rv;
+	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* card, nsIAbCard **_retval)
+// XXX FIX ME combine this duplicated code, dropcard() addcard()
+NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* card)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	nsresult rv = NS_OK;
@@ -847,7 +810,7 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* card, nsIAbCard **_retval)
 	{
 		nsAutoString file; file.AssignWithConversion(&(mURI[PL_strlen(kMDBDirectoryRoot)]));
 		PRInt32 pos = file.Find("/");
-		if (pos != -1)
+		if (pos != kNotFound)
 			mIsMailingList = 1;
 		else
 			mIsMailingList = 0;
@@ -861,13 +824,16 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* card, nsIAbCard **_retval)
 	nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv));
 	if (NS_FAILED(rv))
 	{
-		nsAbMDBCardProperty* dbcardproperty = new nsAbMDBCardProperty ();
-		NS_ADDREF(dbcardproperty);
-		nsCOMPtr<nsIAbCard> newcard = getter_AddRefs(NS_STATIC_CAST(nsIAbCard*, dbcardproperty));
-		newcard->Copy (card);
+    dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv,rv);
+
+		nsCOMPtr<nsIAbCard> newcard = do_QueryInterface(dbcard, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = newcard->Copy(card);
+    NS_ENSURE_SUCCESS(rv,rv);
+
 		card = newcard;
-		dbcard = do_QueryInterface (card);
-		rv = NS_OK;
 	}
 
 	dbcard->SetAbDatabase (mDatabase);
@@ -877,44 +843,25 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* card, nsIAbCard **_retval)
 		mDatabase->CreateNewCardAndAddToDB(card, PR_TRUE);
 	mDatabase->Commit(kLargeCommit);
 
-
-	// Return the RDF resource instance of the card
-	// which was added to the database
-	//
-  nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsXPIDLCString uri;
-	rv = dbcard->GetCardURI(getter_Copies (uri));
-
-	nsCOMPtr<nsIRDFResource> resource;
-	rv = rdf->GetResource(uri, getter_AddRefs(resource));
-	
-	nsCOMPtr<nsIAbCard> cardInstance (do_QueryInterface (resource, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	*_retval = cardInstance;
-	NS_ADDREF(*_retval);
-
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::EditMailListToDatabase(const char *uri)
+NS_IMETHODIMP nsAbMDBDirectory::EditMailListToDatabase(const char *uri, nsIAbCard *listCard)
 {
-	if (mIsQueryURI == PR_TRUE)
+	if (mIsQueryURI)
 		return NS_ERROR_NOT_IMPLEMENTED;
 
 	nsresult rv = NS_OK;
 
 	nsCOMPtr<nsIAddrDatabase>  listDatabase;  
 
-	nsCOMPtr<nsIAddressBook> addresBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);;
+	nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
 	if (NS_SUCCEEDED(rv))
-		rv = addresBook->GetAbDatabaseFromURI(uri, getter_AddRefs(listDatabase));
+		rv = addressBook->GetAbDatabaseFromURI(uri, getter_AddRefs(listDatabase));
 
 	if (listDatabase)
 	{
-		listDatabase->EditMailList(this, PR_TRUE);
+		listDatabase->EditMailList(this, listCard, PR_TRUE);
 		listDatabase->Commit(kLargeCommit);
 		listDatabase = nsnull;
 
@@ -925,30 +872,6 @@ NS_IMETHODIMP nsAbMDBDirectory::EditMailListToDatabase(const char *uri)
 		return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::GetTotalCards(PRBool subDirectoryCount,
-		PRUint32 *_retval)
-{
-	NS_ENSURE_ARG_POINTER(_retval);
-	
-	nsresult rv;
-
-	if (!mDatabase)
-	{
-		rv = GetAbDatabase ();
-		NS_ENSURE_SUCCESS(rv, rv);
-	}
-
-	rv = mDatabase->GetCardCount (_retval);
-	NS_ENSURE_SUCCESS(rv, rv);
-
-	return rv;
-}
-
-
-
-
-
-
 // nsIAddrDBListener methods
 
 NS_IMETHODIMP nsAbMDBDirectory::OnCardAttribChange(PRUint32 abCode, nsIAddrDBListener *instigator)
@@ -958,53 +881,28 @@ NS_IMETHODIMP nsAbMDBDirectory::OnCardAttribChange(PRUint32 abCode, nsIAddrDBLis
 
 NS_IMETHODIMP nsAbMDBDirectory::OnCardEntryChange
 (PRUint32 abCode, nsIAbCard *card, nsIAddrDBListener *instigator)
-{
-	nsresult rv = NS_OK;
-	if (abCode == AB_NotifyInserted && card)
 	{ 
-		nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_ARG_POINTER(card);
+  nsCOMPtr<nsISupports> cardSupports(do_QueryInterface(card));
+  nsresult rv;
 
-		nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-		if (!dbcard)
-			return NS_ERROR_FAILURE;
-
-    nsXPIDLCString cardURI;
-		rv = dbcard->GetCardURI(getter_Copies(cardURI));
-		if (!cardURI)
-			return NS_ERROR_NULL_POINTER;
+  switch (abCode) {
+  case AB_NotifyInserted:
+	  rv = NotifyItemAdded(cardSupports);
+	  break;
+  case AB_NotifyDeleted:
+    rv = NotifyItemDeleted(cardSupports);
+    break;
+  case AB_NotifyPropertyChanged:
+    rv = NotifyItemChanged(cardSupports);
+	  break;
+  default:
+    rv = NS_ERROR_UNEXPECTED;
+    break;
+	}
 		
-		nsCOMPtr<nsIRDFResource> res;
-		rv = rdf->GetResource(cardURI, getter_AddRefs(res));
-		if (NS_SUCCEEDED(rv))
-		{
-			nsCOMPtr<nsIAbMDBCard> dbpersonCard = do_QueryInterface(res);
-			if (dbpersonCard)
-			{
-				dbpersonCard->CopyCard(dbcard);
-				if (mDatabase)
-				{
-					dbpersonCard->SetAbDatabase(mDatabase);
-					nsCOMPtr<nsIAddrDBListener> listener(do_QueryInterface(dbpersonCard, &rv));
 					NS_ENSURE_SUCCESS(rv, rv);
-					mDatabase->AddListener(listener);
-				}
-				nsCOMPtr<nsISupports> cardSupports(do_QueryInterface(dbpersonCard));
-				if (cardSupports)
-				{
-					NotifyItemAdded(cardSupports);
-				}
-			}
-		}
-	}
-	else if (abCode == AB_NotifyDeleted && card)
-	{
-		nsCOMPtr<nsISupports> cardSupports(do_QueryInterface(card, &rv));
-		if(NS_SUCCEEDED(rv))
-			NotifyItemDeleted(cardSupports);
-	}
-	return NS_OK;
+	return rv;
 }
 
 NS_IMETHODIMP nsAbMDBDirectory::OnListEntryChange
@@ -1026,10 +924,9 @@ NS_IMETHODIMP nsAbMDBDirectory::OnListEntryChange
 			if (bIsMailList && m_dbRowID == rowID)
 			{
 				nsXPIDLString pListName;
-				list->GetListName(getter_Copies(pListName));
+				list->GetDirName(getter_Copies(pListName));
 				if (pListName)
-					NotifyPropertyChanged("DirName", nsnull, 
-									  NS_CONST_CAST(PRUnichar*, (const PRUnichar*)pListName));
+					NotifyPropertyChanged("DirName", nsnull, pListName.get());
 			}
 		}
 
@@ -1037,6 +934,11 @@ NS_IMETHODIMP nsAbMDBDirectory::OnListEntryChange
 	return rv;
 }
 
+NS_IMETHODIMP nsAbMDBDirectory::OnAnnouncerGoingAway(nsIAddrDBAnnouncer *instigator)
+{
+  NS_ASSERTION(0,"nsAbMDBDirectory::OnAnnouncerGoingAway");
+  return NS_OK;
+}
 
 // nsIAbDirectorySearch methods
 
@@ -1130,6 +1032,41 @@ nsresult nsAbMDBDirectory::OnSearchFoundCard (nsIAbCard* card)
 	// method will not have returned with results.
 	// NotifyItemAdded (card);
 	return NS_OK;
+}
+
+
+nsresult nsAbMDBDirectory::GetAbDatabase()
+{
+  nsresult rv = NS_OK;
+  if (!mDatabase && mURI)
+  {
+    nsFileSpec* dbPath = nsnull;
+    
+    nsCOMPtr<nsIAddrBookSession> abSession = 
+      do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
+    if(NS_SUCCEEDED(rv))
+      abSession->GetUserProfileDirectory(&dbPath);
+    
+    nsAutoString file; file.AssignWithConversion(&(mURI[PL_strlen(kMDBDirectoryRoot)]));
+    PRInt32 pos = file.Find("/");
+    if (pos != -1)
+      file.Truncate(pos);
+    (*dbPath) += file;
+    
+    nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
+      do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
+    
+    if (NS_SUCCEEDED(rv) && addrDBFactory)
+      rv = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(mDatabase), PR_TRUE);
+    
+    if (mDatabase)
+      mDatabase->AddListener(this);
+    
+    delete dbPath;
+  }
+  if (!mDatabase)
+    return NS_ERROR_NULL_POINTER;
+  return NS_OK;
 }
 
 

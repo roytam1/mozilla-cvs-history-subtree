@@ -703,7 +703,8 @@ function DragOverTree(event)
   dragSession = dragService.getCurrentSession();
   if (!dragSession) return(false);
 
-  if (dragSession.isDataFlavorSupported("text/nsabcard")) validFlavor = true;
+  if (dragSession.isDataFlavorSupported("text/x-moz-address")) 
+    validFlavor = true;
   //XXX other flavors here...
 
   // touch the attribute on the rowgroup to trigger the repaint with the drop feedback.
@@ -721,11 +722,7 @@ function DragOverTree(event)
 
 function DropOnAddressingWidgetTree(event)
 {
-  dump("DropOnTree\n");
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-  if (rdf)
-    rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
-  if (!rdf) return(false);
+  //dump("DropOnTree\n");
 
   var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
   if (dragService)
@@ -737,37 +734,36 @@ function DropOnAddressingWidgetTree(event)
 
   var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
   if ( !trans ) return(false);
-  trans.addDataFlavor("text/nsabcard");
+  trans.addDataFlavor("text/x-moz-address");
 
   for ( var i = 0; i < dragSession.numDropItems; ++i )
   {
     dragSession.getData ( trans, i );
-    dataObj = new Object();
-    bestFlavor = new Object();
-    len = new Object();
+    var dataObj = new Object();
+    var bestFlavor = new Object();
+    var len = new Object();
     trans.getAnyTransferData ( bestFlavor, dataObj, len );
-    if ( dataObj )  dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-    if ( !dataObj ) continue;
+    if ( dataObj )  
+      dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+    if ( !dataObj ) 
+      continue;
 
-    // pull the URL out of the data object
-    var sourceID = dataObj.data.substring(0, len.value);
-    if (!sourceID)  continue;
+    // pull the address out of the data object
+    var address = dataObj.data.substring(0, len.value);
+    if (!address)
+      continue;
 
-    var cardResource = rdf.GetResource(sourceID);
-    var card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
-    var address = "\"" + card.name + "\" <" + card.primaryEmail + ">";
-    dump("    Address #" + i + " = " + address + "\n");
+    //dump("    Address #" + i + " = " + address + "\n");
 
-    DropRecipient(address);
-
+    DropRecipient(event.target, address);
   }
 
   return(false);
 }
 
-function DropRecipient(recipient)
+function DropRecipient(target, recipient)
 {
-    awClickEmptySpace(true);    //that will automatically set the focus on a new available row, and make sure is visible
+    awClickEmptySpace(target, true);    //that will automatically set the focus on a new available row, and make sure is visible
     var lastInput = awGetInputElement(top.MAX_RECIPIENTS);
     lastInput.value = recipient;
     awAppendNewRow(true);

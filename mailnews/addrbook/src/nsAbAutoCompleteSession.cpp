@@ -52,20 +52,14 @@
 #include "nsIPref.h"
 #include "prmem.h"
 
-
-static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kAutoCompleteResultsCID, NS_AUTOCOMPLETERESULTS_CID);
-static NS_DEFINE_CID(kAutoCompleteItemCID, NS_AUTOCOMPLETEITEM_CID);
-
-
 NS_IMPL_ISUPPORTS2(nsAbAutoCompleteSession, nsIAbAutoCompleteSession, nsIAutoCompleteSession)
+
+static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID);
 
 nsAbAutoCompleteSession::nsAbAutoCompleteSession()
 {
 	NS_INIT_REFCNT();
-    mParser = do_GetService(kHeaderParserCID);
+    mParser = do_GetService(kMsgHeaderParserCID);
 }
 
 
@@ -198,8 +192,7 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
     
   if (fullAddrStr && ! ItsADuplicate(fullAddrStr, results))
   {    
-    nsCOMPtr<nsIAutoCompleteItem> newItem;
-    rv = nsComponentManager::CreateInstance(kAutoCompleteItemCID, nsnull, NS_GET_IID(nsIAutoCompleteItem), getter_AddRefs(newItem));
+    nsCOMPtr<nsIAutoCompleteItem> newItem = do_CreateInstance(NS_AUTOCOMPLETEITEM_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv))
     {
       nsAbAutoCompleteParam *param = new nsAbAutoCompleteParam(pNickNameStr, pDisplayNameStr, pFirstNameStr, pLastNameStr, pEmailStr, pNotesStr, pDirName, bIsMailList, type);
@@ -483,7 +476,7 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
 nsresult nsAbAutoCompleteSession::SearchDirectory(nsString& fileName, nsAbAutoCompleteSearchString* searchStr, nsIAutoCompleteResults* results, PRBool searchSubDirectory)
 {
     nsresult rv = NS_OK;
-    nsCOMPtr<nsIRDFService> rdfService(do_GetService(kRDFServiceCID, &rv));
+    nsCOMPtr<nsIRDFService> rdfService(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr <nsIRDFResource> resource;
@@ -603,7 +596,7 @@ NS_IMETHODIMP nsAbAutoCompleteSession::OnStartLookup(const PRUnichar *uSearchStr
     
     PRBool enableAutocomplete = PR_TRUE;
 
-    nsCOMPtr<nsIPref> pPref(do_GetService(kPrefCID, &rv)); 
+    nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
     NS_ENSURE_SUCCESS(rv, rv);
 
     pPref->GetBoolPref("mail.enable_autocomplete", &enableAutocomplete);
@@ -634,8 +627,7 @@ NS_IMETHODIMP nsAbAutoCompleteSession::OnStartLookup(const PRUnichar *uSearchStr
     nsAbAutoCompleteSearchString searchStrings(uSearchString);
     
 	  ResetMatchTypeConters();       
-    nsCOMPtr<nsIAutoCompleteResults> results;
-    rv = nsComponentManager::CreateInstance(kAutoCompleteResultsCID, nsnull, NS_GET_IID(nsIAutoCompleteResults), getter_AddRefs(results));
+    nsCOMPtr<nsIAutoCompleteResults> results = do_CreateInstance(NS_AUTOCOMPLETERESULTS_CONTRACTID, &rv);
     if (NS_SUCCEEDED(rv))
 		  if (NS_FAILED(SearchPreviousResults(&searchStrings, previousSearchResult, results)))
 		  {

@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -46,7 +47,6 @@
 #include "nsIAddrDBListener.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
-#include "nsICollation.h"
 
 typedef enum 
 {
@@ -103,7 +103,7 @@ public:
 	NS_IMETHOD EditCard(nsIAbCard *card, PRBool notify);
 	NS_IMETHOD ContainsCard(nsIAbCard *card, PRBool *hasCard);
 	NS_IMETHOD DeleteMailList(nsIAbDirectory *mailList, PRBool notify);
-	NS_IMETHOD EditMailList(nsIAbDirectory *mailList, PRBool notify);
+	NS_IMETHOD EditMailList(nsIAbDirectory *mailList, nsIAbCard *listCard, PRBool notify);
 	NS_IMETHOD ContainsMailList(nsIAbDirectory *mailList, PRBool *hasCard);
 	NS_IMETHOD DeleteCardFromMailList(nsIAbDirectory *mailList, nsIAbCard *card, PRBool beNotify);
 
@@ -248,7 +248,6 @@ public:
 
 
 	NS_IMETHOD AddListDirNode(nsIMdbRow * listRow);
-	NS_IMETHOD CreateCollationKey(const PRUnichar *sourceStr, nsString& resultStr);
 	NS_IMETHOD GetDirectoryName(PRUnichar **name);
 
 	NS_IMETHOD FindMailListbyUnicodeName(const PRUnichar *listName, PRBool *exist);
@@ -274,8 +273,7 @@ public:
 
 	static void		CleanupCache();
 
-	nsresult CreateABCard(nsIMdbRow* cardRow, nsIAbCard **result);
-	nsresult CreateABCardInList(nsIMdbRow* cardRow, nsIAbCard **result, mdb_id listRowID);
+	nsresult CreateABCard(nsIMdbRow* cardRow, mdb_id listRowID, nsIAbCard **result);
 	nsresult CreateABListCard(nsIMdbRow* listRow, nsIAbCard **result);
 	nsresult CreateABList(nsIMdbRow* listRow, nsIAbDirectory **result);
 
@@ -337,7 +335,6 @@ protected:
 	void DeleteCardFromAllMailLists(mdb_id cardRowID);
 	nsresult NotifyListEntryChange(PRUint32 abCode, nsIAbDirectory *dir, nsIAddrDBListener *instigator);
 
-	nsresult GetCollationKeyGenerator();
 	nsresult AddLowercaseColumn(nsIMdbRow * row, mdb_token columnToken, const char* utf8String);
 
 	static nsVoidArray/*<nsAddrDatabase>*/ * GetDBCache();
@@ -442,8 +439,6 @@ protected:
 
 	PRUint32			m_LastRecordKey;
 	nsIAbDirectory*		m_dbDirectory;
-
-	nsCOMPtr<nsICollation> m_collationKeyGenerator;
 
 };
 

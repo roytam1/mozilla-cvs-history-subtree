@@ -180,22 +180,6 @@ NS_IMETHODIMP nsAbLDAPDirectory::HasCard(nsIAbCard* card, PRBool* hasCard)
     return NS_OK;
 }
 
-NS_IMETHODIMP nsAbLDAPDirectory::GetTotalCards(PRBool subDirectoryCount,
-        PRUint32 *_retval)
-{
-    nsresult rv;
-
-    rv = Initiate ();
-    NS_ENSURE_SUCCESS(rv, rv);
-    // Enter lock
-    nsAutoLock lock (mLock);
-    *_retval = NS_STATIC_CAST(PRUint32 ,mCache.Count ());
-
-    return NS_OK;
-}
-
-
-
 /* 
  *
  * nsAbLDAPDirectoryQuery methods
@@ -383,7 +367,7 @@ nsresult nsAbLDAPDirectory::OnSearchFoundCard (nsIAbCard* card)
     }
     // Exit lock
 
-    nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);;
+    nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
     if(NS_SUCCEEDED(rv))
         abSession->NotifyDirectoryItemAdded(this, card);
 

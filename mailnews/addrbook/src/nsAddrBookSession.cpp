@@ -78,8 +78,7 @@ NS_IMETHODIMP nsAddrBookSession::RemoveAddressBookListener(nsIAbListener * liste
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAddrBookSession::NotifyItemPropertyChanged
-(nsISupports *item, const char *property, const PRUnichar* oldValue, const PRUnichar* newValue)
+NS_IMETHODIMP nsAddrBookSession::NotifyItemPropertyChanged(nsISupports *item, const char *property, const PRUnichar* oldValue, const PRUnichar* newValue)
 {
   NS_ENSURE_TRUE(mListeners, NS_ERROR_NULL_POINTER);
 
@@ -157,18 +156,4 @@ NS_IMETHODIMP nsAddrBookSession::GetUserProfileDirectory(nsFileSpec * *userDir)
   NS_ENSURE_TRUE(*userDir, NS_ERROR_OUT_OF_MEMORY);
 
   return rv;
-}
-
-// used to live in the msg view navigation service
-NS_IMETHODIMP nsAddrBookSession::EnsureDocumentIsLoaded(nsIDOMXULDocument *xulDocument)
-{
-  nsresult rv;
-
-  nsCOMPtr<nsIDocument> document = do_QueryInterface(xulDocument, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  if (!document) return NS_ERROR_FAILURE;
-  rv = document->FlushPendingNotifications();
-  NS_ENSURE_SUCCESS(rv,rv); 
-  return NS_OK;
 }

@@ -50,8 +50,6 @@ public:
 
     nsAbLDAPCard();
     virtual ~nsAbLDAPCard();
-
-protected:
 };
 
 #endif

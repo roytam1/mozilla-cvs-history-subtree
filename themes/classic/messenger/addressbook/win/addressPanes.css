@@ -42,10 +42,3 @@
   margin-left: 1px;
 }
 
-/* ::::: result pane icons ::::: */
-
-.ab-results-icon {
-	list-style-image: url("chrome://messenger/skin/abcard.gif");
-  margin-right: 1px;
-}
-

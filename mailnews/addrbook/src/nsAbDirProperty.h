@@ -76,7 +76,7 @@ protected:
 	nsString m_ListName;
 	nsString m_ListNickName;
 	nsString m_Description;
-	PRBool   m_bIsMailList;
+	PRBool   m_IsMailList;
 
 	nsCOMPtr<nsISupportsArray> m_AddressList;
 

@@ -66,11 +66,5 @@ interface nsIAddrBookSession : nsISupports {
   void notifyDirectoryItemDeleted(in nsIAbDirectory directory, in nsISupports item);
 
   [noscript] readonly attribute nsFileSpec userProfileDirectory;
-
-  /** 
-   * this is used to flush the pending notifcations on the document
-   * used to be in the msg view navigation service, but that is gone 
-   */
-  void ensureDocumentIsLoaded(in nsIDOMXULDocument xulDocument);
 };
 

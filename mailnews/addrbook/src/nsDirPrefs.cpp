@@ -55,9 +55,6 @@
 #include "xp_str.h"
 #include "prprf.h"
 
-static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
-static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-
 #define LDAP_PORT 389
 #define LDAPS_PORT 636
 #define PREF_NOERROR 0
@@ -449,8 +446,6 @@ nsresult DIR_ShutDown()  /* FEs should call this when the app is shutting down. 
 
 	return NS_OK;
 }
-
-static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRDATABASE_CID);
 
 nsresult DIR_ContainsServer(DIR_Server* pServer, PRBool *hasDir)
 {
@@ -2008,7 +2003,7 @@ nsresult DIR_DeleteServerFromList(DIR_Server *server)
 	nsFileSpec* dbPath = nsnull;
 
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if(NS_SUCCEEDED(rv))
 		abSession->GetUserProfileDirectory(&dbPath);
 	
@@ -2020,7 +2015,7 @@ nsresult DIR_DeleteServerFromList(DIR_Server *server)
 
 		// close file before delete it
 		nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
-		         do_GetService(kAddressBookDBCID, &rv);
+		         do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
 
 		if (NS_SUCCEEDED(rv) && addrDBFactory)
 			rv = addrDBFactory->Open(dbPath, PR_FALSE, getter_AddRefs(database), PR_TRUE);
@@ -2836,7 +2831,7 @@ void DIR_SetFileName(char** fileName, const char* defaultName)
 	nsFileSpec* dbPath = nsnull;
 
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if(NS_SUCCEEDED(rv))
 		abSession->GetUserProfileDirectory(&dbPath);
 	if (dbPath)

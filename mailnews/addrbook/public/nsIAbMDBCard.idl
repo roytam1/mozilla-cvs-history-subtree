@@ -70,11 +70,6 @@ interface nsIAbMDBCard : nsISupports {
 	// a directory listener of an inserted event
 	void copyCard(in nsIAbMDBCard srcCardDB);
 
-	// Used in conjunction with copyCard when
-	// inserting a new card into a directory
-	readonly attribute string cardURI;
-
-
 	// Anonymous card properties
 	// Not really sure what these are for
 	// They do not seem to be used.

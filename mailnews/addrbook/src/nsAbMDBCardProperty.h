@@ -54,7 +54,6 @@ public:
 	virtual ~nsAbMDBCardProperty();
 
 	// nsIAbCard methods
-	NS_IMETHODIMP GetPrintCardUrl(char * *aPrintCardUrl);
 	NS_IMETHODIMP EditCardToDatabase(const char *uri);
 
 protected:

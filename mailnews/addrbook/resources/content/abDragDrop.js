@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -35,6 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+var nsIDragService = Components.interfaces.nsIDragService;
+
 function debugDump(msg)
 {
   // uncomment for noise
@@ -45,7 +48,7 @@ function GetDragService()
 {
 	var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
 	if (dragService) 
-		dragService = dragService.QueryInterface(Components.interfaces.nsIDragService);
+		dragService = dragService.QueryInterface(nsIDragService);
 
 	return dragService;
 }
@@ -62,8 +65,8 @@ function DragOverTree(event)
 	dragSession = dragService.getCurrentSession();
 	if ( !dragSession )	return(false);
 
-	if ( dragSession.isDataFlavorSupported("text/nsabcard") )	validFlavor = true;
-	//XXX other flavors here...
+	if ( dragSession.isDataFlavorSupported("text/x-moz-address"))	
+    validFlavor = true;
 
 	// touch the attribute on the rowgroup to trigger the repaint with the drop feedback.
 	if ( validFlavor )
@@ -78,59 +81,71 @@ function DragOverTree(event)
 	return(retVal);
 }
 
-function BeginDragResultTree(event)
+function BeginDragAbResultsPane(event)
 {
-	debugDump("BeginDragResultTree\n");
-
-	//XXX we rely on a capturer to already have determined which item the mouse was over
-	//XXX and have set an attribute.
-    
-	// if the click is on the tree proper, ignore it. We only care about clicks on items.
-
-    if (event.target.localName != "treecell" &&
-        event.target.localName != "treeitem")
-        return false;
-
-	var tree = resultsTree;
-	if ( event.target == tree )
-		return(true);					// continue propagating the event
-
 	var dragStarted = false;
-
+    var outliner = GetAbResultsOutliner();
 	var dragService = GetDragService();
-	if ( !dragService )	return(false);
 
 	var transArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 	if ( !transArray ) return(false); 
 
-	var selArray = tree.selectedItems;
+    // let's build the drag region
+    var region = null;
+    try {
+      region = Components.classesByID["{da5b130a-1dd1-11b2-ad47-f455b1814a78}"].createInstance(Components.interfaces.nsIScriptableRegion);
+      region.init();
+      var obo = outliner.outlinerBoxObject;
+      var bo = obo.outlinerBody.boxObject;
+      var obosel= obo.selection;
+
+      var rowX = bo.x;
+      var rowY = bo.y;
+      var rowHeight = obo.rowHeight;
+      var rowWidth = bo.width;
+
+      //add a rectangle for each visible selected row
+      for (var i = obo.getFirstVisibleRow(); i <= obo.getLastVisibleRow(); i ++)
+      {
+        if (obosel.isSelected(i))
+          region.unionRect(rowX, rowY, rowWidth, rowHeight);
+        rowY = rowY + rowHeight;
+      }
+      
+      //and finally, clip the result to be sure we don't spill over...
+      region.intersectRect(bo.x, bo.y, bo.width, bo.height);
+    } catch(ex) {
+      dump("Error while building selection region: " + ex + "\n");
+      region = null;
+    }
+    
+    var selArray = GetSelectedAbCards();
+
 	var count = selArray.length;
 	debugDump("selArray.length = " + count + "\n");
-	for ( var i = 0; i < count; ++i )
-	{
+    for (i = 0; i < count; i++ ) {
 		var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
 		if ( !trans )		return(false);
 
 		var genTextData = Components.classes["@mozilla.org/supports-wstring;1"].createInstance(Components.interfaces.nsISupportsWString);
 		if (!genTextData)	return(false);
 
-		trans.addDataFlavor("text/nsabcard");
+        trans.addDataFlavor("text/x-moz-address");
         
-		// get id (url) 
-		var id = selArray[i].getAttribute("id");
-		genTextData.data = id;
-		debugDump("    ID #" + i + " = " + id + "\n");
+        var address = GenerateAddressFromCard(selArray[i]);
+        genTextData.data = address;
+        debugDump("address #" + i + " = " + address + "\n");
 
-		trans.setTransferData ( "text/nsabcard", genTextData, id.length * 2 );  // doublebyte byte data
+        trans.setTransferData ( "text/x-moz-address", genTextData, address.length * 2 );  // doublebyte byte data
 
 		// put it into the transferable as an |nsISupports|
 		var genTrans = trans.QueryInterface(Components.interfaces.nsISupports);
 		transArray.AppendElement(genTrans);
 	}
 
-	var nsIDragService = Components.interfaces.nsIDragService;
-	dragService.invokeDragSession ( event.target, transArray, null, nsIDragService.DRAGDROP_ACTION_COPY + 
+    dragService.invokeDragSession ( event.target, transArray, region, nsIDragService.DRAGDROP_ACTION_COPY +
 		nsIDragService.DRAGDROP_ACTION_MOVE );
+
 	dragStarted = true;
 
 	return(!dragStarted);  // don't propagate the event if a drag has begun
@@ -144,17 +159,18 @@ function DropOnDirectoryTree(event)
         event.target.localName != "treeitem")
         return false;
 
-  var RDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService().QueryInterface(Components.interfaces.nsIRDFService);
-	if (!RDF) return(false);
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService().QueryInterface(Components.interfaces.nsIRDFService);
 
 	var treeRoot = dirTree;
 	if (!treeRoot)	return(false);
 	var treeDatabase = treeRoot.database;
-	if (!treeDatabase)	return(false);
+	if (!treeDatabase)
+    return(false);
 
 	// target is the <treecell>, and "id" is on the <treeitem> two levels above
 	var treeItem = event.target.parentNode.parentNode;
-	if (!treeItem)	return(false);
+	if (!treeItem)
+    return(false);
 
 	// drop action is always "on" not "before" or "after"
 	// get drop hint attributes
@@ -168,19 +184,23 @@ function DropOnDirectoryTree(event)
 		return(false);
 
 	var targetID = treeItem.getAttribute("id");
-	if (!targetID)	return(false);
+	if (!targetID)
+    return(false);
 
 	debugDump("***targetID = " + targetID + "\n");
 
 	var dragService = GetDragService();
-	if ( !dragService )	return(false);
+	if ( !dragService )	
+    return(false);
 	
 	var dragSession = dragService.getCurrentSession();
-	if ( !dragSession )	return(false);
+	if ( !dragSession )	
+    return(false);
 
 	var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-	if ( !trans ) return(false);
-	trans.addDataFlavor("text/nsabcard");
+	if ( !trans ) 
+    return(false);
+	trans.addDataFlavor("text/x-moz-address");
 
 	for ( var i = 0; i < dragSession.numDropItems; ++i )
 	{
@@ -189,41 +209,39 @@ function DropOnDirectoryTree(event)
 		var bestFlavor = new Object();
 		var len = new Object();
 		trans.getAnyTransferData ( bestFlavor, dataObj, len );
-		if ( dataObj )	dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-		if ( !dataObj )	continue;
+		if ( dataObj )
+      dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+		if ( !dataObj )	
+      continue;
 
-		// pull the URL out of the data object
-		var sourceID = dataObj.data.substring(0, len.value);
-		if (!sourceID)	continue;
+		var address = dataObj.data.substring(0, len.value);
+		if (!address)	
+      continue;
 
-		debugDump("    Node #" + i + ": drop '" + sourceID + "' " + dropAction + " '" + targetID + "'");
-		debugDump("\n");
+		debugDump("drop address #" + i + ": drop '" + address + "' " + dropAction + " '" + targetID + "'\n");
 
-		var sourceNode = RDF.GetResource(sourceID, true);
+/*
+		var sourceNode = rdf.GetResource(sourceID, true);
 		if (!sourceNode)
 			continue;
 		
-		var targetNode = RDF.GetResource(targetID, true);
+		var targetNode = rdf.GetResource(targetID, true);
 		if (!targetNode) 
 			continue;
 
 		// Prevent dropping of a node before, after, or on itself
-		if (sourceNode == targetNode)	continue;
+		if (sourceNode == targetNode)	
+      continue;
 
 		if (sourceID.substring(0,targetID.length) != targetID)
 		{
 			var cardResource = rdf.GetResource(sourceID);
 			var card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
-			if (card.isMailList == false)
+			if (!card.isMailList)
 				card.dropCardToDatabase(targetID);
 		}
+*/
 	}
 
 	return(false);
-}
-
-function DropOnResultTree(event)
-{
-	debugDump("DropOnResultTree\n");
-	return false;
 }

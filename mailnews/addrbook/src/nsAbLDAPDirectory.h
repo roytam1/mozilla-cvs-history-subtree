@@ -65,7 +65,6 @@ public:
     NS_IMETHOD GetChildNodes(nsIEnumerator* *result);
     NS_IMETHOD GetChildCards(nsIEnumerator* *result);
      NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
-    NS_IMETHOD GetTotalCards(PRBool subDirectoryCount, PRUint32 *_retval);
 
     // nsAbLDAPDirectoryQuery methods
     nsresult GetLDAPConnection (nsILDAPConnection** connection);

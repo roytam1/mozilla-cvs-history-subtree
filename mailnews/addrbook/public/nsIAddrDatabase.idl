@@ -42,15 +42,14 @@
 
 %{C++
 #include "mdb.h"
-#include "nsString.h"
 %}
 
 [ptr] native nsIMdbTableRowCursor(nsIMdbTableRowCursor);
 [ptr] native nsIMdbEnv(nsIMdbEnv);
 [ptr] native nsIMdbRow(nsIMdbRow);
-[ref] native nsStringRef(nsString);
 
 %{C++
+// note, GeneratedName is not a real column
 #define kFirstNameColumn          "FirstName"
 #define kLastNameColumn           "LastName"
 #define kDisplayNameColumn        "DisplayName"
@@ -122,10 +121,10 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void editCard(in nsIAbCard card, in boolean beNotify);
 	boolean containsCard(in nsIAbCard card);
 	void deleteMailList(in nsIAbDirectory mailList, in boolean beNotify);
-	void editMailList(in nsIAbDirectory mailList, in boolean beNotify);
+	void editMailList(in nsIAbDirectory mailList, in nsIAbCard listCard, in boolean beNotify);
 	boolean containsMailList(in nsIAbDirectory mailList);
 	void deleteCardFromMailList(in nsIAbDirectory mailList, in nsIAbCard card, in boolean beNotify);
-	wstring getDirectoryName();
+	readonly attribute wstring directoryName;
 
 	nsIAbCard getCardForEmailAddress(in nsIAbDirectory directory, in string emailAddress);
 
@@ -193,7 +192,4 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addListNickName(in nsIMdbRow row, in string value);
 	[noscript] void addListDescription(in nsIMdbRow row, in string value);
 	[noscript] void AddListDirNode(in nsIMdbRow listRow);
- 
-	[noscript] void createCollationKey(in wstring sourceStr, in nsStringRef resultStr);
-
 };

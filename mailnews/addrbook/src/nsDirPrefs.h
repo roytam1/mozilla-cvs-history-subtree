@@ -56,7 +56,6 @@ PRInt32 INTL_ConvertFromUnicode(const PRUnichar* uniBuffer,
 /* use this to get all directories, create new directory*/
 #define kAllDirectoryRoot          "moz-abdirectory://" 
 
-#define kMDBCardRoot               "moz-abmdbcard://"
 #define kMDBDirectoryRoot          "moz-abmdbdirectory://"
 #define kPersonalAddressbook       "abook.mab"
 #define kPersonalAddressbookUri    "moz-abmdbdirectory://abook.mab"

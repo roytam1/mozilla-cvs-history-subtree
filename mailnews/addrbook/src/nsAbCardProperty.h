@@ -49,7 +49,6 @@
 #include "nsVoidArray.h"
 #include "nsCOMPtr.h"
 #include "nsIAddressBook.h"
-#include "nsIAddrDatabase.h"
 
  /* 
   * Address Book Card Property
@@ -110,10 +109,8 @@ protected:
 	PRUint32 m_Key;
 	PRUint32 m_PreferMailFormat;
 
-	PRBool   m_bIsMailList;
+	PRPackedBool m_IsMailList;
 	char*    m_MailListURI;
-
-	nsCOMPtr<nsIAddressBook> addressBook;
 };
 
 #endif

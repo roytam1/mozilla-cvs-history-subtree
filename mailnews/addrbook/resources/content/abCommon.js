@@ -1,5 +1,7 @@
 var dirTree = 0;
-var resultsTree = 0;
+var gResultsOutliner = 0;
+var gAbView = null;
+var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 
 // functions needed from abMainWindow and abSelectAddresses
 
@@ -21,15 +23,19 @@ var ResultsPaneController =
 
   isCommandEnabled: function(command)
   {
-    var numSelected = 0
     switch (command) {
       case "cmd_selectAll":
         return true;
 
       case "cmd_delete":
       case "button_delete":
-        if (resultsTree && resultsTree.selectedItems)
-          numSelected = resultsTree.selectedItems.length;
+        var numSelected;
+        if (gAbView && gAbView.selection)
+          numSelected = gAbView.selection.count;
+        else 
+          numSelected = 0;
+
+        // fix me, don't update on isCommandEnabled
         if (command == "cmd_delete") {
           if (numSelected < 2)
             goSetMenuValue(command, "valueCard");
@@ -38,9 +44,7 @@ var ResultsPaneController =
         }
         return (numSelected > 0);
       case "button_edit":
-        if (resultsTree && resultsTree.selectedItems)
-          numSelected = resultsTree.selectedItems.length;
-        return (numSelected == 1);
+        return (GetSelectedCardIndex() != -1);
       default:
         return false;
     }
@@ -50,18 +54,15 @@ var ResultsPaneController =
   {
     switch (command) {
       case "cmd_selectAll":
-        if (resultsTree)
-          resultsTree.selectAll();
+        if (gAbView)
+          gAbView.selectAll();
         break;
       case "cmd_delete":
       case "button_delete":
-        if (resultsTree) {
-          var cardList = resultsTree.selectedItems;
-          top.addressbook.deleteCards(resultsTree, resultsTree, cardList);
-        }
+        AbDelete();
         break;
       case "button_edit":
-        AbEditCard();
+        AbEditSelectedCard();
         break;
     }
   },
@@ -133,15 +134,7 @@ var DirPaneController =
 //        top.addressbook.deleteAddressBooks(dirTree.database, dirTree, dirTree.selectedItems);
         break;
       case "button_edit":
-        var selectedItems = dirTree.selectedItems;
-        if (selectedItems.length == 1) {
-          var mailingListUri = selectedItems[0].getAttribute('id');
-          var directory = rdf.GetResource(mailingListUri).QueryInterface(Components.interfaces.nsIAbDirectory);
-          if (directory.isMailList) {
-            var parentURI = selectedItems[0].parentNode.parentNode.getAttribute('id');
-            goEditListDialog(parentURI, mailingListUri);
-          }
-        }
+        AbEditSelectedDirectory();
         break;
     }
   },
@@ -154,10 +147,23 @@ var DirPaneController =
   }
 };
 
+function AbEditSelectedDirectory()
+{
+  var selectedItems = dirTree.selectedItems;
+  if (selectedItems.length == 1) {
+    var mailingListUri = selectedItems[0].getAttribute('id');
+    var directory = rdf.GetResource(mailingListUri).QueryInterface(Components.interfaces.nsIAbDirectory);
+    if (directory.isMailList) {
+      var parentURI = selectedItems[0].parentNode.parentNode.getAttribute('id');
+      goEditListDialog(parentURI, null, mailingListUri, UpdateCardView);
+    }
+  }
+}
+        
 function InitCommonJS()
 {
   dirTree = document.getElementById("dirTree");
-  resultsTree = document.getElementById("resultsTree");
+  gResultsOutliner = document.getElementById("abResultsOutliner");
 }
 
 function SetupCommandUpdateHandlers()
@@ -167,22 +173,14 @@ function SetupCommandUpdateHandlers()
     dirTree.controllers.appendController(DirPaneController);
 
   // results pane
-  if (resultsTree)
-    resultsTree.controllers.appendController(ResultsPaneController);
+  if (gResultsOutliner)
+    gResultsOutliner.controllers.appendController(ResultsPaneController);
 }
 
 function AbDelete()
 {
-  var resultsTree = document.getElementById('resultsTree');
-  if ( resultsTree )
-  {
-    //get the selected elements
-    var cardList = resultsTree.selectedItems;
-    // get AB service
-    addressbook = Components.classes["@mozilla.org/addressbook;1"].getService(Components.interfaces.nsIAddressBook);
-    // delete selected cards
-    addressbook.deleteCards(resultsTree, resultsTree, cardList);
-  }
+  if (gAbView) 
+    gAbView.deleteSelectedCards();
 }
 
 function AbNewCard(abListItem)
@@ -192,23 +190,49 @@ function AbNewCard(abListItem)
   goNewCardDialog(selectedAB);
 }
 
-function AbEditCard()
+// NOTE, will return -1 if more than one card selected, or no cards selected.
+function GetSelectedCardIndex()
 {
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-  rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
+  if (!gAbView)
+    return -1;
 
-  if (resultsTree.selectedItems && resultsTree.selectedItems.length == 1) {
-    var uri = resultsTree.selectedItems[0].getAttribute("id");
-    var card = rdf.GetResource(uri);
-    card = card.QueryInterface(Components.interfaces.nsIAbCard);
+  var outlinerSelection = gAbView.selection;
+  if (outlinerSelection.getRangeCount() == 1) {
+    var start = new Object;
+    var end = new Object;
+    outlinerSelection.getRangeAt(0,start,end);
+    if (start.value == end.value)
+      return start.value;
+    }
+
+  return -1;
+}
+
+// NOTE, returns the card if exactly one card is selected, null otherwise
+function GetSelectedCard()
+{
+  var index = GetSelectedCardIndex();
+  if (index == -1)
+    return null;
+  else 
+    return gAbView.getCardFromRow(index);
+}
+
+function AbEditSelectedCard()
+{
+  AbEditCard(GetSelectedCard());
+}
+
+function AbEditCard(card)
+{
+  if (!card)
+    return;
+
     if (card.isMailList) {
-      listUri = card.mailListURI;
-      goEditListDialog(resultsTree.getAttribute("ref"), listUri);
+    goEditListDialog(gAbView.URI, card, card.mailListURI, UpdateCardView);
     }
     else {
-      var updateFunc = ("gUpdateCardView" in top) ? top.gUpdateCardView : null;
-      goEditCardDialog(resultsTree.getAttribute("ref"), card, updateFunc, uri);
-    }
+    goEditCardDialog(gAbView.URI, card, UpdateCardView);
   }
 }
 
@@ -219,12 +243,12 @@ function AbNewMessage()
   var msgComposeService = Components.classes["@mozilla.org/messengercompose;1"].getService();
   msgComposeService = msgComposeService.QueryInterface(Components.interfaces.nsIMsgComposeService);
 
-  params = Components.classes["@mozilla.org/messengercompose/composeparams;1"].createInstance(Components.interfaces.nsIMsgComposeParams);
+  var params = Components.classes["@mozilla.org/messengercompose/composeparams;1"].createInstance(Components.interfaces.nsIMsgComposeParams);
   if (params)
   {
     params.type = msgComposeType.New;
     params.format = msgComposFormat.Default;
-    composeFields = Components.classes["@mozilla.org/messengercompose/composefields;1"].createInstance(Components.interfaces.nsIMsgCompFields);
+    var composeFields = Components.classes["@mozilla.org/messengercompose/composefields;1"].createInstance(Components.interfaces.nsIMsgCompFields);
     if (composeFields)
     {
       composeFields.to = GetSelectedAddresses();
@@ -234,27 +258,97 @@ function AbNewMessage()
   }
 }
 
+function GetOneOrMoreCardsSelected()
+{
+  if (!gAbView)
+    return false;
+
+  return (gAbView.selection.getRangeCount() > 0);
+}
+
+// XXX move into utilityOverlay.js?
+function goToggleSplitter( id, elementID )
+{
+  var splitter = document.getElementById( id );
+  var element = document.getElementById( elementID );
+  if ( splitter )
+  {
+    var attribValue = splitter.getAttribute("state") ;
+
+    if ( attribValue == "collapsed" )
+    {
+      splitter.setAttribute("state", "open" );
+      if ( element )
+        element.setAttribute("checked","true")
+    }
+    else
+    {
+      splitter.setAttribute("state", "collapsed");
+      if ( element )
+        element.setAttribute("checked","false")
+    }
+    document.persist(id, 'state');
+    document.persist(elementID, 'checked');
+  }
+}
+
 function GetSelectedAddresses()
 {
-  var item, uri, rdf, cardResource, card;
   var selectedAddresses = "";
 
-  rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-  rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
+  var cards = GetSelectedAbCards();
+  var count = cards.length;
 
-  if (resultsTree.selectedItems && resultsTree.selectedItems.length) {
-    for (item = 0; item < resultsTree.selectedItems.length; item++) {
-      uri = resultsTree.selectedItems[item].getAttribute("id");
-      cardResource = rdf.GetResource(uri);
-      card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
-      if (selectedAddresses)
+  for (var i = 0; i < count; i++) { 
+    var generatedAddress = GenerateAddressFromCard(cards[i]);
+
+    if (generatedAddress.length) {
+      if (i != 0) {
         selectedAddresses += ",";
-      selectedAddresses += "\"" + card.displayName + "\" <" + card.primaryEmail + ">";
+      }
+      selectedAddresses += generatedAddress;
     }
   }
+
   return selectedAddresses;
 }
 
+function GetNumSelectedCards()
+{
+ try {
+   var outlinerSelection = gAbView.selection;
+   return outlinerSelection.count;
+ }
+ catch (ex) {
+   return 0;
+ }
+}
+
+function GetSelectedAbCards()
+{  
+  if (!gAbView)
+    return null;
+
+  var outlinerSelection = gAbView.selection;
+
+  var cards = new Array(outlinerSelection.count);
+  var i,j;
+  var count = outlinerSelection.getRangeCount();
+  
+  var current = 0;
+
+  for (i=0; i < count; i++) {
+    var start = new Object;
+    var end = new Object;
+    outlinerSelection.getRangeAt(i,start,end);
+    for (j=start.value;j<=end.value;j++) {
+      cards[current] = gAbView.getCardFromRow(j);
+      current++;
+    }
+  }
+
+  return cards;
+}
 
 function SelectFirstAddressBook()
 {
@@ -270,70 +364,93 @@ function SelectFirstAddressBook()
 
 function SelectFirstCard()
 {
-  var body = GetResultsTreeChildren();
-  if (resultsTree && body) {
-    var treeitems = body.getElementsByTagName("treeitem");
-    if (treeitems && treeitems.length > 0) {
-      resultsTree.selectItem(treeitems[0]);
-      ResultsPaneSelectionChange();
+  if (gAbView && gAbView.selection) {
+    gAbView.selection.select(0);
     }
   }
+
+function DirPaneDoubleClick()
+{
+  if (dirTree && dirTree.selectedItems && (dirTree.selectedItems.length == 1))
+    AbEditSelectedDirectory();
 }
 
 function DirPaneSelectionChange()
 {
   if (dirTree && dirTree.selectedItems && (dirTree.selectedItems.length == 1))
     ChangeDirectoryByDOMNode(dirTree.selectedItems[0]);
-  else {
-    if (resultsTree) {
-      ClearResultsTreeSelection();
-      resultsTree.setAttribute("ref", null);
-    }
   }
+
+function GetAbResultsBoxObject()
+{
+  var outliner = GetAbResultsOutliner();
+  return outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject);
+    }
+
+function CloseAbView()
+{
+  var boxObject = GetAbResultsBoxObject();
+  boxObject.view = null;
+
+  if (gAbView) {
+    gAbView.close();
+    gAbView = null;
+  }
+}
+
+function SetAbView(uri, sortColumn, sortDirection)
+{
+  CloseAbView();
+
+  gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
+
+  var actualSortColumn = gAbView.init(uri, GetAbViewListener(), sortColumn, sortDirection);
+  
+  var boxObject = GetAbResultsBoxObject();
+  boxObject.view = gAbView.QueryInterface(Components.interfaces.nsIOutlinerView);
+  return actualSortColumn;
+}
+
+const kDefaultSortColumn = "GeneratedName";
+const kDefaultAscending = "ascending";
+const kDefaultDescending = "descending";
+
+function GetAbViewURI()
+{
+  if (gAbView)
+    return gAbView.URI;
+  else 
+    return null;
 }
 
 function ChangeDirectoryByDOMNode(dirNode)
 {
   var uri = dirNode.getAttribute("id");
-  if (resultsTree) {
-    if (uri != resultsTree.getAttribute("ref")) {
-      ClearResultsTreeSelection();
-      resultsTree.setAttribute("ref", uri);
-      WaitUntilDocumentIsLoaded();
-      SortToPreviousSettings();
-      SelectFirstCard();
-      UpdateStatusCardCounts(uri);
-    }
-  }
-}
+  if (gAbView && gAbView.URI == uri)
+    return;
+  
+  var sortColumn = dirNode.getAttribute("sortColumn");
+  var sortDirection = dirNode.getAttribute("sortDirection");
+  
+  if (!sortColumn)
+    sortColumn = kDefaultSortColumn;
 
-function ResultsPaneSelectionChange()
-{
-  if ("gUpdateCardView" in top)
-    top.gUpdateCardView();
+  if (!sortDirection)
+    sortDirection = kDefaultAscending;
 
-  if ("gDialogResultsPaneSelectionChanged" in top)
-    top.gDialogResultsPaneSelectionChanged();
-}
+  var actualSortColumn = SetAbView(uri, sortColumn, sortDirection);
 
-function ClearResultsTreeSelection()
-{
-  if (resultsTree)
-    resultsTree.clearItemSelection();
-}
+  UpdateSortIndicators(actualSortColumn, sortDirection);
 
-function RedrawResultsTree()
-{
-  if (resultsTree) {
-    var ref = resultsTree.getAttribute("ref");
-    resultsTree.setAttribute("ref", ref);
-  }
+  setTimeout('SelectFirstCard();',0);
+  
+  return;
 }
 
 function RememberResultsTreeSelection()
 {
   var selectionArray = 0;
-
+  // fix me
   if (resultsTree) {
     var selectedItems = resultsTree.selectedItems;
     var numSelected = selectedItems.length;
@@ -348,35 +465,7 @@ function RememberResultsTreeSelection()
   return selectionArray;
 }
 
-function RestoreResultsTreeSelection(selectionArray)
-{
-  if (resultsTree && selectionArray) {
-    var numSelected = selectionArray.length;
-
-    WaitUntilDocumentIsLoaded();
-
-    var rowElement;
-    for (var i = 0 ; i < numSelected; i++) {
-      rowElement = document.getElementById(selectionArray[i]);
-      resultsTree.addItemToSelection(rowElement);
-      if (rowElement && (i==0))
-        resultsTree.ensureElementIsVisible(rowElement);
-    }
-    ResultsPaneSelectionChange();
-  }
-}
-
 var addrbooksession =Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
-
-function WaitUntilDocumentIsLoaded()
-{
-  try {
-    addrbooksession.ensureDocumentIsLoaded(document);
-  }
-  catch (ex) {
-    dump("failed to flush pending notifications: " + ex + "\n");
-  }
-}
 
 function GetResultsTreeChildren()
 {
@@ -389,147 +478,84 @@ function GetResultsTreeChildren()
   return null;
 }
 
-function GetResultsTreeItem(row)
+function AbSortAscending()
 {
-  var treechildren = GetResultsTreeChildren();
+  var sortColumn = kDefaultSortColumn;
 
-  if (treechildren && row > 0) {
-    var treeitems = treechildren.getElementsByTagName("treeitem");
-    if (treeitems && treeitems.length >= row)
-      return treeitems[row-1];
+  if (gAbView) {
+    var node = document.getElementById(gAbView.URI);
+    sortColumn = node.getAttribute("sortColumn");
   }
-  return null;
+
+  SortAndUpdateIndicators(sortColumn, kDefaultAscending);
 }
 
-function SortResultPane(column, sortKey)
+function AbSortDescending()
 {
-  var node = document.getElementById(column);
-  if (!node)
-    return false;
+  var sortColumn = kDefaultSortColumn;
 
-  var sortDirection = "ascending";
-  var currentDirection = node.getAttribute("sortDirection");
+  if (gAbView) {
+    var node = document.getElementById(gAbView.URI);
+    sortColumn = node.getAttribute("sortColumn");
+  }
 
-  if (currentDirection == "ascending")
-    sortDirection = "descending";
-  else
-    sortDirection = "ascending";
-
-  UpdateSortIndicator(column, sortDirection);
-
-  DoSort(column, sortKey, sortDirection);
-
-  SaveSortSetting(column, sortKey, sortDirection);
-
-  return true;
+  SortAndUpdateIndicators(sortColumn, kDefaultDescending);
 }
 
-function DoSort(column, key, direction)
+function SortResultPane(sortColumn)
 {
-  var isupports = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService();
-  if (!isupports)
-    return false;
+  var sortDirection = kDefaultAscending;
 
-  var xulSortService = isupports.QueryInterface(Components.interfaces.nsIXULSortService);
-  if (!xulSortService)
-    return false;
+  if (gAbView) {
+     sortDirection = gAbView.sortDirection;
+  }
 
-  var node = document.getElementById(column);
+  SortAndUpdateIndicators(sortColumn, sortDirection);
+}
 
+function SortAndUpdateIndicators(sortColumn, sortDirection)
+{
+  UpdateSortIndicators(sortColumn, sortDirection);
+
+  if (gAbView)
+    gAbView.sortBy(sortColumn, sortDirection);
+
+  SaveSortSetting(sortColumn, sortDirection);
+}
+
+function SaveSortSetting(column, direction)
+{
+  if (dirTree && gAbView) {
+    var node = document.getElementById(gAbView.URI);
   if (node) {
-    var selectionArray = RememberResultsTreeSelection();
-    if (selectionArray.length) {
-      xulSortService.Sort(node, key, direction);
-      ClearResultsTreeSelection();
-      WaitUntilDocumentIsLoaded();
-      RestoreResultsTreeSelection(selectionArray);
+      node.setAttribute("sortColumn", column);
+      node.setAttribute("sortDirection", direction);
     }
-    else {
-      try {
-        xulSortService.Sort(node, key, direction);
-        WaitUntilDocumentIsLoaded();
       }
-      catch(ex) {
-        dump("failed to do sort\n");
-      }
-    }
-  }
-  return true;
-}
-function SortToPreviousSettings()
-{
-  if (dirTree && resultsTree) {
-    var ref = resultsTree.getAttribute("ref");
-    var folder = document.getElementById(ref);
-    if (folder) {
-      var column = folder.getAttribute("sortColumn");
-      var key = folder.getAttribute("sortKey");
-      var direction = folder.getAttribute("sortDirection");
-
-      if (!column || !key) {
-        column = "NameColumn";
-        key = "http://home.netscape.com/NC-rdf#Name";
-      }
-      if (!direction)
-        direction = "ascending";
-
-      UpdateSortIndicator(column,direction);
-
-      DoSort(column, key, direction);
-    }
-  }
 }
 
-function SaveSortSetting(column, key, direction)
+function UpdateSortIndicators(colID, sortDirection)
 {
-  if (dirTree && resultsTree) {
-    var ref = resultsTree.getAttribute("ref");
-    var folder = document.getElementById(ref);
-    if (folder) {
-      folder.setAttribute("sortColumn", column);
-      folder.setAttribute("sortKey", key);
-      folder.setAttribute("sortDirection", direction);
-    }
-  }
-}
-
-//------------------------------------------------------------
-// Sets the column header sort icon based on the requested
-// column and direction.
-//
-// Notes:
-// (1) This function relies on the first part of the
-//     <treecell id> matching the <treecol id>.  The treecell
-//     id must have a "Header" suffix.
-// (2) By changing the "sortDirection" attribute, a different
-//     CSS style will be used, thus changing the icon based on
-//     the "sortDirection" parameter.
-//------------------------------------------------------------
-function UpdateSortIndicator(column,sortDirection)
-{
-  // Find the <treerow> element
-  var treerow = document.getElementById("headRow");
-  var id = column + "Header";
-
-  if (treerow) {
-    // Grab all of the <treecell> elements
-    var treecell = treerow.getElementsByTagName("treecell");
-    if (treecell) {
-      // Loop through each treecell...
-      var node_count = treecell.length;
-      for (var i=0; i < node_count; i++) {
-        // Is this the requested column ?
-        if (id == treecell[i].getAttribute("id")) {
-          // Set the sortDirection so the class (CSS) will add the
-          // appropriate icon to the header cell
-          treecell[i].setAttribute("sortDirection", sortDirection);
-        }
-        else {
-          // This is not the sorted row
-          treecell[i].removeAttribute("sortDirection");
+  var sortedColumn;
+  // set the sort indicator on the column we are sorted by
+  if (colID) {
+    sortedColumn = document.getElementById(colID);
+    if (sortedColumn) {
+      sortedColumn.setAttribute("sortDirection",sortDirection);
         }
       }
+
+  // remove the sort indicator from all the columns
+  // except the one we are sorted by
+  var currCol = GetAbResultsOutliner().firstChild;
+  while (currCol) {
+    while (currCol && currCol.localName != "outlinercol")
+      currCol = currCol.nextSibling;
+    if (currCol && (currCol != sortedColumn)) {
+      currCol.removeAttribute("sortDirection");
     }
+    if (currCol) 
+      currCol = currCol.nextSibling;
   }
 }
 
@@ -537,10 +563,7 @@ function AbNewList(abListItem)
 {
   var selectedAB = GetSelectedAddressBookDirID(abListItem);
 
-  window.openDialog("chrome://messenger/content/addressbook/abMailListDialog.xul",
-                    "",
-                    "chrome,titlebar,centerscreen,resizable=no",
-                    {selectedAB:selectedAB});
+  goNewListDialog(selectedAB);
 }
 
 function GetSelectedAddressBookDirID(abListItem)
@@ -560,12 +583,20 @@ function GetSelectedAddressBookDirID(abListItem)
   return selectedAB;
 }
 
-function goEditListDialog(abURI, listURI)
+function goNewListDialog(selectedAB)
+{
+  window.openDialog("chrome://messenger/content/addressbook/abMailListDialog.xul",
+                    "",
+                    "chrome,titlebar,centerscreen,resizable=no",
+                    {selectedAB:selectedAB});
+}
+
+function goEditListDialog(abURI, abCard, listURI, okCallback)
 {
   window.openDialog("chrome://messenger/content/addressbook/abEditListDialog.xul",
                     "",
                     "chrome,titlebar,resizable=no",
-                    {abURI:abURI, listURI:listURI});
+                    {abURI:abURI, abCard:abCard, listURI:listURI, okCallback:okCallback});
 }
 
 function goNewCardDialog(selectedAB)
@@ -576,10 +607,63 @@ function goNewCardDialog(selectedAB)
                     {selectedAB:selectedAB});
 }
 
-function goEditCardDialog(abURI, card, okCallback, abCardURI)
+function goEditCardDialog(abURI, card, okCallback)
 {
   window.openDialog("chrome://messenger/content/addressbook/abEditCardDialog.xul",
 					  "",
 					  "chrome,resizable=no,modal,titlebar,centerscreen",
-					  {abURI:abURI, card:card, okCallback:okCallback, abCardURI:abCardURI});
+					  {abURI:abURI, card:card, okCallback:okCallback});
+}
+
+
+function setSortByMenuItemCheckState(id, value)
+{
+    var menuitem = document.getElementById(id);
+    if (menuitem) {
+      menuitem.setAttribute("checked", value);
+    }
+}
+
+function InitViewSortByMenu()
+{
+    var sortColumn = kDefaultSortColumn;
+    var sortDirection = kDefaultAscending;
+
+    if (gAbView) {
+      sortColumn = gAbView.sortColumn;
+      sortDirection = gAbView.sortDirection;
+    }
+
+    var elements = document.getElementsByAttribute("name","sortas");
+    var i;
+    for (i=0; i< elements.length; i++) {
+        var cmd = elements[i].getAttribute("id");
+        var columnForCmd = cmd.split("cmd_SortBy")[1];
+        setSortByMenuItemCheckState(cmd, (sortColumn == columnForCmd));
+    }
+
+    setSortByMenuItemCheckState("sortAscending", (sortDirection == kDefaultAscending));
+    setSortByMenuItemCheckState("sortDescending", (sortDirection == kDefaultDescending));
+}
+
+function GenerateAddressFromCard(card)
+{
+  var address = "";
+  var name = card.displayName
+  if (name.length) {
+    address += "\"" + name + "\" ";
+  }
+
+  if (card.isMailList) {
+    if (name.length) {
+      address += "<" + name + ">";
+    }
+  }
+  else {
+    var email = card.primaryEmail;
+    if (email.length) {
+      address += "<" + email + ">";
+    }
+  }
+  return address;
 }

@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -38,11 +39,14 @@ top.MAX_RECIPIENTS = 1;
 var inputElementType = "";
 
 var mailList;
-var parentURI;
-var editList;
+var gParentURI;
+var gListCard;
+var gEditList;
+var gOkCallback;
 var hitReturnInList = false;
 var oldListName = "";
 var gAddressBookBundle;
+var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 
 function handleKeyPress(element, event)
 {
@@ -67,9 +71,9 @@ function mailingListExists(listname)
 
 function GetListValue(mailList, doAdd)
 {
-  mailList.listName = document.getElementById('ListName').value;
+  mailList.dirName = document.getElementById('ListName').value;
 
-  if (mailList.listName.length == 0)
+  if (mailList.dirName.length == 0)
   {
     var alertText = gAddressBookBundle.getString("emptyListName");
     alert(alertText);
@@ -77,7 +81,7 @@ function GetListValue(mailList, doAdd)
   }
   else
   {
-    var listname = mailList.listName;
+    var listname = mailList.dirName;
     listname = listname.toLowerCase();
     oldListName = oldListName.toLowerCase();
     if (doAdd == true)
@@ -178,6 +182,7 @@ function MailListOKButton()
     else
       return false;
   }
+
   return true;  // close the window
 }
 
@@ -220,7 +225,6 @@ function OnLoadMailList()
   var listName = document.getElementById('ListName');
   if ( listName )
     listName.focus();
-  moveToAlertPosition();
 }
 
 function EditListOKButton()
@@ -230,10 +234,18 @@ function EditListOKButton()
     hitReturnInList = false;
     return false;
   }
-  //Add mailing list to database
-  if (GetListValue(editList, false))
+  //edit mailing list in database
+  if (GetListValue(gEditList, false))
   {
-    editList.editMailListToDatabase(parentURI);
+    if (gListCard) {
+      // modify the list card (for the results pane) from the mailing list 
+      gListCard.displayName = gEditList.dirName;
+      gListCard.lastName = gEditList.dirName;
+      gListCard.nickName = gEditList.listNickName;
+      gListCard.notes = gEditList.description;
+    }
+
+    gEditList.editMailListToDatabase(gParentURI, gListCard);
     return true;  // close the window
   }
   else
@@ -245,22 +257,22 @@ function OnLoadEditList()
   //XXX: gAddressBookBundle is set in 2 places because of different callers
   gAddressBookBundle = document.getElementById("bundle_addressBook");
 
-  parentURI  = window.arguments[0].abURI;
+  gParentURI  = window.arguments[0].abURI;
+  gListCard = window.arguments[0].abCard;
   var listUri  = window.arguments[0].listURI;
+  gOkCallback = window.arguments[0].okCallback;
 
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-  rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
-  editList = rdf.GetResource(listUri);
-  editList = editList.QueryInterface(Components.interfaces.nsIAbDirectory);
+  gEditList = rdf.GetResource(listUri);
+  gEditList = gEditList.QueryInterface(Components.interfaces.nsIAbDirectory);
 
-  document.getElementById('ListName').value = editList.listName;
-  document.getElementById('ListNickName').value = editList.listNickName;
-  document.getElementById('ListDescription').value = editList.description;
-  oldListName = editList.listName;
+  document.getElementById('ListName').value = gEditList.dirName;
+  document.getElementById('ListNickName').value = gEditList.listNickName;
+  document.getElementById('ListDescription').value = gEditList.description;
+  oldListName = gEditList.dirName;
 
-  if (editList.addressLists)
+  if (gEditList.addressLists)
   {
-    var total = editList.addressLists.Count();
+    var total = gEditList.addressLists.Count();
     if (total)
     {
       var treeChildren = document.getElementById('addressList');
@@ -270,11 +282,11 @@ function OnLoadEditList()
       top.MAX_RECIPIENTS = 0;
       for ( var i = 0;  i < total; i++ )
       {
-        var card = editList.addressLists.GetElementAt(i);
+        var card = gEditList.addressLists.GetElementAt(i);
         card = card.QueryInterface(Components.interfaces.nsIAbCard);
         var address;
-        if (card.name.length)
-          address = card.name + " <" + card.primaryEmail + ">";
+        if (card.displayName.length)
+          address = card.displayName + " <" + card.primaryEmail + ">";
         else
           address = card.primaryEmail;
         SetInputValue(address, newTreeChildrenNode, templateNode);
@@ -290,7 +302,6 @@ function OnLoadEditList()
   var listName = document.getElementById('ListName');
   if ( listName )
     listName.focus();
-  moveToAlertPosition();
 }
 
 function AppendnewRowAndSetFocus()
@@ -546,7 +557,7 @@ function awFinishCopyNodes()
 
 function awTabFromRecipient(element, event)
 {
-  //If we are le last element in the tree, we don't want to create a new row.
+  //If we are the last element in the tree, we don't want to create a new row.
   if (element == awGetInputElement(top.MAX_RECIPIENTS))
     top.doNotCreateANewRow = true;
 }
@@ -570,7 +581,7 @@ function DragOverTree(event)
   dragSession = dragService.getCurrentSession();
   if (!dragSession) return(false);
 
-  if (dragSession.isDataFlavorSupported("text/nsabcard")) validFlavor = true;
+  if (dragSession.isDataFlavorSupported("text/x-moz-address")) validFlavor = true;
   //XXX other flavors here...
 
   // touch the attribute on the rowgroup to trigger the repaint with the drop feedback.
@@ -578,7 +589,9 @@ function DragOverTree(event)
   {
     //XXX this is really slow and likes to refresh N times per second.
     var rowGroup = event.target.parentNode.parentNode;
+    if (rowGroup)
     rowGroup.setAttribute ( "dd-triggerrepaint", 0 );
+
     dragSession.canDrop = true;
     // necessary??
     retVal = false; // do not propagate message
@@ -588,22 +601,19 @@ function DragOverTree(event)
 
 function DropOnAddressListTree(event)
 {
-  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-  if (rdf)
-    rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
-  if (!rdf) return(false);
-
   var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
   if (dragService)
     dragService = dragService.QueryInterface(Components.interfaces.nsIDragService);
-  if (!dragService) return(false);
+  if (!dragService) 
+    return(false);
 
   var dragSession = dragService.getCurrentSession();
-  if ( !dragSession ) return(false);
+  if ( !dragSession ) 
+    return(false);
 
   var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
   if ( !trans ) return(false);
-  trans.addDataFlavor("text/nsabcard");
+  trans.addDataFlavor("text/x-moz-address");
 
   for ( var i = 0; i < dragSession.numDropItems; ++i )
   {
@@ -616,32 +626,19 @@ function DropOnAddressListTree(event)
     if ( !dataObj ) continue;
 
     // pull the URL out of the data object
-    var sourceID = dataObj.data.substring(0, len.value);
-    if (!sourceID)  continue;
+    var address = dataObj.data.substring(0, len.value);
+    if (!address)
+      continue;
 
-    var cardResource = rdf.GetResource(sourceID);
-    var card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
-
-    if (card.isMailList)
-      DropListAddress(card.name);
-    else
-    {
-      var address;
-      if (card.name.length)
-        address = card.name + " <" + card.primaryEmail + ">";
-      else
-        address = card.primaryEmail;
-      DropListAddress(address);
-    }
-
+    DropListAddress(event.target, address);
   }
 
   return(false);
 }
 
-function DropListAddress(address)
+function DropListAddress(target, address)
 {
-    awClickEmptySpace(true);    //that will automatically set the focus on a new available row, and make sure is visible
+    awClickEmptySpace(target, true);    //that will automatically set the focus on a new available row, and make sure is visible
     if (top.MAX_RECIPIENTS == 0)
     top.MAX_RECIPIENTS = 1;
   var lastInput = awGetInputElement(top.MAX_RECIPIENTS);

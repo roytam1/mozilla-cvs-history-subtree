@@ -37,6 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsAbOutlookCard.h"
 #include "nsAbWinHelper.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
 
 #include "prlog.h"
 
@@ -241,6 +243,8 @@ static void UnicodeToWord(const PRUnichar *aUnicode, WORD& aWord)
     }
 }
 
+#define PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST "mail.addr_book.lastnamefirst"
+
 NS_IMETHODIMP nsAbOutlookCard::EditCardToDatabase(const char *aUri)
 {
     nsresult retCode = NS_OK ;
@@ -263,7 +267,19 @@ NS_IMETHODIMP nsAbOutlookCard::EditCardToDatabase(const char *aUri)
     // name, and when all fails, on the email address.
     GetDisplayName(getter_Copies(properties [index_DisplayName])) ;
     if (*properties [index_DisplayName].get() == 0) {
-        GetName(getter_Copies(properties [index_DisplayName])) ;
+      nsresult rv;
+      nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv,rv);
+      
+      nsCOMPtr<nsIPrefBranch> prefBranch;
+      rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
+      NS_ENSURE_SUCCESS(rv,rv);
+      
+      PRInt32 format;
+      rv = prefBranch->GetIntPref(PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST, &format);
+      NS_ENSURE_SUCCESS(rv,rv);
+      
+      GetGeneratedName(format, getter_Copies(properties [index_DisplayName])) ;
         if (*properties [index_DisplayName].get() == 0) {
             GetPrimaryEmail(getter_Copies(properties [index_DisplayName])) ;
         }

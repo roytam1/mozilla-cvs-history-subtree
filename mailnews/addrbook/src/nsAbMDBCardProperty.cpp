@@ -53,11 +53,6 @@
 #include "nsIPref.h"
 #include "nsIAddressBook.h"
 
-static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRDATABASE_CID);
-static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
-static NS_DEFINE_CID(kAddrBookCID, NS_ADDRESSBOOK_CID);
-
-
 nsAbMDBCardProperty::nsAbMDBCardProperty(void)
 {
 	m_Key = 0;
@@ -282,39 +277,6 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousBoolAttribute
 	return rv;
 }
 
-/* caller need to PR_smprintf_free *uri */
-NS_IMETHODIMP nsAbMDBCardProperty::GetCardURI(char **uri)
-{
-	char* cardURI = nsnull;
-	nsFileSpec  *filePath = nsnull;
-	if (mCardDatabase)
-	{
-		mCardDatabase->GetDbPath(&filePath);
-		if (filePath)
-		{
-			char* file = nsnull;
-			file = filePath->GetLeafName();
-			if (file && m_dbRowID)
-			{
-				if (m_bIsMailList)
-					cardURI = PR_smprintf("%s%s/ListCard%ld", kMDBCardRoot, file, m_dbRowID);
-				else
-					cardURI = PR_smprintf("%s%s/Card%ld", kMDBCardRoot, file, m_dbRowID);
-			}
-			if (file)
-				nsCRT::free(file);
-			delete filePath;
-		}
-	}
-	if (cardURI)
-	{
-		*uri = cardURI;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
 NS_IMETHODIMP nsAbMDBCardProperty::CopyCard(nsIAbMDBCard* srcCardDB)
 {
 	nsresult rv = NS_OK;
@@ -432,56 +394,6 @@ NS_IMETHODIMP nsAbMDBCardProperty::EditAnonymousAttributesInDB()
 	return rv;
 }
 
-
-
-
-
-
-
-
-
-// nsIAbCard methods
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetPrintCardUrl(char * *aPrintCardUrl)
-{
-static const char *kAbPrintUrlFormat = "addbook:printone?email=%s&folder=%s";
-
-	if (!aPrintCardUrl)
-		return NS_OK;
-
-  nsXPIDLString email;
-	GetPrimaryEmail(getter_Copies(email));
-	nsAutoString emailStr(email);
-
-	if (emailStr.Length() == 0)
-	{
-		*aPrintCardUrl = PR_smprintf("");
-		return NS_OK;
-	}
-  nsXPIDLString dirName;
-	if (mCardDatabase)
-		mCardDatabase->GetDirectoryName(getter_Copies(dirName));
-	nsAutoString dirNameStr(dirName);
-	if (dirNameStr.Length() == 0)
-	{
-		*aPrintCardUrl = PR_smprintf("");
-		return NS_OK;
-	}
-	dirNameStr.ReplaceSubstring(NS_LITERAL_STRING(" ").get(), NS_LITERAL_STRING("%20").get());
-
-  char *emailCharStr = ToNewUTF8String(emailStr);
-  char *dirCharStr = ToNewUTF8String(dirNameStr);
-
-	*aPrintCardUrl = PR_smprintf(kAbPrintUrlFormat, emailCharStr, dirCharStr);
-
-	nsMemory::Free(emailCharStr);
-	nsMemory::Free(dirCharStr);
-
-	return NS_OK;
-}
-
-
-
 NS_IMETHODIMP nsAbMDBCardProperty::EditCardToDatabase(const char *uri)
 {
 	if (!mCardDatabase && uri)
@@ -497,9 +409,6 @@ NS_IMETHODIMP nsAbMDBCardProperty::EditCardToDatabase(const char *uri)
 		return NS_ERROR_FAILURE;
 }
 
-
-
-
 // protected class methods
 
 nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
@@ -507,7 +416,7 @@ nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
 	nsresult rv = NS_OK;
 
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if (NS_SUCCEEDED(rv))
 	{
 		nsFileSpec* dbPath;
@@ -520,7 +429,7 @@ nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
 		if (dbPath->Exists())
 		{
 			nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
-			         do_GetService(kAddressBookDBCID, &rv);
+			         do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
 
 			if (NS_SUCCEEDED(rv) && addrDBFactory)
 				rv = addrDBFactory->Open(dbPath, PR_TRUE, getter_AddRefs(mCardDatabase), PR_TRUE);

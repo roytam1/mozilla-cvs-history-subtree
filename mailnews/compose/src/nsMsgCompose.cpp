@@ -3176,9 +3176,9 @@ static nsresult OpenAddressBook(const char * dbUri, nsIAddrDatabase** aDatabase,
     return NS_ERROR_NULL_POINTER;
 
   nsresult rv;
-  nsCOMPtr<nsIAddressBook> addresBook (do_GetService(NS_ADDRESSBOOK_CONTRACTID)); 
-  if (addresBook)
-    rv = addresBook->GetAbDatabaseFromURI(dbUri, aDatabase);
+  nsCOMPtr<nsIAddressBook> addressBook (do_GetService(NS_ADDRESSBOOK_CONTRACTID)); 
+  if (addressBook)
+    rv = addressBook->GetAbDatabaseFromURI(dbUri, aDatabase);
 
   nsCOMPtr<nsIRDFService> rdfService (do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
   if (NS_FAILED(rv)) 
@@ -3298,7 +3298,7 @@ nsresult nsMsgCompose::BuildMailListArray(nsIAddrDatabase* database, nsIAbDirect
               nsXPIDLString listName;
               nsXPIDLString listDescription;
 
-              directory->GetListName(getter_Copies(listName));
+              directory->GetDirName(getter_Copies(listName));
               directory->GetDescription(getter_Copies(listDescription));
 
               nsMsgMailList* mailList = new nsMsgMailList(nsAutoString((const PRUnichar*)listName),
@@ -3462,7 +3462,7 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
       if (NS_FAILED(rv) || !abDataBase || !abDirectory)
         continue;
 
-      /* Collect all mailing list defined in this AddresBook */
+      /* Collect all mailing list defined in this address book */
       rv = BuildMailListArray(abDataBase, abDirectory, mailListArray);
       if (NS_FAILED(rv))
         return rv;

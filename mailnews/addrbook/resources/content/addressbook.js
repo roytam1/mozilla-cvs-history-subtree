@@ -1,6 +1,31 @@
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Original Author:
+ *   Paul Hangas <hangas@netscape.com>
+ *
+ * Contributors:
+ *   Seth Spitzer <sspitzer@netscape.com>
+ */
+
 var cvPrefs = 0;
 var addressbook = 0;
-var gUpdateCardView = 0;
 var gAddressBookBundle;
 
 var gTotalCardsElement = null;
@@ -11,46 +36,50 @@ const kDisplayName = 0;
 const kLastNameFirst = 1;
 const kFirstNameFirst = 2;
 
-var addressBookObserver = {
-  onAssert: function(aDataSource, aSource, aProperty, aTarget)
+function OnUnloadAddressBook()
   {
-    UpdateAddDeleteCounts();
-  },
-
-  onUnassert: function(aDataSource, aSource, aProperty, aTarget)
-  {
-    UpdateAddDeleteCounts();
-  },
-
-  onChange: function(aDataSource, aSource, aProperty, aOldTarget, aNewTarget)
-  { },
-
-  onMove: function(aDataSource,
-                aOldSource,
-                aNewSource,
-                aProperty,
-                aTarget)
-  {},
-
-  beginUpdateBatch: function(aDataSource)
-  {},
-
-  endUpdateBatch: function(aDataSource)
-  {}
+  RemovePrefObservers();
+  CloseAbView();
 }
 
-function OnUnloadAddressBook()
+var gAddressBookAbViewListener = {
+	onSelectionChanged: function() {
+    ResultsPaneSelectionChanged();
+  },
+  onCountChanged: function(total) {
+    SetTotalCardStatus(gAbView.directory.dirName, total);
+  }
+};
+
+function GetAbViewListener()
 {
-	try
+  return gAddressBookAbViewListener;
+}
+
+const kPrefMailAddrBookLastNameFirst = "mail.addr_book.lastnamefirst";
+
+var gMailAddrBookLastNameFirstObserver = {
+  observe: function(subject, topic, value) {
+    if (topic == "nsPref:changed" && value == kPrefMailAddrBookLastNameFirst) {
+      UpdateCardView();
+    }
+}
+}
+
+function AddPrefObservers()
 	{
-		var dataSource = top.rdf.GetDataSource("rdf:addressdirectory");
-		dataSource.RemoveObserver (addressBookObserver);
+  var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                              .getService(Components.interfaces.nsIPrefService);
+  var prefBranch = prefService.getBranch(null).QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+  prefBranch.addObserver(kPrefMailAddrBookLastNameFirst, gMailAddrBookLastNameFirstObserver, false);
 	}
-	catch (ex)
+
+function RemovePrefObservers()
 	{
-		dump(ex + "\n");
-		dump("Error removing from RDF datasource\n");
-	}
+  var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                              .getService(Components.interfaces.nsIPrefService);
+  var prefBranch = prefService.getBranch(null).QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+  prefBranch.removeObserver(kPrefMailAddrBookLastNameFirst, gMailAddrBookLastNameFirstObserver);
 }
 
 function OnLoadAddressBook()
@@ -58,39 +87,21 @@ function OnLoadAddressBook()
 	gAddressBookBundle = document.getElementById("bundle_addressBook");
 	verifyAccounts(null); 	// this will do migration, if we need to.
 
-	top.addressbook = Components.classes["@mozilla.org/addressbook;1"].createInstance();
-	top.addressbook = top.addressbook.QueryInterface(Components.interfaces.nsIAddressBook);
-	top.gUpdateCardView = UpdateCardView;
+	top.addressbook = Components.classes["@mozilla.org/addressbook;1"].createInstance(Components.interfaces.nsIAddressBook);
 
 	InitCommonJS();
 	GetCurrentPrefs();
 
+  AddPrefObservers();
+
 	// FIX ME - later we will be able to use onload from the overlay
 	OnLoadCardView();
 	
-	try {
-		top.addressbook.setWebShellWindow(window)
-	}
-	catch (ex) {
-		dump("failed to set webshell window\n");
-	}
-
 	SetupCommandUpdateHandlers();
 
 	//workaround - add setTimeout to make sure dynamic overlays get loaded first
 	setTimeout('SelectFirstAddressBook()',0);
-
-	try
-	{
-		var dataSource = top.rdf.GetDataSource("rdf:addressdirectory");
-		dataSource.AddObserver (addressBookObserver);
 	}
-	catch (ex)
-	{
-		dump(ex + "\n");
-		dump("Error adding to RDF datasource\n");
-	}
-}
 
 
 function GetCurrentPrefs()
@@ -105,25 +116,13 @@ function GetCurrentPrefs()
 		prefs = prefs.getService();
 		if ( prefs )
 			prefs = prefs.QueryInterface(Components.interfaces.nsIPrefBranch);
-	}
 			
-	if ( prefs )
-	{
-		try {
 			cvPrefs.prefs = prefs;
-			cvPrefs.displayLastNameFirst = prefs.getBoolPref("mail.addr_book.displayName.lastnamefirst");
-			cvPrefs.nameColumn = prefs.getIntPref("mail.addr_book.lastnamefirst");
-			cvPrefs.lastFirstSeparator = ", ";
-			cvPrefs.firstLastSeparator = " ";
 		}
-		catch (ex) {
-			dump("failed to get the mail.addr_book.displayName.lastnamefirst pref\n");
-		}
-	}
 	
 	// check "Show Name As" menu item based on pref
 	var menuitemID;
-	switch ( cvPrefs.nameColumn )
+	switch (prefs.getIntPref("mail.addr_book.lastnamefirst"))
 	{
 		case kFirstNameFirst:
 			menuitemID = 'firstLastCmd';
@@ -136,6 +135,7 @@ function GetCurrentPrefs()
 			menuitemID = 'displayNameCmd';
 			break;
 	}
+
 	var menuitem = top.document.getElementById(menuitemID);
 	if ( menuitem )
 		menuitem.setAttribute('checked', 'true');
@@ -159,53 +159,40 @@ function SetNameColumn(cmd)
 			break;
 	}
 	
-	// set pref in file and locally
 	cvPrefs.prefs.setIntPref("mail.addr_book.lastnamefirst", prefValue);
-	cvPrefs.nameColumn = prefValue;
-	
-	var selectionArray = RememberResultsTreeSelection();
-	ClearResultsTreeSelection()	;
-	
-	RedrawResultsTree();
-	
-	WaitUntilDocumentIsLoaded();
-	SortToPreviousSettings();
-	RestoreResultsTreeSelection(selectionArray);
 }
-
 
 function CommandUpdate_AddressBook()
 {
 	goUpdateCommand('button_delete');
-	
-	// get selection info from dir pane
-	var oneAddressBookSelected = false;
-	if ( dirTree && dirTree.selectedItems && (dirTree.selectedItems.length == 1) )
-		oneAddressBookSelected = true;
-		
-	// get selection info from results pane
-	var selectedCards = GetSelectedAddresses();
-	var oneOrMoreCardsSelected = false;
-	if ( selectedCards )
-		oneOrMoreCardsSelected = true;
-	
-	// set commands to enabled / disabled
-	//goSetCommandEnabled('cmd_PrintCard', oneAddressBookSelected);
-	goSetCommandEnabled('cmd_SortByName', oneAddressBookSelected);
-	goSetCommandEnabled('cmd_SortByEmail', oneAddressBookSelected);
-	goSetCommandEnabled('cmd_SortByWorkPhone', oneAddressBookSelected);
-	goSetCommandEnabled('cmd_SortByOrganization', oneAddressBookSelected);
 }
 
+function ResultsPaneSelectionChanged()
+{
+  UpdateCardView();
+}
 
 function UpdateCardView()
 {
-	if ( resultsTree && resultsTree.selectedItems && (resultsTree.selectedItems.length == 1) )
-		DisplayCardViewPane(resultsTree.selectedItems[0]);
+  var card = GetSelectedCard();
+
+  // display the selected card, if exactly one card is selected.
+  // either no cards, or more than one card is selected, clear the pane.
+ 
+  if (card)
+    DisplayCardViewPane(card);
 	else
 		ClearCardViewPane();
 }
 
+
+function OnClickedCard(card)
+{
+  if (card)
+    DisplayCardViewPane(card);
+	else
+		ClearCardViewPane();
+}
 
 function AbClose()
 {
@@ -231,32 +218,33 @@ function AbCreateNewAddressBook(name)
 
 function AbPrintCard()
 {
-	dump("print card\n");
-
-	var selectedItems = resultsTree.selectedItems;
+	var selectedItems = GetSelectedAbCards();
 	var numSelected = selectedItems.length;
 
 	if (numSelected == 0)
-	{
-		dump("AbPrintCard(): No card selected.\n");
-		return false;
-	}  
+    return;
+
+  var addressbook = Components.classes["@mozilla.org/addressbook;1"].createInstance(Components.interfaces.nsIAddressBook);
+  var uri = GetAbViewURI();
+  if (!uri)
+    return;
+
+  var escapedDirName = escape(addressbook.getAbDatabaseFromURI(uri).directoryName);
+
 	var statusFeedback;
 	statusFeedback = Components.classes["@mozilla.org/messenger/statusfeedback;1"].createInstance();
 	statusFeedback = statusFeedback.QueryInterface(Components.interfaces.nsIMsgStatusFeedback);
 
 	var selectionArray = new Array(numSelected);
-
 	var totalCard = 0;
+
 	for(var i = 0; i < numSelected; i++)
 	{
-		var uri = selectedItems[i].getAttribute("id");
-		var cardResource = top.rdf.GetResource(uri);
-		var card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
-		if (card.printCardUrl.length)
+		var card = selectedItems[i];
+    var printCardUrl = CreatePrintCardUrl(escapedDirName, card);
+		if (printCardUrl.length)
 		{
-			selectionArray[totalCard++] = card.printCardUrl;
-			dump("printCardUrl = " + card.printCardUrl + "\n");
+			selectionArray[totalCard++] = printCardUrl;
 		}
 	}
 
@@ -265,7 +253,19 @@ function AbPrintCard()
 										"chrome,dialog=no,all",
 										totalCard, selectionArray, statusFeedback);
 
-	return true;
+	return;
+}
+
+function CreatePrintCardUrl(escapedDirName, card)
+{
+  var url = "";
+
+  var email = card.primaryEmail;
+  if (email.length) {
+  	url = "addbook:printone?email=" + email + "&folder=" + escapedDirName;
+    dump("XXX url = " + url + "\n");
+  } 
+  return url;
 }
 
 function AbPrintAddressBook()
@@ -290,24 +290,6 @@ function AbImport()
 	}
 }
 
-/*
-function AbDelete()
-{
-//	dump("\AbDelete from XUL\n");
-	var tree = document.getElementById('resultsTree');
-	if ( tree )
-	{
-		//get the selected elements
-		var cardList = tree.selectedItems;
-		//get the current folder
-		var srcDirectory = document.getElementById('resultsTree');
-		dump("srcDirectory = " + srcDirectory + "\n");
-		top.addressbook.deleteCards(tree, srcDirectory, cardList);
-	}
-}
-*/
-
-
 function AbDeleteDirectory()
 {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
@@ -315,7 +297,6 @@ function AbDeleteDirectory()
 
     var selArray = dirTree.selectedItems;
     var count = selArray.length;
-    debugDump("selArray.length = " + count + "\n");
     if (!count)
         return;
 
@@ -326,8 +307,6 @@ function AbDeleteDirectory()
 
     for ( var i = 0; i < count; ++i )
     {
-        debugDump("    nodeId #" + i + " = " + selArray[i].getAttribute("id") + "\n");
-		
         // check to see if personal or collected address books is selected for deletion.
         // if yes, prompt the user an appropriate message saying these cannot be deleted
         // if no, mark the selected items for deletion
@@ -343,7 +322,6 @@ function AbDeleteDirectory()
                 else	
                     parentId = parent.getAttribute("id");
 
-                debugDump("    parentId #" + i + " = " + parentId + "\n");
                 var dirResource = rdf.GetResource(parentId);
                 var parentDir = dirResource.QueryInterface(Components.interfaces.nsIAbDirectory);
                 parentArray.AppendElement(parentDir);
@@ -374,61 +352,14 @@ function AbDeleteDirectory()
     }
 }
 
-function clickResultsTree(event)
-{
-    // we only care about button 0 (left click) events
-    if (event.button != 0) return;
-
-    if (event.target.localName != "treecell" &&
-        event.target.localName != "treeitem")
-        return;
-
-    if ( event.detail == 2 ) top.AbEditCard();
-}
-
-function UpdateAddDeleteCounts()
-{
-  if ( dirTree && dirTree.selectedItems && (dirTree.selectedItems.length == 1) )
-  {
-    var dirUri = dirTree.selectedItems[0].getAttribute("id");
-    UpdateStatusCardCounts(dirUri);
-  }
-}
-
 function GetTotalCardCountElement()
 {
-  if(gTotalCardsElement) return gTotalCardsElement;
+  if (gTotalCardsElement) 
+    return gTotalCardsElement;
+
   var totalCardCountElement = document.getElementById('statusText');
   gTotalCardsElement = totalCardCountElement;
-  return totalCardCountElement;
-}
-
-function UpdateStatusCardCounts(uri)
-{
-  if (top.addressbook)
-  {
-    try
-    {
-      var dirResource = rdf.GetResource(uri);
-      var parentDir = dirResource.QueryInterface(Components.interfaces.nsIAbDirectory);
-      if (parentDir && !parentDir.isMailList)
-      {
-        try
-        {
-          var totalCards = parentDir.getTotalCards(false);
-          SetTotalCardStatus(parentDir.dirName, totalCards);
-        }
-        catch(ex)
-        {
-          dump("Fail to get card total from "+uri+"\n");
-        }
-      }
-    }
-    catch(ex)
-    {
-      dump("Fail to get directory from "+uri+"\n");
-    }
-  }
+  return gTotalCardsElement;
 }
 
 function SetTotalCardStatus(name, total)
@@ -448,4 +379,9 @@ function SetTotalCardStatus(name, total)
   }
   else
       dump("Can't find status bar\n");
+}
+
+function AbResultsPaneDoubleClick(card)
+{
+  AbEditCard(card);
 }

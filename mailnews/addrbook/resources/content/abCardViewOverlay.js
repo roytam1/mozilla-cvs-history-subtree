@@ -19,6 +19,7 @@
  * Contributor(s):
  * Paul Hangas <hangas@netscape.com>
  * Alec Flett <alecf@netscape.com>
+ * Seth Spitzer <sspitzer@netscape.com>
  */
 
 //NOTE: gAddressBookBundle must be defined and set or this Overlay won't work
@@ -26,6 +27,7 @@
 var zName;
 var zNickname;
 var zDisplayName;
+var zListName;
 var zWork;
 var zHome;
 var zFax;
@@ -36,7 +38,6 @@ var zCustom2;
 var zCustom3;
 var zCustom4;
 
-var rdf;
 var cvData;
 
 function OnLoadCardView()
@@ -44,6 +45,7 @@ function OnLoadCardView()
   zName = gAddressBookBundle.getString("propertyName") + ": ";
   zNickname = gAddressBookBundle.getString("propertyNickname") + ": ";
   zDisplayName = gAddressBookBundle.getString("propertyDisplayName") + ": ";
+  zListName = gAddressBookBundle.getString("propertyListName") + ": ";
   zWork = gAddressBookBundle.getString("propertyWork") + ": ";
   zHome = gAddressBookBundle.getString("propertyHome") + ": ";
   zFax = gAddressBookBundle.getString("propertyFax") + ": ";
@@ -53,9 +55,6 @@ function OnLoadCardView()
   zCustom2 = gAddressBookBundle.getString("propertyCustom2") + ": ";
   zCustom3 = gAddressBookBundle.getString("propertyCustom3") + ": ";
   zCustom4 = gAddressBookBundle.getString("propertyCustom4") + ": ";
-
-	rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
-	rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
 
 	var doc = document;
 	
@@ -94,6 +93,14 @@ function OnLoadCardView()
 	cvData.cvCustom3		= doc.getElementById("cvCustom3");
 	cvData.cvCustom4		= doc.getElementById("cvCustom4");
 	cvData.cvNotes			= doc.getElementById("cvNotes");
+  // Description section (mailing lists only)
+  cvData.cvbDescription			= doc.getElementById("cvbDescription");
+	cvData.cvhDescription			= doc.getElementById("cvhDescription");
+  cvData.cvNotes			= doc.getElementById("cvNotes");
+  // Addresses section (mailing lists only)
+  cvData.cvbAddresses			= doc.getElementById("cvbAddresses");
+	cvData.cvhAddresses			= doc.getElementById("cvhAddresses");
+  cvData.cvAddresses			= doc.getElementById("cvAddresses");
 	// Phone section
 	cvData.cvbPhone			= doc.getElementById("cvbPhone");
 	cvData.cvhPhone			= doc.getElementById("cvhPhone");
@@ -116,60 +123,61 @@ function OnLoadCardView()
 	cvData.cvWorkWebPage	= doc.getElementById("cvWorkWebPage");
 }
 	
-function DisplayCardViewPane(abNode)
+// XXX similar code already exists, see OnLoadEditList()
+function getAddressesFromURI(uri)
 {
-	var uri = abNode.getAttribute('id');
-	var cardResource = top.rdf.GetResource(uri);
-	var card = cardResource.QueryInterface(Components.interfaces.nsIAbCard);
+  var addresses = "";
+
+  var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+  var editList = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
 	
-	// name
-	var name;
-	var separator = "";
-	if ( card.lastName && card.firstName )
+  if (editList.addressLists)
+{
+    var total = editList.addressLists.Count();
+    if (total) {
+      for ( var i = 0;  i < total; i++ )
 	{
-    // get seperator for display format "First Last"
-    if ( cvPrefs.nameColumn == kFirstNameFirst ) {
-		 	separator = cvPrefs.firstLastSeparator;
+        var current = editList.addressLists.GetElementAt(i).QueryInterface(Components.interfaces.nsIAbCard);
+        
+        if (i == 0)
+          addresses = current.primaryEmail;
+        else
+          addresses += "," + current.primaryEmail;
 	}
-    // for seperator all other display formats
-    else {
-      separator = cvPrefs.lastFirstSeparator;
     }
   }
-
-  switch (cvPrefs.nameColumn) { 
-    case kFirstNameFirst:
-		name = card.firstName + separator + card.lastName;
-      break;
-    case kLastNameFirst: 
-      name = card.lastName + separator + card.firstName;
-      break;
-    case kDisplayName:
-    default:
-      name = card.displayName;
-      break;
+  return addresses;
   }
 
-	var cardTitle = card.name;
-	var nameHeader = name;
+var gPrefs = Components.classes["@mozilla.org/preferences-service;1"];
+gPrefs = gPrefs.getService();
+gPrefs = gPrefs.QueryInterface(Components.interfaces.nsIPrefBranch);
 	
-	if ( !nameHeader )
-		nameHeader = zName;
+function DisplayCardViewPane(card)
+{
+	var generatedName = card.getGeneratedName(gPrefs.getIntPref("mail.addr_book.lastnamefirst"));
 		
 	var data = top.cvData;
 	var visible;
 
 	// set fields in card view pane
-
-	cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewCardTitle", [ cardTitle]));
+  if (card.isMailList)
+  	cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewListTitle", [generatedName]));
+	else
+    cvSetNode(data.CardTitle, gAddressBookBundle.getFormattedString("viewCardTitle", [generatedName]));
 	
 	// Name section
-	cvSetNode(data.cvhName, nameHeader);
+	cvSetNode(data.cvhName, generatedName);
 	cvSetNodeWithLabel(data.cvNickname, zNickname, card.nickName);
-	cvSetNodeWithLabel(data.cvDisplayName, zDisplayName, card.displayName);
 
+  if (card.isMailList) {
+    cvSetNodeWithLabel(data.cvDisplayName, zListName, card.displayName);
+    visible = HandleLink(data.cvEmail1, card.displayName, data.cvEmail1Box, "mailto:") || visible;
+  }
+  else { 
+    cvSetNodeWithLabel(data.cvDisplayName, zDisplayName, card.displayName);
         visible = HandleLink(data.cvEmail1, card.primaryEmail, data.cvEmail1Box, "mailto:") || visible;
-
+  }
         visible = HandleLink(data.cvEmail2, card.secondEmail, data.cvEmail2Box, "mailto:") || visible;
 
 	// Home section
@@ -182,6 +190,19 @@ function DisplayCardViewPane(abNode)
 
 	cvSetVisible(data.cvhHome, visible);
 	cvSetVisible(data.cvbHome, visible);
+  if (card.isMailList) {
+    // Description section
+	  visible = cvSetNode(data.cvNotes, card.notes)
+	  cvSetVisible(data.cvhDescription, visible);
+  	cvSetVisible(data.cvbDescription, visible);
+
+    // Addresses section
+    var addresses = getAddressesFromURI(card.mailListURI);
+	  visible = cvSetNode(data.cvAddresses, addresses)
+	  cvSetVisible(data.cvhAddresses, visible);
+  	cvSetVisible(data.cvbAddresses, visible);
+  }
+  else {
 	// Other section
 	visible = cvSetNodeWithLabel(data.cvCustom1, zCustom1, card.custom1);
 	visible = cvSetNodeWithLabel(data.cvCustom2, zCustom2, card.custom2) || visible;
@@ -190,6 +211,15 @@ function DisplayCardViewPane(abNode)
 	visible = cvSetNode(data.cvNotes, card.notes) || visible;
 	cvSetVisible(data.cvhOther, visible);
 	cvSetVisible(data.cvbOther, visible);
+
+    // hide description section, not show for non-mailing lists
+    cvSetVisible(data.cvhDescription, false);
+  	cvSetVisible(data.cvbDescription, false);
+
+    // hide addresses section, not show for non-mailing lists
+    cvSetVisible(data.cvhAddresses, false);
+  	cvSetVisible(data.cvbAddresses, false);
+  }
 	// Phone section
 	visible = cvSetNodeWithLabel(data.cvPhWork, zWork, card.workPhone);
 	visible = cvSetNodeWithLabel(data.cvPhHome, zHome, card.homePhone) || visible;

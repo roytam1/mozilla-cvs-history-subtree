@@ -63,12 +63,6 @@ typedef struct _nsAbRDFNotification {
   nsIRDFNode *object;
 } nsAbRDFNotification;
                                                 
-static NS_DEFINE_CID(kRDFServiceCID,  NS_RDFSERVICE_CID);
-
-static NS_DEFINE_CID(kAbDirectoryDataSourceCID, NS_ABDIRECTORYDATASOURCE_CID);
-// static NS_DEFINE_CID(kAbDirectoryCID, NS_ABDIRECTORY_CID); 
-static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
-
 nsIRDFResource* nsAbDirectoryDataSource::kNC_Child = nsnull;
 nsIRDFResource* nsAbDirectoryDataSource::kNC_DirName = nsnull;
 nsIRDFResource* nsAbDirectoryDataSource::kNC_CardChild = nsnull;
@@ -105,13 +99,13 @@ nsAbDirectoryDataSource::~nsAbDirectoryDataSource (void)
 	if (mRDFService)
 	{
 		mRDFService->UnregisterDataSource(this);
-		nsServiceManager::ReleaseService(kRDFServiceCID, mRDFService); 
+		nsServiceManager::ReleaseService("@mozilla.org/rdf/rdf-service;1", mRDFService); 
 		mRDFService = nsnull;
 	}
 	
 	nsresult rv = NS_OK;
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if(NS_SUCCEEDED(rv))
 		abSession->RemoveAddressBookListener(this);
 
@@ -136,13 +130,13 @@ nsAbDirectoryDataSource::Init()
 	if (mInitialized)
 		return NS_ERROR_ALREADY_INITIALIZED;
 
-	nsresult rv = nsServiceManager::GetService(kRDFServiceCID,
+	nsresult rv = nsServiceManager::GetService("@mozilla.org/rdf/rdf-service;1",
 											 NS_GET_IID(nsIRDFService),
 											 (nsISupports**) &mRDFService); 
 	NS_ENSURE_SUCCESS(rv, rv);
 
 	nsCOMPtr<nsIAddrBookSession> abSession = 
-	         do_GetService(kAddrBookSessionCID, &rv); 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
 	if (NS_SUCCEEDED(rv))
 		abSession->AddAddressBookListener(this);
 
@@ -167,24 +161,7 @@ nsAbDirectoryDataSource::Init()
 	return NS_OK;
 }
 
-NS_IMPL_ADDREF_INHERITED(nsAbDirectoryDataSource, nsAbRDFDataSource)
-NS_IMPL_RELEASE_INHERITED(nsAbDirectoryDataSource, nsAbRDFDataSource)
-
-NS_IMETHODIMP nsAbDirectoryDataSource::QueryInterface(REFNSIID iid, void** result)
-{
-  if (! result)
-    return NS_ERROR_NULL_POINTER;
-
-	*result = nsnull;
-	if(iid.Equals(NS_GET_IID(nsIAbListener)))
-	{
-		*result = NS_STATIC_CAST(nsIAbListener*, this);
-		NS_ADDREF(this);
-		return NS_OK;
-	}
-	else
-		return nsAbRDFDataSource::QueryInterface(iid, result);
-}
+NS_IMPL_ISUPPORTS_INHERITED1(nsAbDirectoryDataSource, nsAbRDFDataSource, nsIAbListener)
 
  // nsIRDFDataSource methods
 NS_IMETHODIMP nsAbDirectoryDataSource::GetURI(char* *uri)
@@ -550,10 +527,6 @@ nsresult nsAbDirectoryDataSource::createDirectoryNameNode(nsIAbDirectory *direct
 	PRBool bIsMailList = PR_FALSE;
 	nsresult rv = NS_OK;
 
-	directory->GetIsMailList(&bIsMailList);
-	if (bIsMailList)
-		rv = directory->GetListName(&name);
-	else
 		rv = directory->GetDirName(&name);
 	NS_ENSURE_SUCCESS(rv, rv);
 	nsString nameString(name);
@@ -831,3 +804,5 @@ nsresult NS_NewAbDirectoryDataSource(const nsIID& iid, void **result)
 
 	return datasource->QueryInterface(iid, result);
 }
+
+

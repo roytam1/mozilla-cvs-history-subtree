@@ -55,11 +55,6 @@
 #include "prprf.h"
 #include "prmem.h"
 
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-// static NS_DEFINE_CID(kAbCardCID, NS_ABCARD_CID);
-static NS_DEFINE_CID(kAddrBookSessionCID, NS_ADDRBOOKSESSION_CID);
-static NS_DEFINE_CID(kAddrBookCID, NS_ADDRESSBOOK_CID);
-
 nsAbMDBDirProperty::nsAbMDBDirProperty(void)
 {
 }
@@ -151,12 +146,6 @@ NS_IMETHODIMP nsAbMDBDirProperty::CopyDBMailList(nsIAbMDBDirectory* srcListDB)
 
 
 // nsIAbMDBDirectory NOT IMPLEMENTED methods
-
-/* nsIAbCard addChildCards (in string uriName); */
-NS_IMETHODIMP nsAbMDBDirProperty::AddChildCards(const char *uriName, nsIAbCard **_retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
 
 /* nsIAbDirectory addDirectory (in string uriName); */
 NS_IMETHODIMP nsAbMDBDirProperty::AddDirectory(const char *uriName, nsIAbDirectory **_retval)

@@ -66,6 +66,16 @@ Rights Reserved.
                                         <description class="CardViewText" hide="true" id="cvCustom4"/>
                                         <description class="CardViewText" hide="true" id="cvNotes"/>
 				</vbox>
+
+        <vbox id="cvbDescription" class="cardViewGroup">
+                                        <description class="CardViewHeading" hide="true" id="cvhDescription">&description.heading;</description>
+                                        <description class="CardViewText" hide="true" id="cvNotes"/>
+				</vbox>
+
+        <vbox id="cvbAddresses" class="cardViewGroup">
+                                        <description class="CardViewHeading" hide="true" id="cvhAddresses">&addresses.heading;</description>
+                                        <description class="CardViewText" hide="true" id="cvAddresses"/>
+				</vbox>
 			</vbox>
 			
 			<spacer style="width:20px"/>
