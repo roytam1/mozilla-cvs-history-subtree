@@ -85,12 +85,11 @@ sub _to_LDIF_records
 sub _continue_lines
 {
     my ($max_line, $from) = @_;
-    $max_line = undef unless (defined ($max_line) and $max_line > 1);
-    # The caller may allow \n characters to be unencoded, by supplying the
-    # option [encode=>pattern].  In this case, the \n characters will be
-    # lost; that is, a standard LDIF parser will not reconstruct them.
-    # But the remaining characters are preserved, and the output is fairly
-    # legible, with an LDIF continuation line for each line in the value.
+    # If $from contains '\n' bytes, they will be lost; that is, an LDIF
+    # parser will not reconstruct them from the output.  But the remaining
+    # characters are preserved, and the output is fairly legible, with an
+    # LDIF continuation line break in place of each '\n' in $from.
+    # This is useful for a person trying to read the value.
 
     my ($into) = "";
     foreach my $line (split /\n/, $from, -1) {
@@ -158,6 +157,7 @@ sub pack_LDIF
 	    }
 	}
     }
+    $max_line = undef unless (defined ($max_line) and $max_line > 1);
     my $str = "";
     foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
 	my @record = @$record;
@@ -1005,6 +1005,11 @@ Default: 0 (output is not broken into continuation lines).
 =item C<encode =E<gt>>I< pattern>
 
 Base64 encode output values that match I<pattern>.
+Warning: As a rule, your I<pattern> should match any value that contains '\n'.
+If any such value is not Base64 encoded, it will be output in a form
+that does not represent the '\n' bytes in LDIF form.
+That is, if the output is parsed as LDIF, the resulting value will be
+like the original value, except the '\n' bytes will be removed.
 
 Default: C<"^[:E<lt> ]|[^ -\x7E]">
 
