@@ -254,9 +254,6 @@ protected:
   nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
                          float* aT2P);
   nsresult SecurityCheckURL(const char *aURL);
-  nsresult BuildURIfromBase(const char *aURL,
-                            nsIURI **aBuiltURI,
-                            PRBool *aFreeSecurityPass, JSContext **aCXused);
   PopupControlState CheckForAbusePoint();
   PRUint32 CheckOpenAllow(PopupControlState aAbuseLevel,
                           const nsAString &aName);
