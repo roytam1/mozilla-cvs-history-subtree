@@ -23,9 +23,11 @@
 
 #include "rdf.h"
 
+#ifdef XPCOM_XXX
 #include "ntypes.h"
 #include "structs.h"
 #include "pa_parse.h"
+#endif
 
 /*
  * Hyper Tree Api
@@ -215,7 +217,9 @@ PR_PUBLIC_API(void) HT_SetPaneFEData (HT_Pane pane, void* data);
 PR_PUBLIC_API(HT_View) HT_GetSelectedView (HT_Pane pane);
 PR_PUBLIC_API(HT_Error) HT_SetSelectedView (HT_Pane pane, HT_View view);
 
+#ifdef XPCOM_XXX
 PR_PUBLIC_API(void) HT_LayoutComplete(MWContext *context, TagList *metaTags, char *url);
+#endif
 
 enum    _HT_ViewType	{
         HT_VIEW_BOOKMARK=0, HT_VIEW_HISTORY, HT_VIEW_SITEMAP, HT_VIEW_FILES, HT_VIEW_SEARCH
@@ -467,8 +471,11 @@ PR_PUBLIC_API(PRBool)	HT_IsEnabled (HT_Resource node);
 PR_PUBLIC_API(HT_Error) HT_GetEnabledState (HT_Resource node, PRBool *enabledState);
 PR_PUBLIC_API(HT_Error)	HT_SetEnabledState(HT_Resource node, PRBool isEnabled);
 
+#ifdef XPCOM_XXX /* mwcontext dependency */
 PR_PUBLIC_API(PRBool)	HT_Launch(HT_Resource node, MWContext *context);
+
 PR_PUBLIC_API(PRBool)	HT_LaunchURL(HT_Pane pane, char *url, MWContext *context);
+#endif
 
 PR_PUBLIC_API(void)	HT_TypeTo(HT_Pane pane, char *typed);
 
