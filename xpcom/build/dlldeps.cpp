@@ -45,7 +45,6 @@
 #include "nsIByteArrayInputStream.h"
 #include "nsFixedSizeAllocator.h"
 #include "nsRecyclingAllocator.h"
-#include "nsSpecialSystemDirectory.h"
 #include "nsIThread.h"
 #include "nsDeque.h"
 #include "nsObserver.h"
