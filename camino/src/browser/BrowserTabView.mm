@@ -134,7 +134,8 @@
   // of the tab being removed. Users, however, want the tab to the right to
   // be selected. This also matches how mozilla works. Select the right tab
   // first so we don't take the hit of displaying the left tab before we switch.
-  [self selectNextTabViewItem:self];
+  if ( [self selectedTabViewItem] == tabViewItem )
+    [self selectNextTabViewItem:self];
   [super removeTabViewItem:tabViewItem];
   [self showOrHideTabsAsAppropriate];
 }
