@@ -318,7 +318,7 @@ nsJSContext::JSOptionChangedCallback(const char *pref, void *data)
 nsJSContext::nsJSContext(JSRuntime *aRuntime)
 {
   NS_INIT_REFCNT();
-  mRootedScriptObject = nsnull;
+
 #ifdef DEBUG
   mDefaultJSOptions = JSOPTION_STRICT; // lint catching for development
 #else
@@ -350,7 +350,6 @@ nsJSContext::nsJSContext(JSRuntime *aRuntime)
   }
   mIsInitialized = PR_FALSE;
   mNumEvaluations = 0;
-  mSecurityManager = nsnull;
   mOwner = nsnull;
   mTerminationFunc = nsnull;
   mScriptsEnabled = PR_TRUE;
@@ -361,11 +360,7 @@ const char kScriptSecurityManagerContractID[] = NS_SCRIPTSECURITYMANAGER_CONTRAC
 
 nsJSContext::~nsJSContext()
 {
-  if (mSecurityManager) {
-    nsServiceManager::ReleaseService(kScriptSecurityManagerContractID,
-                                     mSecurityManager);
-    mSecurityManager = nsnull;
-  }
+  mSecurityManager = nsnull; // Force release
 
   // Cope with JS_NewContext failure in ctor (XXXbe move NewContext to Init?)
   if (!mContext)
@@ -375,26 +370,22 @@ nsJSContext::~nsJSContext()
   ::JS_SetContextPrivate(mContext, nsnull);
 
   // Unregister our "javascript.options.*" pref-changed callback.
-  nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-  if (NS_SUCCEEDED(rv)) {
-    (void) prefs->UnregisterCallback(js_options_dot_str,
-                                     JSOptionChangedCallback,
-                                     this);
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
+  if (prefs) {
+    prefs->UnregisterCallback(js_options_dot_str, JSOptionChangedCallback,
+                              this);
   }
 
-  // if we were handed an object to remember to unroot now, do it
-  if (mRootedScriptObject)
-    ::JS_RemoveRoot(mContext, &mRootedScriptObject);
-
   /* Remove global object reference to window object, so it can be collected. */
-  ::JS_SetGlobalObject(mContext, nsnull);
+  ::JS_SetGlobalObject(mContext, nsnull); // XXX: Do we need this call?
   ::JS_DestroyContext(mContext);
 
   // Let xpconnect resync its JSContext tracker.
-  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
-  if (NS_SUCCEEDED(rv))
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
+
+  if (xpc) {
     xpc->SyncJSContexts();
+  }
 }
 
 NS_IMPL_ISUPPORTS(nsJSContext, NS_GET_IID(nsIScriptContext));
@@ -481,7 +472,7 @@ nsJSContext::EvaluateStringWithValue(const nsAReadableString& aScript,
 
       if (aVersion)
         oldVersion = ::JS_SetVersion(mContext, newVersion);
-      mRef = nsnull;
+      mTerminationFuncArg = nsnull;
       mTerminationFunc = nsnull;
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
@@ -597,7 +588,7 @@ nsJSContext::EvaluateString(const nsAReadableString& aScript,
 
       if (aVersion)
         oldVersion = ::JS_SetVersion(mContext, newVersion);
-      mRef = nsnull;
+      mTerminationFuncArg = nsnull;
       mTerminationFunc = nsnull;
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
@@ -745,7 +736,7 @@ nsJSContext::ExecuteScript(void* aScriptObject,
   jsval val;
   JSBool ok;
 
-  mRef = nsnull;
+  mTerminationFuncArg = nsnull;
   mTerminationFunc = nsnull;
   ok = ::JS_ExecuteScript(mContext,
                           (JSObject*) aScopeObject,
@@ -927,7 +918,7 @@ nsJSContext::CallEventHandler(void *aTarget, void *aHandler, PRUint32 argc,
   // (that is, hitting ^W on Windows). the addref just below
   // prevents our untimely destruction.
   nsCOMPtr<nsIScriptContext> kungFuDeathGrip(this);
-  mRef = nsnull;
+  mTerminationFuncArg = nsnull;
   mTerminationFunc = nsnull;
 
   // check if the event handler can be run on the object in question
@@ -1046,13 +1037,7 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
                                             NS_GET_IID(nsISupports),
                                             PR_FALSE, getter_AddRefs(holder));
-  if (NS_FAILED(rv))
-    return rv;
-
-  JSObject *global = nsnull;
-  rv = holder->GetJSObject(&global);
-  if (NS_FAILED(rv))
-    return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
 #if 0
   // not needed. We asked xpconnect to do this for us.
@@ -1070,30 +1055,14 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
       ) {
     return NS_ERROR_FAILURE;
   }
-
-  //#if 0
-  //  // init standard classes
-
-  //  // Window uses JS_ResolveStandardClass for lazy class initialization.
-  //  if (JS_GetClass(mContext, global) == &WindowClass) {
-  //    // No JS_InitStandardClasses, so we must JS_SetGlobalObject explicitly.
-    ::JS_SetGlobalObject(mContext, global);
-  //  }
-  //  else {
-  //    // JS_InitStandardClasses does JS_SetGlobalObject for us, if necessary.
-  //    if (!::JS_InitStandardClasses(mContext, global))
-  //      rv = NS_ERROR_FAILURE;
-  //  }
-  //#endif
 #endif
 
-  if (NS_SUCCEEDED(rv)) {
-    rv = InitClasses(); // this will complete global object initialization
-  }
+  rv = InitClasses(); // this will complete global object initialization
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (NS_SUCCEEDED(rv)) {
-    ::JS_SetErrorReporter(mContext, NS_ScriptErrorReporter);
-  }
+  ::JS_SetErrorReporter(mContext, NS_ScriptErrorReporter);
+
+  mIsInitialized = PR_TRUE;
 
   return rv;
 }
@@ -1296,43 +1265,14 @@ static JSFunctionSpec TraceMallocFunctions[] = {
 
 #endif /* NS_TRACE_MALLOC */
 
-NS_IMETHODIMP
+nsresult
 nsJSContext::InitClasses()
 {
   nsresult rv = NS_OK;
-//  nsCOMPtr<nsIScriptGlobalObject> global = dont_AddRef(GetGlobalObject());
   JSObject *globalObj = ::JS_GetGlobalObject(mContext);
 
   rv = InitializeExternalClasses();
   NS_ENSURE_SUCCESS(rv, rv);
-
-  /*
-
-  if (NS_FAILED(NS_InitWindowClass(this, global)) ||
-      NS_FAILED(NS_InitNodeClass(this, nsnull)) ||
-      NS_FAILED(NS_InitKeyEventClass(this, nsnull)) ||
-      NS_FAILED(InitializeLiveConnectClasses()) ||
----      NS_FAILED(InitializeExternalClasses()) ||
-      // XXX Temporarily here. These shouldn't be hardcoded.
-      NS_FAILED(NS_InitHTMLImageElementClass(this, nsnull)) ||
-      NS_FAILED(NS_InitHTMLOptionElementClass(this, nsnull))) {
-    rv = NS_ERROR_FAILURE;
-  }
-  */
-
-/*
-  // This is unnecessary because we already called 
-  // InitClassesWithNewWrappedGlobal.
-
-  // Initialize XPConnect classes
-  if (NS_SUCCEEDED(rv)) {
-    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
-    if (NS_SUCCEEDED(rv)) {
-      rv = xpc->InitClasses(mContext, globalObj);
-    }
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to init xpconnect classes");
-  }
-*/
 
   // Initialize the options object and set default options in mContext
   if (NS_SUCCEEDED(rv)) {
@@ -1352,7 +1292,6 @@ nsJSContext::InitClasses()
   ::JS_DefineFunctions(mContext, globalObj, TraceMallocFunctions);
 #endif
 
-  mIsInitialized = PR_TRUE;
   return rv;
 }
 
@@ -1360,18 +1299,6 @@ NS_IMETHODIMP
 nsJSContext::IsContextInitialized()
 {
   return (mIsInitialized) ? NS_OK : NS_ERROR_NOT_INITIALIZED;
-}
-
-NS_IMETHODIMP
-nsJSContext::AddNamedReference(void *aSlot, void *aScriptObject, const char *aName)
-{
-  return (::JS_AddNamedRoot(mContext, aSlot, aName)) ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP
-nsJSContext::RemoveReference(void *aSlot, void *aScriptObject)
-{
-  return (::JS_RemoveRoot(mContext, aSlot)) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -1385,8 +1312,8 @@ NS_IMETHODIMP
 nsJSContext::ScriptEvaluated(PRBool aTerminated)
 {
   if (aTerminated && mTerminationFunc) {
-    (*mTerminationFunc)(mRef);
-    mRef = nsnull;
+    (*mTerminationFunc)(mTerminationFuncArg);
+    mTerminationFuncArg = nsnull;
     mTerminationFunc = nsnull;
   }
 
@@ -1406,14 +1333,15 @@ NS_IMETHODIMP
 nsJSContext::GetSecurityManager(nsIScriptSecurityManager **aInstancePtr)
 {
   if (!mSecurityManager) {
-    nsresult rv = nsServiceManager::GetService(kScriptSecurityManagerContractID,
-                                               NS_GET_IID(nsIScriptSecurityManager),
-                                               (nsISupports**)&mSecurityManager);
-    if (NS_FAILED(rv))
-      return NS_ERROR_FAILURE;
+    nsresult rv = NS_OK;
+
+    mSecurityManager = do_GetService(kScriptSecurityManagerContractID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
+
   *aInstancePtr = mSecurityManager;
   NS_ADDREF(*aInstancePtr);
+
   return NS_OK;
 }
 
@@ -1441,20 +1369,9 @@ nsJSContext::SetTerminationFunction(nsScriptTerminationFunc aFunc,
                                     nsISupports* aRef)
 {
   mTerminationFunc = aFunc;
-  mRef = aRef;
+  mTerminationFuncArg = aRef;
 
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsJSContext::SetRootedScriptObject(void *aObject)
-{
-  NS_ASSERTION(mRootedScriptObject == nsnull, "two rooted script objects stored");
-  mRootedScriptObject = aObject;
-  if (::JS_AddNamedRoot(mContext, &mRootedScriptObject, "jscontext_savedroot"))
-    return NS_OK;
-  mRootedScriptObject = nsnull;
-  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP

@@ -45,12 +45,17 @@ nsJSDOMEventListener::nsJSDOMEventListener(nsIScriptContext* aContext,
     mHandler(aHandler)
 {
   NS_INIT_REFCNT();
-  aContext->AddNamedReference(&mHandler, mHandler, "nsJSDOMEventListener.mHandler");
+
+  JSContext *cx = (JSContext *)aContext->GetNativeContext();
+
+  ::JS_AddNamedRoot(cx, &mHandler, "nsJSDOMEventListener.mHandler");
 }
 
 nsJSDOMEventListener::~nsJSDOMEventListener() 
 {
-  mContext->RemoveReference(&mHandler, mHandler);
+  JSContext *cx = (JSContext *)mContext->GetNativeContext();
+
+  ::JS_RemoveRoot(cx, &mHandler);
 }
 
 nsresult

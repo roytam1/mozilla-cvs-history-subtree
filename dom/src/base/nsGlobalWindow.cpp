@@ -179,8 +179,6 @@ GlobalWindowImpl::ShutDown()
 
 void GlobalWindowImpl::CleanUp()
 {
-  if (mContext)
-    mContext->RemoveReference(&mScriptObject, mScriptObject);
   mContext = nsnull;            // Forces Release
   mDocument = nsnull;           // Forces Release
   NS_IF_RELEASE(mNavigator);
@@ -285,7 +283,6 @@ NS_IMETHODIMP GlobalWindowImpl::SetContext(nsIScriptContext* aContext)
   // named reference, so do it now
   if (!aContext) {
     NS_WARNING("Possibly early removal of script object, see bug #41608");
-    mContext->RemoveReference(&mScriptObject, mScriptObject);
   } else {
     mScriptObject = ::JS_GetGlobalObject((JSContext *)aContext->GetNativeContext());
   }
@@ -454,16 +451,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetDocShell(nsIDocShell* aDocShell)
      is wont to do. */
   if (!aDocShell && mContext) {
     ClearAllTimeouts();
-    if (mScriptObject) {
-      // Indicate that the window is now closed. Since we've
-      // cleared scope, we have to explicitly set a property.
-      jsval val = BOOLEAN_TO_JSVAL(JS_TRUE);
-      ::JS_SetProperty((JSContext *)mContext->GetNativeContext(),
-                       mScriptObject, "closed", &val);
-      // hand off our reference to mContext
-      mContext->SetRootedScriptObject(mScriptObject);
-      mContext->RemoveReference(&mScriptObject, mScriptObject);
-    }
+
     mContext = nsnull;          // force release now
     mControllers = nsnull;      // force release now
   }
