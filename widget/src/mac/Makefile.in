@@ -122,12 +122,13 @@ export:: $(addprefix $(topsrcdir)/gfx/src/mac/,$(GFX_LCPPSRCS))
 # that lives in the application directory.
 
 RES_DEST = $(DIST)/bin/libwidget.rsrc
+RES_TMP = /tmp/libwidget.rsrc
 RES_SRC = $(srcdir)/nsMacWidget.rsrc
 
 $(RES_DEST): $(RES_SRC)
-	$(DIST)/bin/asdecode $(RES_SRC) $(RES_DEST).tmp
+	$(DIST)/bin/asdecode $(RES_SRC) $(RES_TMP).tmp
 	rm -f $(RES_DEST)
-	cp $(RES_DEST).tmp/rsrc $(RES_DEST)
+	cp $(RES_TMP).tmp/rsrc $(RES_DEST)
 	rm -rf $(RES_DEST).tmp
 
 libs:: $(RES_DEST)
