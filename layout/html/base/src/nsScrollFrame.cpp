@@ -666,6 +666,7 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
   nsIFrame* kidFrame = mFrames.FirstChild();
   nsIFrame* targetFrame;
   nsIFrame* nextFrame;
+  nsresult rv = NS_OK;
 
   nsRect oldKidBounds;
   kidFrame->GetRect(oldKidBounds);
@@ -691,18 +692,25 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
       // then recurse
 
       // Assume that this will handle all children, cut off treewalk here
-      aReflowState.SetCurrentReflowNode(nsnull);
+      // not needed, we build a new reflow state with no command
+      //aReflowState.SetCurrentReflowNode(nsnull);
       
       nsHTMLReflowState reflowState(aReflowState);
       reflowState.reason = eReflowReason_StyleChange;
       reflowState.reflowCommand = nsnull;
-      return Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+      rv = Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
+      if (rv != NS_OK)
+        return rv;
     }
 
     // Get the next frame in the reflow chain, and verify that it's our
     // child frame (we have only one)
     nsIFrame *childFrame;
     aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+    if (amTarget && !childFrame) {
+      return rv;  // traditionally this returned if it was a target
+    }
+    // we aren't the target, or we are but we also have a targetted child
     NS_ASSERTION(childFrame == kidFrame, "Reflow ScrollFrame - wrong child");
   }
 

@@ -104,7 +104,7 @@ public:
             Iterator(Node *node) : mNode(node), mPos(nsnull) { }
             ~Iterator() { }
 #ifdef NS_DEBUG
-            void AssertFrame(nsIFrame *aIFrame);
+            void AssertFrame(const nsIFrame *aIFrame);
 #endif
             Node *NextChild();
             Node *NextChild(nsIFrame **aChildIFrame);
@@ -181,7 +181,7 @@ nsReflowTree::Node::MakeTarget()
 }
 
 #ifdef DEBUG
-#define REFLOW_ASSERTFRAME(x) reflowIterator.AssertFrame(NS_REINTERPRET_CAST(nsIFrame*,(x)))
+#define REFLOW_ASSERTFRAME(x) reflowIterator.AssertFrame(NS_REINTERPRET_CAST(const nsIFrame*,(x)))
 #else
 #define REFLOW_ASSERTFRAME(x)
 #endif

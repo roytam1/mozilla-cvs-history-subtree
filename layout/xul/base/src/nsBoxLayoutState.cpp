@@ -196,7 +196,9 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
   nsReflowTree::Node::Iterator reflowIterator(aCommand->GetCurrentReflowNode());
   nsIFrame* currFrame = reflowIterator.CurrentNode()->GetFrame();
 
-  { // hide in here to minimize stack
+  {
+    // XXX hide in here to minimize stack, I hope.  If this doesn't work to
+    // save stack, we can break this out into a subroutine.
     nsFrameState state;
     currFrame->GetFrameState(&state);
     state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;

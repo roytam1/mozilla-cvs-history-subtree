@@ -211,7 +211,7 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 #endif
 
   if (nsnull != root) {    
-    mPath.RemoveElementAt(mPath.Count() - 1);
+
 
     nsHTMLReflowState reflowState(aPresContext, root, *this,
                                   &aRendContext, aMaxSize);

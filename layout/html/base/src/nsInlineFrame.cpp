@@ -707,7 +707,6 @@ nsInlineFrame::ReflowInlineFrame(nsIPresContext* aPresContext,
   // path to a target or not.
   nsIFrame *onPathFrame;
   onPathFrame = aReflowState.GetCurrentReflowNode() ? aFrame : nsnull;
-  // XXX fix? should we SetCurrentReflowNode() to null?
   nsresult rv = lineLayout->ReflowFrame(aFrame, &onPathFrame, aStatus,
                                         nsnull, pushedFrame);
 

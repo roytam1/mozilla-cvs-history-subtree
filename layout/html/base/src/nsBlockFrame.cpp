@@ -660,7 +660,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // XXX fix? 
     // Is it possible for mAbsoluteContainer to be in the reflow tree?  If
     // not, we can remove this, but I think it's possible....
-    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
+    //aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -816,6 +816,14 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         rv = PrepareResizeReflow(state);
         break;
       }
+
+      NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
+      if (NS_FAILED(rv)) return rv;
+
+      // Now reflow...
+      rv = ReflowDirtyLines(state);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+      if (NS_FAILED(rv)) return rv;
     }
 
     // now handle any targets that are children of this node
@@ -835,6 +843,13 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 #endif
 
       rv = PrepareChildIncrementalReflow(state);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
+      if (NS_FAILED(rv)) return rv;
+
+      // Now reflow...
+      rv = ReflowDirtyLines(state);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
+      if (NS_FAILED(rv)) return rv;
     }
     break;
 
@@ -861,6 +876,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   rv = ReflowDirtyLines(state);
   NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
   if (NS_FAILED(rv)) return rv;
+
+  // XXX FIX?! do in each pass in incremental?
 
   if (!state.GetFlag(BRS_ISINLINEINCRREFLOW)) {
     // XXXwaterson are we sure we don't need to do this work if BRS_ISINLINEINCRREFLOW?
@@ -2129,6 +2146,35 @@ WrappedLinesAreDirty(nsLineList::iterator aLine,
   return PR_FALSE;
 }
 
+PRBool NodeEnclosesTextControls (nsReflowTree::Node *node)
+{
+  nsReflowTree::Node::Iterator reflowIterator(node);
+  PRBool amTarget = reflowIterator.IsTarget();
+  nsIFrame *childFrame;
+
+  // if we're a target, then we're not enclosed in a text control, so
+  // one of the reflows would have been unconstrained.
+  if (amTarget)
+    return PR_FALSE;
+
+  while (reflowIterator.NextChild(&childFrame))
+  {
+    nsCOMPtr<nsIAtom> frameType;
+    childFrame->GetFrameType(getter_AddRefs(frameType));
+    if (frameType)
+    {
+      if (nsLayoutAtoms::textInputFrame != frameType.get())
+      {
+        if (!NodeEnclosesTextControls(reflowIterator.CurrentNode()))
+          return PR_FALSE;
+      }
+      // else it's a text control, keep searching.
+    }
+  }
+  // all of the branches ended in a text control
+  return PR_TRUE; // damage is constrained to the text control innards
+}
+
 PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aState) const
 {
   // see if the reflow will go through a text control.  if so, we can optimize 
@@ -2136,26 +2182,15 @@ PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aS
   if (aState.mReflowState.reflowCommand)
   {
     nsReflowTree::Node::Iterator reflowIterator(aState.mReflowState.GetCurrentReflowNode());
-    // See if the reflow command is targeted at us
-    if (reflowIterator.IsTarget()) {
-      nsIFrame *target = reflowIterator.CurrentNode()->GetFrame();
-
-      while (target)
-      { // starting with the target's parent, scan for a text control
-        nsIFrame *parent;
-        target->GetParent(&parent);
-        if ((nsIFrame*)this==parent || !parent)  // the null check is paranoia, it should never happen
-          break;  // we found ourself, so we know there's no text control between us and target
-        nsCOMPtr<nsIAtom> frameType;
-        parent->GetFrameType(getter_AddRefs(frameType));
-        if (frameType)
-        {
-          if (nsLayoutAtoms::textInputFrame == frameType.get())
-            return PR_TRUE; // damage is constrained to the text control innards
-        }
-        target = parent;  // advance the loop up the frame tree
-      }
-    }
+    REFLOW_ASSERTFRAME(this);
+    // We need to determine if there are any text controls between this
+    // node and _all_ of the targets below us (not including the targets
+    // themselves).  We need to walk the tree, skipping over text controls
+    // and their children, and stopping if we hit a parent of a target.
+    nsReflowTree::Node *node = reflowIterator.CurrentNode();
+    if (node) {
+      return NodeEnclosesTextControls(node);
+    }      
   }
   return PR_FALSE;  // default case, damage is not constrained (or unknown)
 }
@@ -3159,6 +3194,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
                            aState.GetFlag(BRS_COMPUTEMAXELEMENTSIZE),
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
+  brc.SetNextRCFrame(aState.mNextRCFrame);
 
   // See if we should apply the top margin. If the block frame being
   // reflowed is a continuation (non-null prev-in-flow) then we don't
@@ -5149,6 +5185,8 @@ nsBlockFrame::ReflowFloater(nsBlockReflowState& aState,
   nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
                            computeMaxElementSize,
                            aState.GetFlag(BRS_COMPUTEMAXWIDTH));
+
+  brc.SetNextRCFrame(aState.mNextRCFrame);
 
   // Reflow the floater
   PRBool isAdjacentWithTop = aState.IsAdjacentWithTop();

@@ -360,7 +360,7 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
 
 #ifdef NS_DEBUG
 void
-nsReflowTree::Node::Iterator::AssertFrame(nsIFrame *aIFrame)
+nsReflowTree::Node::Iterator::AssertFrame(const nsIFrame *aIFrame)
 {
     if (mNode) {
         NS_ASSERTION(mNode->mFrame == aIFrame,"Reflow tree out of sync!");
