@@ -3,10 +3,12 @@
  *
  * @subsection proposal GFX2 Proposal
  * @htmlonly
- * <ul>
- *   <li><a href="proposal.html">Proposal</a></li>
- *   <li><a href="timeline.html">Timeline</a></li>
- * </ul>
+ * <a href="proposal.html">Proposal</a>
+ * @endhtmlonly
+ *
+ * @subsection timeline GFX2 Timeline
+ * @htmlonly
+ * <a href="timeline.html">Timeline</a>
  * @endhtmlonly
  *
  */
