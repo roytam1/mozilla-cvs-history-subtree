@@ -89,6 +89,7 @@ private:
   // NSPR file I/O for temporary digest file
   PRFileDesc *mTmpFile;
   char       *mTmpFilePath;
+  PRBool      mTokenSet;
 
   // C-style callback functions for the NSS PKCS#12 library
   static SECStatus PR_CALLBACK digest_open(void *, PRBool);
