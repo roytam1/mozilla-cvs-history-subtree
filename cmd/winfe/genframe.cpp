@@ -2270,15 +2270,15 @@ void CGenericFrame::OnTogglePrivacyAnonymous()
 
 void CGenericFrame::OnUpdatePrivacyAnonymous(CCmdUI* pCmdUI)
 {
-    if( pCmdUI->m_pMenu ){
-	pCmdUI->m_pMenu->ModifyMenu(CASTUINT(ID_PRIVACY_ANONYMOUS),
-	    CASTUINT(MF_BYCOMMAND | MF_STRING),
-	    CASTUINT(ID_PRIVACY_ANONYMOUS),
-	    szLoadString(CASTUINT(theApp.m_bAnon ?
-		IDS_PRIVACY_LEAVE_ANONYMOUS : IDS_PRIVACY_ENTER_ANONYMOUS)) );
-    } else {
+//  if( pCmdUI->m_pMenu ){
+//      pCmdUI->m_pMenu->ModifyMenu(CASTUINT(ID_PRIVACY_ANONYMOUS),
+//          CASTUINT(MF_BYCOMMAND | MF_STRING),
+//          CASTUINT(ID_PRIVACY_ANONYMOUS),
+//          szLoadString(CASTUINT(theApp.m_bAnon ?
+//              IDS_PRIVACY_LEAVE_ANONYMOUS : IDS_PRIVACY_ENTER_ANONYMOUS)) );
+//  } else {
 	pCmdUI->SetCheck(theApp.m_bAnon);
-    }
+//  }
 }
 
 void CGenericFrame::OnTogglePrivacyReceipt()
