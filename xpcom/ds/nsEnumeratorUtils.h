@@ -89,7 +89,7 @@ NS_NewSingletonEnumerator(nsISimpleEnumerator* *result,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class NS_COM nsAdapterEnumerator : public nsISimpleEnumerator
+class nsAdapterEnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS

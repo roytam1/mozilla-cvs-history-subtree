@@ -41,7 +41,7 @@
 #include "nsMemory.h"
 #include "prclist.h"
 
-class NS_COM nsSegmentedBuffer
+class nsSegmentedBuffer
 {
 public:
     nsSegmentedBuffer();

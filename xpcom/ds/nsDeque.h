@@ -244,7 +244,7 @@ private:
  * Here comes the nsDequeIterator class...
  ******************************************************/
 
-class NS_COM nsDequeIterator {
+class nsDequeIterator {
 public:
   /**
    * DequeIterator is an object that knows how to iterate

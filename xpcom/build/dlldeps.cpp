@@ -70,7 +70,6 @@
 #include "nsWeakReference.h"
 #include "nsISizeOfHandler.h"
 #include "nsTextFormatter.h"
-#include "nsStatistics.h"
 #include "nsIStorageStream.h"
 #include "nsLinebreakConverter.h"
 #include "nsIBinaryInputStream.h"
@@ -82,17 +81,12 @@
 #include "nsSlidingString.h"
 #include "nsIInputStreamTee.h"
 #include "nsCheapSets.h"
-#include "nsSegmentedBuffer.h"
 #ifdef DEBUG
 #include "pure.h"
 #endif
 #include "pldhash.h"
 #include "nsVariant.h"
 #include "nsEscape.h"
-
-#ifdef DEBUG
-extern NS_COM void TestSegmentedBuffer();
-#endif
 
 void XXXNeverCalled()
 {
@@ -126,7 +120,6 @@ void XXXNeverCalled()
     NS_NewEmptyEnumerator(NULL);
     nsArrayEnumerator(NULL);
     NS_QuickSort(NULL, 0, 0, NULL, NULL);
-    nsStatistics("dummy");
     nsString();
     nsProxyObject(NULL, 0, NULL);
     XPT_DoString(NULL, NULL, NULL);
@@ -146,12 +139,6 @@ void XXXNeverCalled()
     nsCWeakReferent(0);
     NS_GetWeakReference(NULL);
     nsCOMPtr<nsISupports> dummyFoo(do_GetInterface(nsnull));
-    nsSegmentedBuffer segx;
-    segx.AppendNewSegment();
-#ifdef DEBUG
-    TestSegmentedBuffer();
-#endif
-
     NS_NewByteArrayInputStream(NULL, NULL, 0);
     NS_NewSizeOfHandler(0);
     NS_NewStorageStream(0,0, nsnull);
