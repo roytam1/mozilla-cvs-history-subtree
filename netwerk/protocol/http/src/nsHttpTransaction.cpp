@@ -257,6 +257,8 @@ nsHttpTransaction::HandleContent(char *buf,
                 mChunkedDecoder = new nsHttpChunkedDecoder();
                 if (!mChunkedDecoder)
                     return NS_ERROR_OUT_OF_MEMORY;
+                printf(">>> chunked decoder created\n");
+                //NS_BREAK();
             }
         }
     }
@@ -277,8 +279,8 @@ nsHttpTransaction::HandleContent(char *buf,
         this, count, *countRead, mContentRead, mContentLength));
 
     // check for end-of-file
-    if (mContentRead == PRUint32(mContentLength) ||
-        mChunkedDecoder->ReachedEOF()) {
+    if ((mContentRead == PRUint32(mContentLength)) ||
+        (mChunkedDecoder && mChunkedDecoder->ReachedEOF())) {
         // atomically mark the transaction as complete to ensure that
         // OnTransactionComplete is fired only once!
         PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
@@ -415,7 +417,7 @@ nsHttpTransaction::Read(char *buf, PRUint32 bufSize, PRUint32 *bytesWritten)
     bufSize = *bytesWritten;
     *bytesWritten = 0;
 
-    //if (mHaveAllHeaders)
+    if (mHaveAllHeaders)
         return HandleContent(buf, bufSize, bytesWritten);
 
     PRUint32 offset = 0, count = bufSize, bytesConsumed;

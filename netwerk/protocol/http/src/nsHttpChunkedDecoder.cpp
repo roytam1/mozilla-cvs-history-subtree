@@ -52,7 +52,7 @@ nsHttpChunkedDecoder::ParseChunkRemaining(char *buf,
                                           PRUint32 count,
                                           PRUint32 *countRead)
 {
-    NS_PRECONDITION(mChunkRemaining, "chunk remaining should be zero");
+    NS_PRECONDITION(mChunkRemaining == 0, "chunk remaining should be zero");
 
     char *p;
 
@@ -95,6 +95,11 @@ nsHttpChunkedDecoder::ParseChunkRemaining(char *buf,
     if (!sscanf(buf, "%x", &mChunkRemaining)) {
         LOG(("sscanf failed parsing hex on string [%s]\n", buf));
         return NS_ERROR_UNEXPECTED;
+    }
+
+    if ((mChunkRemaining == 0) && (*buf != 0)) {
+        // XXX need to add code to consume "trailer" headers
+        mReachedEOF = PR_TRUE;
     }
 
     // clear the line buffer if it is not already empty
