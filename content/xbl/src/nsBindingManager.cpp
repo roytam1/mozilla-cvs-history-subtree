@@ -89,47 +89,46 @@ static NS_DEFINE_CID(kParserCID,                  NS_PARSER_CID);
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
 
-class nsXBLPDGlobalObject : public nsIScriptGlobalObject,
+class nsXBLDocGlobalObject : public nsIScriptGlobalObject,
                             public nsIScriptObjectPrincipal
 {
 public:
-    nsXBLPDGlobalObject();
+    nsXBLDocGlobalObject();
 
     // nsISupports interface
   NS_DECL_ISUPPORTS
   
-    // nsIScriptGlobalObject methods
-    NS_IMETHOD SetContext(nsIScriptContext *aContext);
-    NS_IMETHOD GetContext(nsIScriptContext **aContext);
-    NS_IMETHOD SetNewDocument(nsIDOMDocument *aDocument);
-    NS_IMETHOD SetDocShell(nsIDocShell *aDocShell);
-    NS_IMETHOD GetDocShell(nsIDocShell **aDocShell);
-    NS_IMETHOD SetOpenerWindow(nsIDOMWindowInternal *aOpener);
-    NS_IMETHOD SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner);
-    NS_IMETHOD GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner);
-    NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, 
-                              nsEvent* aEvent, 
-                              nsIDOMEvent** aDOMEvent,
-                              PRUint32 aFlags,
-                              nsEventStatus* aEventStatus);
-    NS_IMETHOD_(JSObject *) GetGlobalJSObject();
-    NS_IMETHOD OnFinalize(JSObject *aObject);
+  // nsIScriptGlobalObject methods
+  NS_IMETHOD SetContext(nsIScriptContext *aContext);
+  NS_IMETHOD GetContext(nsIScriptContext **aContext);
+  NS_IMETHOD SetNewDocument(nsIDOMDocument *aDocument);
+  NS_IMETHOD SetDocShell(nsIDocShell *aDocShell);
+  NS_IMETHOD GetDocShell(nsIDocShell **aDocShell);
+  NS_IMETHOD SetOpenerWindow(nsIDOMWindowInternal *aOpener);
+  NS_IMETHOD SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner);
+  NS_IMETHOD GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner);
+  NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext, 
+                            nsEvent* aEvent, 
+                            nsIDOMEvent** aDOMEvent,
+                            PRUint32 aFlags,
+                            nsEventStatus* aEventStatus);
+  NS_IMETHOD_(JSObject *) GetGlobalJSObject();
+  NS_IMETHOD OnFinalize(JSObject *aObject);
 
-    // nsIScriptObjectPrincipal methods
-    NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
+  // nsIScriptObjectPrincipal methods
+  NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
     
 protected:
-    virtual ~nsXBLPDGlobalObject();
+  virtual ~nsXBLDocGlobalObject();
 
-    nsCOMPtr<nsIScriptContext> mScriptContext;
-    JSObject *mJSObject;    // XXX JS language rabies bigotry badness
+  nsCOMPtr<nsIScriptContext> mScriptContext;
+  JSObject *mJSObject;    // XXX JS language rabies bigotry badness
 
-    nsIScriptGlobalObjectOwner* mGlobalObjectOwner; // weak reference
-
-    static JSClass gSharedGlobalClass;
+  nsIScriptGlobalObjectOwner* mGlobalObjectOwner; // weak reference
+  static JSClass gSharedGlobalClass;
 };
 
-void PR_CALLBACK nsXBLPDGlobalObject_finalize(JSContext *cx, JSObject *obj)
+void PR_CALLBACK nsXBLDocGlobalObject_finalize(JSContext *cx, JSObject *obj)
 {
   nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(cx, obj);
 
@@ -143,13 +142,11 @@ void PR_CALLBACK nsXBLPDGlobalObject_finalize(JSContext *cx, JSObject *obj)
 }
 
 
-JSBool PR_CALLBACK nsXBLPDGlobalObject_resolve(JSContext *cx, JSObject *obj, jsval id)
+JSBool PR_CALLBACK nsXBLDocGlobalObject_resolve(JSContext *cx, JSObject *obj, jsval id)
 {
-  if (JSVAL_IS_STRING(id)) 
-  {
-      JSString *str = JSVAL_TO_STRING(id);
-
-      jschar *s = ::JS_GetStringChars(str);
+  if (JSVAL_IS_STRING(id)) {
+    JSString *str = JSVAL_TO_STRING(id);
+    jschar *s = ::JS_GetStringChars(str);
   }
 
   JSBool did_resolve = JS_FALSE;
@@ -157,20 +154,20 @@ JSBool PR_CALLBACK nsXBLPDGlobalObject_resolve(JSContext *cx, JSObject *obj, jsv
 }
 
 
-JSClass nsXBLPDGlobalObject::gSharedGlobalClass = {
+JSClass nsXBLDocGlobalObject::gSharedGlobalClass = {
     "nsXBLPrototypeScript compilation scope",
     JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS,
     JS_PropertyStub,  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, nsXBLPDGlobalObject_resolve,  JS_ConvertStub,
-    nsXBLPDGlobalObject_finalize
+    JS_EnumerateStub, nsXBLDocGlobalObject_resolve,  JS_ConvertStub,
+    nsXBLDocGlobalObject_finalize
 };
 
 //----------------------------------------------------------------------
 //
-// nsXBLPDGlobalObject
+// nsXBLDocGlobalObject
 //
 
-nsXBLPDGlobalObject::nsXBLPDGlobalObject()
+nsXBLDocGlobalObject::nsXBLDocGlobalObject()
     : mJSObject(nsnull),
       mGlobalObjectOwner(nsnull)
 {
@@ -178,14 +175,14 @@ nsXBLPDGlobalObject::nsXBLPDGlobalObject()
 }
 
 
-nsXBLPDGlobalObject::~nsXBLPDGlobalObject()
+nsXBLDocGlobalObject::~nsXBLDocGlobalObject()
 {
 }
 
-NS_IMPL_ADDREF(nsXBLPDGlobalObject)
-NS_IMPL_RELEASE(nsXBLPDGlobalObject)
+NS_IMPL_ADDREF(nsXBLDocGlobalObject)
+NS_IMPL_RELEASE(nsXBLDocGlobalObject)
 
-NS_INTERFACE_MAP_BEGIN(nsXBLPDGlobalObject)
+NS_INTERFACE_MAP_BEGIN(nsXBLDocGlobalObject)
     NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
     NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptGlobalObject)
@@ -197,7 +194,7 @@ NS_INTERFACE_MAP_END
 //
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::SetContext(nsIScriptContext *aContext)
+nsXBLDocGlobalObject::SetContext(nsIScriptContext *aContext)
 {
   mScriptContext = aContext;
   return NS_OK;
@@ -205,7 +202,7 @@ nsXBLPDGlobalObject::SetContext(nsIScriptContext *aContext)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::GetContext(nsIScriptContext **aContext)
+nsXBLDocGlobalObject::GetContext(nsIScriptContext **aContext)
 {
   // This whole fragile mess is predicated on the fact that
   // GetContext() will be called before GetScriptObject() is.
@@ -240,7 +237,7 @@ nsXBLPDGlobalObject::GetContext(nsIScriptContext **aContext)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::SetNewDocument(nsIDOMDocument *aDocument)
+nsXBLDocGlobalObject::SetNewDocument(nsIDOMDocument *aDocument)
 {
   NS_NOTREACHED("waaah!");
   return NS_ERROR_UNEXPECTED;
@@ -248,7 +245,7 @@ nsXBLPDGlobalObject::SetNewDocument(nsIDOMDocument *aDocument)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::SetDocShell(nsIDocShell *aDocShell)
+nsXBLDocGlobalObject::SetDocShell(nsIDocShell *aDocShell)
 {
   NS_NOTREACHED("waaah!");
   return NS_ERROR_UNEXPECTED;
@@ -256,7 +253,7 @@ nsXBLPDGlobalObject::SetDocShell(nsIDocShell *aDocShell)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::GetDocShell(nsIDocShell **aDocShell)
+nsXBLDocGlobalObject::GetDocShell(nsIDocShell **aDocShell)
 {
   NS_WARNING("waaah!");
   return NS_ERROR_UNEXPECTED;
@@ -264,7 +261,7 @@ nsXBLPDGlobalObject::GetDocShell(nsIDocShell **aDocShell)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::SetOpenerWindow(nsIDOMWindowInternal *aOpener)
+nsXBLDocGlobalObject::SetOpenerWindow(nsIDOMWindowInternal *aOpener)
 {
   NS_NOTREACHED("waaah!");
   return NS_ERROR_UNEXPECTED;
@@ -272,7 +269,7 @@ nsXBLPDGlobalObject::SetOpenerWindow(nsIDOMWindowInternal *aOpener)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner)
+nsXBLDocGlobalObject::SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner)
 {
   mGlobalObjectOwner = aOwner; // weak reference
   return NS_OK;
@@ -280,7 +277,7 @@ nsXBLPDGlobalObject::SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner)
+nsXBLDocGlobalObject::GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner)
 {
   *aOwner = mGlobalObjectOwner;
   NS_IF_ADDREF(*aOwner);
@@ -289,7 +286,7 @@ nsXBLPDGlobalObject::GetGlobalObjectOwner(nsIScriptGlobalObjectOwner** aOwner)
 
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext, 
+nsXBLDocGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext, 
                                        nsEvent* aEvent, 
                                        nsIDOMEvent** aDOMEvent,
                                        PRUint32 aFlags,
@@ -300,7 +297,7 @@ nsXBLPDGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP_(JSObject *)
-nsXBLPDGlobalObject::GetGlobalJSObject()
+nsXBLDocGlobalObject::GetGlobalJSObject()
 {
   // The prototype document has its own special secret script object
   // that can be used to compile scripts and event handlers.
@@ -317,7 +314,7 @@ nsXBLPDGlobalObject::GetGlobalJSObject()
 }
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::OnFinalize(JSObject *aObject)
+nsXBLDocGlobalObject::OnFinalize(JSObject *aObject)
 {
   NS_ASSERTION(aObject == mJSObject, "Wrong object finalized!");
 
@@ -332,11 +329,10 @@ nsXBLPDGlobalObject::OnFinalize(JSObject *aObject)
 //
 
 NS_IMETHODIMP
-nsXBLPDGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)
+nsXBLDocGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)
 {
   nsresult rv = NS_OK;
-  if (!mGlobalObjectOwner) 
-  {
+  if (!mGlobalObjectOwner) {
     *aPrincipal = nsnull;
     return NS_ERROR_FAILURE;
   }
@@ -443,7 +439,7 @@ nsXBLDocumentInfo::GetScriptGlobalObject(nsIScriptGlobalObject** _result)
 {
   if (!mGlobalObject) {
     
-    mGlobalObject = new nsXBLPDGlobalObject();
+    mGlobalObject = new nsXBLDocGlobalObject();
     
     if (!mGlobalObject) {
       *_result = nsnull;

@@ -68,7 +68,9 @@ public:
   
   NS_IMETHOD GetPrototypeProperties(nsIXBLPrototypeProperty** aResult) = 0;
   NS_IMETHOD SetProtoTypeProperties(nsIXBLPrototypeProperty* aResult) = 0;
-  NS_IMETHOD GetClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject) = 0;
+  NS_IMETHOD GetCompiledClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject) = 0;
+  
+  NS_IMETHOD InitClass(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject) = 0;
   
   NS_IMETHOD AttributeChanged(nsIAtom* aAttribute, PRInt32 aNameSpaceID, PRBool aRemoveFlag, 
                               nsIContent* aChangedElement, nsIContent* aAnonymousContent)=0;

@@ -70,7 +70,8 @@ class nsXBLPrototypeBinding: public nsIXBLPrototypeBinding, public nsICSSLoaderO
   
   NS_IMETHOD GetPrototypeProperties(nsIXBLPrototypeProperty** aResult);
   NS_IMETHOD SetProtoTypeProperties(nsIXBLPrototypeProperty* aResult);
-  NS_IMETHOD GetClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject);
+  NS_IMETHOD GetCompiledClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject);
+  NS_IMETHOD InitClass(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject);
   
   NS_IMETHOD AttributeChanged(nsIAtom* aAttribute, PRInt32 aNameSpaceID, PRBool aRemoveFlag, 
                               nsIContent* aChangedElement, nsIContent* aAnonymousContent);

@@ -192,11 +192,8 @@ nsXBLPrototypeProperty::InitScriptObject(nsIScriptContext * aContext, nsIContent
 
   *aScriptObject = object;
 
-  JSObject* objProto = JS_GetPrototype(jscontext, object);
-
-  JSObject* glob_proto = JS_GetPrototype(jscontext, mClassObject);
-
-  JS_SetPrototype(jscontext, objProto, glob_proto);
+  JSObject * classObject;
+  mPrototypeBinding->InitClass(mClassStr, aContext, (void *) object, (void **) &classObject);
 
   // Root mBoundElement so that it doesn't loose it's binding
   nsCOMPtr<nsIDocument> doc;
@@ -223,15 +220,11 @@ nsXBLPrototypeProperty::InstallProperty(nsIScriptContext * aContext, nsIContent 
   JSContext* cx = (JSContext*) aContext->GetNativeContext();
   JSObject * scriptObject = (JSObject *) aScriptObject;
 
-  //nsCString cName;
-  //cName.AssignWithConversion(mName.get());
-  //printf("installing method name: %s\n", cName.get());
-
   // now we want to re-evaluate our property using aContext and the script object for this window...
 
   if (mJSMethod)
   {
-    JSObject * method = ::JS_CloneFunctionObject(cx, (JSObject *) mJSMethod, scriptObject);
+    JSObject * method = ::JS_CloneFunctionObject(cx, (JSObject *) mJSMethod, JS_GetGlobalObject(cx));
     ::JS_DefineUCProperty(cx, scriptObject, NS_REINTERPRET_CAST(const jschar*, mName.get()),  mName.Length(), OBJECT_TO_JSVAL(method),
                           NULL, NULL, JSPROP_ENUMERATE);
 
@@ -246,11 +239,11 @@ nsXBLPrototypeProperty::InstallProperty(nsIScriptContext * aContext, nsIContent 
     
     JSObject * getter = nsnull;
     if (mJSGetterObject)
-      getter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSGetterObject, scriptObject);
+      getter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSGetterObject, JS_GetGlobalObject(cx));
     
     JSObject * setter = nsnull;
     if (mJSSetterObject)
-      setter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSSetterObject, scriptObject);
+      setter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSSetterObject, JS_GetGlobalObject(cx));
 
     ::JS_DefineUCProperty(cx, scriptObject, NS_REINTERPRET_CAST(const jschar*, mName.get()), 
                           mName.Length(), JSVAL_VOID,  (JSPropertyOp) getter, 
@@ -303,7 +296,7 @@ nsresult nsXBLPrototypeProperty::DelayedPropertyConstruction()
  
   void * classObject;
   JSObject * scopeObject = globalObject->GetGlobalJSObject();
-  mPrototypeBinding->GetClassObject(mClassStr, context, (void *) scopeObject, &classObject);
+  mPrototypeBinding->GetCompiledClassObject(mClassStr, context, (void *) scopeObject, &classObject);
   mClassObject = (JSObject *) classObject;
 
   if (tagName.get() == kMethodAtom /* && mClassObject */) 
@@ -325,6 +318,9 @@ nsresult nsXBLPrototypeProperty::DelayedPropertyConstruction()
 NS_IMETHODIMP
 nsXBLPrototypeProperty::ConstructProperty(nsIContent * aInterfaceElement, nsIContent* aPropertyElement)
 {
+  NS_ENSURE_ARG(aPropertyElement);
+  NS_ENSURE_ARG(aInterfaceElement);
+
   mInterfaceElement = aInterfaceElement;
   mPropertyElement = aPropertyElement;
 
@@ -350,12 +346,6 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
   nsAutoString name;
   nsresult rv = NS_OK;
   aPropertyElement->GetAttribute(kNameSpaceID_None, kNameAtom, mName);
-
-#ifdef DEBUG_mscott
-  nsCString cName;
-  cName.AssignWithConversion(mName.get());
-
-#endif
 
   if (!mName.IsEmpty()) 
   {
@@ -520,10 +510,6 @@ nsresult nsXBLPrototypeProperty::ParseMethod(nsIScriptContext * aContext, nsICon
   nsAutoString body;
   nsresult rv = NS_OK;
   aPropertyElement->GetAttribute(kNameSpaceID_None, kNameAtom, mName);
-
-  //nsCString cName;
-  //cName.AssignWithConversion(mName.get());
-  //printf("method name: %s\n", cName.get());
 
   // Now walk all of our args.
   // XXX I'm lame. 32 max args allowed.

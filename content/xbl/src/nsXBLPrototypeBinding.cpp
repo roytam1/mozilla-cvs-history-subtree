@@ -962,13 +962,28 @@ nsXBLPrototypeBinding::ConstructProperties()
 }
 
 NS_IMETHODIMP
-nsXBLPrototypeBinding::GetClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject)
+nsXBLPrototypeBinding::GetCompiledClassObject(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject)
 {
-  if (mClassObject) // if we've already created a class object....
-  {
+  if (mClassObject) {
     *aClassObject = mClassObject;
     return NS_OK;
   }
+
+  InitClass(aClassName, aContext, aScriptObject, &mClassObject);
+
+  JSContext* jscontext = (JSContext*)aContext->GetNativeContext();
+  JSObject* scriptObject = (JSObject*) aScriptObject;
+  ::JS_SetPrototype(jscontext, scriptObject, (JSObject *) mClassObject);
+
+  *aClassObject = mClassObject;
+
+  return NS_OK;
+}
+ 
+NS_IMETHODIMP
+nsXBLPrototypeBinding::InitClass(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject, void ** aClassObject)
+{
+  NS_ENSURE_ARG_POINTER (aClassObject); 
 
   JSContext* jscontext = (JSContext*)aContext->GetNativeContext();
   JSObject* global = ::JS_GetGlobalObject(jscontext);
@@ -978,36 +993,31 @@ nsXBLPrototypeBinding::GetClassObject(const nsCString& aClassName, nsIScriptCont
   jsval vp;
   JSObject* proto;
 
-  if ((! ::JS_LookupProperty(jscontext, global, aClassName, &vp)) || JSVAL_IS_PRIMITIVE(vp)) 
-  {
+  if ((! ::JS_LookupProperty(jscontext, global, aClassName, &vp)) || JSVAL_IS_PRIMITIVE(vp))  {
     // We need to initialize the class.
     nsXBLJSClass* c;
     void* classObject;
     nsCStringKey key(aClassName);
     classObject = (nsXBLService::gClassTable)->Get(&key);
 
-    if (classObject) 
-    {
+    if (classObject) {
       c = NS_STATIC_CAST(nsXBLJSClass*, classObject);
       // If c is on the LRU list (i.e., not linked to itself), remove it now!
       JSCList* link = NS_STATIC_CAST(JSCList*, c);
-      if (c->next != link) 
-      {
+      if (c->next != link) {
         JS_REMOVE_AND_INIT_LINK(link);
         nsXBLService::gClassLRUListLength--;
       }
     } 
     else 
     {
-      if (JS_CLIST_IS_EMPTY(&nsXBLService::gClassLRUList)) 
-      {
+      if (JS_CLIST_IS_EMPTY(&nsXBLService::gClassLRUList)) {
         // We need to create a struct for this class.
         c = new nsXBLJSClass(aClassName);
         if (!c)
           return NS_ERROR_OUT_OF_MEMORY;
       } 
-      else 
-      {
+      else  {
         // Pull the least recently used class struct off the list.
         JSCList* lru = (nsXBLService::gClassLRUList).next;
         JS_REMOVE_AND_INIT_LINK(lru);
@@ -1041,8 +1051,7 @@ nsXBLPrototypeBinding::GetClassObject(const nsCString& aClassName, nsIScriptCont
                            nsnull,              // proto funcs
                            nsnull,              // ctor props (static)
                            nsnull);             // ctor funcs (static)
-    if (!proto) 
-    {
+    if (!proto) {
       (nsXBLService::gClassTable)->Remove(&key);
       delete c;
       return NS_ERROR_OUT_OF_MEMORY;
@@ -1050,14 +1059,10 @@ nsXBLPrototypeBinding::GetClassObject(const nsCString& aClassName, nsIScriptCont
 
     // The prototype holds a strong reference to its class struct.
     c->Hold();
-    mClassObject = (void *) proto;
+    *aClassObject = (void *) proto;
   }
   else 
-    mClassObject = (void *) JSVAL_TO_OBJECT(vp);
-
-  *aClassObject = mClassObject;
-
-  ::JS_SetPrototype(jscontext, scriptObject, proto);
+    *aClassObject = (void *) JSVAL_TO_OBJECT(vp);
 
   return NS_OK;
 }

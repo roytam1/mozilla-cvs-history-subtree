@@ -92,6 +92,8 @@ protected:
 
   nsresult DelayedPropertyConstruction();
 
+  nsresult InitClass(const nsCString& aClassName, nsIScriptContext * aContext, void * aScriptObject);
+
 };
 
 extern nsresult
