@@ -36,6 +36,9 @@ INCLUDES	+= -I../../../../..$(INSTALLDIR)/include \
 		-I../../../../../dist/include \
 		-I../../../../../dist/public/security \
 		-I../../../ldap/include
+ifdef HAVE_LIBNLS
+INCLUDES	+= -I$(LIBNLS_INCLUDES)
+endif
 
 DEFINES         += $(DEFS)
 
@@ -108,7 +111,6 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
              -L$(NSCP_DISTDIR)/lib -l$(SVRCORE_LIBNAME) \
 	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) -l$(LBER_LIBNAME)\
 	     -ldbm -ldld -lm -lpthread -lrt
-#EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
 ifeq ($(OS_ARCH), AIX)
@@ -121,6 +123,11 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
+ifdef HAVE_LIBNLS
+EXTRA_LIBS += -L$(LIBNLS_DISTDIR) -l$(NSCNV_LIBNAME) -l$(NSJPN_LIBNAME) \
+	   += -l$(NSCCK_LIBNAME) -l$(NSSB_LIBNAME)
+endif
+
 LDTOOLS_LIBS += $(EXTRA_LIBS)
 LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
 
@@ -129,6 +136,16 @@ LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
 all::	$(OBJDEST) libdir $(BINS)
 
 libdir:
+ifneq ($(HAVE_SVRCORE), 1)
+	  @echo ""
+	  @echo "***************************************************"
+	  @echo ""
+	  @echo "Sorry, unable to build the LDAP C SDK command line"
+	  @echo "utilities without svrcore functionality"
+	  @echo
+	  @echo "***************************************************"
+	  @echo ""
+else
 	$(NSINSTALL) $(LIBLOCATION)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -140,6 +157,7 @@ libdir:
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 endif
 
 $(LDAPTOOLCOMMON_OBJ):

@@ -1,3 +1,33 @@
+# 
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
+# The Original Code is Mozilla Communicator client code, released
+# March 31, 1998.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
+# 
+# Contributor(s): 
+#
+
+ifdef HAVE_CCONF
+# component tags for iPlanet build only
+DBM_RELEASE_TAG	=DBM_1_54
+NSPR_RELEASE_TAG=v4.1
+NSS_RELEASE_TAG	=NSS_3_2_BETA5
+SVRCORE_RELEASE_TAG=SVRCORE_3_2_BETA2
+endif
+
 # Ldap library
 LDAPVERS	= 50
 LDAPVERS_SUFFIX = 5.0
@@ -62,49 +92,59 @@ else
 PLC_BASENAME=libplc$(NSPR_LIBVERSION)
 PLDS_BASENAME=libplds$(NSPR_LIBVERSION)
 NSPR_BASENAME=libnspr$(NSPR_LIBVERSION)
-PLC_LIBNAME=plc$(NSPR_LIBVERSION)
-PLDS_LIBNAME=plds$(NSPR_LIBVERSION)
-NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 endif
+
 PLCBASE=plc$(NSPR_LIBVERSION)
 PLDSBASE=plds$(NSPR_LIBVERSION)
 NSPRBASE=nspr$(NSPR_LIBVERSION)
 
-NSPR_LIBNAMES =  $(PLC_BASENAME) $(PLDS_BASENAME) $(NSPR_BASENAME)
-ifeq ($(INCLUDE_SSL),1)
-ifeq ($(OS_ARCH), OSF1)
-# override libplc library name for OSF/1 INCLUDE_SSL=1 (external) builds
-# XXXmcs: for an explanation, scan down for:  XXXmcs: 27-Oct-1999
-NSPR_LIBNAMES =  $(PLC_BASENAME)+ $(PLDS_BASENAME)+ $(NSPR_BASENAME)
-endif
-endif
-
 DYNAMICNSPR = -l$(PLCBASE) -l$(PLDSBASE) -l$(NSPRBASE)
-LIBNSPR_DLL = $(addsuffix .$(DLL_SUFFIX), $(addprefix $(NSCP_DISTDIR)/lib/, $(NSPR_LIBNAMES)))
 
-LIBNSPR = $(addsuffix .$(LIB_SUFFIX), $(addprefix $(NSCP_DISTDIR)/lib/, $(NSPR_LIBNAMES)))
-LIBNSPR_DEP = $(LIBNSPR)
+PLC_LIBNAME=plc$(NSPR_LIBVERSION)
+PLDS_LIBNAME=plds$(NSPR_LIBVERSION)
+NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 
+#
+# NLS library
+#
+NLS_LIBVERSION	=31
+NSCNV_LIBNAME	=nscnv$(NLS_LIBVERSION)
+NSJPN_LIBNAME	=nsjpn$(NLS_LIBVERSION)
+NSCCK_LIBNAME	=nscck$(NLS_LIBVERSION)
+NSSB_LIBNAME	=nssb$(NLS_LIBVERSION)
 
+# as used in clients/tools/Makefile.client
+LIBNLS_INCLUDES =../../../dist/include
+LIBNLS_DISTDIR	=../../../dist/lib
 
 RM              = rm -f
 SED             = sed
 
 # uncomment to enable support for LDAP referrals
 LDAP_REFERRALS  = -DLDAP_REFERRALS
-
-
 DEFNETSSL	= -DNET_SSL 
 NOLIBLCACHE	= -DNO_LIBLCACHE
 NSDOMESTIC	= -DNS_DOMESTIC
-LDAP_DEBUG	= -DLDAP_DEBUG
 LDAPSSLIO	= -DLDAP_SSLIO_HOOKS
 
-# uncomment if have access to libnls
-#HAVELIBNLS     = -DHAVE_LIBNLS
 
-# uncomment to build command line utilities
+ifdef BUILD_OPT
+LDAP_DEBUG	=
+else
+LDAP_DEBUG	= -DLDAP_DEBUG
+endif
+
+ifdef HAVE_LIBNLS
+HAVELIBNLS	= -DHAVE_LIBNLS
+else
+HAVELIBNLS	=
+endif
+
+ifdef BUILD_CLU
 BUILDCLU	= 1
+else
+BUILDCLU	=
+endif
 
 #
 # DEFS are included in CFLAGS
@@ -115,36 +155,8 @@ DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
                   $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
 		  $(NSDOMESTIC) $(LDAPSSLIO)
 
-ifneq ($(OS_ARCH), WINNT)
-ifdef BUILD_OPT
-EXTRACFLAGS=-O
-else
-EXTRACFLAGS=-g
-endif
-endif
 
-ifeq ($(OS_ARCH), WINNT)
-ifeq ($(DEBUG), full)
-DSLDDEBUG=/debug
-else
-ifeq ($(DEBUG), purify)
-DSLDDEBUG=/debug
-endif
-endif
-PDBOPT=NONE
-endif
 
-# line to enable support for LDAP referrals in libldap
-#
-LDAP_REFERRALS  = -DLDAP_REFERRALS
-
-ifeq ($(OS_ARCH), Linux)
-DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
-endif
-
-#
-# Web server dynamic library.
-#
 ifeq ($(OS_ARCH), Linux)
 DEFS            += -DLINUX2_0 -DLINUX1_2 -DLINUX2_1
 endif

@@ -30,16 +30,42 @@ include ../build.mk
 SRCDIRS	= build include libraries
 
 ifeq ($(BUILDCLU), 1)
+ifeq ($(HAVE_SVRCORE), 1)
 SRCDIRS += clients/tools
+endif
 endif
 
 all export::	FORCE
+ifeq ($(BUILDCLU), 1)
+ifneq ($(HAVE_SVRCORE), 1)
+	@echo ""
+	@echo "***************************************************"
+	@echo ""
+	@echo "Sorry, unable to build the LDAP C SDK command line"
+	@echo "utilities without svrcore functionality"
+	@echo
+	@echo "***************************************************"
+	@echo ""
+endif
+endif
 	@for i in $(SRCDIRS); do \
 	    echo "  cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) export"; \
 	    ( cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) export ); \
 	done
 
 libs install::	FORCE
+ifeq ($(BUILDCLU), 1)
+ifneq ($(HAVE_SVRCORE), 1)
+	@echo ""
+	@echo "***************************************************"
+	@echo ""
+	@echo "Sorry, unable to build the LDAP C SDK command line"
+	@echo "utilities without svrcore functionality"
+	@echo
+	@echo "***************************************************"
+	@echo ""
+endif
+endif
 	@for i in $(SRCDIRS); do \
 	    echo "cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) install"; \
 	    ( cd $$i; $(MAKE) -f Makefile.client $(MFLAGS) install ); \
