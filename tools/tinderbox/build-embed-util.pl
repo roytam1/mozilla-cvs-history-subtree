@@ -577,11 +577,6 @@ sub BuildIt {
             run_shell_command "$Settings::CVS $cvsco $TreeSpecific::name/client.mk";
         }
 		
-		# Make sure we have embed.mk.
-        unless (-e "$TreeSpecific::name/embed.mk") {
-            run_shell_command "$Settings::CVS $cvsco $TreeSpecific::name/embed.mk";
-        }
-        
         chdir $Settings::Topsrcdir or die "chdir $Settings::Topsrcdir: $!\n";
 
         # Build it
