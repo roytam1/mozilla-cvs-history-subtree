@@ -685,8 +685,8 @@ static int PR_CALLBACK
 JavaPrefChanged(const char *prefStr, void* data)
 {
     nsJVMMgr* mgr = (nsJVMMgr*)data;
-    XP_Bool prefBool = true;
-    // PREF_GetBoolPref(prefStr, &prefBool);
+    XP_Bool prefBool;
+    PREF_GetBoolPref(prefStr, &prefBool);
     mgr->SetJVMEnabled(prefBool);
     return 0;
 } 
