@@ -23,6 +23,15 @@
 #include <direct.h>
 #include <stdlib.h>
 #include "prio.h"
+#include "nsError.h"
+
+#include "windows.h"
+
+#ifdef UNICODE
+#define CreateDirectoryW  CreateDirectory
+#else
+#define CreateDirectoryA  CreateDirectory
+#endif 
 
 //----------------------------------------------------------------------------------------
 void nsFileSpecHelpers::Canonify(char*& ioPath, bool inMakeDirs)
@@ -245,6 +254,114 @@ void nsNativeFileSpec::Delete(bool inRecursive)
       remove(mPath);
     }
 } // nsNativeFileSpec::Delete
+
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Rename(const char* inNewName)
+//----------------------------------------------------------------------------------------
+{
+    // This function should not be used to move a file on disk. 
+    if (strchr(inNewName, '/')) 
+        return NS_ERROR_FAILURE;
+
+    if (PR_Rename(*this, inNewName) != NS_OK)
+    {
+        return NS_ERROR_FAILURE;
+    }
+    
+    return NS_OK;
+} 
+
+
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& inParentDirectory)
+//----------------------------------------------------------------------------------------
+{
+    // We can only copy into a directory, and (for now) can not copy entire directories
+
+    if (inParentDirectory.IsDirectory() && (! IsDirectory() ) )
+    {
+        nsresult result;
+
+        char *leafname = GetLeafName();
+        char* destPath = nsFileSpecHelpers::StringDup(inParentDirectory, ( strlen(inParentDirectory) + 1 + strlen(leafname) ) );
+        strcat(destPath, "\\");
+        strcat(destPath, leafname);
+        delete [] leafname;
+        
+        // CopyFile returns non-zero if succeeds
+        result = CopyFile(*this, destPath, true);
+
+        delete[] destPath;
+
+        if (result != NS_OK)
+        {
+            return NS_OK;
+        }
+    }
+
+    return NS_ERROR_FAILURE;
+} 
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Move(const nsNativeFileSpec& nsNewParentDirectory)
+//----------------------------------------------------------------------------------------
+{
+    // We can only copy into a directory, and (for now) can not copy entire directories
+
+    if (nsNewParentDirectory.IsDirectory() && (! IsDirectory() ) )
+    {
+        nsresult  result;
+
+        char *leafname = GetLeafName();
+        char *destPath = nsFileSpecHelpers::StringDup(nsNewParentDirectory, ( strlen(nsNewParentDirectory) + 1 + strlen(leafname) ));
+        strcat(destPath, "\\");
+        strcat(destPath, leafname);
+        delete [] leafname;
+
+        // MoveFile returns non-zero if succeeds
+        result = MoveFile(*this, destPath);
+ 
+        delete [] destPath;
+
+        if (result != NS_OK)
+        {
+            return NS_OK;
+        }
+    }
+
+    return NS_ERROR_FAILURE;
+} 
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Execute(const char* inArgs )
+//----------------------------------------------------------------------------------------
+{
+    
+    if (! IsDirectory())
+    {
+        nsresult result;
+
+        char* fileNameWithArgs = NULL;
+
+	    fileNameWithArgs = nsFileSpecHelpers::StringDup(mPath, ( strlen(mPath) + 1 + strlen(inArgs) ) );
+        strcat(fileNameWithArgs, " ");
+        strcat(fileNameWithArgs, inArgs);
+
+        result = WinExec( fileNameWithArgs, SW_NORMAL );
+        
+        delete [] fileNameWithArgs;
+
+        if (result > 31)
+        {
+            return NS_OK;
+        }
+    }
+
+    return NS_ERROR_FAILURE;
+} 
+
+
 
 //========================================================================================
 //								nsDirectoryIterator

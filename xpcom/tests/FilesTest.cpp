@@ -15,7 +15,7 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-
+#include <stdio.h>
 #include "string.h"
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
@@ -35,6 +35,12 @@ struct FilesTest
 	int CreateDirectory(nsNativeFileSpec& victim);
 	int IterateDirectoryChildren(nsNativeFileSpec& startChild);
 	int CanonicalPath(const char* relativePath);
+
+    int Copy(const char*  sourceFile, const char* targDir);
+    int Move(const char*  sourceFile, const char*  targDir);
+    int Rename(const char*  sourceFile, const char* newName);
+
+    int Execute(const char* appName, const char* args);
 
 	void Banner(const char* bannerString);
 	void Passed();
@@ -355,6 +361,104 @@ int FilesTest::CanonicalPath(
 	return 0;
 }
 
+
+
+int 
+FilesTest::Copy(const char* file, const char* dir)
+{
+    nsNativeFileSpec dirPath(dir, true);
+		
+	dirPath.CreateDirectory(true);
+    if (! dirPath.Exists())
+	{
+		Failed();
+		return -1;
+	}
+    
+
+    nsFilePath myTextFilePath(file, true); // relative path.
+    nsIOFileStream *testStream = new nsIOFileStream(myTextFilePath); // creates the file
+    delete testStream;
+    
+    nsNativeFileSpec filePath(file);
+    if (! filePath.Exists())
+	{
+		Failed();
+		return -1;
+	}
+   
+    long error = filePath.Copy(dirPath);
+
+
+    dirPath += filePath.GetLeafName();
+    if (! dirPath.Exists() && filePath.Exists() || error != 0)
+	{
+		Failed();
+		return -1;
+	}
+
+   Passed();
+   
+   return 0;
+}
+
+int 
+FilesTest::Move(const char* file, const char* dir)
+{
+    nsNativeFileSpec dirPath(dir, true);
+		
+	dirPath.CreateDirectory(true);
+    if (! dirPath.Exists())
+	{
+		Failed();
+		return -1;
+	}
+    
+
+    nsFilePath myTextFilePath(file, true); // relative path.
+    nsIOFileStream *testStream = new nsIOFileStream(myTextFilePath); // creates the file
+    delete testStream;
+    
+    nsNativeFileSpec filePath(file);
+    if (! filePath.Exists())
+	{
+		Failed();
+		return -1;
+	}
+   
+    long error = filePath.Move(dirPath);
+
+
+    dirPath += filePath.GetLeafName();
+    if (! dirPath.Exists() || filePath.Exists() || error != 0)
+	{
+		Failed();
+		return -1;
+	}
+
+   Passed();
+
+    return 0;
+}
+
+
+int 
+FilesTest::Execute(const char* appName, const char* args)
+{
+    nsNativeFileSpec appPath(appName, false);
+    long error = appPath.Execute(args);
+    
+    if (error != 0)
+	{
+		Failed();
+		return -1;
+	}
+
+   Passed();
+
+    return 0;
+}
+
 //----------------------------------------------------------------------------------------
 int FilesTest::RunAllTests()
 // For use with DEBUG defined.
@@ -405,6 +509,18 @@ int FilesTest::RunAllTests()
 	if (IterateDirectoryChildren(parent) != 0)
 		return -1;
 
+    Banner("Copy");
+    if (Copy("mumble/copyfile.txt", "mumble/copy") != 0)
+        return -1;
+    
+    Banner("Move");
+    if (Move("mumble/moveFile.txt", "mumble/move") != 0)
+        return -1;
+
+    Banner("Execute");
+    if (Execute("c:\\windows\\notepad.exe", "") != 0)
+        return -1;
+
     return 0;
 }
 
@@ -413,7 +529,6 @@ int main()
 // For use with DEBUG defined.
 //----------------------------------------------------------------------------------------
 {
-
 	FilesTest tester;
 	return tester.RunAllTests();
 } // main

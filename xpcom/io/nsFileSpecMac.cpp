@@ -28,6 +28,7 @@
 #include <Folders.h>
 #include <Errors.h>
 #include <TextUtils.h>
+#include <Processes.h>
 
 const unsigned char* kAliasHavenFolderName = "\pnsAliasHaven";
 
@@ -131,8 +132,8 @@ char* MacFileHelpers::EncodeMacPath(
 //	Method: Swap ':' and '/', hex escape the result
 //-----------------------------------
 {
-	if (inPath == NULL)
-		return NULL;
+	if (inPath == nsnull)
+		return nsnull;
 	int pathSize = strlen(inPath);
 	
 	// XP code sometimes chokes if there's a final slash in the unix path.
@@ -145,8 +146,8 @@ char* MacFileHelpers::EncodeMacPath(
 		pathSize--;
 	}
 
-	char * newPath = NULL;
-	char * finalPath = NULL;
+	char * newPath = nsnull;
+	char * finalPath = nsnull;
 	
 	if (prependSlash)
 	{
@@ -221,9 +222,9 @@ char* MacFileHelpers::MacPathFromUnixPath(const char* unixPath)
 	{
 		char* dst = result;
 		const char* src = unixPath;
-		if (*src == '/')		 	// ¥ full path
+		if (*src == '/')		 	// • full path
 			src++;
-		else if (strchr(src, '/'))	// ¥ partial path, and not just a leaf name
+		else if (strchr(src, '/'))	// • partial path, and not just a leaf name
 			*dst++ = ':';
 		strcpy(dst, src);
 		nsUnescape(dst);	// Hex Decode
@@ -379,7 +380,7 @@ OSErr MacFileHelpers::FSSpecFromFullUnixPath(
 // then it is combined with inOutSpec's vRefNum and parID to form a new spec.
 //-----------------------------------
 {
-	if (unixPath == NULL)
+	if (unixPath == nsnull)
 		return badFidErr;
 	char* macPath = MacPathFromUnixPath(unixPath);
 	if (!macPath)
@@ -413,7 +414,7 @@ char* MacFileHelpers::PathNameFromFSSpec( const FSSpec& inSpec, Boolean wantLeaf
 	OSErr err = noErr;
 	
 	short fullPathLength = 0;
-	Handle fullPath = NULL;
+	Handle fullPath = nsnull;
 	
 	FSSpec tempSpec = inSpec;
 	if ( tempSpec.parID == fsRtParID )
@@ -471,7 +472,7 @@ char* MacFileHelpers::PathNameFromFSSpec( const FSSpec& inSpec, Boolean wantLeaf
 						tempSpec.name[tempSpec.name[0]] = ':';
 						
 						/* Add directory name to beginning of fullPath */
-						(void) Munger(fullPath, 0, NULL, 0, &tempSpec.name[1], tempSpec.name[0]);
+						(void) Munger(fullPath, 0, nsnull, 0, &tempSpec.name[1], tempSpec.name[0]);
 						err = MemError();
 					}
 				} while ( err == noErr && pb.dirInfo.ioDrDirID != fsRtDirID );
@@ -659,7 +660,7 @@ void nsNativeFileSpec::GetParent(nsNativeFileSpec& outSpec) const
 //----------------------------------------------------------------------------------------
 {
 	if (mError == noErr)
-		outSpec.mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, NULL, outSpec);
+		outSpec.mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, nsnull, outSpec);
 } // nsNativeFileSpec::GetParent
 
 //----------------------------------------------------------------------------------------
@@ -702,6 +703,90 @@ void nsNativeFileSpec::Delete(bool inRecursive)
 	else
 		mError = FSpDelete(&mSpec);
 } // nsNativeFileSpec::Delete
+
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Rename(const char* inNewName)
+//----------------------------------------------------------------------------------------
+{
+    if (strchr(inNewName, '/'))
+        return -1; // no relative paths here!
+    Str255 pName;
+    MacFileHelpers::PLstrcpy(pName, inNewName);
+    if (FSpRename(&mSpec, pName) != noErr)
+        return -1;
+    return 0;
+} // nsNativeFileSpec::Rename
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& newParentDir)
+//----------------------------------------------------------------------------------------
+{
+    // We can only copy into a directory, and (for now) can not copy entire directories
+
+    if (!newParentDir.IsDirectory() || (IsDirectory() ) )
+        return NS_ERROR_FAILURE;
+
+    StringPtr leafname = GetLeafPName();
+           
+    OSErr result = FSpFileCopy(   &mSpec,
+                            &newParentDir.mSpec,
+                            leafname,
+                            nsnull,
+                            0,
+                            true);
+
+    if (result != noErr)
+        result = NS_ERROR_FAILURE;
+
+    return NS_OK;
+
+} // nsNativeFileSpec::Copy
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Move(const nsNativeFileSpec& newParentDir)
+//----------------------------------------------------------------------------------------
+{
+    // We can only move into a directory
+    
+    if (!newParentDir.IsDirectory())
+    	return NS_ERROR_FAILURE;
+ 
+    StringPtr leafname = GetLeafPName();
+    OSErr result = FSpMoveRenameCompat(&mSpec,
+                                    &newParentDir.mSpec,
+                                    leafname);
+    
+    if (result != noErr)
+        return NS_ERROR_FAILURE;
+
+    return NS_OK;
+} // nsNativeFileSpec::Move
+
+//----------------------------------------------------------------------------------------
+nsresult nsNativeFileSpec::Execute(const char* /*args - how can this be cross-platform?  problem! */ )
+//----------------------------------------------------------------------------------------
+{
+    if (IsDirectory())
+        return NS_ERROR_FAILURE;
+
+    LaunchParamBlockRec launchThis;
+    launchThis.launchAppSpec = &mSpec;
+    launchThis.launchAppParameters = nsnull; // args;
+    /* launch the thing */
+    launchThis.launchBlockID    = extendedBlock;
+    launchThis.launchEPBLength  = extendedBlockLen;
+    launchThis.launchFileFlags  = nsnull;
+    launchThis.launchControlFlags = launchContinue + launchNoFileFlags + launchUseMinimum;
+    launchThis.launchControlFlags += launchDontSwitch;
+
+    OSErr result = LaunchApplication(&launchThis);
+    if (result != noErr)
+        return NS_ERROR_FAILURE;
+
+    return NS_OK;
+  
+} // nsNativeFileSpec::Execute
 
 
 //========================================================================================
@@ -809,7 +894,7 @@ OSErr nsDirectoryIterator::SetToIndex()
 	CInfoPBRec cipb;
 	DirInfo	*dipb=(DirInfo *)&cipb;
 	Str255 objectName;
-	dipb->ioCompletion = NULL;
+	dipb->ioCompletion = nsnull;
 	dipb->ioFDirIndex = mIndex;
 	// Sorry about this, there seems to be a bug in CWPro 4:
 	FSSpec& currentSpec = mCurrent.nsNativeFileSpec::operator FSSpec&();

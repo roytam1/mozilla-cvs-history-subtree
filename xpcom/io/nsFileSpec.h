@@ -103,7 +103,7 @@
 #define _FILESPEC_H_
 
 #include "nscore.h"
-
+#include "nsError.h"
 //========================================================================================
 //                          Compiler-specific macros, as needed
 //========================================================================================
@@ -253,6 +253,10 @@ class NS_BASE nsNativeFileSpec
         void                    CreateDirectory(int mode = 0700 /* for unix */);
         void                    Delete(bool inRecursive);
         
+        nsresult                Rename(const char* inNewName);
+        nsresult                Copy(const nsNativeFileSpec& inParentDirectory);
+        nsresult                Move(const nsNativeFileSpec& inNewParentDirectory);
+        nsresult                Execute(const char* inArgs);
         //--------------------------------------------------
         // Data
         //--------------------------------------------------
