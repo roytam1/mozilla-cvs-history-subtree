@@ -169,7 +169,7 @@ function editPage(url, launchWindow, delay)
 function createURI(urlstring)
 {
   try {
-    ioserv = Components.classes["@mozilla.org/network/io-service;1"]
+    var ioserv = Components.classes["@mozilla.org/network/io-service;1"]
                .getService(Components.interfaces.nsIIOService);
     return ioserv.newURI(urlstring, null, null);
   } catch (e) {}
