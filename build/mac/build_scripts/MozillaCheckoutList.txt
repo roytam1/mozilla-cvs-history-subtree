@@ -11,9 +11,9 @@ mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
 mozilla/security/nss,   NSS_CLIENT_TAG
 mozilla/security/psm,   
 mozilla/security/manager,
-mozilla/accessible,
+mozilla/accessible,     Style_20010518_Branch
 DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
 mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/gfx2,           Style_20010518_Branch
+mozilla/modules/libpr0n, Style_20010518_Branch
+SeaMonkeyAll,           Style_20010518_Branch
