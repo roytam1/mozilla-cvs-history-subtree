@@ -809,5 +809,21 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUTF16(
     return fd;
 }
  
+PR_IMPLEMENT(PRStatus) PR_GetFileInfo64UTF16(const PRUnichar *fn, PRFileInfo64 *info)
+{
+#ifdef XP_MAC
+#pragma unused (fn, info)
+#endif
+    PRInt32 rv;
+
+    if (!_pr_initialized) _PR_ImplicitInitialization();
+    rv = _PR_MD_GETFILEINFO64_UTF16(fn, info);
+    if (rv < 0) {
+        return PR_FAILURE;
+    } else {
+        return PR_SUCCESS;
+    }
+}
+
 /* ================ UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */

@@ -4812,6 +4812,12 @@ PR_IMPLEMENT(PRDirEntryUTF16*) PR_ReadDirUTF16(PRDirUTF16 *dir, PRDirFlags flags
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
 }
+
+PR_IMPLEMENT(PRStatus) PR_GetFileInfo64UTF16(const PRUnichar *fn, PRFileInfo64 *info)
+{
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+    return PR_FAILURE;
+}
 /* ================ UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */
 

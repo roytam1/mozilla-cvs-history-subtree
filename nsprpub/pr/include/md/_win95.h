@@ -225,10 +225,11 @@ extern PRInt32 _MD_CloseFile(PRInt32 osfd);
 
 #ifdef MOZ_UNICODE
 /* --- UTF16 IO stuff --- */
-#define _MD_OPEN_FILE_UTF16           _PR_MD_OPEN_FILE_UTF16 
-#define _MD_OPEN_DIR_UTF16            _PR_MD_OPEN_DIR_UTF16 
-#define _MD_READ_DIR_UTF16            _PR_MD_READ_DIR_UTF16 
+#define _MD_OPEN_FILE_UTF16           _PR_MD_OPEN_FILE_UTF16
+#define _MD_OPEN_DIR_UTF16            _PR_MD_OPEN_DIR_UTF16
+#define _MD_READ_DIR_UTF16            _PR_MD_READ_DIR_UTF16
 #define _MD_CLOSE_DIR_UTF16           _PR_MD_CLOSE_DIR_UTF16
+#define _MD_GETFILEINFO64_UTF16       _PR_MD_GETFILEINFO64_UTF16
 #endif /* MOZ_UNICODE */
 
 /* --- Socket IO stuff --- */

@@ -842,6 +842,13 @@ struct PRFileInfo64 {
 NSPR_API(PRStatus) PR_GetFileInfo(const char *fn, PRFileInfo *info);
 NSPR_API(PRStatus) PR_GetFileInfo64(const char *fn, PRFileInfo64 *info);
 
+#ifdef MOZ_UNICODE
+/*
+ * EXPERIMENTAL: This function may be removed in a future release.
+ */
+NSPR_API(PRStatus) PR_GetFileInfo64UTF16(const PRUnichar *fn, PRFileInfo64 *info);
+#endif /* MOZ_UNICODE */
+
 /*
  **************************************************************************
  * FUNCTION: PR_GetOpenFileInfo, PR_GetOpenFileInfo64

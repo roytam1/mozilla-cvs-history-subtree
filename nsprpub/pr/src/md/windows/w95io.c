@@ -42,7 +42,7 @@
 #include <direct.h>
 #include <mbstring.h>
 #ifdef MOZ_UNICODE
-#include <tchar.h>
+#include <wchar.h>
 #endif /* MOZ_UNICODE */
 
 
@@ -75,6 +75,10 @@ static DWORD dirAccessTable[] = {
 static const PRTime _pr_filetime_offset = 116444736000000000LL;
 #else
 static const PRTime _pr_filetime_offset = 116444736000000000i64;
+#endif
+
+#ifdef MOZ_UNICODE
+static void InitUnicodeSupport(void);
 #endif
 
 void
@@ -113,6 +117,10 @@ _PR_MD_INIT_IO()
 #endif /* DEBUG */
 
     _PR_NT_InitSids();
+
+#ifdef MOZ_UNICODE
+    InitUnicodeSupport();
+#endif
 }
 
 PRStatus
@@ -1093,6 +1101,40 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 }
 
 #ifdef MOZ_UNICODE
+
+typedef HANDLE (WINAPI *CreateFileWFn) (LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
+static CreateFileWFn createFileW = NULL; 
+typedef HANDLE (WINAPI *FindFirstFileWFn) (LPCWSTR, LPWIN32_FIND_DATAW);
+static FindFirstFileWFn findFirstFileW = NULL; 
+typedef BOOL (WINAPI *FindNextFileWFn) (HANDLE, LPWIN32_FIND_DATAW);
+static FindNextFileWFn findNextFileW = NULL; 
+typedef DWORD (WINAPI *GetFullPathNameWFn) (LPCWSTR, DWORD, LPWSTR, LPWSTR *);
+static GetFullPathNameWFn getFullPathNameW = NULL; 
+typedef UINT (WINAPI *GetDriveTypeWFn) (LPCWSTR);
+static GetDriveTypeWFn getDriveTypeW = NULL; 
+
+static void InitUnicodeSupport(void)
+{
+    HMODULE module;
+
+    /*
+     * The W functions do not exist on Win9x.  NSPR won't run on Win9x
+     * if we call the W functions directly.  Use GetProcAddress() to
+     * look up their addresses at run time.
+     */
+
+    module = GetModuleHandle("Kernel32.dll");
+    if (!module) {
+        return;
+    }
+
+    createFileW = (CreateFileWFn)GetProcAddress(module, "CreateFileW"); 
+    findFirstFileW = (FindFirstFileWFn)GetProcAddress(module, "FindFirstFileW"); 
+    findNextFileW = (FindNextFileWFn)GetProcAddress(module, "FindNextFileW"); 
+    getDriveTypeW = (GetDriveTypeWFn)GetProcAddress(module, "GetDriveTypeW"); 
+    getFullPathNameW = (GetFullPathNameWFn)GetProcAddress(module, "GetFullPathNameW"); 
+}
+
 /* ================ UTF16 Interfaces ================================ */
 void FlipSlashesW(PRUnichar *cp, int len)
 {
@@ -1115,6 +1157,11 @@ _PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, int mode)
     LPSECURITY_ATTRIBUTES lpSA = NULL;
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
+
+    if (!createFileW) {
+        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+        return -1;
+    }
  
     if (osflags & PR_CREATE_FILE) {
         if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
@@ -1147,7 +1194,7 @@ _PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFileW(name,
+    file = createFileW(name,
                        access,
                        FILE_SHARE_READ|FILE_SHARE_WRITE,
                        lpSA,
@@ -1171,6 +1218,11 @@ _PR_MD_OPEN_DIR_UTF16(_MDDirUTF16 *d, const PRUnichar *name)
     PRUnichar filename[ MAX_PATH ];
     int len;
 
+    if (!findFirstFileW) {
+        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+        return PR_FAILURE;
+    }
+
     len = wcslen(name);
     /* Need 5 bytes for \*.* and the trailing null byte. */
     if (len + 5 > MAX_PATH) {
@@ -1189,7 +1241,7 @@ _PR_MD_OPEN_DIR_UTF16(_MDDirUTF16 *d, const PRUnichar *name)
     wcscpy(&filename[len], L"\\*.*");
     FlipSlashesW( filename, wcslen(filename) );
 
-    d->d_hdl = FindFirstFileW( filename, &(d->d_entry) );
+    d->d_hdl = findFirstFileW( filename, &(d->d_entry) );
     if ( d->d_hdl == INVALID_HANDLE_VALUE ) {
         _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
         return PR_FAILURE;
@@ -1206,13 +1258,18 @@ _PR_MD_READ_DIR_UTF16(_MDDirUTF16 *d, PRIntn flags)
     BOOL rv;
     PRUnichar *fileName;
 
+    if (!findNextFileW) {
+        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+        return NULL;
+    }
+
     if ( d ) {
         while (1) {
             if (d->firstEntry) {
                 d->firstEntry = PR_FALSE;
                 rv = 1;
             } else {
-                rv = FindNextFileW(d->d_hdl, &(d->d_entry));
+                rv = findNextFileW(d->d_hdl, &(d->d_entry));
             }
             if (rv == 0) {
                 break;
@@ -1254,5 +1311,198 @@ _PR_MD_CLOSE_DIR_UTF16(_MDDirUTF16 *d)
     return PR_FAILURE;
 }
 
+#define _PR_IS_W_SLASH(ch) ((ch) == L'/' || (ch) == L'\\')
+
+/*
+ * IsRootDirectoryW --
+ *
+ * Return PR_TRUE if the pathname 'fn' is a valid root directory,
+ * else return PR_FALSE.  The PRUnichar buffer pointed to by 'fn' must
+ * be writable.  During the execution of this function, the contents
+ * of the buffer pointed to by 'fn' may be modified, but on return
+ * the original contents will be restored.  'buflen' is the size of
+ * the buffer pointed to by 'fn', in PRUnichars.
+ *
+ * Root directories come in three formats:
+ * 1. / or \, meaning the root directory of the current drive.
+ * 2. C:/ or C:\, where C is a drive letter.
+ * 3. \\<server name>\<share point name>\ or
+ *    \\<server name>\<share point name>, meaning the root directory
+ *    of a UNC (Universal Naming Convention) name.
+ */
+
+static PRBool
+IsRootDirectoryW(PRUnichar *fn, size_t buflen)
+{
+    PRUnichar *p;
+    PRBool slashAdded = PR_FALSE;
+    PRBool rv = PR_FALSE;
+
+    if (_PR_IS_W_SLASH(fn[0]) && fn[1] == L'\0') {
+        return PR_TRUE;
+    }
+
+    if (iswalpha(fn[0]) && fn[1] == L':' && _PR_IS_W_SLASH(fn[2])
+            && fn[3] == L'\0') {
+        rv = getDriveTypeW(fn) > 1 ? PR_TRUE : PR_FALSE;
+        return rv;
+    }
+
+    /* The UNC root directory */
+
+    if (_PR_IS_W_SLASH(fn[0]) && _PR_IS_W_SLASH(fn[1])) {
+        /* The 'server' part should have at least one character. */
+        p = &fn[2];
+        if (*p == L'\0' || _PR_IS_W_SLASH(*p)) {
+            return PR_FALSE;
+        }
+
+        /* look for the next slash */
+        do {
+            p++;
+        } while (*p != L'\0' && !_PR_IS_W_SLASH(*p));
+        if (*p == L'\0') {
+            return PR_FALSE;
+        }
+
+        /* The 'share' part should have at least one character. */
+        p++;
+        if (*p == L'\0' || _PR_IS_W_SLASH(*p)) {
+            return PR_FALSE;
+        }
+
+        /* look for the final slash */
+        do {
+            p++;
+        } while (*p != L'\0' && !_PR_IS_W_SLASH(*p));
+        if (_PR_IS_W_SLASH(*p) && p[1] != L'\0') {
+            return PR_FALSE;
+        }
+        if (*p == L'\0') {
+            /*
+             * GetDriveType() doesn't work correctly if the
+             * path is of the form \\server\share, so we add
+             * a final slash temporarily.
+             */
+            if ((p + 1) < (fn + buflen)) {
+                *p++ = L'\\';
+                *p = L'\0';
+                slashAdded = PR_TRUE;
+            } else {
+                return PR_FALSE; /* name too long */
+            }
+        }
+        rv = getDriveTypeW(fn) > 1 ? PR_TRUE : PR_FALSE;
+        /* restore the 'fn' buffer */
+        if (slashAdded) {
+            *--p = L'\0';
+        }
+    }
+    return rv;
+}
+
+PRInt32
+_PR_MD_GETFILEINFO64_UTF16(const PRUnichar *fn, PRFileInfo64 *info)
+{
+    HANDLE hFindFile;
+    WIN32_FIND_DATAW findFileData;
+    PRUnichar pathbuf[MAX_PATH + 1];
+
+    if (!findFirstFileW || !getFullPathNameW || !getDriveTypeW) {
+        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+        return -1;
+    }
+    
+    if (NULL == fn || L'\0' == *fn) {
+        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+        return -1;
+    }
+
+    /*
+     * FindFirstFile() expands wildcard characters.  So
+     * we make sure the pathname contains no wildcard.
+     */
+    if (NULL != wcspbrk(fn, L"?*")) {
+        PR_SetError(PR_FILE_NOT_FOUND_ERROR, 0);
+        return -1;
+    }
+
+    hFindFile = findFirstFileW(fn, &findFileData);
+    if (INVALID_HANDLE_VALUE == hFindFile) {
+        DWORD len;
+        PRUnichar *filePart;
+
+        /*
+         * FindFirstFile() does not work correctly on root directories.
+         * It also doesn't work correctly on a pathname that ends in a
+         * slash.  So we first check to see if the pathname specifies a
+         * root directory.  If not, and if the pathname ends in a slash,
+         * we remove the final slash and try again.
+         */
+
+        /*
+         * If the pathname does not contain ., \, and /, it cannot be
+         * a root directory or a pathname that ends in a slash.
+         */
+        if (NULL == wcspbrk(fn, L".\\/")) {
+            _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+            return -1;
+        } 
+        len = getFullPathNameW(fn, sizeof(pathbuf)/sizeof(pathbuf[0]), pathbuf,
+                &filePart);
+        if (0 == len) {
+            _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+            return -1;
+        }
+        if (len > sizeof(pathbuf)/sizeof(pathbuf[0])) {
+            PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+            return -1;
+        }
+        if (IsRootDirectoryW(pathbuf, sizeof(pathbuf)/sizeof(pathbuf[0]))) {
+            info->type = PR_FILE_DIRECTORY;
+            info->size = 0;
+            /*
+             * These timestamps don't make sense for root directories.
+             */
+            info->modifyTime = 0;
+            info->creationTime = 0;
+            return 0;
+        }
+        if (!_PR_IS_W_SLASH(pathbuf[len - 1])) {
+            _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+            return -1;
+        } else {
+            pathbuf[len - 1] = L'\0';
+            hFindFile = findFirstFileW(pathbuf, &findFileData);
+            if (INVALID_HANDLE_VALUE == hFindFile) {
+                _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+                return -1;
+            }
+        }
+    }
+
+    FindClose(hFindFile);
+
+    if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        info->type = PR_FILE_DIRECTORY;
+    } else {
+        info->type = PR_FILE_FILE;
+    }
+
+    info->size = findFileData.nFileSizeHigh;
+    info->size = (info->size << 32) + findFileData.nFileSizeLow;
+
+    _PR_FileTimeToPRTime(&findFileData.ftLastWriteTime, &info->modifyTime);
+
+    if (0 == findFileData.ftCreationTime.dwLowDateTime &&
+            0 == findFileData.ftCreationTime.dwHighDateTime) {
+        info->creationTime = info->modifyTime;
+    } else {
+        _PR_FileTimeToPRTime(&findFileData.ftCreationTime,
+                &info->creationTime);
+    }
+
+    return 0;
+}
 /* ================ end of UTF16 Interfaces ================================ */
 #endif /* MOZ_UNICODE */

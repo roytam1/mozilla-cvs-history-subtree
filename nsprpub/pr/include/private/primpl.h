@@ -1160,6 +1160,9 @@ extern PRUnichar * _PR_MD_READ_DIR_UTF16(_MDDirUTF16 *md, PRIntn flags);
 
 extern PRInt32 _PR_MD_CLOSE_DIR_UTF16(_MDDirUTF16 *md);
 #define    _PR_MD_CLOSE_DIR_UTF16 _MD_CLOSE_DIR_UTF16
+
+extern PRInt32 _PR_MD_GETFILEINFO64_UTF16(const PRUnichar *fn, PRFileInfo64 *info);
+#define _PR_MD_GETFILEINFO64_UTF16 _MD_GETFILEINFO64_UTF16
 #endif /* MOZ_UNICODE */
 
 /* Socket I/O related */
