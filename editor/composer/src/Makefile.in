@@ -52,6 +52,7 @@ REQUIRES        = xpcom \
                   appshell \
                   appcomps \
                   windowwatcher \
+                  commandhandler \
                   chrome \
                   exthandler \
                   mimetype \
