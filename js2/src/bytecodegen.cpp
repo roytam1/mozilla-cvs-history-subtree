@@ -1374,8 +1374,9 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             }
 
         }
-    default:
-        NOT_REACHED("Invalid l-value");      // XXX should be a semantic error
+    default:    // return NULL here rather than throwing an exception, 
+                // for (e.g.) typeof foo(), we use the NULL reference to signal
+                // the distinction between lvalue & rvalue cases.
         return NULL;
     }
     return NULL;
