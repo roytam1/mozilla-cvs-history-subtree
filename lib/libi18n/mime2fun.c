@@ -524,6 +524,9 @@ PRIVATE XP_Bool intlmime_is_mime_part2_header(const char *header)
 }
 
 extern char *strip_continuations(char *original);
+extern unsigned char *XP_WordWrapWithPrefix(int charset, unsigned char *str,
+											int maxColumn, int checkQuoting,
+											const char *prefix, int addCRLF);
 
 PRIVATE
 char *intl_decode_mime_part2_str(const char *header, int wincsid, XP_Bool dontConvert)
@@ -1238,7 +1241,8 @@ char *intl_EncodeMimePartIIStr(char *subject, int16 wincsid, XP_Bool bUseMime, i
 	
 	/* check to see if subject are all ascii or not */
 	if(intlmime_only_ascii_str(subject))
-		return NULL;
+		return (char *) XP_WordWrapWithPrefix(mail_csid, (unsigned char *)
+											  subject, maxLineLen, 0, " ", 1);
 		
 	if (mail_csid != wincsid)
 	{
@@ -1272,6 +1276,16 @@ char *intl_EncodeMimePartIIStr(char *subject, int16 wincsid, XP_Bool bUseMime, i
 				buf = (unsigned char *)cvtfunc(obj, (unsigned char*)newbuf, iSrcLen);
 				if(buf != (unsigned char*)newbuf)
 					XP_FREE(newbuf);
+				/* time for wrapping long line */
+				if (buf)
+				{
+					newbuf = (char*) buf;
+					buf = XP_WordWrapWithPrefix(mail_csid, (unsigned char *)
+												newbuf, maxLineLen, 0, " ", 1);
+
+					if (buf != (unsigned char*) newbuf)
+						XP_FREE(newbuf);
+				}
 			}
 		}
 	}
