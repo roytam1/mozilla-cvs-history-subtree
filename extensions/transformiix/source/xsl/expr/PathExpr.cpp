@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *    
  * $Id$
  */
@@ -125,7 +127,14 @@ ExprResult* PathExpr::evaluate(Node* context, ContextState* cs) {
         cs->getNodeSetStack()->push(nodes);
         for (int i = 0; i < nodes->size(); i++) {
             Node* node = nodes->get(i);
+#if 0
             NodeSet* xNodes = (NodeSet*) pxi->pExpr->evaluate(node, cs);
+#else
+           ExprResult *res = pxi->pExpr->evaluate(node, cs);
+           if (!res || res->getResultType() != ExprResult::NODESET)
+               continue;
+            NodeSet* xNodes = (NodeSet *) res;
+#endif
             if ( tmpNodes ) {
                 xNodes->copyInto(*tmpNodes);
             }

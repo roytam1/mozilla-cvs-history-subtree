@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -58,6 +60,12 @@ public:
      * Default constructor. Uses stdout as the default ostream
     **/
     XMLPrinter();
+
+    /**
+     * Destructor must be virtual so subclasses are destroyed.
+    **/
+
+    virtual ~XMLPrinter();
 
     /**
      * Creates a new XML Printer using the given PrintWriter

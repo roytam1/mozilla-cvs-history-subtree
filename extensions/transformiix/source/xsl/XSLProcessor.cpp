@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -55,7 +57,7 @@ XSLProcessor::XSLProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v19991114]");
+    appVersion.append("1.0 [beta v19991124]");
 
 
     //-- create XSL element types
@@ -929,6 +931,7 @@ void XSLProcessor::processAction
                         newAttr->setValue(value);
                         if ( ! ps->addToResultTree(newAttr) )
                             delete newAttr;
+                        delete dfrag;
                     }
                 }
                 break;
@@ -999,6 +1002,7 @@ void XSLProcessor::processAction
                 //XMLUtils::normalizePIValue(value);
                 Comment* comment = resultDoc->createComment(value);
                 if ( ! ps->addToResultTree(comment) ) delete comment;
+                delete dfrag;
                 break;
             }
             //-- xsl:copy
@@ -1150,6 +1154,7 @@ void XSLProcessor::processAction
                     ProcessingInstruction* pi
                             = resultDoc->createProcessingInstruction(name, value);
                     if ( ! ps->addToResultTree(pi) ) delete pi;
+                    delete dfrag;
                 }
                 break;
             }

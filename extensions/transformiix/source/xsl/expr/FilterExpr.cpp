@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *    
  * $Id$
  */
@@ -76,10 +78,7 @@ void FilterExpr::setExpr(Expr* expr) {
 **/
 ExprResult* FilterExpr::evaluate(Node* context, ContextState* cs) {
 
-   NodeSet* nodes = new NodeSet();
-
-   if (( !context ) || (! expr )) return nodes;
-
+   if (( !context ) || (! expr )) return new NodeSet;
 
     ExprResult* exprResult = expr->evaluate(context, cs);
     NodeSet* nodeSet = 0;

@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -150,8 +152,8 @@ void StringList::insertBefore(String* strptr, StringListItem* refItem) {
 /**
  * Returns a StringListIterator for this StringList
 **/
-StringListIterator& StringList::iterator() {
-   return *(new StringListIterator(this));
+StringListIterator StringList::iterator() {
+   return StringListIterator(this);
 }
 
 String* StringList::remove(String* strptr) {

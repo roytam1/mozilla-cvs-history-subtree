@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -61,7 +63,7 @@ class StringList {
       /**
        * Returns a StringListIterator for this StringList
       **/
-      StringListIterator& iterator();
+      StringListIterator iterator();
 
       /**
        * Adds the given String to the list

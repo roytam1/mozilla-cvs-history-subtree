@@ -20,6 +20,8 @@
  *    -- original author
  * Majkel Kretschmar
  *    -- UTF-8 changes
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -116,6 +118,11 @@ void XMLPrinter::initialize(ostream& os, int indentSize) {
     useEmptyElementShorthand = MB_TRUE;
     useFormat = MB_FALSE;
 } //-- initialize
+
+// destructor is needed so that subclasses are destroyed.
+
+XMLPrinter::~XMLPrinter()
+{ }
 
 /**
  * Prints the given Node

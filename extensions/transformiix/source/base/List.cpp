@@ -20,6 +20,8 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
+ * Bob Miller, kbob@oblix.com
+ *    -- plugged core leak.
  *
  * $Id$
  */
@@ -307,6 +309,7 @@ void* ListIterator::remove() {
         List::ListItem* item = currentItem;
         previous(); //-- make previous item the current item
         list->remove(item);
+        delete item;
     }
     return obj;
 } //-- remove
