@@ -432,7 +432,9 @@ PRBool GIFInit(
     GIF_RGB* aBackgroundRGB,
     GIF_RGB* aTransparencyChromaKey),
     
-  int (*PR_CALLBACK GIFCallback_EndGIF)(),
+  int (*PR_CALLBACK GIFCallback_EndGIF)(
+        void*    aClientData,
+        int      aAnimationLoopCount),
   
   int (*PR_CALLBACK GIFCallback_BeginImageFrame)(
     void*    aClientData,
@@ -443,7 +445,10 @@ PRBool GIFInit(
     PRUint32 aFrameHeight,   
     GIF_RGB* aTransparencyChromaKey),
   
-  int (*PR_CALLBACK GIFCallback_EndImageFrame)(),
+  int (*PR_CALLBACK GIFCallback_EndImageFrame)(
+    void* aClientData,
+    PRUint32 aFrameNumber,
+    PRUint32 aDelayTimeout),
   
   int (*PR_CALLBACK GIFCallback_SetupColorspaceConverter)(),
   
@@ -1152,25 +1157,14 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             /* Loop entire animation specified # of times.  Only read the
                loop count during the first iteration. */
             if (netscape_extension == 1) {
-#if 0 // XXX: do something to notify the image container of the loop count
-                if (!ic->is_looping) {
-                    ic->loop_count = GETINT16(q + 1);
+              gs->loop_count = GETINT16(q + 1);
 
-                    /* Zero loop count is infinite animation loop request */
-                    if (ic->loop_count == 0)
-                        ic->loop_count = -1;
+              /* Zero loop count is infinite animation loop request */
+              if (gs->loop_count == 0)
+                  gs->loop_count = -1;
 
-                    /* Tell the front end that the stop state might have changed */
-                    /* because of the looping GIF.                               */
-#ifndef M12N                    /* XXXM12N Fix me. */
-                    if (ic->net_cx)
-                      FE_UpdateStopState(ic->net_cx);
-#endif /* M12N */
-                }
-#endif
-                GETN(1, gif_netscape_extension_block);
+              GETN(1, gif_netscape_extension_block);
             }
-
             /* Wait for specified # of bytes to enter buffer */
             else if (netscape_extension == 2)
             {
@@ -1453,8 +1447,15 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 //     ic->imgdcb->ImgDCBFlushImage();
                 //     ic->imgdcb->ImgDCBHaveImageFrame();
                 //}
-        
-                gs->images_decoded++;                
+                
+                ++gs->images_decoded; 
+                
+                (*gs->GIFCallback_EndImageFrame)(
+                  gs->clientptr,
+                  gs->images_decoded,
+                  gs->delay_time);
+                
+                               
 
                 /* Clear state from this image */
                 gs->control_extension = PR_FALSE;
@@ -1503,7 +1504,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_done:  
             if(gs->GIFCallback_EndGIF) {
-              int result = (gs->GIFCallback_EndGIF)();
+              int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
             }    
             return 0;
             break;

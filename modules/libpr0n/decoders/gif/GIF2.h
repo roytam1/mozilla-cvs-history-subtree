@@ -108,7 +108,10 @@ typedef struct gif_struct {
       GIF_RGB* aLogicalScreenBackgroundRGB,
       GIF_RGB* aTransparencyChromaKey);
       
-    int (PR_CALLBACK* GIFCallback_EndGIF)();
+    int (PR_CALLBACK* GIFCallback_EndGIF)(
+      void*    aClientData,
+      int      aAnimationLoopCount);
+      
     int (PR_CALLBACK* GIFCallback_BeginImageFrame)(
       void*    aClientData,
       PRUint32 aFrameNumber,   /* Frame number, 1-n */
@@ -117,7 +120,10 @@ typedef struct gif_struct {
       PRUint32 aFrameWidth,    
       PRUint32 aFrameHeight,   
       GIF_RGB* aTransparencyChromaKey);
-    int (PR_CALLBACK* GIFCallback_EndImageFrame)();
+    int (PR_CALLBACK* GIFCallback_EndImageFrame)(
+      void* aClientData,
+      PRUint32 aFrameNumber,
+      PRUint32 aDelayTimeout);
     int (PR_CALLBACK* GIFCallback_SetupColorspaceConverter)();
     int (PR_CALLBACK* GIFCallback_ResetPalette)(); 
     int (PR_CALLBACK* GIFCallback_InitTransparentPixel)();
@@ -198,6 +204,8 @@ typedef struct gif_struct {
     int images_decoded;         /* Counts images for multi-part GIFs */
     int destroy_pending;        /* Stream has ended */
     int progressive_display;    /* If TRUE, do Haeberli interlace hack */
+    int loop_count;             /* Netscape specific extension block to control
+                                   the number of animation loops a GIF renders. */
 } gif_struct;
 
 /* These are the APIs that the client calls to intialize,
@@ -215,7 +223,9 @@ PRBool GIFInit(
     GIF_RGB* aBackgroundRGB,
     GIF_RGB* aTransparencyChromaKey),
     
-  int (*PR_CALLBACK GIFCallback_EndGIF)(),
+  int (*PR_CALLBACK GIFCallback_EndGIF)(
+    void*    aClientData,
+    int      aAnimationLoopCount),
   
   int (*PR_CALLBACK GIFCallback_BeginImageFrame)(
     void*    aClientData,
@@ -226,7 +236,10 @@ PRBool GIFInit(
     PRUint32 aFrameHeight,   
     GIF_RGB* aTransparencyChromaKey),
   
-  int (*PR_CALLBACK GIFCallback_EndImageFrame)(),
+  int (*PR_CALLBACK GIFCallback_EndImageFrame)(
+    void* aClientData,
+    PRUint32 aFrameNumber,
+    PRUint32 aDelayTimeout),
   
   int (*PR_CALLBACK GIFCallback_SetupColorspaceConverter)(),
   
@@ -279,7 +292,9 @@ typedef int (PR_CALLBACK *GIFCallback_BeginGIF)(
   GIF_RGB* aLogicalScreenBackgroundRGB);
 */
                             
-typedef int (PR_CALLBACK *GIFCallback_EndGIF)();
+typedef int (PR_CALLBACK *GIFCallback_EndGIF)(
+  void*    aClientData,
+  int      aAnimationLoopCount);
 
 /* GIFCallback_BeginImageFrame is called at the beginning of each frame of
 a GIF.*/
