@@ -2019,8 +2019,12 @@ nsXULElement::SetAttribute(PRInt32 aNameSpaceID,
         rv = EnsureSlots();
         if (NS_FAILED(rv)) return rv;
 
-        rv = nsXULAttributes::Create(NS_STATIC_CAST(nsIStyledContent*, this), &(mSlots->mAttributes));
-        if (NS_FAILED(rv)) return rv;
+		// Since EnsureSlots() may have triggered mSlots->mAttributes construction,
+		// we need to check _again_ before creating attributes.
+        if (! Attributes()) {
+            rv = nsXULAttributes::Create(NS_STATIC_CAST(nsIStyledContent*, this), &(mSlots->mAttributes));
+            if (NS_FAILED(rv)) return rv;
+        }
     }
 
     // XXX Class and Style attribute setting should be checking for the XUL namespace!
@@ -2036,10 +2040,7 @@ nsXULElement::SetAttribute(PRInt32 aNameSpaceID,
     // know about the StyleRule change.
     if (mDocument && (aNameSpaceID == kNameSpaceID_None) && (aName == kStyleAtom)) {
         nsCOMPtr <nsIURI> docURL;
-        if (nsnull != mDocument) {
-            mDocument->GetBaseURL(*getter_AddRefs(docURL));
-        }
-
+        mDocument->GetBaseURL(*getter_AddRefs(docURL));
         Attributes()->UpdateStyleRule(docURL, aValue);
         // XXX Some kind of special document update might need to happen here.
     }
@@ -2399,18 +2400,30 @@ nsXULElement::List(FILE* out, PRInt32 aIndent) const
 
     nsresult rv;
     {
-        nsIAtom* tag;
-        if (NS_FAILED(rv = GetTag(tag)))
-            return rv;
-
         rdf_Indent(out, aIndent);
-        fputs("[XUL", out);
+        fputs("<XUL", out);
         if (mSlots) fputs("*", out);
         fputs(" ", out);
+
+        if (NameSpaceID() == kNameSpaceID_XUL) {
+            fputs("xul:", out);
+        }
+        else if (NameSpaceID() == kNameSpaceID_HTML) {
+            fputs("html:", out);
+        }
+        else if (NameSpaceID() == kNameSpaceID_None) {
+            fputs("none:", out);
+        }
+        else if (NameSpaceID() == kNameSpaceID_Unknown) {
+            fputs("unknown:", out);
+        }
+        else {
+            fputs("?:", out);
+        }
+        
         nsAutoString as;
-        tag->ToString(as);
+        Tag()->ToString(as);
         fputs(as, out);
-        NS_RELEASE(tag);
     }
 
     {
@@ -2421,7 +2434,6 @@ nsXULElement::List(FILE* out, PRInt32 aIndent) const
                 nsIAtom* attr = nsnull;
                 PRInt32 nameSpaceID;
                 GetAttributeNameAt(i, nameSpaceID, attr);
-
 
                 nsAutoString v;
                 GetAttribute(nameSpaceID, attr, v);
@@ -2441,7 +2453,7 @@ nsXULElement::List(FILE* out, PRInt32 aIndent) const
             return rv;
     }
 
-    fputs("]\n", out);
+    fputs(">\n", out);
 
     {
         PRInt32 nchildren;
@@ -3493,19 +3505,11 @@ nsXULElement::EnsureSlots()
     for (PRInt32 i = 0; i < mPrototype->mNumAttributes; ++i) {
         nsXULPrototypeAttribute* proto = &(mPrototype->mAttributes[i]);
 
-        // Create a CBufDescriptor to avoid copying the attribute's
-        // value just to set it.
-        nsXULAttribute* attr;
-        rv = nsXULAttribute::Create(NS_STATIC_CAST(nsIStyledContent*, this),
-                                    proto->mNameSpaceID,
-                                    proto->mName,
-                                    proto->mValue,
-                                    &attr);
-
+        // It's safe for us to call SetAttribute() now, because we
+        // won't re-enter. Plus, this saves us the hassle of copying
+        // all the crappy logic in SetAttribute() yet another time.
+        rv = SetAttribute(proto->mNameSpaceID, proto->mName, proto->mValue, PR_FALSE);
         if (NS_FAILED(rv)) return rv;
-
-        // transfer ownership of the nsXULAttribute object
-        mSlots->mAttributes->AppendElement(attr);
     }
 
     return NS_OK;
