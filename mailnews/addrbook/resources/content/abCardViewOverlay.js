@@ -339,6 +339,24 @@ function cvSetCityStateZip(node, city, state, zip)
 	return cvSetNode(node, text);
 }
 
+// zip, state, city order with 
+// format change customized for Japanese
+function cvSetCityStateZip_JA(node, city, state, zip)
+{
+  var text = "";
+
+  if ( zip )
+    // prepend the postal mark and
+    // append ideographic space
+    text += "\u3012" + zip + "\u3000";
+  if ( state )
+    text += state;
+  if ( city )
+    text += city;
+
+  return cvSetNode(node, text);
+}
+
 function cvSetNode(node, text)
 {
 	if ( node )
