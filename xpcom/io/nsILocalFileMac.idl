@@ -40,21 +40,44 @@
 
 %{C++
 #include <Files.h>
+#include <CFURL.h>
 %}
 
       native OSType(OSType);
       native FSSpec(FSSpec);
-[ref] native FSSpecRef(FSSpec);
 [ptr] native FSSpecPtr(FSSpec);
-
+      native FSRef(FSRef);
+[ptr] native FSRefPtr(FSRef);
+      native CFURLRef(CFURLRef);
 
 [uuid(614c3010-1dd2-11b2-be04-bcd57a64ffc9)]
 interface nsILocalFileMac : nsILocalFile
 {
    /**
+    * initWithCFURL
+    *
+    * Init this object with a CFURLRef
+    *
+    * @param   aCFURL         the CoreFoundation URL
+    *
+    */
+    void initWithCFURL(in CFURLRef aCFURL);
+
+   /**
+    * initWithFSRef
+    *
+    * Init this object with an FSRef
+    *
+    * @param   aFSRef         the native file spec
+    *
+    */
+    void initWithFSRef([const] in FSRefPtr aFSRef);
+
+   /**
     * initWithFSSpec
     *
     * Init this object with an FSSpec
+    * Legacy method - leaving in place for now
     *
     * @param   aFileSpec       the native file spec
     *
@@ -72,7 +95,22 @@ interface nsILocalFileMac : nsILocalFile
     *
     */
     void initToAppWithCreatorCode(in OSType aAppCreator);
-    
+ 
+    /**
+    * getFSRef
+    *
+    * Returns the FSRef of the file object.
+    *
+    * NOTE: Observes the state of the followLinks attribute.
+    * If the file object is an alias and followLinks is TRUE, returns
+    * the target of the alias. If followLinks is FALSE, returns
+    * the unresolved alias file.
+    *
+    * @return
+    *  
+    */ 
+    FSRef getFSRef();
+   
    /**
     * getFSSpec
     *
@@ -169,5 +207,5 @@ interface nsILocalFileMac : nsILocalFile
 
 %{C++
 extern "C" NS_EXPORT nsresult
-NS_NewLocalFileWithFSSpec(FSSpec* inSpec, PRBool followSymlinks, nsILocalFileMac* *result);
+NS_NewLocalFileWithFSSpec(const FSSpec* inSpec, PRBool followSymlinks, nsILocalFileMac* *result);
 %}

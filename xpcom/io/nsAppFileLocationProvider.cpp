@@ -403,7 +403,12 @@ class nsAppDirectoryEnumerator : public nsISimpleEnumerator
         while (!mNext && (mCurrentIndex < mMaxIndex))
         {
             PRBool dontCare;
-            (void)mProvider->GetFile(mKeyList[mCurrentIndex++], &dontCare, getter_AddRefs(mNext));
+            nsCOMPtr<nsIFile> testFile;
+            (void)mProvider->GetFile(mKeyList[mCurrentIndex++], &dontCare, getter_AddRefs(testFile));
+            // Don't return a file which does not exist.
+            PRBool exists;
+            if (testFile && NS_SUCCEEDED(testFile->Exists(&exists)) && exists)
+              mNext = testFile;
         }
         *result = mNext != nsnull;
         return NS_OK;
@@ -448,7 +453,7 @@ nsAppFileLocationProvider::GetFiles(const char *prop, nsISimpleEnumerator **_ret
     
     if (!nsCRT::strcmp(prop, NS_APP_PLUGINS_DIR_LIST))
     {
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
         static const char* keys[] = { NS_APP_PLUGINS_DIR };
 #else
         static const char* keys[] = { NS_ENV_PLUGINS_DIR, NS_USER_PLUGINS_DIR, NS_APP_PLUGINS_DIR };

@@ -19,6 +19,7 @@
  * 
  * Contributor(s): 
  *   Stuart Parmenter <pavlov@netscape.com>
+ *   Steve Dagley <sdagley@netscape.com>
  */
 
 #include "nsCOMPtr.h"
@@ -26,12 +27,12 @@
 #include "nsNetUtil.h"
 #include "nsIComponentManager.h"
 #include "nsILocalFile.h"
-#ifndef XP_MACOSX
 #include "nsILocalFileMac.h"
-#endif
 #include "nsIURL.h"
 #include "nsVoidArray.h"
-#include "nsIFileChannel.h"
+#include "nsIFileURL.h"
+#include "nsToolkit.h"
+#include "nsIEventSink.h"
 
 #include <InternetConfig.h>
 
@@ -43,78 +44,10 @@
 #include "nsIInternetConfigService.h"
 #include "nsIMIMEInfo.h"
 
-#include "nsIPlatformCharset.h"
-#include "nsICharsetConverterManager.h"
-#include "nsIFileURL.h"
-
-//
-// copied over from nsMacControl since we it's not being built.
-//
-
-static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
-
-static void GetFileSystemCharset(nsString & fileSystemCharset);
-static void GetFileSystemCharset(nsString & fileSystemCharset)
-{
-  static nsAutoString aCharset;
-  nsresult rv;
-
-  if (aCharset.Length() < 1) {
-    nsCOMPtr <nsIPlatformCharset> platformCharset = do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &rv);
-	  if (NS_SUCCEEDED(rv)) 
-		  rv = platformCharset->GetCharset(kPlatformCharsetSel_FileName, aCharset);
-
-    NS_ASSERTION(NS_SUCCEEDED(rv), "error getting platform charset");
-	  if (NS_FAILED(rv)) 
-		  aCharset.Assign(NS_LITERAL_STRING("x-mac-roman"));
-  }
-  fileSystemCharset = aCharset;
-}
-	
-
-static void StringToStr255(const nsString& aText, Str255& aStr255) ;
-static void StringToStr255(const nsString& aText, Str255& aStr255)
-{
-	static nsIUnicodeEncoder* sUnicodeEncoder = nsnull;
-	nsresult rv = NS_OK;
-	
-	// get file system charset and create a unicode encoder
-	if (!sUnicodeEncoder) {
-		nsAutoString fileSystemCharset;
-		GetFileSystemCharset(fileSystemCharset);
-
-		nsCOMPtr<nsICharsetConverterManager> ccm = 
-		         do_GetService(kCharsetConverterManagerCID, &rv); 
-		if (NS_SUCCEEDED(rv)) {
-			rv = ccm->GetUnicodeEncoder(&fileSystemCharset, &sUnicodeEncoder);
-            if (NS_SUCCEEDED(rv)) {
-              rv = sUnicodeEncoder->SetOutputErrorBehavior(nsIUnicodeEncoder::kOnError_Replace, nsnull, (PRUnichar)'?');
-            }
-		}
-	}
-
-	// converts from unicode to the file system charset
-	if (NS_SUCCEEDED(rv)) {
-		PRInt32 inLength = aText.Length();
-		PRInt32 outLength = 255;
-		rv = sUnicodeEncoder->Convert(aText.get(), &inLength, (char *) &aStr255[1], &outLength);
-		if (NS_SUCCEEDED(rv))
-			aStr255[0] = outLength;
-	}
-
-	if (NS_FAILED(rv)) {
-//		NS_ASSERTION(0, "error: charset covnersion");
-		NS_LossyConvertUCS2toASCII buffer(Substring(aText,0,254));
-		PRInt32 len = buffer.Length();
-		memcpy(&aStr255[1], buffer.get(), len);
-		aStr255[0] = len;
-	}
-}
-
 
 NS_IMPL_ISUPPORTS1(nsFilePicker, nsIFilePicker)
 
-
+OSType nsFilePicker::sCurrentProcessSignature = 0;
 
 //-------------------------------------------------------------------------
 //
@@ -129,6 +62,25 @@ nsFilePicker::nsFilePicker()
   // Zero out the type lists
   for (int i = 0; i < kMaxTypeListCount; i++)
   	mTypeLists[i] = 0L;
+  
+  mSelectedType = 0;
+
+  if (sCurrentProcessSignature == 0)
+  {
+    ProcessSerialNumber psn;
+    ProcessInfoRec  info;
+    
+    psn.highLongOfPSN = 0;
+    psn.lowLongOfPSN  = kCurrentProcess;
+
+    info.processInfoLength = sizeof(ProcessInfoRec);
+    info.processName = nil;
+    info.processAppSpec = nil;
+    OSErr err = ::GetProcessInformation(&psn, &info);
+    if (err == noErr)
+        sCurrentProcessSignature = info.processSignature;
+    // Try again next time if error
+  }
 }
 
 
@@ -197,42 +149,48 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   
   nsString filterList;
   char *filterBuffer = ToNewCString(filterList);
-
-  Str255 title;
-  Str255 defaultName;
-  StringToStr255(mTitle,title);
-  StringToStr255(mDefault,defaultName);
     
-  FSSpec theFile;
   PRInt16 userClicksOK = returnCancel;
+  nsCOMPtr<nsILocalFileMac> theFile(do_CreateInstance("@mozilla.org/file/local;1"));
+  if (!theFile)
+    return NS_ERROR_FAILURE;
   
   // XXX Ignore the filter list for now....
   
   if (mMode == modeOpen)
-    userClicksOK = GetLocalFile(title, &theFile);
+    userClicksOK = GetLocalFile(mTitle, theFile);
   else if (mMode == modeSave)
-    userClicksOK = PutLocalFile(title, defaultName, &theFile);
+    userClicksOK = PutLocalFile(mTitle, mDefault, theFile);
   else if (mMode == modeGetFolder)
-    userClicksOK = GetLocalFolder(title, &theFile);
+    userClicksOK = GetLocalFolder(mTitle, theFile);
 
   // Clean up filter buffers
   delete[] filterBuffer;
-
-#ifndef XP_MACOSX
+  
   if (userClicksOK == returnOK || userClicksOK == returnReplace)
-  {
-    nsCOMPtr<nsILocalFile>    localFile(do_CreateInstance("@mozilla.org/file/local;1"));
-	  nsCOMPtr<nsILocalFileMac> macFile(do_QueryInterface(localFile));
-
-    nsresult rv = macFile->InitWithFSSpec(&theFile);
-    if (NS_FAILED(rv)) return rv;
-
-    mFile = do_QueryInterface(macFile);
-  }
-#endif
+    mFile = theFile;
   
   *retval = userClicksOK;
   return NS_OK;
+}
+
+
+//
+// HandleShowPopupMenuSelect
+//
+// Figure out which menu item was selected and set mSelectedType accordingly
+// We do this by the rather easy/skanky method of using the menuType field of the
+// NavMenuItemSpec as the index into the menu items we've added
+// And oh so strangely enough Nav Services 3.0 uses the menuType field the same way - as an
+// index into CFArray of popupExtension strings so we don't have to special case this
+// based on TARGET_CARBON
+void nsFilePicker :: HandleShowPopupMenuSelect(NavCBRecPtr callBackParms)
+{
+  if (callBackParms)
+  {
+    NavMenuItemSpec menuItemSpec = *(NavMenuItemSpec*)callBackParms->eventData.eventDataParms.param;
+    mSelectedType = menuItemSpec.menuType;
+  }
 }
 
 
@@ -241,26 +199,50 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 //
 // An event filter proc for NavServices so the dialogs will be movable-modals.
 //
-static pascal void FileDialogEventHandlerProc( NavEventCallbackMessage msg, NavCBRecPtr cbRec, NavCallBackUserData data )
+pascal void nsFilePicker :: FileDialogEventHandlerProc(NavEventCallbackMessage msg, NavCBRecPtr cbRec, NavCallBackUserData callbackUD)
 {
+  nsFilePicker* self = NS_REINTERPRET_CAST(nsFilePicker*, callbackUD);
+  switch (msg)
+  {
+    case kNavCBEvent:
+      switch (cbRec->eventData.eventDataParms.event->what)
+      {
+        case updateEvt:
+        {
 #if 0
-	switch ( msg ) {
-	case kNavCBEvent:
-		switch ( cbRec->eventData.eventDataParms.event->what ) {
-		case updateEvt:
-      WindowPtr window = reinterpret_cast<WindowPtr>(cbRec->eventData.eventDataParms.event->message);
-      nsMacWindow* macWindow = nsMacMessageSink::GetNSWindowFromMacWindow(window);
-      ::BeginUpdate(window);
-      if (macWindow) {
-        EventRecord   theEvent = *cbRec->eventData.eventDataParms.event;
-        macWindow->HandleOSEvent(theEvent);
-      }        
-      ::EndUpdate(window);	        
-			break;
-		}
-		break;
-	}
+          WindowPtr window = reinterpret_cast<WindowPtr>(cbRec->eventData.eventDataParms.event->message);
+          nsCOMPtr<nsIEventSink> sink;
+          nsToolkit::GetWindowEventSink (window, getter_AddRefs(sink));
+          if (sink)
+          {
+            ::BeginUpdate(window);
+            PRBool handled = PR_FALSE;
+            sink->DispatchEvent(cbRec->eventData.eventDataParms.event, &handled);
+            ::EndUpdate(window);
+          }
 #endif
+        }
+        break;
+      }
+      break;
+    
+    case kNavCBStart:
+    {
+      NavMenuItemSpec  menuItem;
+      menuItem.version = kNavMenuItemSpecVersion;
+      menuItem.menuType = self->mSelectedType;
+      menuItem.menuCreator = self->mSelectedType;
+      menuItem.menuItemName[0] = 0;
+      (void)::NavCustomControl(cbRec->context, kNavCtlSelectCustomType, &menuItem);
+    }
+    break;
+    
+    case kNavCBPopupMenuSelect:
+      // Format menu boinked - see what's happening
+      if (self)
+        self->HandleShowPopupMenuSelect(cbRec);
+      break;
+  }
 }
 
 
@@ -341,216 +323,277 @@ nsFilePicker :: FileDialogFilterProc ( AEDesc* theItem, void* theInfo,
 } // FileDialogFilterProc                                        
 
 
-
-
 //-------------------------------------------------------------------------
 //
-// GetFile
+// GetLocalFile
 //
 // Use NavServices to do a GetFile. Returns PR_TRUE if the user presses OK in the dialog. If
 // they do so, the selected file is in the FSSpec.
 //
 //-------------------------------------------------------------------------
 PRInt16
-nsFilePicker::GetLocalFile(Str255 & inTitle, /* filter list here later */ FSSpec* outSpec)
+nsFilePicker::GetLocalFile(const nsString & inTitle, /* filter list here later */ nsILocalFileMac* aFile)
 {
- 	PRInt16 retVal = returnCancel;
-	NavReplyRecord reply;
-	NavDialogOptions dialogOptions;
-	NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
-	NavObjectFilterUPP filterProc = NewNavObjectFilterUPP(FileDialogFilterProc);  // doesn't really matter if this fails
+  NS_ENSURE_ARG(aFile);
 
-	OSErr anErr = NavGetDefaultDialogOptions(&dialogOptions);
-	if (anErr == noErr)	{	
-		// Set the options for how the get file dialog will appear
-		dialogOptions.dialogOptionFlags |= kNavNoTypePopup;
-		dialogOptions.dialogOptionFlags |= kNavDontAutoTranslate;
-		dialogOptions.dialogOptionFlags |= kNavDontAddTranslateItems;
-		dialogOptions.dialogOptionFlags ^= kNavAllowMultipleFiles;
-		::BlockMoveData(inTitle, dialogOptions.windowTitle, *inTitle + 1);
-		
-		// sets up the |mTypeLists| array so the filter proc can use it
-		MapFilterToFileTypes();
-		
-    // allow packages to be chosen if the filter is "*"
-    if ( mAllFilesDisplayed )
-      dialogOptions.dialogOptionFlags |= kNavSupportPackages;		
+  PRInt16 retVal = returnCancel;
+  NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
+  NavObjectFilterUPP filterProc = NewNavObjectFilterUPP(FileDialogFilterProc);  // doesn't really matter if this fails
+  NavDialogRef dialog;
+  NavDialogCreationOptions dialogCreateOptions;
+  // Set defaults
+  OSErr anErr = ::NavGetDefaultDialogCreationOptions(&dialogCreateOptions);
+  if (anErr != noErr)
+    return retVal;
+    
+  // Set the options for how the get file dialog will appear
+  dialogCreateOptions.optionFlags |= kNavNoTypePopup;
+  dialogCreateOptions.optionFlags |= kNavDontAutoTranslate;
+  dialogCreateOptions.optionFlags |= kNavDontAddTranslateItems;
+  dialogCreateOptions.optionFlags ^= kNavAllowMultipleFiles;
+  dialogCreateOptions.modality = kWindowModalityAppModal;
+  dialogCreateOptions.parentWindow = NULL;
+  CFStringRef titleRef = CFStringCreateWithCharacters(NULL, 
+                                                     (const UniChar *) inTitle.get(), inTitle.Length());
+  dialogCreateOptions.windowTitle = titleRef;
 
-		// Display the get file dialog. Only use a filter proc if there are any
-		// filters registered.
+  // sets up the |mTypeLists| array so the filter proc can use it
+  MapFilterToFileTypes();
+	
+  // allow packages to be chosen if the filter is "*"
+  if (mAllFilesDisplayed)
+    dialogCreateOptions.optionFlags |= kNavSupportPackages;		
+
+  // Display the get file dialog. Only use a filter proc if there are any
+  // filters registered.
+  anErr = ::NavCreateGetFileDialog(
+                                  &dialogCreateOptions,
+                                  NULL, //  NavTypeListHandle
+                                  eventProc,
+                                  NULL, //  NavPreviewUPP
+                                  mFilters.Count() ? filterProc : NULL,
+                                  this, //  inClientData
+                                  &dialog);
+  if (anErr == noErr) {
     nsWatchTask::GetTask().Suspend();  
-		anErr = ::NavGetFile(
-					NULL,
-					&reply,
-					&dialogOptions,
-					eventProc,
-					NULL, // preview proc
-					mFilters.Count() ? filterProc : NULL,
-					NULL, //typeList,
-					this); // callbackUD - used by the filterProc
+    anErr = ::NavDialogRun(dialog);
     nsWatchTask::GetTask().Resume();  
-	
-		// See if the user has selected save
-		if (anErr == noErr && reply.validRecord) {
-			AEKeyword	theKeyword;
-			DescType	actualType;
-			Size		actualSize;
-			FSSpec		theFSSpec;
-			
-			// Get the FSSpec for the file to be opened
-			anErr = AEGetNthPtr(&(reply.selection), 1, typeFSS, &theKeyword, &actualType,
-				&theFSSpec, sizeof(theFSSpec), &actualSize);
-			
-			if (anErr == noErr)
-			{
-				*outSpec = theFSSpec;	// Return the FSSpec
-				retVal = returnOK;
-				
-				// Some housekeeping for Nav Services 
-				::NavDisposeReply(&reply);
-			}
+    if (anErr == noErr) {
+    	NavReplyRecord reply;
+      anErr = ::NavDialogGetReply(dialog, &reply);
+      if (anErr == noErr && reply.validRecord) {
+        AEKeyword   theKeyword;
+        DescType    actualType;
+        Size        actualSize;
+        FSRef       theFSRef;
+        
+          // Get the FSRef for the file to be opened (or directory in case of a package)
+        anErr = ::AEGetNthPtr(&(reply.selection), 1, typeFSRef, &theKeyword, &actualType,
+                              &theFSRef, sizeof(theFSRef), &actualSize);
+        if (anErr == noErr) {
+          if (NS_SUCCEEDED(aFile->InitWithFSRef(&theFSRef))) {
+            retVal = returnOK;
+          }
+        }
+        // Some housekeeping for Nav Services 
+        ::NavDisposeReply(&reply);
+      }
+    }
+    ::NavDialogDispose(dialog);
+  }
+  
+  // Free the CF objects from the dialogCreateOptions struct
+  if (dialogCreateOptions.windowTitle)
+    CFRelease(dialogCreateOptions.windowTitle);
 
-		} // if user clicked OK	
-	} // if can get dialog options
+  if (filterProc)
+    ::DisposeNavObjectFilterUPP(filterProc);
 	
-	if ( eventProc )
-		::DisposeNavEventUPP(eventProc);
+  if ( eventProc )
+    ::DisposeNavEventUPP(eventProc);
 		
-	return retVal;
-
+  return retVal;
 } // GetFile
 
 
 //-------------------------------------------------------------------------
 //
-// GetFolder
+// GetLocalFolder
 //
 // Use NavServices to do a PutFile. Returns PR_TRUE if the user presses OK in the dialog. If
 // they do so, the folder location is in the FSSpec.
 //
 //-------------------------------------------------------------------------
 PRInt16
-nsFilePicker::GetLocalFolder(Str255 & inTitle, FSSpec* outSpec)
+nsFilePicker::GetLocalFolder(const nsString & inTitle, nsILocalFileMac* aFile)
 {
- 	PRInt16 retVal = returnCancel;
-	NavReplyRecord reply;
-	NavDialogOptions dialogOptions;
-	NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
+  NS_ENSURE_ARG(aFile);
+  
+  PRInt16 retVal = returnCancel;
+  NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
+  NavDialogRef dialog;
+  NavDialogCreationOptions dialogCreateOptions;
 
-	OSErr anErr = NavGetDefaultDialogOptions(&dialogOptions);
-	if (anErr == noErr)	{	
-		// Set the options for how the get file dialog will appear
-		dialogOptions.dialogOptionFlags |= kNavNoTypePopup;
-		dialogOptions.dialogOptionFlags |= kNavDontAutoTranslate;
-		dialogOptions.dialogOptionFlags |= kNavDontAddTranslateItems;
-		dialogOptions.dialogOptionFlags ^= kNavAllowMultipleFiles;
-		::BlockMoveData(inTitle, dialogOptions.windowTitle, *inTitle + 1);
-		
-		// Display the get file dialog
+  // Set defaults
+  OSErr anErr = ::NavGetDefaultDialogCreationOptions(&dialogCreateOptions);
+  if (anErr != noErr)
+    return retVal;
+
+  // Set the options for how the get file dialog will appear
+  dialogCreateOptions.optionFlags |= kNavNoTypePopup;
+  dialogCreateOptions.optionFlags |= kNavDontAutoTranslate;
+  dialogCreateOptions.optionFlags |= kNavDontAddTranslateItems;
+  dialogCreateOptions.optionFlags ^= kNavAllowMultipleFiles;
+  dialogCreateOptions.modality = kWindowModalityAppModal;
+  dialogCreateOptions.parentWindow = NULL;
+  CFStringRef titleRef = CFStringCreateWithCharacters(NULL, (const UniChar *) inTitle.get(), inTitle.Length());
+  dialogCreateOptions.windowTitle = titleRef;
+
+  anErr = ::NavCreateChooseFolderDialog(
+                                        &dialogCreateOptions,
+                                        eventProc,
+                                        NULL, // filter proc
+                                        this, // inClientData
+                                        &dialog);
+
+  if (anErr == noErr) {
     nsWatchTask::GetTask().Suspend();  
-		anErr = ::NavChooseFolder(
-					NULL,
-					&reply,
-					&dialogOptions,
-					eventProc,
-					NULL, // filter proc
-					NULL); // callbackUD	
+    anErr = ::NavDialogRun(dialog);
     nsWatchTask::GetTask().Resume();  
+    if (anErr == noErr) {
+    	NavReplyRecord reply;
+      anErr = ::NavDialogGetReply(dialog, &reply);
+      if (anErr == noErr && reply.validRecord) {
+        AEKeyword   theKeyword;
+        DescType    actualType;
+        Size        actualSize;
+        FSRef       theFSRef;
+         
+        // Get the FSSpec for the selected folder
+        anErr = ::AEGetNthPtr(&(reply.selection), 1, typeFSRef, &theKeyword, &actualType,
+                              &theFSRef, sizeof(theFSRef), &actualSize);
+        if (anErr == noErr) {
+          if (NS_SUCCEEDED(aFile->InitWithFSRef(&theFSRef))) {
+            retVal = returnOK;
+          }
+        }
+        // Some housekeeping for Nav Services 
+        ::NavDisposeReply(&reply);
+      }
+    }
+    ::NavDialogDispose(dialog);
+  }
+  
+  // Free the CF objects from the dialogCreateOptions struct
+  if (dialogCreateOptions.windowTitle)
+    CFRelease(dialogCreateOptions.windowTitle);
 	
-		// See if the user has selected save
-		if (anErr == noErr && reply.validRecord) {
-			AEKeyword	theKeyword;
-			DescType	actualType;
-			Size		actualSize;
-			FSSpec		theFSSpec;
-			
-			// Get the FSSpec for the file to be opened
-			anErr = AEGetNthPtr(&(reply.selection), 1, typeFSS, &theKeyword, &actualType,
-				&theFSSpec, sizeof(theFSSpec), &actualSize);
-			
-			if (anErr == noErr) {
-				*outSpec = theFSSpec;	// Return the FSSpec
-				retVal = returnOK;
-				
-				// Some housekeeping for Nav Services 
-				::NavDisposeReply(&reply);
-			}
-
-		} // if user clicked OK	
-	} // if can get dialog options
-	
-	if ( eventProc )
-		::DisposeNavEventUPP(eventProc);
+  if (eventProc)
+    ::DisposeNavEventUPP(eventProc);
 		
-	return retVal;
+  return retVal;
 } // GetFolder
 
 PRInt16
-nsFilePicker::PutLocalFile(Str255 & inTitle, Str255 & inDefaultName, FSSpec* outFileSpec)
+nsFilePicker::PutLocalFile(const nsString & inTitle, const nsString & inDefaultName, nsILocalFileMac* aFile)
 {
- 	PRInt16 retVal = returnCancel;
-	NavReplyRecord reply;
-	NavDialogOptions dialogOptions;
-	NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
-	OSType				typeToSave = 'TEXT';
-	OSType				creatorToSave = 'MOZZ';
+  NS_ENSURE_ARG(aFile);
+  
+  PRInt16 retVal = returnCancel;
+  NavEventUPP eventProc = NewNavEventUPP(FileDialogEventHandlerProc);  // doesn't really matter if this fails
+  OSType typeToSave = 'TEXT';
+  OSType creatorToSave = (sCurrentProcessSignature == 0) ? 'MOZZ' : sCurrentProcessSignature;
+  NavDialogRef dialog;
+  NavDialogCreationOptions dialogCreateOptions;
 
-	OSErr anErr = NavGetDefaultDialogOptions(&dialogOptions);
-	if (anErr == noErr)	{	
-		// Set the options for how the get file dialog will appear
-		dialogOptions.dialogOptionFlags |= kNavNoTypePopup;
-		dialogOptions.dialogOptionFlags |= kNavDontAutoTranslate;
-		dialogOptions.dialogOptionFlags |= kNavDontAddTranslateItems;
-		dialogOptions.dialogOptionFlags ^= kNavAllowMultipleFiles;
-		::BlockMoveData(inTitle, dialogOptions.windowTitle, *inTitle + 1);
-		::BlockMoveData(inDefaultName, dialogOptions.savedFileName, *inDefaultName + 1);
-		
-		// Display the get file dialog
+  // Set defaults
+  OSErr anErr = ::NavGetDefaultDialogCreationOptions(&dialogCreateOptions);
+  if (anErr != noErr)
+    return retVal;
+
+  // Set the options for how the put file dialog will appear
+  if (mTitles.Count() == 0)
+  { // If we have no filter titles then suppress the save type popup
+    dialogCreateOptions.optionFlags |= kNavNoTypePopup;
+  }
+  else
+  {
+    dialogCreateOptions.optionFlags &= ~kNavAllowStationery;  // remove Stationery option
+    creatorToSave = kNavGenericSignature;   // This supresses the default format menu items
+    SetupFormatMenuItems(&dialogCreateOptions);
+  }
+  
+  dialogCreateOptions.optionFlags |= kNavDontAutoTranslate;
+  dialogCreateOptions.optionFlags |= kNavDontAddTranslateItems;
+  dialogCreateOptions.optionFlags ^= kNavAllowMultipleFiles;
+  dialogCreateOptions.modality = kWindowModalityAppModal;
+  dialogCreateOptions.parentWindow = NULL;
+  CFStringRef titleRef = CFStringCreateWithCharacters(NULL, 
+                                                      (const UniChar *) inTitle.get(), inTitle.Length());
+  dialogCreateOptions.windowTitle = titleRef;
+  CFStringRef defaultFileNameRef = CFStringCreateWithCharacters(NULL, 
+                                                                (const UniChar *) inDefaultName.get(), 
+                                                                inDefaultName.Length());
+  dialogCreateOptions.saveFileName = defaultFileNameRef;
+
+  anErr = ::NavCreatePutFileDialog(
+                                   &dialogCreateOptions,
+                                   typeToSave,
+                                   creatorToSave,
+                                   eventProc,
+                                   this, // inClientData
+                                   &dialog);
+
+  if (anErr == noErr) {
     nsWatchTask::GetTask().Suspend();  
-		anErr = ::NavPutFile(
-					NULL,
-					&reply,
-					&dialogOptions,
-					eventProc,
-					typeToSave,
-					creatorToSave,
-					NULL); // callbackUD	
+    anErr = ::NavDialogRun(dialog);
     nsWatchTask::GetTask().Resume();  
-	
-		// See if the user has selected save
-		if (anErr == noErr && reply.validRecord)
-		{
-			AEKeyword	theKeyword;
-			DescType	actualType;
-			Size		actualSize;
-			FSSpec		theFSSpec;
-			
-			// Get the FSSpec for the file to be opened
-			anErr = AEGetNthPtr(&(reply.selection), 1, typeFSS, &theKeyword, &actualType,
-				&theFSSpec, sizeof(theFSSpec), &actualSize);
-			
-			if (anErr == noErr) {
-				*outFileSpec = theFSSpec;	// Return the FSSpec
-				
-				if (reply.replacing)
-					retVal = returnReplace;
-				else
-					retVal = returnOK;
-				
-				// Some housekeeping for Nav Services 
-				::NavCompleteSave(&reply, kNavTranslateInPlace);
-				::NavDisposeReply(&reply);
-			}
+    if (anErr == noErr) {
+    	NavReplyRecord reply;
+      anErr = ::NavDialogGetReply(dialog, &reply);
+      if (anErr == noErr && reply.validRecord) {
+        AEKeyword   theKeyword;
+        DescType    actualType;
+        Size        actualSize;
+        FSRef       parentFSRef;
+        CFURLRef    parentURLRef, fullURLRef;
 
-		} // if user clicked OK	
-	} // if can get dialog options
+        // Get the FSRef for the directory where the file to be saved
+        anErr = ::AEGetNthPtr(&(reply.selection), 1, typeFSRef, &theKeyword, &actualType,
+                              &parentFSRef, sizeof(parentFSRef), &actualSize);
+        if (anErr == noErr) {          
+          nsresult rv = aFile->InitWithFSRef(&parentFSRef);
+          if (NS_SUCCEEDED(rv)) {
+            rv = aFile->Append(nsDependentString(::CFStringGetCharactersPtr(reply.saveFileName)));
+            if (NS_SUCCEEDED(rv)) {
+              if (reply.replacing)
+                retVal = returnReplace;
+              else
+                retVal = returnOK;            
+            }
+          }
+        }  			  
+        // Some housekeeping for Nav Services 
+        ::NavCompleteSave(&reply, kNavTranslateInPlace);
+        ::NavDisposeReply(&reply);
+      }
+    }
+    ::NavDialogDispose(dialog);
+  }  
+  
+  // Free the CF objects from the dialogCreateOptions struct
+  if (dialogCreateOptions.windowTitle)
+    CFRelease(dialogCreateOptions.windowTitle);
+  if (dialogCreateOptions.saveFileName)
+    CFRelease(dialogCreateOptions.saveFileName);
+  if (dialogCreateOptions.popupExtension)
+    CFRelease(dialogCreateOptions.popupExtension);
 	
-	if ( eventProc )
-		::DisposeNavEventUPP(eventProc);
+  if (eventProc)
+    ::DisposeNavEventUPP(eventProc);
 	
-	return retVal;	
+  return retVal;	
 }
-
 
 //
 // MapFilterToFileTypes
@@ -661,6 +704,34 @@ nsFilePicker :: MapFilterToFileTypes ( )
 } // MapFilterToFileTypes
 
 
+//-------------------------------------------------------------------------
+// Util func to take the array of mTitles and make it into something
+// Nav Services can use.
+// This is the TARGET_CARBON version for Nav Services 3.0
+//-------------------------------------------------------------------------
+void nsFilePicker::SetupFormatMenuItems (NavDialogCreationOptions* dialogCreateOptions)
+{
+  PRInt32   numMenuItems = mTitles.Count();
+  PRInt32   index;
+  CFStringRef      itemStr = NULL;
+  CFArrayCallBacks callBacks = kCFTypeArrayCallBacks;
+  
+  // Under NavServices 3.0 the popupExtension is actually a CFArray of CFStrings
+  dialogCreateOptions->popupExtension = CFArrayCreateMutable(kCFAllocatorDefault, numMenuItems, &callBacks);
+  
+  if (dialogCreateOptions->popupExtension)
+  {
+    for (index = 0; index < numMenuItems; ++index)
+    {
+      const nsString& titleWide = *mTitles[index];
+      itemStr = CFStringCreateWithCharacters(NULL, (const unsigned short *)titleWide.get(), titleWide.Length());
+      CFArrayInsertValueAtIndex((CFMutableArrayRef)dialogCreateOptions->popupExtension, index, (void*)itemStr);
+      CFRelease(itemStr);
+    }
+  }
+}
+
+//-------------------------------------------------------------------------
 NS_IMETHODIMP nsFilePicker::GetFile(nsILocalFile **aFile)
 {
   NS_ENSURE_ARG_POINTER(aFile);
@@ -739,12 +810,37 @@ NS_IMETHODIMP nsFilePicker::GetDisplayDirectory(nsILocalFile **aDirectory)
 }
 
 
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
 NS_IMETHODIMP
 nsFilePicker::AppendFilter(const PRUnichar *aTitle, const PRUnichar *aFilter)
 {
   mFilters.AppendString(nsDependentString(aFilter));
   mTitles.AppendString(nsDependentString(aTitle));
   
+  return NS_OK;
+}
+
+
+//-------------------------------------------------------------------------
+//
+// Get the filter index
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsFilePicker::GetFilterIndex(PRInt32 *aFilterIndex)
+{
+  *aFilterIndex = mSelectedType;
+  return NS_OK;
+}
+
+//-------------------------------------------------------------------------
+//
+// Set the filter index
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsFilePicker::SetFilterIndex(PRInt32 aFilterIndex)
+{
+  mSelectedType = aFilterIndex;
   return NS_OK;
 }
 
