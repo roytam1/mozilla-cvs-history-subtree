@@ -92,7 +92,7 @@ moz_test_binary()
 }
 
 
-MOZ_PROGRAM=$MOZ_APPRUNNER_NAME
+MOZ_PROGRAM=$MOZ_VIEWER_NAME
 
 moz_test_binary $MOZ_PROGRAM
 
