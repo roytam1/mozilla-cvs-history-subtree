@@ -23,8 +23,8 @@
 #include "nsExceptionService.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
-#include <prthread.h>
-#include <prlock.h>
+#include "prthread.h"
+#include "prlock.h"
 
 static const PRUintn BAD_TLS_INDEX = (PRUintn) -1;
 
