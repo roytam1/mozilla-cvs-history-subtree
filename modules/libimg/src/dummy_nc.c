@@ -201,7 +201,11 @@ dum_TitleObserver(XP_Observable observerable, XP_ObservableMsg msg,
 
     switch(msg){
         case IL_DESCRIPTION:
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
             lo_view_title(context, data->description);
+#endif /* MOZ_NGLAYOUT */
             break;
 
         case IL_IMAGE_DESTROYED:

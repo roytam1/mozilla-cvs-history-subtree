@@ -369,12 +369,16 @@ IL_PreferredStream(URL_Struct *urls)
 			/* discover if layout is blocked on this image */
 			for (image_req = ic->clients; image_req;
                  image_req = image_req->next) {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 #ifndef M12N                    /* XXXM12N Fixme.  Observer for layout?
                                    Query mechanism for FE? */
 				if ((LO_BlockedOnImage(c->cx,
                                        (LO_ImageStruct*)c->client) == TRUE) ||
                     FE_ImageOnScreen(c->cx, (LO_ImageStruct*)c->client) )
 #endif /* M12N */
+#endif /* MOZ_NGLAYOUT */
 				return PR_TRUE;
 			}
 		}
