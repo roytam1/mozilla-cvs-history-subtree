@@ -27,6 +27,7 @@
 #include "nsINNTPArticleList.h"
 #include "nsIMsgNewsFolder.h"
 #include "nsIMsgDatabase.h"
+#include "nsMsgKeyArray.h"
 
 class nsNNTPArticleList : public nsINNTPArticleList
 #ifdef HAVE_CHANGELISTENER
@@ -40,22 +41,18 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSINNTPARTICLELIST
 
-    // other stuff
 protected:
-	struct MSG_NewsKnown	m_idsOnServer;
+    nsMsgKeyArray m_idsInDB;
 
-    /* formerly m_groupName */
+#ifdef DEBUG_seth
+    nsMsgKeyArray m_idsOnServer;
+    nsMsgKeyArray m_idsDeleted;
+#endif
+
 	nsCOMPtr <nsIMsgNewsFolder> m_newsFolder;
     nsCOMPtr <nsIMsgDatabase> m_newsDB;
 
-#ifdef HAVE_IDARRAY
-	IDArray					m_idsInDB;
-#ifdef DEBUG_bienvenu
-	IDArray					m_idsDeleted;
-#endif
-#endif
-	PRInt32					m_dbIndex;
-	nsMsgKey				m_highwater;
+	PRUint32  m_dbIndex;
 };
 
 #endif /* nsNNTPArticleList_h___ */

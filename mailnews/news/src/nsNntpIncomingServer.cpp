@@ -1524,12 +1524,13 @@ nsNntpIncomingServer::SetGroupNeedsExtraInfo(const char *name, PRBool needsExtra
 NS_IMETHODIMP
 nsNntpIncomingServer::GroupNotFound(const char *name, PRBool opening)
 {
-  NS_ASSERTION(0,"not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(name);
+  printf("alert, asking if the user wants to auto unsubscribe from %s\n", name);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsNntpIncomingServer::SetPrettyName(const char *name, const char *prettyName)
+nsNntpIncomingServer::SetPrettyNameForGroup(const char *name, const char *prettyName)
 {
   NS_ASSERTION(0,"not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;

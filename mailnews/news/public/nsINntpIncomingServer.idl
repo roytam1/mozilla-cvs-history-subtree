@@ -99,5 +99,5 @@ interface nsINntpIncomingServer : nsISupports {
 
 	void groupNotFound(in string group, in boolean opening);
 
-	void setPrettyName(in string name, in string prettyName);
+	void setPrettyNameForGroup(in string name, in string prettyName);
 };

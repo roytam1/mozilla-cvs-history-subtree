@@ -304,16 +304,13 @@ NS_IMETHODIMP nsNntpService::GetUrlForUri(const char *aMessageURI, nsIURI **aURL
   NS_ENSURE_ARG_POINTER(aMessageURI);
 
   // double check that it is a news_message:/ uri
-  if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen) == 0)
-  {
-      rv = ConstructNntpUrl(aMessageURI, nsnull, aMsgWindow, aURL);
-      NS_ENSURE_SUCCESS(rv,rv);
-  }
-  else {
+  if (PL_strncmp(aMessageURI, kNewsMessageRootURI, kNewsMessageRootURILen)) {
     rv = NS_ERROR_UNEXPECTED;
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
+  rv = ConstructNntpUrl(aMessageURI, nsnull, aMsgWindow, aURL);
+  NS_ENSURE_SUCCESS(rv,rv);
   return rv;
 
 }
@@ -366,24 +363,13 @@ nsNntpService::GetFolderFromUri(const char *uri, nsIMsgFolder **folder)
     NS_ENSURE_SUCCESS(rv,rv);
 
     nsCOMPtr<nsIRDFResource> res;
-    if (PL_strchr (uri, '@') || PL_strstr(uri,"%40")) {
-      // this is a message id url, so we want to get the server for the uri.
-      nsCAutoString serverURI(uri);
-      PRInt32 pos = serverURI.RFindChar('/');
-      serverURI.Cut(pos, serverURI.Length() - pos);
-
-      rv = rdf->GetResource(serverURI.get(), getter_AddRefs(res));
-    }
-    else {
-      rv = rdf->GetResource(uri, getter_AddRefs(res));
-    }
+    rv = rdf->GetResource(uri, getter_AddRefs(res));
     NS_ENSURE_SUCCESS(rv,rv);
 
     rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **)folder);
     NS_ENSURE_SUCCESS(rv,rv);
     return NS_OK;
 }
-
 
 NS_IMETHODIMP
 nsNntpService::CopyMessage(const char * aSrcMailboxURI, nsIStreamListener * aMailboxCopyHandler, PRBool moveMessage,
@@ -1041,19 +1027,21 @@ NS_IMETHODIMP nsNntpService::GetNewNews(nsINntpIncomingServer *nntpServer, const
 }
 
 NS_IMETHODIMP 
-nsNntpService::CancelMessage(const char *uri, nsISupports * aConsumer, nsIUrlListener * aUrlListener, nsIMsgWindow *aMsgWindow, nsIURI ** aURL)
+nsNntpService::CancelMessage(const char *cancelURL, const char *messageURI, nsISupports * aConsumer, nsIUrlListener * aUrlListener, nsIMsgWindow *aMsgWindow, nsIURI ** aURL)
 {
   nsresult rv;
-  NS_ENSURE_ARG_POINTER(uri);
+  NS_ENSURE_ARG_POINTER(cancelURL);
+  NS_ENSURE_ARG_POINTER(messageURI);
 
   nsCOMPtr<nsIURI> url;
   // the url should have "?cancel" already on it
-  rv = ConstructNntpUrl(uri, aUrlListener,  aMsgWindow, getter_AddRefs(url));
+  rv = ConstructNntpUrl(cancelURL, aUrlListener,  aMsgWindow, getter_AddRefs(url));
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr<nsINntpUrl> nntpUrl = do_QueryInterface(url);
   if (nntpUrl) {
 	  nntpUrl->SetNewsAction(nsINntpUrl::ActionCancelArticle);
+      nntpUrl->SetOriginalMessageURI(messageURI);
   }
 
   rv = RunNewsUrl(url, aMsgWindow, aConsumer);  

@@ -948,14 +948,31 @@ nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages, nsIMsgWindow *aMsgWi
   nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(0));
   nsCOMPtr<nsIMsgDBHdr> msgHdr(do_QueryInterface(msgSupports));
 
-  nsXPIDLCString messageUri;
-  rv = GetUriForMsg(msgHdr, getter_Copies(messageUri));
+  // turn "news_message://sspitzer@news.mozilla.org/netscape.test#5428"
+  // into "news://sspitzer@news.mozilla.org/23423@netscape.com"
+
+  nsCOMPtr <nsIMsgIncomingServer> server;
+  rv = GetServer(getter_AddRefs(server));
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCAutoString cancelUrl((const char *)messageUri);
-  cancelUrl += "?cancel";
+  nsXPIDLCString serverURI;
+  rv = server->GetServerURI(getter_Copies(serverURI));
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  rv = nntpService->CancelMessage(cancelUrl.get(), nsnull /* consumer */, nsnull, aMsgWindow, nsnull);
+  nsXPIDLCString messageID;
+  rv = msgHdr->GetMessageId(getter_Copies(messageID));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCAutoString cancelURL((const char *)serverURI);
+  cancelURL += '/';
+  cancelURL += (const char *)messageID;
+  cancelURL += "?cancel";
+
+  nsXPIDLCString messageURI;
+  rv = GetUriForMsg(msgHdr, getter_Copies(messageURI));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = nntpService->CancelMessage(cancelURL.get(), messageURI, nsnull /* consumer */, nsnull, aMsgWindow, nsnull);
   NS_ENSURE_SUCCESS(rv,rv);
   
   return rv;
@@ -1795,9 +1812,12 @@ NS_IMETHODIMP nsMsgNewsFolder::GetMessageIdForKey(nsMsgKey key, char **result)
 {
   nsresult rv;
 
+  if (!mDatabase) return NS_ERROR_UNEXPECTED;
+
   nsCOMPtr <nsIMsgDBHdr> hdr;
   rv = mDatabase->GetMsgHdrForKey(key, getter_AddRefs(hdr));
   NS_ENSURE_SUCCESS(rv,rv);
+  if (!hdr) return NS_ERROR_INVALID_ARG;
 
   return hdr->GetMessageId(result);
 }

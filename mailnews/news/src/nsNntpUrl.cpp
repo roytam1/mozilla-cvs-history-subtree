@@ -51,19 +51,24 @@ static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
     
 nsNntpUrl::nsNntpUrl()
 {
-	// nsINntpUrl specific code...
-	m_offlineNews = nsnull;
+#ifdef DEBUG_seth
+  printf("XXX nsNntpUrl(%x)\n",(int)this);
+#endif
+  m_offlineNews = nsnull;
   m_newsgroupPost = nsnull;
-	m_newsAction = nsINntpUrl::ActionGetNewNews;
+  m_newsAction = nsINntpUrl::ActionGetNewNews;
   m_addDummyEnvelope = PR_FALSE;
   m_canonicalLineEnding = PR_FALSE;
-	m_filePath = nsnull;
-	m_getOldMessages = PR_FALSE;
+  m_filePath = nsnull;
+  m_getOldMessages = PR_FALSE;
 }
- 
+         
 nsNntpUrl::~nsNntpUrl()
 {
-	NS_IF_RELEASE(m_offlineNews);
+#ifdef DEBUG_seth
+  printf("XXX ~nsNntpUrl(%x)\n",(int)this);
+#endif
+  NS_IF_RELEASE(m_offlineNews);
   NS_IF_RELEASE(m_newsgroupPost);
 }
   
@@ -209,9 +214,6 @@ NS_IMETHODIMP nsNntpUrl::GetMessageHeader(nsIMsgDBHdr ** aMsgHdr)
   nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-#ifdef DEBUG_seth
-  printf("GetMessageHeader for %s\n",mURI.get());
-#endif
   nsCOMPtr <nsIMsgMessageService> msgService = do_QueryInterface(nntpService, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
@@ -300,4 +302,17 @@ NS_IMETHODIMP nsNntpUrl::SetCharsetOverRide(const PRUnichar * aCharacterSet)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsNntpUrl::SetOriginalMessageURI(const char *uri)
+{
+    mOriginalMessageURI = uri;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsNntpUrl::GetOriginalMessageURI(char **uri)
+{
+    NS_ENSURE_ARG_POINTER(uri);
+    *uri = nsCRT::strdup((const char *)mOriginalMessageURI);
+    if (!*uri) return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
 

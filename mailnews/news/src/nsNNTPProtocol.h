@@ -213,8 +213,6 @@ private:
   PRInt32     m_responseCode;    /* code returned from NNTP server */
 	PRInt32 	m_previousResponseCode; 
   char       *m_responseText;   /* text returned from NNTP server */
-	nsXPIDLCString m_hostName;
-  nsXPIDLCString m_userName;
     
   char		*m_dataBuf;
   PRUint32	 m_dataBufSize;
@@ -375,8 +373,9 @@ private:
 	PRInt32 ListXActive();
 	PRInt32 ListXActiveResponse(nsIInputStream * inputStream, PRUint32 length);
 
-	PRInt32 ListGroup();
-	PRInt32 ListGroupResponse(nsIInputStream * inputStream, PRUint32 length);
+    // for "?list-ids"
+	PRInt32 SendListGroup();
+	PRInt32 SendListGroupResponse(nsIInputStream * inputStream, PRUint32 length);
 
 	// Searching Protocol....
 	PRInt32 Search();
@@ -387,7 +386,7 @@ private:
 	// End of Protocol Methods
 	////////////////////////////////////////////////////////////////////////////////////////
 
-	nsresult ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
+	nsresult ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
 
 	void SetProgressBarPercent(PRUint32 aProgress, PRUint32 aProgressMax);
 	nsresult SetProgressStatus(const PRUnichar *aMessage);
@@ -405,7 +404,8 @@ private:
     PRTime m_startTime;
     PRInt32 mNumGroupsListed;
     nsMsgKey m_key;
-    
+
+    nsresult SetCurrentGroup(); /* sets m_currentGroup.  should be called after doing a successful GROUP command */
 };
 
 NS_BEGIN_EXTERN_C

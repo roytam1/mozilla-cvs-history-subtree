@@ -85,11 +85,17 @@ extern PRInt32 net_NewsChunkSize;
 nsNNTPNewsgroupList::nsNNTPNewsgroupList()
 {
     NS_INIT_REFCNT();
+#ifdef DEBUG_seth
+    printf("XXX nsNNTPNewsgroupList(%x)\n",(int)this);
+#endif
 }
 
 
 nsNNTPNewsgroupList::~nsNNTPNewsgroupList()
 {
+#ifdef DEBUG_seth
+    printf("XXX ~nsNNTPNewsgroupList(%x)\n",(int)this);
+#endif
 	CleanUp();
 }
 
@@ -115,7 +121,7 @@ nsNNTPNewsgroupList::Initialize(nsINntpUrl *runningURL, nsIMsgNewsFolder *newsFo
 	m_maxArticles = 0;
 	m_firstMsgToDownload = 0;
 	m_lastMsgToDownload = 0;
-	m_runningURL=runningURL;
+	m_runningURL = runningURL;
     return NS_OK;
 }
 
@@ -806,7 +812,6 @@ nsNNTPNewsgroupList::FinishXOVERLINE(int status, int *newstatus)
 	}
     if (newstatus) *newstatus=0;
     return NS_OK;
-	// nsNNTPNewsgroupList object gets deleted by the master when a new one is created.
 }
 
 nsresult

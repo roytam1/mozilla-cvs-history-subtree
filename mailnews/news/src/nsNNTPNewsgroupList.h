@@ -91,6 +91,7 @@ protected:
 
   nsCOMPtr <nsIMsgNewsFolder> m_newsFolder;
   nsCOMPtr <nsIMsgDatabase> m_newsDB;
+  nsCOMPtr <nsINntpUrl> m_runningURL;
   
   nsMsgKey		m_lastProcessedNumber;
   nsMsgKey		m_firstMsgNumber;
@@ -100,7 +101,6 @@ protected:
   
   struct MSG_NewsKnown	m_knownArts;
   nsMsgKeySet		*m_set;
-  nsINntpUrl        *m_runningURL;
 };
     
 #endif /* nsNNTPNewsgroupListState_h___ */
