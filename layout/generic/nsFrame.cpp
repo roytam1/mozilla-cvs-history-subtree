@@ -2055,7 +2055,7 @@ nsFrame::GetFrameForPoint(const nsPoint& aPoint,
 
 // Resize and incremental reflow
 
-virtual void
+/* virtual */ void
 nsFrame::MarkIntrinsicWidthsDirty()
 {
   // This version is meant only for what used to be box-to-block adaptors.
@@ -2073,14 +2073,14 @@ nsFrame::MarkIntrinsicWidthsDirty()
   }
 }
 
-virtual nscoord
+/* virtual */ nscoord
 nsFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
 {
   NS_NOTREACHED("frame didn't implement GetMinWidth");
   return 0;
 }
 
-virtual nscoord
+/* virtual */ nscoord
 nsFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
   NS_NOTREACHED("frame didn't implement GetPrefWidth");
