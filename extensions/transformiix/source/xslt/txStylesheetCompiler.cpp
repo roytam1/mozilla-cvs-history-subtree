@@ -172,13 +172,15 @@ txStylesheetCompiler::startElement(const PRUnichar *aName,
     }
 
     for (i = 0; i < aAttrCount; ++i) {
-        if (atts[i].mPrefix) {
+        if (atts[i].mPrefix && atts[i].mPrefix != txXMLAtoms::xmlns) {
             atts[i].mNamespaceID =
                 mElementContext->mMappings->lookupNamespace(atts[i].mPrefix);
             NS_ENSURE_TRUE(atts[i].mNamespaceID != kNameSpaceID_Unknown,
                            NS_ERROR_FAILURE);
         }
-        else if (atts[i].mLocalName == txXMLAtoms::xmlns) {
+        else if (atts[i].mPrefix == txXMLAtoms::xmlns || 
+                 (!atts[i].mPrefix && 
+                  atts[i].mLocalName == txXMLAtoms::xmlns)) {
             atts[i].mNamespaceID = kNameSpaceID_XMLNS;
         }
         else {
