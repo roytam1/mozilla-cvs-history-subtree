@@ -213,8 +213,10 @@ class XArgsThread(threading.Thread):
                 sys.exit()
             if files:
                 if self.verbose:
-                    print "%s: %s %s" % (self.getName(), self.shell_command,
-                                         string.join(files))
+                    sys.stderr.write("%s: %s %s\n" %
+                                     (self.getName(),
+                                      self.shell_command,
+                                      string.join(files)))
                 def add_quotes(xx): return '"' + xx + '"'
                 quoted_files = map(add_quotes, files)
                 quoted_files = string.join(files)
