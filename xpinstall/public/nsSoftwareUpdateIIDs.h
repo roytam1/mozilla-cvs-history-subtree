@@ -58,7 +58,29 @@
     {0xbc, 0xde, 0x00, 0x80, 0x5f, 0x0e, 0x13, 0x53} \
 }
 
+#define NS_SoftwareUpdateInstallVersion_CID          \
+{ /* 18c2f98f-b09f-11d2-bcde-00805f0e1353 */         \
+    0x18c2f98f,                                      \
+    0xb09f,                                          \
+    0x11d2,                                          \
+    {0xbc, 0xde, 0x00, 0x80, 0x5f, 0x0e, 0x13, 0x53} \
+}
 
+// {43E6370F-A86E-46bb-82F1-1415B8974751}
+#define NS_SoftwareUninstall_CID                     \
+{ /* {43E6370F-A86E-46bb-82F1-1415B8974751} */       \
+    0x43e6370f,                                      \
+    0xa86e,                                          \
+    0x46bb,                                          \
+    {0x82, 0xf1, 0x14, 0x15, 0xb8, 0x97, 0x47, 0x51} \
+}
+
+#define NS_XPInstallPackageInfo_CID                  \
+{ /* {5338E16A-C85F-40ad-B40A-1A8B644C5C42} */       \
+    0x5338e16a,                                      \
+    0xc85f,                                          \
+    0x40ad,                                          \
+    {0xb4, 0xa, 0x1a, 0x8b, 0x64, 0x4c, 0x5c, 0x42}  \
+}
 
 #endif /* nsSoftwareUpdateIIDs_h___ */
-

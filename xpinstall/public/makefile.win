@@ -37,6 +37,8 @@ XPIDLSRCS =                               \
             .\nsIXPINotifier.idl          \
             .\nsPIXPIStubHook.idl         \
             .\nsPIXPIProxy.idl            \
+            .\nsISoftwareUninstall.idl    \
+            .\nsIXPIPackageInfo.idl       \
             $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

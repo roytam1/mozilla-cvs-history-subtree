@@ -34,4 +34,6 @@ interface nsIXPIListener : nsISupports
     void    onItemScheduled(in wstring message );
     void    onFinalizeProgress(in wstring message, in long itemNum, in long totNum );
     void    onLogComment(in wstring comment);
+    void    onLogUninstallComment(in wstring comment);
+    void    onUninstallNameSet(in wstring aRegName, in wstring aUIName);
 };
