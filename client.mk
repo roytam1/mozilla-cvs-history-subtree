@@ -52,10 +52,10 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
-NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
-PSM_CO_TAG = SECURITY_CLIENT_BRANCH
-LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
+MOZ_CO_TAG = Netscape_20000922_BRANCH
+NSPR_CO_TAG = Netscape_20000922_BRANCH
+PSM_CO_TAG = Netscape_20000922_BRANCH
+LDAPCSDK_CO_TAG = Netscape_20000922_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
