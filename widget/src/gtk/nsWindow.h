@@ -26,6 +26,9 @@
 
 #include "nsString.h"
 
+#include "gtkmozarea.h"
+#include "gdksuperwin.h"
+
 class nsFont;
 class nsIAppShell;
 
@@ -48,11 +51,16 @@ public:
 
   virtual void*        GetNativeData(PRUint32 aDataType);
 
+  NS_IMETHOD           GetAbsoluteBounds(nsRect &aRect);
+
   NS_IMETHOD           Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
 
   NS_IMETHOD           SetTitle(const nsString& aTitle);
   NS_IMETHOD           Show(PRBool aShow);
   NS_IMETHOD           CaptureMouse(PRBool aCapture);
+  NS_IMETHOD           CaptureRollupEvents(nsIRollupListener *aListener,
+                                           PRBool aDoCapture,
+                                           PRBool aConsumeRollupEvent);
 
   NS_IMETHOD           Move(PRInt32 aX, PRInt32 aY);
 
@@ -63,6 +71,9 @@ public:
   NS_IMETHOD           BeginResizingChildren(void);
   NS_IMETHOD           EndResizingChildren(void);
   NS_IMETHOD           Destroy(void);
+
+  NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
+  NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
 
   gint                 ConvertBorderStyles(nsBorderStyle bs);
 
@@ -85,9 +96,21 @@ public:
 
   PRBool   OnKey(nsKeyEvent &aEvent);
   virtual  PRBool OnScroll(nsScrollbarEvent & aEvent, PRUint32 cPos);
-  // in nsWidget now
-  //    virtual  PRBool OnResize(nsSizeEvent &aEvent);
+  
+  static void SuperWinFilter(GdkSuperWin *superwin, XEvent *event, gpointer p);
+  
+  void HandleXlibExposeEvent(XEvent *event);
+  void HandleXlibConfigureNotifyEvent(XEvent *event);
+  void HandleXlibButtonEvent(XButtonEvent *aButtonEvent);
+  void HandleXlibMotionNotifyEvent(XMotionEvent *aMotionEvent);
+  void HandleXlibCrossingEvent(XCrossingEvent * aCrossingEvent);
+ 
+  // Return the GtkMozArea that is the nearest parent of this widget
+  GtkWidget *GetMozArea();
 
+  // Return the Gdk window used for rendering
+  virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
+  virtual void OnButtonPressSignal(GdkEventButton * aGdkButtonEvent);
 
 
 protected:
@@ -117,13 +140,12 @@ protected:
   //////////////////////////////////////////////////////////////////////
 
   virtual void InitCallbacks(char * aName = nsnull);
-  NS_IMETHOD CreateNative(GtkWidget *parentWidget);
+  NS_IMETHOD CreateNative(GtkObject *parentWidget);
 
   nsIFontMetrics *mFontMetrics;
   PRBool      mVisible;
   PRBool      mDisplayed;
   PRBool      mIsDestroyingWindow;
-  PRBool      mIsTooSmall;
 
   // XXX Temporary, should not be caching the font
   nsFont *    mFont;
@@ -134,7 +156,12 @@ protected:
   PRBool mLowerLeft;
 
   GtkWidget *mShell;  /* used for toplevel windows */
-  
+  // this is used by the toplevel window to contain a superwin
+  GtkWidget *mMozArea;
+  // This is the superwin.  Most nsWindows will just contain this
+  // ( no mozarea )
+  GdkSuperWin *mSuperWin;
+
   nsIMenuBar *mMenuBar;
 private:
   nsresult     SetIcon(GdkPixmap *window_pixmap, 
