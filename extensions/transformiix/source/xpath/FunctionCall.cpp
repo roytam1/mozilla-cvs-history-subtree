@@ -41,18 +41,20 @@ const String FunctionCall::INVALID_PARAM_VALUE =
 /**
  * Creates a new FunctionCall
 **/
-FunctionCall::FunctionCall() : name("void")
-{
-}
+FunctionCall::FunctionCall() {
+    this->name = "void";
+} //-- FunctionCall
 
 /**
  * Creates a new FunctionCall with the given function
  * Note: The object references in parameters will be deleted when this
  * FunctionCall gets destroyed.
 **/
-FunctionCall::FunctionCall(const String& aName) : name(aName)
+FunctionCall::FunctionCall(const String& name)
 {
-}
+    //-- copy name
+    this->name = name;
+} //-- FunctionCall
 
 /**
  * Destructor
@@ -195,15 +197,16 @@ void FunctionCall::toString(String& dest)
     dest.append(this->name);
     dest.append('(');
     //-- add parameters
-    txListIterator iterator(&params);
+    ListIterator* iterator = params.iterator();
     int argc = 0;
-    while (iterator.hasNext()) {
+    while (iterator->hasNext()) {
         if (argc > 0)
             dest.append(',');
-        Expr* expr = (Expr*)iterator.next();
+        Expr* expr = (Expr*)iterator->next();
         expr->toString(dest);
         ++argc;
     }
+    delete iterator;
     dest.append(')');
 } //-- toString
 

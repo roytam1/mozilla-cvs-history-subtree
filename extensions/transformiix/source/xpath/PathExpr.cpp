@@ -58,13 +58,14 @@ PathExpr::PathExpr()
 **/
 PathExpr::~PathExpr()
 {
-    txListIterator iter(&expressions);
-    while (iter.hasNext()) {
-         iter.next();
-         PathExprItem* pxi = (PathExprItem*)iter.remove();
+    ListIterator* iter = expressions.iterator();
+    while (iter->hasNext()) {
+         iter->next();
+         PathExprItem* pxi = (PathExprItem*)iter->remove();
          delete pxi->expr;
          delete pxi;
     }
+    delete iter;
 } //-- ~PathExpr
 
 /**
@@ -115,6 +116,7 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
 
     ListIterator iter(&expressions);
     PathExprItem* pxi;
+
     while ((pxi = (PathExprItem*)iter.next())) {
         NodeSet* tmpNodes = 0;
         txNodeSetContext eContext(nodes, aContext);
@@ -149,7 +151,6 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
         nodes = tmpNodes;
         if (!nodes || (nodes->size() == 0)) break;
     }
-
     return nodes;
 } //-- evaluate
 

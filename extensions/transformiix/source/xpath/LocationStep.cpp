@@ -50,6 +50,10 @@ LocationStep::~LocationStep() {
     delete mNodeTest;
 } //-- ~LocationStep
 
+  //-----------------------------/
+ //- Virtual methods from Expr -/
+//-----------------------------/
+
 /**
  * Evaluates this Expr based on the given context node and processor state
  * @param context the context node for evaluation of this Expr
@@ -103,7 +107,7 @@ ExprResult* LocationStep::evaluate(txIEvalContext* aContext)
             break;
         case FOLLOWING_AXIS :
         {
-            if (node->getNodeType() == Node::ATTRIBUTE_NODE) {
+            if ( node->getNodeType() == Node::ATTRIBUTE_NODE) {
                 node = node->getXPathParent();
                 fromDescendants(node, aContext, nodes);
             }
@@ -134,6 +138,10 @@ ExprResult* LocationStep::evaluate(txIEvalContext* aContext)
             }
             break;
         case NAMESPACE_AXIS : //-- not yet implemented
+#if 0
+            // XXX DEBUG OUTPUT
+            cout << "namespace axis not yet implemented"<<endl;
+#endif
             break;
         case PARENT_AXIS :
         {
@@ -240,50 +248,50 @@ void LocationStep::fromDescendantsRev(Node* node, txIMatchContext* cs,
  * @param str the destination String to append to
  * @see Expr
 **/
-void LocationStep::toString(String& aDest) {
+void LocationStep::toString(String& str) {
     switch (mAxisIdentifier) {
         case ANCESTOR_AXIS :
-            aDest.append("ancestor::");
+            str.append("ancestor::");
             break;
         case ANCESTOR_OR_SELF_AXIS :
-            aDest.append("ancestor-or-self::");
+            str.append("ancestor-or-self::");
             break;
         case ATTRIBUTE_AXIS:
-            aDest.append("@");
+            str.append("@");
             break;
         case DESCENDANT_AXIS:
-            aDest.append("descendant::");
+            str.append("descendant::");
             break;
         case DESCENDANT_OR_SELF_AXIS:
-            aDest.append("descendant-or-self::");
+            str.append("descendant-or-self::");
             break;
         case FOLLOWING_AXIS :
-            aDest.append("following::");
+            str.append("following::");
             break;
         case FOLLOWING_SIBLING_AXIS:
-            aDest.append("following-sibling::");
+            str.append("following-sibling::");
             break;
         case NAMESPACE_AXIS:
-            aDest.append("namespace::");
+            str.append("namespace::");
             break;
         case PARENT_AXIS :
-            aDest.append("parent::");
+            str.append("parent::");
             break;
         case PRECEDING_AXIS :
-            aDest.append("preceding::");
+            str.append("preceding::");
             break;
         case PRECEDING_SIBLING_AXIS :
-            aDest.append("preceding-sibling::");
+            str.append("preceding-sibling::");
             break;
         case SELF_AXIS :
-            aDest.append("self::");
+            str.append("self::");
             break;
         default:
             break;
     }
     NS_ASSERTION(mNodeTest, "mNodeTest is null, that's verboten");
-    mNodeTest->toString(aDest);
+    mNodeTest->toString(str);
 
-    PredicateList::toString(aDest);
+    PredicateList::toString(str);
 } // toString
 

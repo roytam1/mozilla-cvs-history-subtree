@@ -196,7 +196,7 @@ NodeSet* Numbering::getAncestorsOrSelf
 {
     NodeSet* nodeSet = new NodeSet();
     Node* parent = context;
-    while (parent  && parent->getNodeType() == Node::ELEMENT_NODE)
+    while ((parent)  && (parent->getNodeType() == Node::ELEMENT_NODE))
     {
         if (from && from->matches(parent, ps))
             break;

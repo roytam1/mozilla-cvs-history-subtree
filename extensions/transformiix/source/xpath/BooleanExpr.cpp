@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -39,16 +39,16 @@
 /**
  * Creates a new BooleanExpr using the given operator
 **/
-BooleanExpr::BooleanExpr(Expr* leftExpr, Expr* rightExpr, short op) 
-    : mOp(op), mLeftExpr(leftExpr), mRightExpr(rightExpr)
-{
-} // BooleanExpr
+BooleanExpr::BooleanExpr(Expr* leftExpr, Expr* rightExpr, short op) {
+    this->op = op;
+    this->leftExpr = leftExpr;
+    this->rightExpr = rightExpr;
+} //-- BooleanExpr
 
-BooleanExpr::~BooleanExpr()
-{
-    delete mLeftExpr;
-    delete mRightExpr;
-} // ~BooleanExpr
+BooleanExpr::~BooleanExpr() {
+    delete leftExpr;
+    delete rightExpr;
+} //-- ~BooleanExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -61,29 +61,27 @@ ExprResult* BooleanExpr::evaluate(txIEvalContext* aContext)
 {
     MBool lval = MB_FALSE;
     ExprResult* exprRes = 0;
-    if (mLeftExpr) {
-        exprRes = mLeftExpr->evaluate(aContext);
-        if (exprRes)
-            lval = exprRes->booleanValue();
+    if ( leftExpr ) {
+        exprRes = leftExpr->evaluate(aContext);
+        if ( exprRes ) lval = exprRes->booleanValue();
         delete exprRes;
     }
 
-    // check left expression for early decision
-    if (mOp == OR && lval)
-        return new BooleanResult(MB_TRUE);
-    if (mOp == AND && !lval) 
-        return new BooleanResult(MB_FALSE);
+
+    //-- check left expression for early decision
+    if (( op == OR ) && (lval)) return new BooleanResult(MB_TRUE);
+    else if ((op == AND) && (!lval)) return new BooleanResult(MB_FALSE);
 
     MBool rval = MB_FALSE;
-    if (mRightExpr) {
-        exprRes = mRightExpr->evaluate(aContext);
-        if (exprRes)
-            rval = exprRes->booleanValue();
+    if ( rightExpr ) {
+        exprRes = rightExpr->evaluate(aContext);
+        if ( exprRes ) rval = exprRes->booleanValue();
         delete exprRes;
     }
-    // just use rval, since we already checked lval
+    //-- just use rval, since we already checked lval
     return new BooleanResult(rval);
-} // evaluate
+
+} //-- evaluate
 
 /**
  * Returns the String representation of this Expr.
@@ -93,24 +91,21 @@ ExprResult* BooleanExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void BooleanExpr::toString(String& aDest)
-{
-    if (mLeftExpr)
-        mLeftExpr->toString(aDest);
-    else
-        aDest.append("null");
+void BooleanExpr::toString(String& str) {
 
-    switch (mOp) {
+    if ( leftExpr ) leftExpr->toString(str);
+    else str.append("null");
+
+    switch ( op ) {
         case OR:
-            aDest.append(" or ");
+            str.append(" or ");
             break;
         default:
-            aDest.append(" and ");
+            str.append(" and ");
             break;
     }
-    if (mRightExpr)
-        mRightExpr->toString(aDest);
-    else
-        aDest.append("null");
-} // toString
+    if ( rightExpr ) rightExpr->toString(str);
+    else str.append("null");
+
+} //-- toString
 

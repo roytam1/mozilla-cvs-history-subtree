@@ -402,7 +402,7 @@ public:
         COMMENT,
         COPY,
         COPY_OF,
-        DECIMAL_FORMAT, // 10
+        DECIMAL_FORMAT,
         ELEMENT,
         IF,
         IMPORT,
@@ -412,7 +412,7 @@ public:
         LITERAL,
         MESSAGE,
         NUMBER,
-        OTHERWISE, // 20
+        OTHERWISE,
         OUTPUT,
         PARAM,
         PROC_INST,
@@ -422,7 +422,7 @@ public:
         TEMPLATE,
         TEXT,
         VALUE_OF,
-        VARIABLE, // 30
+        VARIABLE,
         WHEN,
         WITH_PARAM
     };

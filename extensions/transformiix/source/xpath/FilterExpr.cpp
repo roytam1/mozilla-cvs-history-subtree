@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -34,8 +34,8 @@
  * Creates a new FilterExpr using the given Expr
  * @param expr the Expr to use for evaluation
 **/
-FilterExpr::FilterExpr(Expr* aExpr) : PredicateList(), expr(aExpr)
-{
+FilterExpr::FilterExpr(Expr* expr) : PredicateList() {
+    this->expr = expr;
 } //-- FilterExpr
 
 /**
@@ -87,12 +87,9 @@ ExprResult* FilterExpr::evaluate(txIEvalContext* aContext)
  * @param str the destination String to append to
  * @see Expr
 **/
-void FilterExpr::toString(String& aDest)
-{
-    if (expr)
-      expr->toString(aDest);
-    else
-      aDest.append("null");
-    PredicateList::toString(aDest);
-} // toString
+void FilterExpr::toString(String& str) {
+    if ( expr ) expr->toString(str);
+    else str.append("null");
+    PredicateList::toString(str);
+} //-- toString
 

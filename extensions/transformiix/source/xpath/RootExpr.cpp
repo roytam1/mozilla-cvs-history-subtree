@@ -65,8 +65,7 @@ ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void RootExpr::toString(String& aDest)
-{
+void RootExpr::toString(String& dest) {
     if (mSerialize)
-        aDest.append('/');
+        dest.append('/');
 } //-- toString

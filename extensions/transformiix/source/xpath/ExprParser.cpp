@@ -53,9 +53,8 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
 {
     AttributeValueTemplate* avt = new AttributeValueTemplate();
 
-    if (attValue.isEmpty()) {
-        return avt;
-    }
+    if (attValue.isEmpty())
+        return avt; //XXX should return 0, but that causes crash in lre12
 
     PRInt32 size = attValue.length();
     int cc = 0;
@@ -206,6 +205,7 @@ Expr* ExprParser::createBinaryExpr   (Expr* left, Expr* right, Token* op) {
 
     }
     return 0;
+    //return new ErrorExpr();
 } //-- createBinaryExpr
 
 

@@ -51,8 +51,9 @@
 
 #define DEFAULT_LANG "en"
 
-txNodeSorter::txNodeSorter(ProcessorState* aPs)
-    : mPs(aPs), mNKeys(0), mDefaultExpr(0)
+txNodeSorter::txNodeSorter(ProcessorState* aPs) : mPs(aPs),
+                                                  mNKeys(0),
+                                                  mDefaultExpr(0)
 {
 }
 
@@ -205,7 +206,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
         sNode->clear(mNKeys);
         delete sNode;
     }
-
+    
     return MB_TRUE;
 }
 

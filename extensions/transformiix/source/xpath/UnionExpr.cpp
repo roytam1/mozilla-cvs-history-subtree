@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- 
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -41,11 +41,12 @@ UnionExpr::UnionExpr() {
  * Destructor, will delete all Path Expressions
 **/
 UnionExpr::~UnionExpr() {
-    ListIterator iter(&expressions);
-    while (iter.hasNext()) {
-         iter.next();
-         delete (Expr*)iter.remove();
+    ListIterator* iter = expressions.iterator();
+    while (iter->hasNext()) {
+         iter->next();
+         delete  (Expr*)iter->remove();
     }
+    delete iter;
 } //-- ~UnionExpr
 
 /**
@@ -71,6 +72,7 @@ void UnionExpr::addExpr(Expr* expr) {
 ExprResult* UnionExpr::evaluate(txIEvalContext* aContext)
 {
     NodeSet* nodes = new NodeSet();
+
     if (!aContext || (expressions.getLength() == 0) || !nodes)
         return nodes;
 
@@ -100,16 +102,17 @@ ExprResult* UnionExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void UnionExpr::toString(String& aDest)
-{
-    txListIterator iter(&expressions);
+void UnionExpr::toString(String& dest) {
+    ListIterator* iter = expressions.iterator();
 
     short count = 0;
-    while (iter.hasNext()) {
+    while (iter->hasNext()) {
         //-- set operator
         if (count > 0)
-            aDest.append(" | ");
-        ((Expr*)iter.next())->toString(aDest);
+            dest.append(" | ");
+        ((Expr*)iter->next())->toString(dest);
         ++count;
     }
-}
+    delete iter;
+} //-- toString
+

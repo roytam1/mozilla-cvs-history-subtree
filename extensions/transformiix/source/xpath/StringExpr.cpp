@@ -32,11 +32,10 @@
 /**
  * Creates a new StringExpr
 **/
-StringExpr::StringExpr(const String& aValue)
-{
+StringExpr::StringExpr(const String& value) {
     //-- copy value
-    this->value.append(aValue);
-}
+    this->value.append(value);
+} //-- StringExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -48,7 +47,7 @@ StringExpr::StringExpr(const String& aValue)
 ExprResult* StringExpr::evaluate(txIEvalContext* aContext)
 {
    return new StringResult(value);
-}
+} //-- evaluate
 
 /**
  * Returns the String representation of this Expr.
@@ -58,13 +57,12 @@ ExprResult* StringExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void StringExpr::toString(String& aDest)
-{
+void StringExpr::toString(String& str) {
     UNICODE_CHAR ch = '\'';
     if (value.indexOf(ch) != NOT_FOUND)
         ch = '\"';
-    aDest.append(ch);
-    aDest.append(value);
-    aDest.append(ch);
+    str.append(ch);
+    str.append(value);
+    str.append(ch);
 } //-- toString
 

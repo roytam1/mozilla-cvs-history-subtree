@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -35,14 +35,15 @@
 /**
  * Creates a new AdditiveExpr using the given operator
 **/
-AdditiveExpr::AdditiveExpr(Expr* aLeftExpr, Expr* aRightExpr, short op) 
-    : mOp(op), mLeftExpr(aLeftExpr), mRightExpr(aRightExpr)
-{
-} // AdditiveExpr
+AdditiveExpr::AdditiveExpr(Expr* leftExpr, Expr* rightExpr, short op) {
+    this->op = op;
+    this->leftExpr = leftExpr;
+    this->rightExpr = rightExpr;
+} //-- AdditiveExpr
 
 AdditiveExpr::~AdditiveExpr() {
-    delete mLeftExpr;
-    delete mRightExpr;
+    delete leftExpr;
+    delete rightExpr;
 } //-- ~AdditiveExpr
 
 /**
@@ -57,24 +58,22 @@ ExprResult* AdditiveExpr::evaluate(txIEvalContext* aContext)
     double rightDbl = Double::NaN;
     ExprResult* exprRes = 0;
 
-    if (mRightExpr) {
-        exprRes = mRightExpr->evaluate(aContext);
-        if (exprRes)
-            rightDbl = exprRes->numberValue();
+    if ( rightExpr ) {
+        exprRes = rightExpr->evaluate(aContext);
+        if ( exprRes ) rightDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double leftDbl = Double::NaN;
-    if (mLeftExpr) {
-        exprRes = mLeftExpr->evaluate(aContext);
-        if (exprRes)
-            leftDbl = exprRes->numberValue();
+    if ( leftExpr ) {
+        exprRes = leftExpr->evaluate(aContext);
+        if ( exprRes ) leftDbl = exprRes->numberValue();
         delete exprRes;
     }
 
     double result = 0;
 
-    switch (mOp) {
+    switch ( op ) {
         case SUBTRACTION:
             result = leftDbl - rightDbl;
             break;
@@ -93,25 +92,21 @@ ExprResult* AdditiveExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void AdditiveExpr::toString(String& aDest)
-{
-    if (mLeftExpr)
-        mLeftExpr->toString(aDest);
-    else
-        aDest.append("null");
+void AdditiveExpr::toString(String& str) {
 
-    switch (mOp) {
+    if ( leftExpr ) leftExpr->toString(str);
+    else str.append("null");
+
+    switch ( op ) {
         case SUBTRACTION:
-            aDest.append(" - ");
+            str.append(" - ");
             break;
         default:
-            aDest.append(" + ");
+            str.append(" + ");
             break;
     }
-    if (mRightExpr)
-        mRightExpr->toString(aDest);
-    else
-        aDest.append("null");
+    if ( rightExpr ) rightExpr->toString(str);
+    else str.append("null");
 
-} // toString
+} //-- toString
 

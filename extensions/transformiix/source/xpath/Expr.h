@@ -60,9 +60,10 @@ class txIEvalContext;
 /**
  * A Base Class for all XSL Expressions
 **/
-class Expr : public TxObject
-{
+class Expr : public TxObject {
+
 public:
+
     /**
      * Virtual destructor, important for subclasses
     **/
@@ -87,9 +88,9 @@ public:
      * other #toString() methods for Expressions.
      * @return the String representation of this Expr.
     **/
-    virtual void toString(String& aDest) = 0;
+    virtual void toString(String& str) = 0;
 
-};
+}; //-- Expr
 
 #define TX_DECL_EVALUATE \
     ExprResult* evaluate(txIEvalContext* aContext)
@@ -103,9 +104,10 @@ public:
  * This class represents a FunctionCall as defined by the XPath 1.0
  * Recommendation.
 **/
-class FunctionCall : public Expr
-{
+class FunctionCall : public Expr {
+
 public:
+
     static const String INVALID_PARAM_COUNT;
     static const String INVALID_PARAM_VALUE;
 
@@ -115,7 +117,7 @@ public:
      * Virtual methods from Expr 
     **/
     virtual ExprResult* evaluate(txIEvalContext* aContext) = 0;
-    virtual void toString(String& aDest);
+    virtual void toString(String& dest);
 
     /**
      * Adds the given parameter to this FunctionCall's parameter list
@@ -132,11 +134,11 @@ public:
                                 txIEvalContext* aContext);
 
 protected:
-    txList params;
-    String name;
+
+    List params;
 
     FunctionCall();
-    FunctionCall(const String& aName);
+    FunctionCall(const String& name);
 
     /*
      * Evaluates the given Expression and converts its result to a String.
@@ -160,7 +162,9 @@ protected:
      * If the result is not a NodeSet NULL is returned.
      */
     NodeSet* evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext);
-}; // FunctionCall
+
+    String name;
+}; //-- FunctionCall
 
 
 /**
@@ -177,12 +181,12 @@ public:
     /**
      * Adds the given Expr to this AttributeValueTemplate
     **/
-    void addExpr(Expr* aExpr);
+    void addExpr(Expr* expr);
 
     TX_DECL_EXPR;
 
 private:
-    txList mExpressions;
+    List expressions;
 };
 
 
@@ -304,15 +308,15 @@ public:
      * other #toString() methods for Expressions.
      * @return the String representation of this PredicateList.
     **/
-    virtual void toString(String& aDest);
+    virtual void toString(String& dest);
 
 protected:
     //-- list of predicates
     List predicates;
 }; //-- PredicateList
 
-class LocationStep : public PredicateList, public Expr
-{
+class LocationStep : public PredicateList, public Expr {
+
 public:
 
     // Axis Identifier Types
@@ -403,7 +407,7 @@ class StringExpr : public Expr {
 
 public:
 
-    StringExpr(const String& aValue);
+    StringExpr(const String& value);
 
     TX_DECL_EXPR;
 
@@ -427,15 +431,15 @@ public:
     //-- LF, changed from static const short to enum
     enum _AdditiveExprType { ADDITION = 1, SUBTRACTION };
 
-     AdditiveExpr(Expr* aLeftExpr, Expr* aRightExpr, short op);
+     AdditiveExpr(Expr* leftExpr, Expr* rightExpr, short op);
      ~AdditiveExpr();
 
     TX_DECL_EXPR;
 
 private:
-    short mOp;
-    Expr* mLeftExpr;
-    Expr* mRightExpr;
+    short op;
+    Expr* leftExpr;
+    Expr* rightExpr;
 }; //-- AdditiveExpr
 
 /**
@@ -445,13 +449,13 @@ class UnaryExpr : public Expr {
 
 public:
 
-     UnaryExpr(Expr* aExpr);
+     UnaryExpr(Expr* expr);
      ~UnaryExpr();
 
     TX_DECL_EXPR;
 
 private:
-    Expr* mExpr;
+    Expr* expr;
 }; //-- UnaryExpr
 
 /**
@@ -471,9 +475,9 @@ public:
     TX_DECL_EXPR;
 
 private:
-    short mOp;
-    Expr* mLeftExpr;
-    Expr* mRightExpr;
+    short op;
+    Expr* leftExpr;
+    Expr* rightExpr;
 }; //-- BooleanExpr
 
 /**
@@ -492,15 +496,15 @@ public:
     //-- LF, changed from static const short to enum
     enum _MultiplicativeExprType { DIVIDE = 1, MULTIPLY, MODULUS };
 
-     MultiplicativeExpr(Expr* aLeftExpr, Expr* aRightExpr, short aOp);
+     MultiplicativeExpr(Expr* leftExpr, Expr* rightExpr, short op);
      ~MultiplicativeExpr();
 
     TX_DECL_EXPR;
 
 private:
-    Expr* mLeftExpr;
-    Expr* mRightExpr;
-    short mOp;
+    short op;
+    Expr* leftExpr;
+    Expr* rightExpr;
 }; //-- MultiplicativeExpr
 
 /**
@@ -598,7 +602,7 @@ private:
         PathOperator pathOp;
     };
 
-    txList expressions;
+    List expressions;
 
     /*
      * Selects from the descendants of the context node
@@ -613,8 +617,8 @@ private:
 /**
  * This class represents a RootExpr, which only matches the Document node
 **/
-class RootExpr : public Expr
-{
+class RootExpr : public Expr {
+
 public:
 
     /**
@@ -662,6 +666,7 @@ private:
 
 }; //-- UnionExpr
 
+/* */
 #endif
 
 

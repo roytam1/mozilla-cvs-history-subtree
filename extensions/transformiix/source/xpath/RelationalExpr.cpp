@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -34,10 +34,11 @@
  //- RelationalExpr -/
 //------------------/
 
-RelationalExpr::RelationalExpr(Expr* aLeftExpr, Expr* aRightExpr, short aOp)
-    :op(aOp), leftExpr(aLeftExpr), rightExpr(aRightExpr)
-{
-}
+RelationalExpr::RelationalExpr(Expr* leftExpr, Expr* rightExpr, short op) {
+    this->op = op;
+    this->leftExpr = leftExpr;
+    this->rightExpr = rightExpr;
+} //-- RelationalExpr
 
 RelationalExpr::~RelationalExpr() {
     delete leftExpr;
@@ -45,8 +46,7 @@ RelationalExpr::~RelationalExpr() {
 } //-- ~RelationalExpr
 
 /**
- *  Compares the two ExprResults based on XPath 1.0 Recommendation
- *  (section 3.4)
+ *  Compares the two ExprResults based on XPath 1.0 Recommendation (section 3.4)
 **/
 MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
 
@@ -64,37 +64,35 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
         }
 
         NodeSet* nodeSet = (NodeSet*)left;
-        for (int i = 0; i < nodeSet->size(); i++) {
-            String str;
-            Node* node = nodeSet->get(i);
-            XMLDOMUtils::getNodeValue(node, str);
-            StringResult strResult(str);
-            result = compareResults(&strResult, right);
-            if (result)
-                break;
+        for ( int i = 0; i < nodeSet->size(); i++) {
+                String str;
+                Node* node = nodeSet->get(i);
+                XMLDOMUtils::getNodeValue(node, str);
+                StringResult strResult(str);
+                result = compareResults(&strResult, right);
+                if ( result ) break;
         }
     }
     //-- handle case for Just Right NodeSet
-    else if (rtype == ExprResult::NODESET) {
+    else if ( rtype == ExprResult::NODESET) {
         if (ltype == ExprResult::BOOLEAN) {
             BooleanResult rightBool(right->booleanValue());
             return compareResults(left, &rightBool);
         }
 
         NodeSet* nodeSet = (NodeSet*)right;
-        for (int i = 0; i < nodeSet->size(); i++) {
-            String str;
-            Node* node = nodeSet->get(i);
-            XMLDOMUtils::getNodeValue(node, str);
-            StringResult strResult(str);
-            result = compareResults(left, &strResult);
-            if (result)
-                break;
+        for ( int i = 0; i < nodeSet->size(); i++) {
+                String str;
+                Node* node = nodeSet->get(i);
+                XMLDOMUtils::getNodeValue(node, str);
+                StringResult strResult(str);
+                result = compareResults(left, &strResult);
+                if ( result ) break;
         }
     }
     //-- neither NodeSet
     else {
-        if (op == NOT_EQUAL) {
+        if ( op == NOT_EQUAL) {
 
             if ((ltype == ExprResult::BOOLEAN)
                     || (rtype == ExprResult::BOOLEAN)) {
@@ -121,7 +119,7 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
                 result = !lStr.isEqual(rStr);
             }
         }
-        else if (op == EQUAL) {
+        else if ( op == EQUAL) {
 
             if ((ltype == ExprResult::BOOLEAN)
                     || (rtype == ExprResult::BOOLEAN)) {
@@ -237,37 +235,34 @@ ExprResult* RelationalExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void RelationalExpr::toString(String& aDest)
-{
-    if (leftExpr)
-        leftExpr->toString(aDest);
-    else
-        aDest.append("null");
+void RelationalExpr::toString(String& str) {
+
+    if ( leftExpr ) leftExpr->toString(str);
+    else str.append("null");
 
     switch ( op ) {
         case NOT_EQUAL:
-            aDest.append("!=");
+            str.append("!=");
             break;
         case LESS_THAN:
-            aDest.append("<");
+            str.append("<");
             break;
         case LESS_OR_EQUAL:
-            aDest.append("<=");
+            str.append("<=");
             break;
         case GREATER_THAN :
-            aDest.append(">");
+            str.append(">");
             break;
         case GREATER_OR_EQUAL:
-            aDest.append(">=");
+            str.append(">=");
             break;
         default:
-            aDest.append("=");
+            str.append("=");
             break;
     }
 
-    if (rightExpr)
-        rightExpr->toString(aDest);
-    else
-        aDest.append("null");
+    if ( rightExpr ) rightExpr->toString(str);
+    else str.append("null");
+
 } //-- toString
 

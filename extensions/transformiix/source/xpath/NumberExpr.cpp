@@ -30,9 +30,9 @@
  //- NumberExpr -/
 //--------------/
 
-NumberExpr::NumberExpr(double dbl) : _value(dbl)
-{
-}
+NumberExpr::NumberExpr(double dbl) {
+    _value = dbl;
+} //-- NumberExpr
 
 /**
  * Evaluates this Expr based on the given context node and processor state
@@ -54,8 +54,7 @@ ExprResult* NumberExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void NumberExpr::toString(String& aDest)
-{
-    Double::toString(_value, aDest);
-}
+void NumberExpr::toString(String& str) {
+    Double::toString(_value, str);
+} //-- toString
 
