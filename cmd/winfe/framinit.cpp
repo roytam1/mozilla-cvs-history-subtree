@@ -600,7 +600,7 @@ void CMainFrame::OnLoadHomePage()
         if (nStartup != 0){
             GetMainContext()->NormalGetUrl(lpszHomePage);
 
-			GetChrome()->UpdateURLBars(lpszHomePage);
+			GetChrome()->UpdateURLBars((char*)lpszHomePage);
 		}
     }
 }

@@ -147,6 +147,29 @@ protected:
 void toolbarNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened);
 
 /****************************************************************************
+* 
+* Class: CRDFSeparatorButton
+*
+****************************************************************************/
+
+class CRDFSeparatorButton : public CRDFToolbarButton
+{
+protected:
+	
+public:
+	virtual CSize GetButtonSizeFromChars(CString s, int c);
+		// Overridden to handle special width/height requirements.
+
+	virtual void DrawButtonBitmap(HDC hDC, CRect rcImg);
+	virtual void DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CString strTxt) {};
+
+	// Generated message map functions
+	//{{AFX_MSG(CRDFSeparatorButton)
+	//}}AFX_MSG
+	DECLARE_MESSAGE_MAP()
+};
+
+/****************************************************************************
 *
 *	Class: CRDFToolbarDropTarget
 *
@@ -197,6 +220,8 @@ private:
 	COLORREF m_RolloverColor;
 	COLORREF m_PressedColor;
 	COLORREF m_DisabledColor;
+	COLORREF m_ShadowColor;
+	COLORREF m_HighlightColor;
 
 	CRDFImage* m_pBackgroundImage;
 
@@ -252,6 +277,8 @@ public:
 	COLORREF GetRolloverColor() { return m_RolloverColor; }
 	COLORREF GetPressedColor() { return m_PressedColor; }
 	COLORREF GetDisabledColor() { return m_DisabledColor; }
+	COLORREF GetShadowColor() { return m_ShadowColor; }
+	COLORREF GetHighlightColor() { return m_HighlightColor; }
 
 	CRDFImage* GetBackgroundImage() { return m_pBackgroundImage; }
 	void SetBackgroundColor(COLORREF c) { m_BackgroundColor = c; }
@@ -259,9 +286,14 @@ public:
 	void SetRolloverColor(COLORREF c) { m_RolloverColor = c; }
 	void SetPressedColor(COLORREF c) { m_PressedColor = c; }
 	void SetDisabledColor(COLORREF c) { m_DisabledColor = c; }
+	void SetShadowColor(COLORREF c) { m_ShadowColor = c; }
+	void SetHighlightColor(COLORREF c) { m_HighlightColor = c; }
+
 	void SetBackgroundImage(CRDFImage* p) { m_pBackgroundImage = p; }
 
 	void LoadComplete(HT_Resource r) { Invalidate(); }
+
+	void ChangeButtonSizes(void); // Overridden to prevent separators and url bars from changing size.
 
 protected:
     // Helper function used in conjunction with LayoutButtons

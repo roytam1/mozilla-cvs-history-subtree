@@ -1126,6 +1126,56 @@ void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
 
 	}
 }
+
+///////////////////////////////////////////////////////////////////////////
+// Class CRDFSeparatorButton
+///////////////////////////////////////////////////////////////////////////
+
+BEGIN_MESSAGE_MAP(CRDFSeparatorButton, CRDFToolbarButton)
+	//{{AFX_MSG_MAP(CRDFSeparatorButton)
+//}}AFX_MSG_MAP
+
+END_MESSAGE_MAP()
+
+CSize CRDFSeparatorButton::GetButtonSizeFromChars(CString s, int c)
+{
+	return CSize(8, 8);
+}
+
+void CRDFSeparatorButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
+{
+	CDC* pDC = CDC::FromHandle(hDC);
+	
+	CRect clientRect;
+	GetClientRect(&clientRect);
+
+	COLORREF shadowColor = ::GetSysColor(COLOR_3DSHADOW);
+	COLORREF highlightColor = ::GetSysColor(COLOR_3DLIGHT);
+
+	if (foundOnRDFToolbar())
+	{
+		CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
+		shadowColor = pToolbar->GetShadowColor();
+		highlightColor = pToolbar->GetHighlightColor();
+	}
+
+	HPEN hShadowPen = (HPEN)::CreatePen(PS_SOLID, 1, shadowColor);
+	HPEN hHighlightPen = (HPEN)::CreatePen(PS_SOLID, 1, highlightColor);
+
+	HPEN hOldPen = (HPEN)(pDC->SelectObject(hShadowPen));
+	pDC->MoveTo(3, 3);
+	pDC->LineTo(3, clientRect.bottom - 2);
+	
+	(HPEN)(pDC->SelectObject(hHighlightPen));
+	pDC->MoveTo(4, 3);
+	pDC->LineTo(4, clientRect.bottom - 2);
+
+	pDC->SelectObject(hOldPen);
+
+	VERIFY(::DeleteObject(hShadowPen));
+	VERIFY(::DeleteObject(hHighlightPen));
+}
+
 ///////////////////////////////////////////////////////////////////////////
 //							Class CRDFToolbarDropTarget
 ///////////////////////////////////////////////////////////////////////////
@@ -1432,9 +1482,6 @@ void CRDFToolbar::FillInToolbar()
 
 void CRDFToolbar::AddHTButton(HT_Resource item)
 {
-	if (HT_IsSeparator(item))
-		return;
-
 	BOOKMARKITEM bookmark;
 	XP_STRCPY(bookmark.szText, HT_GetNodeName(item));
 	XP_STRCPY(bookmark.szAnchor, HT_GetNodeURL(item));
@@ -1454,6 +1501,12 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	CRDFToolbarButton* pButton = NULL;
 	if (HT_IsURLBar(item))
 		pButton = new CURLBarButton;
+	else if (HT_IsSeparator(item))
+	{
+		pButton = new CRDFSeparatorButton;
+		tooltipText = "Separator";
+		statusBarText = "Separator";
+	}
 	else pButton = new CRDFToolbarButton;
 
 	pButton->Create(this, theApp.m_pToolbarStyle, CSize(60,42), CSize(85, 25), csAmpersandString,
@@ -1487,12 +1540,35 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	}
 }
 
+void CRDFToolbar::ChangeButtonSizes(void)
+{
+	int nWidth;
+
+	HT_Cursor cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
+	HT_Resource item;
+	while (item = HT_GetNextItem(cursor))
+	{
+		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
+        if (!HT_IsSeparator(item) && !HT_IsURLBar(item) && pButton) 
+		{
+			if(!m_bButtonsSameWidth)
+			{
+				CSize size = pButton->GetRequiredButtonSize();
+				nWidth = size.cx;
+			}
+			else
+				nWidth = m_nMaxButtonWidth;
+
+			pButton->SetButtonSize(CSize(nWidth, m_nMaxButtonHeight));
+		}
+	}
+	HT_DeleteCursor(cursor);
+}
+
 int CRDFToolbar::GetHeight(void)
 {
     return m_nNumberOfRows * (m_nRowHeight + SPACE_BETWEEN_ROWS) + SPACE_BETWEEN_ROWS;
 }
-
-
 
 void CRDFToolbar::SetMinimumRows(int rowWidth)
 {
@@ -1845,12 +1921,18 @@ void CRDFToolbar::OnPaint(void)
 	HT_Resource top = HT_TopNode(GetHTView());
 	void* data;
 	COLORREF backgroundColor = GetSysColor(COLOR_BTNFACE);
+	COLORREF shadowColor = GetSysColor(COLOR_3DSHADOW);
+	COLORREF highlightColor = GetSysColor(COLOR_3DLIGHT);
+
 	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 	{
 		WFE_ParseColor((char*)data, &backgroundColor);
+		Compute3DColors(backgroundColor, highlightColor, shadowColor);
 	}
 	SetBackgroundColor(backgroundColor);
+	SetShadowColor(shadowColor);
+	SetHighlightColor(highlightColor);
 
 	// Foreground color
 	COLORREF foregroundColor = GetSysColor(COLOR_BTNTEXT);
