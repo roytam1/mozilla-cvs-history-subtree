@@ -2821,8 +2821,8 @@ txHandlerTable::init(txHandlerTableData* aTableData)
     while (handler->mLocalName) {
         nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(handler->mLocalName);
         txExpandedName name(handler->mNamespaceID, nameAtom);
-        // XXX this sucks
-        rv = mHandlers.add(name, NS_STATIC_CAST(TxObject*, handler));
+        // XXX this cast is a reinterpret_cast, which is sad
+        rv = mHandlers.add(name, (TxObject*)handler);
         NS_ENSURE_SUCCESS(rv, rv);
 
         handler++;
@@ -2834,8 +2834,8 @@ txElementHandler*
 txHandlerTable::find(PRInt32 aNamespaceID, nsIAtom* aLocalName)
 {
     txExpandedName name(aNamespaceID, aLocalName);
-    txElementHandler* handler =
-        NS_STATIC_CAST(txElementHandler*, mHandlers.get(name));
+    // XXX this cast is a reinterpret_cast, same sad story as in ::init
+    txElementHandler* handler = (txElementHandler*)mHandlers.get(name);
     if (!handler) {
         handler = mOtherHandler;
     }

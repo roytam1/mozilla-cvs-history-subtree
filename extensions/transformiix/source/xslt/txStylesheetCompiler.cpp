@@ -213,7 +213,7 @@ txStylesheetCompiler::startElementInternal(PRInt32 aNamespaceID,
     nsresult rv = NS_OK;
     PRInt32 i;
     for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
-        ++((txInScopeVariable*)mInScopeVariables[i])->mLevel;
+        ++(NS_STATIC_CAST(txInScopeVariable*, mInScopeVariables[i]))->mLevel;
     }
 
     // Update the elementcontext if we have special attributes
@@ -337,7 +337,7 @@ txStylesheetCompiler::endElement()
     PRInt32 i;
     for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
         txInScopeVariable* var =
-            (txInScopeVariable*)mInScopeVariables[i];
+            NS_STATIC_CAST(txInScopeVariable*, mInScopeVariables[i]);
         if (!--(var->mLevel)) {
             nsAutoPtr<txInstruction> instr(new txRemoveVariable(var->mName));
             NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
@@ -350,14 +350,13 @@ txStylesheetCompiler::endElement()
         }
     }
 
-    txElementHandler* handler =
-        (txElementHandler*)popPtr();
+    txElementHandler* handler = NS_STATIC_CAST(txElementHandler*, popPtr());
     rv = (handler->mEndFunction)(*this);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if(!--mElementContext->mDepth) {
+    if (!--mElementContext->mDepth) {
         // this will delete the old object
-        mElementContext = (txElementContext*)popObject();
+        mElementContext = NS_STATIC_CAST(txElementContext*, popObject());
     }
 
     return NS_OK;
@@ -427,8 +426,9 @@ nsresult
 txStylesheetCompiler::ensureNewElementContext()
 {
     // Do we already have a new context?
-    if (!mElementContext->mDepth)
+    if (!mElementContext->mDepth) {
         return NS_OK;
+    }
     
     nsAutoPtr<txElementContext>
         context(new txElementContext(*mElementContext));
@@ -509,7 +509,6 @@ txStylesheetCompilerState::init(const nsAString& aBaseURI,
     }
    
     mElementContext = new txElementContext(aBaseURI);
-    if (!mElementContext || !mElementContext->mMappings)
     NS_ENSURE_TRUE(mElementContext && mElementContext->mMappings,
                    NS_ERROR_OUT_OF_MEMORY);
 
@@ -529,7 +528,7 @@ txStylesheetCompilerState::~txStylesheetCompilerState()
     
     PRInt32 i;
     for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
-        delete (txInScopeVariable*)mInScopeVariables[i];
+        delete NS_STATIC_CAST(txInScopeVariable*, mInScopeVariables[i]);
     }
 }
 
@@ -547,7 +546,7 @@ txStylesheetCompilerState::pushHandlerTable(txHandlerTable* aTable)
 void
 txStylesheetCompilerState::popHandlerTable()
 {
-    mHandlerTable = (txHandlerTable*)popPtr();
+    mHandlerTable = NS_STATIC_CAST(txHandlerTable*, popPtr());
 }
 
 nsresult
@@ -564,7 +563,7 @@ txStylesheetCompilerState::pushSorter(txPushNewContext* aSorter)
 void
 txStylesheetCompilerState::popSorter()
 {
-    mSorter = (txPushNewContext*)popPtr();
+    mSorter = NS_STATIC_CAST(txPushNewContext*, popPtr());
 }
 
 nsresult
@@ -584,7 +583,7 @@ void
 txStylesheetCompilerState::popChooseGotoList()
 {
     // this will delete the old value
-    mChooseGotoList = (txList*)popObject();
+    mChooseGotoList = NS_STATIC_CAST(txList*, popObject());
 }
 
 nsresult
@@ -596,7 +595,7 @@ txStylesheetCompilerState::pushObject(TxObject* aObject)
 TxObject*
 txStylesheetCompilerState::popObject()
 {
-    return (TxObject*)mObjectStack.pop();
+    return NS_STATIC_CAST(TxObject*, mObjectStack.pop());
 }
 
 nsresult
@@ -655,7 +654,7 @@ txStylesheetCompilerState::addInstruction(nsAutoPtr<txInstruction> aInstruction)
     
     PRInt32 i, count = mGotoTargetPointers.Count();
     for (i = 0; i < count; ++i) {
-        *(txInstruction**)mGotoTargetPointers[i] = newInstr;
+        *NS_STATIC_CAST(txInstruction**, mGotoTargetPointers[i]) = newInstr;
     }
     mGotoTargetPointers.Clear();
 
