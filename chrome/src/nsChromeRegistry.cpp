@@ -330,10 +330,10 @@ nsChromeRegistry::Init()
     rv = prefs->GetCharPref(SELECTED_SKIN_PREF, getter_Copies(provider));
     if (NS_SUCCEEDED(rv)) {
       mSelectedSkin = provider;
-      printf("Found skin %s to select.\n", mSelectedSkin.get());
     }
-    else
+    else {
       NS_WARNING("Couldn't get selected skin pref!");
+    }
 
     rv = prefs->AddObserver(SELECTED_SKIN_PREF, this, PR_TRUE);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't add skin-switching observer!");
