@@ -64,14 +64,15 @@ ProcessorState::~ProcessorState() {
 
   //-- delete includes
   StringList* keys = includes.keys();
-  StringListIterator iter = keys->iterator();
-  while (iter.hasNext()) {
-      String* key = iter.next();
+  StringListIterator* iter = keys->iterator();
+  while (iter->hasNext()) {
+      String* key = iter->next();
       MITREObjectWrapper* objWrapper
           = (MITREObjectWrapper*)includes.remove(*key);
       delete (Document*)objWrapper->object;
       delete objWrapper;
   }
+  delete iter;
   delete keys;
 
 } //-- ~ProcessorState
@@ -319,9 +320,9 @@ void ProcessorState::getDocumentHref
 
   //-- lookup includes
   StringList* keys = includes.keys();
-  StringListIterator& iter = keys->iterator();
-  while (iter.hasNext()) {
-      String* key = iter.next();
+  StringListIterator* iter = keys->iterator();
+  while (iter->hasNext()) {
+      String* key = iter->next();
       MITREObjectWrapper* objWrapper
           = (MITREObjectWrapper*)includes.get(*key);
       if (xslDocument == objWrapper->object) {
@@ -329,7 +330,7 @@ void ProcessorState::getDocumentHref
           break;
       }
   }
-  delete &iter;
+  delete iter;
   delete keys;
 } //-- getDocumentBase
 
