@@ -43,11 +43,16 @@ else
 # AMD64
 	PROTO += $(ROOT)/usr/lib/mps/amd64
 endif
+	PROTO += $(ROOT)/usr/include/mps/64
 	abs_dist64_libdir = $(abs_dist_libdir)
 	abs_dist32_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_64_OPT|_OPT|g" -e "s|_64_DBG|_DBG|g")
+	abs_dist64_includedir = $(abs_dist_includedir)
+	abs_dist32_includedir = $(shell echo $(abs_dist_includedir) | sed -e "s|_64_OPT|_OPT|g" -e "s|_64_DBG|_DBG|g")
 else
 	abs_dist32_libdir = $(abs_dist_libdir)
 	abs_dist64_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
+	abs_dist32_includedir = $(abs_dist_includedir)
+	abs_dist64_includedir = $(shell echo $(abs_dist_includedir) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
 endif
 
 awk_pkginfo: bld_awk_pkginfo
@@ -78,4 +83,7 @@ $(ROOT)/usr/lib/mps/cpu/sparcv8plus:
 	$(CP) -r $(abs_dist32_libdir)/cpu/sparcv8plus/*.so $@
 $(ROOT)/usr/include/mps:
 	mkdir -p $@
-	$(CP) -r $(abs_dist_includedir)/* $@
+	$(CP) -r $(abs_dist32_includedir)/* $@
+$(ROOT)/usr/include/mps/64:
+	mkdir -p $@
+	$(CP) -r $(abs_dist64_includedir)/* $@
