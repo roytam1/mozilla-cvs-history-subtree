@@ -221,6 +221,8 @@ protected:
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
+  virtual PRBool    SetProperty(JSContext *aContext, JSObject *aObj,
+                                jsval aID, jsval *aVp);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {

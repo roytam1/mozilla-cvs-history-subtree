@@ -399,17 +399,17 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
@@ -1519,6 +1519,7 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
   return rv;
 }
+
 
 // EventReciever helper
 
