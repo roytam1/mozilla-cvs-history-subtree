@@ -60,3 +60,5 @@ DEFINES         += -Wa,-xarch=v8
 endif
 endif
 endif
+
+MKSHLIB = $(LD) -G

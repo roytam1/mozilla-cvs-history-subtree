@@ -65,3 +65,5 @@ else
 ASFLAGS         += -xarch=v8
 endif
 endif
+
+MKSHLIB = $(LD) -G

@@ -51,7 +51,7 @@ $(LIBRARY): $(LIB_OBJS)
 	$(RANLIB) $@
 
 $(SHARED_LIBRARY): $(LIB_OBJS)
-	$(LD) -G -o $@ $(LIB_OBJS) $(LDFLAGS) $(OTHER_LIBS)
+	$(MKSHLIB) -o $@ $(LIB_OBJS) $(LDFLAGS) $(OTHER_LIBS)
 endif
 endif
 
