@@ -85,6 +85,21 @@ view {
   -moz-image-region: rect(52px, 96px, 78px, 64px) !important;
 }
 
+#installButton {
+  margin: 0px;
+  list-style-image: url("chrome://mozapps/skin/extensions/actionbuttons.png");
+  -moz-image-region: rect(0px, 128px, 26px, 96px);
+}
+
+#installButton:hover:active {
+  list-style-image: url("chrome://mozapps/skin/extensions/actionbuttons.png");
+  -moz-image-region: rect(26px, 128px, 52px, 96px);
+}
+
+#installButton[disabled="true"] {
+  list-style-image: url("chrome://mozapps/skin/extensions/actionbuttons.png");
+  -moz-image-region: rect(52px, 128px, 78px, 96px) !important;
+}
 
 #optionsButton {
   list-style-image: url("chrome://mozapps/skin/extensions/extensionOptions.png");
