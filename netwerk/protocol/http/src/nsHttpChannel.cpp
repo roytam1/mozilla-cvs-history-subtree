@@ -1960,7 +1960,12 @@ nsHttpChannel::GetCredentials(const char *challenges,
     nsHttpAuthIdentity *ident;
     nsCAutoString path;
 
-    if (proxyAuth) {
+    // it is possible for the origin server to fake a proxy challenge.  if
+    // that happens we need to be sure to use the origin server as the auth
+    // domain.  otherwise, we could inadvertantly expose the user's proxy
+    // credentials to an origin server.
+
+    if (proxyAuth && mConnectionInfo->ProxyHost()) {
         host = mConnectionInfo->ProxyHost();
         port = mConnectionInfo->ProxyPort();
         ident = &mProxyIdent;
