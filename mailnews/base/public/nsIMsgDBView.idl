@@ -25,6 +25,8 @@
 
 interface nsIMsgFolder;
 interface nsIMsgWindow;
+interface nsIDOMElement;
+interface nsIMessenger;
 
 typedef long nsMsgViewSortOrderValue;
 typedef long nsMsgViewSortTypeValue;
@@ -202,7 +204,7 @@ interface nsIMsgDBView : nsISupports
     void open(in nsIMsgFolder folder, in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder, in nsMsgViewFlagsTypeValue viewFlags, out long count);
     void close();
 
-    void init(out long pCount);
+    void init(in nsIMessenger aMessengerInstance, in nsIMsgWindow aMsgWindow);
     void addKeys(out nsMsgKey pKeys, out long pFlags, in string pLevels, in nsMsgViewSortTypeValue sortType, in long numKeysToAdd);
 
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
@@ -225,6 +227,8 @@ interface nsIMsgDBView : nsISupports
      * Indicates if navigation of the passed motion type is valid. 
      */
     boolean navigateStatus(in nsMsgNavigationTypeValue motion, in nsMsgViewIndex index, out nsMsgKey selection, in unsigned long numSelected);
+
+	attribute nsIDOMElement sortedColumn;
 
     /**
      * temporary, so we can inspect from js
