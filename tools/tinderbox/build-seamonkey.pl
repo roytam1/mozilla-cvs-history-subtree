@@ -103,10 +103,13 @@ sub PrintExampleConfig {
 }
 
 sub ConditionalArgs {
+  my $cvsuser = $ENV{USER};
+
   $fe          = 'mozilla-bin';
   $RelBinaryName  = "dist/bin/$fe";
   #$FullBinaryName  = "$BaseDir/$DirName/$TopLevel/$Topsrcdir/$RelBinaryName";
-  $BuildModule = 'SeaMonkeyAll';
+  $ENV{CVSROOT} = ":pserver:$cvsuser\@cvs.mozilla.org:/cvsroot";
+  print "build-seamonkey.pl: CVSROOT = $ENV{CVSROOT}\n";
   $CVSCO      .= " -r $BuildTag" unless $BuildTag eq '';
 }
 
