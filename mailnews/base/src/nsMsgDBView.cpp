@@ -395,6 +395,21 @@ NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
   return NS_OK;
 }
 
+// given a URI, we will load the message for it.
+NS_IMETHODIMP nsMsgDBView::LoadMessageByMsgKey(nsMsgKey aMsgKey)
+{
+  if (!mSupressMsgDisplay && (m_currentlyDisplayedMsgKey != aMsgKey))
+  {
+    nsXPIDLCString uri;
+    nsresult rv = GenerateURIForMsgKey(aMsgKey, m_folder, getter_Copies(uri));
+    NS_ENSURE_SUCCESS(rv,rv);
+    mMessengerInstance->OpenURL(uri);
+    m_currentlyDisplayedMsgKey = aMsgKey;
+  }
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 {
   // if the currentSelection changed then we have a message to display
@@ -414,14 +429,7 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     {
       // get the msgkey for the message
       nsMsgKey msgkey = m_keys.GetAt(startRange);
-      if (m_currentlyDisplayedMsgKey != msgkey)
-      {
-        nsXPIDLCString uri;
-        rv = GenerateURIForMsgKey(msgkey, m_folder, getter_Copies(uri));
-        NS_ENSURE_SUCCESS(rv,rv);
-        mMessengerInstance->OpenURL(uri);
-        m_currentlyDisplayedMsgKey = msgkey;
-      }
+      LoadMessageByMsgKey(msgkey);
     }
   }
 
@@ -991,7 +999,25 @@ NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow 
 
 NS_IMETHODIMP nsMsgDBView::SetSupressMsgDisplay(PRBool aSupressDisplay)
 {
+  PRBool forceDisplay = PR_FALSE;
+  if (mSupressMsgDisplay && (mSupressMsgDisplay != aSupressDisplay))
+    forceDisplay = PR_TRUE;
+
   mSupressMsgDisplay = aSupressDisplay;
+  if (forceDisplay)
+  {
+    // get the messae key for the currently selected message
+    nsMsgKey msgKey;
+    nsCOMPtr<nsIMsgDBHdr> dbHdr;
+    GetHdrForFirstSelectedMessage(getter_AddRefs(dbHdr));
+    if (dbHdr)
+    { 
+      nsresult rv = dbHdr->GetMessageKey(&msgKey);
+      if (NS_SUCCEEDED(rv))
+       LoadMessageByMsgKey(msgKey);
+    }
+  }
+
   return NS_OK;
 }
 
