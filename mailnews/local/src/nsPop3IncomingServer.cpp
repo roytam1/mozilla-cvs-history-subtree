@@ -136,7 +136,7 @@ NS_IMPL_SERVERPREF_INT(nsPop3IncomingServer,
 
 NS_IMPL_SERVERPREF_BOOL(nsPop3IncomingServer,
                             DeferGetNewMail,
-                            "defer_get_new_mail");
+                            "defer_get_new_mail")
 
 NS_IMETHODIMP nsPop3IncomingServer::GetDeferredToAccount(char **aRetVal)
 {
