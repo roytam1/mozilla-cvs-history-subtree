@@ -549,6 +549,7 @@
 				F53C1CD8032FF3B301A96654,
 				F5F94B920332532801026D5D,
 				F5B34B05034A50C901A80166,
+				F529788E0371820B01026DCE,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -686,6 +687,7 @@
 				F53C1CD9032FF3B301A96654,
 				F5F94B930332532801026D5D,
 				F5B34B15034A605401A80166,
+				F529788F0371820B01026DCE,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1546,6 +1548,7 @@
 		};
 		F512F52D02D1287F01072C9F = {
 			children = (
+				F59E9F3F0237E43401A967DF,
 				F5F94B910332532801026D5D,
 				F53C1CD7032FF3B301A96654,
 				F6BA6D4E01B2F8A601A962F7,
@@ -2949,6 +2952,42 @@
 			settings = {
 			};
 		};
+		F529788A0371820B01026DCE = {
+			isa = PBXFileReference;
+			name = CHClickListener.h;
+			path = src/embedding/CHClickListener.h;
+			refType = 2;
+		};
+		F529788B0371820B01026DCE = {
+			isa = PBXFileReference;
+			name = CHClickListener.mm;
+			path = src/embedding/CHClickListener.mm;
+			refType = 2;
+		};
+		F529788C0371820B01026DCE = {
+			fileRef = F529788A0371820B01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F529788D0371820B01026DCE = {
+			fileRef = F529788B0371820B01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F529788E0371820B01026DCE = {
+			fileRef = F529788A0371820B01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F529788F0371820B01026DCE = {
+			fileRef = F529788B0371820B01026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F52CE65902BFA88701026D5D = {
 			isa = PBXFileReference;
 			name = English;
@@ -4037,10 +4076,11 @@
 		};
 		F558B1F603107E4A0166970F = {
 			children = (
+				F529788A0371820B01026DCE,
+				F529788B0371820B01026DCE,
 				F5DE10EB0209DC0601A967DF,
 				F558B1F1030F6E470166970F,
 				F5DE10EA0209DC0601A967DF,
-				F59E9F3F0237E43401A967DF,
 			);
 			isa = PBXGroup;
 			name = "Gecko Embedding";
@@ -6815,6 +6855,7 @@
 				F53C1CDA032FF3B301A96654,
 				F5F94B940332532801026D5D,
 				F5B34B06034A50C901A80166,
+				F529788C0371820B01026DCE,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -6964,6 +7005,7 @@
 				F53C1CDB032FF3B301A96654,
 				F5F94B950332532901026D5D,
 				F5A30033034B8B1A01A96660,
+				F529788D0371820B01026DCE,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;

@@ -35,34 +35,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ContentClickListener_h__
-#define __ContentClickListener_h__
+#ifndef __CHClickListener_h__
+#define __CHClickListener_h__
 
-#include <Carbon/Carbon.h>
+//#include <Carbon/Carbon.h>
 #include <Cocoa/Cocoa.h>
 
 #include "nsIDOMMouseListener.h"
-#import "BrowserWindowController.h"
 
-class ContentClickListener :  public nsIDOMMouseListener
+class CHClickListener :  public nsIDOMMouseListener
 {
 public:
-  ContentClickListener(id aBrowserController);
-  virtual ~ContentClickListener();
+  CHClickListener();
+  virtual ~CHClickListener();
 
   NS_DECL_ISUPPORTS
   
   // The DOM mouse listener interface.  We only care about clicks.
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; };
-  NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent) { return NS_OK; };
+  NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent);
   NS_IMETHOD MouseUp(nsIDOMEvent* aMouseEvent) { return NS_OK; };
-  NS_IMETHOD MouseClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseClick(nsIDOMEvent* aMouseEvent) { return NS_OK; };
   NS_IMETHOD MouseDblClick(nsIDOMEvent* aMouseEvent) { return NS_OK; };
   NS_IMETHOD MouseOver(nsIDOMEvent* aMouseEvent) { return NS_OK; };
   NS_IMETHOD MouseOut(nsIDOMEvent* aMouseEvent) { return NS_OK; };
 
 private:
-  BrowserWindowController* mBrowserController; // Our browser controller (weakly held)
+
 };
 
 

@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
+#import "CHClickListener.h"
 
 #include "nsCWebBrowser.h"
 #include "nsIBaseWindow.h"
@@ -45,6 +46,9 @@
 
 #include "nsIURI.h"
 #include "nsIDOMWindow.h"
+#include "nsPIDOMWindow.h"
+#include "nsIChromeEventHandler.h"
+#include "nsIDOMEventReceiver.h"
 #include "nsIWidget.h"
 
 // Printing
@@ -133,6 +137,19 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 // register the view as a drop site for text, files, and urls. 
     [self registerForDraggedTypes: [NSArray arrayWithObjects:
               @"MozURLType", NSStringPboardType, NSURLPboardType, NSFilenamesPboardType, nil]];
+              
+    // hookup the listener for creating our own native menus on <SELECTS>
+    CHClickListener* clickListener = new CHClickListener();
+    if (!clickListener)
+      return nil;
+    
+    nsCOMPtr<nsIDOMWindow> contentWindow = getter_AddRefs([self getContentWindow]);
+    nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
+    nsCOMPtr<nsIChromeEventHandler> chromeHandler;
+    piWindow->GetChromeEventHandler(getter_AddRefs(chromeHandler));
+    nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
+    if ( rec )
+      rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
   }
   return self;
 }
