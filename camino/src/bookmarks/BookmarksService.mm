@@ -71,6 +71,9 @@
 #include "nsIXBLService.h"
 #include "nsIWebBrowser.h"
 
+#include "nsIEnumerator.h"
+#include "nsIContentIterator.h"
+#include "nsContentCID.h"		// for content iterator CID
 
 // Helper for stripping whitespace
 static void StripWhitespaceNodes(nsIContent* aElement)
@@ -1044,6 +1047,8 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
   BookmarkAdded(parentContent, childContent, true /* flush */);
 }
 
+static NS_DEFINE_CID(kCContentIteratorCID,  NS_CONTENTITERATOR_CID);
+ 
 NSString* 
 BookmarksService::ResolveKeyword(NSString* aKeyword)
 {
@@ -1051,25 +1056,53 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
   [aKeyword assignTo_nsAString:keyword];
 
   if (keyword.IsEmpty())
-    return [NSString string];
-  
-#if DEBUG
-  NSLog(@"str = %s", keyword.get());
-#endif
+    return @"";
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) return @"";
-  
-  nsCOMPtr<nsIDOMElement> elt;
-  domDoc->GetElementById(keyword, getter_AddRefs(elt));
 
-  nsCOMPtr<nsIContent> content(do_QueryInterface(elt));
+  nsCOMPtr<nsIContent> foundContent;
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIContentIterator> iterator = do_CreateInstance(kCContentIteratorCID);
+  if (iterator)
+  {
+    nsCOMPtr<nsIContent> root;
+    GetRootContent(getter_AddRefs(root));
+  
+    rv = iterator->Init(root);
+    if (NS_FAILED(rv))
+      return @"";
+      
+    while (iterator->IsDone() == NS_ENUMERATOR_FALSE)
+    {
+      nsCOMPtr<nsIContent> curContent;
+      iterator->CurrentNode(getter_AddRefs(curContent));
+
+      if (curContent)
+      {
+        nsAutoString keywordValue;
+        curContent->GetAttr(kNameSpaceID_None, gKeywordAtom, keywordValue);
+        if (keywordValue.Equals(keyword))
+        {
+          foundContent = curContent;
+          break;
+        }
+      }
+      
+      iterator->Next();
+    }
+  }
+  
   nsAutoString url;
-  if (content) {
-    content->GetAttr(kNameSpaceID_None, gHrefAtom, url);
+  if (foundContent)
+  {
+    nsAutoString url;
+    foundContent->GetAttr(kNameSpaceID_None, gHrefAtom, url);
     return [NSString stringWith_nsAString: url];
   }
-  return [NSString string];
+
+  return @"";
 }
 
 // Is searchItem equal to bookmark or bookmark's parent, grandparent, etc?
@@ -1762,6 +1795,39 @@ static BOOL gMadeBMManager;
   }
 
   return uriArray;
+}
+
+- (NSString*)resolveBookmarksKeyword:(NSString*)locationString
+{
+  NSString *keywordsResult = BookmarksService::ResolveKeyword(locationString);
+  NSString *defaultReturn  = locationString;
+  
+  if ([keywordsResult length] > 0)
+    return keywordsResult;
+
+  // look for "foo bar"
+  NSRange spaceRange = [locationString rangeOfString:@" "];
+  if (spaceRange.location != NSNotFound)
+  {
+    NSString* firstWord  = [locationString substringToIndex:spaceRange.location];
+    NSString* secondWord = [locationString substringFromIndex:(spaceRange.location + spaceRange.length)];
+  
+    keywordsResult = BookmarksService::ResolveKeyword(firstWord);
+    if ([keywordsResult length] > 0)
+    {
+      NSRange matchRange = [keywordsResult rangeOfString:@"%s"];
+      if (matchRange.location != NSNotFound)
+      {
+        NSString* resolvedString = [NSString stringWithFormat:@"%@%@%@",
+                [keywordsResult substringToIndex:matchRange.location],
+                secondWord,
+                [keywordsResult substringFromIndex:(matchRange.location + matchRange.length)]];
+        return resolvedString;
+      }
+    }
+  }
+
+  return locationString;
 }
 
 // return value is addreffed

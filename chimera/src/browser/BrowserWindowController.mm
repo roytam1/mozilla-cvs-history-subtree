@@ -846,12 +846,16 @@ static NSArray* sToolbarDefaults = nil;
 {
   // trim off any whitespace around url
   NSString *theURL = [[sender stringValue] stringByTrimmingWhitespace];
-  [self loadURL:theURL referrer:nil activate:YES];
+  
+  // look for bookmarks keywords match
+  NSString *resolvedURL = [[BookmarksManager sharedBookmarksManager] resolveBookmarksKeyword:theURL];
+  
+  [self loadURL:resolvedURL referrer:nil activate:YES];
     
   // global history needs to know the user typed this url so it can present it
   // in autocomplete. We use the URI fixup service to strip whitespace and remove
-  // invalid protocols, etc.
-  if ( mGlobalHistory && mURIFixer && [theURL length] > 0)
+  // invalid protocols, etc. Don't save keyword-expanded urls.
+  if ([theURL isEqualToString:resolvedURL] && mGlobalHistory && mURIFixer && [theURL length] > 0)
   {
     nsAutoString url;
     [theURL assignTo_nsAString:url];

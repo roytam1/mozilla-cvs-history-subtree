@@ -226,6 +226,8 @@ protected:
 
 - (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item;
 
+- (NSString*)resolveBookmarksKeyword:(NSString*)locationString;
+
 - (void)addNewBookmark:(NSString*)url title:(NSString*)title withParent:(nsIContent*)parent;
 - (void)addNewBookmarkFolder:(NSString*)title withParent:(nsIContent*)parent;
 
