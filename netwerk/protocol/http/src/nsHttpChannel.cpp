@@ -34,6 +34,7 @@
 #include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
+#include "plstr.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpChannel <public>
@@ -48,7 +49,8 @@ nsHttpChannel::nsHttpChannel()
     , mStatus(NS_OK)
     , mIsPending(PR_FALSE)
     , mApplyConversion(PR_TRUE)
-    , mAuthTriedWithPrehost(PR_FALSE)
+    , mTriedCredentialsFromPrehost(PR_FALSE)
+    , mTriedCredentials(PR_FALSE)
 {
     LOG(("Creating nsHttpChannel @%x\n", this));
 
@@ -420,14 +422,18 @@ nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
     rv = SetupTransaction();
     if (NS_FAILED(rv)) return rv;
 
-    return nsHttpHandler::get()->
+    rv = nsHttpHandler::get()->
             InitiateTransaction(mTransaction, mConnectionInfo);
+    if (NS_FAILED(rv)) return rv;
+
+    mTriedCredentials = PR_TRUE;
+    return NS_OK;
 }
 
 nsresult
 nsHttpChannel::GetCredentials(const char *challenges,
                               PRBool proxyAuth,
-                              nsACString &creds)
+                              nsAFlatCString &creds)
 {
     nsAutoString user, pass;
     nsresult rv;
@@ -440,7 +446,7 @@ nsHttpChannel::GetCredentials(const char *challenges,
         return NS_ERROR_NOT_INITIALIZED;
 
     // proxy auth's never in prehost
-    if (!mAuthTriedWithPrehost && !proxyAuth) {
+    if (!mTriedCredentialsFromPrehost && !proxyAuth) {
         rv = GetUserPassFromURI(user, pass);
         if (NS_FAILED(rv)) return rv;
     }
@@ -457,36 +463,49 @@ nsHttpChannel::GetCredentials(const char *challenges,
     }
 
     nsCAutoString realm;
-    if (user.IsEmpty()) {
-        rv = ParseRealm(challenge.get(), realm);
+    rv = ParseRealm(challenge.get(), realm);
+    if (NS_FAILED(rv)) return rv;
+
+    const char *triedCreds = nsnull;
+    const char *host;
+    nsXPIDLCString path;
+    PRInt32 port;
+
+    if (proxyAuth) {
+        host = mConnectionInfo->ProxyHost();
+        port = mConnectionInfo->ProxyPort();
+        triedCreds = mRequestHead.PeekHeader(nsHttp::Proxy_Authorization);
+    }
+    else {
+        host = mConnectionInfo->Host();
+        port = mConnectionInfo->Port();
+        triedCreds = mRequestHead.PeekHeader(nsHttp::Authorization);
+
+        rv = GetCurrentPath(getter_Copies(path));
         if (NS_FAILED(rv)) return rv;
+    }
 
-        const char *host;
-        PRInt32 port;
+    //
+    // if we already tried some credentials for this transaction, then
+    // we need to possibly clear them from the cache, unless the credentials
+    // in the cache have changed, in which case we'd want to give them a
+    // try instead.
+    //
+    authCache->GetCredentialsForDomain(host, port, realm.get(), creds);
 
-        if (proxyAuth) {
-            host = mConnectionInfo->ProxyHost();
-            port = mConnectionInfo->ProxyPort();
-        }
-        else {
-            host = mConnectionInfo->Host();
-            port = mConnectionInfo->Port();
-        }
+    if (triedCreds && !PL_strcmp(triedCreds, creds.get())) {
+        // ok.. clear the credentials from the cache
+        authCache->SetCredentials(host, port, nsnull, realm.get(), nsnull);
+        creds.Truncate(0);
+    }
+    // otherwise, let's try the credentials we got from the cache
 
-        // check to see if credentials are already cached for this domain,
-        // which could happen if we had two channels concurrently requesting
-        // resources from the same domain (ie. the first channel would have
-        // acquired suitable credentials for this channel as well).
-        rv = authCache->GetCredentials(host,
-                                       port,
-                                       nsnull,
-                                       realm.get(),
-                                       creds);
-        if (NS_SUCCEEDED(rv)) {
-            LOG(("using cached credentials!\n"));
-            return NS_OK;
-        }
+    if (!creds.IsEmpty()) {
+        LOG(("using cached credentials!\n"));
+        return NS_OK;
+    }
 
+    if (user.IsEmpty()) {
         // at this point we are forced to interact with the user to get their
         // username and password for this domain.
         rv = PromptForUserPass(host, port, proxyAuth, realm.get(), user, pass);
@@ -503,7 +522,11 @@ nsHttpChannel::GetCredentials(const char *challenges,
     if (NS_FAILED(rv)) return rv;
 
     creds.Assign(result);
-    return NS_OK;
+
+    // store these credentials in the cache.  we do this even though we don't
+    // yet know that these credentials are valid b/c we need to avoid prompting
+    // the user more than once in case the credentials are valid.
+    return authCache->SetCredentials(host, port, path, realm.get(), creds.get());
 }
 
 nsresult
@@ -697,15 +720,16 @@ nsHttpChannel::AddAuthorizationHeaders()
     nsHttpAuthCache *authCache = nsHttpHandler::get()->AuthCache();
     if (authCache) {
         nsCAutoString creds;
+        nsCAutoString realm;
         nsresult rv;
 
         // check if proxy credentials should be sent
         const char *proxyHost = mConnectionInfo->ProxyHost();
         const char *proxyType = mConnectionInfo->ProxyType();
         if (proxyHost && !PL_strcmp(proxyType, "http")) {
-            rv = authCache->GetCredentials(proxyHost,
-                                           mConnectionInfo->ProxyPort(),
-                                           nsnull, nsnull, creds);
+            rv = authCache->GetCredentialsForPath(proxyHost,
+                                                  mConnectionInfo->ProxyPort(),
+                                                  nsnull, realm, creds);
             if (NS_SUCCEEDED(rv)) {
                 LOG(("adding Proxy_Authorization [creds=%s]\n", creds.get()));
                 mRequestHead.SetHeader(nsHttp::Proxy_Authorization, creds.get());
@@ -713,25 +737,33 @@ nsHttpChannel::AddAuthorizationHeaders()
         }
 
         // check if server credentials should be sent
-        nsXPIDLCString dir;
-        nsCOMPtr<nsIURL> url = do_QueryInterface(mURI);
-        if (url)
-            rv = url->GetDirectory(getter_Copies(dir));
-        else
-            rv = mURI->GetPath(getter_Copies(dir));
+        nsXPIDLCString path;
+        rv = GetCurrentPath(getter_Copies(path));
         if (NS_FAILED(rv)) return rv;
 
-        rv = authCache->GetCredentials(mConnectionInfo->Host(),
-                                       mConnectionInfo->Port(),
-                                       dir.get(),
-                                       nsnull, // we don't know the realm yet
-                                       creds);
+        rv = authCache->GetCredentialsForPath(mConnectionInfo->Host(),
+                                              mConnectionInfo->Port(),
+                                              path.get(),
+                                              realm,
+                                              creds);
         if (NS_SUCCEEDED(rv)) {
             LOG(("adding Authorization [creds=%s]\n", creds.get()));
             mRequestHead.SetHeader(nsHttp::Authorization, creds.get());
         }
     }
     return NS_OK;
+}
+
+nsresult
+nsHttpChannel::GetCurrentPath(char **path)
+{
+    nsresult rv;
+    nsCOMPtr<nsIURL> url = do_QueryInterface(mURI);
+    if (url)
+        rv = url->GetDirectory(path);
+    else
+        rv = mURI->GetPath(path);
+    return rv;
 }
 
 //-----------------------------------------------------------------------------

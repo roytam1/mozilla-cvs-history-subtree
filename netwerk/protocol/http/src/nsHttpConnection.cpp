@@ -229,6 +229,8 @@ nsHttpConnection::ActivateConnection()
 {
     nsresult rv;
 
+    // XXX need to handle SSL proxy CONNECT if this is the first time.
+
     // If we don't have a socket transport then create a new one
     if (!mSocketTransport) {
         rv = CreateTransport();

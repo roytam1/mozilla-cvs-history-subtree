@@ -43,16 +43,23 @@ public:
     nsresult Init();
 
     // host and port are required
-    // directory and realm can be null
-    // realm if present takes precidence over directory
-    nsresult GetCredentials(const char *host,
-                            PRInt32     port,
-                            const char *directory,
-                            const char *realm,
-                            nsACString &credentials);
+    // path can be null
+    nsresult GetCredentialsForPath(const char *host,
+                                   PRInt32     port,
+                                   const char *path,
+                                   nsACString &realm,
+                                   nsACString &credentials);
 
     // host and port are required
-    // directory and realm can be null
+    // realm must not be null
+    nsresult GetCredentialsForDomain(const char *host,
+                                     PRInt32     port,
+                                     const char *realm,
+                                     nsACString &credentials);
+
+    // host and port are required
+    // path can be null
+    // realm must not be null
     // credentials, if null, clears the entry
     nsresult SetCredentials(const char *host,
                             PRInt32     port,
@@ -68,22 +75,22 @@ public: /* internal */
     class nsEntry
     {
     public:
-        nsEntry(const char *directory,
+        nsEntry(const char *path,
                 const char *realm,
-                const char *credentials);
+                const char *creds);
        ~nsEntry();
 
-        const char *Directory()   { return mDirectory; }
-        const char *Realm()       { return mRealm; }
-        const char *Credentials() { return mCredentials; }
+        const char *Path()  { return mPath; }
+        const char *Realm() { return mRealm; }
+        const char *Creds() { return mCreds; }
 
-        void SetDirectory(const char *);
-        void SetCredentials(const char *);
+        void SetPath(const char *);
+        void SetCreds(const char *);
                 
     private:
-        char *mDirectory;
+        char *mPath;
         char *mRealm;
-        char *mCredentials;
+        char *mCreds;
     };
 
     class nsEntryList
@@ -92,16 +99,20 @@ public: /* internal */
         nsEntryList();
        ~nsEntryList();
 
-        // both directory and realm can be null, in which case the first
-        // element will be returned.
-        nsresult GetEntry(const char *directory,
-                          const char *realm,
-                          nsACString &credentials);
+        // path can be null, in which case we'll search for an entry
+        // with a null path.
+        nsresult GetCredentialsForPath(const char *path,
+                                       nsACString &realm,
+                                       nsACString &creds);
+
+        // realm must not be null
+        nsresult GetCredentialsForRealm(const char *realm,
+                                        nsACString &creds);
 
         // if a matching entry is found, then credentials will be changed.
-        nsresult SetEntry(const char *directory,
-                          const char *realm,
-                          const char *credentials);
+        nsresult SetCredentials(const char *path,
+                                const char *realm,
+                                const char *credentials);
 
         PRUint32 Count() { return (PRUint32) mList.Count(); }
 
@@ -110,7 +121,7 @@ public: /* internal */
     };
 
 private:
-    void GenerateHashKey(const char *host, PRInt32 port, nsACString &);
+    nsEntryList *LookupEntryList(const char *host, PRInt32 port, nsAFlatCString &key);
     
 private:
     PLHashTable *mDB; // "host:port" --> nsEntryList

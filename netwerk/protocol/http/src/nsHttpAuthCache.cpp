@@ -62,33 +62,46 @@ nsHttpAuthCache::Init()
 }
 
 nsresult
-nsHttpAuthCache::GetCredentials(const char *host,
-                                PRInt32     port,
-                                const char *dir,
-                                const char *realm,
-                                nsACString &creds)
+nsHttpAuthCache::GetCredentialsForPath(const char *host,
+                                       PRInt32     port,
+                                       const char *path,
+                                       nsACString &realm,
+                                       nsACString &creds)
 {
     NS_ENSURE_TRUE(mDB, NS_ERROR_NOT_INITIALIZED);
  
     LOG(("nsHttpAuthCache::GetCredentials\n"));
 
     nsCAutoString key;
-    GenerateHashKey(host, port, key);
-
-    if (key.IsEmpty())
-        return NS_ERROR_FAILURE;
-
-    nsEntryList *list = (nsEntryList *) PL_HashTableLookup(mDB, key.get());
+    nsEntryList *list = LookupEntryList(host, port, key);
     if (!list)
         return NS_ERROR_NOT_AVAILABLE;
 
-    return list->GetEntry(dir, realm, creds);
+    return list->GetCredentialsForPath(path, realm, creds);
+}
+
+nsresult
+nsHttpAuthCache::GetCredentialsForDomain(const char *host,
+                                         PRInt32     port,
+                                         const char *realm,
+                                         nsACString &creds)
+{
+    NS_ENSURE_TRUE(mDB, NS_ERROR_NOT_INITIALIZED);
+ 
+    LOG(("nsHttpAuthCache::GetCredentials\n"));
+
+    nsCAutoString key;
+    nsEntryList *list = LookupEntryList(host, port, key);
+    if (!list)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    return list->GetCredentialsForRealm(realm, creds);
 }
 
 nsresult
 nsHttpAuthCache::SetCredentials(const char *host,
                                 PRInt32     port,
-                                const char *dir,
+                                const char *path,
                                 const char *realm,
                                 const char *creds)
 {
@@ -97,13 +110,9 @@ nsHttpAuthCache::SetCredentials(const char *host,
     LOG(("nsHttpAuthCache::SetCredentials\n"));
 
     nsCAutoString key;
-    GenerateHashKey(host, port, key);
-
-    if (key.IsEmpty())
-        return NS_ERROR_FAILURE;
-
+    nsEntryList *list = LookupEntryList(host, port, key);
     nsresult rv;
-    nsEntryList *list = (nsEntryList *) PL_HashTableLookup(mDB, key.get());
+
     if (!list) {
         // only create a new list if we have a real entry
         if (!creds)
@@ -113,7 +122,7 @@ nsHttpAuthCache::SetCredentials(const char *host,
         list = new nsEntryList();
         if (!list)
             return NS_ERROR_OUT_OF_MEMORY;
-        rv = list->SetEntry(dir, realm, creds);
+        rv = list->SetCredentials(path, realm, creds);
         if (NS_FAILED(rv))
             delete list;
         else
@@ -121,7 +130,7 @@ nsHttpAuthCache::SetCredentials(const char *host,
         return rv;
     }
 
-    rv = list->SetEntry(dir, realm, creds);
+    rv = list->SetCredentials(path, realm, creds);
     if (NS_SUCCEEDED(rv) && (list->Count() == 0)) {
         // the list has no longer has any entries
         PL_HashTableRemove(mDB, key.get());
@@ -141,10 +150,8 @@ nsHttpAuthCache::ClearAll()
 // nsHttpAuthCache <private>
 //-----------------------------------------------------------------------------
 
-void
-nsHttpAuthCache::GenerateHashKey(const char *host,
-                                 PRInt32 port,
-                                 nsACString &key)
+nsHttpAuthCache::nsEntryList *
+nsHttpAuthCache::LookupEntryList(const char *host, PRInt32 port, nsAFlatCString &key)
 {
     char buf[32];
 
@@ -153,6 +160,8 @@ nsHttpAuthCache::GenerateHashKey(const char *host,
     key.Assign(host);
     key.Append(':');
     key.Append(buf);
+
+    return (nsEntryList *) PL_HashTableLookup(mDB, key.get());
 }
 
 //-----------------------------------------------------------------------------
@@ -160,33 +169,33 @@ nsHttpAuthCache::GenerateHashKey(const char *host,
 //-----------------------------------------------------------------------------
 
 nsHttpAuthCache::
-nsEntry::nsEntry(const char *dir, const char *realm, const char *creds)
-    : mDirectory(PL_strdup(dir))
+nsEntry::nsEntry(const char *path, const char *realm, const char *creds)
+    : mPath(PL_strdup(path))
     , mRealm(PL_strdup(realm))
-    , mCredentials(PL_strdup(creds))
+    , mCreds(PL_strdup(creds))
 {
 }
 
 nsHttpAuthCache::
 nsEntry::~nsEntry()
 {
-    free(mDirectory);
+    free(mPath);
     free(mRealm);
-    free(mCredentials);
+    free(mCreds);
 }
 
 void nsHttpAuthCache::
-nsEntry::SetDirectory(const char *dir)
+nsEntry::SetPath(const char *path)
 {
-    free(mDirectory);
-    mDirectory = PL_strdup(dir);
+    free(mPath);
+    mPath = PL_strdup(path);
 }
 
 void nsHttpAuthCache::
-nsEntry::SetCredentials(const char *creds)
+nsEntry::SetCreds(const char *creds)
 {
-    free(mCredentials);
-    mCredentials = PL_strdup(creds);
+    free(mCreds);
+    mCreds = PL_strdup(creds);
 }
 
 //-----------------------------------------------------------------------------
@@ -208,96 +217,101 @@ nsEntryList::~nsEntryList()
 }
 
 nsresult nsHttpAuthCache::
-nsEntryList::GetEntry(const char *dir,
-                      const char *realm,
-                      nsACString &creds)
+nsEntryList::GetCredentialsForPath(const char *path,
+                                   nsACString &realm,
+                                   nsACString &creds)
 {
     nsEntry *entry = nsnull;
 
-    if (realm) {
-        // look for an entry that matches this realm
-        PRInt32 i;
-        for (i=0; i<mList.Count(); ++i) {
-            entry = (nsEntry *) mList[i];
-            if (!PL_strcmp(realm, entry->Realm()))
-                break;
-            entry = nsnull;
-        }
-    }
-    else if (dir) {
-        // look for an entry that either matches or contains this directory.
-        // ie. we'll give out credentials if the given directory is a sub-
-        // directory of an existing entry.
-        PRInt32 i;
-        for (i=0; i<mList.Count(); ++i) {
-            entry = (nsEntry *) mList[i];
-            if (PL_strncmp(dir, entry->Directory(), PL_strlen(entry->Directory())))
-                break;
-            entry = nsnull;
-        }
-    }
-    else {
-        // search for an entry with neither dir or realm (this corresponds
-        // to proxy authentication credentials).  there should be only one
-        // such entry, so just inspect the first one.
-        if (mList.Count() > 0) {
-            entry = (nsEntry *) mList[0];
-            if (entry->Realm() || entry->Directory())
-                entry = nsnull;
-        }
+    // it's permissible to specify a null path, in which case we just treat
+    // this as an empty string.
+    if (!path)
+        path = "";
+
+    // look for an entry that either matches or contains this directory.
+    // ie. we'll give out credentials if the given directory is a sub-
+    // directory of an existing entry.
+    PRInt32 i;
+    for (i=0; i<mList.Count(); ++i) {
+        entry = (nsEntry *) mList[i];
+        if (PL_strncmp(path, entry->Path(), PL_strlen(entry->Path())))
+            break;
+        entry = nsnull;
     }
 
     if (!entry)
         return NS_ERROR_NOT_AVAILABLE;
 
-    creds.Assign(entry->Credentials());
+    realm.Assign(entry->Realm());
+    creds.Assign(entry->Creds());
     return NS_OK;
 }
 
 nsresult nsHttpAuthCache::
-nsEntryList::SetEntry(const char *dir,
-                      const char *realm,
-                      const char *creds)
+nsEntryList::GetCredentialsForRealm(const char *realm,
+                                    nsACString &creds)
 {
+    NS_ENSURE_ARG_POINTER(realm);
+
     nsEntry *entry = nsnull;
 
-    if (realm) {
-        // look for an entry with a matching realm
-        PRInt32 i;
-        for (i=0; i<mList.Count(); ++i) {
-            entry = (nsEntry *) mList[i];
-            if (!PL_strcmp(realm, entry->Realm()))
-                break;
-            entry = nsnull;
-        }
+    // look for an entry that matches this realm
+    PRInt32 i;
+    for (i=0; i<mList.Count(); ++i) {
+        entry = (nsEntry *) mList[i];
+        if (!PL_strcmp(realm, entry->Realm()))
+            break;
+        entry = nsnull;
     }
-    else if (dir) {
-        NS_NOTREACHED("directory without realm");
-    }
-    else {
-        // no realm... XXX can this ever happen?
-        if (mList.Count() > 0) {
-            entry = (nsEntry *) mList[0];
-            if (entry->Realm() || entry->Directory())
-                entry = nsnull;
-        }
+
+    if (!entry)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    creds.Assign(entry->Creds());
+    return NS_OK;
+}
+
+nsresult nsHttpAuthCache::
+nsEntryList::SetCredentials(const char *path,
+                            const char *realm,
+                            const char *creds)
+{
+    NS_ENSURE_ARG_POINTER(realm);
+
+    nsEntry *entry = nsnull;
+
+    // look for an entry with a matching realm
+    PRInt32 i;
+    for (i=0; i<mList.Count(); ++i) {
+        entry = (nsEntry *) mList[i];
+        if (!PL_strcmp(realm, entry->Realm()))
+            break;
+        entry = nsnull;
     }
 
     if (!entry) {
-        entry = new nsEntry(dir, realm, creds);
-        if (!entry)
-            return NS_ERROR_OUT_OF_MEMORY;
-        mList.AppendElement(entry);
+        if (creds) {
+            entry = new nsEntry(path, realm, creds);
+            if (!entry)
+                return NS_ERROR_OUT_OF_MEMORY;
+            mList.AppendElement(entry);
+        }
+        // else, nothing to do
+    }
+    else if (!creds) {
+        mList.RemoveElementAt(i);
+        delete entry;
     }
     else {
-        if (dir) {
-            // we should hold onto the top most of the two directories
-            PRUint32 len1 = PL_strlen(dir);
-            PRUint32 len2 = PL_strlen(entry->Directory());
+        // update the entry...
+        if (path) {
+            // we should hold onto the top-most of the two path
+            PRUint32 len1 = PL_strlen(path);
+            PRUint32 len2 = PL_strlen(entry->Path());
             if (len1 < len2)
-                entry->SetDirectory(dir);
+                entry->SetPath(path);
         }
-        entry->SetCredentials(creds);
+        entry->SetCreds(creds);
     }
 
     return NS_OK;

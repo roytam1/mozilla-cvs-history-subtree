@@ -81,13 +81,14 @@ private:
     nsresult ProcessNotModified();
     nsresult ProcessRedirection(PRUint32 httpStatus);
     nsresult ProcessAuthentication(PRUint32 httpStatus);
-    nsresult GetCredentials(const char *challenges, PRBool proxyAuth, nsACString &creds);
+    nsresult GetCredentials(const char *challenges, PRBool proxyAuth, nsAFlatCString &creds);
     nsresult SelectChallenge(const char *challenges, nsAFlatCString &challenge, nsIHttpAuthenticator **); 
     nsresult GetAuthenticator(const char *scheme, nsIHttpAuthenticator **);
     nsresult GetUserPassFromURI(nsAString &user, nsAString &pass);
     nsresult ParseRealm(const char *challenge, nsACString &realm);
     nsresult PromptForUserPass(const char *host, PRInt32 port, PRBool proxyAuth, const char *realm, nsAString &user, nsAString &pass);
     nsresult AddAuthorizationHeaders();
+    nsresult GetCurrentPath(char **);
 
 private:
     nsCOMPtr<nsIURI>                mOriginalURI;
@@ -116,7 +117,8 @@ private:
 
     PRPackedBool                    mIsPending;
     PRPackedBool                    mApplyConversion;
-    PRPackedBool                    mAuthTriedWithPrehost;
+    PRPackedBool                    mTriedCredentialsFromPrehost;
+    PRPackedBool                    mTriedCredentials;
 };
 
 #endif
