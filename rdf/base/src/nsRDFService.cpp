@@ -116,18 +116,19 @@ PrefixMap::Add(const char* aPrefix, const void* aValue)
     PrefixMapEntry* last = nsnull;
 
     while (entry != nsnull) {
+        // check to see if the new prefix is longer than the current
+        // entry. If so, we'll want to insert the new prefix *before*
+        // this one.
+        if (newPrefixLen > entry->mPrefixLen)
+            break;
+
         // check for exact equality: if so, the prefix is already
         // registered, so fail (?)
         if (PL_strcmp(entry->mPrefix, aPrefix) == 0)
             return PR_FALSE;
 
-
-        // check to see if the prefix of the entry we are looking
-        // at is a substring of the new prefix. If so, then we'll
-        // insert the new prefix *before* the current entry to
-        // enforce specificity
-        if (PL_strncmp(entry->mPrefix, aPrefix, entry->mPrefixLen) <= 0)
-            break;
+        // otherwise, the new prefix is the same length or shorter
+        // than the current entry: continue on to the next one.
 
         last = entry;
         entry = entry->mNext;
@@ -142,19 +143,15 @@ PrefixMap::Add(const char* aPrefix, const void* aValue)
     newEntry->mPrefixLen = newPrefixLen;
     newEntry->mValue     = aValue;
 
-    if (entry) {
-        // we found an entry to insert the new entry before
-        newEntry->mNext = entry;
-        entry->mNext = newEntry;
-    }
-    else if (last) {
-        // we made it all the way to the end of the list
-        newEntry->mNext = nsnull;
+    if (last) {
+        // we found an entry that we need to insert the current
+        // entry *before*
+        newEntry->mNext = last->mNext;
         last->mNext = newEntry;
     }
     else {
-        // there is no head! insert at the start
-        newEntry->mNext = nsnull;
+        // Otherwise, insert at the start
+        newEntry->mNext = mHead;
         mHead = newEntry;
     }
     return PR_TRUE;
@@ -166,8 +163,11 @@ PrefixMap::Remove(const char* aPrefix)
     PrefixMapEntry* entry = mHead;
     PrefixMapEntry* last = nsnull;
 
+    PRInt32 doomedPrefixLen = PL_strlen(aPrefix);
+
     while (entry != nsnull) {
-        if (PL_strcmp(entry->mPrefix, aPrefix) == 0) {
+        if ((doomedPrefixLen == entry->mPrefixLen) &&
+            (PL_strcmp(entry->mPrefix, aPrefix) == 0)) {
             if (last) {
                 last->mNext = entry->mNext;
             }
@@ -196,9 +196,6 @@ PrefixMap::Find(const char* aString)
         PRInt32 cmp = PL_strncmp(entry->mPrefix, aString, entry->mPrefixLen);
         if (cmp == 0)
             return entry->mValue;
-
-        if (cmp < 0)
-            break;
     }
     return nsnull;
 }
@@ -598,8 +595,8 @@ ServiceImpl::RegisterBuiltInResourceFactories(void)
 
     static ResourceFactoryTable gTable[] = {
         "",                NS_NewRDFDefaultResourceFactory,
-        "mailbox:",        NS_NewRDFMailResourceFactory,
         "mailaccount:",    NS_NewRDFMailAccountResourceFactory,
+        "mailbox:",        NS_NewRDFMailResourceFactory,
 #if 0
         "file:",           NS_NewRDFFileResourceFactory,
 #endif
