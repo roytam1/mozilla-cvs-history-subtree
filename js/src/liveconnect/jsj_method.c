@@ -456,6 +456,11 @@ jsj_ReflectJavaMethods(JSContext *cx, JNIEnv *jEnv,
        java.lang.Class.getMethods(). */
     java_class = class_descriptor->java_class;
     joMethodArray = (*jEnv)->CallObjectMethod(jEnv, java_class, jlClass_getMethods);
+	if ((*jEnv)->ExceptionOccurred(jEnv)) {
+    	(*jEnv)->ExceptionDescribe(jEnv);
+    	(*jEnv)->ExceptionClear(jEnv);
+    	return JS_FALSE;
+    }
     if (!joMethodArray) {
         jsj_UnexpectedJavaError(cx, jEnv,
                                 "Can't determine Java object's methods "
