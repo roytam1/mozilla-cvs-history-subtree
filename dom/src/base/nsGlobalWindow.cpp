@@ -5365,10 +5365,6 @@ NavigatorImpl::GetLanguage(nsAString& aLanguage)
 NS_IMETHODIMP
 NavigatorImpl::GetPlatform(nsAString& aPlatform)
 {
-  nsresult res;
-  nsCOMPtr<nsIHttpProtocolHandler>
-    service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && service) {
     // sorry for the #if platform ugliness, but Communicator is
     // likewise hardcoded and we're seeking backward compatibility
     // here (bug 47080)
@@ -5379,16 +5375,20 @@ NavigatorImpl::GetPlatform(nsAString& aPlatform)
     // doesn't know about it this will actually be backward compatible
     aPlatform = NS_LITERAL_STRING("MacPPC");
 #else
+  nsresult res;
+  nsCOMPtr<nsIHttpProtocolHandler> service(do_GetService(kHTTPHandlerCID, &res));
+  if (NS_SUCCEEDED(res) && service) {
     // XXX Communicator uses compiled-in build-time string defines
     // to indicate the platform it was compiled *for*, not what it is
     // currently running *on* which is what this does.
     nsCAutoString plat;
     res = service->GetOscpu(plat);
     CopyASCIItoUCS2(plat, aPlatform);
-#endif
   }
-
   return res;
+#endif
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
