@@ -948,6 +948,9 @@ void nsWindow::NativeGrab(PRBool aGrab)
     nsXKBModeSwitch::UnGrabKeyboard(GDK_CURRENT_TIME);
     DropMotionTarget();
     gdk_pointer_ungrab(GDK_CURRENT_TIME);
+    
+    gdk_flush();
+    XFlush(GDK_DISPLAY());
   }
 }
 
