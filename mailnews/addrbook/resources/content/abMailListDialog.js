@@ -102,7 +102,7 @@ function GetListValue(mailList, doAdd)
         return false;
     }
   }
-
+  
   mailList.dirName = listname;
   mailList.listNickName = document.getElementById('ListNickName').value;
   mailList.description = document.getElementById('ListDescription').value;

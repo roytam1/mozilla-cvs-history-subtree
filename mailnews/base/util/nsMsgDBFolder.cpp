@@ -1100,7 +1100,7 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 		{
 			nsFileSpec		folderName;
 			dbPath->GetFileSpec(&folderName);
-			nsLocalFolderSummarySpec	summarySpec(folderName);
+			nsLocalFolderSummarySpec summarySpec(folderName);
 
 			dbPath->SetFromFileSpec(summarySpec);
 
@@ -1108,7 +1108,7 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 			// see bug #244217 for details
 			PRBool exists;
 			if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
-			dbPath->Touch();
+				dbPath->Touch();
 		}
 	}
 	return rv;
