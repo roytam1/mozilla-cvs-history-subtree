@@ -360,9 +360,9 @@ nsXmlRpcClient.prototype = {
                     'nsISupportsPRBool');
 
             case this.STRING:
-                uuid.value = Components.interfaces.nsISupportsString
+                uuid.value = Components.interfaces.nsISupportsCString
                 return createInstance(SUPPORTSID + 'string;1',
-                    'nsISupportsString');
+                    'nsISupportsCString');
 
             case this.DOUBLE:
                 uuid.value = Components.interfaces.nsISupportsDouble
@@ -585,7 +585,7 @@ nsXmlRpcClient.prototype = {
         } catch(e) {}
         
         try {
-            obj.QueryInterface(Components.interfaces.nsISupportsString);
+            obj.QueryInterface(Components.interfaces.nsISupportsCString);
             return 'String';
         } catch(e) {}
         
