@@ -376,9 +376,9 @@ function NameForStatusCode(aStatusCode)
     case kUnknownProxyHost:
       return "UNKNOWN_PROXY_HOST";
     case kErrorFTPAuthNeeded:
-      return "FTP auth needed ?";
+      return "FTP auth needed (?)";
     case kErrorFTPAuthFailed:
-      return "FTP auth failed ?";
+      return "FTP auth failed (?)";
     case kStatusBeginFTPTransaction:
       return "NET_STATUS_BEGIN_FTP_TRANSACTION";
     case kStatusEndFTPTransaction:

@@ -178,7 +178,7 @@ Transfer.prototype =
     this.dump();
 
     if (this.files.length == 0)
-      this.done(true); // should be true?
+      this.done(true);
 
     if (this.serial)
     {
@@ -345,8 +345,6 @@ Transfer.prototype =
   fileFinished : function(filei)
   {
     ddump("file " + filei + " finished");
-    if (this.serial)
-      this.nextFile();
 
     var file = this.files[filei];
 
@@ -365,7 +363,7 @@ Transfer.prototype =
         file.localFile.remove(false);
     }
 
-    // check, if we're all done
+    // check, if we're done with all files
     var done = true;
     var failed = false;
     for (var i = 0, l = this.files.length; i < l; i++)
@@ -373,11 +371,14 @@ Transfer.prototype =
       var file = this.files[i];
       if (file.status == "failed")
         failed = true; // |done| stays true
-      else if (file.status != "done") // failed already tested above
+      else if (file.status != "done") // "failed" already tested above
         done = false;
     }
     if (done)
       this.done(!failed);
+
+    else if (this.serial)
+      this.nextFile();
   },
 
   // user wishes transfer to stop
@@ -712,7 +713,7 @@ TransferFile.prototype =
     var was_failed = (this.status == "failed");
     var was_done = (this.status == "done");
     if (!was_failed)  /* prevent overwriting older errors with newer, bogus
-                         OK status codes, or the real problem with
+                         OK status codes or the real problem with
                          consequential problems. */
     {
       this.status = aStatus;
@@ -721,7 +722,7 @@ TransferFile.prototype =
         this.statusCode = aStatusCode;
         //this.statusText = aMessage; // might be undefined, but it must match
         //                            // this.statusCode
-        //          *sigh*, for FTP, we get the error msg before the error
+        // WORKAROUND *sigh*, for FTP, we get the error msg before the error
       }
       if (aMessage)
         this.statusText = aMessage;
@@ -799,7 +800,8 @@ TransferProgressListener.prototype =
 
     if (aStatusCode == kNS_OK)
     {
-      /* HTTP gives us NS_OK, although the request failed with an HTTP error
+      /* WORKAROUND
+         HTTP gives us NS_OK, although the request failed with an HTTP error
          code, so check for that.
          FTP gives us NS_OK, although the transfer is still ongoing */
       var scheme = this.file.channel.URI.scheme;
@@ -819,7 +821,8 @@ TransferProgressListener.prototype =
 
   onStatus : function(aRequest, aContext, aStatusCode, aStatusArg)
   {
-    /* The status codes that are passwed to us here in aStatusCode look like
+    /* WORKAROUND
+       The status codes that are passed to us here in aStatusCode look like
        nsresult error codes, but their numerical values overlap with other,
        real errors. Darin said that real errors are never passed in here,
        so we don't have a hard conflict. To make processing easier, I just
@@ -849,29 +852,17 @@ TransferProgressListener.prototype =
     ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
     ddump("  StatusArg: " + aStatusArg);
 
-    /* We sometimes get onStopRequest *before* e.g. onStatus(SENDING_TO), so
+    /* WORKAROUND
+       We sometimes get onStopRequest *before* e.g. onStatus(SENDING_TO), so
        ignore all status msgs after onstop. This is dangerous, because
        IIRC I saw onStop also on the very beginning of a transfer, and
        if that happens for the last file, we might close the dialog before
        the transfer finished, but I don't know another quick and not too bad
        workaround. */
-    if (status == "done")
+    if (this.file.status == "done")
       return;
 
     this.privateStatusChange(aStatusCode);
-  },
-
-  onProgress : function(aRequest, aContext, aProgress, aProgressMax)
-  {
-    // ddumpCont("onProgress: " + aRequest.name + ", ");
-    // ddump(aProgress + "/" + aProgressMax);
-    ddump("onProgress: " + aProgress + "/" + aProgressMax);
-
-    if (aProgressMax > 0 && aProgress > 0)
-                      // Necko sometimes sends crap like 397/0 or 0/4294967295
-    {
-      this.transfer.progressChanged(this.filei, aProgress / aProgressMax);
-    }
   },
 
   /* Use this function to interpret Mozilla status/error codes and
@@ -964,6 +955,19 @@ TransferProgressListener.prototype =
     this.file.setStatus(status, kStatusHTTP, respText);
   },
 
+  onProgress : function(aRequest, aContext, aProgress, aProgressMax)
+  {
+    // ddumpCont("onProgress: " + aRequest.name + ", ");
+    // ddump(aProgress + "/" + aProgressMax);
+    ddump("onProgress: " + aProgress + "/" + aProgressMax);
+
+    if (aProgressMax > 0 && aProgress > 0)
+          // WORKAROUND Necko sometimes sends crap like 397/0 or 0/4294967295
+    {
+      this.transfer.progressChanged(this.filei, aProgress / aProgressMax);
+    }
+  },
+
 
   // Dummies
 
@@ -1018,8 +1022,9 @@ TransferProgressListener.prototype =
   {
     ddump("alert " + text);
 
-    // FTP sends us these in the case of an error *sigh*. Don't display dialog,
-    // but redirect to file errors.
+    /* WORKAROUND
+       FTP sends us these in the case of an error *sigh*. Don't display dialog,
+       but redirect to file errors. */
     this.file.statusText = text.replace(/\n/, "");
 
     /*
