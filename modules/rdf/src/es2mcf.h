@@ -20,7 +20,7 @@
 #define	_RDF_ES2MCF_H_
 
 #include "rdf-int.h"
-#include "net.h"
+#include "cstream.h"
 
 
 

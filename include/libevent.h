@@ -34,6 +34,7 @@
 #include "shist.h"
 #include "fe_proto.h"
 #include "lo_ele.h"
+#include "cstream.h"
 
 NSPR_BEGIN_EXTERN_C
 
