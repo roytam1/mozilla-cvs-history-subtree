@@ -107,7 +107,7 @@ void String::replace(const PRUint32 aOffset, const String& aSource)
     PRUint32 finalLength = aOffset + aSource.mLength;
 
     if (finalLength > mLength) {
-      ensureCapacity(totalOffset - mLength);
+      ensureCapacity(finalLength - mLength);
       mLength = finalLength;
     }
     memcpy(&mBuffer[aOffset], aSource.mBuffer,
@@ -156,12 +156,11 @@ void String::ensureCapacity(const PRUint32 aCapacity)
   mBufferLength += aCapacity - freeSpace;
   UNICODE_CHAR* tempBuffer = new UNICODE_CHAR[mBufferLength];
   memcpy(tempBuffer, mBuffer, mLength);
-  if (mBuffer)
-     delete mBuffer;
+  delete mBuffer;
   mBuffer = tempBuffer;
 }
 
-PRInt32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRUint32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
   PRUint32 searchIndex = aOffset;
 
@@ -173,7 +172,7 @@ PRInt32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
   return NOT_FOUND;
 }
 
-PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
+PRUint32 String::indexOf(const String& aData, const PRUint32 aOffset) const
 {
   PRUint32 searchIndex = aOffset;
   PRUint32 searchLimit = mLength - aData.mLength;
@@ -186,7 +185,7 @@ PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
   return NOT_FOUND;
 }
 
-PRInt32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRUint32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
     if (aOffset >= mLength)
        return NOT_FOUND;
@@ -233,7 +232,7 @@ MBool String::isEmpty() const
     return (mLength == 0);
 }
 
-PRInt32 String::length() const
+PRUint32 String::length() const
 {
   return mLength;
 }
