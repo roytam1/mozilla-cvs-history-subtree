@@ -262,13 +262,15 @@ typedef enum XP_FileType {
 } XP_FileType;
 
 #if defined(XP_UNIX) || defined(XP_MAC)
-#define DIRECTORY_SEPARATOR   '/'
-#define PATH_SEPARATOR        ':'
-#define PATH_SEPARATOR_STR    ":"
+#define DIRECTORY_SEPARATOR '/'
+#define DIRECTORY_SEPARATOR_STR "/"
+#define PATH_SEPARATOR ':'
+#define PATH_SEPARATOR_STR ":"
 #elif defined(XP_WIN) || defined(XP_OS2)
-#define DIRECTORY_SEPARATOR   '\\'
-#define PATH_SEPARATOR        ';'
-#define PATH_SEPARATOR_STR    ";"
+#define DIRECTORY_SEPARATOR '\\'
+#define DIRECTORY_SEPARATOR_STR "\\"
+#define PATH_SEPARATOR ';'
+#define PATH_SEPARATOR_STR ";"
 #else
 #error
 #endif
@@ -276,9 +278,10 @@ typedef enum XP_FileType {
 /*
  * For backward compatibility.
  */
-#define PR_DIRECTORY_SEPARATOR   DIRECTORY_SEPARATOR
-#define PR_PATH_SEPARATOR        PATH_SEPARATOR
-#define PR_PATH_SEPARATOR_STR    PATH_SEPARATOR_STR
+#define PR_DIRECTORY_SEPARATOR DIRECTORY_SEPARATOR
+#define PR_DIRECTORY_SEPARATOR_STR DIRECTORY_SEPARATOR_STR
+#define PR_PATH_SEPARATOR PATH_SEPARATOR
+#define PR_PATH_SEPARATOR_STR PATH_SEPARATOR_STR
 
 #ifdef XP_MAC
 #define MAXPATHLEN 512
