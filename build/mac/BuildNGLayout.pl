@@ -78,6 +78,7 @@ $options{xmlextras}		= 0;
 
 $options{jar_manifests} = 0;        # use jar.mn files for resources, not MANIFESTs
 $options{jars}    		= 0;        # build jar files
+$options{chrome_files}  = 1;        # install files in chrome as well as making jar files.
 
 # Don't change these (where should they go?)
 $optiondefines{mathml}{MOZ_MATHML}		= 1;
@@ -182,7 +183,13 @@ ConfigureBuildSystem();
 
 Checkout();
 
-SetBuildNumber();
+my(@gen_files) = (
+    ":mozilla:xpfe:appshell:public:nsBuildID.h",
+    ":mozilla:xpfe:browser:resources:locale:en-US:navigator.dtd"
+);
+SetBuildNumber(":mozilla:config:build_number", ":mozilla:config:aboutime.pl", \@gen_files);
+
+die;
 
 chdir($MOZ_SRC);
 BuildDist();

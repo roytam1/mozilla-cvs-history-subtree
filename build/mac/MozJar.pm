@@ -98,6 +98,51 @@ sub CreateJarFileFromDirectory($$$)
     MacPerl::SetFileInfo("ZIP ", "ZIP ", $jarpath);
 }
 
+#-------------------------------------------------------------------------------
+# printZipContents
+# 
+#-------------------------------------------------------------------------------
+sub printZipContents($)
+{
+    my($zip) = @_;
+
+    my(@members) = $zip->memberNames();
+    
+    print "Zip contains:\n";
+    
+    my($member);
+    foreach $member (@members)
+    {
+        print "  $member\n";
+    }
+}
+
+
+#-------------------------------------------------------------------------------
+# safeSaveJarFile
+# 
+# Archive::Zip has a problem where you cannot save a zip file on top of
+# an existing zip file that it has open, because it holds references
+# into that zip. So we have to save to a temp file, then do a swap.
+# 
+# Note that the zip will become invalid after this operation.
+# If you want to do further operations on it, you'll have to reread it.
+#-------------------------------------------------------------------------------
+sub safeSaveJarFile($$)
+{
+    my($zip, $full_dest_path) = @_;
+    
+    my($temp_file_name) = $full_dest_path."_temp";
+
+    ($zip->writeToFileNamed($temp_file_name) == Archive::Zip::AZ_OK) || die "Error writing jar to temp file $temp_file_name\n";
+    
+    unlink $full_dest_path;
+    
+    (rename $temp_file_name, $full_dest_path) || die "Failed to rename $temp_file_name\n";
+    
+    MacPerl::SetFileInfo("ZIP ", "ZIP ", $full_dest_path);
+}
+
 
 #-------------------------------------------------------------------------------
 # addToJarFile
@@ -147,7 +192,6 @@ sub addToJarFile($$$$$$)
         unless ($zip) { die "Can't find Zip entry for $jar_id\n"; }
         
         # print "Adding $file_src to jar file $jar_path at $file_jar_path\n";
-    
         my($member) = Archive::Zip::Member->newFromFile($src);
         unless ($member) { die "Failed to create zip file member $src\n"; }
 
@@ -155,14 +199,24 @@ sub addToJarFile($$$$$$)
     
         my($compress) = 1;
         if ($compress) {
-            $member->desiredCompressionMethod(Archive::Zip::COMPRESSION_DEFLATED);            
+            $member->desiredCompressionMethod(Archive::Zip::COMPRESSION_DEFLATED);
+            $member->desiredCompressionLevel(Archive::Zip::COMPRESSION_LEVEL_DEFAULT);   # defaults to 6
         } else {
             $member->desiredCompressionMethod(Archive::Zip::COMPRESSION_STORED);
         }
 
-        $zip->addMember($member);        
+        my($old_member) = $zip->memberNamed($file_jar_path);
+        if ($old_member)
+        {
+            print "Replaced $file_jar_path in jar file $jar_id\n";
+            # need to compare mod dates or use the + here
+            $zip->removeMember($old_member);
+        }
+        
+        $zip->addMember($member);
     }
-    else        # copy file
+    
+    if ($main::options{chrome_files})  # we install raw files too
     {
         my($rel_path) = $file_jar_path;
         $rel_path =~ s|/|:|g;       # slash to colons
@@ -186,17 +240,31 @@ sub addToJarFile($$$$$$)
 
 sub setupJarFile($$$)
 {
-    my($jar_id, $jar_path, $jar_hash) = @_;
+    my($jar_id, $dest_path, $jar_hash) = @_;
 
     # print "Creating jar file $jar_id at $jar_path\n";
     
+    my($jar_file) = $jar_id;
+    $jar_file =~ s|/|:|g;           # slash to colons
+    my($full_jar_path) = Moz::full_path_to($dest_path.":".$jar_file);
+
     if ($main::options{jars})
     {
         my($zip) = $jar_hash->{$jar_id};
         if (!$zip)      # if we haven't made it already, do so
         {
-	        my($zip) = Archive::Zip->new();
-	        $jar_hash->{$jar_id} = $zip;
+            my($zip) = Archive::Zip->new();
+            $jar_hash->{$jar_id} = $zip;
+
+            # does the jar file exist already? If so, read it in
+            if (-e $full_jar_path)
+            {
+                print "Reading in jar file $jar_id\n";
+                if ($zip->read($full_jar_path) != Archive::Zip::AZ_OK) { die "Failed to re-read $full_jar_path\n"; }
+                
+                # printZipContents($zip);
+            }
+
         }
     }
     else
@@ -204,8 +272,8 @@ sub setupJarFile($$$)
         # installing files.
         # nothing to do. MakeAlias creates dirs as needed.
 
-	    # add this jar to the list
-	    $jar_hash->{$jar_id} = 1;
+        # add this jar to the list
+        $jar_hash->{$jar_id} = 1;
     }
 }
 
@@ -261,12 +329,13 @@ sub WriteOutJarFiles($$)
 
         # ensure the target dirs exist
         my($path) = $output_path;
-        $path =~ s/\.jar$//;
+        $path =~ s/[^:]+$//;
         mkpath($path);
         
-        ($zip->writeToFileNamed($output_path) == Archive::Zip::AZ_OK) || die "Error writing jar $rel_path\n";
-        
-        MacPerl::SetFileInfo("ZIP ", "ZIP ", $output_path);
+        # unlink $output_path;        # remove any existing jar
+        safeSaveJarFile($zip, $output_path);
+        # $zip is invalid after this operation, so nuke it here
+        $jars->{$key} = 0;
     }
 }
 
@@ -299,25 +368,25 @@ sub registerChromePackage($$$$$$)
     
     my($inst_chrome) = ${chrome_dir}.":installed-chrome.txt";
     
-	if (open(CHROMEFILE, "<$inst_chrome")) {
-	    while (<CHROMEFILE>) {
-	        chomp;
-	        if ($_ eq $chrome_entry) {
-	            # $chrome_entry already appears in installed-chrome.txt file
-	            # just update the mod date
-	            my $now = time;
-	            utime($now, $now, $inst_chrome) || die "couldn't touch $inst_chrome";
-	            print "+++ updating chrome $inst_chrome\n+++\t\t$chrome_entry\n";
-	    		close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
-	    		return 0;
-	        }
-	    }
-	    close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
-	}
+    if (open(CHROMEFILE, "<$inst_chrome")) {
+        while (<CHROMEFILE>) {
+            chomp;
+            if ($_ eq $chrome_entry) {
+                # $chrome_entry already appears in installed-chrome.txt file
+                # just update the mod date
+                my $now = time;
+                utime($now, $now, $inst_chrome) || die "couldn't touch $inst_chrome";
+                print "+++ updating chrome $inst_chrome\n+++\t\t$chrome_entry\n";
+                close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
+                return 0;
+            }
+        }
+        close(CHROMEFILE) || die "error: can't close $inst_chrome: $!";
+    }
     open(CHROMEFILE, ">>${inst_chrome}") || die "Failed to open $inst_chrome\n";
     print(CHROMEFILE "${chrome_entry}\n");
     close(CHROMEFILE) || die "Failed to close $inst_chrome\n";
-	print "+++ adding chrome $inst_chrome\n+++\t\t$chrome_entry\n";
+    print "+++ adding chrome $inst_chrome\n+++\t\t$chrome_entry\n";
 }
 
 #-------------------------------------------------------------------------------
@@ -342,9 +411,9 @@ sub CreateJarFromManifest($$$)
     # if the jars hash is empty, nuke installed-chrome.txt
     if (! scalar(%$jars))
     {
-        print "Nuking chrome\n";
-	    my($installed_chrome) = $dest_path.":installed-chrome.txt";
-	    # unlink $installed_chrome;
+        print "Nuking installed-chrome.txt\n";
+        my($installed_chrome) = $dest_path.":installed-chrome.txt";
+        # unlink $installed_chrome;
     }
     
     my $jar_man_dir = "";
@@ -382,7 +451,7 @@ sub CreateJarFromManifest($$$)
             $jar_file =~ s|/|:|g;           # slash to colons
             $full_jar_path = $dest_path.":".$jar_file;
                         
-            setupJarFile($jar_id, $full_jar_path, $jars);
+            setupJarFile($jar_id, $dest_path, $jars);
 
         }
         elsif ($line =~ /^\s+([\w\d.\-\_\\\/]+)\s*(\([\w\d.\-\_\\\/]+\))?$\s*/)     # jar file entry
