@@ -65,3 +65,4 @@ interface nsIDOMWindowUtils : nsISupports {
    */
            attribute unsigned short imageAnimationMode;
 };
+

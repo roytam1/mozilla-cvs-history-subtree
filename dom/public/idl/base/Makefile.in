@@ -53,6 +53,7 @@ XPIDLSRCS =					\
 	nsIDOMPluginArray.idl			\
 	nsIDOMScreen.idl			\
 	nsIDOMWindowInternal.idl		\
+	nsIDOMWindowUtils.idl		\
 	nsIDOMJSWindow.idl			\
 	nsIDOMChromeWindow.idl			\
 	$(NULL)
