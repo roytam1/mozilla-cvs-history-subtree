@@ -1,5 +1,5 @@
 DEPTH	 = ../../../..
-srcdir = @srcdir
+srcdir = @srcdir@
 ldaptopsrcdir = @top_srcdir@
 
 UNIXDIRLIST	= liblber libldap
