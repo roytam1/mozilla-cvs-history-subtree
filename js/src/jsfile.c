@@ -988,9 +988,9 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         JS_ReportError(cx, FIRST_ARGUMENT_OPEN_NOT_STRING_ERROR );
         return JS_FALSE;
       }
-      mode = JS_GetStringBytes(strmode);
+      mode = JS_strdup(cx,JS_GetStringBytes(strmode));
     } else
-      mode = "readWrite,append,create"; /* non-destructive, permissive defaults. */
+      mode = JS_strdup(cx,"readWrite,append,create"); /* non-destructive, permissive defaults. */
     if (argc>=1) {
       strtype = JS_ValueToString(cx, argv[0]);
       if (!strtype) {
@@ -1023,6 +1023,8 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     mask|=(file_has_option(mode,"replace"))?PR_TRUNCATE:0;
 
     file->autoflush|=(file_has_option(mode,"autoflush"));
+
+    JS_free(cx,mode);
 
     if ((mask&(PR_RDONLY|PR_WRONLY))==0)
         mask|=PR_RDWR;
