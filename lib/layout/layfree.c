@@ -576,7 +576,7 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			break;
 #ifdef JAVA
 		case LO_JAVA:
-			FE_HideJavaAppElement(context, element->lo_java.session_data);
+			FE_HideJavaAppElement(context, element->lo_java.objTag.session_data);
 			if (element->lo_java.attr_code != NULL)
 			{
 				PA_FREE(element->lo_java.attr_code);
@@ -597,10 +597,10 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 				PA_FREE(element->lo_java.attr_name);
 				element->lo_java.attr_name = NULL;
 			}
-			if (element->lo_java.base_url != NULL)
+			if (element->lo_java.objTag.base_url != NULL)
 			{
-				PA_FREE(element->lo_java.base_url);
-				element->lo_java.base_url = NULL;
+				PA_FREE(element->lo_java.objTag.base_url);
+				element->lo_java.objTag.base_url = NULL;
 			}
 
 #ifdef OJI
@@ -673,10 +673,10 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			 * Otherwise, save the NULL.
 			 */
 			lo_AddEmbedData(context,
-					element->lo_java.session_data,
+					element->lo_java.objTag.session_data,
 					LJ_DeleteSessionData,
-					element->lo_java.embed_index);
-			element->lo_java.session_data = NULL;
+					element->lo_java.objTag.embed_index);
+			element->lo_java.objTag.session_data = NULL;
 			break;
 #endif /* JAVA */
 		case LO_IMAGE:

@@ -337,9 +337,9 @@ static void lo_MoveElementLayers( LO_Element *eptr )
 #ifdef JAVA
 	else if (eptr->type == LO_JAVA)
 	{
-		CL_MoveLayer(eptr->lo_java.layer, 
-			eptr->lo_any.x + eptr->lo_any.x_offset + eptr->lo_java.border_width, 
-			eptr->lo_any.y + eptr->lo_any.y_offset + eptr->lo_java.border_width);
+		CL_MoveLayer(eptr->lo_java.objTag.layer, 
+			eptr->lo_any.x + eptr->lo_any.x_offset + eptr->lo_java.objTag.border_width, 
+			eptr->lo_any.y + eptr->lo_any.y_offset + eptr->lo_java.objTag.border_width);
 		
 	}
 #endif

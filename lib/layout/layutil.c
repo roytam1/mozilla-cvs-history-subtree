@@ -108,8 +108,8 @@ lo_GetElementBbox(LO_Element *element, XP_Rect *rect)
     case LO_JAVA:
     {
         LO_JavaAppStruct *java = &element->lo_java;
-        rect->right  += 2 * (java->border_width + java->border_horiz_space);
-        rect->bottom += 2 * (java->border_width + java->border_vert_space);
+        rect->right  += 2 * (java->objTag.border_width + java->objTag.border_horiz_space);
+        rect->bottom += 2 * (java->objTag.border_width + java->objTag.border_vert_space);
     }
     break;
 #endif

@@ -8252,7 +8252,7 @@ lo_FindReuseableElement(MWContext *context, lo_DocState *state, LO_Element ** el
 				break;
 #ifdef JAVA
 			case LO_JAVA:
-				tag = eptr->lo_java.tag;
+				tag = eptr->lo_java.objTag.tag;
 				break;
 #endif /* JAVA */
 		}

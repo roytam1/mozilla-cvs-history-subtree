@@ -7580,8 +7580,8 @@ void lo_UpdateStateWhileFlushingLine( MWContext *context, lo_DocState *state )
 		    break;
 #ifdef JAVA
 		  case LO_JAVA:
-		    layer = tptr->lo_java.layer;
-		    border_width = tptr->lo_java.border_width;
+		    layer = tptr->lo_java.objTag.layer;
+		    border_width = tptr->lo_java.objTag.border_width;
 		    break;
 #endif
 		  case LO_EMBED:

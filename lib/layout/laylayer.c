@@ -2157,8 +2157,8 @@ lo_window_layer_visibility_changed(CL_Layer *layer,
 	break;
 #ifdef JAVA
     case LO_JAVA:
-	tptr->lo_java.ele_attrmask &= ~LO_ELE_INVISIBLE;
-	tptr->lo_java.ele_attrmask |= LO_ELE_INVISIBLE * !visible;
+	tptr->lo_java.objTag.ele_attrmask &= ~LO_ELE_INVISIBLE;
+	tptr->lo_java.objTag.ele_attrmask |= LO_ELE_INVISIBLE * !visible;
 	break;
 #endif
     default:
@@ -2245,9 +2245,9 @@ lo_CreateEmbeddedObjectLayer(MWContext *context,
 #ifdef JAVA
     case LO_JAVA:
 	name = "_JAVA_APPLET";
-	tptr->lo_java.ele_attrmask  |= LO_ELE_INVISIBLE;
-	vspace = tptr->lo_java.border_vert_space;
-	hspace = tptr->lo_java.border_horiz_space;
+	tptr->lo_java.objTag.ele_attrmask  |= LO_ELE_INVISIBLE;
+	vspace = tptr->lo_java.objTag.border_vert_space;
+	hspace = tptr->lo_java.objTag.border_horiz_space;
 	is_window = PR_TRUE;
 	break;
 #endif

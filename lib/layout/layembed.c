@@ -250,12 +250,12 @@ lo_FormatEmbed(MWContext *context, lo_DocState *state, PA_Tag *tag)
 		embed->attributes.n = PA_FetchAllNameValues(tag,
 			&(embed->attributes.names), &(embed->attributes.values), CS_FE_ASCII);
 #else
- 		embed->objTag.attribute_cnt = 0;
- 		embed->objTag.attribute_list = NULL;
- 		embed->objTag.value_list = NULL;
+ 		embed->attribute_cnt = 0;
+ 		embed->attribute_list = NULL;
+ 		embed->value_list = NULL;
   
- 		embed->objTag.attribute_cnt = PA_FetchAllNameValues(tag,
- 			&(embed->objTag.attribute_list), &(embed->objTag.value_list), CS_FE_ASCII);
+ 		embed->attribute_cnt = PA_FetchAllNameValues(tag,
+ 			&(embed->attribute_list), &(embed->value_list), CS_FE_ASCII);
 #endif
 
 		lo_FormatEmbedInternal(context, state, tag, embed, FALSE, FALSE);
@@ -281,12 +281,12 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 	embed->attributes.n = PA_FetchAllNameValues(tag,
 		&(embed->attributes.names), &(embed->attributes.values), CS_FE_ASCII);
 #else
- 	embed->objTag.attribute_cnt = 0;
- 	embed->objTag.attribute_list = NULL;
- 	embed->objTag.value_list = NULL;
+ 	embed->attribute_cnt = 0;
+ 	embed->attribute_list = NULL;
+ 	embed->value_list = NULL;
   
- 	embed->objTag.attribute_cnt = PA_FetchAllNameValues(tag,
- 		&(embed->objTag.attribute_list), &(embed->objTag.value_list), CS_FE_ASCII);
+ 	embed->attribute_cnt = PA_FetchAllNameValues(tag,
+ 		&(embed->attribute_list), &(embed->value_list), CS_FE_ASCII);
 #endif
 
 #ifdef OJI
@@ -298,15 +298,15 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 	 * other code that looks up parameters by name
 	 * can believe this is a normal EMBED.
 	 */
- 	for (count = 0; count < (uint32)embed->objTag.attribute_cnt; count++)
+ 	for (count = 0; count < (uint32)embed->attribute_cnt; count++)
   	{
- 		if (XP_STRCASECMP(embed->objTag.attribute_list[count], PARAM_ID) == 0)
- 			StrAllocCopy(embed->objTag.attribute_list[count], PARAM_NAME);
- 		else if (XP_STRCASECMP(embed->objTag.attribute_list[count], PARAM_DATA) == 0)
- 			StrAllocCopy(embed->objTag.attribute_list[count], "src");
- 		else if (XP_STRCASECMP(embed->objTag.attribute_list[count], PARAM_TYPE) == 0)
+ 		if (XP_STRCASECMP(embed->attribute_list[count], PARAM_ID) == 0)
+ 			StrAllocCopy(embed->attribute_list[count], PARAM_NAME);
+ 		else if (XP_STRCASECMP(embed->attribute_list[count], PARAM_DATA) == 0)
+ 			StrAllocCopy(embed->attribute_list[count], "src");
+ 		else if (XP_STRCASECMP(embed->attribute_list[count], PARAM_TYPE) == 0)
   			typeIndex = count;
- 		else if (XP_STRCASECMP(embed->objTag.attribute_list[count], PARAM_CLASSID) == 0)
+ 		else if (XP_STRCASECMP(embed->attribute_list[count], PARAM_CLASSID) == 0)
   			classidIndex = count;
   	}
  	
@@ -319,8 +319,8 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 		if (typeIndex >= 0)
 		{
 			/* Change current value of TYPE to application/oleobject */
- 			if (XP_STRCASECMP(embed->objTag.value_list[typeIndex], APPLICATION_OLEOBJECT) != 0)
- 				StrAllocCopy(embed->objTag.value_list[typeIndex], APPLICATION_OLEOBJECT);
+ 			if (XP_STRCASECMP(embed->value_list[typeIndex], APPLICATION_OLEOBJECT) != 0)
+ 				StrAllocCopy(embed->value_list[typeIndex], APPLICATION_OLEOBJECT);
 		}
 		else
 		{
@@ -330,17 +330,17 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 			names[0] = XP_STRDUP(PARAM_TYPE);
 			values[0] = XP_STRDUP(APPLICATION_OLEOBJECT);
 			
- 			lo_AppendParamList((uint32*) &(embed->objTag.attribute_cnt),
- 							   &(embed->objTag.attribute_list),
- 							   &(embed->objTag.value_list),
+ 			lo_AppendParamList((uint32*) &(embed->attribute_cnt),
+ 							   &(embed->attribute_list),
+ 							   &(embed->value_list),
 							   1, names, values);
 		}
 		
 		/* Lop off the "clsid:" prefix from the CLASSID attribute */
-		if (XP_STRNCASECMP(embed->objTag.value_list[classidIndex], "clsid:", 6) == 0)
+		if (XP_STRNCASECMP(embed->value_list[classidIndex], "clsid:", 6) == 0)
 		{
-			char* classID = &(embed->objTag.value_list[classidIndex][6]);
-			XP_MEMMOVE(embed->objTag.value_list[classidIndex], classID,
+			char* classID = &(embed->value_list[classidIndex][6]);
+			XP_MEMMOVE(embed->value_list[classidIndex], classID,
 					   (XP_STRLEN(classID) + 1) * sizeof(char));
 		}
 	}
@@ -378,15 +378,15 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
  		values[0] = NULL;
  		
  		/* Add "PARAM" to the list */
- 		lo_AppendParamList((uint32*) &(embed->objTag.attribute_cnt),
- 						   &(embed->objTag.attribute_list),
- 						   &(embed->objTag.value_list),
+ 		lo_AppendParamList((uint32*) &(embed->attribute_cnt),
+ 						   &(embed->attribute_list),
+ 						   &(embed->value_list),
  						   1, names, values);
  
  		/* Add all <PARAM> tag paramters to the list */
- 		lo_AppendParamList((uint32*) &(embed->objTag.attribute_cnt),
- 						   &(embed->objTag.attribute_list),
- 						   &(embed->objTag.value_list),
+ 		lo_AppendParamList((uint32*) &(embed->attribute_cnt),
+ 						   &(embed->attribute_list),
+ 						   &(embed->value_list),
  						   param_count,
  						   param_names,
  						   param_values);
@@ -441,7 +441,7 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	lo_ConvertAllValues(context, embed->attributes.values, embed->attributes.n,
 						tag->newline_count);
 #else
-	lo_ConvertAllValues(context, embed->objTag.value_list, embed->objTag.attribute_cnt,
+	lo_ConvertAllValues(context, embed->value_list, embed->attribute_cnt,
 						tag->newline_count);
 #endif
 
