@@ -16,6 +16,6 @@
  * Reserved.
  */
 
-#define MOZ_DARK
+#define MOZ_MEDIUM
 
 #define NO_SECURITY
