@@ -411,7 +411,12 @@ nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
 {
-  // xxx see comments at the bottom of Init()
+#ifdef XP_UNIX
+  //XXX - Workaround to make sure that ForeignObject's are displayed on unix
+  // even when they are not preloaded in cache.
+  mIsDirty = PR_TRUE;
+#endif
+
   if (mIsDirty) {
     ArtUta* dirtyRegion = DoReflow();
     if (dirtyRegion) {
