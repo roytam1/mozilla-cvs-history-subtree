@@ -634,11 +634,45 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
                                    PRInt32 aSXOffset, PRInt32 aSYOffset,
                                    const nsRect &aTileRect)
 {
-  nsRect              destRect,srcRect,tvrect;
-  HDC                 TheHDC,offDC,maskDC;
-  PRInt32             x,y,width,height,canRaster,TileBufferWidth,TileBufferHeight;
-  HBITMAP             maskBits,tileBits,oldBits,oldMaskBits; 
+  // XXX this code below is quite slow.  need to make it faster
+  PRInt32
+    validX = 0,
+    validY = 0,
+    validWidth  = mBHead->biWidth,
+    validHeight = mBHead->biHeight;
+  
+  // limit the image rectangle to the size of the image data which
+  // has been validated.
+  if (mDecodedY2 < mBHead->biHeight) {
+    validHeight = mDecodedY2 - mDecodedY1;
+  }
+  if (mDecodedX2 < mBHead->biWidth) {
+    validWidth = mDecodedX2 - mDecodedX1;
+  }
+  if (mDecodedY1 > 0) {   
+    validHeight -= mDecodedY1;
+    validY = mDecodedY1;
+  }
+  if (mDecodedX1 > 0) {
+    validWidth -= mDecodedX1;
+    validX = mDecodedX1; 
+  }
 
+  PRInt32 aY0 = aTileRect.y - aSYOffset,
+          aX0 = aTileRect.x - aSXOffset,
+          aY1 = aTileRect.y + aTileRect.height,
+          aX1 = aTileRect.x + aTileRect.width;
+
+  for (PRInt32 y = aY0; y < aY1; y += mBHead->biHeight)
+    for (PRInt32 x = aX0; x < aX1; x += mBHead->biWidth)
+      Draw(aContext,aSurface, x,y,
+           PR_MIN(validWidth, aX1-x),
+           PR_MIN(validHeight, aY1-y));
+
+
+  return PR_TRUE;
+
+#if 0
 
   nscoord aX0 = aTileRect.x + aSXOffset;
   nscoord aY0 = aTileRect.y + aSYOffset;
@@ -777,8 +811,9 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
   ::SelectObject(offDC,oldBits);
   ::DeleteObject(tileBits);
   ::DeleteObject(offDC);
+#endif
 
-  return (PR_TRUE);
+  return PR_TRUE;
 }
 
 /** ---------------------------------------------------
