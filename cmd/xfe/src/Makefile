@@ -179,7 +179,6 @@ CPPSRCS		+= \
 		  FolderPromptDialog.cpp \
 		  FolderMenu.cpp \
 		  FolderView.cpp \
-		  Frame.cpp \
 		  $(NULL)
 endif
 
