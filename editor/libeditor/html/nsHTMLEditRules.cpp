@@ -492,6 +492,24 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
       if (NS_FAILED(res)) return res;
     }
     
+    // make sure paste, drop, and html insert dont leave us in 
+    // a -moz-user-select: all style
+    if ((action == nsHTMLEditor::kOpHTMLPaste)      || 
+        (action == nsHTMLEditor::kOpLoadHTML))
+    {
+      nsCOMPtr<nsIDOMNode> selNode, selectAllNode;
+      PRInt32 selOffset;
+      res = mHTMLEditor->GetEndNodeAndOffset(selection, address_of(selNode), &selOffset);
+      if (NS_FAILED(res)) return res;
+      selectAllNode = mHTMLEditor->FindUserSelectAllNode(selNode);
+      if (selectAllNode)
+      {
+        res = nsEditor::GetNodeLocation(selectAllNode, address_of(selNode), &selOffset);
+        if (NS_FAILED(res)) return res;
+        selection->Collapse(selNode, selOffset+1);
+      }
+    }
+    
   }
 
   // detect empty doc
