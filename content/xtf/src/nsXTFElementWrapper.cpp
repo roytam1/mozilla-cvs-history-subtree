@@ -49,7 +49,8 @@
 #include "nsHTMLAtoms.h"
 
 nsXTFElementWrapper::nsXTFElementWrapper(nsINodeInfo* aNodeInfo)
-    : nsXTFElementWrapperBase(aNodeInfo)
+  : nsXTFElementWrapperBase(aNodeInfo),
+    mHandleAttributes(PR_FALSE)
 {
 }
 
@@ -164,6 +165,11 @@ nsXTFElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                              nsIAtom* aPrefix, const nsAString& aValue,
                              PRBool aNotify)
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::SetAttr(aNameSpaceID, aName, aPrefix,
+                                            aValue, aNotify);
+  }
+
   nsAutoString name;
   aName->ToString(name);
   
@@ -178,6 +184,10 @@ nsresult
 nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                              nsAString& aResult)const
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::GetAttr(aNameSpaceID, aName, aResult);
+  }
+
   nsAutoString name;
   aName->ToString(name);
   nsresult rv = GetXTFElement()->GetAttribute(name, aResult);
@@ -191,6 +201,10 @@ nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 PRBool
 nsXTFElementWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::HasAttr(aNameSpaceID, aName);
+  }
+
   nsAutoString name;
   aName->ToString(name);
   PRBool rval = PR_FALSE;
@@ -204,6 +218,10 @@ nsresult
 nsXTFElementWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
                                       PRBool aNotify)
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::UnsetAttr(aNameSpaceID, aAttr, aNotify);
+  }
+
   nsAutoString name;
   aAttr->ToString(name);
   
@@ -218,6 +236,11 @@ nsresult
 nsXTFElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                                    nsIAtom** aName, nsIAtom** aPrefix) const
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::GetAttrNameAt(aIndex, aNameSpaceID,
+                                                  aName, aPrefix);
+  }
+
   *aNameSpaceID = kNameSpaceID_None;
   *aPrefix = nsnull;
   
@@ -234,6 +257,10 @@ nsXTFElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
 PRUint32
 nsXTFElementWrapper::GetAttrCount() const
 {
+  if (mHandleAttributes) {
+    return nsXTFElementWrapperBase::GetAttrCount();
+  }
+
   PRUint32 rval = 0;
   GetXTFElement()->GetAttributeCount(&rval);
   return rval;
@@ -344,6 +371,22 @@ nsXTFElementWrapper::GetDocumentFrameElement(nsIDOMElement * *aDocumentFrameElem
   }
   *aDocumentFrameElement = pidomwin->GetFrameElementInternal();
   NS_IF_ADDREF(*aDocumentFrameElement);
+  return NS_OK;
+}
+
+/* attribute boolean shouldHandleAttributes; */
+NS_IMETHODIMP
+nsXTFElementWrapper::GetShouldHandleAttributes(PRBool *aShouldHandle)
+{
+  NS_ENSURE_ARG_POINTER(aShouldHandle);
+  *aShouldHandle = mHandleAttributes;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXTFElementWrapper::SetShouldHandleAttributes(PRBool aShouldHandle)
+{
+  mHandleAttributes = aShouldHandle;
   return NS_OK;
 }
 

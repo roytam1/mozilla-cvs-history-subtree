@@ -92,7 +92,8 @@ protected:
   
   // implementation helpers:  
   PRBool AggregatesInterface(REFNSIID aIID);
-  
+
+  PRBool mHandleAttributes;
 };
 
 #endif // __NS_XTFELEMENTWRAPPER_H__

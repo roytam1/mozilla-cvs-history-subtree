@@ -45,5 +45,7 @@ interface nsIXTFElementWrapper : nsISupports
 {  
   readonly attribute nsIDOMElement elementNode;
   readonly attribute nsIDOMElement documentFrameElement;
+
+  attribute boolean shouldHandleAttributes;
 };
 
