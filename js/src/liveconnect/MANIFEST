@@ -3,3 +3,6 @@
 
 jsjava.h
 nsILiveconnect.h
+nsISecureLiveconnect.h
+nsISecurityContext.h
+netscape_javascript_JSObject.h
