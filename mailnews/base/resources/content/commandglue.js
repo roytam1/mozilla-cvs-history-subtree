@@ -110,10 +110,8 @@ function setTitleFromFolder(msgfolder, subject)
     else
       title = "";
 
-    if (msgfolder.isServer) {
-            // <hostname>
-            title += server.hostName;
-    }
+    if (msgfolder.isServer)
+      title += server.prettyName;
     else {
         var middle;
         var end;
