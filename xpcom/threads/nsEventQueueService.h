@@ -68,9 +68,6 @@ public:
   NS_IMETHOD PushThreadEventQueue(nsIEventQueue **aNewQueue);
   NS_IMETHOD PopThreadEventQueue(nsIEventQueue *aQueue);
 
-#ifdef XP_MAC
-  NS_IMETHOD ProcessEvents();
-#endif // XP_MAC
 
 private:
   NS_IMETHOD CreateEventQueue(PRThread *aThread);
