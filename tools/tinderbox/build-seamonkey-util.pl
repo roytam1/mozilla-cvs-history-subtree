@@ -1663,7 +1663,7 @@ sub run_all_tests {
         and $test_result eq 'success') {
         $test_result =
             FileBasedTest("DomToTextConversionTest", $build_dir, $binary_dir,
-                          ["perl TestOutSinks.pl"], $Settings::DomTestTimeout,
+                          ["perl", "TestOutSinks.pl"], $Settings::DomTestTimeout,
                           "FAILED", 0, 0);  # Timeout means failure.
     }
 
