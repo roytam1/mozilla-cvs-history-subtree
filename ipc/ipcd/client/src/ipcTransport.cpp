@@ -141,7 +141,7 @@ ipcTransport::Init(ipcTransportObserver *obs, PRUint32 *clientID)
     nsCOMPtr<nsIFile> file;
     nsCAutoString path;
 
-    rv = NS_GetSpecialDirectory(NS_XPCOM_CURRENT_PROCESS_DIR, getter_AddRefs(file));
+    rv = NS_GetSpecialDirectory(NS_GRE_DIR, getter_AddRefs(file));
     if (NS_FAILED(rv))
         return rv;
 
