@@ -375,7 +375,11 @@ nsSliderFrame::DoLayout(nsBoxLayoutState& aState)
 
   nscoord ourmaxpos = desiredcoord; 
 
-  mRatio = float(ourmaxpos)/float(maxpos + ourmaxpos);
+  if (float(maxpos + ourmaxpos) == 0) {
+    mRatio = 1;
+  }
+  else
+    mRatio = float(ourmaxpos)/float(maxpos + ourmaxpos);
 
   // if there is more room than the thumb need stretch the
   // thumb
@@ -397,11 +401,13 @@ nsSliderFrame::DoLayout(nsBoxLayoutState& aState)
       
     } else {
         ourmaxpos -= thumbcoord;
-        mRatio = float(ourmaxpos)/float(maxpos);
+        if (float(maxpos) != 0)
+          mRatio = float(ourmaxpos)/float(maxpos);
     }
   } else {
       ourmaxpos -= thumbcoord;
-      mRatio = float(ourmaxpos)/float(maxpos);
+      if (float(maxpos) != 0)
+        mRatio = float(ourmaxpos)/float(maxpos);
   }
   nscoord curpos = curpospx*onePixel;
 
