@@ -33,6 +33,9 @@
 #include "nsAutoLock.h"
 #include "nsIStreamObserver.h"
 #include "nsTime.h"
+#ifdef DNS_TIMING
+#include "prinrval.h"
+#endif
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -89,7 +92,13 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
 
-    nsDNSRequest() : mLookup(nsnull), mSuspendCount(0) { NS_INIT_REFCNT(); }
+    nsDNSRequest()
+        : mLookup(nsnull), 
+#ifdef DNS_TIMING
+          mStartTime(PR_IntervalNow()),
+#endif
+          mSuspendCount(0)
+    { NS_INIT_REFCNT(); }
     virtual ~nsDNSRequest() {}
 
     nsresult Init(nsDNSLookup* lookup,
@@ -103,6 +112,9 @@ protected:
     nsCOMPtr<nsISupports>       mUserContext;
     nsDNSLookup*                mLookup;        // weak ref
     PRUint32                    mSuspendCount;
+#ifdef DNS_TIMING
+    PRIntervalTime              mStartTime;
+#endif
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -249,6 +261,18 @@ nsDNSRequest::FireStop(nsresult status)
 
     mUserListener = null_nsCOMPtr();
     mUserContext = null_nsCOMPtr();
+#ifdef DNS_TIMING
+    if (nsDNSService::gService->mOut) {
+        PRIntervalTime stopTime = PR_IntervalNow();
+        double duration = PR_IntervalToMicroseconds(stopTime - mStartTime);
+        nsDNSService::gService->mCount++;
+        nsDNSService::gService->mTimes += duration;
+        nsDNSService::gService->mSquaredTimes += duration * duration;
+        fprintf(nsDNSService::gService->mOut, "DNS time #%d: %u us for %s\n", 
+                (PRInt32)nsDNSService::gService->mCount,
+                (PRInt32)duration, mLookup->HostName());
+    }
+#endif
     return NS_OK;
 }
 
@@ -717,6 +741,12 @@ nsDNSLookup::DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
 nsDNSService::nsDNSService()
     : mState(NS_OK),
       mMonitor(nsnull),
+#ifdef DNS_TIMING
+      mCount(0),
+      mTimes(0),
+      mSquaredTimes(0),
+      mOut(nsnull),
+#endif
       mLookups(nsnull, nsnull, nsDNSLookup::DeleteEntry, nsnull)
 {
     NS_INIT_REFCNT();
@@ -733,6 +763,12 @@ nsDNSService::nsDNSService()
     mClientContext = nsnull;
 #endif /* TARGET_CARBON */
 #endif /* defined(XP_MAC) */
+
+#ifdef DNS_TIMING
+    if (getenv("DNS_TIMING")) {
+        mOut = fopen("dns-timing.txt", "w");
+    }
+#endif
 }
 
 NS_IMETHODIMP
@@ -816,6 +852,18 @@ nsDNSService::~nsDNSService()
 
     if (--gRefcnt == 0)
         gService = nsnull;
+
+#ifdef DNS_TIMING
+    if (mOut) {
+        double mean;
+        double stddev;
+        NS_MeanAndStdDev(mCount, mTimes, mSquaredTimes, &mean, &stddev);
+        fprintf(mOut, "DNS lookup time: %.2f +/- %.2f us (%d lookups)\n",
+                mean, stddev, (PRInt32)mCount);
+        fclose(mOut);
+        mOut = nsnull;
+    }
+#endif
 }
 
 NS_IMPL_ISUPPORTS2(nsDNSService, nsIDNSService, nsIRunnable);

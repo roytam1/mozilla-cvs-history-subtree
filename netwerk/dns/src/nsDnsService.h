@@ -38,6 +38,10 @@
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 
+//#ifdef DEBUG
+#define DNS_TIMING 1    // XXX remove later
+//#endif
+
 class nsIDNSListener;
 class nsDNSLookup;
 
@@ -92,6 +96,14 @@ protected:
     HWND                        mDNSWindow;
     UINT                        mMsgFoundDNS;
 #endif /* XP_PC */
+
+#ifdef DNS_TIMING
+    double              mCount;
+    double              mTimes;
+    double              mSquaredTimes;
+    FILE*               mOut;
+    friend class nsDNSRequest;
+#endif
 };
 
 #endif /* nsDNSService_h__ */
