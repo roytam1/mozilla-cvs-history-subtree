@@ -49,6 +49,7 @@
 #include "nsXPIDLString.h"
 #include "nsCharsetMenu.h"
 #include "nsFontPackageHandler.h"
+#include "nsAlertsService.h" 
 #if defined(XP_WIN)
 #include "nsUrlWidget.h"
 #include "nsWindowsHooks.h"
@@ -68,6 +69,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(LocalSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(InternetSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(RelatedLinksHandlerImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimeBomb)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAlertsService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUrlbarHistory)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontPackageHandler)
 #if defined(XP_WIN)
@@ -163,7 +165,8 @@ static const nsModuleComponentInfo components[] = {
       NS_INTERNETSEARCH_DATASOURCE_CONTRACTID, InternetSearchDataSourceConstructor },
     { "Related Links Handler", NS_RELATEDLINKSHANDLER_CID, NS_RELATEDLINKSHANDLER_CONTRACTID,
 	  RelatedLinksHandlerImplConstructor},
-	{ "Netscape TimeBomb", NS_TIMEBOMB_CID, NS_TIMEBOMB_CONTRACTID, nsTimeBombConstructor},
+    { "Netscape TimeBomb", NS_TIMEBOMB_CID, NS_TIMEBOMB_CONTRACTID, nsTimeBombConstructor},
+    { "nsAlertsService", NS_ALERTSSERVICE_CID, NS_ALERTSERVICE_CONTRACTID, nsAlertsServiceConstructor},
     { "nsUrlbarHistory", NS_URLBARHISTORY_CID,
       NS_URLBARHISTORY_CONTRACTID, nsUrlbarHistoryConstructor },
     { "nsUrlbarHistory", NS_URLBARHISTORY_CID,

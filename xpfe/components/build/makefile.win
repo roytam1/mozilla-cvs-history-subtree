@@ -43,6 +43,7 @@ REQUIRES	= xpcom \
 		  content \
 		  history \
 		  search \
+                  alerts \
 		  related \
 		  urlbarhistory \
 		  mozldap \
@@ -66,6 +67,7 @@ SUB_LIBRARIES=                           \
         $(DIST)\lib\appcompintl_s.lib    \
         $(DIST)\lib\related_s.lib        \
         $(DIST)\lib\search_s.lib         \
+        $(DIST)\lib\alerts_s.lib         \
         $(DIST)\lib\timebomb_s.lib       \
         $(DIST)\lib\urlbarhistory_s.lib  \
         $(DIST)\lib\urlwidgt_s.lib       \

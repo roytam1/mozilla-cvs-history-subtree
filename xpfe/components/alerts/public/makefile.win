@@ -19,32 +19,16 @@
 #
 # Contributor(s): 
 
-DEPTH=..\..
 
-DIRS= \
-    bookmarks \
-    directory \
-    filepicker \
-    find \
-    history \
-    prefwindow \
-    search \
-    sidebar \
-    regviewer \
-    related \
-    xfer \
-    shistory \
-    timebomb \
-    console \
-    autocomplete \
-    urlbarhistory \
-    winhooks \
-    urlwidget \
-    updates \
-    intl \
-    resetPref \
-    alerts \
-    build \
+
+MODULE=appcomps
+
+DEPTH=..\..\..\..
+
+XPIDL_MODULE=alerts
+
+XPIDLSRCS=\
+	.\nsIAlertsService.idl \
     $(NULL)
-
+  
 include <$(DEPTH)\config\rules.mak>
