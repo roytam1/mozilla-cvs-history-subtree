@@ -492,7 +492,7 @@ nsSprocketLayout::Layout(nsIBox* aBox, nsBoxLayoutState& aState)
         layout = PR_FALSE;
       } else {
         // Always perform layout if we are dirty or have dirty children
-        if (!(child->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) && aState.LayoutReason() != nsBoxLayoutState::Initial)
+        if (!(child->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)))
           layout = PR_FALSE;
       }
 

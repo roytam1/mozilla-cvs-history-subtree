@@ -1835,7 +1835,6 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
     // ok layout at the right size
     if (needsLayout) {
        nsBoxLayoutState resizeState(aState);
-       resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
        PRBool setBack;
        AdjustReflowStateForPrintPreview(aState, setBack);
        LayoutBox(resizeState, mScrollAreaBox, scrollAreaRect);
@@ -1896,7 +1895,6 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
   // we only need to set the rect. The inner child stays the same size.
   if (needsLayout) {
      nsBoxLayoutState resizeState(aState);
-     resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
      PRBool setBack;
      AdjustReflowStateForPrintPreview(aState, setBack);
      LayoutBox(resizeState, mScrollAreaBox, scrollAreaRect); 
@@ -2004,7 +2002,6 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
   // we only need to set the rect. The inner child stays the same size.
   if (needsLayout) {
      nsBoxLayoutState resizeState(aState);
-     resizeState.SetLayoutReason(nsBoxLayoutState::Resize);
      LayoutBox(resizeState, mScrollAreaBox, scrollAreaRect); 
      needsLayout = PR_FALSE;
   }
@@ -2043,7 +2040,8 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
   // be re-laid out anyway)
   if ((oldScrollAreaBounds.width != scrollAreaRect.width
       || oldScrollAreaBounds.height != scrollAreaRect.height)
-      && nsBoxLayoutState::Dirty == aState.LayoutReason()) {
+#error "Is this now always true or always false?"
+      //&& nsBoxLayoutState::Dirty == aState.LayoutReason()) {
     nsIFrame* parentFrame = mOuter->GetParent();
     if (parentFrame) {
       if (parentFrame->GetType() == nsLayoutAtoms::viewportFrame) {

@@ -60,12 +60,6 @@ class nsHTMLReflowCommand;
 class nsBoxLayoutState
 {
 public:
-  enum eBoxLayoutReason {
-    Dirty,
-    Resize,
-    Initial
-  };
-
   nsBoxLayoutState(nsPresContext* aPresContext,
                    const nsHTMLReflowState& aReflowState,
                    nsHTMLReflowMetrics& aDesiredSize) NS_HIDDEN;
@@ -89,8 +83,6 @@ public:
   void SetPaintingDisabled(PRBool aDisable) { mPaintingDisabled = aDisable; }
   PRBool PaintingDisabled() const { return mPaintingDisabled; }
 
-  eBoxLayoutReason LayoutReason() { return mType; }
-  void SetLayoutReason(eBoxLayoutReason aReason) { mType = aReason; }
   const nsHTMLReflowState* GetReflowState() { return mReflowState; }
 
   nsresult PushStackMemory() { return PresShell()->PushStackMemory(); }
@@ -105,7 +97,6 @@ private:
 
   nsCOMPtr<nsPresContext> mPresContext;
   const nsHTMLReflowState* mReflowState;
-  eBoxLayoutReason mType;
   nsSize mScrolledBlockSizeConstraint;
   PRUint32 mLayoutFlags;
   PRBool mPaintingDisabled;

@@ -177,24 +177,7 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 #ifdef DEBUG_LAYOUT 
 
   nsBoxAddIndents();
-
-  nsAutoString reason;
-  switch(aState.LayoutReason())
-    {
-    case nsBoxLayoutState::Dirty:
-      reason.AssignLiteral("Dirty");
-      break;
-    case nsBoxLayoutState::Initial:
-      reason.AssignLiteral("Initial");
-      break;
-    case nsBoxLayoutState::Resize:
-      reason.AssignLiteral("Resize");
-      break;
-    }
-
-  char ch[100];
-  reason.ToCString(ch,100);
-  printf("%s Layout: ", ch);
+  printf("Layout: ");
   DumpBox(stdout);
   printf("\n");
   gIndent++;
@@ -661,8 +644,7 @@ nsBox::SyncLayout(nsBoxLayoutState& aState)
   */
   
 
-  if ((GetStateBits() & NS_FRAME_IS_DIRTY) ||
-      aState.LayoutReason() == nsBoxLayoutState::Initial)
+  if (GetStateBits() & NS_FRAME_IS_DIRTY)
      Redraw(aState);
 
   RemoveStateBits(NS_FRAME_HAS_DIRTY_CHILDREN | NS_FRAME_IS_DIRTY
