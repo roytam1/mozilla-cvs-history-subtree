@@ -717,13 +717,6 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
                     if(!wrapper)
                         return JS_FALSE;
 
-#if 0
-                    // Ask for the shared buffer handle, which will root the
-                    // string.
-                    if(isNewString && ! wrapper->GetSharedBufferHandle())
-                        return JS_FALSE;
-#endif
-
                     *((const nsAString**)d) = wrapper;
                 }
                 else if(JSVAL_IS_NULL(s))
