@@ -294,5 +294,8 @@ pref("accessibility.typeaheadfind.linksonly", false);
 pref("accessibility.typeaheadfind.startlinksonly", false);
 pref("accessibility.typeaheadfind.flashBar", 1);
 
+// Disable the default plugin for firefox
+pref("plugin.default_plugin_disabled", true);
+
 // plugin finder service
 pref("pfs.datasource.url", "chrome://mozapps/locale/plugins/plugins.properties");
