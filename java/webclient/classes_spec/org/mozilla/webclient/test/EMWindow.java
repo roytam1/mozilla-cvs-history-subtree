@@ -186,11 +186,11 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
         
         // Add the URL field, and the buttons panel
         Panel centerPanel = new Panel();
-        Button spacerButton = new Button(" ");
-        spacerButton.setEnabled(false);
         centerPanel.setLayout(new BorderLayout());
         centerPanel.add(urlField, BorderLayout.NORTH);
-        centerPanel.add(spacerButton, BorderLayout.SOUTH);
+        Label spacer = new Label();
+        spacer.setBackground(Color.lightGray);
+        centerPanel.add(spacer, BorderLayout.SOUTH);
 
         //		controlPanel.add(urlField,     BorderLayout.CENTER);
 		controlPanel.add(centerPanel,     BorderLayout.CENTER);
