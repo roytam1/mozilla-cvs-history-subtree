@@ -388,6 +388,7 @@ exn_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
+#if JS_HAS_TOSOURCE
 /*
  * Return a string that may eval to something similar to the original object.
  */
@@ -436,10 +437,13 @@ exn_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     *rval = STRING_TO_JSVAL(result);
     return JS_TRUE;
 }
+#endif
 
 static JSFunctionSpec exception_methods[] = {
-    {js_toString_str,   exn_toString,           0},
+#if JS_HAS_TOSOURCE
     {js_toSource_str,   exn_toSource,           0},
+#endif
+    {js_toString_str,   exn_toString,           0},
     {0}
 };
 
