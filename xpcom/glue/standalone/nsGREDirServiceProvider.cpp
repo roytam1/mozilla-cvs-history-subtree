@@ -184,7 +184,7 @@ char* GetCurrentProcessDirectory()
     // us try this for unix:
     //	- if MOZILLA_FIVE_HOME is defined, that is it
     //	- else give the current directory
-    char buf[1024];
+    char buf[MAXPATHLEN];
 
     // The MOZ_DEFAULT_MOZILLA_FIVE_HOME variable can be set at configure time with
     // a --with-default-mozilla-five-home=foo autoconf flag.
@@ -206,7 +206,10 @@ char* GetCurrentProcessDirectory()
 
     if (moz5)
     {
-        resultPath = strdup(moz5);
+        if (realpath(moz5, buf))
+            resultPath = strdup(buf);
+        else
+            resultPath = strdup(moz5);
         return resultPath;
     }
     else
@@ -305,9 +308,14 @@ nsGREDirServiceProvider::GetGREDirectoryPath()
   }
 
   // if GRE_HOME is in the environment, use that GRE
+  char buf[MAXPATHLEN];
   const char* env = PR_GetEnv("GRE_HOME");
-  if (env && *env)
+  if (env && *env) {
+    if (realpath(env, buf))
+      return strdup(buf);
+
     return strdup(env);
+  }
 
   // the Gecko bits that sit next to the application or in the LD_LIBRARY_PATH
   if (PR_GetEnv("USE_LOCAL_GRE"))
