@@ -1450,7 +1450,10 @@ void nsWebShellWindow::LoadContentAreas() {
 
   // fetch the chrome document URL
   nsCOMPtr<nsIContentViewer> contentViewer;
-  mDocShell->GetContentViewer(getter_AddRefs(contentViewer));
+  // yes, it's possible for the docshell to be null even this early
+  // see bug 57514.
+  if (mDocShell)
+    mDocShell->GetContentViewer(getter_AddRefs(contentViewer));
   if (contentViewer) {
     nsCOMPtr<nsIDocumentViewer> docViewer = do_QueryInterface(contentViewer);
     if (docViewer) {
