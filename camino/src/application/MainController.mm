@@ -942,9 +942,9 @@ const int kReuseWindowOnAE = 2;
   if ( [aMenuItem tag] >= kEncodingMenuTag ) {
     if ( browserController ) {
       NSString* charset = [browserController currentCharset];
-//#if DEBUG_CHARSET
+#if DEBUG_CHARSET
       NSLog(@"charset is %@", charset);
-//#endif
+#endif
       // given the document's charset, check if it maps to the same int as the
       // current item's key. If yes, we select this item because it's our charset.
       // Note that this relies on the key in the nib mapping to the right integer
