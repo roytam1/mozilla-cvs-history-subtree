@@ -65,8 +65,11 @@ NS_IMETHODIMP nsHTMLTextAccessible::GetAccRole(PRUnichar **_retval)
 NS_IMETHODIMP nsHTMLTextAccessible::GetAccState(PRUint32 *_retval)
 {
   *_retval |= STATE_READONLY | STATE_SELECTABLE;
-  if (IsALink())
+  if (IsALink()) {
     *_retval |= STATE_FOCUSABLE | STATE_LINKED;
+    if (mIsLinkVisited)
+      *_retval |= STATE_TRAVERSED;
+  }
   
   // Get current selection and find out if current node is in it
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
