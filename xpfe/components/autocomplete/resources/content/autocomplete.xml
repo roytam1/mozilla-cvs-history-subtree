@@ -492,12 +492,39 @@
           }
         ]]></body>
       </method>
-
-      <!--  -->
+      <method name="trim">
+        <parameter name="aString"/>
+        <body><![CDATA[
+          // Removes leading and trailing spaces from the passed string. Also removes
+          // consecutive spaces and replaces it with one space. If something besides
+          // a string is passed in (null, custom object, etc.) then return the input.
+          var retValue = aString;
+          var ch = retValue.substring(0, 1);
+          while (ch == " ") { // Check for spaces at the beginning of the string
+             retValue = retValue.substring(1, retValue.length);
+             ch = retValue.substring(0, 1);
+          }
+          ch = retValue.substring(retValue.length-1, retValue.length);
+          while (ch == " ") { // Check for spaces at the end of the string
+             retValue = retValue.substring(0, retValue.length-1);
+             ch = retValue.substring(retValue.length-1, retValue.length);
+          }
+          while (retValue.indexOf("  ") != -1) { // Note that there are two spaces in the string - look for multiple spaces within the string
+             retValue = retValue.substring(0, retValue.indexOf("  ")) + retValue.substring(retValue.indexOf("  ")+1, retValue.length); // Again, there are two spaces in each of the strings
+          }
+          return retValue; // Return the this.trimmed string back to the user
+        ]]>
+        </body>
+      </method>
       <method name="startLookup">
         <body><![CDATA[
-          var str = this.value;
-          
+          var commaPos = this.value.lastIndexOf(",");
+          var str;
+          if (commaPos != -1)
+            str = this.trim(this.value.substr(commaPos + 1));
+          else
+            str = this.value;
+            
           this.isSearching = true;
           this.mSessionReturns = this.sessionCount;
           this.mFailureCount = 0;
@@ -526,8 +553,15 @@
       <!--  -->
       <method name="autoComplete">
         <body><![CDATA[
+          var commaPos = this.value.lastIndexOf(",");
+          var str;
+          if (commaPos != -1)
+            str = this.trim(this.value.substr(commaPos + 1));
+          else
+            str = this.value;
+
           for (var name in this.mSessions)
-            this.mSessions[name].onAutoComplete(this.value, 
+            this.mSessions[name].onAutoComplete(str, 
                                                 this.mLastResults[name],
                                                 this.mListeners[name]);
         ]]></body>
@@ -668,7 +702,12 @@
             // set textbox value to either override value, or default search result 
             var val = this.resultsPopup.getOverrideValue();
             if (val) {
-              this.value = val;
+              var commaPos = this.value.lastIndexOf(",");
+              if (commaPos != -1)
+                this.value = this.value.substr(0, commaPos + 1) + " " + val;
+              else
+                this.value = val;
+
             } else if (this.mTransientValue) {
               // do nothing
             } else if (this.forceComplete && (this.mNeedToComplete || aForceComplete)) {
@@ -688,11 +727,19 @@
 
               if (defaultSession) {
                 results = this.mLastResults[defaultSession];
-                if (results && !this.noMatch)
-                  if (results.defaultItemIndex != -1)
-                  this.value = this.getSessionValueAt(defaultSession, results.defaultItemIndex);
+                if (results && !this.noMatch) {
+                  var commaPos = this.value.lastIndexOf(",");
+                  if (commaPos != -1)
+                    str = this.value.substr(0, commaPos + 1) + " ";
                   else
-                    this.value = this.getSessionValueAt(defaultSession, 0); // preselect the first one...
+                    str = "";
+
+                  if (results.defaultItemIndex != -1)
+                    str += this.getSessionValueAt(defaultSession, results.defaultItemIndex);
+                  else
+                    str += this.getSessionValueAt(defaultSession, 0); // preselect the first one...
+                  this.value = str;
+                }
               }
             }
 
@@ -719,12 +766,21 @@
                    !this.noMatch) {
             if (this.getSessionStatusAt(this.resultsPopup.selectedIndex) ==
                 Components.interfaces.nsIAutoCompleteStatus.failureItems) {
-              this.value = this.currentSearchString;
+              var result = this.getResultValueAt(this.resultsPopup.selectedIndex);
+              var commaPos = this.value.lastIndexOf(",");
+              if (commaPos != -1)
+                this.value = this.value.substr(0, commaPos + 1) + " " + this.currentSearchString;
+              else
+                this.value = this.currentSearchString;
               this.mTransientValue = true;
               errItem = this.getResultAt(this.resultsPopup.selectedIndex);
-            } else { 
-              this.value = this.getResultValueAt(
-                                             this.resultsPopup.selectedIndex);
+            } else {
+                var result = this.getResultValueAt(this.resultsPopup.selectedIndex);
+                var commaPos = this.value.lastIndexOf(",");
+                if (commaPos != -1)
+                  this.value = this.value.substr(0, commaPos + 1) + " " + result;
+                else
+                  this.value = result;
             }
           }
 
@@ -745,14 +801,20 @@
       <method name="undoAutoComplete">
         <body><![CDATA[
           var val = this.currentSearchString;
-
+          var commaPos = this.value.lastIndexOf(",");
           var ok = this._fireEvent("textrevert");
           if ((ok || ok == undefined) && val)
-            this.value = val;
+            this.value = this.value.substr(0, commaPos + 1) + " " + val;
 
           this.userAction = "typing";
+          var searchStr;
+          var commaPos = this.value.lastIndexOf(",");
+          if (commaPos != -1)
+            searchStr = this.value.substr(0, commaPos + 2);
+          else
+            searchStr = this.value;
 
-          this.currentSearchString = this.value;
+          this.currentSearchString = searchStr;
           this.mNeedToComplete = false;
         ]]></body>
       </method>
@@ -795,7 +857,14 @@
           this.mTransientValue = false;
           this.mNeedToComplete = true;
           var str = this.value;
-          this.currentSearchString = str;
+          var commaPos = this.value.lastIndexOf(",");
+          var searchStr;
+          if (commaPos != -1)
+            searchStr = this.trim(this.value.substr(commaPos + 1));
+          else
+            searchStr = this.value;
+         
+          this.currentSearchString = searchStr;
           this.resultsPopup.selectedIndex = null;
           
           // We want to autocomplete only if the user is editing at the end of the text
@@ -923,15 +992,28 @@
             if (selected != null) {
               if (this.getSessionStatusAt(selected) == 
                   Components.interfaces.nsIAutoCompleteStatus.failureItems) { 
-                if (this.currentSearchString)
-                  this.value = this.currentSearchString;
+                if (this.currentSearchString) {
+                  var commaPos = this.value.lastIndexOf(",");
+                  if (commaPos != -1)
+                    this.value = this.value.substr(0, commaPos + 1) + " " + this.currentSearchString;
+                  else
+                    this.value = this.currentSearchString;
+                }
               } else {
-                this.value = this.getResultValueAt(selected);
+                var result = this.getResultValueAt(selected);
+                var commaPos = this.value.lastIndexOf(",");
+                if (commaPos != -1)
+                  this.value = this.value.substr(0, commaPos + 1) + " " + result;
+                else
+                  this.value = result;
               }
               this.mTransientValue = true;
             } else {
-              if (this.currentSearchString)
-                this.value = this.currentSearchString;
+                var commaPos = this.value.lastIndexOf(",");
+                if (commaPos != -1)
+                  this.value = this.value.substr(0, commaPos + 1) + " " + this.currentSearchString;
+                else
+                  this.value = this.currentSearchString;
               this.mTransientValue = false;
             }
             
@@ -957,22 +1039,35 @@
             var indexToUse = aResults.defaultItemIndex;
             if (aUseFirstMatchIfNoDefault && indexToUse == -1)
               indexToUse = 0;      
-              
             if (indexToUse != -1) {
               var resultValue = this.getSessionValueAt(aSessionName, indexToUse);
               var match = resultValue.toLowerCase();
               var entry = this.currentSearchString.toLowerCase();
               this.ignoreInputEvent = true;
               if (match.indexOf(entry) == 0) {
-                var endPoint = this.value.length;
+                var str;
+                var commaPos = this.value.lastIndexOf(",");
+                if (commaPos != -1)
+                  str = this.trim(this.value.substr(commaPos + 1));
+                else
+                  str = this.value;
+                var endPoint = str.length;
+                var currLength = this.value.length;
                 this.value = this.value + resultValue.substr(endPoint);
-                this.mInputElt.setSelectionRange(endPoint, this.value.length);
+                this.mInputElt.setSelectionRange(currLength, this.value.length);
               } else {
-                if (this.autoFillAfterMatch) {
+                if (this.autoFillAfterMatch) {       
+                  var currLength = this.value.length;
                   this.value = this.value + " >> " + resultValue;
-                  this.mInputElt.setSelectionRange(entry.length, this.value.length);
+                  this.mInputElt.setSelectionRange(currLength, this.value.length);
                 } else {
-                  var postIndex = resultValue.indexOf(this.value);
+                  var commaPos = this.value.lastIndexOf(",");
+                  var str;
+                  if (commaPos != -1)
+                    str = this.trim(this.value.substr(commaPos + 1));
+                  else
+                    str = this.value;
+                  var postIndex = resultValue.indexOf(str);
                   if (postIndex >= 0) {
                     var startPt = this.value.length;
                     this.value = this.value + resultValue.substr(startPt+postIndex);
