@@ -22,9 +22,9 @@ LIBRARY_NAME=rdfbase_s
 CPP_OBJS=\
         .\$(OBJDIR)\nsContainerCursor.obj         \
         .\$(OBJDIR)\nsEmptyCursor.obj             \
-        .\$(OBJDIR)\nsInMemoryDataSource.obj        \
-        .\$(OBJDIR)\nsRDFResourceManager.obj      \
-        .\$(OBJDIR)\nsDataBase.obj          \
+        .\$(OBJDIR)\nsInMemoryDataSource.obj      \
+        .\$(OBJDIR)\nsRDFService.obj              \
+        .\$(OBJDIR)\nsDataBase.obj                \
         .\$(OBJDIR)\rdfutil.obj                   \
 	$(NULL)
 

@@ -4,5 +4,5 @@ nsIRDFDataBase.h
 nsIRDFDataSource.h
 nsIRDFNode.h
 nsIRDFObserver.h
-nsIRDFResourceManager.h
+nsIRDFService.h
 nsIRDFXMLSource.h

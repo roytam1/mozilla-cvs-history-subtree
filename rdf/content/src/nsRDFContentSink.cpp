@@ -49,7 +49,7 @@
 #include "nsCRT.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsRDFCID.h"
 #include "nsIServiceManager.h"
 #include "nsIURL.h"
@@ -90,12 +90,12 @@ static const char kRDFNameSpaceURI[] = RDF_NAMESPACE_URI;
 
 static NS_DEFINE_IID(kIContentSinkIID,         NS_ICONTENT_SINK_IID); // XXX grr...
 static NS_DEFINE_IID(kIRDFDataSourceIID,       NS_IRDFDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFResourceManagerIID,  NS_IRDFRESOURCEMANAGER_IID);
+static NS_DEFINE_IID(kIRDFServiceIID,          NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kISupportsIID,            NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIXMLContentSinkIID,      NS_IXMLCONTENT_SINK_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,      NS_IRDFCONTENTSINK_IID);
 
-static NS_DEFINE_CID(kRDFResourceManagerCID,   NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFMemoryDataSourceCID,  NS_RDFMEMORYDATASOURCE_CID);
 
 ////////////////////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ rdf_FullyQualifyURI(const nsIURL* base, nsString& spec)
 
 nsRDFContentSink::nsRDFContentSink()
     : mDocumentURL(nsnull),
-      mResourceMgr(nsnull),
+      mRDFService(nsnull),
       mDataSource(nsnull),
       mGenSym(0),
       mNameSpaceManager(nsnull),
@@ -263,8 +263,8 @@ nsRDFContentSink::~nsRDFContentSink()
 {
     NS_IF_RELEASE(mDocumentURL);
 
-    if (mResourceMgr)
-        nsServiceManager::ReleaseService(kRDFResourceManagerCID, mResourceMgr);
+    if (mRDFService)
+        nsServiceManager::ReleaseService(kRDFServiceCID, mRDFService);
 
     NS_IF_RELEASE(mDataSource);
 
@@ -579,9 +579,9 @@ nsRDFContentSink::Init(nsIURL* aURL, nsINameSpaceManager* aNameSpaceManager)
     NS_ADDREF(mNameSpaceManager);
 
     nsresult rv;
-    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
-                                                    kIRDFResourceManagerIID,
-                                                    (nsISupports**) &mResourceMgr)))
+    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
+                                                    kIRDFServiceIID,
+                                                    (nsISupports**) &mRDFService)))
         return rv;
 
     mState = eRDFContentSinkState_InProlog;
@@ -641,8 +641,8 @@ nsRDFContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
                 value.Append(mText, mTextLength);
 
                 nsIRDFLiteral* literal;
-                if (NS_SUCCEEDED(rv = mResourceMgr->GetLiteral(value, &literal))) {
-                    rv = rdf_ContainerAddElement(mResourceMgr,
+                if (NS_SUCCEEDED(rv = mRDFService->GetLiteral(value, &literal))) {
+                    rv = rdf_ContainerAddElement(mRDFService,
                                                  mDataSource,
                                                  GetContextElement(0),
                                                  literal);
@@ -654,7 +654,7 @@ nsRDFContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
                 nsAutoString value;
                 value.Append(mText, mTextLength);
 
-                rv = rdf_Assert(mResourceMgr,
+                rv = rdf_Assert(mRDFService,
                                 mDataSource,
                                 GetContextElement(1),
                                 GetContextElement(0),
@@ -811,7 +811,7 @@ nsRDFContentSink::AddProperties(const nsIParserNode& aNode,
         k.Append(attr);
 
         // Add the attribute to RDF
-        rdf_Assert(mResourceMgr, mDataSource, aSubject, k, v);
+        rdf_Assert(mRDFService, mDataSource, aSubject, k, v);
     }
     return NS_OK;
 }
@@ -850,7 +850,7 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
     // node", or a "container", so this change the content sink's
     // state appropriately.
 
-    if (! mResourceMgr)
+    if (! mRDFService)
         return NS_ERROR_NOT_INITIALIZED;
 
     nsAutoString tag;
@@ -865,7 +865,7 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
         return rv;
 
     nsIRDFResource* rdfResource;
-    if (NS_FAILED(rv = mResourceMgr->GetUnicodeResource(uri, &rdfResource)))
+    if (NS_FAILED(rv = mRDFService->GetUnicodeResource(uri, &rdfResource)))
         return rv;
 
     // If we're in a member or property element, then this is the cue
@@ -873,7 +873,7 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
     // member/property.
     switch (mState) {
     case eRDFContentSinkState_InMemberElement: {
-        rdf_ContainerAddElement(mResourceMgr, mDataSource, GetContextElement(0), rdfResource);
+        rdf_ContainerAddElement(mRDFService, mDataSource, GetContextElement(0), rdfResource);
     } break;
 
     case eRDFContentSinkState_InPropertyElement: {
@@ -901,17 +901,17 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
         }
         else if (tag.Equals(kTagRDF_Bag)) {
             // it's a bag container
-            rdf_MakeBag(mResourceMgr, mDataSource, rdfResource);
+            rdf_MakeBag(mRDFService, mDataSource, rdfResource);
             mState = eRDFContentSinkState_InContainerElement;
         }
         else if (tag.Equals(kTagRDF_Seq)) {
             // it's a seq container
-            rdf_MakeSeq(mResourceMgr, mDataSource, rdfResource);
+            rdf_MakeSeq(mRDFService, mDataSource, rdfResource);
             mState = eRDFContentSinkState_InContainerElement;
         }
         else if (tag.Equals(kTagRDF_Alt)) {
             // it's an alt container
-            rdf_MakeAlt(mResourceMgr, mDataSource, rdfResource);
+            rdf_MakeAlt(mRDFService, mDataSource, rdfResource);
             mState = eRDFContentSinkState_InContainerElement;
         }
         else {
@@ -926,7 +926,7 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
         nsAutoString nameSpace;
         GetNameSpaceURI(nameSpaceID, nameSpace);  // XXX append ':' too?
         nameSpace.Append(tag);
-        rdf_Assert(mResourceMgr, mDataSource, rdfResource, kURIRDF_type, nameSpace);
+        rdf_Assert(mRDFService, mDataSource, rdfResource, kURIRDF_type, nameSpace);
 
         mState = eRDFContentSinkState_InDescriptionElement;
     }
@@ -941,7 +941,7 @@ nsRDFContentSink::OpenObject(const nsIParserNode& aNode)
 nsresult
 nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
 {
-    if (! mResourceMgr)
+    if (! mRDFService)
         return NS_ERROR_NOT_INITIALIZED;
 
     nsresult rv;
@@ -961,7 +961,7 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
     // name. We can do this 'cause we don't need it anymore...
     ns.Append(tag);
     nsIRDFResource* rdfProperty;
-    if (NS_FAILED(rv = mResourceMgr->GetUnicodeResource(ns, &rdfProperty)))
+    if (NS_FAILED(rv = mRDFService->GetUnicodeResource(ns, &rdfProperty)))
         return rv;
 
     nsAutoString resourceURI;
@@ -971,9 +971,9 @@ nsRDFContentSink::OpenProperty(const nsIParserNode& aNode)
         // URI, add the properties to it, and attach the inline
         // resource to its parent.
         nsIRDFResource* rdfResource;
-        if (NS_SUCCEEDED(rv = mResourceMgr->GetUnicodeResource(resourceURI, &rdfResource))) {
+        if (NS_SUCCEEDED(rv = mRDFService->GetUnicodeResource(resourceURI, &rdfResource))) {
             if (NS_SUCCEEDED(rv = AddProperties(aNode, rdfResource))) {
-                rv = rdf_Assert(mResourceMgr,
+                rv = rdf_Assert(mRDFService,
                                 mDataSource,
                                 GetContextElement(0),
                                 rdfProperty,
@@ -1028,8 +1028,8 @@ nsRDFContentSink::OpenMember(const nsIParserNode& aNode)
         // means that it's a "referenced item," as covered in [6.29].
 
         nsIRDFResource* resource;
-        if (NS_SUCCEEDED(rv = mResourceMgr->GetUnicodeResource(resourceURI, &resource))) {
-            rv = rdf_ContainerAddElement(mResourceMgr, mDataSource, container, resource);
+        if (NS_SUCCEEDED(rv = mRDFService->GetUnicodeResource(resourceURI, &resource))) {
+            rv = rdf_ContainerAddElement(mRDFService, mDataSource, container, resource);
         }
 
         // XXX Technically, we should _not_ fall through here and push

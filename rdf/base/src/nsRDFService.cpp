@@ -19,7 +19,7 @@
 
 #include "nsIAtom.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsString.h"
 #include "plhash.h"
 #include "plstr.h"
@@ -27,7 +27,7 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
+static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
 static NS_DEFINE_IID(kIRDFNodeIID,            NS_IRDFNODE_IID);
@@ -37,18 +37,18 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
 class ResourceImpl;
 
-class ResourceManagerImpl : public nsIRDFResourceManager {
+class ServiceImpl : public nsIRDFService {
 protected:
     PLHashTable* mResources;
-    virtual ~ResourceManagerImpl(void);
+    virtual ~ServiceImpl(void);
 
 public:
-    ResourceManagerImpl(void);
+    ServiceImpl(void);
 
     // nsISupports
     NS_DECL_ISUPPORTS
 
-    // nsIRDFResourceManager
+    // nsIRDFService
     NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
     NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
@@ -65,7 +65,7 @@ public:
 
 class ResourceImpl : public nsIRDFResource {
 public:
-    ResourceImpl(ResourceManagerImpl* mgr, const char* uri);
+    ResourceImpl(ServiceImpl* mgr, const char* uri);
     virtual ~ResourceImpl(void);
 
     // nsISupports
@@ -86,11 +86,11 @@ public:
 
 private:
     char*                mURI;
-    ResourceManagerImpl* mMgr;
+    ServiceImpl* mMgr;
 };
 
 
-ResourceImpl::ResourceImpl(ResourceManagerImpl* mgr, const char* uri)
+ResourceImpl::ResourceImpl(ServiceImpl* mgr, const char* uri)
     : mMgr(mgr)
 {
     NS_INIT_REFCNT();
@@ -275,10 +275,10 @@ LiteralImpl::EqualsLiteral(const nsIRDFLiteral* literal, PRBool* result) const
 }
 
 ////////////////////////////////////////////////////////////////////////
-// ResourceManagerImpl
+// ServiceImpl
 
 
-ResourceManagerImpl::ResourceManagerImpl(void)
+ServiceImpl::ServiceImpl(void)
     : mResources(nsnull)
 {
     NS_INIT_REFCNT();
@@ -290,17 +290,17 @@ ResourceManagerImpl::ResourceManagerImpl(void)
 }
 
 
-ResourceManagerImpl::~ResourceManagerImpl(void)
+ServiceImpl::~ServiceImpl(void)
 {
     PL_HashTableDestroy(mResources);
 }
 
 
-NS_IMPL_ISUPPORTS(ResourceManagerImpl, kIRDFResourceManagerIID);
+NS_IMPL_ISUPPORTS(ServiceImpl, kIRDFServiceIID);
 
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetResource(const char* uri, nsIRDFResource** resource)
+ServiceImpl::GetResource(const char* uri, nsIRDFResource** resource)
 {
     ResourceImpl* result =
         NS_STATIC_CAST(ResourceImpl*, PL_HashTableLookup(mResources, uri));
@@ -327,7 +327,7 @@ ResourceManagerImpl::GetResource(const char* uri, nsIRDFResource** resource)
 
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource)
+ServiceImpl::GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource)
 {
     nsString s(uri);
     char* cstr = s.ToNewCString();
@@ -338,7 +338,7 @@ ResourceManagerImpl::GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** r
 
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
+ServiceImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
 {
     LiteralImpl* result = new LiteralImpl(uri);
     if (! result)
@@ -350,14 +350,14 @@ ResourceManagerImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
 }
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetDataSource(const char* uri, nsIRDFDataSource** dataSource)
+ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** dataSource)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
+ServiceImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -365,7 +365,7 @@ ResourceManagerImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
 
 
 NS_IMETHODIMP
-ResourceManagerImpl::GetBrowserDatabase(nsIRDFDataBase** dataBase)
+ServiceImpl::GetBrowserDatabase(nsIRDFDataBase** dataBase)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -373,7 +373,7 @@ ResourceManagerImpl::GetBrowserDatabase(nsIRDFDataBase** dataBase)
 
 
 void
-ResourceManagerImpl::ReleaseNode(const ResourceImpl* resource)
+ServiceImpl::ReleaseNode(const ResourceImpl* resource)
 {
     PL_HashTableRemove(mResources, resource->GetURI());
 }
@@ -381,9 +381,9 @@ ResourceManagerImpl::ReleaseNode(const ResourceImpl* resource)
 ////////////////////////////////////////////////////////////////////////
 
 nsresult
-NS_NewRDFResourceManager(nsIRDFResourceManager** mgr)
+NS_NewRDFService(nsIRDFService** mgr)
 {
-    ResourceManagerImpl* result = new ResourceManagerImpl();
+    ServiceImpl* result = new ServiceImpl();
     if (! result)
         return NS_ERROR_OUT_OF_MEMORY;
 

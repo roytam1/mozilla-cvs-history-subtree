@@ -16,8 +16,8 @@
  * Reserved.
  */
 
-#ifndef nsIRDFResourceManager_h__
-#define nsIRDFResourceManager_h__
+#ifndef nsIRDFService_h__
+#define nsIRDFService_h__
 
 #include "nscore.h"
 #include "nsISupports.h"
@@ -27,16 +27,15 @@ class nsIRDFLiteral;
 class nsIRDFResource;
 
 /**
- * An RDF resource manager. This should be a singleton object, obtained
+ * The RDF service interface. This should be a singleton object, obtained
  * from the <tt>nsServiceManager</tt>.
  */
 
-// XXX This interface should be subsumed by a nsIRDFService interface
-// that includes some of the utility methods that are contained in
-// mozilla/rdf/base/src/rdfutil.h.
-
-class nsIRDFResourceManager : public nsISupports {
+class nsIRDFService : public nsISupports {
 public:
+
+    // Resource management routines
+
     /**
      * Construct an RDF resource from a single-byte URI.
      */
@@ -74,11 +73,11 @@ public:
 };
 
 // {BFD05261-834C-11d2-8EAC-00805F29F370}
-#define NS_IRDFRESOURCEMANAGER_IID \
+#define NS_IRDFSERVICE_IID \
 { 0xbfd05261, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
 
 
 extern nsresult
-NS_NewRDFResourceManager(nsIRDFResourceManager** result);
+NS_NewRDFService(nsIRDFService** result);
 
-#endif // nsIRDFResourceManager_h__
+#endif // nsIRDFService_h__

@@ -28,7 +28,7 @@
 #include "nsIRDFDataBase.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsIPresShell.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIServiceManager.h"
@@ -66,7 +66,7 @@ static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
 static NS_DEFINE_IID(kIRDFResourceIID,        NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
+static NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 static NS_DEFINE_IID(kIStreamListenerIID,     NS_ISTREAMLISTENER_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kITextContentIID,        NS_ITEXT_CONTENT_IID); // XXX grr...
@@ -78,7 +78,7 @@ static NS_DEFINE_CID(kNameSpaceManagerCID,    NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kParserCID,              NS_PARSER_IID); // XXX
 static NS_DEFINE_CID(kPresShellCID,           NS_PRESSHELL_CID);
 static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID,          NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,   NS_RDFSIMPLEDATABASE_CID);
 static NS_DEFINE_CID(kRangeListCID,           NS_RANGELIST_CID);
 static NS_DEFINE_CID(kTextNodeCID,            NS_TEXTNODE_CID);
@@ -99,7 +99,7 @@ nsRDFDocument::nsRDFDocument()
       mAttrStyleSheet(nsnull),
       mParser(nsnull),
       mDB(nsnull),
-      mResourceMgr(nsnull),
+      mRDFService(nsnull),
       mTreeProperties(nsnull)
 {
     NS_INIT_REFCNT();
@@ -120,9 +120,9 @@ nsRDFDocument::~nsRDFDocument()
 {
     NS_IF_RELEASE(mParser);
 
-    if (mResourceMgr) {
-        nsServiceManager::ReleaseService(kRDFResourceManagerCID, mResourceMgr);
-        mResourceMgr = nsnull;
+    if (mRDFService) {
+        nsServiceManager::ReleaseService(kRDFServiceCID, mRDFService);
+        mRDFService = nsnull;
     }
 
     // mParentDocument is never refcounted
@@ -1039,9 +1039,9 @@ nsRDFDocument::Init(void)
                                                     (void**) &mDB)))
         return rv;
 
-    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
-                                                    kIRDFResourceManagerIID,
-                                                    (nsISupports**) &mResourceMgr)))
+    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
+                                                    kIRDFServiceIID,
+                                                    (nsISupports**) &mRDFService)))
         return rv;
 
     return NS_OK;
@@ -1087,8 +1087,8 @@ nsRDFDocument::CreateChildren(nsIRDFContent* element)
     if (! mDB)
         return NS_ERROR_NOT_INITIALIZED;
 
-    NS_ASSERTION(mResourceMgr, "not initialized");
-    if (! mResourceMgr)
+    NS_ASSERTION(mRDFService, "not initialized");
+    if (! mRDFService)
         return NS_ERROR_NOT_INITIALIZED;
 
 

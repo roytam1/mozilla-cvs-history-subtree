@@ -18,7 +18,7 @@
 
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
 #include "nsRDFDocument.h"
@@ -30,7 +30,7 @@ static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
 static NS_DEFINE_CID(kRDFBookmarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFHTMLDocumentCID,       NS_RDFHTMLDOCUMENT_CID);
 static NS_DEFINE_CID(kRDFMemoryDataSourceCID,   NS_RDFMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
 static NS_DEFINE_CID(kRDFStreamDataSourceCID,   NS_RDFSTREAMDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFTreeDocumentCID,       NS_RDFTREEDOCUMENT_CID);
@@ -112,8 +112,8 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
     nsresult rv;
     PRBool wasRefCounted = PR_TRUE;
     nsISupports *inst = nsnull;
-    if (mClassID.Equals(kRDFResourceManagerCID)) {
-        if (NS_FAILED(rv = NS_NewRDFResourceManager((nsIRDFResourceManager**) &inst)))
+    if (mClassID.Equals(kRDFServiceCID)) {
+        if (NS_FAILED(rv = NS_NewRDFService((nsIRDFService**) &inst)))
             return rv;
     }
     else if (mClassID.Equals(kRDFMemoryDataSourceCID)) {
