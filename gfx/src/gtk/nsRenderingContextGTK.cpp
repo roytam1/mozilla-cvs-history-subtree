@@ -2009,10 +2009,15 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(gfxIImageContainer *aImage, const
   sr.y = aSrcRect->y;
   mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
-  nsCOMPtr<nsPIImageContainerGtk> cx(do_QueryInterface(aImage));
-  if (!cx) return NS_ERROR_FAILURE;
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
 
-  return cx->DrawImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &pt);
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  return img->Draw(*this, mSurface, sr.x, sr.y, sr.width, sr.height,
+                                    pt.x + sr.x, pt.y + sr.y, sr.width, sr.height);
 }
 
 /* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
@@ -2031,10 +2036,14 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(gfxIImageContainer *aImage,
   sr.y = aSrcRect->y;
   mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
-  nsCOMPtr<nsPIImageContainerGtk> cg(do_QueryInterface(aImage));
-  if (!cg) return NS_ERROR_FAILURE;
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
 
-  return cg->DrawScaledImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &dr);
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  return img->Draw(*this, mSurface, sr.x, sr.y, sr.width, sr.height, dr.x, dr.y, dr.width, dr.height);
 }
 
 /* [noscript] void drawTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
