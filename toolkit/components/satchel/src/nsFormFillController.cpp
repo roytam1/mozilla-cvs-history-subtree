@@ -653,6 +653,18 @@ nsFormFillController::Input(nsIDOMEvent* aEvent)
   return mController->HandleText();
 }
 
+NS_IMETHODIMP
+nsFormFillController::FormChange(nsIDOMEvent* aEvent)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFormFillController::FormInput(nsIDOMEvent* aEvent)
+{
+  return NS_OK;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 //// nsFormFillController
