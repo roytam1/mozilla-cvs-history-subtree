@@ -46,6 +46,7 @@
 
 #include "nsCMSSecureMessage.h"
 #include "nsCMSDecoder.h"
+#include "nsCertPicker.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNSSComponent, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecureBrowserUIImpl)
@@ -63,6 +64,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSSecureMessage)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSDecoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSEncoder)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSMessage)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCertPicker)
 
 static nsModuleComponentInfo components[] =
 {
@@ -226,6 +228,13 @@ static nsModuleComponentInfo components[] =
     NS_CMSMESSAGE_CONTRACTID,
     nsCMSMessageConstructor
   },
+
+  {
+    NS_CERT_PICKER_CLASSNAME,
+    NS_CERT_PICKER_CID,
+    NS_CERT_PICKER_CONTRACTID,
+    nsCertPickerConstructor
+  }
 };
 
 NS_IMPL_NSGETMODULE(NSS, components);

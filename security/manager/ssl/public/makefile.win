@@ -62,6 +62,7 @@ XPIDLSRCS= \
     .\nsIKeygenThread.idl \
     .\nsICMSSecureMessage.idl \
     .\nsICMSDecoder.idl \
+    .\nsIUserCertPicker.idl \
     $(NULL)
 
 

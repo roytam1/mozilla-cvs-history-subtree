@@ -102,6 +102,7 @@ OBJS = \
     .\$(OBJDIR)\nsKeygenThread.obj \
     .\$(OBJDIR)\nsCMSSecureMessage.obj \
     .\$(OBJDIR)\nsCMSDecoder.obj \
+    .\$(OBJDIR)\nsCertPicker.obj \
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

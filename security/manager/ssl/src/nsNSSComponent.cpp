@@ -58,6 +58,7 @@
 #include "sechash.h"
 #include "secmime.h"
 #include "ocsp.h"
+#include "cms.h"
 extern "C" {
 #include "pkcs11.h"
 #include "pkcs12.h"
@@ -102,6 +103,8 @@ extern char * pk11PasswordPrompt(PK11SlotInfo *slot, PRBool retry, void *arg);
 nsNSSComponent::nsNSSComponent()
 {
   NS_INIT_ISUPPORTS();
+
+  NSS_CMSMessage_Create(nsnull);
 }
 
 nsNSSComponent::~nsNSSComponent()
