@@ -130,7 +130,6 @@ CPPSRCS		= \
 		nsGfxScrollFrame.cpp \
 		nsHTMLContainerFrame.cpp \
 		nsHTMLFrame.cpp \
-		nsHTMLReflowCommand.cpp \
 		nsHTMLReflowState.cpp \
 		nsImageFrame.cpp \
 		nsImageMap.cpp \
@@ -143,7 +142,6 @@ CPPSRCS		= \
 		nsPageContentFrame.cpp \
 		nsPageFrame.cpp \
 		nsPlaceholderFrame.cpp \
-		nsReflowPath.cpp \
 		nsSelection.cpp \
 		nsSimplePageSequence.cpp \
 		nsSpaceManager.cpp \
