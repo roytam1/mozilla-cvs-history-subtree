@@ -614,12 +614,6 @@ RegisterSoftwareUpdate( nsIComponentManager *aCompMgr,
                                 PR_TRUE, PR_TRUE, getter_Copies(previous));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = catman->AddCategoryEntry(JAVASCRIPT_GLOBAL_DYNAMIC_NAMESET_CATEGORY,
-                                "InstallTriggerGlobal",
-				NS_SOFTWAREUPDATENAMESET_CONTRACTID,
-                                PR_TRUE, PR_TRUE, getter_Copies(previous));
-  NS_ENSURE_SUCCESS(rv, rv);
-
   return NS_OK;
 }
 
