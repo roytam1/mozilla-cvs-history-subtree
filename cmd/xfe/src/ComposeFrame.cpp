@@ -35,7 +35,7 @@
 #include "Dashboard.h"
 #include "Xfe/Xfe.h"
 #include "edt.h"
-#include "../../../lib/libmsg/msgcflds.h"
+#include "msgcflds.h"
 #include "msgcom.h"
 #include <xpgetstr.h>     /* for XP_GetString() */
 

@@ -49,6 +49,7 @@ REQUIRES	=\
 			xfeicons \
 			rdf \
 			xpcom \
+			msg \
 			plug
 
 CPPSRCS		= \

@@ -2210,11 +2210,13 @@ static void dir_PushStringToPrefs (DIR_Server *s, char **curVal, const char *new
 }
 
 /* XXX FreeMail - jsw removed for src331 ... need to find a home and proper code */
+#ifdef XP_WIN32
 #ifndef NO_SECURITY
 int DIR_SetupSecureConnection (LDAP *ld, void *pw_arg)
 {
   return -1;
 }
+#endif
 #endif
 
 void DIR_SetAuthDN (DIR_Server *s, const char *dn)

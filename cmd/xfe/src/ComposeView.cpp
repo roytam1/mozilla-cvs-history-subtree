@@ -77,6 +77,7 @@ extern "C" {
   Widget         fe_EditorCreateComposeToolbar(MWContext*, Widget, char*);
 }
 
+extern "C" void fe_sec_logo_cb (Widget, XtPointer, XtPointer);
 
 extern "C" XtPointer fe_GetFont(MWContext *context, int sizeNum, int fontmask);
 extern "C" void

@@ -213,7 +213,7 @@ char *DIR_ConvertFromServerCharSet (DIR_Server *s, char *src, int16 dstCsid);
 
 /* Does the LDAP client lib work for SSL */
 #include "ldap.h"
-int DIR_SetupSecureConnection (LDAP *ld);
+int DIR_SetupSecureConnection (LDAP *l);
 
 #endif /* MOZ_LDAP */
 

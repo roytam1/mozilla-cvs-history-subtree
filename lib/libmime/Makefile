@@ -49,16 +49,9 @@ CSRCS		= mimecont.c \
 		  mimetric.c \
 		  mimeunty.c \
 		  mimevcrd.c \
-		  mimecryp.c \
 		  $(NULL)
 
-ifndef NO_SECURITY
-CSRCS		+= mimempkc.c \
-		   mimepkcs.c \
-		  $(NULL)
-endif
-
-REQUIRES	= nspr dbm img util layer security pref js
+REQUIRES	= mime nspr dbm img util layer security pref js
 
 include $(DEPTH)/config/rules.mk
 
@@ -66,7 +59,7 @@ FILT_SRCS	= mimefilt.c mimestub.c
 FILT_OBJS	= $(addprefix $(OBJDIR)/,$(FILT_SRCS:.c=.o))
 
 ifndef NO_SECURITY
-INCLUDES	+= $(DEPTH)/../ns_include/libmime
+INCLUDES	+= $(DEPTH)/../ns_include/libmime -I$(DEPTH)/lib/libmime
 endif
 
 #
