@@ -33,11 +33,9 @@ interface nsIObjectInputStream : nsIBinaryInputStream
 {
     nsISupports readObject(in PRBool aIsStrongRef);
 
-    [noscript, notxpcom] charPtr getBuffer(in PRUint32 aLength,
-                                           in PRUint32 aAlign);
+    [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
 
-    [noscript, notxpcom] void putBuffer(in charPtr aBuffer,
-                                        in PRUint32 aLength);
+    [notxpcom] void putBuffer(in charPtr aBuffer, in PRUint32 aLength);
 };
 
 %{C++

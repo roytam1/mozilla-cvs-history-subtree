@@ -28,7 +28,7 @@
  * @See nsIBinaryOutputStream
  */
 
-[uuid(92c898ac-5fde-4b99-87b3-5d486422094b)]
+[scriptable, uuid(92c898ac-5fde-4b99-87b3-5d486422094b)]
 interface nsIObjectOutputStream : nsIBinaryOutputStream
 {
     void writeObject(in nsISupports aObject,
