@@ -340,6 +340,10 @@ nsFastLoadFileReader::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead)
         // multiplexing schedules, which do tend to occur given non-blocking
         // i/o with LIFO scheduling.  XXXbe investigate LIFO issues
         do {
+            // Check for unexpected end of multiplexed stream.
+            if (entry->mNextSegmentOffset == 0)
+                return NS_ERROR_UNEXPECTED;
+
             rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                                 entry->mNextSegmentOffset);
             if (NS_FAILED(rv)) return rv;
@@ -353,10 +357,6 @@ nsFastLoadFileReader::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead)
 
             mCurrentDocumentMapEntry = entry;
             if (NS_FAILED(rv)) return rv;
-
-            // Check for unexpected end of multiplexed stream.
-            if (entry->mNextSegmentOffset == 0)
-                return NS_ERROR_UNEXPECTED;
 
             NS_ASSERTION(entry->mBytesLeft >= 8, "demux segment length botch!");
             entry->mBytesLeft -= 8;
