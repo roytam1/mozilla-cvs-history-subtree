@@ -123,6 +123,7 @@ protected:
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
   nsresult CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollapsed);
   nsresult ExpandAll();
+  nsresult CollapseAll();
 
   // helper routines for thread expanding and collapsing.
   nsresult		GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount);

@@ -1154,8 +1154,11 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
     break;
   case nsMsgViewCommandType::selectAll:
-    // note, it is the FE's responsibility to expand all, if in threaded mode
     if (mOutlinerSelection && mOutliner) {
+        // if in threaded mode, we need to expand all before selecting
+        if (m_sortType == nsMsgViewSortType::byThread) {
+            rv = ExpandAll();
+        }
         mOutlinerSelection->SelectAll();
         mOutliner->Invalidate();
     }
@@ -1173,10 +1176,12 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
     printf("implement toggle thread watched\n");
     break;
   case nsMsgViewCommandType::expandAll:
-    printf("implement expand all\n");
+    rv = ExpandAll();
+    mOutliner->Invalidate();
     break;
   case nsMsgViewCommandType::collapseAll:
-    printf("implement collapse all\n");
+    rv = CollapseAll();
+    mOutliner->Invalidate();
     break;
   default:
     NS_ASSERTION(PR_FALSE, "invalid command type");
@@ -1211,10 +1216,11 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
     *selectable_p = (numindices > 0);
     break;
   case nsMsgViewCommandType::markAllRead:
+    printf("fix me\n");
     break;
   case nsMsgViewCommandType::expandAll:
-    break;
   case nsMsgViewCommandType::collapseAll:
+    *selectable_p = (m_sortType == nsMsgViewSortType::byThread);
     break;
   default:
     NS_ASSERTION(PR_FALSE, "invalid command type");
@@ -2302,6 +2308,18 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	if (pNumExpanded != nsnull)
 		*pNumExpanded = numExpanded;
 	return rv;
+}
+
+nsresult nsMsgDBView::CollapseAll()
+{
+    for (PRInt32 i = 0; i < GetSize(); i++)
+    {
+        PRUint32 numExpanded;
+        PRUint32 flags = m_flags[i];
+        if (!(flags & MSG_FLAG_ELIDED))
+            CollapseByIndex(i, &numExpanded);
+    }
+    return NS_OK;
 }
 
 nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollapsed)

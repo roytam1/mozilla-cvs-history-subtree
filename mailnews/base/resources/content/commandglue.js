@@ -254,6 +254,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   SetViewFlags(viewFlags);
 
   //Clear the new messages of the old folder
+  dump("some work needed here\n");
 /*
   var oldFolderURI = folder.getAttribute("ref");
   if(oldFolderURI && (oldFolderURI != "null") && (oldFolderURI !=""))
@@ -282,7 +283,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 
   // null this out, so we don't try sort.
   gDBView = null;
-  // fix me
+  dump("fix me, implement SetSentFolderColumns()\n");
   // SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
 
   // now create the db view, which will sort it.
@@ -296,11 +297,6 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
     outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
     dump('set outliner view\n');
   }
-
-  // Since SetSentFolderColumns() may alter the template's structure,
-  // we need to explicitly force the builder to recompile its rules.
-  //when switching folders, switch back to closing threads
-  SetTemplateTreeItemOpen(false);
 
   SetUpToolbarButtons(uri);
 
@@ -367,13 +363,11 @@ function SetSentFolderColumns(isSentFolder)
 		senderColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Sender");
 		authorColumnHeader.setAttribute("resource", "http://home.netscape.com/NC-rdf#Sender");
 	}
-
-
 }
 
 function SetNewsFolderColumns(isNewsFolder)
 {
-  dump("fix me, I need to show lines instead of size when reading news\n");
+  dump("fix me, I need to show lines or size depending on if the folder is news or not\n");
 /* 
 	var sizeColumn = document.getElementById("SizeColumnHeader");
   var sizeColumnTemplate = document.getElementById("SizeColumnTemplate");

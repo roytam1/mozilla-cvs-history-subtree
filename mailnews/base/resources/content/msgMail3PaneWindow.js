@@ -672,18 +672,6 @@ function FindMessenger()
   return messenger;
 }
 
-function RefreshThreadTreeView()
-{
-	SetBusyCursor(window, true);
-
-	var currentFolder = GetThreadTreeFolder();  
-	var currentFolderID = currentFolder.getAttribute('ref');
-	ClearThreadTreeSelection();
-	currentFolder.setAttribute('ref', currentFolderID);
-	SetBusyCursor(window, false);
-
-}
-
 function ClearThreadTreeSelection()
 {
   // mscott --> implement me

@@ -147,7 +147,6 @@ function MsgEmptyTrash()
                     if(trashSelected)
                     {
                         tree.clearItemSelection();
-                        //RefreshThreadTreeView(); un-neccessary
                     }
                     try {
                           messenger.EmptyTrash(tree.database, folder.resource);

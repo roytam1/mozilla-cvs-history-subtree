@@ -149,10 +149,7 @@ var ThreadPaneController =
 		{
 			case "cmd_selectAll":
                 if (gDBView) {
-                    // if in threaded mode, we need to expand all before selecting all
-                    if (gDBView.sortType == nsMsgViewSortType.byThread) {
-                        gDBView.doCommand(nsMsgViewCommandType.expandAll)
-                    }
+                    // if in threaded mode, the view will expand all before selecting all
                     gDBView.doCommand(nsMsgViewCommandType.selectAll)
                     if (gDBView.numSelected != 1) {
                         ClearMessagePane();
@@ -326,10 +323,12 @@ var DefaultController =
 				return IsFindEnabled();
 				break;
 			case "cmd_expandAllThreads":
+                gDBView.getCommandStatus(nsMsgViewCommandType.expandAll, enabled, checkStatus);
+                return enabled.value;
+				break;
 			case "cmd_collapseAllThreads":
-      // ### fix me
-        return false;
-//				return messageView.showThreads;
+                gDBView.getCommandStatus(nsMsgViewCommandType.collapseAll, enabled, checkStatus);
+                return enabled.value;
 				break;
 			case "cmd_nextFlaggedMsg":
 			case "cmd_previousFlaggedMsg":
@@ -462,10 +461,10 @@ var DefaultController =
 				messenger.Redo(msgWindow);
 				break;
 			case "cmd_expandAllThreads":
-				ExpandOrCollapseThreads(true);
+                gDBView.doCommand(nsMsgViewCommandType.expandAll);
 				break;
 			case "cmd_collapseAllThreads":
-				ExpandOrCollapseThreads(false);
+                gDBView.doCommand(nsMsgViewCommandType.collapseAll);
 				break;
 			case "cmd_renameFolder":
 				MsgRenameFolder();
@@ -854,7 +853,6 @@ var nsMsgViewType = Components.interfaces.nsMsgViewType;
 function MsgViewAllMsgs() 
 {
 	//dump("MsgViewAllMsgs\n");
-
 	if(gDBView)
 	{
 		gDBView.viewType = nsMsgViewType.eShowAllThreads;
@@ -864,7 +862,6 @@ function MsgViewAllMsgs()
             folder.setAttribute("viewType", nsMsgViewType.eShowAllThreads);
         }
 	}
-	RefreshThreadTreeView();
 }
 
 
@@ -914,26 +911,6 @@ function GetFolderNameFromUri(uri, tree)
 
 	nameResult = nameResult.QueryInterface(Components.interfaces.nsIRDFLiteral);
 	return nameResult.Value;
-}
-
-
-//Sets the thread tree's template's treeitem to be open so that all threads are expanded.
-function ExpandOrCollapseThreads(expand)
-{
-	SetTemplateTreeItemOpen(expand);
-	RefreshThreadTreeView();
-}
-
-function SetTemplateTreeItemOpen(open)
-{
-	var templateTreeItem = document.getElementById("threadTreeTemplateTreeItem");
-	if(templateTreeItem)
-	{
-		if(open)
-			templateTreeItem.setAttribute("open", "true");
-		else
-			templateTreeItem.removeAttribute("open");
-	}
 }
 
 function SwitchPaneFocus(direction)
