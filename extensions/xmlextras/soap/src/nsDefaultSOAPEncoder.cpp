@@ -966,11 +966,24 @@ NS_IMETHODIMP nsDefaultEncoder::Decode(nsISOAPEncoding* aEncoding,
       if (NS_FAILED(rc)) return rc;
     }
     if (!type) {
+      rc = aSource->GetNamespaceURI(ns);
+      if (NS_FAILED(rc)) return rc;
+      rc = aSource->GetLocalName(name);
+      if (NS_FAILED(rc)) return rc;
       nsCOMPtr<nsISchemaElement> element;
       rc = collection->GetElement(ns, name, getter_AddRefs(element));
       if (NS_FAILED(rc)) return rc;
       if (element) {
         rc = element->GetType(getter_AddRefs(type));
+        if (NS_FAILED(rc)) return rc;
+      } 
+      else if (ns.Equals(nsSOAPUtils::kSOAPEncodingURI)) {  	//  Last-ditch hack to get undeclared types from SOAP namespace
+	if (name.Equals(kArraySOAPType)) {			//  This should not be needed if schema has these declarations
+          rc = collection->GetType(ns, name, getter_AddRefs(type));
+	}
+	else {
+          rc = collection->GetType(kSchemaDatatypesNamespaceURI, name, getter_AddRefs(type));
+	}
         if (NS_FAILED(rc)) return rc;
       }
     }
