@@ -314,14 +314,68 @@ BITMAPINFO * CXIcon::NewPixmap(NI_Pixmap *pImage, BOOL isMask)
 
 int CXIcon::DisplayPixmap(NI_Pixmap* image, NI_Pixmap* mask, int32 x, int32 y, int32 x_offset, int32 y_offset, int32 width, int32 height, int32 lScaleWidth, int32 lScaleHeight, LTRB& Rect)
 {
+/*
+	if (m_image)
+	{
+		CDCCX::HugeFree(m_image->bits);
+		m_image->bits = NULL;
+		FEBitmapInfo *imageInfo = (FEBitmapInfo*)m_image->client_data;
+		delete imageInfo;
+		m_image->client_data = NULL;
+		m_image = NULL;
+	}
+
+	if (m_mask)
+	{
+		CDCCX::HugeFree(m_mask->bits);
+		m_mask->bits = NULL;
+		FEBitmapInfo *imageInfo = (FEBitmapInfo*)m_mask->client_data;
+		delete imageInfo;
+		m_mask->client_data = NULL;
+		m_mask = NULL;
+	}
+*/
+
+	if (m_icon->bits)
+	{
+		// Free the old pixmap to make way for the new.
+		CDCCX::HugeFree(m_icon->bits);
+		m_icon->bits = NULL;
+	}
+
+	if (m_icon->maskbits)
+	{
+		// Free the old mask to make way for the new.
+		CDCCX::HugeFree(m_icon->maskbits);
+		m_icon->maskbits = NULL;
+	}
+
+	if (m_icon->bmpInfo)
+	{
+		XP_FREE(m_icon->bmpInfo);
+		m_icon->bmpInfo = NULL;
+	}
+
+	// Get the new pixmap.
 	m_image = image;
 	m_mask = mask;
 
+	// Fill in our header.
 	m_icon->bmpInfo = FillBitmapInfoHeader(image);
-	m_icon->bits = image->bits;
-	if (mask)
-		m_icon->maskbits = mask->bits;
 
+	// Copy our bits if we have any.
+	if (m_image->bits)
+	{
+		m_icon->bits = HugeAlloc(m_icon->bmpInfo->bmiHeader.biSizeImage, 1);
+		memcpy( m_icon->bits, m_image->bits, m_icon->bmpInfo->bmiHeader.biSizeImage );
+	}
+
+	if (mask && m_mask->bits)
+	{
+		m_icon->maskbits = HugeAlloc(m_icon->bmpInfo->bmiHeader.biSizeImage, 1);
+	    memcpy( m_icon->maskbits, m_mask->bits, m_icon->bmpInfo->bmiHeader.biSizeImage );
+	}
+		
 	m_icon->CompleteFrameCallback();
 	return 1;
 }
