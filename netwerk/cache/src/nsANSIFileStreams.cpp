@@ -44,7 +44,7 @@ nsresult nsANSIInputStream::Open(nsILocalFile* file)
     if (::fseek(mFile, 0, SEEK_END) != 0) return NS_ERROR_FAILURE;
     mSize = ::ftell(mFile);
     ::fseek(mFile, 0, SEEK_SET);
-    rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+    rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
     return rv;
 }
 
@@ -62,7 +62,7 @@ NS_IMETHODIMP nsANSIInputStream::Available(PRUint32 * result)
 {
     if (mFile) {
         *result = (mSize - ::ftell(mFile));
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -72,7 +72,7 @@ NS_IMETHODIMP nsANSIInputStream::Read(char * buf, PRUint32 count, PRUint32 *resu
 {
     if (mFile) {
         *result = ::fread(buf, 1, count, mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -103,7 +103,7 @@ NS_IMETHODIMP nsANSIInputStream::Seek(PRInt32 whence, PRInt32 offset)
 {
     if (mFile) {
         ::fseek(mFile, offset, whence);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -113,7 +113,7 @@ NS_IMETHODIMP nsANSIInputStream::Tell(PRUint32 * result)
 {
     if (mFile) {
         *result = ::ftell(mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -151,7 +151,7 @@ NS_IMETHODIMP nsANSIOutputStream::Flush()
 {
     if (mFile) {
         ::fflush(mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -161,7 +161,7 @@ NS_IMETHODIMP nsANSIOutputStream::Write(const char *buffer, PRUint32 count, PRUi
 {
     if (mFile) {
         *result = ::fwrite(buffer, 1, count, mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -213,7 +213,7 @@ NS_IMETHODIMP nsANSIOutputStream::Seek(PRInt32 whence, PRInt32 offset)
 {
     if (mFile) {
         ::fseek(mFile, offset, whence);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -223,7 +223,7 @@ NS_IMETHODIMP nsANSIOutputStream::Tell(PRUint32 * result)
 {
     if (mFile) {
         *result = ::ftell(mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -256,7 +256,7 @@ nsresult nsANSIFileStream::Open(nsILocalFile* file)
     if (::fseek(mFile, 0, SEEK_END) != 0) return NS_ERROR_FAILURE;
     mSize = ::ftell(mFile);
     ::fseek(mFile, 0, SEEK_SET);
-    rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+    rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
     return rv;
 }
 
@@ -274,7 +274,7 @@ NS_IMETHODIMP nsANSIFileStream::Available(PRUint32 * result)
 {
     if (mFile) {
         *result = (mSize - ::ftell(mFile));
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -284,7 +284,7 @@ NS_IMETHODIMP nsANSIFileStream::Read(char * buf, PRUint32 count, PRUint32 *resul
 {
     if (mFile) {
         *result = ::fread(buf, 1, count, mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -315,7 +315,7 @@ NS_IMETHODIMP nsANSIFileStream::Flush()
 {
     if (mFile) {
         ::fflush(mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -325,7 +325,7 @@ NS_IMETHODIMP nsANSIFileStream::Write(const char *buffer, PRUint32 count, PRUint
 {
     if (mFile) {
         *result = ::fwrite(buffer, 1, count, mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -371,7 +371,7 @@ NS_IMETHODIMP nsANSIFileStream::Seek(PRInt32 whence, PRInt32 offset)
 {
     if (mFile) {
         ::fseek(mFile, offset, whence);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
@@ -381,7 +381,7 @@ NS_IMETHODIMP nsANSIFileStream::Tell(PRUint32 * result)
 {
     if (mFile) {
         *result = ::ftell(mFile);
-        nsresult rv = (::ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
+        nsresult rv = (ferror(mFile) ? NS_ERROR_FAILURE : NS_OK);
         return rv;
     }
     return NS_BASE_STREAM_CLOSED;
