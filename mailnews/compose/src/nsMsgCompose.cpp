@@ -1719,6 +1719,8 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
     rv = GetMsgDBHdrFromURI(originalMsgURI, getter_AddRefs(originalMsgHdr));
     if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
     {
+
+      mCitePrefix = NS_LITERAL_STRING("<span _moz_skip_spellcheck=\"true\">");
       // Setup the cite information....
       nsXPIDLCString myGetter;
       if (NS_SUCCEEDED(originalMsgHdr->GetMessageId(getter_Copies(myGetter))))
@@ -1875,6 +1877,8 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
         else
           mCitePrefix.Append(citePrefixAuthor);
         mCitePrefix.Append(replyHeaderColon);
+
+        mCitePrefix.Append(NS_LITERAL_STRING("</span>"));
         mCitePrefix.Append(NS_LITERAL_STRING("<br><html>"));
       }
     }
@@ -3324,12 +3328,12 @@ nsMsgCompose::ProcessSignature(nsIMsgIdentity *identity, PRBool aQuoted, nsStrin
 
   static const char      htmlBreak[] = "<BR>";
   static const char      dashes[] = "-- ";
-  static const char      htmlsigopen[] = "<div class=\"moz-signature\">";
+  static const char      htmlsigopen[] = "<div class=\"moz-signature\" _moz_skip_spellcheck=\"true\">";
   static const char      htmlsigclose[] = "</div>";    /* XXX: Due to a bug in
                              4.x' HTML editor, it will not be able to
                              break this HTML sig, if quoted (for the user to
                              interleave a comment). */
-  static const char      _preopen[] = "<pre class=\"moz-signature\" cols=%d>";
+  static const char      _preopen[] = "<pre class=\"moz-signature\" _moz_skip_spellcheck=\"true\" cols=%d>";
   char*                  preopen;
   static const char      preclose[] = "</pre>";
 
