@@ -1293,6 +1293,20 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                        JSObject *obj, jsval id, PRUint32 flags,
                        JSObject **objp, PRBool *_retval)
 {
+  JSBool did_resolve = JS_FALSE;
+
+  if (!JS_ResolveStandardClass(cx, obj, id, &did_resolve)) {
+    *_retval = JS_FALSE;
+
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  if (did_resolve) {
+    *objp = obj;
+
+    return NS_OK;
+  }
+
   if (JSVAL_IS_STRING(id)) {
     JSString *str = JSVAL_TO_STRING(id);
     nsresult rv = NS_OK;

@@ -1045,7 +1045,7 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
   rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
                                             NS_GET_IID(nsISupports),
-                                            PR_TRUE, getter_AddRefs(holder));
+                                            PR_FALSE, getter_AddRefs(holder));
   if (NS_FAILED(rv))
     return rv;
 
