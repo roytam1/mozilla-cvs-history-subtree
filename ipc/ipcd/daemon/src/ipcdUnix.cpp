@@ -59,6 +59,7 @@
 #include "ipcdPrivate.h"
 #include "ipcd.h"
 
+#ifdef XP_UNIX
 void
 IPC_Sleep(int seconds)
 {
@@ -174,6 +175,7 @@ static void ShutdownDaemonDir()
         ipcLockFD = 0;
     }
 }
+#endif
 
 //-----------------------------------------------------------------------------
 // poll list
@@ -185,6 +187,7 @@ static void ShutdownDaemonDir()
 ipcClient *ipcClients = NULL;
 int        ipcClientCount = 0;
 
+#ifdef XP_UNIX
 //
 // the first element of this array is always zero; this is done so that the
 // k'th element of ipcClientArray corresponds to the k'th element of
@@ -340,12 +343,14 @@ static void PollLoop(PRFileDesc *listenFD)
         }
     }
 }
+#endif
 
 //-----------------------------------------------------------------------------
 
 PRStatus
 IPC_PlatformSendMsg(ipcClient  *client, ipcMessage *msg)
 {
+#ifdef XP_UNIX
     LOG(("IPC_PlatformSendMsg\n"));
 
     //
@@ -361,12 +366,18 @@ IPC_PlatformSendMsg(ipcClient  *client, ipcMessage *msg)
     ipcPollList[clientIndex].in_flags |= PR_POLL_WRITE;
 
     return PR_SUCCESS;
+#else
+    const char notimplemented[] = "IPC_PlatformSendMsg not implemented";
+    PR_SetErrorText(sizeof(notimplemented), notimplemented);
+    return PR_FAILURE;
+#endif
 }
 
 //-----------------------------------------------------------------------------
 
 int main(int argc, char **argv)
 {
+#ifdef XP_UNIX
     PRFileDesc *listenFD = NULL;
     PRNetAddr addr;
 
@@ -436,4 +447,7 @@ end:
         PR_Close(listenFD);
     }
     return 0;
+#else
+    return -1;
+#endif
 }
