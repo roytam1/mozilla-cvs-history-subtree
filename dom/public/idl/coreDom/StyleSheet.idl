@@ -1,5 +1,0 @@
-
-   interface StyleSheet {
-      attribute boolean disabled;
-      readonly attribute boolean readOnly;
-   };
