@@ -38,10 +38,12 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsDogbertProfileMigrator.h"
+#include "nsIBookmarksService.h"
 #include "nsIFile.h"
 #include "nsIObserverService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
+#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
@@ -51,30 +53,34 @@
 #define PREF_FILE_HEADER_STRING "# Mozilla User Preferences    " 
 
 #if defined(XP_UNIX) && !defined(XP_MACOSX)
-#define COOKIES_FILE_NAME_IN_4x   "cookies"
-#define BOOKMARKS_FILE_NAME_IN_4x "bookmarks.html"
+#define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("preferences.js")
+#define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("cookies")
+#define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("bookmarks.html")
 #define PSM_CERT7_DB              "cert7.db"
 #define PSM_KEY3_DB               "key3.db"
 #define PSM_SECMODULE_DB          "secmodule.db"
 #elif defined(XP_MAC) || defined(XP_MACOSX)
-#define COOKIES_FILE_NAME_IN_4x   "MagicCookie"
-#define BOOKMARKS_FILE_NAME_IN_4x "Bookmarks.html"
+#define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("Netscape Preferences")
+#define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("MagicCookie")
+#define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("Bookmarks.html")
 #define SECURITY_PATH             "Security"
 #define PSM_CERT7_DB              "Certificates7"
 #define PSM_KEY3_DB               "Key Database3"
 #define PSM_SECMODULE_DB          "Security Modules"
 #else /* XP_WIN || XP_OS2 */
-#define COOKIES_FILE_NAME_IN_4x   "cookies.txt"
-#define BOOKMARKS_FILE_NAME_IN_4x "bookmark.htm"
+#define PREF_FILE_NAME_IN_4x      NS_LITERAL_STRING("prefs.js")
+#define COOKIES_FILE_NAME_IN_4x   NS_LITERAL_STRING("cookies.txt")
+#define BOOKMARKS_FILE_NAME_IN_4x NS_LITERAL_STRING("bookmark.htm")
 #define PSM_CERT7_DB              "cert7.db"
 #define PSM_KEY3_DB               "key3.db"
 #define PSM_SECMODULE_DB          "secmod.db"
 #endif /* XP_UNIX */
 
-#define COOKIES_FILE_NAME_IN_5x   "cookies.txt"
-#define BOOKMARKS_FILE_NAME_IN_5x "bookmarks.html"
-#define HISTORY_FILE_NAME_IN_5x   "history.dat"
+#define COOKIES_FILE_NAME_IN_5x   NS_LITERAL_STRING("cookies.txt")
+#define BOOKMARKS_FILE_NAME_IN_5x NS_LITERAL_STRING("bookmarks.html")
+#define PREF_FILE_NAME_IN_5x      NS_LITERAL_STRING("prefs.js")
 
+#define PREF_CACHE_DIRECTORY      "browser.cache.directory"
 #define MIGRATION_BUNDLE          "chrome://browser/locale/migration/migration.properties"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
@@ -224,14 +230,72 @@ nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir,
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
 {
+  nsresult rv;
+
   // 1) Copy Preferences
+  rv = CopyFile(PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
+  if (NS_FAILED(rv)) return rv;
+
+
+#if 0
+  /* Copy the old prefs file to the new profile directory for modification and reading.  
+     after copying it, rename it to pref.js, the 5.x pref file name on all platforms */
+  nsCOMPtr<nsIFileSpec> oldPrefsFile;
+  rv = NS_NewFileSpec(getter_AddRefs(oldPrefsFile)); 
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = oldPrefsFile->FromFileSpec(oldProfilePath);
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = oldPrefsFile->AppendRelativeUnixPath(PREF_FILE_NAME_IN_4x);
+  if (NS_FAILED(rv)) return rv;
+
+
+  /* the new prefs file */
+  nsCOMPtr<nsIFileSpec> newPrefsFile;
+  rv = NS_NewFileSpec(getter_AddRefs(newPrefsFile)); 
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = newPrefsFile->FromFileSpec(newProfilePath);
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = newPrefsFile->Exists(&exists);
+  if (!exists)
+  {
+	  rv = newPrefsFile->CreateDir();
+  }
+
+  rv = oldPrefsFile->CopyToDir(newPrefsFile);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"failed to copy prefs file");
+
+  rv = newPrefsFile->AppendRelativeUnixPath(PREF_FILE_NAME_IN_4x);
+  rv = newPrefsFile->Rename(PREF_FILE_NAME_IN_5x);
+#endif
+
+
   // 2) Copy Certficates
   return NS_OK;
 }
 
 nsresult
+nsDogbertProfileMigrator::CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName)
+{
+  nsCOMPtr<nsIFile> dogbertPrefFile;
+  mSourceProfile->Clone(getter_AddRefs(dogbertPrefFile));
+
+  dogbertPrefFile->Append(aSourceFileName);
+  PRBool exists = PR_FALSE;
+  dogbertPrefFile->Exists(&exists);
+  if (!exists)
+    return NS_ERROR_FILE_NOT_FOUND;
+
+  return dogbertPrefFile->CopyTo(mTargetProfile, aTargetFileName);
+}
+
+nsresult
 nsDogbertProfileMigrator::CopyCookies(PRBool aReplace)
 {
+  CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
 
   return NS_OK;
 }
@@ -239,7 +303,53 @@ nsDogbertProfileMigrator::CopyCookies(PRBool aReplace)
 nsresult
 nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
 {
+  // If we're blowing away existing content, just copy the file, don't do fancy importing.
+  if (aReplace)
+    return CopyFile(BOOKMARKS_FILE_NAME_IN_4x, BOOKMARKS_FILE_NAME_IN_5x);
 
-  return NS_OK;
+  nsCOMPtr<nsIFile> bookmarksFile;
+  mSourceProfile->Clone(getter_AddRefs(bookmarksFile));
+  bookmarksFile->Append(BOOKMARKS_FILE_NAME_IN_4x);
+
+  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  nsCOMPtr<nsISupportsArray> params;
+  NS_NewISupportsArray(getter_AddRefs(params));
+
+  nsCOMPtr<nsIRDFService> rdfs(do_GetService("@mozilla.org/rdf/rdf-service;1"));
+  nsCOMPtr<nsIRDFResource> prop;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC_NS#URL"), 
+                    getter_AddRefs(prop));
+  nsCOMPtr<nsIRDFLiteral> url;
+  nsAutoString path;
+  bookmarksFile->GetPath(path);
+  rdfs->GetLiteral(path.get(), getter_AddRefs(url));
+
+  params->AppendElement(prop);
+  params->AppendElement(url);
+
+  nsCOMPtr<nsIRDFResource> importCmd;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC_NS#command?cmd=import"), 
+                    getter_AddRefs(importCmd));
+
+  nsCOMPtr<nsIRDFResource> root;
+  rdfs->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
+
+  nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
+  nsCOMPtr<nsIStringBundle> bundle;
+  bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
+
+  nsXPIDLString importedDogbertBookmarksTitle;
+  bundle->GetStringFromName(NS_LITERAL_STRING("importedDogbertBookmarksTitle").get(), getter_Copies(importedDogbertBookmarksTitle));
+
+  nsCOMPtr<nsIRDFResource> folder;
+  bms->CreateFolderInContainer(importedDogbertBookmarksTitle.get(), root, -1, getter_AddRefs(folder));
+
+  nsCOMPtr<nsISupportsArray> sources;
+  NS_NewISupportsArray(getter_AddRefs(sources));
+
+  sources->AppendElement(folder);
+
+  nsCOMPtr<nsIRDFDataSource> ds(do_QueryInterface(bms));
+  return ds->DoCommand(sources, importCmd, params);
 }
 

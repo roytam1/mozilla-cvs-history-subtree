@@ -89,7 +89,7 @@
 #include "nsUnicharUtils.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-#define TRIDENTPROFILE_BUNDLE       "chrome://tridentprofile/locale/tridentProfile.properties"
+#define TRIDENTPROFILE_BUNDLE       "chrome://browser/locale/migration/migration.properties"
 
 #define LARGE_BUFFER 1024
 

@@ -62,6 +62,8 @@ protected:
   nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);
   void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
 
+  nsresult CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName);
+
 private:
   nsCOMPtr<nsISupportsArray> mProfiles;
 
