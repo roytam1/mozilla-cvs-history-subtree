@@ -37,6 +37,7 @@ var nsMsgSearchScope = Components.interfaces.nsMsgSearchScope;
 var gFolderDatasource;
 var gFolderPicker;
 var gStatusBar = null;
+var gStatusPanel = null;
 var gStatusFeedback = new nsMsgStatusFeedback;
 var gNumOfSearchHits = 0;
 var RDF;
@@ -145,6 +146,7 @@ var gSearchNotificationListener =
         gStatusFeedback.showProgress(0);
         gStatusFeedback.showStatusString(statusMsg);
         gStatusBar.setAttribute("mode","normal");
+	gStatusPanel.setAttribute("hidden", "true");
     },
 
     onNewSearch: function()
@@ -154,6 +156,7 @@ var gSearchNotificationListener =
       gStatusFeedback.showProgress(0);
       gStatusFeedback.showStatusString(gSearchBundle.getString("searchingMessage"));
       gStatusBar.setAttribute("mode","undetermined");
+      gStatusPanel.removeAttribute("hidden");
     }
 }
 
@@ -254,6 +257,7 @@ function initializeSearchWindowWidgets()
     gFolderPicker = document.getElementById("searchableFolders");
     gSearchStopButton = document.getElementById("search-button");
     gStatusBar = document.getElementById('statusbar-icon');
+    gStatusPanel = document.getElementById('progress-panel');
 
     msgWindow = Components.classes[msgWindowContractID].createInstance(nsIMsgWindow);
     msgWindow.statusFeedback = gStatusFeedback;
