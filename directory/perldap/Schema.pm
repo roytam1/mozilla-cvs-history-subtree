@@ -174,13 +174,13 @@ sub _initialize
   my @temparr = quotewords(" ", 0, $attrString);
   my ($i,$j) = 2;
   my @objarr;
-  
+  my $count=0;
   # The OID is always going to be the first thing, and it will not have
   # a label on it.
   # We start from 1 because 0 will be a parentheses.
-  
+
   $self->{"oid"} = $temparr[1];
-  
+
   while ($i<(scalar(@temparr)-1)) # the last character is a ")" 
     {
       #since the objectclass can have stuff nested, we need to check
@@ -207,7 +207,8 @@ sub _initialize
 	    $k+=1;
 	    $j+=1;
 	  }
-	$self->{lc $temparr[$i]} = @objarr;
+	@{$self->{lc $temparr[$i]}} = @objarr;
+
 	$i=$j+1;
       }
     }
@@ -265,13 +266,16 @@ sub must
   if(@_) {
     $self->{'must'} = lc shift;
   }
-  $self->{'must'}; 
+  @{$self->{'must'}}; 
 }
 
 sub may
 {
-  my $self = shift;
-  $self->{'may'};
+  my $self = shift; 
+  if(@_) {
+    $self->{'may'} = lc shift;
+  }
+  @{$self->{'may'}}; 
 }
 
 #############################################################################
