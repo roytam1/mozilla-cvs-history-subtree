@@ -43,6 +43,8 @@ class nsIRDFLiteral;
 class nsIRDFResource;
 class nsIRDFResourceFactory;
 
+typedef nsresult (*NSDataSourceConstructorCallback)(nsIRDFDataSource** aResult);
+
 class nsIRDFService : public nsISupports {
 public:
 
@@ -107,6 +109,17 @@ public:
      * Unregister a <i>named data source</i>.
      */
     NS_IMETHOD UnRegisterNamedDataSource(const char* uri) = 0;
+
+    /**
+     * Register a constructor function to create a named data source
+     * if one isn't already registered.
+     */
+    NS_IMETHOD RegisterDataSourceConstructor(const char* aURI, NSDataSourceConstructorCallback aFn) = 0;
+
+    /**
+     * Unregister the constructor function for a named data source.
+     */
+    NS_IMETHOD UnRegisterDataSourceConstructor(const char* aURI) = 0;
 
     /**
      * Get the <i>named data source</i> corresponding to the URI.
