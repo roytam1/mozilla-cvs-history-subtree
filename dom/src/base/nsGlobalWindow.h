@@ -237,7 +237,8 @@ protected:
   nsTimeoutImpl*                mRunningTimeout;
   PRUint32                      mTimeoutPublicIdCounter;
   PRUint32                      mTimeoutFiringDepth;
-  PRBool                        mFirstDocumentLoad;
+  PRPackedBool                  mFirstDocumentLoad;
+  PRPackedBool                  mIsScopeClear;
   nsString                      mStatus;
   nsString                      mDefaultStatus;
   nsString                      mTitle;
@@ -263,7 +264,7 @@ struct nsTimeoutImpl {
   GlobalWindowImpl    *window;        /* window for which this timeout fires */
   JSString            *expr;          /* the JS expression to evaluate */
   JSObject            *funobj;        /* or function to call, if !expr */
-  nsCOMPtr<nsITimer>  timer;         /* The actual timer object */
+  nsCOMPtr<nsITimer>  timer;          /* The actual timer object */
   jsval               *argv;          /* function actual arguments */
   PRUint16            argc;           /* and argument count */
   PRUint16            spare;          /* alignment padding */
@@ -274,7 +275,7 @@ struct nsTimeoutImpl {
   char                *filename;      /* filename of setTimeout call */
   PRUint32            lineno;         /* line number of setTimeout call */
   const char          *version;       /* JS language version string constant */
-  PRUint32              firingDepth;    /* stack depth at which timeout isfiring */
+  PRUint32            firingDepth;    /* stack depth at which timeout isfiring */
   nsTimeoutImpl       *next;
 };
 

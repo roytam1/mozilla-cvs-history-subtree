@@ -144,8 +144,9 @@ GlobalWindowImpl::GlobalWindowImpl() :
   mLocationbar(nsnull), mPersonalbar(nsnull), mStatusbar(nsnull),
   mScrollbars(nsnull), mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts),
   mRunningTimeout(nsnull), mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
-  mFirstDocumentLoad(PR_TRUE), mGlobalObjectOwner(nsnull), mDocShell(nsnull),
-  mMutationBits(0), mChromeEventHandler(nsnull)
+  mFirstDocumentLoad(PR_TRUE), mIsScopeClear(PR_TRUE),
+  mGlobalObjectOwner(nsnull), mDocShell(nsnull), mMutationBits(0),
+  mChromeEventHandler(nsnull)
 {
   NS_INIT_REFCNT();
   // We could have failed the first time through trying
@@ -356,20 +357,23 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
     nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
     nsCOMPtr<nsIURI> docURL;
 
+    // If we had a document in this window the document most likely
+    // made our scope "unclear"
+
+    mIsScopeClear = PR_FALSE;
+
     if (doc) {
       doc->GetDocumentURL(getter_AddRefs(docURL));
       doc = nsnull;             // Forces release now
     }
 
     if (docURL) {
-      char *str;
-      docURL->GetSpec(&str);
+      nsXPIDLCString url;
 
-      nsAutoString url;
-      url.AssignWithConversion(str);
+      docURL->GetSpec(getter_Copies(url));
 
       //about:blank URL's do not have ClearScope called on page change.
-      if (!url.EqualsWithConversion("about:blank")) {
+      if (nsCRT::strcmp(url.get(), "about:blank") != 0) {
         ClearAllTimeouts();
 
         if (mSidebar) {
@@ -388,9 +392,10 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 //      JS properties from going away (that's good) and causes everything,
 //      and I mean everything, to be leaked (that's bad)
           ::JS_ClearScope((JSContext *)mContext->GetNativeContext(), mJSObject);
+
+          mIsScopeClear = PR_TRUE;
         }
       }
-      nsCRT::free(str);
     }
 
     //XXX Should this be outside the about:blank clearscope exception?
@@ -405,7 +410,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument)
 
   mDocument = aDocument;
 
-  if (mDocument && mContext) {
+  if (mDocument && mContext && mIsScopeClear) {
     mContext->InitContext(this);
   }
 
@@ -3115,7 +3120,7 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
     name = ToNewUTF8String(aName);
   }
 
-  if (1 && !aOptions.IsEmpty() /* IsNullDOMString(aOptions) */) {
+  if (!aOptions.IsEmpty() /* IsNullDOMString(aOptions) */) {
     features = ToNewUTF8String(aOptions);
   }
 
@@ -3146,8 +3151,8 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
     nsMemory::Free(name);
   if (url)
     nsMemory::Free(url);
-  return rv;
 
+  return rv;
 }
 
 void GlobalWindowImpl::CloseWindow(nsISupports *aWindow)
