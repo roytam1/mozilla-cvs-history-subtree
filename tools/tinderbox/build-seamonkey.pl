@@ -20,9 +20,9 @@ sub PrintUsage {
 &ParseArgs;
 &ConditionalArgs;
 &GetSystemInfo;
+&LoadConfig;
 &SetupEnv;
 &SetupPath;
-&LoadConfig;
 &BuildIt;
 
 1;
