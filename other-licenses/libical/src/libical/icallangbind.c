@@ -26,6 +26,8 @@
 #ifdef XP_MAC
 #include <extras.h> /* for malloc */
 #include <stdlib.h> /* for free */
+#elif defined(XP_MACOSX)
+#include <stdlib.h>
 #else
 #include <malloc.h>
 #endif
