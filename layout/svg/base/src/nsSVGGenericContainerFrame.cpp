@@ -255,13 +255,13 @@ nsSVGGenericContainerFrame::AttributeChanged(nsIPresContext* aPresContext,
                                              PRInt32         aHint)
 {
 #ifdef DEBUG
-    printf("** nsSVGGenericContainerFrame::AttributeChanged(");
-    nsAutoString str;
-    aAttribute->ToString(str);
-    nsCAutoString cstr;
-    cstr.AssignWithConversion(str);
-    printf(cstr.get());
-    printf(", hint:%d)\n",aHint);
+//    printf("** nsSVGGenericContainerFrame::AttributeChanged(");
+//    nsAutoString str;
+//    aAttribute->ToString(str);
+//    nsCAutoString cstr;
+//    cstr.AssignWithConversion(str);
+//    printf(cstr.get());
+//    printf(", hint:%d)\n",aHint);
 #endif
 
   return NS_OK;

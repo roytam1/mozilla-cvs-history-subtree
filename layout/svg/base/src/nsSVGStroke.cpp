@@ -99,7 +99,7 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
         char *end;
         dash.dash[count++] = PR_strtod(elem, &end);
 #ifdef DEBUG
-        printf("[%f]",dash.dash[count-1]);
+//        printf("[%f]",dash.dash[count-1]);
 #endif
       }
       dash.n_dash = count;
