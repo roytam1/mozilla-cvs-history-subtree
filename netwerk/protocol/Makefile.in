@@ -37,7 +37,7 @@ DIRS		= about \
 ifndef MOZ_MINOTAUR
 DIRS += ftp keyword gopher viewsource
 else
-DIRS += ftp\public
+DIRS += ftp/public
 endif
 
 include $(topsrcdir)/config/rules.mk
