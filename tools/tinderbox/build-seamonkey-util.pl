@@ -328,6 +328,12 @@ sub SetupEnv {
     if($Settings::MailBloatTest) {
         $ENV{BUILD_MAIL_SMOKETEST} = "1";
     }
+
+    # Codesighs/codesize test needs this to pull the right stuff.
+    if ($Settings::CodesizeTest or $Settings::EmbedCodesizeTest) {
+      $ENV{MOZ_MAPINFO} = "1";
+    }
+
 }
 
 sub SetupPath {
