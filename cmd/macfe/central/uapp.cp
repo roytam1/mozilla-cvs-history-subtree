@@ -1277,10 +1277,24 @@ void CFrontApp::InitBookmarks()
 // static
 int CFrontApp::SetBooleanWithPref(const char *prefName, void *boolPtr)
 {
-	XP_Bool	currentValue = *(Boolean *)boolPtr;
+	PRBool	currentValue = *(Boolean *)boolPtr;
 	PREF_GetBoolPref(prefName, &currentValue);
 	*(Boolean *)boolPtr = currentValue;
 	return 0;
+}
+
+// beard: don't blame me!
+extern "C" nsresult np_RegisterPluginMgr(void);
+extern "C" nsresult jvm_RegisterJVMMgr(void);
+
+static void
+InitializePluginStuff(void)
+{
+    nsresult err;
+    err = np_RegisterPluginMgr();
+    XP_ASSERT(err == NS_OK);
+    err = jvm_RegisterJVMMgr();
+    XP_ASSERT(err == NS_OK);
 }
 
 // This is called right after startup for us to do our initialization. If
@@ -1365,7 +1379,7 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	if ( fileType == FILE_TYPE_ASW && file )
 		abortStartup = CPrefs::eRunAccountSetup;
 		
-	XP_Bool startupFlag;
+	PRBool startupFlag = PR_FALSE;
 	mHasFrontierMenuSharing = (!(PREF_GetBoolPref("browser.mac.no_menu_sharing", &startupFlag) == PREF_NOERROR && startupFlag));
 	mHasBookmarksMenu = (!(PREF_GetBoolPref("browser.mac.no_bookmarks_menu", &startupFlag) == PREF_NOERROR && startupFlag));
 
@@ -1413,9 +1427,9 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 		
 		case kAskUserForState:
             		{
-            			XP_Bool	onlineLastTime;
+            			PRBool	onlineLastTime = PR_FALSE;
             			PREF_GetBoolPref("network.online" , &onlineLastTime);
-            			XP_Bool locked = PREF_PrefIsLocked("offline.startup_mode");
+            			PRBool locked = PREF_PrefIsLocked("offline.startup_mode");
 
 						enum
 						{
@@ -1485,7 +1499,7 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 						  (void*)&mJavaEnabled);
 
 	// Set CSharedPatternWorld::sUseUtilityPattern from pref
-	XP_Bool	useUtilityPattern;
+	PRBool	useUtilityPattern = PR_FALSE;
 	int	prefResult = PREF_GetBoolPref("browser.mac.use_utility_pattern", &useUtilityPattern);
 	if (prefResult == PREF_NOERROR && useUtilityPattern)
 	{
@@ -1614,6 +1628,8 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	
 	mozilla_event_queue = PR_CreateEventQueue("Mozilla Event Queue", mozilla_thread);
 
+	InitializePluginStuff();	// service manager stuff for plugins.
+
 	NPL_Init();			// plugins
 	LM_InitMocha();		// mocha, mocha, mocha
 
@@ -1723,7 +1739,7 @@ void CFrontApp::CreateStartupEnvironment(Boolean openStartupWindows)
 	}
 #endif
 
-	XP_Bool startupFlag;
+	PRBool startupFlag = PR_FALSE;
 
 	// handle new startup preferences
 	CommandT command = cmd_Nothing;
@@ -1759,7 +1775,7 @@ void CFrontApp::CreateStartupEnvironment(Boolean openStartupWindows)
 	}
 #endif
 	
-	startupFlag = false;
+	startupFlag = PR_FALSE;
 	if (HasFrontierMenuSharing())
 	{
 		AddAttachment(new LMenuSharingAttachment( msg_AnyMessage, TRUE, MENU_SHARING_FIRST ) ); // Menu Sharing
@@ -2650,7 +2666,10 @@ Boolean CFrontApp::ObeyCommand(CommandT inCommand, void* ioParam)
 #endif /* defined (JAVA) */
 
 #if defined (OJI)
-			JVM_ToggleConsole();
+			if (JVM_IsConsoleVisible())
+				JVM_HideConsole();
+			else
+				JVM_ShowConsole();
 #endif /* defined (OJI) */
 			break;
 			
