@@ -362,6 +362,19 @@ handle_xlib_event(GdkSuperWin *superwin, XEvent *event, gpointer p)
   case ConfigureNotify:
     window->HandleXlibConfigureNotifyEvent(event);
     break;
+  case ButtonPress:
+  case ButtonRelease:
+    window->HandleXlibButtonEvent((XButtonEvent *)event);
+    break;
+  case MotionNotify:
+    window->HandleXlibMotionNotifyEvent((XMotionEvent *) event);
+    break;
+  case EnterNotify:
+  case LeaveNotify:
+    window->HandleXlibCrossingEvent((XCrossingEvent *) event);
+    break;
+  default:
+    break;
   }
 }
 
