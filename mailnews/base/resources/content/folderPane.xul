@@ -45,9 +45,7 @@
                   tooltip="folderTooltip"
                   datasources="rdf:null"
                   onselect="FolderPaneSelectionChange();"
-                  ondragover="return DragOverOutliner(event);"
                   ondraggesture="return BeginDragFolderOutliner(event);"
-                  ondragdrop="return DropOnFolderOutliner(event);"
                   onclick="FolderPaneOnClick(event);"> 
       <template>
         <rule>

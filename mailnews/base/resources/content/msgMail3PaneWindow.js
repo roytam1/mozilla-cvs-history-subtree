@@ -183,20 +183,6 @@ var folderListener = {
     }
 }
 
-var folderObserver = {
-    canDropOn: function(index) {
-        dump("canDropOn: index="+index+"\n");
-        return true;
-    },
-    canDropBeforeAfter: function(index, before) {
-        dump("canDropBeforeAfter: index="+index+" before="+before+"\n");
-        return false;
-    },
-    onDrop: function(row, orientation) {
-        dump("onDrop: row="+row+" orientation="+orientation+"\n");
-    }
-}
-
 function HandleDeleteOrMoveMsgFailed(folder)
 {
   if(IsCurrentLoadedFolder(folder)) {
@@ -788,6 +774,27 @@ function ClearActiveThreadPaneSortColumn()
 
 }
 
+function GetSelectedFolders()
+{
+    var folderArray = [];
+    var k = 0;
+    var folderOutliner = GetFolderOutliner();
+    var rangeCount = folderOutliner.outlinerBoxObject.selection.getRangeCount();
+
+    for(var i = 0; i < rangeCount; i++)
+    {
+        var startIndex = {};
+        var endIndex = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(i, startIndex, endIndex);
+        for (var j = startIndex.value; j <= endIndex.value; j++)
+        {
+            var folderResource = GetFolderResource(j);
+            folderArray[k++] = folderResource.Value;
+        }
+    }
+
+    return folderArray;
+}
 
 function GetSelectedMsgFolders()
 {
