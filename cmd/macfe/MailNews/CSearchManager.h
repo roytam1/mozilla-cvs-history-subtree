@@ -34,7 +34,6 @@
 
 // BE stuff
 
-#define B3_SEARCH_API
 #include "msg_srch.h"
 
 // Other files
