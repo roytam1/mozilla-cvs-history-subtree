@@ -56,6 +56,7 @@ interface nsISocketTransportService : nsISupports
      */
     boolean reuseTransport(in nsIChannel i_Transport);
 
+    void init();
     void shutdown();
 };
 

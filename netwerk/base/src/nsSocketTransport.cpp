@@ -632,7 +632,7 @@ nsresult nsSocketTransport::doResolveHost(void)
     //
     PR_Unlock(mLock);
 
-    rv = pDNSService->Lookup(nsnull, mHostName, this, 
+    rv = pDNSService->Lookup(mHostName, this, nsnull, 
                              getter_AddRefs(mDNSRequest));
     //
     // Aquire the SocketTransport lock again...

@@ -26,7 +26,7 @@
 #include "nsIDNSService.h"
 #include "nsIRunnable.h"
 #include "nsIThread.h"
-#include "nsVoidArray.h"
+#include "nsISupportsArray.h"
 #if defined(XP_MAC)
 #include <OSUtils.h>
 #include <OpenTransport.h>
@@ -35,6 +35,9 @@
 #include <windows.h>
 #include <Winsock2.h>
 #endif
+#include "nsCOMPtr.h"
+#include "nsHashtable.h"
+#include "nsTime.h"
 
 class nsIDNSListener;
 class nsDNSLookup;
@@ -45,24 +48,31 @@ class nsDNSService : public nsIDNSService,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIRUNNABLE
+    NS_DECL_NSIDNSSERVICE
 
     // nsDNSService methods:
     nsDNSService();
     virtual ~nsDNSService();
-    nsresult Init();
-    nsresult InitDNSThread();
- 
+
     // Define a Create method to be used with a factory:
     static NS_METHOD
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
-    // nsIDNSService methods:
-    NS_DECL_NSIDNSSERVICE
+    friend class nsDNSLookup;
 
 protected:
-    friend class nsDNSLookup;
-    nsIThread *         mThread;
+    nsresult InitDNSThread();
+    nsresult GetLookupEntry(const char* hostName, nsDNSLookup* *result);
+ 
+    static nsDNSService*        gService;
+    static nsrefcnt             gRefcnt;
+
+protected:
+    nsInt64             mExpirationInterval;
+    nsCOMPtr<nsIThread> mThread;
     nsresult            mState;
+    PRMonitor*          mMonitor;
+    nsObjectHashtable/*<nsDNSLookup>*/ mLookups;
 
     // nsDNSLookup cache? - list of nsDNSLookups, hash table (nsHashTable, nsStringKey)
     // list of nsDNSLookups in order of expiration (PRCList?)
@@ -80,9 +90,9 @@ protected:
 
 #if defined(XP_PC)
     friend static LRESULT CALLBACK nsDNSEventProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-    HWND                mDNSWindow;
-    UINT                mMsgFoundDNS;
-    nsVoidArray         mCompletionQueue;
+    LRESULT LookupComplete(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    HWND                        mDNSWindow;
+    UINT                        mMsgFoundDNS;
 #endif /* XP_PC */
 };
 

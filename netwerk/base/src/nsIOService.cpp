@@ -275,14 +275,21 @@ nsIOService::GetOffline(PRBool *offline)
 NS_IMETHODIMP
 nsIOService::SetOffline(PRBool offline)
 {
-    mOffline = offline;
-    if (offline) {
+    if (offline && !mOffline) {
         // be sure to try and shutdown both (even if the first fails)
         nsresult rv1 = mSocketTransportService->Shutdown();
         nsresult rv2 = mDNSService->Shutdown();
         if (NS_FAILED(rv1)) return rv1;
         if (NS_FAILED(rv2)) return rv2;
     }
+    else if (!offline && mOffline) {
+        // go online
+        nsresult rv1 = mSocketTransportService->Init();
+        nsresult rv2 = mDNSService->Init();
+        if (NS_FAILED(rv1)) return rv1;
+        if (NS_FAILED(rv2)) return rv2;
+    }
+    mOffline = offline;
     return NS_OK;
 }
 
