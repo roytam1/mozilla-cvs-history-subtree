@@ -1057,11 +1057,11 @@ nsNntpService::CancelMessage(const char *cancelURL, const char *messageURI, nsIS
   nsCOMPtr<nsINntpUrl> nntpUrl = do_QueryInterface(url, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nntpUrl->SetNewsAction(nsINntpUrl::ActionCancelArticle);
-
-  // later used by nsNNTPProtocol::ParseURL()
-  rv = nntpUrl->SetOriginalMessageURI(messageURI);
+  rv = nntpUrl->SetNewsAction(nsINntpUrl::ActionCancelArticle);
   NS_ENSURE_SUCCESS(rv,rv);
+    
+  // note, we don't set the OriginalMessageURI on the nntpUrl
+  // cancel must be left as news://host/message-id?cancel
 
   rv = RunNewsUrl(url, aMsgWindow, aConsumer);  
   NS_ENSURE_SUCCESS(rv,rv);
