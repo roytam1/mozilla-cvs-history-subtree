@@ -3233,13 +3233,13 @@ PrintPropertyPolicy(PLDHashTable *table, PLDHashEntryHdr *entry,
     prop.AppendWithConversion((PRUnichar*)JSValIDToString(cx, pp->key));
     prop += ": Get=";
     if (SECURITY_ACCESS_LEVEL_FLAG(pp->mGet))
-        prop.AppendInt(pp->mGet.level);
+        prop.AppendInt((PRInt32)pp->mGet.level);
     else
         prop += pp->mGet.capability;
 
     prop += " Set=";
     if (SECURITY_ACCESS_LEVEL_FLAG(pp->mSet))
-        prop.AppendInt(pp->mSet.level);
+        prop.AppendInt((PRInt32)pp->mSet.level);
     else
         prop += pp->mSet.capability;
         
