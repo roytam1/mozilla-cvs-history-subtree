@@ -281,22 +281,30 @@ NS_IMETHODIMP nsMsgDBFolder::StartFolderLoading(void)
 
 NS_IMETHODIMP nsMsgDBFolder::EndFolderLoading(void)
 {
-	if(mDatabase)
-		mDatabase->AddListener(this);
-	mAddListener = PR_TRUE;
-	UpdateSummaryTotals(PR_TRUE);
+  if(mDatabase)
+    mDatabase->AddListener(this);
+  mAddListener = PR_TRUE;
+  UpdateSummaryTotals(PR_TRUE);
+  
+  //GGGG check for new mail here and call SetNewMessages...?? -- ONE OF THE 2 PLACES
+  if(mDatabase)
+  {
+    nsresult rv;
+    PRBool hasNewMessages;
+    
+    rv = mDatabase->HasNew(&hasNewMessages);
+    if (!hasNewMessages)
+    {
+      for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++)
+        mDatabase->AddToNewList(m_newMsgs[keyIndex]);
 
-	//GGGG			 check for new mail here and call SetNewMessages...?? -- ONE OF THE 2 PLACES
-	if(mDatabase)
-	{
-	    nsresult rv;
-		PRBool hasNewMessages;
-
-		rv = mDatabase->HasNew(&hasNewMessages);
-		SetHasNewMessages(hasNewMessages);
-	}
-
-	return NS_OK;
+      hasNewMessages = (m_newMsgs.GetSize() > 0);
+      m_newMsgs.RemoveAll();
+    }
+    SetHasNewMessages(hasNewMessages);
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -449,7 +457,9 @@ NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
       m_saveNewMsgs.CopyArray(newMessageKeys);
     NS_DELETEXPCOM (newMessageKeys);
     rv = mDatabase->ClearNewList(PR_TRUE);
+    m_newMsgs.RemoveAll();
   }
+  mNumNewBiffMessages = 0;
   return rv;
 }
 
@@ -773,6 +783,14 @@ nsMsgDBFolder::SetMsgDatabase(nsIMsgDatabase *aMsgDatabase)
     mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
     mDatabase->RemoveListener(this);
     mDatabase->ClearCachedHdrs();
+    if (!aMsgDatabase)
+    {
+      nsMsgKeyArray *newMessageKeys = nsnull;
+      nsresult rv = mDatabase->GetNewList(&newMessageKeys);
+      if (NS_SUCCEEDED(rv) && newMessageKeys)
+        m_newMsgs.CopyArray(newMessageKeys);
+      NS_DELETEXPCOM (newMessageKeys);
+    }
   }
   mDatabase = aMsgDatabase;
 
