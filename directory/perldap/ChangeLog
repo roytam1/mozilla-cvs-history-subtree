@@ -1,3 +1,8 @@
+1999-09-09  Kevin McCarthy  <kevin@perldap.org>
+
+	* Conn.pm (update): Fixed potential bug with scalar(@add) and @remove
+	comparison.
+
 1999-09-08  Kevin McCarthy  <kevin@perldap.org>
 
 	* API.xs: Misc. - function reordering, prototypes, comments.
