@@ -51,16 +51,8 @@
 #if defined(XP_PC) || defined(XP_OS2)
 #define LINEBREAK "\n"
 #endif
-#ifndef NO_SECURITY
+#ifdef MOZ_SECURITY
 #include "sechash.h"
-<<<<<<< prefapi.c
-/* NSPR 1.0 compatability */
-#ifdef NSPR
-#include "prhash.h"
-#else
-#include "plhash.h"
-=======
->>>>>>> 3.1.8.7
 #endif
 #include "plstr.h"
 #include "plhash.h"
@@ -292,7 +284,7 @@ int pref_OpenFile(const char* filename, PRBool is_error_fatal, PRBool verifyHash
    where each 'xx' is a hex value. */
 PRBool pref_VerifyLockFile(char* buf, long buflen)
 {
-#ifndef NO_SECURITY
+#ifdef MOZ_SECURITY
 	PRBool success = FALSE;
 	const int obscure_value = 7;
 	const long hash_length = 51;		/* len = 48 chars of MD5 + // + EOL */
@@ -2051,18 +2043,6 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 		
 	if (m_AutoAdminLib) {
 		get_ldap_attributes = (ldap_func)
-<<<<<<< prefapi.c
-#ifdef NSPR
-			PR_FindSymbol(
-#ifndef XP_WIN16
-			"pref_get_ldap_attributes"
-#else
-			MAKEINTRESOURCE(1)
-#endif
-			, m_AutoAdminLib);
-#else /* NSPR */
-=======
->>>>>>> 3.1.8.7
 			PR_FindSymbol(
 			 m_AutoAdminLib,
 #ifndef XP_WIN16
@@ -2071,10 +2051,6 @@ JSBool PR_CALLBACK pref_NativeGetLDAPAttr
 			MAKEINTRESOURCE(1)
 #endif
 			);
-<<<<<<< prefapi.c
-#endif /* NSPR */
-=======
->>>>>>> 3.1.8.7
 	}
 	if (get_ldap_attributes == NULL) {
 		/* This indicates the AutoAdmin dll was not found. */
@@ -2313,12 +2289,6 @@ pref_LoadAutoAdminLib()
 	}
 	/* Make sure it's really libAutoAdmin.so */
     
-<<<<<<< prefapi.c
-#ifdef NSPR
-	if ( lib && PR_FindSymbol("_POLARIS_SplashPro", lib) == NULL ) return NULL;
-#else 
-=======
->>>>>>> 3.1.8.7
 	if ( lib && PR_FindSymbol(lib, "_POLARIS_SplashPro") == NULL ) return NULL;
 #else
 	lib = PR_LoadLibrary( ADMNLIBNAME );
