@@ -108,8 +108,7 @@ nsXPInstallManager::nsXPInstallManager()
                                        (nsISupports**) &service );
     if (NS_SUCCEEDED(rv) && service)
     {
-        nsILocale* locale = nsnull;
-        rv = service->CreateBundle( XPINSTALL_BUNDLE_URL, locale,
+        rv = service->CreateBundle( XPINSTALL_BUNDLE_URL,
                                     getter_AddRefs(mStringBundle) );
         nsServiceManager::ReleaseService( kStringBundleServiceCID, service );
     }
@@ -306,7 +305,7 @@ PRBool nsXPInstallManager::ConfirmChromeInstall(nsIScriptGlobalObject* aGlobalOb
                      kStringBundleServiceCID, &rv );
     if (NS_SUCCEEDED(rv) && bundleSvc)
     {
-        rv = bundleSvc->CreateBundle( XPINSTALL_BUNDLE_URL, nsnull,
+        rv = bundleSvc->CreateBundle( XPINSTALL_BUNDLE_URL,
                                       getter_AddRefs(xpiBundle) );
         if (NS_SUCCEEDED(rv) && xpiBundle)
         {

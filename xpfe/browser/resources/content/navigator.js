@@ -25,10 +25,12 @@
 const nsIWebNavigation = Components.interfaces.nsIWebNavigation;
 
 var gURLBar = null;
+var gProxyButton = null;
 var gNavigatorBundle;
 var gBrandBundle;
 var gNavigatorRegionBundle;
 var gBrandRegionBundle;
+var gLastValidURL = "";
 
 var pref = Components.classes["@mozilla.org/preferences;1"]
                      .getService(Components.interfaces.nsIPref);
@@ -166,8 +168,19 @@ function UpdateBackForwardButtons()
   var forwardBroadcaster = document.getElementById("canGoForward");
   var webNavigation = getWebNavigation();
 
-  backBroadcaster.setAttribute("disabled", !webNavigation.canGoBack);
-  forwardBroadcaster.setAttribute("disabled", !webNavigation.canGoForward);
+  // Avoid setting attributes on broadcasters if the value hasn't changed!
+  // Remember, guys, setting attributes on elements is expensive!  They
+  // get inherited into anonymous content, broadcast to other widgets, etc.!
+  // Don't do it if the value hasn't changed! - dwh
+
+  var backDisabled = (backBroadcaster.getAttribute("disabled") == "true");
+  var forwardDisabled = (forwardBroadcaster.getAttribute("disabled") == "true");
+
+  if (backDisabled == webNavigation.canGoBack)
+    backBroadcaster.setAttribute("disabled", !backDisabled);
+  
+  if (forwardDisabled == webNavigation.canGoForward)
+    forwardBroadcaster.setAttribute("disabled", !forwardDisabled);
 }
 
 
@@ -212,6 +225,8 @@ function Startup()
 
   gBrowser = document.getElementById("content");
   gURLBar = document.getElementById("urlbar");
+  
+  SetPageProxyState("invalid");
 
   var webNavigation;
   try {
@@ -284,8 +299,8 @@ function Startup()
   var webProgress = interfaceRequestor.getInterface(Components.interfaces.nsIWebProgress);
   webProgress.addProgressListener(window.XULBrowserWindow);
 
-  // XXXjag see bug 68662
-  getBrowser().boxObject.setPropertyAsSupports("listenerkungfu", appCore);
+  // XXXjag see bug 68662 (needed to hook up web progress listener)
+  getBrowser().boxObject.setPropertyAsSupports("listenerkungfu", window.XULBrowserWindow);
 
   // load appropriate initial page from commandline
   var isPageCycling = false;
@@ -450,23 +465,31 @@ function BrowserStop()
 function BrowserReload()
 {
   const reloadFlags = nsIWebNavigation.LOAD_FLAGS_NONE;
-  try {
-    getWebNavigation().reload(reloadFlags);
-  }
-  catch(ex) {
-  }
+  return BrowserReloadWithFlags(reloadFlags);
 }
 
 function BrowserReloadSkipCache()
 {
   // Bypass proxy and cache.
   const reloadFlags = nsIWebNavigation.LOAD_FLAGS_BYPASS_PROXY | nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE;
-  try {
-    getWebNavigation().reload(reloadFlags);
-  }
-  catch(ex) {
-  }
+  return BrowserReloadWithFlags(reloadFlags);
 }
+
+function BrowserReloadWithFlags(reloadFlags)
+{
+   try {
+     /* Need to get SessionHistory from docshell so that
+      * reload on framed pages will work right. This 
+      * method should not be used for the context menu item "Reload frame".
+      * "Reload frame" should directly call into docshell as it does right now
+      */
+     var sh = getWebNavigation().sessionHistory;
+     var webNav = sh.QueryInterface(Components.interfaces.nsIWebNavigation);      
+     webNav.reload(reloadFlags);
+   }
+   catch(ex) {
+   }
+ }
 
 function BrowserHome()
 {
@@ -747,13 +770,59 @@ function BrowserClose()
   window.close();
 }
 
-  function BrowserFind() {
-    appCore.find();
-  }
+function BrowserFind()
+{
+  var focusedWindow = document.commandDispatcher.focusedWindow;
+  if (!focusedWindow || focusedWindow == window)
+    focusedWindow = window._content;
 
-  function BrowserFindAgain() {
-    appCore.findNext();
+  var findInst = getBrowser().webBrowserFind;
+  // set up the find to search the focussedWindow, bounded by the content window.
+  var findInFrames = findInst.QueryInterface(Components.interfaces.nsIWebBrowserFindInFrames);
+  findInFrames.rootSearchFrame = window._content;
+  findInFrames.currentSearchFrame = focusedWindow;
+
+  // always search in frames for now. We could add a checkbox to the dialog for this.
+  findInst.searchFrames = true;
+  
+  // is the dialog up already?
+  if (window.findDialog)
+    window.findDialog.focus();
+  else
+    window.findDialog = window.openDialog("chrome://global/content/finddialog.xul", "Find on Page", "chrome,resizable=no,dependent=yes", findInst);
+}
+
+function BrowserFindAgain()
+{
+  if (window.findDialog)
+    window.findDialog.focus();
+  else
+  {
+    // since the page may have been reloaded, reset stuff
+    var focusedWindow = document.commandDispatcher.focusedWindow;
+    if (!focusedWindow || focusedWindow == window)
+      focusedWindow = window._content;
+
+    var findInst = getBrowser().webBrowserFind;
+    // set up the find to search the focussedWindow, bounded by the content window.
+    var findInFrames = findInst.QueryInterface(Components.interfaces.nsIWebBrowserFindInFrames);
+    findInFrames.rootSearchFrame = window._content;
+    findInFrames.currentSearchFrame = focusedWindow;
+
+    // always search in frames for now. We could add a checkbox to the dialog for this.
+    findInst.searchFrames = true;
+
+    var found = findInst.findNext();
   }
+}
+
+function BrowserCanFindAgain()
+{
+    var findInst = getBrowser().webBrowserFind;
+    var findString = findInst.searchString;
+    
+    return (findString.length > 0);
+}
 
 function loadURI(uri)
 {
@@ -1149,20 +1218,19 @@ function getNewThemes()
   loadURI(gBrandRegionBundle.getString("getNewThemesURL"));
 }
 
-function URLBarLeftClickHandler(aEvent)
+function URLBarMouseupHandler(aEvent)
 {
-  if (pref.GetBoolPref("browser.urlbar.clickSelectsAll")) {
-    var URLBar = aEvent.target;
-    URLBar.setSelectionRange(0, URLBar.value.length);
+  if (aEvent.button == 0 && pref.GetBoolPref("browser.urlbar.clickSelectsAll")) {
+    var selectionLen = gURLBar.selectionEnd - gURLBar.selectionStart;
+    if (selectionLen == 0)
+      gURLBar.setSelectionRange(0, gURLBar.textLength);
   }
 }
 
 function URLBarBlurHandler(aEvent)
 {
-  if (pref.GetBoolPref("browser.urlbar.clickSelectsAll")) {
-    var URLBar = aEvent.target;
-    URLBar.setSelectionRange(0, 0);
-  }
+  if (pref.GetBoolPref("browser.urlbar.clickSelectsAll"))
+    gURLBar.setSelectionRange(0, 0);
 }
 
 // This function gets the "windows hooks" service and has it check its setting
@@ -1193,23 +1261,64 @@ function ShowAndSelectContentsOfURLBar()
 
 // If "ESC" is pressed in the url bar, we replace the urlbar's value with the url of the page
 // and highlight it, unless it is about:blank, where we reset it to "".
-function resetURLBar()
+function handleURLBarRevert()
 {
   var url = _content.location.href;
   var throbberElement = document.getElementById("navigator-throbber");
 
-  if (!throbberElement.getAttribute("busy")){
-    if (url != "about:blank"){ 
+  var isScrolling = gURLBar.userAction == "scrolling";
+  
+  // don't revert to last valid url unless page is NOT loading
+  // and user is NOT key-scrolling through autocomplete list
+  if (!throbberElement.getAttribute("busy") && !isScrolling) {
+    if (url != "about:blank") { 
       gURLBar.value = url;
       gURLBar.select();
     } else { //if about:blank, urlbar becomes ""
       gURLBar.value = "";
     }
+    SetPageProxyState("valid");
   }
+
+  // tell widget to revert to last typed text only if the user
+  // was scrolling when they hit escape
+  return isScrolling; 
 }
 
-function handleURLBarKeyPress(event)
+function handleURLBarCommand(aUserAction)
 {
-  if (event.keyCode == KeyEvent.DOM_VK_RETURN) { addToUrlbarHistory(); BrowserLoadURL(); } 
-  else if (event.keyCode == KeyEvent.DOM_VK_ESCAPE) { resetURLBar(); }
+  if (aUserAction == "typing")
+    addToUrlbarHistory();
+
+  BrowserLoadURL(); 
 }
+
+function UpdatePageProxyState()
+{
+  if (gURLBar.value != gLastValidURL)
+    SetPageProxyState("invalid");
+}
+
+function SetPageProxyState(aState)
+{
+  if (!gProxyButton)
+    gProxyButton = document.getElementById("page-proxy-button");
+
+  gProxyButton.setAttribute("pageproxystate", aState);
+
+  if (aState == "valid") {
+    gLastValidURL = gURLBar.value;
+    gURLBar.addEventListener("input", UpdatePageProxyState, false);
+  } else if (aState == "invalid")
+    gURLBar.removeEventListener("input", UpdatePageProxyState, false);
+  
+}
+
+function PageProxyDragGesture(aEvent)
+{
+  if (gProxyButton.getAttribute("pageproxystate") == "valid")
+    nsDragAndDrop.startDrag(aEvent, proxyIconDNDObserver);
+  else
+    return false;
+}
+

@@ -136,11 +136,9 @@ static PRLogModuleInfo* gTimerLog = nsnull;
 #endif /* DEBUG || FORCE_PR_LOG */
 #endif
 
-// if DEBUG or MOZ_PERF_METRICS are defined, enable the PageCycler
-#ifdef DEBUG
-#define ENABLE_PAGE_CYCLER
-#endif
-#ifdef MOZ_PERF_METRICS
+// if DEBUG, NS_BUILD_REFCNT_LOGGING, or MOZ_PERF_METRICS is defined,
+// enable the PageCycler
+#if defined(DEBUG) || defined(NS_BUILD_REFCNT_LOGGING) || defined(MOZ_PERF_METRICS)
 #define ENABLE_PAGE_CYCLER
 #endif
 
@@ -812,60 +810,6 @@ nsBrowserInstance::Copy()
   return NS_OK;
 }
 
-NS_IMETHODIMP    
-nsBrowserInstance::Find()
-{
-    nsresult rv = NS_OK;
-    PRBool   found = PR_FALSE;
-    
-    // Get find component.
-    nsCOMPtr <nsIFindComponent> finder = do_GetService(NS_IFINDCOMPONENT_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    if (!finder) return NS_ERROR_FAILURE;
-
-    // get the window to search
-    nsCOMPtr<nsIDOMWindowInternal>  windowToSearch;  
-    GetFocussedContentWindow(getter_AddRefs(windowToSearch));
-    
-    // Make sure we've initialized searching for this document.
-    rv = InitializeSearch(windowToSearch, finder);
-    if (NS_FAILED(rv)) return rv;
-
-    // Perform find via find component.
-    if (mSearchContext) {
-        rv = finder->Find( mSearchContext, &found );
-    }
-
-    return rv;
-}
-
-NS_IMETHODIMP    
-nsBrowserInstance::FindNext()
-{
-    nsresult rv = NS_OK;
-    PRBool   found = PR_FALSE;
-
-    // Get find component.
-    nsCOMPtr <nsIFindComponent> finder = do_GetService(NS_IFINDCOMPONENT_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    if (!finder) return NS_ERROR_FAILURE;
-
-    // get the window to search
-    nsCOMPtr<nsIDOMWindowInternal>  windowToSearch;  
-    GetFocussedContentWindow(getter_AddRefs(windowToSearch));
-
-    // Make sure we've initialized searching for this document.
-    rv = InitializeSearch(windowToSearch, finder);
-    if (NS_FAILED(rv)) return rv;
-
-    // Perform find via find component.
-    if (mSearchContext) {
-        rv = finder->FindNext(mSearchContext, &found );
-    }
-
-    return rv;
-}
-
 //*****************************************************************************
 //    nsBrowserInstance: nsIURIContentListener
 //*****************************************************************************
@@ -929,6 +873,8 @@ nsBrowserInstance::IsPreferred(const char * aContentType,
        || nsCRT::strcasecmp(aContentType, "application/vnd.mozilla.xul+xml") == 0
        || nsCRT::strcasecmp(aContentType, "text/rdf") == 0 
        || nsCRT::strcasecmp(aContentType, "text/xml") == 0
+       || nsCRT::strcasecmp(aContentType, "application/xml") == 0
+       || nsCRT::strcasecmp(aContentType, "application/xhtml+xml") == 0
        || nsCRT::strcasecmp(aContentType, "text/css") == 0
        || nsCRT::strcasecmp(aContentType, "image/gif") == 0
        || nsCRT::strcasecmp(aContentType, "image/jpeg") == 0
@@ -992,26 +938,6 @@ nsBrowserInstance::SetLoadCookie(nsISupports * aLoadCookie)
 {
   NS_ASSERTION(!aLoadCookie, "SetLoadCookie on the application level should never be called");
   return NS_OK;
-}
-
-//*****************************************************************************
-// nsBrowserInstance: Helpers
-//*****************************************************************************
-
-nsresult
-nsBrowserInstance::InitializeSearch(nsIDOMWindowInternal* windowToSearch, nsIFindComponent *finder)
-{
-    nsresult rv = NS_OK;
-
-    if (!finder) return NS_ERROR_NULL_POINTER;
-    if (!windowToSearch) return NS_ERROR_NULL_POINTER;
-    
-    if (!mSearchContext )
-        rv = finder->CreateContext(windowToSearch, nsnull, getter_AddRefs(mSearchContext));
-    else
-        rv = finder->ResetContext(mSearchContext, windowToSearch, nsnull);
-    
-    return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -1241,6 +1167,16 @@ static nsModuleComponentInfo components[] = {
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/xml", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/xml", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/xhtml+xml", 
     nsBrowserContentHandlerConstructor 
   },
   { "Browser Content Handler",

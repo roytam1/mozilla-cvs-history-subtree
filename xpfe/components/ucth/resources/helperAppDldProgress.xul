@@ -56,6 +56,9 @@ Contributor(s):
     <data id="dialog.strings.shortTimeFormat">&shortTimeFormat;</data>
     <data id="dialog.strings.longTimeFormat">&longTimeFormat;</data>
     <data id="dialog.strings.unknownTime">&unknownTime;</data>
+    <data id="dialog.strings.pausedMsg">&pausedMsg;</data>
+    <data id="dialog.strings.pause">&pauseButtonText;</data>
+    <data id="dialog.strings.resume">&resumeButtonText;</data>
 
     <grid flex="1">
       <columns>
@@ -109,18 +112,18 @@ Contributor(s):
           </box>
         </row>
         <separator/>
-        <row>
-          <hbox flex="1">
-            <checkbox id="keepProgressDialogUp" label="&keepProgressDialogUpMsg.label;"/>
-          </hbox>
-        </row>
       </rows>
     </grid>
+    <hbox autostretch="never">
+      <checkbox id="keepProgressDialogUp" label="&keepProgressDialogUpMsg.label;"/>
+    </hbox>
+
     
     <separator/>
     
     <box id="CancelButton">
       <button class="dialog" id="cancel" label="&dialogCancel.label;" oncommand="doCancelButton()"/>
+      <button class="dialog" id="pause"  hidden="true" oncommand="doPauseButton()"/>
       <spring flex="1"/>
       <button class="dialog" id="open" label="&open.label;" disabled="true" oncommand="doOpen()"/>
       <button class="dialog" id="openFolder" label="&openFolder.label;" disabled="true" oncommand="doOpenFolder()"/>      

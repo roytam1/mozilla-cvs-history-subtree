@@ -1292,9 +1292,8 @@ GetTitleSuffix(void)
     NS_RELEASE(service);
     return suffix;
   }
-  nsILocale* locale = nsnull;
   nsIStringBundle* bundle = nsnull;
-  ret = service->CreateBundle(url, locale, &bundle);
+  ret = service->CreateBundle(url, &bundle);
   NS_RELEASE(url);
   if (NS_FAILED(ret)) {
     NS_RELEASE(service);
@@ -3311,7 +3310,7 @@ nsBrowserWindow::ToggleBoolPrefAndRefresh(const char * aPrefName)
     PRBool value;
     prefs->GetBoolPref(aPrefName,&value);
     prefs->SetBoolPref(aPrefName,!value);
-    prefs->SavePrefFile();
+    prefs->SavePrefFile(nsnull);
     
     ForceRefresh();
   }
@@ -3328,7 +3327,7 @@ nsBrowserWindow::SetBoolPref(const char * aPrefName, PRBool aValue)
   if (prefs && nsnull != aPrefName)
   {
     prefs->SetBoolPref(aPrefName, aValue);
-    prefs->SavePrefFile();
+    prefs->SavePrefFile(nsnull);
   }
 }
 
@@ -3342,7 +3341,7 @@ nsBrowserWindow::SetStringPref(const char * aPrefName, const nsString& aValue)
   {
     char * prefStr = aValue.ToNewCString();
     prefs->SetCharPref(aPrefName, prefStr);
-    prefs->SavePrefFile();
+    prefs->SavePrefFile(nsnull);
     delete [] prefStr;
   }
 
@@ -3687,7 +3686,7 @@ nsBrowserWindow::SetCompatibilityMode(PRUint32 aMode)
       prefInt = eCompatibility_NavQuirks;
     }
     pref->SetIntPref("nglayout.compatibility.mode", prefInt);
-    pref->SavePrefFile();
+    pref->SavePrefFile(nsnull);
   }
 }
 

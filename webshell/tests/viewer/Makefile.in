@@ -126,7 +126,6 @@ endif
 XP_LIBS			+= \
 			$(XP_NS_UNDERBAR_CRAP) \
 			$(XP_DIST_LIBS) \
-			$(LOST_SYM_LIBS) \
 			$(NSPR_LIBS) \
 			$(NULL)
 
@@ -158,14 +157,6 @@ EXTRA_DEPS		= \
 
 include $(topsrcdir)/config/config.mk
 
-ifeq ($(OS_ARCH)$(OS_TEST),NetBSDarm32)
-NO_LD_ARCHIVE_FLAGS	:= 1
-endif
-
-ifdef NO_LD_ARCHIVE_FLAGS
-LOST_SYM_LIBS		= -lxpcomds_s -lxpcomio_s -lxptinfo -lmozreg_s
-endif
-
 # Force a build thru DIRS so that dependencies are updated properly
 install::
 	+$(LOOP_OVER_DIRS)
@@ -184,7 +175,9 @@ install:: $(PROGRAM) $(srcdir)/mozilla-viewer.sh
 	$(INSTALL) $(EXPORT_RESOURCE_SAMPLES) $(DIST)/bin/res/samples
 	$(INSTALL) $(EXPORT_RESOURCE_THROBBER) $(DIST)/bin/res/throbber
 	$(INSTALL) $(srcdir)/resources/viewer.properties $(DIST)/bin/res
+ifneq ($(MOZ_WIDGET_TOOLKIT),os2)
 	$(INSTALL) $(srcdir)/mozilla-viewer.sh $(DIST)/bin
+endif
 
 unix/gtk/libviewer_gtk_s.a:
 	@$(MAKE) -C $(@D) $(@F)
