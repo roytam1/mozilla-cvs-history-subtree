@@ -243,7 +243,7 @@ struct MathObjectFunctionDef {
 
 void initMathObject(Context *cx, JSObject *mathObj)
 {
-    int i;
+    uint32 i;
     for (i = 0; i < M_CONSTANTS_COUNT; i++)
         mathObj->defineVariable(widenCString(MathObjectConstants[i].name), 
                                     NULL, Number_Type, JSValue(MathObjectConstants[i].value));

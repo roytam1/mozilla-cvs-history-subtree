@@ -100,7 +100,7 @@ void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
     uint32 s = S->size();
     if ((q + r) > s)
         return;
-    for (int i = 0; i < r; i++) {
+    for (uint32 i = 0; i < r; i++) {
         if ((*S)[q + i] != (*R)[i])
             return;
     }

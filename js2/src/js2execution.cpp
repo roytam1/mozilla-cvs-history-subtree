@@ -1211,11 +1211,11 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                 {
                     Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
                     uint32 handler = *((uint32 *)pc);
-                    if (handler != -1)
+                    if (handler != (uint32)(-1))
                         mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                     handler = *((uint32 *)pc);
-                    if (handler != -1)
+                    if (handler != (uint32)(-1))
                         mTryStack.push(new HandlerData(pc + handler, stackSize(), curAct));
                     pc += sizeof(uint32);
                 }

@@ -127,8 +127,8 @@ bool JSObject::hasOwnProperty(const String &name, AttributeList *attr, Access ac
                                  : (prop->mData.fPair.setterF != NULL);
         else
             if (prop->mFlag == IndexPair)
-                return (acc == Read) ? (prop->mData.iPair.getterI != -1)
-                                     : (prop->mData.iPair.setterI != -1);
+                return (acc == Read) ? (prop->mData.iPair.getterI != (uint32)(-1))
+                                     : (prop->mData.iPair.setterI != (uint32)(-1));
             else
                 return true;
     }
@@ -460,7 +460,7 @@ void JSInstance::initInstance(Context *, JSType *type)
 
     // copy instance values from the Ur-instance object
     if (type->mInitialInstance)
-        for (int i = 0; i < type->mVariableCount; i++)
+        for (uint32 i = 0; i < type->mVariableCount; i++)
             mInstanceValues[i] = type->mInitialInstance->mInstanceValues[i];
     mType = type;
 }
@@ -1514,7 +1514,15 @@ void Context::initBuiltins()
 }
 
 Context::Context(JSObject **global, World &world, Arena &a) 
-    : mWorld(world),
+    : VirtualKeyWord(world.identifiers["virtual"]),
+      ConstructorKeyWord(world.identifiers["constructor"]),
+      OperatorKeyWord(world.identifiers["operator"]),
+      FixedKeyWord(world.identifiers["fixed"]),
+      DynamicKeyWord(world.identifiers["dynamic"]),
+      ExtendKeyWord(world.identifiers["extend"]),
+      PrototypeKeyWord(world.identifiers["prototype"]),
+
+      mWorld(world),
       mScopeChain(NULL),
       mArena(a),
       mDebugFlag(false),
@@ -1527,15 +1535,7 @@ Context::Context(JSObject **global, World &world, Arena &a)
       mLocals(NULL),
       mArgumentBase(NULL),
       mGlobal(global), 
-      mReader(NULL),
-
-      VirtualKeyWord(world.identifiers["virtual"]),
-      ConstructorKeyWord(world.identifiers["constructor"]),
-      OperatorKeyWord(world.identifiers["operator"]),
-      FixedKeyWord(world.identifiers["fixed"]),
-      DynamicKeyWord(world.identifiers["dynamic"]),
-      ExtendKeyWord(world.identifiers["extend"]),
-      PrototypeKeyWord(world.identifiers["prototype"])
+      mReader(NULL)
 
 {
     mScopeChain = new ScopeChain(this, mWorld);

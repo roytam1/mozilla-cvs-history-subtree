@@ -1173,7 +1173,7 @@ static const double two31 = 2147483648.0;
 
     class JSFunction : public JSObject {
     protected:
-        JSFunction() : mActivation(NULL), JSObject(Function_Type) { mPrototype = Function_Type->mPrototype; }        // for JSBoundFunction (XXX ask Patrick about this structure)
+        JSFunction() : JSObject(Function_Type), mActivation(NULL) { mPrototype = Function_Type->mPrototype; }        // for JSBoundFunction (XXX ask Patrick about this structure)
     public:
         typedef JSValue (NativeCode)(Context *cx, const JSValue &thisValue, JSValue argv[], uint32 argc);
 

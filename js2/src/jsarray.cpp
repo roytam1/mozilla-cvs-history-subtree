@@ -333,7 +333,7 @@ JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    int32 length = (int32)(result.toUInt32(cx).f64);    
+    uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
     int32 start, end;
     if (argc < 1) 
