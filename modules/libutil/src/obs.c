@@ -99,6 +99,7 @@ XP_DisposeObserverList(
 		
 		next = NextObserver(obs);
 		if (next == obs) {
+      PR_FREEIF(obs);
 			break;
 		}
 		
