@@ -953,7 +953,7 @@ do_octal:
 	            num = (uintN)JS7_UNDEC(c);
 	            tmp = 1;
                     for (c = *++cp; JS7_ISDEC(c); c = *++cp, tmp++)
-		        num = 10 * num - (uintN)JS7_UNDEC(c);
+		        num = 10 * num + (uintN)JS7_UNDEC(c);
                     /* n in [8-9] and > count of parenetheses, then revert to
                     '8' or '9', ignoring the '\' */
                     if (((num == 8) || (num == 9)) && (num > state->parenCount)) {
