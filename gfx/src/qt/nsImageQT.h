@@ -41,6 +41,7 @@
 #define nsImageQT_h___
 
 #include "nsIImage.h"
+#include "nsRect.h"
 
 #include <qpixmap.h>
 #include <qimage.h>
@@ -139,10 +140,7 @@ private:
 
   PRInt8    mNumBytesPixel;
 
-  PRInt32   mDecodedX1;     //Keeps track of what part of image
-  PRInt32   mDecodedY1;     // has been decoded.
-  PRInt32   mDecodedX2; 
-  PRInt32   mDecodedY2;    
+  nsRect    mDecodedRect;   // Keeps track of what part of image has been decoded.
 
   // alpha layer members
   PRUint8   *mAlphaBits;

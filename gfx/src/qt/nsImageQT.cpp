@@ -67,10 +67,6 @@ nsImageQT::nsImageQT()
 , mSizeImage(0)
 , mAlphaRowBytes(0)
 , mNumBytesPixel(0)
-, mDecodedX1(0) 
-, mDecodedY1(0) 
-, mDecodedX2(0) 
-, mDecodedY2(0) 
 {
 #ifdef DEBUG
   gImageCount++;
@@ -248,10 +244,8 @@ void nsImageQT::ImageUpdated(nsIDeviceContext *aContext,
             mImagePixmap = nsnull;
         }
     }
-    if (aUpdateRect->YMost() > mDecodedY2)
-        mDecodedY2 = aUpdateRect->YMost();
-    if (aUpdateRect->XMost() > mDecodedX2)
-        mDecodedX2 = aUpdateRect->XMost();
+
+    mDecodedRect.UnionRect(mDecodedRect, *aUpdateRect);
 }
 
 // Draw the bitmap, this method has a source and destination coordinates
@@ -279,8 +273,29 @@ NS_IMETHODIMP nsImageQT::Draw(nsIRenderingContext &aContext,
     // need to be scaled.
     nsDrawingSurfaceQT *drawing = (nsDrawingSurfaceQT*)aSurface;
 
-    drawing->GetGC()->drawImage(aDX,aDY,*mImagePixmap,aSX,aSY,
-                                aSWidth,aSHeight);
+    nsRect sourceRect(aSX, aSY, aSWidth, aSHeight);
+    if (!sourceRect.IntersectRect(sourceRect, mDecodedRect))
+      return NS_OK;
+
+    // Now get the part of the image that should be drawn
+    // Copy into a new image so we can scale afterwards
+    QImage image(mImagePixmap->copy(sourceRect.x, sourceRect.y,
+                                    sourceRect.width, sourceRect.height));
+    if (image.isNull())
+      return NS_ERROR_FAILURE;
+
+    // Find the scale factor
+    float w_factor = (float)aDWidth / aSWidth;
+    float h_factor = (float)aDHeight / aSHeight;
+
+    // If we had to draw only part of the requested image, must adjust
+    // destination coordinates
+    aDX += PRInt32((sourceRect.x - aSX) * w_factor);
+    aDY += PRInt32((sourceRect.y - aSY) * h_factor);
+
+    image = image.scale(int(sourceRect.width * w_factor), int(sourceRect.height * h_factor));
+
+    drawing->GetGC()->drawImage(QPoint(aDX, aDY), image);
     return NS_OK;
 }
 
@@ -292,28 +307,7 @@ NS_IMETHODIMP nsImageQT::Draw(nsIRenderingContext &aContext,
                               PRInt32 aX, PRInt32 aY,
                               PRInt32 aWidth, PRInt32 aHeight)
 {
-    if (nsnull == aSurface) {
-        return NS_ERROR_FAILURE;
-    }
-    // XXX kipp: this is temporary code until we eliminate the
-    // width/height arguments from the draw method.
-    if ((aWidth != mWidth) || (aHeight != mHeight)) {
-        aWidth = mWidth;
-        aHeight = mHeight;
-    }
-    nsDrawingSurfaceQT *drawing = (nsDrawingSurfaceQT*)aSurface;
-
-    // Render unique image bits onto an off screen pixmap only once
-    // The image bits can change as a result of ImageUpdated() - for
-    // example: animated GIFs.
-    if (nsnull == mImagePixmap) {
-      CreateImagePixmap();
-    }
-    if (nsnull == mImagePixmap)
-        return NS_ERROR_FAILURE;
-
-    drawing->GetGC()->drawImage(aX,aY,*mImagePixmap,0,0,aWidth,aHeight);
-    return NS_OK;
+  return Draw(aContext, aSurface, 0, 0, mWidth, mHeight, aX, aY, aWidth, aHeight);
 }
 
 void nsImageQT::CreateOffscreenPixmap(PRInt32 aWidth,PRInt32 aHeight)
