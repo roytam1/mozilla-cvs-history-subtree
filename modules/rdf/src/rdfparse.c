@@ -97,13 +97,13 @@ parseRDFProcessingInstruction (RDFFile f, char* token)
   char* attlist[2*MAX_ATTRIBUTES+1];
   char* elementName;  
   tokenizeElement(token, attlist, &elementName);
-  if (strcmp(elementName, "xml:namespace") == 0) {
-    char* as = getAttributeValue(attlist, "as");
-    char* url = getHref(attlist);
+  if (strcmp(elementName, "?xml:namespace") == 0) {
+    char* as = getAttributeValue(attlist, "prefix");
+    char* url = getAttributeValue(attlist, "ns");
     if ((as != NULL) && (url != NULL)) {
       XMLNameSpace ns = (XMLNameSpace)getMem(sizeof(struct XMLNameSpaceStruct));
-      ns->as = as;
-      ns->url = url;
+      ns->as = XP_STRDUP(as);
+      ns->url = XP_STRDUP(url);
       ns->next = f->namespaces;
       f->namespaces = ns;
     }

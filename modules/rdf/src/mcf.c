@@ -42,11 +42,16 @@ RDFL		gAllDBs = 0;
 RDFT
 getTranslator (char* url)
 {
+#ifdef MOZILLA_CLIENT
   if (startsWith(url, "rdf:localStore")) {
     return MakeLocalStore(url);
-  } else if (startsWith(url, "rdf:remoteStore")) {
+  } else
+#endif
+  if (startsWith(url, "rdf:remoteStore")) {
     return MakeRemoteStore(url);
-  } else if (startsWith(url, "rdf:history")) {
+  } 
+#ifdef MOZILLA_CLIENT  
+  else if (startsWith(url, "rdf:history")) {
     return MakeHistoryStore(url);
   } else if (startsWith(url, "rdf:esftp")) {
     return MakeESFTPStore(url);
@@ -68,7 +73,9 @@ getTranslator (char* url)
     return MakeSCookDB(url);
   } else if (startsWith("rdf:CookieStore", url)) {
     return MakeCookieStore(url);
-  } else return NULL;
+  } 
+#endif
+  else return NULL;
 }
 
 
@@ -360,13 +367,17 @@ iscontainerp (RDF_Resource u)
   char* id = resourceID(u);
   if (containerIDp(id)) {
     return 1;
-  } else if (startsWith("file:", id)) {
+  } 
+#ifdef MOZILLA_CLIENT  
+  else if (startsWith("file:", id)) {
     return fileDirectoryp(u);
   } else if (startsWith("ftp:", id) && (endsWith("/", id))) {
     return 1;
   } else if (startsWith("cache:container", id)) {
     return 1;
-  } else  return 0; 
+  }
+#endif   
+  else  return 0; 
 } 
 
 
@@ -437,7 +448,7 @@ RDF_DeleteAllArcs (RDF rdf, RDF_Resource u)
     remoteStoreRemove(gRemoteStore, as->u, as->s, as->value, as->type);
     as = next;
   }
-#ifdef DBMTEST
+#if defined(DBMTEST) && defined(MOZILLA_CLIENT)
  nlclStoreKill(gLocalStore, u);
 #endif
   return 0;

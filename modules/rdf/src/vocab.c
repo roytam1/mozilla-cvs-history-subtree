@@ -59,7 +59,6 @@ createVocabs ()
 
   n = 0;
   while (n < (sizeof(RDF_WDVocabStruct)/sizeof(RDF_Resource))) {*(gAllVocab + m++) = *((RDF_Resource*)gWebData + n++);}
-
 }
 
 
@@ -99,6 +98,7 @@ createCoreVocab ()
 void
 createNavCenterVocab () {
   gNavCenter = (RDF_NCVocab) getMem(sizeof(RDF_NCVocabStruct));
+#ifdef MOZILLA_CLIENT
   gNavCenter->RDF_overview = RDF_GetResource(gCoreDB, "overview", 1);
   gNavCenter->RDF_Trash = createContainer("Trash");
   gNavCenter->RDF_Clipboard = createContainer("Clipboard");
@@ -182,6 +182,7 @@ createNavCenterVocab () {
   gNavCenter->selectedColumnHeaderBGColor = newResource("selectedColumnHeaderBGColor", RDF_SELECTED_HEADER_BG_COLOR_STR);
   gNavCenter->showColumnHilite = newResource("showColumnHilite", RDF_SHOW_COLUMN_HILITING_STR);
   gNavCenter->triggerPlacement = newResource("triggerPlacement", RDF_TRIGGER_PLACEMENT_STR);
+#endif /* MOZILLA_CLIENT */
 }
 
 
@@ -190,6 +191,7 @@ void
 createWebDataVocab ()
 {
   gWebData = (RDF_WDVocab) getMem(sizeof(RDF_WDVocabStruct));
+#ifdef MOZILLA_CLIENT
   gWebData->RDF_URL =  newResource("URL", RDF_URL_STR);
   gWebData->RDF_description = newResource("description", RDF_DESCRIPTION_STR);
   gWebData->RDF_Container = RDF_GetResource (gCoreDB, "Container", true);
@@ -199,8 +201,8 @@ createWebDataVocab ()
   gWebData->RDF_creationDate = newResource("creationDate", RDF_CREATED_ON_STR);
   gWebData->RDF_lastModifiedDate = newResource("lastModifiedDate", RDF_LAST_MOD_STR);
   gWebData->RDF_size = newResource("size", RDF_SIZE_STR);
+#endif /* MOZILLA_CLIENT */
 } 
-
 
 
 RDF_Resource
@@ -211,6 +213,7 @@ newResource(char *id, int optionalNameStrID)
 
 	if ((r = RDF_GetResource(gCoreDB, id, true)) != NULL)
 	{
+#ifdef MOZILLA_CLIENT
 		if ((optionalNameStr = XP_GetString(optionalNameStrID)) != NULL)
 		{
 			/* need to have our own private "name" resource */
@@ -219,6 +222,7 @@ newResource(char *id, int optionalNameStrID)
 			remoteStoreAdd(gRemoteStore, r, RDF_name, copyString(optionalNameStr),
 					RDF_STRING_TYPE, PR_TRUE);
 		}
+#endif
 	}
 	return(r);
 }

@@ -241,6 +241,9 @@ addSlotValue (RDFFile f, RDF_Resource u, RDF_Resource s, void* v,
    if (s == gCoreVocab->RDF_parent) f->genlAdded = true; 
    (*f->assert)(f, f->db, u, s, v, type, tv);
    if (s == gCoreVocab->RDF_parent) setContainerp((RDF_Resource)v, 1);
+#ifndef MOZILLA_CLIENT
+   notifySlotValueAdded(v, type);
+#endif
 }
 
 

@@ -43,6 +43,8 @@
 #include "xp.h"
 #include "xp_str.h"
 
+XP_BEGIN_PROTOS
+
 #ifndef XP_WIN32
 #include "prefapi.h"
 #endif
@@ -273,7 +275,6 @@ Assertion	makeNewAssertion (RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF
 
 RDFT MakeRemoteStore (char* url);
 
-
 void readResourceFile(RDF rdf, RDF_Resource u);
 void possiblyGCResource(RDF_Resource u);
 PLHashNumber idenHash(const void* key);
@@ -374,7 +375,7 @@ void* remoteStoreNextValue (RDFT mcf, RDF_Cursor c) ;
 RDF_Error remoteStoreDisposeCursor (RDFT mcf, RDF_Cursor c) ;
 PRBool remoteStoreHasAssertion (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv) ;
 PRBool remoteStoreHasAssertionInt (RDFT mcf, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv) ;
-PRBool  nlocalStoreAddChildAt(RDFT mcf, RDF_Resource obj, RDF_Resource ref, RDF_Resource new, 
+PRBool  nlocalStoreAddChildAt(RDFT mcf, RDF_Resource obj, RDF_Resource ref, RDF_Resource _new, 
 		      PRBool beforep);
 
 RDFT MakeCookieStore (char* url);
@@ -388,5 +389,6 @@ extern RDF_WDVocab gWebData;
 extern RDF_NCVocab gNavCenter;
 extern RDF_CoreVocab gCoreVocab;
 
-
+XP_END_PROTOS
+      
 #endif

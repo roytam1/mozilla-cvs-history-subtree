@@ -26,12 +26,12 @@ LIBRARY_SUFFIX=$(MOZ_BITS)
 MAKE_OBJ_TYPE=DLL
 !else
 OBJS= $(OBJS) .\$(OBJDIR)\test.obj
-# LLIBS=$(LIBNSPR) $(DEPTH)\lib\libdbm\$(DIST_PREFIX)$(MOZ_BITS)_D.OBJ\dbm.lib
+# LLIBS=$(LIBNSPR) 
 # !endif
 !ifndef	MOZ_DEBUG
-LLIBS=$(LIBNSPR) $(DEPTH)\lib\libdbm\$(DIST_PREFIX)$(MOZ_BITS)_O.OBJ\dbm.lib
+LLIBS=$(LIBNSPR) 
 !else
-LLIBS=$(LIBNSPR) $(DEPTH)\lib\libdbm\$(DIST_PREFIX)$(MOZ_BITS)_D.OBJ\dbm.lib
+LLIBS=$(LIBNSPR) 
 !endif
 !endif
 
@@ -43,18 +43,28 @@ PROGRAM=.\$(OBJDIR)\test.exe
 MODULE=rdf 
 LIBRARY_NAME=rdf 
 REQUIRES=nspr dbm java js htmldlgs util img layer pref
-CSRCS=bmk2mcf.c vocab.c  nlcstore.c mcf.c mcff2mcf.c rdfht.c \
-    remstore.c ht.c glue.c utils.c fs2rdf.c hist2rdf.c \
-    rdfparse.c   es2mcf.c columns.c   \
 
-
-C_OBJS=.\$(OBJDIR)\bmk2mcf.obj .\$(OBJDIR)\vocab.obj \
-     .\$(OBJDIR)\nlcstore.obj \
-    .\$(OBJDIR)\mcf.obj .\$(OBJDIR)\mcff2mcf.obj .\$(OBJDIR)\rdfht.obj \
-    .\$(OBJDIR)\remstore.obj .\$(OBJDIR)\ht.obj \
-    .\$(OBJDIR)\glue.obj .\$(OBJDIR)\utils.obj .\$(OBJDIR)\fs2rdf.obj \
-    .\$(OBJDIR)\hist2rdf.obj .\$(OBJDIR)\rdfparse.obj \
-     .\$(OBJDIR)\es2mcf.obj     .\$(OBJDIR)\columns.obj  
+C_OBJS=.\$(OBJDIR)\vocab.obj \
+       .\$(OBJDIR)\mcf.obj \
+       .\$(OBJDIR)\remstore.obj \
+       .\$(OBJDIR)\utils.obj \
+       .\$(OBJDIR)\rdfparse.obj \
+       .\$(OBJDIR)\ldap2rdf.obj \
+       .\$(OBJDIR)\mcff2mcf.obj \
+       .\$(OBJDIR)\bmk2mcf.obj \
+       .\$(OBJDIR)\glue.obj \
+       .\$(OBJDIR)\rdfht.obj
+       
+!ifndef RDF_STANDALONE
+C_OBJS = $(C_OBJS) \
+       .\$(OBJDIR)\ht.obj \
+       .\$(OBJDIR)\fs2rdf.obj \
+       .\$(OBJDIR)\hist2rdf.obj \
+       .\$(OBJDIR)\es2mcf.obj \
+       .\$(OBJDIR)\columns.obj \
+       .\$(OBJDIR)\nlcstore.obj
+!endif
+       
 !if "$(MOZ_BITS)" != "16"
 LINCS=-I$(XPDIST)\public\nspr -I$(XPDIST)\public\dbm \
     -I$(XPDIST)\public\java -I$(XPDIST)\public\js \
@@ -66,6 +76,10 @@ LINCS=-I$(XPDIST)\public\nspr -I$(XPDIST)\public\dbm \
 
 
 include <$(DEPTH)\config\rules.mak>
+
+!ifdef RDF_STANDALONE
+CFLAGS = $(CFLAGS) -UMOZILLA_CLIENT
+!endif
 
 !if "$(MOZ_BITS)" == "32"
 LINCS= $(LINCS) -I$(PUBLIC)\rdf

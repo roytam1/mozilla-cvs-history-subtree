@@ -145,7 +145,6 @@ ht_rjcprintf(PRFileDesc *file, const char *fmt, const char *data)
 }
 
 
-
 char *
 makeDBURL(char* name)
 {
@@ -167,7 +166,6 @@ makeDBURL(char* name)
   }
   return(ans);
 }
-
 
 
 PLHashNumber
@@ -416,10 +414,11 @@ RDF_GetResourceName(RDF rdf, RDF_Resource node)
 }
 
 
-
+#ifdef MOZILLA_CLIENT
 PR_PUBLIC_API(RDF_Resource)
 RDFUtil_GetFirstInstance (RDF_Resource type, char* defaultURL)
 {
+
   RDF_Resource bmk = nlocalStoreGetSlotValue(gLocalStore, type,
 					     gCoreVocab->RDF_instanceOf,
 					     RDF_RESOURCE_TYPE, true, true);
@@ -430,7 +429,6 @@ RDFUtil_GetFirstInstance (RDF_Resource type, char* defaultURL)
   }
   return bmk;
 }
-
 
 
 PR_PUBLIC_API(void)
@@ -703,3 +701,4 @@ MakeCookieStore (char* url)
     } else return gCookieStore;
   } else return NULL;
 }
+#endif /* MOZILLA_CLIENT */

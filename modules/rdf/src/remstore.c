@@ -21,7 +21,7 @@
    For more information on this file, contact rjc or guha 
    For more information on RDF, look at the RDF section of www.mozilla.org
 */
-
+   
 #include "remstore.h"
 #include "hist2rdf.h"
 #include "fs2rdf.h"
@@ -32,7 +32,6 @@
 
 	/* globals */
 PLHashTable	*RDFFileDBHash = NULL;
-
 
 
 
@@ -90,7 +89,6 @@ MakeFileDB (char* url)
     return ntr;
   } else return NULL;
 }
-
 
 
 PRBool
@@ -276,7 +274,6 @@ fileReadp (RDFT rdf, char* url, PRBool mark)
 }
 
 
-
 static void
 possiblyAccessFile (RDFT mcf, RDF_Resource u, RDF_Resource s, PRBool inversep)
 {
@@ -385,8 +382,10 @@ remoteStoreNextValue (RDFT mcf, RDF_Cursor c)
       }
       c->pdata = (c->inversep ? as->invNext : as->next);
       if (c->type == RDF_RESOURCE_TYPE) {
+#ifdef MOZILLA_CLIENT
         FE_Trace(resourceID(c->value));
         FE_Trace("\n");
+#endif
       }
       return c->value;
     }
@@ -488,7 +487,6 @@ freeSomeRDFSpace (RDF mcf)
 }
 
 
-
 RDFFile
 readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
 {
@@ -520,8 +518,6 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return newFile;
   }
 }
-
-
 
 void
 possiblyRefreshRDFFiles ()
@@ -582,3 +578,4 @@ MakeSCookDB (char* url)
     return ntr;
   } else return NULL;
 }
+

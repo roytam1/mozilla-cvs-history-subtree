@@ -63,10 +63,13 @@ newNavCenterDB()
 PR_PUBLIC_API(RDF_Error)
 RDF_Init(RDF_InitParams params)
 {
+#ifdef MOZILLA_CLIENT
   char* navCenterURL;
+#endif
   if ( sRDFInitedB )
     return -1;
 
+#ifdef MOZILLA_CLIENT
   XP_ASSERT(params->profileURL != NULL);
   XP_ASSERT(params->bookmarksURL != NULL);
   XP_ASSERT(params->globalHistoryURL != NULL);
@@ -79,6 +82,7 @@ RDF_Init(RDF_InitParams params)
   profileDirURL     = copyString(params->profileURL);
   gBookmarkURL      = copyString(params->bookmarksURL);
   gGlobalHistoryURL = copyString(params->globalHistoryURL);
+#endif
 
   resourceHash = PL_NewHashTable(500, PL_HashString, PL_CompareStrings, PL_CompareValues,  
 				 NULL, NULL);
@@ -87,6 +91,7 @@ RDF_Init(RDF_InitParams params)
   createVocabs();
   sRDFInitedB = PR_TRUE;
 
+#ifdef MOZILLA_CLIENT
   PREF_SetDefaultCharPref("browser.NavCenter", "http://rdf.netscape.com/rdf/navcntr.rdf");
   PREF_CopyCharPref("browser.NavCenter", &navCenterURL);
   if (!strchr(navCenterURL, ':')) {
@@ -99,6 +104,7 @@ RDF_Init(RDF_InitParams params)
   freeMem(navCenterURL);
 
   HT_Startup();
+#endif
 
   return 0;
 }
@@ -113,7 +119,7 @@ RDF_Init(RDF_InitParams params)
 PR_PUBLIC_API(RDF_Error)
 RDF_Shutdown ()
 {
-
+#ifdef MOZILLA_CLIENT
   /*  flushBookmarks(); */
   HT_Shutdown();
   RDFglueExit();
@@ -137,6 +143,7 @@ RDF_Shutdown ()
   	freeMem(gLocalStoreURL);
   	gLocalStoreURL = NULL;
   }
+#endif
   disposeAllDBs();
   sRDFInitedB = PR_FALSE;
   

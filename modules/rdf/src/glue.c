@@ -36,7 +36,6 @@
 #include "nlcstore.h"
 
 
-
 /* external routines */
 extern	MWContext	*FE_GetRDFContext(void);
 
@@ -87,7 +86,7 @@ rdf_abort(NET_StreamClass *stream, int status)
   }
 }
 
-
+#ifdef MOZILLA_CLIENT
 
 #ifdef	XP_MAC
 PR_PUBLIC_API(NET_StreamClass *)
@@ -219,7 +218,7 @@ rdf_GetURL (MWContext *cx,  int method, Net_GetUrlExitFunc *exit_routine, RDFFil
         }
 	return 1;
 }
-
+#endif /* MOZILLA_CLIENT */
 
 
 
@@ -237,6 +236,8 @@ possiblyRereadRDFFiles (void* data)
 void
 RDFglueInitialize()
 {
+#ifdef MOZILLA_CLIENT
+
 	timerID = FE_SetTimeout(possiblyRereadRDFFiles, NULL, 1000 * 60 * 10); /* once every 10 minutes */
 	if (gRLForbiddenDomains != NULL)
 	{
@@ -247,6 +248,8 @@ RDFglueInitialize()
 	{
 		gRLForbiddenDomains = NULL;
 	}
+
+#endif /* MOZILLA_CLIENT */
 }
 
 
@@ -254,6 +257,8 @@ RDFglueInitialize()
 void
 RDFglueExit (void)
 {
+#ifdef MOZILLA_CLIENT
+
 	if (timerID != NULL)
 	{
 		/* commented out as the timer's window has already been destroyed */
@@ -261,17 +266,22 @@ RDFglueExit (void)
 		/* FE_ClearTimeout(timerID); */
 		timerID = NULL;
 	}
-}
 
+#endif /* MOZILLA_CLIENT */
+}
 
 
 void *
 gRDFMWContext()
 {
+#ifndef MOZILLA_CLIENT
+   return NULL;
+#else
 	void		*cx;
 
 	cx = (void *)FE_GetRDFContext();
 	return(cx);
+#endif
 }
 
 
@@ -292,9 +302,40 @@ beginReadingRDFFile (RDFFile file)
 	char		*url;
 	int		method = 0;
 
+#ifndef MOZILLA_CLIENT
+
+   /* If standalone, we just use NSPR to open the file */
+   NET_StreamClass stream;
+   PRFileDesc *fd;
+   PRFileInfo fi;
+   PRBool bSuccess = FALSE;
+    
+   url = file->url;
+   fd = CallPROpenUsingFileURL(url, PR_RDONLY, 0);
+   if(fd)
+   {
+      if(PR_GetOpenFileInfo(fd, &fi) == PR_SUCCESS)
+      {
+         char* buf = malloc(fi.size);
+         if(PR_Read(fd, buf, fi.size))
+         {
+            stream.data_object = file;
+            if(parseNextRDFXMLBlob (&stream, buf, fi.size))
+               bSuccess = TRUE;
+         }
+         free(buf);
+      }
+      PR_Close(fd);
+   }
+   if(bSuccess == TRUE)
+      rdf_complete(&stream);
+#else
+
 	url = file->url;
 	if (file->fileType == ES_RT)	method = URL_INDEX_METHOD;
 	rdf_GetURL (gRDFMWContext(), method, NULL, file);
+
+#endif
 }
 
 
@@ -307,11 +348,14 @@ unescapeURL(char *inURL)
 {
 	char *escapedPath = copyString(inURL);
 
+#ifdef MOZILLA_CLIENT
 #ifdef XP_WIN
 	replacePipeWithColon(escapedPath);
 #endif
 
 	NET_UnEscape(escapedPath);
+#endif
+
 	return (escapedPath);
 }
 
@@ -327,14 +371,14 @@ convertFileURLToNSPRCopaceticPath(char* inURL)
 	if (startsWith("file://", inURL))	return (inURL + 8);
 	else if (startsWith("mailbox:/", inURL))	return (inURL + 9);
 	else if (startsWith("IMAP:/", inURL))	return (inURL + 6);
-	else return (NULL);
+	else return (inURL);
 #else
 	/* For Mac & Unix, need preceeding '/' so that NSPR */
 	/* interprets path as full path */
 	if (startsWith("file://", inURL))	return (inURL + 7);
 	else if (startsWith("mailbox:/", inURL))	return (inURL + 8);
 	else if (startsWith("IMAP:/", inURL))	return (inURL + 5);
-	else return (NULL);
+	else return (inURL);
 #endif
 }
 
@@ -456,7 +500,7 @@ CallPRMkDirUsingFileURL(char *dirURL, int mode)
 }
 
 
-
+#ifdef MOZILLA_CLIENT
 DB *
 CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const void *openinfo)
 {
@@ -484,3 +528,4 @@ CallDBOpenUsingFileURL(char *fileURL, int flags,int mode, DBTYPE type, const voi
 
 	return result;
 }
+#endif

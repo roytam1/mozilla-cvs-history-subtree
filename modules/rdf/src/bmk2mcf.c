@@ -49,6 +49,7 @@
 #include "mcff2mcf.h"
 #include "utils.h"
 
+#ifdef MOZILLA_CLIENT
 
 	/* extern declarations */
 PR_PUBLIC_API(void) HT_WriteOutAsBookmarks (RDF r, PRFileDesc *fp, RDF_Resource u);	/* XXX this should be elsewhere */
@@ -71,7 +72,7 @@ createSeparator(void)
   return sep;
 }
 
-
+#endif
 
 RDF_Resource
 createContainer (char* id)
@@ -81,7 +82,7 @@ createContainer (char* id)
   return r;
 }
 
-
+#ifdef MOZILLA_CLIENT
 
 char *
 resourceDescription (RDF rdf, RDF_Resource r)
@@ -441,3 +442,5 @@ flushBookmarks()
 		}
 	}
 }
+
+#endif
