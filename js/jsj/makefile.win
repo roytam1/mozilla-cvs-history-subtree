@@ -32,9 +32,9 @@ DEPTH= ..\..
 
 include <$(DEPTH)/config/config.mak>
 
-!ifdef JAVA_OR_OJI
+#!ifdef JAVA_OR_OJI
 DIRS = classes
-!endif
+#!endif
 
 
 #//------------------------------------------------------------------------
