@@ -144,7 +144,7 @@ nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSp
         NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);    
         if (NS_FAILED(rv)) return PR_FALSE;
 
-        rv = fts->CreateTransport(file, PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
+        rv = fts->CreateTransport(file, PR_RDWR | PR_CREATE_FILE,
                                   0664, getter_AddRefs(m_transport));
 		PR_FREEIF(urlSpec);
         m_socketIsOpen = PR_FALSE;
