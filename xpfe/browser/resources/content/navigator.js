@@ -31,6 +31,7 @@ var gBrandBundle;
 var gNavigatorRegionBundle;
 var gBrandRegionBundle;
 var gLastValidURL = "";
+var gHaveUpdatedToolbarState = false;
 var gClickSelectsAll = -1;
 
 var pref = Components.classes["@mozilla.org/preferences;1"]
@@ -433,12 +434,12 @@ function BrowserForward()
 
 function BrowserBackMenu(event)
 {
-  FillHistoryMenu(event.target, "back");
+  return FillHistoryMenu(event.target, "back");
 }
 
 function BrowserForwardMenu(event)
 {
-  FillHistoryMenu(event.target, "forward");
+  return FillHistoryMenu(event.target, "forward");
 }
 
 function BrowserStop()
@@ -1405,15 +1406,63 @@ function PageProxyDragGesture(aEvent)
     return false;
 }
 
-function UpdateNecessaryItems(eltId)
+function UpdateNecessaryItems(eltIds)
 {
-  var eltToUpdate = document.getElementById(eltId);
-  if (!eltToUpdate) return;
   var webNav = getWebNavigation();
   if (!webNav) return;
+  eltIds = eltIds.split(",");
+  var elt;
+  var isPostData = webNav.postData;
+  for (var i = 0; i < eltIds.length; ++i) {
+    elt = document.getElementById(eltIds[i]);
+    if (!elt) continue;
+    if (isPostData)
+      elt.setAttribute("disabled", "true");
+    else if (elt.getAttribute("disabled"))
+      elt.removeAttribute("disabled");
+  }
+}
 
-  if (webNav.postData)
-    eltToUpdate.setAttribute("disabled", "true");
-  else if (eltToUpdate.getAttribute("disabled"))
-    eltToUpdate.removeAttribute("disabled");
+function updateComponentBarBroadcaster()
+{ 
+  var compBarBroadcaster = document.getElementById('cmd_viewcomponentbar');
+  var taskBarBroadcaster = document.getElementById('cmd_viewtaskbar');
+  var compBar = document.getElementById('component-bar');
+  if (taskBarBroadcaster.getAttribute('checked') == 'true') {
+    compBarBroadcaster.removeAttribute('disabled');
+    if (compBar.getAttribute('hidden') != 'true')
+      compBarBroadcaster.setAttribute('checked', 'true');
+  }
+  else {
+    compBarBroadcaster.setAttribute('disabled', 'true');
+    compBarBroadcaster.removeAttribute('checked');
+  }
+}
+
+function updateToolbarStates(toolbarMenuElt)
+{
+  if (gHaveUpdatedToolbarState) {
+    updateComponentBarBroadcaster();
+    return;
+  }
+  var mainWindow = document.getElementById("main-window");
+  var chromeHidden = mainWindow.getAttribute("chromehidden");
+  if (chromeHidden) {
+    gHaveUpdatedToolbarState = true;
+    var i;
+    for (i = 0; i < toolbarMenuElt.childNodes.length; ++i)
+      document.getElementById(toolbarMenuElt.childNodes[i].getAttribute("observes")).removeAttribute("checked");
+    var toolbars = document.getElementsByTagName("toolbar");
+    for (i = 0; i < toolbars.length; ++i) {
+      if (toolbars[i].getAttribute("class").indexOf("chromeclass") != -1)
+        toolbars[i].setAttribute("hidden", "true");
+    }
+    var statusbars = document.getElementsByTagName("statusbar");
+    for (i = 0; i < statusbars.length; ++i) {
+      if (statusbars[i].getAttribute("class").indexOf("chromeclass") != -1)
+        statusbars[i].setAttribute("hidden", "true");
+    }
+    mainWindow.removeAttribute("chromehidden");
+  }
+  updateComponentBarBroadcaster();
 }
