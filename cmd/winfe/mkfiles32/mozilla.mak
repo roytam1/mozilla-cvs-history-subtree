@@ -287,12 +287,12 @@ CFLAGS_LIBPICS_C=       $(CFLAGS_DEFAULT)
 CFLAGS_LIBPWCAC_C=       $(CFLAGS_DEFAULT)
 CFLAGS_XLATE_C=         $(CFLAGS_DEFAULT)
 CFLAGS_LIBDBM_C=        $(CFLAGS_DEFAULT)
-CFLAGS_PLUGIN_C=        $(CFLAGS_DEBUG)
+CFLAGS_PLUGIN_C=        $(CFLAGS_DEFAULT)
 CFLAGS_APPLET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lj.pch" /YX"lj.h"
 CFLAGS_EDTPLUG_C=       $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/le.pch" /YX"le.h"
 CFLAGS_LIBMOCHA_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lm.pch" /YX"lm.h"
 CFLAGS_LAYOUT_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/editor.pch" /YX"editor.h"
-CFLAGS_PLUGIN_CPP=      $(CFLAGS_DEBUG) /I$(DEPTH)\cmd\winfe /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
+CFLAGS_PLUGIN_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\cmd\winfe /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
 CFLAGS_LIBPREF_C=                 $(CFLAGS_DEBUG)
 CFLAGS_WINFE_C=                 $(CFLAGS_DEBUG)
 !if "$(MOZ_BITS)"=="32"
