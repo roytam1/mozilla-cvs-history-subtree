@@ -1530,6 +1530,11 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
   printf ("charset=%s\n", charset.get());
 #endif
 
+  // although the charset in which to _send_ the message might change,
+  // the original message will be parsed for quoting using the charset it is
+  // now displayed with
+  mQuoteCharset = charset;
+
   PRBool isFirstPass = PR_TRUE;
   char *uri = uriList;
   char *nextUri;
@@ -1565,6 +1570,11 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
         if (NS_FAILED(rv)) return rv;
       }
 
+      // save the charset of a message being replied to because
+      // we need to use it when decoding RFC-2047-encoded author name
+      // with |charsetOverride == PR_TRUE|
+      nsCAutoString originCharset(charset); 
+
       // use send_default_charset if reply_in_default_charset is on.
       nsCOMPtr<nsIPref> prefs (do_GetService(NS_PREF_CONTRACTID));
       if (prefs)
@@ -1592,8 +1602,14 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
       if (isFirstPass && !charset.IsEmpty())
         m_compFields->SetCharacterSet(charset);
 
-      rv = msgHdr->GetMime2DecodedSubject(getter_Copies(subject));
+      nsXPIDLCString subjectCStr;
+      (void) msgHdr->GetSubject(getter_Copies(subjectCStr));
+      rv = mimeConverter->DecodeMimeHeader(subjectCStr,
+                getter_Copies(decodedCString),
+                originCharset.get(), charsetOverride);
       if (NS_FAILED(rv)) return rv;
+
+      CopyUTF8toUTF16(decodedCString, subject);
 
       // Check if (was: is present in the subject
       nsAString::const_iterator wasStart, wasEnd;
@@ -1676,7 +1692,7 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
 
             rv = mimeConverter->DecodeMimeHeader(author,
                 getter_Copies(decodedCString),
-                charset, charsetOverride);
+                originCharset.get(), charsetOverride);
             if (NS_SUCCEEDED(rv) && decodedCString)
               m_compFields->SetTo(decodedCString);
             else
@@ -2520,7 +2536,7 @@ nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // 
   // Create the consumer output stream.. this will receive all the HTML from libmime
   mQuoteStreamListener =
     new QuotingOutputStreamListener(originalMsgURI, what != 1, !bAutoQuote, m_identity,
-                                    m_compFields->GetCharacterSet(), mCharsetOverride, PR_TRUE);
+                                    mQuoteCharset.get(), mCharsetOverride, PR_TRUE);
   
   if (!mQuoteStreamListener)
   {
@@ -2534,7 +2550,7 @@ nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // 
   mQuoteStreamListener->SetComposeObj(this);
 
   rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, 
-                            mCharsetOverride ? m_compFields->GetCharacterSet() : "", !bAutoQuote);
+                            mCharsetOverride ? mQuoteCharset.get() : "", !bAutoQuote);
   return rv;
 }
 
