@@ -26,7 +26,15 @@ ifneq ($(subst /,_,$(shell uname -s)),OS2)
 CSRCS		= unix/unixpref.c
 else
 MAKE_DLL 	= 1
-EXTRA_LIBS 	= $(LIBNSPR) $(DIST)/lib/libjs.lib
+FREE_SECLIB	= $(DIST)/lib/libsecfree.lib
+SECLIB		= $(DIST)/lib/secutil.lib
+HASHLIB		= $(DIST)/lib/hash.lib
+ifdef NO_SECURITY
+EXTRA_LIBS	= $(FREE_SECLIB)
+else
+EXTRA_LIBS	= $(SECLIB) $(HASHLIB)
+endif
+EXTRA_LIBS 	+= $(LIBNSPR) $(DIST)/lib/libjs.lib
 endif
 
 CSRCS		+= prefapi.c
@@ -83,3 +91,12 @@ unix/jsbuffer.h: Makefile $(CONFIG_FILES)
 	@echo "static char* pref_init_buffer = " >> $@
 	@cat $(CONFIG_FILES) | sed 's/\\/\\\\/g' | sed 's/\\r/\\n/' | sed 's/\"/\\\"/g' | sed 's/^M//g' | sed 's/^/"/' | sed 's/$$/\\n"/' >> $@
 	@echo \; >> $@
+	
+ifeq ($(OS_ARCH),OS2)
+$(FREE_SECLIB) :
+	cd $(DEPTH)/modules/security/freenav; $(MAKE) -f Makefile libs
+
+$(HASHLIB) :
+	cd $(DEPTH)/security/lib/hash; $(MAKE) libs
+endif
+
