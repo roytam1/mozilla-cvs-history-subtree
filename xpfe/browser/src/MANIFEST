@@ -5,6 +5,9 @@ status.html
 toolbar.xml
 BrowserInitPage.html
 contentframe.html
+contentframe.css
+contentframe.js
+contentframe.xul
 sidebar.html
 xul.css
 dialogs.css
