@@ -12,7 +12,12 @@ ifeq ($(OS_ARCH), SunOS)
   NSPR_OBJDIR   := $(subst _sparc,,$(NSPR_OBJDIR))
 endif
 ifeq ($(OS_ARCH), Linux)
-  NSPR_OBJDIR   := $(subst _All,ELF2.0,$(NSPR_OBJDIR))
+  LINUX_REL     := $(shell uname -r)
+  ifneq (,$(findstring 2.0,$(LINUX_REL)))
+    NSPR_OBJDIR := $(subst _All,2.0.35_x86_PTH,$(NSPR_OBJDIR))
+  else
+    NSPR_OBJDIR := $(subst _All,2.1.108_x86_PTH,$(NSPR_OBJDIR))
+  endif
 endif
 ifeq ($(OS_ARCH), AIX)
   NSPR_OBJDIR   := $(subst 4.1,4.2,$(NSPR_OBJDIR))
