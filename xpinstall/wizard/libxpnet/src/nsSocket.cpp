@@ -430,11 +430,10 @@ nsSocket::Close()
     int wsaErr = WSACleanup();
     if (wsaErr != 0)
         rv = wsaErr;
-#else /* unix or mac */
+#else 
     rv1 = close(mFd);
     if (mListenFd > 0)
-        rv2 = close(mListenFd);
-    
+        rv2 = close(mListenFd);    
     if (rv1 != 0 || rv2 != 0)
         rv = E_SOCK_CLOSE; 
 #endif

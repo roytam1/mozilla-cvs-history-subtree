@@ -264,6 +264,13 @@ nsFTPConn::Get(char *aSrvPath, char *aLoclPath, int aType, int aResumePos,
         err = OK;
 
 BAIL:
+
+    if ( err != OK && err != E_USER_CANCEL ) {
+        sprintf(cmd, "QUIT\r\n");
+        IssueCmd(cmd, resp, kRespBufSize, mCntlSock);
+        FlushCntlSock(mCntlSock);
+    }
+
     /* close locl file if open */
     if (loclfd)
         fclose(loclfd);
