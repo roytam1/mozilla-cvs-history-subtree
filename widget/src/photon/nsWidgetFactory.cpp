@@ -44,6 +44,10 @@
 #include "nsScrollbar.h"
 #include "nsSound.h"
 
+#ifdef IBMBIDI
+#include "nsBidiKeyboard.h"
+#endif
+
 #include <prlog.h>
 struct PRLogModuleInfo  *PhWidLog =  nsnull;
 #include "nsPhWidgetLog.h"
@@ -65,6 +69,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontRetrieverService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFileSpecWithUIImpl)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsBidiKeyboard)
 
 static nsresult nsHorizScrollbarConstructor (nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
@@ -209,6 +214,12 @@ static nsModuleComponentInfo components[] =
     //    "mozilla.widget.dragservice.ph.1",
     "component://netscape/widget/dragservice",
     nsDragServiceConstructor },
+#ifdef IBMBIDI
+    { "Ph Bidi Keyboard",
+    NS_BIDIKEYBOARD_CID,
+    "component://netscape/widget/bidikeyboard",
+    nsBidiKeyboardConstructor },
+#endif // IBMBIDI
   { "File Spec with UI",
     NS_FILESPECWITHUI_CID,
     //    "mozilla.widget.filespecwithui.ph.1",

@@ -134,10 +134,10 @@
 
 #ifdef IBMBIDI
 #include "nsIUBidiUtils.h"
+#include "nsIBidiKeyboard.h"
+#include "nsWidgetsCID.h"
 static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
-#ifdef XP_PC
-#include "windows.h"
-#endif // XP_PC
+static NS_DEFINE_CID(kBidiKeyboardCID, NS_BIDIKEYBOARD_CID);
 #endif // IBMBIDI
 
 // local management of the style watch:
@@ -844,6 +844,7 @@ protected:
   PRBool	mCaretEnabled;
 #ifdef IBMBIDI
   PRUint8   mBidiLevel; // The Bidi level of the cursor
+  nsCOMPtr<nsIBidiKeyboard> mBidiKeyboard;
 #endif // IBMBIDI
 #ifdef NS_DEBUG
   PRBool VerifyIncrementalReflow();
@@ -1162,7 +1163,6 @@ PresShell::~PresShell()
     mPendingReflowEvent = PR_FALSE;
     mEventQueue->RevokeEvents(this);
   }
-
 }
 
 /**
@@ -1274,6 +1274,9 @@ PresShell::Init(nsIDocument* aDocument,
   // cache the drag service so we can check it during reflows
   mDragService = do_GetService("component://netscape/widget/dragservice");
 
+#ifdef IBMBIDI
+  mBidiKeyboard = do_GetService("component://netscape/widget/bidikeyboard");
+#endif
   return NS_OK;
 }
 
@@ -2234,17 +2237,12 @@ NS_IMETHODIMP
    PresShell::SetCursorBidiLevel(PRUint8 aLevel)
 {
 #ifdef IBMBIDI
+  mBidiLevel = aLevel;
 
-#ifdef XP_PC                                         // XXX - need an XP and Xlang solution for this
 //  PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
 //  if (parityChange)                                  // if so, change the keyboard language
-#define kRTLLanguage 	"0000040d"  //Hebrew
-//#define kRTLLanguage 	"00000c01", //Arabic (Egypt)
-#define kLTRLanguage 	"00000409"  //US English
-  LoadKeyboardLayout((aLevel & 1) ? kRTLLanguage : kLTRLanguage, KLF_ACTIVATE);
-#endif // XP_PC
-
-  mBidiLevel = aLevel;
+  if (mBidiKeyboard)
+    mBidiKeyboard->SetLangFromBidiLevel(aLevel);
 #endif // IBMBIDI
   return NS_OK;
 }

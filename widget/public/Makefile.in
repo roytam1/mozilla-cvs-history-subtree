@@ -86,6 +86,7 @@ XPIDLSRCS	= \
 		nsIRollupListener.idl \
 		nsIMenuRollup.idl \
 		nsIBaseWindow.idl \
+		nsIBidiKeyboard.idl \ 
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

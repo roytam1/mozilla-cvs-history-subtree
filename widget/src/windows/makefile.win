@@ -43,6 +43,7 @@ CPPSRCS =              \
 	nsLookAndFeel.cpp    \
 	nsToolkit.cpp        \
 	nsSound.cpp          \
+  nsBidiKeyboard.cpp   \
 #	nsButton.cpp         \
 #	nsTextWidget.cpp     \
 #	nsTextHelper.cpp     \
@@ -70,6 +71,7 @@ OBJS =                             \
 	.\$(OBJDIR)\nsLookAndFeel.obj    \
 	.\$(OBJDIR)\nsToolkit.obj        \
 	.\$(OBJDIR)\nsSound.obj          \
+	.\$(OBJDIR)\nsBidiKeyboard.obj   \
 #	.\$(OBJDIR)\nsButton.obj         \
 #	.\$(OBJDIR)\nsTextWidget.obj     \
 #	.\$(OBJDIR)\nsTextHelper.obj     \

@@ -43,6 +43,9 @@
 #include "nsFileSpecWithUIImpl.h"
 #include "nsScrollbar.h"
 #include "nsSound.h"
+#ifdef IBMBIDI
+#include "nsBidiKeyboard.h"
+#endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(ChildWindow)
@@ -61,6 +64,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontRetrieverService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFileSpecWithUIImpl)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
+#ifdef IBMBIDI
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsBidiKeyboard)
+#endif
 
 static nsresult nsHorizScrollbarConstructor (nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
@@ -198,6 +204,12 @@ static nsModuleComponentInfo components[] =
     //    "mozilla.widget.dragservice.gtk.1",
     "component://netscape/widget/dragservice",
     nsDragServiceConstructor },
+#ifdef IBMBIDI
+    { "Gtk Bidi Keyboard",
+    NS_BIDIKEYBOARD_CID,
+    "component://netscape/widget/bidikeyboard",
+    nsBidiKeyboardConstructor },
+#endif // IBMBIDI
   { "File Spec with UI",
     NS_FILESPECWITHUI_CID,
     //    "mozilla.widget.filespecwithui.gtk.1",

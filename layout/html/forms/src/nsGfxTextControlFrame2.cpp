@@ -97,9 +97,9 @@
 #include "nsITransactionListener.h"
 
 #ifdef IBMBIDI
-#ifdef XP_PC
-#include "windows.h"
-#endif // XP_PC
+#include "nsIBidiKeyboard.h"
+#include "nsWidgetsCID.h"
+static NS_DEFINE_CID(kBidiKeyboardCID, NS_BIDIKEYBOARD_CID);
 #endif // IBMBIDI
 
 #define DEFAULT_COLUMN_WIDTH 20
@@ -588,6 +588,7 @@ private:
   nsWeakPtr mPresShellWeak;
 #ifdef IBMBIDI
   PRUint8   mBidiLevel; // The Bidi level of the cursor
+  nsCOMPtr<nsIBidiKeyboard> mBidiKeyboard;
 #endif
 };
 
@@ -607,6 +608,9 @@ nsTextInputSelectionImpl::nsTextInputSelectionImpl(nsIFrameSelection *aSel, nsIP
     mLimiter = aLimiter;
     mFrameSelection->Init(tracker, mLimiter);
     mPresShellWeak = getter_AddRefs( NS_GetWeakReference(aShell) );
+#ifdef IBMBIDI
+    mBidiKeyboard = do_GetService("component://netscape/widget/bidikeyboard");
+#endif
   }
 }
 
@@ -825,17 +829,12 @@ NS_IMETHODIMP
    nsTextInputSelectionImpl::SetCursorBidiLevel(PRUint8 aLevel)
 {
 #ifdef IBMBIDI
-
-#ifdef XP_PC                                         // XXX - need an XP and Xlang solution for this
-  PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
-  if (parityChange)                                  // if so, change the keyboard language
-#define kRTLLanguage 	"0000040d"  //Hebrew
-//#define kRTLLanguage 	"00000c01", //Arabic (Egypt)
-#define kLTRLanguage 	"00000409"  //US English
-    LoadKeyboardLayout((aLevel & 1) ? kRTLLanguage : kLTRLanguage, KLF_ACTIVATE);
-#endif // XP_PC
-
   mBidiLevel = aLevel;
+  
+  //PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
+  //if (parityChange)                                  // if so, change the keyboard language
+  if (mBidiKeyboard)
+    mBidiKeyboard->SetLangFromBidiLevel(aLevel);
 #endif // IBMBIDI
   return NS_OK;
 }
@@ -851,7 +850,7 @@ NS_IMETHODIMP
 }
 
 NS_IMETHODIMP
-   nsTextInputSelectionImpl::UndefineCursorBidiLevel()
+nsTextInputSelectionImpl::UndefineCursorBidiLevel()
 {
 #ifdef IBMBIDI
   mBidiLevel |= nsISelectionController::BIDI_LEVEL_UNDEFINED;
@@ -1178,6 +1177,7 @@ nsGfxTextControlFrame2::Destroy(nsIPresContext* aPresContext)
       mEditor->RemoveEditorObserver(mTextListener);
     }
   }
+
   return nsBoxFrame::Destroy(aPresContext);
 }
 
@@ -1901,7 +1901,6 @@ nsGfxTextControlFrame2::CreateAnonymousContent(nsIPresContext* aPresContext,
       mEditor->SetFlags(editorFlags);
     }
   }
-
   return NS_OK;
 }
 

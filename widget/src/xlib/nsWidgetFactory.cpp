@@ -40,6 +40,10 @@
 #include "nsLookAndFeel.h"
 #include "nsLabel.h"
 
+#ifdef IBMBIDI
+#include "nsBidiKeyboard.h"
+#endif
+
 static NS_DEFINE_IID(kCWindow,        NS_WINDOW_CID);
 static NS_DEFINE_IID(kCChild,         NS_CHILD_CID);
 static NS_DEFINE_IID(kCButton,        NS_BUTTON_CID);
@@ -56,6 +60,9 @@ static NS_DEFINE_IID(kCAppShell,      NS_APPSHELL_CID);
 static NS_DEFINE_IID(kCToolkit,       NS_TOOLKIT_CID);
 static NS_DEFINE_IID(kCLookAndFeel,   NS_LOOKANDFEEL_CID);
 static NS_DEFINE_IID(kCLabel,         NS_LABEL_CID);
+#ifdef IBMBIDI
+static NS_DEFINE_IID(kCBidiKeyboard,  NS_BIDIKEYBOARD_CID);
+#endif
 
 static NS_DEFINE_IID(kCImageButton,   NS_IMAGEBUTTON_CID);
 static NS_DEFINE_IID(kISupportsIID,   NS_ISUPPORTS_IID);
@@ -180,6 +187,11 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports* aOuter,
   else if (mClassID.Equals(kCLabel)) {
     inst = (nsISupports*)(nsWindow*)new nsLabel();
   }
+#ifdef IBMBIDI
+  else if (mClassID.Equals(kCBidiKeyboard)) {
+    inst = (nsISupports*)(nsIBidiKeyboard*) new nsBidiKeyboard();
+  }
+#endif // IBMBIDI
   if (inst == NULL) {  
     return NS_ERROR_OUT_OF_MEMORY;  
   }  

@@ -50,9 +50,6 @@
 #ifdef IBMBIDI
 //-------------------------------IBM BIDI--------------------------------------
 // Mamdouh : Modifiaction of the caret to work with Bidi in the LTR and RTL
-#ifdef XP_PC
-#include "windows.h"
-#endif // XP_PC
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsViewsCID.h"
@@ -66,6 +63,8 @@
 #include "nsLayoutAtoms.h"
 //#include "nsBidiOptions.h"
 #include "nsIUBidiUtils.h"
+#include "nsIBidiKeyboard.h"
+static NS_DEFINE_CID(kBidiKeyboardCID, NS_BIDIKEYBOARD_CID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);//Hacked from Text Frame
 
 //------------------------------END OF IBM BIDI--------------------------------
@@ -140,7 +139,10 @@ NS_IMETHODIMP nsCaret::Init(nsIPresShell *inPresShell)
 		if (NS_FAILED(err))
 			return err;
 	}
-	
+#ifdef IBMBIDI
+  mBidiKeyboard = do_GetService("component://netscape/widget/bidikeyboard");
+#endif
+
 	return NS_OK;
 }
 
@@ -813,15 +815,15 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
     if (bidiEnabled)
     {
       nsRect hookRect;
-      PRUint8 bidiLevel;
+      PRBool bidiLevel=PR_FALSE;
 
       nsCOMPtr<nsISelectionController> selCon = do_QueryReferent(mPresShell);
       if (selCon)
       {
-        //selCon->GetCursorBidiLevel(&bidiLevel);
-        bidiLevel = IsLangBIDI();
-        // If Bidi level is odd draw the hook to the left; if level is even, to the right
-        hookRect.SetRect(caretRect.x + caretRect.width * ((bidiLevel & 1) ? -1 : 1), 
+        if (mBidiKeyboard)
+          mBidiKeyboard->IsLangRTL(&bidiLevel);
+        // If keyboard language is RTL, draw the hook on the left; if LTR, to the right
+        hookRect.SetRect(caretRect.x + caretRect.width * ((bidiLevel) ? -1 : 1), 
                          caretRect.y + caretRect.width,
                          caretRect.width,
                          caretRect.width);
@@ -931,42 +933,3 @@ NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
   }
   return NS_OK;
 }
-
-#ifdef IBMBIDI
-//----------------------------------------------------------------------------------
-//
-//								Defination of IBMBIDI Function
-// Function : Select lang from list of bidi lang.
-//----------------------------------------------------------------------------------
-PRBool nsCaret::IsLangBIDI(void)
-{
-	char currentLang[KL_NAMELENGTH]="00000000";    // to get keyboar layout name in this array
-	char langID[17][KL_NAMELENGTH]=
-	{
-	"00000401", //Arabic (Saudi Arabia)
-	"00000801", //Arabic (Iraq)
-	"00000c01", //Arabic (Egypt)
-	"00001001", //Arabic (Libya)
-	"00001401", //Arabic (Algeria)
-	"00001801", //Arabic (Morocco)
-	"00001c01", //Arabic (Tunisia)
-	"00002001", //Arabic (Oman)
-	"00002401", //Arabic (Yemen)
-	"00002801", //Arabic (Syria)
-	"00002c01", //Arabic (Jordan)
-	"00003001", //Arabic (Lebanon)
-	"00003401", //Arabic (Kuwait)
-	"00003801", //Arabic (U.A.E.)
-	"00003c01", //Arabic (Bahrain)
-	"00004001", //Arabic (Qatar)
-	"0000040d"  //Hebrew
-	};
-#ifdef XP_PC
-	GetKeyboardLayoutName(currentLang);
-#endif // XP_PC
-	for(int count=0;count<17;count++)
-		if(strcmp(currentLang,langID[count])==0)
-			return PR_TRUE;
-	return PR_FALSE;
-}
-#endif //IBMBIDI

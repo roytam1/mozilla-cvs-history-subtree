@@ -50,6 +50,10 @@
 #include "nsTransferable.h"
 #include "nsXIFFormatConverter.h"
 
+#ifdef IBMBIDI
+#include "nsBidiKeyboard.h"
+#endif
+
 // #include "nsDragService.h"
 // #include "nsDragSource.h"
 // #include "nsDragTarget.h"
@@ -84,6 +88,10 @@ static NS_DEFINE_IID(kCXIFFormatConverter,  NS_XIFFORMATCONVERTER_CID);
 // static NS_DEFINE_IID(kCDragSource,    NS_DRAGSOURCE_CID);
 // static NS_DEFINE_IID(kCDragTarget,    NS_DRAGTARGET_CID);
 // static NS_DEFINE_IID(kCDraggedObject, NS_DRAGGEDOBJECT_CID);
+
+#ifdef IBMBIDI
+static NS_DEFINE_IID(kCBidiKeyboard,   NS_BIDIKEYBOARD_CID);
+#endif
 
 static NS_DEFINE_IID(kISupportsIID,   NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,    NS_IFACTORY_IID);
@@ -243,6 +251,12 @@ nsresult nsWidgetFactory::CreateInstance(nsISupports *aOuter,
     {
         inst = (nsISupports*)new nsXIFFormatConverter();
     }
+#ifdef IBMBIDI
+    else if (mClassID.Equals(kCBidiKeyboard))
+    {
+        inst = (nsISupports*)(nsIBidiKeyboard*) new nsBidiKeyboard();
+    }
+#endif // IBMBIDI
 #if 0
     else if (mClassID.Equals(kCFontRetrieverService)) 
     {

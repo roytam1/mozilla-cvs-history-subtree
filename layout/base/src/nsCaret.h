@@ -26,6 +26,9 @@
 #include "nsIDOMSelectionListener.h"
 #include "nsICaret.h"
 #include "nsWeakPtr.h"
+#ifdef IBMBIDI
+#include "nsIBidiKeyboard.h"
+#endif
 
 class nsITimer;
 class nsIView;
@@ -114,7 +117,8 @@ class nsCaret : public nsICaret,
     nsWeakPtr mDomSelectionWeak;
 #ifdef IBMBIDI
 //---------------------------------------IBMBIDI----------------------------------------------
-    nsRect mHookRect;					// directional hook on the caret
+    nsRect mHookRect;               					// directional hook on the caret
+    nsCOMPtr<nsIBidiKeyboard> mBidiKeyboard;
 //-------------------------------------END OF IBM BIDI----------------------------------------
 #endif
 };
