@@ -546,6 +546,9 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
         }
         break;
       }
+      // Set the iterator's current node to match the child we're playing with
+      aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(frame));
+
       rv = ReflowInlineFrame(aPresContext, aReflowState, irs, frame, aStatus);
       if (NS_FAILED(rv)) {
         done = PR_TRUE;
