@@ -363,12 +363,8 @@ MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
     if (!content) {
         return MB_FALSE;
     }
-    nsINodeInfo* ni = content->GetNodeInfo();
-    if (!ni) {
-        return MB_FALSE;
-    }
-    nsCOMPtr<nsIAtom> idAttr;
-    ni->GetIDAttributeAtom(getter_AddRefs(idAttr));
+
+    nsIAtom* idAttr = content->GetIDAttributeName();
     if (!idAttr) {
         return MB_FALSE; // no ID for this element defined, can't match
     }

@@ -39,6 +39,7 @@ REQUIRES +=	  dom \
 		  js \
 		  unicharutil \
 		  layout \
+		  necko \
 		  $(NULL)
 endif
 
