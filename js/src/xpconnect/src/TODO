@@ -4,10 +4,9 @@
     ! FIX resolve in setProperty brendan bug 72354
     ! FIX Soap stuff in xmlextras needs fix for nsIXPCScriptable usage
     - FIX nested enumerate with scriptable helper
-    - FIX xpccomponets.cpp use scriptable to deal better with prototype use
+    - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
 
 - FEATURES
-    ! jst NEEDS 'rescope' method (really 'reparent')
     - mstoltz wants 'clearAllSecurityPolicy' method
     - followup with shaver on classinfo maps (shared with table driven QI?)
     - deal with shaver's string changes
@@ -15,6 +14,7 @@
     ? nsXPConnect should impl nsISupportsWeakReference
 
 - VERIFY these things:
+    - VERIFY nsXPConnect::ReparentWrappedNativeIfFound
     - VERIFY that locking work is DONE.
     - VERIFY that scriptable flags are being honored
     - VERIFY that we honor nsIClassInfo flags
