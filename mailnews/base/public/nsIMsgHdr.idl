@@ -47,10 +47,12 @@ interface nsIMsgHdr : nsISupports
     unsigned long getUint32Property(in string propertyName);
     void setUint32Property(in string propertyName,
                            in unsigned long propertyVal);
-    
+ 
+    // accessors, to make our JS cleaner
+    readonly attribute boolean isRead;
+    readonly attribute boolean isFlagged;
+
 	// Mark message routines
-    // attribute boolean read;
-	//attribute boolean flagged;
     void markRead(in boolean read);
     void markFlagged(in boolean flagged);
     

@@ -351,8 +351,6 @@ var DefaultController =
 
 	doCommand: function(command)
 	{
-   		dump("XXX ThreadPaneController.doCommand(" + command + ")\n");
-
 		switch ( command )
 		{
 			case "cmd_getNewMessages":

@@ -416,39 +416,29 @@ function SaveAsTemplate(message, folder)
 	}
 }
 
-function MarkMessagesRead(compositeDataSource, messages, markRead)
+function MarkSelectedMessagesRead(markRead)
 {
-
-	var messageResourceArray = ConvertMessagesToResourceArray(messages, null);
-	var command;
-
-	if(markRead)
-		command = "http://home.netscape.com/NC-rdf#MarkRead";
-	else
-		command = "http://home.netscape.com/NC-rdf#MarkUnread";
-
-	DoRDFCommand(compositeDataSource, command, messageResourceArray, null);
-
+    if (markRead) {
+        gDBView.doCommand(nsMsgViewCommandType.markMessagesRead);
+    }
+    else {
+        gDBView.doCommand(nsMsgViewCommandType.markMessagesUnread);
+    }
 }
 
-function MarkMessagesFlagged(compositeDataSource, messages, markFlagged)
+function MarkSelectedMessagesFlagged(markFlagged)
 {
-
-	var messageResourceArray = ConvertMessagesToResourceArray(messages, null);
-	var command;
-
-	if(markFlagged)
-		command = "http://home.netscape.com/NC-rdf#MarkFlagged";
-	else
-		command = "http://home.netscape.com/NC-rdf#MarkUnflagged";
-
-	DoRDFCommand(compositeDataSource, command, messageResourceArray, null);
-
+    if (markFlagged) {
+        gDBView.doCommand(nsMsgViewCommandType.flagMessages);
+    }
+    else {
+        gDBView.doCommand(nsMsgViewCommandType.unflagMessages);
+    }
 }
 
 function MarkAllMessagesRead(compositeDataSource, folder)
 {
-
+    dump("fix this\n");
 	var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
 	var folderResourceArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 	folderResourceArray.AppendElement(folderResource);
@@ -458,7 +448,7 @@ function MarkAllMessagesRead(compositeDataSource, folder)
 
 function DownloadFlaggedMessages(compositeDataSource, folder)
 {
-
+    dump("fix this\n");
 	var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
 	var folderResourceArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 	folderResourceArray.AppendElement(folderResource);
@@ -468,7 +458,7 @@ function DownloadFlaggedMessages(compositeDataSource, folder)
 
 function DownloadSelectedMessages(compositeDataSource, messages, markFlagged)
 {
-
+    dump("fix this\n");
 	var messageResourceArray = ConvertMessagesToResourceArray(messages, null);
 	var command = "http://home.netscape.com/NC-rdf#DownloadSelectedMessages";
 
@@ -477,7 +467,7 @@ function DownloadSelectedMessages(compositeDataSource, messages, markFlagged)
 
 function MarkThreadAsRead(compositeDataSource, message)
 {
-
+    dump("fix this\n");
 	if(message)
 	{
 		var folder = message.msgFolder

@@ -70,13 +70,6 @@ function GetServer(uri)
     return null;
 }
 
-function LoadMessage(messageNode)
-{
-    dump("remove this?  LoadMessage()\n");
-	var uri = messageNode.getAttribute('id');
-	LoadMessageByUri(uri);
-}
-
 function LoadMessageByUri(uri)
 {  
 	if(uri != gCurrentDisplayedMessage)
@@ -745,46 +738,6 @@ function GetSelectedFolderResource()
 }
 
 
-
-function ToggleMessageRead(treeItem)
-{
-/* 
-	var tree = GetThreadTree();
-
-	var messageResource = RDF.GetResource(treeItem.getAttribute('id'));
-
-	var property = RDF.GetResource('http://home.netscape.com/NC-rdf#IsUnread');
-	var result = tree.database.GetTarget(messageResource, property , true);
-	result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-	var isUnread = (result.Value == "true")
-
-	var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-	var messageArray = new Array(1);
-	messageArray[0] = message;
-
-	MarkMessagesRead(tree.database, messageArray, isUnread);
-*/
-}
-
-function ToggleMessageFlagged(treeItem)
-{
-/*
-	var tree = GetThreadTree();
-
-	var messageResource = RDF.GetResource(treeItem.getAttribute('id'));
-
-	var property = RDF.GetResource('http://home.netscape.com/NC-rdf#Flagged');
-	var result = tree.database.GetTarget(messageResource, property , true);
-	result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-	var flagged = (result.Value == "flagged")
-
-	var message = messageResource.QueryInterface(Components.interfaces.nsIMessage);
-	var messageArray = new Array(1);
-	messageArray[0] = message;
-
-	MarkMessagesFlagged(tree.database, messageArray, !flagged);
-*/
-}
 
 //Called when the splitter in between the thread and message panes is clicked.
 function OnClickThreadAndMessagePaneSplitter()

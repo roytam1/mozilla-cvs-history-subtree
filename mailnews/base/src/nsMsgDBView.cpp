@@ -3371,10 +3371,43 @@ nsMsgDBView::GetNumSelected(PRUint32 *numSelected)
 }
 
 // if nothing selected, return an NS_ERROR
+NS_IMETHODIMP
+nsMsgDBView::GetHdrForFirstSelectedMessage(nsIMsgDBHdr **hdr)
+{
+  NS_ENSURE_ARG_POINTER(hdr);
+
+  nsresult rv;
+  nsMsgKey key;
+  rv = GetKeyForFirstSelectedMessage(&key);
+  // don't assert, it is legal for nothing to be selected
+  if (NS_FAILED(rv)) return rv;
+
+  rv = m_db->GetMsgHdrForKey(key, hdr);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
+}
+
+// if nothing selected, return an NS_ERROR
 NS_IMETHODIMP 
 nsMsgDBView::GetURIForFirstSelectedMessage(char **uri)
 {
   NS_ENSURE_ARG_POINTER(uri);
+
+  nsresult rv;
+  nsMsgKey key;
+  rv = GetKeyForFirstSelectedMessage(&key);
+  // don't assert, it is legal for nothing to be selected
+  if (NS_FAILED(rv)) return rv;
+ 
+  rv = GenerateURIForMsgKey(key, m_folder, uri);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
+}
+
+nsresult
+nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
+{
+  NS_ENSURE_ARG_POINTER(key);
 
   if (!mOutlinerSelection) return NS_ERROR_UNEXPECTED;
 
@@ -3390,13 +3423,11 @@ nsMsgDBView::GetURIForFirstSelectedMessage(char **uri)
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (startRange >= 0 && startRange == endRange && startRange < GetSize()) {
-    // get the msgkey for the message
-    nsMsgKey msgkey = m_keys.GetAt(startRange);
-    rv = GenerateURIForMsgKey(msgkey, m_folder, uri);
-    NS_ENSURE_SUCCESS(rv,rv);
-    return NS_OK;
+    *key = m_keys.GetAt(startRange);
   }
   else {
     return NS_ERROR_UNEXPECTED;
   }
+
+  return NS_OK;
 }

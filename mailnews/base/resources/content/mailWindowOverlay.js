@@ -154,43 +154,26 @@ function InitMarkFlaggedItem(id)
 
 function SelectedMessagesAreRead()
 {
-    var aMessage = GetFirstSelectedMessage();
-
-    var compositeDS = GetCompositeDataSource("MarkMessageRead");
-    var property = RDF.GetResource('http://home.netscape.com/NC-rdf#IsUnread');
-
-    var areMessagesRead =false;
-
-    if(!aMessage)
-        areMessagesRead = false;
-    else
-    {
-        var result = compositeDS.GetTarget(aMessage, property, true);
-        result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-        areMessagesRead = result.Value != "true"
+    var isRead;
+    try {
+        isRead = gDBView.hdrForFirstSelectedMessage.isRead;
     }
-
-    return areMessagesRead;
+    catch (ex) {
+        isRead = false;
+    }
+    return isRead;
 }
 
 function SelectedMessagesAreFlagged()
 {
-    var aMessage = GetFirstSelectedMessage();
-
-    var compositeDS = GetCompositeDataSource("MarkMessageFlagged");
-    var property = RDF.GetResource('http://home.netscape.com/NC-rdf#Flagged');
-
-    var areMessagesFlagged = false;
-
-    if(!aMessage)
-        areMessagesFlagged = false;
-    else
-    {
-        var result = compositeDS.GetTarget(aMessage, property, true);
-        result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-        areMessagesFlagged = (result.Value == "flagged");
+    var isFlagged;
+    try {
+        isFlagged = gDBView.hdrForFirstSelectedMessage.isFlagged;
     }
-    return areMessagesFlagged;
+    catch (ex) {
+        isFlagged = false;
+    }
+    return isFlagged;
 }
 
 function GetFirstSelectedMsgFolder()
@@ -686,29 +669,19 @@ function CloseMailWindow()
 
 function MsgMarkMsgAsRead(markRead)
 {
-    if(markRead == null)
-    {
-        markRead= !SelectedMessagesAreRead();
+    if (!markRead) {
+        markRead = !SelectedMessagesAreRead();
     }
-    var selectedMessages = GetSelectedMessages();
-    var compositeDataSource = GetCompositeDataSource("MarkMessageRead");
-
-    MarkMessagesRead(compositeDataSource, selectedMessages, markRead);
+    MarkSelectedMessagesRead(markRead);
 }
 
 function MsgMarkAsFlagged(markFlagged)
 {
-    if(markFlagged == null)
-    {
-        markFlagged= !SelectedMessagesAreFlagged();
+    if (!markFlagged) {
+        markFlagged = !SelectedMessagesAreFlagged();
     }
-
-    var selectedMessages = GetSelectedMessages();
-    var compositeDataSource = GetCompositeDataSource("MarkMessageFlagged");
-
-    MarkMessagesFlagged(compositeDataSource, selectedMessages, markFlagged);
+    MarkSelectedMessagesFlagged(markFlagged);
 }
-
 
 function MsgMarkAllRead()
 {

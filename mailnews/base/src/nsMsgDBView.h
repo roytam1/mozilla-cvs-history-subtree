@@ -196,6 +196,7 @@ protected:
   nsresult MarkThreadRead(nsIMsgThread *threadHdr, nsMsgViewIndex threadIndex, nsMsgKeyArray &idsMarkedRead, PRBool bRead);
   PRBool IsValidIndex(nsMsgViewIndex index);
   nsresult ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState);
+  nsresult GetKeyForFirstSelectedMessage(nsMsgKey *key);
 
   void FreeAll(nsVoidArray *ptrs);
   void ClearHdrCache();

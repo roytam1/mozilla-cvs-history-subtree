@@ -780,3 +780,20 @@ PRBool nsMsgHdr::IsParentOf(nsIMsgDBHdr *possibleChild)
 	return (reference.Equals(messageId));
 }
 
+NS_IMETHODIMP nsMsgHdr::GetIsRead(PRBool *isRead)
+{
+    NS_ENSURE_ARG_POINTER(isRead);
+    if (!(m_initedValues & FLAGS_INITED))
+      InitFlags();
+    *isRead = m_flags & MSG_FLAG_READ;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgHdr::GetIsFlagged(PRBool *isFlagged)
+{
+    NS_ENSURE_ARG_POINTER(isFlagged);
+    if (!(m_initedValues & FLAGS_INITED))
+      InitFlags();
+    *isFlagged = m_flags & MSG_FLAG_MARKED;
+    return NS_OK;
+}

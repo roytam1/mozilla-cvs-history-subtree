@@ -636,3 +636,16 @@ NS_IMETHODIMP nsMessage::GetFolder(nsIMsgFolder **folder)
 	else
 		return NS_ERROR_FAILURE;
 }
+
+NS_IMETHODIMP nsMessage::GetIsRead(PRBool *isRead)
+{
+    // stubbed, since nsMessage is going away
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMessage::GetIsFlagged(PRBool *isFlagged)
+{
+    // stubbed, since nsMessage is going away
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+

@@ -27,6 +27,7 @@ interface nsIMsgFolder;
 interface nsIMsgWindow;
 interface nsIDOMElement;
 interface nsIMessenger;
+interface nsIMsgDBHdr;
 
 typedef long nsMsgViewSortOrderValue;
 typedef long nsMsgViewSortTypeValue;
@@ -233,6 +234,7 @@ interface nsIMsgDBView : nsISupports
     void getURIsForSelection([array, size_is(count)] out string uris, out unsigned long count);
 
     readonly attribute string URIForFirstSelectedMessage;
+    readonly attribute nsIMsgDBHdr hdrForFirstSelectedMessage;
 
     readonly attribute unsigned long numSelected;
 
