@@ -750,13 +750,6 @@ txMozillaXMLOutput::SignalTransformEnd()
         }
     }
 
-    nsCOMPtr<nsIScriptLoader> loader;
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
-    doc->GetScriptLoader(getter_AddRefs(loader));
-    if (loader) {
-        loader->RemoveObserver(this);
-    }
-
     mObserver = nsnull;
 
 //    if (root) {
@@ -765,7 +758,14 @@ txMozillaXMLOutput::SignalTransformEnd()
 
     // XXX Need a better way to determine transform success/failure
     if (mDocument) {
-      observer->OnTransformDone(NS_OK, mDocument);
+        nsCOMPtr<nsIScriptLoader> loader;
+        nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
+        doc->GetScriptLoader(getter_AddRefs(loader));
+        if (loader) {
+            loader->RemoveObserver(this);
+        }
+
+        observer->OnTransformDone(NS_OK, mDocument);
     }
     else {
       // XXX Need better error message and code.
