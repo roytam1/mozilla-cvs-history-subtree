@@ -80,6 +80,20 @@ public:
     txExpandedName mMode;
 };
 
+class txAttribute : public txInstruction
+{
+public:
+    txAttribute(Expr* aName, Expr* aNamespace,
+                   const txNamespaceMap& aMappings);
+    ~txAttribute();
+
+    TX_DECL_TXINSTRUCTION
+
+    Expr* mName;
+    Expr* mNamespace;
+    txNamespaceMap mMappings;
+};
+
 class txCallTemplate : public txInstruction
 {
 public:

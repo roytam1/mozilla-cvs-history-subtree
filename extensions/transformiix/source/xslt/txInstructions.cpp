@@ -45,6 +45,8 @@
 #include "txTextHandler.h"
 #include "nsIConsoleService.h"
 #include "nsIServiceManagerUtils.h"
+#include "txStringUtils.h"
+#include "txAtoms.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -69,6 +71,85 @@ txApplyTemplates::execute(txExecutionState& aEs)
                                       nsnull, &frame);
 
     return aEs.runTemplate(templ, this);
+}
+
+txAttribute::txAttribute(Expr* aName, Expr* aNamespace,
+                         const txNamespaceMap& aMappings)
+    : mName(aName),
+      mNamespace(aNamespace),
+      mMappings(aMappings)
+{
+}
+
+txAttribute::~txAttribute()
+{
+    delete mName;
+    delete mNamespace;
+}
+
+nsresult
+txAttribute::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+
+    ExprResult* exprRes = mName->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    nsAutoString name;
+    exprRes->stringValue(name);
+    delete exprRes;
+
+    if (!XMLUtils::isValidQName(name) ||
+        TX_StringEqualsAtom(name, txXMLAtoms::xmlns)) {
+        // tunkate name to indicate failure
+        name.Truncate();
+    }
+
+    nsCOMPtr<nsIAtom> prefix;
+    XMLUtils::getPrefix(name, getter_AddRefs(prefix));
+
+    PRInt32 nsId = kNameSpaceID_None;
+    if (!name.IsEmpty()) {
+        if (mNamespace) {
+            exprRes = mNamespace->evaluate(aEs.getEvalContext());
+            NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+            nsAutoString nspace;
+            exprRes->stringValue(nspace);
+            delete exprRes;
+
+            if (!nspace.IsEmpty()) {
+#ifdef TX_EXE
+                nsId = txNamespaceManager::getNamespaceID(nspace);
+#else
+                NS_ASSERTION(gTxNameSpaceManager, "No namespace manager");
+                rv = gTxNameSpaceManager->RegisterNameSpace(nspace, nsId);
+                NS_ENSURE_SUCCESS(rv, rv);
+#endif
+            }
+        }
+        else if (prefix) {
+            nsId = mMappings.lookupNamespace(prefix);
+            if (nsId == kNameSpaceID_Unknown) {
+                // tunkate name to indicate failure
+                name.Truncate();
+            }
+        }
+    }
+
+    if (prefix == txXMLAtoms::xmlns) {
+        // Cut xmlns: (6 characters)
+        name.Cut(0, 6);
+    }
+
+    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    if (!name.IsEmpty()) {
+        // add attribute if everything was ok
+        aEs.mResultHandler->attribute(name, nsId, handler->mValue);
+    }
+    delete handler;
+
+    return NS_OK;
 }
 
 txCallTemplate::txCallTemplate(const txExpandedName& aName)

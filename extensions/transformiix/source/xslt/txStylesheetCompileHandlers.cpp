@@ -644,6 +644,52 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:attribute
+nsresult
+txFnStartAttribute(PRInt32 aNamespaceID,
+                   nsIAtom* aLocalName,
+                   nsIAtom* aPrefix,
+                   txStylesheetAttr* aAttributes,
+                   PRInt32 aAttrCount,
+                   txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* name = nsnull;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                    aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* nspace = nsnull;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::_namespace, PR_FALSE,
+                    aState, nspace);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    instr = new txAttribute(name, nspace, aState.mElementContext->mMappings);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndAttribute(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 // xsl:call-template
 nsresult
 txFnStartCallTemplate(PRInt32 aNamespaceID,
@@ -1073,6 +1119,7 @@ txHandlerTableData gTxTopTableData = {
 txHandlerTableData gTxTemplateTableData = {
   // Handlers
   { { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
+    { kNameSpaceID_XSLT, "attribute", txFnStartAttribute, txFnEndAttribute },
     { kNameSpaceID_XSLT, "call-template", txFnStartCallTemplate, txFnEndCallTemplate },
     { kNameSpaceID_XSLT, "comment", txFnStartComment, txFnEndComment },
     { kNameSpaceID_XSLT, "element", txFnStartElement, txFnEndElement },
