@@ -306,10 +306,11 @@ nsIndexedToHTML::OnStopRequest(nsIRequest* request, nsISupports *aContext,
     rv = FormatInputStream(request, aContext, buffer);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mParser->OnStopRequest(request, aContext, aStatus);
-    if (NS_FAILED(rv)) return rv;
-
-    mParser = 0;
+    if (mParser) {
+        rv = mParser->OnStopRequest(request, aContext, aStatus);
+        if (NS_FAILED(rv)) return rv;
+        mParser = 0;
+    }
     
     return mListener->OnStopRequest(request, aContext, aStatus);
 }
@@ -333,7 +334,10 @@ nsIndexedToHTML::OnDataAvailable(nsIRequest *aRequest,
                                  nsIInputStream* aInput,
                                  PRUint32 aOffset,
                                  PRUint32 aCount) {
-    return mParser->OnDataAvailable(aRequest, aCtxt, aInput, aOffset, aCount);
+    if (mParser)
+        return mParser->OnDataAvailable(aRequest, aCtxt, aInput, aOffset, aCount);
+    
+    return NS_OK;
 }
 
 // This defines the number of rows we are going to have per table
