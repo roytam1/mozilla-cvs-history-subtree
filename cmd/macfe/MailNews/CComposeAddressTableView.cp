@@ -21,6 +21,11 @@
 // CComposeAddressTableView.cp
 
 #include "abcom.h"
+#ifdef MOZ_NEWADDR
+#include "addbook.h"
+#else
+#include "addrbook.h"
+#endif //MOZ_NEWADDR
 #include "CComposeAddressTableView.h"
 
 #include <LDropFlag.h>
@@ -31,8 +36,6 @@
 #include "UGraphicGizmos.h"
 #include "CMailComposeWindow.h"
 #include "CMailFlexTable.h"
-#include "addrbook.h"
-#include "addbook.h"
 #include "dirprefs.h"
 #include "CComposeSession.h"
 #include "CDrawingState.h"
@@ -147,7 +150,12 @@ Boolean CMailAddressEditField::HandleKeyPress(const EventRecord& inKeyEvent)
 		theKeyStatus = keyStatus_PassUp;	// Always pass up when Cmd-Key down
 	else
 		if (mKeyFilter != nil)
-			theKeyStatus = (*mKeyFilter)(inKeyEvent);
+		{
+			Int16		theChar = inKeyEvent.message & charCodeMask;
+			
+			theKeyStatus = (*mKeyFilter)(mTextEditH, inKeyEvent.message,
+									theChar, inKeyEvent.modifiers);
+		}
 
 	if (mIsCompletedName)
 	{
