@@ -530,7 +530,11 @@ nsPKCS12Blob::inputToDecoder(SEC_PKCS12DecoderContext *dcx, nsILocalFile *file)
   char buf[PIP_PKCS12_BUFFER_SIZE];
 
   nsCOMPtr<nsIInputStream> fileStream;
-  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file);
+  rv = NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file);
+  
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   while (PR_TRUE) {
     rv = fileStream->Read(buf, PIP_PKCS12_BUFFER_SIZE, &amount);
