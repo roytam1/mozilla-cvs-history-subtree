@@ -102,12 +102,12 @@ tier_1_dirs	+= jpeg
 endif
 
 ifndef MOZ_NATIVE_ZLIB
-tier_1_dirs	+= modules/zlib
+tier_1_dirs	+= modules/zlib/src
 endif
 
 # Installer needs standalone libjar, hence standalone zlib
 ifdef MOZ_INSTALLER
-tier_1_dirs	+= modules/zlib/standalone
+tier_1_dirs	+= modules/zlib/standalone modules/libjar/standalone
 endif
 
 ifdef MOZ_INTERNAL_LIBART_LGPL
