@@ -63,4 +63,4 @@ done
 
 eval "set -- $moreargs"
 echo $dist_bin/run-mozilla.sh $script_args $dist_bin/$MOZILLA_BIN "$@"
-$dist_bin/run-mozilla.sh $script_args $dist_bin/$MOZILLA_BIN "$@"
+exec $dist_bin/run-mozilla.sh $script_args $dist_bin/$MOZILLA_BIN "$@"
