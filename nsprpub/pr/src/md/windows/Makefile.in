@@ -58,6 +58,28 @@ CSRCS = \
     ntinrval.c \
     $(NULL)
 else
+ifeq ($(OS_TARGET), WINCE)
+CSRCS = \
+    ntmisc.c \
+    ntsec.c   \
+    ntsem.c   \
+    ntinrval.c \
+    ntgc.c \
+    w95thred.c \
+    w95io.c \
+    w95cv.c \
+    w32rng.c \
+    w95sock.c \
+    win32_errors.c \
+    w32ipcsem.c \
+    w32poll.c \
+    w32shm.c \
+    w95dllmain.c \
+    w32time.c \
+    w32unicode.c \
+    w32netdb.c \
+    $(NULL)
+else
 ifeq ($(OS_TARGET), WIN95)
 CSRCS =          \
     ntmisc.c \
@@ -94,6 +116,7 @@ CSRCS =          \
     $(NULL)
 endif
 endif
+endif
 
 TARGETS	= $(OBJS)
 
@@ -105,11 +128,3 @@ include $(topsrcdir)/config/rules.mk
 
 export:: $(TARGETS)
 
-# Bug 122433 workaround: disable global optimization (-Og-) on ntio.c.
-ifdef BUILD_OPT
-ifeq ($(OS_TARGET), WINNT)
-$(OBJDIR)/ntio.$(OBJ_SUFFIX): ntio.c
-	@$(MAKE_OBJDIR)
-	$(CC) -Fo$@ -c $(CFLAGS) -Og- $<
-endif
-endif

@@ -69,7 +69,11 @@ DLL_SUFFIX = dll
 OS_CFLAGS = -W3 -nologo -GF -Gy
 
 ifdef BUILD_OPT
+ifeq ($(OS_TARGET),WINCE)
+OS_CFLAGS += -Zl
+else
 OS_CFLAGS += -MD
+endif
 OPTIMIZER = -O2
 DEFINES = -UDEBUG -U_DEBUG -DNDEBUG
 DLLFLAGS = -OUT:"$@"
@@ -87,10 +91,14 @@ else
 # Define USE_DEBUG_RTL if you want to use the debug runtime library
 # (RTL) in the debug build
 #
+ifeq ($(OS_TARGET),WINCE)
+OS_CFLAGS += -Zl
+else
 ifdef USE_DEBUG_RTL
 OS_CFLAGS += -MDd
 else
 OS_CFLAGS += -MD
+endif
 endif
 OPTIMIZER = -Od -Z7
 #OPTIMIZER = -Zi -Fd$(OBJDIR)/ -Od
@@ -140,7 +148,15 @@ OS_CFLAGS += -G5
 endif
 DEFINES += -DWINNT
 else
-DEFINES += -DWIN95 -D_PR_GLOBAL_THREADS_ONLY
+DEFINES += -D_PR_GLOBAL_THREADS_ONLY
+ifeq ($(OS_TARGET),WINCE)
+DEFINES += -DWINCE -D$(CPU_ARCH) -DUNICODE -D_UNICODE -DUNDER_CE=300 -D_WIN32_WCE=300
+ifeq ($(CPU_ARCH),x86)
+DEFINES += -D_WIN32_WCE_CEPC
+endif
+else
+DEFINES += -DWIN95
+endif
 endif
 
 ifeq ($(CPU_ARCH),x86)
@@ -152,7 +168,11 @@ else
 ifeq ($(CPU_ARCH),ALPHA)
 DEFINES += -D_ALPHA_=1
 else
+ifeq ($(CPU_ARCH),ARM)
+DEFINES += -D_ARM_=1
+else
 CPU_ARCH = processor_is_undefined
+endif
 endif
 endif
 endif
@@ -173,4 +193,12 @@ endif
 
 OBJDIR_NAME = $(OS_CONFIG)$(CPU_ARCH_TAG)$(OBJDIR_TAG).$(OBJDIR_SUFFIX)
 
+ifeq ($(OS_TARGET),WINCE)
+ifeq ($(TARGETCPU),X86)
+OS_DLLFLAGS = -nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib
+else
+OS_DLLFLAGS = -nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:ARM -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib
+endif
+else
 OS_DLLFLAGS = -nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE
+endif

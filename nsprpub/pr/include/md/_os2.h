@@ -47,33 +47,6 @@
 
 #include <errno.h>
 
-#define USE_RAMSEM
-
-#ifdef USE_RAMSEM
-#pragma pack(4)
-
-#pragma pack(2)
-typedef struct _RAMSEM
-{
-   ULONG   ulTIDPID;
-   ULONG   hevSem;
-   ULONG   cLocks;
-   USHORT  cWaiting;
-   USHORT  cPosts;
-} RAMSEM, *PRAMSEM;
-
-typedef struct _CRITICAL_SECTION
-{
-    ULONG ulReserved[4]; /* Same size as RAMSEM */
-} CRITICAL_SECTION, *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
-#pragma pack(4)
-
-VOID    APIENTRY DeleteCriticalSection(PCRITICAL_SECTION);
-VOID    APIENTRY EnterCriticalSection(PCRITICAL_SECTION);
-VOID    APIENTRY InitializeCriticalSection(PCRITICAL_SECTION);
-VOID    APIENTRY LeaveCriticalSection(PCRITICAL_SECTION);
-#endif
-
 #ifdef XP_OS2_EMX
 /*
  * EMX-specific tweaks:
@@ -189,11 +162,7 @@ struct _MDNotified {
 };
 
 struct _MDLock {
-#ifdef USE_RAMSEM
-    CRITICAL_SECTION mutex;            /* this is recursive on NT */
-#else
-    HMTX mutex;                        /* this is recursive on NT */
-#endif
+    HMTX mutex;          /* this is recursive on NT */
 
     /*
      * When notifying cvars, there is no point in actually
@@ -289,7 +258,7 @@ extern void _MD_MakeNonblock(PRFileDesc *f);
 #define _MD_INIT_FD_INHERITABLE       (_PR_MD_INIT_FD_INHERITABLE)
 #define _MD_QUERY_FD_INHERITABLE      (_PR_MD_QUERY_FD_INHERITABLE)
 #define _MD_SHUTDOWN                  (_PR_MD_SHUTDOWN)
-#define _MD_LISTEN                    _PR_MD_LISTEN
+#define _MD_LISTEN(s, backlog)        listen(s->secret->md.osfd,backlog)
 extern PRInt32 _MD_CloseSocket(PRInt32 osfd);
 #define _MD_CLOSE_SOCKET              _MD_CloseSocket
 #define _MD_SENDTO                    (_PR_MD_SENDTO)

@@ -239,15 +239,13 @@
 /***********************************************************************
 ** MACROS:      PR_ROUNDUP
 **              PR_MIN
-**              PR_MAX
-**              PR_ABS
+**                              PR_MAX
 ** DESCRIPTION:
 **      Commonly used macros for operations on compatible types.
 ***********************************************************************/
 #define PR_ROUNDUP(x,y) ((((x)+((y)-1))/(y))*(y))
 #define PR_MIN(x,y)     ((x)<(y)?(x):(y))
 #define PR_MAX(x,y)     ((x)>(y)?(x):(y))
-#define PR_ABS(x)       ((x)<0?-(x):(x))
 
 PR_BEGIN_EXTERN_C
 

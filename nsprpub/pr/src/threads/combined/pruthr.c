@@ -33,13 +33,15 @@
  */
 
 #include "primpl.h"
+#if !defined(WINCE)
 #include <signal.h>
+#endif
 #include <string.h>
 
 #if defined(WIN95)                                                                         
 /*
 ** Some local variables report warnings on Win95 because the code paths
-** using them are conditioned on HAVE_CUSTOME_USER_THREADS.
+** using them are conditioned on HAVE_CUSTOM_USER_THREADS.
 ** The pragma suppresses the warning.
 **
 */
@@ -85,6 +87,7 @@ PRThread *suspendAllThread = NULL;
 
 extern PRCList _pr_active_global_threadQ;
 extern PRCList _pr_active_local_threadQ;
+extern _PRCPU  *_pr_primordialCPU;
 
 static void _PR_DecrActiveThreadCount(PRThread *thread);
 static PRThread *_PR_AttachThread(PRThreadType, PRThreadPriority, PRThreadStack *);

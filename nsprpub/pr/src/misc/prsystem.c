@@ -150,6 +150,7 @@ PR_IMPLEMENT(PRStatus) PR_GetSystemInfo(PRSysInfo cmd, char *buf, PRUint32 bufle
 	  default:
 			PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
 			return PR_FAILURE;
+			break;
     }
     return PR_SUCCESS;
 }

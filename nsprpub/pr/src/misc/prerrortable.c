@@ -57,8 +57,12 @@ provided "as is" without express or implied warranty.
 #ifdef SUNOS4
 #include "md/sunos4.h"  /* for strerror */
 #endif
+#if !defined(WINCE)
 #include <assert.h>
 #include <errno.h>
+#else
+#include "primpl.h"
+#endif
 #include "prmem.h"
 #include "prerror.h"
 
@@ -145,7 +149,11 @@ PR_ErrorToString(PRErrorCode code, PRLanguageCode language)
     }
 
     if (code >= 0 && code < 256) {
+#if !defined(WINCE)
 	return strerror(code);
+#else
+        return "errno range error";
+#endif
     }
 
     offset = (int) (code & ((1<<ERRCODE_RANGE)-1));
@@ -201,7 +209,11 @@ PR_ErrorInstallTable(const struct PRErrorTable *table)
     new_et = (struct PRErrorTableList *)
 					PR_Malloc(sizeof(struct PRErrorTableList));
     if (!new_et)
+#if !defined(WINCE)
 	return errno;	/* oops */
+#else
+        return ENOMEM;
+#endif
     new_et->table = table;
     if (callback_newtable) {
 	new_et->table_private = callback_newtable(table, callback_private);
@@ -221,8 +233,13 @@ PR_ErrorInstallCallback(const char * const * languages,
 {
     struct PRErrorTableList *et;
 
+#if !defined(WINCE)
     assert(strcmp(languages[0], "i-default") == 0);
     assert(strcmp(languages[1], "en") == 0);
+#else
+    PR_ASSERT(strcmp(languages[0], "i-default") == 0);
+    PR_ASSERT(strcmp(languages[1], "en") == 0);
+#endif
     
     callback_languages = languages;
     callback_lookup = lookup;

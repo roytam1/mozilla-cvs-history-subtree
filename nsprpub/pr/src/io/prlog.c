@@ -242,7 +242,11 @@ void _PR_InitLog(void)
 #ifdef XP_PC
                 char* str = PR_smprintf("Unable to create nspr log file '%s'\n", ev);
                 if (str) {
+#if !defined(WINCE)
                     OutputDebugString(str);
+#else
+                    OutputDebugStringA(str);
+#endif
                     PR_smprintf_free(str);
                 }
 #else
@@ -355,8 +359,10 @@ PR_IMPLEMENT(PRBool) PR_SetLogFile(const char *file)
 #endif
     newLogFile = fopen(file, "w");
     if (newLogFile) {
+#if !defined(WINCE)
         /* We do buffering ourselves. */
         setvbuf(newLogFile, NULL, _IONBF, 0);
+#endif
         if (logFile && logFile != stdout && logFile != stderr) {
             fclose(logFile);
         }
@@ -440,7 +446,11 @@ PR_IMPLEMENT(void) PR_LogPrint(const char *fmt, ...)
     if (logBuf == 0) {
 #ifdef XP_PC
         if ( logFile == WIN32_DEBUG_FILE)
+#if !defined(WINCE)
             OutputDebugString( line );
+#else
+            OutputDebugStringA( line );
+#endif
         else
             _PUT_LOG(logFile, line, nb);
 #else
@@ -473,7 +483,12 @@ PR_IMPLEMENT(void) PR_LogFlush(void)
 PR_IMPLEMENT(void) PR_Abort(void)
 {
     PR_LogPrint("Aborting");
+
+#if !defined(WINCE)
     abort();
+#else
+    TerminateProcess(GetCurrentProcess(), 3 /* exit code, same as abort */);
+#endif
 }
 
 #if defined(XP_OS2)
@@ -507,7 +522,7 @@ PR_IMPLEMENT(void) PR_Assert(const char *s, const char *file, PRIntn ln)
     DebugBreak();
 #endif
 #ifndef XP_MAC
-    abort();
+    PR_Abort();
 #endif
 }
 

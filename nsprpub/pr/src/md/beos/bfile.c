@@ -118,45 +118,18 @@ _MD_make_nonblock (PRFileDesc *fd)
 
 }
 
-PRStatus
-_MD_set_fd_inheritable (PRFileDesc *fd, PRBool inheritable)
-{
-        int rv;
-	
-        rv = fcntl(fd->secret->md.osfd, F_SETFD, inheritable ? 0 : FD_CLOEXEC);
-        if (-1 == rv) {
-                PR_SetError(PR_UNKNOWN_ERROR, _MD_ERRNO());
-                return PR_FAILURE;
-        }
-        return PR_SUCCESS;
-}
-
 void
 _MD_init_fd_inheritable (PRFileDesc *fd, PRBool imported)
 {
-	if (imported) {
-		fd->secret->inheritable = _PR_TRI_UNKNOWN;
-	} else {
-		int flags = fcntl(fd->secret->md.osfd, F_GETFD, 0);
-		if (flags == -1) {
-			PR_SetError(PR_UNKNOWN_ERROR, _MD_ERRNO());
-			return;
-		}
-		fd->secret->inheritable = (flags & FD_CLOEXEC) ? 
-			_PR_TRI_TRUE : _PR_TRI_FALSE;
-	}
+	/* XXX this function needs to be implemented */
+	fd->secret->inheritable = _PR_TRI_UNKNOWN;
 }
 
 void
 _MD_query_fd_inheritable (PRFileDesc *fd)
 {
-	int flags;
-	
-	PR_ASSERT(_PR_TRI_UNKNOWN == fd->secret->inheritable);
-	flags = fcntl(fd->secret->md.osfd, F_GETFD, 0);
-	PR_ASSERT(-1 != flags);
-	fd->secret->inheritable = (flags & FD_CLOEXEC) ?
-		_PR_TRI_FALSE : _PR_TRI_TRUE;
+	/* XXX this function needs to be implemented */
+	PR_ASSERT(0);
 }
 
 PRInt32

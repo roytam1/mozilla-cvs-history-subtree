@@ -35,7 +35,9 @@
 #include "primpl.h"
 
 #include <string.h>
+#if !defined(WINCE)
 #include <fcntl.h>
+#endif
 
 #ifdef XP_UNIX
 #if defined(AIX) || defined(QNX)
@@ -703,7 +705,7 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
 #pragma unused (readPipe, writePipe)
 #endif
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(WINCE)
     HANDLE readEnd, writeEnd;
     SECURITY_ATTRIBUTES pipeAttributes;
 

@@ -69,7 +69,7 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
          *
          * WARNING WARNING WARNING WARNING WARNING WARNING WARNING */
 
-#if !defined WIN95 // Win95 does not have fibers
+#if !defined(WIN95) && !defined(WINCE) /* Win95/WinCE does not have fibers */
         int *fiberData = t->md.fiber_id;
 
         /* I found these offsets by disassembling SwitchToFiber().
@@ -94,6 +94,8 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
     }
     return (PRWord *)&t->md.gcContext;
 #elif defined(_ALPHA_)
+#elif defined(_ARM_)
+    return NULL;
 #endif /* defined(_X86_) */
 }
 
@@ -119,5 +121,7 @@ GetMyFiberID()
   
     return fiberData;
 #elif defined(_ALPHA_)
+#elif defined(_ARM_)
+    return NULL;
 #endif /* defined(_X86_) */
 }
