@@ -16,6 +16,26 @@
  * Reserved.
  */
 
+/*
+
+  This file provides the implementation for the RDF service manager.
+
+  TO DO
+  -----
+
+  1) Figure out a better way to do "pluggable resources." Currently,
+     we have two _major_ hacks:
+
+       RegisterBuiltInNamedDataSources()
+       RegisterBuiltInResourceFactories()
+
+     These introduce dependencies on the datasource directory. You'd
+     like to have this stuff discovered dynamically at startup or
+     something. Maybe from the registry.
+
+  2) Implement the CreateDataBase() methods.
+     
+ */
 
 #include "nsIAtom.h"
 #include "nsIRDFDataSource.h"
@@ -36,10 +56,16 @@ static NS_DEFINE_IID(kIRDFNodeIID,            NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
 ////////////////////////////////////////////////////////////////////////
-
-/**
- * A simple map from a string prefix to a value.
- */
+// PrefixMap
+//
+//   A simple map from a string prefix to a value. It maintains an
+//   ordered list of prefixes that map to a <tt>void*</tt>. The list
+//   is sorted in ASCII order such that if one prefix <b>p</b> is
+//   itself a prefix of another prefix <b>q</b>, the longest prefix
+//   (<b>q</b>) will appear first in the list. The idea is that you
+//   want to find the "best" match first. (Will this actually be
+//   useful? Probabably not...)
+//
 class PrefixMap
 {
 private:
@@ -162,9 +188,7 @@ PrefixMap::Remove(const char* aPrefix)
     return nsnull;
 }
 
-/**
- * Find the most specific value matching the specified string.
- */
+
 const void*
 PrefixMap::Find(const char* aString)
 {
@@ -182,7 +206,15 @@ PrefixMap::Find(const char* aString)
 
 ////////////////////////////////////////////////////////////////////////
 // LiteralImpl
-
+//
+//   Currently, all literals are implemented exactly the same way;
+//   i.e., there is are no resource factories to allow you to generate
+//   customer resources. I doubt that makes sense, anyway.
+//
+//   What _may_ make sense is to atomize literals (well, at least
+//   short ones), to reduce in memory overhead at the expense of some
+//   processing time.
+//
 class LiteralImpl : public nsIRDFLiteral {
 public:
     LiteralImpl(const PRUnichar* s);
@@ -280,7 +312,10 @@ LiteralImpl::EqualsLiteral(const nsIRDFLiteral* literal, PRBool* result) const
 }
 
 ////////////////////////////////////////////////////////////////////////
-
+// ServiceImpl
+//
+//   This is the RDF service.
+//
 class ServiceImpl : public nsIRDFService
 {
 protected:
@@ -322,8 +357,6 @@ public:
 nsIRDFService* ServiceImpl::gRDFService = nsnull;
 
 ////////////////////////////////////////////////////////////////////////
-// ServiceImpl
-
 
 ServiceImpl::ServiceImpl(void)
     : mResources(nsnull), mNamedDataSources(nsnull)
@@ -545,6 +578,10 @@ ServiceImpl::CreateBrowserDatabase(nsIRDFDataBase** dataBase)
 
 
 ////////////////////////////////////////////////////////////////////////
+//
+//   This is Big Hack #1. Depedencies on all builtin resource
+//   factories are *here*, in the ResourceFactoryTable.
+//
 
 struct ResourceFactoryTable {
     const char* mPrefix;
@@ -584,6 +621,17 @@ ServiceImpl::RegisterBuiltInResourceFactories(void)
 }
 
 ////////////////////////////////////////////////////////////////////////
+//
+//   This is Big Hack #2. Dependencies on all builtin datasources are
+//   *here*, in the DataSourceTable.
+//
+//   FWIW, I don't particularly like this interface *anyway*, because
+//   it requires each built-in data source to be constructed "up
+//   front". Not only does it cause the service manager to be
+//   re-entered (which may be a problem), but it's wasteful: I think
+//   these data sources should be created on demand, and released when
+//   you're done with them.
+//
 
 struct DataSourceTable {
     const char* mURI;
