@@ -325,6 +325,7 @@ private:
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
   PRPackedBool       mContentFocused;
+  PRPackedBool       mWidgetVisible;    // used on Mac to store our widget's visible state
   PRUint16          mNumCachedAttrs;
   PRUint16          mNumCachedParams;
   char              **mCachedAttrParamNames;
@@ -344,7 +345,7 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
   // Mac specific code to fix up port position and clip during paint
 #ifdef XP_MAC
   // get the absolute widget position and clip
-  static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect); 
+  static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect, PRBool& aIsVisible); 
   // convert relative coordinates to absolute
   static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&aContainerWidget);
 #endif // XP_MAC
@@ -1463,26 +1464,25 @@ nsObjectFrame::DidReflow(nsIPresContext*           aPresContext,
       vm->SetViewVisibility(view, bHidden ? nsViewVisibility_kHide : nsViewVisibility_kShow);
   }
 
-  if (bHidden)
-    return rv;
-
   nsPluginWindow *window;
-
-  if (!mInstanceOwner || NS_FAILED(mInstanceOwner->GetWindow(window)))
+ 
+  nsCOMPtr<nsIPluginInstance> pi; 
+  if (!mInstanceOwner ||
+      NS_FAILED(rv = mInstanceOwner->GetWindow(window)) || 
+      NS_FAILED(rv = mInstanceOwner->GetInstance(*getter_AddRefs(pi))) ||
+      !pi ||
+      !window)
     return rv;
 
-  PRBool windowless = (window->type == nsPluginWindowType_Drawable);
-
-  // if we are on Mac or windowless on Windows we will get Paint 
-  // event anyway so there is no need to update plugin window
-  // and call NPP_SetWindow here, it'll be done in Paint.
-  // Windowed plugins thought need it to be done here, there will
-  // no chance to do it later because they will get paint event
-  // from the OS itself
 #ifdef XP_MAC
+  mInstanceOwner->FixUpPluginWindow();
   return rv;
 #endif // XP_MAC
 
+  if (bHidden)
+    return rv;
+
+  PRBool windowless = (window->type == nsPluginWindowType_Drawable);
   if(windowless)
     return rv;
 
@@ -1494,14 +1494,7 @@ nsObjectFrame::DidReflow(nsIPresContext*           aPresContext,
 
   // refresh the plugin port as well
   window->window = mInstanceOwner->GetPluginPort();
-
-  nsIPluginInstance *inst;
-
-  if (NS_OK == mInstanceOwner->GetInstance(inst)) {
-    inst->SetWindow(window);
-    NS_RELEASE(inst);
-  }
-
+  pi->SetWindow(window);
   mInstanceOwner->ReleasePluginPort((nsPluginPort *)window->window);
 
   if (mWidget) {
@@ -2043,6 +2036,7 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mTagText = nsnull;
   mPluginHost = nsnull;
   mContentFocused = PR_FALSE;
+  mWidgetVisible = PR_TRUE;
   mNumCachedAttrs = 0;
   mNumCachedParams = 0;
   mCachedAttrParamNames = nsnull;
@@ -3212,6 +3206,10 @@ nsPluginInstanceOwner::MouseMove(nsIDOMEvent* aMouseEvent)
   // continue only for cases without child window
 #endif
 
+  // don't send mouse events if we are hiddden
+  if (!mWidgetVisible)
+    return NS_OK;
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
     nsMouseEvent* mouseEvent = nsnull;
@@ -3303,6 +3301,10 @@ nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
     return NS_ERROR_FAILURE; // means consume event
   // continue only for cases without child window
 #endif
+
+  // don't send mouse events if we are hiddden
+  if (!mWidgetVisible)
+    return NS_OK;
 
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
@@ -3542,6 +3544,11 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
         EventRecord idleEvent;
         InitializeEventRecord(&idleEvent);
         idleEvent.what = nullEvent;
+
+        // give a bogus 'where' field of our null event when hidden, so Flash
+        // won't respond to mouse moves in other tabs, see bug 120875
+        if (!mWidgetVisible)
+          idleEvent.where.h = idleEvent.where.v = 20000;
         
         nsPluginPort* pluginPort = GetPluginPort();
         nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(pluginPort->port) };
@@ -3788,9 +3795,12 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
 #ifdef XP_MAC
   // calculate the absolute position and clip for a widget 
   // and use other windows in calculating the clip
-static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY,
-                                nsRect& aClipRect) 
+static void GetWidgetPosClipAndVis(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY,
+                                nsRect& aClipRect, PRBool& aIsVisible) 
 {
+  if (aIsVisible)
+    aWidget->IsVisible(aIsVisible);
+
   aWidget->GetBounds(aClipRect); 
   aAbsX = aClipRect.x; 
   aAbsY = aClipRect.y; 
@@ -3800,10 +3810,12 @@ static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbs
   aClipRect.x = 0; 
   aClipRect.y = 0; 
 
-   // Gather up the absolute position of the widget 
-   // + clip window 
+  // Gather up the absolute position of the widget, clip window, and visibilty 
   nsCOMPtr<nsIWidget> widget = getter_AddRefs(aWidget->GetParent());
   while (widget != nsnull) { 
+    if (aIsVisible)
+      widget->IsVisible(aIsVisible);
+
     nsRect wrect; 
     widget->GetClientBounds(wrect); 
     nscoord wx, wy; 
@@ -3827,6 +3839,10 @@ static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbs
 
   aClipRect.x += aAbsX; 
   aClipRect.y += aAbsY; 
+
+  // if we are not visible, clear out the plugin's clip so it won't paint
+  if (!aIsVisible)
+    aClipRect.Empty();
 
   //printf("--------------\n"); 
   //printf("Widget clip X %d Y %d rect %d %d %d %d\n", aAbsX, aAbsY,  aClipRect.x,  aClipRect.y, aClipRect.width,  aClipRect.height ); 
@@ -3900,7 +3916,18 @@ void nsPluginInstanceOwner::FixUpPluginWindow()
     nscoord absWidgetX = 0;
     nscoord absWidgetY = 0;
     nsRect widgetClip(0,0,0,0);
-    GetWidgetPosAndClip(mWidget,absWidgetX,absWidgetY,widgetClip);
+    
+    // first, check our view for CSS visibility style
+    nsIView *view;
+    mOwner->GetView(mContext, &view);
+    nsViewVisibility vis;
+    view->GetVisibility(vis);
+    PRBool isVisible = (vis == nsViewVisibility_kShow) ? PR_TRUE : PR_FALSE;
+    
+    GetWidgetPosClipAndVis(mWidget,absWidgetX,absWidgetY,widgetClip,isVisible);
+
+    if (mWidgetVisible != isVisible)
+      mWidgetVisible = isVisible;
 
     // set the port coordinates
     mPluginWindow.x = absWidgetX;
@@ -3928,6 +3955,5 @@ void nsPluginInstanceOwner::FixUpPluginWindow()
     ::SetPort(savePort);  // restore port
   }
 }
-
 
 #endif // XP_MAC
