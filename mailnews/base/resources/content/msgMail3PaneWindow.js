@@ -462,8 +462,7 @@ function OnLoadMessenger()
   //set up correctly.
   // argument[0] --> folder uri
   // argument[1] --> optional message key
-  dump('arguments[0]: ' + window.arguments[0] + '\n');
-  dump('arguments[1]: ' + window.arguments[1] + '\n');
+
   if ("arguments" in window && window.arguments[0])
   {
     gStartFolderUri = window.arguments[0];
