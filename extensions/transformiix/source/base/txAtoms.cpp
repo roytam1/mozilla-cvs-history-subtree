@@ -39,16 +39,16 @@
 
 #include "txAtoms.h"
 
-#define TX_ATOM(_name, _value) txAtom* txXMLAtoms::_name = 0
+#define TX_ATOM(_name, _value) nsIAtom* txXMLAtoms::_name = 0
 XML_ATOMS;
 #undef TX_ATOM
-#define TX_ATOM(_name, _value) txAtom* txXPathAtoms::_name = 0
+#define TX_ATOM(_name, _value) nsIAtom* txXPathAtoms::_name = 0
 #include "txXPathAtomList.h"
 #undef TX_ATOM
-#define TX_ATOM(_name, _value) txAtom* txXSLTAtoms::_name = 0
+#define TX_ATOM(_name, _value) nsIAtom* txXSLTAtoms::_name = 0
 #include "txXSLTAtomList.h"
 #undef TX_ATOM
-#define TX_ATOM(_name, _value) txAtom* txHTMLAtoms::_name = 0
+#define TX_ATOM(_name, _value) nsIAtom* txHTMLAtoms::_name = 0
 #include "txHTMLAtomList.h"
 #undef TX_ATOM
 
@@ -57,16 +57,9 @@ static PRUint32 gXPathRefCnt = 0;
 static PRUint32 gXSLTRefCnt = 0;
 static PRUint32 gHTMLRefCnt = 0;
 
-#ifdef TX_EXE
-#define TX_ATOM(_name, _value)           \
-    _name = TX_GET_ATOM(String(_value)); \
-    if (!_name)                          \
-        return MB_FALSE
-#else
 #define TX_ATOM(_name, _value)      \
     _name = NS_NewAtom(_value);     \
     NS_ENSURE_TRUE(_name, MB_FALSE)
-#endif
 
 MBool txXMLAtoms::init()
 {
@@ -107,7 +100,7 @@ MBool txHTMLAtoms::init()
 #undef TX_ATOM
 
 #define TX_ATOM(_name, _value) \
-TX_IF_RELEASE_ATOM(_name)
+NS_IF_RELEASE(_name)
 
 void txXMLAtoms::shutdown()
 {

@@ -34,6 +34,7 @@
  *
  */
 
+#include "nsString.h"
 #include "primitives.h"
 #include "XMLUtils.h"
 #include <math.h>
@@ -41,15 +42,7 @@
 #ifdef WIN32
 #include <float.h>
 #endif
-//A trick to handle IEEE floating point exceptions on FreeBSD - E.D.
-#ifdef __FreeBSD__
-#include <ieeefp.h>
-#endif
-#ifndef TX_EXE
 #include "prdtoa.h"
-#else
-#include <stdio.h>
-#endif
 
 /*
  * Utility class for doubles
@@ -57,6 +50,7 @@
 
 //A trick to handle IEEE floating point exceptions on FreeBSD - E.D.
 #ifdef __FreeBSD__
+#include <ieeefp.h>
 #ifdef __alpha__
 fp_except_t allmask = FP_X_INV|FP_X_OFL|FP_X_UFL|FP_X_DZ|FP_X_IMP;
 #else
@@ -129,63 +123,113 @@ MBool Double::isNeg(double aDbl)
  * Converts the given String to a double, if the String value does not
  * represent a double, NaN will be returned
  */
-double Double::toDouble(const String& aSrc)
+class txStringToDouble
 {
-    PRUint32 idx = 0;
-    PRUint32 len = aSrc.length();
-    MBool digitFound = MB_FALSE;
+public:
+    typedef PRUnichar input_type;
+    typedef PRUnichar value_type;
+    txStringToDouble(): mState(eWhitestart), mSign(ePositive) {}
 
-    // leading whitespace
-    while (idx < len &&
-           XMLUtils::isWhitespace(aSrc.charAt(idx))) {
-        ++idx;
-    }
-
-    // sign char
-    if (idx < len && aSrc.charAt(idx) == '-')
-        ++idx;
-
-    // integer chars
-    while (idx < len &&
-           aSrc.charAt(idx) >= '0' &&
-           aSrc.charAt(idx) <= '9') {
-        ++idx;
-        digitFound = MB_TRUE;
-    }
-
-    // decimal separator
-    if (idx < len && aSrc.charAt(idx) == '.') {
-        ++idx;
-
-        // fraction chars
-        while (idx < len &&
-               aSrc.charAt(idx) >= '0' &&
-               aSrc.charAt(idx) <= '9') {
-            ++idx;
-            digitFound = MB_TRUE;
+    PRUint32
+    write(const input_type* aSource, PRUint32 aSourceLength)
+    {
+        if (mState == eIllegal) {
+            return aSourceLength;
         }
+        PRUint32 i = 0;
+        PRUnichar c;
+        for ( ; i < aSourceLength; ++i) {
+            c = aSource[i];
+            switch (mState) {
+                case eWhitestart:
+                    if (c == '-') {
+                        mState = eDecimal;
+                        mSign = eNegative;
+                    }
+                    else if (c >= '0' && c <= '9') {
+                        mState = eDecimal;
+                        mBuffer.Append((char)c);
+                    }
+                    else if (c == '.') {
+                        mState = eMantissa;
+                        mBuffer.Append((char)c);
+                    }
+                    else if (!XMLUtils::isWhitespace(c)) {
+                        mState = eIllegal;
+                        return aSourceLength;
+                    }
+                    break;
+                case eDecimal:
+                    if (c >= '0' && c <= '9') {
+                        mBuffer.Append((char)c);
+                    }
+                    else if (c == '.') {
+                        mState = eMantissa;
+                        mBuffer.Append((char)c);
+                    }
+                    else if (XMLUtils::isWhitespace(c)) {
+                        mState = eWhiteend;
+                    }
+                    else {
+                        mState = eIllegal;
+                        return aSourceLength;
+                    }
+                    break;
+                case eMantissa:
+                    if (c >= '0' && c <= '9') {
+                        mBuffer.Append((char)c);
+                    }
+                    else if (XMLUtils::isWhitespace(c)) {
+                        mState = eWhiteend;
+                    }
+                    else {
+                        mState = eIllegal;
+                        return aSourceLength;
+                    }
+                    break;
+                case eWhiteend:
+                    if (!XMLUtils::isWhitespace(c)) {
+                        mState = eIllegal;
+                        return aSourceLength;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        return aSourceLength;
     }
 
-    // ending whitespace
-    while (idx < len &&
-           XMLUtils::isWhitespace(aSrc.charAt(idx))) {
-        ++idx;
+    double
+    getDouble()
+    {
+        if (mState == eIllegal || mBuffer.IsEmpty() ||
+            (mBuffer.Length() == 1 && mBuffer[0] == '.')) {
+            return Double::NaN;
+        }
+        return mSign*PR_strtod(mBuffer.get(), 0);
     }
+private:
+    nsCAutoString mBuffer;
+    enum {
+        eWhitestart,
+        eDecimal,
+        eMantissa,
+        eWhiteend,
+        eIllegal
+    } mState;
+    enum {
+        eNegative = -1,
+        ePositive = 1
+    } mSign;
+};
 
-    // "."==NaN, ".0"=="0."==0
-    if (digitFound && idx == len) {
-        NS_LossyConvertUCS2toASCII buf(aSrc);
-        double res = buf.get() ?
-#ifdef TX_EXE
-                     atof(buf.get())
-#else
-                     PR_strtod(buf.get(), 0)
-#endif
-                     : Double::NaN;
-        return res;
-    }
-
-    return Double::NaN;
+double Double::toDouble(const nsAString& aSrc)
+{
+    txStringToDouble sink;
+    nsAString::const_iterator fromBegin, fromEnd;
+    copy_string(aSrc.BeginReading(fromBegin), aSrc.EndReading(fromEnd), sink);
+    return sink.getDouble();
 }
 
 /*
@@ -193,20 +237,20 @@ double Double::toDouble(const String& aSrc)
  * The result into the destination String.
  * @return the given dest string
  */
-String& Double::toString(double aValue, String& aDest)
+void Double::toString(double aValue, nsAString& aDest)
 {
 
     // check for special cases
 
     if (isNaN(aValue)) {
-        aDest.append("NaN");
-        return aDest;
+        aDest.Append(NS_LITERAL_STRING("NaN"));
+        return;
     }
     if (isInfinite(aValue)) {
         if (aValue < 0)
-            aDest.append('-');
-        aDest.append("Infinity");
-        return aDest;
+            aDest.Append(PRUnichar('-'));
+        aDest.Append(NS_LITERAL_STRING("Infinity"));
+        return;
     }
 
     int bufsize;
@@ -218,60 +262,25 @@ String& Double::toString(double aValue, String& aDest)
     char* buf = new char[bufsize];
     if (!buf) {
         NS_ASSERTION(0, "out of memory");
-        return aDest;
+        return;
     }
-
-#ifndef TX_EXE
 
     PRIntn intDigits, sign;
     char* endp;
     PR_dtoa(aValue, 0, 0, &intDigits, &sign, &endp, buf, bufsize-1);
 
     if (sign)
-        aDest.append('-');
+        aDest.Append(PRUnichar('-'));
 
     int i;
     for (i = 0; i < endp - buf; i++) {
         if (i == intDigits)
-            aDest.append('.');
-        aDest.append(buf[i]);
+            aDest.Append(PRUnichar('.'));
+        aDest.Append(PRUnichar(buf[i]));
     }
     
     for (; i < intDigits; i++)
-        aDest.append('0');
+        aDest.Append(PRUnichar('0'));
 
-#else
-
-    sprintf(buf, "%1.10f", aValue);
-
-    MBool deciPassed = MB_FALSE;
-    MBool printDeci = MB_FALSE;
-    int zeros=0;
-    int i;
-    for (i = 0; buf[i]; i++) {
-        if (buf[i] == '.') {
-            deciPassed = MB_TRUE;
-            printDeci = MB_TRUE;
-        }
-        else if (deciPassed && buf[i] == '0') {
-            zeros++;
-        }
-        else {
-            if (printDeci) {
-                aDest.append('.');
-                printDeci = MB_FALSE;
-            }
-
-            for ( ;zeros ;zeros--)
-                aDest.append('0');
-
-            aDest.append(buf[i]);
-        }
-    }
-
-#endif
-    
     delete [] buf;
-    
-    return aDest;
 }

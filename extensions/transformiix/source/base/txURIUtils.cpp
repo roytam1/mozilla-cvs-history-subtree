@@ -50,16 +50,10 @@
 #ifdef TX_EXE
 //- Constants -/
 
-const String URIUtils::HTTP_PROTOCOL("http");
-const String URIUtils::FILE_PROTOCOL("file");
 const char   URIUtils::HREF_PATH_SEP  = '/';
 const char   URIUtils::DEVICE_SEP     = '|';
 const char   URIUtils::PORT_SEP       = ':';
 const char   URIUtils::PROTOCOL_SEP   = ':';
-const short  URIUtils::PROTOCOL_MODE  = 1;
-const short  URIUtils::HOST_MODE      = 2;
-const short  URIUtils::PORT_MODE      = 3;
-const short  URIUtils::PATH_MODE      = 4;
 
 
 /**
@@ -70,8 +64,7 @@ const short  URIUtils::PATH_MODE      = 4;
  * @exception java.io.FileNotFoundException when the file could not be
  * found
 **/
-istream* URIUtils::getInputStream
-    (const String& href, String& errMsg)
+istream* URIUtils::getInputStream(const nsAString& href, nsAString& errMsg)
 {
 
     istream* inStream = 0;
@@ -95,31 +88,22 @@ istream* URIUtils::getInputStream
     * Returns the document base of the href argument
     * @return the document base of the given href
 **/
-void URIUtils::getDocumentBase(const String& href, String& dest) {
-    //-- use temp str so the subString method doesn't destroy dest
-    String docBase("");
-
-    if (!href.isEmpty()) {
-
-        int idx = -1;
-        //-- check for URL
-        ParsedURI* uri = parseURI(href);
-        if ( !uri->isMalformed ) {
-            idx = href.lastIndexOf(HREF_PATH_SEP);
-        }
-        else {
-            //-- The following contains a fix from Shane Hathaway
-            //-- to handle the case when both "\" and "/" appear in filename
-            int idx2 = href.lastIndexOf(HREF_PATH_SEP);
-            //idx = href.lastIndexOf(File.separator);
-            idx = -1; //-- hack change later
-            if (idx2 > idx) idx = idx2;
-        }
-        if (idx >= 0) href.subString(0,idx, docBase);
-        delete uri;
+void URIUtils::getDocumentBase(const nsAFlatString& href, nsAString& dest)
+{
+    if (href.IsEmpty()) {
+        return;
     }
-    dest.append(docBase);
-} //-- getDocumentBase
+
+    nsAFlatString::const_char_iterator temp;
+    href.BeginReading(temp);
+    PRUint32 iter = href.Length();
+    while (iter > 0) {
+        if (temp[--iter] == HREF_PATH_SEP) {
+            dest.Append(Substring(href, 0, iter));
+            break;
+        }
+    }
+}
 #endif
 
 /**
@@ -127,83 +111,64 @@ void URIUtils::getDocumentBase(const String& href, String& dest) {
  * if necessary.
  * The new resolved href will be appended to the given dest String
 **/
-void URIUtils::resolveHref(const String& href, const String& base,
-                           String& dest) {
-    if (base.isEmpty()) {
-        dest.append(href);
+void URIUtils::resolveHref(const nsAString& href, const nsAString& base,
+                           nsAString& dest) {
+    if (base.IsEmpty()) {
+        dest.Append(href);
         return;
     }
-    if (href.isEmpty()) {
-        dest.append(base);
+    if (href.IsEmpty()) {
+        dest.Append(base);
         return;
     }
 
 #ifndef TX_EXE
     nsCOMPtr<nsIURI> pURL;
-    String resultHref;
+    nsAutoString resultHref;
     nsresult result = NS_NewURI(getter_AddRefs(pURL), base);
     if (NS_SUCCEEDED(result)) {
         NS_MakeAbsoluteURI(resultHref, href, pURL);
-        dest.append(resultHref);
+        dest.Append(resultHref);
     }
 #else
-    String documentBase;
-    getDocumentBase(base, documentBase);
+    nsAutoString documentBase;
+    getDocumentBase(PromiseFlatString(base), documentBase);
 
     //-- check for URL
     ParsedURI* uri = parseURI(href);
     if ( !uri->isMalformed ) {
-        dest.append(href);
+        dest.Append(href);
         delete uri;
         return;
     }
 
 
     //-- join document base + href
-    String xHref;
-    if (!documentBase.isEmpty()) {
-        xHref.append(documentBase);
-        if (documentBase.charAt(documentBase.length()-1) != HREF_PATH_SEP)
-            xHref.append(HREF_PATH_SEP);
+    nsAutoString xHref;
+    if (!documentBase.IsEmpty()) {
+        xHref.Append(documentBase);
+        if (documentBase.CharAt(documentBase.Length()-1) != HREF_PATH_SEP)
+            xHref.Append(PRUnichar(HREF_PATH_SEP));
     }
-    xHref.append(href);
+    xHref.Append(href);
 
     //-- check new href
     ParsedURI* newUri = parseURI(xHref);
     if ( !newUri->isMalformed ) {
-        dest.append(xHref);
+        dest.Append(xHref);
     }
     else {
         // Try local files
         ifstream inFile(NS_LossyConvertUCS2toASCII(xHref).get(),
                         ios::in);
-        if ( inFile ) dest.append(xHref);
-        else dest.append(href);
+        if ( inFile ) dest.Append(xHref);
+        else dest.Append(href);
         inFile.close();
     }
     delete uri;
     delete newUri;
-    //cout << "\n---\nhref='" << href << "', base='" << base << "'\ndocumentBase='" << documentBase << "', dest='" << dest << "'\n---\n";
 #endif
 } //-- resolveHref
-
-void URIUtils::getFragmentIdentifier(const String& href, String& frag) {
-    PRInt32 pos;
-    pos = href.lastIndexOf('#');
-    if(pos != kNotFound)
-        href.subString(pos+1, frag);
-    else
-        frag.clear();
-} //-- getFragmentIdentifier
-
-void URIUtils::getDocumentURI(const String& href, String& docUri) {
-    PRInt32 pos;
-    pos = href.lastIndexOf('#');
-    if(pos != kNotFound)
-        href.subString(0,pos,docUri);
-    else
-        docUri = href;
-} //-- getDocumentURI
 
 #ifdef TX_EXE
 istream* URIUtils::openStream(ParsedURI* uri) {
@@ -211,7 +176,7 @@ istream* URIUtils::openStream(ParsedURI* uri) {
     // check protocol
 
     istream* inStream = 0;
-    if ( FILE_PROTOCOL.isEqual(uri->protocol) ) {
+    if (uri->protocol.Equals(NS_LITERAL_STRING("file"))) {
         ifstream* inFile =
             new ifstream(NS_LossyConvertUCS2toASCII(uri->path).get(),
                          ios::in);
@@ -221,42 +186,42 @@ istream* URIUtils::openStream(ParsedURI* uri) {
     return inStream;
 } //-- openStream
 
-URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
-
+URIUtils::ParsedURI* URIUtils::parseURI(const nsAString& aUri) {
+    const nsAFlatString& uri = PromiseFlatString(aUri);
     ParsedURI* uriTokens = new ParsedURI;
     if (!uriTokens)
-        return NULL;
+        return nsnull;
     uriTokens->isMalformed = MB_FALSE;
 
-    short mode = PROTOCOL_MODE;
+    ParseMode mode = PROTOCOL_MODE;
 
     // look for protocol
-    int totalCount = uri.length();
+    int totalCount = uri.Length();
     int charCount = 0;
-    UNICODE_CHAR prevCh = '\0';
+    PRUnichar prevCh = '\0';
     int fslash = 0;
-    String buffer(uri.length());
+    nsAutoString buffer;
     while ( charCount < totalCount ) {
-        UNICODE_CHAR ch = uri.charAt(charCount++);
+        PRUnichar ch = uri.CharAt(charCount++);
         switch(ch) {
             case '.' :
                 if ( mode == PROTOCOL_MODE ) {
                     uriTokens->isMalformed = MB_TRUE;
                     mode = HOST_MODE;
                 }
-                buffer.append(ch);
+                buffer.Append(ch);
                 break;
             case ':' :
             {
                 switch ( mode ) {
                     case PROTOCOL_MODE :
                         uriTokens->protocol = buffer;
-                        buffer.clear();
+                        buffer.Truncate();
                         mode = HOST_MODE;
                         break;
                     case HOST_MODE :
                         uriTokens->host = buffer;
-                        buffer.clear();
+                        buffer.Truncate();
                         mode = PORT_MODE;
                         break;
                     default:
@@ -267,25 +232,25 @@ URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
             case '/' :
                 switch ( mode ) {
                     case HOST_MODE :
-                        if (!buffer.isEmpty()) {
+                        if (!buffer.IsEmpty()) {
                             mode = PATH_MODE;
-                            buffer.append(ch);
+                            buffer.Append(ch);
                         }
                         else if ( fslash == 2 ) mode = PATH_MODE;
                         else ++fslash;
                         break;
                     case PORT_MODE :
                         mode = PATH_MODE;
-                        uriTokens->port.append(buffer);
-                        buffer.clear();
+                        uriTokens->port.Append(buffer);
+                        buffer.Truncate();
                         break;
                     default:
-                        buffer.append(ch);
+                        buffer.Append(ch);
                         break;
                 }
                 break;
             default:
-                buffer.append(ch);
+                buffer.Append(ch);
         }
         prevCh = ch;
     }
@@ -294,19 +259,19 @@ URIUtils::ParsedURI* URIUtils::parseURI(const String& uri) {
         uriTokens->isMalformed = MB_TRUE;
     }
     //-- finish remaining mode
-    if (!buffer.isEmpty()) {
+    if (!buffer.IsEmpty()) {
         switch ( mode ) {
             case PROTOCOL_MODE :
-                uriTokens->protocol.append(buffer);
+                uriTokens->protocol.Append(buffer);
                 break;
             case HOST_MODE :
-                uriTokens->host.append(buffer);
+                uriTokens->host.Append(buffer);
                 break;
             case PORT_MODE :
-                uriTokens->port.append(buffer);
+                uriTokens->port.Append(buffer);
                 break;
             case PATH_MODE :
-                uriTokens->path.append(buffer);
+                uriTokens->path.Append(buffer);
                 break;
             default:
                 break;
