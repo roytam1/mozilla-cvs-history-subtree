@@ -44,11 +44,6 @@ interface nsIUrlbarHistory: nsISupports
    readonly attribute long count;
 
   /**
-   * print the History contents
-   */
-   void printHistory();
-
-  /**
    * clear the History contents
    */
    void clearHistory();

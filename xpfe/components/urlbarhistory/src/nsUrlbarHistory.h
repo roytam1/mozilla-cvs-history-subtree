@@ -47,16 +47,16 @@ public:
 protected:
    virtual ~nsUrlbarHistory();
 
+#if 0
    NS_IMETHOD SearchPreviousResults(const PRUnichar *, nsIAutoCompleteResults *);
-   NS_IMETHOD SearchCache(const PRUnichar *, nsIAutoCompleteResults *);
-   NS_IMETHOD GetHostIndex(const PRUnichar * aPath, PRInt32 * aReturn);
-   NS_IMETHOD CheckItemAvailability(const PRUnichar * aItem, nsIAutoCompleteResults * aArray, PRBool * aResult);
-   NS_IMETHOD VerifyAndCreateEntry(const PRUnichar * aItem, PRUnichar * aMatchItem, nsIAutoCompleteResults * aArray);
+#endif
+   NS_IMETHOD SearchCache(nsAReadableString&, nsIAutoCompleteResults *);
+   NS_IMETHOD GetHostIndex(nsAReadableString& aPath, PRInt32 * aReturn);
+   NS_IMETHOD CheckItemAvailability(nsAReadableString& aItem, nsIAutoCompleteResults * aArray, PRBool * aResult);
+   NS_IMETHOD VerifyAndCreateEntry(nsAReadableString& aItem, nsString& aMatchItem, nsIAutoCompleteResults * aArray);
 
 private:
-    nsVoidArray   mArray;
-	PRInt32 mLength;
-	nsVoidArray  mIgnoreArray;
+	nsStringArray  mIgnoreArray;
 	nsCOMPtr<nsIRDFDataSource> mDataSource;
 };
 

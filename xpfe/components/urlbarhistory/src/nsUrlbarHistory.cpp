@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 0 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -79,19 +79,19 @@ static nsIPref * gPrefs;
 //***    nsUrlbarHistory: Object Management
 //*****************************************************************************
 
-nsUrlbarHistory::nsUrlbarHistory():mLength(0)
+nsUrlbarHistory::nsUrlbarHistory()
 {
    NS_INIT_REFCNT();
    PRInt32 cnt = sizeof(ignoreArray)/sizeof(char *);
    for(PRInt32 i=0; i< cnt; i++) 
-     mIgnoreArray.AppendElement((void *) new nsString(NS_ConvertASCIItoUCS2(ignoreArray[i])));
+     mIgnoreArray.AppendString(NS_ConvertASCIItoUCS2(ignoreArray[i]));
    
    nsresult res;
 
    res = nsServiceManager::GetService(kRDFServiceCID, NS_GET_IID(nsIRDFService),
-	                                            (nsISupports **)&gRDFService);
+                                      (nsISupports **)&gRDFService);
    res = nsServiceManager::GetService(kRDFCUtilsCID, NS_GET_IID(nsIRDFContainerUtils),
-	                                            (nsISupports **)&gRDFCUtils);
+                                      (nsISupports **)&gRDFCUtils);
    if (gRDFService) {
 	   //printf("$$$$ Got RDF SERVICE $$$$\n");
      res = gRDFService->GetDataSource("rdf:localstore", getter_AddRefs(mDataSource));
@@ -113,29 +113,15 @@ nsUrlbarHistory::~nsUrlbarHistory()
 {
 	//Entries are now in RDF
     //ClearHistory();
-	PRInt32 cnt = sizeof(ignoreArray)/sizeof(char *);
-    for(PRInt32 j=0; j< cnt; j++)  {
-		nsString * ignoreEntry = (nsString *) mIgnoreArray.ElementAt(j);
-	    delete ignoreEntry;
-	}
-	mIgnoreArray.Clear();
-	if (gRDFService)
-    {
-        nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
-        gRDFService = nsnull;
-    }
-    if (gRDFCUtils)
-    {
-        nsServiceManager::ReleaseService(kRDFCUtilsCID, gRDFCUtils);
-        gRDFCUtils = nsnull;
-    }
+    
 	mDataSource = nsnull;
+    
+    NS_IF_RELEASE(gRDFService);
+    NS_IF_RELEASE(gRDFCUtils);
 	NS_IF_RELEASE(kNC_URLBARHISTORY);
 	NS_IF_RELEASE(kNC_CHILD);
-    if (gPrefs) {
-		nsServiceManager::ReleaseService(kPrefServiceCID, gPrefs);
-	    gPrefs = nsnull;
-	}
+
+    NS_IF_RELEASE(gPrefs);
 }
 
 //*****************************************************************************
@@ -202,25 +188,9 @@ nsUrlbarHistory::GetCount(PRInt32 * aResult)
 
 
 NS_IMETHODIMP
-nsUrlbarHistory::PrintHistory()
-{
-	for (PRInt32 i=0; i<mLength; i++) {
-       nsString * entry = nsnull;
-	   entry = (nsString *) mArray.ElementAt(i);
-	   NS_ENSURE_TRUE(entry, NS_ERROR_FAILURE);
-	   char * cEntry;
-	   cEntry = entry->ToNewCString();
-	   printf("Entry at index %d is %s\n", i, cEntry);
-	   Recycle(cEntry);
-	}
-
-  return NS_OK;
-}
-
-
-
-NS_IMETHODIMP
-nsUrlbarHistory::OnStartLookup(const PRUnichar *uSearchString, nsIAutoCompleteResults *previousSearchResult, nsIAutoCompleteListener *listener)
+nsUrlbarHistory::OnStartLookup(const PRUnichar *uSearchString,
+                               nsIAutoCompleteResults *previousSearchResult,
+                               nsIAutoCompleteListener *listener)
 {
     nsresult rv = NS_OK;
  
@@ -247,7 +217,7 @@ nsUrlbarHistory::OnStartLookup(const PRUnichar *uSearchString, nsIAutoCompleteRe
     // Check if it is one of the generic strings "http://, www., ftp:// etc..
     PRInt32 cnt = mIgnoreArray.Count();
 	for(PRInt32 i=0; i<cnt; i++) {
-       nsString * match = (nsString *)mIgnoreArray.ElementAt(i);
+       nsString * match = mIgnoreArray.StringAt(i);
 	   
 	   if (match) {
           PRInt32 index = match->Find(uSearchString, PR_TRUE);
@@ -272,47 +242,48 @@ nsUrlbarHistory::OnStartLookup(const PRUnichar *uSearchString, nsIAutoCompleteRe
 	
 	results = do_CreateInstance(NS_AUTOCOMPLETERESULTS_CONTRACTID);
 	NS_ENSURE_TRUE(results, NS_ERROR_FAILURE);
-    rv = SearchCache(uSearchString, results);    
+    rv = SearchCache(nsLiteralString(uSearchString), results);    
 
     AutoCompleteStatus status = nsIAutoCompleteStatus::failed;
-    if (NS_SUCCEEDED(rv))
-    {
-        PRBool addedDefaultItem = PR_FALSE;
+    if (NS_FAILED(rv)) return NS_OK;
+    
+    PRBool addedDefaultItem = PR_FALSE;
 
-        results->SetSearchString(uSearchString);
-        results->SetDefaultItemIndex(-1);
+    results->SetSearchString(uSearchString);
+    results->SetDefaultItemIndex(-1);
 
-        nsCOMPtr<nsISupportsArray> array;
-        rv = results->GetItems(getter_AddRefs(array));
-        if (NS_SUCCEEDED(rv))
-        {
-            PRUint32 nbrOfItems;
-            rv = array->Count(&nbrOfItems);
-            if (NS_SUCCEEDED(rv)) {
-                if (nbrOfItems > 1)
-                {
-                    results->SetDefaultItemIndex(addedDefaultItem ? 1 : 0);
-                    status = nsIAutoCompleteStatus::matchFound;
-                }
-                else {
-                    if (nbrOfItems == 1)
-                    {
-                        results->SetDefaultItemIndex(0);
-                        status = nsIAutoCompleteStatus::matchFound;
-                    }
-                    else
-                        status = nsIAutoCompleteStatus::noMatch;
-				}
-			}  // NS_SUCCEEDED(rv)
+    nsCOMPtr<nsISupportsArray> array;
+    rv = results->GetItems(getter_AddRefs(array));
+
+    if (NS_FAILED(rv)) return NS_OK;
+    
+    PRUint32 nbrOfItems;
+    rv = array->Count(&nbrOfItems);
+
+    if (NS_SUCCEEDED(rv)) {
+        if (nbrOfItems > 1) {
+            results->SetDefaultItemIndex(addedDefaultItem ? 1 : 0);
+            status = nsIAutoCompleteStatus::matchFound;
         }
-    listener->OnAutoComplete(results, status);
-	}
+        else {
+            if (nbrOfItems == 1) {
+                results->SetDefaultItemIndex(0);
+                status = nsIAutoCompleteStatus::matchFound;
+            }
+            else
+                status = nsIAutoCompleteStatus::noMatch;
+        }
+    }  // NS_SUCCEEDED(rv)
 
+    listener->OnAutoComplete(results, status);
+    
     return NS_OK;
 }
 
+#if 0
 NS_IMETHODIMP
-nsUrlbarHistory::SearchPreviousResults(const PRUnichar *searchStr, nsIAutoCompleteResults *previousSearchResult)
+nsUrlbarHistory::SearchPreviousResults(const PRUnichar *searchStr,
+                                       nsIAutoCompleteResults *previousSearchResult)
 {
     if (!previousSearchResult)
         return NS_ERROR_NULL_POINTER;
@@ -335,75 +306,72 @@ nsUrlbarHistory::SearchPreviousResults(const PRUnichar *searchStr, nsIAutoComple
 
     nsCOMPtr<nsISupportsArray> array;
     rv = previousSearchResult->GetItems(getter_AddRefs(array));
-    if (NS_SUCCEEDED(rv))
-    {
-        PRUint32 nbrOfItems;
-        PRUint32 i;
+
+    if (NS_FAILED(rv)) return rv;
+    
+    PRUint32 nbrOfItems;
+    PRUint32 i;
         
-        rv = array->Count(&nbrOfItems);
-        if (NS_FAILED(rv) || nbrOfItems <= 0)
+    rv = array->Count(&nbrOfItems);
+    if (NS_FAILED(rv) || nbrOfItems <= 0)
+        return NS_ERROR_FAILURE;
+        
+    nsCOMPtr<nsISupports> item;
+    nsCOMPtr<nsIAutoCompleteItem> resultItem;
+        
+    // XXX I don't understand the purpose of this loop!
+    for (i = 0; i < nbrOfItems; i ++) {
+        rv = array->QueryElementAt(i, NS_GET_IID(nsIAutoCompleteItem),
+                                   getter_AddRefs(resultItem));
+        if (NS_FAILED(rv))
             return NS_ERROR_FAILURE;
-        
-	    nsCOMPtr<nsISupports> item;
-	    nsCOMPtr<nsIAutoCompleteItem> resultItem;
-        
 
-	    for (i = 0; i < nbrOfItems; i ++)
-	    {
-	        rv = array->QueryElementAt(i, nsIAutoCompleteItem::GetIID(), getter_AddRefs(resultItem));
-	        if (NS_FAILED(rv))
-                return NS_ERROR_FAILURE;
+        nsXPIDLString itemValue;
+        resultItem->GetValue(getter_Copies(itemValue));
+        nsAutoString itemAutoStr(itemValue);
 
-	        PRUnichar *  itemValue=nsnull;
-            resultItem->GetValue(&itemValue);
-			nsAutoString itemAutoStr(itemValue);
-
-            //printf("SearchPreviousResults::Comparing %s with %s \n", searchAutoStr.ToNewCString(), itemAutoStr.ToNewCString());
-			if (!itemValue)
-				continue;
-		    if (nsCRT::strncasecmp(searchStr, itemValue, searchStrLen) == 0)
-			{
-			    Recycle(itemValue);
-			    continue;
-			}
+        //printf("SearchPreviousResults::Comparing %s with %s \n", searchAutoStr.ToNewCString(), itemAutoStr.ToNewCString());
+        if (!(const PRUnichar*)itemValue)
+            continue;
+            
+        if (nsCRT::strncasecmp(searchStr, itemValue, searchStrLen) == 0)
+            continue;
 			
-	    }
-	    return NS_OK;
     }
-
-    return NS_ERROR_ABORT;
+    
+    return NS_OK;
 }
-
+#endif
 
 NS_IMETHODIMP
-nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults* results)
+nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
+                             nsIAutoCompleteResults* results)
 {
     nsresult rv = NS_OK;
 	nsCOMPtr<nsISimpleEnumerator>  entries;
 
     //printf("******** In SearchCache *******\n");
-    nsAutoString searchAutoStr(searchStr);
 	
 	PRInt32  protocolIndex=-1;
     nsAutoString searchProtocol, searchPath, resultAutoStr;
     PRInt32 searchPathIndex, searchStrLength;
 
     // Get the length of the search string
-    searchStrLength = searchAutoStr.Length();
+    searchStrLength = searchStr.Length();
     // Check if there is any protocol present in the 
     // search string.
     GetHostIndex(searchStr, &searchPathIndex);
     if (searchPathIndex > 0) {
         // There was a protocol in the search string. Strip off
         // the protocol from the rest of the url  
-        searchAutoStr.Left(searchProtocol, searchPathIndex);
-        searchAutoStr.Mid(searchPath, searchPathIndex, searchStrLength);
+        searchStr.Left(searchProtocol, searchPathIndex);
+        searchStr.Mid(searchPath, searchPathIndex, searchStrLength);
     }
     else {
         // There was no protocol in the search string. 
-        searchPath = searchAutoStr;
+        searchPath = searchStr;
     }
-	//printf("Search String is %s path = %s protocol = %s \n", searchAutoStr.ToNewCString(), searchPath.ToNewCString(), searchProtocol.ToNewCString());
+	//printf("Search String is %s path = %s protocol = %s \n", searchStr.ToNewCString(), searchPath.ToNewCString(), searchProtocol.ToNewCString());
 	   
 	if (!gRDFCUtils || !kNC_URLBARHISTORY)
         return NS_ERROR_FAILURE;
@@ -431,7 +399,7 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
        nsAutoString rdfAutoStr;
        nsAutoString rdfProtocol, rdfPath;
        PRInt32 rdfLength, rdfPathIndex, index = -1;
-       PRUnichar * match = nsnull;
+       nsAutoString match;
        const PRUnichar * rdfValue = nsnull;   
 
        rv = entries->GetNext(getter_AddRefs(entry));
@@ -445,7 +413,7 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
        rdfLength = rdfAutoStr.Length();        
 
        // Get the index of the hostname in the rdf string
-       GetHostIndex (rdfValue, &rdfPathIndex);
+       GetHostIndex (rdfAutoStr, &rdfPathIndex);
 
        if (rdfPathIndex > 0) {
           // RDf string has a protocol in it, Strip it off
@@ -468,7 +436,7 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
               protocolIndex = rdfProtocol.Find(searchProtocol);
               if (protocolIndex == 0) {
                   // Both protocols match. We found a result item
-                  match = rdfAutoStr.ToNewUnicode();
+                  match = rdfAutoStr;
               } 
            } 
            else if (searchProtocol.Length() && (rdfProtocol.Length() <= 0)) {
@@ -481,7 +449,7 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
                // all urls to be char *
                if ((searchProtocol.Find("http://", PR_TRUE)) == 0) {
                   resultAutoStr = searchProtocol + rdfPath;
-                  match = resultAutoStr.ToNewUnicode();
+                  match = resultAutoStr;
                }
            }
            else if ((searchProtocol.Length() <=0) && rdfProtocol.Length() ||
@@ -491,13 +459,13 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
                 * a) searchString has no protocol but rdfString has protocol
                 * b) Both searchString and rdfString don't have a protocol
                 */ 
-               match = rdfPath.ToNewUnicode();
+               match = rdfPath;
            }           
        }  // (index == 0)
 
       
 	   
-       if (match) {		   
+       if (!match.IsEmpty()) {		   
            /* We have a result item.
             * First make sure that the value is not already
             * present in the results array. If we have  
@@ -510,14 +478,13 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
            PRBool itemPresent = PR_FALSE;
            rv = CheckItemAvailability(match, results, &itemPresent);
            if (itemPresent) {
-               Recycle (match);
                continue;
            }
            //Create an AutoComplete Item 
 		   nsCOMPtr<nsIAutoCompleteItem> newItem(do_CreateInstance(NS_AUTOCOMPLETEITEM_CONTRACTID));
 		   NS_ENSURE_TRUE(newItem, NS_ERROR_FAILURE);
            
-           newItem->SetValue(match);
+           newItem->SetValue(match.get());
            nsCOMPtr<nsISupportsArray> array;
            rv = results->GetItems(getter_AddRefs(array));
            if (NS_SUCCEEDED(rv))
@@ -536,17 +503,15 @@ nsUrlbarHistory::SearchCache(const PRUnichar* searchStr, nsIAutoCompleteResults*
             rv = VerifyAndCreateEntry(searchStr, match, results);
 	   }   
 
-	   if (match)
-		   Recycle(match);
     }    // while 
     return rv;
 }
 
 
 NS_IMETHODIMP
-nsUrlbarHistory::GetHostIndex(const PRUnichar * aPath, PRInt32 * aReturn)
+nsUrlbarHistory::GetHostIndex(nsAReadableString& aPath, PRInt32 * aReturn)
 {
-    if (!aPath || !aReturn)
+    if (!aReturn)
         return NS_ERROR_FAILURE;
 
     PRInt32 slashIndex=-1;    
@@ -581,9 +546,11 @@ nsUrlbarHistory::GetHostIndex(const PRUnichar * aPath, PRInt32 * aReturn)
 }
 
 NS_IMETHODIMP
-nsUrlbarHistory::CheckItemAvailability(const PRUnichar * aItem, nsIAutoCompleteResults * aArray, PRBool * aResult)
+nsUrlbarHistory::CheckItemAvailability(nsAReadableString& aItem,
+                                       nsIAutoCompleteResults * aArray,
+                                       PRBool * aResult)
 {
-    if (!aItem || !aArray)
+    if (!aArray)
         return PR_FALSE;
     
     nsresult rv;
@@ -591,49 +558,49 @@ nsUrlbarHistory::CheckItemAvailability(const PRUnichar * aItem, nsIAutoCompleteR
 
     nsCOMPtr<nsISupportsArray> array;
     rv = aArray->GetItems(getter_AddRefs(array));
-    if (NS_SUCCEEDED(rv))
-    {
-        PRUint32 nbrOfItems=0;
-        PRUint32 i;
-        
-        rv = array->Count(&nbrOfItems);
-        // If there is no item found in the array, return false
-        if (nbrOfItems <= 0)
-            return PR_FALSE;
-        
-        nsCOMPtr <nsIAutoCompleteItem> resultItem;
-        for (i = 0; i < nbrOfItems; i ++)
-        {          
-            rv = array->QueryElementAt(i, NS_GET_IID(nsIAutoCompleteItem),
-                                       getter_AddRefs(resultItem));
-            if (NS_FAILED(rv))
-                return NS_ERROR_FAILURE;
 
-            nsXPIDLString itemValue;
-            resultItem->GetValue(getter_Copies(itemValue));
-            // Using nsIURI to do comparisons didn't quite work out.
-            // So use nsCRT methods
-            if (nsCRT::strcasecmp(itemValue, aItem) == 0)
+    // no item array, just return false;
+    if (NS_FAILED(rv)) return NS_OK;
+
+    PRUint32 nbrOfItems=0;
+    PRUint32 i;
+        
+    rv = array->Count(&nbrOfItems);
+    // If there is no item found in the array, return false
+    if (nbrOfItems <= 0)
+        return NS_OK;
+        
+    nsCOMPtr <nsIAutoCompleteItem> resultItem;
+    for (i = 0; i < nbrOfItems; i ++) {
+
+        rv = array->QueryElementAt(i, NS_GET_IID(nsIAutoCompleteItem),
+                                   getter_AddRefs(resultItem));
+        if (NS_FAILED(rv))
+            return NS_ERROR_FAILURE;
+
+        nsXPIDLString itemValue;
+        resultItem->GetValue(getter_Copies(itemValue));
+        // Using nsIURI to do comparisons didn't quite work out.
+        // So use nsCRT methods
+        if (aItem.Equals(itemValue))
             {
                 //printf("In CheckItemAvailability. Item already found\n");
                 *aResult = PR_TRUE;
                 break;
             }
-        }  // for
-    }
+    }  // for
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsUrlbarHistory::VerifyAndCreateEntry(const PRUnichar * aSearchItem, PRUnichar * aMatchStr, nsIAutoCompleteResults * aResultArray)
+nsUrlbarHistory::VerifyAndCreateEntry(nsAReadableString& aSearchItem,
+                                      nsString& aMatchStr,
+                                      nsIAutoCompleteResults * aResultArray)
 {
-    if (!aSearchItem || !aMatchStr || !aResultArray)
+    if (!aResultArray)
         return NS_ERROR_FAILURE;
 
-    PRInt32 searchStrLen = 0;
-
-    if (aSearchItem)
-        searchStrLen = nsCRT::strlen(aSearchItem);
+    PRInt32 searchStrLen = aSearchItem.Length();
     nsresult rv;
     nsCOMPtr<nsIURL>  searchURL = do_CreateInstance(kStandardURLCID, &rv);
     if (searchURL) {
@@ -659,7 +626,7 @@ nsUrlbarHistory::VerifyAndCreateEntry(const PRUnichar * aSearchItem, PRUnichar *
         
         // Find the position of the filepath in the result string
         nsAutoString matchAutoStr(aMatchStr);
-        PRInt32 slashIndex = matchAutoStr.Find("/", PR_FALSE, searchStrLen);
+        PRInt32 slashIndex = aMatchStr.Find("/", PR_FALSE, searchStrLen);
         // Extract the host name
         nsAutoString hostName;
         matchAutoStr.Left(hostName, slashIndex);
@@ -667,7 +634,7 @@ nsUrlbarHistory::VerifyAndCreateEntry(const PRUnichar * aSearchItem, PRUnichar *
         // Check if this host is already present in the result array
         // If not add it to the result array
         PRBool itemAvailable = PR_TRUE;
-        CheckItemAvailability(hostName.GetUnicode(), aResultArray, &itemAvailable);
+        CheckItemAvailability(hostName, aResultArray, &itemAvailable);
         if (!itemAvailable) {
             // Insert the host name to the result array at the top
             //Create an AutoComplete Item 
@@ -693,7 +660,9 @@ nsUrlbarHistory::OnStopLookup()
 }
 
 NS_IMETHODIMP
-nsUrlbarHistory::OnAutoComplete(const PRUnichar *searchString, nsIAutoCompleteResults *previousSearchResult, nsIAutoCompleteListener *listener)
+nsUrlbarHistory::OnAutoComplete(const PRUnichar *searchString,
+                                nsIAutoCompleteResults *previousSearchResult,
+                                nsIAutoCompleteListener *listener)
 {
 	return NS_OK;
 }
