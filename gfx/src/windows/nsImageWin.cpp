@@ -678,7 +678,7 @@ void nsImageWin::DrawComposited(HDC TheHDC, int aDX, int aDY, int aDWidth, int a
 
   ::SelectObject(memDC, oldBitmap);
   ::DeleteObject(tmpBitmap);
-  ::DeleteObject(memDC);
+  ::DeleteDC(memDC);
 }
 
 /** ---------------------------------------------------
@@ -792,7 +792,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
     HBITMAP tmpBitmap = ::CreateDIBSection(memDC, (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, (LPVOID *)&screenBits, NULL, 0);
     HBITMAP oldBitmap = (HBITMAP)::SelectObject(memDC, tmpBitmap);
     if(0 == tmpBitmap){
-      ::DeleteObject(memDC);
+      ::DeleteDC(memDC);
       tryAgain = PR_TRUE;
     } else {
       // Copy from the HDC to the memory DC
@@ -835,7 +835,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
       ::SelectObject(memDC, oldBitmap);
       ::DeleteObject(tmpBitmap);
-      ::DeleteObject(memDC);
+      ::DeleteDC(memDC);
   
     return(PR_TRUE);
     } 
@@ -914,7 +914,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
   tileBits = ::CreateCompatibleBitmap(TheHDC, TileBufferWidth,TileBufferHeight);
 
   if (NULL == tileBits){
-    ::DeleteObject(offDC);
+    ::DeleteDC(offDC);
     return (PR_FALSE);
   }
   oldBits =(HBITMAP) ::SelectObject(offDC,tileBits);
@@ -926,15 +926,15 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
     if (NULL ==maskDC){
       ::SelectObject(offDC,oldBits);
       ::DeleteObject(tileBits);
-      ::DeleteObject(offDC);
+      ::DeleteDC(offDC);
       return (PR_FALSE);
     }
     maskBits = ::CreateCompatibleBitmap(TheHDC, TileBufferWidth, TileBufferHeight);
     if (NULL ==maskBits){
       ::SelectObject(offDC,oldBits);
       ::DeleteObject(tileBits);
-      ::DeleteObject(offDC);
-      ::DeleteObject(maskDC);
+      ::DeleteDC(offDC);
+      ::DeleteDC(maskDC);
       return (PR_FALSE);
     }
 
@@ -991,12 +991,12 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
     } 
     ::SelectObject(maskDC,oldMaskBits);
     ::DeleteObject(maskBits);
-    ::DeleteObject(maskDC);
+    ::DeleteDC(maskDC);
   }
 
   ::SelectObject(offDC,oldBits);
   ::DeleteObject(tileBits);
-  ::DeleteObject(offDC);
+  ::DeleteDC(offDC);
 
   return NS_OK;
 }
@@ -1598,6 +1598,6 @@ CompositeBitsInMemory(HDC aTheHDC, int aDX, int aDY, int aDWidth, int aDHeight,
       }
       ::DeleteObject(tmpBitmap);
     }
-    ::DeleteObject(memDC);
+    ::DeleteDC(memDC);
   }
 }
