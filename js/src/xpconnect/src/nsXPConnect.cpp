@@ -643,8 +643,8 @@ nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16
 {
     NS_IF_ADDREF(aManager);
     NS_IF_RELEASE(mDefaultSecurityManager);
-    mDefaultSecurityManager = aManager;
-    mDefaultSecurityManagerFlags = flags;
+//    mDefaultSecurityManager = aManager;
+//    mDefaultSecurityManagerFlags = flags;
     return NS_OK;
 }        
 
