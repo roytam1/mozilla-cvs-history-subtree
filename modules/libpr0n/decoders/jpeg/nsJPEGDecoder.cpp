@@ -28,8 +28,6 @@
 
 #include "nspr.h"
 
-#include "nsUnitConverters.h"
-
 #include "nsCRT.h"
 
 #include "nsIComponentManager.h"
