@@ -264,11 +264,12 @@ function Startup()
 
 function InitDialog()
 {
-  // turn on extra1 to be "apply"
+// turn on extra1 to be "apply"
   var applyButton = document.documentElement.getButton("extra1");
   if (applyButton)
   {
     applyButton.label = GetString("Apply");
+    applyButton.setAttribute("accesskey", GetString("ApplyAccessKey"));
   }
   
   // Get Table attributes
@@ -906,7 +907,7 @@ function ValidateCellData()
   if (gDialog.TextWrapCheckbox.checked)
   {
     if (gDialog.TextWrapList.selectedIndex == 1)
-      globalCellElement.setAttribute("nowrap","true");
+      globalCellElement.setAttribute("nowrap","nowrap");
     else
       globalCellElement.removeAttribute("nowrap");
   }

@@ -45,7 +45,10 @@ function Startup()
   // Change button text: "Ok" to "Insert"; "Cancel" to "Close"
   var insertButton = document.documentElement.getButton("accept");
   if (insertButton)
+  {
     insertButton.setAttribute("label", GetString("Insert"));
+    insertButton.setAttribute("accesskey", GetString("InsertAccessKey"));
+  }
 
   var cancelButton = document.getElementById("insertCharsDlg").getButton("cancel");
   if (cancelButton)
@@ -64,7 +67,7 @@ function onAccept()
   // Insert the character
   // Note: Assiated parent window and editorShell
   //  will be changed to whatever editor window has the focus
-  window.editorShell.InsertSource(LatinChar);
+  window.editorShell.InsertText(LatinChar);
 
   // Set persistent attributes to save
   //  which category, letter, and character modifier was used
