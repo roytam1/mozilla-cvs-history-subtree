@@ -149,7 +149,7 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
 
 @interface HistoryDataSource(Private)
 
-- (void)cleanup;
+- (void)cleanupHistory;
 
 @end
 
@@ -157,12 +157,12 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
 
 - (void) dealloc
 {
-  [self cleanup];
+  [self cleanupHistory];
   [super dealloc];
 }
 
 // "non-virtual" cleanup method -- safe to call from dealloc.
-- (void)cleanup
+- (void)cleanupHistory
 {
   if (mDataSource && mObserver)
   {
@@ -174,7 +174,7 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
 // "virtual" method; called from superclass
 - (void)cleanupDataSource
 {
- 	[self cleanup];
+ 	[self cleanupHistory];
   [super cleanupDataSource];
 }
 
@@ -267,7 +267,7 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   if ([inValue length] == 0)
     inValue = [self getPropertyString:@"http://home.netscape.com/NC-rdf#URL" forItem:inItem];
   
-  NSMutableAttributedString *cellValue = [[NSMutableAttributedString alloc] initWithString:inValue];
+  NSMutableAttributedString *cellValue = [[[NSMutableAttributedString alloc] initWithString:inValue] autorelease];
   
   if ([inColumn isEqualToString:@"http://home.netscape.com/NC-rdf#Name"])
   {
@@ -275,7 +275,7 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
     NSTextAttachment  *textAttachment = [[NSTextAttachment alloc] initWithFileWrapper:fileWrapper];
 
     // Create an attributed string to hold the empty attachment, then release the components.
-    NSMutableAttributedString *attachmentAttrString = [[NSMutableAttributedString attributedStringWithAttachment:textAttachment] retain];
+    NSMutableAttributedString *attachmentAttrString = [NSMutableAttributedString attributedStringWithAttachment:textAttachment];
     [textAttachment release];
     [fileWrapper release];
 
