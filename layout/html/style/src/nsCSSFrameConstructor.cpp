@@ -116,7 +116,6 @@
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
-#include "nsCanvasFrame.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -298,9 +297,6 @@ NS_NewListBoxScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
 NS_NewTreeBodyFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
-
-nsresult
-NS_NewCanvasXULFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
 // grid
 nsresult
@@ -5251,10 +5247,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         isReplaced = PR_TRUE;
         processChildren = PR_TRUE;
         rv = NS_NewTreeColFrame(aPresShell, &newFrame);
-      }
-      else if (aTag == nsXULAtoms::canvas) {
-        isReplaced = PR_TRUE;
-        rv = NS_NewCanvasXULFrame(aPresShell, &newFrame);
       }
       // TEXT CONSTRUCTION
       else if (aTag == nsXULAtoms::text || aTag == nsHTMLAtoms::label ||
