@@ -45,34 +45,34 @@ XMLLexer::XMLLexer(const char *filename)
 
 void XMLLexer::beginRecording(String &s)
 {
-	recordString = &s;
-	recordBase = p;
-	recordPos = p;
+    recordString = &s;
+    recordBase = p;
+    recordPos = p;
 }
 
 void XMLLexer::recordChar(char c)
 {
-	ASSERT(recordString);
-	if (recordPos) {
-		if (recordPos != end && *recordPos == c) {
-			recordPos++;
-			return;
-		} else {
-			insertChars(*recordString, 0, recordBase, uint32(recordPos - recordBase));
-			recordPos = NULL;
-		}
-	}
-	*recordString += c;
+    ASSERT(recordString);
+    if (recordPos) {
+        if (recordPos != end && *recordPos == c) {
+            recordPos++;
+            return;
+        } else {
+            insertChars(*recordString, 0, recordBase, uint32(recordPos - recordBase));
+            recordPos = NULL;
+        }
+    }
+    *recordString += c;
 }
 
 String &XMLLexer::endRecording()
 {
-	String *rs = recordString;
-	ASSERT(rs);
-	if (recordPos)
-		insertChars(*rs, 0, recordBase, uint32(recordPos - recordBase));
-	recordString = NULL;
-	return *rs;
+    String *rs = recordString;
+    ASSERT(rs);
+    if (recordPos)
+        insertChars(*rs, 0, recordBase, uint32(recordPos - recordBase));
+    recordString = NULL;
+    return *rs;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -80,7 +80,7 @@ String &XMLLexer::endRecording()
 
 void XMLParser::syntaxError(const char *msg, uint backUp)
 {
-	mReader.unget(backUp);
+    mReader.unget(backUp);
     throw Exception(Exception::syntaxError, widenCString(msg));
 }
 
@@ -93,7 +93,7 @@ void XMLParser::parseName(String &id)
         while (true) {
             ch = mReader.peek();
             if (mReader.isAlphanumeric(ch))
-		        mReader.recordChar(mReader.get());
+                mReader.recordChar(mReader.get());
             else
                 break;        
         }
@@ -107,8 +107,8 @@ void XMLParser::parseWhiteSpace()
 {
     while (mReader.isSpace(mReader.peek())) {
         char ch = mReader.get();
-		if (mReader.isLineBreak(ch))
-			mReader.beginLine();
+        if (mReader.isLineBreak(ch))
+            mReader.beginLine();
     }
 }
 
@@ -178,8 +178,8 @@ XMLTag *XMLParser::parseTag()
                             syntaxError("encountered '--' in comment");
                     }
                     else
-		                if (mReader.isLineBreak(ch))
-			                mReader.beginLine();
+                        if (mReader.isLineBreak(ch))
+                            mReader.beginLine();
                 }
             } else {
                 if (mReader.match("[CDATA[", 7)) {
@@ -196,8 +196,8 @@ XMLTag *XMLParser::parseTag()
                             }
                         }
                         else
-		                    if (mReader.isLineBreak(ch))
-			                    mReader.beginLine();
+                            if (mReader.isLineBreak(ch))
+                                mReader.beginLine();
                     }
                 }
             }

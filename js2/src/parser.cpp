@@ -910,9 +910,9 @@ JS::ExprNode *JS::Parser::parseGeneralExpression(bool allowSuperStmt, bool noIn,
 		if (kind == ExprNode::none)
 			break;
 
-                {
-    		    // Push the current operator onto the subexpressionStack.
-		    lexer.get(false);
+	    // Push the current operator onto the subexpressionStack.
+	    lexer.get(false);
+        {
 		    StackedSubexpression &s = *subexpressionStack.reserve_advance_back();
 		    bool superLeft = binOpInfo.superLeft;
 		    if (e->hasKind(ExprNode::superExpr) && !superLeft)
@@ -923,7 +923,7 @@ JS::ExprNode *JS::Parser::parseGeneralExpression(bool allowSuperStmt, bool noIn,
 		    s.pos = t.getPos();
 		    s.op1 = e;
 		    s.op2 = 0;
-                }
+        }
 	  foundColon:
 		e = parseUnaryExpression(ssExpr);
 	}
@@ -1105,14 +1105,14 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
 				if (t1.hasKind(Token::closeParenthesis))
 					restParameter = new(arena) VariableBinding(t1.getPos(), 0, 0, 0, false);
 				else
-					restParameter = parseVariableBinding(true, false, (lexer.eat(true, Token::Const) != NULL));
+					restParameter = parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
 				if (!optParameters)
 					optParameters = restParameter;
 				parameters += restParameter;
 				require(true, Token::closeParenthesis);
 				break;
 			} else {
-				VariableBinding *b = parseVariableBinding(true, false, (lexer.eat(true, Token::Const) != NULL));
+				VariableBinding *b = parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
 				if (b->initializer) {
 					if (!optParameters)
 						optParameters = b;
@@ -1912,7 +1912,7 @@ JS::VariableBinding *JS::Parser::parseRestParameter()
 
 JS::VariableBinding *JS::Parser::parseParameter()
 {
-	bool constant = (lexer.eat (true, Token::Const) != NULL);
+	bool constant = lexer.eat(true, Token::Const) != 0;
 	ExprNode *first = parseIdentifier();
 	ExprNode *second = parseTypeBinding (Token::colon, false);
 

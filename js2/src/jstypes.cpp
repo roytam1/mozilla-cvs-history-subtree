@@ -376,7 +376,7 @@ JSType Date_Type = JSType(widenCString("Date"), &Object_Type, new JSNativeFuncti
     ((JSDOUBLE_HI32(x) & JSDOUBLE_HI32_EXPMASK) != JSDOUBLE_HI32_EXPMASK)
 
 #define JSDOUBLE_IS_NEGZERO(d)  (JSDOUBLE_HI32(d) == JSDOUBLE_HI32_SIGNBIT && \
-				 JSDOUBLE_LO32(d) == 0)
+                                 JSDOUBLE_LO32(d) == 0)
 
 
 // the canonical undefined value, etc.
@@ -780,7 +780,7 @@ JSValue JSValue::valueToNumber(const JSValue& value) // can assume value is not 
         {
             JSString* str = value.string;
             const char16 *numEnd;
-	        double d = stringToDouble(str->begin(), str->end(), numEnd);
+            double d = stringToDouble(str->begin(), str->end(), numEnd);
             return JSValue(d);
         }
     case object_tag:
@@ -881,7 +881,7 @@ JSValue JSValue::valueToInt32(const JSValue& value)
         {
             JSString* str = value.string;
             const char16 *numEnd;
-	        d = stringToDouble(str->begin(), str->end(), numEnd);
+            d = stringToDouble(str->begin(), str->end(), numEnd);
         }
         break;
     case boolean_tag:
@@ -900,9 +900,9 @@ JSValue JSValue::valueToInt32(const JSValue& value)
     d = fmod(d, two32);
     d = (d >= 0) ? d : d + two32;
     if (d >= two31)
-	    return JSValue((int32)(d - two32));
+        return JSValue((int32)(d - two32));
     else
-	    return JSValue((int32)d);
+        return JSValue((int32)d);
     
 }
 
@@ -921,7 +921,7 @@ JSValue JSValue::valueToUInt32(const JSValue& value)
         {
             JSString* str = value.string;
             const char16 *numEnd;
-	        d = stringToDouble(str->begin(), str->end(), numEnd);
+            d = stringToDouble(str->begin(), str->end(), numEnd);
         }
         break;
     case boolean_tag:

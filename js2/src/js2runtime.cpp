@@ -271,7 +271,7 @@ JSValue Context::readEvalFile(const String& fileName)
     FILE* f = fopen(str.c_str(), "r");
     if (f) {
         while ((ch = getc(f)) != EOF)
-	        buffer += static_cast<char>(ch);
+            buffer += static_cast<char>(ch);
         fclose(f);
     
         
@@ -279,18 +279,18 @@ JSValue Context::readEvalFile(const String& fileName)
             Arena a;
             Parser p(mWorld, a, buffer, fileName);
             StmtNode *parsedStatements = p.parseProgram();
-	    ASSERT(p.lexer.peek(true).hasKind(Token::end));
+            ASSERT(p.lexer.peek(true).hasKind(Token::end));
             if (mDebugFlag)
             {
                 PrettyPrinter f(stdOut, 30);
                 {
-            	    PrettyPrinter::Block b(f, 2);
+                    PrettyPrinter::Block b(f, 2);
                     f << "Program =";
                     f.linearBreak(1);
                     StmtNode::printStatements(f, parsedStatements);
                 }
                 f.end();
-    	        stdOut << '\n';
+                stdOut << '\n';
             }
 
             buildRuntime(parsedStatements);
@@ -2425,7 +2425,7 @@ JSValue JSValue::valueToInt32(Context *cx, const JSValue& value)
     case string_tag: 
         {
             const char16 *numEnd;
-	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+            d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
         }
         break;
     case boolean_tag:
@@ -2443,9 +2443,9 @@ JSValue JSValue::valueToInt32(Context *cx, const JSValue& value)
     d = fd::fmod(d, two32);
     d = (d >= 0) ? d : d + two32;
     if (d >= two31)
-	return JSValue((float64)(d - two32));
+        return JSValue((float64)(d - two32));
     else
-	return JSValue((float64)d);    
+        return JSValue((float64)d);    
 }
 
 JSValue JSValue::valueToUInt32(Context *cx, const JSValue& value)
@@ -2458,7 +2458,7 @@ JSValue JSValue::valueToUInt32(Context *cx, const JSValue& value)
     case string_tag: 
         {
             const char16 *numEnd;
-	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+            d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
         }
         break;
     case boolean_tag:
@@ -2491,7 +2491,7 @@ JSValue JSValue::valueToUInt16(Context *cx, const JSValue& value)
     case string_tag: 
         {
             const char16 *numEnd;
-	    d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
+            d = stringToDouble(value.string->begin(), value.string->end(), numEnd);
         }
         break;
     case boolean_tag:

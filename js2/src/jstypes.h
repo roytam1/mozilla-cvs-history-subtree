@@ -296,7 +296,7 @@ namespace JSTypes {
         JSString* mClass;       // this is the internal [[Class]] property
 
 
-		void *mPrivate;
+        void *mPrivate;
 
         static JSObject *initJSObject();
         static JSString *ObjectString;
@@ -315,8 +315,8 @@ namespace JSTypes {
             if (mSetter) delete mSetter;
         }
 
-		void *getPrivate()					{ return mPrivate; }
-		void setPrivate(void *underwear)	{ mPrivate = underwear; }
+        void *getPrivate()                  { return mPrivate; }
+        void setPrivate(void *underwear)    { mPrivate = underwear; }
     
         static void initObjectObject(JSScope *g);
 

@@ -141,14 +141,14 @@ public:
     XMLNodeList mChildren;
     XMLNode *mParent;
     XMLTag *mTag;
-    String mBody;	
+    String mBody;
 };
 
 
 
 class XMLParser {
 public:
-	void syntaxError(const char *message, uint backUp = 1);
+    void syntaxError(const char *message, uint backUp = 1);
     char16 doEscape();
 
     XMLParser(const char *fileName) : mReader(fileName) { }
