@@ -540,19 +540,6 @@ private:
                      nscoord aHeight,
                      PRBool aMoveFrame = PR_TRUE);
 
-  void HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                               const nsHTMLReflowState& aReflowState, 
-                               nsReflowReason& aReason,
-                               nsReflowPath** aReflowPath,
-                               PRBool& aRedrawNow,
-                               PRBool& aNeedReflow,
-                               PRBool& aRedrawAfterReflow,
-                               PRBool& aMoveFrame);
-
-  PRBool CanSetMaxElementWidth(nsBoxLayoutState& aState,
-                               nsReflowReason& aReason,
-                               nsReflowPath **aReflowPath);
-
   NS_IMETHODIMP RefreshSizeCache(nsBoxLayoutState& aState);
 
 protected:
