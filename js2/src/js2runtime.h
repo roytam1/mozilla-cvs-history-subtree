@@ -1418,6 +1418,8 @@ static const double two31 = 2147483648.0;
 
 
     class JSFunction : public JSObject {
+    protected:
+        JSFunction() : mActivation(NULL) { }        // for JSBoundFunction (XXX ask Patrick about this structure)
     public:
         typedef JSValue (NativeCode)(Context *cx, const JSValue &thisValue, JSValue argv[], uint32 argc);
 
@@ -1449,21 +1451,48 @@ static const double two31 = 2147483648.0;
         {
         }
 
-        bool isNative() { return (mCode != NULL); }
+        void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
+        void setResultType(JSType *r)           { mResultType = r; }
+        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; }
 
+        virtual bool hasBoundThis()             { return false; }
+        virtual bool isNative()                 { return (mCode != NULL); }
+        virtual ByteCodeModule *getByteCode()   { ASSERT(!isNative()); return mByteCode; }
+        virtual NativeCode *getNativeCode()     { ASSERT(isNative()); return mCode; }
+
+        virtual JSType *getResultType()         { return mResultType; }
+        virtual uint32 getExpectedArgs()        { return mExpectedArgs; }
+        virtual ScopeChain *getScopeChain()     { return mScopeChain; }
+        virtual JSValue getThisValue()          { return kNullValue; }         
+
+        ParameterBarrel *mParameterBarrel;
+        Activation mActivation;                 // not used during execution   
+    private:
         ByteCodeModule *mByteCode;
         NativeCode *mCode;
         JSType *mResultType;
-        ParameterBarrel *mParameterBarrel;
-        Activation mActivation;                 // not used during execution
         uint32 mExpectedArgs;
-
         ScopeChain *mScopeChain;
-
-        JSValue getThisValue() { return kNullValue; }         
-    
     };
 
+    class JSBoundFunction : public JSFunction {
+    private:
+        JSFunction *mFunction;
+        JSObject *mThis;
+    public:
+        JSBoundFunction(JSFunction *f, JSObject *thisObj)
+            : mFunction(f), mThis(thisObj) { }
+
+        bool hasBoundThis()             { return true; }
+        bool isNative()                 { return mFunction->isNative(); }
+        ByteCodeModule *getByteCode()   { return mFunction->getByteCode(); }
+        NativeCode *getNativeCode()     { return mFunction->getNativeCode(); }
+
+        JSType *getResultType()         { return mFunction->getResultType(); }
+        uint32 getExpectedArgs()        { return mFunction->getExpectedArgs(); }
+        ScopeChain *getScopeChain()     { return mFunction->getScopeChain(); }
+        JSValue getThisValue()          { return JSValue(mThis); }         
+    };
 
     // This is for binary operators, it collects together the operand
     // types and the function pointer for the given operand. See also
@@ -1528,30 +1557,7 @@ static const double two31 = 2147483648.0;
             JSFunction::NativeCode *defCon;
         };
 
-        Context(JSObject *global, World &world, Arena &a) 
-            : mGlobal(global), 
-              mWorld(world),
-              mScopeChain(NULL),
-              mArena(a),
-              mDebugFlag(false),
-
-              VirtualKeyWord(world.identifiers["virtual"]),
-              ConstructorKeyWord(world.identifiers["constructor"]),
-              OperatorKeyWord(world.identifiers["operator"]),
-              FixedKeyWord(world.identifiers["fixed"]),
-              DynamicKeyWord(world.identifiers["dynamic"]),
-              ExtendKeyWord(world.identifiers["extend"])
-
-        {
-            mScopeChain = new ScopeChain(this, mWorld);
-            if (Object_Type == NULL) {                
-                initBuiltins();
-                global->defineVariable(widenCString("undefined"), NULL, Void_Type, kUndefinedValue);
-                global->defineVariable(widenCString("NaN"), NULL, Void_Type, kNaNValue);
-                global->defineVariable(widenCString("Infinity"), NULL, Void_Type, kPositiveInfinity);                
-            }
-            initOperators();
-        }
+        Context(JSObject **global, World &world, Arena &a);
 
         StringAtom& VirtualKeyWord; 
         StringAtom& ConstructorKeyWord; 
@@ -1589,7 +1595,8 @@ static const double two31 = 2147483648.0;
             ASSERT(false);  // somebody should write some code here one day
         }
 
-        JSObject *mGlobal;
+        JSObject *getGlobalObject()         { ASSERT(mGlobal); return *mGlobal; }
+
         World &mWorld;
         ScopeChain *mScopeChain;
         Arena &mArena;
@@ -1704,6 +1711,9 @@ static const double two31 = 2147483648.0;
         // Get the number of parameters.
         uint32 getParameterCount(FunctionDefinition &function);
 
+    private:
+        JSObject **mGlobal;
+
 
     };
 
@@ -1739,7 +1749,7 @@ static const double two31 = 2147483648.0;
     };
 
     inline AccessorReference::AccessorReference(JSFunction *f)
-        : Reference(f->mResultType), mFunction(f) 
+        : Reference(f->getResultType()), mFunction(f) 
     {
     }
 
@@ -1932,28 +1942,28 @@ static const double two31 = 2147483648.0;
 
 
     inline FunctionReference::FunctionReference(JSFunction *f) 
-            : Reference(f->mResultType), mFunction(f)
+            : Reference(f->getResultType()), mFunction(f)
     {
     }
 
     inline GetterFunctionReference::GetterFunctionReference(JSFunction *f) 
-            : Reference(f->mResultType), mFunction(f)
+            : Reference(f->getResultType()), mFunction(f)
     {
     }
 
     inline SetterFunctionReference::SetterFunctionReference(JSFunction *f) 
-            : Reference(f->mResultType), mFunction(f)
+            : Reference(f->getResultType()), mFunction(f)
     {
     }
 
     inline void JSType::addStaticMethod(const String &name, AttributeList *attr, JSFunction *f)
     {
-        defineStaticMethod(name, attr, f->mResultType, f);
+        defineStaticMethod(name, attr, f->getResultType(), f);
     }
 
     inline void JSType::addMethod(const String &name, AttributeList *attr, JSFunction *f)
     {
-        defineMethod(name, attr, f->mResultType, f);
+        defineMethod(name, attr, f->getResultType(), f);
     }
 
     inline void JSInstance::initInstance(Context *cx, JSType *type)
@@ -2017,7 +2027,7 @@ static const double two31 = 2147483648.0;
         }
         if (f) {
             JSValue thisValue(mInitialInstance);
-            cx->interpret(f->mByteCode, thisValue, NULL, 0);
+            cx->interpret(f->getByteCode(), thisValue, NULL, 0);
         }
     }
 
@@ -2027,7 +2037,7 @@ static const double two31 = 2147483648.0;
         mStatics->initInstance(cx, mStatics);       // build the static instance object
         if (f) {
             JSValue thisValue(mStatics);
-            cx->interpret(f->mByteCode, thisValue, NULL, 0);
+            cx->interpret(f->getByteCode(), thisValue, NULL, 0);
         }
     }
 

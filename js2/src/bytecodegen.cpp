@@ -510,7 +510,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
         ASSERT(mStackTop == 1);
         addOpSetDepth(ReturnOp, 0);
     }
-    fnc->mByteCode = new ByteCodeModule(this);        
+    fnc->setByteCode(new ByteCodeModule(this));        
 
     mScopeChain->popScope();
     mScopeChain->popScope();
@@ -551,14 +551,14 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                     // build a function to be invoked 
                     // when the class is loaded
                     f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
-                    f->mByteCode = new ByteCodeModule(&static_cg);
+                    f->setByteCode(new ByteCodeModule(&static_cg));
                 }
                 thisClass->setStaticInitializer(m_cx, f);
                 f = NULL;
                 if (bcg.hasContent()) {
                     // execute this function now to form the initial instance
                     f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
-                    f->mByteCode = new ByteCodeModule(&bcg);
+                    f->setByteCode(new ByteCodeModule(&bcg));
                 }
                 thisClass->setInstanceInitializer(m_cx, f);
             }
@@ -1705,6 +1705,8 @@ BinaryOpEquals:
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
+            if (ref == NULL)
+                throw Exception(Exception::semanticError, "incomprehensible assignment designate (and error message)");
             ref->emitPreAssignment(this);
             genExpr(b->op2);
             ref->emitCodeSequence(this);

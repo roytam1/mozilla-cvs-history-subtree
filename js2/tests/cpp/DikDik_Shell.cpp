@@ -68,8 +68,6 @@ using namespace JavaScript::JS2Runtime;
 
 JavaScript::World world;
 JavaScript::Arena a;
-JSObject globalObject;
-Context cx(&globalObject, world, a);
 
 namespace JavaScript {
 namespace Shell {
@@ -119,9 +117,8 @@ JSValue debug(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
     return kUndefinedValue;
 }
 
-static void readEvalPrint(FILE *in)
+static void readEvalPrint(Context *cx, FILE *in)
 {
-
     String buffer;
     string line;
     LineReader inReader(in);
@@ -143,7 +140,7 @@ static void readEvalPrint(FILE *in)
             } else {
                 StmtNode *parsedStatements = p.parseProgram();
 		ASSERT(p.lexer.peek(true).hasKind(Token::end));
-                if (cx.mDebugFlag)
+                if (cx->mDebugFlag)
                 {
                     PrettyPrinter f(stdOut, 30);
                     {
@@ -158,13 +155,13 @@ static void readEvalPrint(FILE *in)
 #ifdef INTERPRET_INPUT
 		// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
-                cx.buildRuntime(parsedStatements);
-                JS2Runtime::ByteCodeModule* bcm = cx.genCode(parsedStatements, ConsoleName);
+                cx->buildRuntime(parsedStatements);
+                JS2Runtime::ByteCodeModule* bcm = cx->genCode(parsedStatements, ConsoleName);
                 if (bcm) {
 #ifdef SHOW_ICODE
                     stdOut << *bcm;
 #endif
-                    JSValue result = cx.interpret(bcm, kNullValue, NULL, 0);
+                    JSValue result = cx->interpret(bcm, JSValue(cx->getGlobalObject()), NULL, 0);
                     if (!result.isUndefined())
                         stdOut << result << "\n";
                     delete bcm;
@@ -191,7 +188,7 @@ static void readEvalPrint(FILE *in)
 } /* namespace JavaScript */
 
 
-bool processArgs(int argc, char **argv)
+bool processArgs(Context *cx, int argc, char **argv)
 {
     bool doInteractive = true;
     for (int i = 0; i < argc; i++)  {    
@@ -199,7 +196,7 @@ bool processArgs(int argc, char **argv)
             switch (argv[i][1]) {
             case 'f':
                 {
-                    cx.readEvalFile(JavaScript::widenCString(argv[++i]));
+                    cx->readEvalFile(JavaScript::widenCString(argv[++i]));
                     doInteractive = false;
                 }
                 break;
@@ -220,16 +217,18 @@ int main(int argc, char **argv)
     using namespace JavaScript;
     using namespace Shell;
 
+    JSObject *globalObject;
+    Context cx(&globalObject, world, a);
 
-    globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
-    globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
-    globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
+    globalObject->defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
+    globalObject->defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));
+    globalObject->defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
 
     bool doInteractive = true;
     if (argc > 1) {
-        doInteractive = processArgs(argc - 1, argv + 1);
+        doInteractive = processArgs(&cx, argc - 1, argv + 1);
     }
     if (doInteractive)
-        readEvalPrint(stdin);
+        readEvalPrint(&cx, stdin);
     return 0;
 }

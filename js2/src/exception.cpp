@@ -52,6 +52,7 @@ namespace JavaScript
         "Range error",                          // burnt the beans
         "Type error",                           // Yype error
         "Uncaught exception error",             // uncaught exception error
+        "Semantic error",                       // semantic error
     };
     
 // Return a null-terminated string describing the exception's kind.
