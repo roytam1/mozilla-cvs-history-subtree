@@ -33,11 +33,10 @@ class BookmarksService;
 {
   nsIDOMElement*    mElement;
   BookmarkItem*     mBookmarkItem;
-  BookmarksService* mBookmarksService;
   BOOL              mIsFolder;
 }
 
--(id)initWithFrame:(NSRect)frame element:(nsIDOMElement*)element bookmarksService:(BookmarksService*)bookmarksService;
+-(id)initWithFrame:(NSRect)frame element:(nsIDOMElement*)element;
 
 -(void)setElement: (nsIDOMElement*)aElt;
 -(nsIDOMElement*)element;

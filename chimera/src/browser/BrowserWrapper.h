@@ -97,6 +97,8 @@
 - (NSMenu*)getContextMenu;
 - (void)setIsBookmarksImport:(BOOL)aIsImport;
 
+- (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString;
+
 // CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;

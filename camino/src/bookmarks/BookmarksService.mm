@@ -37,14 +37,11 @@
 
 #import "NSString+Utils.h"
 
+#import "BookmarksService.h"
+
 #import "PreferenceManager.h"
 #import "CHBrowserView.h"
 #import "CHBrowserService.h"
-#import "BookmarksService.h"
-#import "BookmarksDataSource.h"
-#import "BookmarkInfoController.h"
-#import "BrowserTabView.h"
-#import "BrowserWindowController.h"
 #import "SiteIconProvider.h"
 
 #include "nsCRT.h"
@@ -53,6 +50,8 @@
 #include "nsIContent.h"
 #include "nsIAtom.h"
 #include "nsITextContent.h"
+#include "nsIDOMNode.h"
+#include "nsIDOMNodeList.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMElement.h"
@@ -72,8 +71,7 @@
 
 
 // Helper for stripping whitespace
-static void
-StripWhitespaceNodes(nsIContent* aElement)
+static void StripWhitespaceNodes(nsIContent* aElement)
 {
   PRInt32 childCount = 0;
   aElement->ChildCount(childCount);
@@ -97,18 +95,75 @@ StripWhitespaceNodes(nsIContent* aElement)
   }
 }
 
-// the tag of the separator after which to insert bookmarks menu items
-// this tag must not conflict with content IDs (which are all >=0)
-// and match the tab in the .nib
-static const int kBookmarksDividerTag = -1;
+static bool ElementIsOrContains(nsIDOMElement* inSearchRoot, nsIDOMElement* inFindElt)
+{
+  nsCOMPtr<nsIContent> curContent = do_QueryInterface(inSearchRoot);
+  if (!curContent) return false;
 
+  if (inSearchRoot == inFindElt)
+    return true;
+    
+  // recurse to children
+  PRInt32 numChildren;
+  curContent->ChildCount(numChildren);
+  for (PRInt32 i = 0; i < numChildren; i ++)
+  {
+    nsCOMPtr<nsIContent> curChild;
+    curContent->ChildAt(i, *getter_AddRefs(curChild));
+    
+    nsCOMPtr<nsIDOMElement> curElt = do_QueryInterface(curChild);
+    if (ElementIsOrContains(curElt, inFindElt))
+      return true;
+  }
+  
+  return false;
+}
 
-PRUint32 BookmarksService::gRefCnt = 0;
+static bool SearchChildrenForMatchingFolder(nsIDOMElement* inCurElt, const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt)
+{
+  nsCOMPtr<nsIContent> curContent = do_QueryInterface(inCurElt);
+  if (!curContent) return false;
+  
+  // sanity check
+  nsCOMPtr<nsIAtom> tagName;
+  curContent->GetTag(*getter_AddRefs(tagName));
+  if (tagName == BookmarksService::gFolderAtom)
+  {
+    nsAutoString attribValue;
+    inCurElt->GetAttribute(inAttribute, attribValue);
+
+    if (attribValue.Equals(inValue))
+    {
+      *foundElt = inCurElt;
+      NS_ADDREF(*foundElt);
+      return true;
+    }
+  }
+
+  // recurse to children
+  PRInt32 numChildren;
+  curContent->ChildCount(numChildren);
+  for (PRInt32 i = 0; i < numChildren; i ++)
+  {
+    nsCOMPtr<nsIContent> curChild;
+    curContent->ChildAt(i, *getter_AddRefs(curChild));
+    
+    nsCOMPtr<nsIDOMElement> curElt = do_QueryInterface(curChild);
+    if (SearchChildrenForMatchingFolder(curElt, inAttribute, inValue, foundElt))
+      return true;
+  }
+  
+  return false;
+}
+
+#pragma mark -
+
 nsIDocument* BookmarksService::gBookmarks = nsnull;
+
 NSMutableDictionary* BookmarksService::gDictionary = nil;
-MainController* BookmarksService::gMainController = nil;
-NSMenu* BookmarksService::gBookmarksMenu = nil;
+
 nsIDOMElement* BookmarksService::gToolbarRoot = nsnull;
+nsIDOMElement* BookmarksService::gDockMenuRoot = nsnull;
 
 nsIAtom* BookmarksService::gBookmarkAtom = nsnull;
 nsIAtom* BookmarksService::gDescriptionAtom = nsnull;
@@ -119,7 +174,7 @@ nsIAtom* BookmarksService::gKeywordAtom = nsnull;
 nsIAtom* BookmarksService::gNameAtom = nsnull;
 nsIAtom* BookmarksService::gOpenAtom = nsnull;
 
-nsVoidArray* BookmarksService::gInstances = nsnull;
+NSMutableArray* BookmarksService::gClientsArray = nsnull;
 
 BOOL BookmarksService::gBookmarksFileReadOK = NO;
 
@@ -128,62 +183,48 @@ int BookmarksService::CHInsertInto = 1;
 int BookmarksService::CHInsertBefore = 2;
 int BookmarksService::CHInsertAfter = 3;
 
-BookmarksService::BookmarksService(BookmarksDataSource* aDataSource)
-{
-  mDataSource = aDataSource;
-  mToolbar = nil;
-}
-
-BookmarksService::BookmarksService(BookmarksToolbar* aToolbar)
-{
-  mDataSource = nil;
-  mToolbar = aToolbar;
-}
-
-BookmarksService::~BookmarksService()
-{
-}
+const int BookmarksService::kBookmarksDividerTag = -1;
 
 void
-BookmarksService::AddObserver()
+BookmarksService::Init()
 {
-    gRefCnt++;
-    if (gRefCnt == 1) {
-        gBookmarkAtom = NS_NewAtom("bookmark");
-        gFolderAtom = NS_NewAtom("folder");
-        gNameAtom = NS_NewAtom("name");
-        gHrefAtom = NS_NewAtom("href");
-        gOpenAtom = NS_NewAtom("open");
-        gKeywordAtom = NS_NewAtom("id");
-        gDescriptionAtom = NS_NewAtom("description");
-        gGroupAtom = NS_NewAtom("group");
-        gInstances = new nsVoidArray();
-    
-        ReadBookmarks();
-     }
-    
-    gInstances->AppendElement(this);
+  static bool sInitted = false;
+  if (sInitted) return;
+  
+  sInitted = true;
+  gBookmarkAtom = NS_NewAtom("bookmark");
+  gFolderAtom = NS_NewAtom("folder");
+  gNameAtom = NS_NewAtom("name");
+  gHrefAtom = NS_NewAtom("href");
+  gOpenAtom = NS_NewAtom("open");
+  gKeywordAtom = NS_NewAtom("id");
+  gDescriptionAtom = NS_NewAtom("description");
+  gGroupAtom = NS_NewAtom("group");
+  
+  ReadBookmarks();
 }
 
+
 void
-BookmarksService::RemoveObserver()
+BookmarksService::Shutdown()
 {
-    if (gRefCnt == 0)
-        return;
- 
-    gInstances->RemoveElement(this);
-     
-    gRefCnt--;
-    if (gRefCnt == 0) {
-        // we should have already written bookmarks in response to a shutdown notification
-        NS_IF_RELEASE(gBookmarks);
-        NS_RELEASE(gBookmarkAtom);
-        NS_RELEASE(gFolderAtom);
-        NS_RELEASE(gNameAtom);
-        NS_RELEASE(gHrefAtom);
-        NS_RELEASE(gOpenAtom);
-        [gDictionary release];
-    }
+  [gClientsArray release];
+  gClientsArray = nil;
+  
+  // we should have already written bookmarks in response to a shutdown notification
+  NS_IF_RELEASE(gBookmarks);
+
+  NS_RELEASE(gBookmarkAtom);
+  NS_RELEASE(gFolderAtom);
+  NS_RELEASE(gNameAtom);
+  NS_RELEASE(gHrefAtom);
+  NS_RELEASE(gOpenAtom);
+  NS_RELEASE(gKeywordAtom);
+  NS_RELEASE(gDescriptionAtom);
+  NS_RELEASE(gGroupAtom);
+  
+  [gDictionary release];
+  gDictionary = nil;
 }
 
 #pragma mark -
@@ -242,65 +283,17 @@ BookmarksService::GetWrapperFor(PRUint32 contentID)
   return [gDictionary objectForKey: [NSNumber numberWithUnsignedInt: contentID]];
 }
 
-NSMenu*
-BookmarksService::LocateMenu(nsIContent* aContent)
-{
-  nsCOMPtr<nsIContent> parent;
-  aContent->GetParent(*getter_AddRefs(parent));
-  if (!parent) {
-    return BookmarksService::gBookmarksMenu;
-  }
-  
-  NSMenu* parentMenu = LocateMenu(parent);
-  
-  PRUint32 contentID;
-  aContent->GetContentID(&contentID);
-
-  NSMenuItem* childMenu = [parentMenu itemWithTag: contentID];
-  return [childMenu submenu];
-}
-
 void
 BookmarksService::BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush)
 {
-  if (!gInstances || !gDictionary)
+  if (!gDictionary)
     return;
 
-  PRInt32 count = gInstances->Count();
-  for (PRInt32 i = 0; i < count; i++) {
-    BookmarksService* instance = (BookmarksService*)gInstances->ElementAt(i);
-
-    if (instance->mDataSource) {
-      // We're a tree view.
-      nsCOMPtr<nsIContent> parent;
-      aContainer->GetParent(*getter_AddRefs(parent));
-
-      BookmarkItem* item = nil;
-      if (parent)
-        // We're not the root.
-        item = GetWrapperFor(aContainer);
-
-      [(instance->mDataSource) reloadDataForItem: item reloadChildren: YES];
-    }
-    else if (instance->mToolbar) {
-      // We're a personal toolbar.
-      nsCOMPtr<nsIDOMElement> parentElt(do_QueryInterface(aContainer));
-      if (parentElt == gToolbarRoot) {
-        // We only care about changes that occur to the personal toolbar's immediate
-        // children.
-        PRInt32 index = -1;
-        aContainer->IndexOf(aChild, index);
-        nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aChild));
-        [(instance->mToolbar) addButton: elt atIndex: index];
-      }
-    }
-    else {
-      // We're the menu.
-      PRInt32 index = -1;
-      aContainer->IndexOf(aChild, index);
-      NSMenu* menu = LocateMenu(aContainer);
-      AddMenuBookmark(menu, aContainer, aChild, index);
-    }
+  unsigned int numClients = [gClientsArray count];
+  for (unsigned int i = 0; i < numClients; i ++)
+  {
+    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    [client bookmarkAdded:aChild inContainer:aContainer];
   }
   
   if (shouldFlush)
@@ -310,41 +303,14 @@ BookmarksService::BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool
 void
 BookmarksService::BookmarkChanged(nsIContent* aItem, bool shouldFlush)
 {
-  if (!gInstances || !gDictionary)
+  if (!gDictionary)
     return;
 
-  PRInt32 count = gInstances->Count();
-  for (PRInt32 i = 0; i < count; i++) {
-    BookmarksService* instance = (BookmarksService*)gInstances->ElementAt(i);
-   
-    if (instance->mDataSource) {
-      // We're a tree view
-      BookmarkItem* item = GetWrapperFor(aItem);
-      [(instance->mDataSource) reloadDataForItem: item reloadChildren: NO];
-    }
-    else if (instance->mToolbar) {
-      // We're a personal toolbar.  It'll figure out what to do.
-      nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aItem));
-      [(instance->mToolbar) editButton: elt];
-    }
-    else {
-      // We're the menu.  Reset the title, in case it's changed.
-      nsCOMPtr<nsIContent> parent;
-      aItem->GetParent(*getter_AddRefs(parent));
-      NSMenu* menu = LocateMenu(parent);
-      PRUint32 contentID = 0;
-      aItem->GetContentID(&contentID);
-      NSMenuItem* childItem = [menu itemWithTag: contentID];
-      nsAutoString name;
-      aItem->GetAttr(kNameSpaceID_None, gNameAtom, name);
-      NSString* bookmarkTitle = [[NSString stringWith_nsAString: name] stringByTruncatingTo:80 at:kTruncateAtMiddle];
-      [childItem setTitle: bookmarkTitle];
-      
-      // and reset the image
-      BookmarkItem* item = GetWrapperFor(aItem);
-      [childItem setImage: [item siteIcon]];
-    }
-    
+  unsigned int numClients = [gClientsArray count];
+  for (unsigned int i = 0; i < numClients; i ++)
+  {
+    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    [client bookmarkChanged:aItem];
   }
 
   if (shouldFlush)
@@ -354,49 +320,27 @@ BookmarksService::BookmarkChanged(nsIContent* aItem, bool shouldFlush)
 void
 BookmarksService::BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush)
 {
-  if (!gInstances)
-    return;
-
-  PRInt32 count = gInstances->Count();
-  for (PRInt32 i = 0; i < count; i++) {
-    BookmarksService* instance = (BookmarksService*)gInstances->ElementAt(i);
-
-    if (instance->mDataSource) {
-      // We're a tree view.
-      nsCOMPtr<nsIContent> parent;
-      aContainer->GetParent(*getter_AddRefs(parent));
-
-      BookmarkItem* item = nil;
-      if (parent)
-        // We're not the root.
-        item = GetWrapperFor(aContainer);
-
-      [(instance->mDataSource) reloadDataForItem: item reloadChildren: YES];
-    }
-    else if (instance->mToolbar) {
-      // We're a personal toolbar.
-      nsCOMPtr<nsIDOMElement> parentElt(do_QueryInterface(aContainer));
-      if (parentElt == gToolbarRoot) {
-        // We only care about changes that occur to the personal toolbar's immediate
-        // children.
-        nsCOMPtr<nsIDOMElement> childElt(do_QueryInterface(aChild));
-        [(instance->mToolbar) removeButton: childElt];
-      }
-    }    
-    else {
-      // We're the menu.
-      NSMenu* menu = LocateMenu(aContainer);
-      PRUint32 contentID = 0;
-      aChild->GetContentID(&contentID);
-      NSMenuItem* childItem = [menu itemWithTag: contentID];
-      [menu removeItem: childItem];
-    }
+  unsigned int numClients = [gClientsArray count];
+  for (unsigned int i = 0; i < numClients; i ++)
+  {
+    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    [client bookmarkRemoved:aChild inContainer:aContainer];
   }
 
   if (shouldFlush)
       FlushBookmarks(); 
 }
 
+void
+BookmarksService::SpecialBookmarkChanged(EBookmarksFolderType aFolderType, nsIContent* aNewContent)
+{
+  unsigned int numClients = [gClientsArray count];
+  for (unsigned int i = 0; i < numClients; i ++)
+  {
+    id<BookmarksClient> client = [gClientsArray objectAtIndex:i];
+    [client specialFolder:aFolderType changedTo:aNewContent];
+  }
+}
 
 void
 BookmarksService::AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt)
@@ -452,6 +396,13 @@ BookmarksService::DeleteBookmark(nsIDOMElement* aBookmark)
 {
   if (!aBookmark || aBookmark == gToolbarRoot) return;
   
+  if (ElementIsOrContains(aBookmark, gDockMenuRoot))
+  {
+    gDockMenuRoot = gToolbarRoot;
+    nsCOMPtr<nsIContent> menuRootContent = do_QueryInterface(gDockMenuRoot);
+    BookmarksService::SpecialBookmarkChanged(eBookmarksFolderDockMenu, menuRootContent);
+  }
+
   nsCOMPtr<nsIDOMNode> oldParent;
   aBookmark->GetParentNode(getter_AddRefs(oldParent));
 
@@ -584,6 +535,8 @@ BookmarksService::ReadBookmarks()
   nsCOMPtr<nsIContent> rootNode;
   GetRootContent(getter_AddRefs(rootNode));
   StripWhitespaceNodes(rootNode);
+  
+  EnsureToolbarRoot();
 }
 
 void
@@ -656,218 +609,139 @@ BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement)
   return [NSImage imageNamed:@"smallbookmark"];
 }
 
-void BookmarksService::EnsureToolbarRoot()
+static bool AttributeStringContainsValue(const nsAString& inAttribute, const nsAString& inValue)
 {
-  if (gToolbarRoot)
-    return;
+  nsAutoString attributeString(inAttribute);
+  attributeString.StripWhitespace();
 
+  PRInt32 begin = 0;
+  PRInt32 len = attributeString.Length();
+  while (begin < len)
+  {
+    PRInt32 end = attributeString.FindChar(PRUnichar(','), begin);
+    if (end == kNotFound)
+      end = len;
+    if (Substring(attributeString, begin, end - begin).Equals(inValue))
+      return true;
+
+    begin = end + 1;
+  }
+
+  return false;
+}
+
+bool BookmarksService::FindFolderWithAttribute(const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt)
+{
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
   nsCOMPtr<nsIDOMElement> rootElt;
   domDoc->GetDocumentElement(getter_AddRefs(rootElt));
+
+  return SearchChildrenForMatchingFolder(rootElt, inAttribute, inValue, foundElt);
+}
+
+void BookmarksService::EnsureToolbarRoot()
+{
+  if (!gToolbarRoot)
+  {
+    nsCOMPtr<nsIDOMElement> foundElt;
+    FindFolderWithAttribute(NS_LITERAL_STRING("type"), NS_LITERAL_STRING("toolbar"), getter_AddRefs(foundElt));
+    if (foundElt)
+      gToolbarRoot = foundElt;
+
+    if (!gToolbarRoot)
+    {
+      NSLog(@"Repairing personal toolbar");
+      nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(gBookmarks);
+
+      nsCOMPtr<nsIDOMElement> rootElt;
+      domDoc->GetDocumentElement(getter_AddRefs(rootElt));
+
+      nsCOMPtr<nsIDOMElement> elt;
+      domDoc->CreateElementNS(NS_LITERAL_STRING("http://chimera.mozdev.org/bookmarks/"),
+                              NS_LITERAL_STRING("folder"),
+                              getter_AddRefs(elt));
   
-  nsCOMPtr<nsIDOMNode> child;
-  rootElt->GetFirstChild(getter_AddRefs(child));
-  nsAutoString typeValue;
-  while (child) {
-    nsCOMPtr<nsIDOMElement> childElt(do_QueryInterface(child));
-    if (childElt) {
-      childElt->GetAttribute(NS_LITERAL_STRING("type"), typeValue);
-      if (typeValue.Equals(NS_LITERAL_STRING("toolbar")))
-        gToolbarRoot = childElt;
+      elt->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Toolbar Bookmarks"));
+      elt->SetAttribute(NS_LITERAL_STRING("type"), NS_LITERAL_STRING("toolbar"));
+  
+      nsCOMPtr<nsIDOMNode> dummy;
+      rootElt->AppendChild(elt, getter_AddRefs(dummy));
+      gToolbarRoot = elt;
     }
-    
-    nsCOMPtr<nsIDOMNode> temp;
-    child->GetNextSibling(getter_AddRefs(temp));
-    child = temp;
   }
-
-  if (!gToolbarRoot) {
-    NSLog(@"Repairing personal toolbar");
-    nsCOMPtr<nsIDOMElement> elt;
-    domDoc->CreateElementNS(NS_LITERAL_STRING("http://chimera.mozdev.org/bookmarks/"),
-                            NS_LITERAL_STRING("folder"),
-                            getter_AddRefs(elt));
-
-    elt->SetAttribute(NS_LITERAL_STRING("name"), NS_LITERAL_STRING("Toolbar Bookmarks"));
-    elt->SetAttribute(NS_LITERAL_STRING("type"), NS_LITERAL_STRING("toolbar"));
-
-    nsCOMPtr<nsIDOMNode> dummy;
-    rootElt->AppendChild(elt, getter_AddRefs(dummy));
-    gToolbarRoot = elt;
+  
+  if (!gDockMenuRoot)
+  {
+    nsCOMPtr<nsIDOMElement> foundElt;
+    FindFolderWithAttribute(NS_LITERAL_STRING("dockmenu"), NS_LITERAL_STRING("true"), getter_AddRefs(foundElt));
+    if (foundElt)
+      gDockMenuRoot = foundElt;
+    
+    if (!gDockMenuRoot)
+      gDockMenuRoot = gToolbarRoot;
   }
 }
 
-static
-void RecursiveAddBookmarkConstruct(NSPopUpButton* aPopup, NSMenu* aMenu, int aTagToMatch, int depth = 0)
-{
-  // Get the menu item children.
-  NSArray* children = [aMenu itemArray];
-  int startPosition = 0;
-  if (aMenu == BookmarksService::gBookmarksMenu)
-    startPosition = 3;
 
-  int count = [children count];
-  for (int i = startPosition; i < count; ++i) {
-    NSMenuItem* menuItem = [children objectAtIndex: i];
-    NSMenu* submenu = [menuItem submenu];
-    if (submenu) {
-      // This is a folder.  Add it to our list and then recur. Indent it
-      // the apropriate depth for readability in the menu.
-      NSMutableString *title = [NSMutableString stringWithString:[menuItem title]];
-      for (int j = 0; j <= depth; ++j) 
-        [title insertString:@"    " atIndex: 0];
+void BookmarksService::SetDockMenuRoot(nsIContent* inDockRootContent)
+{
+  if (!inDockRootContent)
+  {
+    // we allow it to be set to nil
+      if (gDockMenuRoot)
+        gDockMenuRoot->RemoveAttribute(NS_LITERAL_STRING("dockmenu"));
+      gDockMenuRoot = nil;
+      BookmarksService::SpecialBookmarkChanged(eBookmarksFolderDockMenu, nil);
+  }
+  else
+  {
+    // sanity check
+    nsCOMPtr<nsIAtom> tagName;
+    inDockRootContent->GetTag(*getter_AddRefs(tagName));
+  
+    nsAutoString group;
+    inDockRootContent->GetAttr(kNameSpaceID_None, gGroupAtom, group);
+  
+    nsCOMPtr<nsIDOMElement> dockRootElement = do_QueryInterface(inDockRootContent);
     
-      [aPopup addItemWithTitle: title];
-      NSMenuItem* lastItem = [aPopup lastItem];
-      if ([menuItem tag] == aTagToMatch)
-        [aPopup selectItem: lastItem];
+    if (dockRootElement && group.IsEmpty() && tagName == gFolderAtom)
+    {
+      // remove the attribute from the old node
+      if (gDockMenuRoot)
+        gDockMenuRoot->RemoveAttribute(NS_LITERAL_STRING("dockmenu"));
+      // set the attribute on the new node
+      dockRootElement->SetAttribute(NS_LITERAL_STRING("dockmenu"), NS_LITERAL_STRING("true"));
       
-      [lastItem setTag: [menuItem tag]];
-      RecursiveAddBookmarkConstruct(aPopup, submenu, aTagToMatch, depth+1);
+      gDockMenuRoot = dockRootElement;
+      BookmarksService::SpecialBookmarkChanged(eBookmarksFolderDockMenu, inDockRootContent);
     }
   }
 }
 
-void
-BookmarksService::ConstructAddBookmarkFolderList(NSPopUpButton* aPopup, BookmarkItem* aItem)
+void BookmarksService::SetToolbarRoot(nsIContent* inToolbarRootContent)
 {
-  [aPopup removeAllItems];
-  [aPopup addItemWithTitle: [gBookmarksMenu title]];
-  NSMenuItem* lastItem = [aPopup lastItem];
-  [lastItem setTag: -1];
-  int tag = -1;
-  if (aItem) {
-    nsIContent* content = [aItem contentNode];
-    PRUint32 utag;
-    content->GetContentID(&utag);
-    tag = (int)utag;
-  }
-  RecursiveAddBookmarkConstruct(aPopup, gBookmarksMenu, tag);
-}
+  if (!inToolbarRootContent) return;
 
-void
-BookmarksService::GetTitleAndHrefForBrowserView(id aBrowserView, nsString& aTitle, nsString& aHref)
-{
-  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([aBrowserView getWebBrowser]);
-  nsCOMPtr<nsIDOMWindow> window;
-  webBrowser->GetContentDOMWindow(getter_AddRefs(window));
-  nsCOMPtr<nsIDOMDocument> htmlDoc;
-  window->GetDocument(getter_AddRefs(htmlDoc));
-  nsCOMPtr<nsIDocument> pageDoc(do_QueryInterface(htmlDoc));
-
-  if (pageDoc) {
-    nsCOMPtr<nsIURI> url;
-    pageDoc->GetDocumentURL(getter_AddRefs(url));
-    nsCAutoString spec;
-    url->GetSpec(spec);
-    aHref.AssignWithConversion(spec.get());
-  }
-
-  nsCOMPtr<nsIDOMHTMLDocument> htmlDocument(do_QueryInterface(htmlDoc));
-  if (htmlDocument)
-    htmlDocument->GetTitle(aTitle);
-  if (aTitle.IsEmpty())
-    aTitle = aHref;  
-}
-
-void
-BookmarksService::ConstructBookmarksMenu(NSMenu* aMenu, nsIContent* aContent)
-{
-    nsCOMPtr<nsIContent> content = aContent;
-    if (!content) {
-        GetRootContent(getter_AddRefs(content));
-        GetWrapperFor(content);
-        gBookmarksMenu = aMenu;
-    }
-    
-    // Now walk our children, and for folders also recur into them.
-    PRInt32 childCount;
-    content->ChildCount(childCount);
-    
-    for (PRInt32 i = 0; i < childCount; i++) {
-      nsCOMPtr<nsIContent> child;
-      content->ChildAt(i, *getter_AddRefs(child));
-      AddMenuBookmark(aMenu, content, child, -1);
-    }
-}
-
-void
-BookmarksService::AddMenuBookmark(NSMenu* aMenu, nsIContent* aParent, nsIContent* aChild, PRInt32 aIndex)
-{
-  nsAutoString name;
-  aChild->GetAttr(kNameSpaceID_None, gNameAtom, name);
-  NSString* title = [[NSString stringWith_nsAString: name] stringByTruncatingTo:80 at:kTruncateAtMiddle];
-
-  // Create a menu or menu item for the child.
-  NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
-  GetWrapperFor(aChild);
-
-  if (aIndex == -1)
-    [aMenu addItem: menuItem];
-  else {
-    PRInt32 insertIndex = aIndex;
-    if (aMenu == gBookmarksMenu)	// take static menu items into account
-      insertIndex += [aMenu indexOfItemWithTag:kBookmarksDividerTag] + 1;
-    
-    [aMenu insertItem: menuItem atIndex: insertIndex];
-  }
-  
+  // sanity check
   nsCOMPtr<nsIAtom> tagName;
-  aChild->GetTag(*getter_AddRefs(tagName));
+  inToolbarRootContent->GetTag(*getter_AddRefs(tagName));
 
   nsAutoString group;
-  aChild->GetAttr(kNameSpaceID_None, gGroupAtom, group);
+  inToolbarRootContent->GetAttr(kNameSpaceID_None, gGroupAtom, group);
 
-  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aChild));
-  NSImage* menuItemImage = BookmarksService::CreateIconForBookmark(elt);
+  nsCOMPtr<nsIDOMElement> toolbarRootElement = do_QueryInterface(inToolbarRootContent);
   
-  if (group.IsEmpty() && tagName == gFolderAtom) {
-    NSMenu* menu = [[[NSMenu alloc] initWithTitle: title] autorelease];
-    [aMenu setSubmenu: menu forItem: menuItem];
-    [menu setAutoenablesItems: NO];
-    [menuItem setImage: menuItemImage];
-    ConstructBookmarksMenu(menu, aChild);
+  if (toolbarRootElement && group.IsEmpty() && tagName == gFolderAtom)
+  {
+    // remove the attribute from the old node
+    if (gToolbarRoot)
+      gToolbarRoot->RemoveAttribute(NS_LITERAL_STRING("type"));
+    // set the attribute on the new node
+    toolbarRootElement->SetAttribute(NS_LITERAL_STRING("type"), NS_LITERAL_STRING("toolbar"));
+
+    gToolbarRoot = toolbarRootElement;
+    BookmarksService::SpecialBookmarkChanged(eBookmarksFolderToolbar, inToolbarRootContent);
   }
-  else {
-    if (group.IsEmpty())
-      [menuItem setImage: menuItemImage];
-    else
-      [menuItem setImage: menuItemImage];
-    
-    [menuItem setTarget: gMainController];
-    [menuItem setAction: @selector(openMenuBookmark:)];
-  }
-
-  PRUint32 contentID;
-  aChild->GetContentID(&contentID);
-  [menuItem setTag: contentID];
-}
-
-void 
-BookmarksService::OpenMenuBookmark(BrowserWindowController* aController, id aMenuItem)
-{
-  // Get the corresponding bookmark item.
-  BookmarkItem* item = BookmarksService::GetWrapperFor([aMenuItem tag]);
-
-  // Get the content node.
-  nsIContent* content = [item contentNode];
-  nsAutoString group;
-  content->GetAttr(kNameSpaceID_None, gGroupAtom, group);
-  if (!group.IsEmpty()) {
-    nsCOMPtr<nsIDOMElement> elt(do_QueryInterface([item contentNode]));
-    return OpenBookmarkGroup([aController getTabBrowser], elt);
-  }
-  
-  // Get the href attribute.  This is the URL we want to load.
-  nsAutoString href;
-  content->GetAttr(kNameSpaceID_None, gHrefAtom, href);
-  if (href.IsEmpty())
-    return;
-
-  NSString* url = [NSString stringWith_nsAString: href];
-
-  // Now load the URL in the window.
-  [aController loadURL:url referrer:nil activate:YES];
 }
 
 static void GetImportTitle(nsIDOMElement* aSrc, nsString& aTitle)
@@ -1096,48 +970,6 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
 
   // this will save the file
   BookmarkAdded(parentContent, childContent, true /* flush */);
-}
-
-void
-BookmarksService::OpenBookmarkGroup(id aTabView, nsIDOMElement* aFolder)
-{
-  // We might conceivably have to make new tabs in order to load all
-  // the items in the group.
-  int currentIndex = 0;
-  int total = [aTabView numberOfTabViewItems];
-  nsCOMPtr<nsIDOMNode> child;
-  aFolder->GetFirstChild(getter_AddRefs(child));
-  while (child) {
-    nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(child));
-    if (elt) {
-      nsAutoString href;
-      elt->GetAttribute(NS_LITERAL_STRING("href"), href);
-      if (!href.IsEmpty()) {
-        NSString* url = [NSString stringWith_nsAString: href];
-        BrowserTabViewItem* tabViewItem = nil;
-        if (currentIndex >= total) {
-          // We need to make a new tab.
-          // XXX this needs fixing to not max out the number of tabs in a browser window.
-          // See [BrowserWindowController newTabsAllowed];
-          tabViewItem = [[[aTabView window] windowController] createNewTabItem];
-          [tabViewItem setLabel: NSLocalizedString(@"UntitledPageTitle", @"")];
-          [aTabView addTabViewItem: tabViewItem];
-        }
-        else
-          tabViewItem = [aTabView tabViewItemAtIndex: currentIndex];
-
-        [[tabViewItem view] loadURI: url referrer:nil
-                              flags: NSLoadFlagsNone activate:(currentIndex == 0)];
-      }
-    }
-    
-    nsCOMPtr<nsIDOMNode> temp = child;
-    temp->GetNextSibling(getter_AddRefs(child));
-    currentIndex++;
-  }
-
-  // Select the first tab.
-  [aTabView selectTabViewItemAtIndex: 0];
 }
 
 NSString* 
@@ -1427,12 +1259,142 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
   return YES;  
 }
 
+
+#pragma mark -
+
+@implementation BookmarkItem
+
+-(void)dealloc
+{
+  [mSiteIcon release];
+  [super dealloc];
+}
+
+-(nsIContent*)contentNode
+{
+  return mContentNode;		// no addreffing
+}
+
+- (NSNumber*)contentID
+{
+  PRUint32 contentID = 0;
+  mContentNode->GetContentID(&contentID);
+  return [NSNumber numberWithInt: (int)contentID];
+}
+
+- (int)intContentID
+{
+  PRUint32 contentID = 0;
+  mContentNode->GetContentID(&contentID);
+  return (int)contentID;
+}
+
+- (NSString *)description
+{
+  nsCOMPtr<nsIContent> item = [self contentNode];
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(item));
+  nsAutoString href;
+  element->GetAttribute(NS_LITERAL_STRING("name"), href);
+  NSString* info = [NSString stringWith_nsAString: href];
+  return [NSString stringWithFormat:@"<BookmarkItem, name = \"%@\">", info];
+}
+
+- (NSString *)url
+{
+  nsCOMPtr<nsIContent> item = [self contentNode];
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(item));
+  nsAutoString href;
+  element->GetAttribute(NS_LITERAL_STRING("href"), href);
+  return [NSString stringWith_nsAString: href];
+}
+
+- (void)setSiteIcon:(NSImage*)image
+{
+  //NSLog(@"Setting site icon for %@", [self url]);
+  [mSiteIcon autorelease];
+  mSiteIcon = [image retain];
+}
+
+- (NSImage*)siteIcon
+{
+  return mSiteIcon;
+}
+
+-(void)setContentNode: (nsIContent*)aContentNode
+{
+  mContentNode = aContentNode;		// no addreffing
+}
+
+- (id)copyWithZone:(NSZone *)aZone
+{
+  BookmarkItem* copy = [[[self class] allocWithZone: aZone] init];
+  [copy setContentNode: mContentNode];
+  [copy setSiteIcon: mSiteIcon];
+  return copy;
+}
+
+- (BOOL)isFolder
+{
+  nsCOMPtr<nsIAtom> tagName;
+  mContentNode->GetTag(*getter_AddRefs(tagName));
+  return (tagName == BookmarksService::gFolderAtom);
+}
+
+- (BOOL)isGroup
+{
+  nsCOMPtr<nsIAtom> tagName;
+  mContentNode->GetTag(*getter_AddRefs(tagName));
+  if (tagName != BookmarksService::gFolderAtom)
+    return NO;
+
+  nsAutoString group;
+  mContentNode->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
+  return !group.IsEmpty();
+}
+
+- (BOOL)isToobarRoot
+{
+  nsCOMPtr<nsIContent> toolbarRoot = do_QueryInterface(BookmarksService::gToolbarRoot);
+  return (mContentNode == toolbarRoot.get());
+}
+
+- (BOOL)isDockMenuRoot
+{
+  nsCOMPtr<nsIContent> dockRoot = do_QueryInterface(BookmarksService::gDockMenuRoot);
+  return (mContentNode == dockRoot.get());
+}
+
+- (BookmarkItem*)parentItem
+{
+  nsCOMPtr<nsIContent> parentContent;
+  mContentNode->GetParent(*getter_AddRefs(parentContent));
+
+  nsCOMPtr<nsIContent> rootContent;
+  BookmarksService::GetRootContent(getter_AddRefs(rootContent));
+
+  // The root has no item
+  if (parentContent != rootContent)
+  {
+    PRUint32 contentID;
+    parentContent->GetContentID(&contentID);
+    return BookmarksService::GetWrapperFor(contentID);
+  }
+  
+  return nil;
+}
+
+@end
+
+
 #pragma mark -
 
 @interface BookmarksManager(Private)
 
 - (void)registerNotificationListener;
 - (void)imageLoadedNotification:(NSNotification*)notification;
+
+- (void)buildFoldersListWalkChildren:(NSMenu*)menu curNode:(nsIContent*)curNode depth:(int)depth;
+- (void)buildFoldersListProcessItem:(NSMenu*)menu curNode:(nsIContent*)curNode depth:(int)depth;
 
 @end
 
@@ -1454,13 +1416,15 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
   if ((self = [super init]))
   {
     [self registerNotificationListener];
+    BookmarksService::Init();
   }
   return self;
 }
 
 - (void)dealloc
 {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];  
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  BookmarksService::Shutdown();
   [super dealloc];
 }
 
@@ -1508,6 +1472,169 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
   }
 }
 
+- (void)addBookmarksClient:(id<BookmarksClient>)client
+{
+  if (!BookmarksService::gClientsArray)
+    BookmarksService::gClientsArray = [[NSMutableArray alloc] initWithCapacity:4];
+
+  if (![BookmarksService::gClientsArray containsObject:client])
+    [BookmarksService::gClientsArray addObject:client];
+}
+
+- (void)removeBookmarksClient:(id<BookmarksClient>)client
+{
+  [BookmarksService::gClientsArray removeObject:client];
+}
+
+- (BookmarkItem*)getWrapperForContent:(nsIContent*)item
+{
+  return BookmarksService::GetWrapperFor(item);
+}
+
+- (BookmarkItem*)getWrapperForID:(int)contentID
+{
+  return BookmarksService::GetWrapperFor((PRUint32)contentID);
+}
+
+- (nsIContent*)getRootContent
+{
+  nsIContent* rootContent = NULL;
+  BookmarksService::GetRootContent(&rootContent);	// addrefs
+  return rootContent;
+}
+
+- (nsIContent*)getToolbarRoot
+{
+  nsIContent* rootAsContent = NULL;
+  if (BookmarksService::gToolbarRoot)
+    BookmarksService::gToolbarRoot->QueryInterface(nsIContent::GetIID(), (void**)&rootAsContent);
+    
+  return rootAsContent;
+}
+
+- (nsIContent*)getDockMenuRoot
+{
+  nsIContent* rootAsContent = NULL;
+  if (BookmarksService::gDockMenuRoot)
+    BookmarksService::gDockMenuRoot->QueryInterface(nsIContent::GetIID(), (void**)&rootAsContent);
+    
+  return rootAsContent;
+}
+
+- (nsIDOMDocument*)getBookmarksDocument
+{
+  nsIDOMDocument* domDoc = NULL;
+
+  if (BookmarksService::gBookmarks)
+    BookmarksService::gBookmarks->QueryInterface(nsIDOMDocument::GetIID(), (void**)&domDoc);
+    
+  return domDoc;
+}
+
+- (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item
+{
+  nsIContent* content = [item contentNode];
+  nsAutoString group;
+  content->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
+  if (group.IsEmpty())
+    return nil;
+
+  nsCOMPtr<nsIDOMNode> folderNode = do_QueryInterface(content);
+  if (!folderNode) return nil;
+
+  // use nsIContent::ChildAt
+  nsCOMPtr<nsIDOMNodeList> childNodes;
+  folderNode->GetChildNodes(getter_AddRefs(childNodes));
+  if (!childNodes) return nil;
+  
+  PRUint32 numChildren;
+  childNodes->GetLength(&numChildren);
+  
+  NSMutableArray* uriArray = [[[NSMutableArray alloc] initWithCapacity:(int)numChildren] autorelease];
+
+  for (PRUint32 i = 0; i < numChildren; i ++)
+  {
+    nsCOMPtr<nsIDOMNode> child;
+    childNodes->Item(i, getter_AddRefs(child));
+    nsCOMPtr<nsIDOMElement> elt = do_QueryInterface(child);
+    if (elt)
+    {
+      nsAutoString href;
+      elt->GetAttribute(NS_LITERAL_STRING("href"), href);
+      if (!href.IsEmpty())
+      {
+        NSString* url = [NSString stringWith_nsAString: href];
+        [uriArray addObject:url];
+      }
+    }
+  }
+
+  return uriArray;
+}
+
+- (void)buildFoldersListWalkChildren:(NSMenu*)menu curNode:(nsIContent*)content depth:(int)depth
+{
+  if (!content) return;
+  
+  // Now walk our children, and for folders also recur into them.
+  PRInt32 childCount;
+  content->ChildCount(childCount);
+  
+  for (PRInt32 i = 0; i < childCount; i++)
+  {
+    nsCOMPtr<nsIContent> child;
+    content->ChildAt(i, *getter_AddRefs(child));
+    [self buildFoldersListProcessItem:menu curNode:child depth:depth];
+  }
+}
+
+- (void)buildFoldersListProcessItem:(NSMenu*)menu curNode:(nsIContent*)content depth:(int)depth
+{
+  if (!content) return;
+  
+  nsCOMPtr<nsIAtom> tagName;
+  content->GetTag(*getter_AddRefs(tagName));
+
+  nsAutoString group;
+  if (tagName == BookmarksService::gFolderAtom)
+    content->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
+
+  BOOL isFolder = (tagName == BookmarksService::gFolderAtom);
+  BOOL isGroup  = isFolder && !group.IsEmpty();
+
+  if (isFolder && !isGroup) // folder
+  {
+    // add it
+    nsAutoString name;
+    content->GetAttr(kNameSpaceID_None, BookmarksService::gNameAtom, name);
+
+    NSString* 				itemName 	= [[NSString stringWith_nsAString: name] stringByTruncatingTo:80 at:kTruncateAtMiddle];
+    NSMutableString*	title 		= [NSMutableString stringWithString:itemName];
+
+    for (int j = 0; j <= depth; ++j) 
+      [title insertString:@"    " atIndex: 0];
+
+    NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
+    
+    PRUint32 contentID;
+    content->GetContentID(&contentID);
+    [menuItem setTag: contentID];
+    
+    [menu addItem: menuItem];
+
+    [self buildFoldersListWalkChildren:menu curNode:content depth:depth+1];
+  }
+}
+
+
+- (void)buildFlatFolderList:(NSMenu*)menu fromRoot:(nsIContent*)rootContent
+{
+  nsCOMPtr<nsIContent> startContent = rootContent;
+  if (!startContent)
+    BookmarksService::GetRootContent(getter_AddRefs(startContent));
+  
+  [self buildFoldersListWalkChildren:menu curNode:startContent depth:0];
+}
 
 @end
 

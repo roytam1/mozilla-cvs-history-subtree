@@ -23,14 +23,14 @@
 
 #import <AppKit/AppKit.h>
 
+#import "BookmarksService.h"
+
 class nsIDOMElement;
 
-class BookmarksService;
-class BookmarksButton;
+@class BookmarksButton;
 
-@interface BookmarksToolbar : NSView
+@interface BookmarksToolbar : NSView<BookmarksClient>
 {
-  BookmarksService*  mBookmarks;
   NSMutableArray*    mButtons;
   BookmarksButton*   mDragInsertionButton;
   int                mDragInsertionPosition;

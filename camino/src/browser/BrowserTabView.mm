@@ -42,7 +42,8 @@
 
 #import "BrowserTabView.h"
 #import "BookmarksService.h"
-#import "BookmarksDataSource.h"
+#import "BrowserWrapper.h"
+#import "BrowserWindowController.h"
 
 #include "nsCOMPtr.h"
 #include "nsIDOMElement.h"
@@ -363,26 +364,23 @@ const float kTabsInvisibleTopGap  = -7.0;		// space removed to push tab content 
   if ([pasteBoardTypes containsObject: @"MozBookmarkType"])
   {
     NSArray* contentIds = [[sender draggingPasteboard] propertyListForType: @"MozBookmarkType"];
-    if (contentIds) {
+    if (contentIds)
+    {
       // drag type is chimera bookmarks
-      for (unsigned int i = 0; i < [contentIds count]; ++i) {
+      for (unsigned int i = 0; i < [contentIds count]; ++i)
+      {
         BookmarkItem* item = [BookmarksService::gDictionary objectForKey: [contentIds objectAtIndex:i]];
-        nsCOMPtr<nsIDOMElement> bookmarkElt = do_QueryInterface([item contentNode]);
-  
-        nsCOMPtr<nsIAtom> tagName;
-        [item contentNode]->GetTag(*getter_AddRefs(tagName));
-        
-        nsAutoString href;
-        bookmarkElt->GetAttribute(NS_LITERAL_STRING("href"), href);
-        NSString* url = [NSString stringWith_nsAString: href];
-  
-        nsAutoString group;
-        bookmarkElt->GetAttribute(NS_LITERAL_STRING("group"), group);
-        if (!group.IsEmpty()) {
-          BookmarksService::OpenBookmarkGroup(self, bookmarkElt);
-        } else {
-          return [self handleDropOnTab:overTabViewItem overContent:overContentArea withURL:url];
+        if ([item isGroup])
+        {
+          NSArray* groupURLs = [[BookmarksManager sharedBookmarksManager] getBookmarkGroupURIs:item];
+          [[[self window] windowController] openTabGroup:groupURLs replaceExistingTabs:YES];
         }
+        else
+        {
+          // handle multiple items?
+          return [self handleDropOnTab:overTabViewItem overContent:overContentArea withURL:[item url]];
+        }
+
       }	// for each item
     }
   }

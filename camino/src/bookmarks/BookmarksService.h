@@ -43,36 +43,47 @@
 #include "nsIDocumentObserver.h"
 #include "nsVoidArray.h"
 
-#import "MainController.h"
-#import "BookmarksToolbar.h"
-#import "ExtendedOutlineView.h"
 
 class nsIAtom;
+class nsIContent;
+class nsIDOMElement;
 class nsIDOMHTMLDocument;
 
 @class BookmarksDataSource;
+@class BookmarksToolbar;
 @class BookmarkItem;
+@class BrowserWindowController;
 
-// despite appearances, BookmarksService is not a singleton. We make one for the bookmarks menu,
-// one each per BookmarksDataSource, and one per bookmarks toolbar. It relies on a bunch of global
-// variables, which is evil.
+typedef enum
+{
+  eBookmarksFolderNormal,		// any folder
+  eBookmarksFolderRoot,
+  eBookmarksFolderToolbar,
+  eBookmarksFolderDockMenu
+  
+} EBookmarksFolderType;
+
+
+@protocol BookmarksClient
+
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container;
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container;
+- (void)bookmarkChanged:(nsIContent*)bookmark;
+
+- (void)specialFolder:(EBookmarksFolderType)folderType changedTo:(nsIContent*)newFolderContent;
+
+@end
+
 class BookmarksService
 {
 public:
-  BookmarksService(BookmarksDataSource* aDataSource);
-  BookmarksService(BookmarksToolbar* aToolbar);
-  virtual ~BookmarksService();
 
-  void AddObserver();
-  void RemoveObserver();
+  static void Init();			// reads bookmarks
+  static void Shutdown();
 
-public:
   static void BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
   static void BookmarkChanged(nsIContent* aItem, bool shouldFlush = true);
-  static void BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
 
-  static void AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
-  static void MoveBookmarkToFolder(nsIDOMElement* aBookmark, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
   static void DeleteBookmark(nsIDOMElement* aBookmark);
   
   static void GetRootContent(nsIContent** aResult);
@@ -82,44 +93,48 @@ public:
   
   static void ReadBookmarks();
   static void FlushBookmarks();
-  static void SaveBookmarksToFile(const nsAString& inFileName);
 
-  static void ConstructBookmarksMenu(NSMenu* aMenu, nsIContent* aContent);
-  static void OpenMenuBookmark(BrowserWindowController* aController, id aMenuItem);
-  static void AddMenuBookmark(NSMenu* aMenu, nsIContent* aParent, nsIContent* aChild, PRInt32 aIndex);
-  static NSMenu* LocateMenu(nsIContent* aContent);
-
-  static void ConstructAddBookmarkFolderList(NSPopUpButton* aPopup, BookmarkItem* aItem);
-  
+  static void SetDockMenuRoot(nsIContent* inDockRootContent);
+  static void SetToolbarRoot(nsIContent* inToolbarRootContent);
+    
   static NSImage* CreateIconForBookmark(nsIDOMElement* aElement);
-
-  static void EnsureToolbarRoot();
 
   static void ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc);
   
-  static void GetTitleAndHrefForBrowserView(id aBrowserView, nsString& aTitle, nsString& aHref);
-  static void OpenBookmarkGroup(id aTabView, nsIDOMElement* aFolder);
-  
   static NSString* ResolveKeyword(NSString* aKeyword);
 
-  static bool DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem);
   static bool IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs);
   static bool PerformBookmarkDrop(BookmarkItem* parent, BookmarkItem* beforeItem, int index, NSArray* draggedIDs, bool doCopy);
   static bool PerformProxyDrop(BookmarkItem* parentItem, BookmarkItem* beforeItem, NSDictionary* data);
   
   static bool PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeItem, NSString* title, NSString* url);
-  
+
+protected:
+
+  static void SpecialBookmarkChanged(EBookmarksFolderType aFolderType, nsIContent* aNewContent);
+  static void BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
+
+  static void AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
+  static void MoveBookmarkToFolder(nsIDOMElement* aBookmark, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
+
+  static void SaveBookmarksToFile(const nsAString& inFileName);
+
+  static bool FindFolderWithAttribute(const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt);
+  static bool DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem);
+
+  static void EnsureToolbarRoot();
+
 public:
-  // Global counter and pointers to our singletons.
-  static PRUint32 gRefCnt;
 
   // A dictionary that maps from content IDs (which uniquely identify content nodes)
   // to Obj-C bookmarkItem objects.  These objects are handed back to UI elements like
   // the outline view.
   static NSMutableDictionary* gDictionary;
-  static MainController* gMainController;
-  static NSMenu* gBookmarksMenu;
+  static nsIDocument* gBookmarks;
+
   static nsIDOMElement* gToolbarRoot;
+  static nsIDOMElement* gDockMenuRoot;
+
   static nsIAtom* gFolderAtom;
   static nsIAtom* gNameAtom;
   static nsIAtom* gHrefAtom;
@@ -128,36 +143,76 @@ public:
   static nsIAtom* gBookmarkAtom;
   static nsIAtom* gOpenAtom;
   static nsIAtom* gGroupAtom;
-  static nsIDocument* gBookmarks;
-  static BOOL     gBookmarksFileReadOK;
-  static nsVoidArray* gInstances;
+
+  static NSMutableArray* gClientsArray;
+  
+  static const int kBookmarksDividerTag;
+
   static int CHInsertNone;
   static int CHInsertInto;
   static int CHInsertBefore;
-  static int CHInsertAfter;
-  
-private:
-  // There are three kinds of bookmarks data sources:
-  // tree views (mDataSource), the personal toolbar (mToolbar)
-  // and menus (gBookmarksMenu).
-  BookmarksToolbar* mToolbar;
-  BookmarksDataSource* mDataSource;
+  static int CHInsertAfter;  
+
+protected:
+
+  static BOOL     gBookmarksFileReadOK;
+
 };
 
+
+
+@interface BookmarkItem : NSObject
+{
+  nsIContent* mContentNode;
+  NSImage*    mSiteIcon;
+}
+
+- (id)copyWithZone:(NSZone *)aZone;
+
+- (nsIContent*)contentNode;		// does *not* addref (inconsistent)
+- (void)setContentNode: (nsIContent*)aContentNode;
+- (void)setSiteIcon:(NSImage*)image;
+
+- (NSString*)url;
+- (NSImage*)siteIcon;
+- (NSNumber*)contentID;
+- (int)intContentID;
+- (BOOL)isFolder;
+- (BOOL)isGroup;
+
+- (BOOL)isToobarRoot;
+- (BOOL)isDockMenuRoot;
+
+- (BookmarkItem*)parentItem;
+
+@end
 
 
 // singleton bookmarks manager object
 
 @interface BookmarksManager : NSObject
 {
-
-
-
 }
 
 + (BookmarksManager*)sharedBookmarksManager;
 
+- (void)addBookmarksClient:(id<BookmarksClient>)client;
+- (void)removeBookmarksClient:(id<BookmarksClient>)client;
+
+- (BookmarkItem*)getWrapperForContent:(nsIContent*)item;
+- (BookmarkItem*)getWrapperForID:(int)contentID;
+
+- (nsIContent*)getRootContent;		// addrefs return value
+- (nsIContent*)getToolbarRoot;		// addrefs return value
+- (nsIContent*)getDockMenuRoot;		// addrefs return value
+
+- (nsIDOMDocument*)getBookmarksDocument;	// addrefs
+
+- (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item;
+
 - (void)loadProxyImageFor:(id)requestor withURI:(NSString*)inURIString;
+
+- (void)buildFlatFolderList:(NSMenu*)menu fromRoot:(nsIContent*)rootContent;
 
 
 @end

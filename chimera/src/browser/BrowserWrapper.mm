@@ -49,6 +49,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
+#include "nsIURI.h"
 #include "nsIIOService.h"
 #include "ContentClickListener.h"
 #include "nsIDOMWindow.h"
@@ -554,6 +555,35 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     return NO;
   
   return YES;
+}
+
+- (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString
+{
+  *outTitle = *outHrefString = nil;
+
+  nsCOMPtr<nsIDOMWindow> window = getter_AddRefs([mBrowserView getContentWindow]);
+  if (!window) return;
+  
+  nsCOMPtr<nsIDOMDocument> htmlDoc;
+  window->GetDocument(getter_AddRefs(htmlDoc));
+  nsCOMPtr<nsIDocument> pageDoc(do_QueryInterface(htmlDoc));
+  if (pageDoc)
+  {
+    nsCOMPtr<nsIURI> url;
+    pageDoc->GetDocumentURL(getter_AddRefs(url));
+    nsCAutoString spec;
+    url->GetSpec(spec);
+    *outHrefString = [NSString stringWithUTF8String:spec.get()];
+  }
+
+  nsAutoString titleString;
+  nsCOMPtr<nsIDOMHTMLDocument> htmlDocument(do_QueryInterface(htmlDoc));
+  if (htmlDocument)
+    htmlDocument->GetTitle(titleString);
+  if (!titleString.IsEmpty())
+    *outTitle = [NSString stringWith_nsAString:titleString];
+  else if (*outHrefString)
+    *outTitle = [NSString stringWithString:*outHrefString];
 }
 
 -(void)setIsBookmarksImport:(BOOL)aIsImport

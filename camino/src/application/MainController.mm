@@ -41,6 +41,7 @@
 
 #import "MainController.h"
 #import "BrowserWindowController.h"
+#import "BookmarksMenu.h"
 #import "BookmarksService.h"
 #import "CHBrowserService.h"
 #import "AboutBox.h"
@@ -73,42 +74,43 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
 -(id)init
 {
-    if ( (self = [super init]) ) {
-        NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-        if ([defaults boolForKey:USER_DEFAULTS_AUTOREGISTER_KEY]) {
-            // This option causes us to simply initialize embedding and exit.
-            NSString *path = [[[NSBundle mainBundle] executablePath] stringByDeletingLastPathComponent];
-            setenv("MOZILLA_FIVE_HOME", [path fileSystemRepresentation], 1);
+  if ( (self = [super init]) )
+  {
+    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults boolForKey:USER_DEFAULTS_AUTOREGISTER_KEY]) 
+    {
+      // This option causes us to simply initialize embedding and exit.
+      NSString *path = [[[NSBundle mainBundle] executablePath] stringByDeletingLastPathComponent];
+      setenv("MOZILLA_FIVE_HOME", [path fileSystemRepresentation], 1);
 
 #ifdef _BUILD_STATIC_BIN
-            NSGetStaticModuleInfo = app_getModuleInfo;
+      NSGetStaticModuleInfo = app_getModuleInfo;
 #endif
 
-            if (NS_SUCCEEDED(NS_InitEmbedding(nsnull, nsnull))) {
-                // Register new chrome
-                nsCOMPtr<nsIChromeRegistry> chromeReg =
-                  do_GetService("@mozilla.org/chrome/chrome-registry;1");
-                if (chromeReg) {
-                  chromeReg->CheckForNewChrome();
-                  chromeReg = 0;
-                }
-                NS_TermEmbedding();
-            }
-
-            [NSApp terminate:self];
-            return self;
+      if (NS_SUCCEEDED(NS_InitEmbedding(nsnull, nsnull))) {
+        // Register new chrome
+        nsCOMPtr<nsIChromeRegistry> chromeReg =
+          do_GetService("@mozilla.org/chrome/chrome-registry;1");
+        if (chromeReg) {
+          chromeReg->CheckForNewChrome();
+          chromeReg = 0;
         }
+        NS_TermEmbedding();
+      }
 
-        NSString* url = [defaults stringForKey:USER_DEFAULTS_URL_KEY];
-        mStartURL = url ? [url retain] : nil;
-        mSplashScreen = [[SplashScreenWindow alloc] initWithImage:[NSImage imageNamed:@"splash"] withFade:NO];
-        mFindDialog = nil;
-        mMenuBookmarks = nil;
-        
-        [NSApp setServicesProvider:self];
-
+      [NSApp terminate:self];
+      return self;
     }
-    return self;
+
+    NSString* url = [defaults stringForKey:USER_DEFAULTS_URL_KEY];
+    mStartURL = url ? [url retain] : nil;
+    mSplashScreen = [[SplashScreenWindow alloc] initWithImage:[NSImage imageNamed:@"splash"] withFade:NO];
+    mFindDialog = nil;
+    mMenuBookmarks = nil;
+    
+    [NSApp setServicesProvider:self];
+  }
+  return self;
 }
 
 -(void)dealloc
@@ -143,12 +145,24 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   [mSplashScreen close];
 
   // make sure we have a bookmarks manager
-  [BookmarksManager sharedBookmarksManager];
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
   [mBookmarksMenu setAutoenablesItems: NO];
-  mMenuBookmarks = new BookmarksService((BookmarksDataSource*)nil);
-  mMenuBookmarks->AddObserver();
-  BookmarksService::ConstructBookmarksMenu(mBookmarksMenu, nsnull);
-  BookmarksService::gMainController = self;
+
+  // menubar bookmarks
+  int firstBookmarkItem = [mBookmarksMenu indexOfItemWithTag:BookmarksService::kBookmarksDividerTag] + 1;
+  mMenuBookmarks = [[BookmarksMenu alloc] initWithMenu: mBookmarksMenu
+                                             firstItem: firstBookmarkItem
+                                           rootContent: [bmManager getRootContent]
+                                         watchedFolder: eBookmarksFolderRoot];
+  [bmManager addBookmarksClient:mMenuBookmarks];
+
+  // dock bookmarks
+  [mDockMenu setAutoenablesItems:NO];
+  mDockBookmarks = [[BookmarksMenu alloc] initWithMenu: mDockMenu
+                                             firstItem: 0
+                                           rootContent: [bmManager getDockMenuRoot]
+                                         watchedFolder: eBookmarksFolderDockMenu];
+  [bmManager addBookmarksClient:mDockBookmarks];
     
   // Initialize offline mode.
   mOffline = NO;
@@ -159,12 +173,6 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   ioService->GetOffline(&offline);
   mOffline = offline;
     
-  // Set the menu item's text to "Go Online" if we're currently
-  // offline.
-/*
-  if (mOffline)
-    [mOfflineMenuItem setTitle: @"Go Online"];	// XXX localize me
-*/
   // Initialize the keychain service.
   mKeychainService = [KeychainService instance];  
 }
@@ -181,9 +189,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   // Cancel outstanding site icon loads
   [[RemoteDataProvider sharedRemoteDataProvider] cancelOutstandingRequests];
   
-  mMenuBookmarks->RemoveObserver();
-  delete mMenuBookmarks;
-  mMenuBookmarks = nsnull;
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+  [bmManager removeBookmarksClient:mMenuBookmarks];
+  [bmManager removeBookmarksClient:mDockBookmarks];
   
   // Release before calling TermEmbedding since we need to access XPCOM
   // to save preferences
@@ -193,6 +201,11 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   CHBrowserService::TermEmbedding();
   
   [self autorelease];
+}
+
+- (NSMenu *)applicationDockMenu:(NSApplication *)sender
+{
+  return mDockMenu;
 }
 
 -(IBAction)newWindow:(id)aSender
@@ -564,13 +577,38 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
 -(IBAction) openMenuBookmark:(id)aSender
 {
-    NSWindow* browserWindow = [self getFrontmostBrowserWindow];
-    if (!browserWindow) {
-        [self openBrowserWindowWithURL: @"about:blank" andReferrer:nil];
-        browserWindow = [mApplication mainWindow];
-    }
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+  BookmarkItem* item = [bmManager getWrapperForID:[aSender tag]];
 
-    BookmarksService::OpenMenuBookmark([browserWindow windowController], aSender);
+  if ([item isGroup])
+  {
+    NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+    if (browserWindow)
+    {
+      if (![browserWindow isMainWindow])
+        [browserWindow makeKeyAndOrderFront:self];
+    }
+    else
+    {
+        [self newWindow:self];
+        browserWindow = [self getFrontmostBrowserWindow];
+    }
+  
+    BrowserWindowController* browserController = (BrowserWindowController*)[browserWindow delegate];
+    
+    NSArray* uriList = [bmManager getBookmarkGroupURIs:item];
+    [browserController openTabGroup:uriList replaceExistingTabs:YES];
+  }
+  else
+  {
+    NSString* url = [item url];
+    BrowserWindowController* browserController = [self getMainWindowBrowserController];
+    if (browserController)
+      [browserController loadURL:url referrer:nil activate:YES];
+    else
+      [self openBrowserWindowWithURL:url andReferrer:nil];
+  }
+
 }
 
 -(IBAction)manageBookmarks: (id)aSender

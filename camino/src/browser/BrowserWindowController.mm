@@ -1307,7 +1307,7 @@ static NSArray* sToolbarDefaults = nil;
     [browser showWindow:self];
 }
 
--(void)openNewWindowWithGroup: (nsIDOMElement*)aFolderElement loadInBackground: (BOOL)aLoadInBG
+- (void)openNewWindowWithGroup: (nsIContent*)aFolderContent loadInBackground: (BOOL)aLoadInBG
 {
   // Autosave our dimensions before we open a new window.  That ensures the size ends up matching.
   [self autosaveWindowFrame];
@@ -1323,35 +1323,66 @@ static NSArray* sToolbarDefaults = nil;
   else
     [browser showWindow:self];
 
-  id tabBrowser = [browser getTabBrowser];
-  [mSidebarBookmarksDataSource openBookmarkGroup: tabBrowser groupElement: aFolderElement];
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+  BookmarkItem*     item			= [bmManager getWrapperForContent:aFolderContent];
+
+  NSArray* groupURLs = [bmManager getBookmarkGroupURIs:item];
+	[self openTabGroup:groupURLs replaceExistingTabs:YES];
 }
 
 -(void)openNewTabWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG
 {
-    BrowserTabViewItem* newTab  = [self createNewTabItem];
-    BrowserWrapper*     newView = [newTab view];
+  BrowserTabViewItem* newTab  = [self createNewTabItem];
+  BrowserWrapper*     newView = [newTab view];
 
-    // hyatt originally made new tabs open on the far right and tabs opened from a content
-    // link open to the right of the current tab. The idea was to keep the new tab
-    // close to the tab that spawned it, since they are related. Users, however, got confused
-    // as to why tabs appeared in different places, so now all tabs go on the far right.
+  // hyatt originally made new tabs open on the far right and tabs opened from a content
+  // link open to the right of the current tab. The idea was to keep the new tab
+  // close to the tab that spawned it, since they are related. Users, however, got confused
+  // as to why tabs appeared in different places, so now all tabs go on the far right.
 #ifdef OPEN_TAB_TO_RIGHT_OF_SELECTED    
-    NSTabViewItem* selectedTab = [mTabBrowser selectedTabViewItem];
-    int index = [mTabBrowser indexOfTabViewItem: selectedTab];
-    [mTabBrowser insertTabViewItem: newTab atIndex: index+1];
+  NSTabViewItem* selectedTab = [mTabBrowser selectedTabViewItem];
+  int index = [mTabBrowser indexOfTabViewItem: selectedTab];
+  [mTabBrowser insertTabViewItem: newTab atIndex: index+1];
 #else
-    [mTabBrowser addTabViewItem: newTab];
+  [mTabBrowser addTabViewItem: newTab];
 #endif
 
-    [newTab setLabel: NSLocalizedString(@"TabLoading", @"")];
+  [newTab setLabel: NSLocalizedString(@"TabLoading", @"")];
 
-    [newView loadURI:aURLSpec referrer:aReferrer flags:NSLoadFlagsNone activate:!aLoadInBG];
+  [newView loadURI:aURLSpec referrer:aReferrer flags:NSLoadFlagsNone activate:!aLoadInBG];
 
-    if (!aLoadInBG)
-      [mTabBrowser selectTabViewItem: newTab];
+  if (!aLoadInBG)
+    [mTabBrowser selectTabViewItem: newTab];
 }
 
+- (void)openTabGroup:(NSArray*)urlArray replaceExistingTabs:(BOOL)replaceExisting
+{
+  int curNumTabs 				= [mTabBrowser numberOfTabViewItems];
+  unsigned int numItems = [urlArray count];
+  
+  for (unsigned int i = 0; i < numItems; i++)
+  {
+    NSString* thisURL = [urlArray objectAtIndex:i];
+    BrowserTabViewItem* tabViewItem;
+
+    if (replaceExisting && i < curNumTabs)
+    {
+      tabViewItem = [mTabBrowser tabViewItemAtIndex:i];
+    }
+    else
+    {
+      tabViewItem = [self createNewTabItem];
+      [tabViewItem setLabel: NSLocalizedString(@"UntitledPageTitle", @"")];
+      [mTabBrowser addTabViewItem: tabViewItem];
+    }
+
+    [[tabViewItem view] loadURI: thisURL referrer:nil
+                        flags: NSLoadFlagsNone activate:(i == 0)];
+  }
+ 
+  // Select the first tab.
+  [mTabBrowser selectTabViewItemAtIndex:replaceExisting ? 0 : curNumTabs];
+}
 
 -(BrowserTabViewItem*)createNewTabItem
 {

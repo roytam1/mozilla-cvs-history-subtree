@@ -42,7 +42,8 @@
 #import "FindDlgController.h"
 #import "PreferenceManager.h"
 
-class BookmarksService;
+
+@class BookmarksMenu;
 @class KeychainService;
 
 @interface MainController : NSObject 
@@ -60,6 +61,7 @@ class BookmarksService;
 
     // The bookmarks menu.
     IBOutlet NSMenu*        mBookmarksMenu;
+    IBOutlet NSMenu*        mDockMenu;
 
     IBOutlet NSMenuItem*    mBookmarksToolbarMenuItem;
     IBOutlet NSMenuItem*    mAddBookmarkMenuItem;
@@ -68,11 +70,12 @@ class BookmarksService;
     
     BOOL                    mOffline;
 
-    SplashScreenWindow*   mSplashScreen;
+    SplashScreenWindow*   	mSplashScreen;
     
-    PreferenceManager*    mPreferenceManager;
+    PreferenceManager*    	mPreferenceManager;
 
-    BookmarksService*       mMenuBookmarks;
+    BookmarksMenu*          mMenuBookmarks;
+    BookmarksMenu*          mDockBookmarks;
     
     KeychainService*        mKeychainService;
 
