@@ -210,9 +210,11 @@ nsresult NS_MsgLoadSmtpUrl(nsIURI * aUrl, nsISupports * aConsumer)
 		// almost there...now create a nntp protocol instance to run the url in...
 		smtpProtocol = new nsSmtpProtocol(aUrl);
 		if (smtpProtocol == nsnull)
-			rv = NS_ERROR_OUT_OF_MEMORY;
-		else
-			rv = smtpProtocol->LoadUrl(aUrl, aConsumer); // protocol will get destroyed when url is completed...
+			return NS_ERROR_OUT_OF_MEMORY;
+		
+		NS_ADDREF(smtpProtocol);
+		rv = smtpProtocol->LoadUrl(aUrl, aConsumer); // protocol will get destroyed when url is completed...
+		NS_RELEASE(smtpProtocol);
 	}
 
 	return rv;
