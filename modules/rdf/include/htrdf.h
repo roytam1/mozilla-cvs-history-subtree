@@ -127,6 +127,13 @@ typedef HT_NotificationStruct* HT_Notification;
 #define	HT_EVENT_WORKSPACE_EDIT			0x00004000UL
 #define	HT_EVENT_VIEW_HTML_ADD			0x00008000UL
 #define	HT_EVENT_VIEW_HTML_REMOVE		0x00010000UL
+#define	HT_EVENT_NODE_ENABLE			0x00020000UL
+#define	HT_EVENT_NODE_DISABLE			0x00040000UL
+#define	HT_EVENT_NODE_SCROLLTO			0x00080000UL
+#define	HT_EVENT_COLUMN_ADD			0x00100000UL
+#define	HT_EVENT_COLUMN_DELETE			0x00200000UL
+#define	HT_EVENT_COLUMN_SIZETO			0x00400000UL
+
 #define HT_EVENT_NO_NOTIFICATION_MASK           0x00000000UL
 #define HT_EVENT_DEFAULT_NOTIFICATION_MASK      0xFFFFFFFFUL
 
@@ -403,6 +410,10 @@ PR_PUBLIC_API(HT_Error)	HT_SetSelectionRange (HT_Resource node1, HT_Resource nod
 
 PR_PUBLIC_API(HT_Resource)	HT_GetNextSelection(HT_View view, HT_Resource startingNode);
 PR_PUBLIC_API(void)	HT_ToggleSelection(HT_Resource node);
+
+PR_PUBLIC_API(PRBool)	HT_IsEnabled (HT_Resource node);
+PR_PUBLIC_API(HT_Error) HT_GetEnabledState (HT_Resource node, PRBool *enabledState);
+PR_PUBLIC_API(HT_Error)	HT_SetEnabledState(HT_Resource node, PRBool isEnabled);
 
 PR_PUBLIC_API(PRBool)	HT_Launch(HT_Resource node, MWContext *context);
 PR_PUBLIC_API(PRBool)	HT_LaunchURL(HT_Pane pane, char *url, MWContext *context);

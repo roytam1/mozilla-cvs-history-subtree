@@ -329,6 +329,7 @@ newHTEntry (HT_View view, RDF_Resource node)
 		{
 			nr->flags &= (~HT_CONTAINER_FLAG);
 		}
+		nr->flags |= HT_ENABLED_FLAG;
 	}
 	return(nr);
 }
@@ -2292,6 +2293,7 @@ resynchContainer (HT_Resource container)
 		{
 			gAutoEditNewNode = false;
 			HT_SetSelection (nc);
+			sendNotification(nc, HT_EVENT_NODE_SCROLLTO);
 			sendNotification(nc, HT_EVENT_NODE_EDIT);
 		}
 		if ((gAutoOpenPane != NULL) && (gAutoOpenPane == nc->view->pane))
@@ -2380,6 +2382,7 @@ addContainerItem (HT_Resource container, RDF_Resource item)
 		{
 			gAutoEditNewNode = false;
 			HT_SetSelection (nc);
+			sendNotification(nc, HT_EVENT_NODE_SCROLLTO);
 			sendNotification(nc, HT_EVENT_NODE_EDIT);
 		}
 		if ((gAutoOpenPane != NULL) && (gAutoOpenPane == nc->view->pane))
@@ -4060,6 +4063,7 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 
 				case	HT_CMD_RENAME:
 				if (node == NULL)	break;
+				sendNotification(node, HT_EVENT_NODE_SCROLLTO);
 				sendNotification(node, HT_EVENT_NODE_EDIT);
 				break;
 
@@ -4508,6 +4512,22 @@ HT_GetView (HT_Resource node)
 		view = node->view;
 	}
 	return (view);
+}
+
+
+
+PR_PUBLIC_API(PRBool)
+HT_IsEnabled (HT_Resource node)
+{
+	PRBool			isSelected = PR_FALSE;
+
+	XP_ASSERT(node != NULL);
+
+	if (node != NULL)
+	{
+		if (node->flags & HT_ENABLED_FLAG)	isSelected = PR_TRUE;
+	}
+	return (isSelected);
 }
 
 
@@ -6417,6 +6437,33 @@ HT_SetOpenState (HT_Resource containerNode, PRBool isOpen)
 
 
 PR_PUBLIC_API(HT_Error)
+HT_SetEnabledState(HT_Resource node, PRBool isEnabled)
+{
+	HT_Event		theEvent;
+
+	XP_ASSERT(node != NULL);
+
+	if ((isEnabled && (!HT_IsEnabled(node))) ||
+	   ((!isEnabled) && (HT_IsEnabled(node))))
+	{
+		if (isEnabled)
+		{
+			node->flags |= HT_ENABLED_FLAG;
+			theEvent = HT_EVENT_NODE_ENABLE;
+		}
+		else
+		{
+			node->flags &= (~HT_ENABLED_FLAG);
+			theEvent = HT_EVENT_NODE_DISABLE;
+		}
+		sendNotification(node,  theEvent);
+	}
+	return (HT_NoErr);
+}
+
+
+
+PR_PUBLIC_API(HT_Error)
 HT_SetSelectedState (HT_Resource node, PRBool isSelected)
 {
 	XP_ASSERT(node != NULL);
@@ -6457,6 +6504,21 @@ HT_GetOpenState (HT_Resource containerNode, PRBool *openState)
 	XP_ASSERT(openState != NULL);
 
 	*openState = (containerNode->flags & HT_OPEN_FLAG) ? PR_TRUE:PR_FALSE;
+	return (HT_NoErr);
+}
+
+
+
+PR_PUBLIC_API(HT_Error)
+HT_GetEnabledState (HT_Resource node, PRBool *enabledState)
+{
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(enabledState != NULL);
+
+	if ((node != NULL) && (enabledState != NULL))
+	{
+		*enabledState = (node->flags & HT_ENABLED_FLAG) ? PR_TRUE:PR_FALSE;
+	}
 	return (HT_NoErr);
 }
 

@@ -166,6 +166,7 @@ typedef	struct _HT_ValueStruct {
 #define	HT_PASSWORDOK_FLAG	0x0040
 #define	HT_INITED_FLAG		0x0080
 #define	HT_DIRTY_FLAG		0x0100
+#define	HT_ENABLED_FLAG		0x0200
 
 typedef struct _HT_ResourceStruct {
 	struct _HT_ResourceStruct	*nextItem; 
