@@ -917,7 +917,7 @@ sub run_all_tests {
 		  print_log "phonehome = 1\n";
 		  send_startup_results_to_server($avg_startuptime,
 										$times_string, 
-										"coffee");
+										::hostname());
 		}
 
 	  }
