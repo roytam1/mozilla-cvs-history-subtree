@@ -76,6 +76,49 @@ static NS_DEFINE_IID(kIRDFDateIID,         NS_IRDFDATE_IID);
 static NS_DEFINE_IID(kIRDFIntIID,         NS_IRDFINT_IID);
 static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
+////////////////////////////////////////////////////////////////////////////////
+// XXX This should go somewhere else, but linux egcs -pedantic barfed on it.
+// It thinks that the class has undefined methods!? 
+
+#include "nsHashtable.h"
+
+class nsUnicharKey : public nsHashKey {
+private:
+  PRUnichar* mStr;
+
+public:
+  inline nsUnicharKey(const PRUnichar* str);
+
+  inline ~nsUnicharKey(void);
+
+  inline PRUint32 HashValue(void) const;
+
+  inline PRBool Equals(const nsHashKey* aKey) const;
+
+  inline nsHashKey* Clone() const;
+};
+
+inline nsUnicharKey::nsUnicharKey(const PRUnichar* str) {
+  mStr = nsCRT::strdup(str);
+  NS_ASSERTION(mStr, "out of memory");
+}
+
+inline nsUnicharKey::~nsUnicharKey(void) {
+  delete[] mStr;
+}
+
+inline PRUint32 nsUnicharKey::HashValue(void) const {
+  return nsCRT::HashValue(mStr);
+}
+
+inline PRBool nsUnicharKey::Equals(const nsHashKey* aKey) const {
+  return nsCRT::strcmp(NS_STATIC_CAST(const nsUnicharKey*, aKey)->mStr, mStr) == 0;
+}
+
+inline nsHashKey* nsUnicharKey::Clone() const {
+  return new nsUnicharKey(mStr);
+}
+
 ////////////////////////////////////////////////////////////////////////
 // ServiceImpl
 //
