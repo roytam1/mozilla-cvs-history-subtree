@@ -33,15 +33,14 @@
 #include "nsICacheVisitor.h"
 
 #include "nsAutoLock.h"
-#include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
-#include "nsProxiedService.h"
 #include "nsIObserverService.h"
 #include "nsIPref.h"
 
+#if 0
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
-
+#endif
 
 
 
@@ -211,11 +210,21 @@ nsCacheService::Init()
     rv = mActiveEntries.Init();
     if (NS_FAILED(rv)) goto error;
     
-    { // scope nsCOMPtr<nsIPref>
-        nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+    // get references to services we'll be using frequently
+    mEventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    mProxyObjectManager = do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    { // scope nsCOMPtr<nsIPrefService> and  nsCOMPtr<nsIPrefBranch>
+        nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(prefs, &rv);
         if (NS_SUCCEEDED(rv)) {
-            rv = prefs->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mEnableDiskDevice);
-            rv = prefs->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mEnableMemoryDevice);
+            rv = prefBranch->GetBoolPref(ENABLE_DISK_CACHE_PREF, &mEnableDiskDevice);
+            rv = prefBranch->GetBoolPref(ENABLE_MEMORY_CACHE_PREF, &mEnableMemoryDevice);
             // ignore errors
         }
     }
@@ -433,7 +442,13 @@ nsCacheService::CreateDiskDevice()
 
     nsresult rv = mDiskDevice->Init();
     if (NS_FAILED(rv)) {
-        // XXX log error
+#if DEBUG
+        printf("###\n");
+        printf("### mDiskDevice->Init() failed (0x%.8x)\n", rv);
+        printf("###    - disabling disk cache for this session.\n");
+        printf("###\n");
+#endif        
+        mEnableDiskDevice = PR_FALSE;
         delete mDiskDevice;
         mDiskDevice = nsnull;
     }
@@ -488,11 +503,13 @@ nsCacheService::CreateRequest(nsCacheSession *   session,
 
     // get the nsIEventQueue for the request's thread
     nsresult  rv;
+#if 0
     // XXX can we just keep a reference so we don't have to do this everytime?
     NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
     if (NS_FAILED(rv))  goto error;
+#endif
     
-    rv = eventQService->ResolveEventQueue(NS_CURRENT_EVENTQ,
+    rv = mEventQService->ResolveEventQueue(NS_CURRENT_EVENTQ,
                                           getter_AddRefs((*request)->mEventQ));
     if (NS_FAILED(rv))  goto error;
     
@@ -519,17 +536,19 @@ nsCacheService::NotifyListener(nsCacheRequest *          request,
 {
     nsresult rv;
 
+#if 0
     // XXX can we hold onto the proxy object manager?
     NS_WITH_SERVICE(nsIProxyObjectManager, proxyObjMgr, kProxyObjectManagerCID, &rv);
     if (NS_FAILED(rv)) return rv;
+#endif
 
     nsCOMPtr<nsICacheListener> listenerProxy;
     NS_ASSERTION(request->mEventQ, "no event queue for async request!");
-    rv = proxyObjMgr->GetProxyForObject(request->mEventQ,
-                                        NS_GET_IID(nsICacheListener),
-                                        request->mListener,
-                                        PROXY_ASYNC|PROXY_ALWAYS,
-                                        getter_AddRefs(listenerProxy));
+    rv = mProxyObjectManager->GetProxyForObject(request->mEventQ,
+                                                NS_GET_IID(nsICacheListener),
+                                                request->mListener,
+                                                PROXY_ASYNC|PROXY_ALWAYS,
+                                                getter_AddRefs(listenerProxy));
     if (NS_FAILED(rv)) return rv;
 
     return listenerProxy->OnCacheEntryAvailable(descriptor, accessGranted, error);
@@ -732,27 +751,35 @@ nsCacheService::EnsureEntryHasDevice(nsCacheEntry * entry)
 {
     nsCacheDevice * device = entry->CacheDevice();
     if (device)  return device;
+    nsresult rv = NS_OK;
 
     if (entry->IsStreamData() && entry->IsAllowedOnDisk() && mEnableDiskDevice) {
         // this is the default
         if (!mDiskDevice) {
-            nsresult rv = CreateDiskDevice();
-            if (NS_FAILED(rv))
-                return nsnull;
+            rv = CreateDiskDevice();  // ignore the error (check for mDiskDevice instead)
         }
 
-        device = mDiskDevice;
-    } else if (mEnableMemoryDevice) {
+        if (mDiskDevice) {
+            entry->MarkBinding();  // XXX
+            rv = mDiskDevice->BindEntry(entry);
+            entry->ClearBinding(); // XXX
+            if (NS_SUCCEEDED(rv))
+                device = mDiskDevice;
+        }
+    }
+     
+    // if we can't use mDiskDevice, try mMemoryDevice
+    if (!device && mEnableMemoryDevice) {
         NS_ASSERTION(entry->IsAllowedInMemory(), "oops.. bad flags");
-        device = mMemoryDevice;
+        
+        entry->MarkBinding();  // XXX
+        rv = mMemoryDevice->BindEntry(entry);
+        entry->ClearBinding(); // XXX
+        if (NS_SUCCEEDED(rv))
+            device = mMemoryDevice;
     }
 
     if (device == nsnull)  return nsnull;
-
-	entry->MarkBinding(); // XXX
-    nsresult  rv = device->BindEntry(entry);
-    entry->ClearBinding(); // XXX
-    if (NS_FAILED(rv)) return nsnull;
 
     entry->SetCacheDevice(device);
     return device;
@@ -837,6 +864,21 @@ nsCacheService::SetCacheDevicesEnabled(PRBool  enableDisk, PRBool  enableMemory)
     } else if (!enableMemory && mMemoryDevice) {
         // XXX disable memory cache device
     }
+}
+
+
+nsresult
+nsCacheService::SetCacheElement(nsCacheEntry * entry, nsISupports * element)
+{
+    nsresult rv;
+    nsIEventQueue *  eventQ;
+    rv = mEventQService->ResolveEventQueue(NS_CURRENT_EVENTQ, &eventQ);
+    if (NS_FAILED(rv))  return rv;
+
+    entry->SetEventQ(eventQ);
+    entry->SetData(element);
+    entry->TouchData();
+    return NS_OK;
 }
 
 
@@ -1044,6 +1086,7 @@ nsCacheService::ClearActiveEntries()
 {
     // XXX really we want a different finalize callback for mActiveEntries
     PL_DHashTableEnumerate(&mActiveEntries.table, DeactivateAndClearEntry, nsnull);
+    mActiveEntries.Shutdown();
 }
 
 
