@@ -117,6 +117,24 @@ NS_IMETHODIMP nsHTMLEditor::RemoveAllAlternateProperties()
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP 
+nsHTMLEditor::AddDefaultPropertyOverride(nsIAtom *aProperty, 
+                                         const nsAString & aAttribute,
+                                         nsIAtom *aTag)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsHTMLEditor::AddAlternatePropertyOverride(nsIAtom *aProperty, 
+                                           const nsAString & aAttribute,
+                                           nsIAtom *aTag)
+{
+  NS_ERROR("Not implemented");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP nsHTMLEditor::SetPastePolicy(PRInt32 aPolicy)
 {
   NS_ERROR("Not implemented");

@@ -171,6 +171,14 @@ public:
 
   NS_IMETHOD RemoveAllAlternateProperties();
 
+  NS_IMETHOD AddDefaultPropertyOverride(nsIAtom *aProperty, 
+                                        const nsAString & aAttribute,
+                                        nsIAtom *aTag);
+
+  NS_IMETHOD AddAlternatePropertyOverride(nsIAtom *aProperty, 
+                                          const nsAString & aAttribute,
+                                          nsIAtom *aTag);
+
   NS_IMETHOD SetPastePolicy(PRInt32 aPolicy);
   
   NS_IMETHOD SetCSSInlineProperty(nsIAtom *aProperty, 
