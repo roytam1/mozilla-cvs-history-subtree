@@ -383,7 +383,7 @@ NS_IMETHODIMP nsPlaintextEditor::CanDrag(nsIDOMEvent *aDragEvent, PRBool *aCanDr
   nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aDragEvent));
 
   if (nsevent) {
-    res = nsevent->GetOriginalTarget(getter_AddRefs(eventTarget));
+    res = nsevent->GetTmp13RealOriginalTarget(getter_AddRefs(eventTarget));
     if (NS_FAILED(res)) {
       return res;
     }

@@ -39,10 +39,12 @@
 #ifndef nsDOMEvent_h__
 #define nsDOMEvent_h__
 
+#include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMMouseEvent.h"
 #include "nsIDOMNSUIEvent.h"
 #include "nsIDOMNSEvent.h"
+#include "nsIDOMEventTarget.h"
 #include "nsISupports.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIPrivateCompositionEvent.h"
@@ -233,7 +235,8 @@ protected:
   nsIDOMEventTarget* mTarget;
   nsIDOMEventTarget* mCurrentTarget;
   nsIDOMEventTarget* mOriginalTarget;
-  nsIDOMEventTarget* mExplicitOriginalTarget;
+  nsCOMPtr<nsIDOMEventTarget> mExplicitOriginalTarget;
+  nsCOMPtr<nsIDOMEventTarget> mTmp13RealOriginalTarget;
   nsString*	mText;
   nsIPrivateTextRangeList*	mTextRange;
   PRPackedBool mEventIsInternal;
