@@ -1,8 +1,0 @@
-Makefile
-TestSocketIO
-TestSocketInput
-TestSocketTransport
-TestProtocols
-TestFileInput
-TestFileInput2
-urltest
