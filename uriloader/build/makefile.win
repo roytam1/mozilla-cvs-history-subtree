@@ -49,6 +49,7 @@ CPP_OBJS=                                   \
 SUB_LIBRARIES=                          \
         $(DIST)\lib\exthandlers_s.lib   \
         $(DIST)\lib\uriloaderbase_s.lib \
+        $(DIST)\lib\prefetch_s.lib \
         $(NULL)
 
 LLIBS=				\
