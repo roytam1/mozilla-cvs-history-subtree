@@ -13,7 +13,11 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/necko_strconv.xpt
 !xpt dist/bin/components/necko_cache.xpt
 !xpt dist/bin/components/mimetype.xpt
+
+# xxxbsmedberg : why don't we generate/ship this on win32?
+#if OS_ARCH!=WINNT
 !xpt dist/bin/components/necko_socket.xpt
+#endif
 
 [gecko-support]
 dist/bin/defaults/pref/security-prefs.js
