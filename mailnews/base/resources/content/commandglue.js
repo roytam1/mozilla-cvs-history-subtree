@@ -726,7 +726,7 @@ function SortFolderPane(column, sortKey)
 /* not used
 function SortColumn(node, sortKey, secondarySortKey, direction)
 {
-	var xulSortService = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService();
+    var xulSortService = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService();
 
   if (xulSortService)
   {
@@ -771,8 +771,8 @@ function GetSelectedFolderResource()
   var selectedFolder = selectedFolderList[0];
   var uri = selectedFolder.getAttribute('id');
 
-	var folderResource = RDF.GetResource(uri);
-	return folderResource;
+    var folderResource = RDF.GetResource(uri);
+    return folderResource;
 }
 */
 
@@ -833,16 +833,16 @@ function ClearThreadPane()
 /* not used
 function OpenFolderTreeToFolder(folderURI)
 {
-	var tree = GetFolderTree();
-	return OpenToFolder(tree, folderURI);
+    var tree = GetFolderTree();
+    return OpenToFolder(tree, folderURI);
 }
 */
 
 /* not used
 function OpenToFolder(item, folderURI)
 {
-	if(item.nodeType != Node.ELEMENT_NODE)
-		return null;
+    if(item.nodeType != Node.ELEMENT_NODE)
+        return null;
 
   var uri = item.getAttribute('id');
   dump(uri);
