@@ -1354,31 +1354,58 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
 // static
 PRBool
-nsEventRecieverSH::ReallyIsEventName(JSString *jsstr)
+nsEventRecieverSH::ReallyIsEventName(JSString *jsstr, jschar aFirstChar)
 {
-  if (jsstr == sOnmousedown_id ||
-      jsstr == sOnmouseup_id   ||
-      jsstr == sOnclick_id     ||
-      jsstr == sOnmouseover_id ||
-      jsstr == sOnmouseout_id  ||
-      jsstr == sOnkeydown_id   ||
-      jsstr == sOnkeyup_id     ||
-      jsstr == sOnkeypress_id  ||
-      jsstr == sOnmousemove_id ||
-      jsstr == sOnfocus_id     ||
-      jsstr == sOnblur_id      ||
-      jsstr == sOnsubmit_id    ||
-      jsstr == sOnreset_id     ||
-      jsstr == sOnchange_id    ||
-      jsstr == sOnselect_id    ||
-      jsstr == sOnload_id      ||
-      jsstr == sOnunload_id    ||
-      jsstr == sOnabort_id     ||
-      jsstr == sOnerror_id     ||
-      jsstr == sOnpaint_id     ||
-      jsstr == sOnresize_id    ||
-      jsstr == sOnscroll_id) {
-    return PR_TRUE;
+  switch (aFirstChar) {
+  case 'a' :
+  case 'b' :
+  case 'e' :
+  case 'f' :
+    if (jsstr == sOnabort_id     ||
+        jsstr == sOnblur_id      ||
+        jsstr == sOnerror_id     ||
+        jsstr == sOnfocus_id)
+      return PR_TRUE;
+
+    break;
+  case 'c':
+  case 'l':
+  case 'p':
+    if (jsstr == sOnchange_id    ||
+        jsstr == sOnclick_id     ||
+        jsstr == sOnload_id      ||
+        jsstr == sOnpaint_id)
+      return PR_TRUE;
+
+    break;
+  case 'k' :
+  case 'u' :
+    if (jsstr == sOnkeydown_id   ||
+        jsstr == sOnkeypress_id  ||
+        jsstr == sOnkeyup_id     ||
+        jsstr == sOnunload_id)
+      return PR_TRUE;
+
+    break;
+  case 'm' :
+    if (jsstr == sOnmousemove_id ||
+        jsstr == sOnmouseout_id  ||
+        jsstr == sOnmouseover_id ||
+        jsstr == sOnmouseup_id   ||
+        jsstr == sOnmousedown_id)
+      return PR_TRUE;
+
+    break;
+  case 'r' :
+  case 's' :
+    if (jsstr == sOnreset_id     ||
+        jsstr == sOnresize_id    ||
+        jsstr == sOnscroll_id    ||
+        jsstr == sOnselect_id    ||
+        jsstr == sOnsubmit_id)
+      return PR_TRUE;
+
+    break;
   }
 
   return PR_FALSE;

@@ -135,14 +135,14 @@ protected:
   {
   }
 
-  static PRBool ReallyIsEventName(JSString *str);
+  static PRBool ReallyIsEventName(JSString *jsstr, jschar aFirstChar);
 
   static inline PRBool IsEventName(JSString *jsstr)
   {
     jschar *str = ::JS_GetStringChars(jsstr);
 
-    if (str[0] == 'o' && str[1] == 'n' && str[2]) {
-      return ReallyIsEventName(jsstr);
+    if (str[0] == 'o' && str[1] == 'n') {
+      return ReallyIsEventName(jsstr, str[2]);
     }
 
     return PR_FALSE;
