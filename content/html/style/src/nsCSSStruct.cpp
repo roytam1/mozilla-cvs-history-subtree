@@ -1141,7 +1141,8 @@ nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
       mStrokeMiterlimit(aCopy.mStrokeMiterlimit),
       mStrokeOpacity(aCopy.mStrokeOpacity),
       mStrokeWidth(aCopy.mStrokeWidth),
-      mTextAnchor(aCopy.mTextAnchor)
+      mTextAnchor(aCopy.mTextAnchor),
+      mTextRendering(aCopy.mTextRendering)
 {
   MOZ_COUNT_CTOR(nsCSSSVG);
 }
@@ -1176,6 +1177,7 @@ void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
   mStrokeOpacity.AppendToString(buffer, eCSSProperty_stroke_opacity);
   mStrokeWidth.AppendToString(buffer, eCSSProperty_stroke_width);
   mTextAnchor.AppendToString(buffer, eCSSProperty_text_anchor);
+  mTextRendering.AppendToString(buffer, eCSSProperty_text_rendering);
   fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
 }
 #endif
@@ -2001,7 +2003,8 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
-    case eCSSProperty_text_anchor: {
+    case eCSSProperty_text_anchor:
+    case eCSSProperty_text_rendering: {
       CSS_ENSURE(SVG) {
         switch (aProperty) {
           case eCSSProperty_dominant_baseline: theSVG->mDominantBaseline = aValue; break;
@@ -2017,6 +2020,7 @@ nsCSSDeclaration::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValue)
           case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity = aValue;    break;
           case eCSSProperty_stroke_width:      theSVG->mStrokeWidth = aValue;      break;
           case eCSSProperty_text_anchor:       theSVG->mTextAnchor = aValue;       break;
+          case eCSSProperty_text_rendering:    theSVG->mTextRendering = aValue;    break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }
@@ -3011,7 +3015,8 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
       case eCSSProperty_stroke_miterlimit:
       case eCSSProperty_stroke_opacity:
       case eCSSProperty_stroke_width:
-      case eCSSProperty_text_anchor: {
+      case eCSSProperty_text_anchor:
+      case eCSSProperty_text_rendering: {
         CSS_VARONSTACK_GET(SVG);
         if (nsnull != theSVG) {
           CSS_ENSURE_IMPORTANT(SVG) {
@@ -3029,6 +3034,7 @@ nsCSSDeclaration::SetValueImportant(nsCSSProperty aProperty)
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_opacity,    SVG, mStrokeOpacity);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_width,      SVG, mStrokeWidth);
               CSS_CASE_IMPORTANT(eCSSProperty_text_anchor,       SVG, mTextAnchor);
+              CSS_CASE_IMPORTANT(eCSSProperty_text_rendering,    SVG, mTextRendering);
               CSS_BOGUS_DEFAULT; // make compiler happy
             }
           }
@@ -3830,7 +3836,8 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
-    case eCSSProperty_text_anchor: {
+    case eCSSProperty_text_anchor:
+    case eCSSProperty_text_rendering: {
       CSS_CHECK(SVG) {
         switch(aProperty) {
           case eCSSProperty_dominant_baseline: theSVG->mDominantBaseline.Reset(); break;
@@ -3843,9 +3850,10 @@ nsCSSDeclaration::RemoveProperty(nsCSSProperty aProperty)
           case eCSSProperty_stroke_linecap:    theSVG->mStrokeLinecap.Reset();    break;
           case eCSSProperty_stroke_linejoin:   theSVG->mStrokeLinejoin.Reset();   break;
           case eCSSProperty_stroke_miterlimit: theSVG->mStrokeMiterlimit.Reset(); break;
-          case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity.Reset(); break;
-          case eCSSProperty_stroke_width:      theSVG->mStrokeWidth.Reset();   break;
-          case eCSSProperty_text_anchor:       theSVG->mTextAnchor.Reset();   break;
+          case eCSSProperty_stroke_opacity:    theSVG->mStrokeOpacity.Reset();    break;
+          case eCSSProperty_stroke_width:      theSVG->mStrokeWidth.Reset();      break;
+          case eCSSProperty_text_anchor:       theSVG->mTextAnchor.Reset();       break;
+          case eCSSProperty_text_rendering:    theSVG->mTextRendering.Reset();    break;
        CSS_BOGUS_DEFAULT; // Make compiler happy
         }
       }
@@ -4717,7 +4725,8 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
-    case eCSSProperty_text_anchor: {
+    case eCSSProperty_text_anchor:
+    case eCSSProperty_text_rendering: {
       CSS_VARONSTACK_GET(SVG);
       if (nsnull != theSVG) {
         switch (aProperty) {
@@ -4734,6 +4743,7 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
           case eCSSProperty_stroke_opacity:    aValue = theSVG->mStrokeOpacity;    break;
           case eCSSProperty_stroke_width:      aValue = theSVG->mStrokeWidth;      break;
           case eCSSProperty_text_anchor:       aValue = theSVG->mTextAnchor;       break;
+          case eCSSProperty_text_rendering:    aValue = theSVG->mTextRendering;    break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }

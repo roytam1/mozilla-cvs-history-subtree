@@ -107,6 +107,7 @@ public:
   static const PRInt32 kStrokeLinecapKTable[];
   static const PRInt32 kStrokeLinejoinKTable[];
   static const PRInt32 kTextAnchorKTable[];
+  static const PRInt32 kTextRenderingKTable[];
 #endif
   static const PRInt32 kBoxSizingKTable[];
   static const PRInt32 kCaptionSideKTable[];

@@ -49,5 +49,13 @@ interface nsISVGGlyphGeometrySource : nsISVGGeometrySource
 {
   [noscript] readonly attribute nsFont font;
   readonly attribute DOMString characterData;
-};
 
+  /* enums for textRendering */
+  const unsigned short TEXT_RENDERING_AUTO               = 0;
+  const unsigned short TEXT_RENDERING_OPTIMIZESPEED      = 1;
+  const unsigned short TEXT_RENDERING_OPTIMIZELEGIBILITY = 2;
+  const unsigned short TEXT_RENDERING_GEOMETRICPRECISION = 3;
+
+  readonly attribute unsigned short textRendering;
+
+};

@@ -296,6 +296,7 @@ CSS_PROP_INTERNAL(stroke-miterlimit, stroke_miterlimit, StrokeMiterlimit, NS_STY
 CSS_PROP_INTERNAL(stroke-opacity, stroke_opacity, StrokeOpacity, NS_STYLE_HINT_VISUAL)
 CSS_PROP_INTERNAL(stroke-width, stroke_width, StrokeWidth, NS_STYLE_HINT_VISUAL)
 CSS_PROP_INTERNAL(text-anchor, text_anchor, TextAnchor, NS_STYLE_HINT_VISUAL)
+CSS_PROP_INTERNAL(text-rendering, text_rendering, TextRendering, NS_STYLE_HINT_VISUAL)
 #endif
 
 // Clean up after ourselves

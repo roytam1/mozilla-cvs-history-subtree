@@ -1152,6 +1152,7 @@ struct nsStyleSVG : public nsStyleStruct {
   float            mStrokeOpacity;    // [inherit]
   float            mStrokeWidth;      // [inherit], in pixels
   PRUint8          mTextAnchor;       // [inherit], see nsStyleConsts.h
+  PRUint8          mTextRendering;    // [inherit], see nsStyleConsts.h
 };
 
 struct nsStyleSVGReset : public nsStyleStruct {

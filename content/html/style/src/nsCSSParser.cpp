@@ -3872,6 +3872,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
   case eCSSProperty_text_anchor:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kTextAnchorKTable);
+  case eCSSProperty_text_rendering:
+    return ParseVariant(aErrorCode, aValue, VARIANT_AHK,
+                        nsCSSProps::kTextRenderingKTable);
 #endif
   case eCSSProperty_box_sizing:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,

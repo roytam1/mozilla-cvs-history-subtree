@@ -409,13 +409,30 @@ nsSVGGDIPlusGlyphMetrics::GetTextRenderingHint()
 {
   // when the text is stroked, we have to turn off hinting so that
   // stroke and fill match up exactely:
-  PRUint16 type;
-  mSource->GetStrokePaintType(&type);
+  bool forceUnhinted = PR_FALSE;
+  {
+    PRUint16 type;
+    mSource->GetStrokePaintType(&type);
+    forceUnhinted = (type != nsISVGGeometrySource::PAINT_TYPE_NONE); 
+  }
 
-  if (type != nsISVGGeometrySource::PAINT_TYPE_NONE)
-    return TextRenderingHintAntiAlias;
-  
-  return TextRenderingHintAntiAliasGridFit;
+  PRUint16 textRendering;
+  mSource->GetTextRendering(&textRendering);
+  switch (textRendering) {
+    case nsISVGGlyphGeometrySource::TEXT_RENDERING_OPTIMIZESPEED:
+      return TextRenderingHintSingleBitPerPixel;
+      break;
+    case nsISVGGlyphGeometrySource::TEXT_RENDERING_OPTIMIZELEGIBILITY:
+      return forceUnhinted ?
+        TextRenderingHintAntiAlias :
+        TextRenderingHintAntiAliasGridFit;
+      break;
+    case nsISVGGlyphGeometrySource::TEXT_RENDERING_GEOMETRICPRECISION:
+    case nsISVGGlyphGeometrySource::TEXT_RENDERING_AUTO:
+    default:
+      return TextRenderingHintAntiAlias;
+      break;
+  }
 }
 
 void

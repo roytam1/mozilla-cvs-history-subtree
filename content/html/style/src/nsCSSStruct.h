@@ -502,6 +502,7 @@ struct nsCSSSVG : public nsCSSStruct {
   nsCSSValue mStrokeOpacity;
   nsCSSValue mStrokeWidth;
   nsCSSValue mTextAnchor;
+  nsCSSValue mTextRendering;
 };
 #endif
 

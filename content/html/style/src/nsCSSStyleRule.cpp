@@ -1862,6 +1862,9 @@ MapSVGForDeclaration(nsCSSDeclaration* aDecl, nsCSSSVG& aSVG)
   // text-anchor:
   if (aSVG.mTextAnchor.GetUnit() == eCSSUnit_Null && ourSVG->mTextAnchor.GetUnit() != eCSSUnit_Null)
     aSVG.mTextAnchor = ourSVG->mTextAnchor;
+  // text-rendering:
+  if (aSVG.mTextRendering.GetUnit() == eCSSUnit_Null && ourSVG->mTextRendering.GetUnit() != eCSSUnit_Null)
+    aSVG.mTextRendering = ourSVG->mTextRendering;
   return NS_OK;
 }
 #endif

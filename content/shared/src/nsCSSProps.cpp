@@ -882,6 +882,14 @@ const PRInt32 nsCSSProps::kTextAnchorKTable[] = {
   eCSSKeyword_end, NS_STYLE_TEXT_ANCHOR_END,
   -1, -1
 };
+
+const PRInt32 nsCSSProps::kTextRenderingKTable[] = {
+  eCSSKeyword_optimizespeed, NS_STYLE_TEXT_RENDERING_OPTIMIZESPEED,
+  eCSSKeyword_optimizelegibility, NS_STYLE_TEXT_RENDERING_OPTIMIZELEGIBILITY,
+  eCSSKeyword_geometricprecision, NS_STYLE_TEXT_RENDERING_GEOMETRICPRECISION,
+  -1, -1
+};
+
 #endif
 
 PRInt32 
@@ -1011,6 +1019,8 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
     return SearchKeywordTable(aValue, kStrokeLinejoinKTable);
   case eCSSProperty_text_anchor:
     return SearchKeywordTable(aValue, kTextAnchorKTable);
+  case eCSSProperty_text_rendering:
+    return SearchKeywordTable(aValue, kTextRenderingKTable);
 #endif
     
   case eCSSProperty_box_sizing:

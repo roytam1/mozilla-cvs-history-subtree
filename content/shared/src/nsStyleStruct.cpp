@@ -776,6 +776,7 @@ nsStyleSVG::nsStyleSVG()
     mStrokeOpacity    = 1.0f;
     mStrokeWidth      = 1.0f;
     mTextAnchor       = NS_STYLE_TEXT_ANCHOR_START;
+    mTextRendering    = NS_STYLE_TEXT_RENDERING_AUTO;
 }
 
 nsStyleSVG::~nsStyleSVG() 
@@ -802,6 +803,7 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
   mStrokeOpacity = aSource.mStrokeOpacity;
   mStrokeWidth = aSource.mStrokeWidth;
   mTextAnchor = aSource.mTextAnchor;
+  mTextRendering = aSource.mTextRendering;
 }
 
 nsChangeHint nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
@@ -817,7 +819,8 @@ nsChangeHint nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
        mStrokeMiterlimit != aOther.mStrokeMiterlimit ||
        mStrokeOpacity    != aOther.mStrokeOpacity    ||
        mStrokeWidth      != aOther.mStrokeWidth      ||
-       mTextAnchor       != aOther.mTextAnchor)
+       mTextAnchor       != aOther.mTextAnchor       ||
+       mTextRendering    != aOther.mTextRendering)
     return NS_STYLE_HINT_VISUAL;
 
   if ( (mStroke.mType == eStyleSVGPaintType_Color && mStroke.mColor != aOther.mStroke.mColor) ||

@@ -618,9 +618,9 @@
 
 #ifdef MOZ_SVG
 // Some of our constants must map to the same values as those defined in
-// nsISVGGeometrySource.idl/
+// nsISVG{,Path,Glyph}GeometrySource.idl/
 // I don't want to add a dependency on the SVG module
-// everywhere by #include'ing nsISVGGeometrySource.h, so these consts
+// everywhere by #include'ing nsISVG{,Path,Glyph}GeometrySource.h, so these consts
 // have to be kept in sync manually.
 
 // dominant-baseline
@@ -657,6 +657,12 @@
 #define NS_STYLE_TEXT_ANCHOR_START              0 
 #define NS_STYLE_TEXT_ANCHOR_MIDDLE             1 
 #define NS_STYLE_TEXT_ANCHOR_END                2 
+
+// text-rendering
+#define NS_STYLE_TEXT_RENDERING_AUTO               0 /* == nsISVGGlyphGeometrySource::TEXT_RENDERING_AUTO */
+#define NS_STYLE_TEXT_RENDERING_OPTIMIZESPEED      1 /* == nsISVGG.G.S.::TEXT_RENDERING_OPTIMIZESPEED */
+#define NS_STYLE_TEXT_RENDERING_OPTIMIZELEGIBILITY 2 /* == nsISVGG.G.S.::TEXT_RENDERING_OPTIMIZELEGIBILITY */
+#define NS_STYLE_TEXT_RENDERING_GEOMETRICPRECISION 3 /* == nsISVGG.G.S.::TEXT_RENDERING_GEOMETRICPRECISION */
 
 #endif // MOZ_SVG
 

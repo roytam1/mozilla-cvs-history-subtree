@@ -990,6 +990,7 @@ static const PropertyCheckData SVGCheckProperties[] = {
   CHECKDATA_PROP(nsCSSSVG, mStrokeOpacity, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSSVG, mStrokeWidth, CHECKDATA_VALUE, PR_FALSE),
   CHECKDATA_PROP(nsCSSSVG, mTextAnchor, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsCSSSVG, mTextRendering, CHECKDATA_VALUE, PR_FALSE),
 };
 
 static const PropertyCheckData SVGResetCheckProperties[] = {
@@ -4723,6 +4724,18 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
     svg->mTextAnchor = parentSVG->mTextAnchor;
   }
   
+  // text-rendering: enum, auto, inherit
+  if (eCSSUnit_Enumerated == SVGData.mTextRendering.GetUnit()) {
+    svg->mTextRendering = SVGData.mTextRendering.GetIntValue();
+  }
+  else if (eCSSUnit_Auto == SVGData.mTextRendering.GetUnit()) {
+    svg->mTextRendering = NS_STYLE_TEXT_RENDERING_AUTO;
+  }
+  else if (eCSSUnit_Inherit == SVGData.mTextRendering.GetUnit()) {
+    inherited = PR_TRUE;
+    svg->mTextRendering = parentSVG->mTextRendering;
+  }
+
   if (inherited)
     // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
     // style context.

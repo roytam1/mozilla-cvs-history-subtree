@@ -575,6 +575,14 @@ nsSVGGlyphFrame::GetCharacterData(nsAString & aCharacterData)
   return NS_OK;
 }
 
+/* readonly attribute unsigned short textRendering; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetTextRendering(PRUint16 *aTextRendering)
+{
+  *aTextRendering = ((const nsStyleSVG*) mStyleContext->GetStyleData(eStyleStruct_SVG))->mTextRendering;
+  return NS_OK;
+}
+
 //----------------------------------------------------------------------
 // nsISVGPositionedGlyphGeometrySource methods:
 
