@@ -315,7 +315,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 	PRInt32		status		= GDIFF_ERR_MEM;
 	char 		*tmpurl		= NULL;
 	char 		*realfile	= PL_strdup(nsprPath(sourceFile)); // needs to be sourceFile!!!
-	nsFileSpec  OutFileSpec = sourceFile;
+	nsFileSpec  outFileSpec = sourceFile;
 
 	dd = (DIFFDATA *)PR_Calloc( 1, sizeof(DIFFDATA));
 	if (dd != NULL)
@@ -367,19 +367,14 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 		if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
 		{
            // create a tmp file, so that we can AppleSingle the src file
-           nsSpecialSystemDirectory tempMacPath(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+           nsSpecialSystemDirectory tempMacFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
            nsString srcName = sourceFile.GetLeafName();
-           tempMacPath += srcName;
-           tempMacPath.MakeUnique();
-           nsFileSpec *tempMacFile = new nsFileSpec(tempMacPath);
+           tempMacFile.SetLeafName(srcName);
+           tempMacFile.MakeUnique();
            
-           // get FSSepec
-           FSSpec sourceSpec = sourceFile.GetFSSpec();
-           FSSpec tempSpec = tempMacFile->GetFSSpec();
-        
-		   // Encode! 
+           // Encode! 
 		   // Encode src file, and put into temp file
-			status = PAS_EncodeFile(&sourceSpec, &tempSpec);   
+			status = PAS_EncodeFile(sourceFile.GetFSSpec(), tempMacFile->GetFSSpec());   
 				
 			if (status == noErr)
 			{
@@ -392,7 +387,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 
 
 
-		if (status != GDIFF_OK)
+		if (status != NS_OK)
 			goto cleanup;
 
 		// make a unique file at the same location of our source file  (FILENAME-ptch.EXT)
@@ -413,10 +408,10 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
         }
         
 
-		OutFileSpec.SetLeafName(newFileName);
-		OutFileSpec.MakeUnique();
+		outFileSpec.SetLeafName(newFileName); //????
+		outFileSpec.MakeUnique();
 
-        char *outFile = PL_strdup(nsprPath(OutFileSpec));
+        char *outFile = PL_strdup(nsprPath(outFileSpec));
 
 		// apply patch to the source file
 		dd->fSrc = PR_Open ( realfile, PR_RDONLY, 0666);
@@ -441,7 +436,7 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 
             if (status == GDIFF_OK)
             {
-                *newFile = &OutFileSpec;
+                *newFile = &outFileSpec;
                 if ( outFile != nsnull)
                     PL_strfree( outFile );
             }
@@ -458,44 +453,24 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 	if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
 	{
         // create another file, so that we can decode somewhere
-        nsSpecialSystemDirectory anotherName(nsSpecialSystemDirectory::OS_TemporaryDirectory);
-        nsString outName = OutFileSpec.GetLeafName();
-        anotherName += outName;
+        nsFileSpec anotherName = outFileSpec;
         anotherName.MakeUnique();
-        nsFileSpec *anotherMacFile = new nsFileSpec(anotherName); 
-	
+        
 		// Close the out file so that we can read it 		
 		PR_Close( dd->fOut );
 		dd->fOut = NULL;
 		
-		// get FSSpec
-		FSSpec outSpec = OutFileSpec.GetFSSpec();
-		FSSpec anotherSpec = anotherMacFile->GetFSSpec();
-
-		status =  PAS_DecodeFile(&outSpec, &anotherSpec);
+        status =  PAS_DecodeFile(outFileSpec.GetFSSpec(), anotherMacFile->GetFSSpec());
 		if (status != noErr)
 		{
 		   	goto cleanup;
         }
-			
-/* FIX:  does this still apply?
-		// Delete the outfile so that we can replace 
-		XP_FileRemove( outfile, outtype );	
-			
-		// get the name of the file 
-		BlockMove(outFSSpec.name, fileName, sizeof(Str63) );
-
-		// We want the parent 
-		outFSSpec.name[0] = 0;
 		
-		// Copy the output of the decodef to the outfile location passed to us 
-		status = FSpFileCopy(&anotherFSSpec, &outFSSpec, fileName, NULL, 0,true);
-*/		
-		if (status != noErr)
-		{
-		   	goto cleanup;
-        }     
-       
+        nsFileSpec parent = outFileSpec.GetParent();
+        outFileSpec.Delete(PR_FALSE);
+        anotherMacFile->Copy(parent);
+        
+        *newFile = anotherMacFile;
 	}
 	
 #endif 
