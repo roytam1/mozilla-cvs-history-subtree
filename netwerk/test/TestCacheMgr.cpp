@@ -378,10 +378,10 @@ TestRead(nsINetDataCacheManager *aCache, PRUint32 aFlags)
         // Compare against stored protocol data
         char *storedProtocolData;
         PRUint32 storedProtocolDataLength;
-        rv = cacheEntry->GetProtocolPrivate("test data", &storedProtocolDataLength, &storedProtocolData);
+        rv = cacheEntry->GetAnnotation("test data", &storedProtocolDataLength, &storedProtocolData);
         NS_ASSERTION(NS_SUCCEEDED(rv) &&
                      storedProtocolDataLength == CACHE_PROTOCOL_PRIVATE_LENGTH,
-                     "nsICachedNetData::GetProtocolPrivate() failed");
+                     "nsICachedNetData::GetAnnotation() failed");
         randomStream->Match(storedProtocolData, storedProtocolDataLength);
 
         // Test GetAllowPartial()
@@ -465,14 +465,14 @@ FillCache(nsINetDataCacheManager *aCache, PRUint32 aFlags, PRUint32 aCacheCapaci
 
         // Record meta-data should be initially empty
         char *protocolDatap;
-        rv = cacheEntry->GetProtocolPrivate("test data", &protocolDataLength, &protocolDatap);
+        rv = cacheEntry->GetAnnotation("test data", &protocolDataLength, &protocolDatap);
         NS_ASSERTION(NS_SUCCEEDED(rv), " ");
         if ((protocolDataLength != 0) || (protocolDatap != 0))
             return NS_ERROR_FAILURE;
 
         // Store random data as meta-data
         randomStream->Read(protocolData, sizeof protocolData);
-        cacheEntry->SetProtocolPrivate("test data", sizeof protocolData, protocolData);
+        cacheEntry->SetAnnotation("test data", sizeof protocolData, protocolData);
 
         // Store random data as allow-partial flag
         PRBool allowPartial = randomStream->Next() & 1;
