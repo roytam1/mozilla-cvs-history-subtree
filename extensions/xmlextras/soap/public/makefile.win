@@ -27,7 +27,6 @@ XPIDLSRCS =     .\nsISOAPCall.idl \
 		.\nsISOAPEncoding.idl \
 		.\nsISOAPFault.idl \
 		.\nsISOAPHeaderBlock.idl \
-		.\nsISOAPJSValue.idl \
 		.\nsISOAPMessage.idl \
 		.\nsISOAPParameter.idl \
 		.\nsISOAPResponse.idl \
