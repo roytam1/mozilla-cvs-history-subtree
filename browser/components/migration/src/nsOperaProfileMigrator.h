@@ -45,6 +45,7 @@
 #include "nsString.h"
 #include "nsVoidArray.h"
 
+class nsICookieManager2;
 class nsILineInputStream;
 class nsILocalFile;
 class nsINIParser;
@@ -152,25 +153,15 @@ public:
                  COOKIE_OTHERFLAG_6           = 0x24 | 0x80
   } TAG;
 
-#if 0
-0x13 time_t last used
-0x14 string comment
-0x15 string url for comment
-0x16 string doain with version=1 cookies
-0x17 string path with version=1 cookies
-0x18 string string port limitation with ersion=1 cookies
-0x19 flag   https
-0x1A int8+  version number of cookie
-0x1B flag   only to server that sent it
-0x1C flag   reserved for delete protection
-0x20 flag   path
-0x22 flag   password
-0x23 flag   http auth
-0x24 flag   third party
-#endif
-
 protected:
   nsresult ReadHeader();
+
+  void     SynthesizePath(nsVoidArray* aStack, const char* aDelimiter, char** aResult);
+  nsresult AddCookie(nsICookieManager2* aManager,
+                     const nsACString& aID, 
+                     const nsACString& aData, 
+                     PRBool aSecure, 
+                     PRTime aExpiryTime);
 
 private:
   nsCOMPtr<nsIBinaryInputStream> mStream;

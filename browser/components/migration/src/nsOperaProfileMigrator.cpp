@@ -41,6 +41,7 @@
 #include "nsIBookmarksService.h"
 #include "nsIBrowserProfileMigrator.h"
 #include "nsIBrowserHistory.h"
+#include "nsICookieManager2.h"
 #include "nsIGlobalHistory.h"
 #include "nsIInputStream.h"
 #include "nsILineInputStream.h"
@@ -418,6 +419,8 @@ nsOperaCookieMigrator::Migrate()
   if (NS_FAILED(rv)) 
     return NS_OK;
 
+  nsCOMPtr<nsICookieManager2> manager(do_GetService(NS_COOKIEMANAGER_CONTRACTID));
+
   PRUint8 tag;
   PRUint16 length, segmentLength;
   PRTime expiryTime;
@@ -465,14 +468,18 @@ nsOperaCookieMigrator::Migrate()
       mPathStack.AppendElement((void*)buf);
       break;
     case END_PATH_SEGMENT:
-      printf("*** end path segment\n");
-      // We receive one "End Path Segment" even if the path stack is empty
-      // i.e. telling us that we are done processing cookies for "/"
+      {
+        printf("*** end path segment\n");
 
-      // This is where we use the information gathered in all the other 
-      // states to add a cookie to the Firebird Cookie Manager.
+        // Add the last remaining cookie for this path.
+        if (cookieOpen) 
+          AddCookie(manager, id, data, isSecure, expiryTime);
 
-      // Pop the path stack
+        // We receive one "End Path Segment" even if the path stack is empty
+        // i.e. telling us that we are done processing cookies for "/"
+
+        // Pop the path stack
+      }
       break;
 
     case FILTERING_INFO:
@@ -492,6 +499,12 @@ nsOperaCookieMigrator::Migrate()
 
     case BEGIN_COOKIE_SEGMENT:
       printf("*** open segment info\n");
+      
+      // Be sure to save the last cookie before overwriting the buffers
+      // with data from subsequent cookies. 
+      if (cookieOpen)
+        AddCookie(manager, id, data, isSecure, expiryTime);
+
       mStream->Read16(&segmentLength);
       cookieOpen = PR_TRUE;
       break;
@@ -556,6 +569,44 @@ nsOperaCookieMigrator::Migrate()
     }
   }
   while (1);
+}
+
+nsresult
+nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager,
+                                 const nsACString& aID, 
+                                 const nsACString& aData, 
+                                 PRBool aSecure, 
+                                 PRTime aExpiryTime)
+{
+  // This is where we use the information gathered in all the other 
+  // states to add a cookie to the Firebird Cookie Manager.
+  nsXPIDLCString domain;
+  SynthesizePath(&mDomainStack, ".", getter_Copies(domain));
+
+  nsXPIDLCString path;
+  SynthesizePath(&mPathStack, "/", getter_Copies(path));
+
+  return aManager->Add(domain, path, aID, aData, aSecure, PR_FALSE, aExpiryTime);
+}
+
+void
+nsOperaCookieMigrator::SynthesizePath(nsVoidArray* aStack, 
+                                      const char* aDelimiter, 
+                                      char** aResult)
+{
+  PRUint32 stringLength = 0;
+  PRUint32 count = aStack->Count();
+  for (PRUint32 i = 0; i < count; ++i)
+    stringLength += nsCRT::strlen((char*)aStack->ElementAt(i)) + 1;
+
+  nsCAutoString synthesizedPath;
+  for (i = 0; i < count; ++i) {
+    synthesizedPath.Append((char*)aStack->ElementAt(i));
+    if (i != count)
+      synthesizedPath.Append(aDelimiter);
+  }
+
+  *aResult = ToNewCString(synthesizedPath);
 }
 
 nsresult
