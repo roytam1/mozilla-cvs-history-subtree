@@ -543,10 +543,11 @@ nsTextEditRules::WillInsertText(PRInt32          aAction,
   // 1. paste up to the first newline
   // 2. replace newlines with spaces
   // 3. strip newlines
+  // 4. replace with commas
   // So find out what we're expected to do:
   enum {
     ePasteIntact = 0, ePasteFirstLine = 1,
-    eReplaceWithSpaces = 2, eStripNewlines = 3
+    eReplaceWithSpaces = 2, eStripNewlines = 3, eReplaceWithCommas = 4
   };
   PRInt32 singleLineNewlineBehavior = 1;
   nsCOMPtr<nsIPrefBranch> prefBranch =
@@ -574,6 +575,8 @@ nsTextEditRules::WillInsertText(PRInt32          aAction,
       if (firstCRLF > 0)
         tString.Truncate(firstCRLF);
     }
+    else if (singleLineNewlineBehavior == eReplaceWithCommas)
+        tString.ReplaceChar(CRLF, ',');
     else // even if we're pasting newlines, don't paste leading/trailing ones
       tString.Trim(CRLF, PR_TRUE, PR_TRUE);
 
