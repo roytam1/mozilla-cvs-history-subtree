@@ -602,7 +602,7 @@ nsHTMLContentSerializer::StartIndentation(nsIAtom* aName,
       (aName == nsHTMLAtoms::ol) ||
       (aName == nsHTMLAtoms::tbody) ||
       (aName == nsHTMLAtoms::form) ||
-      (aName == nsHTMLAtoms::frameset)
+      (aName == nsHTMLAtoms::frameset) ||
       (aName == nsHTMLAtoms::blockquote) ||
       (aName == nsHTMLAtoms::li) ||
       (aName == nsHTMLAtoms::dt) ||
