@@ -680,7 +680,9 @@ public:
 
 //	Context Overrides
 	virtual void DisplayBullet(MWContext *pContext, int iLocation, LO_BullettStruct *pBullet);
+#ifndef MOZ_NGLAYOUT
 	virtual void DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed);
+#endif
     virtual void DisplayBorder(MWContext *pContext, int iLocation, int x, int y, int width, int height, int bw, LO_Color *color, LO_LineStyle style);
 	virtual void DisplayHR(MWContext *pContext, int iLocation, LO_HorizRuleStruct *pHorizRule);
 	virtual BITMAPINFO*	 NewPixmap(NI_Pixmap* pImage, BOOL mask = FALSE);

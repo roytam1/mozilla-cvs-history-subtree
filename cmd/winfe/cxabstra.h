@@ -71,7 +71,7 @@ typedef enum ContextType    {
     MaxContextTypes   //  Leave as last entry please
 } ContextType;
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 class nsIWebWidget;
 #endif
 
@@ -205,7 +205,7 @@ public:
 	// Override to allow XP Context->Frame matching
 	virtual CFrameGlue *GetFrame() const { return NULL; }
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
     // Convenience to get/set WebWidget from MWContext.
     nsIWebWidget *GetWebWidget() const {        
         return((nsIWebWidget*)m_pXPCX->fe.webWidget);

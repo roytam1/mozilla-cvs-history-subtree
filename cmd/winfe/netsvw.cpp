@@ -53,7 +53,7 @@
 #include "compbar.h"
 #endif
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 #include "nsString.h"
 #define SAMPLES_BASE_URL "resource:/res/samples"
 #define START_URL SAMPLES_BASE_URL "/test0.html"
@@ -142,7 +142,7 @@ CNetscapeView::CNetscapeView()
 
     m_pSaveFileDlg = NULL;
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
     m_bNoWebWidgetHack = FALSE;
 #endif
 
@@ -222,7 +222,7 @@ CNetscapeView::~CNetscapeView()
         m_pDropTarget = NULL;
     }
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
     nsIWebWidget *ww = GetContext()->GetWebWidget();
     if (nsnull != ww) {
       NS_RELEASE(ww);
@@ -507,9 +507,13 @@ void CNetscapeView::OnPrint(CDC *pDC, CPrintInfo *pInfo)	{
             return;
         }
 #endif
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		// Copy the necessary information into the URL's saved data so that we don't
 		// make a copy of the plug-ins when printing
 		NPL_PreparePrint(pContext->GetContext(), &pUrl->savedData);
+#endif
 
 		CPrintCX::PreviewAnchorObject(m_pPreviewContext, pUrl, this, pDC, pInfo, &SavedData, pDisplayUrl);
         XP_FREEIF(pDisplayUrl);
@@ -660,7 +664,7 @@ int CNetscapeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
     return 0;
 }
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 void CNetscapeView::checkCreateWebWidget() {
     if (m_bNoWebWidgetHack) {
         return;
@@ -696,7 +700,7 @@ void CNetscapeView::checkCreateWebWidget() {
     chCrFail:
       NS_IF_RELEASE(ww);    
 }
-#endif /* MOZ_RAPTOR */
+#endif /* MOZ_NGLAYOUT */
 
 // Force a window repaint
 // Don't do this by hand (i.e. by calling LO_RefreshArea()) or we will be
@@ -1066,7 +1070,7 @@ SCODE CViewDropSource::GiveFeedback(DROPEFFECT dropEffect)
 
 void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
 {
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
     checkCreateWebWidget();
 #endif
     CGenericView::OnSize ( nType, cx, cy );
@@ -1078,7 +1082,7 @@ void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
         m_pChild->MoveWindow ( rect );
     }
     // Actually update the size.
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
     if (GetContext() && GetContext()->GetWebWidget()) {
       RECT r;
       ::GetClientRect(m_hWnd, &r);      

@@ -2594,7 +2594,11 @@ void CDCCX::DisplayWindowlessPlugin(MWContext *pContext,
         pAppWin->height = rect.bottom - rect.top;
         pAppWin->type = NPWindowTypeDrawable;
         
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
         NPL_EmbedSize(pEmbeddedApp);
+#endif
     }
     
 #ifdef LAYERS
@@ -2615,7 +2619,11 @@ void CDCCX::DisplayWindowlessPlugin(MWContext *pContext,
     event.wParam = (uint32)hDC;
     event.lParam = (uint32)&rect;
     
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     NPL_HandleEvent(pEmbeddedApp, (void *)&event, pAppWin->window);
+#endif
 
     ReleaseContextDC(hDC);
 }
@@ -2672,6 +2680,7 @@ void CDCCX::DisplayPlugin(MWContext *pContext, LO_EmbedStruct *pEmbed,
        
 }
 
+#ifndef MOZ_NGLAYOUT
 void CDCCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed)
 {
     NPEmbeddedApp* pEmbeddedApp = (NPEmbeddedApp*)pEmbed->FE_Data;
@@ -2682,7 +2691,11 @@ void CDCCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEm
 	if(wfe_IsTypePlugin(pEmbeddedApp)) {
         if (NPL_IsEmbedWindowed(pEmbeddedApp)) {
             DisplayPlugin(pContext, pEmbed, pEmbeddedApp, iLocation);
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
             (void)NPL_EmbedSize(pEmbeddedApp);
+#endif
         }
         else
             DisplayWindowlessPlugin(pContext, pEmbed, pEmbeddedApp, iLocation);
@@ -2757,6 +2770,7 @@ void CDCCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEm
 		ReleaseContextDC(hdc);
 	}
 }
+#endif
 
 void CDCCX::DisplayHR(MWContext *pContext, int iLocation, LO_HorizRuleStruct *pHorizRule)	
 {

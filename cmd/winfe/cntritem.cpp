@@ -150,8 +150,12 @@ void CNetscapeCntrItem::OnChange(OLE_NOTIFICATION nCode, DWORD dwParam)
             CL_UpdateLayerRect(CL_GetLayerCompositor(pLayoutData->layer),
                                pLayoutData->layer, &rect, PR_FALSE);
         }
+#ifdef MOZ_NGLAYOUT
+        ASSERT(0);
+#else
         else
             pContext->funcs->DisplayEmbed(pContext, FE_VIEW, pLayoutData);
+#endif
     }
 }
 

@@ -283,8 +283,10 @@ void CStubsCX::DisplayBullet(MWContext *pContext, int iLocation, LO_BullettStruc
 void CStubsCX::DisplayEdge(MWContext *pContext, int iLocation, LO_EdgeStruct *pEdge)	{
 }
 
+#ifndef MOZ_NGLAYOUT
 void CStubsCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed)	{
 }
+#endif
 
 void CStubsCX::DisplayFormElement(MWContext *pContext, int iLocation, LO_FormElementStruct *pFormElement)	{
 }

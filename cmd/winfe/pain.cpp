@@ -31,7 +31,7 @@ CPaneCX *wfe_CreateNavCenterHTMLPain(HT_View htView, HWND hParent)
     cccGrid.m_pCurrentDoc = new CGenericDoc();
     if(cccGrid.m_pCurrentDoc) {
         CNetscapeView *pNewView = new CNetscapeView();
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
         pNewView->NoWebWidgetHack();
 #endif
         if(pNewView) {

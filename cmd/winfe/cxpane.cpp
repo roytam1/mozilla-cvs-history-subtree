@@ -1420,7 +1420,7 @@ PaneProc(HWND hPane, UINT uMsg, WPARAM wParam, LPARAM lParam)
 //  Subclass or unsubclass a window.
 BOOL CPaneCX::SubClass(HWND hWnd, BOOL bSubClass)
 {
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
   // We want all events to go to the WebWidget window embedded in this
   // one and not here at all.
   return TRUE;

@@ -215,7 +215,11 @@ void *FE_FreeGridWindow(MWContext *pContext, XP_Bool bSaveHistory)	{
 		    }
         }
 
+#ifdef MOZ_NGLAYOUT
+    ASSERT(0);
+#else
 		LO_DiscardDocument(pWinCX->GetContext());
+#endif
 		XP_List *hist_list = pWinCX->GetContext()->hist.list_ptr;
 		pWinCX->GetContext()->hist.list_ptr = NULL;
 

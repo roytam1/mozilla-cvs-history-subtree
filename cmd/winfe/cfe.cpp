@@ -406,6 +406,9 @@ void CFE_DisplayEdge(MWContext *pContext, int iLocation, LO_EdgeStruct *pEdge)	{
 }
 
 void CFE_DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed)	{
+#ifdef MOZ_NGLAYOUT
+  ASSERT(0);
+#else
 	if(ABSTRACTCX(pContext)->IsDestroyed())	{
 		//	Don't allow this to happen if the context has been destroyed...
 		TRACE("Context %p Destroyed :: DisplayEmbed Blocking\n", pContext);
@@ -413,6 +416,7 @@ void CFE_DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed
 	}
 
     ABSTRACTCX(pContext)->DisplayEmbed(pContext, iLocation, pEmbed);
+#endif
 }
 
 void CFE_DisplayFormElement(MWContext *pContext, int iLocation, LO_FormElementStruct *pFormElement)	{

@@ -87,7 +87,7 @@ BOOL bIsGold = FALSE;
 // Full Circle stuff - see http://www.fullsoft.com for more info
 #include "fullsoft.h"
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 #include "nsISupports.h"
 #include "nsRepository.h"
 #include "nsWidgetsCID.h"
@@ -246,12 +246,12 @@ BOOL CNetscapeApp::InitApplication()
     return TRUE;
 }
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 #define WIDGET_DLL "raptorwidget.dll"
 #define GFXWIN_DLL "raptorgfxwin.dll"
 #define VIEW_DLL   "raptorview.dll"
 
-static void InitializeRaptor() {
+static void InitializeNGLayout() {
   NS_DEFINE_IID(kCWindowIID, NS_WINDOW_CID);
   NS_DEFINE_IID(kCScrollbarIID, NS_VERTSCROLLBAR_CID);
   NS_DEFINE_IID(kCButtonIID, NS_BUTTON_CID);
@@ -294,7 +294,7 @@ static void InitializeRaptor() {
   NSRepository::RegisterFactory(kCViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
   NSRepository::RegisterFactory(kCScrollingViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
 }
-#endif /* MOZ_RAPTOR */
+#endif /* MOZ_NGLAYOUT */
 
 
 typedef    FARPROC   (*WSASetBlockingHook_t) (FARPROC);
@@ -1111,7 +1111,9 @@ BOOL CNetscapeApp::InitInstance()
     NET_RegisterContentTypeConverter(cp_wild, FO_OUT_TO_PROXY_CLIENT, NULL, external_viewer_disk_stream);
     NET_RegisterContentTypeConverter(cp_wild, FO_SAVE_AS, NULL, ContextSaveStream);
     NET_RegisterContentTypeConverter(cp_wild, FO_OLE_NETWORK, NULL, nfe_OleStream);
+#ifndef MOZ_NGLAYOUT
 	NET_RegisterContentTypeConverter(cp_wild, FO_EMBED, NULL, EmbedStream);
+#endif
 	//      added by ftang & jliu, just remap it from memory_stream->net_ColorHTMLStream
     NET_RegisterContentTypeConverter(INTERNAL_PARSER, FO_VIEW_SOURCE, TEXT_HTML, net_ColorHTMLStream);
 
@@ -1138,9 +1140,8 @@ BOOL CNetscapeApp::InitInstance()
 //END STREAM VODOO
 
 
-#ifdef MOZ_RAPTOR
-  // Raptor
-  InitializeRaptor();
+#ifdef MOZ_NGLAYOUT
+  InitializeNGLayout();
 #endif
 
 	CString strStatus;

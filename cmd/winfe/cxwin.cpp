@@ -51,7 +51,7 @@ extern char * EDT_NEW_DOC_NAME;
 
 #define EDT_IS_SIZING   ( EDT_IS_EDITOR(GetContext()) && EDT_IsSizing(GetContext()) )
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 #include "nsString.h"
 #include "nsIWebWidget.h"
 #endif
@@ -625,6 +625,9 @@ void CWinCX::DestroyContext()   {
 
 
 void CWinCX::OnDeactivateEmbedCX()  {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     CGenericView *pView = GetView();
     if(pView != NULL && m_pSelected != NULL) {
 		//	Obtain the plugin structure.
@@ -648,6 +651,7 @@ void CWinCX::OnDeactivateEmbedCX()  {
 		//	Clear that nothing is currently selected.
         m_pSelected = NULL;
     }
+#endif
 }
 
 #ifdef EDITOR
@@ -813,7 +817,11 @@ wfe_ResizeFullPagePlugin(MWContext* pContext, int32 lWidth, int32 lHeight)
 			(int)npWindow->width,
 			(int)npWindow->height,
 			SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		NPL_EmbedSize(pContext->pluginList);
+#endif
 	}
 }
 
@@ -1322,7 +1330,12 @@ BOOL CWinCX::HandleEmbedEvent(LO_EmbedStruct *embed, CL_Event *pEvent)
             return FALSE;
     }
     
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+    return FALSE;
+#else
     return (BOOL)NPL_HandleEvent(pEmbeddedApp, &npEvent, (void*)npEvent.wParam);
+#endif
 }
 #endif /* LAYERS */
 
@@ -1622,11 +1635,15 @@ CWinCX::OnLButtonDblClkForLayerCX(UINT uFlags, CPoint& cpPoint,
         }
         else
         {
+#ifdef MOZ_NGLAYOUT
+            ASSERT(0);
+#else /* MOZ_NGLAYOUT */
 #ifdef LAYERS
             LO_DoubleClick(GetDocumentContext(), Point.x, Point.y, layer);
 #else
             LO_DoubleClick(GetDocumentContext(), Point.x, Point.y);
 #endif /* LAYERS */
+#endif /* MOZ_NGLAYOUT */
             // Double-click is the same as holding mouse down when
             // we're selecting. 
             //cmanske: WHY??? DOES THE BROWSER NEED THIS? BAD FOR EDITOR!
@@ -2096,7 +2113,11 @@ CWinCX::OnLButtonDownForLayerCX(UINT uFlags, CPoint &cpPoint, XY& Point,
             else
 #endif // EDITOR
             {
+#ifdef MOZ_NGLAYOUT
+            ASSERT(0);
+#else
         		LO_ExtendSelection(GetDocumentContext(), Point.x, Point.y);
+#endif
             }
         } else {
             // Start a normal selection
@@ -3224,7 +3245,11 @@ CWinCX::OnMouseMoveForLayerCX(UINT uFlags, CPoint& cpPoint,
             } else 
 #endif // EDITOR
             {
+#ifdef MOZ_NGLAYOUT
+                ASSERT(0);
+#else
                 LO_ExtendSelection(GetDocumentContext(), xVal, yVal);
+#endif
             }
         }
 
@@ -3702,7 +3727,7 @@ CWnd *CWinCX::GetDialogOwner() const    {
 
 int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoading, BOOL bForceNew)   
 {
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
   nsIWebWidget* ww = GetWebWidget();
   if (!ww) {
     return MK_NO_ACTION;
@@ -4142,9 +4167,13 @@ void CWinCX::DestroyEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp)
     }	
     XP_FREE(pAppWin);	
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     // turn scrollbars back on
     if(pApp->pagePluginType == NP_FullPage)
         FE_ShowScrollBars(pContext, TRUE);
+#endif
 }
 
 
@@ -5088,7 +5117,11 @@ void CWinCX::Print()	{
 
 	// Copy the necessary information into the URL's saved data so that we don't
 	// make a copy of the plug-ins when printing
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	NPL_PreparePrint(pMWContext, &pUrl->savedData);
+#endif
 
     CGenericView *pView = GetView();
     if(pView)   {
@@ -5252,6 +5285,9 @@ BOOL CWinCX::DoFind(CWnd * pWnd, const char * pFindString, BOOL bMatchCase,
 	                         &end_position,
                                  &sel_layer);
 
+#ifdef MOZ_NGLAYOUT
+    ASSERT(0);
+#else
 	// look for the text	                         
 	if (LO_FindText(GetDocumentContext(),
 	                (char *) pFindString,
@@ -5340,6 +5376,7 @@ BOOL CWinCX::DoFind(CWnd * pWnd, const char * pFindString, BOOL bMatchCase,
             ::MessageBox(hBox, szLoadString(IDS_FIND_NOT_FOUND), szLoadString(AFX_IDS_APP_TITLE), MB_ICONEXCLAMATION | MB_OK);
 
     }
+#endif
 	return FALSE;
 
 }
@@ -6248,6 +6285,9 @@ mouse_over_callback(MWContext * context, LO_Element * lo_element, int32 event,
         }
     }
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     //  See if we are over an embedded item.
     pEmbed = (LO_EmbedStruct *)lo_element;
     if(pEmbed && pEmbed->type == LO_EMBED && pEmbed->FE_Data)  {
@@ -6275,6 +6315,7 @@ mouse_over_callback(MWContext * context, LO_Element * lo_element, int32 event,
 	        }
 		}
     }
+#endif
 
 FINISH_MOUSE_OVER:
     // If nothing set yet blank it out and make sure we have the 
@@ -7062,6 +7103,9 @@ BOOL CWinCX::setTabFocusNextChild( MWContext *currentChildContext, int forward )
 	
 BOOL CWinCX::fireTabFocusElement( UINT nChar)		
 {
+#ifdef MOZ_NGLAYOUT
+  ASSERT(0);
+#else
 	int32			mapAreaIndex, xx, yy;
 	lo_MapAreaRec	*theArea;
 
@@ -7097,7 +7141,8 @@ BOOL CWinCX::fireTabFocusElement( UINT nChar)
 			return( TRUE );
 	}
 
-	return( FALSE );
+#endif /* MOZ_NGLAYOUT */
+	return( FALSE ); 
 }
 
 int CWinCX::getImageDrawFlag( MWContext *pContext, LO_ImageStruct *pImage, lo_MapAreaRec **ppArea, uint32 *pFlag )

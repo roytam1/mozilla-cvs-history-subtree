@@ -664,7 +664,11 @@ void CGenericView::OnFilePrint()
 	    // future, we should pass in at least the printer chosen by the user.
 	    if(GetFrame()->GetActiveWinContext()->ContainsFullPagePlugin()) {
 		    // there can be only one plugin if it is full page
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		    NPL_Print(GetFrame()->GetActiveWinContext()->GetContext()->pluginList, NULL);
+#endif
 			return;
 	    }
 

@@ -51,7 +51,7 @@ enum FEDragType {
     // Add more as we dream them up!
 };
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 #include "nsIWebWidget.h"
 #endif
 
@@ -294,7 +294,7 @@ protected:
 #endif
     DECLARE_MESSAGE_MAP()
 
-#ifdef MOZ_RAPTOR
+#ifdef MOZ_NGLAYOUT
 private:
   void checkCreateWebWidget();
   BOOL m_bNoWebWidgetHack;
@@ -302,7 +302,7 @@ private:
 public:
   void NoWebWidgetHack() {m_bNoWebWidgetHack = TRUE;}
   // Hack to disable it for the RDF window.
-#endif /* MOZ_RAPTOR */
+#endif /* MOZ_NGLAYOUT */
 };
 
 #ifdef _DEBUG_HUH_JEM  // debug version in netsvw.cpp

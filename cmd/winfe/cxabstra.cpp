@@ -161,8 +161,10 @@ void CAbstractCX::DestroyContext()	{
         //      is set.
 	    Interrupt();
 
+#ifndef MOZ_NGLAYOUT
         //  Layout needs to cleanup.
         LO_DiscardDocument(m_pXPCX);
+#endif
 
 	    //	End the session history of the context.
         SHIST_EndSession(m_pXPCX);
@@ -757,7 +759,11 @@ void CAbstractCX::NiceReload(int usePassInType, NET_ReloadMethod iReloadType )	{
 	}
 	else	{
 		context->reSize = FALSE;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		NPL_SamePage(context);
+#endif
 		if( usePassInType ) {
 			Reload( iReloadType );
 			return;
@@ -780,9 +786,11 @@ void CAbstractCX::Back()	{
 
 	History_entry *pHist = SHIST_GetPrevious(GetContext());
 	if (GetContext()->grid_children) {
+#ifndef MOZ_NGLAYOUT
 	    if (LO_BackInGrid(GetDocumentContext())) {
 		return;
 	    }
+#endif
 	}
 	if(pHist)	{
 		GetUrl(SHIST_CreateURLStructFromHistoryEntry(GetContext(), pHist), FO_CACHE_AND_PRESENT);

@@ -581,7 +581,11 @@ BOOL CSaveCX::CanCreate(URL_Struct* pUrl)
 
 					memcpy(&savedData, &m_pUrl->savedData, sizeof(SHIST_SavedData));
 					memset(&m_pUrl->savedData, 0, sizeof(SHIST_SavedData));
+#ifdef MOZ_NGLAYOUT
+          ASSERT(0);
+#else
 					LO_CloneFormData(&savedData, GetDocumentContext(), m_pUrl);
+#endif
 				}
 			}
 

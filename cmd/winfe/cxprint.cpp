@@ -409,7 +409,11 @@ CPrintCX::CPrintCX(URL_Struct *pUrl, SHIST_SavedData *pSavedData, char *pDisplay
     //  Finally, copy the form data if present.
     if(pSavedData && pSavedData->FormList)  {
         TRACE("Cloning form data for print job.\n");
+#ifdef MOZ_NGLAYOUT
+        ASSERT(0);
+#else
         LO_CloneFormData(pSavedData, GetDocumentContext(), pUrl);
+#endif
     }
 }
 
@@ -1840,6 +1844,7 @@ void CPrintCX::DisplayBullet(MWContext *pContext, int iLocation, LO_BullettStruc
 	CDCCX::DisplayBullet(pContext, iLocation, pBullet);
 }
 
+#ifndef MOZ_NGLAYOUT
 void CPrintCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEmbed)	{
     if (GetDisplayMode() == BLOCK_DISPLAY)
         return;
@@ -1859,6 +1864,7 @@ void CPrintCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *
 	}
 	CDCCX::DisplayEmbed(pContext, iLocation, pEmbed);
 }
+#endif
 
 void CPrintCX::DisplayFormElement(MWContext *pContext, int iLocation, LO_FormElementStruct *pFormElement)	{
     if (GetDisplayMode() == BLOCK_DISPLAY)
@@ -2275,7 +2281,11 @@ void CPrintCX::DisplayPlugin(MWContext *pContext, LO_EmbedStruct *pEmbed,
 {
     // get the print area and clamp it
     LTRB Rect;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     ResolveElement(Rect, pEmbed, iLocation, NPL_IsEmbedWindowed(pEmbeddedApp));
+#endif
 	SafeSixteen(Rect);
 
     // set the print area rect
@@ -2301,7 +2311,11 @@ void CPrintCX::DisplayPlugin(MWContext *pContext, LO_EmbedStruct *pEmbed,
 
     npPrint.print.embedPrint.platformPrint = (void*)hdc;
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     (void)NPL_Print(pEmbeddedApp, &npPrint);
+#endif
 
     //  Restore the DC's state.
     if(iSaveDC) {

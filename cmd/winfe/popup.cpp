@@ -1428,3 +1428,11 @@ void CNetscapeView::OnPopupMailTo() {
 		GetContext()->MailDocument();
 	}
 }
+
+// Stub this out somewhere else.
+#ifdef MOZ_NGLAYOUT
+BOOL wfe_IsTypePlugin(NPEmbeddedApp* pEmbeddedApp) {
+  ASSERT(0);
+  return FALSE;
+}
+#endif

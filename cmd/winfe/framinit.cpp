@@ -149,7 +149,7 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext *pContext)
 	//	Call the base, have it do the creation magic.
 	BOOL bRetval = CGenericFrame::OnCreateClient(lpcs, pContext);
 	if(bRetval == TRUE)	{
-    // Try out some raptor stuff.
+    // Try out some NG Layout stuff.
     nsIDocument *doc;
     nsresult res = NS_NewHTMLDocument(&doc);
     if (NS_SUCCEEDED(res)) {
