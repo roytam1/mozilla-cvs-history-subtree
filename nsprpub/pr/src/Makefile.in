@@ -248,6 +248,12 @@ OBJS += \
 	cplus/$(OBJDIR)/rctime.$(OBJ_SUFFIX)
 endif
 
+ifdef USE_AUTOCONF
+
+OBJS += $(addprefix md/$(PR_MD_ARCH_DIR)/$(OBJDIR)/, $(PR_MD_CSRCS:.c=.$(OBJ_SUFFIX)))
+
+else
+
 ifeq ($(OS_ARCH), WINNT)
 ifneq (,$(filter-out WIN16 OS2,$(OS_TARGET)))
 DLLBASE=/BASE:0x30000000
@@ -324,7 +330,6 @@ endif
 
 else
 
-ifndef USE_AUTOCONF
 ifeq ($(OS_ARCH), BeOS)
 	include $(srcdir)/md/beos/objs.mk
 	include $(srcdir)/bthreads/objs.mk
@@ -332,8 +337,8 @@ else
 	# Unix
 	include $(srcdir)/md/unix/objs.mk
 endif
-endif # !USE_AUTOCONF
 endif
+endif # !USE_AUTOCONF
 
 LIBRARY_NAME = nspr
 LIBRARY_VERSION = $(MOD_VERSION)
