@@ -28,7 +28,6 @@ REQUIRES	= xpcom \
 		  locale \
 		  dom \
 		  webshell \
-		  docshell \
 		  pref \
 		  necko \
 		  htmlparser \
@@ -59,8 +58,10 @@ CPPSRCS = \
   nsXULAtoms.cpp \
   nsXBLAtoms.cpp \
   nsStyleCoord.cpp \
-  $(NULL)
-
+!ifdef MOZ_SVG
+  nsSVGAtoms.cpp   \
+!endif
+	$(NULL)
 
 CPP_OBJS= \
   .\$(OBJDIR)\nsCSSAtoms.obj \
@@ -77,6 +78,9 @@ CPP_OBJS= \
   .\$(OBJDIR)\nsXULAtoms.obj \
   .\$(OBJDIR)\nsXBLAtoms.obj \
   .\$(OBJDIR)\nsStyleCoord.obj \
+!ifdef MOZ_SVG
+  .\$(OBJDIR)\nsSVGAtoms.obj \
+!endif
   $(NULL)
 
 LCFLAGS = \

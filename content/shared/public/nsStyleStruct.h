@@ -76,8 +76,14 @@ enum nsStyleStructID {
   eStyleStruct_Border         = 18,
   eStyleStruct_Outline        = 19,
   eStyleStruct_XUL            = 20,
+#ifdef MOZ_SVG
+  eStyleStruct_SVG            = 21,
+  eStyleStruct_Max            = eStyleStruct_SVG,
+  eStyleStruct_BorderPaddingShortcut = 22       // only for use in GetStyle()
+#else
   eStyleStruct_Max            = eStyleStruct_XUL,
   eStyleStruct_BorderPaddingShortcut = 21       // only for use in GetStyle()
+#endif
 };
 
 // Bits for each struct.
@@ -102,15 +108,18 @@ enum nsStyleStructID {
 #define NS_STYLE_INHERIT_BORDER           NS_STYLE_INHERIT_BIT(eStyleStruct_Border)
 #define NS_STYLE_INHERIT_OUTLINE          NS_STYLE_INHERIT_BIT(eStyleStruct_Outline)
 #define NS_STYLE_INHERIT_XUL              NS_STYLE_INHERIT_BIT(eStyleStruct_XUL)
+#ifdef MOZ_SVG
+#define NS_STYLE_INHERIT_SVG              NS_STYLE_INHERIT_BIT(eStyleStruct_SVG)
+#endif
 
-#define NS_STYLE_INHERIT_MASK             0x0fffff
+#define NS_STYLE_INHERIT_MASK             0x00ffffff
 
 // A bit to test whether or not a style context can be shared
 // by siblings.
-#define NS_STYLE_UNIQUE_CONTEXT           0x100000
+#define NS_STYLE_UNIQUE_CONTEXT           0x01000000
 
 // A bit to test whether or not we have any text decorations.
-#define NS_STYLE_HAS_TEXT_DECORATIONS     0x200000
+#define NS_STYLE_HAS_TEXT_DECORATIONS     0x02000000
 
 // The actual structs start here
 struct nsStyleStruct {
@@ -999,6 +1008,52 @@ struct nsStyleXUL : public nsStyleStruct {
   PRUint32      mBoxOrdinal;            // [reset] see nsStyleConsts.h
 };
 #endif
+
+#ifdef MOZ_SVG
+enum nsStyleSVGPaintType {
+  eStyleSVGPaintType_None = 0,
+  eStyleSVGPaintType_Color,
+  eStyleSVGPaintType_Server
+};
+
+struct nsStyleSVGPaint
+{
+  nsStyleSVGPaintType mType;
+  nscolor mColor;
+};
+
+struct nsStyleSVG : public nsStyleStruct {
+  nsStyleSVG();
+  nsStyleSVG(const nsStyleSVG& aSource);
+  ~nsStyleSVG();
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    this->~nsStyleSVG();
+    aContext->FreeToShell(sizeof(nsStyleSVG), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleSVG& aOther) const;
+
+  // all [inherit]ed
+  nsStyleSVGPaint  mFill;
+  float            mFillOpacity;
+  PRUint8          mFillRule; // see nsStyleConsts.h
+  nsStyleSVGPaint  mStroke;
+  nsString         mStrokeDasharray; // XXX we want a parsed value here
+  float            mStrokeDashoffset;
+  PRUint8          mStrokeLinecap;  // see nsStyleConsts.h
+  PRUint8          mStrokeLinejoin; // see nsStyleConsts.h
+  float            mStrokeMiterlimit;
+  float            mStrokeOpacity;
+  float            mStrokeWidth; // in pixels
+};
+#endif
+
 
 #define BORDER_PRECEDENT_EQUAL  0
 #define BORDER_PRECEDENT_LOWER  1

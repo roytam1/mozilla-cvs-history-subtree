@@ -98,8 +98,10 @@
 #include "nsMimeTypes.h"
 
 #include "nsContentUtils.h"
+#include "nsIElementFactory.h"
 
 static NS_DEFINE_CID(kHTMLStyleSheetCID,NS_HTMLSTYLESHEET_CID);
+static NS_DEFINE_CID(kNameSpaceManagerCID, NS_NAMESPACEMANAGER_CID);
 
 // XXX The XML world depends on the html atoms
 #include "nsHTMLAtoms.h"
@@ -762,7 +764,6 @@ nsXMLDocument::CreateElement(const nsAReadableString& aTagName,
   *aReturn = nsnull;
   NS_ENSURE_TRUE(aTagName.Length(), NS_ERROR_DOM_INVALID_CHARACTER_ERR);
 
-  nsIXMLContent* content;
   nsCOMPtr<nsINodeInfo> nodeInfo;
   nsresult rv;
 
@@ -770,13 +771,7 @@ nsXMLDocument::CreateElement(const nsAReadableString& aTagName,
                                      *getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = NS_NewXMLElement(&content, nodeInfo);
-  NS_ENSURE_SUCCESS(rv, rv);
-   
-  rv = content->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aReturn);
-  NS_RELEASE(content);
- 
-  return rv;
+  return CreateElement(nodeInfo, aReturn);
 }
 
 NS_IMETHODIMP    
@@ -893,27 +888,7 @@ nsXMLDocument::CreateElementNS(const nsAReadableString& aNamespaceURI,
                                      *getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  PRInt32 namespaceID;
-  nodeInfo->GetNamespaceID(namespaceID);
-
-  nsCOMPtr<nsIContent> content;
-  if (namespaceID == kNameSpaceID_HTML) {
-    nsCOMPtr<nsIHTMLContent> htmlContent;
-
-    rv = NS_CreateHTMLElement(getter_AddRefs(htmlContent), nodeInfo, PR_TRUE);
-    content = do_QueryInterface(htmlContent);
-  }
-  else {
-    nsCOMPtr<nsIXMLContent> xmlContent;
-    rv = NS_NewXMLElement(getter_AddRefs(xmlContent), nodeInfo);
-    content = do_QueryInterface(xmlContent);
-  }
-
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  content->SetContentID(mNextContentID++);
-
-  return content->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aReturn);
+  return CreateElement(nodeInfo, aReturn);
 }
 
 static nsIContent *
@@ -1040,3 +1015,69 @@ nsXMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
   return result;
 }
 
+nsresult
+nsXMLDocument::CreateElement(nsINodeInfo *aNodeInfo, nsIDOMElement** aResult)
+{
+  NS_ENSURE_ARG_POINTER(aNodeInfo);
+  NS_ENSURE_ARG_POINTER(aResult);
+  *aResult = nsnull;
+  
+  nsresult rv;
+  
+  nsCOMPtr<nsIContent> content;
+
+  if (aNodeInfo->NamespaceEquals(kNameSpaceID_HTML)) {
+    nsCOMPtr<nsIHTMLContent> htmlContent;
+    rv = NS_CreateHTMLElement(getter_AddRefs(htmlContent), aNodeInfo, PR_TRUE);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    content = do_QueryInterface(htmlContent, &rv);
+  }
+  else {
+    PRInt32 namespaceID;
+    aNodeInfo->GetNamespaceID(namespaceID);
+
+    nsCOMPtr<nsIElementFactory> elementFactory;
+    GetElementFactory(namespaceID, getter_AddRefs(elementFactory));
+    if (elementFactory) {
+      rv = elementFactory->CreateInstanceByTag(aNodeInfo, getter_AddRefs(content));
+    }
+    else {
+      nsCOMPtr<nsIXMLContent> xmlContent;
+      rv = NS_NewXMLElement(getter_AddRefs(xmlContent), aNodeInfo);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      content = do_QueryInterface(xmlContent, &rv);
+    }
+  }
+
+  if (content) {
+    content->SetContentID(mNextContentID++);
+    rv = content->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aResult);
+  }
+  
+  return rv;
+}
+
+void 
+nsXMLDocument::GetElementFactory(PRInt32 aNameSpaceID, nsIElementFactory** aResult)
+{
+  nsresult rv;
+
+  *aResult = nsnull;
+  
+  nsCOMPtr<nsINameSpaceManager> nameSpaceManager(do_GetService(kNameSpaceManagerCID, &rv));
+  if (!nameSpaceManager) return;
+  
+  nsAutoString nameSpace;
+  nameSpaceManager->GetNameSpaceURI(aNameSpaceID, nameSpace);
+
+  nsCAutoString contractID( NS_ELEMENT_FACTORY_CONTRACTID_PREFIX );
+  contractID.AppendWithConversion(nameSpace);
+
+  // Retrieve the appropriate factory.
+  nsCOMPtr<nsIElementFactory> elementFactory(do_GetService(contractID, &rv));
+
+  *aResult = elementFactory;
+  NS_IF_ADDREF(*aResult);
+}

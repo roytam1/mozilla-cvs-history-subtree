@@ -523,6 +523,7 @@ widget/src/os2/Makefile
 widget/src/os2/res/Makefile
 widget/src/os2/tests/Makefile
 widget/src/qt/Makefile
+widget/src/xlibxtbin/Makefile
 widget/src/xlib/window_service/Makefile
 widget/src/xpwidgets/Makefile
 widget/src/support/Makefile
@@ -549,6 +550,7 @@ xpcom/base/Makefile
 xpcom/build/Makefile
 xpcom/components/Makefile
 xpcom/ds/Makefile
+xpcom/glue/Makefile
 xpcom/io/Makefile
 xpcom/typelib/Makefile
 xpcom/reflect/Makefile
@@ -915,20 +917,30 @@ if [ "$MOZ_MATHML" ]; then
 	layout/mathml/Makefile
 	layout/mathml/base/Makefile
 	layout/mathml/base/src/Makefile
-	layout/mathml/content/Makefile
-	layout/mathml/content/src/Makefile
 "
 fi
 
-# layout/svg
+#libart
+if [ "$MOZ_INTERNAL_LIBART_LGPL" ]; then
+    MAKEFILES_libart="other-licenses/libart_lgpl/Makefile"
+fi
+
+# svg
 if [ "$MOZ_SVG" ]; then
+    MAKEFILES_content="$MAKEFILES_content
+	content/svg/Makefile
+	content/svg/document/Makefile
+	content/svg/document/src/Makefile
+	content/svg/content/Makefile
+	content/svg/content/src/Makefile
+"
+    MAKEFILES_dom="$MAKEFILES_dom
+	dom/public/idl/svg/Makefile
+"
     MAKEFILES_layout="$MAKEFILES_layout
 	layout/svg/Makefile
 	layout/svg/base/Makefile
-	layout/svg/base/public/Makefile
 	layout/svg/base/src/Makefile
-	layout/svg/content/Makefile
-	layout/svg/content/src/Makefile
 "
 fi
 
@@ -944,7 +956,7 @@ fi
 
 # modules/staticmod
 
-if [ "$MOZ_STATIC_COMPONENTS" ]; then
+if [ "$MOZ_STATIC_COMPONENTS" -o "$MOZ_META_COMPONENTS" ]; then
     MAKEFILES_static_components="$MAKEFILES_static_components
 	modules/staticmod/Makefile
 "
@@ -1065,6 +1077,12 @@ if [ "$BUILD_MODULES" = "all" ]; then
 
 MAKEFILES_themes=`cat ${srcdir}/themes/makefiles`
 
+MAKEFILES_calendar="
+        calendar/Makefile
+        calendar/libxpical/Makefile
+        calendar/resources/Makefile
+       "
+
 add_makefiles "
 $MAKEFILES_caps
 $MAKEFILES_db
@@ -1093,6 +1111,7 @@ $MAKEFILES_l10n_lang
 $MAKEFILES_langpacks
 $MAKEFILES_content
 $MAKEFILES_layout
+$MAKEFILES_libart
 $MAKEFILES_libreg
 $MAKEFILES_libimg
 $MAKEFILES_libpr0n
@@ -1125,6 +1144,10 @@ $MAKEFILES_zlib
 
 if test -n "$MOZ_PSM"; then
     add_makefiles "$MAKEFILES_psm2"
+fi
+
+if test -n "$MOZ_CALENDAR"; then
+    add_makefiles "$MAKEFILES_calendar"
 fi
 
 else

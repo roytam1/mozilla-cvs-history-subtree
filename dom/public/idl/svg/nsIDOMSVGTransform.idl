@@ -1,0 +1,51 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is the Mozilla SVG project.
+ * 
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are
+ * Copyright (C) 2001, Crocodile Clips Ltd.  All Rights Reserved.
+ * 
+ * Contributor(s):
+ *
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ * 
+ */
+
+#include "domstubs.idl"
+
+interface nsIDOMSVGMatrix;
+
+[scriptable, uuid(29cc2e14-6d18-4710-bda9-a88d9d3bc8dc)]
+interface nsIDOMSVGTransform : nsISupports
+{
+    // Transform Types
+  const unsigned short SVG_TRANSFORM_UNKNOWN   = 0;
+  const unsigned short SVG_TRANSFORM_MATRIX    = 1;
+  const unsigned short SVG_TRANSFORM_TRANSLATE = 2;
+  const unsigned short SVG_TRANSFORM_SCALE     = 3;
+  const unsigned short SVG_TRANSFORM_ROTATE    = 4;
+  const unsigned short SVG_TRANSFORM_SKEWX     = 5;
+  const unsigned short SVG_TRANSFORM_SKEWY     = 6;
+
+  readonly attribute unsigned short  type;
+  readonly attribute nsIDOMSVGMatrix matrix;
+  readonly attribute float           angle;
+
+  void setMatrix(in nsIDOMSVGMatrix matrix);
+  void setTranslate(in float tx, in float ty);
+  void setScale(in float sx, in float sy);
+  void setRotate(in float angle, in float cx, in float cy);
+  void setSkewX(in float angle);
+  void setSkewY(in float angle);
+};

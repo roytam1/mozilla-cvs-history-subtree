@@ -428,6 +428,9 @@ eAutoDetectResult CViewSourceHTML::CanParse(CParserContext& aParserContext,nsStr
        aParserContext.mMimeType.EqualsWithConversion(kRDFTextContentType) ||
        aParserContext.mMimeType.EqualsWithConversion(kHTMLTextContentType) ||
        aParserContext.mMimeType.EqualsWithConversion(kXULTextContentType) ||
+#ifdef MOZ_SVG
+       aParserContext.mMimeType.Equals(NS_LITERAL_STRING(kSVGTextContentType)) ||
+#endif
        aParserContext.mMimeType.EqualsWithConversion(kSGMLTextContentType)) {
       result=ePrimaryDetect;
     }
@@ -1182,7 +1185,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
           // Fix bug 40809
           nsAutoString theStr;
           aToken->GetSource(theStr);
-          theStr.ReplaceSubstring(NS_ConvertASCIItoUCS2("\r\n"), NS_ConvertASCIItoUCS2("\n"));
+          theStr.ReplaceSubstring(NS_LITERAL_STRING("\r\n").get(), NS_LITERAL_STRING("\n").get());
           theStr.ReplaceChar(kCR,kLF);  
           result=WriteTag(mText,theStr,aToken->GetAttributeCount(),PR_TRUE);
         }

@@ -37,7 +37,8 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
+
+#include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsString.h"
 #include "nsUnitConversion.h"
@@ -523,6 +524,11 @@ nsStyleContext::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       mCachedStyleData.mResetData->mXULData = (nsStyleXUL*)(const nsStyleXUL*)(&aStruct);
       break;
 #endif
+#ifdef MOZ_SVG
+    case eStyleStruct_SVG:
+      mCachedStyleData.mInheritedData->mSVGData = (nsStyleSVG*)(const nsStyleSVG*)(&aStruct);
+      break;
+#endif
     default:
       NS_ERROR("Invalid style struct id");
       result = NS_ERROR_INVALID_ARG;
@@ -768,6 +774,20 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBo
     }
 #endif
 
+#ifdef MOZ_SVG
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleSVG* svg = (const nsStyleSVG*)GetStyleData(eStyleStruct_SVG);
+      const nsStyleSVG* otherSVG = (const nsStyleSVG*)aOther->GetStyleData(eStyleStruct_SVG);
+      if (svg != otherSVG) {
+        hint = svg->CalcDifference(*otherSVG);
+        if (aHint < hint)
+          aHint = hint;
+      }
+    }
+#endif
+
+    
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleTable* table = (const nsStyleTable*)GetStyleData(eStyleStruct_Table);
@@ -1171,6 +1191,18 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
     (int)xul->mBoxOrient,
     (int)xul->mBoxPack,
     (int)xul->mBoxOrdinal);
+#endif
+
+  // SVG
+#ifdef MOZ_SVG
+  IndentBy(out,aIndent);
+  const nsStyleSVG* svg = (const nsStyleSVG*)GetStyleData(eStyleStruct_SVG);
+  fprintf(out, "<svg data=\"%d %f %f %d %f",
+          (int)svg->mStroke.mType,
+          svg->mStrokeWidth,
+          svg->mStrokeOpacity,
+          (int)svg->mFill.mType,
+          svg->mFillOpacity);
   fprintf(out, "\" />\n");
 #endif
   //#insert new style structs here#

@@ -128,7 +128,33 @@ inline nscoord CalcSideFor(const nsIFrame* aFrame, const nsStyleCoord& aCoord,
           if (isBase) {
             nsSize  size;
             frame->GetSize(size);
-            baseWidth = size.width; // not really width, need to subtract out padding...
+            baseWidth = size.width;
+            // subtract border of containing block
+            const nsStyleBorder* borderData = nsnull;
+            frame->GetStyleData(eStyleStruct_Border,
+                                (const nsStyleStruct*&)borderData);
+            if (borderData) {
+              nsMargin border;
+              borderData->CalcBorderFor(frame, border);
+              baseWidth -= (border.left + border.right);
+            }
+            // if aFrame is not absolutely positioned, subtract
+            // padding of containing block
+            const nsStyleDisplay* displayData = nsnull;
+            aFrame->GetStyleData(eStyleStruct_Display,
+                                 (const nsStyleStruct*&)displayData);
+            if (displayData &&
+                displayData->mPosition != NS_STYLE_POSITION_ABSOLUTE &&
+                displayData->mPosition != NS_STYLE_POSITION_FIXED) {
+              const nsStylePadding* paddingData = nsnull;
+              frame->GetStyleData(eStyleStruct_Padding,
+                                  (const nsStyleStruct*&)paddingData);
+              if (paddingData) {
+                nsMargin padding;
+                paddingData->CalcPaddingFor(frame, padding);
+                baseWidth -= (padding.left + padding.right);
+              }
+            }
             break;
           }
           frame->GetParent(&frame);
@@ -673,6 +699,78 @@ nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
 }
 
 #endif // INCLUDE_XUL
+
+#ifdef MOZ_SVG
+// --------------------
+// nsStyleSVG
+//
+nsStyleSVG::nsStyleSVG() 
+{ 
+    mFill.mType       = eStyleSVGPaintType_None;
+    mFill.mColor      = NS_RGB(0,0,0);
+    mFillOpacity      = 1.0f;
+    mFillRule         = NS_STYLE_FILL_RULE_NONZERO;
+    mStroke.mType     = eStyleSVGPaintType_None;
+    mStroke.mColor    = NS_RGB(0,0,0);
+    mStrokeDasharray.Truncate();
+    mStrokeDashoffset = 0.0f;
+    mStrokeLinecap    = NS_STYLE_STROKE_LINECAP_BUTT;
+    mStrokeLinejoin   = NS_STYLE_STROKE_LINEJOIN_MITER;
+    mStrokeMiterlimit = 4.0f;
+    mStrokeOpacity    = 1.0f;
+    mStrokeWidth      = 1.0f;
+}
+
+nsStyleSVG::~nsStyleSVG() 
+{
+}
+
+nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
+{
+  //nsCRT::memcpy((nsStyleSVG*)this, &aSource, sizeof(nsStyleSVG));
+
+  mFill.mType = aSource.mFill.mType;
+  if (mFill.mType == eStyleSVGPaintType_Color)
+    mFill.mColor = aSource.mFill.mColor;
+  mFillOpacity = aSource.mFillOpacity;
+  mFillRule = aSource.mFillRule;
+  mStroke.mType = aSource.mStroke.mType;
+  if (mStroke.mType == eStyleSVGPaintType_Color)
+    mStroke.mColor = aSource.mStroke.mColor;
+  mStrokeDasharray = aSource.mStrokeDasharray;
+  mStrokeDashoffset = aSource.mStrokeDashoffset;
+  mStrokeLinecap = aSource.mStrokeLinecap;
+  mStrokeLinejoin = aSource.mStrokeLinejoin;
+  mStrokeMiterlimit = aSource.mStrokeMiterlimit;
+  mStrokeOpacity = aSource.mStrokeOpacity;
+  mStrokeWidth = aSource.mStrokeWidth;
+}
+
+PRInt32 
+nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
+{
+  if ( mFill.mType       != aOther.mFill.mType       ||
+       mFillOpacity      != aOther.mFillOpacity      ||
+       mFillRule         != aOther.mFillRule         ||
+       mStroke.mType     != aOther.mStroke.mType     ||
+       mStrokeDasharray  != aOther.mStrokeDasharray  ||
+       mStrokeDashoffset != aOther.mStrokeDashoffset ||
+       mStrokeLinecap    != aOther.mStrokeLinecap    ||
+       mStrokeLinejoin   != aOther.mStrokeLinejoin   ||
+       mStrokeMiterlimit != aOther.mStrokeMiterlimit ||
+       mStrokeOpacity    != aOther.mStrokeOpacity    ||
+       mStrokeWidth      != aOther.mStrokeWidth      )
+    return NS_STYLE_HINT_VISUAL;
+
+  if ( (mStroke.mType == eStyleSVGPaintType_Color && mStroke.mColor != aOther.mStroke.mColor) ||
+       (mFill.mType   == eStyleSVGPaintType_Color && mFill.mColor   != aOther.mFill.mColor) )
+    return NS_STYLE_HINT_VISUAL;
+
+  return NS_STYLE_HINT_NONE;
+}
+
+#endif // MOZ_SVG
+
 
 // --------------------
 // nsStylePosition

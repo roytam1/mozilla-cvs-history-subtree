@@ -52,14 +52,18 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = MOZILLA_0_9_6_BRANCH
-NSPR_CO_TAG = MOZILLA_0_9_6_BRANCH
-PSM_CO_TAG = MOZILLA_0_9_6_BRANCH
-NSS_CO_TAG = MOZILLA_0_9_6_BRANCH
-LDAPCSDK_CO_TAG = MOZILLA_0_9_6_BRANCH
-ACCESSIBLE_CO_TAG =MOZILLA_0_9_6_BRANCH
-GFX2_CO_TAG =MOZILLA_0_9_6_BRANCH
-IMGLIB2_CO_TAG =MOZILLA_0_9_6_BRANCH
+
+# pull svg mini-branch
+MOZ_CO_TAG = SVG_20010721_BRANCH
+MOZ_CO_FLAGS := $(MOZ_CO_FLAGS) -f
+
+NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
+PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
+NSS_CO_TAG = NSS_CLIENT_TAG
+LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
+ACCESSIBLE_CO_TAG = 
+GFX2_CO_TAG = 
+IMGLIB2_CO_TAG = 
 BUILD_MODULES = all
 
 #######################################################################
@@ -123,7 +127,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS := -r $(MOZ_CO_TAG)
+  CVS_CO_FLAGS := -f -r $(MOZ_CO_TAG)
 endif
 
 ####################################
@@ -338,6 +342,109 @@ ifeq ($(MOZ_CO_MODULE),)
 endif
 CVSCO_SEAMONKEY := $(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZ_CO_MODULE)
 
+# HACK FOR SVG SEMI_BRANCH
+
+# add new files here
+SVG_BRANCH_FILES := \
+	content/svg \
+	layout/svg \
+	dom/public/idl/svg \
+	\
+	aclocal.m4 \
+	allmakefiles.sh \
+	build/autoconf/libart.m4 \
+	build/mac/build_scripts/MozillaBuildList.pm \
+	client.mk \
+	client.mak \
+	config/autoconf.mk.in \
+	configure \
+	configure.in \
+	content/Makefile.in \
+	content/base/public/nsIDocument.h \
+	content/base/public/nsIElementFactory.h \
+	content/base/src/nsRuleNode.cpp \
+	content/base/src/nsStyleContext.cpp \
+	content/build/Makefile.in \
+	content/build/makefile.win \
+	content/build/nsContentCID.h \
+	content/build/nsContentDLF.cpp \
+	content/build/nsContentModule.cpp \
+	content/html/document/src/nsHTMLDocument.cpp \
+	content/html/style/src/nsCSSDeclaration.cpp \
+	content/html/style/src/nsCSSParser.cpp \
+	content/html/style/src/nsCSSStyleRule.cpp \
+	content/html/style/src/nsICSSDeclaration.h \
+	content/macbuild/contentSVG.mcp \
+	content/makefile.win \
+	content/shared/public/MANIFEST \
+	content/shared/public/Makefile.in \
+	content/shared/public/makefile.win \
+	content/shared/public/nsCSSKeywordList.h \
+	content/shared/public/nsCSSPropList.h \
+	content/shared/public/nsCSSProps.h \
+	content/shared/public/nsRuleNode.h \
+	content/shared/public/nsSVGAtomList.h \
+	content/shared/public/nsSVGAtoms.h \
+	content/shared/public/nsStyleStruct.h \
+	content/shared/src/Makefile.in \
+	content/shared/src/makefile.win \
+	content/shared/src/nsCSSProps.cpp \
+	content/shared/src/nsSVGAtoms.cpp \
+	content/shared/src/nsStyleStruct.cpp \
+	content/shared/src/nsStyleUtil.cpp \
+	content/xml/document/src/nsXMLDocument.cpp \
+	content/xml/document/src/nsXMLDocument.h \
+	dom/macbuild/dom_svgIDL.mcp \
+	dom/public/idl/Makefile.in \
+	dom/public/idl/makefile.win \
+	dom/public/nsIDOMClassInfo.h \
+	dom/src/base/nsDOMClassInfo.cpp \
+	gfx/public/nsTransform2D.h \
+	htmlparser/public/nsIParser.h \
+	htmlparser/src/nsExpatTokenizer.cpp \
+	htmlparser/src/nsViewSourceHTML.cpp \
+	htmlparser/src/nsWellFormedDTD.cpp \
+	layout/base/public/nsStyleConsts.h \
+	layout/build/Makefile.in \
+	layout/build/makefile.win \
+	layout/html/style/src/Makefile.in \
+	layout/html/style/src/makefile.win \
+	layout/html/style/src/nsCSSFrameConstructor.cpp \
+	layout/html/style/src/nsCSSFrameConstructor.h \
+	layout/html/tests/makefile.win \
+	layout/macbuild/layoutsvg.mcp \
+	Makefile.in \
+	makefile.win \
+	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
+	uriloader/exthandler/nsExternalHelperAppService.cpp \
+	xpfe/browser/src/nsBrowserInstance.cpp
+
+####################################
+# CVS defined for libart (pulled and built if MOZ_INTERNAL_LIBART_LGPL is set)
+#
+CVSCO_LIBART := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/other-licenses/libart_lgpl
+
+ifdef MOZ_INTERNAL_LIBART_LGPL
+FASTUPDATE_LIBART := fast_update $(CVSCO_LIBART)
+CHECKOUT_LIBART := cvs_co $(CVSCO_LIBART)
+else
+CHECKOUT_LIBART := true
+FASTUPDATE_LIBART := true
+endif
+
+####################################
+# CVS defines for Calendar (pulled and built if MOZ_CALENDAR is set)
+#
+CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar
+
+ifdef MOZ_CALENDAR
+FASTUPDATE_CALENDAR := fast_update $(CVSCO_CALENDAR)
+CHECKOUT_CALENDAR := cvs_co $(CVSCO_CALENDAR)
+else
+CHECKOUT_CALENDAR := true
+FASTUPDATE_CALENDAR := true
+endif
+
 #######################################################################
 # Rules
 # 
@@ -374,11 +481,17 @@ checkout::
 	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo "Removing local configures" ; \
+	cd $(ROOTDIR) && \
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/ldap/configure
+endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
-        cd $(ROOTDIR); \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk && \
-	$(MAKE) -f mozilla/client.mk real_checkout
+        cd $(ROOTDIR) && \
+	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 real_checkout:
 #	@: Start the checkout. Split the output to the tty and a log file. \
@@ -395,6 +508,8 @@ real_checkout:
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
+	$(CHECKOUT_CALENDAR) && \
+	$(CHECKOUT_LIBART) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
@@ -407,17 +522,42 @@ real_checkout:
 	else true; \
 	fi
 
+merge:
+	cvs up -dP -jSVG_20010721_TAG -jHEAD $(SVG_BRANCH_FILES)
+
+statictag:
+	cvs tag -F -rHEAD SVG_20010721_TAG $(SVG_BRANCH_FILES)
+
+commitmerge:
+	cvs ci $(SVG_BRANCH_FILES)
+
+diffsvg:
+	cvs diff $(SVG_BRANCH_FILES)
+
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk/ldap && $(AUTOCONF)
+endif
+
 fast-update:
 #	@: Backup the last checkout log.
 	@if test -f $(CVSCO_LOGFILE) ; then \
 	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo "Removing local configures" ; \
+	cd $(ROOTDIR) && \
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/ldap/configure
+endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
-        cd $(ROOTDIR); \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk && \
-        cd mozilla; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+	@cd $(TOPSRCDIR) && \
 	$(MAKE) -f client.mk real_fast-update
 
 real_fast-update:
@@ -439,6 +579,8 @@ real_fast-update:
 	fast_update $(CVSCO_GFX2) && \
 	fast_update $(CVSCO_IMGLIB2) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
+	$(FASTUPDATE_CALENDAR) && \
+	$(FASTUPDATE_LIBART) && \
 	fast_update $(CVSCO_NOSUBDIRS)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
@@ -450,6 +592,12 @@ real_fast-update:
 	  false; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk/ldap && $(AUTOCONF)
+endif
 
 ####################################
 # Web configure
@@ -493,8 +641,7 @@ CONFIG_CACHE  := $(wildcard $(OBJDIR)/config.cache)
 ifdef RUN_AUTOCONF_LOCALLY
 EXTRA_CONFIG_DEPS := \
 	$(TOPSRCDIR)/aclocal.m4 \
-	$(TOPSRCDIR)/build/autoconf/gtk.m4 \
-	$(TOPSRCDIR)/build/autoconf/altoptions.m4 \
+	$(wildcard $(TOPSRCDIR)/build/autoconf/*.m4) \
 	$(NULL)
 
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
@@ -550,7 +697,7 @@ depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 # Build it
 
 build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
-	$(MOZ_MAKE) export && $(MOZ_MAKE) install
+	$(MOZ_MAKE)
 
 ####################################
 # Other targets

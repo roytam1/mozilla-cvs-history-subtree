@@ -89,6 +89,7 @@ LIBIDL_VERSION=0.6.3
 PERL_VERSION=5.004
 QT_VERSION=2.2.0
 QT_VERSION_NUM=220
+LIBART_VERSION=2.3.4
 GTK2_VERSION=1.3.7
 
 dnl Set various checks
@@ -1394,6 +1395,25 @@ then
 
 	LDFLAGS="$_SAVE_LDFLAGS"
 
+    dnl ====================================================
+    dnl = Check if X headers exist
+    dnl ====================================================
+    _SAVE_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS $XCFLAGS"
+    AC_TRY_COMPILE([
+        #include <stdio.h>
+        #include <X11/Xlib.h>
+    ],
+    [
+        Display *dpy = 0;
+        if ((dpy = XOpenDisplay(NULL)) == NULL) {
+            fprintf(stderr, ": can't open %s\en", XDisplayName(NULL));
+            exit(1);
+        }
+    ], [], 
+    [ AC_MSG_ERROR([Could not compile basic X program.]) ])
+    CFLAGS="$_SAVE_CFLAGS"
+
 fi # $no_x
 
 AC_SUBST(XCFLAGS)
@@ -2616,6 +2636,16 @@ MOZ_ARG_DISABLE_BOOL(ldap,
 [  --disable-ldap          Disable LDAP support],
     MOZ_LDAP_XPCOM=)
 
+dnl =========================================================
+dnl = Calendar
+dnl =========================================================
+if test "$MOZ_CALENDAR"; then
+    AC_CHECK_LIB(ical, icalproperty_new_location, [_dummy=foo],
+        AC_MSG_ERROR([Calendar requires libical]))
+fi
+
+AC_SUBST(MOZ_CALENDAR)
+
 dnl ========================================================
 dnl = Xprint
 dnl ========================================================
@@ -2960,8 +2990,7 @@ dnl ========================================================
 dnl = Enable code optimization. OFF by default.
 dnl ========================================================
 MOZ_OPTIMIZE=
-if test ! "$MOZ_OPTIMIZE_FLAGS"
-then
+if test ! "$MOZ_OPTIMIZE_FLAGS"; then
 	MOZ_OPTIMIZE_FLAGS="-O"
 fi
 
@@ -2971,15 +3000,13 @@ MOZ_ARG_ENABLE_STRING(optimize,
     MOZ_OPTIMIZE=1
     if test -n "$enableval" && test "$enableval" != "yes"; then
         MOZ_OPTIMIZE_FLAGS=`echo $enableval | sed -e 's|\\\ | |g'`
+        MOZ_OPTIMIZE=2
     fi
 fi ])
 
-if test "$MOZ_OPTIMIZE"
-then
-  CFLAGS="$CFLAGS $MOZ_OPTIMIZE_FLAGS"
-  CXXFLAGS="$CXXFLAGS $MOZ_OPTIMIZE_FLAGS"
-  LDFLAGS="$LDFLAGS $MOZ_OPTIMIZE_LDFLAGS"
-fi
+AC_SUBST(MOZ_OPTIMIZE)
+AC_SUBST(MOZ_OPTIMIZE_FLAGS)
+AC_SUBST(MOZ_OPTIMIZE_LDFLAGS)
 
 dnl ========================================================
 dnl = Enable/disable debug for specific modules only
@@ -3718,8 +3745,7 @@ then
     fi
     if test -n "$_LIBIDL_NOT_FOUND"; then
         AC_MSG_ERROR([libIDL not found.
-        libIDL $LIBIDL_VERSION or higher is required.
-        See http://andrewtv.org/libIDL/ for more information.])
+        libIDL $LIBIDL_VERSION or higher is required.])
     fi
 fi
 
@@ -3751,6 +3777,31 @@ AC_SUBST(GLIB_LIBS)
 AC_SUBST(HOST_LIBIDL_CONFIG)
 AC_SUBST(HOST_LIBIDL_CFLAGS)
 AC_SUBST(HOST_LIBIDL_LIBS)
+
+dnl ========================================================
+dnl Check for libart
+dnl ========================================================
+MOZ_LIBART_CFLAGS=
+MOZ_LIBART_LIBS=
+
+if test "$MOZ_SVG"; then
+  if test "$MOZ_INTERNAL_LIBART_LGPL"; then
+    dnl libart's configure hasn't been run yet, but we know what the
+    dnl answer should be anyway
+    MOZ_LIBART_CFLAGS='-I${DIST}/include/libart_lgpl'
+    MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'
+  else
+    AM_PATH_LIBART($LIBART_VERSION,,
+      AC_MSG_ERROR(SVG requires at least version $LIBART_VERSION of libart))
+
+    MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
+    MOZ_LIBART_LIBS=$LIBART_LIBS
+  fi
+fi
+
+AC_SUBST(MOZ_LIBART_CFLAGS)
+AC_SUBST(MOZ_LIBART_LIBS)
+AC_SUBST(MOZ_INTERNAL_LIBART_LGPL)
 
 dnl ========================================================
 dnl disable xul

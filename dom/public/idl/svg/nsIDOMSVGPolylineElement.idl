@@ -1,0 +1,48 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is the Mozilla SVG project.
+ * 
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are
+ * Copyright (C) 2001, Crocodile Clips Ltd.  All Rights Reserved.
+ * 
+ * Contributor(s):
+ *
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ * 
+ */
+
+#include "nsIDOMSVGElement.idl"
+
+[scriptable, uuid(7b6e15cf-9793-41ee-adcc-cc1c206c80e6)]
+interface nsIDOMSVGPolylineElement
+  : nsIDOMSVGElement
+/*
+        The SVG DOM makes use of multiple interface inheritance.
+        Since XPCOM only supports single interface inheritance,
+        the best thing that we can do is to promise that whenever
+        an object implements _this_ interface it will also
+        implement the following interfaces. (We then have to QI to
+        hop between them.)
+
+    nsIDOMSVGTests,
+    nsIDOMSVGLangSpace,
+    nsIDOMSVGExternalResourcesRequired,
+    nsIDOMSVGStylable,
+    nsIDOMSVGTransformable,
+    events::nsIDOMEventTarget,
+    nsIDOMSVGAnimatedPoints
+*/
+{
+  
+};

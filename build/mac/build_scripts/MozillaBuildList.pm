@@ -361,7 +361,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:layout:html:forms:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:layout:html:base:src:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:mailnews:jar.mn", $chrome_dir, \%jars);
-    if ($main::options{smime}) {
+    if ($main::options{smime} && $main::options{psm}) {
     	CreateJarFromManifest(":mozilla:mailnews:extensions:smime:jar.mn", $chrome_dir, \%jars);
     }
     CreateJarFromManifest(":mozilla:netwerk:resources:jar.mn", $chrome_dir, \%jars);
@@ -711,10 +711,10 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:layout:html:base:src:MANIFEST",                  "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:forms:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:table:public:MANIFEST",              "$distdirectory:layout:");
-    if ($main::options{svg})
-    {
-        InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
-    }
+    #if ($main::options{svg})
+    #{
+    #    InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
+    #}
     InstallFromManifest(":mozilla:layout:xul:base:public:Manifest",                "$distdirectory:layout:");
 
     #GFX
@@ -737,6 +737,12 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:public:idl:views:MANIFEST_IDL",              "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xbl:MANIFEST_IDL",                "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:idl:xul:MANIFEST_IDL",                "$distdirectory:idl:");
+        
+	# SVG
+	if ($main::options{svg}) {
+		InstallFromManifest(":mozilla:dom:public:idl:svg:MANIFEST_IDL",				"$distdirectory:idl:");
+	}
+    
     InstallFromManifest(":mozilla:dom:public:MANIFEST",                            "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:base:MANIFEST",                       "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:coreEvents:MANIFEST",                 "$distdirectory:dom:");
@@ -897,6 +903,11 @@ sub BuildClientDist()
         InstallFromManifest(":mozilla:js:jsd:idl:MANIFEST_IDL", "$distdirectory:idl:");
         InstallFromManifest(":mozilla:js:jsd:MANIFEST", "$distdirectory:jsdebug:");
     }
+
+	# SVG
+	if ($main::options{svg}) {
+		InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
+	}
 
     print("--- Client Dist export complete ----\n");
 }
@@ -1101,6 +1112,10 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.mcp",                         "dom_xbl");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.mcp",                         "dom_xul");
 
+	if ($main::options{svg}) {
+		BuildIDLProject(":mozilla:dom:macbuild:dom_svgIDL.mcp",                         "dom_svg");
+	}
+
     BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.mcp",                  "jsurl");
     
     BuildIDLProject(":mozilla:gfx:macbuild:gfxIDL.mcp",                             "gfx");
@@ -1167,7 +1182,7 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:mailnews:imap:macbuild:msgimapIDL.mcp",               "MsgImap");
     BuildIDLProject(":mozilla:mailnews:mime:macbuild:mimeIDL.mcp",                  "Mime");
     BuildIDLProject(":mozilla:mailnews:import:macbuild:msgImportIDL.mcp",           "msgImport");
-    if ($main::options{smime}) {
+    if ($main::options{smime} && $main::options{psm}) {
     	BuildIDLProject(":mozilla:mailnews:extensions:smime:macbuild:msgsmimeIDL.mcp",  "msgsmime");
     }
 
@@ -1583,13 +1598,28 @@ sub BuildLayoutProjects()
 
     BuildProject(":mozilla:expat:macbuild:expat.mcp",                           "expat$D.o");
     BuildOneProject(":mozilla:htmlparser:macbuild:htmlparser.mcp",              "htmlparser$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProjectWithOutput(":mozilla:gfx:macbuild:gfx.mcp",                  "gfx$C$D.$S", "gfx$D.$S", 1, $main::ALIAS_SYM_FILES, 0);
+
+    BuildOneProject(":mozilla:gfx:macbuild:gfx.mcp",                            "gfx$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+
+    my($dbg) = $main::DEBUG ? "Dbg" : "";
+    BuildOneProjectWithOutput(":mozilla:gfx:macbuild:gfxComponent.mcp",         "gfxComponent$C$dbg.$S", "gfxComponent$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
+
     BuildOneProject(":mozilla:dom:macbuild:dom.mcp",                            "dom$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:modules:plugin:base:macbuild:plugin.mcp",          "plugin$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
 
     # Static library shared between different content- and layout-related libraries
     BuildProject(":mozilla:content:macbuild:contentshared.mcp",                 "contentshared$D.o");
     MakeAlias(":mozilla:content:macbuild:contentshared$D.o",                    ":mozilla:dist:content:");
+
+	if ($main::options{svg})
+    {
+    	BuildOneProject(":mozilla:content:macbuild:contentsharedsvg.mcp",             "contentsharedsvg$D.o", 0, 0, 0);
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o", 0, 0, 0);
+    }
+    else
+    {
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.mcp",                   "contentSVG$D.o stub", 0, 0, 0);
+    }
 
     BuildOneProject(":mozilla:content:macbuild:content.mcp",                    "content$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     if ($main::options{mathml})
@@ -1602,6 +1632,9 @@ sub BuildLayoutProjects()
     }
     if ($main::options{svg})
     {
+    	BuildProject(":mozilla:modules:libart_lgpl:macbuild:libart.mcp",			"libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    	copy(":mozilla:modules:libart_lgpl:macbuild:libart$D.shlb",$dist_dir."Essential Files:libart$D.shlb");
+    	
         BuildProject(":mozilla:layout:macbuild:layoutsvg.mcp",                   "layoutsvg$D.o");
     }
     else
@@ -1610,9 +1643,9 @@ sub BuildLayoutProjects()
     }
     BuildOneProject(":mozilla:layout:macbuild:layout.mcp",                      "layout$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:view:macbuild:view.mcp",                          "view$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProjectWithOutput(":mozilla:widget:macbuild:widget.mcp",            "widget$C$D.$S", "widget$D.$S", 1, $main::ALIAS_SYM_FILES, 0);
+    BuildOneProject(":mozilla:widget:macbuild:WidgetSupport.mcp",               "WidgetSupport$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+    BuildOneProjectWithOutput(":mozilla:widget:macbuild:widget.mcp",            "widget$C$D.$S", "widget$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:docshell:macbuild:docshell.mcp",                  "docshell$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProject(":mozilla:webshell:embed:mac:RaptorShell.mcp",              "RaptorShell$D.$S", 1, $main::ALIAS_SYM_FILES, 0);
 
     BuildOneProject(":mozilla:rdf:macbuild:rdf.mcp",                            "RDFLibrary$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
 
@@ -1991,7 +2024,7 @@ sub BuildMailNewsProjects()
     }
              
     InstallResources(":mozilla:mailnews:addrbook:src:MANIFEST_COMPONENTS",              "${dist_dir}Components");
-	if ($main::options{smime}) {
+	if ($main::options{smime} && $main::options{psm}) {
     	BuildOneProject(":mozilla:mailnews:extensions:smime:macbuild:smime.mcp",         "msgsmime$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     	InstallResources(":mozilla:mailnews:extensions:smime:src:MANIFEST",				 "${dist_dir}Components");
     } else {

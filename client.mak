@@ -40,14 +40,14 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-MOZ_BRANCH=MOZILLA_0_9_6_BRANCH
-NSPR_CO_TAG=MOZILLA_0_9_6_BRANCH
-PSM_CO_TAG=MOZILLA_0_9_6_BRANCH
-NSS_CO_TAG=MOZILLA_0_9_6_BRANCH
-LDAPCSDK_CO_TAG=MOZILLA_0_9_6_BRANCH
-ACCESSIBLE_CO_TAG=MOZILLA_0_9_6_BRANCH
-IMGLIB2_CO_TAG=MOZILLA_0_9_6_BRANCH
-GFX2_CO_TAG=MOZILLA_0_9_6_BRANCH
+#MOZ_BRANCH=SeaMonkey_M17_BRANCH
+#NSPR_CO_TAG=SeaMonkey_M17_BRANCH
+#PSM_CO_TAG=SeaMonkey_M17_BRANCH
+#NSS_CO_TAG=SeaMonkey_M17_BRANCH
+#LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
+#ACCESSIBLE_CO_TAG=SeaMonkey_M17_BRANCH
+#IMGLIB2_CO_TAG=SeaMonkey_M17_BRANCH
+#GFX2_CO_TAG=SeaMonkey_M17_BRANCH
 
 
 !ifdef MOZ_BRANCH
@@ -326,6 +326,8 @@ clobber_xpconnect:
 	nmake -f makefile.win clobber_all
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js
 	nmake -f makefile.win clobber_all
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
+	nmake -f makefile.win clobber_all
 
 clobber_seamonkey:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\.
@@ -346,6 +348,8 @@ depend_xpconnect:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\xpcom
 	nmake -f makefile.win depend
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src
+	nmake -f makefile.win depend
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
 	nmake -f makefile.win depend
 
 build_nspr: 
@@ -368,6 +372,8 @@ build_xpconnect: build_nspr
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\xpcom
 	nmake -f makefile.win install
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src
+	nmake -f makefile.win all
+	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
 	nmake -f makefile.win all
 
 build_seamonkey:

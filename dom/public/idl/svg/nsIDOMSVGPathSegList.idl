@@ -1,0 +1,49 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is the Mozilla SVG project.
+ * 
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are
+ * Copyright (C) 2001, Crocodile Clips Ltd.  All Rights Reserved.
+ * 
+ * Contributor(s):
+ *
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ * 
+ */
+
+#include "domstubs.idl"
+
+interface nsIDOMSVGPathSeg;
+
+[scriptable, uuid(94a6db98-3f34-4529-a35f-89ef49713795)]
+interface nsIDOMSVGPathSegList : nsISupports
+{ 
+  readonly attribute unsigned long numberOfItems;
+
+  void clear();
+          // raises(nsIDOMDOMException);
+  nsIDOMSVGPathSeg initialize(in nsIDOMSVGPathSeg newItem );
+                    // raises(nsIDOMDOMException, nsIDOMSVGException);
+  nsIDOMSVGPathSeg getItem(in unsigned long index);
+                    // raises(nsIDOMDOMException);
+  nsIDOMSVGPathSeg insertItemBefore(in nsIDOMSVGPathSeg newItem, in unsigned long index);
+                    // raises(nsIDOMDOMException, nsIDOMSVGException);
+  nsIDOMSVGPathSeg replaceItem(in nsIDOMSVGPathSeg newItem, in unsigned long index);
+                    // raises(nsIDOMDOMException, nsIDOMSVGException);
+  nsIDOMSVGPathSeg removeItem(in unsigned long index);
+                    // raises(nsIDOMDOMException);
+  nsIDOMSVGPathSeg appendItem(in nsIDOMSVGPathSeg newItem);
+                    // raises(nsIDOMDOMException, nsIDOMSVGException);
+};
+

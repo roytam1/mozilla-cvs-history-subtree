@@ -1,0 +1,45 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is the Mozilla SVG project.
+ *
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are 
+ * Copyright (C) 2001 Crocodile Clips Ltd. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ *
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ *
+ */
+
+#ifndef __NS_SVGRECT_H__
+#define __NS_SVGRECT_H__
+
+#include "nsIDOMSVGRect.h"
+
+nsresult
+NS_NewSVGRect(nsIDOMSVGRect** result,
+              float x=0.0f, float y=0.0f,
+              float width=0.0f, float height=0.0f);
+
+
+// create an SVGRect wrapper object that delegates all 'getter' calls
+// to the given prototype if the property hasn't been set on the
+// object directly
+nsresult
+NS_NewSVGRectPrototypeWrapper(nsIDOMSVGRect** result,
+                              nsIDOMSVGRect* prototype);
+
+
+#endif //__NS_SVGRECT_H__
