@@ -375,13 +375,10 @@ protected:
    * @param aLine            the line to reflow.  can contain a single block frame
    *                         or contain 1 or more inline frames.
    * @param aKeepReflowGoing [OUT] indicates whether the caller should continue to reflow more lines
-   * @param aDamageDirtyArea if PR_TRUE, do extra work to mark the changed areas as damaged for painting
-   *                         this indicates that frames may have changed size, for example
    */
   nsresult ReflowLine(nsBlockReflowState& aState,
                       line_iterator aLine,
-                      PRBool* aKeepReflowGoing,
-                      PRBool aDamageDirtyArea = PR_FALSE);
+                      PRBool* aKeepReflowGoing);
 
   // Return PR_TRUE if aLine gets pushed.
   PRBool PlaceLine(nsBlockReflowState& aState,
@@ -421,7 +418,6 @@ protected:
   nsresult ReflowInlineFrames(nsBlockReflowState& aState,
                               line_iterator aLine,
                               PRBool* aKeepLineGoing,
-                              PRBool aDamageDirtyArea,
                               PRBool aUpdateMaximumWidth = PR_FALSE);
 
   nsresult DoReflowInlineFrames(nsBlockReflowState& aState,
@@ -429,8 +425,7 @@ protected:
                                 line_iterator aLine,
                                 PRBool* aKeepReflowGoing,
                                 PRUint8* aLineReflowStatus,
-                                PRBool aUpdateMaximumWidth,
-                                PRBool aDamageDirtyArea);
+                                PRBool aUpdateMaximumWidth);
 
   nsresult ReflowInlineFrame(nsBlockReflowState& aState,
                              nsLineLayout& aLineLayout,

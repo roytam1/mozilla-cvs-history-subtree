@@ -1442,12 +1442,6 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
   }
 #endif
 
-  // Check whether we need to do invalidation for the child block
-  PRBool doInvalidate =
-    aState.mReflowState.reason == eReflowReason_Incremental ||
-    aState.mReflowState.reason == eReflowReason_Dirty ||
-    aState.mReflowState.reason == eReflowReason_Resize;
-
   PRBool selfDirty = (GetStateBits() & NS_FRAME_IS_DIRTY) != 0;
   
     // the amount by which we will slide the current line if it is not
@@ -1592,7 +1586,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
 
       // Reflow the dirty line. If it's an incremental reflow, then force
       // it to invalidate the dirty area if necessary
-      rv = ReflowLine(aState, line, &keepGoing, doInvalidate);
+      rv = ReflowLine(aState, line, &keepGoing);
       if (NS_FAILED(rv)) {
         return rv;
       }
@@ -1827,7 +1821,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState,
       // line to be created; see SplitLine's callers for examples of
       // when this happens).
       while (line != end_lines()) {
-        rv = ReflowLine(aState, line, &keepGoing, doInvalidate);
+        rv = ReflowLine(aState, line, &keepGoing);
         if (NS_FAILED(rv)) {
           NS_WARNING("Line reflow failed");
           return rv;
@@ -1947,8 +1941,7 @@ static void GetRectDifferenceStrips(const nsRect& aR1, const nsRect& aR2,
 nsresult
 nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
                          line_iterator aLine,
-                         PRBool* aKeepReflowGoing,
-                         PRBool aDamageDirtyArea)
+                         PRBool* aKeepReflowGoing)
 {
   nsresult rv = NS_OK;
 
@@ -1974,44 +1967,42 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
     // of much confusion and bugs. Thus the following hack considers *both*
     // overflowArea and bounds. This should be considered a temporary hack
     // until we decide how it's really supposed to work.
-    if (aDamageDirtyArea) {
-      nsRect lineCombinedArea(aLine->GetCombinedArea());
-      if (oldCombinedArea.TopLeft() != lineCombinedArea.TopLeft() ||
-          oldBounds.TopLeft() != newBounds.TopLeft()) {
-        // The block has moved, and so to be safe we need to repaint
-        // XXX We need to improve on this...
-        nsRect  dirtyRect;
-        dirtyRect.UnionRect(oldCombinedArea, lineCombinedArea);
+    nsRect lineCombinedArea(aLine->GetCombinedArea());
+    if (oldCombinedArea.TopLeft() != lineCombinedArea.TopLeft() ||
+        oldBounds.TopLeft() != newBounds.TopLeft()) {
+      // The block has moved, and so to be safe we need to repaint
+      // XXX We need to improve on this...
+      nsRect  dirtyRect;
+      dirtyRect.UnionRect(oldCombinedArea, lineCombinedArea);
 #ifdef NOISY_BLOCK_INVALIDATE
-        printf("%p invalidate 6 (%d, %d, %d, %d)\n",
-               this, dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+      printf("%p invalidate 6 (%d, %d, %d, %d)\n",
+             this, dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
 #endif
-        Invalidate(dirtyRect);
-      } else {
-        nsRect combinedAreaHStrip, combinedAreaVStrip;
-        nsRect boundsHStrip, boundsVStrip;
-        GetRectDifferenceStrips(oldBounds, newBounds,
-                                &boundsHStrip, &boundsVStrip);
-        GetRectDifferenceStrips(oldCombinedArea, lineCombinedArea,
-                                &combinedAreaHStrip, &combinedAreaVStrip);
+      Invalidate(dirtyRect);
+    } else {
+      nsRect combinedAreaHStrip, combinedAreaVStrip;
+      nsRect boundsHStrip, boundsVStrip;
+      GetRectDifferenceStrips(oldBounds, newBounds,
+                              &boundsHStrip, &boundsVStrip);
+      GetRectDifferenceStrips(oldCombinedArea, lineCombinedArea,
+                              &combinedAreaHStrip, &combinedAreaVStrip);
 
 #ifdef NOISY_BLOCK_INVALIDATE
-        printf("%p invalidate boundsVStrip (%d, %d, %d, %d)\n",
-               this, boundsVStrip.x, boundsVStrip.y, boundsVStrip.width, boundsVStrip.height);
-        printf("%p invalidate boundsHStrip (%d, %d, %d, %d)\n",
-               this, boundsHStrip.x, boundsHStrip.y, boundsHStrip.width, boundsHStrip.height);
-        printf("%p invalidate combinedAreaVStrip (%d, %d, %d, %d)\n",
-               this, combinedAreaVStrip.x, combinedAreaVStrip.y, combinedAreaVStrip.width, combinedAreaVStrip.height);
-        printf("%p invalidate combinedAreaHStrip (%d, %d, %d, %d)\n",
-               this, combinedAreaHStrip.x, combinedAreaHStrip.y, combinedAreaHStrip.width, combinedAreaHStrip.height);
+      printf("%p invalidate boundsVStrip (%d, %d, %d, %d)\n",
+             this, boundsVStrip.x, boundsVStrip.y, boundsVStrip.width, boundsVStrip.height);
+      printf("%p invalidate boundsHStrip (%d, %d, %d, %d)\n",
+             this, boundsHStrip.x, boundsHStrip.y, boundsHStrip.width, boundsHStrip.height);
+      printf("%p invalidate combinedAreaVStrip (%d, %d, %d, %d)\n",
+             this, combinedAreaVStrip.x, combinedAreaVStrip.y, combinedAreaVStrip.width, combinedAreaVStrip.height);
+      printf("%p invalidate combinedAreaHStrip (%d, %d, %d, %d)\n",
+             this, combinedAreaHStrip.x, combinedAreaHStrip.y, combinedAreaHStrip.width, combinedAreaHStrip.height);
 #endif
-        // The first thing Invalidate does is check if the rect is empty, so
-        // don't bother doing that here.
-        Invalidate(boundsVStrip);
-        Invalidate(boundsHStrip);
-        Invalidate(combinedAreaVStrip);
-        Invalidate(combinedAreaHStrip);
-      }
+      // The first thing Invalidate does is check if the rect is empty, so
+      // don't bother doing that here.
+      Invalidate(boundsVStrip);
+      Invalidate(boundsHStrip);
+      Invalidate(combinedAreaVStrip);
+      Invalidate(combinedAreaHStrip);
     }
   }
   else {
@@ -2055,7 +2046,7 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
       // width is unconstrained...
       aState.mSpaceManager->PushState();
       aState.SetFlag(BRS_UNCONSTRAINEDWIDTH, PR_TRUE);
-      ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea, PR_TRUE);
+      ReflowInlineFrames(aState, aLine, aKeepReflowGoing, PR_TRUE);
       aState.mY = oldY;
       aState.mPrevBottomMargin = oldPrevBottomMargin;
       aState.SetFlag(BRS_UNCONSTRAINEDWIDTH, oldUnconstrainedWidth);
@@ -2077,11 +2068,11 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
       nscoord oldComputeMaximumWidth = aState.GetFlag(BRS_COMPUTEMAXWIDTH);
 
       aState.SetFlag(BRS_COMPUTEMAXWIDTH, PR_FALSE);
-      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea);
+      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing);
       aState.SetFlag(BRS_COMPUTEMAXWIDTH, oldComputeMaximumWidth);
 
     } else {
-      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing, aDamageDirtyArea);
+      rv = ReflowInlineFrames(aState, aLine, aKeepReflowGoing);
       if (NS_SUCCEEDED(rv))
       {
         if (aState.GetFlag(BRS_COMPUTEMAXWIDTH))
@@ -2097,18 +2088,15 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
 
     // We don't really know what changed in the line, so use the union
     // of the old and new combined areas
-    if (aDamageDirtyArea) {
-      nsRect dirtyRect;
-      dirtyRect.UnionRect(oldCombinedArea, aLine->GetCombinedArea());
+    nsRect dirtyRect;
+    dirtyRect.UnionRect(oldCombinedArea, aLine->GetCombinedArea());
 #ifdef NOISY_BLOCK_INVALIDATE
-      printf("%p invalidate because %s is true (%d, %d, %d, %d)\n",
-             this, aDamageDirtyArea ? "aDamageDirtyArea" : "aLine->IsForceInvalidate",
-             dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
-      if (aLine->IsForceInvalidate())
-        printf("  dirty line is %p\n", NS_STATIC_CAST(void*, aLine.get());
+    printf("%p invalidate (%d, %d, %d, %d)\n",
+           this, dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+    if (aLine->IsForceInvalidate())
+      printf("  dirty line is %p\n", NS_STATIC_CAST(void*, aLine.get());
 #endif
-      Invalidate(dirtyRect);
-    }
+    Invalidate(dirtyRect);
   }
 
   return rv;
@@ -3004,7 +2992,6 @@ nsresult
 nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
                                  line_iterator aLine,
                                  PRBool* aKeepReflowGoing,
-                                 PRBool aDamageDirtyArea,
                                  PRBool aUpdateMaximumWidth)
 {
   nsresult rv = NS_OK;
@@ -3030,7 +3017,7 @@ nsBlockFrame::ReflowInlineFrames(nsBlockReflowState& aState,
     lineLayout.Init(&aState, aState.mMinLineHeight, aState.mLineNumber);
     rv = DoReflowInlineFrames(aState, lineLayout, aLine,
                               aKeepReflowGoing, &lineReflowStatus,
-                              aUpdateMaximumWidth, aDamageDirtyArea);
+                              aUpdateMaximumWidth);
     lineLayout.EndLineReflow();
 
 #ifdef DEBUG
@@ -3072,8 +3059,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
                                    line_iterator aLine,
                                    PRBool* aKeepReflowGoing,
                                    PRUint8* aLineReflowStatus,
-                                   PRBool aUpdateMaximumWidth,
-                                   PRBool aDamageDirtyArea)
+                                   PRBool aUpdateMaximumWidth)
 {
   // Forget all of the floats on the line
   aLine->FreeFloats(aState.mFloatCacheFreeList);
@@ -3174,7 +3160,7 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
 
   // Pull frames and reflow them until we can't
   while (LINE_REFLOW_OK == lineReflowStatus) {
-    rv = PullFrame(aState, aLine, aDamageDirtyArea, frame);
+    rv = PullFrame(aState, aLine, frame);
     if (NS_FAILED(rv)) {
       return rv;
     }
