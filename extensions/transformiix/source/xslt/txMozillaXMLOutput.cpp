@@ -43,6 +43,7 @@
 #include "nsIDOMComment.h"
 #include "nsIDOMDocumentType.h"
 #include "nsIDOMDOMImplementation.h"
+#include "nsIDOMNodeList.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMText.h"
 #include "nsIDOMHTMLTableSectionElem.h"
@@ -104,16 +105,15 @@ void txMozillaXMLOutput::attribute(const String& aName,
 
     if ((mOutputFormat.mMethod == eHTMLOutput) && (aNsID == kNameSpaceID_None)) {
         // Outputting HTML as XHTML, lowercase attribute names
-        nsAutoString lowerName(aName.getConstNSString());
+        nsAutoString lowerName(aName);
         ToLowerCase(lowerName);
         element->SetAttributeNS(NS_LITERAL_STRING(""), lowerName,
-                                aValue.getConstNSString());
+                                aValue);
     }
     else {
         nsAutoString nsURI;
         mNameSpaceManager->GetNameSpaceURI(aNsID, nsURI);
-        element->SetAttributeNS(nsURI, aName.getConstNSString(),
-                                aValue.getConstNSString());
+        element->SetAttributeNS(nsURI, aName, aValue);
     }
 }
 
@@ -121,7 +121,7 @@ void txMozillaXMLOutput::characters(const String& aData)
 {
     closePrevious(eCloseElement);
 
-    mText.Append(aData.getConstNSString());
+    mText.Append(aData);
 }
 
 void txMozillaXMLOutput::comment(const String& aData)
@@ -130,7 +130,7 @@ void txMozillaXMLOutput::comment(const String& aData)
 
     if (mCurrentNode) {
         nsCOMPtr<nsIDOMComment> comment;
-        nsresult rv = mDocument->CreateComment(aData.getConstNSString(),
+        nsresult rv = mDocument->CreateComment(aData,
                                                getter_AddRefs(comment));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create comment");
         nsCOMPtr<nsIDOMNode> resultNode;
@@ -183,7 +183,7 @@ void txMozillaXMLOutput::endElement(const String& aName, const PRInt32 aNsID)
 #ifdef DEBUG
     nsAutoString nodeName;
     mCurrentNode->GetNodeName(nodeName);
-    NS_ASSERTION(nodeName.Equals(aName.getConstNSString(), nsCaseInsensitiveStringComparator()),
+    NS_ASSERTION(nodeName.Equals(aName, nsCaseInsensitiveStringComparator()),
                  "Unbalanced startElement and endElement calls!");
 #endif
 
@@ -239,8 +239,7 @@ void txMozillaXMLOutput::processingInstruction(const String& aTarget, const Stri
 
     if (mCurrentNode) {
         nsCOMPtr<nsIDOMProcessingInstruction> pi;
-        nsresult rv = mDocument->CreateProcessingInstruction(aTarget.getConstNSString(),
-                                                             aData.getConstNSString(),
+        nsresult rv = mDocument->CreateProcessingInstruction(aTarget, aData,
                                                              getter_AddRefs(pi));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create processing instruction");
 
@@ -250,8 +249,8 @@ void txMozillaXMLOutput::processingInstruction(const String& aTarget, const Stri
             ssle->SetEnableUpdates(PR_FALSE);
         }
 
-        nsCOMPtr<nsIDOMNode> tmp;
-        rv = mCurrentNode->AppendChild(pi, getter_AddRefs(tmp));
+        nsCOMPtr<nsIDOMNode> resultNode;
+        rv = mCurrentNode->AppendChild(pi, getter_AddRefs(resultNode));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append processing instruction");
 
         if (ssle && mObserver) {
@@ -319,7 +318,7 @@ void txMozillaXMLOutput::startElement(const String& aName,
     mDontAddCurrent = PR_FALSE;
 
     if ((mOutputFormat.mMethod == eHTMLOutput) && (aNsID == kNameSpaceID_None)) {
-        rv = mDocument->CreateElement(aName.getConstNSString(),
+        rv = mDocument->CreateElement(aName,
                                       getter_AddRefs(element));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create element");
 
@@ -328,7 +327,7 @@ void txMozillaXMLOutput::startElement(const String& aName,
     else {
         nsAutoString nsURI;
         mNameSpaceManager->GetNameSpaceURI(aNsID, nsURI);
-        rv = mDocument->CreateElementNS(nsURI, aName.getConstNSString(),
+        rv = mDocument->CreateElementNS(nsURI, aName,
                                         getter_AddRefs(element));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create element");
 
@@ -367,7 +366,19 @@ void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
                                             getter_AddRefs(wrapper));
             NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create wrapper element");
 
-            wrapChildren(mParentNode, wrapper);
+            nsCOMPtr<nsIContent> childContent;
+            nsCOMPtr<nsIDOMNode> child, resultNode;
+            PRInt32 childCount, i;
+            document->GetChildCount(childCount);
+            for (i = 0; i < childCount; ++i) {
+                document->ChildAt(0, *getter_AddRefs(childContent));
+                if (childContent == mRootContent) {
+                    document->SetRootContent(nsnull);
+                }
+                child = do_QueryInterface(childContent);
+                wrapper->AppendChild(child, getter_AddRefs(resultNode));
+            }
+
             mParentNode = wrapper;
             mRootContent = do_QueryInterface(wrapper);
             mRootContent->SetDocument(document, PR_FALSE, PR_TRUE);
@@ -379,13 +390,14 @@ void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
             mNonAddedNode = mCurrentNode;
         }
         else {
-            if (document && !mRootContent) {
+            if (document && currentElement && !mRootContent) {
                 mRootContent = do_QueryInterface(mCurrentNode);
                 mRootContent->SetDocument(document, PR_FALSE, PR_TRUE);
                 document->SetRootContent(mRootContent);
             }
             else {
                 nsCOMPtr<nsIDOMNode> resultNode;
+
                 rv = mParentNode->AppendChild(mCurrentNode, getter_AddRefs(resultNode));
                 NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append node");
             }
@@ -563,30 +575,20 @@ void txMozillaXMLOutput::processHTTPEquiv(nsIAtom* aHeader, const nsAString& aVa
 void txMozillaXMLOutput::wrapChildren(nsIDOMNode* aCurrentNode,
                                       nsIDOMElement* aWrapper)
 {
-    nsresult rv;
-    nsCOMPtr<nsIContent> currentContent;
-
-    currentContent = do_QueryInterface(mCurrentNode, &rv);
-
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Can't QI to nsIContent");
-    if (!currentContent)
+    nsCOMPtr<nsIDOMNodeList> children;
+    nsresult rv = aCurrentNode->GetChildNodes(getter_AddRefs(children));
+    if (NS_FAILED(rv)) {
+        NS_ASSERTION(0, "Can't get children!");
         return;
+    }
 
-    PRInt32 count, i = 0;
     nsCOMPtr<nsIDOMNode> child, resultNode;
-    nsCOMPtr<nsIContent> childContent;
-
-    currentContent->ChildCount(count);
-    for (i = 0; i < count; i++) {
-        rv = currentContent->ChildAt(0, *getter_AddRefs(childContent));
-        child = do_QueryInterface(childContent);
-        NS_ASSERTION(childContent, "couldn't get all children");
-        
-        // Don't move doc-type nodes since they are only allowed in the root
-        PRUint16 nodeType;
-        child->GetNodeType(&nodeType);
-        if (nodeType != nsIDOMNode::DOCUMENT_TYPE_NODE) {
-            aWrapper->AppendChild(resultNode, getter_AddRefs(child));
+    PRUint32 count, i;
+    children->GetLength(&count);
+    for (i = 0; i < count; ++i) {
+        rv = children->Item(0, getter_AddRefs(child));
+        if (NS_SUCCEEDED(rv)) {
+            aWrapper->AppendChild(child, getter_AddRefs(resultNode));
         }
     }
 }
@@ -664,8 +666,8 @@ txMozillaXMLOutput::createResultDocument(const String& aName)
         }
         nsCOMPtr<nsIDOMDocumentType> documentType;
         rv = implementation->CreateDocumentType(qName,
-                                                mOutputFormat.mPublicId.getConstNSString(),
-                                                mOutputFormat.mSystemId.getConstNSString(),
+                                                mOutputFormat.mPublicId,
+                                                mOutputFormat.mSystemId,
                                                 getter_AddRefs(documentType));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create doctype");
         nsCOMPtr<nsIDOMNode> tmp;
