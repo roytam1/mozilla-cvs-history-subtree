@@ -369,8 +369,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
 
-//    NS_DECL_AGGREGATED
-    NS_DECL_ISUPPORTS                                                       
+    NS_DECL_AGGREGATED
 
     static NS_METHOD
     Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
@@ -379,12 +378,10 @@ protected:
     nsPluginManager(nsISupports* outer);
     virtual ~nsPluginManager(void);
 
-#if 0
     // aggregated interfaces:
     nsIJVMManager* GetJVMMgr(const nsIID& aIID);
 
     nsISupports*        fJVMMgr;
-#endif
     nsISupports*        fMalloc;
     PRUint16            fWaiting;
     void*               fOldCursor;
@@ -654,9 +651,8 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class nsPluginStreamPeer :
-    virtual public nsIPluginStreamPeer2, 
-    virtual public nsISeekablePluginStreamPeer
+class nsPluginStreamPeer : public nsIPluginStreamPeer2, 
+                           public nsISeekablePluginStreamPeer
 {
 public:
 
