@@ -41,6 +41,9 @@
 #define NS_AUTOCOMPLETEMDBRESULT_CONTRACTID \
   "@mozilla.org/autocomplete/mdb-result;1"
 
+#define NS_DOWNLOADMANAGER_CONTRACTID \
+  "@mozilla.org/download-manager;1"
+
 #define NS_FORMHISTORY_CONTRACTID \
   "@mozilla.org/satchel/form-history;1"
 
@@ -62,6 +65,9 @@
 // {7A6F70B6-2BBD-44b5-9304-501352D44AB5}
 #define NS_AUTOCOMPLETEMDBRESULT_CID \
 { 0x7a6f70b6, 0x2bbd, 0x44b5, { 0x93, 0x4, 0x50, 0x13, 0x52, 0xd4, 0x4a, 0xb5 } }
+
+#define NS_DOWNLOADMANAGER_CID \
+    { 0xedb0490e, 0x1dd1, 0x11b2, { 0x83, 0xb8, 0xdb, 0xf8, 0xd8, 0x59, 0x06, 0xa6 } }
 
 // {895DB6C7-DBDF-40ea-9F64-B175033243DC}
 #define NS_FORMFILLCONTROLLER_CID \

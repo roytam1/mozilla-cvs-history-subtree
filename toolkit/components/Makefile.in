@@ -48,6 +48,7 @@ else
 DIRS = 		\
 	autocomplete \
 	console \
+	downloads \
 	filepicker \
 	history \
 	passwordmgr \

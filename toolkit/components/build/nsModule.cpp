@@ -40,6 +40,8 @@
 #include "nsToolkitCompsCID.h"
 #include "nsAutoCompleteController.h"
 #include "nsAutoCompleteMdbResult.h"
+#include "nsDownloadManager.h"
+#include "nsDownloadProxy.h"
 #include "nsFormHistory.h"
 #include "nsFormFillController.h"
 #include "nsGlobalHistory.h"
@@ -50,6 +52,8 @@
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsFormHistory, nsFormHistory::GetInstance)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFormFillController)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsGlobalHistory, Init)
@@ -78,6 +82,16 @@ static const nsModuleComponentInfo components[] =
     NS_AUTOCOMPLETEMDBRESULT_CID, 
     NS_AUTOCOMPLETEMDBRESULT_CONTRACTID,
     nsAutoCompleteMdbResultConstructor },
+
+  { "Download Manager",
+    NS_DOWNLOADMANAGER_CID,
+    NS_DOWNLOADMANAGER_CONTRACTID,
+    nsDownloadManagerConstructor },
+
+  { "Download",
+    NS_DOWNLOAD_CID,
+    NS_DOWNLOAD_CONTRACTID,
+    nsDownloadProxyConstructor },
 
   { "HTML Form History",
     NS_FORMHISTORY_CID, 
