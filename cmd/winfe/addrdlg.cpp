@@ -1619,17 +1619,11 @@ void CAddrDialog::PerformDirectorySearch ()
 		return;
 	}
 
-	CUIntArray buttonLabels;
-	buttonLabels.SetSize (4, 1);
-	buttonLabels [0] = IDS_SEARCH_PROMPT;
-	buttonLabels [1] = IDS_CANCEL_BUTTON;
-	buttonLabels [2] = IDS_HELP_BUTTON;
-	buttonLabels [3] = IDS_ADVSEARCH;
 
 	CSearchDialog searchDlg ((UINT) IDS_ADRSEARCH, 
 		(MSG_Pane*) m_addrBookPane, 
 		GetCurrentDirectoryServer(),
-		this, 4, BUTTON_RIGHT, &buttonLabels);
+		this);
 	int result = searchDlg.DoModal(); 
 
 	// Build Search
@@ -4109,17 +4103,11 @@ void CAddrDialog::PerformDirectorySearch ()
 		return;
 	}
 
-	CUIntArray buttonLabels;
-	buttonLabels.SetSize (4, 1);
-	buttonLabels [0] = IDS_SEARCH_PROMPT;
-	buttonLabels [1] = IDS_CANCEL_BUTTON;
-	buttonLabels [2] = IDS_HELP_BUTTON;
-	buttonLabels [3] = IDS_ADVSEARCH;
 
 	CSearchDialog searchDlg ((UINT) IDS_ADRSEARCH, 
 		(MSG_Pane*) m_addrBookPane, 
 		GetCurrentDirectoryServer(),
-		this, 4, BUTTON_RIGHT, &buttonLabels);
+		this);
 	int result = searchDlg.DoModal(); 
 
 	// Build Search

@@ -21,9 +21,7 @@
 
 #include "stdafx.h"
 #include "addrfrm.h"
-#ifdef FEATURE_ADDRPROP
 #include "addrprop.h"
-#endif
 #include "template.h"
 #include "xpgetstr.h"
 #include "wfemsg.h"
@@ -110,7 +108,6 @@ int ShowPropertySheetForEntry (MSG_Pane * pane, MWContext * context)
 
 	if(MSG_GetPaneType(pane) == AB_PERSONENTRYPANE)
 	{
-#ifdef FEATURE_ADDRPROP
 		// Need to get given name
 		AB_AttribID id = AB_attribDisplayName;
 		AB_AttributeValue *value;
@@ -147,7 +144,6 @@ int ShowPropertySheetForEntry (MSG_Pane * pane, MWContext * context)
 		{
 			AB_FreeEntryAttributeValues(value, numItems);
 		}
-#endif
 	}
 	else if(MSG_GetPaneType(pane) == AB_MAILINGLISTPANE)
 	{
@@ -172,7 +168,6 @@ int ShowPropertySheetForDir(DIR_Server *server, MWContext *context, MSG_Pane *pa
 
 	if(server->dirType == LDAPDirectory)
 	{
-#ifdef FEATURE_ADDRPROP
 
 		CAddrLDAPProperties dialog(ABSTRACTCX(context)->GetDialogOwner(), context,
 								   server, "ldaptest");
@@ -181,7 +176,6 @@ int ShowPropertySheetForDir(DIR_Server *server, MWContext *context, MSG_Pane *pa
 		{
 			CAddrFrame::HandleErrorReturn(AB_UpdateDIRServerForContainerPane(pane, server));
 		}
-#endif
 		result = TRUE;
 	}
 	else if(server->dirType == PABDirectory)
@@ -219,7 +213,6 @@ int FE_ShowPropertySheetFor (MWContext* context, ABID entryID, PersonEntry* pPer
 	DIR_Server *pab = NULL;
 	BOOL result = FALSE;
 
-#ifdef FEATURE_ADDRPROP
 	DIR_GetPersonalAddressBook (theApp.m_directories, &pab);
 	XP_ASSERT (pab);
 
@@ -265,7 +258,6 @@ int FE_ShowPropertySheetFor (MWContext* context, ABID entryID, PersonEntry* pPer
 		result = FALSE;
 	// if it is -1 then there was a memory problem creating the dialog 
 	// and we should return that
-#endif
 
 	return result;
 }
@@ -2306,17 +2298,11 @@ void CAddrFrame::OnExtendedDirectorySearch ()
 		return;
 	}
 
-	CUIntArray buttonLabels;
-	buttonLabels.SetSize (4, 1);
-	buttonLabels [0] = IDS_ADRSEARCH;
-	buttonLabels [1] = IDS_CANCEL_BUTTON;
-	buttonLabels [2] = IDS_HELP_BUTTON;
-	buttonLabels [3] = IDS_ADVSEARCH;
 
 	CSearchDialog searchDlg ((UINT) IDS_ADRSEARCH, 
 		(MSG_Pane*) m_addrBookPane, 
 		GetCurrentDirectoryServer(),
-		this, 4, BUTTON_RIGHT, &buttonLabels);
+		this);
 	int result = searchDlg.DoModal(); 
 
 	// Build Search
@@ -4841,10 +4827,6 @@ void CAddrFrame::PaneChanged(MSG_Pane *pane, XP_Bool asynchronous,
 }
 
 
-#ifdef FEATURE_ADDRESS_BOOK
-#include "addrfrm.i00"
-#endif
-
 /////////////////////////////////////////////////////////////////////////////
 // CAddrFrame message handlers
 
@@ -5456,7 +5438,6 @@ void CAddrFrame::OnSwitchSortFirstLast()
 
 void CAddrFrame::OnAddUser ( void )
 {	
-#ifdef FEATURE_ADDRPROP
 	CAddrEditProperties* prop;
 	prop = new CAddrEditProperties (this,
 	GetCurrentDirectoryServer(),
@@ -5470,7 +5451,6 @@ void CAddrFrame::OnAddUser ( void )
 
 		//m_userPropList.Add (prop);	
 	} 
-#endif
 }
 
 void CAddrFrame::OnAddAB ( void )
@@ -5481,7 +5461,6 @@ void CAddrFrame::OnAddAB ( void )
 
 void CAddrFrame::OnAddDir ( void )
 {
-#ifdef FEATURE_ADDRPROP
 	CString label;
 	label.LoadString(IDS_ADD_LDAP_SERVER);
 	CAddrLDAPProperties serverProperties(this, GetContext(), NULL, label);
@@ -5496,7 +5475,6 @@ void CAddrFrame::OnAddDir ( void )
 		XP_ListAddObjectToEnd(theApp.m_directories, pNewServer);
 	   	DIR_SaveServerPreferences (theApp.m_directories); 
 	}
-#endif
 }
 
 
@@ -5512,7 +5490,6 @@ void CAddrFrame::OnUpdateHTMLDomains( CCmdUI *pCmdUI )
 
 void CAddrFrame::OnCreateCard ( void )
 {
-#ifdef FEATURE_ADDRPROP
 	CAddrEditProperties* prop;
 	char* email = NULL;
 	char* name = NULL;
@@ -5584,7 +5561,6 @@ void CAddrFrame::OnCreateCard ( void )
 		XP_FREE (email);
 	if (name)
 		XP_FREE (name);
-#endif
 }
 
 
@@ -5608,7 +5584,6 @@ void CAddrFrame::OnAddList ( void )
 
 void CAddrFrame::OnDeleteItem()
 {
-#ifdef FEATURE_ADDRPROP
 	MSG_ViewIndex *indices;
 	int count;
 	m_pOutliner->GetSelection(indices, count);
@@ -5648,7 +5623,6 @@ void CAddrFrame::OnDeleteItem()
 	else
 		m_pOutliner->SelectItem(m_pOutliner->GetFocusLine());
 	SetCursor ( theApp.LoadStandardCursor ( IDC_ARROW ) );
-#endif
 }
 
 
@@ -5688,7 +5662,6 @@ void CAddrFrame::OnComposeMsg()
 
 void CAddrFrame::CloseUserProperties (CAddrEditProperties* wnd, ABID entryID) 
 {
-#ifdef FEATURE_ADDRPROP
 	CAddrEditProperties* prop;
 	for (int i = 0; i < m_userPropList.GetSize(); i++) {
 		prop = (CAddrEditProperties*) (m_userPropList.GetAt(i));
@@ -5697,7 +5670,6 @@ void CAddrFrame::CloseUserProperties (CAddrEditProperties* wnd, ABID entryID)
 			break;
 		}
 	}			
-#endif
 }
 
 
@@ -5716,7 +5688,6 @@ void CAddrFrame::CloseListProperties (CABMLDialog* wnd, ABID entryID)
 
 void CAddrFrame::OnItemProperties()
 {
-#ifdef FEATURE_ADDRPROP
 	if (GetCurrentDirectoryServer()->dirType == LDAPDirectory) {
 
 		if(m_pDirOutliner == GetFocus())
@@ -5799,7 +5770,6 @@ void CAddrFrame::OnItemProperties()
 			}
 		}
 	}
-#endif
 }
 
 
@@ -6040,17 +6010,10 @@ void CAddrFrame::OnExtendedDirectorySearch ()
 		return;
 	}
 
-	CUIntArray buttonLabels;
-	buttonLabels.SetSize (4, 1);
-	buttonLabels [0] = IDS_ADRSEARCH;
-	buttonLabels [1] = IDS_CANCEL_BUTTON;
-	buttonLabels [2] = IDS_HELP_BUTTON;
-	buttonLabels [3] = IDS_ADVSEARCH;
-
 	CSearchDialog searchDlg ((UINT) IDS_ADRSEARCH, 
 		(MSG_Pane*) m_addrBookPane, 
 		GetCurrentDirectoryServer(),
-		this, 4, BUTTON_RIGHT, &buttonLabels);
+		this);
 	int result = searchDlg.DoModal(); 
 
 	// Build Search
