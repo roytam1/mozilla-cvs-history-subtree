@@ -385,14 +385,14 @@ void XMLPrinter::printUTF8Char(DOM_CHAR ch) const {
     */
     //-- 0x0080-0x07FF
     else if (ch < 2048) {
-        out << (192+(ch/64));   // 0xC0 + x/64
-        out << (128+(ch%64));   // 0x80 + x%64
+        out << (char) (192+(ch/64));        // 0xC0 + x/64
+        out << (char) (128+(ch%64));        // 0x80 + x%64
     }
     //-- 0x800-0xFFFF
     else {
-        out << (224+(ch/4096));      // 0xE0 + x/64^2
-        out << (128+((ch/64)%64));   // 0x80 + (x/64)%64
-        out << (128+(ch%64));        // 0x80 + x%64
+        out << (char) (224+(ch/4096));      // 0xE0 + x/64^2
+        out << (char) (128+((ch/64)%64));   // 0x80 + (x/64)%64
+        out << (char) (128+(ch%64));        // 0x80 + x%64
     }
 } //-- printUTF8Char
 
@@ -420,14 +420,14 @@ void XMLPrinter::printUTF8Chars(const String& data) {
         */
         //-- 0x0080-0x07FF
         else if (ch < 2048) {
-            out << (192+(ch/64));   // 0xC0 + x/64
-            out << (128+(ch%64));   // 0x80 + x%64
+            out << (char)(192+(ch/64));        // 0xC0 + x/64
+            out << (char)(128+(ch%64));        // 0x80 + x%64
         }
         //-- 0x800-0xFFFF
         else {
-            out << (224+(ch/4096));      // 0xE0 + x/64^2
-            out << (128+((ch/64)%64));   // 0x80 + (x/64)%64
-            out << (128+(ch%64));        // 0x80 + x%64
+            out << (char)(224+(ch/4096));      // 0xE0 + x/64^2
+            out << (char)(128+((ch/64)%64));   // 0x80 + (x/64)%64
+            out << (char)(128+(ch%64));        // 0x80 + x%64
         }
     }
 
