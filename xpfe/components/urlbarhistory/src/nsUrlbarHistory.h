@@ -29,12 +29,14 @@
 //Interfaces Needed
 #include "nsIUrlbarHistory.h"
 #include "nsIAutoCompleteSession.h"
+#include "nsIObserver.h"
 #include "nsVoidArray.h"
 #include "nsIRDFService.h"
 #include "nsIRDFDataSource.h"
 #include "nsRDFCID.h"
 
 class nsUrlbarHistory: public nsIUrlbarHistory,
+                       public nsIObserver,
                        public nsIAutoCompleteSession
 {
 public:
@@ -42,6 +44,7 @@ public:
 
 	NS_DECL_ISUPPORTS
 	NS_DECL_NSIURLBARHISTORY
+    NS_DECL_NSIOBSERVER
 	NS_DECL_NSIAUTOCOMPLETESESSION
 
 protected:
@@ -58,6 +61,7 @@ protected:
 private:
 	nsStringArray  mIgnoreArray;
 	nsCOMPtr<nsIRDFDataSource> mDataSource;
+    PRBool mEnabled;
 };
 
 

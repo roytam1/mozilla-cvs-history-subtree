@@ -70,7 +70,6 @@ static nsIRDFResource * kNC_URLBARHISTORY;
 static nsIRDFService * gRDFService;
 static nsIRDFContainerUtils * gRDFCUtils;
 
-static nsIPref * gPrefs;
 #define PREF_AUTOCOMPLETE_ENABLED "browser.urlbar.autocomplete.enabled"
 
 
@@ -99,13 +98,13 @@ nsUrlbarHistory::nsUrlbarHistory()
 	 res = gRDFService->GetResource("http://home.netscape.com/NC-rdf#child", &kNC_CHILD);
 	 res = gRDFService->GetResource("nc:urlbar-history", &kNC_URLBARHISTORY);
    }
-   // Get the pref service
-   res = nsServiceManager::GetService(kPrefServiceCID, NS_GET_IID(nsIPref),
-	                                    (nsISupports **) &gPrefs);
-#if DEBUG_radha
-   if (gPrefs)
-	   printf("***** Got the pref service *****\n");
-#endif
+   
+   nsCOMPtr<nsIPref> prefs = do_GetService(kPrefServiceCID, &res);
+   if (NS_SUCCEEDED(res)) {
+       prefs->GetBoolPref(PREF_AUTOCOMPLETE_ENABLED, &mEnabled);
+       prefs->AddObserver(PREF_AUTOCOMPLETE_ENABLED, this);
+   }
+   
 }
 
 
@@ -121,7 +120,6 @@ nsUrlbarHistory::~nsUrlbarHistory()
 	NS_IF_RELEASE(kNC_URLBARHISTORY);
 	NS_IF_RELEASE(kNC_CHILD);
 
-    NS_IF_RELEASE(gPrefs);
 }
 
 //*****************************************************************************
@@ -132,9 +130,10 @@ NS_IMPL_ADDREF(nsUrlbarHistory)
 NS_IMPL_RELEASE(nsUrlbarHistory)
 
 NS_INTERFACE_MAP_BEGIN(nsUrlbarHistory)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIUrlbarHistory)
    NS_INTERFACE_MAP_ENTRY(nsIAutoCompleteSession)
    NS_INTERFACE_MAP_ENTRY(nsIUrlbarHistory)
+   NS_INTERFACE_MAP_ENTRY(nsIObserver)
+   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIUrlbarHistory)
 NS_INTERFACE_MAP_END
 
 //*****************************************************************************
@@ -197,12 +196,7 @@ nsUrlbarHistory::OnStartLookup(const PRUnichar *uSearchString,
     if (!listener)
         return NS_ERROR_NULL_POINTER;
       
-	PRBool enabled  = PR_FALSE;
-	if (gPrefs) {
-       rv = gPrefs->GetBoolPref(PREF_AUTOCOMPLETE_ENABLED, &enabled);      
-	}
-
-	if (!enabled) {// urlbar autocomplete is not enabled
+	if (!mEnabled) {// urlbar autocomplete is not enabled
 		listener->OnAutoComplete(nsnull, nsIAutoCompleteStatus::ignored);
 		return NS_OK;
 	}
@@ -291,7 +285,6 @@ nsUrlbarHistory::SearchPreviousResults(const PRUnichar *searchStr,
     nsXPIDLString prevSearchString;
     PRUint32 searchStrLen = nsCRT::strlen(searchStr);
     nsresult rv;
-    nsAutoString   searchAutoStr(searchStr);
 
     rv = previousSearchResult->GetSearchString(getter_Copies(prevSearchString));
     if (NS_FAILED(rv))
@@ -328,9 +321,10 @@ nsUrlbarHistory::SearchPreviousResults(const PRUnichar *searchStr,
 
         nsXPIDLString itemValue;
         resultItem->GetValue(getter_Copies(itemValue));
-        nsAutoString itemAutoStr(itemValue);
 
-        //printf("SearchPreviousResults::Comparing %s with %s \n", searchAutoStr.ToNewCString(), itemAutoStr.ToNewCString());
+        // nsCAutoString itemAutoStr;
+        // itemAutoStr.AssignWithConversion(itemValue);
+        // printf("SearchPreviousResults::Comparing %s with %s \n", searchAutoStr.ToNewCString(), itemAutoStr.get());
         if (!(const PRUnichar*)itemValue)
             continue;
             
@@ -353,7 +347,7 @@ nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
     //printf("******** In SearchCache *******\n");
 	
 	PRInt32  protocolIndex=-1;
-    nsAutoString searchProtocol, searchPath, resultAutoStr;
+    nsAutoString searchProtocol, searchPath;
     PRInt32 searchPathIndex, searchStrLength;
 
     // Get the length of the search string
@@ -396,9 +390,8 @@ nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
     while (NS_SUCCEEDED(entries->HasMoreElements(&moreElements)) && moreElements) {
        nsCOMPtr<nsISupports>  entry;
        nsCOMPtr<nsIRDFLiteral>  literal;
-       nsAutoString rdfAutoStr;
        nsAutoString rdfProtocol, rdfPath;
-       PRInt32 rdfLength, rdfPathIndex, index = -1;
+       PRInt32 rdfPathIndex, index = -1;
        nsAutoString match;
        const PRUnichar * rdfValue = nsnull;   
 
@@ -409,23 +402,22 @@ nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
        }      
        if (!rdfValue)
           continue;
-       rdfAutoStr = rdfValue;
-       rdfLength = rdfAutoStr.Length();        
+       nsLiteralString valueStr(rdfValue);
 
        // Get the index of the hostname in the rdf string
-       GetHostIndex (rdfAutoStr, &rdfPathIndex);
+       GetHostIndex (valueStr, &rdfPathIndex);
 
        if (rdfPathIndex > 0) {
           // RDf string has a protocol in it, Strip it off
           // from the rest of the url;
-          rdfAutoStr.Left(rdfProtocol, rdfPathIndex);
-          rdfAutoStr.Mid(rdfPath, rdfPathIndex, rdfLength);
+          valueStr.Left(rdfProtocol, rdfPathIndex);
+          valueStr.Mid(rdfPath, rdfPathIndex, valueStr.Length());
        }
        else {
           // There was no protocol.
-          rdfPath = rdfAutoStr;
+          rdfPath = valueStr;
        }
-       //printf("RDFString is %s path = %s protocol = %s\n", rdfAutoStr.ToNewCString(), rdfPath.ToNewCString(), rdfProtocol.ToNewCString());
+       //printf("RDFString is %s path = %s protocol = %s\n", valueStr.ToNewCString(), rdfPath.ToNewCString(), rdfProtocol.ToNewCString());
        // We have all the data we need. Let's do the comparison
        // We compare the path first and compare the protocol next
        index = rdfPath.Find(searchPath, PR_TRUE);       
@@ -436,7 +428,7 @@ nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
               protocolIndex = rdfProtocol.Find(searchProtocol);
               if (protocolIndex == 0) {
                   // Both protocols match. We found a result item
-                  match = rdfAutoStr;
+                  match = valueStr;
               } 
            } 
            else if (searchProtocol.Length() && (rdfProtocol.Length() <= 0)) {
@@ -448,8 +440,7 @@ nsUrlbarHistory::SearchCache(nsAReadableString& searchStr,
                // XXX I guess  hard-coded "http://" is OK, since netlib considers
                // all urls to be char *
                if ((searchProtocol.Find("http://", PR_TRUE)) == 0) {
-                  resultAutoStr = searchProtocol + rdfPath;
-                  match = resultAutoStr;
+                  match = searchProtocol + rdfPath;
                }
            }
            else if ((searchProtocol.Length() <=0) && rdfProtocol.Length() ||
@@ -520,23 +511,22 @@ nsUrlbarHistory::GetHostIndex(nsAReadableString& aPath, PRInt32 * aReturn)
     nsCOMPtr<nsIURL> pathURL=do_CreateInstance(kStandardURLCID, &rv);
     if (pathURL) {
        pathURL->SetSpec(NS_ConvertUCS2toUTF8(aPath).get());
-       char *  host=nsnull, *preHost = nsnull, * filePath = nsnull;
-       pathURL->GetHost(&host);
-       pathURL->GetFilePath(&filePath);
-       pathURL->GetPreHost(&preHost);
+       nsXPIDLCString host, preHost, filePath;
+
+       pathURL->GetHost(getter_Copies(host));
+       pathURL->GetFilePath(getter_Copies(filePath));
+       pathURL->GetPreHost(getter_Copies(preHost));
+       
        nsAutoString path(aPath);
-       if (preHost) 
+       if ((const char*)preHost) 
            slashIndex  = path.Find(preHost, PR_TRUE);
-       else if (host)
+       else if ((const char *)host)
            slashIndex = path.Find(host,PR_TRUE);
-       else if (filePath)
+       else if ((const char *)filePath)
            slashIndex = path.Find(filePath, PR_TRUE);
        else
            slashIndex = 0;
        
-       nsCRT::free(preHost);
-       nsCRT::free(host);
-       nsCRT::free(filePath);
        //printf("$$$$ Scheme for uri = %s, preHost = %s, filepath = %s, Host = %s HostIndex = %d\n", pathScheme, preHost, filePath, pathHost, *aReturn);
     }
 
@@ -625,11 +615,10 @@ nsUrlbarHistory::VerifyAndCreateEntry(nsAReadableString& aSearchItem,
             return NS_OK;
         
         // Find the position of the filepath in the result string
-        nsAutoString matchAutoStr(aMatchStr);
         PRInt32 slashIndex = aMatchStr.Find("/", PR_FALSE, searchStrLen);
         // Extract the host name
         nsAutoString hostName;
-        matchAutoStr.Left(hostName, slashIndex);
+        aMatchStr.Left(hostName, slashIndex);
         //printf("#### Host Name is %s\n", hostName.ToNewCString());
         // Check if this host is already present in the result array
         // If not add it to the result array
@@ -656,6 +645,7 @@ nsUrlbarHistory::VerifyAndCreateEntry(nsAReadableString& aSearchItem,
 NS_IMETHODIMP
 nsUrlbarHistory::OnStopLookup()
 {
+    printf("nsUrlbarHistory::OnStopLookup()\n");
     return NS_OK;
 }
 
@@ -664,5 +654,24 @@ nsUrlbarHistory::OnAutoComplete(const PRUnichar *searchString,
                                 nsIAutoCompleteResults *previousSearchResult,
                                 nsIAutoCompleteListener *listener)
 {
+#if 1
+    printf("nsUrlbarHistory::OnAutoComplete(%s)\n", NS_ConvertUCS2toUTF8(searchString));
+#endif
 	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsUrlbarHistory::Observe(nsISupports *aSubject, const PRUnichar *aTopic,
+                         const PRUnichar *aSomeData)
+{
+    nsresult rv;
+    
+    if (nsCRT::strcmp(aTopic, NS_LITERAL_STRING("nsPref:changed").get())==0) {
+        
+        nsCOMPtr<nsIPref> prefs=do_QueryInterface(aSubject, &rv);
+        if (NS_SUCCEEDED(rv))
+            prefs->GetBoolPref(PREF_AUTOCOMPLETE_ENABLED, &mEnabled);
+
+    }
+    return NS_OK;
 }
