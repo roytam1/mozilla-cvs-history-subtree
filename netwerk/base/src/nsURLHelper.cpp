@@ -219,11 +219,35 @@ net_CoalesceDirsRel(char* io_Path)
      */
     char *fwdPtr = io_Path;
     char *urlPtr = io_Path;
+    char *lastslash = io_Path;
 
-    /* replace all %2E or %2e with . in the path */ 
+    /* find the last slash before # or ? */
     for(; (*fwdPtr != '\0') && 
             (*fwdPtr != '?') && 
             (*fwdPtr != '#'); ++fwdPtr)
+    {
+    }
+
+    /* found nothing, but go back one only */
+    /* if there is something to go back to */
+    if (fwdPtr != io_Path && *fwdPtr == '\0') {
+        --fwdPtr;
+    }
+
+    /* search the slash */
+    for(; (fwdPtr != io_Path) && 
+            (*fwdPtr != '/'); --fwdPtr)
+    {
+    }
+    lastslash = fwdPtr;
+    fwdPtr = io_Path;
+
+    /* replace all %2E or %2e with . in the path */
+    /* but stop at lastchar if non null */
+    for(; (*fwdPtr != '\0') && 
+            (*fwdPtr != '?') && 
+            (*fwdPtr != '#') &&
+            (*lastslash == '\0' || fwdPtr != lastslash); ++fwdPtr)
     {
         if (*fwdPtr == '%' && *(fwdPtr+1) == '2' && 
             (*(fwdPtr+2) == 'E' || *(fwdPtr+2) == 'e'))
@@ -321,12 +345,36 @@ net_CoalesceDirsAbs(char* io_Path)
      */
     char *fwdPtr = io_Path;
     char *urlPtr = io_Path;
+    char *lastslash = io_Path;
     PRUint32 traversal = 0;
 
-    /* replace all %2E or %2e with . in the path */ 
+    /* find the last slash before # or ? */
     for(; (*fwdPtr != '\0') && 
             (*fwdPtr != '?') && 
             (*fwdPtr != '#'); ++fwdPtr)
+    {
+    }
+
+    /* found nothing, but go back one only */
+    /* if there is something to go back to */
+    if (fwdPtr != io_Path && *fwdPtr == '\0') {
+        --fwdPtr;
+    }
+
+    /* search the slash */
+    for(; (fwdPtr != io_Path) && 
+            (*fwdPtr != '/'); --fwdPtr)
+    {
+    }
+    lastslash = fwdPtr;
+    fwdPtr = io_Path;
+
+    /* replace all %2E or %2e with . in the path */
+    /* but stop at lastchar if non null */
+    for(; (*fwdPtr != '\0') && 
+            (*fwdPtr != '?') && 
+            (*fwdPtr != '#') &&
+            (*lastslash == '\0' || fwdPtr != lastslash); ++fwdPtr)
     {
         if (*fwdPtr == '%' && *(fwdPtr+1) == '2' && 
             (*(fwdPtr+2) == 'E' || *(fwdPtr+2) == 'e'))
