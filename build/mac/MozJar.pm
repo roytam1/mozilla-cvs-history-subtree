@@ -211,7 +211,7 @@ sub addToJarFile($$$$$$$)
         {
             if ($old_member)
             {
-                print "Overriding $file_jar_path in jar file $jar_id\n";
+                # print "Overriding $file_jar_path in jar file $jar_id\n";
                 # need to compare mod dates or use the + here
                 $zip->removeMember($old_member);
             }
@@ -222,8 +222,20 @@ sub addToJarFile($$$$$$$)
         {
             if ($old_member)
             {
-                #compare dates here?
-                print "$file_jar_path already exists in $jar_id. Use '+' in jar.mn to override. File is not being replaced.\n";
+                #compare dates here
+                my($member_moddate) = $old_member->lastModTime();
+                my($file_moddate) = GetFileModDate($src);
+            
+                if ($file_moddate > $member_moddate)
+                {
+                    print "Updating older file $file_jar_path in $jar_id\n";
+                    $zip->removeMember($old_member);
+                    $zip->addMember($member);
+                }
+                else
+                {
+                    print "File $file_jar_path in $jar_id is more recent. Not updating.\n";
+                }
             }
             else
             {
