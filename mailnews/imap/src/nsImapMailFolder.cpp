@@ -3632,7 +3632,8 @@ nsImapMailFolder::ParseAdoptedMsgLine(const char *adoptedMessageLine, nsMsgKey u
                                                                                 
   return rv;
 }
-    
+
+
 NS_IMETHODIMP
 nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage, 
                                           PRBool markRead,
@@ -3652,17 +3653,19 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
     m_tempMessageStream = nsnull;
   }
   nsCOMPtr<nsIMsgDBHdr> msgHdr;
-
   m_curMsgUid = uidOfMessage;
   res = GetMessageHeader(m_curMsgUid, getter_AddRefs(msgHdr));
   nsXPIDLCString messageID;
+  nsCOMPtr<nsIMsgMailNewsUrl> msgUrl(do_QueryInterface(imapUrl, &res));
+  nsCOMPtr<nsIMsgWindow> msgWindow;
+  res = msgUrl->GetMsgWindow(getter_AddRefs(msgWindow));
   if (msgHdr)
   {
     // if we didn't get the message id when we downloaded the message header,
     // we cons up an md5: message id. If we've done that, set needMsgID to true
     // so we'll try to extract the message id out of the mime headers for the whole message.
     msgHdr->GetMessageId(getter_Copies(messageID));
-    if (!strncmp(messageID, "md5: ", 5))
+    if (!strncmp(messageID, "md5:", 4))
       needMsgID = PR_TRUE;
   }
   if (markRead || needMsgID)
@@ -3676,8 +3679,6 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
         PRUint32 msgFlags, newFlags;
         msgHdr->GetFlags(&msgFlags);
 
-            nsCOMPtr<nsIMsgMailNewsUrl> 
-                msgUrl(do_QueryInterface(imapUrl, &res));
             if (NS_SUCCEEDED(res))
             {
           nsCOMPtr<nsIMimeHeaders> mimeHeaders;
@@ -3691,8 +3692,6 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
                                          PR_FALSE, getter_Copies(mdnDnt));
               if (mdnDnt.Length() && !(msgFlags & MSG_FLAG_MDN_REPORT_SENT))
               {
-                nsCOMPtr<nsIMsgWindow> msgWindow;
-                res = msgUrl->GetMsgWindow(getter_AddRefs(msgWindow));
                 if(NS_SUCCEEDED(res))
                 {
                   nsCOMPtr<nsIMsgMdnGenerator> mdnGenerator;
@@ -3730,6 +3729,7 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
   }
   if (commit && mDatabase)
     mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
+
   return res;
 }
 
@@ -6671,93 +6671,6 @@ NS_IMETHODIMP nsImapMailFolder::SetFolderVerifiedOnline(PRBool bVal)
 {
     m_verifiedAsOnlineFolder = bVal;
     return NS_OK;
-}
-
-NS_IMETHODIMP nsImapMailFolder::ShouldStoreMsgOffline(nsMsgKey msgKey, PRBool *result)
-{
-  // aol PFC works for all online folders, not just inbox. And INBOX flag isn't set...
-  PRBool hasMsgOffline = PR_FALSE;
-
-  HasMsgOffline(msgKey, &hasMsgOffline);
-  if (hasMsgOffline)
-  {
-    *result = PR_FALSE;
-    return NS_OK;
-  }
-  nsCOMPtr<nsIImapIncomingServer> imapServer;
-  nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
-  if (mFlags & MSG_FOLDER_FLAG_INBOX && NS_SUCCEEDED(rv) && imapServer)
-  {
-    PRBool storeReadMailInPFC;
-    imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
-    if (storeReadMailInPFC)
-    {
-      nsCOMPtr <nsIMsgFolder> outputPFC;
-      nsCOMPtr <nsIMsgDBHdr> msgHdr;
-      nsXPIDLCString messageID;
-
-      *result = PR_TRUE;
-
-      // look in read mail PFC for msg with same msg id - if we find one,
-      // don't put this message in the read mail pfc.
-      imapServer->GetReadMailPFC(PR_TRUE, getter_AddRefs(outputPFC));
-      rv = GetMessageHeader(msgKey, getter_AddRefs(msgHdr));
-      if (NS_SUCCEEDED(rv) && msgHdr)
-      {
-        msgHdr->GetMessageId(getter_Copies(messageID));
-        if (!messageID.IsEmpty())
-        {
-          nsCOMPtr <nsIMsgDatabase> readMailDB;
-          outputPFC->GetMsgDatabase(nsnull, getter_AddRefs(readMailDB));
-          if (readMailDB)
-          {
-            nsCOMPtr <nsIMsgDBHdr> hdrInDestDB;
-            rv = readMailDB->GetMsgHdrForMessageID(messageID.get(), getter_AddRefs(hdrInDestDB));
-            if (NS_SUCCEEDED(rv) && hdrInDestDB)
-              *result = PR_FALSE;
-          }
-        }
-      }
-      return NS_OK;
-    }
-  }
-  return nsMsgDBFolder::ShouldStoreMsgOffline(msgKey, result);
-}
-
-nsresult nsImapMailFolder::GetOfflineStoreOutputStream(nsIOutputStream **outputStream)
-{
-  // check if we're storing mail we're reading in online aol mail in a personal filing cabinet.
-  // if not, just use base class implementation.
-  nsCOMPtr<nsIImapIncomingServer> imapServer;
-  nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
-  if (NS_SUCCEEDED(rv) && imapServer)
-  {
-    PRBool storeReadMailInPFC;
-    imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
-    if (storeReadMailInPFC)
-    {
-      nsresult rv = NS_ERROR_NULL_POINTER;
-      nsCOMPtr <nsIMsgFolder> outputPFC;
-
-      imapServer->GetReadMailPFC(PR_TRUE, getter_AddRefs(outputPFC));
-      if (outputPFC)
-      {
-        nsCOMPtr <nsIFileSpec> outputPFCPath;
-        outputPFC->GetPath(getter_AddRefs(outputPFCPath));
-        nsCOMPtr<nsISupports>  supports;
-        nsFileSpec fileSpec;
-        outputPFCPath->GetFileSpec(&fileSpec);
-        rv = NS_NewIOFileStream(getter_AddRefs(supports), fileSpec, PR_WRONLY | PR_CREATE_FILE, 00700);
-        supports->QueryInterface(NS_GET_IID(nsIOutputStream), (void **) outputStream);
-
-        nsCOMPtr <nsISeekableStream> seekable = do_QueryInterface(supports);
-        if (seekable)
-          seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
-      }
-      return rv;
-    }
-  }
-  return nsMsgDBFolder::GetOfflineStoreOutputStream(outputStream);
 }
 
 NS_IMETHODIMP nsImapMailFolder::PerformExpand(nsIMsgWindow *aMsgWindow)
