@@ -1438,11 +1438,11 @@ calculate_ctrl_value( const char *value,
     } else {
 	b64 = 0;
     }
-    *ctrl_value = value;
+    *ctrl_value = (char *)value;
 
     if ( b64 ) {
-	if (( *vlen = ldif_base64_decode( value, (unsigned char *)value ))
-		< 0 ) {
+	if (( *vlen = ldif_base64_decode( (char *)value,
+		(unsigned char *)value )) < 0 ) {
 	    fprintf( stderr, 
 		"Unable to decode base64 control value \"%s\"\n", value);
 	    return( -1 );
