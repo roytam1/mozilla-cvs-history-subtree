@@ -124,7 +124,9 @@ public:
   NS_IMETHOD FindChildWithName(const PRUnichar* aName,
                                nsIWebShell*& aResult);
   NS_IMETHOD Back(void);
+  NS_IMETHOD CanBack(void);
   NS_IMETHOD Forward(void);
+  NS_IMETHOD CanForward(void);
   NS_IMETHOD LoadURL(const PRUnichar* aURLSpec,
                      nsIPostData* aPostData=nsnull);
   NS_IMETHOD GoTo(PRInt32 aHistoryIndex);
@@ -790,9 +792,21 @@ nsWebShell::Back(void)
 }
 
 NS_IMETHODIMP
+nsWebShell::CanBack(void)
+{
+  return (mHistoryIndex > 0 ? NS_OK : NS_FALSE);
+}
+
+NS_IMETHODIMP
 nsWebShell::Forward(void)
 {
   return GoTo(mHistoryIndex + 1);
+}
+
+NS_IMETHODIMP
+nsWebShell::CanForward(void)
+{
+  return (mHistoryIndex  < mHistory.Count() - 1 ? NS_OK : NS_FALSE);
 }
 
 #define FILE_PROTOCOL "file:///"
@@ -884,7 +898,7 @@ nsWebShell::GoTo(PRInt32 aHistoryIndex)
 {
   nsresult rv = NS_ERROR_ILLEGAL_VALUE;
   if ((aHistoryIndex >= 0) &&
-      (aHistoryIndex <= mHistory.Count() - 1)) {
+      (aHistoryIndex < mHistory.Count())) {
     nsString* s = (nsString*) mHistory.ElementAt(aHistoryIndex);
 
     // Give web-shell-container right of refusal
