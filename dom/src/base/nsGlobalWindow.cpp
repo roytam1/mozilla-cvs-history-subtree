@@ -4111,22 +4111,23 @@ NS_IMETHODIMP
 GlobalWindowImpl::DispatchEvent(nsIDOMEvent* aEvent, PRBool* _retval)
 {
   nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
-  if (doc) {
-    // Obtain a presentation context
-    nsIPresShell *shell = doc->GetShellAt(0);
-    if (!shell) {
-      return NS_OK;
-    }
 
-    // Retrieve the context
-    nsCOMPtr<nsIPresContext> aPresContext;
-    shell->GetPresContext(getter_AddRefs(aPresContext));
-    aPresContext->EventStateManager()->
-      DispatchNewEvent(NS_STATIC_CAST(nsIScriptGlobalObject*, this),
-                       aEvent, _retval);
+  if (!doc) {
+    return NS_ERROR_FAILURE;
   }
 
-  return NS_ERROR_FAILURE;
+  // Obtain a presentation context
+  nsIPresShell *shell = doc->GetShellAt(0);
+  if (!shell) {
+    return NS_OK;
+  }
+
+  // Retrieve the context
+  nsCOMPtr<nsIPresContext> aPresContext;
+  shell->GetPresContext(getter_AddRefs(aPresContext));
+  return aPresContext->EventStateManager()->
+    DispatchNewEvent(NS_STATIC_CAST(nsIScriptGlobalObject*, this),
+                     aEvent, _retval);
 }
 
 //*****************************************************************************
