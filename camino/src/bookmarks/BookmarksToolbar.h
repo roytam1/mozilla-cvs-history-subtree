@@ -32,9 +32,10 @@ class BookmarksButton;
 {
   BookmarksService*  mBookmarks;
   NSMutableArray*    mButtons;
-  BookmarksButton* mDragInsertionButton;
+  BookmarksButton*   mDragInsertionButton;
   int                mDragInsertionPosition;
   BOOL               mIsShowing;
+  BOOL               mDrawBorder;
 }
 
 -(void)initializeToolbar;
@@ -50,6 +51,7 @@ class BookmarksButton;
 -(void)reflowButtonsStartingAtIndex: (int)aIndex;
 
 -(BOOL)isShown;
+-(void)setDrawBottomBorder:(BOOL)drawBorder;
 -(void)showBookmarksToolbar: (BOOL)aShow;
 
 @end

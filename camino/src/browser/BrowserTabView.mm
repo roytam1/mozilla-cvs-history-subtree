@@ -183,7 +183,6 @@
     {
       if ( [self tabViewType] != NSNoTabsBezelBorder )
       {
-        [self setFrameSize:NSMakeSize( NSWidth([self frame]), NSHeight([self frame]) + 10 )];
         [self setTabViewType:NSNoTabsBezelBorder];
         tabVisibilityChanged = YES;
       }
@@ -193,7 +192,6 @@
     {
       if ( [self tabViewType] != NSTopTabsBezelBorder )
       {
-        [self setFrameSize:NSMakeSize( NSWidth([self frame]), NSHeight([self frame]) - 10 )];
         [self setTabViewType:NSTopTabsBezelBorder];
         tabVisibilityChanged = YES;
       }
@@ -210,10 +208,30 @@
     }
     
     if (tabVisibilityChanged)
+    {
+      [[[[self window] windowController] bookmarksToolbar] setDrawBottomBorder:!tabsVisible];
+
+      // tell the superview to resize its subviews
+      [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
       [self setNeedsDisplay:YES];
+    }
 	}
 }
 
+
+// return the frame we want to have to make us display correctly in the supplied frame.
+const float kTabsVisibleTopGap    = 4.0;    // space above the tabs
+const float kTabsInvisibleTopGap  = -7.0;		// space removed to push tab content up when no tabs are visible
+
+- (float)getExtraTopSpace;
+{
+	return ([self tabsVisible]) ? kTabsVisibleTopGap : kTabsInvisibleTopGap;
+}
+
+- (BOOL)tabsVisible
+{
+  return ([[self tabViewItems] count] > 1);
+}
 
 - (BOOL)handleDropOnTab:(NSTabViewItem*)overTabViewItem overContent:(BOOL)overContentArea withURL:(NSString*)url
 {

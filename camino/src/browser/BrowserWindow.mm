@@ -43,6 +43,14 @@ static const int kEscapeKeyCode = 53;
 
 @implementation BrowserWindow
 
+- (void)dealloc
+{
+#if DEBUG
+  NSLog(@"BrowserWindow dealloc");
+#endif
+  [super dealloc];
+}
+
 - (BOOL)makeFirstResponder:(NSResponder*)responder
 {
   NSResponder* oldResponder = [self firstResponder];

@@ -28,11 +28,15 @@
 #import "BookmarksService.h"
 #import "BookmarksDataSource.h"
 
+#import "CHBrowserService.h"
+
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
 
 @interface BookmarksToolbar(Private)
 
+- (void)cleanup;
+- (void)registerForShutdownNotification;
 - (void)setButtonInsertionPoint:(id <NSDraggingInfo>)sender;
 - (NSRect)insertionRectForButton:(NSView*)aButton position:(int)aPosition;
 - (BookmarksButton*)makeNewButtonWithElement:(nsIDOMElement*)element;
@@ -43,18 +47,21 @@
 
 - (id)initWithFrame:(NSRect)frame
 {
-  if ( (self = [super initWithFrame:frame]) ) {
+  if ( (self = [super initWithFrame:frame]) )
+  {
+    [self registerForShutdownNotification];
     mBookmarks = nsnull;
     mButtons = [[NSMutableArray alloc] init];
     mDragInsertionButton = nil;
     mDragInsertionPosition = BookmarksService::CHInsertNone;
+    mDrawBorder = YES;
     [self registerForDraggedTypes:[NSArray arrayWithObjects:@"MozURLType", @"MozBookmarkType", NSStringPboardType, nil]];
     mIsShowing = YES;
   }
   return self;
 }
 
--(void)initializeToolbar
+- (void)initializeToolbar
 {
   // Initialization code here.
   mBookmarks = new BookmarksService(self);
@@ -63,34 +70,52 @@
   [self buildButtonList];
 }
 
--(void) dealloc
+- (void)dealloc
 {
-  [mButtons autorelease];
-  mBookmarks->RemoveObserver();
-  delete mBookmarks;
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [self cleanup];
   [super dealloc];
 }
 
-- (void)drawRect:(NSRect)aRect {
-  // Fill the background with our background color.
-  //[[NSColor colorWithCalibratedWhite: 0.98 alpha: 1.0] set];
-  //NSRectFill(aRect);
+- (void)cleanup
+{
+  [mButtons release];
+  mButtons = nil;
+  if (mBookmarks) {
+    mBookmarks->RemoveObserver();
+    delete mBookmarks;
+    mBookmarks = nil;
+  }
+}
 
-  //printf("The rect is: %f %f %f %f\n", aRect.origin.x, aRect.origin.y, aRect.size.width, aRect.size.height);
-  
-  if (aRect.origin.y + aRect.size.height ==
-      [self bounds].size.height) {
-    // The personal toolbar is 21 pixels tall.  The bottom two pixels
-    // are a separator.
-    [[NSColor colorWithCalibratedWhite: 0.90 alpha: 1.0] set];
-    //NSRectFill(NSMakeRect(aRect.origin.x, [self bounds].size.height-2, aRect.size.width, [self bounds].size.height));
+- (void)registerForShutdownNotification
+{
+  [[NSNotificationCenter defaultCenter] addObserver:  self
+                                        selector:     @selector(shutdown:)
+                                        name:         XPCOMShutDownNotificationName
+                                        object:       nil];
+}
+
+-(void)shutdown: (NSNotification*)aNotification
+{
+  [self cleanup];
+}
+
+- (void)drawRect:(NSRect)aRect
+{
+  if (mDrawBorder)
+  {
+    [[NSColor controlShadowColor] set];
+    float height = [self bounds].size.height;
+    NSRectFill(NSMakeRect(aRect.origin.x, height - 1.0, aRect.size.width, height));
   }
 
   // The buttons will paint themselves. Just call our base class method.
   [super drawRect: aRect];
   
   // draw a separator at drag n drop insertion point if there is one
-  if (mDragInsertionPosition) {
+  if (mDragInsertionPosition)
+  {
     [[[NSColor controlShadowColor] colorWithAlphaComponent:0.6] set];
     NSRectFill([self insertionRectForButton:mDragInsertionButton position:mDragInsertionPosition]);
   }
@@ -172,12 +197,15 @@
 
 -(void)reflowButtonsStartingAtIndex: (int)aIndex
 {
+  if (![self isShown])
+    return;
+
   // coordinates for this view are flipped, making it easier to lay out from top left
   // to bottom right.
   float oldHeight = [self frame].size.height;
   int   count         = [mButtons count];
   float curRowYOrigin = 0.0;
-  float curX          = 0.0;
+  float curX          = kBookmarkButtonHorizPadding;
   
   for (int i = 0; i < count; i ++)
   {
@@ -204,7 +232,7 @@
       if (NSMaxX(buttonRect) > NSWidth([self bounds]))
       {
         curRowYOrigin += (kBookmarkButtonHeight + 2 * kBookmarkButtonVerticalPadding);
-        buttonRect = NSMakeRect(0.0, curRowYOrigin + kBookmarkButtonVerticalPadding, width, kBookmarkButtonHeight);
+        buttonRect = NSMakeRect(kBookmarkButtonHorizPadding, curRowYOrigin + kBookmarkButtonVerticalPadding, width, kBookmarkButtonHeight);
         curX = NSWidth(buttonRect);
       }
       
@@ -217,15 +245,12 @@
   // our size has changed, readjust our view's frame and the content area
   if (computedHeight != oldHeight)
   {
-    [self setFrame: NSMakeRect([self frame].origin.x, [self frame].origin.y + (oldHeight - computedHeight),
-                               [self frame].size.width, computedHeight)];
+    [super setFrame: NSMakeRect([self frame].origin.x, [self frame].origin.y + (oldHeight - computedHeight),
+                                [self frame].size.width, computedHeight)];
     [self setNeedsDisplay: [self isShown]];
     
-    // adjust the content area.
-    float sizeChange = computedHeight - oldHeight;
-    NSView* view = [[[self window] windowController] getTabBrowser];
-    [view setFrame: NSMakeRect([view frame].origin.x, [view frame].origin.y,
-                               [view frame].size.width, [view frame].size.height - sizeChange)];
+    // tell the superview to resize its subviews
+    [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
   }
 }
 
@@ -267,23 +292,38 @@
   return mIsShowing;
 }
 
+-(void)setDrawBottomBorder:(BOOL)drawBorder
+{
+  if (mDrawBorder != drawBorder)
+  {
+    mDrawBorder = drawBorder;
+    NSRect dirtyRect = [self bounds];
+    dirtyRect.origin.y = dirtyRect.size.height - 1.0;
+    dirtyRect.size.height = 1.0;
+    [self setNeedsDisplayInRect:dirtyRect];
+  }
+}
+
 -(void)showBookmarksToolbar: (BOOL)aShow
 {
+  mIsShowing = aShow;
+
   if (!aShow)
   {
-    float height = [self bounds].size.height;
-    [self setFrame: NSMakeRect([self frame].origin.x, [self frame].origin.y + height,
-                               [self frame].size.width, 0)];
-    // We need to adjust the content area.
-    NSView* view = [[[self window] windowController] getTabBrowser];
-    [view setFrame: NSMakeRect([view frame].origin.x, [view frame].origin.y,
-                               [view frame].size.width, [view frame].size.height + height)];
+    NSRect newFrame = [self frame];
+    newFrame.origin.y += newFrame.size.height;
+    newFrame.size.height = 0;
+    [self setFrame: newFrame];
+
+    // tell the superview to resize its subviews
+    [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
   }
   else
-    // Reflowing the buttons will do the right thing.
+  {
     [self reflowButtons];
-    
-  mIsShowing = aShow;
+    [self setNeedsDisplay:YES];
+  }
+  
 }
 
 - (void)setButtonInsertionPoint:(id <NSDraggingInfo>)sender

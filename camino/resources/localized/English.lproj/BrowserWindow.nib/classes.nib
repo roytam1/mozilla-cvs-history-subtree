@@ -34,6 +34,13 @@
             SUPERCLASS = ExtendedOutlineView; 
         }, 
         {CLASS = BookmarksToolbar; LANGUAGE = ObjC; SUPERCLASS = NSView; }, 
+        {CLASS = BrowserContainerView; LANGUAGE = ObjC; SUPERCLASS = NSView; }, 
+        {
+            CLASS = BrowserContentView; 
+            LANGUAGE = ObjC; 
+            OUTLETS = {mBookmarksToolbar = BookmarksToolbar; mBrowserContainerView = NSView; }; 
+            SUPERCLASS = NSView; 
+        }, 
         {CLASS = BrowserTabView; LANGUAGE = ObjC; SUPERCLASS = NSTabView; }, 
         {
             CLASS = BrowserWindow; 
@@ -76,7 +83,6 @@
                 mAddBookmarkSheetWindow = NSWindow; 
                 mAddBookmarkTitleField = NSTextField; 
                 mBackItem = NSMenuItem; 
-                mCachedBMDS = id; 
                 mForwardItem = NSMenuItem; 
                 mHistoryDataSource = HistoryDataSource; 
                 mImageLinkMenu = NSMenu; 
