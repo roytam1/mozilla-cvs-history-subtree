@@ -92,13 +92,11 @@ static PRBool OnMacOSX();
 #include "nsICharsetConverterManager.h"
 #include "nsIUnicodeDecoder.h"
 
-#ifdef MOZ_THUNDERBIRD
 #include "nsIURILoader.h"
 #include "nsCURILoader.h"
 #include "nsIURI.h"
 #include "nsIChannel.h"
 #include "nsNetUtil.h"
-#endif
 
 /* Define Class IDs */
 static NS_DEFINE_CID(kAppShellCID,          NS_APPSHELL_CID);
@@ -1320,7 +1318,6 @@ nsAppShellService::Ensure1Window(nsICmdLineService *aCmdLineService)
   return rv;
 }
 
-#ifdef MOZ_THUNDERBIRD
 
 NS_IMETHODIMP
 nsAppShellService::OpenURL(const nsACString &aArgument)
@@ -1357,7 +1354,6 @@ nsAppShellService::OpenURL(const nsACString &aArgument)
   // load it
   return loader->OpenURI(channel, PR_TRUE, listenerRef);
 }
-#endif
 
 nsresult
 nsAppShellService::OpenBrowserWindow(PRInt32 height, PRInt32 width)

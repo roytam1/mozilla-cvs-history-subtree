@@ -218,7 +218,6 @@ interface nsIAppShellService : nsISupports
    */
   void ensure1Window(in nsICmdLineService aCmdLineService);
 
-#ifdef MOZ_THUNDERBIRD
   /**
    *  if the app was started with just a url given to the command line,
    *  we'll generically open it, letting the registered content provider
@@ -227,6 +226,5 @@ interface nsIAppShellService : nsISupports
    *  instead of just assuming it's a browser url.
    */
   void OpenURL(in ACString aArgument);
-#endif
 };
 
