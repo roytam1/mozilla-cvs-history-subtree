@@ -461,8 +461,21 @@ NS_IMETHODIMP nsInternetConfigService::GetDownloadFolder(FSSpec *fsspec)
             {
               rv = NS_OK;
             }
+            else
+            { // ResolveAlias for the DownloadFolder failed - try grabbing the FSSpec
+              err = ::ICFindPrefHandle(inst, kICDownloadFolder, &attr, prefH);
+              if (err == noErr)
+              { // Use FSMakeFSSpec to verify the saved FSSpec is still valid
+                FSSpec tempSpec = (*(ICFileSpecHandle)prefH)->fss;
+                err = ::FSMakeFSSpec(tempSpec.vRefNum, tempSpec.parID, tempSpec.name, fsspec);
+                if (err == noErr)
+                  rv = NS_OK;
+              }
+            }
           }
         }
+        // Best not to leave that handle laying around
+        DisposeHandle(prefH);
       }
       err = ::ICEnd(inst);
     }
