@@ -369,8 +369,19 @@ nsresult nsTableRowFrame::ResizeReflow(nsIPresContext&  aPresContext,
 
     // at this point, we know the column widths.  
     // so we get the avail width from the known column widths
-    PRInt32 cellColSpan = aState.tableFrame->GetEffectiveColSpan(((nsTableCellFrame *)kidFrame)->GetColIndex(),
-                                                                 ((nsTableCellFrame *)kidFrame));
+    PRInt32 cellColSpan;
+    // ugly, ugly conditional exception case here XXX the rest of the code isn't ready for this
+    /*
+    if (aState.tableFrame->GetRowCount()==1) {
+      //need the actual col span, not the effective, because we're counting actual columns
+      cellColSpan = ((nsTableCellFrame *)kidFrame)->GetColSpan(); 
+    }
+    else {
+    */
+      cellColSpan = aState.tableFrame->GetEffectiveColSpan(((nsTableCellFrame *)kidFrame)->GetColIndex(),
+                                                           ((nsTableCellFrame *)kidFrame));
+    /*}*/
+                                                              
     nscoord availWidth = 0;
     for (PRInt32 numColSpan=0; numColSpan<cellColSpan; numColSpan++)
     {
