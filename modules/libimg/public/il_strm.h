@@ -40,6 +40,8 @@
 #define OPAQUE_CONTEXT MWContext /* The old MWContext. */
 #endif /* IL_INTERNAL */
 
+XP_BEGIN_PROTOS
+
 #ifndef STANDALONE_IMAGE_LIB
 /********************** Image Library stream converters. *********************/
 extern int IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out,
@@ -47,7 +49,6 @@ extern int IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out,
                                         OPAQUE_CONTEXT *net_cx);
 
 /********************** Image Library stream converters. *********************/
-XP_BEGIN_PROTOS
 
 /* The standard converter for all types of images which are part of an HTML
    document. */
