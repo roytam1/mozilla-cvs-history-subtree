@@ -50,9 +50,16 @@
   width: 25em;
 }
 
+.RadioWidth {
+  width: 5em;
+}
+
+.RadioMargin {
+  margin-left: 8px;
+}
+
 .CardEditLabel {
-  padding: 0px;
-  margin-top: 3px;
+  width: 8em;
 }
 
 .alignBoxWithFieldset {

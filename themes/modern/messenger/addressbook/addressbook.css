@@ -74,6 +74,7 @@
 
 #button-newlist {
   -moz-image-region: rect(510px 49px 543px 0);
+  margin-left: 15px;
 }
 
 #button-newlist:hover {
@@ -122,6 +123,7 @@
 
 #button-delete {
   -moz-image-region: rect(408px 49px 441px 0);
+  margin-left: 15px;
 }
 
 #button-delete:hover {
@@ -135,6 +137,23 @@
 #button-delete[disabled] {
   -moz-image-region: rect(408px 199px 441px 150px) !important;
 } 
+
+#button-more {
+  -moz-image-region: rect(408px 49px 441px 0);
+  margin-left: 12px;
+}
+
+#button-more:hover {
+  -moz-image-region: rect(408px 99px 441px 50px);
+} 
+
+#button-more:hover:active {
+  -moz-image-region: rect(408px 149px 441px 100px);
+}
+
+#button-more[disabled] {
+  -moz-image-region: rect(408px 199px 441px 150px) !important;
+}
 
 /* ::::: sidebar header ::::: */
 
@@ -201,9 +220,15 @@ sidebarheader {
   cursor: pointer;
 }
 
+.CardViewLinkNoIndent {
+  margin: 0px 2px;
+  color: blue;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 #cvHomeMapIt, #cvWorkMapIt {
-  margin-left: 3px;
-  margin-bottom: -1px;
+  margin-right: 8px;
 }
 
 html|a {
