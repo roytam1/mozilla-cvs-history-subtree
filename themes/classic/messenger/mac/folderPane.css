@@ -75,12 +75,12 @@ outlinerbody:-moz-outliner-image(folderNameCol, specialFolder-Trash)
 
 
 /** Server Mail **/
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-True)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true)
 {
  list-style-image: url("chrome://messenger/skin/server-mail.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-True, open)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, open)
 {
  list-style-image: url("chrome://messenger/skin/server-mail.gif");
 }
@@ -96,19 +96,19 @@ outlinerbody:-moz-outliner-image(folderNameCol, biffState-NewMail, isServer-true
 }
 
 /* differentiate new messages on inbox/folders from biff on the server */
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-True)
+outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true)
 {
   list-style-image: url("chrome://messenger/skin/folder-new-closed.gif");
   font-weight: bold;
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-True, specialFolder-Inbox)
+outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true, specialFolder-Inbox)
 {
  list-style-image: url("chrome://messenger/skin/folder-inbox-new.gif");
  font-weight: bold;
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, newMessages-True, open)
+outlinerbody:-moz-outliner-image(folderNameCol, newMessages-true, open)
 {
  list-style-image: url("chrome://messenger/skin/folder-new-open.gif");
  font-weight: bold;
@@ -116,49 +116,49 @@ outlinerbody:-moz-outliner-image(folderNameCol, newMessages-True, open)
 
 /* IMAP folders */
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-Imap, isSecure-true)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-imap, isSecure-true)
   {
     list-style-image      : url("chrome://messenger/skin/server-remote-lock.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, open, isServer-true, serverType-Imap, isSecure-true)
+outlinerbody:-moz-outliner-image(folderNameCol, open, isServer-true, serverType-imap, isSecure-true)
 {
  list-style-image: url("chrome://messenger/skin/server-remote-lock.gif");
 }
 
 /* Local servers */
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-None)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-none)
   {
     list-style-image      : url("chrome://messenger/skin/server-local.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-None, open)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-none, open)
 {
  list-style-image: url("chrome://messenger/skin/server-local.gif");
 }
 
 /* News folders */
-outlinerbody:-moz-outliner-image(folderNameCol, serverType-Nntp)
+outlinerbody:-moz-outliner-image(folderNameCol, serverType-nntp)
   {
     list-style-image      : url("chrome://messenger/skin/folder-newsgroup.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-Nntp, isSecure-true)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true)
   {
     list-style-image      : url("chrome://messenger/skin/server-news-lock.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-Nntp, isSecure-true, open)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true, open)
 {
  list-style-image: url("chrome://messenger/skin/server-news-lock.gif");
 }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-Nntp)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp)
   {
     list-style-image      : url("chrome://messenger/skin/server-news.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-Nntp, open)
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, open)
 {
  list-style-image: url("chrome://messenger/skin/server-news.gif");
 }
@@ -192,3 +192,9 @@ treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twist
   {
     list-style-image: none;
   }
+
+#folderNameCol {
+  min-height: 0px;
+  height: 0px;
+  max-height: 0px;
+}
