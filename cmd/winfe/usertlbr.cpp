@@ -874,7 +874,7 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 		if (nIconType == LOCAL_FILE)
 			pCustomIcon = FetchLocalFileIcon(theItem);
 		else if (nIconType == ARBITRARY_URL)
-			pCustomIcon = FetchCustomIcon(theItem, this, FALSE);
+			pCustomIcon = FetchCustomIcon(theItem, m_pCachedDropMenu, FALSE);
 
 		HT_SetNodeFEData(theItem, this);
 
@@ -1378,6 +1378,11 @@ void CRDFToolbar::HandleEvent(HT_Notification ns, HT_Resource n, HT_Event whatHa
 				AddHTButton(n);
 				LayoutButtons(-1);
 			}
+			else if (whatHappened == HT_EVENT_NODE_EDIT)
+			{	
+				CRDFToolbarButton* pButton = (CRDFToolbarButton*)HT_GetNodeFEData(n);
+				pButton->AddTextEdit();
+			}
 			else if (whatHappened == HT_EVENT_NODE_VPROP_CHANGED)
 			{
 				CRDFToolbarButton* pButton = (CRDFToolbarButton*)HT_GetNodeFEData(n);
@@ -1524,7 +1529,10 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	CSize buttonSize = pButton->GetMinimalButtonSize(); // Only care about height.
 	
 	if (buttonSize.cy > m_nRowHeight)
+	{
 		m_nRowHeight = buttonSize.cy;
+		GetParentFrame()->RecalcLayout();
+	}
 	else if (buttonSize.cy < m_nRowHeight)
 	{
 		CSize size = pButton->GetBitmapSize();
@@ -2042,6 +2050,9 @@ END_MESSAGE_MAP()
 
 void CRDFToolbar::OnRButtonDown(UINT nFlags, CPoint point)
 {
+	HT_SetSelectedView(HT_GetPane(GetHTView()), GetHTView());
+	HT_SetSelection(HT_TopNode(GetHTView()));
+
 	m_MenuCommandMap.Clear();
 	HT_Cursor theCursor = HT_NewContextualMenuCursor(m_ToolbarView, PR_FALSE, PR_TRUE);
 	CMenu menu;
