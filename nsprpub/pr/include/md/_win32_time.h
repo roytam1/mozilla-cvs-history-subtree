@@ -65,13 +65,13 @@
  */
 #define _MD_FILETIME_ARITH(outFileTime, inFileTime, inOperation, inValue) \
     PR_BEGIN_MACRO \
-        ULARGE_INTEGER buffer; \
+        ULARGE_INTEGER _buffer1; \
         \
-        buffer.LowPart = inFileTime.dwLowDateTime; \
-        buffer.HighPart = inFileTime.dwHighDateTime; \
-        buffer.QuadPart = buffer.QuadPart inOperation inValue; \
-        outFileTime.dwLowDateTime = buffer.LowPart; \
-        outFileTime.dwHighDateTime = buffer.HighPart; \
+        _buffer1.LowPart = inFileTime.dwLowDateTime; \
+        _buffer1.HighPart = inFileTime.dwHighDateTime; \
+        _buffer1.QuadPart = _buffer1.QuadPart inOperation inValue; \
+        outFileTime.dwLowDateTime = _buffer1.LowPart; \
+        outFileTime.dwHighDateTime = _buffer1.HighPart; \
     PR_END_MACRO
 
 /*
@@ -80,35 +80,35 @@
  */
 #define _MD_FILETIME_2_MICROSECONDS(outTime, inFileTime) \
     PR_BEGIN_MACRO \
-        ULARGE_INTEGER buffer; \
+        ULARGE_INTEGER _buffer2; \
         \
-        buffer.LowPart = inFileTime.dwLowDateTime; \
-        buffer.HighPart = inFileTime.dwHighDateTime; \
-        outTime = buffer.QuadPart / _PR_I64_CONST(10); \
+        _buffer2.LowPart = inFileTime.dwLowDateTime; \
+        _buffer2.HighPart = inFileTime.dwHighDateTime; \
+        outTime = _buffer2.QuadPart / _PR_I64_CONST(10); \
     PR_END_MACRO
 #define _MD_FILETIME_2_MILLISECONDS(outTime, inFileTime) \
     PR_BEGIN_MACRO \
-        ULARGE_INTEGER buffer; \
+        ULARGE_INTEGER _buffer3; \
         \
-        buffer.LowPart = inFileTime.dwLowDateTime; \
-        buffer.HighPart = inFileTime.dwHighDateTime; \
-        outTime = buffer.QuadPart / _PR_I64_CONST(10000); \
+        _buffer3.LowPart = inFileTime.dwLowDateTime; \
+        _buffer3.HighPart = inFileTime.dwHighDateTime; \
+        outTime = _buffer3.QuadPart / _PR_I64_CONST(10000); \
     PR_END_MACRO
 #define _MD_FILETIME_2_SECONDS(outTime, inFileTime) \
     PR_BEGIN_MACRO \
-        ULARGE_INTEGER buffer; \
+        ULARGE_INTEGER _buffer4; \
         \
-        buffer.LowPart = inFileTime.dwLowDateTime; \
-        buffer.HighPart = inFileTime.dwHighDateTime; \
-        outTime = buffer.QuadPart / _PR_I64_CONST(10000000); \
+        _buffer4.LowPart = inFileTime.dwLowDateTime; \
+        _buffer4.HighPart = inFileTime.dwHighDateTime; \
+        outTime = _buffer4.QuadPart / _PR_I64_CONST(10000000); \
     PR_END_MACRO
 #define _MD_SECONDS_2_FILETIME(outFileTime, inTime) \
     PR_BEGIN_MACRO \
-        ULARGE_INTEGER buffer; \
+        ULARGE_INTEGER _buffer5; \
         \
-        buffer.QuadPart = (ULONGLONG)inTime * _PR_I64_CONST(10000000); \
-        outFileTime.dwLowDateTime = buffer.LowPart; \
-        outFileTime.dwHighDateTime = buffer.HighPart; \
+        _buffer5.QuadPart = (ULONGLONG)inTime * _PR_I64_CONST(10000000); \
+        outFileTime.dwLowDateTime = _buffer5.LowPart; \
+        outFileTime.dwHighDateTime = _buffer5.HighPart; \
     PR_END_MACRO
 
 /*
@@ -116,28 +116,28 @@
  */
 #define _MD_FILETIME_2_PRTime(outPRTime, inFileTime) \
     PR_BEGIN_MACRO \
-        FILETIME result; \
-        ULONGLONG conversion; \
+        FILETIME _result1; \
+        ULONGLONG _conversion1; \
         \
-        _MD_FILETIME_ARITH(result, inFileTime, -, _MD_FILETIME_1970); \
-        _MD_FILETIME_2_MICROSECONDS(conversion, result); \
-        outPRTime = (PRTime)conversion; \
+        _MD_FILETIME_ARITH(_result1, inFileTime, -, _MD_FILETIME_1970); \
+        _MD_FILETIME_2_MICROSECONDS(_conversion1, _result1); \
+        outPRTime = (PRTime)_conversion1; \
     PR_END_MACRO
 #define _MD_FILETIME_2_time_t(outTimeT, inFileTime) \
     PR_BEGIN_MACRO \
-        FILETIME result; \
-        ULONGLONG conversion; \
+        FILETIME _result2; \
+        ULONGLONG _conversion2; \
         \
-        _MD_FILETIME_ARITH(result, inFileTime, -, _MD_FILETIME_1970); \
-        _MD_FILETIME_2_SECONDS(conversion, result); \
-        outTimeT = (time_t)conversion; \
+        _MD_FILETIME_ARITH(_result2, inFileTime, -, _MD_FILETIME_1970); \
+        _MD_FILETIME_2_SECONDS(_conversion2, _result2); \
+        outTimeT = (time_t)_conversion2; \
     PR_END_MACRO
 #define _MD_time_t_2_FILETIME(outFileTime, inTimeT) \
     PR_BEGIN_MACRO \
-        FILETIME conversion; \
+        FILETIME _conversion3; \
         \
-        _MD_SECONDS_2_FILETIME(conversion, inTimeT); \
-        _MD_FILETIME_ARITH(outFileTime, conversion, +, _MD_FILETIME_1970); \
+        _MD_SECONDS_2_FILETIME(_conversion3, inTimeT); \
+        _MD_FILETIME_ARITH(outFileTime, _conversion3, +, _MD_FILETIME_1970); \
     PR_END_MACRO
 
 
@@ -146,32 +146,32 @@
  */
 #define _MD_SYSTEMTIME_2_PRTime(outPRTime, inSystemTime) \
     PR_BEGIN_MACRO \
-        FILETIME result; \
+        FILETIME _result3; \
         \
-        SystemTimeToFileTime(&inSystemTime, &result); \
-        _MD_FILETIME_2_PRTime(outPRTime, result); \
+        SystemTimeToFileTime(&inSystemTime, &_result3); \
+        _MD_FILETIME_2_PRTime(outPRTime, _result3); \
     PR_END_MACRO
 #define _MD_SYSTEMTIME_2_time_t(outTimeT, inSystemTime) \
     PR_BEGIN_MACRO \
-        FILETIME result; \
+        FILETIME _result4; \
         \
-        SystemTimeToFileTime(&inSystemTime, &result); \
-        _MD_FILETIME_2_time_t(outTimeT, result); \
+        SystemTimeToFileTime(&inSystemTime, &_result4); \
+        _MD_FILETIME_2_time_t(outTimeT, _result4); \
     PR_END_MACRO
 #define _MD_time_t_2_SYSTEMTIME(outSystemTime, inTimeT) \
     PR_BEGIN_MACRO \
-        FILETIME conversion; \
+        FILETIME _conversion4; \
         \
-        _MD_time_t_2_FILETIME(conversion, inTimeT); \
-        FileTimeToSystemTime(&conversion, &outSystemTime); \
+        _MD_time_t_2_FILETIME(_conversion4, inTimeT); \
+        FileTimeToSystemTime(&_conversion4, &outSystemTime); \
     PR_END_MACRO
 #define _MD_time_t_2_LOCALSYSTEMTIME(outSystemTime, inTimeT) \
     PR_BEGIN_MACRO \
-        FILETIME conversion; \
+        FILETIME _conversion5; \
         FILETIME localConversion; \
         \
-        _MD_time_t_2_FILETIME(conversion, inTimeT); \
-        FileTimeToLocalFileTime(&conversion, &localConversion); \
+        _MD_time_t_2_FILETIME(_conversion5, inTimeT); \
+        FileTimeToLocalFileTime(&_conversion5, &localConversion); \
         FileTimeToSystemTime(&localConversion, &outSystemTime); \
     PR_END_MACRO
 
