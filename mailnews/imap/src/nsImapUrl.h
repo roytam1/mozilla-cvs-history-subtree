@@ -100,7 +100,8 @@ protected:
   void		ParseUidChoice();
   void		ParseMsgFlags();
   void		ParseListOfMessageIds();
-  
+  void          ParseCustomMsgFetchAttribute();
+
   nsresult GetMsgFolder(nsIMsgFolder **msgFolder);
   
   char        *m_sourceCanonicalFolderPathSubString;
@@ -110,6 +111,8 @@ protected:
   char		m_onlineSubDirSeparator;
   char		*m_searchCriteriaString;	// should we use m_search, or is this special?
   nsCString     m_command;       // for custom commands
+  nsCString     m_msgFetchAttribute; // for fetching custom msg attributes
+  nsCString     m_customAttributeResult; // for fetching custom msg attributes
   PRPackedBool m_validUrl;
   PRPackedBool m_runningUrl;
   PRPackedBool m_idsAreUids;

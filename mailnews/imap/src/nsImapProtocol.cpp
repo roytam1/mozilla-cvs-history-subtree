@@ -1991,6 +1991,16 @@ void nsImapProtocol::ProcessSelectedStateURL()
           IssueUserDefinedMsgCommand(command, messageIdString);
         }
         break;
+      case nsIImapUrl::nsImapUserDefinedFetchAttribute:
+        {
+          nsXPIDLCString messageIdString;
+          nsXPIDLCString attribute;
+    
+          m_runningUrl->GetCustomAttributeToFetch(getter_Copies(attribute));
+          m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
+          FetchMsgAttribute(messageIdString, attribute);
+        }
+        break;
       case nsIImapUrl::nsImapDeleteMsg:
         {
           nsXPIDLCString messageIdString;
@@ -2512,7 +2522,23 @@ void nsImapProtocol::PipelinedFetchMessageParts(const char *uid, nsIMAPMessagePa
 }
 
 
-
+void nsImapProtocol::FetchMsgAttribute(const char * messageIds, const char *attribute)
+{
+    IncrementCommandTagNumber();
+    
+    nsCAutoString commandString (GetServerCommandTag());
+    commandString.Append(" UID fetch ");
+    commandString.Append(messageIds);
+    commandString.Append(" (");
+    commandString.Append(attribute);
+    commandString.Append(")"CRLF);
+    nsresult rv = SendData(commandString.get());
+      
+    if (NS_SUCCEEDED(rv))
+       ParseIMAPandCheckForNewMail(commandString.get());
+    GetServerStateParser().SetFetchingFlags(PR_FALSE);
+    GetServerStateParser().SetFetchingEverythingRFC822(PR_FALSE); // always clear this flag after every fetch....
+}
 
 // this routine is used to fetch a message or messages, or headers for a
 // message...

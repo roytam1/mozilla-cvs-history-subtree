@@ -3192,6 +3192,16 @@ NS_IMETHODIMP nsImapMailFolder::IssueCommandOnMsgs(const char *command, const ch
   return imapService->IssueCommandOnMsgs(m_eventQueue, this, aWindow, command, uids, url);
 }
 
+NS_IMETHODIMP nsImapMailFolder::FetchCustomMsgAttribute(const char *attribute, const char *uids, nsIMsgWindow *aWindow, nsIURI **url)
+{
+  nsresult rv;
+ nsCOMPtr<nsIImapService> imapService(do_GetService(kCImapService, &rv));
+  if (NS_FAILED(rv)) return rv;
+  // selecting the folder with m_downloadingFolderForOfflineUse true will cause
+  // us to fetch any message bodies we don't have.
+  return imapService->FetchCustomMsgAttribute(m_eventQueue, this, aWindow, attribute, uids, url);
+}
+
 nsresult nsImapMailFolder::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
                                                    nsIMsgDatabase *sourceDB, 
                                                    const char *destFolderUri,

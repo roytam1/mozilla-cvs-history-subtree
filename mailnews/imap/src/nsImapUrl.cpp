@@ -391,6 +391,28 @@ NS_IMETHODIMP nsImapUrl::GetCommand(char **result)
   return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
+
+NS_IMETHODIMP nsImapUrl::GetCustomAttributeToFetch(char **result)
+{
+  NS_ENSURE_ARG_POINTER(result);
+  *result = strdup(m_msgFetchAttribute.get());
+  return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP nsImapUrl::GetCustomAttributeResult(char **result)
+{
+  NS_ENSURE_ARG_POINTER(result);
+  *result = strdup(m_customAttributeResult.get());
+  return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP nsImapUrl::SetCustomAttributeResult(const char *result)
+{
+  m_customAttributeResult = result;
+  return NS_OK;
+}
+
+
 NS_IMETHODIMP nsImapUrl::GetImapPartToFetch(char **result) 
 {
 	//  here's the old code....
@@ -491,6 +513,13 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
       ParseUidChoice();
       ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
       ParseListOfMessageIds();
+    }
+    else if (!nsCRT::strcasecmp(m_urlidSubString, "customFetch"))
+    {
+      ParseUidChoice();
+      ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
+      ParseListOfMessageIds();
+      ParseCustomMsgFetchAttribute();
     }
     else if (!nsCRT::strcasecmp(m_urlidSubString, "deletemsg"))
     {
@@ -1494,6 +1523,10 @@ void nsImapUrl::ParseListOfMessageIds()
 	}
 }
 
+void nsImapUrl::ParseCustomMsgFetchAttribute()
+{
+  m_msgFetchAttribute = m_tokenPlaceHolder ? nsIMAPGenericParser::Imapstrtok_r(nsnull, IMAP_URL_TOKEN_SEPARATOR, &m_tokenPlaceHolder) : (char *)nsnull;
+}
 // nsIMsgI18NUrl support
 
 nsresult nsImapUrl::GetMsgFolder(nsIMsgFolder **msgFolder)

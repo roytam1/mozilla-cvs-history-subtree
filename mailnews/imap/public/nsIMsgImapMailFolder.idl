@@ -81,7 +81,8 @@ interface nsIMsgImapMailFolder : nsISupports {
 
   // this is used to issue an arbitrary imap command on the passed in msgs.
   // It assumes the command needs to be run in the selected state.
-  void issueCommandOnMsgs(in string command, in string uids, in nsIMsgWindow aWindow, out nsIURI url);
+  nsIURI issueCommandOnMsgs(in string command, in string uids, in nsIMsgWindow aWindow);
+  nsIURI fetchCustomMsgAttribute(in string msgAttribute, in string uids, in nsIMsgWindow aWindow);
   attribute boolean verifiedAsOnlineFolder;
   attribute boolean explicitlyVerify;
   attribute wchar hierarchyDelimiter;

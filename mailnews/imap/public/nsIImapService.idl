@@ -249,6 +249,12 @@ interface nsIImapService : nsISupports
                       in string aCommand,
                       in string aMessageIdentifierList);
 
+  nsIURI fetchCustomMsgAttribute(in nsIEventQueue aClientEventQueue,
+                      in nsIMsgFolder aMailFolder,
+                      in nsIMsgWindow aMsgWindow,
+                      in string aAttribute,
+                      in string aMessageIdentifierList);
+
   void getListOfFoldersOnServer(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow);
   void getListOfFoldersWithPath(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow, in string folderPath);
 

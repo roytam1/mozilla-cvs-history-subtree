@@ -1229,7 +1229,25 @@ void nsImapServerResponseParser::msg_fetch()
 			xaolenvelope_data();
 		}
 		else
-			SetSyntaxError(PR_TRUE);
+                {
+                  nsImapAction imapAction; 
+      	          fServerConnection.GetCurrentUrl()->GetImapAction(&imapAction);
+                  nsXPIDLCString userDefinedFetchAttribute;
+                  fServerConnection.GetCurrentUrl()->GetCustomAttributeToFetch(getter_Copies(userDefinedFetchAttribute));
+                  if (imapAction == nsIImapUrl::nsImapUserDefinedFetchAttribute && !strcmp(userDefinedFetchAttribute.get(), fNextToken))
+                  {
+                    fNextToken = GetNextToken();
+                    char *fetchResult = CreateParenGroup();
+                    // look through the tokens until we find the closing ')'
+                    // we can have a result like the following:
+                    // ((A B) (C D) (E F))
+                    fServerConnection.GetCurrentUrl()->SetCustomAttributeResult(fetchResult);
+                    PR_Free(fetchResult);
+                    break;
+                  }
+                  else
+                    SetSyntaxError(PR_TRUE);
+                }
 
 	}
 	
