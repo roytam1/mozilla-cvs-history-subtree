@@ -22,6 +22,7 @@
 DEPTH		= ../../..
 MODULE		= rdf
 LIBRARY_NAME	= $(LITE_PREFIX)rdf
+LIBXP		= $(DIST)/lib/libxp.$(LIB_SUFFIX)
 
 REQUIRES	= nspr dbm java js htmldlgs util img layer pref
 
@@ -54,6 +55,9 @@ CSRCS		+= \
 		  $(NULL)
 endif
 
+SPF_OBJS	= $(OBJDIR)/spf2ldif.o \
+		  $(OBJDIR)/hashtable.o
+
 LOCAL_INCLUDES	= -I$(PUBLIC)/rdf
 
 include $(DEPTH)/config/rules.mk
@@ -64,10 +68,15 @@ endif
 
 $(LIBRARY): $(OBJS)
 
-test:	$(OBJDIR)/test
+test:		$(OBJDIR)/test
+spf2ldif:	$(OBJDIR)/spf2ldif
 
-.PHONY: test
+.PHONY: test spf2ldif
 
 $(OBJDIR)/test: $(OBJDIR)/test.o $(LIBRARY)
 	    @$(MAKE_OBJDIR)
-	    $(CC) -o $@ $(OBJDIR)/test.o $(LIBRARY) $(LIBNSPR) $(LDFLAGS) $(OS_LIBS) 
+	    $(CC) -o $@ $(OBJDIR)/test.o $(LIBRARY) $(LIBNSPR) $(LIBXP) $(LDFLAGS) $(OS_LIBS) 
+	    
+$(OBJDIR)/spf2ldif: $(SPF_OBJS)  $(LIBRARY)
+	    @$(MAKE_OBJDIR)
+	    $(CC) -o $@ $(SPF_OBJS) $(LIBRARY) $(LIBNSPR) $(LIBXP) $(LDFLAGS) $(OS_LIBS) 
