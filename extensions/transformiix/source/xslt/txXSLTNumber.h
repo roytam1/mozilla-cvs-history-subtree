@@ -39,28 +39,47 @@
 #ifndef TRANSFRMX_TXXSLTNUMBER_H
 #define TRANSFRMX_TXXSLTNUMBER_H
 
-#include "ProcessorState.h"
 #include "txError.h"
+#include "TxString.h"
+#include "List.h"
+
+class txExecutionState;
+class Expr;
+class Node;
+class txPattern;
+class txIEvalContext;
+class txIMatchContext;
 
 class txXSLTNumber {
-
 public:
-    static nsresult createNumber(Element* aNumberElement, ProcessorState* aPs,
-                                 String& aResult);
-private:
-    static nsresult getValueList(Element* aNumberElement, ProcessorState* aPs,
-                                 txList& aValues, String& aValueString);
+    enum LevelType {
+        eLevelSingle,
+        eLevelMultiple,
+        eLevelAny
+    };
 
-    static nsresult getCounters(Element* aNumberElement, ProcessorState* aPs,
-                                txList& aCounters,
-                                String& aHead, String& aTail);
+    static nsresult createNumber(Expr* aValueExpr, txPattern* aCountPattern,
+                                 txPattern* aFromPattern, LevelType aLevel,
+                                 Expr* aGroupSize, Expr* aGroupSeparator,
+                                 Expr* aFormat, txIEvalContext* aContext,
+                                 String& aResult);
+
+private:
+    static nsresult getValueList(Expr* aValueExpr, txPattern* aCountPattern,
+                                 txPattern* aFromPattern, LevelType aLevel,
+                                 txIEvalContext* aContext, txList& aValues,
+                                 String& aValueString);
+
+    static nsresult getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
+                                Expr* aFormat, txIEvalContext* aContext,
+                                txList& aCounters, String& aHead, String& aTail);
 
     static PRInt32 getSiblingCount(Node* aNode, txPattern* aCountPattern,
                                    txIMatchContext* aContext);
     
     static Node* getPrevInDocumentOrder(Node* aNode);
     
-    static MBool isAlphaNumeric(UNICODE_CHAR ch);
+    static MBool isAlphaNumeric(PRUnichar ch);
 };
 
 class txFormattedCounter {

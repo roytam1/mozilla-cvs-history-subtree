@@ -43,7 +43,8 @@
 #include "txNamespaceMap.h"
 #include "txExpandedNameMap.h"
 
-extern txHandlerTable* gTxRootHandler;
+struct txStylesheetAttr;
+class txStylesheetCompilerState;
 
 typedef nsresult (*HandleStartFn) (PRInt32 aNamespaceID,
                                    txAtom* aLocalName,
@@ -86,5 +87,7 @@ private:
     txElementHandler* mOtherHandler;
     txExpandedNameMap mHandlers;
 };
+
+extern txHandlerTable* gTxRootHandler;
 
 #endif //TRANSFRMX_TXSTYLESHEETCOMPILEHANDLERS_H

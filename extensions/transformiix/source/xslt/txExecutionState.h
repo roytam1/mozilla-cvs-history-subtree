@@ -61,6 +61,7 @@ public:
     txExecutionState(txStylesheet* aStylesheet);
     ~txExecutionState();
     nsresult init(Node* aNode, txExpandedNameMap* aGlobalParams);
+    nsresult end();
 
     TX_DECL_MATCH_CONTEXT;
 

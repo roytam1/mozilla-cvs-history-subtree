@@ -43,6 +43,14 @@
 
 class txXSLTProcessor
 {
+    /**
+     * Initialisation and shutdown routines
+     * Allocate and free static atoms.
+     */
+    static MBool init();
+    static void shutdown();
+
+
     static nsresult execute(txExecutionState& aEs);
 
     // once we want to have interuption we should probably have functions for

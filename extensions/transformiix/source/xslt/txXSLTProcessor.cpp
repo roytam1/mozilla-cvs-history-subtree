@@ -38,7 +38,51 @@
 
 #include "txXSLTProcessor.h"
 #include "txInstructions.h"
+#include "txAtoms.h"
+#include "txStylesheetCompileHandlers.h"
 
+/* static */
+MBool
+txXSLTProcessor::init()
+{
+#ifdef TX_EXE
+    if (!txNamespaceManager::init())
+        return MB_FALSE;
+#endif
+
+    if (!txHTMLAtoms::init())
+        return MB_FALSE;
+    if (!txXMLAtoms::init())
+        return MB_FALSE;
+    if (!txXPathAtoms::init())
+        return MB_FALSE;
+    if (!txXSLTAtoms::init())
+        return MB_FALSE;
+    
+    if (!txHandlerTable::init())
+        return MB_FALSE;
+
+    return MB_TRUE;
+}
+
+/* static */
+void
+txXSLTProcessor::shutdown()
+{
+#ifdef TX_EXE
+    txNamespaceManager::shutdown();
+#endif
+
+    txHTMLAtoms::shutdown();
+    txXMLAtoms::shutdown();
+    txXPathAtoms::shutdown();
+    txXSLTAtoms::shutdown();
+
+    txHandlerTable::shutdown();
+}
+
+
+/* static */
 nsresult
 txXSLTProcessor::execute(txExecutionState& aEs)
 {

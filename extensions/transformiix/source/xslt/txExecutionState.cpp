@@ -73,7 +73,6 @@ txExecutionState::init(Node* aNode,
     mOutputHandler = handler;
     mResultHandler = handler;
     mOutputHandler->startDocument();
-    // XXX who calls mOutputHandler->endDocument(); ?
 
     txStylesheet::ImportFrame* frame = 0;
     mNextInstruction = mStylesheet->findTemplate(aNode, txExpandedName(),
@@ -82,6 +81,14 @@ txExecutionState::init(Node* aNode,
     NS_ENSURE_SUCCESS(rv, rv);
 
     // XXX set global parameters
+    
+    return NS_OK;
+}
+
+nsresult
+txExecutionState::end()
+{
+    mOutputHandler->endDocument();
     
     return NS_OK;
 }
