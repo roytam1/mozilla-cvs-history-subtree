@@ -2147,7 +2147,12 @@ js_DecompileValueGenerator(JSContext *cx, jsval v, JSString *fallback)
     /* Be paranoid about loading an invalid pc from sp[-depth]. */
     if (!pc)
 	goto do_fallback;
-    JS_ASSERT(JS_UPTRDIFF(pc, script->code) < (jsuword)script->length);
+
+    /*
+     * Using an object for which js_DefaultValue fails as part of an expression 
+     * blows this assert.  Disabled for now.
+     * JS_ASSERT(JS_UPTRDIFF(pc, script->code) < (jsuword)script->length);
+     */
     if (JS_UPTRDIFF(pc, script->code) >= (jsuword)script->length) {
 	pc = fp->pc;
 	if (!pc)
