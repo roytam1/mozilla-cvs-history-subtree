@@ -43,6 +43,9 @@ public:
 
   PRBool ContinueReflow(nscoord y, nscoord height);
 
+  // Responses to changes
+  void OnContentAdded(nsIPresContext& aPresContext);
+
 protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();
@@ -69,7 +72,8 @@ protected: // Data Members
   nsIFrame* mBottomFrame; // The current bottom frame in the view.
 
   PRBool mIsLazy; // Whether or not we're a lazily instantiated beast
-  
+  PRBool mIsFull; // Whether or not we have any more room.
+
   nsIFrame* mScrollbar; // Our scrollbar.
   
   nsCSSFrameConstructor* mFrameConstructor; // We don't own this. (No addref/release allowed, punk.)

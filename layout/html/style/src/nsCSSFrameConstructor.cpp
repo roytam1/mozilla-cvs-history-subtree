@@ -3979,6 +3979,20 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
       }
     }
 
+#ifdef INCLUDE_XUL
+    nsCOMPtr<nsIAtom> tag;
+    aContainer->GetTag(*getter_AddRefs(tag));
+    if (tag == nsXULAtoms::treechildren ||
+      tag == nsXULAtoms::treeitem) {
+      // Convert to a tree row group frame.
+      nsTreeRowGroupFrame* treeRowGroup = (nsTreeRowGroupFrame*)parentFrame;
+      if (treeRowGroup->IsLazy()) {
+        treeRowGroup->OnContentAdded(*aPresContext);
+        return NS_OK;
+      }
+    }
+#endif // INCLUDE_XUL
+
     // Create some new frames
     PRInt32                 count;
     nsIFrame*               firstAppendedFrame = nsnull;
@@ -4214,6 +4228,21 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext* aPresContext,
 
     // Construct a new frame
     if (nsnull != parentFrame) {
+
+#ifdef INCLUDE_XUL
+      nsCOMPtr<nsIAtom> tag;
+      aContainer->GetTag(*getter_AddRefs(tag));
+      if (tag == nsXULAtoms::treechildren ||
+        tag == nsXULAtoms::treeitem) {
+        // Convert to a tree row group frame.
+        nsTreeRowGroupFrame* treeRowGroup = (nsTreeRowGroupFrame*)parentFrame;
+        if (treeRowGroup->IsLazy()) {
+          treeRowGroup->OnContentAdded(*aPresContext);
+          return NS_OK;
+        }
+      }
+#endif // INCLUDE_XUL
+
       nsFrameItems            frameItems;
       nsFrameConstructorState state(mFixedContainingBlock,
                                     GetAbsoluteContainingBlock(aPresContext, parentFrame),

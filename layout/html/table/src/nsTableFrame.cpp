@@ -3249,8 +3249,9 @@ NS_METHOD nsTableFrame::IR_TargetIsMe(nsIPresContext&        aPresContext,
     break;
   
   case nsIReflowCommand::FrameAppended :
-    NS_ASSERTION(nsnull!=objectFrame, "bad objectFrame");
-    NS_ASSERTION(nsnull!=childDisplay, "bad childDisplay");
+    if (!objectFrame)
+      break;
+    
     if (NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP == childDisplay->mDisplay)
     {
       rv = IR_ColGroupAppended(aPresContext, aDesiredSize, aReflowState, aStatus, 

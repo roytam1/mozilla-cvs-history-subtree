@@ -29,6 +29,8 @@
 #include "nsCSSRendering.h"
 #include "nsTreeCellFrame.h"
 #include "nsCellMap.h"
+#include "nsIReflowCommand.h"
+#include "nsHTMLParts.h"
 
 //
 // NS_NewTreeFrame
@@ -55,7 +57,7 @@ NS_NewTreeRowGroupFrame (nsIFrame** aNewFrame)
 // Constructor
 nsTreeRowGroupFrame::nsTreeRowGroupFrame()
 :nsTableRowGroupFrame(), mScrollbar(nsnull), mFrameConstructor(nsnull),
- mTopFrame(nsnull), mBottomFrame(nsnull), mIsLazy(PR_FALSE)
+ mTopFrame(nsnull), mBottomFrame(nsnull), mIsLazy(PR_FALSE), mIsFull(PR_FALSE)
 { }
 
 // Destructor
@@ -167,6 +169,7 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
 { 
   // Clear ourselves out.
   mTopFrame = mBottomFrame = nsnull;
+  mIsFull = PR_FALSE;
 
   // We may just be a normal row group.
   if (!mIsLazy)
@@ -256,9 +259,34 @@ PRBool nsTreeRowGroupFrame::ContinueReflow(nscoord y, nscoord height)
 { 
   //printf("Y is: %d\n", y);
   //printf("Height is: %d\n", height); 
-  if (height <= 0)
+  if (height <= 0) {
+    mIsFull = PR_TRUE;
     return PR_FALSE;
+  }
   else
     return PR_TRUE;
 }
   
+// Responses to changes
+void nsTreeRowGroupFrame::OnContentAdded(nsIPresContext& aPresContext) 
+{
+  nsTableFrame* tableFrame;
+  nsTableFrame::GetTableFrame(this, tableFrame);
+
+  nsTreeFrame* treeFrame = (nsTreeFrame*)tableFrame;
+
+  if (IsLazy() && !mIsFull && !treeFrame->IsSlatedForReflow()) {
+    treeFrame->SlateForReflow();
+
+    // Schedule a reflow for us.
+    nsCOMPtr<nsIReflowCommand> reflowCmd;
+    
+    nsresult rv = NS_NewHTMLReflowCommand(getter_AddRefs(reflowCmd), treeFrame,
+                                          nsIReflowCommand::FrameAppended, nsnull);
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIPresShell> presShell;
+      aPresContext.GetShell(getter_AddRefs(presShell));
+      presShell->AppendReflowCommand(reflowCmd);
+    }
+  }
+}
