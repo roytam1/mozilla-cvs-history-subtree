@@ -155,9 +155,9 @@
   
   <hbox>
     <hbox id="commandBar">
-      <toolbarbutton id="cleanUpButton" 
-                     label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" 
-                     command="cmd_cleanUp"/>
+      <button id="cleanUpButton" 
+              label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" 
+              command="cmd_cleanUp"/>
     </hbox>
     
     <spacer flex="1"/>

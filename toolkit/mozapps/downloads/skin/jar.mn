@@ -5,6 +5,8 @@ classic.jar:
   skin/classic/mozapps/downloads/downloadSelected.png
   skin/classic/mozapps/downloads/downloadsBG.png
   skin/classic/mozapps/downloads/downloadIcon.png
+  skin/classic/mozapps/downloads/downloadCleanup.png
+  skin/classic/mozapps/downloads/downloadCleanupDisabled.png
   skin/classic/mozapps/downloads/downloads.css
   skin/classic/mozapps/downloads/downloads.xml
   
