@@ -272,7 +272,7 @@ PRBool pref_VerifyLockFile(char* buf, long buflen)
 }
 PRBool PREF_Init(const char *filename)
 {
-    PRBool ok = PR_FALSE, request = PR_FALSE;
+    PRBool ok = PR_TRUE, request = PR_FALSE;
     extern JSRuntime* PREF_GetJSRuntime(void);
 
     /* --ML hash test */
@@ -287,6 +287,7 @@ PRBool PREF_Init(const char *filename)
 
     if (!gMochaContext)
     {
+        ok = PR_FALSE;
         gMochaContext = JS_NewContext(gMochaTaskState, 8192);
         if (!gMochaContext)
             goto out;
