@@ -1713,7 +1713,6 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
         nsIPluginInstance * inst;
         if (NS_OK == GetPluginInstance(inst))
         {
-            NS_RELEASE(inst);
             // Look if it's windowless
             nsPluginWindow * window;
             mInstanceOwner->GetWindow(window);
@@ -1721,8 +1720,14 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
             {
                 PRUint32 hdc;
                 aRenderingContext.RetrieveCurrentNativeGraphicData(&hdc);
+                if(NS_REINTERPRET_CAST(PRUint32, window->window) != hdc)
+                {
+                    window->window = NS_REINTERPRET_CAST(nsPluginPort*, hdc);
+                    inst->SetWindow(window);
+                }
                 mInstanceOwner->Paint(aDirtyRect, hdc);
             }
+            NS_RELEASE(inst);
         }
     }
 #endif /* !XP_MAC */
