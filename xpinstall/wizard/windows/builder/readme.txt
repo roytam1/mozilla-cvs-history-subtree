@@ -60,7 +60,6 @@ IIRC, I had to:
 - Use DOS-prompt
 - Use cygwin (first perl in path).
   If using the 1.0 branch, apply patch in bug 173122.
-- cd xpinstall/wizard/windows/; make
 - cd xpinstall/wizard/windows/nsztool/; make
 - cd xpinstall/wizard/windows/nsinstall/; make
 - if you are using a build dir, copy over xpinstall/wizard/windows/builder/
