@@ -88,8 +88,10 @@ function FindNextFolder(originalFolderURI)
   startFromBeginning is a boolean that states whether or not we should start looking at the beginning
   if we reach the end 
 */
-function GoNextMessage(type, startFromBeginning )
+function GoNextMessage(type, startFromBeginning)
 {
+    GoNextMessageNWO(type, startFromBeginning);
+
 	var beforeGoNextMessage;
     if (showPerformance) {
 	    beforeGoNextMessage = new Date();
@@ -338,4 +340,31 @@ function GetTopLevelMessageForMessage(message, folder)
 
 }
 
+var nsMsgNavigationType = Components.interfaces.nsMsgNavigationType;
 
+function GoNextMessageNWO(type, startFromBeginning)
+{
+  try {
+    dump("XXX GoNextMessage(" + type + "," + startFromBeginning + ")\n");
+
+    var selection = new Object;
+    var status = gDBView.navigateStatus(nsMsgNavigationType.nextMessage, 1 /* index */,  selection, 1 /* numSelected */);
+    dump("XXX status = " + status + "\n");
+    dump("XXX selection = " + selection.value + "\n");
+
+    var resultId = new Object;
+    var resultIndex = new Object;
+    var threadIndex = new Object;
+    var resultFolder = new Object;
+
+    gDBView.viewNavigate(nsMsgNavigationType.nextMessage, 1 /* startIndex */, selection, 1 /* numSelected */, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
+    dump("XXX selection = " + selection.value + "\n");
+    dump("XXX resultID = " + resultId.value + "\n");
+    dump("XXX resultIndex = " + resultIndex.value + "\n");
+    dump("XXX threadIndex = " + threadIndex.value + "\n");
+    dump("XXX resultFolder = " + resultFolder.value + "\n");
+  }
+  catch (ex) {
+    dump("XXX ex = " + ex + "\n");
+  }
+}
