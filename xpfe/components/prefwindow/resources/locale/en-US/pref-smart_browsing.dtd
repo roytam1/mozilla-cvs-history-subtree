@@ -33,5 +33,5 @@
 
 <!ENTITY  autoCompleteHeader.label          "Location Bar Autocomplete">
 <!ENTITY  autoCompleteDescription.label     "Automatically completes text typed into Location bar">
-<!ENTITY  autoCompleteEnabled.label                 "Enable Location bar autoomplete">
+<!ENTITY  autoCompleteEnabled.label                 "Enable Location bar autocomplete">
 <!ENTITY  autoCompleteEnabled.accesskey             "l">
