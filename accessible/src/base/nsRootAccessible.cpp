@@ -366,12 +366,14 @@ nsDocAccessibleMixin::~nsDocAccessibleMixin()
 {
 }
 
-NS_IMETHODIMP nsDocAccessibleMixin::GetURL(PRUnichar **aURL)
-{  
-  nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
+NS_IMETHODIMP nsDocAccessibleMixin::GetURL(nsAWritableString& aURL)
+{ 
+  nsCOMPtr<nsIURI> pURI(dont_AddRef(mDocument->GetDocumentURL()));
+  // When merging, change above to:
+  // mDocument->GetDocumentURL(getter_AddRefs(pURI));
   nsXPIDLCString path;
   pURI->GetSpec(getter_Copies(path));
-  *aURL = ToNewUnicode(nsDependentCString(path));
+  CopyASCIItoUCS2(nsDependentCString(path), aURL);
   return NS_OK;
 }
 
