@@ -446,8 +446,14 @@ nsSmtpServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
             rv = GetServerURI(getter_Copies(serverUri));
             if (NS_FAILED(rv))
                 return rv;
+            nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
+            PRBool passwordProtectLocalCache = PR_FALSE;
+
+            (void) prefBranch->GetBoolPref( "mail.password_protect_local_cache", &passwordProtectLocalCache);
+
+            PRUint32 savePasswordType = (passwordProtectLocalCache) ? nsIAuthPrompt::SAVE_PASSWORD_FOR_SESSION : nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY;
             rv = aDialog->PromptPassword(aPromptTitle, aPromptMessage, 
-                    NS_ConvertASCIItoUCS2(serverUri).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+                    NS_ConvertASCIItoUCS2(serverUri).get(), savePasswordType,
                     getter_Copies(uniPassword), &okayValue);
             if (NS_FAILED(rv))
                 return rv;
