@@ -22,10 +22,7 @@
 ** lth. Jul-1999.
 */
 #include <string.h>
-#include <prshm.h>
-#include <prerr.h>
-#include <prmem.h>
-#include <private/primpl.h>       
+#include "primpl.h"
 
 extern PRLogModuleInfo *_pr_shm_lm;
 
