@@ -48,6 +48,10 @@
 #define PL_ARENA_CONST_ALIGN_MASK 3
 #include "plarena.h"
 
+#ifdef DEBUG
+#include <stdio.h>
+#endif
+
 class nsStaticAtomWrapper;
 
 /**

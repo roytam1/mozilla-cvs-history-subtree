@@ -342,7 +342,7 @@ class NS_COM nsTAString
 
     protected:
 
-      nsTAString( const self_type& readable );
+      //nsTAString( const self_type& readable );
         /*
         : mVTable(readable.mVTable)
         {}

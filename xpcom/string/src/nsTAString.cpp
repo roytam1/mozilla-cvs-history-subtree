@@ -53,7 +53,17 @@
    * In most cases we will avoid the vtable.
    */
 
-  // MSVC6 does not support template instantiation of destructors
+
+#ifdef _MSC_VER
+
+  /** 
+   * MSVC6 does not support template instantiation of destructors, so we
+   * need to specialize the destructors manually.
+   *
+   * Unfortunately, GCC 2.96 cannot compile this code, so we use the
+   * template instantation approach for non-MSVC compilers.
+   */ 
+  
 NS_SPECIALIZE_TEMPLATE
 nsTAString<char>::~nsTAString()
   {
@@ -70,6 +80,23 @@ nsTAString<PRUnichar>::~nsTAString()
     else
       AsObsoleteString()->~nsTObsoleteAString();
   }
+
+#else // !_MSC_VER
+
+template <class CharT>
+nsTAString<CharT>::~nsTAString()
+  {
+    if (mVTable == obsolete_string_type::sCanonicalVTable)
+      AsString()->ReleaseData();
+    else
+      AsObsoleteString()->~nsTObsoleteAString();
+  }
+
+template nsTAString<char>::~nsTAString();
+template nsTAString<PRUnichar>::~nsTAString();
+
+#endif
+
 
 template <class CharT>
 typename
