@@ -27,6 +27,7 @@
 
 interface nsIImageFrame;
 interface nsIEnumerator;
+interface nsIImageContainerObserver;
 
 /**
  * nsIImageContainer interface
@@ -41,11 +42,15 @@ interface nsIImageContainer : nsISupports
   /**
    * Create a new \a aWidth x \a aHeight sized image container.
    *
-   * @param aWidth The width of the container in which all the nsIImageFrame children will fit.
-   * @param aHeight The height of the container in which all the nsIImageFrame children will fit.
+   * @param aWidth The width of the container in which all the
+   *               nsIImageFrame children will fit.
+   * @param aHeight The height of the container in which all the
+   *                nsIImageFrame children will fit.
+   * @param aObserver Observer to send animation notifications to.
    */
   void init(in nscoord aWidth,
-            in nscoord aHeight);
+            in nscoord aHeight,
+            in nsIImageContainerObserver aObserver);
 
 
   /* this should probably be on the device context (or equiv) */

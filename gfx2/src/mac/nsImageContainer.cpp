@@ -40,9 +40,8 @@ nsImageContainer::~nsImageContainer()
 
 
 
-
-/* void init (in nscoord aWidth, in nscoord aHeight); */
-NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight)
+/* void init (in nscoord aWidth, in nscoord aHeight, in nsIImageContainerObserver aObserver); */
+NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, nsIImageContainerObserver *aObserver)
 {
   if (aWidth <= 0 || aHeight <= 0) {
     printf("error - negative image size\n");

@@ -35,6 +35,7 @@ XPIDLSRCS	= \
 		gfx2types.idl \
 		nsIGFXFormat.idl \
 		nsIImageContainer.idl \
+		nsIImageContainerObserver.idl \
 		nsIImageFrame.idl \
 		$(NULL)
 

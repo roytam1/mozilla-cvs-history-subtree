@@ -24,9 +24,13 @@
 #include "nsIImageContainer.h"
 #include "nsPIImageContainerGtk.h"
 
+#include "nsIImageContainerObserver.h"
+
 #include "nsSize.h"
 
 #include "nsSupportsArray.h"
+
+#include "nsCOMPtr.h"
 
 #define NS_IMAGECONTAINER_CID \
 { /* 5e04ec5e-1dd2-11b2-8fda-c4db5fb666e0 */         \
@@ -52,5 +56,7 @@ private:
   nsSupportsArray mFrames;
   nsSize mSize;
   PRUint32 mCurrentFrame;
+
+  nsCOMPtr<nsIImageContainerObserver> mObserver;
 };
 
