@@ -22,13 +22,13 @@
 
 package Mozilla::LDAP::LDIF;
 
-use vars qw($VERSION); $VERSION = "0.05";
+use vars qw($VERSION); $VERSION = "0.07";
 
 require Exporter;
 @ISA       = qw(Exporter);
 @EXPORT    = qw();
 @EXPORT_OK = qw(get_LDIF put_LDIF unpack_LDIF pack_LDIF set_Entry
-	references sort_attributes sort_entry
+	references next_attribute sort_attributes sort_entry
 	delist_values enlist_values condense
 	LDIF_get_DN get_DN
 	read_v0 read_file_name read_v1 read_file_URL read_file_URL_or_name);
@@ -319,15 +319,54 @@ sub put
 #############################################################################
 # Utilities
 
+sub _eval { return eval $_[$[]; }
+sub _call { return &{$_[$[]} ($_); }
+sub _undef { return; }
+
+sub next_attribute
+{
+    my ($record, $offset) = @_;
+    use integer;
+    if (not defined $offset) { $offset = -2;
+    } elsif ($offset % 2)  { --$offset; # make it even
+    }
+    my $i = $[ + $offset;
+ATTRIBUTE:
+    while (($i += 2) < $#$record) {
+	my $value = \${$record}[$i+1];
+	next unless defined $$value; # ignore comments and "-" lines
+	my $option;
+	for ($option = $[ + 2; $option < $#_; $option += 2) {
+	    my ($keyword, $expression) = (lc $_[$option], $_[$option+1]);
+	    my $exprType = ref $expression;
+	    my $evaluate = $exprType ? (($exprType eq "CODE") ? \&_call
+	                                                      : \&_undef)
+	                             : \&_eval;
+	    my $OK = 0;
+	    if  ("name" eq $keyword or "type" eq $keyword) {
+		foreach $_ (${$record}[$i]) {
+		    last if ($OK = &$evaluate ($expression));
+		}
+	    } elsif ("value" eq $keyword) {
+		foreach $_ (((ref $$value) eq "ARRAY") ? @$$value : $$value) {
+		    last if ($OK = &$evaluate ($expression));	
+		}
+	    } # else unsupported keyword
+	    next ATTRIBUTE unless $OK;
+	}
+	return $i - $[;
+    }
+    return undef;
+}
+
 sub references
 {
     my @refs;
     use integer;
     foreach my $record ((_to_LDIF_records \@_) ? \@_ : @_) {
-	my $i;
-	for ($i = $[+1; $i <= $#$record; $i += 2) {
-	    my $vref = \${$record}[$i];
-	    next unless defined ($$vref);
+	my $i = undef;
+	while (defined ($i = next_attribute ($record, $i))) {
+	    my $vref = \${$record}[$[+$i+1];
 	    my $vtype = ref $$vref;
 	    if ($vtype eq "ARRAY") { # a list
 		foreach my $value (@$$vref) {
@@ -431,7 +470,7 @@ sub delist_values
 		push @result, ($attr, $value);
 	    }
 	}
-	if ($i == @$record) { # weird.  Well, don't lose it:
+	if ($i == $#$record + 1) { # weird.  Well, don't lose it:
 	    push @result, ${$record}[$i-1];
 	}
 	foreach my $r (references (\@result)) { # don't return the same reference
@@ -455,18 +494,16 @@ sub _byAttrValue
 }
 
 sub _shiftAttr
-    # Given an reference to an LDIF record, remove the first two elements
+    # Given a reference to an LDIF record, remove the first two elements
     # (usually an attribute type and value) and also any subsequent
     # non-attributes (comments, "-" lines or non-LDIF lines).
     # Return a reference to an array containing the removed values.
 {
     my ($from) = @_;
-    my @into;
-    while (1) {
-	my ($attr, $value) = splice @$from, 0, 2;
-	push @into, ($attr, $value);
-	last unless @$from and not defined $$from[$[+1];
-    }
+    my $next = next_attribute ($from, 0);
+    return [ splice @$from, 0, $next ] if defined $next;
+    my @into = splice @$from, 0;
+    push @into, (undef) if (@into % 2);
     return \@into;
 }
 
@@ -524,14 +561,9 @@ sub get_DN
     }
     my @DNs;
     foreach my $record ($single ? \@_ : @_) {
-	my ($i, $value);
-	for ($i = $[+1; $i <= $#$record; $i += 2) {
-	    $value = $record->[$i];
-	    next if not defined $value; # ignore leading comments
-	    $value = undef unless ("dn" eq lc $record->[$i-1]);
-	    last;
-	}
-	push @DNs, $value;
+	my $i = next_attribute ($record);
+	push @DNs, (((defined $i) and ("dn" eq lc $record->[$[+$i])) ?
+		$record->[$[+$i+1] : undef);
     }
     return $single ? $DNs[$[] : @DNs;
 }
@@ -585,9 +617,10 @@ sub set_Entry
     foreach my $r (references ($record)) {
 	read_file_URL_or_name ($$r);
     }
-    while (@$record >= 2) {
+    my $skip;
+    while (defined ($skip = next_attribute ($record))) {
+	if ($skip) { splice @$record, 0, $skip; }
 	my ($attr, $value) = splice @$record, 0, 2;
-	next unless defined $value; # ignore comments and non-LDIF lines
 	if ("dn" eq lc $attr) { $entry->setDN ($value);
 	} else { $entry->{$attr} = ((ref $value) eq "ARRAY") ? $value : [$value];
 	}
@@ -728,16 +761,18 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
  $string = pack_LDIF ($options, @record);
  $string = pack_LDIF ($options, \@record, \object ...);
 
- @record = sort_attributes (@record);
-
  @record = enlist_values (@record);
  @record = delist_values (@record);
 
- @references = references (@record);
- @references = references (\@record, \object ...);
+ @record = sort_attributes (@record);
 
  $DN  = LDIF_get_DN (@record); # alias get_DN
  @DNS = LDIF_get_DN (\@record, \object ...); # alias get_DN
+
+ $offset = next_attribute (\@record, $offset, @options);
+
+ @references = references (@record);
+ @references = references (\@record, \object ...);
 
  $success = read_v1 (\$url);  # alias read_file_URL
  $success = read_v0 (\$name); # alias read_file_name
@@ -1054,6 +1089,43 @@ as an array with one element for each parameter.
 If a given record's first attribute isn't a DN,
 the corresponding element of the returned array is undef.
 
+=item next_attribute (\@record, $offset, @options)
+
+Return the offset of an attribute type in the given record.
+Search forward, starting at $offset + 1, or 0 if $offset is not defined.
+Return undef if no attribute is found.
+The @options list is composed of zero or more of the following:
+
+=over 4
+
+=item C<name =E<gt> >I<expression>
+
+=item C<type =E<gt> >I<expression>
+
+Don't return an offset unless the given I<expression> evaluates to TRUE,
+with $_ aliased to the attribute type name.
+
+=item C<value =E<gt> >I<expression>
+
+Don't return an offset unless the given I<expression> evaluates to TRUE,
+with $_ aliased to one of the attribute values.
+
+=back
+
+In either case, the I<expression> may be a string, which is simply
+evaluated (using B<eval>), or
+a reference to a subroutine, which is called with $_ as its only parameter.
+The value returned by B<eval> or the subroutine is taken as the
+result of evaluation.
+
+If no options are given, the offset of the next attribute is returned.
+
+Option expressions can modify the record,
+since they are passed an alias to an element of the record.
+An option can selectively prevent the evaluation of subsequent options:
+options are evaluated in the order they appear in the @options list, and
+if an option evaluates to FALSE, subsequent options are not evaluated.
+
 =back
 
 =head1 DIAGNOSTICS
@@ -1106,12 +1178,23 @@ to pass it only a single record.
         add $conn ($entry);
     }
 
-    use Mozilla::LDAP::LDIF qw(get_LDIF put_LDIF references read_v1 sort_attributes);
+    use Mozilla::LDAP::LDIF qw(get_LDIF put_LDIF
+        references read_v1 next_attribute sort_attributes);
 
     while (@record = get_LDIF (*STDIN, $eof)) {
+        # Resolve all the file URLs:
         foreach my $r (references (@record)) {
             read_v1 ($$r);
         }
+        # Capitalize all the attribute names:
+        for ($r = undef; defined ($r = next_attribute (\@record, $r)); ) {
+            $record[$r] = ucfirst $record[$r];
+        }
+        # Capitalize all the title values:
+        next_attribute (\@record, undef,
+                        type => '"title" eq lc $_',
+                        value => '$_ = ucfirst; 0');
+	# Sort the attributes and output the record, 78 characters per line:
         put_LDIF (*STDOUT, 78, sort_attributes (@record));
         last if $eof;
     }
