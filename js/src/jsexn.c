@@ -65,7 +65,6 @@ exn_initPrivate(JSContext *cx, JSErrorReport *report)
 {
     JSExnPrivate *newPrivate;
     JSErrorReport *newReport;
-    size_t len;
 
     newPrivate = (JSExnPrivate *)JS_malloc(cx, sizeof (JSExnPrivate));
 
@@ -208,7 +207,6 @@ js_ReportUncaughtException(JSContext *cx) {
     JSString *str;
     jsval exn;
     JSErrorReport *reportp;
-    JSBool rooted;
     
     if (!JS_IsExceptionPending(cx))
         return JS_FALSE;
@@ -436,7 +434,6 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
 {
     int i;
     JSObject **protos;
-    JSBool ok;
 
     /*
      * The browser seems to call js_InitExceptionClasses on a context
@@ -446,10 +443,8 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
     if (cx->exceptionProtos == NULL)
         cx->exceptionProtos =
             JS_malloc(cx, sizeof(JSObject *) * JSEXN_LIMIT + 1);
-    if (!cx->exceptionProtos) {
-        ok = JS_FALSE;
-        goto out;
-    }
+    if (!cx->exceptionProtos)
+        return NULL;
     protos = cx->exceptionProtos;
     
     /* Initialize the prototypes first. */
@@ -461,17 +456,13 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
         protos[i] = js_NewObject(cx, &exn_class,
                                  protoidx >= 0 ? protos[protoidx] : NULL,
                                  obj);
-        if (!protos[i]) {
-            ok = JS_FALSE;
-            goto out;
-        }
+        if (!protos[i])
+            return NULL;
         
         /* proto bootstrap bit from JS_InitClass omitted. */
         nameString = JS_NewStringCopyZ(cx, exceptions[i].name);
-        if (nameString == NULL) {
-            ok = JS_FALSE;
-            goto out;
-        }
+        if (nameString == NULL)
+            return NULL;
         
         /* Add the name property to the prototype. */
         if (!JS_DefineProperty(cx, protos[i], js_name_str,
@@ -479,8 +470,7 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
                                NULL, NULL,
                                JSPROP_ENUMERATE)) {
             /* release it? */
-            ok = JS_FALSE;
-            goto out;
+            return NULL;
         }   
         
         /* So finalize knows whether to. */
@@ -500,25 +490,16 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
      */
     if (!JS_DefineProperty(cx, protos[0], "message",
                            STRING_TO_JSVAL(cx->runtime->emptyString),
-                           NULL, NULL, JSPROP_ENUMERATE)) {
-        ok = JS_FALSE; 
-        goto out;
-    }
+                           NULL, NULL, JSPROP_ENUMERATE))
+        return NULL;
     
     /*
      * Add methods only to Exception.prototype, because ostensibly all
      * exception types delegate to that.
      */
-    if (!JS_DefineFunctions(cx, protos[0], exception_methods)) {
-        ok = JS_FALSE;
-        goto out;
-    }
-
-    ok = JS_TRUE;
-out:
-    if (!ok)
+    if (!JS_DefineFunctions(cx, protos[0], exception_methods))
         return NULL;
-    
+
     /*
      * Now that we have all these nice prototypes to attach to,
      * create a bunch of functions to attach to them.
@@ -538,7 +519,7 @@ out:
         /* Make the prototype and constructor links. */
         if (!js_SetClassPrototype(cx, fun->object, protos[i],
                                   JSPROP_READONLY | JSPROP_PERMANENT))
-            return JS_FALSE;
+            return NULL;
     }
 
     return protos[0];
