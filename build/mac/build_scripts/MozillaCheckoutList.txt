@@ -14,7 +14,7 @@ mozilla/accessible, MOZILLA_1_2_BRANCH
 mozilla/directory/c-sdk,    MOZILLA_1_2_BRANCH
 mozilla/lib/mac/Instrumentation, MOZILLA_1_2_BRANCH
 mozilla/modules/libpr0n, MOZILLA_1_2_BRANCH
-SeaMonkeyAll, MOZILLA_1_2_BRANCH
+SeaMonkeyAll, ANGELON_MOZ12_BRANCH
 ## You need this if you want to be able to use SVG
 ## Note that this library is under the LGPL, not the MPL
 #mozilla/other-licenses/libart_lgpl
