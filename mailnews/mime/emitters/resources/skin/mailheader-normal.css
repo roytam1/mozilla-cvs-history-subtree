@@ -2,8 +2,9 @@
  * Window behavior for scrolling and general header color
  * attributes
  */
-window      { overflow: auto; }
-mailheader  { display: block; background-color:  #E0E0E0; }
+window          { overflow: auto; }
+mailheader      { display: block; background-color:  #E0E0E0; }
+mailattachcount { display: none; }
 
 /**************************************************
  * These are all the headers that are displayed
