@@ -326,6 +326,7 @@ private:
   nsresult        AddMemberToList(nsIAbCard *listCard, nsIAbCard *newCard);
   nsresult        ChangeMailingListName(nsIAbDirectory *directory, nsString listName, nsIAbCard *listCard);
   nsresult        DeleteMemberFromList(nsIAddrDatabase *aDatabase, nsIAbCard *listCard, PRInt32 memberLocalID);
+  nsresult        DeleteAllEmailMemberCards(syncListMappingRecord *listRecord);
   PRBool          MemberAlreadyExists(syncListMappingRecord *listRecord, PRInt32 localID, PRInt32 serverID);
   nsresult        AddGroupsValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTagValue);
   nsresult        InitNewTables();

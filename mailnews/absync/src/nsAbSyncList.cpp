@@ -81,21 +81,22 @@ extern PRLogModuleInfo *ABSYNC;
 //
 // Each list is stored as a single line in the history file in the following sequence: 
 //
-//  list1_key/list1_server_id,
+//  CRC_of_email_members/list1_key/list1_server_id,
 //  list1_member1_key/list1_member1_server_id,
 //  list1_member2_key/list1_member2_server_id,
 //  etc.
 //
 // Examples: (list whose local key is 52 does not have any members):
 //
-// 52/73
-// 57/91,55/88,56/89 (with two members (55/88 and 56/89))
+// 0/52/73
+// 3710889628/57/91,55/88,56/89 (2 members:55/88 & 56/89 and member 56 is type 'email')
 //
 // The file is loaded into memory in the following structure:
 //
 //  typedef struct {
 //    PRInt32       serverID;
 //    PRInt32       localID;
+//    ulong         CRC;
 //    nsUInt32Array memServerID;
 //    nsUInt32Array memLocalID;
 //    nsUInt32Array memFlags;
@@ -398,10 +399,10 @@ nsresult nsAbSync::SaveCurrentListsToHistoryFile()
 //   CRC/52/73
 //   CRC/57/91,55/88,56/89
 //
-// Notet that 'crc' is the the check sum of all the email addresses from the 'eamil
-// adress' type of members and is used to tell if we need to send server a list of
-// new email addresses. This happens when the card of type 'email address' is edited
-// and crd seems to be the best way to tell if something has changed (instead storing
+// Notet that 'crc' is the check sum of all the email addresses from the 'eamil
+// adress' type of members and is used to tell if we need to send servers a list of
+// new email addresses. This happens when cards of type 'email address' are edited
+// and crc seems to be the best way to tell if something has changed (instead storing
 // all email addresses in the history file).
 //
 void nsAbSync::ConvertListMappingEntryToString(syncListMappingRecord &listRecord, char **result)
@@ -1450,11 +1451,6 @@ nsAbSync::DeleteMailingLists()
   if (NS_FAILED(InitNewTables()))
     goto EarlyExit;
 
-  // This is the list of cards that will be deleted later.
-  //nsCOMPtr <nsISupportsArray> cardsToDelete;
-  //rv = NS_NewISupportsArray(getter_AddRefs(cardsToDelete));
-  //NS_ENSURE_SUCCESS(rv,rv);
-
   // Find the list local ids (keys) and remove the cards from database.
   PRInt32 i, j;
   for (i = 0; i < delCount; i++)
@@ -1486,24 +1482,15 @@ nsAbSync::DeleteMailingLists()
             // Reset server id so we don't save it to history table later.
             rv = LocateExistingListRecord(listLocalID, &listRecord);
             listRecord->serverID = 0;
+            // Now delete cards associated with email members.
+            DeleteAllEmailMemberCards(listRecord);
           }
         }
-        //nsCOMPtr<nsIAbCard> listCard;
-        //if (NS_FAILED(FindCardBySserverID(listID, aDatabase, directory, getter_AddRefs(listCard))))
-        //  continue;
-
-        //nsCOMPtr<nsISupports> supports = do_QueryInterface(listCard, &rv);
-        //if (NS_FAILED(rv))
-        //  continue;
-        
-        //if (NS_FAILED(cardsToDelete->AppendElement(supports)))
-        //  continue;
       }
     }
   }  
 
 EarlyExit:
-  //rv = directory->DeleteCards(cardsToDelete);
   if (aDatabase)
     aDatabase->Close(PR_TRUE);
   NS_IF_RELEASE(aDatabase);
@@ -2016,6 +2003,19 @@ EarlyExit:
   return rv;
 }
 
+nsresult nsAbSync::DeleteAllEmailMemberCards(syncListMappingRecord *listRecord)
+{
+  nsresult rv = NS_OK;
+  PRUint32 cnt = listRecord->memLocalID.GetSize();
+  for (PRUint32 i = 0; i < cnt; i++)
+    if ( (GetCardTypeByMemberId(listRecord->memLocalID.GetAt(i)) & SYNC_IS_AOL_ADDITIONAL_EMAIL) )
+    {
+      rv |= DeleteCardByServerID(listRecord->memServerID.GetAt(i));
+      listRecord->memServerID.SetAt(i, 0);
+    }
+  return rv;
+}
+
 // Input id string is separated by a single space like:
 //   112 113 114
 nsresult nsAbSync::ParseEmailMemberIds(nsString *idString, nsUInt32Array &memberServerIDs)
@@ -2090,6 +2090,4 @@ nsresult nsAbSync::ParseEmailMemberAddresses(nsString *addrString, nsVoidArray &
   }
   return NS_OK;
 }
-
-
 
