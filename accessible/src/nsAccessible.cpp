@@ -404,8 +404,8 @@ PRBool nsDOMTreeWalker::GetAccessible()
   mAccessible = nsnull;
 
   return (mAccService &&
-    NS_SUCCEEDED(mAccService->GetAccessibleFor(mDOMNode, getter_AddRefs(mAccessible))) &&
-    mAccessible);
+          NS_SUCCEEDED(mAccService->GetAccessibleFor(mDOMNode, getter_AddRefs(mAccessible))) &&
+          mAccessible);
 }
 
 
@@ -584,7 +584,8 @@ nsresult nsAccessible::GetTranslatedString(PRUnichar *aKey, nsAWritableString *a
   if (firstTime) {
     firstTime = PR_FALSE;
     nsresult rv;
-    NS_WITH_SERVICE(nsIStringBundleService, stringBundleService, kStringBundleServiceCID, &rv);
+    nsCOMPtr<nsIStringBundleService> stringBundleService = 
+             do_GetService(kStringBundleServiceCID, &rv);
     // nsCOMPtr<nsIStringBundleService> stringBundleService(do_GetService(kStringBundleServiceCID, &rv));
     if (!stringBundleService) { 
       NS_WARNING("ERROR: Failed to get StringBundle Service instance.\n");
@@ -608,11 +609,15 @@ NS_IMETHODIMP nsAccessible::GetAccState(PRUint32 *aAccState)
   nsresult rv = NS_OK; 
   *aAccState = 0;
 
-  if (NS_SUCCEEDED(rv) && mFocusController) {
-    nsCOMPtr<nsIDOMElement> focusedElement, currElement(do_QueryInterface(mDOMNode));
-    mFocusController->GetFocusedElement(getter_AddRefs(focusedElement));
-    if (focusedElement == currElement)
-      *aAccState |= STATE_FOCUSED;
+  nsCOMPtr<nsIDOMElement> currElement(do_QueryInterface(mDOMNode));
+  if (currElement) {
+    *aAccState |= STATE_FOCUSABLE;
+    if (mFocusController) {
+      nsCOMPtr<nsIDOMElement> focusedElement; 
+      rv = mFocusController->GetFocusedElement(getter_AddRefs(focusedElement));
+      if (NS_SUCCEEDED(rv) && focusedElement == currElement)
+        *aAccState |= STATE_FOCUSED;
+    }
   }
 
   return rv;
@@ -1465,7 +1470,7 @@ NS_IMETHODIMP nsLinkableAccessible::GetAccState(PRUint32 *_retval)
   nsAccessible::GetAccState(_retval);
   *_retval |= STATE_READONLY | STATE_SELECTABLE;
   if (IsALink()) {
-    *_retval |= STATE_FOCUSABLE | STATE_LINKED;
+    *_retval |= STATE_LINKED;
     if (mIsLinkVisited)
       *_retval |= STATE_TRAVERSED;
   }
