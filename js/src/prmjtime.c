@@ -210,7 +210,7 @@ PRMJ_LocalGMTDifference()
 #define G2037GMTMICROLOW       0x7a238000 /* micro secs to 2037 low */
 
 /* Convert from base time to extended time */
-static IMPLEMENT(JSInt64)
+static JSInt64
 PRMJ_ToExtendedTime(JSInt32 time)
 {
     JSInt64 exttime;
