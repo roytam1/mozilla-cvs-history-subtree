@@ -263,6 +263,14 @@ function nsJunkmail() {}
 
 nsJunkmail.prototype = {
 
+    move: true,
+
+    threshhold: 255.0,
+
+    logStream: {},
+
+    dummyFilterObj: {},
+
     init: function(aServerPrefsKey) {
 
         if (!gPrefs) {
@@ -287,6 +295,10 @@ nsJunkmail.prototype = {
             + "@"  + 
             gPrefs.getCharPref("mail.server." + aServerPrefsKey + ".hostname")
             + "/Junk Mail");
+        
+        this.threshhold = Number(
+            gPrefs.getCharPref("mail.server." + aServerPrefsKey 
+                               + ".junkmail.threshhold"));
 
         // the logfile is called "junklog.txt" in the server directory
         // XXX needs to a complex pref
@@ -627,7 +639,7 @@ nsJunkmail.prototype = {
         // XXX don't hardcode this
         //
         aMsgHdr.setStringProperty("score", msgScore);
-        if (msgScore >= 3.1) {
+        if (msgScore >= this.threshhold) {
             aListener.applyFilterHit(this.dummyFilterObj, aMsgWindow);
         }
 
