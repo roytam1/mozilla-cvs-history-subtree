@@ -654,7 +654,23 @@ MailFolder::AddMessage(PRUnichar* uri, MailFolder* folder,
     return NS_OK;
 }
 
-
+char*
+trimString (char* str) {
+    size_t len = strlen(str);
+    size_t n = len-1;
+    while (n > 0) {
+        if ((str[n] == ' ') || (str[n] == '\n') || (str[n] == '\r')) {
+            str[n--] = '\0';
+        } else break;
+    } 
+    n = 0;
+    while (n < len) {
+        if ((str[n] == ' ') || (str[n] == '\n') || (str[n] == '\r')) {
+            n++;
+        } else break;
+    }
+    return &str[n];
+}
 
 nsresult
 MailFolder::ReadSummaryFile (char* url)
@@ -682,22 +698,22 @@ MailFolder::ReadSummaryFile (char* url)
     mf = openFileWR(fileurl);
 
 
-    while (0 && mSummaryFile && fgets(buff, BUFF_SIZE, mSummaryFile)) {
+    while (mSummaryFile && fgets(buff, BUFF_SIZE, mSummaryFile)) {
       if (startsWith("Status:", buff)) {
           summaryFileFound = 1;
           flags = PL_strdup(&buff[8]);
           fgets(buff, BUFF_SIZE, mSummaryFile);
           sscanf(&buff[9], "%d", &summOffset);
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          nsAutoString pfrom(&buff[6]);
+          nsAutoString pfrom(trimString(&buff[6]));
           gRDFService->GetUnicodeResource(pfrom, &rFrom);
            
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          nsAutoString psubject(&buff[8]);
+          nsAutoString psubject(trimString(&buff[8]));
           gRDFService->GetLiteral(psubject, &rSubject);
            
           fgets(buff, BUFF_SIZE, mSummaryFile);
-          nsAutoString pdate(&buff[6]);
+          nsAutoString pdate(trimString(&buff[6]));
           gRDFService->GetLiteral(pdate, &rDate);
           
           fgets(buff, BUFF_SIZE, mSummaryFile);
