@@ -141,8 +141,10 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                 if (namespaceID == kNameSpaceID_Unknown)
                     return NS_ERROR_XSLT_PARSE_FAILURE;
 
-                mState.mElementContext->
-                    mInstructionNamespaces.add(NS_INT32_TO_PTR(namespaceID));
+                if (!mState.mElementContext->mInstructionNamespaces.
+                        AppendElement(NS_INT32_TO_PTR(namespaceID))) {
+                    return NS_ERROR_OUT_OF_MEMORY;
+                }
             }
         }
 
@@ -169,10 +171,10 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
 
     // Find the right elementhandler and execute it
     MBool isInstruction = MB_FALSE;
-    txListIterator iter(&mState.mElementContext->mInstructionNamespaces);
-    PRInt32 instrID;
-    while ((instrID = NS_PTR_TO_INT32(iter.next()))) {
-        if (instrID == aNamespaceID) {
+    PRInt32 count = mState.mElementContext->mInstructionNamespaces.Count();
+    for (i = 0; i < count; ++i) {
+        if (NS_PTR_TO_INT32(mState.mElementContext->mInstructionNamespaces[i]) ==
+            aNamespaceID) {
             isInstruction = MB_TRUE;
             break;
         }
@@ -273,8 +275,6 @@ txStylesheetCompiler::ensureNewElementContext()
     txElementContext* context = new txElementContext(*mState.mElementContext);
     NS_ENSURE_TRUE(context, NS_ERROR_OUT_OF_MEMORY);
 
-    context->mDepth = 0;
-
     nsresult rv = mState.pushObject(mState.mElementContext);
     if (NS_FAILED(rv)) {
         delete context;
@@ -322,19 +322,8 @@ txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
     // XXX Embedded stylesheets have another handler. Probably
     mHandlerTable = gTxRootHandler;
 
-    mElementContext = new txElementContext;
+    mElementContext = new txElementContext(aBaseURI);
     if (!mElementContext) {
-        // XXX invalidate
-        return;
-    }
-
-    mElementContext->mPreserveWhitespace = MB_FALSE;
-    mElementContext->mForwardsCompatibleParsing = MB_TRUE;
-    mElementContext->mBaseURI = aBaseURI;
-    mElementContext->mDepth = 0;
-    rv = mElementContext->
-        mInstructionNamespaces.add(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
-    if (NS_FAILED(rv)) {
         // XXX invalidate
         return;
     }
@@ -427,6 +416,8 @@ txStylesheetCompilerState::openInstructionContainer(txInstructionContainer* aCon
 void
 txStylesheetCompilerState::closeInstructionContainer()
 {
+    NS_ASSERTION(mGotoTargetPointers.Count() == 0,
+                 "GotoTargets still exists, did you forget to add txReturn?");
     mNextInstrPtr = 0;
 }
 
@@ -437,9 +428,26 @@ txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
 
     *mNextInstrPtr = aInstruction;
     mNextInstrPtr = &aInstruction->mNext;
+    
+    PRInt32 i, count = mGotoTargetPointers.Count();
+    for (i = 0; i < count; ++i) {
+        *(txInstruction**)mGotoTargetPointers[i] = aInstruction;
+    }
+    mGotoTargetPointers.Clear();
 
     return NS_OK;
 }
+
+nsresult
+txStylesheetCompilerState::addGotoTarget(txInstruction** aTargetPointer)
+{
+    if (!mGotoTargetPointers.AppendElement(aTargetPointer)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    return NS_OK;
+}
+
 
 nsresult
 txStylesheetCompilerState::parsePattern(const nsAFlatString& aPattern,
@@ -567,4 +575,23 @@ void
 txStylesheetCompilerState::receiveError(const nsAString& aMsg, nsresult aRes)
 {
     // XXX implement me
+}
+
+txElementContext::txElementContext(const nsAString& aBaseURI)
+    : mPreserveWhitespace(PR_FALSE),
+      mForwardsCompatibleParsing(PR_TRUE),
+      mBaseURI(aBaseURI),
+      mDepth(0)
+{
+    mInstructionNamespaces.AppendElement(NS_INT32_TO_PTR(kNameSpaceID_XSLT));
+}
+
+txElementContext::txElementContext(const txElementContext& aOther)
+    : mPreserveWhitespace(aOther.mPreserveWhitespace),
+      mForwardsCompatibleParsing(aOther.mForwardsCompatibleParsing),
+      mBaseURI(aOther.mBaseURI),
+      mMappings(aOther.mMappings),
+      mDepth(0)
+{
+      mInstructionNamespaces = aOther.mInstructionNamespaces;
 }

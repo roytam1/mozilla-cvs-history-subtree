@@ -78,8 +78,10 @@ public:
 
     // state-modification functions
     txInstruction* getNextInstruction();
-    nsresult runTemplate(txInstruction* aInstruction);
+    nsresult runTemplate(txInstruction* aInstruction,
+                         txInstruction* aReturnTo = nsnull);
     void gotoInstruction(txInstruction* aNext);
+    void returnFromTemplate();
 
     // Other
     nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,

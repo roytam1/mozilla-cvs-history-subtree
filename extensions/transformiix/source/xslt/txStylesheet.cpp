@@ -44,9 +44,13 @@
 #include "primitives.h"
 
 txStylesheet::txStylesheet()
-    : mNamedTemplates(PR_FALSE),
+    : mRootFrame(nsnull),
+      mNamedTemplates(PR_FALSE),
       mDecimalFormats(PR_TRUE),
-      mAttributeSets(PR_TRUE)
+      mAttributeSets(PR_TRUE),
+      mContainerTemplate(nsnull),
+      mCharactersTemplate(nsnull),
+      mEmptyTemplate(nsnull)
 {
 }
 
@@ -56,6 +60,42 @@ txStylesheet::init()
     mRootFrame = new ImportFrame;
     NS_ENSURE_TRUE(mRootFrame, NS_ERROR_OUT_OF_MEMORY);
     
+    // Create default templates
+    // element/root template
+    txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+    NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
+
+    Expr* nodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
+    NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
+
+    mContainerTemplate = new txPushNewContext(nodeExpr);
+    NS_ENSURE_TRUE(mContainerTemplate, NS_ERROR_OUT_OF_MEMORY);
+
+    // XXX ToDo: need special instruction that gets the correct mode
+    mContainerTemplate->mNext = new txApplyTemplates(txExpandedName());
+    NS_ENSURE_TRUE(mContainerTemplate->mNext, NS_ERROR_OUT_OF_MEMORY);
+
+    mContainerTemplate->mNext->mNext = new txReturn();
+    NS_ENSURE_TRUE(mContainerTemplate->mNext->mNext, NS_ERROR_OUT_OF_MEMORY);
+
+    // attribute/textnode template
+    nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+    NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
+
+    nodeExpr = new LocationStep(nt, LocationStep::SELF_AXIS);
+    NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
+
+    mCharactersTemplate = new txValueOf(nodeExpr, PR_FALSE);
+    NS_ENSURE_TRUE(mContainerTemplate, NS_ERROR_OUT_OF_MEMORY);
+
+    // XXX ToDo: need special instruction that gets the correct mode
+    mCharactersTemplate->mNext = new txReturn();
+    NS_ENSURE_TRUE(mContainerTemplate->mNext, NS_ERROR_OUT_OF_MEMORY);
+
+    // pi/comment/namespace template
+    mEmptyTemplate = new txReturn();
+    NS_ENSURE_TRUE(mEmptyTemplate, NS_ERROR_OUT_OF_MEMORY);
+
     return NS_OK;
 }
 
@@ -71,6 +111,10 @@ txStylesheet::~txStylesheet()
     while (instrIter.hasNext()) {
         delete (txInstruction*)instrIter.next();
     }
+    
+    delete mContainerTemplate;
+    delete mCharactersTemplate;
+    delete mEmptyTemplate;
 }
 
 txInstruction*
@@ -134,7 +178,6 @@ txStylesheet::findTemplate(Node* aNode,
     if (matchTemplate) {
         String matchAttr;
         match->toString(matchAttr);
-        // matchTemplate can be a document (see addLREStylesheet)
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("MatchTemplate, Pattern %s, Mode %s, Node %s\n",
                 NS_LossyConvertUCS2toASCII(matchAttr).get(),
@@ -148,8 +191,25 @@ txStylesheet::findTemplate(Node* aNode,
                 NS_LossyConvertUCS2toASCII(mode).get()));
     }
 #endif
-    
-    // XXX get default template
+
+    if (!matchTemplate) {
+        switch(aNode->getNodeType()) {
+            case Node::ELEMENT_NODE :
+            case Node::DOCUMENT_NODE :
+                matchTemplate = mContainerTemplate;
+                break;
+
+            case Node::ATTRIBUTE_NODE :
+            case Node::TEXT_NODE :
+            case Node::CDATA_SECTION_NODE :
+                matchTemplate = mCharactersTemplate;
+                break;
+
+            default:
+                matchTemplate = mEmptyTemplate;
+                break;
+        }
+    }
 
     return matchTemplate;
 }
@@ -183,7 +243,7 @@ txStylesheet::doneCompiling()
     
     mRootFrame = nsnull;
     
-    // XXX traverse tree of importframes and fill mImportFrames
+    // XXX ToDo: traverse tree of importframes and fill mImportFrames
 
     // Loop through importframes and process all items
     txListIterator frameIter(&mImportFrames);
@@ -212,9 +272,9 @@ txStylesheet::doneCompiling()
                     delete item;
                 }
             }
+            itemIter.remove(); //remove() moves to the previous
+            itemIter.next();
         }
-        itemIter.remove(); //remove() moves to the previous
-        itemIter.next();
     }
 
     return NS_OK;
@@ -243,7 +303,6 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
 
     if (!aTemplate->mMatch) {
         // This is no error, see section 6 Named Templates
-        delete aTemplate;
 
         return NS_OK;
     }
@@ -255,7 +314,6 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
     if (!templates) {
         templates = new txList;
         if (!templates) {
-            delete aTemplate;
             return NS_ERROR_OUT_OF_MEMORY;
         }
 
@@ -263,7 +321,6 @@ txStylesheet::addTemplate(txTemplateItem* aTemplate,
                                                    templates);
         if (NS_FAILED(rv)) {
             delete templates;
-            delete aTemplate;
             return rv;
         }
     }

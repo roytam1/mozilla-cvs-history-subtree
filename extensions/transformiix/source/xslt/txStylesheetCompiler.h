@@ -83,6 +83,9 @@ public:
     nsresult openInstructionContainer(txInstructionContainer* aContainer);
     void closeInstructionContainer();
     nsresult addInstruction(txInstruction* aInstruction);
+    
+    // misc
+    nsresult addGotoTarget(txInstruction** aTargetPointer);
 
     // txIParseContext
     nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID);
@@ -101,6 +104,7 @@ private:
     txStack mOtherStack;
     txInstruction** mNextInstrPtr;
     txListIterator mToplevelIterator;
+    nsVoidArray mGotoTargetPointers;
 };
 
 struct txStylesheetAttr
@@ -139,11 +143,14 @@ private:
 class txElementContext : public TxObject
 {
 public:
-    MBool mPreserveWhitespace;
-    MBool mForwardsCompatibleParsing;
+    txElementContext(const nsAString& aBaseURI);
+    txElementContext(const txElementContext& aOther);
+
+    PRBool mPreserveWhitespace;
+    PRBool mForwardsCompatibleParsing;
     nsString mBaseURI;
     txNamespaceMap mMappings;
-    txList mInstructionNamespaces;
+    nsVoidArray mInstructionNamespaces;
     PRInt32 mDepth;
 };
 

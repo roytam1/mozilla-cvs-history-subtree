@@ -223,7 +223,7 @@ NS_IMETHODIMP
 txStylesheetSink::HandleCDataSection(const PRUnichar *aData,
                                      PRUint32 aLength)
 {
-    return NS_OK;
+    return mCompiler->characters(Substring(aData, aData + aLength));
 }
 
 NS_IMETHODIMP
@@ -313,6 +313,7 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
 
             aCompiler.startElement(namespaceID, localname, prefix, atts,
                                     attsCount);
+            destroyAttributesArray(atts, attsCount);
 
             PRInt32 childCount;
             element->ChildCount(childCount);
@@ -326,10 +327,9 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler& aCompiler)
             }
 
             aCompiler.endElement();
-
-            destroyAttributesArray(atts, attsCount);
             break;
         }
+        case nsIDOMNode::CDATA_SECTION_NODE:
         case nsIDOMNode::TEXT_NODE:
         {
             nsAutoString chars;

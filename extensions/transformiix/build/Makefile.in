@@ -47,6 +47,7 @@ REQUIRES	= xpcom \
 		  webshell \
 		  docshell \
 		  layout \
+		  uconv \
 		  $(NULL)
 IS_COMPONENT	= 1
 MODULE_NAME	= TransformiixModule

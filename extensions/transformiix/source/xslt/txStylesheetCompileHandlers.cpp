@@ -51,6 +51,7 @@ txHandlerTable* gTxRootHandler = 0;
 txHandlerTable* gTxTopHandler = 0;
 txHandlerTable* gTxTemplateHandler = 0;
 txHandlerTable* gTxTextHandler = 0;
+txHandlerTable* gTxApplyTemplatesHandler = 0;
 
 
 txStylesheetAttr*
@@ -276,6 +277,10 @@ txFnStartTemplate(PRInt32 aNamespaceID,
 nsresult
 txFnEndTemplate(txStylesheetCompilerState& aState)
 {
+    txInstruction* instr = new txReturn();
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     aState.closeInstructionContainer();
     aState.popHandlerTable();
 
@@ -418,18 +423,123 @@ txFnEndLRE(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// "LRE text"
 nsresult
 txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
     TX_RETURN_IF_WHITESPACE(PromiseFlatString(aStr), aState);
 
-    txInstruction* instr = new txTextInstruction(aStr, MB_FALSE);
+    txInstruction* instr = new txText(aStr, MB_FALSE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
+}
+
+// xsl:apply-templates
+nsresult
+txFnStartApplyTemplates(PRInt32 aNamespaceID,
+                        nsIAtom* aLocalName,
+                        nsIAtom* aPrefix,
+                        txStylesheetAttr* aAttributes,
+                        PRInt32 aAttrCount,
+                        txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txStylesheetAttr* attr = 0;
+
+    txExpandedName name;
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::name);
+    if (attr) {
+        rv = aState.parseQName(attr->mValue, name, MB_FALSE);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    txInstruction* applyTempl = new txApplyTemplates(name);
+    NS_ENSURE_TRUE(applyTempl, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(applyTempl);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* select = 0;
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::select);
+    if (attr) {
+        rv = aState.parseExpr(attr->mValue, &select);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+        NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
+
+        select = new LocationStep(nt, LocationStep::CHILD_AXIS);
+        NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    txPushNewContext* newContextInstr = new txPushNewContext(select);
+    NS_ENSURE_TRUE(newContextInstr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(newContextInstr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxApplyTemplatesHandler);
+}
+
+nsresult
+txFnEndApplyTemplates(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    // txPushNewContext
+    nsresult rv = aState.addInstruction((txPushNewContext*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // txApplyTemplates
+    rv = aState.addInstruction((txInstruction*)aState.popObject());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+// xsl:if
+nsresult
+txFnStartIf(PRInt32 aNamespaceID,
+            nsIAtom* aLocalName,
+            nsIAtom* aPrefix,
+            txStylesheetAttr* aAttributes,
+            PRInt32 aAttrCount,
+            txStylesheetCompilerState& aState)
+{
+    txStylesheetAttr* attr = 0;
+
+    Expr* test = 0;
+    attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::test);
+    NS_ENSURE_TRUE(attr, NS_ERROR_XSLT_PARSE_FAILURE);
+
+    nsresult rv = aState.parseExpr(attr->mValue, &test);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txConditionalGoto* condGoto = new txConditionalGoto(test);
+    if (!condGoto) {
+        delete test;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    rv = aState.pushPtr(condGoto);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(condGoto);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndIf(txStylesheetCompilerState& aState)
+{
+    txConditionalGoto* condGoto = (txConditionalGoto*)aState.popPtr();
+    return aState.addGotoTarget(&condGoto->mTarget);
 }
 
 // xsl:text
@@ -469,7 +579,7 @@ txFnEndText(txStylesheetCompilerState& aState)
 nsresult
 txFnTextText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txTextInstruction(aStr, aState.mDOE);
+    txInstruction* instr = new txText(aStr, aState.mDOE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -509,7 +619,7 @@ txFnStartValueOf(PRInt32 aNamespaceID,
     nsresult rv = aState.parseExpr(attr->mValue, &select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txValueOfInstruction(select, doe);
+    txInstruction* instr = new txValueOf(select, doe);
     if (!instr) {
         delete select;
         return NS_ERROR_OUT_OF_MEMORY;
@@ -527,6 +637,7 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
     return NS_OK;
 }
+
 
 /**
  * Table Datas
@@ -573,6 +684,8 @@ txHandlerTableData gTxTemplateTableData = {
   { { kNameSpaceID_XSLT, "fallback", txFnStartElementSetIgnore, txFnEndElementSetIgnore },
     { kNameSpaceID_XSLT, "text", txFnStartText, txFnEndText },
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
+    { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
+    { kNameSpaceID_XSLT, "apply-templates", txFnStartApplyTemplates, txFnEndApplyTemplates },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },
@@ -591,6 +704,17 @@ txHandlerTableData gTxTextTableData = {
   { 0, 0, txFnStartElementError, txFnEndElementError },
   // Text
   txFnTextText
+};
+
+txHandlerTableData gTxApplyTemplatesTableData = {
+  // Handlers
+  { { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore }, // should this be error?
+  // LRE
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore },
+  // Text
+  txFnTextIgnore
 };
 
 
@@ -659,6 +783,7 @@ txHandlerTable::init()
     INIT_HANDLER(Ignore);
     INIT_HANDLER(Template);
     INIT_HANDLER(Text);
+    INIT_HANDLER(ApplyTemplates);
 
     return MB_TRUE;
 }
@@ -672,4 +797,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Ignore);
     SHUTDOWN_HANDLER(Template);
     SHUTDOWN_HANDLER(Text);
+    SHUTDOWN_HANDLER(ApplyTemplates);
 }

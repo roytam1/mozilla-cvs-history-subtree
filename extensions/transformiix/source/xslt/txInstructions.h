@@ -113,10 +113,10 @@ public:
     txExpandedName mName;
 };
 
-class txTextInstruction : public txInstruction
+class txText : public txInstruction
 {
 public:
-    txTextInstruction(const nsAString& aStr, PRBool aDOE);
+    txText(const nsAString& aStr, PRBool aDOE);
 
     TX_DECL_TXINSTRUCTION
 
@@ -124,11 +124,11 @@ public:
     PRBool mDOE;
 };
 
-class txValueOfInstruction : public txInstruction
+class txValueOf : public txInstruction
 {
 public:
-    txValueOfInstruction(Expr* aExpr, PRBool aDOE);
-    ~txValueOfInstruction();
+    txValueOf(Expr* aExpr, PRBool aDOE);
+    ~txValueOf();
 
     TX_DECL_TXINSTRUCTION
 
@@ -140,6 +140,7 @@ class txRecursionCheckpointStart : public txInstruction
 {
 public:
     txRecursionCheckpointStart(const nsAString& aName);
+
     TX_DECL_TXINSTRUCTION
     
     nsString mName;
@@ -148,6 +149,48 @@ public:
 class txRecursionCheckpointEnd : public txInstruction
 {
 public:
+    TX_DECL_TXINSTRUCTION
+};
+
+class txConditionalGoto : public txInstruction
+{
+public:
+    txConditionalGoto(Expr* aCondition);
+    ~txConditionalGoto();
+
+    TX_DECL_TXINSTRUCTION
+    
+    Expr* mCondition;
+    txInstruction* mTarget;
+};
+
+class txPushNewContext : public txInstruction
+{
+public:
+    txPushNewContext(Expr* aSelect);
+    ~txPushNewContext();
+
+    TX_DECL_TXINSTRUCTION
+    
+    //addSort(Expr* aSelectExpr, Expr* aLangExpr,
+    //        Expr* aDataTypeExpr, Expr* aOrderExpr,
+    //        Expr* aCaseOrderExpr, txIEvalContext* aContext);
+
+    Expr* mSelect;
+};
+
+class txApplyTemplates : public txInstruction
+{
+public:
+    txApplyTemplates(const txExpandedName& aMode);
+
+    TX_DECL_TXINSTRUCTION
+    
+    txExpandedName mMode;
+};
+
+class txReturn : public txInstruction
+{
     TX_DECL_TXINSTRUCTION
 };
 

@@ -41,6 +41,7 @@
 #include "Expr.h"
 #include "ExprResult.h"
 #include "txStylesheet.h"
+#include "txNodeSetContext.h"
 
 txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
                                      nsIAtom* aLocalName,
@@ -51,7 +52,8 @@ txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
 {
 }
 
-nsresult txStartLREElement::execute(txExecutionState& aEs)
+nsresult
+txStartLREElement::execute(txExecutionState& aEs)
 {
     // We should atomize the resulthandler
     nsAutoString nodeName;
@@ -77,7 +79,8 @@ nsresult txStartLREElement::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-nsresult txEndLREElement::execute(txExecutionState& aEs)
+nsresult
+txEndLREElement::execute(txExecutionState& aEs)
 {
     PRInt32 namespaceID = aEs.popInt();
     nsAutoString nodeName;
@@ -102,7 +105,8 @@ txLREAttribute::~txLREAttribute()
     delete mValue;
 }
 
-nsresult txLREAttribute::execute(txExecutionState& aEs)
+nsresult
+txLREAttribute::execute(txExecutionState& aEs)
 {
     // We should atomize the resulthandler
     nsAutoString nodeName;
@@ -134,7 +138,8 @@ txInsertAttrSet::txInsertAttrSet(const txExpandedName& aName)
 {
 }
 
-nsresult txInsertAttrSet::execute(txExecutionState& aEs)
+nsresult
+txInsertAttrSet::execute(txExecutionState& aEs)
 {
     txInstruction* instr = aEs.mStylesheet->getAttributeSet(mName);
     NS_ENSURE_TRUE(instr, NS_ERROR_XSLT_EXECUTION_FAILURE);
@@ -145,30 +150,32 @@ nsresult txInsertAttrSet::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txTextInstruction::txTextInstruction(const nsAString& aStr, PRBool aDOE)
+txText::txText(const nsAString& aStr, PRBool aDOE)
     : mStr(aStr),
       mDOE(aDOE)
 {
 }
 
-nsresult txTextInstruction::execute(txExecutionState& aEs)
+nsresult
+txText::execute(txExecutionState& aEs)
 {
     aEs.mResultHandler->characters(mStr, mDOE);
     return NS_OK;
 }
 
-txValueOfInstruction::txValueOfInstruction(Expr* aExpr, PRBool aDOE)
+txValueOf::txValueOf(Expr* aExpr, PRBool aDOE)
     : mExpr(aExpr),
       mDOE(aDOE)
 {
 }
 
-txValueOfInstruction::~txValueOfInstruction()
+txValueOf::~txValueOf()
 {
     delete mExpr;
 }
 
-nsresult txValueOfInstruction::execute(txExecutionState& aEs)
+nsresult
+txValueOf::execute(txExecutionState& aEs)
 {
     ExprResult* exprRes = mExpr->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
@@ -188,15 +195,115 @@ txRecursionCheckpointStart::txRecursionCheckpointStart(const nsAString& aName)
 {
 }
 
-nsresult txRecursionCheckpointStart::execute(txExecutionState& aEs)
+nsresult
+txRecursionCheckpointStart::execute(txExecutionState& aEs)
 {
     // XXX will this work? what if the context is in two different states
     return aEs.enterRecursionCheckpoint(this, aEs.getEvalContext());
 }
 
-nsresult txRecursionCheckpointEnd::execute(txExecutionState& aEs)
+nsresult
+txRecursionCheckpointEnd::execute(txExecutionState& aEs)
 {
     aEs.leaveRecursionCheckpoint();
     return NS_OK;
 }
 
+txConditionalGoto::txConditionalGoto(Expr* aCondition)
+    : mCondition(aCondition),
+      mTarget(nsnull)
+{
+}
+
+txConditionalGoto::~txConditionalGoto()
+{
+    delete mCondition;
+}
+
+nsresult
+txConditionalGoto::execute(txExecutionState& aEs)
+{
+    ExprResult* exprRes = mCondition->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    if (!exprRes->booleanValue()) {
+        aEs.gotoInstruction(mTarget);
+    }
+    delete exprRes;
+
+    return NS_OK;
+}
+
+txPushNewContext::txPushNewContext(Expr* aSelect)
+    : mSelect(aSelect)
+{
+}
+
+txPushNewContext::~txPushNewContext()
+{
+    delete mSelect;
+}
+
+nsresult
+txPushNewContext::execute(txExecutionState& aEs)
+{
+    ExprResult* exprRes = mSelect->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    if (exprRes->getResultType() != ExprResult::NODESET) {
+        delete exprRes;
+        // XXX ErrorReport: nodeset expected
+        return NS_ERROR_XSLT_NODESET_EXPECTED;
+    }
+    
+    NodeSet* nodes = (NodeSet*)exprRes;
+    
+    // XXX ToDo: Sort nodes if non-empty
+    
+    txNodeSetContext* context = new txOwningNodeSetContext(nodes, &aEs);
+    if (!context) {
+        delete exprRes;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    nsresult rv = aEs.pushEvalContext(context);
+    if (NS_FAILED(rv)) {
+        delete context;
+        return rv;
+    }
+    
+    return NS_OK;
+}
+
+txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
+    : mMode(aMode)
+{
+}
+
+nsresult
+txApplyTemplates::execute(txExecutionState& aEs)
+{
+    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
+    if (!context->hasNext()) {
+        delete aEs.popEvalContext();
+        
+        return NS_OK;
+    }
+
+    context->next();
+    
+    txStylesheet::ImportFrame* frame = 0;
+    txInstruction* templ =
+        aEs.mStylesheet->findTemplate(context->getContextNode(), mMode, &aEs,
+                                      nsnull, &frame);
+
+    return aEs.runTemplate(templ, this);
+}
+
+nsresult
+txReturn::execute(txExecutionState& aEs)
+{
+    aEs.returnFromTemplate();
+
+    return NS_OK;
+}

@@ -42,7 +42,8 @@
 #include "txStylesheet.h"
 
 txExecutionState::txExecutionState(txStylesheet* aStylesheet)
-    : mStylesheet(aStylesheet)
+    : mStylesheet(aStylesheet),
+      mNextInstruction(nsnull)
 {
 }
 
@@ -50,8 +51,9 @@ txExecutionState::~txExecutionState()
 {
     delete mEvalContext;
     
-    // XXX mind the initial evalcontext, it can occur more then once in the
-    // evalcontext-stack. If we refcount them this won't be a problem.
+    // XXX ToDo: delete evalcontext-stack. mind the initial evalcontext, it
+    // can occur more then once in the evalcontext-stack. If we refcount them
+    // this won't be a problem.
 }
 
 nsresult
@@ -75,12 +77,12 @@ txExecutionState::init(Node* aNode,
     mOutputHandler->startDocument();
 
     txStylesheet::ImportFrame* frame = 0;
-    mNextInstruction = mStylesheet->findTemplate(aNode, txExpandedName(),
-                                                 this, nsnull, &frame);
-    rv = mReturnStack.push(0);
+    txInstruction* templ = mStylesheet->findTemplate(aNode, txExpandedName(),
+                                                     this, nsnull, &frame);
+    rv = runTemplate(templ);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX set global parameters
+    // XXX ToDo: set global parameters
     
     return NS_OK;
 }
@@ -119,13 +121,21 @@ txExecutionState::receiveError(const nsAString& aMsg, nsresult aRes)
 nsresult
 txExecutionState::pushEvalContext(txIEvalContext* aContext)
 {
-    return mEvalContextStack.push(aContext);
+    nsresult rv = mEvalContextStack.push(mEvalContext);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    mEvalContext = aContext;
+    
+    return NS_OK;
 }
 
 txIEvalContext*
 txExecutionState::popEvalContext()
 {
-    return (txIEvalContext*)mEvalContextStack.pop();
+    txIEvalContext* prev = mEvalContext;
+    mEvalContext = (txIEvalContext*)mEvalContextStack.pop();
+    
+    return prev;
 }
 
 nsresult
@@ -142,6 +152,7 @@ void
 txExecutionState::popString(nsAString& aStr)
 {
     PRInt32 count = mStringStack.Count() - 1;
+    NS_ASSERTION(count >= 0, "stack is empty");
     mStringStack.StringAt(count, aStr);
     mStringStack.RemoveStringAt(count);
 }
@@ -167,28 +178,24 @@ txExecutionState::getEvalContext()
 txInstruction*
 txExecutionState::getNextInstruction()
 {
-    if (!mNextInstruction) {
-        mNextInstruction = (txInstruction*)mReturnStack.pop();
-        if (!mNextInstruction) {
-            return nsnull;
-        }
-        // XXX pop local variables
-    }
-    
     txInstruction* instr = mNextInstruction;
-    mNextInstruction = instr->mNext;
+    if (instr) {
+        mNextInstruction = instr->mNext;
+    }
     
     return instr;
 }
 
 nsresult
-txExecutionState::runTemplate(txInstruction* aInstruction)
+txExecutionState::runTemplate(txInstruction* aTemplate,
+                              txInstruction* aReturnTo)
 {
-    // XXX push local variables
-    nsresult rv = mReturnStack.push(mNextInstruction);
+    // XXX ToDo: push local variables
+    txInstruction* ret = aReturnTo ? aReturnTo : mNextInstruction;
+    nsresult rv = mReturnStack.push(ret);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    mNextInstruction = aInstruction;
+    mNextInstruction = aTemplate;
     
     return NS_OK;
 }
@@ -197,6 +204,14 @@ void
 txExecutionState::gotoInstruction(txInstruction* aNext)
 {
     mNextInstruction = aNext;
+}
+
+void
+txExecutionState::returnFromTemplate()
+{
+    NS_ASSERTION(!mReturnStack.isEmpty(), "returnstack is empty");
+    mNextInstruction = (txInstruction*)mReturnStack.pop();
+    // XXX ToDo: pop local variables
 }
 
 nsresult

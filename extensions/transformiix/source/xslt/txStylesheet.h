@@ -141,6 +141,11 @@ private:
 
     // Map with all named attribute sets
     txExpandedNameMap mAttributeSets;
+    
+    // Default templates
+    txInstruction* mContainerTemplate;
+    txInstruction* mCharactersTemplate;
+    txInstruction* mEmptyTemplate;
 };
 
 

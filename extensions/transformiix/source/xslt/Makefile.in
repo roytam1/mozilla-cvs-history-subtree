@@ -44,6 +44,7 @@ REQUIRES +=	  dom \
 		  webshell \
 		  docshell \
 		  layout \
+		  uconv \
 		  $(NULL)
 endif
 
