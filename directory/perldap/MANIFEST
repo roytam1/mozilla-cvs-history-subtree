@@ -4,7 +4,7 @@ API.xs
 MANIFEST
 Makefile.PL
 constant.h
-test.pl
+oldtest.pl
 typemap
 Entry.pm
 Conn.pm
