@@ -3720,13 +3720,10 @@ np_delete_instance(np_instance *instance)
 
                 userInst->SetWindow(NULL);
 
-                nsrefcnt cnt;
-                cnt = userInst->Release();
-                XP_ASSERT(cnt == 0);
+                nsPluginError err = userInst->Destroy();
+                XP_ASSERT(err == nsPluginError_NoError);
 
-                // XXX Is this the right place to be releasing the
-                // peer?
-                cnt = peerInst->Release();
+                nsrefcnt cnt = peerInst->Release();
                 XP_ASSERT(cnt == 0);
 
                 // XXX Any other bookkeeping we need to do here?
