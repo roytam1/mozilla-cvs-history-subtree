@@ -502,15 +502,30 @@ public class NodeTransformer {
     protected void addVariables(Node tree, VariableTable vars) {
         // OPT: a whole pass to collect variables seems expensive.
         // Could special case to go into statements only.
+        boolean inFunction = tree.getType() == TokenStream.FUNCTION;
         PreorderNodeIterator iterator = tree.getPreorderIterator();
+        Hashtable ht = null;
         Node node;
         while ((node = iterator.nextNode()) != null) {
-            if (node.getType() != TokenStream.VAR)
+            int nodeType = node.getType();
+            if (inFunction && nodeType == TokenStream.FUNCTION) {
+                // In a function with both "var x" and "function x",
+                // disregard the var statement, independent of order.
+                String name = node.getString();
+                if (name == null)
+                    continue;
+                vars.removeLocal(name);
+                if (ht == null)
+                    ht = new Hashtable();
+                ht.put(name, Boolean.TRUE);
+            }
+            if (nodeType != TokenStream.VAR)
                 continue;
             ShallowNodeIterator i = node.getChildIterator();
             while (i.hasMoreElements()) {
                 Node n = i.nextNode();
-                vars.addLocal(n.getString());
+                if (ht == null || ht.get(n.getString()) == null)
+                    vars.addLocal(n.getString());
             }
         }
     }
