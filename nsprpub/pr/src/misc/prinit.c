@@ -78,11 +78,11 @@ PR_IMPLEMENT(PRBool) PR_VersionCheck(const char *importedVersion)
     /*
     ** This is the secret handshake algorithm.
     **
-    ** This release (3.1) is backward compatible with
-    ** all the previous releases ("2.1 19980529", "3.0",
-    ** "3.0.x").  It is not compatible with future
-    ** releases or patches.  So this release has a
-    ** simple version compatibility check algorithm.
+    ** This release has a simple version compatibility
+    ** check algorithm.  This release is not backward
+    ** compatible with previous major releases.  It is
+    ** not compatible with future major, minor, or
+    ** patch releases.
     */
     int vmajor = 0, vminor = 0, vpatch = 0;
     const char *ptr = importedVersion;
@@ -106,7 +106,7 @@ PR_IMPLEMENT(PRBool) PR_VersionCheck(const char *importedVersion)
         }
     }
 
-    if (vmajor > PR_VMAJOR) {
+    if (vmajor != PR_VMAJOR) {
         return PR_FALSE;
     }
     if (vmajor == PR_VMAJOR && vminor > PR_VMINOR) {
