@@ -190,8 +190,10 @@ nsSVGForeignObjectFrame::AppendFrames(nsIPresContext* aPresContext,
                                       nsIAtom*        aListName,
                                       nsIFrame*       aFrameList)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+	nsresult rv;
+	rv = nsSVGForeignObjectFrameBase::AppendFrames(aPresContext, aPresShell, aListName, aFrameList);
+	Update();
+	return rv;
 }
 
 NS_IMETHODIMP
@@ -201,8 +203,10 @@ nsSVGForeignObjectFrame::InsertFrames(nsIPresContext* aPresContext,
                                      nsIFrame*       aPrevFrame,
                                      nsIFrame*       aFrameList)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+	nsresult rv;
+	rv = nsSVGForeignObjectFrameBase::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList);
+	Update();
+	return rv;
 }
 
 NS_IMETHODIMP
@@ -211,8 +215,10 @@ nsSVGForeignObjectFrame::RemoveFrame(nsIPresContext* aPresContext,
                                      nsIAtom*        aListName,
                                      nsIFrame*       aOldFrame)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+	nsresult rv;
+	rv = nsSVGForeignObjectFrameBase::RemoveFrame(aPresContext, aPresShell, aListName, aOldFrame);
+	Update();
+	return rv;
 }
 
 NS_IMETHODIMP
@@ -222,8 +228,10 @@ nsSVGForeignObjectFrame::ReplaceFrame(nsIPresContext* aPresContext,
                                       nsIFrame*       aOldFrame,
                                       nsIFrame*       aNewFrame)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_UNEXPECTED;
+	nsresult rv;
+	rv = nsSVGForeignObjectFrameBase::ReplaceFrame(aPresContext, aPresShell, aListName, aOldFrame, aNewFrame);
+	Update();
+	return rv;
 }
 
 nsresult nsSVGForeignObjectFrame::Init()
