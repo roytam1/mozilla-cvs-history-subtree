@@ -214,7 +214,7 @@ endif
 #
 ####################################################################
 
-MDIST = /m/dist
+MDIST = /share/builds/components
 ifeq ($(OS_ARCH),WINNT)
 MDIST = //helium/dist
 MDIST_DOS = $(subst /,\\,$(MDIST))
