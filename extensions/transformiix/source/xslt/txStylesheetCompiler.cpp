@@ -91,13 +91,9 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    PRInt32 i;
-    for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
-        ++((txInScopeVariable*)mInScopeVariables[i])->mLevel;
-    }
-
     // look for new namespace mappings
     PRBool hasOwnNamespaceMap = PR_FALSE;
+    PRInt32 i;
     for (i = 0; i < aAttrCount; ++i) {
         txStylesheetAttr* attr = aAttributes + i;
         if (attr->mNamespaceID == kNameSpaceID_XMLNS) {
@@ -120,6 +116,97 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                     addNamespace(attr->mLocalName, attr->mValue);
             }
         }
+    }
+
+    return startElementInternal(aNamespaceID, aLocalName, aPrefix,
+                                aAttributes, aAttrCount);
+}
+
+nsresult
+txStylesheetCompiler::startElement(const PRUnichar *aName,
+                                   const PRUnichar **aAttrs,
+                                   PRInt32 aAttrCount)
+{
+    nsresult rv = flushCharacters();
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsAutoArrayPtr<txStylesheetAttr> atts;
+    if (aAttrCount > 0) {
+        atts = new txStylesheetAttr[aAttrCount];
+        NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    PRBool hasOwnNamespaceMap = PR_FALSE;
+    PRInt32 i;
+    for (i = 0; i < aAttrCount; ++i) {
+        XMLUtils::splitXMLName(nsDependentString(aAttrs[i * 2]),
+                               getter_AddRefs(atts[i].mPrefix),
+                               getter_AddRefs(atts[i].mLocalName));
+
+        atts[i].mValue.Append(aAttrs[i * 2 + 1]);
+
+        nsCOMPtr<nsIAtom> prefixToBind;
+        if (atts[i].mPrefix == txXMLAtoms::xmlns) {
+            prefixToBind = atts[i].mLocalName;
+        }
+        else if (!atts[i].mPrefix && atts[i].mLocalName == txXMLAtoms::xmlns) {
+            prefixToBind = txXMLAtoms::_empty;
+        }
+
+        if (prefixToBind) {
+            rv = ensureNewElementContext();
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            if (!hasOwnNamespaceMap) {
+                mElementContext->mMappings =
+                    new txNamespaceMap(*mElementContext->mMappings);
+                NS_ENSURE_TRUE(mElementContext->mMappings,
+                               NS_ERROR_OUT_OF_MEMORY);
+                hasOwnNamespaceMap = PR_TRUE;
+            }
+
+            rv = mElementContext->mMappings->
+                addNamespace(nsnull, atts[i].mValue);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+    }
+
+    for (i = 0; i < aAttrCount; ++i) {
+        if (atts[i].mPrefix) {
+            atts[i].mNamespaceID =
+                mElementContext->mMappings->lookupNamespace(atts[i].mPrefix);
+        }
+        else if (atts[i].mLocalName == txXMLAtoms::xmlns) {
+            atts[i].mNamespaceID = kNameSpaceID_XMLNS;
+        }
+        else {
+            atts[i].mNamespaceID = kNameSpaceID_None;
+        }
+    }
+
+    nsCOMPtr<nsIAtom> prefix, localname;
+    XMLUtils::splitXMLName(nsDependentString(aName), getter_AddRefs(prefix),
+                           getter_AddRefs(localname));
+
+    PRInt32 namespaceID = mElementContext->mMappings->lookupNamespace(prefix);
+
+    NS_ENSURE_TRUE(namespaceID != kNameSpaceID_Unknown, NS_ERROR_FAILURE);
+
+    return startElementInternal(namespaceID, localname, prefix, atts,
+                                aAttrCount);
+}
+
+nsresult
+txStylesheetCompiler::startElementInternal(PRInt32 aNamespaceID,
+                                           nsIAtom* aLocalName,
+                                           nsIAtom* aPrefix,
+                                           txStylesheetAttr* aAttributes,
+                                           PRInt32 aAttrCount)
+{
+    nsresult rv = NS_OK;
+    PRInt32 i;
+    for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
+        ++((txInScopeVariable*)mInScopeVariables[i])->mLevel;
     }
 
     // Update the elementcontext if we have special attributes

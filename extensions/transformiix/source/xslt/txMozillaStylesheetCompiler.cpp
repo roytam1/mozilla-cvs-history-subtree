@@ -51,17 +51,6 @@
 #include "txStylesheetCompiler.h"
 #include "XMLUtils.h"
 
-static void destroyAttributesArray(txStylesheetAttr* aAtts,
-                                   PRUint32 aAttsCount)
-{
-    PRUint32 counter;
-    for (counter = 0; counter < aAttsCount; ++counter) {
-        NS_RELEASE(aAtts[counter].mLocalName);
-        NS_IF_RELEASE(aAtts[counter].mPrefix);
-    }
-    delete [] aAtts;
-}
-
 class txStylesheetSink : public nsIXMLContentSink,
                          public nsIExpatSink
 {
@@ -148,7 +137,7 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
     XMLUtils::splitXMLName(nsDependentString(aName), getter_AddRefs(prefix),
                            getter_AddRefs(localname));
 
-    txStylesheetAttr* atts = nsnull;
+    nsAutoArrayPtr<txStylesheetAttr> atts;
     if (aAttsCount > 0) {
         atts = new txStylesheetAttr[aAttsCount];
         NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
@@ -167,11 +156,11 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
 
     NS_ENSURE_TRUE(nameSpace, NS_ERROR_UNEXPECTED);
 
-    PRUint32 attTotal = 0;
+    PRInt32 attTotal = 0;
     while (*aAtts) {
         XMLUtils::splitXMLName(nsDependentString(aAtts[0]),
-                               &atts[attTotal].mPrefix,
-                               &atts[attTotal].mLocalName);
+                               getter_AddRefs(atts[attTotal].mPrefix),
+                               getter_AddRefs(atts[attTotal].mLocalName));
 
         atts[attTotal].mValue.Append(aAtts[1]);
 
@@ -221,7 +210,6 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
 
     rv = mCompiler->startElement(namespaceID, localname, prefix, atts,
                                  attTotal);
-    destroyAttributesArray(atts, attTotal);
     return rv;
 }
 
@@ -317,7 +305,7 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
 
             PRInt32 attsCount;
             element->GetAttrCount(attsCount);
-            txStylesheetAttr* atts = nsnull;
+            nsAutoArrayPtr<txStylesheetAttr> atts;
             if (attsCount > 0) {
                 atts = new txStylesheetAttr[attsCount];
                 //NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
@@ -325,14 +313,17 @@ static nsresult handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
                 for (counter = 0; counter < attsCount; ++counter) {
                     txStylesheetAttr& att = atts[counter];
                     element->GetAttrNameAt(counter, att.mNamespaceID,
-                                           att.mLocalName, att.mPrefix);
+                                           *getter_AddRefs(att.mLocalName),
+                                           *getter_AddRefs(att.mPrefix));
                     element->GetAttr(att.mNamespaceID, att.mLocalName, att.mValue);
                 }
             }
 
             aCompiler->startElement(namespaceID, localname, prefix, atts,
                                     attsCount);
-            destroyAttributesArray(atts, attsCount);
+
+            // explicitly destroy the attrs here since we no longer need it
+            atts = nsnull;
 
             PRInt32 childCount;
             element->ChildCount(childCount);

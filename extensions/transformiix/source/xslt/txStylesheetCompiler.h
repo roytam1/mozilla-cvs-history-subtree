@@ -154,8 +154,8 @@ private:
 struct txStylesheetAttr
 {
     PRInt32 mNamespaceID;
-    nsIAtom* mLocalName;
-    nsIAtom* mPrefix;
+    nsCOMPtr<nsIAtom> mLocalName;
+    nsCOMPtr<nsIAtom> mPrefix;
     nsString mValue;
 };
 
@@ -175,6 +175,9 @@ public:
     nsresult startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                           nsIAtom* aPrefix, txStylesheetAttr* aAttributes,
                           PRInt32 aAttrCount);
+    nsresult startElement(const PRUnichar *aName,
+                          const PRUnichar **aAtts,
+                          PRInt32 aAttsCount);
     nsresult endElement();
     nsresult characters(const nsAString& aStr);
     nsresult doneLoading(); // XXX do we want to merge this with cancel?
@@ -188,6 +191,11 @@ public:
     void onDoneCompiling(txStylesheetCompiler* aCompiler, nsresult aResult);
 
 private:
+    nsresult startElementInternal(PRInt32 aNamespaceID, nsIAtom* aLocalName,
+                                  nsIAtom* aPrefix,
+                                  txStylesheetAttr* aAttributes,
+                                  PRInt32 aAttrCount);
+
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
     nsresult maybeDoneCompiling();
