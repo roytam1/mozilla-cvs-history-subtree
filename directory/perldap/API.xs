@@ -599,7 +599,8 @@ ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
 	char *		value
 	char **		valwords
 	CLEANUP:
-	ldap_value_free(valwords);
+	if (valwords)
+	  ldap_value_free(valwords);
 
 #ifdef LDAPV3
 
@@ -732,7 +733,8 @@ ldap_extended_operation_s(ld,requestoid,requestdata,serverctrls,clientctrls,reto
 	retoidp
 	retdatap
 	CLEANUP:
-	ldap_value_free_len(retdatap);
+	if (retdatap)
+	  ldap_value_free_len(retdatap);
 
 #endif
 
@@ -969,7 +971,8 @@ ldap_memcache_init(ttl,size,baseDNs,cachep)
 	RETVAL
 	cachep
 	CLEANUP:
-	ldap_value_free(baseDNs);
+	if (baseDNs)
+	  ldap_value_free(baseDNs);
 
 int
 ldap_memcache_set(ld,cache)
@@ -1095,7 +1098,8 @@ ldap_multisort_entries(ld,chain,attr)
 	RETVAL
 	chain
 	CLEANUP:
-	ldap_value_free(attr);
+	if (attr)
+	  ldap_value_free(attr);
 
 char *
 ldap_next_attribute(ld,entry,ber)
@@ -1306,7 +1310,8 @@ ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	char **		attrs
 	int		attrsonly
 	CLEANUP:
-	ldap_value_free(attrs);
+	if (attrs)
+	  ldap_value_free(attrs);
 
 #ifdef LDAPV3
 
@@ -1327,7 +1332,8 @@ ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,tim
 	RETVAL
 	msgidp
 	CLEANUP:
-	ldap_value_free(attrs);
+	if (attrs)
+	  ldap_value_free(attrs);
 
 int
 ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,res)
@@ -1346,7 +1352,8 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	RETVAL
 	res
 	CLEANUP:
-	ldap_value_free(attrs);
+	if (attrs)
+	  ldap_value_free(attrs);
 
 #endif
 
@@ -1363,7 +1370,8 @@ ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
 	RETVAL
 	res
 	CLEANUP:
-	ldap_value_free(attrs);
+	if (attrs)
+	  ldap_value_free(attrs);
 
 int
 ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
@@ -1379,7 +1387,8 @@ ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
 	RETVAL
 	res
 	CLEANUP:
-	ldap_value_free(attrs);
+	if (attrs)
+	  ldap_value_free(attrs);
 	
 int
 ldap_set_filter_additions(lfdp,prefix,suffix)
