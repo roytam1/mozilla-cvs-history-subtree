@@ -41,7 +41,7 @@ extern "C" {
 #include <utime.h>
 #endif
 #ifndef LDAP_TYPE_SOCKET_DEFINED	/* API extension */
-#include "macsock.h"
+#include "macsocket.h"
 #endif
 #else /* everything else, e.g., Unix */
 #ifndef LDAP_TYPE_TIMEVAL_DEFINED
