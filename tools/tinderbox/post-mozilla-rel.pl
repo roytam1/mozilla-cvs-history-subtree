@@ -323,7 +323,7 @@ sub main {
     $cachebuild = 0;
   }
 
-  processtalkback($cachebuild, $objdir);
+  processtalkback($cachebuild && $Settings::shiptalkback, $objdir);
 
   $upload_directory = $package_location . "/" . $upload_directory;
 
