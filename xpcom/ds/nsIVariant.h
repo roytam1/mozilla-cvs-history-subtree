@@ -146,7 +146,7 @@ public:
 
 };
 
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewIVariant(nsVariantType initialType, nsVariantValue& initialValue,
                nsIVariant* *result);
 

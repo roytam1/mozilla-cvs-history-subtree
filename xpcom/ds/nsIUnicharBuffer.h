@@ -41,7 +41,7 @@ public:
 };
 
 /// Factory method for nsIUnicharBuffer.
-extern NS_BASE nsresult
+extern NS_COM nsresult
 NS_NewUnicharBuffer(nsIUnicharBuffer** aInstancePtrResult,
                     nsISupports* aOuter,
                     PRUint32 aBufferSize = 0);

@@ -137,7 +137,7 @@ UnicharBufferImpl::Fill(nsresult* aErrorCode,
   return nb;
 }
 
-NS_BASE nsresult
+NS_COM nsresult
 NS_NewUnicharBuffer(nsIUnicharBuffer** aInstancePtrResult,
                     nsISupports* aOuter,
                     PRUint32 aBufferSize)

@@ -42,7 +42,7 @@ static nsObserverService* gObserverService = nsnull; // The one-and-only Observe
 
 NS_IMPL_ISUPPORTS(nsObserverService, kIObserverServiceIID);
 
-NS_BASE nsresult NS_NewObserverService(nsIObserverService** anObserverService)
+NS_COM nsresult NS_NewObserverService(nsIObserverService** anObserverService)
 {
     return nsObserverService::GetObserverService(anObserverService);
 }
