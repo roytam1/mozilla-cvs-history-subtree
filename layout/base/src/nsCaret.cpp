@@ -550,14 +550,18 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
             presShell->GetCursorBidiLevel(&bidiLevel);
             if (bidiLevel & BIDI_LEVEL_UNDEFINED)
             {
+              PRUint8 newBidiLevel;
+              bidiLevel &= ~BIDI_LEVEL_UNDEFINED;
               // There has been a reflow, so we reset the cursor Bidi level to the level of the current frame
+              //  unless the existing cursor level is smaller (this deals with the case of caret at the beginning
+              //  of the line, where the level of the first frame is different from the base embedding level)
               if (!presContext) // Use the style default
-                bidiLevel = display->mDirection;
+                newBidiLevel = display->mDirection;
               else
               {
                 theFrame->GetBidiProperty(presContext, nsLayoutAtoms::embeddingLevel,
-                                          (void**)&bidiLevel, sizeof(PRUint8) );
-                presShell->SetCursorBidiLevel(bidiLevel);
+                                          (void**)&newBidiLevel, sizeof(PRUint8) );
+                presShell->SetCursorBidiLevel(PR_MIN(bidiLevel, newBidiLevel));
               }
             }
 
@@ -574,8 +578,8 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
             {
               /* Boundary condition, we need to know the Bidi levels of the characters before and after the cursor */
               if (NS_SUCCEEDED(frameSelection->GetPrevNextBidiLevels(presContext, contentNode, contentOffset,
-                &frameBefore, &frameAfter,
-                &levelBefore, &levelAfter)))
+                                                                     &frameBefore, &frameAfter,
+                                                                     &levelBefore, &levelAfter)))
               {
                 if (levelBefore != levelAfter)
                 {

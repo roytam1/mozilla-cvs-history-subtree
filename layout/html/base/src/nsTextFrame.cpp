@@ -1946,7 +1946,7 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
       aPresContext->GetBidiUtils(&bidiUtils);
       if (bidiUtils) {
         bidiUtils->FormatUnicodeText(aPresContext, text, textLength, textClass,
-                                     level & 1,  isBidiSystem);
+                                     level & 1, isBidiSystem);
       }
     }
     if (0 != textLength) { // textLength might change due to the bidi formattimg
@@ -2116,6 +2116,21 @@ nsTextFrame::GetPositionSlowly(nsIPresContext* aPresContext,
     return NS_ERROR_FAILURE;
   }
 
+#ifdef IBMBIDI // Simon -- reverse RTL text here
+  int level;
+  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&level);
+  PRBool isOddLevel = (level & 1);
+  if (isOddLevel) {
+    PRUnichar *tStart, *tEnd;
+    PRUnichar tSwap;
+    for (tStart = paintBuffer.mBuffer, tEnd = tStart + textLength - 1; tEnd > tStart; tStart++, tEnd--) {
+      tSwap = *tStart;
+      *tStart = *tEnd;
+      *tEnd = tSwap;
+    }
+  }
+#endif // IBMBIDI
+
   ComputeExtraJustificationSpacing(*aRendContext, ts, paintBuffer.mBuffer, textLength, numSpaces);
 
 //IF STYLE SAYS TO SELECT TO END OF FRAME HERE...
@@ -2148,6 +2163,11 @@ nsTextFrame::GetPositionSlowly(nsIPresContext* aPresContext,
     //the following will first get the index into the PAINTBUFFER then the actual content
     nscoord adjustedX = PR_MAX(0,aPoint.x-origin.x);
 
+#ifdef IBMBIDI
+    if (isOddLevel)
+      aOffset = mContentOffset+textLength-GetLengthSlowly(*aRendContext, ts,paintBuffer.mBuffer,textLength,adjustedX);
+    else
+#endif
     aOffset = mContentOffset+GetLengthSlowly(*aRendContext, ts,paintBuffer.mBuffer,textLength,adjustedX);
     PRInt32 i;
     for (i = 0;i <= mContentLength; i ++){
@@ -2492,6 +2512,7 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
 
   if (0 != textLength) {
 #ifdef IBMBIDI
+    PRBool isRTL = PR_FALSE;
     PRBool bidiEnabled;
     aPresContext->BidiEnabled(bidiEnabled);
 
@@ -2506,6 +2527,8 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
                         (void**) &level);
         GetBidiProperty(aPresContext, nsLayoutAtoms::textClass,
                         (void**) &textClass);
+        if (CLASS_IS_RTL(textClass))
+          isRTL = PR_TRUE;
         // Since we paint char by char, handle the text like on non-bidi platform
         bidiUtils->FormatUnicodeText(aPresContext, text, textLength, textClass,
                                      level & 1, PR_FALSE);
@@ -2548,6 +2571,13 @@ nsTextFrame::PaintTextSlowly(nsIPresContext* aPresContext,
       while (sdptr){
         sdptr->mStart = ip[sdptr->mStart] - mContentOffset;
         sdptr->mEnd = ip[sdptr->mEnd]  - mContentOffset;
+#ifdef IBMBIDI // Simon - display substrings RTL in RTL frame
+        if (isRTL) {
+          PRInt32 swap  = sdptr->mStart;
+          sdptr->mStart = textLength - sdptr->mEnd;
+          sdptr->mEnd   = textLength - swap;
+        }
+#endif
         sdptr = sdptr->mNext;
       }
 
@@ -3256,20 +3286,19 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
     NS_ASSERTION(0, "invalid offset passed to GetPointFromOffset");
     inOffset = mContentLength;
   }
+  while (inOffset >=0 && ip[inOffset] < mContentOffset) //buffer has shrunk
+    inOffset --;
 #ifdef IBMBIDI
   int level;
   PRInt32 logicalOffset;
   PRBool doBidi = PR_FALSE;
   GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&level);
-  if ((level & 1) && (inOffset <= textLength)) {
-    // if inOffset > textLength, no need for Bidi processing: who cares in which direction we measure the whole content?
+  if (level & 1) {
     doBidi = PR_TRUE;
     logicalOffset = inOffset;
-    inOffset = textLength - inOffset;
+    inOffset = PR_MAX(0, textLength - inOffset);
   }
 #endif
-  while (inOffset >=0 && ip[inOffset] < mContentOffset) //buffer has shrunk
-    inOffset --;
   nscoord width = mRect.width;
   if (inOffset <0)
   {
@@ -3304,6 +3333,21 @@ nsTextFrame::GetPointFromOffset(nsIPresContext* aPresContext,
           inRendContext->GetWidth(paintBuffer.mBuffer, ip[inOffset]-mContentOffset,width);
       }
     }
+#ifdef IBMBIDI
+    if (doBidi)
+      if (logicalOffset > textLength && (TEXT_TRIMMED_WS & mState)){
+        //
+        // Offset must be after a space that has
+        // been trimmed off the end of the frame.
+        // Subtract the width of the trimmed space back
+        // from the total width, so the caret appears
+        // in the proper place!
+        //
+        // NOTE: the trailing whitespace includes the word spacing!!
+        width -= (ts.mSpaceWidth + ts.mWordSpacing);
+      }
+    else
+#endif
     if (inOffset > textLength && (TEXT_TRIMMED_WS & mState)){
       //
       // Offset must be after a space that has
@@ -3382,14 +3426,13 @@ NS_IMETHODIMP
 nsTextFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos) 
 {
 #ifdef IBMBIDI
-  int level;
+  int level, baseLevel;
   GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&level);
+  GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**)&baseLevel);
   PRBool isOddLevel = (level & 1);
 
   if ((eSelectCharacter == aPos->mAmount)
-      || (eSelectWord == aPos->mAmount)
-     // || (eSelectNoAmount == aPos->mAmount)
-     )
+      || (eSelectWord == aPos->mAmount))
     aPos->mPreferLeft ^= isOddLevel;
 #endif
 
@@ -4511,7 +4554,7 @@ nsTextFrame::Reflow(nsIPresContext* aPresContext,
   }
 #ifdef IBMBIDI
   if ( (mContentLength > 0) && (mState & NS_FRAME_IS_BIDI) ) {
-      startingOffset = mContentOffset;
+    startingOffset = mContentOffset;
   }
 #endif //IBMBIDI
   nsLineLayout& lineLayout = *aReflowState.mLineLayout;
@@ -4658,72 +4701,72 @@ nsTextFrame::Reflow(nsIPresContext* aPresContext,
     aMetrics.maxElementSize->height = aMetrics.height;
   }
 //ahmed
-	#ifdef IBMBIDI
- #ifdef _WIN32
- PRBool ArabicCharset;
-	aPresContext->IsArabicEncoding(ArabicCharset);
- if(ArabicCharset==PR_TRUE){
-  	nsCOMPtr<nsIAtom> ParentType;
-   nsIFrame * Parent = nsnull;
-	  this->GetParent(&Parent);
-   nsString aString;
-  	while (Parent != nsnull) {
- 	   Parent->GetFrameType(getter_AddRefs(ParentType) );
-	 	  if(ParentType) {
-		  	  ParentType->ToString(aString);
-		 		  if ((ParentType == nsLayoutAtoms::listControlFrame)||(ParentType == nsLayoutAtoms::textInputFrame)){// Check Parent type
-							 	if (!doc)
-					      return 0;
-			      //PRUint8 value;
-    				 nsString oCharsetID;
-			    	 nsBidiOptions aBidiop;
-				     aPresContext->GetBidi(&aBidiop);
-				     doc->GetDocumentCharacterSet(oCharsetID);
-         NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
-    				 if (oCharsetID.EqualsIgnoreCase("ibm864") && (aBidiop.mcontrolstextmode == IBMBIDI_CONTROLSTEXTMODE_LOGICAL)){
-				      	nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
-					      nsTextFragment* frag = nsnull;
-					      if (tc.get()) {
-						       tc->GetText((const nsTextFragment**)&frag);
-					      }
-					      if (!frag) {
-						       return NS_ERROR_FAILURE;
-					      }
-					      if (frag->Is2b()) {
-						       nsString Buffer, NewBuffer;
-						       PRInt32 Length = frag->GetLength();
-												 Buffer = NS_ConvertToString("");
-						       Buffer += frag->Get2b();
-						       Buffer.SetLength(Length);
-						       BidiEngine->Conv_FE_06 (Buffer, NewBuffer);
-						       *frag = NewBuffer;
-					      }
-				     }
-         else if ( ( (oCharsetID.EqualsIgnoreCase("windows-1256") )||(oCharsetID.EqualsIgnoreCase("iso-8859-6") )) && (aBidiop.mcontrolstextmode == IBMBIDI_CONTROLSTEXTMODE_VISUAL)){
-					      nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
-					      nsTextFragment* frag = nsnull;
-					      if (tc.get()) {
-						       tc->GetText((const nsTextFragment**)&frag);
-					      }
-					      if (!frag) {
-						       return NS_ERROR_FAILURE;
-					      }
-										 if ((frag->Is2b())) {
-					       	nsString Buffer, NewBuffer;
-						       PRInt32 Length = frag->GetLength();
-										 		Buffer = NS_ConvertToString("");
-						       Buffer += frag->Get2b();
-						       Buffer.SetLength(Length);
-						       BidiEngine->Conv_06_FE_WithReverse(Buffer, NewBuffer,aPresContext->map);
-						       *frag = NewBuffer; 
-				      	}
-				     }
-			   }//of control frame
-     
-		 } 
-	 	Parent->GetParent(&Parent);
-	 }
- }//OF ARABIC ENCODING
+#ifdef IBMBIDI
+#ifdef _WIN32
+  PRBool ArabicCharset;
+  aPresContext->IsArabicEncoding(ArabicCharset);
+  if(ArabicCharset==PR_TRUE){
+    nsCOMPtr<nsIAtom> ParentType;
+    nsIFrame * Parent = nsnull;
+    this->GetParent(&Parent);
+    nsString aString;
+    while (Parent != nsnull) {
+      Parent->GetFrameType(getter_AddRefs(ParentType) );
+      if(ParentType) {
+        ParentType->ToString(aString);
+        if ((ParentType == nsLayoutAtoms::listControlFrame)||(ParentType == nsLayoutAtoms::textInputFrame)){// Check Parent type
+          if (!doc)
+            return 0;
+//          PRUint8 value;
+          nsString oCharsetID;
+          nsBidiOptions aBidiop;
+          aPresContext->GetBidi(&aBidiop);
+          doc->GetDocumentCharacterSet(oCharsetID);
+          NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
+          if (oCharsetID.EqualsIgnoreCase("ibm864") && (aBidiop.mcontrolstextmode == IBMBIDI_CONTROLSTEXTMODE_LOGICAL)){
+            nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+            nsTextFragment* frag = nsnull;
+            if (tc.get()) {
+              tc->GetText((const nsTextFragment**)&frag);
+            }
+            if (!frag) {
+              return NS_ERROR_FAILURE;
+            }
+            if (frag->Is2b()) {
+              nsString Buffer, NewBuffer;
+              PRInt32 Length = frag->GetLength();
+              Buffer = NS_ConvertToString("");
+              Buffer += frag->Get2b();
+              Buffer.SetLength(Length);
+              BidiEngine->Conv_FE_06 (Buffer, NewBuffer);
+              *frag = NewBuffer;
+            }
+          }
+          else if ( ( (oCharsetID.EqualsIgnoreCase("windows-1256") )||(oCharsetID.EqualsIgnoreCase("iso-8859-6") )) && (aBidiop.mcontrolstextmode == IBMBIDI_CONTROLSTEXTMODE_VISUAL)){
+            nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+            nsTextFragment* frag = nsnull;
+            if (tc.get()) {
+              tc->GetText((const nsTextFragment**)&frag);
+            }
+            if (!frag) {
+              return NS_ERROR_FAILURE;
+            }
+            if ((frag->Is2b())) {
+              nsString Buffer, NewBuffer;
+              PRInt32 Length = frag->GetLength();
+              Buffer = NS_ConvertToString("");
+              Buffer += frag->Get2b();
+              Buffer.SetLength(Length);
+              BidiEngine->Conv_06_FE_WithReverse(Buffer, NewBuffer,aPresContext->map);
+              *frag = NewBuffer; 
+            }
+          }
+        }//of control frame
+
+      } 
+      Parent->GetParent(&Parent);
+    }
+  }//OF ARABIC ENCODING
 #endif // XP_WIN32
 #endif // IBMBIDI
   // Set content offset and length

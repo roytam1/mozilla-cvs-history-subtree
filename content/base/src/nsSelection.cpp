@@ -1465,7 +1465,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
         pos.mAmount = eSelectBeginLine;
         InvalidateDesiredX();
         mHint = HINTRIGHT;//stick to opposite of movement
-#ifdef IBMBIDI
+#ifdef IBMBIDI_0
 				caret->VKHomePress(1);  // Mamdouh To identify home key press for layer change;
 #endif
       break;
@@ -1477,7 +1477,7 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
      break;
   default :return NS_ERROR_FAILURE;
   }
-#ifdef IBMBIDI
+#ifdef IBMBIDI_0
   // Mamdouh : Flage for VK key
   caret->AccessVirtualKey(1);
 #endif 
@@ -1515,10 +1515,10 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
           pos.mContentOffset = frameEnd;
 
         // set the cursor Bidi level to the paragraph embedding level
-          theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, (void**)&level,
-                                    sizeof(PRUint8) );
-          shell->SetCursorBidiLevel(level);
-          break;
+        theFrame->GetBidiProperty(context, nsLayoutAtoms::baseLevel, (void**)&level,
+                                  sizeof(PRUint8) );
+        shell->SetCursorBidiLevel(level);
+        break;
 
       default:
         // If the current position is not a frame boundary, it's enough just to take the Bidi level of the current frame
@@ -1678,13 +1678,13 @@ nsDOMSelection::GetHint(PRBool *aHintRight)
 
 #ifdef IBMBIDI
 NS_IMETHODIMP
-   nsSelection::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
-                                      nsIContent *aNode,
-                                      PRUint32 aContentOffset,
-                                      nsIFrame **aPrevFrame,
-                                      nsIFrame **aNextFrame,
-                                      PRUint8 *aPrevLevel,
-                                      PRUint8 *aNextLevel)
+nsSelection::GetPrevNextBidiLevels(nsIPresContext *aPresContext,
+                                   nsIContent *aNode,
+                                   PRUint32 aContentOffset,
+                                   nsIFrame **aPrevFrame,
+                                   nsIFrame **aNextFrame,
+                                   PRUint8 *aPrevLevel,
+                                   PRUint8 *aNextLevel)
 {
   if (!aPrevFrame || !aNextFrame)
     return NS_ERROR_NULL_POINTER;
@@ -1877,28 +1877,39 @@ void nsSelection::BidiLevelFromMove(nsIPresContext* aContext,
 
   aPresShell->GetCursorBidiLevel(&currentLevel);
 
-  GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
-
   switch (aKeycode) {
 
     // Right and Left: the new cursor Bidi level is the level of the character moved over
     case nsIDOMKeyEvent::DOM_VK_RIGHT:
-      if (currentLevel & 1)
-        aPresShell->SetCursorBidiLevel(secondLevel);
-      else
+    case nsIDOMKeyEvent::DOM_VK_LEFT:
+      GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
+      if (HINTLEFT==mHint)
         aPresShell->SetCursorBidiLevel(firstLevel);
+      else
+        aPresShell->SetCursorBidiLevel(secondLevel);
+      break;
+      
+    /*
+    case nsIDOMKeyEvent::DOM_VK_RIGHT:
+      GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
+      if (currentLevel & 1)
+        aPresShell->SetCursorBidiLevel(firstLevel);
+      else
+        aPresShell->SetCursorBidiLevel(secondLevel);
       break;
 
     case nsIDOMKeyEvent::DOM_VK_LEFT:
+      GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
       if (currentLevel & 1)
-        aPresShell->SetCursorBidiLevel(firstLevel);
-      else
         aPresShell->SetCursorBidiLevel(secondLevel);
+      else
+        aPresShell->SetCursorBidiLevel(firstLevel);
       break;
-
+*/
     // Up and Down: the new cursor Bidi level is the smaller of the two surrounding characters
     case nsIDOMKeyEvent::DOM_VK_UP:
     case nsIDOMKeyEvent::DOM_VK_DOWN:
+      GetPrevNextBidiLevels(aContext, aNode, aContentOffset, &firstFrame, &secondFrame, &firstLevel, &secondLevel);
       aPresShell->SetCursorBidiLevel(PR_MIN(firstLevel, secondLevel));
       break;
 

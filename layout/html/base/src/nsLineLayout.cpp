@@ -491,9 +491,10 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
 #ifdef IBMBIDI
     if (mBlockReflowState->mStyleDisplay->mDirection == NS_STYLE_DIRECTION_RTL)
     {  
-      psd->mRightEdge = (((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() > (aRightEdge)) ? 
-        ((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() : 
-        (aRightEdge);
+//      psd->mRightEdge = (((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() > (psd->mX+psd->mLeftEdge-aRightEdge)) ?
+      psd->mRightEdge = (((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() > (aRightEdge)) ?
+                        ((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() : 
+                        (aRightEdge);
       
       //((nsBlockFrame*)mBlockReflowState->frame)->AlignLinesRight();
       //psd->mRightEdge = aRightEdge;
@@ -877,7 +878,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
           }
         }
         else if (type == nsIReflowCommand::ReflowDirty &&
-                 (state & NS_FRAME_IS_DIRTY)) {          
+                 (state & NS_FRAME_IS_DIRTY)) {
           reason = eReflowReason_Dirty;
         }
       }
@@ -2857,7 +2858,11 @@ nsLineLayout::RelativePositionFrames(PerSpanData* psd, nsRect& aCombinedArea)
     // don't want to happen.
     if (r->width && r->height) {
       nscoord xl = x + r->x;
+#ifdef IBMBIDI
+      nscoord xr = (NS_STYLE_DIRECTION_RTL == psd->mDirection) ? r->XMost() : x + r->XMost();
+#else
       nscoord xr = x + r->XMost();
+#endif
       if (xl < minX) {
         minX = xl;
       }

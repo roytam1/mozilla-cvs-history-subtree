@@ -662,45 +662,59 @@ nsLineIterator::CheckLineOrder(PRInt32                  aLine,
                                nsIFrame                 **aLastVisual)
 {
   nsRect    checkRect;
-  PRInt32   saveLine, testLine;
+  PRInt32   currentLine, saveLine, testLine;
   nscoord   saveX;
   nsIFrame  *checkFrame;
   nsIFrame  *firstFrame;
+  nsIFrame  *leftmostFrame;
+  nsIFrame  *rightmostFrame;
   nscoord   minX, maxX;
   PRInt32   lineFrameCount;
   PRUint32  lineFlags;
 
+  nsresult  result;
   *aIsReordered = PR_FALSE;
-  
-  nsLineBox* line = mLines[aLine];
-  if (!line)
-    return NS_ERROR_INVALID_ARG;
-  
-  checkFrame = line->mFirstChild;
 
-  checkFrame->GetRect(checkRect);
-  nsresult result = FindLineContaining(checkFrame, &saveLine);
-  if (NS_FAILED(result))
-    return result;
-  saveX = checkRect.x;
+  // Check the preceding and following line, since we might be moving into them
 
-  for (; checkFrame; result = checkFrame->GetNextSibling(&checkFrame)) {
-    if (NS_FAILED(result))
+  for (currentLine = PR_MAX(0, aLine-1); currentLine < aLine+1; currentLine++) {
+
+    nsLineBox* line = mLines[currentLine];
+    if (!line)
       break;
-    result = FindLineContaining(checkFrame, &testLine);
-    if (NS_FAILED(result))
-      return result;
-    if (testLine != saveLine) {
-      *aIsReordered = PR_TRUE;
-      break;
-    }
+
+    checkFrame = line->mFirstChild;
 
     checkFrame->GetRect(checkRect);
-    if (checkRect.x < saveX) { // if the origin of any frame is less than the previous frame, the line is reordered
-      *aIsReordered = PR_TRUE;
-      break;
-    }
+    result = FindLineContaining(checkFrame, &saveLine);
+    if (NS_FAILED(result))
+      return result;
     saveX = checkRect.x;
+    lineFrameCount = line->GetChildCount();
+
+    for (; checkFrame; result = checkFrame->GetNextSibling(&checkFrame)) {
+      if (NS_FAILED(result))
+        break;
+      result = FindLineContaining(checkFrame, &testLine);
+      if (NS_FAILED(result))
+        return result;
+      if (testLine != saveLine) {
+        *aIsReordered = PR_TRUE;
+        break;
+      }
+
+      checkFrame->GetRect(checkRect);
+      if (checkRect.x < saveX) { // if the origin of any frame is less than the previous frame, the line is reordered
+        *aIsReordered = PR_TRUE;
+        break;
+      }
+      saveX = checkRect.x;
+      lineFrameCount--;
+      if (0 == lineFrameCount)
+        break;
+    }
+    if (*aIsReordered)
+      break;
   }
 
   if (*aIsReordered) {
@@ -709,7 +723,7 @@ nsLineIterator::CheckLineOrder(PRInt32                  aLine,
     if (NS_FAILED(result))
       return result;
 
-    *aFirstVisual = *aLastVisual = firstFrame;
+    leftmostFrame = rightmostFrame = firstFrame;
     firstFrame->GetRect(checkRect);
     maxX = checkRect.x;
     minX = checkRect.x;
@@ -725,12 +739,20 @@ nsLineIterator::CheckLineOrder(PRInt32                  aLine,
       firstFrame->GetRect(checkRect);
       if (checkRect.x > maxX) {
         maxX = checkRect.x;
-        *aLastVisual = firstFrame;
+        rightmostFrame = firstFrame;
       }
       if (checkRect.x < minX) {
         minX = checkRect.x;
-        *aFirstVisual = firstFrame;
+        leftmostFrame = firstFrame;
       }
+    }
+    if (mRightToLeft) {
+      *aFirstVisual = rightmostFrame;
+      *aLastVisual = leftmostFrame;
+    }
+    else {
+      *aFirstVisual = leftmostFrame;
+      *aLastVisual = rightmostFrame;
     }
   }
   return result;
