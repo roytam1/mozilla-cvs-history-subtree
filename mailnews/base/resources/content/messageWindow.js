@@ -36,6 +36,17 @@ var folderListener = {
 
 	OnItemRemoved: function(parentItem, item, view)
 	{
+		var parentFolderResource = parentItem.QueryInterface(Components.interfaces.nsIRDFResource);
+		if(!parentFolderResource)
+			return;
+
+		var parentURI = parentFolderResource.Value;
+		if(parentURI != gCurrentFolderUri)
+			return;
+
+		var deletedMessageHdr = item.QueryInterface(Components.interfaces.nsIMsgDBHdr);
+    if (extractMsgKeyFromURI() == deletedMessageHdr.messageKey)
+			gCurrentMessageIsDeleted = true;
 	},
 
 	OnItemPropertyChanged: function(item, property, oldValue, newValue) {},
@@ -95,8 +106,9 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 		return;
 
 	var folderUri = folderResource.Value;
-	if((folderUri == gCurrentFolderUri))
+	if((folderUri == gCurrentFolderUri) && gCurrentMessageIsDeleted)
 	{
+    gCurrentMessageIsDeleted = false;
     if (gNextMessageViewIndexAfterDelete != -1) 
     {
       var nextMstKey = gDBView.getKeyAt(gNextMessageViewIndexAfterDelete);
