@@ -56,8 +56,10 @@
 #include "nsIDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
-#include "nsIProfile.h"
 #include "nsQuickSort.h"
+#include "nsIObserverService.h"
+#include "nsWeakReference.h"
+#include "nsIProfileChangeStatus.h"
 
 #include "nsTextFormatter.h"
 
@@ -93,20 +95,23 @@ static NS_DEFINE_CID(kSecurityManagerCID,   NS_SCRIPTSECURITYMANAGER_CID);
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 //========================================================================================
-class nsPref: public nsIPref, public nsISecurityPref
+class nsPref: public nsIPref,
+              public nsISecurityPref,
+              public nsIObserver,
+              public nsSupportsWeakReference
 //========================================================================================
 {
     NS_DECL_ISUPPORTS
 
 public:
     static nsPref *GetInstance();
-
+    
     /* Use xpidl-generated macro to declare everything required by nsIPref */
     NS_DECL_NSIPREF
     NS_DECL_NSISECURITYPREF
+    NS_DECL_NSIOBSERVER
 
 protected:
-
     nsPref();
     virtual ~nsPref();
 
@@ -213,6 +218,16 @@ nsPref::nsPref()
 {
     PR_AtomicIncrement(&g_InstanceCount);
     NS_INIT_REFCNT();
+
+    nsresult rv;
+    NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+    if (observerService) {
+        // Our refcnt must be > 0 when we call this, or we'll get deleted!
+        ++mRefCnt;
+        rv = observerService->AddObserver(this, PROFILE_BEFORE_CHANGE_TOPIC);
+        rv = observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
+        --mRefCnt;
+    }
 }
 
 //----------------------------------------------------------------------------------------
@@ -526,7 +541,7 @@ nsresult nsPref::SecurePrefCheck(const char* aPrefName)
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsPref, nsIPref, nsISecurityPref);
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsPref, nsIPref, nsISecurityPref, nsIObserver, nsSupportsWeakReference);
 
 //========================================================================================
 // nsIPref Implementation
@@ -1379,6 +1394,24 @@ nsPref::EnumerateChildren(const char *parent, PrefEnumerationFunc callback, void
     return NS_OK;
 }
 
+
+NS_IMETHODIMP nsPref::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
+{
+    nsresult rv = NS_OK;
+
+    if (nsCRT::strcmp(aTopic, PROFILE_BEFORE_CHANGE_TOPIC) == 0)
+    {
+        // Don't think we need to do this - the app should be in control of when prefs are saved
+        //rv = SavePrefFile();
+    }
+    else if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0)
+    {
+        rv = ReadUserPrefs();
+    }
+    return rv;
+}
+
+
 //========================================================================================
 // C++ implementations of old C routines
 //========================================================================================
@@ -1832,16 +1865,19 @@ CreateNewPref(nsISupports *aDelegate, REFNSIID aIID, void **aResult)
 {
     if (aDelegate != NULL)
         return NS_ERROR_NO_AGGREGATION;
+    if (aResult == NULL)
+        return NS_ERROR_NULL_POINTER;
+    
+    *aResult = NULL;
 
     nsPref *t = nsPref::GetInstance();
     
     if (t == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
     
-    nsresult res = t->QueryInterface(aIID, aResult);
+    nsresult res;
     
-    if (NS_FAILED(res))
-        *aResult = NULL;
+    res = t->QueryInterface(aIID, aResult);        
 
     return res;
 }

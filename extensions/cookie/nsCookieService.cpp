@@ -30,6 +30,8 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIPrompt.h"
+#include "nsIObserverService.h"
+#include "nsIProfileChangeStatus.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -37,7 +39,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 // nsCookieService Implementation
 
-NS_IMPL_ISUPPORTS1(nsCookieService, nsICookieService);
+NS_IMPL_ISUPPORTS3(nsCookieService, nsICookieService, nsIObserver, nsSupportsWeakReference);
 
 nsCookieService::nsCookieService()
 : mInitted(PR_FALSE)
@@ -62,6 +64,13 @@ nsresult nsCookieService::Init()
     
   COOKIE_RegisterCookiePrefCallbacks();
   COOKIE_ReadCookies();
+  
+  nsresult rv;
+  NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+  if (observerService) {
+    observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
+  }
+  
   mInitted = PR_TRUE;
   return NS_OK;
 }
@@ -182,6 +191,27 @@ NS_IMETHODIMP nsCookieService::CookieEnabled(PRBool* aEnabled)
 {
   *aEnabled = (COOKIE_GetBehaviorPref() != COOKIE_DontUse);
   return NS_OK;
+}
+
+
+NS_IMETHODIMP nsCookieService::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
+{
+    nsresult rv = NS_OK;
+    
+    if (nsCRT::strcmp(aTopic, PROFILE_DO_CHANGE_TOPIC) == 0)
+    {
+        // The profile has aleady changed.
+        
+        // Dump current cookies. This does not touch any files
+        // from the old cookie location. If this condition ever
+        // changes, COOKIE_RemoveAllCookies needs to be done on
+        // PROFILE_BEFORE_CHANGE_TOPIC.
+        COOKIE_RemoveAllCookies();
+        // Now just read them from the new profile location
+        COOKIE_ReadCookies();
+    }
+
+    return rv;
 }
 
 

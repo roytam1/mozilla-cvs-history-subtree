@@ -77,6 +77,8 @@
 #include "nsInt64.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsIObserverService.h"
+#include "nsIProfileChangeStatus.h"
 
 static char kChromePrefix[] = "chrome://";
 static char kAllPackagesName[] = "all-packages.rdf";
@@ -264,6 +266,14 @@ nsChromeRegistry::nsChromeRegistry()
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
   }
 
+  NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+  if (observerService) {
+    // Our refcnt must be > 0 when we call this or else we'll get deleted!
+    ++mRefCnt;
+    observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
+    --mRefCnt;
+  }
+
   CheckForNewChrome();
 }
 
@@ -306,7 +316,7 @@ nsChromeRegistry::~nsChromeRegistry()
 
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsChromeRegistry, nsIChromeRegistry);
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsChromeRegistry, nsIChromeRegistry, nsIObserver, nsSupportsWeakReference);
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChromeRegistry methods:
@@ -463,37 +473,8 @@ nsChromeRegistry::ConvertChromeURL(nsIURI* aChromeURL, char** aResult)
     // Just setSpec 
     rv = GetInstallRoot(mInstallRoot);
     if (NS_FAILED(rv)) return rv;
-    rv = GetProfileRoot(mProfileRoot);
-    if (NS_SUCCEEDED(rv)) {
-      // Load the profile search path for skins, content, and locales
-      // Prepend them to our list of substitutions.
-      mProfileInitialized = mInstallInitialized = PR_TRUE;
-      mChromeDataSource = nsnull;
-      rv = AddToCompositeDataSource(PR_TRUE);
-      if (NS_FAILED(rv)) return rv;
-
-      // We have to flush the chrome cache!
-      rv = RefreshSkins();
-      if (NS_FAILED(rv)) return rv;
-
-      rv = LoadStyleSheet(getter_AddRefs(mScrollbarSheet), nsCAutoString("chrome://global/skin/scrollbars.css")); 
-      if (NS_FAILED(rv)) return rv;
-      // This must always be the last line of profile initialization!
-
-      nsCAutoString userSheetURL;
-      rv = GetUserSheetURL(PR_TRUE, userSheetURL);
-      if (NS_FAILED(rv)) return rv;
-      if(!userSheetURL.IsEmpty()) {
-        (void)LoadStyleSheet(getter_AddRefs(mUserChromeSheet), userSheetURL);
-        // it's ok to not have a user.css file
-      }
-      rv = GetUserSheetURL(PR_FALSE, userSheetURL);
-      if (NS_FAILED(rv)) return rv;
-      if(!userSheetURL.IsEmpty()) {
-        (void)LoadStyleSheet(getter_AddRefs(mUserContentSheet), userSheetURL);
-        // it's ok not to have a userContent.css or userChrome.css file
-      }
-    }
+    rv = LoadProfileDataSource();
+    if (NS_FAILED(rv)) return rv;
   }
  
   nsCAutoString finalURL;
@@ -2446,6 +2427,42 @@ nsresult nsChromeRegistry::GetUserSheetURL(PRBool aIsChrome, nsCString & aURL)
   return NS_OK;
 }
 
+nsresult nsChromeRegistry::LoadProfileDataSource()
+{
+    nsresult rv = GetProfileRoot(mProfileRoot);
+    if (NS_SUCCEEDED(rv)) {
+      // Load the profile search path for skins, content, and locales
+      // Prepend them to our list of substitutions.
+      mProfileInitialized = mInstallInitialized = PR_TRUE;
+      mChromeDataSource = nsnull;
+      rv = AddToCompositeDataSource(PR_TRUE);
+      if (NS_FAILED(rv)) return rv;
+
+      // We have to flush the chrome cache!
+      rv = RefreshSkins();
+      if (NS_FAILED(rv)) return rv;
+
+      rv = LoadStyleSheet(getter_AddRefs(mScrollbarSheet), nsCAutoString("chrome://global/skin/scrollbars.css")); 
+      if (NS_FAILED(rv)) return rv;
+      // This must always be the last line of profile initialization!
+
+      nsCAutoString userSheetURL;
+      rv = GetUserSheetURL(PR_TRUE, userSheetURL);
+      if (NS_FAILED(rv)) return rv;
+      if(!userSheetURL.IsEmpty()) {
+        (void)LoadStyleSheet(getter_AddRefs(mUserChromeSheet), userSheetURL);
+        // it's ok to not have a user.css file
+      }
+      rv = GetUserSheetURL(PR_FALSE, userSheetURL);
+      if (NS_FAILED(rv)) return rv;
+      if(!userSheetURL.IsEmpty()) {
+        (void)LoadStyleSheet(getter_AddRefs(mUserContentSheet), userSheetURL);
+        // it's ok not to have a userContent.css or userChrome.css file
+      }
+    }
+    return NS_OK;
+}
+
 NS_IMETHODIMP nsChromeRegistry::AllowScriptsForSkin(nsIURI* aChromeURI, PRBool *aResult)
 {
   *aResult = PR_TRUE;
@@ -2721,6 +2738,17 @@ nsChromeRegistry::GetProviderCount(const nsCString& aProviderType, nsIRDFDataSou
   PRInt32 count;
   container->GetCount(&count);
   return count;
+}
+
+
+NS_IMETHODIMP nsChromeRegistry::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
+{
+    nsresult rv = NS_OK;
+    
+    if (nsCRT::strcmp(PROFILE_DO_CHANGE_TOPIC, aTopic) == 0)
+        rv = LoadProfileDataSource();
+
+    return rv;
 }
 
 //////////////////////////////////////////////////////////////////////
