@@ -8650,11 +8650,6 @@ nsCSSFrameConstructor::FindPrimaryFrameFor(nsIPresContext*  aPresContext,
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
 
-  PRBool fixBug28553 = PR_TRUE;
-  nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_PROGID));
-  if (pref) {
-	  pref->GetBoolPref("nglayout.bug28553", &fixBug28553);
-  }
   // We want to be able to quickly map from a content object to its frame,
   // but we also want to keep the hash table small. Therefore, many frames
   // are not added to the hash table when they're first created:
@@ -8684,9 +8679,6 @@ nsCSSFrameConstructor::FindPrimaryFrameFor(nsIPresContext*  aPresContext,
         break;
       }
       else { 
-        if (!fixBug28553) {
-          break;  // the pref was set to skip the fix for bug 28553
-        }
         // We need to check parentFrame's sibling frame as well 
         parentFrame->GetNextSibling(&parentFrame); 
         if (!parentFrame) {
