@@ -62,8 +62,11 @@ public:
   NS_IMETHOD BeginBatchUpdate();
   NS_IMETHOD EndBatchUpdate();
 
-  typedef nsresult 
-  NS_STDCALL_FUNCPROTO(nsISVGValueObserver::*SVGObserverNotifyFunction,(nsISVGValue*));
+  typedef
+  NS_STDCALL_FUNCPROTO(nsresult,
+                       SVGObserverNotifyFunction,
+                       nsISVGValueObserver, DidModifySVGObservable,
+                       (nsISVGValue*));
 
 protected:
   // implementation helpers
