@@ -79,6 +79,7 @@ JavaClass_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         return JS_TRUE;
 
     default:
+      break;
     }
     return JS_TRUE;
 }
