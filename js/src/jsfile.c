@@ -23,8 +23,6 @@
 
 /* ------------------ Platform-specific includes and defines ------------------- */
 #ifdef XP_MAC
-#   define LINEBREAK             "\012"
-#   define LINEBREAK_LEN         1
 #   define FILESEPARATOR         ':'
 #   define FILESEPARATOR2        '\0'
 #   define CURRENT_DIR          "HARD DISK:Desktop Folder"
@@ -33,8 +31,6 @@
 #   include <io.h>
 #   include <sys/types.h>
 #   include <sys/stat.h>
-#   define LINEBREAK            "\015\012"
-#   define LINEBREAK_LEN        2
 #   define FILESEPARATOR        '\\'
 #   define FILESEPARATOR2       '/'
 #   define CURRENT_DIR          "c:\\"
@@ -45,8 +41,6 @@
 #   include <stdio.h>
 #   include <stdlib.h>
 #   include <unistd.h>
-#   define LINEBREAK            "\012"
-#   define LINEBREAK_LEN        1
 #   define FILESEPARATOR        '/'
 #   define FILESEPARATOR2       '\0'
 #   define CURRENT_DIR          "/"
@@ -98,6 +92,8 @@
 #define STDINPUT_NAME           "Standard input stream"
 #define STDOUTPUT_NAME          "Standard output stream"
 #define STDERROR_NAME           "Standard error stream"
+
+#define RESOLVE_PATH            js_absolutePath
 
 /* Error handling */
 typedef enum JSFileErrNum {
@@ -1410,7 +1406,11 @@ out:
 static JSBool
 file_remove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-    JSFile  *file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
+	JSFile  *file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
+
+    /*if(PR_RmDir(file->path)!=PR_SUCCESS){
+		printf("total failure\n");
+    }*/
 
     /* SECURITY */
     JSFILE_CHECK_NATIVE("remove");
@@ -1440,7 +1440,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     char        *dest = NULL;
     PRFileDesc  *handle = NULL;
     char        *buffer;
-    uint32      count, size;
+    jsval		count, size;
     JSBool      fileInitiallyOpen=JS_FALSE;
 
     /* SECURITY */
@@ -1493,7 +1493,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     buffer = JS_malloc(cx, size);
 
-    count = PR_Read(file->handle, buffer, size);
+    count = INT_TO_JSVAL(PR_Read(file->handle, buffer, size));
 
     /* reading panic */
     if (count!=size) {
@@ -1503,7 +1503,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         goto out;
     }
 
-    count = PR_Write(handle, buffer, size);
+    count = INT_TO_JSVAL(PR_Write(handle, buffer, JSVAL_TO_INT(size)));
 
     /* writing panic */
     if (count!=size) {
@@ -1515,11 +1515,9 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     JS_free(cx, buffer);
 
-    if(PR_Close(file->handle)!=PR_SUCCESS){
-        JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,
-              JSFILEMSG_OP_FAILED, "close", file->path);
-        goto out;
-    }
+	if(!fileInitiallyOpen){
+		if(!file_close(cx, obj, 0, NULL, rval)) goto out;
+	}
 
     if(PR_Close(handle)!=PR_SUCCESS){
         JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,
@@ -1531,7 +1529,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 out:
     if(file->isOpen && !fileInitiallyOpen){
-        if((!file->isNative)?PR_Close(file->handle):fclose(file->nativehandle)!=PR_SUCCESS){
+        if(PR_Close(file->handle)!=PR_SUCCESS){
             JS_ReportWarning(cx, "Can't close %s, proceeding", file->path);
         }
     }
@@ -1555,20 +1553,23 @@ file_renameTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 
         sprintf(str, "%d", argc);
         JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,
-            JSFILEMSG_EXPECTS_ONE_ARG_ERROR, "rename", str);
+            JSFILEMSG_EXPECTS_ONE_ARG_ERROR, "renameTo", str);
         goto out;
     }
 
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
-    dest = JS_GetStringBytes(JS_ValueToString(cx, argv[0]));
+    dest = RESOLVE_PATH(cx, JS_GetStringBytes(JS_ValueToString(cx, argv[0])));
 
     /* SECURITY */
-    JSFILE_CHECK_NATIVE("rename");
+    JSFILE_CHECK_NATIVE("renameTo");
 
-    JSFILE_CHECK_CLOSED("rename");
+    JSFILE_CHECK_CLOSED("renameTo");
 
     if (PR_Rename(file->path, dest)==PR_SUCCESS){
+        /* copy the new filename */
+        JS_free(cx, file->path);
+        file->path = dest;
         *rval = JSVAL_TRUE;
         return JS_TRUE;
     }else{
@@ -1652,7 +1653,7 @@ file_writeln(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* don't report an error here */
     if(!file_write(cx, obj, argc, argv, rval))  return JS_FALSE;
     /* don't do security here -- we passed the check in file_write */
-    str = JS_NewStringCopyZ(cx, LINEBREAK);
+    str = JS_NewStringCopyZ(cx, "\n");
 
     if (js_FileWrite(cx, file, JS_GetStringChars(str), JS_GetStringLength(str), file->type)==-1){
         *rval = JSVAL_FALSE;
@@ -1958,7 +1959,7 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* SECURITY */
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
-    if (argc=1) {
+    if (argc==1) {
         if (JSVAL_IS_REGEXP(cx, argv[0])) {
             re = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[0]));
         }else
@@ -1969,10 +1970,6 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
                 JSFILEMSG_FIRST_ARGUMENT_MUST_BE_A_FUNCTION_OR_REGEX, argv[0]);
             goto out;
         }
-    }else{
-        JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,
-            JSFILEMSG_FIRST_ARGUMENT_MUST_BE_A_NUMBER, "list", argv[0]);
-        goto out;
     }
 
     if (!js_isDirectory(cx, file)) {
@@ -2037,7 +2034,7 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         len++;
     }
 
-    if(!PR_CloseDir(dir)){
+    if(PR_CloseDir(dir)!=PR_SUCCESS){
         JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,
             JSFILEMSG_OP_FAILED, "close", file->path);
         goto out;
@@ -2077,9 +2074,10 @@ file_mkdir(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         JS_free(cx, dir);
 
         /* call file_mkdir with the right set of parameters if needed */
-        if (!file_mkdir(cx, dirObj, argc, argv, rval)) {
+        if (file_mkdir(cx, dirObj, argc, argv, rval))
+			return JS_TRUE;
+		else
             goto out;
-        }
     }else{
         char *dirName = JS_GetStringBytes(JS_ValueToString(cx, argv[0]));
         char *fullName;
@@ -2173,7 +2171,7 @@ file_init(JSContext *cx, JSObject *obj, char *bytes)
 
     /* canonize the path */
     /*file->path = js_canonicalPath(cx, bytes);*/
-    file->path = js_absolutePath(cx, bytes);
+    file->path = RESOLVE_PATH(cx, bytes);
 
     if (!JS_SetPrivate(cx, obj, file)) {
         JS_ReportErrorNumber(cx, JSFile_GetErrorMessage, NULL,

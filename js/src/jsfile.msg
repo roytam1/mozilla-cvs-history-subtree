@@ -51,6 +51,6 @@ MSG_DEF(JSFILEMSG_CANNOT_OPEN_DIR,                                27, 1, JSEXN_N
 MSG_DEF(JSFILEMSG_NO_RANDOM_ACCESS,                               28, 1, JSEXN_NONE, "File {0} doesn't support random access")
 MSG_DEF(JSFILEMSG_CANNOT_REPORT_POSITION,                         29, 1, JSEXN_NONE, "Cannot report the position in file {0}, seek operation failed")
 MSG_DEF(JSFILEMSG_CANNOT_SET_POSITION,                            30, 1, JSEXN_NONE, "Cannot set the position in file {0}, seek operation failed")
-MSG_DEF(JSFILEMSG_FILE_MUST_BE_CLOSED,                            31, 1, JSEXN_NONE, "Cannot perform operation or access property {0} on an open file")
-MSG_DEF(JSFILEMSG_FILE_MUST_BE_OPEN,                              32, 1, JSEXN_NONE, "Cannot perform operation or access property {0} on an closed file")
+MSG_DEF(JSFILEMSG_FILE_MUST_BE_CLOSED,                            31, 1, JSEXN_NONE, "Cannot perform operation or access property \"{0}\" on an open file")
+MSG_DEF(JSFILEMSG_FILE_MUST_BE_OPEN,                              32, 1, JSEXN_NONE, "Cannot perform operation or access property \"{0}\" on an closed file")
 
