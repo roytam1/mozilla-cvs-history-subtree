@@ -52,6 +52,16 @@
 #define IL_BYPASS_CACHE     0x04   /* Don't get image out of image cache.   */
 #define IL_ONLY_FROM_CACHE  0x08   /* Don't load if image cache misses.     */
 
+typedef enum
+{   
+     USE_IMG_CACHE,        /* use imgcache */
+     DONT_USE_IMG_CACHE,   /* dont use imgcache AND if found in imgcache delete entry */
+     SYNTH_IMGDOC_NEEDS_IMG_CACHE   /* needed for view-image/image doc */
+     
+} ImgCachePolicy;
+
+
+
 /* A rectangle structure. */
 typedef struct _IL_Rect {
   PRUint16 x_origin;

@@ -43,9 +43,6 @@
 
 #include "nsIImgDecoder.h"
 
-#include "ntypes.h"             /* typedefs for commonly used Netscape data
-                                   structures */
-
 typedef struct _IL_GroupContext IL_GroupContext;
 typedef struct _IL_ImageReq IL_ImageReq;
 typedef struct il_context_list il_context_list;
@@ -153,7 +150,7 @@ enum icstate {
 
 /* Force memory cache to be flushed ? */
 #define FORCE_RELOAD(reload_method)                                           \
- (((reload_method)==NET_NORMAL_RELOAD) || ((reload_method)==NET_SUPER_RELOAD))
+    (reload_method = DONT_USE_IMG_CACHE)
 
 /* Simple list of image contexts. */
 struct il_context_list {

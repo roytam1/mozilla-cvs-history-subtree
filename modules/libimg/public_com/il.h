@@ -34,7 +34,6 @@
 #ifndef _IL_H
 #define _IL_H
 
-#include "ntypes.h"
 
 /* attr values */
 #define IL_ATTR_RDONLY	      0

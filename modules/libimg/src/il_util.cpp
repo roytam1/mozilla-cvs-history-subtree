@@ -28,8 +28,7 @@
 
 
 #include "nsCRT.h"
-#include "ntypes.h"             /* typedefs for commonly used Netscape data
-                                   structures. */
+
 #include "prtypes.h"
 #include "prmem.h"
 
