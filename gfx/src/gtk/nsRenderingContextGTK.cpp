@@ -697,8 +697,8 @@ NS_IMETHODIMP nsRenderingContextGTK::SetLineStyle(nsLineStyle aLineStyle)
 
       case nsLineStyle_kDotted:
         {
-          mLineStyle = GDK_LINE_ON_OFF_DASH;
           mDashList[0] = mDashList[1] = 1;
+          mLineStyle = GDK_LINE_ON_OFF_DASH;
           mDashes = 2;
 
           /*          ::gdk_gc_set_dashes(mSurface->GetGC(), 
