@@ -51,7 +51,7 @@ const nsIProperties    = Components.interfaces.nsIProperties;
 const nsIFileURL       = Components.interfaces.nsIFileURL;
 const nsIRDFRemoteDataSource = Components.interfaces.nsIRDFRemoteDataSource;
 const nsIInternetSearchService = Components.interfaces.nsIInternetSearchService;
-const nsISecurityCheckedComponent = Components.interfaces.nsISecurityCheckedComponent;
+const nsIClassInfo = Components.interfaces.nsIClassInfo;
 
 function nsSidebar()
 {
@@ -292,41 +292,16 @@ function (engineURL, iconURL, suggestedTitle, suggestedCategory)
     }
 }
 
-// method of nsISecurityCheckedComponent
-nsSidebar.prototype.canCreateWrapper =
-function (iid) {
-    return "NoAccess";
-}
+// property of nsIClassInfo
+nsSidebar.prototype.flags = nsIClassInfo.DOM_OBJECT;
 
-// method of nsISecurityCheckedComponent
-nsSidebar.prototype.canCallMethod =
-function (iid, methodName) {
-    if (iid.equals(nsISidebar) &&
-        (methodName == "setWindow" ||
-         methodName == "addPanel" ||
-         methodName == "addSearchEngine")) {
-        return "AllAccess";
-    } else {
-        return "NoAccess";
-    }
-}
-
-// method of nsISecurityCheckedComponent
-nsSidebar.prototype.canGetProperty =
-function (iid, propertyName) {
-    return "NoAccess";
-}
-
-// method of nsISecurityCheckedComponent
-nsSidebar.prototype.canSetProperty =
-function (iid, propertyName) {
-    return "NoAccess";
-}
+// property of nsIClassInfo
+nsSidebar.prototype.classDescription = "Sidebar";
 
 nsSidebar.prototype.QueryInterface =
 function (iid) {
     if (!iid.equals(nsISidebar) && 
-        !iid.equals(nsISecurityCheckedComponent) &&
+        !iid.equals(nsIClassInfo) &&
         !iid.equals(nsISupports))
         throw Components.results.NS_ERROR_NO_INTERFACE;
     return this;
