@@ -45,7 +45,6 @@
 #include "nsISupports.h"
 #include "nsIFactory.h"
 #include "nsIGenericFactory.h"
-#include "nsIRegistry.h"
 #include "nsMemory.h"
 #include "nsString.h"
 #include "simpleCID.h"
@@ -368,14 +367,6 @@ static nsModuleComponentInfo gComponentInfo[] = {
 
 NS_IMPL_NSGETMODULE("SimplePlugin", gComponentInfo);
 
-// This counter is used to keep track of the number of outstanding objects.
-// It is used to determine whether the plugin's DLL can be unloaded.
-static PRUint32 gPluginObjectCount = 0;
-
-// This flag is used to keep track of whether the plugin's DLL is explicitly
-// being retained by some client.
-static PRBool gPluginLocked = PR_FALSE;
-
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePluginInstance Methods
 ////////////////////////////////////////////////////////////////////////////////
@@ -445,10 +436,9 @@ SimplePluginInstance::UnregisterSelf(nsIComponentManager* aCompMgr,
 
 
 SimplePluginInstance::SimplePluginInstance(void)
-    : fPeer(NULL), fWindow(NULL), fMode(nsPluginMode_Embedded), fText(NULL)
+    : fText(NULL), fPeer(NULL), fWindow(NULL), fMode(nsPluginMode_Embedded)
 {
     NS_INIT_REFCNT();
-    gPluginObjectCount++;
 
     static const char text[] = "Hello World!";
     fText = (char*) nsMemory::Clone(text, sizeof(text));
@@ -463,7 +453,6 @@ SimplePluginInstance::SimplePluginInstance(void)
 
 SimplePluginInstance::~SimplePluginInstance(void)
 {
-    gPluginObjectCount--;
     if(fText)
         nsMemory::Free(fText);
     PlatformDestroy(); // Perform platform specific cleanup
@@ -764,7 +753,6 @@ SimplePluginStreamListener::SimplePluginStreamListener(SimplePluginInstance* ins
                                                        const char* msgName)
     : fMessageName(msgName)
 {
-    gPluginObjectCount++;
     NS_INIT_REFCNT();
     char msg[256];
     sprintf(msg, "### Creating SimplePluginStreamListener for %s\n", fMessageName);
@@ -772,7 +760,6 @@ SimplePluginStreamListener::SimplePluginStreamListener(SimplePluginInstance* ins
 
 SimplePluginStreamListener::~SimplePluginStreamListener(void)
 {
-    gPluginObjectCount--;
     char msg[256];
     sprintf(msg, "### Destroying SimplePluginStreamListener for %s\n", fMessageName);
 }
