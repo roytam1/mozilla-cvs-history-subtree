@@ -521,7 +521,7 @@ ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns )
     }
 /* 
  * XXXceb  This is a hack until the new IO functions are done.
- * this function MUST be called before ldap_enable_clienauth.
+ * this function MUST be called before ldapssl_enable_clientauth.
  * 
  */
     set_using_pkcs_functions( 1 );

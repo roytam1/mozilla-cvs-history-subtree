@@ -91,7 +91,7 @@ typedef struct ldapssl_socket_info {
 
 /* 
  * XXXceb  This is a hack until the new IO functions are done.
- * this function MUST be called before ldap_enable_clienauth.
+ * this function MUST be called before ldapssl_enable_clientauth.
  * right now, this function is called in ldapssl_pkcs_init();
  */
 
