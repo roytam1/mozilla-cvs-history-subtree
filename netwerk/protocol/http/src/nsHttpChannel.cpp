@@ -967,12 +967,9 @@ nsHttpChannel::InstallCacheListener()
     rv = mCacheTransport->OpenOutputStream(0, PRUint32(-1), 0, getter_AddRefs(out));
     if (NS_FAILED(rv)) return rv;
 
-    // XXX disk cache does not support overlapped i/o yet
-#if 0
     // Mark entry valid inorder to allow simultaneous reading...
     rv = mCacheEntry->MarkValid();
     if (NS_FAILED(rv)) return rv;
-#endif
 
     nsCOMPtr<nsIStreamListenerTee> tee =
         do_CreateInstance(kStreamListenerTeeCID, &rv);
