@@ -457,25 +457,20 @@ public:
     
     nsresult Read(nsIInputStream * input)
     {
-        nsresult rv = mMetaDataFile.Read(input);
-        if (NS_FAILED(rv)) return rv;
-        return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), getter_Copies(mClientID));
+        return mMetaDataFile.Read(input);
     }
     
-    const char* ClientID() { return mClientID; }
     const char* Key() { return mMetaDataFile.mKey; }
     
 private:
     MetaDataFile mMetaDataFile;
-    nsXPIDLCString mClientID;
 };
 NS_IMPL_ISUPPORTS1(nsDiskCacheEntryInfo, nsICacheEntryInfo);
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
 {
     NS_ENSURE_ARG_POINTER(clientID);
-    *clientID = nsCRT::strdup(mClientID.get());
-    return (*clientID ? NS_OK : NS_ERROR_OUT_OF_MEMORY);
+    return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientID);
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
@@ -935,8 +930,6 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
             
             // tell the visitor about this entry.
             PRBool keepGoing;
-//          rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo->ClientID(),
-//                                   entryInfo, &keepGoing);
             rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo, &keepGoing);
             if (NS_FAILED(rv)) return rv;
             if (!keepGoing) break;
