@@ -489,6 +489,7 @@ sub mail_build_finished_message {
         
     # Put the status at the top of the log, so the server will not
     # have to search through the entire log to find it.
+    print OUTLOG "\n";
     print OUTLOG "tinderbox: tree: $Settings::BuildTree\n";
     print OUTLOG "tinderbox: builddate: $start_time\n";
     print OUTLOG "tinderbox: status: $build_status\n";
