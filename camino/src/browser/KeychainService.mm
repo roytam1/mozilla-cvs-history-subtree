@@ -950,8 +950,16 @@ KeychainFormSubmitObserver::CheckChangeDataYN(nsIDOMWindowInternal* window)
         [username assignTo_nsAString:user];
         [password assignTo_nsAString:pwd];
         
-        rv = usernameElement->SetValue(user);
-        rv = passwordElement->SetValue(pwd);
+        // if the server specifies a value attribute (bug 169760), only autofill
+        // the password if what we have in keychain matches what the server supplies,
+        // otherwise don't. Don't bother checking the password field for a value; i can't
+        // imagine the server ever prefilling a password
+        nsAutoString userValue;
+        usernameElement->GetAttribute(NS_LITERAL_STRING("value"), userValue);
+        if (!userValue.Length() || userValue.Equals(user)) {
+          rv = usernameElement->SetValue(user);
+          rv = passwordElement->SetValue(pwd);
+        }
       }
         
       // We found the sign-in form so return now. This means we don't
