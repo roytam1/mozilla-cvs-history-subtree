@@ -25,6 +25,8 @@
 #define NETSCAPE_INTERNAL 1
 #include "jscompat.h"
 
+JS_BEGIN_EXTERN_C
+
 /* Scalar typedefs. */
 typedef uint16    jschar;
 typedef int32     jsint;
@@ -237,5 +239,7 @@ typedef struct JSErrorFormatString {
 typedef const JSErrorFormatString *
 (* CRT_CALL JSErrorCallback)(void *userRef, const char *locale,
 			     const uintN errorNumber);
+
+JS_END_EXTERN_C
 
 #endif /* jspubtd_h___ */
