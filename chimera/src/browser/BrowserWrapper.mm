@@ -163,6 +163,12 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   // |destroyWebBrowser| call. (bug 174416)
   [mBrowserView removeListener: self];
   [mBrowserView destroyWebBrowser];
+
+  // We don't want site icon notifications when the window has gone away
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:SiteIconLoadNotificationName object:nil];
+  // We're basically a zombie now. Clear fields which are in an undefined state.
+  mIsPrimary = NO;
+  mWindowController = nil;
 }
 
 - (IBAction)load:(id)sender
