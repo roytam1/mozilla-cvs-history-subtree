@@ -34,6 +34,18 @@ nsDiskCacheMap::~nsDiskCacheMap()
 {
 }
 
+void nsDiskCacheMap::Reset()
+{
+    mHeader.mDataSize = 0;
+    mHeader.mEntryCount = 0;
+    mHeader.mIsDirty = PR_TRUE;
+
+    for (PRUint32 i = 1; i < kBucketsPerTable; ++i) {
+        nsDiskCacheBucket& bucket = mBuckets[i];
+        ::memset(&bucket, 0, sizeof(nsDiskCacheBucket));
+    }
+}
+
 nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
 {
     nsDiskCacheBucket& bucket = mBuckets[(hashNumber & (kBucketsPerTable - 1))];
@@ -92,12 +104,15 @@ nsresult nsDiskCacheMap::Read(nsIInputStream* input)
     if (NS_FAILED(rv)) return rv;
 
     // read the header.
-    rv = input->Read((char*)&mHeader, sizeof(mHeader), &count);
+    nsDiskCacheHeader header;
+    rv = input->Read((char*)&header, sizeof(header), &count);
+    if (count != sizeof(header)) return NS_ERROR_FAILURE;
     if (NS_FAILED(rv)) return rv;
-    mHeader.Unswap();
+    header.Unswap();
     
     // validate the version.
-    if (mHeader.mVersion != nsDiskCacheHeader::kCurrentVersion) return NS_ERROR_FAILURE;
+    if (header.mVersion != nsDiskCacheHeader::kCurrentVersion) return NS_ERROR_FAILURE;
+    mHeader = header;
 
     // seek to beginning of first bucket.
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, sizeof(nsDiskCacheBucket));
@@ -105,6 +120,7 @@ nsresult nsDiskCacheMap::Read(nsIInputStream* input)
 
     // read the buckets.
     rv = input->Read((char*)&mBuckets[1], sizeof(mBuckets) - sizeof(nsDiskCacheBucket), &count);
+    if (count != (sizeof(mBuckets) - sizeof(nsDiskCacheBucket))) return NS_ERROR_FAILURE;
     if (NS_FAILED(rv)) return rv;
     
     // unswap all of the active records.
@@ -157,6 +173,7 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
             record->Unswap();
         }
     }
+    if (count != sizeof(mBuckets)) return NS_ERROR_FAILURE;
     if (NS_FAILED(rv)) return rv;
 
     // seek back to beginning of file.
@@ -164,9 +181,10 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     if (NS_FAILED(rv)) return rv;
     
     // write the header.
-    mHeader.Swap();
-    rv = output->Write((char*)&mHeader, sizeof(mHeader), &count);
-    mHeader.Unswap();
+    nsDiskCacheHeader header = mHeader;
+    header.Swap();
+    rv = output->Write((char*)&header, sizeof(header), &count);
+    if (count != sizeof(header)) return NS_ERROR_FAILURE;
 
     // flush the write.
     output->Flush();
@@ -199,7 +217,6 @@ nsresult nsDiskCacheMap::WriteBucket(nsIOutputStream* output, PRUint32 index)
 
     PRUint32 count;
     rv = output->Write((char*)&bucket, sizeof(nsDiskCacheBucket), &count);
-    NS_ASSERTION(count == sizeof(nsDiskCacheBucket), "nsDiskCacheMap::WriteBucket");
     output->Flush();
 
     // unswap all of the active records.
@@ -211,6 +228,31 @@ nsresult nsDiskCacheMap::WriteBucket(nsIOutputStream* output, PRUint32 index)
             record->Unswap();
         }
     }
+
+    NS_ASSERTION(count == sizeof(nsDiskCacheBucket), "nsDiskCacheMap::WriteBucket failed");
+    if (count != sizeof(nsDiskCacheBucket)) return NS_ERROR_FAILURE;
+    
+    return rv;
+}
+
+nsresult nsDiskCacheMap::WriteHeader(nsIOutputStream* output)
+{
+    nsresult rv;
+    PRUint32 count;
+    
+    // can only do this if the stream is seekable.
+    nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(output, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, 0);
+    if (NS_FAILED(rv)) return rv;
+
+    // write the header.
+    nsDiskCacheHeader header = mHeader;
+    header.Swap();
+    rv = output->Write((char*)&header, sizeof(header), &count);
+    output->Flush();
+    if (count != sizeof(header)) return NS_ERROR_FAILURE;
     
     return rv;
 }
