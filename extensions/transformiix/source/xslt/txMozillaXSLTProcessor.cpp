@@ -244,13 +244,13 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
                 txExpandedName name(nsId, localName);
 
                 // XXX Change when sicking lands vars rewrite
-                VariableBinding* binding = new VariableBinding(String(&var->mLocalName), value);
+                VariableBinding* binding = new VariableBinding(String(var->mLocalName), value);
                 if (!binding) {
                     // XXX Error? Signal to user?
                     continue;
                 }
                 binding->allowShadowing();
-                globalVars->put(String(&var->mLocalName), binding);
+                globalVars->put(String(var->mLocalName), binding);
             }
         }
 

@@ -39,14 +39,12 @@ class txOutputXMLEventHandler;
 class txXSLTProcessor
 {
 public:
-#ifdef TX_EXE
     /*
-     * Initialisation and shutdown routines for standalone
+     * Initialisation and shutdown routines
      * Allocate and free static atoms.
      */
     static MBool txInit();
     static MBool txShutdown();
-#endif
 
     /*
      * Creates a new txXSLTProcessor.
@@ -153,7 +151,7 @@ private:
      * @param aPs the current ProcessorState
      */
     void process(Node* aNode,
-                 const String& aMode,
+                 const txExpandedName& aMode,
                  ProcessorState* aPs);
 
     /*
@@ -215,7 +213,7 @@ private:
      */
     void processDefaultTemplate(Node* aNode,
                                 ProcessorState* aPs,
-                                const String& aMode);
+                                const txExpandedName& aMode);
 
     /*
      * Processes an include or import stylesheet.
@@ -243,7 +241,7 @@ private:
     void processMatchedTemplate(Node* aXslTemplate,
                                 Node* aNode,
                                 NamedMap* aParams,
-                                const String& aMode,
+                                const txExpandedName& aMode,
                                 ProcessorState::ImportFrame* aFrame,
                                 ProcessorState* aPs);
 

@@ -55,8 +55,8 @@
 #include "XMLDOMUtils.h"
 #include "XMLUtils.h"
 
-const String txXSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
-"templates for the following element are not allowed to generate non character data: ";
+const String txXSLTProcessor::NON_TEXT_TEMPLATE_WARNING(
+"templates for the following element are not allowed to generate non character data: ");
 
 /*
  * Implement static variables for atomservice and dom.
@@ -64,13 +64,16 @@ const String txXSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
 #ifdef TX_EXE
 TX_IMPL_ATOM_STATICS;
 TX_IMPL_DOM_STATICS;
+#endif
 
 /* static */
 MBool
 txXSLTProcessor::txInit()
 {
+#ifdef TX_EXE
     if (!txNamespaceManager::init())
         return MB_FALSE;
+#endif
     if (!txHTMLAtoms::init())
         return MB_FALSE;
     if (!txXMLAtoms::init())
@@ -84,22 +87,22 @@ txXSLTProcessor::txInit()
 MBool
 txXSLTProcessor::txShutdown()
 {
+#ifdef TX_EXE
     txNamespaceManager::shutdown();
+#endif
     txHTMLAtoms::shutdown();
     txXMLAtoms::shutdown();
     txXPathAtoms::shutdown();
     txXSLTAtoms::shutdown();
     return MB_TRUE;
 }
-#endif
 
 txXSLTProcessor::txXSLTProcessor() : mOutputHandler(0),
-                                     mResultHandler(0)
+                                     mResultHandler(0),
+                                     mXsltVersion("1.0"),
+                                     mAppName("TransforMiiX"),
+                                     mAppVersion("1.0 [beta]")
 {
-    mXsltVersion.append("1.0");
-    mAppName.append("TransforMiiX");
-    mAppVersion.append("1.0 [beta]");
-
     // Create default expressions
 
     // "node()"
@@ -240,7 +243,7 @@ txXSLTProcessor::copyNode(Node* aNode, ProcessorState* aPs)
 
 void
 txXSLTProcessor::process(Node* aNode,
-                         const String& aMode,
+                         const txExpandedName& aMode,
                          ProcessorState* aPs)
 {
     if (!aNode)
@@ -248,7 +251,7 @@ txXSLTProcessor::process(Node* aNode,
 
     ProcessorState::ImportFrame *frame;
     Node* xslTemplate = aPs->findTemplate(aNode, aMode, &frame);
-    processMatchedTemplate(xslTemplate, aNode, 0, NULL_STRING, frame, aPs);
+    processMatchedTemplate(xslTemplate, aNode, 0, aMode, frame, aPs);
 }
 
 void
@@ -256,6 +259,7 @@ txXSLTProcessor::processAction(Node* aNode,
                                Node* aXsltAction,
                                ProcessorState* aPs)
 {
+    nsresult rv = NS_OK;
     NS_ASSERTION(aXsltAction, "We need an action to process.");
     if (!aXsltAction)
         return;
@@ -267,7 +271,7 @@ txXSLTProcessor::processAction(Node* aNode,
         nodeType == Node::CDATA_SECTION_NODE) {
         const String& textValue = aXsltAction->getNodeValue();
         if (!aPs->isXSLStripSpaceAllowed(aXsltAction) ||
-            !XMLUtils::shouldStripTextnode(textValue)) {
+            !XMLUtils::isWhitespace(textValue)) {
             NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
             mResultHandler->characters(textValue);
         }
@@ -380,9 +384,20 @@ txXSLTProcessor::processAction(Node* aNode,
             // Process xsl:with-param elements
             NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
 
-            String mode;
-            actionElement->getAttr(txXSLTAtoms::mode,
-                                   kNameSpaceID_None, mode);
+            // Get mode
+            String modeStr;
+            txExpandedName mode;
+            if (actionElement->getAttr(txXSLTAtoms::mode,
+                                       kNameSpaceID_None, modeStr)) {
+                rv = mode.init(modeStr, actionElement, MB_FALSE);
+                if (NS_FAILED(rv)) {
+                    String err("malformed mode-name in xsl:apply-templates");
+                    aPs->receiveError(err);
+                    TX_IF_RELEASE_ATOM(localName);
+                    delete actualParams;
+                    return;
+                }
+            }
 
             txNodeSetContext evalContext(nodeSet, aPs);
             txIEvalContext* priorEC =
@@ -483,16 +498,20 @@ txXSLTProcessor::processAction(Node* aNode,
     }
     // xsl:call-template
     else if (localName == txXSLTAtoms::callTemplate) {
-        String templateName;
-        if (actionElement->getAttr(txXSLTAtoms::name,
-                                   kNameSpaceID_None, templateName)) {
+        String nameStr;
+        txExpandedName templateName;
+        actionElement->getAttr(txXSLTAtoms::name,
+                               kNameSpaceID_None, nameStr);
+
+        rv = templateName.init(nameStr, actionElement, MB_FALSE);
+        if (NS_SUCCEEDED(rv)) {
             Element* xslTemplate = aPs->getNamedTemplate(templateName);
             if (xslTemplate) {
 #ifdef PR_LOGGING
                 char *nameBuf = 0, *uriBuf = 0;
                 PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                        ("CallTemplate, Name %s, Stylesheet %s\n",
-                        (nameBuf = templateName.toCharArray()),
+                        (nameBuf = nameStr.toCharArray()),
                         (uriBuf = xslTemplate->getBaseURI().toCharArray())));
                 delete nameBuf;
                 delete uriBuf;
@@ -503,7 +522,7 @@ txXSLTProcessor::processAction(Node* aNode,
             }
         }
         else {
-            String err("missing required name attribute for xsl:call-template");
+            String err("missing or malformed name in xsl:call-template");
             aPs->receiveError(err, NS_ERROR_FAILURE);
         }
     }
@@ -530,8 +549,8 @@ txXSLTProcessor::processAction(Node* aNode,
                     continue;
                 }
 
-                ExprResult* result = expr->evaluate
-                    (aPs->getEvalContext());
+                ExprResult* result =
+                    expr->evaluate(aPs->getEvalContext());
                 if (result && result->booleanValue()) {
                     processChildren(aNode, xslTemplate, aPs);
                     caseFound = MB_TRUE;
@@ -551,8 +570,8 @@ txXSLTProcessor::processAction(Node* aNode,
         String value;
         processChildrenAsValue(aNode, actionElement, aPs, MB_TRUE, value);
         PRInt32 pos = 0;
-        PRInt32 length = value.length();
-        while ((pos = value.indexOf('-', pos)) != NOT_FOUND) {
+        PRUint32 length = value.length();
+        while ((pos = value.indexOf('-', pos)) != kNotFound) {
             ++pos;
             if ((pos == length) || (value.charAt(pos) == '-'))
                 value.insert(pos++, ' ');
@@ -722,7 +741,7 @@ txXSLTProcessor::processAction(Node* aNode,
             return;
         }
 
-        if ( exprResult->booleanValue() ) {
+        if (exprResult->booleanValue()) {
             processChildren(aNode, actionElement, aPs);
         }
         delete exprResult;
@@ -854,6 +873,7 @@ txXSLTProcessor::processAttributeSets(Element* aElement,
                                       Node* aNode,
                                       ProcessorState* aPs)
 {
+    nsresult rv = NS_OK;
     String names;
     PRInt32 namespaceID;
     if (aElement->getNamespaceID() == kNameSpaceID_XSLT)
@@ -865,14 +885,24 @@ txXSLTProcessor::processAttributeSets(Element* aElement,
 
     // Split names
     txTokenizer tokenizer(names);
-    String name;
+    String nameStr;
     while (tokenizer.hasMoreTokens()) {
-        tokenizer.nextToken(name);
+        tokenizer.nextToken(nameStr);
+        txExpandedName name;
+        rv = name.init(nameStr, aElement, MB_FALSE);
+        if (NS_FAILED(rv)) {
+            String err("missing or malformed name in use-attribute-sets");
+            aPs->receiveError(err);
+            return;
+        }
+
         txStackIterator attributeSets(&mAttributeSetStack);
         while (attributeSets.hasNext()) {
-            String* test = (String*)attributeSets.next();
-            if (test->isEqual(name))
+            if (name == *(txExpandedName*)attributeSets.next()) {
+                String err("circular inclusion detected in use-attribute-sets");
+                aPs->receiveError(err);
                 return;
+            }
         }
 
         NodeSet* attSet = aPs->getAttributeSet(name);
@@ -931,7 +961,7 @@ txXSLTProcessor::processChildrenAsValue(Node* aNode,
 void
 txXSLTProcessor::processDefaultTemplate(Node* aNode,
                                         ProcessorState* aPs,
-                                        const String& aMode)
+                                        const txExpandedName& aMode)
 {
     NS_ASSERTION(aNode, "context node is NULL in call to txXSLTProcessor::processTemplate!");
 
@@ -1036,7 +1066,7 @@ void
 txXSLTProcessor::processMatchedTemplate(Node* aXsltTemplate,
                                         Node* aNode,
                                         NamedMap* aParams,
-                                        const String& aMode,
+                                        const txExpandedName& aMode,
                                         ProcessorState::ImportFrame* aFrame,
                                         ProcessorState* aPs)
 {
@@ -1180,7 +1210,7 @@ txXSLTProcessor::processTemplate(Node* aNode,
         }
         else {
             // out of memory so we can't get the keys
-            // don't delete any variables since it's better we leak then
+            // don't delete any variables since it's better we leak than
             // crash
             localBindings.setObjectDeletion(MB_FALSE);
         }
@@ -1579,7 +1609,7 @@ txXSLTProcessor::startElement(const String& aName,
         if (format->mMethod == eMethodNotSet) {
             // XXX Should check for whitespace-only sibling text nodes
             if ((aNsID == kNameSpaceID_None) &&
-                aName.isEqualIgnoreCase("html")) {
+                aName.isEqualIgnoreCase(String("html"))) {
                 // Switch to html output mode according to the XSLT spec.
                 format->mMethod = eHTMLOutput;
             }
@@ -1619,7 +1649,8 @@ txXSLTProcessor::transform(Node* aNode, ProcessorState* aPs)
     mHaveDocumentElement = MB_FALSE;
     mOutputHandler->startDocument();
 
-    process(aNode, NULL_STRING, aPs);
+    txExpandedName nullMode;
+    process(aNode, nullMode, aPs);
 
     mOutputHandler->endDocument();
 }

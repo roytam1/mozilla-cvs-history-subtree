@@ -404,7 +404,7 @@ void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
         }
         else {
             DelayedNode* dn = new DelayedNode(DelayedNode::eTextNode,
-                                              String(mText.get(), mText.Length()));
+                                              String(mText));
             if (dn) {
                 mDelayedNodes.add(dn);
             }
