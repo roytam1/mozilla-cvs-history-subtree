@@ -3799,8 +3799,11 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext& aPresContext,
         // Only applies to the tree widget.
         nscoord tableSpecifiedHeight;
         GetTableSpecifiedHeight(tableSpecifiedHeight, kidReflowState);
-        if (tableSpecifiedHeight != -1)
+        if (tableSpecifiedHeight != -1) {
           kidReflowState.availableHeight = tableSpecifiedHeight - y;
+          if (kidReflowState.availableHeight < 0)
+            kidReflowState.availableHeight = 0;
+        }
       }
 
       rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState, aStatus);
