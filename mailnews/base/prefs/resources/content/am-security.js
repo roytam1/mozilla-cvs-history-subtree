@@ -36,15 +36,17 @@ function onInit()
         document.getElementById("encryption.certificateName").setAttribute("value", gIdentity.encryptionCertName);
     } else {
         document.getElementById("encryption.certificateName").setAttribute("value", "");
+        document.getElementById("encryption.alwaysEncryptMessage").setAttribute("disabled", "true");
     }
     document.getElementById("signing.signMessage").checked =  gIdentity.signMessage;
     if (gIdentity.signingCertName) {
         document.getElementById("signing.certificateName").setAttribute("value", gIdentity.signingCertName);
     } else {
-        document.getElementById("encryption.certificateName").setAttribute("value", "");
+        document.getElementById("signing.certificateName").setAttribute("value", "");
+        document.getElementById("signing.signMessage").setAttribute("disabled", "true");
     }
 
-    // Disable the encrypt if possibe check box.
+    // Disable the encrypt if possibe check for the moment
     document.getElementById("encryption.ifPossibleEncryptMessage").setAttribute("disabled", "true");
 }
 
@@ -205,10 +207,16 @@ function smimeSelectCert(smime_cert)
   }
 
   if (!canceled.value && x509cert) {
-      var certInfo = document.getElementById(smime_cert);
-      if (certInfo) {
-          certInfo.setAttribute("disabled", "false");
-          certInfo.value = x509cert.nickname;
-    }
+    var certInfo = document.getElementById(smime_cert);
+    if (certInfo) {
+      certInfo.setAttribute("disabled", "false");
+      certInfo.value = x509cert.nickname;
+
+      if (smime_cert == "encryption.certificateName") {
+        document.getElementById("encryption.alwaysEncryptMessage").removeAttribute("disabled");
+      } else {
+        document.getElementById("encryption.signMessage").removeAttribute("disabled");
+      }
+	  }
   }
 }
