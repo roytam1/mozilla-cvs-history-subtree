@@ -576,6 +576,7 @@ nsSchemaLoader::GetType(const nsAString & aName,
 
 nsresult
 nsSchemaLoader::GetResolvedURI(const nsAString& aSchemaURI,
+                               nsIURI *aBaseURI,
                                const char* aMethod,
                                nsIURI** aURI)
 {
@@ -595,12 +596,16 @@ nsSchemaLoader::GetResolvedURI(const nsAString& aSchemaURI,
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIURI> baseURI;
-    nsCOMPtr<nsIPrincipal> principal;
-    rv = secMan->GetSubjectPrincipal(getter_AddRefs(principal));
-    if (NS_SUCCEEDED(rv)) {
-      principal->GetURI(getter_AddRefs(baseURI));
+    if (aBaseURI) {
+      baseURI = aBaseURI;
+    } else {
+      nsCOMPtr<nsIPrincipal> principal;
+      rv = secMan->GetSubjectPrincipal(getter_AddRefs(principal));
+      if (NS_SUCCEEDED(rv)) {
+        principal->GetURI(getter_AddRefs(baseURI));
+      }
     }
-    
+
     rv = NS_NewURI(aURI, aSchemaURI, nsnull, baseURI);
     if (NS_FAILED(rv)) return rv;
     
@@ -614,22 +619,24 @@ nsSchemaLoader::GetResolvedURI(const nsAString& aSchemaURI,
     }
   }
   else {
-    rv = NS_NewURI(aURI, aSchemaURI, nsnull);
+    rv = NS_NewURI(aURI, aSchemaURI, nsnull, aBaseURI);
     if (NS_FAILED(rv)) return rv;
   }
 
   return NS_OK;
 }
 
-/* nsISchema load (in AString schemaURI); */
+/* nsISchema load (in AString schemaURI, in nsIURI baseURI); */
 NS_IMETHODIMP 
 nsSchemaLoader::Load(const nsAString& schemaURI, 
+                     nsIURI *aBaseURI,
                      nsISchema **_retval)
 {
   NS_ENSURE_ARG_POINTER(_retval);
 
   nsCOMPtr<nsIURI> resolvedURI;
-  nsresult rv = GetResolvedURI(schemaURI, "load", getter_AddRefs(resolvedURI));
+  nsresult rv = GetResolvedURI(schemaURI, aBaseURI,
+                               "load", getter_AddRefs(resolvedURI));
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -677,15 +684,17 @@ nsSchemaLoader::Load(const nsAString& schemaURI,
   return rv;
 }
 
-/* void loadAsync (in AString schemaURI, in nsISchemaLoadListener listener); */
-NS_IMETHODIMP 
-nsSchemaLoader::LoadAsync(const nsAString& schemaURI, 
+/* void loadAsync (in AString schemaURI,
+                   in nsIURI  baseURI, in nsISchemaLoadListener listener); */
+NS_IMETHODIMP
+nsSchemaLoader::LoadAsync(const nsAString& schemaURI, nsIURI *aBaseURI,
                           nsISchemaLoadListener *aListener)
 {
   NS_ENSURE_ARG(aListener);
 
   nsCOMPtr<nsIURI> resolvedURI;
-  nsresult rv = GetResolvedURI(schemaURI, "loadAsync", getter_AddRefs(resolvedURI));
+  nsresult rv = GetResolvedURI(schemaURI, aBaseURI,
+                               "loadAsync", getter_AddRefs(resolvedURI));
   if (NS_FAILED(rv)) {
     return rv;
   }

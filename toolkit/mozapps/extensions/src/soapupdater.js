@@ -45,7 +45,7 @@ nsExtensionUpdater2.prototype = {
     var schemaLoader = Components.classes["@mozilla.org/xmlextras/schemas/schemaloader;1"]
                                  .createInstance(Components.interfaces.nsISchemaLoader);
     var schemaLoaderListener = new SchemaLoaderListener(this);
-    schemaLoader.loadAsync("http://www.bengoodger.com/software/mb/umo/types.xsd", 
+    schemaLoader.loadAsync("http://www.bengoodger.com/software/mb/umo/types.xsd", nsnull,
                            schemaLoaderListener);
   },
   

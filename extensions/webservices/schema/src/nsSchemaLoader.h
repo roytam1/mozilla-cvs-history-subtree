@@ -186,7 +186,7 @@ protected:
                     PRUint32* aMinOccurs,
                     PRUint32* aMaxOccurs);
 
-  nsresult GetResolvedURI(const nsAString& aSchemaURI,
+  nsresult GetResolvedURI(const nsAString& aSchemaURI, nsIURI *aBaseURI,
                           const char* aMethod, nsIURI** aURI);
 
   nsresult ParseArrayType(nsSchema* aSchema,

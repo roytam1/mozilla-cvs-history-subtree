@@ -42,11 +42,12 @@ interface nsISchema;
 interface nsISchemaType;
 interface nsIDOMElement;
 interface nsISchemaLoadListener;
+interface nsIURI;
 
 [scriptable, uuid(3c14a032-6f4e-11d5-9b46-000064657374)]
 interface nsISchemaLoader : nsISupports {
-  nsISchema load(in AString schemaURI);
-  void loadAsync(in AString schemaURI, 
+  nsISchema load(in AString schemaURI, in nsIURI baseURI);
+  void loadAsync(in AString schemaURI, in nsIURI baseURI,
                  in nsISchemaLoadListener listener);
   nsISchema processSchemaElement(in nsIDOMElement element);
 };
