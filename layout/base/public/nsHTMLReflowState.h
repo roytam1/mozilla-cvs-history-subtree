@@ -32,6 +32,7 @@ class nsISpaceManager;
 class nsLineLayout;
 
 struct nsStyleDisplay;
+struct nsStyleVisibility;
 struct nsStylePosition;
 struct nsStyleBorder;
 struct nsStyleMargin;
