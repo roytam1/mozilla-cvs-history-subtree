@@ -1027,6 +1027,7 @@ PrintObject::~PrintObject()
   } 
 
   if (mPresShell && !mSharedPresShell) {
+    mPresShell->EndObservingDocument();
     mPresShell->Destroy();
   }
 
