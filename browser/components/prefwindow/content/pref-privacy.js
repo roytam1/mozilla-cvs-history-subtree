@@ -103,6 +103,8 @@ function Startup() {
   drp.removeAttribute("hidden");
   document.documentElement.removeChild(drp);
   drb.appendChild(drp);
+  
+  setMasterPasswordButtonLabel();
 }
 
 function unload()
@@ -365,5 +367,39 @@ function unexpandOld(event)
   for (var i = 0; i < box.childNodes.length; ++i) {
     if (box.childNodes[i] != newExpander && box.childNodes[i].getAttribute("open"))
       box.childNodes[i].open = false;
+  }
+}
+
+function changeMasterPassword()
+{
+  window.openDialog("chrome://browser/content/pref/pref-masterpass.xul","",
+                    "chrome,centerscreen,modal,resizable=yes");
+  setMasterPasswordButtonLabel();
+}
+
+function setMasterPasswordButtonLabel()
+{
+  // see if there's a master password and set the button label accordingly
+  const nsPKCS11ModuleDB = "@mozilla.org/security/pkcs11moduledb;1";
+  const nsIPKCS11ModuleDB = Components.interfaces.nsIPKCS11ModuleDB;
+  const nsIPKCS11Slot = Components.interfaces.nsIPKCS11Slot;
+
+  var secmoddb = Components.classes[nsPKCS11ModuleDB].getService(nsIPKCS11ModuleDB);
+  var slot = secmoddb.findSlotByName("");
+
+  if (slot) {
+    var status = slot.status;
+    var masterPasswordBtn = document.getElementById("masterPasswordBtn");
+    var privacyBundle = document.getElementById("privacyBundle");
+    var buttonLabel = "";
+    if (status == nsIPKCS11Slot.SLOT_UNINITIALIZED
+      || status == nsIPKCS11Slot.SLOT_READY) {
+
+      buttonLabel = privacyBundle.getString("setMasterPassword");
+      masterPasswordBtn.setAttribute("label",buttonLabel);
+    } else {
+      buttonLabel = privacyBundle.getString("changeMasterPassword");
+      masterPasswordBtn.setAttribute("label",buttonLabel);
+    }
   }
 }

@@ -90,6 +90,7 @@
         </vbox>
         <vbox>
           <button label="&viewPasswords.label;" oncommand="viewSignons();"/>
+          <button id="masterPasswordBtn" label="" oncommand="changeMasterPassword();"/>
         </vbox>
       </hbox>
     </expander>
