@@ -147,6 +147,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   // unregister for shutdown notification. It may have already happened, but just in case.
   NS_IF_RELEASE(mFormSubmitObserver);
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  
+  [super dealloc];
 }
 
 
@@ -568,6 +570,7 @@ KeychainFormSubmitObserver::CheckConfirmYN(nsIDOMWindowInternal* window)
 - (void) dealloc
 {
   // NSLog(@"Keychain browser listener died.");
+  [super dealloc];
 }
 
 - (void)onLoadingCompleted:(BOOL)succeeded;

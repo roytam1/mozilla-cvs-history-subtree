@@ -265,7 +265,15 @@ static NSArray* sToolbarDefaults = nil;
   [mSidebarBookmarksDataSource windowClosing];
 
   [self autosaveWindowFrame];
-  [self autorelease];
+  
+  // while the typical pattern in cocoa seems to be to autorelease the controller,
+  // that is really bad news for us. In the intervening time before the next event
+  // loop, gecko can do all sorts of nasty things such as show the window and try
+  // to process events. It also keeps things living just long enough for cocoa to
+  // think that it can still send events here. As a result, we're in this hellish
+  // limbo state, all of which is easily avoided by just destroying the window and
+  // all open net connections right this very moment, thankyouverymuch, good day.
+  [self release];
 }
 
 - (void)dealloc
