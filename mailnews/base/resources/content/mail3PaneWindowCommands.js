@@ -932,16 +932,16 @@ function MsgViewAllMsgs()
 }
 
 
-function FillInFolderTooltip(cellNode)
+function FillInFolderTooltip(event)
 {
-	var folderNode = cellNode.parentNode.parentNode;
-	var uri = folderNode.getAttribute('id');
-	var folderTree = GetFolderTree();
-
-	var name = GetFolderNameFromUri(uri, folderTree);
-
-	var folderResource = RDF.GetResource(uri);
+        var folderOutliner = GetFolderOutliner();
+        var row = {};
+        var col = {};
+        var elt = {};
+        folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+        var folderResource = GetFolderResource(row.value);
 	var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+
 	var unreadCount = msgFolder.getNumUnread(false);
 	if(unreadCount < 0)
 		unreadCount = 0;
@@ -950,14 +950,13 @@ function FillInFolderTooltip(cellNode)
 	if(totalCount < 0)
 		totalCount = 0;
 
-	var textNode = document.getElementById("foldertooltipText");
-	var folderTooltip = name;
+	var folderTooltip = GetFolderAttribute(folderResource, 'Name');
 	if(!msgFolder.isServer)
 		folderTooltip += " ("  + unreadCount + "/" + totalCount +")";
+	var textNode = document.getElementById("folderTooltipText");
 	textNode.setAttribute('value', folderTooltip);
-	return true;
-	
 
+	return true;
 }
 
 function GetFolderNameFromUri(uri, outliner)
