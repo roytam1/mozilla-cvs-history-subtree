@@ -225,6 +225,7 @@ bin\components\dom_traversal.xpt
 bin\components\dom_views.xpt
 bin\components\dom_xbl.xpt
 bin\components\dom_xul.xpt
+bin\components\dom_loadsave.xpt
 
 ; editor / composer for HTML compose
 bin\components\editor.xpt
