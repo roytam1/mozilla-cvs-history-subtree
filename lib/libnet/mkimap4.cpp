@@ -5660,7 +5660,7 @@ int TNavigatorImapConnection::WriteLineToSocket(char *line)
 	                                              line,
 	                                              XP_STRLEN(line));
 	    	
-	    int socketError = SOCKET_ERRNO;
+	    int socketError = (int)PR_GetError();
 		Log("NET","WR",line);
 		//PR_LOG(IMAP, out, ("WR: %s",line));
 	    LIBNET_UNLOCK();

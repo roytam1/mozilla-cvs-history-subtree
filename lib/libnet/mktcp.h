@@ -19,7 +19,9 @@
 #define MKTCP_H
 
 #include "rosetta.h"
+/*
 #include "xp_sock.h"
+*/
 #include "mkutils.h"
 
 
