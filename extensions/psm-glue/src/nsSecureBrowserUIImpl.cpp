@@ -666,9 +666,10 @@ nsSecureBrowserUIImpl::CheckPost(nsIURI *actionURL, PRBool *okayToPost)
         return rv;
     
     // if we are posting to a secure link from a secure page, all is okay.
-    if (secure  && mIsSecureDocument)
+    if (secure  && mIsSecureDocument) {
+        *okayToPost = PR_TRUE;
         return NS_OK;
-
+    }
 
     PRBool boolpref = PR_TRUE;    
 
