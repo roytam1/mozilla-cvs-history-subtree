@@ -246,7 +246,7 @@ public:
   NS_DECL_NSITREEBOXOBJECT
 
   // nsIBox
-  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect);
 
   // nsIReflowCallback

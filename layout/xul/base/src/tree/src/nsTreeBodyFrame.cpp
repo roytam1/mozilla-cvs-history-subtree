@@ -411,7 +411,7 @@ nsTreeBodyFrame::Init(nsIPresContext* aPresContext, nsIContent* aContent,
 }
 
 NS_IMETHODIMP
-nsTreeBodyFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
+nsTreeBodyFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 {
   EnsureView();
 
@@ -430,8 +430,10 @@ nsTreeBodyFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
       desiredRows = size.ToInteger(&err);
       mHasFixedRowCount = PR_TRUE;
       mPageCount = desiredRows;
-    } else
+    }
+    else {
       desiredRows = 1;
+    }
   } else {
     // tree
     aSize.width = 0;
@@ -442,8 +444,10 @@ nsTreeBodyFrame::GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
       desiredRows = rows.ToInteger(&err);
       mHasFixedRowCount = PR_TRUE;
       mPageCount = desiredRows;
-    } else
+    }
+    else {
       desiredRows = 0;
+    }
   }
 
   aSize.height = mRowHeight * desiredRows;

@@ -997,8 +997,9 @@
   <binding id="bookmarks-tree-folders" extends="chrome://communicator/content/bookmarks/bookmarksTree.xml#bookmarks-tree">
     <xbl:content xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" xmlns:xbl="http://www.mozilla.org/xbl">
       <tree anonid="bookmarks-tree" flex="1" hidecolumnpicker="true"
-                datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
-                onselect="this.parentNode.treeBoxObject.view.selectionChanged();">
+            xbl:inherits="rows"
+            datasources="rdf:bookmarks rdf:internetsearch rdf:files rdf:localsearch" ref="NC:BookmarksRoot" flags="dont-build-content"
+            onselect="this.parentNode.treeBoxObject.view.selectionChanged();">
         <template>
           <rule iscontainer="true">
             <treechildren>
