@@ -47,6 +47,7 @@
 #include "prlink.h"
 
 #include "npglue.h"
+#include "nsIEventHandler.h"
 
 #ifdef LAYERS
 #include "layers.h"
@@ -932,21 +933,6 @@ NPError FE_PluginGetValue(MWContext *, NPEmbeddedApp *, NPNVariable ,
 	return NPERR_NO_ERROR;
 }
 
-void FE_RegisterWindow(void *plugin, void* window)
-{
-	((CPluginView*)plugin)->RegisterWindow(window);
-}
-
-void FE_UnregisterWindow(void *plugin, void* window)
-{
-	((CPluginView*)plugin)->UnregisterWindow(window);
-}
-
-SInt16 FE_AllocateMenuID(void *plugin, XP_Bool isSubmenu)
-{
-	return ((CPluginView*)plugin)->AllocateMenuID(isSubmenu);
-}
-
 //
 // Rather than having to scan an explicit list of windows each time an event
 // comes in, why not use a sub-class of LWindow, and let PowerPlant do the work
@@ -957,7 +943,7 @@ SInt16 FE_AllocateMenuID(void *plugin, XP_Bool isSubmenu)
 
 class CPluginWindow : public LWindow, public LPeriodical {
 public:
-	CPluginWindow(CPluginView* plugin, WindowPtr window);
+	CPluginWindow(nsIEventHandler* eventHandler, WindowRef window);
 	virtual ~CPluginWindow();
 
 	virtual void		HandleClick(const EventRecord& inMacEvent, Int16 inPart);
@@ -969,15 +955,49 @@ public:
 	virtual void		ActivateSelf();
 	virtual void		DeactivateSelf();
 	virtual void 		AdjustCursorSelf(Point inPortPt, const EventRecord& inMacEvent);
+
+	Boolean				IsPluginCommand(CommandT inCommand);
+	Boolean				PassPluginEvent(EventRecord& event);
 	
 private:
-	CPluginView*		mPlugin;
+	nsIEventHandler*	mEventHandler;
 	SInt16				mKind;
 };
 
-CPluginWindow::CPluginWindow(CPluginView* plugin, WindowPtr window)
+void FE_RegisterWindow(nsIEventHandler* handler, void* window)
 {
-	mPlugin = plugin;
+#if 1
+	CPluginWindow* pluginWindow = new CPluginWindow(handler, WindowRef(window));
+#else
+	((CPluginView*)plugin)->RegisterWindow(window);
+#endif
+}
+
+void FE_UnregisterWindow(nsIEventHandler* handler, void* window)
+{
+#if 1
+	// Toss the pluginWindow itself.
+	LWindow* pluginWindow = LWindow::FetchWindowObject(WindowPtr(window));
+	if (pluginWindow != NULL) {
+		// Notify PowerPlant that the window is no longer active.
+		pluginWindow->Deactivate();
+		delete pluginWindow;
+	}
+#else
+	((CPluginView*)plugin)->UnregisterWindow(window);
+#endif
+}
+
+#if 0
+SInt16 FE_AllocateMenuID(void *plugin, XP_Bool isSubmenu)
+{
+	return ((CPluginView*)plugin)->AllocateMenuID(isSubmenu);
+}
+#endif
+
+CPluginWindow::CPluginWindow(nsIEventHandler* eventHandler, WindowRef window)
+{
+	mEventHandler = eventHandler;
 	mMacWindowP = window;
 
 	// The following is cribbed from one of the LWindow constructors.
@@ -1038,41 +1058,33 @@ CPluginWindow::~CPluginWindow()
 void CPluginWindow::HandleClick(const EventRecord& inMacEvent, Int16 inPart)
 {
 	EventRecord mouseEvent = inMacEvent;
-	if (!mPlugin->PassWindowEvent(mouseEvent, mMacWindowP))
+	if (!PassPluginEvent(mouseEvent))
 		LWindow::HandleClick(inMacEvent, inPart);
 }
 
 void CPluginWindow::EventMouseUp(const EventRecord& inMouseUp)
 {
 	EventRecord mouseEvent = inMouseUp;
-	mPlugin->PassWindowEvent(mouseEvent, mMacWindowP);
+	PassPluginEvent(mouseEvent);
 }
 
 Boolean	CPluginWindow::ObeyCommand(CommandT inCommand, void *ioParam)
 {
-	if (mPlugin->IsPluginCommand(inCommand)) {
-		// assume this is a plugin menu item, since menusharing didn't handle it.
+	if (IsPluginCommand(inCommand)) {
 		EventRecord menuEvent;
 		::OSEventAvail(0, &menuEvent);
-		menuEvent.what = menuCommandEvent;
+		menuEvent.what = nsEventType_menuCommandEvent;
 		menuEvent.message = -inCommand;			// PowerPlant encodes a raw menu selection as the negation of the selection.
-		return mPlugin->PassWindowEvent(menuEvent, mMacWindowP);
+		return PassPluginEvent(menuEvent);
 	}
-#if 0
-	if (inCommand == cmd_Close) {
-		HideSelf();
-		return true;
-	}
-#endif
 	return LWindow::ObeyCommand(inCommand, ioParam);
 }
 
 Boolean	CPluginWindow::HandleKeyPress(const EventRecord& inKeyEvent)
 {
 	EventRecord keyEvent = inKeyEvent;
-	return mPlugin->PassWindowEvent(keyEvent, mMacWindowP);
+	return PassPluginEvent(keyEvent);
 }
-
 
 void CPluginWindow::DrawSelf()
 {
@@ -1080,7 +1092,7 @@ void CPluginWindow::DrawSelf()
 	::OSEventAvail(0, &updateEvent);
 	updateEvent.what = updateEvt;
 	updateEvent.message = UInt32(mMacWindowP);
-	mPlugin->PassWindowEvent(updateEvent, mMacWindowP);
+	PassPluginEvent(updateEvent);
 }
 
 void CPluginWindow::SpendTime(const EventRecord& inMacEvent)
@@ -1101,7 +1113,7 @@ void CPluginWindow::SpendTime(const EventRecord& inMacEvent)
 	}
 
 	EventRecord macEvent = inMacEvent;
-	mPlugin->PassWindowEvent(macEvent, mMacWindowP);
+	PassPluginEvent(macEvent);
 	
 	//
 	// If weÕre in SpendTime because of a non-null event, send a
@@ -1112,7 +1124,7 @@ void CPluginWindow::SpendTime(const EventRecord& inMacEvent)
 	//
 	if (macEvent.what != nullEvent) {
 		macEvent.what = nullEvent;
-		mPlugin->PassWindowEvent(macEvent, mMacWindowP);
+		PassPluginEvent(macEvent);
 	}
 }
 
@@ -1125,7 +1137,7 @@ void CPluginWindow::ActivateSelf()
 	activateEvent.what = activateEvt;
 	activateEvent.modifiers |= activeFlag;
 	activateEvent.message = UInt32(mMacWindowP);
-	mPlugin->PassWindowEvent(activateEvent, mMacWindowP);
+	PassPluginEvent(activateEvent);
 }
 
 
@@ -1138,15 +1150,42 @@ void CPluginWindow::DeactivateSelf()
 	activateEvent.what = activateEvt;
 	activateEvent.modifiers &= ~activeFlag;
 	activateEvent.message = UInt32(mMacWindowP);
-	mPlugin->PassWindowEvent(activateEvent, mMacWindowP);
+	PassPluginEvent(activateEvent);
 }
 
 void CPluginWindow::AdjustCursorSelf(Point inPortPt, const EventRecord& inMacEvent)
 {
 	EventRecord cursorEvent = inMacEvent;
 	cursorEvent.what = adjustCursorEvent;
-	if (!mPlugin->PassWindowEvent(cursorEvent, mMacWindowP))
+	if (!PassPluginEvent(cursorEvent))
 		LWindow::AdjustCursorSelf(inPortPt, inMacEvent);
+}
+
+Boolean CPluginWindow::IsPluginCommand(CommandT inCommand)
+{
+#if 1
+	// Since only one plugin can have menus in the menu bar at a time,
+	// the test only checks to see if this plugin has any menus, and
+	// whether the command is synthetic and is from one of the plugin's menus.
+	if (thePluginManager != NULL) {
+		short menuID, menuItem;
+		if (LCommander::IsSyntheticCommand(inCommand, menuID, menuItem))
+			return thePluginManager->HasAllocatedMenuID(mEventHandler, menuID);
+	}
+	return false;
+#else
+	return mPlugin->IsPluginCommand(inCommand);
+#endif
+}
+
+Boolean CPluginWindow::PassPluginEvent(EventRecord& event)
+{
+#if 1
+	nsPluginEvent pluginEvent = { &event, mMacWindowP };
+	return mEventHandler->HandleEvent(&pluginEvent);
+#else
+	return mPlugin->PassWindowEvent(event, mMacWindowP))
+#endif
 }
 
 
@@ -1277,9 +1316,10 @@ void CPluginView::RegisterWindow(void* window)
 	// Set the default commander to the application, to limit the depth of the chain of command.
 	// I've seen this get ridiculously deep.
 	LCommander::LCommander::SetDefaultCommander(LCommander::GetTopCommander());
+
+#if 0
 	CPluginWindow* pluginWindow = new CPluginWindow(this, WindowPtr(window));
 	
-#if 0
 	if (fWindowList == NULL)
 		fWindowList = new LArray;
 	if (fWindowList != NULL)
@@ -1672,7 +1712,7 @@ Boolean	CPluginView::ObeyCommand(CommandT inCommand, void *ioParam)
 		// assume this is a plugin menu item, since menusharing didn't handle it.
 		EventRecord menuEvent;
 		::memset(&menuEvent, 0, sizeof(EventRecord));
-		menuEvent.what = menuCommandEvent;
+		menuEvent.what = nsEventType_menuCommandEvent;
 		menuEvent.message = -inCommand;			// PowerPlant encodes a raw menu selection as the negation of the selection.
 		return PassEvent(menuEvent);
 	}
