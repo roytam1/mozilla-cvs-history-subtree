@@ -534,7 +534,8 @@ public:
 
     void SetName(jsval name);
     void SetArgsAndResultPtr(uintN argc, jsval *argv, jsval *rval);
-    void SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter);
+    void SetCallInfo(XPCNativeInterface* iface, XPCNativeMember* member, 
+                     JSBool isSetter);
 
     JSBool  CanCallNow();
 
@@ -1560,36 +1561,14 @@ private:
 
 /***************************************************************************/
 
-// Tight. No virtual methods.
-class XPCCallableInfo
-{
-public:
-    XPCCallableInfo(XPCNativeInterface* Interface,
-                    XPCNativeMember*    Member)
-        : mInterface(Interface), mMember(Member) {}
-    ~XPCCallableInfo() {}
-
-    XPCNativeInterface* GetInterface() const {return mInterface;}
-    XPCNativeMember*    GetMember() const {return mMember;}
-
-private:
-    // hide these...
-    XPCCallableInfo(const XPCCallableInfo& r); // not implemented
-    XPCCallableInfo& operator= (const XPCCallableInfo& r); // not implemented
-    XPCCallableInfo();   // No implementation
-
-private:
-    XPCNativeInterface* mInterface;
-    XPCNativeMember*    mMember;
-};
-
-
 // Tight. No virtual methods. Can be bitwise copied (until any resolution done).
 class XPCNativeMember
 {
 public:
-    static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, 
-                                            JSObject* funobj);
+    static JSBool GetCallInfo(XPCCallContext& ccx, 
+                              JSObject* funobj,
+                              XPCNativeInterface** pInterface,
+                              XPCNativeMember**    pMember);
 
     jsval   GetName() const {return mName;}
 

@@ -237,10 +237,10 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 int ifacesAfter = (int) self->mIID2NativeInterfaceMap->Count();
 
                 printf("\n");
-                printf("XPCNativeSets:        before: %d  after: %d  collected: %d\n",
-                       setsBefore, setsAfter, setsBefore - setsAfter);  
-                printf("XPCNativeInterfaces:  before: %d  after: %d  collected: %d\n",
-                       ifacesBefore, ifacesAfter, ifacesBefore - ifacesAfter);  
+                printf("XPCNativeSets:        before: %d  collected: %d  remaining: %d\n",
+                       setsBefore, setsBefore - setsAfter, setsAfter);  
+                printf("XPCNativeInterfaces:  before: %d  collected: %d  remaining: %d\n",
+                       ifacesBefore, ifacesBefore - ifacesAfter, ifacesAfter);  
                 printf("--------------------------------------------------------------\n");
 #endif
 

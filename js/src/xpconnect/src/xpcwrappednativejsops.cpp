@@ -201,7 +201,7 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 // wrappedNative wrapper to be used by JS code. One might think of it as:
 //    wrappedNative(wrappedJS(underlying_JSObject))
 // This is done (as opposed to just unwrapping the wrapped JS and automatically 
-// returning the underlying JSObject so that JS callers will see what looks
+// returning the underlying JSObject) so that JS callers will see what looks
 // Like any other xpcom object - and be limited to use its interfaces.
 //
 // See the comment preceeding nsIXPCWrappedJSObjectGetter in nsIXPConnect.idl.
@@ -1138,11 +1138,14 @@ XPC_WN_CallMethod(JSContext *cx, JSObject *obj,
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
     NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
-    XPCCallableInfo* ci =
-        XPCNativeMember::GetCallableInfo(ccx, JSVAL_TO_OBJECT(argv[-2]));
-    if(!ci)
+    
+    XPCNativeInterface* iface;
+    XPCNativeMember*    member;
+    
+    if(!XPCNativeMember::GetCallInfo(ccx, JSVAL_TO_OBJECT(argv[-2]),
+                                     &iface, &member))
         return Throw(NS_ERROR_XPC_CANT_GET_METHOD_INFO, cx);
-    ccx.SetCallableInfo(ci, JS_FALSE);
+    ccx.SetCallInfo(iface, member, JS_FALSE);
     return XPCWrappedNative::CallMethod(ccx);
 }
 
@@ -1155,15 +1158,18 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
     NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
-    XPCCallableInfo* ci =
-        XPCNativeMember::GetCallableInfo(ccx, JSVAL_TO_OBJECT(argv[-2]));
-    if(!ci)
+
+    XPCNativeInterface* iface;
+    XPCNativeMember*    member;
+
+    if(!XPCNativeMember::GetCallInfo(ccx, JSVAL_TO_OBJECT(argv[-2]),
+                                     &iface, &member))
         return Throw(NS_ERROR_XPC_CANT_GET_METHOD_INFO, cx);
 
     ccx.SetArgsAndResultPtr(argc, argv, vp);
     if(JS_IsAssigning(cx))
     {
-        ccx.SetCallableInfo(ci, JS_TRUE);
+        ccx.SetCallInfo(iface, member, JS_TRUE);
         JSBool retval = XPCWrappedNative::SetAttribute(ccx);
         if(retval && vp && argc)
             *vp = argv[0];
@@ -1171,7 +1177,7 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
     }
     // else...
 
-    ccx.SetCallableInfo(ci, JS_FALSE);
+    ccx.SetCallInfo(iface, member, JS_FALSE);
     return XPCWrappedNative::GetAttribute(ccx);
 }
 

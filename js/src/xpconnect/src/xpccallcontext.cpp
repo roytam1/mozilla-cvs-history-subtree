@@ -194,18 +194,19 @@ XPCCallContext::SetName(jsval name)
 }
 
 void
-XPCCallContext::SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter)
+XPCCallContext::SetCallInfo(XPCNativeInterface* iface, XPCNativeMember* member, 
+                            JSBool isSetter)
 {
     // We are going straight to the method info and need not do a lookup
     // by id.
 
     // don't be tricked if method is called with wrong 'this'
-    if(mTearOff && mTearOff->GetInterface() != ci->GetInterface())
+    if(mTearOff && mTearOff->GetInterface() != iface)
         mTearOff = nsnull;
 
     mSet = nsnull;
-    mInterface = ci->GetInterface();
-    mMember = ci->GetMember();
+    mInterface = iface;
+    mMember = member;
     mMethodIndex = mMember->GetIndex() + (isSetter ? 1 : 0);
     mName = mMember->GetName();
 

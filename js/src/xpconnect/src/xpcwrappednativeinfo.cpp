@@ -40,9 +40,38 @@
 /***************************************************************************/
 // XPCNativeMember
 
-// static
-XPCCallableInfo*
-XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
+// XXX We want to phase this out and have direct private slots on the funobj. 
+// See: http://bugzilla.mozilla.org/show_bug.cgi?id=73843
+
+// Tight. No virtual methods.
+class XPCCallableInfo
+{
+public:
+    XPCCallableInfo(XPCNativeInterface* Interface,
+                    XPCNativeMember*    Member)
+        : mInterface(Interface), mMember(Member) {}
+    ~XPCCallableInfo() {}
+
+    XPCNativeInterface* GetInterface() const {return mInterface;}
+    XPCNativeMember*    GetMember() const {return mMember;}
+
+private:
+    // hide these...
+    XPCCallableInfo(const XPCCallableInfo& r); // not implemented
+    XPCCallableInfo& operator= (const XPCCallableInfo& r); // not implemented
+    XPCCallableInfo();   // No implementation
+
+private:
+    XPCNativeInterface* mInterface;
+    XPCNativeMember*    mMember;
+};
+
+// static 
+JSBool 
+XPCNativeMember::GetCallInfo(XPCCallContext& ccx, 
+                             JSObject* funobj,
+                             XPCNativeInterface** pInterface,
+                             XPCNativeMember**    pMember)
 {
     JSFunction* fun;
     JSObject* realFunObj;
@@ -56,9 +85,17 @@ XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
     id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
     if(OBJ_GET_PROPERTY(ccx, realFunObj, id, &val) && JSVAL_IS_INT(val))
-        return (XPCCallableInfo*) JSVAL_TO_PRIVATE(val);
+    {
+        XPCCallableInfo* ci = (XPCCallableInfo*) JSVAL_TO_PRIVATE(val);
+        if(ci)
+        {
+            *pInterface = ci->GetInterface();
+            *pMember = ci->GetMember();
+            return JS_TRUE;
+        }
+    }
 
-    return nsnull;
+    return JS_FALSE;
 }
 
 void
