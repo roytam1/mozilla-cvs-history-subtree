@@ -292,12 +292,12 @@ treechildren:-moz-tree-image(source\:col-0, code, prettyprint) {
     list-style-image: url("chrome://venkman/skin/images/code-line-dis.gif");
 }
 
-treechildren:-moz-tree-image(source\:col-0, breakpoint) {
-    list-style-image: url("chrome://venkman/skin/images/breakpoint-line.gif");
-}
-
 treechildren:-moz-tree-image(source\:col-0, future-breakpoint) {
     list-style-image: url("chrome://venkman/skin/images/breakpoint-future-line.gif");
+}
+
+treechildren:-moz-tree-image(source\:col-0, breakpoint) {
+    list-style-image: url("chrome://venkman/skin/images/breakpoint-line.gif");
 }
 
 treechildren:-moz-tree-image(current-frame-flag){
@@ -321,15 +321,19 @@ treechildren:-moz-tree-image(windows\:col-0, item-file) {
     list-style-image: url("chrome://venkman/skin/images/file-js.png");
 }
 
+treechildren:-moz-tree-image(breaks\:col-0, future-breakpoint) {
+    list-style-image: url("chrome://venkman/skin/images/breakpoint-future.gif");
+}
+
 treechildren:-moz-tree-image(breaks\:col-0, item-breakpoint) {
     list-style-image: url("chrome://venkman/skin/images/breakpoint.png");
 }
 
-treechildren:-moz-tree-image(scripts\:col-0) {
+treechildren:-moz-tree-image(scripts\:col-0, file-function) {
     list-style-image: url("chrome://venkman/skin/images/file-function.png");
 }
 
-treechildren:-moz-tree-image(scripts\:col-0) {
+treechildren:-moz-tree-image(scripts\:col-0, file-function, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-function-bp.png");
 }
 
@@ -353,23 +357,23 @@ treechildren:-moz-tree-image(item-xml) {
     list-style-image: url("chrome://venkman/skin/images/file-xml.png");
 }
 
-treechildren:-moz-tree-image(item-unk, has-bp) {
+treechildren:-moz-tree-image(item-unk, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-unknown-bp.png");
 }
 
-treechildren:-moz-tree-image(item-js, has-bp) {
+treechildren:-moz-tree-image(item-js, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-js-bp.png");
 }
 
-treechildren:-moz-tree-image(item-html, has-bp) {
+treechildren:-moz-tree-image(item-html, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-html-bp.png");
 }
 
-treechildren:-moz-tree-image(item-xul, has-bp) {
+treechildren:-moz-tree-image(item-xul, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-xul-bp.png");
 }
 
-treechildren:-moz-tree-image(item-xml, has-bp) {
+treechildren:-moz-tree-image(item-xml, item-has-bp) {
     list-style-image: url("chrome://venkman/skin/images/file-xml-bp.png");
 }
 

@@ -71,6 +71,7 @@ venkman.jar:
   skin/modern/venkman/images/step-out-dis.png    (skin/images/step-out-dis.png)
   skin/modern/venkman/images/breakpoint-line.gif (skin/images/breakpoint-line.gif)
   skin/modern/venkman/images/breakpoint-future-line.gif (skin/images/breakpoint-future-line.gif)
+  skin/modern/venkman/images/breakpoint-future.gif (skin/images/breakpoint-future.gif)
   skin/modern/venkman/images/code-line.gif       (skin/images/code-line.gif)
   skin/modern/venkman/images/code-line-dis.gif   (skin/images/code-line-dis.gif)
   skin/modern/venkman/images/windows.png (skin/images/windows.png)

@@ -512,6 +512,21 @@ function arraySpeak (ary, single, plural)
     
 }
 
+function arrayOrFlag (ary, i, flag)
+{
+    if (i in ary)
+        ary[i] |= flag;
+    else
+        ary[i] = flag;
+}
+
+function arrayAndFlag (ary, i, flag)
+{
+    if (i in ary)
+        ary[i] &= flag;
+    else
+        ary[i] = 0;
+}
 
 function arrayContains (ary, elem)
 {

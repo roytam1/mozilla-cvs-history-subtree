@@ -51,16 +51,19 @@ function initPrefs()
     
     //    console.addPref ("input.commandchar", "/");    
     console.addPref ("enableChromeFilter", false);
+    console.addPref ("tabWidth", 4);
     console.addPref ("profile.template.html",
                      "chrome://venkman/content/profile.html.tpl");
     console.addPref ("profile.ranges",
                      "1000000, 5000, 2500, 1000, 750, 500, 250, 100, 75, 50, " +
                      "25, 10, 7.5, 5, 2.5, 1, 0.75, 0.5, 0.25");
-    console.addPref ("sourcetext.tab.width", 4);
     console.addPref ("input.history.max", 20);
     console.addPref ("input.dtab.time", 500);
     console.addPref ("initialScripts", "");
     console.addPref ("prettyprint", false);
+    console.addPref ("guessContext", 5);
+    console.addPref ("guessPattern", "(\\w+)\\s*[:=]\\s*$");
+    console.addPref ("scriptsView.groupFiles", true);
     
     var list = console.prefs.prefBranch.getChildList("extensions.venkman.", {});
     for (var p in list)

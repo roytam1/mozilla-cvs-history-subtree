@@ -59,11 +59,6 @@
             <treecol id="breaks:col-1" flex="1" label="&BreakCol1.label;"
               persist="hidden width"/>
             <splitter class="tree-splitter"/>
-            <treecol id="breaks:col-2" flex="1" label="&BreakCol2.label;"
-              persist="hidden width"/>
-            <splitter class="tree-splitter"/>
-            <treecol id="breaks:col-3" flex="1" label="&BreakCol3.label;"
-              persist="hidden width"/>
           </treecols>
 
           <treechildren id="break-body"/>
@@ -104,7 +99,8 @@
     <floatingview id="scripts" title="&Scripts.label;" flex="1"
       splitter-collapse="after" default-container="view-container-2">
       <vbox id="scripts-view-content" flex="1">
-        <tree flex="1" id="scripts-tree" persist="height">
+        <tree flex="1" id="scripts-tree" persist="height"
+          ondblclick="console.views.scripts.onDblClick(event);">
 
           <treecols>
             <treecol id="scripts:col-0" label="&ScriptsCol0.header;"
@@ -128,7 +124,8 @@
     <floatingview id="source" title="&Source.label;" flex="1"
       splitter-collapse="after" default-container="view-container-2">
       <vbox id="source-view-content" flex="1">
-        <tree id="source-tree" flex="1" persist="width">
+        <tree id="source-tree" flex="1" persist="width"
+          onclick="console.views.source.onClick(event);">
 
           <treecols>
             <treecol id="source:col-0" flex="3" display="&SourceCol0.display;"

@@ -49,7 +49,7 @@ function initViews()
         if (ASSERT("init" in console.views[v],
                    "View " + v + " does not have an init() property"))
         {
-            console.views[v].init();
+            console.realizeView(console.views[v], v);
         }
     }
 }
@@ -110,6 +110,8 @@ function con_realizeview (view, key)
 {
     console.views[key] = view;
     console.views[key].init();
+    if ("hooks" in console.views[key])
+        console.commandManager.addHooks (console.views[key].hooks, key);
 }
 
 console.views = new Object();
@@ -124,10 +126,64 @@ console.views.breaks = new XULTreeView(breaksShare);
 
 console.views.breaks.vewId = "breaks";
 
+console.views.breaks.hooks = new Object();
+
+console.views.breaks.hooks["hook-fbreak-set"] =
+function bv_hookFBreakSet (e)
+{
+    var breakRecord = new BPRecord (e.fbreak);
+    breakRecord.reserveChildren();
+    e.fbreak.breakRecord = breakRecord;
+    console.views.breaks.childData.appendChild(breakRecord);        
+}
+
+console.views.breaks.hooks["hook-fbreak-clear"] =
+function bv_hookFBreakClear (e)
+{
+    var breakRecord = e.fbreak.breakRecord;
+    delete e.fbreak.breakRecord;
+    console.views.breaks.childData.removeChildAtIndex(breakRecord.childIndex);
+    for (var i in breakRecord.childData)
+        console.views.breaks.childData.appendChild(breakRecord.childData[i]);
+}
+
+console.views.breaks.hooks["hook-break-set"] =
+function bv_hookBreakSet (e)
+{
+    var breakRecord = new BPRecord (e.breakInstance);
+    e.breakInstance.breakRecord = breakRecord;
+    if (e.breakInstance.parentBP)
+    {
+        var parentRecord = e.breakInstance.parentBP.breakRecord;
+        parentRecord.appendChild(breakRecord);
+    }
+    else
+    {
+        console.views.breaks.childData.appendChild(breakRecord);
+    }
+}
+
+console.views.breaks.hooks["hook-break-clear"] =
+function bv_hookBreakClear (e)
+{
+    var breakRecord = e.breakInstance.breakRecord;
+    if (e.breakInstance.parentBP)
+    {
+        var parentRecord = e.breakInstance.parentBP.breakRecord;
+        parentRecord.removeChildAtIndex(breakRecord.childIndex);
+    }
+    else
+    {
+        var idx = breakRecord.childIndex;
+        console.views.breaks.childData.removeChildAtIndex(idx);
+    }
+}
+
 console.views.breaks.init =
 function bv_init ()
 {
-    this.atomBreakpoint = console.atomService.getAtom("item-breakpoint");
+    this.atomBreak = console.atomService.getAtom("item-breakpoint");
+    this.atomFBreak = console.atomService.getAtom("future-breakpoint");
 }
 
 console.views.breaks.onShow =
@@ -218,137 +274,43 @@ function bv_getcx(cx)
 console.views.breaks.getCellProperties =
 function bv_cellprops (index, colID, properties)
 {
-    if (colID == "col-0")
+    if (colID == "breaks:col-0")
     {
-        if (this.childData.locateChildByVisualRow(index))
-            properties.AppendElement (this.atomBreakpoint);
+        var row = this.childData.locateChildByVisualRow(index);
+        if (row.type == "future")
+            properties.AppendElement (this.atomFBreak);
+        else
+            properties.AppendElement (this.atomBreak);
     }
 }
 
-console.views.breaks.locateChildByFileLine =
-function bv_findfl (fileName, line)
+function BPRecord (breakInstance)
 {
-    for (var i = 0; i < this.childData.length; ++i)
-    {
-        var child = this.childData[i];
-        if (child.line == line &&
-            child.fileName == fileName)
-            return child;
-    }
-
-    return null;
-}
-
-function BPRecord (fileName, line)
-{
-    var record = this;
-    function getMatchLength ()
-    {
-        return record.scriptRecords.length;
-    }
-        
-    this.scriptRecords = new Array();
-    this.fileName = fileName;
-    this._enabled = true;
-    this.stop = true;
-
-    this.setColumnPropertyName ("col-0", "shortName");
-    this.setColumnPropertyName ("col-2", "functionName");
+    this.setColumnPropertyName ("col-0", "name");
     this.setColumnPropertyName ("col-1", "line");
-    this.setColumnPropertyName ("col-3", getMatchLength);
 
-    var ary = fileName.match(/\/([^\/?]+)(\?|$)/);
-    if (ary)
-        this.shortName = ary[1];
-    else
-        this.shortName = fileName;
-    this.line = line;
-    this.functionName = MSG_VAL_UNKNOWN;
+    if ("pc" in breakInstance)
+    {
+        dd ("breakpoint instance record");
+        this.type = "instance";
+        this.name = breakInstance.scriptWrapper.functionName;
+        this.line = getMsg(MSN_FMT_PC, String(breakInstance.pc));
+    }
+    else if (breakInstance instanceof FutureBreakpoint)
+    {
+        dd ("future breakpoint record");
+        this.type = "future";
+        var ary = breakInstance.url.match(/\/([^\/?]+)(\?|$)/);
+        if (ary)
+            this.name = ary[1];
+        else
+            this.name = breakInstance.url;
+
+        this.line = breakInstance.lineNumber;
+    }    
 }
 
 BPRecord.prototype = new XULTreeViewRecord(breaksShare);
-
-BPRecord.prototype.__defineGetter__ ("scriptMatches", bpr_getmatches);
-function bpr_getmatches ()
-{
-    return this.scriptRecords.length;
-}
-
-BPRecord.prototype.__defineGetter__ ("enabled", bpr_getenabled);
-function bpr_getenabled ()
-{
-    return this._enabled;
-}
-
-BPRecord.prototype.__defineSetter__ ("enabled", bpr_setenabled);
-function bpr_setenabled (state)
-{
-    if (state == this._enabled)
-        return;
-    
-    var delta = (state) ? +1 : -1;
-    
-    for (var i = 0; i < this.scriptRecords.length; ++i)
-    {
-        this.scriptRecords[i].bpcount += delta;
-        var script = this.scriptRecords[i].script;
-        var pc = script.lineToPc(this.line, PCMAP_SOURCETEXT);
-        if (state)
-            script.setBreakpoint(pc);
-        else
-            script.clearBreakpoint(pc);
-    }
-    this._enabled = state;
-}
-
-BPRecord.prototype.matchesScriptRecord =
-function bpr_matchrec (scriptRec)
-{
-    return (scriptRec.script.fileName.indexOf(this.fileName) != -1 &&
-            scriptRec.containsLine(this.line) &&
-            scriptRec.script.isLineExecutable(this.line, PCMAP_SOURCETEXT));
-}
-
-BPRecord.prototype.addScriptRecord =
-function bpr_addscript (scriptRec)
-{
-    for (var i = 0; i < this.scriptRecords.length; ++i)
-        if (this.scriptRecords[i] == scriptRec)
-            return;
-
-    if (this._enabled)
-    {
-        var pc = scriptRec.script.lineToPc(this.line, PCMAP_SOURCETEXT);
-        scriptRec.script.setBreakpoint(pc);
-    }
-    
-    this.functionName = scriptRec.functionName;
-    ++(scriptRec.bpcount);
-    
-    this.scriptRecords.push(scriptRec);
-}
-
-BPRecord.prototype.removeScriptRecord =
-function bpr_remscript (scriptRec)
-{
-    for (var i = 0; i < this.scriptRecords.length; ++i)
-        if (this.scriptRecords[i] == scriptRec)
-        {
-            --(this.scriptRecords[i].bpcount);
-            arrayRemoveAt(this.scriptRecords, i);
-            return;
-        }
-}
-
-BPRecord.prototype.hasScriptRecord =
-function bpr_addscript (scriptRec)
-{
-    for (var i = 0; i < this.scriptRecords.length; ++i)
-        if (this.scriptRecords[i] == scriptRec)
-            return true;
-
-    return false;
-}
 
 /*******************************************************************************
  * Locals View
@@ -764,16 +726,12 @@ function scv_init ()
     this.atomXML        = atomsvc.getAtom("item-xml");
     this.atomGuessed    = atomsvc.getAtom("item-guessed");
     this.atomBreakpoint = atomsvc.getAtom("item-has-bp");
-
-    var hooks =
-    [
-     ["chrome-filter",                        scv_hookChromeFilter,
-      "scripts:chrome-filter-hook",           false]
-    ];
-
-    console.commandManager.hookCommands(hooks);
+    this.atomFunction   = atomsvc.getAtom("file-function");
 }
 
+console.views.scripts.hooks = new Object();
+
+console.views.scripts.hooks["chrome-filter"] =
 function scv_hookChromeFilter(e)
 {
     console.views.scripts.freeze();
@@ -812,6 +770,69 @@ function scv_hookChromeFilter(e)
     console.views.scripts.thaw();
 }
 
+console.views.scripts.hooks["hook-break-set"] =
+console.views.scripts.hooks["hook-break-clear"] =
+console.views.scripts.hooks["hook-fbreak-set"] =
+console.views.scripts.hooks["hook-fbreak-clear"] =
+function sch_hookBreakChange(e)
+{
+    if (console.views.scripts.tree)
+        console.views.scripts.tree.invalidate();
+}
+
+console.views.scripts.hooks["hook-guess-complete"] =
+function sch_hookGuessComplete(e)
+{
+    if (!("scriptInstanceRecord" in e.scriptInstance))
+        return;
+    
+    var rec = e.scriptInstance.scriptInstanceRecord;
+    if (!rec.childData.length)
+        return;
+
+    for (var i in rec.childData)
+    {
+        rec.childData[i].functionName =
+            rec.childData[i].scriptWrapper.functionName;
+    }
+
+    if (console.views.scripts.tree)
+        console.views.scripts.tree.invalidate();
+}
+
+console.views.scripts.hooks["hook-script-instance-sealed"] =
+function scv_hookScriptInstanceSealed (e)
+{
+    var scr = new ScriptInstanceRecord (e.scriptInstance);
+    e.scriptInstance.scriptInstanceRecord = scr;
+    console.views.scripts.childData.appendChild(scr);
+}
+
+console.views.scripts.hooks["hook-script-instance-destroyed"] =
+function scv_hookScriptInstanceCreated (e)
+{
+    if (!ASSERT("scriptInstanceRecord" in e.scriptInstance,
+                "Script instance destroyed, but never sealed"))
+    {
+        return;
+    }
+    
+    var rec = e.scriptInstance.scriptInstanceRecord;
+    console.views.scripts.childData.removeChildAtIndex(rec.childIndex);
+}
+
+console.views.scripts.hooks["hook-window-opened"] =
+function scv_hookWindowOpen (e)
+{
+    console.views.scripts.freeze();
+}
+
+console.views.scripts.hooks["hook-window-loaded"] =
+function scv_hookWindowOpen (e)
+{
+    console.views.scripts.thaw();
+}
+
 console.views.scripts.onShow =
 function scv_show ()
 {
@@ -824,7 +845,7 @@ function scv_hide ()
     syncTreeView (getChildById(this.currentContent, "scripts-tree"), null);
 }
 
-console.views.scripts.onSelect =
+console.views.scripts.onDblClick =
 function scv_select (e)
 {
     var scriptsView = console.views.scripts;
@@ -844,9 +865,9 @@ function scv_select (e)
     ASSERT (row, "bogus row");
 
     if (row instanceof ScriptRecord)
-        dispatch ("find-script", {scriptRec: row});
-    else if (row instanceof ScriptContainerRecord)
-        dispatch ("find-url", {url: row.fileName});
+        dispatch ("find-script", {scriptWrapper: row.scriptWrapper});
+    else if (row instanceof ScriptInstanceRecord)
+        dispatch ("find-url", {url: row.url});
 }
 
 console.views.scripts.onClick =
@@ -916,15 +937,29 @@ function scv_setmode (flag)
 console.views.scripts.getCellProperties =
 function scv_getcprops (index, colID, properties)
 {
-    var row;
-    if ((row = this.childData.locateChildByVisualRow (index, 0)))
+    var row = this.childData.locateChildByVisualRow (index)
+    if (row)
     {
-        if ("fileType" in row && colID == "scripts:col-0")
-            properties.AppendElement (row.fileType);
-        if ("isGuessedName" in row && colID == "scripts:col-0")
-            properties.AppendElement (this.atomGuessed);
-        if (row.bpcount > 0)
-            properties.AppendElement (this.atomBreakpoint);
+        if (colID == "scripts:col-0")
+        {
+            if (row instanceof ScriptInstanceRecord)
+            {
+                properties.AppendElement (row.fileType);
+
+                if ("isGuessedName" in row)
+                    properties.AppendElement (this.atomGuessed);
+
+                if (row.scriptInstance.breakpointCount)
+                    properties.AppendElement (this.atomBreakpoint);
+            }
+            else if (row instanceof ScriptRecord)
+            {
+                properties.AppendElement (this.atomFunction);
+
+                if (row.scriptWrapper.breakpointCount)
+                    properties.AppendElement (this.atomBreakpoint);
+            }
+        }        
     }
 }
 
@@ -947,7 +982,7 @@ function scv_getcx(cx)
     
     cx.target = rec;
     
-    if (rec instanceof ScriptContainerRecord)
+    if (rec instanceof ScriptInstanceRecord)
     {
         cx.url = cx.fileName = rec.fileName;
         cx.scriptRec = rec.childData[0];
@@ -988,7 +1023,7 @@ function scv_getcx(cx)
         for (row = min; row <= max; ++row)
         {
             rec = this.childData.locateChildByVisualRow(row);
-            if (rec instanceof ScriptContainerRecord)
+            if (rec instanceof ScriptInstanceRecord)
             {
                 cx.fileNameList.push (rec.fileName);
             }
@@ -1008,52 +1043,61 @@ function scv_getcx(cx)
     return cx;
 }    
 
-function ScriptContainerRecord(fileName)
+function ScriptInstanceRecord(scriptInstance)
 {
+    if (!ASSERT(scriptInstance.isSealed,
+                "Attempt to create ScriptInstanceRecord for unsealed instance"))
+    {
+        return null;
+    }
+    
     this.setColumnPropertyName ("col-0", "displayName");
     this.setColumnPropertyValue ("col-1", "");
     this.setColumnPropertyValue ("col-2", "");
-    this.fileName = fileName;
+    this.reserveChildren();
+    this.url = scriptInstance.url;
     var sv = console.views.scripts;
     this.fileType = sv.atomUnknown;
-    this.shortName = this.fileName;
+    this.shortName = this.url;
     this.group = 4;
-    this.bpcount = 0;
+    this.scriptInstance = scriptInstance;
 
-    this.shortName = getFileFromPath(this.fileName);
+    this.shortName = getFileFromPath(this.url);
     ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
     if (ary)
     {
         switch (ary[1].toLowerCase())
         {
-        case "js":
-            this.fileType = sv.atomJS;
-            this.group = 0;
-            break;
+            case "js":
+                this.fileType = sv.atomJS;
+                this.group = 0;
+                break;
             
-        case "html":
-            this.group = 1;
-            this.fileType = sv.atomHTML;
-            break;
+            case "html":
+                this.group = 1;
+                this.fileType = sv.atomHTML;
+                break;
             
-        case "xul":
-            this.group = 2;
-            this.fileType = sv.atomXUL;
-            break;
+            case "xul":
+                this.group = 2;
+                this.fileType = sv.atomXUL;
+                break;
             
-        case "xml":
-            this.group = 3;
-            this.fileType = sv.atomXML;
-            break;
+            case "xml":
+                this.group = 3;
+                this.fileType = sv.atomXML;
+                break;
         }
     }
     
     this.displayName = this.shortName;
+
+    return this;
 }
 
-ScriptContainerRecord.prototype = new XULTreeViewRecord(scriptShare);
+ScriptInstanceRecord.prototype = new XULTreeViewRecord(scriptShare);
 
-ScriptContainerRecord.prototype.onDragStart =
+ScriptInstanceRecord.prototype.onDragStart =
 function scr_dragstart (e, transferData, dragAction)
 {        
     transferData.data = new TransferData();
@@ -1066,24 +1110,20 @@ function scr_dragstart (e, transferData, dragAction)
     return true;
 }    
 
-ScriptContainerRecord.prototype.appendScriptRecord =
-function scr_addscript(scriptRec)
+ScriptInstanceRecord.prototype.super_resort = XTRootRecord.prototype.resort;
+
+ScriptInstanceRecord.prototype.resort =
+function scr_resort ()
 {
-    this.appendChild (scriptRec);
+    console._groupFiles = console.prefs["scriptsView.groupFiles"];
+    this.super_resort();
+    delete console._groupFiles;
 }
 
-ScriptContainerRecord.prototype.__defineGetter__ ("sourceText", scr_gettext);
-function scr_gettext ()
-{
-    if (!("_sourceText" in this))
-        this._sourceText = new SourceText (this, this.fileName);
-    return this._sourceText;
-}
-
-ScriptContainerRecord.prototype.sortCompare =
+ScriptInstanceRecord.prototype.sortCompare =
 function scr_compare (a, b)
 {
-    if (console.views.scripts.groupFiles)
+    if (console._groupFiles)
     {
         if (a.group < b.group)
             return -1;
@@ -1101,43 +1141,42 @@ function scr_compare (a, b)
     return 0;
 }
 
-ScriptContainerRecord.prototype.locateChildByScript =
-function scr_locate (script)
+ScriptInstanceRecord.prototype.onPreOpen =
+function scr_preopen ()
 {
-    for (var i = 0; i < this.childData.length; ++i)
-        if (script == this.childData[i].script)
-            return this.childData[i];
-
-    return null;
-}
-
-ScriptContainerRecord.prototype.guessFunctionNames =
-function scr_guessnames (sourceText)
-{
-    for (var i = 0; i < this.childData.length; ++i)
+    if (this.childData.length == 0)
     {
-        this.childData[i].guessFunctionName(sourceText);
+        console.views.scripts.freeze();
+        var scriptWrapper = this.scriptInstance.topLevel;
+        var sr = new ScriptRecord(scriptWrapper);
+        scriptWrapper.scriptRecord = sr;
+        this.appendChild(sr);
+
+        var functions = this.scriptInstance.functions;
+        for (var f in functions)
+        {
+            sr = new ScriptRecord(functions[f]);
+            functions[f].scriptRecord = sr;
+            this.appendChild(sr);
+        }
+        console.views.scripts.thaw();
     }
-    /* XXX invalidate scripts view */
-    dispatch ("hook-guess-completed", {url: this.fileName});
 }
-
-function ScriptRecord(script) 
+        
+function ScriptRecord(scriptWrapper) 
 {
-    if (!(script instanceof jsdIScript))
-        throw new BadMojo (ERR_INVALID_PARAM, "script");
+    this.setColumnPropertyName ("col-0", "functionName");
+    this.setColumnPropertyName ("col-1", "baseLineNumber");
+    this.setColumnPropertyName ("col-2", "lineExtent");
 
-    this.setColumnPropertyName ("script-name", "functionName");
-    this.setColumnPropertyName ("script-line-start", "baseLineNumber");
-    this.setColumnPropertyName ("script-line-extent", "lineExtent");
-    this.functionName = (script.functionName) ? script.functionName :
-        MSG_VAL_TLSCRIPT;
-    this.baseLineNumber = script.baseLineNumber;
-    this.lineExtent = script.lineExtent;
-    this.script = script;
+    this.functionName = scriptWrapper.functionName
+    this.baseLineNumber = scriptWrapper.jsdScript.baseLineNumber;
+    this.lineExtent = scriptWrapper.jsdScript.lineExtent;
+    this.scriptWrapper = scriptWrapper;
 
-    this.jsdurl = "jsd:sourcetext?url=" + escape(this.script.fileName) + 
-        "&base=" + this.baseLineNumber + "&" + "extent=" + this.lineExtent +
+    this.jsdurl = "jsd:sourcetext?url=" +
+        escape(this.scriptWrapper.jsdScript.fileName) + 
+        "&base=" + this.baseLineNumber + "&extent=" + this.lineExtent +
         "&name=" + this.functionName;
 }
 
@@ -1157,118 +1196,6 @@ function sr_dragstart (e, transferData, dragAction)
     return true;
 }
 
-ScriptRecord.prototype.containsLine =
-function sr_containsl (line)
-{
-    if (this.script.baseLineNumber <= line && 
-        this.script.baseLineNumber + this.lineExtent > line)
-        return true;
-    
-    return false;
-}
-
-ScriptRecord.prototype.__defineGetter__ ("sourceText", sr_getsource);
-function sr_getsource ()
-{
-    if (!("_sourceText" in this))
-        this._sourceText = new PPSourceText(this);
-    return this._sourceText;
-}
-
-ScriptRecord.prototype.__defineGetter__ ("bpcount", sr_getbpcount);
-function sr_getbpcount ()
-{
-    if (!("_bpcount" in this))
-        return 0;
-
-    return this._bpcount;
-}
-
-ScriptRecord.prototype.__defineSetter__ ("bpcount", sr_setbpcount);
-function sr_setbpcount (value)
-{
-    var delta;
-    
-    if ("_bpcount" in this)
-    {
-        if (value == this._bpcount)
-            return value;
-        delta = value - this._bpcount;
-    }
-    else
-        delta = value;
-
-    this._bpcount = value;
-    this.invalidate();
-    this.parentRecord.bpcount += delta;
-    this.parentRecord.invalidate();
-    return value;
-}
-
-ScriptRecord.prototype.guessFunctionName =
-function sr_guessname (sourceText)
-{
-    var targetLine = this.script.baseLineNumber;
-    var sourceLines = sourceText.lines;
-    if (targetLine > sourceLines)
-    {
-        dd ("not enough source to guess function at line " + targetLine);
-        return;
-    }
-    
-    if (this.functionName == MSG_VAL_TLSCRIPT)
-    {
-        if (sourceLines[targetLine].search(/\WsetTimeout\W/) != -1)
-            this.functionName = MSD_VAL_TOSCRIPT;
-        else if (sourceLines[targetLine].search(/\WsetInterval\W/) != -1)
-            this.functionName = MSD_VAL_IVSCRIPT;        
-        else if (sourceLines[targetLine].search(/\Weval\W/) != -1)
-            this.functionName = MSD_VAL_EVSCRIPT;
-        return;
-    }
-    
-    if (this.functionName != "anonymous")
-        return;
-    var scanText = "";
-    
-    /* scan at most 3 lines before the function definition */
-    switch (targetLine - 3)
-    {
-        case -2: /* target line is the first line, nothing before it */
-            break;
-
-        case -1: /* target line is the second line, one line before it */ 
-            scanText = 
-                String(sourceLines[targetLine - 2]);
-            break;
-        case 0:  /* target line is the third line, two before it */
-            scanText =
-                String(sourceLines[targetLine - 3]) + 
-                String(sourceLines[targetLine - 2]);
-            break;            
-        default: /* target line is the fourth or higher line, three before it */
-            scanText += 
-                String(sourceLines[targetLine - 4]) + 
-                String(sourceLines[targetLine - 3]) +
-                String(sourceLines[targetLine - 2]);
-            break;
-    }
-
-    scanText += String(sourceLines[targetLine - 1]);
-    
-    scanText = scanText.substring(0, scanText.lastIndexOf ("function"));
-    var ary = scanText.match (/(\w+)\s*[:=]\s*$/);
-    if (ary)
-    {
-        this.functionName = getMsg(MSN_FMT_GUESSEDNAME, ary[1]);
-        this.isGuessedName = true;
-    }
-    else
-    {
-        dd ("unable to guess function name based on text ``" + scanText + "''");
-    }
-}
-
 /*******************************************************************************
  * Stack View
  *******************************************************************************/
@@ -1284,19 +1211,11 @@ function skv_init()
 {
     this.atomFrame = console.atomService.getAtom("item-frame");
 
-    var hooks =
-    [
-     ["hook-debug-stop",                skv_hookDebugStop,
-      "stack:hook-debug-stop",          false],
-     ["hook-debug-continue",            skv_hookDebugCont,
-      "stack:hook-debug-continue",      false],
-     ["frame",                          skv_hookFrame,
-      "stack:hook-frame",               false]
-    ];
-
-    console.commandManager.hookCommands(hooks);
 }
 
+console.views.stack.hooks = new Object();
+
+console.views.stack.hooks["hook-debug-stop"] =
 function skv_hookDebugStop (e)
 {
     var frameRec;
@@ -1308,12 +1227,14 @@ function skv_hookDebugStop (e)
     }
 }
 
+console.views.stack.hooks["hook-debug-continue"] =
 function skv_hookDebugCont (e)
 {
     while (console.views.stack.childData.length)
         console.views.stack.childData.removeChildAtIndex(0);
 }
 
+console.views.stack.hooks["frame"] =
 function skv_hookFrame (e)
 {
     if (e.frameIndex && console.views.stack.tree)
@@ -1469,29 +1390,26 @@ function sv_init()
     this.atomHighlightStart = atomsvc.getAtom("highlight-start");
     this.atomHighlightRange = atomsvc.getAtom("highlight-range");
     this.atomHighlightEnd   = atomsvc.getAtom("highlight-end");
-    this.atomBreakpoint     = atomsvc.getAtom("breakpoint");
-    this.atomFBreakpoint    = atomsvc.getAtom("future-breakpoint");
+    this.atomBreak          = atomsvc.getAtom("breakpoint");
+    this.atomFBreak         = atomsvc.getAtom("future-breakpoint");
     this.atomCode           = atomsvc.getAtom("code");
     this.atomPrettyPrint    = atomsvc.getAtom("prettyprint");
     this.atomWhitespace     = atomsvc.getAtom("whitespace");
-
-    var hooks =
-    [
-     ["hook-debug-continue",                    sv_hookDebugCont,
-      "source:hook-debug-continue",             false],
-     ["hook-display-sourcetext",                sv_hookDisplay,
-      "source:display-hook",                    false],
-     ["hook-display-sourcetext-soft",           sv_hookDisplay,
-      "source:display-hook",                    false],
-     ["pprint",                                 sv_hookPPrint,
-      "source:prettyprint-hook",                false],
-     ["hook-source-load-complete",              sv_hookLoadComplete,
-      "source:reload-hook",                     false]
-    ];
-
-    console.commandManager.hookCommands(hooks);
 }
 
+console.views.source.hooks = new Object();
+
+console.views.source.hooks["hook-break-set"] =
+console.views.source.hooks["hook-break-clear"] =
+console.views.source.hooks["hook-fbreak-set"] =
+console.views.source.hooks["hook-fbreak-clear"] =
+function sv_hookBreakChange(e)
+{
+    if (console.views.source.tree)
+        console.views.source.tree.invalidate();
+}
+
+console.views.source.hooks["hook-debug-continue"] =
 function sv_hookDebugCont (e)
 {
     /* Invalidate on continue to remove the highlight line. */
@@ -1502,6 +1420,8 @@ function sv_hookDebugCont (e)
 /**
  * Display requested sourcetext.
  */
+console.views.source.hooks["hook-display-sourcetext"] =
+console.views.source.hooks["hook-display-sourcetext-soft"] =
 function sv_hookDisplay (e)
 {
     console.views.source.details = e.details;
@@ -1525,12 +1445,7 @@ function sv_hookDisplay (e)
 /**
  * Sync with the pretty print state as it changes.
  */
-function sv_hookPPrint (e)
-{
-    if (console.views.source.details)
-        sv_hookFindScript(console.views.source.details);
-}
-
+console.views.source.hooks["hook-source-load-complete"] =
 function sv_hookLoadComplete (e)
 {
     console.views.source.syncTreeView();
@@ -1579,16 +1494,17 @@ function sv_click (e)
         colID = colID.value;
         row = row.value;
         
-        if (colID == "breakpoint-col")
+        if (colID == "source:col-0")
         {
-            if ("onMarginClick" in console.sourceView.childData)
+            if ("onMarginClick" in console.views.source.childData)
                 console.views.source.childData.onMarginClick (e, row + 1);
         }
     }
 
 }
 
-console.views.source._scrollTo = BasicOView.prototype.scrollTo;
+console.views.source.super_scrollTo = BasicOView.prototype.scrollTo;
+
 console.views.source.scrollTo =
 function sv_scrollto (line, align)
 {
@@ -1603,7 +1519,10 @@ function sv_scrollto (line, align)
         this.childData.pendingScrollType = align;
         return;
     }
-    this._scrollTo(line, align);
+    this.super_scrollTo(line, align);
+
+    if (this.tree)
+        this.tree.invalidate();
 }
 
 console.views.source.syncTreeView =
@@ -1815,26 +1734,17 @@ function sv_cellprops (row, colID, properties)
     if (!line)
         return;
     
-    if (colID == "breakpoint-col")
+    if (colID == "source:col-0")
     {
-        if (this.prettyPrint)
-            properties.AppendElement(this.atomPrettyPrint);
-        if (typeof this.childData.lines[row] == "object" &&
-            "bpRecord" in this.childData.lines[row])
+        if ("lineMap" in this.childData && row in this.childData.lineMap)
         {
-            if (this.childData.lines[row].bpRecord.scriptRecords.length)
-                properties.AppendElement(this.atomBreakpoint);
-            else
-                properties.AppendElement(this.atomFBreakpoint);
-        }
-        else if ("lineMap" in this.childData && row in this.childData.lineMap &&
-                 this.childData.lineMap[row] & SourceText.LINE_BREAKABLE)
-        {
-            properties.AppendElement(this.atomCode);
-        }
-        else
-        {
-            properties.AppendElement(this.atomWhitespace);
+            var flags = this.childData.lineMap[row];
+            if (flags & LINE_BREAK)
+                properties.AppendElement(this.atomBreak);
+            if (flags & LINE_FBREAK)
+                properties.AppendElement(this.atomFBreak);
+            if (flags & LINE_BREAKABLE)
+                properties.AppendElement(this.atomCode);
         }
     }
     
@@ -1854,7 +1764,7 @@ function sv_cellprops (row, colID, properties)
             atom = this.atomHighlightRange;
         }
         
-        if (atom && console.highlightFile == this.childData.fileName)
+        if (atom && console.highlightURL == this.childData.url)
         {
             properties.AppendElement(atom);
         }
@@ -1985,24 +1895,17 @@ function winv_init ()
     WindowRecord.prototype.property         = atomsvc.getAtom("item-window");
     FileContainerRecord.prototype.property  = atomsvc.getAtom("item-files");
     FileRecord.prototype.property           = atomsvc.getAtom("item-file");
-
-    var hooks =
-    [
-     ["hook-window-opened",     winv_hookWindowOpened,
-      "winv:hook-window-opened", false],
-     ["hook-window-closed",     winv_hookWindowClosed,
-      "winv:hook-window-closed", false]
-     ];
-    
-    console.commandManager.hookCommands(hooks);
-
 }
 
+console.views.windows.hooks = new Object();
+
+console.views.windows.hooks["hook-window-opened"] =
 function winv_hookWindowOpened (e)
 {
     console.views.windows.childData.appendChild (new WindowRecord(e.window, ""));
 }
 
+console.views.windows.hooks["hook-window-closed"] =
 function winv_hookWindowClosed (e)
 {
     var winRecord = console.views.windows.locateChildByWindow(e.window);

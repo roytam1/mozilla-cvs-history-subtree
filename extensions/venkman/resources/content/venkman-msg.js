@@ -58,7 +58,6 @@ function initMsgs ()
                 constValue = prop.value.replace (/^\"/, "").replace (/\"$/, "");
             }
 
-            //dd ("window." + constName + " = " + constValue.quote());
             eval ("window." + constName + " = " + constValue.quote());
         }
     }

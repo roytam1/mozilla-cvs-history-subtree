@@ -50,10 +50,8 @@
 
 <!-- breakpoint view -->
 <!ENTITY Break.label        "Breakpoints">
-<!ENTITY BreakCol0.label    "File">
-<!ENTITY BreakCol1.label    "Function">
-<!ENTITY BreakCol2.label    "Line">
-<!ENTITY BreakCol3.label    "Instances">
+<!ENTITY BreakCol0.label    "Name">
+<!ENTITY BreakCol1.label    "Line/PC">
 
 <!-- locals view -->
 <!ENTITY Locals.label       "Local Variables">

@@ -65,6 +65,8 @@ function initCommands()
          ["find-ctor",      cmdFindCreatorOrCtor,  0],
          ["find-file",      cmdFindFile,           CMD_CONSOLE],
          ["find-frame",     cmdFindFrame,          CMD_NEED_STACK],
+         ["find-sourcetext",cmdFindSourceText,     0],
+         ["find-sourcetext-soft",cmdFindSourceText,0],
          ["find-script",    cmdFindScript,         0],
          ["find-url",       cmdFindURL,            CMD_CONSOLE],
          ["find-url-soft",  cmdFindURL,            0],
@@ -125,16 +127,29 @@ function initCommands()
          ["tm-break",       "tmode break",          0],
 
          /* hooks */
+         ["hook-break-set",                cmdHook, 0],
+         ["hook-break-clear",              cmdHook, 0],
          ["hook-debug-stop",               cmdHook, 0],
          ["hook-debug-continue",           cmdHook, 0],
          ["hook-display-sourcetext",       cmdHook, 0],
          ["hook-display-sourcetext-soft",  cmdHook, 0],
+         ["hook-fbreak-set",               cmdHook, 0],
+         ["hook-fbreak-clear",             cmdHook, 0],
          ["hook-guess-complete",           cmdHook, 0],
+         ["hook-transient-script",         cmdHook, 0],
+         ["hook-script-manager-created",   cmdHook, 0],
+         ["hook-script-manager-destroyed", cmdHook, 0],
+         ["hook-script-instance-created",  cmdHook, 0],
+         ["hook-script-instance-sealed",   cmdHook, 0],
+         ["hook-script-instance-destroyed",cmdHook, 0],
          ["hook-source-load-complete",     cmdHook, 0],
          ["hook-window-closed",            cmdHook, 0],
          ["hook-window-loaded",            cmdHook, 0],
          ["hook-window-opened",            cmdHook, 0],
-         ["hook-window-unloaded",          cmdHook, 0]
+         ["hook-window-unloaded",          cmdHook, 0],
+         ["hook-venkman-exit",             cmdHook, 0],
+         ["hook-venkman-query-exit",       cmdHook, 0],
+         ["hook-venkman-started",          cmdHook, 0]
         ];
 
     defineVenkmanCommands (cmdary);
@@ -601,67 +616,98 @@ function cmdFindFile (e)
 
 function cmdFindFrame (e)
 {
-    var frame = console.frames[e.frameIndex];
+    var jsdFrame = console.frames[e.frameIndex];
 
-    displayFrame (frame, e.frameIndex, true);
+    displayFrame (jsdFrame, e.frameIndex, true);
 
-    if (frame.isNative)
+    if (jsdFrame.isNative)
         return true;
     
-    var scriptContainer = console.scripts[frame.script.fileName];
-    if (!scriptContainer)
-    {
-        dd ("frame from unknown source");
-        return false;
-    }
-    var scriptRecord = scriptContainer.locateChildByScript (frame.script);
-    if (!scriptRecord)
-    {
-        dd ("frame with unknown script");
-        return false;
-    }
-
-    return dispatch ("find-script", {scriptRec: scriptRecord});
+    var scriptWrapper = console.scriptWrappers[jsdFrame.script.tag]
+    return dispatch ("find-script", { scriptWrapper: scriptWrapper });
 }
 
 function cmdFindScript (e)
 {
+    var jsdScript = e.scriptWrapper.jsdScript;
     var rv;
 
-    if (console.prefs["prettyprint"])
+    if (jsdScript.isValid && console.prefs["prettyprint"])
     {
         delete console.highlightFile;
         delete console.highlightStart;
         delete console.highlightEnd;
+        console.currentDetails = e.scriptWrapper;
         dispatch ("hook-display-sourcetext",
-                  {sourceText: e.scriptRec.sourceText, startLine: 1,
-                   details: e.scriptRec.script});
-        rv = e.scriptRec.script.fileName;
+                  { sourceText: e.scriptWrapper.sourceText, startLine: 1,
+                    details: e.scriptWrapper });
+        rv = jsdScript.fileName;
     }
     else
     {
-        rv = dispatch("find-url", {url: e.scriptRec.parentRecord.fileName,
-                                   rangeStart: e.scriptRec.baseLineNumber,
-                                   rangeEnd: e.scriptRec.baseLineNumber + 
-                                             e.scriptRec.lineExtent - 1,
-                                   details: e.scriptRec.script});
+        rv = dispatch("find-url", { url: jsdScript.fileName,
+                                    rangeStart: jsdScript.baseLineNumber,
+                                    rangeEnd: jsdScript.baseLineNumber + 
+                                              jsdScript.lineExtent - 1,
+                                    details: e.scriptWrapper });
     }
 
     return rv;
 }
-    
-function cmdFindURL (e)
+
+function cmdFindSourceText (e)
 {
     function cb(status)
     {
-        if (status == Components.results.NS_OK)
-            dispatch (hookName, {sourceText: sourceText, startLine: line});
+        if (status != Components.results.NS_OK)
+        {
+            display (getMsg (MSN_ERR_SOURCE_LOAD_FAILED,
+                             [e.sourceText.url, status], MT_ERROR));
+            return;
+        }
+        
+        var params = {
+            sourceText: e.sourceText,
+            startLine: e.rangeStart,
+            details: e.details
+        };
+        
+        if (e.command.name.indexOf("soft") != -1)
+            dispatch ("hook-display-sourcetext-soft", params);
+        else
+            dispatch ("hook-display-sourcetext", params);
     };
 
+    var line = 0;
+    console.highlightURL = e.sourceText.url;
+    
+    delete console.highlightStart;
+    delete console.highlightEnd;
+    if ("rangeStart" in e && e.rangeStart != null)
+    {
+        line = e.rangeStart;
+        if (e.rangeEnd != null)
+        {
+            console.highlightStart = e.rangeStart - 1;
+            console.highlightEnd = e.rangeEnd - 1;
+        }
+    }    
+    
+    console.currentSourceText = e.sourceText;
+    console.currentDetails = e.details;
+    
+    if (e.sourceText.isLoaded)
+        cb(Components.results.NS_OK);
+    else
+        e.sourceText.loadSource(cb);
+}
+
+function cmdFindURL (e)
+{
     if (!e.url)
     {
-        dispatch ("hook-display-sourcetext", {sourceText: null, startLine: 0});
-        return null;
+        dispatch ("find-sourcetext", { sourceText: null });
+        return;
     }
 
     var sourceText;
@@ -677,12 +723,12 @@ function cmdFindURL (e)
             default:
                 display (getMsg(MSN_ERR_INVALID_PARAM, ["url", e.url]),
                          MT_ERROR);
-                return null;
+                return;
         }
     }
-    else if (e.url in console.scripts)
+    else if (e.url in console.scriptManagers)
     {
-        sourceText = console.scripts[e.url].sourceText;
+        sourceText = console.scriptManagers[e.url].sourceText;
     }
     else if (e.url in console.files)
     {
@@ -693,34 +739,17 @@ function cmdFindURL (e)
         sourceText = console.files[e.url] = new SourceText (null, e.url);
     }
 
-    var line = 0;
-    console.highlightFile = e.url;
-    
-    delete console.highlightStart;
-    delete console.highlightEnd;
-    if ("rangeStart" in e && e.rangeStart != null)
-    {
-        line = e.rangeStart;
-        if (e.rangeEnd != null)
-        {
-            console.highlightStart = e.rangeStart - 1;
-            console.highlightEnd = e.rangeEnd - 1;
-        }
-    }
-    
-    if ("lineNumber" in e)
-        line = e.lineNumber;
-    
-    var hookName = (e.command.name == "find-url") ?
-        "hook-display-sourcetext" : "hook-display-sourcetext-soft";
-    console.currentSourceText = sourceText;
+    var params = {
+        sourceText: sourceText,
+        rangeStart: e.rangeStart,
+        rangeEnd: e.rangeEnd,
+        details: e.details
+    };
 
-    if (sourceText.isLoaded)
-        cb(Components.results.NS_OK);
+    if (e.command.name.indexOf("soft") == -1)
+        dispatch ("find-sourcetext", params);
     else
-        sourceText.loadSource(cb);
-    
-    return e.url;
+        dispatch ("find-sourcetext-soft", params);
 }
 
 function cmdFloat (e)
@@ -933,6 +962,7 @@ function cmdMoveView (e)
     {
         /* Relocate the view to the new container. */
         view.currentContent = e.viewContent;
+        view.currentContent.jsView = view;
         if (e.beforeContent)
             e.viewContainer.insertBefore (e.viewContent, e.beforeContent);
         else
@@ -977,19 +1007,32 @@ function cmdOpenURL (e)
 
 function cmdPPrint (e)
 {
-    var state;
+    var state, params;
     
-    if (e.toggle == "toggle")
-        state = console.prefs["prettyprint"] = !console.prefs["prettyprint"];
-    else
-        state = console.prefs["prettyprint"] = e.toggle;
-    
-    var tb = document.getElementById("maintoolbar-pprint");
-    if (state)
-        tb.setAttribute("state", "true");
-    else
-        tb.removeAttribute("state");
+    if (e.toggle != null)
+    {
+        if (e.toggle == "toggle")
+            state = console.prefs["prettyprint"] = !console.prefs["prettyprint"];
+        else
+            state = console.prefs["prettyprint"] = e.toggle;
+        
+        var tb = document.getElementById("maintoolbar-toggle-pprint");
+        if (state)
+        {
+            tb.setAttribute("state", "true");
+        }
+        else
+        {
+            tb.removeAttribute("state");
+        }
 
+        if (console.currentDetails instanceof ScriptWrapper)
+            dispatch ("find-script", { scriptWrapper: console.currentDetails });
+    }
+
+    feedback (e, getMsg(MSN_FMT_PPRINT, console.prefs["prettyprint"] ?
+                        MSG_VAL_ON : MSG_VAL_OFF));
+    
     return true;
 }
 
@@ -1081,10 +1124,10 @@ function cmdReload()
         enableReloadCommand();
     }
         
-    if ("currentSourceText" in client)
+    if ("currentSourceText" in console)
     {
         disableReloadCommand();
-        client.currentSourceText.reloadSource(cb);
+        console.currentSourceText.reloadSource(cb);
     }
 }
 

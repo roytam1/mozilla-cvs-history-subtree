@@ -61,6 +61,10 @@ var MAX_STR_LEN = 100;  /* max string length to display before changing to
 const MAX_WORD_LEN = 20; /* number of characters to display before forcing a 
                           * potential word break point (in the console.) */
 
+const LINE_BREAKABLE = 0x01;
+const LINE_BREAK     = 0x02;
+const LINE_FBREAK    = 0x04;
+
 var console = new Object();
 
 console.version = "0.8.5";
@@ -132,10 +136,10 @@ function disableDebugCommands()
 
 function displayUsageError (e, details)
 {
-    if (!e.isInteractive)
+    if (!("isInteractive" in e) || !e.isInteractive)
     {
         var caller = Components.stack.caller.caller;
-        if (caller.name == display)
+        if (caller.name == "dispatch")
             caller = caller.caller;
         var error = new Error (details);
         error.fileName = caller.filename;
@@ -177,7 +181,7 @@ function dispatch (text, e, flags)
     {            
         case 0:
             /* no match, try again */
-            display (getMsg(MSN_ERR_NO_COMMAND, e.commandText), MT_ERROR);
+            display (getMsg(MSN_NO_CMDMATCH, e.commandText), MT_ERROR);
             break;
             
         case 1:
@@ -236,7 +240,7 @@ function dispatchCommand (command, e, flags)
         return null;
     }
     
-    var h;
+    var h, i;
     
     if ("beforeHooks" in e.command)
     {
@@ -257,8 +261,16 @@ function dispatchCommand (command, e, flags)
         {
             if ("dbgDispatch" in console && console.dbgDispatch)
             {
-                dd ("dispatching command ``" + e.command.name+ "''\n" +
-                    dumpObjectTree(e));
+                var str = "";
+                for (i = 0; i < e.command.argNames.length; ++i)
+                {
+                    var name = e.command.argNames[i];
+                    if (name in e)
+                        str += " " + name + ": " + e[name];
+                    else if (name != ":")
+                        str += " ?" + name;
+                }
+                dd ("dispatching command ``" + e.command.name + str + "''");
                 e.returnValue = e.command.func(e);
                 /* set console.lastEvent *after* dispatching, so the dispatched
                  * function actually get's a chance to see the last event. */
@@ -275,7 +287,7 @@ function dispatchCommand (command, e, flags)
     {
         /* dispatch an alias (semicolon delimited list of subcommands) */
         var commandList = e.command.func.split(";");
-        for (var i = 0; i < commandList.length; ++i)
+        for (i = 0; i < commandList.length; ++i)
         {
             commandList[i] = stringTrim(commandList[i]);
             if (i == 1)
@@ -447,15 +459,8 @@ function init()
     initMainMenus();
     initViews();
 
-    var hooks =
-    [
-     ["hook-debug-stop",     hookDebugStop,    ":hook-debug-stop", false],
-     ["frame",               hookFrame,        ":hook-frame",      false],
-     ["eval",                hookEval,         ":hook-eval",       false]
-    ];
+    console.commandManager.addHooks (console.hooks);
 
-    console.commandManager.hookCommands(hooks);
-    
     disableDebugCommands();
     
     console.files = new Object();
@@ -509,7 +514,11 @@ function init()
     dispatch ("toggle-view windows");
     dispatch ("toggle-view source");
     dispatch ("toggle-view watches");
-
+    dispatch ("toggle-view scripts");
+    dispatch ("toggle-view breaks");
+    dispatch ("pprint", { toggle: console.prefs["prettyprint"] });
+              
+    dispatch ("hook-venkman-started");
 }
 
 function destroy ()
@@ -519,6 +528,40 @@ function destroy ()
     detachDebugger();
 }
 
+console.hooks = new Object();
+
+console.hooks["frame"] =
+function hookFrame (e)
+{
+    if (e.frameIndex)
+    {
+        var jsdFrame = console.frames[e.frameIndex];
+        if (jsdFrame.isNative)
+            return;
+        
+        dispatch ("find-url-soft", {url: jsdFrame.script.fileName,
+                  rangeStart: jsdFrame.script.baseLineNumber,
+                  rangeEnd:   jsdFrame.script.baseLineNumber + 
+                              jsdFrame.script.lineExtent - 1,
+                  lineNumber: jsdFrame.line, 
+                  details:    jsdFrame.script});
+    }
+}
+
+console.hooks["hook-script-instance-sealed"] =
+function hookScriptSealed (e)
+{
+    for (var fbp in console.fbreaks)
+    {
+        if (e.scriptInstance.url.search(console.fbreaks[fbp].url) != -1)
+        {
+            e.scriptInstance.setBreakpoint(console.fbreaks[fbp].lineNumber,
+                                           console.fbreaks[fbp]);
+        }
+    }
+}
+
+console.hooks["hook-debug-stop"] =
 function hookDebugStop (e)
 {
     var frame = setCurrentFrameByIndex(0);
@@ -541,23 +584,21 @@ function hookDebugStop (e)
     enableDebugCommands()
 }
 
-function hookFrame (e)
+console.hooks["hook-venkman-query-exit"] =
+function hookQueryExit (e)
 {
-    if (e.frameIndex)
+    if ("frames" in console)
     {
-        var jsdFrame = console.frames[e.frameIndex];
-        if (jsdFrame.isNative)
-            return;
-        
-        dispatch ("find-url-soft", {url: jsdFrame.script.fileName,
-                  rangeStart: jsdFrame.script.baseLineNumber,
-                  rangeEnd:   jsdFrame.script.baseLineNumber + 
-                              jsdFrame.script.lineExtent - 1,
-                  lineNumber: jsdFrame.line, 
-                  details:    jsdFrame.script});
+        if (confirm(MSG_QUERY_CLOSE))
+        {
+            console.__exitAfterContinue__ = true;
+            dispatch ("cont");
+        }
+        e.returnValue = false;
     }
 }
 
+console.hooks["eval"] =
 function hookEval()
 {
     for (var i = 0; i < $.length; ++i)
@@ -1006,31 +1047,44 @@ function con_scrolldn ()
     window.frames[0].scrollTo(0, window.frames[0].document.height);
 }
 
-function SourceText (scriptContainer, url)
+function SourceText (scriptInstance)
 {
     this.lines = new Array();
-    this.tabWidth = console.prefs["sourcetext.tab.width"];
-    this.url = this.fileName = url;
-    this.scriptContainer = scriptContainer;
-    this.lineMap = new Array();
+    this.tabWidth = console.prefs["tabWidth"];
+    this.scriptInstance = scriptInstance;
+    this.url = scriptInstance.url;
 }
-
-SourceText.LINE_BREAKABLE  = 1;
-SourceText.LINE_BREAKPOINT = 2;
 
 SourceText.prototype.onMarginClick =
 function st_marginclick (e, line)
 {
-    if (getBreakpoint(this.fileName, line))
+    if (!this.scriptInstance)
     {
-        clearBreakpoint (this.fileName, line);
+        dispatch ("fbreak", { url: this.url, line: line });
     }
     else
     {
-        if (this.scriptContainer)
-            setBreakpoint (this.fileName, line);
+        var manager = this.scriptInstance.scriptManager;
+        var parentBP = manager.getFutureBreakpoint(line);
+        if (parentBP)
+        {
+            if (this.scriptInstance.hasBreakpoint(line))
+                this.scriptInstance.clearBreakpoint(line);
+            else
+                manager.clearFutureBreakpoint(line);
+        }
         else
-            setFutureBreakpoint (this.fileName, line);
+        {
+            if (this.scriptInstance.hasBreakpoint(line))
+            {
+                this.scriptInstance.clearBreakpoint(line);
+            }
+            else
+            {
+                parentBP = manager.setFutureBreakpoint(line);
+                this.scriptInstance.setBreakpoint (line, parentBP);
+            }
+        }
     }
 }
 
@@ -1050,125 +1104,100 @@ function st_reloadsrc (cb)
     this.loadSource(reloadCB);
 }
 
-SourceText.prototype.markBreakableLines =
-function st_initmap()
+SourceText.prototype.onSourceLoaded =
+function st_oncomplete (data, url, status)
 {
     var sourceText = this;
     
-    function setFlag (line, flag)
+    function callall (status)
     {
-        if (line in sourceText.lineMap)
-            sourceText.lineMap[line] |= flag;
-        else
-            sourceText.lineMap[line] = flag;
-    }
-    
-    console.pushStatus (getMsg(MSN_STATUS_MARKING,
-                               this.scriptContainer.shortName));
-    
-    var scripts = this.scriptContainer.childData;
-    for (var i = 0; i < scripts.length; ++i)
-    {
-        var scriptRec = scripts[i];
-        var end = scriptRec.baseLineNumber + scriptRec.lineExtent;
-        for (var j = scriptRec.baseLineNumber; j < end; ++j)
+        while (sourceText.loadCallbacks.length)
         {
-            var script = scriptRec.script;
-            if (script.isLineExecutable(j + 1, PCMAP_SOURCETEXT)) {
-                setFlag (j, SourceText.LINE_BREAKABLE);
-            }
+            var cb = sourceText.loadCallbacks.pop();
+            cb (status);
         }
+        delete sourceText.loadCallbacks;
+    };
+            
+    delete this.isLoading;
+    
+    if (status != Components.results.NS_OK)
+    {
+        dd ("loadSource failed with status " + status + ", " + url);
+        callall (status);
+        return;
     }
 
-    console.popStatus();
+    if (!ASSERT(data, "loadSource succeeded but got no data"))
+        data = "";
+    
+    var ary = data.split(/\r\n|\n|\r/m);
+    for (var i = 0; i < ary.length; ++i)
+    {
+        /*
+         * The replace() strips control characters, we leave the tabs in
+         * so we can expand them to a per-file width before actually
+         * displaying them.
+         */
+        ary[i] = new String(ary[i].replace(/[\x0-\x8]|[\xA-\x1A]/g, ""));
+    }
+
+    this.lines = ary;
+
+    ary = ary[0].match (/tab-?width*:\s*(\d+)/i);
+    if (ary)
+        this.tabWidth = ary[1];
+    
+    if (this.scriptInstance)
+    {
+        this.scriptInstance.guessFunctionNames(sourceText);
+        this.lineMap = this.scriptInstance.lineMap;
+    }
+
+    this.isLoaded = true;
+    dispatch ("hook-source-load-complete",
+              { sourceText: sourceText, status: status });
+    callall(status);
 }
+
 
 SourceText.prototype.loadSource =
 function st_loadsrc (cb)
 {
+    var sourceText = this;
+    
+    function onComplete (data, url, status)
+    {
+        sourceText.onSourceLoaded (data, url, status);
+    };
+    
     if (this.isLoaded)
     {
         /* if we're loaded, callback right now, and return. */
         cb (Components.results.NS_OK);
         return;
     }
+
     if ("isLoading" in this)
     {
         /* if we're in the process of loading, make a note of the callback, and
          * return. */
-        if (!("extraCallbacks" in this))
-            this.extraCallbacks = new Array();
-        this.extraCallbacks.push (cb);
+        this.loadCallbacks.push (cb);
         return;
     }
+    else
+        this.loadCallbacks = new Array();
 
-    var sourceText = this;
+    this.loadCallbacks.push (cb);
     this.isLoading = true;    
     
-    var observer = {
-        onComplete: function oncomplete (data, url, status) {
-            function callall (status)
-            {
-                cb (status);
-                if ("extraCallbacks" in sourceText)
-                {
-                    while (sourceText.extraCallbacks)
-                    {
-                        cb = sourceText.extraCallbacks.pop();
-                        cb (status);
-                    }
-                    delete sourceText.extraCallbacks;
-                }
-            }
-            
-            delete sourceText.isLoading;
-            
-            if (status != Components.results.NS_OK)
-            {
-                dd ("loadSource failed with status " + status + ", " + url);
-                callall (status);
-                console.popStatus();                
-                return;
-            }
-            if (!ASSERT(data, "loadSource succeeded but got no data"))
-                data = "";
-                
-            var ary = data.split(/\r\n|\n|\r/m);
-            for (var i = 0; i < ary.length; ++i)
-            {
-                /*
-                 * The replace() strips control characters, we leave the tabs in
-                 * so we can expand them to a per-file width before actually
-                 * displaying them.
-                 */
-                ary[i] = new String(ary[i].replace(/[\x0-\x8]|[\xA-\x1A]/g, ""));
-            }
-            sourceText.lines = ary;
-            ary = ary[0].match (/tab-?width*:\s*(\d+)/i);
-            if (ary)
-                sourceText.tabWidth = ary[1];
-            
-            if (sourceText.scriptContainer)
-            {
-                sourceText.scriptContainer.guessFunctionNames(sourceText);
-                sourceText.markBreakableLines();
-            }
-            sourceText.isLoaded = true;
-            dispatch ("hook-source-load-complete",
-                      {sourceText: sourceText, status: status});
-            callall(status);
-            console.popStatus();
-        }
-    };
-
     var ex;
     var src;
-    var url = this.fileName;
-    console.pushStatus (getMsg(MSN_STATUS_LOADING, url));
+    var url = this.url;
     try
     {
         src = loadURLNow(url);
-        observer.onComplete (src, url, Components.results.NS_OK);
+        onComplete (src, url, Components.results.NS_OK);
         delete this.isLoading;
     }
     catch (ex)
@@ -1176,58 +1205,66 @@ function st_loadsrc (cb)
         /* if we can't load it now, try to load it later */
         try
         {
-            loadURLAsync (url, observer);
+            loadURLAsync (url, { onComplete: onComplete });
         }
         catch (ex)
         {
             display (getMsg(MSN_ERR_SOURCE_LOAD_FAILED, [url, ex]), MT_ERROR);
-            observer.onComplete (src, url, Components.results.NS_ERROR_FAILURE);
-        }    
+            onComplete (src, url, Components.results.NS_ERROR_FAILURE);
+        }
     }
 }
 
-function PPSourceText (scriptRecord)
+function PPSourceText (scriptWrapper)
 {
-    this.scriptRecord = scriptRecord;
+    this.scriptWrapper = scriptWrapper;
     this.reloadSource();
 }
 
 PPSourceText.prototype.isLoaded = true;
 
 PPSourceText.prototype.reloadSource =
-function (cb)
+function pp_reload (cb)
 {
-    var sourceText = this;
-    
-    function setFlag (line, flag)
-    {
-        if (line in sourceText.lineMap)
-            sourceText.lineMap[line] |= flag;
-        else
-            sourceText.lineMap[line] = flag;
-    }
-
-    this.tabWidth = console.prefs["sourcetext.tab.width"];
-    this.fileName = this.scriptRecord.script.fileName;
-    this.lines = String(this.scriptRecord.script.functionSource).split("\n");
+    var jsdScript = this.scriptWrapper.jsdScript;
+        
+    this.tabWidth = console.prefs["tabWidth"];
+    this.url = jsdScript.fileName;
+    this.lines = String(jsdScript.functionSource).split("\n");
     this.lineMap = new Array();
     var len = this.lines.length;
     for (var i = 0; i < len; ++i)
     {
-        if (this.scriptRecord.script.isLineExecutable(i + 1, PCMAP_PRETTYPRINT))
-        {
-            setFlag (i, SourceText.LINE_BREAKABLE);
-        }
+        if (jsdScript.isLineExecutable(i + 1, PCMAP_PRETTYPRINT))
+            this.lineMap[i] = LINE_BREAKABLE;
+    }
+
+    for (var b in this.scriptWrapper.breaks)
+    {
+        var line = jsdScript.pcToLine(this.scriptWrapper.breaks[b].pc,
+                                      PCMAP_PRETTYPRINT);
+        arrayOrFlag (this.lineMap, line - 1, LINE_BREAK);
     }
 
     if (typeof cb == "function")
         cb (Components.results.NS_OK);
 }
 
+PPSourceText.prototype.onMarginClick =
+function st_marginclick (e, line)
+{
+    var jsdScript = this.scriptWrapper.jsdScript;
+    var pc = jsdScript.lineToPc(line, PCMAP_PRETTYPRINT);
+    if (this.scriptWrapper.hasBreakpoint(pc))
+        this.scriptWrapper.clearBreakpoint(pc);
+    else
+        this.scriptWrapper.setBreakpoint(pc);
+}
+
 function HelpText ()
 {
-    this.tabWidth = console.prefs["sourcetext.tab.width"];
-    this.url = this.fileName = "x-jsd:help";
+    this.tabWidth = console.prefs["tabWidth"];
+    this.url = "x-jsd:help";
     this.reloadSource();
 }
 

@@ -317,7 +317,7 @@ function cmgr_add (command)
  * if |before| is |false|, or not specified, the hook will be called *after*
  * the command executes.
  */
-CommandManager.prototype.hookCommand =
+CommandManager.prototype.addHook =
 function cmgr_hook (commandName, func, id, before)
 {
     if (!ASSERT(commandName in this.commands,
@@ -342,15 +342,18 @@ function cmgr_hook (commandName, func, id, before)
     }
 }
 
-CommandManager.prototype.hookCommands =
-function cmgr_hooks (ary)
+CommandManager.prototype.addHooks =
+function cmgr_hooks (hooks, prefix)
 {
-    for (var i in ary)
-        this.hookCommand (ary[i][0], ary[i][1], ary[i][2], ary[i][3]);
+    for (var h in hooks)
+    {
+        this.addHook(h, hooks[h], prefix + ":" + h, 
+                     ("before" in hooks[h]) ? hooks[h].before : false);
+    }
 }
 
-CommandManager.prototype.unhookCommand =
-function cmgr_hooks (commandName, id, before)
+CommandManager.prototype.removeHook =
+function cmgr_unhook (commandName, id, before)
 {
     var command = this.commands[commandName];
 

@@ -108,8 +108,9 @@ function con_winclose (win)
     if (win.location.href != "chrome://venkman/content/venkman.xul")
     {
         var idx = arrayIndexOf(console.hookedWindows, win);
-        if (idx != -1)
-            arrayRemoveAt(console.hookedWindows, idx);
+        ASSERT (idx != -1,
+                "WARNING: Can't find hooked window for closed window.");
+        arrayRemoveAt(console.hookedWindows, idx);
         dispatch ("hook-window-closed", {window: win});
     }
     //console.scriptsView.freeze();
@@ -129,23 +130,21 @@ function con_load (e)
     catch (ex)
     {
         window.alert (getMsg (MSN_ERR_STARTUP, formatException(ex)));
+        console.startupException = ex;
     }
 }
 
 console.onClose =
 function con_onclose (e)
 {
-    if (typeof console == "object" && "frames" in console)
-    {
-        if (confirm(MSG_QUERY_CLOSE))
-        {
-            console.__exitAfterContinue__ = true;
-            dispatch ("cont");
-        }
-        return false;
-    }
-
-    return true;
+    dd ("onclose");
+    
+    if (typeof console != "object" || "startupException" in console)
+        return true;
+    
+    dd ("onclose: dispatching");
+    
+    return dispatch ("hook-venkman-query-exit");
 }
 
 console.onUnload =
@@ -153,8 +152,11 @@ function con_unload (e)
 {
     dd ("Application venkman, 'JavaScript Debugger' unloading.");
 
+    if (typeof console != "object")
+        return;
+
+    dispatch ("hook-venkman-exit");
     destroy();
-    return true;
 }
 
 console.onInputCompleteLine =

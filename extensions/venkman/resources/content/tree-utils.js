@@ -984,7 +984,7 @@ function torr_resort ()
             this.childData[i].sortIsInvalid = true;
     }
     
-    if ("_treeView" in this && "tree" in this._treeView)
+    if ("_treeView" in this && this._treeView.tree)
     {
         /*
         dd ("root node: invalidating 0 - " + this.visualFootprint +
@@ -1344,7 +1344,7 @@ function xtv_drop (index, orientation)
 XULTreeView.prototype.setTree =
 function xtv_seto (tree)
 {
-    dd ("setTree: " + tree);
+    this.childData.invalidateCache();
     this.tree = tree;
 }
 
