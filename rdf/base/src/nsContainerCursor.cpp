@@ -107,8 +107,6 @@ ContainerCursorImpl::ContainerCursorImpl(nsIRDFDataSource* ds,
                                       (nsISupports**) &mRDFService);
 
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to acquire resource manager");
-
-    NS_ASSERTION(rdf_IsContainer(mDataSource, container), "not a container");
 }
 
 
@@ -305,6 +303,10 @@ NS_NewContainerCursor(nsIRDFDataSource* ds,
     if (!ds || !container || !cursor)
         return NS_ERROR_NULL_POINTER;
 
+    NS_ASSERTION(rdf_IsContainer(ds, container), "not a container");
+    if (! rdf_IsContainer(ds, container))
+        return NS_ERROR_ILLEGAL_VALUE;
+    
     ContainerCursorImpl* result = new ContainerCursorImpl(ds, container);
     if (! result)
         return NS_ERROR_OUT_OF_MEMORY;
