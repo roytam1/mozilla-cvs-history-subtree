@@ -465,7 +465,7 @@ nsTreeBodyFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
 
   AddBorderAndPadding(aSize);
   AddInset(aSize);
-  nsIBox::AddCSSPrefSize(aBoxLayoutState, this, aSize);
+  nsIBox::AddCSSMinSize(aBoxLayoutState, this, aSize);
 
   return NS_OK;
 }
