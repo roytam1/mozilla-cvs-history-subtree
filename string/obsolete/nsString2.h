@@ -149,7 +149,6 @@ public:
      * Retrieve const ptr to internal buffer; DO NOT TRY TO FREE IT!
      */
   const char* GetBuffer(void) const;
-  const PRUnichar* GetUnicode() const { return get(); }
 
    /**
      * Set nth character.
