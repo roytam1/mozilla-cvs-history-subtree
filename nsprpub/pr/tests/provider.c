@@ -1118,8 +1118,8 @@ PRIntn main(PRIntn argc, char** argv)
         case 'X':  /* use XTP as transport */
             protocol = 36;
             break;
-	case '6':  /* Use IPv6 */
-            domain = AF_INET6;
+		case '6':  /* Use IPv6 */
+            domain = PR_AF_INET6;
             break;
         case 'a':  /* the value for accepting */
             accepting = atoi(opt->value);

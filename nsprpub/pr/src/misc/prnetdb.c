@@ -109,17 +109,17 @@ const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
  * both big-endian and little-endian systems
 */
 #define _PR_IN6_IS_ADDR_V4MAPPED(a)		\
-		(((a)->s6_addr32[0] == 0) 	&&	\
-		((a)->s6_addr32[1] == 0)	&&	\
-		((a)->s6_addr[8] == 0)		&&	\
-		((a)->s6_addr[9] == 0)		&&	\
-		((a)->s6_addr[10] == 0xff)	&&	\
-		((a)->s6_addr[11] == 0xff))
+		(((a)->_pr_s6_addr32[0] == 0) 	&&	\
+		((a)->_pr_s6_addr32[1] == 0)	&&	\
+		((a)->_pr_s6_addr[8] == 0)		&&	\
+		((a)->_pr_s6_addr[9] == 0)		&&	\
+		((a)->_pr_s6_addr[10] == 0xff)	&&	\
+		((a)->_pr_s6_addr[11] == 0xff))
 
 #define _PR_IN6_IS_ADDR_V4COMPAT(a)			\
-		(((a)->s6_addr32[0] == 0) &&		\
-		((a)->s6_addr32[1] == 0) &&			\
-		((a)->s6_addr32[2] == 0))
+		(((a)->_pr_s6_addr32[0] == 0) &&		\
+		((a)->_pr_s6_addr32[1] == 0) &&			\
+		((a)->_pr_s6_addr32[2] == 0))
 
 #endif /* _PR_INET6 */
 
@@ -228,9 +228,11 @@ static PRStatus CopyHostent(
 		to->h_addrtype = PR_AF_INET6;
 		to->h_length = 16;
 	} else {
+#if defined(_PR_INET6)
 		if (AF_INET6 == from->h_addrtype)
 			to->h_addrtype = PR_AF_INET6;
 		else
+#endif
 			to->h_addrtype = from->h_addrtype;
 		to->h_length = from->h_length;
 	}
@@ -538,9 +540,11 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 		addr = &hostaddr->inet.ip;
 		addrlen = sizeof(hostaddr->inet.ip);
 	}
+#if defined(_PR_INET6)
 	if (PR_AF_INET6 == hostaddr->raw.family)
 		af = AF_INET6;
 	else
+#endif
 		af = hostaddr->raw.family;
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYADDR)
 	h = getipnodebyaddr(addr, addrlen, af, &error_num);
@@ -894,12 +898,12 @@ PR_IMPLEMENT(PRStatus) PR_SetNetAddr(
         case PR_IpAddrAny:
             ipv4_in_addr = htonl(INADDR_ANY);
 			MakeIPv4MappedAddr((char *) &ipv4_in_addr,
-								(char *) addr->ipv6.ip.s6_addr);
+								(char *) addr->ipv6.ip._pr_s6_addr);
             break;
         case PR_IpAddrLoopback:
             ipv4_in_addr = htonl(INADDR_LOOPBACK);
 			MakeIPv4MappedAddr((char *) &ipv4_in_addr,
-								(char *) addr->ipv6.ip.s6_addr);
+								(char *) addr->ipv6.ip._pr_s6_addr);
             break;
         default:
             PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
@@ -1064,7 +1068,7 @@ PR_IMPLEMENT(PRStatus) PR_NetAddrToString(
 #else
     if (PR_AF_INET6 == addr->raw.family)
     {
-		unsigned char *byte = (unsigned char *) addr->ipv6.ip.s6_addr;
+		unsigned char *byte = (unsigned char *) addr->ipv6.ip._pr_s6_addr;
 		int i, len;
 
 		len = 0;

@@ -1110,8 +1110,8 @@ static PRStatus pt_Connect(
     PRIntn rv = -1, syserrno;
     pt_SockLen addr_len;
 	const PRNetAddr *addrp = addr;
-	PRUint16 md_af = addr->raw.family;
 #if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
+	PRUint16 md_af = addr->raw.family;
     PRNetAddr addrCopy;
 #endif
 
@@ -1261,8 +1261,8 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
     PRIntn rv;
     pt_SockLen addr_len;
 	const PRNetAddr *addrp = addr;
-	PRUint16 md_af = addr->raw.family;
 #if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
+	PRUint16 md_af = addr->raw.family;
     PRNetAddr addrCopy;
 #endif
 
@@ -1479,8 +1479,8 @@ static PRInt32 pt_SendTo(
     PRBool fNeedContinue = PR_FALSE;
     pt_SockLen addr_len;
 	const PRNetAddr *addrp = addr;
-	PRUint16 md_af = addr->raw.family;
 #if defined(_PR_HAVE_SOCKADDR_LEN) || defined(_PR_INET6)
+	PRUint16 md_af = addr->raw.family;
     PRNetAddr addrCopy;
 #endif
 

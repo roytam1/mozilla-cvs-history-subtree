@@ -138,9 +138,9 @@ struct _pr_in6_addr {
 		PRUint64 _S6_u64[2];
 	} _S6_un;
 };
-#define s6_addr		_S6_un._S6_u8
-#define s6_addr32	_S6_un._S6_u32
-#define s6_addr64 	_S6_un._S6_addr64
+#define _pr_s6_addr		_S6_un._S6_u8
+#define _pr_s6_addr32	_S6_un._S6_u32
+#define _pr_s6_addr64 	_S6_un._S6_addr64
 
 typedef struct _pr_in6_addr PRIPv6Addr;
 struct _pr_sockaddr_in6 {

@@ -34,10 +34,14 @@ extern PRBool IsValidNetAddr(const PRNetAddr *addr);
 void ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
 											PRNetAddr *dst_v4addr)
 {
+#ifdef _PR_INET6
+const PRUint8 *srcp = src_v6addr->ipv6.ip.s6_addr;
+#else
+const PRUint8 *srcp = src_v6addr->ipv6.ip._pr_s6_addr;
+#endif
 	dst_v4addr->inet.family = PR_AF_INET;
 	dst_v4addr->inet.port = src_v6addr->ipv6.port;
-	memcpy((char *) &dst_v4addr->inet.ip,
-				(char *) &src_v6addr->ipv6.ip.s6_addr + 12, 4);
+	memcpy((char *) &dst_v4addr->inet.ip, srcp + 12, 4);
 }
 
 /*
@@ -46,11 +50,16 @@ void ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
 void ConvertToIpv6NetAddr(const PRNetAddr *src_v4addr,
                                             PRNetAddr *dst_v6addr)
 {
+#ifdef _PR_INET6
+PRUint8 *dstp = dst_v6addr->ipv6.ip.s6_addr;
+#else
+PRUint8 *dstp = dst_v6addr->ipv6.ip._pr_s6_addr;
+#endif
 	dst_v6addr->ipv6.family = PR_AF_INET6;
 	dst_v6addr->ipv6.port = src_v4addr->inet.port;
-	memset(dst_v6addr->ipv6.ip.s6_addr, 0, 10);
-	memset(dst_v6addr->ipv6.ip.s6_addr + 10, 0xff, 2);
-	memcpy(dst_v6addr->ipv6.ip.s6_addr + 12,(char *) &src_v4addr->inet.ip, 4);
+	memset(dstp, 0, 10);
+	memset(dstp + 10, 0xff, 2);
+	memcpy(dstp + 12,(char *) &src_v4addr->inet.ip, 4);
 }
 
 static PRStatus PR_CALLBACK Ipv6ToIpv4SocketBind(PRFileDesc *fd,
