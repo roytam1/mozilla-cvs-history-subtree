@@ -63,6 +63,7 @@ struct ldap                     nsldapi_ld_defaults;
 struct ldap_memalloc_fns        nsldapi_memalloc_fns = { 0, 0, 0, 0 };
 int				nsldapi_initialized = 0;
 
+#ifndef macintosh
 #ifndef _WINDOWS
 #include <pthread.h>
 static pthread_key_t		nsldapi_key;
@@ -336,6 +337,7 @@ static struct ldap_extra_thread_fns
 		(void *(*)(void))pthread_self
 #endif /* _WINDOWS */
 		};
+#endif /* macintosh */
 
 void
 nsldapi_initialize_defaults( void )
@@ -345,7 +347,7 @@ nsldapi_initialize_defaults( void )
 		return;
 	}
 
-#ifndef _WINDOWS
+#if !defined(_WINDOWS) && !defined(macintosh)
         if ( pthread_key_create(&nsldapi_key, free ) != 0) {
                 perror("pthread_key_create");
         }
@@ -373,6 +375,7 @@ nsldapi_initialize_defaults( void )
         /* this was picked as it is the standard tcp timeout as well */
         nsldapi_ld_defaults.ld_connect_timeout = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
 
+#if !defined(macintosh)
         /* load up default platform specific locking routines */
         if (ldap_set_option( NULL, LDAP_OPT_THREAD_FN_PTRS,
                 (void *)&nsldapi_default_thread_fns) != LDAP_SUCCESS) {
@@ -386,6 +389,7 @@ nsldapi_initialize_defaults( void )
                 return;
         }
 #endif /* _WINDOWS */
+#endif /* macintosh */
 }
 
 

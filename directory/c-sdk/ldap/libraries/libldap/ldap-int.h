@@ -517,6 +517,7 @@ struct ldap {
 /*
  * Some Unix error defs. Under CW 7, we can't define OTUNIXERRORS because
  * it generates many conflicts with errno.h. Define what we need here.
+ * These need to be in sync with OpenTransport.h
  */
  
 #if defined(macintosh)

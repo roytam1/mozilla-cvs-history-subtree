@@ -119,6 +119,36 @@ struct prldap_errormap_entry {
 #endif
 #endif /* _WINDOWS */
 
+#if defined(macintosh)
+/*
+ * Some Unix error defs. Under CW 7, we can't define OTUNIXERRORS because
+ * it generates many conflicts with errno.h. Define what we need here.
+ * These need to be in sync with OpenTransport.h
+ */
+#define EWOULDBLOCK     35
+#define ENOTSOCK        38
+#define EPROTOTYPE      41
+#define EPROTONOSUPPORT 43
+#define EOPNOTSUPP      45
+#define EADDRINUSE      48
+#define EADDRNOTAVAIL   49
+#define ENETDOWN        50
+#define ECONNABORTED    53
+#define ECONNRESET      54
+#define EISCONN         56
+#define ENOTCONN        57
+#define ESHUTDOWN       58
+#define ETIMEDOUT       60
+#define ECONNREFUSED    61
+#define EHOSTUNREACH    65
+#define EAFNOSUPPORT    -1
+#define ELOOP           -1
+#define ENOTBLK         -1
+#define ENOTSUP         -1
+#define EOVERFLOW       -1
+#define ETXTBSY         -1
+#endif /* macintosh */
+
 /* XXX: need to verify that the -1 entries are correct (no mapping) */
 static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_OUT_OF_MEMORY_ERROR, ENOMEM },

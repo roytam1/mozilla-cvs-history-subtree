@@ -627,7 +627,7 @@ nsldapi_dump_connection( LDAP *ld, LDAPConn *lconns, int all )
 	LDAPConn	*lc;
 	char        msg[256];
 /* CTIME for this platform doesn't use this. */
-#if !defined(SUNOS4) && !defined(_WIN32) && !defined(LINUX)
+#if !defined(SUNOS4) && !defined(_WIN32) && !defined(LINUX) && !defined(macintosh)
 	char		buf[26];
 #endif
 

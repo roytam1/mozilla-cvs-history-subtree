@@ -107,16 +107,12 @@ typedef struct berelement BerElement;
 typedef struct sockbuf Sockbuf;
 typedef int (*BERTranslateProc)( char **bufp, unsigned long *buflenp,
 	int free_input );
-#ifndef macintosh
 #if defined( _WINDOWS ) || defined( _WIN32) || defined( _CONSOLE )
 #include <winsock.h> /* for SOCKET */
 typedef SOCKET LBER_SOCKET;
 #else
 typedef int LBER_SOCKET;
 #endif /* _WINDOWS */
-#else /* macintosh */
-typedef void *LBER_SOCKET;
-#endif /* macintosh */
 
 /* calling conventions used by library */
 #ifndef LDAP_CALL

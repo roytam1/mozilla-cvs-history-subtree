@@ -33,6 +33,8 @@
 		/*------------------*/
 #endif
 
+#define NSLDAPI_AVOID_OS_SOCKETS
+
 #ifdef NO_GLOBALS
 
 #ifdef macintosh	/* IUMagIDString declared in TextUtils.h under MPW */

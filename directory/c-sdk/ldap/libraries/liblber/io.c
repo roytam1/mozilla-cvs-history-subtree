@@ -141,9 +141,13 @@ ber_filbuf( Sockbuf *sb, long len )
 			    && (len < READBUFSIZ)) ? len : READBUFSIZ,
 			    sb->sb_ext_io_fns.lbextiofn_socket_arg );
 		} else {
+#ifdef NSLDAPI_AVOID_OS_SOCKETS
+			return( -1 );
+#else
 			rc = read( sb->sb_sd, sb->sb_ber.ber_buf,
 			    ((sb->sb_options & LBER_SOCKBUF_OPT_NO_READ_AHEAD)
 			    && (len < READBUFSIZ)) ? len : READBUFSIZ );
+#endif
 		}
 	}
 
@@ -397,10 +401,14 @@ ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 					return( -1 );
 				}
 			} else {
+#ifdef NSLDAPI_AVOID_OS_SOCKETS
+				return( -1 );
+#else
 				if ( (rc = BerWrite( sb, ber->ber_rwptr,
 				    (size_t) towrite )) <= 0 ) {
 					return( -1 );
 				}
+#endif
 			}
 		}
 		towrite -= rc;

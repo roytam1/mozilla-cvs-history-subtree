@@ -46,5 +46,6 @@
 
 #include "IDE_Options.h"
 // #define NO_USERINTERFACE
-// #define LDAP_DEBUG
 #endif /* 0 */
+
+#define LDAP_DEBUG

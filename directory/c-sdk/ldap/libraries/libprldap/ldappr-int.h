@@ -26,9 +26,9 @@
  *
  */
 
-#include <ldap.h>
-#include <nspr.h>
-#include <ldappr.h>
+#include "ldap.h"
+#include "nspr.h"
+#include "ldappr.h"
 
 #include <errno.h>
 #include <string.h>

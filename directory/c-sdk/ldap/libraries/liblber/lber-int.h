@@ -209,6 +209,8 @@ struct sockbuf {
 };
 #define NULLSOCKBUF	((Sockbuf *)NULL)
 
+/* needed by libldap, even in non-DEBUG builds */
+void ber_err_print( char *data );
 
 #ifndef NSLBERI_LBER_INT_FRIEND
 /*
@@ -257,7 +259,6 @@ struct sockbuf {
 #ifdef LDAP_DEBUG
 void lber_bprint( char *data, int len );
 #endif
-void ber_err_print( char *data );
 void *nslberi_malloc( size_t size );
 void *nslberi_calloc( size_t nelem, size_t elsize );
 void *nslberi_realloc( void *ptr, size_t size );
