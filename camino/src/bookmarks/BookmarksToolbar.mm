@@ -365,7 +365,7 @@
   else
   {
     // throw it in at the end
-    mDragInsertionButton   = [mButtons objectAtIndex:[mButtons count] - 1];    
+    mDragInsertionButton   = ([mButtons count] > 0) ? [mButtons objectAtIndex:[mButtons count] - 1] : 0;
     mDragInsertionPosition = BookmarksService::CHInsertAfter;
   }
 }
