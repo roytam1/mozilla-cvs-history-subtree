@@ -215,11 +215,13 @@ function Init()
       showScheduling = true;
   }
 
-  if (!showScheduling || isLivemark) {
+  // always hide the scheduling/notification tabs;
+  // we're diabling scheduling for 1.0 (bug 253478)
+  //if (!showScheduling || isLivemark) {
     // only allow scheduling of http/https URLs that are not livemarks
     document.getElementById("ScheduleTab").setAttribute("hidden", "true");
     document.getElementById("NotifyTab").setAttribute("hidden", "true");
-  }
+  //}
 
   sizeToContent();
   

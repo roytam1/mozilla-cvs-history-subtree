@@ -1052,6 +1052,11 @@ BookmarkParser::Unescape(nsString &text)
             text.Cut(offset, 6);
             text.Insert(PRUnichar('\"'), offset);
         }
+        else if (Substring(text, offset, 5).Equals(NS_LITERAL_STRING("&#39;")))
+        {
+            text.Cut(offset, 5);
+            text.Insert(PRUnichar('\''), offset);
+        }
 
         ++offset;
     }
@@ -1128,12 +1133,15 @@ BookmarkParser::gBookmarkFieldTable[] =
   { kWebPanelEquals,        NC_NAMESPACE_URI  "WebPanel",          nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kPostDataEquals,        NC_NAMESPACE_URI  "PostData",          nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kLastCharsetEquals,     WEB_NAMESPACE_URI "LastCharset",       nsnull,  BookmarkParser::ParseLiteral,   nsnull },
+  // don't parse scheduling bits, disabled for 1.0 (bug 2534768)
+#if 0
   { kScheduleEquals,        WEB_NAMESPACE_URI "Schedule",          nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kLastPingEquals,        WEB_NAMESPACE_URI "LastPingDate",      nsnull,  BookmarkParser::ParseDate,      nsnull },
   { kPingETagEquals,        WEB_NAMESPACE_URI "LastPingETag",      nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kPingLastModEquals,     WEB_NAMESPACE_URI "LastPingModDate",   nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kPingContentLenEquals,  WEB_NAMESPACE_URI "LastPingContentLen",nsnull,  BookmarkParser::ParseLiteral,   nsnull },
   { kPingStatusEquals,      WEB_NAMESPACE_URI "status",            nsnull,  BookmarkParser::ParseLiteral,   nsnull },
+#endif
   // Note: end of table
   { nsnull,                 nsnull,                                nsnull,  nsnull,                         nsnull },
 };
@@ -1710,6 +1718,9 @@ nsBookmarksService::Init()
     rv = InitDataSource();
     NS_ENSURE_SUCCESS(rv, rv);
 
+    // bookmark timers and scheduling are disabled for 1.0, until
+    // they can be fixed (bug 253478)
+#if 0
     /* timer initialization */
     busyResource = nsnull;
 
@@ -1723,6 +1734,7 @@ nsBookmarksService::Init()
                                      nsITimer::TYPE_REPEATING_SLACK);
         // Note: don't addref "this" as we'll cancel the timer in the nsBookmarkService destructor
     }
+#endif
 
     // register this as a named data source with the RDF
     // service. Do this *last*, because if Init() fails, then the
@@ -3630,7 +3642,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             nsCOMPtr<nsIRDFLiteral> iconLiteral = do_QueryInterface(*aTarget);
             if (!iconLiteral) {
                 // erm, shouldn't happen
-                aTarget = nsnull;
+                *aTarget = nsnull;
                 return NS_RDF_NO_VALUE;
             }
 
@@ -3646,7 +3658,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
                 // consisting of purely "data:".  So, if that's what we have,
                 // we pretend it has no icon.
                 if (urlStr.Length() == 5) {
-                    aTarget = nsnull;
+                    *aTarget = nsnull;
                     return NS_RDF_NO_VALUE;
                 }
 
@@ -3654,7 +3666,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             }
 
             // no data:? no icon!
-            aTarget = nsnull;
+            *aTarget = nsnull;
             return NS_RDF_NO_VALUE;
         }
     }
