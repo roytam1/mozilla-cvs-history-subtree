@@ -19,7 +19,7 @@ DEPTH=..\..\..
 IGNORE_MANIFEST=1
 
 MAKE_OBJ_TYPE   = EXE
-PROGRAM = .\$(OBJDIR)\xpviewer.exe
+PROGRAM = .\$(OBJDIR)\ngt.exe
 RESFILE = xpviewer.res
 
 !if defined(NGEDITOR)
