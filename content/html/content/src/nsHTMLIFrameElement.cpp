@@ -268,16 +268,13 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
     nsHTMLValue value;
 
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     nsStylePosition* pos = (nsStylePosition*)
       aContext->GetMutableStyleData(eStyleStruct_Position);
 
     // width: value
     aAttributes->GetAttribute(nsHTMLAtoms::width, value);
     if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mWidth.SetCoordValue(twips);
+      pos->mWidth.SetCoordValue(value.GetPixelValue());
     }
     else if (value.GetUnit() == eHTMLUnit_Percent) {
       pos->mWidth.SetPercentValue(value.GetPercentValue());
@@ -286,8 +283,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     // height: value
     aAttributes->GetAttribute(nsHTMLAtoms::height, value);
     if (value.GetUnit() == eHTMLUnit_Pixel) {
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mHeight.SetCoordValue(twips);
+      pos->mHeight.SetCoordValue(value.GetPixelValue());
     }
     else if (value.GetUnit() == eHTMLUnit_Percent) {
       pos->mHeight.SetPercentValue(value.GetPercentValue());

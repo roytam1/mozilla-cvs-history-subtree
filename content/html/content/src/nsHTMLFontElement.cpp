@@ -298,15 +298,15 @@ MapFontAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     aAttributes->GetAttribute(nsHTMLAtoms::pointSize, value);
     if (value.GetUnit() == eHTMLUnit_Integer) {
       // XXX should probably sanitize value
-      font->mFont.size = parentFont->mFont.size +
-        NSIntPointsToTwips(value.GetIntValue());
-      font->mFixedFont.size = parentFont->mFixedFont.size +
-        NSIntPointsToTwips(value.GetIntValue());
+      // XXX pav -- value.GetIntValue is in points
+      font->mFont.size = parentFont->mFont.size + value.GetIntValue();
+      font->mFixedFont.size = parentFont->mFixedFont.size + value.GetIntValue();
       font->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
     }
     else if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      font->mFont.size = NSIntPointsToTwips(value.GetIntValue());
-      font->mFixedFont.size = NSIntPointsToTwips(value.GetIntValue());
+      // XXX pav -- value.GetIntValue is in points
+      font->mFont.size = value.GetIntValue();
+      font->mFixedFont.size = value.GetIntValue();
       font->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
     }
     else {

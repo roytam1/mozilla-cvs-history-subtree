@@ -24,10 +24,10 @@
 
 #include "nslayout.h"
 #include "nsISupports.h"
+#include "gfxtypes.h"
 #include "nsColor.h"
 #include <stdio.h>
 #include "nsString.h"
-#include "nsCoord.h"
 #include "nsCSSValue.h"
 #include "nsCSSProps.h"
 

@@ -142,8 +142,8 @@ public:
   NS_IMETHOD GetScrollbarBox(PRBool aVertical, nsIBox** aResult);
 
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         gfx_width *aWidth, 
-                         gfx_height *aHeight) const;
+                         gfx_dimension *aWidth, 
+                         gfx_dimension *aHeight) const;
  
   NS_IMETHOD  GetScrollPreference(nsIPresContext* aPresContext, nsScrollPref* aScrollPreference) const;
 

@@ -117,8 +117,8 @@ public:
                                     PRBool aHorizontalVisible);
 
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         gfx_width *aWidth, 
-                         gfx_height *aHeight) const;
+                         gfx_dimension *aWidth, 
+                         gfx_dimension *aHeight) const;
 
   NS_IMETHOD GetScrollPosition(nsIPresContext* aContext, nscoord &aX, nscoord& aY) const;
   NS_IMETHOD ScrollTo(nsIPresContext* aContext, nscoord aX, nscoord aY, PRUint32 aFlags);

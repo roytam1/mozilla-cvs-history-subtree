@@ -25,7 +25,7 @@
 #include "nslayout.h"
 #include "nsColor.h"
 #include "nsString.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsCSSProps.h"
 
 

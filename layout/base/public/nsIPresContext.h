@@ -321,6 +321,8 @@ public:
    */
   NS_IMETHOD GetPageHeight(gfx_dimension* aResult) = 0;
 
+  NS_IMETHOD GetOutputDevice(nsIOutputDevice** aOutputDevice) = 0;
+
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager) = 0;
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection) = 0;
   NS_IMETHOD SetDefaultDirection(PRUint8 aDirection) = 0;

@@ -374,6 +374,8 @@ nsPresContext::Init(nsIOutputDevice *aOutputDevice)
 {
   NS_ASSERTION(!(mInitialized == PR_TRUE), "attempt to reinit pres context");
 
+  mOutputDevice = aOutputDevice;
+
 // XXX pav
 #if 0
   mDeviceContext = dont_QueryInterface(aDeviceContext);
@@ -393,6 +395,7 @@ nsPresContext::Init(nsIOutputDevice *aOutputDevice)
     GetUserPreferences();
   }
 #endif
+
 
 #ifdef DEBUG
   mInitialized = PR_TRUE;
@@ -1138,6 +1141,14 @@ nsPresContext::GetContainer(nsISupports** aResult)
   }
   *aResult = mContainer;
   NS_IF_ADDREF(mContainer);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPresContext::GetOutputDevice(nsIOutputDevice** aOutputDevice)
+{
+  *aOutputDevice = mOutputDevice;
+  NS_IF_ADDREF(*aOutputDevice);
   return NS_OK;
 }
 

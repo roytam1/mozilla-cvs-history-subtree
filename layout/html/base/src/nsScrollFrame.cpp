@@ -33,7 +33,6 @@
 #include "nsHTMLIIDs.h"
 #include "nsCSSRendering.h"
 #include "nsIScrollableView.h"
-#include "nsWidgetsCID.h"
 #include "nsScrollFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsIWebShell.h"
@@ -49,7 +48,6 @@
 
 static NS_DEFINE_IID(kIWebShellIID, NS_IWEB_SHELL_IID);
 
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kScrollingViewCID, NS_SCROLLING_VIEW_CID);
 static NS_DEFINE_IID(kViewCID, NS_VIEW_CID);
 
@@ -122,8 +120,8 @@ nsScrollFrame::GetScrolledFrame(nsIPresContext* aPresContext, nsIFrame *&aScroll
 
 NS_IMETHODIMP
 nsScrollFrame::GetClipSize(   nsIPresContext* aPresContext, 
-                              gfx_width *aWidth, 
-                              gfx_height *aHeight) const
+                              gfx_dimension *aWidth, 
+                              gfx_dimension *aHeight) const
 {
     nsIScrollableView* scrollingView;
     nsIView*           view;
@@ -378,7 +376,7 @@ nsScrollFrame::CreateScrollingViewWidget(nsIView* aView, const nsStylePosition* 
   nsresult rv = NS_OK;
    // If it's fixed positioned, then create a widget 
   if (NS_STYLE_POSITION_FIXED == aPosition->mPosition) {
-    rv = aView->CreateWidget(kWidgetCID);
+    rv = aView->CreateWidget("@mozilla.org/gfx/window/child;2");
   }
 
   return(rv);
@@ -1009,7 +1007,7 @@ nsScrollFrame::SaveState(nsIPresContext* aPresContext,
                               nsIPresState** aState)
 {
   nsresult res = NS_OK;
-  PRInt32 x,y;
+  gfx_coord x,y;
   nsIScrollableView* scrollingView;
   nsIView*           view;
   GetView(aPresContext, &view);

@@ -768,7 +768,7 @@ nsHTMLInputElement::Click()
             event.isAlt = PR_FALSE;
             event.isMeta = PR_FALSE;
             event.clickCount = 0;
-            event.widget = nsnull;
+            event.window = nsnull;
             
             mHandlingClick = PR_TRUE;
 
@@ -961,7 +961,7 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
               event.isAlt = PR_FALSE;
               event.isMeta = PR_FALSE;
               event.clickCount = 0;
-              event.widget = nsnull;
+              event.window = nsnull;
               rv = HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
             } // case
           } // switch
@@ -1183,9 +1183,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     case NS_FORM_INPUT_CHECKBOX:
       case NS_FORM_INPUT_RADIO:
       {
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        nscoord pad = NSIntPixelsToTwips(3, p2t);
+        nscoord pad = 3;
 
         // add left and right padding around the radio button via css
         nsStyleSpacing* spacing = (nsStyleSpacing*) aContext->GetMutableStyleData(eStyleStruct_Spacing);
@@ -1194,7 +1192,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
           spacing->mMargin.SetLeft(left);
         }
         if (eStyleUnit_Null == spacing->mMargin.GetRightUnit()) {
-          nsStyleCoord right(NSIntPixelsToTwips(5, p2t));
+          nsStyleCoord right(5);
           spacing->mMargin.SetRight(right);
         }
         // add bottom padding if backward mode

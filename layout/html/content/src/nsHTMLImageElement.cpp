@@ -357,15 +357,7 @@ nsHTMLImageElement::GetHeight(PRInt32* aHeight)
     nsSize size;
     imageFrame->GetSize(size);
 
-    nsCOMPtr<nsIPresContext> context;
-    rv = nsGenericHTMLElement::GetPresContext(this, getter_AddRefs(context));
-
-    if (NS_SUCCEEDED(rv) && context) {
-      float t2p;
-      context->GetTwipsToPixels(&t2p);
-
-      *aHeight = NSTwipsToIntPixels(size.height, t2p);
-    }
+    *aHeight = size.height;
   } else {
     nsHTMLValue value;
     rv = mInner.GetHTMLAttribute(nsHTMLAtoms::height, value);
@@ -433,15 +425,7 @@ nsHTMLImageElement::GetWidth(PRInt32* aWidth)
     nsSize size;
     imageFrame->GetSize(size);
 
-    nsCOMPtr<nsIPresContext> context;
-    rv = nsGenericHTMLElement::GetPresContext(this, getter_AddRefs(context));
-
-    if (NS_SUCCEEDED(rv) && context) {
-      float t2p;
-      context->GetTwipsToPixels(&t2p);
-
-      *aWidth = NSTwipsToIntPixels(size.width, t2p);
-    }
+    *aWidth = size.width;
   } else {
     nsHTMLValue value;
     rv = mInner.GetHTMLAttribute(nsHTMLAtoms::width, value);
@@ -885,19 +869,16 @@ nsresult nsHTMLImageElement::ImageLibCallBack(nsIPresContext* aPresContext,
     nsCOMPtr<nsIPresContext> cx;
     aLoader->GetPresContext(getter_AddRefs(cx));
 
-    float t2p;
-    cx->GetTwipsToPixels(&t2p);
-
     nsSize size;
     aLoader->GetSize(size);
 
     nsAutoString tmpStr;
-    tmpStr.AppendInt(NSTwipsToIntPixels(size.width, t2p));
+    tmpStr.AppendInt(size.width);
     img->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::width, tmpStr,
                       PR_FALSE);
 
     tmpStr.Truncate();
-    tmpStr.AppendInt(NSTwipsToIntPixels(size.height, t2p));
+    tmpStr.AppendInt(size.height);
     img->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::height, tmpStr,
                       PR_FALSE);
   }
@@ -947,19 +928,17 @@ nsHTMLImageElement::SetSrcInner(nsIURI* aBaseURL,
       if (NS_SUCCEEDED(result)) {
         nsSize size;
         nsHTMLValue val;
-        float p2t;
 
-        context->GetScaledPixelsToTwips(&p2t);
         result = mInner.GetHTMLAttribute(nsHTMLAtoms::width, val);
         if (NS_CONTENT_ATTR_HAS_VALUE == result) {
-          size.width = NSIntPixelsToTwips(val.GetIntValue(), p2t);
+          size.width = val.GetIntValue();
         }
         else {
           size.width = 0;
         }
         result = mInner.GetHTMLAttribute(nsHTMLAtoms::height, val);
         if (NS_CONTENT_ATTR_HAS_VALUE == result) {
-          size.height = NSIntPixelsToTwips(val.GetIntValue(), p2t);
+          size.height = val.GetIntValue();
         }
         else {
           size.height = 0;

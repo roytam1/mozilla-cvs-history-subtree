@@ -329,7 +329,7 @@ nsHTMLFormElement::Reset()
           event.isAlt = PR_FALSE;
           event.isMeta = PR_FALSE;
           event.clickCount = 0;
-          event.widget = nsnull;
+          event.window = nsnull;
 
           res = HandleDOMEvent(context, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
         }

@@ -684,15 +684,8 @@ nsGenericHTMLElement::GetOffsetRect(nsRect& aRect,
         presShell->GetPresContext(getter_AddRefs(context));
        
         if(context) {
-          // Get the scale from that Presentation Context
-          float scale;
-          context->GetTwipsToPixels(&scale);
-              
           // Convert to pixels using that scale
-          aRect.x = NSTwipsToIntPixels(origin.x, scale);
-          aRect.y = NSTwipsToIntPixels(origin.y, scale);
-          aRect.width = NSTwipsToIntPixels(rcFrame.width, scale);
-          aRect.height = NSTwipsToIntPixels(rcFrame.height, scale);
+          aRect.SetRect(origin.x, origin.y, rcFrame.width, rcFrame.height);
         }
       }
     }
@@ -2878,8 +2871,6 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
 {
   nsHTMLValue value;
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
   nsStylePosition* pos = (nsStylePosition*)
     aContext->GetMutableStyleData(eStyleStruct_Position);
   nsStyleSpacing* spacing = (nsStyleSpacing*)
@@ -2888,8 +2879,7 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
   // width: value
   aAttributes->GetAttribute(nsHTMLAtoms::width, value);
   if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    pos->mWidth.SetCoordValue(twips);
+    pos->mWidth.SetCoordValue(value.GetPixelValue());
   }
   else if (value.GetUnit() == eHTMLUnit_Percent) {
     pos->mWidth.SetPercentValue(value.GetPercentValue());
@@ -2898,8 +2888,7 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
   // height: value
   aAttributes->GetAttribute(nsHTMLAtoms::height, value);
   if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    pos->mHeight.SetCoordValue(twips);
+    pos->mHeight.SetCoordValue(value.GetPixelValue());
   }
   else if (value.GetUnit() == eHTMLUnit_Percent) {
     pos->mHeight.SetPercentValue(value.GetPercentValue());
@@ -2908,8 +2897,7 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
   // hspace: value
   aAttributes->GetAttribute(nsHTMLAtoms::hspace, value);
   if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    nsStyleCoord c(twips);
+    nsStyleCoord c(value.GetPixelValue());
     spacing->mMargin.SetLeft(c);
     spacing->mMargin.SetRight(c);
   }
@@ -2922,8 +2910,7 @@ nsGenericHTMLElement::MapImageAttributesInto(const nsIHTMLMappedAttributes* aAtt
   // vspace: value
   aAttributes->GetAttribute(nsHTMLAtoms::vspace, value);
   if (value.GetUnit() == eHTMLUnit_Pixel) {
-    nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-    nsStyleCoord c(twips);
+    nsStyleCoord c(value.GetPixelValue());
     spacing->mMargin.SetTop(c);
     spacing->mMargin.SetBottom(c);
   }
@@ -2963,9 +2950,8 @@ nsGenericHTMLElement::MapImageAlignAttributeInto(const nsIHTMLMappedAttributes* 
       aContext->GetMutableStyleData(eStyleStruct_Text);
     nsStyleSpacing* spacing = (nsStyleSpacing*)
       aContext->GetMutableStyleData(eStyleStruct_Spacing);
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nsStyleCoord three(NSIntPixelsToTwips(3, p2t));
+
+    nsStyleCoord three(3);
     switch (align) {
       case NS_STYLE_TEXT_ALIGN_LEFT:
         display->mFloats = NS_STYLE_FLOAT_LEFT;
@@ -3018,16 +3004,12 @@ nsGenericHTMLElement::MapImageBorderAttributeInto(const nsIHTMLMappedAttributes*
     value.SetPixelValue(0);
   }
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-
   // Fixup border-padding sums: subtract out the old size and then
   // add in the new size.
   nsStyleSpacing* spacing = (nsStyleSpacing*)
     aContext->GetMutableStyleData(eStyleStruct_Spacing);
   nsStyleCoord coord;
-  coord.SetCoordValue(twips);
+  coord.SetCoordValue(value.GetPixelValue());
   spacing->mBorder.SetTop(coord);
   spacing->mBorder.SetRight(coord);
   spacing->mBorder.SetBottom(coord);

@@ -137,6 +137,7 @@ public:
   NS_IMETHOD IsPaginated(PRBool* aResult) = 0;
   NS_IMETHOD GetPageWidth(nscoord* aResult) = 0;
   NS_IMETHOD GetPageHeight(nscoord* aResult) = 0;
+  NS_IMETHOD GetOutputDevice(nsIOutputDevice** aOutputDevice);
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager);
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection);
   NS_IMETHOD SetDefaultDirection(PRUint8 aDirection);

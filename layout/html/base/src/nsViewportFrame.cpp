@@ -334,11 +334,12 @@ ViewportFrame::CalculateFixedContainingBlockSize(nsIPresContext*          aPresC
       PRBool  vertSBVisible, horzSBVisible;
       
       scrollingView->GetScrollbarVisibility(&vertSBVisible, &horzSBVisible);
+      // XXX pav do we need to round?
       if (vertSBVisible) {
-        aWidth -= NSToCoordRound(sbWidth);
+        aWidth -= sbWidth;
       }
       if (horzSBVisible) {
-        aHeight -= NSToCoordRound(sbHeight);
+        aHeight -= sbHeight;
       }
     }
   }

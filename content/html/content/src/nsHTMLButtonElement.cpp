@@ -471,7 +471,7 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext* aPresContext,
           event.isAlt = PR_FALSE;
           event.isMeta = PR_FALSE;
           event.clickCount = 0;
-          event.widget = nsnull;
+          event.window = nsnull;
           rv = HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
         }
       }

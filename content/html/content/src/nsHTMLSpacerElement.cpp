@@ -225,8 +225,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
 
     nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext, aPresContext);
 
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     PRBool typeIsBlock = PR_FALSE;
     aAttributes->GetAttribute(nsHTMLAtoms::type, value);
     if (eHTMLUnit_String == value.GetUnit()) {
@@ -249,8 +247,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       // width: value
       aAttributes->GetAttribute(nsHTMLAtoms::width, value);
       if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mWidth.SetCoordValue(twips);
+        position->mWidth.SetCoordValue(value.GetPixelValue());
       }
       else if (value.GetUnit() == eHTMLUnit_Percent) {
         position->mWidth.SetPercentValue(value.GetPercentValue());
@@ -258,8 +255,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       // height: value
       aAttributes->GetAttribute(nsHTMLAtoms::height, value);
       if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mHeight.SetCoordValue(twips);
+        position->mHeight.SetCoordValue(value.GetPixelValue());
       }
       else if (value.GetUnit() == eHTMLUnit_Percent) {
         position->mHeight.SetPercentValue(value.GetPercentValue());
@@ -270,8 +266,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       // size: value
       aAttributes->GetAttribute(nsHTMLAtoms::size, value);
       if (value.GetUnit() == eHTMLUnit_Pixel) {
-        nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-        position->mWidth.SetCoordValue(twips);
+        position->mWidth.SetCoordValue(value.GetPixelValue());
       }
     }
   }

@@ -216,7 +216,7 @@ nsSimplePageSequenceFrame::Reflow(nsIPresContext*          aPresContext,
   nsSize  pageSize;
   aPresContext->GetPageWidth(&pageSize.width);
   aPresContext->GetPageHeight(&pageSize.height);
-  PRInt32 extra = aReflowState.availableWidth - 2 * PAGE_SPACING_TWIPS - pageSize.width;
+  nscoord extra = aReflowState.availableWidth - 2 * PAGE_SPACING_TWIPS - pageSize.width;
 
   nscoord x = PAGE_SPACING_TWIPS;
   if (extra > 0) {
@@ -325,13 +325,11 @@ nsSimplePageSequenceFrame::PaintChild(nsIPresContext*      aPresContext,
     // XXX Paint a one-pixel border around the page so it's easy to see where
     // each page begins and ends when we're in print preview mode
     nsRect  pageBounds;
-    float   p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
 
     // XXX pav do we need to set the color here ???
     //    aDrawable->SetForegroundColor(NS_RGB(0, 0, 0));
     aFrame->GetRect(pageBounds);
-    pageBounds.Inflate(NSToCoordRound(p2t), NSToCoordRound(p2t));
+    pageBounds.Inflate(1, 1);
     
     // this paints a rectangle around the for the printer output, 
     // which sometimes appears, other times

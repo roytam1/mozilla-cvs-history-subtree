@@ -50,6 +50,7 @@
 #include "nsFrame.h"
 #include "nsIDrawable.h"
 #include "nsIWindow.h"
+#include "nsIOutputDevice.h"
 #include "nsIReflowCommand.h"
 #include "nsIViewManager.h"
 #include "nsCRT.h"
@@ -5439,7 +5440,7 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
 
     nsRect r1, r2;
     nsIView* v1, *v2;
-    nsCOMPtr<nsIWindow> w1, *w2;
+    nsCOMPtr<nsIWindow> w1, w2;
     for (;;) {
       if (((nsnull == k1) && (nsnull != k2)) ||
           ((nsnull != k1) && (nsnull == k2))) {
@@ -5733,7 +5734,11 @@ PresShell::VerifyIncrementalReflow()
   }
 
   NS_ASSERTION(NS_OK == rv, "failed to create presentation context");
-  cx->Init();
+
+
+  nsCOMPtr<nsIOutputDevice> outputDevice;
+  mPresContext->GetOutputDevice(getter_AddRefs(outputDevice));
+  cx->Init(outputDevice);
 
   // Get our scrolling preference
   nsScrollPreference scrolling;
@@ -5745,8 +5750,8 @@ PresShell::VerifyIncrementalReflow()
   if (NS_OK == rv) {
     scrollView->GetScrollPreference(scrolling);
   }
-  nsIWindow* rootWidget;
-  rootView->GetWidget(rootWidget);
+  nsCOMPtr<nsIWindow> rootWidget;
+  rootView->GetWidget(getter_AddRefs(rootWidget));
   // XXX pav
   void* nativeParentWidget = nsnull;//rootWidget->GetNativeData(NS_NATIVE_WIDGET);
 
@@ -5779,7 +5784,9 @@ PresShell::VerifyIncrementalReflow()
   }
 
   //now create the widget for the view
-  rv = view->CreateWidget(kWidgetCID, nsnull, nativeParentWidget);
+  rv = view->CreateWidget("@mozilla.org/gfx/window/child;2");
+  // XXX pav
+  // kWidgetCID, nsnull, nativeParentWidget);
   if (NS_OK != rv) {
     NS_ASSERTION(NS_OK == rv, "failed to create scroll view widget");
   }

@@ -301,12 +301,9 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     // height: pixel
     aAttributes->GetAttribute(nsHTMLAtoms::height, value);
     if (value.GetUnit() == eHTMLUnit_Pixel) {
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
       nsStylePosition* pos = (nsStylePosition*)
         aContext->GetMutableStyleData(eStyleStruct_Position);
-      nscoord twips = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      pos->mHeight.SetCoordValue(twips);
+      pos->mHeight.SetCoordValue(value.GetPixelValue());
     }
     nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext, aPresContext);
     nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext, aPresContext);

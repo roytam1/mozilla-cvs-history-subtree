@@ -31,7 +31,7 @@
 #include "nsIContent.h"
 #include "nsStyleConsts.h"
 #include "nsIStyleContext.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIFontMetrics.h"
 #include "nsIDrawable.h"
 #include "nsHTMLIIDs.h"
@@ -58,7 +58,7 @@
 #include "nsIFrameSelection.h"
 #include "nsISelection.h"
 #include "nsIDOMRange.h"
-#include "nsILookAndFeel.h"
+#include "nsISystemLook.h"
 
 #include "nsILineIterator.h"
 
@@ -164,7 +164,7 @@ public:
 
   void Stop();
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
   static nsresult AddBlinkFrame(nsIPresContext* aPresContext, nsIFrame* aFrame);
   static nsresult RemoveBlinkFrame(nsIFrame* aFrame);
@@ -215,9 +215,9 @@ nsBlinkTimer::~nsBlinkTimer()
 void nsBlinkTimer::Start()
 {
   nsresult rv;
-  mTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+  mTimer = do_CreateInstance("@mozilla.org/timer;2", &rv);
   if (NS_OK == rv) {
-    mTimer->Init(this, 750, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_PRECISE);
+    mTimer->Init(this, 750, nsITimer::NS_PRIORITY_NORMAL, nsITimer::NS_TYPE_REPEATING_PRECISE);
   }
 }
 
@@ -262,7 +262,7 @@ PRInt32 nsBlinkTimer::FrameCount() {
   return mFrames.Count();
 }
 
-NS_IMETHODIMP_(void) nsBlinkTimer::Notify(nsITimer *timer)
+NS_IMETHODIMP nsBlinkTimer::Notify(nsITimer *timer)
 {
   // Toggle blink state bit so that text code knows whether or not to
   // render. All text code shares the same flag so that they all blink
@@ -303,6 +303,7 @@ NS_IMETHODIMP_(void) nsBlinkTimer::Notify(nsITimer *timer)
     vm->UpdateView(view, bounds, 0);
     NS_RELEASE(vm);
   }
+  return NS_OK;
 }
 
 
@@ -532,15 +533,11 @@ public:
 
 
 
-      // XXX pav nsISystemLook
-#if 0
-	    nsILookAndFeel* look = nsnull;
-	    if (NS_SUCCEEDED(aPresContext->GetLookAndFeel(&look)) && look) {
-	      look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, mSelectionBGColor);
-	      look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, mSelectionTextColor);
-	      NS_RELEASE(look);
+	    nsCOMPtr<nsISystemLook> look(do_GetService("@mozilla.org/gfx/systemlook;2"));
+	    if (look) {
+	      look->GetColor(nsISystemLook::color_TextSelectBackground, &mSelectionBGColor);
+	      look->GetColor(nsISystemLook::color_TextSelectForeground, &mSelectionTextColor);
 	    }
-#endif
 
       // Get the word and letter spacing
       mWordSpacing = 0;
@@ -1031,9 +1028,11 @@ DrawSelectionIterator::CurrentForeGroundColor()
    	colorSet = PR_TRUE;
   }
 
+  // XXX pav -- what is this?  mac only stuff?  hmmmmmmmmmmmmm seems suspicious to me.
+#if 0
 	if (colorSet && (foreColor != NS_DONT_CHANGE_COLOR))
 			return foreColor;
-
+#endif
   return mOldStyle.mColor->mColor;
 }
 
@@ -1585,7 +1584,7 @@ nsTextFrame::PaintTextDecorations(nsIDrawable *aDrawable,
     while(aDetails){
       const nscoord* sp= aSpacing;
       PRInt32 startOffset = 0;
-      PRInt32 textWidth = 0;
+      gfx_dimension textWidth = 0;
       PRInt32 start = PR_MAX(0,(aDetails->mStart - (PRInt32)aIndex));
       PRInt32 end = PR_MIN((PRInt32)aLength,(aDetails->mEnd - (PRInt32)aIndex));
       PRInt32 i;
@@ -1908,7 +1907,7 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
         aDrawable->DrawString(text, PRUint32(textLength), dx, dy);
       }
       PaintTextDecorations(aDrawable, aStyleContext,
-                           aTextStyle, dx, dy, width, text, details,0,(PRUint32)textLength);
+                           aTextStyle, dx, dy, width, text, details,0,(nscoord)textLength);
       sdptr = details;
       if (details){
         while ((sdptr = details->mNext) != nsnull) {
@@ -2039,11 +2038,11 @@ nsTextFrame::RenderString(nsIDrawable* aDrawable,
   PRBool spacing = (0 != aTextStyle.mLetterSpacing) ||
     (0 != aTextStyle.mWordSpacing) || aTextStyle.mJustifying;
   nscoord spacingMem[TEXT_BUF_SIZE];
-  PRIntn* sp0 = spacingMem; 
+  nscoord* sp0 = spacingMem; 
   if (spacing && (aLength > TEXT_BUF_SIZE)) {
     sp0 = new nscoord[aLength];
   }
-  PRIntn* sp = sp0;
+  nscoord* sp = sp0;
 
   nscoord smallY = aY;
   if (aTextStyle.mSmallCaps) {
@@ -2124,7 +2123,7 @@ nsTextFrame::RenderString(nsIDrawable* aDrawable,
         // Note: use aY not small-y so that decorations are drawn with
         // respect to the normal-font not the current font.
         PaintTextDecorations(aDrawable, aStyleContext, aTextStyle,
-                             aX, aY, width, runStart, aDetails,countSoFar,pendingCount, spacing ? sp0 : nsnull);
+                             aX, aY, width, runStart, aDetails,countSoFar,pendingCount, (nscoord*)&spacing ? (nscoord*)sp0 : nsnull);
         countSoFar += pendingCount;
         aWidth -= width;
         aX += width;
@@ -2154,7 +2153,7 @@ nsTextFrame::RenderString(nsIDrawable* aDrawable,
     // respect to the normal-font not the current font.
     PaintTextDecorations(aDrawable, aStyleContext, aTextStyle,
                          aX, aY, aWidth, runStart, aDetails,countSoFar,pendingCount,
-                         spacing ? sp0 : nsnull);
+                         (nscoord*)&spacing ? (nscoord*)sp0 : nsnull);
   }
   aTextStyle.mLastFont = lastFont;
 
@@ -2640,7 +2639,7 @@ nsTextFrame::PaintAsciiText(nsIPresContext* aPresContext,
       PaintTextDecorations(aDrawable, aStyleContext,
                            aTextStyle, dx, dy, width,
                            unicodePaintBuffer.mBuffer,
-                           details, 0, textLength);
+                           details, 0, (nscoord)textLength);
       sdptr = details;
       if (details){
         while ((sdptr = details->mNext) != nsnull) {
@@ -2672,13 +2671,13 @@ nsTextFrame::PaintAsciiText(nsIPresContext* aPresContext,
 static PRBool
 BinarySearchForPosition(nsIDrawable* aDrawable, 
                         PRUnichar* aText,
-                        PRInt32    aBaseWidth,
+                        gfx_dimension    aBaseWidth,
                         PRInt32    aBaseInx,
                         PRInt32    aStartInx, 
                         PRInt32    aEndInx, 
                         PRInt32    aCursorPos, 
                         PRInt32&   aIndex,
-                        PRInt32&   aTextWidth)
+                        gfx_dimension&   aTextWidth)
 {
   PRInt32 range = aEndInx - aStartInx;
   if (range == 1) {
@@ -2690,12 +2689,12 @@ BinarySearchForPosition(nsIDrawable* aDrawable,
   }
   PRInt32 inx = aStartInx + (range / 2);
 
-  PRInt32 textWidth = 0;
+  gfx_dimension textWidth = 0;
   nsCOMPtr<nsIFontMetrics> fm;
   aDrawable->GetFontMetrics(getter_AddRefs(fm));
   fm->GetStringWidth(aText, inx, &textWidth);
 
-  PRInt32 fullWidth = aBaseWidth + textWidth;
+  gfx_dimension fullWidth = aBaseWidth + textWidth;
   if (fullWidth == aCursorPos) {
     aTextWidth = textWidth;
     aIndex = inx;
@@ -2810,14 +2809,14 @@ nsTextFrame::GetPosition(nsIPresContext* aCX,
         PRInt32* ip = indexBuffer.mBuffer;
 
         PRInt32 indx;
-        PRInt32 textWidth = 0;
+        gfx_coord textWidth = 0;
         PRUnichar* text = paintBuffer.mBuffer;
         PRBool found = BinarySearchForPosition(draw, text, origin.x, 0, 0,
-                                               PRInt32(textLength),
+                                               textLength,
                                                PRInt32(aPoint.x) , //go to local coordinates
                                                indx, textWidth);
         if (found) {
-          PRInt32 charWidth;
+          nscoord charWidth;
           nsCOMPtr<nsIFontMetrics> fm;
           draw->GetFontMetrics(getter_AddRefs(fm));
           fm->GetCCharWidth(text[indx], &charWidth);
@@ -3661,9 +3660,9 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   PRInt32 prevOffset = -1;
   PRInt32 column = mColumn;
   PRInt32 prevColumn = column;
-  nscoord prevMaxWordWidth = 0;
+  gfx_dimension prevMaxWordWidth = 0;
   PRInt32 lastWordLen = 0;
-  PRInt32 lastWordWidth = 0;
+  gfx_dimension lastWordWidth = 0;
   PRUnichar* lastWordPtr = nsnull;
   PRBool  textStartsWithNBSP = PR_FALSE;
   PRBool  endsInWhitespace = PR_FALSE;

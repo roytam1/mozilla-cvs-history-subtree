@@ -263,11 +263,11 @@ BodyRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPr
   aPresContext->GetFontScaler(&scaler);
   float scaleFactor = nsStyleUtil::GetScalingFactor(scaler);
   // apply font scaling to the body
-  font->mFont.size = NSToCoordFloor(float(font->mFont.size) * scaleFactor);
+  font->mFont.size = GFXCoordFloor(font->mFont.size * scaleFactor);
   if (font->mFont.size < 1) {
     font->mFont.size = 1;
   }
-  font->mFixedFont.size = NSToCoordFloor(float(font->mFixedFont.size) * scaleFactor);
+  font->mFixedFont.size = GFXCoordFloor(font->mFixedFont.size * scaleFactor);
   if (font->mFixedFont.size < 1) {
     font->mFixedFont.size = 1;
   }
@@ -285,9 +285,7 @@ BodyRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresCo
     if (nsnull != styleSpacing) {
       nsHTMLValue   value;
       PRInt32       attrCount;
-      float         p2t;
       mPart->GetAttributeCount(attrCount);
-      aPresContext->GetScaledPixelsToTwips(&p2t);
       nscoord bodyMarginWidth  = -1;
       nscoord bodyMarginHeight = -1;
 
@@ -295,7 +293,7 @@ BodyRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresCo
         // if marginwidth/marginheigth is set reflect them as 'margin'
         mPart->GetHTMLAttribute(nsHTMLAtoms::marginwidth, value);
         if (eHTMLUnit_Pixel == value.GetUnit()) {
-          bodyMarginWidth = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+          bodyMarginWidth = value.GetPixelValue();
           if (bodyMarginWidth < 0) {
             bodyMarginWidth = 0;
           }
@@ -306,7 +304,7 @@ BodyRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresCo
 
         mPart->GetHTMLAttribute(nsHTMLAtoms::marginheight, value);
         if (eHTMLUnit_Pixel == value.GetUnit()) {
-          bodyMarginHeight = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
+          bodyMarginHeight = value.GetPixelValue();
           if (bodyMarginHeight < 0) {
             bodyMarginHeight = 0;
           }

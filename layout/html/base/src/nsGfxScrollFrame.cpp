@@ -145,7 +145,7 @@ public:
 
    PRBool AddRemoveScrollbar       (PRBool& aHasScrollbar, 
                                   gfx_coord& aXY, 
-                                  gfx_width& aSize, 
+                                  gfx_dimension& aSize, 
                                   nscoord aSbSize, 
                                   PRBool aOnRightOrBottom, 
                                   PRBool aAdd);
@@ -174,7 +174,6 @@ public:
   nsIBox* mHScrollbarBox;
   nsIBox* mVScrollbarBox;
   nsIBox* mScrollAreaBox;
-  nscoord mOnePixel;
   nsCOMPtr<nsIDocument> mDocument;
   nsGfxScrollFrame* mOuter;
   nsIScrollableView* mScrollableView;
@@ -258,8 +257,8 @@ nsGfxScrollFrame::GetScrolledFrame(nsIPresContext* aPresContext, nsIFrame *&aScr
  */
 NS_IMETHODIMP
 nsGfxScrollFrame::GetClipSize(nsIPresContext* aPresContext, 
-                              gfx_width *aWidth, 
-                              gfx_height *aHeight) const
+                              gfx_dimension *aWidth, 
+                              gfx_dimension *aHeight) const
 {
    nsRect rect;
    mInner->mScrollAreaBox->GetBounds(rect);
@@ -821,7 +820,6 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 nsGfxScrollFrameInner::nsGfxScrollFrameInner(nsGfxScrollFrame* aOuter):mHScrollbarBox(nsnull),
                                                mVScrollbarBox(nsnull),
                                                mScrollAreaBox(nsnull),
-                                               mOnePixel(20),
                                                mHasVerticalScrollbar(PR_FALSE), 
                                                mHasHorizontalScrollbar(PR_FALSE)
 {
@@ -903,7 +901,7 @@ nsGfxScrollFrameInner::AttributeChanged(nsIDocument *aDocument,
 
         nsIScrollableView* s = GetScrollableView(mOuter->mPresContext);
         s->RemoveScrollPositionListener(this);
-        ScrollbarChanged(mOuter->mPresContext, x*mOnePixel, y*mOnePixel);
+        ScrollbarChanged(mOuter->mPresContext, x, y);
         s->AddScrollPositionListener(this);
 
      }
@@ -995,7 +993,7 @@ nsGfxScrollFrameInner::AddRemoveScrollbar(nsBoxLayoutState& aState, nsRect& aScr
 }
 
 PRBool
-nsGfxScrollFrameInner::AddRemoveScrollbar(PRBool& aHasScrollbar, gfx_coord& aXY, gfx_height& aSize, nscoord aSbSize, PRBool aRightOrBottom, PRBool aAdd)
+nsGfxScrollFrameInner::AddRemoveScrollbar(PRBool& aHasScrollbar, gfx_coord& aXY, gfx_dimension& aSize, nscoord aSbSize, PRBool aRightOrBottom, PRBool aAdd)
 { 
    nscoord size = aSize;
 
@@ -1195,13 +1193,12 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
     
   GetScrolledSize(aState.GetPresContext(),&scrolledContentSize.width, &scrolledContentSize.height);
 
-  nsIPresContext* presContext = aState.GetPresContext();
-  float p2t;
-  presContext->GetScaledPixelsToTwips(&p2t);
-  mOnePixel = NSIntPixelsToTwips(1, p2t);
   const nsStyleFont* font;
   mOuter->GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&) font);
   const nsFont& f = font->mFont;
+
+  nsIPresContext* presContext = aState.GetPresContext();
+
   nsCOMPtr<nsIFontMetrics> fm;
   presContext->GetMetricsFor(f, getter_AddRefs(fm));
   nscoord fontHeight = 1;
@@ -1277,7 +1274,7 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
   if (mHasHorizontalScrollbar) {
     SetAttribute(mHScrollbarBox, nsXULAtoms::maxpos, maxX);
     SetAttribute(mHScrollbarBox, nsXULAtoms::pageincrement, nscoord(float(scrollAreaRect.width)*0.8));
-    SetAttribute(mHScrollbarBox, nsXULAtoms::increment, 10*mOnePixel, PR_FALSE);
+    SetAttribute(mHScrollbarBox, nsXULAtoms::increment, 10, PR_FALSE);
   } 
 
   if (mHScrollbarBox) {
@@ -1328,7 +1325,7 @@ PRBool
 nsGfxScrollFrameInner::SetAttribute(nsIBox* aBox, nsIAtom* aAtom, nscoord aSize, PRBool aReflow)
 {
   // convert to pixels
-  aSize /= mOnePixel;
+  aSize;
 
   // only set the attribute if it changed.
 

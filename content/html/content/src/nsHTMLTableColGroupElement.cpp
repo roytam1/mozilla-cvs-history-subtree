@@ -224,9 +224,7 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         break;
 
       case eHTMLUnit_Pixel:
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        position->mWidth.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), p2t));
+        position->mWidth.SetCoordValue(value.GetPixelValue());
         break;
       
       case eHTMLUnit_Proportional:
