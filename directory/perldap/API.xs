@@ -129,9 +129,9 @@ perldap_init()
    memalloc_fns.ldapmem_realloc = perldap_realloc;
    memalloc_fns.ldapmem_free = perldap_free;
 
-   return(ldap_set_option(NULL,
-                          LDAP_OPT_MEMALLOC_FN_PTRS,
-                          &memalloc_fns));
+   return (ldap_set_option(NULL,
+                           LDAP_OPT_MEMALLOC_FN_PTRS,
+                           &memalloc_fns));
 }
 
 
@@ -143,7 +143,7 @@ perldap_malloc(size_t size)
 
    New(1, new_ptr, size, char);
 
-   return(new_ptr);
+   return (new_ptr);
 }
 
 static
@@ -154,7 +154,7 @@ perldap_calloc(size_t number, size_t size)
 
    Newz(1, new_ptr, (number*size), char);
 
-   return(new_ptr);
+   return (new_ptr);
 }
 
 static
@@ -163,7 +163,7 @@ perldap_realloc(void *ptr, size_t size)
 {
    Renew(ptr, size, char);
 
-   return(ptr);
+   return (ptr);
 }
 
 static
@@ -198,7 +198,7 @@ avref2charptrptr(SV *avref)
    }
    tmp_cpp[ix_av] = NULL;
 
-   return(tmp_cpp);
+   return (tmp_cpp);
 }
 
 /* Return a struct berval ** when passed a reference to an AV */
