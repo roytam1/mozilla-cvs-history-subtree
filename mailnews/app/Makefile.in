@@ -133,3 +133,22 @@ install:: minotaur
 
 GARBAGE += minotaur
 endif
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+
+ifdef MOZ_DEBUG
+APP_NAME = MinotaurDebug
+else
+APP_NAME = Minotaur
+endif
+
+libs:: $(PROGRAM)
+	mkdir -p $(DIST)/$(APP_NAME).app/Contents/MacOS
+	rsync -a $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app
+	rsync -aL $(DIST)/bin/ $(DIST)/$(APP_NAME).app/Contents/MacOS
+	cp -RL $(srcdir)/macbuild/mach.icns $(DIST)/$(APP_NAME).app/Contents/Resources/mach.icns
+	echo -n APPLMOZZ > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
+
+clean clobber::
+	rm -rf $(DIST)/$(APP_NAME).app
+endif

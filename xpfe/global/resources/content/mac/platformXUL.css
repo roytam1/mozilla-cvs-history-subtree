@@ -20,3 +20,8 @@ statusbar {
 .statusbar-resizerpanel {
   display: none;
 }
+
+toolbar[type="menubar"] {
+  min-height: 0 !important;
+  border: 0 !important;
+}

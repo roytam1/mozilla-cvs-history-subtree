@@ -1,0 +1,12 @@
+Makefile
+nsNativeAppSupportBase.cpp
+nsWindowCreator.cpp
+showOSAlert.cpp
+nsNativeAppSupportWin.cpp
+nsNativeAppSupportGtk.cpp
+nsNativeAppSupportOS2.cpp
+nsNativeAppSupportBeOS.cpp
+nsNativeAppSupportMac.cpp
+nsSigHandlers.cpp
+nsStackFrameUnix.cpp
+nsStackFrameUnix.h

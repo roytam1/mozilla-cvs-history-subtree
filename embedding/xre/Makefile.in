@@ -82,7 +82,6 @@ EXPORTS = nsXULAppAPI.h
 
 SHAREDSRCS = \
 	nsNativeAppSupportBase.cpp \
-	nsSigHandlers.cpp \
 	nsWindowCreator.cpp \
 	showOSAlert.cpp \
 	$(NULL)
@@ -102,6 +101,10 @@ endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
 SHAREDSRCS += nsNativeAppSupportBeOS.cpp
+endif
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+SHAREDSRCS += nsNativeAppSupportMac.cpp
 endif
 
 CPPSRCS = \
