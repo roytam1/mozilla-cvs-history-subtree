@@ -62,7 +62,7 @@ XP_BEGIN_PROTOS
 #define noRDFErr 0
 #define noMoreValuesErr 1
 
-#define MAX_ATTRIBUTES 10
+#define MAX_ATTRIBUTES 64
 
 #define RDF_RT 0
 #define LFS_RT 1
