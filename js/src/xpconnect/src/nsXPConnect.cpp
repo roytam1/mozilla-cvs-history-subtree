@@ -392,17 +392,17 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
                             getter_AddRefs(holder))) || !holder)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
-    JSObject* aGlobalJSObj;
-    if(NS_FAILED(holder->GetJSObject(&aGlobalJSObj)) || !aGlobalJSObj)
+    JSObject* globalJSObj;
+    if(NS_FAILED(holder->GetJSObject(&globalJSObj)) || !globalJSObj)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     // voodoo to fixup scoping and parenting...
 
-    JS_SetParent(aJSContext, aGlobalJSObj, nsnull);
-    JS_SetGlobalObject(aJSContext, aGlobalJSObj);
+    JS_SetParent(aJSContext, globalJSObj, nsnull);
+    JS_SetGlobalObject(aJSContext, globalJSObj);
 
     if(aCallJS_InitStandardClasses &&
-       !JS_InitStandardClasses(aJSContext, aGlobalJSObj))
+       !JS_InitStandardClasses(aJSContext, globalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNative* wrapper = 
@@ -412,7 +412,7 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     if(!scope)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
-    scope->SetGlobal(ccx, aGlobalJSObj);
+    scope->SetGlobal(ccx, globalJSObj);
     
     XPCWrappedNativeProto* proto = wrapper->GetProto();
     if(!proto)
@@ -421,11 +421,11 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
     JSObject* protoJSObject = proto->GetJSProtoObject();
     if(protoJSObject)
     {
-        JS_SetParent(aJSContext, protoJSObject, aGlobalJSObj);
+        JS_SetParent(aJSContext, protoJSObject, globalJSObj);
         JS_SetPrototype(aJSContext, protoJSObject, scope->GetPrototypeJSObject());
     }
 
-    if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
+    if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, globalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
     
     NS_ADDREF(*_retval = holder);
