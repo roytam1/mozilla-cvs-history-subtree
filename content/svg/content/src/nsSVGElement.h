@@ -86,7 +86,7 @@ public:
   NS_IMETHOD_(PRUint32) GetChildCount() const;
   NS_IMETHOD_(nsIContent *) GetChildAt(PRUint32 aIndex) const;
   NS_IMETHOD_(PRInt32) IndexOf(nsIContent* aPossibleChild) const;
-  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex,
+  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                            PRBool aNotify,
                            PRBool aDeepSetDocument);
   NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,

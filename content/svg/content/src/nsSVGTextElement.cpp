@@ -440,8 +440,7 @@ nsSVGTextElement::GetTextContentMetrics()
     return nsnull;
   }
   
-  nsCOMPtr<nsIPresShell> presShell;
-  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  nsIPresShell* presShell = mDocument->GetShellAt(0);
   if (!presShell) {
     NS_ERROR("no presshell");
     return nsnull;
