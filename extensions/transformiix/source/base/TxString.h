@@ -34,13 +34,13 @@
 #ifdef TX_EXE
 #include <iostream.h>
 typedef unsigned short UNICODE_CHAR;
-#define kNotFound -1
+const PRInt32 kNotFound = -1;
 #else
 #include "nsString.h"
 typedef PRUnichar UNICODE_CHAR;
 #endif
 
-class String : public TxObject
+class String
 {
 public:
     /*
@@ -88,8 +88,8 @@ public:
     void deleteChars(const PRUint32 aOffset, const PRUint32 aCount);
 
     /*
-     * Returns the character at aIndex. If the index is out of
-     * bounds, -1 will be returned.
+     * Returns the character at aIndex. Caller needs to check the
+     * index for out-of-bounds errors.
      */
     UNICODE_CHAR charAt(const PRUint32 aIndex) const;
 
@@ -102,7 +102,11 @@ public:
      * Returns index of first occurrence of aData.
      */
     PRInt32 indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset = 0) const;
-    PRInt32 indexOf(const String& data, const PRInt32 aOffset = 0) const;
+    PRInt32 indexOf(const String& aData, const PRInt32 aOffset = 0) const;
+
+    /*
+     * Returns index of last occurrence of aData.
+     */
     PRInt32 lastIndexOf(const UNICODE_CHAR aData, const PRInt32 aOffset = 0) const;
 
     /*
@@ -153,6 +157,9 @@ public:
     void toUpperCase();
 
 #ifdef TX_EXE
+    /*
+     * Assignment operator.
+     */
     String& operator = (const String& aSource);
 #else
     /*
@@ -173,11 +180,11 @@ private:
     /*
      * Make sure the string buffer can hold aCapacity characters.
      */
-    void ensureCapacity(const PRUint32 aCapacity);
+    MBool ensureCapacity(const PRUint32 aCapacity);
 
     /*
      * Allocate a new UNICODE_CHAR buffer and copy this string's
-     * buffer into it.
+     * buffer into it. Caller needs to free the buffer.
      */
     UNICODE_CHAR* toUnicode() const;
 
@@ -208,6 +215,26 @@ public:
 
 #ifdef TX_EXE
 ostream& operator << (ostream& aOutput, const String& aSource);
+
+inline UNICODE_CHAR String::charAt(const PRUint32 aIndex) const
+{
+  NS_ASSERTION(aIndex < mLength, "|charAt| out-of-range");
+  return mBuffer[aIndex];
+}
+
+inline MBool String::isEmpty() const
+{
+  return (mLength == 0);
+}
+
+inline PRUint32 String::length() const
+{
+  return mLength;
+}
+#else
+// txMozillaString.h contains all inline implementations for the 
+// Mozilla module.
+#include "txMozillaString.h"
 #endif
 
 #endif // txString_h__
