@@ -839,7 +839,6 @@ nsRuleNode::GetXULData(nsIStyleContext* aContext)
 const nsStyleStruct*
 nsRuleNode::GetSVGData(nsIStyleContext* aContext)
 {
-  printf("In GetSVGData!\n");
   nsCSSSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVG, mPresContext, aContext);
   ruleData.mSVGData = &svgData;
@@ -3627,7 +3626,6 @@ SetSVGOpacity(const nsCSSValue& aValue, float parentOpacity, float& opacity, PRB
   else if (aValue.GetUnit() == eCSSUnit_Number) {
     opacity = aValue.GetFloatValue();
   }
-  printf("Opacity set to %f\n",opacity);
 }
 
 const nsStyleStruct* 
@@ -3636,20 +3634,17 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  printf("NEW SVG CREATED!!!\n");
   nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
 
   nsStyleSVG* svg = nsnull;
   nsStyleSVG* parentSVG = svg;
   PRBool inherited = aInherited;
-  
-  const nsCSSSVG& svgData = NS_STATIC_CAST(const nsCSSSVG&, aData);
-  nsStyleSVG* aStartSVG = NS_STATIC_CAST(nsStyleSVG*, aStartStruct);
+  const nsCSSSVG& SVGData = NS_STATIC_CAST(const nsCSSSVG&, aData);
 
-  if (aStartSVG)
+  if (aStartStruct)
     // We only need to compute the delta between this computed data and our
     // computed data.
-    svg = new (mPresContext) nsStyleSVG(*aStartSVG);
+    svg = new (mPresContext) nsStyleSVG(*NS_STATIC_CAST(nsStyleSVG*,aStartStruct));
   else {
     if (aRuleDetail != eRuleFullMixed) {
       // No question. We will have to inherit. Go ahead and init
@@ -3657,8 +3652,6 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
       inherited = PR_TRUE;
       if (parentContext)
         parentSVG = (nsStyleSVG*)parentContext->GetStyleData(eStyleStruct_SVG);
-      printf("my parent{context,SVG} is %p,%p\n",parentContext.get(),parentSVG);
-      //parentSVG = nsnull;
       if (parentSVG)
         svg = new (mPresContext) nsStyleSVG(*parentSVG);
     }
@@ -3668,10 +3661,10 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
     svg = parentSVG = new (mPresContext) nsStyleSVG();
 
   // stroke: 
-  SetSVGPaint(svgData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
+  SetSVGPaint(SVGData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
   // stroke_width:
   nsStyleCoord coord;
-  if (SetCoord(svgData.mStrokeWidth, coord, coord,
+  if (SetCoord(SVGData.mStrokeWidth, coord, coord,
                SETCOORD_LP | SETCOORD_FACTOR,
                aContext, mPresContext, inherited)) {
     if (coord.GetUnit() == eStyleUnit_Factor) { // user units
@@ -3686,16 +3679,16 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
       svg->mStrokeWidth /= twipsPerPix;
     }
   }
-  else if (svgData.mStrokeWidth.GetUnit() == eCSSUnit_Inherit) {
+  else if (SVGData.mStrokeWidth.GetUnit() == eCSSUnit_Inherit) {
     svg->mStrokeWidth = parentSVG->mStrokeWidth;
     inherited = PR_TRUE;
   }
   // stroke_opacity:
-  SetSVGOpacity(svgData.mStrokeOpacity, parentSVG->mStrokeOpacity, svg->mStrokeOpacity, inherited);
+  SetSVGOpacity(SVGData.mStrokeOpacity, parentSVG->mStrokeOpacity, svg->mStrokeOpacity, inherited);
   // fill: 
-  SetSVGPaint(svgData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
+  SetSVGPaint(SVGData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
   // fill_opacity:
-  SetSVGOpacity(svgData.mFillOpacity, parentSVG->mFillOpacity, svg->mFillOpacity, inherited);
+  SetSVGOpacity(SVGData.mFillOpacity, parentSVG->mFillOpacity, svg->mFillOpacity, inherited);
   
 
   if (inherited)

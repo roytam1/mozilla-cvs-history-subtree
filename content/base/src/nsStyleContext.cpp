@@ -515,7 +515,6 @@ nsStyleContext::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
 #endif
 #ifdef MOZ_SVG
     case eStyleStruct_SVG:
-      printf("SetStyle called for svg!\n");
       mCachedStyleData.mInheritedData->mSVGData = (nsStyleSVG*)(const nsStyleSVG*)(&aStruct);
       break;
 #endif

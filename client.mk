@@ -363,6 +363,7 @@ SVG_BRANCH_FILES := \
 	content/shared/src/nsCSSProps.cpp \
 	content/shared/src/nsSVGAtoms.cpp \
 	content/shared/src/nsStyleStruct.cpp \
+	content/shared/src/nsStyleUtil.cpp \
 	dom/public/idl/Makefile.in \
 	dom/public/idl/makefile.win \
 	dom/public/nsIDOMClassInfo.h \

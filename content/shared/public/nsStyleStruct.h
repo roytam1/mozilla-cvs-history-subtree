@@ -94,14 +94,14 @@ enum nsStyleStructID {
 #define NS_STYLE_INHERIT_XUL              NS_STYLE_INHERIT_BIT(eStyleStruct_XUL)
 #define NS_STYLE_INHERIT_SVG              NS_STYLE_INHERIT_BIT(eStyleStruct_SVG)
 
-#define NS_STYLE_INHERIT_MASK             0x0fffff
+#define NS_STYLE_INHERIT_MASK             0x00ffffff
 
 // A bit to test whether or not a style context can be shared
 // by siblings.
-#define NS_STYLE_UNIQUE_CONTEXT           0x100000
+#define NS_STYLE_UNIQUE_CONTEXT           0x01000000
 
 // A bit to test whether or not we have any text decorations.
-#define NS_STYLE_HAS_TEXT_DECORATIONS     0x200000
+#define NS_STYLE_HAS_TEXT_DECORATIONS     0x02000000
 
 // The actual structs start here
 struct nsStyleStruct {
