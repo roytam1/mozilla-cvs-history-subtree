@@ -34,8 +34,32 @@
 #include "pratom.h"
 #include "nsIComponentManager.h"
 #include "nsICharRepresentable.h"
+#include "nsIUnicodeDecoder.h"
+#include "nsIUnicodeEncoder.h"
+#include "nsIUnicodeDecodeHelper.h"
+#include "nsIUnicodeEncodeHelper.h"
 #include "nsUCvMathSupport.h"
 #include "nsUCvMathDll.h"
+
+// Interface ID for our Unicode Decode Helper interface
+// {9CC39FF0-DD5D-11d2-8AAC-00600811A836}
+NS_DECLARE_ID(kIUnicodeDecodeHelperIID,
+  0x9cc39ff0, 0xdd5d, 0x11d2, 0x8a, 0xac, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
+
+// Class ID for our UnicodeDecoderHelper implementation
+// {9CC39FF1-DD5D-11d2-8AAC-00600811A836}
+NS_DECLARE_ID(kUnicodeDecodeHelperCID, 
+  0x9cc39ff1, 0xdd5d, 0x11d2, 0x8a, 0xac, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
+
+// Interface ID for our Unicode Encode Helper interface
+// {D8E6B700-CA9D-11d2-8AA9-00600811A836}
+NS_DECLARE_ID(kIUnicodeEncodeHelperIID,
+  0xd8e6b700, 0xca9d, 0x11d2, 0x8a, 0xa9, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
+
+// Class ID for our UnicodeEncoderHelper implementation
+// {1767FC50-CAA4-11d2-8AA9-00600811A836}
+NS_DECLARE_ID(kUnicodeEncodeHelperCID, 
+  0x1767fc50, 0xcaa4, 0x11d2, 0x8a, 0xa9, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
 
 #define DEFAULT_BUFFER_CAPACITY 16
 
