@@ -436,8 +436,7 @@ protected:
 
   // XXX blech
   void PostPlaceLine(nsBlockReflowState& aState,
-                     nsLineBox* aLine,
-                     nscoord aMaxElementWidth);
+                     nsLineBox* aLine);
 
   // XXX where to go
   PRBool ShouldJustifyLine(nsBlockReflowState& aState,

@@ -508,9 +508,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
   mMetrics.height = nscoord(0xdeadbeef);
   mMetrics.ascent = nscoord(0xdeadbeef);
   mMetrics.descent = nscoord(0xdeadbeef);
-  if (mMetrics.mComputeMEW) {
-    mMetrics.mMaxElementWidth = nscoord(0xdeadbeef);
-  }
 #endif
 
   mOuterReflowState.mSpaceManager->Translate(tx, ty);
@@ -552,24 +549,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
       nsFrame::ListTag(stdout, mFrame);
       printf(" metrics=%d,%d!\n", mMetrics.width, mMetrics.height);
     }
-    if (mMetrics.mComputeMEW &&
-        (nscoord(0xdeadbeef) == mMetrics.mMaxElementWidth)) {
-      printf("nsBlockReflowContext: ");
-      nsFrame::ListTag(stdout, mFrame);
-      printf(" didn't set max-element-size!\n");
-    }
-#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
-    // Note: there are common reflow situations where this *correctly*
-    // occurs; so only enable this debug noise when you really need to
-    // analyze in detail.
-    if (mMetrics.mComputeMEW &&
-        (mMetrics.mMaxElementWidth > mMetrics.width)) {
-      printf("nsBlockReflowContext: ");
-      nsFrame::ListTag(stdout, mFrame);
-      printf(": WARNING: maxElementWidth=%d > metrics=%d\n",
-             mMetrics.mMaxElementWidth, mMetrics.width);
-    }
-#endif
     if ((mMetrics.width == nscoord(0xdeadbeef)) ||
         (mMetrics.height == nscoord(0xdeadbeef)) ||
         (mMetrics.ascent == nscoord(0xdeadbeef)) ||
@@ -579,20 +558,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
       printf(" didn't set whad %d,%d,%d,%d!\n",
              mMetrics.width, mMetrics.height,
              mMetrics.ascent, mMetrics.descent);
-    }
-  }
-#endif
-#ifdef DEBUG
-  if (nsBlockFrame::gNoisyMaxElementWidth) {
-    nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-    if (!NS_INLINE_IS_BREAK_BEFORE(aFrameReflowStatus)) {
-      if (mMetrics.mComputeMEW) {
-        printf("  ");
-        nsFrame::ListTag(stdout, mFrame);
-        printf(": maxElementSize=%d wh=%d,%d\n",
-               mMetrics.mMaxElementWidth,
-               mMetrics.width, mMetrics.height);
-      }
     }
   }
 #endif
@@ -735,53 +700,6 @@ nsBlockReflowContext::PlaceBlock(const nsHTMLReflowState& aReflowState,
 
       // Now place the frame and complete the reflow process
       nsContainerFrame::FinishReflowChild(mFrame, mPresContext, &aReflowState, mMetrics, x, y, 0);
-
-      // Adjust the max-element-size in the metrics to take into
-      // account the margins around the block element.
-      // Do not allow auto margins to impact the max-element size
-      // since they are springy and don't really count!
-      if (mMetrics.mComputeMEW) {
-        nsMargin maxElemMargin;
-        const nsStyleSides &styleMargin = mStyleMargin->mMargin;
-        nsStyleCoord coord;
-        if (styleMargin.GetLeftUnit() == eStyleUnit_Coord)
-          maxElemMargin.left = styleMargin.GetLeft(coord).GetCoordValue();
-        else
-          maxElemMargin.left = 0;
-        if (styleMargin.GetRightUnit() == eStyleUnit_Coord)
-          maxElemMargin.right = styleMargin.GetRight(coord).GetCoordValue();
-        else
-          maxElemMargin.right = 0;
-
-        nscoord dummyXOffset;
-        // Base the margins on the max-element size
-        ComputeShrinkwrapMargins(mStyleMargin, mMetrics.mMaxElementWidth,
-                                 maxElemMargin, dummyXOffset);
-
-        mMetrics.mMaxElementWidth += maxElemMargin.left + maxElemMargin.right;
-      }
-
-      // do the same for the maximum width
-      if (mComputeMaximumWidth) {
-        nsMargin maxWidthMargin;
-        const nsStyleSides &styleMargin = mStyleMargin->mMargin;
-        nsStyleCoord coord;
-        if (styleMargin.GetLeftUnit() == eStyleUnit_Coord)
-          maxWidthMargin.left = styleMargin.GetLeft(coord).GetCoordValue();
-        else
-          maxWidthMargin.left = 0;
-        if (styleMargin.GetRightUnit() == eStyleUnit_Coord)
-          maxWidthMargin.right = styleMargin.GetRight(coord).GetCoordValue();
-        else
-          maxWidthMargin.right = 0;
-
-        nscoord dummyXOffset;
-        // Base the margins on the maximum width
-        ComputeShrinkwrapMargins(mStyleMargin, mMetrics.mMaximumWidth,
-                                 maxWidthMargin, dummyXOffset);
-
-        mMetrics.mMaximumWidth += maxWidthMargin.left + maxWidthMargin.right;
-      }
     }
     else {
       // Send the DidReflow() notification, but don't bother placing

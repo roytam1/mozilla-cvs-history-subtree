@@ -550,8 +550,6 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
 {
   mMinWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
-
-  // XXX CLEAR CACHED WIDTHS IN LINES
 }
 
 /* virtual */ nscoord
@@ -571,6 +569,8 @@ nsBlockFrame::GetMinWidth()
                         nsLayoutUtils::MIN_WIDTH);
     } else {
       // XXX WRITE ME
+      // Refactor nsLineLayout::VerticalAlignLine's computation of
+      // maxElementWidth into something else.
     }
     if (line_result > result)
       result = line_result;
@@ -1242,22 +1242,6 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
     // Use style defined width
     aMetrics.width = borderPadding.left + aReflowState.mComputedWidth +
       borderPadding.right;
-
-    if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-      if (GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Percent) {
-        // for percentage widths, |HaveAutoWidth| is sometimes true and
-        // sometimes false (XXXldb check that this is really true), and
-        // we want the max-element-width to be the same either way
-        // (i.e., whether it's an uncontsrained reflow or a fixed-width
-        // reflow).  Thus, do the same thing we do below.
-        maxElementWidth = aState.mMaxElementWidth +
-          borderPadding.left + borderPadding.right;
-      } else {
-        // When style defines the width use it for the max-element-width
-        // because we can't shrink any smaller.
-        maxElementWidth = aMetrics.width;
-      }
-    }
   }
   else {
     nscoord computedWidth;
@@ -1287,18 +1271,6 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
           computedWidth = xmost;
       }
       computedWidth += borderPadding.right;
-    }
-
-    if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-      // Add in border and padding dimensions to already computed
-      // max-element-width values.
-      maxElementWidth = aState.mMaxElementWidth +
-        borderPadding.left + borderPadding.right;
-      if (computedWidth < maxElementWidth) {
-        // XXXldb It's *compute* max-element-width, not *change size
-        // based on* max-element-width...
-        computedWidth = maxElementWidth;
-      }
     }
 
     // Apply min/max values
@@ -1451,62 +1423,12 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
   aMetrics.ascent = mAscent;
   aMetrics.descent = aMetrics.height - aMetrics.ascent;
 
-  if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-    // Store away the final value
-    aMetrics.mMaxElementWidth = maxElementWidth;
-#ifdef DEBUG
-    if (gNoisyMaxElementWidth) {
-      IndentBy(stdout, gNoiseIndent);
-      printf ("nsBlockFrame::CFS: %p returning MEW %d\n", 
-              NS_STATIC_CAST(void*, this), aMetrics.mMaxElementWidth);
-    }
-#endif
-  }
-
 #ifdef DEBUG_blocks
   if (CRAZY_WIDTH(aMetrics.width) || CRAZY_HEIGHT(aMetrics.height)) {
     ListTag(stdout);
     printf(": WARNING: desired:%d,%d\n", aMetrics.width, aMetrics.height);
   }
-  if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH) &&
-      (maxElementWidth > aMetrics.width))) {
-    ListTag(stdout);
-    printf(": WARNING: max-element-width:%d desired:%d,%d maxSize:%d,%d\n",
-           maxElementWidth, aMetrics.width, aMetrics.height,
-           aState.mReflowState.availableWidth,
-           aState.mReflowState.availableHeight);
-  }
 #endif
-#ifdef DEBUG
-  if (gNoisyMaxElementWidth) {
-    if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-      IndentBy(stdout, gNoiseIndent);
-      if (NS_UNCONSTRAINEDSIZE == aState.mReflowState.availableWidth) {
-        printf("PASS1 ");
-      }
-      ListTag(stdout);
-      printf(": max-element-width:%d desired:%d,%d maxSize:%d,%d\n",
-             maxElementWidth, aMetrics.width, aMetrics.height,
-             aState.mReflowState.availableWidth,
-             aState.mReflowState.availableHeight);
-    }
-  }
-#endif
-
-  // If we're requested to update our maximum width, then compute it
-  if (aState.GetFlag(BRS_COMPUTEMAXWIDTH)) {
-    if (!HaveAutoWidth(aReflowState) &&
-        aReflowState.mStylePosition->mWidth.GetUnit() != eStyleUnit_Percent) {
-      aMetrics.mMaximumWidth = aMetrics.width;
-    } else {
-      // We need to add in for the right border/padding
-      // XXXldb Why right and not left?
-      aMetrics.mMaximumWidth = aState.mMaximumWidth + borderPadding.right;
-    }
-#ifdef NOISY_MAXIMUM_WIDTH
-    printf("nsBlockFrame::ComputeFinalSize block %p setting aMetrics.mMaximumWidth to %d\n", this, aMetrics.mMaximumWidth);
-#endif
-  }
 
   ComputeCombinedArea(aReflowState, aMetrics);
 }
@@ -2789,18 +2711,6 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
 #endif
           aState.UpdateMaximumWidth(aLine->mMaximumWidth);
         }
-        if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH))
-        {
-#ifdef DEBUG
-          if (gNoisyMaxElementWidth) {
-            IndentBy(stdout, gNoiseIndent);
-            printf("nsBlockFrame::ReflowLine block %p line %p setting aLine.mMaxElementWidth to %d\n", 
-                   NS_STATIC_CAST(void*, this), NS_STATIC_CAST(void*, aLine.get()),
-                   aLine->mMaxElementWidth);
-          }
-#endif
-          aState.UpdateMaxElementWidth(aLine->mMaxElementWidth);
-        }
       }
     }
 
@@ -3638,17 +3548,13 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
 #endif
         
         // Post-process the "line"
-        nscoord maxElementWidth = 0;
-        if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-          maxElementWidth = brc.GetMaxElementWidth();
-        }
         // If we asked the block to update its maximum width, then record the
         // updated value in the line, and update the current maximum width
         if (aState.GetFlag(BRS_COMPUTEMAXWIDTH)) {
           aLine->mMaximumWidth = brc.GetMaximumWidth();
           aState.UpdateMaximumWidth(aLine->mMaximumWidth);
         }
-        PostPlaceLine(aState, aLine, maxElementWidth);
+        PostPlaceLine(aState, aLine);
         
         // If the block frame that we just reflowed happens to be our
         // first block, then its computed ascent is ours
@@ -4358,7 +4264,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
     aLineLayout.AddBulletFrame(mBullet, metrics);
     addedBullet = PR_TRUE;
   }
-  nscoord maxElementWidth;
   aLineLayout.VerticalAlignLine(aLine, &maxElementWidth);
   // Our ascent is the ascent of our first line (but if this line is all
   // whitespace we'll correct things in |ReflowBlockFrame|).
@@ -4524,7 +4429,7 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
     }
 
   } else {
-    PostPlaceLine(aState, aLine, maxElementWidth);
+    PostPlaceLine(aState, aLine);
   }
 
   // Add the already placed current-line floats to the line
@@ -4588,25 +4493,8 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 
 void
 nsBlockFrame::PostPlaceLine(nsBlockReflowState& aState,
-                            nsLineBox* aLine,
-                            nscoord aMaxElementWidth)
+                            nsLineBox* aLine)
 {
-  // Update max-element-width
-  if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-    aState.UpdateMaxElementWidth(aMaxElementWidth);
-    // We also cache the max element width in the line. This is needed for
-    // incremental reflow
-    aLine->mMaxElementWidth = aMaxElementWidth;
-#ifdef DEBUG
-    if (gNoisyMaxElementWidth) {
-      IndentBy(stdout, gNoiseIndent);
-      printf ("nsBlockFrame::PostPlaceLine: %p setting line %p MEW %d\n", 
-              NS_STATIC_CAST(void*, this), NS_STATIC_CAST(void*, aLine),
-              aMaxElementWidth);
-    }
-#endif
-  }
-
   // If this is an unconstrained reflow, then cache the line width in the
   // line. We'll need this during incremental reflow if we're asked to
   // calculate the maximum width

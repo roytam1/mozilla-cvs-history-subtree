@@ -218,9 +218,6 @@ public:
   // being N^2.
   nsFloatCacheFreeList mBelowCurrentLineFloats;
 
-  nscoord mMaxElementWidth;
-  nscoord mMaximumWidth;
-
   nscoord mMinLineHeight;
 
   PRInt32 mLineNumber;

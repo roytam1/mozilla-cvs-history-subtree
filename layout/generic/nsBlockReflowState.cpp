@@ -147,18 +147,6 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
   mPrevChild = nsnull;
   mCurrentLine = aFrame->end_lines();
 
-  SetFlag(BRS_COMPUTEMAXELEMENTWIDTH, aMetrics.mComputeMEW);
-#ifdef DEBUG
-  if (nsBlockFrame::gNoisyMaxElementWidth) {
-    nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-    printf("BRS: setting compute-MEW to %d\n", aMetrics.mComputeMEW);
-  }
-#endif
-  mMaxElementWidth = 0;
-  SetFlag(BRS_COMPUTEMAXWIDTH, 
-          (NS_REFLOW_CALC_MAX_WIDTH == (aMetrics.mFlags & NS_REFLOW_CALC_MAX_WIDTH)));
-  mMaximumWidth = 0;
-
   mMinLineHeight = nsHTMLReflowState::CalcLineHeight(mPresContext,
                                                      aReflowState.rendContext,
                                                      aReflowState.frame);

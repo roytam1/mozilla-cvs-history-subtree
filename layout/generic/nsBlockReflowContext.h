@@ -57,9 +57,7 @@ struct nsBlockHorizontalAlign;
 class nsBlockReflowContext {
 public:
   nsBlockReflowContext(nsPresContext* aPresContext,
-                       const nsHTMLReflowState& aParentRS,
-                       PRBool aComputeMaxElementWidth,
-                       PRBool aComputeMaximumWidth);
+                       const nsHTMLReflowState& aParentRS);
   ~nsBlockReflowContext() { }
 
   nsresult ReflowBlock(const nsRect&       aSpace,
@@ -97,14 +95,6 @@ public:
     return mMetrics;
   }
 
-  nscoord GetMaxElementWidth() const {
-    return mMetrics.mMaxElementWidth;
-  }
-  
-  nscoord GetMaximumWidth() const {
-    return mMetrics.mMaximumWidth;
-  }
-
   /**
    * Computes the collapsed top margin for a block whose reflow state is in aRS.
    * The computed margin is added into aMargin.
@@ -140,7 +130,6 @@ protected:
   nscoord mX, mY;
   nsHTMLReflowMetrics mMetrics;
   nsCollapsingMargin mTopMargin;
-  PRPackedBool mComputeMaximumWidth;
 };
 
 #endif /* nsBlockReflowContext_h___ */
