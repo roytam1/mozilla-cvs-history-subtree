@@ -11,6 +11,7 @@ use vars qw( @ISA @EXPORT );
 use Mac::StandardFile;
 use Mac::Processes;
 use Mac::Events;
+use Mac::Files;
 use Cwd;
 use File::Path;
 use File::Copy;
@@ -147,8 +148,17 @@ sub EmptyTree($)
 	foreach $sub (readdir(DIR))
 	{
 		my $fullpathname = $root.$sub; # -f, -d only work on full paths
-		if (-d $fullpathname) #if it's a directory (returns true for the alias of a directory, false for a broken alias)
+
+		# Don't call empty tree for the alias of a directory.
+		# -d returns true for the alias of a directory, false for a broken alias)
+
+		if (-d $fullpathname)
 		{
+			if (-l $fullpathname)
+			{
+				print "еее $fullpathname is an alias to a directory. Not emptying!\n";
+				next;
+			}
 			EmptyTree($fullpathname.":");
 			if ($sub eq "CVS")
 			{
@@ -209,6 +219,7 @@ sub BuildDist()
 	
 	#MAC_COMMON
 	InstallFromManifest(":mozilla:build:mac:MANIFEST",								"$distdirectory:mac:common:");
+	InstallFromManifest(":mozilla:lib:mac:NSRuntime:include:MANIFEST",				"$distdirectory:mac:common:");
 	InstallFromManifest(":mozilla:lib:mac:NSStdLib:include:MANIFEST",				"$distdirectory:mac:common:");
 	InstallFromManifest(":mozilla:lib:mac:MacMemoryAllocator:include:MANIFEST",		"$distdirectory:mac:common:");
 	InstallFromManifest(":mozilla:lib:mac:Misc:MANIFEST",							"$distdirectory:mac:common:");
@@ -233,6 +244,9 @@ sub BuildDist()
     InstallFromManifest(":mozilla:nsprpub:lib:msgc:include:MANIFEST",				"$distdirectory:nspr:");
 
 	#INTL
+	#CHARDET
+	InstallFromManifest(":mozilla:intl:chardet:public:MANIFEST",				"$distdirectory:chardet");
+
 	#UCONV
 	InstallFromManifest(":mozilla:intl:uconv:public:MANIFEST",						"$distdirectory:uconv:");
 	InstallFromManifest(":mozilla:intl:uconv:ucvlatin:MANIFEST",					"$distdirectory:uconv:");
@@ -265,16 +279,21 @@ sub BuildDist()
     InstallFromManifest(":mozilla:modules:libreg:include:MANIFEST",					"$distdirectory:libreg:");
 
 	#XPCOM
-	InstallFromManifest(":mozilla:xpcom:idl:MANIFEST",								"$distdirectory:idl:");
-	EmptyTree("$distdirectory:xpcom:");#// XXX temporary - needed during changeover only.
-    InstallFromManifest(":mozilla:xpcom:public:MANIFEST",							"$distdirectory:xpcom:");
-    !$main::USE_XPIDL && InstallFromManifest(":mozilla:xpcom:public:MANIFEST_TEMP","$distdirectory:xpcom:"); #// XXX remove
-	InstallFromManifest(":mozilla:xpcom:src:MANIFEST",								"$distdirectory:xpcom:");
-	InstallFromManifest(":mozilla:xpcom:libxpt:public:MANIFEST",					"$distdirectory:xpcom:");
-	InstallFromManifest(":mozilla:xpcom:libxpt:xptinfo:public:MANIFEST",			"$distdirectory:xpcom:");
-	InstallFromManifest(":mozilla:xpcom:libxpt:xptcall:public:MANIFEST",			"$distdirectory:xpcom:");
-	$main::USE_XPIDL && #// XXX remove
 	BuildOneProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp", 						"headers", "", 0, 0, 0);
+
+	InstallFromManifest(":mozilla:xpcom:idl:MANIFEST",								"$distdirectory:idl:");
+    InstallFromManifest(":mozilla:xpcom:public:MANIFEST",							"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:base:MANIFEST",								"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:components:MANIFEST",						"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:ds:MANIFEST",								"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:io:MANIFEST",								"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:threads:MANIFEST",							"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:proxy:public:MANIFEST",						"$distdirectory:xpcom:");
+
+	InstallFromManifest(":mozilla:xpcom:reflect:xptinfo:public:MANIFEST",			"$distdirectory:xpcom:");
+	InstallFromManifest(":mozilla:xpcom:reflect:xptcall:public:MANIFEST",			"$distdirectory:xpcom:");
+
+	InstallFromManifest(":mozilla:xpcom:typelib:xpt:public:MANIFEST",					"$distdirectory:xpcom:");
 	
 	#ZLIB
     InstallFromManifest(":mozilla:modules:zlib:src:MANIFEST",						"$distdirectory:zlib:");
@@ -301,6 +320,8 @@ sub BuildDist()
 	
 	#XPCONNECT
 	InstallFromManifest(":mozilla:js:src:xpconnect:public:MANIFEST",				"$distdirectory:xpconnect:");
+	InstallFromManifest(":mozilla:js:src:xpconnect:idl:MANIFEST",					"$distdirectory:idl:");
+	BuildOneProject(":mozilla:js:macbuild:XPConnectIDL.mcp", 						"headers", "", 0, 0, 0);
 	
 	#CAPS
 	InstallFromManifest(":mozilla:caps:public:MANIFEST",							"$distdirectory:caps:");
@@ -360,10 +381,6 @@ sub BuildDist()
     InstallFromManifest(":mozilla:network:protocol:sockstub:MANIFEST",				"$distdirectory:network:");
     InstallFromManifest(":mozilla:network:module:MANIFEST",							"$distdirectory:network:module");
 
-	#BASE
-    InstallFromManifest(":mozilla:base:src:MANIFEST",								"$distdirectory:base:");
-    InstallFromManifest(":mozilla:base:public:MANIFEST",							"$distdirectory:base:");
-
 	#WALLET
     InstallFromManifest(":mozilla:extensions:wallet:public:MANIFEST",				"$distdirectory:wallet:");
 
@@ -417,14 +434,12 @@ sub BuildDist()
 
     #RDF
     InstallFromManifest(":mozilla:rdf:base:idl:MANIFEST",							"$distdirectory:idl:");
-	EmptyTree("$distdirectory:rdf:");#// XXX temporary - needed during changeover only.
+	#EmptyTree("$distdirectory:rdf:");#// XXX temporary - needed during changeover only.
     InstallFromManifest(":mozilla:rdf:base:public:MANIFEST",						"$distdirectory:rdf:");
-    !$main::USE_XPIDL && InstallFromManifest(":mozilla:rdf:base:public:MANIFEST_TEMP","$distdirectory:rdf:"); #// XXX remove
     InstallFromManifest(":mozilla:rdf:util:public:MANIFEST",						"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:content:public:MANIFEST",						"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:datasource:public:MANIFEST",					"$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:build:MANIFEST",								"$distdirectory:rdf:");
-    $main::USE_XPIDL && #// remove
 	BuildOneProject(":mozilla:rdf:macbuild:RDFIDL.mcp", 							"headers", "", 0, 0, 0);
     
     #BRPROF
@@ -465,7 +480,16 @@ sub BuildDist()
 	# XPFE COMPONENTS
    InstallFromManifest(":mozilla:xpfe:components:public:MANIFEST",					"$distdirectory:xpfe:components");
    # find
-   InstallFromManifest(":mozilla:xpfe:components:find:public:MANIFEST",				"$distdirectory:xpfe:components:find");
+   InstallFromManifest(":mozilla:xpfe:components:find:public:MANIFEST",				"$distdirectory:xpfe:components");
+   # history
+   InstallFromManifest(":mozilla:xpfe:components:history:public:MANIFEST_IDL",		"$distdirectory:idl:");
+   BuildOneProject(":mozilla:xpfe:components:history:macbuild:historyIDL.mcp", 		"headers", "", 0, 0, 0);
+   # sample
+   InstallFromManifest(":mozilla:xpfe:components:sample:public:MANIFEST",			"$distdirectory:xpfe:components");
+   # ucth
+   InstallFromManifest(":mozilla:xpfe:components:ucth:public:MANIFEST",				"$distdirectory:xpfe:components");
+   # xfer
+   InstallFromManifest(":mozilla:xpfe:components:xfer:public:MANIFEST",				"$distdirectory:xpfe:components");
 	
 	# XPAPPS
    InstallFromManifest(":mozilla:xpfe:AppCores:public:MANIFEST",					"$distdirectory:xpfe:");
@@ -487,6 +511,7 @@ sub BuildDist()
    InstallFromManifest(":mozilla:mailnews:imap:public:MANIFEST",					"$distdirectory:mailnews:");
    InstallFromManifest(":mozilla:mailnews:mime:public:MANIFEST",					"$distdirectory:mailnews:");
    InstallFromManifest(":mozilla:mailnews:news:public:MANIFEST",					"$distdirectory:mailnews:");
+   InstallFromManifest(":mozilla:mailnews:addrbook:public:MANIFEST",				"$distdirectory:mailnews:");
 
 	print("--- Dist export complete ----\n")
 }
@@ -589,14 +614,24 @@ sub BuildCommonProjects()
 	#// for NSRuntime under Carbon, don't use BuildOneProject to alias the shlb or the xsym since the 
 	#// target names differ from the output names. Make them by hand instead.
 	if ( $main::CARBON ) {
-		BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntimeCarbon$D.shlb", "", 0, 0, 0);
+		if ($main::PROFILE) {
+			BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntimeCarbonProfil.shlb", "", 0, 0, 0);
+		}
+		else {
+			BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntimeCarbon$D.shlb", "", 0, 0, 0);
+		}
 		MakeAlias(":mozilla:lib:mac:NSRuntime:NSRuntime$D.shlb", ":mozilla:dist:viewer_debug:Essential Files:");
 		if ( $main::ALIAS_SYM_FILES ) {
 			MakeAlias(":mozilla:lib:mac:NSRuntime:NSRuntime$D.shlb.xSYM", ":mozilla:dist:viewer_debug:Essential Files:");		
 		}
 	}
 	else {
-		BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntime$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
+		if ($main::PROFILE) {
+			BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntimeProfil.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
+		}
+		else {
+			BuildOneProject(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp",					"NSRuntime$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
+		}
 	}
 	
 	BuildProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",			"MoreFiles.o");
@@ -621,7 +656,6 @@ sub BuildCommonProjects()
 
 	BuildOneProject(":mozilla:xpcom:macbuild:xpcomPPC.mcp",						"xpcom$D.shlb", "xpcom.toc", 1, $main::ALIAS_SYM_FILES, 0);
 	
-	$main::USE_XPIDL && #// XXX remove
 	BuildOneProject(":mozilla:xpcom:macbuild:XPCOMIDL.mcp",						"xpcom.xpt", "", 1, 0, 1);
 
 	BuildOneProject(":mozilla:js:macbuild:JavaScript.mcp",						"JavaScript$D.shlb", "JavaScript.toc", 1, $main::ALIAS_SYM_FILES, 0);
@@ -636,15 +670,12 @@ sub BuildCommonProjects()
 	
 	BuildOneProject(":mozilla:modules:oji:macbuild:oji.mcp",					"oji$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
 
-	BuildOneProject(":mozilla:base:macbuild:base.mcp",							"base$D.shlb", "base.toc", 1, $main::ALIAS_SYM_FILES, 0);
-
 	BuildOneProject(":mozilla:modules:libpref:macbuild:libpref.mcp",			"libpref$D.shlb", "libpref.toc", 1, $main::ALIAS_SYM_FILES, 0);
 
 	BuildOneProject(":mozilla:profile:macbuild:profile.mcp",					"profile$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 1);
 
-	BuildOneProject(":mozilla:xpcom:libxpt:macbuild:libxpt.mcp",				"libxpt$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
-
-	BuildOneProject(":mozilla:js:macbuild:XPConnect.mcp",						"XPConnect$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 0);
+	BuildOneProject(":mozilla:js:macbuild:XPConnect.mcp",						"XPConnect$D.shlb", "", 1, $main::ALIAS_SYM_FILES, 1);
+	BuildOneProject(":mozilla:js:macbuild:XPConnectIDL.mcp", 					"xpconnect.xpt", "", 1, 0, 1);
 
 	BuildOneProject(":mozilla:modules:libutil:macbuild:libutil.mcp",			"libutil$D.shlb", "libutil.toc", 1, $main::ALIAS_SYM_FILES, 0);
 
@@ -679,6 +710,8 @@ sub BuildInternationalProjects()
 
 	# $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
 	my($D) = $main::DEBUG ? "Debug" : "";
+
+	BuildOneProject(":mozilla:intl:chardet:macbuild:chardet.mcp",				"chardet$D.shlb", "chardet.toc", 1, $main::ALIAS_SYM_FILES, 1);
 
 	BuildOneProject(":mozilla:intl:uconv:macbuild:uconv.mcp",					"uconv$D.shlb", "uconv.toc", 1, $main::ALIAS_SYM_FILES, 1);
 
@@ -728,9 +761,15 @@ sub BuildFolderResourceAliases($$)
 	
 	# make aliases for each one into the dest directory
 	print("Placing aliases to all files from $src_dir in $dest_dir\n");
-	for ( @resource_files ) {
+	for ( @resource_files )
+	{
 		next if $_ eq "CVS";
-		
+		#print("    Doing $_\n");
+		if (-l $src_dir.$_)
+		{
+			print("   $_ is an alias\n");
+			next;
+		}
 		my($file_name) = $src_dir . $_;	
 		MakeAlias($file_name, $dest_dir);
 	}
@@ -766,7 +805,7 @@ sub MakeResourceAliases()
 	MakeAlias(":mozilla:webshell:tests:viewer:resources:viewer.properties",				"$resource_dir");
 	MakeAlias(":mozilla:intl:uconv:src:charsetalias.properties",						"$resource_dir");
 	MakeAlias(":mozilla:intl:uconv:src:maccharset.properties",							"$resource_dir");
-	MakeAlias(":mozilla:extensions:wallet:src:wallet.properties",				"$resource_dir");
+	MakeAlias(":mozilla:extensions:wallet:src:wallet.properties",						"$resource_dir");
 
 	my($html_dir) = "$resource_dir" . "html:";
 	MakeAlias(":mozilla:layout:html:base:src:broken-image.gif",							"$html_dir");
@@ -780,7 +819,6 @@ sub MakeResourceAliases()
 	my($rdf_dir) = "$resource_dir" . "rdf:";
 	BuildFolderResourceAliases(":mozilla:rdf:resources:",								"$rdf_dir");
 
-	$main::USE_XPIDL && #// XXX remove
 	BuildOneProject(":mozilla:rdf:macbuild:RDFIDL.mcp",									"rdf.xpt", "", 1, 0, 1);
 	
 	my($profile_dir) = "$resource_dir" . "profile:";
@@ -813,6 +851,7 @@ sub MakeResourceAliases()
 		my($mailnews_dir) = "$resource_dir" . "mailnews";
 		
 		InstallResources(":mozilla:mailnews:ui:messenger:resources:MANIFEST",		"$mailnews_dir:messenger:", 0);
+		InstallResources(":mozilla:mailnews:mime:resources:MANIFEST",				"$mailnews_dir:messenger:", 0);	
 		InstallResources(":mozilla:mailnews:mime:emitters:resources:MANIFEST",		"$mailnews_dir:messenger:", 0);	
 		InstallResources(":mozilla:mailnews:ui:compose:resources:MANIFEST",			"$mailnews_dir:compose:", 0);	
 		InstallResources(":mozilla:mailnews:ui:preference:resources:MANIFEST",		"$mailnews_dir:preference:", 0);
@@ -826,6 +865,9 @@ sub MakeResourceAliases()
 		
 	# Install XPFE component resources
 	InstallResources(":mozilla:xpfe:components:find:resources:MANIFEST",					"$samples_dir");
+	InstallResources(":mozilla:xpfe:components:history:resources:MANIFEST",					"$samples_dir");
+	InstallResources(":mozilla:xpfe:components:ucth:resources:MANIFEST",					"$samples_dir");
+	InstallResources(":mozilla:xpfe:components:xfer:resources:MANIFEST",					"$samples_dir");
 
 	print("--- Resource copying complete ----\n")
 }
@@ -972,7 +1014,7 @@ sub BuildXPAppProjects()
 
 	# Components
 	BuildOneProject(":mozilla:xpfe:components:find:macbuild:FindComponent.mcp",	"FindComponent$D.shlb", "FindComponent.toc", 1, $main::ALIAS_SYM_FILES, 1);
-	
+	BuildOneProject(":mozilla:xpfe:components:history:macbuild:history.mcp", "history$D.shlb", "historyComponent.toc", 1, $main::ALIAS_SYM_FILES, 1);
 	
 	# Applications
 	BuildOneProject(":mozilla:xpfe:appshell:macbuild:AppShell.mcp",				"AppShell$D.shlb", "AppShell.toc", 1, $main::ALIAS_SYM_FILES, 0);
@@ -1011,6 +1053,8 @@ sub BuildMailNewsProjects()
 	BuildOneProject(":mozilla:mailnews:imap:macbuild:msgimap.mcp",						"MsgImap$D.shlb", "MsgImap.toc", 1, $main::ALIAS_SYM_FILES, 1);
 
 	BuildOneProject(":mozilla:mailnews:news:macbuild:msgnews.mcp",						"MsgNews$D.shlb", "MsgNews.toc", 1, $main::ALIAS_SYM_FILES, 1);
+
+	BuildOneProject(":mozilla:mailnews:addrbook:macbuild:msgAddrbook.mcp",				"MsgAddrbook$D.shlb", "MsgAddrbook.toc", 1, $main::ALIAS_SYM_FILES, 1);
 
 	BuildOneProject(":mozilla:mailnews:mime:macbuild:mime.mcp",							"Mime$D.shlb", "Mime.toc", 1, $main::ALIAS_SYM_FILES, 1);
 
