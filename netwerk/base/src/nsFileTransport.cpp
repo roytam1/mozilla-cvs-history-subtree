@@ -492,21 +492,6 @@ nsFileTransport::Run(void)
     return NS_OK;
 }
 
-/*
-static NS_METHOD
-nsWriteToFile(nsIInputStream* in,
-              void* closure,
-              const char* fromRawSegment,
-              PRUint32 toOffset,
-              PRUint32 count,
-              PRUint32 *writeCount)
-{
-    nsIOutputStream* outStr = (nsIOutputStream*)closure;
-    nsresult rv = outStr->Write(fromRawSegment, count, writeCount);
-    return rv;
-}
-*/
-
 void
 nsFileTransport::Process(void)
 {
