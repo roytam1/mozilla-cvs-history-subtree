@@ -75,7 +75,7 @@ ExprResult* FilterExpr::evaluate(txIEvalContext* aContext)
         // We can't filter a non-nodeset
         String err("Expecting nodeset as result of: ");
         expr->toString(err);
-        aContext->receiveError(err, txLevelError);
+        aContext->receiveError(err, NS_ERROR_XPATH_EVAL_FAILED);
         delete exprResult;
         return new NodeSet;
     }

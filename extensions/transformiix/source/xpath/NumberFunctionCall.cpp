@@ -148,6 +148,6 @@ ExprResult* NumberFunctionCall::evaluate(txIEvalContext* aContext)
     }
 
     String err("Internal error");
-    aContext->receiveError(err, txLevelError);
+    aContext->receiveError(err, NS_ERROR_UNEXPECTED);
     return new StringResult("error");
 }

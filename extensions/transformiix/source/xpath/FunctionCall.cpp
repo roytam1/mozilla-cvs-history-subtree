@@ -142,7 +142,7 @@ NodeSet* FunctionCall::evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext)
 
     if (exprResult->getResultType() != ExprResult::NODESET) {
         String err("NodeSet expected as argument");
-        aContext->receiveError(err, txLevelError);
+        aContext->receiveError(err, NS_ERROR_XPATH_EVAL_FAILED);
         delete exprResult;
         return 0;
     }
@@ -161,7 +161,7 @@ MBool FunctionCall::requireParams (int paramCountMin,
     if ((argc < paramCountMin) || (argc > paramCountMax)) {
         String err(INVALID_PARAM_COUNT);
         toString(err);
-        aContext->receiveError(err, txLevelError);
+        aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
         return MB_FALSE;
     }
     return MB_TRUE;
@@ -176,7 +176,7 @@ MBool FunctionCall::requireParams(int paramCountMin, txIEvalContext* aContext)
     if (argc < paramCountMin) {
         String err(INVALID_PARAM_COUNT);
         toString(err);
-        aContext->receiveError(err, txLevelError);
+        aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
         return MB_FALSE;
     }
     return MB_TRUE;

@@ -76,11 +76,11 @@ MBool txForwardContext::isStripSpaceAllowed(Node* aNode)
     return mInner ? mInner->isStripSpaceAllowed(aNode) : MB_FALSE;
 }
 
-void txForwardContext::receiveError(const String& aMsg, txErrorLevel aLevel)
+void txForwardContext::receiveError(const String& aMsg, nsresult aRes)
 {
     if (mInner) {
         String error("forwarded error: ");
         error.append(aMsg);
-        mInner->receiveError(error, aLevel);
+        mInner->receiveError(error, aRes);
     }
 }

@@ -42,13 +42,6 @@
 #include "Expr.h"
 #include "txError.h"
 
-enum txErrorLevel
-{
-    txLevelError,
-    txLevelWarning,
-    txLevelFatal
-};
-
 class txIParseContext
 {
 public:
@@ -56,7 +49,7 @@ public:
     virtual nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID) = 0;
     virtual nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                          FunctionCall*& aFunction) = 0;
-    virtual void receiveError(const String& aMsg, txErrorLevel aLevel) = 0;
+    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
 };
 
 class txIMatchContext
@@ -66,14 +59,14 @@ public:
     virtual nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
                                  ExprResult*& aResult) = 0;
     virtual MBool isStripSpaceAllowed(Node* aNode) = 0;
-    virtual void receiveError(const String& aMsg, txErrorLevel aLevel) = 0;
+    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
 };
 
 #define TX_DECL_MATCH_CONTEXT \
     nsresult getVariable(PRInt32 aNamespace, txAtom* aLName, \
                          ExprResult*& aResult); \
     MBool isStripSpaceAllowed(Node* aNode); \
-    void receiveError(const String& aMsg, txErrorLevel aLevel)
+    void receiveError(const String& aMsg, nsresult aRes)
 
 class txIEvalContext : public txIMatchContext
 {

@@ -134,10 +134,12 @@ ExprResult* PathExpr::evaluate(txIEvalContext* aContext)
                 nodes = (NodeSet*)result;
                 break;
             case ExprResult::TREE_FRAGMENT:
-                aContext->receiveError(RTF_INVALID_OP, txLevelError);
+                aContext->receiveError(RTF_INVALID_OP,
+                                       NS_ERROR_XPATH_INVALID_ARG);
                 return 0;
             default:
-                aContext->receiveError(NODESET_EXPECTED, txLevelError);
+                aContext->receiveError(NODESET_EXPECTED,
+                                       NS_ERROR_XPATH_INVALID_ARG);
                 return 0;
         }
     }
