@@ -18,8 +18,15 @@
  */
 
 #include "nsURL.h"
+#include "plstr.h"
 
 static const PRInt32 DEFAULT_PORT = -1;
+
+NS_NET
+nsICoolURL* CreateURL(const char* i_URL)
+{
+    return new nsURL(i_URL);
+}
 
 nsURL::nsURL(const char* i_URL):m_Port(DEFAULT_PORT),mRefCnt(0)
 {
@@ -39,9 +46,9 @@ nsURL::nsURL(const char* i_URL):m_Port(DEFAULT_PORT),mRefCnt(0)
         *m_URL = '\0';
     }
 
-    for (int i=0, i<TOTAL_PARTS, ++i) 
+    for (int i=0; i<TOTAL_PARTS; ++i) 
     {
-        for (int j=0, j<TOTAL_PARTS, ++j)
+        for (int j=0; j<2; ++j)
         {
             m_Position[i][j] = -1;
         }
@@ -63,28 +70,54 @@ nsURL::~nsURL()
 NS_IMPL_ADDREF(nsURL);
 
 PRBool
-nsURL::Equals(const nsICoolURL* i_URL) const
+nsURL::Equals(const nsIURI* i_URI) const
 {
     return PR_FALSE;
 }
 
 nsresult
-nsURL::Extract(const char* o_OutputString, nsURL::Part i_id)
+nsURL::Extract(const char* *o_OutputString, nsURL::Part i_id) const
 {
+	int i = (int) i_id;
+	if (o_OutputString)
+	{
+		*o_OutputString = new char(m_Position[i][1]+1);
+        //if (!*o_OutputString)
+        //    return NS_ERROR; //TODO
+
+        char* dest = (char*) *o_OutputString;
+        char* src = m_URL + m_Position[i][0];
+
+		for (int j=0; j<m_Position[i][1]; ++j)
+		{
+            *dest++ = *src++;
+		}
+        *dest = '\0';
+        return NS_OK;
+	}
+    return NS_OK; //TODO error
 }
 
 nsresult
 nsURL::GetDocument(const char* *o_Data)
 {
+    NS_PRECONDITION( (0 != m_URL), "GetDocument called on empty url!");
+    *o_Data = "Here is your data";
+    return NS_OK;
 }
 
 
 nsresult nsURL::OpenStream(nsIInputStream* *o_InputStream)
 {
+    NS_PRECONDITION( (0 != m_URL), "OpenStream called on empty url!");
+    return NS_OK;
 }
 
 nsresult nsURL::Parse(void)
 {
+    NS_PRECONDITION( (0 != m_URL), "Parse called on empty url!");
+
+    return NS_OK;
 }
 
 
@@ -98,12 +131,12 @@ nsURL::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     
     static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);                 \
 
-    if (aIID.Equals(NS_IIURL_IID)) {
-        *aInstancePtr = (void*) ((nsIURL*)this);
+    if (aIID.Equals(NS_ICOOLURL_IID)) {
+        *aInstancePtr = (void*) ((nsICoolURL*)this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
-    if (aIID.Equals(NS_IIURI_IID)) {
+    if (aIID.Equals(NS_IURI_IID)) {
         *aInstancePtr = (void*) ((nsIURI*)this);
         NS_ADDREF_THIS();
         return NS_OK;
@@ -121,6 +154,13 @@ NS_IMPL_RELEASE(nsURL);
 nsresult
 nsURL::SetHost(const char* i_Host)
 {
+    return NS_OK;
+}
+
+nsresult
+nsURL::SetPath(const char* i_Path)
+{
+    return NS_OK;
 }
 
 nsresult
@@ -141,19 +181,17 @@ nsURL::SetPort(PRInt32 i_Port)
         }
         Parse();
     }
+    return NS_OK;
 }
 
 nsresult
 nsURL::SetPreHost(const char* i_PreHost)
 {
+    return NS_OK;
 }
 
 nsresult
 nsURL::SetScheme(const char* i_Scheme)
 {
-}
-
-nsresult
-nsURL::ToString(const char* *o_URLString)
-{
+    return NS_OK;
 }

@@ -93,13 +93,11 @@ public:
 
     static const nsIID& IID() { return NS_ICOOLURL_IID; };
 
-}
+};
 
-/*
-extern "C"
-{
+
+extern NS_NET
     nsICoolURL* CreateURL(const char* i_URL);
-}
-*/
+
 
 #endif /* _nsICoolURL_h_ */

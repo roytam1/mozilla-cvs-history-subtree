@@ -112,8 +112,8 @@ public:
     */
     NS_IMETHOD          ToString(const char* *o_URIString) const = 0;
 
-    static const nsIID& IID() { return NS_ICOOLURI_IID; };
+    static const nsIID& IID() { return NS_IURI_IID; };
 
-}
+};
 
 #endif /* _nsIURI_h_ */

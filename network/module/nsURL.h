@@ -124,7 +124,7 @@ public:
             http://foo.com:80 == http://foo.com
         but this function through nsIURL alone will not return equality.
     */
-    NS_METHOD_(PRBool) Equals(const nsICoolURL* i_URL) const;
+    NS_METHOD_(PRBool) Equals(const nsIURI* i_URI) const;
 
     /* 
         Writes a string representation of the URL. 
@@ -154,16 +154,23 @@ protected:
     /*
         Extract a portion from the given part id.
     */
-    NS_METHOD          Extract(const char* o_OutputString, Part i_id) const;
+    NS_METHOD          Extract(const char* *o_OutputString, Part i_id) const;
 
     /* 
         This holds the offsets and the lengths of each part. 
         Optimizes on storage and speed. 
     */
-    int m_Position[TOTAL_PARTS][TOTAL_PARTS];
+    int m_Position[TOTAL_PARTS][2];
 
     char*       m_URL;
     PRInt32     m_Port;
+};
+
+inline
+NS_METHOD          
+nsURL::GetHost(const char* *o_Host) const
+{
+    return Extract(o_Host, HOST);
 }
 
 inline
@@ -198,7 +205,8 @@ inline
 NS_METHOD
 nsURL::ToString(const char* *o_URLString) const
 {
-    return m_URL;
+    *o_URLString = m_URL;
+    return NS_OK;
 }
 
 #endif /* _nsURL_h_ */
