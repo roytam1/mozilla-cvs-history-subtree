@@ -135,7 +135,7 @@ nsStdURL::GetPassword(char* *o_Password)
 inline NS_METHOD
 nsStdURL::GetHost(char* *o_Host)
 {
-    return GetString(o_Host, mHost, ESCAPED);
+    return GetString(o_Host, mHost, UNESCAPED);
 }
 
 inline NS_METHOD
