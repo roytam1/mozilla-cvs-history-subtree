@@ -27,7 +27,7 @@
 #include "nsIOutputStream.h"
 #include "nsIServiceManager.h"
 #include "nsIEventQueueService.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsILoadGroup.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -144,8 +144,8 @@ public:
         rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), &eventQ);
         if (NS_FAILED(rv)) return rv;
 
-        rv = serv->NewAsyncStreamListener(aListener, eventQ, 
-                                          getter_AddRefs(mStreamListener));
+        rv = NS_NewAsyncStreamListener(aListener, eventQ, 
+                                       getter_AddRefs(mStreamListener));
         NS_RELEASE(eventQ);
         if (NS_FAILED(rv)) return rv;
 
