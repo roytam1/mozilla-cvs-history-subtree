@@ -1,7 +1,4 @@
-<<<<<<< API.xs
-=======
-/*
- *******************************************************************************
+/******************************************************************************
  * $Id$
  *
  * The contents of this file are subject to the Mozilla Public License
@@ -25,9 +22,8 @@
  * DESCRIPTION
  *    This is the XSUB interface for the API.
  *
- *******************************************************************************/
+ *****************************************************************************/
 
->>>>>>> 1.3
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -150,7 +146,7 @@ SV* charptrptr2avref(char **cppval)
          SV* SVval = newSVpv(cppval[ix],0);
          av_push(tmp_av,SVval);
       }
-      ldap_values_free(cppval);
+      ldap_value_free(cppval);
    }
    return(tmp_ref);
 }
@@ -170,7 +166,7 @@ SV* berptrptr2avref(struct berval **bval)
          SV *SVval = newSVpv(bval[ix]->bv_val,bval[ix]->bv_len);
          av_push(tmp_av,SVval);
       }
-      ldap_values_free_len(bval);
+      ldap_value_free_len(bval);
    }
    return(tmp_ref);
 }
