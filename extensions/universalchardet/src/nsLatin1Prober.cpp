@@ -125,8 +125,8 @@ PRBool nsLatin1Prober::FilterWithEnglishLetters(const char* aBuf, PRUint32 aLen,
 
   for (curPtr = prevPtr = (char*)aBuf; curPtr < aBuf+aLen; curPtr++)
   {
-    if (*curPtr == '>')
-      isInTag = PR_FALSE;
+		if (*curPtr == '>')
+			isInTag = PR_FALSE;
     else if (*curPtr == '<')
       isInTag = PR_TRUE;
 
