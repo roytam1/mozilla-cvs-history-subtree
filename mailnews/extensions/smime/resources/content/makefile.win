@@ -38,7 +38,6 @@ include <$(DEPTH)\config\rules.mak>
 
 install::
     $(MAKE_INSTALL) .\smime.js $(DIST)\bin\defaults\pref
-    $(MAKE_INSTALL) .\smime-service.js $(DIST)\bin\components
 
 include <$(DEPTH)\config\rules.mak>
 
