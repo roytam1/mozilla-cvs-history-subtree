@@ -572,7 +572,7 @@ sub findMapping {
     
     foreach my $mapping (@{$self->{'mappings'}}) {
         if ((my $match = $mapfile) =~
-            s/^\Q$mapping->[0]/\Q$mapping->[1]/) {
+            s/^\Q$mapping->[0]/$mapping->[1]/) {
 
             MozPackager::_verbosePrint(3, "Mapping $mapfile to $match");
             return $match;
@@ -646,21 +646,22 @@ sub _parseFile {
         next if (! $process);
 
         # !command args...
-        if ($line =~ /^!(\S+)\s*(.*)$/) {
+        if ($line =~ s/^!(\S+)\s*//) {
             exists($self->{'commands'}->{$1})
                 || die("In file $file, line $.: command processor $1 not defined");
 
             MozPackager::_verbosePrint(3, "Calling '$1' command processor.");
 
-            $self->{'commands'}->{$1}($self, $2, $fileh, $file);
+            $self->{'commands'}->{$1}($self, $line, $fileh, $file);
             next;
         }
 
         # files
-        my @files = split(' ', $line);
+        $line =~ s/^\s//;
+        my @files = split(/(?<!\\)\s+/, $line, 3);
 
-        next if (scalar(@files) == 0); #blank line
-        scalar(@files) <= 2 || die("Parse error in $file, line $.: unrecognized text \"$line\".");
+        next if (! $files[0]); #blank line
+        $files[2] && die("Parse error in $file, line $.: unrecognized text '$line'.");
 
         _checkFile($files[0], $file, $.);
         
