@@ -1687,6 +1687,21 @@ NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const char* aCString, PRUint32 aLe
     AppendWithConversion(aCString,aLength);
   }
 
+NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const nsACString& aCString )
+  {
+    Initialize(*this,mBuffer,(sizeof(mBuffer)>>eTwoByte)-1,0,eTwoByte,PR_FALSE);
+    AddNullTerminator(*this);
+
+    nsReadingIterator<char> start; aCString.BeginReading(start);
+    nsReadingIterator<char> end;   aCString.EndReading(end);
+
+    while (start != end) {
+      nsReadableFragment<char> frag(start.fragment());
+      AppendWithConversion(frag.mStart, frag.mEnd - frag.mStart);
+      start.advance(start.size_forward());
+    }
+  }
+
 NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const char* aCString )
   {
     Initialize(*this,mBuffer,(sizeof(mBuffer)>>eTwoByte)-1,0,eTwoByte,PR_FALSE);
@@ -1700,6 +1715,130 @@ NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( char aChar )
     AddNullTerminator(*this);
     AppendWithConversion(aChar);
   }
+
+void
+NS_ConvertUTF8toUCS2::Init( const nsACString& aCString )
+{
+  // Compute space required: do this once so we don't incur multiple
+  // allocations. This "optimization" is probably of dubious value...
+  nsReadingIterator<char> p, end;
+  aCString.BeginReading(p);
+  aCString.EndReading(end);
+  PRUint32 count;
+  for (count = 0; *p && p != end; ++count) {
+    if ( 0 == (*p & 0x80) )
+      p.advance(1); // ASCII
+    else if ( 0xC0 == (*p & 0xE0) )
+      p.advance(2); // 2 byte UTF8
+    else if ( 0xE0 == (*p & 0xF0) )
+      p.advance(3); // 3 byte UTF8
+    else if ( 0xF0 == (*p & 0xF8) )
+      p.advance(4); // 4 byte UTF8
+    else if ( 0xF8 == (*p & 0xFC) )
+      p.advance(5); // 5 byte UTF8
+    else if ( 0xFC == (*p & 0xFE) )
+      p.advance(6);
+    else {
+      NS_ERROR("not a UTF-8 string");
+      return;
+    }
+  }
+
+  // Grow the buffer if we need to.
+  if ((count * sizeof(PRUnichar)) >= sizeof(mBuffer))
+    SetCapacity(count + 1);
+    // |SetCapacity| normally doesn't guarantee the use we are putting it to here (see its interface comment in nsAWritableString.h),
+    //  we can only use it since our local implementation, |nsString::SetCapacity|, is known to do what we want
+
+  // We'll write directly into the new string's buffer
+  PRUnichar* out = mUStr;
+
+  // Convert the characters.
+  aCString.BeginReading(p);
+  for (count = 0; *p && p != end; ++count) {
+    char c = *p++;
+
+    if( 0 == (0x80 & c)) { // ASCII
+      *out++ = PRUnichar(c);
+      continue;
+    }
+
+    PRUint32 ucs4;
+    PRUint32 minUcs4;
+    PRInt32 state = 0;
+    
+    if ( 0xC0 == (0xE0 & c) ) { // 2 bytes UTF8
+      ucs4 = (PRUint32(c) << 6) & 0x000007C0L;
+      state = 1;
+      minUcs4 = 0x00000080;
+    }
+    else if ( 0xE0 == (0xF0 & c) ) { // 3 bytes UTF8
+      ucs4 = (PRUint32(c) << 12) & 0x0000F000L;
+      state = 2;
+      minUcs4 = 0x00000800;
+    }
+    else if ( 0xF0 == (0xF8 & c) ) { // 4 bytes UTF8
+      ucs4 = (PRUint32(c) << 18) & 0x001F0000L;
+      state = 3;
+      minUcs4 = 0x00010000;
+    }
+    else if ( 0xF8 == (0xFC & c) ) { // 5 bytes UTF8
+      ucs4 = (PRUint32(c) << 24) & 0x03000000L;
+      state = 4;
+      minUcs4 = 0x00200000;
+    }
+    else if ( 0xFC == (0xFE & c) ) { // 6 bytes UTF8
+      ucs4 = (PRUint32(c) << 30) & 0x40000000L;
+      state = 5;
+      minUcs4 = 0x04000000;
+    }
+    else {
+      NS_ERROR("not a UTF8 string");
+      break;
+    }
+
+    while (state--) {
+      c = *p++;
+
+      if ( 0x80 == (0xC0 & c) ) {
+        PRInt32 shift = state * 6;
+        ucs4 |= (PRUint32(c) & 0x3F) << shift;
+      }
+      else {
+        NS_ERROR("not a UTF8 string");
+        goto done; // so we minimally clean up
+      }
+    }
+
+    if (ucs4 < minUcs4) {
+      // Overlong sequence
+      *out++ = 0xFFFD;
+    } else if (ucs4 >= 0xD800 && ucs4 <= 0xDFFF) {
+      // Surrogates
+      *out++ = 0xFFFD;
+    } else if (ucs4 == 0xFFFE || ucs4 == 0xFFFF) {
+      // Prohibited characters
+      *out++ = 0xFFFD;
+    } else if (ucs4 >= 0x00010000) {
+      if (ucs4 >= 0x001F0000) {
+        *out++ = 0xFFFD;
+      }
+      else {
+        ucs4 -= 0x00010000;
+        *out++ = 0xD800 | (0x000003FF & (ucs4 >> 10));
+        *out++ = 0xDC00 | (0x000003FF & ucs4);
+      }
+    }
+    else {
+      if (0xfeff != ucs4) // ignore BOM
+        *out++ = ucs4;
+    }
+  }
+
+ done:
+  *out = '\0'; // null terminate
+  mLength = count;
+}
 
 void
 NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
