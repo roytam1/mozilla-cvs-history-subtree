@@ -129,7 +129,8 @@ public:
   **/
 
   void SetTranslation(float tX, float tY) {
-    m20 = tX; m21 = tY;
+    m20 = tX;
+    m21 = tY;
     type |= MG_2DTRANSLATION;
   }
 

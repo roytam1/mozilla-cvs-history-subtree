@@ -4321,7 +4321,7 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShel
 {
   nsIFrame * newFrame;
   nsresult rv = NS_NewFieldSetFrame(aPresShell, &newFrame, NS_BLOCK_SPACE_MGR);
-  if (!NS_SUCCEEDED(rv)) {
+  if (NS_FAILED(rv)) {
     return rv;
   }
 

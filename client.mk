@@ -534,6 +534,9 @@ commitmerge:
 diffsvg:
 	cvs diff $(SVG_BRANCH_FILES)
 
+trunkdiff:
+	cvs diff -rSVG_20010721_TAG -rSVG_20010721_BRANCH $(SVG_BRANCH_FILES)
+
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo Generating configures using $(AUTOCONF) ; \
 	cd $(TOPSRCDIR) && $(AUTOCONF) && \
