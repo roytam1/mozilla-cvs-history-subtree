@@ -205,6 +205,7 @@ createNavCenterVocab () {
 
   /* Toolbar Appearance Styles */
   gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* "Toolbar Bitmap Position" */ );
+  gNavCenter->toolbarButtonsFixedSize = newResource("toolbarButtonsFixedSize", 0 /* "Toolbar Bitmap Position" */ );
 
 #endif /* MOZILLA_CLIENT */
 }

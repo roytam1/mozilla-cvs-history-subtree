@@ -137,6 +137,8 @@ typedef struct _RDF_NCVocabStruct {
 
   /* Toolbar Appearance Styles */
   RDF_Resource toolbarBitmapPosition; /* Bitmap's position ("side"/"top") */
+  RDF_Resource toolbarButtonsFixedSize; /* Whether or not the buttons must be the same size ("yes"/"no") */
+
 } RDF_NCVocabStruct;
 
 typedef RDF_NCVocabStruct* RDF_NCVocab;
