@@ -1105,7 +1105,8 @@ nsOutlinerBodyFrame::ScrollbarButtonPressed(PRInt32 aOldIndex, PRInt32 aNewIndex
 {
   if (aNewIndex > aOldIndex)
     ScrollToRow(mTopRowIndex+1);
-  else ScrollToRow(mTopRowIndex-1);
+  else if (aNewIndex < aOldIndex)
+    ScrollToRow(mTopRowIndex-1);
   return NS_OK;
 }
   
