@@ -94,6 +94,10 @@ namespace JavaScript
 #ifndef _WIN32
     // Return a String containing the characters of the null-terminated C
     // string cstr (without the trailing null).
+    //
+    // This function is inline in the vain hope that some compiler would do a return
+    // value optimization and avoid creating and destroying a temporary String when
+    // widenCString is called.  We can still hope....
     inline String widenCString(const char *cstr) {
         size_t len = strlen(cstr);
         const uchar *ucstr = reinterpret_cast<const uchar *>(cstr);
