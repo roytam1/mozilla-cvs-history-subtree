@@ -1,8 +1,0 @@
-nsICapsSecurityCallbacks.idl
-nsIPrincipal.idl
-nsIPrincipalArray.idl
-nsIPrivilege.idl
-nsIPrivilegeManager.idl
-nsIScriptSecurityManager.idl
-nsICapsManager.idl
-nsITarget.idl
