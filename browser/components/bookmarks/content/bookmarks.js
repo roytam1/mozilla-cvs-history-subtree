@@ -530,6 +530,12 @@ var BookmarksCommand = {
   
   deleteBookmark: function (aSelection)
   {
+    // call checkSelection here to update the immutable and other
+    // flags on the selection; when new resources get created,
+    // they're temporarily not valid because they're not in a
+    // bookmark container.  So, they can't be removed until that's
+    // fixed.
+    BookmarksUtils.checkSelection(aSelection);
     BookmarksUtils.removeAndCheckSelection("delete", aSelection);
   },
 
