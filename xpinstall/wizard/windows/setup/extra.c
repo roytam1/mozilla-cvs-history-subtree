@@ -1631,6 +1631,54 @@ siC *SiCNodeGetObject(DWORD dwIndex, BOOL bIncludeInvisibleObjs)
   return(NULL);
 }
 
+dsN *CreateDSNode()
+{
+  dsN *dsNode;
+
+  if((dsNode = NS_GlobalAlloc(sizeof(struct diskSpaceNode))) == NULL)
+    exit(1);
+
+  dsNode->ullSpaceRequired = 0;
+
+  if((dsNode->szPath = NS_GlobalAlloc(MAX_BUF)) == NULL)
+    exit(1);
+  dsNode->Next             = NULL;
+  dsNode->Prev             = NULL;
+
+  return(dsNode);
+}
+
+void DsNodeInsert(dsN **dsNHead, dsN *dsNTemp)
+{
+  if(*dsNHead == NULL)
+  {
+    *dsNHead          = dsNTemp;
+    (*dsNHead)->Next  = *dsNHead;
+    (*dsNHead)->Prev  = *dsNHead;
+  }
+  else
+  {
+    dsNTemp->Next           = *dsNHead;
+    dsNTemp->Prev           = (*dsNHead)->Prev;
+    (*dsNHead)->Prev->Next  = dsNTemp;
+    (*dsNHead)->Prev        = dsNTemp;
+  }
+}
+
+void DsNodeDelete(dsN *dsNTemp)
+{
+  if(dsNTemp != NULL)
+  {
+    dsNTemp->Next->Prev = dsNTemp->Prev;
+    dsNTemp->Prev->Next = dsNTemp->Next;
+    dsNTemp->Next       = NULL;
+    dsNTemp->Prev       = NULL;
+
+    FreeMemory(&(dsNTemp->szPath));
+    FreeMemory(&dsNTemp);
+  }
+}
+
 BOOL IsWin95Debute()
 {
   HINSTANCE hLib;
@@ -1812,8 +1860,105 @@ HRESULT ErrorMsgDiskSpace(ULONGLONG ullDSAvailable, ULONGLONG ullDSRequired, LPS
   return(MessageBox(hWndMain, szBufMsg, szDlgDiskSpaceCheckTitle, dwDlgType | MB_ICONEXCLAMATION | MB_DEFBUTTON2 | MB_APPLMODAL | MB_SETFOREGROUND));
 }
 
+void UpdatePathDiskSpaceRequired(LPSTR szPath, ULONGLONG ullSize, dsN **dsnComponentDSRequirement)
+{
+  BOOL  bFound = FALSE;
+  dsN   *dsnTemp = *dsnComponentDSRequirement;
+
+  if(ullSize > 0)
+  {
+    do
+    {
+      if(*dsnComponentDSRequirement == NULL)
+      {
+        *dsnComponentDSRequirement = CreateDSNode();
+        dsnTemp = *dsnComponentDSRequirement;
+        strcpy(dsnTemp->szPath, szPath);
+        dsnTemp->ullSpaceRequired = ullSize;
+        bFound = TRUE;
+      }
+      else if(lstrcmpi(dsnTemp->szPath, szPath) == 0)
+      {
+        dsnTemp->ullSpaceRequired += ullSize;
+        bFound = TRUE;
+      }
+      else
+        dsnTemp = dsnTemp->Next;
+
+    } while((dsnTemp != *dsnComponentDSRequirement) && (dsnTemp != NULL) && (bFound == FALSE));
+
+    if(bFound == FALSE)
+    {
+      dsnTemp = CreateDSNode();
+      strcpy(dsnTemp->szPath, szPath);
+      dsnTemp->ullSpaceRequired = ullSize;
+      DsNodeInsert(dsnComponentDSRequirement, dsnTemp);
+    }
+  }
+}
+
+HRESULT InitComponentDiskSpaceInfo(dsN **dsnComponentDSRequirement)
+{
+  DWORD     dwIndex0;
+  siC       *siCObject = NULL;
+  HRESULT   hResult    = 0;
+  char      szBuf[MAX_BUF];
+  char      szIndex0[MAX_BUF];
+  char      szSysPath[MAX_BUF];
+  char      szBufSysPath[MAX_BUF];
+  char      szBufTempPath[MAX_BUF];
+
+  if(GetSystemDirectory(szSysPath, MAX_BUF) == 0)
+  {
+    ZeroMemory(szSysPath, MAX_BUF);
+    ZeroMemory(szBufSysPath, MAX_BUF);
+  }
+  else
+  {
+    ParsePath(szSysPath, szBufSysPath, sizeof(szBufSysPath), PP_ROOT_ONLY);
+    AppendBackSlash(szBufSysPath, sizeof(szBufSysPath));
+  }
+
+  ParsePath(szTempDir, szBufTempPath, sizeof(szBufTempPath), PP_ROOT_ONLY);
+  AppendBackSlash(szBufTempPath, sizeof(szBufTempPath));
+
+  dwIndex0 = 0;
+  itoa(dwIndex0, szIndex0, 10);
+  siCObject = SiCNodeGetObject(dwIndex0, TRUE);
+  while(siCObject)
+  {
+    if(siCObject->dwAttributes & SIC_SELECTED)
+    {
+      if(*(siCObject->szDestinationPath) == '\0')
+        ParsePath(sgProduct.szPath, szBuf, sizeof(szBuf), PP_ROOT_ONLY);
+      else
+        ParsePath(siCObject->szDestinationPath, szBuf, sizeof(szBuf), PP_ROOT_ONLY);
+
+      AppendBackSlash(szBuf, sizeof(szBuf));
+      UpdatePathDiskSpaceRequired(szBuf, siCObject->ullInstallSize, dsnComponentDSRequirement);
+
+      if(*szBufSysPath != '\0')
+        UpdatePathDiskSpaceRequired(szBufSysPath, siCObject->ullInstallSizeSystem, dsnComponentDSRequirement);
+
+      if(*szBufTempPath != '\0')
+        UpdatePathDiskSpaceRequired(szBufTempPath, siCObject->ullInstallSizeArchive, dsnComponentDSRequirement);
+    }
+
+    ++dwIndex0;
+    itoa(dwIndex0, szIndex0, 10);
+    siCObject = SiCNodeGetObject(dwIndex0, TRUE);
+  }
+
+  /* take the uncompressed size of core into account */
+  if(*szBufTempPath != '\0')
+    UpdatePathDiskSpaceRequired(szBufTempPath, siCFCoreFile.ullInstallSize, dsnComponentDSRequirement);
+
+  return(hResult);
+}
+
 HRESULT VerifyDiskSpace()
 {
+#ifdef XXX_SSU
   ULONGLONG ullDSAPath;
   ULONGLONG ullDSRPath;
   ULONGLONG ullDSASysPath;
@@ -1822,12 +1967,38 @@ HRESULT VerifyDiskSpace()
   ULONGLONG ullDSRTempPath;
   ULONGLONG ullDSTotalAvailable;
   ULONGLONG ullDSTotalRequired;
-  HRESULT   hRetValue = TRUE;
   char      szSysPath[MAX_BUF];
   char      szBufPath[MAX_BUF];
   char      szBufSysPath[MAX_BUF];
   char      szBufTempPath[MAX_BUF];
+#endif
 
+  ULONGLONG ullDSAvailable;
+  HRESULT   hRetValue = TRUE;
+  dsN       *dsnComponentDSRequirement = NULL;
+  dsN       *dsnTemp = NULL;
+
+
+  InitComponentDiskSpaceInfo(&dsnComponentDSRequirement);
+  if(dsnComponentDSRequirement != NULL)
+  {
+    dsnTemp = dsnComponentDSRequirement;
+
+    do
+    {
+      if(dsnTemp != NULL)
+      {
+        ullDSAvailable = GetDiskSpaceAvailable(dsnTemp->szPath);
+        if(ullDSAvailable < dsnTemp->ullSpaceRequired)
+          return(ErrorMsgDiskSpace(ullDSAvailable, dsnTemp->ullSpaceRequired, dsnTemp->szPath, FALSE));
+
+        dsnTemp = dsnTemp->Next;
+      }
+    } while((dsnTemp != dsnComponentDSRequirement) && (dsnTemp != NULL));
+  }
+
+
+#ifdef XXX_SSU
   /* Calculate disk space for destination path */
   ullDSAPath = GetDiskSpaceAvailable(sgProduct.szPath);
   ullDSRPath = GetDiskSpaceRequired(DSR_DESTINATION);
@@ -1930,6 +2101,7 @@ HRESULT VerifyDiskSpace()
       }
     }
   }
+#endif
 
   return(FALSE);
 }
