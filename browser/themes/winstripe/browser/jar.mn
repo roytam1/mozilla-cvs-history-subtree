@@ -4,10 +4,13 @@ classic.jar:
         skin/classic/browser/browser.xml
         skin/classic/browser/contents.rdf
         skin/classic/browser/Go.png
+        skin/classic/browser/Go-rtl.png
         skin/classic/browser/Info.png
         skin/classic/browser/pageInfo.css
         skin/classic/browser/page-livemarks.png
+        skin/classic/browser/page-livemarks-rtl.png
         skin/classic/browser/livemark-item.png
+        skin/classic/browser/livemark-item-rtl.png
         skin/classic/browser/searchbar.css
         skin/classic/browser/search-arrow.gif
         skin/classic/browser/Search-bar.png
