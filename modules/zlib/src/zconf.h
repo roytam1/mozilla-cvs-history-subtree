@@ -172,7 +172,7 @@ typedef uLong FAR uLongf;
    typedef Byte     *voidp;
 #endif
 
-#ifndef NETSCAPE
+#ifndef MOZILLA_CLIENT
 /* Compile with -DZLIB_DLL for Windows DLL support */
 #if (defined(_WINDOWS) || defined(WINDOWS)) && defined(ZLIB_DLL)
 #  include <windows.h>

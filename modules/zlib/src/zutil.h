@@ -133,7 +133,7 @@ extern const char *z_errmsg[10]; /* indexed by 2-zlib_error */
          /* functions */
 
 #ifdef HAVE_STRERROR
-#ifndef NETSCAPE
+#ifndef MOZILLA_CLIENT
    extern char *strerror OF((int));
 #endif
 #  define zstrerror(errnum) strerror(errnum)
