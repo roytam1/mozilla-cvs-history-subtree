@@ -258,7 +258,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
   SEC_PKCS12ExportContext *ecx = NULL;
   SEC_PKCS12SafeInfo *certSafe = NULL, *keySafe = NULL;
   SECItem unicodePw;
-  nsCAutoString filePath;
+  nsAutoString filePath;
   int i;
   nsCOMPtr<nsILocalFile> localFileRef;
   NS_ASSERTION(mToken, "Need to set the token before exporting");
@@ -360,7 +360,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
     // We're going to add the .p12 extension to the file name just like
     // Communicator used to.  We create a new nsILocalFile and initialize
     // it with the new patch.
-    filePath.Append(NS_LITERAL_CSTRING(".p12"));
+    filePath.Append(NS_LITERAL_STRING(".p12"));
     localFileRef = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) goto finish;
     localFileRef->InitWithPath(filePath);
@@ -531,7 +531,7 @@ nsPKCS12Blob::digest_open(void *arg, PRBool reading)
                         NS_GET_IID(nsILocalFile),
                         getter_AddRefs(tmpFile));
   if (tmpFile) {
-    tmpFile->Append(PIP_PKCS12_TMPFILENAME);
+    tmpFile->AppendNative(PIP_PKCS12_TMPFILENAME);
     nsCAutoString pathBuf;
     tmpFile->GetNativePath(pathBuf);
     cx->mTmpFilePath = ToNewCString(pathBuf);
