@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsXULAppAPI.h"
+#include "nsISoftwareUpdate.h"
 #ifdef XP_WIN
 #include <windows.h>
 #endif
@@ -47,6 +48,23 @@ int main(int argc, char* argv[])
   appData.SetSplashEnabled(PR_FALSE);
   appData.SetProductName(NS_LITERAL_CSTRING("Minotaur"));
   appData.SetUseStartupPrefs(PR_TRUE);
+
+  // Ask XPInstall if we need to autoregister anything new.
+  PRBool needAutoReg = NS_SoftwareUpdateNeedsAutoReg();
+
+#ifdef DEBUG
+  // _Always_ autoreg if we're in a debug build, under the assumption
+  // that people are busily modifying components and will be angry if
+  // their changes aren't noticed.
+  needAutoReg = PR_TRUE;
+#endif
+
+  if (needAutoReg) {
+    nsComponentManager::AutoRegister(nsIComponentManagerObsolete::NS_Startup,
+                                     NULL /* default */);
+    // XXX ...and autoreg was successful?
+    NS_SoftwareUpdateDidAutoReg();
+  }
 
   return xre_main(argc, argv, appData);
 }
