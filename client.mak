@@ -31,12 +31,12 @@ MOZ_TOP=mozilla
 #//------------------------------------------------------------------------
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
-!if "$(MOZ_BRANCH)" != ""
-CVS_BRANCH=-r $(MOZ_BRANCH)
+#//!if "$(MOZ_BRANCH)" != ""
+CVS_BRANCH=-r nscp_beta1_BRANCH
 HAVE_BRANCH=1
-!else
-HAVE_BRANCH=0
-!endif
+#//!else
+#//HAVE_BRANCH=0
+#//!endif
 
 !if "$(MOZ_DATE)" != ""
 CVS_BRANCH=-D "$(MOZ_DATE)"
@@ -95,7 +95,7 @@ CVSCO_NETWORK = $(CVSCO)
 !if "$(NSPR_CO_TAG)" != ""
 NSPR_CO_FLAGS=-r $(NSPR_CO_TAG)
 !else
-NSPR_CO_FLAGS=-r NSPRPUB_RELEASE_4_0_20000218
+NSPR_CO_FLAGS=-r nscp_beta1_BRANCH
 !endif
 
 CVSCO_NSPR = cvs -q $(CVS_FLAGS) co $(NSPR_CO_FLAGS) -P

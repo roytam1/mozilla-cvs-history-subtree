@@ -126,9 +126,7 @@ else
   CVS_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 
-ifdef MOZ_CO_BRANCH
-  CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r $(MOZ_CO_BRANCH)
-endif
+  CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r nscp_beta1_BRANCH 
 
 ifdef MOZ_CO_DATE
   CVS_CO_FLAGS := $(CVS_CO_FLAGS) -D "$(MOZ_CO_DATE)"
@@ -152,7 +150,7 @@ endif
 NSPR_CO_MODULE        = mozilla/nsprpub
 NSPR_CO_FLAGS := -P
 CVSCO_NSPR    = cvs $(CVS_FLAGS) co $(NSPR_CO_FLAGS)
-NSPR_CO_TAG   = NSPRPUB_RELEASE_4_0_20000218
+NSPR_CO_TAG   = nscp_beta1_BRANCH
 
 ifdef NSPR_CO_TAG
   NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) -r $(NSPR_CO_TAG)
