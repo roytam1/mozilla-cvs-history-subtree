@@ -146,7 +146,7 @@ LLIBS=$(SUB_LIBRARIES) $(LLIBS)
 MAKE_OBJ_TYPE=$(NULL)
 
 !if defined(META_COMPONENT)
-META_LINK_LIBS=$(DIST)\$(META_COMPONENT)\link-libs
+META_LINK_LIBS=$(DIST)\$(META_COMPONENT)-link-libs
 !endif
 
 LIBRARY=.\$(OBJDIR)\$(LIBRARY_NAME).lib
@@ -557,7 +557,6 @@ clobber::
 !if defined(META_COMPONENT)
 # It's to be linked into a meta-component. Add the library to the
 # meta component's list
-META_LINK_LIBS=$(DIST)\$(META_COMPONENT)\link-libs
 
 export::
         $(PERL) $(DEPTH)\config\build-list.pl $(_NO_FLOCK) $(META_LINK_LIBS:\=/) $(LIBRARY_NAME)
