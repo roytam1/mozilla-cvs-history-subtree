@@ -22,58 +22,29 @@ Rights Reserved.
 Contributor(s):
     rcassin@supernova.org
 -->
-
 <?xml-stylesheet href="chrome://messenger/skin/prefPanels.css" type="text/css"?>
-<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+
+<?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/pref-mailnews.dtd">
 
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="parent.initPanel('chrome://messenger/content/pref-mailnews.xul');"
-      headertitle="&pane.title;">
+      headertitle="Messages">
+
+  <popupset id="aTooltipSet"/>
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["mailPaneConfig", "mailnewsConfirmMoveFoldersToTrash", 
-                       "mailnewsStartPageEnabled", "mailnewsStartPageUrl",
-                       "newMailNotification", "newMailNotificationAlert", "mailWarnOnSendAccelKey" ];
+    var _elementIDs = ["newMailNotification", "newMailNotificationAlert", "label1TextBox", "label1Color", "label2TextBox", "label2Color", "label3TextBox", "label3Color", "label4TextBox", "label4Color", "label5TextBox", "label5Color"];
   ]]>
   </script>
-  <script type="application/x-javascript" src="chrome://messenger/content/pref-mailnews.js"/>
-  
+
+  <script type="application/x-javascript" src="chrome://messenger/content/pref-labels.js"/>
+
   <groupbox>
-    <caption label="&windowSettings.label;"/>
-    
-    <hbox align="center">
-      <label value="&selectWindowLayout.label;"/>
-      <spacer flex="1"/>
-      <radiogroup id="mailPaneConfig" prefstring="mail.pane_config" orient="horizontal">
-        <radio class="iconic" value="0" id="classic"/>
-        <radio class="iconic" value="1" id="wide"/>
-      </radiogroup>
-    </hbox>
-    
-    <description>&chooseExp.label;</description>
-
-    <separator class="thin"/>
-
-    <hbox align="center">
-      <checkbox id="mailnewsConfirmMoveFoldersToTrash" label="&confirmMove.label;"
-                prefstring="mailnews.confirm.moveFoldersToTrash"/>
-    </hbox>
-
-    <hbox align="center">
-      <checkbox id="mailWarnOnSendAccelKey" label="&warnOnSendAccelKey.label;"
-                prefstring="mail.warn_on_send_accel_key"
-                accesskey="&warnOnSendAccelKey.accesskey;" />
-    </hbox>
-    
-    <hbox align="start" id="mapi"/>
-
-    <separator class="thin"/>
-    
-    <description>&newMessagesArrive.label;</description>
-
+    <caption label="&newMessagesArrive.label;"/>
     <hbox align="center">
       <checkbox id="newMailNotification" label="&playSound.label;"
                 prefstring="mail.biff.play_sound"
@@ -85,31 +56,132 @@ Contributor(s):
                 prefstring="mail.biff.show_alert"
                 accesskey="&showAnimatedAlert.accesskey;" />
     </hbox>
-
   </groupbox>
-
   <groupbox>
-    <caption label="&messengerStartPage.label;"/>
-      <hbox align="center">
-        <checkbox id="mailnewsStartPageEnabled" label="&enableStartPage.label;"
-                  prefstring="mailnews.start_page.enabled"/>
-      </hbox>
+    <caption label="&labelsSettings.label;"/>
 
-      <hbox align="center">
-        <label value="&location.label;" accesskey="&location.accesskey;" 
-               control="mailnews.start_page.url"/>
-        <textbox id="mailnewsStartPageUrl" flex="1" preftype="localizedstring"
-                 type="autocomplete" prefstring="mailnews.start_page.url"
-                 searchSessions="history" timeout="50" maxrows="6"/>
-      </hbox>
+  <description>&displayText.label;</description>
 
-    <hbox pack="end">
-      <button label="&useDefault.label;" accesskey="&useDefault.accesskey;"
-              oncommand="setHomePageToDefaultPage('mailnewsStartPageUrl');">
-        <observes element="mailnewsStartPageUrl" attribute="disabled"/>
-      </button>
-     </hbox>
+  <!-- label color: 1 (default red) -->
+  <hbox class="indent" align="center">
+    <textbox
+        id="label1TextBox"
+        pref="true"
+        preftype="localizedstring"
+        prefstring="mailnews.labels.description.1"
+        prefattribute="value"/>
+    <colorpicker
+        class="small-margin"
+        type="button"
+        id="labelColorPicker1"
+        palettename="standard"
+        onchange="setColorWell(this);"/>
+    <data
+        id="label1Color"
+        pref="true"
+        preftype="color"
+        prefstring="mailnews.labels.color.1"
+        prefattribute="value"
+        wsm_attributes="value"/>
+  </hbox>    
 
+  <!-- label color: 2 (default orange) -->
+  <hbox class="indent" align="center">
+    <textbox
+        id="label2TextBox"
+        pref="true"
+        preftype="localizedstring"
+        prefstring="mailnews.labels.description.2"
+        prefattribute="value"/>
+    <colorpicker
+        class="small-margin"
+        type="button"
+        id="labelColorPicker2"
+        palettename="standard"
+        onchange="setColorWell(this);"/>
+    <data
+        id="label2Color"
+        pref="true"
+        preftype="color"
+        prefstring="mailnews.labels.color.2"
+        prefattribute="value"
+        wsm_attributes="value"/>
+  </hbox>    
+
+  <!-- label color: 3 (default green) -->
+  <hbox class="indent" align="center">
+    <textbox
+        id="label3TextBox"
+        pref="true"
+        preftype="localizedstring"
+        prefstring="mailnews.labels.description.3"
+        prefattribute="value"/>
+    <colorpicker
+        class="small-margin"
+        type="button"
+        id="labelColorPicker3"
+        palettename="standard"
+        onchange="setColorWell(this);"/>
+    <data
+        id="label3Color"
+        pref="true"
+        preftype="color"
+        prefstring="mailnews.labels.color.3"
+        prefattribute="value"
+        wsm_attributes="value"/>
+  </hbox>    
+
+  <!-- label color: 4 (default blue) -->
+  <hbox class="indent" align="center">
+    <textbox
+        id="label4TextBox"
+        pref="true"
+        preftype="localizedstring"
+        prefstring="mailnews.labels.description.4"
+        prefattribute="value"/>
+    <colorpicker
+        class="small-margin"
+        type="button"
+        id="labelColorPicker4"
+        palettename="standard"
+        onchange="setColorWell(this);"/>
+    <data
+        id="label4Color"
+        pref="true"
+        preftype="color"
+        prefstring="mailnews.labels.color.4"
+        prefattribute="value"
+        wsm_attributes="value"/>
+  </hbox>    
+
+  <!-- label color: 5 (default purple) -->
+  <hbox class="indent" align="center">
+    <textbox
+        id="label5TextBox"
+        pref="true"
+        preftype="localizedstring"
+        prefstring="mailnews.labels.description.5"
+        prefattribute="value"/>
+    <colorpicker
+        class="small-margin"
+        type="button"
+        id="labelColorPicker5"
+        palettename="standard"
+        onchange="setColorWell(this);"/>
+    <data
+        id="label5Color"
+        pref="true"
+        preftype="color"
+        prefstring="mailnews.labels.color.5"
+        prefattribute="value"
+        wsm_attributes="value"/>
+  </hbox>    
+
+  <hbox pack="end">
+    <button label="&restoreDefaults.label;" accesskey="&restoreDefaults.accesskey;"
+            oncommand="restoreColorAndDescriptionToDefaults();">
+    </button>
+   </hbox>
   </groupbox>
-  
+
 </page>

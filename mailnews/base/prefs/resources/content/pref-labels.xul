@@ -43,22 +43,37 @@
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 
+<!DOCTYPE window SYSTEM "chrome://messenger/locale/pref-mailnews.dtd">
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/pref-labels.dtd">
 
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       onload="parent.initPanel('chrome://messenger/content/pref-labels.xul');"
-      headertitle="&pane.title;">
+      headertitle="Messages">
 
   <popupset id="aTooltipSet"/>
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["label1TextBox", "label1Color", "label2TextBox", "label2Color", "label3TextBox", "label3Color", "label4TextBox", "label4Color", "label5TextBox", "label5Color"];
+    var _elementIDs = ["newMailNotification", "newMailNotificationAlert", "label1TextBox", "label1Color", "label2TextBox", "label2Color", "label3TextBox", "label3Color", "label4TextBox", "label4Color", "label5TextBox", "label5Color"];
   ]]>
   </script>
 
   <script type="application/x-javascript" src="chrome://messenger/content/pref-labels.js"/>
 
+  <groupbox>
+    <caption label="&newMessagesArrive.label;">
+    <hbox align="center">
+      <checkbox id="newMailNotification" label="&playSound.label;"
+                prefstring="mail.biff.play_sound"
+                accesskey="&playSound.accesskey;" />
+    </hbox>
+
+    <hbox align="center">
+      <checkbox id="newMailNotificationAlert" label="&showAnimatedAlert.label;"
+                prefstring="mail.biff.show_alert"
+                accesskey="&showAnimatedAlert.accesskey;" />
+    </hbox>
+  </groupbox>
   <groupbox>
     <caption label="&labelsSettings.label;"/>
 

@@ -12,7 +12,7 @@
   <![CDATA[
     var panel;
     if (panel != undefined) {
-      switch(panel) 
+      switch(panel)
       {
       case "chrome://communicator/content/pref/pref-scripts.xul":
         _elementIDs.push("javascriptAllowMailNews");
@@ -26,7 +26,7 @@
       }
     }
   ]]>
-  </script>         
+  </script>
 
   <!-- javascript toggle for mail/news -->
   <page id="scriptsAndWindowPanel">
@@ -36,11 +36,11 @@
               prefattribute="checked" oncommand="javascriptEnabledChange();" insertafter="javascriptAllowNavigator"/>
   </page>
   <!-- mail startup toggle -->
-  <groupbox id="generalStartupPreferences">           
+  <groupbox id="generalStartupPreferences">
     <checkbox id="generalStartupMail" wsm_persist="true" position="3"
               label="&mail.label;" accesskey="&mail.accesskey;"
               pref="true" preftype="bool" prefstring="general.startup.mail"
-              prefattribute="checked"/>         
+              prefattribute="checked"/>
   </groupbox>
   <!--- cookie toggle for mail/news -->
   <page id="cookiesPanel">
@@ -52,43 +52,16 @@
 
   <!-- category tree entries for mail/news -->
   <treechildren id="panelChildren">
-    <treeitem container="true" id="mailnews" position="3">
-      <treerow>       
-        <treecell url="chrome://messenger/content/pref-mailnews.xul" label="&mail.label;"/> 
+    <treeitem id="mailnews">
+      <treerow>
+        <treecell url="chrome://messenger/content/pref-mailnews.xul" label="Messages"/>
       </treerow>
-      <treechildren id="messengerChildren">
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/pref-viewing_messages.xul" label="&viewingMessages.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/messengercompose/pref-composing_messages.xul" label="&composingMessages.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/messengercompose/pref-formatting.xul" label="&format.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/addressbook/pref-addressing.xul" label="&address.label;"/> 
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/pref-labels.xul" label="&labels.label;"/>
-          </treerow>
-        </treeitem>
-        <treeitem>
-          <treerow>
-            <treecell url="chrome://messenger/content/pref-receipts.xul" label="&return.label;"/>
-          </treerow>
-        </treeitem>
-      </treechildren>
+    </treeitem>
+    <treeitem>
+      <treerow>
+        <treecell url="chrome://messenger/content/pref-receipts.xul" label="&return.label;"/>
+      </treerow>
     </treeitem>
   </treechildren>
-           
-</overlay>         
+
+</overlay>
