@@ -609,13 +609,34 @@
 #define HG21182
 #define HG02030
 #define HG93649
-
-
-
-
-
-
-
+#define HG18966
+#define HG27311
+#define HG89217
+#define HG82167
+#define HG21761
+#define HG10280
+#define HG19271
+#define HG10977
+#define HG19711
+#define HG19189
+#define HG71676
+#define HG71851
+#define HG78266
+#define HG18177
+#define HG18760
+#define HG71661
+#define HG90177
+#define HG79299
+#define HG21897 m_port_text
+#define HG17661 m_port_text
+#define HG18261
+#define HG19877
+#define HG19871
+#define HG19773
+#define HG18162
+#define HG13181
+#define HG14871 FALSE
+#define HG19861 FALSE
 
 
 
