@@ -76,8 +76,8 @@ istream* URIUtils::getInputStream
     }
     else {
         // Try local files
-        char* fchars = new char[href.length()+1];
-        inStream = new ifstream(href.toCharArray(fchars), ios::in);
+        char* fchars = href.toCharArray();
+        inStream = new ifstream(fchars, ios::in);
         delete fchars;
     }
     delete uri;
@@ -170,8 +170,8 @@ void URIUtils::resolveHref(const String& href, const String& base,
     }
     else {
         // Try local files
-        char* xHrefChars = new char[xHref.length()+1];
-        ifstream inFile(xHref.toCharArray(xHrefChars), ios::in);
+        char* xHrefChars = xHref.toCharArray();
+        ifstream inFile(xHrefChars, ios::in);
         if ( inFile ) dest.append(xHref);
         else dest.append(href);
         inFile.close();
@@ -208,8 +208,8 @@ istream* URIUtils::openStream(ParsedURI* uri) {
 
     istream* inStream = 0;
     if ( FILE_PROTOCOL.isEqual(uri->protocol) ) {
-        char* fchars = new char[uri->path.length()+1];
-        ifstream* inFile = new ifstream(uri->path.toCharArray(fchars), ios::in);
+        char* fchars = uri->path.toCharArray();
+        ifstream* inFile = new ifstream(fchars, ios::in);
         delete fchars;
         inStream = inFile;
     }
