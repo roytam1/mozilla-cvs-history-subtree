@@ -821,7 +821,7 @@ static NSArray* sToolbarDefaults = nil;
 - (IBAction)goToLocationFromToolbarURLField:(id)sender
 {
   // trim off any whitespace around url
-  NSString *theURL = [[sender stringValue] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  NSString *theURL = [[sender stringValue] stringByTrimmingWhitespace];
   [self loadURL:theURL referrer:nil activate:YES];
     
   // global history needs to know the user typed this url so it can present it
