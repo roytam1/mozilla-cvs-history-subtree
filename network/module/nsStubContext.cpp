@@ -71,7 +71,7 @@ void stub_Alert(MWContext *context,
     }
 }
 
-void FE_Alert(MWContext *context, const char *msg)
+extern "C" void FE_Alert(MWContext *context, const char *msg)
 {
     stub_Alert(context, msg);
 }
