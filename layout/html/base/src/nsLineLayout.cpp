@@ -119,11 +119,10 @@ static PRBool InUnconstrainedTableCell(const nsHTMLReflowState& aBlockReflowStat
     NS_ASSERTION(parentReflowState->mStyleDisplay, "null styleDisplay in parentReflowState unexpected");
     if (parentReflowState->mStyleDisplay &&
         parentReflowState->mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL) {
-      // see if width is unconstrained or percent
+      // see if width is unconstrained
       NS_ASSERTION(parentReflowState->mStylePosition, "null stylePosition in parentReflowState unexpected");
       if(parentReflowState->mStylePosition) {
         switch(parentReflowState->mStylePosition->mWidth.GetUnit()) {
-          case eStyleUnit_Percent :
           case eStyleUnit_Auto :
           case eStyleUnit_Null :
             result = PR_TRUE;
