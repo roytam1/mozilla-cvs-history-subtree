@@ -5248,7 +5248,7 @@ function stylesheetFillPopup(menuPopup)
   noStyle.setAttribute("checked", styleDisabled);
   persistentOnly.setAttribute("checked", !altStyleSelected && !styleDisabled);
   persistentOnly.hidden = (window._content.document.preferredStylesheetSet) ? true : false;
-  sep.hidden = !haveAltSheets;
+  sep.hidden = (noStyle.hidden && persistentOnly.hidden) || !haveAltSheets;
   return true;
 }
 

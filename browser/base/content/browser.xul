@@ -443,7 +443,7 @@
       <menupopup onpopupshowing="stylesheetFillPopup(this);"
                  oncommand="stylesheetSwitchAll(window._content, event.target.getAttribute('data')); setStyleDisabled(false);">
         <menuitem label="&pageStyleNoStyle.label;" accesskey="&pageStyleNoStyle.accesskey;"
-                  oncommand="setStyleDisabled(true); event.preventBubble();" type="radio"/>
+                  oncommand="setStyleDisabled(true); event.preventBubble();" type="radio" hidden="true"/>
         <menuitem label="&pageStylePersistentOnly.label;" accesskey="&pageStylePersistentOnly.accesskey;" type="radio" checked="true"/>
         <menuseparator/>
       </menupopup>
