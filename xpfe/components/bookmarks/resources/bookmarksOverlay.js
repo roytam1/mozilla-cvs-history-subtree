@@ -826,12 +826,6 @@ var BookmarksUtils = {
                 { property: NC_NS + "URL",    literal:  krAnonymous.Value}];
     this.doBookmarksCommand(aRelativeItem, NC_NS_CMD + "newfolder", args);
 
-    // Tidy up.
-    const krURL = this.RDF.GetResource(NC_NS + "URL");
-    const krCurrURL = krBMDS.GetTarget(krAnonymous, krURL, true);
-    const krEmpty = this.RDF.GetLiteral("");
-    krBMDS.Change(krAnonymous, krURL, krCurrURL, krEmpty);
-    
     return krAnonymous;
   },
 
