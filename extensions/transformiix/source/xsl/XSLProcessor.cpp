@@ -59,7 +59,7 @@ XSLProcessor::XSLProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v19991124]");
+    appVersion.append("1.0 [beta v20000218]");
 
 
     //-- create XSL element types
@@ -1126,6 +1126,10 @@ void XSLProcessor::processAction
                 ps->addToResultTree(resultDoc->createTextNode(result));
                 break;
             }
+	    //-- xsl:param
+	    case XSLType::PARAM: 
+	      //-- ignore in this loop already processed
+	      break;
             //-- xsl:processing-instruction
             case XSLType::PI:
             {
