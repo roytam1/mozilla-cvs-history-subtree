@@ -299,12 +299,14 @@ nsHTMLButtonElement::SetFocus(nsIPresContext* aPresContext)
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  nsresult rv = GetPrimaryFrame(this, formControlFrame);
-  if (NS_SUCCEEDED(rv)) {
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
+
+  if (formControlFrame) {
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
     formControlFrame->ScrollIntoView(aPresContext);
   }
-  return rv;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -316,8 +318,9 @@ nsHTMLButtonElement::RemoveFocus(nsIPresContext* aPresContext)
   nsresult rv = NS_OK;
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame);
-  if (NS_SUCCEEDED(rv)) {
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
+
+  if (formControlFrame) {
     formControlFrame->SetFocus(PR_FALSE, PR_FALSE);
   }
 
@@ -408,13 +411,13 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame, PR_FALSE);
-  if (NS_SUCCEEDED(rv) && formControlFrame)
-  {
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
+
+  if (formControlFrame) {
     nsIFrame* formFrame = nsnull;
-    if (NS_SUCCEEDED(formControlFrame->QueryInterface(NS_GET_IID(nsIFrame), 
-                                  (void **)&formFrame)) && formFrame)
-    {
+    CallQueryInterface(formControlFrame, &formFrame);
+
+    if (formFrame) {
       const nsStyleUserInterface* uiStyle;
       formFrame->GetStyleData(eStyleStruct_UserInterface,
                               (const nsStyleStruct *&)uiStyle);
@@ -464,8 +467,8 @@ nsHTMLButtonElement::HandleDOMEvent(nsIPresContext* aPresContext,
       {
         // Tell the frame about the click
         nsIFormControlFrame* formControlFrame = nsnull;
-        rv = GetPrimaryFrame(this, formControlFrame);
-        if (NS_SUCCEEDED(rv)) {
+        GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
+        if (formControlFrame) {
           formControlFrame->MouseClicked(aPresContext);
         }
       }

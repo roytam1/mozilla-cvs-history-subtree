@@ -113,7 +113,7 @@ public:
 protected:
   // Get the primary frame associated with this content
   nsresult GetPrimaryFrame(nsIFormControlFrame *&aFormControlFrame,
-                           PRBool aFlushNotifications = PR_TRUE);
+                           PRBool aFlushContent, PRBool aFlushReflows);
 
   // Get the select content element that contains this option, this
   // intentionally does not return nsresult, all we care about is if
@@ -382,15 +382,14 @@ nsHTMLOptionElement::SetLabel(const nsAReadableString& aValue)
   if (NS_SUCCEEDED(result)) {
     nsIFormControlFrame* fcFrame = nsnull;
 
-    result = GetPrimaryFrame(fcFrame);
+    GetPrimaryFrame(fcFrame, PR_TRUE, PR_FALSE);
 
-    if (NS_SUCCEEDED(result) && (nsnull != fcFrame)) {
+    if (fcFrame) {
       nsIComboboxControlFrame* selectFrame = nsnull;
 
-      result = fcFrame->QueryInterface(NS_GET_IID(nsIComboboxControlFrame),
-                                       (void **) &selectFrame);
+      CallQueryInterface(fcFrame, &selectFrame);
 
-      if (NS_SUCCEEDED(result) && selectFrame) {
+      if (selectFrame) {
         selectFrame->UpdateSelection(PR_FALSE, PR_TRUE, 0);
       }
     }
@@ -601,15 +600,14 @@ nsHTMLOptionElement::SetText(const nsAReadableString& aText)
 
   if (NS_SUCCEEDED(result)) {
     nsIFormControlFrame* fcFrame = nsnull;
-    result = GetPrimaryFrame(fcFrame);
+    GetPrimaryFrame(fcFrame, PR_TRUE, PR_FALSE);
 
-    if (NS_SUCCEEDED(result) && fcFrame) {
+    if (fcFrame) {
       nsIComboboxControlFrame* selectFrame = nsnull;
 
-      result = fcFrame->QueryInterface(NS_GET_IID(nsIComboboxControlFrame),
-                                       (void **)&selectFrame);
+      CallQueryInterface(fcFrame, &selectFrame);
 
-      if (NS_SUCCEEDED(result) && selectFrame) {
+      if (selectFrame) {
         selectFrame->UpdateSelection(PR_FALSE, PR_TRUE, 0);
       }
     }
@@ -624,7 +622,8 @@ nsHTMLOptionElement::SetText(const nsAReadableString& aText)
 
 nsresult
 nsHTMLOptionElement::GetPrimaryFrame(nsIFormControlFrame *&aIFormControlFrame,
-                                     PRBool aFlushNotifications)
+                                     PRBool aFlushContent,
+                                     PRBool aFlushReflows)
 {
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
 
@@ -638,7 +637,8 @@ nsHTMLOptionElement::GetPrimaryFrame(nsIFormControlFrame *&aIFormControlFrame,
     if (selectContent) {
       res = nsGenericHTMLElement::GetPrimaryFrame(selectContent,
                                                   aIFormControlFrame,
-                                                  aFlushNotifications);
+                                                  aFlushContent,
+                                                  aFlushReflows);
     }
   }
 

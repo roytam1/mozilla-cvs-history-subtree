@@ -259,7 +259,7 @@ nsHTMLTextAreaElement::SetFocus(nsIPresContext* aPresContext)
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  nsresult rv = GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -268,7 +268,7 @@ nsHTMLTextAreaElement::SetFocus(nsIPresContext* aPresContext)
     // select text when we receive focus.
   }
 
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -280,7 +280,7 @@ nsHTMLTextAreaElement::RemoveFocus(nsIPresContext* aPresContext)
   nsresult rv = NS_OK;
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_FALSE, PR_FALSE);
@@ -347,7 +347,7 @@ nsHTMLTextAreaElement::Select()
     }
 
     nsIFormControlFrame* formControlFrame = nsnull;
-    rv = GetPrimaryFrame(this, formControlFrame);
+    GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
     if (formControlFrame) {
       formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -364,15 +364,14 @@ NS_IMETHODIMP
 nsHTMLTextAreaElement::SelectAll(nsIPresContext* aPresContext)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  nsresult rv = GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetProperty(aPresContext, nsHTMLAtoms::select,
-                                  nsAutoString());
-    return NS_OK;
+                                  nsString());
   }
 
-  return rv;
+  return NS_OK;
 }
 
 NS_IMPL_STRING_ATTR(nsHTMLTextAreaElement, AccessKey, accesskey)
@@ -405,7 +404,7 @@ NS_IMETHODIMP
 nsHTMLTextAreaElement::GetValue(nsAWritableString& aValue)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->GetProperty(nsHTMLAtoms::value, aValue);
@@ -432,7 +431,7 @@ NS_IMETHODIMP
 nsHTMLTextAreaElement::SetValue(const nsAReadableString& aValue)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<nsIPresContext> presContext;
@@ -565,7 +564,7 @@ nsHTMLTextAreaElement::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
   nsIFrame* formFrame = nsnull;
 
   if (formControlFrame &&

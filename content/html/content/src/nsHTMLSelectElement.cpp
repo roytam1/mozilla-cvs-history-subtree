@@ -436,11 +436,13 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
     nsIFormControlFrame* fcFrame = nsnull;
     nsISelectControlFrame* selectFrame = nsnull;
     nsCOMPtr<nsIPresContext> presContext;
-    GetPrimaryFrame(this, fcFrame, PR_FALSE);
+    GetPrimaryFrame(this, fcFrame, PR_FALSE, PR_FALSE);
+
     if (fcFrame) {
       CallQueryInterface(fcFrame, &selectFrame);
       if (selectFrame) {
         GetPresContext(this, getter_AddRefs(presContext));
+
         for (int i=aListIndex;i<insertIndex;i++) {
           selectFrame->AddOption(presContext, i);
         }
@@ -468,6 +470,7 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
           if (!isMultiple) {
             SetOptionsSelectedByIndex(i, i, PR_TRUE, PR_TRUE, PR_TRUE, nsnull);
           }
+
           // This is sort of a hack ... we need to notify that the option was
           // set and change selectedIndex even though we didn't really change
           // its value.
@@ -528,15 +531,15 @@ nsHTMLSelectElement::RemoveOptionsFromList(nsIContent* aOptions,
   if (numRemoved) {
     // Tell the widget we removed the options
     nsIFormControlFrame* fcFrame = nsnull;
-    nsresult rv = GetPrimaryFrame(this, fcFrame, PR_FALSE);
-    if (NS_SUCCEEDED(rv) && fcFrame) {
+    GetPrimaryFrame(this, fcFrame, PR_FALSE, PR_FALSE);
+    if (fcFrame) {
       nsISelectControlFrame* selectFrame = nsnull;
       CallQueryInterface(fcFrame, &selectFrame);
       if (selectFrame) {
         nsCOMPtr<nsIPresContext> presContext;
         GetPresContext(this, getter_AddRefs(presContext));
         for (int i=aListIndex;i<aListIndex+numRemoved;i++) {
-          rv = selectFrame->RemoveOption(presContext, i);
+          selectFrame->RemoveOption(presContext, i);
         }
       }
     }
@@ -1153,7 +1156,7 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
 
   // To notify the frame if anything gets changed
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   nsCOMPtr<nsISelectControlFrame> selectFrame =
     do_QueryInterface(formControlFrame);
@@ -1469,7 +1472,7 @@ nsHTMLSelectElement::SetFocus(nsIPresContext* aPresContext)
 
   nsIFormControlFrame* formControlFrame = nsnull;
 
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -1491,7 +1494,7 @@ nsHTMLSelectElement::RemoveFocus(nsIPresContext* aPresContext)
 
   nsIFormControlFrame* formControlFrame = nsnull;
 
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_FALSE, PR_FALSE);
@@ -1613,7 +1616,7 @@ nsHTMLSelectElement::DoneAddingContent(PRBool aIsDone)
   mIsDoneAddingContent = aIsDone;
 
   nsIFormControlFrame* fcFrame = nsnull;
-  nsresult rv = GetPrimaryFrame(this, fcFrame, PR_FALSE);
+  GetPrimaryFrame(this, fcFrame, PR_FALSE, PR_FALSE);
 
   // If we foolishly tried to restore before we were done adding
   // content, restore the rest of the options proper-like
@@ -1623,11 +1626,11 @@ nsHTMLSelectElement::DoneAddingContent(PRBool aIsDone)
     mRestoreState = nsnull;
   }
 
-  if (NS_SUCCEEDED(rv) && fcFrame) {
+  if (fcFrame) {
     nsISelectControlFrame* selectFrame = nsnull;
     CallQueryInterface(fcFrame, &selectFrame);
     if (selectFrame) {
-      rv = selectFrame->DoneAddingContent(mIsDoneAddingContent);
+      selectFrame->DoneAddingContent(mIsDoneAddingContent);
     }
   }
 
@@ -1718,7 +1721,7 @@ nsHTMLSelectElement::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
   nsIFrame* formFrame = nsnull;
 
   if (formControlFrame &&
@@ -1827,7 +1830,7 @@ nsHTMLSelectElement::RestoreState(nsIPresContext* aPresContext,
     RestoreStateTo(&stateStr);
 
     nsIFormControlFrame* formControlFrame = nsnull;
-    GetPrimaryFrame(this, formControlFrame);
+    GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
     if (formControlFrame) {
       formControlFrame->OnContentReset();
     }
@@ -1907,7 +1910,7 @@ nsHTMLSelectElement::Reset()
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
   if (formControlFrame) {
     formControlFrame->OnContentReset();
   }

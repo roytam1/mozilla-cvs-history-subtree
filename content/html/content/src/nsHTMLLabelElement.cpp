@@ -379,8 +379,9 @@ nsHTMLLabelElement::HandleDOMEvent(nsIPresContext* aPresContext,
               // Find out of this is a form element.
               if (NS_SUCCEEDED(rv)) {
                 nsIFormControlFrame* control;
-                nsresult gotFrame = GetPrimaryFrame(node, control);
-                isFormElement = NS_SUCCEEDED(gotFrame) && control;
+                GetPrimaryFrame(node, control, PR_TRUE, PR_FALSE);
+
+                isFormElement = control != nsnull;
               }
             }
           }
@@ -406,9 +407,9 @@ nsHTMLLabelElement::HandleDOMEvent(nsIPresContext* aPresContext,
                   // Find out of this is a form element.
                   nsIFormControlFrame* control;
 
-                  nsresult gotFrame = GetPrimaryFrame(node, control);
+                  GetPrimaryFrame(node, control, PR_TRUE, PR_FALSE);
 
-                  isFormElement = NS_SUCCEEDED(gotFrame) && control;
+                  isFormElement = control != nsnull;
                 }
               }
             }

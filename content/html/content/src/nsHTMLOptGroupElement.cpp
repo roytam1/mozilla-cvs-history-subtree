@@ -188,9 +188,9 @@ nsHTMLOptGroupElement::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame);
-  nsIFrame* formFrame = nsnull;
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
 
+  nsIFrame* formFrame = nsnull;
   if (formControlFrame &&
       NS_SUCCEEDED(formControlFrame->QueryInterface(NS_GET_IID(nsIFrame),
                                                     (void **)&formFrame)) &&

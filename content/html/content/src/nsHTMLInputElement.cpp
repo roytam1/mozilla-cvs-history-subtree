@@ -401,7 +401,7 @@ nsHTMLInputElement::GetValue(nsAWritableString& aValue)
   if (NS_FORM_INPUT_TEXT == type || NS_FORM_INPUT_PASSWORD == type ||
       NS_FORM_INPUT_FILE == type) {
     nsIFormControlFrame* formControlFrame = nsnull;
-    GetPrimaryFrame(this, formControlFrame);
+    GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
     if (formControlFrame) {
       formControlFrame->GetProperty(nsHTMLAtoms::value, aValue);
@@ -475,13 +475,12 @@ nsHTMLInputElement::SetValueSecure(const nsAReadableString& aValue,
     }
 
     nsIFormControlFrame* formControlFrame = nsnull;
-    GetPrimaryFrame(this, formControlFrame);
+    GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
     if (formControlFrame) {
-      nsIPresContext* presContext;
-      GetPresContext(this, &presContext);
+      nsCOMPtr<nsIPresContext> presContext;
+      GetPresContext(this, getter_AddRefs(presContext));
       formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, aValue);
-      NS_IF_RELEASE(presContext);
     } else {
       SetValueInternal(aValue);
     }
@@ -499,7 +498,8 @@ nsHTMLInputElement::GetChecked(PRBool* aValue)
 {
   nsAutoString value; value.AssignWithConversion("0");
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->GetProperty(nsHTMLAtoms::checked, value);
@@ -554,7 +554,7 @@ nsHTMLInputElement::SetChecked(PRBool aValue)
   GetPresContext(this, getter_AddRefs(presContext));
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     // the value is being toggled
@@ -676,7 +676,7 @@ nsHTMLInputElement::SetFocus(nsIPresContext* aPresContext)
   }
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -697,7 +697,7 @@ nsHTMLInputElement::RemoveFocus(nsIPresContext* aPresContext)
   nsresult rv = NS_OK;
 
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetFocus(PR_FALSE, PR_FALSE);
@@ -783,7 +783,7 @@ nsHTMLInputElement::Select()
       }
 
       nsIFormControlFrame* formControlFrame = nsnull;
-      rv = GetPrimaryFrame(this, formControlFrame);
+      rv = GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
       if (formControlFrame) {
         formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -801,7 +801,7 @@ void
 nsHTMLInputElement::SelectAll(nsIPresContext* aPresContext)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     formControlFrame->SetProperty(aPresContext, nsHTMLAtoms::select,
@@ -933,7 +933,7 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
   //                This pointer is only valid until
   //                nsGenericHTMLLeafFormElement::HandleDOMEvent
   nsIFormControlFrame* formControlFrame = nsnull;
-  rv = GetPrimaryFrame(this, formControlFrame, PR_FALSE);
+  rv = GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
 
   if (formControlFrame) {
     nsIFrame* formFrame = nsnull;
@@ -1042,10 +1042,11 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           // Get the currently selected button from the radio group
           // we get access to that via the nsIRadioControlFrame interface
           // because the current grouping is kept in the frame.
-          nsIRadioControlFrame * rb = nsnull;
-          if (formControlFrame != nsnull) {
-            nsresult resv = formControlFrame->QueryInterface(NS_GET_IID(nsIRadioControlFrame), (void**)&rb);
-            if (NS_SUCCEEDED(resv) && rb) {
+          if (formControlFrame) {
+            nsIRadioControlFrame * rb = nsnull;
+            CallQueryInterface(formControlFrame, &rb);
+
+            if (rb) {
               rb->GetRadioGroupSelectedContent(getter_AddRefs(selectedRadiobtn));
             }
           }
@@ -1090,7 +1091,7 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   // Bugscape 2369: Frame might have changed during event handler
   formControlFrame = nsnull;
-  rv = nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame, PR_FALSE);
+  GetPrimaryFrame(this, formControlFrame, PR_FALSE, PR_FALSE);
 
   // Finish the special file control processing...
   if (oldTarget) {
@@ -1506,7 +1507,7 @@ NS_IMETHODIMP
 nsHTMLInputElement::GetTextLength(PRInt32* aTextLength)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<textControlPlace>
@@ -1524,7 +1525,7 @@ nsHTMLInputElement::SetSelectionRange(PRInt32 aSelectionStart,
                                       PRInt32 aSelectionEnd)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<textControlPlace>
@@ -1550,7 +1551,7 @@ NS_IMETHODIMP
 nsHTMLInputElement::SetSelectionStart(PRInt32 aSelectionStart)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<textControlPlace>
@@ -1577,7 +1578,7 @@ NS_IMETHODIMP
 nsHTMLInputElement::SetSelectionEnd(PRInt32 aSelectionEnd)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<textControlPlace>
@@ -1595,7 +1596,7 @@ nsHTMLInputElement::GetSelectionRange(PRInt32* aSelectionStart,
                                       PRInt32* aSelectionEnd)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
-  GetPrimaryFrame(this, formControlFrame);
+  GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
   if (formControlFrame) {
     nsCOMPtr<textControlPlace>
@@ -1822,7 +1823,7 @@ nsHTMLInputElement::GetNamesValues(PRInt32 aMaxNumValues,
       PRInt32 clickedX;
       PRInt32 clickedY;
       nsIFormControlFrame* formControlFrame = nsnull;
-      rv = GetPrimaryFrame(this, formControlFrame);
+      GetPrimaryFrame(this, formControlFrame, PR_TRUE, PR_FALSE);
 
       nsCOMPtr<nsIImageControlFrame> imageControlFrame(
           do_QueryInterface(formControlFrame));

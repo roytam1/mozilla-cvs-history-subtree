@@ -2757,39 +2757,45 @@ nsGenericHTMLElement::ColorToString(const nsHTMLValue& aValue,
   return PR_FALSE;
 }
 
-// XXX This creates a dependency between content and frames
 nsresult
 nsGenericHTMLElement::GetPrimaryFrame(nsIHTMLContent* aContent,
                                       nsIFormControlFrame *&aFormControlFrame,
-                                      PRBool aFlushNotifications)
+                                      PRBool aFlushContent,
+                                      PRBool aFlushReflows)
 {
-  nsIDocument* doc = nsnull;
-  nsresult res = NS_NOINTERFACE;
-   // Get the document
-  if (NS_OK == aContent->GetDocument(doc)) {
-    if (nsnull != doc) {
-      if (aFlushNotifications) {
-        // Cause a flushing of notifications, so we get
-        // up-to-date presentation information
-        doc->FlushPendingNotifications();
-      }
+  aFormControlFrame = nsnull;
 
-       // Get presentation shell 0
-      nsCOMPtr<nsIPresShell> presShell;
-      doc->GetShellAt(0, getter_AddRefs(presShell));
-      if (nsnull != presShell) {
-        nsIFrame *frame = nsnull;
-        presShell->GetPrimaryFrameFor(aContent, &frame);
-        if (nsnull != frame) {
-          res = frame->QueryInterface(NS_GET_IID(nsIFormControlFrame),
-                                      (void**)&aFormControlFrame);
-        }
+  nsCOMPtr<nsIDocument> doc;
+
+  // Get the document
+  aContent->GetDocument(*getter_AddRefs(doc));
+
+  if (doc) {
+    if (aFlushReflows) {
+      // Cause a flushing of notifications, so we get
+      // up-to-date presentation information
+      doc->FlushPendingNotifications(PR_TRUE);
+    } else if (aFlushContent) {
+      // Cause a flushing of notifications, so we get
+      // up-to-date presentation information
+      doc->FlushPendingNotifications(PR_FALSE);
+    }
+
+    // Get presentation shell 0
+    nsCOMPtr<nsIPresShell> presShell;
+    doc->GetShellAt(0, getter_AddRefs(presShell));
+
+    if (presShell) {
+      nsIFrame *frame = nsnull;
+      presShell->GetPrimaryFrameFor(aContent, &frame);
+
+      if (frame) {
+        CallQueryInterface(frame, &aFormControlFrame);
       }
-      NS_RELEASE(doc);
     }
   }
 
-  return res;
+  return NS_OK;
 }
 
 nsresult
