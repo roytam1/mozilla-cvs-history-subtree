@@ -181,6 +181,9 @@ class CNSContext : public LBroadcaster, public LSharable
 		virtual void				GetHistoryURLByIndex(cstring& outURL, Int32 inIndex);	// one-based index
 
 			// URL MANIPULATION
+		// 97-10-29 pchen -- Fix bug #90892, prefer origin_url in history entry to address
+		virtual cstring				GetURLForReferral();
+		
 		virtual	cstring				GetCurrentURL();
 		
 		virtual	void				SwitchLoadURL(
@@ -488,6 +491,8 @@ public:
 
 		Int32			GetTransactionID() { return fNSCProgressID; }
 		Int32			GetContextUniqueID() { return fNSCWindowID; }
+		CommandT		GetCurrentCommand() const { return mCurrentCommand; }
+		void			SetCurrentCommand(CommandT inCommand) { mCurrentCommand = inCommand; }
 		// Window ID. Used to identify the context
 
 
@@ -506,6 +511,7 @@ protected:
 		Int16 					mDefaultCSID;
 		Boolean					mRequiresClone;		
 		CContextProgress*		mProgress;
+		CommandT				mCurrentCommand; // command being executed
 };
 
 

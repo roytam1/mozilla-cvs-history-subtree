@@ -2463,9 +2463,9 @@ int DIR_ValidateRootDSE (DIR_Server *server, char *version, int32 first, int32 l
 	return 0;
 }
 
+#ifdef MOZ_LDAP
 int DIR_ParseRootDSE (DIR_Server *server, LDAP *ld, LDAPMessage *message)
 {
-#ifdef MOZ_LDAP
 	char **values = NULL;
 
 	server->flags |= DIR_LDAP_ROOTDSE_PARSED;
@@ -2502,9 +2502,9 @@ int DIR_ParseRootDSE (DIR_Server *server, LDAP *ld, LDAPMessage *message)
 		}
 		ldap_value_free (values);
 	}
-#endif
 	return 0;
 }
+#endif
 
 
 void DIR_SetAutoCompleteEnabled (XP_List *list, DIR_Server *server, XP_Bool enabled)
