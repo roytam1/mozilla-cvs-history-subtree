@@ -218,6 +218,16 @@ endif
 # hardwire dependencies on jsopcode.tbl
 jsopcode.h jsopcode.c: jsopcode.tbl
 
+# Generate jscpucfg.h header
+$(CSRCS): $(OBJDIR)/jscpucfg.h
+
+$(OBJDIR)/jscpucfg.h: $(OBJDIR)/jscpucfg
+	rm -f $@
+	$(OBJDIR)/jscpucfg > $@
+
+$(OBJDIR)/jscpucfg: $(OBJDIR)/jscpucfg.o
+	$(CC) -o $@ $(OBJDIR)/jscpucfg.o
+
 # this section was put in the merged by danda into the
 # JAVA_*_MERGE section and normally would have
 # been removed.  However it looks like it shouldn't have
@@ -230,25 +240,3 @@ $(OBJDIR)/js.o: js.c
 	@$(MAKE_OBJDIR)
 	$(CC) -Fo$@ -c $(CFLAGS) $(JSJAVA_CFLAGS) js.c
 endif
-
-
-refdiff:
-	@for f in `cat commfiles`; do                                         \
-	    t=/tmp/refdiff.$$$$;                                              \
-	    trap 'rm -f $$t' 0 1 2 15;                                        \
-	    sed -f prconv.sed ../ref/$$f > $$t;                               \
-	    cmp -s $$t $$f;                                                   \
-	    if test $$? -ne 0; then                                           \
-		echo "=== $$f";                                               \
-		diff $$f $$t;                                                 \
-	    fi;                                                               \
-	    rm -f $$t;                                                        \
-	done
-
-refconv:
-	@for f in `cat commfiles`; do                                         \
-	    echo "=== $$f";                                                   \
-	    sed -f prconv.sed ../ref/$$f > $$f;                               \
-	done
-
-.PHONY: refdiff refconv
