@@ -99,7 +99,6 @@ CPPSRCS		+= \
 		nsWinReg.cpp \
 		nsJSWinReg.cpp \
 		nsWinRegItem.cpp \
-		nsWinRegValue.cpp \
 		nsWinProfile.cpp \
 		nsJSWinProfile.cpp \
 		nsWinProfileItem.cpp \
