@@ -97,6 +97,7 @@ public:
   NS_IMETHOD DestroyPopup(nsIFrame* aPopup);
 
   NS_IMETHOD AddPopupFrame(nsIFrame* aPopup);
+  NS_IMETHOD RemovePopupFrame(nsIFrame* aPopup);
   
   PRBool OnCreate(nsIContent* aPopupContent);
   PRBool OnDestroy(nsIContent* aPopupContent);
@@ -106,11 +107,12 @@ public:
   void ActivatePopup(nsPopupFrameList* aEntry, PRBool aActivateFlag);
   void OpenPopup(nsPopupFrameList* aEntry, PRBool aOpenFlag);
 
+#ifdef DEBUG
   NS_IMETHOD GetFrameName(nsString& aResult) const
   {
-      aResult.AssignWithConversion("PopupSet");
-      return NS_OK;
+      return MakeFrameName("PopupSet", aResult);
   }
+#endif
 
   void SetFrameConstructor(nsCSSFrameConstructor* aFC) {
     mFrameConstructor = aFC;

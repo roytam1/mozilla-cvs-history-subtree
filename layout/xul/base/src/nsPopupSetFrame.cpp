@@ -394,8 +394,7 @@ nsPopupSetFrame::DestroyPopup(nsIFrame* aPopup)
     entry->mLastPref.width = -1;
     entry->mLastPref.height = -1;
 
-    // remove the frame and ungenerate the popup.
-    entry->mPopupFrame = nsnull;
+    // ungenerate the popup.
     entry->mPopupContent->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, PR_TRUE);
   }
 
@@ -444,8 +443,8 @@ nsPopupSetFrame::OpenPopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
 
     // Unregister, but not if we're a tooltip
     if (aEntry->mPopupType != NS_LITERAL_STRING("tooltip") ) {
-      if (nsMenuFrame::mDismissalListener)
-        nsMenuFrame::mDismissalListener->Unregister();
+      if (nsMenuFrame::sDismissalListener)
+        nsMenuFrame::sDismissalListener->Unregister();
     }
     
     // Remove any keyboard navigators
@@ -470,6 +469,7 @@ nsPopupSetFrame::ActivatePopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
     // is set by setting the |menuactive| attribute. This used to trip css into showing the menu
     // but now we do it ourselves. 
     if (aActivateFlag)
+      // XXXben hook in |width| and |height| usage here? 
       aEntry->mPopupContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menutobedisplayed, NS_LITERAL_STRING("true"), PR_TRUE);
     else {
       aEntry->mPopupContent->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, PR_TRUE);
@@ -665,7 +665,7 @@ nsPopupSetFrame::OnDestroyed(nsIContent* aPopupContent)
 void
 nsPopupSetFrame::UpdateDismissalListener(nsIMenuParent* aMenuParent)
 {
-  if (!nsMenuFrame::mDismissalListener) {
+  if (!nsMenuFrame::sDismissalListener) {
     if (!aMenuParent)
        return;
     // Create the listener and attach it to the outermost window.
@@ -674,7 +674,40 @@ nsPopupSetFrame::UpdateDismissalListener(nsIMenuParent* aMenuParent)
   
   // Make sure the menu dismissal listener knows what the current
   // innermost menu popup frame is.
-  nsMenuFrame::mDismissalListener->SetCurrentMenuParent(aMenuParent);
+  nsMenuFrame::sDismissalListener->SetCurrentMenuParent(aMenuParent);
+}
+
+NS_IMETHODIMP
+nsPopupSetFrame::RemovePopupFrame(nsIFrame* aPopup)
+{
+  // This was called by the Destroy() method of the popup, so all we have to do is
+  // get the popup out of our list, so we don't reflow it later.
+  nsPopupFrameList* currEntry = mPopupList;
+  nsPopupFrameList* temp = nsnull;
+  while (currEntry) {
+    if (currEntry->mPopupFrame == aPopup) {
+      // Remove this entry.
+      if (temp)
+        temp->mNextPopup = currEntry->mNextPopup;
+      else
+        mPopupList = currEntry->mNextPopup;
+      
+      // Destroy the frame.
+      currEntry->mPopupFrame->Destroy(mPresContext);
+
+      // Delete the entry.
+      currEntry->mNextPopup = nsnull;
+      delete currEntry;
+
+      // Break out of the loop.
+      break;
+    }
+
+    temp = currEntry;
+    currEntry = currEntry->mNextPopup;
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
