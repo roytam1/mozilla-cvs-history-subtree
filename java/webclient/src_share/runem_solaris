@@ -11,6 +11,7 @@ fi
 echo "args = $script_args"
 
 JDKHOME=`pwd`/../../java
+MOZILLA_FIVE_HOME=`pwd`/../..
 
 ARCH=`uname -p` 
 
@@ -36,6 +37,7 @@ bindir=`pwd`/../..
 export LD_LIBRARY_PATH
 export CLASSPATH
 export JDKHOME
+export MOZILLA_FIVE_HOME
 
 args="-native -Djava.library.path=$libpath -classpath $CLASSPATH $testclass $bindir $script_args"
 
