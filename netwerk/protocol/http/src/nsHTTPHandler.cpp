@@ -442,8 +442,11 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
 
 nsHTTPHandler * nsHTTPHandler::GetInstance(void)
 {
-    static nsHTTPHandler* pHandler = new nsHTTPHandler();
-    NS_ADDREF(pHandler);
+    static nsHTTPHandler* pHandler;
+    if (!pHandler) {
+        pHandler = new nsHTTPHandler();
+        NS_ADDREF(pHandler);
+    }
     return pHandler;
 };
 
