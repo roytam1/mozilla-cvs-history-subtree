@@ -28,6 +28,35 @@ function Startup()
 
 function applySkin()
 {
+  // XXX XXX BAD BAD BAD BAD !! XXX XXX
+  // we STILL haven't fixed editor skin switch problems
+  // hacking around it yet again
+  try {
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+    var strbundle = srGetStrBundle("chrome://navigator/locale/navigator.properties");
+    var brandbundle = srGetStrBundle("chrome://global/locale/brand.properties");
+  }
+  catch(e) {
+    return;
+  }
+  
+  if (promptService)
+  {
+    try {
+      var dialogTitle = strbundle.GetStringFromName("switchskinstitle");
+      var brandName = brandbundle.GetStringFromName("brandShortName");
+      var msg = strbundle.formatStringFromName("switchskins",
+                                               [brandName, brandName],
+                                               2);
+      if (!promptService.confirm(window, dialogTitle, msg))
+        return;
+    }
+    catch(e) {
+    }
+  }
+  else
+    return;
+
   var tree = document.getElementById( "skinsTree" );
   var selectedSkinItem = tree.selectedItems[0];
   var skinName = selectedSkinItem.getAttribute( "name" );
