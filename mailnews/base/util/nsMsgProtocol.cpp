@@ -32,6 +32,8 @@ nsMsgProtocol::nsMsgProtocol()
 {
 	NS_INIT_REFCNT();
 	m_flags = 0;
+	m_startPosition = 0;
+	m_readCount = 0;
 	m_socketIsOpen = PR_FALSE;
 }
 
@@ -43,6 +45,9 @@ nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on
 	nsresult rv = NS_OK;
 	nsXPIDLCString hostName;
 	PRInt32 port = 0;
+
+	m_readCount = -1; // with socket connections we want to read as much data as arrives
+	m_startPosition = 0;
 
     NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
 
@@ -62,19 +67,22 @@ nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on
 	return rv;
 }
 
-nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec)
+nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec, PRUint32 aStartPosition, PRInt32 aReadCount)
 {
 	// mscott - file needs to be encoded directly into aURL. I should be able to get
 	// rid of this method completely.
 
 	nsresult rv = NS_OK;
+	m_startPosition = aStartPosition;
+	m_readCount = aReadCount;
+
     NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
 	if (NS_SUCCEEDED(rv) && aURL)
 	{
 		// extract the file path from the uri...
 		nsXPIDLCString filePath;
 		aURL->GetPath(getter_Copies(filePath));
-		char * urlSpec = PR_smprintf("file://%s", filePath);
+		char * urlSpec = PR_smprintf("file://%s", (const char *) filePath);
 
 		rv = netService->NewChannel("Load", urlSpec, nsnull, nsnull, getter_AddRefs(m_channel));
 		PR_FREEIF(urlSpec);
@@ -179,7 +187,7 @@ nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 		if (!m_socketIsOpen)
 		{
 			// put us in a state where we are always notified of incoming data
-			m_channel->AsyncRead(0, -1, aURL,this /* stream observer */ );
+			m_channel->AsyncRead(m_startPosition, m_readCount, aURL,this /* stream observer */, nsnull /* load group */ );
 			m_socketIsOpen = PR_TRUE; // mark the channel as open
 		} // if we got an event queue service
 		else  // the connection is already open so we should begin processing our new url...
