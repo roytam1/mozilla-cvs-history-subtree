@@ -177,13 +177,18 @@ typedef PRUint32 nsFrameState;
 #define NS_FRAME_SELECTED_CONTENT                     0x00000200
 
 // If this bit is set, then the frame is dirty and needs to be reflowed.
-// This bit is set when the frame is first created
+// This bit is set when the frame is first created.
 #define NS_FRAME_IS_DIRTY                             0x00000400
 
 // If this bit is set then the frame is unflowable.
 #define NS_FRAME_IS_UNFLOWABLE                        0x00000800
 
-// If this bit is set, the frame has dirty descendants.
+// If this bit is set, either:
+//  1. the frame has children that have either NS_FRAME_IS_DIRTY or
+//     NS_FRAME_HAS_DIRTY_CHILDREN, or
+//  2. the frame has had descendants removed.
+// It means that Reflow needs to be called, but that Reflow will not
+// do as much work as it would if NS_FRAME_IS_DIRTY were set.
 #define NS_FRAME_HAS_DIRTY_CHILDREN                   0x00001000
 
 // If this bit is set, the frame has an associated view
