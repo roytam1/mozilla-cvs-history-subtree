@@ -485,6 +485,21 @@ public static String webShellGetURL(int webShellPtr,
 	}
 }
 
+/**
+ * Added by Mark Goddard OTMP 9/2/1999
+ */
+
+public static boolean webShellRefresh(int webShellPtr) throws Exception
+{
+ 	synchronized(lock) {
+		if (initialized) {
+			return instance.nativeWebShellRefresh(webShellPtr);
+		}
+		else {
+			throw new Exception("instance is not initialized.");
+		}
+	}
+}   
 //
 // Native interfaces
 //
@@ -552,6 +567,11 @@ private native boolean	nativeWebShellGoTo				(int webShellPtr, int aHistoryIndex
 private native int		nativeWebShellGetHistoryLength	(int webShellPtr) throws Exception;
 private native int		nativeWebShellGetHistoryIndex	(int webShellPtr) throws Exception;
 private native String	nativeWebShellGetURL			(int webShellPtr, int aHistoryIndex) throws Exception;
+
+/**
+ * Added by Mark Goddard OTMP 9/2/1999
+ */
+private native boolean  nativeWebShellRefresh           (int webShellPtr) throws Exception;
 
 //
 // General Methods

@@ -47,6 +47,11 @@ public boolean back() throws Exception;
 
 public boolean forward() throws Exception;
 
+// added by Mark Goddard OTMP 9/2/1999
+public boolean refresh() throws Exception;
+
 public int getNativeWebShell();
 
 } // end of interface BrowserControlCore
+
+

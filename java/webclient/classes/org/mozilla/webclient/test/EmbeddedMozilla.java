@@ -85,6 +85,7 @@ public class EmbeddedMozilla extends Frame implements ActionListener {
 		makeItem(buttonsPanel, "Back",    0, 0, 1, 1, 0.0, 0.0);
 		makeItem(buttonsPanel, "Forward", 1, 0, 1, 1, 0.0, 0.0);
 		makeItem(buttonsPanel, "Stop",    2, 0, 1, 1, 0.0, 0.0);
+		makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
@@ -148,6 +149,9 @@ public class EmbeddedMozilla extends Frame implements ActionListener {
 	    	else if (command.equals("Stop")) {
 	    		browserControl.stop();
 	    	}
+            else if (command.equals("Refresh")) {
+                browserControl.refresh();
+            }
 	    	else {
 		        browserControl.loadURL(urlField.getText());
 		    }

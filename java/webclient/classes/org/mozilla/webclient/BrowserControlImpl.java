@@ -203,6 +203,14 @@ public String getURL (int historyIndex) throws Exception
 }
 
 /**
+ * Added by Mark Goddard OTMP 9/2/1999
+ */
+public boolean refresh() throws Exception
+{
+    return BrowserControlMozillaShim.webShellRefresh(nativeWebShell);
+}
+
+/**
  *
  */
 public int getNativeWebShell () 
