@@ -303,7 +303,7 @@ sub SetupEnv {
     if ($Settings::ObjDir ne '') {
         $ENV{LD_LIBRARY_PATH} = "$topsrcdir/${Settings::ObjDir}/$Settings::DistBin:" . "$ENV{LD_LIBRARY_PATH}";
     } else {
-        $ENV{LD_LIBRARY_PATH} = "$topsrcdir/$Settings::DistBin:" . "$ENV{LD_LIBRARY_PATH}";
+        $ENV{LD_LIBRARY_PATH} = "$topsrcdir/$Settings::DistBin:" . ($ENV{LD_LIBRARY_PATH} || "");
     }
 
     # MacOSX needs this set.
