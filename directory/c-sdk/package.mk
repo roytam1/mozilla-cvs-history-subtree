@@ -93,6 +93,7 @@ endif
 	$(NSINSTALL) $(INCDIR)/lber.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-standard.h $(INSTDIR)/include
+	$(NSINSTALL) $(INCDIR)/ldap-platform.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-extension.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-deprecated.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-to-be-deprecated.h $(INSTDIR)/include
