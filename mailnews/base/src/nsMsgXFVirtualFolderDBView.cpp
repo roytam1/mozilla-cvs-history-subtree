@@ -42,7 +42,6 @@
 #include "nsIMsgCopyService.h"
 #include "nsICopyMsgStreamListener.h"
 #include "nsMsgUtils.h"
-#include "nsITreeColumns.h"
 #include "nsIMsgSearchSession.h"
 
 nsMsgXFVirtualFolderDBView::nsMsgXFVirtualFolderDBView()

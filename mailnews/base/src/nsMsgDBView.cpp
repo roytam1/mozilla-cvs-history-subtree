@@ -133,6 +133,7 @@ nsMsgDBView::nsMsgDBView()
   m_viewFlags = nsMsgViewFlagsType::kNone;
   m_cachedMsgKey = nsMsgKey_None;
   m_currentlyDisplayedMsgKey = nsMsgKey_None;
+  m_currentlyDisplayedViewIndex = nsMsgViewIndex_None;
   mNumSelectedRows = 0;
   mSuppressMsgDisplay = PR_FALSE;
   mSuppressCommandUpdating = PR_FALSE;
@@ -893,7 +894,7 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
 nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, nsIMsgFolder *folder, char ** aURI)
 {
   NS_ENSURE_ARG(folder);
-	return(folder->GenerateMessageURI(aMsgKey, aURI));
+  return(folder->GenerateMessageURI(aMsgKey, aURI));
 }
 
 nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
@@ -963,24 +964,24 @@ NS_IMETHODIMP nsMsgDBView::ReloadMessage()
 
 nsresult nsMsgDBView::ReloadMessageHelper(PRBool forceAllParts)
 {
-  if (!mSuppressMsgDisplay && m_currentlyDisplayedMsgKey != nsMsgKey_None)
+  if (!mSuppressMsgDisplay && m_currentlyDisplayedViewIndex != nsMsgViewIndex_None)
   {
-    nsMsgKey currentMsgToReload = m_currentlyDisplayedMsgKey;
+    nsMsgViewIndex msgToReload = m_currentlyDisplayedViewIndex;
     m_currentlyDisplayedMsgKey = nsMsgKey_None;
-    LoadMessageByMsgKeyHelper(currentMsgToReload, forceAllParts);
+    m_currentlyDisplayedViewIndex = nsMsgViewIndex_None;
+    LoadMessageByViewIndexHelper(msgToReload, forceAllParts);
   }
 
   return NS_OK;
 }
 
-nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
+nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgViewIndex viewPosition)
 {
   nsresult rv;
   if (mCommandUpdater)
   {
     // get the subject and the folder for the message and inform the front end that
     // we changed the message we are currently displaying.
-    nsMsgViewIndex viewPosition = FindViewIndex(aMsgKey);
     if (viewPosition != nsMsgViewIndex_None)
     {
       nsCOMPtr <nsIMsgDBHdr> msgHdr;
@@ -997,7 +998,7 @@ nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
 
       if (m_folder) 
       {
-        rv = m_folder->SetLastMessageLoaded(aMsgKey);
+        rv = m_folder->SetLastMessageLoaded(m_keys[viewPosition]);
         NS_ENSURE_SUCCESS(rv,rv);
       }
     } // if view position is valid
@@ -1008,26 +1009,46 @@ nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgKey aMsgKey)
 // given a msg key, we will load the message for it.
 NS_IMETHODIMP nsMsgDBView::LoadMessageByMsgKey(nsMsgKey aMsgKey)
 {
-  return LoadMessageByMsgKeyHelper(aMsgKey, PR_FALSE);
+  return LoadMessageByViewIndexHelper(FindViewIndex(aMsgKey), PR_FALSE);
 }
 
-nsresult nsMsgDBView::LoadMessageByMsgKeyHelper(nsMsgKey aMsgKey, PRBool forceAllParts)
+NS_IMETHODIMP nsMsgDBView::LoadMessageByViewIndex(nsMsgViewIndex aViewIndex)
 {
-  NS_ASSERTION(aMsgKey != nsMsgKey_None,"trying to load nsMsgKey_None");
-  if (aMsgKey == nsMsgKey_None) return NS_ERROR_UNEXPECTED;
+  NS_ASSERTION(aViewIndex != nsMsgViewIndex_None,"trying to load nsMsgViewIndex_None");
+  if (aViewIndex == nsMsgViewIndex_None) return NS_ERROR_UNEXPECTED;
 
-  if (!mSuppressMsgDisplay && (m_currentlyDisplayedMsgKey != aMsgKey))
+  nsXPIDLCString uri;
+  nsresult rv = GetURIForViewIndex(aViewIndex, getter_Copies(uri));
+  if (!mSuppressMsgDisplay && !m_currentlyDisplayedMsgUri.Equals(uri))
+  {
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    mMessengerInstance->OpenURL(uri);
+    m_currentlyDisplayedMsgKey = m_keys[aViewIndex];
+    m_currentlyDisplayedMsgUri = uri;
+    m_currentlyDisplayedViewIndex = aViewIndex;
+    UpdateDisplayMessage(m_currentlyDisplayedViewIndex);
+  }
+  return NS_OK;
+}
+
+nsresult nsMsgDBView::LoadMessageByViewIndexHelper(nsMsgViewIndex aViewIndex, PRBool forceAllParts)
+{
+  NS_ASSERTION(aViewIndex != nsMsgViewIndex_None,"trying to load nsMsgViewIndex_None");
+  if (aViewIndex == nsMsgViewIndex_None) return NS_ERROR_UNEXPECTED;
+
+  if (!mSuppressMsgDisplay && (m_currentlyDisplayedViewIndex != aViewIndex))
   {
     nsXPIDLCString uri;
-    nsresult rv = GenerateURIForMsgKey(aMsgKey, m_folder, getter_Copies(uri));
+    nsresult rv = GetURIForViewIndex(aViewIndex, getter_Copies(uri));
     NS_ENSURE_SUCCESS(rv,rv);
     if (forceAllParts)
-    {
       uri.Append("?fetchCompleteMessage=true");
-    }
+
     mMessengerInstance->OpenURL(uri);
-    m_currentlyDisplayedMsgKey = aMsgKey;
-    UpdateDisplayMessage(aMsgKey);
+    m_currentlyDisplayedMsgKey = m_keys[aViewIndex];
+    m_currentlyDisplayedViewIndex = aViewIndex;
+    UpdateDisplayMessage(aViewIndex);
   }
 
   return NS_OK;
@@ -1072,14 +1093,12 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 
     if (startRange >= 0 && startRange == endRange && startRange < GetSize())
     {
-      // get the msgkey for the message
-      nsMsgKey msgkey = m_keys.GetAt(startRange);
       if (!mRemovingRow)
       {
         if (!mSuppressMsgDisplay)
-          LoadMessageByMsgKey(msgkey);
+          LoadMessageByViewIndex(startRange);
         else
-          UpdateDisplayMessage(msgkey);
+          UpdateDisplayMessage(startRange);
       }
     }
     else
@@ -1874,6 +1893,7 @@ NS_IMETHODIMP nsMsgDBView::GetSuppressCommandUpdating(PRBool * aSuppressCommandU
 
 NS_IMETHODIMP nsMsgDBView::SetSuppressMsgDisplay(PRBool aSuppressDisplay)
 {
+  nsresult rv = NS_OK;
   PRBool forceDisplay = PR_FALSE;
   if (mSuppressMsgDisplay && (mSuppressMsgDisplay != aSuppressDisplay))
     forceDisplay = PR_TRUE;
@@ -1881,19 +1901,14 @@ NS_IMETHODIMP nsMsgDBView::SetSuppressMsgDisplay(PRBool aSuppressDisplay)
   mSuppressMsgDisplay = aSuppressDisplay;
   if (forceDisplay)
   {
-    // get the messae key for the currently selected message
-    nsMsgKey msgKey;
-    nsCOMPtr<nsIMsgDBHdr> dbHdr;
-    GetHdrForFirstSelectedMessage(getter_AddRefs(dbHdr));
-    if (dbHdr)
-    { 
-      nsresult rv = dbHdr->GetMessageKey(&msgKey);
-      if (NS_SUCCEEDED(rv))
-       LoadMessageByMsgKey(msgKey);
-    }
+    // get the view indexfor the currently selected message
+    nsMsgViewIndex viewIndex;
+    rv = GetViewIndexForFirstSelectedMsg(&viewIndex);
+    if (NS_SUCCEEDED(rv) && viewIndex != nsMsgViewIndex_None)
+       LoadMessageByViewIndex(viewIndex);
   }
 
-  return NS_OK;
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetSuppressMsgDisplay(PRBool * aSuppressDisplay)
@@ -1977,13 +1992,12 @@ NS_IMETHODIMP nsMsgDBView::GetURIForViewIndex(nsMsgViewIndex index, char **resul
 {
   nsresult rv;
   nsCOMPtr <nsIMsgFolder> folder = m_folder;
-  if (!folder) {
+  if (!folder)
+  {
     rv = GetFolderForViewIndex(index, getter_AddRefs(folder));
     NS_ENSURE_SUCCESS(rv,rv);
   }
-  rv = GenerateURIForMsgKey(m_keys[index], folder, result);
-  NS_ENSURE_SUCCESS(rv,rv);
-  return NS_OK;
+  return GenerateURIForMsgKey(m_keys[index], folder, result);
 }
 
 NS_IMETHODIMP nsMsgDBView::DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder)
@@ -5605,6 +5619,31 @@ PRBool nsMsgDBView::OfflineMsgSelected(nsMsgViewIndex * indices, PRInt32 numIndi
       return PR_TRUE;
   }
   return PR_FALSE;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetViewIndexForFirstSelectedMsg(nsMsgViewIndex *aViewIndex)
+{
+  NS_ENSURE_ARG_POINTER(aViewIndex);
+  // if we don't have an tree selection we must be in stand alone mode....
+  if (!mTreeSelection) 
+  {
+    *aViewIndex = m_currentlyDisplayedViewIndex;
+    return NS_OK;
+  }
+
+  PRInt32 startRange;
+  PRInt32 endRange;
+  nsresult rv = mTreeSelection->GetRangeAt(0, &startRange, &endRange);
+  // don't assert, it is legal for nothing to be selected
+  if (NS_FAILED(rv))
+    return rv;
+
+  // check that the first index is valid, it may not be if nothing is selected
+  if (startRange >= 0 && startRange < GetSize()) 
+    *aViewIndex = startRange;
+  else 
+    return NS_ERROR_UNEXPECTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

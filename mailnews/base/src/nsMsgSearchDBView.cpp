@@ -71,6 +71,7 @@ NS_IMETHODIMP nsMsgSearchDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeVal
 
     if (pCount)
       *pCount = 0;
+    m_folder = nsnull;
     return rv;
 }
 

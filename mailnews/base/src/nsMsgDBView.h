@@ -208,9 +208,9 @@ protected:
   nsMsgViewIndex GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr);
   nsresult GetFirstMessageHdrToDisplayInThread(nsIMsgThread *threadHdr, nsIMsgDBHdr **result);
   nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
-											  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
-											  PRInt32 *pThreadCount = nsnull,
-											  PRUint32 *pFlags = nsnull);
+				  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
+				  PRInt32 *pThreadCount = nsnull,
+				  PRUint32 *pFlags = nsnull);
   nsMsgKey GetKeyOfFirstMsgInThread(nsMsgKey key);
   PRInt32 CountExpandedThread(nsMsgViewIndex index);
   nsresult ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta);
@@ -307,8 +307,8 @@ protected:
   void InitializeAtomsAndLiterals();
   PRInt32 GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex);
   nsresult GetImapDeleteModel(nsIMsgFolder *folder);
-  nsresult UpdateDisplayMessage(nsMsgKey aMsgKey);
-  nsresult LoadMessageByMsgKeyHelper(nsMsgKey aMsgKey, PRBool forceAllParts);
+  nsresult UpdateDisplayMessage(nsMsgViewIndex viewPosition);
+  nsresult LoadMessageByViewIndexHelper(nsMsgViewIndex aViewIndex, PRBool forceAllParts);
   nsresult ReloadMessageHelper(PRBool forceAllParts);
 
   PRBool AdjustReadFlag(nsIMsgDBHdr *msgHdr, PRUint32 *msgFlags);
@@ -326,6 +326,8 @@ protected:
   // we need to store the message key for the message we are currenty displaying to ensure we
   // don't try to redisplay the same message just because the selection changed (i.e. after a sort)
   nsMsgKey                m_currentlyDisplayedMsgKey;
+  nsCString               m_currentlyDisplayedMsgUri;
+  nsMsgViewIndex          m_currentlyDisplayedViewIndex;
   // if we're deleting messages, we want to hold off loading messages on selection changed until the delete is done
   // and we want to batch notifications.
   PRPackedBool m_deletingRows;

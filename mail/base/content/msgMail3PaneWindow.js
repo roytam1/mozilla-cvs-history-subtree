@@ -1568,15 +1568,19 @@ function EnsureFolderIndex(builder, msgFolder)
 
 function SelectFolder(folderUri)
 {
+    dump("in selectFolder, folderUri = " + folderUri + "\n");
     var folderTree = GetFolderTree();
     var folderResource = RDF.GetResource(folderUri);
     var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
 
-    // before we can select a folder, we need to make sure it is "visible"
-    // in the tree.  to do that, we need to ensure that all its
-    // ancestors are expanded
-    var folderIndex = EnsureFolderIndex(folderTree.builderView, msgFolder);
-    ChangeSelection(folderTree, folderIndex);
+    if (msgFolder)
+    {
+      // before we can select a folder, we need to make sure it is "visible"
+      // in the tree.  to do that, we need to ensure that all its
+      // ancestors are expanded
+      var folderIndex = EnsureFolderIndex(folderTree.builderView, msgFolder);
+      ChangeSelection(folderTree, folderIndex);
+    }
 }
 
 function SelectMessage(messageUri)
