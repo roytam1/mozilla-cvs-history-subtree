@@ -1201,9 +1201,15 @@ mime_parse_stream_complete (nsMIMESession *stream)
     NS_ASSERTION ( mdd->options == mdd->obj->options, "mime draft options not same as obj->options" );
     mime_free (mdd->obj);
     mdd->obj = 0;
+    
     if (mdd->options) 
     {
-      // mscott: aren't we leaking a bunch of trings here like the charset strings and such?
+      if ((!mdd->mailcharset || mdd->options->override_charset) && mdd->options->default_charset)
+      {
+        PR_FREEIF(mdd->mailcharset);
+        mdd->mailcharset = nsCRT::strdup(mdd->options->default_charset);
+      }
+
       delete mdd->options;
       mdd->options = 0;
     }
