@@ -60,7 +60,7 @@ var nsNewsBlogFeedDownloader =
         .getService(Components.interfaces.nsIRDFService);
 
     progressNotifier.init(aMsgWindow ? aMsgWindow.statusFeedback : null, false);
-    
+
     for (url in feedUrlArray)
     {
       if (feedUrlArray[url])
@@ -136,7 +136,7 @@ var nsNewsBlogFeedDownloader =
           if (index != -1)
             feeds.RemoveElementAt(index, false);
           removeAssertions(ds, id);
-        }
+        }  
         else
           ds.Change(id, FZ_DESTFOLDER, node, rdf.GetResource(aFolder.URI));
       }
@@ -279,7 +279,7 @@ function NSGetModule(aCompMgr, aFileSpec)
 function loadScripts()
 {
   var scriptLoader =  Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
-                     .createInstance(Components.interfaces.mozIJSSubScriptLoader);
+                     .getService(Components.interfaces.mozIJSSubScriptLoader);
   if (scriptLoader)
   { 
     scriptLoader.loadSubScript("chrome://messenger-newsblog/content/Feed.js");
@@ -313,9 +313,8 @@ var progressNotifier = {
       if (this.mStatusFeedback)
       {
         this.mStatusFeedback.startMeteors();
-
         this.mStatusFeedback.showStatusString(aSubscribeMode ? GetNewsBlogStringBundle().GetStringFromName('subscribe-validating') 
-                                              : GetNewsBlogStringBundle().GetStringFromName('newsblog-getNewMailCheck'));
+                                            : GetNewsBlogStringBundle().GetStringFromName('newsblog-getNewMailCheck'));
       }
     }
   },
@@ -334,12 +333,11 @@ var progressNotifier = {
     if (this.mStatusFeedback)
     {
       if (aErrorCode == kNewsBlogInvalidFeed)
-        this.mStatusFeedback.showStatusString(GetNewsBlogStringBundle().formatStringFromName("newsblog-invalidFeed",
-                                              [feed.url], 1));
+      this.mStatusFeedback.showStatusString(GetNewsBlogStringBundle().formatStringFromName("newsblog-invalidFeed",
+                                            [feed.url], 1));
       else if (aErrorCode == kNewsBlogRequestFailure)
         this.mStatusFeedback.showStatusString(GetNewsBlogStringBundle().formatStringFromName("newsblog-networkError",
-                                              [feed.url], 1));
-      
+                                            [feed.url], 1));      
       this.mStatusFeedback.stopMeteors();
     }
 

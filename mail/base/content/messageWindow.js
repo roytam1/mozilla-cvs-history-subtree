@@ -39,41 +39,22 @@ var gNextMessageAfterLoad = null;
 
 // the folderListener object
 var folderListener = {
-  OnItemAdded: function(parentItem, item, view) {},
+  OnItemAdded: function(parentItem, item) {},
 
-  OnItemRemoved: function(parentItem, item, view) {
-    var parentFolderResource = parentItem.QueryInterface(Components.interfaces.nsIRDFResource);
-    if (!parentFolderResource)
+  OnItemRemoved: function(parentItem, item) {
+    if (parentItem.Value != gCurrentFolderUri)
       return;
 
-    var parentURI = parentFolderResource.Value;
-    if (parentURI != gCurrentFolderUri)
-      return;
-
-    var deletedMessageHdr = item.QueryInterface(Components.interfaces.nsIMsgDBHdr);
-    if (extractMsgKeyFromURI() == deletedMessageHdr.messageKey)
+    if (item instanceof Components.interfaces.nsIMsgDBHdr &&
+        extractMsgKeyFromURI() == item.messageKey)
       gCurrentMessageIsDeleted = true;
   },
 
   OnItemPropertyChanged: function(item, property, oldValue, newValue) {},
   OnItemIntPropertyChanged: function(item, property, oldValue, newValue) { 
-    var currentLoadedFolder = GetLoadedMsgFolder();
-    if (!currentLoadedFolder) return;
-    var currentURI = currentLoadedFolder.URI;
-
-    //if we don't have a folder loaded, don't bother.
-    if (currentURI) {
+    if (item.Value == gCurrentFolderUri) {
       if (property.toString() == "TotalMessages" || property.toString() == "TotalUnreadMessages") {
-        var folder = item.QueryInterface(Components.interfaces.nsIMsgFolder);
-        if (folder) {
-          var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource); 
-          if (folderResource) {
-            var folderURI = folderResource.Value;
-            if (currentURI == folderURI) {
-              UpdateStandAloneMessageCounts();
-            }
-          }
-        }
+        UpdateStandAloneMessageCounts();
       }      
     }
   },

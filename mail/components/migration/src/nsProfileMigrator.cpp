@@ -154,7 +154,7 @@ nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey)
     aKey = "seamonkey";
   }
 #endif
-  
+
   return;
 }
 

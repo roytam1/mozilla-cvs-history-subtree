@@ -1,22 +1,41 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation. Portions created by Netscape are
- * Copyright (C) 1998-1999 Netscape Communications Corporation. All
- * Rights Reserved.
- */
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Mark Banner <mark@standard8.demon.co.uk>
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 const MSG_FOLDER_FLAG_INBOX = 0x1000
 
@@ -30,7 +49,7 @@ var gRunFiltersFolderPickerLabel;
 var gRunFiltersFolderPicker;
 var gRunFiltersButton;
 var gFilterBundle;
-var gPromptService;
+var gPromptService = GetPromptService();
 var gFilterListMsgWindow = null;
 var gFilterTree;
 var gStatusBar;
@@ -89,9 +108,6 @@ const nsMsgFilterMotion = Components.interfaces.nsMsgFilterMotion;
 
 function onLoad()
 {
-    var gPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
-    gPromptService = gPromptService.QueryInterface(Components.interfaces.nsIPromptService);
-
     gFilterListMsgWindow = Components.classes["@mozilla.org/messenger/msgwindow;1"].createInstance(Components.interfaces.nsIMsgWindow);
     gFilterListMsgWindow.statusFeedback = gStatusFeedback;
     gFilterListMsgWindow.SetDOMWindow(window); 
@@ -204,7 +220,6 @@ function setServer(uri)
    // this will get the deferred to account root folder, if server is deferred
    msgFolder = msgFolder.server.rootMsgFolder;
    var rootFolderUri = msgFolder.URI;
-
    rebuildFilterTree(uri);
    
    // root the folder picker to this server
@@ -241,8 +256,9 @@ function toggleFilter(aFilterURI)
                                             Components.interfaces.nsIMsgFilter);
     if (filter.unparseable)
     {
-      var str = gFilterBundle.getString("cannotEnableFilter");
-      window.alert(str);
+      if (gPromptService)
+        gPromptService.alert(window, null,
+                             gFilterBundle.getString("cannotEnableFilter"));
       return;
     }
     filter.enabled = !filter.enabled;
@@ -314,7 +330,8 @@ function onFilterSelect(event)
 function onEditFilter() 
 {
   var selectedFilter = currentFilter();
-  var args = {filter: selectedFilter};
+  var curFilterList = currentFilterList();
+  var args = {filter: selectedFilter, filterList: curFilterList};
 
   window.openDialog("chrome://messenger/content/FilterEditor.xul", "FilterEditor", "chrome,modal,titlebar,resizable,centerscreen", args);
 
@@ -340,10 +357,11 @@ function onDeleteFilter()
     var filterList = currentFilterList();
     if (!filterList) return;
 
-    var confirmStr = gFilterBundle.getString("deleteFilterConfirmation");
-
-    if (!window.confirm(confirmStr)) 
-      return;
+    if (gPromptService) {
+      if (!gPromptService.confirm(window, null,
+                                  gFilterBundle.getString("deleteFilterConfirmation")))
+        return;
+    }
 
     filterList.removeFilter(filter);
     refresh();
@@ -377,19 +395,18 @@ function onFilterClose()
   if (filterList) 
     filterList.saveToDefaultFile();
 
-  var nsIPromptService = Components.interfaces.nsIPromptService;
   if (gRunFiltersButton.getAttribute("label") == gRunFiltersButton.getAttribute("stoplabel")) {
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
-
     var promptTitle = gFilterBundle.getString("promptTitle");
     var promptMsg = gFilterBundle.getString("promptMsg");;
     var stopButtonLabel = gFilterBundle.getString("stopButtonLabel");
     var continueButtonLabel = gFilterBundle.getString("continueButtonLabel");
-    
-    var result = promptService.confirmEx(window, promptTitle, promptMsg,
-          (promptService.BUTTON_TITLE_IS_STRING*promptService.BUTTON_POS_0) +
-          (promptService.BUTTON_TITLE_IS_STRING*promptService.BUTTON_POS_1),
-          continueButtonLabel, stopButtonLabel, null, null, {value:0});
+    var result = false;
+
+    if (gPromptService)
+      result = gPromptService.confirmEx(window, promptTitle, promptMsg,
+               (gPromptService.BUTTON_TITLE_IS_STRING*gPromptService.BUTTON_POS_0) +
+               (gPromptService.BUTTON_TITLE_IS_STRING*gPromptService.BUTTON_POS_1),
+               continueButtonLabel, stopButtonLabel, null, null, {value:0});
 
     if (result)
       gFilterListMsgWindow.StopUrls();
@@ -477,7 +494,7 @@ function refresh()
         var previousSel = gFilterTree.builderView.getIndexOfResource(selectedRes);
         if (previousSel >= 0) {
             // sometimes the selected element is gone.
-            gFilterTree.treeBoxObject.selection.select(previousSel);
+            gFilterTree.view.selection.select(previousSel);
             gFilterTree.treeBoxObject.ensureRowIsVisible(previousSel);
         }
     }
@@ -590,9 +607,9 @@ function onFilterClick(event)
     if (event.button != 0)
       return;
     
-    var row = {}, colID = {}, childElt = {};
+    var row = {}, col = {}, childElt = {};
     var filterTree = document.getElementById("filterTree");
-    filterTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, colID, childElt);
+    filterTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, col, childElt);
     if (row.value == -1 || row.value > filterTree.view.rowCount-1 || event.originalTarget.localName != "treechildren") {
       if (event.originalTarget.localName == "treecol") { 
         // clicking on the name column in the filter list should not sort
@@ -601,7 +618,7 @@ function onFilterClick(event)
       return;
     }
         
-    if (colID.value == "activeColumn") {
+    if (col.value.id == "activeColumn") {
       var res = filterTree.builderView.getResourceAtIndex(row.value);
       toggleFilter(res.Value);
     }
@@ -613,9 +630,9 @@ function onFilterDoubleClick(event)
     if (event.button != 0)
       return;
 
-    var row = {}, colID = {}, childElt = {};
+    var row = {}, col = {}, childElt = {};
     var filterTree = document.getElementById("filterTree");
-    filterTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, colID, childElt);
+    filterTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, col, childElt);
     if (row.value == -1 || row.value > filterTree.view.rowCount-1 || event.originalTarget.localName != "treechildren") {
       // double clicking on a non valid row should not open the edit filter dialog
       return;
@@ -623,8 +640,7 @@ function onFilterDoubleClick(event)
 
     // if the cell is in a "cycler" column (the enabled column)
     // don't open the edit filter dialog with the selected filter
-    var col = document.getElementById(colID.value);
-    if (col.getAttribute("cycler") != "true")
+    if (!col.value.cycler)
       onEditFilter();
 }
 
@@ -680,4 +696,15 @@ function getFirstFolderURI(msgFolder)
     dump(ex + "\n");
   }
   return msgFolder.URI;
+}
+
+function GetPromptService()
+{
+  try {
+    return Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                     .getService(Components.interfaces.nsIPromptService);
+  }
+  catch (e) {
+    return null;
+  }
 }

@@ -54,65 +54,65 @@
         title="&aboutDialog.title;" creditslabel="&credits;" aboutlabel="&aboutLink;" versionlabel="&aboutVersion;"
         style="width: 299px; height: 330px;"> 
 
-  <script type="application/x-javascript">
-    <![CDATA[
-      function onLoad() {
-        var versionField = document.getElementById("versionField");      
-        versionField.value = document.documentElement.getAttribute("versionlabel") + ' ' 
+    <script type="application/x-javascript">
+      <![CDATA[
+        function onLoad() {
+          var versionField = document.getElementById("versionField");
+          versionField.value = document.documentElement.getAttribute("versionlabel") + ' ' 
                              + navigator.vendorSub + ' (' + navigator.productSub + ')';
 
-        var button = document.documentElement.getButton("extra2");
-        button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
-        gSelectedPage = 0;
-        button.addEventListener("command", switchPage, false);
-        document.documentElement.getButton("accept").focus();
-      }
-      
-      function uninit(aEvent)
-      {
-        if (aEvent.target != document)
-          return;
-        var iframe = document.getElementById("creditsIframe");
-        iframe.setAttribute("src", "");
-      }
-
-      function switchPage(aEvent)
-      {
-        var button = aEvent.target;
-        if (button.localName != "button")
-          return;
-
-        var iframe = document.getElementById("creditsIframe");
-        if (gSelectedPage == 0) { 
-          iframe.setAttribute("src", "chrome://messenger/locale/credits.html");
-          button.setAttribute("label", document.documentElement.getAttribute("aboutlabel"));
-          gSelectedPage = 1;
-        }
-        else {
-          iframe.setAttribute("src", ""); 
+          var button = document.documentElement.getButton("extra2");
           button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
           gSelectedPage = 0;
+          button.addEventListener("command", switchPage, false);
+          document.documentElement.getButton("accept").focus();
         }
-        var modes = document.getElementById("modes");
-        modes.setAttribute("selectedIndex", gSelectedPage);
-      }
-    ]]>
-  </script>
 
-  <deck id="modes" flex="1">
-    <vbox flex="1" id="clientBox">
+        function uninit(aEvent)
+        {
+          if (aEvent.target != document)
+            return;
+          var iframe = document.getElementById("creditsIframe");
+          iframe.setAttribute("src", "");
+        }
+
+        function switchPage(aEvent)
+        {
+          var button = aEvent.target;
+          if (button.localName != "button")
+            return;
+
+          var iframe = document.getElementById("creditsIframe");
+          if (gSelectedPage == 0) { 
+            iframe.setAttribute("src", "chrome://messenger/locale/credits.html");
+            button.setAttribute("label", document.documentElement.getAttribute("aboutlabel"));
+            gSelectedPage = 1;
+          }
+          else {
+            iframe.setAttribute("src", ""); 
+            button.setAttribute("label", document.documentElement.getAttribute("creditslabel"));
+            gSelectedPage = 0;
+          }
+          var modes = document.getElementById("modes");
+          modes.setAttribute("selectedIndex", gSelectedPage);
+        }
+      ]]>
+    </script>
+
+    <deck id="modes" flex="1">
+      <vbox flex="1" id="clientBox">
       <vbox id="versionWrapper">
         <textbox id="versionField" readonly="true" class="plain" tabindex="2"/>
-      </vbox>
-      <separator class="thin"/>
+            </vbox>
+          <separator class="thin"/>
       <description id="copyright">&copyrightText;</description>
-    </vbox>
+      </vbox>
 
-    <vbox flex="1" id="creditsBox">
-      <html:iframe style="border: 0px;" id="creditsIframe" src="chrome://messenger/locale/credits.html" flex="1"/>
-    </vbox>    
-  </deck>
+      <vbox flex="1" id="creditsBox">
+        <html:iframe style="border: 0px;" id="creditsIframe" src="chrome://messenger/locale/credits.html" flex="1"/>
+      </vbox> 
+    </deck>   
   
-  <separator class="groove" id="groove"/>
-
+    <separator class="groove" id="groove"/>
+    
 </dialog>

@@ -5,3 +5,6 @@ messenger.jar:
 
 comm.jar:
 +   content/editor/EdSpellCheck.js                                 (content/EdSpellCheck.js) 
+
+en-US.jar:
++   locale/en-US/messenger/messengercompose/messengercompose.dtd   (locale/messengercompose.dtd)

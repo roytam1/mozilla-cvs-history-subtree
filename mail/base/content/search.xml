@@ -49,7 +49,7 @@
       <children/>
       <xul:hbox class="quick-search-textbox textbox-input-box" flex="1">
         <html:input class="textbox-input" flex="1" anonid="input" allowevents="true"
-                    xbl:inherits="onfocus,onblur,value,type,maxlength,disabled,size,readonly,tabindex,accesskey"/>        
+                    xbl:inherits="onfocus,onblur,value,type,maxlength,disabled,size,readonly,tabindex,accesskey"/>
       </xul:hbox>
       <xul:toolbarbutton id="quick-search-clearbutton" xbl:inherits="" disabled="true" class="quick-search-clearbutton" onclick="onClearSearch(); return false;"/>
     </content>
@@ -83,7 +83,7 @@
          this.clearButtonHidden = true;
         ]]></body>
       </method>
-    </implementation> 
+    </implementation>
 
     <handlers>
       <handler event="input">
@@ -131,7 +131,7 @@
           <xul:image class="quick-search-button-image" xbl:inherits="src"/>
         </xul:hbox>
         <xul:hbox align="center">
-          <xul:image class="quick-search-button-dropmarker"/>
+        <xul:image class="quick-search-button-dropmarker"/>
         </xul:hbox>
       </xul:stack>
     </content>  

@@ -39,6 +39,8 @@ pref("general.useragent.vendor", "Thunderbird");
 pref("general.useragent.vendorSub",
 #expand __APP_VERSION__
 );
+pref("general.useragent.locale", "en-US");
+pref("general.skins.selectedSkin", "classic/1.0");
 
 // This is this application's unique identifier used by the Extension System to identify
 // this application as an extension target, and by the SmartUpdate system to identify
@@ -50,60 +52,41 @@ pref("app.version",
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
-pref("app.extensions.version", "0.8");
+pref("app.extensions.version", "0.6");
 
 #ifdef XP_MACOSX
 pref("mail.biff.animate_dock_icon", false);
 #endif
 
-// App-specific update preferences
-pref("app.update.enabled", true);               // Whether or not app updates are enabled
-pref("app.update.autoUpdateEnabled", true);     // Whether or not background app updates 
-                                                // are enabled
-pref("app.update.url", "chrome://mozapps/locale/update/update.properties");
-pref("app.update.updatesAvailable", false);
-pref("app.update.interval", 86400000);          // Check for updates to Firefox every day
-pref("app.update.lastUpdateDate", 0);           // UTC offset when last App update was 
-                                                // performed. 
-pref("app.update.performed", false);            // Whether or not an update has been 
-                                                // performed this session. 
-
-// Symmetric (can be overridden by individual extensions) update preferences.
-// e.g.
-//  extensions.{GUID}.update.enabled
-//  extensions.{GUID}.update.url
-//  extensions.{GUID}.update.interval
-//  .. etc ..
-//
-pref("extensions.update.enabled", true);
-pref("extensions.update.autoUpdateEnabled", true);
-pref("extensions.update.url", "chrome://mozapps/locale/extensions/extensions.properties");
-pref("extensions.update.autoUpdate", false);    // Automatically download and install 
-                                                // updates to themes and extensions. 
-                                                // Does nothing at present. 
-
-pref("extensions.update.interval", 604800000);  // Check for updates to Extensions and 
-                                                // Themes every week
-pref("extensions.update.lastUpdateDate", 0);    // UTC offset when last Extension/Theme 
-                                                // update was performed. 
-// Non-symmetric (not shared by extensions) extension-specific [update] preferences
+pref("update.app.enabled", true);
+pref("update.app.url", "chrome://mozapps/locale/update/update.properties");
+pref("update.app.updatesAvailable", false);
+pref("update.app.updateVersion", "");
+pref("update.app.updateDescription", "");
+pref("update.app.updateURL", "");
+pref("update.extensions.enabled", true);
+pref("update.extensions.wsdl", "chrome://mozapps/locale/extensions/extensions.properties");
 pref("extensions.getMoreExtensionsURL", "chrome://mozapps/locale/extensions/extensions.properties");
 pref("extensions.getMoreThemesURL", "chrome://mozapps/locale/extensions/extensions.properties");
-pref("extensions.update.severity.threshold", 5);// The number of pending Extension/Theme
+
+pref("update.extensions.autoUpdate", false);    // Automatically download and install 
+                                                // updates to themes and extensions. 
+                                                // Does nothing at present. 
+pref("update.extensions.interval", 604800000);  // Check for updates to Extensions and 
+                                                // Themes every week
+pref("update.extensions.lastUpdateDate", 0);    // UTC offset when last Extension/Theme 
+                                                // update was performed. 
+pref("update.extensions.severity.threshold", 5);// The number of pending Extension/Theme
                                                 // updates you can have before the update
                                                 // notifier goes from low->medium severity.
-pref("extensions.update.count", 0);             // The number of extension/theme/etc 
-                                                // updates available
-pref("extensions.dss.enabled", false);          // Dynamic Skin Switching                                               
-pref("extensions.dss.switchPending", false);    // Non-dynamic switch pending after next
-                                                // restart.
-
-
-// General Update preferences
+pref("update.app.interval", 86400000);          // Check for updates to Firefox every day
+pref("update.app.lastUpdateDate", 0);           // UTC offset when last App update was 
+                                                // performed. 
 pref("update.interval", 3600000);               // Check each of the above intervals 
                                                 // every 60 mins
-pref("update.showSlidingNotification", true);   // Windows-only slide-up taskbar 
+pref("update.showSlidingNotification", false);   // Windows-only slide-up taskbar 
                                                 // notification.
+
 // These prefs relate to the number and severity of updates available. This is a 
 // cache that the browser notification mechanism uses to determine if it should show
 // status bar UI if updates are detected and the app is shut down before installing
@@ -112,7 +95,8 @@ pref("update.showSlidingNotification", true);   // Windows-only slide-up taskbar
 // 1 = medium (numerous extension/theme updates), 
 // 2 = high   (new version of Firefox/Security patch)
 pref("update.severity", 0); 
-
+// The number of extension/theme/etc updates available
+pref("update.extensions.count", 0);
 pref("xpinstall.whitelist.add", "update.mozilla.org");
 
 /////////////////////////////////////////////////////////////////
@@ -137,17 +121,19 @@ pref("editor.singleLine.pasteNewlines", 4);  // substitute commas for new lines 
 // to avoid the height of the header area from changing when headers are present / not present
 pref("mailnews.headers.minNumHeaders", 0); // 0 means we ignore this pref
 
+pref("mail.compose.dontWarnMail2Newsgroup", false);
+
 pref("messenger.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("mailnews.release_notes.url","chrome://messenger-region/locale/region.properties");
 pref("mailnews.hints_and_tips.url","chrome://messenger-region/locale/region.properties");
 pref("compose.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("addressbook.throbber.url","chrome://messenger-region/locale/region.properties");
 
-// show a broken image icon for blocked remote image requests
 pref("network.image.imageBehavior", 2);
 
-// thunderbird shows size in KB instead of lines by default
-pref("news.show_size_in_lines", false);
+/////////////////////////////////////////////////////////////////
+// End seamonkey suite mailnews.js pref overrides
+///////////////////////////////////////////////////////////////// 
 
 #ifdef MOZ_WIDGET_GTK2
 // whether to check if we're the default mail client on startup (GNOME)
@@ -157,17 +143,10 @@ pref("mail.checkDefaultNews", false);
 #endif
 
 /////////////////////////////////////////////////////////////////
-// End seamonkey suite mailnews.js pref overrides
-///////////////////////////////////////////////////////////////// 
-
-/////////////////////////////////////////////////////////////////
 // Overrides for generic app behavior from the seamonkey suite's all.js
 /////////////////////////////////////////////////////////////////
 
 // l12n and i18n
-#expand pref("general.useragent.locale", "__AB_CD__");
-pref("general.skins.selectedSkin", "classic/1.0");
-
 pref("intl.charsetmenu.mailedit", "chrome://global/locale/intl.properties");
 pref("intl.accept_languages", "chrome://global/locale/intl.properties");
 // collationOption is only set on linux for japanese. see bug 18338 and 62015
@@ -203,33 +182,26 @@ pref("offline.send.unsent_messages",            0);
 pref("offline.download.download_messages",  0);
 pref("offline.prompt_synch_on_exit",            true);
 
-// Expose only select protocol handlers. All others should go
-// through the external protocol handler route.
-pref("network.protocol-handler.expose-all", false);
+// Expose only select protocol handlers. All others should go                   
+// through the external protocol handler route.                                 
+pref("network.protocol-handler.expose-all", false);                             
 pref("network.protocol-handler.expose.mailto", true);
 pref("network.protocol-handler.expose.news", true);
 pref("network.protocol-handler.expose.snews", true);
 pref("network.protocol-handler.expose.nntp", true);
 pref("network.protocol-handler.expose.imap", true);
 pref("network.protocol-handler.expose.addbook", true);
-pref("network.protocol-handler.expose.pop", true);
-pref("network.protocol-handler.expose.mailbox", true);
-
-// suppress external-load warning for standard browser schemes
-pref("network.protocol-handler.warn-external.http", false);
-pref("network.protocol-handler.warn-external.https", false);
-pref("network.protocol-handler.warn-external.ftp", false);
-
+pref("network.protocol-handler.expose.pop", true);                                                                                                            
+pref("network.protocol-handler.expose.mailbox", true);  
+pref("network.protocols.useSystemDefaults",   false);  
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 
 pref("general.config.obscure_value", 0); // for MCD .cfg files
 
+pref("xpinstall.dialog.progress", "chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.confirm", "chrome://mozapps/content/xpinstall/xpinstallConfirm.xul");
-pref("xpinstall.dialog.progress.skin", "chrome://mozapps/content/extensions/extensions.xul?type=themes");
-pref("xpinstall.dialog.progress.chrome", "chrome://mozapps/content/extensions/extensions.xul?type=extensions");
-pref("xpinstall.dialog.progress.type.skin", "Extension:Manager-themes"); 
-pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager-extensions");
+pref("xpinstall.dialog.progress.type", "");
 
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite all.js pref overrides
@@ -265,9 +237,7 @@ pref("browser.chrome.toolbar_tips",         true);
 // 0 = Pictures Only, 1 = Text Only, 2 = Pictures and Text
 pref("browser.chrome.toolbar_style",        2);
 
-pref("browser.turbo.enabled", false);
-
-pref("browser.xul.error_pages.enabled", true);  
+pref("browser.xul.error_pages.enabled", true);
 
 // Dialog modality issues
 pref("browser.prefWindowModal", true);
@@ -283,7 +253,6 @@ pref("browser.search.defaulturl", "chrome://navigator-region/locale/region.prope
 pref("browser.search.opensidebarsearchpanel", true);
 pref("browser.search.last_search_category", "NC:SearchCategory?category=urn:search:category:1");
 pref("browser.search.mode", 0);
-pref("browser.search.powermode", 0);
 // basic search popup constraint: minimum sherlock plugin version displayed
 // (note: must be a string representation of a float or it'll default to 0.0)
 pref("browser.search.basic.min_ver", "0.0");
@@ -318,11 +287,6 @@ pref("javascript.options.showInConsole",    true);
 
 pref("network.enableIDN",                   false); // Turn on/off IDN (Internationalized Domain Name) resolution
 pref("wallet.captureForms",                 true);
-pref("wallet.notified",                     false);
-pref("wallet.TutorialFromMenu",             "chrome://navigator/locale/navigator.properties");
-pref("wallet.Server",                       "chrome://navigator/locale/navigator.properties");
-pref("wallet.Samples",                      "chrome://navigator/locale/navigator.properties");
-pref("wallet.version",                      "1");
 pref("wallet.enabled",                      true);
 pref("wallet.crypto",                       false); 
 pref("wallet.crypto.autocompleteoverride",  false); // Ignore 'autocomplete=off' - available only when wallet.crypto is enabled. 

@@ -113,6 +113,12 @@ libs::
 installer:: 
 	$(MAKE) -C ../config
 
+ifeq ($(OS_ARCH), Darwin)
+MOZ_PKG_APPNAME = Thunderbird
+endif
+
+include $(DEPTH)/config/autoconf.mk
+
 include $(DEPTH)/xpinstall/packager/Makefile
 
 # Rename the archive after it's created, so that we can differentiate between

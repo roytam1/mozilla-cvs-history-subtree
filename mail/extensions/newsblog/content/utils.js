@@ -87,7 +87,6 @@ function addFeed(url, title, destFolder) {
 
 var kFeedUrlDelimiter = '|'; // the delimiter used to delimit feed urls in the msg folder database "feedUrl" property
 
-// updates the "feedUrl" property in the message database for the folder in question.
 function updateFolderFeedUrl(aFolder, aFeedUrl, aRemoveUrl)
 {
   var msgdb = aFolder.QueryInterface(Components.interfaces.nsIMsgFolder).getMsgDatabase(null);

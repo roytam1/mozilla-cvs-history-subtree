@@ -141,13 +141,13 @@ function setTitleFromFolder(msgfolder, subject)
             }
         if (middle) title += " " + middle;
         if (end) title += " " + end;
-      }
+    }
     }
 
 #ifndef XP_MACOSX
     title += " - " + gBrandBundle.getString("brandShortName");
 #endif
-    window.title = title;
+    document.title = title;
 }
 
 function UpdateMailToolbar(caller)
@@ -650,10 +650,6 @@ function CreateBareDBView(originalView, msgFolder, viewType, viewFlags, sortType
           break;
       case nsMsgViewType.eShowAllThreads:
       default:
-          if (sortType == nsMsgViewSortType.byThread || sortType == nsMsgViewSortType.byId
-            || sortType == nsMsgViewSortType.byNone)
-            viewFlags &= ~nsMsgViewFlagsType.kGroupBySort;
-
           if (viewFlags & nsMsgViewFlagsType.kGroupBySort)
             dbviewContractId += "group";
           else
@@ -674,7 +670,6 @@ function CreateBareDBView(originalView, msgFolder, viewType, viewFlags, sortType
 
   if (!originalView) {
     gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
-
     gDBView.open(msgFolder, gCurSortType, sortOrder, viewFlags, count);
     if (viewType == nsMsgViewType.eShowVirtualFolderResults)
     {
@@ -724,7 +719,7 @@ function GetSelectedFolderResource()
     var folderTree = GetFolderTree();
     var startIndex = {};
     var endIndex = {};
-    folderTree.treeBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    folderTree.view.selection.getRangeAt(0, startIndex, endIndex);
     return GetFolderResource(folderTree, startIndex.value);
 }
 
@@ -760,7 +755,7 @@ function OnMouseUpThreadAndMessagePaneSplitter()
 function FolderPaneSelectionChange()
 {
     var folderTree = GetFolderTree();
-    var folderSelection = folderTree.treeBoxObject.selection;
+    var folderSelection = folderTree.view.selection;
 
     // This prevents a folder from being loaded in the case that the user
     // has right-clicked on a folder different from the one that was
@@ -829,8 +824,7 @@ function FolderPaneSelectionChange()
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;
                     var searchTermString = dbFolderInfo.getCharPtrProperty("searchStr");
-                    var searchOnline = {};
-                    dbFolderInfo.getBooleanProperty("searchOnline", searchOnline, false);
+                    var searchOnline = dbFolderInfo.getBooleanProperty("searchOnline", false);
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
                     var srchFolderUri = dbFolderInfo.getCharPtrProperty("searchFolderUri");
@@ -844,7 +838,7 @@ function FolderPaneSelectionChange()
                     {
                       viewType = nsMsgViewType.eShowVirtualFolderResults;
                       gXFVirtualFolderTerms = CreateGroupedSearchTerms(tempFilter.searchTerms);
-                      setupXFVirtualFolderSearch(srchFolderUriArray, gXFVirtualFolderTerms, searchOnline.value);
+                      setupXFVirtualFolderSearch(srchFolderUriArray, gXFVirtualFolderTerms, searchOnline);
                       // need to set things up so that reroot folder issues the search
                     }
                     else
@@ -855,7 +849,7 @@ function FolderPaneSelectionChange()
                       // will return false...
                       var realFolderRes = GetResourceFromUri(uriToLoad);
                       var realFolder = realFolderRes.QueryInterface(Components.interfaces.nsIMsgFolder);
-                      msgDatabase = realFolder.getMsgDatabase(msgWindow);                   
+                      msgDatabase = realFolder.getMsgDatabase(msgWindow);
                       gVirtualFolderTerms = CreateGroupedSearchTerms(tempFilter.searchTerms);
                     }
                   }
@@ -1036,7 +1030,7 @@ function  CreateVirtualFolder(newName, parentFolder, searchFolderURIs, searchTer
 
       vfdb.summaryValid = true;
       vfdb.Close(true);
-      parentFolder.NotifyItemAdded(parentFolder, newFolder, "folderView");
+      parentFolder.NotifyItemAdded(newFolder);
       var accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
       accountManager.saveVirtualFolders();
     }

@@ -44,9 +44,9 @@
   buttons="accept,cancel"
   onload="onLoad();"
   ondialogaccept="return onOk();">
-
+  
   <script type="application/x-javascript" src="feed-properties.js"/>
-  <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
+   <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 
   <grid flex="1">
     <columns>
@@ -72,12 +72,12 @@
               sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
               sortDirection="ascending"
               datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
-              ref="...">           
+              ref="...">
             <menupopup>
               <menuitem  id="rssAccountMenuItem"/>
               <menuseparator/>
             </menupopup>
-
+               
             <template>              
               <!-- cheat and use the CanRename property to make sure we don't list the Trash folder as a possible feed folder -->
               <rule nc:CanFileMessages="true" iscontainer="true" isempty="false" nc:CanRename="true">
@@ -97,16 +97,16 @@
               </rule>
               <rule nc:CanFileMessages="true" nc:CanRename="true">
                 <menupopup>
-                   <menuitem uri="..." value="..."  
-                    class="folderMenuItem menuitem-iconic"
-                    oncommand="PickedMsgFolder(event.target,'selectFolder')"
-                    SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
-                    BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
-                    IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
-                    IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
-                    ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"
-                    label="rdf:http://home.netscape.com/NC-rdf#Name"/>
-                </menupopup>
+                     <menuitem uri="..." value="..."  
+                      class="folderMenuItem menuitem-iconic"
+                      oncommand="PickedMsgFolder(event.target,'selectFolder')"
+                      SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
+                      BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
+                      IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
+                      IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
+                      ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"
+                      label="rdf:http://home.netscape.com/NC-rdf#Name"/>
+                 </menupopup>
               </rule>
             </template>
         </menulist>

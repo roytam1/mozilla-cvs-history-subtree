@@ -104,3 +104,4 @@ dummy.usesMailWidgets {
 #statusbar-updates {
   -moz-binding: url("chrome://mozapps/content/update/updates.xml#updateStatusbarNotification");
 }
+

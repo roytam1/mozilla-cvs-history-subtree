@@ -383,7 +383,7 @@
 
 <!-- Tools Menu -->
 <!ENTITY tasksMenu.label "Tools">
-<!ENTITY tasksMenu.accesskey "T"> 
+<!ENTITY tasksMenu.accesskey "T">
 <!ENTITY extensions.label             "Extensions">
 <!ENTITY extensions.tooltip           "Show and Manage installed Extensions">
 <!ENTITY extensions.accesskey         "E">

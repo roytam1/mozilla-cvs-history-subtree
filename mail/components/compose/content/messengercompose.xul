@@ -367,6 +367,20 @@
           <menuseparator/>
           <menuitem id="returnReceiptMenu" type="checkbox" label="&returnReceiptMenu.label;" accesskey="&returnReceiptMenu.accesskey;" checked="false" oncommand="ToggleReturnReceipt(event.target)"/>
           <menuseparator/>
+          <menu id="maileditCharsetMenu" label="&charsetMenu.label;" accesskey="&charsetMenu.accesskey;" datasources="rdf:charset-menu" ref="NC:MaileditCharsetMenuRoot" oncommand="SetDocumentCharacterSet(event.target.getAttribute('id'));" onpopupshowing="CreateMenu('mailedit');InitCharsetMenuCheckMark();" onpopupshown="CreateMenu('more-menu');">
+            <template>
+              <rule>
+                <menupopup>
+                  <menuitem type="radio" name="charsetGroup" checked="rdf:http://home.netscape.com/NC-rdf#Checked" uri="..." label="rdf:http://home.netscape.com/NC-rdf#Name"/>
+                </menupopup>
+              </rule>
+            </template>
+
+            <menupopup>
+              <menuitem name="charsetCustomize" accesskey="&charsetCustomize.accesskey;" label="&charsetCustomize.label;" oncommand="window.openDialog('chrome://global/content/customizeCharset.xul','PrefWindow', 'chrome,modal=yes,resizable=yes', 'mailedit')"/>
+              <menuseparator />
+            </menupopup>
+          </menu>
           <menu id="outputFormatMenu" label="&outputFormatMenu.label;" accesskey="&outputFormatMenu.accesskey;" oncommand="OutputFormatMenuSelect(event.target)">
             <menupopup>
               <menuitem type="radio" name="output_format" label="&autoFormatCmd.label;" accesskey="&autoFormatCmd.accesskey;" id="format_auto" checked="true"/>
@@ -382,20 +396,6 @@
               <menuitem type="radio" name="priority" label="&normalPriorityCmd.label;" accesskey="&normalPriorityCmd.accesskey;" value="Normal" id="priority_normal" checked="true"/>
               <menuitem type="radio" name="priority" label="&lowPriorityCmd.label;" accesskey="&lowPriorityCmd.accesskey;" value="Low" id="priority_low"/>
               <menuitem type="radio" name="priority" label="&lowestPriorityCmd.label;" accesskey="&lowestPriorityCmd.accesskey;" value="Lowest"  id="priority_lowest"/>              
-            </menupopup>
-          </menu>
-          <menu id="maileditCharsetMenu" label="&charsetMenu.label;" accesskey="&charsetMenu.accesskey;" datasources="rdf:charset-menu" ref="NC:MaileditCharsetMenuRoot" oncommand="SetDocumentCharacterSet(event.target.getAttribute('id'));" onpopupshowing="CreateMenu('mailedit');InitCharsetMenuCheckMark();" onpopupshown="CreateMenu('more-menu');">
-            <template>
-              <rule>
-                <menupopup>
-                  <menuitem type="radio" name="charsetGroup" checked="rdf:http://home.netscape.com/NC-rdf#Checked" uri="..." label="rdf:http://home.netscape.com/NC-rdf#Name"/>
-                </menupopup>
-              </rule>
-            </template>
-
-            <menupopup>
-              <menuitem name="charsetCustomize" accesskey="&charsetCustomize.accesskey;" label="&charsetCustomize.label;" oncommand="window.openDialog('chrome://global/content/customizeCharset.xul','PrefWindow', 'chrome,modal=yes,resizable=yes', 'mailedit')"/>
-              <menuseparator />
             </menupopup>
           </menu>
           <menu id="fccMenu" label="&fileCarbonCopyCmd.label;" 
@@ -492,7 +492,7 @@
 #endif
       
       <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
-        <menupopup id="menu_HelpPopup">      
+        <menupopup id="menu_HelpPopup">
 #ifdef XP_MACOSX
           <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
           <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
@@ -697,7 +697,7 @@
     </toolbar>   
        
     <!-- These toolbar items get filled out from the editorOverlay -->
-    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" customizable="true">
+    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" customizable="true">
       <menulist id="ParagraphSelect"/>
       <menulist id="FontFaceSelect"/>
       <stack id="ColorButtons"/>

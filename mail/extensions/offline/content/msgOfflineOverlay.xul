@@ -48,7 +48,7 @@
   
   <hbox id="statusTextBox">
     <statusbarpanel insertbefore="statusText" checkfunc="MailCheckBeforeOfflineChange()" id="offline-status" class="statusbarpanel-iconic"/> 
-    </hbox>
+  </hbox>
 
   <commandset id="mailFileMenuItems">
     <command id="cmd_synchronizeOffline" oncommand="goDoCommand('cmd_synchronizeOffline')" disabled="true"/>

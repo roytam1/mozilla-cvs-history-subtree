@@ -1,28 +1,43 @@
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
-# The contents of this file are subject to the Netscape Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/NPL/
-# 
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-# 
+# ***** BEGIN LICENSE BLOCK *****
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-# 
-# The Initial Developer of the Original Code is Netscape
-# Communications Corporation. Portions created by Netscape are
-# Copyright (C) 1998-1999 Netscape Communications Corporation. All
-# Rights Reserved.
 #
-# Original Author:
-#   Navin Gupta <naving@netscape.com>
+# The Initial Developer of the Original Code is
+# Netscape Communications Corporation.
+# Portions created by the Initial Developer are Copyright (C) 1998-1999
+# the Initial Developer. All Rights Reserved.
+#
 # Contributor(s):
 #   Seth Spitzer <sspitzer@netscape.com>
 #   Scott MacGregor <mscott@mozilla.org>
 #   David Bienvenu <bienvenu@nventure.com>
+#
+# Alternatively, the contents of this file may be used under the terms of
+# either of the GNU General Public License Version 2 or later (the "GPL"),
+# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+#
+# ***** END LICENSE BLOCK ***** 
 
 var gSearchSession = null;
 var gPreQuickSearchView = null;
@@ -139,13 +154,11 @@ function removeListeners()
 function removeGlobalListeners()
 {
   removeListeners();
-  gSearchSession.removeFolderListener(folderListener);
   gSearchSession.unregisterListener(gSearchNotificationListener); 
 }
 
 function initializeGlobalListeners()
 {
-  gSearchSession.addFolderListener(folderListener);
   // Setup the javascript object as a listener on the search results
   gSearchSession.registerListener(gSearchNotificationListener);
 }
@@ -193,13 +206,13 @@ function initializeSearchBar()
 
 function onEnterInSearchBar()
 {
-   viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
+  viewDebug ("onEnterInSearchBar gSearchInput.value = " + gSearchInput.value + " showing criteria = " + gSearchInput.showingSearchCriteria +"\n");
    if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
    {
      if (gSearchInput.searchMode == kQuickSearchHighlight)
        removeHighlighting();
      
-     if (gDBView.viewType == nsMsgViewType.eShowQuickSearchResults
+     if (gDBView.viewType == nsMsgViewType.eShowQuickSearchResults 
         || gDBView.viewType == nsMsgViewType.eShowVirtualFolderResults)
      {
        statusFeedback.showStatusString("");
@@ -209,16 +222,16 @@ function onEnterInSearchBar()
        var addTerms = gDefaultSearchViewTerms || gVirtualFolderTerms || gXFVirtualFolderTerms;
        if (addTerms)
        {
-         viewDebug ("addTerms = " + addTerms + " count = " + addTerms.Count() + "\n");
-         initializeSearchBar();
-         onSearch(addTerms);
+           viewDebug ("addTerms = " + addTerms + " count = " + addTerms.Count() + "\n");
+           initializeSearchBar();
+           onSearch(addTerms);
        }
        else
-          restorePreSearchView();
+        restorePreSearchView();
      }
      else if (gPreQuickSearchView && !gDefaultSearchViewTerms)// may be a quick search from a cross-folder virtual folder
-       restorePreSearchView();
-
+      restorePreSearchView();
+     
      gSearchInput.showingSearchCriteria = true;
      
      gQSViewIsDirty = false;
@@ -236,7 +249,7 @@ function onEnterInSearchBar()
 
      onSearch(null);
      gQSViewIsDirty = false;
-   }
+  }
 }
 
 function restorePreSearchView()
@@ -311,7 +324,8 @@ function restorePreSearchView()
     // if we didn't just scroll, 
     // scroll to the first new message
     // but don't select it
-    scrolled = ScrollToMessage(nsMsgNavigationType.firstNew, true, false /* selectMessage */);
+    if (pref.getBoolPref("mailnews.scroll_to_new_message"))
+      scrolled = ScrollToMessage(nsMsgNavigationType.firstNew, true, false /* selectMessage */);
     if (!scrolled) 
     {
       // if we still haven't scrolled,
@@ -342,23 +356,23 @@ function restorePreSearchView()
 
 function onSearch(aSearchTerms)
 {
-  viewDebug("in OnSearch, searchTerms = " + aSearchTerms + "\n");
-  RerootThreadPane();
+    viewDebug("in OnSearch, searchTerms = " + aSearchTerms + "\n");
+    RerootThreadPane();
 
-  if (aSearchTerms)
-    createSearchTermsWithList(aSearchTerms);
-  else
-    createSearchTerms();
+    if (aSearchTerms)
+      createSearchTermsWithList(aSearchTerms);
+    else
+      createSearchTerms();
 
-  gDBView.searchSession = gSearchSession;
-  try
-  {
-    gSearchSession.search(msgWindow);
-  }
-  catch(ex)
-  {
-    dump("Search Exception\n");
-  }
+    gDBView.searchSession = gSearchSession;
+    try
+    {
+      gSearchSession.search(msgWindow);
+    }
+    catch(ex)
+    {
+      dump("Search Exception\n");
+    }
 }
 
 function createSearchTermsWithList(aTermsArray)
@@ -443,31 +457,31 @@ function createSearchTerms()
       // if our search criteria is subject or subject|sender then add a term for the subject
       if (gSearchInput.searchMode == kQuickSearchSubject || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
       {
-         term = gSearchSession.createTerm();
-         value = term.value;
-         value.str = termList[i];
-         term.value = value;
-         term.attrib = nsMsgSearchAttrib.Subject;
-         term.op = nsMsgSearchOp.Contains;
-         term.booleanAnd = false;
-         searchTermsArray.AppendElement(term);
-       }
+        term = gSearchSession.createTerm();
+        value = term.value;
+        value.str = termList[i];
+        term.value = value;
+        term.attrib = nsMsgSearchAttrib.Subject;
+        term.op = nsMsgSearchOp.Contains;
+        term.booleanAnd = false;
+        searchTermsArray.AppendElement(term);
+      }
 
-       if (gSearchInput.searchMode == kQuickSearchBody)
-       {
-         // what do we do for news and imap users that aren't configured for offline use?
-         // in these cases the body search will never return any matches. Should we try to 
-         // see if body is a valid search scope in this particular case before doing the search?
-         // should we switch back to a subject/sender search behind the scenes?
-         term = gSearchSession.createTerm();
-         value = term.value;
-         value.str = termList[i];
-         term.value = value;
-         term.attrib = nsMsgSearchAttrib.Body;
-         term.op = nsMsgSearchOp.Contains; 
-         term.booleanAnd = false;
-         searchTermsArray.AppendElement(term);       
-       }
+      if (gSearchInput.searchMode == kQuickSearchBody)
+      {
+        // what do we do for news and imap users that aren't configured for offline use?
+        // in these cases the body search will never return any matches. Should we try to 
+        // see if body is a valid search scope in this particular case before doing the search?
+        // should we switch back to a subject/sender search behind the scenes?
+        term = gSearchSession.createTerm();
+        value = term.value;
+        value.str = termList[i];
+        term.value = value;
+        term.attrib = nsMsgSearchAttrib.Body;
+        term.op = nsMsgSearchOp.Contains; 
+        term.booleanAnd = false;
+        searchTermsArray.AppendElement(term);       
+      }
 
       // create, fill, and append the sender (or recipient) term
       if (gSearchInput.searchMode == kQuickSearchSender || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
@@ -582,7 +596,7 @@ function onClearSearch()
   if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
   {
     gQuickSearchFocusEl = gLastFocusedElement;  //save of the last focused element so that focus can be restored
-    Search("");
+  Search("");
     // this needs to be on a timer otherwise we end up messing up the focus while the Search("") is still happening
     setTimeout("restoreSearchFocusAfterClear();", 0); 
   }
@@ -670,7 +684,7 @@ function changeQuickSearchMode(aMenuItem)
   else if (oldSearchMode != gSearchInput.searchMode) // the search mode just changed so we need to redo the quick search
   {
     if (gHighlightedMessageText)
-      removeHighlighting(); // remove any existing highlighting in the message before switching gears      
+      removeHighlighting(); // remove any existing highlighting in the message before switching gears
     onEnterInSearchBar();
   }
 }

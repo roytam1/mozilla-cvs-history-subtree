@@ -158,7 +158,7 @@ Feed.prototype.quickMode getter = function() {
         quickMode = quickMode.QueryInterface(Components.interfaces.nsIRDFLiteral);
         quickMode = quickMode.Value;
         quickMode = eval(quickMode);
-    }    
+    }
     return quickMode;
 }
 
@@ -260,6 +260,10 @@ Feed.prototype.parseAsRSS2 = function() {
     item.date = getNodeValue(itemNode.getElementsByTagName("pubDate")[0]
                              || itemNode.getElementsByTagName("date")[0])
                 || item.date;
+
+    var content = getNodeValue(itemNode.getElementsByTagNameNS(RSS_CONTENT_NS, "encoded")[0]);
+    if (content)
+      item.content = content;
 
     var content = getNodeValue(itemNode.getElementsByTagNameNS(RSS_CONTENT_NS, "encoded")[0]);
     if (content)
@@ -515,12 +519,12 @@ Feed.prototype.storeNextItem = function()
 Feed.prototype.notify = function(aTimer) {
   this.storeNextItem();
 }
-
+  
 Feed.prototype.QueryInterface = function(aIID) {
-  if (aIID.equals(Components.interfaces.nsITimerCallback) || aIID.equals(Components.interfaces.nsISupports))
-    return this;
-
-  Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
-  return null;    
-}
+    if (aIID.equals(Components.interfaces.nsITimerCallback) || aIID.equals(Components.interfaces.nsISupports))
+      return this;
+    
+    Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+    return null;           
+  }
 

@@ -309,9 +309,10 @@ function viewRefreshCustomMailViews(aCurrentViewValue)
   // remove any existing entries...
   var menupopupNode = document.getElementById('viewMessageViewPopup');
   var userDefinedItems = menupopupNode.getElementsByAttribute("userdefined","true");
-  for (var i=0; i<userDefinedItems.length; i++)
+  for (var i=0; userDefinedItems.item(i); )
   {
-    menupopupNode.removeChild(userDefinedItems[i]);
+    if (!menupopupNode.removeChild(userDefinedItems[i]))
+      ++i;
   }
   
   // now rebuild the list
@@ -746,7 +747,6 @@ function MsgGetMessagesForAllServers(defaultServer)
     try
     {
         var allServers = accountManager.allServers;
-
         // array of isupportsarrays of servers for a particular folder
         var pop3DownloadServersArray = new Array; 
         // parallel isupports array of folders to download to...
@@ -774,7 +774,7 @@ function MsgGetMessagesForAllServers(defaultServer)
                     }
                     else
                     // Check to see if there are new messages on the server
-                    currentServer.PerformBiff(msgWindow);
+                      currentServer.PerformBiff(msgWindow);
                 }
             }
         }
@@ -1632,7 +1632,7 @@ function IsGetNextNMessagesEnabled()
     var serverType = server.type;
 
     var menuItem = document.getElementById("menu_getnextnmsg");
-    if((serverType == "nntp")) {
+    if ((serverType == "nntp") && !folder.isServer) {
         var newsServer = server.QueryInterface(Components.interfaces.nsINntpIncomingServer);
         var menuLabel = gMessengerBundle.getFormattedString("getNextNMessages",
                                                             [ newsServer.maxArticles ]);
@@ -1640,10 +1640,9 @@ function IsGetNextNMessagesEnabled()
         menuItem.removeAttribute("hidden");
         return true;
     }
-    else {
-        menuItem.setAttribute("hidden","true");
-        return false;
-    }
+
+    menuItem.setAttribute("hidden","true");
+    return false;
 }
 
 function IsEmptyTrashEnabled()
@@ -1891,7 +1890,7 @@ function GetFolderMessages()
     // should shift click get mail for all (authenticated) accounts?
     // see bug #125885
     if (!folder.server.isDeferredTo)
-    folder = defaultAccountRootFolder;
+      folder = defaultAccountRootFolder;
   }
 
   var folders = new Array(1);
@@ -2215,7 +2214,7 @@ function OnMsgLoaded(aUrl)
     if (!(/type=x-message-display/.test(msgURI)))
       msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
         
-      SetUpJunkBar(msgHdr);
+    SetUpJunkBar(msgHdr);
 
     // we just finished loading a message. set a timer to actually mark the message is read after n seconds
     // where n can be configured by the user.

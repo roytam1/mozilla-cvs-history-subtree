@@ -57,26 +57,26 @@
         <caption label="&managecerts.label;"/>
         <description>&managecerts.text;</description>
         <hbox align="center">
-          <button label="&managecerts.button;"
-                  oncommand="openCertManager();" 
-                  id="openCertManagerButton"
+            <button label="&managecerts.button;"
+              oncommand="openCertManager();" 
+              id="openCertManagerButton"
                   accesskey="&managecerts.accesskey;"
                   prefstring="security.disable_button.openCertManager"/>
-        </hbox>
+    </hbox>
       </groupbox>
-
+    
       <!-- Device manager -->
       <groupbox>
         <caption label="&managedevices.label;"/>
         <description>&managedevices.text;</description>
         <hbox align="center">
-          <button label="&managedevices.button;"
-                  oncommand="openDeviceManager();"
-                  id="openDeviceManagerButton"
-                  accesskey="&managedevices.accesskey;"
-                  prefstring="security.disable_button.openDeviceManager"/>
-        </hbox>
+      <button label="&managedevices.button;"
+        oncommand="openDeviceManager();"
+        id="openDeviceManagerButton"
+        accesskey="&managedevices.accesskey;"
+        prefstring="security.disable_button.openDeviceManager"/>
+    </hbox>
       </groupbox>
-    </expander>
+  </expander>
   </vbox>
 </overlay>

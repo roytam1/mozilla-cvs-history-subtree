@@ -37,14 +37,14 @@
 var gRSSServer = null;
 
 function doLoad() {
-  // extract the server argument
-  if (window.arguments[0].server)
-    gRSSServer = window.arguments[0].server;
-  
-  var ds = getSubscriptionsDS(gRSSServer);
-  var tree = document.getElementById('subscriptions');
-  tree.database.AddDataSource(ds);
-  tree.builder.rebuild();
+    // extract the server argument
+    if (window.arguments[0].server)
+        gRSSServer = window.arguments[0].server;
+    
+    var ds = getSubscriptionsDS(gRSSServer);
+    var tree = document.getElementById('subscriptions');
+    tree.database.AddDataSource(ds);
+    tree.builder.rebuild();
 }
 
 function onAccept()
@@ -72,8 +72,8 @@ function onAccept()
 // optionally, pass in the name and 
 function openFeedEditor(feedProperties)
 {
-  window.openDialog('feed-properties.xul', 'feedproperties', 'modal,titlebar,chrome,center', feedProperties);
-  return feedProperties;
+    window.openDialog('feed-properties.xul', 'feedproperties', 'modal,titlebar,chrome,center', feedProperties);
+    return feedProperties;
 } 
 
 // status helper routines

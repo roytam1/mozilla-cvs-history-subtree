@@ -32,26 +32,38 @@ skin,install,url,jar:resource:/chrome/qute.jar!/skin/classic/messenger/
 skin,install,url,jar:resource:/chrome/qute.jar!/skin/classic/navigator/
 skin,install,url,jar:resource:/chrome/qute.jar!/skin/classic/mozapps/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/wallet/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/pipnss/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/pippki/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/autoconfig/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/pipnss/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/pippki/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/autoconfig/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-mdn/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-views/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-smime/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-mapi/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger-region/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/necko/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/editor/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/mozldap/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/mozapps/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/navigator/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/communicator/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/global/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/global-region/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/global-platform/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/navigator-platform/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/communicator-platform/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-region/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/necko/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/editor/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/mozldap/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/mozapps/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/navigator/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/communicator/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/global/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/global-region/
+#ifdef XP_WIN
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/global-platform/
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/communicator-platform/
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/navigator-platform/
+#else
+#ifdef XP_OS2
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/global-platform/
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/communicator-platform/
+locale,install,url,jar:resource:/chrome/en-win.jar!/locale/en-US/navigator-platform/
+#else
+locale,install,url,jar:resource:/chrome/en-unix.jar!/locale/en-US/global-platform/
+locale,install,url,jar:resource:/chrome/en-unix.jar!/locale/en-US/communicator-platform/
+locale,install,url,jar:resource:/chrome/en-unix.jar!/locale/en-US/navigator-platform/
+#endif
+#endif
 skin,install,select,classic/1.0
 
 # optional registration for dom inspector which may or may not be installed
@@ -63,10 +75,10 @@ skin,install,url,jar:resource:/chrome/inspector.jar!/skin/modern/inspector/
 # optional registration for offline support which may or may not be installed
 content,install,url,jar:resource:/chrome/offline.jar!/content/messenger-offline/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/content/messenger-offline/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger-offline/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-offline/
 skin,install,url,jar:resource:/chrome/offline.jar!/content/messenger-offline/
 
 # optional registration for RSS support which may or may not be installed
 content,install,url,jar:resource:/chrome/newsblog.jar!/content/messenger-newsblog/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/messenger-newsblog/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-newsblog/
 skin,install,url,jar:resource:/chrome/qute.jar!/skin/classic/messenger-newsblog/

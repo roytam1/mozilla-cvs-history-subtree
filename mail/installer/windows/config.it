@@ -322,7 +322,7 @@ Message0=Create icons for $ProductShortName$:
 ; Only a maximum of 3 "Windows Integration-Item"s are allowded.  Each Item
 ; shows up as a checkbox in the Windows Integration dialog.
 [Windows Integration-Item0]
-CheckBoxState=TRUE
+CheckBoxState=FALSE
 ;*** LOCALIZE ME BABY ***
 Description=On my Desktop
 Archive=
@@ -698,7 +698,7 @@ Description Long=for reporting $ProductName$ crash information
 Archive=talkback.xpi
 $InstallSize$:talkback
 $InstallSizeSystem$
-$InstallSizeArchive$:talkbck.xpi
+$InstallSizeArchive$:talkback.xpi
 Attributes=SELECTED|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\components\fullsoft.dll
 FileCount=$FileCount$

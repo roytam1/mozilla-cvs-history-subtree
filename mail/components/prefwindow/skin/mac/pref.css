@@ -128,7 +128,7 @@ page button {
   -moz-image-region: rect(0px, 128px, 32px, 96px)
 }
 
-#attachments {  
+#attachments {
   -moz-image-region: rect(0px 160px 32px 128px);
 }
 
@@ -187,23 +187,23 @@ button  {
 }
 
 /* :::::: layout preference icons ::::: */
- 
+
  .mailPaneConfigIcon 
  {
    list-style-image : url("chrome://messenger/skin/icons/mailPaneConfig.png");
- }
- 
+}
+
  #classic 
  {
 	 -moz-image-region: rect(0px, 32px, 32px, 0px)
- }
- 
+}
+
  #wide 
  {
 	 -moz-image-region: rect(0px, 64px, 32px, 32px)
- }
- 
+}
+
  #vertical
  {
 	 -moz-image-region: rect(0px, 96px, 32px, 64px)
- }
+}

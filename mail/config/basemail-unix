@@ -39,6 +39,7 @@ components/offlineStartup.js
 components/mdn-service.js
 components/libsmimestb.so
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Chrome Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -48,6 +49,8 @@ chrome/en-US-mail.jar
 ;;this maybe incorrect but we use win because of 
 ;;a static installed-chrome.txt
 chrome/en-unix.jar
+;;chrome/en-unix.jar
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Default Profile Settings
@@ -59,13 +62,14 @@ greprefs/*
 defaults/messenger/mailViews.dat
 defaults/profile/localstore.rdf
 defaults/profile/mimeTypes.rdf
-defaults/profile/extensions/Extensions.rdf
-defaults/profile/extensions/installed-extensions.txt
-defaults/profile/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
 defaults/profile/US/localstore.rdf
 defaults/profile/US/mimeTypes.rdf
 defaults/isp/US/movemail.rdf
 defaults/isp/movemail.rdf
+defaults/profile/extensions/Extensions.rdf
+defaults/profile/extensions/installed-extensions.txt
+defaults/profile/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; App extensions to Mail
@@ -133,6 +137,7 @@ libmozjs.so
 ; XPCOM:
 ; 
 libxpcom.so 
+libxpcom_core.so 
 libxpistub.so
 libxpcom_compat.so
 components/xpcom_base.xpt
@@ -157,6 +162,7 @@ libgtksuperwin.so
 libgtkxtbin.so 
 libgtkembedmoz.so 
 libxlibrgb.so
+libgfxpsshar.so
 components/libgfx_gtk.so
 components/libgfxps.so
 components/libgfxxprint.so
@@ -234,7 +240,7 @@ components/jar.xpt
 components/pref.xpt                     
 components/libpref.so
 
-; profile             
+; profile
 components/profile.xpt
 components/libprofileimport.so
 components/libprofilemigration.so
@@ -295,7 +301,6 @@ components/necko_about.xpt
 components/necko_data.xpt               
 components/necko_dns.xpt                
 components/necko_http.xpt               
-components/necko_jar.xpt                
 components/necko_res.xpt                
 components/necko_strconv.xpt
 components/necko_viewsource.xpt
@@ -478,7 +483,7 @@ components/filepicker.xpt
 
 ; extensions
 components/nsExtensionManager.js
-components/nsUpdateService.js 
+components/nsBackgroundUpdateService.js
 components/extensions.xpt
 components/update.xpt
 

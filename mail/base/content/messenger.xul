@@ -125,7 +125,7 @@
               oncommand="SendMailToNode(document.popupNode)"/>
     <menuitem label="&CopyEmailAddress.label;"
               accesskey="&CopyEmailAddress.accesskey;"
-              oncommand="CopyEmailAddress(document.popupNode)"/>  
+              oncommand="CopyEmailAddress(document.popupNode)"/> 
     <menuseparator/> 
     <menuitem label="&CreateFilter.label;"
               accesskey="&CreateFilter.accesskey;"
@@ -383,5 +383,5 @@
     <statusbarpanel id="unreadMessageCount"/>
     <statusbarpanel id="totalMessageCount"/>
     <statusbarpanel id="statusbar-updates"/>
-  </statusbar>  
+  </statusbar>
 </window>

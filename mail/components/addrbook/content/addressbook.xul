@@ -452,21 +452,21 @@
             </menupopup>
         </menu>
 #endif
-      <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
-        <menupopup id="menu_HelpPopup">      
+        <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
+          <menupopup id="menu_HelpPopup">
 #ifdef XP_MACOSX
           <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
           <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
 #else
-          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
-          <menuitem id="hintsAndTips" accesskey="&hintsAndTips.accesskey;" label="&hintsAndTips.label;" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
+            <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>
+            <menuitem id="hintsAndTips" accesskey="&hintsAndTips.accesskey;" label="&hintsAndTips.label;" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
 #endif
-          <menuseparator id="menu_HelpAboutSeparator"/>
-          <menuitem id="aboutName" accesskey="&aboutCmd.accesskey;"
-                    label="&aboutCmd.label;"
-                    oncommand="window.openDialog('chrome://messenger/content/aboutDialog.xul', 'About', 'modal,centerscreen,chrome,resizable=no');"/>
-        </menupopup>
-      </menu>
+            <menuseparator id="menu_HelpAboutSeparator"/>
+            <menuitem id="aboutName" accesskey="&aboutCmd.accesskey;"
+                      label="&aboutCmd.label;"
+                      oncommand="window.openDialog('chrome://messenger/content/aboutDialog.xul', 'About', 'modal,centerscreen,chrome,resizable=no');"/>
+          </menupopup>
+        </menu>
     </menubar>
    </toolbaritem>
   </toolbar>
@@ -710,7 +710,7 @@
                   <description class="CardViewText" id="cvCustom3"/>
                   <description class="CardViewText" id="cvCustom4"/>
                   <description class="CardViewText" id="cvNotes"/>
-                  <hbox autostretch="never">
+                  <hbox>
                     <image id="cvBuddyIcon"/> 
                   </hbox>
                 </vbox>

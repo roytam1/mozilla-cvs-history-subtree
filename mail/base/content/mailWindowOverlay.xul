@@ -186,6 +186,7 @@
   <command id="cmd_previousMsg" oncommand="goDoCommand('cmd_previousMsg')" disabled="true"/>
   <command id="cmd_previousUnreadMsg" oncommand="goDoCommand('cmd_previousUnreadMsg')" disabled="true"/>
   <command id="cmd_previousFlaggedMsg" oncommand="goDoCommand('cmd_previousFlaggedMsg')" disabled="true"/>
+  <command id="cmd_goStartPage" oncommand="goDoCommand('cmd_goStartPage');"/>
 </commandset>
 
 <commandset id="mailMessageMenuItems"
@@ -1304,10 +1305,10 @@
 
           <menu label="&textSize.label;" accesskey="&textSize.accesskey;">
             <menupopup>
-              <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
-                       command="cmd_textZoomEnlarge"/>
-              <menuitem key="key_textZoomReduce" label="&textZoomReduceCmd.label;" accesskey="&textZoomReduceCmd.accesskey;"
-                        command="cmd_textZoomReduce"/>
+          <menuitem key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
+                    command="cmd_textZoomEnlarge"/>
+          <menuitem key="key_textZoomReduce" label="&textZoomReduceCmd.label;" accesskey="&textZoomReduceCmd.accesskey;"
+                    command="cmd_textZoomReduce"/>
               <menuseparator/>
               <menuitem key="key_textZoomReset" label="&textZoomResetCmd.label;" accesskey="&textZoomResetCmd.accesskey;" command="cmd_textZoomReset"/>
             </menupopup>
@@ -1339,7 +1340,7 @@
             </menupopup>
           </menu>
           <menuseparator id="goNextSeparator"/>
-          <menuitem id="goStartPage" label="&startPageCmd.label;" accesskey="&startPageCmd.accesskey;" oncommand="HideMessageHeaderPane();loadStartPage();"/>
+          <menuitem id="goStartPage" label="&startPageCmd.label;" accesskey="&startPageCmd.accesskey;" command="cmd_goStartPage"/>
         </menupopup>
         </menu>
 
@@ -1667,7 +1668,7 @@
       
       <!-- Help -->  
       <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
-        <menupopup id="menu_HelpPopup">      
+        <menupopup id="menu_HelpPopup">
 #ifdef XP_MACOSX
           <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="loadThrobberUrl('mailnews.hints_and_tips.url');"/>
           <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="loadThrobberUrl('mailnews.release_notes.url');"/>

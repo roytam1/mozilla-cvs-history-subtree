@@ -70,11 +70,11 @@
     <key id="key_delete" oncommand="goDoCommand('cmd_delete');"/>
     <key key="&closeCmd.key;" modifiers="accel" oncommand="onSearchStop(); closeWindow(true);"/>
     <key keycode="VK_ESCAPE" xulkey="false" oncommand="onSearchStop(); closeWindow(true);"/>
-#ifdef XP_MACOSX
-    <key id="cmd_shiftDelete" keycode="VK_BACK" xulkey="false" oncommand="goDoCommand('cmd_shiftDelete');" modifiers="shift"/>
-#else
-    <key id="cmd_shiftDelete" keycode="VK_DELETE" xulkey="false" oncommand="goDoCommand('cmd_shiftDelete');" modifiers="shift"/>
-#endif
+    #ifdef XP_MACOSX
+      <key id="cmd_shiftDelete" keycode="VK_BACK" xulkey="false" oncommand="goDoCommand('cmd_shiftDelete');" modifiers="shift"/>
+    #else
+      <key id="cmd_shiftDelete" keycode="VK_DELETE" xulkey="false" oncommand="goDoCommand('cmd_shiftDelete');" modifiers="shift"/>
+    #endif
   </keyset>
 
   <broadcasterset id="mailBroadcasters">
@@ -94,11 +94,11 @@
  
         </hbox>
         
-        <hbox align="center">
+         <hbox align="center">
            <checkbox id="checkSearchSubFolders" label="&searchSubfolders.label;" checked="true" accesskey="&searchSubfolders.accesskey;"/>
            <spacer flex="10"/>
            <button label="&resetButton.label;" oncommand="onResetSearch(event);" accesskey="&resetButton.accesskey;"/>
-        </hbox>
+         </hbox>
       </vbox>
 
       <hbox flex="1">
@@ -256,7 +256,7 @@
     <statusbarpanel id="statusText" crop="right" flex="1"/>   
     <statusbarpanel class="statusbarpanel-progress" collapsed="true" id="statusbar-progresspanel">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>
-    </statusbarpanel>    
+    </statusbarpanel>
   </statusbar> 
 
 </window>

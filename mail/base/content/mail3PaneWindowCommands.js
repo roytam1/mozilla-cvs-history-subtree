@@ -62,7 +62,7 @@ var FolderPaneController =
       var folderTree = GetFolderTree();
       var startIndex = {};
       var endIndex = {};
-      folderTree.treeBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+      folderTree.view.selection.getRangeAt(0, startIndex, endIndex);
       if (startIndex.value >= 0) {
         var canDeleteThisFolder;
 				var specialFolder = null;
@@ -154,6 +154,7 @@ var DefaultController =
 			case "cmd_previousMsg":
 			case "cmd_previousUnreadMsg":
 			case "cmd_previousFlaggedMsg":
+      case "cmd_goStartPage":
 			case "cmd_viewAllMsgs":
 			case "cmd_viewUnreadMsgs":
       case "cmd_viewThreadsWithUnread":
@@ -253,9 +254,9 @@ var DefaultController =
           gDBView.getCommandStatus(nsMsgViewCommandType.junk, enabled, checkStatus);
         return enabled.value;
       case "cmd_killThread":
-        return GetNumSelectedMessages() == 1;
+        return GetNumSelectedMessages() > 0;
       case "cmd_watchThread":
-        if ((GetNumSelectedMessages() == 1) && gDBView)
+        if (gDBView)
           gDBView.getCommandStatus(nsMsgViewCommandType.toggleThreadWatched, enabled, checkStatus);
         return enabled.value;
       case "cmd_createFilterFromPopup":
@@ -341,6 +342,8 @@ var DefaultController =
       case "cmd_previousMsg":
       case "cmd_previousUnreadMsg":
         return IsViewNavigationItemEnabled();
+      case "cmd_goStartPage":
+        return pref.getBoolPref("mailnews.start_page.enabled") && !IsMessagePaneCollapsed();
       case "cmd_markAllRead":
       case "cmd_markReadByDate":
         return IsFolderSelected();
@@ -510,6 +513,10 @@ var DefaultController =
 			case "cmd_previousFlaggedMsg":
 				MsgPreviousFlaggedMessage();
 				break;
+      case "cmd_goStartPage":
+        HideMessageHeaderPane();
+        loadStartPage();
+        break;
 			case "cmd_viewAllMsgs":
       case "cmd_viewThreadsWithUnread":
       case "cmd_viewWatchedThreadsWithUnread":
@@ -812,7 +819,7 @@ function IsSendUnsentMsgsEnabled(folderResource)
 function IsRenameFolderEnabled()
 {
     var folderTree = GetFolderTree();
-    var selection = folderTree.treeBoxObject.selection;
+    var selection = folderTree.view.selection;
     if (selection.count == 1)
     {
         var startIndex = {};
@@ -861,7 +868,7 @@ function IsPropertiesEnabled(command)
    if (IsFakeAccount())
      return false;
 
-   var selection = folderTree.treeBoxObject.selection;
+   var selection = folderTree.view.selection;
    return (selection.count == 1);
 }
 
@@ -873,7 +880,7 @@ function IsViewNavigationItemEnabled()
 function IsFolderSelected()
 {
     var folderTree = GetFolderTree();
-    var selection = folderTree.treeBoxObject.selection;
+    var selection = folderTree.view.selection;
     if (selection.count == 1)
     {
         var startIndex = {};

@@ -64,7 +64,7 @@ var gSaveLabelAccesskey;
 var gMessengerBundle;
 var gProfileDirURL;
 var gIOService;
-var gFileHandler;
+var gFileHandler;  
 var gShowCondensedEmailAddresses = true; // show the friendly display names for people I know instead of the name + email address
 var gPersonalAddressBookDirectory; // used for determining if we want to show just the display name in email address nodes
 
@@ -343,9 +343,9 @@ var messageHeaderSink = {
         // we don't have to worry about looking for: Cc and CC, etc.
         var lowerCaseHeaderName = header.headerName.toLowerCase();
 
-        // if we have an x-mailer string, put it in the user-agent slot which we know how to handle
+        // if we have an x-mailer or x-mimeole string, put it in the user-agent slot which we know how to handle
         // already. 
-        if (lowerCaseHeaderName == "x-mailer")
+        if (lowerCaseHeaderName == "x-mailer" || lowerCaseHeaderName == "x-mimeole")
           lowerCaseHeaderName = "user-agent";   
         
         // according to RFC 2822, certain headers
@@ -372,12 +372,12 @@ var messageHeaderSink = {
                 (gCollectNewsgroup && dontCollectAddress))
             {
               gCollectAddress = header.headerValue;
-              // collect, and add card if doesn't exist
+              // collect, and add card if doesn't exist, unknown preferred send format
               gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, true, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
             }
             else if (gCollectOutgoing) 
             {
-              // collect, but only update existing cards
+              // collect, but only update existing cards, unknown preferred send format
               gCollectAddress = header.headerValue;
               gCollectAddressTimer = setTimeout('abAddressCollector.collectUnicodeAddress(gCollectAddress, false, Components.interfaces.nsIAbPreferMailFormat.unknown);', 2000);
             }
@@ -447,6 +447,7 @@ var messageHeaderSink = {
     },
     onMsgHasRemoteContent: function(aMsgHdr)
     {
+      dump('entering on msg has remote content\n\n');
       SetUpRemoteContentBar(aMsgHdr);
     },
 
@@ -1338,8 +1339,8 @@ function ClearAttachmentList()
   // clear selection
   var list = document.getElementById('attachmentList');
 
-  while (list.childNodes.length) 
-    list.removeChild(list.firstChild);
+  while (list.hasChildNodes()) 
+    list.removeChild(list.lastChild);
 }
 
 function ShowEditMessageButton() 

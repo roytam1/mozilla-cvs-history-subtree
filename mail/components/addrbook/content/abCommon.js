@@ -238,7 +238,7 @@ function SendCommandToResultsPane(command)
 
 function AbEditSelectedDirectory()
 {
-  if (dirTree.treeBoxObject.selection.count == 1) {
+  if (dirTree.view.selection.count == 1) {
     var selecteduri = GetSelectedDirectory();
     var directory = GetDirectoryFromURI(selecteduri);
     if (directory.isMailList) {
@@ -638,20 +638,19 @@ function DirPaneDoubleClick(event)
   if (event.button != 0)
     return;
 
-  var row = {}, colID = {}, childElt = {};
-  dirTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, colID, childElt);
-  if (row.value == -1 || row.value > dirTree.view.rowCount-1) {
+  var row = dirTree.treeBoxObject.getRowAt(event.clientX, event.clientY);
+  if (row == -1 || row > dirTree.view.rowCount-1) {
     // double clicking on a non valid row should not open the dir properties dialog
     return;
   }
 
-  if (dirTree && dirTree.treeBoxObject.selection && dirTree.treeBoxObject.selection.count == 1)
+  if (dirTree && dirTree.view.selection && dirTree.view.selection.count == 1)
     AbEditSelectedDirectory();
 }
 
 function DirPaneSelectionChange()
 {
-  if (dirTree && dirTree.treeBoxObject.selection && dirTree.treeBoxObject.selection.count == 1)
+  if (dirTree && dirTree.view.selection && dirTree.view.selection.count == 1)
     ChangeDirectoryByURI(GetSelectedDirectory());
 }
 
@@ -682,7 +681,7 @@ function SetAbView(uri, searchView, sortColumn, sortDirection)
   if (!sortColumn)
 		sortColumn = kDefaultSortColumn;
 
-  if (!sortDirection)
+	if (!sortDirection)
 		sortDirection = kDefaultAscending;
 
   if (gAbView && gCurDirectory == GetSelectedDirectory())
@@ -691,16 +690,15 @@ function SetAbView(uri, searchView, sortColumn, sortDirection)
     actualSortColumn = gAbView.init(uri, searchView, GetAbViewListener(), sortColumn, sortDirection);
   }
   else
-{
-  CloseAbView();
+  {
+	  CloseAbView();
 
 		gCurDirectory = GetSelectedDirectory();
-
-  gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
+	  gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
 
 		actualSortColumn = gAbView.init(uri, searchView, GetAbViewListener(), sortColumn, sortDirection);
   }
-  
+
   var boxObject = GetAbResultsBoxObject();
   boxObject.view = gAbView.QueryInterface(Components.interfaces.nsITreeView);
 

@@ -20,6 +20,7 @@ bin\defaults\profile\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.r
 
 [xpcom]
 bin\xpcom.dll
+bin\xpcom_core.dll
 bin\xpcom_compat.dll
 bin\xpistub.dll
 bin\components\jar50.dll
@@ -248,7 +249,6 @@ bin\components\necko.xpt
 bin\components\necko_data.xpt               
 bin\components\necko_dns.xpt                
 bin\components\necko_http.xpt               
-bin\components\necko_jar.xpt                
 bin\components\necko_res.xpt                
 bin\components\necko_strconv.xpt
 bin\components\necko_file.xpt
@@ -258,7 +258,7 @@ bin\components\nsProxyAutoConfig.js
  
 ; extensions
 bin\components\nsExtensionManager.js
-bin\components\nsUpdateService.js 
+bin\components\nsBackgroundUpdateService.js
 bin\components\extensions.xpt
 bin\components\update.xpt
 bin\components\websrvcs.xpt
@@ -311,7 +311,7 @@ bin\res\charsetalias.properties
 bin\res\langGroups.properties
 bin\res\language.properties
 bin\res\wincharset.properties
-bin\res\builtin\platformHTMLBindings.xml
+bin\res\builtin\*
 bin\res\entityTables\*
 
 ; editor resource files

@@ -32,7 +32,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 function onLoad()
-{
+{ 
   if (window.arguments[0].feedLocation)
     document.getElementById('feedLocation').value = window.arguments[0].feedLocation;  
 

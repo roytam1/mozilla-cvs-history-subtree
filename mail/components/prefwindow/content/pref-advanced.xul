@@ -68,7 +68,7 @@
                                               
                        // general settings
                        "showCondensedAddresses", "markAsRead", "markAsReadDelay", "showFolderPaneColumns",
-
+                                              
                        // smart update
                        "enableSmartUpdate", "enableExtensionUpdate"];
   ]]>
@@ -243,10 +243,10 @@
       <vbox class="indent" align="left">
         <checkbox id="enableSmartUpdate"
                   label="&enableSmartUpdate.label;" accesskey="&enableSmartUpdate.accesskey;"
-                  prefstring="app.update.autoUpdateEnabled"/>
+                  prefstring="update.app.enabled"/>
         <checkbox id="enableExtensionUpdate"
                   label="&enableExtensionUpdate.label;" accesskey="&enableExtensionUpdate.accesskey;"
-                  prefstring="extensions.update.autoUpdateEnabled"/>      
+                  prefstring="update.extensions.enabled"/>      
         <separator class="thin"/>
         <button label="&checkNow.label;" accesskey="&checkNow.accesskey;"
                 oncommand="checkForUpdates();"/>

@@ -55,7 +55,7 @@ function Startup()
   otherCasesLabel = document.getElementById("otherCasesLabel");
 
   EnableDisableAllowedReceipts();
-
+        
   toggleRemoteImagesPrefUI(document.getElementById('networkImageDisableImagesInMailNews'));
         
   return true;
@@ -95,7 +95,7 @@ function EnableDisableAllowedReceipts() {
     otherCasesLabel.removeAttribute("disabled");
   }
   return true;
-} 
+}
 
 // Password Management
 

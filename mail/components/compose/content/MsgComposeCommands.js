@@ -1159,26 +1159,25 @@ function ComposeStartup(recycled, aParams)
   var params = null; // New way to pass parameters to the compose window as a nsIMsgComposeParameters object
   var args = null;   // old way, parameters are passed as a string
   
-  if (recycled)
-    dump("This is a recycled compose window!\n");
-
   if (aParams)
     params = aParams;
-
-  else if (window.arguments && window.arguments[0]) {
-    try {
+  else if (window.arguments && window.arguments[0]) 
+  {
+    try 
+    {
       if (window.arguments[0] instanceof Components.interfaces.nsIMsgComposeParams)
         params = window.arguments[0];
       else
         params = handleMailtoArgs(window.arguments[0]);
     }
-    catch(ex) { dump("ERROR with parameters: " + ex + "\n"); }
       
+    catch(ex) { dump("ERROR with parameters: " + ex + "\n"); }
+     
     // if still no dice, try and see if the params is an old fashioned list of string attributes
     // XXX can we get rid of this yet? 
     if (!params)
       args = GetArgs(window.arguments[0]);
-  }
+  }  
 
   var identityList = document.getElementById("msgIdentity");
   var identityListPopup = document.getElementById("msgIdentityPopup");
@@ -1392,9 +1391,9 @@ var gMsgEditorCreationObserver =
         var editorStyle = editor.QueryInterface(Components.interfaces.nsIEditorStyleSheets);
         editorStyle.addStyleSheet("chrome://messenger/skin/messageQuotes.css");
         gMsgCompose.initEditor(editor, window.content);
+      }
     }
   }
-}
 }
 
 function WizCallback(state)
@@ -1433,7 +1432,7 @@ function ComposeLoad()
   }
 
   try {
-    sAccountManagerDataSource = Components.classes["@mozilla.org/rdf/datasource;1?name=msgaccountmanager"].createInstance(Components.interfaces.nsIRDFDataSource);
+    sAccountManagerDataSource = Components.classes["@mozilla.org/rdf/datasource;1?name=msgaccountmanager"].getService(Components.interfaces.nsIRDFDataSource);
     sRDF = Components.classes['@mozilla.org/rdf/rdf-service;1'].getService(Components.interfaces.nsIRDFService);
     sNameProperty = sRDF.GetResource("http://home.netscape.com/NC-rdf#Name?sort=true");
   }
@@ -1632,9 +1631,9 @@ function GenericSendMessage( msgType )
 
   if (gMsgCompose != null)
   {
-      var msgCompFields = gMsgCompose.compFields;
-      if (msgCompFields)
-      {
+    var msgCompFields = gMsgCompose.compFields;
+    if (msgCompFields)
+    {
       Recipients2CompFields(msgCompFields);
       var subject = document.getElementById("msgSubject").value;
       msgCompFields.subject = subject;
@@ -1643,9 +1642,10 @@ function GenericSendMessage( msgType )
       if (msgType == nsIMsgCompDeliverMode.Now || msgType == nsIMsgCompDeliverMode.Later)
       {
         //Do we need to check the spelling?
-        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend")){
-        //We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
-        //therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
+        if (sPrefs.getBoolPref("mail.SpellCheckBeforeSend")) 
+        {
+          //We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
+          //therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
           window.content.focus();
           window.cancelSendMessage = false;
           try {
@@ -1655,66 +1655,102 @@ function GenericSendMessage( msgType )
           catch(ex){}
           if(window.cancelSendMessage)
             return;
-        }
+         }
 
-        //Check if we have a subject, else ask user for confirmation
-        if (subject == "")
-        {
-          if (gPromptService)
-          {
-            var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
-            if (gPromptService.prompt(
-              window,
-              sComposeMsgsBundle.getString("subjectDlogTitle"),
-              sComposeMsgsBundle.getString("subjectDlogMessage"),
-                        result,
-              null,
-              {value:0}
-              ))
-              {
-                msgCompFields.subject = result.value;
-                var subjectInputElem = document.getElementById("msgSubject");
-                subjectInputElem.value = result.value;
-              }
-              else
-                return;
+         //Check if we have a subject, else ask user for confirmation
+         if (subject == "")
+         {
+           if (gPromptService)
+           {            
+             var result = {value:sComposeMsgsBundle.getString("defaultSubject")};
+             if (gPromptService.prompt(
+                window,
+                sComposeMsgsBundle.getString("subjectDlogTitle"),
+                sComposeMsgsBundle.getString("subjectDlogMessage"),
+                result,
+                null,
+                {value:0}))
+             {
+               msgCompFields.subject = result.value;
+               var subjectInputElem = document.getElementById("msgSubject");
+               subjectInputElem.value = result.value;
+             }
+             else
+               return;
             }
           }
 
-        // Before sending the message, check what to do with HTML message, eventually abort.
-        var convert = DetermineConvertibility();
-        var action = DetermineHTMLAction(convert);
-        if (action == nsIMsgCompSendFormat.AskUser)
-        {
-                    var recommAction = convert == nsIMsgCompConvertible.No
-                                   ? nsIMsgCompSendFormat.AskUser
-                                   : nsIMsgCompSendFormat.PlainText;
-                    var result2 = {action:recommAction,
-                                  convertible:convert,
-                                  abort:false};
-                    window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
-                                      "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
-                                      result2);
-          if (result2.abort)
-            return;
-          action = result2.action;
-        }
-        switch (action)
-        {
-          case nsIMsgCompSendFormat.PlainText:
-            msgCompFields.forcePlainText = true;
-            msgCompFields.useMultipartAlternative = false;
-            break;
-          case nsIMsgCompSendFormat.HTML:
-            msgCompFields.forcePlainText = false;
-            msgCompFields.useMultipartAlternative = false;
-            break;
-          case nsIMsgCompSendFormat.Both:
-            msgCompFields.forcePlainText = false;
-            msgCompFields.useMultipartAlternative = true;
-            break;
-           default: dump("\###SendMessage Error: invalid action value\n"); return;
-        }
+          // check if the user tries to send a message to a newsgroup through a mail account
+          var currentAccountKey = getCurrentAccountKey();
+          var account = gAccountManager.getAccount(currentAccountKey);
+          var servertype = account.incomingServer.type;
+
+          if (servertype != "nntp" && msgCompFields.newsgroups != "")
+          {
+            // default to ask user if the pref is not set
+            var dontAskAgain = sPrefs.getBoolPref("mail.compose.dontWarnMail2Newsgroup");
+
+            if (!dontAskAgain)
+            {
+              var checkbox = {value:false};
+              var okToProceed = gPromptService.confirmCheck(window,
+                                                            sComposeMsgsBundle.getString("subjectDlogTitle"),
+                                                            sComposeMsgsBundle.getString("recipientDlogMessage"),
+                                                            sComposeMsgsBundle.getString("CheckMsg"), checkbox);
+
+              if (!okToProceed)
+                return;
+
+              if (checkbox.value)
+                sPrefs.setBoolPref(kDontAskAgainPref, true);
+            }
+
+            // remove newsgroups to prevent news_p to be set 
+            // in nsMsgComposeAndSend::DeliverMessage()
+            msgCompFields.newsgroups = "";
+          }
+
+          // Before sending the message, check what to do with HTML message, eventually abort.
+          var convert = DetermineConvertibility();
+          var action = DetermineHTMLAction(convert);
+          if (action == nsIMsgCompSendFormat.AskUser)
+          {
+            var recommAction = convert == nsIMsgCompConvertible.No
+                           ? nsIMsgCompSendFormat.AskUser
+                           : nsIMsgCompSendFormat.PlainText;
+            var result2 = {action:recommAction,
+                          convertible:convert,
+                          abort:false};
+            window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
+                              "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
+                              result2);
+            if (result2.abort)
+              return;
+            action = result2.action;
+          }
+          
+          // we will remember the users "send format" decision
+          // in the address collector code (see nsAbAddressCollecter::CollectAddress())
+          // by using msgCompFields.forcePlainText and msgCompFields.useMultipartAlternative
+          // to determine the nsIAbPreferMailFormat (unknown, plaintext, or html)
+          // if the user sends both, we remember html.
+
+          switch (action)
+          {
+            case nsIMsgCompSendFormat.PlainText:
+              msgCompFields.forcePlainText = true;
+              msgCompFields.useMultipartAlternative = false;
+              break;
+            case nsIMsgCompSendFormat.HTML:
+              msgCompFields.forcePlainText = false;
+              msgCompFields.useMultipartAlternative = false;
+              break;
+            case nsIMsgCompSendFormat.Both:
+              msgCompFields.forcePlainText = false;
+              msgCompFields.useMultipartAlternative = true;
+              break;
+             default: dump("\###SendMessage Error: invalid action value\n"); return;
+          }
       }
 
       // hook for extra compose pre-processing
@@ -1761,8 +1797,7 @@ function GenericSendMessage( msgType )
           gSendOrSaveOperationInProgress = true;
         }
         msgWindow.SetDOMWindow(window);
-
-        gMsgCompose.SendMsg(msgType, getCurrentIdentity(), getCurrentAccountKey(), msgWindow, progress);
+        gMsgCompose.SendMsg(msgType, getCurrentIdentity(), currentAccountKey, msgWindow, progress);
       }
       catch (ex) {
         dump("failed to SendMsg: " + ex + "\n");
@@ -2001,8 +2036,8 @@ function queryISupportsArray(supportsArray, iid) {
 function ClearIdentityListPopup(popup)
 {
   if (popup)
-    for (var i = popup.childNodes.length - 1; i >= 0; i--)
-      popup.removeChild(popup.childNodes[i]);
+    while (popup.hasChildNodes())
+      popup.removeChild(popup.lastChild);
 }
 
 function compareAccountSortOrder(account1, account2)
@@ -2121,7 +2156,7 @@ function SetComposeWindowTitle()
     newTitle = sComposeMsgsBundle.getString("defaultSubject");
 
   newTitle += GetCharsetUIString();
-  window.title = sComposeMsgsBundle.getString("windowTitlePrefix") + " " + newTitle;
+  document.title = sComposeMsgsBundle.getString("windowTitlePrefix") + " " + newTitle;
 }
 
 // Check for changes to document and allow saving before closing
@@ -2437,9 +2472,9 @@ function RemoveAllAttachments()
 {
   var child;
   var bucket = document.getElementById("attachmentBucket");
-  for (var i = bucket.childNodes.length - 1; i >= 0; i--)
+  while (bucket.hasChildNodes())
   {
-    child = bucket.removeChild(bucket.childNodes[i]);
+    child = bucket.removeChild(bucket.lastChild);
     // Let's release the attachment object hold by the node else it won't go away until the window is destroyed
     child.attachment = null;
   }
@@ -2607,6 +2642,7 @@ function DetermineHTMLAction(convertible)
         }
         dump("DetermineHTMLAction: preferFormat = " + preferFormat + ", noHtmlRecipients are " + noHtmlRecipients + "\n");
 
+        //Check newsgroups now...
         noHtmlnewsgroups = gMsgCompose.compFields.newsgroups;
 
         if (noHtmlRecipients != "" || noHtmlnewsgroups != "")
@@ -3207,10 +3243,10 @@ function loadHTMLMsgPrefs()
     textColor = pref.getCharPref("msgcompose.text_color");
     if (!bodyElement.getAttribute("text"))
     {
-      bodyElement.setAttribute("text", textColor);
-      gDefaultTextColor = textColor;
-      document.getElementById("cmd_fontColor").setAttribute("state", textColor);    
-      onFontColorChange();
+    bodyElement.setAttribute("text", textColor);
+    gDefaultTextColor = textColor;
+    document.getElementById("cmd_fontColor").setAttribute("state", textColor);    
+    onFontColorChange();
     }
   } catch (e) {}
  
@@ -3218,10 +3254,10 @@ function loadHTMLMsgPrefs()
     bgColor = pref.getCharPref("msgcompose.background_color");
     if (!bodyElement.getAttribute("bgcolor"))
     {
-      bodyElement.setAttribute("bgcolor", bgColor);
-      gDefaultBackgroundColor = bgColor;
-      document.getElementById("cmd_backgroundColor").setAttribute("state", bgColor);
-      onBackgroundColorChange();
+    bodyElement.setAttribute("bgcolor", bgColor);
+    gDefaultBackgroundColor = bgColor;
+    document.getElementById("cmd_backgroundColor").setAttribute("state", bgColor);
+    onBackgroundColorChange();
     }
   } catch (e) {}
 }

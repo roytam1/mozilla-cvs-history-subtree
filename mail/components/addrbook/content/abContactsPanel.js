@@ -49,10 +49,9 @@ function contactsListDoubleClick(event)
   if (event.button != 0)
     return;
 
-  var row = {}, colID = {}, childElt = {};
   var contactsTree = document.getElementById("abResultsTree");
-  contactsTree.treeBoxObject.getCellAt(event.clientX, event.clientY, row, colID, childElt);
-  if (row.value == -1 || row.value > contactsTree.view.rowCount-1 || event.originalTarget.localName != "treechildren") 
+  var row = contactsTree.treeBoxObject.getRowAt(event.clientX, event.clientY);
+  if (row == -1 || row > contactsTree.view.rowCount-1 || event.originalTarget.localName != "treechildren") 
   {
     // double clicking on a non valid row should not open the edit filter dialog
     return;
@@ -90,7 +89,7 @@ var gAddressBookPanelAbListener = {
       // if so, select the person addressbook (it can't be removed)
       if (directory == GetAbView().directory) {
           var abPopup = document.getElementById('addressbookList');
-          abPopup.setAttribute("selectedAB", kPersonalAddressbookURI);
+          abPopup.value = kPersonalAddressbookURI;
           LoadPreviouslySelectedAB();
       } 
     }
@@ -118,26 +117,9 @@ var gAddressBookPanelAbListener = {
 function LoadPreviouslySelectedAB()
 {
   var abPopup = document.getElementById('addressbookList');
-  if ( abPopup )
-  {
-    var menupopup = document.getElementById('addressbookList-menupopup');
-    var selectedAB = abPopup.getAttribute("selectedAB");
-    if (!selectedAB) 
-      selectedAB = kPersonalAddressbookURI;
-      
-    if ( selectedAB && menupopup && menupopup.childNodes )
-    {
-      for ( var index = menupopup.childNodes.length - 1; index >= 0; index-- )
-      {
-        if ( menupopup.childNodes[index].getAttribute('value') == selectedAB )
-        {
-          abPopup.label = menupopup.childNodes[index].getAttribute('label');
-          abPopup.value = menupopup.childNodes[index].getAttribute('value');
-          break;
-        }
-      }
-    }
-  }
+  var value = abPopup.value || kPersonalAddressbookURI;
+  abPopup.selectedItem = null;
+  abPopup.value = value;
   ChangeDirectoryByURI(abPopup.selectedItem.id);
 }
 
@@ -157,13 +139,6 @@ function AbPanelLoad()
                   Components.interfaces.nsIAbListener.directoryRemoved | Components.interfaces.nsIAbListener.changed);
 
   gSearchInput = document.getElementById("searchInput");
-}
-
-
-function AbPanelOnChange(event)
-{
-  var abPopup = document.getElementById('addressbookList');
-  abPopup.setAttribute("selectedAB", abPopup.value);
 }
 
 function AbPanelUnload()
