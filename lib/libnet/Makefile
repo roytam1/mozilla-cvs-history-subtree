@@ -23,10 +23,8 @@ LIBRARY_NAME		= net
 CSRCS			= cvactive.c \
 			  cvcolor.c \
 			  cvdisk.c \
-			  cvextcon.c \
 			  cvproxy.c \
 			  cvsimple.c \
-			  cvview.c \
 			  cvchunk.c \
 			  extcache.c \
 			  mkaccess.c \
@@ -63,6 +61,13 @@ CSRCS			= cvactive.c \
 			  mkutils.c \
 			  prefetch.c \
 			  $(NULL)
+
+ifneq ($(subst /,,$(shell uname -s)),OS2)
+CSRCS += \
+         cvextcon.c \
+         cvview.c   \
+         $(NULL)
+endif
 
 CPPSRCS			= mkmarimb.cpp
 
@@ -154,9 +159,11 @@ $(OBJDIR)/mkformat.o: mkformat.c mktypes.h
 
 $(LIBRARY): $(OBJS)
 
+ifneq ($(OS_ARCH),OS2)
 $(OBJDIR)/mkutils.o $(OBJDIR)/LITE_mkutils.o: mkutils.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(CFLAGS) $(SCO_OPT_FIX) $<
+endif
 
 
 mktypes.h: $(MIME_TYPES) $(MIME_TYPES_UNIX) $(MIME_TYPES_NONUNIX)

@@ -2998,6 +2998,8 @@ bm_write_address( char *pszAddress, XP_File fp )
     WRITE( pszBuf, -1, fp );
     
     XP_FREE( pszBuf );
+
+	return 0;
 }
 
 /* writes out a URL entry to look like:

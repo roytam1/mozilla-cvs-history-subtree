@@ -28,17 +28,13 @@ EXPORTS		= nppg.h npupp.h nsplugin.h nsjvm.h npglue.h nppriv.h
 
 REQUIRES	= lay layer js style applet nspr dbm img util java pref xpcom
 
-ifeq ($(subst /,_,$(shell uname -s)),OS2) 
-CPPSRCS		= npwplat.cpp
+ifeq ($(subst /,,$(shell uname -s)),OS2) 
+# This doesn't compile yet! CPPSRCS		= npwplat.cpp
 REQUIRES	+= xp libfont os2font jtools
 endif
 
 CSRCS		+= npglue.c
 
 include $(DEPTH)/config/rules.mk
-
-ifeq ($(subst /,_,$(shell uname -s)),OS2)
-INCLUDES	+= -I$(DEPTH)/cmd/os2fe/nfc/include -I$(DEPTH)/cmd/os2fe -I$(DEPTH)/cmd/winfe
-endif
 
 $(LIBRARY): $(OBJS)

@@ -276,7 +276,7 @@ int css_wrap(void)
 #include <stdio.h>
 
 #ifndef __cplusplus
-#ifndef __STDC__
+#if !defined(__STDC__) && !defined(XP_OS2_VACPP)
 #define const
 #endif
 #endif

@@ -45,12 +45,6 @@ TEST_LIBS	= $(LIBRARY) \
 CSS_TEST_LIBS	= $(LIBRARY) \
 		  $(DIST)/lib/libxp.$(LIB_SUFFIX)
 
-ifeq ($(OS_ARCH),OS2)
-$(OBJDIR)/csstab.o: csstab.c
-	@$(MAKE_OBJDIR)
-	$(CC) -Fo$@ -Sa -c $(CFLAGS) $<
-endif
-
 test:
 	$(CC) -g -o $(OBJDIR)/style_test $(CFLAGS) -DSS_TEST stystruc.c $(TEST_LIBS)
 	$(CC) -g -o $(OBJDIR)/stack_test $(CFLAGS) -DTEST_STYLESTACK stystack.c $(TEST_LIBS)

@@ -186,6 +186,10 @@ RETURN CODES FOR PROTOCOL MODULES AND STREAMS
 #define HT_TEMP_REDIRECT        29998   /* Redo the retrieve with a new URL */
 #define HT_LOADED               29999   /* Instead of a socket */
 
+#if defined(XP_OS2) && defined(HT_ERROR)
+#undef HT_ERROR
+#endif
+
 #define HT_ERROR                -1      /* Generic failure */
 
 #define HT_NO_ACCESS            -10     /* Access not available */

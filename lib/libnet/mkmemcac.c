@@ -989,6 +989,7 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 		goto malloc_failure;  /* skip memory cacheing */
 	  }
     
+#ifndef XP_OS2
 	/* copy security info */
 	memory_copy->cache_obj.security_on             = URL_s->security_on;
     StrAllocCopy(memory_copy->cache_obj.key_cipher,  URL_s->key_cipher);
@@ -996,6 +997,7 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 	memory_copy->cache_obj.key_secret_size         = URL_s->key_secret_size;
 	if (URL_s->certificate)
 		memory_copy->cache_obj.certificate = CERT_DupCertificate(URL_s->certificate);
+#endif
 
 	/* build the stream object */
     stream = XP_NEW(NET_StreamClass);
@@ -1231,6 +1233,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
  		URL_s->last_modified       = found_cache_obj->cache_obj.last_modified;
  		URL_s->is_netsite          = found_cache_obj->cache_obj.is_netsite;
 
+#ifndef XP_OS2
 		/* copy security info */
 		URL_s->security_on         = found_cache_obj->cache_obj.security_on;
 		URL_s->key_size            = found_cache_obj->cache_obj.key_size;
@@ -1244,6 +1247,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 		if (found_cache_obj->cache_obj.certificate)
 		  URL_s->certificate =
 			CERT_DupCertificate(found_cache_obj->cache_obj.certificate);
+#endif
 
 		net_cache_adding_object++; /* semaphore */
 		/* reorder objects so that the list is in last accessed order */

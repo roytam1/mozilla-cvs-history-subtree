@@ -405,7 +405,11 @@ np_deletestreamobjects(np_stream* stream)
  * (b) We should call NET_GetURL with the app in the fe_data (notification uses it!)
  * (c) We need to store the target context (may be different than instance context!)
  */
+#ifndef XP_OS2_VACPP
 static void
+#else
+extern "C" void
+#endif
 np_dofetch(URL_Struct *urls, int status, MWContext *window_id)
 {
 	np_stream *stream = np_get_stream(urls);
@@ -1057,7 +1061,11 @@ np_makecontext(np_instance* instance, const char* window)
 }
 
 
+#ifndef XP_OS2_VACPP
 PR_STATIC_CALLBACK(void)
+#else
+extern "C" void
+#endif
 np_redisable_js(URL_Struct* url_s, int status, MWContext* context)
 {
 	context->forceJSEnabled = PR_FALSE;
@@ -3048,7 +3056,11 @@ NPL_NewEmbedStream(FO_Present_Types format_out, void* type, URL_Struct* urls, MW
 }
 
 
+#ifndef XP_OS2_VACPP
 static NET_StreamClass *
+#else
+extern "C" NET_StreamClass *
+#endif
 np_newbyterangestream(FO_Present_Types format_out, void *type, URL_Struct *urls, MWContext *cx)
 {
     NET_StreamClass *nstream = nil;
@@ -3071,7 +3083,11 @@ np_newbyterangestream(FO_Present_Types format_out, void *type, URL_Struct *urls,
     return nstream;
 }
 
+#ifndef XP_OS2_VACPP
 static NET_StreamClass *
+#else
+extern "C" NET_StreamClass *
+#endif
 np_newpluginstream(FO_Present_Types format_out, void *type, URL_Struct *urls, MWContext *cx)
 {
     NPEmbeddedApp* app = (NPEmbeddedApp*) urls->fe_data;

@@ -19,8 +19,10 @@
 #define MKUTILS_H
 
 /* Used throughout netlib. */
+#ifndef XP_OS2_VACPP
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
+#endif
 #endif
 
 /* use the fancy new mail reading stuff
@@ -37,10 +39,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2_EMX)
 #include <unistd.h>
 #include <signal.h>
-#endif /* XP_UNIX */
+#endif /* XP_UNIX || XP_OS2_EMX */
 /*#include "version.h"*/
 
 #ifndef NSPR20

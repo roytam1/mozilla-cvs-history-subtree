@@ -68,7 +68,7 @@
 
 #else	/* ! __cplusplus */
 
-#if __STDC__
+#if __STDC__ || defined(XP_OS2_VACPP)
 
 #define YY_USE_PROTOS
 #define YY_USE_CONST

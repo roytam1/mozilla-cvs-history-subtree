@@ -2311,8 +2311,13 @@ PR_STATIC_CALLBACK(void)
 et_DestroyEvent_SetWriteStream(MozillaEvent_DocCacheConverter * e)
 {
     NET_DropURLStruct(e->pUrl);
+#ifndef XP_OS2_VACPP
     PR_FREEIF((char *) e->wysiwyg_url);
     PR_FREEIF((char *) e->base_href);
+#else
+    PR_FREEIF(         e->wysiwyg_url);
+    PR_FREEIF(         e->base_href);
+#endif
     XP_FREE(e);
 }
 
