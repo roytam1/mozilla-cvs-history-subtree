@@ -47,7 +47,6 @@
 <!ENTITY pageInfoCmd.label "Page Info">
 <!ENTITY pageInfoCmd.accesskey "I">
 <!ENTITY pageInfoCmd.commandkey "i">
-<!ENTITY pageInfoWinCmd.commandkey "j">
 <!ENTITY fullScreenCmd.label "Full Screen">
 <!ENTITY fullScreenCmd.accesskey "F">
 
@@ -119,7 +118,7 @@
 <!ENTITY downloads.label              "Downloads">
 <!ENTITY downloads.tooltip            "Display the progress of ongoing downloads">
 <!ENTITY downloads.accesskey          "D">
-<!ENTITY downloads.commandkey         "E">
+<!ENTITY downloads.commandkey         "J">
 <!ENTITY extensions.label             "Extensions">
 <!ENTITY extensions.tooltip           "Show and Manage installed Extensions">
 <!ENTITY extensions.accesskey         "E">
@@ -266,15 +265,19 @@
 <!ENTITY thisFrameMenu.label              "This Frame">
 <!ENTITY thisFrameMenu.accesskey          "h">
 
-<!ENTITY textZoomEnlargeCmd.label       "Increase Text Size">
+<!ENTITY textZoomEnlargeCmd.label       "Increase">
 <!ENTITY textZoomEnlargeCmd.accesskey   "I">
 <!ENTITY textZoomEnlargeCmd.commandkey  "+">
 <!ENTITY textZoomEnlargeCmd.commandkey2 "="> <!-- + is above this key on many keyboards -->
 
-<!ENTITY textZoomReduceCmd.label        "Decrease Text Size">
+<!ENTITY textZoomReduceCmd.label        "Decrease">
 <!ENTITY textZoomReduceCmd.accesskey    "D">
 <!ENTITY textZoomReduceCmd.commandkey   "-">
 <!ENTITY textZoomResetCmd.commandkey    "0">
+<!ENTITY textZoomResetCmd.label         "Normal">
+<!ENTITY textZoomResetCmd.accesskey     "N">
+<!ENTITY textSize.label                 "Text Size">
+<!ENTITY textSize.accesskey             "S">
 
 <!ENTITY mailMenu.label                   "Mail &amp; News">
 <!ENTITY mailMenu.accesskey               "M">
