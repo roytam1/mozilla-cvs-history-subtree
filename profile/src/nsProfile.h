@@ -23,6 +23,7 @@
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
 #include "nsIProfileStartupListener.h"
+#include "nsIProfileChangeStatus.h"
 #include "nsCOMPtr.h"
 #include "nsISupports.h"
 #include "nsIRegistry.h"
@@ -59,12 +60,14 @@
 #define REGISTRY_VERSION_1_0      "1.0"		
 
 class nsProfile: public nsIProfileInternal,
-                 public nsIDirectoryServiceProvider 
+                 public nsIDirectoryServiceProvider,
+                 public nsIProfileChangeStatus 
 {
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROFILE
     NS_DECL_NSIPROFILEINTERNAL
     NS_DECL_NSIDIRECTORYSERVICEPROVIDER
+    NS_DECL_NSIPROFILECHANGESTATUS
 
 private:
     nsresult ProcessArgs(nsICmdLineService *service,
@@ -84,6 +87,7 @@ private:
     PRBool mAutomigrate;
     PRBool mOutofDiskSpace;
     PRBool mDiskSpaceErrorQuitCalled;
+    PRBool mProfileChangeBlocked;
 
 public:
     nsProfile();
