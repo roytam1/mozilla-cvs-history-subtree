@@ -159,9 +159,9 @@
           </treerow>
         </treeitem>
       </treechildren>
-    </treeitem>
+    </treeitem> 
 
-    <treeitem container="true" open="true" id="debugItem">
+    <treeitem container="true" open="true" id="debugItem" hidden="true">
       <treerow>       
         <treecell class="treecell-indent" url="chrome://communicator/content/pref/pref-debug.xul" value="&debug.label;"/> 
       </treerow>
