@@ -1170,13 +1170,6 @@ XULDocumentImpl::PrepareToLoad( nsCOMPtr<nsIParser>* created_parser,
             NS_ERROR("unable to add XUL datasource to db");
             return rv;
         }
-
-				const char* seedCString = 0;
-				syntheticURL->GetSpec(&seedCString);
-        if (NS_FAILED(rv = mDocumentDataSource->Init(seedCString))) {
-            NS_ERROR("unable to initialize XUL data source");
-            return rv;
-        }
     }
 
     nsCOMPtr<nsIXULContentSink> sink;
