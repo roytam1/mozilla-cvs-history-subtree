@@ -49,6 +49,7 @@
 
 #define image_behaviorPref "network.image.imageBehavior"
 #define image_warningPref "network.image.warnAboutImages"
+#define image_blockImageInMailPref "mailnews.message_display.disable_remote_image"
 
 typedef struct _permission_HostStruct {
   char * host;
@@ -62,6 +63,9 @@ typedef struct _permission_TypeStruct {
 
 PRIVATE PERMISSION_BehaviorEnum image_behavior = PERMISSION_Accept;
 PRIVATE PRBool image_warning = PR_FALSE;
+
+#define kBlockImageInMailPrefDefault PR_FALSE
+static PRBool gBlockImageInMailNewsPref = kBlockImageInMailPrefDefault;
 
 PRIVATE void
 image_SetBehaviorPref(PERMISSION_BehaviorEnum x) {
@@ -108,6 +112,17 @@ image_WarningPrefChanged(const char * newpref, void * data) {
   return 0;
 }
 
+PR_STATIC_CALLBACK(int)
+image_BlockedInMailPrefChanged(const char * newpref, void * data) {
+  PRBool x;
+  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+  if (!prefs || NS_FAILED(prefs->GetBoolPref(image_blockImageInMailPref, &x))) {
+    x = kBlockImageInMailPrefDefault;
+  }
+  gBlockImageInMailNewsPref = x;
+  return 0;
+}
+
 PUBLIC void
 IMAGE_RegisterPrefCallbacks(void) {
   PRInt32 n;
@@ -128,6 +143,10 @@ IMAGE_RegisterPrefCallbacks(void) {
   }
   image_SetWarningPref(x);
   prefs->RegisterCallback(image_warningPref, image_WarningPrefChanged, NULL);
+
+  //Initialize for image_blockImageInMailPref
+  image_BlockedInMailPrefChanged(image_blockImageInMailPref, NULL);
+  prefs->RegisterCallback(image_blockImageInMailPref, image_BlockedInMailPrefChanged, NULL);
 }
 
 PUBLIC nsresult
@@ -195,6 +214,12 @@ IMAGE_CheckForPermission
   PR_FREEIF(new_string);
   Recycle(message);
   return NS_OK;
+}
+
+PUBLIC PRBool
+IMAGE_BlockedInMail()
+{
+  return gBlockImageInMailNewsPref;
 }
 
 PUBLIC nsresult
