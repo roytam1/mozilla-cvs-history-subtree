@@ -9,6 +9,7 @@ var headerTestsByName = {};
 var gPrefs;
 var gTargetFolder;
 var gLogStream;
+var gMimeConverterService;
 
 // types of tests
 //
@@ -213,6 +214,12 @@ nsJunkmail.prototype = {
                 .getBranch(null);
         }
 
+	if (!gMimeConverterService) {
+	    gMimeConverterService = 
+	        Components.classes["@mozilla.org/messenger/mimeconverter;1"]
+	        .getService(Components.interfaces.nsIMimeConverter);
+	}
+
         // XXX needs to be a wstring pref, actually.  Both of the following
         // prefs probably should be associated if with an identity, if not
         // an account or server
@@ -345,6 +352,9 @@ nsJunkmail.prototype = {
                 // PerMsgStatus.pm:get_header(), note that it could end
                 // up with a trailing comma (bug?).
                 //
+		// XXX need to get the raw values for this, not the decoded
+		// values
+		//
                 // XXX probably shouldn't generate this info dynamically,
                 // should add it to the table when the headers are read
                 // 
@@ -486,14 +496,31 @@ nsJunkmail.prototype = {
                     headersByName[headerName] = new Array();
                 }
 
-                // push header value, with continuations replaced, onto 
-                // the array of like-named headers
-                //
-                headersByName[headerName].push(
-                    aHeaders[headerLine].substring(headerRE.lastIndex)
-                    .replace(/\n\s+/g, " "));
-            }
+		// save the value of the header, with all continuations 
+		// replaced
+		// XXX maybe let decodeMimeHeaderToCString do this
+		//
+		var headerValue = aHeaders[headerLine]
+		    .substring(headerRE.lastIndex)
+		    .replace(/\n\s+/g, " ");
 
+
+		// try and decode the header
+		//
+		// XXX deal with different default charset depending on
+		// what user has set?
+		//
+		var decodedValue = 
+		    gMimeConverterService.decodeMimeHeaderToCString(
+			headerValue, null, false, true);
+
+                // push the decoded header (if decoding was required) or the
+		// headerValue itself (if not) onto the array of like-named
+		// headers
+		//
+                headersByName[headerName].push(
+		    decodedValue ? decodedValue : headerValue);
+            }
         }
 
         buildHeaderTable();
@@ -626,7 +653,6 @@ nsJunkmail.prototype = {
 
                 // XXXdmose I haven't included the above code here yet, because
                 // I don't believe the code does what the commentary claims.
-
 
                 if (are_more_high_bits_set(subj)) {
                     return true;
