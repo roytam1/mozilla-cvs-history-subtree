@@ -83,7 +83,7 @@ $(OBJDIR)/bsdecho.o:  bsdecho.c
 
 $(OBJDIR)/bsdecho$(BIN_SUFFIX):	$(OBJDIR)/bsdecho.o
 	@$(MAKE_OBJDIR)
-	$(LINK_EXE) -OUT:$@ $< $(LDFLAGS)
+	$(LINK_EXE) $(LDFLAGS) $<
 	$(INSTALL) -m 444 $@ $(DIST)/bin
 else
 $(OBJDIR)/bsdecho$(BIN_SUFFIX):	$(OBJDIR)/bsdecho.o

@@ -132,7 +132,7 @@ RC		= $(FLIPPER) rc$(BIN_SUFFIX)
 AR		= $(FLIPPER) ILib //noignorecase //nologo $@
 IMPLIB		= $(FLIPPER) implib -nologo -noignorecase
 DLLFLAGS	= -OUT:$@ -MAP:$(@:.dll=.map)
-LFLAGS		= $(OBJS) -OUT:$@ $(XLFLAGS) $(DEPLIBS) $(EXTRA_LIBS) -MAP:$(@:.dll=.map) $(DEF_FILE)
+LFLAGS		= -OUT:$@ $(XLFLAGS) $(DEPLIBS) $(EXTRA_LIBS) -MAP:$(@:.dll=.map) $(DEF_FILE)
 AR_EXTRA_ARGS   = ,,
 MKSHLIB		= $(FLIPPER) ilink
 FILTER		= $(FLIPPER) cppfilt -q -B -P
