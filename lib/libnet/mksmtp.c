@@ -1314,7 +1314,7 @@ HG61365
 */
 
 PRIVATE int
-NET_CheckTLSResponse (ActiveEntry *cur_entry)
+NET_CheckAuthResponse (ActiveEntry *cur_entry)
 {
     SMTPConData * cd = (SMTPConData *)cur_entry->con_data;
 	int err = 0;
