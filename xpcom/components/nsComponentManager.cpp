@@ -23,29 +23,6 @@
 extern "C" NS_EXPORT nsresult
 NS_RegistryGetFactory(nsISupports* servMgr, nsIFactory** aFactory);
 
-#ifndef XP_MAC
-// including this on mac causes odd link errors in static initialization
-// stuff that we (pinkerton & scc) don't yet understand. If you want to
-// turn this on for mac, talk to one of us.
-#include <iostream.h>
-#endif
-
-#ifdef	XP_MAC
-#include <Files.h>
-#include <Memory.h>
-#include <Processes.h>
-#include <TextUtils.h>
-#ifndef PR_PATH_SEPARATOR
-#define PR_PATH_SEPARATOR       ':' 
-#endif
-#elif defined(XP_UNIX)
-#ifndef PR_PATH_SEPARATOR
-#define PR_PATH_SEPARATOR       ':'     // nspr doesn't like sun386i?
-#endif
-#else
-#include "private/primpl.h"     // XXX for PR_PATH_SEPARATOR 
-#endif
-
 #include "plstr.h"
 #include "prlink.h"
 #include "prsystem.h"
@@ -284,7 +261,6 @@ nsresult nsComponentManagerImpl::Init(void)
         if (PR_Access(dotMozillaDir, PR_ACCESS_EXISTS) != PR_SUCCESS)
         {
             PR_MkDir(dotMozillaDir, NS_MOZILLA_DIR_PERMISSION);
-            printf("nsComponentManager: Creating Directory %s\n", dotMozillaDir);
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                    ("nsComponentManager: Creating Directory %s", dotMozillaDir));
         }
@@ -1145,56 +1121,6 @@ nsComponentManagerImpl::CreateInstance(const char *aProgID,
     return CreateInstance(clsid, aDelegate, aIID, aResult);
 }
 
-#if 0
-nsresult 
-nsComponentManagerImpl::CreateInstance2(const nsCID &aClass, 
-                                        nsISupports *aDelegate,
-                                        const nsIID &aIID,
-                                        void *aSignature,
-                                        void **aResult)
-{
-#ifdef NS_DEBUG
-    if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
-    {
-        char *buf = aClass.ToString();
-        PR_LogPrint("nsComponentManager: Creating Instance.");
-        PR_LogPrint("nsComponentManager: + %s.", 
-                    buf);
-        PR_LogPrint("nsComponentManager: + Signature = %p.",
-                    aSignature);
-        delete [] buf;
-    }
-#endif
-    if (aResult == NULL)
-    {
-        return NS_ERROR_NULL_POINTER;
-    }
-    *aResult = NULL;
-    	
-    nsIFactory *factory = NULL;
-    	
-    nsresult res = FindFactory(aClass, &factory);
-    	
-    if (NS_SUCCEEDED(res))
-    {
-        nsIFactory2 *factory2 = NULL;
-        res = NS_ERROR_FACTORY_NO_SIGNATURE_SUPPORT;
-    		
-        factory->QueryInterface(kFactory2IID, (void **) &factory2);
-    		
-        if (factory2 != NULL)
-        {
-            res = factory2->CreateInstance2(aDelegate, aIID, aSignature, aResult);
-            NS_RELEASE(factory2);
-        }
-    		
-        NS_RELEASE(factory);
-        return res;
-    }
-    	
-    return NS_ERROR_FACTORY_NOT_REGISTERED;
-}
-#endif /* 0 */
 
 /**
  * RegisterFactory()
@@ -1608,79 +1534,24 @@ nsComponentManagerImpl::FreeLibraries(void)
 nsresult
 nsComponentManagerImpl::AutoRegister(RegistrationTime when, const char* dir)
 {
+    nsresult rv = NS_ERROR_FAILURE;
 
     if (dir != NULL)
     {
+#ifdef DEBUG
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                ("nsComponentManager: Autoregistration begins. dir = %s", dir));
-        SyncComponentsInDir(when, dir);
+        printf("nsComponentManager: Autoregistration begins. dir = %s\n", dir);
+#endif /* DEBUG */
+        rv = SyncComponentsInDir(when, dir);
+#ifdef DEBUG
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-               ("nsComponentManager: Autoregistration ends.", dir));
+               ("nsComponentManager: Autoregistration ends. dir = %s", dir));
+        printf("nsComponentManager: Autoregistration ends. dir = %s\n", dir);
+#endif /* DEBUG */
     }
 
-#ifdef XP_MAC
-    // The below code is being moved out into the applications using using
-    // nsSpecialSystemDirectory platform by platform.
-
-    // get info for the the current process to determine the directory its located in
-    CInfoPBRec	catInfo;
-    Handle		pathH;
-    OSErr			err;
-    ProcessSerialNumber	psn;
-    ProcessInfoRec	pInfo;
-    FSSpec			appFSSpec;
-    FSSpec			tempSpec;
-    long              theDirID;
-    Str255			name;
-
-    if (!(err = GetCurrentProcess(&psn)))
-    {
-        // initialize ProcessInfoRec before calling GetProcessInformation() or die horribly.
-        pInfo.processName = nil;
-        pInfo.processAppSpec = &tempSpec;
-        pInfo.processInfoLength = sizeof(ProcessInfoRec);
-        if (!(err = GetProcessInformation(&psn, &pInfo)))
-        {
-            appFSSpec = *(pInfo.processAppSpec);
-            if ((pathH = NewHandle(1)) != NULL)
-            {
-                **pathH = '\0';						// initially null terminate the string
-                HNoPurge(pathH);
-                HUnlock(pathH);
-                theDirID = appFSSpec.parID;
-                do
-                {
-                    catInfo.dirInfo.ioCompletion = NULL;
-                    catInfo.dirInfo.ioNamePtr = (StringPtr)&name;
-                    catInfo.dirInfo.ioVRefNum = appFSSpec.vRefNum;
-                    catInfo.dirInfo.ioDrDirID = theDirID;
-                    catInfo.dirInfo.ioFDirIndex = -1;		// -1 = query dir in ioDrDirID
-                    if (!(err = PBGetCatInfoSync(&catInfo)))
-                    {
-                        // build up a Unix style pathname due to NSPR
-                        // XXX Note: this breaks if any of the parent
-                        // directories contain a "slash" (blame NSPR)
-
-                        Munger(pathH, 0L, NULL, 0L, (const void *)&name[1], (long)name[0]);	// prepend dir name
-                        Munger(pathH, 0L, NULL, 0L, "/", 1);					// prepend slash
-
-                        // move up to parent directory
-                        theDirID = catInfo.dirInfo.ioDrParID;
-                    }
-                } while ((!err) && (catInfo.dirInfo.ioDrDirID != 2));	// 2 = root
-                if (!err)
-                {
-                    Munger(pathH, GetHandleSize(pathH)-1, NULL, 0L, "/components", 11);	// append "/components"
-                    HLock(pathH);
-                    SyncComponentsInDir(when, (const char *)(*pathH));
-                    HUnlock(pathH);
-                }
-                DisposeHandle(pathH);
-            }
-        }
-    }
-#endif /* XP_MAC */
-    return NS_OK;
+    return rv;
 }
 
 
@@ -1777,10 +1648,14 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
     nsresult rv = NS_OK;
     if (dll == NULL)
     {
-        // XXX Create nsDll for this from registry and
-        // XXX add it to our dll cache mDllStore.
+        // Create nsDll for this from registry and
+        // add it to our dll cache mDllStore.
 #ifdef USE_REGISTRY
         rv = PlatformCreateDll(fullname, &dll);
+        if (NS_SUCCEEDED(rv))
+        {
+            mDllStore->Put(&key, (void *) dll);
+        }
 #endif /* USE_REGISTRY */
     }
     	
@@ -1898,7 +1773,7 @@ nsComponentManagerImpl::AutoRegisterComponent(RegistrationTime when, const char 
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsComponentManager: Autoregistration Passed for "
-                "\"%s\". Skipping...", dll->GetFullPath()));
+                "\"%s\".", dll->GetFullPath()));
         // Marking dll along with modified time and size in the
         // registry happens at PlatformRegister(). No need to do it
         // here again.
@@ -1931,6 +1806,7 @@ nsComponentManagerImpl::SelfRegisterDll(nsDll *dll)
                ("nsComponentManager: SelfRegisterDll(%s) Load FAILED with error:%s", dll->GetFullPath(), errorMsg));
 #if defined(XP_UNIX) || defined(XP_PC)
     	// Put the error message on the screen.
+        // For now this message is also for optimized builds. Hence no ifdef DEBUG
         printf("**************************************************\n"
                "nsComponentManager: Load(%s) FAILED with error: %s\n"
                "**************************************************\n",
