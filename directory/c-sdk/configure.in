@@ -833,7 +833,7 @@ case "$target" in
         AC_DEFINE(_PR_STAT_HAS_ST_ATIMESPEC)
         MKSHLIB='$(CC) -o $@ $(DSO_LDOPTS)'
         DSO_CFLAGS=-fPIC
-        DSO_LDOPTS='-shared -Wl,-soname,$(@:$(OBJDIR)/%.so=%.so)'
+        DSO_LDOPTS='-shared -soname $(@:$(OBJDIR)/%.so=%.so)'
         STRIP="$STRIP -d"
         case "$target_os" in
         bsdi4.2*)
