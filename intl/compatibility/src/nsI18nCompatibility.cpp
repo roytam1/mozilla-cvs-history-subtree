@@ -42,6 +42,7 @@
 #include "nsIComponentManager.h"
 #include "nsCOMPtr.h"
 #include "nsReadableUtils.h"
+#include "nsString.h"
 #include "nsIFactory.h"
 #include "nsIGenericFactory.h"
 #include "nsIModule.h"
