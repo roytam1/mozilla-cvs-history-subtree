@@ -24,6 +24,7 @@
 #     Doron Rosenberg <doronr@naboonline.com>
 #     Roger B. Sidje <rbs@maths.uq.edu.au>
 #     Pierre Chanial <p_ch@verizon.net>
+#     Blake Ross     <blake@cs.stanford.edu>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,8 +51,10 @@
 %brandDTD;
 <!ENTITY % sourceDTD SYSTEM "chrome://global/locale/viewSource.dtd" >
 %sourceDTD;
-<!ENTITY % findBarDTD SYSTEM "chrome://global/locale/findBar.dtd" >
-%findBarDTD;
+<!ENTITY % browserDTD SYSTEM "chrome://browser/locale/browser.dtd" >
+%browserDTD;
+<!ENTITY % findDTD SYSTEM "chrome://global/locale/finddialog.dtd" >
+%findDTD;
 ]>
 
 <window id="main-window"
@@ -74,7 +77,7 @@
   <script type="application/x-javascript" src="chrome://global/content/viewSource.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewZoomOverlay.js"/>
 
-  <stringbundle id="bundle_findBar" src="chrome://global/locale/findBar.properties"/>
+  <stringbundle id="bundle_findBar" src="chrome://browser/locale/browser.properties"/>
   <stringbundle id="viewSourceBundle" src="chrome://global/locale/viewSource.properties"/>
 
   <command id="cmd_savePage" disabled="true" oncommand="ViewSourceSavePage();"/>

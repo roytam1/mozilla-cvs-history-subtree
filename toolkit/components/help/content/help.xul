@@ -47,8 +47,10 @@
     %brandDTD;
     <!ENTITY % helpDTD SYSTEM "chrome://help/locale/help.dtd">
     %helpDTD;
-    <!ENTITY % findBarDTD SYSTEM "chrome://global/locale/findBar.dtd" >
-    %findBarDTD;
+    <!ENTITY % browserDTD SYSTEM "chrome://browser/locale/browser.dtd" >
+    %browserDTD;
+    <!ENTITY % findDTD SYSTEM "chrome://global/locale/finddialog.dtd" >
+    %findDTD;
 ]>
 
 <window id="help"
@@ -67,7 +69,7 @@
     <script type="application/x-javascript" src="chrome://global/content/viewZoomOverlay.js"/>
     <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
-    <stringbundle id="bundle_findBar" src="chrome://global/locale/findBar.properties"/>
+    <stringbundle id="bundle_findBar" src="chrome://browser/locale/browser.properties"/>
     
     <menupopup id="backMenu" position="after_start"
         onpopupshowing="return createBackMenu(event);"

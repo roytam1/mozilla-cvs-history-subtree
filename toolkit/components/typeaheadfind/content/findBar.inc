@@ -15,7 +15,7 @@
                      oncommand="toggleHighlight(!this.checked);
                                 if (gFindMode != FIND_NORMAL) setFindCloseTimeout();"
                      type="checkbox" disabled="true"/>
-      <checkbox label="&matchCase.label;" accesskey="&matchCase.accesskey;"
+      <checkbox label="&caseSensitiveCheckbox.label;" accesskey="&caseSensitiveCheckbox.accesskey;"
                 oncommand="toggleCaseSensitivity(this.checked);"/>
       <image id="find-status-icon"/>
       <label id="find-status"/>

@@ -24,6 +24,7 @@
 #     Doron Rosenberg <doronr@naboonline.com>
 #     Roger B. Sidje <rbs@maths.uq.edu.au>
 #     Pierre Chanial <p_ch@verizon.net>
+#     Blake Ross <blake@cs.stanford.edu>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,6 +42,7 @@
 
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?> 
 <?xml-stylesheet href="chrome://global/content/viewSource.css" type="text/css"?> 
+<?xml-stylesheet href="chrome://global/skin/findBar.css" type="text/css"?>
 <?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 
@@ -49,11 +51,17 @@
 %brandDTD;
 <!ENTITY % sourceDTD SYSTEM "chrome://global/locale/viewSource.dtd" >
 %sourceDTD;
+<!ENTITY % browserDTD SYSTEM "chrome://browser/locale/browser.dtd" >
+%browserDTD;
+<!ENTITY % findDTD SYSTEM "chrome://global/locale/finddialog.dtd" >
+%findDTD;
+
 ]>
 
 <window id="main-window"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         onload="onLoadViewPartialSource();"
+        onunload="onUnloadViewPartialSource();"
         contenttitlesetting="false"
         title="&mainWindow.title;" 
         titlemodifier="&mainWindow.titlemodifier;" 
@@ -65,13 +73,13 @@
         persist="screenX screenY width height sizemode">
 
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/findUtils.js"/>
+  <script type="application/x-javascript" src="chrome://global/content/findBar.js"/>
   <script type="application/x-javascript" src="chrome://global/content/printUtils.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewSource.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewPartialSource.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewZoomOverlay.js"/>
 
-  <stringbundle id="findBundle" src="chrome://global/locale/finddialog.properties"/>
+  <stringbundle id="bundle_findBar" src="chrome://browser/locale/browser.properties"/>
 
   <command id="cmd_savePage" disabled="true" oncommand="ViewSourceSavePage();"/>
   <command id="cmd_print" oncommand="PrintUtils.print();"/>
@@ -79,9 +87,9 @@
   <command id="cmd_pagesetup" oncommand="PrintUtils.showPageSetup();"/>
   <command id="cmd_close" oncommand="window.close();"/>
   <commandset id="editMenuCommands"/>
-  <command id="cmd_find" oncommand="getBrowser().find();"/>
-  <command id="cmd_findAgain" oncommand="getBrowser().findAgain()"/>
-  <command id="cmd_findPrevious" oncommand="getBrowser().findPrevious()"/>
+  <command id="cmd_find" oncommand="onFindCmd();"/>
+  <command id="cmd_findAgain" oncommand="onFindAgainCmd();"/>
+  <command id="cmd_findPrevious" oncommand="onFindPreviousCmd();"/>    
   <command id="cmd_goToLine" oncommand="ViewSourceGoToLine();" disabled="true"/>
   <command id="cmd_highlightSyntax" oncommand="highlightSyntax();"/>
   <command id="cmd_wrapLongLines" oncommand="wrapLongLines()"/>
@@ -170,6 +178,8 @@
 
     <browser id="content" type="content-primary" name="content" src="about:blank" flex="1"
              context="viewSourceContextMenu"/>
+
+#include ../../typeaheadfind/content/findBar.inc
 
   </vbox>
 
