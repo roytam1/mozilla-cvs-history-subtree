@@ -30,7 +30,7 @@
 // XP
 #include "proto.h" // for XP_InterruptContext
 #include "addrbook.h"
-#include "aberror.h"
+//#include "aberror.h"
 #include "edt.h"
 #include "mime.h"
 #include "libi18n.h"
