@@ -1,3 +1,35 @@
+1998-09-12  Leif Hedstrom  <leif@netscape.com>
+
+	* LDIF.pm (readEntries): Changed tests for empty arguments, to use
+	defined().
+
+	* Utils.pm (ldapArgs): Bug fix, we used the wrong option for the
+	certificate (-P) when checking to set the LDAP port.
+	(normalizeDN): Chagned tests for empty arguments, to use use defined().
+
+	* Entry.pm (STORE): Changed tests for empty arguments, to use
+	defined().
+	(DELETE): Dito.
+	(attrModified): Dito.
+	(isModified): Dito.
+	(remove): Dito.
+	(removeValue): Dito.
+	(addValue): Dito.
+	(hasValue): Dito.
+	(matchValue): Dito.
+	(setDN): Dito.
+	(size): Dito.
+	(exists): Dito.
+
+	* Conn.pm (printError): Changed test for $str to see if it's defined.
+	(delete): Cleaned up code around $dn.
+	(modifyRDN): Cleaned up testes around $dn and $del.
+
+1998-09-11  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (modifyRDN): We now preserve the case of the DN/RDN, but
+	still treat RDNs as CIS when comparing strings.
+
 1998-09-08  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (setDefaultRebindProc): Bug fix, it had the Ldapc:: crap
