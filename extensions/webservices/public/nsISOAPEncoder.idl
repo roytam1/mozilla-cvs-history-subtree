@@ -34,17 +34,15 @@ interface nsIDOMNode;
 interface nsISOAPEncoder : nsISupports {
 
 /**
- * Encode the source parameter or object
+ * Encode the source parameter
  *
  * @param aMessage The message receiving the encoded data
  *
- * @param aSource The parameter or object to be encoded
+ * @param aSource The parameter to be encoded
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aTypeID The type ID of the source parameter or object
- *
- * @param aSchemaID The schema ID of the DOM node or data to create
+ * @param aTypeID The type ID of the source parameter
  *
  * @param aDestination The node scope, if any, where the result 
  *   will live.  If this is null, then the result must be 
@@ -56,6 +54,5 @@ interface nsISOAPEncoder : nsISupports {
 void encode(
     in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
     in AString aEncodingStyleURI, in AString aTypeID, 
-    in AString aSchemaID, in nsISupports aConfiguration,
     in nsIDOMNode aDestination);
 };

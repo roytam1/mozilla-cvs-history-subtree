@@ -43,7 +43,6 @@ XPIDLSRCS	= \
 		nsISOAPStruct.idl		\
 		nsISOAPTransport.idl \
 		nsISOAPTransportListener.idl \
-		nsISOAPType.idl \
 		nsISOAPTypeRegistry.idl \
 		nsISOAPDecoder.idl \
 		$(NULL)

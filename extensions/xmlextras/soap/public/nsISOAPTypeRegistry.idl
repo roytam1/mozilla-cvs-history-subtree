@@ -24,7 +24,8 @@
 
 interface nsIDOMElement;
 interface nsIDOMNode;
-interface nsISOAPType;
+interface nsISOAPEncoder;
+interface nsISOAPDecoder;
 interface nsISOAPMessage;
 interface nsISOAPParameter;
 
@@ -36,50 +37,30 @@ interface nsISOAPParameter;
 
 [scriptable, uuid(9ae49600-1dd1-11b2-877f-e62f620c5e92)]
 interface nsISOAPTypeRegistry : nsISupports {
-  /**
-   * Process a configuration and add the resulting types
-   *
-   * @param aConfiguration Root element of configuration XML.
-   *
-   * @return boolean True if types were added, false if an error occurred
-   */
-  boolean addConfiguration(in nsIDOMElement aConfiguration);
-
-  /**
+/**
    * Add a type to this registry so it can be serialized / deserialized
    *
-   * @param aType The type to be added.
+   * @param aType The native type to be added.
+   *
+   * @param aEncoder The encoder to be used.
    *
    * @return True if type was added, false if type could not be added
    */
-  void addType(in nsISOAPType aType);
+  void addNativeType(in AString aEncoding, in AString aType, in nsISOAPEncoder aEncoder);
 
-  /**
-   * Given a decoded type, find the type information.
+/**
+   * Add a type to this registry so it can be serialized / deserialized
    *
-   * @param aEncodingStyleURI The URI that matches the encoding style of 
-   *   the type to be located.
+   * @param aType The schema type to be added.
    *
-   * @param aTypeID The  parameter or object type to be located.
+   * @param aDecoder The decoder to be used.
    *
-   * @return The type in the registry that matches the encoding and type name
+   * @return True if type was added, false if type could not be added
    */
-  nsISOAPType queryByTypeID(
-        in AString aEncodingStyleURI, in AString aTypeID);
-  
-  /**
-   * Given a schema type, find the type information.
-   *
-   * @param encodingStyleURI The URI that matches the encoding style of 
-   *   the type to be located.
-   *
-   * @param aSchemaID the namespace URI of the element.
-   *
-   * @return The type in the registry that matches the encoding and element
-   */
-  nsISOAPType queryBySchemaID(
-        in AString aEncodingStyleURI, in AString aSchemaID);
+  void addSchemaType(in AString aEncoding, in AString aType, in nsISOAPDecoder aDecoder);
 
+  nsISOAPEncoder queryByNativeType(in AString aEncoding, in AString type);
+  nsISOAPDecoder queryBySchemaType(in AString aEncoding, in AString type);
 
   /**
    * Encode the source object into the specified
@@ -88,22 +69,17 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @param aMessage The message receiving the encoded content
    *
-   * @param aSource The parameter or object to be encoded
+   * @param aSource The parameter object to be encoded
    *
    * @param aEncodingStyleURI The encoding style
    *
-   * @param aTypeID The type ID of the source parameter or object
+   * @param aTypeID The type ID of the source parameter.
    *
    * @param aDOMScope The element scope, if any, where the result 
    *   will live, so that namespace prefixes, and other context
    *   such as xml:base, xml:lang, etc. can be assumed instead of
    *   having to locally declare everything.  If this is null, then
    *   everything must be locally declared.
-   *
-   * @return The encoded DOM node or data, which may be null if the 
-   *   operation failed, did not return a result, or inserted the
-   *   result itself into the destination.  In case of failure, 
-   *   a more complete status is recorded in the message.
    */
   void encode(
       in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
@@ -117,14 +93,14 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @param aMessage The message supplying the decoded content
    *
-   * @param aSource The DOM node or data to be decoded
+   * @param aSource The DOM node to be decoded
    *
    * @param aEncodingStyleURI The encoding style
    *
-   * @param aSchemaID The schema ID of the source DOM node or data
+   * @param aSchemaID The schema ID of the source DOM node.
    *
-   * @return The decoded parameter or object, which is null if the
-   *   operation failed or did not return a result.  In case of failure, 
+   * @return The decoded parameter, which is null if the
+   *   operation failed.  In case of failure, 
    *   a more complete status is recorded in the message.
    */
   nsISOAPParameter decode(

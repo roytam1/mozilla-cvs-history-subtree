@@ -36,7 +36,7 @@ interface nsISOAPParameter;
 interface nsISOAPDecoder : nsISupports {
 
 /**
- * Decode the source DOM node or data
+ * Decode the source DOM node
  *
  * @param aMessage The message supplying the data to be decoded
  *
@@ -44,19 +44,13 @@ interface nsISOAPDecoder : nsISupports {
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aSchemaID The schema ID of the source DOM node or data
+ * @param aSchemaID The schema ID of the source DOM node
  *
- * @param aTypeID The type ID of the parameter or object to create
- *
- * @param aConfiguration Configuration object which may specify more
- *   details used by the decodeer.
- *
- * @return The decoded parameter or object, which is null if 
+ * @return The decoded parameter, which is null if 
  *   the operation failed or did not return a result.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
 nsISOAPParameter decode(
     in nsISOAPMessage aMessage, in nsIDOMNode aSource,
-    in AString aEncodingStyleURI, in AString aSchemaID, 
-    in AString aTypeID, in nsISupports aConfiguration);
+    in AString aEncodingStyleURI, in AString aSchemaID);
 };
