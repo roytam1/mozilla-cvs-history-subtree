@@ -393,7 +393,7 @@ nsJunkmail.prototype = {
         }
     },
 
-    filterMsgByHeaders: function(aCount, aHeaders, aListener, aMsgWindow) { 
+    filterMsgByHeaders: function(aMsgHdr, aCount, aHeaders, aListener, aMsgWindow) { 
 
         var headersByName = {};
         var msgScore = 0.0;
@@ -608,6 +608,7 @@ nsJunkmail.prototype = {
 
         // XXX don't hardcode this
         //
+        aMsgHdr.setStringProperty("score", msgScore);
         if (msgScore >= 3.1) {
             aListener.applyFilterHit(df, aMsgWindow);
         }
@@ -648,8 +649,7 @@ nsJunkmail.prototype = {
 
             var subject = getHeaderVals("Subject");
 
-            if (subject
-		&& subject.search( /[-_\.\s]{7,}([-a-z0-9]{4,})$/ ) >= 0
+            if (subject && (subject.search( /[-_\.\s]{7,}([-a-z0-9]{4,})$/ ) >= 0
                 || subject.search( /\s{10,}(?:\S\s)?(\S+)$/ ) >= 0 
                 || subject.search( 
                     /\s{3,}[-:\#\(\[]+([-a-z0-9]{4,})[\]\)]+$/ ) >=0
@@ -670,7 +670,7 @@ nsJunkmail.prototype = {
                 || subject.search( /\b(\w{7,}-\w{7,}-\d+-\d+)\s*$/ ) >= 0
 
                 // #30D7 and similar
-                || subject.search( /\s#\s*([a-f0-9]{4,})\s*$/ ) >= 0) {
+                || subject.search( /\s#\s*([a-f0-9]{4,})\s*$/ ) >= 0)) {
 
                 // XXX exempt online purchases
 
