@@ -35,7 +35,7 @@
 
 var _elementIDs = ["browserStartupHomepage", "checkForDefault"];
     
-const nsIPrefService    = Components.interfaces.nsIPrefService;
+const nsIPrefService         = Components.interfaces.nsIPrefService;
 const nsIPrefLocalizedString = Components.interfaces.nsIPrefLocalizedString;
 
 const PREFSERVICE_CONTRACTID    = "@mozilla.org/preferences-service;1";
@@ -98,10 +98,6 @@ function onOK()
     if (homeButton)
       homeButton.setAttribute("tooltiptext", parent.homepage);
   }
-
-  var shell = getShellService();
-  if (shell && "shouldBeDefaultBrowser" in parent && parent.shouldBeDefautBrowser)
-    shell.setDefaultBrowser(true, false);
 }
 
 function Startup()
@@ -125,11 +121,12 @@ function Startup()
     document.getElementById("browserUseBlank").disabled = true;
   }
  
-#ifdef MOZ_WIDGET_GTK2
-  var shell = getShellService();
-  if (!shell)
+  try {
+    var shellSvc = Components.classes["@mozilla.org/browser/shell-service;1"]
+                             .getService(Components.interfaces.nsIShellService);
+  } catch (e) {
     document.getElementById("defaultBrowserPrefs").hidden = true;
-#endif
+  }
 
   parent.hPrefWindow.registerOKCallbackFunc(onOK);
 }
@@ -219,10 +216,11 @@ function saveFontPrefs()
   }
 }
 
-#ifdef HAVE_SHELL_SERVICE
+# this function is only reached if the shell service is defined
 function checkNow()
 {
-  var shell = getShellService();
+  var shellSvc = Components.classes["@mozilla.org/browser/shell-service;1"]
+                           .getService(Components.interfaces.nsIShellService);
   var brandBundle = document.getElementById("bundle_brand");
   var shellBundle = document.getElementById("bundle_shell");
   var brandShortName = brandBundle.getString("brandShortName");
@@ -231,7 +229,7 @@ function checkNow()
   const IPS = Components.interfaces.nsIPromptService;
   var psvc = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                        .getService(IPS);
-  if (!shell.isDefaultBrowser(false)) {
+  if (!shellSvc.isDefaultBrowser(false)) {
     promptMessage = shellBundle.getFormattedString("setDefaultBrowserMessage", 
                                                    [brandShortName]);
     var rv = psvc.confirmEx(window, promptTitle, promptMessage, 
@@ -239,7 +237,7 @@ function checkNow()
                             (IPS.BUTTON_TITLE_NO * IPS.BUTTON_POS_1),
                             null, null, null, null, { });
     if (rv == 0)
-      shell.setDefaultBrowser(true, false);
+      shellSvc.setDefaultBrowser(true, false);
   }
   else {
     promptMessage = shellBundle.getFormattedString("alreadyDefaultBrowser",
@@ -247,7 +245,6 @@ function checkNow()
     psvc.alert(window, promptTitle, promptMessage);
   }
 }
-#endif
 
 function showLanguages()
 {
