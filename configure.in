@@ -511,6 +511,13 @@ AC_ARG_ENABLE(smart-mail,
 	    MOZ_SMART_MAIL=1
 	fi])
 
+AC_ARG_ENABLE(nu-cache,
+[  --enable-nu-cache       enable NU CACHE (untested)],
+	[if test "$enableval" = "yes"; then
+	    NU_CACHE=1
+	    NU_CACHE_LIB="-lcache"
+	fi])
+
 AC_ARG_ENABLE(mail-compose,
 [  --enable-mail-compose   enable old Messenger mail composer ],
 	[if test "$enableval" = "yes"; then
@@ -552,6 +559,8 @@ AC_SUBST(MOZ_USER_DIR)
 AC_SUBST(MOZ_SMART_MAIL)
 AC_SUBST(MOZ_DOM)
 AC_SUBST(MOZ_MAIL_COMPOSE)
+AC_SUBST(NU_CACHE)
+AC_SUBST(NU_CACHE_LIB)
 AC_SUBST(FULL_STATIC_BUILD)
 AC_SUBST(NO_UNIX_LDAP)
 AC_SUBST(MOZ_IDL_TOOL)

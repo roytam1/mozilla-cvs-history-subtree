@@ -151,6 +151,10 @@ LIBS = \
 	$(NULL)
 
 
+ifdef NU_CACHE
+LIBS += $(NU_CACHE_LIB)
+endif
+ 
 CPPSRCS = \
 	nsAppRunner.cpp 	\
 	nsSetupRegistry.cpp	\

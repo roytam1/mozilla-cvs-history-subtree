@@ -135,6 +135,10 @@ LIBS = \
 	$(TK_LIBS) \
 	$(NULL)
 
+ifdef NU_CACHE
+LIBS += $(NU_CACHE_LIB)
+endif
+
 include $(topsrcdir)/config/config.mk
 
 CFLAGS += $(TOOLKIT_CFLAGS)
