@@ -1924,7 +1924,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         return 0;
       }
 
-          char* noEMRestart = PR_GetEnv("NO_EM_RESTART");
+      char* noEMRestart = PR_GetEnv("NO_EM_RESTART");
       noRestart = noEMRestart && !strcmp("1", noEMRestart);
       if (!noRestart && upgraded) {
         rv = em->CheckForMismatches(&needsRestart);
