@@ -54,10 +54,11 @@ nsJARInputStream::Read(char* buf, PRUint32 count, PRUint32 *bytesRead)
     return NS_OK;
   }
 
-  if( (Zip()->Read(mReadInfo, buf, count, bytesRead)) != ZIP_OK )
-    return NS_ERROR_FAILURE;
-  else
-    return NS_OK;
+  PRInt32 err = Zip()->Read(mReadInfo, buf, count, bytesRead);
+#ifdef DEBUG_warren
+//  printf("read %d from %s\n", *bytesRead, mEntryName);
+#endif
+  return err == ZIP_OK ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -75,7 +76,7 @@ nsJARInputStream::Init(nsJAR* aJAR, const char* aFilename)
     return NS_ERROR_NULL_POINTER;
   mJAR = aJAR;
   NS_ADDREF(mJAR);
-  mEntryName = (char*)aFilename;
+  mEntryName = nsCRT::strdup(aFilename);
 
   PRInt32 result; 
   result = Zip()->ReadInit(mEntryName, &mReadInfo);
@@ -106,6 +107,7 @@ nsJARInputStream::Create(nsISupports* ignored, const nsIID& aIID, void* *aResult
 //----------------------------------------------
 
 nsJARInputStream::nsJARInputStream()
+  : mJAR(nsnull), mEntryName(nsnull), mReadInfo(nsnull)
 {
   NS_INIT_REFCNT();
 }
@@ -113,6 +115,7 @@ nsJARInputStream::nsJARInputStream()
 nsJARInputStream::~nsJARInputStream()
 {
   Close();
+  if (mEntryName) nsCRT::free(mEntryName);
 }
 
 
