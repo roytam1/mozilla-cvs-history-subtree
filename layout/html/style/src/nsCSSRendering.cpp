@@ -2221,7 +2221,6 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
     nsCOMPtr<imgIContainer> image;
     req->GetImage(getter_AddRefs(image));
 
-#if 1
     image->GetWidth(&imageSize.width);
     image->GetHeight(&imageSize.height);
 
@@ -2548,9 +2547,6 @@ nsCSSRendering::PaintBackground(nsIPresContext* aPresContext,
 #if !defined(XP_UNIX) && !defined(XP_BEOS)
     // Restore clipping
     aRenderingContext.PopState(clipState);
-#endif
-
-
 #endif
 
   }
