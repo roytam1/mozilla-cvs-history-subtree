@@ -1806,7 +1806,7 @@ nsHTMLInputElement::GetType(nsAString& aValue)
 NS_IMETHODIMP
 nsHTMLInputElement::SetType(const nsAString& aValue)
 {
-  return SetAttrHelper(nsHTMLAtoms::type, aValue);
+  return SetAttr(kNameSpaceID_None, nsHTMLAtoms::type, aValue, PR_TRUE);
 }
 
 static void
