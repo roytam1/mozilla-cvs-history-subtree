@@ -303,6 +303,16 @@ modules/libimg/pngcom/Makefile
 modules/libimg/mngcom/Makefile  
 "
 
+MAKEFILES_libpr0n="
+modules/libpr0n/Makefile
+modules/libpr0n/public/Makefile
+modules/libpr0n/src/Makefile
+modules/libpr0n/decoders/Makefile
+modules/libpr0n/decoders/png/Makefile
+modules/libpr0n/decoders/ppm/Makefile
+modules/libpr0n/decoders/jpeg/Makefile
+"
+
 MAKEFILES_libjar="
 modules/libjar/Makefile
 modules/libjar/standalone/Makefile
@@ -981,6 +991,7 @@ $MAKEFILES_langpacks
 $MAKEFILES_layout
 $MAKEFILES_libreg
 $MAKEFILES_libimg
+$MAKEFILES_libpr0n
 $MAKEFILES_libjar
 $MAKEFILES_libpref
 $MAKEFILES_libutil
