@@ -87,6 +87,14 @@ BOOL bIsGold = FALSE;
 // Full Circle stuff - see http://www.fullsoft.com for more info
 #include "fullsoft.h"
 
+#ifdef MOZ_RAPTOR
+#include "nsISupports.h"
+#include "nsRepository.h"
+#include "nsWidgetsCID.h"
+#include "nsGfxCIID.h"
+#include "nsViewsCID.h"
+#endif
+
 #ifdef JAVA
 	// don't include java.h here because the Win16 compiler won't be able to handle this file
 	void WFE_LJ_StartupJava(void);
@@ -237,6 +245,57 @@ BOOL CNetscapeApp::InitApplication()
 	
     return TRUE;
 }
+
+#ifdef MOZ_RAPTOR
+#define WIDGET_DLL "raptorwidget.dll"
+#define GFXWIN_DLL "raptorgfxwin.dll"
+#define VIEW_DLL   "raptorview.dll"
+
+static void InitializeRaptor() {
+  NS_DEFINE_IID(kCWindowIID, NS_WINDOW_CID);
+  NS_DEFINE_IID(kCScrollbarIID, NS_VERTSCROLLBAR_CID);
+  NS_DEFINE_IID(kCButtonIID, NS_BUTTON_CID);
+  NS_DEFINE_IID(kCComboBoxCID, NS_COMBOBOX_CID);
+  NS_DEFINE_IID(kCFileWidgetCID, NS_FILEWIDGET_CID);
+  NS_DEFINE_IID(kCListBoxCID, NS_LISTBOX_CID);
+  NS_DEFINE_IID(kCRadioButtonCID, NS_RADIOBUTTON_CID);
+  NS_DEFINE_IID(kCTextAreaCID, NS_TEXTAREA_CID);
+  NS_DEFINE_IID(kCTextFieldCID, NS_TEXTFIELD_CID);
+  NS_DEFINE_IID(kCCheckButtonIID, NS_CHECKBUTTON_CID);
+  NS_DEFINE_IID(kCChildIID, NS_CHILD_CID);
+
+  NSRepository::RegisterFactory(kCWindowIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCScrollbarIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCButtonIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCComboBoxCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCFileWidgetCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCListBoxCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCRadioButtonCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCTextAreaCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCTextFieldCID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCCheckButtonIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCChildIID, WIDGET_DLL, PR_FALSE, PR_FALSE);
+
+  NS_DEFINE_IID(kCRenderingContextIID, NS_RENDERING_CONTEXT_CID);
+  NS_DEFINE_IID(kCDeviceContextIID, NS_DEVICE_CONTEXT_CID);
+  NS_DEFINE_IID(kCFontMetricsIID, NS_FONT_METRICS_CID);
+  NS_DEFINE_IID(kCImageIID, NS_IMAGE_CID);
+
+  NSRepository::RegisterFactory(kCRenderingContextIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCDeviceContextIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCFontMetricsIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCImageIID, GFXWIN_DLL, PR_FALSE, PR_FALSE);
+
+  NS_DEFINE_IID(kCViewManagerCID, NS_VIEW_MANAGER_CID);
+  NS_DEFINE_IID(kCViewCID, NS_VIEW_CID);
+  NS_DEFINE_IID(kCScrollingViewCID, NS_SCROLLING_VIEW_CID);
+
+  NSRepository::RegisterFactory(kCViewManagerCID, VIEW_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
+  NSRepository::RegisterFactory(kCScrollingViewCID, VIEW_DLL, PR_FALSE, PR_FALSE);
+}
+#endif /* MOZ_RAPTOR */
+
 
 typedef    FARPROC   (*WSASetBlockingHook_t) (FARPROC);
 /////////////////////////////////////////////////////////////////////////////
@@ -1078,6 +1137,11 @@ BOOL CNetscapeApp::InitInstance()
     COleRegistry::RegisterIniProtocolHandlers();
 //END STREAM VODOO
 
+
+#ifdef MOZ_RAPTOR
+  // Raptor
+  InitializeRaptor();
+#endif
 
 	CString strStatus;
 

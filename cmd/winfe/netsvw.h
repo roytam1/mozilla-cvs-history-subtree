@@ -51,6 +51,10 @@ enum FEDragType {
     // Add more as we dream them up!
 };
 
+#ifdef MOZ_RAPTOR
+#include "nsIWebWidget.h"
+#endif
+
 /////////////////////////////////////////////////////////////////////////////
 // Mostly default behavior, but override the type of cursor used 
 //   during drag and drop
@@ -289,6 +293,19 @@ protected:
     afx_msg void OnPopupLoadLinkInEditor();
 #endif
     DECLARE_MESSAGE_MAP()
+
+#ifdef MOZ_RAPTOR
+private:
+  void checkCreateWebWidget();
+  nsIWebWidget *m_pWebWidget;
+  BOOL m_bNoWebWidgetHack;
+
+public:
+  void NoWebWidgetHack() {m_bNoWebWidgetHack = TRUE;}
+  // Hack to disable it for the RDF window.
+
+  nsIWebWidget* GetWebWidget() {return m_pWebWidget;}
+#endif /* MOZ_RAPTOR */
 };
 
 #ifdef _DEBUG_HUH_JEM  // debug version in netsvw.cpp

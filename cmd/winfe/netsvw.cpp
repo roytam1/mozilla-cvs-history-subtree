@@ -53,6 +53,12 @@
 #include "compbar.h"
 #endif
 
+#ifdef MOZ_RAPTOR
+#include "nsString.h"
+#define SAMPLES_BASE_URL "resource:/res/samples"
+#define START_URL SAMPLES_BASE_URL "/test0.html"
+#endif
+
 #ifdef _DEBUG
 #undef THIS_FILE
 static char BASED_CODE THIS_FILE[] = __FILE__;
@@ -70,6 +76,7 @@ extern char *EDT_NEW_DOC_URL;
 extern char *EDT_NEW_DOC_NAME;
 #endif
 // CNetscapeView
+
 
 #ifndef _AFXDLL
 #undef new
@@ -134,6 +141,12 @@ CNetscapeView::CNetscapeView()
 	m_pContext = NULL;
 
     m_pSaveFileDlg = NULL;
+
+#ifdef MOZ_RAPTOR
+    m_pWebWidget = NULL;
+    m_bNoWebWidgetHack = FALSE;
+#endif
+
 #ifdef EDITOR
     // This is set to TRUE by derived class CEditView
     //  if we are actually an editor
@@ -209,6 +222,10 @@ CNetscapeView::~CNetscapeView()
         delete m_pDropTarget;
         m_pDropTarget = NULL;
     }
+
+#ifdef MOZ_RAPTOR
+    NS_IF_RELEASE(m_pWebWidget);
+#endif
 
 #ifdef EDITOR
     if ( m_pClipboardFormats )
@@ -636,8 +653,44 @@ int CNetscapeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
     //  Leaving it out also enables it, so lets do that
     //
     // DragAcceptFiles(FALSE);
+
     return 0;
 }
+
+#ifdef MOZ_RAPTOR
+void CNetscapeView::checkCreateWebWidget() {
+    if (m_bNoWebWidgetHack) {
+        return;
+    }
+
+    if (m_pWebWidget) {
+        return;
+    }
+
+    nsresult rv;
+    RECT r;
+    ::GetClientRect(m_hWnd, &r);
+    nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
+    if (rr.IsEmpty()) {
+        goto chCrFail;
+    }
+    rv = NS_NewWebWidget(&m_pWebWidget);
+    if (!NS_SUCCEEDED(rv)) {
+        goto chCrFail;
+    }
+    rv = m_pWebWidget->Init(m_hWnd, rr);
+    if (!NS_SUCCEEDED(rv)) {
+        goto chCrFail;
+    }
+    m_pWebWidget->Show();
+    m_pWebWidget->LoadURL(nsString(START_URL));
+
+    return;  
+
+    chCrFail:
+      NS_IF_RELEASE(m_pWebWidget);    
+}
+#endif /* MOZ_RAPTOR */
 
 // Force a window repaint
 // Don't do this by hand (i.e. by calling LO_RefreshArea()) or we will be
@@ -1007,6 +1060,9 @@ SCODE CViewDropSource::GiveFeedback(DROPEFFECT dropEffect)
 
 void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
 {
+#ifdef MOZ_RAPTOR
+    checkCreateWebWidget();
+#endif
     CGenericView::OnSize ( nType, cx, cy );
     if ( m_pChild )
     {
@@ -1015,6 +1071,16 @@ void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
         GetClientRect(rect);
         m_pChild->MoveWindow ( rect );
     }
+#ifdef MOZ_RAPTOR
+    if (m_pWebWidget) {
+      RECT r;
+      ::GetClientRect(m_hWnd, &r);      
+      nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
+      if (!rr.IsEmpty()) {
+        m_pWebWidget->SetBounds(rr);
+      }
+    }
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

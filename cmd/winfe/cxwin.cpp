@@ -51,6 +51,11 @@ extern char * EDT_NEW_DOC_NAME;
 
 #define EDT_IS_SIZING   ( EDT_IS_EDITOR(GetContext()) && EDT_IsSizing(GetContext()) )
 
+#ifdef MOZ_RAPTOR
+#include "nsString.h"
+#include "nsIWebWidget.h"
+#endif
+
 #ifdef JAVA
 #include "np.h"
 #include "java.h"
@@ -3697,6 +3702,19 @@ CWnd *CWinCX::GetDialogOwner() const    {
 
 int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoading, BOOL bForceNew)   
 {
+#ifdef MOZ_RAPTOR
+  CNetscapeView *nsv = (CNetscapeView*)GetView();
+  nsIWebWidget* ww = nsv->GetWebWidget();
+  if (!ww) {
+    return MK_NO_ACTION;
+  }
+  nsAutoString str(pUrl->address);
+  ww->LoadURL(str);
+  return MK_DATA_LOADED; // some success code
+
+  // Do we need to free pUrl
+#else
+
     // If we are POSTing data (publishing), or forcing a new page, don't ask user to save current page first
     //  If user cancels when being prompted to save current document, return without action
 #ifdef EDITOR
@@ -3769,9 +3787,9 @@ int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLo
 		}
 	}
 
-
     //  Call the base.                          
     return(CPaneCX::GetUrl(pUrl, iFormatOut, bReallyLoading, bForceNew));
+#endif
 }
 
 CNSToolTip*	CWinCX::CreateToolTip(LO_ImageStruct* pImage, CPoint& cpPoint, CL_Layer *layer)
