@@ -15,8 +15,8 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#ifndef nsEditorAppCore_h___
-#define nsEditorAppCore_h___
+#ifndef nsEditorShell_h___
+#define nsEditorShell_h___
 
 //#include "nsAppCores.h"
 
@@ -50,13 +50,12 @@ class nsIDOMNode;
 class nsIURI;
 class nsIWebShellWindow;
 class nsIPresShell;
-class nsIHTMLEditor;
-class nsITextEditor;
+class nsIHighLevelHTMLEditor;
 class nsIOutputStream;
 class nsISupportsArray;
 
 
-#define NS_EDITORAPPCORE_CID                          \
+#define NS_EDITORSHELL_CID                            \
 { /* {} */                                            \
     0x9afff72b, 0xca9a, 0x11d2,                       \
     { 0x96, 0xc9, 0x0, 0x60, 0xb0, 0xfb, 0x99, 0x56 } \
@@ -316,7 +315,7 @@ class nsEditorShell :   public nsIEditorShell,
 
 		EEditorType					mEditorType;
 		nsString						mEditorTypeString;	// string which describes which editor type will be instantiated (lowercased)
-    nsCOMPtr<nsISupports>	 	mEditor;						// this can be either an HTML or plain text (or other?) editor
+    nsCOMPtr<nsIHighLevelHTMLEditor>	 	mEditor;						// this can be either an HTML or plain text (or other?) editor
 
     nsCOMPtr<nsISupports>   mSearchContext;		// context used for search and replace. Owned by the appshell.
     
@@ -336,4 +335,4 @@ class nsEditorShell :   public nsIEditorShell,
     nsCOMPtr<nsISupportsArray>    mDocStateListeners;		// contents are nsISupports
 };
 
-#endif // nsEditorAppCore_h___
+#endif // nsEditorShell_h___

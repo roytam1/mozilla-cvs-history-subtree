@@ -87,7 +87,7 @@ nsHTMLEditor::InsertTableColumn(PRInt32 aNumber, PRBool aAfter)
   
   if (NS_SUCCEEDED(res))
   {
-    PRInt32 rowCount, colCount, row, col, curRow, curCol;
+    PRInt32 rowCount, colCount, row, col;
     if (NS_FAILED(GetTableSize(table, rowCount, colCount)))
       return NS_ERROR_FAILURE;
     for ( row = 0; row < rowCount; row++)
@@ -191,7 +191,7 @@ nsHTMLEditor::DeleteTableRow(PRInt32 aNumber)
 }
 
 NS_IMETHODIMP 
-nsHTMLEditor::JoinTableCells()
+nsHTMLEditor::JoinTableCells(PRBool aCellToRight)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -222,7 +222,7 @@ nsHTMLEditor::GetCellIndexes(nsIDOMElement *aCell, PRInt32 &aColIndex, PRInt32 &
   res = NS_ERROR_FAILURE;        // we return an error unless we get the index
   nsISupports *layoutObject=nsnull; // frames are not ref counted, so don't use an nsCOMPtr
 
-  res = nsEditor::GetLayoutObject(aCell, &layoutObject);
+  res = nsHTMLEditor::GetLayoutObject(aCell, &layoutObject);
 
   if ((NS_SUCCEEDED(res)) && (nsnull!=layoutObject))
   { // get the table cell interface from the frame
@@ -246,7 +246,7 @@ nsHTMLEditor::GetTableLayoutObject(nsIDOMElement* aTable, nsITableLayout **table
   
   // frames are not ref counted, so don't use an nsCOMPtr
   nsISupports *layoutObject=nsnull;
-  nsresult res = nsEditor::GetLayoutObject(aTable, &layoutObject); 
+  nsresult res = nsHTMLEditor::GetLayoutObject(aTable, &layoutObject); 
   if ((NS_SUCCEEDED(res)) && (nsnull!=layoutObject)) 
   { // get the table interface from the frame 
     

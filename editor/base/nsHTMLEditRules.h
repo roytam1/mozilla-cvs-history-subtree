@@ -61,7 +61,7 @@ protected:
                             TypeInState     typeInState,
                             PRInt32         aMaxLength);
   nsresult WillInsertBreak(nsIDOMSelection *aSelection, PRBool *aCancel);
-  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECollapsedSelectionAction aAction, PRBool *aCancel);
+  nsresult WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESelectionCollapseDirection aAction, PRBool *aCancel);
   nsresult WillMakeList(nsIDOMSelection *aSelection, PRBool aOrderd, PRBool *aCancel);
   nsresult WillIndent(nsIDOMSelection *aSelection, PRBool *aCancel);
   nsresult WillOutdent(nsIDOMSelection *aSelection, PRBool *aCancel);

@@ -17,6 +17,9 @@
  */
 #include "nsEditorEventListeners.h"
 #include "nsEditor.h"
+#include "nsVoidArray.h"
+#include "nsString.h"
+
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
@@ -25,15 +28,10 @@
 #include "nsIDOMCharacterData.h"
 #include "nsIEditProperty.h"
 #include "nsISupportsArray.h"
-#include "nsVoidArray.h"
-#include "nsString.h"
 #include "nsIStringStream.h"
 #include "nsIDOMUIEvent.h"
 #include "nsIDOMNSUIEvent.h"
-
-// for testing only
-#include "nsIHTMLEditor.h"
-// end for testing only
+#include "nsIEditorMailSupport.h"
 
 // for repainting hack only
 #include "nsIView.h"
@@ -141,7 +139,7 @@ nsTextEditorKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
 //        break;
 
       case nsIDOMUIEvent::VK_DELETE:
-        mEditor->DeleteSelection(nsIEditor::eDeleteRight);
+        mEditor->DeleteSelection(nsIEditor::eCollapseForwards);
         break;
 
 //      case nsIDOMUIEvent::VK_RETURN:
@@ -180,7 +178,7 @@ nsTextEditorKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
       {
         PRUint32 flags=0;
         mEditor->GetFlags(&flags);
-        if (! (flags & TEXT_EDITOR_FLAG_SINGLELINE))
+        if (! (flags & nsIHighLevelHTMLEditor::eEditorSingleLineMask))
         {
           PRBool ctrlKey, altKey, metaKey;
           uiEvent->GetCtrlKey(&ctrlKey);
@@ -191,7 +189,10 @@ nsTextEditorKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
           // else we insert the tab straight through  
  		      nsAutoString key;
           key += keyCode;
- 		      mEditor->InsertText(key);
+
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+ 		      if (htmlEditor)
+ 		        htmlEditor->InsertText(key);
           return NS_ERROR_BASE; // this means "I handled the event, don't do default processing"
         }
         else {
@@ -243,14 +244,17 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
   if (metaKey)
     return NS_OK;	// don't consume
   
+  nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+  if (!htmlEditor) return NS_ERROR_NO_INTERFACE;
+  
 	if (NS_SUCCEEDED(uiEvent->GetKeyCode(&keyCode)))
 	{
     if (nsIDOMUIEvent::VK_BACK==keyCode) {
-			mEditor->DeleteSelection(nsIEditor::eDeleteLeft);
+			mEditor->DeleteSelection(nsIEditor::eCollapseBackwards);
 			return NS_ERROR_BASE; // consumed
 		}	
 		if (nsIDOMUIEvent::VK_RETURN==keyCode) {
-			mEditor->InsertBreak();
+			htmlEditor->InsertBreak();
 			return NS_ERROR_BASE; // consumed
 		}
 	}
@@ -262,7 +266,7 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
       return NS_OK; // ignore tabs here, they're handled in keyDown if at all
     }
  		key += character;
- 		mEditor->InsertText(key);
+ 		htmlEditor->InsertText(key);
  	}
 
 	return NS_ERROR_BASE; // consumed
@@ -332,28 +336,6 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             format = "text/html";
           res = mEditor->OutputToString(output, format,
                                         nsEditor::EditorOutputFormatted);
-#if 0
-          nsCOMPtr<nsIHTMLEditor> htmlEditor (do_QueryInterface(mEditor));
-          if (htmlEditor)
-          {
-            if (isShift)
-              res = htmlEditor->OutputTextToString(output, PR_TRUE, PR_FALSE);
-            else
-              res = htmlEditor->OutputHTMLToString(output, PR_FALSE);
-          }
-          else
-          {
-            nsCOMPtr<nsITextEditor> textEditor (do_QueryInterface(mEditor));
-            if (textEditor)
-            {
-              if (isShift)
-                res = textEditor->OutputTextToString(output, PR_TRUE, PR_FALSE);
-              else
-                res = textEditor->OutputHTMLToString(output, PR_FALSE);
-            }
-          }
-#endif
-
           if (NS_SUCCEEDED(res))
           {
             char* buf = output.ToNewCString();
@@ -377,11 +359,15 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
         {
           printf("Getting number of columns\n");
           aProcessed=PR_TRUE;
-          PRInt32 wrap;
-          if (NS_SUCCEEDED(mEditor->GetBodyWrapWidth(&wrap)))
-            printf("Currently wrapping to %d\n", wrap);
-          else
-            printf("GetBodyWrapWidth returned an error\n");
+          nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+          if (mailEditor)
+          {
+	          PRInt32 wrap;
+	          if (NS_SUCCEEDED(mailEditor->GetBodyWrapWidth(&wrap)))
+	            printf("Currently wrapping to %d\n", wrap);
+	          else
+	            printf("GetBodyWrapWidth returned an error\n");	            
+          }
         }
         break;
 
@@ -389,20 +375,24 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
         // hard coded "Decrease wrap size"
         if (PR_TRUE==altKey)
         {
-          aProcessed=PR_TRUE;
-          PRInt32 wrap;
-          if (!NS_SUCCEEDED(mEditor->GetBodyWrapWidth(&wrap)))
-          {
-            printf("GetBodyWrapWidth returned an error\n");
-            break;
-          }
-          mEditor->SetBodyWrapWidth(wrap - 5);
-          if (!NS_SUCCEEDED(mEditor->GetBodyWrapWidth(&wrap)))
-          {
-            printf("Second GetBodyWrapWidth returned an error\n");
-            break;
-          }
-          else printf("Now wrapping to %d\n", wrap);
+	        nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+	        if (mailEditor)
+	        {
+	          aProcessed=PR_TRUE;
+	          PRInt32 wrap;
+	          if (!NS_SUCCEEDED(mailEditor->GetBodyWrapWidth(&wrap)))
+	          {
+	            printf("GetBodyWrapWidth returned an error\n");
+	            break;
+	          }
+	          mailEditor->SetBodyWrapWidth(wrap - 5);
+	          if (!NS_SUCCEEDED(mailEditor->GetBodyWrapWidth(&wrap)))
+	          {
+	            printf("Second GetBodyWrapWidth returned an error\n");
+	            break;
+	          }
+	          else printf("Now wrapping to %d\n", wrap);
+	        }
         }
         break;
 
@@ -410,20 +400,24 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
         // hard coded "Increase wrap size"
         if (PR_TRUE==altKey)
         {
-          aProcessed=PR_TRUE;
-          PRInt32 wrap;
-          if (!NS_SUCCEEDED(mEditor->GetBodyWrapWidth(&wrap)))
-          {
-            printf("GetBodyWrapWidth returned an error\n");
-            break;
-          }
-          mEditor->SetBodyWrapWidth(wrap + 5);
-          if (!NS_SUCCEEDED(mEditor->GetBodyWrapWidth(&wrap)))
-          {
-            printf("Second GetBodyWrapWidth returned an error\n");
-            break;
-          }
-          else printf("Now wrapping to %d\n", wrap);
+	        nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+	        if (mailEditor)
+	        {
+	          aProcessed=PR_TRUE;
+	          PRInt32 wrap;
+	          if (!NS_SUCCEEDED(mailEditor->GetBodyWrapWidth(&wrap)))
+	          {
+	            printf("GetBodyWrapWidth returned an error\n");
+	            break;
+	          }
+	          mailEditor->SetBodyWrapWidth(wrap + 5);
+	          if (!NS_SUCCEEDED(mailEditor->GetBodyWrapWidth(&wrap)))
+	          {
+	            printf("Second GetBodyWrapWidth returned an error\n");
+	            break;
+	          }
+	          else printf("Now wrapping to %d\n", wrap);
+	        }
         }
         break;
 
@@ -435,7 +429,11 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
           if (mEditor)
           {
             if (altKey)
-              mEditor->PasteAsQuotation();
+            {
+              nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+              if (mailEditor)
+                mailEditor->PasteAsQuotation();
+            }
             else
               mEditor->Paste();
           }
@@ -464,19 +462,20 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_I:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
             PRBool any = PR_FALSE;
             PRBool all = PR_FALSE;
             PRBool first = PR_FALSE;
-            mEditor->GetTextProperty(nsIEditProperty::i, nsnull, nsnull, first, any, all);
+            htmlEditor->GetInlineProperty(nsIEditProperty::i, nsnull, nsnull, first, any, all);
             if (PR_FALSE==first) {
-              mEditor->SetTextProperty(nsIEditProperty::i, nsnull, nsnull);
+              htmlEditor->SetInlineProperty(nsIEditProperty::i, nsnull, nsnull);
             }
             else {
-              mEditor->RemoveTextProperty(nsIEditProperty::i, nsnull);
+              htmlEditor->RemoveInlineProperty(nsIEditProperty::i, nsnull);
             }
           }
         }
@@ -485,7 +484,7 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
         else if (PR_TRUE==altKey)
         {
           aProcessed=PR_TRUE;
-          nsCOMPtr<nsIHTMLEditor> htmlEditor (do_QueryInterface(mEditor));
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
           if (htmlEditor)
           {
             nsString nsstr ("This is <b>bold <em>and emphasized</em></b> text");
@@ -498,19 +497,20 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_B:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
             PRBool any = PR_FALSE;
             PRBool all = PR_FALSE;
             PRBool first = PR_FALSE;
-            mEditor->GetTextProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
+            htmlEditor->GetInlineProperty(nsIEditProperty::b, nsnull, nsnull, first, any, all);
             if (PR_FALSE==first) {
-              mEditor->SetTextProperty(nsIEditProperty::b, nsnull, nsnull);
+              htmlEditor->SetInlineProperty(nsIEditProperty::b, nsnull, nsnull);
             }
             else {
-              mEditor->RemoveTextProperty(nsIEditProperty::b, nsnull);
+              htmlEditor->RemoveInlineProperty(nsIEditProperty::b, nsnull);
             }
           }
         }
@@ -520,19 +520,20 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_U:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
             PRBool any = PR_FALSE;
             PRBool all = PR_FALSE;
             PRBool first = PR_FALSE;
-            mEditor->GetTextProperty(nsIEditProperty::u, nsnull, nsnull, first, any, all);
+            htmlEditor->GetInlineProperty(nsIEditProperty::u, nsnull, nsnull, first, any, all);
             if (PR_FALSE==first) {
-              mEditor->SetTextProperty(nsIEditProperty::u, nsnull, nsnull);
+              htmlEditor->SetInlineProperty(nsIEditProperty::u, nsnull, nsnull);
             }
             else {
-              mEditor->RemoveTextProperty(nsIEditProperty::u, nsnull);
+              htmlEditor->RemoveInlineProperty(nsIEditProperty::u, nsnull);
             }
 
           }
@@ -543,7 +544,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_1:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -552,9 +554,9 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             PRBool first = PR_FALSE;
             nsAutoString color = "COLOR";
             nsAutoString value = "red";
-            mEditor->GetTextProperty(nsIEditProperty::font, &color, &value, first, any, all);
+            htmlEditor->GetInlineProperty(nsIEditProperty::font, &color, &value, first, any, all);
             if (!all) {
-              mEditor->SetTextProperty(nsIEditProperty::font, &color, &value);
+              htmlEditor->SetInlineProperty(nsIEditProperty::font, &color, &value);
             }
             else {
               printf("NOOP: all selected text is already red\n");
@@ -567,7 +569,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_2:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -575,9 +578,9 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             PRBool all = PR_FALSE;
             PRBool first = PR_FALSE;
             nsAutoString color = "COLOR";
-            mEditor->GetTextProperty(nsIEditProperty::font, &color, nsnull, first, any, all);
+            htmlEditor->GetInlineProperty(nsIEditProperty::font, &color, nsnull, first, any, all);
             if (any) {
-              mEditor->RemoveTextProperty(nsIEditProperty::font, &color);
+              htmlEditor->RemoveInlineProperty(nsIEditProperty::font, &color);
             }
             else {
               printf("NOOP: no color set\n");
@@ -590,7 +593,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_3:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -599,7 +603,7 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             //PRBool first = PR_FALSE;
             nsAutoString prop = "SIZE";
             nsAutoString value = "+2";
-            mEditor->SetTextProperty(nsIEditProperty::font, &prop, &value);
+            htmlEditor->SetInlineProperty(nsIEditProperty::font, &prop, &value);
           }
         }
         break;
@@ -608,7 +612,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_4:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -617,7 +622,7 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             //PRBool first = PR_FALSE;
             nsAutoString prop = "SIZE";
             nsAutoString value = "-2";
-            mEditor->SetTextProperty(nsIEditProperty::font, &prop, &value);
+            htmlEditor->SetInlineProperty(nsIEditProperty::font, &prop, &value);
           }
         }
         break;
@@ -626,7 +631,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_5:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -635,7 +641,7 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             //PRBool first = PR_FALSE;
             nsAutoString prop = "FACE";
             nsAutoString value = "helvetica";
-            mEditor->SetTextProperty(nsIEditProperty::font, &prop, &value);
+            htmlEditor->SetInlineProperty(nsIEditProperty::font, &prop, &value);
           }
         }
         break;
@@ -644,7 +650,8 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_6:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
             // XXX: move this logic down into texteditor rules delegate
             //      should just call mEditor->ChangeTextProperty(prop)
@@ -653,7 +660,7 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
             //PRBool first = PR_FALSE;
             nsAutoString prop = "FACE";
             nsAutoString value = "times";
-            mEditor->SetTextProperty(nsIEditProperty::font, &prop, &value);
+            htmlEditor->SetInlineProperty(nsIEditProperty::font, &prop, &value);
           }
         }
         break;
@@ -662,16 +669,12 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_7:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor) 
           {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) 
-            {
-              nsAutoString tag;
-              nsIEditProperty::h1->ToString(tag);
-              htmlEditor->ReplaceBlockParent(tag);
-            }
+            nsAutoString tag;
+            nsIEditProperty::h1->ToString(tag);
+            htmlEditor->ReplaceBlockParent(tag);
           }
         }
         break;
@@ -680,16 +683,12 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_8:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor) 
           {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) 
-            {
-              nsAutoString tag;
-              nsIEditProperty::h2->ToString(tag);
-              htmlEditor->ReplaceBlockParent(tag);
-            }
+            nsAutoString tag;
+            nsIEditProperty::h2->ToString(tag);
+            htmlEditor->ReplaceBlockParent(tag);
           }
         }
         break;
@@ -698,13 +697,9 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_9:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
-          {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) {
-              htmlEditor->RemoveParagraphStyle();
-            }
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor) {
+            htmlEditor->RemoveParagraphStyle();
           }
         }
         break;
@@ -713,28 +708,23 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_0:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
           {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) 
+            printf("testing GetParagraphStyle\n");
+            nsStringArray styles;
+            nsresult result = htmlEditor->GetParagraphStyle(&styles);
+            if (NS_SUCCEEDED(result))
             {
-              printf("testing GetParagraphStyle\n");
-              nsStringArray styles;
-              nsresult result = htmlEditor->GetParagraphStyle(&styles);
-              if (NS_SUCCEEDED(result))
+              PRInt32 count = styles.Count();
+              PRInt32 i;
+              for (i=0; i<count; i++)
               {
-                PRInt32 count = styles.Count();
-                PRInt32 i;
-                for (i=0; i<count; i++)
-                {
-                  nsString *tag = styles.StringAt(i);
-                  char *tagCString = tag->ToNewCString();
-                  printf("%s ", tagCString);
-                  delete [] tagCString;
-                }
-                printf("\n");
+                nsString *tag = styles.StringAt(i);
+                char *tagCString = tag->ToNewCString();
+                printf("%s ", tagCString);
+                delete [] tagCString;
               }
+              printf("\n");
             }
           }
         }
@@ -744,16 +734,12 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_COMMA:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor)
           {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) 
-            {
-              nsAutoString tag;
-              nsIEditProperty::blockquote->ToString(tag);
-              htmlEditor->AddBlockParent(tag);
-            }
+            nsAutoString tag;
+            nsIEditProperty::blockquote->ToString(tag);
+            htmlEditor->AddBlockParent(tag);
           }
         }
         break;
@@ -762,16 +748,12 @@ nsTextEditorKeyListener::ProcessShortCutKeys(nsIDOMEvent* aKeyEvent, PRBool& aPr
       case nsIDOMUIEvent::VK_PERIOD:
         if (PR_TRUE==ctrlKey)
         {
-          if (mEditor)
+          nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+          if (htmlEditor) 
           {
-            nsCOMPtr<nsIHTMLEditor>htmlEditor;
-            htmlEditor = do_QueryInterface(mEditor);
-            if (htmlEditor) 
-            {
-              nsAutoString tag;
-              nsIEditProperty::blockquote->ToString(tag);
-              htmlEditor->RemoveParent(tag);
-            }
+            nsAutoString tag;
+            nsIEditProperty::blockquote->ToString(tag);
+            htmlEditor->RemoveParent(tag);
           }
         }
         break;
@@ -906,8 +888,11 @@ nsTextEditorMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
   uiEvent->GetCtrlKey(&ctrlKey);
 
   if (ctrlKey)
-    return editor->PasteAsQuotation();
-
+  {
+    nsCOMPtr<nsIEditorMailSupport> mailEditor = do_QueryInterface(mEditor);
+    if (mailEditor)
+      mailEditor->PasteAsQuotation();
+  }
   return editor->Paste();
 }
 
@@ -932,24 +917,21 @@ nsTextEditorMouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
 nsresult
 nsTextEditorMouseListener::MouseDblClick(nsIDOMEvent* aMouseEvent)
 {
-  if (mEditor)
+	nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
+  if (htmlEditor)
   {
-    nsIHTMLEditor * HTMLEditor;
-    if (NS_SUCCEEDED(mEditor->QueryInterface(nsIHTMLEditor::GetIID(), (void**)&HTMLEditor)))
+    nsCOMPtr<nsIDOMElement> selectedElement;
+    if (NS_SUCCEEDED(htmlEditor->GetSelectedElement("", getter_AddRefs(selectedElement))) && selectedElement)
     {
-      nsCOMPtr<nsIDOMElement> selectedElement;
-      if (NS_SUCCEEDED(HTMLEditor->GetSelectedElement("", getter_AddRefs(selectedElement))) && selectedElement)
-      {
-        nsAutoString TagName;
-        selectedElement->GetTagName(TagName);
-        TagName.ToLowerCase();
+      nsAutoString TagName;
+      selectedElement->GetTagName(TagName);
+      TagName.ToLowerCase();
 
 #if DEBUG_cmanske
-        char szTagName[64];
-        TagName.ToCString(szTagName, 64);
-        printf("Single Selected element found: %s\n", szTagName);
+      char szTagName[64];
+      TagName.ToCString(szTagName, 64);
+      printf("Single Selected element found: %s\n", szTagName);
 #endif
-      }
     }
   }
   return NS_OK;
@@ -1034,7 +1016,7 @@ nsresult
 nsTextEditorTextListener::HandleText(nsIDOMEvent* aTextEvent)
 {
 	nsString				composedText;
-	nsresult				result;
+	nsresult				result = NS_OK;
 	nsCOMPtr<nsIDOMUIEvent>uiEvent;
 	nsIDOMTextRangeList		*textRangeList;
 
@@ -1047,7 +1029,11 @@ nsTextEditorTextListener::HandleText(nsIDOMEvent* aTextEvent)
 	uiEvent->GetText(composedText);
 	uiEvent->GetInputRange(&textRangeList);
 	textRangeList->AddRef();
-	result = mEditor->SetCompositionString(composedText,textRangeList);
+	
+	nsCOMPtr<nsIEditorIMESupport> imeEditor = do_QueryInterface(mEditor);
+	if (imeEditor)
+   	result = imeEditor->SetCompositionString(composedText,textRangeList);
+  
 	return result;
 }
 
@@ -1202,9 +1188,12 @@ nsTextEditorDragListener::DragDrop(nsIDOMEvent* aMouseEvent)
               trans->GetAnyTransferData(&textMime, (void **)&str, &len);
 
               // If the string was not empty then paste it in
-              if (str) {
+              if (str)
+              {
+                nsCOMPtr<nsIHighLevelHTMLEditor> htmlEditor = do_QueryInterface(mEditor);
                 stuffToPaste.SetString(str, len);
-                mEditor->InsertText(stuffToPaste);
+                if (htmlEditor)
+                  htmlEditor->InsertText(stuffToPaste);
                 dragSession->SetCanDrop(PR_TRUE);
               }
 
@@ -1266,6 +1255,16 @@ nsTextEditorCompositionListener::HandleEvent(nsIDOMEvent* aEvent)
 {
   return NS_OK;
 }
+
+void nsTextEditorCompositionListener::SetEditor(nsIEditor *aEditor)
+{
+  nsCOMPtr<nsIEditorIMESupport> imeEditor = do_QueryInterface(aEditor);
+  if (!imeEditor) return;		// should return an error here!
+  
+  // note that we don't hold an extra reference here.
+  mEditor = imeEditor;
+}
+
 nsresult
 nsTextEditorCompositionListener::HandleStartComposition(nsIDOMEvent* aCompositionEvent)
 {
@@ -1288,7 +1287,7 @@ nsTextEditorCompositionListener::HandleEndComposition(nsIDOMEvent* aCompositionE
 
 nsresult 
 NS_NewEditorKeyListener(nsIDOMEventListener ** aInstancePtrResult, 
-                        nsITextEditor *aEditor)
+                        nsIEditor *aEditor)
 {
   nsTextEditorKeyListener* it = new nsTextEditorKeyListener();
   if (nsnull == it) {
@@ -1304,7 +1303,7 @@ NS_NewEditorKeyListener(nsIDOMEventListener ** aInstancePtrResult,
 
 nsresult
 NS_NewEditorMouseListener(nsIDOMEventListener ** aInstancePtrResult, 
-                          nsITextEditor *aEditor)
+                          nsIEditor *aEditor)
 {
   nsTextEditorMouseListener* it = new nsTextEditorMouseListener();
   if (nsnull == it) {
@@ -1318,7 +1317,7 @@ NS_NewEditorMouseListener(nsIDOMEventListener ** aInstancePtrResult,
 
 
 nsresult
-NS_NewEditorTextListener(nsIDOMEventListener** aInstancePtrResult, nsITextEditor* aEditor)
+NS_NewEditorTextListener(nsIDOMEventListener** aInstancePtrResult, nsIEditor* aEditor)
 {
 	nsTextEditorTextListener*	it = new nsTextEditorTextListener();
 	if (nsnull==it) {
@@ -1334,7 +1333,7 @@ NS_NewEditorTextListener(nsIDOMEventListener** aInstancePtrResult, nsITextEditor
 
 nsresult
 NS_NewEditorDragListener(nsIDOMEventListener ** aInstancePtrResult, 
-                          nsITextEditor *aEditor)
+                          nsIEditor *aEditor)
 {
   nsTextEditorDragListener* it = new nsTextEditorDragListener();
   if (nsnull == it) {
@@ -1347,7 +1346,7 @@ NS_NewEditorDragListener(nsIDOMEventListener ** aInstancePtrResult,
 }
 
 nsresult
-NS_NewEditorCompositionListener(nsIDOMEventListener** aInstancePtrResult, nsITextEditor* aEditor)
+NS_NewEditorCompositionListener(nsIDOMEventListener** aInstancePtrResult, nsIEditor* aEditor)
 {
 	nsTextEditorCompositionListener*	it = new nsTextEditorCompositionListener();
 	if (nsnull==it) {
@@ -1359,7 +1358,7 @@ NS_NewEditorCompositionListener(nsIDOMEventListener** aInstancePtrResult, nsITex
 
 nsresult 
 NS_NewEditorFocusListener(nsIDOMEventListener ** aInstancePtrResult, 
-                          nsITextEditor *aEditor)
+                          nsIEditor *aEditor)
 {
   nsTextEditorFocusListener* it = new nsTextEditorFocusListener();
   if (nsnull == it) {

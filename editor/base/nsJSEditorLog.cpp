@@ -191,7 +191,7 @@ nsJSEditorLog::RemoveTextProperty(nsIAtom *aProperty, const nsString *aAttribute
 }
 
 NS_IMETHODIMP
-nsJSEditorLog::DeleteSelection(nsIEditor::ECollapsedSelectionAction aAction)
+nsJSEditorLog::DeleteSelection(nsIEditor::ESelectionCollapseDirection aAction)
 {
   if (mLocked)
     return NS_OK;

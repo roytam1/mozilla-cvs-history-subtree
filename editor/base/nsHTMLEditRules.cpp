@@ -17,11 +17,13 @@
  */
 
 #include "nsHTMLEditRules.h"
+
 #include "nsEditor.h"
 #include "nsHTMLEditor.h"
-#include "nsTextEditor.h"
+
 #include "PlaceholderTxn.h"
 #include "InsertTextTxn.h"
+
 #include "nsIContent.h"
 #include "nsIContentIterator.h"
 #include "nsIDOMNode.h"
@@ -36,7 +38,7 @@
 #include "nsIPresShell.h"
 #include "nsLayoutCID.h"
 
-class nsIFrame;
+#include "nsEditorUtils.h"
 
 //const static char* kMOZEditorBogusNodeAttr="MOZ_EDITOR_BOGUS_NODE";
 //const static char* kMOZEditorBogusNodeValue="TRUE";
@@ -285,7 +287,7 @@ nsHTMLEditRules::WillInsertBreak(nsIDOMSelection *aSelection, PRBool *aCancel)
 
 
 nsresult
-nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECollapsedSelectionAction aAction, PRBool *aCancel)
+nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESelectionCollapseDirection aAction, PRBool *aCancel)
 {
   if (!aSelection || !aCancel) { return NS_ERROR_NULL_POINTER; }
   // initialize out param
@@ -315,7 +317,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECo
       if (NS_FAILED(res)) return res;
     
       // at beginning of text node and backspaced?
-      if (!offset && (aAction == nsIEditor::eDeleteLeft))
+      if (!offset && (aAction == nsIEditor::eCollapseBackwards))
       {
         nsCOMPtr<nsIDOMNode> priorNode;
         res = mEditor->GetPriorNode(node, PR_TRUE, getter_AddRefs(priorNode));
@@ -368,7 +370,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECo
     
       // at end of text node and deleted?
       if ((offset == (PRInt32)strLength)
-          && (aAction == nsIEditor::eDeleteRight))
+          && (aAction == nsIEditor::eCollapseForwards))
       {
         nsCOMPtr<nsIDOMNode> nextNode;
         res = mEditor->GetNextNode(node, PR_TRUE, getter_AddRefs(nextNode));
@@ -463,7 +465,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECo
       {
         // first delete the selection
         *aCancel = PR_TRUE;
-        res = mEditor->nsEditor::DeleteSelection(aAction);
+        res = mEditor->nsEditor::DoDeleteSelectionTxn(aAction);
         if (NS_FAILED(res)) return res;
         // then join para's, insert break
         res = mEditor->JoinNodeDeep(leftParent,rightParent,aSelection);
@@ -476,7 +478,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ECo
       {
         // first delete the selection
         *aCancel = PR_TRUE;
-        res = mEditor->nsEditor::DeleteSelection(aAction);
+        res = mEditor->nsEditor::DoDeleteSelectionTxn(aAction);
         if (NS_FAILED(res)) return res;
         // join blocks
         res = mEditor->JoinNodeDeep(leftParent,rightParent,aSelection);
@@ -1836,13 +1838,5 @@ nsHTMLEditRules::ReturnInListItem(nsIDOMSelection *aSelection,
   res = aSelection->Collapse(aNode,0);
   return res;
 }
-
-
-
-
-
-
-
-
 
 

@@ -61,7 +61,7 @@ public:
   NS_IMETHOD GetParagraphFormat(nsString& aParagraphFormat);
   NS_IMETHOD SetParagraphFormat(const nsString& aParagraphFormat);
   NS_IMETHOD RemoveTextProperty(nsIAtom *aProperty, const nsString *aAttribute);
-  NS_IMETHOD DeleteSelection(nsIEditor::ECollapsedSelectionAction aAction);
+  NS_IMETHOD DeleteSelection(nsIEditor::ESelectionCollapseDirection aAction);
   NS_IMETHOD InsertText(const nsString& aStringToInsert);
   NS_IMETHOD InsertBreak();
   NS_IMETHOD EnableUndo(PRBool aEnable);

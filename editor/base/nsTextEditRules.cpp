@@ -17,10 +17,11 @@
  */
 
 #include "nsTextEditRules.h"
-#include "nsTextEditor.h"
+
 #include "nsEditor.h"
 #include "PlaceholderTxn.h"
 #include "InsertTextTxn.h"
+
 #include "nsCOMPtr.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMElement.h"
@@ -37,7 +38,7 @@
 static NS_DEFINE_CID(kCContentIteratorCID,   NS_CONTENTITERATOR_CID);
 
 #define CANCEL_OPERATION_IF_READONLY_OR_DISABLED \
-  if (mFlags & TEXT_EDITOR_FLAG_READONLY || mFlags & TEXT_EDITOR_FLAG_DISABLED) \
+  if ((mFlags & nsIHighLevelHTMLEditor::eEditorReadonlyMask) || (mFlags & nsIHighLevelHTMLEditor::eEditorDisabledMask)) \
   {                     \
     *aCancel = PR_TRUE; \
     return NS_OK;       \
@@ -67,7 +68,9 @@ NS_IMETHODIMP
 nsTextEditRules::Init(nsIEditor *aEditor)
 {
   if (!aEditor) { return NS_ERROR_NULL_POINTER; }
-  mEditor = (nsTextEditor*)aEditor;  // we hold a non-refcounted reference back to our editor
+
+#warning fix me
+  mEditor = (nsHTMLEditor *)aEditor;  // we hold a non-refcounted reference back to our editor
   nsCOMPtr<nsIDOMSelection> selection;
   mEditor->GetSelection(getter_AddRefs(selection));
   NS_ASSERTION(selection, "editor cannot get selection");
@@ -92,19 +95,19 @@ nsTextEditRules::SetFlags(PRUint32 aFlags)
   // a style attribute on it, don't know why.
   // SetFlags() is really meant to only be called once
   // and at editor init time.  
-  if (aFlags & TEXT_EDITOR_FLAG_PLAINTEXT)
+  if (aFlags & nsIHighLevelHTMLEditor::eEditorPlaintextMask)
   {
-    if (!(mFlags & TEXT_EDITOR_FLAG_PLAINTEXT))
+    if (!(mFlags & nsIHighLevelHTMLEditor::eEditorPlaintextMask))
     {
       // we are converting TO a plaintext editor
       // put a "white-space: pre" style on the body
-	  nsCOMPtr<nsIDOMElement> bodyElement;
-	  nsresult res = mEditor->GetBodyElement(getter_AddRefs(bodyElement));
-	  if (NS_SUCCEEDED(res) && bodyElement)
-	  {
-	    // not going through the editor to do this.
-	    bodyElement->SetAttribute("style", "white-space: pre");
-	  }
+		  nsCOMPtr<nsIDOMElement> bodyElement;
+		  nsresult res = mEditor->GetBodyElement(getter_AddRefs(bodyElement));
+		  if (NS_SUCCEEDED(res) && bodyElement)
+		  {
+		    // not going through the editor to do this.
+		    bodyElement->SetAttribute("style", "white-space: pre");
+		  }
     }
   }
   mFlags = aFlags;
@@ -194,7 +197,9 @@ nsTextEditRules::DidDoAction(nsIDOMSelection *aSelection,
 nsresult
 nsTextEditRules::WillInsert(nsIDOMSelection *aSelection, PRBool *aCancel)
 {
-  if (!aSelection || !aCancel) { return NS_ERROR_NULL_POINTER; }
+  if (!aSelection || !aCancel)
+    return NS_ERROR_NULL_POINTER;
+  
   CANCEL_OPERATION_IF_READONLY_OR_DISABLED
 
   // initialize out param
@@ -223,7 +228,7 @@ nsTextEditRules::WillInsertBreak(nsIDOMSelection *aSelection, PRBool *aCancel)
 {
   if (!aSelection || !aCancel) { return NS_ERROR_NULL_POINTER; }
   CANCEL_OPERATION_IF_READONLY_OR_DISABLED
-  if (mFlags & TEXT_EDITOR_FLAG_SINGLELINE) {
+  if (mFlags & nsIHighLevelHTMLEditor::eEditorSingleLineMask) {
     *aCancel = PR_TRUE;
   }
   else {
@@ -256,7 +261,7 @@ nsTextEditRules::WillInsertText(nsIDOMSelection *aSelection,
   nsString inString = *aInString; // we might want to mutate the input 
                                   // before setting the output, do that in a local var
 
-  if ((-1 != aMaxLength) && (mFlags&TEXT_EDITOR_FLAG_PLAINTEXT))
+  if ((-1 != aMaxLength) && (mFlags & nsIHighLevelHTMLEditor::eEditorPlaintextMask))
   {
     // get the current text length
     // get the length of inString
@@ -288,7 +293,7 @@ nsTextEditRules::WillInsertText(nsIDOMSelection *aSelection,
   // initialize out params
   *aCancel = PR_FALSE;
 
-  if (mFlags&TEXT_EDITOR_FLAG_PASSWORD)
+  if (mFlags & nsIHighLevelHTMLEditor::eEditorPasswordMask)
   {
     // manage the password buffer
     PRInt32 start, end;
@@ -579,7 +584,7 @@ nsTextEditRules::InsertStyleAndNewTextNode(nsIDOMNode *aParentNode, nsIAtom *aTa
   result = mEditor->CreateNode(tag, aParentNode, 0, getter_AddRefs(newStyleNode));
   if (NS_SUCCEEDED(result)) 
   {
-    result = mEditor->CreateNode(nsIEditor::GetTextNodeTag(), newStyleNode, 0, getter_AddRefs(newTextNode));
+    result = mEditor->CreateNode(nsEditor::GetTextNodeTag(), newStyleNode, 0, getter_AddRefs(newTextNode));
     if (NS_SUCCEEDED(result)) 
     {
       if (aSelection) {
@@ -596,7 +601,7 @@ nsTextEditRules::WillSetTextProperty(nsIDOMSelection *aSelection, PRBool *aCance
   nsresult result = NS_OK;
 
   // XXX: should probably return a success value other than NS_OK that means "not allowed"
-  if (TEXT_EDITOR_FLAG_PLAINTEXT & mFlags) {
+  if (nsIHighLevelHTMLEditor::eEditorPlaintextMask & mFlags) {
     *aCancel = PR_TRUE;
   }
   return result;
@@ -614,7 +619,7 @@ nsTextEditRules::WillRemoveTextProperty(nsIDOMSelection *aSelection, PRBool *aCa
   nsresult result = NS_OK;
 
   // XXX: should probably return a success value other than NS_OK that means "not allowed"
-  if (TEXT_EDITOR_FLAG_PLAINTEXT & mFlags) {
+  if (nsIHighLevelHTMLEditor::eEditorPlaintextMask & mFlags) {
     *aCancel = PR_TRUE;
   }
   return result;
@@ -628,7 +633,7 @@ nsTextEditRules::DidRemoveTextProperty(nsIDOMSelection *aSelection, nsresult aRe
 
 nsresult
 nsTextEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, 
-                                     nsIEditor::ECollapsedSelectionAction aCollapsedAction, 
+                                     nsIEditor::ESelectionCollapseDirection aCollapsedAction, 
                                      PRBool *aCancel)
 {
   if (!aSelection || !aCancel) { return NS_ERROR_NULL_POINTER; }
@@ -642,17 +647,17 @@ nsTextEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
     *aCancel = PR_TRUE;
     return NS_OK;
   }
-  if (mFlags&TEXT_EDITOR_FLAG_PASSWORD)
+  if (mFlags & nsIHighLevelHTMLEditor::eEditorPasswordMask)
   {
     // manage the password buffer
     PRInt32 start, end;
     mEditor->GetTextSelectionOffsets(aSelection, start, end);
     if (end==start)
     { // collapsed selection
-      if (nsIEditor::eDeleteLeft==aCollapsedAction && 0<start) { // del back
+      if (nsIEditor::eCollapseBackwards==aCollapsedAction && 0<start) { // del back
         mPasswordText.Cut(start-1, 1);
       }
-      else if (nsIEditor::eDeleteRight==aCollapsedAction) {      // del forward
+      else if (nsIEditor::eCollapseForwards==aCollapsedAction) {      // del forward
         mPasswordText.Cut(start, 1);
       }
       // otherwise nothing to do for this collapsed selection
@@ -672,7 +677,7 @@ nsTextEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
 // if we ended up with consecutive text nodes, merge them
 nsresult
 nsTextEditRules::DidDeleteSelection(nsIDOMSelection *aSelection, 
-                                    nsIEditor::ECollapsedSelectionAction aCollapsedAction, 
+                                    nsIEditor::ESelectionCollapseDirection aCollapsedAction, 
                                     nsresult aResult)
 {
   nsresult result = aResult;  // if aResult is an error, we just return it
@@ -859,7 +864,7 @@ nsTextEditRules::WillOutputText(nsIDOMSelection *aSelection,
   // initialize out param
   *aCancel = PR_FALSE;
   
-  if (mFlags&TEXT_EDITOR_FLAG_PASSWORD)
+  if (mFlags & nsIHighLevelHTMLEditor::eEditorPasswordMask)
   {
     *aOutString = mPasswordText;
     *aCancel = PR_TRUE;
@@ -917,7 +922,7 @@ nsTextEditRules::CreateBogusNodeIfNeeded(nsIDOMSelection *aSelection)
         if ((NS_SUCCEEDED(result)) && mBogusNode)
         {
           nsCOMPtr<nsIDOMNode>newTNode;
-          result = mEditor->CreateNode(nsIEditor::GetTextNodeTag(), mBogusNode, 0, 
+          result = mEditor->CreateNode(nsEditor::GetTextNodeTag(), mBogusNode, 0, 
                                        getter_AddRefs(newTNode));
           if ((NS_SUCCEEDED(result)) && newTNode)
           {
