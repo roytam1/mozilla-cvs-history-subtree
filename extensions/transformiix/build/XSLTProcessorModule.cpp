@@ -41,6 +41,8 @@
 #include "XSLTProcessor.h"
 #include "TxLog.h"
 #include "nsCRT.h"
+#include "nsIScriptSecurityManager.h"
+#include "txURIUtils.h"
 
 /* 1c1a3c01-14f6-11d6-a7f2-ea502af815dc */
 #define TRANSFORMIIX_DOMCI_EXTENSION_CID   \
@@ -48,7 +50,6 @@
 
 #define TRANSFORMIIX_DOMCI_EXTENSION_CONTRACTID \
 "@mozilla.org/transformiix-domci-extender;1"
-
 
 NS_DOMCI_EXTENSION(Transformiix)
     static NS_DEFINE_CID(kXSLTProcessorCID, TRANSFORMIIX_XSLT_PROCESSOR_CID);
@@ -199,7 +200,15 @@ Initialize(nsIModule* aSelf)
     if (!txXSLTProcessor::txInit()) {
         return NS_ERROR_OUT_OF_MEMORY;
     }
+
+    nsresult rv = CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &gTxSecurityManager);
+    if (NS_FAILED(rv)) {
+        gTxSecurityManager = nsnull;
+        return rv;
+    }
+
     TX_LG_CREATE;
+
     return NS_OK;
 }
 
@@ -229,6 +238,9 @@ Shutdown(nsIModule* aSelf)
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathResult));
 
     txXSLTProcessor::txShutdown();
+
+    NS_IF_RELEASE(gTxSecurityManager);
+
     TX_LG_DELETE;
 }
 

@@ -68,7 +68,7 @@ void txMozillaTextOutput::attribute(const String& aName,
 void txMozillaTextOutput::characters(const String& aData)
 {
     if (mTextNode)
-        mTextNode->AppendData(aData.getConstNSString());
+        mTextNode->AppendData(aData);
 }
 
 void txMozillaTextOutput::comment(const String& aData)
