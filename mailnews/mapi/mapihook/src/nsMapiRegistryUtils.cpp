@@ -570,7 +570,7 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
                                 "", "URL:MailTo Protocol");
             if (NS_SUCCEEDED(rv)) {
                 nsCAutoString appPath (thisApp);
-                appPath += " \"%1\"";
+                appPath += " -compose %1";
                 keyName.Append("\\shell\\open\\command");
                 rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                        keyName.get(), 
