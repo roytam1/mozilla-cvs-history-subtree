@@ -126,7 +126,7 @@ ConvertGeckoRectToMacRect(const nsRect& aRect, Rect& outMacRect)
 static PRUint32 underlineAttributeToTextRangeType(PRUint32 aUnderlineStyle)
 {
 #ifdef DEBUG_IME
-  NSLog(@"in underlineAttributeToTextRangeType = %d", aUnderlineStyle);
+  NSLog(@"****in underlineAttributeToTextRangeType = %d", aUnderlineStyle);
 #endif
 
   // For more info on the underline attribute, please see: 
@@ -135,16 +135,10 @@ static PRUint32 underlineAttributeToTextRangeType(PRUint32 aUnderlineStyle)
   // To see this value in japanese ime, type 'aaaaaaaaa' and hit space to make the
   // ime send you some part of text in 1 (NSSingleUnderlineStyle) and some part in 2. 
   // ftang will ask apple for more details
+  //
+  // it probably means show 1-pixel thickness underline vs 2-pixel thickness
 
-  switch (aUnderlineStyle)
-  {
-    case NSNoUnderlineStyle:     return NS_TEXTRANGE_RAWINPUT;
-    case NSSingleUnderlineStyle: return NS_TEXTRANGE_CONVERTEDTEXT;
-    case 2:                      return NS_TEXTRANGE_SELECTEDCONVERTEDTEXT;
-    default:
-      NS_ASSERTION(0, "cannot convert");
-  }
-  return NS_TEXTRANGE_SELECTEDRAWTEXT;
+  return aUnderlineStyle ? NS_TEXTRANGE_RAWINPUT : NS_TEXTRANGE_CONVERTEDTEXT;
 }
 
 static PRUint32 countRanges(NSAttributedString *aString)
@@ -166,7 +160,7 @@ static PRUint32 countRanges(NSAttributedString *aString)
   return count;
 }
 
-static void convertAttributeToGeckoRange(NSAttributedString *aString, PRUint32 inCount, nsTextRange* aRanges)
+static void convertAttributeToGeckoRange(NSAttributedString *aString, NSRange markRange, PRUint32 inCount, nsTextRange* aRanges)
 {
   // Convert the Cocoa range into the nsTextRange Array used in Gecko.
   // Iterate through the attributed string and map the underline attribute to Gecko IME textrange attributes.
@@ -182,13 +176,25 @@ static void convertAttributeToGeckoRange(NSAttributedString *aString, PRUint32 i
     aRanges[i].mStartOffset = effectiveRange.location;                         
     aRanges[i].mEndOffset = NSMaxRange(effectiveRange);                         
     aRanges[i].mRangeType = underlineAttributeToTextRangeType([attributeValue intValue]); 
+
+    // reset the range type if the ranges should be selected
+    if (markRange.length > 0) {
+      if (effectiveRange.location == markRange.location 
+          && effectiveRange.length >= markRange.length) {
+        if (aRanges[i].mRangeType == NS_TEXTRANGE_RAWINPUT)
+          aRanges[i].mRangeType = NS_TEXTRANGE_SELECTEDRAWTEXT;
+        else
+          aRanges[i].mRangeType = NS_TEXTRANGE_SELECTEDCONVERTEDTEXT;
+      }
+    }
+
     limitRange = NSMakeRange(NSMaxRange(effectiveRange), 
                              NSMaxRange(limitRange) - NSMaxRange(effectiveRange));
     i++;
   }
 }
 
-static void fillTextRangeInTextEvent(nsTextEvent *aTextEvent, NSAttributedString* aString, NSRange selRange)
+static void fillTextRangeInTextEvent(nsTextEvent *aTextEvent, NSAttributedString* aString, NSRange markRange)
 { 
   // Count the number of segments in the attributed string.  Allocate the right size of nsTextRange.
   // Convert the attributed string into an array of nsTextRange by calling above functions.
@@ -197,10 +203,7 @@ static void fillTextRangeInTextEvent(nsTextEvent *aTextEvent, NSAttributedString
   if (aTextEvent->rangeArray)
   {
     aTextEvent->rangeCount = count;
-    convertAttributeToGeckoRange(aString,  aTextEvent->rangeCount,  aTextEvent->rangeArray);
-    // XXX ftang: hack to work around a problem which he can't remember anymore.
-    if ( (aTextEvent->rangeCount == 1) && (NS_TEXTRANGE_RAWINPUT == aTextEvent->rangeArray[0].mRangeType) )
-      aTextEvent->rangeCount = 0;
+    convertAttributeToGeckoRange(aString, markRange, aTextEvent->rangeCount,  aTextEvent->rangeArray);
   } 
 }
 
@@ -2006,7 +2009,11 @@ nsChildView::Idle()
 - (nsRect) sendCompositionEvent:(PRInt32)aEventType;
 
 // sends gecko an ime text event
-- (void) sendTextEvent:(PRUnichar*) aBuffer attributedString:(NSAttributedString*) aString  selectedRange:(NSRange)selRange;
+- (void) sendTextEvent:(PRUnichar*) aBuffer 
+                       attributedString:(NSAttributedString*) aString
+                       selectedRange:(NSRange)selRange
+                       markedRange:(NSRange)markRange
+                       doCommit:(BOOL)doCommit;
 
 @end
 
@@ -2443,11 +2450,15 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   return event.theReply.mCursorPosition;
 }
 
-- (void)sendTextEvent:(PRUnichar*) aBuffer attributedString:(NSAttributedString*) aString  selectedRange:(NSRange)selRange
+- (void)sendTextEvent:(PRUnichar*) aBuffer 
+                      attributedString:(NSAttributedString*) aString  
+                      selectedRange:(NSRange) selRange 
+                      markedRange:(NSRange) markRange
+                      doCommit:(BOOL) doCommit
 {
 #ifdef DEBUG_IME
   NSLog(@"****in sendTextEvent; string = %@\n", aString);
-  NSLog(@" selRange = %d, %d\n", selRange.location, selRange.length);
+  NSLog(@" markRange = %d, %d;  selRange = %d, %d\n", markRange.location, markRange.length, selRange.location, selRange.length);
 #endif
 
   nsTextEvent textEvent;
@@ -2461,7 +2472,8 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   textEvent.theText = aBuffer;
   textEvent.rangeCount = 0;
   textEvent.rangeArray = nsnull;
-  fillTextRangeInTextEvent(&textEvent, aString, selRange);
+  if (!doCommit)
+    fillTextRangeInTextEvent(&textEvent, aString, markRange);
 
   mGeckoChild->DispatchWindowEvent(textEvent);
   if ( textEvent.rangeArray )
@@ -2474,8 +2486,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 {
 #if DEBUG_IME
   NSLog(@"****in insertText: %@\n", insertString);
-  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
-  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" markRange = %d, %d;  selRange = %d, %d\n", mMarkedRange.location, mMarkedRange.length, mSelectedRange.location, mSelectedRange.length);
 #endif
 
   if ( ! [insertString isKindOfClass:[NSAttributedString class]])
@@ -2514,7 +2525,10 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     }
 
     // dispatch textevent (is this redundant?)
-    [self sendTextEvent:bufPtr attributedString:insertString selectedRange:NSMakeRange(0, len)];
+    [self sendTextEvent:bufPtr attributedString:insertString
+                               selectedRange:NSMakeRange(0, len)
+                               markedRange:mMarkedRange
+                               doCommit:YES];
 
     // send end composition event to gecko
     [self sendCompositionEvent: NS_COMPOSITION_END];
@@ -2535,8 +2549,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 {
 #if DEBUG_IME 
   NSLog(@"****in setMarkedText location: %d, length: %d\n", selRange.location, selRange.length);
-  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
-  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" markRange = %d, %d;  selRange = %d, %d\n", mMarkedRange.location, mMarkedRange.length, mSelectedRange.location, mSelectedRange.length);
   NSLog(@" aString = %@\n", aString);
 #endif
 
@@ -2570,7 +2583,10 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     mInComposition = YES;
   }
 
-  [self sendTextEvent:bufPtr attributedString:aString selectedRange:selRange];
+  [self sendTextEvent:bufPtr attributedString:aString
+                             selectedRange:selRange
+                             markedRange:mMarkedRange
+                             doCommit:NO];
 
   if (bufPtr != buffer)
     delete[] bufPtr;
@@ -2693,8 +2709,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 {
 #if DEBUG_IME
   NSLog(@"****in characterIndexForPoint\n");
-  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
-  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" markRange = %d, %d;  selectRange = %d, %d\n", mMarkedRange.location, mMarkedRange.length, mSelectedRange.location, mSelectedRange.length);
 #endif
 
 //  short regionClass;
@@ -2706,8 +2721,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 {
 #if DEBUG_IME
   NSLog(@"****in validAttributesForMarkedText\n");
-  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
-  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" markRange = %d, %d;  selectRange = %d, %d\n", mMarkedRange.location, mMarkedRange.length, mSelectedRange.location, mSelectedRange.length);
 #endif
 
   return [NSArray array]; // empty array; we don't support any attributes right now
