@@ -30,6 +30,7 @@
 #include "il_icons.h"
 #include "extgen.h"
 #include "libevent.h"
+#include "cstream.h"
 
 extern "C" int MK_DISK_FULL;   // defined in allxpstr.c
 
