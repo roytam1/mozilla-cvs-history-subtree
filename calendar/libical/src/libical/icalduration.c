@@ -40,7 +40,9 @@
 #include "icalmemory.h"
 #include "icalvalue.h"
 
-
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
 
 
 /* From Seth Alves,  <alves@hungry.com>   */
