@@ -186,9 +186,18 @@ nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNe
   {
     if (header)
     {
-      char *ptr2 = PL_strcasestr ("only", (header+PL_strlen("?header=")));
-      char *ptr3 = PL_strcasestr ("quote", (header+PL_strlen("?header=")));
-      if (ptr2)
+      PRInt32 lenOfHeader = PL_strlen("?header=");
+
+      char *ptr2 = PL_strcasestr ("only", (header+lenOfHeader));
+      char *ptr3 = PL_strcasestr ("quote", (header+lenOfHeader));
+      char *ptr4 = PL_strcasestr ("none", (header+lenOfHeader));
+      if (ptr4)
+      {
+        PR_FREEIF(mOutputFormat);
+        mOutputFormat = PL_strdup("text/html");
+        *aNewType = nsMimeOutput::nsMimeMessageBodyDisplay;
+      }
+      else if (ptr2)
       {
         PR_FREEIF(mOutputFormat);
         mOutputFormat = PL_strdup("text/xml");
