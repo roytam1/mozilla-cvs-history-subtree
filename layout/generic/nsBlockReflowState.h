@@ -101,10 +101,6 @@ public:
     return mReflowState.mComputedMargin;
   }
 
-  void UpdateMaxElementWidth(nscoord aMaxElementWidth);
-
-  void UpdateMaximumWidth(nscoord aMaximumWidth);
-
   // Reconstruct the previous bottom margin that goes above |aLine|.
   void ReconstructMarginAbove(nsLineList::iterator aLine);
 

@@ -104,20 +104,10 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
     mContentArea.width = aReflowState.mComputedWidth;
   }
   else {
-    if (NS_UNCONSTRAINEDSIZE == aReflowState.availableWidth) {
-      mContentArea.width = NS_UNCONSTRAINEDSIZE;
-      SetFlag(BRS_UNCONSTRAINEDWIDTH, PR_TRUE);
-    }
-    else if (NS_UNCONSTRAINEDSIZE != aReflowState.mComputedMaxWidth) {
-      // Choose a width based on the content (shrink wrap width) up
-      // to the maximum width
-      mContentArea.width = aReflowState.mComputedMaxWidth;
-      SetFlag(BRS_SHRINKWRAPWIDTH, PR_TRUE);
-    }
-    else {
-      nscoord lr = borderPadding.left + borderPadding.right;
-      mContentArea.width = PR_MAX(0, aReflowState.availableWidth - lr);
-    }
+    mContentArea.width = aReflowState.availableWidth -
+                         borderPadding.left - borderPadding.right;
+    if (mContentArea.width < 0)
+      mContentArea.width = 0;
   }
 
   // Compute content area height. Unlike the width, if we have a
@@ -218,10 +208,8 @@ nsBlockReflowState::ComputeBlockAvailSpace(nsIFrame* aFrame,
           // The child block will flow around the float. Therefore
           // give it all of the available space.
           aResult.x = borderPadding.left;
-          aResult.width = GetFlag(BRS_UNCONSTRAINEDWIDTH)
-            ? NS_UNCONSTRAINEDSIZE
-            : mContentArea.width;
-           break;
+          aResult.width = mContentArea.width;
+          break;
         case NS_STYLE_FLOAT_EDGE_BORDER: 
         case NS_STYLE_FLOAT_EDGE_PADDING:
           {
@@ -246,21 +234,16 @@ nsBlockReflowState::ComputeBlockAvailSpace(nsIFrame* aFrame,
             }
 
             // determine width
-            if (GetFlag(BRS_UNCONSTRAINEDWIDTH)) {
-              aResult.width = NS_UNCONSTRAINEDSIZE;
-            }
-            else {
-              if (mBand.GetRightFloatCount()) {
-                if (mBand.GetLeftFloatCount()) {
-                  aResult.width = mAvailSpaceRect.width + m.left + m.right;
-                }
-                else {
-                  aResult.width = mAvailSpaceRect.width + m.right;
-                }
+            if (mBand.GetRightFloatCount()) {
+              if (mBand.GetLeftFloatCount()) {
+                aResult.width = mAvailSpaceRect.width + m.left + m.right;
               }
               else {
-                aResult.width = mAvailSpaceRect.width + m.left;
+                aResult.width = mAvailSpaceRect.width + m.right;
               }
+            }
+            else {
+              aResult.width = mAvailSpaceRect.width + m.left;
             }
           }
           break;
@@ -280,9 +263,7 @@ nsBlockReflowState::ComputeBlockAvailSpace(nsIFrame* aFrame,
       // doesn't matter therefore give the block element all of the
       // available space since it will flow around the float itself.
       aResult.x = borderPadding.left;
-      aResult.width = GetFlag(BRS_UNCONSTRAINEDWIDTH)
-        ? NS_UNCONSTRAINEDSIZE
-        : mContentArea.width;
+      aResult.width = mContentArea.width;
     }
   }
   else {
@@ -459,32 +440,6 @@ nsBlockReflowState::RecoverStateFrom(nsLineList::iterator aLine,
   // Make the line being recovered the current line
   mCurrentLine = aLine;
 
-  if (GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-#ifdef DEBUG
-    if (nsBlockFrame::gNoisyMaxElementWidth) {
-      nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-      printf("nsBlockReflowState::RecoverStateFrom block %p caching max width %d\n", mBlock, aLine->mMaxElementWidth);
-    }
-#endif
-    UpdateMaxElementWidth(aLine->mMaxElementWidth);
-
-    // Recover the float MEWs for floats in this line (but not in
-    // blocks within it, since their MEWs are already part of the block's
-    // MEW).
-    if (aLine->HasFloats()) {
-      for (nsFloatCache* fc = aLine->GetFirstFloat(); fc; fc = fc->Next())
-        UpdateMaxElementWidth(fc->mMaxElementWidth);
-    }
-  }
-
-  // If computing the maximum width, then update mMaximumWidth
-  if (GetFlag(BRS_COMPUTEMAXWIDTH)) {
-#ifdef NOISY_MAXIMUM_WIDTH
-    printf("nsBlockReflowState::RecoverStateFrom block %p caching max width %d\n", mBlock, aLine->mMaximumWidth);
-#endif
-    UpdateMaximumWidth(aLine->mMaximumWidth);
-  }
-
   // Place floats for this line into the space manager
   if (aLine->HasFloats() || aLine->IsBlock()) {
     // Undo border/padding translation since the nsFloatCache's
@@ -553,7 +508,6 @@ nsBlockReflowState::AddFloat(nsLineLayout&       aLineLayout,
   nsFloatCache* fc = mFloatCacheFreeList.Alloc();
   fc->mPlaceholder = aPlaceholder;
   fc->mIsCurrentLineFloat = aLineLayout.CanPlaceFloatNow();
-  fc->mMaxElementWidth = 0;
 
   // Now place the float immediately if possible. Otherwise stash it
   // away in mPendingFloats and place it later.
@@ -579,7 +533,7 @@ nsBlockReflowState::AddFloat(nsLineLayout&       aLineLayout,
     // Pass on updated available space to the current inline reflow engine
     GetAvailableSpace();
     aLineLayout.UpdateBand(mAvailSpaceRect.x + BorderPadding().left, mY,
-                           GetFlag(BRS_UNCONSTRAINEDWIDTH) ? NS_UNCONSTRAINEDSIZE : mAvailSpaceRect.width,
+                           mAvailSpaceRect.width,
                            mAvailSpaceRect.height,
                            isLeftFloat,
                            aPlaceholder->GetOutOfFlowFrame());
@@ -591,41 +545,6 @@ nsBlockReflowState::AddFloat(nsLineLayout&       aLineLayout,
     // This float will be placed after the line is done (it is a
     // below-current-line float).
     mBelowCurrentLineFloats.Append(fc);
-  }
-}
-
-void
-nsBlockReflowState::UpdateMaxElementWidth(nscoord aMaxElementWidth)
-{
-#ifdef DEBUG
-  nscoord oldWidth = mMaxElementWidth;
-#endif
-  if (aMaxElementWidth > mMaxElementWidth) {
-    mMaxElementWidth = aMaxElementWidth;
-  }
-#ifdef DEBUG
-  if (nsBlockFrame::gNoisyMaxElementWidth) {
-    if (mMaxElementWidth != oldWidth) {
-      nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
-      if (NS_UNCONSTRAINEDSIZE == mReflowState.availableWidth) {
-        printf("PASS1 ");
-      }
-      nsFrame::ListTag(stdout, mBlock);
-      printf(": old max-element-width=%d new=%d\n",
-             oldWidth, mMaxElementWidth);
-    }
-  }
-#endif
-}
-
-void
-nsBlockReflowState::UpdateMaximumWidth(nscoord aMaximumWidth)
-{
-  if (aMaximumWidth > mMaximumWidth) {
-#ifdef NOISY_MAXIMUM_WIDTH
-    printf("nsBlockReflowState::UpdateMaximumWidth block %p caching max width %d\n", mBlock, aMaximumWidth);
-#endif
-    mMaximumWidth = aMaximumWidth;
   }
 }
 
@@ -994,16 +913,7 @@ nsBlockReflowState::FlowAndPlaceFloat(nsFloatCache*   aFloatCache,
   // reflow, and since there's no need to change the code that was
   // necessary back when the float was positioned relative to
   // NS_UNCONSTRAINEDSIZE.
-  if (isLeftFloat ||
-      !GetFlag(BRS_UNCONSTRAINEDWIDTH) ||
-      !GetFlag(BRS_SHRINKWRAPWIDTH)) {
-    mFloatCombinedArea.UnionRect(combinedArea, mFloatCombinedArea);
-  } else if (GetFlag(BRS_SHRINKWRAPWIDTH)) {
-    // Mark the line dirty so we come back and re-place the float once
-    // the shrink wrap width is determined
-    mCurrentLine->MarkDirty();
-    SetFlag(BRS_NEEDRESIZEREFLOW, PR_TRUE);
-  }
+  mFloatCombinedArea.UnionRect(combinedArea, mFloatCombinedArea);
 
   // Now restore mY
   mY = saveY;
