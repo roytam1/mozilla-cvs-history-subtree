@@ -6709,18 +6709,27 @@ HT_GetRDFResource (HT_Resource node)
 
 
 
-PR_PUBLIC_API(char*)
+PR_PUBLIC_API(char *)
 HT_GetNodeURL(HT_Resource node)
 {
+	char		*retVal = NULL;
+
 	XP_ASSERT(node != NULL);
 	XP_ASSERT(node->node != NULL);
 
-	return  resourceID(node->node);
+	if (node != NULL)
+	{
+		if (node->node != NULL)
+		{
+			retVal = resourceID(node->node);
+		}
+	}
+	return(retVal);
 }
 
 
 
-PR_PUBLIC_API(char*)
+PR_PUBLIC_API(char *)
 HT_GetNodeName(HT_Resource node)
 {
 	char		*name = NULL;
@@ -6732,6 +6741,40 @@ HT_GetNodeName(HT_Resource node)
 		HT_GetNodeData (node, gCoreVocab->RDF_name, HT_COLUMN_STRING, &name);
 	}
 	return(name);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_SetTopVisibleNodeIndex(HT_View view, uint32 topNodeIndex)
+{
+	XP_ASSERT(view != NULL);
+
+	if (view != NULL)
+	{
+		view->topNodeIndex = topNodeIndex;
+	}
+}
+
+
+
+PR_PUBLIC_API(uint32)
+HT_GetTopVisibleNodeIndex(HT_View view)
+{
+	uint32		topNodeIndex = 0, listCount;
+
+	XP_ASSERT(view != NULL);
+
+	if (view != NULL)
+	{
+		topNodeIndex = view->topNodeIndex;
+		listCount = HT_GetItemListCount(view);
+		if (topNodeIndex > listCount)
+		{
+			topNodeIndex = listCount;
+		}
+	}
+	return(topNodeIndex);
 }
 
 

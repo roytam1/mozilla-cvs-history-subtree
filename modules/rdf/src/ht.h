@@ -143,13 +143,14 @@ typedef struct _HT_ViewStruct {
 	struct _HT_ResourceStruct	***itemList;
 	uint32				itemListSize;
 	uint32				itemListCount;
+	uint32				topNodeIndex;
 	uint32				selectedNodeHint;
 	uint32				sortTokenType;
 	void				*sortToken;
 	PRBool				descendingFlag;
 	PRBool				refreshingItemListp;
 	PRBool				inited;
-    RDF_Resource        treeRel;
+	RDF_Resource			treeRel;
 } HT_ViewStruct;
 
 typedef	struct _HT_ValueStruct {

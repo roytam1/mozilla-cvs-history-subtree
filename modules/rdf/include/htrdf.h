@@ -268,8 +268,8 @@ PR_PUBLIC_API(HT_Resource)  HT_GetParent (HT_Resource node);
  * HT_NodeDisplayString (XXX needs work)
  * obtain the name of a node
  */
-PR_PUBLIC_API(HT_Error)     HT_NodeDisplayString (HT_Resource node, char *buffer, int bufferLen);
-PR_PUBLIC_API(HT_Error)     HT_ViewDisplayString (HT_View view, char *buffer, int bufferLen);
+PR_PUBLIC_API(HT_Error)     HT_NodeDisplayString (HT_Resource node, char *buffer, int bufferLen);	/* obsolete! */
+PR_PUBLIC_API(HT_Error)     HT_ViewDisplayString (HT_View view, char *buffer, int bufferLen);		/* obsolete! */
 
 PR_PUBLIC_API(PRBool)	HT_GetNodeData (HT_Resource node, void *token,
 					uint32 tokenType, void **data);
@@ -323,6 +323,9 @@ PR_PUBLIC_API(void)		HT_HideColumn(HT_View view, void *token, uint32 tokenType);
 PR_PUBLIC_API(PRBool)		HT_ContainerSupportsNaturalOrderSort(HT_Resource container);
 PR_PUBLIC_API(void)		HT_SetColumnFEData(HT_View view, void *token, void *data);
 PR_PUBLIC_API(void *)		HT_GetColumnFEData (HT_View view, void *token);
+
+PR_PUBLIC_API(void)		HT_SetTopVisibleNodeIndex(HT_View view, uint32 topNodeIndex);
+PR_PUBLIC_API(uint32)		HT_GetTopVisibleNodeIndex(HT_View view);
 
 
 /*
@@ -378,8 +381,8 @@ PR_PUBLIC_API(RDF_Resource) HT_GetRDFResource (HT_Resource node);
  * Access the node's name and URL
  */
 
-PR_PUBLIC_API(char*) HT_GetNodeURL(HT_Resource node);
-PR_PUBLIC_API(char*) HT_GetNodeName(HT_Resource node);
+PR_PUBLIC_API(char *) HT_GetNodeURL(HT_Resource node);
+PR_PUBLIC_API(char *) HT_GetNodeName(HT_Resource node);
 
 /*-----------------------------------------------------------------------*/
 /*                          Accessor and Mutators                        */
