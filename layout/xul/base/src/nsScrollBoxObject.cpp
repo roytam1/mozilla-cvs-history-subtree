@@ -42,8 +42,8 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsIDOMNSDocument.h"
 #include "nsIDOMElement.h"
-#include "nsIDOMXULElement.h"
 #include "nsIPresContext.h"
 #include "nsIFrame.h"
 #include "nsIScrollableView.h"
@@ -207,6 +207,7 @@ NS_IMETHODIMP nsScrollBoxObject::ScrollToLine(PRInt32 line)
 /* void scrollToElement (in nsIDOMElement child); */
 NS_IMETHODIMP nsScrollBoxObject::ScrollToElement(nsIDOMElement *child)
 {
+    NS_ENSURE_ARG_POINTER(child);
     nsIScrollableView* scrollableView = GetScrollableView();
     if (!scrollableView)
        return NS_ERROR_FAILURE;
@@ -221,12 +222,21 @@ NS_IMETHODIMP nsScrollBoxObject::ScrollToElement(nsIDOMElement *child)
     nsIFrame* frame = GetFrame();
     nsIBox *box;
     CallQueryInterface(frame, &box);
+    NS_ASSERTION(box, "Failed to QI from nsIFrame to nsIBox");
 
     nsRect rect, crect;
     nsIBox* scrolledBox;
-    nsCOMPtr<nsIDOMXULElement> childDOMXULElement (do_QueryInterface(child));
-    nsIBoxObject * childBoxObject;
-	childDOMXULElement->GetBoxObject(&childBoxObject);
+    nsCOMPtr<nsIDOMDocument> doc;
+    child->GetOwnerDocument(getter_AddRefs(doc));
+    nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(doc));
+    if(!nsDoc)
+        return NS_ERROR_UNEXPECTED;
+
+    nsCOMPtr<nsIBoxObject> childBoxObject;
+    nsDoc->GetBoxObjectFor(child, getter_AddRefs(childBoxObject));
+    if(!childBoxObject)
+      return NS_ERROR_UNEXPECTED;
+    
 
     PRInt32 x,y;
     childBoxObject->GetX(&x);
@@ -287,6 +297,7 @@ NS_IMETHODIMP nsScrollBoxObject::GetScrolledSize(PRInt32 *width, PRInt32 *height
 /* void ensureElementIsVisible (in nsIDOMElement child); */
 NS_IMETHODIMP nsScrollBoxObject::EnsureElementIsVisible(nsIDOMElement *child)
 {
+    NS_ENSURE_ARG_POINTER(child);
     nsIScrollableView* scrollableView = GetScrollableView();
     if (!scrollableView)
        return NS_ERROR_FAILURE;
@@ -301,12 +312,21 @@ NS_IMETHODIMP nsScrollBoxObject::EnsureElementIsVisible(nsIDOMElement *child)
     nsIFrame* frame = GetFrame();
     nsIBox* box;
     CallQueryInterface(frame, &box);
+    NS_ASSERTION(box, "Failed to QI from nsIFrame to nsIBox");
 
     nsRect rect, crect;
     nsIBox* scrolledBox;
-    nsCOMPtr<nsIDOMXULElement> childDOMXULElement (do_QueryInterface(child));
-    nsIBoxObject * childBoxObject;
-    childDOMXULElement->GetBoxObject(&childBoxObject);
+    nsCOMPtr<nsIDOMDocument> doc;
+    child->GetOwnerDocument(getter_AddRefs(doc));
+    nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(doc));
+    if(!nsDoc)
+        return NS_ERROR_UNEXPECTED;
+
+    nsCOMPtr<nsIBoxObject> childBoxObject;
+    nsDoc->GetBoxObjectFor(child, getter_AddRefs(childBoxObject));
+    if(!childBoxObject)
+        return NS_ERROR_UNEXPECTED;
+
 
     PRInt32 x,y,width,height;
     childBoxObject->GetX(&x);
