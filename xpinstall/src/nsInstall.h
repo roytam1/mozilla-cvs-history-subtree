@@ -32,6 +32,8 @@
 
 #include "jsapi.h"
 
+#include "plevent.h"
+
 #include "nsString.h"
 #include "nsFileSpec.h"
 #include "nsVector.h"
@@ -61,6 +63,9 @@ class nsInstallInfo
     
     PRBool    IsMultipleTrigger();
   
+    PLEventQueue* GetUIEventQueue(void) const { return mUIEventQueue; }
+    void          SetUIEventQueue(PLEventQueue* queue) { mUIEventQueue = queue; }
+    
   private:
     
     void DeleteVector(nsVector* vector);
@@ -77,6 +82,8 @@ class nsInstallInfo
 
     nsVector *mFromURLs;
     nsVector *mLocalFiles;
+
+    PLEventQueue *mUIEventQueue;  // this should be moved to private and have accessors
 };
 
 

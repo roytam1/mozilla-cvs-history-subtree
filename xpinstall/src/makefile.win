@@ -38,17 +38,20 @@ LCFLAGS =          \
         $(DEFINES) \
         $(NULL)
 
-LINCS=                                 \
-        -I$(XPDIST)\public\xpinstall   \
-        -I$(XPDIST)\public\jar         \
-        -I$(XPDIST)\public\libreg      \
-        -I$(XPDIST)\public\netlib      \
-        -I$(XPDIST)\public\xpcom       \
-        -I$(XPDIST)\public\pref        \
-        -I$(XPDIST)\public\js          \
-        -I$(XPDIST)\public\dom         \
-        -I$(XPDIST)\public\raptor      \
-        -I$(XPDIST)\public\nspr2       \
+LINCS=                          \
+        -I$(PUBLIC)\libxpt      \
+        -I$(PUBLIC)\xptinfo     \
+        -I$(PUBLIC)\xptcall     \
+        -I$(PUBLIC)\xpinstall   \
+        -I$(PUBLIC)\jar         \
+        -I$(PUBLIC)\libreg      \
+        -I$(PUBLIC)\netlib      \
+        -I$(PUBLIC)\xpcom       \
+        -I$(PUBLIC)\pref        \
+        -I$(PUBLIC)\js          \
+        -I$(PUBLIC)\dom         \
+        -I$(PUBLIC)\raptor      \
+        -I$(PUBLIC)\nspr2       \
         $(NULL)
 
 LLIBS =                                \
@@ -83,6 +86,7 @@ OBJS =                                          \
        .\$(OBJDIR)\nsInstallUninstall.obj       \
        .\$(OBJDIR)\nsInstallResources.obj       \
        .\$(OBJDIR)\ScheduledTasks.obj           \
+       .\$(OBJDIR)\nsAppShellProxy.obj          \
        $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -82,15 +82,15 @@ nsInstallFolder::nsInstallFolder(const nsString& aFolderID)
 
 nsInstallFolder::nsInstallFolder(const nsString& aFolderID, const nsString& aRelativePath)
 {
-    mUrlPath = nsnull;
+    mFileSpec = nsnull;
     SetDirectoryPath( aFolderID, aRelativePath);
 }
 
 
 nsInstallFolder::~nsInstallFolder()
 {
-    if (mUrlPath != nsnull)
-        delete mUrlPath;
+    if (mFileSpec != nsnull)
+        delete mFileSpec;
 }
         
 void 
@@ -98,10 +98,10 @@ nsInstallFolder::GetDirectoryPath(nsString& aDirectoryPath)
 {
 	aDirectoryPath.SetLength(0);
     
-    if (mUrlPath != nsnull)
+    if (mFileSpec != nsnull)
     {
         // We want the a NATIVE path.
-       aDirectoryPath.Append(mUrlPath->GetCString());
+       aDirectoryPath.Append(mFileSpec->GetCString());
     }
 }
 
@@ -115,7 +115,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
     }
     else if ( aFolderID.EqualsIgnoreCase("Installed") )
     {   
-        mUrlPath = new nsFileSpec(aRelativePath, PR_TRUE);  // creates the directories to the relative path.
+        mFileSpec = new nsFileSpec(aRelativePath, PR_TRUE);  // creates the directories to the relative path.
         return;
     }
     else
@@ -229,7 +229,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 		    default:
 			   return;
 		}
-
+#ifndef XP_MAC
         if (aRelativePath.Length() > 0)
         {
             nsString tempPath(aRelativePath);
@@ -237,17 +237,17 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
             if (aRelativePath.Last() != '/' || aRelativePath.Last() != '\\')
                 tempPath += '/';
 
-            *mUrlPath += tempPath;
-            
-            // make sure that the directory is created.
-            nsFileSpec(mUrlPath->GetCString(), PR_TRUE);
+            *mFileSpec += tempPath;
         }
+#endif
+            // make sure that the directory is created.
+        nsFileSpec(mFileSpec->GetCString(), PR_TRUE);
     }
 }
 
 void nsInstallFolder::PickDefaultDirectory()
 {
-    //FIX:  Need to put up a dialog here and set mUrlPath
+    //FIX:  Need to put up a dialog here and set mFileSpec
     return;   
 }
 
@@ -277,5 +277,5 @@ void nsInstallFolder::operator = (enum nsSpecialSystemDirectory::SystemDirectori
 //----------------------------------------------------------------------------------------
 {
     nsSpecialSystemDirectory temp(aSystemSystemDirectory);
-    mUrlPath = new nsFileSpec(temp);
+    mFileSpec = new nsFileSpec(temp);
 }

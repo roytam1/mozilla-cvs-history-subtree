@@ -77,6 +77,8 @@ nsInstallInfo::nsInstallInfo(const nsString& fromURL, const nsString& arguments)
 nsInstallInfo::nsInstallInfo(const nsString& fromURL, const nsString& arguments, const nsString& flags)
 {
 
+    mUIEventQueue       = nsnull;
+
     mFromURL            = new nsString(fromURL);
     mArguments          = new nsString(arguments);
     mFlags              = new nsString(flags);
@@ -155,7 +157,7 @@ nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
 
     if (aURL.Compare(nsString("file://"), false, 7) == 0)
     {       
-        tempFileString = nsFilePath(nsFileURL(aURL));
+        tempFileString.SetString( nsprPath(nsFileURL(aURL)) );
     }
     else
     {
@@ -175,7 +177,7 @@ nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
 
         tempFile.MakeUnique();
 
-        tempFileString = nsFilePath(tempFile);
+        tempFileString.SetString( nsprPath( nsFilePath(tempFile) ) );
     }
 }
 
@@ -1525,7 +1527,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedNa
     // We will overwrite what is in the way.  is this something that we want to do?  
     extractHereSpec->Delete(PR_FALSE);
 
-    result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), nsFilePath(*extractHereSpec) );
+    result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), nsprPath( *extractHereSpec ) );
     
     if (result == 0)
     {

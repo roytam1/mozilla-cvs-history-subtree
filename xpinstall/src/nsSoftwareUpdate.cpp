@@ -126,7 +126,7 @@ nsSoftwareUpdate::Startup()
     /***************************************/
     
     nsSpecialSystemDirectory appDir(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-    VR_SetRegDirectory(appDir.GetCString());
+    VR_SetRegDirectory( nsprPath(appDir) );
  
     NR_StartupRegistry();   /* startup the registry; if already started, this will essentially be a noop */
 

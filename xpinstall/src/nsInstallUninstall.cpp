@@ -148,7 +148,8 @@ extern "C" NS_EXPORT PRInt32 SU_Uninstall(char *regPackageName)
     }
     
     err = VR_Remove(regPackageName);
-
+    // there is a problem here.  It looks like if the file is refcounted, we still blow away the reg key
+    // FIX!
     state = 0;
     status = VR_UninstallEnumSharedFiles( regPackageName, &state, sharedfilebuf, MAXREGPATHLEN );
     while (status == REGERR_OK)

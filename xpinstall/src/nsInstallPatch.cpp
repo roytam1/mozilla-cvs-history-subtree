@@ -216,7 +216,7 @@ PRInt32 nsInstallPatch::Complete()
             char* tempVersion = tempVersionString.ToNewCString();
 
             err = VR_Install( tempRegName, 
-                              (char*)mTargetFile->GetCString(), 
+                              (char*) (const char*) nsprPath(*mTargetFile), 
                               tempVersion, 
                               PR_FALSE );
             
@@ -283,7 +283,7 @@ void*
 nsInstallPatch::HashFilePath(const nsFilePath& aPath)
 {
     PRUint32 rv = 0;
-    const char* cPath = aPath;
+    const char* cPath = nsprPath(aPath);
     
     if(cPath != nsnull) 
     {

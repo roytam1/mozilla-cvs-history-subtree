@@ -251,8 +251,8 @@ nsInstallFile::RegisterInVersionRegistry()
     }
 
     VR_Install( (char*)(const char*)nsAutoCString(*mVersionRegistryName), 
-                (char*)mFinalFile->GetCString(),  // FIX: mac?  What should we be passing to the version registry: native of unix???
-                (char*)(const char*) nsAutoCString(regPackageName), 
+                (char*)(const char*)nsprPath(*mFinalFile),
+                (char*)(const char*)nsAutoCString(regPackageName), 
                 PR_FALSE );
 
     if (!mUpgradeFile) 
