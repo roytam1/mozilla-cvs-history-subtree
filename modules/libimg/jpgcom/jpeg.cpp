@@ -49,8 +49,6 @@
 PR_BEGIN_EXTERN_C
 #include "jpeglib.h"
 #include "jerror.h"
-
-extern int MK_OUT_OF_MEMORY;
 PR_END_EXTERN_C
 
 #ifdef XP_OS2
