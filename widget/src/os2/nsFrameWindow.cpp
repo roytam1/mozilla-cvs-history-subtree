@@ -43,6 +43,7 @@
 extern nsIRollupListener * gRollupListener;
 extern nsIWidget         * gRollupWidget;
 extern PRBool              gRollupConsumeRollupEvent;
+extern PRBool              gDontActivate;
 
 BOOL nsFrameWindow::fHiddenWindowCreated = FALSE;
 
@@ -339,6 +340,11 @@ MRESULT nsFrameWindow::FrameMessage( ULONG msg, MPARAM mp1, MPARAM mp2)
 
    switch( msg)
    {
+      case WM_BUTTON1DOWN:
+         if (WinQueryWindowULong(mFrameWnd, QWL_STYLE) & WS_MINIMIZED) {
+           gDontActivate = PR_TRUE;
+         }
+         break;
       case WM_WINDOWPOSCHANGED:
       {
          PSWP pSwp = (PSWP) mp1;
