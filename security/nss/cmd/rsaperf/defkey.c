@@ -38,7 +38,6 @@
 #include "secoidt.h"
 #include "lowkeyti.h"
 
-#undef CONST
 #define CONST
 
 static CONST unsigned char default_n[128] = {

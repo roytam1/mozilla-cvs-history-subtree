@@ -2257,37 +2257,29 @@ pk11_DestroySlotData(PK11Slot *slot)
  * handle the SECMOD.db
  */
 char **
-NSC_ModuleDBFunc(unsigned long function,char *parameters, void *args)
+NSC_ModuleDBFunc(unsigned long function,char *parameters, char *args)
 {
-    char *secmod = NULL;
-    char *appName = NULL;
-    char *filename = NULL;
+    char *secmod;
     PRBool rw;
     static char *success="Success";
     char **rvstr = NULL;
 
-    secmod = secmod_getSecmodName(parameters,&appName,&filename, &rw);
+    secmod = secmod_getSecmodName(parameters,&rw);
 
     switch (function) {
     case SECMOD_MODULE_DB_FUNCTION_FIND:
-	rvstr = secmod_ReadPermDB(appName,filename,secmod,(char *)parameters,rw);
+	rvstr = secmod_ReadPermDB(secmod,parameters,rw);
 	break;
     case SECMOD_MODULE_DB_FUNCTION_ADD:
-	rvstr = (secmod_AddPermDB(appName,filename,secmod,(char *)args,rw) 
-				== SECSuccess) ? &success: NULL;
+	rvstr = (secmod_AddPermDB(secmod,args,rw) == SECSuccess) 
+							? &success: NULL;
 	break;
     case SECMOD_MODULE_DB_FUNCTION_DEL:
-	rvstr = (secmod_DeletePermDB(appName,filename,secmod,(char *)args,rw)
-				 == SECSuccess) ? &success: NULL;
-	break;
-    case SECMOD_MODULE_DB_FUNCTION_RELEASE:
-	rvstr = (secmod_ReleasePermDBData(appName,filename,secmod,
-			(char **)args,rw) == SECSuccess) ? &success: NULL;
+	rvstr = (secmod_DeletePermDB(secmod,args,rw) == SECSuccess) 
+							? &success: NULL;
 	break;
     }
     if (secmod) PR_smprintf_free(secmod);
-    if (appName) PORT_Free(appName);
-    if (filename) PORT_Free(filename);
     return rvstr;
 }
 
@@ -2432,7 +2424,6 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
     pInfo->flags = 0;
     return CKR_OK;
 }
-
 
 /* NSC_GetSlotList obtains a list of slots in the system. */
 CK_RV NSC_GetSlotList(CK_BBOOL tokenPresent,
@@ -3222,6 +3213,7 @@ CK_RV NSC_CopyObject(CK_SESSION_HANDLE hSession,
     if (crv != CKR_OK) {
 	pk11_FreeObject(destObject);
 	pk11_FreeSession(session);
+	return crv;
     }
 
     crv = pk11_handleObject(destObject,session);
@@ -3496,16 +3488,6 @@ pk11_key_collect(DBT *key, DBT *data, void *arg)
 
 	if (keyData->id->len == 0) {
 	    haveMatch = PR_TRUE; /* taking any key */
-	    /* Make sure this isn't a NSC_KEY */
-	    privKey = nsslowkey_FindKeyByPublicKey(keyData->slot->keyDB, 
-					&tmpDBKey, keyData->slot->password);
-	    if (privKey) {
-		haveMatch = isSecretKey(privKey) ?
-				(PRBool)(keyData->classFlags & NSC_KEY) != 0:
-				(PRBool)(keyData->classFlags & 
-					      (NSC_PRIVATE|NSC_PUBLIC)) != 0;
-		nsslowkey_DestroyPrivateKey(privKey);
-	    }
 	} else {
 	    SHA1_HashBuf( hashKey, key->data, key->size ); /* match id */
 	    haveMatch = SECITEM_ItemsAreEqual(keyData->id,&result);
@@ -3589,15 +3571,15 @@ pk11_searchKeys(PK11Slot *slot, SECItem *key_id, PRBool isLoggedIn,
     if (key_id->data) {
 	privKey = nsslowkey_FindKeyByPublicKey(keyHandle, key_id, slot->password);
 	if (privKey) {
-	    if ((classFlags & NSC_KEY) && isSecretKey(privKey)) {
+	    if (classFlags & NSC_KEY) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_KEY));
 	    }
-	    if ((classFlags & NSC_PRIVATE) && !isSecretKey(privKey)) {
+	    if (classFlags & NSC_PRIVATE) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_PRIV));
 	    }
-	    if ((classFlags & NSC_PUBLIC) && !isSecretKey(privKey)) {
+	    if (classFlags & NSC_PUBLIC) {
     	        pk11_addHandle(search,
 			pk11_mkHandle(slot,key_id,PK11_TOKEN_TYPE_PUB));
 	    }
@@ -3641,10 +3623,6 @@ static SECStatus
 pk11_cert_collect(NSSLOWCERTCertificate *cert,void *arg)
 {
     pk11CertData *cd = (pk11CertData *)arg;
-
-    if (cert == NULL) {
-	return SECSuccess;
-    }
 
     if (cd->certs == NULL) {
 	return SECFailure;

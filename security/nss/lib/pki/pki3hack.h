@@ -111,9 +111,6 @@ STAN_RemoveModuleFromDefaultTrustDomain
 );
 
 NSS_EXTERN CERTCertificate *
-STAN_ForceCERTCertificateUpdate(NSSCertificate *c);
-
-NSS_EXTERN CERTCertificate *
 STAN_GetCERTCertificate(NSSCertificate *c);
 
 NSS_EXTERN NSSCertificate *

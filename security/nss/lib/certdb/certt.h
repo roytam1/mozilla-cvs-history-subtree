@@ -177,7 +177,7 @@ struct CERTCertTrustStr {
 /*
  * defined the types of trust that exist
  */
-typedef enum SECTrustTypeEnum {
+typedef enum {
     trustSSL = 0,
     trustEmail = 1,
     trustObjectSigning = 2,
@@ -458,7 +458,7 @@ struct CERTDistNamesStr {
 			 NS_CERT_TYPE_EMAIL_CA | \
 			 NS_CERT_TYPE_OBJECT_SIGNING_CA | \
 			 EXT_KEY_USAGE_STATUS_RESPONDER )
-typedef enum SECCertUsageEnum {
+typedef enum {
     certUsageSSLClient = 0,
     certUsageSSLServer = 1,
     certUsageSSLServerWithStepUp = 2,
@@ -476,7 +476,7 @@ typedef enum SECCertUsageEnum {
 /*
  * Does the cert belong to the user, a peer, or a CA.
  */
-typedef enum CERTCertOwnerEnum {
+typedef enum {
     certOwnerUser = 0,
     certOwnerPeer = 1,
     certOwnerCA = 2
@@ -485,7 +485,7 @@ typedef enum CERTCertOwnerEnum {
 /*
  * This enum represents the state of validity times of a certificate
  */
-typedef enum SECCertTimeValidityEnum {
+typedef enum {
     secCertTimeValid = 0,
     secCertTimeExpired = 1,
     secCertTimeNotValidYet = 2
@@ -576,7 +576,7 @@ struct CERTBasicConstraintsStr {
 
 /* If we needed to extract the general name field, use this */
 /* General Name types */
-typedef enum CERTGeneralNameTypeEnum {
+typedef enum {
     certOtherName = 1,
     certRFC822Name = 2,
     certDNSName = 3,
@@ -652,7 +652,7 @@ struct CERTAuthKeyIDStr {
 /*
  * defined the types of CRL Distribution points
  */
-typedef enum DistributionPointTypesEnum {
+typedef enum {
     generalName = 1,			/* only support this for now */
     relativeDistinguishedName = 2
 } DistributionPointTypes;
@@ -734,7 +734,7 @@ typedef char * (*CERTDBNameFunc)(void *arg, int dbVersion);
 /*
  * types of cert packages that we can decode
  */
-typedef enum CERTPackageTypeEnum {
+typedef enum {
     certPackageNone = 0,
     certPackageCert = 1,
     certPackagePKCS7 = 2,

@@ -3619,9 +3619,7 @@ PK11_ListPublicKeysInSlot(PK11SlotInfo *slot, char *nickname)
     for (i=0; i < objCount ; i++) {
 	SECKEYPublicKey *pubKey = 
 				PK11_ExtractPublicKey(slot,nullKey,key_ids[i]);
-	if (pubKey) {
-	    SECKEY_AddPublicKeyToListTail(keys, pubKey);
-	}
+	SECKEY_AddPublicKeyToListTail(keys, pubKey);
    }
 
    PORT_Free(key_ids);
@@ -3838,10 +3836,11 @@ SEC_DeletePermCRL(CERTSignedCrl *crl)
     crv = PK11_DestroyTokenObject(slot,crl->pkcs11ID);
     if (crv != CKR_OK) {
         PORT_SetError( PK11_MapError(crv) );
-	return SECFailure;
+	goto loser;
     }
     crl->slot = NULL;
     PK11_FreeSlot(slot);
+loser:
     return SECSuccess;
 }
 
