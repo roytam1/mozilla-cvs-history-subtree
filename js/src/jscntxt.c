@@ -331,8 +331,17 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
 	report.filename = fp->script->filename;
 	report.lineno = js_PCToLineNumber(fp->script, fp->pc);
     } else {
-	report.filename = NULL;
-	report.lineno = 0;
+         /*  We can't find out where the error was from the current
+             frame so see if the next frame has a script/pc combo we
+             could use */
+         if (fp && fp->down && fp->down->script && fp->down->pc) {
+           report.filename = fp->down->script->filename;
+           report.lineno = js_PCToLineNumber(fp->down->script, fp->down->pc);
+         }
+         else {
+           report.filename = NULL;
+           report.lineno = 0;
+         }
     }
 
     /* XXX should fetch line somehow */
