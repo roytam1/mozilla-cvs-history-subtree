@@ -196,6 +196,7 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
                const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen)
 {
+  CMTStatus rv = CMTSuccess;
   CMTItem message;
   EncryptRequestMessage request;
   SingleItemMessage reply;
@@ -205,7 +206,8 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
   request.data = CMT_CopyDataToItem(data, dataLen);
 
   /* Encode */
-  if (CMT_EncodeMessage(EncryptRequestTemplate, &message, &request) != CMTSuccess) {
+  rv = CMT_EncodeMessage(EncryptRequestTemplate, &message, &request);
+  if (rv != CMTSuccess) {
     goto loser;
   }
 
@@ -213,11 +215,13 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
 
   /* Send */
   /* if (CMT_SendMessage(control, &message) != CMTSuccess) goto loser; */
-  if (tmp_SendMessage(control, &message) != CMTSuccess) goto loser;
+  rv = tmp_SendMessage(control, &message);
+  if (rv != CMTSuccess) goto loser;
 
-  if (message.type != SSM_SDR_ENCRYPT_REPLY) goto loser;
+  if (message.type != SSM_SDR_ENCRYPT_REPLY) { rv = CMTFailure; goto loser; }
 
-  if (CMT_DecodeMessage(SingleItemMessageTemplate, &reply, &message) != CMTSuccess)
+  rv = CMT_DecodeMessage(SingleItemMessageTemplate, &reply, &message);
+  if (rv != CMTSuccess)
     goto loser;
 
   *result = reply.item.data;
@@ -231,13 +235,14 @@ loser:
   if (request.data.data) free(request.data.data);
   if (reply.item.data) free(reply.item.data);
 
-  return CMTSuccess; /* need return value */
+  return rv; /* need return value */
 }
 
 CMTStatus
 CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen)
 {
+  CMTStatus rv;
   CMTItem message;
   SingleItemMessage request;
   SingleItemMessage reply;
@@ -246,7 +251,8 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
   request.item = CMT_CopyDataToItem(data, dataLen);
 
   /* Encode */
-  if (CMT_EncodeMessage(SingleItemMessageTemplate, &message, &request) != CMTSuccess) {
+  rv = CMT_EncodeMessage(SingleItemMessageTemplate, &message, &request);
+  if (rv != CMTSuccess) {
     goto loser;
   }
 
@@ -254,11 +260,13 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
 
   /* Send */
   /* if (CMT_SendMessage(control, &message) != CMTSuccess) goto loser; */
-  if (tmp_SendMessage(control, &message) != CMTSuccess) goto loser;
+  rv = tmp_SendMessage(control, &message);
+  if (rv != CMTSuccess) goto loser;
 
-  if (message.type != SSM_SDR_DECRYPT_REPLY) goto loser;
+  if (message.type != SSM_SDR_DECRYPT_REPLY) { rv = CMTFailure; goto loser; }
 
-  if (CMT_DecodeMessage(SingleItemMessageTemplate, &reply, &message) != CMTSuccess)
+  rv = CMT_DecodeMessage(SingleItemMessageTemplate, &reply, &message);
+  if (rv != CMTSuccess)
     goto loser;
 
   *result = reply.item.data;
@@ -271,7 +279,7 @@ loser:
   if (request.item.data) free(request.item.data);
   if (reply.item.data) free(reply.item.data);
 
-  return CMTSuccess; /* need return value */
+  return rv; /* need return value */
 }
 
 /* "encrypt" */
