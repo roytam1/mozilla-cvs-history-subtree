@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *     Scott MacGregor <mscott@netscape.com>
+ *      Scott MacGregor         <mscott@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -36,39 +36,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.h"
-#include "nsCOMPtr.h"
 
-#include "nsIFactory.h"
-#include "nsIGenericFactory.h"
-#include "nsIServiceManager.h"
-#include "nsIModule.h"
+/* This is a private interface used exclusively by SMIME. NO ONE outside of extensions/smime
+   should have any knowledge nor should be referring to this interface. 
+*/
 
-#include "pratom.h"
-#include "nsMsgSMIMECID.h"
-#include "nsMsgCompCID.h"
+#include "nsISupports.idl"
 
-/* Include all of the interfaces our factory can generate components for */
-#include "nsMsgComposeSecure.h"
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeSecure);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSMIMEComposeFields);
-
-////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////
-
-static nsModuleComponentInfo components[] =
+[scriptable, uuid(338E91F9-5970-4f81-B771-0822A32B1161)]
+interface nsIMsgSMIMECompFields : nsISupports 
 {
-  { "Msg Compose Secure",
-    NS_MSGCOMPOSESECURE_CID,
-    NS_MSGCOMPOSESECURE_CONTRACTID,
-    nsMsgComposeSecureConstructor },
-  { "Msg SMIME Compose Fields",
-    NS_MSGSMIMECOMPFIELDS_CID,
-    NS_MSGSMIMECOMPFIELDS_CONTRACTID,
-    nsMsgSMIMEComposeFieldsConstructor }
+  attribute boolean signMessage;
+  attribute boolean alwaysEncryptMessage;
 };
-
-  
-NS_IMPL_NSGETMODULE(nsMsgComposeModule, components)
