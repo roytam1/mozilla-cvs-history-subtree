@@ -6778,7 +6778,10 @@ PR_PUBLIC_API(char *)
 HT_GetNodeURL(HT_Resource node)
 {
 	char		*retVal = NULL;
-
+#ifdef DEBUG 
+	RDF_BT type = resourceType(node->node);
+#endif
+	
 	XP_ASSERT(node != NULL);
 	XP_ASSERT(node->node != NULL);
 
@@ -6809,7 +6812,7 @@ HT_GetNodeName(HT_Resource node)
 }
 
 
-
+ 
 PR_PUBLIC_API(void)
 HT_SetTopVisibleNodeIndex(HT_View view, uint32 topNodeIndex)
 {

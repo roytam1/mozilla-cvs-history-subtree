@@ -150,7 +150,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_HTMLURL = newResource("htmlURL", RDF_HTML_URL_STR);
   gNavCenter->RDF_HTMLHeight = newResource("htmlHeight", RDF_HTML_HEIGHT_STR);
   gNavCenter->RDF_LocalFiles = createContainer("NC:LocalFiles");
-  setResourceType(gNavCenter->RDF_LocalFiles, LFS_RT);
+  /*  setResourceType(gNavCenter->RDF_LocalFiles, LFS_RT); */
   gNavCenter->RDF_FTP = createContainer("NC:FTP");
   gNavCenter->RDF_FTP = newResource("NC:FTP", RDF_FTP_NAME_STR);
   gNavCenter->RDF_Appletalk = createContainer("NC:Appletalk");
@@ -177,7 +177,7 @@ createNavCenterVocab () {
   gNavCenter->RDF_HTMLType = RDF_GetResource (gCoreDB, "HTMLPage", true);
   gNavCenter->RDF_URLShortcut = RDF_GetResource(gCoreDB, "URLShortcut", true);
   gNavCenter->RDF_Cookies = createContainer("NC:Cookies");
-  setResourceType(gNavCenter->RDF_Cookies, COOKIE_RT);
+  setResourceType(gNavCenter->RDF_Cookies, COOKIE_RT); 
   gNavCenter->RDF_Toolbar = createContainer("NC:Toolbar");
   gNavCenter->RDF_JSec = createContainer("NC:Jsec");
   gNavCenter->RDF_JSecPrincipal = RDF_GetResource(gCoreDB, "JsecPrincipal", true);

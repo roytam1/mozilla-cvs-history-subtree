@@ -452,7 +452,7 @@ resourceTypeFromID (char* id)
     return RDF_RT;
   } else if (endsWith(".mco", id)) {
     return RDF_RT;
-  } else if (startsWith("file:", id) || (startsWith("NC:LocalFiles", id))) {
+  } else if (startsWith("file:", id))  {
     return LFS_RT;
   } else if (startsWith("nes:", id)) {
     return ES_RT;
