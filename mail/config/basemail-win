@@ -105,6 +105,10 @@ components\xpinstall.xpt
 components\xmlextras.dll
 components\xmlextras.xpt
 
+; plugin packaging
+components\gkplugin.dll
+components\plugin.xpt
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Base Package Files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
