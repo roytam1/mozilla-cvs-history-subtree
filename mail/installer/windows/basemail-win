@@ -239,6 +239,8 @@ thunderbird\components\xppref32.dll
 ; profile
 thunderbird\components\profile.dll                  
 thunderbird\components\profile.xpt
+thunderbird\components\profileimport.dll
+thunderbird\components\toolkitprofile.xpt
 
 ; rdf
 thunderbird\components\rdf.dll

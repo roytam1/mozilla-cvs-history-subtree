@@ -201,6 +201,8 @@ components\pref.dll
 ; profile
 components\profile.dll                  
 components\profile.xpt
+components\profileimport.dll
+components\toolkitprofile.xpt
 
 ; rdf
 components\rdf.dll
