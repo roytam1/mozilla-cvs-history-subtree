@@ -279,7 +279,9 @@ typedef char GETHOSTBYNAME_buf_t [BUFSIZ /* XXX might be too small */];
 #elif defined(HPUX10) && defined(_REENTRANT) && !defined(HPUX11)
 #define CTIME( c, b, l )		nsldapi_compat_ctime_r( c, b, l )
 #elif defined( IRIX6_2 ) || defined( IRIX6_3 ) || defined(UNIXWARE) \
-	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) || defined(hpux) || defined(HPUX11) || defined(NETBSD) || defined(IRIX6)
+	|| defined(OSF1V4) || defined(AIX) || defined(UnixWare) \
+        || defined(hpux) || defined(HPUX11) || defined(NETBSD) \
+        || defined(IRIX6) || defined (FREEBSD)
 #define CTIME( c, b, l )                ctime_r( c, b )
 #elif defined( OSF1V3 )
 #define CTIME( c, b, l )		(ctime_r( c, b, l ) ? NULL : b)
