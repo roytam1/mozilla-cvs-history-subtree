@@ -438,6 +438,12 @@ ViewportFrame::ReflowFixedFrames(nsIPresContext*          aPresContext,
   reflowState.mComputedWidth = width;
   reflowState.mComputedHeight = height;
 
+  // If an incremental reflow was targeted at the viewport frame
+  // itself, then we'll be asked to reflow all the fixed frames,
+  // too. Propagate the reflow as a `resize'.
+  if (reflowState.reason == eReflowReason_Incremental)
+    reflowState.reason = eReflowReason_Resize;
+
   nsIFrame* kidFrame;
   for (kidFrame = mFixedFrames.FirstChild(); nsnull != kidFrame; kidFrame->GetNextSibling(&kidFrame)) {
     // Reflow the frame using our reflow reason
