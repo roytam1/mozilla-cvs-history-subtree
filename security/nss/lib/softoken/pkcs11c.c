@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -4414,7 +4413,6 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
     CK_OBJECT_CLASS classType	= CKO_SECRET_KEY;
     CK_KEY_DERIVATION_STRING_DATA *stringPtr;
     PRBool          isTLS = PR_FALSE;
-    PRBool          isDH = PR_FALSE;
     SECStatus       rv;
     int             i;
     unsigned int    outLen;
@@ -4495,20 +4493,15 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
      * generate the master secret 
      */
     case CKM_TLS_MASTER_KEY_DERIVE:
-    case CKM_TLS_MASTER_KEY_DERIVE_DH:
 	isTLS = PR_TRUE;
 	/* fall thru */
     case CKM_SSL3_MASTER_KEY_DERIVE:
-    case CKM_SSL3_MASTER_KEY_DERIVE_DH:
       {
 	CK_SSL3_MASTER_KEY_DERIVE_PARAMS *ssl3_master;
 	SSL3RSAPreMasterSecret *rsa_pms;
-        if ((pMechanism->mechanism == CKM_SSL3_MASTER_KEY_DERIVE_DH) ||
-            (pMechanism->mechanism == CKM_TLS_MASTER_KEY_DERIVE_DH))
-		isDH = PR_TRUE;
 
-	/* first do the consistancy checks */
-	if (!isDH && (att->attrib.ulValueLen != SSL3_PMS_LENGTH)) {
+	/* first do the consistancy checkes */
+	if (att->attrib.ulValueLen != SSL3_PMS_LENGTH) {
 	    crv = CKR_KEY_TYPE_INCONSISTENT;
 	    break;
 	}
@@ -5472,3 +5465,5 @@ CK_RV NSC_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey)
     pk11_FreeAttribute(att);
     return crv;
 }
+
+

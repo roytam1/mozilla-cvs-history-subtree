@@ -29,8 +29,8 @@
 #       as would have been produced with -cron
 #   -m <mailinglist> - send filename to mailinglist (csl) only useful
 #       with -f
+#   -l <mozroot> run on a local build O_LOCAL
 #   -cron equivalient to -y -s -d -f $RESULTDIR/$HOST.<scriptname>
-#   -t  run on a tinderbox build that means: local, from the startlocation
 #
 # special strings
 # ---------------
@@ -82,8 +82,6 @@ O_CRON=OFF          # turned on by -cron cron use only
 O_CRONFILE=OFF      # turned on by -cron cron and -fcron
 O_LOCAL=OFF         # turned on by -l run on a local build in $MOZROOT
 O_MAIL=OFF          # turned on by -m - sends email
-O_TBX=OFF           # turned on by -t run on a tinderbox build
-                    # that means: local, from the startlocation
 
 if  [ -z "$DOMSUF" ]
 then
@@ -129,29 +127,27 @@ KILL_SELFSERV=OFF   # if sourcing script sets this to on cleanup will also
                     # kill the running selfserv processes
 
                     # Set the masterbuilds 
-if [ -z "$UX_MASTERBUILD" ]
-then                     
-    UX_MASTERBUILD=y2sun2_Solaris8
-fi
-if [ -z "$NT_MASTERBUILD" ]
-then                     
-    NT_MASTERBUILD=blowfish_NT4.0_Win95
-    NT_MB_WAS_SET=FALSE      # in this case later functions can override if
-                             # they find a different build that looks like NT
-else
-    NT_MB_WAS_SET=TRUE
-fi
 if [ -z "$MASTERBUILD" ]    
 then
-    MASTERBUILD=$UX_MASTERBUILD
+    MASTERBUILD=y2sun2_Solaris8
+    #MASTERBUILD=shame_Solaris2.6
+    MB_WAS_SET=FALSE
+else
+    MB_WAS_SET=TRUE
 fi
 
-                    # Set the default build
 if [ -z "$BUILDNUMBER" ]    
 then
     BUILDNUMBER=1
 fi
 export BUILDNUMBER
+if [ -z "$NT_MASTERBUILD" ]
+then                     
+    NT_MASTERBUILD=blowfish_NT4.0_Win95
+    NT_MB_WAS_SET=FALSE
+else
+    NT_MB_WAS_SET=TRUE
+fi
 O_LDIR=OFF          #local QA dir for NT, temporary
 
 if [ -z "$WIN_WAIT_FOREVER" ]    # header is global, some including scripts 
@@ -161,10 +157,8 @@ then                # want the init to wait forever for directories to
 fi
 
 if [ -z "$BC_MASTER" ]    # master directory for backwardscompatibility testing
-then                      # a linux compiler bug prevents us from doing the 
-                          # testing against a rtm - so we rebuild the branch
-    #BC_MASTER="20010212.1.nss32_rtm"
-    BC_MASTER="nss32/builds/20010420-nss-3.2-ref"
+then
+    BC_MASTER="20010212.1.nss32_rtm"
 fi
 
 EARLY_EXIT=TRUE     #before the report file has been created, causes Exit to 
@@ -175,27 +169,33 @@ EARLY_EXIT=TRUE     #before the report file has been created, causes Exit to
 ########################################################################
 glob_init()
 {
-    if [ $O_PARAM = "ON" ] ; then
-        eval_opts $*    # parse parameters and options - set flags
+    if [ $O_PARAM = "ON" ]
+    then
+        eval_opts $*            # parse parameters and options - set flags
     fi
-                        # if running from cron HOST needs to be known early, 
-    init_host            # so the output file name can be constructed. 
+    #if [ $O_CRON = "ON" ]      # if running from cron HOST needs to be
+    #then                       # known early, so the output file name
+        set_host                # can be constructed. If running interactive 
+    #fi                         # it needs to be called by sourcing script
     . $QASCRIPT_DIR/set_environment #finds out if we are running on Windows
     Debug "OPerating system: $os_name $os_full"
-    if [ $O_WIN = "ON" ] ; then
+    if [ $O_WIN = "ON" ] 
+    then
+        #set_host
         write_to_tmpfile
-        MASTERBUILD=$NT_MASTERBUILD
+    else
+        Debug "Not a Windows OS"
     fi
     umask 0    
-    init_dirs
-    init_files
-    init_vars
+    set_dirs
+    set_files
+    set_vars
 }
 
-################################### init_vars ###########################
+################################### set_vars ###########################
 # global shell function, sets the environment variables, part of init 
 ########################################################################
-init_vars()
+set_vars()
 {
     if [ -z "$LOGNAME" ]
     then
@@ -220,7 +220,7 @@ init_vars()
     fi
 }
 
-########################## find_nt_masterbuild #########################
+################################### set_dirs ###########################
 # global shell function, sets the nt masterbuild directories, part of init 
 ########################################################################
 find_nt_masterbuild()
@@ -236,77 +236,39 @@ find_nt_masterbuild()
     Debug "NT_MASTERDIR $NT_MASTERDIR"
 }
 
-set_d2()
-{
-    if [ "$O_TBX" = "ON" ] ; then
-        D2="$TBX_D2"
-        LOCALDIST=${UXDIST}
-    else
-        D2=${D1}/builds/${QAYEAR}${BUILDDATE}.${BUILDNUMBER}
-        LOCALDIST=${D2}/${MASTERBUILD}/mozilla/dist
-    fi
-}
-
-tbx_dirs()
-{
-    TBX_D2=`cd ../../../../..;pwd`
-    D1="${TBX_D2}/../.." 
-    set_d2
-    UX_MASTERDIR=`cd ../../../..;pwd`
-    NT_MASTERDIR=$UX_MASTERDIR
-    MOZILLA_ROOT=$UX_MASTERDIR/mozilla
-
-    UXDIST=${MOZILLA_ROOT}/dist
-    NTDIST=${UXDIST}
-
-    if [ -z "${RESULTDIR}" ] ; then #FIXME, needs to be different for tinderbox
-        RESULTDIR=${UX_MASTERDIR}/mozilla/tests_results/security
-    fi
-
-    TESTSCRIPTDIR=`pwd`
-    COMMON=${TESTSCRIPTDIR}/common
-
-    set_objdir
-    debug_dirs
-    export_dirs
-}
-
-################################### init_dirs ###########################
+################################### set_dirs ###########################
 # global shell function, sets the directories, part of init 
 ########################################################################
-init_dirs()
+set_dirs()
 {
-    if [ "$O_TBX" = "ON" ] ; then
-        tbx_dirs
-        return
-    elif [ "$O_WIN" = "ON" ] ; then
-        win_set_d1
-    else
-        D1=/h/hs-sca15c/export/builds/mccrel/nss/nss$NSSVER
-    fi
-
-    set_d2
-
-    if [ -z "${BCDIST}" ] ; then
-        BCDIST=/h/hs-sca15c/export/builds/mccrel/nss/${BC_MASTER}/${MASTERBUILD}/mozilla/dist
-        #BCDIST=${D1}/builds/${BC_MASTER}/${MASTERBUILD}/mozilla/dist
-    fi
-
-    UX_MASTERDIR=${D2}/${UX_MASTERBUILD}
-    find_nt_masterbuild
-
+#O_LOCAL
     if [ "$O_WIN" = "ON" ]
     then
-        MOZILLA_ROOT=${NT_MASTERDIR}/mozilla
+        win_set_dirs
     else
-        MOZILLA_ROOT=${UX_MASTERDIR}/mozilla
+        D1=/h/hs-sca15c/export/builds/mccrel/nss/nss$NSSVER
+        D3=${D2}/${MASTERBUILD}
+        UXDIST=${D3}/mozilla/dist
+        RESULTDIR=${D3}/mozilla/tests_results/security
     fi
+
+    D2=${D1}/builds/${QAYEAR}${BUILDDATE}.${BUILDNUMBER}
+    UX_MASTERDIR=${D2}/${MASTERBUILD}
+    find_nt_masterbuild
 
     UXDIST=${UX_MASTERDIR}/mozilla/dist
     NTDIST=${NT_MASTERDIR}/mozilla/dist
 
-    if [ -z "${RESULTDIR}" ] ; then 
-        RESULTDIR=${UX_MASTERDIR}/mozilla/tests_results/security
+    RESULTDIR=${UX_MASTERDIR}/mozilla/tests_results/security
+
+
+#O_LOCAL
+    if [ "$O_WIN" = "ON" ]
+    then
+        MASTERBUILD=$NT_MASTERBUILD
+        MOZILLA_ROOT=${NT_MASTERDIR}/mozilla
+    else
+        MOZILLA_ROOT=${UX_MASTERDIR}/mozilla
     fi
 
     TESTSCRIPTDIR=${MOZILLA_ROOT}/security/nss/tests
@@ -324,12 +286,8 @@ init_dirs()
     COMMON=${TESTSCRIPTDIR}/common
 
     set_objdir
-    debug_dirs
-    export_dirs
-}
+    
 
-debug_dirs()
-{
     Debug "NTDIST $NTDIST"
     Debug "UXDIST $UXDIST"
     Debug "TESTSCRIPTDIR $TESTSCRIPTDIR"
@@ -338,18 +296,15 @@ debug_dirs()
     Debug "LOCALDIST_BIN $LOCALDIST_BIN"
     Debug "COMMON $COMMON"
     Debug "MOZILLA_ROOT $MOZILLA_ROOT"
-}
-
-export_dirs()
-{
-    export D1 D2 NTDIST UXDIST RESULTDIR TESTSCRIPTDIR BCDIST
+        
+    export D1 D2 NTDIST UXDIST RESULTDIR TESTSCRIPTDIR 
     export UX_MASTERDIR NT_MASTERDIR COMMON MOZILLA_ROOT
 }
 
-################################### init_files ###########################
+################################### set_files ###########################
 # global shell function, sets filenames, initializes files, part of init 
 ########################################################################
-init_files()
+set_files()
 {
     if [ $O_CRONFILE = "ON" ]
     then
@@ -388,18 +343,6 @@ write_to_tmpfile()
     Debug "Writing output to $FILENAME"
 }
 
-############################# turn_on_cronoptions ######################
-# global shell function, turns on options needed for cron and tinderbox
-########################################################################
-turn_on_cronoptions()
-{
-    O_CRON=ON
-    O_SILENT=ON
-    O_DEBUG=ON                # FIXME take out!
-    O_ALWAYS_YES=ON
-    write_to_tmpfile
-}
-
 ################################### eval_opts ##########################
 # global shell function, evapuates options and parameters, sets flags
 # variables and defaults
@@ -410,12 +353,24 @@ eval_opts()
   do
     case $1 in
         -cron)
-            turn_on_cronoptions
+            O_CRON=ON
+            O_SILENT=ON
+            O_DEBUG=ON                # FIXME take out!
+            O_ALWAYS_YES=ON
+            write_to_tmpfile
+            
+            export O_CRON
             ;;
-        -T*|-t*)
-            O_TBX=ON
-            turn_on_cronoptions
-            O_SILENT=OFF	#FIXME debug only
+        -l)
+            O_LOCAL=ON    #Now what - 
+            shift
+            MOZROOT=$1
+            if [ -z "$MOZROOT" ]
+            then
+                glob_usage "Error: -l requires a directory to follow, for example $HOME/src/tip1025 "
+            fi
+            Warning "-l not implemented yet (or only halfway)"
+            Debug "testing locally on $MOZROOT"
             ;;
         -S*|-s*)
             O_SILENT=ON
@@ -463,8 +418,8 @@ eval_opts()
             NSSVER=$1
             if [ -z "$NSSVER" ]        
             then
-                NSSVER="tip"
-                Debug "NSS Version: Parameters missing - defaulting to tip!"
+                NSSVER="32"
+                Debug "NSS Version: Parameters missing - defaulting to 32!"
             else
                 BUILDDATE=$2
                 if [ -z "$BUILDDATE" ] 
@@ -487,20 +442,19 @@ eval_opts()
   fi
   if [ -z "$NSSVER" ]            
   then
-      NSSVER="tip"
-      Debug "NSS Version: Parameters missing - defaulting to tip!"
+      NSSVER="32"
+      Debug "NSS Version: Parameters missing - defaulting to 32!"
   fi
   
   Debug "Builddate $BUILDDATE NssVersion $NSSVER"
   export BUILDDATE NSSVER
-  export O_CRON O_SILENT O_DEBUG O_ALWAYS_YES O_TBX
 }
 
-######################### win_set_d1 ################################
+######################### win_set_dirs ################################
 # global shell function, interactively finds the directories in case
 # windows can't get to the default
 ########################################################################
-win_set_d1()
+win_set_dirs()
 {
     Debug "set Windows Directories..."
     TMP=`echo "$TMP" | sed -e 's/\\\/\//g'`
@@ -542,17 +496,13 @@ win_set_d1()
     Debug "D1 set to $D1"
 }
 
-########################### init_host ##################################
+########################### set_host ##################################
 # global shell function, sets required variables HOST and DOMSUF, and asks
 # the user if it has been set right
 ########################################################################
 set_host()
 {
-    init_host
-}
-init_host()
-{
-    init_host_done=0
+    set_host_done=0
 
     if [ $DS_WAS_SET = FALSE ] #give chance to overwrite, espec. for NT
     then
@@ -593,12 +543,12 @@ init_host()
     fi
     if [ $O_DEBUG = "ON" ]
     then
-        while [ $init_host_done -eq 0 ]
+        while [ $set_host_done -eq 0 ]
         do
             Echo
             ask "DOMSUF=$DOMSUF, HOST=$HOST - OK", "y" "n" &&
-                init_host_done=1
-            if [ $init_host_done -eq 0 ]
+                set_host_done=1
+            if [ $set_host_done -eq 0 ]
             then
                 Echo "input DOMSUF: "
                 read D
@@ -621,52 +571,6 @@ init_host()
 
 #-----------------------------# UTILS #----------------------------------
 
-########################### qa_stat_get_sysinfo ########################
-# local shell function, tries to determine the QA operating system
-########################################################################
-qa_stat_get_sysinfo()
-{
-    case $1 in
-        ?*) REM_SYS=$1
-            GET_SYSINFO="rsh $1"
-            ;;
-        *)  REM_SYS=""
-            GET_SYSINFO=""
-            ;;
-    esac
-    QA_SYS=`$GET_SYSINFO uname -sr`
-    echo $QA_SYS | grep Linux >/dev/null &&
-              QA_RHVER=`$GET_SYSINFO cat /etc/redhat-release`
-    if [ -n "$QA_RHVER" ]
-    then
-        QA_OS=`echo $REM_SYS $QA_RHVER | sed -e "s/Red Hat /RH /" \
-                    -e "s/ release//"`
-    else
-        case $QA_SYS in
-            *SunOS*5.8*)
-                IS_64=`$GET_SYSINFO isainfo -v | grep 64 >/dev/null && \
-                    echo 64 bit`
-                if [ -z "$IS_64" ] ; then IS_64="32 bit"; fi;
-                ;;
-            *HP*)
-                IS_64=`$GET_SYSINFO getconf KERNEL_BITS |
-                    grep 64 >/dev/null && echo 64 bit`
-                if [ -z "$IS_64" ] ; then IS_64="32 bit"; fi;
-                ;;
-            *AIX*)
-                IS_64=`$GET_SYSINFO lslpp -l |
-                    grep "bos.64bit"> /dev/null && echo 64 bit`
-                if [ -z "$IS_64" ] ; then IS_64="32 bit"; fi;
-                ;;
-        esac
-        QA_OS=`echo "$REM_SYS $QA_SYS $IS_64"`
-    fi
-    if [ "$O_SILENT" != ON ] ; then
-        echo $QA_OS
-    fi
-    QA_OS_STRING=`echo $QA_OS | sed -e "s/^[_ ]//" -e "s/ /_/g"`
-}
-
 ################################### set_objdir #########################
 # global shell function, sets the object directories and DIST
 ########################################################################
@@ -675,10 +579,12 @@ set_objdir()
     OBJDIR=`cd ${TESTSCRIPTDIR}/common; gmake objdir_name`
     OS_ARCH=`cd ${TESTSCRIPTDIR}/common; gmake os_arch`
     
-    #at this point $MASTERBUILD needs to be either NT or unix
+    #at this point $MASTEBUILD is be either NT or unix
 
-    set_d2
+    LOCALDIST=${D1}/builds/${QAYEAR}${BUILDDATE}.${BUILDNUMBER}/${MASTERBUILD}/mozilla/dist
+    BCDIST=${D1}/builds/${BC_MASTER}/${MASTERBUILD}/mozilla/dist
     LOCALDIST_BIN=${LOCALDIST}/${OBJDIR}/bin
+
     DIST=$LOCALDIST
 
     if [ -z "${TEST_LEVEL}" ] ; then 
@@ -689,7 +595,7 @@ set_objdir()
     PATH_CONTAINS_BIN="TRUE"
     export PATH_CONTAINS_BIN
 
-    export OBJDIR OS_ARCH LOCALDIST LOCALDIST_BIN DIST PATH 
+    export OBJDIR OS_ARCH LOCALDIST LOCALDIST_BIN DIST PATH BCDIST
 }
 
 ########################### bc #########################################
@@ -700,8 +606,6 @@ bc()
   DON_T_SET_PATHS="TRUE"
   case $1 in
     0)
-      #unset TESTDIR
-      TESTDIR=${RESULTDIR}
       if [ "$O_WIN" = "ON" -a "$O_CYGNUS" != ON ] ; then
           PATH="$TESTSCRIPTDIR;$LOCALDIST_BIN;$BASEPATH"
       else
@@ -711,8 +615,7 @@ bc()
       DON_T_SET_PATHS="FALSE" #let init.sh override - FIXME - check if necessary
       ;;
     1)
-      TESTDIR=${RESULTDIR}/bc_libs
-      BC_ACTION="backward compatibility shlibs in $BC_MASTER to new binaries"
+      BC_ACTION="backward compatibility against shlibs in $BC_MASTER"
       LD_LIBRARY_PATH=${BCDIST}/${OBJDIR}/lib
       if [ "$O_WIN" = "ON" ] ; then
           if [ "$O_CYGNUS" = ON ] ; then
@@ -726,8 +629,7 @@ bc()
       Debug "1st stage of backward compatibility test"
       ;;
     *)
-      TESTDIR=${RESULTDIR}/bc_bins
-      BC_ACTION="backward compatibility of binaries in $BC_MASTER to new libs"
+      BC_ACTION="forward compatibility of binaries in $BC_MASTER"
       BCDIST_BIN=${BCDIST}/${OBJDIR}/bin
       LD_LIBRARY_PATH=${LOCALDIST}/${OBJDIR}/lib
       if [ "$O_WIN" = "ON" ] ; then
@@ -742,12 +644,6 @@ bc()
       Debug "2nd stage of backward compatibility test"
       ;;
   esac
-  if [ -n "$TESTDIR" ] ; then
-      if [ ! -d $TESTDIR ] ; then
-          mkdir -p $TESTDIR
-      fi
-      export TESTDIR
-  fi
   SHLIB_PATH=${LD_LIBRARY_PATH}
   LIBPATH=${LD_LIBRARY_PATH}
   Debug "PATH $PATH"
@@ -827,10 +723,10 @@ early_exit()
             cat $FILENAME | sed -e "s/^/<br>/" >>${FILENAME}.err
         fi
         echo '</body></html>' >>${FILENAME}.err
-        cat ${FILENAME}.err | $RMAIL $MAILINGLIST
+        cat ${FILENAME}.err | rmail $MAILINGLIST
         
         rm ${FILENAME}.err 2>/dev/null
-        #echo "cat ${FILENAME}.err | $RMAIL $MAILINGLIST "
+        #echo "cat ${FILENAME}.err | rmail $MAILINGLIST "
     fi
 }
 
@@ -870,7 +766,7 @@ Exit()
             early_exit "$1"
         elif [ -n "$FILENAME" -a -f "$FILENAME" ]
         then
-            cat $FILENAME | $RMAIL $MAILINGLIST
+            cat $FILENAME | rmail $MAILINGLIST
         fi
         #rm $FILENAME 2>/dev/null
     elif  [ $O_MAIL = "ON" -a $EARLY_EXIT = TRUE ]
@@ -879,11 +775,7 @@ Exit()
         rm $FILENAME 2>/dev/null
     fi
     #chmod a+rw ${RESULTDIR} ${RESULTDIR}/* ${RESULTDIR}/*/* &
-    if [ -n "$O_TBX" -a "$O_TBX" = "ON" ] ; then
-        exit $TBX_EXIT
-    else
-        exit
-    fi
+    exit
 }
 
 trap "rm -f ${TMPFILES} 2>/dev/null; Exit 'killed... cleaning up...'" 2 3 15
@@ -1107,7 +999,6 @@ opt_usage()
         Echo "         example sonmi,nelsonb,wtc) only useful with -f"
         Echo "    -cron equivalient to -y -s -d -f \$RESULTDIR/\$HOST.nssqa"
         Echo "    -l <mozroot> run on a local build"
-        Echo "    -t run on a tinderbox build (included -cron)"
     fi
     
 }

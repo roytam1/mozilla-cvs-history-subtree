@@ -85,11 +85,6 @@ public:
     return NS_OK;
   }
 
-  NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect,
-                   nsFramePaintLayer aWhichLayer);
-
   /**
    * Get the "type" of the frame
    *
@@ -223,18 +218,6 @@ CanvasFrame::RemoveFrame(nsIPresContext* aPresContext,
   }
 
   return rv;
-}
-
-NS_IMETHODIMP
-CanvasFrame::Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect,
-                   nsFramePaintLayer aWhichLayer)
-{
-  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
-    SetDefaultBackgroundColor(aPresContext);
-  }
-  return nsHTMLContainerFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
 }
 
 NS_IMETHODIMP

@@ -550,7 +550,7 @@ ber_put_set( BerElement *ber )
 /* VARARGS */
 int
 LDAP_C
-ber_printf( BerElement *ber, char *fmt, ... )
+ber_printf( BerElement *ber, const char *fmt, ... )
 {
 	va_list		ap;
 	char		*s, **ss;
@@ -577,12 +577,12 @@ ber_printf( BerElement *ber, char *fmt, ... )
 
 		case 'i':	/* int */
 			i = va_arg( ap, int );
-			rc = ber_put_int( ber, i, ber->ber_tag );
+			rc = ber_put_int( ber, (long)i, ber->ber_tag );
 			break;
 
 		case 'e':	/* enumeration */
 			i = va_arg( ap, int );
-			rc = ber_put_enum( ber, i, ber->ber_tag );
+			rc = ber_put_enum( ber, (long)i, ber->ber_tag );
 			break;
 
 		case 'n':	/* null */

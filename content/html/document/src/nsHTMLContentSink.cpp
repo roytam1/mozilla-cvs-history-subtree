@@ -119,6 +119,11 @@
 #include "nsIPrompt.h"
 #include "nsIDOMWindowInternal.h"
 
+#include "nsLayoutCID.h"
+#include "nsIFrameManager.h"
+#include "nsILayoutHistoryState.h"
+static NS_DEFINE_CID(kLayoutHistoryStateCID, NS_LAYOUT_HISTORY_STATE_CID);
+
 #ifdef ALLOW_ASYNCH_STYLE_SHEETS
 const PRBool kBlockByDefault=PR_FALSE;
 #else
@@ -1653,6 +1658,33 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
         mSink->mInNotification--;
       }
       
+      // Create a temp layoutHistoryState to store the childrens' state
+      nsCOMPtr<nsIPresShell> presShell;
+      nsCOMPtr<nsIPresContext> presContext;
+      nsCOMPtr<nsIFrameManager> frameManager;
+      nsCOMPtr<nsILayoutHistoryState> tempFrameState = do_CreateInstance(kLayoutHistoryStateCID);
+      if (mSink && mSink->mDocument) {
+        PRInt32 ns = mSink->mDocument->GetNumberOfShells();
+        if (ns > 0) {
+          presShell = dont_AddRef(mSink->mDocument->GetShellAt(0));
+          if (presShell) {
+            presShell->GetFrameManager(getter_AddRefs(frameManager));
+            presShell->GetPresContext(getter_AddRefs(presContext));
+          }
+        }
+      }
+      NS_ASSERTION(presShell && frameManager && presContext && tempFrameState,
+                  "SinkContext::DemoteContainer() Error storing frame state!");
+
+      // Store children frames state before removing them from old parent
+      nsIFrame* frame = nsnull;
+      if (frameManager && presContext && tempFrameState) {
+        presShell->GetPrimaryFrameFor(container, &frame);
+        if (frame) {
+          frameManager->CaptureFrameState(presContext, frame, tempFrameState);
+        }
+      }
+
       if (NS_SUCCEEDED(result)) {
         // Move all of the demoted containers children to its parent
         PRInt32 i, count;
@@ -1709,6 +1741,15 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
         }
         mStackPos--;
       }
+
+      // Restore frames state after adding it to new parent
+      if (frameManager && presContext && tempFrameState && frame) {
+        presShell->GetPrimaryFrameFor(parent, &frame);
+        if (frame) {
+          frameManager->RestoreFrameState(presContext, frame, tempFrameState);
+        }
+      }
+
     }
     NS_RELEASE(container);
 
@@ -2311,35 +2352,34 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   mWebShell = aContainer;
   NS_ADDREF(aContainer);
 
-  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mWebShell));
-  NS_ASSERTION(docShell,"oops no docshell!");
-  if (docShell) {
-    PRBool enabled;
-    
-    docShell->GetAllowJavascript(&enabled);
+  PRBool enabled = PR_TRUE;
+  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+  NS_ASSERTION(prefs, "oops no prefs!");
+  if (prefs) {
+    prefs->GetBoolPref("javascript.enabled", &enabled);
     if (enabled) {
       mFlags |= NS_SINK_FLAG_SCRIPT_ENABLED;
     }
-    
+  }
+
+  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mWebShell));
+  NS_ASSERTION(docShell,"oops no docshell!");
+  if (docShell) {
     docShell->GetAllowSubframes(&enabled);
     if (enabled) {
       mFlags |= NS_SINK_FLAG_FRAMES_ENABLED;
     }
   }
 
-  NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-
-  if (NS_FAILED(rv)) {
-    MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Init()\n"));
-    MOZ_TIMER_STOP(mWatch);
-    return rv;
+  mNotifyOnTimer = PR_TRUE;
+  if (prefs) {
+    prefs->GetBoolPref("content.notify.ontimer", &mNotifyOnTimer);
   }
 
-  mNotifyOnTimer = PR_TRUE;
-  prefs->GetBoolPref("content.notify.ontimer", &mNotifyOnTimer);
-
   mBackoffCount = -1; // never
-  prefs->GetIntPref("content.notify.backoffcount", &mBackoffCount);
+  if (prefs) {
+    prefs->GetIntPref("content.notify.backoffcount", &mBackoffCount);
+  }
 
   // The mNotificationInterval has a dramatic effect on how long it 
   // takes to initially display content for slow connections.
@@ -2349,10 +2389,14 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   // it starts to impact page load performance.
   // see bugzilla bug 72138 for more info.
   mNotificationInterval = 250000;
-  prefs->GetIntPref("content.notify.interval", &mNotificationInterval);
+  if (prefs) {
+    prefs->GetIntPref("content.notify.interval", &mNotificationInterval);
+  }
 
   mMaxTextRun = 8192;
-  prefs->GetIntPref("content.maxtextrun", &mMaxTextRun);
+  if (prefs) {
+    prefs->GetIntPref("content.maxtextrun", &mMaxTextRun);
+  }
 
   nsIHTMLContentContainer* htmlContainer = nsnull;
   if (NS_SUCCEEDED(aDoc->QueryInterface(NS_GET_IID(nsIHTMLContentContainer), (void**)&htmlContainer))) {

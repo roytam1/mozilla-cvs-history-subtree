@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -155,18 +154,6 @@ SECKEY_CreateRSAPrivateKey(int keySizeInBits,SECKEYPublicKey **pubk, void *cx)
     param.pe = 65537L;
     
     privk = PK11_GenerateKeyPair(slot,CKM_RSA_PKCS_KEY_PAIR_GEN,&param,pubk,
-					PR_FALSE, PR_TRUE, cx);
-    PK11_FreeSlot(slot);
-    return(privk);
-}
-
-SECKEYPrivateKey *
-SECKEY_CreateDHPrivateKey(DHParams *param, SECKEYPublicKey **pubk, void *cx)
-{
-    SECKEYPrivateKey *privk;
-    PK11SlotInfo *slot = PK11_GetBestSlot(CKM_DH_PKCS_KEY_PAIR_GEN,cx);
-    
-    privk = PK11_GenerateKeyPair(slot,CKM_DH_PKCS_KEY_PAIR_GEN,param,pubk,
 					PR_FALSE, PR_TRUE, cx);
     PK11_FreeSlot(slot);
     return(privk);

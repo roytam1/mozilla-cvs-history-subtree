@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -100,15 +99,9 @@ extern SECKEYPublicKey *SECKEY_CopyPublicKey(SECKEYPublicKey *pubKey);
 extern SECKEYPublicKey *SECKEY_ConvertToPublicKey(SECKEYPrivateKey *privateKey);
 
 /*
- * create a new RSA key pair. The private Key is returned...
+ * create a new RSA key pair. The public Key is returned...
  */
 SECKEYPrivateKey *SECKEY_CreateRSAPrivateKey(int keySizeInBits,
-					   SECKEYPublicKey **pubk, void *cx);
-	
-/*
- * create a new DH key pair. The private Key is returned...
- */
-SECKEYPrivateKey *SECKEY_CreateDHPrivateKey(DHParams *param,
 					   SECKEYPublicKey **pubk, void *cx);
 /*
 ** Create a subject-public-key-info based on a public key.

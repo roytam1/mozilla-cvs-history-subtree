@@ -158,15 +158,15 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  echo "selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \\"
+  echo "selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \\"
   echo "         -w nss ${sparam} -i ${R_SERVERPID} $verbose &"
   echo "selfserv started at `date`"
   if [ ${fileout} -eq 1 ]; then
-      selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
+      selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
                -w nss ${sparam} -i ${R_SERVERPID} $verbose \
                > ${SERVEROUTFILE} 2>&1 &
   else
-      selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
+      selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
                -w nss ${sparam} -i ${R_SERVERPID} $verbose &
   fi
   wait_for_selfserv
@@ -262,10 +262,9 @@ ssl_stress()
           echo "         ${HOSTADDR}"
           echo "strsclnt started at `date`"
           strsclnt -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
-          ret=$?
           echo "strsclnt completed at `date`"
 
-          html_msg $ret $value "${testname}"
+          html_msg $? $value "${testname}"
           kill_selfserv
       fi
   done
