@@ -842,7 +842,7 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
 {
 	// We need to create a new top level window and then enter a nested
 	// loop. Eventually the new window will be told that it has loaded,
-	// at which time we know it is safe to spin out of the modal loop
+	// at which time we know it is safe to spin out of the nested loop
 	// and allow the opening code to proceed.
 
 	// First push a nested event queue for event processing from netlib
@@ -858,19 +858,8 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
 		NS_ERROR("Unable to obtain queue service.");
 		return rv;
 	}
-	if (NS_FAILED(rv = eQueueService->GetThreadEventQueue(PR_GetCurrentThread(), 
-		getter_AddRefs(outerQueue)))) {
-		NS_ERROR("Unable to obtain the outer event queue.");
-		return rv;
-	}
 	
 	eQueueService->PushThreadEventQueue();
-
-	if (NS_FAILED(rv = eQueueService->GetThreadEventQueue(PR_GetCurrentThread(), 
-		getter_AddRefs(innerQueue)))) {
-		NS_ERROR("Unable to obtain the inner event queue.");
-		return rv;
-	}
 
   nsCOMPtr<nsIURL> urlObj;
   rv = NS_NewURL(getter_AddRefs(urlObj), "chrome://navigator/content/");
@@ -895,7 +884,7 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
     return rv;
 
   subshell->Create(0, nsnull);
-  subshell->Spinup(innerQueue); // Spin up and let the event dispatching code know about the new queue
+  subshell->Spinup(); // Spin up 
 
   // Specify that we want the window to remain locked until the chrome has loaded.
 	newWindow->LockUntilChromeLoad();
@@ -916,7 +905,7 @@ nsWebShellWindow::NewWebShell(PRUint32 aChromeMask, PRBool aVisible,
 	eQueueService->PopThreadEventQueue();
 	nsServiceManager::ReleaseService(kEventQueueServiceCID, eQueueService);
 
-  subshell->Spindown(outerQueue);
+  subshell->Spindown();
   NS_RELEASE(subshell);
 
 	// We're out of the nested loop.
@@ -994,22 +983,15 @@ nsWebShellWindow::ShowModalInternal()
     return rv;
 
 	nsIEventQueueService *eQueueService;
-	nsCOMPtr<nsIEventQueue> outerQueue;
-	nsCOMPtr<nsIEventQueue> innerQueue;
-  if (NS_FAILED(rv = nsServiceManager::GetService(kEventQueueServiceCID,
+	if (NS_FAILED(rv = nsServiceManager::GetService(kEventQueueServiceCID,
                                     kIEventQueueServiceIID,
                                     (nsISupports **)&eQueueService))) {
 		NS_ERROR("Unable to obtain queue service.");
 		return rv;
 	}
-	if (NS_FAILED(rv = eQueueService->GetThreadEventQueue(PR_GetCurrentThread(), 
-		getter_AddRefs(innerQueue)))) {
-		NS_ERROR("Unable to obtain the inner event queue.");
-		return rv;
-	}
 
   subshell->Create(0, nsnull);
-  subshell->Spinup(innerQueue);
+  subshell->Spinup();
 
   nsIWidget *window = GetWidget();
   window->SetModal();
@@ -1028,13 +1010,8 @@ nsWebShellWindow::ShowModalInternal()
     }
   }
 	eQueueService->PopThreadEventQueue();
-	if (NS_FAILED(rv = eQueueService->GetThreadEventQueue(PR_GetCurrentThread(), 
-		getter_AddRefs(outerQueue)))) {
-		NS_ERROR("Unable to obtain the outer event queue.");
-		return rv;
-	}
-  
-  subshell->Spindown(outerQueue);
+	
+  subshell->Spindown();
   NS_RELEASE(window);
   NS_RELEASE(subshell);
 
