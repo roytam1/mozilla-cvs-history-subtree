@@ -355,9 +355,6 @@ PR_GetLibraryPath()
     }   /* if (p)  */
     ev = p;
     PR_LOG(_pr_io_lm, PR_LOG_NOTICE, ("linker path '%s'", ev));
-
-        printf("linker_path = %s\n", ev); 
-
     }
 #else
     /* AFAIK there isn't a library path with the HP SHL interface --Rob */
