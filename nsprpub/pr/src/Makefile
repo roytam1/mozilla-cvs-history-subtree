@@ -91,10 +91,6 @@ endif
 endif
 endif
 
-ifeq ($(OS_ARCH),OpenVMS)
-OS_LIBS		= -lvms_jackets
-endif
-
 ifeq ($(OS_ARCH),OSF1)
 ifeq ($(USE_PTHREADS), 1)
 OS_LIBS 	= -lpthread -lrt
@@ -394,7 +390,15 @@ endif
 export:: $(TARGETS)
 	$(INSTALL) -m 444 $(TARGETS) $(DIST)/lib
 ifdef SHARED_LIBRARY
+ifeq ($(OS_ARCH),HP-UX)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/bin
+else
 	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/bin
+endif
+ifeq ($(OS_ARCH), OpenVMS)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/lib
+endif
 endif
 ifeq ($(MOZ_BITS),16)
 	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/lib

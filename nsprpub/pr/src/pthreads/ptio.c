@@ -123,7 +123,8 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
 #if defined(SOLARIS)
 #define _PRSockOptVal_t char *
 #elif defined(IRIX) || defined(OSF1) || defined(AIX) || defined(HPUX) \
-    || defined(LINUX) || defined(FREEBSD) || defined(BSDI) || defined(VMS)
+    || defined(LINUX) || defined(FREEBSD) || defined(BSDI) || defined(VMS) \
+    || defined(NTO)
 #define _PRSockOptVal_t void *
 #else
 #error "Cannot determine architecture"
@@ -137,7 +138,7 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
     || defined(OSF1) || defined(SOLARIS) \
     || defined(HPUX10_30) || defined(HPUX11) || defined(LINUX) \
     || defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
-    || defined(BSDI) || defined(VMS)
+    || defined(BSDI) || defined(VMS) || defined(NTO)
 #define _PRSelectFdSetArg_t fd_set *
 #else
 #error "Cannot determine architecture"
@@ -193,8 +194,11 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
 #define PT_DEFAULT_POLL_MSEC 100
 
 /*
- * Latest POSIX defines this type as socklen_t.  It may also be
- * size_t or int.
+ * pt_SockLen is the type for the length of a socket address
+ * structure, used in the address length argument to bind,
+ * connect, accept, getsockname, getpeername, etc.  Posix.1g
+ * defines this type as socklen_t.  It is size_t or int on
+ * most current systems.
  */
 #if defined(HAVE_SOCKLEN_T) \
     || (defined(LINUX) && defined(__GLIBC__) && __GLIBC__ >= 2 \
@@ -2814,7 +2818,7 @@ static PRIOMethods _pr_socketpollfd_methods = {
 
 #if defined(HPUX) || defined(OSF1) || defined(SOLARIS) || defined (IRIX) \
     || defined(AIX) || defined(LINUX) || defined(FREEBSD) || defined(NETBSD) \
-    || defined(OPENBSD) || defined(BSDI) || defined(VMS)
+    || defined(OPENBSD) || defined(BSDI) || defined(VMS) || defined(NTO)
 #define _PR_FCNTL_FLAGS O_NONBLOCK
 #else
 #error "Can't determine architecture"
