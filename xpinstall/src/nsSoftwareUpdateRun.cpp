@@ -722,21 +722,26 @@ extern "C" void RunChromeInstallOnThread(void *data)
                 if (!installed)
                     rv = reg->InstallSkin(spec.get(), PR_TRUE, PR_FALSE);
                 
+#ifndef MOZ_XUL_APP
                 if (NS_SUCCEEDED(rv) && selected)
                 {
                     NS_ConvertUCS2toUTF8 utf8Args(info->GetArguments());
                     rv = reg->SelectSkin(utf8Args, PR_TRUE);
                 }
+#endif
             }
 
             if ( isLocale )
             {
                 rv = reg->InstallLocale(spec.get(), PR_TRUE);
+
+#ifndef MOZ_XUL_APP
                 if (NS_SUCCEEDED(rv) && selected)
                 {
                     NS_ConvertUCS2toUTF8 utf8Args(info->GetArguments());
                     rv = reg->SelectLocale(utf8Args, PR_TRUE);
                 }
+#endif
             }
 
             // now that all types are registered try to activate
