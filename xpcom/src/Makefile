@@ -27,6 +27,7 @@ CPPSRCS		= nsDebug.cpp \
 		  $(NULL)
 
 EXPORTS		= nsCom.h \
+		  nsAgg.h \
 		  nsDebug.h \
 		  nsError.h \
 		  nsHashtable.h \
