@@ -58,7 +58,7 @@ class nsHTMLAppletElement : public nsGenericHTMLElement,
                             public nsIDOMHTMLAppletElement
 {
 public:
-  nsHTMLAppletElement();
+  nsHTMLAppletElement(PRBool aFromParser = PR_FALSE);
   virtual ~nsHTMLAppletElement();
 
   // nsISupports
@@ -76,6 +76,9 @@ public:
   // nsIDOMHTMLAppletElement
   NS_DECL_NSIDOMHTMLAPPLETELEMENT
 
+  virtual void DoneAddingChildren();
+  virtual PRBool IsDoneAddingChildren();
+
   virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
@@ -85,16 +88,17 @@ public:
   NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const;
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
 protected:
-  PRBool mReflectedApplet;
+  PRPackedBool mReflectedApplet;
+  PRPackedBool mIsDoneAddingChildren;
 };
 
 nsresult
 NS_NewHTMLAppletElement(nsIHTMLContent** aInstancePtrResult,
-                        nsINodeInfo *aNodeInfo)
+                        nsINodeInfo *aNodeInfo, PRBool aFromParser)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 
-  nsHTMLAppletElement* it = new nsHTMLAppletElement();
+  nsHTMLAppletElement* it = new nsHTMLAppletElement(aFromParser);
 
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
@@ -115,13 +119,27 @@ NS_NewHTMLAppletElement(nsIHTMLContent** aInstancePtrResult,
 }
 
 
-nsHTMLAppletElement::nsHTMLAppletElement()
+nsHTMLAppletElement::nsHTMLAppletElement(PRBool aFromParser)
 {
   mReflectedApplet = PR_FALSE;
+  mIsDoneAddingChildren = !aFromParser;
 }
 
 nsHTMLAppletElement::~nsHTMLAppletElement()
 {
+}
+
+PRBool
+nsHTMLAppletElement::IsDoneAddingChildren()
+{
+  return mIsDoneAddingChildren;
+}
+
+void
+nsHTMLAppletElement::DoneAddingChildren()
+{
+  mIsDoneAddingChildren = PR_TRUE;
+  RecreateFrames();
 }
 
 NS_IMPL_ADDREF_INHERITED(nsHTMLAppletElement, nsGenericElement) 

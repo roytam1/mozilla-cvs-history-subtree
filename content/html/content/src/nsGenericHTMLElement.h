@@ -758,7 +758,7 @@ protected:
   nsresult GetContentsAsText(nsAString& aText);
 
   /**
-   * Helpermethod for NS_IMPL_STRING_ATTR_DEFAULT_VALUE macro.
+   * Helper method for NS_IMPL_STRING_ATTR_DEFAULT_VALUE macro.
    * Gets the value of an attribute, returns specified default value if the
    * attribute isn't set. Only works for attributes in null namespace.
    *
@@ -771,7 +771,7 @@ protected:
                                 nsAString& aResult);
 
   /**
-   * Helpermethod for NS_IMPL_BOOL_ATTR macro.
+   * Helper method for NS_IMPL_BOOL_ATTR macro.
    * Sets value of boolean attribute by removing attribute or setting it to
    * the empty string. Only works for attributes in null namespace.
    *
@@ -781,7 +781,7 @@ protected:
   nsresult SetBoolAttr(nsIAtom* aAttr, PRBool aValue);
 
   /**
-   * Helpermethod for NS_IMPL_INT_ATTR macro.
+   * Helper method for NS_IMPL_INT_ATTR macro.
    * Gets the integer-value of an attribute, returns specified default value
    * if the attribute isn't set or isn't set to an integer. Only works for
    * attributes in null namespace.
@@ -793,7 +793,7 @@ protected:
   void GetIntAttr(nsIAtom* aAttr, PRInt32 aDefault, PRInt32* aValue);
 
   /**
-   * Helpermethod for NS_IMPL_INT_ATTR macro.
+   * Helper method for NS_IMPL_INT_ATTR macro.
    * Sets value of attribute to specified integer. Only works for attributes
    * in null namespace.
    *
@@ -803,7 +803,7 @@ protected:
   nsresult SetIntAttr(nsIAtom* aAttr, PRInt32 aValue);
 
   /**
-   * Helpermethod for NS_IMPL_URI_ATTR macro.
+   * Helper method for NS_IMPL_URI_ATTR macro.
    * Gets the absolute URI value of an attribute, by resolving any relative
    * URIs in the attribute against the baseuri of the element. If the attribute
    * isn't a relative URI the value of the attribute is returned as is. Only
@@ -813,6 +813,12 @@ protected:
    * @param aResult  result value [out]
    */
   void GetURIAttr(nsIAtom* aAttr, nsAString& aResult);
+
+  /**
+   * Helper method to recreate all frames for this content, if there
+   * are any.
+   */
+  void RecreateFrames();
 };
 
 
@@ -1051,173 +1057,227 @@ protected:
 // Element class factory methods
 
 nsresult
-NS_NewHTMLSharedLeafElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLSharedLeafElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                            PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLAnchorElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLAnchorElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLAppletElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLAppletElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLAreaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLAreaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLBRElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLBRElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                    PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLBaseFontElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLBaseFontElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLBodyElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLBodyElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLButtonElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLButtonElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLDListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLDListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLDelElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLDelElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                     PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLDirectoryElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLDirectoryElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                           PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLDivElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLDivElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                     PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLFieldSetElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLFieldSetElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLFontElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLFontElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLFormElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLFormElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLFrameElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLFrameElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLFrameSetElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLFrameSetElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLHRElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLHRElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                    PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLHeadElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLHeadElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLHeadingElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLHeadingElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                         PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLHtmlElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLHtmlElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLIFrameElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLIFrameElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLImageElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLImageElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
 NS_NewHTMLInputElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
                        PRBool aFromParser);
 
 nsresult
-NS_NewHTMLInsElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLInsElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                     PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLLIElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLLIElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                    PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLLabelElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLLabelElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLLegendElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLLegendElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLLinkElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLLinkElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLMapElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLMapElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                     PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLMenuElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLMenuElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLMetaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLMetaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLOListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLOListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLObjectElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLObjectElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLOptGroupElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLOptGroupElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLOptionElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLOptionElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLParagraphElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLParagraphElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                           PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLPreElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLPreElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                     PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLQuoteElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLQuoteElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLScriptElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLScriptElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                        PRBool aFromParser = PR_FALSE);
 
 nsresult
 NS_NewHTMLSelectElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
                         PRBool aFromParser);
 
 nsresult
-NS_NewHTMLSpanElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLSpanElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                      PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLStyleElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLStyleElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableCaptionElement(nsIHTMLContent** aResult,nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableCaptionElement(nsIHTMLContent** aResult,nsINodeInfo *aNodeInfo,
+                              PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableCellElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableCellElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                           PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableColElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableColElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableRowElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableRowElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTableSectionElement(nsIHTMLContent** aResult,nsINodeInfo *aNodeInfo);
+NS_NewHTMLTableSectionElement(nsIHTMLContent** aResult,nsINodeInfo *aNodeInfo,
+                              PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTbodyElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTbodyElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTextAreaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTextAreaElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                          PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTfootElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTfootElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTheadElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTheadElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLTitleElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLTitleElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLUListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLUListElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                       PRBool aFromParser = PR_FALSE);
 
 nsresult
-NS_NewHTMLUnknownElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo);
+NS_NewHTMLUnknownElement(nsIHTMLContent** aResult, nsINodeInfo *aNodeInfo,
+                         PRBool aFromParser = PR_FALSE);
 
 #endif /* nsGenericHTMLElement_h___ */
