@@ -119,7 +119,7 @@ nsTypeAheadFind::nsTypeAheadFind():
   mLinksOnly(PR_FALSE), mCaretBrowsingOn(PR_FALSE),
   mLiteralTextSearchOnly(PR_FALSE), mDontTryExactMatch(PR_FALSE),
   mAllTheSameChar(PR_TRUE),
-  mRepeatingMode(eRepeatingNone),
+  mRepeatingMode(eRepeatingNone), mLastFindLength(0),
   mFocusLinks(PR_FALSE),
   mSoundInterface(nsnull), mIsSoundInitialized(PR_FALSE)
 {
@@ -237,6 +237,9 @@ nsTypeAheadFind::SaveFind()
 {
   if (mWebBrowserFind)
     mWebBrowserFind->SetSearchString(PromiseFlatString(mTypeAheadBuffer).get());
+  
+  // save the length of this find for "not found" sound
+  mLastFindLength = mTypeAheadBuffer.Length();
 }
 
 void
@@ -949,7 +952,8 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly, PRUint1
     mRepeatingMode = eRepeatingNone;
 
     // Error sound
-    PlayNotFoundSound();
+    if (mTypeAheadBuffer.Length() > mLastFindLength)
+      PlayNotFoundSound();
   }
 
   SaveFind();
