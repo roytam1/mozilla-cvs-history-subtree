@@ -245,7 +245,7 @@ txStylesheetCompiler::endElement()
         txInScopeVariable* var =
             (txInScopeVariable*)mInScopeVariables[i];
         if (!--(var->mLevel)) {
-            txInstruction* instr = new txRemoveVariable(var->mName);
+            nsAutoPtr<txInstruction> instr(new txRemoveVariable(var->mName));
             NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
             rv = addInstruction(instr);
@@ -546,11 +546,11 @@ txStylesheetCompilerState::closeInstructionContainer()
 }
 
 nsresult
-txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
+txStylesheetCompilerState::addInstruction(nsAutoPtr<txInstruction> aInstruction)
 {
     NS_PRECONDITION(mNextInstrPtr, "adding instruction outside container");
 
-    *mNextInstrPtr = aInstruction;
+    *mNextInstrPtr = aInstruction.forget();
     mNextInstrPtr = &aInstruction->mNext;
     
     PRInt32 i, count = mGotoTargetPointers.Count();

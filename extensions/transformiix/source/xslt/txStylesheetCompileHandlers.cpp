@@ -135,7 +135,7 @@ parseUseAttrSets(txStylesheetAttr* aAttributes,
                        PR_FALSE);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        txInstruction* instr = new txInsertAttrSet(name);
+        nsAutoPtr<txInstruction> instr(new txInsertAttrSet(name));
         NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
         rv = aState.addInstruction(instr);
@@ -176,7 +176,7 @@ getExprAttr(txStylesheetAttr* aAttributes,
             nsIAtom* aName,
             PRBool aRequired,
             txStylesheetCompilerState& aState,
-            Expr*& aExpr)
+            nsAutoPtr<Expr>& aExpr)
 {
     aExpr = nsnull;
     txStylesheetAttr* attr = nsnull;
@@ -201,7 +201,7 @@ getAVTAttr(txStylesheetAttr* aAttributes,
            nsIAtom* aName,
            PRBool aRequired,
            txStylesheetCompilerState& aState,
-           Expr*& aAVT)
+           nsAutoPtr<Expr>& aAVT)
 {
     aAVT = nsnull;
     txStylesheetAttr* attr = nsnull;
@@ -226,7 +226,7 @@ getPatternAttr(txStylesheetAttr* aAttributes,
                nsIAtom* aName,
                PRBool aRequired,
                txStylesheetCompilerState& aState,
-               txPattern*& aPattern)
+               nsAutoPtr<txPattern>& aPattern)
 {
     aPattern = nsnull;
     txStylesheetAttr* attr = nsnull;
@@ -478,16 +478,17 @@ txFnStartLREStylesheet(PRInt32 aNamespaceID,
     
     txExpandedName nullExpr;
     double prio = Double::NaN;
-    txPattern* match = new txRootPattern(MB_TRUE);
+    nsAutoPtr<txPattern> match(new txRootPattern(MB_TRUE));
     NS_ENSURE_TRUE(match, NS_ERROR_OUT_OF_MEMORY);
 
-    txTemplateItem* templ = new txTemplateItem(match, nullExpr, nullExpr,
-                                               prio);
+    nsAutoPtr<txTemplateItem> templ(new txTemplateItem(match, nullExpr,
+                                                       nullExpr, prio));
     NS_ENSURE_TRUE(templ, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addToplevelItem(templ);
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
+    templ.forget();
     aState.openInstructionContainer(templ);
 
     return txFnStartLRE(aNamespaceID, aLocalName, aPrefix, aAttributes,
@@ -500,7 +501,7 @@ txFnEndLREStylesheet(txStylesheetCompilerState& aState)
     nsresult rv = txFnEndLRE(aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txReturn();
+    nsAutoPtr<txInstruction> instr(new txReturn());
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -554,7 +555,7 @@ txFnStartDecimalFormat(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txDecimalFormat* format = new txDecimalFormat;
+    nsAutoPtr<txDecimalFormat> format(new txDecimalFormat);
     NS_ENSURE_TRUE(format, NS_ERROR_OUT_OF_MEMORY);
 
     rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::decimalSeparator,
@@ -608,7 +609,7 @@ txFnStartDecimalFormat(PRInt32 aNamespaceID,
 
     rv = aState.mStylesheet->addDecimalFormat(name, format);
     NS_ENSURE_SUCCESS(rv, rv);
-
+    
     return aState.pushHandlerTable(gTxIgnoreHandler);
 }
 
@@ -629,7 +630,7 @@ txFnStartImport(PRInt32 aNamespaceID,
                 PRInt32 aAttrCount,
                 txStylesheetCompilerState& aState)
 {
-    txImportItem* import = new txImportItem;
+    nsAutoPtr<txImportItem> import(new txImportItem);
     NS_ENSURE_TRUE(import, NS_ERROR_OUT_OF_MEMORY);
     
     import->mFrame = new txStylesheet::ImportFrame;
@@ -638,6 +639,8 @@ txFnStartImport(PRInt32 aNamespaceID,
     nsresult rv = aState.addToplevelItem(import);
     NS_ENSURE_SUCCESS(rv, rv);
     
+    txImportItem* importPtr = import.forget();
+    
     txStylesheetAttr* attr = nsnull;
     rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
                       txXSLTAtoms::href, PR_TRUE, &attr);
@@ -645,7 +648,7 @@ txFnStartImport(PRInt32 aNamespaceID,
 
     nsAutoString absUri;
     URIUtils::resolveHref(attr->mValue, aState.mElementContext->mBaseURI, absUri);
-    rv = aState.loadImportedStylesheet(absUri, import->mFrame);
+    rv = aState.loadImportedStylesheet(absUri, importPtr->mFrame);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxIgnoreHandler);
@@ -704,12 +707,12 @@ txFnStartKey(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txPattern* match = nsnull;
+    nsAutoPtr<txPattern> match;
     rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::match, PR_TRUE,
                         aState, match);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* use = nsnull;
+    nsAutoPtr<Expr> use;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::use, PR_TRUE,
                      aState, use);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -739,7 +742,7 @@ txFnStartOutput(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    txOutputItem* item = new txOutputItem;
+    nsAutoPtr<txOutputItem> item(new txOutputItem);
     NS_ENSURE_TRUE(item, NS_ERROR_OUT_OF_MEMORY);
 
     txExpandedName methodExpName;
@@ -831,6 +834,8 @@ txFnStartOutput(PRInt32 aNamespaceID,
 
     rv = aState.addToplevelItem(item);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    item.forget();
 
     return aState.pushHandlerTable(gTxIgnoreHandler);
 }
@@ -859,7 +864,7 @@ txFnStartStripSpace(PRInt32 aNamespaceID,
 
     PRBool strip = aLocalName == txXSLTAtoms::stripSpace;
 
-    txStripSpaceItem* stripItem = new txStripSpaceItem;
+    nsAutoPtr<txStripSpaceItem> stripItem(new txStripSpaceItem);
     NS_ENSURE_TRUE(stripItem, NS_ERROR_OUT_OF_MEMORY);
 
     txTokenizer tokenizer(attr->mValue);
@@ -873,8 +878,8 @@ txFnStartStripSpace(PRInt32 aNamespaceID,
             ns = aState.mElementContext->mMappings->lookupNamespace(prefix);
             NS_ENSURE_TRUE(ns != kNameSpaceID_Unknown, NS_ERROR_FAILURE);
         }
-        nsAutoPtr<txStripSpaceTest> sst = new txStripSpaceTest(localName, ns,
-                                                               strip);
+        nsAutoPtr<txStripSpaceTest> sst(new txStripSpaceTest(localName, ns,
+                                                             strip));
         NS_ENSURE_TRUE(sst, NS_ERROR_OUT_OF_MEMORY);
 
         rv = stripItem->addStripSpaceTest(sst);
@@ -885,6 +890,8 @@ txFnStartStripSpace(PRInt32 aNamespaceID,
 
     rv = aState.addToplevelItem(stripItem);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    stripItem.forget();
 
     return aState.pushHandlerTable(gTxIgnoreHandler);
 }
@@ -924,16 +931,18 @@ txFnStartTemplate(PRInt32 aNamespaceID,
                        aState, prio);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txPattern* match = nsnull;
+    nsAutoPtr<txPattern> match;
     rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::match, PR_FALSE,
                         aState, match);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txTemplateItem* templ = new txTemplateItem(match, name, mode, prio);
+    nsAutoPtr<txTemplateItem> templ(new txTemplateItem(match, name, mode, prio));
     NS_ENSURE_TRUE(templ, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addToplevelItem(templ);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    templ.forget();
     
     aState.openInstructionContainer(templ);
 
@@ -943,7 +952,7 @@ txFnStartTemplate(PRInt32 aNamespaceID,
 nsresult
 txFnEndTemplate(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txReturn();
+    nsAutoPtr<txInstruction> instr(new txReturn());
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -970,13 +979,13 @@ txFnStartTopVariable(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txVariableItem* var =
-        new txVariableItem(name, select, aLocalName == txXSLTAtoms::param);
+    nsAutoPtr<txVariableItem> var(
+        new txVariableItem(name, select, aLocalName == txXSLTAtoms::param));
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
     aState.openInstructionContainer(var);
@@ -995,6 +1004,8 @@ txFnStartTopVariable(PRInt32 aNamespaceID,
 
     rv = aState.addToplevelItem(var);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    var.forget();
 
     return NS_OK;
 }
@@ -1014,7 +1025,7 @@ txFnEndTopVariable(txStylesheetCompilerState& aState)
     }
     else if (!var->mValue) {
         // If we don't have a select-expression there mush be children.
-        txInstruction* instr = new txReturn();
+        nsAutoPtr<txInstruction> instr(new txReturn());
         NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
         nsresult rv = aState.addInstruction(instr);
@@ -1072,13 +1083,13 @@ txFnStartLRE(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    txInstruction* instr = new txStartLREElement(aNamespaceID, aLocalName,
-                                                 aPrefix);
+    nsAutoPtr<txInstruction> instr(new txStartLREElement(aNamespaceID,
+                                                         aLocalName, aPrefix));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
-
+    
     rv = parseUseAttrSets(aAttributes, aAttrCount, PR_TRUE, aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1091,8 +1102,8 @@ txFnStartLRE(PRInt32 aNamespaceID,
             continue;
         }
         
-        Expr* avt = ExprParser::createAttributeValueTemplate(attr->mValue,
-                                                             &aState);
+        nsAutoPtr<Expr> avt(
+              ExprParser::createAttributeValueTemplate(attr->mValue, &aState));
         NS_ENSURE_TRUE(avt, NS_ERROR_XPATH_PARSE_FAILURE);
 
         instr = new txLREAttribute(attr->mNamespaceID, attr->mLocalName,
@@ -1109,7 +1120,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
 nsresult
 txFnEndLRE(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txEndElement;
+    nsAutoPtr<txInstruction> instr(new txEndElement);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1128,7 +1139,7 @@ txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
     TX_RETURN_IF_WHITESPACE(aStr, aState);
 
-    txInstruction* instr = new txText(aStr, MB_FALSE);
+    nsAutoPtr<txInstruction> instr(new txText(aStr, MB_FALSE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1156,7 +1167,7 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    txInstruction* instr = new txPushParams;
+    nsAutoPtr<txInstruction> instr(new txPushParams);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1173,20 +1184,23 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
     rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select = nsnull;
+    instr.forget();
+
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (!select) {
-        txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+        nsAutoPtr<txNodeTest> nt(
+            new txNodeTypeTest(txNodeTypeTest::NODE_TYPE));
         NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
         select = new LocationStep(nt, LocationStep::CHILD_AXIS);
         NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    txPushNewContext* pushcontext = new txPushNewContext(select);
+    nsAutoPtr<txPushNewContext> pushcontext(new txPushNewContext(select));
     NS_ENSURE_TRUE(pushcontext, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushSorter(pushcontext);
@@ -1194,6 +1208,8 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
 
     rv = aState.pushObject(pushcontext);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    pushcontext.forget();
 
     return aState.pushHandlerTable(gTxApplyTemplatesHandler);
 }
@@ -1204,16 +1220,18 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
 
     // txPushNewContext
-    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     aState.popSorter();
 
     // txApplyTemplates
-    rv = aState.addInstruction((txInstruction*)aState.popObject());
+    instr = (txInstruction*)aState.popObject();
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txPopParams;
+    instr = new txPopParams;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1239,18 +1257,18 @@ txFnStartAttribute(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    nsAutoPtr<txInstruction> instr(new txPushStringHandler(PR_TRUE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* name = nsnull;
+    nsAutoPtr<Expr> name;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
                     aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* nspace = nsnull;
+    nsAutoPtr<Expr> nspace;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::_namespace, PR_FALSE,
                     aState, nspace);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1261,13 +1279,15 @@ txFnStartAttribute(PRInt32 aNamespaceID,
     rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    instr.forget();
+
     return NS_OK;
 }
 
 nsresult
 txFnEndAttribute(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1292,7 +1312,7 @@ txFnStartCallTemplate(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    txInstruction* instr = new txPushParams;
+    nsAutoPtr<txInstruction> instr(new txPushParams);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1303,11 +1323,13 @@ txFnStartCallTemplate(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* callTempl = new txCallTemplate(name);
-    NS_ENSURE_TRUE(callTempl, NS_ERROR_OUT_OF_MEMORY);
+    instr = new txCallTemplate(name);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.pushObject(callTempl);
+    rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    instr.forget();
 
     return aState.pushHandlerTable(gTxCallTemplateHandler);
 }
@@ -1318,10 +1340,11 @@ txFnEndCallTemplate(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
 
     // txCallTemplate
-    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txPopParams;
+    instr = new txPopParams;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1390,7 +1413,7 @@ txFnStartComment(PRInt32 aNamespaceID,
                  PRInt32 aAttrCount,
                  txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    nsAutoPtr<txInstruction> instr(new txPushStringHandler(PR_TRUE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1402,7 +1425,7 @@ txFnStartComment(PRInt32 aNamespaceID,
 nsresult
 txFnEndComment(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txComment;
+    nsAutoPtr<txInstruction> instr(new txComment);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1428,13 +1451,14 @@ txFnStartCopy(PRInt32 aNamespaceID,
               PRInt32 aAttrCount,
               txStylesheetCompilerState& aState)
 {
-    txCopy* copy = new txCopy;
+    nsAutoPtr<txCopy> copy(new txCopy);
     NS_ENSURE_TRUE(copy, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.pushPtr(copy);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(copy);
+    nsAutoPtr<txInstruction> instr(copy.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = parseUseAttrSets(aAttributes, aAttrCount, PR_FALSE, aState);
@@ -1446,12 +1470,12 @@ txFnStartCopy(PRInt32 aNamespaceID,
 nsresult
 txFnEndCopy(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txEndElement;
+    nsAutoPtr<txInstruction> instr(new txEndElement);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
     txCopy* copy = (txCopy*)aState.popPtr();
     rv = aState.addGotoTarget(&copy->mBailTarget);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1474,12 +1498,12 @@ txFnStartCopyOf(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_TRUE,
                     aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txCopyOf(select);
+    nsAutoPtr<txInstruction> instr(new txCopyOf(select));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
     
     rv = aState.addInstruction(instr);
@@ -1513,18 +1537,18 @@ txFnStartElement(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* name = nsnull;
+    nsAutoPtr<Expr> name;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
                     aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* nspace = nsnull;
+    nsAutoPtr<Expr> nspace;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::_namespace, PR_FALSE,
                     aState, nspace);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr =
-        new txStartElement(name, nspace, aState.mElementContext->mMappings);
+    nsAutoPtr<txInstruction> instr(
+        new txStartElement(name, nspace, aState.mElementContext->mMappings));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -1539,7 +1563,7 @@ txFnStartElement(PRInt32 aNamespaceID,
 nsresult
 txFnEndElement(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txEndElement;
+    nsAutoPtr<txInstruction> instr(new txEndElement);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1567,33 +1591,37 @@ txFnStartForEach(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_TRUE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txPushNewContext* pushcontext = new txPushNewContext(select);
+    nsAutoPtr<txPushNewContext> pushcontext(new txPushNewContext(select));
     NS_ENSURE_TRUE(pushcontext, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushSorter(pushcontext);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(pushcontext);
+    nsAutoPtr<txInstruction> instr(pushcontext.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    txForEach* forEach = new txForEach();
+    nsAutoPtr<txForEach> forEach(new txForEach);
     NS_ENSURE_TRUE(forEach, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushPtr(forEach);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(forEach);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    txInstruction* instr = new txGoTo(forEach);
+    instr = new txGoTo(forEach);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushObject(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    instr.forget();
+
+    instr = forEach.forget();
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxForEachHandler);
@@ -1605,7 +1633,8 @@ txFnEndForEach(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
 
     // txGoTo
-    nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txForEach* forEach = (txForEach*)aState.popPtr();
@@ -1658,18 +1687,19 @@ txFnStartIf(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* test = nsnull;
+    nsAutoPtr<Expr> test;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::test, PR_TRUE,
                      aState, test);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txConditionalGoto* condGoto = new txConditionalGoto(test, nsnull);
+    nsAutoPtr<txConditionalGoto> condGoto(new txConditionalGoto(test, nsnull));
     NS_ENSURE_TRUE(condGoto, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushPtr(condGoto);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(condGoto);
+    nsAutoPtr<txInstruction> instr(condGoto.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -1697,7 +1727,7 @@ txFnStartMessage(PRInt32 aNamespaceID,
                  PRInt32 aAttrCount,
                  txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txPushStringHandler(PR_FALSE);
+    nsAutoPtr<txInstruction> instr(new txPushStringHandler(PR_FALSE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -1714,13 +1744,15 @@ txFnStartMessage(PRInt32 aNamespaceID,
     rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    instr.forget();
+
     return NS_OK;
 }
 
 nsresult
 txFnEndMessage(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1758,38 +1790,39 @@ txFnStartNumber(PRInt32 aNamespaceID,
         return NS_ERROR_XSLT_PARSE_FAILURE;
     }
     
-    txPattern* count = nsnull;
+    nsAutoPtr<txPattern> count;
     rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::count, PR_FALSE,
                         aState, count);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    txPattern* from = nsnull;
+    nsAutoPtr<txPattern> from;
     rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::from, PR_FALSE,
                         aState, from);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* value = nsnull;
+    nsAutoPtr<Expr> value;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::value, PR_FALSE,
                      aState, value);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* format = nsnull;
+    nsAutoPtr<Expr> format;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::format, PR_FALSE,
                     aState, format);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    Expr* groupingSeparator = nsnull;
+    nsAutoPtr<Expr> groupingSeparator;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::groupingSeparator,
                     PR_FALSE, aState, groupingSeparator);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    Expr* groupingSize = nsnull;
+    nsAutoPtr<Expr> groupingSize;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::groupingSize,
                     PR_FALSE, aState, groupingSize);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    txInstruction* instr = new txNumber(level, count, from, value, format,
-                                        groupingSeparator, groupingSize);
+    nsAutoPtr<txInstruction> instr(new txNumber(level, count, from, value,
+                                                format,groupingSeparator,
+                                                groupingSize));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
     
     rv = aState.addInstruction(instr);
@@ -1855,21 +1888,22 @@ txFnStartParam(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txCheckParam* checkParam = new txCheckParam(name);
+    nsAutoPtr<txCheckParam> checkParam(new txCheckParam(name));
     NS_ENSURE_SUCCESS(rv, rv);
     
     rv = aState.pushPtr(checkParam);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(checkParam);
+    nsAutoPtr<txInstruction> instr(checkParam.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txSetVariable* var = new txSetVariable(name, select);
+    nsAutoPtr<txSetVariable> var(new txSetVariable(name, select));
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
     if (var->mValue) {
@@ -1884,6 +1918,8 @@ txFnStartParam(PRInt32 aNamespaceID,
 
     rv = aState.pushObject(var);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    var.forget();
 
     return NS_OK;
 }
@@ -1891,7 +1927,7 @@ txFnStartParam(PRInt32 aNamespaceID,
 nsresult
 txFnEndParam(txStylesheetCompilerState& aState)
 {
-    txSetVariable* var = (txSetVariable*)aState.popObject();
+    nsAutoPtr<txSetVariable> var((txSetVariable*)aState.popObject());
     txHandlerTable* prev = aState.mHandlerTable;
     aState.popHandlerTable();
 
@@ -1905,7 +1941,8 @@ txFnEndParam(txStylesheetCompilerState& aState)
     nsresult rv = aState.addVariable(var->mName);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(var);
+    nsAutoPtr<txInstruction> instr(var.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txCheckParam* checkParam = (txCheckParam*)aState.popPtr();
@@ -1929,13 +1966,13 @@ txFnStartPI(PRInt32 aNamespaceID,
             PRInt32 aAttrCount,
             txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    nsAutoPtr<txInstruction> instr(new txPushStringHandler(PR_TRUE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* name;
+    nsAutoPtr<Expr> name;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
                     aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1946,13 +1983,15 @@ txFnStartPI(PRInt32 aNamespaceID,
     rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    instr.forget();
+
     return NS_OK;
 }
 
 nsresult
 txFnEndPI(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1974,35 +2013,36 @@ txFnStartSort(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* select;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (!select) {
-        txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+        nsAutoPtr<txNodeTest> nt(
+              new txNodeTypeTest(txNodeTypeTest::NODE_TYPE));
         NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
         select = new LocationStep(nt, LocationStep::SELF_AXIS);
         NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    Expr* lang;
+    nsAutoPtr<Expr> lang;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::lang, PR_FALSE,
                     aState, lang);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* dataType;
+    nsAutoPtr<Expr> dataType;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::dataType, PR_FALSE,
                     aState, dataType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* order;
+    nsAutoPtr<Expr> order;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::order, PR_FALSE,
                     aState, order);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* caseOrder;
+    nsAutoPtr<Expr> caseOrder;
     rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::caseOrder, PR_FALSE,
                     aState, caseOrder);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -2059,7 +2099,7 @@ txFnEndText(txStylesheetCompilerState& aState)
 nsresult
 txFnTextText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txText(aStr, aState.mDOE);
+    nsAutoPtr<txInstruction> instr(new txText(aStr, aState.mDOE));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -2089,12 +2129,12 @@ txFnStartValueOf(PRInt32 aNamespaceID,
                      doe);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_TRUE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txValueOf(select, doe == eTrue);
+    nsAutoPtr<txInstruction> instr(new txValueOf(select, doe == eTrue));
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.addInstruction(instr);
@@ -2113,10 +2153,9 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
 /*
     xsl:variable
     
-    txPushRTFHandler  |  --- (for RTF-parameters)
-    [children]        |  /
-    txSetVariable     |
-                    <-+
+    txPushRTFHandler     --- (for RTF-parameters)
+    [children]           /
+    txSetVariable      
 */
 nsresult
 txFnStartVariable(PRInt32 aNamespaceID,
@@ -2133,12 +2172,12 @@ txFnStartVariable(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txSetVariable* var = new txSetVariable(name, select);
+    nsAutoPtr<txSetVariable> var(new txSetVariable(name, select));
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
     if (var->mValue) {
@@ -2154,13 +2193,15 @@ txFnStartVariable(PRInt32 aNamespaceID,
     rv = aState.pushObject(var);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    var.forget();
+
     return NS_OK;
 }
 
 nsresult
 txFnEndVariable(txStylesheetCompilerState& aState)
 {
-    txSetVariable* var = (txSetVariable*)aState.popObject();
+    nsAutoPtr<txSetVariable> var((txSetVariable*)aState.popObject());
 
     txHandlerTable* prev = aState.mHandlerTable;
     aState.popHandlerTable();
@@ -2175,7 +2216,8 @@ txFnEndVariable(txStylesheetCompilerState& aState)
     nsresult rv = aState.addVariable(var->mName);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(var);
+    nsAutoPtr<txInstruction> instr(var.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -2189,7 +2231,7 @@ txFnStartElementStartRTF(PRInt32 aNamespaceID,
                          PRInt32 aAttrCount,
                          txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txPushRTFHandler;
+    nsAutoPtr<txInstruction> instr(new txPushRTFHandler);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -2205,7 +2247,7 @@ txFnTextStartRTF(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
     TX_RETURN_IF_WHITESPACE(aStr, aState);
 
-    txInstruction* instr = new txPushRTFHandler;
+    nsAutoPtr<txInstruction> instr(new txPushRTFHandler);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);
@@ -2231,18 +2273,19 @@ txFnStartWhen(PRInt32 aNamespaceID,
 {
     nsresult rv = NS_OK;
 
-    Expr* test = nsnull;
+    nsAutoPtr<Expr> test;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::test, PR_TRUE,
                      aState, test);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txConditionalGoto* condGoto = new txConditionalGoto(test, nsnull);
+    nsAutoPtr<txConditionalGoto> condGoto(new txConditionalGoto(test, nsnull));
     NS_ENSURE_TRUE(condGoto, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushPtr(condGoto);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.addInstruction(condGoto);
+    nsAutoPtr<txInstruction> instr(condGoto.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxTemplateHandler);
@@ -2252,13 +2295,14 @@ nsresult
 txFnEndWhen(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
-    txGoTo* gotoinstr = new txGoTo(nsnull);
+    nsAutoPtr<txGoTo> gotoinstr(new txGoTo(nsnull));
     NS_ENSURE_TRUE(gotoinstr, NS_ERROR_OUT_OF_MEMORY);
     
     nsresult rv = aState.mChooseGotoList->add(gotoinstr);
     NS_ENSURE_SUCCESS(rv, rv);
-    
-    rv = aState.addInstruction(gotoinstr);
+
+    nsAutoPtr<txInstruction> instr(gotoinstr.forget());
+    rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     txConditionalGoto* condGoto = (txConditionalGoto*)aState.popPtr();
@@ -2290,12 +2334,12 @@ txFnStartWithParam(PRInt32 aNamespaceID,
                       aState, name);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    Expr* select = nsnull;
+    nsAutoPtr<Expr> select;
     rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txSetParam* var = new txSetParam(name, select);
+    nsAutoPtr<txSetParam> var(new txSetParam(name, select));
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
     if (var->mValue) {
@@ -2311,13 +2355,15 @@ txFnStartWithParam(PRInt32 aNamespaceID,
     rv = aState.pushObject(var);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    var.forget();
+
     return NS_OK;
 }
 
 nsresult
 txFnEndWithParam(txStylesheetCompilerState& aState)
 {
-    txSetParam* var = (txSetParam*)aState.popObject();
+    nsAutoPtr<txSetParam> var((txSetParam*)aState.popObject());
     txHandlerTable* prev = aState.mHandlerTable;
     aState.popHandlerTable();
 
@@ -2328,10 +2374,8 @@ txFnEndWithParam(txStylesheetCompilerState& aState)
         NS_ENSURE_TRUE(var->mValue, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    nsresult rv = aState.addVariable(var->mName);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = aState.addInstruction(var);
+    nsAutoPtr<txInstruction> instr(var.forget());
+    nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;

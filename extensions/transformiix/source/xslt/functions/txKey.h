@@ -43,6 +43,7 @@
 #include "XMLUtils.h"
 #include "NodeSet.h"
 #include "List.h"
+#include "txXSLTPatterns.h"
 
 class txPattern;
 class Expr;
@@ -135,7 +136,7 @@ public:
      * @param aUse    use-expression
      * @return PR_FALSE if an error occured, PR_TRUE otherwise
      */
-    PRBool addKey(txPattern* aMatch, Expr* aUse);
+    PRBool addKey(nsAutoPtr<txPattern> aMatch, nsAutoPtr<Expr> aUse);
 
     /**
      * Indexes a document and adds it to the hash of key values
@@ -174,8 +175,8 @@ private:
      * represents one match/use pair
      */
     struct Key {
-        txPattern* matchPattern;
-        Expr* useExpr;
+        nsAutoPtr<txPattern> matchPattern;
+        nsAutoPtr<Expr> useExpr;
     };
 
     /**

@@ -272,8 +272,6 @@ txXSLKey::~txXSLKey()
     txListIterator iter(&mKeys);
     Key* key;
     while ((key = (Key*)iter.next())) {
-        delete key->matchPattern;
-        delete key->useExpr;
         delete key;
     }
 }
@@ -284,18 +282,22 @@ txXSLKey::~txXSLKey()
  * @param aUse    use-expression
  * @return PR_FALSE if an error occured, PR_TRUE otherwise
  */
-PRBool txXSLKey::addKey(txPattern* aMatch, Expr* aUse)
+PRBool txXSLKey::addKey(nsAutoPtr<txPattern> aMatch, nsAutoPtr<Expr> aUse)
 {
     if (!aMatch || !aUse)
         return PR_FALSE;
 
-    Key* key = new Key;
+    nsAutoPtr<Key> key = new Key;
     if (!key)
         return PR_FALSE;
 
     key->matchPattern = aMatch;
     key->useExpr = aUse;
-    mKeys.add(key);
+    nsresult rv = mKeys.add(key);
+    NS_ENSURE_SUCCESS(rv, PR_FALSE);
+    
+    key.forget();
+
     return PR_TRUE;
 }
 

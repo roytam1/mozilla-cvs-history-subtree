@@ -50,10 +50,7 @@ txStylesheet::txStylesheet()
       mDecimalFormats(PR_TRUE),
       mAttributeSets(PR_TRUE),
       mGlobalVariables(PR_TRUE),
-      mKeys(PR_TRUE),
-      mContainerTemplate(nsnull),
-      mCharactersTemplate(nsnull),
-      mEmptyTemplate(nsnull)
+      mKeys(PR_TRUE)
 {
 }
 
@@ -65,14 +62,14 @@ txStylesheet::init()
     
     // Create default templates
     // element/root template
-    txInstruction** instrp = &mContainerTemplate;
+    txInstruction** instrp = mContainerTemplate.StartAssignment();
     *instrp = new txPushParams;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
-    txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+    nsAutoPtr<txNodeTest> nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
     NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
 
-    Expr* nodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
+    nsAutoPtr<Expr> nodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
     NS_ENSURE_TRUE(nodeExpr, NS_ERROR_OUT_OF_MEMORY);
 
     instrp = &(*instrp)->mNext;
@@ -124,10 +121,6 @@ txStylesheet::~txStylesheet()
     while (instrIter.hasNext()) {
         delete (txInstruction*)instrIter.next();
     }
-    
-    delete mContainerTemplate;
-    delete mCharactersTemplate;
-    delete mEmptyTemplate;
 }
 
 txInstruction*
@@ -547,7 +540,7 @@ txStylesheet::addGlobalVariable(txVariableItem* aVariable)
 
 nsresult
 txStylesheet::addKey(const txExpandedName& aName,
-                     txPattern* aMatch, Expr* aUse)
+                     nsAutoPtr<txPattern> aMatch, nsAutoPtr<Expr> aUse)
 {
     nsresult rv = NS_OK;
 
@@ -570,19 +563,22 @@ txStylesheet::addKey(const txExpandedName& aName,
 
 nsresult
 txStylesheet::addDecimalFormat(const txExpandedName& aName,
-                               txDecimalFormat* aFormat)
+                               nsAutoPtr<txDecimalFormat> aFormat)
 {
     txDecimalFormat* existing = (txDecimalFormat*)mDecimalFormats.get(aName);
     if (existing) {
         NS_ENSURE_TRUE(existing->isEqual(aFormat),
                        NS_ERROR_XSLT_PARSE_FAILURE);
 
-        delete aFormat;
-
         return NS_OK;
     }
 
-    return mDecimalFormats.add(aName, aFormat);
+    nsresult rv = mDecimalFormats.add(aName, aFormat);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    aFormat.forget();
+
+    return NS_OK;
 }
 
 txStylesheet::ImportFrame::ImportFrame()

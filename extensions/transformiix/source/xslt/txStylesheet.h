@@ -45,11 +45,11 @@
 #include "Expr.h"
 #include "txXSLTPatterns.h"
 #include "txInstructions.h"
+#include "XSLTFunctions.h"
 
 class txInstruction;
 class txToplevelItem;
 class txTemplateItem;
-class txDecimalFormat;
 class txVariableItem;
 class txStripSpaceItem;
 
@@ -101,14 +101,14 @@ public:
     /**
      * Add a key to the stylesheet
      */
-    nsresult addKey(const txExpandedName& aName, txPattern* aMatch,
-                    Expr* aUse);
+    nsresult addKey(const txExpandedName& aName, nsAutoPtr<txPattern> aMatch,
+                    nsAutoPtr<Expr> aUse);
 
     /**
      * Add a decimal-format to the stylesheet
      */
     nsresult addDecimalFormat(const txExpandedName& aName,
-                              txDecimalFormat* aFormat);
+                              nsAutoPtr<txDecimalFormat> aFormat);
 
     /**
      * Contain information that is import precedence dependant.
@@ -195,9 +195,9 @@ private:
     nsVoidArray mStripSpaceTests;
     
     // Default templates
-    txInstruction* mContainerTemplate;
-    txInstruction* mCharactersTemplate;
-    txInstruction* mEmptyTemplate;
+    nsAutoPtr<txInstruction> mContainerTemplate;
+    nsAutoPtr<txInstruction> mCharactersTemplate;
+    nsAutoPtr<txInstruction> mEmptyTemplate;
 };
 
 
