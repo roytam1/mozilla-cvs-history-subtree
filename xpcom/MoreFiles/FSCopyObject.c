@@ -177,6 +177,7 @@ typedef struct FSDeleteObjectGlobals FSDeleteObjectGlobals;
 
 static OSErr		FSCopyFile(	const FSRef		*source,
 							 	const FSRef		*destDir,
+							 	const HFSUniStr255 *destName,			/* can be NULL (no rename during copy) */
 							 	CopyParams		*copyParams,
 							 	FilterParams	*filterParams,
 							 	FSRef			*newFile);				/* can be NULL */
@@ -204,12 +205,13 @@ static OSErr		DoCopyFile(	const FSRef 		*source,
 
 static OSErr		FSCopyFolder(	const FSRef *source,
 									const FSRef *destDir,
+									const HFSUniStr255 *destName,		/* can be NULL (no rename during copy) */
 									CopyParams* copyParams,
 									FilterParams *filterParams,
 									ItemCount maxLevels,
 									FSRef* newDir);						/* can be NULL */
 
-static OSErr 		FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals );
+static OSErr 		FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals, const HFSUniStr255 *destName );
 
 static OSErr		CheckForDestInsideSource(	const FSRef *source,
 												const FSRef *destDir);
@@ -291,6 +293,8 @@ static void			FSDeleteFolderLevel(	const FSRef *container,
 	// b) minimise the local variables in the recursive routines.
 OSErr FSCopyObject(	const FSRef *source,
 					const FSRef *destDir,
+				 	UniCharCount nameLength,
+				 	const UniChar *copyName,	// can be NULL (no rename during copy)
 				 	ItemCount maxLevels,
 				 	FSCatalogInfoBitmap whichInfo,
 					Boolean wantFSSpec,
@@ -301,9 +305,25 @@ OSErr FSCopyObject(	const FSRef *source,
 {
 	CopyParams   	copyParams;
 	FilterParams	filterParams;
+	HFSUniStr255 	destName;
+	HFSUniStr255 	*destNamePtr;
 	Boolean			isDirectory;
 	OSErr			osErr = ( source != NULL && destDir != NULL ) ? noErr : paramErr;
-
+  
+	if (copyName)
+	{
+		if (nameLength <= 255)
+		{
+			BlockMoveData(copyName, destName.unicode, nameLength * sizeof(UniChar));
+			destName.length = nameLength;
+			destNamePtr = &destName;
+		}
+		else
+			osErr = paramErr;
+	}
+	else
+		destNamePtr = NULL;
+  
 		// we want the settable info no matter what the user asked for
 	filterParams.whichInfo		= whichInfo | kFSCatInfoSettableInfo;
 	filterParams.filterProcPtr	= filterProcPtr;
@@ -315,14 +335,17 @@ OSErr FSCopyObject(	const FSRef *source,
 		// and create the buffer
 	if( osErr == noErr )
 		osErr = CalculateBufferSize( source, destDir, &copyParams.copyBufferSize);
+
 	if( osErr == noErr )
 	{
 		copyParams.copyBuffer = NewPtr( copyParams.copyBufferSize );
 		if( copyParams.copyBuffer == NULL )
 			osErr = memFullErr;
 	}
+
 	if( osErr == noErr )
 		osErr = GetMagicBusyCreationDate( &copyParams.magicBusyCreateDate ); 
+
 	if( osErr == noErr )	// figure out if source is a file or folder
 	{						//			  if it is on a local volume, 
 							//			  if destination is a drop box 
@@ -353,10 +376,10 @@ OSErr FSCopyObject(	const FSRef *source,
 		{		// yes
 			osErr = CheckForDestInsideSource(source, destDir);
 			if( osErr == noErr )
-				osErr = FSCopyFolder( source, destDir, &copyParams, &filterParams, maxLevels, newObject );
+				osErr = FSCopyFolder( source, destDir, destNamePtr, &copyParams, &filterParams, maxLevels, newObject );
 		}
 		else	// no
-			osErr = FSCopyFile(source, destDir, &copyParams, &filterParams, newObject);
+			osErr = FSCopyFile(source, destDir, destNamePtr, &copyParams, &filterParams, newObject);
 	}
 	
 	// Clean up for space and safety...  Who me?
@@ -374,6 +397,7 @@ OSErr FSCopyObject(	const FSRef *source,
 
 OSErr FSCopyFile(	const FSRef		*source,
 			 		const FSRef		*destDir,
+			 		const HFSUniStr255 *destName,
 			 		CopyParams	*copyParams,
 			 		FilterParams	*filterParams,
 			 		FSRef			*newFile)
@@ -385,7 +409,15 @@ OSErr FSCopyFile(	const FSRef		*source,
 		
 		// get needed info about the source file
 	if ( osErr == noErr )
-		osErr = FSGetCatalogInfo(source, filterParams->whichInfo, &sourceCatInfo, &filterParams->fileName,  NULL, NULL);
+	{
+		if (destName)
+		{
+			osErr = FSGetCatalogInfo(source, filterParams->whichInfo, &sourceCatInfo, NULL,  NULL, NULL);
+			filterParams->fileName = *destName;
+		}
+		else
+			osErr = FSGetCatalogInfo(source, filterParams->whichInfo, &sourceCatInfo, &filterParams->fileName,  NULL, NULL);
+	}
 	if( osErr == noErr )
 		osErr = CopyFile(source, &sourceCatInfo, destDir, &filterParams->fileName, copyParams, &tmpRef);
 	
@@ -582,8 +614,8 @@ OSErr DoCopyFile(	const FSRef *source,
 
 #pragma mark ----- Copy Folders -----
 
-OSErr FSCopyFolder( const FSRef *source, const FSRef *destDir, CopyParams* copyParams, 
-							FilterParams *filterParams, ItemCount maxLevels, FSRef* newDir)
+OSErr FSCopyFolder( const FSRef *source, const FSRef *destDir, const HFSUniStr255 *destName,
+                    CopyParams* copyParams,  FilterParams *filterParams, ItemCount maxLevels, FSRef* newDir)
 {
 	FSCopyObjectGlobals	theGlobals;
 
@@ -602,7 +634,7 @@ OSErr FSCopyFolder( const FSRef *source, const FSRef *destDir, CopyParams* copyP
 	
 		// here we go into recursion land...
 	if( theGlobals.result == noErr )
-		theGlobals.result = FSCopyFolderLevel(&theGlobals);
+		theGlobals.result = FSCopyFolderLevel(&theGlobals, destName);
 
 	if( theGlobals.result == noErr && newDir != NULL)
 		*newDir = theGlobals.ref;
@@ -624,7 +656,7 @@ OSErr FSCopyFolder( const FSRef *source, const FSRef *destDir, CopyParams* copyP
 
 /*****************************************************************************/
 
-OSErr FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals )
+OSErr FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals, const HFSUniStr255 *destName )
 {
 		// If maxLevels is zero, we aren't checking levels
 		// If currentLevel < maxLevels, look at this level
@@ -641,6 +673,9 @@ OSErr FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals )
 		theGlobals->result = FSGetCatalogInfo(	&theGlobals->ref, filterPtr->whichInfo,
 												&theGlobals->catalogInfo, &filterPtr->fileName, 
 												NULL, NULL);
+
+		if (theGlobals->currentLevel == 0 && destName)
+			filterPtr->fileName = *destName;
 
 			// Clear the "inited" bit so that the Finder positions the icon for us.
 		((FInfo *)(theGlobals->catalogInfo.finderInfo))->fdFlags &= ~kHasBeenInited;
@@ -703,7 +738,7 @@ OSErr FSCopyFolderLevel( FSCopyObjectGlobals *theGlobals )
 					if ( (theGlobals->catalogInfo.nodeFlags & kFSNodeIsDirectoryMask) != 0 )
 					{		// yes
 						theGlobals->destRef	= newDirRef;				
-						osErr = FSCopyFolderLevel(theGlobals);
+						osErr = FSCopyFolderLevel(theGlobals, NULL);
 						theGlobals->result = noErr;	// don't want one silly mistake to kill the party...
 					}
 					else	// no

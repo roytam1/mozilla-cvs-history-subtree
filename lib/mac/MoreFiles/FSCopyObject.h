@@ -196,6 +196,8 @@ typedef CALLBACK_API( Boolean , CopyObjectFilterProcPtr ) (
 
 OSErr FSCopyObject(	const FSRef *source,
 					const FSRef *destDir,
+				 	UniCharCount nameLength,
+				 	const UniChar *copyName,			// can be NULL (no rename during copy)
 				 	ItemCount maxLevels,
 				 	FSCatalogInfoBitmap whichInfo,
 					Boolean wantFSSpec,
