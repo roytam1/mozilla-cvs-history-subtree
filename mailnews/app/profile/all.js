@@ -51,6 +51,7 @@ pref("general.startup.news",                false);
 pref("general.startup.editor",              false);
 pref("general.startup.compose",             false);
 pref("general.startup.addressbook",         false);
+pref("general.skins.selectedSkin", "modern/1.0");
 
 pref("general.open_location.last_url",      "");
 pref("general.open_location.last_window_choice", 0);
