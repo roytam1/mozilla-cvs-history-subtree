@@ -614,7 +614,6 @@ protected:
 
   nsresult CreateInputFrame(nsIPresShell*    aPresShell,
                             nsIPresContext*  aPresContext,
-                            nsFrameConstructorState& aState,
                             nsIContent*      aContent,
                             nsIFrame*&       aFrame,
                             nsIStyleContext* aStyleContext);

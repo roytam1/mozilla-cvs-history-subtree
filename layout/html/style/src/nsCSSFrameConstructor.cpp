@@ -1497,7 +1497,6 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
 nsresult
 nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
                                         nsIPresContext  *aPresContext,
-                                        nsFrameConstructorState& aState,
                                         nsIContent      *aContent, 
                                         nsIFrame        *&aFrame,
                                         nsIStyleContext *aStyleContext)
@@ -1523,12 +1522,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
       rv = NS_NewFileControlFrame(aPresShell, &aFrame);
     }
     else if (val.EqualsIgnoreCase("hidden")) {
-      // JBK Don't create a hidden frame
-      nsStyleDisplay* mutdisplay =
-          (nsStyleDisplay*)aStyleContext->GetUniqueStyleData(aPresContext,
-               eStyleStruct_Display);
-      mutdisplay->mDisplay = NS_STYLE_DISPLAY_NONE;
-      aState.mFrameManager->SetUndisplayedContent(aContent, aStyleContext);
+      rv = NS_OK;
     }
     else if (val.EqualsIgnoreCase("image")) {
       rv = NS_NewImageControlFrame(aPresShell, &aFrame);
@@ -4484,7 +4478,7 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
           ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
         }
         isReplaced = PR_TRUE;
-        rv = CreateInputFrame(aPresShell, aPresContext, aState,
+        rv = CreateInputFrame(aPresShell, aPresContext,
                               aContent, newFrame, aStyleContext);
       }
       else if (nsHTMLAtoms::textarea == aTag) {
