@@ -79,6 +79,7 @@ class nsIDocumentEncoder;
 class nsIClipboard;
 class TypeInState;
 class nsIContentFilter;
+struct PropItem;
 
 /**
  * The HTML editor implementation.<br>
@@ -168,8 +169,18 @@ public:
                                    const nsAString & aValue);
 
   NS_IMETHOD RemoveAllAlternateProperties();
+  
+  NS_IMETHOD AddDefaultPropertyOverride(nsIAtom *aProperty, 
+                                        const nsAString & aAttribute,
+                                        nsIAtom *aTag);
+
+  NS_IMETHOD AddAlternatePropertyOverride(nsIAtom *aProperty, 
+                                          const nsAString & aAttribute,
+                                          nsIAtom *aTag);
 
   NS_IMETHOD SetPastePolicy(PRInt32 aPolicy);
+
+  NS_IMETHOD ApplyStyleToDocument(PRInt32 aPolicy);
   
   NS_IMETHOD SetCSSInlineProperty(nsIAtom *aProperty, 
                              const nsAString & aAttribute, 
@@ -813,7 +824,8 @@ protected:
                                     nsIAtom *aProperty, 
                                     const nsAString *aAttribute,
                                     const nsAString *aValue,
-                                    PRBool aDontOverride = PR_FALSE);
+                                    PRBool aDontOverride = PR_FALSE,
+                                    PropItem *aPropItem = nsnull);
 
   nsresult PromoteInlineRange(nsIDOMRange *inRange);
   nsresult PromoteRangeIfStartsOrEndsInNamedAnchor(nsIDOMRange *inRange);
@@ -826,6 +838,7 @@ protected:
                                 const nsAString *aAttribute,
                                 nsCOMPtr<nsIDOMNode> *outLeftNode = nsnull,
                                 nsCOMPtr<nsIDOMNode> *outRightNode = nsnull);
+  PRBool   CheckOverrides(PropItem* aPropItem, nsIDOMNode *aNode, PRBool aCheckAncestors=PR_TRUE);
   nsresult ApplyDefaultProperties();
   nsresult RemoveStyleInside(nsIDOMNode *aNode, 
                              nsIAtom *aProperty, 

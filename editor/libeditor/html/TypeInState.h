@@ -52,8 +52,9 @@ struct PropItem
   nsIAtom *tag;
   nsString attr;
   nsString value;
+  nsVoidArray *overrides;
   
-  PropItem() : tag(nsnull), attr(), value() {};
+  PropItem() : tag(nsnull), attr(), value(), overrides(0) {};
   PropItem(nsIAtom *aTag, const nsAString &aAttr, const nsAString &aValue);
   ~PropItem();
 };
@@ -99,8 +100,16 @@ public:
   nsresult GetTypingState(PRBool &isSet, PRBool &theSetting, nsIAtom *aProp, 
                           const nsString &aAttr, nsString* outValue);
 
-  static   PRBool FindPropInList(nsIAtom *aProp, const nsAString &aAttr, nsAString *outValue, nsVoidArray &aList, PRInt32 &outIndex);
+  //**************************************************************************
+  //    AddOverride: Add aTag to an override list for this property.  Used to
+  //                 control which tags properties can be applied to.
+  static nsresult  AddOverride(nsVoidArray &aList, nsIAtom *aProp, 
+                               const nsAString &aAttr, nsIAtom *aTag);
 
+  static   PRBool  FindPropInList(nsIAtom *aProp, const nsAString &aAttr, 
+                                  nsAString *outValue, nsVoidArray &aList, 
+                                  PRInt32 &outIndex);
+  
 protected:
 
   nsresult RemovePropFromSetList(nsIAtom *aProp, const nsString &aAttr);

@@ -43,6 +43,7 @@
 #include "nsError.h"  // for nsresult
 class nsIEditor;
 class nsIDOMNode;
+class nsIAtom;
 
 class nsHTMLEditUtils
 {
@@ -76,6 +77,7 @@ public:
   static PRBool IsMailCite(nsIDOMNode *aNode);
   static PRBool IsFormWidget(nsIDOMNode *aNode);
   static PRBool IsDescendantOf(nsIDOMNode *aNode, nsIDOMNode *aParent, PRInt32 *aOffset = 0);
+  static PRBool IsDescendantOfTag(nsIDOMNode *aNode, nsIAtom *aTag);
   static PRBool IsLeafNode(nsIDOMNode *aNode);
   static PRBool SupportsAlignAttr(nsIDOMNode *aNode);
 
