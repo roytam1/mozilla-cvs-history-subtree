@@ -83,7 +83,8 @@
 #endif /* USE_SYSCONF */
 
 #if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI) && \
-    !defined(XP_OS2) && !defined(XP_BEOS) && !defined(NTO)
+    !defined(XP_OS2) && !defined(XP_BEOS) && !defined(NTO) && \
+    !defined(DARWIN)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
