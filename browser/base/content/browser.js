@@ -276,9 +276,10 @@ function BrowserOpenFindBar(aSelect)
   var findField = document.getElementById("find-field");
   if (gLinksMode)
     findField.value = "";
-  else if (aSelect) {
+  else {
     findField.focus();
-    findField.select();
+    if (aSelect)
+      findField.select();
   }
 }
 

@@ -127,8 +127,8 @@
     <command id="View:PageInfo" oncommand="BrowserPageInfo();"/>
     <command id="View:FullScreen" oncommand="BrowserFullScreen();"/>
     <command id="cmd_find" oncommand="BrowserOpenFindBar(true);"/>
-    <command id="cmd_findAgain" oncommand="BrowserOpenFindBar(false); BrowserFindNext();"/>
-    <command id="cmd_findPrevious" oncommand="BrowserOpenFindBar(false); BrowserFindPrevious();"/>    
+    <command id="cmd_findAgain" oncommand="BrowserOpenFindBar(false); changeSelectionColor(true); BrowserFindNext();"/>
+    <command id="cmd_findPrevious" oncommand="BrowserOpenFindBar(false); changeSelectionColor(true); BrowserFindPrevious();"/>    
     <command id="Browser:AddBookmarkAs" oncommand="addBookmarkAs(document.getElementById('content'));"/>
     <command id="Browser:Home"    oncommand="BrowserHome();"/>
     <command id="Browser:Back"    oncommand="BrowserBack();" disabled="true"/>
