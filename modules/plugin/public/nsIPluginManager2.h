@@ -89,6 +89,9 @@ public:
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(nsIEventHandler* handler, PRBool isSubmenu) = 0;
 
+	NS_IMETHOD
+	ReleaseMenuID(nsIEventHandler* handler, PRInt16 menuID) = 0;
+
 	// On the mac (and most likely win16), network activity can
     // only occur on the main thread. Therefore, we provide a hook
     // here for the case that the main thread needs to tickle itself.
