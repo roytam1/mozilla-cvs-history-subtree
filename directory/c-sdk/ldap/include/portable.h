@@ -137,7 +137,7 @@
  * for select()
  */
 #if !defined(WINSOCK) && !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
-#if defined(hpux) || defined(LINUX) || defined(SUNOS4) || defined(XP_BEOS)
+#if defined(HPUX) || defined(LINUX) || defined(SUNOS4) || defined(XP_BEOS)
 #include <sys/time.h>
 #else
 #include <sys/select.h>
