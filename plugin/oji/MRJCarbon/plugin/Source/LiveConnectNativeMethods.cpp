@@ -207,7 +207,7 @@ static jobject GetCurrentThread(JNIEnv* env)
 MRJSecurityContext::MRJSecurityContext(const char* location)
     :   mLocation(nsnull), mConnection(nsnull)
 {
-    NS_INIT_ISUPPORTS();
+    NS_INIT_REFCNT();
     
     mLocation = ::strdup(location);
     if (mLocation) {

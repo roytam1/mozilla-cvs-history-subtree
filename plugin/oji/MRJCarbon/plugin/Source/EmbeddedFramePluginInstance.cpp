@@ -50,7 +50,7 @@
 EmbeddedFramePluginInstance::EmbeddedFramePluginInstance()
 	:	mPeer(NULL), mFrame(NULL)
 {
-	NS_INIT_ISUPPORTS();
+	NS_INIT_REFCNT();
 }
 
 EmbeddedFramePluginInstance::~EmbeddedFramePluginInstance()
