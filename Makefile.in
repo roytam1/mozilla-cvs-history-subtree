@@ -40,9 +40,12 @@ else
 # Divide the default build into tiers. 
 # Tiers must be defined on module boundaries 
 #
-default: 
+default: $(SUBMAKEFILES)
 	$(MAKE) nspr
 	$(MAKE) tier_0
+ifdef MOZ_LDAP_XPCOM
+	$(MAKE) -C directory/c-sdk/ldap
+endif
 	$(MAKE) tier_1
 	$(MAKE) tier_9
 
@@ -174,7 +177,7 @@ tier_9_dirs	+= security/manager
 endif
 
 ifdef MOZ_LDAP_XPCOM
-tier_9_dirs	+= directory/c-sdk/ldap directory/xpcom
+tier_9_dirs	+= directory/xpcom
 endif
 
 ifdef MOZ_EXTENSIONS
@@ -233,7 +236,7 @@ tier_%:
 	done ; \
 	$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/include ;\
 	for d in $($@_dirs); do $(UPDATE_TITLE) \
-		$(MAKE) -C $$d install; \
+		$(MAKE) -C $$d libs; \
 	done
 #
 # Individual modules
@@ -258,5 +261,3 @@ export::
 distclean::
 	cat unallmakefiles | $(XARGS) rm -f
 	rm -f unallmakefiles $(DIST_GARBAGE)
-
-
