@@ -160,6 +160,10 @@ push(@extras,
      AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
     if ($] >= 5.005);
 
+#
+# Temp fix so this version compiles under Perl 5.6 - have to
+# change internal variables for version 2.0
+#
 push(@extras, POLLUTE => 1) if ($] >= 5.006);
 
 #

@@ -1,3 +1,8 @@
+2000-05-30  Kevin McCarthy  <kevin@perldap.org>
+
+	* Makefile.PL: Added fix so API.xs compiles under Perl 5.6
+	(POLLUTE=>1)
+
 1999-09-07  Leif Hedstrom  <leif@perldap.org>
 
 	* API.xs (avref2charptrptr): Fixed potential core dump, if the
