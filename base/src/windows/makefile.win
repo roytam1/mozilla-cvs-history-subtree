@@ -16,34 +16,25 @@
 # Reserved.
 
 DEPTH=..\..\..
-
 IGNORE_MANIFEST=1
 
-MAKE_OBJ_TYPE = DLL
+DEFINES=-D_IMPL_NS_BASE 
+LIBRARY_NAME=gmbase 
+MODULE=raptor 
+REQUIRES=xpcom raptor 
 
-DLL = $(OBJDIR)\TestDynamic.dll
+CPPSRCS=nsTimer.cpp 
 
-LINCS = -I.. -I../../src
+CPP_OBJS=.\$(OBJDIR)\nsTimer.obj 
 
-LLIBS=				\
- $(DIST)\lib\xpcom32.lib	\
- $(LIBNSPR)			\
- $(DIST)\lib\libplc21.lib
-!if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
-!endif
+LINCS=-I$(XPDIST)\public\xpcom -I$(XPDIST)\public\raptor 
 
-CPPSRCS =				\
-	TestDynamic.cpp			\
-	$(NULL)
-
-CPP_OBJS = \
-	.\$(OBJDIR)\TestDynamic.obj	\
-	$(NULL)
-
-MODULE = xpcom
+LCFLAGS = \
+        $(LCFLAGS) \
+        -D_IMPL_NS_BASE \
+        $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin
+libs:: $(OBJS)
+	$(MAKE_INSTALL) $(OBJDIR)\nsTimer.obj ..\$(OBJDIR)

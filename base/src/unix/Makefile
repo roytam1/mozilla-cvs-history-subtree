@@ -1,4 +1,4 @@
-#!nmake
+#!gmake
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -15,35 +15,29 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH=..\..\..
 
-IGNORE_MANIFEST=1
+DEPTH = ../../..
 
-MAKE_OBJ_TYPE = DLL
 
-DLL = $(OBJDIR)\TestDynamic.dll
+LIBRARY_NAME = gmbaseunix
 
-LINCS = -I.. -I../../src
+MODULE=raptor
 
-LLIBS=				\
- $(DIST)\lib\xpcom32.lib	\
- $(LIBNSPR)			\
- $(DIST)\lib\libplc21.lib
-!if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
-!endif
+REQUIRES=xpcom raptor 
 
-CPPSRCS =				\
-	TestDynamic.cpp			\
-	$(NULL)
+DEFINES = -D_IMPL_NS_WIDGET 
 
-CPP_OBJS = \
-	.\$(OBJDIR)\TestDynamic.obj	\
-	$(NULL)
+CPPSRCS= \
+	nsTimer.cpp 
 
-MODULE = xpcom
+CPP_OBJS=				\
+ ./$(OBJDIR)/nsTimer.o		\
+ $(NULL)
 
-include <$(DEPTH)\config\rules.mak>
+include $(DEPTH)/config/config.mk
 
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin
+TARGETS = $(LIBRARY)
+
+include $(DEPTH)/config/rules.mk
+
+

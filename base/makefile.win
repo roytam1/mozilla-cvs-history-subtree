@@ -15,35 +15,9 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH=..\..\..
-
+DEPTH=..
 IGNORE_MANIFEST=1
 
-MAKE_OBJ_TYPE = DLL
-
-DLL = $(OBJDIR)\TestDynamic.dll
-
-LINCS = -I.. -I../../src
-
-LLIBS=				\
- $(DIST)\lib\xpcom32.lib	\
- $(LIBNSPR)			\
- $(DIST)\lib\libplc21.lib
-!if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
-!endif
-
-CPPSRCS =				\
-	TestDynamic.cpp			\
-	$(NULL)
-
-CPP_OBJS = \
-	.\$(OBJDIR)\TestDynamic.obj	\
-	$(NULL)
-
-MODULE = xpcom
+DIRS=public src tests 
 
 include <$(DEPTH)\config\rules.mak>
-
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin

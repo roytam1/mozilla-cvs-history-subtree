@@ -15,33 +15,39 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH=..\..\..
-
-IGNORE_MANIFEST=1
+DEPTH=..\..
 
 MAKE_OBJ_TYPE	= EXE
-PROG1 = .\$(OBJDIR)\TestCOM.exe
-PROGRAMS = $(PROG1) $(PROG2)
+PROG0 = .\$(OBJDIR)\TimerTest.exe
+PROG1 = .\$(OBJDIR)\TestAtoms.exe
+PROG2 = .\$(OBJDIR)\CvtURL.exe
+PROG3 = .\$(OBJDIR)\TestCRT.exe
+RESFILE = timer.res
+PROGRAMS = $(PROG0) $(PROG1) $(PROG2) $(PROG3)
 
-LINCS=-I..\..\src
+LINCS=-I..\src -I$(PUBLIC)\xpcom -I$(PUBLIC)\netlib
 
-LLIBS=					\
- rpcrt4.lib				\
- uuid.lib				\
- $(DIST)\lib\xpcom32.lib		\
- $(LIBNSPR)				\
- $(DIST)\lib\libplc21.lib
-!if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
-LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
-!endif
+LLIBS=				\
+ $(DIST)\lib\xpcom32.lib	\
+ $(DIST)\lib\raptorbase.lib	\
+ $(DIST)\lib\netlib.lib	        \
+ $(LIBNSPR)			\
+ $(DIST)\lib\libplc21.lib	\
+ $(RESFILE)
 
 include <$(DEPTH)\config\rules.mak>
 
 install:: $(PROGRAMS)
-	-for %p in ($(PROGRAMS)) do $(MAKE_INSTALL) %p $(DIST)\bin
+	$(MAKE_INSTALL) $(PROG0) $(DIST)\bin
+	$(MAKE_INSTALL) $(PROG1) $(DIST)\bin
+	$(MAKE_INSTALL) $(PROG2) $(DIST)\bin
+	$(MAKE_INSTALL) $(PROG3) $(DIST)\bin
 
 clobber::
-	-for %p in ($(PROGRAMS)) do $(RM) %p $(DIST)\bin\%p
+	rm -f $(DIST)\bin\TimerTest.exe
+	rm -f $(DIST)\bin\TestAtoms.exe
+	rm -f $(DIST)\bin\CvtURL.exe
+	rm -f $(DIST)\bin\TestCRT.exe
 
 # Move this into config/obj.inc when it's allowed
 .cpp{.\$(OBJDIR)\}.exe:
@@ -59,5 +65,11 @@ clobber::
         $(CURDIR)$(*B).cpp
 <<KEEP
 
-$(PROG1): $(OBJDIR) TestCOM.cpp
+$(PROG0): $(OBJDIR) TimerTest.cpp $(RESFILE)
+
+$(PROG1): $(OBJDIR) TestAtoms.cpp
+
+$(PROG2): $(OBJDIR) CvtURL.cpp
+
+$(PROG2): $(OBJDIR) TestCRT.cpp
 
