@@ -63,7 +63,7 @@
 		 var augment = event.ctrlKey || event.metaKey;
 		 if (event.shiftKey) {
 		   b.selection.rangedSelect(-1, row.value, augment);
-           b.currentIndex = row.value;
+           b.selection.currentIndex = row.value;
          }
          else if (augment) {
            b.selection.toggleSelect(row.value);
