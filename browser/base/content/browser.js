@@ -1041,7 +1041,7 @@ function Startup()
 #endif
 
   var sidebarSplitter;
-  if (window.opener) {
+  if (window.opener && !window.opener.closed) {
     if (window.opener.gFindMode == FIND_NORMAL) {
       var openerFindBar = window.opener.document.getElementById("FindToolbar");
       if (openerFindBar && !openerFindBar.hidden)
