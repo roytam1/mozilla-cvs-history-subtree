@@ -22,11 +22,31 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/idl
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= idl src
+MODULE		= intlcmpt
+LIBRARY_NAME	= intlcmpt
+EXPORT_LIBRARY = 1
+IS_COMPONENT	= 1
+MODULE_NAME	= I18nCompatibility
+
+REQUIRES	= \
+		xpcom \
+		string \
+		$(NULL)
+
+CPPSRCS		= \
+		src/nsI18nCompatibility.cpp \
+		src/nsCSIDtoCharsetName.cpp \
+		$(NULL)
+
+XPIDLSRCS	= nsII18nCompatibility.idl
+
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
 
 include $(topsrcdir)/config/rules.mk
+
+INCLUDES	+= -I..
 

@@ -19,7 +19,13 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= \
+	@srcdir@ \
+	@srcdir@/../unicharutil/idl \
+	@srcdir@/../locale/idl \
+	@srcdir@/../strres/public \
+	@srcdir@/../chardet/public \
+	$(NULL)
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -28,6 +34,18 @@ LIBRARY_NAME	= i18n
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= nsI18nModule
+
+ifdef ENABLE_TESTS
+DIRS		+= \
+		../unicharutil/tests \
+		../strres/tests \
+		../lwbrk/tests \
+		$(NULL)
+ifeq ($(OS_ARCH),WINNT)
+DIRS		+= ../chardet/tests
+endif
+endif
+
 REQUIRES	= xpcom \
 		  string \
 		  unicharutil \
@@ -42,44 +60,166 @@ REQUIRES	= xpcom \
 		  widget \
 		  webshell \
 		  necko \
+		  gfx \
+		  docshell \
+		  embedcomponents \
+		  pref \
 		  $(NULL)
 
+CSRCS		= \
+		../lwbrk/src/rulebrk.c \
+		$(NULL)
+
 CPPSRCS		= \
-			nsI18nModule.cpp \
-			$(NULL)
+		../unicharutil/src/nsCaseConversionImp2.cpp \
+		../unicharutil/src/nsCategoryImp.cpp \
+		../unicharutil/src/nsHankakuToZenkaku.cpp \
+		../unicharutil/src/nsEntityConverter.cpp \
+		../unicharutil/src/nsSaveAsCharset.cpp \
+		../locale/src/nsCollation.cpp \
+		../locale/src/nsScriptableDateFormat.cpp \
+		../locale/src/nsLanguageAtomService.cpp \
+		../locale/src/nsLocale.cpp \
+		../locale/src/nsLocaleService.cpp \
+		../locale/src/nsFontPackageService.cpp \
+		../strres/src/nsStringBundle.cpp \
+		../strres/src/nsStringBundleTextOverride.cpp \
+		../lwbrk/src/nsJISx4501LineBreaker.cpp \
+		../lwbrk/src/nsLWBreakerFImp.cpp \
+		../lwbrk/src/nsSampleWordBreaker.cpp \
+		../chardet/src/nsObserverBase.cpp \
+		../chardet/src/nsXMLEncodingObserver.cpp \
+		../chardet/src/nsMetaCharsetObserver.cpp \
+		../chardet/src/nsDetectionAdaptor.cpp \
+		../chardet/src/nsDebugDetector.cpp \
+		../chardet/src/nsPSMDetectors.cpp \
+		../chardet/src/nsCyrillicDetector.cpp \
+		../chardet/src/nsDocumentCharsetInfo.cpp \
+		nsI18nModule.cpp \
+		$(NULL)
 
 # see also intl/locale/src/Makefile.in
-ifneq (,$(filter mac os2 windows, $(MOZ_WIDGET_TOOLKIT)))
-LOCALE_DIR		= $(MOZ_WIDGET_TOOLKIT)
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+LOCALE_DIR	= windows
+CPPSRCS		+= \
+		../locale/src/windows/nsCollationWin.cpp \
+		../locale/src/windows/nsDateTimeFormatWin.cpp \
+		../locale/src/windows/nsIWin32LocaleImpl.cpp \
+		$(NULL)
 else
-ifeq ($(MOZ_WIDGET_TOOLKIT), cocoa)
-LOCALE_DIR		= mac
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+LOCALE_DIR	= mac
+CPPSRCS		+= 
+		../locale/src/mac/nsCollationMac.cpp \
+		../locale/src/mac/nsCollationMacUC.cpp \
+		../locale/src/mac/nsDateTimeFormatMac.cpp \
+		../locale/src/mac/nsMacLocale.cpp \
+		$(NULL)
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+LOCALE_DIR	= os2
+CPPSRCS		+= \
+		../locale/src/os2/nsOS2Locale.cpp \
+		../locale/src/os2/nsCollationOS2.cpp \
+		../locale/src/os2/nsDateTimeFormatOS2.cpp \
+		$(NULL)
 else
 LOCALE_DIR		= unix
-endif
-endif
+CPPSRCS		+= \
+		../locale/src/unix/nsCollationUnix.cpp \
+		../locale/src/unix/nsDateTimeFormatUnix.cpp \
+		../locale/src/unix/nsPosixLocale.cpp \
+		$(NULL)
+endif # os2
+endif # mac
+endif # windows
 
-LOCAL_INCLUDES = \
-			-I$(srcdir)/../chardet/src \
-			-I$(srcdir)/../lwbrk/src \
-			-I$(srcdir)/../unicharutil/src \
-			-I$(srcdir)/../strres/src \
-			-I$(srcdir)/../locale/src \
-			-I$(srcdir)/../locale/src/$(LOCALE_DIR) \
-			$(NULL)
+EXPORTS_SUB_MODULES = unicharutil locale lwbrk chardet
 
-SHARED_LIBRARY_LIBS = \
-			$(DIST)/lib/$(LIB_PREFIX)chardet_s.$(LIB_SUFFIX) \
-			$(DIST)/lib/$(LIB_PREFIX)lwbrk_s.$(LIB_SUFFIX) \
-			$(DIST)/lib/$(LIB_PREFIX)ucharucomp_s.$(LIB_SUFFIX) \
-			$(DIST)/lib/$(LIB_PREFIX)strres_s.$(LIB_SUFFIX) \
-			$(DIST)/lib/$(LIB_PREFIX)nslocale_s.$(LIB_SUFFIX) \
-			$(DIST)/lib/$(LIB_PREFIX)platlocale_s.$(LIB_SUFFIX) \
-			$(NULL)
+unicharutil_EXPORTS = \
+		$(srcdir)/../unicharutil/public/nsICaseConversion.h \
+		$(srcdir)/../unicharutil/public/nsIOrderIdFormater.h \
+		$(srcdir)/../unicharutil/public/nsITextTransform.h \
+		$(srcdir)/../unicharutil/public/nsIUGenCategory.h \
+		$(srcdir)/../unicharutil/public/nsIUGenDetailCategory.h \
+		$(srcdir)/../unicharutil/public/nsUnicharUtilCIID.h \
+		$(srcdir)/../unicharutil/public/nsHankakuToZenkakuCID.h \
+		$(srcdir)/../unicharutil/public/nsArabicBasicLToPFormBVCID.h \
+		$(NULL)
+
+locale_EXPORTS	= \
+		$(srcdir)/../locale/public/nsCollationCID.h \
+		$(srcdir)/../locale/public/nsDateTimeFormatCID.h \
+		$(srcdir)/../locale/public/nsICollation.h \
+		$(srcdir)/../locale/public/nsIDateTimeFormat.h \
+		$(srcdir)/../locale/public/nsIMacLocale.h \
+		$(srcdir)/../locale/public/nsIPosixLocale.h \
+		$(srcdir)/../locale/public/nsIOS2Locale.h \
+		$(srcdir)/../locale/public/nsIWin32Locale.h \
+		$(srcdir)/../locale/public/nsLocaleCID.h \
+		$(srcdir)/../locale/src/nsCollation.h \
+		$(NULL)
+
+lwbrk_EXPORTS	= \
+		$(srcdir)/../lwbrk/public/nsIBreakState.h \
+		$(srcdir)/../lwbrk/public/nsIBinarySearchIterator.h \
+		$(srcdir)/../lwbrk/public/nsILineBreaker.h \
+		$(srcdir)/../lwbrk/public/nsILineBreakerFactory.h \
+		$(srcdir)/../lwbrk/public/nsILinearIterator.h \
+		$(srcdir)/../lwbrk/public/nsIWordBreaker.h \
+		$(srcdir)/../lwbrk/public/nsIWordBreakerFactory.h \
+		$(srcdir)/../lwbrk/public/nsLWBrkCIID.h \
+		$(NULL)
+
+chardet_EXPORTS = \
+		$(srcdir)/../chardet/public/nsCharsetDetectionAdaptorCID.h \
+		$(srcdir)/../chardet/public/nsDetectionConfident.h \
+		$(srcdir)/../chardet/public/nsDocumentCharsetInfoCID.h \
+		$(srcdir)/../chardet/public/nsICharsetDetectionAdaptor.h \
+		$(srcdir)/../chardet/public/nsICharsetDetectionObserver.h \
+		$(srcdir)/../chardet/public/nsICharsetDetector.h \
+		$(srcdir)/../chardet/public/nsIMetaCharsetService.h \
+		$(srcdir)/../chardet/public/nsIStringCharsetDetector.h \
+		$(srcdir)/../chardet/public/nsIXMLEncodingService.h \
+		$(srcdir)/../chardet/public/nsMetaCharsetCID.h \
+		$(srcdir)/../chardet/public/nsXMLEncodingCID.h \
+		$(NULL)
+
+XPIDLSRCS_SUB_MODULES = unicharutil locale strres chardet
+
+unicharutil_MODULE = unicharutil
+unicharutil_XPIDLSRCS = \
+		nsIEntityConverter.idl \
+		nsISaveAsCharset.idl \
+		$(NULL)
+
+locale_MODULE = locale
+locale_XPIDLSRCS = \
+		nsILanguageAtom.idl \
+		nsILanguageAtomService.idl \
+		nsIFontPackageService.idl \
+		nsIFontPackageProxy.idl \
+		nsIFontPackageHandler.idl \
+		nsILocale.idl \
+		nsILocaleService.idl \
+		nsIScriptableDateFormat.idl \
+		$(NULL)
+
+strres_MODULE = intl
+strres_XPIDLSRCS = \
+		nsIStringBundle.idl \
+		nsIStringBundleOverride.idl \
+		$(NULL)
+
+chardet_MODULE = chardet
+chardet_XPIDLSRCS = \
+                nsIDocumentCharsetInfo.idl \
+                nsIDocCharset.idl \
+		$(NULL)
 
 EXTRA_DSO_LDOPTS = \
-	$(MOZ_COMPONENT_LIBS) \
 	$(MOZ_UNICHARUTIL_LIBS) \
+	$(MOZ_COMPONENT_LIBS) \
 	$(NULL)
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
@@ -88,9 +228,47 @@ EXTRA_DSO_LDOPTS += \
         $(NULL)
 endif
 
+LOCAL_INCLUDES = \
+		-I$(srcdir)/../chardet/src \
+		-I$(srcdir)/../lwbrk/src \
+		-I$(srcdir)/../unicharutil/src \
+		-I$(srcdir)/../strres/src \
+		-I$(srcdir)/../locale/src \
+		-I$(srcdir)/../locale/src/$(LOCALE_DIR) \
+		$(NULL)
+
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 OS_LIBS += libuls.lib
 endif
 
 include $(topsrcdir)/config/rules.mk
+
+_EXPORT_RESOURCES = \
+		../locale/src/langGroups.properties \
+		../locale/src/language.properties \
+		$(NULL)
+
+libs:: $(_EXPORT_RESOURCES)
+	$(INSTALL) $^ $(DIST)/bin/res
+
+install:: $(_EXPORT_RESOURCES)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res
+
+_PROP_TABLES = \
+	../unicharutil/tables/htmlEntityVersions.properties \
+	../unicharutil/tables/html40Latin1.properties \
+	../unicharutil/tables/html40Symbols.properties \
+	../unicharutil/tables/html40Special.properties \
+	../unicharutil/tables/transliterate.properties \
+	$(NULL)
+
+ifdef MOZ_MATHML
+_PROP_TABLES += ../unicharutil/tables/mathml20.properties
+endif
+
+libs:: $(_PROP_TABLES)
+	$(INSTALL) $^ $(DIST)/bin/res/entityTables
+
+install:: $(_PROP_TABLES)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res/entityTables
 
