@@ -166,7 +166,7 @@ function LoadSignons()
       var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                     .getService(Components.interfaces.nsIIOService);
       try {
-        url = ioService.extractUrlPart(host, 1<<1, 0, 0, username);  // TODO verify!
+        url = ioService.extractUrlPart(host, ioService.url_Username, 0, 0, username);  // TODO verify!
       } catch(e) {}
       if (username.value) {
         user = username.value;

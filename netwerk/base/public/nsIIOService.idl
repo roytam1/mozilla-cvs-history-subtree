@@ -138,7 +138,7 @@ interface nsIIOService : nsISupports
     nsIURLParser getParserForScheme(in string scheme);
 
     void extractUrlPart(in string urlString,
-                        in short mask,
+                        in short flag,
                         out unsigned long startPos,
                         out unsigned long endPos,
                         out string urlPart);

@@ -337,6 +337,31 @@ nsIOService::GetCachedProtocolHandler(const char *scheme, nsIProtocolHandler **r
     return NS_ERROR_FAILURE;
 }
  
+NS_IMETHODIMP
+nsIOService::CacheURLParser(const char *scheme, nsIURLParser *parser)
+{
+    for (unsigned int i=0; i<NS_N(gScheme); i++)
+    {
+        if (!nsCRT::strcasecmp(scheme, gScheme[i]))
+        {
+            mURLParsers.SetElementAt(i, parser);
+            return NS_OK;
+        }
+    }
+    return NS_ERROR_FAILURE;
+}
+
+
+NS_IMETHODIMP
+nsIOService::GetCachedURLParser(const char *scheme, nsIURLParser **result)
+{
+    for (unsigned int i=0; i<NS_N(gScheme); i++)
+    {
+        if (!nsCRT::strcasecmp(scheme, gScheme[i]))
+            return mURLParsers.GetElementAt(i, (nsISupports **)result);
+    }
+    return NS_ERROR_FAILURE;
+}
 
 NS_IMETHODIMP
 nsIOService::GetProtocolHandler(const char* scheme, nsIProtocolHandler* *result)
@@ -390,34 +415,64 @@ nsIOService::GetParserForScheme(const char *scheme, nsIURLParser **_retval)
 {
     nsresult rv;
     
-    if (scheme) {
-        nsCOMPtr<nsICategoryManager> catmgr(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
-        if (NS_FAILED(rv)) return rv;
+    rv = GetCachedURLParser(scheme, _retval);
+    if (NS_SUCCEEDED(rv) && *_retval) return NS_OK;
 
-        nsCOMPtr<nsISimpleEnumerator> entries;
-        rv = catmgr->EnumerateCategory(NS_IURLPARSER_KEY, getter_AddRefs(entries));
-        if (NS_FAILED(rv)) return rv;
 
-        nsCOMPtr<nsISupportsString> entry;
-        rv = entries->GetNext(getter_AddRefs(entry));
-        while (NS_SUCCEEDED(rv)) {
-            // get the entry string
-            nsXPIDLCString entryString;
-            rv = entry->GetData(getter_Copies(entryString));
+    if (!scheme) {
+        if (!mDefaultURLParser) {
+            rv = nsServiceManager::GetService(kStdURLParserCID, 
+                                              NS_GET_IID(nsIURLParser), 
+                                              getter_AddRefs(mDefaultURLParser));
             if (NS_FAILED(rv)) return rv;
-    
-            if (nsCRT::strcmp(entryString, scheme)) {
-                nsXPIDLCString contractID;
-                rv = catmgr->GetCategoryEntry(NS_IURLPARSER_KEY,(const char *)entryString, getter_Copies(contractID));
-                if (NS_FAILED(rv)) return rv;
+        }
+        
+        *_retval = mDefaultURLParser;
+        NS_ADDREF(*_retval);
+        return NS_OK;
+    }
 
-                return nsServiceManager::GetService(contractID, NS_GET_IID(nsIURLParser), (nsISupports **)_retval);
-            }
+    nsCOMPtr<nsICategoryManager> catmgr(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISimpleEnumerator> parserList;
+    rv = catmgr->EnumerateCategory(NS_IURLPARSER_KEY, getter_AddRefs(parserList));
+    if (NS_FAILED(rv)) return rv;
+    
+    nsCOMPtr<nsISupportsString> entry;
+
+    // Walk the list of parsers...
+    while (1) {
+        rv = parserList->GetNext(getter_AddRefs(entry));
+        if (NS_FAILED(rv)) return rv;
+
+        // get the entry string
+        nsXPIDLCString entryString;
+        rv = entry->GetData(getter_Copies(entryString));
+        if (NS_FAILED(rv)) return rv;
+
+        if (nsCRT::strcmp(entryString, scheme) == 0) {
+            nsXPIDLCString contractID;
+            rv = catmgr->GetCategoryEntry(NS_IURLPARSER_KEY,(const char *)entryString, getter_Copies(contractID));
+            if (NS_FAILED(rv)) return rv;
+
+            CacheURLParser(scheme, *_retval);
+            return nsServiceManager::GetService(contractID, NS_GET_IID(nsIURLParser), (nsISupports **)_retval);
         }
     }
-    // nothing registered - lets use the standard one.. 
-    // TODO cache it.
-    return nsServiceManager::GetService(kStdURLParserCID, NS_GET_IID(nsIURLParser), (nsISupports **)_retval);
+
+    // no registered url parser. Just use the default...
+    if (!mDefaultURLParser) {
+        rv = nsServiceManager::GetService(kStdURLParserCID, 
+                                          NS_GET_IID(nsIURLParser), 
+                                          getter_AddRefs(mDefaultURLParser));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    *_retval = mDefaultURLParser;
+    NS_ADDREF(*_retval);
+    CacheURLParser(scheme, *_retval);
+    return NS_OK;
 }
 
 static void CalculateStartEndPos(const char*string, const char* substring, PRUint32 *startPos, PRUint32 *endPos)
@@ -433,14 +488,14 @@ static void CalculateStartEndPos(const char*string, const char* substring, PRUin
 
 // Crap.  How do I ensure that startPos and endPos are correct.
 NS_IMETHODIMP 
-nsIOService::ExtractUrlPart(const char *urlString, PRInt16 mask, PRUint32 *startPos, PRUint32 *endPos, char **urlPart)
+nsIOService::ExtractUrlPart(const char *urlString, PRInt16 flag, PRUint32 *startPos, PRUint32 *endPos, char **urlPart)
 {
     nsresult rv;
     nsXPIDLCString scheme;
 
     ExtractScheme(urlString, startPos, endPos, getter_Copies(scheme));
 
-    if (mask == url_Scheme) {
+    if (flag == url_Scheme) {
         CalculateStartEndPos(urlString, scheme, startPos, endPos);
 
         if (urlPart)
@@ -465,28 +520,28 @@ nsIOService::ExtractUrlPart(const char *urlString, PRInt16 mask, PRUint32 *start
     
     if (NS_FAILED(rv)) return rv;
     
-    if (mask == url_Username) {
+    if (flag == url_Username) {
         CalculateStartEndPos(urlString, username, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(username.get());
         return NS_OK;
     }
 
-    if (mask == url_Password) {
+    if (flag == url_Password) {
         CalculateStartEndPos(urlString, password, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(password.get());
         return NS_OK;
     }
 
-    if (mask == url_Host) {
+    if (flag == url_Host) {
         CalculateStartEndPos(urlString, host, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(host.get());
         return NS_OK;
     }
 
-    if (mask == url_Directory) {
+    if (flag == url_Directory) {
         CalculateStartEndPos(urlString, path, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(path.get());
@@ -507,35 +562,35 @@ nsIOService::ExtractUrlPart(const char *urlString, PRInt16 mask, PRUint32 *start
     if (NS_FAILED(rv)) return rv;
     
     
-    if (mask == url_FileBaseName) {
+    if (flag == url_FileBaseName) {
         CalculateStartEndPos(urlString, fileBaseName, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(fileBaseName.get());
         return NS_OK;
     }
     
-    if (mask == url_FileExtension) {
+    if (flag == url_FileExtension) {
         CalculateStartEndPos(urlString, fileBaseName, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(fileExtension.get());
         return NS_OK;
     }
     
-    if (mask == url_Param) {
+    if (flag == url_Param) {
         CalculateStartEndPos(urlString, fileBaseName, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(param.get());
         return NS_OK;
     }
     
-    if (mask == url_Query) {
+    if (flag == url_Query) {
         CalculateStartEndPos(urlString, fileBaseName, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(query.get());
         return NS_OK;
     }
 
-    if (mask == url_Ref) {
+    if (flag == url_Ref) {
         CalculateStartEndPos(urlString, fileBaseName, startPos, endPos);
         if (urlPart)
             *urlPart = nsCRT::strdup(ref.get());
