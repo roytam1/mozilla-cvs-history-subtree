@@ -2082,18 +2082,21 @@ nsPop3Protocol::SendRetr()
             rv = mStringService->GetBundle(getter_AddRefs(bundle));
             NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't get bundle");
 
-            const PRUnichar *formatStrings[] = {
-                realNewString.GetUnicode(),
-                reallyNewMessages.GetUnicode(),
-            };
+            if (bundle)
+            {
+              const PRUnichar *formatStrings[] = {
+                  realNewString.GetUnicode(),
+                  reallyNewMessages.GetUnicode(),
+              };
 
-            nsXPIDLString finalString;
-            rv = bundle->FormatStringFromID(LOCAL_STATUS_RECEIVING_MESSAGE_OF,
-                                            formatStrings, 2,
-                                            getter_Copies(finalString));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't format string");
+              nsXPIDLString finalString;
+              rv = bundle->FormatStringFromID(LOCAL_STATUS_RECEIVING_MESSAGE_OF,
+                                              formatStrings, 2,
+                                              getter_Copies(finalString));
+              NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't format string");
 
-            m_statusFeedback->ShowStatusString(finalString);
+              m_statusFeedback->ShowStatusString(finalString);
+            }
             
 		}
 
@@ -2935,7 +2938,7 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
 			{
 				nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(m_pop3Server);
 				if (server)
-					server->SetServerBusy(PR_FALSE); // the server is now busy
+					server->SetServerBusy(PR_FALSE); // the server is now not busy
 			}
 
 			CloseSocket();

@@ -25,24 +25,24 @@
  */
 
 const nsILocalFile        = Components.interfaces.nsILocalFile;
-const nsILocalFile_CONTRACTID = "@mozilla.org/file/local;1";
+const nsILocalFile_PROGID = "component://mozilla/file/local";
 const nsIFilePicker       = Components.interfaces.nsIFilePicker;
 const nsIDirectoryServiceProvider = Components.interfaces.nsIDirectoryServiceProvider;
-const nsIDirectoryServiceProvider_CONTRACTID = "@mozilla.org/file/directory_service;1";
-const nsStdURL_CONTRACTID     = "@mozilla.org/network/standard-url;1";
+const nsIDirectoryServiceProvider_PROGID = "component://netscape/file/directory_service";
+const nsStdURL_PROGID     = "component://netscape/network/standard-url";
 const nsIFileURL          = Components.interfaces.nsIFileURL;
 const NC_NAMESPACE_URI = "http://home.netscape.com/NC-rdf#";
 
-var sfile = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+var sfile = Components.classes[nsILocalFile_PROGID].createInstance(nsILocalFile);
 var retvals;
 var filePickerMode;
 var currentFilter;
+var lastClicked;
 var dirHistory;
 var homeDir;
 
 var directoryTree;
 var textInput;
-var okButton;
 
 var bundle = srGetStrBundle("chrome://global/locale/filepicker.properties");   
 
@@ -51,7 +51,6 @@ function onLoad() {
 
   directoryTree = document.getElementById("directoryTree");
   textInput = document.getElementById("textInput");
-  okButton = document.getElementById("ok");
 
   if (window.arguments) {
     var o = window.arguments[0];
@@ -70,17 +69,11 @@ function onLoad() {
     if (initialText) {
       textInput.value = initialText;
     }
-  }
-
-  if ((filePickerMode == nsIFilePicker.modeOpen) ||
-      (filePickerMode == nsIFilePicker.modeSave)) {
-
-    currentFilter = filterTypes[0];
-    applyFilter();
-
     /* build filter popup */
     var filterPopup = document.createElement("menupopup");
 
+    currentFilter = filterTypes[0];
+    applyFilter();
     for (var i = 0; i < numFilters; i++) {
       var menuItem = document.createElement("menuitem");
       menuItem.setAttribute("value", filterTitles[i] + " (" + filterTypes[i] + ")");
@@ -90,39 +83,13 @@ function onLoad() {
 
     var filterMenuList = document.getElementById("filterMenuList");
     filterMenuList.appendChild(filterPopup);
-    var filterBox = document.getElementById("filterBox");
-    filterBox.removeAttribute("hidden");
-  } else if (filePickerMode == nsIFilePicker.modeGetFolder) {
-     // This applies a special filter to only show directories
-     applyDirectoryFilter();
-  }
-
-  try {
-    var buttonLabel;
-    switch (filePickerMode) {
-      case nsIFilePicker.modeOpen:
-        buttonLabel = bundle.GetStringFromName("openButtonLabel");
-        break;
-      case nsIFilePicker.modeSave:
-        buttonLabel = bundle.GetStringFromName("saveButtonLabel");
-        break;
-      case nsIFilePicker.modeGetFolder:
-        buttonLabel = bundle.GetStringFromName("selectFolderButtonLabel");
-        break;
-    }
-
-    if (buttonLabel) {
-      okButton.setAttribute("value", buttonLabel);
-    }
-  } catch (exception) {
-    // keep it set to "OK"
   }
 
   // setup the dialogOverlay.xul button handlers
   doSetOKCancel(onOK, onCancel);
 
   // get the home dir
-  var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_CONTRACTID].getService().QueryInterface(nsIDirectoryServiceProvider);
+  var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_PROGID].getService().QueryInterface(nsIDirectoryServiceProvider);
   var persistent = new Object();
   homeDir = dirServiceProvider.getFile("Home", persistent);
 
@@ -136,7 +103,6 @@ function onLoad() {
   retvals.buttonStatus = nsIFilePicker.returnCancel;
 
   gotoDirectory(sfile);
-  doEnabling();
   textInput.focus();
 }
 
@@ -231,8 +197,8 @@ function onOK()
   }
 
   if (file.exists()) {
-    isDir = file.isDirectory();
-    isFile = file.isFile();
+    var isDir = file.isDirectory();
+    var isFile = file.isFile();
   }
 
   switch(filePickerMode) {
@@ -245,46 +211,28 @@ function onOK()
         gotoDirectory(file);
       }
       textInput.value = "";
-      doEnabling();
       ret = nsIFilePicker.returnCancel;
     }
     break;
   case nsIFilePicker.modeSave:
-    if (isFile) { // can only be true if file.exists()
+    if (isFile) {
       // we need to pop up a dialog asking if you want to save
       rv = window.confirm(file.path + " " + bundle.GetStringFromName("confirmFileReplacing"));
-      if (rv) {
+      if (rv)
         ret = nsIFilePicker.returnReplace;
-        retvals.directory = file.parent.path;
-      } else {
+      else
         ret = nsIFilePicker.returnCancel;
-      }
-    } else if (isDir) {
-      if (!sfile.equals(file)) {
-        gotoDirectory(file);
-      }
-      textInput.value = "";
-      doEnabling();
-      ret = nsIFilePicker.returnCancel;
-    } else {
-      var parent = file.parent;
-      if (parent.exists() && parent.isDirectory()) {
-        ret = nsIFilePicker.returnOK;
-        retvals.directory = parent.path;
-      } else {
-        // See bug 55026, do nothing for now, leaves typed text as clue.
-        // window.alert("Directory "+parent.path+" doesn't seem to exist, can't save "+file.path);
-        ret = nsIFilePicker.returnCancel;
-      }
+      retvals.directory = file.parent.path;
+    } else if (!file.exists()) {
+      ret = nsIFilePicker.returnOK;
+      retvals.directory = file.parent.path;
     }
     break;
   case nsIFilePicker.modeGetFolder:
     if (isDir) {
       retvals.directory = file.parent.path;
-    } else { // if nothing selected, the current directory will be fine
-      retvals.directory = sfile.path;
+      ret = nsIFilePicker.returnOK;
     }
-    ret = nsIFilePicker.returnOK;
     break;
   }
 
@@ -301,24 +249,19 @@ function onCancel()
 {
   // Close the window.
   retvals.buttonStatus = nsIFilePicker.returnCancel;
-  retvals.file = null;
   return true;
 }
 
 function onClick(e) {
   if ( e.detail == 2 ) {
-    var path = e.target.parentNode.getAttribute("path");
+    var file = URLpathToFile(e.target.parentNode.getAttribute("path"));
 
-    if (path) {
-      var file = URLpathToFile(path);
-      if (file) {
-        if (file.isDirectory()) {
-          gotoDirectory(file);
-        }
-        else if (file.isFile()) {
-          doOKButton();
-        }
-      }
+    if (file.isDirectory()) {
+      gotoDirectory(file);
+    }
+    else if (file.isFile()) {
+      /* what about symlinks? what if they symlink to a directory? */
+      return doOKButton();
     }
   }
 }
@@ -328,38 +271,14 @@ function onKeypress(e) {
     goUp();
 }
 
-function doEnabling() {
-  // Maybe add check if textInput.value would resolve to an existing
-  // file or directory in .modeOpen. Too costly I think.
-  var enable = (textInput.value != "");
-
-  if (enable) {
-    if (okButton.getAttribute("disabled")) {
-      okButton.removeAttribute("disabled");
-    }
-  } else {
-    if (!okButton.getAttribute("disabled")) {
-      okButton.setAttribute("disabled","true");
-    }
-  }
-}
-
 function onSelect(e) {
   if (e.target.selectedItems.length != 1)
     return;
-  var path = e.target.selectedItems[0].firstChild.getAttribute("path");
+  var file = URLpathToFile(e.target.selectedItems[0].firstChild.getAttribute("path"));
 
-  if (path) {
-    var file = URLpathToFile(path);
-    if (file) {
-      /* Put the leafName of the selected item in the input field if:
-         - GetFolder mode   : a directory was selected (only option)
-         - Open or Save mode: a file was selected                    */
-      if ((filePickerMode == nsIFilePicker.modeGetFolder) || file.isFile()) {
-        textInput.value = file.leafName;
-        doEnabling();
-      }
-    }
+  if (file.isFile()) {
+    textInput.value = file.leafName;
+    lastClicked = file.leafName;
   }
 }
 
@@ -367,12 +286,10 @@ function onDirectoryChanged(target)
 {
   var path = target.getAttribute("value");
 
-  var file = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+  var file = Components.classes[nsILocalFile_PROGID].createInstance(nsILocalFile);
   file.initWithPath(path);
 
-  if (!sfile.equals(file)) {
-    gotoDirectory(file);
-  }
+  gotoDirectory(file);
 }
 
 function addToHistory(directoryName) {
@@ -428,25 +345,13 @@ function gotoDirectory(directory) {
 }
 
 function fileToURL(aFile) {
-  var newDirectoryURL = Components.classes[nsStdURL_CONTRACTID].createInstance().QueryInterface(nsIFileURL);
+  var newDirectoryURL = Components.classes[nsStdURL_PROGID].createInstance().QueryInterface(nsIFileURL);
   newDirectoryURL.file = aFile;
   return newDirectoryURL;
 }
 
 function URLpathToFile(aURLstr) {
-  var fileURL = Components.classes[nsStdURL_CONTRACTID].createInstance().QueryInterface(nsIFileURL);
+  var fileURL = Components.classes[nsStdURL_PROGID].createInstance().QueryInterface(nsIFileURL);
   fileURL.spec = aURLstr;
   return fileURL.file;
 }
-
-function applyDirectoryFilter() {
-  var ruleNode = document.getElementById("matchRule.0");
-
-  // A file can never have an extension of ".", because the extension is
-  // by definition everything after the last dot.  So, this rule will
-  // cause only directories to show up.
-  ruleNode.setAttributeNS(NC_NAMESPACE_URI, "extension", ".");
-
-  directoryTree.builder.rebuild();
-}
-
