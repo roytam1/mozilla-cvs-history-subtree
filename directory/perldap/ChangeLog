@@ -1,3 +1,14 @@
+1999-08-16  Kevin McCarthy  <kmccarth@perldap.org>
+
+	* API.xs: Cleaned up prototypes, changed strdup() to use a
+	Perl'ified version, change a number of free()'s to use Safefree.
+	(ldap_value_free_perl): New function, similar to
+	ldap_mods_free_perl(), to avoid memory problems (on NT and
+	ActivePerl primarily).
+	(StrDup): New function, to handle strdup() calls in a safe way.
+	(ber_bvfree_perl): Ditto.
+	(ber_bvecfree_perl): Ditto.
+
 1999-08-15  Leif Hedstrom  <leif@netscape.com>
 
 	* API.xs (ldap_mods_free_perl): Modified version of
