@@ -92,8 +92,7 @@ nsPrincipalManager::CreateCodebasePrincipal(const char * codebaseURL, nsIPrincip
 NS_IMETHODIMP
 nsPrincipalManager::CreateCertificatePrincipal(const unsigned char * * certChain, PRUint32 * certChainLengths, PRUint32 noOfCerts, nsIPrincipal * * prin)
 {
-	* prin = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate,
-											 certChain, certChainLengths, noOfCerts);
+	* prin = new nsCertificatePrincipal(nsIPrincipal::PrincipalType_Certificate,certChain, certChainLengths, noOfCerts);
 	if (!prin) return NS_ERROR_OUT_OF_MEMORY;
 	(* prin)->AddRef();
 	return NS_OK;
@@ -192,8 +191,6 @@ nsPrincipalManager::GetMyPrincipals(nsIScriptContext * context, PRInt32 callerDe
 {
 	return nsPrincipalManager::GetPrincipalManager()->GetClassPrincipalsFromStack(context, callerDepth);
 }
-
-
 
 nsIPrincipal * 
 nsPrincipalManager::GetPrincipalFromString(char * prinName)

@@ -53,8 +53,8 @@ typedef struct nsJSPrincipalsData {
 	JSPrincipals principals;
 	void* principalsArrayRef;
 	nsIURI *url;
-	char* name;
-	void* zip;
+	char* name; 
+	void* zip; 
 	uint32 externalCapturePrincipalsCount;
 	nsString* untransformed;
 	nsString* transformed;

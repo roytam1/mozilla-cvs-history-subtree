@@ -20,42 +20,48 @@
 #define _NS_CODEBASE_PRINCIPAL_H_
 
 #include "nsIPrincipal.h"
+#include "nsIURI.h"
 
 class nsCodebasePrincipal : public nsICodebasePrincipal {
 public:
 
-	NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS
 
-	NS_IMETHOD
-	GetURL(char ** cburl);
+  NS_IMETHOD
+  GetURLString(char ** cburl);
+  
+  NS_IMETHOD
+  GetURL(nsIURI * * url);
 
-	NS_IMETHOD 
-	IsCodebaseExact(PRBool * result);
+  NS_IMETHOD 
+  IsCodebaseExact(PRBool * result);
 
-	NS_IMETHOD
-	IsCodebaseRegex(PRBool * result);
+  NS_IMETHOD
+  IsCodebaseRegex(PRBool * result);
 
-	NS_IMETHOD
-	GetType(PRInt16 * type);
+  NS_IMETHOD
+  GetType(PRInt16 * type);
 
-	NS_IMETHOD
-	IsSecure(PRBool * result);
+  NS_IMETHOD
+  IsSecure(PRBool * result);
 
-	NS_IMETHOD
-	ToString(char ** result);
+  NS_IMETHOD
+  ToString(char ** result);
 
-	NS_IMETHOD
-	HashCode(PRUint32 * code);
+  NS_IMETHOD
+  HashCode(PRUint32 * code);
 
-	NS_IMETHOD
-	Equals(nsIPrincipal * other, PRBool * result);
+  NS_IMETHOD
+  Equals(nsIPrincipal * other, PRBool * result);
 
-	nsCodebasePrincipal(PRInt16 type, const char *codebaseURL);
-	virtual ~nsCodebasePrincipal(void);
+  nsCodebasePrincipal(PRInt16 type, const char * codebaseURL);
+  nsCodebasePrincipal(PRInt16 type, const nsIURI * url);
+  virtual ~nsCodebasePrincipal(void);
 
 protected:
-	const char * itsCodeBaseURL;
-	PRInt16 itsType;
+  char * itsCodeBaseURL;
+  nsIURI * itsURL;
+  PRInt16 itsType;
 };
 
 #endif // _NS_CODEBASE_PRINCIPAL_H_

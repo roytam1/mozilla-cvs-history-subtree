@@ -17,17 +17,27 @@
  */
 /* describes principals by thier orginating uris*/
 #include "nsCodebasePrincipal.h"
+#include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
 #include "xp.h"
+#include "nsIURL.h"
 
+static NS_DEFINE_IID(kURLCID, NS_STANDARDURL_CID);
+static NS_DEFINE_IID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_IID(kICodebasePrincipalIID, NS_ICODEBASEPRINCIPAL_IID);
 
 NS_IMPL_ISUPPORTS(nsCodebasePrincipal, kICodebasePrincipalIID);
 
 NS_IMETHODIMP
-nsCodebasePrincipal::GetURL(char **cburl)
+nsCodebasePrincipal::GetURLString(char **cburl)
 {
-	* cburl = (char *)itsCodeBaseURL;
-	return NS_OK;
+  return itsURL->GetSpec(cburl);
+}
+
+NS_IMETHODIMP
+nsCodebasePrincipal::GetURL(nsIURI * * url) 
+{
+  return itsURL->Clone(url);
 }
 
 NS_IMETHODIMP
@@ -94,8 +104,19 @@ nsCodebasePrincipal::Equals(nsIPrincipal * other, PRBool * result)
 nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const char * codeBaseURL)
 {
 	this->itsType = type;
-	this->itsCodeBaseURL = codeBaseURL;
+  nsresult rv;
+  NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
+  if (!NS_SUCCEEDED(rv)) 
+  {
+    compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void * *)& itsURL);
+  }
 }
+
+nsCodebasePrincipal::nsCodebasePrincipal(PRInt16 type, const nsIURI * url)
+{
+  this->itsType = type;
+  ((nsIURI *)url)->Clone(& itsURL);
+}  
 
 nsCodebasePrincipal::~nsCodebasePrincipal(void)
 {

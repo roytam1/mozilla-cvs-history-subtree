@@ -65,59 +65,47 @@ extern "C" NS_DOM nsresult
 NS_NewScriptSecurityManager(nsIScriptSecurityManager ** aInstancePtrResult)
 {
   nsIScriptSecurityManager* it = new nsJSSecurityManager();
-  if (nsnull == it) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  
+  if (nsnull == it) return NS_ERROR_OUT_OF_MEMORY;
   nsresult ret = it->QueryInterface(kIScriptSecurityManagerIID, (void **) aInstancePtrResult);
-  
-  if (NS_FAILED(ret)) {
-    return ret;
-  }
-
-  if (NS_FAILED(ret)) {
-    NS_RELEASE(*aInstancePtrResult);
-  }
-
+  if (NS_FAILED(ret)) return ret;
+  if (NS_FAILED(ret)) NS_RELEASE(*aInstancePtrResult);
   return ret;
 }
 
 nsJSSecurityManager::nsJSSecurityManager()
 {
-    NS_INIT_REFCNT();
-    nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
+  NS_INIT_REFCNT();
+  nsServiceManager::GetService(kPrefServiceCID, nsIPref::GetIID(), (nsISupports**)&mPrefs);
 }
 
 nsJSSecurityManager::~nsJSSecurityManager()
 {
-    nsServiceManager::ReleaseService(kPrefServiceCID, mPrefs);
+  nsServiceManager::ReleaseService(kPrefServiceCID, mPrefs);
 //    NS_IF_RELEASE(mCapsManager);
 }
 
 NS_IMETHODIMP
 nsJSSecurityManager::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
-    if (nsnull == aInstancePtr) {
-        return NS_ERROR_NULL_POINTER;
-    }
-    if (aIID.Equals(kIScriptSecurityManagerIID)) {
-        *aInstancePtr = (void*)(nsIScriptSecurityManager*)this;
-        NS_ADDREF_THIS();
-        return NS_OK;
-    }
-    /*
-    if (aIID.Equals(kICapsSecurityCallbacksIID)) {
-        *aInstancePtr = (void*)(nsICapsSecurityCallbacks*)this;
-        NS_ADDREF_THIS();
-        return NS_OK;
-    }
-    */
-    if (aIID.Equals(kIXPCSecurityManagerIID)) {
-        *aInstancePtr = (void*)(nsIXPCSecurityManager*)this;
-        NS_ADDREF_THIS();
-        return NS_OK;
-    }
-    return NS_NOINTERFACE;
+  if (nsnull == aInstancePtr) return NS_ERROR_NULL_POINTER;
+  if (aIID.Equals(kIScriptSecurityManagerIID)) {
+      *aInstancePtr = (void*)(nsIScriptSecurityManager*)this;
+      NS_ADDREF_THIS();
+      return NS_OK;
+  }
+  /*
+  if (aIID.Equals(kICapsSecurityCallbacksIID)) {
+      *aInstancePtr = (void*)(nsICapsSecurityCallbacks*)this;
+      NS_ADDREF_THIS();
+      return NS_OK;
+  }
+  */
+  if (aIID.Equals(kIXPCSecurityManagerIID)) {
+      *aInstancePtr = (void*)(nsIXPCSecurityManager*)this;
+      NS_ADDREF_THIS();
+      return NS_OK;
+  }
+  return NS_NOINTERFACE;
 }
 
 NS_IMPL_ADDREF(nsJSSecurityManager)
@@ -151,23 +139,18 @@ DestroyJSPrincipals(JSContext *aCx, JSPrincipals *aPrincipals)
       aPrincipals != (JSPrincipals*)&unknownPrincipals) {
     nsJSPrincipalsData* data = (nsJSPrincipalsData*)aPrincipals;
 
-    if (aPrincipals->codebase) {
-      delete aPrincipals->codebase;
-    }
+    if (aPrincipals->codebase) delete aPrincipals->codebase;
     if (data->principalsArrayRef != nsnull) {
       /* XXX: raman: Should we free up the principals that are in that array also? */
-	((nsIPrincipalArray *)data->principalsArrayRef)->FreePrincipalArray();
+      ((nsIPrincipalArray *)data->principalsArrayRef)->FreePrincipalArray();
     }
     //XXX
-    if (data->name) {
-      delete data->name;
-    }
+    if (data->name) delete data->name;
     //data->untransformed
     //data->transformed
     if (data->codebaseBeforeSettingDomain) {
       delete data->codebaseBeforeSettingDomain;
     }
-
     if (data->zip)
       //ns_zip_close(data->zip);
     if (data->url) NS_RELEASE(data->url);
@@ -384,10 +367,8 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
   // Need to check that the origin hasn't changed underneath us
   char* originUrl = FindOriginURL(aCx, container);
   if (!originUrl) return NS_ERROR_FAILURE;
-
   nsISupports *tmp;
   nsIScriptGlobalObjectData *globalData;
-
   tmp = (nsISupports*)JS_GetPrivate(aCx, container);
   nsresult result = NS_ERROR_FAILURE;
   if (nsnull == tmp ||
@@ -398,13 +379,11 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
       return result;
   }
   globalData->GetPrincipals((void**)aPrincipals);
-
   if (nsnull != *aPrincipals) {
     if (this->SameOrigins(aCx, originUrl, (*aPrincipals)->codebase)) {
       delete originUrl;
       return NS_OK;
     }
-
     nsJSPrincipalsData* data;
     data = (nsJSPrincipalsData*)*aPrincipals;
     if (data->codebaseBeforeSettingDomain &&
@@ -423,9 +402,7 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
     delete originUrl;
     return NS_ERROR_FAILURE;
   }
-
   globalData->SetPrincipals((void*)*aPrincipals);
-
   delete originUrl;
   return NS_OK;
 }
