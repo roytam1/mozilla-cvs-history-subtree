@@ -44,6 +44,7 @@ protected:
 		                      const nsAReadableString & aDefaultTag, 
 		                      nsISOAPParameter * aSource, 
 		                      const nsAReadableString & aEncodingStyleURI, 
+				      const nsAReadableString & aSchemaNamespaceURI, 
 				      const nsAReadableString & aSchemaType, 
 				      nsIDOMNode* aDestination);
 #if 0

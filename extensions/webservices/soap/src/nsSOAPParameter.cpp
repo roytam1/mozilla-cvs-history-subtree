@@ -83,6 +83,19 @@ NS_IMETHODIMP nsSOAPParameter::SetType(const nsAReadableString & aType)
   return NS_OK;
 }
 
+/* attribute AString schemaNamespaceURI; */
+NS_IMETHODIMP nsSOAPParameter::GetSchemaNamespaceURI(nsAWritableString & aSchemaNamespaceURI)
+{
+  NS_ENSURE_ARG_POINTER(&aSchemaNamespaceURI);
+  aSchemaNamespaceURI.Assign(mSchemaNamespaceURI);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetSchemaNamespaceURI(const nsAReadableString & aSchemaNamespaceURI)
+{
+  mSchemaNamespaceURI.Assign(aSchemaNamespaceURI);
+  return NS_OK;
+}
+
 /* attribute AString schemaType; */
 NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsAWritableString & aSchemaType)
 {

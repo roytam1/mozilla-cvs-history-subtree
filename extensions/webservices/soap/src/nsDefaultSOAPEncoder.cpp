@@ -75,7 +75,7 @@ ns##name##Encoder::~ns##name##Encoder() {}
 {\
   ns##name##Encoder *handler = new ns##name##Encoder();\
   registry->AddNativeType(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##Type, handler);\
-  registry->AddSchemaType(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##SchemaType, handler);\
+  registry->AddSchemaType(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##SchemaNamespaceURI, nsSOAPUtils::k##name##SchemaType, handler);\
 }
 
 // All encoders must be first declared and then registered.
@@ -119,6 +119,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
 		                          const nsAReadableString & aDefaultTag, 
 		                          nsISOAPParameter * aSource, 
 		                          const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aSchemaNamespaceURI, 
 					  const nsAReadableString & aSchemaType, 
 					  nsIDOMNode* aDestination)
 {
@@ -139,20 +140,13 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeValue(
   nsCOMPtr<nsIDOMNode>ignore;
   rc = aDestination->AppendChild(element, getter_AddRefs(ignore));
   if (NS_FAILED(rc)) return rc;
-  if (nsSOAPUtils::StartsWith(aSchemaType, nsSOAPUtils::kXMLSchemaSchemaTypePrefix)) {
-    PRUint32 l =  nsSOAPUtils::kXMLSchemaSchemaTypePrefix.Length() + 1;
-    PRUint32 i = aSchemaType.FindChar('#', l);
-    if (i >= l) {	//  If possible, convert schema id into type field
-      nsAutoString type;
-      nsAutoString temp;
-      aSchemaType.Mid(temp, i, l - i);
-      rc = nsSOAPUtils::MakeNamespacePrefixFixed(element, temp, type);
-      if (NS_FAILED(rc)) return rc;
-      type.Append(nsSOAPUtils::kTypeSeparator);
-      aSchemaType.Right(temp,aSchemaType.Length() - l - 1);
-      type.Append(temp);
-      element->SetAttributeNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, type);
-    }
+  if (!aSchemaType.IsEmpty()) {
+    nsAutoString type;
+    rc = nsSOAPUtils::MakeNamespacePrefixFixed(element, aSchemaNamespaceURI, type);
+    if (NS_FAILED(rc)) return rc;
+    type.Append(nsSOAPUtils::kQualifiedSeparator);
+    type.Append(aSchemaType);
+    element->SetAttributeNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, type);
   }
   if (!aValue.IsEmpty()) {
     nsCOMPtr<nsIDOMText> text;
@@ -183,15 +177,21 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPTypeRegistry* aTypes,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kStringType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kStringSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kStringElementName,
                        aSource, 
 		       aEncodingStyleURI,
 		       schemaType,
+		       schemaNamespaceURI,
 		       aDestination);
 }
 
@@ -214,14 +214,20 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPTypeRegistry* type,
   rc = object->GetData(&b);
   if (NS_FAILED(rc)) return rc;
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kBooleanType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kBooleanSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kBooleanSchemaNamespaceURI;
+  }
   return EncodeValue(b ? kOne : kZero, 
 		       kBooleanElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -246,14 +252,20 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kDoubleType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kDoubleSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kDoubleSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kDoubleElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -278,14 +290,20 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kFloatType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kFloatSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kFloatSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kFloatElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -310,14 +328,20 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kLongType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kLongSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kLongSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kLongElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -342,14 +366,20 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kIntType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kIntSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kIntSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kIntElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -374,14 +404,20 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kShortType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kShortSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kShortSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kShortElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -406,14 +442,20 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPTypeRegistry* types,
   if (NS_FAILED(rc)) return rc;
   nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
   nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
+  if (NS_FAILED(rc)) return rc;
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
-  if (schemaType.IsEmpty())
-    schemaType = nsSOAPUtils::kByteType;
+  if (schemaType.IsEmpty()) {
+    schemaType = nsSOAPUtils::kByteSchemaType;
+    schemaNamespaceURI = nsSOAPUtils::kByteSchemaNamespaceURI;
+  }
   return EncodeValue(string, 
 		       kByteElementName,
                        aSource, 
 		       aEncodingStyleURI,
+		       schemaNamespaceURI,
 		       schemaType,
 		       aDestination);
 }
@@ -438,6 +480,7 @@ Unknown
 NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPTypeRegistry* types,
 		                          nsIDOMNode *aSource, 
 					    const nsAReadableString & aEncodingStyleURI, 
+					    const nsAReadableString & aSchemaNamespaceURI, 
 					    const nsAReadableString & aSchemaType, 
 					    nsISOAPAttachments* aAttachments,
 					    nsISOAPParameter **_retval)

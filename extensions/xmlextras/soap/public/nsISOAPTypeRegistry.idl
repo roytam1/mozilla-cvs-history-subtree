@@ -41,27 +41,31 @@ interface nsISOAPTypeRegistry : nsISupports {
 /**
    * Add a type to this registry so it can be serialized / deserialized
    *
-   * @param aType The native type to be added.
+   * @param aNativeType The native type to be added.
    *
    * @param aEncoder The encoder to be used.
    *
    * @return True if type was added, false if type could not be added
    */
-  void addNativeType(in AString aEncoding, in AString aType, in nsISOAPEncoder aEncoder);
+  void addNativeType(in AString aEncoding, in AString aNativeType, in nsISOAPEncoder aEncoder);
 
 /**
    * Add a type to this registry so it can be serialized / deserialized
    *
-   * @param aType The schema type to be added.
+   * @param aSchemaNamespaceURI The schema namespace URI to be added.
+   *
+   * @param aSchemaType The schema type to be added.
    *
    * @param aDecoder The decoder to be used.
    *
    * @return True if type was added, false if type could not be added
    */
-  void addSchemaType(in AString aEncoding, in AString aType, in nsISOAPDecoder aDecoder);
+  void addSchemaType(in AString aEncoding, 
+   in AString aSchemaNamespaceURI, in AString aSchemaType, 
+   in nsISOAPDecoder aDecoder);
 
-  nsISOAPEncoder queryByNativeType(in AString aEncoding, in AString type);
-  nsISOAPDecoder queryBySchemaType(in AString aEncoding, in AString type);
+  nsISOAPEncoder queryByNativeType(in AString aEncoding, in AString aNativeType);
+  nsISOAPDecoder queryBySchemaType(in AString aEncoding, in AString aSchemaNamespaceURI, in AString aSchemaType);
 
   /**
    * Encode the source object into the specified
@@ -104,7 +108,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    *   a more complete status is recorded in the message.
    */
   nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
-      in AString aEncodingStyleURI, in AString aSchemaType,
+      in AString aEncodingStyleURI, in AString aSchemaNamespaceURI, in AString aSchemaType,
       in nsISOAPAttachments aAttachments);
   };
 

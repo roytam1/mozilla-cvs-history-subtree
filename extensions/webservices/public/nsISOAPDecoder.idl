@@ -45,13 +45,15 @@ interface nsISOAPDecoder : nsISupports {
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aSchemaType The schema ID of the source DOM node
+ * @param aSchemaNamespaceURI The schema namespace URI of the source DOM node
+ *
+ * @param aSchemaType The schema type of the source DOM node
  *
  * @return The decoded parameter, which is null if 
  *   the operation failed or did not return a result.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
 nsISOAPParameter decode(in nsISOAPTypeRegistry aTypes, in nsIDOMNode aSource, 
-    in AString aEncodingStyleURI, in AString aSchemaType,
+    in AString aEncodingStyleURI, in AString aSchemaNamespaceURI, in AString aSchemaType,
     in nsISOAPAttachments aAttachments);
 };

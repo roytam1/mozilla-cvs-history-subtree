@@ -59,12 +59,12 @@ nsSOAPTypeRegistry::~nsSOAPTypeRegistry()
 }
 
 /* void addNativeType (in AString aType, in nsISOAPEncoder aEncoder); */
-NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, nsAReadableString & aType, nsISOAPEncoder* aEncoder)
+NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, nsAReadableString & aNativeType, nsISOAPEncoder* aEncoder)
 {
   NS_ENSURE_ARG_POINTER(aEncoder);
   nsAutoString type(aEncoding);
   type.Append(nsSOAPUtils::kTypeSeparator);
-  type.Append(aType);
+  type.Append(aNativeType);
   nsStringKey typeKey(type);
   if (mNativeTypes->Exists(&typeKey))
   {
@@ -77,12 +77,14 @@ NS_IMETHODIMP nsSOAPTypeRegistry::AddNativeType(nsAReadableString & aEncoding, n
 }
 
 /* void addSchemaType (in AString aType, in nsISOAPDecoder); */
-NS_IMETHODIMP nsSOAPTypeRegistry::AddSchemaType(nsAReadableString & aEncoding, nsAReadableString & aType, nsISOAPDecoder* aDecoder)
+NS_IMETHODIMP nsSOAPTypeRegistry::AddSchemaType(nsAReadableString & aEncoding, nsAReadableString & aSchemaNamespaceURI, nsAReadableString & aSchemaType, nsISOAPDecoder* aDecoder)
 {
   NS_ENSURE_ARG_POINTER(aDecoder);
   nsAutoString type(aEncoding);
   type.Append(nsSOAPUtils::kTypeSeparator);
-  type.Append(aType);
+  type.Append(aSchemaNamespaceURI);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aSchemaType);
   nsStringKey typeKey(type);
   if (mNativeTypes->Exists(&typeKey))
   {
@@ -105,10 +107,11 @@ nsresult nsSOAPTypeRegistry::QueryByNativeType(const nsAReadableString & aEncodi
   return NS_OK;
 }
 
-/* nsISOAPType queryBySchemaType (in DOMString aEncodingStyleURI, in DOMString aSchemaType); */
-nsresult nsSOAPTypeRegistry::QueryBySchemaType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPDecoder **_retval)
+nsresult nsSOAPTypeRegistry::QueryBySchemaType(const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaNamespaceURI, const nsAReadableString & aSchemaType, nsISOAPDecoder **_retval)
 {
   nsAutoString type(aEncodingStyleURI);
+  type.Append(nsSOAPUtils::kTypeSeparator);
+  type.Append(aSchemaNamespaceURI);
   type.Append(nsSOAPUtils::kTypeSeparator);
   type.Append(aSchemaType);
   nsStringKey schemaKey(type);
@@ -135,16 +138,16 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Encode(nsISOAPTypeRegistry *aTypes, nsISOAPPar
   return encoder->Encode(aTypes, aSource, aEncodingStyleURI, aNativeType, aDestination, aAttachments);
 }
 
-NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPTypeRegistry *aTypes, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaType, nsISOAPAttachments* aAttachments, nsISOAPParameter **_retval)
+NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPTypeRegistry *aTypes, nsIDOMNode *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaNamespaceURI, const nsAReadableString & aSchemaType, nsISOAPAttachments* aAttachments, nsISOAPParameter **_retval)
 {
   *_retval = nsnull;
   nsAutoString schemaID(aSchemaType);
   nsCOMPtr<nsISOAPDecoder> decoder;
   for (;;) {
-    QueryBySchemaType(aEncodingStyleURI, schemaID, getter_AddRefs(decoder));
+    QueryBySchemaType(aEncodingStyleURI, aSchemaNamespaceURI, schemaID, getter_AddRefs(decoder));
     if (decoder)
       break;
-    mDefault->QueryBySchemaType(aEncodingStyleURI, schemaID, getter_AddRefs(decoder));
+    mDefault->QueryBySchemaType(aEncodingStyleURI, aSchemaNamespaceURI, schemaID, getter_AddRefs(decoder));
     if (decoder)
       break;
 #if 0
@@ -156,7 +159,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Decode(nsISOAPTypeRegistry *aTypes, nsIDOMNode
     schemaID.Left(schemaID, i);
 #endif
   }
-  return decoder->Decode(aTypes, aSource, aEncodingStyleURI, aSchemaType, aAttachments, _retval);
+  return decoder->Decode(aTypes, aSource, aEncodingStyleURI, aSchemaNamespaceURI, aSchemaType, aAttachments, _retval);
 }
 
 static const char* kAllAccess = "AllAccess";

@@ -94,6 +94,14 @@ interface nsISOAPParameter : nsISupports {
   attribute AString type;
 
   /**
+   * The schema type namespace associated with a parameter.  In addition
+   *   to a language data type, there may be a schema type associated
+   *   with a parameter.  If this is not specified, the recipient
+   *   must make its own choice as appropriate.
+   */
+  attribute AString schemaNamespaceURI;
+
+  /**
    * The schema type associated with a parameter.  In addition
    *   to a language data type, there may be a schema type associated
    *   with a parameter.  If this is not specified, the recipient

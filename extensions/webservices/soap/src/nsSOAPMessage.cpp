@@ -281,6 +281,7 @@ NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
   nsCOMPtr<nsISOAPParameter> param;
   nsAutoString encoding;
   nsAutoString type;
+  nsAutoString namespaceURI;
   PRBool isHeader = header != nsnull;
   if (!isHeader)
     header = body;
@@ -305,26 +306,16 @@ NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
       rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
       if (NS_FAILED(rv)) return rv;
       if (attr) {
-        type = nsSOAPUtils::kXMLSchemaSchemaTypePrefix;
-	nsAutoString t1;
-	nsAutoString t2;
-	attr->GetNodeValue(t1);
-	nsSOAPUtils::GetNamespaceURI(current, t1, t2);
-	type.Append(t2);
-	type.Append(nsSOAPUtils::kTypeSeparator);
-	nsSOAPUtils::GetLocalName(t1, t2);
-	type.Append(t2);
+	nsAutoString temp;
+	attr->GetNodeValue(temp);
+	nsSOAPUtils::GetNamespaceURI(current, temp, namespaceURI);
+	nsSOAPUtils::GetLocalName(temp, type);
       }
-      else {
-        type = nsSOAPUtils::kXMLNameSchemaTypePrefix;
-	nsAutoString t1;
-	current->GetNamespaceURI(t1);
-	type.Append(t1);
-	type.Append(nsSOAPUtils::kTypeSeparator);
-	current->GetLocalName(t1);
-	type.Append(t1);
+      else {  // Need fancier fallback type determination
+	namespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
+	type = nsSOAPUtils::kStringSchemaType;
       }
-      rv = mTypes->Decode(mTypes, current, encoding, type, nsnull, getter_AddRefs(param));
+      rv = mTypes->Decode(mTypes, current, encoding, namespaceURI, type, nsnull, getter_AddRefs(param));
       if (NS_FAILED(rv)) return rv;
       if (param) {
 	rv = param->SetHeader(isHeader);

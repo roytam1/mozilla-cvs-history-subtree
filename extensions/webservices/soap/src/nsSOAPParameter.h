@@ -59,6 +59,7 @@ protected:
   nsString mEncodingStyleURI;
   nsString mName;
   nsString mType;
+  nsString mSchemaNamespaceURI;
   nsString mSchemaType;
   nsCOMPtr<nsISupports> mValue;
   PRBool mHeader;
