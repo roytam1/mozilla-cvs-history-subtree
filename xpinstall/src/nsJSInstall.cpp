@@ -209,6 +209,8 @@ InstallAbortInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   if(argc >= 0)
   {
+    //  public int AbortInstall(void);
+
 //    if(NS_OK != nativeThis->AbortInstall())
 //    {
       return JS_FALSE;
@@ -377,6 +379,13 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
   if(argc >= 6)
   {
+    //  public int AddSubComponent ( String registryName,
+    //                               String version,        --OR--     VersionInfo version, 
+    //                               String jarSourcePath,
+    //                               Object localDirSpec,
+    //                               String relativeLocalPath,
+    //                               Boolean forceUpdate); 
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -397,6 +406,12 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   }
   else if(argc >= 5)
   {
+    //  public int AddSubComponent ( String registryName,
+    //                               String version,
+    //                               String jarSourcePath,
+    //                               Object localDirSpec,
+    //                               String relativeLocalPath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -412,6 +427,11 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   }
   else if(argc >= 4)
   {
+    //  public int AddSubComponent ( String registryName,
+    //                               String jarSourcePath,
+    //                               Object localDirSpec,
+    //                               String relativeLocalPath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -426,6 +446,8 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   }
   else if(argc >= 1)
   {
+    //  public int AddSubComponent ( String jarSourcePath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->AddDirectory(b0, &nativeRet))
@@ -465,6 +487,8 @@ InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
   if(argc >= 1)
   {
+    //  public int DeleteComponent ( String registryName);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->DeleteComponent(b0, &nativeRet))
@@ -505,6 +529,9 @@ InstallDeleteFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 
   if(argc >= 2)
   {
+    //  public int DeleteFile ( Object folder,
+    //                          String relativeFileName);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -545,6 +572,8 @@ InstallDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
   if(argc >= 1)
   {
+    //  public int DiskSpaceAvailable ( Object localDirSpec);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->DiskSpaceAvailable(b0, &nativeRet))
@@ -585,6 +614,9 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
   if(argc >= 2)
   {
+    //  public int Execute ( String jarSourcePath,
+    //                       String args);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -597,6 +629,8 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   }
   else if(argc >= 1)
   {
+    //  public int Execute ( String jarSourcePath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->Execute(b0, &nativeRet))
@@ -635,6 +669,8 @@ InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
   if(argc >= 0)
   {
+    //  public int FinalizeInstall (void);
+
 //    if(NS_OK != nativeThis->FinalizeInstall(&nativeRet))
 //    {
       return JS_FALSE;
@@ -672,6 +708,9 @@ InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
   if(argc >= 1)
   {
+    //  public int Gestalt ( String selector,
+    //                       long   *response);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->Gestalt(b0, &nativeRet))
@@ -712,6 +751,9 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
   if(argc >= 2)
   {
+    //  public int GetComponentFolder ( String registryName,
+    //                                  String subDirectory);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -724,6 +766,8 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   }
   else if(argc >= 1)
   {
+    //  public int GetComponentFolder ( String registryName);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->GetComponentFolder(b0, &nativeRet))
@@ -764,6 +808,9 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 
   if(argc >= 2)
   {
+    //  public int GetFolder ( String folderName, --OR-- Object localDirSpec,
+    //                       String subDirectory);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -776,6 +823,8 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
   }
   else if(argc >= 1)
   {
+    //  public int GetFolder ( String folderName);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->GetFolder(b0, &nativeRet))
@@ -816,6 +865,8 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   if(argc >= 0)
   {
+    //  public int GetLastError (void);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->GetLastError(&nativeRet))
@@ -856,6 +907,9 @@ InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
   if(argc >= 2)
   {
+    //  public int GetWinProfile (Object folder,
+    //                            String file);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -895,6 +949,8 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 
   if(argc >= 0)
   {
+    //  public int GetWinRegistry (void);
+
 //    if(NS_OK != nativeThis->GetWinRegistry(&nativeRet))
 //    {
       return JS_FALSE;
@@ -936,6 +992,12 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
   if(argc >= 5)
   {
+    //  public int Patch (String registryName,
+    //                    String version,        --OR-- VersionInfo version,
+    //                    String jarSourcePath,
+    //                    Object localDirSpec,
+    //                    String relativeLocalPath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -951,6 +1013,11 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
   }
   else if(argc >= 4)
   {
+    //  public int Patch (String registryName,
+    //                    String jarSourcePath,
+    //                    Object localDirSpec,
+    //                    String relativeLocalPath);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -991,6 +1058,8 @@ InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 
   if(argc >= 0)
   {
+    //  public int ResetError (void);
+
 //    if(NS_OK != nativeThis->ResetError())
 //    {
       return JS_FALSE;
@@ -1027,6 +1096,8 @@ InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 
   if(argc >= 1)
   {
+    //  public int SetPackageFolder (Object folder);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->SetPackageFolder(b0))
@@ -1068,6 +1139,10 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   if(argc >= 4)
   {
+    //  public int StartInstall (String package,
+    //                           String version,  --OR--  VersionInfo version,
+    //                           int flags);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
@@ -1087,6 +1162,9 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   }
   else if(argc >= 2)
   {
+    //  public int StartInstall (String package,
+    //                           String version);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
@@ -1127,6 +1205,8 @@ InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 
   if(argc >= 1)
   {
+    //  public int Uninstall (String packageName);
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
 //    if(NS_OK != nativeThis->Uninstall(b0, &nativeRet))
