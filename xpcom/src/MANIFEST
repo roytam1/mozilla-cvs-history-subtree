@@ -18,3 +18,5 @@ nscore.h
 nsIBaseStream.h
 nsIOutputStream.h
 nsVector.h
+nsIMalloc.h
+nsMalloc.h
