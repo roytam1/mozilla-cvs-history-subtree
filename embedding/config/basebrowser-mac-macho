@@ -207,6 +207,7 @@ components/libucvko.dylib
 components/libucvcn.dylib
 components/libucvtw.dylib
 components/libucvtw2.dylib
+components/libuniversalchardet.dylib
 ; components/libucvibm.dylib for ibm
 
 
