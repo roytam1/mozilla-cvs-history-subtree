@@ -815,6 +815,7 @@ void art_vpath_dash_filter_init (ArtVpathIterator *src_iter,
 
   instance->dashpointer.dasharray = dasharray;
   instance->dashpointer.length = 0.0;
+  instance->dashpointer.offset = 0.0;
   for (i=0; i<dasharray->n_dash; ++i)
     instance->dashpointer.length += dasharray->dash[i];
   _art_dashpointer_seek(instance->dist, &instance->dashpointer);
