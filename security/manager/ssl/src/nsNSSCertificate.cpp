@@ -1779,8 +1779,26 @@ ProcessTime(PRTime dispTime, const PRUnichar *displayName,
     return rv;
 
   nsString text;
-  dateFormatter->FormatPRTime(nsnull, kDateFormatShort, kTimeFormatNone,
-                              dispTime, text);
+  nsString tempString;
+
+  PRExplodedTime explodedTime;
+  PR_ExplodeTime(dispTime, PR_LocalTimeParameters, &explodedTime);
+
+  dateFormatter->FormatPRExplodedTime(nsnull, kDateFormatShort, kTimeFormatSecondsForce24Hour,
+                              &explodedTime, tempString);
+
+  text.Append(tempString);
+  text.Append(NS_LITERAL_STRING("\n("));
+
+  PRExplodedTime explodedTimeGMT;
+  PR_ExplodeTime(dispTime, PR_GMTParameters, &explodedTimeGMT);
+
+  dateFormatter->FormatPRExplodedTime(nsnull, kDateFormatShort, kTimeFormatSecondsForce24Hour,
+                              &explodedTimeGMT, tempString);
+
+  text.Append(tempString);
+  text.Append(NS_LITERAL_STRING(" GMT)"));
+
   nsCOMPtr<nsIASN1PrintableItem> printableItem = new nsNSSASN1PrintableItem();
   if (printableItem == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
