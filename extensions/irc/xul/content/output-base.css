@@ -474,10 +474,10 @@ a.chatzilla-link:hover {
 .msg-user[important="true"]:after {
     font-weight: bold;
 }
-.msg-user[msg-user="ME!"]:before {
+.msg-user[msg-user$="ME!"]:before {
     content: "<";
 }
-.msg-user[msg-user="ME!"]:after {
+.msg-user[msg-user$="ME!"]:after {
     content: ">";
 }
 .msg-user[msg-type="ACTION"]:before,
@@ -498,10 +498,10 @@ a.chatzilla-link:hover {
 .msg-user[dest-type="IRCUser"]:after {
     content: ")";
 }
-.msg-user[msg-dest="ME!"]:before {
+.msg-user[msg-dest$="ME!"]:before {
     content: "from(";
 }
-.msg-user[msg-dest="ME!"]:after {
+.msg-user[msg-dest$="ME!"]:after {
     content: ")";
 }
 
@@ -512,9 +512,9 @@ a.chatzilla-link:hover {
 .msg-user[view-type="IRCUser"]:after {
     content: "}";
 }
-.msg-user[view-type="IRCUser"][msg-user="ME!"]:before {
+.msg-user[view-type$="IRCUser"][msg-user="ME!"]:before {
     content: "{";
 }
-.msg-user[view-type="IRCUser"][msg-user="ME!"]:after {
+.msg-user[view-type$="IRCUser"][msg-user="ME!"]:after {
     content: "}";
 }
