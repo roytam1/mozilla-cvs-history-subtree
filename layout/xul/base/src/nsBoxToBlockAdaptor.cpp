@@ -937,7 +937,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 // XXX FIX!!! shouldn't that be &aReflowState????
 void
 nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                                          const nsHTMLReflowState aReflowState,
+                                          const nsHTMLReflowState &aReflowState,
                                           nsReflowReason& aReason,
                                           PRBool aPopOffIncremental,
                                           PRBool& aRedrawNow,
@@ -970,21 +970,23 @@ nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState,
       // this lets me iterate through the reflow children; initialized
       // from state within the reflowCommand
       nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
-      // See if the reflow command is targeted at us
-      PRBool amTarget = reflowIterator.IsTarget();
-
-      // Get the next frame in the reflow chain, and verify that it's our
-      // child frame (we have only one)
-      nsIFrame *childFrame;
-
-      if (!amTarget && reflowIterator.NextChild(&childFrame) &&
-          childFrame == mFrame) {
+      if (reflowIterator.CurrentNode() &&
+          reflowIterator.CurrentNode()->GetFrame() == mFrame) {
 
         aNeedsReflow = PR_TRUE;
 
+#if 0
         // set reflow state for child
-        aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
-
+        if (aPopOffIncremental)
+        {
+          // XXX FIX!  if we have multiple targetted children, we'd need to
+          // make sure they get reflowed, and that will depend on the code
+          // that called us, or require a rewrite.
+          nsIFrame *childFrame;
+          reflowIterator.NextChild(&childFrame);
+          aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+        }
+#endif
         // if we hit the target then we have used up the chain.
         // next time a layout 
         break;
