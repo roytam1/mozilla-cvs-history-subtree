@@ -679,6 +679,9 @@ void ExprLexer::parse(const String& pattern) {
                 case AT_SIGN :
                 case PLUS:
                 case DOLLAR_SIGN :
+                    matchToken(tokenBuffer, ch);
+                    matchDelimiter(ch);
+                    break;
                 case VERT_BAR:
                     matchToken(tokenBuffer, ch);
                     matchDelimiter(ch);
