@@ -413,10 +413,7 @@ function onBrowserKeyPress(evt)
         find(findField.value);
       }
       else {
-        if (evt.charCode == 47)
-          selectFindBar();
-        else
-          findField.value = "";
+        findField.value = "";
       }
     }
     else {
