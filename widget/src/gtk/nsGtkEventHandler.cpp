@@ -54,101 +54,6 @@ struct EventInfo {
   nsRect   *rect;    // the rect
 };
 
-struct nsKeyConverter {
-  int vkCode; // Platform independent key code
-  int keysym; // GDK keysym key code
-};
-
-struct nsKeyConverter nsKeycodes[] = {
-  { NS_VK_CANCEL,     GDK_Cancel },
-  { NS_VK_BACK,       GDK_BackSpace },
-  { NS_VK_TAB,        GDK_Tab },
-  { NS_VK_TAB,        GDK_ISO_Left_Tab },
-  { NS_VK_CLEAR,      GDK_Clear },
-  { NS_VK_RETURN,     GDK_Return },
-  { NS_VK_SHIFT,      GDK_Shift_L },
-  { NS_VK_SHIFT,      GDK_Shift_R },
-  { NS_VK_CONTROL,    GDK_Control_L },
-  { NS_VK_CONTROL,    GDK_Control_R },
-  { NS_VK_ALT,        GDK_Alt_L },
-  { NS_VK_ALT,        GDK_Alt_R },
-  { NS_VK_PAUSE,      GDK_Pause },
-  { NS_VK_CAPS_LOCK,  GDK_Caps_Lock },
-  { NS_VK_ESCAPE,     GDK_Escape },
-  { NS_VK_SPACE,      GDK_space },
-  { NS_VK_PAGE_UP,    GDK_Page_Up },
-  { NS_VK_PAGE_DOWN,  GDK_Page_Down },
-  { NS_VK_END,        GDK_End },
-  { NS_VK_HOME,       GDK_Home },
-  { NS_VK_LEFT,       GDK_Left },
-  { NS_VK_UP,         GDK_Up },
-  { NS_VK_RIGHT,      GDK_Right },
-  { NS_VK_DOWN,       GDK_Down },
-  { NS_VK_PRINTSCREEN, GDK_Print },
-  { NS_VK_INSERT,     GDK_Insert },
-  { NS_VK_DELETE,     GDK_Delete },
-
-  { NS_VK_MULTIPLY,   GDK_KP_Multiply },
-  { NS_VK_ADD,        GDK_KP_Add },
-  { NS_VK_SEPARATOR,  GDK_KP_Separator },
-  { NS_VK_SUBTRACT,   GDK_KP_Subtract },
-  { NS_VK_DECIMAL,    GDK_KP_Decimal },
-  { NS_VK_DIVIDE,     GDK_KP_Divide },
-  { NS_VK_RETURN,     GDK_KP_Enter },
-
-  { NS_VK_COMMA,      GDK_comma },
-  { NS_VK_PERIOD,     GDK_period },
-  { NS_VK_SLASH,      GDK_slash },
-  { NS_VK_BACK_SLASH, GDK_backslash },
-//XXX: How do you get a BACK_QUOTE?  NS_VK_BACK_QUOTE, GDK_backquote,
-  { NS_VK_OPEN_BRACKET, GDK_bracketleft },
-  { NS_VK_CLOSE_BRACKET, GDK_bracketright },
-  { NS_VK_QUOTE, GDK_quotedbl }
-
-};
-
-void nsGtkWidget_InitNSKeyEvent(int aEventType, nsKeyEvent& aKeyEvent,
-                                GtkWidget *w, gpointer p, GdkEventKey * event);
-
-// Input keysym is in gtk format; output is in NS_VK format
-int nsConvertKey(int keysym)
-{
-  int i;
-  int length = sizeof(nsKeycodes) / sizeof(struct nsKeyConverter);
-
-
-  // First, try to handle alphanumeric input, not listed in nsKeycodes:
-  // most likely, more letters will be getting typed in than things in
-  // the key list, so we will look through these first.
-
-  // since X has different key symbols for upper and lowercase letters and
-  // mozilla does not, convert gdk's to mozilla's
-  if (keysym >= GDK_a && keysym <= GDK_z)
-    return keysym - GDK_a + NS_VK_A;
-  if (keysym >= GDK_A && keysym <= GDK_Z)
-    return keysym - GDK_A + NS_VK_A;
-
-  // numbers
-  if (keysym >= GDK_0 && keysym <= GDK_9)
-    return keysym - GDK_0 + NS_VK_0;
-
-  // keypad numbers
-  if (keysym >= GDK_KP_0 && keysym <= GDK_KP_9)
-    return keysym - GDK_KP_0 + NS_VK_NUMPAD0;
-
-  // misc other things
-  for (i = 0; i < length; i++) {
-    if (nsKeycodes[i].keysym == keysym)
-      return(nsKeycodes[i].vkCode);
-  }
-
-  // function keys
-  if (keysym >= GDK_F1 && keysym <= GDK_F24)
-    return keysym - GDK_F1 + NS_VK_F1;
-
-  return((int)0);
-}
-
 //==============================================================
 void InitAllocationEvent(GtkAllocation *aAlloc,
                          gpointer   p,
@@ -241,6 +146,118 @@ void UninitExposeEvent(GdkEventExpose *aGEE,
   }
 }
 
+struct nsKeyConverter {
+  int vkCode; // Platform independent key code
+  int keysym; // GDK keysym key code
+};
+
+struct nsKeyConverter nsKeycodes[] = {
+  { NS_VK_CANCEL,     GDK_Cancel },
+  { NS_VK_BACK,       GDK_BackSpace },
+  { NS_VK_TAB,        GDK_Tab },
+  { NS_VK_TAB,        GDK_ISO_Left_Tab },
+  { NS_VK_CLEAR,      GDK_Clear },
+  { NS_VK_RETURN,     GDK_Return },
+  { NS_VK_SHIFT,      GDK_Shift_L },
+  { NS_VK_SHIFT,      GDK_Shift_R },
+  { NS_VK_CONTROL,    GDK_Control_L },
+  { NS_VK_CONTROL,    GDK_Control_R },
+  { NS_VK_ALT,        GDK_Alt_L },
+  { NS_VK_ALT,        GDK_Alt_R },
+  { NS_VK_PAUSE,      GDK_Pause },
+  { NS_VK_CAPS_LOCK,  GDK_Caps_Lock },
+  { NS_VK_ESCAPE,     GDK_Escape },
+  { NS_VK_SPACE,      GDK_space },
+  { NS_VK_PAGE_UP,    GDK_Page_Up },
+  { NS_VK_PAGE_DOWN,  GDK_Page_Down },
+  { NS_VK_END,        GDK_End },
+  { NS_VK_HOME,       GDK_Home },
+  { NS_VK_LEFT,       GDK_Left },
+  { NS_VK_UP,         GDK_Up },
+  { NS_VK_RIGHT,      GDK_Right },
+  { NS_VK_DOWN,       GDK_Down },
+  { NS_VK_PRINTSCREEN, GDK_Print },
+  { NS_VK_INSERT,     GDK_Insert },
+  { NS_VK_DELETE,     GDK_Delete },
+
+  { NS_VK_MULTIPLY,   GDK_KP_Multiply },
+  { NS_VK_ADD,        GDK_KP_Add },
+  { NS_VK_SEPARATOR,  GDK_KP_Separator },
+  { NS_VK_SUBTRACT,   GDK_KP_Subtract },
+  { NS_VK_DECIMAL,    GDK_KP_Decimal },
+  { NS_VK_DIVIDE,     GDK_KP_Divide },
+  { NS_VK_RETURN,     GDK_KP_Enter },
+
+  { NS_VK_COMMA,      GDK_comma },
+  { NS_VK_PERIOD,     GDK_period },
+  { NS_VK_SLASH,      GDK_slash },
+  { NS_VK_BACK_SLASH, GDK_backslash },
+//XXX: How do you get a BACK_QUOTE?  NS_VK_BACK_QUOTE, GDK_backquote,
+  { NS_VK_OPEN_BRACKET, GDK_bracketleft },
+  { NS_VK_CLOSE_BRACKET, GDK_bracketright },
+  { NS_VK_QUOTE, GDK_quotedbl }
+
+};
+
+void nsGtkWidget_InitNSKeyEvent(int aEventType, nsKeyEvent& aKeyEvent,
+                                GtkWidget *w, gpointer p, GdkEventKey * event);
+
+//==============================================================
+
+// Input keysym is in gtk format; output is in NS_VK format
+int nsPlatformToDOMKeyCode(GdkEventKey *aGEK, int* isPrintable)
+{
+  int i;
+  int length = sizeof(nsKeycodes) / sizeof(struct nsKeyConverter);
+
+  int keysym = aGEK->keyval;
+
+  // First, try to handle alphanumeric input, not listed in nsKeycodes:
+  // most likely, more letters will be getting typed in than things in
+  // the key list, so we will look through these first.
+
+  // since X has different key symbols for upper and lowercase letters and
+  // mozilla does not, convert gdk's to mozilla's
+  if (keysym >= GDK_a && keysym <= GDK_z)
+  {
+    *isPrintable = 1;
+    return keysym - GDK_a + NS_VK_A;
+  }
+  if (keysym >= GDK_A && keysym <= GDK_Z)
+  {
+    *isPrintable = 1;
+    return keysym - GDK_A + NS_VK_A;
+  }
+
+  // numbers
+  if (keysym >= GDK_0 && keysym <= GDK_9)
+  {
+    *isPrintable = 1;
+    return keysym - GDK_0 + NS_VK_0;
+  }
+
+  // keypad numbers
+  if (keysym >= GDK_KP_0 && keysym <= GDK_KP_9)
+  {
+    *isPrintable = 1;
+    return keysym - GDK_KP_0 + NS_VK_NUMPAD0;
+  }
+
+  *isPrintable = 0;
+
+  // misc other things
+  for (i = 0; i < length; i++) {
+    if (nsKeycodes[i].keysym == keysym)
+      return(nsKeycodes[i].vkCode);
+  }
+
+  // function keys
+  if (keysym >= GDK_F1 && keysym <= GDK_F24)
+    return keysym - GDK_F1 + NS_VK_F1;
+
+  return((int)0);
+}
+
 //==============================================================
 
 PRUint32 nsConvertCharCodeToUnicode(GdkEventKey* aGEK)
@@ -286,7 +303,8 @@ void InitKeyEvent(GdkEventKey *aGEK,
   anEvent.eventStructType = NS_KEY_EVENT;
 
   if (aGEK != nsnull) {
-    anEvent.keyCode = nsConvertKey(aGEK->keyval) & 0x00FF;
+    int isPrintable;  // Actually we don't care, just need a placeholder
+    anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK, &isPrintable);
     anEvent.charCode = 0;
     anEvent.time = aGEK->time;
     anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
@@ -309,21 +327,24 @@ void InitKeyPressEvent(GdkEventKey *aGEK,
   anEvent.widget = (nsWidget*)p;
 
   if (aGEK!=nsnull) {
-    anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
-    if (anEvent.charCode == 0)
-      anEvent.keyCode = nsConvertKey(aGEK->keyval) & 0x00FF;
-    else
-      anEvent.keyCode = 0;
+    int isPrintable;
+    anEvent.keyCode = nsPlatformToDOMKeyCode(aGEK, &isPrintable);
 
+    anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isControl = (aGEK->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isAlt = (aGEK->state & GDK_MOD1_MASK) ? PR_TRUE : PR_FALSE;
-    // XXX need meta, but nsKeyEvent doesn't offer it -- see bug 14465
+    anEvent.isMeta = (aGEK->state & GDK_MOD2_MASK) ? PR_TRUE : PR_FALSE;
+
+    if (isPrintable && !anEvent.isControl && !anEvent.isAlt && !anEvent.isMeta)
+    {
+      anEvent.keyCode = 0;
+      anEvent.charCode = nsConvertCharCodeToUnicode(aGEK);
+    }
 
 #ifdef DEBUG_pavlov
     g_print("%s\n", aGEK->string);
 #endif
     anEvent.time = aGEK->time;
-    anEvent.isShift = (aGEK->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.point.x = 0;
     anEvent.point.y = 0;
   }
