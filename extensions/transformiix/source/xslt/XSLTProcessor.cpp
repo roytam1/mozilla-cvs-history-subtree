@@ -423,6 +423,8 @@ void XSLTProcessor::processTopLevel
                     String errMsg;
                     XMLParser xmlParser;
 
+                    URIUtils::resolveHref(href, thisDocBase, realHref);
+
                     Document* xslDoc = xmlParser.getDocumentFromURI(realHref, thisDocBase, errMsg);
 
                     if (!xslDoc) {
