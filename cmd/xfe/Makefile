@@ -125,7 +125,6 @@ CSRCS		= \
 		  strings.c \
 		  visual.c \
 		  MozillaWm.c \
-		  lite_stubs.c \
 		  commands.c \
 		  dialogs.c \
 		  hot.c \
@@ -142,6 +141,11 @@ CSRCS		= \
 		  editor.c \
 		  editordialogs.c \
 		  $(NULL)
+
+ifndef MOZ_MAIL_NEWS
+CSRCS		+= lite_stubs.c \
+		  $(NULL)
+endif
 
 ifdef MOZ_MAIL_NEWS
 CSRCS		+= \
