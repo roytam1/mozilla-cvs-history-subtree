@@ -44,47 +44,66 @@
 
 #include "Registry.h"
 #include "nsString.h"
+#include "nsIStringBundle.h"
 
-//Sets the registry key for basekey/keyname valuename.
+class nsMapiRegistryUtils
+{
+private :
+    nsCAutoString m_thisApp ;
+    nsAutoString m_brand ;
+
+    nsCOMPtr<nsIStringBundle> m_mapiStringBundle ;
+public :
+    nsMapiRegistryUtils() ;
+
+    // returns TRUE if the Mapi32.dll is smart dll.
+    PRBool isSmartDll();
+    // returns TRUE if the Mapi32.dll is a Mozilla dll.
+    PRBool isMozDll();
+
+    // Returns the (fully-qualified) name of this executable.
+    const char * thisApplication() ; 
+    // This returns the brand name for this application
+    const PRUnichar * brandName() ;
+    // verifyRestrictedAccess - Returns PR_TRUE if this user only has restricted access
+    // to the registry keys we need to modify.
+    PRBool verifyRestrictedAccess() ;
+
+    // set the Windows registry key
 nsresult SetRegistryKey(HKEY baseKey, const char * keyName, 
                         const char * valueName, char * value);
-
-// Deletes the registry key for base/keyname/valuename
+    // delete a registry key
 nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName, 
                         const char * valueName);
+    // get a Windows registry key
+    void GetRegistryKey(HKEY baseKey, const char * keyName, 
+                         const char * valueName, nsCAutoString & value) ;
 
-// Gets the current regiistry setting for the key.
-nsCString GetRegistryKey(HKEY baseKey, const char * keyName, 
-                         const char * valueName);
-// Returns PR_TRUE if this user only has restricted access
-// to the registry keys we need to modify.
-PRBool verifyRestrictedAccess();
-
-// Returns true if mozilla is the default mail client
-// by checking the registry.
+    // Returns TRUE if the current application is default mail client.
 PRBool IsDefaultMailClient();
+    // Sets Mozilla as default Mail Client
+    nsresult setDefaultMailClient() ;
+    // Removes Mozilla as the default Mail client and restores the previous setting
+    nsresult unsetDefaultMailClient() ;
 
-// Save the current setting for the default mail client.
+    // Saves the current setting of the default Mail Client in 
+    // HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
 nsresult saveDefaultMailClient();
-
-// Saves the current user setting for the default mail client.
+    // Saves the current user setting of the default Mail Client in 
+    // HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
 nsresult saveUserDefaultMailClient();
 
-// Renames Mapi32.dl in system directory to Mapi32_moz_bak.dll
-// copies the mozMapi32.dll from bin directory to the system directory
 nsresult CopyMozMapiToWinSysDir();
-
-// deletes the Mapi32.dll in system directory and renames Mapi32_moz_bak.dll
-//  to Mapi32.dll
 nsresult RestoreBackedUpMapiDll();
 
-// Sets mozilla as the default mail client	
-nsresult setDefaultMailClient();
+    // Returns FALSE if showMapiDialog is set to 0.
+    PRBool getShowDialog() ;
 
-// unsets mozilla and resets the default mail client setting to previous one
-nsresult unsetDefaultMailClient();
+    // create a string bundle for MAPI messages
+    nsresult MakeMapiStringBundle(nsIStringBundle ** aMapiStringBundle) ;
+    // display an error dialog for MAPI messages
+    nsresult ShowMapiErrorDialog() ;
 
-// returns true if we need to show the mail integration dialog.
-PRBool getShowDialog();
+} ;
 
 #endif

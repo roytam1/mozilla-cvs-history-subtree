@@ -48,24 +48,22 @@
 #include "nsCOMPtr.h"
 #include "nsISupports.h"
 #include "nsMsgCompCID.h"
-#include "nsMsgComposeStringBundle.h"
 
 
-const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
 
-nsMapiImp::nsMapiImp()
+CMapiImp::CMapiImp()
 : m_cRef(1)
 {
     m_Lock = PR_NewLock();
 }
 
-nsMapiImp::~nsMapiImp() 
+CMapiImp::~CMapiImp() 
 { 
     if (m_Lock)
         PR_DestroyLock(m_Lock);
 }
 
-STDMETHODIMP nsMapiImp::QueryInterface(const IID& aIid, void** aPpv)
+STDMETHODIMP CMapiImp::QueryInterface(const IID& aIid, void** aPpv)
 {    
     if (aIid == IID_IUnknown)
     {
@@ -85,12 +83,12 @@ STDMETHODIMP nsMapiImp::QueryInterface(const IID& aIid, void** aPpv)
     return S_OK;
 }
 
-STDMETHODIMP_(ULONG) nsMapiImp::AddRef()
+STDMETHODIMP_(ULONG) CMapiImp::AddRef()
 {
     return PR_AtomicIncrement(&m_cRef);
 }
 
-STDMETHODIMP_(ULONG) nsMapiImp::Release() 
+STDMETHODIMP_(ULONG) CMapiImp::Release() 
 {
     PRInt32 temp;
     temp = PR_AtomicDecrement(&m_cRef);
@@ -103,12 +101,12 @@ STDMETHODIMP_(ULONG) nsMapiImp::Release()
     return temp;
 }
 
-STDMETHODIMP nsMapiImp::IsValid()
+STDMETHODIMP CMapiImp::IsValid()
 {
     return S_OK;
 }
 
-STDMETHODIMP nsMapiImp::IsValidSession(unsigned long aSession)
+STDMETHODIMP CMapiImp::IsValidSession(unsigned long aSession)
 {
     nsMAPIConfiguration *pConfig = nsMAPIConfiguration::GetMAPIConfiguration();
     if (pConfig && pConfig->IsSessionValid(aSession))
@@ -117,7 +115,7 @@ STDMETHODIMP nsMapiImp::IsValidSession(unsigned long aSession)
     return E_FAIL;
 }
 
-STDMETHODIMP nsMapiImp::Initialize()
+STDMETHODIMP CMapiImp::Initialize()
 {
     HRESULT hr = E_FAIL;
 
@@ -138,7 +136,7 @@ STDMETHODIMP nsMapiImp::Initialize()
     return hr;
 }
 
-STDMETHODIMP nsMapiImp::Login(unsigned long aUIArg, LOGIN_PW_TYPE aLogin, LOGIN_PW_TYPE aPassWord,
+STDMETHODIMP CMapiImp::Login(unsigned long aUIArg, LOGIN_PW_TYPE aLogin, LOGIN_PW_TYPE aPassWord,
                 unsigned long aFlags, unsigned long *aSessionId)
 {
     HRESULT hr = E_FAIL;
@@ -192,18 +190,16 @@ STDMETHODIMP nsMapiImp::Login(unsigned long aUIArg, LOGIN_PW_TYPE aLogin, LOGIN_
     return S_OK;
 }
 
-STDMETHODIMP nsMapiImp::SendMail( unsigned long aSession, lpnsMapiMessage aMessage,
+STDMETHODIMP CMapiImp::SendMail( unsigned long aSession, lpnsMapiMessage aMessage,
      short aRecipCount, lpnsMapiRecipDesc aRecips , short aFileCount, lpnsMapiFileDesc aFiles , 
      unsigned long aFlags, unsigned long aReserved)
 {
-    HRESULT hr = SUCCESS_SUCCESS ;
+    nsresult rv = NS_OK ;
 
     // Assign the pointers in the aMessage struct to the array of Recips and Files
     // recieved here from MS COM. These are used in BlindSendMail and ShowCompWin fns 
     aMessage->lpRecips = aRecips ;
     aMessage->lpFiles = aFiles ;
-
-    nsresult rv ;
 
     /** create nsIMsgCompFields obj and populate it **/
     nsCOMPtr<nsIMsgCompFields> pCompFields = do_CreateInstance(NS_MSGCOMPFIELDS_CONTRACTID, &rv) ;
@@ -226,51 +222,14 @@ STDMETHODIMP nsMapiImp::SendMail( unsigned long aSession, lpnsMapiMessage aMessa
             rv = nsMapiHook::ShowComposerWindow(aSession, pCompFields);
         }
     }
-
-    // return success
-    if (NS_SUCCEEDED (rv)) return hr ;
-    // if failure return the related MAPI failure code
-    switch (rv)
-    {
-        case NS_MSG_NO_RECIPIENTS :
-            hr = MAPI_E_BAD_RECIPTYPE ;
-            break ;
-        case NS_ERROR_COULD_NOT_GET_USERS_MAIL_ADDRESS :
-            hr = MAPI_E_INVALID_RECIPS ; 
-            break ;
-        case NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER :
-            hr = MAPI_E_LOGIN_FAILURE ;
-            break ;
-        case NS_MSG_UNABLE_TO_OPEN_FILE :                 
-        case NS_MSG_UNABLE_TO_OPEN_TMP_FILE :
-        case NS_MSG_COULDNT_OPEN_FCC_FOLDER :
-        case NS_ERROR_FILE_INVALID_PATH :
-            hr = MAPI_E_ATTACHMENT_OPEN_FAILURE ;
-            break ;
-        case NS_ERROR_FILE_TARGET_DOES_NOT_EXIST :
-            hr = MAPI_E_ATTACHMENT_NOT_FOUND ;
-            break ;
-        case NS_MSG_CANCELLING :
-            hr = MAPI_E_USER_ABORT ;
-            break ;
-        case NS_MSG_ERROR_WRITING_FILE :
-        case NS_MSG_UNABLE_TO_SAVE_TEMPLATE :
-        case NS_MSG_UNABLE_TO_SAVE_DRAFT :
-            hr = MAPI_E_ATTACHMENT_WRITE_FAILURE ;
-            break ;
-        default :
-            hr = MAPI_E_FAILURE ;
-            break ;
-    }
     
-    return hr ;
+    return nsMAPIConfiguration::GetMAPIErrorFromNSError (rv) ;
 }
 
 
-STDMETHODIMP nsMapiImp::SendDocuments( unsigned long aSession, LPTSTR aDelimChar,
+STDMETHODIMP CMapiImp::SendDocuments( unsigned long aSession, LPTSTR aDelimChar,
                             LPTSTR aFilePaths, LPTSTR aFileNames, ULONG aFlags)
 {
-    HRESULT hr = SUCCESS_SUCCESS ;
     nsresult rv = NS_OK ;
 
     /** create nsIMsgCompFields obj and populate it **/
@@ -285,40 +244,10 @@ STDMETHODIMP nsMapiImp::SendDocuments( unsigned long aSession, LPTSTR aDelimChar
     if (NS_SUCCEEDED (rv)) 
         rv = nsMapiHook::ShowComposerWindow(aSession, pCompFields);
 
-    // return success
-    if (NS_SUCCEEDED (rv)) return hr ;
-    // if failure return the related MAPI failure code
-    switch (rv)
-    {
-        case NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER :
-            hr = MAPI_E_LOGIN_FAILURE ;
-            break ;
-        case NS_MSG_UNABLE_TO_OPEN_FILE :                 
-        case NS_MSG_UNABLE_TO_OPEN_TMP_FILE :
-        case NS_MSG_COULDNT_OPEN_FCC_FOLDER :
-        case NS_ERROR_FILE_INVALID_PATH :
-            hr = MAPI_E_ATTACHMENT_OPEN_FAILURE ;
-            break ;
-        case NS_ERROR_FILE_TARGET_DOES_NOT_EXIST :
-            hr = MAPI_E_ATTACHMENT_NOT_FOUND ;
-            break ;
-        case NS_MSG_CANCELLING :
-            hr = MAPI_E_USER_ABORT ;
-            break ;
-        case NS_MSG_ERROR_WRITING_FILE :
-        case NS_MSG_UNABLE_TO_SAVE_TEMPLATE :
-        case NS_MSG_UNABLE_TO_SAVE_DRAFT :
-            hr = MAPI_E_ATTACHMENT_WRITE_FAILURE ;
-            break ;
-        default :
-            hr = MAPI_E_FAILURE ;
-            break ;
-    }
-
-    return hr ;
+    return nsMAPIConfiguration::GetMAPIErrorFromNSError (rv) ;
 }
 
-STDMETHODIMP nsMapiImp::Logoff (unsigned long aSession)
+STDMETHODIMP CMapiImp::Logoff (unsigned long aSession)
 {
     nsMAPIConfiguration *pConfig = nsMAPIConfiguration::GetMAPIConfiguration();
 
@@ -328,8 +257,10 @@ STDMETHODIMP nsMapiImp::Logoff (unsigned long aSession)
     return E_FAIL;
 }
 
-STDMETHODIMP nsMapiImp::CleanUp()
+STDMETHODIMP CMapiImp::CleanUp()
 {
     nsMapiHook::CleanUp();
     return S_OK;
 }
+
+

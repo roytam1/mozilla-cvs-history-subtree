@@ -38,7 +38,6 @@
 #undef UNICODE
 
 #include <objbase.h>
-#include <assert.h>
 #include "nsString.h"
 #include "Registry.h"
 

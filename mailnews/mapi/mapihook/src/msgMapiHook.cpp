@@ -88,6 +88,8 @@ static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
 #define PREF_MAPI_WARN_PRIOR_TO_BLIND_SEND "mapi.blind-send.warn"
 #define PREF_MAPI_BLIND_SEND_ENABLED       "mapi.blind-send.enabled"
 
+#define RAJIV_DEBUG 1
+
 class nsMAPISendListener : public nsIMsgSendListener
 {
 public:
@@ -362,7 +364,7 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
     // smtp password and Logged in used IdKey from MapiConfig (session obj)
     nsMAPIConfiguration * pMapiConfig = nsMAPIConfiguration::GetMAPIConfiguration() ;
     if (!pMapiConfig) return NS_ERROR_FAILURE ;  // get the singelton obj
-    PRUnichar * password = pMapiConfig->GetPassWord(aSession) ;
+    PRUnichar * password = pMapiConfig->GetPassword(aSession) ;
     // password
     nsCAutoString smtpPassword ;
     smtpPassword.AssignWithConversion (password) ;

@@ -37,7 +37,6 @@
 
 #include <windows.h>
 #include <tchar.h>
-#include <assert.h>
 #include <mapidefs.h>
 #include <mapi.h>
 #include "msgMapi.h"
@@ -46,7 +45,7 @@
 #define MAX_RECIPS  100
 #define MAX_FILES   100
 
-const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5,
+const CLSID CLSID_CMapiImp = {0x29f458be, 0x8866, 0x11d5,
                               {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
 const IID IID_nsIMapi = {0x6EDCD38E,0x8861,0x11d5,
                         {0xA3,0xDD,0x00,0xB0,0xD0,0xF3,0xBA,0xA7}};
@@ -83,7 +82,7 @@ BOOL InitMozillaReference(nsIMapi **aRetValue)
 
     HRESULT hRes = ::CoInitialize(nsnull) ;
 
-    hRes = ::CoCreateInstance(CLSID_nsMapiImp, NULL, CLSCTX_LOCAL_SERVER,
+    hRes = ::CoCreateInstance(CLSID_CMapiImp, NULL, CLSCTX_LOCAL_SERVER,
                                          IID_nsIMapi, (LPVOID *)aRetValue);
 
     if (hRes == S_OK && (*aRetValue)->Initialize() == S_OK)

@@ -36,19 +36,15 @@
  * ***** END LICENSE BLOCK ***** */
  
 #include "nsIServiceManager.h"
-#include "nsMapiRegistry.h"
 #include "nsXPIDLString.h"
 #include "nsIPromptService.h"
-#include "nsIStringBundle.h"
 #include "nsIProxyObjectManager.h"
 #include "nsProxiedService.h"
 
 #include "nsMapiRegistryUtils.h" 
-#include "nsString.h"
+#include "nsMapiRegistry.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-
-nsresult ShowMapiErrorDialog();
 
 /** Implementation of the nsIMapiRegistry interface.
  *  Use standard implementation of nsISupports stuff.
@@ -57,8 +53,8 @@ NS_IMPL_ISUPPORTS1(nsMapiRegistry, nsIMapiRegistry);
 
 nsMapiRegistry::nsMapiRegistry() {
     NS_INIT_ISUPPORTS();
-    m_ShowDialog = !verifyRestrictedAccess();
-    m_DefaultMailClient = IsDefaultMailClient();
+    m_ShowDialog = ! m_registryUtils.verifyRestrictedAccess();
+    m_DefaultMailClient = m_registryUtils.IsDefaultMailClient();
 }
 
 nsMapiRegistry::~nsMapiRegistry() {
@@ -69,7 +65,7 @@ nsMapiRegistry::GetIsDefaultMailClient(PRBool * retval) {
     // we need to get the value from registry everytime
     // because the registry settings can be changed from
     // other mail applications.
-    *retval = IsDefaultMailClient();
+    *retval = m_registryUtils.IsDefaultMailClient();
     return NS_OK;
 }
 
@@ -80,23 +76,28 @@ nsMapiRegistry::GetShowDialog(PRBool * retval) {
 }
 
 NS_IMETHODIMP
-nsMapiRegistry::SetDefaultMailClient() {
-    nsresult rv = setDefaultMailClient();
+nsMapiRegistry::SetIsDefaultMailClient(PRBool aIsDefaultMailClient) 
+{
+    nsresult rv = NS_OK ;
+
+    if (aIsDefaultMailClient)
+    {
+        rv = m_registryUtils.setDefaultMailClient();
     if (NS_SUCCEEDED(rv))
         m_DefaultMailClient = PR_TRUE;
     else
-       rv = ShowMapiErrorDialog();
-    return NS_OK;
+            m_registryUtils.ShowMapiErrorDialog();
 }
-
-NS_IMETHODIMP
-nsMapiRegistry::UnsetDefaultMailClient() {
-    nsresult rv = unsetDefaultMailClient();
+    else
+    {
+        rv = m_registryUtils.unsetDefaultMailClient();
     if (NS_SUCCEEDED(rv))
         m_DefaultMailClient = PR_FALSE;
     else
-        ShowMapiErrorDialog();
-    return NS_OK;
+            m_registryUtils.ShowMapiErrorDialog();
+}
+
+    return rv ;
 }
 
 /** This will bring up the dialog box only once per session and 
@@ -107,46 +108,26 @@ nsMapiRegistry::UnsetDefaultMailClient() {
 NS_IMETHODIMP
 nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
     nsresult rv;
-    if (!m_ShowDialog || !getShowDialog()) return NS_OK;
+    if (!m_ShowDialog || !m_registryUtils.getShowDialog()) return NS_OK;
     nsCOMPtr<nsIPromptService> promptService(do_GetService(
                   "@mozilla.org/embedcomp/prompt-service;1", &rv));
     if (NS_SUCCEEDED(rv) && promptService)
     {
-        nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
-                                         kStringBundleServiceCID, &rv));
-        if (NS_FAILED(rv) || !bundleService) return NS_ERROR_FAILURE;
-
         nsCOMPtr<nsIStringBundle> bundle;
-        rv = bundleService->CreateBundle(
-                        "chrome://messenger/locale/mapi.properties",
-                        getter_AddRefs(bundle));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-        nsCOMPtr<nsIStringBundle> brandBundle;
-        rv = bundleService->CreateBundle(
-                        "chrome://global/locale/brand.properties",
-                        getter_AddRefs(brandBundle));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-        nsXPIDLString brandName;
-        rv = brandBundle->GetStringFromName(
-                           NS_LITERAL_STRING("brandShortName").get(),
-                           getter_Copies(brandName));
+        rv = m_registryUtils.MakeMapiStringBundle (getter_AddRefs (bundle)) ;
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
         nsXPIDLString dialogTitle;
-        const PRUnichar *brandStrings[] = { brandName.get() };
+        const PRUnichar *brandStrings[] = { m_registryUtils.brandName() };
         NS_NAMED_LITERAL_STRING(dialogTitlePropertyTag, "dialogTitle");
-        const PRUnichar *dTitlepropertyTag = dialogTitlePropertyTag.get();
-        rv = bundle->FormatStringFromName(dTitlepropertyTag,
+        rv = bundle->FormatStringFromName(dialogTitlePropertyTag.get(),
                                           brandStrings, 1,
                                           getter_Copies(dialogTitle));
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
         
         nsXPIDLString dialogText;
         NS_NAMED_LITERAL_STRING(dialogTextPropertyTag, "dialogText");
-        const PRUnichar *dpropertyTag = dialogTextPropertyTag.get();
-        rv = bundle->FormatStringFromName(dpropertyTag,
+        rv = bundle->FormatStringFromName(dialogTextPropertyTag.get(),
                                           brandStrings, 1,
                                           getter_Copies(dialogText));
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
@@ -173,62 +154,13 @@ nsMapiRegistry::ShowMailIntegrationDialog(nsIDOMWindow *aParentWindow) {
                                       &checkValue,
                                       &buttonPressed);
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+        rv = m_registryUtils.SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
                                 "showMapiDialog", (checkValue) ? "0" : "1");
         if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
         m_ShowDialog = PR_FALSE;
         if (!buttonPressed)
-            rv = SetDefaultMailClient();
-    }
-    return rv;
-}
-
-nsresult ShowMapiErrorDialog() {
-    nsresult rv;
-    nsCOMPtr<nsIPromptService> promptService(do_GetService(
-                  "@mozilla.org/embedcomp/prompt-service;1", &rv));
-    if (NS_SUCCEEDED(rv) && promptService)
-    {
-        nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
-                                         kStringBundleServiceCID, &rv));
-        if (NS_FAILED(rv) || !bundleService) return NS_ERROR_FAILURE;
-
-        nsCOMPtr<nsIStringBundle> bundle;
-        rv = bundleService->CreateBundle(
-                        "chrome://messenger/locale/mapi.properties",
-                        getter_AddRefs(bundle));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-        nsCOMPtr<nsIStringBundle> brandBundle;
-        rv = bundleService->CreateBundle(
-                        "chrome://global/locale/brand.properties",
-                        getter_AddRefs(brandBundle));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-        nsXPIDLString brandName;
-        rv = brandBundle->GetStringFromName(
-                           NS_LITERAL_STRING("brandShortName").get(),
-                           getter_Copies(brandName));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-        nsXPIDLString dialogTitle;
-        const PRUnichar *brandStrings[] = { brandName.get() };
-        NS_NAMED_LITERAL_STRING(dialogTitlePropertyTag, "errorMessageTitle");
-        const PRUnichar *dTitlepropertyTag = dialogTitlePropertyTag.get();
-        rv = bundle->FormatStringFromName(dTitlepropertyTag,
-                                          brandStrings, 1,
-                                          getter_Copies(dialogTitle));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-        nsXPIDLString dialogText;
-        NS_NAMED_LITERAL_STRING(dialogTextPropertyTag, "errorMessage");
-        const PRUnichar *dpropertyTag = dialogTextPropertyTag.get();
-        rv = bundle->FormatStringFromName(dpropertyTag,
-                                          brandStrings, 1,
-                                          getter_Copies(dialogText));
-        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-        rv = promptService->Alert(nsnull, dialogTitle,
-                                  dialogText);
+            rv = SetIsDefaultMailClient(PR_TRUE) ; // SetDefaultMailClient();
     }
     return rv;
 }

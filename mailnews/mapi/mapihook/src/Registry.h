@@ -39,7 +39,6 @@
 #define _REGISTRY_H_
 
 #include <objbase.h>
-#include <assert.h>
 
 // This function will register a component in the Registry.
 

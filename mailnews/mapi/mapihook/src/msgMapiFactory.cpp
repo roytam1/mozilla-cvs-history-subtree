@@ -41,19 +41,16 @@
 #include "msgMapiImp.h"
 #include "msgMapi.h"
 
-const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
-
-
-nsMapiFactory::nsMapiFactory()
+CMapiFactory ::CMapiFactory()
 : m_cRef(1)
 {
 }
 
-nsMapiFactory::~nsMapiFactory()
+CMapiFactory::~CMapiFactory()
 {
 }
 
-STDMETHODIMP nsMapiFactory::QueryInterface(const IID& aIid, void** aPpv)
+STDMETHODIMP CMapiFactory::QueryInterface(const IID& aIid, void** aPpv)
 {    
     if ((aIid == IID_IUnknown) || (aIid == IID_IClassFactory))
     {
@@ -68,12 +65,12 @@ STDMETHODIMP nsMapiFactory::QueryInterface(const IID& aIid, void** aPpv)
     return S_OK;
 }
 
-STDMETHODIMP_(ULONG) nsMapiFactory::AddRef()
+STDMETHODIMP_(ULONG) CMapiFactory::AddRef()
 {
     return (PR_AtomicIncrement(&m_cRef));
 }
 
-STDMETHODIMP_(ULONG) nsMapiFactory::Release() 
+STDMETHODIMP_(ULONG) CMapiFactory::Release() 
 {
     PRInt32 temp;
     temp = PR_AtomicDecrement(&m_cRef);
@@ -86,7 +83,7 @@ STDMETHODIMP_(ULONG) nsMapiFactory::Release()
     return temp;
 }
 
-STDMETHODIMP nsMapiFactory::CreateInstance(IUnknown* aUnknownOuter,
+STDMETHODIMP CMapiFactory::CreateInstance(IUnknown* aUnknownOuter,
                                            const IID& aIid,
                                            void** aPpv) 
 {
@@ -99,7 +96,7 @@ STDMETHODIMP nsMapiFactory::CreateInstance(IUnknown* aUnknownOuter,
 
     // Create component.
 
-    nsMapiImp* pImp = new nsMapiImp();
+    CMapiImp* pImp = new CMapiImp();
     if (pImp == nsnull)
     {
         return E_OUTOFMEMORY ;
@@ -115,7 +112,7 @@ STDMETHODIMP nsMapiFactory::CreateInstance(IUnknown* aUnknownOuter,
     return hr;
 }
 
-STDMETHODIMP nsMapiFactory::LockServer(PRBool aLock) 
+STDMETHODIMP CMapiFactory::LockServer(PRBool aLock) 
 {
     return S_OK ;
 }

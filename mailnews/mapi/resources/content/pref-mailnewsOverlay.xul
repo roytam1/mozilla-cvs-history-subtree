@@ -38,7 +38,7 @@ Contributor(s):
 <hbox autostretch="never" id="mapi">
   <checkbox id="mailnewsEnableMapi" label="&enableMapi.label;"
             accesskey="&enableMapi.accesskey;"
-            oncommand="onEnableMapi();"
-            startFunc="mailnewsOverlayStartup();"/>
+	        preftype="bool" prefstring="mailnews.default_mail_client" prefattribute="checked"/>
+
 </hbox>
 </overlay> 

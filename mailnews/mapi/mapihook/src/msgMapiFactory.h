@@ -42,7 +42,7 @@
 #include "nspr.h"
 
 
-class nsMapiFactory : public IClassFactory
+class CMapiFactory : public IClassFactory
 {
 public :
 
@@ -57,8 +57,8 @@ public :
     STDMETHODIMP        CreateInstance (LPUNKNOWN aUnkOuter, REFIID aIid, void **aPpv);
     STDMETHODIMP        LockServer (BOOL aLock);
 
-    nsMapiFactory();
-    ~nsMapiFactory();
+    CMapiFactory ();
+    ~CMapiFactory ();
 
 private :
 

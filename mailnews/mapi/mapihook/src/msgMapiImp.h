@@ -43,7 +43,12 @@
 #include "nsXPIDLString.h"
 #include "nspr.h"
 
-class nsMapiImp : public nsIMapi
+const CLSID CLSID_CMapiImp = {0x29f458be, 0x8866, 0x11d5, {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
+
+// this class implements the MS COM interface nsIMapi that provides the methods
+// called by mapi32.dll to perform the mail operations as specified by MAPI.
+// These class methods in turn use the Mozilla Mail XPCOM interfaces to do so.
+class CMapiImp : public nsIMapi
 {
 
 public :
@@ -75,8 +80,8 @@ public :
     STDMETHODIMP Logoff (unsigned long aSession);
     STDMETHODIMP CleanUp();
 
-    nsMapiImp();
-    ~nsMapiImp();
+    CMapiImp();
+    ~CMapiImp();
 
 private :
 

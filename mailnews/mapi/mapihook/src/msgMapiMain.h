@@ -58,8 +58,8 @@ private :
     PRUint32  m_nMaxSessions;
 
 
-    nsHashtable *m_ProfileMap;
-    nsHashtable *m_SessionMap;
+    nsHashtable m_ProfileMap;
+    nsHashtable m_SessionMap;
     nsMAPIConfiguration();
 
 public :
@@ -70,9 +70,12 @@ public :
                             PRBool aNewSession, PRUint32 *aSession, char *aIdKey);
     PRBool IsSessionValid(PRUint32 aSessionID);
     PRBool UnRegisterSession(PRUint32 aSessionID);
-    PRUnichar *GetPassWord(PRUint32 aSessionID);
+    PRUnichar *GetPassword(PRUint32 aSessionID);
     char *GetIdKey(PRUint32 aSessionID);
     ~nsMAPIConfiguration();
+
+    // a util func
+    static HRESULT GetMAPIErrorFromNSError (nsresult res) ;
 };
 
 class nsMAPISession
@@ -97,7 +100,7 @@ class nsMAPISession
         PRUint32 IncrementSession();
         PRUint32 DecrementSession();
         PRUint32 GetSessionCount();
-        PRUnichar *nsMAPISession::GetPassWord();
+        PRUnichar *nsMAPISession::GetPassword();
         char *nsMAPISession::GetIdKey();
         ~nsMAPISession();
 };

@@ -33,21 +33,25 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#include <nsComPtr.h>
-#include <objbase.h>
-#include <nsISupports.h>
-#include <nsMapiRegistry.h>
-#include <nsIGenericFactory.h>
-#include <nsIObserverService.h>
-#include <nsIAppStartupNotifier.h>
-#include <nsIServiceManager.h>
-#include <nsIComponentManager.h>
-#include <nsICategoryManager.h>
+#include "nsCOMPtr.h"
+#include "objbase.h"
+#include "nsISupports.h"
+
+#include "nsIGenericFactory.h"
+#include "nsIObserverService.h"
+#include "nsIAppStartupNotifier.h"
+#include "nsIServiceManager.h"
+#include "nsIComponentManager.h"
+#include "nsICategoryManager.h"
+
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefBranchInternal.h"
+
 #include "msgMapiSupport.h"
-
-
-const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, \
-                              {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
+#include "nsMapiRegistryUtils.h" 
+#include "nsMapiRegistry.h"
+#include "msgMapiImp.h"
 
 /** Implementation of the nsIMapiSupport interface.
  *  Use standard implementation of nsISupports stuff.
@@ -74,13 +78,30 @@ static NS_METHOD nsMapiRegistrationProc(nsIComponentManager *aCompMgr,
 NS_IMETHODIMP
 nsMapiSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
 {
+    nsresult rv = NS_OK ;
+
     if (!nsCRT::strcmp(aTopic, "profile-after-change"))
         return InitializeMAPISupport();
 
     if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
         return ShutdownMAPISupport();
 
-    nsresult rv;
+    if (!nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID))
+    {
+        nsCOMPtr<nsIPrefBranch> prefs = do_QueryInterface(aSubject, &rv);
+        if (NS_FAILED(rv))  return rv;
+        // which preference changed?
+        if (!nsCRT::strcmp(MAILNEWS_ALLOW_DEFAULT_MAIL_CLIENT, NS_ConvertUCS2toUTF8(aData).get()))
+        {
+            PRBool bIsDefault = PR_FALSE ;
+            rv = prefs->GetBoolPref(MAILNEWS_ALLOW_DEFAULT_MAIL_CLIENT, &bIsDefault);
+            if (NS_FAILED(rv)) return rv;
+            nsCOMPtr <nsIMapiRegistry> mapiRegistry = do_CreateInstance(NS_IMAPIREGISTRY_CONTRACTID, &rv) ;
+            if (NS_FAILED(rv)) return rv;
+            return mapiRegistry->SetIsDefaultMailClient(bIsDefault) ;
+        }
+        return rv ;
+    }
 
     nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
     if (NS_FAILED(rv)) return rv;
@@ -89,6 +110,16 @@ nsMapiSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnicha
     if (NS_FAILED(rv)) return rv;
 
     rv = observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+    if (NS_FAILED(rv))  return rv;
+
+     nsCOMPtr<nsIPrefService> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))  return rv;
+
+    nsCOMPtr<nsIPrefBranchInternal> prefInternal = do_QueryInterface(prefs, &rv);
+    if (NS_FAILED(rv))  return rv;
+
+    rv = prefInternal->AddObserver(MAILNEWS_ALLOW_DEFAULT_MAIL_CLIENT, this, PR_FALSE);
+    if (NS_FAILED(rv))  return rv;
            
     return rv;
 }
@@ -112,11 +143,11 @@ nsMapiSupport::InitializeMAPISupport()
 
     if (m_nsMapiFactory == nsnull)    // No Registering if already done.  Sanity Check!!
     {
-        m_nsMapiFactory = new nsMapiFactory();
+        m_nsMapiFactory = new CMapiFactory();
 
         if (m_nsMapiFactory != nsnull)
         {
-            HRESULT hr = ::CoRegisterClassObject(CLSID_nsMapiImp, \
+            HRESULT hr = ::CoRegisterClassObject(CLSID_CMapiImp, \
                                                  m_nsMapiFactory, \
                                                  CLSCTX_LOCAL_SERVER, \
                                                  REGCLS_MULTIPLEUSE, \

@@ -50,19 +50,11 @@ interface nsIMapiRegistry: nsISupports {
 
    /** This is set to TRUE if Mozilla is the default Application
     */
-   readonly attribute boolean isDefaultMailClient;
+   attribute boolean isDefaultMailClient;
 
    /** This is set TRUE only once per session.
     */
    readonly attribute boolean showDialog;
-
-   /** This will update the registry keys to set Mozilla as default Mail Client.
-    */
-   void setDefaultMailClient();
-
-   /** This will reset the registry keys for the default Mail Client.
-    */
-   void unsetDefaultMailClient();
 
    /** This will bring the dialog asking the user if he/she wants to set
     * Mozilla as default Mail Client.

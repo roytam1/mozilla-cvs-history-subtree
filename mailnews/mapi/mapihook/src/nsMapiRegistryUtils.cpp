@@ -39,46 +39,46 @@
 #undef _UNICODE
 
 #include "nsIServiceManager.h"
+#include "msgMapiImp.h"
 #include "nsMapiRegistryUtils.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
+#include "nsIPromptService.h"
 #include "nsXPIDLString.h"
 #include "nsSpecialSystemDirectory.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 
-// returns TRUE if the Mapi32.dll is smart dll.
-static PRBool isSmartDll();
-
-// returns TRUE if the Mapi32.dll is a Mozilla dll.
-static PRBool isMozDll();
-
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
 
-// Returns the (fully-qualified) name of this executable.
-static nsCString thisApplication() {
-    static nsCAutoString result;
+#define EXE_EXTENSION ".exe" 
 
-    if (result.IsEmpty()) {
-        char buffer[MAX_PATH] = {0};
-        DWORD len = ::GetModuleFileName(NULL, buffer, sizeof buffer);
-        len = ::GetShortPathName(buffer, buffer, sizeof buffer);
+nsMapiRegistryUtils::nsMapiRegistryUtils()
+{
+   m_mapiStringBundle = nsnull ;
+}
     
-        result = buffer;
-        result.ToUpperCase();
+const char * nsMapiRegistryUtils::thisApplication()
+{
+    if (m_thisApp.IsEmpty()) {
+        char buffer[MAX_PATH] = {0};
+        DWORD len = ::GetModuleFileName(NULL, buffer, MAX_PATH);
+        if (!len) return nsnull ; 
+        char shortPathBuf[MAX_PATH] = {0};
+        len = ::GetShortPathName(buffer, shortPathBuf, MAX_PATH);
+        if (!len) return nsnull ; 
+        m_thisApp = buffer;
+        m_thisApp.ToUpperCase();
     }
 
-    return result;
+    return m_thisApp.get() ;
 }
 
-/** This returns the brand name for this application
-  */
-static nsCString brandName() {
-    static nsCAutoString brand;
+const PRUnichar * nsMapiRegistryUtils::brandName() 
+{
     nsresult rv;
-    if (brand.IsEmpty()) {
+    if (m_brand.IsEmpty()) {
         nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
                                          kStringBundleServiceCID, &rv));
         if (NS_SUCCEEDED(rv) && bundleService) {
@@ -92,17 +92,16 @@ static nsCString brandName() {
                            NS_LITERAL_STRING("brandShortName").get(),
                            getter_Copies(brandName));
                 if (NS_SUCCEEDED(rv)) {
-                    brand.AssignWithConversion(brandName.get());
+                    m_brand = brandName ;
                 }
             }
         }
     }
-    return brand;
+
+    return m_brand.get()  ;
 }
 
-// verifyRestrictedAccess - Returns PR_TRUE if this user only has restricted access
-// to the registry keys we need to modify.
-PRBool verifyRestrictedAccess() {
+PRBool nsMapiRegistryUtils::verifyRestrictedAccess() {
     char   subKey[] = "Software\\Mozilla - Test Key";
     PRBool result = PR_FALSE;
     DWORD  dwDisp = 0;
@@ -136,7 +135,7 @@ PRBool verifyRestrictedAccess() {
     return result;
 }
 
-nsresult SetRegistryKey(HKEY baseKey, const char * keyName, 
+nsresult nsMapiRegistryUtils::SetRegistryKey(HKEY baseKey, const char * keyName, 
                         const char * valueName, char * value)
 {
     nsresult result = NS_ERROR_FAILURE;
@@ -154,7 +153,7 @@ nsresult SetRegistryKey(HKEY baseKey, const char * keyName,
     return result;
 }
 
-nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName, 
+nsresult nsMapiRegistryUtils::DeleteRegistryValue(HKEY baseKey, const char * keyName, 
                         const char * valueName)
 {
     nsresult result = NS_ERROR_FAILURE;
@@ -170,10 +169,9 @@ nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName,
     return result;
 }
 
-nsCString GetRegistryKey(HKEY baseKey, const char * keyName, 
-                         const char * valueName)
+void nsMapiRegistryUtils::GetRegistryKey(HKEY baseKey, const char * keyName, 
+                         const char * valueName, nsCAutoString & value)
 {
-    nsCAutoString value;
     HKEY   key;
     LONG   rc = ::RegOpenKey(baseKey, keyName, &key);
     if (rc == ERROR_SUCCESS) {
@@ -187,26 +185,23 @@ nsCString GetRegistryKey(HKEY baseKey, const char * keyName,
         }
         ::RegCloseKey(key);
      }
-     return value;
 }
 
-#define EXE_EXTENSION ".exe" 
 
-/** Returns TRUE if the current application is default mail client.
- */
-PRBool IsDefaultMailClient()
+
+PRBool nsMapiRegistryUtils::IsDefaultMailClient()
 {
     if (!isSmartDll() && !isMozDll()) 
         return PR_FALSE;
-    nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                      "Software\\Clients\\Mail", ""));
+    nsCAutoString name; 
+    GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Clients\\Mail", "", name);
     if (!name.IsEmpty()) {
-         nsCString keyName("Software\\Clients\\Mail\\");
+         nsCAutoString keyName("Software\\Clients\\Mail\\");
          keyName += name.get(); 
          keyName += "\\protocols\\mailto\\shell\\open\\command";
 
-         nsCAutoString result(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                             keyName.get(), ""));
+         nsCAutoString result;
+         GetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", result);
          if (!result.IsEmpty()) {
              nsCAutoString strExtension;
              strExtension.Assign(EXE_EXTENSION);
@@ -216,34 +211,32 @@ PRBool IsDefaultMailClient()
              if (index != kNotFound) {
                  result.Truncate(index + strExtension.Length());
              }
-             return (result == thisApplication());
+             nsCAutoString thisApp (thisApplication()) ;
+             return (result == thisApp);
         }
     }
     return PR_FALSE;
 
 }
 
-/** Saves the current setting of the default Mail Client in 
- * HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
- */
-nsresult saveDefaultMailClient()
+nsresult nsMapiRegistryUtils::saveDefaultMailClient()
 {
     nsresult rv;
-    nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE,
-                                    "Software\\Clients\\Mail", ""));
+    nsCAutoString name ;
+    GetRegistryKey(HKEY_LOCAL_MACHINE,"Software\\Clients\\Mail", "", name);
     if (!name.IsEmpty()) {
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                             "Software\\Mozilla\\Desktop", 
                             "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail", 
                             (char *)name.get());
         if (NS_SUCCEEDED(rv)) {
-            nsCString keyName("Software\\Clients\\Mail\\");
+            nsCAutoString keyName("Software\\Clients\\Mail\\");
             keyName += name.get(); 
             keyName += "\\protocols\\mailto\\shell\\open\\command";
-            nsCAutoString appPath(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                               keyName.get(), ""));
+            nsCAutoString appPath ;
+            GetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", appPath);
             if (!appPath.IsEmpty()) {
-                nsCString stringName("HKEY_LOCAL_MACHINE\\");
+                nsCAutoString stringName("HKEY_LOCAL_MACHINE\\");
                 stringName += keyName.get();
                 rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                                   "Software\\Mozilla\\Desktop", 
@@ -259,14 +252,11 @@ nsresult saveDefaultMailClient()
     return rv;
 } 
 
-/** Saves the current user setting of the default Mail Client in 
- * HKEY_LOCAL_MACHINE\\Software\\Mozilla\\Desktop
- */
-nsresult saveUserDefaultMailClient()
+nsresult nsMapiRegistryUtils::saveUserDefaultMailClient()
 {
     nsresult rv;
-    nsCAutoString name(GetRegistryKey(HKEY_CURRENT_USER,
-                                    "Software\\Clients\\Mail", ""));
+    nsCAutoString name ;
+    GetRegistryKey(HKEY_CURRENT_USER,"Software\\Clients\\Mail", "", name);
     if (!name.IsEmpty()) {
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                             "Software\\Mozilla\\Desktop", 
@@ -290,7 +280,7 @@ nsresult saveUserDefaultMailClient()
  */
 
 typedef HRESULT (FAR PASCAL GetOutlookVersionFunc)(); 
-static PRBool isSmartDll() 
+PRBool nsMapiRegistryUtils::isSmartDll() 
 { 
     char buffer[MAX_PATH] = {0};
     if (GetSystemDirectory(buffer, sizeof(buffer)) == 0) 
@@ -314,7 +304,7 @@ typedef HRESULT (FAR PASCAL GetMapiDllVersion)();
  * Checks whether mapi32.dll is installed by this app. 
  * Returns TRUE if it is.
  */
-static PRBool isMozDll() 
+PRBool nsMapiRegistryUtils::isMozDll() 
 { 
     char buffer[MAX_PATH] = {0};
     if (GetSystemDirectory(buffer, sizeof(buffer)) == 0) 
@@ -336,7 +326,7 @@ static PRBool isMozDll()
 /** Renames Mapi32.dl in system directory to Mapi32_moz_bak.dll
  *  copies the mozMapi32.dll from bin directory to the system directory
  */
-nsresult CopyMozMapiToWinSysDir()
+nsresult nsMapiRegistryUtils::CopyMozMapiToWinSysDir()
 {
     nsresult rv;
     char buffer[MAX_PATH] = {0};
@@ -391,8 +381,7 @@ nsresult CopyMozMapiToWinSysDir()
         }
     }
     
-    nsAutoString fileName;
-    fileName.AssignWithConversion("Mapi32.dll");
+    NS_NAMED_LITERAL_STRING(fileName, "Mapi32.dll");
     filePath.Assign(buffer);
     pCurrentMapiFile->InitWithPath(filePath.get());
     rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
@@ -404,7 +393,7 @@ nsresult CopyMozMapiToWinSysDir()
 /** deletes the Mapi32.dll in system directory and renames Mapi32_moz_bak.dll
  *  to Mapi32.dll
  */
-nsresult RestoreBackedUpMapiDll()
+nsresult nsMapiRegistryUtils::RestoreBackedUpMapiDll()
 {
     nsresult rv;
     char buffer[MAX_PATH] = {0};
@@ -443,7 +432,7 @@ nsresult RestoreBackedUpMapiDll()
 
 /** Sets Mozilla as default Mail Client
  */
-nsresult setDefaultMailClient()
+nsresult nsMapiRegistryUtils::setDefaultMailClient()
 {
     nsresult rv;
     nsresult mailKeySet=NS_ERROR_FAILURE;
@@ -456,37 +445,40 @@ nsresult setDefaultMailClient()
         NS_FAILED(rv)) return NS_ERROR_FAILURE;
     nsCAutoString keyName("Software\\Clients\\Mail\\");
 
-    nsCAutoString appName(brandName());
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(brandName()).get());
     if (!appName.IsEmpty()) {
         keyName.Append(appName.get());
         // hardcoding this for 0.9.4 branch
         // need to change it before merging into the trunk
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                        (char *)keyName.get(), 
+                        keyName.get(), 
                         "", "Netscape 6.2 Mail"); 
     }
     else
         rv = NS_ERROR_FAILURE;
     if (NS_SUCCEEDED(rv)) {
-        nsCAutoString dllPath(thisApplication());
+        nsCAutoString thisApp (thisApplication()) ;
+        if (NS_FAILED(rv)) return rv ;
+
+        nsCAutoString dllPath (thisApp) ;
         PRInt32 index = dllPath.RFind("\\");
         if (index != kNotFound)
             dllPath.Truncate(index + 1);
         dllPath += "mozMapi32.dll";
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                            (char *)keyName.get(), "DLLPath", 
+                            keyName.get(), "DLLPath", 
                             (char *)dllPath.get());
         if (NS_SUCCEEDED(rv)) {
             keyName.Append("\\protocols\\mailto");
             rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                (char *)keyName.get(), 
+                                keyName.get(), 
                                 "", "URL:MailTo Protocol");
             if (NS_SUCCEEDED(rv)) {
-                nsCAutoString appPath(thisApplication());
+                nsCAutoString appPath (thisApp);
                 appPath += " \"%1\"";
                 keyName.Append("\\shell\\open\\command");
                 rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                       (char *)keyName.get(), 
+                       keyName.get(), 
                        "", (char *)appPath.get());
                 if (NS_SUCCEEDED(rv)) {
                     rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
@@ -494,23 +486,23 @@ nsresult setDefaultMailClient()
                                         "", (char *)appName.get());
                 }
                 if (NS_SUCCEEDED(rv)) {
-                    nsCAutoString mailAppPath(thisApplication());
+                    nsCAutoString mailAppPath(thisApp);
                     mailAppPath += " -mail";
                     nsCAutoString appKeyName ("Software\\Clients\\Mail\\");
                     appKeyName.Append(appName.get());
                     appKeyName.Append("\\shell\\open\\command");
                     rv = SetRegistryKey(HKEY_LOCAL_MACHINE,
-                                        (char *)appKeyName.get(),
+                                        appKeyName.get(),
                                         "", (char *)mailAppPath.get());
                 }
                 if (NS_SUCCEEDED(rv)) {
-                    nsCAutoString iconPath(thisApplication());
+                    nsCAutoString iconPath(thisApp);
                     iconPath += ",0";
                     nsCAutoString iconKeyName ("Software\\Clients\\Mail\\");
                     iconKeyName.Append(appName.get());
                     iconKeyName.Append("\\DefaultIcon");
                     mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE,
-                                        (char *)iconKeyName.get(),
+                                        iconKeyName.get(),
                                         "", (char *)iconPath.get());
                 }
             }            
@@ -528,7 +520,7 @@ nsresult setDefaultMailClient()
         }
         ::SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 
                      (LPARAM)"Software\\Clients\\Mail");
-        RegisterServer(CLSID_nsMapiImp, "Mozilla MAPI", "mozMapi", "mozMapi.1");
+        RegisterServer(CLSID_CMapiImp, "Mozilla MAPI", "mozMapi", "mozMapi.1");
         return desktopKeySet;
     }
     
@@ -537,31 +529,31 @@ nsresult setDefaultMailClient()
 
 /** Removes Mozilla as the default Mail client and restores the previous setting
  */
-nsresult unsetDefaultMailClient() {
+nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
     nsresult result = NS_OK;
     nsresult mailKeySet = NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     if (!isSmartDll()) {
         if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
     }
-    nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                      "Software\\Mozilla\\Desktop", 
-                                      "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail"));
-    nsCAutoString appName(brandName());
+    nsCAutoString name ;
+    GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+                                      "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail", name);
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(brandName()).get());
 
     if (!name.IsEmpty() && !appName.IsEmpty() && name.Equals(appName)) {
         nsCAutoString keyName("HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail\\");
         keyName.Append(appName.get());
         keyName.Append("\\protocols\\mailto\\shell\\open\\command");
-        nsCAutoString appPath(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                        "Software\\Mozilla\\Desktop", 
-                        (char *)keyName.get()));
+        nsCAutoString appPath ;
+        GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+                        keyName.get(), appPath);
         if (!appPath.IsEmpty()) {
             keyName.Assign("Software\\Clients\\Mail\\");
             keyName.Append(appName.get());
             keyName.Append("\\protocols\\mailto\\shell\\open\\command");
             result = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                       (char *) keyName.get(), 
+                       keyName.get(), 
                        "", (char *)appPath.get());
             if (NS_SUCCEEDED(result)) {
                 PRInt32 index = appPath.RFind("\\");
@@ -571,7 +563,7 @@ nsresult unsetDefaultMailClient() {
                 keyName.Assign("Software\\Clients\\Mail\\");
                 keyName.Append(appName.get());
                 result = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                        (char *)keyName.get(), 
+                                        keyName.get(), 
                                         "DLLPath", (char *) appPath.get());
             }
         }
@@ -589,9 +581,10 @@ nsresult unsetDefaultMailClient() {
                                 "", "");
 
     if (NS_SUCCEEDED(mailKeySet)) {
-        nsCAutoString userAppName(GetRegistryKey(HKEY_LOCAL_MACHINE, 
+        nsCAutoString userAppName ;
+        GetRegistryKey(HKEY_LOCAL_MACHINE, 
                                   "Software\\Mozilla\\Desktop", 
-                                  "HKEY_CURRENT_USER\\Software\\Clients\\Mail"));
+                                  "HKEY_CURRENT_USER\\Software\\Clients\\Mail", userAppName);
         nsresult desktopKeySet = NS_OK;
         if (!userAppName.IsEmpty()) {
             desktopKeySet = SetRegistryKey(HKEY_CURRENT_USER, 
@@ -608,7 +601,7 @@ nsresult unsetDefaultMailClient() {
         }
         ::SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 
                      (LPARAM)"Software\\Clients\\Mail");
-        UnregisterServer(CLSID_nsMapiImp, "mozMapi", "mozMapi.1");
+        UnregisterServer(CLSID_CMapiImp, "mozMapi", "mozMapi.1");
         return desktopKeySet;
     }
     return mailKeySet;
@@ -621,11 +614,11 @@ nsresult unsetDefaultMailClient() {
  *  This function gets called only if the current app is not the default mail
  *  client
  */
-PRBool getShowDialog() {
+PRBool nsMapiRegistryUtils::getShowDialog() {
     PRBool rv = PR_FALSE;
-    nsCString showDialog(GetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                        "Software\\Mozilla\\Desktop", 
-                                        "showMapiDialog"));
+    nsCAutoString showDialog ;
+    GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+                                        "showMapiDialog", showDialog);
     // if the user has not selected the checkbox, show dialog 
     if (showDialog.IsEmpty() || showDialog.Equals("1"))
             rv = PR_TRUE;
@@ -634,9 +627,9 @@ PRBool getShowDialog() {
         // even if the user has selected the checkbox
         // show it if some other application has changed the 
         // default setting.
-        nsCAutoString setMailDefault(GetRegistryKey(HKEY_LOCAL_MACHINE,
-                                       "Software\\Mozilla\\Desktop", 
-                                       "defaultMailHasBeenSet"));
+        nsCAutoString setMailDefault ;
+        GetRegistryKey(HKEY_LOCAL_MACHINE,"Software\\Mozilla\\Desktop", 
+                                       "defaultMailHasBeenSet", setMailDefault);
         if (setMailDefault.Equals("1")) {
             // need to reset the defaultMailHasBeenSet to "0"
             // so that after the dialog is displayed once,
@@ -650,3 +643,59 @@ PRBool getShowDialog() {
     }
     return rv;
 }
+
+nsresult nsMapiRegistryUtils::MakeMapiStringBundle(nsIStringBundle ** aMapiStringBundle)
+{
+    nsresult rv = NS_OK ;
+
+    if (m_mapiStringBundle)
+    {
+        *aMapiStringBundle = m_mapiStringBundle ;
+        NS_ADDREF(*aMapiStringBundle);
+        return rv ;
+    }
+
+    nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
+                                     kStringBundleServiceCID, &rv));
+    if (NS_FAILED(rv) || !bundleService) return NS_ERROR_FAILURE;
+
+    rv = bundleService->CreateBundle(
+                    "chrome://messenger/locale/mapi.properties",
+                    getter_AddRefs(m_mapiStringBundle));
+    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+    return rv ;
+}
+
+nsresult nsMapiRegistryUtils::ShowMapiErrorDialog() 
+{
+    nsresult rv;
+    nsCOMPtr<nsIPromptService> promptService(do_GetService(
+                  "@mozilla.org/embedcomp/prompt-service;1", &rv));
+    if (NS_SUCCEEDED(rv) && promptService)
+    {
+        nsCOMPtr<nsIStringBundle> bundle;
+        rv = MakeMapiStringBundle (getter_AddRefs (bundle)) ;
+        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+        nsXPIDLString dialogTitle;
+        const PRUnichar *brandStrings[] = { brandName() };
+        NS_NAMED_LITERAL_STRING(dialogTitlePropertyTag, "errorMessageTitle");
+        rv = bundle->FormatStringFromName(dialogTitlePropertyTag.get(),
+                                          brandStrings, 1,
+                                          getter_Copies(dialogTitle));
+        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+        nsXPIDLString dialogText;
+        NS_NAMED_LITERAL_STRING(dialogTextPropertyTag, "errorMessage");
+        rv = bundle->FormatStringFromName(dialogTextPropertyTag.get(),
+                                          brandStrings, 1,
+                                          getter_Copies(dialogText));
+        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+        rv = promptService->Alert(nsnull, dialogTitle,
+                                  dialogText);
+    }
+    return rv;
+}
+

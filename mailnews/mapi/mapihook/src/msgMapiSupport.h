@@ -37,8 +37,8 @@
 #ifndef MSG_MAPI_SUPPORT_H_
 #define MSG_MAPI_SUPPORT_H_
 
-#include <nsIObserver.h>
-#include <nsIMapiSupport.h>
+#include "nsIObserver.h"
+#include "nsIMapiSupport.h"
 #include "msgMapiFactory.h"
 
 #define NS_IMAPISUPPORT_CID \
@@ -60,7 +60,7 @@ class nsMapiSupport : public nsIMapiSupport,
     private :
 
         DWORD   m_dwRegister;
-        nsMapiFactory *m_nsMapiFactory;
+        CMapiFactory *m_nsMapiFactory;
 };
 
 #endif  // MSG_MAPI_SUPPORT_H_

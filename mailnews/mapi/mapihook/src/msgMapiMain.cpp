@@ -34,6 +34,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include <mapidefs.h>
+#include <mapi.h>
+
+#include "msgCore.h"
+#include "nsMsgComposeStringBundle.h"
 #include "msgMapiMain.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
@@ -73,22 +78,20 @@ nsMAPIConfiguration *nsMAPIConfiguration::GetMAPIConfiguration()
 }
 
 nsMAPIConfiguration::nsMAPIConfiguration()
-: m_nMaxSessions(MAX_SESSIONS),
-  m_ProfileMap(nsnull),
-  m_SessionMap(nsnull)
+: m_nMaxSessions(MAX_SESSIONS)
 {
     m_Lock = PR_NewLock();
-    m_ProfileMap = new nsHashtable();
-    m_SessionMap = new nsHashtable();
-    NS_ASSERTION(m_SessionMap && m_ProfileMap, "hashtables not created");
 }
 
 static PRBool
 FreeSessionMapEntries(nsHashKey *aKey, void *aData, void* aClosure)
 {
     nsMAPISession *pTemp = (nsMAPISession*) aData;
+    if (pTemp)
+    {
     delete pTemp;
     pTemp = nsnull;
+    }
     return PR_TRUE;
 }
 
@@ -103,20 +106,9 @@ nsMAPIConfiguration::~nsMAPIConfiguration()
     if (m_Lock)
         PR_DestroyLock(m_Lock);
 
-    if (m_SessionMap)
-    {
-        m_SessionMap->Reset(FreeSessionMapEntries);
-        delete m_SessionMap;
-        m_SessionMap = nsnull;
+    m_SessionMap.Reset(FreeSessionMapEntries);
+    m_ProfileMap.Reset(FreeProfileMapEntries);
     }
-
-    if (m_ProfileMap)
-    {
-        m_ProfileMap->Reset(FreeProfileMapEntries);
-        delete m_ProfileMap;
-        m_ProfileMap = nsnull;
-    }
-}
 
 void nsMAPIConfiguration::OpenConfiguration()
 {
@@ -149,7 +141,7 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
     if (aUserName != nsnull && aUserName[0] != '\0')
     {
     nsStringKey usernameKey(aUserName);
-    n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
+    n_SessionId = (PRUint32) m_ProfileMap.Get(&usernameKey);
     }
 
     // try to share a session; if not create a session
@@ -157,7 +149,7 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
     if (n_SessionId > 0)
     {
         nsPRUintKey sessionKey(n_SessionId);
-        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
         if (pTemp != nsnull)
         {
             pTemp->IncrementSession();
@@ -183,11 +175,11 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
                 session_generator++;
 
             nsPRUintKey sessionKey(session_generator);
-            m_SessionMap->Put(&sessionKey, pTemp);
+            m_SessionMap.Put(&sessionKey, pTemp);
             if (aUserName != nsnull && aUserName[0] != '\0')
             {
                 nsStringKey usernameKey(aUserName);
-            m_ProfileMap->Put(&usernameKey, (void*)session_generator);
+            m_ProfileMap.Put(&usernameKey, (void*)session_generator);
             }
 
             *aSession = session_generator;
@@ -209,7 +201,7 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
     if (aSessionID != 0)
     {
         nsPRUintKey sessionKey(aSessionID);
-        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
 
         if (pTemp != nsnull)
         {
@@ -218,9 +210,9 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
                 if (pTemp->m_pProfileName.get() != nsnull)
                 {
                 nsStringKey stringKey(pTemp->m_pProfileName.get());
-                m_ProfileMap->Remove(&stringKey);
+                m_ProfileMap.Remove(&stringKey);
                 }
-                m_SessionMap->Remove(&sessionKey);
+                m_SessionMap.Remove(&sessionKey);
                 sessionCount--;
                 bResult = PR_TRUE;
             }
@@ -241,7 +233,7 @@ PRBool nsMAPIConfiguration::IsSessionValid(PRUint32 aSessionID)
 
     PR_Lock(m_Lock);
 
-    retValue = m_SessionMap->Exists(&sessionKey);
+    retValue = m_SessionMap.Exists(&sessionKey);
         
     PR_Unlock(m_Lock);
 
@@ -249,7 +241,7 @@ PRBool nsMAPIConfiguration::IsSessionValid(PRUint32 aSessionID)
 }
 
 
-PRUnichar *nsMAPIConfiguration::GetPassWord(PRUint32 aSessionID)
+PRUnichar *nsMAPIConfiguration::GetPassword(PRUint32 aSessionID)
 {
     PRUnichar *pResult = nsnull;
 
@@ -258,11 +250,11 @@ PRUnichar *nsMAPIConfiguration::GetPassWord(PRUint32 aSessionID)
     if (aSessionID != 0)
     {
         nsPRUintKey sessionKey(aSessionID);
-        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
 
         if (pTemp)
         {
-            pResult = pTemp->GetPassWord();
+            pResult = pTemp->GetPassword();
         }
     }
 
@@ -280,7 +272,7 @@ char *nsMAPIConfiguration::GetIdKey(PRUint32 aSessionID)
     if (aSessionID != 0)
     {
         nsPRUintKey sessionKey(aSessionID);
-        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap->Get(&sessionKey);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
         if (pTemp)
         {
            pResult = pTemp->GetIdKey();
@@ -291,6 +283,49 @@ char *nsMAPIConfiguration::GetIdKey(PRUint32 aSessionID)
     return pResult;
 }
 
+// util func
+HRESULT nsMAPIConfiguration::GetMAPIErrorFromNSError (nsresult res)
+{
+    HRESULT hr = SUCCESS_SUCCESS ;
+
+    if (NS_SUCCEEDED (hr)) return hr ;
+
+    // if failure return the related MAPI failure code
+    switch (res)
+    {
+        case NS_MSG_NO_RECIPIENTS :
+            hr = MAPI_E_BAD_RECIPTYPE ;
+            break ;
+        case NS_ERROR_COULD_NOT_GET_USERS_MAIL_ADDRESS :
+            hr = MAPI_E_INVALID_RECIPS ; 
+            break ;
+        case NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER :
+            hr = MAPI_E_LOGIN_FAILURE ;
+            break ;
+        case NS_MSG_UNABLE_TO_OPEN_FILE :                 
+        case NS_MSG_UNABLE_TO_OPEN_TMP_FILE :
+        case NS_MSG_COULDNT_OPEN_FCC_FOLDER :
+        case NS_ERROR_FILE_INVALID_PATH :
+            hr = MAPI_E_ATTACHMENT_OPEN_FAILURE ;
+            break ;
+        case NS_ERROR_FILE_TARGET_DOES_NOT_EXIST :
+            hr = MAPI_E_ATTACHMENT_NOT_FOUND ;
+            break ;
+        case NS_MSG_CANCELLING :
+            hr = MAPI_E_USER_ABORT ;
+            break ;
+        case NS_MSG_ERROR_WRITING_FILE :
+        case NS_MSG_UNABLE_TO_SAVE_TEMPLATE :
+        case NS_MSG_UNABLE_TO_SAVE_DRAFT :
+            hr = MAPI_E_ATTACHMENT_WRITE_FAILURE ;
+            break ;
+        default :
+            hr = MAPI_E_FAILURE ;
+            break ;
+    }
+
+    return hr ;
+}
 
 
 nsMAPISession::nsMAPISession(PRUint32 aHwnd, const PRUnichar *aUserName,\
@@ -329,7 +364,7 @@ PRUint32 nsMAPISession::GetSessionCount()
     return m_nShared;
 }
 
-PRUnichar *nsMAPISession::GetPassWord()
+PRUnichar *nsMAPISession::GetPassword()
 {
     return (PRUnichar *)m_pPassword.get();
 }
@@ -338,3 +373,4 @@ char *nsMAPISession::GetIdKey()
 {
     return m_pIdKey;
 }
+

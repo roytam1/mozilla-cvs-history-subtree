@@ -50,6 +50,8 @@
 #define NS_IMAPIREGISTRY_CONTRACTID    "@mozilla.org/mapiregistry;1"
 #define NS_IMAPIREGISTRY_CLASSNAME "Mozilla MAPI Registry"
 
+#define MAILNEWS_ALLOW_DEFAULT_MAIL_CLIENT  "mailnews.default_mail_client"
+
 class nsMapiRegistry : public nsIMapiRegistry {
 public:
     // ctor/dtor
@@ -64,6 +66,7 @@ protected:
     
     PRBool m_DefaultMailClient;
     PRBool m_ShowDialog;
+    nsMapiRegistryUtils m_registryUtils ;
 
 private:
     // Special member to handle initialization.
