@@ -29,6 +29,14 @@
 #include "ldappr-int.h"
 
 /*
+ * Macros:
+ */
+/*
+ * Grow thread private data arrays 10 elements at a time.
+ */
+#define PRLDAP_TPD_ARRAY_INCREMENT	10
+
+/*
  * Structures and types:
  */
 /*
@@ -40,14 +48,24 @@ typedef struct prldap_errorinfo {
     char	*plei_errmsg;
 } PRLDAP_ErrorInfo;
 
+/*
+ * Structure used to maintain thread-private data. At the present time,
+ * only error info. is thread-private.  One of these structures is allocated
+ * for each thread.
+ */
+typedef struct prldap_tpd_header {
+    int			ptpdh_tpd_count;	/* # of data items allocated */
+    void		**ptpdh_dataitems;	/* array of data items */
+} PRLDAP_TPDHeader;
 
 /*
- * Structure used by associate an NSPR thread-private-data index with an
- * LDAP session handle.
+ * Structure used by associate a PRLDAP thread-private data index with an
+ * LDAP session handle. One of these exists for each active LDAP session
+ * handle.
  */
 typedef struct prldap_tpd_map {
     LDAP			*prtm_ld;	/* non-NULL if in use */
-    PRUintn			prtm_index;	/* allocated by NSPR */
+    PRUintn			prtm_index;	/* index into TPD array */
     struct prldap_tpd_map	*prtm_next;
 } PRLDAP_TPDMap;
 
@@ -70,10 +88,23 @@ static PRLDAP_TPDMap *prldap_map_list = NULL;
 static PRLock	*prldap_map_mutex = NULL;
 
 /*
- * The prldap_callonce_init_map_list structure is used by NSPR to ensure
- * that prldap_init_map_list() is called at most once.
+ * The prldap_tpd_maxindex value is used to track the largest TPD array
+ * index we have used.
  */
-static PRCallOnceType prldap_callonce_init_map_list = { 0, 0, 0 };
+static PRInt32	prldap_tpd_maxindex = -1;
+
+/*
+ * prldap_tpdindex is an NSPR thread private data index we use to
+ * maintain our own thread-private data. It is initialized inside
+ * prldap_init_tpd().
+ */
+static PRUintn	prldap_tpdindex = 0;
+
+/*
+ * The prldap_callonce_init_tpd structure is used by NSPR to ensure
+ * that prldap_init_tpd() is called at most once.
+ */
+static PRCallOnceType prldap_callonce_init_tpd = { 0, 0, 0 };
 
 
 /*
@@ -88,9 +119,15 @@ static void prldap_mutex_free( void *mutex );
 static int prldap_mutex_lock( void *mutex );
 static int prldap_mutex_unlock( void *mutex );
 static void *prldap_get_thread_id( void );
-static PRStatus prldap_init_map_list( void );
+static PRStatus prldap_init_tpd( void );
 static PRLDAP_TPDMap *prldap_allocate_map( LDAP *ld );
 static void prldap_return_map( PRLDAP_TPDMap *map );
+static PRUintn prldap_new_tpdindex( void );
+static int prldap_set_thread_private( PRInt32 tpdindex, void *priv );
+static void *prldap_get_thread_private( PRInt32 tpdindex );
+static PRLDAP_TPDHeader *prldap_tsd_realloc( PRLDAP_TPDHeader *tsdhdr,
+	int maxindex );
+static void prldap_tsd_destroy( void *priv );
 
 
 /*
@@ -105,7 +142,7 @@ prldap_install_thread_functions( LDAP *ld, int shared )
     struct ldap_thread_fns		tfns;
     struct ldap_extra_thread_fns	xtfns;
 
-    if ( PR_CallOnce( &prldap_callonce_init_map_list, prldap_init_map_list )
+    if ( PR_CallOnce( &prldap_callonce_init_tpd, prldap_init_tpd )
 		!= PR_SUCCESS ) {
 	ldap_set_lderrno( ld, LDAP_LOCAL_ERROR, NULL, NULL );
 	return( -1 );
@@ -201,7 +238,7 @@ prldap_get_ld_error( char **matchedp, char **errmsgp, void *errorarg )
     PRLDAP_ErrorInfo	*eip;
 
     if (( map = (PRLDAP_TPDMap *)errorarg ) != NULL && ( eip =
-	    (PRLDAP_ErrorInfo *)PR_GetThreadPrivate(
+	    (PRLDAP_ErrorInfo *)prldap_get_thread_private(
 	    map->prtm_index )) != NULL ) {
 	if ( matchedp != NULL ) {
 	    *matchedp = eip->plei_matched;
@@ -229,23 +266,25 @@ prldap_set_ld_error( int err, char *matched, char *errmsg, void *errorarg )
     PRLDAP_ErrorInfo	*eip;
 
     if (( map = (PRLDAP_TPDMap *)errorarg ) != NULL ) {
-	if (( eip = (PRLDAP_ErrorInfo *)PR_GetThreadPrivate(
+	if (( eip = (PRLDAP_ErrorInfo *)prldap_get_thread_private(
 		map->prtm_index )) == NULL ) {
 	    /*
-	     * error info. has not yet been allocated for this thread.
-	     * do it now.  Note that we free this memory only for the
+	     * Error info. has not yet been allocated for this thread.
+	     * Do so now.  Note that we free this memory only for the
 	     * thread that calls prldap_thread_dispose_handle(), which
 	     * should be the one that called ldap_unbind() -- see
 	     * prldap_return_map().  Not freeing the memory used by
 	     * other threads is deemed acceptable since it will be
-	     * recycled and used by other LDAP sessions.
+	     * recycled and used by other LDAP sessions.  All of the
+	     * thread-private memory is freed when a thread exits
+	     * (inside the prldap_tsd_destroy() function).
 	     */
 	    eip = (PRLDAP_ErrorInfo *)PR_Calloc( 1,
 		    sizeof( PRLDAP_ErrorInfo ));
 	    if ( eip == NULL ) {
 		return;	/* punt */
 	    }
-	    (void)PR_SetThreadPrivate( map->prtm_index, eip );
+	    (void)prldap_set_thread_private( map->prtm_index, eip );
 	}
 
 	eip->plei_lderrno = err;
@@ -307,9 +346,10 @@ prldap_thread_dispose_handle( LDAP *ld, void *sessionarg )
 
 
 static PRStatus
-prldap_init_map_list( void )
+prldap_init_tpd( void )
 {
-    if (( prldap_map_mutex = PR_NewLock()) == NULL ) {
+    if (( prldap_map_mutex = PR_NewLock()) == NULL || PR_NewThreadPrivateIndex(
+		&prldap_tpdindex, prldap_tsd_destroy ) != PR_SUCCESS ) {
 	return( PR_FAILURE );
     }
 
@@ -321,15 +361,14 @@ prldap_init_map_list( void )
 
 /*
  * Function: prldap_allocate_map()
- * Description: allocate a thread-private-data map to use for a new
+ * Description: allocate a thread-private data map to use for a new
  *	LDAP session handle.
- * Returns: a pointer to the tsd map or NULL if none available.
+ * Returns: a pointer to the TPD map or NULL if none available.
  */
 static PRLDAP_TPDMap *
 prldap_allocate_map( LDAP *ld )
 {
     PRLDAP_TPDMap	*map, *prevmap;
-    PRUintn		tsdindex;
 
     PR_Lock( prldap_map_mutex );
 
@@ -348,11 +387,13 @@ prldap_allocate_map( LDAP *ld )
      * if none we found (map == NULL), try to allocate a new one and add it
      * to the end of our global list.
      */
-    if ( map == NULL && PR_NewThreadPrivateIndex( &tsdindex, NULL )
-	    == PR_SUCCESS ) {
+    if ( map == NULL ) {
+	PRUintn	tpdindex;
+
+	tpdindex = prldap_new_tpdindex();
 	map = (PRLDAP_TPDMap *)PR_Malloc( sizeof( PRLDAP_TPDMap ));
 	if ( map != NULL ) {
-	    map->prtm_index = tsdindex;
+	    map->prtm_index = tpdindex;
 	    map->prtm_next = NULL;
 	    if ( prevmap == NULL ) {
 		prldap_map_list = map;
@@ -366,7 +407,7 @@ prldap_allocate_map( LDAP *ld )
 	map->prtm_ld = ld;	/* now marked as "in use" */
 				/* since we are reusing...reset */
 				/* to initial state */
-	(void)PR_SetThreadPrivate( map->prtm_index, NULL );
+	(void)prldap_set_thread_private( map->prtm_index, NULL );
     }
 
     PR_Unlock( prldap_map_mutex );
@@ -377,7 +418,7 @@ prldap_allocate_map( LDAP *ld )
 
 /*
  * Function: prldap_return_map()
- * Description: return a thread-private-data map to the pool of ones
+ * Description: return a thread-private data map to the pool of ones
  *	available for re-use.
  */
 static void
@@ -392,8 +433,9 @@ prldap_return_map( PRLDAP_TPDMap *map )
      * only disposes of the memory consumed on THIS thread, but that is
      * okay.  See the comment in prldap_set_ld_error() for the reason why.
      */
-    if (( eip = (PRLDAP_ErrorInfo *)PR_GetThreadPrivate( map->prtm_index ))
-		!= NULL ) {
+    if (( eip = (PRLDAP_ErrorInfo *)prldap_get_thread_private(
+		map->prtm_index )) != NULL &&
+		prldap_set_thread_private( map->prtm_index, NULL ) == 0 ) {
 	if ( eip->plei_matched != NULL ) {
 	    ldap_memfree( eip->plei_matched );
 	}
@@ -408,4 +450,149 @@ prldap_return_map( PRLDAP_TPDMap *map )
     map->prtm_ld = NULL;
 
     PR_Unlock( prldap_map_mutex );
+}
+
+
+/*
+ * Function: prldap_new_tpdindex()
+ * Description: allocate a thread-private data index.
+ * Returns: the new index.
+ */
+static PRUintn
+prldap_new_tpdindex( void )
+{
+    PRUintn	tpdindex;
+
+    tpdindex = (PRUintn)PR_AtomicIncrement( &prldap_tpd_maxindex );
+    return( tpdindex );
+}
+
+
+/*
+ * Function: prldap_set_thread_private()
+ * Description: store a piece of thread-private data.
+ * Returns: 0 if successful and -1 if not.
+ */
+static int
+prldap_set_thread_private( PRInt32 tpdindex, void *priv )
+{
+    PRLDAP_TPDHeader	*tsdhdr;
+
+    if ( tpdindex > prldap_tpd_maxindex ) {
+	return( -1 );	/* bad index */ 
+    }
+
+    tsdhdr = (PRLDAP_TPDHeader *)PR_GetThreadPrivate( prldap_tpdindex );
+    if ( tsdhdr == NULL || tpdindex >= tsdhdr->ptpdh_tpd_count ) {
+	tsdhdr = prldap_tsd_realloc( tsdhdr, tpdindex );
+	if ( tsdhdr == NULL ) {
+	    return( -1 );	/* realloc failed */
+	}
+    }
+
+    tsdhdr->ptpdh_dataitems[ tpdindex ] = priv;
+    return( 0 );
+}
+
+
+/*
+ * Function: prldap_get_thread_private()
+ * Description: retrieve a piece of thread-private data.  If not set,
+ *	NULL is returned.
+ * Returns: 0 if successful and -1 if not.
+ */
+static void *
+prldap_get_thread_private( PRInt32 tpdindex )
+{
+    PRLDAP_TPDHeader	*tsdhdr;
+
+    tsdhdr = (PRLDAP_TPDHeader *)PR_GetThreadPrivate( prldap_tpdindex );
+    if ( tsdhdr == NULL ) {
+	return( NULL );	/* no thread private data */
+    }
+
+    if ( tpdindex >= tsdhdr->ptpdh_tpd_count
+		|| tsdhdr->ptpdh_dataitems == NULL ) {
+	return( NULL );	/* fewer data items than requested index */
+    }
+
+    return( tsdhdr->ptpdh_dataitems[ tpdindex ] );
+}
+
+
+/*
+ * Function: prldap_tsd_realloc()
+ * Description: enlarge the thread-private data array.
+ * Returns: the new PRLDAP_TPDHeader value (non-NULL if successful).
+ * Note: tsdhdr can be NULL (allocates a new PRLDAP_TPDHeader).
+ */
+static PRLDAP_TPDHeader *
+prldap_tsd_realloc( PRLDAP_TPDHeader *tsdhdr, int maxindex )
+{
+    void	*newdataitems = NULL;
+    int		count;
+
+    if ( tsdhdr == NULL ) {
+	/* allocate a new thread private data header */
+	if (( tsdhdr = PR_Calloc( 1, sizeof( PRLDAP_TPDHeader ))) == NULL ) {
+	    return( NULL );
+	}
+	(void)PR_SetThreadPrivate( prldap_tpdindex, tsdhdr );
+    }
+
+    /*
+     * Make the size of the new array the next highest multiple of
+     * the array increment value that is greater than maxindex.
+     */
+    count = PRLDAP_TPD_ARRAY_INCREMENT *
+		( 1 + ( maxindex / PRLDAP_TPD_ARRAY_INCREMENT ));
+
+    /* increase the size of the data item array if necessary */
+    if ( count > tsdhdr->ptpdh_tpd_count  ) {
+	newdataitems = (PRLDAP_ErrorInfo *)PR_Calloc( count, sizeof( void * ));
+	if ( newdataitems == NULL ) {
+	    return( NULL );
+	}
+	if ( tsdhdr->ptpdh_dataitems != NULL ) {	/* preserve old data */
+	    memcpy( newdataitems, tsdhdr->ptpdh_dataitems,
+			tsdhdr->ptpdh_tpd_count * sizeof( void * ));
+	    PR_Free( tsdhdr->ptpdh_dataitems );
+	}
+
+	tsdhdr->ptpdh_tpd_count = count;
+	tsdhdr->ptpdh_dataitems = newdataitems;
+    }
+
+    return( tsdhdr );
+}
+
+
+/*
+ * Function: prldap_tsd_destroy()
+ * Description: Free a thread-private data array. Installed as an NSPR TPD
+ *	destructor function
+ * Returns: nothing.
+ * Note: this function assumes that each TPD item installed at the PRLDAP
+ *	level can be freed with a call to PR_Free().
+ */
+static void
+prldap_tsd_destroy( void *priv )
+{
+    PRLDAP_TPDHeader	*tsdhdr;
+    int			i;
+
+    tsdhdr = (PRLDAP_TPDHeader *)priv;
+    if ( tsdhdr != NULL ) {
+	if ( tsdhdr->ptpdh_dataitems != NULL ) {
+	    for ( i = 0; i < tsdhdr->ptpdh_tpd_count; ++i ) {
+		if ( tsdhdr->ptpdh_dataitems[ i ] != NULL ) {
+		    PR_Free( tsdhdr->ptpdh_dataitems[ i ] );
+		    tsdhdr->ptpdh_dataitems[ i ] = NULL;
+		}
+	    }
+	    PR_Free( tsdhdr->ptpdh_dataitems );
+	    tsdhdr->ptpdh_dataitems = NULL;
+	}
+	PR_Free( tsdhdr );
+    }
 }
