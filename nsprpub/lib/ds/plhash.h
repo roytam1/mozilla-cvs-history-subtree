@@ -57,6 +57,23 @@ struct PLHashEntry {
     void                *value;         /* ptr to opaque value */
 };
 
+struct PLHashTable {
+    PLHashEntry         **buckets;      /* vector of hash buckets */
+    PRUint32              nentries;       /* number of entries in table */
+    PRUint32              shift;          /* multiplicative hash shift */
+    PLHashFunction      keyHash;        /* key hash function */
+    PLHashComparator    keyCompare;     /* key comparison function */
+    PLHashComparator    valueCompare;   /* value comparison function */
+    const PLHashAllocOps *allocOps;     /* allocation operations */
+    void                *allocPriv;     /* allocation private data */
+#ifdef HASHMETER
+    PRUint32              nlookups;       /* total number of lookups */
+    PRUint32              nsteps;         /* number of hash chains traversed */
+    PRUint32              ngrows;         /* number of table expansions */
+    PRUint32              nshrinks;       /* number of table contractions */
+#endif
+};
+
 /*
  * Create a new hash table.
  * If allocOps is null, use default allocator ops built on top of malloc().

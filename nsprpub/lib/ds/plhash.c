@@ -27,23 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct PLHashTable {
-    PLHashEntry         **buckets;      /* vector of hash buckets */
-    PRUint32              nentries;       /* number of entries in table */
-    PRUint32              shift;          /* multiplicative hash shift */
-    PLHashFunction      keyHash;        /* key hash function */
-    PLHashComparator    keyCompare;     /* key comparison function */
-    PLHashComparator    valueCompare;   /* value comparison function */
-    const PLHashAllocOps *allocOps;     /* allocation operations */
-    void                *allocPriv;     /* allocation private data */
-#ifdef HASHMETER
-    PRUint32              nlookups;       /* total number of lookups */
-    PRUint32              nsteps;         /* number of hash chains traversed */
-    PRUint32              ngrows;         /* number of table expansions */
-    PRUint32              nshrinks;       /* number of table contractions */
-#endif
-};
-
 /* Compute the number of buckets in ht */
 #define NBUCKETS(ht)    (1 << (PL_HASH_BITS - (ht)->shift))
 
