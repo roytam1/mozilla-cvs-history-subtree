@@ -150,6 +150,7 @@ LINCS=-I$(PUBLIC)\jtools	\
     -I$(PUBLIC)\network		\
     -I$(PUBLIC)\ldap		\
     -I$(PUBLIC)\net		\
+    -I$(PUBLIC)\perf            \
     -I$(PUBLIC)\progress	\
     -I$(PUBLIC)\ldapurl		\
     -I$(PUBLIC)\imap4url	\
