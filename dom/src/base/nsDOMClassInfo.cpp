@@ -683,6 +683,12 @@ nsDOMClassInfo::GetContractID(char **aContractID)
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsDOMClassInfo::GetClassDescription(char **aClassDescription)
+{
+  return GetClassName(aClassDescription);
+}
+
 NS_IMETHODIMP
 nsDOMClassInfo::GetClassID(nsCID **aClassID)
 {

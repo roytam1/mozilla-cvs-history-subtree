@@ -80,6 +80,11 @@ interface nsIClassInfo : nsISupports
     readonly attribute string   contractID;
 
     /**
+     * A human readable string naming the class, or null.
+     */
+    readonly attribute string   classDescription;
+
+    /**
      * A class ID through which an instance of this class can be created
      * (or accessed as a service, if |flags & SINGLETON|), or null.
      */
