@@ -37,6 +37,7 @@
 #include "nsXPathResult.h"
 #include "nsXPIDLString.h"
 #include "txAtoms.h"
+#include "txMozillaXSLTProcessor.h"
 #include "XSLTProcessor.h"
 #include "TxLog.h"
 #include "nsCRT.h"
@@ -52,8 +53,9 @@
 NS_DOMCI_EXTENSION(Transformiix)
     static NS_DEFINE_CID(kXSLTProcessorCID, TRANSFORMIIX_XSLT_PROCESSOR_CID);
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XSLTProcessor)
-        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDocumentTransformer)
-    NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIDocumentTransformer,
+        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessor)
+        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDocumentTransformer) // XXX DEPRECATED
+    NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIXSLTProcessor,
                                  PR_FALSE, &kXSLTProcessorCID)
 
     static NS_DEFINE_CID(kXPathEvaluatorCID, TRANSFORMIIX_XPATH_EVALUATOR_CID);
@@ -85,7 +87,7 @@ NS_DOMCI_EXTENSION(Transformiix)
 NS_DOMCI_EXTENSION_END
 
 // Factory Constructor
-NS_GENERIC_FACTORY_CONSTRUCTOR(XSLTProcessor)
+NS_GENERIC_FACTORY_CONSTRUCTOR(txMozillaXSLTProcessor)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsXPathEvaluator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSyncLoader)
 
@@ -153,6 +155,16 @@ RegisterTransformiix(nsIComponentManager *aCompMgr,
       return NS_ERROR_OUT_OF_MEMORY;
     rv = catman->AddCategoryEntry(JAVASCRIPT_DOM_INTERFACE,
                                   "nsIDocumentTransformer",
+                                  iidString,
+                                  PR_TRUE, PR_TRUE, getter_Copies(previous));
+    nsCRT::free(iidString);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    iidString = NS_GET_IID(nsIXSLTProcessor).ToString();
+    if (!iidString)
+      return NS_ERROR_OUT_OF_MEMORY;
+    rv = catman->AddCategoryEntry(JAVASCRIPT_DOM_INTERFACE,
+                                  "nsIXSLTProcessor",
                                   iidString,
                                   PR_TRUE, PR_TRUE, getter_Copies(previous));
     nsCRT::free(iidString);
@@ -233,7 +245,7 @@ static const nsModuleComponentInfo gComponents[] = {
     { "XSLTProcessor",
       TRANSFORMIIX_XSLT_PROCESSOR_CID,
       TRANSFORMIIX_XSLT_PROCESSOR_CONTRACTID,
-      XSLTProcessorConstructor,
+      txMozillaXSLTProcessorConstructor,
       RegisterTransformiix },
     { "XPathEvaluator",
       TRANSFORMIIX_XPATH_EVALUATOR_CID,

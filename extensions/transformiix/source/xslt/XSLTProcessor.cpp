@@ -43,50 +43,19 @@
 
 #include "XSLTProcessor.h"
 #include "Names.h"
-#include "XMLParser.h"
-#include "VariableBinding.h"
-#include "XMLUtils.h"
-#include "XMLDOMUtils.h"
-#include "txNodeSorter.h"
 #include "Numbering.h"
 #include "Tokenizer.h"
-#include "txURIUtils.h"
 #include "txAtoms.h"
-#include "TxLog.h"
-#include "txRtfHandler.h"
 #include "txNodeSetContext.h"
-#include "txSingleNodeContext.h"
-#ifndef TX_EXE
-#include "nsIDocShell.h"
-#include "nsIObserverService.h"
-#include "nsIURL.h"
-#include "nsIServiceManager.h"
-#include "nsIIOService.h"
-#include "nsILoadGroup.h"
-#include "nsIChannel.h"
-#include "nsNetUtil.h"
-#include "nsIDOMClassInfo.h"
-#include "nsIConsoleService.h"
-#else
-#include "txHTMLOutput.h"
-#include "txTextOutput.h"
-#include "txUnknownHandler.h"
-#include "txXMLOutput.h"
-#endif
+#include "txNodeSorter.h"
+#include "txRtfHandler.h"
+#include "txTextHandler.h"
+#include "txURIUtils.h"
+#include "VariableBinding.h"
+#include "XMLDOMUtils.h"
+#include "XMLUtils.h"
 
-  //-----------------------------------/
- //- Implementation of XSLTProcessor -/
-//-----------------------------------/
-
-/**
- * XSLTProcessor is a class for Processing XSL stylesheets
-**/
-
-/**
- * A warning message used by all templates that do not allow non character
- * data to be generated
-**/
-const String XSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
+const String txXSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
 "templates for the following element are not allowed to generate non character data: ";
 
 /*
@@ -95,64 +64,10 @@ const String XSLTProcessor::NON_TEXT_TEMPLATE_WARNING =
 #ifdef TX_EXE
 TX_IMPL_ATOM_STATICS;
 TX_IMPL_DOM_STATICS;
-#endif
 
-/**
- * Creates a new XSLTProcessor
-**/
-XSLTProcessor::XSLTProcessor() : mOutputHandler(0),
-                                 mResultHandler(0)
-{
-#ifndef TX_EXE
-    NS_INIT_ISUPPORTS();
-#endif
-
-    xslVersion.append("1.0");
-    appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20010123]");
-
-    // Create default expressions
-
-    // "node()"
-    txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
-    mNodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
-
-} //-- XSLTProcessor
-
-/**
- * Default destructor
-**/
-XSLTProcessor::~XSLTProcessor()
-{
-    delete mOutputHandler;
-    delete mNodeExpr;
-}
-
-#ifndef TX_EXE
-
-// XXX START
-// XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
-// XXX
-
-NS_IMPL_ADDREF(XSLTProcessor)
-NS_IMPL_RELEASE(XSLTProcessor)
-NS_INTERFACE_MAP_BEGIN(XSLTProcessor)
-    NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptLoaderObserver)
-    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocumentTransformer)
-    NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
-NS_INTERFACE_MAP_END
-
-// XXX
-// XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
-// XXX END
-
-#else
-
-/*
- * Initialize atom tables.
- */
-MBool txInit()
+/* static */
+MBool
+txXSLTProcessor::txInit()
 {
     if (!txNamespaceManager::init())
         return MB_FALSE;
@@ -165,12 +80,9 @@ MBool txInit()
     return txXSLTAtoms::init();
 }
 
-/*
- * To be called when done with transformiix.
- *
- * Free atom table, namespace manager.
- */
-MBool txShutdown()
+/* static */
+MBool
+txXSLTProcessor::txShutdown()
 {
     txNamespaceManager::shutdown();
     txHTMLAtoms::shutdown();
@@ -181,864 +93,182 @@ MBool txShutdown()
 }
 #endif
 
-/**
- * Registers the given ErrorObserver with this ProcessorState
-**/
-void XSLTProcessor::addErrorObserver(ErrorObserver& errorObserver) {
-    errorObservers.add(&errorObserver);
-} //-- addErrorObserver
-
-String& XSLTProcessor::getAppName() {
-    return appName;
-} //-- getAppName
-
-String& XSLTProcessor::getAppVersion() {
-    return appVersion;
-} //-- getAppVersion
-
-#ifdef TX_EXE
-
-// XXX START
-// XXX Standalone only code. This should move to txStandaloneXSLTProcessor
-// XXX
-
-/**
- * Parses all XML Stylesheet PIs associated with the
- * given XML document. If any stylesheet PIs are found with
- * type="text/xsl" the href psuedo attribute value will be
- * added to the given href argument. If multiple text/xsl stylesheet PIs
- * are found, the one closest to the end of the document is used.
-**/
-void XSLTProcessor::getHrefFromStylesheetPI(Document& xmlDocument, String& href) {
-
-    Node* node = xmlDocument.getFirstChild();
-    String type;
-    String tmpHref;
-    while (node) {
-        if ( node->getNodeType() == Node::PROCESSING_INSTRUCTION_NODE ) {
-            String target = ((ProcessingInstruction*)node)->getTarget();
-            if ( STYLESHEET_PI.isEqual(target) ||
-                 STYLESHEET_PI_OLD.isEqual(target) ) {
-                String data = ((ProcessingInstruction*)node)->getData();
-                type.clear();
-                tmpHref.clear();
-                parseStylesheetPI(data, type, tmpHref);
-                if ( XSL_MIME_TYPE.isEqual(type) ) {
-                    href.clear();
-                    URIUtils::resolveHref(tmpHref, node->getBaseURI(), href);
-                }
-            }
-        }
-        node = node->getNextSibling();
-    }
-
-} //-- getHrefFromStylesheetPI
-
-/**
- * Parses the contents of data, and returns the type and href psuedo attributes
-**/
-void XSLTProcessor::parseStylesheetPI(String& data, String& type, String& href) {
-
-    PRInt32 size = data.length();
-    NamedMap bufferMap;
-    bufferMap.put("type", &type);
-    bufferMap.put("href", &href);
-    int ccount = 0;
-    MBool inLiteral = MB_FALSE;
-    UNICODE_CHAR matchQuote = '"';
-    String sink;
-    String* buffer = &sink;
-
-    for (ccount = 0; ccount < size; ccount++) {
-        UNICODE_CHAR ch = data.charAt(ccount);
-        switch ( ch ) {
-            case ' ' :
-                if ( inLiteral ) {
-                    buffer->append(ch);
-                }
-                break;
-            case '=':
-                if ( inLiteral ) buffer->append(ch);
-                else if (!buffer->isEmpty()) {
-                    buffer = (String*)bufferMap.get(*buffer);
-                    if ( !buffer ) {
-                        sink.clear();
-                        buffer = &sink;
-                    }
-                }
-                break;
-            case '"' :
-            case '\'':
-                if (inLiteral) {
-                    if ( matchQuote == ch ) {
-                        inLiteral = MB_FALSE;
-                        sink.clear();
-                        buffer = &sink;
-                    }
-                    else buffer->append(ch);
-                }
-                else {
-                    inLiteral = MB_TRUE;
-                    matchQuote = ch;
-                }
-                break;
-            default:
-                buffer->append(ch);
-                break;
-        }
-    }
-
-} //-- parseStylesheetPI
-
-/**
- * Processes the given XML Document, the XSL stylesheet
- * will be retrieved from the XML Stylesheet Processing instruction,
- * otherwise an empty document will be returned.
- * @param xmlDocument the XML document to process
- * @param documentBase the document base of the XML document, for
- * resolving relative URIs
- * @return the result tree.
-**/
-Document* XSLTProcessor::process(Document& xmlDocument) {
-    //-- look for Stylesheet PI
-    Document xslDocument; //-- empty for now
-    return process(xmlDocument, xslDocument);
-} //-- process
-
-/**
- * Reads an XML Document from the given XML input stream, and
- * processes the document using the XSL document derived from
- * the given XSL input stream.
- * @return the result tree.
-**/
-Document* XSLTProcessor::process
-    (istream& xmlInput, String& xmlFilename,
-     istream& xslInput, String& xslFilename) {
-    //-- read in XML Document
-    XMLParser xmlParser;
-    Document* xmlDoc = xmlParser.parse(xmlInput, xmlFilename);
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        return 0;
-    }
-    //-- Read in XSL document
-    Document* xslDoc = xmlParser.parse(xslInput, xslFilename);
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        delete xmlDoc;
-        return 0;
-    }
-    Document* result = process(*xmlDoc, *xslDoc);
-    delete xmlDoc;
-    delete xslDoc;
-    return result;
-} //-- process
-
-/**
- * Reads an XML document from the given XML input stream. The
- * XML document is processed using the associated XSL document
- * retrieved from the XML document's Stylesheet Processing Instruction,
- * otherwise an empty document will be returned.
- * @param xmlDocument the XML document to process
- * @param documentBase the document base of the XML document, for
- * resolving relative URIs
- * @return the result tree.
-**/
-Document* XSLTProcessor::process(istream& xmlInput, String& xmlFilename) {
-    //-- read in XML Document
-    XMLParser xmlParser;
-    Document* xmlDoc = xmlParser.parse(xmlInput, xmlFilename);
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        return 0;
-    }
-    //-- Read in XSL document
-    String href;
-    String errMsg;
-    getHrefFromStylesheetPI(*xmlDoc, href);
-    istream* xslInput = URIUtils::getInputStream(href,errMsg);
-    Document* xslDoc = 0;
-    if ( xslInput ) {
-        xslDoc = xmlParser.parse(*xslInput, href);
-        delete xslInput;
-    }
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        delete xmlDoc;
-        return 0;
-    }
-    Document* result = process(*xmlDoc, *xslDoc);
-    delete xmlDoc;
-    delete xslDoc;
-    return result;
-} //-- process
-
-// XXX
-// XXX Standalone only code. This should move to txStandaloneXSLTProcessor
-// XXX END
-
-#endif
-
-/**
- * Processes the Top level elements for an XSL stylesheet
-**/
-void XSLTProcessor::processStylesheet(Document* aSource,
-                                      Document* aStylesheet,
-                                      txListIterator* aImportFrame,
-                                      ProcessorState* aPs)
+txXSLTProcessor::txXSLTProcessor() : mOutputHandler(0),
+                                     mResultHandler(0)
 {
-    NS_ASSERTION(aStylesheet, "processTopLevel called without stylesheet");
-    if (!aStylesheet || !aStylesheet->getDocumentElement())
-        return;
+    mXsltVersion.append("1.0");
+    mAppName.append("TransforMiiX");
+    mAppVersion.append("1.0 [beta]");
 
-    Element* elem = aStylesheet->getDocumentElement();
+    // Create default expressions
 
-    txAtom* localName;
-    PRInt32 namespaceID = elem->getNamespaceID();
-    elem->getLocalName(&localName);
-
-    if (((localName == txXSLTAtoms::stylesheet) ||
-         (localName == txXSLTAtoms::transform)) &&
-        (namespaceID == kNameSpaceID_XSLT)) {
-        processTopLevel(aSource, elem, aImportFrame, aPs);
-    }
-    else {
-        NS_ASSERTION(aImportFrame->current(), "no current importframe");
-        if (!aImportFrame->current()) {
-            TX_IF_RELEASE_ATOM(localName);
-            return;
-        }
-        aPs->addLREStylesheet(aStylesheet,
-            (ProcessorState::ImportFrame*)aImportFrame->current());
-    }
-    TX_IF_RELEASE_ATOM(localName);
+    // "node()"
+    txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+    mNodeExpr = new LocationStep(nt, LocationStep::CHILD_AXIS);
 }
 
-/**
- * Processes the Top level elements for an XSL stylesheet
-**/
-void XSLTProcessor::processTopLevel(Document* aSource,
-                                    Element* aStylesheet,
-                                    txListIterator* importFrame,
-                                    ProcessorState* aPs)
+txXSLTProcessor::~txXSLTProcessor()
 {
-    // Index templates and process top level xsl elements
-    NS_ASSERTION(aStylesheet, "processTopLevel called without stylesheet element");
-    if (!aStylesheet)
-        return;
-
-    ProcessorState::ImportFrame* currentFrame =
-        (ProcessorState::ImportFrame*)importFrame->current();
-
-    NS_ASSERTION(currentFrame,
-                 "processTopLevel called with no current importframe");
-    if (!currentFrame)
-        return;
-
-    NS_ASSERTION(aSource, "processTopLevel called without source document");
-
-    MBool importsDone = MB_FALSE;
-    Node* node = aStylesheet->getFirstChild();
-    while (node && !importsDone) {
-        if (node->getNodeType() == Node::ELEMENT_NODE) {
-            txAtom* localName;
-            node->getLocalName(&localName);
-            if (node->getNamespaceID() == kNameSpaceID_XSLT &&
-                localName == txXSLTAtoms::import) {
-                Element* element = (Element*)node;
-                String hrefAttr, href;
-                element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
-                                 hrefAttr);
-                URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
-                                      href);
-
-                // Create a new ImportFrame with correct firstNotImported
-                ProcessorState::ImportFrame *nextFrame, *newFrame;
-                nextFrame =
-                    (ProcessorState::ImportFrame*)importFrame->next();
-                newFrame = new ProcessorState::ImportFrame(nextFrame);
-                if (!newFrame) {
-                    // XXX ErrorReport: out of memory
-                    break;
-                }
-
-                // Insert frame and process stylesheet
-                importFrame->addBefore(newFrame);
-                importFrame->previous();
-                processInclude(href, aSource, importFrame, aPs);
-
-                // Restore iterator to initial position
-                importFrame->previous();
-            }
-            else {
-                importsDone = MB_TRUE;
-            }
-            TX_IF_RELEASE_ATOM(localName);
-        }
-        if (!importsDone)
-            node = node->getNextSibling();
-    }
-
-    while (node) {
-        if (node->getNodeType() != Node::ELEMENT_NODE ||
-            node->getNamespaceID() != kNameSpaceID_XSLT) {
-            node = node->getNextSibling();
-            continue;
-        }
-
-        txAtom* localName;
-        node->getLocalName(&localName);
-        Element* element = (Element*)node;
-        // xsl:attribute-set
-        if (localName == txXSLTAtoms::attributeSet) {
-            aPs->addAttributeSet(element, currentFrame);
-        }
-        // xsl:decimal-format
-        else if (localName == txXSLTAtoms::decimalFormat) {
-            if (!aPs->addDecimalFormat(element)) {
-                // Add error to ErrorObserver
-                String fName;
-                element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
-                                 fName);
-                String err("unable to add ");
-                if (fName.isEmpty()) {
-                    err.append("default");
-                }
-                else {
-                    err.append("\"");
-                    err.append(fName);
-                    err.append("\"");
-                }
-                err.append(" decimal format for xsl:decimal-format");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-            }
-        }
-        // xsl:param
-        else if (localName == txXSLTAtoms::param) {
-            String name;
-            element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
-                             name);
-            if (name.isEmpty()) {
-                String err("missing required name attribute for xsl:param");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-                break;
-            }
-            ExprResult* exprResult = processVariable(aSource, element, aPs);
-            bindVariable(name, exprResult, MB_TRUE, aPs);
-        }
-        // xsl:import
-        else if (localName == txXSLTAtoms::import) {
-            String err("xsl:import only allowed at top of stylesheet");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-        }
-        // xsl:include
-        else if (localName == txXSLTAtoms::include) {
-            String hrefAttr, href;
-            element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
-                             hrefAttr);
-            URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
-                                  href);
-
-            processInclude(href, aSource, importFrame, aPs);
-        }
-        // xsl:key
-        else if (localName == txXSLTAtoms::key) {
-            if (!aPs->addKey(element)) {
-                String name;
-                element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
-                                 name);
-                String err("error adding key '");
-                err.append(name);
-                err.append("'");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-            }
-        }
-        // xsl:output
-        else if (localName == txXSLTAtoms::output) {
-            txOutputFormat& format = currentFrame->mOutputFormat;
-            String attValue;
-
-            if (element->getAttr(txXSLTAtoms::method, kNameSpaceID_None,
-                                 attValue)) {
-                if (attValue.isEqual("html")) {
-                    format.mMethod = eHTMLOutput;
-                }
-                else if (attValue.isEqual("text")) {
-                    format.mMethod = eTextOutput;
-                }
-                else {
-                    format.mMethod = eXMLOutput;
-                }
-            }
-
-            if (element->getAttr(txXSLTAtoms::version, kNameSpaceID_None,
-                                 attValue)) {
-                format.mVersion = attValue;
-            }
-
-            if (element->getAttr(txXSLTAtoms::encoding, kNameSpaceID_None,
-                                 attValue)) {
-                format.mEncoding = attValue;
-            }
-
-            if (element->getAttr(txXSLTAtoms::omitXmlDeclaration,
-                                 kNameSpaceID_None, attValue)) {
-                format.mOmitXMLDeclaration = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
-            }
-
-            if (element->getAttr(txXSLTAtoms::standalone, kNameSpaceID_None,
-                                 attValue)) {
-                format.mStandalone = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
-            }
-
-            if (element->getAttr(txXSLTAtoms::doctypePublic,
-                                 kNameSpaceID_None, attValue)) {
-                format.mPublicId = attValue;
-            }
-
-            if (element->getAttr(txXSLTAtoms::doctypeSystem,
-                                 kNameSpaceID_None, attValue)) {
-                format.mSystemId = attValue;
-            }
-
-            if (element->getAttr(txXSLTAtoms::cdataSectionElements,
-                                 kNameSpaceID_None, attValue)) {
-                txTokenizer tokens(attValue);
-                String token;
-                while (tokens.hasMoreTokens()) {
-                    tokens.nextToken(token);
-                    if (!XMLUtils::isValidQName(token)) {
-                        break;
-                    }
-
-                    String namePart;
-                    XMLUtils::getPrefix(token, namePart);
-                    txAtom* nameAtom = TX_GET_ATOM(namePart);
-                    PRInt32 nsID = element->lookupNamespaceID(nameAtom);
-                    TX_IF_RELEASE_ATOM(nameAtom);
-                    if (nsID == kNameSpaceID_Unknown) {
-                        // XXX ErrorReport: unknown prefix
-                        break;
-                    }
-                    XMLUtils::getLocalPart(token, namePart);
-                    nameAtom = TX_GET_ATOM(namePart);
-                    if (!nameAtom) {
-                        // XXX ErrorReport: out of memory
-                        break;
-                    }
-                    txExpandedName* qname = new txExpandedName(nsID, nameAtom);
-                    TX_RELEASE_ATOM(nameAtom);
-                    if (!qname) {
-                        // XXX ErrorReport: out of memory
-                        break;
-                    }
-                    format.mCDATASectionElements.add(qname);
-                }
-            }
-
-            if (element->getAttr(txXSLTAtoms::indent, kNameSpaceID_None,
-                                 attValue)) {
-                format.mIndent = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
-            }
-
-            if (element->getAttr(txXSLTAtoms::mediaType, kNameSpaceID_None,
-                                 attValue)) {
-                format.mMediaType = attValue;
-            }
-        }
-        // xsl:template
-        else if (localName == txXSLTAtoms::_template) {
-            aPs->addTemplate(element, currentFrame);
-        }
-        // xsl:variable
-        else if (localName == txXSLTAtoms::variable) {
-            String name;
-            element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
-                             name);
-            if (name.isEmpty()) {
-                String err("missing required name attribute for xsl:variable");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-                break;
-            }
-            ExprResult* exprResult = processVariable(aSource, element, aPs);
-            bindVariable(name, exprResult, MB_FALSE, aPs);
-        }
-        // xsl:preserve-space
-        else if (localName == txXSLTAtoms::preserveSpace) {
-            String elements;
-            if (!element->getAttr(txXSLTAtoms::elements,
-                                  kNameSpaceID_None, elements)) {
-                //-- add error to ErrorObserver
-                String err("missing required 'elements' attribute for ");
-                err.append("xsl:preserve-space");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-            }
-            else {
-                aPs->shouldStripSpace(elements, element,
-                                      MB_FALSE,
-                                      currentFrame);
-            }
-        }
-        // xsl:strip-space
-        else if (localName == txXSLTAtoms::stripSpace) {
-            String elements;
-            if (!element->getAttr(txXSLTAtoms::elements,
-                                  kNameSpaceID_None, elements)) {
-                //-- add error to ErrorObserver
-                String err("missing required 'elements' attribute for ");
-                err.append("xsl:strip-space");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
-            }
-            else {
-                aPs->shouldStripSpace(elements, element,
-                                      MB_TRUE,
-                                      currentFrame);
-            }
-        }
-        TX_IF_RELEASE_ATOM(localName);
-        node = node->getNextSibling();
-    }
+    delete mNodeExpr;
 }
 
-/*
- * Processes an include or import stylesheet
- * @param aHref    URI of stylesheet to process
- * @param aSource  source document
- * @param aImportFrame current importFrame iterator
- * @param aPs      current ProcessorState
- */
-void XSLTProcessor::processInclude(String& aHref,
-                                   Document* aSource,
-                                   txListIterator* aImportFrame,
-                                   ProcessorState* aPs)
+String&
+txXSLTProcessor::getAppName()
 {
-    // make sure the include isn't included yet
-    txStackIterator iter(aPs->getEnteredStylesheets());
-    while (iter.hasNext()) {
-        if (((String*)iter.next())->isEqual(aHref)) {
-            String err("Stylesheet includes itself. URI: ");
-            err.append(aHref);
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            return;
-        }
-    }
-    aPs->getEnteredStylesheets()->push(&aHref);
-
-    // Load XSL document
-    Node* stylesheet = aPs->retrieveDocument(aHref, NULL_STRING);
-    if (!stylesheet) {
-        String err("Unable to load included stylesheet ");
-        err.append(aHref);
-        aPs->receiveError(err, NS_ERROR_FAILURE);
-        aPs->getEnteredStylesheets()->pop();
-        return;
-    }
-
-    switch(stylesheet->getNodeType()) {
-        case Node::DOCUMENT_NODE :
-            processStylesheet(aSource,
-                              (Document*)stylesheet,
-                              aImportFrame,
-                              aPs);
-            break;
-        case Node::ELEMENT_NODE :
-            processTopLevel(aSource, (Element*)stylesheet, aImportFrame, aPs);
-            break;
-        default:
-            // This should never happen
-            String err("Unsupported fragment identifier");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            break;
-    }
-
-    aPs->getEnteredStylesheets()->pop();
+    return mAppName;
 }
 
-#ifdef TX_EXE
-
-// XXX START
-// XXX Standalone only code. This should move to txStandaloneXSLTProcessor
-// XXX
-
-/*
- * Processes the given XML Document using the given XSL document
- * and returns the result tree
- */
-Document* XSLTProcessor::process(Document& xmlDocument,
-                                 Document& xslDocument)
+String&
+txXSLTProcessor::getAppVersion()
 {
-    Document* result = new Document();
-    if (!result)
-        // XXX ErrorReport: out of memory
-        return 0;
-
-    /* XXX Disabled for now, need to implement a handler
-           that creates a result tree.
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
-    {
-        // Create a new ProcessorState
-        ProcessorState ps(&aXMLDocument, &aXSLTDocument, &result);
-    
-        // Add error observers
-        txListIterator iter(&errorObservers);
-        while (iter.hasNext())
-            ps.addErrorObserver(*(ErrorObserver*)iter.next());
-    
-        txSingleNodeContext evalContext(&aXMLDocument, &ps);
-        ps.setEvalContext(&evalContext);
-
-        // Index templates and process top level xsl elements
-        txListIterator importFrame(ps.getImportFrames());
-        importFrame.addAfter(new ProcessorState::ImportFrame(0));
-        if (!importFrame.next()) {
-            delete result;
-            // XXX ErrorReport: out of memory
-            return 0;
-        }
-        processStylesheet(&aXMLDocument, &aXSLTDocument, &importFrame, &ps);
-    
-        initializeHandlers(&ps);
-        // XXX Set the result document on the handler
-    
-        // Process root of XML source document
-        startTransform(&aXMLDocument, &ps);
-    }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
-       XXX End of disabled section */
-
-    // Return result Document
-    return result;
+    return mAppVersion;
 }
 
-/*
- * Processes the given XML Document using the given XSL document
- * and prints the results to the given ostream argument
- */
-void XSLTProcessor::process(Document& aXMLDocument,
-                            Node& aStylesheet,
-                            ostream& aOut)
+void
+txXSLTProcessor::bindVariable(String& aName,
+                              ExprResult* aValue,
+                              MBool aAllowShadowing,
+                              ProcessorState* aPs)
 {
-    // Need a result document for creating result tree fragments.
-    Document result;
-
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
-    {
-        // Create a new ProcessorState
-        Document* stylesheetDoc = 0;
-        Element* stylesheetElem = 0;
-        if (aStylesheet.getNodeType() == Node::DOCUMENT_NODE) {
-            stylesheetDoc = (Document*)&aStylesheet;
-        }
-        else {
-            stylesheetElem = (Element*)&aStylesheet;
-            stylesheetDoc = aStylesheet.getOwnerDocument();
-        }
-        ProcessorState ps(&aXMLDocument, stylesheetDoc, &result);
-
-        // Add error observers
-        txListIterator iter(&errorObservers);
-        while (iter.hasNext())
-            ps.addErrorObserver(*(ErrorObserver*)iter.next());
-
-        txSingleNodeContext evalContext(&aXMLDocument, &ps);
-        ps.setEvalContext(&evalContext);
-
-        // Index templates and process top level xsl elements
-        txListIterator importFrame(ps.getImportFrames());
-        importFrame.addAfter(new ProcessorState::ImportFrame(0));
-        if (!importFrame.next())
-            // XXX ErrorReport: out of memory
-            return;
-        
-        if (stylesheetElem)
-            processTopLevel(&aXMLDocument, stylesheetElem, &importFrame, &ps);
-        else
-            processStylesheet(&aXMLDocument, stylesheetDoc, &importFrame, &ps);
-
-        initializeHandlers(&ps);
-        if (mOutputHandler)
-            mOutputHandler->setOutputStream(&aOut);
-
-        // Process root of XML source document
-        startTransform(&aXMLDocument, &ps);
-    }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the result document.
-}
-
-/**
- * Reads an XML Document from the given XML input stream.
- * The XSL Stylesheet is obtained from the XML Documents stylesheet PI.
- * If no Stylesheet is found, an empty document will be the result;
- * otherwise the XML Document is processed using the stylesheet.
- * The result tree is printed to the given ostream argument,
- * will not close the ostream argument
-**/
-void XSLTProcessor::process
-   (istream& xmlInput, String& xmlFilename, ostream& out)
-{
-
-    XMLParser xmlParser;
-    Document* xmlDoc = xmlParser.parse(xmlInput, xmlFilename);
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        return;
-    }
-    //-- Read in XSL document
-    String href;
-    String errMsg;
-    getHrefFromStylesheetPI(*xmlDoc, href);
-    istream* xslInput = URIUtils::getInputStream(href,errMsg);
-    Document* xslDoc = 0;
-    if ( xslInput ) {
-        xslDoc = xmlParser.parse(*xslInput, href);
-        delete xslInput;
-    }
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        delete xmlDoc;
-        return;
-    }
-
-    Node* stylesheet;
-    String frag;
-    URIUtils::getFragmentIdentifier(href, frag);
-    if (!frag.isEmpty()) {
-        stylesheet = xslDoc->getElementById(frag);
-        if (!stylesheet) {
-            String err("unable to get fragment");
-            cerr << err << endl;
-            delete xmlDoc;
-            delete xslDoc;
-            return;
-        }
-    }
-    else {
-        stylesheet = xslDoc;
-    }
-
-    process(*xmlDoc, *stylesheet, out);
-    delete xmlDoc;
-    delete xslDoc;
-} //-- process
-
-/**
- * Reads an XML Document from the given XML input stream, and
- * processes the document using the XSL document derived from
- * the given XSL input stream.
- * The result tree is printed to the given ostream argument,
- * will not close the ostream argument
-**/
-void XSLTProcessor::process
-   (istream& xmlInput, String& xmlFilename,
-    istream& xslInput, String& xslFilename,
-    ostream& out)
-{
-    //-- read in XML Document
-    XMLParser xmlParser;
-    Document* xmlDoc = xmlParser.parse(xmlInput, xmlFilename);
-    if (!xmlDoc) {
-        String err("error reading XML document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        return;
-    }
-    //-- read in XSL Document
-    Document* xslDoc = xmlParser.parse(xslInput, xslFilename);
-    if (!xslDoc) {
-        String err("error reading XSL stylesheet document: ");
-        err.append(xmlParser.getErrorString());
-        cerr << err << endl;
-        delete xmlDoc;
-        return;
-    }
-    process(*xmlDoc, *xslDoc, out);
-    delete xmlDoc;
-    delete xslDoc;
-} //-- process
-
-// XXX
-// XXX Standalone only code. This should move to txStandaloneXSLTProcessor
-// XXX END
-
-#endif // ifdef TX_EXE
-
-  //-------------------/
- //- Private Methods -/
-//-------------------/
-
-void XSLTProcessor::bindVariable
-    (String& name, ExprResult* value, MBool allowShadowing, ProcessorState* ps)
-{
-    NamedMap* varSet = (NamedMap*)ps->getVariableSetStack()->peek();
+    NamedMap* varSet = (NamedMap*)aPs->getVariableSetStack()->peek();
     //-- check for duplicate variable names
-    VariableBinding* current = (VariableBinding*) varSet->get(name);
+    VariableBinding* current = (VariableBinding*) varSet->get(aName);
     VariableBinding* binding = 0;
     if (current) {
         binding = current;
-        if (current->isShadowingAllowed() ) {
-            current->setShadowValue(value);
+        if (current->isShadowingAllowed()) {
+            current->setShadowValue(aValue);
         }
         else {
             //-- error cannot rebind variables
             String err("cannot rebind variables: ");
-            err.append(name);
+            err.append(aName);
             err.append(" already exists in this scope.");
-            ps->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(err, NS_ERROR_FAILURE);
         }
     }
     else {
-        binding = new VariableBinding(name, value);
-        varSet->put((const String&)name, binding);
+        binding = new VariableBinding(aName, aValue);
+        varSet->put((const String&)aName, binding);
     }
-    if ( allowShadowing ) binding->allowShadowing();
-    else binding->disallowShadowing();
+    if (aAllowShadowing) {
+        binding->allowShadowing();
+    }
+    else {
+        binding->disallowShadowing();
+    }
 
-} //-- bindVariable
+}
 
-void XSLTProcessor::process(Node* node,
-                            const String& mode,
-                            ProcessorState* ps) {
-    if (!node)
+void
+txXSLTProcessor::copyNode(Node* aNode, ProcessorState* aPs)
+{
+    if (!aNode)
+        return;
+
+    switch (aNode->getNodeType()) {
+        case Node::ATTRIBUTE_NODE:
+        {
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->attribute(aNode->getNodeName(), aNode->getNamespaceID(),
+                                      aNode->getNodeValue());
+            break;
+        }
+        case Node::COMMENT_NODE:
+        {
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->comment(((Comment*)aNode)->getData());
+            break;
+        }
+        case Node::DOCUMENT_NODE:
+        case Node::DOCUMENT_FRAGMENT_NODE:
+        {
+            // Copy children
+            Node* child = aNode->getFirstChild();
+            while (child) {
+                copyNode(child, aPs);
+                child = child->getNextSibling();
+            }
+            break;
+        }
+        case Node::ELEMENT_NODE:
+        {
+            Element* element = (Element*)aNode;
+            const String& name = element->getNodeName();
+            PRInt32 nsID = element->getNamespaceID();
+            startElement(name, nsID, aPs);
+
+            // Copy attributes
+            NamedNodeMap* attList = element->getAttributes();
+            if (attList) {
+                PRUint32 i = 0;
+                for (i = 0; i < attList->getLength(); i++) {
+                    Attr* attr = (Attr*)attList->item(i);
+                    NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+                    mResultHandler->attribute(attr->getName(), attr->getNamespaceID(),
+                                              attr->getValue());
+                }
+            }
+
+            // Copy children
+            Node* child = element->getFirstChild();
+            while (child) {
+                copyNode(child, aPs);
+                child = child->getNextSibling();
+            }
+
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->endElement(name, nsID);
+            break;
+        }
+        case Node::PROCESSING_INSTRUCTION_NODE:
+        {
+            ProcessingInstruction* pi = (ProcessingInstruction*)aNode;
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->processingInstruction(pi->getTarget(), pi->getData());
+            break;
+        }
+        case Node::TEXT_NODE:
+        case Node::CDATA_SECTION_NODE:
+        {
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->characters(((CharacterData*)aNode)->getData());
+            break;
+        }
+    }
+}
+
+void
+txXSLTProcessor::process(Node* aNode,
+                         const String& aMode,
+                         ProcessorState* aPs)
+{
+    if (!aNode)
         return;
 
     ProcessorState::ImportFrame *frame;
-    Node* xslTemplate = ps->findTemplate(node, mode, &frame);
-    processMatchedTemplate(xslTemplate, node, 0, NULL_STRING, frame, ps);
-} //-- process
+    Node* xslTemplate = aPs->findTemplate(aNode, aMode, &frame);
+    processMatchedTemplate(xslTemplate, aNode, 0, NULL_STRING, frame, aPs);
+}
 
-void XSLTProcessor::processAction(Node* aNode,
-                                  Node* aXSLTAction,
-                                  ProcessorState* aPs)
+void
+txXSLTProcessor::processAction(Node* aNode,
+                               Node* aXsltAction,
+                               ProcessorState* aPs)
 {
-    NS_ASSERTION(aXSLTAction, "We need an action to process.");
-    if (!aXSLTAction)
+    NS_ASSERTION(aXsltAction, "We need an action to process.");
+    if (!aXsltAction)
         return;
 
     Document* resultDoc = aPs->getResultDocument();
 
-    unsigned short nodeType = aXSLTAction->getNodeType();
+    unsigned short nodeType = aXsltAction->getNodeType();
 
     // Handle text nodes
     if (nodeType == Node::TEXT_NODE ||
         nodeType == Node::CDATA_SECTION_NODE) {
-        const String& textValue = aXSLTAction->getNodeValue();
-        if (!aPs->isXSLStripSpaceAllowed(aXSLTAction) ||
+        const String& textValue = aXsltAction->getNodeValue();
+        if (!aPs->isXSLStripSpaceAllowed(aXsltAction) ||
             !XMLUtils::shouldStripTextnode(textValue)) {
             NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
             mResultHandler->characters(textValue);
@@ -1051,13 +281,13 @@ void XSLTProcessor::processAction(Node* aNode,
     }
 
     // Handle element nodes
-    Element* actionElement = (Element*)aXSLTAction;
-    PRInt32 nsID = aXSLTAction->getNamespaceID();
+    Element* actionElement = (Element*)aXsltAction;
+    PRInt32 nsID = aXsltAction->getNamespaceID();
     if (nsID != kNameSpaceID_XSLT) {
         // Literal result element
         // XXX TODO Check for excluded namespaces and aliased namespaces (element and attributes) 
-        const String& nodeName = aXSLTAction->getNodeName();
-        startElement(aPs, nodeName, nsID);
+        const String& nodeName = aXsltAction->getNodeName();
+        startElement(nodeName, nsID, aPs);
 
         processAttributeSets(actionElement, aNode, aPs);
 
@@ -1088,7 +318,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
     Expr* expr = 0;
     txAtom* localName;
-    aXSLTAction->getLocalName(&localName);
+    aXsltAction->getLocalName(&localName);
     // xsl:apply-imports
     if (localName == txXSLTAtoms::applyImports) {
         ProcessorState::TemplateRule* curr;
@@ -1406,7 +636,7 @@ void XSLTProcessor::processAction(Node* aNode,
             return;
         }
 
-        startElement(aPs, name, resultNsID);
+        startElement(name, resultNsID, aPs);
         processAttributeSets(actionElement, aNode, aPs);
         processChildren(aNode, actionElement, aPs);
         NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
@@ -1504,20 +734,7 @@ void XSLTProcessor::processAction(Node* aNode,
         String message;
         processChildrenAsValue(aNode, actionElement, aPs, MB_FALSE, message);
         // We should add a MessageObserver class
-#ifdef TX_EXE
-        cout << "xsl:message - "<< message << endl;
-#else
-        nsresult rv;
-        nsCOMPtr<nsIConsoleService> consoleSvc = 
-          do_GetService("@mozilla.org/consoleservice;1", &rv);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't get console service");
-        if (consoleSvc) {
-            nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
-            logString.Append(message.getConstNSString());
-            rv = consoleSvc->LogStringMessage(logString.get());
-            NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
-        }
-#endif
+        logMessage(message);
     }
     // xsl:number
     else if (localName == txXSLTAtoms::number) {
@@ -1634,11 +851,10 @@ void XSLTProcessor::processAction(Node* aNode,
     TX_IF_RELEASE_ATOM(localName);
 }
 
-/**
- * Processes the attribute sets specified in the use-attribute-sets attribute
- * of the element specified in aElement
-**/
-void XSLTProcessor::processAttributeSets(Element* aElement, Node* aNode, ProcessorState* aPs)
+void
+txXSLTProcessor::processAttributeSets(Element* aElement,
+                                      Node* aNode,
+                                      ProcessorState* aPs)
 {
     String names;
     PRInt32 namespaceID;
@@ -1679,31 +895,184 @@ void XSLTProcessor::processAttributeSets(Element* aElement, Node* aNode, Process
             delete attSet;
         }
     }
-} //-- processAttributeSets
+}
 
-/**
- * Processes the xsl:with-param child elements of the given xsl action.
- * A VariableBinding is created for each actual parameter, and
- * added to the result NamedMap. At this point, we do not care
- * whether the actual parameter matches a formal parameter of the template
- * or not.
- * @param xslAction the action node that takes parameters (xsl:call-template
- *   or xsl:apply-templates
- * @param context the current context node
- * @ps the current ProcessorState
- * @return a NamedMap of variable bindings
-**/
-NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, ProcessorState* ps)
+void
+txXSLTProcessor::processChildren(Node* aNode,
+                                 Element* aXsltElement,
+                                 ProcessorState* aPs)
+{
+    NS_ASSERTION(aXsltElement,"xslElement is NULL in call to txXSLTProcessor::processChildren!");
+
+    Stack* bindings = aPs->getVariableSetStack();
+    NamedMap localBindings;
+    localBindings.setObjectDeletion(MB_TRUE);
+    bindings->push(&localBindings);
+    Node* child = aXsltElement->getFirstChild();
+    while (child) {
+        processAction(aNode, child, aPs);
+        child = child->getNextSibling();
+    }
+    bindings->pop();
+}
+
+void
+txXSLTProcessor::processChildrenAsValue(Node* aNode,
+                                        Element* aElement,
+                                        ProcessorState* aPs,
+                                        MBool aOnlyText,
+                                        String& aValue)
+{
+    txXMLEventHandler* previousHandler = mResultHandler;
+    txTextHandler valueHandler(aValue, aOnlyText);
+    mResultHandler = &valueHandler;
+    processChildren(aNode, aElement, aPs);
+    mResultHandler = previousHandler;
+}
+
+void
+txXSLTProcessor::processDefaultTemplate(Node* aNode,
+                                        ProcessorState* aPs,
+                                        const String& aMode)
+{
+    NS_ASSERTION(aNode, "context node is NULL in call to txXSLTProcessor::processTemplate!");
+
+    switch (aNode->getNodeType())
+    {
+        case Node::ELEMENT_NODE :
+        case Node::DOCUMENT_NODE :
+        {
+            if (!mNodeExpr)
+                break;
+
+            ExprResult* exprResult = mNodeExpr->evaluate(aPs->getEvalContext());
+            if (!exprResult ||
+                exprResult->getResultType() != ExprResult::NODESET) {
+                String err("None-nodeset returned while processing default template");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+                delete exprResult;
+                return;
+            }
+
+            NodeSet* nodeSet = (NodeSet*)exprResult;
+            txNodeSetContext evalContext(nodeSet, aPs);
+            txIEvalContext* priorEC = aPs->setEvalContext(&evalContext);
+
+            while (evalContext.hasNext()) {
+                evalContext.next();
+                Node* currNode = evalContext.getContextNode();
+
+                ProcessorState::ImportFrame *frame;
+                Node* xslTemplate = aPs->findTemplate(currNode, aMode, &frame);
+                processMatchedTemplate(xslTemplate, currNode, 0, aMode, frame,
+                                       aPs);
+            }
+            aPs->setEvalContext(priorEC);
+            delete exprResult;
+            break;
+        }
+        case Node::ATTRIBUTE_NODE :
+        case Node::TEXT_NODE :
+        case Node::CDATA_SECTION_NODE :
+        {
+            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+            mResultHandler->characters(aNode->getNodeValue());
+            break;
+        }
+        default:
+            // on all other nodetypes (including namespace nodes)
+            // we do nothing
+            break;
+    }
+}
+
+void
+txXSLTProcessor::processInclude(String& aHref,
+                                Document* aSource,
+                                txListIterator* aImportFrame,
+                                ProcessorState* aPs)
+{
+    // make sure the include isn't included yet
+    txStackIterator iter(aPs->getEnteredStylesheets());
+    while (iter.hasNext()) {
+        if (((String*)iter.next())->isEqual(aHref)) {
+            String err("Stylesheet includes itself. URI: ");
+            err.append(aHref);
+            aPs->receiveError(err, NS_ERROR_FAILURE);
+            return;
+        }
+    }
+    aPs->getEnteredStylesheets()->push(&aHref);
+
+    // Load XSL document
+    Node* stylesheet = aPs->retrieveDocument(aHref, NULL_STRING);
+    if (!stylesheet) {
+        String err("Unable to load included stylesheet ");
+        err.append(aHref);
+        aPs->receiveError(err, NS_ERROR_FAILURE);
+        aPs->getEnteredStylesheets()->pop();
+        return;
+    }
+
+    switch(stylesheet->getNodeType()) {
+        case Node::DOCUMENT_NODE :
+            processStylesheet(aSource,
+                              (Document*)stylesheet,
+                              aImportFrame,
+                              aPs);
+            break;
+        case Node::ELEMENT_NODE :
+            processTopLevel(aSource, (Element*)stylesheet, aImportFrame, aPs);
+            break;
+        default:
+            // This should never happen
+            String err("Unsupported fragment identifier");
+            aPs->receiveError(err, NS_ERROR_FAILURE);
+            break;
+    }
+
+    aPs->getEnteredStylesheets()->pop();
+}
+
+void
+txXSLTProcessor::processMatchedTemplate(Node* aXsltTemplate,
+                                        Node* aNode,
+                                        NamedMap* aParams,
+                                        const String& aMode,
+                                        ProcessorState::ImportFrame* aFrame,
+                                        ProcessorState* aPs)
+{
+    if (aXsltTemplate) {
+        ProcessorState::TemplateRule *oldTemplate, newTemplate;
+        oldTemplate = aPs->getCurrentTemplateRule();
+        newTemplate.mFrame = aFrame;
+        newTemplate.mMode = &aMode;
+        newTemplate.mParams = aParams;
+        aPs->setCurrentTemplateRule(&newTemplate);
+
+        processTemplate(aNode, aXsltTemplate, aPs, aParams);
+
+        aPs->setCurrentTemplateRule(oldTemplate);
+    }
+    else {
+        processDefaultTemplate(aNode, aPs, aMode);
+    }
+}
+
+NamedMap*
+txXSLTProcessor::processParameters(Element* aXsltAction,
+                                   Node* aContext,
+                                   ProcessorState* aPs)
 {
     NamedMap* params = new NamedMap();
 
-    if (!xslAction || !params)
+    if (!aXsltAction || !params)
       return params;
 
     params->setObjectDeletion(MB_TRUE);
 
     //-- handle xsl:with-param elements
-    Node* tmpNode = xslAction->getFirstChild();
+    Node* tmpNode = aXsltAction->getFirstChild();
     while (tmpNode) {
         if (tmpNode->getNodeType() == Node::ELEMENT_NODE &&
             tmpNode->getNamespaceID() == kNameSpaceID_XSLT) {
@@ -1720,16 +1089,16 @@ NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, Pr
             if (!action->getAttr(txXSLTAtoms::name,
                                  kNameSpaceID_None, name)) {
                 String err("missing required name attribute for xsl:with-param");
-                ps->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(err, NS_ERROR_FAILURE);
             }
             else {
-                ExprResult* exprResult = processVariable(context, action, ps);
+                ExprResult* exprResult = processVariable(aContext, action, aPs);
                 if (params->get(name)) {
                     //-- error cannot rebind parameters
                     String err("value for parameter '");
                     err.append(name);
                     err.append("' specified more than once.");
-                    ps->receiveError(err, NS_ERROR_FAILURE);
+                    aPs->receiveError(err, NS_ERROR_FAILURE);
                 }
                 else {
                     VariableBinding* binding = new VariableBinding(name, exprResult);
@@ -1741,78 +1110,69 @@ NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, Pr
         tmpNode = tmpNode->getNextSibling();
     }
     return params;
-} //-- processParameters
-
-/**
- * Processes the children of the specified element using the given context node
- * and ProcessorState
- * @param node the context node
- * @param xslElement the template to be processed. Must be != NULL
- * @param ps the current ProcessorState
-**/
-void XSLTProcessor::processChildren(Node* node, Element* xslElement, ProcessorState* ps) {
-
-    NS_ASSERTION(xslElement,"xslElement is NULL in call to XSLTProcessor::processChildren!");
-
-    Stack* bindings = ps->getVariableSetStack();
-    NamedMap localBindings;
-    localBindings.setObjectDeletion(MB_TRUE);
-    bindings->push(&localBindings);
-    Node* child = xslElement->getFirstChild();
-    while (child) {
-        processAction(node, child, ps);
-        child = child->getNextSibling();
-    }
-    bindings->pop();
-} //-- processChildren
-
-void
-XSLTProcessor::processChildrenAsValue(Node* aNode,
-                                      Element* aElement,
-                                      ProcessorState* aPs,
-                                      MBool aOnlyText,
-                                      String& aValue)
-{
-    txXMLEventHandler* previousHandler = mResultHandler;
-    txTextHandler valueHandler(aValue, aOnlyText);
-    mResultHandler = &valueHandler;
-    processChildren(aNode, aElement, aPs);
-    mResultHandler = previousHandler;
 }
 
-/**
- * Processes the specified template using the given context, ProcessorState, and actual
- * parameters.
- * @param xslTemplate the template to be processed
- * @ps the current ProcessorState
- * @param params a NamedMap of variable bindings that contain the actual parameters for
- *   the template. Parameters that do not match a formal parameter of the template (i.e.
- *   there is no corresponding xsl:param in the template definition) will be discarded.
-**/
-void XSLTProcessor::processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps, NamedMap* params) {
+void
+txXSLTProcessor::processStylesheet(Document* aSource,
+                                   Document* aStylesheet,
+                                   txListIterator* aImportFrame,
+                                   ProcessorState* aPs)
+{
+    NS_ASSERTION(aStylesheet, "processTopLevel called without stylesheet");
+    if (!aStylesheet || !aStylesheet->getDocumentElement())
+        return;
 
-    NS_ASSERTION(xslTemplate, "xslTemplate is NULL in call to XSLTProcessor::processTemplate!");
+    Element* elem = aStylesheet->getDocumentElement();
 
-    Stack* bindings = ps->getVariableSetStack();
+    txAtom* localName;
+    PRInt32 namespaceID = elem->getNamespaceID();
+    elem->getLocalName(&localName);
+
+    if (((localName == txXSLTAtoms::stylesheet) ||
+         (localName == txXSLTAtoms::transform)) &&
+        (namespaceID == kNameSpaceID_XSLT)) {
+        processTopLevel(aSource, elem, aImportFrame, aPs);
+    }
+    else {
+        NS_ASSERTION(aImportFrame->current(), "no current importframe");
+        if (!aImportFrame->current()) {
+            TX_IF_RELEASE_ATOM(localName);
+            return;
+        }
+        aPs->addLREStylesheet(aStylesheet,
+            (ProcessorState::ImportFrame*)aImportFrame->current());
+    }
+    TX_IF_RELEASE_ATOM(localName);
+}
+
+void
+txXSLTProcessor::processTemplate(Node* aNode,
+                                 Node* aXsltTemplate,
+                                 ProcessorState* aPs,
+                                 NamedMap* aParams)
+{
+    NS_ASSERTION(aXsltTemplate, "xslTemplate is NULL in call to txXSLTProcessor::processTemplate!");
+
+    Stack* bindings = aPs->getVariableSetStack();
     NamedMap localBindings;
     localBindings.setObjectDeletion(MB_TRUE);
     bindings->push(&localBindings);
-    processTemplateParams(xslTemplate, node, ps, params);
-    Node* tmp = xslTemplate->getFirstChild();
+    processTemplateParams(aXsltTemplate, aNode, aPs, aParams);
+    Node* tmp = aXsltTemplate->getFirstChild();
     while (tmp) {
-        processAction(node,tmp,ps);
+        processAction(aNode, tmp, aPs);
         tmp = tmp->getNextSibling();
     }
     
-    if (params) {
-        StringList* keys = params->keys();
+    if (aParams) {
+        StringList* keys = aParams->keys();
         if (keys) {
             StringListIterator keyIter(keys);
             String* key;
             while((key = keyIter.next())) {
                 VariableBinding *var, *param;
                 var = (VariableBinding*)localBindings.get(*key);
-                param = (VariableBinding*)params->get(*key);
+                param = (VariableBinding*)aParams->get(*key);
                 if (var && var->getValue() == param->getValue()) {
                     // Don't delete the contained ExprResult since it's
                     // not ours
@@ -1830,109 +1190,16 @@ void XSLTProcessor::processTemplate(Node* node, Node* xslTemplate, ProcessorStat
     }
     
     bindings->pop();
-} //-- processTemplate
-
-void XSLTProcessor::processMatchedTemplate(Node* aXslTemplate,
-                                           Node* aNode,
-                                           NamedMap* aParams,
-                                           const String& aMode,
-                                           ProcessorState::ImportFrame* aFrame,
-                                           ProcessorState* aPs)
-{
-    if (aXslTemplate) {
-        ProcessorState::TemplateRule *oldTemplate, newTemplate;
-        oldTemplate = aPs->getCurrentTemplateRule();
-        newTemplate.mFrame = aFrame;
-        newTemplate.mMode = &aMode;
-        newTemplate.mParams = aParams;
-        aPs->setCurrentTemplateRule(&newTemplate);
-
-        processTemplate(aNode, aXslTemplate, aPs, aParams);
-
-        aPs->setCurrentTemplateRule(oldTemplate);
-    }
-    else {
-        processDefaultTemplate(aNode, aPs, aMode);
-    }
 }
 
-/**
- * Invokes the default template for the specified node
- * @param node  context node
- * @param ps    current ProcessorState
- * @param mode  template mode
-**/
-void XSLTProcessor::processDefaultTemplate(Node* node,
-                                           ProcessorState* ps,
-                                           const String& mode)
+void
+txXSLTProcessor::processTemplateParams(Node* aXsltTemplate,
+                                       Node* aContext,
+                                       ProcessorState* aPs,
+                                       NamedMap* aActualParams)
 {
-    NS_ASSERTION(node, "context node is NULL in call to XSLTProcessor::processTemplate!");
-
-    switch(node->getNodeType())
-    {
-        case Node::ELEMENT_NODE :
-        case Node::DOCUMENT_NODE :
-        {
-            if (!mNodeExpr)
-                break;
-
-            ExprResult* exprResult = mNodeExpr->evaluate(ps->getEvalContext());
-            if (!exprResult ||
-                exprResult->getResultType() != ExprResult::NODESET) {
-                String err("None-nodeset returned while processing default template");
-                ps->receiveError(err, NS_ERROR_FAILURE);
-                delete exprResult;
-                return;
-            }
-
-            NodeSet* nodeSet = (NodeSet*)exprResult;
-            txNodeSetContext evalContext(nodeSet, ps);
-            txIEvalContext* priorEC = ps->setEvalContext(&evalContext);
-
-            while (evalContext.hasNext()) {
-                evalContext.next();
-                Node* currNode = evalContext.getContextNode();
-
-                ProcessorState::ImportFrame *frame;
-                Node* xslTemplate = ps->findTemplate(currNode, mode, &frame);
-                processMatchedTemplate(xslTemplate, currNode, 0, mode, frame,
-                                       ps);
-            }
-            ps->setEvalContext(priorEC);
-            delete exprResult;
-            break;
-        }
-        case Node::ATTRIBUTE_NODE :
-        case Node::TEXT_NODE :
-        case Node::CDATA_SECTION_NODE :
-        {
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->characters(node->getNodeValue());
-            break;
-        }
-        default:
-            // on all other nodetypes (including namespace nodes)
-            // we do nothing
-            break;
-    }
-} //-- processDefaultTemplate
-
-/**
- * Builds the initial bindings for the template. Formal parameters (xsl:param) that
- *   have a corresponding binding in actualParams are bound to the actual parameter value,
- *   otherwise to their default value. Actual parameters that do not match any formal
- *   parameter are discarded.
- * @param xslTemplate the template node
- * @param context the current context node
- * @param ps the current ProcessorState
- * @param actualParams a NamedMap of variable bindings that contains the actual parameters
-**/
-void XSLTProcessor::processTemplateParams
-    (Node* xslTemplate, Node* context, ProcessorState* ps, NamedMap* actualParams)
-{
-
-    if ( xslTemplate ) {
-        Node* tmpNode = xslTemplate->getFirstChild();
+    if (aXsltTemplate) {
+        Node* tmpNode = aXsltTemplate->getFirstChild();
         //-- handle params
         while (tmpNode) {
             unsigned short nodeType = tmpNode->getNodeType();
@@ -1951,22 +1218,22 @@ void XSLTProcessor::processTemplateParams
                 if (!action->getAttr(txXSLTAtoms::name,
                                      kNameSpaceID_None, name)) {
                     String err("missing required name attribute for xsl:param");
-                    ps->receiveError(err, NS_ERROR_FAILURE);
+                    aPs->receiveError(err, NS_ERROR_FAILURE);
                 }
                 else {
                     VariableBinding* binding = 0;
-                    if (actualParams) {
-                        binding = (VariableBinding*) actualParams->get((const String&)name);
+                    if (aActualParams) {
+                        binding = (VariableBinding*) aActualParams->get((const String&)name);
                     }
                     if (binding) {
                         // the formal parameter has a corresponding actual parameter, use it
                         ExprResult* exprResult = binding->getValue();
-                        bindVariable(name, exprResult, MB_FALSE, ps);
+                        bindVariable(name, exprResult, MB_FALSE, aPs);
                     }
                     else {
                         // no actual param, use default
-                        ExprResult* exprResult = processVariable(context, action, ps);
-                        bindVariable(name, exprResult, MB_FALSE, ps);
+                        ExprResult* exprResult = processVariable(aContext, action, aPs);
+                        bindVariable(name, exprResult, MB_FALSE, aPs);
                     }
                 }
             }
@@ -1978,41 +1245,318 @@ void XSLTProcessor::processTemplateParams
             tmpNode = tmpNode->getNextSibling();
         }
     }
-} //-- processTemplateParams
+}
 
+void
+txXSLTProcessor::processTopLevel(Document* aSource,
+                                 Element* aStylesheet,
+                                 txListIterator* importFrame,
+                                 ProcessorState* aPs)
+{
+    // Index templates and process top level xslt elements
+    NS_ASSERTION(aStylesheet, "processTopLevel called without stylesheet element");
+    if (!aStylesheet)
+        return;
 
-/**
- *  processes the xslVariable parameter as an xsl:variable using the given context,
- *  and ProcessorState.
- *  If the xslTemplate contains an "expr" attribute, the attribute is evaluated
- *  as an Expression and the ExprResult is returned. Otherwise the xslVariable is
- *  is processed as a template, and it's result is converted into an ExprResult
- *  @return an ExprResult
-**/
-ExprResult* XSLTProcessor::processVariable
-        (Node* node, Element* xslVariable, ProcessorState* ps)
+    ProcessorState::ImportFrame* currentFrame =
+        (ProcessorState::ImportFrame*)importFrame->current();
+
+    NS_ASSERTION(currentFrame,
+                 "processTopLevel called with no current importframe");
+    if (!currentFrame)
+        return;
+
+    NS_ASSERTION(aSource, "processTopLevel called without source document");
+
+    MBool importsDone = MB_FALSE;
+    Node* node = aStylesheet->getFirstChild();
+    while (node && !importsDone) {
+        if (node->getNodeType() == Node::ELEMENT_NODE) {
+            txAtom* localName;
+            node->getLocalName(&localName);
+            if (node->getNamespaceID() == kNameSpaceID_XSLT &&
+                localName == txXSLTAtoms::import) {
+                Element* element = (Element*)node;
+                String hrefAttr, href;
+                element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
+                                 hrefAttr);
+                URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
+                                      href);
+
+                // Create a new ImportFrame with correct firstNotImported
+                ProcessorState::ImportFrame *nextFrame, *newFrame;
+                nextFrame =
+                    (ProcessorState::ImportFrame*)importFrame->next();
+                newFrame = new ProcessorState::ImportFrame(nextFrame);
+                if (!newFrame) {
+                    // XXX ErrorReport: out of memory
+                    break;
+                }
+
+                // Insert frame and process stylesheet
+                importFrame->addBefore(newFrame);
+                importFrame->previous();
+                processInclude(href, aSource, importFrame, aPs);
+
+                // Restore iterator to initial position
+                importFrame->previous();
+            }
+            else {
+                importsDone = MB_TRUE;
+            }
+            TX_IF_RELEASE_ATOM(localName);
+        }
+        if (!importsDone)
+            node = node->getNextSibling();
+    }
+
+    while (node) {
+        if (node->getNodeType() != Node::ELEMENT_NODE ||
+            node->getNamespaceID() != kNameSpaceID_XSLT) {
+            node = node->getNextSibling();
+            continue;
+        }
+
+        txAtom* localName;
+        node->getLocalName(&localName);
+        Element* element = (Element*)node;
+        // xsl:attribute-set
+        if (localName == txXSLTAtoms::attributeSet) {
+            aPs->addAttributeSet(element, currentFrame);
+        }
+        // xsl:decimal-format
+        else if (localName == txXSLTAtoms::decimalFormat) {
+            if (!aPs->addDecimalFormat(element)) {
+                // Add error to ErrorObserver
+                String fName;
+                element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                 fName);
+                String err("unable to add ");
+                if (fName.isEmpty()) {
+                    err.append("default");
+                }
+                else {
+                    err.append("\"");
+                    err.append(fName);
+                    err.append("\"");
+                }
+                err.append(" decimal format for xsl:decimal-format");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+            }
+        }
+        // xsl:param
+        else if (localName == txXSLTAtoms::param) {
+            String name;
+            element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                             name);
+            if (name.isEmpty()) {
+                String err("missing required name attribute for xsl:param");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+                break;
+            }
+            ExprResult* exprResult = processVariable(aSource, element, aPs);
+            bindVariable(name, exprResult, MB_TRUE, aPs);
+        }
+        // xsl:import
+        else if (localName == txXSLTAtoms::import) {
+            String err("xsl:import only allowed at top of stylesheet");
+            aPs->receiveError(err, NS_ERROR_FAILURE);
+        }
+        // xsl:include
+        else if (localName == txXSLTAtoms::include) {
+            String hrefAttr, href;
+            element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
+                             hrefAttr);
+            URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
+                                  href);
+
+            processInclude(href, aSource, importFrame, aPs);
+        }
+        // xsl:key
+        else if (localName == txXSLTAtoms::key) {
+            if (!aPs->addKey(element)) {
+                String name;
+                element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                 name);
+                String err("error adding key '");
+                err.append(name);
+                err.append("'");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+            }
+        }
+        // xsl:output
+        else if (localName == txXSLTAtoms::output) {
+            txOutputFormat& format = currentFrame->mOutputFormat;
+            String attValue;
+
+            if (element->getAttr(txXSLTAtoms::method, kNameSpaceID_None,
+                                 attValue)) {
+                if (attValue.isEqual("html")) {
+                    format.mMethod = eHTMLOutput;
+                }
+                else if (attValue.isEqual("text")) {
+                    format.mMethod = eTextOutput;
+                }
+                else {
+                    format.mMethod = eXMLOutput;
+                }
+            }
+
+            if (element->getAttr(txXSLTAtoms::version, kNameSpaceID_None,
+                                 attValue)) {
+                format.mVersion = attValue;
+            }
+
+            if (element->getAttr(txXSLTAtoms::encoding, kNameSpaceID_None,
+                                 attValue)) {
+                format.mEncoding = attValue;
+            }
+
+            if (element->getAttr(txXSLTAtoms::omitXmlDeclaration,
+                                 kNameSpaceID_None, attValue)) {
+                format.mOmitXMLDeclaration = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+            }
+
+            if (element->getAttr(txXSLTAtoms::standalone, kNameSpaceID_None,
+                                 attValue)) {
+                format.mStandalone = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+            }
+
+            if (element->getAttr(txXSLTAtoms::doctypePublic,
+                                 kNameSpaceID_None, attValue)) {
+                format.mPublicId = attValue;
+            }
+
+            if (element->getAttr(txXSLTAtoms::doctypeSystem,
+                                 kNameSpaceID_None, attValue)) {
+                format.mSystemId = attValue;
+            }
+
+            if (element->getAttr(txXSLTAtoms::cdataSectionElements,
+                                 kNameSpaceID_None, attValue)) {
+                txTokenizer tokens(attValue);
+                String token;
+                while (tokens.hasMoreTokens()) {
+                    tokens.nextToken(token);
+                    if (!XMLUtils::isValidQName(token)) {
+                        break;
+                    }
+
+                    String namePart;
+                    XMLUtils::getPrefix(token, namePart);
+                    txAtom* nameAtom = TX_GET_ATOM(namePart);
+                    PRInt32 nsID = element->lookupNamespaceID(nameAtom);
+                    TX_IF_RELEASE_ATOM(nameAtom);
+                    if (nsID == kNameSpaceID_Unknown) {
+                        // XXX ErrorReport: unknown prefix
+                        break;
+                    }
+                    XMLUtils::getLocalPart(token, namePart);
+                    nameAtom = TX_GET_ATOM(namePart);
+                    if (!nameAtom) {
+                        // XXX ErrorReport: out of memory
+                        break;
+                    }
+                    txExpandedName* qname = new txExpandedName(nsID, nameAtom);
+                    TX_RELEASE_ATOM(nameAtom);
+                    if (!qname) {
+                        // XXX ErrorReport: out of memory
+                        break;
+                    }
+                    format.mCDATASectionElements.add(qname);
+                }
+            }
+
+            if (element->getAttr(txXSLTAtoms::indent, kNameSpaceID_None,
+                                 attValue)) {
+                format.mIndent = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+            }
+
+            if (element->getAttr(txXSLTAtoms::mediaType, kNameSpaceID_None,
+                                 attValue)) {
+                format.mMediaType = attValue;
+            }
+        }
+        // xsl:template
+        else if (localName == txXSLTAtoms::_template) {
+            aPs->addTemplate(element, currentFrame);
+        }
+        // xsl:variable
+        else if (localName == txXSLTAtoms::variable) {
+            String name;
+            element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                             name);
+            if (name.isEmpty()) {
+                String err("missing required name attribute for xsl:variable");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+                break;
+            }
+            ExprResult* exprResult = processVariable(aSource, element, aPs);
+            bindVariable(name, exprResult, MB_FALSE, aPs);
+        }
+        // xsl:preserve-space
+        else if (localName == txXSLTAtoms::preserveSpace) {
+            String elements;
+            if (!element->getAttr(txXSLTAtoms::elements,
+                                  kNameSpaceID_None, elements)) {
+                //-- add error to ErrorObserver
+                String err("missing required 'elements' attribute for ");
+                err.append("xsl:preserve-space");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+            }
+            else {
+                aPs->shouldStripSpace(elements, element,
+                                      MB_FALSE,
+                                      currentFrame);
+            }
+        }
+        // xsl:strip-space
+        else if (localName == txXSLTAtoms::stripSpace) {
+            String elements;
+            if (!element->getAttr(txXSLTAtoms::elements,
+                                  kNameSpaceID_None, elements)) {
+                //-- add error to ErrorObserver
+                String err("missing required 'elements' attribute for ");
+                err.append("xsl:strip-space");
+                aPs->receiveError(err, NS_ERROR_FAILURE);
+            }
+            else {
+                aPs->shouldStripSpace(elements, element,
+                                      MB_TRUE,
+                                      currentFrame);
+            }
+        }
+        TX_IF_RELEASE_ATOM(localName);
+        node = node->getNextSibling();
+    }
+}
+
+ExprResult*
+txXSLTProcessor::processVariable(Node* aNode,
+                                 Element* aXsltVariable,
+                                 ProcessorState* aPs)
 {
 
-    if ( !xslVariable ) {
+    if (!aXsltVariable) {
         return new StringResult("unable to process variable");
     }
 
     //-- check for select attribute
-    if (xslVariable->hasAttr(txXSLTAtoms::select, kNameSpaceID_None)) {
-        Expr* expr = ps->getExpr(xslVariable, ProcessorState::SelectAttr);
+    if (aXsltVariable->hasAttr(txXSLTAtoms::select, kNameSpaceID_None)) {
+        Expr* expr = aPs->getExpr(aXsltVariable, ProcessorState::SelectAttr);
         if (!expr)
             return new StringResult("unable to process variable");
-        return expr->evaluate(ps->getEvalContext());
+        return expr->evaluate(aPs->getEvalContext());
     }
-    else if (xslVariable->hasChildNodes()) {
+    else if (aXsltVariable->hasChildNodes()) {
         txResultTreeFragment* rtf = new txResultTreeFragment();
         if (!rtf)
             // XXX ErrorReport: Out of memory
             return 0;
         txXMLEventHandler* previousHandler = mResultHandler;
-        txRtfHandler rtfHandler(ps->getResultDocument(), rtf);
+        txRtfHandler rtfHandler(aPs->getResultDocument(), rtf);
         mResultHandler = &rtfHandler;
-        processChildren(node, xslVariable, ps);
+        processChildren(aNode, aXsltVariable, aPs);
         //NS_ASSERTION(previousHandler, "Setting mResultHandler to NULL!");
         mResultHandler = previousHandler;
         return rtf;
@@ -2020,95 +1564,61 @@ ExprResult* XSLTProcessor::processVariable
     else {
         return new StringResult("");
     }
-} //-- processVariable
-
-void XSLTProcessor::startTransform(Node* aNode, ProcessorState* aPs)
-{
-    mHaveDocumentElement = MB_FALSE;
-    mOutputHandler->startDocument();
-    process(aNode, NULL_STRING, aPs);
-#ifdef TX_EXE
-    txOutputFormat* format = aPs->getOutputFormat();
-    if (format->mMethod == eMethodNotSet) {
-        // This is an unusual case, no output method has been set and we
-        // didn't create a document element. Switching to XML output mode
-        // anyway.
-        txUnknownHandler* oldHandler = (txUnknownHandler*)mOutputHandler;
-        ostream* out;
-        oldHandler->getOutputStream(&out);
-        mOutputHandler = new txXMLOutput();
-        format->mMethod = eXMLOutput;
-        NS_ASSERTION(mOutputHandler, "Setting mResultHandler to NULL!");
-        mOutputHandler->setOutputStream(out);
-        mOutputHandler->setOutputFormat(format);
-        mResultHandler = mOutputHandler;
-        oldHandler->flush(mOutputHandler);
-        delete oldHandler;
-    }
-#endif
-    mOutputHandler->endDocument();
 }
 
-MBool XSLTProcessor::initializeHandlers(ProcessorState* aPs)
+void
+txXSLTProcessor::startElement(const String& aName,
+                              const PRInt32 aNsID,
+                              ProcessorState* aPs)
+{
+    if (!mHaveDocumentElement && (mResultHandler == mOutputHandler)) {
+        txOutputFormat* format = aPs->getOutputFormat();
+        if (format->mMethod == eMethodNotSet) {
+            // XXX Should check for whitespace-only sibling text nodes
+            if ((aNsID == kNameSpaceID_None) &&
+                aName.isEqualIgnoreCase("html")) {
+                // Switch to html output mode according to the XSLT spec.
+                format->mMethod = eHTMLOutput;
+            }
+            else {
+                format->mMethod = eXMLOutput;
+            }
+            mOutputHandler = getOutputHandler(format->mMethod);
+            mOutputHandler->setOutputFormat(format);
+        }
+        mHaveDocumentElement = MB_TRUE;
+    }
+    NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
+    mResultHandler->startElement(aName, aNsID);
+}
+
+void
+txXSLTProcessor::transform(Node* aNode, ProcessorState* aPs)
 {
     txListIterator frameIter(aPs->getImportFrames());
     ProcessorState::ImportFrame* frame;
     txOutputFormat* outputFormat = aPs->getOutputFormat();
-    while ((frame = (ProcessorState::ImportFrame*)frameIter.next()))
+    while ((frame = (ProcessorState::ImportFrame*)frameIter.next())) {
         outputFormat->merge(frame->mOutputFormat);
-
-    delete mOutputHandler;
-#ifdef TX_EXE
-    switch (outputFormat->mMethod) {
-        case eXMLOutput:
-        {
-            mOutputHandler = new txXMLOutput();
-            break;
-        }
-        case eHTMLOutput:
-        {
-            mOutputHandler = new txHTMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mOutputHandler = new txTextOutput();
-            break;
-        }
-        case eMethodNotSet:
-        {
-            mOutputHandler = new txUnknownHandler();
-            break;
-        }
     }
-#else
-    switch (outputFormat->mMethod) {
-        case eMethodNotSet:
-        case eXMLOutput:
-        case eHTMLOutput:
-        {
-            mOutputHandler = new txMozillaXMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mOutputHandler = new txMozillaTextOutput();
-            break;
-        }
-    }
-#endif
 
+    mOutputHandler = getOutputHandler(outputFormat->mMethod);
+    if (!mOutputHandler) {
+        return;
+    }
     mResultHandler = mOutputHandler;
-    if (!mOutputHandler)
-        return MB_FALSE;
     mOutputHandler->setOutputFormat(outputFormat);
-    return MB_TRUE;
+    mHaveDocumentElement = MB_FALSE;
+    mOutputHandler->startDocument();
+
+    process(aNode, NULL_STRING, aPs);
+
+    mOutputHandler->endDocument();
 }
 
-/**
- * Performs the xsl:copy action as specified in the XSLT specification
- */
-void XSLTProcessor::xslCopy(Node* aNode, Element* aAction, ProcessorState* aPs)
+
+void
+txXSLTProcessor::xslCopy(Node* aNode, Element* aAction, ProcessorState* aPs)
 {
     if (!aNode)
         return;
@@ -2126,7 +1636,7 @@ void XSLTProcessor::xslCopy(Node* aNode, Element* aAction, ProcessorState* aPs)
             String nodeName = element->getNodeName();
             PRInt32 nsID = element->getNamespaceID();
 
-            startElement(aPs, nodeName, nsID);
+            startElement(nodeName, nsID, aPs);
             // XXX copy namespace attributes once we have them
             processAttributeSets(aAction, aNode, aPs);
             processChildren(aNode, aAction, aPs);
@@ -2141,10 +1651,8 @@ void XSLTProcessor::xslCopy(Node* aNode, Element* aAction, ProcessorState* aPs)
     }
 }
 
-/**
- * Performs the xsl:copy-of action as specified in the XSLT specification
- */
-void XSLTProcessor::xslCopyOf(ExprResult* aExprResult, ProcessorState* aPs)
+void
+txXSLTProcessor::xslCopyOf(ExprResult* aExprResult, ProcessorState* aPs)
 {
     if (!aExprResult)
         return;
@@ -2169,335 +1677,3 @@ void XSLTProcessor::xslCopyOf(ExprResult* aExprResult, ProcessorState* aPs)
         }
     }
 }
-
-/**
- * Copy a node. For document nodes and document fragments, copy the children.
- */
-void XSLTProcessor::copyNode(Node* aNode, ProcessorState* aPs)
-{
-    if (!aNode)
-        return;
-
-    switch (aNode->getNodeType()) {
-        case Node::ATTRIBUTE_NODE:
-        {
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->attribute(aNode->getNodeName(), aNode->getNamespaceID(),
-                                      aNode->getNodeValue());
-            break;
-        }
-        case Node::COMMENT_NODE:
-        {
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->comment(((Comment*)aNode)->getData());
-            break;
-        }
-        case Node::DOCUMENT_NODE:
-        case Node::DOCUMENT_FRAGMENT_NODE:
-        {
-            // Copy children
-            Node* child = aNode->getFirstChild();
-            while (child) {
-                copyNode(child, aPs);
-                child = child->getNextSibling();
-            }
-            break;
-        }
-        case Node::ELEMENT_NODE:
-        {
-            Element* element = (Element*)aNode;
-            const String& name = element->getNodeName();
-            PRInt32 nsID = element->getNamespaceID();
-            startElement(aPs, name, nsID);
-
-            // Copy attributes
-            NamedNodeMap* attList = element->getAttributes();
-            if (attList) {
-                PRUint32 i = 0;
-                for (i = 0; i < attList->getLength(); i++) {
-                    Attr* attr = (Attr*)attList->item(i);
-                    NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-                    mResultHandler->attribute(attr->getName(), attr->getNamespaceID(),
-                                              attr->getValue());
-                }
-            }
-
-            // Copy children
-            Node* child = element->getFirstChild();
-            while (child) {
-                copyNode(child, aPs);
-                child = child->getNextSibling();
-            }
-
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->endElement(name, nsID);
-            break;
-        }
-        case Node::PROCESSING_INSTRUCTION_NODE:
-        {
-            ProcessingInstruction* pi = (ProcessingInstruction*)aNode;
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->processingInstruction(pi->getTarget(), pi->getData());
-            break;
-        }
-        case Node::TEXT_NODE:
-        case Node::CDATA_SECTION_NODE:
-        {
-            NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-            mResultHandler->characters(((CharacterData*)aNode)->getData());
-            break;
-        }
-    }
-}
-
-void
-XSLTProcessor::startElement(ProcessorState* aPs, const String& aName, const PRInt32 aNsID)
-{
-    if (!mHaveDocumentElement && (mResultHandler == mOutputHandler)) {
-        txOutputFormat* format = aPs->getOutputFormat();
-        if (format->mMethod == eMethodNotSet) {
-            // XXX Should check for whitespace-only sibling text nodes
-            if ((aNsID == kNameSpaceID_None) &&
-                aName.isEqualIgnoreCase("html")) {
-                // Switch to html output mode according to the XSLT spec.
-                format->mMethod = eHTMLOutput;
-#ifndef TX_EXE
-                mOutputHandler->setOutputFormat(format);
-#endif
-            }
-#ifdef TX_EXE
-            ostream* out;
-            mOutputHandler->getOutputStream(&out);
-            txUnknownHandler* oldHandler = (txUnknownHandler*)mOutputHandler;
-            if (format->mMethod == eHTMLOutput) {
-                mOutputHandler = new txHTMLOutput();
-            }
-            else {
-                mOutputHandler = new txXMLOutput();
-                format->mMethod = eXMLOutput;
-            }
-            NS_ASSERTION(mOutputHandler, "Setting mResultHandler to NULL!");
-            mOutputHandler->setOutputStream(out);
-            mOutputHandler->setOutputFormat(format);
-            mResultHandler = mOutputHandler;
-            oldHandler->flush(mOutputHandler);
-            delete oldHandler;
-#endif
-        }
-        mHaveDocumentElement = MB_TRUE;
-    }
-    NS_ASSERTION(mResultHandler, "mResultHandler must not be NULL!");
-    mResultHandler->startElement(aName, aNsID);
-}
-
-#ifndef TX_EXE
-
-// XXX START
-// XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
-// XXX
-
-NS_IMETHODIMP
-XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
-                                 nsIDOMNode* aStyleDOM,
-                                 nsIDOMDocument* aOutputDoc,
-                                 nsITransformObserver* aObserver)
-{
-    // We need source and result documents but no stylesheet.
-    NS_ENSURE_ARG(aSourceDOM);
-    NS_ENSURE_ARG(aOutputDoc);
-
-    // Create wrapper for the source document.
-    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
-    aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
-    if (!sourceDOMDocument)
-        sourceDOMDocument = do_QueryInterface(aSourceDOM);
-    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
-    Document sourceDocument(sourceDOMDocument);
-    Node* sourceNode = sourceDocument.createWrapper(aSourceDOM);
-    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
-
-    // Create wrapper for the style document.
-    nsCOMPtr<nsIDOMDocument> styleDOMDocument;
-    aStyleDOM->GetOwnerDocument(getter_AddRefs(styleDOMDocument));
-    if (!styleDOMDocument)
-        styleDOMDocument = do_QueryInterface(aStyleDOM);
-    Document xslDocument(styleDOMDocument);
-
-    // Create wrapper for the output document.
-    nsCOMPtr<nsIDocument> document = do_QueryInterface(aOutputDoc);
-    NS_ENSURE_TRUE(document, NS_ERROR_FAILURE);
-    Document resultDocument(aOutputDoc);
-
-    // Reset the output document.
-    // Create a temporary channel to get nsIDocument->Reset to
-    // do the right thing.
-    nsCOMPtr<nsILoadGroup> loadGroup;
-    nsCOMPtr<nsIChannel> channel;
-    nsCOMPtr<nsIURI> docURL;
-
-    document->GetDocumentURL(getter_AddRefs(docURL));
-    NS_ASSERTION(docURL, "No document URL");
-    document->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-    if (!loadGroup) {
-        nsCOMPtr<nsIDocument> source = do_QueryInterface(sourceDOMDocument);
-        if (source) {
-            source->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-        }
-    }
-
-    nsresult rv = NS_NewChannel(getter_AddRefs(channel), docURL,
-                                nsnull, loadGroup);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // Start of hack for keeping the scrollbars on an existing document.
-    // Based on similar hack that jst wrote for document.open().
-    // See bugs 78070 and 55334.
-    nsCOMPtr<nsIContent> root;
-    document->GetRootContent(getter_AddRefs(root));
-    if (root) {
-        document->SetRootContent(nsnull);
-    }
-
-    // Call Reset(), this will now do the full reset, except removing
-    // the root from the document, doing that confuses the scrollbar
-    // code in mozilla since the document in the root element and all
-    // the anonymous content (i.e. scrollbar elements) is set to
-    // null.
-    rv = document->Reset(channel, loadGroup);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (root) {
-        // Tear down the frames for the root element.
-        document->ContentRemoved(nsnull, root, 0);
-    }
-    // End of hack for keeping the scrollbars on an existing document.
-
-    // Start of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
-    {
-        // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument, &resultDocument);
-
-        // XXX Need to add error observers
-
-        // Set current txIEvalContext
-        txSingleNodeContext evalContext(&sourceDocument, &ps);
-        ps.setEvalContext(&evalContext);
-
-        // Index templates and process top level xsl elements
-        txListIterator importFrame(ps.getImportFrames());
-        importFrame.addAfter(new ProcessorState::ImportFrame(0));
-        if (!importFrame.next())
-            return NS_ERROR_OUT_OF_MEMORY;
-        nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
-        if (styleDoc) {
-            processStylesheet(&sourceDocument, &xslDocument, &importFrame,
-                              &ps);
-        }
-        else {
-            nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
-            NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
-            Element* element = xslDocument.createElement(styleElem);
-            NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            processTopLevel(&sourceDocument, element, &importFrame, &ps);
-        }
-
-        initializeHandlers(&ps);
-
-        if (mOutputHandler) {
-            mOutputHandler->setOutputDocument(aOutputDoc);
-        }
-
-        // Get the script loader of the result document.
-        if (aObserver) {
-            document->GetScriptLoader(getter_AddRefs(mScriptLoader));
-            if (mScriptLoader) {
-                mScriptLoader->AddObserver(this);
-            }
-        }
-
-        // Process root of XML source document
-        startTransform(sourceNode, &ps);
-    }
-    // End of block to ensure the destruction of the ProcessorState
-    // before the destruction of the documents.
-
-    mOutputHandler->getRootContent(getter_AddRefs(root));
-    if (root) {
-        document->ContentInserted(nsnull, root, 0);
-    }
-
-    mObserver = do_GetWeakReference(aObserver);
-    SignalTransformEnd();
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-XSLTProcessor::ScriptAvailable(nsresult aResult, 
-                               nsIDOMHTMLScriptElement *aElement, 
-                               PRBool aIsInline,
-                               PRBool aWasPending,
-                               nsIURI *aURI, 
-                               PRInt32 aLineNo,
-                               const nsAString& aScript)
-{
-    if (NS_FAILED(aResult) && mOutputHandler) {
-        mOutputHandler->removeScriptElement(aElement);
-        SignalTransformEnd();
-    }
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-XSLTProcessor::ScriptEvaluated(nsresult aResult, 
-                               nsIDOMHTMLScriptElement *aElement,
-                               PRBool aIsInline,
-                               PRBool aWasPending)
-{
-    if (mOutputHandler) {
-        mOutputHandler->removeScriptElement(aElement);
-        SignalTransformEnd();
-    }
-
-    return NS_OK;
-}
-
-void
-XSLTProcessor::SignalTransformEnd()
-{
-    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
-    if (!observer)
-        return;
-
-    if (!mOutputHandler || !mOutputHandler->isDone())
-        return;
-
-    if (mScriptLoader) {
-        mScriptLoader->RemoveObserver(this);
-        mScriptLoader = nsnull;
-    }
-
-    mObserver = nsnull;
-
-    // XXX Need a better way to determine transform success/failure
-    nsCOMPtr<nsIContent> rootContent;
-    mOutputHandler->getRootContent(getter_AddRefs(rootContent));
-    nsCOMPtr<nsIDOMNode> root = do_QueryInterface(rootContent);
-    if (root) {
-      nsCOMPtr<nsIDOMDocument> resultDoc;
-      root->GetOwnerDocument(getter_AddRefs(resultDoc));
-      observer->OnTransformDone(NS_OK, resultDoc);
-    }
-    else {
-      // XXX Need better error message and code.
-      observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
-    }
-}
-
-// XXX
-// XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
-// XXX END
-
-#endif

@@ -42,6 +42,8 @@
 #include "txXMLEventHandler.h"
 #include "TxString.h"
 
+class txXSLTProcessor;
+
 class txOutputTransaction
 {
 public:
@@ -49,7 +51,6 @@ public:
         eCharacterTransaction,
         eCharacterNoOETransaction,
         eCommentTransaction,
-        eEndDocumentTransaction,
         ePITransaction,
         eStartDocumentTransaction
     };
@@ -93,7 +94,7 @@ public:
 class txUnknownHandler : public txStreamXMLEventHandler
 {
 public:
-    txUnknownHandler();
+    txUnknownHandler(txXSLTProcessor* aProcessor);
     virtual ~txUnknownHandler();
 
     /*
@@ -193,6 +194,8 @@ private:
 
     PRUint32 mTotal, mMax;
     ostream* mOut;
+    txOutputFormat* mFormat;
+    txXSLTProcessor* mProcessor;
     txOutputTransaction** mArray;
 
     static PRUint32 kReasonableTransactions;

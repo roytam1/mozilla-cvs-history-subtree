@@ -59,12 +59,14 @@ CPPSRCS = Names.cpp \
 
 ifdef TX_EXE
 CPPSRCS += txHTMLOutput.cpp	\
+           txStandaloneXSLTProcessor.cpp \
            txTextOutput.cpp \
            txUnknownHandler.cpp \
            txXMLOutput.cpp
 else
 CPPSRCS += txMozillaTextOutput.cpp \
-           txMozillaXMLOutput.cpp
+           txMozillaXMLOutput.cpp \
+           txMozillaXSLTProcessor.cpp
 endif
 
 include $(topsrcdir)/config/rules.mk

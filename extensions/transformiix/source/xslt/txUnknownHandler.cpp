@@ -38,6 +38,7 @@
 
 #include "txUnknownHandler.h"
 #include <string.h>
+#include "XSLTProcessor.h"
 
 PRUint32 txUnknownHandler::kReasonableTransactions = 8;
 
@@ -101,13 +102,21 @@ void txUnknownHandler::comment(const String& aData)
 
 void txUnknownHandler::endDocument()
 {
-    txOutputTransaction* transaction =
-        new txOutputTransaction(txOutputTransaction::eEndDocumentTransaction);
-    if (!transaction) {
-        NS_ASSERTION(0, "Out of memory!")
+    // This is an unusual case, no output method has been set and we
+    // didn't create a document element. Switching to XML output mode
+    // anyway.
+    txOutputXMLEventHandler* outputHandler =
+        mProcessor->getOutputHandler(eXMLOutput);
+    NS_ASSERTION(outputHandler, "Out of memory, dropping output!");
+    if (!outputHandler) {
         return;
     }
-    addTransaction(transaction);
+    mFormat->mMethod = eXMLOutput;
+    outputHandler->setOutputStream(mOut);
+    outputHandler->setOutputFormat(mFormat);
+    flush(outputHandler);
+    outputHandler->endDocument();
+    delete outputHandler;
 }
 
 void txUnknownHandler::endElement(const String& aName,
