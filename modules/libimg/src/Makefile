@@ -26,21 +26,19 @@ LIBRARY_NAME	= img
 ifdef STANDALONE_IMAGE_LIB
 
 CPPSRCS		= ilNetReader.cpp \
-		  xpcompat.cpp \
-		  $(NULL)
-
-CSRCS		= color.c \
-		  colormap.c \
-		  dither.c \
-		  gif.c \
-		  if.c \
-		  ilclient.c \
-		  il_util.c \
-		  jpeg.c \
-		  scale.c \
-		  xbm.c \
-		  ipng.c \
-		  png_png.c \
+		  xpcompat.cpp 
+		  color.cpp \
+		  colormap.cpp \
+		  dither.cpp \
+		  gif.cpp \
+		  if.cpp \
+		  ilclient.cpp \
+		  il_util.cpp \
+		  jpeg.cpp \
+		  scale.cpp \
+		  xbm.cpp \
+		  ipng.cpp \
+		  png_png.cpp \
 		  $(NULL)
 
 EXPORTS		= PIMGCB.h PPSIMGCB.h
@@ -57,20 +55,20 @@ symbols::
 	@echo  "DIST		is $(DIST)"
 
 else
-CSRCS		= color.c \
-		  colormap.c \
-		  dither.c \
-		  dummy_nc.c \
-		  external.c \
-		  gif.c \
-		  if.c \
-		  ilclient.c \
-		  il_util.c \
-		  jpeg.c \
-		  scale.c \
-		  xbm.c \
-		  ipng.c \
-		  png_png.c \
+CPPSRCS		= color.cpp \
+		  colormap.cpp \
+		  dither.cpp \
+		  dummy_nc.cpp \
+		  external.cpp \
+		  gif.cpp \
+		  if.cpp \
+		  ilclient.cpp \
+		  il_util.cpp \
+		  jpeg.cpp \
+		  scale.cpp \
+		  xbm.cpp \
+		  ipng.cpp \
+		  png_png.cpp \
 		  $(NULL)
 
 EXPORTS		= PIMGCB.h PPSIMGCB.h
