@@ -109,7 +109,6 @@
 
 -(void)dealloc
 {
-  NSLog(@"Splash dealloc");
   [mFadeThreadLock release];
   [super dealloc];
 }
