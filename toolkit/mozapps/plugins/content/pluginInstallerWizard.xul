@@ -98,8 +98,10 @@
     </vbox>
 
     <radiogroup id="licenseRadioGroup">
-      <radio label="&pluginWizard.licensePage.accept.label;"/>
-      <radio selected="true" label="&pluginWizard.licensePage.deny.label;"/>
+      <radio id="licenseRadioGroup1" disabled="true"
+             label="&pluginWizard.licensePage.accept.label;"/>
+      <radio id="licenseRadioGroup2" disabled="true" selected="true"
+             label="&pluginWizard.licensePage.deny.label;"/>
     </radiogroup>    
   </wizardpage>
 

@@ -209,6 +209,8 @@ nsPluginInstallerWizard.prototype.showLicenses = function (){
 
 nsPluginInstallerWizard.prototype.enableNext = function (){
   gPluginInstaller.canAdvance(true);
+  document.getElementById("licenseRadioGroup1").disabled = false;
+  document.getElementById("licenseRadioGroup2").disabled = false;
 }
 
 nsPluginInstallerWizard.prototype.showLicense = function (){
@@ -220,6 +222,8 @@ nsPluginInstallerWizard.prototype.showLicense = function (){
   document.getElementById("pluginLicenseLabel").firstChild.nodeValue = 
     this.getFormattedString("pluginLicenseAgreement.label", [pluginInfo.name]);
 
+  document.getElementById("licenseRadioGroup1").disabled = true;
+  document.getElementById("licenseRadioGroup2").disabled = true;
   document.getElementById("licenseRadioGroup").selectedIndex = 
     pluginInfo.licenseAccepted ? 0 : 1;
 }
