@@ -86,12 +86,7 @@ nsMAPIConfiguration::nsMAPIConfiguration()
 static PRBool
 FreeSessionMapEntries(nsHashKey *aKey, void *aData, void* aClosure)
 {
-    nsMAPISession *pTemp = (nsMAPISession*) aData;
-    if (pTemp)
-    {
-    delete pTemp;
-    pTemp = nsnull;
-    }
+    delete (nsMAPISession*) aData;
     return PR_TRUE;
 }
 
@@ -253,14 +248,45 @@ PRUnichar *nsMAPIConfiguration::GetPassword(PRUint32 aSessionID)
         nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
 
         if (pTemp)
-        {
             pResult = pTemp->GetPassword();
         }
-    }
 
     PR_Unlock(m_Lock);
 
     return pResult;
+}
+
+void *nsMAPIConfiguration::GetMapiListContext(PRUint32 aSessionID)
+{
+    void *pResult = nsnull;
+
+    PR_Lock(m_Lock);
+
+    if (aSessionID != 0)
+    {
+        nsPRUintKey sessionKey(aSessionID);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
+        if (pTemp)
+           pResult = pTemp->GetMapiListContext();
+    }
+
+    PR_Unlock(m_Lock);
+    return pResult;
+}
+
+void nsMAPIConfiguration::SetMapiListContext(PRUint32 aSessionID, void *mapiListContext)
+{
+    PR_Lock(m_Lock);
+
+    if (aSessionID != 0)
+    {
+        nsPRUintKey sessionKey(aSessionID);
+        nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
+        if (pTemp)
+           pTemp->SetMapiListContext(mapiListContext);
+    }
+
+    PR_Unlock(m_Lock);
 }
 
 char *nsMAPIConfiguration::GetIdKey(PRUint32 aSessionID)
@@ -274,10 +300,8 @@ char *nsMAPIConfiguration::GetIdKey(PRUint32 aSessionID)
         nsPRUintKey sessionKey(aSessionID);
         nsMAPISession *pTemp = (nsMAPISession *)m_SessionMap.Get(&sessionKey);
         if (pTemp)
-        {
            pResult = pTemp->GetIdKey();
         }
-    }
 
     PR_Unlock(m_Lock);
     return pResult;
@@ -288,7 +312,7 @@ HRESULT nsMAPIConfiguration::GetMAPIErrorFromNSError (nsresult res)
 {
     HRESULT hr = SUCCESS_SUCCESS ;
 
-    if (NS_SUCCEEDED (hr)) return hr ;
+    if (NS_SUCCEEDED (res)) return hr ;
 
     // if failure return the related MAPI failure code
     switch (res)
@@ -336,6 +360,7 @@ nsMAPISession::nsMAPISession(PRUint32 aHwnd, const PRUnichar *aUserName,\
   m_nShared(1),
   m_pIdKey(aKey)
 {
+    m_listContext = NULL;
     m_pProfileName.Assign(aUserName);
     m_pPassword.Assign(aPassword);
 }

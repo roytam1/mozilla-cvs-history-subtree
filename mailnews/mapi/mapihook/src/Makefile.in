@@ -46,6 +46,8 @@ REQUIRES	= xpcom \
 		  msgbaseutil \
 		  msgcompose \
 		  mailnews \
+      mime \
+      msgimap \
 		  necko \
 		  intl \
 		  editor \
