@@ -994,6 +994,7 @@ void nsTableCellFrame::MapBorderPadding(nsIPresContext* aPresContext)
  * as outlined in Bugzilla bug report 1802 and 915 */
 void nsTableCellFrame::MapVAlignAttribute(nsIPresContext* aPresContext, nsTableFrame *aTableFrame)
 {
+#if 0
   const nsStyleTextReset* textStyle;
   GetStyleData(eStyleStruct_TextReset,(const nsStyleStruct *&)textStyle);
   // check if valign is set on the cell
@@ -1019,6 +1020,7 @@ void nsTableCellFrame::MapVAlignAttribute(nsIPresContext* aPresContext, nsTableF
   // otherwise, set the vertical align attribute to the HTML default
   nsStyleTextReset* cellTextStyle = (nsStyleTextReset*)mStyleContext->GetMutableStyleData(eStyleStruct_TextReset);
   cellTextStyle->mVerticalAlign.SetIntValue(NS_STYLE_VERTICAL_ALIGN_MIDDLE, eStyleUnit_Enumerated);
+#endif
 }
 
 /* XXX: this code will not work properly until the style and layout code has been updated 

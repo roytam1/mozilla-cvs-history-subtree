@@ -3125,7 +3125,7 @@ void
 nsGenericHTMLElement::MapAlignAttributeInto(const nsIHTMLMappedAttributes* aAttributes,
                                             nsRuleData* aRuleData)
 {
-  if (aRuleData->mSID == eStyleStruct_Display || aRuleData->mSID == eStyleStruct_Text) {
+  if (aRuleData->mSID == eStyleStruct_Display || aRuleData->mSID == eStyleStruct_TextReset) {
     nsHTMLValue value;
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
