@@ -1,3 +1,10 @@
+1998-12-03  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (update): Bug fix, now we empty the hash array before
+	examining changed attributes (bug #1385).
+
+	* Makefile.PL: Added the "-nolinenumbers" XSUBS options (bug #1329).
+
 1998-09-26  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (init): Cleaned out _perror() calls.
