@@ -862,7 +862,7 @@ js_FileRead(JSContext *cx, JSFile * file, jschar*buf, int32 len, int32 mode)
 
     if(count==-1){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_READ_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "read", file->path);
     }
 
     return count;
@@ -924,7 +924,7 @@ js_FileSkip(JSContext *cx, JSFile * file, int32 len, int32 mode)
 
     if(count==-1){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_SKIP_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "skip", file->path);
     }
 
     return count;
@@ -990,7 +990,7 @@ js_FileWrite(JSContext *cx, JSFile *file, jschar *buf, int32 len, int32 mode)
     }
     if(count==-1){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_WRITE_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "write", file->path);
     }
     return count;
 }
@@ -1280,7 +1280,7 @@ file_open(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (file->handle==NULL && file->nativehandle==NULL){
         file->isOpen = JS_FALSE;
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_OPEN_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "open", file->path);
         return JS_FALSE;
     }else{
         file->isOpen = JS_TRUE;
@@ -1309,7 +1309,7 @@ file_close(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         }else{
             if(PR_Close(file->handle)){
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                    JSFILEMSG_CLOSE_FAILED, file->path);
+                    JSFILEMSG_OP_FAILED, "close", file->path);
 
                 goto out;
             }
@@ -1317,7 +1317,7 @@ file_close(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }else{
         if(PCLOSE(file->nativehandle)==-1){
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                JSFILEMSG_PCLOSE_FAILED, file->path);
+                JSFILEMSG_OP_FAILED, "pclose", file->path);
             goto out;
         }
     }
@@ -1346,7 +1346,7 @@ file_remove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_TRUE;
     } else {
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_REMOVE_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "remove", file->path);
         goto out;
     }
 out:
@@ -1379,12 +1379,14 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     /* SECURITY */
     JSFILE_CHECK_NATIVE("copyTo");
 
-    /* make sure we are not reading a file open for writing */
-    if (file->isOpen && js_canRead(cx, file)) {
+    /* TODO: do we need these checks??? */
+    /* make sure we are not reading a file open for writing
+    if (file->isOpen && js_canWrite(cx, file)) {
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                 JSFILEMSG_CANNOT_COPY_FILE_OPEN_FOR_WRITING_ERROR, file->path);
         goto out;
     }
+    */
 
     /* open a closed file */
     if(!file->isOpen){
@@ -1394,7 +1396,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     if (file->handle==NULL){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_OPEN_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "open", file->path);
         goto out;
     }
 
@@ -1402,7 +1404,7 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     if(!handle){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_OPEN_FAILED, dest);
+            JSFILEMSG_OP_FAILED, "open", dest);
         goto out;
     }
 
@@ -1436,13 +1438,13 @@ file_copyTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     if(PR_Close(file->handle)!=PR_SUCCESS){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-              JSFILEMSG_CLOSE_FAILED, file->path);
+              JSFILEMSG_OP_FAILED, "close", file->path);
         goto out;
     }
 
     if(PR_Close(handle)!=PR_SUCCESS){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-              JSFILEMSG_CLOSE_FAILED, dest);
+              JSFILEMSG_OP_FAILED, "close", dest);
         goto out;
     }
 
@@ -1503,8 +1505,7 @@ file_flush(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     file = JS_GetInstancePrivate(cx, obj, &file_class, NULL);
 
     if (!file->isOpen) {
-        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-           JSFILEMSG_CANNOT_FLUSH_CLOSE_FILE_ERROR, file->path);
+        JS_ReportWarning("Cannot flush closed file %s", file->path);
         goto out;
     }
 
@@ -1515,7 +1516,7 @@ file_flush(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
       *rval = JSVAL_TRUE;
     else{
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-           JSFILEMSG_CANNOT_FLUSH, file->path);
+           JSFILEMSG_OP_FAILED, "flush", file->path);
        goto out;
     }
 out:
@@ -1906,7 +1907,7 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     dir = PR_OpenDir(file->path);
     if(!dir){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_OPEN_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "open", file->path);
         goto out;
     }
 
@@ -1957,7 +1958,7 @@ file_list(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     if(!PR_CloseDir(dir)){
         JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-            JSFILEMSG_CLOSE_FAILED, file->path);
+            JSFILEMSG_OP_FAILED, "close", file->path);
         goto out;
     }
     *rval = OBJECT_TO_JSVAL(array);
@@ -2006,7 +2007,7 @@ file_mkdir(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
             return JS_TRUE;
         }else{
             JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                JSFILEMSG_MKDIR_FAILED, fullName);
+                JSFILEMSG_OP_FAILED, "mkdir", fullName);
             JS_free(cx, fullName);
             goto out;
         }
@@ -2452,7 +2453,7 @@ file_getProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
             if(!PR_CloseDir(dir)){
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-                    JSFILEMSG_CLOSE_FAILED, file->path);
+                    JSFILEMSG_OP_FAILED, "close", file->path);
 
                 goto out;
             }
