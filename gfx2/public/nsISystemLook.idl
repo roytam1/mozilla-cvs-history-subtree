@@ -84,6 +84,9 @@ interface nsISystemLook : nsISupports
   const long color_Window                      = 38;
   const long color_WindowFrame                 = 39;
   const long color_WindowText                  = 40;
+
+  // moz extensions
+  const long color_moz_Field                   = 41;
   //@}
 
 
