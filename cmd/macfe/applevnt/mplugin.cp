@@ -684,7 +684,7 @@ NET_StreamClass* EmbedDefault(
 	if (request != NULL)
 	{
 		NPEmbeddedApp* fe_data = (NPEmbeddedApp*) request->fe_data;
-		if (fe_data != NULL)
+		if (fe_data != NULL && false)
 		{
 			CPluginView* plugin = (CPluginView*) fe_data->fe_data;
 			if (plugin != NULL)
