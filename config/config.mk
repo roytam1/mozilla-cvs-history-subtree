@@ -26,6 +26,51 @@ ifndef topsrcdir
 topsrcdir	= $(DEPTH)
 endif
 
+ifdef USE_AUTOCONF_2
+
+CCC		= $(CXX)
+
+NFSPWD		= $(MOD_DEPTH)/config/nfspwd
+
+CFLAGS		= $(CC_ONLY_FLAGS) $(OPTIMIZER) $(OS_CFLAGS)\
+		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+CXXFLAGS	= $(CCC_ONLY_FLAGS) $(OPTIMIZER) $(OS_CXXFLAGS)\
+		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+# For purify
+NOMD_CFLAGS	= $(CC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
+		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+NOMD_CCFLAGS	= $(CCC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
+		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
+
+INCLUDES	= $(LOCAL_INCLUDES) -I$(DIST)/include -I$(XPDIST)/include -I$(topsrcdir)/include $(OS_INCLUDES) $(G++INCLUDES)
+
+BUILD		= $(OBJDIR_NAME)
+OBJDIR		= $(OBJDIR_NAME)
+XPDIST		= $(DEPTH)/dist
+DIST		= $(DEPTH)/dist/$(OBJDIR_NAME)
+
+XPIDL_COMPILE 	= $(DIST)/bin/xpidl
+XPIDL_LINK	= $(DIST)/bin/xpt_link
+
+NSINSTALL	= $(DEPTH)/config/$(OBJDIR_NAME)/nsinstall
+
+ifeq ($(NSDISTMODE),copy)
+# copy files, but preserve source mtime
+INSTALL		= $(NSINSTALL) -t
+else
+ifeq ($(NSDISTMODE),absolute_symlink)
+# install using absolute symbolic links
+INSTALL		= $(NSINSTALL) -L `$(NFSPWD)`
+else
+# install using relative symbolic links
+INSTALL		= $(NSINSTALL) -R
+endif
+endif
+
+GARBAGE		+= $(DEPENDENCIES) core $(wildcard core.[0-9]*)
+
+else # !USE_AUTOCONF_2
+
 # This wastes time.
 include $(topsrcdir)/config/common.mk
 
@@ -461,7 +506,7 @@ endif
 ######################################################################
 # Now test variables that might have been set or overridden by $(MY_CONFIG).
 
-DEFINES         += -DOSTYPE=\"$(OS_CONFIG)\"
+#DEFINES         += -DOSTYPE=\"$(OS_CONFIG)\"
 
 # Specify that we are building a client.
 # This will instruct the cross platform libraries to
@@ -727,3 +772,5 @@ ifeq ($(USE_PTHREADS), 1)
 DEFINES += -D_PR_PTHREADS -UHAVE_CVAR_BUILT_ON_SEM
 endif
 endif #!USE_AUTOCONF
+
+endif #USE_AUTOCONF_2
