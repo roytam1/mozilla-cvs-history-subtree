@@ -491,7 +491,7 @@ nsXPInstallManager::OpenProgressDialog(const PRUnichar **aPackageList, PRUint32 
         rv = wwatch->OpenWindow(0, 
                                 statusDialogURL,
                                 "_blank", 
-                                "chrome,centerscreen,titlebar,resizable",
+                                "chrome,centerscreen,titlebar,dialog=no,resizable",
                                 params, 
                                 getter_AddRefs(newWindow));
     }
