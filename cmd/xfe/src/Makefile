@@ -171,6 +171,12 @@ CPPSRCS		+= \
 		  $(NULL)
 endif
 
+ifdef PRIVACY_FEATURES
+REQUIRES	+= \
+		  misc \
+		  $(NULL)
+endif
+
 ifdef EDITOR
 CPPSRCS		+= \
 		  EditorDrop.cpp \
