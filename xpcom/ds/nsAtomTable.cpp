@@ -15,7 +15,8 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#include "nsIAtom.h"
+
+#include "nsAtomTable.h"
 #include "nsString.h"
 #include "nsCRT.h"
 #include "plhash.h"
@@ -26,30 +27,6 @@
  */
 static nsrefcnt gAtoms;
 static struct PLHashTable* gAtomHashTable;
-
-class AtomImpl : public nsIAtom {
-public:
-  AtomImpl();
-  virtual ~AtomImpl();
-
-  NS_DECL_ISUPPORTS
-
-  void* operator new(size_t size, const PRUnichar* us, PRInt32 uslen);
-
-  void operator delete(void* ptr) {
-    ::operator delete(ptr);
-  }
-
-  virtual void ToString(nsString& aBuf) const;
-
-  virtual const PRUnichar* GetUnicode() const;
-
-  NS_IMETHOD SizeOf(nsISizeOfHandler* aHandler) const;
-
-  // Actually more; 0 terminated. This slot is reserved for the
-  // terminating zero.
-  PRUnichar mString[1];
-};
 
 AtomImpl::AtomImpl()
 {

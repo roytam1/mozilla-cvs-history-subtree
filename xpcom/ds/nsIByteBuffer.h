@@ -31,6 +31,8 @@ class nsIInputStream;
 /** Interface to a buffer that holds bytes */
 class nsIByteBuffer : public nsISupports {
 public:
+  NS_IMETHOD Init(PRUint32 aBufferSize) = 0;
+
   /** @return length of buffer, i.e. how many bytes are currently in it. */
   NS_IMETHOD_(PRUint32) GetLength(void) const = 0;
 
@@ -48,6 +50,15 @@ public:
   NS_IMETHOD_(PRInt32) Fill(nsresult* aErrorCode, nsIInputStream* aStream,
                             PRUint32 aKeep) = 0;
 };
+
+// XXX regenerate:
+#define NS_BYTEBUFFER_CID                            \
+{ /* 78323f10-0a8c-11d3-9331-000000000000 */         \
+    0x78323f10,                                      \
+    0x0a8c,                                          \
+    0x11d3,                                          \
+    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+}
 
 /** Create a new byte buffer using the given buffer size. */
 extern NS_BASE nsresult 

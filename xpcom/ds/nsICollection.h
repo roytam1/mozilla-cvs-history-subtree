@@ -1,55 +1,90 @@
-/*
- * DO NOT EDIT.  THIS FILE IS GENERATED FROM nsICollection.idl
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specifzic language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
+#ifndef nsICollection_h___
+#define nsICollection_h___
 
-#ifndef __gen_nsICollection_h__
-#define __gen_nsICollection_h__
+#include "nsISupports.h"
 
-#include "nsISupports.h" /* interface nsISupports */
-#include "nsrootidl.h" /* interface nsrootidl */
-#include "nsIEnumerator.h" /* interface nsIEnumerator */
+class nsIEnumerator;
 
-#ifdef XPIDL_JS_STUBS
-#include "jsapi.h"
-#endif
+// IID for the nsICollection interface
+#define NS_ICOLLECTION_IID                           \
+{ /* 83b6019c-cbc4-11d2-8cca-0060b0fc14a3 */         \
+    0x83b6019c,                                      \
+    0xcbc4,                                          \
+    0x11d2,                                          \
+    {0x8c, 0xca, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
+}
 
-/* starting interface:    nsICollection */
+// IID for the nsICollection Factory interface
+#define NS_ICOLLECTIONFACTORY_IID      \
+{ 0xf8052641, 0x8768, 0x11d2, \
+  { 0x8f, 0x39, 0x0, 0x60, 0x8, 0x31, 0x1, 0x94 } }
 
-/* {83b6019c-cbc4-11d2-8cca-0060b0fc14a3} */
-#define NS_ICOLLECTION_IID_STR "83b6019c-cbc4-11d2-8cca-0060b0fc14a3"
-#define NS_ICOLLECTION_IID \
-  {0x83b6019c, 0xcbc4, 0x11d2, \
-    { 0x8c, 0xca, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3 }}
+//----------------------------------------------------------------------
 
+/** nsICollection Interface
+ *  this may be ordered or not. a list or array, the implementation is opaque
+ */
 class nsICollection : public nsISupports {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICOLLECTION_IID)
+public:
 
-  /* unsigned long Count (); */
-  NS_IMETHOD Count(PRUint32 *_retval) = 0;
+  static const nsIID& GetIID(void) { static nsIID iid = NS_ICOLLECTION_IID; return iid; }
 
-  /* nsISupports GetElementAt (in unsigned long index); */
-  NS_IMETHOD GetElementAt(PRUint32 index, nsISupports **_retval) = 0;
+  /** Return the count of elements in the collection.
+   */
+  NS_IMETHOD Count(PRUint32 *result) = 0;
 
-  /* void SetElementAt (in unsigned long index, in nsISupports item); */
-  NS_IMETHOD SetElementAt(PRUint32 index, nsISupports *item) = 0;
+  /**
+   * Gets an element by index.
+   */
+  NS_IMETHOD GetElementAt(PRUint32 index, nsISupports* *result) = 0;
 
-  /* void AppendElement (in nsISupports item); */
-  NS_IMETHOD AppendElement(nsISupports *item) = 0;
+  /**
+   * Sets an element by index. Any existing element will be released.
+   */
+  NS_IMETHOD SetElementAt(PRUint32 index, nsISupports* value) = 0;
 
-  /* void RemoveElement (in nsISupports item); */
-  NS_IMETHOD RemoveElement(nsISupports *item) = 0;
+  /**
+   * AppendElement will take an ISupports and keep track of it 
+   * @param aItem is the Item to be added WILL BE ADDREFFED
+   * @return NS_OK if successfully added
+   * @return NS_ERROR_FAILURE otherwise
+   */
+  NS_IMETHOD AppendElement(nsISupports *aItem) = 0;
 
-  /* nsIEnumerator Enumerate (); */
-  NS_IMETHOD Enumerate(nsIEnumerator **_retval) = 0;
+  /** RemoveElement will take an nsISupports and remove it from the collection
+   * @param aItem is the item to be removed  WILL BE RELEASED
+   * @return NS_OK if successfully added
+   * @return NS_ERROR_FAILURE otherwise
+   */
+  NS_IMETHOD RemoveElement(nsISupports *aItem) = 0;
 
-  /* void Clear (); */
-  NS_IMETHOD Clear() = 0;
+  /** Return an enumeration for the collection.
+   */
+  NS_IMETHOD Enumerate(nsIEnumerator* *result) = 0;
 
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsICollection *priv);
-#endif
+  /** Clear will clear all items from list
+   */
+  NS_IMETHOD Clear(void) = 0;
+
 };
 
-#endif /* __gen_nsICollection_h__ */
+
+#endif /* nsICollection_h___ */
+

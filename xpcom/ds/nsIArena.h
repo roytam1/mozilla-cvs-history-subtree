@@ -39,7 +39,9 @@ class nsIArena : public nsISupports {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IARENA_IID; return iid; }
 
-  virtual void* Alloc(PRInt32 size) = 0;
+  NS_IMETHOD Init(PRUint32 arenaBlockSize) = 0;
+
+  NS_IMETHOD_(void*) Alloc(PRUint32 size) = 0;
 };
 
 /**
@@ -48,6 +50,17 @@ public:
  * using the PR heap.
  */
 extern NS_BASE nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
-                                        PRInt32 aArenaBlockSize = 0);
+                                        PRUint32 aArenaBlockSize = 0);
+
+// XXX regenerate:
+#define NS_ARENA_CID                                 \
+{ /* e139e1d0-0a89-11d3-9331-000000000000 */         \
+    0xe139e1d0,                                      \
+    0x0a89,                                          \
+    0x11d3,                                          \
+    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+}
 
 #endif /* nsIArena_h___ */
+
+

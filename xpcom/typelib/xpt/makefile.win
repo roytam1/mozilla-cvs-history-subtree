@@ -14,7 +14,7 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-DEPTH=..\..
+DEPTH=..\..\..
 IGNORE_MANIFEST=1
 
 # Don't recur into xptinfo and xptcall, because they may require xpidl,

@@ -19,7 +19,7 @@ IGNORE_MANIFEST=1
 
 MAKE_OBJ_TYPE	= DLL
 
-DEPTH=..\..\..
+DEPTH=..\..\..\..
 
 LIBNAME = .\$(OBJDIR)\libxpt$(MOZ_BITS)
 DLL = $(LIBNAME).dll

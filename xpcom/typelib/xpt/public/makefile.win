@@ -17,7 +17,7 @@
 
 IGNORE_MANIFEST=1
 
-DEPTH=..\..\..
+DEPTH=..\..\..\..
 
 EXPORTS =	xpt_struct.h	\
 		xpt_xdr.h	\

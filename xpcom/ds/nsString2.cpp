@@ -829,8 +829,8 @@ nsString2& nsString2::Append(const char* aCString,PRInt32 aCount) {
     nsStr temp;
     Initialize(temp,eOneByte);
     temp.mStr=(char*)aCString;
-    if(-1==aCount) aCount= nsCRT::strlen(aCString);
-    temp.mLength = aCount;
+    temp.mLength=nsCRT::strlen(aCString);
+    if(-1==aCount) aCount=temp.mLength;
     nsStr::Append(*this,temp,0,aCount,mAgent);
   }
   return *this;
@@ -848,8 +848,8 @@ nsString2& nsString2::Append(const PRUnichar* aString,PRInt32 aCount) {
     nsStr temp;
     Initialize(temp,eTwoByte);
     temp.mUStr=(PRUnichar*)aString;
-    if(-1==aCount) aCount= nsCRT::strlen(aString);
-    temp.mLength = aCount;
+    temp.mLength=nsCRT::strlen(aString);
+    if(-1==aCount) aCount=temp.mLength;
     nsStr::Append(*this,temp,0,aCount,mAgent);
   }
   return *this;

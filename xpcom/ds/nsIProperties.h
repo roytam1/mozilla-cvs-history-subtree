@@ -29,6 +29,15 @@
     {0x93, 0x11, 0x00, 0xe0, 0x98, 0x05, 0x57, 0x0f} \
 }
 
+// XXX regenerate:
+#define NS_PROPERTIES_CID                            \
+{ /* 9017a8a0-0a90-11d3-9331-000000000000 */         \
+    0x9017a8a0,                                      \
+    0x0a90,                                          \
+    0x11d3,                                          \
+    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+}
+
 class nsIProperties : public nsISupports {
 public:
     static const nsIID& GetIID() { static nsIID iid = NS_IPROPERTIES_IID; return iid; }

@@ -38,7 +38,13 @@ EXPORTS =                          \
         nsSpecialSystemDirectory.h \
         $(NULL)			
 
-XPIDLSRCS =               \
+xXPILD_MODULE = xpcom_io
+
+xXPIDLSRCS =                 \
+        .\nsIUri.idl        \
+        .\nsIUrl.idl        \
+        .\nsIFileUrl.idl    \
+        .\nsIUriManager.idl \
         $(NULL)
 
 ################################################################################
@@ -62,6 +68,7 @@ CPP_OBJS =                                       \
         .\$(OBJDIR)\nsFileStream.obj             \
         .\$(OBJDIR)\nsIFileStream.obj            \
         .\$(OBJDIR)\nsIStringStream.obj          \
+        .\$(OBJDIR)\nsPipe.obj                   \
         .\$(OBJDIR)\nsSpecialSystemDirectory.obj \
         .\$(OBJDIR)\nsUnicharInputStream.obj     \
         $(NULL)

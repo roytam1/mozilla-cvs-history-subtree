@@ -18,7 +18,6 @@
 
 #define NS_IMPL_IDS
 
-#include "nsXPComCIID.h"
 #include "nsIEventQueueService.h"
 #include "nsINetService.h"
 #include "nsIProperties.h"
@@ -29,7 +28,7 @@
 #include "plevent.h"
 #endif
 
-#define TEST_URL "resource:/res/test.properties"
+#define TEST_URL "resource:/res/test.PersistentProperties"
 
 #ifdef XP_PC
 #define NETLIB_DLL "netlib.dll"
@@ -46,7 +45,6 @@
 #define XPCOM_DLL "libxpcom.so"
 #endif
 #endif
-static NS_DEFINE_IID(kEventQueueCID, NS_EVENTQUEUE_CID);
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_IID(kIEventQueueServiceIID, NS_IEVENTQUEUESERVICE_IID);
 static NS_DEFINE_IID(kINetServiceIID, NS_INETSERVICE_IID);
@@ -59,42 +57,21 @@ extern "C" void NS_SetupRegistry();
 #endif
 
 int
-main(int argc, char* argv[])
+main(int argc, char *argv[])
 {
-  nsresult ret;
-
-  ret = nsComponentManager::RegisterComponent(kNetServiceCID, NULL,
-    NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
-  if (NS_FAILED(ret)) {
-    printf("cannot register net service\n");
-    return 1;
-  }
-  ret = nsComponentManager::RegisterComponent(kEventQueueCID, NULL,
-    NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  if (NS_FAILED(ret)) {
-    printf("cannot register event queue\n");
-    return 1;
-  }
-  ret = nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL,
-    NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  if (NS_FAILED(ret)) {
-    printf("cannot register event queue service\n");
-    return 1;
-  }
-  ret = nsComponentManager::RegisterComponent(kPersistentPropertiesCID, NULL,
-    NULL, RAPTORBASE_DLL, PR_FALSE, PR_FALSE);
-  if (NS_FAILED(ret)) {
-    printf("cannot register persistent properties\n");
-    return 1;
-  }
+  nsComponentManager::RegisterComponent(kNetServiceCID, NULL, NULL, NETLIB_DLL,
+    PR_FALSE, PR_FALSE);
+  nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL,
+    PR_FALSE, PR_FALSE);
 #ifdef XP_MAC    // have not build this on PC and UNIX yet so make it #ifdef XP_MAC
   NS_SetupRegistry(); 
 #endif
-
+  
+  nsresult ret;
   nsIEventQueueService* pEventQueueService = nsnull;
   ret = nsServiceManager::GetService(kEventQueueServiceCID,
     kIEventQueueServiceIID, (nsISupports**) &pEventQueueService);
-  if (NS_FAILED(ret) || (!pEventQueueService)) {
+  if (NS_FAILED(ret)) {
     printf("cannot get event queue service\n");
     return 1;
   }
@@ -106,53 +83,43 @@ main(int argc, char* argv[])
   nsINetService* pNetService = nsnull;
   ret = nsServiceManager::GetService(kNetServiceCID, kINetServiceIID,
     (nsISupports**) &pNetService);
-  if (NS_FAILED(ret) || (!pNetService)) {
+  if (NS_FAILED(ret)) {
     printf("cannot get net service\n");
     return 1;
   }
-  nsIURL* url = nsnull;
+  nsIURL *url = nsnull;
   ret = pNetService->CreateURL(&url, nsString(TEST_URL), nsnull, nsnull,
     nsnull);
-  if (NS_FAILED(ret) || (!url)) {
+  if (NS_FAILED(ret)) {
     printf("cannot create URL\n");
     return 1;
   }
-  nsIInputStream* in = nsnull;
+  nsIInputStream *in = nsnull;
   ret = pNetService->OpenBlockingStream(url, nsnull, &in);
-  if (NS_FAILED(ret) || (!in)) {
+  if (NS_FAILED(ret)) {
     printf("cannot open stream\n");
     return 1;
   }
-  nsIPersistentProperties* props = nsnull;
+  nsIPersistentProperties *props = nsnull;
   ret = nsComponentManager::CreateInstance(kPersistentPropertiesCID, NULL,
     kIPersistentPropertiesIID, (void**) &props);
-  if (NS_FAILED(ret) || (!props)) {
+  if (NS_FAILED(ret)) {
     printf("create nsIPersistentProperties failed\n");
     return 1;
   }
-  ret = props->Load(in);
-  if (NS_FAILED(ret)) {
-    printf("cannot load properties\n");
-    return 1;
-  }
+  props->Load(in);
   int i = 1;
   while (1) {
     char name[16];
-    name[0] = 0;
     sprintf(name, "%d", i);
     nsAutoString v("");
-    ret = props->GetProperty(name, v);
-    if (NS_FAILED(ret) || (!v.Length())) {
+    props->GetProperty(name, v);
+    if (!v.Length()) {
       break;
     }
-    char* value = v.ToNewCString();
-    if (value) {
-      cout << "\"" << i << "\"=\"" << value << "\"" << endl;
-      delete[] value;
-    }
-    else {
-      printf("%d: ToNewCString failed\n", i);
-    }
+    char *value = v.ToNewCString();
+    cout << "\"" << i << "\"=\"" << value << "\"" << endl;
+    delete[] value;
     i++;
   }
 

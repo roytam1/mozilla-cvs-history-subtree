@@ -58,6 +58,22 @@ nsBuffer::~nsBuffer()
 
 NS_IMPL_ISUPPORTS(nsBuffer, nsIBuffer::GetIID());
 
+NS_METHOD
+nsBuffer::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
+{
+    if (aOuter)
+        return NS_ERROR_NO_AGGREGATION;
+
+    nsBuffer* buf = new nsBuffer();
+    if (buf == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(buf);
+    nsresult rv = buf->QueryInterface(aIID, aResult);
+    NS_RELEASE(buf);
+    return rv;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 nsresult
@@ -324,17 +340,16 @@ NS_NewBuffer(nsIBuffer* *result,
     NS_WITH_SERVICE(nsIAllocator, alloc, kAllocatorCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsBuffer* buf = new nsBuffer();
-    if (buf == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
+    nsBuffer* buf;
+    rv = nsBuffer::Create(NULL, nsIBuffer::GetIID(), (void**)&buf);
+    if (NS_FAILED(rv)) return rv;
 
     rv = buf->Init(growBySize, maxSize, alloc);
     if (NS_FAILED(rv)) {
-        delete buf;
+        NS_RELEASE(buf);
         return rv;
     }
 
-    NS_ADDREF(buf);
     *result = buf;
     return NS_OK;
 }
@@ -349,17 +364,16 @@ NS_NewPageBuffer(nsIBuffer* *result,
     NS_WITH_SERVICE(nsIAllocator, alloc, kPageManagerCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsBuffer* buf = new nsBuffer();
-    if (buf == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
+    nsBuffer* buf;
+    rv = nsBuffer::Create(NULL, nsIBuffer::GetIID(), (void**)&buf);
+    if (NS_FAILED(rv)) return rv;
 
     rv = buf->Init(growBySize, maxSize, alloc);
     if (NS_FAILED(rv)) {
-        delete buf;
+        NS_RELEASE(buf);
         return rv;
     }
 
-    NS_ADDREF(buf);
     *result = buf;
     return NS_OK;
 }

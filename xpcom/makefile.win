@@ -26,6 +26,7 @@ DIRS=   typelib        \
         components     \
         threads        \
         reflect        \
+        proxy          \
         tools          \
         build          \
         tests

@@ -416,6 +416,26 @@ nsPageMgr::~nsPageMgr()
     }
 }
 
+NS_METHOD
+nsPageMgr::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
+{
+    if (aOuter)
+        return NS_ERROR_NO_AGGREGATION;
+    nsPageMgr* pageMgr = new nsPageMgr();
+    if (pageMgr == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(pageMgr);
+    nsresult rv = pageMgr->Init();
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(pageMgr);
+        return rv;
+    }
+    rv = pageMgr->QueryInterface(aIID, aResult);
+    NS_RELEASE(pageMgr);
+    return NS_OK;
+}
+
 NS_IMPL_ADDREF(nsPageMgr);
 NS_IMPL_RELEASE(nsPageMgr);
 
