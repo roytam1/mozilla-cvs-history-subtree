@@ -3794,19 +3794,6 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
 NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
-
-  // XXX there are some rounding problems in this code (or in the image frame)
-
-  nsresult rv;
-
-  nsCOMPtr<nsIImageFrame> img;
-  rv = aImage->GetCurrentFrame(getter_AddRefs(img));
-
-  if (NS_FAILED(rv))
-    return rv;
-
-#if 1
-  // XXX this is ugly.
   nsPoint pt;
   nsRect sr;
 
@@ -3814,8 +3801,7 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
-//	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
-#endif
+  //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
 
   nsCOMPtr<nsPIImageContainerWin> cw(do_QueryInterface(aImage));
   if (!cw) return NS_ERROR_FAILURE;
