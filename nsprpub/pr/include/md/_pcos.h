@@ -60,6 +60,9 @@ PR_END_EXTERN_C
 #ifdef MOZ_BITS
 #include <time.h>
 #endif
+#ifdef XP_OS2_EMX
+#include <sys/types.h>
+#endif
 #include <sys/stat.h>
 #include <io.h>
 #include <fcntl.h>          /* O_BINARY */

@@ -19,14 +19,16 @@
 #include "primpl.h"
 #include <process.h>  /* for _beginthread() */
 
-APIRET (* APIENTRY QueryThreadContext)(TID, ULONG, PCONTEXTRECORD);
+/* --- Declare these to avoid "implicit" warnings --- */
+PR_EXTERN(void) _PR_MD_NEW_SEM(_MDSemaphore *md, PRUintn value);
+PR_EXTERN(void) _PR_MD_DESTROY_SEM(_MDSemaphore *md);
 
 /* --- globals ------------------------------------------------ */
 _NSPR_TLS*        pThreadLocalStorage = 0;
 _PRInterruptTable             _pr_interruptTable[] = { { 0 } };
 
 PR_IMPLEMENT(void)
-_PR_MD_ENSURE_TLS()
+_PR_MD_ENSURE_TLS(void)
 {
    if(!pThreadLocalStorage)
    {
@@ -65,14 +67,12 @@ _PR_MD_INIT_PRIMORDIAL_THREAD(PRThread *thread)
 PR_IMPLEMENT(PRStatus)
 _PR_MD_INIT_THREAD(PRThread *thread)
 {
-   APIRET rc;
-
    if (thread->flags & _PR_PRIMORDIAL)
       _PR_MD_INIT_PRIMORDIAL_THREAD(thread);
 
    /* Create the blocking IO semaphore */
    _PR_MD_NEW_SEM(&thread->md.blocked_sema, 1);
-   return (thread->md.blocked_sema.sem != NULL) ? PR_SUCCESS : PR_FAILURE;
+   return (thread->md.blocked_sema.sem != 0) ? PR_SUCCESS : PR_FAILURE;
 }
 
 PR_IMPLEMENT(PRStatus) 

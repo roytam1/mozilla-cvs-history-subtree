@@ -20,6 +20,10 @@
  * This file implements _PR_MD_PR_POLL for OS/2.
  */
 
+#ifdef XP_OS2_EMX
+	#include <sys/time.h> /* For timeval. */
+#endif
+
 #include "primpl.h"
 
 PRInt32
@@ -27,8 +31,7 @@ _PR_MD_PR_POLL(PRPollDesc *pds, PRIntn npds,
 						PRIntervalTime timeout)
 {
     PRPollDesc *pd, *epd;
-    PRInt32 n, err, pdcnt;
-    PRThread *me = _PR_MD_CURRENT_THREAD();
+    PRInt32 n, err;
 
   	 fd_set rd, wt, ex;
   	 struct timeval tv, *tvp = NULL;

@@ -428,14 +428,11 @@ PR_LoadLibrary(const char *name)
 
 #ifdef XP_OS2  /* Why isn't all this stuff in MD code?! */
     {
-        NODL_PROC *pfn;
         HMODULE h;
         UCHAR pszError[_MAX_PATH];
         ULONG ulRc = NO_ERROR;
-        int first_try = 1;
 
-        retry:
-              ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
+        ulRc = DosLoadModule(pszError, _MAX_PATH, (PSZ) name, &h);
       	if (ulRc != NO_ERROR) {
       	    PR_DELETE(lm);
       	    goto unlock;

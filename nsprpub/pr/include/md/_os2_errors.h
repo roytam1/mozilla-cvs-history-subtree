@@ -21,7 +21,9 @@
 
 #include "md/_os2.h"
 #include <assert.h>
+#ifdef XP_OS2_VACPP
 #include <nerrno.h>
+#endif
 
 PR_EXTERN(void) _MD_os2_map_opendir_error(PRInt32 err);
 #define	_PR_MD_MAP_OPENDIR_ERROR	_MD_os2_map_opendir_error
