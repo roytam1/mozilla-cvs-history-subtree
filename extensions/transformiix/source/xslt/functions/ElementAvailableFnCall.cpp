@@ -37,7 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "Names.h"
 #include "txIXPathContext.h"
 #include "txAtoms.h"
 #include "XMLUtils.h"
@@ -53,8 +52,7 @@
  * Expr and is used for namespaceID resolution
 **/
 ElementAvailableFunctionCall::ElementAvailableFunctionCall(Node* aQNameResolveNode)
-    : FunctionCall(ELEMENT_AVAILABLE_FN),
-      mQNameResolveNode(aQNameResolveNode)
+    : mQNameResolveNode(aQNameResolveNode)
 {
 }
 
@@ -135,3 +133,9 @@ ExprResult* ElementAvailableFunctionCall::evaluate(txIEvalContext* aContext)
     return result;
 }
 
+nsresult ElementAvailableFunctionCall::getNameAtom(txAtom** aAtom)
+{
+    *aAtom = txXSLTAtoms::elementAvailable;
+    TX_ADDREF_ATOM(*aAtom);
+    return NS_OK;
+}

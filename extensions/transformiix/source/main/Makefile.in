@@ -89,7 +89,6 @@ OBJS =../base/ArrayList.$(OBJ_SUFFIX) \
   ../xpath/UnionExpr.$(OBJ_SUFFIX) \
   ../xpath/UnaryExpr.$(OBJ_SUFFIX) \
   ../xpath/VariableRefExpr.$(OBJ_SUFFIX) \
-  ../xpath/XPathNames.$(OBJ_SUFFIX) \
   ../xml/XMLUtils.$(OBJ_SUFFIX) \
   ../xml/XMLDOMUtils.$(OBJ_SUFFIX) \
   ../xml/parser/XMLParser.$(OBJ_SUFFIX) \

@@ -39,7 +39,7 @@
 #include "XSLTFunctions.h"
 #include "ProcessorState.h"
 #include "primitives.h"
-#include "Names.h"
+#include "txAtoms.h"
 #include "txIXPathContext.h"
 #include <math.h>
 
@@ -61,8 +61,7 @@ const UNICODE_CHAR txFormatNumberFunctionCall::FORMAT_QUOTE = '\'';
  */
 txFormatNumberFunctionCall::txFormatNumberFunctionCall(ProcessorState* aPs,
                                                        Node* aQNameResolveNode)
-    : FunctionCall(FORMAT_NUMBER_FN),
-      mPs(aPs),
+    : mPs(aPs),
       mQNameResolveNode(aQNameResolveNode)
 {
 }
@@ -477,6 +476,12 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
     return new StringResult(res);
 } //-- evaluate
 
+nsresult txFormatNumberFunctionCall::getNameAtom(txAtom** aAtom)
+{
+    *aAtom = txXSLTAtoms::formatNumber;
+    TX_ADDREF_ATOM(*aAtom);
+    return NS_OK;
+}
 
 /*
  * txDecimalFormat

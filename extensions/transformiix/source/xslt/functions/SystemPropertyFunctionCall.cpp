@@ -1,4 +1,3 @@
-#include "Names.h"
 #include "txIXPathContext.h"
 #include "txAtoms.h"
 #include "XMLUtils.h"
@@ -14,8 +13,7 @@
  * Expr and is used for namespaceID resolution
 **/
 SystemPropertyFunctionCall::SystemPropertyFunctionCall(Node* aQNameResolveNode)
-    : FunctionCall(SYSTEM_PROPERTY_FN),
-      mQNameResolveNode(aQNameResolveNode)      
+    : mQNameResolveNode(aQNameResolveNode)      
 {
 }
 
@@ -66,3 +64,9 @@ ExprResult* SystemPropertyFunctionCall::evaluate(txIEvalContext* aContext)
     return result;
 }
 
+nsresult SystemPropertyFunctionCall::getNameAtom(txAtom** aAtom)
+{
+    *aAtom = txXSLTAtoms::systemProperty;
+    TX_ADDREF_ATOM(*aAtom);
+    return NS_OK;
+}

@@ -34,9 +34,8 @@
 #include "Expr.h"
 #include "TxString.h"
 #include "Map.h"
-#include "List.h"
+#include "ExprResult.h"
 
-class ExprResult;
 class NamedMap;
 class ProcessorState;
 class txPattern;
@@ -53,10 +52,7 @@ public:
     **/
     DocumentFunctionCall(ProcessorState* aPs, Node* aDefResolveNode);
 
-    /**
-     * Virtual methods from FunctionCall
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     ProcessorState* mProcessorState;
@@ -75,13 +71,7 @@ public:
      */
     txKeyFunctionCall(ProcessorState* aPs, Node* aQNameResolveNode);
 
-    /*
-     * Evaluates a key() xslt-functioncall. First argument is name of key
-     * to use, second argument is value to look up.
-     *
-     * Virtual function from FunctionCall
-     */
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     ProcessorState* mProcessorState;
@@ -187,10 +177,7 @@ public:
     **/
     txFormatNumberFunctionCall(ProcessorState* aPs, Node* aQNameResolveNode);
 
-    /**
-     * Virtual function from FunctionCall
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     static const UNICODE_CHAR FORMAT_QUOTE;
@@ -247,10 +234,7 @@ public:
     **/
     CurrentFunctionCall(ProcessorState* ps);
 
-    /**
-     * Virtual function from FunctionCall
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     ProcessorState* mPs;
@@ -268,15 +252,7 @@ public:
     **/
     UnparsedEntityUriFunctionCall();
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
 };
@@ -293,15 +269,7 @@ public:
     **/
     GenerateIdFunctionCall();
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     static const char printfFmt[];
@@ -321,15 +289,7 @@ public:
     **/
     SystemPropertyFunctionCall(Node* aQNameResolveNode);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     /*
@@ -352,15 +312,7 @@ public:
     **/
     ElementAvailableFunctionCall(Node* aQNameResolveNode);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     /*
@@ -381,15 +333,7 @@ public:
     **/
     FunctionAvailableFunctionCall(Node* aQNameResolveNode);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_FUNCTION;
 
 private:
     /*

@@ -37,7 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "Names.h"
 #include "txIXPathContext.h"
 #include "txAtoms.h"
 #include "XMLUtils.h"
@@ -51,8 +50,7 @@
  * Creates a new function-available function call
 **/
 FunctionAvailableFunctionCall::FunctionAvailableFunctionCall(Node* aQNameResolveNode)
-    : FunctionCall(FUNCTION_AVAILABLE_FN),
-      mQNameResolveNode(aQNameResolveNode)
+    : mQNameResolveNode(aQNameResolveNode)
 {
 }
 
@@ -134,3 +132,9 @@ ExprResult* FunctionAvailableFunctionCall::evaluate(txIEvalContext* aContext)
     return result;
 }
 
+nsresult FunctionAvailableFunctionCall::getNameAtom(txAtom** aAtom)
+{
+    *aAtom = txXSLTAtoms::functionAvailable;
+    TX_ADDREF_ATOM(*aAtom);
+    return NS_OK;
+}
