@@ -274,7 +274,7 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 static JSBool
 JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 {
-    // Manually load the required native methods.
+    /* Manually load the required native methods. */
     static JNINativeMethod nativeMethods[] = {
         "initClass", "()V", (void*)&Java_netscape_javascript_JSObject_initClass,
         "getMember", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getMember,
