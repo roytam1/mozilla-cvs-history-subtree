@@ -80,7 +80,7 @@ sub PrintExampleConfig {
 sub ParseArgs {
     PrintUsage() if $#ARGV == -1;
 
-    $args = {};
+    my $args = {};
     while (my $arg = shift @ARGV) {
         $Settings::BuildDepend = 0, next if $arg eq '--clobber';
         $Settings::BuildDepend = 1, next if $arg eq '--depend';
