@@ -19,9 +19,9 @@ topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-MODULE = netwerk
+MODULE = necko
 
-LIBRARY_NAME = resourceprotocol
+LIBRARY_NAME = necko_resource
 
 IS_COMPONENT = 1
 
@@ -32,7 +32,7 @@ CPPSRCS =			      \
         nsResourceProtocolFactory.cpp \
         $(NULL)
 
-REQUIRES = xpcom netwerk 
+REQUIRES = xpcom necko 
 
 include $(topsrcdir)/config/config.mk
 
@@ -43,4 +43,4 @@ endif
 
 TARGET = $(LIBARY)
 
-include $(DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk

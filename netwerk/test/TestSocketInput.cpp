@@ -22,6 +22,7 @@
 #endif
 
 #include "nscore.h"
+#include "nsCOMPtr.h"
 #include "nsISocketTransportService.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
@@ -45,26 +46,16 @@ public:
   NS_DECL_ISUPPORTS
 
   // IStreamListener interface...
-  NS_IMETHOD OnStartBinding(nsISupports* context);
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports* context);
 
-  NS_IMETHOD OnDataAvailable(nsISupports* context,
-                             nsIBufferInputStream *aIStream, 
+  NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports* context,
+                             nsIInputStream *aIStream, 
                              PRUint32 aSourceOffset,
                              PRUint32 aLength);
 
-  NS_IMETHOD OnStopBinding(nsISupports* context,
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports* context,
                            nsresult aStatus,
                            const PRUnichar* aMsg);
-
-  NS_IMETHOD OnStartRequest(nsISupports* context) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  NS_IMETHOD OnStopRequest(nsISupports* context,
-                           nsresult aStatus,
-                           const PRUnichar* aMsg) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
 
 };
 
@@ -84,23 +75,24 @@ NS_IMPL_ISUPPORTS(InputTestConsumer,kIStreamListenerIID);
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStartBinding(nsISupports* context)
+InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
-  printf("+++ OnStartBinding +++\n");
+  printf("+++ OnStartRequest +++\n");
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnDataAvailable(nsISupports* context,
-                                   nsIBufferInputStream *aIStream, 
+InputTestConsumer::OnDataAvailable(nsIChannel* channel, 
+                                   nsISupports* context,
+                                   nsIInputStream *aIStream, 
                                    PRUint32 aSourceOffset,
                                    PRUint32 aLength)
 {
   char buf[1025];
   while (aLength > 0) {
     PRUint32 amt;
-    nsresult rv = aIStream->Read(buf, 1024, &amt);
+    aIStream->Read(buf, 1024, &amt);
     buf[amt] = '\0';
     printf(buf);
     aLength -= amt;
@@ -111,15 +103,22 @@ InputTestConsumer::OnDataAvailable(nsISupports* context,
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStopBinding(nsISupports* context,
-                         nsresult aStatus,
-                         const PRUnichar* aMsg)
+InputTestConsumer::OnStopRequest(nsIChannel* channel, 
+                                 nsISupports* context,
+                                 nsresult aStatus,
+                                 const PRUnichar* aMsg)
 {
   gKeepRunning = 0;
-  printf("+++ OnStopBinding +++\n");
+  printf("+++ OnStopRequest status %x +++\n", aStatus);
   return NS_OK;
 }
 
+
+nsresult NS_AutoregisterComponents()
+{
+  nsresult rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
+  return rv;
+}
 
 int
 main(int argc, char* argv[])
@@ -138,21 +137,20 @@ main(int argc, char* argv[])
 //port = portString.ToInteger(&rv);
   port = 13;
 
-  // XXX why do I have to do this?!
-  rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
-                                        "components");
+  rv = NS_AutoregisterComponents();
   if (NS_FAILED(rv)) return rv;
 
   // Create the Event Queue for this thread...
   NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
-  nsIEventQueue* eventQ;
   rv = eventQService->CreateThreadEventQueue();
   if (NS_FAILED(rv)) return rv;
 
-  eventQService->GetThreadEventQueue(PR_CurrentThread(), &eventQ);
-  
+  nsCOMPtr<nsIEventQueue> eventQ;
+  rv = eventQService->GetThreadEventQueue(PR_CurrentThread(), getter_AddRefs(eventQ));
+  if (NS_FAILED(rv)) return rv;
+
   NS_WITH_SERVICE(nsISocketTransportService, sts, kSocketTransportServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
@@ -160,7 +158,7 @@ main(int argc, char* argv[])
 
   rv = sts->CreateTransport(hostName, port, &transport);
   if (NS_SUCCEEDED(rv)) {
-    transport->AsyncRead(0, -1, nsnull, eventQ, new InputTestConsumer);
+    transport->AsyncRead(0, -1, nsnull, new InputTestConsumer);
 
     NS_RELEASE(transport);
   }
@@ -188,7 +186,6 @@ main(int argc, char* argv[])
 
   sts->Shutdown();
   NS_RELEASE(sts);
-  NS_RELEASE(eventQService);
-
   return 0;
 }
+

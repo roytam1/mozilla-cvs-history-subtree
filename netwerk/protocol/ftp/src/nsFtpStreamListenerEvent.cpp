@@ -19,19 +19,22 @@
 #include "nsFtpStreamListenerEvent.h"
 #include "nsIBufferInputStream.h"
 #include "nscore.h"
-
+#include "nsIChannel.h"
 
 nsFtpStreamListenerEvent::nsFtpStreamListenerEvent(nsIStreamListener* listener,
-                                             nsISupports* context)
-    : mListener(listener), mContext(context)
+                                                   nsIChannel* channel,
+                                                   nsISupports* context)
+    : mListener(listener), mChannel(channel), mContext(context)
 {
-    NS_IF_ADDREF(mListener);
+    NS_ADDREF(mListener);
+    NS_ADDREF(mChannel);
     NS_IF_ADDREF(mContext);
 }
 
 nsFtpStreamListenerEvent::~nsFtpStreamListenerEvent()
 {
-    NS_IF_RELEASE(mListener);
+    NS_RELEASE(mListener);
+    NS_RELEASE(mChannel);
     NS_IF_RELEASE(mContext);
 }
 
@@ -72,25 +75,25 @@ nsFtpStreamListenerEvent::Fire(nsIEventQueue* aEventQueue)
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// OnStartBinding...
+// OnStartRequest...
 //
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
-nsFtpOnStartBindingEvent::HandleEvent()
+nsFtpOnStartRequestEvent::HandleEvent()
 {
   nsIStreamObserver* receiver = (nsIStreamObserver*)mListener;
-  return receiver->OnStartBinding(mContext);
+  return receiver->OnStartRequest(mChannel, mContext);
 }
 /*
 NS_IMETHODIMP 
-nsMarshalingStreamObserver::OnStartBinding(nsISupports* context)
+nsMarshalingStreamObserver::OnStartRequest(nsISupports* context)
 {
     nsresult rv = GetStatus();
     if (NS_FAILED(rv)) return rv;
 
-    nsOnStartBindingEvent* event = 
-        new nsOnStartBindingEvent(this, context);
+    nsOnStartRequestEvent* event = 
+        new nsOnStartRequestEvent(this, context);
     if (event == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -115,7 +118,7 @@ nsFtpOnDataAvailableEvent::~nsFtpOnDataAvailableEvent()
 }
 
 nsresult
-nsFtpOnDataAvailableEvent::Init(nsIBufferInputStream* aIStream, 
+nsFtpOnDataAvailableEvent::Init(nsIInputStream* aIStream, 
                                 PRUint32 aSourceOffset, PRUint32 aLength)
 {
     mLength = aLength;
@@ -129,7 +132,7 @@ NS_IMETHODIMP
 nsFtpOnDataAvailableEvent::HandleEvent()
 {
   nsIStreamListener* receiver = (nsIStreamListener*)mListener;
-  return receiver->OnDataAvailable(mContext, mIStream, mSourceOffset, mLength);
+  return receiver->OnDataAvailable(mChannel, mContext, mIStream, mSourceOffset, mLength);
 }
 /*
 NS_IMETHODIMP 
@@ -159,16 +162,16 @@ nsMarshalingStreamListener::OnDataAvailable(nsISupports* context,
 */
 ////////////////////////////////////////////////////////////////////////////////
 //
-// OnStopBinding
+// OnStopRequest
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-nsFtpOnStopBindingEvent::~nsFtpOnStopBindingEvent()
+nsFtpOnStopRequestEvent::~nsFtpOnStopRequestEvent()
 {
 }
 
 nsresult
-nsFtpOnStopBindingEvent::Init(nsresult status, PRUnichar* aMsg)
+nsFtpOnStopRequestEvent::Init(nsresult status, PRUnichar* aMsg)
 {
     mStatus = status;
     mMessage = aMsg;
@@ -176,22 +179,22 @@ nsFtpOnStopBindingEvent::Init(nsresult status, PRUnichar* aMsg)
 }
 
 NS_IMETHODIMP
-nsFtpOnStopBindingEvent::HandleEvent()
+nsFtpOnStopRequestEvent::HandleEvent()
 {
   nsIStreamObserver* receiver = (nsIStreamObserver*)mListener;
-  return receiver->OnStopBinding(mContext, mStatus, mMessage);
+  return receiver->OnStopRequest(mChannel, mContext, mStatus, mMessage);
 }
 /*
 NS_IMETHODIMP 
-nsMarshalingStreamObserver::OnStopBinding(nsISupports* context,
+nsMarshalingStreamObserver::OnStopRequest(nsISupports* context,
                                           nsresult aStatus,
                                           const PRUnichar* aMsg)
 {
     nsresult rv = GetStatus();
     if (NS_FAILED(rv)) return rv;
 
-    nsOnStopBindingEvent* event = 
-        new nsOnStopBindingEvent(this, context);
+    nsOnStopRequestEvent* event = 
+        new nsOnStopRequestEvent(this, context);
     if (event == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 

@@ -17,9 +17,10 @@
 
 DEPTH = ..\..
 
-MODULE = netwerk
+MODULE = necko
 
 DIRS=            \
+	about    \
 	file     \
 	resource \
 	ftp      \

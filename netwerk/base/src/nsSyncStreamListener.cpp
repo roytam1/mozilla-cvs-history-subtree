@@ -30,18 +30,14 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIStreamObserver methods:
-    NS_IMETHOD OnStartBinding(nsISupports* context);
-    NS_IMETHOD OnStopBinding(nsISupports* context,
-                             nsresult aStatus,
-                             const PRUnichar* aMsg);
-    NS_IMETHOD OnStartRequest(nsISupports* context);
-    NS_IMETHOD OnStopRequest(nsISupports* context,
+    NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports* context);
+    NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports* context,
                              nsresult aStatus,
                              const PRUnichar* aMsg);
 
     // nsIStreamListener methods:
-    NS_IMETHOD OnDataAvailable(nsISupports* context,
-                               nsIBufferInputStream *aIStream, 
+    NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports* context,
+                               nsIInputStream *aIStream, 
                                PRUint32 aSourceOffset,
                                PRUint32 aLength);
 
@@ -52,7 +48,7 @@ public:
     }
     virtual ~nsSyncStreamListener();
 
-    nsresult Init(nsIBufferInputStream* *result);
+    nsresult Init(nsIInputStream* *result);
 
     nsIBufferOutputStream* GetOutputStream() { return mOutputStream; }
 
@@ -66,7 +62,7 @@ protected:
 #define NS_SYNC_STREAM_LISTENER_BUFFER_SIZE     (32 * 1024)
 
 nsresult 
-nsSyncStreamListener::Init(nsIBufferInputStream* *result)
+nsSyncStreamListener::Init(nsIInputStream* *result)
 {
     nsresult rv;
     nsIBufferInputStream* in;
@@ -91,9 +87,9 @@ NS_IMETHODIMP
 nsSyncStreamListener::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
     NS_ASSERTION(aInstancePtr, "no instance pointer");
-    if (aIID.Equals(nsIStreamListener::GetIID()) ||
-        aIID.Equals(nsIStreamObserver::GetIID()) ||
-        aIID.Equals(nsISupports::GetIID())) {
+    if (aIID.Equals(nsCOMTypeInfo<nsIStreamListener>::GetIID()) ||
+        aIID.Equals(nsCOMTypeInfo<nsIStreamObserver>::GetIID()) ||
+        aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aInstancePtr = NS_STATIC_CAST(nsIStreamListener*, this);
         NS_ADDREF_THIS();
         return NS_OK;
@@ -102,13 +98,13 @@ nsSyncStreamListener::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 }
 
 NS_IMETHODIMP 
-nsSyncStreamListener::OnStartBinding(nsISupports* context)
+nsSyncStreamListener::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
     return NS_OK;
 }
 
 NS_IMETHODIMP 
-nsSyncStreamListener::OnStopBinding(nsISupports* context,
+nsSyncStreamListener::OnStopRequest(nsIChannel* channel, nsISupports* context,
                                     nsresult aStatus,
                                     const PRUnichar* aMsg)
 {
@@ -117,23 +113,9 @@ nsSyncStreamListener::OnStopBinding(nsISupports* context,
 }
 
 NS_IMETHODIMP 
-nsSyncStreamListener::OnStartRequest(nsISupports* context)
-{
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsSyncStreamListener::OnStopRequest(nsISupports* context,
-                                    nsresult aStatus,
-                                    const PRUnichar* aMsg)
-{
-    // XXX what do we do with the status and error message?
-    return mOutputStream->Close();
-}
-
-NS_IMETHODIMP 
-nsSyncStreamListener::OnDataAvailable(nsISupports* context,
-                                      nsIBufferInputStream *aIStream, 
+nsSyncStreamListener::OnDataAvailable(nsIChannel* channel,
+                                      nsISupports* context, 
+                                      nsIInputStream *aIStream, 
                                       PRUint32 aSourceOffset,
                                       PRUint32 aLength)
 {
@@ -151,7 +133,7 @@ nsSyncStreamListener::OnDataAvailable(nsISupports* context,
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_NET nsresult
-NS_NewSyncStreamListener(nsIBufferInputStream **inStream,
+NS_NewSyncStreamListener(nsIInputStream **inStream,
                          nsIBufferOutputStream **outStream,
                          nsIStreamListener **listener)
 {

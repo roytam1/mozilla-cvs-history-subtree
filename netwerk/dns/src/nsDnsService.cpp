@@ -46,6 +46,7 @@ class nsDNSRequest : public nsIRequest
     nsDNSLookup*    mHostNameLookup;
 
     // nsIRequest methods:
+    NS_IMETHOD IsPending(PRBool *result);
     NS_IMETHOD Cancel(void);
     NS_IMETHOD Suspend(void);
     NS_IMETHOD Resume(void);
@@ -89,7 +90,7 @@ nsDNSService::~nsDNSService()
 }
 
 
-NS_IMPL_ISUPPORTS(nsDNSService, nsIDNSService::GetIID());
+NS_IMPL_ISUPPORTS(nsDNSService, nsCOMTypeInfo<nsIDNSService>::GetIID());
 
 NS_METHOD
 nsDNSService::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)

@@ -18,8 +18,16 @@
 
 #include "nsISupports.idl"
 
+[scriptable, uuid(F2CAABA0-2F25-11d3-A164-0050041CAF44)]
 interface nsIRequest : nsISupports
 {
+    /**
+     * Returns true if the request is pending (active). Returns false 
+     * after completion or successful calling Cancel. Suspended requests
+     * are still considered pending.
+     */
+    boolean IsPending();
+
     /**
      * Cancels the current request. This will close any open input or
      * output streams and terminate any async requests. 

@@ -28,7 +28,7 @@
 
 #include "nsCOMPtr.h"
 #include "nscore.h"
-#include "nsIHTTPHandler.h"
+#include "nsIHTTPProtocolHandler.h"
 #include "nsHTTPCID.h"
 #include "nsHTTPHandlerFactory.h"
 #include "nsIComponentManager.h"
@@ -36,7 +36,6 @@
 #include "nsXPComFactory.h"
 #include "nsIProtocolHandler.h" // for NS_NETWORK_PROTOCOL_PROGID_PREFIX
 
-static NS_DEFINE_IID(kISupportsIID,        NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,         NS_IFACTORY_IID);
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kHTTPHandlerCID,      NS_HTTP_HANDLER_FACTORY_CID);
@@ -65,7 +64,7 @@ nsHTTPHandlerFactory::QueryInterface(const nsIID &aIID, void **aResult)
     // Always NULL result, in case of failure
     *aResult = nsnull;
 
-    if (aIID.Equals(kISupportsIID)) {
+    if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aResult = NS_STATIC_CAST(nsISupports*, this);
         AddRef();
         return NS_OK;
@@ -97,7 +96,7 @@ nsHTTPHandlerFactory::CreateInstance(nsISupports *aOuter,
 
     nsISupports *inst = nsnull;
     if (mClassID.Equals(kHTTPHandlerCID)) {
-        if (NS_FAILED(rv = CreateOrGetHTTPHandler((nsIHTTPHandler**) &inst)))
+        if (NS_FAILED(rv = NS_CreateOrGetHTTPHandler((nsIHTTPProtocolHandler**) &inst)))
             return rv;
     }
     else {

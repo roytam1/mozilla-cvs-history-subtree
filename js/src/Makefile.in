@@ -30,15 +30,13 @@ include $(topsrcdir)/config/config.mk
 LIBRARY_NAME	= $(MOZ_LIB_JS_PREFIX)js
 MODULE		= js
 
-SIMPLE_PROGRAMS	= jscpucfg
-
 ifdef MOZ_OJI
 DIRS		= liveconnect
 endif
 
 DIRS		+= fdlibm xpconnect
 
-GARBAGE		+= $(JSMATH_PRELINK) $(OBJDIR)/jscpucfg.o $(OBJDIR)/jsautocfg.h
+GARBAGE		+= $(JSMATH_PRELINK) $(OBJDIR)/jscpucfg.o $(OBJDIR)/jsautocfg.h $(OBJDIR)/jscpucfg
 
 ifeq ($(OS_ARCH),OS2)
 ifndef XCFLAGS
@@ -142,6 +140,8 @@ endif
 include $(topsrcdir)/config/rules.mk
 
 INCLUDES	+= -I$(srcdir)
+
+TARGETS		+= jscpucfg
 
 ifneq ($(findstring -L,$(NSPR_LIBS)),)
 NSPR_STATIC_PATH	= $(subst -L,,$(findstring -L,$(NSPR_LIBS)))
@@ -257,6 +257,12 @@ jsopcode.h jsopcode.c: jsopcode.tbl
 $(OBJDIR)/jsautocfg.h: $(OBJDIR)/jscpucfg
 	rm -f $@
 	$(OBJDIR)/jscpucfg > $@
+
+# jscpucfg is a strange target
+# Needs to be built with the host compiler but needs to include
+# the mdcpucfg for the target so it needs the appropriate target defines
+$(OBJDIR)/jscpucfg: jscpucfg.c
+	$(HOST_CC) $(DEFINES) $(NSPR_CFLAGS) -DMDCPUCFG=$(TARGET_NSPR_MDCPUCFG) -o $@ $<
 
 export:: $(OBJDIR)/jsautocfg.h
 	$(INSTALL) -m 444 $< $(DIST)/include

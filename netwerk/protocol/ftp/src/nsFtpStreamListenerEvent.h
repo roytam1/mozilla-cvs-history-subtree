@@ -27,7 +27,8 @@
 
 class nsFtpStreamListenerEvent : public PLEvent {
 public:
-    nsFtpStreamListenerEvent(nsIStreamListener* listener, nsISupports* context);
+    nsFtpStreamListenerEvent(nsIStreamListener* listener,
+                             nsIChannel* channel, nsISupports* context);
     virtual ~nsFtpStreamListenerEvent();
 
     nsresult Fire(nsIEventQueue* aEventQ);
@@ -38,16 +39,18 @@ protected:
     static void PR_CALLBACK HandlePLEvent(PLEvent* aEvent);
     static void PR_CALLBACK DestroyPLEvent(PLEvent* aEvent);
 
-    nsIStreamListener* mListener;
-    nsISupports*                mContext;
+    nsIStreamListener*  mListener;
+    nsIChannel*         mChannel;
+    nsISupports*        mContext;
 };
 
-class nsFtpOnStartBindingEvent : public nsFtpStreamListenerEvent
+class nsFtpOnStartRequestEvent : public nsFtpStreamListenerEvent
 {
 public:
-    nsFtpOnStartBindingEvent(nsIStreamListener* listener, nsISupports* context)
-        : nsFtpStreamListenerEvent(listener, context) {}
-    virtual ~nsFtpOnStartBindingEvent() {}
+    nsFtpOnStartRequestEvent(nsIStreamListener* listener, 
+                             nsIChannel* channel, nsISupports* context)
+        : nsFtpStreamListenerEvent(listener, channel, context) {}
+    virtual ~nsFtpOnStartRequestEvent() {}
 
     NS_IMETHOD HandleEvent();
 };
@@ -56,28 +59,30 @@ public:
 class nsFtpOnDataAvailableEvent : public nsFtpStreamListenerEvent
 {
 public:
-    nsFtpOnDataAvailableEvent(nsIStreamListener* listener, nsISupports* context)
-        : nsFtpStreamListenerEvent(listener, context),
+    nsFtpOnDataAvailableEvent(nsIStreamListener* listener,
+                              nsIChannel* channel, nsISupports* context)
+        : nsFtpStreamListenerEvent(listener, channel, context),
           mIStream(nsnull), mLength(0) {}
     virtual ~nsFtpOnDataAvailableEvent();
 
-    nsresult Init(nsIBufferInputStream* aIStream, PRUint32 aSourceOffset, PRUint32 aLength);
+    nsresult Init(nsIInputStream* aIStream, PRUint32 aSourceOffset, PRUint32 aLength);
     NS_IMETHOD HandleEvent();
 
 protected:
-    nsIBufferInputStream*       mIStream;
+    nsIInputStream*       mIStream;
     PRUint32                    mSourceOffset;
     PRUint32                    mLength;
 };
 
 
-class nsFtpOnStopBindingEvent : public nsFtpStreamListenerEvent
+class nsFtpOnStopRequestEvent : public nsFtpStreamListenerEvent
 {
 public:
-    nsFtpOnStopBindingEvent(nsIStreamListener* listener, nsISupports* context)
-        : nsFtpStreamListenerEvent(listener, context),
+    nsFtpOnStopRequestEvent(nsIStreamListener* listener,
+                            nsIChannel* channel, nsISupports* context)
+        : nsFtpStreamListenerEvent(listener, channel, context),
           mStatus(NS_OK), mMessage(nsnull) {}
-    virtual ~nsFtpOnStopBindingEvent();
+    virtual ~nsFtpOnStopRequestEvent();
 
     nsresult Init(nsresult status, PRUnichar* aMsg);
     NS_IMETHOD HandleEvent();

@@ -38,11 +38,16 @@
  *       |         PreHost            
  *     Scheme
  *
- * The subclass nsIURL provides a means to open an input or output
- * stream to a URI as a source/destination, as well as providing additional
- * accessors to destructure the path, query and reference portions typically
- * associated with URLs.
+ * The subclass nsIURL provides a means to open an input or output              
+ * stream to a URI as a source/destination, as well as providing additional     
+ * accessors to destructure the path, query and reference portions typically    
+ * associated with URLs.                                                        
  */
+
+%{C++
+#undef GetPort  // XXX Windows!
+#undef SetPort  // XXX Windows!
+%}
 
 [scriptable, uuid(07a22cc0-0ce5-11d3-9331-00104ba0fd40)]
 interface nsIURI : nsISupports
@@ -112,11 +117,44 @@ interface nsIURI : nsISupports
      */
     nsIURI Clone();
 
-    /**
-     * Returns a new URI string that merges the relative part with defaults
-     * from the current URI's location. If the relative part actually
-     * specifies an absolute URI, the string is returned as is.
-     */
-    string MakeAbsolute(in string relativePart);
+	/**
+	 * Sets the given string to be a relative path for this URL, and 
+	 * changes this to read relative. Thus for example- if this = 
+	 * http://foo.com/bar/index.html, then calling SetRelativePath("/baz") will 
+	 * change this to http://foo.com/baz and calling it with "baz" will
+	 * change this to http://foo.com/bar/baz. 
+	 */
+	 void SetRelativePath(in string i_RelativePath);
 };
 
+%{C++
+// Malformed URL Error
+#define NS_ERROR_MALFORMED_URI  NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 10)
+
+/**
+ * Protocol writers can obtain a very basic (ok, degenerate) implementation
+ * of nsIURI by calling the component manager with NS_SIMPLEURI_CID. The
+ * implementation returned will only parse things of the form:
+ *
+ *    about:cache
+ *    \   / \   /
+ *     ---   ---
+ *      |     |
+ *   Scheme  Path
+ *
+ * where the path is everything after the colon. Note that this is probably 
+ * only useful for cases like about: or javascript: URIs. 
+ *
+ * *** What you most likely will want is NS_STANDARDURL_CID which is much more 
+ * full featured. Look at nsIURL.idl for more details.
+ */
+
+#define NS_SIMPLEURI_CID                              \
+{ /* e0da1d70-2f7b-11d3-8cd0-0060b0fc14a3 */          \
+     0xe0da1d70,                                      \
+     0x2f7b,                                          \
+     0x11d3,                                          \
+     {0x8c, 0xd0, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
+}
+
+%}

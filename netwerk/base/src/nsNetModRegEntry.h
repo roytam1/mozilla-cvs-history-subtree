@@ -22,7 +22,7 @@
 #include "nsINetModRegEntry.h"
 #include "nsIEventQueue.h"
 
-class nsNetModRegEntry : nsINetModRegEntry {
+class nsNetModRegEntry : public nsINetModRegEntry {
 public:
     // nsISupports
     NS_DECL_ISUPPORTS
@@ -37,7 +37,7 @@ public:
 
     // nsNetModRegEntry
     nsNetModRegEntry(const char *aTopic, nsIEventQueue *aEventQ, nsINetNotify *aNotify, nsCID aCID);
-    ~nsNetModRegEntry();
+    virtual ~nsNetModRegEntry();
 
     char                *mTopic;
     nsIEventQueue       *mEventQ;

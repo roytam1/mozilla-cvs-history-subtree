@@ -52,26 +52,16 @@ public:
   NS_DECL_ISUPPORTS
 
   // IStreamListener interface...
-  NS_IMETHOD OnStartBinding(nsISupports* context);
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports* context);
 
-  NS_IMETHOD OnDataAvailable(nsISupports* context,
-                             nsIBufferInputStream *aIStream, 
+  NS_IMETHOD OnDataAvailable(nsIChannel* channel, nsISupports* context,
+                             nsIInputStream *aIStream, 
                              PRUint32 aSourceOffset,
                              PRUint32 aLength);
 
-  NS_IMETHOD OnStopBinding(nsISupports* context,
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports* context,
                            nsresult aStatus,
                            const PRUnichar* aMsg);
-
-  NS_IMETHOD OnStartRequest(nsISupports* context) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  NS_IMETHOD OnStopRequest(nsISupports* context,
-                           nsresult aStatus,
-                           const PRUnichar* aMsg) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
 
 };
 
@@ -91,23 +81,24 @@ NS_IMPL_ISUPPORTS(InputTestConsumer,kIStreamListenerIID);
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStartBinding(nsISupports* context)
+InputTestConsumer::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
-  printf("\n+++ InputTestConsumer::OnStartBinding +++\n");
+  printf("\n+++ InputTestConsumer::OnStartRequest +++\n");
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnDataAvailable(nsISupports* context,
-                                   nsIBufferInputStream *aIStream, 
+InputTestConsumer::OnDataAvailable(nsIChannel* channel,
+                                   nsISupports* context,
+                                   nsIInputStream *aIStream, 
                                    PRUint32 aSourceOffset,
                                    PRUint32 aLength)
 {
   char buf[1025];
   PRUint32 amt;
   do {
-    nsresult rv = aIStream->Read(buf, 1024, &amt);
+    aIStream->Read(buf, 1024, &amt);
     buf[amt] = '\0';
     puts(buf);
   } while (amt != 0);
@@ -117,12 +108,13 @@ InputTestConsumer::OnDataAvailable(nsISupports* context,
 
 
 NS_IMETHODIMP
-InputTestConsumer::OnStopBinding(nsISupports* context,
-                         nsresult aStatus,
-                         const PRUnichar* aMsg)
+InputTestConsumer::OnStopRequest(nsIChannel* channel,
+                                 nsISupports* context,
+                                 nsresult aStatus,
+                                 const PRUnichar* aMsg)
 {
   gKeepRunning = 0;
-  printf("\n+++ InputTestConsumer::OnStopBinding (status = %x) +++\n", aStatus);
+  printf("\n+++ InputTestConsumer::OnStopRequest (status = %x) +++\n", aStatus);
   return NS_OK;
 }
 
@@ -139,22 +131,11 @@ public:
   NS_DECL_ISUPPORTS
 
   // IStreamObserver interface...
-  NS_IMETHOD OnStartBinding(nsISupports* context);
+  NS_IMETHOD OnStartRequest(nsIChannel* channel, nsISupports* context);
 
-  NS_IMETHOD OnStopBinding(nsISupports* context,
+  NS_IMETHOD OnStopRequest(nsIChannel* channel, nsISupports* context,
                            nsresult aStatus,
                            const PRUnichar* aMsg);
-
-  NS_IMETHOD OnStartRequest(nsISupports* context) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  NS_IMETHOD OnStopRequest(nsISupports* context,
-                           nsresult aStatus,
-                           const PRUnichar* aMsg) {
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
 
 protected:
   nsIChannel* mTransport;
@@ -174,26 +155,26 @@ TestWriteObserver::~TestWriteObserver()
 }
 
 
-NS_IMPL_ISUPPORTS(TestWriteObserver,nsIStreamObserver::GetIID());
+NS_IMPL_ISUPPORTS(TestWriteObserver,nsCOMTypeInfo<nsIStreamObserver>::GetIID());
 
 
 NS_IMETHODIMP
-TestWriteObserver::OnStartBinding(nsISupports* context)
+TestWriteObserver::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
-  printf("\n+++ TestWriteObserver::OnStartBinding +++\n");
+  printf("\n+++ TestWriteObserver::OnStartRequest +++\n");
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-TestWriteObserver::OnStopBinding(nsISupports* context,
+TestWriteObserver::OnStopRequest(nsIChannel* channel, nsISupports* context,
                                  nsresult aStatus,
                                  const PRUnichar* aMsg)
 {
-  printf("\n+++ TestWriteObserver::OnStopBinding (status = %x) +++\n", aStatus);
+  printf("\n+++ TestWriteObserver::OnStopRequest (status = %x) +++\n", aStatus);
 
   if (NS_SUCCEEDED(aStatus)) {
-    mTransport->AsyncRead(0, -1, nsnull, gEventQ, new InputTestConsumer);
+    mTransport->AsyncRead(0, -1, nsnull, new InputTestConsumer);
   } else {
     gKeepRunning = 0;
   }
@@ -201,6 +182,11 @@ TestWriteObserver::OnStopBinding(nsISupports* context,
   return NS_OK;
 }
 
+nsresult NS_AutoregisterComponents()
+{
+  nsresult rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
+  return rv;
+}
 
 int
 main(int argc, char* argv[])
@@ -215,10 +201,9 @@ main(int argc, char* argv[])
   char* hostName = argv[1];
   char* fileName = argv[2];
   int port = 80;
- 
-  // XXX why do I have to do this?!
-  rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
-                                        "components");
+
+  rv =  NS_AutoregisterComponents();
+
   if (NS_FAILED(rv)) return rv;
 
   // Create the Event Queue for this thread...
@@ -244,7 +229,11 @@ main(int argc, char* argv[])
   if (NS_FAILED(rv)) return rv;
 
   char *buffer = PR_smprintf("GET %s HTML/1.0%s%s", fileName, CRLF, CRLF);
+#if 0
   stream->Fill(buffer, strlen(buffer), &bytesWritten);
+#else
+  buf->Write(buffer, strlen(buffer), &bytesWritten);
+#endif
   printf("\n+++ Request is: %s\n", buffer);
 
   // Create the socket transport...
@@ -270,7 +259,7 @@ main(int argc, char* argv[])
     TestWriteObserver* observer = new TestWriteObserver(transport);
 
     gElapsedTime = PR_Now();
-    transport->AsyncWrite(stream, 0, bytesWritten, nsnull, gEventQ, observer);
+    transport->AsyncWrite(stream, 0, bytesWritten, nsnull, observer);
 
     NS_RELEASE(transport);
   }

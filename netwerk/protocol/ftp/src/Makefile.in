@@ -19,7 +19,7 @@ topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
-LIBRARY_NAME = ftpprotocol
+LIBRARY_NAME = necko_ftp
 
 IS_COMPONENT = 1
 
@@ -33,7 +33,7 @@ CPPSRCS =                             \
         nsFtpFactory.cpp              \
         $(NULL)
 
-MODULE = netwerk
+MODULE = necko
 
 include $(topsrcdir)/config/config.mk
 
@@ -44,4 +44,4 @@ endif
 
 TARGET = $(LIBARY)
 
-include $(DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk

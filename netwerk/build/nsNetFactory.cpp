@@ -24,16 +24,22 @@
 //#include "nsFileTransportService.h"
 #include "nsSocketTransportService.h"
 #include "nscore.h"
-#include "nsStandardUrl.h"
+#include "nsStdURL.h"
+#include "nsSimpleURI.h"
 #include "nsDnsService.h"
+#include "nsLoadGroup.h"
+#include "nsInputStreamChannel.h"
 
 static NS_DEFINE_CID(kComponentManagerCID,       NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 //static NS_DEFINE_CID(kFileTransportServiceCID,   NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID,            NS_STANDARDURL_CID);
+static NS_DEFINE_CID(kSimpleURICID,              NS_SIMPLEURI_CID);
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kExternalModuleManagerCID,  NS_NETMODULEMGR_CID);
 static NS_DEFINE_CID(kDNSServiceCID,             NS_DNSSERVICE_CID);
+static NS_DEFINE_CID(kLoadGroupCID,              NS_LOADGROUP_CID);
+static NS_DEFINE_CID(kInputStreamChannelCID,     NS_INPUTSTREAMCHANNEL_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -60,14 +66,26 @@ NSGetFactory(nsISupports* aServMgr,
     else if (aClass.Equals(kSocketTransportServiceCID)) {
         rv = NS_NewGenericFactory(&fact, nsSocketTransportService::Create);
     }
+    else if (aClass.Equals(kDNSServiceCID)) {
+        rv = NS_NewGenericFactory(&fact, nsDNSService::Create);
+    }
     else if (aClass.Equals(kStandardURLCID)) {
-        rv = NS_NewGenericFactory(&fact, nsStandardURL::Create);
+        rv = NS_NewGenericFactory(&fact, nsStdURL::Create);
+    }
+    else if (aClass.Equals(kSimpleURICID)) {
+        rv = NS_NewGenericFactory(&fact, nsSimpleURI::Create);
     }
     else if (aClass.Equals(kExternalModuleManagerCID)) {
         rv = NS_NewGenericFactory(&fact, nsNetModuleMgr::Create);
     }
     else if (aClass.Equals(kDNSServiceCID)) {
         rv = NS_NewGenericFactory(&fact, nsDNSService::Create);
+    }
+    else if (aClass.Equals(kLoadGroupCID)) {
+        rv = NS_NewGenericFactory(&fact, nsLoadGroup::Create);
+    }
+    else if (aClass.Equals(kInputStreamChannelCID)) {
+        rv = NS_NewGenericFactory(&fact, nsInputStreamChannel::Create);
     }
     else {
         rv = NS_ERROR_FAILURE;
@@ -104,15 +122,33 @@ NSRegisterSelf(nsISupports* aServMgr , const char* aPath)
                                     aPath, PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
+    rv = compMgr->RegisterComponent(kDNSServiceCID, 
+                                    "DNS Service",
+                                    "component://netscape/network/dns-service",
+                                    aPath, PR_TRUE, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
     rv = compMgr->RegisterComponent(kStandardURLCID, 
                                     "Standard URL Implementation",
                                     "component://netscape/network/standard-url",
                                     aPath, PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
+    rv = compMgr->RegisterComponent(kSimpleURICID, 
+                                    "Simple URI Implementation",
+                                    "component://netscape/network/simple-uri",
+                                    aPath, PR_TRUE, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
     rv = compMgr->RegisterComponent(kExternalModuleManagerCID,
                                     "External Module Manager",
                                     "component://netscape/network/net-extern-mod",
+                                    aPath, PR_TRUE, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = compMgr->RegisterComponent(kInputStreamChannelCID,
+                                    "Input Stream Channel",
+                                    "component://netscape/network/input-stream-channel",
                                     aPath, PR_TRUE, PR_TRUE);
     return rv;
 }
@@ -134,10 +170,19 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* aPath)
     rv = compMgr->UnregisterComponent(kSocketTransportServiceCID, aPath);
     if (NS_FAILED(rv)) return rv;
 
+    rv = compMgr->UnregisterComponent(kDNSServiceCID, aPath);
+    if (NS_FAILED(rv)) return rv;
+
     rv = compMgr->UnregisterComponent(kStandardURLCID, aPath);
     if (NS_FAILED(rv)) return rv;
     
+    rv = compMgr->UnregisterComponent(kSimpleURICID, aPath);
+    if (NS_FAILED(rv)) return rv;
+    
     rv = compMgr->UnregisterComponent(kExternalModuleManagerCID, aPath);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = compMgr->UnregisterComponent(kInputStreamChannelCID, aPath);
     return rv;
 }
 

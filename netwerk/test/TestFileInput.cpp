@@ -36,7 +36,6 @@
 #include "nsIChannel.h"
 #include <stdio.h>
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
@@ -103,9 +102,8 @@ public:
         return NS_OK;
     }
 
-    nsIEventQueue* GetEventQueue() { return mEventQueue; }
-
-    NS_IMETHOD OnStartBinding(nsISupports* context) {
+    NS_IMETHOD OnStartRequest(nsIChannel* channel,
+                              nsISupports* context) {
         PR_EnterMonitor(mMonitor);
         printf("start binding\n"); 
         mStartTime = PR_IntervalNow();
@@ -113,15 +111,16 @@ public:
         return NS_OK;
     }
 
-    NS_IMETHOD OnDataAvailable(nsISupports* context,
-                               nsIBufferInputStream *aIStream, 
+    NS_IMETHOD OnDataAvailable(nsIChannel* channel, 
+                               nsISupports* context,
+                               nsIInputStream *aIStream, 
                                PRUint32 aSourceOffset,
                                PRUint32 aLength) {
         PR_EnterMonitor(mMonitor);
         char buf[1025];
         while (aLength > 0) {
             PRUint32 amt;
-            nsresult rv = aIStream->Read(buf, 1024, &amt);
+            /*nsresult rv = */aIStream->Read(buf, 1024, &amt);
             buf[amt] = '\0';
             printf(buf);
             aLength -= amt;
@@ -131,7 +130,8 @@ public:
         return NS_OK;
     }
 
-    NS_IMETHOD OnStopBinding(nsISupports* context,
+    NS_IMETHOD OnStopRequest(nsIChannel* channel, 
+                             nsISupports* context,
                              nsresult aStatus,
                              const PRUnichar* aMsg) {
         nsresult rv;
@@ -146,16 +146,6 @@ public:
         if (NS_FAILED(rv)) return rv;
 
         return rv;
-    }
-
-    NS_IMETHOD OnStartRequest(nsISupports* context) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    NS_IMETHOD OnStopRequest(nsISupports* context,
-                             nsresult aStatus,
-                             const PRUnichar* aMsg) {
-        return NS_ERROR_NOT_IMPLEMENTED;
     }
 
 protected:
@@ -176,13 +166,13 @@ nsReader::QueryInterface(const nsIID& aIID, void* *aInstancePtr)
     if (NULL == aInstancePtr) {
         return NS_ERROR_NULL_POINTER; 
     } 
-    if (aIID.Equals(nsIRunnable::GetIID()) ||
-        aIID.Equals(kISupportsIID)) {
+    if (aIID.Equals(nsCOMTypeInfo<nsIRunnable>::GetIID()) ||
+        aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID())) {
         *aInstancePtr = NS_STATIC_CAST(nsIRunnable*, this); 
         NS_ADDREF_THIS(); 
         return NS_OK; 
     } 
-    if (aIID.Equals(nsIStreamListener::GetIID())) {
+    if (aIID.Equals(nsCOMTypeInfo<nsIStreamListener>::GetIID())) {
         *aInstancePtr = NS_STATIC_CAST(nsIStreamListener*, this); 
         NS_ADDREF_THIS(); 
         return NS_OK; 
@@ -205,13 +195,13 @@ Simulated_nsFileTransport_Run(nsReader* reader, const char* path)
     nsFileSpec spec(path);
     PRUint32 sourceOffset = 0;
 
-    rv = reader->OnStartBinding(nsnull);
+    rv = reader->OnStartRequest(nsnull, nsnull);
     if (NS_FAILED(rv)) goto done;       // XXX should this abort the transfer?
 
     rv = NS_NewTypicalInputFileStream(&fs, spec);
     if (NS_FAILED(rv)) goto done;
 
-    rv = fs->QueryInterface(nsIInputStream::GetIID(), (void**)&fileStr);
+    rv = fs->QueryInterface(nsCOMTypeInfo<nsIInputStream>::GetIID(), (void**)&fileStr);
     NS_RELEASE(fs);
     if (NS_FAILED(rv)) goto done;
 
@@ -228,14 +218,18 @@ Simulated_nsFileTransport_Run(nsReader* reader, const char* path)
     while (PR_TRUE) {
         PRUint32 amt;
 		    /* id'l change to FillFrom... */
+#if 0
         rv = bufStr->FillFrom(fileStr, spec.GetFileSize(), &amt);
+#else
+        rv = buf->WriteFrom(fileStr, spec.GetFileSize(), &amt);
+#endif
         if (rv == NS_BASE_STREAM_EOF) {
             rv = NS_OK;
             break;
         }
         if (NS_FAILED(rv)) break;
 
-        rv = reader->OnDataAvailable(nsnull, bufStr, sourceOffset, amt);
+        rv = reader->OnDataAvailable(nsnull, nsnull, bufStr, sourceOffset, amt);
         if (NS_FAILED(rv)) break;
 
         sourceOffset += amt;
@@ -245,7 +239,7 @@ Simulated_nsFileTransport_Run(nsReader* reader, const char* path)
     NS_IF_RELEASE(bufStr);
     NS_IF_RELEASE(fileStr);
 
-    rv = reader->OnStopBinding(nsnull, rv, nsnull);
+    rv = reader->OnStopRequest(nsnull, nsnull, rv, nsnull);
     return rv;
 }
 
@@ -280,7 +274,7 @@ SerialReadTest(char* dirName)
         NS_ASSERTION(NS_SUCCEEDED(rv), "init failed");
 
         nsIStreamListener* listener;
-        reader->QueryInterface(nsIStreamListener::GetIID(), (void**)&listener);
+        reader->QueryInterface(nsCOMTypeInfo<nsIStreamListener>::GetIID(), (void**)&listener);
         NS_ASSERTION(listener, "QI failed");
 
         rv = Simulated_nsFileTransport_Run(reader, spec);
@@ -343,14 +337,14 @@ ParallelReadTest(char* dirName, nsIFileTransportService* fts)
         NS_ASSERTION(NS_SUCCEEDED(rv), "init failed");
 
         nsIStreamListener* listener;
-        reader->QueryInterface(nsIStreamListener::GetIID(), (void**)&listener);
+        reader->QueryInterface(nsCOMTypeInfo<nsIStreamListener>::GetIID(), (void**)&listener);
         NS_ASSERTION(listener, "QI failed");
     
         nsIChannel* trans;
         rv = fts->CreateTransport(spec, &trans);
         NS_ASSERTION(NS_SUCCEEDED(rv), "create failed");
 
-        rv = trans->AsyncRead(0, -1, nsnull, reader->GetEventQueue(), listener);
+        rv = trans->AsyncRead(0, -1, nsnull, listener);
         NS_ASSERTION(NS_SUCCEEDED(rv), "AsyncRead failed");
 
         // the reader thread will hang on to these objects until it quits
@@ -375,6 +369,12 @@ ParallelReadTest(char* dirName, nsIFileTransportService* fts)
     NS_ASSERTION(status == PR_SUCCESS, "can't close dir");
 }
 
+nsresult NS_AutoregisterComponents()
+{
+  nsresult rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
+  return rv;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -386,9 +386,7 @@ main(int argc, char* argv[])
     }
     char* dirName = argv[1];
 
-    // XXX why do I have to do this?!
-    rv = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup,
-                                          "components");
+    rv = NS_AutoregisterComponents();
     if (NS_FAILED(rv)) return rv;
 
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
@@ -407,3 +405,4 @@ main(int argc, char* argv[])
 
     return 0;
 }
+
