@@ -85,7 +85,7 @@ HOST_CFLAGS="${HOST_CFLAGS=}"
 HOST_LDFLAGS="${HOST_LDFLAGS=}"
 
 case "$target" in
-*-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
+*-cygwin*|*-mingw*)
     # Check to see if we are really running in a msvc environemnt
     _WIN32_MSVC=
     AC_CHECK_PROGS(CC, cl)
@@ -100,6 +100,12 @@ case "$target" in
         fi
         rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
     fi
+    ;;
+*-msvc*)
+    _WIN32_MSVC=1
+    ;;
+*-mksnt*)
+    _WIN32_MSVC=1
     ;;
 esac
 
@@ -325,7 +331,7 @@ if test -n "$MOZ_DEBUG"; then
         DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
-        DEFINES="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_`$WHOAMI`"
+        DEFINES="$DEFINES -DDEBUG_`$WHOAMI`"
         ;;
     esac
 else
@@ -1138,6 +1144,10 @@ case "$target" in
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
     _OPTIMIZE_FLAGS=-O2
+    _DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb, and that
+                                   # combo is not yet good at debugging inlined
+                                   # functions (even when using DWARF2 as the
+                                   # debugging format)
     COMPILER_TAG=_glibc
     if echo "$OS_TEST" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
