@@ -1065,9 +1065,6 @@ pref("intl.jis0208.map", "CP932");
 pref("browser.drag_out_of_frame_style", 1);
 pref("ui.key.saveLink.shift", false); // true = shift, false = meta
 
-// should a GURL event open a new window or re-use (4.x compat)
-pref("browser.always_reuse_window", false);
-
 // default font name (in UTF8)
 
 pref("font.name.serif.ar", "Lucida Grande");
