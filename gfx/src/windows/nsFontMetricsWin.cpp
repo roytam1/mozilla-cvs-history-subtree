@@ -4704,6 +4704,7 @@ nsFontMetricsWinA::LoadSubstituteFont(HDC aDC, nsString* aName)
           }
           delete font;
         }
+        PR_Free(map);
       }
     }
     ::SelectObject(aDC, (HGDIOBJ)oldFont);
