@@ -34,6 +34,7 @@ public:
 
   virtual PRBool operator==(const nsIURL& aURL) const;
   virtual nsIInputStream* Open(PRInt32* aErrorCode);
+  virtual nsresult Open(nsIStreamNotification *aListener);
   virtual nsresult Set(const char *aNewSpec);
   virtual const char* GetProtocol() const;
   virtual const char* GetHost() const;
@@ -310,6 +311,26 @@ nsIInputStream* URLImpl::Open(PRInt32* aErrorCode)
   *aErrorCode = rv;
   return in;
 }
+
+nsresult URLImpl::Open(nsIStreamNotification *aListener)
+{
+  nsresult rv;
+
+  if (PL_strcmp(mProtocol, "file") == 0) {
+      rv = NS_FALSE; // XXX: Async file not supported yet...
+  } else if (PL_strcmp(mProtocol, "resource") == 0) {
+      rv = NS_FALSE; // XXX: Asunc resource: not supported yet...
+  } else {
+    nsINetService *inet;
+
+    rv = NS_NewINetService(&inet, nsnull);
+    if (NS_OK == rv) {
+      rv = inet->OpenStream(this, aListener);
+    }
+  }
+  return rv;
+}
+
 
 NS_NET nsresult NS_NewURL(nsIURL** aInstancePtrResult,
                           const nsString& aSpec)
