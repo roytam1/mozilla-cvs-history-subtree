@@ -290,7 +290,8 @@ nsStorageTransport::GetNotificationCallbacks(nsIInterfaceRequestor** aCallbacks)
 }
 
 NS_IMETHODIMP
-nsStorageTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aCallbacks, PRBool isBackground)
+nsStorageTransport::SetNotificationCallbacks(nsIInterfaceRequestor* aCallbacks,
+                                             PRUint32 flags)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -102,7 +102,7 @@ public:
     };
 
 protected:
-    nsCOMPtr<nsIProgressEventSink>      mProgress;
+    nsCOMPtr<nsIProgressEventSink>      mProgressSink;
     nsCOMPtr<nsIInterfaceRequestor>     mNotificationCallbacks;
     nsCOMPtr<nsIStreamIO>               mStreamIO;
     char                               *mContentType;

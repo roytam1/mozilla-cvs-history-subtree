@@ -224,7 +224,7 @@ protected:
     
     nsSocketState                   mCurrentState;
     nsCOMPtr<nsIRequest>            mDNSRequest;
-    nsCOMPtr<nsIProgressEventSink>  mEventSink;
+    nsCOMPtr<nsIProgressEventSink>  mProgressSink;
     nsCOMPtr<nsIInterfaceRequestor> mNotificationCallbacks;
     char*                           mHostName;
     PRInt32                         mPort;
