@@ -83,7 +83,6 @@ LOBJS =../source/base/ArrayList.o \
   ../source/xpath/ExtensionFunctionCall.o \
   ../source/xpath/FilterExpr.o \
   ../source/xpath/FunctionCall.o \
-  ../source/xpath/IdentityExpr.o \
   ../source/xpath/LocationStep.o \
   ../source/xpath/MultiplicativeExpr.o \
   ../source/xpath/NodeSet.o \
@@ -92,7 +91,6 @@ LOBJS =../source/base/ArrayList.o \
   ../source/xpath/NumberExpr.o \
   ../source/xpath/NumberFunctionCall.o \
   ../source/xpath/NumberResult.o \
-  ../source/xpath/ParentExpr.o \
   ../source/xpath/PathExpr.o \
   ../source/xpath/PredicateList.o \
   ../source/xpath/RelationalExpr.o \
