@@ -20,13 +20,19 @@ The "avail" lists included options that are available for use.
 common.c (supported by all of the tools):
 	raw:	nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:
 	sorted: 0 DEHIKMNOPQRVWXYZ dfhikmnpvwy
-	avail:	[2-9] CJ gj (not used by any of the tools)
+	avail:	[2-9] J gj (not used by any of the tools)
 
 ldapcmp.c:
 	raw:	Bb:l:s:z:
 	sorted:	B blsz
 	all:	0 BDHIKMNOPQRVWXYZ bdfhiklmnpsvwyz
 	avail:	[1-9] ACFGJLSTU acegjoqrtu
+
+ldapcompare.c:
+	raw:	cq
+	sorted:	cq
+	all:	0 DEHIKMNOPQRVWXYZ cdfhikmnpqvwy
+	avail:	[1-9] ABCFJLSTU abegjlorstuxz
 
 ldapdelete.c (deprecated)
 	raw:	c
