@@ -1316,15 +1316,19 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *aEvent,
   NS_ADDREF(aEvent->widget);
 
 #ifdef NS_DEBUG
-  GtkObject *gw = GTK_OBJECT(aEvent->widget->GetNativeData(NS_NATIVE_WIDGET));
-
-  if (CAPS_LOCK_IS_ON)
-  {
-    debug_DumpEvent(stdout,
-                    aEvent->widget,
-                    aEvent,
-                    debug_GetName(gw),
-                    (PRInt32) debug_GetRenderXID(gw));
+  GtkObject *gw;
+  void *nativeWidget = aEvent->widget->GetNativeData(NS_NATIVE_WIDGET);
+  if (nativeWidget) {
+    gw = GTK_OBJECT(nativeWidget);
+    
+    if (CAPS_LOCK_IS_ON)
+      {
+        debug_DumpEvent(stdout,
+                        aEvent->widget,
+                        aEvent,
+                        debug_GetName(gw),
+                        (PRInt32) debug_GetRenderXID(gw));
+      }
   }
 #endif // NS_DEBUG
 
