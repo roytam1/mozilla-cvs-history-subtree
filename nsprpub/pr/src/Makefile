@@ -69,7 +69,7 @@ OS_LIBS			= -lm
 else	# 4.1.3_U1
 ifeq ($(BUILD_SUN_PKG),1)
 MAPFILE = $(OBJDIR)/nsprmap.sun
-ALL_TRASH += $(MAPFILE)
+GARBAGE += $(MAPFILE)
 MKSHLIB += -M $(MAPFILE)
 endif
 ifdef USE_PTHREADS

@@ -45,7 +45,7 @@ else
 OS_LIBS += -lc
 ifeq ($(BUILD_SUN_PKG),1)
 MAPFILE = $(OBJDIR)/plcmap.sun
-ALL_TRASH += $(MAPFILE)
+GARBAGE += $(MAPFILE)
 MKSHLIB += -M $(MAPFILE)
 endif
 endif
