@@ -1,30 +1,41 @@
-#!perl
+=head1 NAME
 
-#
-# The contents of this file are subject to the Netscape Public License
-# Version 1.0 (the "NPL"); you may not use this file except in
-# compliance with the NPL.  You may obtain a copy of the NPL at
-# http://www.mozilla.org/NPL/
-#
-# Software distributed under the NPL is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
-# for the specific language governing rights and limitations under the
-# NPL.
-#
-# The Initial Developer of this code under the NPL is Netscape
-# Communications Corporation.  Portions created by Netscape are
-# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
-# Reserved.
-#
+Moz
+
+=head1 DESCRIPTION
+
+...
+
+=head1 COPYRIGHT
+
+The contents of this file are subject to the Netscape Public License
+Version 1.0 (the "NPL"); you may not use this file except in
+compliance with the NPL.  You may obtain a copy of the NPL at
+http://www.mozilla.org/NPL/
+
+Software distributed under the NPL is distributed on an "AS IS" basis,
+WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+for the specific language governing rights and limitations under the
+NPL.
+
+The Initial Developer of this code under the NPL is Netscape
+Communications Corporation.  Portions created by Netscape are
+Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+Reserved.
+
+=cut
+
+
 
 package			Moz;
 require			Exporter;
 
 @ISA				= qw(Exporter);
-@EXPORT			= qw();
-@EXPORT_OK	= qw(BuildProject,OpenErrorLog,CloseErrorLog,UseCodeWarriorLib,Configure);
+@EXPORT			= qw(BuildProject BuildProjectClean OpenErrorLog MakeAlias StopForErrors DontStopForErrors);
+@EXPORT_OK	= qw(CloseErrorLog UseCodeWarriorLib);
 
 	use Cwd;
+	use File::Path;
 
 sub current_directory()
 	{
@@ -68,14 +79,9 @@ BEGIN
 		activate_CodeWarrior();
 	}
 
-sub Configure($)
-	{
-		my ($config_file) = @_;
-		# read in the configuration file
-	}
-
 $logging								= 0;
 $recent_errors_file			= "";
+$stop_on_1st_error			= 1;
 
 sub CloseErrorLog()
 	{
@@ -103,6 +109,25 @@ sub OpenErrorLog($)
 			}
 	}
 
+sub StopForErrors()
+	{
+		$stop_on_1st_error = 1;
+		
+			# Can't stop for errors unless we notice them.
+			# Can't notice them unless we are logging.
+			# If the user didn't explicitly request logging, log to a temporary file.
+
+		if ( ! $recent_errors_file )
+			{
+				OpenErrorLog("${TMPDIR}BuildResults");
+			}
+	}
+
+sub DontStopForErrors()
+	{
+		$stop_on_1st_error = 0;		
+	}
+
 sub log_message($)
 	{
 		if ( $logging )
@@ -122,25 +147,38 @@ sub log_message_with_time($)
 			}
 	}
 
-sub log_recent_errors()
+sub log_recent_errors($)
 	{
+		my ($project_name) = @_;
+		my $found_errors = 0;
+
 		if ( $logging )
 			{
 				open(RECENT_ERRORS, "<$recent_errors_file");
 
 				while( <RECENT_ERRORS> )
 					{
+						if ( /^Error/ || /^Couldn’t find project file/ )
+							{
+								$found_errors = 1;
+							}
 						print ERROR_LOG $_;
 					}
 
 				close(RECENT_ERRORS);
 				unlink("$recent_errors_file");
 			}
+
+		if ( $stop_on_1st_error && $found_errors )
+			{
+				print ERROR_LOG "### Build failed.\n";
+				die "### Errors encountered building \"$project_name\".\n";
+			}
 	}
 
-sub BuildProject($;$)
+sub build_project($$$)
 	{
-		my ($project_path, $target_name) = @_;
+		my ($project_path, $target_name, $clean_build) = @_;
 		$project_path = full_path_to($project_path);
 
 		$project_path =~ m/.+:(.+)/;
@@ -150,14 +188,51 @@ sub BuildProject($;$)
 
 		$had_errors =
 MacPerl::DoAppleScript(<<END_OF_APPLESCRIPT);
-	tell (load script file "$CodeWarriorLib") to BuildProject("$project_path", "$project_name", "$target_name", "$recent_errors_file")
+	tell (load script file "$CodeWarriorLib") to BuildProject("$project_path", "$project_name", "$target_name", "$recent_errors_file", $clean_build)
 END_OF_APPLESCRIPT
 
 			# Append any errors to the globally accumulated log file
 		if ( $had_errors )
 			{
-				log_recent_errors();
+				log_recent_errors($project_path);
 			}
 	}
+
+sub BuildProject($;$)
+	{
+		my ($project_path, $target_name) = @_;
+		build_project($project_path, $target_name, "false");
+	}
+
+sub BuildProjectClean($;$)
+	{
+		my ($project_path, $target_name) = @_;
+		build_project($project_path, $target_name, "true");
+	}
+
+sub MakeAlias($;$)
+	{
+		my ($old_file, $new_file) = @_;
+
+			# if the directory to hold $new_file doesn't exist, create it
+		if ( ($new_file =~ m/(.+:)/) && !-d $1 )
+			{
+				mkpath($1);
+			}
+
+			# if a leaf name wasn't specified for $new_file, use the leaf from $old_file
+		if ( ($new_file =~ m/:$/) && ($old_file =~ m/.+:(.+)/) )
+			{
+				$new_file .= $1;
+			}
+
+		my $message = "Can't create a Finder alias (at \"$new_file\") for \"$old_file\";";
+		# die "$message symlink doesn't work on directories.\n" if -d $old_file;
+		die "$message because \"$old_file\" doesn't exit.\n" unless -e $old_file;
+
+		unlink $new_file;
+		symlink($old_file, $new_file) || die "$message symlink returned an unexpected error.\n";
+	}
+
 
 1;
