@@ -252,7 +252,6 @@ Initialize(nsIModule* aSelf)
 #ifdef DEBUG
   nsFrame::DisplayReflowStartup();
 #endif
-  nsCSSFrameConstructor::InitGlobals();
   nsTextTransformer::Initialize();
   nsImageLoadingContent::Initialize();
 
