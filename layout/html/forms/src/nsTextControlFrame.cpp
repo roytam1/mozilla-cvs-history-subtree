@@ -55,7 +55,7 @@
 #include "nsISelectionPrivate.h"
 #include "nsIController.h"
 #include "nsIControllers.h"
-#include "nsIEditorController.h"
+#include "nsIControllerContext.h"
 #include "nsIElementFactory.h"
 #include "nsIHTMLContent.h"
 #include "nsIEditorIMESupport.h"
@@ -1400,10 +1400,10 @@ nsTextControlFrame::PreDestroy(nsIPresContext* aPresContext)
         rv = controllers->GetControllerAt(i, getter_AddRefs(controller));
         if (NS_SUCCEEDED(rv) && controller)
         {
-          nsCOMPtr<nsIEditorController> editController = do_QueryInterface(controller);
+          nsCOMPtr<nsIControllerContext> editController = do_QueryInterface(controller);
           if (editController)
           {
-            editController->SetCommandRefCon(nsnull);
+            editController->SetCommandContext(nsnull);
           }
         }
       }
@@ -1956,10 +1956,10 @@ nsTextControlFrame::CreateAnonymousContent(nsIPresContext* aPresContext,
         rv = controllers->GetControllerAt(i, getter_AddRefs(controller));
         if (NS_SUCCEEDED(rv) && controller)
         {
-          nsCOMPtr<nsIEditorController> editController = do_QueryInterface(controller);
+          nsCOMPtr<nsIControllerContext> editController = do_QueryInterface(controller);
           if (editController)
           {
-            editController->SetCommandRefCon(mEditor);
+            editController->SetCommandContext(mEditor);
             found = PR_TRUE;
           }
         }
