@@ -190,14 +190,15 @@ MimeMessage_parse_line (char *line, PRInt32 length, MimeObject *obj)
 
 #ifdef MIME_DRAFTS
   if ( obj->options &&
-	   obj->options->decompose_file_p &&
-	   ! obj->options->is_multipart_msg &&
-	   obj->options->done_parsing_outer_headers &&
-	   obj->options->decompose_file_output_fn ) {
-	status =  obj->options->decompose_file_output_fn ( line,
-													   length,
-											    obj->options->stream_closure );
-	if (status < 0) return status;
+	     obj->options->decompose_file_p &&
+	     ! obj->options->is_multipart_msg &&
+	     obj->options->done_parsing_outer_headers &&
+	     obj->options->decompose_file_output_fn ) 
+  {
+  	status =  obj->options->decompose_file_output_fn( line, length,
+											                                obj->options->stream_closure );
+  	if (status < 0) 
+      return status;
   }
 #endif /* MIME_DRAFTS */
 
