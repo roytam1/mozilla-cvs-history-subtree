@@ -52,6 +52,7 @@
         <command id="Help:Find" oncommand="helpBrowser.find();"/>
         <command id="Help:FindAgain" oncommand="helpBrowser.findAgain();"/>      
 	<command id="Help:ToggleSidebar" oncommand="toggleSidebar();"/>
+	 <command id="cmd_closeWindow" oncommand="close();"/>
         <command id="cmd_textZoomReduce" oncommand="ZoomManager.prototype.getInstance().reduce();"/>
         <command id="cmd_textZoomEnlarge" oncommand="ZoomManager.prototype.getInstance().enlarge();"/>
         <command id="cmd_CustomizeToolbars" oncommand="CustomizeToolbar('help-toolbox');"/>
@@ -68,6 +69,8 @@
             command="Help:Find" modifiers="accel"/>
         <key id="key_findAgain" key="&findAgainCmd.commandkey;"
             command="Help:FindAgain" modifiers="accel"/>
+        <key id="key_closeWindow" key="&closeWindow.commandkey;"
+            command="cmd_closeWindow" modifiers="accel"/>
         <key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"
             command="cmd_textZoomEnlarge" modifiers="accel"/>
         <key id="key_textZoomReduce" key="&textZoomReduceCmd.commandkey;"
