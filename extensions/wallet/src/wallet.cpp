@@ -35,7 +35,7 @@
 #include "nsIServiceManager.h"
 #include "nsIDocument.h"
 #include "nsIDOMHTMLDocument.h"
-#include "nsIDOMNSHTMLOptionCollection.h"
+#include "nsIDOMHTMLCollection.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIDOMHTMLSelectElement.h"
@@ -1577,10 +1577,15 @@ wallet_ReadFromFile
       wallet_WriteToList(helpMac->item1, helpMac->item2, dummy, list, PR_FALSE, placement);
     } else {
       /* need to create a sublist and put item2 and item3 onto it */
+
+      // don't we leak itemList here?
+
       nsVoidArray * itemList = new nsVoidArray();
       if (!itemList) {
         break;
       }
+
+      // Don't we leak sublist too?
       wallet_Sublist * sublist = new wallet_Sublist;
       if (!sublist) {
         break;
@@ -1878,21 +1883,21 @@ wallet_GetSelectIndex(
   const nsString& value,
   PRInt32& index)
 {
-  nsresult result;
   PRUint32 length;
   selectElement->GetLength(&length);
-  nsIDOMNSHTMLOptionCollection * options;
-  result = selectElement->GetOptions(&options);
-  if ((NS_SUCCEEDED(result)) && (nsnull != options)) {
+  nsCOMPtr<nsIDOMHTMLCollection> options;
+  selectElement->GetOptions(getter_AddRefs(options));
+  if (options) {
     PRUint32 numOptions;
     options->GetLength(&numOptions);
     for (PRUint32 optionX = 0; optionX < numOptions; optionX++) {
-      nsIDOMNode* optionNode = nsnull;
-      options->Item(optionX, &optionNode);
-      if (nsnull != optionNode) {
-        nsIDOMHTMLOptionElement* optionElement = nsnull;
-        result = optionNode->QueryInterface(kIDOMHTMLOptionElementIID, (void**)&optionElement);
-        if ((NS_SUCCEEDED(result)) && (nsnull != optionElement)) {
+      nsCOMPtr<nsIDOMNode> optionNode;
+      options->Item(optionX, getter_AddRefs(optionNode));
+
+      if (optionNode) {
+        nsCOMPtr<nsIDOMHTMLOptionElement> optionElement(do_QueryInterface(optionNode));
+
+        if (optionElement) {
           nsAutoString optionValue;
           nsAutoString optionText;
           optionElement->GetValue(optionValue);
@@ -1905,12 +1910,9 @@ wallet_GetSelectIndex(
             index = optionX;
             return 0;
           }
-          NS_RELEASE(optionElement);
         }
-        NS_RELEASE(optionNode);
       }
     }
-    NS_RELEASE(options);
   }
   return -1;
 }
@@ -1980,9 +1982,9 @@ wallet_StepForwardOrBack
         }
       }
     } else {
-      nsIDOMHTMLSelectElement* selectElement;
-      result = elementNode->QueryInterface(kIDOMHTMLSelectElementIID, (void**)&selectElement);
-      if ((NS_SUCCEEDED(result)) && (selectElement)) {
+      nsCOMPtr<nsIDOMHTMLSelectElement> selectElement(do_QueryInterface(elementNode));
+
+      if (selectElement) {
         atInputOrSelect = PR_TRUE;
         return;
       }
@@ -2125,6 +2127,7 @@ wallet_ResolvePositionalSchema(nsIDOMNode* elementNode, nsString& schema) {
 //          nsIUGenCategory* intl =  nsnull;
 //          nsresult rv = nsServiceManager::GetService(kUnicharUtilCID, kIUGenCategoryIID,
 //                                      (nsISupports**)&intl);
+//          Whaaaaaa, intl is never released here!
 //          if (NS_SUCCEEDED(rv) && intl) {
 //            PRBool accept;
 //            rv = intl->Is(c, intl->kUGenCategory_Number, &accept);
@@ -2408,6 +2411,9 @@ wallet_GetPrefills(
   nsresult result;
 
   /* get prefills for input element */
+
+  // The below code looks really suspicious leak-wize
+
   result = elementNode->QueryInterface(kIDOMHTMLInputElementIID, (void**)&inputElement);
   if ((NS_SUCCEEDED(result)) && (nsnull != inputElement)) {
     nsAutoString type;
@@ -2493,6 +2499,9 @@ if (schema.Length()) {
           result = wallet_GetSelectIndex(selectElement, value, selectIndex);
           if (NS_SUCCEEDED(result)) {
             /* value matched one of the values in the drop-down list */
+
+            // No Release() here?
+
             inputElement = nsnull;
             return NS_OK;
           }
@@ -2503,6 +2512,9 @@ if (schema.Length()) {
             result = wallet_GetSelectIndex(selectElement, value, selectIndex);
             if (NS_SUCCEEDED(result)) {
               /* value matched one of the values in the drop-down list */
+
+              // No Release() here?
+
               inputElement = nsnull;
               return NS_OK;
             }
@@ -2669,7 +2681,11 @@ wallet_InitializeCurrentURL(nsIDocument * doc) {
   /* get host+file */
   nsAutoString urlName;
   wallet_GetHostFile(url, urlName);
+
+  // I don't get this, we get the string urlName for no good reason?
   NS_RELEASE(url);
+
+  // And why do we need this?
   if (urlName.Length() == 0) {
     return;
   }
@@ -3490,6 +3506,9 @@ WLLT_Prefill(nsIPresShell* shell, PRBool quick, nsIDOMWindowInternal* win)
       wallet_Alert(message, win);
       Recycle(message);
     }
+
+    // Shouldn't wallet_PrefillElement_list be deleted here?
+
     return NS_ERROR_FAILURE; // indicates to caller not to display preview screen
   }
 
@@ -3597,21 +3616,27 @@ wallet_CaptureSelectElement(nsIDOMNode* elementNode, nsIDocument* doc) {
     /* it's a dropdown list */
     nsAutoString field;
     result = selectElement->GetName(field);
+
     if (NS_SUCCEEDED(result)) {
       PRUint32 length;
       selectElement->GetLength(&length);
-      nsIDOMNSHTMLOptionCollection * options;
-      result = selectElement->GetOptions(&options);
-      if ((NS_SUCCEEDED(result)) && (nsnull != options)) {
+
+      nsCOMPtr<nsIDOMHTMLCollection> options;
+      selectElement->GetOptions(getter_AddRefs(options));
+
+      if (options) {
         PRInt32 selectedIndex;
         result = selectElement->GetSelectedIndex(&selectedIndex);
+
         if (NS_SUCCEEDED(result)) {
-          nsIDOMNode* optionNode = nsnull;
-          options->Item(selectedIndex, &optionNode);
-          if (nsnull != optionNode) {
-            nsIDOMHTMLOptionElement* optionElement = nsnull;
-            result = optionNode->QueryInterface(kIDOMHTMLOptionElementIID, (void**)&optionElement);
-            if ((NS_SUCCEEDED(result)) && (nsnull != optionElement)) {
+          nsCOMPtr<nsIDOMNode> optionNode;
+
+          options->Item(selectedIndex, getter_AddRefs(optionNode));
+
+          if (optionNode) {
+            nsCOMPtr<nsIDOMHTMLOptionElement> optionElement(do_QueryInterface(optionNode));
+
+            if (optionElement) {
               nsAutoString optionValue;
               nsAutoString optionText;
 
