@@ -481,7 +481,7 @@ function MsgForwardAsAttachment(event)
   var loadedFolder = GetLoadedMsgFolder();
   var messageArray = GetSelectedMessages();
 
-  dump("\nMsgForwardAsAttachment from XUL\n");
+  //dump("\nMsgForwardAsAttachment from XUL\n");
   if (event && event.shiftKey)
     ComposeMessage(msgComposeType.ForwardAsAttachment,
                    msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
@@ -494,7 +494,7 @@ function MsgForwardAsInline(event)
   var loadedFolder = GetLoadedMsgFolder();
   var messageArray = GetSelectedMessages();
 
- dump("\nMsgForwardAsInline from XUL\n");
+  //dump("\nMsgForwardAsInline from XUL\n");
   if (event && event.shiftKey)
     ComposeMessage(msgComposeType.ForwardInline,
                    msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
@@ -616,7 +616,7 @@ function MsgUnsubscribe()
 
 function MsgSaveAsFile() 
 {
-    dump("\MsgSaveAsFile from XUL\n");
+    //dump("\MsgSaveAsFile from XUL\n");
     var messages = GetSelectedMessages();
     if (messages && messages.length == 1)
     {
@@ -627,7 +627,7 @@ function MsgSaveAsFile()
 
 function MsgSaveAsTemplate() 
 {
-    dump("\MsgSaveAsTemplate from XUL\n");
+    //dump("\MsgSaveAsTemplate from XUL\n");
     var folder = GetLoadedMsgFolder();
     var messages = GetSelectedMessages();
     if (messages && messages.length == 1)
@@ -702,7 +702,7 @@ function MsgOpenNewWindowForMessage(messageUri, folderUri)
 
 function CloseMailWindow() 
 {
-    dump("\nClose from XUL\nDo something...\n");
+    //dump("\nClose from XUL\nDo something...\n");
     window.close();
 }
 
@@ -774,7 +774,7 @@ function MsgMarkThreadAsRead()
 
 function MsgViewPageSource() 
 {
-    dump("MsgViewPageSource(); \n ");
+    //dump("MsgViewPageSource(); \n ");
     
     var messages = GetSelectedMessages();
     ViewPageSource(messages);

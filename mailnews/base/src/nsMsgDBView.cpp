@@ -245,7 +245,7 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
   return NS_OK;
 }
 
-nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
+NS_IMETHODIMP nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
 {
   nsXPIDLCString baseURI;
   m_folder->GetBaseMessageURI(getter_Copies(baseURI));
@@ -335,7 +335,8 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
       // get the msgkey for the message
       nsMsgKey msgkey = m_keys.GetAt(startRange);
       nsXPIDLCString uri;
-      GenerateURIForMsgKey(msgkey, getter_Copies(uri));
+      rv = GenerateURIForMsgKey(msgkey, getter_Copies(uri));
+      NS_ENSURE_SUCCESS(rv,rv);
       mMessengerInstance->OpenURL(uri);
     }
   }
@@ -682,6 +683,35 @@ int PR_CALLBACK CompareViewIndices (const void *v1, const void *v2, void *)
 	nsMsgViewIndex i1 = *(nsMsgViewIndex*) v1;
 	nsMsgViewIndex i2 = *(nsMsgViewIndex*) v2;
 	return i1 - i2;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
+{
+  nsresult rv = NS_OK;
+
+  NS_ENSURE_ARG_POINTER(length);
+  *length = 0;
+  NS_ENSURE_ARG_POINTER(uris);
+  *uris = nsnull;
+
+  nsUInt32Array selection;
+  GetSelectedIndices(&selection);
+  *length = selection.GetSize();
+  PRUint32 numIndicies = *length;
+  if (!numIndicies) return NS_OK;
+
+  char **outArray, **next;
+  next = outArray = (char **)nsMemory::Alloc(numIndicies * sizeof(char *));
+  if (!outArray) return NS_ERROR_OUT_OF_MEMORY;
+  for (PRUint32 i=0;i<numIndicies;i++) {
+    rv = GenerateURIForMsgKey(selection.GetAt(i),next);
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (!*next) return NS_ERROR_OUT_OF_MEMORY;
+    next++;
+  }
+
+  *uris = outArray;
+  return NS_OK;
 }
 
 /* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
@@ -1337,10 +1367,12 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
     nsMsgKeyArray preservedSelection;
 
+#ifdef DEBUG_seth
     printf("XXX nsMsgDBView::Sort(%d,%d)\n",(int)sortType,(int)sortOrder);
+#endif
     if (m_sortType == sortType && m_sortValid) {
         if (m_sortOrder == sortOrder) {
-            printf("XXX same as it ever was.  do nothing\n");
+            // same as it ever was.  do nothing
             return NS_OK;
         }   
         else {

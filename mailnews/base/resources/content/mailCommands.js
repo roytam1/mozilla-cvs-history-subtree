@@ -190,14 +190,15 @@ function GetNextNMessages(folder)
 	}
 }
 
- function ComposeMessage(type, format, folder, messageArray) //type is a nsIMsgCompType and format is a nsIMsgCompFormat
+// type is a nsIMsgCompType and format is a nsIMsgCompFormat
+function ComposeMessage(type, format, folder, messageArray) 
 {
 	var msgComposeType = Components.interfaces.nsIMsgCompType;
 	var identity = null;
 	var newsgroup = null;
 	var server;
 
-	dump("ComposeMessage folder="+folder+"\n");
+	//dump("ComposeMessage folder="+folder+"\n");
 	try 
 	{
 		if(folder)
@@ -220,17 +221,14 @@ function GetNextNMessages(folder)
 			}
 	        identity = getIdentityForServer(server);
 		    // dump("identity = " + identity + "\n");
-
 		}
-        
-
 	}
 	catch (ex) 
 	{
         	dump("failed to get an identity to pre-select: " + ex + "\n");
 	}
 
-	dump("\nComposeMessage from XUL: " + identity + "\n");
+	//dump("\nComposeMessage from XUL: " + identity + "\n");
 	var uri = null;
 
 	if (! msgComposeService)
@@ -245,9 +243,9 @@ function GetNextNMessages(folder)
 		msgComposeService.OpenComposeWindow(null, null, type, format, identity);
 		return;
 	}
-        else if (type == msgComposeType.NewsPost) 
+    else if (type == msgComposeType.NewsPost) 
 	{
-		dump("OpenComposeWindow with " + identity + " and " + newsgroup + "\n");
+		//dump("OpenComposeWindow with " + identity + " and " + newsgroup + "\n");
 		msgComposeService.OpenComposeWindow(null, newsgroup, type, format, identity);
 		return;
 	}
@@ -261,11 +259,10 @@ function GetNextNMessages(folder)
 		uri = "";
 		for (var i = 0; i < messageArray.length && i < 8; i ++)
 		{	
-			var messageResource = messageArray[i].QueryInterface(Components.interfaces.nsIRDFResource);
-			var messageUri = messageResource.Value;
-
-			dump('i = '+ i);
-			dump('\n');				
+			var messageUri = messageArray[i];
+            dump("XXX messageUri in ComposeMessage = " + messageUri + "\n");
+			//dump('i = '+ i);
+			//dump('\n');				
 			if (type == msgComposeType.Reply || type == msgComposeType.ReplyAll || type == msgComposeType.ForwardInline ||
 				type == msgComposeType.ReplyToGroup || type == msgComposeType.ReplyToSender || 
 				type == msgComposeType.ReplyToSenderAndGroup ||

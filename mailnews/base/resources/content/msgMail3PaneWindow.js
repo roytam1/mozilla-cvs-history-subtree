@@ -853,12 +853,21 @@ function GetSelectedMessage(index)
 
 function GetNumSelectedMessages()
 {
-// this needs re-written 
+  // this needs to be re-written
 }
 
 function GetSelectedMessages()
 {
-  // this isn't going to work anymore
+  try {
+    var messageArray = {}; 
+    var length = {};
+    gDBView.getURIsForSelection(messageArray,length);
+    return messageArray.value;
+  }
+  catch (ex) {
+    dump("ex = " + ex + "\n");
+    return null;
+  }
 }
 
 function GetLoadedMsgFolder()
