@@ -6,6 +6,7 @@ sroaming.jar:
   content/sroaming/transfer/progressDialog.js    (resources/content/transfer/progressDialog.js)
   content/sroaming/transfer/conflictResolve.xul  (resources/content/transfer/conflictResolve.xul)
   content/sroaming/transfer/conflictResolve.js   (resources/content/transfer/conflictResolve.js)
+  content/sroaming/transfer/conflictCheck.js     (resources/content/transfer/conflictCheck.js)
   content/sroaming/prefs/all.js                  (resources/content/prefs/all.js)
   content/sroaming/prefs/top.xul                 (resources/content/prefs/top.xul)
   content/sroaming/prefs/top.js                  (resources/content/prefs/top.js)

@@ -15,8 +15,8 @@
  * The Original Code is Mozilla Roaming code.
  *
  * The Initial Developer of the Original Code is 
- * Ben Bucksch <http://www.bucksch.org> of
- * Beonex <http://www.beonex.com>
+ *       Ben Bucksch <http://www.bucksch.org>
+ *       of Beonex <http://www.beonex.com>
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
@@ -35,6 +35,9 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+
+/* Code for the conflictResolve.xul dialog, which lets the user select
+   which of 2 conflicting versions of the same file to keep. */
 
 var params = window.arguments[0].QueryInterface(
                                    Components.interfaces.nsIDialogParamBlock);

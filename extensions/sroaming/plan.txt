@@ -1,17 +1,17 @@
 - rework
   - conflict
-  - rewrite dialog
 - Bugs
   - no upload at switch profile
+  - trunk upload
+    - ftp: offline
+    - http: not initialized
 - error handling
+  - (local profile) files missing
   - ftp
-    - trunk: offline
-    - malformed url (or cancelled auth?) stops and then goes back to busy.
-      reports success, but failed.
+    - ok too early: after binding, ns_ok, then goes on to transfer
+      - malformed url (or cancelled auth?) stops and then goes back to busy.
+        reports success, but failed.
   - http
-    - trunk: upload fails on trunk with "not initialized"
-    m wrong path in url (but working server) vv
-    - test same situations with ftp
   - cancel by user in progress dialog: xpconnect errors
   - pressing cancel after finished with failed, all files are set to abort
   - copy protocol
@@ -19,18 +19,15 @@
 m conflictresolve: mod/upload times
 - world gone
   - ddump, xpcom not defined after done
-  - xpconnect errors after ftp upload
+  - see ftp above
 
 Later:
 - license headers
 - nsresult for internal functions, clean up interfaces
 - warn before saving pw
-- XXXs
 - remove printfs
-- polish
-  - conflict ui
-  - progress ui
-    - focus cancel button?
+- rewrite dialog
+- XXXs
 
 Enhance
 - protocols
@@ -38,7 +35,6 @@ Enhance
   - LDAP
   - IMAP
 - password encrypt
-- ProfileManager
 
 roaming urls
  <ftp://user@ftp-server//path/to/dir/>

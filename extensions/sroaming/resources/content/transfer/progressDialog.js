@@ -11,9 +11,9 @@
  *  
  * The Original Code is Mozilla Session Roaming code.
  * 
- * The Initial Developer of the Original Code is
- * Ben Bucksch <http://www.bucksch.org> of
- * Beonex <http://www.beonex.com>
+ * The Initial Developer of the Original Code is (XXX am I?)
+ *        Ben Bucksch <http://www.bucksch.org>
+ *        of Beonex <http://www.beonex.com>
  * Portions created by Ben Bucksch are Copyright (C) 2002 Ben Bucksch.
  * All Rights Reserved.
  * 
@@ -23,7 +23,7 @@
 
 /* Displays the progress of the down/upload of profile files to an
    HTTP/FTP server.
-   It also initiates the actual transfer, using sroamingTransfer.js,
+   It also initiates the actual transfer, using transfer.js,
    see mozSRoamingStream.cpp for the reasons.
 */
 
@@ -50,7 +50,8 @@ function Startup()
 
   try
   {
-    GetParams(); // also starts transfer
+    GetParams(); // dialog params -> gTransfer
+    gTransfer.transfer(); // non-blocking
   }
   catch (e)
   {
@@ -86,8 +87,7 @@ function Startup()
 }
 
 /*
-  Reads in the params we got from the calling function.
-  Also starts the transfer (in transfer.js).
+  Reads in the params we got from the calling function. Creates gTransfer.
 */
 function GetParams()
 {
@@ -144,7 +144,7 @@ function GetParams()
   // ignore errors
 
   // filenames
-  var files = Array();
+  var files = new Array();
   for (var i = 0; i < count; i++)
   {
     var filename = params.GetString(i + 4);  // filenames start at item 4
@@ -163,7 +163,16 @@ function GetParams()
                            password, savepw,
                            files,
                            undefined, SetProgressStatus);
-  gTransfer.transfer();
+
+  files = new Array();
+  files[0] = new Object();
+  files[0].filename = "listing.xml";
+  files[0].mimetype = "text/xml";
+  gTransferListing = new Transfer(download, serial,
+                                  profileDir, remoteDir,
+                                  password, savepw,
+                                  files,
+                                  undefined, SetProgressStatus);
 }
 
 function PassBackParams()

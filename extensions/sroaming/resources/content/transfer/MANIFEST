@@ -22,3 +22,4 @@ progressDialog.xul
 progressDialog.js
 conflictResolve.xul
 conflictResolve.js
+conflictCheck.js

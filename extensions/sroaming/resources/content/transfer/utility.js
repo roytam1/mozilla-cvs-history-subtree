@@ -12,8 +12,8 @@
  * The Original Code is Mozilla Session Roaming code.
  * 
  * The Initial Developer of the Original Code is
- * Ben Bucksch <http://www.bucksch.org> of
- * Beonex <http://www.beonex.com>
+ *       Ben Bucksch <http://www.bucksch.org>
+ *       of Beonex <http://www.beonex.com>
  * Portions created by Ben Bucksch are Copyright (C) 2002 Ben Bucksch.
  * All Rights Reserved.
  * 
@@ -95,6 +95,9 @@ function ErrorMessageForFile(aFile)
     return GetStringWithFile("HTTPResponse", aFile.filename)
            .replace(/%responsecode%/, aFile.httpResponse)
            .replace(/%responsetext%/, aFile.statusText);
+  else if (aFile.statusCode == kErrorFailure && aFile.statusText) // FTP
+    return GetStringWithFile("StatusTextOnly", aFile.filename)
+           .replace(/%statustext%/, aFile.statusText);
   else
     return ErrorMessageForStatusCode(aFile.statusCode, aFile.filename);
 }

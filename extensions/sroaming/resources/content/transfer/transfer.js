@@ -16,6 +16,7 @@
  *
  * The Initial Developer of the Original Code is 
  *       Ben Bucksch <http://www.bucksch.org>
+ *       of Beonex <http://www.beonex.com>
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
@@ -324,8 +325,8 @@ Transfer.prototype =
       }
       else
       {
-        dumpError("Transfer failed:\n" + e);
-        throw e;
+        ddump("Unexpected (non-XPCOM) transfer problem:\n" + e);
+        file.setStatus("failed", kErrorUnexpected, e);
       }
     }
   },
@@ -656,9 +657,12 @@ TransferFile.prototype =
       if (aStatusCode != undefined)
       {
         this.statusCode = aStatusCode;
-        this.statusText = aMessage; // might be undefined, but it must match
-                                    // this.statusCode
+        //this.statusText = aMessage; // might be undefined, but it must match
+        //                            // this.statusCode
+        //          *sigh*, for FTP, we get the error msg before the error
       }
+      if (aMessage)
+        this.statusText = aMessage;
 
       if(this.transfer.progressCallback)
         this.transfer.progressCallback(this.filei);
@@ -866,9 +870,16 @@ TransferProgressListener.prototype =
   alert : function(dlgTitle, text)
   {
     ddump("alert");
+
+    // FTP sends us these in the case of an error *sigh*. Don't display dialog,
+    // but redirect to file errors.
+    this.file.statusText = text.replace(/\n/, "");
+
+    /*
     if (!dlgTitle)
       title = GetString("Alert");
     GetPromptService().alert(window, dlgTitle, text);
+    */
   },
   alertCheck : function(dlgTitle, text, checkBoxLabel, checkObj)
   {

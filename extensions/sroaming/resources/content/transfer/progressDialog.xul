@@ -39,6 +39,7 @@
 
   <script type="application/x-javascript" src="chrome://global/content/dialogOverlay.js" />
   <script type="application/x-javascript" src="chrome://sroaming/content/transfer/progressDialog.js" />
+  <script type="application/x-javascript" src="chrome://sroaming/content/transfer/conflictCheck.js" />
   <script type="application/x-javascript" src="chrome://sroaming/content/transfer/transfer.js" />
   <script type="application/x-javascript" src="chrome://sroaming/content/transfer/utility.js" />
 
