@@ -2077,14 +2077,14 @@ char *
 GenerateFileNameFromURI(nsIURI *aURL)
 {
   nsresult    rv; 
-  const char  *file;
-  const char  *spec;
+  nsXPIDLCString file;
+  nsXPIDLCString spec;;
   char        *returnString;
   char        *cp = nsnull;
   char        *cp1 = nsnull;
 
-  rv = aURL->GetFile(&file);
-  if ( NS_SUCCEEDED(rv) && file && (*file))
+  rv = aURL->GetPath(getter_Copies(file));
+  if ( NS_SUCCEEDED(rv) && file)
   {
     char *newFile = PL_strdup(file);
     if (!newFile)
@@ -2113,8 +2113,8 @@ GenerateFileNameFromURI(nsIURI *aURL)
   cp1 = nsnull;
 
 
-  rv = aURL->GetSpec(&spec);
-  if ( NS_SUCCEEDED(rv) && spec && (*spec) )
+  rv = aURL->GetSpec(getter_Copies(spec));
+  if ( NS_SUCCEEDED(rv) && spec)
   {
     char *newSpec = PL_strdup(spec);
     if (!newSpec)
@@ -2133,8 +2133,8 @@ GenerateFileNameFromURI(nsIURI *aURL)
     if (!hostStr)
       hostStr = cp;
 
-    const char *protocol = nsnull;
-    if (NS_SUCCEEDED(aURL->GetProtocol(&protocol)) && (protocol) && (*protocol) )
+    nsXPIDLCString protocol;
+    if (NS_SUCCEEDED(aURL->GetScheme(getter_Copies(protocol))) && (protocol))
     {
       if (PL_strcasecmp(protocol, "http") == 0)
       {
