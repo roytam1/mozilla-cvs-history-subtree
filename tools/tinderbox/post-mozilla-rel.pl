@@ -63,7 +63,10 @@ sub makefullsoft {
   chomp($builddir);
   # should go in config
   my $moforoot = "cltbld\@cvs.mozilla.org:/mofo"; 
-  TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co -d fullsoft talkback/fullsoft";
+  my $fullsofttag = " ";
+  $fullsofttag = " -r $Settings::BuildTag"
+        unless not defined($Settings::BuildTag) or $Settings::BuildTag eq '';
+  TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co $fullsofttag -d fullsoft talkback/fullsoft";
   TinderUtils::run_shell_command "$builddir/build/autoconf/make-makefile $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft";
   TinderUtils::run_shell_command "make -C $builddir/fullsoft fullcircle-push";
