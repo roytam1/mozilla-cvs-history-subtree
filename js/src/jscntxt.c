@@ -355,10 +355,25 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
     if (errorNumber == JSMSG_UNCAUGHT_EXCEPTION)
         report.flags |= JSREPORT_EXCEPTION;
     
-    /* Only call the error reporter if an exception wasn't raised. */
+    /* 
+     * Only call the error reporter if an exception wasn't raised. 
+     *
+     * If an exception was raised, then we call the debugErrorHook 
+     * (if present) to give it a chance to see the error before it
+     * propigates out of scope. This is needed for compatability with
+     * the old scheme.
+     */
     if (!js_ErrorToException(cx, message, &report))
-#endif
+        js_ReportErrorAgain(cx, message, &report);
+    else if (cx->runtime->debugErrorHook && cx->errorReporter) {
+        JSDebugErrorHook hook = cx->runtime->debugErrorHook;
+        /* test local in case debugErrorHook changed on another thread */
+        if (hook)
+            hook(cx, message, &report, cx->runtime->debugErrorHookData);
+    }
+#else
     js_ReportErrorAgain(cx, message, &report);
+#endif
 
     if (message)
 	JS_free(cx, message);
@@ -379,6 +394,18 @@ js_ReportErrorAgain(JSContext *cx, const char *message, JSErrorReport *reportp)
     if (!cx->lastMessage)
 	return;
     onError = cx->errorReporter;
+    /*
+     * If debugErrorHook is present then we give it a chance to veto
+     * sending the error on to the regular ErrorReporter.
+     */
+    if (cx->runtime->debugErrorHook && onError) {
+        JSDebugErrorHook hook = cx->runtime->debugErrorHook;
+        /* test local in case debugErrorHook changed on another thread */
+        if (hook && !hook(cx, message, reportp,
+                          cx->runtime->debugErrorHookData)) {
+            onError = NULL;
+        }
+    }
     if (onError)
 	(*onError)(cx, cx->lastMessage, reportp);
 }

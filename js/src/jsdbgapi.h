@@ -246,6 +246,9 @@ JS_SetObjectHook(JSRuntime *rt, JSObjectHook hook, void *closure);
 extern JS_PUBLIC_API(JSBool)
 JS_SetThrowHook(JSRuntime *rt, JSTrapHandler hook, void *closure);
 
+extern JS_PUBLIC_API(JSBool)
+JS_SetDebugErrorHook(JSRuntime *rt, JSDebugErrorHook hook, void *closure);
+
 JS_END_EXTERN_C
 
 #endif /* jsdbgapi_h___ */

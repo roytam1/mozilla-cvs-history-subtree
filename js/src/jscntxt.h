@@ -93,6 +93,8 @@ struct JSRuntime {
     void                *objectHookData;
     JSTrapHandler       throwHook;
     void                *throwHookData;
+    JSDebugErrorHook    debugErrorHook;
+    void                *debugErrorHookData;
 
     /* More debugging state, see jsdbgapi.c. */
     JSCList             trapList;

@@ -870,3 +870,11 @@ JS_SetThrowHook(JSRuntime *rt, JSTrapHandler hook, void *closure)
     rt->throwHookData = closure;
     return JS_TRUE;
 }
+
+JS_PUBLIC_API(JSBool)
+JS_SetDebugErrorHook(JSRuntime *rt, JSDebugErrorHook hook, void *closure)
+{
+    rt->debugErrorHook = hook;
+    rt->debugErrorHookData = closure;
+    return JS_TRUE;
+}

@@ -438,6 +438,8 @@ MatchChar(JSTokenStream *ts, int32 expect)
     return JS_FALSE;
 }
 
+#if 0
+/* XXX js_ReportCompileError is unused */
 void
 js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
 		      const char *format, ...)
@@ -497,6 +499,7 @@ js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
 	limit[-1] = lastc;
     free(message);
 }
+#endif
 
 void
 js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
@@ -570,12 +573,19 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
          * don't really want to call the error reporter, as when js is called
          * by other code which could catch the error.
          */
-        if (cx->interpLevel == 0)
+        if (cx->interpLevel != 0)
+            onError = NULL;
+#endif
+        if (cx->runtime->debugErrorHook && onError) {
+            JSDebugErrorHook hook = cx->runtime->debugErrorHook;
+            /* test local in case debugErrorHook changed on another thread */
+            if (hook && !hook(cx, message, &report,
+                              cx->runtime->debugErrorHookData)) {
+                onError = NULL;
+            }
+        }
+        if (onError)
             (*onError)(cx, message, &report);
-#else
-        (*onError)(cx, message, &report);
-#endif;
-
 
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {

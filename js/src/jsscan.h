@@ -221,9 +221,12 @@ js_MapKeywords(void (*mapfun)(const char *));
  * Report an error found while scanning ts to a window or other output device
  * associated with cx.
  */
+#if 0
+/* XXX js_ReportCompileError is unused */
 extern void
 js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
 		      const char *format, ...);
+#endif
 
 void
 js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
