@@ -38,7 +38,7 @@
 // SYNTAX HINTS:  dashes are delimiters.  Use underscores instead.
 //  The first character after a period must be alphabetic.
 
-pref("general.useragent.misc", "Stable");
+pref("general.useragent.misc", "rv:1.0.2");
 // Separate the ever-changing version info to avoid merge conflicts
 
 // see <http://www.mozilla.org/build/revised-user-agent-strings.html>
@@ -66,6 +66,7 @@ pref("backups.number_of_prefs_copies", 1);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 pref("browser.startup.page",                1);
 pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
+pref("browser.startup.homepage.count", 1);
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.beonex.0-8.1", true);
 
@@ -94,7 +95,7 @@ pref("browser.display.show_image_placeholders", true); // true = show image plac
 pref("browser.anchor_color",                "#0000EE");
 pref("browser.visited_color",               "#551A8B");
 pref("browser.underline_anchors",           true);
-pref("browser.blink_allowed",               true);
+pref("browser.blink_allowed",               false);
 
 pref("browser.display.use_focus_colors",    false);
 pref("browser.display.focus_background_color", "#117722");
@@ -128,7 +129,7 @@ pref("browser.turbo.enabled", false);
 // pref("browser.turbo.singleProfileOnly", false);
 
 pref("browser.helperApps.alwaysAsk.force",  false);
-pref("browser.helperApps.neverAsk.saveToDisk", "");
+pref("browser.helperApps.neverAsk.saveToDisk", "application%2Foccet-stream");
 pref("browser.helperApps.neverAsk.openFile", "");
 
 pref("accessibility.browsewithcaret", false);
@@ -182,10 +183,10 @@ pref("browser.forms.submit.backwards_compatible", true);
 // Tab browser preferences.
 pref("browser.tabs.autoHide", true);
 pref("browser.tabs.forceHide", false);
-pref("browser.tabs.loadInBackground", false);
-pref("browser.tabs.opentabfor.middleclick", false);
+pref("browser.tabs.loadInBackground", true);
+pref("browser.tabs.opentabfor.middleclick", true);
 pref("browser.tabs.opentabfor.urlbar", false);
-pref("browser.tabs.opentabfor.windowopen", false);
+pref("browser.tabs.opentabfor.windowopen", true);
 pref("browser.tabs.opentabfor.bookmarks", false);
 
 // view source
@@ -219,7 +220,7 @@ pref("browser.related.disabledForDomains", "");
 pref("browser.goBrowsing.enabled", false);
 
 // URI fixup prefs
-pref("browser.fixup.alternate.enabled", true);
+pref("browser.fixup.alternate.enabled", false);
 pref("browser.fixup.alternate.prefix", "www.");
 pref("browser.fixup.alternate.suffix", ".com");
 
@@ -289,8 +290,6 @@ pref("capability.policy.default.History.toString", "UniversalBrowserRead");
 
 pref("capability.policy.default.HTMLDocument.close", "allAccess");
 pref("capability.policy.default.HTMLDocument.open", "allAccess");
-pref("capability.policy.default.HTMLDocument.write", "allAccess");
-pref("capability.policy.default.HTMLDocument.writeln", "allAccess");
 
 pref("capability.policy.default.Location.hash.set", "allAccess");
 pref("capability.policy.default.Location.href.set", "allAccess");
@@ -358,6 +357,64 @@ pref("capability.policy.mailnews.Window.resizeTo", "noAccess");
 pref("capability.policy.mailnews.Window.screenX.set", "noAccess");
 pref("capability.policy.mailnews.Window.screenY.set", "noAccess");
 pref("capability.policy.mailnews.Window.sizeToContent", "noAccess");
+pref("capability.policy.mailnews.document.load", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.channel", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.responseXML", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.responseText", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.status", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.statusText", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.abort", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.getAllResponseHeaders", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.getResponseHeader", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.open", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.send", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.setRequestHeader", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.readyState", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.overrideMimeType", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.onload", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.onerror", "noAccess");
+pref("capability.policy.mailnews.XMLHttpRequest.onreadystatechange", "noAccess");
+pref("capability.policy.mailnews.XMLSerializer.serializeToString", "noAccess");
+pref("capability.policy.mailnews.XMLSerializer.serializeToStream", "noAccess");
+pref("capability.policy.mailnews.DOMParser,parseFromString", "noAccess");
+pref("capability.policy.mailnews.DOMParser,parseFromStream", "noAccess");
+pref("capability.policy.mailnews.SOAPCall.transportURI", "noAccess");
+pref("capability.policy.mailnews.SOAPCall.verifySourceHeader", "noAccess");
+pref("capability.policy.mailnews.SOAPCall.invoke", "noAccess");
+pref("capability.policy.mailnews.SOAPCall.asyncInvoke", "noAccess");
+pref("capability.policy.mailnews.SOAPResponse.fault", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.styleURI", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.getAssociatedEncoding", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.setEncoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.getEncoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.setDecoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.setDecoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.getDecoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.defaultEncoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.defaultDecoder", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.schemaCollection", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.encode", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.decode", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.mapSchemaURI", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.unmapSchemaURI", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.getInternalSchemaURI", "noAccess");
+pref("capability.policy.mailnews.SOAPEncoding.getExternalSchemaURI", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.element", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.faultNamespaceURI", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.faultCode", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.faultString", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.faultActor", "noAccess");
+pref("capability.policy.mailnews.SOAPFault.detail", "noAccess");
+pref("capability.policy.mailnews.SOAPHeaderBlock.actorURI", "noAccess");
+pref("capability.policy.mailnews.SOAPHeaderBlock.mustUnderstand", "noAccess");
+pref("capability.policy.mailnews.SOAPParameter", "noAccess");
+pref("capability.policy.mailnews.SOAPPropertyBagMutator.propertyBag", "noAccess");
+pref("capability.policy.mailnews.SOAPPropertyBagMutator.addProperty", "noAccess");
+pref("capability.policy.mailnews.SchemaLoader.load", "noAccess");
+pref("capability.policy.mailnews.SchemaLoader.loadAsync", "noAccess");
+pref("capability.policy.mailnews.SchemaLoader.processSchemaElement", "noAccess");
+pref("capability.policy.mailnews.SchemaLoader.onLoad", "noAccess");
+pref("capability.policy.mailnews.SchemaLoader.onError", "noAccess");
 
 // Scripts & Windows prefs
 pref("browser.block.target_new_window",     false);
@@ -398,9 +455,39 @@ pref("offline.news.download.use_days",          0);
 // prevents necko connecting to ports 1-5 unless the protocol
 // overrides.
 
+// Prevent using external protocol handlers for these schemes
+pref("network.protocol-handler.external.hcp", false);
+pref("network.protocol-handler.external.vbscript", false);
+pref("network.protocol-handler.external.javascript", false);
+pref("network.protocol-handler.external.ms-help", false);
+pref("network.protocol-handler.external.vnd.ms.radio", false);
+// because we disable unknown protocols by default (see below),
+// enable a few well-known and presumably safe ones. please review choices.
+// Source: <http://www.w3.org/Addressing/schemes>
+// Attention: This disables any possible internal handlers, so don't list
+// them here.
+pref("network.protocol-handler.external.callto", true); // telephony
+pref("network.protocol-handler.external.fax", true); // dito
+pref("network.protocol-handler.external.tel", true); // dito
+pref("network.protocol-handler.external.h324", true); // dito
+pref("network.protocol-handler.external.h323", true); // dito
+pref("network.protocol-handler.external.sip", true); // dito
+pref("network.protocol-handler.external.freenet", true); // freenetproject.org
+pref("network.protocol-handler.external.rtsp", true); // realplayer etc.
+pref("network.protocol-handler.external.rtp", true); // dito
+pref("network.protocol-handler.external.pnm", true); // dito
+pref("network.protocol-handler.external.telnet", true); // shell services
+pref("network.protocol-handler.external.ssh", true); // dito
+pref("network.protocol-handler.external.tn3270", true); // dito?
+pref("network.protocol-handler.external.wais", true);
+pref("network.protocol-handler.external.z3950r", true);
+pref("network.protocol-handler.external.z3950s", true);
+pref("network.protocol-handler.external.dict", true); // dictionary lookup
+pref("network.protocol-handler.useSystemDefaults", false); // this is for url schemes. ask the OS. a lot of dangerous crap might be there (Windows Help with potential exploits), but some useful stuff as well (RealPlayer). We try to enable the useful stuff explicitly above. Mozilla doesn't have this pref at all, hardcoded to true.
+pref("network.protocols.useSystemDefaults", false); // *headbang* this is not for protocols or url schemes, but mimetypes.
+
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
-pref("network.protocols.useSystemDefaults",   false); // set to true if user links should use system default handlers
 
 // <http>
 pref("network.http.version", "1.1");	  // default
@@ -415,6 +502,10 @@ pref("network.http.proxy.version", "1.1");    // default
 
 // enable caching of http documents
 pref("network.http.use-cache", true);
+
+// this preference can be set to override the socket type used for normal
+// HTTP traffic.  an empty value indicates the normal TCP/IP socket type.
+pref("network.http.default-socket-type", "");
 
 pref("network.http.keep-alive", true); // set it to false in case of problems
 pref("network.http.proxy.keep-alive", true);
@@ -466,8 +557,13 @@ pref("network.http.sendRefererHeader", 5);
 // normally wouldn't send a referrer, such as file: and resource: and imap:
 pref("network.http.referrerSchemeOverride", false);
 
+// This pref controls whether or not we send HTTPS referrers
+// cross domain.  By default, this is enabled for compatibility
+// with other browsers and many websites (see bug 141641).
+pref("network.http.sendSecureXSiteReferrer", true);
+
 // Maximum number of consecutive redirects before aborting.
-pref("network.http.redirection-limit", 10);
+pref("network.http.redirection-limit", 20);
 
 // Enable http compression: comment this out in case of problems with 1.1
 pref("network.http.accept-encoding" ,"gzip, deflate, compress;q=0.9");
@@ -502,6 +598,9 @@ pref("network.ftp.idleConnectionTimeout", 300);
 // directory listing format - constants are defined in nsIDirectoryListing.idl
 // Do not set this to 0...
 pref("network.dir.format", 2);
+
+// enables the prefetch service (i.e., prefetching of <link rel="next"> URLs).
+pref("network.prefetch-next", false);
 
 // sspitzer:  change this back to "news" when we get to beta.
 // for now, set this to news.mozilla.org because you can only
