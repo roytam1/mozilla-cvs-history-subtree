@@ -307,8 +307,8 @@ nsFontMetricsWin :: nsFontMetricsWin()
   NS_INIT_REFCNT();
   mSpaceWidth = 0;
   ++gFontMetricsWinCount;
- /* for (PRInt32 i = 0; i < 256; i++)
-    mMeasuredChars[i] = -1;*/
+  for (PRInt32 i = 0; i < 256; i++)
+    mMeasuredChars[i] = -1;
 }
   
 nsFontMetricsWin :: ~nsFontMetricsWin()
@@ -407,7 +407,7 @@ nsresult nsFontMetricsWin :: GetSpaceWidth(nscoord &aSpaceWidth)
 
 nsresult   
 nsFontMetricsWin::GetASCIITextWidth(HDC aDC, const char* aStart, PRInt32 aNumChars, float aP2T, nscoord& aTextWidth)
-{/*
+{
   aTextWidth = 0;
   for (PRInt32 i = 0; i < aNumChars; i++) {
     nscoord width = mMeasuredChars[aStart[i]];
@@ -419,7 +419,7 @@ nsFontMetricsWin::GetASCIITextWidth(HDC aDC, const char* aStart, PRInt32 aNumCha
     else 
       aTextWidth += width;
   }
-*/
+
   return NS_OK;
 }
 
