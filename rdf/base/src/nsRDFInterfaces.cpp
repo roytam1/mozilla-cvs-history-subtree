@@ -1,5 +1,5 @@
 /*
- * DO NOT EDIT.  THIS FILE IS GENERATED FROM ../../../../rdf/base/idl/nsRDFInterfaces.idl
+ * DO NOT EDIT.  THIS FILE IS GENERATED FROM /home/waterson/RDF_19990326_BRANCH/mozilla/rdf/base/idl/nsRDFInterfaces.idl
  */
 #include "jsapi.h"
 #include "nsRDFInterfaces.h"
@@ -14,7 +14,7 @@ nsIRDFNode_Init(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
   nsIRDFNode *priv = (nsIRDFNode *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *uri;
+  const char *uri;
   if (!JS_ConvertArguments(cx, argc, argv, "s", &uri))
     return JS_FALSE;
   nsresult rv = priv->Init(uri);
@@ -139,7 +139,7 @@ nsIRDFResource_EqualsString(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
   nsIRDFResource *priv = (nsIRDFResource *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *aURI;
+  const char *aURI;
   if (!JS_ConvertArguments(cx, argc, argv, "s", &aURI))
     return JS_FALSE;
   PRBool retval;
@@ -1013,7 +1013,7 @@ nsIRDFDataSource_Init(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
   nsIRDFDataSource *priv = (nsIRDFDataSource *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *uri;
+  const char *uri;
   if (!JS_ConvertArguments(cx, argc, argv, "s", &uri))
     return JS_FALSE;
   nsresult rv = priv->Init(uri);
@@ -1302,7 +1302,7 @@ nsIRDFDataSource_IsCommandEnabled(JSContext *cx, JSObject *obj, uintN argc, jsva
   nsIRDFDataSource *priv = (nsIRDFDataSource *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *aCommand;
+  const char *aCommand;
   nsIRDFResource *aCommandTarget;
   if (!JS_ConvertArguments(cx, argc, argv, "so", &aCommand, &aCommandTarget))
     return JS_FALSE;
@@ -1323,7 +1323,7 @@ nsIRDFDataSource_DoCommand(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
   nsIRDFDataSource *priv = (nsIRDFDataSource *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *aCommand;
+  const char *aCommand;
   nsIRDFResource *aCommandTarget;
   if (!JS_ConvertArguments(cx, argc, argv, "so", &aCommand, &aCommandTarget))
     return JS_FALSE;
@@ -1558,7 +1558,7 @@ nsIRDFService_GetResource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *aURI;
+  const char *aURI;
   if (!JS_ConvertArguments(cx, argc, argv, "s", &aURI))
     return JS_FALSE;
   nsIRDFResource * retval;
@@ -1579,7 +1579,7 @@ nsIRDFService_GetUnicodeResource(JSContext *cx, JSObject *obj, uintN argc, jsval
   nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  PRUnichar *aURI;
+  const PRUnichar *aURI;
   if (!JS_ConvertArguments(cx, argc, argv, "W", &aURI))
     return JS_FALSE;
   nsIRDFResource * retval;
@@ -1600,7 +1600,7 @@ nsIRDFService_GetLiteral(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  PRUnichar *aValue;
+  const PRUnichar *aValue;
   if (!JS_ConvertArguments(cx, argc, argv, "W", &aValue))
     return JS_FALSE;
   nsIRDFLiteral * retval;
@@ -1695,7 +1695,7 @@ nsIRDFService_GetDataSource(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
   nsIRDFService *priv = (nsIRDFService *)JS_GetPrivate(cx, obj);
   if (!priv)
     return JS_TRUE;
-  char *aURI;
+  const char *aURI;
   if (!JS_ConvertArguments(cx, argc, argv, "s", &aURI))
     return JS_FALSE;
   nsIRDFDataSource * retval;

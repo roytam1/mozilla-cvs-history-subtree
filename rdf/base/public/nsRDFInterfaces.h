@@ -1,5 +1,5 @@
 /*
- * DO NOT EDIT.  THIS FILE IS GENERATED FROM ../../../../rdf/base/idl/nsRDFInterfaces.idl
+ * DO NOT EDIT.  THIS FILE IS GENERATED FROM /home/waterson/RDF_19990326_BRANCH/mozilla/rdf/base/idl/nsRDFInterfaces.idl
  */
 
 #ifndef __gen_nsRDFInterfaces_h__
@@ -11,13 +11,6 @@
 #ifdef XPIDL_JS_STUBS
 #include "jsapi.h"
 #endif
-#include "nsDebug.h"
-#include "nsTraceRefcnt.h"
-#include "nsID.h"
-#include "nsIID.h"
-#include "nsError.h"
-#include "nsISupportsUtils.h"
-
 #include "nscore.h" // for PRUnichar
 
 
@@ -37,7 +30,7 @@ class nsIRDFNode : public nsISupports {
   }
 
   /* void Init (in string uri); */
-  NS_IMETHOD Init(char *uri) = 0;
+  NS_IMETHOD Init(const char *uri) = 0;
 
   /* boolean EqualsNode (in nsIRDFNode aNode); */
   NS_IMETHOD EqualsNode(nsIRDFNode *aNode, PRBool *_retval) = 0;
@@ -70,7 +63,7 @@ class nsIRDFResource : public nsIRDFNode {
   NS_IMETHOD EqualsResource(nsIRDFResource *aResource, PRBool *_retval) = 0;
 
   /* boolean EqualsString (in string aURI); */
-  NS_IMETHOD EqualsString(char *aURI, PRBool *_retval) = 0;
+  NS_IMETHOD EqualsString(const char *aURI, PRBool *_retval) = 0;
 
 #ifdef XPIDL_JS_STUBS
   static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
@@ -290,7 +283,7 @@ class nsIRDFDataSource : public nsISupports {
   }
 
   /* void Init (in string uri); */
-  NS_IMETHOD Init(char *uri) = 0;
+  NS_IMETHOD Init(const char *uri) = 0;
 
   /* readonly attribute string URI; */
   NS_IMETHOD GetURI(char * *aURI) = 0;
@@ -335,10 +328,10 @@ class nsIRDFDataSource : public nsISupports {
   NS_IMETHOD Flush() = 0;
 
   /* boolean IsCommandEnabled (in string aCommand, in nsIRDFResource aCommandTarget); */
-  NS_IMETHOD IsCommandEnabled(char *aCommand, nsIRDFResource *aCommandTarget, PRBool *_retval) = 0;
+  NS_IMETHOD IsCommandEnabled(const char *aCommand, nsIRDFResource *aCommandTarget, PRBool *_retval) = 0;
 
   /* void DoCommand (in string aCommand, in nsIRDFResource aCommandTarget); */
-  NS_IMETHOD DoCommand(char *aCommand, nsIRDFResource *aCommandTarget) = 0;
+  NS_IMETHOD DoCommand(const char *aCommand, nsIRDFResource *aCommandTarget) = 0;
 
 #ifdef XPIDL_JS_STUBS
   static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
@@ -389,13 +382,13 @@ class nsIRDFService : public nsISupports {
   }
 
   /* nsIRDFResource GetResource (in string aURI); */
-  NS_IMETHOD GetResource(char *aURI, nsIRDFResource **_retval) = 0;
+  NS_IMETHOD GetResource(const char *aURI, nsIRDFResource **_retval) = 0;
 
   /* nsIRDFResource GetUnicodeResource (in wstring aURI); */
-  NS_IMETHOD GetUnicodeResource(PRUnichar *aURI, nsIRDFResource **_retval) = 0;
+  NS_IMETHOD GetUnicodeResource(const PRUnichar *aURI, nsIRDFResource **_retval) = 0;
 
   /* nsIRDFLiteral GetLiteral (in wstring aValue); */
-  NS_IMETHOD GetLiteral(PRUnichar *aValue, nsIRDFLiteral **_retval) = 0;
+  NS_IMETHOD GetLiteral(const PRUnichar *aValue, nsIRDFLiteral **_retval) = 0;
 
   /* void RegisterResource (in nsIRDFResource aResource, in boolean aReplace); */
   NS_IMETHOD RegisterResource(nsIRDFResource *aResource, PRBool aReplace) = 0;
@@ -410,7 +403,7 @@ class nsIRDFService : public nsISupports {
   NS_IMETHOD UnregisterDataSource(nsIRDFDataSource *aDataSource) = 0;
 
   /* nsIRDFDataSource GetDataSource (in string aURI); */
-  NS_IMETHOD GetDataSource(char *aURI, nsIRDFDataSource **_retval) = 0;
+  NS_IMETHOD GetDataSource(const char *aURI, nsIRDFDataSource **_retval) = 0;
 
 #ifdef XPIDL_JS_STUBS
   static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
