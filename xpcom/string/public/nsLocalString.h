@@ -48,48 +48,38 @@
 class NS_COM nsLocalString
       : public nsAFlatString
   {
-    protected:
-      virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) { }
-
     public:
     
       explicit
       nsLocalString( const PRUnichar* aLiteral )
-          : mStart(aLiteral),
-            mEnd(mStart ? (mStart + nsCharTraits<PRUnichar>::length(mStart)) : mStart)
+          : mHandle(aLiteral, aLiteral ? (aLiteral+nsCharTraits<PRUnichar>::length(aLiteral)) : aLiteral)
         {
           // nothing else to do here
         }
 
       nsLocalString( const PRUnichar* aLiteral, PRUint32 aLength )
-          : mStart(aLiteral),
-            mEnd(mStart + aLength)
+          : mHandle(aLiteral, aLiteral+aLength)
         {
             // This is an annoying hack.  Callers should be fixed to use the other
             //  constructor if they don't really know the length.
           if ( aLength == PRUint32(-1) )
             {
 //            NS_WARNING("Tell scc: Caller constructing a string doesn't know the real length.  Please use the other constructor.");
-              mEnd = mStart ? (mStart + nsCharTraits<PRUnichar>::length(mStart)) : mStart;
+              mHandle.DataEnd(aLiteral ? (aLiteral+nsCharTraits<PRUnichar>::length(aLiteral)) : aLiteral);
             }
         }
 
       // nsLocalString( const nsLocalString& );  // auto-generated copy-constructor OK
       // ~nsLocalString();                       // auto-generated destructor OK
 
+      virtual const nsBufferHandle<PRUnichar>* GetBufferHandle() const  { return &mHandle; }
+
+    private:
+      nsBufferHandle<PRUnichar> mHandle;
+
     private:
         // NOT TO BE IMPLEMENTED
       void operator=( const nsLocalString& );    // we're immutable
-
-    public:
-
-      virtual PRUint32 Length() const;
-      virtual void SetLength( size_type ) { }
-
-    private:
-      const PRUnichar* mStart;
-      const PRUnichar* mEnd;
   };
 
 
@@ -97,48 +87,38 @@ class NS_COM nsLocalString
 class NS_COM nsLocalCString
       : public nsAFlatCString
   {
-    protected:
-      virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 ) { }
-
     public:
     
       explicit
       nsLocalCString( const char* aLiteral )
-          : mStart(aLiteral),
-            mEnd(mStart ? (mStart + nsCharTraits<char>::length(mStart)) : mStart)
+          : mHandle(aLiteral, aLiteral ? (aLiteral+nsCharTraits<char>::length(aLiteral)) : aLiteral)
         {
           // nothing else to do here
         }
 
       nsLocalCString( const char* aLiteral, PRUint32 aLength )
-          : mStart(aLiteral),
-            mEnd(mStart + aLength)
+          : mHandle(aLiteral, aLiteral+aLength)
         {
             // This is an annoying hack.  Callers should be fixed to use the other
             //  constructor if they don't really know the length.
           if ( aLength == PRUint32(-1) )
             {
 //            NS_WARNING("Tell scc: Caller constructing a string doesn't know the real length.  Please use the other constructor.");
-              mEnd = mStart ? (mStart + nsCharTraits<char>::length(mStart)) : mStart;
+              mHandle.DataEnd(aLiteral ? (aLiteral+nsCharTraits<char>::length(aLiteral)) : aLiteral);
             }
         }
 
       // nsLocalCString( const nsLocalCString& );   // auto-generated copy-constructor OK
       // ~nsLocalCString();                         // auto-generated destructor OK
 
+      virtual const nsBufferHandle<char>* GetBufferHandle() const  { return &mHandle; }
+
+    private:
+      nsBufferHandle<char> mHandle;
+
     private:
         // NOT TO BE IMPLEMENTED
-      void operator=( const nsLocalCString& );      // we're immutable
-
-    public:
-
-      virtual PRUint32 Length() const;
-      virtual void SetLength( size_type ) { }
-
-    private:
-      const char* mStart;
-      const char* mEnd;
+      void operator=( const nsLocalCString& );    // we're immutable
   };
 
 #endif /* !defined(nsLocalString_h___) */

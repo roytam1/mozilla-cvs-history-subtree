@@ -30,7 +30,14 @@
 
 typedef const nsAString   nsAReadableString;
 typedef const nsACString  nsAReadableCString;
-  // what about the |const|?
+
+#ifdef NEED_CPP_TEMPLATE_CAST_TO_BASE
+#define NS_READABLE_CAST(CharT, expr)  (NS_STATIC_CAST(const nsStringTraits<CharT>::abstract_string_type&, (expr)))
+#else
+#define NS_READABLE_CAST(CharT, expr)  (expr)
+#endif
+
+
 
 #ifndef nsPromiseSubstring_h___
 #include "nsPromiseSubstring.h"

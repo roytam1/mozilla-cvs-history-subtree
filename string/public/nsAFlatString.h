@@ -27,22 +27,34 @@
 #include "nsAString.h"
 #endif
 
-class nsAFlatString
+class NS_COM nsAFlatString
     : public nsAString
   {
     public:
       const PRUnichar* get() const              { return GetBufferHandle()->DataStart(); }
       PRUnichar  operator[]( PRUint32 i ) const { return get()[ i ]; }
       PRUnichar  CharAt( PRUint32 ) const;
+
+      virtual PRUint32 Length() const           { return GetBufferHandle()->DataLength(); }
+
+    protected:
+      virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       PRUnichar* GetWritableFragment( nsWritableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 );
   };
 
-class nsAFlatCString
+class NS_COM nsAFlatCString
     : public nsACString
   {
     public:
       const char* get() const                   { return GetBufferHandle()->DataStart(); }
       char  operator[]( PRUint32 i ) const      { return get()[ i ]; }
       char  CharAt( PRUint32 ) const;
+
+      virtual PRUint32 Length() const           { return GetBufferHandle()->DataLength(); }
+
+    protected:
+      virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       char* GetWritableFragment( nsWritableFragment<char>&, nsFragmentRequest, PRUint32 );
   };
 
 inline

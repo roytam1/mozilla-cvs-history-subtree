@@ -135,7 +135,7 @@ class NS_COM nsAString
          * This distinction makes me think the two different uses should be split into
          * two distinct functions.
          */
-      virtual void SetLength( size_type ) = 0;
+      virtual void SetLength( size_type ) { }
 
 
       void
@@ -365,7 +365,7 @@ class NS_COM nsACString
          * This distinction makes me think the two different uses should be split into
          * two distinct functions.
          */
-      virtual void SetLength( size_type ) = 0;
+      virtual void SetLength( size_type ) { }
 
 
       void

@@ -62,6 +62,7 @@ class nsPromiseConcatenation
 
     protected:
       virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 ) { }
 
       enum { kLeftString, kRightString };
 
@@ -265,20 +266,32 @@ nsPromiseConcatenation<CharT>::operator+( const string_type& rhs ) const
     to implement the virtual functions of readables.
   */
 
-template <class CharT>
 inline
-nsPromiseConcatenation<CharT>
-operator+( const nsPromiseConcatenation<CharT>& lhs, const nsPromiseConcatenation<CharT>::string_type& rhs )
+nsPromiseConcatenation<PRUnichar>
+operator+( const nsPromiseConcatenation<PRUnichar>& lhs, const nsAString& rhs )
   {
-    return nsPromiseConcatenation<CharT>(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
+    return nsPromiseConcatenation<PRUnichar>(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
   }
 
-template <class CharT>
 inline
-nsPromiseConcatenation<CharT>
-operator+( const nsPromiseConcatenation<CharT>::string_type& lhs, const nsPromiseConcatenation<CharT>::string_type& rhs )
+nsPromiseConcatenation<char>
+operator+( const nsPromiseConcatenation<char>& lhs, const nsACString& rhs )
   {
-    return nsPromiseConcatenation<CharT>(lhs, rhs);
+    return nsPromiseConcatenation<char>(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
+  }
+
+inline
+nsPromiseConcatenation<PRUnichar>
+operator+( const nsAString& lhs, const nsAString& rhs )
+  {
+    return nsPromiseConcatenation<PRUnichar>(lhs, rhs);
+  }
+
+inline
+nsPromiseConcatenation<char>
+operator+( const nsACString& lhs, const nsACString& rhs )
+  {
+    return nsPromiseConcatenation<char>(lhs, rhs);
   }
 
 

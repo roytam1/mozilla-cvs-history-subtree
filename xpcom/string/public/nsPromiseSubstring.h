@@ -86,9 +86,6 @@ class nsPromiseSubstring
       virtual PRBool Promises( const string_type& aString ) const { return mString.Promises(aString); }
 
     private:
-      virtual void SetLength( PRUint32 ) { }
-
-    private:
       const string_type&  mString;
       PRUint32            mStartPos;
       PRUint32            mLength;
