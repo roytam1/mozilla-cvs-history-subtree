@@ -64,7 +64,7 @@ extern int NET_URL_Type (CONST char *URL);
 extern void del_front_spaces (char *string);
 extern void NET_f_a_c (char **obj);
 
-extern void NET_ParseContentTypeHeader(MWContext *context, char *value, URL_Struct *URL_s, XP_Bool is_http);
+extern void NET_ParseContentTypeHeader(MWContext *context, char *value, URL_Struct *URL_s, PRBool is_http);
 
 /*
  * This function takes an error code and associated error data
@@ -101,7 +101,7 @@ NET_WritePostData(MWContext  *context,
 				  URL_Struct *URL_s,
                   PRFileDesc     *sock,
                   void      **write_post_data_data,
-                  XP_Bool     add_crlf_to_line_endings);
+                  PRBool     add_crlf_to_line_endings);
 
 extern char * NET_SpaceToPlus(char * string);
 

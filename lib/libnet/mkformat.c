@@ -446,12 +446,12 @@ void
 print_mime_types()
 {
   int32 i;
-  XP_List *list_ptr = NET_ciMasterList;
   NET_cdataStruct *cdata;
+  PL_ListEnumReset(NET_ciMasterList);
 
   fprintf(stderr, "\n---------\n");
 
-  while ((cdata = (NET_cdataStruct *) XP_ListNextObject (list_ptr)))
+  while ((cdata = (NET_cdataStruct *) PL_ListEnumNext(NET_ciMasterList)))
 	{
 	  fprintf (stderr, "%s%s%s (%s; %s):",
 			   (cdata->ci.type ? cdata->ci.type : ""),
@@ -1146,7 +1146,7 @@ NET_CleanupFileFormat(char *filename)
 	int len = 0;
 	PRBool failed = FALSE;
 	Bool file_open = FALSE;
-	XP_List *modifiedList = NULL;
+	PLList *modifiedList = NULL;
 	char buffer[512];
 	Bool first = TRUE;
 

@@ -100,11 +100,11 @@ NET_BuildProxyAuthString(MWContext * context,
  * and TRUE if the user wants to continue with a new authorization
  * string.
  */
-PUBLIC XP_Bool
+PUBLIC PRBool
 NET_AskForProxyAuth(MWContext * context,
 		    char *   proxy_addr,
 		    char *   pauth_params,
-		    XP_Bool  already_sent_auth);
+		    PRBool  already_sent_auth);
 
 /*
  * Figure out better of two {WWW,Proxy}-Authenticate headers;
@@ -112,7 +112,7 @@ NET_AskForProxyAuth(MWContext * context,
  * enum values.
  *
  */
-extern XP_Bool
+extern PRBool
 net_IsBetterAuth(char *new_auth, char *old_auth);
 
 /* create an HTML stream and push a bunch of HTML about cookies */

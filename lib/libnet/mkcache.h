@@ -45,7 +45,7 @@ extern void NET_RemoveURLFromCache(URL_Struct *URL_s);
 extern void NET_DisplayCacheInfoAsHTML(ActiveEntry * cur_entry);
 
 /* trace variable for cache testing */
-extern XP_Bool NET_CacheTraceOn;
+extern PRBool NET_CacheTraceOn;
 
 /* public accessor function for netcaster */
 extern Bool NET_CacheStore(net_CacheObject *cacheObject, URL_Struct *url_s, Bool accept_partial_files);

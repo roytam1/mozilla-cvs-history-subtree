@@ -154,8 +154,8 @@ typedef enum {
 
 /* Declared in mkgeturl.c. NET_GetURL uses these variables to determine
  * whether or not the pac file has been loaded. */
-extern XP_Bool NET_GlobalAcLoaded;
-extern XP_Bool NET_ProxyAcLoaded;
+extern PRBool NET_GlobalAcLoaded;
+extern PRBool NET_ProxyAcLoaded;
 
 /* Private proxy auto-config variables */
 #ifdef MOCHA
@@ -438,7 +438,7 @@ NET_SetNoProxyFailover(void) {
 #endif
 }
 
-PUBLIC XP_Bool
+PUBLIC PRBool
 NET_LoadingPac(void) {
 	return pacf_loading;
 }
@@ -1405,7 +1405,7 @@ PRIVATE char *proxy_dns_resolve(const char *host) {
     if (host) {
 	const char *p;
 	char *safe = NULL;
-	XP_Bool is_numeric_ip = TRUE;
+	PRBool is_numeric_ip = TRUE;
 
 	for(p=host; *p; p++) {
 	    if (!XP_IS_DIGIT(*p) && *p != '.') {
@@ -1480,7 +1480,7 @@ proxy_dnsResolve(JSContext *mc, JSObject *obj, unsigned int argc,
 MODULE_PRIVATE JSBool PR_CALLBACK
 proxy_myIpAddress(JSContext *mc, JSObject *obj, unsigned int argc, 
 				  jsval *argv, jsval *rval) {
-    static XP_Bool initialized = FALSE;
+    static PRBool initialized = FALSE;
     static char *my_address = NULL;
 
     if (!initialized) {

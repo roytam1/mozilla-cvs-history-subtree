@@ -21,6 +21,8 @@ MODULE			= netlib
 LIBRARY_NAME		= netlib
 
 CSRCS			= \
+			  pllist.c \
+			  plstr2.c \
 			  depend.c \
 			  mkgeturl.c \
 			  mkconect.c \
@@ -92,7 +94,7 @@ endif
 include $(DEPTH)/config/rules.mk
 
 DEFINES			+= -DNEW_DECODERS -DB1M
-INCLUDES		+= -I$(DEPTH)/raptor/base/src
+INCLUDES		+= -I$(DEPTH)/base/src
 
 ifndef NO_UNIX_ASYNC_DNS
 DEFINES			+= -DUNIX_ASYNC_DNS

@@ -104,7 +104,7 @@ extern int NET_TotalNumberOfOpenConnections;
 extern int NET_MaxNumberOfOpenConnections;
 extern CacheUseEnum NET_CacheUseMethod;
 extern time_t NET_StartupTime;  /* time we began the program */
-extern XP_Bool NET_ProxyAcLoaded;
+extern PRBool NET_ProxyAcLoaded;
 /*
  * Silently Interrupts all transfers in progress that have the same
  * window id as the one passed in.

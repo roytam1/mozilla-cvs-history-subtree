@@ -35,7 +35,7 @@ extern void NET_ClearConnectPoll(PRFileDesc *fd);
  * dialog is up it won't call the OnIdle loop which is currently the
  * source of our events.
  */
-extern void NET_SetNetlibSlowKickTimer(XP_Bool set);
+extern void NET_SetNetlibSlowKickTimer(PRBool set);
 
 /* set and clear the callnetliballthetime busy poller.
  * all reference counting is done internally
@@ -45,7 +45,7 @@ extern void NET_SetNetlibSlowKickTimer(XP_Bool set);
  */
 extern void NET_SetCallNetlibAllTheTime(MWContext *context, char *caller);
 extern void NET_ClearCallNetlibAllTheTime(MWContext *context, char *caller);
-extern XP_Bool NET_IsCallNetlibAllTheTimeSet(MWContext *context, char *caller);
+extern PRBool NET_IsCallNetlibAllTheTimeSet(MWContext *context, char *caller);
 
 extern void NET_SetReadSelect(MWContext *context, PRFileDesc *file_desc);
 extern void NET_ClearReadSelect(MWContext *context, PRFileDesc *file_desc);

@@ -119,7 +119,7 @@ PL_bcmp(const void *b1, const void *b2, size_t count);
  */
 
 PR_EXTERN(void)
-PL_bcopy(void *dest, void *src, size_t count);
+PL_bcopy(void *dest, void const *src, size_t count);
 
 /*
  * PL_bzero
