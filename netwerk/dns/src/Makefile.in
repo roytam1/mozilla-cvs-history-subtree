@@ -32,13 +32,21 @@ REQUIRES	= xpcom \
 		  string \
 		  pref \
 		  $(NULL)
+
 CPPSRCS		= nsDnsService.cpp
+
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.
 FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
+
+# note that DNS_RESET is only supported on Linux currently.  This is due
+# to our available to test other platforms at this time.  
+ifeq ($(OS_ARCH), Linux)
+DEFINES         += -D_BSD_SOURCE
+endif
 
 DEFINES		+= -D_IMPL_NS_NET
 ifeq ($(OS_ARCH),WINNT)
