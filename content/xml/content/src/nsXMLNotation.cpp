@@ -236,6 +236,12 @@ nsXMLNotation::SetContentID(PRUint32 aID)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsXMLNotation::IsContentOfType(PRUint32 aFlags)
+{
+  return PR_FALSE;
+}
+
 NS_IMETHODIMP
 nsXMLNotation::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const
 {
