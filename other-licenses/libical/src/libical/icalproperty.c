@@ -197,10 +197,12 @@ icalproperty* icalproperty_new_from_string(const char* str)
 
     /* Is this a HACK or a crafty reuse of code? */
 
-    icalmemory_append_string(&buf, &buf_ptr, &buf_size, "BEGIN:VCALENDAR\n");
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, "BEGIN:VCALENDAR");
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, newline);
     icalmemory_append_string(&buf, &buf_ptr, &buf_size, str);
-    icalmemory_append_string(&buf, &buf_ptr, &buf_size, newline);    
-    icalmemory_append_string(&buf, &buf_ptr, &buf_size, "END:VCALENDAR\n");
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, newline);
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, "END:VCALENDAR");
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, newline);
 
     comp = icalparser_parse_string(buf);
 
