@@ -1695,8 +1695,8 @@ sub BloatTest {
     }
 
     # Figure out testname labels
-    my $leaks_testname_label = "refcnt_leaks";
-    my $bloat_testname_label = "refcnt_bloat";
+    my $leaks_testname_label = "refcnt Leaks";
+    my $bloat_testname_label = "refcnt Bloat";
     unless($bloatdiff_label eq "") {
       $leaks_testname_label = $label_prefix . "refcnt_leaks";
       $bloat_testname_label = $label_prefix . "refcnt_bloat";
