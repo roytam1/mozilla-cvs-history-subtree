@@ -97,6 +97,7 @@ endif
 # So we actually get the definition of hostent_data....
 ifeq ($(OS_ARCH),AIX)
 DEFINES               += -D_THREAD_SAFE
+DSO_LDOPTS      += -lm -lc_r -L../liblber -llber40
 endif
 
 GARBAGE		+= $(ETCDIR)/ldapfriendly $(ETCDIR)/ldapfilter.conf \
