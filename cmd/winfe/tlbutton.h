@@ -243,7 +243,7 @@ public:
 	int	 GetMaxTextCharacters(void) { return m_nMaxTextChars; }
     int GetMinTextCharacters(void) { return m_nMinTextChars; }
 
-	BOOL NeedsUpdate(void) { return m_bNeedsUpdate; }
+	virtual BOOL NeedsUpdate(void) { return m_bNeedsUpdate; }
 
 	void Enable(BOOL bEnabled) { m_bEnabled = bEnabled; }
 	BOOL IsEnabled(void) { return m_bEnabled; }

@@ -775,6 +775,18 @@ void CRDFToolbarButton::SetTextWithoutResize(CString text)
 	XP_STRCPY(m_pButtonText, text);
 }
 
+BOOL CRDFToolbarButton::NeedsUpdate()
+{
+	// Only internal commands need updating via the OnUpdateCmdUI handler.
+	// All other buttons are enabled/disabled using the appropriate HT calls.
+	if (m_Node && strncmp(HT_GetNodeURL(m_Node), "command:", 8) == 0)
+	{
+		m_nCommand = theApp.m_pBrowserCommandMap->GetFEResource(HT_GetNodeURL(m_Node));
+		return TRUE;
+	}
+	return FALSE;
+}
+
 void CRDFToolbarButton::LoadComplete(HT_Resource r)
 {
 	Invalidate();
@@ -1281,6 +1293,12 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 		m_nRowHeight = buttonSize.cy;
 	
 	AddButtonAtIndex(pButton); // Have to put the button in the array, since the toolbar base class depends on it.
+
+	// Update the button if it's a command.
+	if (pButton->NeedsUpdate())
+	{
+		pButton->OnUpdateCmdUI(GetTopLevelFrame(), FALSE);
+	}
 }
 
 int CRDFToolbar::GetHeight(void)
