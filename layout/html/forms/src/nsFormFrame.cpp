@@ -677,8 +677,8 @@ nsFormFrame::GetFirstSubmitButtonAndTxtCnt(PRInt32& aInputTxtCnt)
     fcFrame->GetType(&type);
     if ((type == NS_FORM_INPUT_SUBMIT || type == NS_FORM_BUTTON_SUBMIT || type == NS_FORM_INPUT_IMAGE) && 
         submitFrame == nsnull) {
-      nsresult rv = fcFrame->QueryInterface(NS_GET_IID(nsIFrame), (void**)&submitFrame);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "This has to be a frame!");                
+      CallQueryInterface(fcFrame, &submitFrame);
+      NS_ASSERTION(submitFrame, "This has to be a frame!");
     } else if (type == NS_FORM_INPUT_TEXT || type == NS_FORM_INPUT_PASSWORD) {
       aInputTxtCnt++;
     }
