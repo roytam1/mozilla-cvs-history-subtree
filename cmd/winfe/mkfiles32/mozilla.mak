@@ -1003,51 +1003,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmsg\thrlstst.cpp
 	$(DEPTH)\lib\libmsg\thrnewvw.cpp
 	$(DEPTH)\lib\libmsg\mozdb.cpp
-	$(DEPTH)\lib\libneo\enstring.cpp
-	$(DEPTH)\lib\libneo\enswizz.cpp
-	$(DEPTH)\lib\libneo\nappl.cpp
-	$(DEPTH)\lib\libneo\nappsa.cpp
-	$(DEPTH)\lib\libneo\narray.cpp
-	$(DEPTH)\lib\libneo\nblob.cpp
-	$(DEPTH)\lib\libneo\nclass.cpp
-	$(DEPTH)\lib\libneo\ncstream.cpp
-	$(DEPTH)\lib\libneo\ndata.cpp
-	$(DEPTH)\lib\libneo\ndblndx.cpp
-	$(DEPTH)\lib\libneo\ndoc.cpp
-	$(DEPTH)\lib\libneo\nfltndx.cpp
-	$(DEPTH)\lib\libneo\nformat.cpp
-	$(DEPTH)\lib\libneo\nfree.cpp
-	$(DEPTH)\lib\libneo\nfstream.cpp
-	$(DEPTH)\lib\libneo\nidindex.cpp
-	$(DEPTH)\lib\libneo\nidlist.cpp
-	$(DEPTH)\lib\libneo\nindexit.cpp
-	$(DEPTH)\lib\libneo\ninode.cpp
-	$(DEPTH)\lib\libneo\nioblock.cpp
-	$(DEPTH)\lib\libneo\niter.cpp
-	$(DEPTH)\lib\libneo\nlaundry.cpp
-	$(DEPTH)\lib\libneo\nlongndx.cpp
-	$(DEPTH)\lib\libneo\nmeta.cpp
-	$(DEPTH)\lib\libneo\nmrswsem.cpp
-	$(DEPTH)\lib\libneo\nmsem.cpp
-	$(DEPTH)\lib\libneo\nnode.cpp
-	$(DEPTH)\lib\libneo\nnstrndx.cpp
-	$(DEPTH)\lib\libneo\noffsprn.cpp
-	$(DEPTH)\lib\libneo\npartmgr.cpp
-	$(DEPTH)\lib\libneo\npersist.cpp
-	$(DEPTH)\lib\libneo\npliter.cpp
-	$(DEPTH)\lib\libneo\nquery.cpp
-	$(DEPTH)\lib\libneo\nselect.cpp
-	$(DEPTH)\lib\libneo\nsselect.cpp
-	$(DEPTH)\lib\libneo\nstream.cpp
-	$(DEPTH)\lib\libneo\nstrndx.cpp
-	$(DEPTH)\lib\libneo\nsub.cpp
-	$(DEPTH)\lib\libneo\nthread.cpp
-	$(DEPTH)\lib\libneo\ntrans.cpp
-	$(DEPTH)\lib\libneo\nulngndx.cpp
-	$(DEPTH)\lib\libneo\nutils.cpp
-	$(DEPTH)\lib\libneo\nwselect.cpp
-	$(DEPTH)\lib\libneo\semnspr.cpp
-	$(DEPTH)\lib\libneo\thrnspr.cpp
 !endif
 
 !ifndef MOZ_NGLAYOUT
@@ -2805,7 +2760,6 @@ exports:
 !ifdef MOZ_MAIL_NEWS
     -xcopy $(DEPTH)\lib\libaddr\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(DEPTH)\lib\libneo\*.h $(EXPORTINC) $(XCF)
 !endif
 !ifdef MOZ_LDAP
     -xcopy $(DEPTH)\netsite\ldap\include\*.h $(EXPORTINC) $(XCF)
