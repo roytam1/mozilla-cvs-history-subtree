@@ -30,7 +30,7 @@
 //
 // ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
 
-#include "Moz_DebugConfig.h"
+#include "MacPrefix_debug.h"
 
 #ifdef powerc
 	#pragma precompile_target "MailNews_HeadersPPC"
