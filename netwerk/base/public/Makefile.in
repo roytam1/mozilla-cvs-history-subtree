@@ -30,6 +30,7 @@ MODULE		= necko
 
 SDK_XPIDLSRCS   = \
 		nsIChannel.idl \
+		nsIIOService.idl \
 		nsILoadGroup.idl \
 		nsIProtocolHandler.idl \
 		nsIRequest.idl \
@@ -49,7 +50,6 @@ XPIDLSRCS	= \
 		nsIFileChannel.idl \
 		nsIFileStreams.idl \
 		nsIFileTransportService.idl \
-		nsIIOService.idl \
 		nsIMIMEInputStream.idl \
 		nsINetModRegEntry.idl \
 		nsINetModuleMgr.idl \
