@@ -214,6 +214,15 @@ interface nsIChannel : nsIRequest
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// nsIChannelStatus is a TEMPORARY interface introduced for beta1 in order to 
+// minimize impact on the codebase. Eventually this method will be migrated into
+// nsIChannel directly.
+////////////////////////////////////////////////////////////////////////////////
+[scriptable, uuid(FA42A053-F61D-11d3-98B9-001083010E9B)]
+interface nsIChannelStatus : nsISupports
+{
+	readonly attribute nsresult status;
+};
 
 /**
  * nsIInputStreamChannel is an interface that allows for the initialization

@@ -43,6 +43,7 @@
 class nsIInterfaceRequestor;
 
 class nsFileTransport : public nsIChannel, 
+                        public nsIChannelStatus,
                         public nsIRunnable,
                         public nsIPipeObserver
 {
@@ -50,6 +51,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
     NS_DECL_NSICHANNEL
+    NS_DECL_NSICHANNELSTATUS
     NS_DECL_NSIPIPEOBSERVER
     NS_DECL_NSIRUNNABLE
 

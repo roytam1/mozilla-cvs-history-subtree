@@ -198,6 +198,19 @@ nsOnStartRequestEvent::HandleEvent()
   PR_LOG(gStreamEventLog, PR_LOG_DEBUG,
          ("netlibEvent: Handle Start [event=%x]", this));
 #endif
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIChannelStatus> channelStatus (do_QueryInterface(mChannel, &rv));
+  if (NS_SUCCEEDED(rv) && channelStatus)
+  {
+    channelStatus->GetStatus(&rv);
+    // if the channel failed (or was canceled...) don't 
+    // fire the on start request...just go ahead and return success
+    // and things will be aborted...
+    if (NS_FAILED(rv))
+      return NS_OK;
+  }
+
   nsIStreamObserver* receiver = (nsIStreamObserver*)mListener->GetReceiver();
   return receiver->OnStartRequest(mChannel, mContext);
 }

@@ -440,10 +440,11 @@ nsFileTransport::~nsFileTransport()
 #endif
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS4(nsFileTransport, 
+NS_IMPL_THREADSAFE_ISUPPORTS5(nsFileTransport, 
                               nsIChannel, 
+                              nsIChannelStatus,
                               nsIRequest, 
-                              nsIRunnable, 
+                              nsIRunnable,                            
                               nsIPipeObserver);
 
 NS_METHOD
@@ -528,6 +529,17 @@ nsFileTransport::Resume()
                 this, (const char*)mSpec, mStatus));
     }
     return rv;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// From nsIChannelStatus
+////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP
+nsFileTransport::GetStatus(nsresult * aStatusCode)
+{
+  *aStatusCode = mStatus;
+  return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
