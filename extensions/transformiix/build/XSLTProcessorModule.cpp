@@ -196,14 +196,9 @@ Initialize(nsIModule* aSelf)
         xs->RegisterExceptionProvider(sXPathExceptionProvider,
                                       NS_ERROR_MODULE_DOM_XPATH);
 
-    if (!txXMLAtoms::init())
+    if (!txXSLTProcessor::txInit()) {
         return NS_ERROR_OUT_OF_MEMORY;
-    if (!txXPathAtoms::init())
-        return NS_ERROR_OUT_OF_MEMORY;
-    if (!txXSLTAtoms::init())
-        return NS_ERROR_OUT_OF_MEMORY;
-    if (!txHTMLAtoms::init())
-        return NS_ERROR_OUT_OF_MEMORY;
+    }
     TX_LG_CREATE;
     return NS_OK;
 }
@@ -233,10 +228,7 @@ Shutdown(nsIModule* aSelf)
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathNSResolver));
     NS_IF_RELEASE(NS_CLASSINFO_NAME(XPathResult));
 
-    txXMLAtoms::shutdown();
-    txXPathAtoms::shutdown();
-    txXSLTAtoms::shutdown();
-    txHTMLAtoms::shutdown();
+    txXSLTProcessor::txShutdown();
     TX_LG_DELETE;
 }
 
