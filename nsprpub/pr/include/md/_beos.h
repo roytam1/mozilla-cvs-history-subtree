@@ -91,9 +91,8 @@
 /* Define threading functions and objects as native BeOS */
 struct _MDThread {
     thread_id	tid;	/* BeOS thread handle */
-	sem_id		joinSem;	/* sems used to synchronzie joining */
-	PRBool	is_joining;	/* TRUE if someone is currently waiting to
-						   join this thread */
+    bool	is_joinable;	/* TRUE if PR_JOINABLE */
+    bool	is_joining;	/* TRUE if we were woken up to join */
 };
 
 struct _MDThreadStack {
@@ -481,7 +480,7 @@ NSPR_API(void) _MD_init_locks(void);
 NSPR_API(PRStatus) _MD_new_lock(struct _MDLock *md);
 NSPR_API(void) _MD_free_lock(struct _MDLock *md);
 NSPR_API(void) _MD_lock(struct _MDLock *md);
-NSPR_API(PRIntn) _MD_test_and_lock(struct _MDLock *md);
+NSPR_API(PRBool) _MD_test_and_lock(struct _MDLock *md);
 NSPR_API(void) _MD_unlock(struct _MDLock *md);
 NSPR_API(void) _MD_ioq_lock(void);
 NSPR_API(void) _MD_ioq_unlock(void);

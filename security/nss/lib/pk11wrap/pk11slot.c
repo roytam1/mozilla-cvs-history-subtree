@@ -2829,6 +2829,9 @@ PK11_GetKeyGen(CK_MECHANISM_TYPE type)
 	return CKM_GENERIC_SECRET_KEY_GEN;
     case CKM_PBE_MD2_DES_CBC:
     case CKM_PBE_MD5_DES_CBC:
+    case CKM_NETSCAPE_PBE_SHA1_HMAC_KEY_GEN:
+    case CKM_NETSCAPE_PBE_MD5_HMAC_KEY_GEN:
+    case CKM_NETSCAPE_PBE_MD2_HMAC_KEY_GEN:
     case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
     case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC:
     case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC:
@@ -3342,14 +3345,14 @@ pk11_pbe_decode(SECAlgorithmID *algid, SECItem *mech)
     p5_misc = &p5_param->salt;
     paramSize = sizeof(CK_PBE_PARAMS);
 
-    pbe_params = (CK_PBE_PARAMS *)PORT_ZAlloc(paramSize);
+    pbe_params = (CK_PBE_PARAMS *)PORT_ZAlloc(paramSize + p5_misc->len);
     if (pbe_params == NULL) {
 	SEC_PKCS5DestroyPBEParameter(p5_param);
 	return SECFailure;
     }
 
     /* get salt */
-    pbe_params->pSalt = (CK_CHAR_PTR)PORT_ZAlloc(p5_misc->len);
+    pbe_params->pSalt = ((CK_CHAR_PTR)pbe_params) + paramSize;
     if (pbe_params->pSalt == CK_NULL_PTR) {
 	goto loser;
     }
@@ -3367,9 +3370,6 @@ pk11_pbe_decode(SECAlgorithmID *algid, SECItem *mech)
     return SECSuccess;
 
 loser:
-    if (pbe_params->pSalt != CK_NULL_PTR) {
-	PORT_Free(pbe_params->pSalt);
-    }
     PORT_Free(pbe_params);
     SEC_PKCS5DestroyPBEParameter(p5_param);
     return SECFailure;
@@ -3650,10 +3650,10 @@ PK11_GenerateRandom(unsigned char *data,int len) {
     slot = PK11_GetBestSlot(CKM_FAKE_RANDOM,NULL);
     if (slot == NULL) return SECFailure;
 
-    PK11_EnterSlotMonitor(slot);
+    if (!slot->isInternal) PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_GenerateRandom(slot->session,data, 
 							(CK_ULONG)len);
-    PK11_ExitSlotMonitor(slot);
+    if (!slot->isInternal) PK11_ExitSlotMonitor(slot);
     PK11_FreeSlot(slot);
     return (crv != CKR_OK) ? SECFailure : SECSuccess;
 }
@@ -4343,6 +4343,7 @@ PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
     SECStatus rv = SECFailure;
     SECAlgorithmID temp_algid;
     SECItem param, *iv;
+    CK_CHAR_PTR ivBuf = NULL;
 
     if((pPBEMechanism == CK_NULL_PTR) || (pCryptoMechanism == CK_NULL_PTR)) {
 	return CKR_HOST_MEMORY;
@@ -4352,7 +4353,7 @@ PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
     iv_len = PK11_GetIVLength(pPBEMechanism->mechanism);
 
     if(pPBEparams->pInitVector == CK_NULL_PTR) {
-	pPBEparams->pInitVector = (CK_CHAR_PTR)PORT_ZAlloc(iv_len);
+	pPBEparams->pInitVector = ivBuf = (CK_CHAR_PTR)PORT_ZAlloc(iv_len);
 	if(pPBEparams->pInitVector == NULL) {
 	    return CKR_HOST_MEMORY;
 	}
@@ -4363,11 +4364,15 @@ PK11_MapPBEMechanismToCryptoMechanism(CK_MECHANISM_PTR pPBEMechanism,
 				&param, NULL, &temp_algid);
 	if(rv != SECSuccess) {
 	    SECOID_DestroyAlgorithmID(&temp_algid, PR_FALSE);
+	    PORT_ZFree(ivBuf, iv_len);
+	    pPBEparams->pInitVector = NULL;
 	    return CKR_HOST_MEMORY;
 	} else {
 	    iv = SEC_PKCS5GetIV(&temp_algid, pbe_pwd, faulty3DES);
 	    if((iv == NULL) && (iv_len != 0)) {
 	        SECOID_DestroyAlgorithmID(&temp_algid, PR_FALSE);
+		PORT_ZFree(ivBuf, iv_len);
+		pPBEparams->pInitVector = NULL;
 		return CKR_HOST_MEMORY;
 	    }
 	    SECOID_DestroyAlgorithmID(&temp_algid, PR_FALSE);
@@ -4395,6 +4400,10 @@ have_crypto_mechanism:
 	    pCryptoMechanism->pParameter = PORT_Alloc(iv_len);
 	    pCryptoMechanism->ulParameterLen = (CK_ULONG)iv_len;
 	    if(pCryptoMechanism->pParameter == NULL) {
+		if (ivBuf) {
+		    PORT_ZFree(ivBuf, iv_len);
+		    pPBEparams->pInitVector = NULL;
+		}
 		return CKR_HOST_MEMORY;
 	    }
 	    PORT_Memcpy((unsigned char *)(pCryptoMechanism->pParameter),
@@ -4421,6 +4430,10 @@ have_key_len:
 	    pCryptoMechanism->pParameter = 
 		(CK_RC2_CBC_PARAMS_PTR)PORT_ZAlloc(sizeof(CK_RC2_CBC_PARAMS));
 	    if(pCryptoMechanism->pParameter == NULL) {
+		if (ivBuf) {
+		    PORT_ZFree(ivBuf, iv_len);
+		    pPBEparams->pInitVector = NULL;
+		}
 		return CKR_HOST_MEMORY;
 	    }
 	    rc2_params = (CK_RC2_CBC_PARAMS_PTR)pCryptoMechanism->pParameter;
@@ -4430,7 +4443,16 @@ have_key_len:
 	    rc2_params->ulEffectiveBits = rc2_key_len;
 	    break;
 	default:
+	    if (ivBuf) {
+		PORT_ZFree(ivBuf, iv_len);
+		pPBEparams->pInitVector = NULL;
+	    }
 	    return CKR_MECHANISM_INVALID;
+    }
+
+    if (ivBuf) {
+	PORT_ZFree(ivBuf, iv_len);
+	pPBEparams->pInitVector = NULL;
     }
 
     return CKR_OK;
