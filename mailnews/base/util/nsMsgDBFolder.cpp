@@ -65,6 +65,7 @@
 #include "nsIMsgFilterPlugin.h"
 #include "nsIMsgMailSession.h"
 #include "nsIRDFService.h"
+#include "nsMsgDBCID.h"
 
 #include <time.h>
 
@@ -76,6 +77,8 @@ static PRTime gtimeOfLastPurgeCheck;    //variable to know when to check for pur
 
 #define PREF_MAIL_PROMPT_PURGE_THRESHOLD "mail.prompt_purge_threshhold"
 #define PREF_MAIL_PURGE_THRESHOLD "mail.purge_threshhold"
+
+static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 
 nsIAtom* nsMsgDBFolder::mFolderLoadedAtom=nsnull;
 nsIAtom* nsMsgDBFolder::mDeleteOrMoveMsgCompletedAtom=nsnull;
@@ -163,6 +166,13 @@ NS_IMETHODIMP nsMsgDBFolder::ForceDBClosed ()
     {
         mDatabase->ForceClosed();
         mDatabase = nsnull;
+    }
+    else
+    {
+      nsCOMPtr<nsIMsgDatabase> mailDBFactory;
+      nsresult rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
+      if (NS_SUCCEEDED(rv) && mailDBFactory)
+        mailDBFactory->ForceFolderDBClosed(this);
     }
     return NS_OK;
 }

@@ -63,6 +63,7 @@
 #include "prprf.h"
 #include "nsTime.h"
 #include "nsIFileSpec.h"
+#include "nsLocalFolderSummarySpec.h"
 
 #include "nsILocale.h"
 #include "nsLocaleCID.h"
@@ -796,9 +797,7 @@ nsMsgDatabase::~nsMsgDatabase()
 	if (m_mdbAllThreadsTable)
 		m_mdbAllThreadsTable->Release();
 	if (m_mdbStore)
-	{
 		m_mdbStore->Release();
-	}
 	if (m_mdbEnv)
 	{
 		m_mdbEnv->Release(); //??? is this right?
@@ -1071,6 +1070,31 @@ nsresult nsMsgDatabase::OpenMDB(const char *dbName, PRBool create)
 	}
 	return ret;
 }
+
+NS_IMETHODIMP nsMsgDatabase::ForceFolderDBClosed(nsIMsgFolder *aFolder)
+{
+  NS_ENSURE_ARG(aFolder);
+  nsCOMPtr <nsIFileSpec> folderPath;
+  nsFileSpec		folderName;
+
+  nsresult rv = aFolder->GetPath(getter_AddRefs(folderPath));
+  NS_ENSURE_SUCCESS(rv, rv);
+  folderPath->GetFileSpec(&folderName);
+  nsLocalFolderSummarySpec	summarySpec(folderName);
+  
+  
+  nsFileSpec dbPath(summarySpec);
+  
+  nsIMsgDatabase *mailDB = (nsMsgDatabase *) FindInCache(dbPath);
+  if (mailDB)
+  {
+    mailDB->ForceClosed();
+   //FindInCache AddRef's
+    mailDB->Release();
+  }
+  return(NS_OK);
+ }
+
 
 nsresult nsMsgDatabase::CloseMDB(PRBool commit)
 {
