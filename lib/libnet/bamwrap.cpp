@@ -259,7 +259,7 @@ void stub_complete(NET_StreamClass *stream)
 
     /* Notify the Data Consumer that the Binding has completed... */
     if (pConn->pConsumer) {
-        pConn->pConsumer->OnStopBinding();
+        pConn->pConsumer->OnStopBinding(NS_BINDING_SUCCEEDED, nsnull);
         pConn->pConsumer->Release();
         pConn->pConsumer = NULL;
     }
@@ -287,7 +287,7 @@ void stub_abort(NET_StreamClass *stream, int status)
      * abort...
      */
     if (pConn->pConsumer) {
-        pConn->pConsumer->OnStopBinding();
+        pConn->pConsumer->OnStopBinding(NS_BINDING_ABORTED, nsnull);
         pConn->pConsumer->Release();
         pConn->pConsumer = NULL;
     }
@@ -310,7 +310,7 @@ int stub_put_block(NET_StreamClass *stream, const char *buffer, int32 length)
      *       is interrupted...  In this case, Netlib will call put_block(...)
      *       with the string "Transfer Interrupted!"
      */
-    bytesWritten = pConn->pNetStream->Write(&errorCode, buffer, length);
+    bytesWritten = pConn->pNetStream->Write(&errorCode, buffer, 0, length);
 
     /* Abort the connection... */
     if (NS_INPUTSTREAM_EOF == errorCode) {
