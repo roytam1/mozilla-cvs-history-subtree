@@ -137,7 +137,6 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
         if (pos == formatLen) {
             pos = 0;
             prefix.append(format->mMinusSign);
-            value = value * -1;
         }
         else
             pos++;
@@ -170,17 +169,6 @@ ExprResult* txFormatNumberFunctionCall::evaluate(txIEvalContext* aContext)
                 else if (c == format->mPerMille) {
                     if (multiplier == 1)
                         multiplier = 1000;
-                    else {
-                        String err(INVALID_PARAM_VALUE);
-                        toString(err);
-                        aContext->receiveError(err,
-                                               NS_ERROR_XPATH_EVAL_FAILED);
-                        return new StringResult(err);
-                    }
-                }
-                else if (c == format->mMinusSign) {
-                    if (Double::isNeg(value))
-                        value=-1 * value;
                     else {
                         String err(INVALID_PARAM_VALUE);
                         toString(err);
