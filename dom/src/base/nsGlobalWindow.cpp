@@ -599,7 +599,7 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
         ClearAllTimeouts();
 
         if (mContext && mJSObject) {
-          if (mNavigator) {
+          if (mNavigator && sXPConnect) {
             nsIDOMNavigator* navigator =
               NS_STATIC_CAST(nsIDOMNavigator*, mNavigator.get());
             sXPConnect->WrapNative(cx, mJSObject, navigator,
