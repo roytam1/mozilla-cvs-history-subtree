@@ -76,7 +76,7 @@ REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target )
     
         char* leafName = target.GetLeafName();
         tmpfile.Rename(leafName);
-        PR_Free(leafName);
+        nsCRT::free(leafName);
     }
     else
     {
@@ -220,7 +220,7 @@ void ReplaceScheduledFiles(void)
                         {
                             char* leafName = targetFile.GetLeafName();
                             replaceFile.Rename(leafName);
-                            PR_Free(leafName);
+                            nsCRT::free(leafName);
                             
                             NR_RegDeleteEntry( reg, key, tmpfile );
                         }

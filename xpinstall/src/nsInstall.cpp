@@ -155,7 +155,7 @@ nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
 {
     // Checking to see if the url is local
 
-    if (aURL.Compare(nsString("file://"), false, 7) == 0)
+    if (aURL.Compare(nsString("file://").GetUnicode(), false, 7) == 0)
     {       
         tempFileString.SetString( nsprPath(nsFileURL(aURL)) );
     }
@@ -3011,17 +3011,17 @@ nsInstall::GetQualifiedRegName(const nsString& name )
     nsString comm("=COMM=/");
     nsString usr ("=USER=/");
 
-    if ( name.Compare(comm, PR_TRUE, comm.Length()) == 0 ) 
+    if ( name.Compare(comm, PR_TRUE) == 0 ) 
     {
         qualifiedRegName = new nsString( name );
         qualifiedRegName->Cut( 0, comm.Length() );
     }
-    else if ( name.Compare(usr, PR_TRUE, usr.Length()) == 0 ) 
+    else if ( name.Compare(usr, PR_TRUE) == 0 ) 
     {
         qualifiedRegName = new nsString( name );
         qualifiedRegName->Cut( 0, usr.Length() );
     }
-    else if ( name[0] != '/' )
+    else if ( name.CharAt(0) != '/' )
     {
         if (mUIName != "")
         {
@@ -3157,25 +3157,25 @@ nsInstall::CleanUp(void)
 void       
 nsInstall::GetJarFileLocation(nsString& aFile)
 {
-    aFile.SetString( mJarFileLocation );
+    aFile = mJarFileLocation;
 }
 
 void       
 nsInstall::SetJarFileLocation(const nsString& aFile)
 {
-    mJarFileLocation.SetString(aFile);
+    mJarFileLocation = aFile;
 }
 
 void       
 nsInstall::GetInstallArguments(nsString& args)
 {
-    args.SetString( mInstallArguments );
+    args = mInstallArguments;
 }
 
 void       
 nsInstall::SetInstallArguments(const nsString& args)
 {
-    mInstallArguments.SetString(args);
+    mInstallArguments = args;
 }
 
 

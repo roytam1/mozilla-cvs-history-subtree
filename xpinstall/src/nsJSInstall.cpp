@@ -61,7 +61,7 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         nsAutoString prop;
         if (NS_OK == a->GetUserPackageName(prop)) 
         {
-            *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop, prop.Length()) );
+            *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
         }
         else 
         {
@@ -74,7 +74,7 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         nsAutoString prop;
         if (NS_OK == a->GetRegPackageName(prop)) 
         {
-          *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop, prop.Length()) );
+          *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
         }
         else 
         {
@@ -87,7 +87,7 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         nsAutoString prop;
         
         a->GetJarFileLocation(prop);
-        *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop, prop.Length()) );
+        *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
         
         break;
       }
@@ -97,7 +97,7 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         nsAutoString prop;
         
         a->GetInstallArguments(prop); 
-        *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop, prop.Length()) );
+        *vp = STRING_TO_JSVAL( JS_NewUCStringCopyN(cx, prop.GetUnicode(), prop.Length()) );
         
         break;
       }
@@ -167,7 +167,7 @@ void nsCvrtStrToJSVal(const nsString& aProp,
                       JSContext* aContext,
                       jsval* aReturn)
 {
-  JSString *jsstring = JS_NewUCStringCopyN(aContext, aProp, aProp.Length());
+  JSString *jsstring = JS_NewUCStringCopyN(aContext, aProp.GetUnicode(), aProp.Length());
   // set the return value
   *aReturn = STRING_TO_JSVAL(jsstring);
 }
