@@ -110,10 +110,7 @@ else {
 # build up the command invocation string
 
 $cmd = $JAVA_CMD;
-# if on UNIX, append the -native argument
-if ($SEP eq "/") {
-  $cmd = $cmd . " -native";
-}
+
 #tack on the java library path
 $cmd = $cmd . " -Djava.library.path=" . $BINDIR . $CPSEP . $BINDIR . $SEP .
           "javadev" . $SEP . "lib";

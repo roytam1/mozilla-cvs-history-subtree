@@ -39,7 +39,7 @@ export CLASSPATH
 export JDKHOME
 export MOZILLA_FIVE_HOME
 
-args="-native -Djava.library.path=$libpath -classpath $CLASSPATH $testclass $bindir $script_args"
+args="-Djava.library.path=$libpath -classpath $CLASSPATH $testclass $bindir $script_args"
 
 cmd="$JDKHOME/bin/java $args"
 echo "CMD = " $cmd

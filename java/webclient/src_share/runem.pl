@@ -111,14 +111,6 @@ else {
 # build up the command invocation string
 
 $cmd = $JAVA_CMD;
-# if on UNIX, append the -native argument
-if ($SEP eq "/") {
-  $cmd = $cmd . " -native";
-}
-else {
-  # workaround bug 64332 on Win32, turn off hotspot and JIT
-  $cmd = $cmd . " -classic -Djava.compiler=NONE";
-}
 
 #tack on the java library path
 $cmd = $cmd . " -Djava.library.path=" . $BINDIR . $CPSEP . $BINDIR . $SEP . "components";
