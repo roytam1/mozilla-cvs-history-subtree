@@ -150,11 +150,6 @@ jsj_WrapJavaObject(JSContext *cx,
     JS_SetPrivate(cx, js_wrapper_obj, java_wrapper);
     java_wrapper->class_descriptor = class_descriptor;
 
-    java_obj = (*jEnv)->NewGlobalRef(jEnv, java_obj);
-    java_wrapper->java_obj = java_obj;
-    if (!java_obj)
-        goto out_of_memory;
-
 #ifdef JSJ_THREADSAFE
     PR_EnterMonitor(java_obj_reflections_monitor);
 
@@ -176,6 +171,11 @@ jsj_WrapJavaObject(JSContext *cx,
     java_obj_reflections_mutation_count++;
 
 #endif
+
+    java_obj = (*jEnv)->NewGlobalRef(jEnv, java_obj);
+    java_wrapper->java_obj = java_obj;
+    if (!java_obj)
+        goto out_of_memory;
 
     /* Add the JavaObject to the hash table */
     he = JSJ_HashTableRawAdd(java_obj_reflections, hep, hash_code,
