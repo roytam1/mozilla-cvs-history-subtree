@@ -24,6 +24,11 @@
 
 /**
  * @file nsMatrix.h
+ */
+
+/**
+ * nsMatrix class
+ * @class nsMatrix
  *
  * A 2x3 matrices of the form: 
  *
