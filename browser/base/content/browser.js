@@ -104,7 +104,6 @@ function loadEventHandlers(event)
 {
   // Filter out events that are not about the document load we are interested in
   if (event.originalTarget == _content.document) {
-    UpdateBookmarksLastVisitedDate(event);
     checkForDirectoryListing();
     charsetLoadListener(event);
 #ifdef ALTSS_ICON
@@ -128,6 +127,11 @@ function loadEventHandlers(event)
   }
 
   updatePageFavIcon(targetBrowser, targetListener);
+
+  // update the last visited date
+  if (targetBrowser.currentURI.spec)
+    BMSVC.updateLastVisitedDate(targetBrowser.currentURI.spec,
+                                targetBrowser.contentDocument.characterSet);
 }
 
 /**
@@ -141,17 +145,6 @@ function getContentAreaFrameCount()
     saveFrameItem.setAttribute("hidden", "true");
   else
     saveFrameItem.removeAttribute("hidden");
-}
-
-//////////////////////////////// BOOKMARKS ////////////////////////////////////
-
-function UpdateBookmarksLastVisitedDate(event)
-{
-  var url = getWebNavigation().currentURI.spec;
-  if (url) {
-    // if the URL is bookmarked, update its "Last Visited" date
-    BMSVC.updateLastVisitedDate(url, _content.document.characterSet);
-  }
 }
 
 function UpdateBackForwardButtons()
@@ -1915,7 +1908,12 @@ function SetPageProxyState(aState, aURI)
     gURLBar.addEventListener("input", UpdatePageProxyState, false);
 
     if (gBrowser.mCurrentBrowser.mFavIconURL != null) {
-      PageProxySetIcon(gBrowser.mCurrentBrowser.mFavIconURL);
+      if (gBrowser.isFavIconKnownMissing(gBrowser.mCurrentBrowser.mFavIconURL)) {
+        gBrowser.mFavIconURL = null;
+        PageProxyClearIcon();
+      } else {
+        PageProxySetIcon(gBrowser.mCurrentBrowser.mFavIconURL);
+      }
     } else {
       PageProxyClearIcon();
     }
@@ -2842,7 +2840,7 @@ nsBrowserStatusHandler.prototype =
   {
     if (gProxyFavIcon &&
         gBrowser.mCurrentBrowser == aBrowser &&
-        getBrowser().userTypedValue === null)
+        gBrowser.userTypedValue === null)
     {
       PageProxySetIcon(aHref);
     }

@@ -249,7 +249,7 @@
             mTab: aTab,
             mBrowser: aBrowser,
             mBlank: aStartsBlank,
-            mIcon: "", 
+            mIcon: null,
             mLastURI: null,
 
             onProgressChange : function (aWebProgress, aRequest,
@@ -294,7 +294,7 @@
                   this.mTab.setAttribute("busy", "true");
                   this.mTab.label = this.mTabBrowser.mStringBundle.getString("tabs.loading");
                   this.mTab.removeAttribute("image"); 
-                  this.mIcon = "";
+                  this.mIcon = null;
 
                   if (this.mTabBrowser.mCurrentTab == this.mTab)
                     this.mTabBrowser.mIsBusy = true;
@@ -318,12 +318,12 @@
                 if (location.scheme == "keyword")
                   this.mBrowser.userTypedValue = null;
 
-                if (this.mIcon) {
-                  this.mTab.setAttribute("image", this.mIcon);
-                  mIcon = "";
+                if (this.mTabBrowser.shouldLoadFavIcon(location)) {
+                    if (this.mIcon)
+                      this.mTab.setAttribute("image", this.mIcon);
+                    else
+                      this.mTabBrowser.loadFavIcon(location, "image", this.mTab);
                 }
-                else if (this.mTabBrowser.shouldLoadFavIcon(location))
-                  this.mTabBrowser.loadFavIcon(location, "image", this.mTab);
 
                 if (this.mTab.label == this.mTabBrowser.mStringBundle.getString("tabs.loading"))
                   this.mTabBrowser.setTabTitle(this.mTab);
@@ -422,13 +422,8 @@
         <body>
           <![CDATA[
             var iconURL = this.buildFavIconString(aURI);
-            var entry = this.openCacheEntry(iconURL, Components.interfaces.nsICache.ACCESS_READ);
-            if (!entry)
+            if (!this.isFavIconKnownMissing(iconURL))
               aElt.setAttribute(aAttr, iconURL);
-            else {
-              entry.close();
-              entry = null;
-            }
           ]]>
         </body>
       </method>
@@ -467,6 +462,20 @@
             catch (e) {
               return null;
             }
+          ]]>
+        </body>
+      </method>
+
+      <method name="isFavIconKnownMissing">
+        <parameter name="key"/>
+        <body>
+          <![CDATA[
+            var e = this.openCacheEntry(key, Components.interfaces.nsICache.ACCESS_READ);
+            if (e) {
+                e.close();
+                return true;
+            }
+            return false;
           ]]>
         </body>
       </method>
@@ -565,8 +574,12 @@
                 if (securityUI)
                   p.onSecurityChange(webProgress, null, securityUI.state);
                 var listener = this.mTabListeners[this.mPanelContainer.selectedIndex];
-                if (listener.mIcon)
-                  p.onLinkIconAvailable(newBrowser, listener.mIcon);
+                if (listener.mIcon) {
+                  if (this.isFavIconKnownMissing(listener.mIcon))
+                    listener.mIcon = null;
+                  else
+                    p.onLinkIconAvailable(newBrowser, listener.mIcon);
+                }
               }
             }
             this.mCurrentBrowser.userTypedClear = userTypedClear;
@@ -710,6 +723,13 @@
 
             var listener = tabBrowser.mTabListeners[browserIndex];
             // there's no tab listener for non-tabbed mode browser 0
+
+            if (tabBrowser.isFavIconKnownMissing(href)) {
+              if (listener)
+                listener.mIcon = null;
+              return;
+            }
+
             if (listener)
               listener.mIcon = href;
 
