@@ -67,84 +67,121 @@ nsMsgDBView::~nsMsgDBView()
 
 NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aRowCount = GetSize();
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetSelection(nsIOutlinerSelection * *aSelection)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
+
 NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *properties)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID, nsISupportsArray *properties)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnichar **_retval)
+NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+  nsMsgKey key = m_keys.GetAt(aRow);
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsresult rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // just a hack
+  nsXPIDLCString dbString;
+
+  switch (aColID[0])
+  {
+  case 's':
+    if (aColID[1] == 'u') // subject
+      rv = msgHdr->GetMime2DecodedSubject(aValue);
+    else
+      rv = msgHdr->GetMime2DecodedAuthor(aValue);
+    break;
+  case 'd':  // date
+    break;
+  default:
+    break;
+  }
+
+  // mscott: to do, we need to use a msgHdrParser to break down the author field and extract just the "pretty name"
+  // but this requires a bunch of string conversions I'd like to avoid on every paint! 
+#if 0
+  if(mHeaderParser)
+	{
+
+		nsXPIDLCString name;
+
+    rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUCS2toUTF8(sender), getter_Copies(name));
+    if (NS_SUCCEEDED(rv) && (const char*)name)
+      senderUserName.Assign(NS_ConvertUTF8toUCS2(name));
+	}
+#endif
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::SetOutliner(nsIOutlinerBoxObject *outliner)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  mOutliner = outliner;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement *elt)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::PerformAction(const PRUnichar *action)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::PerformActionOnRow(const PRUnichar *action, PRInt32 row)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::PerformActionOnCell(const PRUnichar *action, PRInt32 row, const PRUnichar *colID)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////
 // end nsIOutlinerView Implementation Methods
@@ -565,6 +602,8 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
             }
 
             m_sortOrder = sortOrder;
+            // we just reversed the sort order...we still need to invalidate the view
+            mOutliner->Invalidate();
             return NS_OK;
         }
     }
@@ -745,6 +784,10 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
     m_sortValid = PR_TRUE;
     //m_messageDB->SetSortInfo(sortType, sortOrder);
+
+    // last but not least, invalidate the entire view
+    if (mOutliner)
+      mOutliner->Invalidate();
 
     return NS_OK;
 }

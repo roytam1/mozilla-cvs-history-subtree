@@ -31,6 +31,7 @@
 #include "nsUint8Array.h"
 #include "nsIDBChangeListener.h"
 #include "nsIOutlinerView.h"
+#include "nsIOutlinerBoxObject.h"
 #include "nsVoidArray.h"
 
 enum eFieldType {
@@ -59,6 +60,10 @@ public:
   NS_DECL_NSIOUTLINERVIEW
 
 protected:
+
+  // mscott: talk to hyatt about making this  a weak reference?
+  nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
+
   // routines used in building up view
   PRBool WantsThisThread(nsIMsgThread * thread);
 
