@@ -734,9 +734,10 @@ nsInstall::DiskSpaceAvailable(const nsString& aFolder, PRInt64* aReturn)
         return NS_OK;
     }
     
-    nsFileSpec fsFolder(aFolder);
+    nsCOMPtr<nsILocalFile> folder;
+    NS_NewLocalFile(aFolder.ToNewCString(), getter_AddRefs(folder));
 
-    *aReturn = fsFolder.GetDiskSpaceAvailable();
+    result = folder->GetDiskSpaceAvailable(aReturn);
     return NS_OK;
 }
 
@@ -1754,9 +1755,11 @@ nsInstall::FileOpFileGetNativeVersion(nsInstallFolder& aTarget, nsString* aRetur
 PRInt32
 nsInstall::FileOpFileGetDiskSpaceAvailable(nsInstallFolder& aTarget, PRInt64* aReturn)
 {
-  nsCOMPtr<nsIFile> localFile = aTarget.GetFileSpec();
+  nsresult rv;
+  nsCOMPtr<nsIFile> file = aTarget.GetFileSpec();
+  nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file, &rv); 
 
-  //localFile->GetDiskSpaceAvailable(aReturn);  //nsIFileXXX: need to figure out how to call GetDiskSpaceAvailable
+  localFile->GetDiskSpaceAvailable(aReturn);  //nsIFileXXX: need to figure out how to call GetDiskSpaceAvailable
   return NS_OK;
 }
 
@@ -2222,12 +2225,12 @@ nsInstall::CleanUp(void)
     {
         //PRUint32 numberOfObjects = 0;
         //mInstalledFiles->Count(&numberOfObjects);
-        //for (PRInt32 i=0; i < mInstalledFiles->Count(); i++) 
-        //{
-        //    ie = (nsInstallObject*)mInstalledFiles->ElementAt(i);
-        //    if (ie)
-        //        delete ie;
-        //}
+        for (PRInt32 i=0; i < mInstalledFiles->Count(); i++) 
+        {
+            ie = (nsInstallObject*)mInstalledFiles->ElementAt(i);
+            if (ie)
+                delete ie;
+        }
 
         mInstalledFiles->Clear();
         delete (mInstalledFiles);

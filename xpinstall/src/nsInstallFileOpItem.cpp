@@ -702,7 +702,7 @@ nsInstallFileOpItem::NativeFileOpFileCopyComplete()
 
   mSrc->GetLeafName(&leafName);
   mTarget->GetParent(getter_AddRefs(parent));
-  mSrc->CopyTo(parent, leafName);
+  ret = mSrc->CopyTo(parent, leafName);
   if(nsInstall::SUCCESS == ret)
     mAction = nsInstallFileOpItem::ACTION_SUCCESS;
 

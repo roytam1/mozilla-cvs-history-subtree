@@ -75,8 +75,8 @@ class nsSoftwareUpdate: public nsIAppShellComponent,
 
 
     private:
-        static   nsSoftwareUpdate* mInstance;
-        static   nsCOMPtr<nsIFile>      mProgramDir;
+        static   nsSoftwareUpdate*  mInstance;
+        static   nsCOMPtr<nsIFile>  mProgramDir;
 
 #if NOTIFICATION_ENABLE
         static   nsIUpdateNotification *mUpdateNotifier;
