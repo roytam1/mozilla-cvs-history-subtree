@@ -2688,54 +2688,48 @@ nsresult nsMsgDatabase::GetCollationKeyGenerator()
 	return err;
 }
 
-nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token columnToken, PRUnichar* *resultStr)
+nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token columnToken, PRUint8 **result, PRUint32 *len)
 {
-    nsXPIDLString nakedString;
+  nsXPIDLString nakedString;
 	nsresult err;
 
 	err = RowCellColumnToMime2DecodedString(row, columnToken, getter_Copies(nakedString));
 	if (NS_SUCCEEDED(err))
-		err = CreateCollationKey(nakedString, resultStr);
+		err = CreateCollationKey((const PRUnichar *)nakedString, result, len);
 
 	return err;
 }
 
-  nsresult nsMsgDatabase::CreateCollationKey(const PRUnichar *sourceString, PRUnichar **resultString)
-  {
-        nsresult err = GetCollationKeyGenerator();
-       if (NS_SUCCEEDED(err) && m_collationKeyGenerator) 
-       {
-               PRUint32 aLength;
-               PRUint8 *aKey;
-               nsAutoString sourceStr(sourceString);
-               err = m_collationKeyGenerator->GetSortKeyLen(kCollationCaseInSensitive, sourceStr, &aLength);
-               if (NS_SUCCEEDED(err)) 
-               {
-                       aKey = (PRUint8 *) PR_Malloc(aLength + 3);    // plus three for null termination
-                       if (aKey) 
-                       {
-                               err = m_collationKeyGenerator->CreateRawSortKey(kCollationCaseInSensitive, sourceStr, aKey, &aLength);
-                               if (NS_SUCCEEDED(err)) 
-                               {
-                                       // Generate a null terminated unicode string.
-                                       // Note using PRUnichar* to store collation key is not recommented since the key may contains 0x0000.
-                                       aKey[aLength] = 0;
-                                       aKey[aLength+1] = 0;
-                                       aKey[aLength+2] = 0;
-                                       *resultString = (PRUnichar *) aKey;
-                               }
-                               else
-                                       PR_Free(aKey);
-                       }
-               }
-       }
-       else 
-       {
-               nsAutoString resultStr;
-               *resultString = resultStr.ToNewUnicode();
-       }
-        return err;
-  }
+NS_IMETHODIMP 
+nsMsgDatabase::CompareCollationKeys(PRUint8 *key1, PRUint32 len1, PRUint8 *key2, PRUint32 len2, PRInt32 *result)
+{
+  nsresult rv = GetCollationKeyGenerator();
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (!m_collationKeyGenerator) return NS_ERROR_FAILURE;
+
+  rv = m_collationKeyGenerator->CompareRawSortKey(key1,len1,key2,len2,result);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return rv;
+}
+
+NS_IMETHODIMP 
+nsMsgDatabase::CreateCollationKey(const PRUnichar *sourceString, PRUint8 **result, PRUint32 *len)
+{
+  nsresult err = GetCollationKeyGenerator();
+  NS_ENSURE_SUCCESS(err,err);
+  if (!m_collationKeyGenerator) return NS_ERROR_FAILURE;
+
+  nsAutoString sourceStr(sourceString);
+  err = m_collationKeyGenerator->GetSortKeyLen(kCollationCaseInSensitive, sourceStr, len);
+  NS_ENSURE_SUCCESS(err,err);
+
+  *result = (PRUint8 *) PR_Malloc(*len);
+  if (!result) return NS_ERROR_OUT_OF_MEMORY;
+
+  err = m_collationKeyGenerator->CreateRawSortKey(kCollationCaseInSensitive, sourceStr, *result, len);
+  NS_ENSURE_SUCCESS(err,err);
+  return err;
+}
 
 nsIMsgHeaderParser *nsMsgDatabase::GetHeaderParser()
 {

@@ -36,6 +36,8 @@ interface nsIMsgThread;
 interface nsIDBFolderInfo;
 interface nsIMsgOfflineImapOperation;
 
+[ptr] native octetPtr(PRUint8);
+
 typedef unsigned long nsMsgRetainByPreference;
 
 [scriptable, uuid(063bd2ac-de85-11d4-a5b6-0060b0fc04b7)]
@@ -222,5 +224,8 @@ interface  nsIMsgDatabase : nsIDBChangeAnnouncer {
   readonly attribute nsMsgKey HighWaterArticleNum;
   attribute nsMsgKey NextPseudoMsgKey;   //for undo-redo of move pop->imap
 
+  // for sorting
+  [noscript] void createCollationKey(in wstring sourceString, out octetPtr key, out unsigned long len);
+  [noscript] long compareCollationKeys(out octet key1, in unsigned long len1, out octet key2, in unsigned long len2);
 };
 

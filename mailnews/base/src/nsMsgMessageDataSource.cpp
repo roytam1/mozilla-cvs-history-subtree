@@ -1239,7 +1239,12 @@ nsMsgMessageDataSource::createMessageNameNode(nsIMessage *message,
   nsXPIDLString subject;
   if(sort)
 	{
+#if 0
       rv = message->GetSubjectCollationKey(getter_Copies(subject));
+#else
+      printf("I'm breaking this for now, this datasource will be going away\n");
+      rv = NS_ERROR_FAILURE;
+#endif
 	}
   else
 	{
@@ -1277,9 +1282,14 @@ nsMsgMessageDataSource::createMessageSenderNode(nsIMessage *message,
   nsAutoString senderUserName;
   if(sort)
 	{
+#if 0
       rv = message->GetAuthorCollationKey(getter_Copies(sender));
 			if(NS_SUCCEEDED(rv))
 	      rv = createNode(sender, target, getRDFService());
+#else
+      printf("I'm breaking this for now, this datasource will be going away\n");
+      rv = NS_ERROR_FAILURE;
+#endif
 	}
   else
 	{
@@ -1302,9 +1312,14 @@ nsMsgMessageDataSource::createMessageRecipientNode(nsIMessage *message,
 	nsAutoString recipientUserName;
 	if(sort)
 	{
+#if 0
 		rv = message->GetRecipientsCollationKey(getter_Copies(recipients));
 		if(NS_SUCCEEDED(rv))
 			rv = createNode(recipients, target, getRDFService());
+#else
+    printf("I'm breaking this for now, this datasource will be going away\n");
+    rv = NS_ERROR_FAILURE;
+#endif
 	}
 	else
 	{

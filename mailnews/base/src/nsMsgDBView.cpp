@@ -873,7 +873,7 @@ nsresult nsMsgDBView::DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indic
   nsresult rv = NS_OK;
 	nsCOMPtr<nsISupportsArray> messageArray;
 	NS_NewISupportsArray(getter_AddRefs(messageArray));
-  for (nsMsgViewIndex index = 0; index < numIndices; index++)
+  for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++)
   {
     nsMsgKey key = m_keys.GetAt(indices[index]);
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
@@ -1086,36 +1086,37 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
     return NS_OK;
 }
 
-typedef struct entryInfo
-{
+typedef struct entryInfo {
     nsMsgKey    id;
     PRUint32    bits;
+    PRUint32    len;
+    PRUint32    pad;
 } EntryInfo;
 
-typedef struct tagIdStr{
+typedef struct tagIdKey {
     EntryInfo   info;
-    PRUnichar   str[1];
-} IdStr;
+    PRUint8     key[1];
+} IdKey;
 
-typedef struct tagIdStrPtr{
-	EntryInfo	info;
-	const PRUnichar		*strPtr;
-} IdStrPtr;
-
+typedef struct tagIdPtrKey {
+    EntryInfo   info;
+    PRUint8     *key;
+} IdKeyPtr;
 
 int PR_CALLBACK
-FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
+FnSortIdKey(const void *pItem1, const void *pItem2, void *privateData)
 {
-    IdStr** p1 = (IdStr**)pItem1;
-    IdStr** p2 = (IdStr**)pItem2;
-#if 0
-    int retVal = nsCRT::strcmp((*p1)->str, (*p2)->str); 
-#else
-    // fix sorting, hack for now.
-    const char *str1 = (const char *)((*p1)->str);
-    const char *str2 = (const char *)((*p2)->str);
-    int retVal = nsCRT::strcmp(str1,str2);
-#endif
+    PRInt32 retVal = 0;
+    nsresult rv;
+
+    IdKey** p1 = (IdKey**)pItem1;
+    IdKey** p2 = (IdKey**)pItem2;
+
+    nsIMsgDatabase *db = (nsIMsgDatabase *)privateData;
+
+    rv = db->CompareCollationKeys((*p1)->key,(*p1)->info.len,(*p2)->key,(*p2)->info.len,&retVal);
+    NS_ASSERTION(NS_SUCCEEDED(rv),"compare failed");
+
     if (retVal != 0)
         return(retVal);
     if ((*p1)->info.id >= (*p2)->info.id)
@@ -1124,22 +1125,9 @@ FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
         return(-1);
 }
 
-static int /* __cdecl */ FnSortIdStrPtr(const void* pItem1, const void* pItem2, void *privateData)
-{
-	IdStrPtr** p1 = (IdStrPtr**)pItem1;
-	IdStrPtr** p2 = (IdStrPtr**)pItem2;
-  int retVal = nsCRT::strcmp((*p1)->strPtr, (*p2)->strPtr); 
-	if (retVal != 0)
-		return(retVal);
-	if ((*p1)->info.id >= (*p2)->info.id)
-		return(1);
-	else
-		return(-1);
-}
-
-typedef struct tagIdDWord{
+typedef struct tagIdDWord {
     EntryInfo   info;
-    PRUint32 dword;
+    PRUint32    dword;
 } IdDWord;
 
 int PR_CALLBACK
@@ -1157,9 +1145,9 @@ FnSortIdDWord(const void *pItem1, const void *pItem2, void *privateData)
         return(-1);
 }
 
-typedef struct tagIdPRTime{
+typedef struct tagIdPRTime {
     EntryInfo   info;
-    PRTime prtime;
+    PRTime      prtime;
 } IdPRTime;
 
 int PR_CALLBACK
@@ -1178,12 +1166,11 @@ FnSortIdPRTime(const void *pItem1, const void *pItem2, void *privateData)
         return(-1);
 }
 
-// use these for guessing how much space to allocate when we start sorting 
-// guess 80 characters in a subject, or 160 bytes (since these are PRUnichars)
-// 80 for author, 40 for recipient.  if we guess wrong, we'll grows
-const int kMaxSubject = 160;
-const int kMaxAuthor = 160;
-const int kMaxRecipient = 80;
+
+// XXX are these still correct? 
+const int kMaxSubjectKey = 160;
+const int kMaxAuthorKey = 160;
+const int kMaxRecipientKey = 80;
 
 nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType)
 {
@@ -1192,16 +1179,16 @@ nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType,
 
     switch (sortType) {
         case nsMsgViewSortType::bySubject:
-            *pFieldType = kString;
-            *pMaxLen = kMaxSubject;
+            *pFieldType = kCollationKey;
+            *pMaxLen = kMaxSubjectKey;
             break;
         case nsMsgViewSortType::byRecipient:
-            *pFieldType = kString;
-            *pMaxLen = kMaxRecipient;
+            *pFieldType = kCollationKey;
+            *pMaxLen = kMaxRecipientKey;
             break;
         case nsMsgViewSortType::byAuthor:
-            *pFieldType = kString;
-            *pMaxLen = kMaxAuthor;
+            *pFieldType = kCollationKey;
+            *pMaxLen = kMaxAuthorKey;
             break;
         case nsMsgViewSortType::byDate:
             *pFieldType = kPRTime;
@@ -1293,7 +1280,8 @@ nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sor
 }
 
 
-nsresult nsMsgDBView::GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUnichar **result)
+nsresult 
+nsMsgDBView::GetCollationKey(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint8 **result, PRUint32 *len)
 {
   nsresult rv;
   NS_ENSURE_ARG_POINTER(msgHdr);
@@ -1301,13 +1289,13 @@ nsresult nsMsgDBView::GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue s
 
   switch (sortType) {
     case nsMsgViewSortType::bySubject:
-        rv = msgHdr->GetSubjectCollationKey(result);
+        rv = msgHdr->GetSubjectCollationKey(result, len);
         break;
     case nsMsgViewSortType::byRecipient:
-        rv = msgHdr->GetRecipientsCollationKey(result);
+        rv = msgHdr->GetRecipientsCollationKey(result, len);
         break;
     case nsMsgViewSortType::byAuthor:
-        rv = msgHdr->GetAuthorCollationKey(result);
+        rv = msgHdr->GetAuthorCollationKey(result, len);
         break;
     default:
         rv = NS_ERROR_UNEXPECTED;
@@ -1367,7 +1355,8 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
     nsVoidArray ptrs;
     PRUint32 arraySize = GetSize();
-    IdStr** pPtrBase = (IdStr**)PR_Malloc(arraySize * sizeof(IdStr*));
+    // use IdPRTime, it is the biggest
+    IdPRTime** pPtrBase = (IdPRTime**)PR_Malloc(arraySize * sizeof(IdPRTime*));
     NS_ASSERTION(pPtrBase, "out of memory, can't sort");
     if (!pPtrBase) return NS_ERROR_OUT_OF_MEMORY;
     ptrs.AppendElement((void *)pPtrBase); // remember this pointer so we can free it later
@@ -1386,12 +1375,13 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    ptrs.AppendElement((void *)pTemp); // remember this pointer so we can free it later
+    ptrs.AppendElement(pTemp); // remember this pointer so we can free it later
 
-    char * pBase = pTemp;
+    char *pBase = pTemp;
     PRBool more = PR_TRUE;
 
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    PRUint8 *keyValue = nsnull;
     PRUint32 longValue;
     PRTime timeValue;
     while (more && numSoFar < arraySize) {
@@ -1410,30 +1400,19 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
       // could be a problem here if the ones that appear here are different than the ones already in the array
       void *pField = nsnull;
-      nsXPIDLString intlString;
-      PRUint32 paddedFieldLen = 0;
       PRUint32 actualFieldLen = 0;
-      if (fieldType == kString) {
-        //"Re:" might be encoded inside subject field using MIMEII encoding,
-        // It should be stripped before sorting
-        // we use to strip it here, but now we are stripping it off
-        // before creating the collation key, and only for subjects
-        rv = GetStringField(msgHdr, sortType, getter_Copies(intlString));
+      if (fieldType == kCollationKey) {
+        rv = GetCollationKey(msgHdr, sortType, &keyValue, &actualFieldLen);
         NS_ENSURE_SUCCESS(rv,rv);
-        pField = (void *)((const PRUnichar *)intlString);
-        actualFieldLen = (pField) ? (nsCRT::strlen((const PRUnichar *)pField) * sizeof(PRUnichar)) + sizeof(PRUnichar) : 2;
-        paddedFieldLen = actualFieldLen;
-        PRUint32 mod4 = actualFieldLen % 4;
-        if (mod4 > 0) {
-          paddedFieldLen += 4 - mod4;
-        }
+
+        pField = (void *) keyValue;
       }
       else if (fieldType == kPRTime) {
         rv = GetPRTimeField(msgHdr, sortType, &timeValue);
         NS_ENSURE_SUCCESS(rv,rv);
 
         pField = (void *) &timeValue;
-        actualFieldLen = paddedFieldLen = maxLen;
+        actualFieldLen = maxLen;
       }
       else {
         if (sortType == nsMsgViewSortType::byId) {
@@ -1444,25 +1423,25 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
             NS_ENSURE_SUCCESS(rv,rv);
         }
         pField = (void *)&longValue;
-        actualFieldLen = paddedFieldLen = maxLen;
+        actualFieldLen = maxLen;
       }
 
       // check to see if this entry fits into the block we have allocated so far
       // pTemp - pBase = the space we have used so far
       // sizeof(EntryInfo) + fieldLen = space we need for this entry
       // allocSize = size of the current block
-      if ((PRUint32)(pTemp - pBase) + (PRUint32)sizeof(EntryInfo) + (PRUint32)paddedFieldLen >= allocSize) {
+      if ((PRUint32)(pTemp - pBase) + (PRUint32)sizeof(EntryInfo) + (PRUint32)actualFieldLen >= allocSize) {
         maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
         maxBlockSize = (PRUint32) 0xf000L;
         allocSize = PR_MIN(maxBlockSize, maxSize);
-        pTemp = (char*)PR_Malloc(allocSize);
+        pTemp = (char *) PR_Malloc(allocSize);
         NS_ASSERTION(pTemp, "out of memory, can't sort");
         if (!pTemp) {
           FreeAll(&ptrs);
           return NS_ERROR_OUT_OF_MEMORY;
         }
         pBase = pTemp;
-        ptrs.AppendElement((void *)pTemp); // remember this pointer so we can free it later
+        ptrs.AppendElement(pTemp); // remember this pointer so we can free it later
       }
 
       // make sure there aren't more IDs than we allocated space for
@@ -1473,33 +1452,36 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       }
 
       // now store this entry away in the allocated memory
-      pPtrBase[numSoFar] = (IdStr*)pTemp;
-      EntryInfo *info = (EntryInfo *)pTemp;
+      pPtrBase[numSoFar] = (IdPRTime*)pTemp;
+      EntryInfo *info = (EntryInfo*)pTemp;
       info->id = thisKey;
-      PRUint32 bits = 0;
-      bits = m_flags.GetAt(numSoFar);
-      info->bits = bits;
+      info->bits = m_flags.GetAt(numSoFar);
+      info->len = actualFieldLen;
+      info->pad = -1;
+
       pTemp += sizeof(EntryInfo);
+
       PRInt32 bytesLeft = allocSize - (PRInt32)(pTemp - pBase);
       PRInt32 bytesToCopy = PR_MIN(bytesLeft, (PRInt32)actualFieldLen);
       if (pField && bytesToCopy > 0) {
         nsCRT::memcpy((void *)pTemp, pField, bytesToCopy);
         if (bytesToCopy < (PRInt32)actualFieldLen) {
           NS_ASSERTION(0, "wow, big block");
-          *(pTemp + bytesToCopy - 1) = '\0';
+          info->len = bytesToCopy;
         }
       }
       else {
         *pTemp = 0;
       }
-      pTemp += paddedFieldLen;
+      pTemp += bytesToCopy;
       ++numSoFar;
+      PR_FREEIF(keyValue);
     }
 
     // do the sort
     switch (fieldType) {
-        case kString:
-            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdStr*), FnSortIdStr, nsnull);
+        case kCollationKey:
+            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdKey*), FnSortIdKey, m_db);
             break;
         case kU32:
             NS_QuickSort(pPtrBase, numSoFar, sizeof(IdDWord*), FnSortIdDWord, nsnull);
@@ -1961,23 +1943,21 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	PRBool done = PR_FALSE;
 	PRBool withinOne = PR_FALSE;
 	nsMsgViewIndex retIndex = nsMsgViewIndex_None;
-	nsMsgViewIndex	tryIndex = GetSize() / 2;
-	nsMsgViewIndex	newTryIndex;
+	nsMsgViewIndex tryIndex = GetSize() / 2;
+	nsMsgViewIndex newTryIndex;
 	nsMsgViewIndex lowIndex = 0;
 	nsMsgViewIndex highIndex = GetSize() - 1;
-	IdDWord			dWordEntryInfo1, dWordEntryInfo2;
-	IdStrPtr		strPtrInfo1, strPtrInfo2;
+	IdDWord	dWordEntryInfo1, dWordEntryInfo2;
+	IdKeyPtr	keyInfo1, keyInfo2;
+  nsresult rv;
 
 	if (GetSize() == 0)
 		return 0;
 
 	PRUint16	maxLen;
-	nsXPIDLString field1Str;
-	nsXPIDLString field2Str;
 	eFieldType fieldType;
-  nsresult rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
-	const void	*pValue1, *pValue2;
-	//char *intlString1 = nsnull;
+  rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
+	const void *pValue1, *pValue2;
 
 	if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0)
 	{
@@ -1989,18 +1969,18 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	int retStatus = 0;
 	switch (fieldType)
 	{
-		case kString:
-			comparisonFun = FnSortIdStrPtr;
-      GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
-      strPtrInfo1.strPtr = (const PRUnichar *) field1Str;
-			msgHdr->GetMessageKey(&strPtrInfo1.info.id);
-			pValue1 = &strPtrInfo1;
+		case kCollationKey:
+      rv = GetCollationKey(msgHdr, m_sortType, &(keyInfo1.key), &(keyInfo1.info.len));
+      NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
+			msgHdr->GetMessageKey(&keyInfo1.info.id);
+      comparisonFun = FnSortIdKey;
+			pValue1 = (void *) &keyInfo1;
 			break;
 		case kU32:
-			pValue1 = &dWordEntryInfo1;
 			GetLongField(msgHdr, m_sortType, &dWordEntryInfo1.dword);
 			msgHdr->GetMessageKey(&dWordEntryInfo1.info.id);
 			comparisonFun = FnSortIdDWord;
+			pValue1 = (void *) &dWordEntryInfo1;
 			break;
 		default:
 			done = PR_TRUE;
@@ -2012,15 +1992,14 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 		nsMsgKey	messageKey = GetAt(tryIndex);
 		nsCOMPtr <nsIMsgDBHdr> tryHdr;
     rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(tryHdr));
-		//char	*intlString2 = nsnull;
 		if (!tryHdr)
 			break;
-		if (fieldType == kString)
+		if (fieldType == kCollationKey)
 		{
-			GetStringField(tryHdr, m_sortType, getter_Copies(field2Str));
-      strPtrInfo2.strPtr = (const PRUnichar *) field2Str;
-			strPtrInfo2.info.id = messageKey;
-			pValue2 = &strPtrInfo2;
+			rv = GetCollationKey(tryHdr, m_sortType, &(keyInfo2.key), &(keyInfo2.info.len));
+      NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
+			keyInfo2.info.id = messageKey;
+      pValue2 = &keyInfo2;
 		}
 		else
 		{

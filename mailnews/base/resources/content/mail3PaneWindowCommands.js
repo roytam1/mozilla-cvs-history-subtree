@@ -608,12 +608,14 @@ function FocusRingUpdate_Mail(){
     
 	if(currentFocusedElement != lastFocusedElement) {
         if( currentFocusedElement == GetThreadTree()) {
-            GetThreadTree().setAttribute("focusring","true");
+            // XXX fix me
+            //GetThreadTree().setAttribute("focusring","true");
             GetMessagePane().setAttribute("focusring","false");
         }
 
         else if(currentFocusedElement==GetFolderTree()) {
-            GetThreadTree().setAttribute("focusring","false");
+            // XXX fix me
+            //GetThreadTree().setAttribute("focusring","false");
             GetMessagePane().setAttribute("focusring","false");
         }
         else if(currentFocusedElement==GetMessagePane()){
@@ -622,6 +624,7 @@ function FocusRingUpdate_Mail(){
             GetMessagePane().setAttribute("focusring","true");
         }
         else {
+            // XXX fix me
             GetThreadTree().setAttribute("focusring","false");
             GetMessagePane().setAttribute("focusring","false");
         }

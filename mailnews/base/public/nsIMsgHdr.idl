@@ -32,6 +32,7 @@
 [ptr] native nsCString(nsCString);
 [ref] native nsStringRef(nsString);
 [ref] native nsCStringRef(nsCString);
+[ptr] native octetPtr(PRUint8);
 
 [scriptable, uuid(4e994f60-c317-11d2-8cc9-0060b0fc14a3)]
 interface nsIMsgHdr : nsISupports
@@ -93,9 +94,9 @@ interface nsIMsgHdr : nsISupports
     readonly attribute wstring mime2DecodedSubject;
     readonly attribute wstring mime2DecodedRecipients;
 
-    readonly attribute wstring authorCollationKey;
-    readonly attribute wstring subjectCollationKey;
-    readonly attribute wstring recipientsCollationKey;
+    [noscript] void getAuthorCollationKey(out octetPtr key, out unsigned long len);
+    [noscript] void getSubjectCollationKey(out octetPtr key, out unsigned long len);
+    [noscript] void getRecipientsCollationKey(out octetPtr key, out unsigned long len);
     
 	attribute string Charset;
 };

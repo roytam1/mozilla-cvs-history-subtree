@@ -612,7 +612,7 @@ NS_IMETHODIMP nsMsgHdr::GetMime2DecodedRecipients(PRUnichar* *resultRecipients)
 }
 
 
-NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(PRUnichar* *resultAuthor)
+NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(PRUint8 **resultAuthor, PRUint32 *len)
 {
 	nsCAutoString cSender;
 	char *name = nsnull;
@@ -624,6 +624,7 @@ NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(PRUnichar* *resultAuthor)
 		if (headerParser)
 		{
 			// apply mime decode
+      // XXX TODO cache the converter
 			nsIMimeConverter *converter;
 			ret = nsComponentManager::CreateInstance(kCMimeConverterCID, nsnull, 
 												NS_GET_IID(nsIMimeConverter), (void **)&converter);
@@ -650,26 +651,24 @@ NS_IMETHODIMP nsMsgHdr::GetAuthorCollationKey(PRUnichar* *resultAuthor)
 	}
 	if (NS_SUCCEEDED(ret))
 	{
-		nsAutoString autoString; autoString.AssignWithConversion(name);
-        PRUnichar *uniName = autoString.ToNewUnicode();
-		ret = m_mdb->CreateCollationKey(uniName, resultAuthor);
-        Recycle(uniName);
+		nsAutoString nameStr;
+    nameStr.AssignWithConversion(name);
+		ret = m_mdb->CreateCollationKey(nameStr.GetUnicode(), resultAuthor, len);
 	}
 
-	if(name)
-		PL_strfree(name);
+	if (name) PL_strfree(name);
 
 	return ret;
 }
 
-NS_IMETHODIMP nsMsgHdr::GetSubjectCollationKey(PRUnichar* *resultSubject)
+NS_IMETHODIMP nsMsgHdr::GetSubjectCollationKey(PRUint8 **resultSubject, PRUint32 *len)
 {
-	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
+	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject, len);
 }
 
-NS_IMETHODIMP nsMsgHdr::GetRecipientsCollationKey(PRUnichar* *resultRecipients)
+NS_IMETHODIMP nsMsgHdr::GetRecipientsCollationKey(PRUint8 **resultRecipients, PRUint32 *len)
 {
-	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
+	return m_mdb->RowCellColumnToCollationKey(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients, len);
 }
 
 NS_IMETHODIMP nsMsgHdr::GetCharset(char **aCharset)
