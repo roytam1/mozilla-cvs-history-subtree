@@ -3373,10 +3373,11 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
             
             nsMouseScrollEvent scrollEvent;
+            scrolllEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
             if (msg == WM_MOUSEWHEEL)
-                scrollEvent.deltaLines = -((short) HIWORD (wParam) / iDeltaPerLine);
+                scrollEvent.delta = -((short) HIWORD (wParam) / iDeltaPerLine);
             else
-                scrollEvent.deltaLines = -((int) wParam / iDeltaPerLine);
+                scrollEvent.delta = -((int) wParam / iDeltaPerLine);
             scrollEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
             scrollEvent.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
             scrollEvent.isControl = IS_VK_DOWN(NS_VK_CONTROL);
