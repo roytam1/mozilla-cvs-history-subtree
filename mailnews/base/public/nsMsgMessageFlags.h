@@ -99,7 +99,6 @@ typedef PRInt32 MsgFlags;
 									   */
 #define MSG_FLAG_IGNORED	0x40000 /* the thread is ignored */
 
-
 #define MSG_FLAG_IMAP_DELETED	0x200000 /* message is marked deleted on the server */
 
 #define MSG_FLAG_MDN_REPORT_NEEDED 0x400000 /* This msg required to send an MDN 
@@ -112,6 +111,9 @@ typedef PRInt32 MsgFlags;
 											 */
 #define MSG_FLAG_TEMPLATE       0x1000000	/* this message is a template */
 #define MSG_FLAG_ATTACHMENT		0x10000000	/* this message has files attached to it */
+
+// we're trying to reserve the high byte of the flags for view flags,
+// so, don't add flags to the high byte if possible.
 
 /* The list of all message flags to not write to disk. */
 #define MSG_FLAG_RUNTIME_ONLY   (MSG_FLAG_ELIDED)

@@ -45,6 +45,7 @@ protected:
 									 PRInt32 numToList, PRInt32 *pNumListed, PRInt32 *pTotalHeaders);
   nsresult InitSort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
   nsresult ExpandAll();
+	void			ClearPrevIdArray();
   // these are used to save off the previous view so that bopping back and forth
   // between two views is quick (e.g., threaded and flat sorted by date).
 	PRBool		m_havePrevView;

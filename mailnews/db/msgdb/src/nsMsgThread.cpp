@@ -1081,3 +1081,40 @@ nsresult nsMsgThread::GetChildHdrForKey(nsMsgKey desiredKey, nsIMsgDBHdr **resul
 	return rv;
 }
 
+NS_IMETHODIMP nsMsgThread::GetFirstUnreadChild(nsIMsgDBHdr **result)
+{
+  NS_ENSURE_ARG(result);
+  PRUint32 numChildren;
+  nsresult rv;
+
+	GetNumChildren(&numChildren);
+
+	if ((PRInt32) numChildren < 0)
+		numChildren = 0;
+
+	for (PRUint32 childIndex = 0; childIndex < numChildren; childIndex++)
+	{
+    nsCOMPtr <nsIMsgDBHdr> child;
+		rv = GetChildHdrAt(childIndex, getter_AddRefs(child));
+		if (NS_SUCCEEDED(rv) && child)
+		{
+			nsMsgKey msgKey;
+			// we're only doing one level of threading, so check if caller is
+			// asking for children of the first message in the thread or not.
+			// if not, we will tell him there are no children.
+			child->GetMessageKey(&msgKey);
+
+      PRBool isRead;
+      rv = m_mdbDB->IsRead(msgKey, &isRead);
+			if (NS_SUCCEEDED(rv) && !isRead)
+      {
+        *result = child;
+        NS_ADDREF(*result);
+				break;
+      }
+		}
+	}
+
+	return rv;
+}
+

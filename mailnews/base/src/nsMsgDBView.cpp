@@ -512,6 +512,11 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	return rv;
 }
 
+PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
+{
+  return PR_TRUE; // default is to want all threads.
+}
+
 void	nsMsgDBView::EnableChangeUpdates()
 {
 }

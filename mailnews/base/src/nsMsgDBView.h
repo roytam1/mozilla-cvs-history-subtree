@@ -37,6 +37,11 @@ enum eFieldType {
     kU64
 };
 
+// reserve the top 8 bits in the msg flags for the view-only flags.
+#define MSG_VIEW_FLAGS 0xFE000000
+#define MSG_VIEW_FLAG_HASCHILDREN 0x40000000
+#define MSG_VIEW_FLAG_ISTHREAD 0x8000000
+
 typedef PRInt32 nsMsgDBViewFlags;
 	// flags for GetViewFlags
 const int kOutlineDisplay = 0x1;
@@ -57,6 +62,9 @@ public:
   NS_DECL_NSIMSGDBVIEW
 
 protected:
+  // routines used in building up view
+  PRBool WantsThisThread(nsIMsgThread * thread);
+
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
   nsresult ExpandAll();
   nsresult ReverseSort();
