@@ -1,6 +1,6 @@
 #if OS_ARCH==WINNT
 [xpi-bootstrap]
-!preprocess @srcdir@/packager/windows/xpcom.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/xpcom.jst xpiroot/install.js
 
 !optional @topsrcdir@/../redist/microsoft/system/msvcrt.dll
 !=The Microsoft redistributable system file msvcrt.dll was not found in
@@ -17,28 +17,48 @@
 !=http://bugzilla.mozilla.org/show_bug.cgi?id=27601
 
 [gre-xpi]
-!preprocess @srcdir@/packager/win_gre/gre.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/win_gre/gre.jst xpiroot/install.js
 
 [xpfe-browser-xpi]
-!preprocess @srcdir@/packager/windows/browser.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/browser.jst xpiroot/install.js
 
 [xpfe-lang-enUS-xpi]
-!preprocess @srcdir@/xpinstall/packager/windows/langenus.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/langenus.jst xpiroot/install.js
 
 [xpfe-locale-US-xpi]
-!preprocess @srcdir@/xpinstall/packager/windows/regus.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/regus.jst xpiroot/install.js
 
 [xpfe-default-US-xpi]
-!preprocess @srcdir@/xpinstall/packager/windows/deflenus.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/deflenus.jst xpiroot/install.js
 
 [xpfe-mailnews-xpi]
-!preprocess @srcdir@/xpinstall/packager/windows/mail.jst xpiroot/install.js
+!preprocess @topsrcdir@/xpinstall/packager/windows/mail.jst xpiroot/install.js
 
 [xpfe-editor-xpi]
-!preprocess @srcdir@/xpinstall/packager/windows/
+!preprocess @topsrcdir@/xpinstall/packager/windows/editor.jst xpiroot/install.js
 
 #else
 #if OS_ARCH==OS2
+[gre-xpi]
+!error Not implemented on OS/2 yet!
+
+[xpfe-browser-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/browser.jst xpiroot/install.js
+
+[xpfe-lang-enUS-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/langenus.jst xpiroot/install.js
+
+[xpfe-locale-US-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/regus.jst xpiroot/install.js
+
+[xpfe-default-US-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/deflenus.jst xpiroot/install.js
+
+[xpfe-mailnews-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/mail.jst xpiroot/install.js
+
+[xpfe-editor-xpi]
+!preprocess @topsrcdir@/xpinstall/packager/os2/editor.jst xpiroot/install.js
 
 #else
 [xpi-bootstrap gre-xpi xpfe-browser-xpi xpfe-lang-enUS-xpi xpfe-locale-US-xpi xpfe-default-US-xpi xpfe-mailnews-xpi xpfe-editor-xpi
