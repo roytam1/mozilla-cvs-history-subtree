@@ -14,6 +14,7 @@ Later:
 - remove printfs
 - XXXs
 - clean up progressdialog
+- firebird/thunderbird extension
 
 don't care (for now):
 - conflict

@@ -46,6 +46,8 @@ var gCount = 0; // number of files
 
 function StartUp()
 {
+  //  AddItem (1, "bookmarks", "server", "local");
+  //  return;
   centerWindowOnScreen();
   LoadElements();
   ClearParam();
@@ -54,32 +56,52 @@ function StartUp()
 
 function AddItem(fileid, filename, server, local)
 {
-  var filenames = document.getElementById("filenames");
-  var radios = document.getElementById("radios");
-
-  var label = document.createElement("text");
-  label.setAttribute("value", GetFileDescription(filename));
+  /*
+    <rows id="filerows">
+      <row>
+        <description><html:b>&filedescr.label;</html:b></description>
+        <description><html:b>&server.label;</html:b></description>
+        <description><html:b>&local.label;</html:b></description>
+      </row>
+      <radiogroup value="2"
+                  style="display: -moz-grid-line;
+                         -moz-box-orient: horizontal;"
+                  flex="1">   <!-- acts as column-->
+        <description>file description</description>
+        <radio label="last modified server, size server" value="1"/>
+        <radio label="last modified local, size local" value="2"/>
+      </radiogroup>
+    <rows>
+  */
 
   var radiogroup = document.createElement("radiogroup");
-  radiogroup.setAttribute("orient", "horizontal");
+  //  radiogroup.setAttribute("orient", "horizontal");
+  radiogroup.setAttribute("style",
+                      "display: -moz-grid-line; -moz-box-orient: horizontal;");
   radiogroup.setAttribute("id", fileid);
-
-  var radioServer = document.createElement("radio");
-  radioServer.setAttribute("value", "1");
-  if (server)
-    radioServer.setAttribute("label", server);
-  var radioLocal = document.createElement("radio");
-  radioLocal.setAttribute("value", "2");
-  if (local)
-    radioLocal.setAttribute("label", local);
-
   radiogroup.setAttribute("value", gIsDownload ? "2" : "1");
+  var cell;
 
-  radiogroup.appendChild(radioServer);
-  radiogroup.appendChild(radioLocal);
+  cell = document.createElement("description");
+  cell.appendChild(document.createTextNode(GetFileDescription(filename)));
+  radiogroup.appendChild(cell);
 
-  filenames.appendChild(label);
-  radios.appendChild(radiogroup);
+  cell = document.createElement("radio");
+  cell.setAttribute("value", "1");
+  if (server)
+    cell.setAttribute("label", server);
+  radiogroup.appendChild(cell);
+
+  cell = document.createElement("radio");
+  cell.setAttribute("value", "2");
+  if (local)
+    cell.setAttribute("label", local);
+  radiogroup.appendChild(cell);
+
+  var rows = document.getElementById("filerows");
+  rows.appendChild(radiogroup);
+  //window.style.fontSize="9pt";
+  //window.sizeToContent();
 }
 
 function FileLabel(lastModified, size)

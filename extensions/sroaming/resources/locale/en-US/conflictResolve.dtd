@@ -38,14 +38,14 @@
 
 <!ENTITY windowtitle.label     "Roaming files conflicts">
 
-<!ENTITY subheader.label       "Select which version of files to keep">
+<!ENTITY subheader.label       "Select which version of your profile files to keep">
 
-<!ENTITY intro-download.label  "Download: Several files in your local user profile have been changed since the files on the server have been last uploaded. This suggests that the files on the server are not uptodate. Which version of the files do you want to keep?">
-<!ENTITY intro-upload.label    "Upload: Several files have been changed both on the server and in your local user profile since the files have been last uploaded. Which version of the files do you want to keep?">
+<!ENTITY intro-download.label  "Download: Several files in your local user profile have been changed since the corresponding files on the server have been last uploaded. This suggests that the files on the server are not up-to-date. Which version of the files do you want to keep?">
+<!ENTITY intro-upload.label    "Upload: Several files have been changed both on the server and in your local user profile since the files have been last downloaded. Which version of the files do you want to keep?">
 
-<!ENTITY filename.label        "Filename">
+<!ENTITY filedescr.label       "File">
 <!ENTITY server.label          "Server">
-<!ENTITY local.label           "Local">
+<!ENTITY local.label           "Local profile">
 
 <!ENTITY start.label           "OK">
 <!ENTITY exit.label            "Cancel roaming"><!-- XXX needed? -->
