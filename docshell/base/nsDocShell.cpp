@@ -4748,6 +4748,9 @@ nsresult nsDocShell::DoChannelLoad(nsIChannel * aChannel,
     // Load attributes depend on load type...
     switch (mLoadType) {
     case LOAD_HISTORY:
+        loadFlags |= nsIRequest::VALIDATE_NEVER;
+        break;
+
     case LOAD_RELOAD_CHARSET_CHANGE:
         loadFlags |= nsIRequest::LOAD_FROM_CACHE;
         break;
@@ -4761,6 +4764,7 @@ nsresult nsDocShell::DoChannelLoad(nsIChannel * aChannel,
     case LOAD_REFRESH:
         loadFlags |= nsIRequest::LOAD_BYPASS_CACHE;
         break;
+
     case LOAD_NORMAL:
     case LOAD_LINK:
         // Set cache checking flags
