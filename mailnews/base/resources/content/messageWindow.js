@@ -71,6 +71,13 @@ var folderListener = {
 function nsMsgDBViewCommandUpdater()
 {}
 
+function UpdateStandAloneMessageCounts()
+{
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(null, "mail:updateStandAloneMessageCounts", "");
+}
+
 nsMsgDBViewCommandUpdater.prototype = 
 {
   updateCommandStatus : function()
@@ -85,8 +92,6 @@ nsMsgDBViewCommandUpdater.prototype =
     setTitleFromFolder(aFolder, aSubject);
     gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
     UpdateStandAloneMessageCounts();
-    if ("SetUpExtraMsgToolbarButtons" in top)
-      SetUpExtraMsgToolbarButtons();
     SetKeywords(aKeywords);
   },
 

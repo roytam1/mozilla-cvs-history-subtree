@@ -1337,22 +1337,8 @@ function SetUpToolbarButtons(uri)
     }
 
     // hook for extra toolbar items
-    if ("SetUpExtraToolbarButtons" in top) {
-      SetUpExtraToolbarButtons(uri);
-    }
-}
-
-function UpdateStandAloneMessageCounts()
-{
-  dump("XXX UpdateStandAloneMessageCounts()\n");
-  // for now, do nothing on this
-  // but still provide this hook
-  if ("UpdateExtraStandAloneMessageCounts()" in top) {
-    UpdateExtraStandAloneMessageCounts();
-  }
-  else {
-    dump("XXX no UpdateExtraStandAloneMessageCounts\n");
-  }
+    var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+    observerService.notifyObservers(null, "mail:updateToolbarItems", uri);
 }
 
 var gMessageBrowser;
