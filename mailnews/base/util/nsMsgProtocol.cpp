@@ -91,9 +91,7 @@ nsresult nsMsgProtocol::SetupTransportState()
 
 	if (!m_socketIsOpen && m_channel)
 	{
-#if 0
 		rv = m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
-#endif
 
 		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output stream");
 		// we want to open the stream 
@@ -125,13 +123,9 @@ PRInt32 nsMsgProtocol::SendData(nsIURI * aURL, const char * dataBuffer)
 	PRInt32 status = 0; 
 
 //	NS_PRECONDITION(m_outputStream, "oops....we don't have an output stream...how did that happen?");
-	if (dataBuffer /*  && m_outputStream */)
+	if (dataBuffer && m_outputStream)
 	{
-//		if (!m_outputStream)
-			m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
 		nsresult rv = m_outputStream->Write(dataBuffer, PL_strlen(dataBuffer), &writeCount);
-		// due to a necko bug...we must close the stream as soon as we are done writing.
-		m_outputStream->Close();
 	}
 
 	return status;
