@@ -584,6 +584,7 @@ lm_CanCaptureEvent(JSContext *cx, JSFunction *fun, JSEvent *event)
 JSPrincipals *
 lm_GetPrincipalsFromStackFrame(JSContext *cx)
 {
+#ifdef OJI
     /*
      * Get principals from script of innermost interpreted frame.
      */
@@ -600,8 +601,9 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
         }
     }
         return JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
-
+#else
     return NULL;
+#endif
 }
 
 const char *
@@ -1557,9 +1559,10 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     JSStackFrame *fp;
     void *annotationRef;
     void *principalArray = NULL;
+#ifdef OJI
     JSStackFrame *pFrameToStartLooking = JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
-
+#endif
     setupJSCapsCallbacks();
 
     /* Map JSTarget to nsTarget */
@@ -1570,6 +1573,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     /* Find annotation */
     annotationRef = NULL;
     principalArray = NULL;
+#ifdef OJI
     fp = pFrameToStartLooking;
     while ((fp = JS_FrameIterator(cx, &fp)) != pFrameToEndLooking) {
         void *current;
@@ -1592,6 +1596,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
             ? nsCapsIntersectPrincipalArray(principalArray, current)
             : current;
     }
+#endif
 
     if (annotationRef) {
         annotation = (struct nsPrivilegeTable *)annotationRef;
