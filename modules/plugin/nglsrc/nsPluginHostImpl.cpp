@@ -4009,7 +4009,6 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
           if (postDataRandomAccess)
             postDataRandomAccess->Seek(PR_SEEK_SET, 0);
           
-          httpChannel->SetRequestMethod("POST");
           httpChannel->SetUploadStream(postDataStream);
 
           if (newPostData)
