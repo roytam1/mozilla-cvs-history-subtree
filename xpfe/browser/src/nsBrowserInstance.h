@@ -48,6 +48,10 @@
 #include "nsIUrlbarHistory.h"
 #include "nsISHistory.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h" // Bidi options
+#endif // IBMBIDI
+
 class nsIDocShell;
 class nsIScriptContext;
 class nsIDOMWindow;
@@ -121,6 +125,10 @@ class nsBrowserInstance : public nsIBrowserInstance,
     nsCOMPtr<nsIUrlbarHistory> mUrlbarHistory;                  //We own this
     nsCOMPtr<nsISupports>  mSearchContext;				// at last, something we really own
     nsInstanceCounter   mInstanceCounter;
+#ifdef IBMBIDI
+    nsBidiOptions       mBidi;    // IBMBIDI Options
+#endif // IBMBIDI
+
 #ifdef DEBUG_warren
     PRIntervalTime      mLoadStartTime;
 #endif

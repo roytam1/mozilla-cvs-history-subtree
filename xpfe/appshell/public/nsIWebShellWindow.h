@@ -25,6 +25,11 @@
 
 #include "nsISupports.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
+
+
 /* Forward declarations.... */
 class nsIWebShell;
 class nsIWidget;
@@ -40,6 +45,11 @@ class nsIWebShellWindow : public nsISupports
 {
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_IWEBSHELL_WINDOW_IID; return iid; }
+
+#ifdef IBMBIDI
+  NS_IMETHOD   SetBidi(nsBidiOptions Source) = 0;
+  NS_IMETHOD   GetBidi(nsBidiOptions * Dist) = 0;
+#endif // IBMBIDI
 
   NS_IMETHOD Show(PRBool aShow) = 0;
   NS_IMETHOD ShowModal() = 0;

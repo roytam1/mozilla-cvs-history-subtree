@@ -37,6 +37,10 @@
 #include "nsISupportsArray.h"
 #include "nsIScrollPositionListener.h"
 
+#ifdef IBMBIDI
+#include "nsIStyleContext.h"
+#endif // IBMBIDI
+
 static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_IID(kIClipViewIID, NS_ICLIPVIEW_IID);
@@ -1209,6 +1213,33 @@ NS_IMETHODIMP nsScrollingView::ComputeScrollOffsets(PRBool aAdjustWidgets)
     mSizeX = mSizeY = 0;
   }
 
+#ifdef IBMBIDI
+  void * clientData;
+
+  this->GetClientData(clientData);
+  nsIFrame* frame = (nsIFrame*)clientData;
+  if (frame != nsnull) 
+  {
+    const nsStyleDisplay *frame_display = nsnull;
+    frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) frame_display);
+    if (frame_display->mDirection == NS_STYLE_DIRECTION_RTL) {
+      nsRect clipRect;
+      mClipView->GetBounds(clipRect);
+
+      if ((mVScrollBarView && ViewIsShowing((ScrollBarView *)mVScrollBarView))  &&  (nsnull != scrolledView))
+      {
+        nscoord vwidth, vheight;
+        if (nsnull != mVScrollBarView)
+          mVScrollBarView->GetDimensions(&vwidth, &vheight);
+        clipRect.x = mInsets.left + vwidth;
+      } else {
+        clipRect.x = mInsets.left;
+      }
+      mClipView->SetBounds(clipRect);
+    }
+  }
+#endif // IBMBIDI
+
   UpdateScrollControls(PR_TRUE);
 
   return NS_OK;
@@ -1467,12 +1498,42 @@ void nsScrollingView::UpdateScrollControls(PRBool aPaint)
         visCornerSize.height = 0;
     }
 
+#ifdef IBMBIDI
+    const nsStyleDisplay *frame_display = nsnull;
+    void * clientData;
+
+    this->GetClientData(clientData);
+    nsIFrame* frame = (nsIFrame*)clientData;
+    if (frame != nsnull) 
+    {
+      frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) frame_display);
+    }
+#endif // IBMBIDI
+
     // Size and position the vertical scrollbar
     if (nsnull != mVScrollBarView)
     {
       nsSize            vertSize;
 
       mVScrollBarView->GetDimensions(&vertSize.width, &vertSize.height);
+#ifdef IBMBIDI
+      if (frame && frame_display->mDirection == NS_STYLE_DIRECTION_RTL)
+      {
+        mVScrollBarView->SetBounds(mInsets.left, mInsets.top, vertSize.width, 
+                                   clipRect.height - visCornerSize.height, aPaint);
+        cornerPos.x = clipRect.x;
+      }
+      else
+      {
+        mVScrollBarView->SetBounds(clipRect.XMost(), clipRect.y, vertSize.width, 
+                                   clipRect.height - visCornerSize.height, aPaint);
+
+        if (vertVis == nsViewVisibility_kShow)
+          cornerPos.x = clipRect.XMost();
+        else
+          cornerPos.x = clipRect.XMost() - cornerSize.width;
+      }
+#else
       mVScrollBarView->SetBounds(clipRect.XMost(), clipRect.y, vertSize.width, 
                                  clipRect.height - visCornerSize.height, aPaint);
 
@@ -1480,6 +1541,7 @@ void nsScrollingView::UpdateScrollControls(PRBool aPaint)
         cornerPos.x = clipRect.XMost();
       else
         cornerPos.x = clipRect.XMost() - cornerSize.width;
+#endif // IBMBIDI
     }
 
     // Size and position the horizontal scrollbar
@@ -1488,8 +1550,19 @@ void nsScrollingView::UpdateScrollControls(PRBool aPaint)
       nsSize            horzSize;
 
       mHScrollBarView->GetDimensions(&horzSize.width, &horzSize.height);
+#ifdef IBMBIDI
+      if (frame && frame_display->mDirection == NS_STYLE_DIRECTION_RTL)
+      {
+        mHScrollBarView->SetBounds(clipRect.x - visCornerSize.width, clipRect.YMost(), clipRect.width - visCornerSize.width,
+                                   horzSize.height, aPaint);
+      } else {
+        mHScrollBarView->SetBounds(clipRect.x, clipRect.YMost(), clipRect.width - visCornerSize.width,
+                                   horzSize.height, aPaint);
+      }
+#else
       mHScrollBarView->SetBounds(clipRect.x, clipRect.YMost(), clipRect.width - visCornerSize.width,
                                  horzSize.height, aPaint);
+#endif // IBMBIDI
 
       if (horzVis == nsViewVisibility_kShow)
         cornerPos.y = clipRect.YMost();

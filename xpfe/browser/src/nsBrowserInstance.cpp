@@ -121,6 +121,15 @@
 #include "nsFileStream.h"
 #include "nsIProxyObjectManager.h" 
 
+#ifdef IBMBIDI
+#include "nsIDocumentViewer.h"
+#include "nsIDocument.h"
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);//Hacked from Text Frame
+#endif // IBMBIDI
+
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kIWalletServiceIID, NS_IWALLETSERVICE_IID);
 static NS_DEFINE_IID(kWalletServiceCID, NS_WALLETSERVICE_CID);
@@ -1208,6 +1217,46 @@ nsBrowserInstance::SetDocumentCharset(const PRUnichar *aCharset)
   }
   return NS_OK;
 }
+
+#ifdef IBMBIDI
+
+NS_IMETHODIMP    
+nsBrowserInstance::SetDocumentBiDi(const PRUint8 member, const PRUint8 value)
+{
+  if (mWebShellWin != nsnull){
+  nsBiDiOptions mBidiop;
+  mWebShellWin->GetBiDi(&mBidiop);
+  this->mBiDi = mBidiop;
+  }
+    switch (member)
+  {
+  case IBMBIDI_TEXTDIRECTION:
+    this->mBiDi.mdirection = value;
+    break;
+  case IBMBIDI_TEXTTYPE:
+    this->mBiDi.mtexttype = value;
+    break;
+  case IBMBIDI_CONTROLSTEXTMODE:
+    this->mBiDi.mcontrolstextmode = value;
+    break;
+  case IBMBIDI_CLIPBOARDTEXTMODE:
+    this->mBiDi.mclipboardtextmode = value;
+    break;
+  case IBMBIDI_NUMERAL:
+    this->mBiDi.mnumeral = value;
+    break;
+  case IBMBIDI_SUPPORTMODE:
+    this->mBiDi.msupport = value;
+    break;
+  case IBMBIDI_CHARSET:
+    this->mBiDi.mcharacterset = value;
+    break;
+  }
+  if (mWebShellWin != nsnull)
+    mWebShellWin->SetBiDi(mBiDi);
+  return NS_OK;
+}
+#endif //IBMBIDI
 
 // XXX isolate the common code in the next two methods into a common method
 

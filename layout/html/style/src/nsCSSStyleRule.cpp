@@ -1888,6 +1888,9 @@ MapDeclarationDisplayInto(nsICSSDeclaration* aDeclaration,
       // direction: enum, inherit
       if (eCSSUnit_Enumerated == ourDisplay->mDirection.GetUnit()) {
         display->mDirection = ourDisplay->mDirection.GetIntValue();
+#ifdef IBMBIDI
+        display->mExplicitDirection = display->mDirection;
+#endif // IBMBIDI
       }
       else if (eCSSUnit_Inherit == ourDisplay->mDirection.GetUnit()) {
         display->mDirection = parentDisplay->mDirection;

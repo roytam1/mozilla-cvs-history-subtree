@@ -29,6 +29,10 @@
 #include "nsIChannel.h"
 #include "nsIScrollableView.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
+
 class nsIDOMElement;
 class nsIDOMWindow;
 class nsIFactory;
@@ -147,6 +151,11 @@ public:
    * Set the URL of the current WebShell.
    */
   NS_IMETHOD SetURL(const PRUnichar* aURL) = 0;
+
+#ifdef IBMBIDI
+  NS_IMETHOD   SetBidi(nsBidiOptions Source) = 0;
+  NS_IMETHOD   GetBidi(nsBidiOptions * Dist) = 0;
+#endif // IBMBIDI
 
   /**
    * Notify children to fire unload events before root data gone

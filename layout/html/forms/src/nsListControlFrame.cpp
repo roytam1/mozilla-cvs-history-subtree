@@ -806,6 +806,33 @@ nsListControlFrame::Reflow(nsIPresContext*          aPresContext,
     visibleWidth += (border.left + border.right + padding.left + padding.right);
   }
 
+#ifdef IBMBIDI
+  nsRect parentRect, thisRect;
+
+  const nsStyleDisplay* display;
+  GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+  if (display->mDirection == NS_STYLE_DIRECTION_RTL)
+  {
+    nscoord BidiscrolledAreaWidth = scrolledAreaDesiredSize.maxElementSize->width;
+    firstPassState.reason = eReflowReason_StyleChange;
+    float p2t;
+    aPresContext->GetScaledPixelsToTwips(&p2t);
+    if (aReflowState.mComputedWidth == NS_UNCONSTRAINEDSIZE)
+    {
+      if (needsVerticalScrollbar) {
+         BidiscrolledAreaWidth -= scrollbarWidth;
+      } else {
+         BidiscrolledAreaWidth = aReflowState.mComputedWidth - scrollbarWidth + (6 * p2t);
+         if (needsVerticalScrollbar) BidiscrolledAreaWidth -= scrollbarWidth;
+      }
+      firstPassState.mComputedWidth  = BidiscrolledAreaWidth;
+      firstPassState.availableWidth = BidiscrolledAreaWidth;
+      nsScrollFrame::Reflow(aPresContext, aDesiredSize, firstPassState, aStatus);
+    }
+  }
+#endif // IBMBIDI
+
    // Do a second reflow with the adjusted width and height settings
    // This sets up all of the frames with the correct width and height.
   secondPassState.mComputedWidth  = visibleWidth;
@@ -2717,6 +2744,16 @@ NS_IMETHODIMP nsListControlFrame::MoveTo(nsIPresContext* aPresContext, nscoord a
   }
 }
 
+#ifdef IBMBIDI
+NS_IMETHODIMP
+nsListControlFrame::GetFrameType(nsIAtom** aType) const
+{
+  NS_PRECONDITION(nsnull != aType, "null OUT parameter pointer");
+  *aType = nsLayoutAtoms::listControlFrame; 
+  NS_ADDREF(*aType);
+  return NS_OK;
+}
+#endif // IBMBIDI
 
 //---------------------------------------------------------
 NS_IMETHODIMP 

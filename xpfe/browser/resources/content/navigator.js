@@ -1070,6 +1070,18 @@ function BrowserChangeTextSize(newSize)
     }
   }
 
+// IBMBIDI
+  function BrowserSetBidi(member, value)
+  {
+    if (appCore != null) {
+      appCore.SetDocumentBidi(member, value);
+      window.content.location.reload();
+    } else {
+      dump("BrowserAppCore has not been created!\n");
+    }
+  }
+// IBMBIDI
+
   function BrowserClose()
   {
     // This code replicates stuff in Shutdown().  It is here because

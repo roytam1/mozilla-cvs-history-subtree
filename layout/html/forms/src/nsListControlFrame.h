@@ -94,6 +94,15 @@ public:
   NS_IMETHOD MoveTo(nsIPresContext* aPresContext, nscoord aX, nscoord aY);
   NS_IMETHOD Destroy(nsIPresContext *aPresContext);
 
+#ifdef IBMBIDI
+  /**
+   * Get the "type" of the frame
+   *
+   * @see nsLayoutAtoms::scrollFrame
+   */
+  NS_IMETHOD GetFrameType(nsIAtom** aType) const;
+#endif // IBMBIDI
+
     // nsIFormControlFrame
   NS_IMETHOD GetType(PRInt32* aType) const;
   NS_IMETHOD GetName(nsString* aName);

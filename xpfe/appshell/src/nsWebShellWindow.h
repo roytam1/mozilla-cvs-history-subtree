@@ -41,6 +41,10 @@
 #include "nsCOMPtr.h"
 #include "nsXULWindow.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h" // Bidi options
+#endif // IBMBIDI
+
 /* Forward declarations.... */
 struct PLEvent;
 
@@ -78,6 +82,10 @@ public:
                { *aYes = mLoadDefaultPage; return NS_OK; }
 
   // nsIWebShellWindow methods...
+#ifdef IBMBIDI
+  NS_IMETHOD SetBidi(nsBidiOptions Source);
+  NS_IMETHOD GetBidi(nsBidiOptions * Dist);
+#endif // IBMBIDI
   NS_IMETHOD Show(PRBool aShow);
   NS_IMETHOD ShowModal();
   NS_IMETHOD ShowModally(PRBool aPrepare);
@@ -205,6 +213,10 @@ protected:
 
   void        SetPersistenceTimer(PRBool aSize, PRBool aPosition);
   static void FirePersistenceTimer(nsITimer *aTimer, void *aClosure);
+
+#ifdef IBMBIDI
+  nsBidiOptions  mBidi; // IBMBIDI Options
+#endif // IBMBIDI
 
 private:
 

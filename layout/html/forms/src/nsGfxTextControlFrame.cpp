@@ -107,6 +107,18 @@
 
 #include "nsLayoutAtoms.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#include "nsIWebShellWindow.h"
+
+// We used to pass the values of mBidi to the mWebShell
+// but from what I C it has been deleted.. !!
+// so we should invistigate what will it do again
+
+static NS_DEFINE_IID(kIWebShellIID,    NS_IWEB_SHELL_IID);
+static NS_DEFINE_IID(kIWebShellWindowIID,  NS_IWEBSHELL_WINDOW_IID);
+#endif // IBMBIDI
+
 static NS_DEFINE_IID(kIFrameIID, NS_IFRAME_IID);
 static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
 static NS_DEFINE_IID(kTextCID, NS_TEXTFIELD_CID);
@@ -1424,6 +1436,15 @@ nsGfxTextControlFrame::CreateSubDoc(nsRect *aSizeOfSubdocContainer)
     rv = htmlElement->AppendChildTo(bodyElement, PR_FALSE);
     if (NS_FAILED(rv)) { return rv; }
     
+#ifdef IBMBIDI
+  if (mDocShell != nsnull) {
+    nsBidiOptions tempBidi;
+    nsCOMPtr<nsIWebShell> CurrentWebShell(do_QueryInterface(mDocShell));
+    CurrentWebShell->GetBidi(&tempBidi);
+    doc->SetBidi(tempBidi); // M15: in M14 we used to set the webshell
+  }
+#endif // IBMBIDI
+
     // load the document into the docshell
     nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(doc);
     if (!domDoc) { return NS_ERROR_NULL_POINTER; }
@@ -1999,6 +2020,14 @@ nsGfxTextControlFrame::CreateDocShell(nsIPresContext* aPresContext,
   if ((PR_FALSE==IsSingleLineTextControl()) || (NS_FORM_INPUT_PASSWORD == type)) {
     docShellAsWin->SetVisibility(PR_TRUE);
   }
+#ifdef IBMBIDI
+  if (aPresContext != nsnull && mDocShell != nsnull) {
+		nsBidiOptions tempBidi;
+		nsCOMPtr<nsIWebShell> CurrentWebShell(do_QueryInterface(mDocShell));
+		aPresContext->GetBidi(&tempBidi);
+		CurrentWebShell->SetBidi(tempBidi); // M15: in M14 we used to set the webshell
+	}
+#endif // IBMBIDI
   return NS_OK;
 }
 
@@ -2843,6 +2872,14 @@ nsGfxTextControlFrame::Reflow(nsIPresContext* aPresContext,
           mDebugResizeReflowsThatChangedMySize, mDebugReflowsThatMovedSubdoc);
 #endif
 #endif
+#ifdef IBMBIDI
+  if (aPresContext != nsnull && mDocShell != nsnull) {
+		nsBidiOptions tempBidi;
+		nsCOMPtr<nsIWebShell> CurrentWebShell(do_QueryInterface(mDocShell));
+		aPresContext->GetBidi(&tempBidi);
+		CurrentWebShell->SetBidi(tempBidi); // M15: in M14 we used to set the webshell
+	}
+#endif // IBMBIDI
   return NS_OK;
 }
 

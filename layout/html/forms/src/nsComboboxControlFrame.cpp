@@ -952,6 +952,24 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   kidReflowState.mComputedWidth  = dispWidth;
   kidReflowState.mComputedHeight = dispHeight;
 
+#ifdef IBMBIDI
+  const nsStyleDisplay* display;
+  GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+  // M14 didn't calculate the RightEdge in the reflow
+  // Unless we set the width to some thing other than unrestricted
+  // the code changed this may not be the best place to put it
+  // in this->Reflow like this :
+  //
+  // Reflow display + button
+  // nsAreaFrame::Reflow(aPresContext, aDesiredSize, firstPassState, aStatus);
+
+  if (display->mDirection == NS_STYLE_DIRECTION_RTL)
+  {
+    kidReflowState.mComputedWidth = 0;
+  }
+#endif // IBMBIDI
+
   // do reflow
   nsAreaFrame::Reflow(aPresContext, aDesiredSize, kidReflowState, aStatus);
 
@@ -1013,6 +1031,17 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   buttonRect.y       = aBorderPadding.top;
   buttonRect.height  = insideHeight;
   buttonRect.width   = aBtnWidth;
+#ifdef IBMBIDI
+  if (display->mDirection == NS_STYLE_DIRECTION_RTL)
+  {
+    if (buttonRect.x > displayRect.x)
+    {
+      buttonRect.x = displayRect.x;
+      displayRect.x += buttonRect.width;
+      aDisplayFrame->SetRect(aPresContext, displayRect);
+    }
+  }
+#endif // IBMBIDI
   aDropDownBtn->SetRect(aPresContext, buttonRect);
 
   // since we have changed the height of the button 

@@ -122,6 +122,10 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsIPopupSetFrame.h"
 #include "nsIWalletService.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h" // Bidi options
+#endif // IBMBIDI
+
 /* Define Class IDs */
 static NS_DEFINE_CID(kWindowCID,           NS_WINDOW_CID);
 static NS_DEFINE_CID(kWebShellCID,         NS_WEB_SHELL_CID);
@@ -346,6 +350,34 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
     NS_ENSURE_SUCCESS(webNav->LoadURI(urlString.GetUnicode()), NS_ERROR_FAILURE);
   }
                      
+#ifdef IBMBIDI
+  PRInt8 prefInt;
+  nsIPref *prefs;
+
+  rv = nsServiceManager::GetService(kPrefCID, 
+                                    NS_GET_IID(nsIPref), 
+                                    (nsISupports **)&prefs);
+  //ahmed
+  if (NS_SUCCEEDED(rv)) {
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTDIRECTION_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mdirection= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_TEXTTYPE_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mtexttype= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CONTROLSTEXTMODE_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mcontrolstextmode= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CLIPBOARDTEXTMODE_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mclipboardtextmode= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_NUMERAL_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mnumeral= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_SUPPORTMODE_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.msupport= prefInt;
+  NS_SUCCEEDED(prefs->GetIntPref(IBMBIDI_CHARSET_STR, ((PRInt32*)&prefInt)));
+  this->mBidi.mcharacterset= prefInt;
+  if (mWebShell != nsnull)
+    mWebShell->SetBidi(mBidi);
+}
+#endif // IBMBIDI
+
   return rv;
 }
 
@@ -555,6 +587,35 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
   }
   return result;
 }
+
+#ifdef IBMBIDI
+NS_IMETHODIMP   nsWebShellWindow::SetBidi(nsBidiOptions Source)
+{
+  this->mBidi.mdirection        = Source.mdirection;
+  this->mBidi.mtexttype          = Source.mtexttype;
+  this->mBidi.mcontrolstextmode = Source.mcontrolstextmode;
+  this->mBidi.mclipboardtextmode = Source.mclipboardtextmode;
+  this->mBidi.mnumeral          = Source.mnumeral;
+  this->mBidi.msupport          = Source.msupport;
+  this->mBidi.mcharacterset      = Source.mcharacterset;
+
+  if (mWebShell != nsnull)
+    mWebShell->SetBidi(Source);
+
+  return NS_OK;
+}
+NS_IMETHODIMP   nsWebShellWindow::GetBidi(nsBidiOptions * Dist)
+{
+  Dist->mdirection        = this->mBidi.mdirection;
+  Dist->mtexttype          = this->mBidi.mtexttype;
+  Dist->mcontrolstextmode = this->mBidi.mcontrolstextmode;
+  Dist->mclipboardtextmode = this->mBidi.mclipboardtextmode;
+  Dist->mnumeral          = this->mBidi.mnumeral;
+  Dist->msupport          = this->mBidi.msupport;
+  Dist->mcharacterset      = this->mBidi.mcharacterset;
+  return NS_OK;
+}
+#endif //IBMBIDI
 
 #if 0
 //----------------------------------------
