@@ -55,18 +55,25 @@
 #else
 #ifndef macintosh
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#ifndef XP_OS2_VACPP
+#include <unistd.h>
+#endif /* vacpp */
 #endif
 #endif
 #include "cmtclist.h"
 
 typedef void (*void_fun) (void);
 
+#ifdef XP_OS2_VACPP	/* OS/2 Visual Age */
+typedef void (*_Optlink CMTP7ContentCallback)(void *arg, const char *buf,
+				      unsigned long len);
+#else
 typedef void (* CMTP7ContentCallback)(void *arg, const char *buf,
 				      unsigned long len);
+#endif
 
 typedef struct _CMTPrivate CMTPrivate;
 typedef void (*CMTReclaimFunc)(CMTPrivate *priv);
@@ -1865,9 +1872,14 @@ typedef struct _NameList {
    char ** names;
 } NameList;
 
+CMTStatus CMT_CreateKeyGenContextForKeyGenTag(PCMT_CONTROL control, 
+                                              CMUint32       *keyGenContext,
+                                              CMUint32       *errorCode);
+
 char * CMT_GenKeyOldStyle(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
                           CMKeyGenTagReq * next);
-
+char * CMT_GetGenKeyResponse(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
+                             CMKeyGenTagReq *next);
 /* Certificates */
 CMTStatus CMT_FindCertificateByNickname(PCMT_CONTROL control, char * nickname, CMUint32 *resID);
 CMTStatus CMT_FindCertificateByKey(PCMT_CONTROL control, CMTItem *key, CMUint32 *resID);
