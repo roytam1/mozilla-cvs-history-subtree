@@ -460,9 +460,14 @@ PRBool nsDOMTreeWalker::GetAccessible()
 */
 
 
-//----------------------------------------
+//-----------------------------------------------------------------------
  // This method finds the content node in the parent document
  // corresponds to the docshell
+ // This code is copied and pasted from nsEventStateManager.cpp
+ // Is also inefficient - better solution should come along as part of 
+ // Bug 85602: "FindContentForDocShell walks entire content tree"
+ // Hopefully there will be a better method soon, with a public interface
+
  nsIContent* 
  nsAccessibilityService::FindContentForDocShell(nsIPresShell* aPresShell,
                                              nsIContent*   aContent,
