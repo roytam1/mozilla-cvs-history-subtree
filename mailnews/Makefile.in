@@ -28,6 +28,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= public base db/msgdb news local mime compose imap addrbook import extensions
 
+PACKAGE_FILE = mailnews.pkg
+
 ifeq ($(OS_ARCH),WINNT)
 ifndef GNU_CC
 DIRS		+= mapi
