@@ -27,6 +27,7 @@
  #pragma warning(disable: 4786)
 #endif
 
+#define EXITCODE_RUNTIME_ERROR 3
 
 #include <algorithm>
 #include <assert.h>
@@ -117,8 +118,9 @@ JSValue debug(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
     return kUndefinedValue;
 }
 
-static void readEvalPrint(Context *cx, FILE *in)
+static int readEvalPrint(Context *cx, FILE *in)
 {
+    int result = 0;
     String buffer;
     string line;
     LineReader inReader(in);
@@ -163,7 +165,7 @@ static void readEvalPrint(Context *cx, FILE *in)
 #endif
                     JSValue result = cx->interpret(bcm, JSValue(cx->getGlobalObject()), NULL, 0);
                     if (!result.isUndefined())
-                        stdOut << result << "\n";
+                        stdOut << result.toString(cx) << "\n";
                     delete bcm;
                 }
 #endif
@@ -178,13 +180,15 @@ static void readEvalPrint(Context *cx, FILE *in)
                   e.sourceFile == ConsoleName)) {
                 stdOut << '\n' << e.fullMessage();
                 clear(buffer);
+                result = EXITCODE_RUNTIME_ERROR;
             }
         }
     }
     stdOut << '\n';
+    return result;
 }
 
-bool processArgs(Context *cx, int argc, char **argv)
+bool processArgs(Context *cx, int argc, char **argv, int *result)
 {
     bool doInteractive = true;
     for (int i = 0; i < argc; i++)  {    
@@ -195,7 +199,8 @@ bool processArgs(Context *cx, int argc, char **argv)
                     try {
                         cx->readEvalFile(JavaScript::widenCString(argv[++i]));
                     } catch (Exception &e) {
-                            stdOut << '\n' << e.fullMessage();
+                        stdOut << '\n' << e.fullMessage();
+                        *result = EXITCODE_RUNTIME_ERROR;
                     }
                     doInteractive = false;
                 }
@@ -228,10 +233,11 @@ int main(int argc, char **argv)
     globalObject->defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(&cx, debug, NULL)));
 
     bool doInteractive = true;
+    int result = 0;
     if (argc > 1) {
-        doInteractive = processArgs(&cx, argc - 1, argv + 1);
+        doInteractive = processArgs(&cx, argc - 1, argv + 1, &result);
     }
     if (doInteractive)
-        readEvalPrint(&cx, stdin);
-    return 0;
+        result = readEvalPrint(&cx, stdin);
+    return result;
 }

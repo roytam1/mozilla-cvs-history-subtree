@@ -1449,6 +1449,7 @@ static const double two31 = 2147483648.0;
             if (scopeChain) {
                 mScopeChain = new ScopeChain(*scopeChain);
             }
+            mPrototype = Object_Type->mPrototype;
         }
         
         JSFunction(Context *cx, NativeCode *code, JSType *resultType) 
@@ -1460,6 +1461,7 @@ static const double two31 = 2147483648.0;
                         mExpectedArgs(0),
                         mScopeChain(NULL)
         {
+            mPrototype = Object_Type->mPrototype;
         }
 
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
