@@ -443,7 +443,7 @@ sub do_component
 	    warn "Warning: component directory \"$component\" already exists in \"$destdir\".\n";
 	  } else {
 	    ($debug >= 4) && print " mkdir $destdir$PD$component\n";
-	    mkdir ("$destdir$PD$component", 0755) ||
+	    mkdir ("$destdir$PD$component") ||
 	      die "Error: couldn't create component directory \"$component\": $!.  Exiting...\n";
 	  }
 	}
