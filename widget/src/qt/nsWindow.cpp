@@ -466,20 +466,6 @@ NS_METHOD nsWindow::ConstrainPosition(PRBool aAllowSlop,
 
 NS_METHOD nsWindow::Move(PRInt32 aX, PRInt32 aY)
 {
-  if (mWidget && mParent && mWindowType == eWindowType_popup) {
-    nsRect oldrect, newrect;
-
-    mBounds.x = aX;
-    mBounds.y = aY;
-
-    oldrect.x = aX;
-    oldrect.y = aY;
-    mParent->WidgetToScreen(oldrect,newrect);
-    mWidget->Move(newrect.x,newrect.y);
-
-    return NS_OK;
-  }
-  else
     return(nsWidget::Move(aX,aY));
 }
 

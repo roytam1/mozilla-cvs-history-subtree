@@ -257,7 +257,6 @@ unsigned int NS_GetQWFlags(nsBorderStyle aBorder,nsWindowType aType)
       break;
 
     case eWindowType_popup:
-      w |= Qt::WType_Popup;
       break;
 
     case eWindowType_child:
