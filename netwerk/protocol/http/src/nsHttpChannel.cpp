@@ -514,12 +514,21 @@ nsHttpChannel::OpenCacheEntry(PRBool *delayed)
     else
         accessRequested = nsICache::ACCESS_READ_WRITE; // normal browsing
 
-    rv = session->AsyncOpenCacheEntry(cacheKey, accessRequested, this);
-    if (NS_FAILED(rv)) return rv;
-
-    // we'll have to wait for the cache entry
-    *delayed = PR_TRUE;
-    return NS_OK;
+    // we'll try to synchronously open the cache entry... however, it may be
+    // in use and not yet validated, in which case we'll try asynchronously
+    // opening the cache entry.
+    rv = session->OpenCacheEntry(cacheKey, accessRequested, PR_FALSE,
+                                 getter_AddRefs(mCacheEntry));
+    if (rv == NS_ERROR_CACHE_WAIT_FOR_VALIDATION) {
+        // access to the cache entry has been denied
+        rv = session->AsyncOpenCacheEntry(cacheKey, accessRequested, this);
+        if (NS_FAILED(rv)) return rv;
+        // we'll have to wait for the cache entry
+        *delayed = PR_TRUE;
+    }
+    else if (rv == NS_OK)
+        mCacheEntry->GetAccessGranted(&mCacheAccess);
+    return rv;
 }
 
 nsresult
@@ -821,7 +830,7 @@ nsHttpChannel::CloseCacheEntry(nsresult status)
     if (mCacheEntry) {
         LOG(("nsHttpChannel::CloseCacheEntry [this=%x status=%x]", this, status));
 
-        if (NS_FAILED(status)) {
+        if (NS_FAILED(status) && (mCacheAccess & nsICache::ACCESS_WRITE)) {
             LOG(("dooming cache entry!!"));
             rv = mCacheEntry->Doom();
         }
@@ -834,6 +843,7 @@ nsHttpChannel::CloseCacheEntry(nsresult status)
         mCacheReadRequest = 0;
         mCacheTransport = 0;
         mCacheEntry = 0;
+        mCacheAccess = 0;
     }
     return rv;
 }
@@ -1658,6 +1668,9 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
     if (NS_FAILED(rv)) {
         LOG(("Connect failed [rv=%x]\n", rv));
 
+        // make sure  cache entry
+        CloseCacheEntry(rv);
+
         AsyncAbort(rv);
 
         mListener = 0;
@@ -2113,8 +2126,7 @@ nsHttpChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry,
 
     // a failure from Connect means that we have to abort the channel.
     if (NS_FAILED(rv)) {
-        mCacheEntry = 0;
-        mCacheAccess = 0;
+        CloseCacheEntry(rv);
         AsyncAbort(rv);
     }
 
