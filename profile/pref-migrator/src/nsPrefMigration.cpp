@@ -182,6 +182,7 @@
 
 #define PREF_MIGRATION_PROGRESS_URL "chrome://communicator/content/profile/profileMigrationProgress.xul"
 #define PREF_MIGRATION_NO_SPACE_URL "chrome://communicator/content/profile/no_space.xul"
+#define PREF_MIGRATION_MODE_URL "chrome://communicator/content/profile/migrationMode.xul"
 
 typedef struct
 {
@@ -231,6 +232,9 @@ static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
+PRInt32 gMigrationModeForMail;  // 0 stands for keep a seperate work space for migration, just copy the mail files to a new location,
+                                // 1 stands for using the exist mail files, don't copy
+      	
 nsPrefMigration* nsPrefMigration::mInstance = nsnull;
 
 nsPrefMigration *
@@ -311,9 +315,26 @@ NS_IMETHODIMP
 nsPrefMigration::ProcessPrefs(PRBool showProgressAsModalWindow)
 {
   nsresult rv;
+
+  gMigrationModeForMail = 1;  // 1 stands for using exist 
   
   nsCOMPtr<nsIWindowWatcher> windowWatcher(do_GetService("@mozilla.org/embedcomp/window-watcher;1", &rv));
-  if (NS_FAILED(rv)) return rv;
+  if( NS_FAILED(rv) ) return rv;
+  
+  nsCOMPtr<nsIDialogParamBlock> ioParamBlock(do_GetService("@mozilla.org/embedcomp/dialogparam;1", &rv));
+  if( NS_FAILED(rv) ) return rv;
+  ioParamBlock->SetInt(0, 2);  // Set the keepSeperate and UsingExist buttons
+  
+  nsCOMPtr<nsIDOMWindow> newWindow;
+  rv = windowWatcher->OpenWindow(nsnull,
+                                 PREF_MIGRATION_MODE_URL,
+                                 "_blank",
+                                 "dialog, chrome, centerscreen, modal, titlebar",
+                                 ioParamBlock,
+                                 getter_AddRefs(newWindow));
+  if( NS_FAILED(rv) ) return rv;
+  if( NS_SUCCEEDED(rv) )
+    ioParamBlock->GetInt(0, &gMigrationModeForMail);
 
   // WindowWatcher can work with or without parent window
   rv = windowWatcher->OpenWindow(nsnull,
@@ -844,130 +865,127 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
 
   
   if (serverType == POP_4X_MAIL_TYPE) {
-
-    rv = newPOPMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newPOPMailPath->CreateDir();
+      rv = newPOPMailPath->Exists(&exists);
       if (NS_FAILED(rv)) return rv;
-    }
+      if (!exists)  {
+        rv = newPOPMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
 
-    rv = newPOPMailPath->AppendRelativeUnixPath(NEW_MAIL_DIR_NAME);
-    if (NS_FAILED(rv)) return rv;
+      rv = newPOPMailPath->AppendRelativeUnixPath(NEW_MAIL_DIR_NAME);
+      if (NS_FAILED(rv)) return rv;
  
-    rv = newPOPMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newPOPMailPath->CreateDir();
+      rv = newPOPMailPath->Exists(&exists);
       if (NS_FAILED(rv)) return rv;
-    }
+      if (!exists)  {
+        rv = newPOPMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
 
-    {
-      // temporarily go through nsFileSpec
-      nsFileSpec newPOPMailPathSpec;
-      newPOPMailPath->GetFileSpec(&newPOPMailPathSpec);
+      {
+        // temporarily go through nsFileSpec
+        nsFileSpec newPOPMailPathSpec;
+        newPOPMailPath->GetFileSpec(&newPOPMailPathSpec);
       
-      nsCOMPtr<nsILocalFile> newPOPMailPathFile;
-      NS_FileSpecToIFile(&newPOPMailPathSpec,
-                         getter_AddRefs(newPOPMailPathFile));
+        nsCOMPtr<nsILocalFile> newPOPMailPathFile;
+        NS_FileSpecToIFile(&newPOPMailPathSpec, getter_AddRefs(newPOPMailPathFile));
       
-      rv = m_prefs->SetFileXPref(PREF_MAIL_DIRECTORY, newPOPMailPathFile); 
-      if (NS_FAILED(rv)) return rv;
-    }
+        rv = m_prefs->SetFileXPref(PREF_MAIL_DIRECTORY, newPOPMailPathFile); 
+        if (NS_FAILED(rv)) return rv;
+      }
 
-    m_prefs->CopyCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
+      m_prefs->CopyCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
 
-    nsCAutoString popServerNamewithoutPort(popServerName);
-    PRInt32 colonPos = popServerNamewithoutPort.FindChar(':');
+      nsCAutoString popServerNamewithoutPort(popServerName);
+      PRInt32 colonPos = popServerNamewithoutPort.FindChar(':');
 
-    if (colonPos != -1 ) {
-	popServerNamewithoutPort.Truncate(colonPos);
-	rv = newPOPMailPath->AppendRelativeUnixPath(popServerNamewithoutPort);
-    }
-    else {
-	rv = newPOPMailPath->AppendRelativeUnixPath(popServerName);
-    }
+      if (colonPos != -1 ) {
+        popServerNamewithoutPort.Truncate(colonPos);
+        rv = newPOPMailPath->AppendRelativeUnixPath(popServerNamewithoutPort);
+      }
+      else {
+        rv = newPOPMailPath->AppendRelativeUnixPath(popServerName);
+      }
 
-    if (NS_FAILED(rv)) return rv;				  
+      if (NS_FAILED(rv)) return rv;				  
     
-    rv = newPOPMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newPOPMailPath->CreateDir();
+      rv = newPOPMailPath->Exists(&exists);
       if (NS_FAILED(rv)) return rv;
-    }
+      if (!exists)  {
+        rv = newPOPMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
   }
   else if (serverType == IMAP_4X_MAIL_TYPE) {
-      
-
-    rv = newIMAPLocalMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newIMAPLocalMailPath->CreateDir();
-      if (NS_FAILED(rv)) return rv;
-    }
-      
-    rv = newIMAPLocalMailPath->AppendRelativeUnixPath(NEW_MAIL_DIR_NAME);
-    if (NS_FAILED(rv)) return rv;
-
-    /* Now create the new "Mail/Local Folders" directory */
-    rv = newIMAPLocalMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      newIMAPLocalMailPath->CreateDir();
-    }
-
+    if( gMigrationModeForMail == 0 )  // keep seperate
     {
-      // temporarily go through nsFileSpec
-      nsFileSpec newIMAPLocalMailPathSpec;
-      newIMAPLocalMailPath->GetFileSpec(&newIMAPLocalMailPathSpec);
+      rv = newIMAPLocalMailPath->Exists(&exists);
+      if (NS_FAILED(rv)) return rv;
+      if (!exists)  {
+        rv = newIMAPLocalMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
       
-      nsCOMPtr<nsILocalFile> newIMAPLocalMailPathFile;
-      NS_FileSpecToIFile(&newIMAPLocalMailPathSpec,
-                         getter_AddRefs(newIMAPLocalMailPathFile));
+      rv = newIMAPLocalMailPath->AppendRelativeUnixPath(NEW_MAIL_DIR_NAME);
+      if (NS_FAILED(rv)) return rv;
+
+      /* Now create the new "Mail/Local Folders" directory */
+      rv = newIMAPLocalMailPath->Exists(&exists);
+      if (NS_FAILED(rv)) return rv;
+      if (!exists)  {
+        newIMAPLocalMailPath->CreateDir();
+      }
+
+      rv = newIMAPLocalMailPath->AppendRelativeUnixPath(NEW_LOCAL_MAIL_DIR_NAME);
+      if (NS_FAILED(rv)) return rv;
+      rv = newIMAPLocalMailPath->Exists(&exists);
+      if (NS_FAILED(rv)) return rv;
+      if (!exists)  {
+        rv = newIMAPLocalMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
+
+      {
+        // temporarily go through nsFileSpec
+        nsFileSpec newIMAPLocalMailPathSpec;
+        newIMAPLocalMailPath->GetFileSpec(&newIMAPLocalMailPathSpec);
       
-      rv = m_prefs->SetFileXPref(PREF_MAIL_DIRECTORY, newIMAPLocalMailPathFile); 
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    rv = newIMAPLocalMailPath->AppendRelativeUnixPath(NEW_LOCAL_MAIL_DIR_NAME);
-    if (NS_FAILED(rv)) return rv;
-    rv = newIMAPLocalMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newIMAPLocalMailPath->CreateDir();
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    /* Now deal with the IMAP mail summary file location */
-    rv = newIMAPMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newIMAPMailPath->CreateDir();
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    rv = newIMAPMailPath->AppendRelativeUnixPath(NEW_IMAPMAIL_DIR_NAME);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = newIMAPMailPath->Exists(&exists);
-    if (NS_FAILED(rv)) return rv;
-    if (!exists)  {
-      rv = newIMAPMailPath->CreateDir();
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    {
-      // temporarily go through nsFileSpec
-      nsFileSpec newIMAPMailPathSpec;
-      newIMAPMailPath->GetFileSpec(&newIMAPMailPathSpec);
+        nsCOMPtr<nsILocalFile> newIMAPLocalMailPathFile;
+        NS_FileSpecToIFile(&newIMAPLocalMailPathSpec, getter_AddRefs(newIMAPLocalMailPathFile));
       
-      nsCOMPtr<nsILocalFile> newIMAPMailPathFile;
-      NS_FileSpecToIFile(&newIMAPMailPathSpec,
-                         getter_AddRefs(newIMAPMailPathFile));
-      
-      rv = m_prefs->SetFileXPref(PREF_MAIL_IMAP_ROOT_DIR, newIMAPMailPathFile);
+        rv = m_prefs->SetFileXPref(PREF_MAIL_DIRECTORY, newIMAPLocalMailPathFile); 
+        if (NS_FAILED(rv)) return rv;
+      }
+
+      /* Now deal with the IMAP mail summary file location */
+      rv = newIMAPMailPath->Exists(&exists);
       if (NS_FAILED(rv)) return rv;
+      if (!exists)  {
+        rv = newIMAPMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
+
+      rv = newIMAPMailPath->AppendRelativeUnixPath(NEW_IMAPMAIL_DIR_NAME);
+      if (NS_FAILED(rv)) return rv;
+
+      rv = newIMAPMailPath->Exists(&exists);
+      if (NS_FAILED(rv)) return rv;
+      if (!exists)  {
+        rv = newIMAPMailPath->CreateDir();
+        if (NS_FAILED(rv)) return rv;
+      }
+
+      {
+        // temporarily go through nsFileSpec
+        nsFileSpec newIMAPMailPathSpec;
+        newIMAPMailPath->GetFileSpec(&newIMAPMailPathSpec);
+      
+        nsCOMPtr<nsILocalFile> newIMAPMailPathFile;
+        NS_FileSpecToIFile(&newIMAPMailPathSpec, getter_AddRefs(newIMAPMailPathFile));
+      
+        rv = m_prefs->SetFileXPref(PREF_MAIL_IMAP_ROOT_DIR, newIMAPMailPathFile);
+        if (NS_FAILED(rv)) return rv;
+      }
     }
   }
 
@@ -1072,9 +1090,9 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
   
   rv = DoTheCopy(oldProfilePath, newProfilePath, PR_FALSE);
   if (NS_FAILED(rv)) return rv;
+
   rv = DoTheCopy(oldNewsPath, newNewsPath, PR_TRUE);
   if (NS_FAILED(rv)) return rv;
-
 #ifdef NEED_TO_COPY_AND_RENAME_NEWSRC_FILES
   /* in 4.x, the newsrc files were in $HOME.  Now that we can have multiple
    * profiles in 5.x, with the same user, this won't fly.
@@ -1084,11 +1102,25 @@ nsPrefMigration::ProcessPrefsCallback(const char* oldProfilePathStr, const char 
   rv = CopyAndRenameNewsrcFiles(newNewsPath);
   if (NS_FAILED(rv)) return rv;
 #endif /* NEED_TO_COPY_AND_RENAME_NEWSRC_FILES */
+
   if(serverType == IMAP_4X_MAIL_TYPE) {
-    rv = DoTheCopyAndRename(oldIMAPMailPath, newIMAPMailPath, PR_TRUE, needToRenameFilterFiles, IMAP_MAIL_FILTER_FILE_NAME_IN_4x, IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
-    if (NS_FAILED(rv)) return rv;
-    rv = DoTheCopyAndRename(oldIMAPLocalMailPath, newIMAPLocalMailPath, PR_TRUE, needToRenameFilterFiles,IMAP_MAIL_FILTER_FILE_NAME_IN_4x,IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
-    if (NS_FAILED(rv)) return rv;
+    if( gMigrationModeForMail == 0 )  // keep seperate
+    {
+      rv = DoTheCopyAndRename(oldIMAPMailPath, newIMAPMailPath, PR_TRUE, needToRenameFilterFiles, IMAP_MAIL_FILTER_FILE_NAME_IN_4x, IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
+      if (NS_FAILED(rv)) return rv;
+      rv = DoTheCopyAndRename(oldIMAPLocalMailPath, newIMAPLocalMailPath, PR_TRUE, needToRenameFilterFiles,IMAP_MAIL_FILTER_FILE_NAME_IN_4x,IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
+      if (NS_FAILED(rv)) return rv;
+    }
+    else  // Copy & Rename filter files
+    {
+      // IMAP path
+      rv = DoTheCopyAndRename(oldIMAPMailPath, PR_TRUE, IMAP_MAIL_FILTER_FILE_NAME_IN_4x, IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
+      // if (NS_FAILED(rv)) return rv;  // don't care it
+      
+      // Local Folders path
+      rv = DoTheCopyAndRename(oldIMAPLocalMailPath, PR_TRUE, IMAP_MAIL_FILTER_FILE_NAME_IN_4x, IMAP_MAIL_FILTER_FILE_NAME_IN_5x);
+      // if (NS_FAILED(rv)) return rv;  // don't care it
+    }
   }
   else if (serverType == POP_4X_MAIL_TYPE) {
     // we take care of the POP filter file later, in DoSpecialUpdates()
@@ -1550,6 +1582,58 @@ nsPrefMigration::DoTheCopyAndRename(nsIFileSpec * oldPathSpec, nsIFileSpec *newP
   return NS_OK;
 }
 
+/*-------------------------------------------------------------------------
+ * DoTheCopyAndRename copies and renames files
+ *
+ * INPUT: aPath - the path
+ *
+ *        aReadSubdirs - if sub directories should be handled
+ *
+ *        aOldFile - old file name (used for renaming)
+ *
+ *        aNewFile - new file name (used for renaming)
+ *
+ * RETURNS: NS_OK if successful
+ *          NS_ERROR_FAILURE if failed
+ *
+ *--------------------------------------------------------------------------*/
+nsresult
+nsPrefMigration::DoTheCopyAndRename(nsIFileSpec * aPathSpec, PRBool aReadSubdirs, const char *aOldName, const char *aNewName)
+{
+  if( !aOldName || !aNewName || !strcmp(aOldName, aNewName) )
+    return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  nsFileSpec path;
+  
+  rv = aPathSpec->GetFileSpec(&path);
+  if (NS_FAILED(rv)) return rv;
+  
+  // Handle sub folders
+  for (nsDirectoryIterator dir(path, PR_FALSE); dir.Exists(); dir++)
+  {
+    nsFileSpec fileOrDirName = dir.Spec(); //set first file or dir to a nsFileSpec
+    if (fileOrDirName.IsDirectory())
+    {
+      if( aReadSubdirs )
+      {
+        nsCOMPtr<nsIFileSpec>fileOrDirNameSpec;
+        rv = NS_NewFileSpecWithSpec(fileOrDirName, getter_AddRefs(fileOrDirNameSpec));
+        DoTheCopyAndRename(fileOrDirNameSpec, aReadSubdirs, aOldName, aNewName); /* re-enter the DoTheCopyAndRename function */
+      }
+      else
+        continue;
+    }
+  }
+
+  path += aOldName;
+  nsCOMPtr<nsILocalFile> localFile;
+  rv = NS_FileSpecToIFile(&path, getter_AddRefs(localFile));
+  if( NS_SUCCEEDED(rv) )
+    localFile->CopyTo(nsnull, aNewName);
+  
+  return NS_OK;
+}
 
 nsresult
 nsPrefMigration::DoTheCopy(nsIFileSpec * oldPath, nsIFileSpec * newPath, PRBool readSubdirs)
@@ -2268,5 +2352,4 @@ nsPrefConverter::GetPlatformCharset(nsAutoString& aCharset)
  
   return rv;
 }
-
 

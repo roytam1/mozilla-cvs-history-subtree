@@ -1,0 +1,6 @@
+<!-- extracted from migrationMode.xul -->
+
+<!ENTITY windowTitle.label "Migration Mode For Mail">
+<!ENTITY textInformation.label "Do you want to keep a seperate work space for mail or just use the existing one?">
+<!ENTITY buttonKeepSeperate.label "Keep Seperate">
+<!ENTITY buttonUsingExist.label "Use Existing">

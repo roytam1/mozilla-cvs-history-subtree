@@ -648,7 +648,6 @@ nsMessengerMigrator::UpgradePrefs()
     // set the newly created smtp server as the default
     smtpService->SetDefaultServer(smtpServer); // ignore the error code....continue even if this call fails...
 
-
     if ( m_oldMailType == POP_4X_MAIL_TYPE) {
       // in 4.x, you could only have one pop account
       rv = MigratePopAccount(identity);
@@ -1142,13 +1141,6 @@ nsMessengerMigrator::MigrateLocalMailAccount()
   if (NS_FAILED(rv)) return rv;
 
   // set the local path for this "none" server
-  //
-  // we need to set this to <profile>/Mail/Local Folders, because that's where
-  // the 4.x "Local Mail" (when using imap) got copied.
-  // it would be great to use the server key, but we don't know it
-  // when we are copying of the mail.
-  rv = mailDirSpec->AppendRelativeUnixPath((const char *)mLocalFoldersHostname);
-  if (NS_FAILED(rv)) return rv; 
   rv = server->SetLocalPath(mailDirSpec);
   if (NS_FAILED(rv)) return rv;
     
