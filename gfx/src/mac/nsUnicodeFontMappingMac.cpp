@@ -299,21 +299,20 @@ void nsUnicodeFontMappingMac::InitByFontFamily(nsFont* aFont, nsIDeviceContext *
 
 void nsUnicodeFontMappingMac::processOneLangRegion(const char* aLanguage, const char* aRegion )
 {
-	if(gUtil->ScriptEnabled(smTradChinese) &&
-	   ((! nsCRT::strcmp(aLanguage,"zh")) &&
-	    ((! nsCRT::strcmp(aRegion,"TW")) || (! nsCRT::strcmp(aRegion,"HK"))))) 
+	if ((! nsCRT::strcmp(aLanguage,"zh")) &&
+	    ((! nsCRT::strcmp(aRegion,"TW")) || (! nsCRT::strcmp(aRegion,"HK"))))
 	{
 		FillVarBlockToScript(smTradChinese, mPrivBlockToScript);
 	} 
-	else if(gUtil->ScriptEnabled(smSimpChinese) && (! nsCRT::strcmp(aLanguage,"zh"))) 
+	else if(! nsCRT::strcmp(aLanguage,"zh"))
 	{
 		FillVarBlockToScript(smSimpChinese, mPrivBlockToScript);
 	} 
-	else if(gUtil->ScriptEnabled(smKorean) && (! nsCRT::strcmp(aLanguage,"ko"))) 
+	else if(! nsCRT::strcmp(aLanguage,"ko"))
 	{
 		FillVarBlockToScript(smKorean, mPrivBlockToScript);
 	}
-	else if(gUtil->ScriptEnabled(smJapanese) && (! nsCRT::strcmp(aLanguage,"ja"))) 
+	else if(! nsCRT::strcmp(aLanguage,"ja"))
 	{
 		FillVarBlockToScript(smJapanese, mPrivBlockToScript);
 	}
@@ -411,19 +410,19 @@ void nsUnicodeFontMappingMac::InitByLangGroup(const nsString& aLangGroup)
 	// do not countinue if there are no difference to look at the document Charset
 	if( ScriptMapInitComplete() )
 		return;
-	if(gUtil->ScriptEnabled(smRoman) && aLangGroup.EqualsIgnoreCase("x-western"))
+	if(aLangGroup.EqualsIgnoreCase("x-western"))
   	{
 		FillVarBlockToScript(smRoman, mPrivBlockToScript);		
-  	} else if(gUtil->ScriptEnabled(smSimpChinese) && aLangGroup.EqualsIgnoreCase("zh-CN"))
+  	} else if(aLangGroup.EqualsIgnoreCase("zh-CN"))
   	{
 		FillVarBlockToScript(smSimpChinese, mPrivBlockToScript);
-  	} else if(gUtil->ScriptEnabled(smKorean) && aLangGroup.EqualsIgnoreCase("ko"))
+  	} else if(aLangGroup.EqualsIgnoreCase("ko"))
   	{
 		FillVarBlockToScript(smKorean, mPrivBlockToScript);
-  	} else if((gUtil->ScriptEnabled(smTradChinese)) && ((aLangGroup.EqualsIgnoreCase("zh-TW")) || (aLangGroup.EqualsIgnoreCase("zh-HK"))))
+  	} else if((aLangGroup.EqualsIgnoreCase("zh-TW")) || (aLangGroup.EqualsIgnoreCase("zh-HK")))
   	{
 		FillVarBlockToScript(smTradChinese, mPrivBlockToScript);
-  	} else if(gUtil->ScriptEnabled(smJapanese) && aLangGroup.EqualsIgnoreCase("ja"))
+  	} else if(aLangGroup.EqualsIgnoreCase("ja"))
   	{
 		FillVarBlockToScript(smJapanese, mPrivBlockToScript);
   	}

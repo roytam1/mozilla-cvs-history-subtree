@@ -1050,9 +1050,9 @@ pref("browser.always_reuse_window", false);
 
 // default font name (in UTF8)
 
-pref("font.name.serif.ar", "ثلث‮ ‬أبيض");
-pref("font.name.sans-serif.ar", "البيان");
-pref("font.name.monospace.ar", "جيزة");
+pref("font.name.serif.ar", "Lucida Grande");
+pref("font.name.sans-serif.ar", "Lucida Grande");
+pref("font.name.monospace.ar", "Monaco");
 pref("font.name.cursive.ar", "XXX.cursive");
 pref("font.name.fantasy.ar", "XXX.fantasy");
 
@@ -1062,9 +1062,9 @@ pref("font.name.monospace.el", "Courier GR");
 pref("font.name.cursive.el", "XXX.cursive");
 pref("font.name.fantasy.el", "XXX.fantasy");
 
-pref("font.name.serif.he", "פנינים‮ ‬חדש");
-pref("font.name.sans-serif.he", "אריאל");
-pref("font.name.monospace.he", "אריאל");
+pref("font.name.serif.he", "Lucida Grande");
+pref("font.name.sans-serif.he", "Lucida Grande");
+pref("font.name.monospace.he", "Monaco");
 pref("font.name.cursive.he", "XXX.cursive");
 pref("font.name.fantasy.he", "XXX.fantasy");
 
@@ -1140,18 +1140,18 @@ pref("font.name.fantasy.zh-TW", "XXX.fantasy");
 pref("font.name.serif.zh-HK", "Ming(for ISO10646)");
 pref("font.name.sans-serif.zh-HK", "Apple LiGothic Medium");  
 pref("font.name.monospace.zh-HK", "Apple LiGothic Medium");  
-pref("font.name.cursive.zh-HK", "XXX.cursive");
+pref("font.name.cursive.zh-HK", "XXX.cursive");s
 pref("font.name.fantasy.zh-HK", "XXX.fantasy");
 
 pref("font.default", "serif");
 pref("font.default", "serif");
-pref("font.size.variable.ar", 16);
+pref("font.size.variable.ar", 15);
 pref("font.size.fixed.ar", 13);
 
 pref("font.size.variable.el", 16);
 pref("font.size.fixed.el", 13);
 
-pref("font.size.variable.he", 16);
+pref("font.size.variable.he", 15);
 pref("font.size.fixed.he", 13);
 
 pref("font.size.variable.ja", 14);
