@@ -185,9 +185,11 @@ sub exists
 sub FIRSTKEY
 {
   my ($self, $idx) = ($_[$[], 0);
-  my (@attrs) = @{$self->{"_oc_order_"}};
-  my ($key);
+  my (@attrs, $key);
 
+  return unless defined($self->{"_oc_order_"});
+
+  @attrs =  @{$self->{"_oc_order_"}};
   while ($idx < $self->{"_oc_numattr_"})
     {
       $key = $attrs[$idx++];
@@ -208,9 +210,11 @@ sub NEXTKEY
 {
   my ($self) = $_[$[];
   my ($idx) = $self->{"_oc_keyidx_"};
-  my (@attrs) = @{$self->{"_oc_order_"}};
-  my ($key);
+  my (@attrs, $key);
 
+  return unless defined($self->{"_oc_order_"});
+
+  @attrs = @{$self->{"_oc_order_"}};
   while ($idx < $self->{"_oc_numattr_"})
     {
       $key = $attrs[$idx++];
