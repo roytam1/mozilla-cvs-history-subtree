@@ -95,6 +95,10 @@ endif
 endif
 endif
 
+ifdef BUILD_OPT
+OPTIMIZER		= -xO4
+endif
+
 ifeq ($(USE_64),1)
 ifndef INTERNAL_TOOLS
 ifndef NS_USE_GCC
