@@ -238,7 +238,7 @@ sub ldapArgs
   $ld{"bind"} = $main::opt_D || $bind || "";
   $ld{"pswd"} = $main::opt_w || "";
   $ld{"cert"} = $main::opt_P || "";
-  $ld{"scope"} = $main::opt_s || LDAP_SCOPE_SUBTREE;
+  $ld{"scope"} = (defined($main::opt_s) ? $main::opt_s : LDAP_SCOPE_SUBTREE);
 
   if (($ld{"bind"} ne "") && ($ld{"pswd"} eq ""))
     {
