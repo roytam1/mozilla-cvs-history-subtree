@@ -169,6 +169,8 @@ interface nsMsgViewCommandType
   
   const nsMsgViewCommandTypeValue copyMessages = 13;
   const nsMsgViewCommandTypeValue moveMessages = 14;
+
+  const nsMsgViewCommandTypeValue selectAll = 15;
 };
 
 [scriptable, uuid(65903eb2-1dd2-11b2-ac45-c5b69c1618d7)]

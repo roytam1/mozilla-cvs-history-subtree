@@ -1111,19 +1111,31 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
 		rv = ApplyCommandToIndices(command, indices, numIndices);
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
-
+    break;
+  case nsMsgViewCommandType::selectAll:
+    // note, it is the FE's responsibility to expand all, if in threaded mode
+    if (mOutlinerSelection && mOutliner) {
+        mOutlinerSelection->SelectAll();
+        mOutliner->Invalidate();
+    }
     break;
   case nsMsgViewCommandType::markThreadRead:
+    printf("implement mark thread read\n");
     break;
   case nsMsgViewCommandType::markAllRead:
+    printf("implement mark all read\n");
     break;
   case nsMsgViewCommandType::toggleThreadKilled:
+    printf("implement toggle thread killed\n");
     break;
   case nsMsgViewCommandType::toggleThreadWatched:
+    printf("implement toggle thread watched\n");
     break;
   case nsMsgViewCommandType::expandAll:
+    printf("implement expand all\n");
     break;
   case nsMsgViewCommandType::collapseAll:
+    printf("implement collapse all\n");
     break;
   default:
     NS_ASSERTION(PR_FALSE, "invalid command type");
