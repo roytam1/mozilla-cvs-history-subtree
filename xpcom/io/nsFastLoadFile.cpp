@@ -369,8 +369,6 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
         if (aIsStrongRef) {
             NS_ASSERTION(entry->mStrongRefCnt != 0, "mStrongRefCnt underflow!");
             entry->mStrongRefCnt--;
-            nsISupports* rawPtr = object.get();
-            NS_ADDREF(rawPtr);
         } else {
             NS_ASSERTION(entry->mWeakRefCnt != 0, "mWeakRefCnt underflow!");
             entry->mWeakRefCnt--;

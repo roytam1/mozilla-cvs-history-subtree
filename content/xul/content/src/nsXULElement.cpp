@@ -4740,12 +4740,18 @@ nsXULPrototypeElement::Serialize(nsIObjectOutputStream* aStream,
 {
     nsresult rv;
 
+#if 0
+    // XXXbe partial deserializer is not ready for this yet
     rv = aStream->Write32(PRUint32(mNumChildren));
     if (NS_FAILED(rv)) return rv;
+#endif
 
     // XXXbe check for failure once all elements have been taught to serialize
-    for (PRInt32 i = 0; i < mNumChildren; i++)
-        (void) mChildren[i]->Serialize(aStream, aContext);
+    for (PRInt32 i = 0; i < mNumChildren; i++) {
+        rv = mChildren[i]->Serialize(aStream, aContext);
+        NS_ASSERTION(NS_SUCCEEDED(rv) || rv == NS_ERROR_NOT_IMPLEMENTED,
+                     "can't serialize!");
+    }
     return NS_OK;
 }
 
@@ -4927,11 +4933,15 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
             // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
 
             data = ::JS_XDRMemGetData(xdr, &size);
-            ::JS_XDRMemSetData(xdr, NULL, 0);
+            if (data)
+                ::JS_XDRMemSetData(xdr, NULL, 0);
             ::JS_XDRDestroy(xdr);
         }
 
-        nsMemory::Free(data);
+        // If data is null now, it must have been freed while deserializing an
+        // XPCOM object (e.g., a principal) beneath ::JS_XDRScript.
+        if (data)
+            nsMemory::Free(data);
     }
     if (NS_FAILED(rv)) return rv;
 

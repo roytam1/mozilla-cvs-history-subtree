@@ -123,6 +123,9 @@ JS_XDRMemGetData(JSXDRState *xdr, uint32 *lp);
 extern JS_PUBLIC_API(void)
 JS_XDRMemSetData(JSXDRState *xdr, void *data, uint32 len);
 
+extern JS_PUBLIC_API(uint32)
+JS_XDRMemDataLeft(JSXDRState *xdr);
+
 extern JS_PUBLIC_API(void)
 JS_XDRMemResetData(JSXDRState *xdr);
 

@@ -75,6 +75,8 @@ nsDecodeJSPrincipals(JSXDRState *xdr, JSPrincipals **jsprinp)
     nsresult rv;
     nsCOMPtr<nsIPrincipal> prin;
 
+    NS_ASSERTION(JS_XDRMemDataLeft(xdr) == 0, "XDR out of sync?!");
+
     nsIObjectInputStream *stream = NS_REINTERPRET_CAST(nsIObjectInputStream*,
                                                        xdr->userdata);
 
@@ -83,8 +85,9 @@ nsDecodeJSPrincipals(JSXDRState *xdr, JSPrincipals **jsprinp)
         PRUint32 size;
         rv = stream->Read32(&size);
         if (NS_SUCCEEDED(rv)) {
-            char *data;
-            rv = stream->ReadBytes(&data, size);
+            char *data = nsnull;
+            if (size != 0)
+                rv = stream->ReadBytes(&data, size);
             if (NS_SUCCEEDED(rv)) {
                 char *olddata;
                 PRUint32 oldsize;

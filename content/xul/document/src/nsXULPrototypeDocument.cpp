@@ -278,12 +278,6 @@ nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
     rv = aStream->ReadObject(PR_TRUE, getter_AddRefs(mURI));
     if (NS_FAILED(rv)) return rv;
 
-    // XXXbe inline prefix of nsXULPrototypeElement::Deserialize, to skip the
-    // unused numChildren so that scripts can be deserialized one by one.
-    PRUint32 numChildren;
-    rv = aStream->Read32(&numChildren);
-    if (NS_FAILED(rv)) return rv;
-
     // XXXbe more to come
     return NS_OK;
 }

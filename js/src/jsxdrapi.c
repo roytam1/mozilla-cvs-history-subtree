@@ -243,8 +243,8 @@ JS_XDRNewMem(JSContext *cx, JSXDRMode mode)
         MEM_BASE(xdr) = NULL;
     }
     xdr->ops = &xdrmem_ops;
-    MEM_PRIV(xdr)->count = 0;
-    MEM_PRIV(xdr)->limit = MEM_BLOCK;
+    MEM_COUNT(xdr) = 0;
+    MEM_LIMIT(xdr) = MEM_BLOCK;
     return xdr;
 }
 
@@ -253,7 +253,7 @@ JS_XDRMemGetData(JSXDRState *xdr, uint32 *lp)
 {
     if (xdr->ops != &xdrmem_ops)
         return NULL;
-    *lp = MEM_PRIV(xdr)->count;
+    *lp = MEM_COUNT(xdr);
     return MEM_BASE(xdr);
 }
 
@@ -262,9 +262,17 @@ JS_XDRMemSetData(JSXDRState *xdr, void *data, uint32 len)
 {
     if (xdr->ops != &xdrmem_ops)
         return;
-    MEM_PRIV(xdr)->limit = len;
+    MEM_LIMIT(xdr) = len;
     MEM_BASE(xdr) = data;
     MEM_COUNT(xdr) = 0;
+}
+
+JS_PUBLIC_API(uint32)
+JS_XDRMemDataLeft(JSXDRState *xdr)
+{
+    if (xdr->ops != &xdrmem_ops)
+        return 0;
+    return MEM_LIMIT(xdr) - MEM_COUNT(xdr);
 }
 
 JS_PUBLIC_API(void)

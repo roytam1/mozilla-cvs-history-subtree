@@ -132,13 +132,15 @@ nsSystemPrincipal::DisableCapability(const char *capability, void **annotation)
 NS_IMETHODIMP
 nsSystemPrincipal::Read(nsIObjectInputStream* aStream)
 {
-    return nsBasePrincipal::Read(aStream);
+    // no-op: CID is sufficient to identify the mSystemPrincipal singleton
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsSystemPrincipal::Write(nsIObjectOutputStream* aStream)
 {
-    return nsBasePrincipal::Write(aStream);
+    // no-op: CID is sufficient to identify the mSystemPrincipal singleton
+    return NS_OK;
 }
 
 NS_IMETHODIMP
