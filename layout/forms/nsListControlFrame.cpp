@@ -89,6 +89,7 @@
 #include "nsIDOMMouseListener.h"
 #include "nsIDOMMouseMotionListener.h"
 #include "nsIDOMKeyListener.h"
+#include "nsIDOM3Node.h"
 
 // Constants
 const nscoord kMaxDropDownRows          = 20; // This matches the setting for 4.x browsers
@@ -1900,6 +1901,10 @@ nsListControlFrame::GetOptionText(PRInt32 aIndex, nsAString & aStr)
         aStr = text;
 #else
         optionElement->GetText(aStr);
+        if (aStr.IsEmpty()) {
+          nsCOMPtr<nsIDOM3Node> node3 = do_QueryInterface(optionElement);
+          node3->GetTextContent(aStr);
+        }
 #endif
         rv = NS_OK;
       }

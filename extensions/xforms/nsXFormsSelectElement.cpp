@@ -162,19 +162,13 @@ nsXFormsSelectElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
   mSelect = do_QueryInterface(element);
   NS_ENSURE_TRUE(mSelect, NS_ERROR_FAILURE);
 
-  // Unless we're a select1, set multiple=true
+  // Unless we're a select1, set multiple=true and size=4
   nsAutoString tag;
   mElement->GetLocalName(tag);
   if (!tag.EqualsLiteral("select1")) {
     mSelect->SetMultiple(PR_TRUE);
-
-    // TODO: should leave default size=1 for select1, but options don't
-    // select correctly if we do that.  Need to figure out why.
-    //    mSelect->SetSize(4);
+    mSelect->SetSize(4);
   }
-
-  // Default to minimal/compact appearance
-  mSelect->SetSize(4);
 
   // TODO: support "selection" and "incremental" attributes.
 
@@ -256,11 +250,24 @@ nsXFormsSelectElement::WillSetAttribute(nsIAtom *aName,
       modelPrivate->RemoveFormControl(this);
     }
   } else if (aName == nsXFormsAtoms::appearance) {
-    //    if (aValue.EqualsLiteral("full")) {
-      // XXX todo
-    //    }
+    PRBool isFull = PR_TRUE;
 
-    mSelect->SetSize(4);
+    if (aValue.EqualsLiteral("minimal")) {
+      isFull = PR_FALSE;
+    } else if (aValue.EqualsLiteral("compact")) {
+      // "compact" for a select is the full listbox, but for a select1,
+      // it's the size=1 select.
+
+      nsAutoString tag;
+      mElement->GetLocalName(tag);
+      isFull = tag.EqualsLiteral("select");
+    }
+
+    if (isFull)
+      mSelect->SetSize(4);
+    else
+      mSelect->SetSize(1);
+
   }
 
   return NS_OK;
