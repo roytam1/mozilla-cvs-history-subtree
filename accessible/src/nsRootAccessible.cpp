@@ -259,7 +259,9 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
       // is it a link?
       nsCOMPtr<nsILink> link(do_QueryInterface(content));
       if (link) {
+#ifdef DEBUG
         printf("focus link!\n");
+#endif
         nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
         if (node)
           a = new nsHTMLLinkAccessible(shell, node);

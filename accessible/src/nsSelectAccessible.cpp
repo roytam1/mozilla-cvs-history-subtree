@@ -370,7 +370,9 @@ nsSelectChildAccessible::~nsSelectChildAccessible()
 NS_IMETHODIMP nsSelectChildAccessible::Create(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_TRUE;
+#ifdef DEBUG
   printf("Open\n");
+#endif
 
   /* TBD send state change event */ 
 
@@ -380,7 +382,10 @@ NS_IMETHODIMP nsSelectChildAccessible::Create(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsSelectChildAccessible::Destroy(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
+
+#ifdef DEBUG
   printf("Close\n");
+#endif
 
   /* TBD send state change event */ 
 
@@ -390,7 +395,9 @@ NS_IMETHODIMP nsSelectChildAccessible::Destroy(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsSelectChildAccessible::Close(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
+#ifdef DEBUG
   printf("Close\n");
+#endif
 
   /* TBD send state change event */ 
 
@@ -456,7 +463,9 @@ nsSelectWindowAccessible::~nsSelectWindowAccessible()
 NS_IMETHODIMP nsSelectWindowAccessible::Create(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_TRUE;
+#ifdef DEBUG
   printf("Open\n");
+#endif
 
   /* TBD send state change event */ 
 
@@ -466,7 +475,9 @@ NS_IMETHODIMP nsSelectWindowAccessible::Create(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsSelectWindowAccessible::Destroy(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
+#ifdef DEBUG
   printf("Close\n");
+#endif
 
   /* TBD send state change event */ 
 
@@ -476,7 +487,9 @@ NS_IMETHODIMP nsSelectWindowAccessible::Destroy(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsSelectWindowAccessible::Close(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
+#ifdef DEBUG
   printf("Close\n");
+#endif
 
   /* TBD send state change event */ 
 

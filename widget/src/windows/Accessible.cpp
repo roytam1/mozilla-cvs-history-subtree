@@ -637,7 +637,9 @@ void RootAccessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible
 NS_IMETHODIMP RootAccessible::HandleEvent(PRUint32 aEvent, nsIAccessible* aAccessible)
 {
   // print focus event!!
+#ifdef DEBUG
   printf("Focus Changed!!!\n");
+#endif
 
   // get the id for the accessible
   PRInt32 id = GetIdFor(aAccessible);
