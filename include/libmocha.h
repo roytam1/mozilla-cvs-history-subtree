@@ -29,6 +29,7 @@
 #include "plhash.h"
 #include "prthread.h"
 #include "jsapi.h"
+#include "netstream.h"
 
 /* enable JavaScript Debugger support */
 #if defined (_WIN32) || defined(XP_UNIX) || defined(powerc) || defined(__powerc) || defined(XP_OS2)
@@ -53,7 +54,7 @@ typedef struct MochaDecoder {
     JSContext	    *js_context;
     MWContext       *window_context;
     JSObject	    *window_object;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     int32           stream_owner;   /* id of layer that's loading the stream */
     URL_Struct      *url_struct;
     JSTimeout	    *timeouts;

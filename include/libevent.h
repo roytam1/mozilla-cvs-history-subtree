@@ -362,7 +362,7 @@ extern void
 ET_ClearDecoderStream(MWContext * context, NET_StreamClass * old_stream);
 
 extern void
-ET_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
+ET_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
 	            URL_Struct *url_struct, JSBool free_stream_on_close);
 
 /*
