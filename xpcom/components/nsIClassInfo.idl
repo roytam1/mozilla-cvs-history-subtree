@@ -98,6 +98,7 @@ interface nsIClassInfo : nsISupports
     const PRUint32 SINGLETON            = 1 << 0;
     const PRUint32 THREADSAFE           = 1 << 1;
     const PRUint32 MAIN_THREAD_ONLY     = 1 << 2;
+    const PRUint32 DOM_OBJECT           = 1 << 3;
     // XXX what else might we want to add?
 
     readonly attribute PRUint32 flags;
