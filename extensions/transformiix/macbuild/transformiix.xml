@@ -1302,7 +1302,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>XMLParser.cpp</PATH>
+                    <PATH>txXMLParser.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -1827,7 +1827,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>XMLParser.cpp</PATH>
+                    <PATH>txXMLParser.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -3238,7 +3238,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>XMLParser.cpp</PATH>
+                    <PATH>txXMLParser.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -3771,7 +3771,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>XMLParser.cpp</PATH>
+                    <PATH>txXMLParser.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4089,7 +4089,7 @@
                     <FILEREF>
                         <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                         <PATHTYPE>Name</PATHTYPE>
-                        <PATH>XMLParser.cpp</PATH>
+                        <PATH>txXMLParser.cpp</PATH>
                         <PATHFORMAT>MacOS</PATHFORMAT>
                     </FILEREF>
                 </GROUP>
