@@ -35,3 +35,6 @@ OS_CFLAGS = -qarch=com -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV
 OS_LIBS = -lbsd -lsvld -lm
 #-lpthreads -lc_r
 
+MKSHLIB = $(LD) -brtl -bM:SRE -bnoentry -bexpall -berok
+XLDFLAGS += -lc
+
