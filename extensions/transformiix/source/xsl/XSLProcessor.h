@@ -25,8 +25,8 @@
  */
 
 
-#ifndef MITREXSL_XSLPROCESSOR_H
-#define MITREXSL_XSLPROCESSOR_H
+#ifndef TRANSFRMX_XSLPROCESSOR_H
+#define TRANSFRMX_XSLPROCESSOR_H
 
 #ifndef __BORLANDC__
 #ifndef MOZILLA
@@ -34,6 +34,7 @@
 #include <fstream.h>
 #endif
 #endif
+
 
 #ifdef MOZILLA
 #include "nsIDocumentTransformer.h"
@@ -59,12 +60,14 @@
 #include "VariableBinding.h"
 #include "Numbering.h"
 
+
 #ifdef MOZILLA
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define MITRE_XSL_PROCESSOR_CID   \
 { 0xbacd8ad0, 0x552f, 0x11d3, {0xa9, 0xf7, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74} }
 
 #endif
+
 
 /**
  * A class for Processing XSL Stylesheets
@@ -114,11 +117,7 @@ public:
     /**
      * Default destructor for XSLProcessor
     **/
-#ifdef MOZILLA
     virtual ~XSLProcessor();
-#else
-    ~XSLProcessor();
-#endif
 
     /**
      * Registers the given ErrorObserver with this XSLProcessor
@@ -158,6 +157,7 @@ public:
      * @return the result tree.
     **/
     Document* process(Document& xmlDocument, String& documentBase);
+
 #endif
 
     /**
@@ -271,8 +271,18 @@ private:
                       ProcessorState* ps);
 
 #ifndef MOZILLA
-    XMLPrinter* createPrinter(Document& xslDocument, ostream& out);
+
+    /**
+     * Prints the given XML document to the given ostream and uses
+     * the properties specified in the OutputFormat.
+     * This method is used to print the result tree
+     * @param document the XML document to print
+     * @param format the OutputFormat specifying formatting info
+     * @param ostream the Stream to print to
+    **/
+    void print(Document& document, OutputFormat* format, ostream& out);
 #endif
+
 
     /**
      * Processes the xsl:with-param elements of the given xsl action
@@ -380,6 +390,7 @@ public:
         LITERAL,
         NUMBER,
         OTHERWISE,
+        OUTPUT,
         PARAM,
         PI,
         PRESERVE_SPACE,
@@ -401,3 +412,5 @@ public:
 };
 
 #endif
+
+
