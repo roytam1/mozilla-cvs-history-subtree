@@ -21,6 +21,7 @@
 
 #include "nsIImportSettings.h"
 #include "nsIFileSpec.h"
+#include "nsCOMPtr.h"
 
 class nsEudoraSettings : public nsIImportSettings {
 public:
@@ -36,7 +37,7 @@ public:
 	NS_DECL_NSIIMPORTSETTINGS	  
 
 private:
-	nsIFileSpec *	m_pLocation;
+	nsCOMPtr<nsIFileSpec> m_pLocation;
 };
 
 #endif /* nsEudoraSettings_h___ */
