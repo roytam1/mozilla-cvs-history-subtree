@@ -22,7 +22,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
-LIBRARY_NAME	= xpcomproxy
+LIBRARY_NAME	= xpcomproxy_s
 REQUIRES        = xpcom
 
 CPPSRCS		     =            \
@@ -33,5 +33,9 @@ CPPSRCS		     =            \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk
+
+# No shared lib; Force creation of static lib
+override NO_SHARED_LIB=1
+override NO_STATIC_LIB=
 
 include $(topsrcdir)/config/rules.mk
