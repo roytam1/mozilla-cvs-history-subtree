@@ -1133,6 +1133,13 @@ long RetrieveRedirectFile()
     WritePrivateProfileString("Execution",        "exe",              siSDObject.szExe,             szFileIdiGetRedirect);
     WritePrivateProfileString("Execution",        "exe_param",        siSDObject.szExeParam,        szFileIdiGetRedirect);
 
+    /* proxy support */
+    if((*diAdvancedSettings.szProxyServer != '\0') && (*diAdvancedSettings.szProxyPort != '\0'))
+    {
+      WritePrivateProfileString("Proxy", "server", diAdvancedSettings.szProxyServer, szFileIdiGetRedirect);
+      WritePrivateProfileString("Proxy", "port",   diAdvancedSettings.szProxyPort,   szFileIdiGetRedirect);
+    }
+
     lResult = SdArchives(szFileIdiGetRedirect, szTempDir);
     if((lResult != 0) && (LOWORD(lResult) != 53)) // 53 - url is valid, but file does not exist
       return(lResult);
