@@ -286,6 +286,7 @@ NS_IMETHODIMP nsMsgFolder::Shutdown(PRBool shutdownChildren)
   // Reset incoming server pointer and pathname.
   mServer = nsnull;
   mPath = nsnull;
+  mSubFolders->Clear();  //clear mSubFolders array on shutdown, will come here if shutDownChildren is true
   return NS_OK;
 }
 
@@ -1605,7 +1606,7 @@ NS_IMETHODIMP nsMsgFolder::OnFlagChange(PRUint32 flag)
   rv = GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
   if (NS_SUCCEEDED(rv) && folderInfo)
   {
-#ifdef DEBUG_bienvenu
+#ifdef DEBUG_bienvenu1
        nsXPIDLString name;
        rv = GetName(getter_Copies(name));
        NS_ASSERTION(Compare(name, kLocalizedTrashName)) || (mFlags & MSG_FOLDER_FLAG_TRASH), "lost trash flag");
