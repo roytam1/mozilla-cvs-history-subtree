@@ -4,7 +4,7 @@
 <!ENTITY addpermission.label          "New Site">
 <!ENTITY removepermission.label       "Remove Site">
 <!ENTITY removeallpermissions.label   "Remove All Sites">
-<!ENTITY address.label                "Address of website:">
+<!ENTITY address.label                "Address of web site:">
 <!ENTITY block.label                  "Block">
 <!ENTITY session.label                "Allow for Session">
 <!ENTITY allow.label                  "Allow">

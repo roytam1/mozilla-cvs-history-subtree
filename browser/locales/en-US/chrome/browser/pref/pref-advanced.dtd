@@ -4,7 +4,7 @@
 <!ENTITY accessibility.label          "Accessibility">
 <!ENTITY moveSystemCaret.label        "Move system caret with focus/selection changes">
 <!ENTITY browsing.label               "Browsing">
-<!ENTITY hideTabBar.label             "Hide the tab bar when only one website is open">
+<!ENTITY hideTabBar.label             "Hide the tab bar when only one web site is open">
 <!ENTITY loadInBackground.label       "Select new tabs opened from links">
 <!ENTITY useAutoScrolling.label       "Use autoscrolling">
 <!ENTITY useSmoothScrolling.label     "Use smooth scrolling">

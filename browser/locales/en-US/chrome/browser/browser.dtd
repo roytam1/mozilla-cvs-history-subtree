@@ -324,7 +324,7 @@
 <!ENTITY pageThemePersistentOnly.accesskey "b">
 
 <!ENTITY pageThemeIcon.tooltip            "Switch to an alternate stylesheet">
-<!ENTITY pageReportIcon.tooltip            "Change popup blocking settings for this website">
+<!ENTITY pageReportIcon.tooltip            "Change popup blocking settings for this web site">
 
 <!ENTITY find.label "Find:">
 <!ENTITY findNext.label "Find Next">
