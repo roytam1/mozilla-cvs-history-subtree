@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Jan Varga (varga@utcru.sk)
+ *   Håkan Waara (hwaara@chello.se)
  */
 
 
@@ -193,7 +197,7 @@ treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twist
 
 outlinerbody.folderOutlinerBody:-moz-outliner-row
 {
-  height: 18px;
+  height: 20px;
 }
 
 outlinerbody.folderOutlinerBody:-moz-outliner-line

@@ -192,7 +192,7 @@ treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twist
 
 outlinerbody.folderOutlinerBody:-moz-outliner-row
 {
-  height: 18px;
+  height: 20px;
 }
 
 outlinerbody.folderOutlinerBody:-moz-outliner-line

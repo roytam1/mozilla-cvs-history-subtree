@@ -203,12 +203,10 @@ outlinerbody:-moz-outliner-cell-text(noSelect-true) {
   font-style: italic;
 }
 
-outlinerbody.folderOutlinerBody:-moz-outliner-row
-{
-  height: 18px;
+outlinerbody.folderOutlinerBody:-moz-outliner-row {
+  height: 20px;
 }
 
-outlinerbody.folderOutlinerBody:-moz-outliner-line
-{
+outlinerbody.folderOutlinerBody:-moz-outliner-line {
   visibility: hidden;
 }
