@@ -163,26 +163,6 @@ void String::clear()
   mLength = 0;
 }
 
-void String::ensureCapacity(const PRUint32 aCapacity)
-{
-  PRUint32 freeSpace = mBufferLength - mLength;
-
-  if (freeSpace >= aCapacity) {
-    return;
-  }
-
-  mBufferLength += aCapacity - freeSpace;
-  UNICODE_CHAR* tempBuffer = new UNICODE_CHAR[mBufferLength];
-  if (mLength > 0) {
-    memcpy(tempBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
-  }
-  else {
-    memset(tempBuffer, 0, mBufferLength * sizeof(UNICODE_CHAR));
-  }
-  delete [] mBuffer;
-  mBuffer = tempBuffer;
-}
-
 PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
 {
   PRInt32 searchIndex = aOffset;
@@ -325,6 +305,57 @@ String& String::operator = (const String& aSource)
   return *this;
 }
 
+void String::ensureCapacity(const PRUint32 aCapacity)
+{
+  PRUint32 freeSpace = mBufferLength - mLength;
+
+  if (freeSpace >= aCapacity) {
+    return;
+  }
+
+  mBufferLength += aCapacity - freeSpace;
+  UNICODE_CHAR* tempBuffer = new UNICODE_CHAR[mBufferLength];
+  if (mLength > 0) {
+    memcpy(tempBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
+  }
+  delete [] mBuffer;
+  mBuffer = tempBuffer;
+}
+
+UNICODE_CHAR* String::toUnicode() const
+{
+  if (mLength == 0) {
+    return 0;
+  }
+  UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength];
+  NS_ASSERTION(tmpBuffer, "out of memory");
+  if (tmpBuffer) {
+    memcpy(tmpBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
+  }
+  return tmpBuffer;
+}
+
+PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
+{
+  PRUint32 index = 0;
+
+  // Count UNICODE_CHARs Until a Unicode "NULL" is found.
+  while (aData[index] != 0x0000) {
+    ++index;
+  }
+  return index;
+}
+
+ostream& operator<<(ostream& aOutput, const String& aSource)
+{
+  PRUint32 outputLoop;
+
+  for (outputLoop = 0; outputLoop < aSource.mLength; ++outputLoop) {
+    aOutput << (char)aSource.charAt(outputLoop);
+  }
+  return aOutput;
+}
+
 // XXX DEPRECATED
 String::String(const PRUint32 aSize) : mBuffer(0),
                                        mBufferLength(0),
@@ -350,23 +381,6 @@ String::String(const char* aSource) : mBuffer(0),
   mLength = length;
 }
 
-String& String::operator = (const char* aSource)
-{
-  if (!aSource) {
-    mLength = 0;
-    return *this;
-  }
-
-  PRUint32 length = strlen(aSource);
-  ensureCapacity(length);
-  PRUint32 counter;
-  for (counter = 0; counter < length; ++counter) {
-    mBuffer[counter] = (UNICODE_CHAR)aSource[counter];
-  }
-  mLength = length;
-  return *this;
-}
-
 void String::append(const char* aSource)
 {
   if (!aSource) {
@@ -380,21 +394,6 @@ void String::append(const char* aSource)
     mBuffer[mLength + counter] = (UNICODE_CHAR)aSource[counter];
   }
   mLength += length;
-}
-
-PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
-{
-  if (aOffset < 0) {
-     return kNotFound;
-  }
-
-  PRUint32 searchIndex = mLength - aOffset;
-  while (--searchIndex >= 0) {
-    if (mBuffer[searchIndex] == (UNICODE_CHAR)aData) {
-      return searchIndex;
-    }
-  }
-  return kNotFound;
 }
 
 MBool String::isEqual(const char* aData) const
@@ -430,38 +429,4 @@ char* String::toCharArray() const
     tmpBuffer[mLength] = 0;
   }
   return tmpBuffer;
-}
-
-UNICODE_CHAR* String::toUnicode() const
-{
-  if (mLength == 0) {
-    return 0;
-  }
-  UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength];
-  NS_ASSERTION(tmpBuffer, "out of memory");
-  if (tmpBuffer) {
-    memcpy(tmpBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
-  }
-  return tmpBuffer;
-}
-
-PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
-{
-  PRUint32 index = 0;
-
-  // Count UNICODE_CHARs Until a Unicode "NULL" is found.
-  while (aData[index] != 0x0000) {
-    ++index;
-  }
-  return index;
-}
-
-ostream& operator<<(ostream& aOutput, const String& aSource)
-{
-  PRUint32 outputLoop;
-
-  for (outputLoop = 0; outputLoop < aSource.mLength; ++outputLoop) {
-    aOutput << (char)aSource.charAt(outputLoop);
-  }
-  return aOutput;
 }
