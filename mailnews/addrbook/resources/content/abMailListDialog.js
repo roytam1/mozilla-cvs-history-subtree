@@ -244,7 +244,7 @@ function OnLoadNewMailList()
   // focus on first name
   var listName = document.getElementById('ListName');
   if ( listName )
-    listName.focus();
+    setTimeout( function(firstTextBox) { firstTextBox.focus(); }, 0, listName );
 
   moveToAlertPosition();
 }
