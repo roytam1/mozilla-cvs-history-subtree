@@ -53,6 +53,7 @@ m_cvstrm.h
 ncompat.h
 net.h
 np.h
+np2.h
 npapi.h
 npassoc.h
 nsldap.h
