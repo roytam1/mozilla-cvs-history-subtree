@@ -1,4 +1,5 @@
 gfxtypes.idl
+gfx2types.idl
 nsIGFXFormat.idl
 nsIImageContainer.idl
 nsIImageFrame.idl

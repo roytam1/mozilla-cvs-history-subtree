@@ -25,8 +25,6 @@
 #include "gfxtypes.idl"
 #include "nsIGFXFormat.idl"
 
-[ptr] native nsRect(nsRect);
-
 %{C++
 #include "nsRect.h"
 %}
