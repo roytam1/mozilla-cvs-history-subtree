@@ -545,7 +545,7 @@ CDEPENDINCLUDES= \
 # if you add something to CDISTINCLUDES, you must also add it to the exports target
 # at the end of the file.
 
-CDISTINCLUDES= \
+CDISTINCLUDES1= \
 !if "$(MOZ_BITS)" == "32"
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
@@ -556,7 +556,11 @@ CDISTINCLUDES= \
 !endif
     /I$(XPDIST)\public\libreg \
     /I$(XPDIST)\public\hook \
-    /I$(XPDIST)\public\pref \
+    /I$(XPDIST)\public\pref
+!endif
+
+CDISTINCLUDES2= \
+!if "$(MOZ_BITS)" == "32"
     /I$(XPDIST)\public\libfont \
     /I$(XPDIST)\public\winfont \
     /I$(XPDIST)\public\js \
@@ -568,11 +572,15 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\netcache \
     /I$(XPDIST)\public\network \
     /I$(XPDIST)\public\netcnvts\
-    /I$(XPDIST)\public\util \
+    /I$(XPDIST)\public\util
+!endif
+
+CDISTINCLUDES3= \
+!if "$(MOZ_BITS)" == "32"
 #!ifdef MOZ_LOC_INDEP
-	/I$(XPDIST)\public\li \
+    /I$(XPDIST)\public\li \
 #!endif MOZ_LOC_INDEP
-	/I$(XPDIST)\public\progress \
+    /I$(XPDIST)\public\progress \
     /I$(XPDIST)\public\schedulr \
     /I$(XPDIST)\public\xpcom \
 #!ifdef EDITOR
@@ -589,7 +597,6 @@ CDISTINCLUDES= \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
     /I$(XPDIST)\public\jtools \
-!else
 !endif
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
@@ -597,6 +604,8 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\jar \
 !endif
     /I$(XPDIST)\public\util
+
+CDISTINCLUDES = $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDISTINCLUDES3)
 
 RCDISTINCLUDES=$(DIST)\include;$(XPDIST)\public\security
 
@@ -654,7 +663,9 @@ RCDEFINES=$(RCDEFINES) $(MOZ_LITENESS_FLAGS)
 CFILEFLAGS=$(CFLAGS_GENERAL) ^
     $(CDEFINES) ^
     $(CINCLUDES) ^
-    $(CDISTINCLUDES) 
+    $(CDISTINCLUDES1) ^
+    $(CDISTINCLUDES2) ^
+    $(CDISTINCLUDES3) 
 
 
 RCFILEFLAGS=$(RCFLAGS_GENERAL)\
