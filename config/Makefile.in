@@ -77,6 +77,9 @@ endif
 
 include $(topsrcdir)/config/config.mk
 
+# Chicken vs Egg
+MKINSTALLDIRS='$(AUTOCONF_TOOLS)/mkinstalldirs'
+
 # Do not install util programs
 NO_INSTALL=1
 
