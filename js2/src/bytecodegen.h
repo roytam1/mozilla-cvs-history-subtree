@@ -420,5 +420,4 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
     int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm);
 }
 }
-
-#endif bytecodegen_h___
+#endif /* bytecodegen_h___ */
