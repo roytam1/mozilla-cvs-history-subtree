@@ -72,12 +72,8 @@ nsTreeOuterFrame::Init(nsIPresContext*  aPresContext,
               nsIStyleContext* aContext,
               nsIFrame*        aPrevInFlow)
 {
-  nsresult  rv = nsTableOuterFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
-  CreateViewForFrame(aPresContext,this,aContext,PR_TRUE);
-  nsIView* view;
-  GetView(aPresContext, &view);
-  view->SetContentTransparency(PR_TRUE);
-  return rv;
+  /* M13:  don't create a view to prevent a serious cosmetic problem. bug=23530, r=hyatt, a=choffman */
+  return nsTableOuterFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
 }
 
 NS_IMETHODIMP 
