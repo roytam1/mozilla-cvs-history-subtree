@@ -1428,7 +1428,7 @@
                 readonly="true"/>    
                 
       <property name="findString"
-                onget="return this.mCurrentBrowser.fastFindString;"
+                onget="return this.mCurrentBrowser.findString;"
                 readonly="true"/>
                 
       <property name="docShell"
