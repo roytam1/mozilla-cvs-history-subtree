@@ -908,8 +908,19 @@ nsMsgFolderDataSource::OnItemUnicharPropertyChanged(nsISupports *item,
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item, &rv);
       if (NS_SUCCEEDED(rv)) {
+        // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+        // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+        PRUint32 flags;
+        nsresult rv = folder->GetFlags(&flags);
+        if(NS_FAILED(rv))
+          return rv;
+
         PRInt32 numUnread;
-        folder->GetNumUnread(PR_FALSE, &numUnread);
+        if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+          numUnread = 0;
+        else
+          folder->GetNumUnread(PR_FALSE, &numUnread);
+
         NotifyFolderTreeNameChanged(folder, numUnread);
         NotifyFolderTreeSimpleNameChanged(folder);
         NotifyFolderNameChanged(folder);
@@ -1106,8 +1117,19 @@ nsMsgFolderDataSource::createFolderTreeNameNode(nsIMsgFolder *folder,
   if (NS_FAILED(rv)) return rv;
   nsAutoString nameString(name);
   PRInt32 unreadMessages;
+  
+  // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+  // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+  PRUint32 flags;
+  rv = folder->GetFlags(&flags);
+  if(NS_FAILED(rv))
+    return rv;
+  
+  if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+    unreadMessages = 0;
+  else
+    rv = folder->GetNumUnread(PR_FALSE, &unreadMessages);
 
-  rv = folder->GetNumUnread(PR_FALSE, &unreadMessages);
   if(NS_SUCCEEDED(rv)) 
     CreateUnreadMessagesNameString(unreadMessages, nameString);	
 
@@ -1634,11 +1656,23 @@ nsMsgFolderDataSource::createUnreadMessagesNode(nsIMsgFolder *folder,
 		totalUnreadMessages = -2;
 	else
 	{
-		rv = folder->GetNumUnread(PR_FALSE, &totalUnreadMessages);
-		if(NS_FAILED(rv)) return rv;
+    // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+    // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+    PRUint32 flags;
+    nsresult rv = folder->GetFlags(&flags);
+    if(NS_FAILED(rv))
+      return rv;
+    
+    if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+      totalUnreadMessages = 0;
+    else {
+  		rv = folder->GetNumUnread(PR_FALSE, &totalUnreadMessages);
+	  	if(NS_FAILED(rv)) 
+        return rv;
+    }
 	}
-	GetNumMessagesNode(totalUnreadMessages, target);
 
+  GetNumMessagesNode(totalUnreadMessages, target);
 
 	return NS_OK;
 }
@@ -1657,18 +1691,30 @@ nsMsgFolderDataSource::createHasUnreadMessagesNode(nsIMsgFolder *folder, PRBool 
   PRInt32 totalUnreadMessages;
   if(!isServer)
   {
-    rv = folder->GetNumUnread(aIncludeSubfolders, &totalUnreadMessages);
-    if(NS_FAILED(rv)) return rv;
-    // if we're including sub-folders, we're trying to find out if child folders
-    // have unread. If so, we subtract the unread msgs in the current folder.
-    if (aIncludeSubfolders)
+    // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+    // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+    PRUint32 flags;
+    nsresult rv = folder->GetFlags(&flags);
+    if(NS_FAILED(rv))
+      return rv;
+    
+    if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+      totalUnreadMessages = 0;
+    else 
     {
-      PRInt32 numUnreadInFolder;
-      rv = folder->GetNumUnread(PR_FALSE, &numUnreadInFolder);
-      NS_ENSURE_SUCCESS(rv, rv);
-      // don't subtract if numUnread is negative (which means we don't know the unread count)
-      if (numUnreadInFolder > 0) 
-        totalUnreadMessages -= numUnreadInFolder;
+      rv = folder->GetNumUnread(aIncludeSubfolders, &totalUnreadMessages);
+      if(NS_FAILED(rv)) return rv;
+      // if we're including sub-folders, we're trying to find out if child folders
+      // have unread. If so, we subtract the unread msgs in the current folder.
+      if (aIncludeSubfolders)
+      {
+        PRInt32 numUnreadInFolder;
+        rv = folder->GetNumUnread(PR_FALSE, &numUnreadInFolder);
+        NS_ENSURE_SUCCESS(rv, rv);
+        // don't subtract if numUnread is negative (which means we don't know the unread count)
+        if (numUnreadInFolder > 0) 
+          totalUnreadMessages -= numUnreadInFolder;
+      }
     }
     if(totalUnreadMessages > 0)
       *target = kTrueLiteral;
@@ -1683,6 +1729,17 @@ nsMsgFolderDataSource::createHasUnreadMessagesNode(nsIMsgFolder *folder, PRBool 
 nsresult
 nsMsgFolderDataSource::OnUnreadMessagePropertyChanged(nsIMsgFolder *folder, PRInt32 oldValue, PRInt32 newValue)
 {
+  // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+  // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+  PRUint32 flags;
+  nsresult rv = folder->GetFlags(&flags);
+  if(NS_FAILED(rv))
+    return rv;
+  
+  // if this is sent, we don't care
+  if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+    return NS_OK;
+
   nsCOMPtr<nsIRDFResource> folderResource = do_QueryInterface(folder);
   if(folderResource)
   {
@@ -1749,7 +1806,17 @@ nsMsgFolderDataSource::NotifyFolderTreeNameChanged(nsIMsgFolder* aFolder,
   if (NS_SUCCEEDED(rv)) {
     nsAutoString newNameString(name);
 			
-    CreateUnreadMessagesNameString(aUnreadMessages, newNameString);	
+    // fix for 2.4.6  The number of unread Sent Mail should not be displayed
+    // see http://jazz.mcom.com/users/scottip/publish/ishmail/Japan_Requirements.html
+    PRUint32 flags;
+    rv = aFolder->GetFlags(&flags);
+    if(NS_FAILED(rv))
+      return rv;
+    
+    if (flags & MSG_FOLDER_FLAG_SENTMAIL)
+      CreateUnreadMessagesNameString(0, newNameString);	
+    else
+      CreateUnreadMessagesNameString(aUnreadMessages, newNameString);	
 			
     nsCOMPtr<nsIRDFNode> newNameNode;
     createNode(newNameString.get(), getter_AddRefs(newNameNode), getRDFService());
