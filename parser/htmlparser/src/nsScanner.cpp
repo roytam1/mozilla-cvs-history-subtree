@@ -50,25 +50,6 @@
 
 static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 
-#if 0
-nsScannerString::nsScannerString(PRUnichar* aStorageStart, 
-                                 PRUnichar* aDataEnd, 
-                                 PRUnichar* aStorageEnd) : nsSlidingString(aStorageStart, aDataEnd, aStorageEnd)
-{
-}
-
-void
-nsScannerString::ReplaceCharacter(nsScannerIterator& aPosition,
-                                  PRUnichar aChar)
-{
-  // XXX Casting a const to non-const. Unless the base class
-  // provides support for writing iterators, this is the best
-  // that can be done.
-  PRUnichar* pos = (PRUnichar*)aPosition.get();
-  *pos = aChar;
-}
-#endif
-
 nsReadEndCondition::nsReadEndCondition(const PRUnichar* aTerminateChars) :
   mChars(aTerminateChars), mFilter(PRUnichar(~0)) // All bits set
 {
@@ -141,15 +122,16 @@ nsScanner::nsScanner(nsString& aFilename,PRBool aCreateStream, const nsACString&
   MOZ_COUNT_CTOR(nsScanner);
 
   mSlidingBuffer = nsnull;
-#if 0
-  // XXX This is a big hack.  We want to initialize the iterators in the
-  // constructor.  So, we temporarily use the mFileName string for this
-  // purpose.  This fixes bug 182067.
-  mFilename.BeginReading(mCurrentPosition);
-#endif
-  // XXX need to initialize mCurrentPosition to something --darin
+
+  // XXX This is a big hack.  We need to initialize the iterators to something.
+  // What matters is that mCurrentPosition == mEndPosition, so that our methods
+  // believe that we are at EOF (see bug 182067).  We null out mCurrentPosition
+  // so that we have some hope of catching null pointer dereferences associated
+  // with this hack. --darin
+  memset(&mCurrentPosition, 0, sizeof(mCurrentPosition));
   mMarkPosition = mCurrentPosition;
   mEndPosition = mCurrentPosition;
+
   mIncremental=PR_TRUE;
   mCountRemaining = 0;
   mTotalRead=0;
@@ -183,15 +165,16 @@ nsScanner::nsScanner(const nsAString& aFilename,nsIInputStream* aStream,const ns
   MOZ_COUNT_CTOR(nsScanner);
 
   mSlidingBuffer = nsnull;
-#if 0
-  // XXX This is a big hack.  We want to initialize the iterators in the
-  // constructor.  So, we temporarily use the mFileName string for this
-  // purpose.  This fixes bug 182067.
-  mFilename.BeginReading(mCurrentPosition);
-#endif
-  // XXX need to initialize mCurrentPosition to something --darin
+
+  // XXX This is a big hack.  We need to initialize the iterators to something.
+  // What matters is that mCurrentPosition == mEndPosition, so that our methods
+  // believe that we are at EOF (see bug 182067).  We null out mCurrentPosition
+  // so that we have some hope of catching null pointer dereferences associated
+  // with this hack. --darin
+  memset(&mCurrentPosition, 0, sizeof(mCurrentPosition));
   mMarkPosition = mCurrentPosition;
   mEndPosition = mCurrentPosition;
+
   mIncremental=PR_FALSE;
   mCountRemaining = 0;
   mTotalRead=0;
@@ -354,8 +337,6 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
     mUnicodeDecoder->GetMaxLength(aBuffer, aLen, &unicharBufLen);
     nsScannerString::Buffer* buffer = nsScannerString::AllocBuffer(unicharBufLen + 1);
     NS_ENSURE_TRUE(buffer,NS_ERROR_OUT_OF_MEMORY);
-    //start = unichars = (PRUnichar*)nsMemory::Alloc((unicharBufLen+1) * sizeof(PRUnichar));
-    //NS_ENSURE_TRUE(unichars,NS_ERROR_OUT_OF_MEMORY);
     start = unichars = buffer->DataStart();
 	  
     PRInt32 totalChars = 0;
@@ -389,11 +370,6 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
 
     buffer->SetDataLength(totalChars);
     AppendToBuffer(buffer);
-    /*
-    AppendToBuffer(start, 
-                   start+totalChars, 
-                   start+unicharBufLen);
-    */
     mTotalRead += totalChars;
 
     // Don't propagate return code of unicode decoder
