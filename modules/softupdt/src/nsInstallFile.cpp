@@ -90,7 +90,7 @@ nsInstallFile::nsInstallFile(nsSoftwareUpdate* inSoftUpdate,
       (folderSpec == NULL) || (inSoftUpdate == NULL) ||
       (inVInfo == NULL)) {
     *errorMsg = SU_GetErrorMsg3("Invalid arguments to the constructor", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return;
   }
   vrName = new nsString(inVRName);
@@ -115,7 +115,7 @@ nsInstallFile::nsInstallFile(nsSoftwareUpdate* inSoftUpdate,
     nsTarget* install_target = nsTarget::findTarget(INSTALL_PRIV);
     if (install_target != NULL) {
       if (!privMgr->enablePrivilege(install_target, softUpdate->GetPrincipal(), 1)) {
-        *errorMsg = SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        *errorMsg = SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
         return;
       }
     }
@@ -170,17 +170,17 @@ char* nsInstallFile::Prepare()
 
   if (softUpdate == NULL) {
     errorMsg = SU_GetErrorMsg3("nsSoftwareUpdate object is null", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return errorMsg;
   }
   if (jarLocation == NULL) {
     errorMsg = SU_GetErrorMsg3("JAR file is null", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return errorMsg;
   }
   if (finalFile == NULL) {
     errorMsg = SU_GetErrorMsg3("folderSpec's full path (finalFile) was null", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return errorMsg;
   }
 
@@ -193,7 +193,7 @@ char* nsInstallFile::Prepare()
   if ((privMgr != NULL) && (impersonation != NULL)) {
     PRBool allowed = privMgr->enablePrivilege(impersonation, 1);
     if (allowed == PR_FALSE) {
-      errorMsg = SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+      errorMsg = SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
       return errorMsg;
     }
 
@@ -202,7 +202,7 @@ char* nsInstallFile::Prepare()
     if (install_target != NULL) {
       PRBool allowed = privMgr->enablePrivilege(install_target, softUpdate->GetPrincipal(), 1);
       if (allowed == PR_FALSE) {
-        errorMsg = SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        errorMsg = SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
         return errorMsg;
       }
     }
@@ -237,15 +237,15 @@ char* nsInstallFile::Complete()
 
   if (softUpdate == NULL) {
     return SU_GetErrorMsg3("nsSoftwareUpdate object is null", 
-                           nsSoftUpdateError_INVALID_ARGUMENTS);
+                           SUERR_INVALID_ARGUMENTS);
   }
   if (vrName == NULL) {
     return SU_GetErrorMsg3("version registry name is null", 
-                           nsSoftUpdateError_INVALID_ARGUMENTS);
+                           SUERR_INVALID_ARGUMENTS);
   }
   if (finalFile == NULL) {
     return  SU_GetErrorMsg3("folderSpec's full path (finalFile) is null", 
-                            nsSoftUpdateError_INVALID_ARGUMENTS);
+                            SUERR_INVALID_ARGUMENTS);
   }
 
   /* Check the security for our target */
@@ -265,7 +265,7 @@ char* nsInstallFile::Complete()
       if (!privMgr->enablePrivilege(install_target, 
                                     softUpdate->GetPrincipal(), 1)) {
         return SU_GetErrorMsg3("Permssion was denied", 
-                               nsSoftUpdateError_ACCESS_DENIED);
+                               SUERR_ACCESS_DENIED);
       }
     }
   }
@@ -293,7 +293,7 @@ char* nsInstallFile::Complete()
   
   // Register file and log for Uninstall
   
-  if ( 0 == err || nsSoftwareUpdate_REBOOT_NEEDED == err ) {
+  if ( 0 == err || SU_REBOOT_NEEDED == err ) {
     // we ignore all registry errors because they're not
     // important enough to abort an otherwise OK install.
     if (!bChild) {
@@ -469,7 +469,7 @@ int nsInstallFile::NativeComplete()
       /* File already exists, need to remove the original */
       result = FE_ReplaceExistingFile(currentName, xpURL, finalName, xpURL, force);
 
-      if ( result == nsSoftwareUpdate_REBOOT_NEEDED ) {
+      if ( result == SU_REBOOT_NEEDED ) {
 #ifdef XP_WIN16
         if (!utilityScheduled) {
           utilityScheduled = PR_TRUE;

@@ -54,13 +54,13 @@ nsInstallDelete::nsInstallDelete(nsSoftwareUpdate* inSoftUpdate,
   registryName = NULL;
   finalFile = NULL;
   deleteStatus = DELETE_FILE;
-  FILE_DOES_NOT_EXIST = nsSoftUpdateError_FILE_DOES_NOT_EXIST;
-  FILE_READ_ONLY = nsSoftUpdateError_FILE_READ_ONLY;
-  FILE_IS_DIRECTORY = nsSoftUpdateError_FILE_IS_DIRECTORY;
+  FILE_DOES_NOT_EXIST = SUERR_FILE_DOES_NOT_EXIST;
+  FILE_READ_ONLY = SUERR_FILE_READ_ONLY;
+  FILE_IS_DIRECTORY = SUERR_FILE_IS_DIRECTORY;
 
   if ((inFolder == NULL) || (inSoftUpdate == NULL)) {
     *errorMsg = SU_GetErrorMsg3("Invalid arguments to the constructor", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return;
   }
 
@@ -80,13 +80,13 @@ nsInstallDelete::nsInstallDelete(nsSoftwareUpdate* inSoftUpdate,
 {
   finalFile = NULL;
   deleteStatus = DELETE_COMPONENT;
-  FILE_DOES_NOT_EXIST = nsSoftUpdateError_FILE_DOES_NOT_EXIST;
-  FILE_READ_ONLY = nsSoftUpdateError_FILE_READ_ONLY;
-  FILE_IS_DIRECTORY = nsSoftUpdateError_FILE_IS_DIRECTORY;
+  FILE_DOES_NOT_EXIST = SUERR_FILE_DOES_NOT_EXIST;
+  FILE_READ_ONLY = SUERR_FILE_READ_ONLY;
+  FILE_IS_DIRECTORY = SUERR_FILE_IS_DIRECTORY;
 
   if ((inRegistryName == NULL) || (inSoftUpdate == NULL)) {
     *errorMsg = SU_GetErrorMsg3("Invalid arguments to the constructor", 
-                               nsSoftUpdateError_INVALID_ARGUMENTS);
+                               SUERR_INVALID_ARGUMENTS);
     return;
   }
 
@@ -118,7 +118,7 @@ char* nsInstallDelete::Complete()
 
   if (softUpdate == NULL) {
     return SU_GetErrorMsg3("Invalid arguments to the constructor", 
-                           nsSoftUpdateError_INVALID_ARGUMENTS);
+                           SUERR_INVALID_ARGUMENTS);
   }
 
   nsPrivilegeManager* privMgr = nsPrivilegeManager::getPrivilegeManager();
@@ -129,7 +129,7 @@ char* nsInstallDelete::Complete()
     execTarget = nsTarget::findTarget(INSTALL_PRIV);
     if (execTarget != NULL) {
       if (!privMgr->enablePrivilege( execTarget, softUpdate->GetPrincipal(), 1 )) {
-        return SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        return SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
       }
     }
   }
@@ -141,7 +141,7 @@ char* nsInstallDelete::Complete()
   if ((deleteStatus == DELETE_FILE) || (err == REGERR_OK)) {
     if (finalFile != NULL) {
       err = NativeComplete();
-      if ((err != 0) && (err != nsSoftUpdateError_FILE_DOES_NOT_EXIST))	{
+      if ((err != 0) && (err != SUERR_FILE_DOES_NOT_EXIST))	{
         if (execTarget != NULL) {
           privMgr->revertPrivilege( execTarget, 1 );
         }
@@ -188,7 +188,7 @@ void nsInstallDelete::processInstallDelete(char* *errorMsg)
     if (target != NULL) {
       /* XXX: we need a way to indicate that a dialog box should appear.*/
       if (!privMgr->enablePrivilege( target, softUpdate->GetPrincipal(), 1 )) {
-        *errorMsg = SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        *errorMsg = SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
         return;
       }
     }
@@ -200,7 +200,7 @@ void nsInstallDelete::processInstallDelete(char* *errorMsg)
     if (err != REGERR_OK) {
       char *msg = NULL;
       msg = SU_GetString1(SU_ERROR_NOT_IN_REGISTRY, registryName);
-      *errorMsg = SU_GetErrorMsg3(msg, nsSoftUpdateError_NO_SUCH_COMPONENT);
+      *errorMsg = SU_GetErrorMsg3(msg, SUERR_NO_SUCH_COMPONENT);
       XP_FREEIF(msg);
       return;
     } 
@@ -222,11 +222,11 @@ void nsInstallDelete::processInstallDelete(char* *errorMsg)
     char *msg = NULL;
     if (err == 0) {
       /* System.out.println("File exists and is not read only" + finalFile);*/
-    } else if (err == nsSoftUpdateError_FILE_DOES_NOT_EXIST)	{
-      msg = SU_GetString1(nsSoftUpdateError_FILE_DOES_NOT_EXIST, finalFile);
-    } else if (err == nsSoftUpdateError_FILE_READ_ONLY) {
+    } else if (err == SUERR_FILE_DOES_NOT_EXIST)	{
+      msg = SU_GetString1(SUERR_FILE_DOES_NOT_EXIST, finalFile);
+    } else if (err == SUERR_FILE_READ_ONLY) {
       msg = SU_GetString1(SU_ERROR_FILE_READ_ONLY, finalFile);
-    } else if (err == nsSoftUpdateError_FILE_IS_DIRECTORY) {
+    } else if (err == SUERR_FILE_IS_DIRECTORY) {
       msg = SU_GetString1(SU_ERROR_FILE_IS_DIRECTORY, finalFile);
     } else {
       msg = SU_GetString1(SU_ERROR_UNEXPECTED, finalFile);
@@ -266,7 +266,7 @@ int nsInstallDelete::NativeComplete()
                     {
 #ifdef XP_PC
                       /* REMIND  need to move function to generic XP file */
-                      err = nsSoftwareUpdate_REBOOT_NEEDED;
+                      err = SU_REBOOT_NEEDED;
                       su_DeleteOldFileLater( (char*)finalFile );
 #endif
 					}

@@ -23,6 +23,7 @@
 #include "prprf.h"
 #include "xp.h"
 #include "NSReg.h"
+#include "VerReg.h"
 #include "softupdt.h"
 #include "nsPrivilegeManager.h"
 #include "nsTarget.h"
@@ -43,13 +44,13 @@ nsUninstallObject::nsUninstallObject(nsSoftwareUpdate* inSoftUpdate,
   regName = NULL;
   userName = NULL;
   if ( (inRegName == NULL) || (XP_STRLEN(inRegName) == 0) ) {
-    *errorMsg = SU_GetErrorMsg3("RegName is NULL ", nsSoftUpdateError_INVALID_ARGUMENTS );
+    *errorMsg = SU_GetErrorMsg3("RegName is NULL ", SUERR_INVALID_ARGUMENTS );
     return;
   }
 
   if (inSoftUpdate == NULL) {
     *errorMsg = SU_GetErrorMsg3("SoftwareUpdate object is NULL ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS);
+                                SUERR_INVALID_ARGUMENTS);
     return;
   }
 
@@ -68,7 +69,7 @@ nsUninstallObject::nsUninstallObject(nsSoftwareUpdate* inSoftUpdate,
     target = nsTarget::findTarget(INSTALL_PRIV);
     if (target != NULL) {
       if (!privMgr->enablePrivilege( target, softUpdate->GetPrincipal(), 1 )) {
-        *errorMsg = SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        *errorMsg = SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
         return;
       }
     }
@@ -86,7 +87,7 @@ nsUninstallObject::nsUninstallObject(nsSoftwareUpdate* inSoftUpdate,
   {
     char *msg = NULL;
     msg = PR_sprintf_append(msg, "No such component %s", regName);
-    *errorMsg = SU_GetErrorMsg3(msg, nsSoftUpdateError_NO_SUCH_COMPONENT);
+    *errorMsg = SU_GetErrorMsg3(msg, SUERR_NO_SUCH_COMPONENT);
     PR_FREEIF(msg);
     return;
   }
@@ -108,9 +109,8 @@ char* nsUninstallObject::Complete()
   nsTarget* execTarget = NULL;
 
   if ((softUpdate == NULL) || (regName == NULL)) {
-    *errorMsg = SU_GetErrorMsg3("Invalid arguments to UninstallObject ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS);
-    return;
+    return SU_GetErrorMsg3("Invalid arguments to UninstallObject ", 
+                                SUERR_INVALID_ARGUMENTS);
   }
 
   nsPrivilegeManager* privMgr = nsPrivilegeManager::getPrivilegeManager();
@@ -124,7 +124,7 @@ char* nsUninstallObject::Complete()
     execTarget = nsTarget::findTarget(INSTALL_PRIV);
     if (execTarget != NULL) {
       if (!privMgr->enablePrivilege( execTarget, softUpdate->GetPrincipal(), 1 )) {
-        return SU_GetErrorMsg3("Permssion was denied", nsSoftUpdateError_ACCESS_DENIED);
+        return SU_GetErrorMsg3("Permssion was denied", SUERR_ACCESS_DENIED);
       }
     }
   }
@@ -170,7 +170,7 @@ char* nsUninstallObject::NativeComplete(char* regname)
 * UninstallObject() uninstall files, 
 * hence this function returns false. 
 */
-protected boolean CanUninstall()
+PRBool nsUninstallObject::CanUninstall()
 {
     return PR_FALSE;
 }
@@ -179,7 +179,7 @@ protected boolean CanUninstall()
 * UninstallObject() uninstalls files which no longer need to be registered,
 * hence this function returns false.
 */
-protected boolean RegisterPackageNode()
+PRBool nsUninstallObject::RegisterPackageNode()
 {
     return PR_FALSE;
 }

@@ -82,14 +82,15 @@ extern int SU_INSTALLWIN_TITLE;
 extern int SU_INSTALLWIN_UNPACKING;
 extern int SU_INSTALLWIN_INSTALLING;
 
-PR_BEGIN_EXTERN_C
-
-static PRBool su_PathEndsWithSeparator(char* path, char* sep);
-
 #ifdef XP_PC
 extern char * WH_TempFileName(int type, const char * prefix, 
                               const char * extension); 
 #endif
+
+PR_BEGIN_EXTERN_C
+
+static PRBool su_PathEndsWithSeparator(char* path, char* sep);
+
 
 extern uint32 FE_DiskSpaceAvailable (MWContext *context, const char *lpszPath );
 
@@ -394,7 +395,7 @@ char* nsSoftwareUpdate::ExtractJARFile(char* inJarLocation,
 {
   if (zigPtr == NULL) {
     *errorMsg = SU_GetErrorMsg3("JAR file has not been opened", 
-                                nsSoftUpdateError_UNKNOWN_JAR_FILE );
+                                SUERR_UNKNOWN_JAR_FILE );
     return NULL;
   }
 
@@ -441,12 +442,12 @@ char* nsSoftwareUpdate::ExtractJARFile(char* inJarLocation,
         if (!unsigned_jar_enabled) {
           msg = PR_sprintf_append(msg, "Missing certificate for %s", 
                                   inJarLocation);
-          *errorMsg = SU_GetErrorMsg3(msg, nsSoftUpdateError_NO_CERTIFICATE);
+          *errorMsg = SU_GetErrorMsg3(msg, SUERR_NO_CERTIFICATE);
         }
       } else {
         msg = PR_sprintf_append(msg, "Missing certificate for %s", inJarLocation);
         *errorMsg = SU_GetErrorMsg3(msg, 
-                                    nsSoftUpdateError_NO_MATCHING_CERTIFICATE);
+                                    SUERR_NO_MATCHING_CERTIFICATE);
       }
       PR_FREEIF(msg);
     }
@@ -468,11 +469,11 @@ void
 nsSoftwareUpdate::ParseFlags(int flags)
 {
  
-    if ((flags & nsInstallType_NO_STATUS_DLG) == nsInstallType_NO_STATUS_DLG)
+    if ((flags & SU_NO_STATUS_DLG) == SU_NO_STATUS_DLG)
     {
         bShowProgress = PR_FALSE;
     }
-    if ((flags & nsInstallType_NO_FINALIZE_DLG) == nsInstallType_NO_FINALIZE_DLG)
+    if ((flags & SU_NO_FINALIZE_DLG) == SU_NO_FINALIZE_DLG)
     {
         bShowFinalize = PR_FALSE;
     }
@@ -502,7 +503,7 @@ PRInt32 nsSoftwareUpdate::StartInstall(char* vrPackageName,
                                        PRInt32 flags, 
                                        char* *errorMsg)
 {
-  int errcode= nsSoftwareUpdate_SUCCESS;
+  int errcode= SU_SUCCESS;
   *errorMsg = NULL;
   ResetError();
   ParseFlags(flags);
@@ -512,8 +513,8 @@ PRInt32 nsSoftwareUpdate::StartInstall(char* vrPackageName,
   if ( vrPackageName == NULL ) 
   {
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_BAD_PACKAGE_NAME, 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return nsSoftUpdateError_INVALID_ARGUMENTS;
+                                SUERR_INVALID_ARGUMENTS );
+    return SUERR_INVALID_ARGUMENTS;
   }
   
   packageName	= GetQualifiedPackageName( vrPackageName );
@@ -634,7 +635,7 @@ void nsSoftwareUpdate::UserApproved()
 PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
 {
   PRBool rebootNeeded = PR_FALSE;
-  int result = nsSoftwareUpdate_SUCCESS;
+  int result = SU_SUCCESS;
   *errorMsg = NULL;
   
   
@@ -668,7 +669,7 @@ PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
     confdlg = NULL;
     if (userChoice != 1) {
       AbortInstall();
-      return saveError(nsSoftUpdateError_USER_CANCELLED);
+      return saveError(SUERR_USER_CANCELLED);
     }
   }
   
@@ -709,7 +710,7 @@ PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
     *errorMsg = ie->Complete();
     if (*errorMsg != NULL) {
       ie->Abort();
-      return nsSoftUpdateError_UNEXPECTED_ERROR;
+      return SUERR_UNEXPECTED_ERROR;
     }
     SetProgressDialogThermo(++count);
   }
@@ -726,8 +727,8 @@ PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
   }
   CleanUp();
   
-  if (result == nsSoftwareUpdate_SUCCESS && rebootNeeded)
-    result = nsSoftwareUpdate_REBOOT_NEEDED;
+  if (result == SU_SUCCESS && rebootNeeded)
+    result = SU_REBOOT_NEEDED;
   
   saveError( result );
   return result;
@@ -826,21 +827,21 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
                                           char* *errorMsg)
 {
   nsInstallFile* ie;
-  int result = nsSoftwareUpdate_SUCCESS;
+  int result = SU_SUCCESS;
   int err;  /* does not get saved */
   *errorMsg = NULL;
   char *new_name;
 
   if ( jarSource == NULL || (XP_STRLEN(jarSource) == 0) ) {
     *errorMsg = SU_GetErrorMsg3("No Jar Source", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return nsSoftUpdateError_INVALID_ARGUMENTS;
+                                SUERR_INVALID_ARGUMENTS );
+    return SUERR_INVALID_ARGUMENTS;
   }
       
   if ( folderSpec == NULL ) {
     *errorMsg = SU_GetErrorMsg3("folderSpec is NULL ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return nsSoftUpdateError_INVALID_ARGUMENTS;
+                                SUERR_INVALID_ARGUMENTS );
+    return SUERR_INVALID_ARGUMENTS;
   }
    
    
@@ -862,7 +863,7 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
   
   if (*errorMsg != NULL)
   {
-  	return nsSoftUpdateError_BAD_PACKAGE_NAME;
+  	return SUERR_BAD_PACKAGE_NAME;
   }
       
   if ( (relativePath == NULL) || (XP_STRLEN(relativePath) == 0) ) {
@@ -884,8 +885,7 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
     nsVersionInfo* oldVersion = new nsVersionInfo(versionStruct.major,
                                                   versionStruct.minor,
                                                   versionStruct.release,
-                                                  versionStruct.build,
-                                                  versionStruct.check);
+                                                  versionStruct.build);
     
 	if ( version->compareTo( oldVersion ) != nsVersionEnum_EQUAL )
       versionNewer = PR_TRUE;
@@ -908,7 +908,7 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
     }
   }
   if (*errorMsg != NULL) {
-    result = nsSoftUpdateError_UNEXPECTED_ERROR;
+    result = SUERR_UNEXPECTED_ERROR;
   }
 
   XP_FREEIF (new_name);
@@ -923,7 +923,7 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
  */
 PRInt32 nsSoftwareUpdate::Execute(char* jarSource, char* *errorMsg, char* args)
 {
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   errcode = SanityCheck(errorMsg);
   
@@ -936,11 +936,11 @@ PRInt32 nsSoftwareUpdate::Execute(char* jarSource, char* *errorMsg, char* args)
   
   nsInstallExecute* ie = new nsInstallExecute(this, jarSource, errorMsg, args);
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_ACCESS_DENIED;
+    errcode = SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = ScheduleForInstall( ie );
     if (*errorMsg != NULL) {
-      errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+      errcode = SUERR_UNEXPECTED_ERROR;
     }
   }
   
@@ -974,7 +974,7 @@ PRInt32 nsSoftwareUpdate::Gestalt(char* selectorStr, int* os_err,
   if ((selectorStr == NULL) ||
       (XP_STRLEN(selectorStr) != 4))
     {
-      *os_err = nsSoftUpdateError_GESTALT_UNKNOWN_ERR; /* gestaltUnknownErr */
+      *os_err = SUERR_GESTALT_UNKNOWN_ERR; /* gestaltUnknownErr */
       goto fail;
     }
   XP_MEMCPY(&selector, selectorStr, 4);
@@ -984,7 +984,7 @@ PRInt32 nsSoftwareUpdate::Gestalt(char* selectorStr, int* os_err,
   }
   goto fail;	/* Drop through to failure */
 #else
-  *os_err = nsSoftUpdateError_GESTALT_INVALID_ARGUMENT;
+  *os_err = SUERR_GESTALT_INVALID_ARGUMENT;
   goto fail;
 #endif
 
@@ -1005,12 +1005,12 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
                                 char* patchname, 
                                 char* *errorMsg)
 {
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   if ( regName == NULL || patchname == NULL ) {
     *errorMsg = SU_GetErrorMsg3("regName or patchName is NULL ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return saveError( nsSoftUpdateError_INVALID_ARGUMENTS );
+                                SUERR_INVALID_ARGUMENTS );
+    return saveError( SUERR_INVALID_ARGUMENTS );
   }
   
   errcode = SanityCheck(errorMsg);
@@ -1024,7 +1024,7 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
   char* rname = GetQualifiedRegName( regName, errorMsg);
   if (*errorMsg != NULL) 
   {
-  	errcode = nsSoftUpdateError_BAD_PACKAGE_NAME;
+  	errcode = SUERR_BAD_PACKAGE_NAME;
   	saveError( errcode );
     return errcode;
   }
@@ -1032,11 +1032,11 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
   nsInstallPatch* ip = new nsInstallPatch(this, rname, version, patchname, 
                                           errorMsg);
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_ACCESS_DENIED;
+    errcode = SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = ScheduleForInstall( ip );
     if (*errorMsg != NULL) {
-      errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+      errcode = SUERR_UNEXPECTED_ERROR;
     }
   }
   XP_FREEIF( rname );
@@ -1060,11 +1060,11 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
   if ( folder == NULL || regName == NULL || 
        XP_STRLEN(regName) == 0 || patchname == NULL ) {
     *errorMsg = SU_GetErrorMsg3("folder or regName or patchName is NULL ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return saveError( nsSoftUpdateError_INVALID_ARGUMENTS );
+                                SUERR_INVALID_ARGUMENTS );
+    return saveError( SUERR_INVALID_ARGUMENTS );
   }
   
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   errcode = SanityCheck(errorMsg);
   
@@ -1077,7 +1077,7 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
   char* rname = GetQualifiedRegName( regName, errorMsg );
   if (*errorMsg != NULL) 
   {
-    errcode = nsSoftUpdateError_BAD_PACKAGE_NAME;
+    errcode = SUERR_BAD_PACKAGE_NAME;
     saveError( errcode );
   	return errcode;
   }
@@ -1087,11 +1087,11 @@ PRInt32 nsSoftwareUpdate::Patch(char* regName,
                                            patchname, folder, filename, 
                                            errorMsg );
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_ACCESS_DENIED;
+    errcode = SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = ScheduleForInstall( ip );
     if (*errorMsg != NULL) {
-      errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+      errcode = SUERR_UNEXPECTED_ERROR;
     }
   }
   XP_FREEIF ( rname );
@@ -1109,7 +1109,7 @@ PRInt32 nsSoftwareUpdate::DeleteFile(nsFolderSpec* folder,
                                      char* relativeFileName, 
                                      char* *errorMsg)
 {
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   errcode = SanityCheck(errorMsg);
   
@@ -1122,16 +1122,16 @@ PRInt32 nsSoftwareUpdate::DeleteFile(nsFolderSpec* folder,
   nsInstallDelete* id = new nsInstallDelete(this, folder, relativeFileName, 
                                             errorMsg);
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_ACCESS_DENIED;
+    errcode = SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = ScheduleForInstall( id );
     if (*errorMsg != NULL) {
-      errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+      errcode = SUERR_UNEXPECTED_ERROR;
     }
   }
   /* XXX: who set FILE_DOES_NOT_EXIST errcode ?? */
-  if (errcode == nsSoftUpdateError_FILE_DOES_NOT_EXIST) {
-    errcode = nsSoftwareUpdate_SUCCESS;
+  if (errcode == SUERR_FILE_DOES_NOT_EXIST) {
+    errcode = SU_SUCCESS;
   }
   saveError( errcode );
   return errcode;
@@ -1147,7 +1147,7 @@ PRInt32 nsSoftwareUpdate::DeleteFile(nsFolderSpec* folder,
  */
 PRInt32 nsSoftwareUpdate::DeleteComponent(char* registryName, char* *errorMsg)
 {
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   errcode = SanityCheck(errorMsg);
   
@@ -1160,23 +1160,23 @@ PRInt32 nsSoftwareUpdate::DeleteComponent(char* registryName, char* *errorMsg)
   char* rname = GetQualifiedRegName( registryName, errorMsg );
   if (*errorMsg != NULL) 
   {
-	 errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+	 errcode = SUERR_UNEXPECTED_ERROR;
 	 saveError( errcode );
 	return errcode;
   }
 
   nsInstallDelete* id = new nsInstallDelete(this, NULL, rname, errorMsg);
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_ACCESS_DENIED;
+    errcode = SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = ScheduleForInstall( id );
     if (*errorMsg != NULL) {
-      errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+      errcode = SUERR_UNEXPECTED_ERROR;
     }
   }
   /* XXX: who set FILE_DOES_NOT_EXIST errcode ?? */
-  if (errcode == nsSoftUpdateError_FILE_DOES_NOT_EXIST) {
-    errcode = nsSoftwareUpdate_SUCCESS;
+  if (errcode == SUERR_FILE_DOES_NOT_EXIST) {
+    errcode = SU_SUCCESS;
   }
   
   XP_FREEIF (rname );
@@ -1292,21 +1292,21 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
                                        char* *errorMsg)
 {
   nsInstallFile* ie = NULL;
-  int result = nsSoftwareUpdate_SUCCESS;
+  int result = SU_SUCCESS;
   char *qualified_name = NULL;
   *errorMsg = NULL;
 
   if ( jarSource == NULL || XP_STRLEN(jarSource) == 0 || folderSpec == NULL ) {
     *errorMsg = SU_GetErrorMsg3("folder or Jarsource is NULL ", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS );
-    return saveError(nsSoftUpdateError_INVALID_ARGUMENTS);
+                                SUERR_INVALID_ARGUMENTS );
+    return saveError(SUERR_INVALID_ARGUMENTS);
   }
       
   if (packageName == NULL) {
     // probably didn't call StartInstall()
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_BAD_PACKAGE_NAME_AS, 
-                                nsSoftUpdateError_BAD_PACKAGE_NAME );
-    return saveError(nsSoftUpdateError_BAD_PACKAGE_NAME);
+                                SUERR_BAD_PACKAGE_NAME );
+    return saveError(SUERR_BAD_PACKAGE_NAME);
   }
       
   if ((name == NULL) || (XP_STRLEN(name) == 0)) {
@@ -1318,7 +1318,7 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
   
   if (*errorMsg != NULL)
   {
-  	return nsSoftUpdateError_BAD_PACKAGE_NAME;
+  	return SUERR_BAD_PACKAGE_NAME;
   }
   
       
@@ -1356,8 +1356,7 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
       nsVersionInfo* oldVer = new nsVersionInfo(versionStruct.major,
                                                 versionStruct.minor,
                                                 versionStruct.release,
-                                                versionStruct.build,
-                                                versionStruct.check);
+                                                versionStruct.build);
          
       bInstall = ( version->compareTo(oldVer) > 0 );
       
@@ -1402,7 +1401,7 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
   XP_FREEIF(subdir);
   XP_FREEIF(qualified_name);
   if (errorMsg != NULL) {
-    result = nsSoftUpdateError_UNEXPECTED_ERROR;
+    result = SUERR_UNEXPECTED_ERROR;
   }
   
   saveError( result );
@@ -1412,7 +1411,7 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
 /* Uninstall */
 PRInt32 nsSoftwareUpdate::Uninstall(char* packageName, char* *errorMsg)
 {
-  int errcode = nsSoftwareUpdate_SUCCESS;
+  int errcode = SU_SUCCESS;
   
   errcode = SanityCheck(errorMsg);
   
@@ -1426,7 +1425,7 @@ PRInt32 nsSoftwareUpdate::Uninstall(char* packageName, char* *errorMsg)
    
   nsUninstallObject* u = new nsUninstallObject( this, rname, errorMsg );
   if (*errorMsg != NULL) {
-    errcode = nsSoftUpdateError_UNEXPECTED_ERROR;
+    errcode = SUERR_UNEXPECTED_ERROR;
   } else {
     ScheduleForInstall( u );
   }
@@ -1504,19 +1503,19 @@ PRInt32 nsSoftwareUpdate::InitializeInstallerCertificate(char* *errorMsg)
   if ((prinArray == NULL) || (prinArray->GetSize() == 0)) {
     if (!unsigned_jar_enabled) {
       *errorMsg = SU_GetErrorMsg4(SU_ERROR_NO_CERTIFICATE, 
-                                  nsSoftUpdateError_NO_INSTALLER_CERTIFICATE);
-      errcode = nsSoftUpdateError_NO_INSTALLER_CERTIFICATE;
+                                  SUERR_NO_INSTALLER_CERTIFICATE);
+      errcode = SUERR_NO_INSTALLER_CERTIFICATE;
     }
   } else if (prinArray->GetSize() > 1) {
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_TOO_MANY_CERTIFICATES, 
-                                nsSoftUpdateError_TOO_MANY_CERTIFICATES);
-    errcode = nsSoftUpdateError_TOO_MANY_CERTIFICATES;
+                                SUERR_TOO_MANY_CERTIFICATES);
+    errcode = SUERR_TOO_MANY_CERTIFICATES;
   } else {
     prin = (nsPrincipal *)prinArray->Get(0);
     if ((prin == NULL) && (!unsigned_jar_enabled)) {
       *errorMsg = SU_GetErrorMsg4(SU_ERROR_NO_CERTIFICATE, 
-                                  nsSoftUpdateError_NO_INSTALLER_CERTIFICATE);
-      errcode = nsSoftUpdateError_NO_INSTALLER_CERTIFICATE;
+                                  SUERR_NO_INSTALLER_CERTIFICATE);
+      errcode = SUERR_NO_INSTALLER_CERTIFICATE;
     }
   }
 
@@ -1590,11 +1589,11 @@ PRInt32 nsSoftwareUpdate::RequestSecurityPrivileges(char* *errorMsg)
 
   if (!ret_val) {
     *errorMsg = "Permssion was denied";
-    return nsSoftUpdateError_ACCESS_DENIED;
+    return SUERR_ACCESS_DENIED;
   } else {
     *errorMsg = NULL;
   }
-  return nsSoftwareUpdate_SUCCESS;
+  return SU_SUCCESS;
 }
 
 /**
@@ -1602,7 +1601,7 @@ PRInt32 nsSoftwareUpdate::RequestSecurityPrivileges(char* *errorMsg)
  */
 PRInt32 nsSoftwareUpdate::saveError(PRInt32 errcode)
 {
-  if ( errcode != nsSoftwareUpdate_SUCCESS ) 
+  if ( errcode != SU_SUCCESS ) 
     lastError = errcode;
   return errcode;
 }
@@ -1693,7 +1692,7 @@ char* nsSoftwareUpdate::GetQualifiedRegName(char* name, char**errorMsg)
   
   if (BadRegName(name)) 
   {
-  	*errorMsg = SU_GetErrorMsg4(nsSoftUpdateError_BAD_PACKAGE_NAME, nsSoftUpdateError_BAD_PACKAGE_NAME);
+  	*errorMsg = SU_GetErrorMsg4(SUERR_BAD_PACKAGE_NAME, SUERR_BAD_PACKAGE_NAME);
   	name = NULL;
   }
   
@@ -1712,10 +1711,10 @@ char* nsSoftwareUpdate::VerifyJSObject(void* jsObj)
   char *errorMsg = NULL;
   /* Get the object's class, and verify that it is of class SoftUpdate
    */
+#ifdef XXX
   JSObject * jsobj;
   JSClass * jsclass;
   jsobj = (JSObject *) jsObj;
-#ifdef XXX
   /*	jsobj = JSJ_ExtractInternalJSObject(env, (HObject*)a);*/
   jsclass = JS_GetClass(jsobj);
   /* XXX Fix it */
@@ -1745,24 +1744,24 @@ PRInt32 nsSoftwareUpdate::OpenJARFile(char* *errorMsg)
   
   if (!enabled)	{
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_BAD_JS_ARGUMENT, 
-                                nsSoftUpdateError_INVALID_ARGUMENTS);
-    return nsSoftUpdateError_INVALID_ARGUMENTS;
+                                SUERR_INVALID_ARGUMENTS);
+    return SUERR_INVALID_ARGUMENTS;
   }
   
   jarFile = jarName;
   if (jarFile == NULL) {
     /* error already signaled */
     *errorMsg = SU_GetErrorMsg3("No Jar Source", 
-                                nsSoftUpdateError_INVALID_ARGUMENTS);
-    return nsSoftUpdateError_INVALID_ARGUMENTS;
+                                SUERR_INVALID_ARGUMENTS);
+    return SUERR_INVALID_ARGUMENTS;
   }
   
   /* Open and initialize the JAR archive */
   jarData = SOB_new();
   if ( jarData == NULL ) {
     *errorMsg = SU_GetErrorMsg3("No Jar Source", 
-                                nsSoftUpdateError_UNEXPECTED_ERROR);
-    return nsSoftUpdateError_UNEXPECTED_ERROR;
+                                SUERR_UNEXPECTED_ERROR);
+    return SUERR_UNEXPECTED_ERROR;
   }
   err = SOB_pass_archive( ZIG_F_GUESS, 
                           jarFile, 
@@ -1770,7 +1769,7 @@ PRInt32 nsSoftwareUpdate::OpenJARFile(char* *errorMsg)
                           jarData );
   if ( err != 0 ) {
     if (unsigned_jar_enabled) 
-      return nsSoftwareUpdate_SUCCESS;
+      return SU_SUCCESS;
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_VERIFICATION_FAILED, err);
     return err;
   }
@@ -1781,12 +1780,12 @@ PRInt32 nsSoftwareUpdate::OpenJARFile(char* *errorMsg)
                          (void**)&installerJarName, &installerJarNameLength);
   if (err != 0) {
     if (unsigned_jar_enabled) 
-      return nsSoftwareUpdate_SUCCESS;
+      return SU_SUCCESS;
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_MISSING_INSTALLER, err);
     return err;
   }
   zigPtr = jarData;
-  return nsSoftwareUpdate_SUCCESS;
+  return SU_SUCCESS;
 }
 
 void nsSoftwareUpdate::CloseJARFile()
@@ -1845,7 +1844,7 @@ char* nsSoftwareUpdate::NativeExtractJARFile(char* inJarLocation,
   if (jarPath == NULL) {
     /* out-of-memory error already signaled */
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_OUT_OF_MEMORY, 
-                                nsSoftUpdateError_UNEXPECTED_ERROR);
+                                SUERR_UNEXPECTED_ERROR);
     return NULL;
   }
   
@@ -2207,16 +2206,16 @@ nsSoftwareUpdate::SanityCheck(char**errorMsg)
 {
     if ( packageName == NULL ) 
     {
-        *errorMsg = SU_GetErrorMsg4(nsSoftUpdateError_INSTALL_NOT_STARTED, nsSoftUpdateError_INSTALL_NOT_STARTED);
-        return nsSoftUpdateError_INSTALL_NOT_STARTED;	
+        *errorMsg = SU_GetErrorMsg4(SUERR_INSTALL_NOT_STARTED, SUERR_INSTALL_NOT_STARTED);
+        return SUERR_INSTALL_NOT_STARTED;	
     }
 
     if (bUserCancelled) 
     {
         AbortInstall();
-        saveError(nsSoftUpdateError_USER_CANCELLED);
-        *errorMsg = SU_GetErrorMsg4(nsSoftUpdateError_USER_CANCELLED, nsSoftUpdateError_USER_CANCELLED);
-        return nsSoftUpdateError_USER_CANCELLED;
+        saveError(SUERR_USER_CANCELLED);
+        *errorMsg = SU_GetErrorMsg4(SUERR_USER_CANCELLED, SUERR_USER_CANCELLED);
+        return SUERR_USER_CANCELLED;
     }
 	
 	return 0;

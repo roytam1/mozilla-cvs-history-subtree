@@ -60,13 +60,13 @@ extern uint32 FE_DiskSpaceAvailable (MWContext *context, const char *lpszPath );
 /* su_DownloadStream
  * keeps track of all SU specific data needed for the stream
  */ 
-typedef struct su_DownloadStream_struct	{
-	XP_File			fFile;
-	char *			fJarFile;	/* xpURL location of the downloaded file */
-	URL_Struct *	fURL;
-	MWContext *		fContext;
-	SoftUpdateCompletionFunction fCompletion;
-	void *			fCompletionClosure;
+typedef struct su_DownloadStream_struct {
+    XP_File         fFile;
+    char *          fJarFile;	/* xpURL location of the downloaded file */
+    URL_Struct *    fURL;
+    MWContext *     fContext;
+    SoftUpdateCompletionFunction fCompletion;
+    void *          fCompletionClosure;
     int32           fFlags;     /* download flags */
     pw_ptr          progress ;
 } su_DownloadStream;
@@ -390,6 +390,16 @@ void su_NetExitProc(URL_Struct* url, int result, MWContext * context)
 #ifdef XP_MAC
 #pragma export on
 #endif
+
+
+XP_Bool SU_IsUpdateEnabled(void)
+{
+    XP_Bool enabled = FALSE;
+    PREF_GetBoolPref( AUTOUPDATE_ENABLE_PREF, &enabled);
+
+    return (enabled);
+}
+
 
 /* SU_StartSoftwareUpdate
  * Main public interface to software update
@@ -1554,12 +1564,6 @@ XP_Bool su_RegPackTime()
         su_SetLastRegPackTime(nowSecInt);
         return FALSE;
     }
-GetPathname( vreg, curver, NAVHOME, dirbuf, sizeof(dirbuf) );
-D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(530):                err = vr_SetPathname( vreg, curver, NAVHOME, programPath );
-D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(542):                err = vr_GetPathname( vreg, state, NAVHOME, dirbuf, sizeof(dirbuf) );
-D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(587):            err = vr_SetPathname( vreg, curver, NAVHOME, programPath );
-D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(1970):         err = vr_GetPathname( vreg, key, NAVHOME, dirbuf, sizeof(dirbuf) );
-7 occurrence(s) have been found.
     i = nowSecInt - lastRegPackTime;
     if ((i > intervalSec) || (i < 0))
     {
