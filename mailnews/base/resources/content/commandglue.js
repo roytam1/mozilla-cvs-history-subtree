@@ -120,7 +120,7 @@ function GetFolderResource(index)
     var outliner = GetFolderOutliner();
     var folderOutlinerBuilder = outliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
 
-    return folderOutlinerBuilder.getIndexOfResource(index);
+    return folderOutlinerBuilder.getResourceAtIndex(index);
 }
 
 function GetFolderIndex(resource)
