@@ -34,6 +34,7 @@ CPPSRCS		= \
 	nsID.cpp \
 	nsComponentManager.cpp \
 	nsEnumeratorUtils.cpp \
+	nsEmptyEnumerator.cpp \
 	nsRepository.cpp \
 	nsServiceManager.cpp \
 	nsSupportsArray.cpp \

@@ -59,6 +59,8 @@ CPPSRCS =                             \
         nsCOMPtr.cpp                  \
         nsProxyEvent.cpp              \
         nsComponentManager.cpp        \
+        nsEnumeratorUtils.cpp         \
+        nsEmptyEnumerator.cpp         \
         nsRepository.cpp              \
         nsServiceManager.cpp          \
         nsSupportsArray.cpp           \
@@ -80,6 +82,7 @@ CPP_OBJS =                                        \
         .\$(OBJDIR)\nsID.obj                      \
         .\$(OBJDIR)\nsCOMPtr.obj                  \
         .\$(OBJDIR)\nsEnumeratorUtils.obj         \
+        .\$(OBJDIR)\nsEmptyEnumerator.obj         \
         .\$(OBJDIR)\nsProxyEvent.obj              \
         .\$(OBJDIR)\nsComponentManager.obj        \
         .\$(OBJDIR)\nsRepository.obj              \
