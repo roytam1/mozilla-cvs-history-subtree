@@ -27,25 +27,9 @@
 #include "nsUCvMinSupport.h"
 #include "nsUConvDll.h"
 
-// Interface ID for our Unicode Decode Helper interface
-// {9CC39FF0-DD5D-11d2-8AAC-00600811A836}
-NS_DECLARE_ID(kIUnicodeDecodeHelperIID,
-  0x9cc39ff0, 0xdd5d, 0x11d2, 0x8a, 0xac, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
 
-// Class ID for our UnicodeDecoderHelper implementation
-// {9CC39FF1-DD5D-11d2-8AAC-00600811A836}
-NS_DECLARE_ID(kUnicodeDecodeHelperCID, 
-  0x9cc39ff1, 0xdd5d, 0x11d2, 0x8a, 0xac, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
-
-// Interface ID for our Unicode Encode Helper interface
-// {D8E6B700-CA9D-11d2-8AA9-00600811A836}
-NS_DECLARE_ID(kIUnicodeEncodeHelperIID,
-  0xd8e6b700, 0xca9d, 0x11d2, 0x8a, 0xa9, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
-
-// Class ID for our UnicodeEncoderHelper implementation
-// {1767FC50-CAA4-11d2-8AA9-00600811A836}
-NS_DECLARE_ID(kUnicodeEncodeHelperCID, 
-  0x1767fc50, 0xcaa4, 0x11d2, 0x8a, 0xa9, 0x0, 0x60, 0x8, 0x11, 0xa8, 0x36);
+static NS_DEFINE_CID(kUnicodeEncodeHelperCID, NS_UNICODEENCODEHELPER_CID);
+static NS_DEFINE_CID(kUnicodeDecodeHelperCID, NS_UNICODEDECODEHELPER_CID);
 
 #define DEFAULT_BUFFER_CAPACITY 16
 
@@ -254,7 +238,7 @@ NS_IMETHODIMP nsTableDecoderSupport::ConvertNoBuff(const char * aSrc,
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeDecodeHelperCID, NULL, 
-        kIUnicodeDecodeHelperIID, (void**) & mHelper);
+        NS_GET_IID(nsIUnicodeEncodeHelper), (void**) & mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UDEC_NOHELPER;
   }
@@ -298,7 +282,7 @@ NS_IMETHODIMP nsMultiTableDecoderSupport::ConvertNoBuff(const char * aSrc,
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeDecodeHelperCID, NULL, 
-        kIUnicodeDecodeHelperIID, (void**) &mHelper);
+        NS_GET_IID(nsIUnicodeDecodeHelper), (void**) &mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UDEC_NOHELPER;
   }
@@ -338,7 +322,7 @@ NS_IMETHODIMP nsOneByteDecoderSupport::Convert(const char * aSrc,
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeDecodeHelperCID, NULL, 
-        kIUnicodeDecodeHelperIID, (void**) &mHelper);
+        NS_GET_IID(nsIUnicodeDecodeHelper), (void**) &mHelper);
     if (NS_FAILED(res)) return NS_ERROR_UDEC_NOHELPER;
 
     res = mHelper -> CreateFastTable(mShiftTable, mMappingTable, mFastTable, 
@@ -648,7 +632,7 @@ NS_IMETHODIMP nsTableEncoderSupport::FillInfo(PRUint32 *aInfo)
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeEncodeHelperCID, NULL, 
-        kIUnicodeEncodeHelperIID, (void**) & mHelper);
+        NS_GET_IID(nsIUnicodeEncodeHelper), (void**) & mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
   }
@@ -669,7 +653,7 @@ NS_IMETHODIMP nsTableEncoderSupport::ConvertNoBuffNoErr(
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeEncodeHelperCID, NULL, 
-        kIUnicodeEncodeHelperIID, (void**) & mHelper);
+        NS_GET_IID(nsIUnicodeEncodeHelper), (void**) & mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
   }
@@ -705,7 +689,7 @@ NS_IMETHODIMP nsMultiTableEncoderSupport::FillInfo(PRUint32 *aInfo)
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeEncodeHelperCID, NULL, 
-        kIUnicodeEncodeHelperIID, (void**) & mHelper);
+        NS_GET_IID(nsIUnicodeEncodeHelper), (void**) & mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
   }
@@ -726,7 +710,7 @@ NS_IMETHODIMP nsMultiTableEncoderSupport::ConvertNoBuffNoErr(
 
   if (mHelper == nsnull) {
     res = nsComponentManager::CreateInstance(kUnicodeEncodeHelperCID, NULL, 
-        kIUnicodeEncodeHelperIID, (void**) & mHelper);
+        NS_GET_IID(nsIUnicodeEncodeHelper), (void**) & mHelper);
     
     if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
   }
