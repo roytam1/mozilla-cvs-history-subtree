@@ -687,8 +687,7 @@ nsSVGSVGElement::CreateSVGMatrix(nsIDOMSVGMatrix **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGRect(nsIDOMSVGRect **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_NewSVGRect(_retval);
 }
 
 /* nsIDOMSVGTransform createSVGTransform (); */
