@@ -1569,6 +1569,14 @@ DocumentViewerImpl::Destroy()
     mPreviousViewer = nsnull;
   }
 
+  if (mIsSticky) {
+    // This window is sticky, that means that it might be shown again
+    // and we don't want the presshell n' all that to be thrown away
+    // just because the window is hidden.
+
+    return NS_OK;
+  }
+
   if (mDeviceContext)
     mDeviceContext->FlushFontCache();
 
@@ -6124,14 +6132,6 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings)
   mPrt->mPrintDC->GetZoom(mPrt->mOrigZoom);
   mPrt->mPrintDC->SetTextZoom(1.0f);
   mPrt->mPrintDC->SetZoom(1.0f);
-
-  if (mIsSticky) {
-    // This window is sticky, that means that it might be shown again
-    // and we don't want the presshell n' all that to be thrown away
-    // just because the window is hidden.
-
-    return NS_OK;
-  }
 
   if (mDeviceContext) {
     mDeviceContext->SetUseAltDC(kUseAltDCFor_FONTMETRICS, PR_TRUE);
