@@ -42,6 +42,25 @@ namespace JavaScript
 {
 
 //
+// Save-Restore Pattern
+//
+
+    // Use the definition
+    //   SaveRestore<T> temp(var)
+    // to save the current value of var at the time of the definition into a temporary temp
+    // and restore var to the saved value at the end of temp's scope, regardless of whether
+    // temp goes out of scope due to normal execution or due to a thrown exception.
+    template<typename T> class SaveRestore {
+        const T savedValue;
+        T &var;
+
+      public:
+        SaveRestore(T &t): savedValue(t), var(t) {}
+        ~SaveRestore() {var = savedValue;}
+    };
+
+
+//
 // Doubly Linked Lists
 //
 
