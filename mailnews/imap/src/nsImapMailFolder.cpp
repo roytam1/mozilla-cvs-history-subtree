@@ -2304,6 +2304,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
   ChangeNumPendingTotalMessages(-GetNumPendingTotalMessages());
   ChangeNumPendingUnread(-GetNumPendingUnread());
   m_numStatusRecentMessages = 0; // clear this since we selected the folder.
+  m_numStatusUnseenMessages = 0; // clear this since we selected the folder.
 
   
   if (!mDatabase)
