@@ -22,7 +22,9 @@
 
 #include "jsd.h"
 
-#define JSD_TRACE 1
+/*
+* #define JSD_TRACE 1
+*/
 
 #ifdef JSD_TRACE
 #define TRACEOBJ(jsdc, jsdobj, which) _traceObj(jsdc, jsdobj, which)
