@@ -53,6 +53,9 @@
 
 #include "nscore.h"
 #include "pldhash.h"
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 
 class nsIFrame;
 class nsHTMLReflowCommand;
@@ -100,6 +103,9 @@ public:
         public:
             Iterator(Node *node) : mNode(node), mPos(nsnull) { }
             ~Iterator() { }
+#ifdef DEBUG
+            void AssertFrame(nsIFrame *aIFrame);
+#endif
             Node *NextChild();
             Node *NextChild(nsIFrame **aChildIFrame);
             // Set the mPos to the node with this nsIFrame, or null
@@ -107,7 +113,14 @@ public:
             Node *CurrentChild() { return mPos ? *mPos : nsnull; }
             Node *CurrentNode()  { return mNode; }
             PRBool IsTarget()
-                { return mNode ? mNode->IsTarget() : PR_FALSE; }
+                {
+#ifdef DEBUG
+                    fprintf(stderr,"IsTarget(%p) = %d\n",
+                            mNode ? mNode->mFrame : nsnull,
+                            mNode ? mNode->IsTarget() : PR_FALSE);
+#endif
+                    return mNode ? mNode->IsTarget() : PR_FALSE;
+                }
         private:
             Node *mNode;
             Node **mPos;
@@ -162,4 +175,11 @@ nsReflowTree::Node::MakeTarget()
     mFlags |= NODE_IS_TARGET;
     mTargetCount++;
 }
+
+#ifdef DEBUG
+#define REFLOW_ASSERTFRAME(x) reflowIterator.AssertFrame(NS_REINTERPRET_CAST(nsIFrame*,(x)))
+#else
+#define REFLOW_ASSERTFRAME(x)
+#endif
+
 #endif

@@ -307,6 +307,7 @@ nsFieldSetFrame::Reflow(nsIPresContext*          aPresContext,
    // this lets me iterate through the reflow children; initialized
    // from state within the reflowCommand
    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+   REFLOW_ASSERTFRAME(this);
 
     if ( aReflowState.reason == eReflowReason_Incremental ) {
         nsReflowType  reflowType;

@@ -511,6 +511,7 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
 
   PRBool    isHandled = PR_FALSE;
   
@@ -568,7 +569,6 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
         }
       }
       // set up iterator to reflow main child if needed, or to none
-      // XXX fix?
       aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(kidFrame));
     }
     // Reflow our one and only principal child frame

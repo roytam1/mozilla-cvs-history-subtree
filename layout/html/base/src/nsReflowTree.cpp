@@ -260,6 +260,10 @@ nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
   nsReflowTree::Node *result = NextChild();
   *aChildIFrame = (mPos && *mPos) ?
       NS_STATIC_CAST(nsReflowTree::Node*, *mPos)->GetFrame() : nsnull;
+
+#ifdef DEBUG
+  fprintf(stderr,"NextChild() = %p\n",result ? result->mFrame : nsnull);
+#endif
   return result;
 }
 
@@ -269,8 +273,12 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     Node **aPos;
     ChildChunk *aCurrentChunk;
 
-    if (!mNode)
+    if (!mNode) {
+#ifdef DEBUG
+        fprintf(stderr,"SelectChild() = %p\n",nsnull);
+#endif
         return nsnull;
+    }
     
     if (mNode->HasSingleChild()) {
         aPos = &mNode->mKidU.mChild;
@@ -279,7 +287,12 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
         aPos = &aCurrentChunk->mKids[0];
     }
     if (*aPos && (*aPos)->mFrame == aChildIFrame)
+    {
+#ifdef DEBUG
+        fprintf(stderr,"SelectChild() = %p\n",(*aPos)->mFrame);
+#endif
         return *aPos;
+    }
 
     while (aPos && *aPos) {
         if (aPos < &aCurrentChunk->mKids[ChildChunk::KIDS_CHUNK_SIZE]) {
@@ -287,17 +300,37 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
         } else {
             aCurrentChunk = aCurrentChunk->mNext;
             if (!aCurrentChunk) {
+#ifdef DEBUG
+                fprintf(stderr,"SelectChild() = %p\n",nsnull);
+#endif
                 return nsnull;
             } else {
                 aPos = &mCurrentChunk->mKids[0];
             }
         }
-        if ((*aPos)->mFrame == aChildIFrame)
+        if ((*aPos)->mFrame == aChildIFrame) {
+#ifdef DEBUG
+            fprintf(stderr,"SelectChild() = %p\n",(*aPos)->mFrame);
+#endif
             return *aPos;
+        }
     }
 
+#ifdef DEBUG
+    fprintf(stderr,"SelectChild() = %p\n",nsnull);
+#endif
     return nsnull;
 }
+
+#ifdef DEBUG
+void
+nsReflowTree::Node::Iterator::AssertFrame(nsIFrame *aIFrame)
+{
+    if (mNode) {
+        NS_ASSERTION(mNode->mFrame == aIFrame,"Reflow tree out of sync!");
+    }
+}
+#endif
 
 PRBool
 nsReflowTree::AddTargettedFrame(nsIFrame *frame)

@@ -2705,6 +2705,7 @@ nsTableFrame::IncrementalReflow(nsIPresContext*          aPresContext,
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
   // See if the reflow command is targeted at us
   PRBool amTarget = reflowIterator.IsTarget();
 
@@ -2713,8 +2714,7 @@ nsTableFrame::IncrementalReflow(nsIPresContext*          aPresContext,
   // this is the target if target is either this or the outer table frame containing this inner frame
   nsIFrame* outerTableFrame = nsnull;
   GetParent(&outerTableFrame);
-  // XXX FIX!!!!!!!!!!  How do we decide if the outerframe is a target?
-  if (amTarget /*|| (outerTableFrame == target)*/) {
+  if (amTarget || aReflowState.reflowCommand->IsATarget(outerTableFrame)) {
     aReflowState.SetCurrentReflowNode(nsnull);
     rv = IR_TargetIsMe(aPresContext, state, aStatus);
   }

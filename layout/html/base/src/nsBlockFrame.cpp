@@ -603,6 +603,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
+
   nsIFrame *childFrame;
 
   // See if the reflow command is targeted at us
@@ -654,7 +656,11 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     CalculateContainingBlock(aReflowState, mRect.width, mRect.height,
                              containingBlockWidth, containingBlockHeight);
     
-    // XXX FIX! need to SetCurrentReflowNode?
+    // Set the iterator's current node to match the child we're playing with
+    // XXX fix? 
+    // Is it possible for mAbsoluteContainer to be in the reflow tree?  If
+    // not, we can remove this, but I think it's possible....
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -3250,6 +3256,7 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
   if (frame == aState.mNextRCFrame) {
     // NULL out mNextRCFrame so if we reflow it again we don't think it's still
     // an incremental reflow
+    // XXX Fix?  Does this interact with reflowtree?  probably not...
     aState.mNextRCFrame = nsnull;
   }
   if (NS_FAILED(rv)) {
@@ -3739,6 +3746,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
   if (aFrame == aState.mNextRCFrame) {
     // NULL out mNextRCFrame so if we reflow it again we don't think it's still
     // an incremental reflow
+    // XXX fix?  does this interact with reflowtree?  Probably ok.
     aState.mNextRCFrame = nsnull;
   }
   if (NS_FAILED(rv)) {

@@ -113,6 +113,7 @@ nsHTMLReflowCommand::nsHTMLReflowCommand(nsIFrame*    aTargetFrame,
     mPrevSiblingFrame(nsnull),
     mAttribute(aAttribute),
     mListName(nsnull),
+    mTree(nsnull),
     mReflowNode(nsnull),
     mFlags(0)
 {
@@ -200,7 +201,8 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 
 #ifdef NS_DEBUG
   nsCOMPtr<nsIPresShell> shell;
-  aPresContext->GetShell(getter_AddRefs(shell));
+  if (aPresContext)
+    aPresContext->GetShell(getter_AddRefs(shell));
   if (shell) {
     nsIFrame* rootFrame;
     shell->GetRootFrame(&rootFrame);

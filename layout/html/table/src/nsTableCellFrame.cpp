@@ -863,6 +863,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
     // this lets me iterate through the reflow children; initialized
     // from state within the reflowCommand
     nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    REFLOW_ASSERTFRAME(this);
     // See if the reflow command is targeted at us
     PRBool amTarget = reflowIterator.IsTarget();
 
@@ -872,6 +873,8 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
     // if it is a StyleChanged reflow targeted at this cell frame,
     // handle that here
     // first determine if this frame is the target or not
+    // XXX FIX!!! what if we're a target AND our child is a target?  This
+    // will only do the "I'm a target" reflow!
     if (amTarget) {
       nsReflowType type;
       aReflowState.reflowCommand->GetType(type);
@@ -883,6 +886,11 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
       else {
         NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
       }
+#ifdef DEBUG
+      nsIFrame *childFrame = nsnull;
+      reflowIterator.NextChild(&childFrame);
+      NS_ASSERTION(childFrame == nsnull,"TableCellFrame is target and has targeted children");
+#endif
     }
     else {
       // Get the next frame in the reflow chain, and verify that it's our

@@ -472,6 +472,7 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
   // this lets me iterate through the reflow children; initialized
   // from state within the reflowCommand
   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  REFLOW_ASSERTFRAME(this);
 
   nsLineLayout* lineLayout = aReflowState.mLineLayout;
   nscoord leftEdge = 0;
@@ -513,10 +514,7 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
       }
     }
     // Set the iterator's current node to match the child we're playing with
-    // XXX fix?
-    reflowIterator.SelectChild(frame);
-
-    // FIX!!!?  SetCurrentReflowNode?
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(frame));
 
     rv = ReflowInlineFrame(aPresContext, aReflowState, irs, frame, aStatus);
     if (NS_FAILED(rv)) {

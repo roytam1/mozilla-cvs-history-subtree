@@ -1335,6 +1335,7 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
     // this lets me iterate through the reflow children; initialized
     // from state within the reflowCommand
     nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    REFLOW_ASSERTFRAME(this);
     // See if the reflow command is targeted at us
     PRBool amTarget = reflowIterator.IsTarget();
 

@@ -926,6 +926,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   else if (aNextRCFrame && *aNextRCFrame == aFrame) {
     reason = eReflowReason_Incremental;
     // Make sure we only incrementally reflow once
+    // XXX FIX? should we kill this child or other children?  Probably not...
     *aNextRCFrame = nsnull;
   }
   else if (psd->mReflowState->reason == eReflowReason_StyleChange) {
