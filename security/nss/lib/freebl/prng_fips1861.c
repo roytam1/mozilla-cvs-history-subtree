@@ -166,8 +166,6 @@ alg_fips186_1_x3_1(RNGContext *rng,
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
-    /* initialize the SHA1 context */
-    memset(&sha1cx, 0, sizeof(sha1cx));
     /* 
      * <Step 2> Initialize t, taken care of in SHA-1 (same initial values) 
      */
@@ -271,7 +269,8 @@ RNG_RNGInit(void)
 ** material
 */
 SECStatus 
-prng_RandomUpdate(RNGContext *rng, void *data, size_t bytes, unsigned char *q)
+prng_RandomUpdate(RNGContext *rng, 
+		  const void *data, size_t bytes, unsigned char *q)
 {
     SECStatus rv = SECSuccess;
     unsigned char inputhash[BSIZE];
@@ -343,7 +342,7 @@ prng_RandomUpdate(RNGContext *rng, void *data, size_t bytes, unsigned char *q)
 ** material.  Not DSA, so no q.
 */
 SECStatus 
-RNG_RandomUpdate(void *data, size_t bytes)
+RNG_RandomUpdate(const void *data, size_t bytes)
 {
     return prng_RandomUpdate(globalrng, data, bytes, NULL);
 }

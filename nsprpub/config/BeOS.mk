@@ -47,7 +47,6 @@ OBJ_SUFFIX              = o
 LIB_SUFFIX              = a
 DLL_SUFFIX              = so
 AR                      = ar cr $@
-STRIP			= strip
 
 ifdef BUILD_OPT
 DEFINES                 = -UDEBUG -DNDEBUG

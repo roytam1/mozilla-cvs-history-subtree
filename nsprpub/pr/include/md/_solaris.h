@@ -70,10 +70,8 @@
  * version uses a global mutex_t to implement the atomic routines
  * in solaris.c, which is actually equivalent to the default
  * implementation.
- *
- * 64-bit Solaris requires sparc v9, which has atomic instructions.
  */
-#if defined(i386) || defined(_PR_GLOBAL_THREADS_ONLY) || defined(IS_64)
+#if defined(i386) || defined(_PR_GLOBAL_THREADS_ONLY)
 #define _PR_HAVE_ATOMIC_OPS
 #endif
 
@@ -81,8 +79,12 @@
 /*
  * We have assembly language implementation of atomic
  * stacks for the 32-bit sparc and x86 architectures only.
+ *
+ * Note: We ran into thread starvation problem with the
+ * 32-bit sparc assembly language implementation of atomic
+ * stacks, so we do not use it now. (Bugzilla bug 113740)
  */
-#if !defined(sparc) || !defined(IS_64)
+#if !defined(sparc)
 #define _PR_HAVE_ATOMIC_CAS
 #endif
 #endif
@@ -779,6 +781,8 @@ extern int gethostname (char *name, int namelen);
 PR_END_EXTERN_C
 
 #endif /* _PR_GLOBAL_THREADS_ONLY */
+
+extern void _MD_solaris_map_sendfile_error(int err);
 
 #endif /* nspr_solaris_defs_h___ */
 
