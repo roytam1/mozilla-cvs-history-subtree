@@ -4746,94 +4746,49 @@ nsBookmarksService::WriteBookmarks(nsIFile* aBookmarksFile,
     if (!aBookmarksFile || !aDataSource || !aRoot)
         return NS_ERROR_NULL_POINTER;
 
-    nsCOMPtr<nsIFile> tempFile;
-    nsresult rv = aBookmarksFile->Clone(getter_AddRefs(tempFile));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = tempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, /*octal*/ 0600);
-    NS_ENSURE_SUCCESS(rv, rv);
-
+    // get a safe output stream, so we don't clobber the bookmarks file unless
+    // all the writes succeeded.
     nsCOMPtr<nsIOutputStream> out;
-    rv = NS_NewLocalFileOutputStream(getter_AddRefs(out),
-                                     tempFile,
-                                     PR_WRONLY,
-                                     /*octal*/ 0600,
-                                     0);
-    if (NS_FAILED(rv))
-    {
-        tempFile->Remove(PR_FALSE);
-        return rv;
-    }
+    nsresult rv = NS_NewSafeLocalFileOutputStream(getter_AddRefs(out),
+                                                  aBookmarksFile,
+                                                  PR_WRONLY,
+                                                  /*octal*/ 0600,
+                                                  0);
+    if (NS_FAILED(rv)) return rv;
 
     // We need a buffered output stream for performance.
     // See bug 202477.
     nsCOMPtr<nsIOutputStream> strm;
-    rv = NS_NewBufferedOutputStream(getter_AddRefs(strm),
-                                    out,
-                                    4096);
-    if (NS_FAILED(rv))
-    {
-        tempFile->Remove(PR_FALSE);
-        return rv;
-    }
+    rv = NS_NewBufferedOutputStream(getter_AddRefs(strm), out, 4096);
+    if (NS_FAILED(rv)) return rv;
 
     PRUint32 dummy;
-    rv = strm->Write(kFileIntro, sizeof(kFileIntro)-1, &dummy);
+    strm->Write(kFileIntro, sizeof(kFileIntro)-1, &dummy);
 
     // Write the bookmarks root
     // output <H1
-    rv |= strm->Write(kRootIntro, sizeof(kRootIntro)-1, &dummy);
+    strm->Write(kRootIntro, sizeof(kRootIntro)-1, &dummy);
     // output LAST_MODIFIED
-    rv |= WriteBookmarkProperties(aDataSource, strm, aRoot, kWEB_LastModifiedDate, kLastModifiedEquals, PR_FALSE);
+    rv = WriteBookmarkProperties(aDataSource, strm, aRoot, kWEB_LastModifiedDate, kLastModifiedEquals, PR_FALSE);
     // output Bookmarks and close H1
-    rv |= strm->Write(kCloseRootH1, sizeof(kCloseRootH1)-1, &dummy);
+    strm->Write(kCloseRootH1, sizeof(kCloseRootH1)-1, &dummy);
 
     nsCOMArray<nsIRDFResource> parentArray;
     rv |= WriteBookmarksContainer(aDataSource, strm, aRoot, 0, parentArray);
 
-    strm->Close();
-    out->Close();
-
-    if (NS_FAILED(rv))
-    {
-        tempFile->Remove(PR_FALSE);
-        return rv;
-    }
-
-    // If we wrote to the file successfully (i.e. if the disk wasn't full) 
-    // then move the temp file to the bookmarks file so it takes its place. 
-    PRBool equals;
-    rv = tempFile->Equals(aBookmarksFile, &equals);
+    // All went ok. Maybe except for problems in Write(), but the stream detects
+    // that for us
+    nsCOMPtr<nsISafeOutputStream> safeStream = do_QueryInterface(strm);
+    if (NS_SUCCEEDED(rv) && safeStream)
+        rv = safeStream->Finish();
+  
     if (NS_FAILED(rv)) {
-        tempFile->Remove(PR_FALSE);
+        NS_WARNING("failed to save bookmarks file! possible dataloss");
         return rv;
-    }
-    if (!equals) {
-        nsCOMPtr<nsIFile> bookmarkParentDir;
-        rv = aBookmarksFile->GetParent(getter_AddRefs(bookmarkParentDir));
-        if (NS_FAILED(rv)) {
-            tempFile->Remove(PR_FALSE);
-            return rv;
-        }
-
-        nsAutoString bookmarkLeafName;
-        rv = aBookmarksFile->GetLeafName(bookmarkLeafName);
-        if (NS_FAILED(rv)) {
-            tempFile->Remove(PR_FALSE);
-            return rv;
-        }
-
-        rv = tempFile->MoveTo(bookmarkParentDir, bookmarkLeafName);
-        if (NS_FAILED(rv))
-        {
-            tempFile->Remove(PR_FALSE);
-            return rv;
-        }
     }
 
     mDirty = PR_FALSE;
-
-    return NS_OK;
+    return rv;
 }
 
 static const char kBookmarkIntro[] = "<DL><p>" NS_LINEBREAK;

@@ -49,6 +49,7 @@
 #include "nsIURI.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
+#include "nsISafeOutputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIRequestObserverProxy.h"
 #include "nsIStreamListenerProxy.h" // XXX for nsIAsyncStreamListener
@@ -729,6 +730,26 @@ NS_NewLocalFileOutputStream(nsIOutputStream **aResult,
     return rv;
 }
 
+// returns a file output stream which can be QI'ed to nsISafeOutputStream.
+inline nsresult
+NS_NewSafeLocalFileOutputStream(nsIOutputStream **aResult,
+                                nsIFile          *aFile,
+                                PRInt32           aIOFlags       = -1,
+                                PRInt32           aPerm          = -1,
+                                PRInt32           aBehaviorFlags = 0)
+{
+    nsresult rv;
+    static NS_DEFINE_CID(kSafeLocalFileOutputStreamCID, NS_SAFELOCALFILEOUTPUTSTREAM_CID);
+    nsCOMPtr<nsIFileOutputStream> out =
+        do_CreateInstance(kSafeLocalFileOutputStreamCID, &rv);
+    if (NS_SUCCEEDED(rv)) {
+        rv = out->Init(aFile, aIOFlags, aPerm, aBehaviorFlags);
+        if (NS_SUCCEEDED(rv))
+            NS_ADDREF(*aResult = out);
+    }
+    return rv;
+}
+
 // returns the input end of a pipe.  the output end of the pipe
 // is attached to the original stream.  data from the original
 // stream is read into the pipe on a background thread.
@@ -794,6 +815,8 @@ NS_NewBufferedInputStream(nsIInputStream **aResult,
     return rv;
 }
 
+// note: the resulting stream can be QI'ed to nsISafeOutputStream iff the
+// provided stream supports it.
 inline nsresult
 NS_NewBufferedOutputStream(nsIOutputStream **aResult,
                            nsIOutputStream  *aStr,

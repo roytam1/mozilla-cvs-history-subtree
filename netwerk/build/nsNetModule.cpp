@@ -105,6 +105,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloader)
 #include "nsSyncStreamListener.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSyncStreamListener, Init)
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSafeFileOutputStream)
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "nsStreamConverterService.h"
@@ -138,8 +140,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamListenerTee)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#ifdef NECKO_COOKIES
 #include "nsCookieService.h"
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsCookieService, nsCookieService::GetSingleton)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // protocols
@@ -687,6 +691,11 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_LOCALFILEOUTPUTSTREAM_CID,
       NS_LOCALFILEOUTPUTSTREAM_CONTRACTID,
       nsFileOutputStream::Create },
+    { NS_SAFELOCALFILEOUTPUTSTREAM_CLASSNAME,
+      NS_SAFELOCALFILEOUTPUTSTREAM_CID,
+      NS_SAFELOCALFILEOUTPUTSTREAM_CONTRACTID,
+      nsSafeFileOutputStreamConstructor
+    },
     
     { "URIChecker",
       NS_URICHECKER_CID,
@@ -1029,6 +1038,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
        nsCacheService::Create
     },
 
+#ifdef NECKO_COOKIES
     { NS_COOKIEMANAGER_CLASSNAME,
       NS_COOKIEMANAGER_CID,
       NS_COOKIEMANAGER_CONTRACTID,
@@ -1040,6 +1050,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_COOKIESERVICE_CONTRACTID,
       nsCookieServiceConstructor
     },
+#endif
 
 };
 

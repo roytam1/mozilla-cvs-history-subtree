@@ -185,7 +185,8 @@ static const PRUint32 kLazyWriteTimeout = 2000; //msec
 NS_IMPL_ISUPPORTS3(nsPermissionManager, nsIPermissionManager, nsIObserver, nsISupportsWeakReference)
 
 nsPermissionManager::nsPermissionManager()
- : mHostCount(0)
+ : mHostCount(0),
+   mChangedList(PR_FALSE)
 {
 }
 
@@ -860,7 +861,10 @@ nsPermissionManager::Write()
   }
 
   nsCOMPtr<nsIOutputStream> fileOutputStream;
-  rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutputStream), mPermissionsFile);
+  rv = NS_NewSafeLocalFileOutputStream(getter_AddRefs(fileOutputStream),
+                                       mPermissionsFile,
+                                       -1,
+                                       0600);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // get a buffered output stream 4096 bytes big, to optimize writes
@@ -930,8 +934,20 @@ nsPermissionManager::Write()
   }
 
   delete[] hostList;
-  mChangedList = PR_FALSE;
 
+  // All went ok. Maybe except for problems in Write(), but the stream detects
+  // that for us
+  nsCOMPtr<nsISafeOutputStream> safeStream = do_QueryInterface(bufferedOutputStream);
+  NS_ASSERTION(safeStream, "expected a safe output stream!");
+  if (safeStream) {
+    rv = safeStream->Finish();
+    if (NS_FAILED(rv)) {
+      NS_WARNING("failed to save permissions file! possible dataloss");
+      return rv;
+    }
+  }
+
+  mChangedList = PR_FALSE;
   return NS_OK;
 }
 

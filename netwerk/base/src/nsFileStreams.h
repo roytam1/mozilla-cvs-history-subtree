@@ -42,6 +42,7 @@
 #include "nsIFile.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
+#include "nsISafeOutputStream.h"
 #include "nsISeekableStream.h"
 #include "nsILineInputStream.h"
 #include "nsCOMPtr.h"
@@ -149,6 +150,33 @@ public:
     
     static NS_METHOD
     Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+class nsSafeFileOutputStream : public nsFileOutputStream,
+                               public nsISafeOutputStream
+{
+public:
+    NS_DECL_ISUPPORTS_INHERITED
+    NS_DECL_NSISAFEOUTPUTSTREAM
+
+    nsSafeFileOutputStream() :
+        mTargetFileExists(PR_TRUE),
+        mWriteResult(NS_OK) {}
+
+    virtual ~nsSafeFileOutputStream() { nsSafeFileOutputStream::Close(); }
+
+    NS_IMETHODIMP Close();
+    NS_IMETHODIMP Write(const char *buf, PRUint32 count, PRUint32 *result);
+    NS_IMETHODIMP Init(nsIFile* file, PRInt32 ioFlags, PRInt32 perm, PRInt32 behaviorFlags);
+
+protected:
+    nsCOMPtr<nsIFile>         mTargetFile;
+    nsCOMPtr<nsIFile>         mTempFile;
+
+    PRBool   mTargetFileExists;
+    nsresult mWriteResult; // Internally set in Write()
 };
 
 ////////////////////////////////////////////////////////////////////////////////

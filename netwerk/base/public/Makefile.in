@@ -46,6 +46,7 @@ SDK_XPIDLSRCS   = \
 XPIDLSRCS	= \
 		nsIAuthPrompt.idl \
 		nsIAsyncStreamCopier.idl \
+		nsISafeOutputStream.idl \
 		nsIBufferedStreams.idl \
 		nsIDirectoryListing.idl \
 		nsIDownloader.idl \

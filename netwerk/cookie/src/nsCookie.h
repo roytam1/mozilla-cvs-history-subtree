@@ -121,7 +121,7 @@ class nsCookie : public nsICookie2
     inline const nsDependentCString Host()  const { return nsDependentCString(mHost, mPath - 1); }
     inline const nsDependentCString RawHost() const { return nsDependentCString(IsDomain() ? mHost + 1 : mHost, mPath - 1); }
     inline const nsDependentCString Path()  const { return nsDependentCString(mPath, mEnd); }
-    inline nsInt64 Expiry()                 const { NS_ASSERTION(!IsSession(), "can't get expiry time for a session cookie"); return mExpiry; }
+    inline nsInt64 Expiry()                 const { return mExpiry; }
     inline nsInt64 LastAccessed()           const { return mLastAccessed; }
     inline PRUint32 CreationTime()          const { return mCreationTime; }
     inline PRBool IsSession()               const { return mIsSession; }
