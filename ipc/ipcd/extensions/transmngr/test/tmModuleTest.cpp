@@ -127,7 +127,7 @@ NS_IMETHODIMP myTransactionObserver::OnFlushReply(PRUint32 aQueueID, PRUint32 aS
 
 //-----------------------------------------------------------------------------
 
-PRInt32 main(PRInt32 argc, char *argv[])
+int main(PRInt32 argc, char *argv[])
 {
   nsresult rv;
 
