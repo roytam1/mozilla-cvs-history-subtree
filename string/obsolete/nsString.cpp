@@ -165,7 +165,7 @@ char* nsCString::GetWritableFragment( nsWritableFragment<char>& aFragment, nsFra
   }
 }
 
-nsCString::nsCString( const nsAReadableCString& aReadable ) {
+nsCString::nsCString( const nsACString& aReadable ) {
   Initialize(*this,eOneByte);
   Assign(aReadable);
 }
@@ -774,7 +774,7 @@ void nsCString::AssignWithConversion( const nsString& aString ) {
   AssignWithConversion(aString.GetUnicode(), aString.Length());
 }
 
-void nsCString::AssignWithConversion( const nsAReadableString& aString ) {
+void nsCString::AssignWithConversion( const nsAString& aString ) {
   nsStr::StrTruncate(*this,0);
   PRInt32 count = aString.Length();
 
@@ -798,7 +798,7 @@ void nsCString::AssignWithConversion( const nsAReadableString& aString ) {
   }
 }
 
-void nsCString::AppendWithConversion( const nsAReadableString& aString ) {
+void nsCString::AppendWithConversion( const nsAString& aString ) {
   PRInt32 count = aString.Length();
 
   if(count){   
@@ -1366,7 +1366,7 @@ void nsCString::DebugDump(void) const {
        
 //----------------------------------------------------------------------
 
-NS_ConvertUCS2toUTF8::NS_ConvertUCS2toUTF8( const nsAReadableString& aString )
+NS_ConvertUCS2toUTF8::NS_ConvertUCS2toUTF8( const nsAString& aString )
   {
     nsReadingIterator<PRUnichar> start; aString.BeginReading(start);
     nsReadingIterator<PRUnichar> end;   aString.EndReading(end);
@@ -1495,7 +1495,7 @@ nsCAutoString::nsCAutoString( const nsCString& aString ) : nsCString(){
   Append(aString);
 }
 
-nsCAutoString::nsCAutoString( const nsAReadableCString& aString ) : nsCString(){
+nsCAutoString::nsCAutoString( const nsACString& aString ) : nsCString(){
   Initialize(*this,mBuffer,sizeof(mBuffer)-1,0,eOneByte,PR_FALSE);
   AddNullTerminator(*this);
   Append(aString);
