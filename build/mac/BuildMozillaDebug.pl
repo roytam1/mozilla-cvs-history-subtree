@@ -21,14 +21,15 @@
 	use BuildList;
 
 $DEBUG = 1;
-
-	# One of them should be 1. This will come from a config file at some stage.
-	# In the meanwhile, it should match mozilla/config/mac/MacConfig.h
-$MOZ_LITE   = 0;
-$MOZ_MEDIUM = 1;
-$MOZ_DARK   = 0;
+$MOZ_LITE = 0;		# build moz medium. This will come from a config file at some stage.
 
 Moz::OpenErrorLog(":::Mozilla.BuildLog");
 Moz::StopForErrors();
 
+chdir("::::");
+
+# Make and popuplate the dist directory
+DistMozilla();
+
+# Now build the projects
 BuildMozilla();
