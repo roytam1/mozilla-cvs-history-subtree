@@ -1651,7 +1651,7 @@ nsRenderingContextWin::GetDimensions(const char*   aString,
       }
 
       // Measure the text
-      nscoord twWidth;
+      nscoord twWidth = 0;
       if ((1 == numChars) && (aString[start] == ' ')) {
         metrics->GetSpaceWidth(twWidth);
       } 
@@ -1702,6 +1702,7 @@ nsRenderingContextWin::GetDimensions(const char*   aString,
         // the way back to the first word
         width += twWidth;
         while ((breakIndex >= 1) && (width > aAvailWidth)) {
+          twWidth = 0;
           start = aBreaks[breakIndex - 1];
           numChars = aBreaks[breakIndex] - start;
           
