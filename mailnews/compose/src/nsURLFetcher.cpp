@@ -31,6 +31,7 @@
 #include "nsURLFetcher.h"
 #include "nsIIOService.h"
 #include "nsIChannel.h"
+#include "nsIHTTPChannel.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -71,11 +72,13 @@ nsURLFetcher::nsURLFetcher()
   mTotalWritten = 0;
   mStillRunning = PR_TRUE;
   mCallback = nsnull;
+  mContentType = nsnull;
 }
 
 nsURLFetcher::~nsURLFetcher()
 {
   mStillRunning = PR_FALSE;
+  PR_FREEIF(mContentType);
 }
 
 nsresult
@@ -120,8 +123,18 @@ nsURLFetcher::OnDataAvailable(nsIChannel * aChannel, nsISupports * ctxt, nsIInpu
 
 // Methods for nsIStreamObserver 
 nsresult
-nsURLFetcher::OnStartRequest(nsIChannel * /* aChannel */, nsISupports * /* ctxt */)
+nsURLFetcher::OnStartRequest(nsIChannel *aChannel, nsISupports *ctxt)
 {
+  if (aChannel)
+  {
+    char    *contentType = nsnull;
+    if (NS_SUCCEEDED(aChannel->GetContentType(&contentType)) && contentType)
+      mContentType = PL_strdup(contentType);
+  }
+
+#ifdef NS_DEBUG_rhp
+  printf("nsURLFetcher::OnStartRequest() for Content-Type: %s\n", mContentType);
+#endif
   return NS_OK;
 }
 
@@ -143,7 +156,7 @@ nsURLFetcher::OnStopRequest(nsIChannel * /* aChannel */, nsISupports * /* ctxt *
 
   // Now if there is a callback, we need to call it...
   if (mCallback)
-    mCallback (mURL, aStatus, "", mTotalWritten, aMsg, mTagData);
+    mCallback (mURL, aStatus, mContentType, mTotalWritten, aMsg, mTagData);
 
   // Time to return...
   return NS_OK;
