@@ -787,7 +787,7 @@ function cmdTogglePref (e)
 {
     var state = !client.prefs[e.prefName];
     client.prefs[e.prefName] = state;
-    feedback(e, getMsg (MSG_FMT_PREFVALUE, 
+    feedback(e, getMsg (MSG_FMT_PREF, 
                         [e.prefName, state ? MSG_VAL_ON : MSG_VAL_OFF]));
 }
 
@@ -1012,11 +1012,11 @@ function cmdQuery(e)
     var user = openQueryTab(e.server, e.nickname);
     setCurrentObject(user);
 
-    if (e.msg)
+    if (e.message)
     {
-        e.msg = filterOutput(e.msg, "PRIVMSG", "ME!");
-        user.display(e.msg, "PRIVMSG", "ME!", user);
-        user.say(fromUnicode(e.msg, e.sourceObject));
+        e.message = filterOutput(e.message, "PRIVMSG", "ME!");
+        user.display(e.message, "PRIVMSG", "ME!", user);
+        user.say(fromUnicode(e.message, e.sourceObject));
     }
 
     return user;
@@ -1159,12 +1159,13 @@ function cmdJoin(e)
     
     if (!("messages" in e.channel))
     {
-        e.channel.displayHere(getMsg(MSG_CHANNEL_OPENED, 
-                                     e.channel.unicodeName),
+        e.channel.displayHere(getMsg(MSG_CHANNEL_OPENED, e.channel.unicodeName),
                               MT_INFO);
     }
 
-    setCurrentObject(e.channel);
+    if (!e.isInteractive || client.prefs["focusChannelOnJoin"])
+        setCurrentObject(e.channel);
+
     return e.channel;
 }
 
@@ -1209,17 +1210,6 @@ function cmdLoad (e)
 {
     var ex;
     
-    if (!("_loader" in client))
-    {
-        const LOADER_CTRID = "@mozilla.org/moz/jssubscript-loader;1";
-        const mozIJSSubScriptLoader = 
-            Components.interfaces.mozIJSSubScriptLoader;
-
-        var cls;
-        if ((cls = Components.classes[LOADER_CTRID]))
-            client._loader = cls.createInstance(mozIJSSubScriptLoader);
-    }
-    
     if (!e.scope)
         e.scope = new Object();
 
@@ -1234,7 +1224,7 @@ function cmdLoad (e)
     try
     {
         var rvStr;
-        var rv = rvStr = client._loader.loadSubScript(e.url, e.scope);
+        var rv = rvStr = client.load(e.url, e.scope);
         if ("initPlugin" in e.scope)
             rv = rvStr = e.scope.initPlugin(e.scope);
 

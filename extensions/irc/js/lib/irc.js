@@ -117,7 +117,7 @@ CIRCNetwork.prototype.stayingPower = false;
 CIRCNetwork.prototype.TYPE = "IRCNetwork";
 
 CIRCNetwork.prototype.getURL =
-function net_geturl (target)
+function net_geturl(target)
 {
     if (this.serverList.length == 1 &&
         this.serverList[0].name == this.name &&
@@ -269,7 +269,7 @@ CIRCServer.prototype.DEFAULT_REASON = "no reason";
 CIRCServer.prototype.TYPE = "IRCServer";
 
 CIRCServer.prototype.getURL =
-function serv_geturl (target)
+function serv_geturl(target)
 {
     if (!target)
         target = "";
@@ -2037,7 +2037,7 @@ CIRCUser.prototype.TYPE = "IRCUser";
 CIRCUser.prototype.getURL =
 function usr_geturl ()
 {
-    return this.parent.getURL(this.nick) + ",isnick";
+    return this.parent.parent.getURL(this.nick) + ",isnick";
 }
 
 CIRCUser.prototype.changeNick =

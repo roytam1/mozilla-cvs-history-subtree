@@ -114,6 +114,9 @@ function mm_checkset(charset)
 MessageManager.prototype.toUnicode =
 function mm_tounicode(msg, charset)
 {
+    if (!charset)
+        return msg;
+    
     try
     {
         this.ucConverter.charset = charset;
@@ -121,8 +124,8 @@ function mm_tounicode(msg, charset)
     }
     catch (ex)
     {
-        dd ("caught exception " + ex + " converting " + msg + " to charset " +
-            charset);
+        //dd ("caught exception " + ex + " converting " + msg + " to charset " +
+        //    charset);
     }
 
     return msg;
@@ -131,6 +134,9 @@ function mm_tounicode(msg, charset)
 MessageManager.prototype.fromUnicode =
 function mm_fromunicode(msg, charset)
 {
+    if (!charset)
+        return msg;
+
     if (charset != this.ucConverter.charset)
         this.ucConverter.charset = charset;
 
@@ -149,8 +155,8 @@ function mm_fromunicode(msg, charset)
     }
     catch (ex)
     {
-        dd ("caught exception " + ex + " converting " + msg + " to charset " +
-            charset);
+        //dd ("caught exception " + ex + " converting " + msg + " to charset " +
+        //    charset);
     }
     
     return msg;

@@ -237,12 +237,11 @@ function onInputKeyPress (e)
     switch (e.keyCode)
     {        
         case 9:  /* tab */
-    		if (e.ctrlKey || e.metaKey)
-                cycleView(e.shiftKey ? -1: 1);
-            else
+            if (!e.ctrlKey && !e.metaKey)
+            {
                 onTabCompleteRequest(e);
-
-            e.preventDefault();
+                e.preventDefault();
+            }
             break;
 
         case 13: /* CR */
@@ -409,6 +408,14 @@ function onWindowKeyPress (e)
 
     switch (code)
     {
+        case 9: /* tab */
+            if (e.ctrlKey || e.metaKey)
+            {
+                cycleView(e.shiftKey ? -1: 1);
+                e.preventDefault();
+            }
+            break;
+
         case 112: /* F1 */
         case 113: /* ... */
         case 114:
@@ -425,6 +432,12 @@ function onWindowKeyPress (e)
             break;
 
         case 33: /* pgup */
+            if (e.ctrlKey)
+            {
+                cycleView(1);
+                break;
+            }
+
             if (elemFocused == userList)
                 break;
 
@@ -438,6 +451,12 @@ function onWindowKeyPress (e)
             break;
             
         case 34: /* pgdn */
+            if (e.ctrlKey)
+            {
+                cycleView(-1);
+                break;
+            }
+
             if (elemFocused == userList)
                 break;
 
@@ -1250,11 +1269,13 @@ function my_unkctcp (e)
 CIRCChannel.prototype.onJoin =
 function my_cjoin (e)
 {
+    if (!("messages" in this))
+        this.displayHere(getMsg(MSG_CHANNEL_OPENED, this.unicodeName), MT_INFO);
+
     if (userIsMe (e.user))
     {
         this.display (getMsg("my_cjoinMsg", e.channel.unicodeName), "JOIN",
                       e.server.me, this);
-        setCurrentObject(this);
     }
     else
     {

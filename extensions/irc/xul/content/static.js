@@ -34,8 +34,8 @@
  *  Samuel Sieb, samuel@sieb.net, MIRC color codes, munger menu, and various
  */
 
-const __cz_version   = "0.9.14";
-const __cz_condition = "red";
+const __cz_version   = "0.9.19";
+const __cz_condition = "yellow";
 
 var warn;
 var ASSERT;
@@ -144,7 +144,7 @@ function init()
     if (client.prefs["log"])
        client.openLogFile(client);
 
-    client.display(getMsg("welcome"), "HELLO");
+    client.display(MSG_WELCOME, "HELLO");
     setCurrentObject(client);
 
     importFromFrame("updateHeader");
@@ -192,7 +192,7 @@ function initStatic()
     client.statusBar["server-nick"] = document.getElementById ("server-nick");
 
     client.statusElement = document.getElementById ("status-text");
-    client.defaultStatus = getMsg ("defaultStatus");
+    client.defaultStatus = MSG_DEFAULT_STATUS;
 
     client.logFile = null;
     setInterval("onNotifyTimeout()", client.NOTIFY_TIMEOUT);
@@ -1162,7 +1162,7 @@ function openQueryTab (server, nick)
 function arraySpeak (ary, single, plural)
 {
     var rv = "";
-    var and = getMsg ("arraySpeakAnd");
+    var and = MSG_AND;
     
     switch (ary.length)
     {
@@ -1291,57 +1291,6 @@ function addDynamicRule (rule)
 
     var pos = rules.cssRules.length;
     rules.insertRule (rule, pos);
-}
-
-function createHighlightMenu()
-{
-    /* Look for "special" highlighting rules int he motif.  These special rules
-     * are in the format ``.chatzilla-highlight[name="<display-name>"] { ... }''
-     * where <display-name> is a textual description to be placed in the
-     * Highlight submenu of the message area context menu.  The body of
-     * these rules can be applied by the user to different irc messages.  They
-     * are special becaus they do not actually match an element in the content
-     * model.  The style body is copied into a new rule that matches a pettern
-     * determined by the user.
-     */
-    function processStyleRules(rules)
-    {
-        for (var i = 0; i < rules.length; ++i)
-        {
-            var rule = rules.item(i);
-            if (rule instanceof CSSStyleRule)
-            {
-                var ary = rule.selectorText.
-                    match(/\.chatzilla-highlight\[name=\"?([^\"]+)\"?\]/i);
-                if (ary)
-                {
-                    menuitem = document.createElement("menuitem");
-                    menuitem.setAttribute ("class", "highlight-menu-item");
-                    menuitem.setAttribute ("label", ary[1]);
-                    menuitem.setAttribute ("oncommand", "onPopupHighlight('" + 
-                                           rule.style.cssText + "');");
-                    menuitem.setAttribute ("style", rule.style.cssText);
-                    menu.appendChild(menuitem);
-                }
-            }
-            else if (rule instanceof CSSImportRule)
-            {
-                processStyleRules(rule.styleSheet.cssRules);
-            }
-        }
-    }
-    
-    var menu = document.getElementById("highlightMenu");
-    while (menu.firstChild)
-        menu.removeChild(menu.firstChild);
-
-    var menuitem = document.createElement("menuitem");
-    menuitem.setAttribute ("label", getMsg("noStyle"));
-    menuitem.setAttribute ("class", "highlight-menu-item");
-    menuitem.setAttribute ("oncommand", "onPopupHighlight('');");
-    menu.appendChild(menuitem);
-    
-    processStyleRules(frames[0].document.styleSheets[0].cssRules);
 }
 
 var testURLs =
@@ -1694,43 +1643,6 @@ function updateNetwork()
                                                  client.currentObject.getURL());
     client.statusBar["header-url"].setAttribute("name", 
                                                  client.currentObject.name);
-}
-
-function updateChannel (obj)
-{
-    if (obj && obj != client.currentObject)
-        return;
-    
-    var o = getObjectDetails (client.currentObject);
-
-    var mode = MSG_NONE, users = MSG_NONE, topic = MSG_UNKNOWN;
-
-    if (o.channel)
-    {
-        mode = o.channel.mode.getModeStr();
-        if (!mode)
-            mode = MSG_NONE;
-        users = getMsg("userCountDetails",
-                       [o.channel.getUsersLength(), o.channel.opCount,
-                        o.channel.voiceCount]);
-        topic = o.channel.topic ? o.channel.topic : MSG_NONE;
-    }
-    
-    client.statusBar["channel-mode"].setAttribute("value", mode);
-    client.statusBar["channel-users"].setAttribute("value", users);
-    var regex = new RegExp ("(\\S{" + client.MAX_WORD_DISPLAY + ",})", "g");
-    var ary = topic.match(regex);
-    if (ary && ary.length)
-    {
-        for (var i = 0; i < ary.length; ++i)
-        {
-            var hyphenated = hyphenateWord(ary[i], client.MAX_WORD_DISPLAY);
-            topic = topic.replace(ary[i], hyphenated);
-        }
-    }        
-
-    client.statusBar["channel-topic"].firstChild.data = topic;
-
 }
 
 function updateTitle (obj)
@@ -2363,7 +2275,7 @@ function tabdnd_drop (aEvent, aXferData, aDragSession)
     if (!url || url.search(client.linkRE) == -1)
         return;
     
-    if (url.search(/\.css$/i) != -1  && confirm (getMsg("tabdnd_drop", url)))
+    if (url.search(/\.css$/i) != -1  && confirm (getMsg(MSG_TABDND_DROP, url)))
         dispatch("motif", {"motif": url});
     else if (url.search(/^irc:\/\//i) != -1)
         dispatch("goto-url", {"url": url});
@@ -2407,23 +2319,14 @@ function deleteTab (tb)
     var i;
     var key = Number(tb.getAttribute("viewKey"));
     
-    if ("isPermanent" in client.viewsArray[key].source &&
-        client.viewsArray[key].source.isPermanent)
+    /* re-index higher toolbuttons */
+    for (i = key + 1; i < client.viewsArray.length; i++)
     {
-        window.alert (getMsg("deleteTabMsg"));
-        return -1;
+        client.viewsArray[i].tb.setAttribute ("viewKey", i - 1);
     }
-    else
-    {
-        /* re-index higher toolbuttons */
-        for (i = key + 1; i < client.viewsArray.length; i++)
-        {
-            client.viewsArray[i].tb.setAttribute ("viewKey", i - 1);
-        }
-        arrayRemoveAt(client.viewsArray, key);
-        var tbinner = document.getElementById("views-tbar-inner");
-        tbinner.removeChild(tb);
-    }
+    arrayRemoveAt(client.viewsArray, key);
+    var tbinner = document.getElementById("views-tbar-inner");
+    tbinner.removeChild(tb);
 
     return key;
 }
@@ -2498,9 +2401,9 @@ function cli_geturl ()
 }
 
 client.load =
-function cli_load(url, obj)
+function cli_load(url, scope)
 {
-    if (!client._loader)
+    if (!("_loader" in client))
     {
         const LOADER_CTRID = "@mozilla.org/moz/jssubscript-loader;1";
         const mozIJSSubScriptLoader = 
@@ -2508,18 +2411,10 @@ function cli_load(url, obj)
 
         var cls;
         if ((cls = Components.classes[LOADER_CTRID]))
-            client._loader = cls.createInstance (mozIJSSubScriptLoader);
+            client._loader = cls.createInstance(mozIJSSubScriptLoader);
     }
-    
-    try {
-        client.currentObject.display (getMsg("cli_loadLoading", url));
-        client._loader.loadSubScript (url, obj);
-    }
-    catch (ex)
-    {
-        var msg = getMsg("cli_loadError", ex.lineNumber, ex.fileName, ex);
-        client.currentObject.display (msg, "ERROR");        
-    }
+
+    return client._loader.loadSubScript(url, scope);
 }
     
 client.sayToCurrentTarget =
@@ -2542,7 +2437,7 @@ function cli_say(msg)
         default:
             if (msg != "")
             {
-                display(getMsg("cli_sayMsg", client.currentObject.TYPE),
+                display(getMsg(MSG_ERR_NO_DEFAULT, client.currentObject.TYPE),
                         MT_ERROR);
             }
             break;
@@ -2629,16 +2524,22 @@ function net_display (message, msgtype, sourceObj, destObj)
     if (client.SLOPPY_NETWORKS && client.currentObject != client &&
         client.currentObject != this && o.network == this &&
         o.server.isConnected)
+    {
         client.currentObject.display (message, msgtype, sourceObj, destObj);
+    }
     else
+    {
         this.displayHere (message, msgtype, sourceObj, destObj);
+    }
 }
 
 CIRCUser.prototype.display =
 function usr_display(message, msgtype, sourceObj, destObj)
 {
     if ("messages" in this)
+    {
         this.displayHere (message, msgtype, sourceObj, destObj);
+    }
     else
     {
         var o = getObjectDetails(client.currentObject);
@@ -2697,10 +2598,12 @@ function __display(message, msgtype, sourceObj, destObj)
         obj.setAttribute ("dest-type", toType);
         obj.setAttribute ("view-type", viewType); 
         if (fromAttr)
+        {
             if (fromUser)
                 obj.setAttribute ("msg-user", fromAttr);
             else
                 obj.setAttribute ("msg-source", fromAttr);
+        }
    }
 
     if (!msgtype)
@@ -2714,15 +2617,21 @@ function __display(message, msgtype, sourceObj, destObj)
     if (o.server && "me" in o.server)
         me = o.server.me;    /* get the object representing the user          */
 
-    if (sourceObj == "ME!") sourceObj = me;   /* if the caller passes "ME!"   */
-    if (destObj == "ME!") destObj = me;       /* substitute the actual object */
+    if (sourceObj == "ME!")
+        sourceObj = me;      /* if the caller passes "ME!"   */
+    if (destObj == "ME!")
+        destObj = me;        /* substitute the actual object */
 
     var fromType = (sourceObj && sourceObj.TYPE) ? sourceObj.TYPE : "unk";
     var fromUser = (fromType.search(/IRC.*User/) != -1);    
+
     var fromAttr;
-    if      (fromUser && sourceObj == me)  fromAttr = me.nick + " ME!";
-    else if (fromUser)                     fromAttr = sourceObj.nick;
-    else if (typeof sourceObj == "object") fromAttr = sourceObj.name;
+    if (fromUser && sourceObj == me)
+        fromAttr = me.nick + " ME!";
+    else if (fromUser)
+        fromAttr = sourceObj.nick;
+    else if (typeof sourceObj == "object")
+        fromAttr = sourceObj.name;
 
     var toType = (destObj) ? destObj.TYPE : "unk";
     var toAttr;
@@ -2750,17 +2659,17 @@ function __display(message, msgtype, sourceObj, destObj)
         mins = "0" + mins;
     var statusString;
     
-    var timeStamp = getMsg("cli_dateString", [d.getMonth() + 1, d.getDate(),
-                                              d.getHours(), mins]);
+    var timeStamp = getMsg(MSG_FMT_DATE, [d.getMonth() + 1, d.getDate(),
+                                          d.getHours(), mins]);
     logText = "[" + timeStamp + "] ";
 
     if (fromUser)
     {
         statusString =
-            getMsg("cli_statusString", [d.getMonth() + 1, d.getDate(),
-                                        d.getHours(), mins,
-                                        sourceObj.nick + "!" + 
-                                        sourceObj.name + "@" + sourceObj.host]);
+            getMsg(MSG_FMT_STATUS, [d.getMonth() + 1, d.getDate(),
+                                    d.getHours(), mins,
+                                    sourceObj.nick + "!" + 
+                                    sourceObj.name + "@" + sourceObj.host]);
     }
     else
     {
@@ -2776,9 +2685,8 @@ function __display(message, msgtype, sourceObj, destObj)
                 this.unicodeName : this.name;
         }
 
-        statusString =
-            getMsg("cli_statusString", [d.getMonth() + 1, d.getDate(),
-                                        d.getHours(), mins, name]);
+        statusString = getMsg(MSG_FMT_STATUS, [d.getMonth() + 1, d.getDate(),
+                                               d.getHours(), mins, name]);
     }
     
     if (fromType.search(/IRC.*User/) != -1 &&
@@ -2919,14 +2827,14 @@ function __display(message, msgtype, sourceObj, destObj)
     {
         var msgData = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
-        setAttribs (msgData, "msg-data", {statusText: statusString, 
-                                          colspan: client.INITIAL_COLSPAN,
-                                          timeStamp: timeStamp});
+        setAttribs(msgData, "msg-data", {statusText: statusString, 
+                                         colspan: client.INITIAL_COLSPAN,
+                                         timeStamp: timeStamp});
         if (isImportant)
-            msgData.setAttribute ("important", "true");
+            msgData.setAttribute("important", "true");
 
         if ("mark" in this)
-            msgData.setAttribute ("mark", this.mark);
+            msgData.setAttribute("mark", this.mark);
         
         if (typeof message == "string")
         {
@@ -3029,61 +2937,54 @@ function addHistory (source, obj, mergeData)
 
     var needScroll = false;
 
-    if (client.PRINT_DIRECTION == 1)
+    if (mergeData)
     {
-        if (mergeData)
+        var thisUserCol = obj.firstChild;
+        var thisMessageCol = thisUserCol.nextSibling;
+        var ci = findPreviousColumnInfo(source.messages);
+        var nickColumns = ci.nickColumns;
+        var rowExtents = ci.extents;
+        var nickColumnCount = nickColumns.length;
+        var sameNick = (nickColumnCount > 0 &&
+                        nickColumns[nickColumnCount - 1].
+                        getAttribute("msg-user") ==
+                        thisUserCol.getAttribute("msg-user"));
+        var lastRowSpan = (nickColumnCount > 0) ?
+            Number(nickColumns[0].getAttribute("rowspan")) : 0;
+        if (sameNick && mergeData)
         {
-            var thisUserCol = obj.firstChild;
-            var thisMessageCol = thisUserCol.nextSibling;
-            var ci = findPreviousColumnInfo(source.messages);
-            var nickColumns = ci.nickColumns;
-            var rowExtents = ci.extents;
-            var nickColumnCount = nickColumns.length;
-            var sameNick = (nickColumnCount > 0 &&
-                            nickColumns[nickColumnCount - 1].
-                            getAttribute("msg-user") ==
-                            thisUserCol.getAttribute("msg-user"));
-            var lastRowSpan = (nickColumnCount > 0) ?
-                Number(nickColumns[0].getAttribute("rowspan")) : 0;
-            if (sameNick && mergeData)
+            if (obj.getAttribute("important"))
             {
-                if (obj.getAttribute("important"))
-                {
-                    nickColumns[nickColumnCount - 1].setAttribute ("important",
-                                                                   true);
-                }
-                /* message is from the same person as last time,
-                 * strip the nick first... */
-                obj.removeChild(obj.firstChild);
-                /* Adjust height of previous cells, maybe. */
-                for (i = 0; i < rowExtents.length - 1; ++i)
-                {
-                    var myLastData = 
-                        rowExtents[i].childNodes[nickColumnCount - 1];
-                    var myLastRowSpan = (myLastData) ?
-                        myLastData.getAttribute("rowspan") : 0;
-                    if (myLastData && myLastRowSpan > 1)
-                    {
-                        myLastData.removeAttribute("rowspan");
-                    }
-                }
-                /* then add one to the colspan for the previous user columns */
-                if (!lastRowSpan)
-                    lastRowSpan = 1;
-                for (var i = 0; i < nickColumns.length; ++i)
-                    nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
+                nickColumns[nickColumnCount - 1].setAttribute ("important",
+                                                               true);
             }
+            /* message is from the same person as last time,
+             * strip the nick first... */
+            obj.removeChild(obj.firstChild);
+            /* Adjust height of previous cells, maybe. */
+            for (i = 0; i < rowExtents.length - 1; ++i)
+            {
+                var myLastData = 
+                    rowExtents[i].childNodes[nickColumnCount - 1];
+                var myLastRowSpan = (myLastData) ?
+                    myLastData.getAttribute("rowspan") : 0;
+                if (myLastData && myLastRowSpan > 1)
+                {
+                    myLastData.removeAttribute("rowspan");
+                }
+            }
+            /* then add one to the colspan for the previous user columns */
+            if (!lastRowSpan)
+                lastRowSpan = 1;
+            for (var i = 0; i < nickColumns.length; ++i)
+                nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
         }
-        
-        if ("frame" in source)
-            needScroll = checkScroll(source.frame);
-        if (obj)
-            tbody.appendChild (obj);
     }
-    else
-    {
-        tbody.insertBefore (obj, source.messages.firstChild);
-    }
+    
+    if ("frame" in source)
+        needScroll = checkScroll(source.frame);
+    if (obj)
+        tbody.appendChild (obj);
 
     if (source.MAX_MESSAGES)
     {
@@ -3093,6 +2994,7 @@ function addHistory (source, obj, mergeData)
             source.messageCount++;
 
         if (source.messageCount > source.MAX_MESSAGES)
+        {
             if (client.PRINT_DIRECTION == 1)
             {
                 var height = tbody.firstChild.scrollHeight;
@@ -3123,6 +3025,7 @@ function addHistory (source, obj, mergeData)
                     tbody.removeChild (tbody.lastChild);
                 }
             }
+        }
     }
 
     if (needScroll)
@@ -3169,8 +3072,10 @@ function cli_gccount ()
     var count = 0;
     
     for (var n in client.networks)
+    {
         if (client.networks[n].isConnected())
             ++count;
+    }
 
     return count;
 }   
@@ -3268,18 +3173,21 @@ function gettabmatch_other (line, wordStart, wordEnd, word, cursorpos)
     {
         /* Ok, not #<tab> or no current channel, so get the full list. */
         
-        if ("users" in details.sourceObject)
-        {
-            users = details.sourceObject.users;
-            for (var n in users)
-                matchList.push (users[n].nick);
-        }
-        
+        if (details.channel)
+            users = details.channel.users;
+
         if (details.server)
         {
             channels = details.server.channels;
             for (var c in channels)
                 matchList.push (channels[c].name);
+            users = details.server.users;
+        }
+
+        if (users)
+        {
+            for (var n in users)
+                matchList.push (users[n].nick);
         }
     }
     
@@ -3313,12 +3221,9 @@ function my_graphres ()
 {
     if (!("rdfRes" in this))
     {
-        this.rdfRes = 
-            client.rdf.GetResource(RES_PFX + "CHANNEL:" +
-                                   this.parent.parent.name +
-                                   ":" + escape(this.name));
-            //dd ("created channel resource " + this.rdfRes.Value);
-
+        var id = RES_PFX + "CHANNEL:" + this.parent.parent.name + ":" + 
+            escape(this.name);
+        this.rdfRes = client.rdf.GetResource(id);
     }
     
     return this.rdfRes;
@@ -3364,7 +3269,6 @@ function usr_graphres()
     }
 
     return this.rdfRes;
-
 }
 
 CIRCUser.prototype.updateGraphResource =
