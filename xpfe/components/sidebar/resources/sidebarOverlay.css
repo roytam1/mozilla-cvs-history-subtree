@@ -48,6 +48,12 @@ box#sidebar-box
   max-width: 400px;
   border: none;
   border-bottom: 8px solid #003366;
+  padding-bottom: 1px;
+}
+
+box#sidebar-box[class="extra_panel"]
+{
+  border-top: 8px solid #003366;
 }
 
 box#sidebar-box[hidden="true"]
@@ -81,17 +87,17 @@ splitter#title-box {
   padding: 0px;
   padding-left: 5px;
   padding-right: 5px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter#title-box div {
   margin: 2px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter#title-box titledbutton {
   padding: 0px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter#title-box titledbutton:hover {
@@ -106,17 +112,17 @@ splitter.panel-bar {
   padding: 0px;
   padding-left: 5px;
   padding-right: 5px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter.panel-bar div {
   margin: 2px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter.panel-bar titledbutton {
   padding: 0px;
-  font: smaller;
+  font-size: smaller;
 }
 
 splitter > titledbutton.show-hide

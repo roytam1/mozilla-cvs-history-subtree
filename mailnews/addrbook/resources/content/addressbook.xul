@@ -18,12 +18,13 @@ Communications Corporation. Portions created by Netscape are
  Copyright (C) 1998-1999 Netscape Communications Corporation. All
 Rights Reserved.
 --> 
-<?xml-stylesheet href="chrome://addressbook/skin/" type="text/css"?> 
+<?xml-stylesheet href="chrome://addressbook/skin/addressbook.css" type="text/css"?> 
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://addressbook/content/abDirTreeOverlay.xul"?>
 <?xul-overlay href="chrome://addressbook/content/abResultsTreeOverlay.xul"?>
 <?xul-overlay href="chrome://addressbook/content/abCardViewOverlay.xul"?>
+<?xul-overlay href="chrome://sidebar/content/sidebarOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://addressbook/locale/abMainWindow.dtd">
 
@@ -91,7 +92,6 @@ Rights Reserved.
 </keyset>
 
 
-<toolbox>
 	<menubar>
 		<menu id="menu_File">
 			<menupopup id="menu_FilePopup">
@@ -186,43 +186,42 @@ Rights Reserved.
 		<menu id="menu_Help"/>
 		<spring flex="100%"/>
 	</menubar>
-		<toolbar class="standard" id="abToolbar" persist="collapsed">
-			<box id="toolbar_button_box">
-				<titledbutton id="button_newcard" class="button28" align="top" value="&newcardButton.label;" onclick="AbNewCard()"/>
-				<titledbutton id="button_newlist" class="button28" align="top" value="&newlistButton.label;" onclick="AbNewList()"/>
-				<titledbutton id="button_editcard" align="top" value="&editButton.label;" onclick="AbEditCard()"/>
-				<titledbutton id="button_newmessage" align="top" value="&newmsgButton.label;" onclick="AbNewMessage()"/>
-				<titledbutton id="button_delete" disabled="true" align="top" value="&deleteButton.label;" onclick="AbDelete()"/>
-
-				<box align="vertical" flex="100%">
-					<spring flex="100%"/> 
-					<html:div style="padding-left:5px; padding-bottom:2px">&showNames.label;</html:div>
-					<html:input id="searchtext" type="text" align="bottom" style="min-width:100px; min-height:25px; padding-bottom:0px"/> 
-				</box>
-
-				<titledbutton id="button_stop" align="top" value="&stopButton.label;" onclick="AbStop()"/>
-				<titledbutton id="button_search" align="top" value="&searchButton.label;" onclick="AbSearch()"/>
-				<spring flex="100%"/>
-			</box>
-
-			<box id="toolbar_throbber_box"/>
-		</toolbar>
-	</toolbox>
-
+	
 	<!-- The main address book three pane -->
 	<box align="horizontal" flex="100%">
-		<!-- dir tree -->
-		<box align="horizontal"
-			 style="width:200px; height:100%; background-color:white; border-right:solid black 1px">
-			<!-- FIX ME - div is hack to make tree scroll properly -->
-			<html:div style="width:100px;height:100px" flex="1">
+		<!-- sidebar with dir tree -->
+		<box id="sidebar-box" class="extra_panel">
+			<html:div style="width:100px; height:100px" flex="1">
 				<tree id="dirTree"/>
 			</html:div>
 		</box>
-		
-		<splitter collapse="before"/>
+		<splitter id="sidebar-splitter" collapse="before" persist="state"/>
 		
 		<box align="vertical" flex="100%">
+			<!-- toolbar -->
+			<toolbox>
+				<toolbar class="standard" id="abToolbar" persist="collapsed">
+					<box id="toolbar_button_box">
+						<titledbutton id="button_newcard" class="button28" align="top" value="&newcardButton.label;" onclick="AbNewCard()"/>
+						<titledbutton id="button_newlist" class="button28" align="top" value="&newlistButton.label;" onclick="AbNewList()"/>
+						<titledbutton id="button_editcard" align="top" value="&editButton.label;" onclick="AbEditCard()"/>
+						<titledbutton id="button_newmessage" align="top" value="&newmsgButton.label;" onclick="AbNewMessage()"/>
+						<titledbutton id="button_delete" disabled="true" align="top" value="&deleteButton.label;" onclick="AbDelete()"/>
+
+						<box align="vertical" flex="100%">
+							<spring flex="100%"/> 
+							<html:div id="searchlabel">&showNames.label;</html:div>
+							<html:input id="searchtext" type="text" align="bottom"/> 
+						</box>
+
+						<titledbutton id="button_stop" align="top" value="&stopButton.label;" onclick="AbStop()"/>
+						<titledbutton id="button_search" align="top" value="&searchButton.label;" onclick="AbSearch()"/>
+					</box>
+
+					<box id="toolbar_throbber_box"/>
+				</toolbar>
+			</toolbox>
+
 			<!-- results tree -->
 			<box id="results_box" flex="50%" align="vertical">
 				<!-- FIX ME - div is hack to make tree scroll properly -->

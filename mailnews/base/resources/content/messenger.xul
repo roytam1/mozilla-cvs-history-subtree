@@ -473,7 +473,7 @@ Rights Reserved.
 
         <box align="horizontal" style="height:100px" flex="1">
           
-          <box id="sidebar-box">
+          <box id="sidebar-box" class="extra_panel">
             <html:div id="folder-panel"/>
           </box>
           
