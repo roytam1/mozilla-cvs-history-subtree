@@ -595,8 +595,10 @@ nsFileTransport::Run(void)
 #endif
 #endif
 
-    if (mRunState == SUSPENDED && NS_FAILED(mCancelStatus))
+    if (mRunState == SUSPENDED && NS_FAILED(mCancelStatus)) {
         mRunState = CANCELED;
+        mService->RemoveSuspendedTransport(this);
+    }
 
     while (mXferState != CLOSED && mRunState != SUSPENDED) {
         //
