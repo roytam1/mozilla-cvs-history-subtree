@@ -4514,6 +4514,7 @@ nsXULDocument::EndFastLoad()
             doc->mNextFastLoad = nsnull;
             break;
         }
+        docp = &doc->mNextFastLoad;
     }
 
     // If the list is empty now, the FastLoad process is done.
