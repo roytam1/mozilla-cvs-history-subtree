@@ -3084,8 +3084,8 @@ nsresult nsPluginInstanceOwner::ScrollPositionDidChange(nsIScrollableView* aScro
             }
 #endif
         }
-#endif
     }
+#endif
     return NS_OK;
 }
 
