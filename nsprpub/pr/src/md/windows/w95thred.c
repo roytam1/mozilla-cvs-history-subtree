@@ -104,6 +104,7 @@ _PR_MD_INIT_THREAD(PRThread *thread)
         ** On WinCE the thread ID is the same as the real thread handle.
         */
         thread->md.handle = (HANDLE)GetCurrentThreadId();
+        thread->md.noCloseHandle = PR_TRUE;
 #endif
     }
 
@@ -217,8 +218,13 @@ _PR_MD_CLEAN_THREAD(PRThread *thread)
     }
 
     if (thread->md.handle) {
-        rv = CloseHandle(thread->md.handle);
-        PR_ASSERT(rv);
+        if(PR_FALSE == thread->md.noCloseHandle) {
+            rv = CloseHandle(thread->md.handle);
+            PR_ASSERT(rv);
+        }
+        else {
+            thread->md.noCloseHandle = PR_FALSE; /* reused? insurance.... */
+        }
         thread->md.handle = 0;
     }
 }

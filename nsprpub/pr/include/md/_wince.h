@@ -99,6 +99,7 @@ struct _MDThread {
                                          * wait queue of some cond var.
                                          * PR_FALSE otherwise.  */
     HANDLE           handle;            /* Win32 thread handle */
+    PRBool           noCloseHandle;     /* Whether or not to CloseHandle */
     PRUint32         id;
     void            *sp;                /* only valid when suspended */
     PRUint32         magic;             /* for debugging */
