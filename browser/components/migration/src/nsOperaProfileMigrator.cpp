@@ -570,10 +570,6 @@ nsOperaCookieMigrator::Migrate()
     case COOKIE_OTHERFLAG_4:
     case COOKIE_OTHERFLAG_5:
     case COOKIE_OTHERFLAG_6: 
-      {
-        PRUint8 temp;
-        mStream->Read8(&temp);
-      }
       break;
     }
   }
