@@ -430,8 +430,8 @@ nsCStringKey::Clone() const
 
 ////////////////////////////////////////////////////////////////////////////////
 
-nsStringKey::nsStringKey(const nsString& str)
-    : mStr((PRUnichar*)str.GetUnicode()), mStrLen(str.Length()), mOwnsStr(PR_FALSE)
+nsStringKey::nsStringKey(const nsAReadableString& str)
+    : mStr((const PRUnichar*)nsPromiseFlatString(str)), mStrLen(str.Length()), mOwnsStr(PR_FALSE)
 {
     NS_ASSERTION(mStr, "null string key");
     NS_ASSERTION(mStrLen == nsCRT::strlen(mStr), "bad string length");

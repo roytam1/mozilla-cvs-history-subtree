@@ -29,6 +29,8 @@
 #include "nsAReadableString.h"
 #include "nsAWritableString.h"
 
+NS_COM void CopyUCS2toASCII( const nsAReadableString& aSource, nsAWritableCString& aDest );
+NS_COM void CopyASCIItoUCS2( const nsAReadableCString& aSource, nsAWritableString& aDest );
 
   /**
    * Returns a new |char| buffer containing a zero-terminated copy of |aSource|.

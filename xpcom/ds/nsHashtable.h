@@ -37,6 +37,7 @@
 #include "prlock.h"
 #include "nsCom.h"
 #include "nscore.h"
+#include "nsString.h"
 
 class nsHashtable;
 class nsStringKey;
@@ -295,7 +296,7 @@ public:
   // does not contain embedded nulls, i.e. nsCRT::strlen will be used to determine the
   // length. If ownsString is true, destroying the string key will destroy str:
   nsStringKey(const PRUnichar* str, PRInt32 strLen = -1, PRBool ownsStr = PR_FALSE);
-  nsStringKey(const nsString& str);
+  nsStringKey(const nsAReadableString& str);
   ~nsStringKey(void);
 
   PRUint32 HashCode(void) const;

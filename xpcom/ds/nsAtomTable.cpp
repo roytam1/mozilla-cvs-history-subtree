@@ -75,7 +75,12 @@ AtomImpl::~AtomImpl()
 {
   NS_PRECONDITION(nsnull != gAtomHashTable, "null atom hashtable");
   if (nsnull != gAtomHashTable) {
-    PL_HashTableRemove(gAtomHashTable, &nsLiteralString(mString));
+    // The hash table uses nsAReadableString& as the key so we must
+    // instanciate a nsAReadableString (nsLiteralString) and use that
+    // as the key
+    nsLiteralString key(mString);
+
+    PL_HashTableRemove(gAtomHashTable, &key);
     nsrefcnt cnt = --gAtoms;
     if (0 == cnt) {
       // When the last atom is destroyed, the atom arena is destroyed

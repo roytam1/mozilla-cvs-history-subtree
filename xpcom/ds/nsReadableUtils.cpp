@@ -66,6 +66,24 @@ class LossyConvertEncoding
   };
 
 
+NS_COM
+void
+CopyUCS2toASCII( const nsAReadableString& aSource, nsAWritableCString& aDest )
+  {
+      // right now, this won't work on multi-fragment destinations
+    aDest.SetLength(aSource.Length());
+    copy_string(aSource.BeginReading(), aSource.EndReading(), LossyConvertEncoding<PRUnichar, char>(aDest.BeginWriting().get()));
+  }
+
+NS_COM
+void
+CopyASCIItoUCS2( const nsAReadableCString& aSource, nsAWritableString& aDest )
+  {
+      // right now, this won't work on multi-fragment destinations
+    aDest.SetLength(aSource.Length());
+    copy_string(aSource.BeginReading(), aSource.EndReading(), LossyConvertEncoding<char, PRUnichar>(aDest.BeginWriting().get()));
+  }
+
 
   /**
    * A helper function that allocates a buffer of the desired character type big enough to hold a copy of the supplied string (plus a zero terminator).
