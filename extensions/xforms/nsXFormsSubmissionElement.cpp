@@ -67,6 +67,7 @@
 #include "nsIWebNavigation.h"
 #include "nsIStringStream.h"
 #include "nsIInputStream.h"
+#include "nsIMultiplexInputStream.h"
 #include "nsIMIMEInputStream.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDocument.h"
@@ -582,14 +583,14 @@ nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
       uri.Append('?');
     else
       uri.Append(separator);
-    AppendDataURLEncoded(data, uri, separator);
+    AppendURLEncodedData(data, separator, uri);
 
     *stream = nsnull;
   }
   else if (format & METHOD_POST)
   {
     nsCAutoString buf;
-    AppendDataURLEncoded(data, buf, separator);
+    AppendURLEncodedData(data, separator, buf);
 
     nsCOMPtr<nsIInputStream> postBody;
 
@@ -617,8 +618,9 @@ nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
 }
 
 void
-nsXFormsSubmissionElement::AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf,
-                                                const nsCString &separator)
+nsXFormsSubmissionElement::AppendURLEncodedData(nsIDOMNode *data,
+                                                const nsCString &separator,
+                                                nsCString &buf)
 {
   // 1. Each element node is visited in document order. Each element that has
   //    one text node child is selected for inclusion.
@@ -641,7 +643,7 @@ nsXFormsSubmissionElement::AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf
 #ifdef DEBUG_darinf
   nsAutoString nodeName;
   data->GetNodeName(nodeName);
-  LOG(("+++ AppendDataURLEncoded: inspecting <%s>\n",
+  LOG(("+++ AppendURLEncodedData: inspecting <%s>\n",
       NS_ConvertUTF16toUTF8(nodeName).get()));
 #endif
 
@@ -663,7 +665,6 @@ nsXFormsSubmissionElement::AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf
 
     nsAutoString value;
     child->GetNodeValue(value);
-    value.ReplaceChar(PRUnichar(' '), PRUnichar('+'));
 
     LOG(("    appending data for <%s>\n", NS_ConvertUTF16toUTF8(localName).get()));
 
@@ -675,10 +676,10 @@ nsXFormsSubmissionElement::AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf
   }
   else
   {
-    // call AppendDataURLEncoded on each child node
+    // call AppendURLEncodedData on each child node
     do
     {
-      AppendDataURLEncoded(child, buf, separator);
+      AppendURLEncodedData(child, separator, buf);
       child->GetNextSibling(getter_AddRefs(sibling));
       child.swap(sibling);
     }
@@ -700,8 +701,128 @@ nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
                                                           PRUint32 format,
                                                           nsIInputStream **stream)
 {
-  NS_WARNING("not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ASSERTION(format & METHOD_POST, "unexpected submission method");
+
+  // This format follows the rules for multipart/form-data MIME data streams in
+  // [RFC 2388], with specific requirements of this serialization listed below:
+  //  o Each element node is visited in document order.
+  //  o Each element that has exactly one text node child is selected for
+  //    inclusion.
+  //  o Element nodes selected for inclusion are as encoded as
+  //    Content-Disposition: form-data MIME parts as defined in [RFC 2387], with
+  //    the name parameter being the element local name.
+  //  o Element nodes of any datatype populated by upload are serialized as the
+  //    specified content and additionally have a Content-Disposition filename
+  //    parameter, if available.
+  //  o The Content-Type must be text/plain except for xsd:base64Binary,
+  //    xsd:hexBinary, and derived types, in which case the header represents the
+  //    media type of the attachment if known, otherwise
+  //    application/octet-stream. If a character set is applicable, the
+  //    Content-Type may have a charset parameter.
+
+  nsCAutoString boundary;
+  MakeMultipartBoundary(boundary);
+
+  nsCOMPtr<nsIMultiplexInputStream> multiStream =
+      do_CreateInstance("@mozilla.org/io/multiplex-input-stream;1");
+
+  nsCString postDataChunk;
+  AppendMultipartFormData(data, boundary, postDataChunk, multiStream);
+
+  postDataChunk += NS_LITERAL_CSTRING("--") + boundary
+                +  NS_LITERAL_CSTRING("--\r\n");
+  AppendPostDataChunk(postDataChunk, multiStream);
+
+  nsCOMPtr<nsIMIMEInputStream> mimeStream =
+      do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
+  NS_ENSURE_TRUE(mimeStream, NS_ERROR_UNEXPECTED);
+
+  nsCAutoString contentType =
+      NS_LITERAL_CSTRING("multipart/form-data; boundary=") + boundary;
+  mimeStream->AddHeader("Content-Type", contentType.get());
+  mimeStream->SetAddContentLength(PR_TRUE);
+  mimeStream->SetData(multiStream);
+
+  NS_ADDREF(*stream = mimeStream);
+  return NS_OK;
+}
+
+void
+nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
+                                                   const nsCString &boundary,
+                                                   nsCString &postDataChunk,
+                                                   nsIMultiplexInputStream *multiStream)
+{
+#ifdef DEBUG_darinf
+  nsAutoString nodeName;
+  data->GetNodeName(nodeName);
+  LOG(("+++ AppendMultipartFormData: inspecting <%s>\n",
+      NS_ConvertUTF16toUTF8(nodeName).get()));
+#endif
+
+  nsCOMPtr<nsIDOMNode> child;
+  data->GetFirstChild(getter_AddRefs(child));
+  if (!child)
+    return;
+
+  PRUint16 childType;
+  child->GetNodeType(&childType);
+
+  nsCOMPtr<nsIDOMNode> sibling;
+  child->GetNextSibling(getter_AddRefs(sibling));
+
+  if (!sibling && childType == nsIDOMNode::TEXT_NODE)
+  {
+    nsAutoString localName;
+    data->GetLocalName(localName);
+
+    nsAutoString value;
+    child->GetNodeValue(value);
+
+    LOG(("    appending data for <%s>\n", NS_ConvertUTF16toUTF8(localName).get()));
+
+    // XXX need to deal with 'upload' as well as xsd:base64Binary and xsd:hexBinary
+
+    // XXX UTF-8 ok?
+
+    NS_ConvertUTF16toUTF8 encLocalName(localName);
+    encLocalName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encLocalName.get(),
+                       nsLinebreakConverter::eLinebreakAny,
+                       nsLinebreakConverter::eLinebreakNet));
+
+    NS_ConvertUTF16toUTF8 encValue(value);
+    encValue.Adopt(nsLinebreakConverter::ConvertLineBreaks(encValue.get(),
+                   nsLinebreakConverter::eLinebreakAny,
+                   nsLinebreakConverter::eLinebreakNet));
+
+    postDataChunk += NS_LITERAL_CSTRING("--") + boundary
+                  +  NS_LITERAL_CSTRING("\r\nContent-Disposition: form-data; name=\"")
+                  +  encLocalName + NS_LITERAL_CSTRING("\"\r\n")
+                  +  NS_LITERAL_CSTRING("Content-Type: text/plain; charset=UTF-8\r\n")
+                  +  encValue + NS_LITERAL_CSTRING("\r\n");
+  }
+  else
+  {
+    // call AppendMultipartFormData on each child node
+    do
+    {
+      AppendMultipartFormData(child, boundary, postDataChunk, multiStream);
+      child->GetNextSibling(getter_AddRefs(sibling));
+      child.swap(sibling);
+    }
+    while (child);
+  }
+}
+
+void
+nsXFormsSubmissionElement::AppendPostDataChunk(nsCString &postDataChunk,
+                                               nsIMultiplexInputStream *multiStream)
+{
+  nsCOMPtr<nsIInputStream> stream;
+  NS_NewCStringInputStream(getter_AddRefs(stream), postDataChunk);
+  if (stream)
+    multiStream->AppendStream(stream);
+  postDataChunk.Truncate();
 }
 
 nsresult

@@ -43,6 +43,7 @@
 #include "nsIDOMEventListener.h"
 #include "nsXFormsElement.h"
 
+class nsIMultiplexInputStream;
 class nsIInputStream;
 class nsIContent;
 class nsCString;
@@ -68,9 +69,11 @@ public:
   NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **);
   NS_HIDDEN_(nsresult) SerializeDataXML(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
   NS_HIDDEN_(nsresult) SerializeDataURLEncoded(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **);
-  NS_HIDDEN_(void)     AppendDataURLEncoded(nsIDOMNode *data, nsCString &buf, const nsCString &sep);
+  NS_HIDDEN_(void)     AppendURLEncodedData(nsIDOMNode *data, const nsCString &sep, nsCString &buf);
   NS_HIDDEN_(nsresult) SerializeDataMultipartRelated(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
   NS_HIDDEN_(nsresult) SerializeDataMultipartFormData(nsIDOMNode *data, PRUint32 format, nsIInputStream **);
+  NS_HIDDEN_(void)     AppendMultipartFormData(nsIDOMNode *data, const nsCString &boundary, nsCString &buf, nsIMultiplexInputStream *);
+  NS_HIDDEN_(void)     AppendPostDataChunk(nsCString &postDataChunk, nsIMultiplexInputStream *multiStream);
   NS_HIDDEN_(nsresult) SendData(PRUint32 format, const nsCString &uri, nsIInputStream *stream);
 
 private:
