@@ -7,13 +7,13 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/psm,   
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/nsprpub,        XPCDOM_20010329_BRANCH
+mozilla/security/nss,   XPCDOM_20010329_BRANCH
+mozilla/security/psm,   XPCDOM_20010329_BRANCH
+mozilla/security/manager, XPCDOM_20010329_BRANCH
+mozilla/accessible,     XPCDOM_20010329_BRANCH
+DirectorySDKSourceC,    XPCDOM_20010329_BRANCH
+mozilla/lib/mac/Instrumentation XPCDOM_20010329_BRANCH
+mozilla/gfx2            XPCDOM_20010329_BRANCH
+mozilla/modules/libpr0n XPCDOM_20010329_BRANCH
+SeaMonkeyAll            XPCDOM_20010329_BRANCH
