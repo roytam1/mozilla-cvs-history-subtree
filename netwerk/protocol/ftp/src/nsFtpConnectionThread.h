@@ -32,7 +32,6 @@
 #include "prtime.h"
 #include "nsString.h"
 #include "nsIFTPChannel.h"
-#include "nsIConnectionCache.h"
 #include "nsIProtocolHandler.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
