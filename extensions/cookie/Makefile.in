@@ -60,7 +60,6 @@ CPPSRCS		= \
 
 XPIDLSRCS	= \
 		nsIImgManager.idl \
-		nsIPermissionManager.idl \
 		nsIPermission.idl \
 		nsICookieAcceptDialog.idl \
 		nsICookiePromptService.idl \
