@@ -37,6 +37,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifdef MOZ_LOGGING
+#define FORCE_PR_LOG /* Allow logging in the release build */
+#endif
+
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
@@ -91,6 +95,9 @@
 #include "nsIMsgFilterList.h"
 
 #include "nsIPrefMigration.h"	// for NEW_LOCAL_MAIL_DIR_NAME
+#include "nspr.h"
+
+PRLogModuleInfo *PAIF;
 
 #define BUF_STR_LEN 1024
 
@@ -410,6 +417,10 @@ nsresult nsMessengerMigrator::Init()
   
   rv = getPrefService();
   if (NS_FAILED(rv)) return rv;   
+  if (!PAIF)
+    PAIF = PR_NewLogModule("PAIF");
+
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("migrating mail prefs and files\n"));
 
   rv = ResetState();
   return rv;
@@ -653,17 +664,11 @@ nsMessengerMigrator::UpgradePrefs()
     // this plays nicely with msgMail3PaneWindow.js, which will launch the
     // Account Wizard if UpgradePrefs() fails.
     rv = ProceedWithMigration();
-    if (NS_FAILED(rv)) {
-#ifdef DEBUG_MIGRATOR
-      printf("FAIL:  don't proceed with migration.\n");
-#endif
+    if (NS_FAILED(rv)) 
+    {
+      PR_LOG(PAIF, PR_LOG_DEBUG, ("nothing to migrate\n"));
       return rv;
     }
-#ifdef DEBUG_MIGRATOR
-    else {
-      printf("PASS:  proceed with migration.\n");
-    }
-#endif 
 
     nsCOMPtr<nsIMsgAccountManager> accountManager = 
              do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
@@ -674,8 +679,10 @@ nsMessengerMigrator::UpgradePrefs()
 
     rv = accountManager->CreateIdentity(getter_AddRefs(identity));
     if (NS_FAILED(rv)) return rv;
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("created dummy identity for migration\n"));
 
     rv = MigrateIdentity(identity);
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated identity rv = %lx\n", rv));
     if (NS_FAILED(rv)) return rv;    
     
     nsCOMPtr<nsISmtpService> smtpService = 
@@ -687,6 +694,7 @@ nsMessengerMigrator::UpgradePrefs()
     if (NS_FAILED(rv)) return rv;    
 
     rv = MigrateSmtpServer(smtpServer);
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated smtp server rv = %lx\n", rv));
     if (NS_FAILED(rv)) return rv;    
 
     // set the newly created smtp server as the default
@@ -696,25 +704,30 @@ nsMessengerMigrator::UpgradePrefs()
     if ( m_oldMailType == POP_4X_MAIL_TYPE) {
       // in 4.x, you could only have one pop account
       rv = MigratePopAccount(identity);
+      PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated pop account rv = %lx\n", rv));
       if (NS_FAILED(rv)) return rv;
 
       // everyone gets a local mail account in 5.0
       rv = CreateLocalMailAccount(PR_TRUE);
+      PR_LOG(PAIF, PR_LOG_DEBUG, ("created local mail account rv = %lx\n", rv));
       if (NS_FAILED(rv)) return rv;
     }
     else if (m_oldMailType == IMAP_4X_MAIL_TYPE) {
       rv = MigrateImapAccounts(identity);
+      PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated imap account(s) rv = %lx\n", rv));
       if (NS_FAILED(rv)) return rv;
       
       // if they had IMAP in 4.x, they also had "Local Mail"
       // we'll migrate that to "Local Folders"
       rv = MigrateLocalMailAccount();
+      PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated local mail account rv = %lx\n", rv));
       if (NS_FAILED(rv)) return rv;
     }
 #ifdef HAVE_MOVEMAIL
     else if (m_oldMailType == MOVEMAIL_4X_MAIL_TYPE) {
 	// if 4.x, you could only have one movemail account
 	rv = MigrateMovemailAccount(identity);
+        PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated move mail account rv = %lx\n", rv));
 	if (NS_FAILED(rv)) return rv;
 
         // everyone gets a local mail account in 5.0
@@ -730,20 +743,25 @@ nsMessengerMigrator::UpgradePrefs()
     }
 
     rv = MigrateNewsAccounts(identity);
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated mews account(s) rv = %lx\n", rv));
     if (NS_FAILED(rv)) return rv;
 
     // this will upgrade the ldap prefs
 #if defined(MOZ_LDAP_XPCOM)
     nsCOMPtr <nsILDAPPrefsService> ldapPrefsService = do_GetService("@mozilla.org/ldapprefs-service;1", &rv);
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated ldap prefs\n", rv));
 #endif    
     rv = MigrateAddressBookPrefs();
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated address book prefs rv = %lx\n", rv));
     NS_ENSURE_SUCCESS(rv,rv);
 
     rv = MigrateAddressBooks();
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("migrated address book(s) rv = %lx\n", rv));
     if (NS_FAILED(rv)) return rv;
 
     // we're done migrating, let's save the prefs
     rv = m_prefs->SavePrefFile(nsnull);
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("done migrating - save prefs file rv = %lx\n", rv));
     if (NS_FAILED(rv)) return rv;
 
 	// remove the temporary identity we used for migration purposes
@@ -1832,9 +1850,14 @@ nsMessengerMigrator::MigrateImapAccount(nsIMsgIdentity *identity, const char *ho
   
  
   if (isDefaultAccount) {
-    rv = accountManager->SetDefaultAccount(account);
-    if (NS_FAILED(rv)) return rv;
-
+    nsCOMPtr<nsIMsgAccount> defaultAccount;
+    accountManager->GetDefaultAccount(getter_AddRefs(defaultAccount));
+    // check if there's already a default account (MCD might have set one up)
+    if (!defaultAccount)
+    {
+      rv = accountManager->SetDefaultAccount(account);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
     // Set check for new mail option for default account to TRUE 
     rv = server->SetLoginAtStartUp(PR_TRUE);
   }
@@ -1946,6 +1969,7 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
   nsCAutoString serverPrefName(aPref);
   PRInt32 fileNamePos = serverPrefName.Find(".filename");
   serverPrefName.Truncate(fileNamePos + 1);
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("considering migrating address book %s\n", serverPrefName.get()));
   serverPrefName.Append("serverName");
   nsXPIDLCString serverName;
   rv = prefs->CopyCharPref(serverPrefName.get(), getter_Copies(serverName));
@@ -1953,6 +1977,7 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
     return; // skip this - it's an ldap server
       
   rv = prefs->CopyCharPref(aPref,getter_Copies(abFileName));
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("migrating address book filename = %s\n", abFileName.get()));
   NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to get ab filename");
   if (NS_FAILED(rv)) return;
   
@@ -1966,7 +1991,8 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
   printf("pref value: %s\n",(const char *)abFileName);
 #endif /* DEBUG_AB_MIGRATION */
   // if this a 5.x addressbook file name, skip it.
-  if (charEndsWith((const char *)abFileName, ADDRESSBOOK_PREF_VALUE_5x_SUFFIX)) return;
+  if (charEndsWith((const char *)abFileName, ADDRESSBOOK_PREF_VALUE_5x_SUFFIX))
+    return;
     
   nsCAutoString abName;
   abName = (const char *)abFileName;
@@ -1986,6 +2012,8 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
 #ifdef DEBUG_AB_MIGRATION
   printf("turn %s%s into %s%s\n", (const char *)abName,ADDRESSBOOK_PREF_VALUE_4x_SUFFIX,(const char *)abName,TEMP_LDIF_FILE_SUFFIX);
 #endif /* DEBUG_AB_MIGRATION */
+
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("migrating from %s%s to %s%s\n", abName.get() ,ADDRESSBOOK_PREF_VALUE_4x_SUFFIX,abName.get(),TEMP_LDIF_FILE_SUFFIX));
 
   rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(ab4xFile));
   NS_ASSERTION(NS_SUCCEEDED(rv) && ab4xFile,"ab migration failed: failed to get profile dir");
@@ -2030,7 +2058,11 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
 
   nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
   NS_ASSERTION(NS_SUCCEEDED(rv) && abUpgrader, "failed to get upgrader");
-  if (NS_FAILED(rv) || !abUpgrader) return;
+  if (NS_FAILED(rv) || !abUpgrader)
+  {
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("failed to get 4.x ab ugrader\n"));
+    return;
+  }
   rv = abUpgrader->SetCurrentCharset((const char *)csidPrefValue);
   NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set the current char set");
   if (NS_FAILED(rv)) return;
@@ -2052,10 +2084,12 @@ nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref, void *aClosur
   if (NS_FAILED(rv) || !ab) return;
 
   rv = ab->ConvertNA2toLDIF(ab4xFileSpec, tmpLDIFFileSpec);
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("converted 4.x ab %s to ldif file %s rv = %lx\n", abName.get(), ldifFileName.get(), rv));
   NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to convert na2 to ldif");
   if (NS_FAILED(rv)) return;
   
   rv = ab->ConvertLDIFtoMAB(tmpLDIFFileSpec, PR_TRUE /* migrating */, nsnull, PR_FALSE, PR_FALSE /* Importing Comm4x */);
+  PR_LOG(PAIF, PR_LOG_DEBUG, ("converted ldif file %s to .mab file rv = %lx\n", ldifFileName.get(), rv));
   NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration filed:  failed to convert ldif to mab\n");
   if (NS_FAILED(rv)) return;
  
@@ -2106,6 +2140,7 @@ nsMessengerMigrator::MigrateAddressBooks()
 
   nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
   if (NS_FAILED(rv) || !abUpgrader) {
+    PR_LOG(PAIF, PR_LOG_DEBUG, ("failed to get 4.x ab ugrader\n"));
     printf("the addressbook migrator is only in the commercial builds.\n");
     return NS_OK;
   }
