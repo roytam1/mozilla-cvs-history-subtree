@@ -21,27 +21,33 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageLoader.h"
-#include "nsIThreadPool.h"
-#include "nsCOMPtr.h"
+#ifndef ImageCache_h__
+#define ImageCache_h__
 
-#define NS_IMAGELOADER_CID \
-{ /* 9f6a0d2e-1dd1-11b2-a5b8-951f13c846f7 */         \
-     0x9f6a0d2e,                                     \
-     0x1dd1,                                         \
+#include "nsIURI.h"
+#include "nsPIImageRequest.h"
+
+
+#define IMAGE_CACHE_CID \
+{ /* 70058a20-1dd2-11b2-9d22-db0a9d82e8bd */         \
+     0x70058a20,                                     \
+     0x1dd2,                                         \
      0x11b2,                                         \
-    {0xa5, 0xb8, 0x95, 0x1f, 0x13, 0xc8, 0x46, 0xf7} \
+    {0x9d, 0x22, 0xdb, 0x0a, 0x9d, 0x82, 0xe8, 0xbd} \
 }
 
-class nsImageLoader : public nsIImageLoader
+class ImageCache
 {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIIMAGELOADER
+  ImageCache();
+  ~ImageCache();
 
-  nsImageLoader();
-  virtual ~nsImageLoader();
+  /* additional members */
+  static PRBool Put(nsIURI *aKey, nsPIImageRequest *request);
+  static PRBool Get(nsIURI *aKey, nsPIImageRequest **request);
+  static PRBool Remove(nsIURI *aKey);
 
 private:
-  nsCOMPtr<nsIThreadPool> mThreadPool;
 };
+
+#endif

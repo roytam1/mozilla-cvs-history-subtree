@@ -36,38 +36,11 @@
 #include "nsPIImageRequest.h"
 #include "nsPIImageRequestProxy.h"
 
+#include "ImageCache.h"
+
 #include "nsXPIDLString.h"
 
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
-
-
-
-class nsIURIKey : public nsHashKey {
-protected:
-  nsCOMPtr<nsIURI> mKey;
-
-public:
-  nsIURIKey(nsIURI* key) : mKey(key) {}
-  ~nsIURIKey(void) {}
-
-  PRUint32 HashCode(void) const {
-    nsXPIDLCString spec;
-    mKey->GetSpec(getter_Copies(spec));
-    return (PRUint32) PL_HashString(spec);
-  }
-
-  PRBool Equals(const nsHashKey *aKey) const {
-    PRBool eq;
-    mKey->Equals( ((nsIURIKey*) aKey)->mKey, &eq );
-    return eq;
-  }
-
-  nsHashKey *Clone(void) const {
-    return new nsIURIKey(mKey);
-  }
-};
-
-
 
 nsImageLoader::nsImageLoader()
 {
@@ -99,13 +72,8 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 
   nsCOMPtr<nsPIImageRequest> imgRequest;
 
-  nsIURIKey key(aURI);
-  nsISupports *sup = mRequests.Get(&key);
-  if (sup) {
-    imgRequest = do_QueryInterface(sup);
-    NS_RELEASE(sup);
-  } else {
-
+  ImageCache::Get(aURI, getter_AddRefs(imgRequest));
+  if (!imgRequest) {
     nsCOMPtr<nsIIOService> ioserv(do_GetService("@mozilla.org/network/io-service;1"));
     if (!ioserv) return NS_ERROR_FAILURE;
 
@@ -118,7 +86,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
     imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
     imgRequest->Init(newChannel);
 
-    mRequests.Put(&key, imgRequest);
+    ImageCache::Put(aURI, imgRequest);
 
     nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
     newChannel->AsyncRead(streamList, cx);  // XXX are we calling this too early?
@@ -147,12 +115,9 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
 
   nsCOMPtr<nsIURI> uri;
   channel->GetURI(getter_AddRefs(uri));
-  nsIURIKey key(uri);
-  nsISupports *sup = mRequests.Get(&key);
-  if (sup) {
-    imgRequest = do_QueryInterface(sup);
-    NS_RELEASE(sup);
 
+  ImageCache::Get(uri, getter_AddRefs(imgRequest));
+  if (imgRequest) {
     // we have this in our cache already.. cancel the current (document) load
 
     // XXX
@@ -165,7 +130,7 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
     imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
     imgRequest->Init(channel);
 
-    mRequests.Put(&key, imgRequest);
+    ImageCache::Put(uri, imgRequest);
 
     nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
     *listener = streamList;

@@ -40,6 +40,9 @@
 
 #include "nspr.h"
 
+#include "ImageCache.h"
+
+
 NS_IMPL_ISUPPORTS6(nsImageRequest, nsIImageRequest, nsPIImageRequest,
                    nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver, nsIRunnable)
 
@@ -98,9 +101,16 @@ NS_IMETHODIMP nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, 
 {
   mObservers.RemoveElement(NS_STATIC_CAST(void*, observer));
 
-  if ((mObservers.Count() == 0) && mChannel)
-    mChannel->Cancel(status);
+  if ((mObservers.Count() == 0) && mChannel) {
+    if (mProcessing) {
+      // XXX this is hacky :)
+      nsCOMPtr<nsIURI> uri;
+      mChannel->GetURI(getter_AddRefs(uri));
+      ImageCache::Remove(uri);
+      mChannel->Cancel(status);
 
+    } //otherwise we're done, no need to call cancel
+  }
   return NS_OK;
 }
 

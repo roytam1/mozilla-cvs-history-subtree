@@ -37,6 +37,7 @@ XPIDLSRCS	= \
 		$(NULL)
 
 OBJS	= \
+		.\$(OBJDIR)\ImageCache.obj \
 		.\$(OBJDIR)\nsImageLoader.obj \
 		.\$(OBJDIR)\nsImageRequest.obj \
 		.\$(OBJDIR)\nsImageRequestProxy.obj \
