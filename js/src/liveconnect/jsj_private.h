@@ -93,6 +93,9 @@ typedef enum {
 #define IS_PRIMITIVE_TYPE(sig)                                               \
     (((int)(sig) >= (int)JAVA_SIGNATURE_BOOLEAN) && !IS_REFERENCE_TYPE(sig))                                    \
 
+/* This is used for checking whether an exception is wrapped or not. */
+#define JSTYPE_EMPTY -1
+
 /* The signature of a Java method consists of the signatures of all its
    arguments and its return type signature. */
 typedef struct JavaMethodSignature {
@@ -251,15 +254,16 @@ extern jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashC
 extern jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
 extern jmethodID njJSException_JSException;    /* netscape.javascipt.JSException constructor */
-extern jmethodID njJSException_JSException_wrap;/*netscape.javascipt.JSException constructor */
+extern jmethodID njJSException_JSException_wrap;/*netscape.javascipt.JSException alternate constructor */
 extern jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 extern jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
+extern jmethodID njJSException_getWrappedExceptionType;       /* netscape.javascript.JSException.getWrappedExceptionType() */
+extern jmethodID njJSException_getWrappedException;       /* netscape.javascript.JSException.getWrappedException() */
 extern jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
 extern jfieldID njJSException_lineno;          /* netscape.javascript.JSException.lineno */
 extern jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 extern jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 extern jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-extern jfieldID njJSException_wrappedException; /* netscape.javascript.JSException.wrappedException */
 
 /**************** Java <==> JS conversions and Java types *******************/
 extern JSBool

@@ -113,17 +113,18 @@ jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashCode() *
 
 jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
-jmethodID njJSException_JSException;    /* netscape.javascript.JSexception constructor */
-jmethodID njJSException_JSException_wrap;/*netscape.javascript.JSexception constructor */
+jmethodID njJSException_JSException;    /* netscape.javascript.JSException constructor */
+jmethodID njJSException_JSException_wrap;/*netscape.javascript.JSException alternate constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 jmethodID njJSUtil_workAroundAIXJavaBug;/* netscape.javascript.JSUtil.workAroundAIXJavaBug() */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
+jmethodID njJSException_getWrappedExceptionType; /*netscape.javascript.JSException.getWrappedExceptionType() */
+jmethodID njJSException_getWrappedException; /*netscape.javascript.JSException.getWrappedException() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
 jfieldID njJSException_lineno;          /* netscape.javascript.JSException.lineno */
 jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-jfieldID njJSException_wrappedException; /* netscape.javascript.JSException.wrappedException */
 
 /* Obtain a reference to a Java class */
 #define LOAD_CLASS(qualified_name, class)                                    \
@@ -322,7 +323,8 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
     /* Load second constructor for wrapping JS exception objects inside JSExceptions */                                                                                            njJSException);
     _LOAD_METHOD(netscape.javascript.JSException,<init>,
-                                            JSException_wrap,   "(Ljava/lang/Object;)V",        njJSException, JS_FALSE)
+                 JSException_wrap, "(ILjava/lang/Object;)V",        
+                 njJSException, JS_FALSE)
 
     LOAD_FIELDID(netscape.javascript.JSObject,  
                                             internal,           "I",                            njJSObject);
@@ -338,6 +340,11 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_STATIC_METHOD(netscape.javascript.JSUtil,
                                             getStackTrace,      "(Ljava/lang/Throwable;)Ljava/lang/String;",
                                                                                                 njJSUtil);
+    LOAD_METHOD(netscape.javascript.JSException, getWrappedExceptionType,
+                "()I", njJSException);
+    LOAD_METHOD(netscape.javascript.JSException, getWrappedException,         
+                "()Ljava/lang/Object;", njJSException);
+
 #ifdef AIX
 #    define JAVA_STATIC_INITIALIZER_BUG
 #endif

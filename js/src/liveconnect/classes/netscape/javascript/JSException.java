@@ -25,11 +25,21 @@ package netscape.javascript;
 
 public
 class JSException extends RuntimeException {
+    public static final int EXCEPTION_TYPE_EMPTY = -1;
+    public static final int EXCEPTION_TYPE_VOID = 0;
+    public static final int EXCEPTION_TYPE_OBJECT = 1;
+    public static final int EXCEPTION_TYPE_FUNCTION = 2;
+    public static final int EXCEPTION_TYPE_STRING = 3;
+    public static final int EXCEPTION_TYPE_NUMBER = 4;
+    public static final int EXCEPTION_TYPE_BOOLEAN = 5;
+    public static final int EXCEPTION_TYPE_ERROR = 6;
+
     String filename;
     int lineno;
     String source;
     int tokenIndex;
-    Object wrappedException;
+    private int wrappedExceptionType;
+    private Object wrappedException;
 
     /**
      * Constructs a JSException without a detail message.
@@ -43,6 +53,7 @@ class JSException extends RuntimeException {
         lineno = 0;
         source = "";
         tokenIndex = 0;
+	wrappedExceptionType = EXCEPTION_TYPE_EMPTY;
     }
 
     /**
@@ -58,6 +69,7 @@ class JSException extends RuntimeException {
         lineno = 0;
         source = "";
         tokenIndex = 0;
+	wrappedExceptionType = EXCEPTION_TYPE_EMPTY;
     }
 
     /**
@@ -65,8 +77,9 @@ class JSException extends RuntimeException {
      * This constructor needs to be public so that Java users can throw 
      * exceptions to JS cleanly.
      */
-    private JSException(Object wrappedException) {
+    private JSException(int wrappedExceptionType, Object wrappedException) {
 	super();
+	this.wrappedExceptionType = wrappedExceptionType;
 	this.wrappedException = wrappedException;
     }
     
@@ -84,6 +97,15 @@ class JSException extends RuntimeException {
         this.lineno = lineno;
         this.source = source;
         this.tokenIndex = tokenIndex;
+	wrappedExceptionType = EXCEPTION_TYPE_EMPTY;
+    }
+
+    /**
+     * Instance method getWrappedExceptionType returns the int mapping of the
+     * type of the wrappedException Object.
+     */
+    public int getWrappedExceptionType() {
+	return wrappedExceptionType;
     }
 
     /**

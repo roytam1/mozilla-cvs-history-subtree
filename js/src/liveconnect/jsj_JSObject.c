@@ -399,7 +399,9 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     jobject java_obj;
     int dummy_cost;
     JSBool dummy_bool;
+    JSType primitive_type;
     jthrowable java_exception;
+    JSObject *js_obj;
 
     /* Get the Java JNI environment */
     jEnv = jsj_env->jEnv;
@@ -407,8 +409,23 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     /* Get the pending JS exception if it exists */
     if (JS_IsExceptionPending(jsj_env->cx)) {
         if (!JS_GetPendingException(jsj_env->cx, &pending_exception))
-            return;
+            goto out_of_memory;
         
+        /* Find out whether this jsval represents a native type. 
+         * Right now we use JSTYPE_LIMIT as the flag denoting the 
+         * error_as_exception condition, since JSTYPE_LIMIT isn't used for
+         * much elsewhere. Should we add another JSTYPE specifically 
+         * for errors? - coop 11/06/1998 */
+        primitive_type = JS_TypeOfValue(jsj_env->cx, pending_exception);
+        
+#if JS_HAS_ERROR_EXCEPTIONS
+        if (primitive_type == JSTYPE_OBJECT) {
+            js_obj = JSVAL_TO_OBJECT(pending_exception);
+            if (OBJ_GET_CLASS(jsj_env->cx, js_obj) == &js_ExceptionClass) 
+                primitive_type = JSTYPE_LIMIT;
+        }
+#endif
+
         /* Convert jsval exception to a java object and then use it to
            create an instance of JSException. */ 
         if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, 
@@ -420,7 +437,7 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
         
         java_exception = (*jEnv)->NewObject(jEnv, njJSException, 
                                             njJSException_JSException_wrap,
-                                            java_obj);
+                                            primitive_type, java_obj);
         if (!java_exception) 
             goto out_of_memory;
         
