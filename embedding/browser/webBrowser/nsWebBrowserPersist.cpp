@@ -217,8 +217,9 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveURI(nsIURI *aURI, nsIInputStream *aPostDa
 
     // Get the output channel ready for writing
     nsCOMPtr<nsIRequest> writeRequest;
-    rv = outputChannel->AsyncWrite(inStream, NS_STATIC_CAST(nsIStreamObserver *, this), nsnull,
-                                   0, -1, getter_AddRefs(writeRequest));
+    rv = NS_AsyncWriteFromStream(getter_AddRefs(writeRequest),
+            outputChannel, inStream, 0, -1,
+            NS_STATIC_CAST(nsIStreamObserver*, this), nsnull);
     if (NS_FAILED(rv))
     {
         OnEndDownload();

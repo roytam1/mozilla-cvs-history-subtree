@@ -403,6 +403,10 @@ nsPipe::nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
             if (NS_FAILED(rv) && rv != NS_BASE_STREAM_WOULD_BLOCK)
                 goto done;
             NS_ASSERTION(writeCount <= readBufferLen, "writer returned bad writeCount");
+#ifdef DEBUG
+            if (writeCount > 0 && rv == NS_BASE_STREAM_WOULD_BLOCK)
+                NS_WARNING("Invalid writer implementation: cannot write data and return WOULD_BLOCK");
+#endif
             readBuffer += writeCount;
             readBufferLen -= writeCount;
             *readCount += writeCount;
@@ -428,6 +432,15 @@ nsPipe::nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
                 rv = mObserver->OnEmpty(this);
                 mon.Enter();
                 mon.Notify();   // wake up writer
+                if (NS_FAILED(rv))
+                    goto done;
+            }
+        }
+        else if (pipe->mReadCursor == pipe->mWriteCursor) {
+            if (mObserver) {
+                mon.Exit();     // XXXbe avoid deadlock better
+                rv = mObserver->OnEmpty(this);
+                mon.Enter();
                 if (NS_FAILED(rv))
                     goto done;
             }
@@ -680,6 +693,7 @@ nsPipe::nsPipeOutputStream::WriteSegments(nsReadSegmentFun reader,
                 rv = reader(this, closure, writeBuf, *writeCount, writeBufLen, &readCount);
                 if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
                     NS_ASSERTION(readCount <= writeBufLen, "reader returned bad readCount");
+                    // XXX should not update counters if reader returned WOULD_BLOCK!!
                     writeBuf += readCount;
                     writeBufLen -= readCount;
                     *writeCount += readCount;
@@ -690,8 +704,11 @@ nsPipe::nsPipeOutputStream::WriteSegments(nsReadSegmentFun reader,
                     // call flush to notify the guy downstream, hoping that he'll somehow
                     // wake up the guy upstream to eventually produce more data for us.
                     nsresult rv2 = Flush();
-                    if (/*rv2 == NS_BASE_STREAM_WOULD_BLOCK || */NS_FAILED(rv2))
+                    if (NS_FAILED(rv2)) {
+                        if (rv2 == NS_BASE_STREAM_WOULD_BLOCK)
+                            rv = pipe->mCondition;
                         goto done;
+                    }
                     // else we flushed, so go around again
                     continue;
                 }
