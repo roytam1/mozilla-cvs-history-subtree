@@ -4203,9 +4203,35 @@ nsXULDocument::ResumeWalk()
             rv = mContextStack.Peek(&proto, getter_AddRefs(element), &indx);
             if (NS_FAILED(rv)) return rv;
 
-            // If we've processed all of the prototype's children, then
-            // pop back up to the parent node.
             if (indx >= proto->mNumChildren) {
+                // We've processed all of the prototype's children.
+                // Check the element for a 'datasources' attribute, in
+                // which case we'll need to create a template builder
+                // and construct the first 'ply' of elements beneath
+                // it.
+                //
+                // N.B. that we do this -after- all other XUL children
+                // have been created: this ensures that there'll be a
+                // <template> tag available when we try to build that
+                // first ply of generated elements.
+                nsAutoString datasources;
+                rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
+
+                if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
+                    nsCOMPtr<nsIRDFContentModelBuilder> builder;
+                    rv = CreateTemplateBuilder(element, datasources, &builder);
+                    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
+                    if (NS_SUCCEEDED(rv)) {
+                        // Force construction of immediate template sub-content _now_.
+                        rv = builder->CreateContents(element);
+                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
+                    }
+                }
+
+                if (NS_FAILED(rv)) return rv;
+
+                // Now pop the context stack back up to the parent
+                // element and continue the prototype walk.
                 mContextStack.Pop();
                 continue;
             }
@@ -4258,26 +4284,6 @@ nsXULDocument::ResumeWalk()
                 if (protoele->mNumChildren > 0) {
                     rv = mContextStack.Push(protoele, child);
                     if (NS_FAILED(rv)) return rv;
-                }
-
-                // Check for a 'datasources' tag, in which case we'll
-                // create a template builder.
-                if (child) {
-                    nsAutoString datasources;
-                    rv = element->GetAttribute(kNameSpaceID_None, kDataSourcesAtom, datasources);
-
-                    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                        nsCOMPtr<nsIRDFContentModelBuilder> builder;
-                        rv = CreateTemplateBuilder(element, datasources, &builder);
-                        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add datasources");
-                        if (NS_SUCCEEDED(rv)) {
-                            // Force construction of immediate template sub-content _now_.
-                            rv = builder->CreateContents(element);
-                            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create template contents");
-                        }
-                    }
-
-                    if (NS_FAILED(rv)) return NS_OK;
                 }
             }
             break;
