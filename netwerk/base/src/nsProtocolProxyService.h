@@ -42,6 +42,7 @@
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsVoidArray.h"
+#include "nsIDNSListener.h"
 #include "nsIPrefBranch.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIProxyAutoConfig.h"
@@ -53,11 +54,13 @@
 
 class nsProtocolProxyService : public nsIProtocolProxyService
                              , public nsIObserver
+                             , public nsIDNSListener
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROTOCOLPROXYSERVICE
     NS_DECL_NSIOBSERVER
+    NS_DECL_NSIDNSLISTENER
 
     nsProtocolProxyService();
     virtual ~nsProtocolProxyService();
@@ -109,7 +112,8 @@ protected:
     nsresult NewProxyInfo_Internal(const char *type, char *host, PRInt32 port, nsIProxyInfo **);
     void     LoadFilters(const char *filters);
     PRBool   CanUseProxy(nsIURI *aURI, PRInt32 defaultPort);
-
+    void     ConfigureFromWPAD();
+    
     static PRBool PR_CALLBACK CleanupFilterArray(void *aElement, void *aData);
     static void*  PR_CALLBACK HandlePACLoadEvent(PLEvent* aEvent);
     static void   PR_CALLBACK DestroyPACLoadEvent(PLEvent* aEvent);

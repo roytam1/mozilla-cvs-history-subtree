@@ -43,6 +43,7 @@
 #include "nsIIOService.h"
 #include "nsIEventQueueService.h"
 #include "nsIProtocolHandler.h"
+#include "nsIDNSService.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsReadableUtils.h"
@@ -50,6 +51,7 @@
 #include "nsNetUtil.h"
 #include "nsCRT.h"
 #include "prnetdb.h"
+#include "nsEventQueueUtils.h"
 
 #define IS_ASCII_SPACE(_c) ((_c) == ' ' || (_c) == '\t')
 
@@ -118,8 +120,9 @@ proxy_GetIntPref(nsIPrefBranch *aPrefBranch,
         aResult = temp;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsProtocolProxyService,
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsProtocolProxyService,
                               nsIProtocolProxyService,
+                              nsIDNSListener,
                               nsIObserver)
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsProtocolProxyService::nsProxyInfo,
                               nsIProxyInfo)
@@ -193,7 +196,7 @@ nsProtocolProxyService::PrefsChanged(nsIPrefBranch *prefBranch,
                 if (!pref)
                     prefBranch->SetIntPref("network.proxy.type", 0);
             }
-            mUseProxy = type; // type == 2 is autoconfig stuff
+            mUseProxy = type; // type == 2 is fixed PAC URL, 4 is WPAD
             reloadPAC = PR_TRUE;
         }
     }
@@ -245,12 +248,16 @@ nsProtocolProxyService::PrefsChanged(nsIPrefBranch *prefBranch,
             LoadFilters(tempString.get());
     }
 
-    if ((!pref || !strcmp(pref, "network.proxy.autoconfig_url") || reloadPAC) && (mUseProxy == 2)) {
+    if ((!pref || !strcmp(pref, "network.proxy.autoconfig_url") || reloadPAC) &&
+        (mUseProxy == 2)) {
         rv = prefBranch->GetCharPref("network.proxy.autoconfig_url", 
                                      getter_Copies(tempString));
         if (NS_SUCCEEDED(rv) && (!reloadPAC || strcmp(tempString.get(), mPACURL.get()))) 
             ConfigureFromPAC(tempString);
     }
+
+    if ((!pref || reloadPAC) && (mUseProxy == 4))
+        ConfigureFromWPAD();
 }
 
 // this is the main ui thread calling us back, load the pac now
@@ -497,7 +504,7 @@ nsProtocolProxyService::ExamineForProxy(nsIURI *aURI, nsIProxyInfo **aResult)
     PRInt32 port = -1;
     
     // Proxy auto config magic...
-    if (2 == mUseProxy) {
+    if (2 == mUseProxy || 4 == mUseProxy) {
         if (!mPAC) {
             NS_ERROR("ERROR: PAC js component is null, assuming DIRECT");
             return NS_OK; // assume DIRECT connection for now
@@ -824,5 +831,49 @@ nsProtocolProxyService::NewProxyInfo_Internal(const char *aType,
     proxyInfo->mPort = aPort;
 
     NS_ADDREF(*aResult = proxyInfo);
+    return NS_OK;
+}
+
+void
+nsProtocolProxyService::ConfigureFromWPAD()
+{
+    nsCOMPtr<nsIDNSService> dnsService = do_GetService(NS_DNSSERVICE_CONTRACTID);
+    if (!dnsService) {
+        NS_ERROR("Can't run WPAD: no DNS service?");
+        return;
+    }
+    
+    // Asynchronously resolve "wpad", configuring from PAC if we find one (in our
+    // OnLookupComplete method).
+    //
+    // We diverge from the WPAD spec here in that we don't walk the hosts's
+    // FQDN, stripping components until we hit a TLD.  Doing so is dangerous in
+    // the face of an incomplete list of TLDs, and TLDs get added over time.  We
+    // could consider doing only a single substitution of the first component,
+    // if that proves to help compatibility.
+    nsresult rv;
+
+    nsCOMPtr<nsIEventQueue> curQ;
+    rv = NS_GetCurrentEventQ(getter_AddRefs(curQ));
+    if (NS_FAILED(rv)) {
+        NS_ERROR("Can't run WPAD: can't get event queue for async resolve!");
+        return;
+    }
+    
+    nsCOMPtr<nsIDNSRequest> request;
+    rv = dnsService->AsyncResolve(NS_LITERAL_CSTRING("wpad"), PR_TRUE, this, curQ,
+                                  getter_AddRefs(request));
+    if (NS_FAILED(rv)) {
+        NS_ERROR("Can't run WPAD: AsyncResolve failed");
+    }
+}
+
+NS_IMETHODIMP
+nsProtocolProxyService::OnLookupComplete(nsIDNSRequest *aRequest,
+                                         nsIDNSRecord *aRecord,
+                                         nsresult aStatus)
+{
+    if (aRecord)
+        ConfigureFromPAC("http://wpad/wpad.dat");
     return NS_OK;
 }
