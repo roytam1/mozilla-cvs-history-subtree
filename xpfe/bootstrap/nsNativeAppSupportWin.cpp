@@ -604,6 +604,28 @@ nsNativeAppSupportWin::CheckConsole() {
             break;
         }
     }
+    // check if this is a restart of the browser after quiting from
+    // the servermoded browser instance.
+    if (!mServerMode ) {
+        HKEY key;
+        LONG result = ::RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &key );
+        if ( result == ERROR_SUCCESS ) {
+          BYTE regvalue[_MAX_PATH];
+          DWORD type, len = sizeof(regvalue);
+          result = ::RegQueryValueEx( key, NS_QUICKLAUNCH_RUN_KEY, NULL, &type, regvalue, &len);
+          ::RegCloseKey( key );
+          if ( result == ERROR_SUCCESS && len > 0 ) {
+              // Make sure the filename in the quicklaunch command matches us
+              char fileName[_MAX_PATH];
+              int rv = ::GetModuleFileName( NULL, fileName, sizeof fileName );
+              if (rv && !PL_strncasecmp(fileName, (const char *)regvalue, PR_MIN(len, strlen(fileName)))) {
+                  mServerMode = PR_TRUE;
+                  mShouldShowUI = PR_TRUE;
+              }
+          }
+        }
+    }
+
     return;
 }
 
@@ -918,19 +940,6 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
     }
 
     startupLock.Unlock();
-
-    PRBool serverMode = PR_FALSE;
-    GetIsServerMode( &serverMode );
-    if ( !serverMode ) {  // okay, so it's not -turbo
-        HKEY key;
-        LONG result = ::RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &key );
-        if ( result == ERROR_SUCCESS ) {
-          result = ::RegQueryValueEx( key, NS_QUICKLAUNCH_RUN_KEY, NULL, NULL, NULL, NULL );
-          ::RegCloseKey( key );
-          if ( result == ERROR_SUCCESS )
-            SetIsServerMode( PR_TRUE );
-        }
-    }
 
     return rv;
 }
@@ -1897,6 +1906,15 @@ nsNativeAppSupportWin::StartServerMode() {
     // Turn on system tray icon.
     SetupSysTrayIcon();
 
+    if (mShouldShowUI) {
+        // We dont have to anything anymore. The native UI
+        // will create the window
+        return NS_OK;
+    }
+
+    // Since native UI wont create any window, we create a hidden window
+    // so thing work alright.
+
     // Create some of the objects we'll need.
     nsCOMPtr<nsIWindowWatcher>   ww(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
     nsCOMPtr<nsISupportsWString> arg1(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
@@ -1919,24 +1937,24 @@ nsNativeAppSupportWin::StartServerMode() {
 
     // Put args into array.
     if ( NS_FAILED( argArray->AppendElement( arg1 ) ) ||
-         NS_FAILED( argArray->AppendElement( arg2 ) ) ) {
+        NS_FAILED( argArray->AppendElement( arg2 ) ) ) {
         return NS_OK;
     }
 
     // Now open the window.
     nsCOMPtr<nsIDOMWindow> newWindow;
     ww->OpenWindow( 0,
-                    "chrome://navigator/content",
-                    "_blank",
-                    "chrome,dialog=no,toolbar=no",
-                    argArray,
-                    getter_AddRefs( newWindow ) );
-
+        "chrome://navigator/content",
+        "_blank",
+        "chrome,dialog=no,toolbar=no",
+        argArray,
+        getter_AddRefs( newWindow ) );
+    
     if ( !newWindow ) {
         return NS_OK;
     }
     mInitialWindow = newWindow;
-
+    
     // Hide this window by re-parenting it (to ensure it doesn't appear).
     ReParent( newWindow, (HWND)MessageWindow() );
 
