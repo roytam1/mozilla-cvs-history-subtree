@@ -138,19 +138,8 @@ export::
 #// MOZILLA_OFFICIAL junk: rebase and splitsym for binary release
 #//
 #//------------------------------------------------------------------------
-#// should make sure we have rebase, and die if not
-
-!if defined(MOZILLA_OFFICIAL)
-
-!if [for %i in (. %PATH%) do $(QUIET)if exist %i\$(REBASE) echo %i\$(REBASE) > rebase.yes]
-!endif
-
-!if !exist(rebase.yes)  
-REBASE=
-!if [del rebase.yes]                                                           
-!endif
-!endif
-!endif
+#// WIN2k barfs on paths with spaces, rebase check is broken.
+#// just assume rebase is in the path
 
 rebase:
 !if defined(MOZILLA_OFFICIAL)
