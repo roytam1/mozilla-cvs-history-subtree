@@ -1261,7 +1261,7 @@ case "$target" in
 
         if test -n "$MOZ_OPTIMIZE"; then
             if test "$OS_TARGET" = "WINCE"; then
-                CFLAGS="$CFLAGS -Zl"
+                CFLAGS="$CFLAGS -Zl -GR- -GX- -Gi- -Gm-"
                 _OPTIMIZE_FLAGS=-O1
             else
                 CFLAGS="$CFLAGS -MD"
@@ -1276,7 +1276,7 @@ case "$target" in
             fi
         else
             if test "$OS_TARGET" = "WINCE"; then
-                CFLAGS="$CFLAGS -Zl"
+                CFLAGS="$CFLAGS -Zl -GR- -GX- -Gi- -Gm-"
                 _DEBUG_FLAGS="-Od -Zi"
             else
                 if test -n "$USE_DEBUG_RTL"; then
@@ -1333,7 +1333,7 @@ case "$target" in
     fi
 
     if test "$OS_TARGET" = "WINCE"; then
-        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00'
+        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -INCREMENTAL:NO'
     else
         OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
     fi

@@ -975,7 +975,7 @@ case "$target" in
         MKSHLIB_FORCE_ALL=
         MKSHLIB_UNFORCE_ALL=
         if test "$OS_TARGET" = "WINCE"; then
-            DSO_LDOPTS=/SUBSYSTEM:WINDOWSCE,3.00
+            DSO_LDOPTS=/SUBSYSTEM:WINDOWSCE,3.00 /INCREMENTAL:NO
         else
             DSO_LDOPTS=/SUBSYSTEM:WINDOWS
         fi
@@ -985,7 +985,7 @@ case "$target" in
         CXXFLAGS="$CXXFLAGS -W3 -nologo -Gy -Fd\$(PDBFILE)"
         if test "$OS_TARGET" = "WINCE"; then
             LIBS="$LIBS corelibc.lib coredll.lib winsock.lib wince_missing.lib"
-            LDFLAGS="$LDFLAGS -SUBSYSTEM:WINDOWSCE,3.00 -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib"
+            LDFLAGS="$LDFLAGS -SUBSYSTEM:WINDOWSCE,3.00 -INCREMENTAL:NO -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib"
             if test "$TARGETCPU" = "ARM"; then
                 LDFLAGS="$LDFLAGS -MACHINE:ARM"
             else

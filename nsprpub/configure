@@ -3796,7 +3796,7 @@ EOF
 
         if test -n "$MOZ_OPTIMIZE"; then
             if test "$OS_TARGET" = "WINCE"; then
-                CFLAGS="$CFLAGS -Zl"
+                CFLAGS="$CFLAGS -Zl -GR- -GX- -Gi- -Gm-"
                 _OPTIMIZE_FLAGS=-O1
             else
                 CFLAGS="$CFLAGS -MD"
@@ -3811,7 +3811,7 @@ EOF
             fi
         else
             if test "$OS_TARGET" = "WINCE"; then
-                CFLAGS="$CFLAGS -Zl"
+                CFLAGS="$CFLAGS -Zl -GR- -GX- -Gi- -Gm-"
                 _DEBUG_FLAGS="-Od -Zi"
             else
                 if test -n "$USE_DEBUG_RTL"; then
@@ -3893,9 +3893,9 @@ EOF
 
     if test "$OS_TARGET" = "WINCE"; then
         if test "$TARGETCPU" = "X86"; then
-            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
+            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -INCREMENTAL:NO -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
         else
-            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:ARM -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
+            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -INCREMENTAL:NO -MACHINE:ARM -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
         fi
     else
         OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'

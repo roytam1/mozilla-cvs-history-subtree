@@ -595,7 +595,7 @@ endif # MOZ_DEBUG || NS_TRACE_MALLOC
 endif # USE_NON_MT_LIBS
 endif # USE_STATIC_LIBS
 else
-RTL_FLAGS=-Zl
+RTL_FLAGS=-Zl -GR- -GX- -Gi- -Gm-
 endif # WINCE
 endif # WINNT
 
