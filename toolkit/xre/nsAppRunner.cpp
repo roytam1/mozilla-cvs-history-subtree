@@ -88,6 +88,7 @@
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
 #include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
 #include "nsNetUtil.h"
 #include "nsXPCOM.h"
 #include "nsXPIDLString.h"
@@ -1763,13 +1764,8 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         (do_CreateInstance("@mozilla.org/toolkit/command-line;1"));
       NS_ENSURE_TRUE(cmdLine, 1);
 
-      nsCOMPtr<nsIProperties>
-        dirSvc (do_GetService("@mozilla.org/file/directory_service;1"));
-      NS_ENSURE_TRUE(dirSvc, 1);
-
       nsCOMPtr<nsIFile> workingDir;
-      rv = dirSvc->Get(NS_OS_CURRENT_WORKING_DIR, NS_GET_IID(nsIFile),
-                       getter_AddRefs(workingDir));
+      rv = NS_GetSpecialDirectory(NS_OS_CURRENT_WORKING_DIR, getter_AddRefs(workingDir));
       NS_ENSURE_SUCCESS(rv, 1);
 
       rv = cmdLine->Init(gArgc, gArgv,

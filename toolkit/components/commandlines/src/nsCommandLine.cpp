@@ -135,7 +135,7 @@ nsCommandLine::FindFlag(const nsAString& aFlag, PRBool aCaseSensitive, PRInt32 *
   for (f = 0; f < mArgs.Count(); ++f) {
     const nsString &arg = *mArgs[f];
 
-    if (arg.Length() >= 2 && arg[0] == PRUnichar('-')) {
+    if (arg.Length() >= 2 && arg.First() == PRUnichar('-')) {
       if (aFlag.Equals(Substring(arg, 1), c)) {
         *aResult = f;
         return NS_OK;
@@ -196,7 +196,7 @@ nsCommandLine::HandleFlagWithParam(const nsAString& aFlag, PRBool aCaseSensitive
     return NS_OK;
   }
 
-  if (found == mArgs.Count()) {
+  if (found == mArgs.Count() - 1) {
     return NS_ERROR_INVALID_ARG;
   }
 
@@ -278,7 +278,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
   CFRelease(newurl);
   if (NS_FAILED(rv)) return rv;
 
-  return CallQueryInterface(newfile, aResult);
+  NS_ADDREF(*aResult = newfile);
+  return NS_OK;
 
 #elif defined(XP_BEOS)
   nsCOMPtr<nsILocalFile> lf (do_CreateInstance(NS_LOCAL_FILE_CONTRACTID));
@@ -289,7 +290,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
     rv = lf->InitWithPath(aArgument);
     if (NS_FAILED(rv)) return rv;
 
-    return CallQueryInterface(lf, aResult);
+    NS_ADDREF(*aResult = lf);
+    return NS_OK;
   }
 
   nsCAutoString carg;
@@ -308,7 +310,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
   rv = lf->InitWithNativePath(BPath.Path());
   if (NS_FAILED(rv)) return rv;
 
-  return CallQueryInterface(lf, aResult);
+  NS_ADDREF(*aResult = lf);
+  return NS_OK;
 
 #elif defined(XP_UNIX)
   nsCOMPtr<nsILocalFile> lf (do_CreateInstance(NS_LOCAL_FILE_CONTRACTID));
@@ -319,7 +322,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
     rv = lf->InitWithPath(aArgument);
     if (NS_FAILED(rv)) return rv;
 
-    return CallQueryInterface(lf, aResult);
+    NS_ADDREF(*aResult = lf);
+    return NS_OK;
   }
 
   nsCAutoString nativeArg;
@@ -337,7 +341,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
   rv = lf->Normalize();
   if (NS_FAILED(rv)) return rv;
 
-  return CallQueryInterface(lf, aResult);
+  NS_ADDREF(*aResult = lf);
+  return NS_OK;
 
 #elif defined(XP_WIN32) || defined(XP_OS2)
   nsCOMPtr<nsILocalFile> lf (do_CreateInstance(NS_LOCAL_FILE_CONTRACTID));
@@ -366,7 +371,8 @@ nsCommandLine::ResolveFile(const nsAString& aArgument, nsIFile* *aResult)
     rv = lf->InitWithNativePath(nsDependentCString(pathBuf));
     if (NS_FAILED(rv)) return rv;
   }
-  return CallQueryInterface(lf, aResult);
+  NS_ADDREF(*aResult = lf);
+  return NS_OK;
 
 #else
 #error Need platform-specific logic here.
@@ -574,7 +580,8 @@ EnumHelp(nsCString& aEntry, void* aData)
   nsCString text;
   rv = clh->GetHelpInfo(text);
   if (NS_SUCCEEDED(rv)) {
-    NS_ASSERTION(text.Length() == 0 || text.Last() == '\n', "Help text from command line handlers should end in a newline.");
+    NS_ASSERTION(text.Length() == 0 || text.Last() == '\n',
+                 "Help text from command line handlers should end in a newline.");
     closure->text.Append(text);
   }
 

@@ -126,8 +126,6 @@ activateWindow( nsIDOMWindowInternal *win ) {
 #define MOZ_DEBUG_DDE 1
 #endif
 
-#define MOZ_DEBUG_DDE 1
-
 // Simple Win32 mutex wrapper.
 struct Mutex {
     Mutex( const char *name )
