@@ -41,7 +41,5 @@ dist/bin/chrome/pipnss.jar
 
 [unpackaged-files]
 dist/bin/shlibsign@BINS@
-#if OS_ARCH==WINNT
-!optional dist/bin/mangle.exe
-#endif
+!optional dist/bin/mangle@BINS@
 dist/bin/@SOFTOKEN3_CHK@
