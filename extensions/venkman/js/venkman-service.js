@@ -47,7 +47,7 @@ const JSDPROT_HANDLER_CID =
 const CATMAN_CTRID = "@mozilla.org/categorymanager;1";
 const STRING_STREAM_CTRID = "@mozilla.org/io/string-input-stream;1";
 const MEDIATOR_CTRID =
-    "@mozilla.org/rdf/datasource;1?name=window-mediator";
+    "@mozilla.org/appshell/window-mediator;1";
 const SIMPLEURI_CTRID = "@mozilla.org/network/simple-uri;1";
 
 const nsIWindowMediator    = Components.interfaces.nsIWindowMediator;
