@@ -1,0 +1,10 @@
+[inspector]
+dist/bin/components/@SHARED_LIBRARY@
+dist/bin/components/inspector-cmdline.js
+!xpt dist/bin/components/inspector.xpt
+dist/bin/chrome/inspector.jar
+dist/bin/res/inspector/viewer-registry.rdf
+dist/bin/res/inspector/search-registry.rdf
+
+[inspector xpfe-browser]
+dist/bin/defaults/pref/inspector.js

@@ -1,0 +1,74 @@
+# Master List of Packages
+#
+# This file lists package dependencies, and is
+# parsed by MozParser.pm (MozPackages::getPackagesFor)
+#
+# DO NOT ALTER THIS FILE WITHOUT APPROVAL FROM
+# Benjamin Smedberg <bsmedberg@covad.net>
+
+nspr                   :
+nspr-devel             :
+
+# xpcom does not depend on NSPR automatically because
+# they are separate RPMs
+xpcom                  :
+
+# these are core files needed to bootstrap the xpi stub installer
+xpi-bootstrap          : nspr xpcom
+
+# this target builds minimo, embedding, GRE
+# don't alter it without permission from dougt
+gecko                  : nspr xpcom
+
+# This package should eventually disappear. It includes prefs and
+# extras that *ought* to be in the gecko package, but can't be yet for
+# technical reasons). Don't even think about adding more to it.
+gecko-support          :
+
+nss                    :
+nss-devel              :
+
+# psm doesn't depend on nss because they are separate RPMs
+# although this might change if a GRE RPM comes into the picture
+psm                    :
+psm-devel              :
+psm-support            :
+
+gre                    : gecko nss psm
+gre-xpi                : gre
+
+# This package will disappear as well. It is used for embed.jar
+gre-support            : gecko-support psm-support
+
+# This is a bizarre catch-all for each platform's embedding package.
+# xxxbsmedberg: this still needs work, what about the mfcembed
+# which uses the GRE?
+embed                  : gecko nss psm psm-support
+
+xpfe-browser           : gecko-support psm-support
+xpfe-browser-xpi       : xpfe-browser
+xpfe-lang-enUS         :
+xpfe-locale-US         :
+xpfe-default-US        :
+xpfe-mailnews          :
+xpfe-editor            :
+
+# this currently has fb/tb ifdefs that make it impossible to package
+# independently of the particular app, which sucks... see bug 
+toolkit                : gecko-support
+
+# THE NEXT TWO ARE NOT NEARLY COMPLETE, DON'T EXPECT THAT THEY WORK
+# CORRECTLY
+
+# firebird (using separate GRE)
+browser                : toolkit
+# thunderbird (using separate GRE)
+mail                   : toolkit
+
+# I think that we build the same XPI for both seamonkey and firebird
+venkman                :
+inspector              :
+chatzilla              :
+
+# these targets creates the nightly tarballs (incorporating the GRE)
+seamonkeyall-enUS     : gre xpfe-browser xpfe-lang-enUS xpfe-locale-US xpfe-default-US xpfe-mailnews xpfe-editor venkman inspector chatzilla

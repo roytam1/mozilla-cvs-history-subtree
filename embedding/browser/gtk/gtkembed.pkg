@@ -1,0 +1,3 @@
+[embed]
+dist/bin/TestGtkEmbed
+dist/bin/@DLLP@gtkembedmoz@DLLS@

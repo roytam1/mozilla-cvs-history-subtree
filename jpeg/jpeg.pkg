@@ -1,0 +1,5 @@
+# this was part of browser instead of embedding... I have
+# no idea why, so I've made it part of embedding/GRE. You can
+# configure --with-system-jpeg to disable packaging jpeg
+[gecko]
+dist/bin/@SHARED_LIBRARY@

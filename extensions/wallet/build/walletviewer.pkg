@@ -1,0 +1,7 @@
+[xpfe-browser embed]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/signonviewer.xpt
+!xpt dist/bin/components/walleteditor.xpt
+!xpt dist/bin/components/walletpreview.xpt

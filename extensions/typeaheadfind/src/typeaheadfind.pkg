@@ -1,0 +1,7 @@
+# why not ship this with GRE/embedding, if we're building it?
+
+[xpfe-browser browser]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/typeaheadfind.xpt

@@ -1,0 +1,2 @@
+[xpfe-browser browser]
+!xpt dist/bin/components/webshell_idls.xpt

@@ -1,0 +1,6 @@
+# xxxbsmedberg does firebird actually use this? It's currently shipping.
+[xpfe-browser browser]
+#if SHARED_LIBRARY
+dist/bin/components/@SHARED_LIBRARY@
+#endif
+!xpt dist/bin/components/prefmgr.xpt
