@@ -959,7 +959,7 @@ nsExpatDriver::CanParse(CParserContext& aParserContext,
       result=ePrimaryDetect;
     }
     else {
-      if (0 == aParserContext.mMimeType.Length() &&
+      if (aParserContext.mMimeType.IsEmpty() &&
           kNotFound != aBuffer.Find("<?xml ")) {
         aParserContext.SetMimeType(NS_LITERAL_CSTRING(kXMLTextContentType));
         result=eValidDetect;
@@ -1130,6 +1130,12 @@ NS_IMETHODIMP_(void)
 nsExpatDriver::PrependTokens(nsDeque& aDeque)
 {
 
+}
+
+NS_IMETHODIMP
+nsExpatDriver::CopyState(nsITokenizer* aTokenizer)
+{
+  return NS_OK;
 }
 
 NS_IMETHODIMP 
