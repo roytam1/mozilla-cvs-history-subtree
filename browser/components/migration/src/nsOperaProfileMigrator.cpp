@@ -959,8 +959,10 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
       LL_I2L(million, PR_USEC_PER_SEC);
       LL_MUL(lastVisitDate, temp, million);
 
-      nsCAutoString urlStr; urlStr.AssignWithConversion(url);
-      hist->AddPageWithDetails(urlStr.get(), title.get(), lastVisitDate);
+      nsCOMPtr<nsIURI> uri;
+      NS_NewURI(getter_AddRefs(uri), url);
+      if (uri)
+        hist->AddPageWithDetails(uri, title.get(), lastVisitDate);
       
       state = TITLE;
       break;

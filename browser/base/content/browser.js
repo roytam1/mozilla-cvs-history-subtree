@@ -1984,7 +1984,7 @@ function addToUrlbarHistory()
    try {
      if (urlToAdd.indexOf(" ") == -1) {
        var fixedUpURI = gURIFixup.createFixupURI(urlToAdd, 0);
-       gGlobalHistory.markPageAsTyped(fixedUpURI.spec);
+       gGlobalHistory.markPageAsTyped(fixedUpURI);
      }
    }
    catch(ex) {
