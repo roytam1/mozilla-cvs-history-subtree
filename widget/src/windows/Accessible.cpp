@@ -260,7 +260,7 @@ STDMETHODIMP Accessible::get_accRole(
    if (role.EqualsIgnoreCase("text"))
       pvarRole->lVal = ROLE_SYSTEM_TEXT;
    else if (role.EqualsIgnoreCase("static text"))
-      pvarRole->lVal = ROLE_SYSTEM_STATICTEXT;
+      pvarRole->lVal = ROLE_SYSTEM_STATICTEXT;  // Do we want to follow IE and say ROLE_SYSTEM_TEXT here?
    else if (role.EqualsIgnoreCase("graphic"))
       pvarRole->lVal = ROLE_SYSTEM_GRAPHIC;
    else if (role.EqualsIgnoreCase("table"))
@@ -269,8 +269,6 @@ STDMETHODIMP Accessible::get_accRole(
       pvarRole->lVal = ROLE_SYSTEM_CELL;
    else if (role.EqualsIgnoreCase("row"))
       pvarRole->lVal = ROLE_SYSTEM_ROW;
-   else if (role.EqualsIgnoreCase("link"))
-      pvarRole->lVal = ROLE_SYSTEM_LINK;
    else if (role.EqualsIgnoreCase("combo box"))
       pvarRole->lVal = ROLE_SYSTEM_COMBOBOX;
    else if (role.EqualsIgnoreCase("link"))
@@ -295,6 +293,8 @@ STDMETHODIMP Accessible::get_accRole(
       pvarRole->lVal = ROLE_SYSTEM_CLIENT;
    else if (role.EqualsIgnoreCase("window"))
       pvarRole->lVal = ROLE_SYSTEM_WINDOW;
+   else if (role.EqualsIgnoreCase("pane"))
+      pvarRole->lVal = ROLE_SYSTEM_PANE;
    else
       pvarRole->lVal = ROLE_SYSTEM_ALERT;
 
