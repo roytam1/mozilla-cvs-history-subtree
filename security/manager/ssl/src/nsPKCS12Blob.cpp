@@ -339,6 +339,10 @@ finish:
   }
   if (ecx)
     SEC_PKCS12DestroyExportContext(ecx);
+  if (this->mTmpFile) {
+    PR_Close(this->mTmpFile);
+    this->mTmpFile = NULL;
+  }
   return rv;
 }
 
