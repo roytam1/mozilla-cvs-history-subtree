@@ -5774,6 +5774,8 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView, PRUint32 aFlags,
     void*     clientData;
     aView->GetClientData(clientData);
     nsIFrame* frame = (nsIFrame *)clientData;
+    if (frame == nsnull)
+      return NS_ERROR_FAILURE;
     return frame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent, aStatus);
   }
 #endif
