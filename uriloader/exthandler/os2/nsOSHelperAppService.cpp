@@ -19,6 +19,7 @@
  * Contributor(s):
  *   Scott MacGregor <mscott@netscape.com>
  *   Boris Zbarsky <bzbarsky@mit.edu>  (Added mailcap and mime.types support)
+ *   Peter Weilbacher <mozilla@Weilbacher.org>
  */
 
 #include "nsOSHelperAppService.h"
@@ -1122,6 +1123,8 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
 {
   LOG(("-- nsOSHelperAppService::ExternalProtocolHandlerExists for '%s'\n",
        aProtocolScheme));
+  *aHandlerExists = PR_FALSE;
+
   /* if applications.protocol is in prefs, then we have an external protocol handler */
   nsresult rv;
   nsCAutoString prefName;
@@ -1132,15 +1135,71 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
     nsXPIDLCString prefString;
     rv = thePrefsService->CopyCharPref(prefName.get(), getter_Copies(prefString));
     *aHandlerExists = NS_SUCCEEDED(rv) && !prefString.IsEmpty();
+    if (*aHandlerExists) {
+      return NS_OK;
+    }
+  }
+  /* Check the OS/2 INI for the protocol */
+  char szAppFromINI[CCHMAXPATH] = "\0";
+  nsDependentCString protocol(aProtocolScheme);
+  if ((protocol.Equals("http")) ||
+      (protocol.Equals("https"))) {
+    PrfQueryProfileString(HINI_USER,
+                          "WPURLDEFAULTSETTINGS",
+                          "DefaultBrowserExe",
+                          "",
+                          szAppFromINI,
+                          sizeof(szAppFromINI));
+    *aHandlerExists = (*szAppFromINI != 0);
     return NS_OK;
   }
-  *aHandlerExists = PR_FALSE;
+  if ((protocol.Equals("ftp"))) {
+    PrfQueryProfileString(HINI_USER,
+                          "WPURLDEFAULTSETTINGS",
+                          "DefaultFTPExe",
+                          "",
+                          szAppFromINI,
+                          sizeof(szAppFromINI));
+    *aHandlerExists = (*szAppFromINI != 0);
+    return NS_OK;
+  }
+  if ((protocol.Equals("mailto"))) {
+    PrfQueryProfileString(HINI_USER,
+                          "WPURLDEFAULTSETTINGS",
+                          "DefaultMailExe",
+                          "",
+                          szAppFromINI,
+                          sizeof(szAppFromINI));
+    *aHandlerExists = (*szAppFromINI != 0);
+    return NS_OK;
+  }
+  if ((protocol.Equals("news")) ||
+      (protocol.Equals("snews"))) {
+    PrfQueryProfileString(HINI_USER,
+                          "WPURLDEFAULTSETTINGS",
+                          "DefaultNewsExe",
+                          "",
+                          szAppFromINI,
+                          sizeof(szAppFromINI));
+    *aHandlerExists = (*szAppFromINI != 0);
+    return NS_OK;
+  }
+  if (protocol.Equals("irc")) {
+    PrfQueryProfileString(HINI_USER,
+                          "WPURLDEFAULTSETTINGS",
+                          "DefaultIRCExe",
+                          "",
+                          szAppFromINI,
+                          sizeof(szAppFromINI));
+    *aHandlerExists = (*szAppFromINI != 0);
+    return NS_OK;
+  }
   return NS_OK;
 }
 
 nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
 {
-  LOG(("-- nsOSHelperAppService::LoadUrl\n"));
+  LOG(("-- nsOSHelperAppService::LoadUriInternal\n"));
   nsCOMPtr<nsIPref> thePrefsService(do_GetService(NS_PREF_CONTRACTID));
   if (!thePrefsService) {
     return NS_ERROR_FAILURE;
@@ -1171,120 +1230,138 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
   if (NS_FAILED(rv) || prefString.IsEmpty()) {
     char szAppFromINI[CCHMAXPATH] = "\0";
     char szParamsFromINI[CCHMAXPATH];
-    /* Special case http, https, and ftp - if we get here, pass them to the shell */
+    /* http or https */
     if ((uProtocol == NS_LITERAL_CSTRING("http")) ||
-        (uProtocol == NS_LITERAL_CSTRING("https")) ||
-        (uProtocol == NS_LITERAL_CSTRING("ftp"))) {
-      if (uProtocol == NS_LITERAL_CSTRING("ftp")) {
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultFTPExe",
-                              "",
-                              szAppFromINI,
-                              sizeof(szAppFromINI)) ;
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultFTPParameters",
-                              "",
-                              szParamsFromINI,
-                              sizeof(szParamsFromINI)) ;
-      }
-      /* If we didn't get a default ftp or it's http or https */
-      if ((uProtocol == NS_LITERAL_CSTRING("http")) ||
-          (uProtocol == NS_LITERAL_CSTRING("https")) ||
-          (szAppFromINI[0] == '\0')) {
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultBrowserExe",
-                              "",
-                              szAppFromINI,
-                              sizeof(szAppFromINI));
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultParameters",
-                              "",
-                              szParamsFromINI,
-                              sizeof(szParamsFromINI));
-        // DefaultParameters is the correct OS/2 way.
-        // In the configapps application, it writes
-        // DefaultBrowserParameters as well, so let's
-        // support it
-        if (szParamsFromINI[0] = '\0') {
-          PrfQueryProfileString(HINI_USER,
-                                "WPURLDEFAULTSETTINGS",
-                                "DefaultBrowserParameters",
-                                "",
-                                szParamsFromINI,
-                                sizeof(szParamsFromINI));
-        }
-      }
-    } else if ((uProtocol == NS_LITERAL_CSTRING("mailto")) ||
-               (uProtocol == NS_LITERAL_CSTRING("news"))) {
-      if (uProtocol == NS_LITERAL_CSTRING("news")) {
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultNewsExe",
-                              "",
-                              szAppFromINI,
-                              sizeof(szAppFromINI)) ;
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultNewsParameters",
-                              "",
-                              szParamsFromINI,
-                              sizeof(szParamsFromINI)) ;
-      }
-      /* If we didn't get a default news or it's mailto */
-      if ((uProtocol == NS_LITERAL_CSTRING("mailto")) ||
-          (szAppFromINI[0] == '\0')) {
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultMailExe",
-                              "",
-                              szAppFromINI,
-                              sizeof(szAppFromINI));
-        PrfQueryProfileString(HINI_USER,
-                              "WPURLDEFAULTSETTINGS",
-                              "DefaultMailParameters",
-                              "",
-                              szParamsFromINI,
-                              sizeof(szParamsFromINI));
-      }
-    } else {
+        (uProtocol == NS_LITERAL_CSTRING("https"))) {
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultBrowserExe",
+                            "",
+                            szAppFromINI,
+                            sizeof(szAppFromINI));
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultParameters",
+                            "",
+                            szParamsFromINI,
+                            sizeof(szParamsFromINI));
+    }
+    /* mailto: */
+    else if (uProtocol == NS_LITERAL_CSTRING("mailto")) {
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultMailExe",
+                            "",
+                            szAppFromINI,
+                            sizeof(szAppFromINI));
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultMailParameters",
+                            "",
+                            szParamsFromINI,
+                            sizeof(szParamsFromINI));
+    }
+    /* ftp */
+    else if (uProtocol == NS_LITERAL_CSTRING("ftp")) {
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultFTPExe",
+                            "",
+                            szAppFromINI,
+                            sizeof(szAppFromINI));
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultFTPParameters",
+                            "",
+                            szParamsFromINI,
+                            sizeof(szParamsFromINI));
+    }
+    /* news: or snews: */
+    else if ((uProtocol == NS_LITERAL_CSTRING("news")) ||
+             (uProtocol == NS_LITERAL_CSTRING("snews"))) {
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultNewsExe",
+                            "",
+                            szAppFromINI,
+                            sizeof(szAppFromINI));
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultNewsParameters",
+                            "",
+                            szParamsFromINI,
+                            sizeof(szParamsFromINI));
+    }
+    /* irc: */
+    else if (uProtocol == NS_LITERAL_CSTRING("irc")) {
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultIRCExe",
+                            "",
+                            szAppFromINI,
+                            sizeof(szAppFromINI));
+      PrfQueryProfileString(HINI_USER,
+                            "WPURLDEFAULTSETTINGS",
+                            "DefaultIRCParameters",
+                            "",
+                            szParamsFromINI,
+                            sizeof(szParamsFromINI));
+    }
+    /* unsupported protocol scheme */
+    else {
       return NS_ERROR_FAILURE;
     }
 
+    /* did OS2.INI contain application? */
     if (szAppFromINI[0]) {
       applicationName = szAppFromINI;
       parameters = szParamsFromINI;
-      parameters += " ";
-      parameters += urlSpec;
     } else {
       return NS_ERROR_FAILURE;
     }
   }
 
+  // Dissect the URI
+  nsCAutoString uURL, uUsername, uPassword, uHost, uPort, uPath;
+  nsCAutoString uEmail, uGroup;
+  PRInt32 iPort;
+
+  // when passing to OS/2 apps later, we need ASCII URLs,
+  // UTF-8 would probably not get handled correctly
+  aURL->GetAsciiSpec(uURL);
+  uri->GetAsciiHost(uHost);
+  uri->GetUsername(uUsername);
+  NS_UnescapeURL(uUsername);
+  uri->GetPassword(uPassword);
+  NS_UnescapeURL(uPassword);
+  uri->GetPort(&iPort);
+  /* GetPort returns -1 if there is no port in the URI */
+  if (iPort != -1)
+    uPort.AppendInt(iPort);
+  uri->GetPath(uPath);
+  NS_UnescapeURL(uPath);
+
+  // One could use nsIMailtoUrl to get email and newsgroup,
+  // but it is probably easier to do that quickly by hand here
+  // uEmail is both email address and message id  for news
+  uEmail = uUsername + NS_LITERAL_CSTRING("@") + uHost;
+  // uPath can almost be used as newsgroup and as channel for IRC
+  // but strip leading "/"
+  uGroup = Substring(uPath, 1, uPath.Length());
+
+  NS_NAMED_LITERAL_CSTRING(url, "%url%");
+  NS_NAMED_LITERAL_CSTRING(username, "%username%");
+  NS_NAMED_LITERAL_CSTRING(password, "%password%");
+  NS_NAMED_LITERAL_CSTRING(host, "%host%");
+  NS_NAMED_LITERAL_CSTRING(port, "%port%");
+  NS_NAMED_LITERAL_CSTRING(email, "%email%");
+  NS_NAMED_LITERAL_CSTRING(group, "%group%");
+  NS_NAMED_LITERAL_CSTRING(msgid, "%msgid%");
+  NS_NAMED_LITERAL_CSTRING(channel, "%channel%");
+
   if (applicationName.IsEmpty() && parameters.IsEmpty()) {
     /* Put application name in parameters */
     applicationName.Append(prefString);
-  
-    nsCAutoString uPort;
-    PRInt32 iPort;
-    uri->GetPort(&iPort);
-    /* GetPort returns -1 if there is no port in the URI */
-    if (iPort != -1)
-      uPort.AppendInt(iPort);
-  
-    nsCAutoString uUsername;
-    uri->GetUsername(uUsername);
-    NS_UnescapeURL(uUsername);
-  
-    nsCAutoString uPassword;
-    uri->GetPassword(uPassword);
-    NS_UnescapeURL(uPassword);
-  
-    nsCAutoString uHost;
-    uri->GetAsciiHost(uHost);
   
     prefName.Append(".");
     nsCOMPtr<nsIPrefBranch> prefBranch;
@@ -1295,8 +1372,6 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
       if (NS_SUCCEEDED(rv) && !prefString.IsEmpty()) {
         parameters.Append(" ");
         parameters.Append(prefString);
-  
-        NS_NAMED_LITERAL_CSTRING(url, "%url%");
   
         PRInt32 pos = parameters.Find(url.get());
         if (pos != kNotFound) {
@@ -1341,34 +1416,79 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
         }
       }
     }
+  }
+
+#ifdef DEBUG_peter
+  printf("uURL=%s\n", uURL.get());
+  printf("uUsername=%s\n", uUsername.get());
+  printf("uPassword=%s\n", uPassword.get());
+  printf("uHost=%s\n", uHost.get());
+  printf("uPort=%s\n", uPort.get());
+  printf("uPath=%s\n", uPath.get());
+  printf("uEmail=%s\n", uEmail.get());
+  printf("uGroup=%s\n", uGroup.get());
+#endif
   
-    PRInt32 pos;
-  
-    NS_NAMED_LITERAL_CSTRING(port, "%port%");
-    NS_NAMED_LITERAL_CSTRING(username, "%username%");
-    NS_NAMED_LITERAL_CSTRING(password, "%password%");
-    NS_NAMED_LITERAL_CSTRING(host, "%host%");
-  
-    pos = parameters.Find(port.get());
-    if (pos != kNotFound) {
-      parameters.Replace(pos, port.Length(), uPort);
-    }
-    pos = parameters.Find(username.get());
-    if (pos != kNotFound) {
-      parameters.Replace(pos, username.Length(), uUsername);
-    }
-    pos = parameters.Find(password.get());
-    if (pos != kNotFound) {
-      parameters.Replace(pos, password.Length(), uPassword);
-    }
-    pos = parameters.Find(host.get());
-    if (pos != kNotFound) {
-      parameters.Replace(pos, host.Length(), uHost);
-    }
+  PRInt32 pos;
+  PRBool replaced = PR_FALSE;
+  pos = parameters.Find(url.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, url.Length(), uURL);
+  }
+  pos = parameters.Find(username.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, username.Length(), uUsername);
+  }
+  pos = parameters.Find(password.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, password.Length(), uPassword);
+  }
+  pos = parameters.Find(host.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, host.Length(), uHost);
+  }
+  pos = parameters.Find(port.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, port.Length(), uPort);
+  }
+  pos = parameters.Find(email.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, email.Length(), uEmail);
+  }
+  pos = parameters.Find(group.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, group.Length(), uGroup);
+  }
+  pos = parameters.Find(msgid.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, msgid.Length(), uEmail);
+  }
+  pos = parameters.Find(channel.get());
+  if (pos != kNotFound) {
+    replaced = PR_TRUE;
+    parameters.Replace(pos, channel.Length(), uGroup);
+  }
+  // If no replacement variable was used, the user most likely uses the WPS URL
+  // object and does not know about the replacement variables.
+  // Just append the full URL.
+  if (!replaced) {
+    parameters.Append(" ");
+    parameters.Append(uURL);
   }
 
   const char *params[3];
   params[0] = parameters.get();
+#ifdef DEBUG_peter
+  printf("params[0]=%s\n", params[0]);
+#endif
   PRInt32 numParams = 1;
 
   nsCOMPtr<nsILocalFile> application;
@@ -1394,7 +1514,6 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
        params[2] = parameters.get();
        numParams = 3;
      }
-
   }
 
   nsCOMPtr<nsIProcess> process = do_CreateInstance(NS_PROCESS_CONTRACTID);
