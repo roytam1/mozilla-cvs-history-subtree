@@ -2100,6 +2100,12 @@ if test "$result" = "yes"; then
 fi
 AC_SUBST(HAVE_64BIT_OS)
 
+if test "$HAVE_64BIT_OS"; then
+	case "$target_os" in
+	solaris*) TARGET_NSPR_MDCPUCFG='\"md/_solaris64.cfg\"' ;;
+	esac
+fi
+
 dnl Check for usable wchar_t (2 bytes, unsigned)
 dnl (we really don't need the unsignedness check anymore)
 dnl ========================================================
@@ -2401,7 +2407,7 @@ dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS(random strerror lchown fchmod snprintf localtime_r statvfs memmove rint)
-AC_CHECK_FUNCS(nl_langinfo)
+AC_CHECK_FUNCS(nl_langinfo strtok_r)
 
 AC_LANG_CPLUSPLUS
 AC_CACHE_CHECK(
@@ -3835,6 +3841,10 @@ MOZ_ARG_DISABLE_BOOL(ldap,
 [  --disable-ldap          Disable LDAP support],
   MOZ_LDAP_XPCOM=
     )
+if test "$MOZ_LDAP_XPCOM"; then
+    LDAP_CFLAGS='-I${DIST}/include/ldap'
+    LDAP_LIBS='-L${DIST}/bin -L${DIST}/lib -lldap40 -llber40'
+fi
 
 dnl --enable-ldap-experimental
 dnl
@@ -4094,6 +4104,8 @@ AC_SUBST(MOZ_INSURIFYING)
 AC_SUBST(MOZ_BUILD_XPFE)
 AC_SUBST(MOZ_LDAP_XPCOM)
 AC_SUBST(MOZ_LDAP_XPCOM_EXPERIMENTAL)
+AC_SUBST(LDAP_CFLAGS)
+AC_SUBST(LDAP_LIBS)
 
 AC_SUBST(XPCOM_USE_LEA)
 AC_SUBST(UNIX_CRASH_ON_ASSERT)
@@ -4562,6 +4574,9 @@ unset CONFIG_FILES
 
 if test -z "$MOZ_NATIVE_NSPR" || test "$MOZ_LDAP_XPCOM"; then
     ac_configure_args="$_SUBDIR_CONFIG_ARGS --with-dist-prefix=$MOZ_BUILD_ROOT/dist"
+    if test -n "$HAVE_64BIT_OS"; then
+        ac_configure_args="$ac_configure_args --enable-64bit"
+    fi
     AC_OUTPUT_SUBDIRS(nsprpub)
 fi
 
@@ -4600,5 +4615,8 @@ if test "$MOZ_LDAP_XPCOM"; then
   fi
 
   ac_configure_args="$_SUBDIR_CONFIG_ARGS --prefix=$MOZ_BUILD_ROOT/dist"
+    if test -n "$HAVE_64BIT_OS"; then
+        ac_configure_args="$ac_configure_args --enable-64bit"
+    fi
   AC_OUTPUT_SUBDIRS(directory/c-sdk/ldap)
 fi
