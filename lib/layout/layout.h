@@ -856,10 +856,8 @@ struct lo_TopState_struct {
 #ifdef DEBUG_ScriptPlugin
 #define SCRIPT_TYPE_PLUGIN  5
 #endif
-#ifdef MOCHA
 extern void 
 lo_DestroyScriptData(void *data); 
-#endif
 
 /* Define to get the reload flag of the current document */
 #define FORCE_RELOAD_FLAG(top_state) \

@@ -45,9 +45,7 @@
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
-#ifdef NSPR20
 #include "private/prpriv.h"	/* for PR_NewNamedMonitor */
-#endif /* NSPR20 */
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
@@ -63,11 +61,7 @@
 #include "xeditor.h"
 #endif
 #include "prnetdb.h"
-#ifndef NSPR20
-#include "prevent.h"
-#else
 #include "plevent.h"
-#endif
 #include "e_kit.h"
 
 #include "icons.h"
@@ -1073,16 +1067,12 @@ fe_EventLoop ()
 	     */
 	  if (first_time) {
 #ifndef I_KNOW_MY_Xt_IS_BAD
-#ifdef NSPR20
 		/*
 		 * XXX - TO BE FIXED
 		 * with NSPR20 this count seems to go as high as 7 or 8; needs to
 		 * be investigated further
 		 */
 	      XP_ASSERT(spinning_wildly < 12);
-#else
-	      XP_ASSERT(spinning_wildly < 3);
-#endif
 #endif /* I_KNOW_MY_Xt_IS_BAD */
 	      spinning_wildly++;
 	  }
@@ -2542,12 +2532,7 @@ main
 
   fe_display = dpy = XtDisplay (toplevel);
 
-#if defined(NSPR20)
   PR_UnblockClockInterrupts();
-#else
-  /* Now we can turn the nspr clock on */
-  PR_StartEvents(0);
-#endif	/* NSPR20 */
 
 #ifdef JAVA
   {
@@ -2768,10 +2753,7 @@ main
 	      const char *host;
 
 	      inaddr.s_addr = addr;
-#ifndef NSPR20
-	      hp = PR_gethostbyaddr((char *)&inaddr, sizeof inaddr, AF_INET,
-				    &hpbuf, dbbuf, sizeof(dbbuf), 0);
-#else
+
               {
 	      PRStatus sts;
 	      PRNetAddr pr_addr;
@@ -2784,7 +2766,6 @@ main
 	      else
 		  hp = &hpbuf;
 	      }
-#endif
 	      host = (hp == NULL) ? inet_ntoa(inaddr) : hp->h_name;
 	      fmt = PR_sprintf_append(fmt,
 		      XP_GetString(XFE_APPEARS_TO_BE_RUNNING_ON_HOST_UNDER_PID),
@@ -3174,11 +3155,8 @@ main
 				  while (*s && *s != ':' && *s != '/')
 					s++;
 				  
-#ifndef NSPR20
-				  if (*s == ':' || PR_gethostbyname (argv [i], &hpbuf, dbbuf, sizeof(dbbuf), 0))
-#else
+
 				  if (*s == ':' || (PR_GetHostByName (argv [i], dbbuf, sizeof(dbbuf), &hpbuf) == PR_SUCCESS))
-#endif
 					{
 					  /* There is a : before the first / so it's a URL.
 						 Or it is a host name, which are also magically URLs.
@@ -3712,13 +3690,7 @@ fe_create_pidlock (const char *name, unsigned long *paddr, pid_t *ppid)
   char *colon, *after;
   pid_t pid;
 
-#ifndef NSPR20
-  if (gethostname (hostname, sizeof hostname) < 0 ||
-      (hp = PR_gethostbyname (hostname, &hpbuf, dbbuf, sizeof(dbbuf), 0)) == NULL)
-    inaddr.s_addr = INADDR_LOOPBACK;
-  else
-    memcpy (&inaddr, hp->h_addr, sizeof inaddr);
-#else
+
   {
   PRStatus sts;
 
@@ -3735,7 +3707,7 @@ fe_create_pidlock (const char *name, unsigned long *paddr, pid_t *ppid)
     }
   }
   }
-#endif
+
 
   myaddr = inaddr.s_addr;
   signature = PR_smprintf ("%s:%u", inet_ntoa (inaddr), (unsigned)getpid ());

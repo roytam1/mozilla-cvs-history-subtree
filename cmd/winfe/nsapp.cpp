@@ -1660,14 +1660,14 @@ int CNetscapeApp::Run()
 	}
 
 #ifdef XP_WIN16
-#if defined(OJI) || defined(JAVA) || defined(MOCHA)
+#if defined(OJI) || defined(JAVA)
 	/*
 	** On Win16 the only way for another thread to run is to explicitly
 	** yield...
 	*/
 	extern void fe_yield(void);
 	fe_yield();
-#endif	/* OJI || JAVA || MOCHA */
+#endif	/* OJI || JAVA */
 #endif	/* XP_WIN16 */
 
 	do  {
@@ -1794,14 +1794,14 @@ BOOL CNetscapeApp::OnIdle(LONG lCount)
 	// already sends a WM_IDLEUPDATECMDUI to each of the frames
 
 #ifdef XP_WIN16
-#if defined(OJI) || defined(JAVA) || defined(MOCHA)
+#if defined(OJI) || defined(JAVA)
     /*
     ** On Win16 the only way for another thread to run is to explicitly
     ** yield...
     */
     extern void fe_yield(void);
     fe_yield();
-#endif	/* OJI || JAVA || MOCHA */
+#endif	/* OJI || JAVA */
 
     //	Update the UI of the frames.
     if(lCount == 0)    {
