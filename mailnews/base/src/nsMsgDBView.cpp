@@ -699,9 +699,12 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
         NS_ENSURE_SUCCESS(rv,rv);
 
         nsXPIDLCString subject;
+        nsXPIDLCString author;
         rv = msgHdr->GetSubject(getter_Copies(subject));
         NS_ENSURE_SUCCESS(rv,rv);
-        printf("(%d,%d,%d,%s)\n",key,flags,level,(const char *)subject);
+        rv = msgHdr->GetAuthor(getter_Copies(author));
+        NS_ENSURE_SUCCESS(rv,rv);
+        printf("(%d,%d,%d,%s,%s)\n",key,flags,level,(const char *)subject,(const char *)author);
     }
     printf("\n");
     return NS_OK;
@@ -729,7 +732,14 @@ FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
 {
     IdStr** p1 = (IdStr**)pItem1;
     IdStr** p2 = (IdStr**)pItem2;
-    int retVal = nsCRT::strcmp((*p1)->str, (*p2)->str); // used to be strcasecmp, but INTL sorting routine lower cases it.
+#if 0
+    int retVal = nsCRT::strcmp((*p1)->str, (*p2)->str); 
+#else
+    // fix sorting, hack for now.
+    const char *str1 = (const char *)((*p1)->str);
+    const char *str2 = (const char *)((*p2)->str);
+    int retVal = nsCRT::strcmp(str1,str2);
+#endif
     if (retVal != 0)
         return(retVal);
     if ((*p1)->info.id >= (*p2)->info.id)
@@ -1401,7 +1411,9 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 {
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread;
-  nsMsgKey        startMsg = nsMsgKey_None;
+#ifdef HAVE_PORT
+    nsMsgKey        startMsg = nsMsgKey_None;
+#endif
 	nsresult		rv = NS_OK;
 	PRUint32			numExpanded = 0;
 
@@ -2464,7 +2476,8 @@ nsresult nsMsgDBView::ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices
     for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
     {
       // here we need to build up the unique threads, and mark them ignored.
-      nsMsgViewIndex    threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
+      nsMsgViewIndex threadIndex;
+      threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
     }
   }
   return rv;
@@ -2539,7 +2552,8 @@ nsresult nsMsgDBView::ToggleWatched( nsMsgViewIndex* indices,	PRInt32 numIndices
 			NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
 		for (int curIndex = numIndices - 1; curIndex >= 0; curIndex--)
 		{
-		  nsMsgViewIndex	threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
+		  nsMsgViewIndex	threadIndex;    
+          threadIndex = GetThreadFromMsgIndex(*indices, getter_AddRefs(thread));
       // here we need to build up the unique threads, and mark them watched.
 		}
 	}

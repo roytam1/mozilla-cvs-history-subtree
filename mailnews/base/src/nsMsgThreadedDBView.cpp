@@ -142,7 +142,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 {
 	nsresult rv = NS_OK;
 	// N.B..don't ret before assigning numListed to *pNumListed
-	PRInt32				numListed;
+	PRInt32	numListed = 0;
 
 	if (*startMsg > 0)
 	{
