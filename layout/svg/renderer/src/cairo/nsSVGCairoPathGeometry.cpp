@@ -48,6 +48,7 @@
 #include "nsSVGCairoPathBuilder.h"
 #include "nsMemory.h"
 #include <cairo.h>
+#include "nsSVGCairoRegion.h"
 
 /**
  * \addtogroup cairo_renderer Cairo Rendering Engine
@@ -292,16 +293,16 @@ nsSVGCairoPathGeometry::Render(nsISVGRendererCanvas *canvas)
 NS_IMETHODIMP
 nsSVGCairoPathGeometry::Update(PRUint32 updatemask, nsISVGRendererRegion **_retval)
 {
-  *_retval = nsnull;
-  return NS_OK;
+  // XXX just return a large region for now:
+  return NS_NewSVGCairoRectRegion(_retval, -10000, -10000, 20000, 20000);
 }
 
 /** Implements nsISVGRendererRegion getCoveredRegion(); */
 NS_IMETHODIMP
 nsSVGCairoPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
-  *_retval = nsnull;
-  return NS_OK;
+  // XXX just return a large region for now:
+  return NS_NewSVGCairoRectRegion(_retval, -10000, -10000, 20000, 20000);
 }
 
 /** Implements boolean containsPoint(in float x, in float y); */
