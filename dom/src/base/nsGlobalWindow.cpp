@@ -422,10 +422,13 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
      bug 49615 describes a case.) */
   /* We only want to do this when we're setting a new document rather
      than going away.  See bug 61840.  */
+
   if (mDocShell && aDocument) {
     SetStatus(nsString());
     SetDefaultStatus(nsString());
   }
+
+  PRBool do_clear_scope = PR_FALSE;
 
   if (mDocument) {
     nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
@@ -438,7 +441,6 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
 
     if (doc) {
       doc->GetDocumentURL(getter_AddRefs(docURL));
-      doc = nsnull;             // Forces release now
     }
 
     if (removeEventListeners && mListenerManager) {
@@ -451,7 +453,9 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
 
       docURL->GetSpec(url);
 
-      //about:blank URL's do not have ClearScope called on page change.
+      // about:blank URL's do not have ClearScope called on page
+      // change.
+
       if (strcmp(url.get(), "about:blank") != 0) {
         ClearAllTimeouts();
 
@@ -461,21 +465,23 @@ GlobalWindowImpl::SetNewDocument(nsIDOMDocument* aDocument,
         }
 
         if (mContext && mJSObject) {
-//      if (mContext && mJSObject && aDocument) {
-//      not doing this unless there's a new document prevents a closed window's
-//      JS properties from going away (that's good) and causes everything,
-//      and I mean everything, to be leaked (that's bad)
-
-          ::JS_ClearScope((JSContext *)mContext->GetNativeContext(),
-                          mJSObject);
-
-          mIsScopeClear = PR_TRUE;
+          do_clear_scope = PR_TRUE;
         }
       }
     }
+  } else if (!aDocument) {
+    // If both mDocument and aDocument are null we've just left a
+    // full-page plugin page and we need to ensure that the scope is
+    // cleared so that the cached window.document property (which
+    // happens to be null in a full-page plugin window) is cleared.
 
-    //XXX Should this be outside the about:blank clearscope exception?
-    mDocument = nsnull;         // Forces Release
+    do_clear_scope = PR_TRUE;
+  }
+
+  if (do_clear_scope) {
+    ::JS_ClearScope((JSContext *)mContext->GetNativeContext(), mJSObject);
+
+    mIsScopeClear = PR_TRUE;
   }
 
   if (mContext && aDocument) {
@@ -5552,7 +5558,6 @@ NavigatorImpl::Preference()
       STRING_TO_JSVAL(::JS_InternString(cx, "preferenceinternal"));
   }
 
-  NS_ENSURE_SUCCESS(rv, rv);
   PRUint32 action;
   if (argc == 1) {
       action = nsIXPCSecurityManager::ACCESS_GET_PROPERTY;
