@@ -53,12 +53,13 @@ usage( void )
     fprintf( stderr, "\t\t(if the environment variable LDAP_BASEDN is set,\n" );
     fprintf( stderr, "\t\tthen the -b flag is not required)\n" );
     fprintf( stderr, "options:\n" );
+    fprintf( stderr, "    -s scope\tone of base, one, or sub (default is sub)\n" );
     ldaptool_common_usage( 1 );
     exit( LDAP_PARAM_ERROR );
 }
 
 static char	*base = NULL;
-static int	 allow_binary, vals2tmp, ldif, scope, deref;
+static int	 allow_binary, vals2tmp, ldif, scope, deref, differ=0;
 static int	attrsonly, timelimit, sizelimit;
 #if 0 /* these statics are referenced only by unused functions */
 static char	*sep = LDAPTOOL_DEFSEP;
@@ -124,8 +125,8 @@ main( int argc, char **argv )
 
     ldaptool_cleanup( ld1 );
     ldaptool_cleanup( ld2 );
-    if ( ldaptool_verbose ) {
-	if ( 0 == rc ) {
+    if ( ldaptool_verbose && !rc ) {
+	if ( !differ ) {
 	    printf( "compare completed: no differences found\n" );
 	} else {
 	    printf( "compare completed: ****differences were found****\n" );
@@ -194,7 +195,7 @@ docompare( LDAP *ld1, LDAP *ld2, char *base )
 	serverctrls = NULL;
     }
 
-    if ( ldap_search_ext( ld1, base, LDAP_SCOPE_BASE, "objectClass=*", NULL,
+    if ( ldap_search_ext( ld1, base, scope, "objectClass=*", NULL,
 	    0, serverctrls, NULL, NULL, -1, &msgid ) != LDAP_SUCCESS ) {
 	return( ldaptool_print_lderror( ld1, "ldap_search",
 	    LDAPTOOL_CHECK4SSL_IF_APPROP ));
@@ -216,7 +217,7 @@ docompare( LDAP *ld1, LDAP *ld2, char *base )
     }
     ldap_msgfree( res );
 
-    if ( ldap_search_ext( ld2, base, LDAP_SCOPE_BASE, "objectClass=*", NULL,
+    if ( ldap_search_ext( ld2, base, scope, "objectClass=*", NULL,
 	    0, serverctrls, NULL, NULL, -1, &msgid  ) == -1 ) {
 	return( ldaptool_print_lderror( ld2, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
@@ -284,33 +285,12 @@ cmp2( LDAP *ld1, LDAP *ld2, LDAPMessage *e1, int findonly)
     }
     if ( !found ) {
 	notfound( dn, findonly );
+	differ = 1;
     }
     if ( rc == -1 ) {
         return( ldaptool_print_lderror( ld2, "ldap_result",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
-    ldap_msgfree( res );
-
-    if (( msgid = ldap_search( ld1, dn, LDAP_SCOPE_ONELEVEL, "objectClass=*" , NULL, 0 )) == -1 ) {
-	return( ldaptool_print_lderror( ld1, "ldap_search",
-		LDAPTOOL_CHECK4SSL_IF_APPROP ));
-    }
-/* XXXmcs: this code should be modified to display referrals and references */
-    while ( (rc = ldap_result( ld1, msgid, 0, NULL, &res )) == 
-        LDAP_RES_SEARCH_ENTRY ) {
-        e2 = ldap_first_entry( ld1, res );
-        rc = cmp2( ld1, ld2, e2, findonly );
-        ldap_msgfree( res );
-    }
-    if ( rc == -1 ) {
-	return( ldaptool_print_lderror( ld1, "ldap_result",
-		LDAPTOOL_CHECK4SSL_IF_APPROP ));
-    }
-    if (( rc = ldap_result2error( ld1, res, 0 )) != LDAP_SUCCESS ) {
-        ldaptool_print_lderror( ld1, "ldap_search",
-		LDAPTOOL_CHECK4SSL_IF_APPROP );
-    }
-
     ldap_msgfree( res );
     ldap_memfree( dn );
     return(rc);
@@ -381,6 +361,7 @@ cmp_attrs( ATTR *a1, ATTR *a2 )
 		head1 = head1->next;
 		attr_free(tmp);
 	    }
+	    differ = 1;
 	    break;
 	}
         name = head1->name;
@@ -409,6 +390,7 @@ cmp_attrs( ATTR *a1, ATTR *a2 )
 
 		if(strcmp(res, "")) {
 		    sprintf(partial, "\ndifferent: %s%s", name, res);
+		    differ = 1;
 		    strcat(result, partial);
 		}
 		if(prev == NULL) {		/* tmp = head2 */
@@ -439,6 +421,7 @@ cmp_attrs( ATTR *a1, ATTR *a2 )
 		}
 		if(tmp == start) {	/* attr !exist in 2 */
 		    sprintf(partial, "\ndifferent: %s(*)", name);
+		    differ = 1;
 		    strcat(result, partial);
 		    for(i=0; head1->vals[i] != NULL; i++) {
 		        sprintf(partial, "\n\t1: %s", head1->vals[i]);
@@ -454,6 +437,7 @@ cmp_attrs( ATTR *a1, ATTR *a2 )
     }
     while(head2 != NULL) {
         sprintf(partial, "\ndifferent: %s(*)", head2->name);
+	differ = 1;
        	strcat(result, partial);
        	for(i=0; head2->vals[i] != NULL; i++) {
        	    sprintf(partial, "\n\t2: %s", head2->vals[i]);
