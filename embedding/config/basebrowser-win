@@ -317,6 +317,10 @@ res\entityTables\htmlEntityVersions.properties
 res\entityTables\transliterate.properties
 res\fonts\*
 
+; xmlextras
+components\xmlextras.dll
+components\xmlextras.xpt
+
 ;
 ; MathML
 ;

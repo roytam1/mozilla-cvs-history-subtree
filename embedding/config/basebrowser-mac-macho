@@ -233,6 +233,10 @@ components/uriloader.xpt
 components/libwidget_mac.dylib
 components/widget.xpt
 
+; xmlextras
+components/libxmlextras.dylib
+components/xmlextras.xpt
+
 ; xpconnect
 components/libxpconnect.dylib
 components/xpconnect.xpt
