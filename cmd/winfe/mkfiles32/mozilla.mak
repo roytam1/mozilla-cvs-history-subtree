@@ -174,6 +174,9 @@ _MSC_VER=1020
 !if "$(MOZ_BITS)"=="32"
 #CFLAGS_RELEASE=/DNDEBUG \
 CFLAGS_RELEASE=/DNDEBUG /DCookieManagement /DSingleSignon \
+!ifdef MOZ_PRIVACY
+/DTRANSACTION_RECEIPTS /DPRIVACY_POLICIES \
+!endif
 !else
 CFLAGS_RELEASE=/DNDEBUG \
 !endif
@@ -209,7 +212,10 @@ MOZ_STACK=33679
 !if defined(MOZ_DEBUG)
 VERSTR=Dbg
 !if "$(MOZ_BITS)"=="32"
-CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG) /DCookieManagement /DSingleSignon\
+CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG) /DCookieManagement /DSingleSignon \
+!ifdef MOZ_PRIVACY
+/DTRANSACTION_RECEIPTS /DPRIVACY_POLICIES\
+!endif
 !else
 CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
 !endif
@@ -400,6 +406,9 @@ LINK_LIBS= \
     $(OUTDIR)\appicon.res \
 !ifndef MOZ_NGLAYOUT
     $(DIST)\lib\winfont.lib \
+!endif
+!ifdef MOZ_PRIVACY
+    $(DIST)\lib\privacy.lib \
 !endif
     $(DIST)\lib\abouturl.lib \
     $(DIST)\lib\dataurl.lib \
@@ -2451,6 +2460,9 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\xpcom16.lib +
     $(DIST)\lib\rdf16.lib +
     $(DIST)\lib\xpstrdll.lib +
+!ifdef MOZ_PRIVACY
+    $(DIST)\lib\privacy.lib +
+!endif
     $(DIST)\lib\abouturl.lib +
     $(DIST)\lib\dataurl.lib +
     $(DIST)\lib\fileurl.lib +
