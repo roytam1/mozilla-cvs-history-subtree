@@ -21,14 +21,21 @@ MODULE		= httpurl
 LIBRARY_NAME	= httpurl
 
 CSRCS		= \
-	mkhttp.c	\
 	mkaccess.c	\
+	$(NULL)
+
+CPPSRCS		= \
+	mkhttp.cpp	\
 	$(NULL)
 
 EXPORTS= mkaccess.h httpurl.h httpauth.h cookies.h jscookie.h
 
 REQUIRES	= netcache network nspr2 dbm util pref js java fileurl \
 	security layer img httpurl mimetype htmldlgs
+
+ifdef MOZ_SMOOTH_PROGRESS
+REQUIRES	+= progress xpcom
+endif
 
 include $(DEPTH)/config/rules.mk
 
