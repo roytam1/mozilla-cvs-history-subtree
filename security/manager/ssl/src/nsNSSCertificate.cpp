@@ -57,6 +57,7 @@
 #include "nsIURI.h"
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
+#include "nsNSSAutoPtr.h"
 
 #include "nspr.h"
 extern "C" {
@@ -70,6 +71,7 @@ extern "C" {
 }
 #include "ssl.h"
 #include "ocsp.h"
+#include "plbase64.h"
 
 #ifdef PR_LOGGING
 extern PRLogModuleInfo* gPIPNSSLog;
@@ -3908,3 +3910,59 @@ loser:
   return rv;
 }
 
+/* nsIX509Cert constructX509FromBase64 (in string base64); */
+NS_IMETHODIMP
+nsNSSCertificateDB::ConstructX509FromBase64(const char * base64, nsIX509Cert **_retval)
+{
+  if (!_retval) {
+    return NS_ERROR_FAILURE;
+  }
+
+  PRUint32 len = PL_strlen(base64);
+  int adjust = 0;
+
+  /* Compute length adjustment */
+  if (base64[len-1] == '=') {
+    adjust++;
+    if (base64[len-2] == '=') adjust++;
+  }
+
+  nsNSSAutoCPtr<char> certDER (0, &nsCRT::free);
+  PRInt32 lengthDER = 0;
+
+  certDER.setPtr((char*)PL_Base64Decode(base64, len, NULL));
+  if (!*certDER) { 
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+  lengthDER = (len*3)/4 - adjust;
+
+  SECItem secitem_cert;
+  secitem_cert.type = siDERCertBuffer;
+  secitem_cert.data = (unsigned char*)certDER.ptr();
+  secitem_cert.len = lengthDER;
+
+  nsNSSAutoCPtr<CERTCertificate> cert(
+    CERT_NewTempCertificate(CERT_GetDefaultCertDB(), &secitem_cert, nsnull, PR_FALSE, PR_TRUE),
+    CERT_DestroyCertificate
+  );
+  
+  if (!cert) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsNSSCertificate *nsNSS = new nsNSSCertificate(cert);
+  if (!nsNSS) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  nsresult rv = nsNSS->QueryInterface(NS_GET_IID(nsIX509Cert), (void**)_retval);
+  NS_RELEASE(nsNSS);
+
+  if (NS_FAILED(rv) || !*_retval) {
+    return rv;
+  }
+  
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}

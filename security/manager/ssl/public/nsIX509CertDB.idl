@@ -254,5 +254,12 @@ interface nsIX509CertDB : nsISupports {
    * values.
    */
   void enableOCSP();
- };
+
+  /*
+   * decode base64 certificate and return a new nsIX509Cert instance
+   * 
+   */
+  nsIX509Cert constructX509FromBase64(in string base64);
+
+};
 
