@@ -19,3 +19,5 @@
 #define MOZ_MEDIUM
 
 #define NO_SECURITY
+
+#define SMOOTH_PROGRESS
