@@ -85,7 +85,7 @@ nsNativeComponentLoader::GetFactory(const nsIID & aCID,
     if (!dll->IsLoaded()) {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsNativeComponentLoader: loading \"%s\"",
-                dll->GetNativePath()));
+                dll->GetDisplayPath()));
 
         if (!dll->Load()) {
 
@@ -119,7 +119,7 @@ nsNativeComponentLoader::GetFactory(const nsIID & aCID,
                 fprintf(stderr,
                         "XPCOM: Component %s uses DEPRECATED\n"
                         "       NSGetFactory interface. This could break "
-                        "AT ANY TIME.\n", dll->GetNativePath());
+                        "AT ANY TIME.\n", dll->GetDisplayPath());
             }
 #endif
         }
@@ -128,7 +128,7 @@ nsNativeComponentLoader::GetFactory(const nsIID & aCID,
     PR_LOG(nsComponentManagerLog, (NS_SUCCEEDED(rv) ? PR_LOG_DEBUG : PR_LOG_ERROR),
            ("nsNativeComponentLoader: Factory creation %s "
             "%s -> %s\n", (NS_SUCCEEDED(rv) ? "passed" : "FAILED"),
-            aLocation, dll->GetNativePath()));
+            aLocation, dll->GetDisplayPath()));
 
     // If the dll failed to get us a factory. But the dll registered that
     // it would be able to create a factory for this CID. mmh!
@@ -197,10 +197,10 @@ nsNativeComponentLoader::Init(nsIComponentManager *aCompMgr, nsISupports *aReg)
 
         // Create nsDll with this name
         nsDll *dll = NULL;
-        PRUint32 lastModTime = 0;
-        PRUint32 fileSize = 0;
+        PRInt64 lastModTime;
+        PRInt64 fileSize;
         GetRegistryDllInfo(libKey, &lastModTime, &fileSize);
-        rv = CreateDll(NULL, library, lastModTime, fileSize, &dll);
+        rv = CreateDll(NULL, library, &lastModTime, &fileSize, &dll);
         if (NS_FAILED(rv)) continue;
     }
 
@@ -209,7 +209,7 @@ nsNativeComponentLoader::Init(nsIComponentManager *aCompMgr, nsISupports *aReg)
 
 NS_IMETHODIMP
 nsNativeComponentLoader::AutoRegisterComponents(PRInt32 aWhen,
-                                                nsIFileSpec *aDirectory)
+                                                nsIFile *aDirectory)
 {
 #ifdef DEBUG
     /* do we _really_ want to print this every time? */
@@ -228,7 +228,7 @@ nsNativeComponentLoader::AutoRegisterComponents(PRInt32 aWhen,
 
 nsresult
 nsNativeComponentLoader::RegisterComponentsInDir(PRInt32 when,
-                                                 nsIFileSpec *dir)
+                                                 nsIFile *dir)
 {
     nsresult rv = NS_ERROR_FAILURE;
     PRBool isDir = PR_FALSE;
@@ -248,22 +248,20 @@ nsNativeComponentLoader::RegisterComponentsInDir(PRInt32 when,
 #endif /* 0 */
 
     // Create a directory iterator
-    nsCOMPtr<nsIDirectoryIterator>dirIterator;
-    rv = nsComponentManager::CreateInstance(NS_DIRECTORYITERATOR_PROGID, NULL,
-                                            NS_GET_IID(nsIDirectoryIterator),
-                                            getter_AddRefs(dirIterator));
+    nsCOMPtr<nsISimpleEnumerator> dirIterator;
+    rv = dir->GetDirectoryEntries(getter_AddRefs(dirIterator));
+    
     if (NS_FAILED(rv)) return rv;
-    rv = dirIterator->Init(dir, PR_FALSE);
-    if (NS_FAILED(rv)) return rv;
-
+    
     // whip through the directory to register every file
-    nsIFileSpec *dirEntry = NULL;
+    nsIFile *dirEntry = NULL;
     PRBool more = PR_FALSE;
-    rv = dirIterator->Exists(&more);
+
+    rv = dirIterator->HasMoreElements(&more);
     if (NS_FAILED(rv)) return rv;
     while (more == PR_TRUE)
     {
-        rv = dirIterator->GetCurrentSpec(&dirEntry);
+        rv = dirIterator->GetNext((nsISupports**)&dirEntry);
         if (NS_SUCCEEDED(rv))
         {
             rv = dirEntry->IsDirectory(&isDir);
@@ -283,9 +281,7 @@ nsNativeComponentLoader::RegisterComponentsInDir(PRInt32 when,
             }
             NS_RELEASE(dirEntry);
         }
-        rv = dirIterator->Next();
-        if (NS_FAILED(rv)) return rv;
-        rv = dirIterator->Exists(&more);
+        rv = dirIterator->HasMoreElements(&more);
         if (NS_FAILED(rv)) return rv;
     }
     
@@ -334,7 +330,7 @@ nsFreeLibrary(nsDll *dll, nsIServiceManager *serviceMgr, PRInt32 when)
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                    ("nsComponentManager: Unload cant get nsIModule or CanUnload for %s",
-                    dll->GetNativePath()));
+                    dll->GetDisplayPath()));
             return rv;
         }
     }
@@ -354,7 +350,7 @@ nsFreeLibrary(nsDll *dll, nsIServiceManager *serviceMgr, PRInt32 when)
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                ("nsComponentManager: nsIModule::CanUnload() returned error for %s.",
-                dll->GetNativePath()));
+                dll->GetDisplayPath()));
         return rv;
     }
 
@@ -363,7 +359,7 @@ nsFreeLibrary(nsDll *dll, nsIServiceManager *serviceMgr, PRInt32 when)
         if (dllMarkedForUnload)
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-                   ("nsComponentManager: + Unloading \"%s\".", dll->GetNativePath()));
+                   ("nsComponentManager: + Unloading \"%s\".", dll->GetDisplayPath()));
 #if 0
             // XXX dlls aren't counting their outstanding instances correctly
             // XXX hence, dont unload until this gets enforced.
@@ -373,13 +369,13 @@ nsFreeLibrary(nsDll *dll, nsIServiceManager *serviceMgr, PRInt32 when)
         else
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
-                   ("nsComponentManager: Ready for unload \"%s\".", dll->GetNativePath()));
+                   ("nsComponentManager: Ready for unload \"%s\".", dll->GetDisplayPath()));
         }
     }
     else
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-               ("nsComponentManager: + NOT Unloading %s", dll->GetNativePath()));
+               ("nsComponentManager: + NOT Unloading %s", dll->GetDisplayPath()));
         rv = NS_ERROR_FAILURE;
     }
     return rv;
@@ -434,7 +430,7 @@ nsNativeComponentLoader::SelfRegisterDll(nsDll *dll,
     }
 
     PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
-           ("nsNativeComponentLoader: + Loaded \"%s\".", dll->GetNativePath()));
+           ("nsNativeComponentLoader: + Loaded \"%s\".", dll->GetDisplayPath()));
 
     // Tell the module to self register
     nsCOMPtr<nsIModule> mobj;
@@ -443,8 +439,8 @@ nsNativeComponentLoader::SelfRegisterDll(nsDll *dll,
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
                ("nsNativeComponentLoader: %s using nsIModule to register self.",
-                dll->GetNativePath()));
-        nsCOMPtr<nsIFileSpec> fs;
+                dll->GetDisplayPath()));
+        nsCOMPtr<nsIFile> fs;
         res = dll->GetDllSpec(getter_AddRefs(fs));
         if (NS_SUCCEEDED(res))
             res = mobj->RegisterSelf(mCompMgr, fs, registryLocation,
@@ -453,7 +449,7 @@ nsNativeComponentLoader::SelfRegisterDll(nsDll *dll,
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
                    ("nsNativeComponentLoader: dll->GetDllSpec() on %s FAILED.",
-                    dll->GetNativePath()));
+                    dll->GetDisplayPath()));
         }
         mobj = NULL;    // Force a release of the Module object before unload()
     }
@@ -481,8 +477,12 @@ nsNativeComponentLoader::SelfRegisterDll(nsDll *dll,
     // installed.
     if (res != NS_ERROR_FACTORY_REGISTER_AGAIN) {
         dll->Sync();
-        SetRegistryDllInfo(registryLocation, dll->GetLastModifiedTime(),
-                           dll->GetSize());
+        
+        PRInt64 modTime, size;
+        dll->GetLastModifiedTime(&modTime);
+        dll->GetSize(&size);
+
+        SetRegistryDllInfo(registryLocation, &modTime, &size);
     }
 
     return res;
@@ -553,7 +553,7 @@ nsNativeComponentLoader::DumpLoadError(nsDll *dll,
     PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
            ("nsNativeComponentLoader: %s(%s) Load FAILED with error:%s", 
             aCallerName,
-            dll->GetNativePath(), 
+            dll->GetDisplayPath(), 
             (const char *) errorMsg));
     
 
@@ -563,7 +563,7 @@ nsNativeComponentLoader::DumpLoadError(nsDll *dll,
            "nsNativeComponentLoader: %s(%s) Load FAILED with error: %s\n"
            "**************************************************\n",
            aCallerName,
-           dll->GetNativePath(), 
+           dll->GetDisplayPath(), 
            (const char *) errorMsg);
 #endif
 
@@ -592,15 +592,15 @@ nsNativeComponentLoader::SelfUnregisterDll(nsDll *dll)
     if (NS_SUCCEEDED(res))
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
-               ("nsNativeComponentLoader: %s using nsIModule to unregister self.", dll->GetNativePath()));
-        nsCOMPtr<nsIFileSpec> fs;
+               ("nsNativeComponentLoader: %s using nsIModule to unregister self.", dll->GetDisplayPath()));
+        nsCOMPtr<nsIFile> fs;
         res = dll->GetDllSpec(getter_AddRefs(fs));
         if (NS_SUCCEEDED(res))
             res = mobj->UnregisterSelf(mCompMgr, fs, /* XXX location */ "");
         else
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ERROR, 
-                   ("nsNativeComponentLoader: dll->GetDllSpec() on %s FAILED.", dll->GetNativePath()));
+                   ("nsNativeComponentLoader: dll->GetDllSpec() on %s FAILED.", dll->GetDisplayPath()));
         }
         mobj = NULL;    // Force a release of the Module object before unload()
     }
@@ -623,7 +623,7 @@ nsNativeComponentLoader::SelfUnregisterDll(nsDll *dll)
 
 nsresult
 nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
-                                               nsIFileSpec *component,
+                                               nsIFile *component,
                                                PRBool *registered)
 {
     nsresult rv;
@@ -664,11 +664,10 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
     // deal only with files that have a valid extension
     PRBool validExtension = PR_FALSE;
 
-#ifdef  XP_MAC
+#ifdef  XP_MAC  // sdagley dougt fix
+
     // rjc - on Mac, check the file's type code (skip checking the creator code)
-    nsFileSpec  fs;
-    if (NS_FAILED(rv = component->GetFileSpec(&fs)))
-        return(rv);
+    nsCOMPtr<nsIFile>  fs = component;
 
     CInfoPBRec  catInfo;
     OSErr       err = fs.GetCatInfo(catInfo);
@@ -701,7 +700,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
             break;
         }
     }
-    if (leafName) nsCRT::free(leafName);
+    if (leafName) nsAllocator::Free(leafName);
 #endif
         
     if (validExtension == PR_FALSE)
@@ -729,7 +728,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
         {
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                    ("nsNativeComponentLoader: + nsDll not NS_OK \"%s\". Skipping...",
-                    dll->GetNativePath()));
+                    dll->GetDisplayPath()));
             return NS_ERROR_FAILURE;
         }
             
@@ -739,7 +738,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
             // Dll hasn't changed. Skip.
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                    ("nsComponentManager: + nsDll not changed \"%s\". Skipping...",
-                    dll->GetNativePath()));
+                    dll->GetDisplayPath()));
             return NS_OK;
         }
 
@@ -760,7 +759,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
                 PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                        ("nsNativeComponentLoader: *** Dll already loaded. "
                         "Cannot unload either. Hence cannot re-register "
-                        "\"%s\". Skipping...", dll->GetNativePath()));
+                        "\"%s\". Skipping...", dll->GetDisplayPath()));
                 return rv;
             }
             else {
@@ -769,7 +768,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
                 dll->Unload();
                 PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS, 
                        ("nsNativeComponentLoader: + Unloading \"%s\". (no CanUnloadProc).",
-                        dll->GetNativePath()));
+                        dll->GetDisplayPath()));
             }
                 
         } // dll isloaded
@@ -782,7 +781,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
             // loaded. Whoever taught dp programming...
             PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                    ("nsNativeComponentLoader: Dll still loaded. Cannot re-register "
-                    "\"%s\". Skipping...", dll->GetNativePath()));
+                    "\"%s\". Skipping...", dll->GetDisplayPath()));
             return NS_ERROR_FAILURE;
         }
     } // dll != NULL
@@ -812,7 +811,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
         } else {
             PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
                    ("nsNativeComponentLoader: Autoregistration FAILED for "
-                    "\"%s\". Skipping...", dll->GetNativePath()));
+                    "\"%s\". Skipping...", dll->GetDisplayPath()));
             return NS_ERROR_FACTORY_NOT_REGISTERED;
         }
     }
@@ -820,7 +819,7 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsNativeComponentLoader: Autoregistration Passed for "
-                "\"%s\".", dll->GetNativePath()));
+                "\"%s\".", dll->GetDisplayPath()));
         // Marking dll along with modified time and size in the
         // registry happens at PlatformRegister(). No need to do it
         // here again.
@@ -885,8 +884,8 @@ nsNativeComponentLoader::UnloadAll(PRInt32 aWhen)
 
 nsresult
 nsNativeComponentLoader::GetRegistryDllInfo(const char *aLocation,
-                                            PRUint32 *lastModifiedTime,
-                                            PRUint32 *fileSize)
+                                            PRInt64 *lastModifiedTime,
+                                            PRInt64 *fileSize)
 {
     nsresult rv;
 
@@ -899,16 +898,16 @@ nsNativeComponentLoader::GetRegistryDllInfo(const char *aLocation,
 
 nsresult
 nsNativeComponentLoader::GetRegistryDllInfo(nsRegistryKey key,
-                                            PRUint32 *lastModifiedTime,
-                                            PRUint32 *fileSize)
+                                            PRInt64 *lastModifiedTime,
+                                            PRInt64 *fileSize)
 {
-    PRInt32 lastMod;
-    nsresult rv = mRegistry->GetInt(key, lastModValueName, &lastMod);
+    PRInt64 lastMod;
+    nsresult rv = mRegistry->GetLongLong(key, lastModValueName, &lastMod);
     if (NS_FAILED(rv)) return rv;
     *lastModifiedTime = lastMod;
         
-    PRInt32 fsize;
-    rv = mRegistry->GetInt(key, fileSizeValueName, &fsize);
+    PRInt64 fsize;
+    rv = mRegistry->GetLongLong(key, fileSizeValueName, &fsize);
     if (NS_FAILED(rv)) return rv;
     *fileSize = fsize;
 
@@ -917,17 +916,17 @@ nsNativeComponentLoader::GetRegistryDllInfo(nsRegistryKey key,
 
 nsresult
 nsNativeComponentLoader::SetRegistryDllInfo(const char *aLocation,
-                                            PRUint32 lastModifiedTime,
-                                            PRUint32 fileSize)
+                                            PRInt64 *lastModifiedTime,
+                                            PRInt64 *fileSize)
 {
     nsresult rv;
     nsRegistryKey key;
     rv = mRegistry->GetSubtreeRaw(mXPCOMKey, aLocation, &key);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mRegistry->SetInt(key, lastModValueName, lastModifiedTime);
+    rv = mRegistry->SetLongLong(key, lastModValueName, lastModifiedTime);
     if (NS_FAILED(rv)) return rv;
-    rv = mRegistry->SetInt(key, fileSizeValueName, fileSize);
+    rv = mRegistry->SetLongLong(key, fileSizeValueName, fileSize);
     return rv;
 }
 
@@ -950,13 +949,13 @@ nsNativeComponentLoader::SetRegistryDllInfo(const char *aLocation,
 //		registry along with its	lastModTime and fileSize.
 //		{NULL, rel:libpref.so, 8985659, 20987}
 nsresult
-nsNativeComponentLoader::CreateDll(nsIFileSpec *aSpec, const char *aLocation,
-                                   PRUint32 modificationTime, PRUint32 fileSize,
+nsNativeComponentLoader::CreateDll(nsIFile *aSpec, const char *aLocation,
+                                   PRInt64 *modificationTime, PRInt64 *fileSize,
                                    nsDll **aDll)
 {
     nsDll *dll;
-    nsFileSpec dllSpec;
-    nsCOMPtr<nsIFileSpec> spec;
+    nsCOMPtr<nsIFile> dllSpec;
+    nsCOMPtr<nsIFile> spec;
     nsresult rv;
 
     nsStringKey key(aLocation);
@@ -989,7 +988,7 @@ nsNativeComponentLoader::CreateDll(nsIFileSpec *aSpec, const char *aLocation,
         if (modificationTime == 0 && fileSize == 0)
         {
             // Get the modtime and filesize from the registry
-            rv = GetRegistryDllInfo(aLocation, &modificationTime, &fileSize);
+            rv = GetRegistryDllInfo(aLocation, modificationTime, fileSize);
         }
         dll = new nsDll(spec, aLocation, modificationTime, fileSize);
     }
@@ -1016,7 +1015,7 @@ nsNativeComponentLoader::GetFactoryFromModule(nsDll *aDll, const nsCID &aCID,
 
     PR_LOG(nsComponentManagerLog, PR_LOG_DEBUG,
            ("nsNativeComponentLoader: %s using nsIModule to get factory",
-            aDll->GetNativePath()));
+            aDll->GetDisplayPath()));
     
     return module->GetClassObject(mCompMgr, aCID, NS_GET_IID(nsIFactory),
                                   (void **)aFactory);
@@ -1037,7 +1036,7 @@ nsNativeComponentLoader::GetFactoryFromNSGetFactory(nsDll *aDll,
     
     PR_LOG(nsComponentManagerLog, PR_LOG_DEBUG,
            ("nsNativeComponentLoader: %s using OBSOLETE NSGetFactory\n",
-            aDll->GetNativePath()));
+            aDll->GetDisplayPath()));
 
     /*
      * There was a time when CLSIDToProgID was used to get className

@@ -24,7 +24,8 @@
 #undef NS_IMPL_IDS
 #include "nsCOMPtr.h"
 #include "nsIModule.h"
-
+#include "nsIFile.h"
+#include "nsFileSpec.h"
 #include "pratom.h"
 #include "nsCharDetDll.h"
 #include "nsISupports.h"
@@ -285,7 +286,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsCharDetModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                              nsIFileSpec* aPath,
+                             nsIFile* aPath,
                               const char* registryLocation,
                               const char* componentType)
 {
@@ -394,7 +395,7 @@ nsCharDetModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsCharDetModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                                nsIFileSpec* aPath,
+                             nsIFile* aPath,
                                 const char* registryLocation)
 {
 #ifdef DEBUG
@@ -431,7 +432,7 @@ nsCharDetModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsCharDetModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* location,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

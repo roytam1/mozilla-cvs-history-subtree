@@ -28,10 +28,12 @@
 %{C++
 #include "prio.h"
 #include "prlink.h"
+#include <stdio.h>
 %}
 
 [ptr] native PRFileDescStar(PRFileDesc);
 [ptr] native PRLibraryStar(PRLibrary);
+[ptr] native FILE(FILE);
 
 [scriptable, uuid(aa610f20-a889-11d3-8c81-000064657374)]
 interface nsILocalFile : nsIFile
@@ -59,7 +61,9 @@ interface nsILocalFile : nsIFile
       
        void initWithPath([const] in string filePath );
        
-       [noscript] PRFileDescStar open(in long flags, in long mode);
+       [noscript] PRFileDescStar openNSPRFileDesc(in long flags, in long mode);
+       [noscript] FILE           openANSIFileDesc(in string mode);
+
        [noscript] PRLibraryStar  load();
     
        readonly attribute PRInt64 diskSpaceAvailable;  // maybe we should put this somewhere else.

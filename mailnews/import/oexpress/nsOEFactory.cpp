@@ -31,7 +31,7 @@
 #include "nsIRegistry.h"
 #include "nsIImportService.h"
 #include "nsOEImport.h"
-
+#include "nsCRT.h"
 #include "OEDebugLog.h"
 
 static NS_DEFINE_CID(kOEImportCID,       	NS_OEIMPORT_CID);
@@ -226,9 +226,9 @@ nsresult GetImportModulesRegKey( nsIRegistry *reg, nsRegistryKey *pKey)
 
 NS_IMETHODIMP
 nsOEImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                          nsIFileSpec* aPath,
-                          const char* registryLocation,
-                          const char* componentType)
+                               nsIFile* aPath,
+                               const char* registryLocation,
+                               const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -291,8 +291,8 @@ nsOEImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsOEImportModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                            nsIFileSpec* aPath,
-                            const char* registryLocation)
+                                 nsIFile* aPath,
+                                 const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering Outlook Express import components\n");
@@ -328,7 +328,7 @@ nsOEImportModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsOEImportModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

@@ -93,7 +93,7 @@ NS_NewGenericModule(const char* moduleName,
 
 #define NS_IMPL_NSGETMODULE(_name, _components)                              \
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,      \
-                                          nsIFileSpec* location,             \
+                                          nsIFile* location,                 \
                                           nsIModule** result)                \
 {                                                                            \
     return NS_NewGenericModule((_name),                                      \

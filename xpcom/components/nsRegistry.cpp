@@ -22,7 +22,7 @@
 
 #include "nsIRegistry.h"
 #include "nsIEnumerator.h"
-#include "nsSpecialSystemDirectory.h"
+#include "nsDirectoryService.h"
 #include "NSReg.h"
 #include "prmem.h"
 #include "prlock.h"
@@ -30,6 +30,9 @@
 #include "nsCRT.h"
 #include "nsAllocator.h"
 
+#include "nsCOMPtr.h"
+#include "nsILocalFile.h"
+#include "nsIServiceManager.h"
 /* extra locking for the paranoid */
 /* #define EXTRA_THREADSAFE */
 #ifndef EXTRA_THREADSAFE
@@ -397,16 +400,26 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( nsWellKnownRegistry regid ) {
 
     // Ensure existing registry is closed.
     Close();
+    
+    nsresult rv;
+    nsCOMPtr<nsIFile> registryLocation;
 
-    nsSpecialSystemDirectory *registryLocation = NULL;
     PRBool foundReg = PR_FALSE;
     
     switch ( (nsWellKnownRegistry) regid ) {
       case ApplicationComponentRegistry:
-        registryLocation =
-          new nsSpecialSystemDirectory(nsSpecialSystemDirectory::XPCOM_CurrentProcessComponentRegistry);
-        if (registryLocation != NULL)
-          foundReg = PR_TRUE;
+        {
+            nsCOMPtr<nsIProperties> directoryService;
+            rv = nsDirectoryService::Create(nsnull, 
+                                            NS_GET_IID(nsIProperties), 
+                                            getter_AddRefs(directoryService));
+            if (NS_FAILED(rv)) return rv;
+            directoryService->Get("xpcom.currentProcess.componentRegistry", NS_GET_IID(nsIFile), 
+                                          (void**)&registryLocation);
+
+            if (registryLocation != NULL)
+                foundReg = PR_TRUE;
+        }
         break;
 
       default:
@@ -417,16 +430,17 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( nsWellKnownRegistry regid ) {
         return NS_ERROR_REG_BADTYPE;
     }
 
-    const char *regFile = registryLocation->GetNativePathCString();
+    char *regFile;
+    registryLocation->GetPath(&regFile);  // dougt fix...
+
 
 #ifdef DEBUG_dp
     printf("nsRegistry: Opening std registry %s\n", regFile);
 #endif /* DEBUG_dp */
+
     PR_Lock(mregLock);
     err = NR_RegOpen((char*)regFile, &mReg );
     PR_Unlock(mregLock);
-    // Cleanup
-    delete registryLocation;
 
     // Store the registry that was opened for optimizing future opens.
     mCurRegID = regid;
@@ -607,6 +621,25 @@ NS_IMETHODIMP nsRegistry::GetInt( nsRegistryKey baseKey, const char *path, PRInt
     return rv;
 }
 
+
+/*---------------------------- nsRegistry::GetLongLong--------------------------
+| This function is just shorthand for fetching a 1-element PRInt64 array.  We  |
+| implement it "manually" using NR_RegGetEntry                                 |
+------------------------------------------------------------------------------*/
+NS_IMETHODIMP nsRegistry::GetLongLong( nsRegistryKey baseKey, const char *path, PRInt64 *result ) {
+    nsresult rv = NS_OK;
+    REGERR err = REGERR_OK;
+    
+    PR_Lock(mregLock);
+    
+    unsigned long length = sizeof PRInt64;
+    err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, &length);
+    
+    PR_Unlock(mregLock);
+    
+    // Convert status.
+    return regerr2nsresult( err );
+}
 /*---------------------------- nsRegistry::SetInt ------------------------------
 | Write out the value as a one-element PRInt32 array, using NR_RegSetEntry.      |
 ------------------------------------------------------------------------------*/
@@ -620,6 +653,28 @@ NS_IMETHODIMP nsRegistry::SetInt( nsRegistryKey baseKey, const char *path, PRInt
                            REGTYPE_ENTRY_INT32_ARRAY,
                            &value,
                            sizeof value );
+    PR_Unlock(mregLock);
+    // Convert result.
+    return regerr2nsresult( err );
+}
+
+
+
+/*---------------------------- nsRegistry::SetLongLong---------------------------
+| Write out the value as a one-element PRInt64 array, using NR_RegSetEntry.      |
+------------------------------------------------------------------------------*/
+NS_IMETHODIMP nsRegistry::SetLongLong( nsRegistryKey baseKey, const char *path, PRInt64* value ) {
+    REGERR err = REGERR_OK;
+    // Set the contents.
+    PR_Lock(mregLock);
+
+    err = NR_RegSetEntry( mReg,
+                        (RKEY)baseKey,
+                        (char*)path,
+                        REGTYPE_ENTRY_BYTES,
+                        &value,
+                        sizeof(PRInt64) );
+
     PR_Unlock(mregLock);
     // Convert result.
     return regerr2nsresult( err );

@@ -30,6 +30,8 @@
 #include "nsEntityConverter.h"
 #include "nsSaveAsCharset.h"
 #include "nsUUDll.h"
+#include "nsFileSpec.h"
+#include "nsIFile.h"
 
 PRInt32 g_InstanceCount = 0;
 PRInt32 g_LockCount = 0;
@@ -235,9 +237,9 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsUcharUtilModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
-                             const char* registryLocation,
-                             const char* componentType)
+                                nsIFile* aPath,
+                                const char* registryLocation,
+                                const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -266,8 +268,8 @@ nsUcharUtilModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsUcharUtilModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                               nsIFileSpec* aPath,
-                               const char* registryLocation)
+                                  nsIFile* aPath,
+                                  const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering UcharUtil components\n");
@@ -303,7 +305,7 @@ nsUcharUtilModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsUcharUtilModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

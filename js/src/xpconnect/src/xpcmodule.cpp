@@ -35,7 +35,7 @@
 /* Module level methods. */
 
 #include "xpcprivate.h"
-
+#include "nsCRT.h"
 /***************************************************************************/
 
 static NS_DEFINE_CID(kJSID_CID,  NS_JS_ID_CID);
@@ -308,7 +308,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsXPConnectModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                                nsIFileSpec* aPath,
+                                nsIFile* aPath,
                                 const char* registryLocation,
                                 const char* componentType)
 {
@@ -339,7 +339,7 @@ nsXPConnectModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsXPConnectModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                                  nsIFileSpec* aPath,
+                                  nsIFile* aPath,
                                   const char* registryLocation)
 {
 #ifdef DEBUG
@@ -376,7 +376,7 @@ nsXPConnectModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsXPConnectModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

@@ -136,11 +136,24 @@ nsLocalFile::createAllParentDirectories(PRUint32 permissions)
 
 
 NS_IMETHODIMP  
-nsLocalFile::Open(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
+nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 {
     CHECK_mPath();
    
     *_retval = PR_Open(mPath, flags, mode);
+    
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP  
+nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
+{
+    CHECK_mPath(); 
+   
+    *_retval = fopen(mPath, mode);
     
     if (*_retval)
         return NS_OK;

@@ -79,7 +79,7 @@ nsComponentManager::CreateInstance(const nsCID &aClass,
     nsresult rv = NS_GetGlobalComponentManager(&cm);
     if (NS_FAILED(rv)) return rv;
     return cm->CreateInstance(aClass, aDelegate, aIID, aResult);
-}
+    }
 
 nsresult
 nsComponentManager::CreateInstance(const char *aProgID,
@@ -126,7 +126,7 @@ nsresult
 nsComponentManager::RegisterComponentSpec(const nsCID &aClass,
                                       const char *aClassName,
                                       const char *aProgID,
-                                      nsIFileSpec *aLibrary,
+                                      nsIFile *aLibrary,
                                       PRBool aReplace,
                                       PRBool aPersist)
 {
@@ -174,7 +174,7 @@ nsComponentManager::UnregisterComponent(const nsCID &aClass,
 
 nsresult
 nsComponentManager::UnregisterComponentSpec(const nsCID &aClass,
-                                            nsIFileSpec *aLibrarySpec)
+                                            nsIFile *aLibrarySpec)
 {
     nsIComponentManager* cm;
     nsresult rv = NS_GetGlobalComponentManager(&cm);
@@ -192,7 +192,7 @@ nsComponentManager::FreeLibraries(void)
 }
 
 nsresult
-nsComponentManager::AutoRegister(PRInt32 when, nsIFileSpec *directory)
+nsComponentManager::AutoRegister(PRInt32 when, nsIFile *directory)
 {
     nsIComponentManager* cm;
     nsresult rv = NS_GetGlobalComponentManager(&cm);
@@ -202,7 +202,7 @@ nsComponentManager::AutoRegister(PRInt32 when, nsIFileSpec *directory)
 
 nsresult
 nsComponentManager::AutoRegisterComponent(PRInt32 when,
-                                          nsIFileSpec *fullname)
+                                          nsIFile *fullname)
 {
     nsIComponentManager* cm;
     nsresult rv = NS_GetGlobalComponentManager(&cm);

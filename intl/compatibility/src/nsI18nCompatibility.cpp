@@ -30,6 +30,8 @@
 #include "nsIServiceManager.h"
 #include "nsII18nCompatibility.h"
 #include "nsI18nCompatibility.h"
+#include "nsIFile.h"
+#include "nsFileSpec.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kI18nCompatibilityCID, NS_I18NCOMPATIBILITY_CID);
@@ -119,7 +121,7 @@ protected:
 static nsI18nCompModule * gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager * compMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* location,
                                           nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
@@ -206,9 +208,9 @@ NS_IMETHODIMP nsI18nCompModule::GetClassObject(nsIComponentManager *aCompMgr,
 }
 
 NS_IMETHODIMP nsI18nCompModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                                              nsIFileSpec* aPath,
-                                              const char* registryLocation,
-                                              const char* componentType)
+                                             nsIFile* aPath,
+                                             const char* registryLocation,
+                                             const char* componentType)
 {
   nsresult rv;
   rv = aCompMgr->RegisterComponentSpec(kI18nCompatibilityCID, 
@@ -220,8 +222,8 @@ NS_IMETHODIMP nsI18nCompModule::RegisterSelf(nsIComponentManager *aCompMgr,
 }
 
 NS_IMETHODIMP nsI18nCompModule::UnregisterSelf(nsIComponentManager *aCompMgr,
-                                                nsIFileSpec* aPath,
-                                                const char* registryLocation)
+                                               nsIFile* aPath,
+                                               const char* registryLocation)
 {
   nsresult rv;
 

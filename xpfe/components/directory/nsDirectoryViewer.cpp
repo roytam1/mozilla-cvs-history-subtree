@@ -31,6 +31,7 @@
 
 #include "jsapi.h"
 #include "nsCOMPtr.h"
+#include "nsCRT.h"
 #include "nsEscape.h"
 #include "nsNetUtil.h"
 #include "nsIContentViewer.h"
@@ -1234,7 +1235,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsDirectoryViewerModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
+                             nsIFile* aPath,
                              const char* registryLocation,
                              const char* componentType)
 {
@@ -1267,7 +1268,7 @@ nsDirectoryViewerModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsDirectoryViewerModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                               nsIFileSpec* aPath,
+                               nsIFile* aPath,
                                const char* registryLocation)
 {
 #ifdef DEBUG
@@ -1308,7 +1309,7 @@ nsDirectoryViewerModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUn
 static nsDirectoryViewerModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

@@ -32,7 +32,8 @@
 */
 
 #include "nsCOMPtr.h"
-#include "nsFileSpec.h"
+#include "nsIFileSpec.h"
+#include "nsCRT.h"
 #include "nsFileStream.h"
 #include "nsIModule.h"
 #include "nsIEnumerator.h"
@@ -1662,7 +1663,7 @@ nsGlobalHistoryModule::GetClassObject(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsGlobalHistoryModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                          nsIFileSpec* aPath,
+                          nsIFile* aPath,
                           const char* registryLocation,
                           const char* componentType)
 {
@@ -1685,7 +1686,7 @@ nsGlobalHistoryModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsGlobalHistoryModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                                      nsIFileSpec* aPath,
+                                      nsIFile* aPath,
                                       const char* registryLocation)
 {
 #ifdef DEBUG
@@ -1712,7 +1713,7 @@ nsGlobalHistoryModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnlo
 static nsGlobalHistoryModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

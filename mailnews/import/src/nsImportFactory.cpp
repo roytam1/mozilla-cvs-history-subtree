@@ -24,7 +24,7 @@
 #include "nsIGenericFactory.h"
 #include "nsIImportService.h"
 #include "nsImportMimeEncode.h"
-
+#include "nsCRT.h"
 #include "ImportDebug.h"
 
 static NS_DEFINE_CID(kImportServiceCID,		NS_IMPORTSERVICE_CID);
@@ -197,9 +197,9 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsImportServiceModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                          nsIFileSpec* aPath,
-                          const char* registryLocation,
-                          const char* componentType)
+                                    nsIFile* aPath,
+                                    const char* registryLocation,
+                                    const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -228,8 +228,8 @@ nsImportServiceModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsImportServiceModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                            nsIFileSpec* aPath,
-                            const char* registryLocation)
+                                      nsIFile* aPath,
+                                      const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering ImportService components\n");
@@ -265,7 +265,7 @@ nsImportServiceModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnlo
 static nsImportServiceModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

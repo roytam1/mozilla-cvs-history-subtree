@@ -27,7 +27,7 @@
 #include "nsIRegistry.h"
 #include "nsIImportService.h"
 #include "nsEudoraImport.h"
-
+#include "nsCRT.h"
 #include "EudoraDebugLog.h"
 
 static NS_DEFINE_CID(kEudoraImportCID,    	NS_EUDORAIMPORT_CID);
@@ -239,9 +239,9 @@ nsresult GetImportModulesRegKey( nsIRegistry *reg, nsRegistryKey *pKey)
 
 NS_IMETHODIMP
 nsEudoraImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                          nsIFileSpec* aPath,
-                          const char* registryLocation,
-                          const char* componentType)
+                                   nsIFile* aPath,
+                                   const char* registryLocation,
+                                   const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -304,8 +304,8 @@ nsEudoraImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsEudoraImportModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                            nsIFileSpec* aPath,
-                            const char* registryLocation)
+                                     nsIFile* aPath,
+                                     const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering Eudora import components\n");
@@ -341,7 +341,7 @@ nsEudoraImportModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnloa
 static nsEudoraImportModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

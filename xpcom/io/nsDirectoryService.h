@@ -47,12 +47,7 @@ public:
 
   NS_DECL_AGGREGATED
 
-  // nsIProperties methods:
-  NS_IMETHOD DefineProperty(const char* prop, nsISupports* initialValue);
-  NS_IMETHOD UndefineProperty(const char* prop);
-  NS_IMETHOD GetProperty(const char* prop, nsISupports* *result);
-  NS_IMETHOD SetProperty(const char* prop, nsISupports* value);
-  NS_IMETHOD HasProperty(const char* prop, nsISupports* value); 
+  NS_DECL_NSIPROPERTIES
 
   // nsProperties methods:
   nsDirectoryService(nsISupports* outer);
@@ -62,7 +57,9 @@ public:
   Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
 
   static PRBool ReleaseValues(nsHashKey* key, void* data, void* closure);
-
+private:
+    static nsDirectoryService* mService;
+  
 };
 
 

@@ -64,7 +64,7 @@
 static _class *g##_class;                                                     \
 extern "C" NS_EXPORT nsresult                                                 \
 NSGetModule(nsIComponentManager *servMgr,                                     \
-            nsIFileSpec* location,                                            \
+            nsIFile* aPath,                                                   \
             nsIModule** aResult)                                              \
 {                                                                             \
     nsresult rv = NS_OK;                                                      \
@@ -303,7 +303,7 @@ NS_IMPL_ISUPPORTS1(className##Module, nsIModule) \
 /* NSRegisterSelf implementation */\
 NS_IMETHODIMP \
 className##Module::RegisterSelf(nsIComponentManager *compMgr, \
-                                nsIFileSpec *path, \
+                                nsIFile* aPath,               \
                                 const char *registryLocation, \
                                 const char *componentType) \
 { \
@@ -351,7 +351,7 @@ className##Module::RegisterSelf(nsIComponentManager *compMgr, \
 /* UnregisterSelf implementation */ \
 NS_IMETHODIMP \
 className##Module::UnregisterSelf( nsIComponentManager *compMgr, \
-                                   nsIFileSpec* path, \
+                                   nsIFile* aPath,               \
                                    const char *registryLocation) { \
     nsresult rv = NS_OK; \
     if (NS_FAILED(rv)) \

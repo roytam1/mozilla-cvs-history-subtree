@@ -22,7 +22,7 @@
 
 #define NS_IMPL_IDS
 #include "nsID.h"
-
+#include "nsFileSpec.h"
 #include "nsString2.h"
 #include "nsIPersistentProperties.h"
 #include "nsIStringBundle.h"
@@ -41,6 +41,7 @@
 #include "prmem.h"
 #include "nsIServiceManager.h"
 #include "nsIModule.h"
+#include "nsIFile.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
@@ -53,7 +54,6 @@ NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
 NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 static NS_DEFINE_IID(kIPersistentPropertiesIID, NS_IPERSISTENTPROPERTIES_IID);
-
 class nsStringBundle : public nsIStringBundle
 {
 public:
@@ -449,7 +449,7 @@ protected:
 static nsSBModule * gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager * compMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
@@ -536,9 +536,9 @@ NS_IMETHODIMP nsSBModule::GetClassObject(nsIComponentManager *aCompMgr,
 }
 
 NS_IMETHODIMP nsSBModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                                              nsIFileSpec* aPath,
-                                              const char* registryLocation,
-                                              const char* componentType)
+                                       nsIFile* aPath,
+                                       const char* registryLocation,
+                                       const char* componentType)
 {
   nsresult rv;
   rv = aCompMgr->RegisterComponentSpec(kStringBundleServiceCID, 
@@ -550,8 +550,8 @@ NS_IMETHODIMP nsSBModule::RegisterSelf(nsIComponentManager *aCompMgr,
 }
 
 NS_IMETHODIMP nsSBModule::UnregisterSelf(nsIComponentManager *aCompMgr,
-                                                nsIFileSpec* aPath,
-                                                const char* registryLocation)
+                                         nsIFile* aPath,
+                                         const char* registryLocation)
 {
   nsresult rv;
 

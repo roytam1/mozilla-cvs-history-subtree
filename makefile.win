@@ -45,33 +45,9 @@ DEPTH=.
 
 DIRS =                         \
 !if defined(DIST_DIRS)
-  config                       \
-  include                      \
-  jpeg                         \
-  sun-java                     \
-  modules\libreg               \
-  xpcom                        \
-  db                           \
-  dbm                          \
-  modules\libutil              \
-  netwerk                      \
-  widget\timer                 \
-  js                           \
-  modules\zlib                 \
-  modules\libjar               \
-  modules\libimg               \
-  modules\libpref              \
-  modules\plugin               \
-  modules\oji                  \
-  caps                         \
-  intl                         \
 !endif
 !if defined(LAYOUT_DIRS)
 # the following are associated with the layout engine
-  expat                        \
-  gfx                          \
-  uriloader                    \
-  htmlparser                   \
   widget                       \
   dom                          \
   view                         \

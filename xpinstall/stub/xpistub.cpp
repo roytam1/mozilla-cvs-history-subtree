@@ -96,18 +96,17 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     
     FSpGetDirectoryID(&aXPIStubDir, &xpiStubDirID, &isDir);
     nsfsDirectory = aXPIStubDir;
-    rv = NS_InitXPCOM(&gServiceMgr, &nsfsDirectory);
-#elif defined(XP_PC)
-    char componentPath[_MAX_PATH];
+    rv = NS_InitXPCOM(&gServiceMgr, &nsfsDirectory); // mac stuff FIX dougt/sdagley  FIX
+#elif defined(XP_PC) || defined(XP_UNIX)
+   //nsfsDirectory = componentPath;
 
-    getcwd(componentPath, _MAX_PATH);
-    nsfsDirectory = componentPath;
+    // nsCOMPtr<nsIFile> file;
+    // rv = NS_NewLocalFile(getter_AddRefs(file));
+    // if (NS_SUCCEEDED(rv) && file)
+    // {
+    //    file->InitWithPath(aProgramDir)
 
-    rv = NS_InitXPCOM(&gServiceMgr, &nsfsDirectory);
-#elif defined(XP_UNIX)
-    nsfsDirectory = aProgramDir;
- 
-    rv = NS_InitXPCOM(&gServiceMgr, &nsfsDirectory);
+    rv = NS_InitXPCOM(&gServiceMgr, NULL); //file); // fix!!!
 #else
     rv = NS_InitXPCOM(&gServiceMgr, NULL);
 #endif

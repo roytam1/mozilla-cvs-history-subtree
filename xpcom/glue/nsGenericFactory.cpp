@@ -21,8 +21,11 @@
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
 
-#include "nsGenericFactory.h"
 
+// DO NOT COPY THIS CODE INTO YOUR SOURCE!  USE NS_IMPL_NSGETMODULE()
+
+#include "nsGenericFactory.h"
+#include "nsCRT.h"
 nsGenericFactory::nsGenericFactory(ConstructorProcPtr constructor)
 	: mConstructor(constructor), mDestructor(NULL)
 {
@@ -192,7 +195,7 @@ nsGenericModule::GetClassObject(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsGenericModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                              nsIFileSpec* aPath,
+                              nsIFile* aPath,
                               const char* registryLocation,
                               const char* componentType)
 {
@@ -222,7 +225,7 @@ nsGenericModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsGenericModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                            nsIFileSpec* aPath,
+                            nsIFile* aPath,
                             const char* registryLocation)
 {
 #ifdef DEBUG

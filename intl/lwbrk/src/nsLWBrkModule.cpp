@@ -27,9 +27,11 @@
 #include "nsIWordBreakerFactory.h"
 #include "nsLWBreakerFImp.h"
 #include "nsLWBRKDll.h"
-
+#include "nsFileSpec.h"
 PRInt32 g_InstanceCount = 0;
 PRInt32 g_LockCount = 0;
+
+#include "nsIFile.h"
 
 static NS_DEFINE_IID(kLWBrkCID, NS_LWBRK_CID);
 
@@ -185,7 +187,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsLWBrkModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                            nsIFileSpec* aPath,
+                            nsIFile* aPath,
                             const char* registryLocation,
                             const char* componentType)
 {
@@ -216,7 +218,7 @@ nsLWBrkModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsLWBrkModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                              nsIFileSpec* aPath,
+                              nsIFile* aPath,
                               const char* registryLocation)
 {
 #ifdef DEBUG
@@ -253,7 +255,7 @@ nsLWBrkModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsLWBrkModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;

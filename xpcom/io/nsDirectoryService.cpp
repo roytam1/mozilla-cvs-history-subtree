@@ -20,8 +20,179 @@
  * Contributor(s): 
  */
 
- #include "nsDirectoryService.h"
+#include "nsCOMPtr.h"
+#include "nsDirectoryService.h"
+#include "nsILocalFile.h"
+#include "nsLocalFile.h"
+#include "nsDebug.h"
 
+#ifdef XP_MAC
+#include <Folders.h>
+#include <Files.h>
+#include <Memory.h>
+#include <Processes.h>
+#elif defined(XP_PC)
+#include <windows.h>
+#include <shlobj.h>
+#include <stdlib.h>
+#include <stdio.h>
+#elif defined(XP_UNIX)
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/param.h>
+#include "prenv.h"
+#elif defined(XP_BEOS)
+#include <FindDirectory.h>
+#include <Path.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/param.h>
+#include <OS.h>
+#include <image.h>
+#include "prenv.h"
+#endif
+
+
+
+
+
+
+
+//----------------------------------------------------------------------------------------
+static nsresult GetCurrentProcessDirectory(nsILocalFile* aFile)
+//----------------------------------------------------------------------------------------
+{
+#ifdef XP_PC
+    char buf[MAX_PATH];
+    if ( ::GetModuleFileName(0, buf, sizeof(buf)) ) {
+        // chop of the executable name by finding the rightmost backslash
+        char* lastSlash = PL_strrchr(buf, '\\');
+        if (lastSlash)
+            *(lastSlash + 1) = '\0';
+        
+        aFile->InitWithPath(buf);
+        return NS_OK;
+    }
+
+#elif defined(XP_MAC)
+    // get info for the the current process to determine the directory
+    // its located in
+    OSErr err;
+    ProcessSerialNumber psn;
+    if (!(err = GetCurrentProcess(&psn)))
+    {
+        ProcessInfoRec pInfo;
+        FSSpec         tempSpec;
+
+        // initialize ProcessInfoRec before calling
+        // GetProcessInformation() or die horribly.
+        pInfo.processName = nil;
+        pInfo.processAppSpec = &tempSpec;
+        pInfo.processInfoLength = sizeof(ProcessInfoRec);
+
+        if (!(err = GetProcessInformation(&psn, &pInfo)))
+        {
+            FSSpec appFSSpec = *(pInfo.processAppSpec);
+            long theDirID = appFSSpec.parID;
+
+            Str255 name;
+            CInfoPBRec catInfo;
+            catInfo.dirInfo.ioCompletion = NULL;
+            catInfo.dirInfo.ioNamePtr = (StringPtr)&name;
+            catInfo.dirInfo.ioVRefNum = appFSSpec.vRefNum;
+            catInfo.dirInfo.ioDrDirID = theDirID;
+            catInfo.dirInfo.ioFDirIndex = -1; // -1 = query dir in ioDrDirID
+
+            if (!(err = PBGetCatInfoSync(&catInfo)))
+            {
+                aFileSpec // DO SOMETHING MAC HERE
+                return NS_OK;
+            }
+        }
+    }
+
+#elif defined(XP_UNIX)
+
+    // In the absence of a good way to get the executable directory let
+    // us try this for unix:
+    //	- if MOZILLA_FIVE_HOME is defined, that is it
+    //	- else give the current directory
+    char buf[MAXPATHLEN];
+    char *moz5 = PR_GetEnv("MOZILLA_FIVE_HOME");
+    if (moz5)
+    {
+        aFile->InitWithPath(moz5);
+        return NS_OK;
+    }
+    else
+    {
+        static PRBool firstWarning = PR_TRUE;
+
+        if(firstWarning) {
+            // Warn that MOZILLA_FIVE_HOME not set, once.
+            printf("Warning: MOZILLA_FIVE_HOME not set.\n");
+            firstWarning = PR_FALSE;
+        }
+
+        // Fall back to current directory.
+        if (getcwd(buf, sizeof(buf)))
+        {
+            aFile->InitWithPath(buf);
+            return NS_OK;
+        }
+    }
+
+#elif defined(XP_BEOS)
+
+    char *moz5 = getenv("MOZILLA_FIVE_HOME");
+    if (moz5)
+    {
+        aFile->InitWithPath(moz5);
+        return NS_OK;
+    }
+    else
+    {
+      static char buf[MAXPATHLEN];
+      int32 cookie = 0;
+      image_info info;
+      char *p;
+      *buf = 0;
+      if(get_next_image_info(0, &cookie, &info) == B_OK)
+      {
+        strcpy(buf, info.name);
+        if((p = strrchr(buf, '/')) != 0)
+        {
+          *p = 0;
+          aFile->InitWithPath(buf);
+          return NS_OK;
+        }
+      }
+    }
+
+#endif
+
+    NS_ERROR("unable to get current process directory");
+    return NS_ERROR_FAILURE;
+} // GetCurrentProcessDirectory()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+nsDirectoryService* nsDirectoryService::mService = nsnull;
 
 nsDirectoryService::nsDirectoryService(nsISupports* outer)
 {
@@ -34,14 +205,14 @@ nsDirectoryService::Create(nsISupports *outer, REFNSIID aIID, void **aResult)
     NS_ENSURE_ARG_POINTER(aResult);
 	 NS_ENSURE_PROPER_AGGREGATION(outer, aIID);
 
-    nsDirectoryService* props = new nsDirectoryService(outer);
-    if (props == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
+    if (mService == nsnull)
+    {
+        mService = new nsDirectoryService(outer);
+        if (mService == NULL)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
 
-    nsresult rv = props->AggregatedQueryInterface(aIID, aResult);
-	 if (NS_FAILED(rv))
-	     delete props;
-    return rv;
+    return  mService->AggregatedQueryInterface(aIID, aResult);
 }
 
 PRBool
@@ -78,7 +249,7 @@ nsDirectoryService::AggregatedQueryInterface(const nsIID& aIID, void** aInstance
 }
 
 NS_IMETHODIMP
-nsDirectoryService::DefineProperty(const char* prop, nsISupports* initialValue)
+nsDirectoryService::Define(const char* prop, nsISupports* initialValue)
 {
     nsStringKey key(prop);
     if (Exists(&key))
@@ -91,7 +262,7 @@ nsDirectoryService::DefineProperty(const char* prop, nsISupports* initialValue)
 }
 
 NS_IMETHODIMP
-nsDirectoryService::UndefineProperty(const char* prop)
+nsDirectoryService::Undefine(const char* prop)
 {
     nsStringKey key(prop);
     if (!Exists(&key))
@@ -103,32 +274,60 @@ nsDirectoryService::UndefineProperty(const char* prop)
 }
 
 NS_IMETHODIMP
-nsDirectoryService::GetProperty(const char* prop, nsISupports* *result)
+nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
 {
     nsStringKey key(prop);
     if (!Exists(&key))
     {
         // check to see if it is one of our defaults
-        //
-        //  code here..
-        //   
-        //
-        // else
-        //
+        
+        if (strncmp(prop, "xpcom.currentProcess.componentRegistry", 38) == 0)
+        {
+            nsLocalFile* localFile = new nsLocalFile;
+    
+            nsresult rv = GetCurrentProcessDirectory(localFile);
+            if (NS_FAILED(rv)) 
+                return rv;
+ 
+#ifdef XP_MAC
+            localFile->AppendPath("Component Registry");           
+#else
+            localFile->AppendPath("component.reg");           
+#endif /* XP_MAC */
+    
+            Set(prop, localFile);
+            return localFile->QueryInterface(uuid, result);
+        }
+        else if (strncmp(prop, "xpcom.currentProcess.componentDirectory", 39) == 0)
+        {
+            nsLocalFile* localFile = new nsLocalFile;
+    
+            nsresult rv = GetCurrentProcessDirectory(localFile);
+            if (NS_FAILED(rv)) 
+                return rv;
+ 
+#ifdef XP_MAC
+            localFile->AppendPath("Components");           
+#else
+            localFile->AppendPath("components");           
+#endif /* XP_MAC */
+    
+            return localFile->QueryInterface(uuid, result);
+        }
+              
         return NS_ERROR_FAILURE;
     }
 
-    nsISupports* value = (nsISupports*)Get(&key);
-    NS_IF_ADDREF(value);
-    *result = value;
-    return NS_OK;
+
+    nsISupports* value = (nsISupports*)nsHashtable::Get(&key);
+    return value->QueryInterface(uuid, result);
 }
 
 NS_IMETHODIMP
-nsDirectoryService::SetProperty(const char* prop, nsISupports* value)
+nsDirectoryService::Set(const char* prop, nsISupports* value)
 {
     nsStringKey key(prop);
-    if (!Exists(&key))
+    if (Exists(&key))
         return NS_ERROR_FAILURE;
 
     nsISupports* prevValue = (nsISupports*)Put(&key, value);
@@ -138,12 +337,20 @@ nsDirectoryService::SetProperty(const char* prop, nsISupports* value)
 }
 
 NS_IMETHODIMP
-nsDirectoryService::HasProperty(const char* prop, nsISupports* expectedValue)
+nsDirectoryService::Has(const char *prop, const nsIID & uuid, nsISupports *value, PRBool *_retval)
 {
-    nsISupports* value;
-    nsresult rv = GetProperty(prop, &value);
-    if (NS_FAILED(rv)) return rv;
-    rv = (value == expectedValue) ? NS_OK : NS_ERROR_FAILURE;
-    NS_IF_RELEASE(value);
+    *_retval = PR_FALSE;
+
+    nsresult rv = Get(prop, uuid, (void**)&value);
+    if (NS_FAILED(rv)) 
+        return rv;
+    
+    if (value)
+    {
+        *_retval = PR_FALSE;
+         NS_RELEASE(value);
+         return NS_OK;
+    }
+    
     return rv;
 }

@@ -36,6 +36,7 @@
 //#include "nsTextTokenizer.h"
 #include "nsExpatTokenizer.h"
 #include "nsIParserService.h"
+#include "nsIFile.h"
 
 static NS_DEFINE_IID(kIParserServiceIID, NS_IPARSERSERVICE_IID);
 
@@ -291,7 +292,7 @@ nsParserModule::GetClassObject(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsParserModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
+                             nsIFile* aPath,
                              const char* registryLocation,
                              const char* componentType)
 {
@@ -315,8 +316,8 @@ nsParserModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsParserModule::UnregisterSelf(nsIComponentManager *aCompMgr,
-                               nsIFileSpec* aPath,
-                               const char* registryLocation)
+                             nsIFile* aPath,
+                             const char* registryLocation)
 {
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
@@ -349,7 +350,7 @@ nsParserModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsParserModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aLocation,
                                           nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;

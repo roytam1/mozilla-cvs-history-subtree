@@ -31,7 +31,7 @@
 #include "nsIRegistry.h"
 #include "nsIImportService.h"
 #include "nsOutlookImport.h"
-
+#include "nsCRT.h"
 #include "OutlookDebugLog.h"
 
 static NS_DEFINE_CID(kOutlookImportCID,    	NS_OUTLOOKIMPORT_CID);
@@ -226,9 +226,9 @@ nsresult GetImportModulesRegKey( nsIRegistry *reg, nsRegistryKey *pKey)
 
 NS_IMETHODIMP
 nsOutlookImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                          nsIFileSpec* aPath,
-                          const char* registryLocation,
-                          const char* componentType)
+                                    nsIFile* aPath,
+                                    const char* registryLocation,
+                                    const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -291,8 +291,8 @@ nsOutlookImportModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsOutlookImportModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                            nsIFileSpec* aPath,
-                            const char* registryLocation)
+                                      nsIFile* aPath,
+                                      const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering Outlook import components\n");
@@ -328,7 +328,7 @@ nsOutlookImportModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnlo
 static nsOutlookImportModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

@@ -39,6 +39,7 @@
 #include "shellapi.h"
 #include "shlguid.h"
 
+#include <stdio.h>
 
 // certainly not all the error that can be 
 // encountered, but many of them common ones
@@ -481,6 +482,11 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
     const char *filePath = mResolvedPath.GetBuffer();
     BOOL result;
     
+    // We are going to be checking the last error.
+    // Lets make sure that we clear it first.
+
+    SetLastError(0);
+        
     result = GetFileAttributesEx( filePath, GetFileExInfoStandard, &mFileAttrData);
     if ( 0 ==  result )
     {
@@ -566,13 +572,29 @@ nsLocalFile::InitWithPath(const char *filePath)
 }
 
 NS_IMETHODIMP  
-nsLocalFile::Open(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
+nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
 {
     nsresult rv = ResolveAndStat(PR_TRUE);
     if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
         return rv; 
    
     *_retval = PR_Open(mResolvedPath, flags, mode);
+    
+    if (*_retval)
+        return NS_OK;
+
+    return NS_ERROR_FAILURE;
+}
+
+
+NS_IMETHODIMP  
+nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
+{
+    nsresult rv = ResolveAndStat(PR_TRUE);
+    if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
+        return rv; 
+   
+    *_retval = fopen(mResolvedPath, mode);
     
     if (*_retval)
         return NS_OK;
@@ -745,6 +767,11 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const char
         return rv;
 
     int copyOK;
+    
+    // We are going to be checking the last error.
+    // Lets make sure that we clear it first.
+
+    SetLastError(0);
 
     if (!move)
         copyOK = CopyFile(filePath, destPath, PR_TRUE);
@@ -1392,7 +1419,7 @@ NS_IMETHODIMP
 nsLocalFile::Exists(PRBool *_retval)
 {
     NS_ENSURE_ARG(_retval);
-    
+
     nsresult rv = ResolveAndStat( PR_TRUE );
     
     if (NS_SUCCEEDED(rv))
@@ -1597,45 +1624,32 @@ nsLocalFile::Equals(nsIFile *inFile, PRBool *_retval)
 NS_IMETHODIMP
 nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
 {
-    nsresult rv = NS_OK;
-    nsCOMPtr<nsIFile> iter = this;
-    nsCOMPtr<nsIFile> parent;
-    
     *_retval = PR_FALSE;
        
+    char* myFilePath;
+    GetPath(&myFilePath);
+    
+    PRInt32 myFilePathLen = strlen(myFilePath);
+    
     char* inFilePath;
     inFile->GetPath(&inFilePath);
-    PRInt32 inFilePathLen = strlen(inFilePath);
-    
-    if (inFilePathLen > 257)
-        return NS_ERROR_FAILURE;
 
-    while (1)
+    if ( strncmp( myFilePath, inFilePath, myFilePathLen) == 0)
     {
-        char* iterPath;
-        iter->GetPath(&iterPath);
+        // now make sure that the |inFile|'s path has a trailing
+        // separator.
 
-        if ( strncmp( inFilePath, iterPath, inFilePathLen) == 0)
+        if (inFilePath[myFilePathLen] == '\\')
         {
-            nsAllocator::Free(iterPath);
-            *_retval = PR_FALSE;
-            break;
+            *_retval = PR_TRUE;
         }
 
-        nsAllocator::Free(iterPath);
-
-        rv = iter->GetParent(getter_AddRefs(parent));
-        if (NS_FAILED(rv))
-        {
-            break;
-        }
-        
-        iter = parent;
     }
-
+        
     nsAllocator::Free(inFilePath);
+    nsAllocator::Free(myFilePath);
 
-    return rv;
+    return NS_OK;
 }
 
 

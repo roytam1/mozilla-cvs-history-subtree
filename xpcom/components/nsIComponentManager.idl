@@ -17,7 +17,7 @@
  */
 
 #include "nsISupports.idl"
-#include "nsIFileSpec.idl"
+#include "nsIFile.idl"
 #include "nsIFactory.idl"
 #include "nsIEnumerator.idl"
 
@@ -42,12 +42,12 @@ interface nsIComponentManager : nsISupports
     /**
      * Produce a rel: or abs: registry location for a given spec.
      */
-    string     registryLocationForSpec(in nsIFileSpec aSpec);
+    string     registryLocationForSpec(in nsIFile aSpec);
 
     /**
      * Create a full FileSpec for the rel:/abs: location provided.
      */
-    nsIFileSpec specForRegistryLocation(in string aLocation);
+    nsIFile specForRegistryLocation(in string aLocation);
     
     void       registerFactory(in nsCIDRef aClass, in string aClassName,
                                in string aProgID, in nsIFactory aFactory,
@@ -60,13 +60,13 @@ interface nsIComponentManager : nsISupports
     void       registerComponentWithType(in nsCIDRef aClass,
                                          in string aClassName,
                                          in string aProgID,
-                                         in nsIFileSpec aSpec,
+                                         in nsIFile aSpec,
                                          in string aLocation,
                                          in boolean aReplace,
                                          in boolean aPersist,
                                          in string aType);
     void       registerComponentSpec(in nsCIDRef aClass, in string aClassName,
-                                     in string aProgID, in nsIFileSpec aLibrary,
+                                     in string aProgID, in nsIFile aLibrary,
                                      in boolean aReplace, in boolean aPersist);
     void       registerComponentLib(in nsCIDRef aClass, in string aClassName,
                                     in string aProgID, in string adllName,
@@ -75,7 +75,7 @@ interface nsIComponentManager : nsISupports
     void       unregisterFactory(in nsCIDRef aClass, in nsIFactory aFactory);
     void       unregisterComponent(in nsCIDRef aClass, in string aLibrary);
     void       unregisterComponentSpec(in nsCIDRef aClass,
-                                       in nsIFileSpec aLibrarySpec);
+                                       in nsIFile aLibrarySpec);
 
     void       freeLibraries();
     const long NS_Startup = 0;
@@ -83,8 +83,8 @@ interface nsIComponentManager : nsISupports
     const long NS_Timer = 2;
     const long NS_Shutdown = 3;
 
-    void       autoRegister(in long when, in nsIFileSpec directory);
-    void       autoRegisterComponent(in long when, in nsIFileSpec component);
+    void       autoRegister(in long when, in nsIFile directory);
+    void       autoRegisterComponent(in long when, in nsIFile component);
 
     boolean    isRegistered(in nsCIDRef aClass);
     nsIEnumerator	enumerateCLSIDs();

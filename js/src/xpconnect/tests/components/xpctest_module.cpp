@@ -38,6 +38,7 @@
 #include "nsCOMPtr.h"
 #include "nsIModule.h"
 #include "nsIGenericFactory.h"
+#include "nsCRT.h"
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kGenericFactoryCID, NS_GENERICFACTORY_CID);
@@ -395,9 +396,9 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsXPCTestModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
-                             const char* registryLocation,
-                             const char* componentType)
+                              nsIFile* aPath,
+                              const char* registryLocation,
+                              const char* componentType)
 {
     nsresult rv = NS_OK;
 
@@ -426,8 +427,8 @@ nsXPCTestModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsXPCTestModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                               nsIFileSpec* aPath,
-                               const char* registryLocation)
+                                nsIFile* aPath,
+                                const char* registryLocation)
 {
 #ifdef DEBUG
     printf("*** Unregistering XPCTest components\n");
@@ -463,7 +464,7 @@ nsXPCTestModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsXPCTestModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;

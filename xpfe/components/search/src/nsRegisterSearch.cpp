@@ -30,6 +30,7 @@
 #include "nsIServiceManager.h"
 #include "nsIRDFDataSource.h"
 #include "nsISearchService.h"
+#include "nsCRT.h"
 
 static NS_DEFINE_CID(kLocalSearchServiceCID,         NS_RDFFINDDATASOURCE_CID);
 static NS_DEFINE_CID(kInternetSearchServiceCID,      NS_RDFSEARCHDATASOURCE_CID);
@@ -195,7 +196,7 @@ static Components gComponents[] = {
 
 NS_IMETHODIMP
 nsSearchModule::RegisterSelf(nsIComponentManager *aCompMgr,
-                             nsIFileSpec* aPath,
+                             nsIFile* aPath,
                              const char* registryLocation,
                              const char* componentType)
 {
@@ -228,7 +229,7 @@ nsSearchModule::RegisterSelf(nsIComponentManager *aCompMgr,
 
 NS_IMETHODIMP
 nsSearchModule::UnregisterSelf(nsIComponentManager* aCompMgr,
-                               nsIFileSpec* aPath,
+                               nsIFile* aPath,
                                const char* registryLocation)
 {
 #ifdef DEBUG
@@ -269,7 +270,7 @@ nsSearchModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 static nsSearchModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
-                                          nsIFileSpec* location,
+                                          nsIFile* aPath,
                                           nsIModule** return_cobj)
 {
     nsresult rv = NS_OK;
