@@ -433,12 +433,12 @@ function Startup()
         return;
     }
 
-    // Focus the content area if the caller instructed us to.
-    if ("arguments" in window && window.arguments.length >= 3 && window.arguments[2] == true ||
-        !window.locationbar.visible)
-      setTimeout(WindowFocusTimerCallback, 0, _content);
-    else
+    const navBar = document.getElementById("nav-bar");
+    // Focus the content area unless we're loading a blank page
+    if ((!uriToLoad || uriToLoad == "about:blank") && !navBar.hidden && window.locationbar.visible)
       setTimeout(WindowFocusTimerCallback, 0, gURLBar);
+    else
+      setTimeout(WindowFocusTimerCallback, 0, _content);
 
     // Perform default browser checking (after window opens).
     setTimeout( checkForDefaultBrowser, 0 );
