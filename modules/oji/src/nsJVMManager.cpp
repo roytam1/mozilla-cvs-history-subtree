@@ -942,7 +942,13 @@ nsJVMManager::IsLiveConnectEnabled(void)
 		return (status == nsJVMStatus_Enabled || status == nsJVMStatus_Running);
 	}
 #endif
+
+  // no java for minotaur, but we might allow for it later, so re-think when merging to the trunk
+#ifdef MOZ_MINOTAUR
+  return PR_FALSE;
+#else
 	return PR_TRUE;
+#endif
 }
 
 /*
