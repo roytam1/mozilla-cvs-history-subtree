@@ -112,7 +112,6 @@ res:dtd:xhtml11.dtd
 Components:layout.shlb
 Components:htmlparser.shlb
 Components:htmlparser.xpt
-Components:view.shlb
 Components:content.xpt     
 Components:layout.xpt   
 

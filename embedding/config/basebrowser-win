@@ -69,7 +69,6 @@ components\gkgfxwin.dll
 components\gkwidget.dll   
 components\widget.xpt
 components\gfx.xpt                      
-components\gkview.dll                   
 
 ; layout
 moz_art_lgpl.dll

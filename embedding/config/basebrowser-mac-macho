@@ -109,8 +109,6 @@ components/jsurl.xpt
 res/dtd/xhtml11.dtd
 components/libgklayout.dylib                   
 components/libhtmlpars.dylib                 
-components/libgkview.dylib                   
-components/layout_base.xpt              
 components/layout_xul.xpt               
 components/content_base.xpt
 

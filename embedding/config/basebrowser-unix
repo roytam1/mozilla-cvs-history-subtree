@@ -60,7 +60,6 @@ libmoz_art_lgpl.so
 res/dtd/xhtml11.dtd
 components/libgklayout.so                   
 components/libhtmlpars.so                 
-components/libgkview.so                   
 components/layout_base.xpt              
 components/layout_xul.xpt               
 components/content_base.xpt

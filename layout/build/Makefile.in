@@ -45,6 +45,7 @@ REQUIRES	= xpcom \
 		  content \
 		  gfx \
 		  widget \
+		  view \
 		  locale \
 		  necko \
 		  dom \
@@ -98,6 +99,7 @@ SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)gkconxbl_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkconxuldoc_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)gkconshared_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)gkview_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 ifdef MOZ_XUL
@@ -161,6 +163,7 @@ INCLUDES	+= -I$(srcdir)/../base/src \
 		   -I$(srcdir)/../../content/xul/content/src \
 		   -I$(srcdir)/../../content/xul/templates/src \
 		   -I$(srcdir)/../../content/events/src \
+		   -I$(topsrcdir)/view/src \
 		   -I. \
 		   $(NULL)
 

@@ -129,6 +129,13 @@
 #include "nsXULAtoms.h"
 #include "nsLayoutCID.h"
 
+// view stuff
+#include "nsViewsCID.h"
+#include "nsView.h"
+#include "nsScrollingView.h"
+#include "nsScrollPortView.h"
+#include "nsViewManager.h"
+
 class nsIDocumentLoaderFactory;
 
 #define PRODUCT_NAME "Gecko"
@@ -491,6 +498,38 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsInspectorCSSUtils)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWyciwygProtocolHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
 MAKE_CTOR(CreateSyncLoadDOMService,       nsISyncLoadDOMService,       NS_NewSyncLoadDOMService)
+
+// views are not refcounted, so this is the same as
+// NS_GENERIC_FACTORY_CONSTRUCTOR without the NS_ADDREF/NS_RELEASE
+#define NS_GENERIC_FACTORY_CONSTRUCTOR_NOREFS(_InstanceClass)                 \
+static NS_IMETHODIMP                                                          \
+_InstanceClass##Constructor(nsISupports *aOuter, REFNSIID aIID,               \
+                            void **aResult)                                   \
+{                                                                             \
+    nsresult rv;                                                              \
+                                                                              \
+    _InstanceClass * inst;                                                    \
+                                                                              \
+    *aResult = NULL;                                                          \
+    if (NULL != aOuter) {                                                     \
+        rv = NS_ERROR_NO_AGGREGATION;                                         \
+        return rv;                                                            \
+    }                                                                         \
+                                                                              \
+    NS_NEWXPCOM(inst, _InstanceClass);                                        \
+    if (NULL == inst) {                                                       \
+        rv = NS_ERROR_OUT_OF_MEMORY;                                          \
+        return rv;                                                            \
+    }                                                                         \
+    rv = inst->QueryInterface(aIID, aResult);                                 \
+                                                                              \
+    return rv;                                                                \
+}                                                                             \
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsViewManager)
+NS_GENERIC_FACTORY_CONSTRUCTOR_NOREFS(nsView)
+NS_GENERIC_FACTORY_CONSTRUCTOR_NOREFS(nsScrollingView)
+NS_GENERIC_FACTORY_CONSTRUCTOR_NOREFS(nsScrollPortView)
 
 static NS_IMETHODIMP
 CreateHTMLImgElement(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -1118,8 +1157,16 @@ static const nsModuleComponentInfo gComponents[] = {
   { "SyncLoad DOM Service",
     NS_SYNCLOADDOMSERVICE_CID,
     NS_SYNCLOADDOMSERVICE_CONTRACTID,
-    CreateSyncLoadDOMService }
+    CreateSyncLoadDOMService },
 
+  // view stuff
+  { "View Manager", NS_VIEW_MANAGER_CID, "@mozilla.org/view-manager;1",
+    nsViewManagerConstructor },
+  { "View", NS_VIEW_CID, "@mozilla.org/view;1", nsViewConstructor },
+  { "Scrolling View", NS_SCROLLING_VIEW_CID, "@mozilla.org/scrolling-view;1",
+    nsScrollingViewConstructor },
+  { "Scroll Port View", NS_SCROLL_PORT_VIEW_CID,
+    "@mozilla.org/scroll-port-view;1", nsScrollPortViewConstructor }
 };
 
 NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsLayoutModule, gComponents, Initialize, Shutdown)
