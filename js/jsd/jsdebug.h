@@ -730,6 +730,7 @@ JSD_GetErrorReporter(JSDContext*        jsdc,
                      void**             callerdata);
 
 /***************************************************************************/
+/* Generic locks that callers can use for their own purposes */
 
 /*
 * Is Locking and GetThread supported in this build?
