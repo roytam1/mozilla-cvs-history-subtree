@@ -1264,24 +1264,23 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetPrettyName(PRUnichar ** prettyName)
 NS_IMETHODIMP
 nsMsgLocalMailFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgDatabase **db)
 {
-    nsresult openErr=NS_ERROR_UNEXPECTED;
-    if(!db || !folderInfo)
-		return NS_ERROR_NULL_POINTER;	//ducarroz: should we use NS_ERROR_INVALID_ARG?
+  nsresult openErr=NS_ERROR_UNEXPECTED;
+  if(!db || !folderInfo)
+    return NS_ERROR_NULL_POINTER;	//ducarroz: should we use NS_ERROR_INVALID_ARG?
 
-
-    nsresult rv;
-    nsCOMPtr<nsIMsgDatabase> mailDBFactory( do_CreateInstance(kCMailDB, &rv) );
+  nsresult rv;
+  nsCOMPtr<nsIMsgDatabase> mailDBFactory( do_CreateInstance(kCMailDB, &rv) );
 	nsCOMPtr<nsIMsgDatabase> mailDB;
-	if (NS_SUCCEEDED(rv) && mailDBFactory)
-	{
+  if (NS_SUCCEEDED(rv) && mailDBFactory)
+  {
         openErr = mailDBFactory->Open(mPath, PR_FALSE, PR_FALSE, getter_AddRefs(mailDB));
-	}
+  }
 
-    *db = mailDB;
-	NS_IF_ADDREF(*db);
-    if (NS_SUCCEEDED(openErr)&& *db)
-        openErr = (*db)->GetDBFolderInfo(folderInfo);
-    return openErr;
+  *db = mailDB;
+  NS_IF_ADDREF(*db);
+  if (NS_SUCCEEDED(openErr)&& *db)
+    openErr = (*db)->GetDBFolderInfo(folderInfo);
+  return openErr;
 }
 
 NS_IMETHODIMP nsMsgLocalMailFolder::UpdateSummaryTotals(PRBool force)

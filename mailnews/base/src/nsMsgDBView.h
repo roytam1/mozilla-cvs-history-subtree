@@ -66,12 +66,31 @@ protected:
   // routines used in building up view
   PRBool WantsThisThread(nsIMsgThread * thread);
 
+  nsresult ToggleExpansion(nsMsgViewIndex index, PRUint32 *numChanged);
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
+  nsresult CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollapsed);
   nsresult ExpandAll();
+
+  // helper routines for thread expanding and collapsing.
+  nsresult		GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount);
+  nsMsgViewIndex GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr);
+  nsMsgViewIndex ThreadIndexOfMsg(nsMsgKey msgKey, 
+											  nsMsgViewIndex msgIndex = nsMsgViewIndex_None,
+											  PRInt32 *pThreadCount = nsnull,
+											  PRUint32 *pFlags = nsnull);
+  nsMsgKey GetKeyOfFirstMsgInThread(nsMsgKey key);
+  PRInt32 CountExpandedThread(nsMsgViewIndex index);
+  nsresult ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta);
   nsresult ReverseSort();
   nsresult ReverseThreads();
 
+	nsMsgKey		GetAt(nsMsgViewIndex index) ;
+	nsMsgViewIndex	FindViewIndex(nsMsgKey  key) 
+						{return (nsMsgViewIndex) (m_keys.FindIndex(key));}
+	virtual nsMsgViewIndex	FindKey(nsMsgKey key, PRBool expand);
+
   nsresult	ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
+  PRInt32   FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgKey msgKey, nsMsgViewIndex startOfThreadViewIndex);
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
   // notification api's

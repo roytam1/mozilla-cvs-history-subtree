@@ -4106,7 +4106,9 @@ PRInt32 nsNNTPProtocol::DisplayNewsRCResponse()
 	  {
 		/* only on news server error or when zero articles
 		 */
+#ifdef DEBUG_seth
 		NS_ASSERTION(PR_FALSE,"check this code");
+#endif
         rv = m_nntpServer->DisplaySubscribedGroup(m_newsFolder, 0, 0, 0);
 		NS_ASSERTION(NS_SUCCEEDED(rv),"DisplaySubscribedGroup() failed");
 	  }

@@ -41,7 +41,9 @@ nsMsgThreadedDBView::~nsMsgThreadedDBView()
 
 NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
 {
-	nsresult rv;;
+	nsresult rv;
+  m_sortType = viewType;
+  m_sortOrder = nsMsgViewSortOrder::ascending;
 	rv = nsMsgDBView::Open(folder, viewType, pCount);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -58,8 +60,6 @@ NS_IMETHODIMP nsMsgThreadedDBView::Close()
 NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 {
 	nsresult rv;
-	nsMsgViewSortOrderValue sortOrder;
-	nsMsgViewSortTypeValue sortType;
 
 	m_keys.RemoveAll();
 	m_flags.RemoveAll();
@@ -68,8 +68,6 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 	m_prevFlags.RemoveAll();
 	m_prevLevels.RemoveAll();
 	m_havePrevView = PR_FALSE;
-    m_sortType = nsMsgViewSortType::byThread;	// this sorts by thread, which we will resort.
-	sortType = m_sortType;
 	nsresult getSortrv = NS_OK; // ### TODO m_db->GetSortInfo(&sortType, &sortOrder);
 
 	// list all the ids into m_idArray.
@@ -86,7 +84,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
                     levelArray, kIdChunkSize, &numListed, nsnull);
 		if (NS_SUCCEEDED(rv))
 		{
-			PRInt32 numAdded = AddKeys(idArray, flagArray, levelArray, sortType, numListed);
+			PRInt32 numAdded = AddKeys(idArray, flagArray, levelArray, m_sortType, numListed);
 			if (pCount)
 				*pCount += numAdded;
 		}
@@ -95,7 +93,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 
 	if (NS_SUCCEEDED(getSortrv))
 	{
-		InitSort(sortType, sortOrder);
+		InitSort(m_sortType, m_sortOrder);
 	}
 	return rv;
 }
@@ -286,7 +284,7 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 	if ((m_viewFlags & kUnreadOnly) && m_sortType == nsMsgViewSortType::byThread)
 		ExpandAll();
 	m_sortValid = PR_TRUE;
-  if (sortType != sortType != nsMsgViewSortType::byThread)
+  if (sortType != nsMsgViewSortType::byThread)
     ExpandAll(); // for now, expand all and do a flat sort.
 
 	Sort(sortType, sortOrder);

@@ -28,7 +28,7 @@
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgDatabase.h"
 #include "nsIMsgFolder.h"
-
+#include "MailNewsTypes2.h"
 
 /* Implementation file */
 
@@ -123,7 +123,7 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
     PRUint32 num = GetSize();
     printf("#:  (key,flag)\n");
     for (i = 0; i < num; i++) {
-        printf("%d:  (%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i));
+        printf("%d:  (%d,%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i),m_levels.GetAt(i));
     }
     printf("\n");
     return NS_OK;
@@ -405,6 +405,219 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     return NS_OK;
 }
 
+nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr)
+{
+	nsMsgViewIndex	retIndex = nsMsgViewIndex_None;
+	PRUint32	childIndex = 0;
+	// We could speed up the unreadOnly view by starting our search with the first
+	// unread message in the thread. Sometimes, that will be wrong, however, so
+	// let's skip it until we're sure it's neccessary.
+//	(m_viewFlags & kUnreadOnly) 
+//		? threadHdr->GetFirstUnreadKey(m_messageDB) : threadHdr->GetChildAt(0);
+  PRUint32 numThreadChildren;
+  threadHdr->GetNumChildren(&numThreadChildren);
+	while (retIndex == nsMsgViewIndex_None && childIndex < numThreadChildren)
+	{
+		nsMsgKey childKey;
+    threadHdr->GetChildKeyAt(childIndex++, &childKey);
+		retIndex = FindViewIndex(childKey);
+	}
+	return retIndex;
+}
+
+
+// Find the view index of the thread containing the passed msgKey, if
+// the thread is in the view. MsgIndex is passed in as a shortcut if
+// it turns out the msgKey is the first message in the thread,
+// then we can avoid looking for the msgKey.
+nsMsgViewIndex nsMsgDBView::ThreadIndexOfMsg(nsMsgKey msgKey, 
+											  nsMsgViewIndex msgIndex /* = nsMsgViewIndex_None */,
+											  PRInt32 *pThreadCount /* = NULL */,
+											  PRUint32 *pFlags /* = NULL */)
+{
+	if (m_sortType != nsMsgViewSortType::byThread)
+		return nsMsgViewIndex_None;
+	nsCOMPtr <nsIMsgThread> threadHdr;
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsresult rv = m_db->GetMsgHdrForKey(msgKey, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv, nsMsgViewIndex_None);
+  rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+  NS_ENSURE_SUCCESS(rv, nsMsgViewIndex_None);
+
+	nsMsgViewIndex retIndex = nsMsgViewIndex_None;
+
+	if (threadHdr != nsnull)
+	{
+		if (msgIndex == nsMsgViewIndex_None)
+			msgIndex = FindViewIndex(msgKey);
+
+		if (msgIndex == nsMsgViewIndex_None)	// key is not in view, need to find by thread
+		{
+			msgIndex = GetIndexOfFirstDisplayedKeyInThread(threadHdr);
+			nsMsgKey		threadKey = (msgIndex == nsMsgViewIndex_None) ? nsMsgKey_None : GetAt(msgIndex);
+			if (pFlags)
+				threadHdr->GetFlags(pFlags);
+		}
+		nsMsgViewIndex startOfThread = msgIndex;
+		while ((PRInt32) startOfThread >= 0 && m_levels[startOfThread] != 0)
+			startOfThread--;
+		retIndex = startOfThread;
+		if (pThreadCount)
+		{
+			PRInt32 numChildren = 0;
+			nsMsgViewIndex threadIndex = startOfThread;
+			do
+			{
+				threadIndex++;
+				numChildren++;
+			}
+			while ((int32) threadIndex < m_levels.GetSize() && m_levels[threadIndex] != 0);
+			*pThreadCount = numChildren;
+		}
+	}
+	return retIndex;
+}
+
+nsMsgKey nsMsgDBView::GetKeyOfFirstMsgInThread(nsMsgKey key)
+{
+	nsCOMPtr <nsIMsgThread> pThread;
+	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsresult rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv, rv);
+  m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+	nsMsgKey	firstKeyInThread = nsMsgKey_None;
+
+	if (pThread == nsnull)
+	{
+		NS_ASSERTION(PR_FALSE, "error getting msg from thread");
+		return firstKeyInThread;
+	}
+	// ### dmb UnreadOnly - this is wrong.
+	pThread->GetChildKeyAt(0, &firstKeyInThread);
+	return firstKeyInThread;
+}
+
+nsMsgKey nsMsgDBView::GetAt(nsMsgViewIndex index) 
+{
+	if (index >= m_keys.GetSize() || index == nsMsgViewIndex_None)
+		return nsMsgKey_None;
+	else
+		return(m_keys.GetAt(index));
+}
+
+nsMsgViewIndex	nsMsgDBView::FindKey(nsMsgKey key, PRBool expand)
+{
+	nsMsgViewIndex retIndex = nsMsgViewIndex_None;
+	retIndex = (nsMsgViewIndex) (m_keys.FindIndex(key));
+	if (key != nsMsgKey_None && retIndex == nsMsgViewIndex_None && expand && m_db)
+	{
+		nsMsgKey threadKey = GetKeyOfFirstMsgInThread(key);
+		if (threadKey != nsMsgKey_None)
+		{
+			nsMsgViewIndex threadIndex = FindKey(threadKey, PR_FALSE);
+			if (threadIndex != nsMsgViewIndex_None)
+			{
+				PRUint32 flags = m_flags[threadIndex];
+				if ((flags & MSG_FLAG_ELIDED) && NS_SUCCEEDED(ExpandByIndex(threadIndex, nsnull)))
+					retIndex = FindKey(key, PR_FALSE);
+			}
+		}
+	}
+	return retIndex;
+}
+
+nsresult		nsMsgDBView::GetThreadCount(nsMsgKey messageKey, PRUint32 *pThreadCount)
+{
+	nsresult rv = NS_MSG_MESSAGE_NOT_FOUND;
+	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv, rv);
+	nsCOMPtr <nsIMsgThread> pThread;
+  rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
+	if (NS_SUCCEEDED(rv) && pThread != nsnull)
+    rv = pThread->GetNumChildren(pThreadCount);
+	return rv;
+}
+
+
+// This counts the number of messages in an expanded thread, given the
+// index of the first message in the thread.
+PRInt32 nsMsgDBView::CountExpandedThread(nsMsgViewIndex index)
+{
+	PRInt32 numInThread = 0;
+	nsMsgViewIndex startOfThread = index;
+	while ((PRInt32) startOfThread >= 0 && m_levels[startOfThread] != 0)
+		startOfThread--;
+	nsMsgViewIndex threadIndex = startOfThread;
+	do
+	{
+		threadIndex++;
+		numInThread++;
+	}
+	while ((PRInt32) threadIndex < m_levels.GetSize() && m_levels[threadIndex] != 0);
+
+	return numInThread;
+}
+
+// returns the number of lines that would be added (> 0) or removed (< 0) 
+// if we were to try to expand/collapse the passed index.
+nsresult nsMsgDBView::ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDelta)
+{
+	PRUint32 numChildren;
+	nsresult	rv;
+
+	*expansionDelta = 0;
+	if ((int) index > m_keys.GetSize())
+		return NS_MSG_MESSAGE_NOT_FOUND;
+	char	flags = m_flags[index];
+
+	if (m_sortType != nsMsgViewSortType::byThread)
+		return NS_OK;
+
+	// The client can pass in the key of any message
+	// in a thread and get the expansion delta for the thread.
+
+	if (!(m_viewFlags & kUnreadOnly))
+	{
+		rv = GetThreadCount(m_keys[index], &numChildren);
+		NS_ENSURE_SUCCESS(rv, rv);
+	}
+	else
+	{
+		numChildren = CountExpandedThread(index);
+	}
+
+	if (flags & MSG_FLAG_ELIDED)
+		*expansionDelta = numChildren - 1;
+	else
+		*expansionDelta = - (PRInt32) (numChildren - 1);
+
+	return NS_OK;
+}
+
+nsresult nsMsgDBView::ToggleExpansion(nsMsgViewIndex index, PRUint32 *numChanged)
+{
+  NS_ENSURE_ARG(numChanged);
+  *numChanged = 0;
+	nsMsgViewIndex threadIndex = ThreadIndexOfMsg(GetAt(index), index);
+	if (threadIndex == nsMsgViewIndex_None)
+	{
+		NS_ASSERTION(PR_FALSE, "couldn't find thread");
+		return NS_MSG_MESSAGE_NOT_FOUND;
+	}
+	PRInt32	flags = m_flags[threadIndex];
+
+	// if not a thread, or doesn't have children, no expand/collapse
+	// If we add sub-thread expand collapse, this will need to be relaxed
+	if (!(flags & MSG_VIEW_FLAG_ISTHREAD) || !(flags && MSG_VIEW_FLAG_HASCHILDREN))
+		return NS_MSG_MESSAGE_NOT_FOUND;
+	if (flags & MSG_FLAG_ELIDED)
+		return ExpandByIndex(threadIndex, numChanged);
+	else
+		return CollapseByIndex(threadIndex, numChanged);
+
+}
+
 nsresult nsMsgDBView::ExpandAll()
 {
 	for (PRInt32 i = GetSize() - 1; i >= 0; i--) 
@@ -464,22 +677,81 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	return rv;
 }
 
+nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollapsed)
+{
+	nsMsgKey		firstIdInThread;
+	nsresult	rv;
+	PRInt32	flags = m_flags[index];
+	PRInt32	threadCount = 0;
+
+	if (flags & MSG_FLAG_ELIDED || m_sortType != nsMsgViewSortType::byThread)
+		return NS_OK;
+	flags  |= MSG_FLAG_ELIDED;
+
+	if (index > m_keys.GetSize())
+		return NS_MSG_MESSAGE_NOT_FOUND;
+
+	firstIdInThread = m_keys[index];
+	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  rv = m_db->GetMsgHdrForKey(firstIdInThread, getter_AddRefs(msgHdr));
+	if (!NS_SUCCEEDED(rv) || msgHdr == nsnull)
+	{
+		NS_ASSERTION(PR_FALSE, "error collapsing thread");
+		return NS_MSG_MESSAGE_NOT_FOUND;
+	}
+
+	m_flags[index] = flags;
+	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
+
+	rv = ExpansionDelta(index, &threadCount);
+	if (NS_SUCCEEDED(rv))
+	{
+		PRInt32 numRemoved = threadCount; // don't count first header in thread
+    NoteStartChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete);
+		// start at first id after thread.
+		for (int i = 1; i <= threadCount && index + 1 < m_keys.GetSize(); i++)
+		{
+			m_keys.RemoveAt(index + 1);
+			m_flags.RemoveAt(index + 1);
+			m_levels.RemoveAt(index + 1);
+		}
+		if (pNumCollapsed != nsnull)
+			*pNumCollapsed = numRemoved;	
+		NoteEndChange(index + 1, -numRemoved, nsMsgViewNotificationCode::insertOrDelete);
+	}
+	return rv;
+}
+
 PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
 {
   return PR_TRUE; // default is to want all threads.
 }
 
-nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed)
+PRInt32 nsMsgDBView::FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgKey msgKey, nsMsgViewIndex startOfThreadViewIndex)
+{
+  nsMsgKey threadParent;
+  msgHdr->GetThreadParent(&threadParent);
+  nsMsgViewIndex parentIndex = m_keys.FindIndex(threadParent, startOfThreadViewIndex);
+  if (parentIndex != nsMsgViewIndex_None)
+    return m_levels[parentIndex] + 1;
+  else
+  {
+    NS_ASSERTION(PR_FALSE, "couldn't find parent of msg");
+    return 1; // well, return level 1.
+  }
+}
+
+nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
 {
   NS_ENSURE_ARG(threadHdr);
 	// these children ids should be in thread order.
 	PRUint32 i;
-
+  nsMsgViewIndex viewIndex = startOfThreadViewIndex + 1;
 	*pNumListed = 0;
 
   PRUint32 numChildren;
   threadHdr->GetNumChildren(&numChildren);
-	for (i = 0; i < numChildren; i++)
+	for (i = 1; i < numChildren; i++)
 	{
 		nsCOMPtr <nsIMsgDBHdr> msgHdr;
     threadHdr->GetChildHdrAt(i, getter_AddRefs(msgHdr));
@@ -500,7 +772,9 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex vi
 			m_keys.InsertAt(viewIndex, msgKey);
       // ### TODO - how about hasChildren flag?
 			m_flags.InsertAt(viewIndex, msgFlags & ~MSG_VIEW_FLAGS);
-			m_levels.InsertAt(viewIndex, 1); // ### TODO this is going to be tricky - might use enumerators
+      // ### TODO this is going to be tricky - might use enumerators
+      PRInt32 level = FindLevelInThread(msgHdr, msgKey, startOfThreadViewIndex);
+			m_levels.InsertAt(viewIndex, level); 
 			// turn off thread or elided bit if they got turned on (maybe from new only view?)
 			if (i > 0)	
 				msgHdr->AndFlags(~(MSG_VIEW_FLAG_ISTHREAD | MSG_FLAG_ELIDED), &newFlags);

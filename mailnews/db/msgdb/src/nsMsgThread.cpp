@@ -321,6 +321,19 @@ nsresult	nsMsgThread::ReparentNonReferenceChildrenOf(nsIMsgDBHdr *topLevelHdr, n
 	return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgThread::GetChildKeyAt(PRInt32 aIndex, nsMsgKey *result)
+{
+	nsresult ret = NS_OK;
+	mdbOid oid;
+	nsIMdbRow *hdrRow = nsnull;
+
+	ret = m_mdbTable->PosToOid( m_mdbDB->GetEnv(), aIndex, &oid);
+	if (ret == 0)
+    *result = oid.mOid_Id;
+
+	return ret;
+}
+
 NS_IMETHODIMP nsMsgThread::GetChildAt(PRInt32 aIndex, nsIMsgDBHdr **result)
 {
 	nsresult ret = NS_OK;
