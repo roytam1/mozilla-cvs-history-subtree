@@ -55,7 +55,7 @@
     mDragInsertionButton = nil;
     mDragInsertionPosition = BookmarksService::CHInsertNone;
     mDrawBorder = YES;
-    [self registerForDraggedTypes:[NSArray arrayWithObjects:@"MozURLType", @"MozBookmarkType", NSStringPboardType, nil]];
+    [self registerForDraggedTypes:[NSArray arrayWithObjects:@"MozURLType", @"MozBookmarkType", NSStringPboardType, NSURLPboardType, nil]];
     mIsShowing = YES;
   }
   return self;
@@ -515,6 +515,11 @@
     NSString* draggedText = [[sender draggingPasteboard] stringForType:NSStringPboardType];
     // maybe fix URL drags to include the selected text as the title
     dropHandled = BookmarksService::PerformURLDrop(parent, beforeItem, draggedText, draggedText);
+  }
+  else if ([draggedTypes containsObject: NSURLPboardType])
+  {
+    NSURL*	urlData = [NSURL URLFromPasteboard:[sender draggingPasteboard]];
+    dropHandled = BookmarksService::PerformURLDrop(parent, beforeItem, [urlData absoluteString], [urlData absoluteString]);
   }
   
   mDragInsertionButton = nil;

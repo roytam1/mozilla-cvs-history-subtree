@@ -642,13 +642,14 @@
     return (BookmarksService::IsBookmarkDropValid(parent, index, draggedIDs)) ? NSDragOperationGeneric : NSDragOperationNone;
   }
   
-  if ([types containsObject: @"MozURLType"]) {
+  if ([types containsObject: @"MozURLType"])
     return NSDragOperationGeneric;
-  }
   
-  if ([types containsObject: NSStringPboardType]) {
+  if ([types containsObject: NSStringPboardType])
     return NSDragOperationGeneric;
-  }
+
+  if ([types containsObject: NSURLPboardType])
+    return NSDragOperationGeneric;
 
   return NSDragOperationNone;
 }
@@ -674,6 +675,11 @@
   {
     NSString* draggedText = [[info draggingPasteboard] stringForType:NSStringPboardType];
     return BookmarksService::PerformURLDrop(parent, beforeItem, draggedText, draggedText);
+  }
+  else if ([types containsObject: NSURLPboardType])
+  {
+    NSURL*	urlData = [NSURL URLFromPasteboard:[info draggingPasteboard]];
+    return BookmarksService::PerformURLDrop(parent, beforeItem, [urlData absoluteString], [urlData absoluteString]);
   }
   
   return NO;

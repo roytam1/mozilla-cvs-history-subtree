@@ -227,7 +227,7 @@
     [mLabelCell setImageSpace:2.0];
     
     [self registerForDraggedTypes:[NSArray arrayWithObjects:
-        @"MozURLType", @"MozBookmarkType", NSStringPboardType, NSFilenamesPboardType, nil]];
+        @"MozURLType", @"MozBookmarkType", NSStringPboardType, NSFilenamesPboardType, NSURLPboardType, nil]];
   }
   return self;
 }

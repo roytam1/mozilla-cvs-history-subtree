@@ -38,6 +38,7 @@
 * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
+#import "NSPasteboard+Utils.h"
 
 #import "BrowserTabView.h"
 #import "BookmarksService.h"
@@ -89,7 +90,7 @@
 {
     [self showOrHideTabsAsAppropriate];
     [self registerForDraggedTypes:[NSArray arrayWithObjects:
-        @"MozURLType", @"MozBookmarkType", NSStringPboardType, NSFilenamesPboardType, nil]];
+        @"MozURLType", @"MozBookmarkType", NSStringPboardType, NSFilenamesPboardType, NSURLPboardType, nil]];
 }
 
 /******************************************/
@@ -341,7 +342,7 @@ const float kTabsInvisibleTopGap  = -7.0;		// space removed to push tab content 
   NSArray*        pasteBoardTypes = [[sender draggingPasteboard] types];
 
   [self hideDragDestinationIndicator];
-
+  
   if ([pasteBoardTypes containsObject: @"MozBookmarkType"])
   {
     NSArray* contentIds = [[sender draggingPasteboard] propertyListForType: @"MozBookmarkType"];
