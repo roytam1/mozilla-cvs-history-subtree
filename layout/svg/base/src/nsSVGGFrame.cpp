@@ -234,7 +234,7 @@ nsSVGGFrame::InsertFrames(nsIPresContext* aPresContext,
   // call InitialUpdate() on all new frames:
   nsIFrame* end = nsnull;
   if (lastNewFrame)
-    lastNewFrame->GetNextSibling(&end);
+    end = lastNewFrame->GetNextSibling();
   
   for (nsIFrame* kid = aFrameList; kid != end;
        kid = kid->GetNextSibling()) {
@@ -369,7 +369,7 @@ nsSVGGFrame::GetCoveredRegion()
         }
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return accu_region;
@@ -385,7 +385,7 @@ nsSVGGFrame::InitialUpdate()
     if (SVGFrame) {
       SVGFrame->InitialUpdate();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }  

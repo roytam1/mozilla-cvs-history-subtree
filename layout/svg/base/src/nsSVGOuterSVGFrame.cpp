@@ -577,7 +577,7 @@ nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
       if (SVGFrame) {
         SVGFrame->InitialUpdate(); 
       }
-      kid->GetNextSibling(&kid);
+      kid = kid->GetNextSibling();
     }
     
     UnsuspendRedraw();
@@ -623,7 +623,7 @@ nsSVGOuterSVGFrame::InsertFrames(nsIPresContext* aPresContext,
   
   nsIFrame* end = nsnull;
   if (lastNewFrame)
-    lastNewFrame->GetNextSibling(&end);
+    end = lastNewFrame->GetNextSibling();
 
   for (nsIFrame* kid = aFrameList; kid != end;
        kid = kid->GetNextSibling()) {
@@ -1008,7 +1008,7 @@ nsSVGOuterSVGFrame::NotifyViewportChange()
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->NotifyCTMChanged(); 
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   UnsuspendRedraw();
   return NS_OK;

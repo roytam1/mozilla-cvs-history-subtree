@@ -376,7 +376,7 @@ nsSVGGenericContainerFrame::GetCoveredRegion()
         }
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return accu_region;
@@ -392,7 +392,7 @@ nsSVGGenericContainerFrame::InitialUpdate()
     if (SVGFrame) {
       SVGFrame->InitialUpdate();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }  

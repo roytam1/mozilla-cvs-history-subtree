@@ -287,7 +287,7 @@ nsSVGTSpanFrame::InsertFrames(nsIPresContext* aPresContext,
   nsIFrame* kid = aFrameList;
   nsIFrame* end = nsnull;
   if (lastNewFrame)
-    lastNewFrame->GetNextSibling(&end);
+    end = lastNewFrame->GetNextSibling();
   
   while (kid != end) {
     nsISVGChildFrame* SVGFrame=nsnull;
@@ -295,7 +295,7 @@ nsSVGTSpanFrame::InsertFrames(nsIPresContext* aPresContext,
     if (SVGFrame) {
       SVGFrame->InitialUpdate(); 
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return NS_OK;
@@ -368,7 +368,7 @@ nsSVGTSpanFrame::DidModifySVGObservable (nsISVGValue* observable)
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->NotifyCTMChanged(); // XXX
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }  
   return NS_OK;
 }
@@ -390,7 +390,7 @@ nsSVGTSpanFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwip
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(canvas, dirtyRectTwips);
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   return NS_OK;
@@ -416,7 +416,7 @@ nsSVGTSpanFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
         // have a singly linked list...
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return *hit ? NS_OK : NS_ERROR_FAILURE;
@@ -442,7 +442,7 @@ nsSVGTSpanFrame::GetCoveredRegion()
         NS_IF_ADDREF(accu_region);
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return accu_region;
@@ -458,7 +458,7 @@ nsSVGTSpanFrame::InitialUpdate()
     if (SVGFrame) {
       SVGFrame->InitialUpdate();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }  
@@ -473,7 +473,7 @@ nsSVGTSpanFrame::NotifyCTMChanged()
     if (SVGFrame) {
       SVGFrame->NotifyCTMChanged();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }
@@ -488,7 +488,7 @@ nsSVGTSpanFrame::NotifyRedrawSuspended()
     if (SVGFrame) {
       SVGFrame->NotifyRedrawSuspended();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }
@@ -503,7 +503,7 @@ nsSVGTSpanFrame::NotifyRedrawUnsuspended()
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }
@@ -549,7 +549,7 @@ nsSVGTSpanFrame::GetBBox(nsIDOMSVGRect **_retval)
         if (y+h>y2) y2 = y+h;
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
@@ -640,7 +640,7 @@ nsSVGTSpanFrame::GetFirstGlyphFragment()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&node);
     if (node)
       return node->GetFirstGlyphFragment();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   // nope. try siblings:
@@ -657,7 +657,7 @@ nsSVGTSpanFrame::GetNextGlyphFragment()
     sibling->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       return node->GetFirstGlyphFragment();
-    sibling->GetNextSibling(&sibling);
+    sibling = sibling->GetNextSibling();
   }
 
   // no more siblings. go back up the tree.
@@ -695,7 +695,7 @@ nsSVGTSpanFrame::NotifyMetricsSuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyMetricsSuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 }
 
@@ -708,7 +708,7 @@ nsSVGTSpanFrame::NotifyMetricsUnsuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyMetricsUnsuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 }
 
@@ -721,7 +721,7 @@ nsSVGTSpanFrame::NotifyGlyphFragmentTreeSuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyGlyphFragmentTreeSuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 }
 
@@ -742,7 +742,7 @@ nsSVGTSpanFrame::NotifyGlyphFragmentTreeUnsuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyGlyphFragmentTreeUnsuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 }
 
@@ -784,7 +784,7 @@ nsSVGTSpanFrame::GetFirstGlyphFragmentChildNode()
   while (frame) {
     frame->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&retval);
     if (retval) break;
-    frame->GetNextSibling(&frame);
+    frame = frame->GetNextSibling();
   }
   return retval;
 }
@@ -796,11 +796,11 @@ nsSVGTSpanFrame::GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node)
   nsIFrame* frame = nsnull;
   node->QueryInterface(NS_GET_IID(nsIFrame), (void**)&frame);
   NS_ASSERTION(frame, "interface not implemented");
-  frame->GetNextSibling(&frame);
+  frame = frame->GetNextSibling();
   while (frame) {
     frame->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&retval);
     if (retval) break;
-    frame->GetNextSibling(&frame);
+    frame = frame->GetNextSibling();
   }
   return retval;
 }

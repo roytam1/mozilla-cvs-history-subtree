@@ -353,7 +353,7 @@ nsSVGTextFrame::InsertFrames(nsIPresContext* aPresContext,
   nsIFrame* kid = aFrameList;
   nsIFrame* end = nsnull;
   if (lastNewFrame)
-    lastNewFrame->GetNextSibling(&end);
+    end = lastNewFrame->GetNextSibling();
   
   while (kid != end) {
     nsISVGChildFrame* SVGFrame=nsnull;
@@ -361,7 +361,7 @@ nsSVGTextFrame::InsertFrames(nsIPresContext* aPresContext,
     if (SVGFrame) {
       SVGFrame->InitialUpdate(); 
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return NS_OK;
@@ -436,7 +436,7 @@ nsSVGTextFrame::DidModifySVGObservable (nsISVGValue* observable)
       kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
       if (SVGFrame)
         SVGFrame->NotifyCTMChanged();
-      kid->GetNextSibling(&kid);
+      kid = kid->GetNextSibling();
     }
   }
   else {
@@ -496,7 +496,7 @@ nsSVGTextFrame::Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
       SVGFrame->Paint(canvas, dirtyRectTwips);
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   return NS_OK;
@@ -522,7 +522,7 @@ nsSVGTextFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
         // have a singly linked list...
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return *hit ? NS_OK : NS_ERROR_FAILURE;
@@ -550,7 +550,7 @@ nsSVGTextFrame::GetCoveredRegion()
         }
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return accu_region;
@@ -566,7 +566,7 @@ nsSVGTextFrame::InitialUpdate()
     if (SVGFrame) {
       SVGFrame->InitialUpdate();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
 #ifdef DEBUG
@@ -595,7 +595,7 @@ nsSVGTextFrame::NotifyCTMChanged()
     if (SVGFrame) {
       SVGFrame->NotifyCTMChanged();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }
@@ -619,7 +619,7 @@ nsSVGTextFrame::NotifyRedrawSuspended()
       fragmentNode->NotifyMetricsSuspended();
       fragmentNode->NotifyGlyphFragmentTreeSuspended();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   return NS_OK;
 }
@@ -638,7 +638,7 @@ nsSVGTextFrame::NotifyRedrawUnsuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyGlyphFragmentTreeUnsuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   mFragmentTreeState = unsuspended;
@@ -652,7 +652,7 @@ nsSVGTextFrame::NotifyRedrawUnsuspended()
     kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       node->NotifyMetricsUnsuspended();
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   mMetricsState = unsuspended;
@@ -666,7 +666,7 @@ nsSVGTextFrame::NotifyRedrawUnsuspended()
     if (SVGFrame) {
       SVGFrame->NotifyRedrawUnsuspended();
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
   
   return NS_OK;
@@ -715,7 +715,7 @@ nsSVGTextFrame::GetBBox(nsIDOMSVGRect **_retval)
         if (y+h>y2) y2 = y+h;
       }
     }
-    kid->GetNextSibling(&kid);
+    kid = kid->GetNextSibling();
   }
 
   nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
@@ -849,7 +849,7 @@ nsSVGTextFrame::EnsureFragmentTreeUpToDate()
       kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
       if (node)
         node->NotifyGlyphFragmentTreeUnsuspended();
-      kid->GetNextSibling(&kid);
+      kid = kid->GetNextSibling();
     }
     
     mFragmentTreeState = unsuspended;
@@ -867,7 +867,7 @@ nsSVGTextFrame::EnsureFragmentTreeUpToDate()
       kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
       if (node)
         node->NotifyMetricsUnsuspended();
-      kid->GetNextSibling(&kid);
+      kid = kid->GetNextSibling();
     }
 
     mMetricsState = unsuspended;
@@ -888,7 +888,7 @@ nsSVGTextFrame::EnsureFragmentTreeUpToDate()
         fragmentNode->NotifyMetricsSuspended();
         fragmentNode->NotifyGlyphFragmentTreeSuspended();
       }
-      kid->GetNextSibling(&kid);
+      kid = kid->GetNextSibling();
     }
   } 
 }
@@ -1089,7 +1089,7 @@ nsSVGTextFrame::GetFirstGlyphFragmentChildNode()
   while (frame) {
     frame->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&retval);
     if (retval) break;
-    frame->GetNextSibling(&frame);
+    frame = frame->GetNextSibling();
   }
   return retval;
 }
@@ -1101,11 +1101,11 @@ nsSVGTextFrame::GetNextGlyphFragmentChildNode(nsISVGGlyphFragmentNode*node)
   nsIFrame* frame = nsnull;
   node->QueryInterface(NS_GET_IID(nsIFrame), (void**)&frame);
   NS_ASSERTION(frame, "interface not implemented");
-  frame->GetNextSibling(&frame);
+  frame = frame->GetNextSibling();
   while (frame) {
     frame->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode),(void**)&retval);
     if (retval) break;
-    frame->GetNextSibling(&frame);
+    frame = frame->GetNextSibling();
   }
   return retval;
 }

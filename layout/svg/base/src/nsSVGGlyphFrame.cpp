@@ -280,14 +280,11 @@ nsSVGGlyphFrame::SetSelected(nsIPresContext* aPresContext,
   if (!selectable)
     return NS_OK;
   
-  nsFrameState  frameState;
-  GetFrameState(&frameState);
   if ( aSelected ){
-    frameState |=  NS_FRAME_SELECTED_CONTENT;
+    mState |=  NS_FRAME_SELECTED_CONTENT;
   }
   else
-    frameState &= ~NS_FRAME_SELECTED_CONTENT;
-  SetFrameState(frameState);
+    mState &= ~NS_FRAME_SELECTED_CONTENT;
 
   UpdateGeometry(nsISVGGlyphGeometrySource::UPDATEMASK_HIGHLIGHT |
                  nsISVGGlyphGeometrySource::UPDATEMASK_HAS_HIGHLIGHT,
@@ -668,9 +665,7 @@ nsSVGGlyphFrame::GetY(float *aY)
 NS_IMETHODIMP
 nsSVGGlyphFrame::GetHasHighlight(PRBool *aHasHighlight)
 {
-  nsFrameState  frameState;
-  GetFrameState(&frameState);
-  *aHasHighlight = (frameState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
+  *aHasHighlight = (mState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
 
   return NS_OK;
 }
@@ -905,7 +900,7 @@ nsSVGGlyphFrame::GetNextGlyphFragment()
     sibling->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       return node->GetFirstGlyphFragment();
-    sibling->GetNextSibling(&sibling);
+    sibling = sibling->GetNextSibling();
   }
 
   // no more siblings. go back up the tree.
