@@ -118,7 +118,7 @@ struct berval ** avref2berptrptr(SV *avref)
    I32 avref_arraylen;
    int ix_av,val_len;
    SV **current_val;
-   char *tmp_char;
+   char *tmp_char,*tmp2;
    struct berval **tmp_ber;
 
    if (SvTYPE(SvRV(avref)) != SVt_PVAV || 
@@ -132,11 +132,14 @@ struct berval ** avref2berptrptr(SV *avref)
    {
       New(1,tmp_ber[ix_av],1,struct berval);
       current_val = av_fetch((AV *)SvRV(avref),ix_av,0);
+
+      tmp_char = SvPV(*current_val,na);
       val_len = SvCUR(*current_val);
 
-      Newz(1,tmp_char,val_len+1,char);
-      Copy(SvPV(*current_val,na),tmp_char,val_len,char);
-      tmp_ber[ix_av]->bv_val = tmp_char;
+      Newz(1,tmp2,val_len+1,char);
+      Copy(tmp_char,tmp2,val_len,char);
+
+      tmp_ber[ix_av]->bv_val = tmp2;
       tmp_ber[ix_av]->bv_len = val_len;
    }
    tmp_ber[ix_av] = NULL;
@@ -479,6 +482,13 @@ void
 ldap_ber_free(ber,freebuf)
 	BerElement *	ber
 	int		freebuf
+	CODE:
+	{
+	   if (ber)
+	   {
+	      ldap_ber_free(ber,freebuf);
+	   }
+	}
 
 int
 ldap_bind(ld,dn,passwd,authmethod)
@@ -1052,6 +1062,15 @@ ldap_mods_free(mods,freemods)
 int
 ldap_msgfree(lm)
 	LDAPMessage *	lm
+	CODE:
+	{
+	   if (lm)
+	   {
+	      RETVAL = ldap_msgfree(lm);
+	   }
+	}
+	OUTPUT:
+	RETVAL
 
 int
 ldap_msgid(lm)
