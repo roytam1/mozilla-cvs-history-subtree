@@ -102,6 +102,7 @@ nsBidiPresUtils::~nsBidiPresUtils()
   if (mIndexMap) {
     delete[] mIndexMap;
   }
+  delete mBidiEngine;
 }
 
 PRBool
