@@ -21,14 +21,21 @@
 
 /* temporary outliner styles */
 
-outlinercell.threadColumnHeader[currentView="threaded"] {
+outlinercol.threadColumnHeader[currentView="threaded"] {
   list-style-image: url("chrome://messenger/skin/threadcol.gif");
 }
 
-outlinercell.threadColumnHeader[currentView="unthreaded"] {
+outlinercol.threadColumnHeader[currentView="unthreaded"] {
   list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
 }
 
+outlinercol.readColumnHeader {
+  list-style-image: url("chrome://messenger/skin/unreadmail.gif");
+}
+
+outlinercol.flagColumnHeader {
+  list-style-image: url("chrome://messenger/skin/flaggedmail.gif");
+}
 
 /* end temporary outliner styles */
 
