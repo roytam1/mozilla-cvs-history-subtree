@@ -154,10 +154,13 @@ PR_BEGIN_EXTERN_C
 
 #ifdef MOCHA
 
+extern "C" JSContext *lm_crippled_context; /* XXX kill me */
+
 PR_IMPLEMENT(JSContext *)
 map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 {
-    JSContext *cx    = NULL;
+	// beard:  use crippled context if none other can be found.
+    JSContext *cx = lm_crippled_context;
     jobject   loader;
     PRBool    mayscript = PR_FALSE;
     PRBool    jvmMochaPrefsEnabled = PR_FALSE;
@@ -658,8 +661,8 @@ static int PR_CALLBACK
 JavaPrefChanged(const char *prefStr, void* data)
 {
     nsJVMMgr* mgr = (nsJVMMgr*)data;
-    XP_Bool prefBool;
-    PREF_GetBoolPref(prefStr, &prefBool);
+    XP_Bool prefBool = true;
+    // PREF_GetBoolPref(prefStr, &prefBool);
     mgr->SetJVMEnabled(prefBool);
     return 0;
 } 
@@ -918,16 +921,21 @@ nsJVMPluginTagInfo::Create(nsISupports* outer, const nsIID& aIID, void* *aInstan
 
 PR_BEGIN_EXTERN_C
 
+extern nsPluginManager* thePluginManager;
+
 PR_IMPLEMENT(nsJVMMgr*)
 JVM_GetJVMMgr(void)
 {
-    extern nsPluginManager* thePluginManager;
-    if (thePluginManager == NULL)
-        return NULL;
-    nsJVMMgr* mgr;
-    nsresult res =
-        thePluginManager->QueryInterface(kIJVMManagerIID, (void**)&mgr);
-    if (res != NS_OK)
+	nsresult result = NS_OK;
+    if (thePluginManager == NULL) {
+        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+        result = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
+		if (result != NS_OK)
+			return NULL;
+    }
+    nsJVMMgr* mgr = NULL;
+    result = thePluginManager->QueryInterface(kIJVMManagerIID, (void**)&mgr);
+    if (result != NS_OK)
         return NULL;
     return mgr;
 }
