@@ -614,8 +614,14 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
 
                             nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
                             charTextNode->GetData(titleStr);
-                        } else if (childNname.Equals(NS_LITERAL_STRING("link"))) {
-                            if (!isAtom) {
+                        } else if (!isAtom && childNname.Equals(NS_LITERAL_STRING("guid"))) {
+                            nsCOMPtr<nsIDOMElement> linkElem = do_QueryInterface(childNode);
+                            if (!linkElem) break; // out of while(childNode) loop
+                            
+                            nsAutoString isPermaLink;
+                            linkElem->GetAttribute(NS_LITERAL_STRING("isPermaLink"), isPermaLink);
+                            // Ignore failures. isPermaLink defaults to true.
+                            if (!isPermaLink.Equals(NS_LITERAL_STRING("false"))) {
                                 // in node's TEXT
                                 nsCOMPtr<nsIDOMNode> textNode;
 
@@ -624,13 +630,28 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
 
                                 nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
                                 charTextNode->GetData(linkStr);
-                            } else {
+                            }
+                        } else if (childNname.Equals(NS_LITERAL_STRING("link"))) {
+                            if (isAtom) { 
                                 // in HREF attribute
                                 nsCOMPtr<nsIDOMElement> linkElem = do_QueryInterface(childNode);
                                 if (!linkElem) break; // out of while(childNode) loop
 
-                                rv = linkElem->GetAttribute(NS_LITERAL_STRING("href"), linkStr);
-                                if (NS_FAILED(rv)) break; // out of while(childNode) loop
+                                nsAutoString rel;
+                                linkElem->GetAttribute(NS_LITERAL_STRING("rel"), rel);
+                                if (rel.Equals(NS_LITERAL_STRING("alternate"))) {
+                                    rv = linkElem->GetAttribute(NS_LITERAL_STRING("href"), linkStr);
+                                    if (NS_FAILED(rv)) break; // out of while(childNode) loop
+                                }
+                            } else if (linkStr.IsEmpty()) {
+                                // in node's TEXT
+                                nsCOMPtr<nsIDOMNode> textNode;
+
+                                rv = FindTextNode (childNode, getter_AddRefs(textNode));
+                                if (!textNode || NS_FAILED(rv)) break;
+
+                                nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
+                                charTextNode->GetData(linkStr);
                             }
                         }
                     }
