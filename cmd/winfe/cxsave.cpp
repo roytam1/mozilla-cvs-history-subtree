@@ -481,9 +481,9 @@ BOOL CSaveCX::Creator()
     return(bRetval);
 }
 
+#ifdef MOZ_MAIL_NEWS
 void CSaveCX::AddFileExtension (char *& pFileName)
 {
-#ifdef MOZ_MAIL_NEWS
 	char *ext = FE_FindFileExt(pFileName);
 
 	if (!ext) {
@@ -507,8 +507,8 @@ void CSaveCX::AddFileExtension (char *& pFileName)
 				StrAllocCat (pFileName, aExt);
 		}
 	}
-#endif // MOZ_MAIL_NEWS
 }
+#endif // MOZ_MAIL_NEWS
 
 //	Determine if it's OK to create the dialog for the transfer.
 BOOL CSaveCX::CanCreate(URL_Struct* pUrl)	
@@ -686,7 +686,9 @@ BOOL CSaveCX::CanCreate(URL_Struct* pUrl)
 	#else 
 					pLocalName = GetMailNewsTempFileName(pLocalName);
 	#endif
+#ifdef MOZ_MAIL_NEWS
 					AddFileExtension( pLocalName );
+#endif
 				}
 				else	{
 				//  Retain the extension.
@@ -1574,6 +1576,7 @@ BOOL CSaveCX::SaveToGlobal(HGLOBAL *phGlobal, LPCSTR lpszUrl, LPCSTR lpszTitle)
 	return bRes;
 }
 
+#ifdef MOZ_MAIL_NEWS
 BOOL CSaveCX::SaveToFile(CFile *pFile, LPCSTR lpszUrl, LPCSTR lpszTitle)
 {
 	//	Indirect constructor for serializing object.
@@ -1598,10 +1601,13 @@ BOOL CSaveCX::SaveToFile(CFile *pFile, LPCSTR lpszUrl, LPCSTR lpszTitle)
 		return FALSE;
 	}
 
+    // XXX Note from gab:  Should use XP_IsContextInList and not block
+    //     here since pSaveCX could already be invalid.
 	FEU_BlockUntilDestroyed(pSaveCX->GetContextID());
 
 	delete pStream;
 
 	return bRes;
 }
+#endif
 
