@@ -910,8 +910,9 @@ function vmgr_dragover (event, flavor, session)
     if (target.getAttribute("id") == parsedLocation.id)
         return false;
     
-    var proxyIcon = target.proxyIcon;
-    proxyIcon.setAttribute ("dragover", this.getDropDirection(event, target));
+    var direction = this.getDropDirection(event, target);
+    target.setAttribute ("dragover", direction);
+    target.proxyIcon.setAttribute ("dragover", direction);
 
     session.canDrop = true;
     return true;
@@ -922,7 +923,10 @@ function vmgr_dragexit (event, session)
 {
     var target = this.findFloatingView(event.originalTarget);
     if (target)
+    {
+        target.removeAttribute ("dragover");
         target.proxyIcon.removeAttribute ("dragover");
+    }
 }
 
 ViewManager.prototype.onViewDrop =

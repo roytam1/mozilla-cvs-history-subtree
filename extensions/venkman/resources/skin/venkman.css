@@ -239,16 +239,32 @@ tree {
     font-variant: small-caps;
 }
 
+floatingview[dragover="left"] {
+    border-left: 4px black solid;
+}
+
 .view-title-pop[dragover="left"] {
     list-style-image: url("chrome://venkman/skin/images/arrow-left.png") !important;
+}
+
+floatingview[dragover="up"] {
+    border-top: 4px black solid;
 }
 
 .view-title-pop[dragover="up"] {
     list-style-image: url("chrome://venkman/skin/images/arrow-up.png") !important;
 }
 
+floatingview[dragover="right"] {
+    border-right: 4px black solid;
+}
+
 .view-title-pop[dragover="right"] {
     list-style-image: url("chrome://venkman/skin/images/arrow-right.png") !important;
+}
+
+floatingview[dragover="down"] {
+    border-bottom: 4px black solid;
 }
 
 .view-title-pop[dragover="down"] {
