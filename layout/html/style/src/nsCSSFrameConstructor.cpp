@@ -1732,8 +1732,8 @@ nsCSSFrameConstructor::TableIsValidCellContent(nsIPresContext* aPresContext,
         (nsXULAtoms::widget          == tag.get())  ||
         (nsXULAtoms::tree            == tag.get())  ||
         (nsXULAtoms::treechildren    == tag.get())  ||
-        (nsXULAtoms::treebody        == tag.get())  ||
         (nsXULAtoms::treeitem        == tag.get())  ||
+        (nsXULAtoms::treerow         == tag.get())  ||
         (nsXULAtoms::treecell        == tag.get())  ||
         (nsXULAtoms::treeindentation == tag.get())  ||
         (nsXULAtoms::toolbox         == tag.get())  ||
@@ -2714,9 +2714,9 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresContext*          aPresContext,
   
     // TREE CONSTRUCTION
     // The following code is used to construct a tree view from the XUL content
-    // model.  It has to take the hierarchical tree content structure and build a flattened
-    // table row frame structure.
-    else if (aTag == nsXULAtoms::treebody) {
+    // model.  
+    else if (aTag == nsXULAtoms::treeitem ||
+             aTag == nsXULAtoms::treechildren) {
       nsIFrame* newTopFrame;
       rv = ConstructTableGroupFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext,
                                     PR_TRUE, newTopFrame, newFrame, treeCreator, nsnull);
@@ -2760,12 +2760,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresContext*          aPresContext,
       }
       return rv;
     }
-    else if (aTag == nsXULAtoms::treechildren)
-    {
-      haltProcessing = PR_TRUE;
-      return rv; // This is actually handled by the treeitem node.
-    }
-    else if (aTag == nsXULAtoms::treeitem)
+    else if (aTag == nsXULAtoms::treerow)
     {
       // A tree item causes a table row to be constructed that is always
       // slaved to the nearest enclosing table row group (regardless of how
@@ -2773,60 +2768,29 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresContext*          aPresContext,
       rv = ConstructTableRowFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext, 
                                   newFrame, ignore, treeCreator);
       aFrameItems.AddChild(newFrame);
-
-      // We need to find the treechildren node that is a child of this node
-      // and we need to construct new rows.
-      PRInt32 aChildCount;
-      aContent->ChildCount(aChildCount);
-      for (PRInt32 i = 0; i < aChildCount; i++) 
-      {
-        nsCOMPtr<nsIContent> childContent;
-		
-        if (NS_SUCCEEDED(aContent->ChildAt(i, *getter_AddRefs(childContent))))
-        {
-          // Construct a child frame
-          nsCOMPtr<nsIAtom> pTag;
-          childContent->GetTag(*getter_AddRefs(pTag));
-          if (pTag.get() == nsXULAtoms::treechildren)
-          {
-            // Always build rows. Rely on style rules to hide frames.
-            // Rely on RDF trickery to hide synthetic content from the content model.
-            nsFrameConstructorSaveState  floaterSaveState;
-
-            aState.PushFloaterContainingBlock(nsnull, floaterSaveState);
-            rv = ProcessChildren(aPresContext, aState, childContent, aParentFrame,
-                                 PR_FALSE, aFrameItems);
-            NS_ASSERTION(!aState.mFloatedItems.childList, "floater in odd spot");
-          }
-        }
-      }
       return rv;
-  
-	// Note: See later in this method.  More processing has to be done after the
-	// tree item has constructed its children and after this frame has been added
-	// to our list.
-  }
-  else if (aTag == nsXULAtoms::treecell)
-  {
-    // We make a tree cell frame and process the children.
-	  // Find out what the attribute value for event allowance is.
-	  nsString attrValue;
-    nsresult result = aContent->GetAttribute(kNameSpaceID_None, nsXULAtoms::treeallowevents, attrValue);
-    attrValue.ToLowerCase();
-    PRBool allowEvents =  (result == NS_CONTENT_ATTR_NO_VALUE ||
-					      (result == NS_CONTENT_ATTR_HAS_VALUE && attrValue=="true"));
-    nsIFrame* ignore2;
-    rv = ConstructTableCellFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext, 
-                                 newFrame, ignore, ignore2, treeCreator);
-    aFrameItems.AddChild(newFrame);
-	((nsTreeCellFrame*)newFrame)->SetAllowEvents(allowEvents);
-    return rv;
-  }
-  else if (aTag == nsXULAtoms::treeindentation)
-  {
-    rv = NS_NewTreeIndentationFrame(&newFrame);
-  }
-  // End of TREE CONSTRUCTION code here (there's more later on in the function)
+    }
+    else if (aTag == nsXULAtoms::treecell)
+    {
+      // We make a tree cell frame and process the children.
+	    // Find out what the attribute value for event allowance is.
+	    nsString attrValue;
+      nsresult result = aContent->GetAttribute(kNameSpaceID_None, nsXULAtoms::treeallowevents, attrValue);
+      attrValue.ToLowerCase();
+      PRBool allowEvents =  (result == NS_CONTENT_ATTR_NO_VALUE ||
+					        (result == NS_CONTENT_ATTR_HAS_VALUE && attrValue=="true"));
+      nsIFrame* ignore2;
+      rv = ConstructTableCellFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext, 
+                                   newFrame, ignore, ignore2, treeCreator);
+      aFrameItems.AddChild(newFrame);
+	    ((nsTreeCellFrame*)newFrame)->SetAllowEvents(allowEvents);
+      return rv;
+    }
+    else if (aTag == nsXULAtoms::treeindentation)
+    {
+      rv = NS_NewTreeIndentationFrame(&newFrame);
+    }
+    // End of TREE CONSTRUCTION code here (there's more later on in the function)
 
     // TOOLBAR CONSTRUCTION
     else if (aTag == nsXULAtoms::toolbox) {
@@ -4166,47 +4130,9 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext* aPresContext,
     nsIFrame* parentFrame;
     if ((nsnull == prevSibling) && (nsnull == nextSibling)) {
 
-#ifdef INCLUDE_XUL
-      // Need to (for XUL only) do a special check for the treechildren tag
-      PRInt32 nameSpaceID;
-      if (NS_SUCCEEDED(aContainer->GetNameSpaceID(nameSpaceID)) &&
-          nameSpaceID == nsXULAtoms::nameSpaceID) {
-        // See if we're the treechildren tag.  This tag is treated differently,
-        // since it has no corresponding frame, but may have children that have
-        // frames (the whole hierarchical content model vs. flat table frame model
-        // problem).
-        nsIAtom* tag;
-        aContainer->GetTag(tag);
-        nsString tagName;
-        tag->ToString(tagName);
-        if (tagName == "treechildren")
-        {
-          // Retrieve the parent treeitem, and then obtain its frame.  This is
-          // the prevSibling frame that we should use.
-          nsCOMPtr<nsIContent> parentItem;
-          aContainer->GetParent(*getter_AddRefs(parentItem));
-          
-          shell->GetPrimaryFrameFor(parentItem, &prevSibling);
-          prevSibling->GetParent(&parentFrame);
-          // XXX: Optimize for the lazy frame instantiation case. Need to bail
-          // if our frame isn't visible
-        }
-        else
-        {
-          // No previous or next sibling so treat this like an appended frame.
-          isAppend = PR_TRUE;
-          shell->GetPrimaryFrameFor(aContainer, &parentFrame);
-        }      
-      }
-      else {
-#endif // INCLUDE_XUL
-
       // No previous or next sibling so treat this like an appended frame.
       isAppend = PR_TRUE;
       shell->GetPrimaryFrameFor(aContainer, &parentFrame);
-#ifdef INCLUDE_XUL
-      }
-#endif  
     } else {
       // Use the prev sibling if we have it; otherwise use the next sibling
       if (nsnull != prevSibling) {
@@ -4460,41 +4386,6 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
         nsIFrame* parentFrame;
         childFrame->GetParent(&parentFrame);
         rv = parentFrame->RemoveFrame(*aPresContext, *shell, nsnull, childFrame);
-
-#ifdef INCLUDE_XUL
-        // Need to (for XUL only) do a special check for the treeitem tag
-				PRInt32 nameSpaceID;
-				if (aContainer &&
-            NS_SUCCEEDED(aContainer->GetNameSpaceID(nameSpaceID)) &&
-						nameSpaceID == nsXULAtoms::nameSpaceID) {
-					// See if we're the treeitem tag.  This tag is treated differently,
-					// since the children of the content node are actually SIBLING frames.
-					// We've only removed the parent frame.  Now we have to remove all of
-					// its children.
-					nsCOMPtr<nsIAtom> tag;
-					aContainer->GetTag(*getter_AddRefs(tag));
-					nsString tagName;
-					tag->ToString(tagName);
-					if (tagName == "treeitem")
-					{
-						// Calling content removed on each of our content node children
-						// should do the trick.
-						PRInt32 count = 0;
-            aContainer->ChildCount(count);
-						for (PRInt32 i = 0; i < count; i++)
-						{
-							nsCOMPtr<nsIContent> childContent;
-							aContainer->ChildAt(i, *getter_AddRefs(childContent));
-							if (childContent)
-							{
-								// Call ContentRemoved.
-							  ContentRemoved(aPresContext, aContainer,
-															 childContent, i);
-							}
-						}
-					}
-				}
-#endif // INCLUDE_XUL
       }
     }
 
