@@ -105,6 +105,7 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLUnknownElement, nsGenericElement)
 
 // XPConnect interface list for nsHTMLUnknownElement
 NS_CLASSINFO_MAP_BEGIN(HTMLUnknownElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLElement)
   NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
 NS_CLASSINFO_MAP_END
 
