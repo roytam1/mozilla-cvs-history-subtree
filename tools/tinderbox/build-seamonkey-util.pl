@@ -348,6 +348,7 @@ sub SetupPath {
         $ENV{PATH} = "/bin:/usr/bin:$ENV{PATH}";
         $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
         $Settings::Compiler = 'cc';
+        $Settings::mail ||= '/usr/bin/mail';
     }
 
     if ($Settings::OS eq 'FreeBSD') {
