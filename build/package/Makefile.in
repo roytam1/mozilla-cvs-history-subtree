@@ -56,7 +56,7 @@ DMG_FILE         = $(DIST)/$*.dmg
 
 PACKAGE_LIST = $(srcdir)/packages.list
 PACKAGE_FLAGS = 
-HANDLERS = xptmerge touch optional preprocess
+HANDLERS = xptmerge touch optional preprocess exec
 MAPPINGS = dist/bin=bin xpiroot/=
 
 dump-packages:
