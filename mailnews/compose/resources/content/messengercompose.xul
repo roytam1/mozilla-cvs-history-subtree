@@ -370,7 +370,7 @@ These also need to call goDoCommand(), not editor JS functions. - - smfr
     </menupopup>
 	</menu>
 
-    <menu id="debugMenu"/>
+    <!-- menu id="debugMenu"/ -->
 	<menu id="tasksMenu"/>
 	<menu id="menu_Help"/>
 	<spring flex="100%"/>
