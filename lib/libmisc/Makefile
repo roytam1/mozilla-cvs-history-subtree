@@ -34,12 +34,6 @@ CSRCS		= \
 
 REQUIRES	= net msg js dbm nspr img util layer pref ldap security
 
-ifdef PRIVACY_FEATURES
-EXPORTS		= receipt.h privacy.h
-REQUIRES	+= style lay layer rdf
-CSRCS		+= privacy.c receipt.c
-endif
-
 
 include $(DEPTH)/config/config.mk
 
