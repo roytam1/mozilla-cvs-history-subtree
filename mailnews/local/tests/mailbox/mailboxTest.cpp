@@ -567,7 +567,7 @@ nsresult nsMailboxTestDriver::OpenMailbox()
 // End on command handlers for mailbox
 /////////////////////////////////////////////////////////////////////////////////
 
-NS_IMETHODIMP nsMailboxTestDriver::OnDataAvailable(nsIChannel * /* aChannel */, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 aLength)
+NS_IMETHODIMP nsMailboxTestDriver::OnDataAvailable(nsIRequest * /* aRequest */, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 aLength)
 {
 	// read the data out and print it to the screen....
 	if (aLength > 0)
@@ -584,7 +584,7 @@ NS_IMETHODIMP nsMailboxTestDriver::OnDataAvailable(nsIChannel * /* aChannel */, 
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMailboxTestDriver::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
+NS_IMETHODIMP nsMailboxTestDriver::OnStartRequest(nsIRequest * aRequest, nsISupports *ctxt)
 {
 	nsCOMPtr<nsIMailboxUrl> mailboxUrl = do_QueryInterface(ctxt);
 	if (mailboxUrl)
@@ -597,7 +597,7 @@ NS_IMETHODIMP nsMailboxTestDriver::OnStartRequest(nsIChannel * aChannel, nsISupp
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsMailboxTestDriver::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsMailboxTestDriver::OnStopRequest(nsIRequest * /* aRequest*/, nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
 {
 	nsCOMPtr<nsIMailboxUrl> mailboxUrl = do_QueryInterface(ctxt);
 
