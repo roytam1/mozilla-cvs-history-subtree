@@ -85,6 +85,8 @@ static PRLogModuleInfo *gOSXIntegrationLog = nsnull;
 
 #include <Carbon/Carbon.h>
 
+#define kBiffBadgeIcon "mail-biff-badge.png"
+
 nsMessengerOSXIntegration::nsMessengerOSXIntegration()
 {
 #if defined(PR_LOGGING)
@@ -175,22 +177,13 @@ nsresult nsMessengerOSXIntegration::OnAlertFinished(const PRUnichar * aAlertCook
         nsCOMPtr<nsIDOMWindowInternal> domWindow;
         mediator->GetMostRecentWindow(NS_LITERAL_STRING("mail:3pane").get(), getter_AddRefs(domWindow));
         if (domWindow)
-        {
-            nsCOMPtr<nsIObserverService> obsService = do_GetService("@mozilla.org/observer-service;1", &rv);
-            if (NS_FAILED(rv)) { return rv; }
-            
+        {         
             nsCOMPtr<nsIDOMChromeWindow> chromeWindow(do_QueryInterface(domWindow));
             chromeWindow->GetAttention();
         }
     }
 
-#if 0 
-    // This will change the dock icon.
-    // this is really proof-of-concept. It draws a blank rectangle
-    // in lieu of the dock icon. 
-    
-    // If we can get a static "New Mail" image, we can use that.
-        
+    // This will change the dock icon.     
     // If we want to overlay the number of new messages on top of
     // the icon ...
     
@@ -198,22 +191,30 @@ nsresult nsMessengerOSXIntegration::OnAlertFinished(const PRUnichar * aAlertCook
     // -- you'll have to pass it a CGImage, and somehow we have to
     // create the CGImage with the numbers. tricky.
     
-    GrafPtr oldGrafPtr;
-    ::GetPort(&oldGrafPtr);
-    
-    CGrafPtr dockIconGrafPtr = ::BeginQDContextForApplicationDockTile();
-    if (dockIconGrafPtr)
+    CFBundleRef appBundle = CFBundleGetMainBundle();
+    CGDataProviderRef   provider;
+    if (appBundle)
     {
-        Rect r;
-        ::SetPort(dockIconGrafPtr);
-        ::SetRect(&r, 0, 0, 127, 127);
+      CFStringRef fileName = CFStringCreateWithCString( NULL, kBiffBadgeIcon, kCFStringEncodingASCII );
+      if (fileName)
+      {
+        CFURLRef url = CFBundleCopyResourceURL( appBundle, fileName, NULL, NULL );
+        provider = CGDataProviderCreateWithURL( url );
+
+        CGImageRef iOverlayIcon = NULL;
+
+        iOverlayIcon = CGImageCreateWithPNGDataProvider( provider, NULL, false,  kCGRenderingIntentDefault );
+        if (iOverlayIcon)
+        {
+          OverlayApplicationDockTileImage(iOverlayIcon);
+          mBiffIconVisible = PR_TRUE;
+        }
         
-        ::EraseRect(&r);
-        EndQDContextForApplicationDockTile(dockIconGrafPtr);
-        ::SetPort(oldGrafPtr);
+        CGDataProviderRelease( provider );
+        CFRelease( url );
+        CFRelease(fileName);
+      }
     }
-        
-#endif
   }
 
   mSuppressBiffIcon = PR_FALSE;
@@ -276,19 +277,10 @@ nsMessengerOSXIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom 
     {
       // we are always going to remove the icon whenever we get our first no mail
       // notification. 
-      
-      // avoid a race condition where we are told to remove the icon before we've actually
-      // added it to the system tray. This happens when the user reads a new message before
-      // the animated alert has gone away.
-      if (mAlertInProgress)
-        mSuppressBiffIcon = PR_TRUE;
 
       mFoldersWithNewMail->Clear(); 
       if (mBiffIconVisible) 
-      {
-        //  XXX: TODO clear the new mail notification on OSX. The user has read a new message.
-        // not really necessary.
-      }
+        RestoreApplicationDockTileImage();
     }
   } // if the biff property changed
   
