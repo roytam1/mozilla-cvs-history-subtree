@@ -15,10 +15,24 @@ var MigrationWizard = {
               new MigrationItem(nsIBPM.BOOKMARKS, "bookmarks"),
               new MigrationItem(nsIBPM.DOWNLOADS, "downloads")],
   _dataSources: { 
-    "ie":       { _migrate: [0, 1, 2, 3, 4, 5], _import: [0, 1, 2, 3, 4, 5] },
-    "opera":    { _migrate: [0, 1, 2, 5, 6],    _import: [0, 1, 2, 5, 6] },
-    "dogbert":  { _migrate: [0, 1, 5],          _import: [5] },
-    "seamonkey":{ _migrate: [0, 1, 2, 4, 5, 6], _import: [5] },
+#ifdef XP_WIN
+    "ie":       { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.FORMDATA, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS], 
+                   _import: [0, 1, 2, 3, 4, 5] },
+#endif
+#ifdef XP_MACOSX
+    "safari":   { _migrate: [],
+                   _import: [] },
+    "omniweb":  { _migrate: [],
+                   _import: [] },
+    "macie":    { _migrate: [],
+                   _import: [] },
+#endif
+    "opera":    { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.BOOKMARKS, nsIBPM.DOWNLOADS],    
+                   _import: [0, 1, 2, 5, 6] },
+    "dogbert":  { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.BOOKMARKS],          
+                   _import: [5] },
+    "seamonkey":{ _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS, nsIBPM.DOWNLOADS], 
+                   _import: [5] },
   },
   
   _source: "",
@@ -213,6 +227,7 @@ var MigrationWizard = {
       var index = this._selectedIndices[i];
       var label = document.createElement("label");
       var item = this._items[idToIndex[index.toString()]];
+      dump("*** goat = " + index + "\n");
       label.id = item._key;
       label.setAttribute("value", bundle.getString(item._key + "_" + this._source));
       items.appendChild(label);

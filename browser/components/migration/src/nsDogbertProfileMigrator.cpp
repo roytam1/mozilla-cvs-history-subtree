@@ -120,6 +120,9 @@ nsDogbertProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnic
 
   CreateTemplateProfile(aProfile);
 
+  nsCOMPtr<nsIProfileInternal> pmi(do_GetService("@mozilla.org/profile/manager;1"));
+  pmi->GetOriginalProfileDir(aProfile, getter_AddRefs(mSourceProfile));
+
   if (aReplace) {
     COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
     COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());

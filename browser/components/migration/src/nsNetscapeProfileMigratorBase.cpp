@@ -89,7 +89,6 @@ nsNetscapeProfileMigratorBase::CreateTemplateProfile(const PRUnichar* aSuggested
   nsCOMPtr<nsIFile> target;
   pmi->GetProfileDir(profileName.get(), getter_AddRefs(target));
   mTargetProfile = do_QueryInterface(target);
-  pmi->GetOriginalProfileDir(aSuggestedName, getter_AddRefs(mSourceProfile));
 
   return NS_OK;
 }

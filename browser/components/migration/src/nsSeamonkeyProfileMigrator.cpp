@@ -88,6 +88,8 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUn
 
   CreateTemplateProfile(aProfile);
 
+  GetSourceProfile(aProfile);
+
   if (aReplace) {
     COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
     COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
@@ -132,6 +134,27 @@ nsSeamonkeyProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
   }
   
   NS_IF_ADDREF(*aResult = mProfileNames);
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsSeamonkeyProfileMigrator
+
+nsresult
+nsSeamonkeyProfileMigrator::GetSourceProfile(const PRUnichar* aProfile)
+{
+  PRUint32 count;
+  mProfileNames->Count(&count);
+  for (PRUint32 i = 0; i < count; ++i) {
+    nsCOMPtr<nsISupportsString> str(do_QueryElementAt(mProfileNames, i));
+    nsXPIDLString profileName;
+    str->GetData(profileName);
+    if (profileName.Equals(aProfile)) {
+      mSourceProfile = do_QueryElementAt(mProfileLocations, i);
+      break;
+    }
+  }
+
   return NS_OK;
 }
 
@@ -211,9 +234,6 @@ nsSeamonkeyProfileMigrator::GetProfileDataFromSeamonkeyRegistry(nsISupportsArray
     keys->Next();
   }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// nsSeamonkeyProfileMigrator
 
 #define F(a) nsSeamonkeyProfileMigrator::a
 

@@ -65,6 +65,7 @@ public:
 protected:
   nsresult GetProfileDataFromSeamonkeyRegistry(nsISupportsArray* aProfileNames,
                                                nsISupportsArray* aProfileLocations);
+  nsresult GetSourceProfile(const PRUnichar* aProfile);
 
   nsresult CopyPreferences(PRBool aReplace);
   nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
