@@ -744,9 +744,6 @@ XFE_ComposeView::isCommandEnabled(CommandType command, void *calldata,
 
     if (pane && MSG_DeliveryInProgress(pane) && command != xfeCmdStopLoading)
     {
-#ifdef DEBUG_akkana
-        printf("delivery in progress!\n");
-#endif
         return False;
     }
 

@@ -118,7 +118,6 @@ CSRCS		= \
 		  strings.c \
 		  visual.c \
 		  MozillaWm.c \
-		  lite_stubs.c \
 		  commands.c \
 		  dialogs.c \
 		  hot.c \
@@ -142,6 +141,12 @@ CSRCS		+= \
 		  mailattach.c \
 		  mailcompose.c \
 		  movemail.c \
+		  $(NULL)
+endif
+
+ifndef MOZ_MAIL_COMPOSE
+CSRCS		+= \
+		  lite_stubs.c \
 		  $(NULL)
 endif
 
