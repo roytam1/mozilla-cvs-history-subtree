@@ -78,7 +78,6 @@ CACHELIBNAME=netcache.lib
 LLIBS = \
  $(DIST)\lib\gkgfxwin.lib \
  $(DIST)\lib\xpcom.lib \
- $(DIST)\lib\xppref32.lib \
  $(LIBNSPR)  
 
 WIN_LIBS = \
