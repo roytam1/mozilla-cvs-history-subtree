@@ -682,7 +682,7 @@ nsImapIncomingServer::CreateImapConnection(nsIEventQueue *aEventQueue,
 				rv = mailnewsUrl->GetMsgWindow(getter_AddRefs(aMsgWindow));
 
 			RequestOverrideInfo(aMsgWindow);
-			canRunButBusy = PR_TRUE;
+      canRunButBusy = PR_TRUE;
 		}
 	}
 	// if we got here and we have a connection, then we should return it!
@@ -852,7 +852,7 @@ nsImapIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
  
     rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
     if (NS_FAILED(rv)) return rv;
-    rv = imapService->DiscoverAllFolders(queue, rootMsgFolder, this, nsnull);
+    rv = imapService->DiscoverAllFolders(queue, rootMsgFolder, this, aMsgWindow, nsnull);
  	return rv; 	
 }
 
@@ -1996,10 +1996,18 @@ nsresult nsImapIncomingServer::RequestOverrideInfo(nsIMsgWindow *aMsgWindow)
         // if we still don't have a password then the user must have hit cancel so just
         // fall out...
         if (!((const char *) password) || nsCRT::strlen((const char *) password) == 0)
+        {
+          // be sure to clear the waiting for connection info flag because we aren't waiting
+          // anymore for a connection...
+          m_waitingForConnectionInfo = PR_FALSE;
           return NS_OK;
       }
+      }
 
-  		rv = m_logonRedirector->Logon(userName, password, logonRedirectorRequester, nsMsgLogonRedirectionServiceIDs::Imap);
+      nsCOMPtr<nsIPrompt> dialogPrompter;
+      if (aMsgWindow)
+      aMsgWindow->GetPromptDialog(getter_AddRefs(dialogPrompter));
+  		rv = m_logonRedirector->Logon(userName, password, dialogPrompter, logonRedirectorRequester, nsMsgLogonRedirectionServiceIDs::Imap);
 		}
 	}
 
@@ -2012,8 +2020,20 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionError(const PRUnichar *pEr
 
 	nsXPIDLString progressString;
 	GetImapStringByID(IMAP_LOGIN_FAILED, getter_Copies(progressString));
+      
+  nsCOMPtr<nsIMsgWindow> msgWindow;
+  PRUint32 urlQueueCnt = 0;
+       // pull the url out of the queue so we can get the msg window, and try to rerun it.
+       m_urlQueue->Count(&urlQueueCnt);
 
-	FEAlert(progressString, nsnull);
+       if (urlQueueCnt > 0)
+       {
+               nsCOMPtr<nsISupports> supportCtxt(getter_AddRefs(m_urlQueue->ElementAt(0)));
+               nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl(do_QueryInterface(supportCtxt, &rv));
+     if (mailnewsUrl)
+      mailnewsUrl->GetMsgWindow(getter_AddRefs(msgWindow));
+  }	
+	   FEAlert(progressString, msgWindow);
 
 	if (m_logonRedirector)
 	{
@@ -2026,10 +2046,7 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionError(const PRUnichar *pEr
 	if (badPassword)
 		SetPassword(nsnull);
 
-	PRUint32 urlQueueCnt = 0;
 
-	// pull the url out of the queue so we can get the msg window, and try to rerun it.
-	m_urlQueue->Count(&urlQueueCnt);
 	if (badPassword && ++m_redirectedLogonRetries <= 3)
 	{
 		// this will force a reprompt for the password.

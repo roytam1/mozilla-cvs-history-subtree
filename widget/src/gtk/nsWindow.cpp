@@ -1944,8 +1944,8 @@ void * nsWindow::GetNativeData(PRUint32 aDataType)
       // this window in case it was just created
       XSync(GDK_DISPLAY(), False);
       return (void *)GDK_WINDOW_XWINDOW(mSuperWin->bin_window);
-    }
-    return NULL;
+   }
+   return NULL;
   }
 
   return nsWidget::GetNativeData(aDataType);

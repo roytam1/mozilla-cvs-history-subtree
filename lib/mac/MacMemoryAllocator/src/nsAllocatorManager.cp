@@ -677,15 +677,15 @@ void* realloc(void* block, size_t newSize)
         switch (allocator->GetAllocatorType())
         {
             case nsMemAllocator::eAllocatorTypeFixed:
-                ((nsFixedSizeAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
+                newBlock = ((nsFixedSizeAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
                 break;
                 
             case nsMemAllocator::eAllocatorTypeSmall:
-                ((nsSmallHeapAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
+                newBlock = ((nsSmallHeapAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
                 break;
                 
             case nsMemAllocator::eAllocatorTypeLarge:
-                ((nsLargeHeapAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
+                newBlock = ((nsLargeHeapAllocator*)allocator)->AllocatorResizeBlock(block, newSize);
                 break;
         }
 

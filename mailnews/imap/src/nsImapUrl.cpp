@@ -1022,6 +1022,7 @@ NS_IMETHODIMP nsImapUrl::RemoveChannel(nsresult status)
 		{
 			loadGroup->RemoveChannel(m_mockChannel, nsnull, status, nsnull);
 		}
+		SetMockChannel(nsnull);
 	}
 	return NS_OK;
 }

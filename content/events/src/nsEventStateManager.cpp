@@ -19,7 +19,6 @@
  *
  * Contributor(s): 
  */
-#define FORCE_PR_LOG
 
 #include "nsCOMPtr.h"
 #include "nsIEventStateManager.h"
@@ -67,7 +66,6 @@
 #include "nsIDOMXULDocument.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIObserverService.h"
-#include "prlog.h"
 #include "nsIDocShell.h"
 #include "nsIMarkupDocumentViewer.h"
 #include "nsITreeFrame.h"
@@ -80,8 +78,6 @@ static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 nsIContent * gLastFocusedContent = 0; // Strong reference
 nsIDocument * gLastFocusedDocument = 0; // Strong reference
 nsIPresContext* gLastFocusedPresContext = 0; // Weak reference
-
-PRLogModuleInfo *MOUSEWHEEL;
 
 PRUint32 nsEventStateManager::mInstanceCount = 0;
 
@@ -130,8 +126,6 @@ nsEventStateManager::nsEventStateManager()
   NS_INIT_REFCNT();
   
   ++mInstanceCount;
-  if (!MOUSEWHEEL)
-    MOUSEWHEEL = PR_NewLogModule("MOUSEWHEEL");
 }
 
 NS_IMETHODIMP
@@ -961,34 +955,46 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
       if (msEvent->isShift) {
         mPrefService->GetIntPref("mousewheel.withshiftkey.action", &action);
         mPrefService->GetBoolPref("mousewheel.withshiftkey.sysnumlines", &aBool);
-        if (aBool)
-          numLines = msEvent->deltaLines;
+        if (aBool) {
+          numLines = msEvent->delta;
+          if (msEvent->scrollFlags & nsMouseScrollEvent::kIsFullPage)
+            action = MOUSE_SCROLL_PAGE;
+        }
         else
           mPrefService->GetIntPref("mousewheel.withshiftkey.numlines", &numLines);
       } else if (msEvent->isControl) {
         mPrefService->GetIntPref("mousewheel.withcontrolkey.action", &action);
         mPrefService->GetBoolPref("mousewheel.withcontrolkey.sysnumlines", &aBool);
-        if (aBool)
-          numLines = msEvent->deltaLines;
+        if (aBool) {
+          numLines = msEvent->delta;
+          if (msEvent->scrollFlags & nsMouseScrollEvent::kIsFullPage)
+            action = MOUSE_SCROLL_PAGE;
+        }
         else
           mPrefService->GetIntPref("mousewheel.withcontrolkey.numlines", &numLines);
       } else if (msEvent->isAlt) {
         mPrefService->GetIntPref("mousewheel.withaltkey.action", &action);
         mPrefService->GetBoolPref("mousewheel.withaltkey.sysnumlines", &aBool);
-        if (aBool)
-          numLines = msEvent->deltaLines;
+        if (aBool) {
+          numLines = msEvent->delta;
+          if (msEvent->scrollFlags & nsMouseScrollEvent::kIsFullPage)
+            action = MOUSE_SCROLL_PAGE;
+        }
         else
           mPrefService->GetIntPref("mousewheel.withaltkey.numlines", &numLines);
       } else {
         mPrefService->GetIntPref("mousewheel.withnokey.action", &action);
         mPrefService->GetBoolPref("mousewheel.withnokey.sysnumlines", &aBool);
-        if (aBool)
-          numLines = msEvent->deltaLines;
+        if (aBool) {
+          numLines = msEvent->delta;
+          if (msEvent->scrollFlags & nsMouseScrollEvent::kIsFullPage)
+            action = MOUSE_SCROLL_PAGE;
+        }
         else
           mPrefService->GetIntPref("mousewheel.withnokey.numlines", &numLines);
       }
 
-      if ((msEvent->deltaLines < 0) && (numLines > 0))
+      if ((msEvent->delta < 0) && (numLines > 0))
         numLines = -numLines;
 
       switch (action) {
@@ -1083,7 +1089,7 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
           if (pcContainer) {
             nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(pcContainer));
             if (webNav) {
-              if (msEvent->deltaLines > 0)
+              if (msEvent->delta > 0)
                  webNav->GoBack();
               else
                  webNav->GoForward();
@@ -1093,7 +1099,7 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
         break;
 
       case MOUSE_SCROLL_TEXTSIZE:
-        ChangeTextSize((msEvent->deltaLines > 0) ? 1 : -1);
+        ChangeTextSize((msEvent->delta > 0) ? 1 : -1);
         break;
       }
       *aStatus = nsEventStatus_eConsumeNoDefault;
@@ -1461,6 +1467,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
             event.isControl = ((nsMouseEvent*)aEvent)->isControl;
             event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
             event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+            event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
 
             mCurrentTargetContent = mLastMouseOverContent;
             NS_IF_ADDREF(mCurrentTargetContent);
@@ -1505,6 +1512,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           event.isControl = ((nsMouseEvent*)aEvent)->isControl;
           event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
           event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+          event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
 
           mCurrentTargetContent = targetContent;
           NS_IF_ADDREF(mCurrentTargetContent);
@@ -1560,6 +1568,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           event.isControl = ((nsMouseEvent*)aEvent)->isControl;
           event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
           event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+          event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
 
           mCurrentTargetContent = mLastMouseOverContent;
           NS_IF_ADDREF(mCurrentTargetContent);
@@ -2194,7 +2203,7 @@ nsEventStateManager::GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* 
       //TabIndex not set (-1) treated at same level as set to 0
       tabIndex = tabIndex < 0 ? 0 : tabIndex;
 
-      if (!disabled && !hidden && mCurrentTabIndex == tabIndex) {
+      if (!disabled && !hidden && mCurrentTabIndex == tabIndex && child.get() != mCurrentFocus) {
         *aResult = child;
         NS_IF_ADDREF(*aResult);
         return NS_OK;

@@ -1402,11 +1402,24 @@ NS_IMETHODIMP nsDocLoaderImpl::OnHeadersAvailable(nsISupports * aContext)
 
 NS_IMETHODIMP nsDocLoaderImpl::OnRedirect(nsISupports * aContext, nsIURI * aNewLocation)
 {
-  // we have a problem in that this method doesn't give us enough information about
-  // the url being redirected. We need to know if the url is the document url or some other
-  // part of the document (like an image). Proper implementation requires this, otherwise
-  // we end up setting the url bar location to a redirected image url when we didn't want to.
-  // for now, we'll make the implementation empty.
+  if (aContext)
+  {
+    PRInt32 stateFlags = nsIWebProgressListener::STATE_REDIRECTING |
+                       nsIWebProgressListener::STATE_IS_REQUEST |
+                       nsIWebProgressListener::STATE_IS_NETWORK;
+    nsCOMPtr<nsIChannel> channel (do_QueryInterface(aContext));
+    // if the current channel == the document channel (then we must be getting a redirect on the
+    // actual document and not a part in the document so be sure to set the state is document flag
+    // and to reset mDocumentChannel...
+    if (channel.get() == mDocumentChannel.get())
+    {
+      stateFlags |= nsIWebProgressListener::STATE_IS_DOCUMENT;
+      mDocumentChannel = channel; // reset the document channel
+    }
+
+    FireOnStateChange(this, channel, stateFlags, NS_OK);
+  }
+
   return NS_OK;
 }
 

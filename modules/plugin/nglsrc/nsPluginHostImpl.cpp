@@ -1135,16 +1135,24 @@ nsPluginStreamListenerPeer::OnStartRequest(nsIChannel* channel, nsISupports* aCo
   // if we don't have an nsIPluginInstance (mInstance), it means
   // we weren't able to load a plugin previously because we
   // didn't have the mimetype.  Now that we do (aContentType),
-  // we'll try again with SetUpPluginInstance()
+  // we'll try again with SetUpPluginInstance() 
+  // which is called by InstantiateEmbededPlugin()
+  // NOTE: we don't want to try again if we didn't get the MIME type this time
 
-  if ((nsnull == mInstance) && (nsnull != mOwner))
+  if ((nsnull == mInstance) && (nsnull != mOwner) && (nsnull != aContentType))
   {
     mOwner->GetInstance(mInstance);
     mOwner->GetWindow(window);
 
     if ((nsnull == mInstance) && (nsnull != mHost) && (nsnull != window))
     {
-      rv = mHost->SetUpPluginInstance(aContentType, aURL, mOwner);
+      // determine if we need to try embedded again. FullPage takes a different code path
+      nsPluginMode mode;
+      mOwner->GetMode(&mode);
+      if (mode == nsPluginMode_Embedded)
+        rv = mHost->InstantiateEmbededPlugin(aContentType, aURL, mOwner);
+      else
+        rv = mHost->SetUpPluginInstance(aContentType, aURL, mOwner);
 
       if (NS_OK == rv)
       {
@@ -1360,7 +1368,25 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIChannel* channel,
   
   mSetUpListener = PR_TRUE;
   mPluginStreamInfo->SetSeekable(PR_FALSE);
-  //mPluginStreamInfo->SetModified(??);
+  
+  // get Last-Modified header for plugin info
+  nsCOMPtr<nsIHTTPChannel>	theHTTPChannel = do_QueryInterface(channel);
+  if (theHTTPChannel) {
+     char * lastModified;
+     nsCOMPtr<nsIAtom> header = NS_NewAtom("last-modified");
+
+     theHTTPChannel->GetResponseHeader(header, &lastModified);
+     if (lastModified) {
+       PRTime time64;
+       PR_ParseTimeString(lastModified, PR_TRUE, &time64);  //convert string time to interger time
+ 
+       // Convert PRTime to unix-style time_t, i.e. seconds since the epoch
+       double fpTime;
+       LL_L2D(fpTime, time64);
+       mPluginStreamInfo->SetLastModified((PRUint32)(fpTime * 1e-6 + 0.5));
+       nsCRT::free(lastModified);
+     }
+  } 
 
   char* urlString;
   aURL->GetSpec(&urlString);
@@ -2096,6 +2122,16 @@ NS_IMETHODIMP nsPluginHostImpl::InstantiateEmbededPlugin(const char *aMimeType,
     return NS_OK;
   }
 
+  // if we don't have a MIME type at this point, we still have one more chance by 
+  // opening the stream and seeing if the server hands one back 
+  if (!aMimeType)
+    if (aURL)
+    {
+       rv = NewEmbededPluginStream(aURL, aOwner, nsnull);
+       return rv;
+    } else
+       return NS_ERROR_FAILURE;
+
   rv = SetUpPluginInstance(aMimeType, aURL, aOwner);
 
   if(rv == NS_OK)
@@ -2139,20 +2175,9 @@ NS_IMETHODIMP nsPluginHostImpl::InstantiateEmbededPlugin(const char *aMimeType,
   if(rv == NS_ERROR_FAILURE)
 	  return rv;
 
-  if(rv != NS_OK)
-  {
-	// we have not been able to load a plugin because we have not 
-    // determined the mimetype
-    if (aURL)
-    {
-      //we need to stream in enough to get the mime type...
-      rv = NewEmbededPluginStream(aURL, aOwner, nsnull);
-    }
-    else
-      rv = NS_ERROR_FAILURE;
-  }
-  else // we have loaded a plugin for this mimetype
-  {
+   // if we are here then we have loaded a plugin for this mimetype
+   // and it could be the Default plugin
+  
     nsPluginWindow    *window = nsnull;
 
     //we got a plugin built, now stream
@@ -2181,7 +2206,6 @@ NS_IMETHODIMP nsPluginHostImpl::InstantiateEmbededPlugin(const char *aMimeType,
 
       NS_RELEASE(instance);
     }
-  }
 
 #ifdef NS_DEBUG
   printf("InstantiateEmbededPlugin.. returning\n");
@@ -2827,77 +2851,76 @@ nsPluginHostImpl::FindPluginEnabledForType(const char* aMimeType,
 
 NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugin** aPlugin)
 {
-	nsresult rv = NS_ERROR_FAILURE;
-	*aPlugin = NULL;
+  nsresult rv = NS_ERROR_FAILURE;
+  *aPlugin = NULL;
 
-	if(!aMimeType)
-		return NS_ERROR_ILLEGAL_VALUE;
+  if(!aMimeType)
+    return NS_ERROR_ILLEGAL_VALUE;
 
-	// If plugins haven't been scanned yet, do so now
+  // If plugins haven't been scanned yet, do so now
   LoadPlugins();
 
-	nsPluginTag* pluginTag;
-	if((rv = FindPluginEnabledForType(aMimeType, pluginTag)) == NS_OK)
-	{
-
-#ifdef XP_WIN // actually load a dll on Windows
+  nsPluginTag* pluginTag;
+  if((rv = FindPluginEnabledForType(aMimeType, pluginTag)) == NS_OK)
+  {
 
 #ifdef NS_DEBUG
-  printf("For %s found plugin %s\n", aMimeType, pluginTag->mFileName);
+    printf("For %s found plugin %s\n", aMimeType, pluginTag->mFileName);
 #endif
 
-    nsFileSpec file(pluginTag->mFileName);
+    if (nsnull == pluginTag->mLibrary)		// if we haven't done this yet
+    {
+      nsFileSpec file(pluginTag->mFileName);
 
-    nsPluginFile pluginFile(file);
-    PRLibrary* pluginLibrary = NULL;
+      nsPluginFile pluginFile(file);
+      PRLibrary* pluginLibrary = NULL;
 
-    if (pluginFile.LoadPlugin(pluginLibrary) != NS_OK || pluginLibrary == NULL)
-      return NS_ERROR_FAILURE;
+      if (pluginFile.LoadPlugin(pluginLibrary) != NS_OK || pluginLibrary == NULL)
+        return NS_ERROR_FAILURE;
 
-    pluginTag->mLibrary = pluginLibrary;
+      pluginTag->mLibrary = pluginLibrary;
+    }
 
-#endif
-
-		nsIPlugin* plugin = pluginTag->mEntryPoint;
-		if(plugin == NULL)
-		{
+    nsIPlugin* plugin = pluginTag->mEntryPoint;
+    if(plugin == NULL)
+    {
       // No, this is not a leak. GetGlobalServiceManager() doesn't
       // addref the pointer on the way out. It probably should.
       nsIServiceManager* serviceManager;
       nsServiceManager::GetGlobalServiceManager(&serviceManager);
 
-			// need to get the plugin factory from this plugin.
-			nsFactoryProc nsGetFactory = nsnull;
-			nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
-			if(nsGetFactory != nsnull)
-			{
-			    rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ContractID
+      // need to get the plugin factory from this plugin.
+      nsFactoryProc nsGetFactory = nsnull;
+      nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
+      if(nsGetFactory != nsnull)
+      {
+        rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ContractID
                             (nsIFactory**)&pluginTag->mEntryPoint);
-			    plugin = pluginTag->mEntryPoint;
-			    if (plugin != NULL)
-				    plugin->Initialize();
-			}
-			else
-			{
-				rv = ns4xPlugin::CreatePlugin(serviceManager,
+        plugin = pluginTag->mEntryPoint;
+        if (plugin != NULL)
+          plugin->Initialize();
+      }
+      else
+      {
+        rv = ns4xPlugin::CreatePlugin(serviceManager,
                                       pluginTag->mFileName,
                                       pluginTag->mLibrary,
                                       &pluginTag->mEntryPoint);
 
-				plugin = pluginTag->mEntryPoint;
-                pluginTag->mFlags |= NS_PLUGIN_FLAG_OLDSCHOOL;
+        plugin = pluginTag->mEntryPoint;
+        pluginTag->mFlags |= NS_PLUGIN_FLAG_OLDSCHOOL;
 
-				// no need to initialize, already done by CreatePlugin()
-			}
-		}
+        // no need to initialize, already done by CreatePlugin()
+      }
+    }
 
-		if(plugin != nsnull)
-		{
-			*aPlugin = plugin;
-			plugin->AddRef();
-			return NS_OK;
-		}
-	}
+    if(plugin != nsnull)
+    {
+      *aPlugin = plugin;
+      plugin->AddRef();
+      return NS_OK;
+    }
+  }
 
 	return rv;
 }

@@ -29,6 +29,7 @@
 #include "nsViewsCID.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
+#include "nsIDOMKeyListener.h"
 #include "nsIPluginHost.h"
 #include "nsplugin.h"
 #include "nsString.h"
@@ -69,6 +70,11 @@
 
 #include "nsObjectFrame.h"
 
+/* X headers suck */
+#ifdef KeyPress
+#undef KeyPress
+#endif
+
 static NS_DEFINE_IID(kIDOMMouseListenerIID, NS_IDOMMOUSELISTENER_IID);
 
 class nsPluginInstanceOwner : public nsIPluginInstanceOwner,
@@ -76,7 +82,8 @@ class nsPluginInstanceOwner : public nsIPluginInstanceOwner,
                               public nsIJVMPluginTagInfo,
                               public nsIEventListener,
                               public nsITimerCallback,
-                              public nsIDOMMouseListener
+                              public nsIDOMMouseListener,
+                              public nsIDOMKeyListener
                               
 {
 public:
@@ -163,6 +170,14 @@ public:
   virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
   virtual nsresult HandleEvent(nsIDOMEvent* aEvent);     
   /* END interfaces from nsIDOMMouseListener*/
+  
+  // nsIDOMKeyListener interfaces
+
+    virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent);
+    virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent);
+    virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent);
+  // end nsIDOMKeyListener interfaces
+    
 
   nsresult Destroy();  
 
@@ -187,6 +202,10 @@ public:
 
   void SetPluginHost(nsIPluginHost* aHost);
 
+#ifdef XP_MAC
+  void FixUpPluginWindow();
+#endif
+
 private:
   nsPluginWindow    mPluginWindow;
   nsIPluginInstance *mInstance;
@@ -203,6 +222,9 @@ private:
   nsIPresContext    *mContext;
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
+  
+  nsresult DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent);
+  nsresult DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent);
 };
 
   // Mac specific code to fix up port position and clip during paint
@@ -924,6 +946,7 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   nsPoint origin;
   nsPluginWindow  *window;
   float           t2p;
+
   aPresContext->GetTwipsToPixels(&t2p);
 
   SetFullURL(aURL);
@@ -946,10 +969,18 @@ nsObjectFrame::InstantiatePlugin(nsIPresContext*          aPresContext,
   window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
   window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
   
+  // on the Mac we need to set the clipRect to { 0, 0, 0, 0 } for now. This will keep
+  // us from drawing on screen until the widget is properly positioned, which will not
+  // happen until we have finished the reflow process.
   window->clipRect.top = 0;
   window->clipRect.left = 0;
+#ifndef XP_MAC
   window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
   window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+#else
+  window->clipRect.bottom = 0;
+  window->clipRect.right = 0;
+#endif
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -1009,10 +1040,14 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
   window->width = NSTwipsToIntPixels(aMetrics.width, t2p);
   window->height = NSTwipsToIntPixels(aMetrics.height, t2p);
 
+  // ignore this for now on the Mac because the widget is not properly positioned
+  // yet and won't be until we have finished the reflow process.
+#ifndef XP_MAC
   window->clipRect.top = 0;
   window->clipRect.left = 0;
   window->clipRect.bottom = NSTwipsToIntPixels(aMetrics.height, t2p);
   window->clipRect.right = NSTwipsToIntPixels(aMetrics.width, t2p);
+#endif
 
 #ifdef XP_UNIX
   window->ws_info = nsnull;   //XXX need to figure out what this is. MMP
@@ -1192,7 +1227,6 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
       if (NS_OK == mInstanceOwner->GetWindow(window)) {
         nsIView           *parentWithView;
         nsPoint           origin;
-        nsIPluginInstance *inst;
         float             t2p;
         aPresContext->GetTwipsToPixels(&t2p);
         nscoord           offx, offy;
@@ -1222,12 +1256,12 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
         window->clipRect.left = 0;
         window->clipRect.bottom = window->clipRect.top + window->height;
         window->clipRect.right = window->clipRect.left + window->width;
+#else
+        // now that we have finished the reflow process, the widget is properly positioned
+        // and we can validate the plugin clipping information by syncing the plugin
+        // window info to reflect the current widget location.
+        mInstanceOwner->FixUpPluginWindow();
 #endif
-
-        if (NS_OK == mInstanceOwner->GetInstance(inst)) {
-          inst->SetWindow(window);
-          NS_RELEASE(inst);
-        }
 
         //~~~
         mInstanceOwner->ReleasePluginPort((nsPluginPort *)window->window);
@@ -1308,18 +1342,18 @@ nsObjectFrame::HandleEvent(nsIPresContext* aPresContext,
 	  switch (anEvent->message) 
     {
     //XXX: All of the button down's are handled by the DOM listener 
-     // case NS_MOUSE_LEFT_BUTTON_DOWN:
-      case NS_MOUSE_LEFT_BUTTON_UP:
-      case NS_MOUSE_LEFT_DOUBLECLICK:
-     // case NS_MOUSE_RIGHT_BUTTON_DOWN:
-      case NS_MOUSE_RIGHT_BUTTON_UP:
-      case NS_MOUSE_RIGHT_DOUBLECLICK:
-     // case NS_MOUSE_MIDDLE_BUTTON_DOWN:
-      case NS_MOUSE_MIDDLE_BUTTON_UP:
-      case NS_MOUSE_MIDDLE_DOUBLECLICK:
-      case NS_MOUSE_MOVE:
-      case NS_KEY_UP:
-      case NS_KEY_DOWN:
+      // case NS_MOUSE_LEFT_BUTTON_DOWN:
+      // case NS_MOUSE_LEFT_BUTTON_UP:
+      // case NS_MOUSE_LEFT_DOUBLECLICK:
+      // case NS_MOUSE_RIGHT_BUTTON_DOWN:
+      // case NS_MOUSE_RIGHT_BUTTON_UP:
+      // case NS_MOUSE_RIGHT_DOUBLECLICK:
+      // case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+      // case NS_MOUSE_MIDDLE_BUTTON_UP:
+      // case NS_MOUSE_MIDDLE_DOUBLECLICK:
+      // case NS_MOUSE_MOVE:
+      // case NS_KEY_UP:
+      // case NS_KEY_DOWN:
       case NS_GOTFOCUS:
       case NS_LOSTFOCUS:
       //case set cursor should be here too:
@@ -1339,13 +1373,13 @@ nsObjectFrame::HandleEvent(nsIPresContext* aPresContext,
 		break;
 	case NS_GOTFOCUS:
 	case NS_LOSTFOCUS:
-	case NS_KEY_UP:
-	case NS_KEY_DOWN:
-	case NS_MOUSE_MOVE:
-	case NS_MOUSE_ENTER:
-	case NS_MOUSE_LEFT_BUTTON_UP:
+	//case NS_KEY_UP:
+	//case NS_KEY_DOWN:
+	//case NS_MOUSE_MOVE:
+	//case NS_MOUSE_ENTER:
+	//case NS_MOUSE_LEFT_BUTTON_UP:
 #ifndef XP_MAC
-	case NS_MOUSE_LEFT_BUTTON_DOWN:
+	//case NS_MOUSE_LEFT_BUTTON_DOWN:
 #endif
 		*anEventStatus = mInstanceOwner->ProcessEvent(*anEvent);
 		break;
@@ -1578,7 +1612,13 @@ nsresult nsPluginInstanceOwner::QueryInterface(const nsIID& aIID,
     AddRef();
     return NS_OK;                                                        
   }
-
+  
+  if (aIID.Equals(NS_GET_IID(nsIDOMKeyListener))) {                                         
+    *aInstancePtrResult = (void*)(nsIDOMKeyListener*) this;    
+    AddRef();
+    return NS_OK;                                                        
+  }
+  
   if (aIID.Equals(kISupportsIID))
   {
     *aInstancePtrResult = (void *)((nsISupports *)((nsIPluginTagInfo *)this));
@@ -2425,7 +2465,47 @@ static void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent)
 }
 #endif
 
+/*=============== nsIKeyListener ======================*/
+nsresult nsPluginInstanceOwner::KeyDown(nsIDOMEvent* aKeyEvent)
+{
+  return DispatchKeyToPlugin(aKeyEvent);
+}
 
+nsresult nsPluginInstanceOwner::KeyUp(nsIDOMEvent* aKeyEvent)
+{
+  return DispatchKeyToPlugin(aKeyEvent);
+}
+
+nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
+{
+  // If this event is going to the plugin, we want to kill it.
+  // Not actually sending keypress to the plugin, since we didn't before.
+  aKeyEvent->PreventDefault();
+  aKeyEvent->PreventBubble();
+  return NS_ERROR_FAILURE; // means consume event
+}
+    
+nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
+{
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aKeyEvent));
+  if (privateEvent) {
+    nsKeyEvent* keyEvent = nsnull;
+    privateEvent->GetInternalNSEvent((nsEvent**)&keyEvent);
+    if (keyEvent) {
+      nsEventStatus rv = ProcessEvent(*keyEvent);
+      if (nsEventStatus_eConsumeNoDefault == rv) {
+        aKeyEvent->PreventDefault();
+        aKeyEvent->PreventBubble();
+        return NS_ERROR_FAILURE; // means consume event
+      }
+    }
+    else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchKeyToPlugin failed, keyEvent null");   
+  }
+  else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchKeyToPlugin failed, privateEvent null");   
+  
+  return NS_OK;
+}
+    
 /*=============== nsIMouseListener ======================*/
 
 nsresult
@@ -2451,35 +2531,51 @@ nsPluginInstanceOwner::MouseDown(nsIDOMEvent* aMouseEvent)
 nsresult
 nsPluginInstanceOwner::MouseUp(nsIDOMEvent* aMouseEvent)
 {
-  
-  return NS_OK;
+  return DispatchMouseToPlugin(aMouseEvent);
 }
 
 nsresult
 nsPluginInstanceOwner::MouseClick(nsIDOMEvent* aMouseEvent)
 {
- 
-  return NS_OK;
+  return DispatchMouseToPlugin(aMouseEvent);
 }
 
 nsresult
 nsPluginInstanceOwner::MouseDblClick(nsIDOMEvent* aMouseEvent)
 {
- 
-  return NS_OK;
+  return DispatchMouseToPlugin(aMouseEvent);
 }
 
 nsresult
 nsPluginInstanceOwner::MouseOver(nsIDOMEvent* aMouseEvent)
 {
- 
-  return NS_OK;
+  return DispatchMouseToPlugin(aMouseEvent);
 }
 
 nsresult
 nsPluginInstanceOwner::MouseOut(nsIDOMEvent* aMouseEvent)
 {
- 
+  return DispatchMouseToPlugin(aMouseEvent);
+}
+
+nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
+{
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
+  if (privateEvent) {
+    nsMouseEvent* mouseEvent = nsnull;
+    privateEvent->GetInternalNSEvent((nsEvent**)&mouseEvent);
+    if (mouseEvent) {
+      nsEventStatus rv = ProcessEvent(*mouseEvent);
+      if (nsEventStatus_eConsumeNoDefault == rv) {
+        aMouseEvent->PreventDefault();
+        aMouseEvent->PreventBubble();
+        return NS_ERROR_FAILURE; // means consume event
+      }
+    }
+    else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchMouseToPlugin failed, mouseEvent null");   
+  }
+  else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchMouseToPlugin failed, privateEvent null");   
+  
   return NS_OK;
 }
 
@@ -2493,8 +2589,11 @@ nsPluginInstanceOwner::HandleEvent(nsIDOMEvent* aEvent)
 nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 {
 	nsEventStatus rv = nsEventStatus_eIgnore;
+  if (!mInstance)   // if mInstance is null, we shouldn't be here
+    return rv;
+
 #ifdef XP_MAC
-	if (mInstance != NULL) {
+	if (mWidget != NULL) {  // check for null mWidget
 		EventRecord* event = (EventRecord*)anEvent.nativeMsg;
 		if (event == NULL || event->what == nullEvent) {
 			EventRecord macEvent;
@@ -2505,7 +2604,7 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 		nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(port->port) };
 		PRBool eventHandled = PR_FALSE;
 		mInstance->HandleEvent(&pluginEvent, &eventHandled);
-		if (eventHandled)
+		if(eventHandled && anEvent.message != NS_MOUSE_LEFT_BUTTON_DOWN)
 			rv = nsEventStatus_eConsumeNoDefault;
 	}
 #endif
@@ -2535,6 +2634,21 @@ nsPluginInstanceOwner::Destroy()
       QueryInterface(NS_GET_IID(nsIDOMMouseListener), getter_AddRefs(mouseListener));
       if (mouseListener) { 
         receiver->RemoveEventListenerByIID(mouseListener, NS_GET_IID(nsIDOMMouseListener));
+      }
+      else NS_ASSERTION(PR_FALSE, "Unable to remove event listener for plugin");
+    }
+    else NS_ASSERTION(PR_FALSE, "plugin was not an event listener");
+  }
+  else NS_ASSERTION(PR_FALSE, "plugin had no content");
+  
+  // Unregister key event listener;
+  if (content) {
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(content));
+    if (receiver) {
+      nsCOMPtr<nsIDOMKeyListener> keyListener;
+      QueryInterface(NS_GET_IID(nsIDOMKeyListener), getter_AddRefs(keyListener));
+      if (keyListener) { 
+        receiver->RemoveEventListenerByIID(keyListener, NS_GET_IID(nsIDOMKeyListener));
       }
       else NS_ASSERTION(PR_FALSE, "Unable to remove event listener for plugin");
     }
@@ -2620,6 +2734,10 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
 {
 #ifdef XP_MAC
+    // validate the plugin clipping information by syncing the plugin window info to
+    // reflect the current widget location. This makes sure that everything is updated
+    // correctly in the event of scrolling in the window.
+    FixUpPluginWindow();
 	if (mInstance != NULL) {
 		EventRecord idleEvent;
 		::OSEventAvail(0, &idleEvent);
@@ -2666,11 +2784,24 @@ NS_IMETHODIMP nsPluginInstanceOwner::Init(nsIPresContext* aPresContext, nsObject
       QueryInterface(NS_GET_IID(nsIDOMMouseListener), getter_AddRefs(mouseListener));
       if (mouseListener) {
         receiver->AddEventListenerByIID(mouseListener, NS_GET_IID(nsIDOMMouseListener));
+      }
+    }
+  }
+  // Register key listener
+  if (content) {
+    nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(content));
+    if (receiver) {
+      nsCOMPtr<nsIDOMKeyListener> keyListener;
+      QueryInterface(NS_GET_IID(nsIDOMKeyListener), getter_AddRefs(keyListener));
+      if (keyListener) {
+        receiver->AddEventListener(NS_LITERAL_STRING("keypress"), keyListener, PR_TRUE);
+        receiver->AddEventListener(NS_LITERAL_STRING("keydown"), keyListener, PR_TRUE);
+        receiver->AddEventListener(NS_LITERAL_STRING("keyup"), keyListener, PR_TRUE);
         return NS_OK;
       }
     }
   }
-
+  
   NS_ASSERTION(PR_FALSE, "plugin could not be added as a mouse listener");
   return NS_ERROR_NO_INTERFACE; 
 }
@@ -2708,6 +2839,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
 {
   nsIView   *view;
   nsresult  rv = NS_ERROR_FAILURE;
+  float     p2t;
 
   if (nsnull != mOwner)
   {
@@ -2721,9 +2853,11 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
 
       mInstance->GetValue(nsPluginInstanceVariable_WindowlessBool, (void *)&windowless);
 
+      // always create widgets in Twips, not pixels
+      mContext->GetScaledPixelsToTwips(&p2t);
       rv = mOwner->CreateWidget(mContext,
-                                mPluginWindow.width,
-                                mPluginWindow.height,
+                                NSIntPixelsToTwips(mPluginWindow.width, p2t),
+                                NSIntPixelsToTwips(mPluginWindow.height, p2t),
                                 windowless);
       if (NS_OK == rv)
       {
@@ -2886,4 +3020,26 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
   aPixelRect.height = NSTwipsToIntPixels(aTwipsRect.height, t2p);
 }
 #endif	// DO_DIRTY_INTERSECT
+
+void nsPluginInstanceOwner::FixUpPluginWindow()
+{
+  if (mWidget) {
+    nscoord absWidgetX = 0;
+    nscoord absWidgetY = 0;
+    nsRect widgetClip(0,0,0,0);
+    GetWidgetPosAndClip(mWidget,absWidgetX,absWidgetY,widgetClip);
+
+    // set the port coordinates
+    mPluginWindow.x = absWidgetX;
+    mPluginWindow.y = absWidgetY;
+
+    // fix up the clipping region
+    mPluginWindow.clipRect.top = widgetClip.y;
+    mPluginWindow.clipRect.left = widgetClip.x;
+    mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
+    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
+  }
+}
+
+
 #endif	// XP_MAC

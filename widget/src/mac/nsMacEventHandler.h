@@ -22,9 +22,11 @@
 #ifndef MacMacEventHandler_h__
 #define MacMacEventHandler_h__
 
+#include <ConditionalMacros.h>
 #include <Events.h>
 #include <MacWindows.h>
 #include <TextServices.h>
+#include <Controls.h>
 #include "prtypes.h"
 #include "nsCOMPtr.h"
 #include "nsGUIEvent.h"
@@ -33,6 +35,27 @@
 
 class nsWindow;
 class nsMacWindow;
+
+
+//
+// struct PhantomScrollbarData
+//
+// When creating the phantom scrollbar for a Gecko instance, create
+// one of these structures and stick it in the control's refCon. It 
+// is used not only to identify our scrollbar from any others, but
+// also to pass data to the scrollbar's action proc about which
+// widget is the one the mouse is over.
+//
+struct PhantomScrollbarData
+{
+  PhantomScrollbarData ( ) 
+    : mTag(kUniqueTag), mWidgetToGetEvent(nsnull) { }
+  
+  enum ResType { kUniqueTag = 'mozz' };
+  
+  ResType mTag;                     // should always be kUniqueTag
+  nsIWidget* mWidgetToGetEvent;     // for the action proc, the widget to get the event
+}; 
 
 
 //-------------------------------------------------------------------------
@@ -64,6 +87,7 @@ public:
 	virtual void	NotifyDelete(void* aDeletedObject);
 
 private:
+
 	nsWindow*	mActiveWidget;
 	nsWindow*	mWidgetHit;
 	nsWindow*	mWidgetPointed;
@@ -127,6 +151,7 @@ protected:
 	static PRBool	sMouseInWidgetHit;
   static PRBool	sInBackground;
 
+  ControlActionUPP mControlActionProc;
 
 	nsMacWindow*	mTopLevelWidget;
 	RgnHandle			mUpdateRgn;

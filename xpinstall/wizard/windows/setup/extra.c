@@ -1133,6 +1133,13 @@ long RetrieveRedirectFile()
     WritePrivateProfileString("Execution",        "exe",              siSDObject.szExe,             szFileIdiGetRedirect);
     WritePrivateProfileString("Execution",        "exe_param",        siSDObject.szExeParam,        szFileIdiGetRedirect);
 
+    /* proxy support */
+    if((*diAdvancedSettings.szProxyServer != '\0') && (*diAdvancedSettings.szProxyPort != '\0'))
+    {
+      WritePrivateProfileString("Proxy", "server", diAdvancedSettings.szProxyServer, szFileIdiGetRedirect);
+      WritePrivateProfileString("Proxy", "port",   diAdvancedSettings.szProxyPort,   szFileIdiGetRedirect);
+    }
+
     lResult = SdArchives(szFileIdiGetRedirect, szTempDir);
     if((lResult != 0) && (LOWORD(lResult) != 53)) // 53 - url is valid, but file does not exist
       return(lResult);
@@ -1431,7 +1438,7 @@ HRESULT LaunchApps()
       lstrcpy(szArchive, sgProduct.szAlternateArchiveSearchPath);
       AppendBackSlash(szArchive, sizeof(szArchive));
       lstrcat(szArchive, siCObject->szArchiveName);
-      if(!FileExists(szArchive))
+      if((*sgProduct.szAlternateArchiveSearchPath == '\0') || !FileExists(szArchive))
       {
         lstrcpy(szArchive, szSetupDir);
         AppendBackSlash(szArchive, sizeof(szArchive));
@@ -5263,7 +5270,7 @@ HRESULT DecryptString(LPSTR szOutputStr, LPSTR szInputStr)
       lstrcat(szOutuptStrTemp, szBuf);
       lstrcat(szOutuptStrTemp, szAppend);
 
-      if(FileExists(szOutuptStrTemp))
+      if((*sgProduct.szAlternateArchiveSearchPath != '\0') && FileExists(szOutuptStrTemp))
       {
         lstrcpy(szVariable, sgProduct.szAlternateArchiveSearchPath);
       }

@@ -239,7 +239,15 @@ struct nsCompositionEvent : public nsInputEvent {
 };
 
 struct nsMouseScrollEvent : public nsInputEvent {
-	PRInt32                 deltaLines;
+
+  enum nsMouseScrollFlags {
+    kIsFullPage   = 1 << 0,
+    kIsVertical   = 1 << 1,
+    kIsHorizontal = 1 << 2
+  };
+
+  PRInt32 scrollFlags;
+  PRInt32 delta;
 };
 
 struct nsReconversionEventReply {
