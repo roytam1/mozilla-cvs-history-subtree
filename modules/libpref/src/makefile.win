@@ -47,6 +47,7 @@ LINCS = -I$(PUBLIC)/js \
 	-I$(PUBLIC)/ldap \
 	-I$(PUBLIC)/dbm \
 	-I$(PUBLIC)/security \
+	-I$(PUBLIC)/xpcom \
         -I$(DEPTH)\include \
 
 LCFLAGS = -DMOZILLA_CLIENT
@@ -74,9 +75,12 @@ HASHLIBS=$(BINREL_DIST)\lib\hash.lib $(BINREL_DIST)\lib\secutil.lib
 !endif
 
 !if ("$(MOZ_BITS)" == "16" ) 
-LLIBS	= $(LIBNSPR) $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
-$(HASHLIBS) \
-$(BINREL_DIST)\lib\watcomfx.lib 
+LLIBS	= \
+	$(LIBNSPR) $(DIST)\lib\plc21.lib \
+	$(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
+	$(HASHLIBS) \
+	$(DIST)\lib\xpcom16.lib \
+	$(BINREL_DIST)\lib\watcomfx.lib 
 
 !ifdef NSPR20
 DEFFILE	= $(DLL1NAME).def
@@ -84,8 +88,12 @@ DEFFILE	= $(DLL1NAME).def
 DEFFILE	= $(DLLNAME).def
 !endif
 !else
-LLIBS	= $(LIBNSPR) $(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
-$(HASHLIBS)
+LLIBS	= \
+	$(DIST)\lib\libplc21.lib \
+	$(LIBNSPR) \
+	$(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib \
+	$(DIST)\lib\xpcom32.lib \
+	$(HASHLIBS)
 !endif
 
 
@@ -96,6 +104,7 @@ $(HASHLIBS)
 #//------------------------------------------------------------------------
 OBJS =							\
 	.\$(OBJDIR)\prefapi.obj	\
+	.\$(OBJDIR)\nsPref.obj	\
 	$(NULL)
 
 #//------------------------------------------------------------------------
