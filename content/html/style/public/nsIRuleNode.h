@@ -31,18 +31,39 @@
 #include "nsIMutableStyleContext.h"
 #include "nsICSSDeclaration.h"
 
-struct nsCachedStyleData
+struct nsInheritedStyleData
 {
   nsStyleFont* mFontData;
-  nsStyleMargin* mMarginData;
-  nsStyleBorder* mBorderData;
-  nsStylePadding* mPaddingData;
-  nsStyleOutline* mOutlineData;
   nsStyleList* mListData;
-  nsStylePosition* mPositionData;
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    if (result)
+    nsCRT::zero(result, sz);
+    return result;
+  };
+  void Destroy(nsIPresContext* aContext) {
+    if (mFontData)
+      mFontData->Destroy(aContext);
+    if (mListData)
+      mListData->Destroy(aContext);
+    aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
+  };
+
+  nsInheritedStyleData() 
+    :mFontData(nsnull), mListData(nsnull) {};
+};
+
+struct nsResetStyleData
+{
+  nsResetStyleData()
+    :mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
+     mOutlineData(nsnull), mPositionData(nsnull) {
 #ifdef INCLUDE_XUL
-  nsStyleXUL* mXULData;
+    mXULData = nsnull;
 #endif
+  };
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
@@ -52,8 +73,6 @@ struct nsCachedStyleData
     return result;
   }
   void Destroy(nsIPresContext* aContext) {
-    if (mFontData)
-      mFontData->Destroy(aContext);
     if (mMarginData)
       mMarginData->Destroy(aContext);
     if (mBorderData)
@@ -62,18 +81,63 @@ struct nsCachedStyleData
       mPaddingData->Destroy(aContext);
     if (mOutlineData)
       mOutlineData->Destroy(aContext);
-    if (mListData)
-      mListData->Destroy(aContext);
     if (mPositionData)
       mPositionData->Destroy(aContext);
 #ifdef INCLUDE_XUL
     if (mXULData)
       mXULData->Destroy(aContext);
 #endif
-    aContext->FreeToShell(sizeof(nsCachedStyleData), this);
+    aContext->FreeToShell(sizeof(nsResetStyleData), this);
   };
 
-  static PRBool IsReset(const nsStyleStructID& aSID);
+  nsStyleMargin* mMarginData;
+  nsStyleBorder* mBorderData;
+  nsStylePadding* mPaddingData;
+  nsStyleOutline* mOutlineData;
+  nsStylePosition* mPositionData;
+
+#ifdef INCLUDE_XUL
+  nsStyleXUL* mXULData;
+#endif
+};
+
+struct nsCachedStyleData
+{
+  nsInheritedStyleData* mInheritedData;
+  nsResetStyleData* mResetData;
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    if (result)
+    nsCRT::zero(result, sz);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    if (mInheritedData)
+      mInheritedData->Destroy(aContext);
+    if (mResetData)
+      mResetData->Destroy(aContext);
+  };
+
+  static PRBool IsReset(const nsStyleStructID& aSID)
+  {
+    switch (aSID) {
+      case eStyleStruct_Font: // [Inherited]
+      case eStyleStruct_List:
+        return PR_FALSE; 
+      case eStyleStruct_Margin: // [Reset]
+      case eStyleStruct_Padding:
+      case eStyleStruct_Border:
+      case eStyleStruct_Outline:
+      case eStyleStruct_Position:
+      case eStyleStruct_XUL:
+    	  return PR_TRUE;
+    }
+
+    return PR_TRUE;
+  };
+
   static PRUint32 nsCachedStyleData::GetBitForSID(const nsStyleStructID& aSID)
   {
     switch (aSID) {
@@ -114,33 +178,28 @@ struct nsCachedStyleData
   nsStyleStruct* GetStyleData(const nsStyleStructID& aSID) {
     switch (aSID) {
       case eStyleStruct_Font:
-        return mFontData;
+        return mInheritedData ? mInheritedData->mFontData : nsnull;
       case eStyleStruct_Margin:
-    	  return mMarginData;
+        return mResetData ? mResetData->mMarginData : nsnull;
       case eStyleStruct_Padding:
-    	  return mPaddingData;
+        return mResetData ? mResetData->mPaddingData : nsnull;
       case eStyleStruct_Border:
-    	  return mBorderData;
+        return mResetData ? mResetData->mBorderData : nsnull;
       case eStyleStruct_Outline:
-    	  return mOutlineData;
+        return mResetData ? mResetData->mOutlineData : nsnull;
       case eStyleStruct_List:
-        return mListData;
+        return mInheritedData ? mInheritedData->mListData : nsnull;
       case eStyleStruct_Position:
-        return mPositionData;
+        return mResetData ? mResetData->mPositionData : nsnull;
 #ifdef INCLUDE_XUL
       case eStyleStruct_XUL:
-    	  return mXULData;
+        return mResetData ? mResetData->mXULData : nsnull;
 #endif
     }
     return nsnull;
   };
 
-  nsCachedStyleData() :mFontData(nsnull), mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
-    mOutlineData(nsnull), mListData(nsnull), mPositionData(nsnull) {
-#ifdef INCLUDE_XUL
-    mXULData = nsnull;
-#endif
-  };
+  nsCachedStyleData() :mInheritedData(nsnull), mResetData(nsnull) {};
   ~nsCachedStyleData() {};
 };
 

@@ -210,26 +210,6 @@ static PRBool SetColor(const nsCSSValue& aValue, const nscolor aParentColor,
   return result;
 }
 
-// nsCachedStyleData Functions
-inline PRBool
-nsCachedStyleData::IsReset(const nsStyleStructID& aSID)
-{
-  switch (aSID) {
-    case eStyleStruct_Font: // [Inherited]
-    case eStyleStruct_List:
-      return PR_FALSE; 
-    case eStyleStruct_Margin: // [Reset]
-    case eStyleStruct_Padding:
-    case eStyleStruct_Border:
-    case eStyleStruct_Outline:
-    case eStyleStruct_Position:
-    case eStyleStruct_XUL:
-    	return PR_TRUE;
-  }
-
-  return PR_TRUE;
-}
-
 // nsRuleNode globals
 PRUint32 nsRuleNode::gRefCnt = 0;
 
@@ -1035,7 +1015,9 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mFontData = font;
+    if (!aHighestNode->mStyleData->mInheritedData)
+      aHighestNode->mStyleData->mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData->mInheritedData->mFontData = font;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_FONT, aHighestNode);
   }
@@ -1097,7 +1079,9 @@ nsRuleNode::ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aM
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mMarginData = margin;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mMarginData = margin;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_MARGIN, aHighestNode);
   }
@@ -1343,7 +1327,9 @@ nsRuleNode::ComputeBorderData(nsStyleBorder* aStartBorder, const nsCSSMargin& aM
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mBorderData = border;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mBorderData = border;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_BORDER, aHighestNode);
   }
@@ -1406,7 +1392,9 @@ nsRuleNode::ComputePaddingData(nsStylePadding* aStartPadding, const nsCSSMargin&
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mPaddingData = padding;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mPaddingData = padding;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_PADDING, aHighestNode);
   }
@@ -1476,7 +1464,9 @@ nsRuleNode::ComputeOutlineData(nsStyleOutline* aStartOutline, const nsCSSMargin&
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mOutlineData = outline;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mOutlineData = outline;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_OUTLINE, aHighestNode);
   }
@@ -1560,7 +1550,9 @@ nsRuleNode::ComputeListData(nsStyleList* aStartList, const nsCSSList& aListData,
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mListData = list;
+    if (!aHighestNode->mStyleData->mInheritedData)
+      aHighestNode->mStyleData->mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData->mInheritedData->mListData = list;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_LIST, aHighestNode);
   }
@@ -1682,7 +1674,9 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mPositionData = pos;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mPositionData = pos;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_POSITION, aHighestNode);
   }
@@ -1735,7 +1729,9 @@ nsRuleNode::ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData,
     // We were fully specified and can therefore be cached right on the rule node.
     if (!aHighestNode->mStyleData)
       aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    aHighestNode->mStyleData->mXULData = xul;
+    if (!aHighestNode->mStyleData->mResetData)
+      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData->mResetData->mXULData = xul;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_XUL, aHighestNode);
   }

@@ -1182,18 +1182,30 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
     mCachedStyleData = new (presContext.get()) nsCachedStyleData;
   }
       
+  PRBool isReset = mCachedStyleData->IsReset(aSID);
+  if (isReset && !mCachedStyleData->mResetData) {
+    nsCOMPtr<nsIPresContext> presContext;
+    mRuleNode->GetPresContext(getter_AddRefs(presContext));
+    mCachedStyleData->mResetData = new (presContext.get()) nsResetStyleData;
+  }
+  else if (!isReset && !mCachedStyleData->mInheritedData) {
+    nsCOMPtr<nsIPresContext> presContext;
+    mRuleNode->GetPresContext(getter_AddRefs(presContext));
+    mCachedStyleData->mInheritedData = new (presContext.get()) nsInheritedStyleData;
+  }
+
   switch (aSID) {
     case eStyleStruct_Font:
-      mCachedStyleData->mFontData = (nsStyleFont*)(const nsStyleFont*)(&aStruct);
+      mCachedStyleData->mInheritedData->mFontData = (nsStyleFont*)(const nsStyleFont*)(&aStruct);
       break;
     case eStyleStruct_Color:
       GETSCDATA(Color).SetFrom((const nsStyleColor&)aStruct);
       break;
     case eStyleStruct_List:
-      mCachedStyleData->mListData = (nsStyleList*)(const nsStyleList*)(&aStruct);
+      mCachedStyleData->mInheritedData->mListData = (nsStyleList*)(const nsStyleList*)(&aStruct);
       break;
     case eStyleStruct_Position:
-      mCachedStyleData->mPositionData = (nsStylePosition*)(const nsStylePosition*)(&aStruct);
+      mCachedStyleData->mResetData->mPositionData = (nsStylePosition*)(const nsStylePosition*)(&aStruct);
       break;
     case eStyleStruct_Text:
       GETSCDATA(Text).SetFrom((const nsStyleText&)aStruct);
@@ -1211,20 +1223,20 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       GETSCDATA(UserInterface).SetFrom((const nsStyleUserInterface&)aStruct);
       break;
     case eStyleStruct_Margin:
-      mCachedStyleData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
+      mCachedStyleData->mResetData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
       break;
     case eStyleStruct_Padding:
-      mCachedStyleData->mPaddingData = (nsStylePadding*)(const nsStylePadding*)(&aStruct);
+      mCachedStyleData->mResetData->mPaddingData = (nsStylePadding*)(const nsStylePadding*)(&aStruct);
       break;
     case eStyleStruct_Border:
-      mCachedStyleData->mBorderData = (nsStyleBorder*)(const nsStyleBorder*)(&aStruct);
+      mCachedStyleData->mResetData->mBorderData = (nsStyleBorder*)(const nsStyleBorder*)(&aStruct);
       break;
     case eStyleStruct_Outline:
-      mCachedStyleData->mOutlineData = (nsStyleOutline*)(const nsStyleOutline*)(&aStruct);
+      mCachedStyleData->mResetData->mOutlineData = (nsStyleOutline*)(const nsStyleOutline*)(&aStruct);
       break;
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
-      mCachedStyleData->mXULData = (nsStyleXUL*)(const nsStyleXUL*)(&aStruct);
+      mCachedStyleData->mResetData->mXULData = (nsStyleXUL*)(const nsStyleXUL*)(&aStruct);
       break;
 #endif
     default:
