@@ -222,6 +222,7 @@ public:
 	// Used for MIME parts on demand.
 	void	SetContentModified(IMAP_ContentModifiedType modified);
 	PRBool	GetShouldFetchAllParts();
+        PRBool  GetIgnoreExpunges() {return m_ignoreExpunges;}
 
 	// Generic accessors required by the imap parser
 	char * CreateNewLineFromSocket();
@@ -546,6 +547,7 @@ private:
   PRInt32		m_chunkStartSize;
   PRInt32		m_maxChunkSize;
   PRBool		m_fetchByChunks;
+  PRBool                m_ignoreExpunges;
   PRInt32		m_chunkSize;
   PRInt32		m_chunkThreshold;
   TLineDownloadCache m_downloadLineCache;

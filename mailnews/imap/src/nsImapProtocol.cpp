@@ -232,6 +232,7 @@ nsImapProtocol::nsImapProtocol() :
   m_flags = 0;
   m_urlInProgress = PR_FALSE;
   m_socketIsOpen = PR_FALSE;
+  m_ignoreExpunges = PR_FALSE;
   m_gotFEEventCompletion = PR_FALSE;
   m_connectionStatus = 0;
   m_hostSessionList = nsnull;
@@ -601,7 +602,12 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
     GetServerStateParser().SetCapabilityFlag(capability);
 
     if (imapServer)
+    {
+      nsXPIDLCString redirectorType;
+      imapServer->GetRedirectorType(getter_Copies(redirectorType));
+      m_ignoreExpunges = redirectorType.Equals("aol");
       imapServer->GetFetchByChunks(&m_fetchByChunks);
+    }
 
     if ( m_runningUrl && !m_channel /* and we don't have a transport yet */)
     {
