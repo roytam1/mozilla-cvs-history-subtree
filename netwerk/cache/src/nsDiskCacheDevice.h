@@ -33,14 +33,7 @@
 #include "nsILocalFile.h"
 #include "nsIObserver.h"
 
-class nsDiskCacheBinding;
 class nsDiskCacheMap;
-class nsDiskCacheRecord;
-
-class nsISupportsArray;
-class nsIInputStream;
-class nsIOutputStream;
-class nsANSIFileStream;
 
 class nsDiskCacheDevice : public nsCacheDevice {
 public:

@@ -186,14 +186,13 @@ nsDiskCacheBindery::CreateBinding(nsCacheEntry *       entry,
     nsDiskCacheBinding * binding = new nsDiskCacheBinding(entry, record);
     if (!binding)  return nsnull;
         
-    data = binding; // add ref
-    entry->SetData(data.get());     // XXX why .get() ?
+    // give ownership of the binding to the entry
+    entry->SetData(binding);
     
     // add binding to collision detection system
     rv = AddBinding(binding);
     if (NS_FAILED(rv)) {
         entry->SetData(nsnull);
-        delete binding;
         return nsnull;
     }
 

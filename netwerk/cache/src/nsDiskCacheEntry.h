@@ -53,7 +53,11 @@ struct nsDiskCacheEntry {
     char            mKeyStart[1];   // start of key data
     //              mMetaDataStart = mKeyStart[mKeySize];
 
-    PRUint32        Size()    { return sizeof(nsDiskCacheEntry) + mKeySize + mMetaDataSize; }
+    PRUint32        Size()    { return sizeof(nsDiskCacheEntry)
+                                     - sizeof(char) // subtract default key size
+                                     + mKeySize     // plus actual key size
+                                     + mMetaDataSize;
+                              }
 
     nsCacheEntry *  CreateCacheEntry(nsCacheDevice *  device);
                                      

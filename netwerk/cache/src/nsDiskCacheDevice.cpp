@@ -261,24 +261,24 @@ static nsresult removeObservers(nsDiskCacheDevice* device)
 
 
 /******************************************************************************
- *  RecordEvictor
+ *  nsDiskCacheEvictor
  *
  *  Helper class for nsDiskCacheDevice.
  *
  *****************************************************************************/
 #ifdef XP_MAC
 #pragma mark -
-#pragma mark RecordEvictor
+#pragma mark nsDiskCacheEvictor
 #endif
 
-class RecordEvictor : public nsDiskCacheRecordVisitor
+class nsDiskCacheEvictor : public nsDiskCacheRecordVisitor
 {
 public:
-    RecordEvictor( nsDiskCacheDevice *   device,
-                   nsDiskCacheMap *      cacheMap,
-                   nsDiskCacheBindery *  cacheBindery,
-                   PRInt32               targetSize,
-                   const char *          clientID)
+    nsDiskCacheEvictor( nsDiskCacheDevice *   device,
+                        nsDiskCacheMap *      cacheMap,
+                        nsDiskCacheBindery *  cacheBindery,
+                        PRInt32               targetSize,
+                        const char *          clientID)
         : mDevice(device)
         , mCacheMap(cacheMap)
         , mBindery(cacheBindery)
@@ -298,7 +298,7 @@ private:
 
 
 PRInt32
-RecordEvictor::VisitRecord(nsDiskCacheRecord *  mapRecord)
+nsDiskCacheEvictor::VisitRecord(nsDiskCacheRecord *  mapRecord)
 {
     // read disk cache entry
     nsDiskCacheEntry *   diskEntry = nsnull;
@@ -311,6 +311,8 @@ RecordEvictor::VisitRecord(nsDiskCacheRecord *  mapRecord)
         nsresult  rv = mCacheMap->ReadDiskCacheEntry(mapRecord, &diskEntry);
         if (NS_FAILED(rv))  goto exit;  // XXX or delete record?
     
+        // XXX FIXME compare clientID's without malloc
+
         // get client ID from key
         rv = ClientIDFromCacheKey(nsLiteralCString(diskEntry->mKeyStart), &clientID);
         if (NS_FAILED(rv))  goto exit;
@@ -942,7 +944,7 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
-    RecordEvictor  evictor(this, mCacheMap, &mBindery, 0, clientID);
+    nsDiskCacheEvictor  evictor(this, mCacheMap, &mBindery, 0, clientID);
     nsresult       rv = mCacheMap->VisitRecords(&evictor);
     return rv;
 }
@@ -1026,7 +1028,7 @@ nsDiskCacheDevice::EvictDiskCacheEntries()
     
     if (mCacheMap->TotalSize() < mCacheCapacity)  return NS_OK;
 
-    RecordEvictor  evictor(this, mCacheMap, &mBindery, mCacheCapacity, nsnull);
+    nsDiskCacheEvictor  evictor(this, mCacheMap, &mBindery, mCacheCapacity, nsnull);
     rv = mCacheMap->EvictRecords(&evictor);
     
     return rv;

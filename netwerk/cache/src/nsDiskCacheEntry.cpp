@@ -123,6 +123,7 @@ CreateDiskCacheEntry(nsDiskCacheBinding *  binding)
     
     nsCRT::memcpy(diskEntry->mKeyStart, entry->Key()->get(),keySize);
     
+    // XXX FIXME FlattenMetaData should not allocate a buffer
     char *    metaData = nsnull;
     PRUint32  metaSize = 0;
     nsresult rv = entry->FlattenMetaData(&metaData, &metaSize);
@@ -169,36 +170,42 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetFetchCount(PRInt32 *aFetchCount)
 {
-    return *aFetchCount = mDiskEntry->mFetchCount;
+    NS_ENSURE_ARG_POINTER(aFetchCount);
+    *aFetchCount = mDiskEntry->mFetchCount;
     return NS_OK;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastFetched(PRUint32 *aLastFetched)
 {
+    NS_ENSURE_ARG_POINTER(aLastFetched);
     *aLastFetched = mDiskEntry->mLastFetched;
     return NS_OK;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
 {
+    NS_ENSURE_ARG_POINTER(aLastModified);
     *aLastModified = mDiskEntry->mLastModified;
     return NS_OK;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
 {
+    NS_ENSURE_ARG_POINTER(aExpirationTime);
     *aExpirationTime = mDiskEntry->mExpirationTime;
     return NS_OK;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::IsStreamBased(PRBool *aStreamBased)
 {
+    NS_ENSURE_ARG_POINTER(aStreamBased);
     *aStreamBased = PR_TRUE;
     return NS_OK;
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
 {
+    NS_ENSURE_ARG_POINTER(aDataSize);
     *aDataSize = mDiskEntry->mDataSize;
     return NS_OK;
 }
