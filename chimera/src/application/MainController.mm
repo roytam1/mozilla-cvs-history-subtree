@@ -1144,17 +1144,16 @@ const int kReuseWindowOnAE = 2;
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)theApp hasVisibleWindows:(BOOL)flag
 {
-  // If AppKit knows what to do, let it.
-  if (flag)
-    return YES;
-    
-  // If window available, wake it up. |mainWindow| should always be null.
-  NSWindow* mainWindow = [mApplication mainWindow];
-  if (!mainWindow)
+  // ignore |hasVisibleWindows| because we always want to show a browser window when
+  // the user clicks on the app icon, even if, say, prefs or the d/l window are open.
+  // If there is no browser, create one. If there is one, bring it to the front and
+  // unminimize it if it's down in the dock.
+  NSWindow* frontBrowser = [self getFrontmostBrowserWindow];
+  if ( !frontBrowser )
     [self newWindow:self];
-  else {												// Don't think this will ever happen, but just in case
-    if ([[mainWindow windowController]respondsToSelector:@selector(showWindow:)])
-      [[mainWindow windowController] showWindow:self];
+  else {
+    if ([[frontBrowser windowController] respondsToSelector:@selector(showWindow:)])
+      [[frontBrowser windowController] showWindow:self];
     else
       [self newWindow:self];
   }
