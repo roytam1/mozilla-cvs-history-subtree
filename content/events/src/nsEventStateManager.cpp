@@ -531,8 +531,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
 
           nsCOMPtr<nsIContent> currentFocus = mCurrentFocus;
           // "leak" this reference, but we take it back later
-          mCurrentFocus = nsnull;
-          mCurrentFocusFrame = nsnull;
+          SetFocusedContent(nsnull);
 
           if (gLastFocusedDocument != mDocument) {
             mDocument->HandleDOMEvent(aPresContext, &focusevent, nsnull,
@@ -545,7 +544,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
           globalObject->HandleDOMEvent(aPresContext, &focusevent, nsnull,
                                        NS_EVENT_FLAG_INIT, &status);
 
-          mCurrentFocus = currentFocus; // we kept this reference above
+          SetFocusedContent(currentFocus); // we kept this reference above
           NS_IF_RELEASE(gLastFocusedContent);
           gLastFocusedContent = mCurrentFocus;
           NS_IF_ADDREF(gLastFocusedContent);
@@ -3105,7 +3104,7 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
 {
 #ifdef DEBUG_DOCSHELL_FOCUS
   printf("[%p] ShiftFocusInternal: aForward=%d, aStart=%p, mCurrentFocus=%p\n",
-         this, aForward, aStart, mCurrentFocus);
+         this, aForward, aStart, mCurrentFocus.get());
 #endif
   NS_ASSERTION(mPresContext, "no pres context");
   EnsureDocument(mPresContext);
@@ -3127,9 +3126,7 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
   PRBool ignoreTabIndex = PR_FALSE;
 
   if (aStart) {
-    mCurrentFocus = aStart;
-    mCurrentFocusFrame = nsnull;
-
+    SetFocusedContent(aStart);
     TabIndexFrom(mCurrentFocus, &mCurrentTabIndex);
   } else if (!mCurrentFocus) {  
     // mCurrentFocus is ambiguous for determining whether
@@ -3180,8 +3177,7 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
       if (docHasFocus && selectionFrame)
         mCurrentTabIndex = 0;
       else {
-        mCurrentFocus = rootContent;
-        mCurrentFocusFrame = nsnull;
+        SetFocusedContent(rootContent);
         mCurrentTabIndex = 1;
       }
     } 
@@ -3255,8 +3251,16 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
 
       nsCOMPtr<nsIContent> oldFocus(mCurrentFocus);
       ChangeFocus(nextFocus, eEventFocusedByKey);
-      mCurrentFocusFrame = nextFocusFrame;
-      SetFrameExternalReference(mCurrentFocusFrame);
+      if (!mCurrentFocus && oldFocus) {
+        // ChangeFocus failed to move focus to nextFocus because a blur handler
+        // made it unfocusable. (bug #118685)
+        mCurrentTarget = nsnull;
+        return ShiftFocusInternal(aForward, oldFocus);
+      } else {
+        GetFocusedFrame(&mCurrentTarget);
+        if (mCurrentTarget)
+          SetFrameExternalReference(mCurrentTarget);
+      }
 
       // It's possible that the act of removing focus from our previously
       // focused element caused nextFocus to be removed from the document.
@@ -3266,11 +3270,11 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
       if (oldFocus) {
         nsCOMPtr<nsIDocument> newElementDocument;
         nextFocus->GetDocument(*getter_AddRefs(newElementDocument));
-        if (doc != newElementDocument)
+        if (doc != newElementDocument) {
+          mCurrentTarget = nsnull;
           return ShiftFocusInternal(aForward, oldFocus);
+        }
       }
-
-      mCurrentFocus = nextFocus;
 
       if (docHasFocus)
         docShell->SetCanvasHasFocus(PR_FALSE);
@@ -3301,10 +3305,9 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
       // Next time backward we go to URL bar
       // We need to move the caret to the document root, so that we don't 
       // tab from the most recently focused element next time around
-      mCurrentFocus = rootContent;
-      mCurrentFocusFrame = nsnull;
+      SetFocusedContent(rootContent);
       MoveCaretToFocus();
-      mCurrentFocus = nsnull;
+      SetFocusedContent(nsnull);
 
     } else {
       // If there's nothing left to focus in this document,
@@ -3316,11 +3319,10 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
       if (mTabbedThroughDocument)
         return NS_OK;
 
-      mCurrentFocus = rootContent;
-      mCurrentFocusFrame = nsnull;
+      SetFocusedContent(rootContent);
       mCurrentTabIndex = 0;
       MoveCaretToFocus();
-      mCurrentFocus = nsnull;
+      SetFocusedContent(nsnull);
 
       mTabbedThroughDocument = PR_TRUE;
 
@@ -3379,7 +3381,7 @@ nsEventStateManager::ShiftFocusInternal(PRBool aForward, nsIContent* aStart)
           printf("wrapping around within this document\n");
 #endif
 
-          mCurrentFocus = nsnull;
+          SetFocusedContent(nsnull);
           docShell->SetHasFocus(PR_FALSE);
           ShiftFocusInternal(aForward);
         }
@@ -4315,11 +4317,19 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
     }
   }
   
+  if (aContent) {
+    // Check if the HandleDOMEvent calls above destroyed our frame (bug #118685)
+    nsIFrame* frame = nsnull;
+    presShell->GetPrimaryFrameFor(aContent, &frame);
+    if (!frame) {
+      aContent = nsnull;
+    }
+  }
+
   NS_IF_RELEASE(gLastFocusedContent);
   gLastFocusedContent = aContent;
   NS_IF_ADDREF(gLastFocusedContent);
-  mCurrentFocus = aContent;
-  mCurrentFocusFrame = nsnull;
+  SetFocusedContent(aContent);
 
   // Moved widget focusing code here, from end of SendFocusBlur
   // This fixes the order of accessibility focus events, so that 
@@ -4433,8 +4443,7 @@ nsEventStateManager::ContentRemoved(nsIContent* aContent)
     // we don't want to fire a blur.  Blurs should only be fired
     // in response to clicks or tabbing.
 
-    mCurrentFocus = nsnull;
-    mCurrentFocusFrame = nsnull;
+    SetFocusedContent(nsnull);
   }
 
   if (aContent == mHoverContent) {
