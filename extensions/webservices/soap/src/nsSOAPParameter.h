@@ -61,6 +61,7 @@ protected:
   nsString mType;
   nsString mSchemaType;
   nsCOMPtr<nsISupports> mValue;
+  nsString mActorURI;
 };
 
 #endif

@@ -112,6 +112,14 @@ interface nsISOAPParameter : nsISupports {
   [noscript] attribute nsISupports value;
 
   /**
+   * An optional actorURI specifically for this parameter. The
+   * default is to place all parameters in the main body or
+   * in the main call object, but this will cause a parameter
+   * to be placed into a header.
+   */
+  attribute AString actorURI;
+
+  /**
    * A convenience method to set the value and type as a AString.
    * This creates the wrapper and sets the type to "#string".
    *

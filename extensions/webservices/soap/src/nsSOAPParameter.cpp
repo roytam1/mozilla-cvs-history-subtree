@@ -111,6 +111,19 @@ NS_IMETHODIMP nsSOAPParameter::SetValue(nsISupports *aValue)
     return NS_OK;
 }
 
+/* attribute AString actorURI; */
+NS_IMETHODIMP nsSOAPParameter::GetActorURI(nsAWritableString & aActorURI)
+{
+  NS_ENSURE_ARG_POINTER(&aActorURI);
+  aActorURI.Assign(mActorURI);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetActorURI(const nsAReadableString & aActorURI)
+{
+  mActorURI.Assign(aActorURI);
+  return NS_OK;
+}
+
 /* void setAsWString (in AString aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
 {
