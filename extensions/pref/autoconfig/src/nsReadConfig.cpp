@@ -294,7 +294,7 @@ nsresult nsReadConfig::openAndEvaluateJSFile(const char *aFileName,
     if (NS_SUCCEEDED(rv)) {
         if (isEncoded) {
             // Unobscure file by subtracting some value from every char. 
-            const int obscure_value = 13;
+            const int obscure_value = 0;// 13;
             for (PRUint32 i = 0; i < amt; i++)
                 buf[i] -= obscure_value;
         }
