@@ -26,12 +26,14 @@
 
 use ExtUtils::MakeMaker;
 use Config;
+use Carp;
 
 $perlpath = $Config{'perlpath'};
 $osname   = $Config{'osname'};
 
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
-$ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # Y to include SSL
+$ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
+$ldapsdk_ver = $ENV{"LDAPV3ON"};   # N to exclude LDAP v3 features
 
 $libexts = "so|sl|a|lib";
 
@@ -39,13 +41,18 @@ $libexts = "so|sl|a|lib";
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
 print     "================================\n";
 
+$silent = 1;
+print "Directory containing 'include' and 'lib' directory of the Netscape\n";
+print "LDAP Software Developer Kit (default: /usr): ";
 if (!$ldapsdk_loc)
 {
-   print "Directory containing 'include' and 'lib' directory of the Netscape\n";
-   print "LDAP Software Developer Kit (default: /usr): ";
+   $silent = 0;
    chomp ($ldapsdk_loc = <STDIN>);
    $ldapsdk_loc = "/usr" unless $ldapsdk_loc =~ /\S/;
+} else {
+  print "$ldapsdk_loc\n";
 }
+croak("Directory $ldapsdk_loc does not exist!") unless -d $ldapsdk_loc;
 
 if ($osname =~ /mswin/i)
 {
@@ -57,26 +64,27 @@ if ($osname =~ /mswin/i)
 $include_ldap = $ldapsdk_loc . $dir_sep . "include";
 $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
 
+print "Using LDAPv3 Developer Kit (default: yes)?  ";
 if (!$ldapsdk_ver)
 {
-   print "Using LDAPv3 Developer Kit (default: yes)?  ";
-   chomp ($ver = <STDIN>);
-   if ($ver !~ /^n/i)
-   {
-      $v3_def = "-DLDAPV3";
-   }
+   $silent = 0;
+   chomp ($ldapsdk_ver = <STDIN>);
+} else {
+  print "YES\n";
 }
+$v3_def = "-DLDAPV3" unless ($ldapsdk_ver =~ /^n/i);
+
    
+print "Include SSL Support (default: yes)?  ";
 if (!$ldapsdk_ssl)
 {
-   print "Include SSL Support (default: yes)?  ";
+   $silent = 0;
    chomp ($ldapsdk_ssl = <STDIN>);
+} else {
+  print "YES\n";
 }
+$ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
 
-if ($ldapsdk_ssl !~ /^n/i)
-{
-   $ssl_def = "-DUSE_SSL";
-}
 
 opendir(DIR,$lib_ldap);
 @files = grep{/ldap|lber/} readdir(DIR);
@@ -116,8 +124,14 @@ if ($#lberlib >= 0 && $lline =~ /ldap$/)
 }
 
 print "Libraries to link with (default: $lline):  ";
-chomp ($lib_line = <STDIN>);
-$lib_line = $lline unless $lib_line =~ /\S/;
+if (!$silent)
+{
+   chomp ($lib_line = <STDIN>);
+   $lib_line = $lline unless $lib_line =~ /\S/;
+} else {
+  print "\n";
+}
+
 
 if ($osname =~ /mswin/i)
 {
