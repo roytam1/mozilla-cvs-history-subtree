@@ -48,16 +48,12 @@ static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
 static NS_DEFINE_CID(kDateTimeCID, NS_DATETIMEFORMAT_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
-static nsIUnicodeEncoder *encoderUTF8 = nsnull;
-static nsIUnicodeDecoder *decoderUTF8 = nsnull;
-
 static nsIUnicodeEncoder *encoderASCII = nsnull;
-static nsIUnicodeDecoder *decoderASCII = nsnull;
 
-#define TEXT_BUNDLE	    "resource:/ui/psm_text.properties"
-#define UI_BUNDLE		"resource:/ui/psm_ui.properties"
-#define BIN_BUNDLE		"resource:/ui/psm_bin.properties"
-#define DOC_BUNDLE		"resource:/ui/psm_doc.properties"
+#define TEXT_BUNDLE	    "resource:/psmdata/ui/psm_text.properties"
+#define UI_BUNDLE		"resource:/psmdata/ui/psm_ui.properties"
+#define BIN_BUNDLE		"resource:/psmdata/ui/psm_bin.properties"
+#define DOC_BUNDLE		"resource:/psmdata/ui/psm_doc.properties"
 
 extern "C" {
 static nsIStringBundle* nlsCreateBundle(char* bundleURL);
@@ -69,11 +65,12 @@ static nsIStringBundle * bundles[4] = {NULL, NULL, NULL, NULL};
 extern "C" PRBool nlsInit()
 {
 	nsICharsetConverterManager *ccm = nsnull;
-	nsAutoString charsetUTF8("UTF-8");
-	nsAutoString charsetASCII("ISO-8859-1");
+	nsAutoString charsetUTF8 = NS_ConvertASCIItoUCS2("UTF-8");
+	nsAutoString charsetASCII = NS_ConvertASCIItoUCS2("ISO-8859-1");
 	PRBool ret = PR_FALSE;
 	nsresult res;
 
+#if !defined(XP_MAC)
 	res = NS_InitXPCOM(NULL, NULL);
 	NS_ASSERTION( NS_SUCCEEDED(res), "NS_InitXPCOM failed" );
 
@@ -83,6 +80,7 @@ extern "C" PRBool nlsInit()
 	if(NS_FAILED(res)) {
 		goto loser;
 	}
+#endif
 
 	// Create the bundles
 	bundles[0] = nlsCreateBundle(TEXT_BUNDLE);
@@ -99,23 +97,8 @@ extern "C" PRBool nlsInit()
 		goto loser;
 	}
 
-	res = ccm->GetUnicodeEncoder(&charsetUTF8, &encoderUTF8);
-	if (NS_FAILED(res) || (nsnull == encoderUTF8)) {
-		goto loser;
-	}
-
-	res = ccm->GetUnicodeDecoder(&charsetUTF8, &decoderUTF8);
-	if (NS_FAILED(res) || (nsnull == decoderUTF8)) {
-		goto loser;
-	}
-
 	res = ccm->GetUnicodeEncoder(&charsetASCII, &encoderASCII);
 	if (NS_FAILED(res) || (nsnull == encoderASCII)) {
-		goto loser;
-	}
-
-	res = ccm->GetUnicodeDecoder(&charsetASCII, &decoderASCII);
-	if (NS_FAILED(res) || (nsnull == decoderASCII)) {
 		goto loser;
 	}
 
@@ -126,10 +109,7 @@ loser:
 	NS_IF_RELEASE(bundles[1]);
 	NS_IF_RELEASE(bundles[2]);
 	NS_IF_RELEASE(bundles[3]);
-	NS_IF_RELEASE(encoderUTF8);
-	NS_IF_RELEASE(decoderUTF8);
 	NS_IF_RELEASE(encoderASCII);
-	NS_IF_RELEASE(decoderASCII);
 done:
 	return ret;
 }
@@ -164,7 +144,7 @@ extern "C" char* nlsGetUTF8StringFromBundle(nsIStringBundle *bundle, const char 
 {
 	nsresult ret;
 
-	nsString key(name);
+	nsString key = NS_ConvertASCIItoUCS2(name);
 	nsString value;
 	PRUnichar * p = NULL;
 	ret = bundle->GetStringFromName(key.GetUnicode(), &p);
@@ -175,8 +155,8 @@ extern "C" char* nlsGetUTF8StringFromBundle(nsIStringBundle *bundle, const char 
 
 	// XXX This is a hack to get cr and lf chars in string. 
 	// See bug# 21418
-	value.ReplaceSubstring("<psm:cr>", "\r");
-	value.ReplaceSubstring("<psm:lf>", "\n");
+	value.ReplaceSubstring(NS_ConvertASCIItoUCS2("<psm:cr>"), NS_ConvertASCIItoUCS2("\r"));
+	value.ReplaceSubstring(NS_ConvertASCIItoUCS2("<psm:lf>"), NS_ConvertASCIItoUCS2("\n"));
 	return value.ToNewUTF8String();
 }
 
@@ -236,25 +216,17 @@ extern "C" PRBool nlsUnicodeToUTF8(unsigned char * inBuf, unsigned int inBufByte
 							unsigned char * outBuf, unsigned int maxOutBufLen,
 							unsigned int * outBufLen)
 {
-	PRBool ret = PR_FALSE;
-	nsIUnicodeEncoder *enc = encoderUTF8;
-	PRInt32 dstLength;
-	nsresult res;
-
-	res = enc->GetMaxLength((const PRUnichar *)inBuf, inBufBytes, &dstLength);
-	if (NS_FAILED(res) || (dstLength > maxOutBufLen)) {
+	char *utf8;
+	PRBool ret = PR_TRUE;
+	
+	utf8 = NS_ConvertUCS2toUTF8((PRUnichar*)inBuf, inBufBytes/2);
+	*outBufLen = PL_strlen(utf8);
+	if (*outBufLen+1 > maxOutBufLen) {
+		ret = PR_FALSE;
 		goto loser;
 	}
-
-	res = enc->Convert((const PRUnichar *)inBuf, (PRInt32*)&inBufBytes, (char*)outBuf, &dstLength);
-	if (NS_FAILED(res)) {
-		goto loser;
-	}
-
-	/* outBuf[dstLength] = '\0';*/
-	*outBufLen = dstLength;
-	ret = PR_TRUE;
-
+	memcpy(outBuf, utf8, *outBufLen+1);
+	
 loser:
 	return ret;
 }
@@ -263,23 +235,21 @@ extern "C" PRBool nlsUTF8ToUnicode(unsigned char * inBuf, unsigned int inBufByte
 							unsigned char * outBuf, unsigned int maxOutBufLen,
 							unsigned int * outBufLen)
 {
-	PRBool ret = PR_FALSE;
-	PRInt32 dstLength;
-	nsIUnicodeDecoder *dec = decoderUTF8;
-	nsresult res;
-
-	res = dec->GetMaxLength((const char*)inBuf, inBufBytes, &dstLength);
-	if (NS_FAILED(res) || (dstLength > maxOutBufLen)) {
+	PRBool ret = PR_TRUE;
+	nsAutoString autoString = NS_ConvertUTF8toUCS2((const char*)inBuf);
+	const PRUnichar *buffer;
+	PRUint32 bufLen;
+	unsigned int newLen;
+	
+	buffer = autoString.GetUnicode();
+	bufLen = autoString.Length();
+	newLen = (bufLen+1)*2;
+	if (newLen > maxOutBufLen) {
+		ret = PR_FALSE;
 		goto loser;
 	}
-
-	res = dec->Convert((const char *)inBuf, (PRInt32*)&inBufBytes, (PRUnichar*)outBuf, &dstLength);
-	if (NS_FAILED(res)) {
-		goto loser;
-	}
-
-	ret = PR_TRUE;
-
+	memcpy(outBuf, (char*)buffer, newLen);
+	*outBufLen = newLen;
 loser:
 	return ret;
 }
@@ -303,10 +273,9 @@ extern "C" PRBool nlsUnicodeToASCII(unsigned char * inBuf, unsigned int inBufByt
 		goto loser;
 	}
 
-	/* outBuf[dstLength] = '\0';*/
+	outBuf[dstLength] = '\0';
 	*outBufLen = dstLength;
 	ret = PR_TRUE;
-
 loser:
 	return ret;
 }
@@ -315,23 +284,21 @@ extern "C" PRBool nlsASCIIToUnicode(unsigned char * inBuf, unsigned int inBufByt
 							unsigned char * outBuf, unsigned int maxOutBufLen,
 							unsigned int * outBufLen)
 {
-	PRBool ret = PR_FALSE;
-	PRInt32 dstLength;
-	nsIUnicodeDecoder *dec = decoderASCII;
-	nsresult res;
-
-	res = dec->GetMaxLength((const char*)inBuf, inBufBytes, &dstLength);
-	if (NS_FAILED(res) || (dstLength > maxOutBufLen)) {
+	nsAutoString autoString = NS_ConvertASCIItoUCS2((const char*)inBuf);
+	PRUint32 bufLen;
+	const PRUnichar *buffer;
+	PRBool ret = PR_TRUE;
+	unsigned int newLen;
+	
+	bufLen = autoString.Length();
+	buffer = autoString.GetUnicode();
+	newLen = (bufLen+1)*2;
+	if (newLen > maxOutBufLen) {
+		ret = PR_FALSE;
 		goto loser;
 	}
-
-	res = dec->Convert((const char *)inBuf, (PRInt32*)&inBufBytes, (PRUnichar*)outBuf, &dstLength);
-	if (NS_FAILED(res)) {
-		goto loser;
-	}
-	*outBufLen = (unsigned int)dstLength*2;
-	ret = PR_TRUE;
-
+	memcpy(outBuf, buffer, newLen);
+	*outBufLen = newLen;
 loser:
 	return ret;
 }

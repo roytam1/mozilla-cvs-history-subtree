@@ -73,17 +73,15 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 
 psm_RelEng_srvr_bld:
-ifeq ($(OS_ARCH), SunOS)
-ifeq ($(OS_RELEASE), 5.5.1)
-	cd ../nss; gmake import IMPORTS=nspr20/v4.0-sol251-20000504 RELEASE_TREE=/h/tortoise/export/share/builds/components
-endif
-endif
-	cd ../nss; gmake nss_RelEng_bld
+	cd ../../nsprpub; gmake
+	cd ../nss; gmake import IMPORTS=dbm/DBM_1_54
+	cd ../nss; gmake 
 ifeq ($(OS_ARCH), WINNT)
-	gmake import IMPORTS=nlslayer/m14 RELEASE_TREE=//drinan/dist
+	gmake import IMPORTS=nlslayer/m16
 else
-	gmake import IMPORTS=nlslayer/m14 RELEASE_TREE=/h/tortoise/export/share/builds/components
+	gmake import IMPORTS=nlslayer/PR3 RELEASE_TREE=/h/tortoise/export/share/builds/components
 endif
 	cd ui;gmake
 	gmake
+	cd server;gmake build_xpi
 

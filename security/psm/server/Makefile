@@ -68,6 +68,13 @@ LDAPSDKDIST = $(LDAPSDK_LOC)/$(LDAPSDK_PLATFORM)
 
 endif
 
+#Which versin of install.js do we really want?
+ifeq ($(OS_ARCH), WINNT)
+INSTALL_JS = install.js
+else 
+INSTALL_JS = unix-install.js
+endif
+
 ifneq ($(OS_ARCH), WINNT)
 ifeq ($(OS_ARCH), Linux)
 # On linux, we link with libstdc++ (we're always using egcs on linux, right?)
@@ -142,18 +149,16 @@ NSPR_DYNAMIC_LIBS = \
 NSPR_LIBS = $(NSPR_DYNAMIC_LIBS)
 
 I18N_COMPONENTS = \
-	$(DIST)/lib/mimetype.dll \
 	$(DIST)/lib/necko.dll \
-	$(DIST)/lib/nkfile.dll \
-	$(DIST)/lib/nkres.dll \
-	$(DIST)/lib/nslocale.dll \
 	$(DIST)/lib/strres.dll \
 	$(DIST)/lib/ucharuti.dll \
 	$(DIST)/lib/uconv.dll \
 	$(DIST)/lib/ucvlatin.dll \
+	$(DIST)/lib/nslocale.dll \
 	$(NULL)
 
 XPCOM_LIBS = \
+	$(DIST)/lib/zlib.dll \
 	$(DIST)/lib/mozreg.dll \
 	$(DIST)/lib/xpcom.dll \
 	$(NULL)
@@ -200,24 +205,23 @@ NSPR_LIBS = \
 	$(DIST)/lib/libnspr4.$(DLL_SUFFIX)
 
 I18N_COMPONENTS = \
-	$(DIST)/lib/libmimetype.$(DLL_SUFFIX) \
 	$(DIST)/lib/libnecko.$(DLL_SUFFIX) \
-	$(DIST)/lib/libnecko_file.$(DLL_SUFFIX) \
-	$(DIST)/lib/libnecko_res.$(DLL_SUFFIX) \
-	$(DIST)/lib/libnslocale.$(DLL_SUFFIX) \
 	$(DIST)/lib/libstrres.$(DLL_SUFFIX) \
 	$(DIST)/lib/libunicharutil.$(DLL_SUFFIX) \
 	$(DIST)/lib/libuconv.$(DLL_SUFFIX) \
 	$(DIST)/lib/libucvlatin.$(DLL_SUFFIX) \
+	$(DIST)/lib/libnslocale.$(DLL_SUFFIX) \
 	$(NULL)
 
 XPCOM_LIBS = \
 	$(DIST)/lib/libxpcom.$(DLL_SUFFIX) \
 	$(NULL)
 
+
 ifeq ($(OS_ARCH), SunOS)
 NSPR_LINK_LIBS = -L$(DIST)/lib -Bdynamic -lnspr4 -lplc4 -lplds4
 XPCOM_LINK_LIBS = -lxpcom
+XPCOM_LIBS += $(DIST)/lib/libz.$(DLL_SUFFIX)
 else
 NSPR_LINK_LIBS = $(NSPR_LIBS)
 XPCOM_LINK_LIBS	= $(XPCOM_LIBS)
@@ -260,8 +264,8 @@ endif
 
 release_md::
 	$(NSINSTALL) -m 644 $(NSPR_LIBS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
-	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/ui 
-	$(NSINSTALL) -m 644 ../doc/*.htm ../doc/*.html ../doc/*.gif $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/doc
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.htm ../doc/*.html ../doc/*.gif $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/psmdata/doc
 	$(NSINSTALL) -m 644 $(XPCOM_LIBS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
 	$(NSINSTALL) -m 644 $(I18N_COMPONENTS) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)/components
 ifneq ($(OS_ARCH), WINNT)
@@ -270,8 +274,8 @@ endif
 
 
 install::
-	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(PLATFORM)/ui
-	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm $(PLATFORM)/doc
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties $(PLATFORM)/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm $(PLATFORM)/psmdata/doc
 	$(NSINSTALL) -m 644 $(XPCOM_LIBS) $(PLATFORM)
 	$(NSINSTALL) -m 644 $(I18N_COMPONENTS) $(PLATFORM)/components
 	$(NSINSTALL) -m 644 $(NSPR_LIBS) $(PLATFORM)
@@ -298,3 +302,19 @@ patch: $(PROGRAM)
 #   - i18n libraries
 #   - xpcom libraries
 #   - subdirectories (ui, do)
+
+build_xpi: $(PROGRAM)
+	$(NSINSTALL) -m 644 ../ui/$(PLATFORM)/psm*.properties xpi/psm/psmdata/ui
+	$(NSINSTALL) -m 644 ../doc/*.gif ../doc/*.html ../doc/*.htm xpi/psm/psmdata/doc
+ifneq ($(OS_ARCH), WINNT)
+	$(NSINSTALL) -m 775 start-psm xpi/psm
+endif
+	$(NSINSTALL) -m 755 $(PROGRAM) xpi/psm
+	cp $(INSTALL_JS) xpi/install.js
+	cd xpi; zip -T -r ../$(PLATFORM)/psm.xpi psm install.js
+	rm -rf xpi
+	$(NSINSTALL) -m 644 moz-install.html $(PLATFORM)
+
+release_xpi: build_xpi
+	$(NSINSTALL) -m 644 $(PLATFORM)/psm.xpi $(RELEASE_TREE)/$(PLATFORM)/xpi
+	$(NSINSTALL) -m 644 moz-install.html $(RELEASE_TREE)/$(PLATFORM)/xpi

@@ -52,7 +52,26 @@ ssmpkcs12context_createpkcs12file(SSMPKCS12Context *cx,
                                   PRBool forceAuthenticate,
                                   CERTCertificate **certArr,
                                   PRIntn numCerts);
+#ifdef XP_MAC
 
+char* SSM_ConvertMacPathToUnix(char *path)
+{
+	char *cursor;
+	int len;
+		
+	len = PL_strlen(path);
+	cursor = PR_Realloc(path, len+2);
+	memmove(cursor+1, cursor, len+1);
+	path = cursor;
+	*cursor = '/';
+	while ((cursor = PL_strchr(cursor, ':')) != NULL) {
+		*cursor = '/';
+		cursor++;
+	}
+	return path;
+}
+
+#endif
 
 SECStatus
 SSM_UnicodeConversion(SECItem *dest, SECItem *src,
@@ -207,7 +226,7 @@ ssmpkcs12context_writetoexportfile(void *arg, const char *buf,
                                    unsigned long len)
 {
     SSMPKCS12Context *p12Cxt = (SSMPKCS12Context*)arg;
-    PRInt32 bytesWritten;
+    PRUint32 bytesWritten;
 
     if (p12Cxt == NULL) {
         return;
@@ -353,6 +372,9 @@ ssmpkcs12context_createpkcs12file(SSMPKCS12Context *cxt,
         rv = SSM_ERR_BAD_FILENAME;
         goto loser;
     }
+#ifdef XP_MAC
+	cxt->super.m_fileName = SSM_ConvertMacPathToUnix(cxt->super.m_fileName);
+#endif    
     cxt->m_file = PR_Open (cxt->super.m_fileName,
                            PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE,
                            0600);
@@ -383,6 +405,18 @@ ssmpkcs12context_createpkcs12file(SSMPKCS12Context *cxt,
     return rv;
 }
 
+void ssm_switch_endian(unsigned char *buf, unsigned int len)
+{
+    unsigned int i;
+    unsigned char tmp;
+
+    for (i=0; i<len; i+=2) {
+        tmp      = buf[i];
+        buf[i]   = buf[i+1];
+        buf[i+1] = tmp;
+    }
+}
+
 /* This function converts ASCII strings to UCS2 strings in Network Byte Order.
 ** The "swapBytes" argument is ignored.  
 ** The PKCS#12 code only makes it true on Little Endian systems, 
@@ -405,7 +439,7 @@ SSM_UCS2_ASCIIConversion(PRBool toUnicode,
     	PRBool rv;
 #ifdef DEBUG
 	unsigned int outLen;
-	int i;
+	unsigned int i;
 	fprintf(stderr,"\n---ssm_ConvertAsciiToUCS2---\nInput: inBuf= ");
 	for (i = 0; i < inBufLen; i++) {
 	    fprintf(stderr, "%c", inBuf[i]);
@@ -415,14 +449,7 @@ SSM_UCS2_ASCIIConversion(PRBool toUnicode,
 	rv = nlsASCIIToUnicode(inBuf, inBufLen, 
 				    outBuf, maxOutBufLen, outBufLen);
     if (swapBytes) {
-        unsigned int i;
-        char tmp;
-
-        for (i=0; i<*outBufLen; i+=2) {
-            tmp = outBuf[i];
-            outBuf[i]   = outBuf[i+1];
-            outBuf[i+1] = tmp;
-        }
+        ssm_switch_endian(outBuf, *outBufLen);
     }
 #ifdef DEBUG
 	outLen = *outBufLen;
@@ -452,6 +479,7 @@ SSM_UCS2_UTF8Conversion(PRBool toUnicode, unsigned char *inBuf,
 #ifdef DEBUG
 	unsigned int i;
 #endif
+    char *newbuf=NULL;
 
     if(!inBuf || !outBuf || !outBufLen) {
         return PR_FALSE;
@@ -471,11 +499,36 @@ SSM_UCS2_UTF8Conversion(PRBool toUnicode, unsigned char *inBuf,
 	}
 	fprintf(stderr,"\n");
 #endif
-
     if(toUnicode) {
         retval = nlsUTF8ToUnicode(inBuf, inBufLen, outBuf, maxOutBufLen, 
                                  outBufLen);
+#if IS_LITTLE_ENDIAN
+        /* Our converter gives us back the buffer in host order,
+         * so let's convert to network byte order
+         */
+        ssm_switch_endian(outBuf, *outBufLen);
+#endif
     } else {
+#if IS_LITTLE_ENDIAN
+        /* NSS is the only place where this function gets called.  It gives
+         * us the bytes in Network Byte Order, but the conversion functions
+         * expect the bytes in host order.  So we'll switch the bytes around
+         * before passing them to the translator.
+         */
+        
+        /* The buffer that comes won't necessarily have the trailing ending
+         * zero bytes, which our converter assumes. So we'll add them
+         * here.
+         */
+        /* Do a check to make sure it is in Network Byte Order first. */
+        if (inBuf[0] == 0) {
+            newbuf = SSM_NEW_ARRAY(char, inBufLen+2);
+            memcpy(newbuf, inBuf, inBufLen);
+            newbuf[inBufLen] = newbuf[inBufLen+1] = 0;
+            inBuf = newbuf;
+            ssm_switch_endian(inBuf, inBufLen);
+        }
+#endif
     	retval = nlsUnicodeToUTF8(inBuf, inBufLen, outBuf, maxOutBufLen, 
                                  outBufLen);
 	}
@@ -490,6 +543,7 @@ SSM_UCS2_UTF8Conversion(PRBool toUnicode, unsigned char *inBuf,
 	}
 	fprintf(stderr,"\n\n");
 #endif
+    PR_FREEIF(newbuf);
 	return retval;
 }
 
@@ -497,26 +551,29 @@ static SECStatus
 ssmpkcs12context_digestopen(void *arg, PRBool readData)
 {
     char *tmpFileName=NULL;
-    char  filePathSep;
+    char *filePathSep;
     SSMPKCS12Context *cxt = (SSMPKCS12Context *)arg;
 
 #if defined(XP_UNIX)
-    filePathSep = '/';
+    filePathSep = "/";
 #elif defined(WIN32)
-    filePathSep = '\\';
+    filePathSep = "\\";
 #elif defined(XP_MAC)
-	filePathSep = ':';
+	filePathSep = "";
 #else
 #error Tell me what the file path separator is of this platform.
 #endif
 
-    tmpFileName = PR_smprintf("%s%c%s", 
+    tmpFileName = PR_smprintf("%s%s%s", 
                               SSMRESOURCE(cxt)->m_connection->m_dirRoot,
                               filePathSep,
                               ".nsm_p12_tmp");
     if (tmpFileName == NULL) {
         return SECFailure;
     }
+#ifdef XP_MAC
+	tmpFileName = SSM_ConvertMacPathToUnix(tmpFileName);
+#endif    
     if (readData) {
         cxt->m_digestFile = PR_Open(tmpFileName,
                                     PR_RDONLY, 0400);
@@ -701,8 +758,14 @@ SSMPKCS12Context_RestoreCertFromPKCS12File(SSMPKCS12Context *cxt)
         rv = SSM_ERR_NO_PASSWORD;
         goto loser;
     }
-    cxt->m_file = PR_Open(SSMRESOURCE(cxt)->m_fileName,
-                          PR_RDONLY, 0400);
+#ifdef XP_MAC
+
+	/*NSPR wants the path to be a UNIX style path.  So let's convert it here for MAC.*/
+	SSMRESOURCE(cxt)->m_fileName = SSM_ConvertMacPathToUnix(SSMRESOURCE(cxt)->m_fileName);
+	
+#endif  
+	cxt->m_file = PR_Open(SSMRESOURCE(cxt)->m_fileName,
+                          PR_RDONLY, 0400);                        
     if (cxt->m_file == NULL) {
         rv = SSM_ERR_BAD_FILENAME;
         goto loser;
@@ -754,11 +817,7 @@ SSMPKCS12Context_RestoreCertFromPKCS12File(SSMPKCS12Context *cxt)
         rv = SSM_ERR_OUT_OF_MEMORY;
         goto loser;
     }
-    cxt->m_file = PR_Open(SSMRESOURCE(cxt)->m_fileName, PR_RDONLY, 0400);
-    if (cxt->m_file == NULL) {
-        rv = SSM_ERR_BAD_FILENAME;
-        goto loser;
-    }
+
     while (PR_TRUE) {
         int readLen = PR_Read(cxt->m_file, buf, PKCS12_IN_BUFFER_SIZE);
         if (readLen < 0) {

@@ -120,7 +120,7 @@ typedef CMTStatus (*CMT_VERIFY_UNIX)(CMTSocket sock);
 /*
  * Use this function to send data across the socket
  */
-typedef size_t (*CMT_SEND)(CMTSocket sock, void* buffer, size_t length);
+typedef CMInt32 (*CMT_SEND)(CMTSocket sock, void* buffer, size_t length);
 
 /*
  * Use this function to select a socket. If poll is non-zero, then 
@@ -134,7 +134,7 @@ typedef CMTSocket (*CMT_SELECT)(CMTSocket *sock, int numSocks, int poll);
  * Use this function to receive data from a socket.  Function should
  * return number of bytes actually read. Return -1 in case of error.
  */
-typedef size_t (*CMT_RECEIVE)(CMTSocket sock, void *buffer, size_t bufSize);
+typedef CMInt32 (*CMT_RECEIVE)(CMTSocket sock, void *buffer, size_t bufSize);
 
 /*
  * Use this function to shutdown writing to the socket.
@@ -1872,9 +1872,14 @@ typedef struct _NameList {
    char ** names;
 } NameList;
 
+CMTStatus CMT_CreateKeyGenContextForKeyGenTag(PCMT_CONTROL control, 
+                                              CMUint32       *keyGenContext,
+                                              CMUint32       *errorCode);
+
 char * CMT_GenKeyOldStyle(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
                           CMKeyGenTagReq * next);
-
+char * CMT_GetGenKeyResponse(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
+                             CMKeyGenTagReq *next);
 /* Certificates */
 CMTStatus CMT_FindCertificateByNickname(PCMT_CONTROL control, char * nickname, CMUint32 *resID);
 CMTStatus CMT_FindCertificateByKey(PCMT_CONTROL control, CMTItem *key, CMUint32 *resID);

@@ -325,8 +325,6 @@ SSMTextGen_PushStack(SSMTextGenContext *cx,
 void
 SSMTextGen_DestroyContext(SSMTextGenContext *cx)
 {
-    PRInt32 i;
-
     if (cx->m_params)
     {
         char *tmp;
@@ -355,11 +353,11 @@ SSMTextGen_DestroyContext(SSMTextGenContext *cx)
 }
 
 
-SSMResource *
+SSMControlConnection *
 SSMTextGen_GetControlConnection(SSMTextGenContext *cx)
 {
-    if (cx && cx->m_request && cx->m_request->ctrlconn)
-        return &(cx->m_request->ctrlconn->super.super);
+    if (cx && cx->m_request)
+        return cx->m_request->ctrlconn;
     else
         return NULL;
 }
@@ -367,10 +365,16 @@ SSMTextGen_GetControlConnection(SSMTextGenContext *cx)
 SSMResource *
 SSMTextGen_GetTargetObject(SSMTextGenContext *cx)
 {
-    if (cx && cx->m_request && cx->m_request->target)
-        return cx->m_request->target;
-    else
-        return SSMTextGen_GetControlConnection(cx);
+    SSMResource *target = NULL;
+
+    if (cx && cx->m_request && cx->m_request->target) {
+        target = cx->m_request->target;
+    } else {
+        SSMControlConnection *ctrl;
+        ctrl = SSMTextGen_GetControlConnection(cx);
+        target = &(ctrl->super.super);
+    }
+    return target;
 }
 
 /* Allocate/deallocate an array of UTF8 Strings. */
@@ -911,15 +915,14 @@ SSM_FindUTF8StringInBundles(SSMTextGenContext *cx,
                                char **utf8Result)
 {
     SSMStatus rv = SSM_FAILURE;
-    size_t bufSize;
     char *utf8;
 
-	/* Attempt to get the string. */
-	utf8 = nlsGetUTF8String(key);
-	if (utf8) {
-		rv = SSMTextGen_DequotifyString(utf8); /* found it */
-		*utf8Result = utf8;
-	}
+    /* Attempt to get the string. */
+    utf8 = nlsGetUTF8String(key);
+    if (utf8) {
+        rv = SSMTextGen_DequotifyString(utf8); /* found it */
+        *utf8Result = utf8;
+    }
     return rv;
 }
 
@@ -1256,7 +1259,16 @@ void SSM_InitNLS(char *dataDirectory)
                                SSM_MakeUniqueNameForIssuerWindow);
     SSM_RegisterKeywordHandler("_windowOffset",
                                SSM_GetWindowOffset);
-
+    SSM_RegisterKeywordHandler("_crlButton",
+                               SSM_DisplayCRLButton);
+    SSM_RegisterKeywordHandler("_crlList",
+                               SSM_ListCRLs);
+    SSM_RegisterKeywordHandler("_smime_tab",
+                               SSM_LayoutSMIMETab);
+    SSM_RegisterKeywordHandler("_java_js_tab",
+                               SSM_LayoutJavaJSTab);
+    SSM_RegisterKeywordHandler("_addOthersCerts",
+                               SSM_LayoutOthersTab);
 #if 0
     TestNLS();
 #endif

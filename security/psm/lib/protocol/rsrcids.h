@@ -64,6 +64,9 @@ typedef enum
     SSM_RESTYPE_SECADVISOR_CONTEXT,
     SSM_RESTYPE_SIGNTEXT,
     SSM_RESTYPE_PKCS12_CONTEXT,
+
+    SSM_RESTYPE_SDR_CONTEXT,  /* Internal - Not used by client protocol */
+
     SSM_RESTYPE_MAX
 } SSMResourceType;
 
@@ -158,6 +161,9 @@ typedef enum
     SSM_FID_KEYGEN_TOKEN_NAME,
 
     SSM_FID_SSLDATA_DISCARD_SOCKET_STATUS,
+    SSM_FID_CHOOSE_TOKEN_URL,
+    SSM_FID_INIT_DB_URL,
+    SSM_FID_SSS_CA_NAME,
 
     SSM_FID_MAX /* placeholder */
 } SSMAttributeID;

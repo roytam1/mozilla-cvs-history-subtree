@@ -249,34 +249,12 @@ void prettyPrintMessage(CMTItem *msg)
 }
 #endif
 
-CMTStatus CMT_SendMessage(PCMT_CONTROL control, CMTItem* message)
+CMTStatus CMT_ReadMessageDispatchEvents(PCMT_CONTROL control, CMTItem* message)
 {
-	CMTStatus status;
-    CMUint32 msgCategory;
+    CMTStatus status;
     CMBool done = CM_FALSE;
-#ifdef PRINT_SEND_MESSAGES
-    LOG("About to print message sent to PSM\n");
-    prettyPrintMessage(message);
-#endif
-
-    /* Acquire lock on the control connection */
-    CMT_LOCK(control->mutex);
-
-    /* Try to send pending random data */
-    if (message->type != (SSM_REQUEST_MESSAGE | SSM_HELLO_MESSAGE))
-    {
-        /* If we've already said hello, then flush random data
-           just before sending the request. */
-        status = CMT_FlushPendingRandomData(control);
-        if (status != CMTSuccess)
-            goto loser;
-    }
+    CMUint32 msgCategory;
     
-	status = CMT_TransmitMessage(control, message);
-	if (status != CMTSuccess) {
-		goto loser;
-	}
-
     /* We have to deal with other types of data on the socket and */
     /* handle them accordingly */
     while (!done) {
@@ -300,7 +278,40 @@ CMTStatus CMT_SendMessage(PCMT_CONTROL control, CMTItem* message)
                 break;
         }
     }
+    return CMTSuccess;
+ loser:
+    return CMTFailure;
+}
 
+CMTStatus CMT_SendMessage(PCMT_CONTROL control, CMTItem* message)
+{
+	CMTStatus status;
+#ifdef PRINT_SEND_MESSAGES
+    LOG("About to print message sent to PSM\n");
+    prettyPrintMessage(message);
+#endif
+
+    /* Acquire lock on the control connection */
+    CMT_LOCK(control->mutex);
+
+    /* Try to send pending random data */
+    if (message->type != (SSM_REQUEST_MESSAGE | SSM_HELLO_MESSAGE))
+    {
+        /* If we've already said hello, then flush random data
+           just before sending the request. */
+        status = CMT_FlushPendingRandomData(control);
+        if (status != CMTSuccess)
+            goto loser;
+    }
+    
+	status = CMT_TransmitMessage(control, message);
+	if (status != CMTSuccess) {
+		goto loser;
+	}
+
+    if (CMT_ReadMessageDispatchEvents(control, message) != CMTSuccess) {
+        goto loser;
+    }
     /* Release the control connection lock */
     CMT_UNLOCK(control->mutex);
 	return CMTSuccess;
@@ -313,7 +324,7 @@ loser:
 CMTStatus CMT_TransmitMessage(PCMT_CONTROL control, CMTItem * message)
 {
     CMTMessageHeader header;
-	CMUint32 sent, rv;
+	CMUint32 sent;
 
     /* Set up the message header */
     header.type = htonl(message->type);
@@ -345,7 +356,7 @@ loser:
 CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
 {
     CMTMessageHeader header;
-    CMUint32 numread, rv;
+    CMUint32 numread;
 
     /* Get the message header */
     numread = CMT_ReadThisMany(control, control->sock, 
@@ -485,6 +496,8 @@ CMT_DestroyDataConnection(PCMT_CONTROL control, CMTSocket sock)
     PCMT_DATA ptr, pptr = NULL;
     int rv=CMTSuccess;
 
+    if (!control) return rv;
+
     control->sockFuncs.close(sock);
     for (ptr = control->cmtDataConnections; ptr != NULL;
 	 pptr = ptr, ptr = ptr->next) {
@@ -616,8 +629,7 @@ void * CMT_CopyItemToPtr(CMTItem value)
 }
 
 CMTStatus CMT_ReferenceControlConnection(PCMT_CONTROL control)
-{
-    CMT_LOCK(control->mutex);
+{    CMT_LOCK(control->mutex);
     control->refCount++;
     CMT_UNLOCK(control->mutex);
     return CMTSuccess;

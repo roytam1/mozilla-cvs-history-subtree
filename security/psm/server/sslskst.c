@@ -110,6 +110,7 @@ SSMSSLSocketStatus_Init(SSMSSLSocketStatus *ss,
     ss->m_keySize = keySize;
     ss->m_secretKeySize = secretKeySize;
     ss->m_level = level;
+
     /* Sanity check before returning */
     SSMSSLSocketStatus_Invariant(ss);
     
@@ -229,7 +230,6 @@ SSMSSLSocketStatus_GetAttr(SSMResource *res,
         value->u.string.len = PL_strlen(ss->m_cipherName);
         value->u.string.data = (unsigned char *) PL_strdup(ss->m_cipherName);
         break;
-
     case SSM_FID_SSS_HTML_STATUS:
         value->type = SSM_STRING_ATTRIBUTE;
         rv = (*res->m_html_func)(res, NULL, (void**)&tmpstr);
@@ -237,7 +237,20 @@ SSMSSLSocketStatus_GetAttr(SSMResource *res,
         value->u.string.len = PL_strlen(tmpstr);
         value->u.string.data = (unsigned char *) PL_strdup(tmpstr);
         break;
+	case SSM_FID_SSS_CA_NAME:
+		{
+			char * caName = NULL;
 
+		value->type = SSM_STRING_ATTRIBUTE;
+		caName = CERT_GetOrgName(&ss->m_cert->cert->issuer);
+		if (caName == NULL) {
+			caName = PL_strdup("");
+		}
+		value->u.string.len = PL_strlen(caName);
+		value->u.string.data = (unsigned char *)PL_strdup(caName);
+		PR_FREEIF(caName);
+		}
+		break;
     default:
         rv = SSMResource_GetAttr(res,attrID,attrType,value);
         if (rv != PR_SUCCESS)

@@ -86,7 +86,7 @@ extern PRBool standalone;
 /* Safe strcmp() which compares only based on the shorter 
    of the two lengths. DO NOT USE if you really want to determine
    string equality -- this is used for sloppy parameter matches. */
-#define MIN_STRCMP(x,y) strncmp((x), (y), MIN(strlen(x),strlen(y)))
+#define MIN_STRCMP(x,y) strncmp((x), (y), PR_MIN(strlen(x),strlen(y)))
 
 /* forward declare this type to eliminate circular dependencies */
 typedef struct SSMResource SSMResource;
@@ -153,12 +153,12 @@ void SSM_HandleFilePathReply(SSMControlConnection *ctrl,
 void SSM_HandleUserPromptReply(SSMControlConnection *ctrl,
 			       SECItem              *msg);
 			       
-char * SSM_ConvertStringToHTMLString(char * string);
-
 SSMStatus SSM_CopyCMTItem(CMTItem *dest, CMTItem *source);
 
 SSMStatus
 SSM_PrettyPrintDER(PRFileDesc *out, SECItem *derItem, PRBool raw);
+PRBool
+SSM_IsCRLPresent(SSMControlConnection *ctrl);
 
 #ifdef XP_UNIX
 void SSM_ReleaseLockFile();

@@ -128,6 +128,9 @@ typedef struct SSMHTTPParamMultValuesStr{
 /* Typedef for a command handler. */
 typedef SSMStatus (*SSMCommandHandlerFunc)(HTTPRequest *req);
 
+/*Quick macro for getting the target from a HTTP Request*/
+#define REQ_TARGET(req) ((req)->target) ? (req)->target : &((req)->ctrlconn->super.super)
+
 /* Register a command handler. */
 SSMStatus SSM_HTTPRegisterCommandHandler(const char *name, 
                                          SSMCommandHandlerFunc func);
@@ -224,5 +227,6 @@ char * SSM_ConvertStringToHTMLString(char * string);
 
 SSMStatus SSM_ProcessPasswordWindow(HTTPRequest * req);
 
+char * SSM_GenerateChangePasswordURL(PK11SlotInfo *slot, SSMResource *target);
 #endif
 

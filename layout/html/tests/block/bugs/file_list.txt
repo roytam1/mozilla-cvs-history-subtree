@@ -1,2 +1,0 @@
-file:///s:/mozilla/layout/html/tests/block/bugs/7093.html
-file:///s:/mozilla/layout/html/tests/block/bugs/16656.html

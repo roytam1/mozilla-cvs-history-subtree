@@ -123,20 +123,96 @@ loser:
   return;
 }
 
+char * cmt_processreplytooldkeygen(CMTItem *message,
+                                   CMKeyGenTagArg * arg,
+                                   CMKeyGenTagReq *next)
+{
+  char * keystring = NULL;
+  SingleStringMessage keyreply;
+  GenKeyOldStyleTokenRequest tokenrequest;
+  NameList * tokens = NULL;
+  GenKeyOldStylePasswordRequest pwdrequest;
+  CMKeyGenPassword * pwdstruct = NULL;
+  int i;
+
+  /* check what kind of response we got */
+  switch (message->type) {
+  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_DONE):
+      /* Decode the reply */
+      if (CMT_DecodeMessage(SingleStringMessageTemplate, &keyreply, message) 
+          != CMTSuccess) 
+          goto loser;
+      keystring = strdup(keyreply.string);
+      *next = CM_KEYGEN_DONE;
+      break;
+  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_TOKEN):
+      /* Decode the reply */
+      if (CMT_DecodeMessage(GenKeyOldStyleTokenRequestTemplate, &tokenrequest,
+                            message) != CMTSuccess) 
+          goto loser;
+      tokens = (NameList *) malloc(sizeof(NameList));
+      tokens->numitems = tokenrequest.numtokens;
+      tokens->names = (char **) calloc(tokenrequest.numtokens, sizeof(char *));
+      for (i = 0; i<tokenrequest.numtokens; i++)
+          tokens->names[i] = strdup(tokenrequest.tokenNames[i]);
+      arg->rid = tokenrequest.rid;
+      arg->current = tokens;
+      *next = CM_KEYGEN_PICK_TOKEN ;
+      break;
+  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_PASSWORD):
+       if (CMT_DecodeMessage(GenKeyOldStylePasswordRequestTemplate, 
+                             &pwdrequest,message) != CMTSuccess) 
+           goto loser;
+       arg->rid = pwdrequest.rid;
+       pwdstruct = (CMKeyGenPassword *) malloc(sizeof(CMKeyGenPassword));
+       pwdstruct->password = NULL;
+       pwdstruct->minpwd = pwdrequest.minpwdlen;
+       pwdstruct->maxpwd = pwdrequest.maxpwdlen;
+       pwdstruct->internalToken = pwdrequest.internal;
+       arg->current = pwdstruct;
+       *next = CM_KEYGEN_SET_PASSWORD;
+       break;
+  default:
+      /* error or bad message type */
+      *next = CM_KEYGEN_ERR;
+      break;
+  }
+  return keystring;
+ loser:
+  if (keystring)
+      free (keystring);
+  return NULL;
+}
+
+char * CMT_GetGenKeyResponse(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
+                             CMKeyGenTagReq *next)
+{
+    CMTItem message;
+    char *keystring = NULL;
+    CMTSocket sock;
+
+    memset(&message, 0, sizeof(CMTItem));
+    CMT_LOCK(control->mutex);
+    sock = control->sock;
+    if (control->sockFuncs.select(&sock, 1, 1) == sock) {
+        /* Make sure there's a message waiting to be read so 
+         * that we avoid deadlock
+         */
+        CMT_ReadMessageDispatchEvents(control, &message);
+        keystring = cmt_processreplytooldkeygen(&message, arg, next);
+    }
+    CMT_UNLOCK(control->mutex);
+    return keystring;
+}
+
 char * CMT_GenKeyOldStyle(PCMT_CONTROL control, CMKeyGenTagArg * arg, 
                           CMKeyGenTagReq *next)
 {
+  char * keystring = NULL;
   CMTItem message;
   GenKeyOldStyleRequest request;
   GenKeyOldStyleTokenReply tokenreply;
-  GenKeyOldStyleTokenRequest tokenrequest;
-  SingleStringMessage keyreply;
-  GenKeyOldStylePasswordRequest pwdrequest;
   GenKeyOldStylePasswordReply passwordreply;
-  char * keystring = NULL;
-  NameList * tokens = NULL;
-  CMKeyGenPassword * pwdstruct = NULL;
-  int i;
   
   if (!arg || !next) 
       goto loser;
@@ -194,48 +270,7 @@ char * CMT_GenKeyOldStyle(PCMT_CONTROL control, CMKeyGenTagArg * arg,
       free(arg->current);
   arg->current = NULL;
   
-  /* check what kind of response we got */
-  switch (message.type) {
-  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_DONE):
-      /* Decode the reply */
-      if (CMT_DecodeMessage(SingleStringMessageTemplate, &keyreply, &message) 
-          != CMTSuccess) 
-          goto loser;
-      keystring = strdup(keyreply.string);
-      *next = CM_KEYGEN_DONE;
-      break;
-  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_TOKEN):
-      /* Decode the reply */
-      if (CMT_DecodeMessage(GenKeyOldStyleTokenRequestTemplate, &tokenrequest,
-                            &message) != CMTSuccess) 
-          goto loser;
-      tokens = (NameList *) malloc(sizeof(NameList));
-      tokens->numitems = tokenrequest.numtokens;
-      tokens->names = (char **) calloc(tokenrequest.numtokens, sizeof(char *));
-      for (i = 0; i<tokenrequest.numtokens; i++)
-          tokens->names[i] = strdup(tokenrequest.tokenNames[i]);
-      arg->rid = tokenrequest.rid;
-      arg->current = tokens;
-      *next = CM_KEYGEN_PICK_TOKEN ;
-      break;
-  case (SSM_REPLY_OK_MESSAGE | SSM_KEYGEN_TAG | SSM_KEYGEN_PASSWORD):
-       if (CMT_DecodeMessage(GenKeyOldStylePasswordRequestTemplate, 
-                             &pwdrequest,&message) != CMTSuccess) 
-           goto loser;
-       arg->rid = pwdrequest.rid;
-       pwdstruct = (CMKeyGenPassword *) malloc(sizeof(CMKeyGenPassword));
-       pwdstruct->password = NULL;
-       pwdstruct->minpwd = pwdrequest.minpwdlen;
-       pwdstruct->maxpwd = pwdrequest.maxpwdlen;
-       pwdstruct->internalToken = pwdrequest.internal;
-       arg->current = pwdstruct;
-       *next = CM_KEYGEN_SET_PASSWORD;
-       break;
-  default:
-      /* error or bad message type */
-      *next = CM_KEYGEN_ERR;
-      break;
-  }
+  keystring = cmt_processreplytooldkeygen(&message, arg, next);
 
 loser:
   return keystring;

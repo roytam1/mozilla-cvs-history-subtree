@@ -111,7 +111,6 @@ text_backup=Backup
 text_finished=Finished
 text_cert=Certificate
 text_policy=Policy
-text_view=View
 text_delete=Delete
 text_checked=checked
 text_continue=Continue
@@ -123,6 +122,9 @@ text_passwords=Passwords
 text_edit_view=View/Edit
 text_edit_dots=Edit...
 text_add_dots=Add...
+text_login=Login
+text_logout=Logout
+text_logout_all=Logout All
 
 
 ;
@@ -131,7 +133,6 @@ text_add_dots=Add...
 untitle_doc=Untitled Document
 text_privileges=Privileges
 text_ocsp_settings=OCSP Settings
-text_information=Information
 text_disable=Disable
 text_enable=Enable
 
@@ -142,7 +143,7 @@ text_name=Name:
 ;
 ; Information panes text
 ;
-info_about_intro="The tabs across the top of this window let you control these Personal Security Manager version 1.1 settings: "
+info_about_intro="The tabs across the top of this window let you control these Personal Security Manager version 1.3 settings: "
 info_information=" Click Selected Item to see security information (if available) for the browser window or message you are currently viewing."
 info_applications=" Security settings for Navigator, Messenger, and Java/JavaScript applications."
 info_certificates=" Settings for security certificates stored in your browser, including your personal security password."
@@ -324,11 +325,8 @@ http_error_no_spec_err="No specific error message was reported."
 ;
 ; client auth UI text strings
 ;
-bad_client_auth_title="Authentication Has Failed"
-bad_client_auth_header="No Acceptable Identification"
 client_auth_greeting_string="This site has requested that you identify yourself with a security {glossary certificate,certificate}:"
 
-bad_client_auth_string="However, you have no certificates available that are accepted as valid identification by this site."
 client_auth_header="User Identification Request"
 client_auth_string="Choose a certificate to present as identification:"
 serverCert_not_before="Valid from: "
@@ -412,16 +410,14 @@ module_del_failure="Unable to delete module"
 ;
 ; Token password prompt strings
 ;
-ask_token_password="Please enter the password or the PIN for<psm:lf>%1$s security device. "
-retry_token_password:
-Successive login failures may disable this card or database. Password is invalid. Retry? %1$s security device
-:retry_token_password
+ask_token_password="Please enter the Personal Security Password for the %1$s security device. "
+retry_token_password="The password for the %1$s security device is incorrect. Please retype it. Successive failures may disable the device."
 
 ;
 ; PKCS 12 prompt strings
 ;
-pkcs12_import_file_prompt="File Name to Import"
-pkcs12_export_file_prompt="File Name to Export"
+pkcs12_import_file_prompt="File Name to Restore"
+pkcs12_export_file_prompt="File Name to Backup"
 pkcs12_request_password_prompt="Please enter the portable security password protecting this security certificate and<psm:lf>private key."
 pkcs12_restore_success="Successfully restored your security certificate and private key"
 pkcs12_restore_failure="Unable to restore your security certificate and private key"
@@ -566,7 +562,7 @@ people while it is in transit.
 
 web_site_ident_verified=Web Site Identity Verified
 web_site_supports_encr_verified_by:
-The web site <strong> %1$s</strong> supports {glossary authentication,authentication} for the page you are viewing. The identity of this web site has been verified by %2$s, a certificate authority you trust for this purpose.
+The web site <strong> %1$s</strong> supports {glossary authentication,authentication} for the page you are viewing. The identity of this web site has been verified by %2$s, a certificate authority you trust for this purpose - not by Netscape.
 :web_site_supports_encr_verified_by
 view_verifier="View the security certificate that verifies this web site's identity."
 connection_encrypted="Connection Encrypted: %5$s (%6$s %7$d bits)"
@@ -631,8 +627,9 @@ signing_cert_issuer_not_trusted="The security certificate used to sign the messa
 trust_this_cert_or_all_issued_by="You can choose to explicitly trust only this certificate, or trust all email certificates issued by this certificate authority."
 signing_cert_issuer_expired="The security certificate used to sign the message was issued by a {glossary certificate authority,certificate authority (CA)} whose own security certificate has expired. "
 unkown_problems_with_signature="There are unknown problems with this digital signature."
-ocsp_message_for_signature="However, you have OCSP enabled and the OCSP url for the signing certificate is %1$s (%2$d). Please verify that OCSP is configured correctly."
 mismatch_email_warning="This message appears to have been sent from the email address %1$s, but the certificate which was used to sign this message belongs to the email address %2$s. If these two email addresses don't belong to the same person, this could be an attempt at forgery."
+ocsp_fail_message_generic="Verification may have failed because Personal Security Manager could not verify the responder's signature. Click the Advanced tab, then Options to verify that OCSP is configured correctly."
+ocsp_message_for_signature="However, you have OCSP enabled and the OCSP url for the signing certificate is %1$s (%2$d). Please verify that OCSP is configured correctly."
 cert_for_included_and_signed_by="This message included the Security Certificate for %3$s, and was signed on %4$s. To check the Certificate, press the ``View/Edit'' button. "
 message_cannot_be_decrypted="Message Cannot Be Decrypted"
 message_cannot_be_decrypted_because="This message was {glossary encrypted,encryption} before it was sent to you, but it cannot be decrypted because:"
@@ -822,3 +819,14 @@ view_cert_detail=View Certificate Details
 ;
 cert_renewal_title="Certificate Renewal"
 cert_renewal_info_string="One of your security {glossary certificates,certificate} is now eligible for renewal."
+select_module=Select Module
+
+
+text_crl_button=Delete CRLs
+
+verification_services=OCSP Settings
+crl_dialog_text=Delete CRL
+select_crl_text=Select which CRL(s) you want to delete:
+
+
+

@@ -483,7 +483,7 @@ http_error_content:
 :http_error_content
 
 ; In the normal header: 0=additional headers, 1=content type
-http_header_template="HTTP/1.0 200 OK<psm:cr><psm:lf>%1$sContent-Type: %2$s<psm:cr><psm:lf>Connection: close<psm:cr><psm:lf><psm:cr><psm:lf>"
+http_header_template="HTTP/1.0 200 OK<psm:cr><psm:lf>%1$sContent-Type: %2$s<psm:cr><psm:lf>Connection: close<psm:cr><psm:lf>Pragma: no-cache<psm:cr><psm:lf><psm:cr><psm:lf>"
 
 ; Standard preamble for most HTML pages
 html_start=<html><head><psm:cr><psm:lf><meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">{disable_right_click_js}</head><body bgcolor=#{$1}>
@@ -632,6 +632,9 @@ formsubmit_dosubmit_js_hdrs=""
 formsubmit_dosubmit_js_content:
 <script language=javascript>
 top.submitform();
+//In case submit test failes, we don't want to leave the buttons
+//frame empty.
+window.back();
 </script>
 :formsubmit_dosubmit_js_content
 
@@ -700,6 +703,7 @@ kgtop_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=titlestyle">
 {disable_right_click_js}</head>
 <body CLASS=standard alink="#FFFFFF" fgcolor=#FFFFFF bgcolor=#9999CC>
@@ -715,6 +719,7 @@ kgmain_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}</head>
 <script>
@@ -809,6 +814,7 @@ topframework:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvtopstyle">
 {disable_right_click_js}</head>
 <script language=javascript>
@@ -857,6 +863,7 @@ loadpanes();
 leftframework:
 <html><head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvleftstyle">
 {disable_right_click_js}</head>
 <body bgcolor="#CCCCCC" alink="#CCCCFF">
@@ -885,23 +892,29 @@ left1-1_content={leftframework left1-1tabs,info_selected}
 left1-2_type=text/html
 left1-2_content={leftframework left1-2tabs,info_about}
 
+app_does_smime={link_left_tab {text_messenger},2,2}
+app_does_javajs={link_left_tab {text_javajs},2,3}
+
+app_does_smime_selected={select_left_tab {text_messenger},2,2}
+app_does_javajs_selected={select_left_tab {text_javajs},2,3}
+
 ;
 ; Applications pane
 ;
 left2-1tabs:
 {select_left_tab {text_navigator}}
-{link_left_tab {text_messenger},2,2}
-{link_left_tab {text_javajs},2,3}
+{_smime_tab app_does_smime}
+{_java_js_tab app_does_javajs}
 :left2-1tabs
 left2-2tabs:
 {link_left_tab {text_navigator},2,1}
-{select_left_tab {text_messenger}}
-{link_left_tab {text_javajs},2,3}
+{_smime_tab app_does_smime_selected}
+{_java_js_tab app_does_javajs}
 :left2-2tabs
 left2-3tabs:
 {link_left_tab {text_navigator},2,1}
-{link_left_tab {text_messenger},2,2}
-{select_left_tab {text_javajs}}
+{_smime_tab app_does_smime}
+{_java_js_tab app_does_javajs_selected}
 :left2-3tabs
 
 ; Top level pages
@@ -912,30 +925,33 @@ left2-2_content={leftframework left2-2tabs,apps_messenger}
 left2-3_type=text/html
 left2-3_content={leftframework left2-3tabs,apps_javajs}
 
+app_uses_others={link_left_tab {text_others},3,2}
+app_uses_others_selected={select_left_tab {text_others},3,2}
+
 ;
 ; Certificates pane
 ;
 left3-1tabs:
 {select_left_tab {text_mine},3,1}
-{link_left_tab {text_others},3,2}
+{_addOthersCerts app_uses_others}
 {link_left_tab {text_websites},3,3}
 {link_left_tab {text_authorities},3,4}
 :left3-1tabs
 left3-2tabs:
 {link_left_tab {text_mine},3,1}
-{select_left_tab {text_others},3,2}
+{_addOthersCerts app_uses_others_selected}
 {link_left_tab {text_websites},3,3}
 {link_left_tab {text_authorities},3,4}
 :left3-2tabs
 left3-3tabs:
 {link_left_tab {text_mine},3,1}
-{link_left_tab {text_others},3,2}
+{_addOthersCerts app_uses_others}
 {select_left_tab {text_websites},3,3}
 {link_left_tab {text_authorities},3,4}
 :left3-3tabs
 left3-4tabs:
 {link_left_tab {text_mine},3,1}
-{link_left_tab {text_others},3,2}
+{_addOthersCerts app_uses_others}
 {link_left_tab {text_websites},3,3}
 {select_left_tab {text_authorities},3,4}
 :left3-4tabs
@@ -988,6 +1004,7 @@ foot_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvfootstyle">
 <title>{untitle_doc}</title>
 {disable_right_click_js}</head>
@@ -1040,11 +1057,11 @@ prefs_list_js:
 {get_pref_list}
 
 var prefix = '<input type=hidden name="';
-var suffix = '">\\n';
+var suffix = '">';
 
 function writePrefInput(d, s)
 {
-    d.write(prefix + s + suffix);
+    d.writeln(prefix + s + suffix);
 }
 
 // creates the hidden buttons that are used to submit pref changes
@@ -1072,31 +1089,59 @@ function makeClientAuthPref(d)
     if (client_auth_auto_select == true) {
         d.write('checked ');
     }
-    d.writeln('onClick="top.client_auth_auto_select = checked;"></td><td><p>' + autoSelectStr + '</p></td></tr>');
+    d.writeln('onClick="top.enableClientAuthAutoSelect();"></td><td><p>' + autoSelectStr + '</p></td></tr>');
 
     d.write('<tr><td><div><input type=radio name="client_auth_auto_select" value="false" ');
     if (client_auth_auto_select == false) {
         d.write('checked ');
     }
-    d.writeln('onClick="top.client_auth_auto_select = !checked;"></td><td><p>' + manualSelectStr + '</p></td></tr>');
+    d.writeln('onClick="top.disableClientAuthAutoSelect();"></td><td><p>' + manualSelectStr + '</p></td></tr>');
+}
+
+function enableClientAuthAutoSelect()
+{
+    top.client_auth_auto_select = true;
+}
+
+function disableClientAuthAutoSelect()
+{
+    top.client_auth_auto_select = false;
 }
 
 // creates the HTML string for SSL cipher family prefs
 var enableSSL2Str = {adv_enable_SSL2};
 var enableSSL3Str = {adv_enable_SSL3};
+function toggleSSL2Cipher()
+{
+  if (top.enable_ssl2) {
+    top.enable_ssl2 = false;
+  } else {
+    top.enable_ssl2 = true;
+  }
+}
+
+function toggleSSL3Cipher()
+{
+  if (top.enable_ssl3) {
+    top.enable_ssl3 = false;
+  } else {
+    top.enable_ssl3 = true;
+  }
+}
+
 function makeSSLCipherPref(d)
 {
     d.write('<tr><td><input type=checkbox name="enable_ssl2" value="true" ');
     if (enable_ssl2 == true) {
         d.write('checked ');
     }
-    d.writeln('onClick="top.enable_ssl2 = checked;"></td><td><p>' + enableSSL2Str + '</p></td></tr>');
+    d.writeln('onClick="top.toggleSSL2Cipher();"></td><td><p>' + enableSSL2Str + '</p></td></tr>');
 
     d.write('<tr><td><input type=checkbox name="enable_ssl3" value="true" ');
     if (enable_ssl3 == true) {
         d.write('checked ');
     }
-    d.writeln('onClick="top.enable_ssl3 = checked;"></td><td><p>' + enableSSL3Str + '</p></td></tr>');
+    d.writeln('onClick="top.toggleSSL3Cipher();"></td><td><p>' + enableSSL3Str + '</p></td></tr>');
 }
 
 // these functions create the HTML strings for various navigator & messenger
@@ -1107,7 +1152,16 @@ function makeBoolPrefHTML(d, nm, vrbl)
     if (vrbl == true) {
         d.write('checked ');
     }
-    d.write('onClick="top.' + nm + ' = checked;"></td>');
+    d.write('onClick="top.togglePrefBool(' + nm + ');"></td>');
+}
+
+function togglePrefBool(nm, newVal)
+{
+   if (top[nm.name]) {
+      top[nm.name] = false;
+   } else {
+      top[nm.name] = true;
+   }
 }
 
 // makes the default email cert selected
@@ -1332,6 +1386,7 @@ info_about_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1357,6 +1412,7 @@ apps_navigator_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1417,6 +1473,7 @@ apps_messenger_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1480,6 +1537,7 @@ apps_javajs_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1551,6 +1609,7 @@ remove_privileges_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
@@ -1566,6 +1625,7 @@ remove_privileges_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
@@ -1601,6 +1661,7 @@ adv_options_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1649,6 +1710,7 @@ sa_noinfo:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1663,6 +1725,7 @@ sa_navigator_no_sec:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1704,8 +1767,7 @@ sa_navigator_ssl:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<SCRIPT LANGUAGE="JavaScript">
-</SCRIPT>
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1755,6 +1817,7 @@ sa_navigator_ssl_bad_issuer:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 <SCRIPT LANGUAGE="JavaScript">
@@ -1827,6 +1890,7 @@ sa_navigator_ssl_unknown_issuer:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1876,6 +1940,7 @@ sa_navigator_ssl_bad_cert_domain:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1918,6 +1983,7 @@ sa_navigator_ssl_unknown_error:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -1970,6 +2036,7 @@ sa_message_not_signed:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2018,6 +2085,7 @@ sa_message_signed:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2094,6 +2162,7 @@ sa_message_signed_bad_signature:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2105,7 +2174,7 @@ parent.sa_message_sign_status = 2;
 <tr VALIGN=TOP>
 
 <td><H1>
-{digital_signature_not_valid}
+{digital_signature_not_valid}  %1$s
 </H1>
 
 <P>
@@ -2131,6 +2200,7 @@ sa_message_signed_expired_signing_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2147,7 +2217,7 @@ parent.sa_message_sign_status = 2;
 <DIV CLASS=Explanationbox>
 
 <UL><LI>
-{signing_cert_is_expired}
+{signing_cert_is_expired}  %1$s
 </LI></UL>
 <BLOCKQUOTE>
 {may_be_caused_incorrect_clock}
@@ -2164,6 +2234,7 @@ sa_message_signed_revoked_signing_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2180,7 +2251,7 @@ parent.sa_message_sign_status = 2;
 <DIV CLASS=Explanationbox>
 
 <UL><LI>
-{signing_certificate_revoked}
+{signing_certificate_revoked} %1$s
 </LI></UL>
 <BLOCKQUOTE>
 {do_not_trust_until_sender_verifies}
@@ -2197,6 +2268,7 @@ sa_message_signed_unknown_issuer:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2213,9 +2285,11 @@ parent.sa_message_sign_status = 2;
 {invalid_digital_signature_because}</p>
 <DIV CLASS=Explanationbox>
 
-<UL><LI>
-{signing_cert_issuer_unknown}
-</LI></UL>
+<UL>
+<LI>
+{signing_cert_issuer_unknown}  %3$s
+</LI>
+</UL>
 
 <table border=0> 
 <tr valign="Top">
@@ -2241,6 +2315,7 @@ sa_message_signed_untrusted_issuer:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2258,7 +2333,7 @@ parent.sa_message_sign_status = 2;
 <DIV CLASS=Explanationbox>
 
 <UL><LI>
-{signing_cert_issuer_not_trusted}
+{signing_cert_issuer_not_trusted} %4$s
 </LI></UL>
 <BLOCKQUOTE>
 {trust_this_cert_or_all_issued_by}
@@ -2296,6 +2371,7 @@ sa_message_signed_expired_issuer_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2312,7 +2388,7 @@ parent.sa_message_sign_status = 2;
 {invalid_digital_signature_because}</p>
 <DIV CLASS=Explanationbox>
 <UL><LI>
-{signing_cert_issuer_expired}
+{signing_cert_issuer_expired} %1$s
 </LI></UL>
 <BLOCKQUOTE>
 {may_be_caused_incorrect_clock}
@@ -2328,6 +2404,7 @@ sa_message_signed_ocsp_error:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2360,6 +2437,7 @@ sa_message_signed_unknown_error:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2390,6 +2468,7 @@ sa_message_signed_addr_mismatch:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2505,6 +2584,7 @@ sa_compose_not_to_be_signed:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT>
 <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
@@ -2545,7 +2625,7 @@ parent.sa_compose_encrypt_status = 0;
 
 sa_compose_can_be_signed:
 <html>
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
 {disable_right_click_js}
@@ -2616,7 +2696,7 @@ sa_compose_sign_no_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
 <body onLoad="parent.SetComposeHelp()">
@@ -2655,7 +2735,7 @@ sa_compose_sign_expired_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
 <body onLoad="parent.SetComposeHelp()">
@@ -2689,7 +2769,7 @@ sa_compose_sign_revoked_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
 <body>
@@ -2722,7 +2802,7 @@ sa_compose_sign_invalid_cert:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
 <body onLoad="parent.SetComposeHelp()">
@@ -2753,7 +2833,7 @@ sa_compose_sign_unknown_error:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </head>
 <body onLoad="parent.SetComposeHelp()">
@@ -3480,7 +3560,7 @@ cert_authorities_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {certificate_pane_javascript}
 {disable_right_click_js}
 </head>
@@ -3529,9 +3609,8 @@ onClick="openIfSelected('cert_authorities', 'cert?baseRef=cert_action&action=cer
 <!- td>
 
 <tr>
-
 <td><div><input type="submit" value="{text_delete}" name="delete" width="72" >
-</div></td>
+{_crlButton}</div></td>
 </tr>
 {textarea_current_cert}
 </table>
@@ -3541,12 +3620,82 @@ onClick="openIfSelected('cert_authorities', 'cert?baseRef=cert_action&action=cer
 </html>
 :cert_authorities_content
 
+crlButtonHTML:
+<script language=JavaScript>
+<!--
+function launchCRLDialog()
+{
+  var newWindow = window.open("get?baseRef=crlDialog&target=%1$d", "crlPopup", "width=390,height=350,status=no,toolbar=no,menubar=no,screenX=100,screenY=100");
+  newWindow.advisor = self;
+}
+// -->
+</script>
+<input type=submit name=crlButton value='{text_crl_button}' onClick='launchCRLDialog();' width="72">
+:crlButtonHTML
+
+crlDialog_type=text/html
+crlDialog_content={frame_set crl_dialog,formsubmit}
+
+crl_dialog_top_type=text/html
+crl_dialog_top_content={top_frame crl_dialog_text,lockedgif,35,35}
+
+crl_dialog_buttons_type=text/html
+crl_dialog_buttons_content:
+{formsubmit_buttons_close_on_cancel_frame crlDialog,help.htm}
+:crl_dialog_buttons_content
+
+crl_dialog_main_type=text/html
+crl_dialog_main_content:
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+{disable_right_click_js}
+</head>
+{formsubmit document.forms[0]}
+<body bgcolor=white>
+<form name=crlDialog method=get action="formsubmit_handler" >
+<input type=hidden name="baseRef" value="windowclose_doclose_js">
+<input type=hidden name="formName" value="crlDialog">
+<input type=hidden name="target" value="%1$d">
+<br>
+{select_crl_text}
+<p>
+<table BORDER=0 CELLSPACING=0 CELLPADDING=0 COLS=0 WIDTH="100%%">
+<tr VALIGN=TOP ALIGN=LEFT>
+<td><div></div></td>
+<td><div>
+<select MULTIPLE name="crlNames" SIZE="8">
+{_crlList}
+<option value="">{nbsp10}{nbsp10}{nbsp10}{nbsp10}
+</select>
+</div></td>
+<td><div align=left>
+</div></td>
+</tr>
+</table>
+</form>
+</body>
+<script>
+document.forms[0].crlNames.selectedIndex = 0;
+</script>
+</html>
+:crl_dialog_main_content
+
+crlclose_doclose_js_type="text/html"
+crlclose_doclose_js_hdrs=""
+crlclose_doclose_js_content:
+<script language=javascript>
+top.closewin();
+top.advisor.open(top.advisor.location, 'content');
+</script>
+:crlclose_doclose_js_content
+
 cert_websites_type=text/html
 cert_websites_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {certificate_pane_javascript}
 {disable_right_click_js}
 </head>
@@ -3623,7 +3772,7 @@ cert_others_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {certificate_pane_javascript}
 {disable_right_click_js}
 </head>
@@ -3694,7 +3843,7 @@ cert_mine_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {certificate_pane_javascript}
 {disable_right_click_js}
 </head>
@@ -3810,6 +3959,13 @@ top.window.open("%1$s",'%2$s',null,true);
 ; OK-6px-Cancel-12px-HELP|<- end of frame
 ;
 buttons_only:
+<script language=javascript>
+var doCancel = false;
+
+function setCancelFlag() {
+  doCancel = true;
+}
+</script>
 <div align=right>
 <table border=0 cellspacing=0 cellpadding=0 height=100%%>
 <tr align=right valign=center>
@@ -3820,7 +3976,8 @@ buttons_only:
 </td>
 <td>
 <div class=buttonspace>
-<input type="submit" name="do_cancel" value="{text_cancel}" width="72" >
+<input type="submit" name="do_cancel" value="{text_cancel}" width="72" 
+       onClick="setCancelFlag();">
 </div>
 </td>
 <td width=30%%>
@@ -3881,7 +4038,7 @@ choose_cert_usage_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -3941,7 +4098,7 @@ choose_cert_usage_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" 
@@ -3982,7 +4139,7 @@ ldap_request_dialog_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body class=content alink="#333399">
@@ -4052,7 +4209,7 @@ ldap_request_dialog_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" 
@@ -4155,7 +4312,7 @@ cert_edit_trust_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body bgcolor=white>
@@ -4175,7 +4332,7 @@ cert_edit_trust_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" >
@@ -4408,7 +4565,7 @@ function openIssuerWindow()
 
 function showCertContents()
 {
-   window.open('get?baseRef=certPrettyPrint&target=%1$d', 'dump'+uniqueName,'width=760,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no');
+   window.open('get?baseRef=certPrettyPrint&target=%1$d', 'dump'+uniqueName,'width=760,height=625,scrollbars=yes,resizable=yes,toolbar=no,menubar=no');
 }
 //-->
 </script>
@@ -4420,7 +4577,7 @@ cert_view_detail_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 {showIssuerAndContents}
 </head>
@@ -4459,7 +4616,7 @@ cert_view_detail_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body bgcolor="#CCCCCC" link="#6666CC" vlink="#6666CC" alink="#333399">
@@ -4507,7 +4664,7 @@ delete_cert_perm_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 {showIssuerAndContents}
 </head>
@@ -4537,7 +4694,7 @@ delete_cert_perm_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399">
@@ -4573,13 +4730,13 @@ set_token_password_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body class=content alink="#333399">
 {formsubmit document.forms[0]}
 <div>
-<form method="get" action="formsubmit_handler" > 
+<form method="get" action="formsubmit_handler">
 <input type=hidden name="formName" value="set_db_password">
 <input type=hidden name="target" value="%1$d">
 <input type=hidden name="baseRef" value="windowclose_doclose_js">
@@ -4708,29 +4865,43 @@ set_token_password_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" 
 	onLoad="parent.SetHelpURL('help.htm#1051739')">
 <script language=javascript>
 {pop_up_alert}
+function resetForm(f)
+{
+  if (f.oldpassword) {
+    f.oldpassword.focus();
+  } else {
+    f.newpassword.focus();
+  }
+  f.reset();
+}
 function checknewpasswordfield()
 {
   var passwordform = window.parent.DialogContent.document.forms[0];
+  if (doCancel) {
+    return true;
+  }
   if (passwordform.oldpassword && passwordform.oldpassword.value == '') {
     PopUpAlert('{supply_current_password}');
+    resetForm(passwordform);
     return false;
   }
   if (passwordform.newpassword.value != 
     passwordform.repeatpassword.value) {
     PopUpAlert('{invalid_new_password}');
+    resetForm(passwordform);
     return false;
   }
   return true;
 }
 </script>
-<form method="get" action="check_for_cancel" >
+<form method="get" action="check_for_cancel" onSubmit="return (checknewpasswordfield())">
 
 <input type=hidden name="baseRef" value="formsubmit_dosubmit_js">
 <input type=hidden name=target value="%1$d">
@@ -4749,7 +4920,7 @@ show_followup_content:
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-    <LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+    <SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
   </head>
   <body>
@@ -4799,7 +4970,7 @@ escrow_top_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body CLASS=TOP alink="#333399">
@@ -4820,7 +4991,7 @@ escrow_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content>
@@ -4891,7 +5062,7 @@ escrow_bottom_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body bgcolor="#CCCCCC"alink="#333399" 
@@ -4932,7 +5103,7 @@ kgtoken_main_content:
 {formsubmit document.forms[0]}
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=CONTENT>
@@ -4977,7 +5148,7 @@ kgtoken_popup_wrapper=<!---- unused %1$d -----><option value='%3$d+%2$d'>%4$s
 ;<html>
 ;<head>
 ;<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-;<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+;<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 ;</head>
 ;{formsubmit document.forms[0]}
 ;<body class=top alink="#333399">
@@ -4997,7 +5168,7 @@ kgtoken_popup_wrapper=<!---- unused %1$d -----><option value='%3$d+%2$d'>%4$s
 ;<html>
 ;<head>
 ;<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-;<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+;<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 ;</head>
 ;<body class=CONTENT>
 ;<form method=get action=tokenSelect name="tokenSelectForm">
@@ -5022,7 +5193,7 @@ kgtoken_popup_wrapper=<!---- unused %1$d -----><option value='%3$d+%2$d'>%4$s
 ;<html>
 ;<head>
 ;<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-;<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+;<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 ;</head>
 ;<body onLoad="">
 ;<!-- hook up selectToken_help target -->
@@ -5063,7 +5234,7 @@ cert_exists_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content alink="#FF0000">
@@ -5118,7 +5289,7 @@ import_ca_cert_oldstyle1_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content>
@@ -5174,7 +5345,7 @@ import_ca_cert_oldstyle1_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" 
@@ -5220,7 +5391,7 @@ import_ca_cert_oldstyle2_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -5278,7 +5449,7 @@ import_ca_cert_oldstyle2_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399"
@@ -5315,7 +5486,7 @@ ca_policy_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body>
@@ -5336,7 +5507,7 @@ ca_policy_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body bgcolor="#CCCCCC" link="#6666CC" vlink="#6666CC" alink="#333399">
@@ -5354,7 +5525,6 @@ ca_policy_buttons_content:
 </html>
 :ca_policy_buttons_content
 
-ca_policy_top
 ;
 ; CA certificate info  
 ; top level frame set
@@ -5385,7 +5555,7 @@ view_ca_cert_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=CONTENT>
@@ -5414,7 +5584,7 @@ view_ca_cert_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body bgcolor="#CCCCCC" link="#6666CC" vlink="#6666CC" alink="#333399">
@@ -5439,72 +5609,6 @@ glossary_icon:
 <img SRC="get?baseRef=infojpg" ALT="Glossary Entry" ALIGN=ABSBOTTOM>
 :glossary_icon
 
-;
-; client auth failure top level fram set HTML
-;
-bad_client_auth_type="text/html"
-bad_client_auth_hdrs=""
-bad_client_auth_width=520
-bad_client_auth_height=350
-bad_client_auth_content:
-{frame_set bca,windowclose}
-:bad_client_auth_content
-
-;
-; client auth failure top frame
-;
-bca_top_type="text/html"
-bca_top_hdrs=""
-bca_top_content:
-{top_frame bad_client_auth_header,lockedgif,35,30}
-:bca_top_content
-
-;
-; client auth failure buttons frame
-;
-bca_buttons_type="text/html"
-bca_buttons_hdrs=""
-bca_buttons_content:
-{windowclose_buttons_frame BCAButton,help.htm#1036343}
-:bca_buttons_content
-
-;
-; client auth failure main frame
-;
-bca_main_type="text/html"
-bca_main_hdrs=""
-bca_main_content:
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
-{disable_right_click_js}
-</head>
-<body class=content alink="#FF0000">
-<p>{client_auth_greeting_string}</p>
-
-<table WIDTH=500px>
-<tr VALIGN=CENTER>
-<td ALIGN=CENTER WIDTH="90px"><img SRC="get?baseRef=certgif" height=60 width=80></td>
-
-<td ALIGN=CENTER VALIGN=TOP>
-{_server_cert_info simple,serverCert_format,serverCert_format}
-
-</td></tr></table>
-
-<HR WIDTH=96% ALIGN=CENTER>
-
-<table>
-<tr VALIGN=CENTER>
-<td align=center width="90px"><img SRC="get?baseRef=nocertgif" height=60 width=80></td>
-<td WIDTH="400">
-<div class=plain>
-{bad_client_auth_string}
-</div>
-</td></tr></table>
-</body>
-</html>
-:bca_main_content
 
 ;
 ; server cert format
@@ -5536,10 +5640,6 @@ serverCert_format:
 </td><td></td></tr></table>
 <!-- %2$s %3$s unused -->
 :serverCert_format
-
-;
-; -- END -- bad_client_auth
-;
 
 ;
 ; client auth top level frame set HTML
@@ -5579,7 +5679,7 @@ client_auth_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -5802,7 +5902,7 @@ adv_modules_module_list_content:
 <link REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvcontentstyle">
 {disable_right_click_js}
 </HEAD><BODY bgcolor=#FFFFFF>
-<p class=bu>Select Module</p>
+<p class=bu>{select_module}</p>
 <script language="JavaScript1.2">
 <!-- data here comes from PSM -->
 {_pk11modules pk11_newmodulewrap}
@@ -5863,7 +5963,7 @@ pk11_addmodule_main_content:
 <HTML>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -6020,7 +6120,7 @@ formsubmit_buttons_close_on_cancel_frame:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" onLoad="parent.SetHelpURL('{$2}')">
@@ -6140,11 +6240,11 @@ adv_modules_slotlist_part3:
 </select>
 </td></div></tr>
 <tr><td><div>
-<input type="button" value="Login"width="72"  onClick=parent.DoSomethingToSlot("LoginSlot")>
+<input type="button" value="{text_login}"width="72"  onClick=parent.DoSomethingToSlot("LoginSlot")>
 <spacer type="horizontal" size="12">
-<input type="button" value="Logout" width="72" onClick=parent.DoSomethingToSlot("LogoutSlot")>
+<input type="button" value="{text_logout}" width="72" onClick=parent.DoSomethingToSlot("LogoutSlot")>
 <spacer type="horizontal" size="12">
-<input type="button" value="Logout All" width="72" onClick=parent.DoSomethingToSlot("LogoutAllSlots")>
+<input type="button" value="{text_logout_all}" width="72" onClick=parent.DoSomethingToSlot("LogoutAllSlots")>
 </td></div></tr>
 </table>
 </div>
@@ -6332,7 +6432,7 @@ function checkForPasswordReset()
 </script>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body CLASS=CONTENT alink="#333399">
@@ -6437,7 +6537,7 @@ cert_backup_bottom_template:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 {{$1}}
@@ -6488,7 +6588,7 @@ pkcs12_action_followup_content:
 
 function showAlert() {
 	 PopUpAlert("%1$s");
-	 window.location = "get?baseRef=cert_mine";
+	 window.location = "get?baseRef=cert_mine&target=%2$d";
 }
 </script>
 </head>
@@ -6507,7 +6607,7 @@ bad_server_cert_expired_content:
 
 
 bad_server_cert_expired_top_type="text/html"
-bad_server_cert_hdrs=""
+bad_server_cert_expired_top_hdrs=""
 bad_server_cert_expired_top_content:
 {top_frame bad_server_cert_expired_title,alert1gif,35,35}
 :bad_server_cert_expired_top_content
@@ -6535,7 +6635,7 @@ bad_server_cert_not_yet_valid_content:
 
 
 bad_server_cert_not_yet_valid_top_type="text/html"
-bad_server_cert_not_yet_valid_hdrs=""
+bad_server_cert_not_yet_valid_top_hdrs=""
 bad_server_cert_not_yet_valid_top_content:
 {top_frame bad_server_cert_not_yet_valid_title,alert1gif,35,35}
 :bad_server_cert_not_yet_valid_top_content
@@ -6562,7 +6662,7 @@ bad_server_cert_time:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -6633,7 +6733,7 @@ bad_server_cert_domain_content:
 
 
 bad_server_cert_domain_top_type="text/html"
-bad_server_cert_hdrs=""
+bad_server_cert_domain_top_hdrs=""
 bad_server_cert_domain_top_content:
 {top_frame bad_server_cert_domain_title,alert1gif,35,35}
 :bad_server_cert_domain_top_content
@@ -6644,7 +6744,7 @@ bad_server_cert_domain_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -6672,7 +6772,7 @@ bad_server_cert_domain_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body alink="#333399" onLoad="parent.SetHelpURL('help.htm#1036471')">
@@ -6731,7 +6831,7 @@ bad_server_cert_unknown_issuer1_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content>
@@ -6763,7 +6863,7 @@ bad_server_cert_unknown_issuer1_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body alink="#333399" onLoad="parent.SetHelpURL('help.htm#1036414')">
@@ -6824,7 +6924,7 @@ bad_server_cert_unknown_issuer2_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
@@ -6882,7 +6982,7 @@ bad_server_cert_unknown_issuer2_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body alink="#333399" onLoad="parent.SetHelpURL('help.htm#1036414')">
@@ -6956,7 +7056,7 @@ server_cert_view_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 </head>
 <body bgcolor="#CCCCCC" link="#6666CC" vlink="#6666CC" alink="#333399"
       onLoad="parent.SetHelpURL('help.htm#1049021')">
@@ -6991,7 +7091,7 @@ server_cert_view_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=CONTENT>
@@ -7351,7 +7451,7 @@ top_frame:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body CLASS=TOP alink="#333399">
@@ -7370,7 +7470,7 @@ top_frame_no_image:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body CLASS=TOP alink="#333399">
@@ -7397,7 +7497,7 @@ formsubmit_buttons_frame:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" onLoad="parent.SetHelpURL('{$2}')">
@@ -7417,7 +7517,7 @@ windowclose_buttons_frame:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" onLoad="parent.SetHelpURL('{$2}')">
@@ -7490,7 +7590,7 @@ signtext_top_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body CLASS=TOP alink="#333399">
@@ -7523,7 +7623,7 @@ signtext_cert_auto_content:
 {formsubmit document.forms[0]}
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399">
@@ -7549,7 +7649,7 @@ signtext_cert_ask_content:
 {formsubmit document.forms[0]}
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399">
@@ -7584,7 +7684,7 @@ signtext_bottom_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=secadvmodalstyle">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" onLoad="">
@@ -7614,7 +7714,7 @@ cert_issue_backup_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content>
@@ -7641,7 +7741,7 @@ cert_issue_backup_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body class=foot alink="#333399" onLoad="parent.SetHelpURL('help.htm#1036319')">
@@ -7678,8 +7778,6 @@ cert_issue_backup_buttons_content:
 verification_setup_type=text/html
 verification_setup_hdrs=
 verification_setup_content={frame_set verification_config,formsubmit}
-
-verification_services=OCSP Settings
 
 verification_config_top_type=text/html
 verification_config_top_hdrs=
@@ -7730,7 +7828,7 @@ verification_config_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 <script language=javascript>
 <!---
@@ -7783,7 +7881,7 @@ verification_config_buttons_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
 {disable_right_click_js}
 </head>
 <body bgcolor="#CCCCCC"alink="#333399"  
@@ -7820,14 +7918,14 @@ certDump_top_content:
 certDump_buttons_type="text/html"
 certDump_buttons_hdrs=""
 certDump_buttons_content:
-{windowclose_buttons_frame OKButton,help.htm}
+{windowclose_buttons_frame OKButton,help.htm#1055417}
 :certDump_buttons_content
 
 certPrettyPrefix:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content alink="#FF0000">
@@ -7872,7 +7970,7 @@ no_issuer_top_content:
 no_issuer_buttons_type="text/html"
 no_issuer_buttons_hdrs=""
 no_issuer_buttons_content:
-{windowclose_buttons_frame OKButton,help.htm}
+{windowclose_buttons_frame OKButton,help.htm#1055437}
 :no_issuer_buttons_content
 
 no_issuer_main_type="text/html"
@@ -7881,7 +7979,7 @@ no_issuer_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 <body class=content alink="#FF0000">
@@ -7898,15 +7996,56 @@ cert_renewal_hdrs=""
 cert_renewal_width=520
 cert_renewal_height=350
 cert_renewal_content:
-{frame_set cert_renewal,formsubmit}
+<html>
+{help_monitor_js}
+<script language=JavaScript>
+{pop_up_alert}
+
+function submitCheck()
+{
+	var renewal_url = CertRenewalContent.document.forms[0].elements['renewal_url'].value;
+
+	if (CertRenewalContent.document.forms[0].action[0].checked) {
+		window.top.open(renewal_url);
+	}
+	return true;
+}
+</script>
+{formsubmit_monitor_with_check_js submitCheck}
+{help_monitor_js}
+<frameset rows="50,*,40" border="0" frameborder="NO">
+<frame src="get?baseRef=cert_renewal_top&target=%1$d" name="CertRenewalTop" scrolling="NO" marginwidth="0" marginheight="0">
+<frame src="get?baseRef=cert_renewal_main&target=%1$d" name="CertRenewalContent" scrolling="Auto" marginwidth="0" marginheight="0">
+<frame src="get?baseRef=cert_renewal_bottom&target=%1$d" name="CertRenewalFoot" scrolling="NO" marginwidth="0" marginheight="0">
+</frameset>
+</html>
 :cert_renewal_content
 
 
 cert_renewal_top_type="text/html"
-bad_server_cert_hdrs=""
+cert_renewal_top__hdrs=""
 cert_renewal_top_content:
 {top_frame cert_renewal_title,certgif,35,35}
 :cert_renewal_top_content
+
+cert_renewal_bottom_type=text/html
+cert_renewal_bottom_hdrs=
+cert_renewal_bottom_content={cert_renewal_bottom_template blank}
+
+cert_renewal_bottom_template:
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalonefoot">
+{disable_right_click_js}
+</head>
+{{$1}}
+<body class=foot alink="#333399" 
+      onLoad="parent.SetHelpURL('help.htm#1055232')">
+{ok_cancel_help cert_renewal,pkcs12_button_reply,close_if_cancel}
+</body>
+</html>
+:cert_renewal_bottom_template
 
 cert_renewal_buttons_type="text/html"
 cert_renewal_buttons_hdrs=""
@@ -7923,12 +8062,16 @@ cert_renewal_main_content:
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset={nsm_charset}">
-<LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
+<SCRIPT></SCRIPT><LINK REL=STYLESHEET TYPE="text/css" HREF="get?baseRef=standalone">
 {disable_right_click_js}
 </head>
 {formsubmit document.forms[0]}
 <body class=content alink="#FF0000">
 <p>{cert_renewal_info_string}</p>
+
+<form method="get" action="formsubmit_handler" name="cert_renewal">
+<input type=hidden name="baseRef" value="windowclose_doclose_js">
+<input type=hidden name="target" value="%1$d">
 
 <table WIDTH=500px>
 <tr VALIGN=CENTER>
@@ -7941,9 +8084,6 @@ cert_renewal_main_content:
 
 <HR WIDTH=96%% ALIGN=CENTER>
 
-<form method="get" action="formsubmit_handler" name="cert_renewal">
-<input type=hidden name="baseRef" value="windowclose_doclose_js">
-<input type=hidden name="target" value="%1$d">
 <div class=Plainbox>
 <TABLE>
 <TR valign=top>
@@ -7998,5 +8138,8 @@ Expires on: %3$s
 Issued under: %4$s
 </div>
 </td><td></td></tr></table>
+
+<input type=hidden name="renewal_url" value="%5$s">
+
 :cert_renewal_cert_info
 

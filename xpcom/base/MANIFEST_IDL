@@ -1,7 +1,0 @@
-nsISupports.idl
-nsIMemory.idl
-nsrootidl.idl
-nsIInterfaceRequestor.idl
-nsIConsoleService.idl
-nsIConsoleMessage.idl
-nsIConsoleListener.idl

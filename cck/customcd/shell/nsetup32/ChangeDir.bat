@@ -1,2 +1,0 @@
-cd Core
-NetscapeSetup.exe

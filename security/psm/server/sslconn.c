@@ -461,13 +461,12 @@ SSMStatus SSMSSLDataConnection_PickleSecurityStatus(SSMSSLDataConnection* conn,
      * very unlikely), we will wait until the handshake callback creates it
      */
     SSM_LockResource(SSMRESOURCE(conn));
-    while (conn->m_sockStat == NULL ||
-           conn->m_sockStat->m_cipherName == NULL) {
+    if (conn->m_sockStat == NULL ||
+        conn->m_sockStat->m_cipherName == NULL) {
         SSM_DEBUG("Oops, the security status has not been updated.  "
                   "Waiting...\n");
-        SSM_WaitResource(SSMRESOURCE(conn), PR_INTERVAL_NO_TIMEOUT);
+        SSM_WaitResource(SSMRESOURCE(conn), PR_TicksPerSecond());
     }
-    /* XXX is this really necessary? */
     if (conn->m_sockStat == NULL) {
         SSM_DEBUG("No socket status on dead socket.\n");
         SSM_UnlockResource(SSMRESOURCE(conn));
@@ -959,7 +958,6 @@ loser:
     return PR_FAILURE;
 }
 
-
 /* thread function */
 /* SSL connection is serviced by the data service thread that works on
  * the client data socket and the SSL socket.
@@ -980,8 +978,8 @@ void SSM_SSLDataServiceThread(void* arg)
     int i;
     PRIntn read = 0;
     PRIntn sent = 0;
-    char **outbound = NULL;
-    char **inbound = NULL;
+    char *outbound = NULL;
+    char *inbound = NULL;
     PRIntn oBufSize;
     
     SSM_RegisterNewThread("ssl data", (SSMResource *) arg);
@@ -995,11 +993,11 @@ void SSM_SSLDataServiceThread(void* arg)
     SSMDATACONNECTION(conn)->m_dataServiceThread = PR_GetCurrentThread();
 
 	/* initialize xfer buffers */
-	outbound = (char **) PR_CALLOC(READSSL_CHUNKSIZE+1);
+	outbound = (char *) PR_CALLOC(READSSL_CHUNKSIZE+1);
 	if (outbound == NULL)
 		goto loser;
 
-	inbound = (char **) PR_CALLOC(READSSL_CHUNKSIZE+1);
+	inbound = (char *) PR_CALLOC(READSSL_CHUNKSIZE+1);
 	if (inbound == NULL)
 		goto loser;
 
@@ -1205,6 +1203,9 @@ void SSM_SSLDataServiceThread(void* arg)
                     else {
                         /* Got data, write it to the client socket */
                         SSM_DEBUG("Writing to client socket.\n");
+#if 0
+                        SSM_DumpBuffer(inbound, read);
+#endif
                         sent = PR_Send(SSMDATACONNECTION(conn)->m_clientSocket,
                                        inbound, read, 0, 
                                        PR_INTERVAL_NO_TIMEOUT);
@@ -1902,12 +1903,6 @@ SECStatus SSM_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
 
 	goto done;
 noCert:
-    /* we display the no cert dialog only if the app is UI-capable */
-    if (SSMCONTROLCONNECTION(conn)->m_doesUI) {
-        if (SSM_SSLMakeBadClientAuthDialog(conn) != SSM_SUCCESS) {
-            SSM_DEBUG("client auth failure UI display failed.\n");
-        }
-    }
 loser:
     if (rv == SECSuccess) {
         rv = SECFailure;

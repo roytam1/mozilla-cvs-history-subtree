@@ -135,7 +135,8 @@ SSMStatus SSMSecurityAdvisorContext_Print(SSMResource *res,
                                          char *fmt, PRIntn numParam,
                                          char **value, char **resultStr);
 
-SSMStatus SSMSecurityAdvisorContext_DoPKCS12Response(HTTPRequest *req,
+SSMStatus SSMSecurityAdvisorContext_DoPKCS12Response(SSMSecurityAdvisorContext *cx,
+                                                     HTTPRequest *req,
                                            			const char  *responseKey);
 
 SSMStatus SSMSecurityAdvisorContext_DoPKCS12Restore(SSMSecurityAdvisorContext *res,
@@ -162,4 +163,9 @@ SSMStatus SSM_RemovePrivilegesHandler(HTTPRequest* req);
 SSMStatus SSM_OCSPResponderList(SSMTextGenContext* cx);
 char* SSM_GetOCSPURL(CERTCertificate *cert, PrefSet *prefs);
 PRBool SSM_IsOCSPEnabled(SSMControlConnection *connection);
+SSMStatus SSM_DisplayCRLButton(SSMTextGenContext *cx);
+SSMStatus SSM_ListCRLs(SSMTextGenContext *cx);
+SSMStatus SSM_LayoutSMIMETab(SSMTextGenContext *cx);
+SSMStatus SSM_LayoutJavaJSTab(SSMTextGenContext *cx);
+SSMStatus SSM_LayoutOthersTab(SSMTextGenContext *cx);
 #endif

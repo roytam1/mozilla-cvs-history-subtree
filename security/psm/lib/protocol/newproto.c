@@ -49,10 +49,13 @@
 #ifdef XP_OS2_VACPP
 #include <utils.h>
 #endif
+#ifdef XP_BEOS
+#include "ByteOrder.h"
+#endif
 
 #include "newproto.h"
 
-char SSMVersionString[] = "1.1";
+char SSMVersionString[] = "1.3";
 
 CMT_Alloc_fn cmt_alloc = malloc;
 CMT_Free_fn cmt_free = free;

@@ -299,8 +299,10 @@ SSM_RegisterThread(char *threadName, SSMResource *ptr)
     */
     { 
       PRUintn threadIndex = GetThreadIndex();
-      if (threadIndex > 0)
-      	PR_SetThreadPrivate(threadIndex, PR_GetCurrentThread());
+      if (threadIndex > 0) {
+      	if (PR_GetThreadPrivate(threadIndex) != thr)
+	      	PR_SetThreadPrivate(threadIndex, thr);
+      }
     }
 #endif
 
@@ -422,7 +424,7 @@ void SSM_DebugP(char *fmt, ...)
             numWritten = PR_Write(sock, tmp2, len);
         if (numWritten < len)
         {
-            SSM_Remove(logSockets, sock);
+            /*SSM_Remove(logSockets, sock);*/
             /*PR_Close(sock);*/
             /*PR_Shutdown(sock, PR_SHUTDOWN_BOTH);*/
             rv = 0;
