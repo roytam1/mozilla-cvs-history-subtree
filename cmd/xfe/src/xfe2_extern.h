@@ -122,8 +122,10 @@ extern void XFE_SetDocTitle(MWContext *context, char *title);
 
 extern void fe_openTargetUrl(MWContext * context,LO_AnchorData * anchor_data);
 
+#if defined(MOZ_MAIL_NEWS)
 extern MSG_IMAPUpgradeType fe_promptForIMAPSubscriptionUpgrade(MWContext *context,
                                                                const char* hostName);
+#endif
 
 XP_END_PROTOS
 
