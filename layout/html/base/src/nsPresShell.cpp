@@ -6324,15 +6324,17 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
           continue;         // can't be merged...try next?
         
         // note that this frame was specifically targetted
+        nsIFrame *target;
         n->MakeTarget();
+        // add to list of targets of this command
+        command->GetTarget(target);
+        curr->AddTarget(target);
             
         // remove merged command from the list
-#ifdef shaver_notyet
         mReflowCommands.RemoveElementAt(i);
         ReflowCommandRemoved(command);
         delete command;
         i--;  // account for the element removal and ensuing shift
-#endif
       }
       curr->SetCurrentReflowNode(tree.Root());
       tree.Dump();
