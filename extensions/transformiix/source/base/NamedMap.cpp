@@ -190,7 +190,10 @@ MBool NamedMap::isEmpty() {
  * Please delete this List when you are done with it
 **/
 StringList* NamedMap::keys() {
-  StringList* list = new StringList();
+    StringList* list = new StringList();
+    if (!list)
+        return NULL;
+
     for (int i = 0; i < numberOfBuckets; i++) {
         BucketItem* item = elements[i];
         while (item) {
@@ -250,7 +253,11 @@ void NamedMap::put(const String& key, TxObject* obj) {
             ++numberOfElements;
         }
         //-- we found bucket item, just set value
-        else bktItem->item = obj;
+        else {
+            if (doObjectDeletion)
+                delete bktItem->item;
+            bktItem->item = obj;
+        }
     }
 } //-- put
 /**
@@ -312,10 +319,12 @@ int NamedMap::size() {
 NamedMap::BucketItem* NamedMap::createBucketItem(const String& key, TxObject* objPtr)
 {
     BucketItem* bktItem = new BucketItem;
-    bktItem->next = 0;
-    bktItem->prev = 0;
-    bktItem->key  = key;
-    bktItem->item = objPtr;
+    if (bktItem) {
+        bktItem->next = 0;
+        bktItem->prev = 0;
+        bktItem->key  = key;
+        bktItem->item = objPtr;
+    }
     return bktItem;
 } //-- createBucketItem
 
