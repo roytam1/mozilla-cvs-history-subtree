@@ -7,9 +7,6 @@
   <Description about="urn:mimetypes"> 
     <NC:MIME-types> 
       <Seq about="urn:mimetypes:root"> 
-        <RDF:li resource="urn:mimetype:application/vnd.ms-excel"/>
-        <RDF:li resource="urn:mimetype:application/msword"/>
-        <RDF:li resource="urn:mimetype:application/vnd.ms-powerpoint"/>
         <RDF:li resource="urn:mimetype:application/pdf"/>
         <RDF:li resource="urn:mimetype:video/avi"/>
         <RDF:li resource="urn:mimetype:video/quicktime"/>
