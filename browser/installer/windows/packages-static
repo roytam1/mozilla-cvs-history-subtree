@@ -86,6 +86,7 @@ bin\components\dom_views.xpt
 bin\components\dom_xbl.xpt
 bin\components\dom_xpath.xpt
 bin\components\dom_xul.xpt
+bin\components\dom_loadsave.xpt
 bin\components\downloads.xpt
 bin\components\editor.xpt
 bin\components\embed_base.xpt
