@@ -197,7 +197,7 @@ OS_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWSCE,3.00 /MACHINE:IX86 /STACK:0x10000,0x
 !else
 OS_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWSCE,3.00 /MACHINE:$(TARGETCPU) /STACK:0x10000,0x1000
 !endif
-OS_LIBS=corelibc.lib winsock.lib
+OS_LIBS=corelibc.lib coredll.lib winsock.lib
 !else
 OS_LFLAGS=$(OS_LFLAGS)
 OS_LIBS=kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib
@@ -208,6 +208,11 @@ OS_LIBS=kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib
 #// Specify the special flags for creating EXEs
 #//
 #//------------------------------------------------------------------------
+!if "$(OS_TARGET)" == "WINCE"
+EXE_CFLAGS=/Gy
+EXE_LFLAGS=$(OS_LFLAGS)
+EXE_LIBS=$(DIST)/lib/a2ww2a.lib
+!else
 !if defined(SWAPTUNER) || (defined(GLOWCODE) && defined(GLOWPROF) && "$(MOZ_BITS)"=="32")
 # this seems to get lost
 EXE_CFLAGS=/Gh
@@ -220,6 +225,7 @@ EXE_LFLAGS=$(OS_LFLAGS) /FIXED:NO
 EXE_LFLAGS=$(OS_LFLAGS)
 !endif
 EXE_LIBS=
+!endif
 
 !if defined(MOZ_COVERAGE) && !defined(MOZ_NO_COVERAGE)
 EXE_LIBS=$(EXE_LIBS) $(DIST)/lib/trace.lib
@@ -233,7 +239,7 @@ EXE_LIBS=$(EXE_LIBS) $(DIST)/lib/trace.lib
 !if "$(OS_TARGET)" == "WINCE"
 DLL_CFLAGS=
 DLL_LFLAGS=$(OS_LFLAGS) /DLL /ENTRY:_DllMainCRTStartup
-DLL_LIBS=coredll.lib
+DLL_LIBS=$(DIST)/lib/a2ww2a.lib
 !else
 DLL_CFLAGS=
 DLL_LFLAGS=$(OS_LFLAGS) /SUBSYSTEM:WINDOWS
