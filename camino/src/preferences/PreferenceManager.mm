@@ -314,7 +314,9 @@ static void SCProxiesChangedCallback(SCDynamicStoreRef store, CFArrayRef changed
 {
   PreferenceManager* prefsManager = [PreferenceManager sharedInstanceDontCreate];
   [prefsManager readSystemProxySettings];
+#if DEBUG
   NSLog(@"Updating proxies");
+#endif
 }
 					
 - (void)registerForProxyChanges
