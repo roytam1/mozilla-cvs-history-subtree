@@ -120,8 +120,8 @@ nsTypeAheadFind::nsTypeAheadFind():
   mLiteralTextSearchOnly(PR_FALSE), mDontTryExactMatch(PR_FALSE),
   mAllTheSameChar(PR_TRUE),
   mIsFirstVisiblePreferred(PR_FALSE),
-  mBadKeysSinceMatch(0), mLastBadChar(0),
   mRepeatingMode(eRepeatingNone),
+  mFocusLinks(PR_FALSE),
   mSoundInterface(nsnull), mIsSoundInitialized(PR_FALSE)
 {
 }
@@ -207,9 +207,6 @@ nsTypeAheadFind::Observe(nsISupports *aSubject, const char *aTopic,
 void
 nsTypeAheadFind::SaveFind()
 {
-  if (mLastBadChar)
-    mTypeAheadBuffer.Append(mLastBadChar);
-
   if (mWebBrowserFind)
     mWebBrowserFind->SetSearchString(PromiseFlatString(mTypeAheadBuffer).get());
 }
@@ -246,8 +243,9 @@ nsTypeAheadFind::PlayNotFoundSound()
 nsresult
 nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
                            PRBool aIsRepeatingSameChar, PRBool aIsLinksOnly,
-                           PRBool aIsFirstVisiblePreferred)
+                           PRBool aIsFirstVisiblePreferred, PRBool aFindNext, PRUint16* aResult)
 {
+  *aResult = FIND_NOTFOUND;
   nsCOMPtr<nsISelection> selection;
   nsCOMPtr<nsISelectionController> selectionController;
   nsCOMPtr<nsIPresShell> startingPresShell (do_QueryReferent(mPresShell));
@@ -314,6 +312,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
 
   // ------------ Get ranges ready ----------------
   nsCOMPtr<nsIDOMRange> returnRange;
+  nsCOMPtr<nsIDOMRange> oldRange;
   nsCOMPtr<nsIPresShell> focusedPS;
   if (NS_FAILED(GetSearchContainers(currentContainer, aIsRepeatingSameChar,
                                     aIsFirstVisiblePreferred, 
@@ -342,9 +341,13 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
   while (PR_TRUE) {    // ----- Outer while loop: go through all docs -----
     while (PR_TRUE) {  // === Inner while loop: go through a single doc ===
       mFind->Find(findBuffer.get(), mSearchRange, mStartPointRange,
-                  mEndPointRange, getter_AddRefs(returnRange));
+                  mEndPointRange, getter_AddRefs(returnRange));            
+      
       if (!returnRange)
         break;  // Nothing found in this doc, go to outer loop (try next doc)
+
+      if (!hasWrapped)
+        oldRange = returnRange;
 
       // ------- Test resulting found range for success conditions ------
       PRBool isInsideLink = PR_FALSE, isStartingLink = PR_FALSE;
@@ -391,13 +394,13 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
                                                    nsISelectionController::SELECTION_FOCUS_REGION, PR_TRUE);
       currentDocShell->SetHasFocus(PR_TRUE);
 
-      if (mLinksOnly) {
+      if (mFocusLinks) {
         nsIEventStateManager *esm = presContext->EventStateManager();
         PRBool isSelectionWithFocus;
         esm->MoveFocusToCaret(PR_TRUE, &isSelectionWithFocus);
       }
 
-      mBadKeysSinceMatch = 0;
+      *aResult = hasWrapped ? FIND_WRAPPED : FIND_FOUND;
 
       return NS_OK;
     }
@@ -424,7 +427,7 @@ nsTypeAheadFind::FindItNow(nsIPresShell *aPresShell,
       rootContentDocShell->GetDocShellEnumerator(nsIDocShellTreeItem::typeContent,
                                                  nsIDocShell::ENUMERATE_FORWARDS,
                                                  getter_AddRefs(docShellEnumerator));
-      hasTriedFirstDoc = PR_TRUE;
+      hasTriedFirstDoc = PR_TRUE;      
     } while (docShellEnumerator);  // ==== end second inner while  ===
 
     PRBool continueLoop = PR_FALSE;
@@ -472,6 +475,21 @@ NS_IMETHODIMP
 nsTypeAheadFind::GetSearchString(nsAString& aSearchString)
 {
   aSearchString = mTypeAheadBuffer;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsTypeAheadFind::GetFocusLinks(PRBool* aFocusLinks)
+{
+  NS_ENSURE_ARG(aFocusLinks);
+  *aFocusLinks = mFocusLinks;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsTypeAheadFind::SetFocusLinks(PRBool aFocusLinks)
+{
+  mFocusLinks = aFocusLinks;
   return NS_OK;
 }
 
@@ -540,7 +558,8 @@ nsTypeAheadFind::GetSearchContainers(nsISupports *aContainer,
     nsCOMPtr<nsISelection> selection;
     nsCOMPtr<nsISelectionController> selectionController;
     GetSelection(presShell, getter_AddRefs(selectionController), getter_AddRefs(selection));
-    selection->GetRangeAt(0, getter_AddRefs(currentSelectionRange));
+    if (selection)
+      selection->GetRangeAt(0, getter_AddRefs(currentSelectionRange));
   }
 
   if (!currentSelectionRange) {
@@ -692,25 +711,24 @@ nsTypeAheadFind::RangeStartsInsideLink(nsIDOMRange *aRange,
 }
 
 NS_IMETHODIMP
-nsTypeAheadFind::FindPrevious()
+nsTypeAheadFind::FindPrevious(PRUint16* aResult)
 {
-  return FindInternal(true);
+  return FindInternal(true, aResult);
 }
 
 NS_IMETHODIMP
-nsTypeAheadFind::FindNext()
+nsTypeAheadFind::FindNext(PRUint16* aResult)
 {
-  return FindInternal(false); 
+  return FindInternal(false, aResult); 
 }
 
 nsresult
-nsTypeAheadFind::FindInternal(PRBool aFindBackwards)
+nsTypeAheadFind::FindInternal(PRBool aFindBackwards, PRUint16* aResult)
 {
+  *aResult = FIND_NOTFOUND;
+
   if (mTypeAheadBuffer.IsEmpty())
     return NS_OK;
-
- if (mBadKeysSinceMatch > 0)
-    return NS_OK;     // We know it will fail, so just return
 
   PRBool repeatingSameChar = PR_FALSE;
 
@@ -724,7 +742,7 @@ nsTypeAheadFind::FindInternal(PRBool aFindBackwards)
   }
   mLiteralTextSearchOnly = PR_TRUE;
 
-  if (NS_FAILED(FindItNow(nsnull, repeatingSameChar, mLinksOnly, PR_FALSE)))
+  if (NS_FAILED(FindItNow(nsnull, repeatingSameChar, mLinksOnly, PR_FALSE, !aFindBackwards, aResult)))
     mRepeatingMode = eRepeatingNone;
 
   return NS_OK;
@@ -733,9 +751,6 @@ nsTypeAheadFind::FindInternal(PRBool aFindBackwards)
 nsresult
 nsTypeAheadFind::Cancel()
 {
-  if (mTypeAheadBuffer.IsEmpty())    
-    return NS_OK;   // Nothing to cancel
-     
   if (mRepeatingMode != eRepeatingNone)
     mTypeAheadBuffer.Truncate();  
 
@@ -745,16 +760,16 @@ nsTypeAheadFind::Cancel()
   mLiteralTextSearchOnly = PR_FALSE;
   mDontTryExactMatch = PR_FALSE;
   mStartFindRange = nsnull;
-  mBadKeysSinceMatch = 0;
-  mLastBadChar = 0;
   mAllTheSameChar = PR_TRUE; // Until at least 2 different chars are typed
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
+nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly, PRUint16* aResult)
 {
+  *aResult = FIND_NOTFOUND;
+
   nsCOMPtr<nsISelection> selection;
   nsCOMPtr<nsISelectionController> selectionController;
   nsCOMPtr<nsIPresShell> presShell (do_QueryReferent(mPresShell));
@@ -771,25 +786,25 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
 
   if (aSearchString.IsEmpty()) {
     mTypeAheadBuffer = aSearchString;
+    *aResult = FIND_FOUND;
     return Cancel();
   }
 
-  nsString::const_iterator new_start, new_end, old_start, old_end;
-  aSearchString.BeginReading(new_start);
-  mTypeAheadBuffer.BeginReading(old_start); 
-  aSearchString.EndReading(new_end);  
-  mTypeAheadBuffer.EndReading(old_end);
-
-  int i = 0;
-  while (old_start != old_end) {
-    if (*old_start != *new_start)
-      break;
-
-    ++new_start; ++old_start; ++i;
+  PRBool atEnd = PR_FALSE;    
+  if (mTypeAheadBuffer.Length()) {
+    const nsAString& oldStr = Substring(mTypeAheadBuffer, 0, mTypeAheadBuffer.Length());
+    const nsAString& newStr = Substring(aSearchString, 0, mTypeAheadBuffer.Length());
+    if (oldStr.Equals(newStr))
+      atEnd = PR_TRUE;
+  
+    const nsAString& newStr2 = Substring(aSearchString, 0, aSearchString.Length());
+    const nsAString& oldStr2 = Substring(mTypeAheadBuffer, 0, aSearchString.Length());
+    if (oldStr2.Equals(newStr2))
+      atEnd = PR_TRUE;
+    
+    if (!atEnd)
+      mStartFindRange = nsnull;
   }
-  PRBool atEnd = (i >= mTypeAheadBuffer.Length());
-  if (!atEnd)
-    Cancel();
 
   if (!mIsSoundInitialized && !mNotFoundSoundURL.IsEmpty()) {
     // This makes sure system sound library is loaded so that
@@ -802,7 +817,7 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
     }
   }
 
-  mLinksOnly = aLinksOnly;
+  mLinksOnly = aLinksOnly;  
 
 #ifdef XP_WIN
   // After each keystroke, ensure sound object is destroyed, to free up memory 
@@ -811,26 +826,10 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
   mSoundInterface = nsnull;
 #endif
 
-  // ------------ Million keys protection -------------
-  if (mBadKeysSinceMatch >= kMaxBadCharsBeforeCancel) {
-    // If they're just quickly mashing keys onto the keyboard, stop searching
-    // until typeahead find is canceled via timeout or another normal means
-    return NS_ERROR_FAILURE;
-  }
-
   PRInt32 bufferLength = mTypeAheadBuffer.Length();
 
-  // --------- No new chars after find again ----------
-  if (mRepeatingMode == eRepeatingForward ||
-      mRepeatingMode == eRepeatingReverse) {
-    // Once Accel+[shift]+G or [shift]+F3 has been used once,
-    // new typing will start a new find
-    Cancel();
-    bufferLength = 0;
-    mRepeatingMode = eRepeatingNone;
-  }
   // --------- New char in repeated char mode ---------
-  else if ((mRepeatingMode == eRepeatingChar ||
+  if ((mRepeatingMode == eRepeatingChar ||
            mRepeatingMode == eRepeatingCharReverse) && 
            bufferLength > 1/* && aChar != mTypeAheadBuffer.First()*/) {
     // If they repeat the same character and then change, such as aaaab
@@ -863,7 +862,7 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
 
     // If true, we will scan from top left of visible area
     // If false, we will scan from start of selection
-    mIsFirstVisiblePreferred = !mCaretBrowsingOn && isSelectionCollapsed;
+    mIsFirstVisiblePreferred = !atEnd && !mCaretBrowsingOn && isSelectionCollapsed;
     if (mIsFirstVisiblePreferred) {
       // Get focused content from esm. If it's null, the document is focused.
       // If not, make sure the selection is in sync with the focus, so we can 
@@ -885,27 +884,24 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
   // ----------- Find the text! ---------------------
   nsresult rv = NS_ERROR_FAILURE;
 
-  if (mBadKeysSinceMatch <= 1) {   // Don't even try if the last key was already bad
-    if (!mDontTryExactMatch) {
-      // Regular find, not repeated char find
+  if (!mDontTryExactMatch) {
+    // Regular find, not repeated char find
 
-      // Prefer to find exact match
-      rv = FindItNow(nsnull, PR_FALSE, mLinksOnly, mIsFirstVisiblePreferred);
-    }
+    // Prefer to find exact match
+    rv = FindItNow(nsnull, PR_FALSE, mLinksOnly, mIsFirstVisiblePreferred, PR_FALSE, aResult);
+  }
 
 #ifndef NO_LINK_CYCLE_ON_SAME_CHAR
-    if (NS_FAILED(rv) && !mLiteralTextSearchOnly && mAllTheSameChar && 
-        mTypeAheadBuffer.Length() > 1) {
-      mRepeatingMode = eRepeatingChar;
-      mDontTryExactMatch = PR_TRUE;  // Repeated character find mode
-      rv = FindItNow(nsnull, PR_TRUE, PR_TRUE, mIsFirstVisiblePreferred);
-    }
-#endif
+  if (NS_FAILED(rv) && !mLiteralTextSearchOnly && mAllTheSameChar && 
+      mTypeAheadBuffer.Length() > 1) {
+    mRepeatingMode = eRepeatingChar;
+    mDontTryExactMatch = PR_TRUE;  // Repeated character find mode
+    rv = FindItNow(nsnull, PR_TRUE, PR_TRUE, mIsFirstVisiblePreferred, PR_FALSE, aResult);
   }
+#endif
 
   // ---------Handle success or failure ---------------
   if (NS_SUCCEEDED(rv)) {
-    mLastBadChar = 0;
     if (mTypeAheadBuffer.Length() == 1) {
       // If first letter, store where the first find succeeded
       // (mStartFindRange)
@@ -919,33 +915,14 @@ nsTypeAheadFind::Find(const nsAString& aSearchString, PRBool aLinksOnly)
     }
   }
   else {
-    PRUint32 length = mTypeAheadBuffer.Length();
-    if (mLastBadChar && length >= 1) {
-      // We have to do this to put the exact typed string in the status 
-      // Otherwise, it will be missing mLastBadChar, which had been removed
-      // so that the user could avoid pressing backspace
-      nsAutoString lastTwoCharsTyped(mLastBadChar);
-      lastTwoCharsTyped += mTypeAheadBuffer.CharAt(length - 1);
-      mTypeAheadBuffer.Truncate(length - 1);
-      mTypeAheadBuffer += lastTwoCharsTyped;
-      ++length;
-    }
     mRepeatingMode = eRepeatingNone;
-
-    ++mBadKeysSinceMatch;
 
     // Error sound
     PlayNotFoundSound();
-
-    // Remove bad character from buffer, so we can continue typing from
-    // last matched character
-    if (length >= 1) {
-      mLastBadChar = mTypeAheadBuffer.CharAt(length - 1);
-      mTypeAheadBuffer.Truncate(length - 1);
-    }
   }
 
   SaveFind();
+  return NS_OK;
 }
 
 void

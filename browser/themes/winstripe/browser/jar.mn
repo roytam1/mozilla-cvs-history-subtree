@@ -6,6 +6,8 @@ classic.jar:
         skin/classic/browser/contents.rdf
         skin/classic/browser/find.png
         skin/classic/browser/highlight.png
+        skin/classic/browser/wrap.png
+        skin/classic/browser/notfound.png
         skin/classic/browser/Go.png
         skin/classic/browser/Info.png
         skin/classic/browser/pageInfo.css

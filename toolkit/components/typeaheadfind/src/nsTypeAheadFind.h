@@ -86,7 +86,7 @@ protected:
 
   void SaveFind();
   void PlayNotFoundSound(); 
-  nsresult FindInternal(PRBool aFindBackwards);
+  nsresult FindInternal(PRBool aFindBackwards, PRUint16* aResult);
   nsresult GetWebBrowserFind(nsIDocShell *aDocShell,
                              nsIWebBrowserFind **aWebBrowserFind);
 
@@ -100,7 +100,7 @@ protected:
                          PRBool aGetTopVisibleLeaf,
                          nsIDOMRange **aNewRange);
   nsresult FindItNow(nsIPresShell *aPresShell, PRBool aIsRepeatingSameChar, 
-                     PRBool aIsLinksOnly, PRBool aIsFirstVisiblePreferred);
+                     PRBool aIsLinksOnly, PRBool aIsFirstVisiblePreferred, PRBool aFindNext, PRUint16* aResult);
   nsresult GetSearchContainers(nsISupports *aContainer,                                
                                PRBool aIsRepeatingSameChar,
                                PRBool aIsFirstVisiblePreferred, 
@@ -121,14 +121,13 @@ protected:
   PRBool mStartLinksOnlyPref;
   PRPackedBool mLinksOnly;
   PRBool mCaretBrowsingOn;
+  PRBool mFocusLinks;
   PRPackedBool mLiteralTextSearchOnly;
   PRPackedBool mDontTryExactMatch;
   // mAllTheSame Char starts out PR_TRUE, becomes false when 
   // at least 2 different chars typed
   PRPackedBool mAllTheSameChar;
   PRPackedBool mIsFirstVisiblePreferred;
-  PRInt32 mBadKeysSinceMatch;
-  PRUnichar mLastBadChar; // if taf automatically overwrites an unfound character
   PRInt32 mRepeatingMode;
 
   // Sound is played asynchronously on some platforms.

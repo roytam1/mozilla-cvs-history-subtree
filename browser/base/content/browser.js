@@ -89,7 +89,12 @@ var gQuickFindTimeout = null;
 var gQuickFindTimeoutLength = 0;
 var gHighlightTimeout = null;
 var gUseTypeAheadFind = false;
+var gWrappedToTopStr = "";
+var gWrappedToBottomStr = "";
+var gNotFoundStr = "";
 var gTypeAheadFindBuffer = "";
+var gIsBack = true;
+var gBackProtectBuffer = 3;
 var gSidebarCommand = "";
 
 // Global variable that holds the nsContextMenu instance.
@@ -276,6 +281,13 @@ function changeSelectionColor(aAttention)
 
 function openFindBar()
 {
+  if (!gNotFoundStr || !gWrappedToTopStr || !gWrappedToBottomStr) {
+    var bundle_browser = document.getElementById("bundle_browser");
+    gNotFoundStr = bundle_browser.getString("NotFound");
+    gWrappedToTopStr = bundle_browser.getString("WrappedToTop");
+    gWrappedToBottomStr = bundle_browser.getString("WrappedToBottom");
+  }
+  
   var findToolbar = document.getElementById("FindToolbar");
   if (findToolbar.hidden) {
     findToolbar.hidden = false;
@@ -323,7 +335,12 @@ function shouldFastFind(evt)
     var ln = elt.localName.toLowerCase();
     if (ln == "input" || ln == "textarea" || ln == "select" || ln == "button")
       return false;
-  }  
+  }
+  
+  var win = document.commandDispatcher.focusedWindow;
+  if (win && win.document.designMode == "on")
+    return false;
+  
   return true;
 }
 
@@ -332,8 +349,14 @@ function isPrintable(c)
   return (c >= 32 && c <= 126);
 }
 
+function onFindBarFocus()
+{
+  toggleLinkFocus(false);
+}
+
 function onFindBarBlur()
 {
+  toggleLinkFocus(true);
   changeSelectionColor(false);
 }
 
@@ -345,21 +368,23 @@ function onBrowserKeyPress(evt)
   
   var findField = document.getElementById("find-field");
   if (gFindMode != FIND_NORMAL) {    
-    if (evt.keyCode == 8) {
+    if (evt.keyCode == 8) { // Backspace
       if (findField.value) {
         findField.value = findField.value.substr(0, findField.value.length - 1);
-        evt.preventDefault();
+        gIsBack = true;   
+        gBackProtectBuffer = 3;
       }
+      else if (gBackProtectBuffer > 0) {
+        gBackProtectBuffer--;
+      }
+      
+      if (gIsBack || gBackProtectBuffer > 0)
+        evt.preventDefault();
+        
       find(findField.value);
     }
     else if (evt.keyCode == 27) { // Escape
       closeFindBar();
-    }
-    else if (evt.keyCode == 13 && gFindMode == FIND_TYPEAHEAD) { // Enter
-      if (evt.shiftKey)
-        findPrevious();
-      else
-        findNext();
     }
     else if (isPrintable(evt.charCode)) {
       if (evt.charCode == 32) // Space
@@ -373,6 +398,7 @@ function onBrowserKeyPress(evt)
   
   if (evt.charCode == 39 /* '*/ || evt.charCode == 47 /* / */ || (gUseTypeAheadFind & isPrintable(evt.charCode) && evt.charCode != 32)) {   
     gFindMode = (evt.charCode == 39) ? FIND_LINKS : FIND_TYPEAHEAD;
+    toggleLinkFocus(true);
     if (openFindBar()) {      
       setFindCloseTimeout();      
       if (gUseTypeAheadFind && evt.charCode != 39 && evt.charCode != 47) {
@@ -397,9 +423,20 @@ function onBrowserKeyPress(evt)
   }
 }
 
-function onFindBarKeydown(evt)
+function toggleLinkFocus(aFocusLinks)
 {
   var fastFind = getBrowser().fastFind;
+  fastFind.focusLinks = aFocusLinks;
+}
+
+function onBrowserKeyUp(evt)
+{
+  if (evt.keyCode == 8)
+    gIsBack = false;
+}
+
+function onFindBarKeyPress(evt)
+{
   if (evt.keyCode == KeyEvent.DOM_VK_RETURN) {
     if (evt.shiftKey)
       findPrevious();
@@ -408,6 +445,7 @@ function onFindBarKeydown(evt)
   }
   else if (evt.keyCode == KeyEvent.DOM_VK_ESCAPE) {
     closeFindBar();
+    evt.preventDefault();
   }
 }
 
@@ -431,8 +469,10 @@ function find(val)
     setHighlightTimeout();
         
   changeSelectionColor(true);
-  var fastFind = getBrowser().fastFind;
-  fastFind.find(val, gFindMode == FIND_LINKS);
+  var fastFind = getBrowser().fastFind;  
+  var res = fastFind.find(val, gFindMode == FIND_LINKS);
+  updateStatus(res, true);
+  
   if (gFindMode != FIND_NORMAL)
     setFindCloseTimeout();
 }
@@ -466,13 +506,15 @@ function setHighlightTimeout()
 {
   if (gHighlightTimeout)
     clearTimeout(gHighlightTimeout);
-  gHighlightTimeout = setTimeout(function() { Highlight(false); Highlight(true); }, 500);  
+  gHighlightTimeout = setTimeout(function() { toggleHighlight(false); toggleHighlight(true); }, 500);  
 }
 
 function findNext()
 {
-  var fastFind = getBrowser().fastFind;
-  fastFind.findNext();
+  var fastFind = getBrowser().fastFind; 
+  var res = fastFind.findNext();  
+  updateStatus(res, true);
+    
   if (gFindMode != FIND_NORMAL)
     setFindCloseTimeout();
 }
@@ -480,9 +522,35 @@ function findNext()
 function findPrevious()
 {
   var fastFind = getBrowser().fastFind;
-  fastFind.findPrevious();
+  var res = fastFind.findPrevious();
+  updateStatus(res, false);
+  
   if (gFindMode != FIND_NORMAL)
     setFindCloseTimeout();
+}
+
+function updateStatus(res, findNext)
+{
+  var statusIcon = document.getElementById("find-status-icon");
+  var statusText = document.getElementById("find-status");
+  var field = document.getElementById("find-field");
+  switch(res) {
+    case Components.interfaces.nsITypeAheadFind.FIND_WRAPPED:
+      statusIcon.setAttribute("status", "wrapped");      
+      statusText.value = findNext ? gWrappedToTopStr : gWrappedToBottomStr;
+      break;
+    case Components.interfaces.nsITypeAheadFind.FIND_NOTFOUND:
+      statusIcon.setAttribute("status", "notfound");
+      statusText.value = gNotFoundStr;
+      field.setAttribute("status", "notfound");      
+      break;
+    case Components.interfaces.nsITypeAheadFind.FIND_FOUND:
+    default:
+      statusIcon.removeAttribute("status");      
+      statusText.value = "";
+      field.removeAttribute("status");
+      break;
+  }
 }
 
 function setFindCloseTimeout()
@@ -3229,8 +3297,8 @@ nsBrowserStatusHandler.prototype =
     // Do not update urlbar if there was a subframe navigation
 
     var browser = getBrowser().selectedBrowser;
-    if (aWebProgress.DOMWindow == content) {
-      var findField = document.getElementById("find-field");
+    var findField = document.getElementById("find-field");
+    if (aWebProgress.DOMWindow == content) {      
       if (findField)
         setTimeout(function() { findField.value = browser.findString; }, 0, findField, browser); 
 
@@ -3258,7 +3326,13 @@ nsBrowserStatusHandler.prototype =
       }
     }
     UpdateBackForwardButtons();
-    
+
+    if (findField && gFindMode != FIND_NORMAL) {
+      // Close the Find toolbar if we're in old-style TAF mode
+      closeFindBar();
+      gBackProtectBuffer = 0;
+    }
+       
     setTimeout(function () { updatePageTheme(); updatePageLivemarks(); }, 0);
   },
 
@@ -3311,7 +3385,7 @@ nsBrowserStatusHandler.prototype =
 
     // clear out livemark data
     gBrowser.mCurrentBrowser.livemarkLinks = null;
-
+    
     const nsIChannel = Components.interfaces.nsIChannel;
     var urlStr = aRequest.QueryInterface(nsIChannel).URI.spec;
     var observerService = Components.classes["@mozilla.org/observer-service;1"]

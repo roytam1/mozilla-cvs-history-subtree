@@ -647,6 +647,8 @@ statusbarpanel#statusbar-display {
   color: #555566;
 }
 
+/* ::::: find ::::: */
+
 #find-previous 
 {
   list-style-image: url("chrome://browser/skin/find.png");
@@ -695,6 +697,33 @@ statusbarpanel#statusbar-display {
   -moz-image-region: rect(0px 48px 16px 32px) !important;
 }
 
+#find-status-icon
+{
+  margin-left: 12px;
+  width: 16px;
+  height: 16px;
+}
+  
+#find-status-icon[status="notfound"]
+{
+  list-style-image: url("chrome://browser/skin/notfound.png");
+}
+
+#find-field
+{
+  -moz-appearance: none;
+}
+
+#find-field[status="notfound"]
+{
+  background-color: #FF6666;
+}
+
+#find-status-icon[status="wrapped"]
+{
+  list-style-image: url("chrome://browser/skin/wrap.png");
+}
+	
 /* ::::: go button ::::: */
 
 #go-button {

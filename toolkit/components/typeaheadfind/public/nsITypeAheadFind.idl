@@ -49,10 +49,15 @@ interface nsITypeAheadFind : nsISupports
 {
   void init(in nsIDocShell aDocShell);
 
-  void find(in AString aSearchString, in boolean aLinksOnly);
-  void findNext();
-  void findPrevious();
+  const unsigned short FIND_FOUND    = 0;
+  const unsigned short FIND_NOTFOUND = 1;
+  const unsigned short FIND_WRAPPED  = 2;
+
+  unsigned short find(in AString aSearchString, in boolean aLinksOnly);
+  unsigned short findNext();
+  unsigned short findPrevious();
 
   readonly attribute AString searchString;
+  attribute boolean focusLinks;
 };
 
