@@ -24,17 +24,12 @@ DEPTH=..\..\..\..\..\..
 include <$(DEPTH)\config\rules.mak>
 
 clobber::
-        rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
         rm -f $(DIST)\bin\chrome\packages\core\communicator\content\wallet\SignonViewer.xul
         rm -f $(DIST)\bin\chrome\packages\core\communicator\content\wallet\SignonViewer.js
         rm -f $(DIST)\bin\chrome\skins\modern\communicator\skin\wallet\SignonViewer.css
         rm -f $(DIST)\bin\chrome\locales\en-US\communicator\locale\wallet\SignonViewer.properties
         rm -f $(DIST)\bin\chrome\locales\en-US\communicator\locale\wallet\SignonViewer.dtd
 
-!ifdef MOZ_STATIC_COMPONENT_LIBS
-install:: $(LIB)
-!else
-install:: $(DLL)
-!endif
+install::
         $(MAKE_INSTALL) SignonViewer.properties $(DIST)\bin\chrome\locales\en-US\communicator\locale\wallet
         $(MAKE_INSTALL) SignonViewer.dtd $(DIST)\bin\chrome\locales\en-US\communicator\locale\wallet
