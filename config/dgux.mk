@@ -17,9 +17,9 @@
 
 ######################################################################
 # Config stuff for Data General DG/UX
+######################################################################
 #
 # Initial DG/UX port by Marc Fraioli <fraioli@dg-rtp.dg.com>
-######################################################################
 #
 ######################################################################
 # Version-independent
@@ -35,7 +35,6 @@ LOC_LIB_DIR		=
 MOTIF			=
 MOTIFLIB		= -lXm -lXt -lXmu -lX11
 OS_LIBS			= -lgen -lresolv -lsocket -lnsl 
-#DSO_LDFLAGS		= -lXm -lXt -lX11 -lsocket -lnsl
 
 PLATFORM_FLAGS		= -DDGUX -Di386 -D_DGUX_SOURCE -D_POSIX4A_DRAFT6_SOURCE
 MOVEMAIL_FLAGS		= -DUSG -DHAVE_STRERROR
@@ -44,7 +43,7 @@ PDJAVA_FLAGS		=
 
 OS_CFLAGS		= $(PLATFORM_FLAGS) $(PORT_FLAGS) $(MOVEMAIL_FLAGS)
 
-LOCALE_MAP		= $(DEPTH)/cmd/xfe/intl/unixware.lm
+LOCALE_MAP		= $(DEPTH)/cmd/xfe/intl/dgux.lm
 EN_LOCALE		= C
 DE_LOCALE		= de_DE.ISO8859-1
 FR_LOCALE		= fr_FR.ISO8859-1
@@ -55,12 +54,9 @@ CN_LOCALE		= zh
 TW_LOCALE		= zh
 I2_LOCALE		= i2
 
-# BUILD_UNIX_PLUGINS	= 1
-
 ######################################################################
 # Version-specific stuff
 ######################################################################
-
 
 ######################################################################
 # Overrides for defaults in config.mk (or wherever)
@@ -68,12 +64,7 @@ I2_LOCALE		= i2
 
 EMACS			= /bin/true
 PERL			= /usr/bin/perl
-ifdef BUILD_OPT
-OPTIMIZER		= -O2
-else
-# -g would produce a huge executable.
 OPTIMIZER		=
-endif
 
 ######################################################################
 # Other
