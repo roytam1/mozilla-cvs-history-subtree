@@ -876,6 +876,11 @@ icalcomponent* icalparser_add_line(icalparser* parser,
 	    } else {
 		/* Error. Failed to parse the parameter*/
 		/* 'tail' defined above */
+                /* The following ifdef block has been added by Mozilla Calendar in order to
+                have the option of being flexible towards unsupported parameters */
+                #ifndef ICAL_ERRORS_ARE_FATAL
+                continue;
+                #endif;
 		insert_error(tail, str, "Cant parse parameter name",
 			     ICAL_XLICERRORTYPE_PARAMETERNAMEPARSEERROR);
 		tail = 0;
