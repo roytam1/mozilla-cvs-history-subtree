@@ -1725,6 +1725,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative call, uintN nargs,
     fun->spare = 0;
     fun->atom = atom;
     fun->script = NULL;
+    fun->clasp = NULL;
     return fun;
 }
 

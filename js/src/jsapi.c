@@ -985,10 +985,12 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 	if (!fun)
 	    goto bad;
 
-#if 0
-        if (clasp->construct == NULL)
-            clasp->construct = constructor;
-#endif
+        /* 
+         * Remember the class this function is a constructor for so that
+         * we know to create an object of this class when we call the 
+         * constructor.
+         */
+        fun->clasp = clasp;
 
 	/* Connect constructor and prototype by named properties. */
 	ctor = fun->object;

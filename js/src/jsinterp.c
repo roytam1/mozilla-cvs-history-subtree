@@ -1919,10 +1919,13 @@ js_Interpret(JSContext *cx, jsval *result)
 		obj2 = fun->object;
 	    }
 
+            clasp = &js_ObjectClass;
 	    if (!obj2) {
 		proto = parent = NULL;
 		fun = NULL;
 	    } else {
+                JSClass *cl;
+
 		/* Get the constructor prototype object for this function. */
 		ok = OBJ_GET_PROPERTY(cx, obj2,
 				      (jsid)rt->atomState.classPrototypeAtom,
@@ -1931,34 +1934,14 @@ js_Interpret(JSContext *cx, jsval *result)
 		    goto out;
 		proto = JSVAL_IS_OBJECT(rval) ? JSVAL_TO_OBJECT(rval) : NULL;
 		parent = OBJ_GET_PARENT(cx, obj2);
-	    }
 
-#if 1
-	    /* If there is no class prototype, use js_ObjectClass. */
-	    if (!proto)
-		obj = js_NewObject(cx, &js_ObjectClass, NULL, parent);
-	    else
-		obj = js_NewObject(cx, OBJ_GET_CLASS(cx, proto), proto, parent);
-#else
-            clasp = &js_ObjectClass;
-            if (!JSVAL_IS_PRIMITIVE(lval)) {
-                /* 
-                 * Use prototype's class iff we are calling the class's
-                 * constuctor.
-                 */
-                JSObject *funobj;
-
-                funobj = JSVAL_TO_OBJECT(lval);
-                clasp = OBJ_GET_CLASS(cx, funobj);
-                if (clasp == &js_FunctionClass &&
-                    ((JSFunction *)JS_GetPrivate(cx, funobj))->call == 
-                        OBJ_GET_CLASS(cx, proto)->construct)
+                if ((OBJ_GET_CLASS(cx, obj2) == &js_FunctionClass) && 
+                    (cl = ((JSFunction *)JS_GetPrivate(cx, obj2))->clasp))
                 {
-                    clasp = OBJ_GET_CLASS(cx, proto);
+                    clasp = cl;
                 }
-            }
+	    }
 	    obj = js_NewObject(cx, clasp, proto, parent);
-#endif
 	    if (!obj) {
 		ok = JS_FALSE;
 		goto out;
