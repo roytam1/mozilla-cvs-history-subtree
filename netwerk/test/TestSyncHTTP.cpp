@@ -88,7 +88,7 @@ main(int argc, char **argv)
     for (i=0; i<nc; ++i) {
         c[i].t1 = PR_Now();
 
-        rv = c[i].channel->OpenInputStream(getter_AddRefs(c[i].inputStream));
+        rv = c[i].channel->OpenInputStream(0, -1, getter_AddRefs(c[i].inputStream));
         RETURN_IF_FAILED(rv, "nsIChannel::OpenInputStream");
     }
 
