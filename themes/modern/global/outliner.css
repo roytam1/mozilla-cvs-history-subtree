@@ -26,6 +26,11 @@ outlinerbody {
   border-left: 1px solid transparent;
 }
 
+:-moz-outliner-row(current)
+{
+  border: 1px #768AA0 dotted;
+}
+
 :-moz-outliner-row(selected)
 {
   background-color:  #486380;
