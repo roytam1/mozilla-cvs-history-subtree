@@ -969,7 +969,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\cmd\winfe\addrfrm.cpp   
-	$(DEPTH)\cmd\winfe\addrdlg.cpp   
+	$(DEPTH)\cmd\winfe\addrdlg.cpp 
+	$(DEPTH)\cmd\winfe\addrprop.cpp  
 	$(DEPTH)\cmd\winfe\abmldlg.cpp   
 	$(DEPTH)\cmd\winfe\advprosh.cpp
 	$(DEPTH)\cmd\winfe\compbar.cpp
@@ -1030,6 +1031,10 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\srchdlg.cpp
 	$(DEPTH)\cmd\winfe\srchobj.cpp
 	$(DEPTH)\cmd\winfe\mnrccln.cpp
+!endif
+!ifdef MOZ_OFFLINE
+	$(DEPTH)\cmd\winfe\offlndlg.cpp
+	$(DEPTH)\cmd\winfe\offpkdlg.cpp
 !endif
 	$(DEPTH)\cmd\winfe\setupwiz.cpp  
 	$(DEPTH)\cmd\winfe\ngdwtrst.cpp
