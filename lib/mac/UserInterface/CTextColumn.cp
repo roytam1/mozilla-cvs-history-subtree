@@ -38,7 +38,7 @@ CTextColumn::CTextColumn(
 	LStream*	inStream)
 	
 	:	super(inStream)
-	,	CQAPartnerTableMixin(this)
+//	,	CQAPartnerTableMixin(this)
 {
 }
 

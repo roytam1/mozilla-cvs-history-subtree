@@ -282,7 +282,7 @@ CStandardFlexTable::CStandardFlexTable(LStream *inStream)
 ,	LDragAndDrop(GetMacPort(), this)
 ,	LCommander()
 ,	LBroadcaster()
-,	CQAPartnerTableMixin(this)
+//,	CQAPartnerTableMixin(this)
 ,	mTableHeaderListener(this)
 ,	mTableHeader(NULL)
 ,	mSelectionList(NULL)
@@ -1141,7 +1141,7 @@ void CStandardFlexTable::TrackSelection( const SMouseDownEvent & inMouseDown )
 	
 	StColorPenState 	oldPenState;
 	
-	mTableView->GetTableSize( maxRows, maxColumns );
+	GetTableSize( maxRows, maxColumns );
 	
 	STableCell		topLeftCell( 0, 0 );
 	STableCell		botRightCell( 0, 0 );

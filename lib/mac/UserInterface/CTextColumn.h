@@ -27,9 +27,10 @@
 #pragma once
 
 #include <LTextColumn.h>
-#include <QAP_Assist.h>
+//#include <QAP_Assist.h>
 
-class	CTextColumn : public LTextColumn, public CQAPartnerTableMixin
+class	CTextColumn : public LTextColumn
+//					, public CQAPartnerTableMixin
 {
 private:
 
