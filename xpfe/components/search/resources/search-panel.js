@@ -27,7 +27,6 @@ var   settingsButton = null;
 var   settingsButtonText = null;
 var   bunremoveAttributedle = null;
 var   pref = null;
-var   mClickCount = null;
 
 // get the click count pref
 try {
@@ -587,7 +586,7 @@ function openURL(event, treeitem, root)
     mClickCount = 1;
   } 
   
-	if ((event.button != 1) || (event.clickCount != mClickCount))
+  if ((event.button != 1) || (event.clickCount != mClickCount))
 		return(false);
 
 	if (treeitem.getAttribute("container") == "true")
@@ -629,7 +628,11 @@ function openURL(event, treeitem, root)
 	{
 	}
 
-	window.content.location = id;
+  if ( window.content )
+    window.content.location = id;
+  else {
+    window.openDialog( "chrome://navigator/content/navigator.xul", "_blank", "chrome,all,dialog=no", id );
+  }
 }
 
 // this should go somewhere else. 
