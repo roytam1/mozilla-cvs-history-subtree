@@ -48,6 +48,8 @@
 
 class nsIFile;
 class nsICookieManager2;
+class nsIRDFResource;
+class nsIBookmarksService;
 
 #import "c:\windows\system32\pstorec.dll"
 using namespace PSTORECLib;
@@ -65,8 +67,9 @@ private:
   nsresult CopyPreferences(PRBool aReplace);
   nsresult CopyStyleSheet(PRBool aReplace);
   nsresult CopyCookies(PRBool aReplace);
+
+#ifdef MOZ_PHOENIX
   nsresult CopyHistory(PRBool aReplace);
-  nsresult CopyFavorites(PRBool aReplace);
 
   PRBool   KeyIsURI(const nsAString& aKey, char** aRealm);
 
@@ -78,6 +81,16 @@ private:
 
   nsresult CopyFormData(PRBool aReplace);
   nsresult AddDataToFormHistory(const nsAString& aKey, PRUnichar* data, unsigned long len);
+
+  nsresult CopyFavorites(PRBool aReplace);
+  void     ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL);
+  nsresult ParseFavoritesFolder(nsIFile* aDirectory, 
+                                nsIRDFResource* aParentResource,
+                                nsIBookmarksService* aBookmarksService, 
+                                const nsAString& aPersonalToolbarFolderName,
+                                PRBool aIsAtRootLevel);
+  nsresult CopySmartKeywords(nsIRDFResource* aParentFolder);
+#endif
 
   nsresult CopyCookiesFromBuffer(char *aBuffer, PRUint32 aBufferLength,
                                  nsICookieManager2 *aCookieManager);

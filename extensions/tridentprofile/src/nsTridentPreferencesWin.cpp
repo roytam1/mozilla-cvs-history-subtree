@@ -67,10 +67,12 @@
 
 #ifdef MOZ_PHOENIX
 #include <objbase.h>
-#include <initguid.h>
+//#include <initguid.h>
 #include <shlguid.h>
 #include <urlhist.h>
 #include <comdef.h>
+#include <shlobj.h>
+#include <intshcut.h>
 
 #include "nsIBrowserHistory.h"
 #include "nsIGlobalHistory.h"
@@ -78,14 +80,24 @@
 #include "nsIURI.h"
 #include "nsIPasswordManager.h"
 #include "nsIFormHistory.h"
+#include "nsIRDFService.h"
+#include "nsIRDFContainer.h"
+#include "nsIURL.h"
+#include "nsIBookmarksService.h"
+#include "nsIStringBundle.h"
 #include "nsCRT.h"
+#include "nsNetUtil.h"
+#include "nsUnicharUtils.h"
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
+#define TRIDENTPROFILE_BUNDLE       "chrome://tridentprofile/locale/tridentProfile.properties"
 #endif
 
 #define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
 #define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
 #define MIGRATION_STARTED           "Migration:Started"
 #define MIGRATION_ENDED             "Migration:Ended"
- 
+
 const int sInitialCookieBufferSize = 1024; // but it can grow
 const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
@@ -681,6 +693,8 @@ nsTridentPreferencesWin::CopyPasswords(PRBool aReplace)
   rv = GetSignonsListFromPStore(PStore, &signonsFound);
   if (NS_SUCCEEDED(rv))
     ResolveAndMigrateSignons(PStore, &signonsFound);
+
+  return NS_OK;
 }
 
 nsresult
@@ -941,10 +955,329 @@ nsTridentPreferencesWin::AddDataToFormHistory(const nsAString& aKey, PRUnichar* 
   return NS_OK;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//
+// favorites
+// search keywords
+//
+
 nsresult
 nsTridentPreferencesWin::CopyFavorites(PRBool aReplace) {
-  printf("*** copyfavorites\n");
+  // If "aReplace" is true, merge into the root level of bookmarks. Otherwise, create
+  // a folder called "Imported IE Favorites" and place all the Bookmarks there. 
+  nsresult rv;
+
+  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1"));
+  nsCOMPtr<nsIRDFResource> root;
+  rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
+
+  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  nsAutoString personalToolbarFolderName;
+
+  nsCOMPtr<nsIRDFResource> folder;
+  if (!aReplace) {
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    nsCOMPtr<nsIStringBundle> bundle;
+    bundleService->CreateBundle(TRIDENTPROFILE_BUNDLE, getter_AddRefs(bundle));
+
+    nsXPIDLString importedIEFavsTitle;
+    bundle->GetStringFromName(NS_LITERAL_STRING("importedIEFavsTitle").get(), getter_Copies(importedIEFavsTitle));
+
+    bms->CreateFolderInContainer(importedIEFavsTitle.get(), root, -1, getter_AddRefs(folder));
+  }
+  else {
+    // Locate the Links toolbar folder, we want to replace the Personal Toolbar content with 
+    // Favorites in this folder. 
+    HKEY key;
+    if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                      "Software\\Microsoft\\Internet Explorer\\Toolbar",
+                      0, KEY_READ, &key) == ERROR_SUCCESS) {
+      DWORD type, length;
+      unsigned char linksFolderName[MAX_PATH];
+      if (::RegQueryValueEx(key, "LinksFolderName", 0, &type, linksFolderName, &length) == ERROR_SUCCESS)
+        personalToolbarFolderName.AssignWithConversion((char*)linksFolderName);
+    }
+    folder = root;
+  }
+
+  nsCOMPtr<nsIProperties> fileLocator(do_GetService("@mozilla.org/file/directory_service;1", &rv));
+  if (NS_FAILED(rv)) 
+      return rv;
+
+  nsCOMPtr<nsIFile> favoritesDirectory;
+  fileLocator->Get("Favs", NS_GET_IID(nsIFile), getter_AddRefs(favoritesDirectory));
+
+  // If |favoritesDirectory| is null, it means that we're on a Windows 
+  // platform that does not have a Favorites folder, e.g. Windows 95 
+  // (early SRs, before IE integrated with the shell). Only try to 
+  // read Favorites folder if it exists on the machine. 
+  if (favoritesDirectory) {
+    rv = ParseFavoritesFolder(favoritesDirectory, folder, bms, personalToolbarFolderName, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+  }
+
+  return CopySmartKeywords(root);
+}
+
+nsresult
+nsTridentPreferencesWin::CopySmartKeywords(nsIRDFResource* aParentFolder)
+{ 
+  HKEY key;
+  if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                    "Software\\Microsoft\\Internet Explorer\\SearchUrl",
+                    0, KEY_READ, &key) == ERROR_SUCCESS) {
+    nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+    nsCOMPtr<nsIRDFResource> keywordsFolder, bookmark;
+    nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
+
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID);
+    
+    nsCOMPtr<nsIStringBundle> bundle;
+    bundleService->CreateBundle(TRIDENTPROFILE_BUNDLE, getter_AddRefs(bundle));
+
+
+    int offset = 0;
+    while (1) {
+      char keyName[MAX_PATH];
+      DWORD keySize = MAX_PATH;
+      LONG rv = ::RegEnumKey(key, offset, keyName, keySize);
+      if (rv == ERROR_NO_MORE_ITEMS)
+        break;
+
+      if (!keywordsFolder) {
+        nsXPIDLString importedIESearchUrlsTitle;
+        bundle->GetStringFromName(NS_LITERAL_STRING("importedIESearchUrls").get(), getter_Copies(importedIESearchUrlsTitle));
+
+        bms->CreateFolderInContainer(importedIESearchUrlsTitle.get(), aParentFolder, -1, getter_AddRefs(keywordsFolder));
+      }
+
+      nsCAutoString keyNameStr(keyName);
+      nsCAutoString smartKeywordKey(NS_LITERAL_CSTRING("Software\\Microsoft\\Internet Explorer\\SearchUrl\\"));
+      smartKeywordKey += keyNameStr;
+      HKEY skey;
+      if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                        smartKeywordKey.get(),
+                        0, KEY_READ, &skey) == ERROR_SUCCESS) {
+        LONG length;
+        char url[MAX_PATH];
+        if (::RegQueryValue(skey, NULL, (char*)url, &length) == ERROR_SUCCESS) {
+          uri->SetSpec(nsDependentCString((char*)url));
+          nsCAutoString hostCStr;
+          uri->GetHost(hostCStr);
+          nsAutoString host; host.AssignWithConversion(hostCStr.get());
+
+          const PRUnichar* nameStrings[] = { host.get() };
+          nsXPIDLString keywordName;
+          rv = bundle->FormatStringFromName(NS_LITERAL_STRING("importedIESearchUrlTitle").get(),
+                                            nameStrings, 1, getter_Copies(keywordName));
+
+          nsAutoString keyword; keyword.AssignWithConversion(keyName);
+
+          const PRUnichar* descStrings[] = { keyword.get(), host.get() };
+          nsXPIDLString keywordDesc;
+          rv = bundle->FormatStringFromName(NS_LITERAL_STRING("importedIESearchUrlDesc").get(),
+                                            descStrings, 2, getter_Copies(keywordDesc));
+          bms->CreateBookmarkInContainer(keywordName.get(), 
+                                         (char*)url, 
+                                         keyword.get(), 
+                                         keywordDesc.get(), 
+                                         NS_LITERAL_STRING("").get(), 
+                                         keywordsFolder, 
+                                         -1, 
+                                         getter_AddRefs(bookmark));
+        }
+      }
+
+      ++offset;
+    }
+  }
+
   return NS_OK;
+}
+
+void 
+nsTridentPreferencesWin::ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL) {
+  HRESULT result;
+
+  IUniformResourceLocator* urlLink = nsnull;
+  result = ::CoCreateInstance(CLSID_InternetShortcut, NULL, CLSCTX_INPROC_SERVER,
+                              IID_IUniformResourceLocator, (void**)&urlLink);
+  if (SUCCEEDED(result) && urlLink) {
+    IPersistFile* urlFile = nsnull;
+    result = urlLink->QueryInterface(IID_IPersistFile, (void**)&urlFile);
+    if (SUCCEEDED(result) && urlFile) {
+      result = urlFile->Load(aFileName.get(), STGM_READ);
+      if (SUCCEEDED(result) ) {
+        LPSTR lpTemp = nsnull;
+        result = urlLink->GetURL(&lpTemp);
+        if (SUCCEEDED(result) && lpTemp) {
+          *aOutURL = PL_strdup(lpTemp);
+          // free the string that GetURL alloc'd
+          IMalloc* pMalloc;
+          result = SHGetMalloc(&pMalloc);
+          if (SUCCEEDED(result)) {
+            pMalloc->Free(lpTemp);
+            pMalloc->Release();
+          } 
+        }
+      }
+      urlFile->Release();
+    }
+    urlLink->Release();
+  }
+}
+
+nsresult
+nsTridentPreferencesWin::ParseFavoritesFolder(nsIFile* aDirectory, 
+                                              nsIRDFResource* aParentResource,
+                                              nsIBookmarksService* aBookmarksService, 
+                                              const nsAString& aPersonalToolbarFolderName,
+                                              PRBool aIsAtRootLevel) {
+  nsresult rv;
+
+  nsCOMPtr<nsISimpleEnumerator> entries;
+  rv = aDirectory->GetDirectoryEntries(getter_AddRefs(entries));
+  if (NS_FAILED(rv)) return rv;
+
+  do {
+    PRBool hasMore = PR_FALSE;
+    rv = entries->HasMoreElements(&hasMore);
+    if (NS_FAILED(rv) || !hasMore) break;
+
+    nsCOMPtr<nsISupports> supp;
+    rv = entries->GetNext(getter_AddRefs(supp));
+    if (NS_FAILED(rv)) break;
+
+    nsCOMPtr<nsIFile> currFile(do_QueryInterface(supp));
+
+    nsCOMPtr<nsIURI> uri;
+    rv = NS_NewFileURI(getter_AddRefs(uri), currFile);
+    if (NS_FAILED(rv)) break;
+
+    nsAutoString bookmarkName;
+    currFile->GetLeafName(bookmarkName);
+
+    PRBool isSymlink = PR_FALSE;
+    PRBool isDir = PR_FALSE;
+
+    currFile->IsSymlink(&isSymlink);
+    currFile->IsDirectory(&isDir);
+
+    if (isSymlink) {
+      // It's a .lnk file.  Get the native path and check to see if it's
+      // a dir.  If so, create a bookmark for the dir.  If not, then
+      // simply do nothing and continue.
+
+      // Get the native path that the .lnk file is pointing to.
+      nsCAutoString path;
+      rv = currFile->GetNativeTarget(path);
+      if (NS_FAILED(rv)) continue;
+
+      nsCOMPtr<nsILocalFile> localFile;
+      rv = NS_NewNativeLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
+      if (NS_FAILED(rv)) continue;
+
+      // Check for dir here.  If path is not a dir, just continue with
+      // next import.
+      rv = localFile->IsDirectory(&isDir);
+      NS_ENSURE_SUCCESS(rv, rv);
+      if (!isDir) continue;
+
+      nsCAutoString spec;
+      nsCOMPtr<nsIFile> filePath(localFile);
+      // Get the file url format (file:///...) of the native file path.
+      rv = NS_GetURLSpecFromFile(filePath, spec);
+      if (NS_FAILED(rv)) continue;
+
+      // Look for and strip out the .lnk extension.
+      NS_NAMED_LITERAL_STRING(lnkExt, ".lnk");
+      PRInt32 lnkExtStart = bookmarkName.Length() - lnkExt.Length();
+      if (StringEndsWith(bookmarkName, lnkExt,
+                         nsCaseInsensitiveStringComparator()))
+        bookmarkName.Truncate(lnkExtStart);
+
+      nsCOMPtr<nsIRDFResource> bookmark;
+      aBookmarksService->CreateBookmarkInContainer(bookmarkName.get(), 
+                                                   spec.get(), 
+                                                   nsnull,
+                                                   nsnull, 
+                                                   nsnull, 
+                                                   aParentResource, 
+                                                   -1, 
+                                                   getter_AddRefs(bookmark));
+      if (NS_FAILED(rv)) continue;
+    }
+    else if (isDir) {
+      nsCOMPtr<nsIRDFResource> folder;
+      if (bookmarkName.Equals(aPersonalToolbarFolderName)) {
+        aBookmarksService->GetBookmarksToolbarFolder(getter_AddRefs(folder));
+        
+        // If we're here, it means the user's doing a _replace_ import which means
+        // clear out the content of this folder, and replace it with the new content
+        nsCOMPtr<nsIRDFContainer> ctr(do_CreateInstance("@mozilla.org/rdf/container;1"));
+        nsCOMPtr<nsIRDFDataSource> bmds(do_QueryInterface(aBookmarksService));
+        ctr->Init(bmds, folder);
+
+        nsCOMPtr<nsISimpleEnumerator> e;
+        ctr->GetElements(getter_AddRefs(e));
+
+        PRBool hasMore;
+        e->HasMoreElements(&hasMore);
+        while (hasMore) {
+          nsCOMPtr<nsIRDFResource> b;
+          e->GetNext(getter_AddRefs(b));
+
+          ctr->RemoveElement(b, PR_FALSE);
+
+          e->HasMoreElements(&hasMore);
+        }
+      }
+      else {
+        rv = aBookmarksService->CreateFolderInContainer(bookmarkName.get(), 
+                                                        aParentResource, 
+                                                        -1, 
+                                                        getter_AddRefs(folder));
+        if (NS_FAILED(rv)) continue;
+      }
+
+      rv = ParseFavoritesFolder(currFile, folder, aBookmarksService, aPersonalToolbarFolderName, PR_FALSE);
+      if (NS_FAILED(rv)) continue;
+    }
+    else {
+      nsCOMPtr<nsIURL> url(do_QueryInterface(uri));
+      nsCAutoString extension;
+
+      url->GetFileExtension(extension);
+      if (!extension.Equals(NS_LITERAL_CSTRING("url"),
+                            nsCaseInsensitiveCStringComparator()))
+        continue;
+
+      nsAutoString name(Substring(bookmarkName, 0, 
+                                  bookmarkName.Length() - extension.Length() - 1));
+
+      nsAutoString path;
+      currFile->GetPath(path);
+
+      nsXPIDLCString resolvedURL;
+      ResolveShortcut(path, getter_Copies(resolvedURL));
+
+      nsCOMPtr<nsIRDFResource> bookmark;
+      rv = aBookmarksService->CreateBookmarkInContainer(name.get(), 
+                                                        resolvedURL.get(), 
+                                                        nsnull, 
+                                                        nsnull, 
+                                                        nsnull, 
+                                                        aParentResource, 
+                                                        -1, 
+                                                        getter_AddRefs(bookmark));
+      if (NS_FAILED(rv)) continue;
+    }
+  }
+  while (1);
+
+  return rv;
 }
 
 nsresult
