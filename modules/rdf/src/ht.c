@@ -3068,20 +3068,23 @@ HT_ContainerSupportsNaturalOrderSort(HT_Resource container)
 	HT_Resource	parent;
 	PRBool		naturalOrder = PR_FALSE;
 
-	if (container != NULL && HT_IsContainer(container))
+	if ((container != NULL) && HT_IsContainer(container))
 	{
-		if ((container->node == RDFUtil_GetQuickFileFolder()) ||
-	        	(container->node == RDFUtil_GetPTFolder()))
+		if (container->view->sortToken == NULL)
 		{
-			naturalOrder = PR_TRUE;
-		}
-		else
-		{
-			parent = container->parent;
-			if (parent != NULL)
+			if ((container->node == RDFUtil_GetQuickFileFolder()) ||
+		        	(container->node == RDFUtil_GetPTFolder()))
 			{
-				naturalOrder = nlocalStoreHasAssertion(gLocalStore, container->node,
-					gCoreVocab->RDF_parent, parent->node, RDF_RESOURCE_TYPE, 1);
+				naturalOrder = PR_TRUE;
+			}
+			else
+			{
+				parent = container->parent;
+				if (parent != NULL)
+				{
+					naturalOrder = nlocalStoreHasAssertion(gLocalStore, container->node,
+						gCoreVocab->RDF_parent, parent->node, RDF_RESOURCE_TYPE, 1);
+				}
 			}
 		}
 	}
