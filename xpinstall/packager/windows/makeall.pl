@@ -104,15 +104,15 @@ $versionLanguage               = "en";
 # Beonex settings
 
 $seiFileNameGeneric   = "nsinstall.exe";
-$seiFileNameSpecific  = "beonex-comm-0.8.1-stable-1-win32-installer.exe";
-$seiFileNameSpecificStub  = "beonex-comm-0.8.1-stable-1-win32-stub-installer.exe";
-$seuFileNameSpecific  = "BeonexComm0.8.1Uninstall.exe";
-$seuzFileNameSpecific = "BeonexComm0.8.1Uninstall.zip";
+$seiFileNameSpecific  = "beonex-comm-0.8.2-stable-1-win32-installer.exe";
+$seiFileNameSpecificStub  = "beonex-comm-0.8.2-stable-1-win32-stub-installer.exe";
+$seuFileNameSpecific  = "BeonexComm0.8.2Uninstall.exe";
+$seuzFileNameSpecific = "BeonexComm0.8.2Uninstall.zip";
 
 # set environment vars for use by other .pl scripts called from this script.
-$ENV{WIZ_userAgent}            = "0.8.1 (en)";
-$ENV{WIZ_userAgentShort}       = "0.8.1";
-$ENV{WIZ_xpinstallVersion}     = "0.8.1";
+$ENV{WIZ_userAgent}            = "0.8.2 (en)";
+$ENV{WIZ_userAgentShort}       = "0.8.2";
+$ENV{WIZ_xpinstallVersion}     = "0.8.2";
 $ENV{WIZ_nameCompany}          = "Beonex";
 $ENV{WIZ_nameProduct}          = "Beonex Communicator";
 $ENV{WIZ_nameProductNoVersion} = "Beonex Communicator";
