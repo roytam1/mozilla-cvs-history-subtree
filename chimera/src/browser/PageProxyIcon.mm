@@ -62,6 +62,12 @@
   // need to implement this or else mouseDragged isn't called
 }
 
+- (void)mouseUp:(NSEvent *)theEvent
+{
+  // select the url bar text
+  [[[self window] windowController] focusURLBar];
+}
+
 - (void) mouseDragged: (NSEvent*) event
 {
   nsAutoString hrefStr, titleStr;
