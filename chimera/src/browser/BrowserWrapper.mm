@@ -145,15 +145,17 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mToolTip release];
   [mTitle release];
 
-
   [super dealloc];
 }
 
 
 -(void)windowClosed
 {
-  // Break the cycle.
-  [mBrowserView setContainer: nil];
+  // Break the cycle, but don't clear ourselves as the container 
+  // before we call |destroyWebBrowser| or onUnload handlers won't be
+  // able to create new windows. The container will get cleared
+  // when the CHBrowserListener goes away as a result of the
+  // |destroyWebBrowser| call. (bug 174416)
   [mBrowserView removeListener: self];
   [mBrowserView destroyWebBrowser];
 }
