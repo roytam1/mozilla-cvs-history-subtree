@@ -2,3 +2,5 @@
 dist/bin/chrome/embed.jar
 @topsrcdir@/embedding/config/installed-chrome.txt dist/bin/chrome/installed-chrome.txt
 
+[embed]
+@topsrcdir@/xpinstall/config/readme.html dist/bin/readme.html

@@ -30,6 +30,8 @@ XPIDL_MODULE	= webBrowser_core
 LIBRARY_NAME	= nsWebBrowser_s
 GRE_MODULE	= 1
 
+PACKAGE_FILE = webbrwsr.pkg
+
 REQUIRES	= xpcom \
 		  string \
 		  docshell \
