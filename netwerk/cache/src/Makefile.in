@@ -43,6 +43,7 @@ CPPSRCS		= \
 	nsCacheService.cpp \
 	nsCacheSession.cpp \
 	nsDiskCacheDevice.cpp \
+	nsDiskCacheEntry.cpp \
 	nsMemoryCacheDevice.cpp \
 	$(NULL)
 
