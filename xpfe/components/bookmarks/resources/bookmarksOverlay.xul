@@ -37,7 +37,10 @@
   <commands id="commands">
     <commandset id="bookmarksItems">
       <command id="cmd_bm_open"                      oncommand="goDoCommand('cmd_bm_open');"/>
+      <command id="cmd_bm_openinnewwindow"           oncommand="goDoCommand('cmd_bm_openinnewwindow');"/>
+      <command id="cmd_bm_openinnewtab"              oncommand="goDoCommand('cmd_bm_openinnewtab');"/>
       <command id="cmd_bm_expandfolder"              oncommand="goDoCommand('cmd_bm_expandfolder');"/>
+      <command id="cmd_bm_managefolder"              oncommand="goDoCommand('cmd_bm_managefolder');"/>
       <command id="cmd_bm_newfolder"                 oncommand="goDoCommand('cmd_bm_newfolder');"/>
       <command id="cmd_bm_newbookmark"               oncommand="goDoCommand('cmd_bm_newbookmark');"/>
       <command id="cmd_bm_newseparator"              oncommand="goDoCommand('cmd_bm_newseparator');"/>
@@ -47,8 +50,6 @@
       <command id="cmd_bm_setnewsearchfolder"        oncommand="goDoCommand('cmd_bm_setnewsearchfolder');"/>
       <command id="cmd_bm_properties"                oncommand="goDoCommand('cmd_bm_properties');"/>
       <command id="cmd_bm_rename"                    oncommand="goDoCommand('cmd_bm_rename');"/>
-      <command id="cmd_bm_openinnewwindow"           oncommand="goDoCommand('cmd_bm_openinnewwindow');"/>
-      <command id="cmd_bm_openinnewtab"              oncommand="goDoCommand('cmd_bm_openinnewtab');"/>
       <command id="cmd_bm_import"                    oncommand="goDoCommand('cmd_bm_import');"/>
       <command id="cmd_bm_export"                    oncommand="goDoCommand('cmd_bm_export');"/>
       <command id="cmd_bm_movebookmark"              oncommand="goDoCommand('cmd_bm_movebookmark');"/>
