@@ -59,8 +59,6 @@ nsWindow::nsWindow()
   mLowerLeft = PR_FALSE;
   mWindowType = eWindowType_child;
   mBorderStyle = eBorderStyle_default;
-  mIsDestroyingWindow = PR_FALSE;
-  mOnDestroyCalled = PR_FALSE;
   mFont = nsnull;
   
   mMenuBar = nsnull;
@@ -78,10 +76,13 @@ nsWindow::~nsWindow()
   IndentByDepth(stdout);
   printf("nsWindow::~nsWindow:%p\n", this);
 #endif
-  mIsDestroyingWindow = PR_TRUE;
-  if (nsnull != mShell) {
-    Destroy();
+
+  if (mShell) {
+    if (GTK_IS_WIDGET(mShell))
+      gtk_widget_destroy(mShell);
+    mShell = nsnull;
   }
+
   NS_IF_RELEASE(mMenuBar);
 }
 
@@ -90,7 +91,7 @@ PRBool nsWindow::IsChild() const
   return PR_FALSE;
 }
 
-NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
+NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect *aOldRect, nsRect **aNewRect)
 {
   gint x;
   gint y;
@@ -100,8 +101,8 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
     if (mShell->window)
     {
       gdk_window_get_origin(mWidget->window, &x, &y);
-      aNewRect.x = x + aOldRect.x;
-      aNewRect.y = y + aOldRect.y;
+      (*aNewRect)->x = x + aOldRect->x;
+      (*aNewRect)->y = y + aOldRect->y;
     }
     else
       return NS_ERROR_FAILURE;
@@ -111,39 +112,11 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
     if (mWidget->window)
     {
       gdk_window_get_origin(mWidget->window, &x, &y);
-      aNewRect.x = x + aOldRect.x;
-      aNewRect.y = y + aOldRect.y;
+      (*aNewRect)->x = x + aOldRect->x;
+      (*aNewRect)->y = y + aOldRect->y;
     }
     else
       return NS_ERROR_FAILURE;
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsWindow::Destroy()
-{
-#ifdef NOISY_DESTROY
-  IndentByDepth(stdout);
-  printf("nsWindow::Destroy:%p: isDestroyingWindow=%s widget=%p shell=%p parent=%p\n",
-         this, mIsDestroyingWindow ? "yes" : "no", mWidget, mShell, mParent);
-#endif
-  NS_IF_RELEASE(mMenuBar);
-
-  // Call base class first... we need to ensure that upper management
-  // knows about the close so that if this is the main application
-  // window, for example, the application will exit as it should.
-
-  if (mIsDestroyingWindow == PR_TRUE) {
-    nsBaseWidget::Destroy();
-    if (PR_FALSE == mOnDestroyCalled)
-        nsWidget::OnDestroy();
-
-    if (mShell) {
-    	if (GTK_IS_WIDGET(mShell))
-     		gtk_widget_destroy(mShell);
-    	mShell = nsnull;
-    }
   }
 
   return NS_OK;
@@ -160,8 +133,10 @@ nsWindow::OnDestroySignal(GtkWidget* aGtkWidget)
 
 gint handle_delete_event(GtkWidget *w, GdkEventAny *e, nsWindow *win)
 {
-  win->SetIsDestroying( PR_TRUE );
-  win->Destroy();
+  win->DispatchStandardEvent(NS_DESTROY);
+
+  NS_RELEASE(win);
+
   return TRUE;
 }
 
@@ -323,17 +298,21 @@ void nsWindow::InitCallbacks(char * aName)
 // Return some native data according to aDataType
 //
 //-------------------------------------------------------------------------
-void * nsWindow::GetNativeData(PRUint32 aDataType)
+NS_IMETHODIMP nsWindow::GetNativeData(PRUint32 aDataType, void **aData)
 {
   if (aDataType == NS_NATIVE_WINDOW)
   {
     // The GTK layout widget uses a clip window to do scrolling.
     // All the action happens on that window - called the 'bin_window'
     if (mWidget)
-      return (void *) GTK_LAYOUT(mWidget)->bin_window;
+    {
+      *aData = GTK_LAYOUT(mWidget)->bin_window;
+      return NS_OK;
+    }
+    return NS_ERROR_FAILURE;
   }
 
-  return nsWidget::GetNativeData(aDataType);
+  return nsWidget::GetNativeData(aDataType, aData);
 }
 
 //-------------------------------------------------------------------------
@@ -355,12 +334,12 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 }
 
 
-NS_IMETHODIMP nsWindow::SetTitle(const nsString& aTitle)
+NS_IMETHODIMP nsWindow::SetTitle(const char *aTitle)
 {
   if (!mShell)
     return NS_ERROR_FAILURE;
 
-  gtk_window_set_title(GTK_WINDOW(mShell), nsAutoCString(aTitle));
+  gtk_window_set_title(GTK_WINDOW(mShell), aTitle);
 
   return NS_OK;
 }
@@ -737,11 +716,13 @@ NS_IMETHODIMP nsWindow::Move(PRInt32 aX, PRInt32 aY)
     else
     {
       // *VERY* stupid hack to make gfx combo boxes work
-      nsRect oldrect, newrect;
+      nsRect oldrect, *newrect;
       oldrect.x = aX;
       oldrect.y = aY;
-      mParent->WidgetToScreen(oldrect, newrect);
-      gtk_widget_set_uposition(mShell, newrect.x, newrect.y);
+      newrect = new nsRect();
+      mParent->WidgetToScreen(&oldrect, &newrect);
+      gtk_widget_set_uposition(mShell, newrect->x, newrect->y);
+      delete newrect;
     }
   }
   else if (mWidget) 
@@ -997,7 +978,7 @@ PRBool ChildWindow::IsChild() const
 {
   return PR_TRUE;
 }
-
+#if 0
 NS_METHOD ChildWindow::Destroy()
 {
 #ifdef NOISY_DESTROY
@@ -1007,5 +988,6 @@ NS_METHOD ChildWindow::Destroy()
 
   // Skip over baseclass Destroy method which doesn't do what we want;
   // instead make sure widget destroy method gets invoked.
-  return nsWidget::Destroy();
+  //  return nsWidget::Destroy();
 }
+#endif

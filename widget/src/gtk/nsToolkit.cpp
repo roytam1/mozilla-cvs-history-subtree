@@ -17,8 +17,10 @@
  */
 
 #include "nscore.h"  // needed for 'nsnull'
+#include "stdio.h"
 #include "nsToolkit.h"
 
+static int num = 0;
 
 //-------------------------------------------------------------------------
 //
@@ -27,6 +29,8 @@
 //-------------------------------------------------------------------------
 nsToolkit::nsToolkit()
 {
+  ++num;
+  printf("TOOLKITS - %i\n", num);
   NS_INIT_REFCNT();
   mSharedGC = nsnull;
 }
@@ -38,6 +42,8 @@ nsToolkit::nsToolkit()
 //-------------------------------------------------------------------------
 nsToolkit::~nsToolkit()
 {
+  --num;
+  printf("TOOLKITS - %i\n", num);
   if (mSharedGC)
     gdk_gc_unref(mSharedGC);
 }

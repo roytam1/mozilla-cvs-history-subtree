@@ -34,6 +34,7 @@ XPIDLSRCS =               \
   .\nsIClipboard.idl            \
   .\nsIClipboardOwner.idl       \
   .\nsIRollupListener.idl \
+  .\nsIWidget.idl \
   $(NULL)
 
 EXPORTS=\
@@ -41,7 +42,6 @@ EXPORTS=\
   nsIFontNameIterator.h \
   nsIFontRetrieverService.h \
   nsIFileWidget.h            \
-  nsIWidget.h \
   nsIButton.h \
   nsICheckButton.h \
   nsIListWidget.h \

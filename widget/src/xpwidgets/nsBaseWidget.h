@@ -54,30 +54,41 @@ public:
   // nsIWidget interface
   NS_IMETHOD              CaptureMouse(PRBool aCapture);
   NS_IMETHOD              InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSynchronous);
-  NS_IMETHOD              GetClientData(void*& aClientData);
+  NS_IMETHOD              GetClientData(void** aClientData);
   NS_IMETHOD              SetClientData(void* aClientData);
-  NS_IMETHOD              Destroy();
-  virtual nsIWidget*      GetParent(void);
-  virtual nsIEnumerator*  GetChildren();
-  virtual void            AddChild(nsIWidget* aChild);
-  virtual void            RemoveChild(nsIWidget* aChild);
+  NS_IMETHOD              GetParent(nsIWidget **aParent);
+  NS_IMETHOD              GetChildren(nsIEnumerator **aChildren);
+  NS_IMETHOD              AddChild(nsIWidget* aChild);
+  NS_IMETHOD              RemoveChild(nsIWidget* aChild);
 
   NS_IMETHOD              SetZIndex(PRInt32 aZIndex);
   NS_IMETHOD              GetZIndex(PRInt32* aZIndex);
 
-  virtual nscolor         GetForegroundColor(void);
-  NS_IMETHOD              SetForegroundColor(const nscolor &aColor);
-  virtual nscolor         GetBackgroundColor(void);
-  NS_IMETHOD              SetBackgroundColor(const nscolor &aColor);
-  virtual nsCursor        GetCursor();
+  NS_IMETHOD              GetForegroundColor(nscolor *aColor);
+  NS_IMETHOD              SetForegroundColor(nscolor aColor);
+
+  NS_IMETHOD              GetBackgroundColor(nscolor *aColor);
+  NS_IMETHOD              SetBackgroundColor(nscolor aColor);
+
+  NS_IMETHOD              GetCursor(nsCursor *aCursor);
   NS_IMETHOD              SetCursor(nsCursor aCursor);
+
   virtual nsIRenderingContext* GetRenderingContext();
   virtual nsIDeviceContext* GetDeviceContext();
   virtual nsIAppShell *   GetAppShell();
-  virtual nsIToolkit*     GetToolkit();  
+
+  NS_IMETHOD Show(PRBool aShow) { printf("nsIWidget::Show is depriciated.  Call nsIWidget::SetVisibility\n"); return SetVisibility(aShow); }
+
+
+  NS_IMETHOD              GetToolkit(nsIToolkit **aToolkit);
   NS_IMETHOD              SetModal(void); 
+
   NS_IMETHOD              SetWindowType(nsWindowType aWindowType);
-  NS_IMETHOD              SetBorderStyle(nsBorderStyle aBorderStyle); 
+  NS_IMETHOD              GetWindowType(nsWindowType *aWindowType);
+
+  NS_IMETHOD              SetBorderStyle(nsBorderStyle aBorderStyle);
+  NS_IMETHOD              GetBorderStyle(nsBorderStyle *aBorderStyle);
+  
   NS_IMETHOD              AddMouseListener(nsIMouseListener * aListener);
   NS_IMETHOD              AddEventListener(nsIEventListener * aListener);
   NS_IMETHOD              AddMenuListener(nsIMenuListener * aListener);
@@ -85,13 +96,12 @@ public:
   NS_IMETHOD              GetBounds(nsRect &aRect);
   NS_IMETHOD              GetBoundsAppUnits(nsRect &aRect, float aAppUnits);
   NS_IMETHOD              GetClientBounds(nsRect &aRect);
-  NS_IMETHOD              GetBorderSize(PRInt32 &aWidth, PRInt32 &aHeight);
-  NS_IMETHOD              Paint(nsIRenderingContext& aRenderingContext, const nsRect& aDirtyRect);
+  NS_IMETHOD              GetBorderSize(PRInt32 *aWidth, PRInt32 *aHeight);
+  NS_IMETHOD              Paint(nsIRenderingContext *aRenderingContext, const nsRect *aDirtyRect);
 #ifdef LOSER
   NS_IMETHOD              SetVerticalScrollbar(nsIWidget * aScrollbar);
 #endif
   NS_IMETHOD              EnableDragDrop(PRBool aEnable);
-  virtual void            ConvertToDeviceCoordinates(nscoord  &aX,nscoord &aY) {}
   virtual void            FreeNativeData(void * data, PRUint32 aDataType) {}//~~~
 
 protected:
@@ -103,7 +113,6 @@ protected:
   virtual void            DrawScaledLine(nsIRenderingContext& aRenderingContext, 
                                          nscoord aSX, nscoord aSY, nscoord aEX, nscoord aEY, 
                                          float   aScale, float aAppUnits, PRBool aIsHorz);
-  virtual void            OnDestroy();
   virtual void            BaseCreate(nsIWidget *aParent,
                                      const nsRect &aRect,
                                      EVENT_CALLBACK aHandleEventFunction,
@@ -129,8 +138,6 @@ protected:
   PRBool            mIsShiftDown;
   PRBool            mIsControlDown;
   PRBool            mIsAltDown;
-  PRBool            mIsDestroying;
-  PRBool            mOnDestroyCalled;
   nsRect            mBounds;
 #ifdef LOSER
   nsIWidget        *mVScrollbar;

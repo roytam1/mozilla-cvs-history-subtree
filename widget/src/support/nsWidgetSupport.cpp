@@ -55,6 +55,31 @@ static NS_DEFINE_IID(kIScrollBarIID, NS_ISCROLLBAR_IID);
 	#define WIDGET_SUPPORT_EXPORT(returnType)	returnType
 #endif
 
+
+void createWidget(nsISupports *aParent,
+                  nsISupports *aWidget,
+                  const nsRect& aRect,
+                  EVENT_CALLBACK aHandleEventFunction,
+                  const nsFont* aFont)
+{
+	nsIWidget* parent = nsnull;
+	if (aParent != nsnull)
+    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
+
+ 	nsIWidget *widget;
+	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
+	  widget->Create(parent, aRect, aHandleEventFunction, NULL, NULL, NULL, NULL);
+	  widget->SetVisibility(PR_TRUE);
+    if (aFont != nsnull)
+	  	widget->SetFont((nsFont*)aFont);
+		NS_IF_RELEASE(widget);
+	}
+  if (aParent != nsnull)
+    NS_IF_RELEASE(parent);
+}
+
+
+
 WIDGET_SUPPORT_EXPORT(nsresult)
 NS_CreateButton(nsISupports* aParent, 
 								nsIButton* aButton, 
@@ -62,21 +87,7 @@ NS_CreateButton(nsISupports* aParent,
 								EVENT_CALLBACK aHandleEventFunction,
 								const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget;
-	if (NS_OK == aButton->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-		NS_IF_RELEASE(widget);
-	}
-  
-  if (aParent != nsnull)
-    NS_IF_RELEASE(parent);
+  createWidget(aParent, aButton, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -87,21 +98,8 @@ NS_CreateCheckButton(nsISupports* aParent,
 											  EVENT_CALLBACK aHandleEventFunction,
 											  const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
- 	nsIWidget* 	widget;
-	if (NS_OK == aCheckButton->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-		NS_IF_RELEASE(widget);
-	}
-  if (aParent != nsnull)
-    NS_IF_RELEASE(parent);
- return NS_OK;
+  createWidget(aParent, aCheckButton, aRect, aHandleEventFunction, aFont);
+  return NS_OK;
 }
 
 
@@ -114,21 +112,8 @@ NS_CreateRadioButton( nsISupports* aParent,
 												EVENT_CALLBACK aHandleEventFunction,
 												const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
- 	nsIWidget* 	widget;
-	if (NS_OK == aRadioButton->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-		NS_IF_RELEASE(widget);
-	}
-  if (aParent != nsnull)
-    NS_IF_RELEASE(parent);
- return NS_OK;
+  createWidget(aParent, aRadioButton, aRect, aHandleEventFunction, aFont);
+  return NS_OK;
 }
 
 
@@ -139,19 +124,7 @@ NS_CreateLabel( nsISupports* aParent,
 									EVENT_CALLBACK aHandleEventFunction,
 									const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (NS_OK == aParent->QueryInterface(kIWidgetIID,(void**)&parent))
-	{
-		nsIWidget* 	widget;
-		if (NS_OK == aLabel->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  	widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  	widget->Show(PR_TRUE);
-      if (aFont != nsnull)
-	  	  widget->SetFont(*aFont);
-			NS_IF_RELEASE(widget);
-		}
-		NS_IF_RELEASE(parent);
-	}
+  createWidget(aParent, aLabel, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -164,26 +137,7 @@ NS_CreateTextAreaWidget(nsISupports* aParent,
 									EVENT_CALLBACK aHandleEventFunction,
 									const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget = nsnull;
-	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-    NS_IF_RELEASE(widget);
-	}
-  else
-  {
-    NS_ERROR("Called QueryInterface on a non kIWidgetIID supported object");
-  }
-
-	if (aParent)
-	  NS_IF_RELEASE(parent);
-
+  createWidget(aParent, aWidget, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -194,26 +148,7 @@ NS_CreateTextWidget(nsISupports* aParent,
 									EVENT_CALLBACK aHandleEventFunction,
 									const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget = nsnull;
-	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-    NS_IF_RELEASE(widget);
-	}
-  else
-  {
-    NS_ERROR("Called QueryInterface on a non kIWidgetIID supported object");
-  }
-
-	if (aParent)
-	  NS_IF_RELEASE(parent);
-
+  createWidget(aParent, aWidget, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -225,24 +160,7 @@ NS_CreateScrollBar(nsISupports* aParent,
 									const nsRect& aRect, 
 									EVENT_CALLBACK aHandleEventFunction)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget = nsnull;
-	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    NS_IF_RELEASE(widget);
-	}
-  else
-  {
-    NS_ERROR("Called QueryInterface on a non kIWidgetIID supported object");
-  }
-
-	if (aParent)
-	  NS_IF_RELEASE(parent);
-
+  createWidget(aParent, aWidget, aRect, aHandleEventFunction, nsnull);
   return NS_OK;
 }
 
@@ -253,26 +171,7 @@ NS_CreateListBox(nsISupports* aParent,
                   EVENT_CALLBACK aHandleEventFunction,
                   const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget = nsnull;
-	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-    NS_IF_RELEASE(widget);
-	}
-  else
-  {
-    NS_ERROR("Called QueryInterface on a non kIWidgetIID supported object");
-  }
-
-	if (aParent)
-	  NS_IF_RELEASE(parent);
-
+  createWidget(aParent, aWidget, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -284,26 +183,7 @@ NS_CreateComboBox(nsISupports* aParent,
                   EVENT_CALLBACK aHandleEventFunction,
                   const nsFont* aFont)
 {
-	nsIWidget* parent = nsnull;
-	if (aParent != nsnull)
-    aParent->QueryInterface(kIWidgetIID,(void**)&parent);
-
-  nsIWidget* 	widget = nsnull;
-	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Create(parent, aRect, aHandleEventFunction, NULL);
-	  widget->Show(PR_TRUE);
-    if (aFont != nsnull)
-	  	widget->SetFont(*aFont);
-    NS_IF_RELEASE(widget);
-	}
-  else
-  {
-    NS_ERROR("Called QueryInterface on a non kIWidgetIID supported object");
-  }
-
-	if (aParent)
-	  NS_IF_RELEASE(parent);
-
+  createWidget(aParent, aWidget, aRect, aHandleEventFunction, aFont);
   return NS_OK;
 }
 
@@ -312,10 +192,9 @@ NS_CreateComboBox(nsISupports* aParent,
 WIDGET_SUPPORT_EXPORT(nsresult)
 NS_ShowWidget(nsISupports* aWidget, PRBool aShow)
 {
-
   nsIWidget* 	widget = nsnull;
 	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget)) {
-	  widget->Show(aShow);
+	  widget->SetVisibility(aShow);
 	  NS_IF_RELEASE(widget);
 	}
 
@@ -366,7 +245,7 @@ NS_GetWidgetNativeData(nsISupports* aWidget, void** aNativeData)
 	nsIWidget* 	widget;
 	if (NS_OK == aWidget->QueryInterface(kIWidgetIID,(void**)&widget))
 	{
-		result = widget->GetNativeData(NS_NATIVE_WIDGET);
+		widget->GetNativeData(nsIWidget::NS_NATIVE_WIDGET, &result);
 		NS_RELEASE(widget);
 	}
 	*aNativeData = result;

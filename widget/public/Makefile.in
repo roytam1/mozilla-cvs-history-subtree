@@ -35,7 +35,6 @@ EXPORTS		= \
 		nsIPopUpMenu.h \
 		nsIFileWidget.h \
 		nsStringUtil.h \
-		nsIWidget.h \
 		nsIButton.h \
 		nsICheckButton.h \
 		nsIListWidget.h \
@@ -64,6 +63,7 @@ EXPORTS		= \
 		$(NULL)
 
 XPIDLSRCS	= \
+		nsIWidget.idl \
 		nsIAppShell.idl \
 		nsIFileSpecWithUI.idl \
 		nsIToolkit.idl \

@@ -71,7 +71,7 @@ public:
                                nsIAppShell *aAppShell = nsnull,
                                nsIToolkit *aToolkit = nsnull,
                                nsWidgetInitData *aInitData = nsnull);
-  NS_IMETHOD            Create(nsNativeWidget aParent,
+  NS_IMETHOD            CreateWithNativeParent(nsNativeWidget aParent,
                                const nsRect &aRect,
                                EVENT_CALLBACK aHandleEventFunction,
                                nsIDeviceContext *aContext,
@@ -79,18 +79,19 @@ public:
                                nsIToolkit *aToolkit = nsnull,
                                nsWidgetInitData *aInitData = nsnull);
 
-  NS_IMETHOD Destroy(void);
-  nsIWidget* GetParent(void);
+  NS_IMETHOD GetParent(nsIWidget **aParent);
 
   NS_IMETHOD SetModal(void);
-  NS_IMETHOD Show(PRBool state);
+
+  NS_IMETHOD SetVisibility(PRBool aState);
+  NS_IMETHOD GetVisibility(PRBool *aState);
+
   NS_IMETHOD CaptureRollupEvents(nsIRollupListener *aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent);
-  NS_IMETHOD IsVisible(PRBool &aState);
 
   NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);
   NS_IMETHOD Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint);
-  NS_IMETHOD Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
-                    PRInt32 aHeight, PRBool aRepaint);
+  NS_IMETHOD MoveResize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+                        PRInt32 aHeight, PRBool aRepaint);
 
   NS_IMETHOD Enable(PRBool aState);
   NS_IMETHOD SetFocus(void);
@@ -99,32 +100,33 @@ public:
   virtual PRBool OnResize(nsRect &aRect);
   virtual PRBool OnMove(PRInt32 aX, PRInt32 aY);
 
-  nsIFontMetrics *GetFont(void);
-  NS_IMETHOD SetFont(const nsFont &aFont);
+  NS_IMETHOD SetFont(nsFont *aFont);
+  NS_IMETHOD GetFont(nsFont **aFont);
 
-  NS_IMETHOD SetBackgroundColor(const nscolor &aColor);
+  NS_IMETHOD SetBackgroundColor(nscolor aColor);
 
   NS_IMETHOD SetCursor(nsCursor aCursor);
 
   NS_IMETHOD SetColorMap(nsColorMap *aColorMap);
+  NS_IMETHOD GetColorMap(nsColorMap **aColorMap) { return NS_ERROR_FAILURE; }
 
-  void* GetNativeData(PRUint32 aDataType);
+  NS_IMETHOD GetNativeData(PRUint32 aDataType, void **aData);
 
   NS_IMETHOD GetAbsoluteBounds(nsRect &aRect);
-  NS_IMETHOD WidgetToScreen(const nsRect &aOldRect, nsRect &aNewRect);
-  NS_IMETHOD ScreenToWidget(const nsRect &aOldRect, nsRect &aNewRect);
+  NS_IMETHOD WidgetToScreen(const nsRect *aOldRect, nsRect **aNewRect);
+  NS_IMETHOD ScreenToWidget(const nsRect *aOldRect, nsRect **aNewRect);
 
   NS_IMETHOD BeginResizingChildren(void);
   NS_IMETHOD EndResizingChildren(void);
 
-  NS_IMETHOD GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight);
+  NS_IMETHOD GetPreferredSize(PRInt32 *aWidth, PRInt32 *aHeight);
   NS_IMETHOD SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight);
 
   // Use this to set the name of a widget for normal widgets.. not the same as the nsWindow version
-  NS_IMETHOD SetTitle(const nsString& aTitle);
+  NS_IMETHOD SetTitle(const char *aTitle);
 
 
-  virtual void ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY);
+  NS_IMETHOD ConvertToDeviceCoordinates(nscoord *aX, nscoord *aY);
 
   // the following are nsWindow specific, and just stubbed here
   NS_IMETHOD Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect) { return NS_ERROR_FAILURE; }
@@ -135,7 +137,7 @@ public:
 
 
   NS_IMETHOD Invalidate(PRBool aIsSynchronous);
-  NS_IMETHOD Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
+  NS_IMETHOD InvalidateRect(const nsRect *aRect, PRBool aIsSynchronous);
   NS_IMETHOD InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSynchronous);
   NS_IMETHOD Update(void);
   NS_IMETHOD DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus);
@@ -162,7 +164,6 @@ public:
 protected:
 
   virtual void InitCallbacks(char * aName = nsnull);
-  virtual void OnDestroy();
 
   NS_IMETHOD CreateNative(GtkWidget *parentWindow) { return NS_OK; }
 
@@ -378,6 +379,7 @@ protected:
 
 
 private:
+  PRBool mIsDestroying;
   PRBool mIsDragDest;
   static nsILookAndFeel *sLookAndFeel;
   static PRUint32 sWidgetCount;

@@ -133,30 +133,30 @@ enum nsBorderStyle
  */
 
 enum nsCursor {   ///(normal cursor,       usually rendered as an arrow)
-                eCursor_standard, 
-                  ///(system is busy,      usually rendered as a hourglass or watch)
-                eCursor_wait, 
-                  ///(Selecting something, usually rendered as an IBeam)
-                eCursor_select, 
-                  ///(can hyper-link,      usually rendered as a human hand)
-                eCursor_hyperlink, 
-                  ///(west/east sizing,    usually rendered as ->||<-)
-                eCursor_sizeWE,
-                  ///(north/south sizing,  usually rendered as sizeWE rotated 90 degrees)
-                eCursor_sizeNS,
-                eCursor_arrow_north,
-                eCursor_arrow_north_plus,
-                eCursor_arrow_south,
-                eCursor_arrow_south_plus,
-                eCursor_arrow_west,
-                eCursor_arrow_west_plus,
-                eCursor_arrow_east,
-                eCursor_arrow_east_plus,
-                eCursor_crosshair,
-                //Don't know what 'move' cursor should be.  See CSS2.
-                eCursor_move,
-                eCursor_help
-                }; 
+  eCursor_standard, 
+  ///(system is busy,      usually rendered as a hourglass or watch)
+  eCursor_wait, 
+  ///(Selecting something, usually rendered as an IBeam)
+  eCursor_select, 
+  ///(can hyper-link,      usually rendered as a human hand)
+  eCursor_hyperlink, 
+  ///(west/east sizing,    usually rendered as ->||<-)
+  eCursor_sizeWE,
+  ///(north/south sizing,  usually rendered as sizeWE rotated 90 degrees)
+  eCursor_sizeNS,
+  eCursor_arrow_north,
+  eCursor_arrow_north_plus,
+  eCursor_arrow_south,
+  eCursor_arrow_south_plus,
+  eCursor_arrow_west,
+  eCursor_arrow_west_plus,
+  eCursor_arrow_east,
+  eCursor_arrow_east_plus,
+  eCursor_crosshair,
+  //Don't know what 'move' cursor should be.  See CSS2.
+  eCursor_move,
+  eCursor_help
+}; 
 
 
 /**
@@ -260,13 +260,6 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD  GetClientData(void*& aClientData) = 0;
     NS_IMETHOD  SetClientData(void* aClientData) = 0;
     //@}
-
-    /**
-     * Close and destroy the internal native window. 
-     * This method does not delete the widget.
-     */
-
-    NS_IMETHOD Destroy(void) = 0;
 
     /**
      * Return the parent Widget of this Widget or nsnull if this is a 
@@ -554,8 +547,8 @@ class nsIWidget : public nsISupports {
      */
 
     //@{
-    virtual void AddChild(nsIWidget* aChild) = 0;
-    virtual void RemoveChild(nsIWidget* aChild) = 0;
+    NS_IMETHOD AddChild(nsIWidget* aChild) = 0;
+    NS_IMETHOD RemoveChild(nsIWidget* aChild) = 0;
     virtual void* GetNativeData(PRUint32 aDataType) = 0;
     virtual void FreeNativeData(void * data, PRUint32 aDataType) = 0;//~~~
     virtual nsIRenderingContext* GetRenderingContext() = 0;

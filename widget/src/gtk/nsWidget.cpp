@@ -93,6 +93,7 @@ nsWidget::nsWidget()
     sLookAndFeel->GetColor(nsILookAndFeel::eColor_WindowBackground,
                            mBackground);
 
+  mIsDestroying = PR_TRUE;
   mGrabTime = 0;
   mWidget = nsnull;
   mParent = nsnull;
@@ -103,9 +104,7 @@ nsWidget::nsWidget()
   mBounds.y = 0;
   mBounds.width = 0;
   mBounds.height = 0;
-  mIsDestroying = PR_FALSE;
   mIsDragDest = PR_FALSE;
-  mOnDestroyCalled = PR_FALSE;
   mIsToplevel = PR_FALSE;
 
   if (NS_OK == nsComponentManager::CreateInstance(kRegionCID,
@@ -137,15 +136,29 @@ nsWidget::~nsWidget()
   printf("nsWidget::~nsWidget:%p\n", this);
 #endif
 
+  mIsDestroying = PR_TRUE;
+
+
+  // prevent the widget from causing additional events
+  mEventCallback = nsnull;
+
+
   NS_IF_RELEASE(mUpdateArea);
 
-  mIsDestroying = PR_TRUE;
-  if (nsnull != mWidget) {
-    Destroy();
+  if (mWidget)
+  {
+    // see if we need to destroy the old size information
+    GtkAllocation *old_size = (GtkAllocation *) gtk_object_get_data(GTK_OBJECT(mWidget), "mozilla.old_size");
+    if (old_size)
+      g_free(old_size);
+
+    gtk_widget_destroy(mWidget);
+    mWidget = nsnull;
   }
-  if (!sWidgetCount--) {
+
+  if (!sWidgetCount--)
     NS_IF_RELEASE(sLookAndFeel);
-  }
+
 }
 
 NS_IMETHODIMP nsWidget::GetAbsoluteBounds(nsRect &aRect)
@@ -174,18 +187,21 @@ NS_IMETHODIMP nsWidget::GetAbsoluteBounds(nsRect &aRect)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
+NS_IMETHODIMP nsWidget::WidgetToScreen(const nsRect *aOldRect, nsRect **aNewRect)
 {
   gint x;
   gint y;
+
+  if (!*aNewRect)
+    return NS_ERROR_FAILURE;
 
   if (mWidget)
   {
     if (mWidget->window)
     {
       gdk_window_get_origin(mWidget->window, &x, &y);
-      aNewRect.x = x + aOldRect.x;
-      aNewRect.y = y + aOldRect.y;
+      (*aNewRect)->x = x + aOldRect->x;
+      (*aNewRect)->y = y + aOldRect->y;
     }
     else
       return NS_ERROR_FAILURE;
@@ -194,13 +210,13 @@ NS_IMETHODIMP nsWidget::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::ScreenToWidget(const nsRect& aOldRect, nsRect& aNewRect)
+NS_IMETHODIMP nsWidget::ScreenToWidget(const nsRect *aOldRect, nsRect **aNewRect)
 {
 #ifdef DEBUG_pavlov
     g_print("nsWidget::ScreenToWidget\n");
 #endif
     NS_NOTYETIMPLEMENTED("nsWidget::ScreenToWidget");
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 }
 
 #ifdef DEBUG
@@ -217,59 +233,6 @@ nsWidget::IndentByDepth(FILE* out)
 }
 #endif
 
-//-------------------------------------------------------------------------
-//
-// Close this nsWidget
-//
-//-------------------------------------------------------------------------
-
-NS_IMETHODIMP nsWidget::Destroy(void)
-{
-#ifdef NOISY_DESTROY
-  IndentByDepth(stdout);
-  printf("nsWidget::Destroy:%p: isDestroying=%s widget=%p parent=%p\n",
-         this, mIsDestroying ? "yes" : "no", mWidget, mParent);
-#endif
-  GtkAllocation *old_size = NULL;
-  if (!mIsDestroying) {
-    nsBaseWidget::Destroy();
-    NS_IF_RELEASE(mParent);
-  }
-  if (mWidget) {
-    // see if we need to destroy the old size information
-    old_size = (GtkAllocation *) gtk_object_get_data(GTK_OBJECT(mWidget), "mozilla.old_size");
-    if (old_size) {
-      g_free(old_size);
-    }
-    // prevent the widget from causing additional events
-    mEventCallback = nsnull;
-    ::gtk_widget_destroy(mWidget);
-    mWidget = nsnull;
-    if (PR_FALSE == mOnDestroyCalled)
-      OnDestroy();
-  }
-  return NS_OK;
-}
-
-// make sure that we clean up here
-
-void nsWidget::OnDestroy()
-{
-  mOnDestroyCalled = PR_TRUE;
-  // release references to children, device context, toolkit + app shell
-  nsBaseWidget::OnDestroy();
-
-  // dispatch the event
-  if (!mIsDestroying) {
-    // dispatching of the event may cause the reference count to drop
-    // to 0 and result in this object being destroyed. To avoid that,
-    // add a reference and then release it after dispatching the event
-    nsrefcnt old = mRefCnt;
-    mRefCnt = 99;
-    DispatchStandardEvent(NS_DESTROY);
-    mRefCnt = old;
-  }
-}
 
 gint
 nsWidget::DestroySignal(GtkWidget* aGtkWidget, nsWidget* aWidget)
@@ -292,12 +255,15 @@ nsWidget::OnDestroySignal(GtkWidget* aGtkWidget)
 //
 //-------------------------------------------------------------------------
 
-nsIWidget* nsWidget::GetParent(void)
+NS_IMETHODIMP nsWidget::GetParent(nsIWidget **aParent)
 {
-  if (mParent) {
-    NS_ADDREF(mParent);
-  }
-  return mParent;
+  if (!mParent)
+    return NS_ERROR_FAILURE;
+  
+  NS_ADDREF(mParent);
+  *aParent = mParent;
+
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -306,7 +272,7 @@ nsIWidget* nsWidget::GetParent(void)
 //
 //-------------------------------------------------------------------------
 
-NS_IMETHODIMP nsWidget::Show(PRBool bState)
+NS_IMETHODIMP nsWidget::SetVisibility(PRBool bState)
 {
   if (!mWidget)
     return NS_OK; // Will be null durring printing
@@ -321,6 +287,15 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsWidget::GetVisibility(PRBool *aState)
+{
+  if (mWidget)
+    *aState = GTK_WIDGET_VISIBLE(mWidget);
+  else
+    *aState = PR_FALSE;
+
+  return NS_OK;
+}
 
 NS_IMETHODIMP nsWidget::CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent)
 {
@@ -360,16 +335,6 @@ NS_IMETHODIMP nsWidget::SetModal(void)
   gtk_window_set_modal(toplevel, PR_TRUE);
 
 	return NS_OK;
-}
-
-NS_IMETHODIMP nsWidget::IsVisible(PRBool &aState)
-{
-  if (mWidget)
-    aState = GTK_WIDGET_VISIBLE(mWidget);
-  else
-    aState = PR_FALSE;
-
-  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -441,8 +406,8 @@ NS_IMETHODIMP nsWidget::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::Resize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
-                           PRInt32 aHeight, PRBool aRepaint)
+NS_IMETHODIMP nsWidget::MoveResize(PRInt32 aX, PRInt32 aY, PRInt32 aWidth,
+                                   PRInt32 aHeight, PRBool aRepaint)
 {
   Move(aX, aY);
   Resize(aWidth,aHeight,aRepaint);
@@ -537,10 +502,10 @@ NS_IMETHODIMP nsWidget::SetFocus(void)
 // Get this component font
 //
 //-------------------------------------------------------------------------
-nsIFontMetrics *nsWidget::GetFont(void)
+NS_IMETHODIMP nsWidget::GetFont(nsFont **aFont)
 {
   NS_NOTYETIMPLEMENTED("nsWidget::GetFont");
-  return nsnull;
+  return NS_ERROR_FAILURE;
 }
 
 //-------------------------------------------------------------------------
@@ -548,10 +513,10 @@ nsIFontMetrics *nsWidget::GetFont(void)
 // Set this component font
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWidget::SetFont(const nsFont &aFont)
+NS_IMETHODIMP nsWidget::SetFont(nsFont *aFont)
 {
     nsIFontMetrics* mFontMetrics;
-    mContext->GetMetricsFor(aFont, mFontMetrics);
+    mContext->GetMetricsFor(*aFont, mFontMetrics);
 
     if (mFontMetrics) {
         nsFontHandle  fontHandle;
@@ -577,7 +542,7 @@ NS_IMETHODIMP nsWidget::SetFont(const nsFont &aFont)
 //
 //-------------------------------------------------------------------------
 
-NS_IMETHODIMP nsWidget::SetBackgroundColor(const nscolor &aColor)
+NS_IMETHODIMP nsWidget::SetBackgroundColor(nscolor aColor)
 {
   nsBaseWidget::SetBackgroundColor(aColor);
 
@@ -717,10 +682,13 @@ NS_IMETHODIMP nsWidget::Invalidate(PRBool aIsSynchronous)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
+NS_IMETHODIMP nsWidget::InvalidateRect(const nsRect *aRect, PRBool aIsSynchronous)
 {
   if (!mWidget)
     return NS_OK;  // mWidget is null during printing
+
+  if (!aRect)
+    return NS_ERROR_FAILURE;
 
   if (!GTK_IS_WIDGET(mWidget))
     return NS_ERROR_FAILURE;
@@ -728,14 +696,14 @@ NS_IMETHODIMP nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
   if (!GTK_WIDGET_REALIZED(mWidget) || !GTK_WIDGET_VISIBLE(mWidget))
     return NS_ERROR_FAILURE;
 
-  mUpdateArea->Union(aRect.x, aRect.y, aRect.width, aRect.height);
+  mUpdateArea->Union(aRect->x, aRect->y, aRect->width, aRect->height);
 
 #ifdef NS_DEBUG
   if (CAPS_LOCK_IS_ON)
   {
     debug_DumpInvalidate(stdout,
                          this,
-                         &aRect,
+                         aRect,
                          aIsSynchronous,
                          debug_GetName(mWidget),
                          debug_GetRenderXID(mWidget));
@@ -746,7 +714,7 @@ NS_IMETHODIMP nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
   if (aIsSynchronous)
   {
     GdkRectangle nRect;
-    NSRECT_TO_GDKRECT(aRect, nRect);
+    NSRECT_TO_GDKRECT(*aRect, nRect);
 
     gtk_widget_draw(mWidget, &nRect);
   }
@@ -755,8 +723,8 @@ NS_IMETHODIMP nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
 #endif
 
     gtk_widget_queue_draw_area(mWidget,
-                               aRect.x, aRect.y,
-                               aRect.width, aRect.height);
+                               aRect->x, aRect->y,
+                               aRect->width, aRect->height);
 
 #if 0
   }
@@ -827,35 +795,41 @@ NS_IMETHODIMP nsWidget::Update(void)
 // Return some native data according to aDataType
 //
 //-------------------------------------------------------------------------
-void *nsWidget::GetNativeData(PRUint32 aDataType)
+NS_IMETHODIMP nsWidget::GetNativeData(PRUint32 aDataType, void **aData)
 {
   switch(aDataType) {
   case NS_NATIVE_WINDOW:
     if (mWidget) {
-      return (void *)mWidget->window;
+      *aData = (void *)mWidget->window;
+      return NS_OK;
     }
     break;
 
   case NS_NATIVE_DISPLAY:
-    return (void *)GDK_DISPLAY();
+    *aData = (void *)GDK_DISPLAY();
+    return NS_OK;
+
 
   case NS_NATIVE_WIDGET:
   case NS_NATIVE_PLUGIN_PORT:
     if (mWidget) {
-      return (void *)mWidget;
+      *aData = (void *)mWidget;
+      return NS_OK;
     }
     break;
 
   case NS_NATIVE_GRAPHIC:
     /* GetSharedGC ups the ref count on the GdkGC so make sure you release
      * it afterwards. */
-    return (void *)((nsToolkit *)mToolkit)->GetSharedGC();
+    *aData = (void *)((nsToolkit *)mToolkit)->GetSharedGC();
+    return NS_OK;
 
   default:
     g_print("nsWidget::GetNativeData(%i) - weird value\n", aDataType);
     break;
   }
-  return nsnull;
+
+  return NS_ERROR_FAILURE;
 }
 
 //-------------------------------------------------------------------------
@@ -878,10 +852,10 @@ NS_IMETHODIMP nsWidget::EndResizingChildren(void)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::GetPreferredSize(PRInt32& aWidth, PRInt32& aHeight)
+NS_IMETHODIMP nsWidget::GetPreferredSize(PRInt32 *aWidth, PRInt32 *aHeight)
 {
-  aWidth  = mPreferredWidth;
-  aHeight = mPreferredHeight;
+  *aWidth  = mPreferredWidth;
+  *aHeight = mPreferredHeight;
   return (mPreferredWidth != 0 && mPreferredHeight != 0)?NS_OK:NS_ERROR_FAILURE;
 }
 
@@ -892,9 +866,9 @@ NS_IMETHODIMP nsWidget::SetPreferredSize(PRInt32 aWidth, PRInt32 aHeight)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsWidget::SetTitle(const nsString &aTitle)
+NS_IMETHODIMP nsWidget::SetTitle(const char *aTitle)
 {
-  gtk_widget_set_name(mWidget, "foo");
+  gtk_widget_set_name(mWidget, aTitle);
   return NS_OK;
 }
 
@@ -936,8 +910,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   if (aNativeParent) {
     parentWidget = GTK_WIDGET(aNativeParent);
   } else if (aParent) {
-    // this ups the refcount of the gtk widget, we must unref later.
-    parentWidget = GTK_WIDGET(aParent->GetNativeData(NS_NATIVE_WIDGET));
+    aParent->GetNativeData(NS_NATIVE_WIDGET, (void**)&parentWidget);
   }
 
   mBounds = aRect;
@@ -1029,7 +1002,7 @@ NS_IMETHODIMP nsWidget::Create(nsIWidget *aParent,
 // create with a native parent
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsWidget::Create(nsNativeWidget aParent,
+NS_IMETHODIMP nsWidget::CreateWithNativeParent(nsNativeWidget aParent,
                            const nsRect &aRect,
                            EVENT_CALLBACK aHandleEventFunction,
                            nsIDeviceContext *aContext,
@@ -1051,9 +1024,9 @@ void nsWidget::InitCallbacks(char *aName)
 {
 }
 
-void nsWidget::ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY)
+NS_IMETHODIMP nsWidget::ConvertToDeviceCoordinates(nscoord *aX, nscoord *aY)
 {
-
+  return NS_ERROR_FAILURE;
 }
 
 void nsWidget::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint)
@@ -1176,7 +1149,8 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent *aEvent,
   NS_ADDREF(aEvent->widget);
 
 #ifdef NS_DEBUG
-  GtkWidget * gw = (GtkWidget *) aEvent->widget->GetNativeData(NS_NATIVE_WIDGET);
+  GtkWidget * gw;
+  aEvent->widget->GetNativeData(NS_NATIVE_WIDGET, (void**)&gw);
 
   if (CAPS_LOCK_IS_ON)
   {
@@ -1712,8 +1686,11 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
   if (gRollupWidget && gRollupListener)
   {
-    GtkWidget *rollupWidget = GTK_WIDGET(gRollupWidget->GetNativeData(NS_NATIVE_WIDGET));
-    GtkWidget *thisWidget = GTK_WIDGET(GetNativeData(NS_NATIVE_WIDGET));
+    GtkWidget *rollupWidget;
+    gRollupWidget->GetNativeData(NS_NATIVE_WIDGET, (void**)&rollupWidget);
+
+    GtkWidget *thisWidget;
+    GetNativeData(NS_NATIVE_WIDGET, (void**)&thisWidget);
     if (rollupWidget != thisWidget && gtk_widget_get_toplevel(thisWidget) != rollupWidget)
     {
       gRollupListener->Rollup();
@@ -1848,9 +1825,6 @@ nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
 /* virtual */ void
 nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
 {
-  if (mIsDestroying)
-    return;
-
   nsGUIEvent event;
   
   event.message = NS_GOTFOCUS;
@@ -1885,8 +1859,8 @@ nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
 
   if (mIC)
   {
-    GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
-    if (gdkWindow)
+    GdkWindow *gdkWindow;
+    if (NS_SUCCEEDED(GetNativeData(NS_NATIVE_WINDOW, (void**)&gdkWindow)))
     {
       gdk_im_begin ((GdkIC*)mIC, gdkWindow);
     }
@@ -1911,9 +1885,6 @@ nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
 /* virtual */ void
 nsWidget::OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent)
 {
-  if (mIsDestroying)
-    return;
-
   nsGUIEvent event;
   
   event.message = NS_LOSTFOCUS;
@@ -1945,8 +1916,8 @@ nsWidget::OnFocusOutSignal(GdkEventFocus * aGdkFocusEvent)
   }
   if (mIC)
   {
-    GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
-    if (gdkWindow)
+    GdkWindow *gdkWindow;
+    if (NS_SUCCEEDED(GetNativeData(NS_NATIVE_WINDOW, (void**)&gdkWindow)))
     {
       gdk_im_end();
     }
@@ -2492,7 +2463,7 @@ nsWidget::GetXIC()
   nsIWidget *root = this;
   while (widget) {
     root = widget;
-    widget = widget->GetParent();
+    widget->GetParent(&widget);
   }
   nsWidget *root_win = (nsWidget*)root; // this is a toplevel window
   if (!root_win->mIC) {
@@ -2519,8 +2490,9 @@ nsWidget::GetXIC()
       // text insertion point
       GdkFont *gfontset =
 gdk_fontset_load("-misc-fixed-medium-r-normal--*-130-*-*-*-*-*-0");
-      GdkWindow *gdkWindow = (GdkWindow*) GetNativeData(NS_NATIVE_WINDOW);
-      if (!gdkWindow) return nsnull;
+      GdkWindow *gdkWindow;
+      if (NS_FAILED(GetNativeData(NS_NATIVE_WINDOW, (void**)&gdkWindow)))
+        return nsnull;
 
       GdkWindowPrivate *gdkWindow_private = (GdkWindowPrivate*) gdkWindow;
       GdkICAttr *attr = gdk_ic_attr_new();

@@ -161,11 +161,32 @@ nsWindow::~nsWindow()
     mouseTrailer->DestroyTimer();
   } 
 
-  // If the widget was released without calling Destroy() then the native
-  // window still exists, and we need to destroy it
-  if (NULL != mWnd) {
-    Destroy();
+
+  // Switch to the "main gui thread" if necessary... This method must
+  // be executed on the "gui thread"...
+  nsToolkit* toolkit = (nsToolkit *)mToolkit;
+  if (toolkit != nsnull && !toolkit->IsGuiThread()) {
+    //MethodInfo info(this, nsWindow::DESTROY);
+    //toolkit->CallMethod(&info);
   }
+
+  EnableDragDrop(PR_FALSE);
+
+  // destroy the HWND
+  if (mWnd) {
+    // prevent the widget from causing additional events
+    mEventCallback = nsnull;
+    VERIFY(::DestroyWindow(mWnd));
+    mWnd = NULL;
+    //our windows can be subclassed by
+    //others and these namless, faceless others
+    //may not let us know about WM_DESTROY. so,
+    //if OnDestroy() didn't get called, just call
+    //it now. MMP
+    if (PR_FALSE == mOnDestroyCalled)
+      OnDestroy();
+  }
+
 
   NS_IF_RELEASE(mHitMenu); // this should always have already been freed by the deselect
 
@@ -680,48 +701,6 @@ NS_METHOD nsWindow::Create(nsNativeWidget aParent,
     return(StandardWindowCreate(nsnull, aRect, aHandleEventFunction,
                          aContext, aAppShell, aToolkit, aInitData,
                          aParent));
-}
-
-
-//-------------------------------------------------------------------------
-//
-// Close this nsWindow
-//
-//-------------------------------------------------------------------------
-NS_METHOD nsWindow::Destroy()
-{
-  // Switch to the "main gui thread" if necessary... This method must
-  // be executed on the "gui thread"...
-  nsToolkit* toolkit = (nsToolkit *)mToolkit;
-  if (toolkit != nsnull && !toolkit->IsGuiThread()) {
-    MethodInfo info(this, nsWindow::DESTROY);
-    toolkit->CallMethod(&info);
-    return NS_ERROR_FAILURE;
-  }
-
-  // disconnect from the parent
-  if (!mIsDestroying) {
-    nsBaseWidget::Destroy();
-  }
-
-  EnableDragDrop(PR_FALSE);
-
-  // destroy the HWND
-  if (mWnd) {
-    // prevent the widget from causing additional events
-    mEventCallback = nsnull;
-    VERIFY(::DestroyWindow(mWnd));
-    mWnd = NULL;
-    //our windows can be subclassed by
-    //others and these namless, faceless others
-    //may not let us know about WM_DESTROY. so,
-    //if OnDestroy() didn't get called, just call
-    //it now. MMP
-    if (PR_FALSE == mOnDestroyCalled)
-      OnDestroy();
-  }
-
-  return NS_OK;
 }
 
 
@@ -1417,7 +1396,7 @@ BOOL nsWindow::CallMethod(MethodInfo *info)
 
         case nsWindow::DESTROY:
             NS_ASSERTION(info->nArgs == 0, "Wrong number of arguments to CallMethod");
-            Destroy();
+            //Destroy();
             break;
 
         case nsWindow::SET_FOCUS:
@@ -2991,9 +2970,6 @@ void nsWindow::OnDestroy()
       mDeferredPositioner = NULL;
     }
 
-    // release references to children, device context, toolkit, and app shell
-    nsBaseWidget::OnDestroy();
- 
     // dispatch the event
     if (!mIsDestroying) {
       // dispatching of the event may cause the reference count to drop to 0

@@ -437,7 +437,7 @@ NS_IMETHODIMP nsAppShell::EventIsForModalWindow(PRBool aRealEvent,
   if (aWidget != nsnull) {
     // Get Native Window for dialog window
     GdkWindow *win;
-    win = (GdkWindow *)aWidget->GetNativeData(NS_NATIVE_WINDOW);
+    aWidget->GetNativeData(nsIWidget::NS_NATIVE_WINDOW, (void**)&win);
 
     // Find top most window of event window
     GdkWindow *eWin = msg->window;

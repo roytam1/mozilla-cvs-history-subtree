@@ -81,7 +81,6 @@ public:
                             nsWidgetInitData *aInitData,
                             nsNativeWidget aNativeParent = nsnull);
 
-    NS_IMETHOD              Destroy();
     virtual nsIWidget*      GetParent(void);
     NS_IMETHOD              Show(PRBool bState);
     NS_IMETHOD              IsVisible(PRBool & aState);

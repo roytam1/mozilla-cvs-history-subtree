@@ -42,15 +42,15 @@ public:
   nsWindow();
   virtual ~nsWindow();
 
-  NS_IMETHOD           WidgetToScreen(const nsRect &aOldRect, nsRect &aNewRect);
+  NS_IMETHOD           WidgetToScreen(const nsRect *aOldRect, nsRect **aNewRect);
 
   NS_IMETHOD           PreCreateWidget(nsWidgetInitData *aWidgetInitData);
 
-  virtual void*        GetNativeData(PRUint32 aDataType);
+  NS_IMETHOD           GetNativeData(PRUint32 aDataType, void **aData);
 
   NS_IMETHOD           Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect);
 
-  NS_IMETHOD           SetTitle(const nsString& aTitle);
+  NS_IMETHOD           SetTitle(const char *aTitle);
   NS_IMETHOD           Show(PRBool aShow);
   NS_IMETHOD           CaptureMouse(PRBool aCapture);
 
@@ -62,7 +62,6 @@ public:
 
   NS_IMETHOD           BeginResizingChildren(void);
   NS_IMETHOD           EndResizingChildren(void);
-  NS_IMETHOD           Destroy(void);
 
   gint                 ConvertBorderStyles(nsBorderStyle bs);
 
@@ -71,12 +70,8 @@ public:
 
   virtual PRBool IsChild() const;
 
-  void SetIsDestroying(PRBool val) {
-    mIsDestroyingWindow = val;
-  }
-
   PRBool IsDestroying() const {
-    return mIsDestroyingWindow;
+    return PR_FALSE;
   }
 
   // Utility methods
@@ -122,7 +117,6 @@ protected:
   nsIFontMetrics *mFontMetrics;
   PRBool      mVisible;
   PRBool      mDisplayed;
-  PRBool      mIsDestroyingWindow;
   PRBool      mIsTooSmall;
 
   // XXX Temporary, should not be caching the font
@@ -150,7 +144,7 @@ public:
   ChildWindow();
   ~ChildWindow();
   virtual PRBool IsChild() const;
-  NS_IMETHOD Destroy(void);
+  //  NS_IMETHOD Destroy();
 };
 
 #endif // Window_h__

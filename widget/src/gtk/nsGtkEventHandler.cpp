@@ -467,7 +467,10 @@ void handle_scrollbar_value_changed(GtkAdjustment *adj, gpointer p)
   sevent.widget  = (nsWidget *) p;
   sevent.eventStructType = NS_SCROLLBAR_EVENT;
 
-  GdkWindow *win = (GdkWindow *)widget->GetNativeData(NS_NATIVE_WINDOW);
+  GdkWindow *win;
+  if (NS_FAILED(widget->GetNativeData(nsIWidget::NS_NATIVE_WINDOW, (void**)&win)))
+      return;
+
   gdk_window_get_pointer(win, &sevent.point.x, &sevent.point.y, nsnull);
 
   widget->AddRef();
