@@ -113,6 +113,7 @@
 #include "nsCSSRendering.h"
 #include "nsISelectElement.h"
 #include "nsLayoutErrors.h"
+#include "nsLayoutUtils.h"
 #include "nsAutoPtr.h"
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
@@ -1427,10 +1428,18 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
   
     // Create an image frame and initialize it
-    nsIFrame* imageFrame;
-    NS_NewImageFrame(shell, &imageFrame);
-    imageFrame->Init(aPresContext, content, aParentFrame, aStyleContext, nsnull);
-  
+    nsIFrame* imageFrame = nsnull;
+    rv = NS_NewImageFrame(shell, &imageFrame);
+    if (!imageFrame) {
+      return rv;
+    }
+
+    rv = imageFrame->Init(aPresContext, content, aParentFrame, aStyleContext, nsnull);
+    if (NS_FAILED(rv)) {
+      imageFrame->Destroy(aPresContext);
+      return rv == NS_ERROR_FRAME_REPLACED ? NS_OK : rv;
+    }
+
     // Return the image frame
     *aFrame = imageFrame;
 
@@ -4989,68 +4998,89 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
       }
     }
     
-    InitAndRestoreFrame(aPresContext, aState, aContent, 
-                        geometricParent, aStyleContext, nsnull, newFrame);
+    rv = InitAndRestoreFrame(aPresContext, aState, aContent, 
+                             geometricParent, aStyleContext, nsnull, newFrame);
+    if (rv == NS_ERROR_FRAME_REPLACED) {
+      // The frame called CantRenderReplacedElement from inside Init().  That
+      // failed to do anything useful, since the frame was not in the frame
+      // tree yet... Create an alternate frame ourselves
+      newFrame->Destroy(aPresContext);
 
-    // See if we need to create a view, e.g. the frame is absolutely
-    // positioned
-    nsHTMLContainerFrame::CreateViewForFrame(aPresContext, newFrame,
-                                             aStyleContext, aParentFrame, PR_FALSE);
+      if (aTag != nsHTMLAtoms::img && aTag != nsHTMLAtoms::input) {
+        // XXXbz This should really be made to work for <object> too...
+        return NS_OK;
+      }
 
-    // Process the child content if requested
-    nsFrameItems childItems;
-    if (processChildren) {
-      if (isPositionedContainingBlock) {
-        // The area frame becomes a container for child frames that are
-        // absolutely positioned
-        nsFrameConstructorSaveState absoluteSaveState;
-        aState.PushAbsoluteContainingBlock(aPresContext, newFrame, absoluteSaveState);
+      // Try to construct the alternate frame
+      newFrame = nsnull;
+      rv = ConstructAlternateFrame(aPresShell, aPresContext, aContent,
+                                   aStyleContext, geometricParent,
+                                   aParentFrame, newFrame);
+      NS_ENSURE_SUCCESS(rv, rv);
+      NS_ASSERTION(newFrame, "ConstructAlternateFrame needs better error-checking");
+    } else {
+      NS_ASSERTION(NS_SUCCEEDED(rv), "InitAndRestoreFrame failed");
+      // See if we need to create a view, e.g. the frame is absolutely
+      // positioned
+      nsHTMLContainerFrame::CreateViewForFrame(aPresContext, newFrame,
+                                               aStyleContext, aParentFrame, PR_FALSE);
+
+      // Process the child content if requested
+      nsFrameItems childItems;
+      if (processChildren) {
+        if (isPositionedContainingBlock) {
+          // The area frame becomes a container for child frames that are
+          // absolutely positioned
+          nsFrameConstructorSaveState absoluteSaveState;
+          aState.PushAbsoluteContainingBlock(aPresContext, newFrame, absoluteSaveState);
         
-        // Process the child frames
-        rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
-                             PR_TRUE, childItems, PR_FALSE);
+          // Process the child frames
+          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
+                               PR_TRUE, childItems, PR_FALSE);
         
-        // Set the frame's absolute list if there were any absolutely positioned children
-        if (aState.mAbsoluteItems.childList) {
-          newFrame->SetInitialChildList(aPresContext,
-                                        nsLayoutAtoms::absoluteList,
-                                        aState.mAbsoluteItems.childList);
+          // Set the frame's absolute list if there were any absolutely positioned children
+          if (aState.mAbsoluteItems.childList) {
+            newFrame->SetInitialChildList(aPresContext,
+                                          nsLayoutAtoms::absoluteList,
+                                          aState.mAbsoluteItems.childList);
+          }
+        }
+        else if (isFloaterContainer) {
+          // If the frame can contain floaters, then push a floater
+          // containing block
+          PRBool haveFirstLetterStyle, haveFirstLineStyle;
+          HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
+                                &haveFirstLetterStyle, &haveFirstLineStyle);
+          nsFrameConstructorSaveState floaterSaveState;
+          aState.PushFloaterContainingBlock(newFrame, floaterSaveState,
+                                            PR_FALSE, PR_FALSE);
+        
+          // Process the child frames
+          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
+                               PR_TRUE, childItems, PR_FALSE);
+        
+          // Set the frame's floater list if there were any floated children
+          if (aState.mFloatedItems.childList) {
+            newFrame->SetInitialChildList(aPresContext,
+                                          nsLayoutAtoms::floaterList,
+                                          aState.mFloatedItems.childList);
+          }
+
+        } else {
+          rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
+                               PR_TRUE, childItems, PR_FALSE);
         }
       }
-      else if (isFloaterContainer) {
-        // If the frame can contain floaters, then push a floater
-        // containing block
-        PRBool haveFirstLetterStyle, haveFirstLineStyle;
-        HaveSpecialBlockStyle(aPresContext, aContent, aStyleContext,
-                              &haveFirstLetterStyle, &haveFirstLineStyle);
-        nsFrameConstructorSaveState floaterSaveState;
-        aState.PushFloaterContainingBlock(newFrame, floaterSaveState,
-                                          PR_FALSE, PR_FALSE);
-        
-        // Process the child frames
-        rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
-                             PR_TRUE, childItems, PR_FALSE);
-        
-        // Set the frame's floater list if there were any floated children
-        if (aState.mFloatedItems.childList) {
-          newFrame->SetInitialChildList(aPresContext,
-                                        nsLayoutAtoms::floaterList,
-                                        aState.mFloatedItems.childList);
-        }
 
-      } else {
-        rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame,
-                             PR_TRUE, childItems, PR_FALSE);
+      // if there are any anonymous children create frames for them
+      CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
+                            PR_FALSE, childItems);
+
+      // Set the frame's initial child list
+      if (childItems.childList) {
+        newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
       }
     }
-
-    // if there are any anonymous children create frames for them
-    CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-                          PR_FALSE, childItems);
-
-
-    // Set the frame's initial child list
-    newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
   }
 
   // If the frame is positioned, then create a placeholder frame
@@ -7754,35 +7784,6 @@ nsCSSFrameConstructor::GetFloaterContainingBlock(nsIPresContext* aPresContext,
   return containingBlock;
 }
 
-// Helper function to determine whether a given frame is generated content
-// for the specified content object. Returns PR_TRUE if the frame is associated
-// with generated content and PR_FALSE otherwise
-static inline PRBool
-IsGeneratedContentFor(nsIContent* aContent, nsIFrame* aFrame, nsIAtom* aPseudoElement)
-{
-  NS_PRECONDITION(aFrame, "null frame pointer");
-  nsFrameState  state;
-  PRBool        result = PR_FALSE;
-
-  // First check the frame state bit
-  aFrame->GetFrameState(&state);
-  if (state & NS_FRAME_GENERATED_CONTENT) {
-    nsCOMPtr<nsIContent> content;
-
-    // Check that it has the same content pointer
-    aFrame->GetContent(getter_AddRefs(content));
-    if (content == aContent) {
-      nsStyleContext* styleContext = aFrame->GetStyleContext();
-
-      // See if the pseudo element type matches
-      nsCOMPtr<nsIAtom> pseudoType = styleContext->GetPseudoType();
-      result = (pseudoType == aPseudoElement);
-    }
-  }
-
-  return result;
-}
-
 /**
  * This function is called by ContentAppended() and ContentInserted()
  * when appending flowed frames to a parent's principal child list. It
@@ -7797,18 +7798,24 @@ nsCSSFrameConstructor::AppendFrames(nsIPresContext*  aPresContext,
                                     nsIFrame*        aParentFrame,
                                     nsIFrame*        aFrameList)
 {
-  nsIFrame* firstChild;
-  aParentFrame->FirstChild(aPresContext, nsnull, &firstChild);
-  nsFrameList frames(firstChild);
-  nsIFrame* lastChild = frames.LastChild();
+  // See if the parent has an :after pseudo-element.  Check for the presence
+  // of style first, since nsLayoutUtils::GetAfterFrame is sorta expensive.
+  nsStyleContext* parentStyle = aParentFrame->GetStyleContext();
+  if (nsLayoutUtils::HasPseudoStyle(aContainer, parentStyle,
+                                    nsCSSPseudoElements::after,
+                                    aPresContext)) {
+    nsIFrame* afterFrame = nsLayoutUtils::GetAfterFrame(aParentFrame,
+                                                        aPresContext);
+    if (afterFrame) {
+      nsIFrame* firstChild;
+      aParentFrame->FirstChild(aPresContext, nsnull, &firstChild);
+      nsFrameList frames(firstChild);
 
-  // See if the parent has an :after pseudo-element
-  if (lastChild && IsGeneratedContentFor(aContainer, lastChild,
-                                         nsCSSPseudoElements::after)) {
-    // Insert the frames before the :after pseudo-element.
-    return aFrameManager->InsertFrames(aPresContext, *aPresShell, aParentFrame,
-                                       nsnull, frames.GetPrevSiblingFor(lastChild),
+      // Insert the frames before the :after pseudo-element.
+      return aFrameManager->InsertFrames(aPresContext, *aPresShell, aParentFrame,
+                                       nsnull, frames.GetPrevSiblingFor(afterFrame),
                                        aFrameList);
+    }
   }
 
   nsresult rv = NS_OK;
@@ -9271,8 +9278,9 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
         nsIFrame* firstChild;
         parentFrame->FirstChild(aPresContext, nsnull, &firstChild);
 
-        if (firstChild && IsGeneratedContentFor(aContainer, firstChild,
-                                                nsCSSPseudoElements::before)) {
+        if (firstChild &&
+            nsLayoutUtils::IsGeneratedContentFor(aContainer, firstChild,
+                                                 nsCSSPseudoElements::before)) {
           // Insert the new frames after the :before pseudo-element
           prevSibling = firstChild;
         }
@@ -9591,21 +9599,6 @@ nsCSSFrameConstructor::RemoveMappingsForFrameSubtree(nsIPresContext* aPresContex
   CaptureStateFor(aPresContext, aRemovedFrame, mTempFrameTreeState);
 
   return DeletingFrameSubtree(aPresContext, presShell, frameManager, aRemovedFrame);
-}
-
-static PRBool
-HasPseudoStyle(nsIPresContext* aPresContext,
-               nsIContent* aContent,
-               nsStyleContext* aStyleContext,
-               nsIAtom* aPseudoElement)
-{
-  nsRefPtr<nsStyleContext> pseudoStyleContext;
-  if (aContent) {
-    pseudoStyleContext = aPresContext->ProbePseudoStyleContextFor(aContent,
-                                                                  aPseudoElement,
-                                                                  aStyleContext);
-  }
-  return pseudoStyleContext != nsnull;
 }
 
 NS_IMETHODIMP
@@ -10816,7 +10809,8 @@ nsCSSFrameConstructor::ConstructAlternateFrame(nsIPresShell*    aPresShell,
                                                nsIPresContext*  aPresContext,
                                                nsIContent*      aContent,
                                                nsStyleContext*  aStyleContext,
-                                               nsIFrame*        aParentFrame,
+                                               nsIFrame*        aGeometricParent,
+                                               nsIFrame*        aContentParent,
                                                nsIFrame*&       aFrame)
 {
   nsresult rv;
@@ -10861,9 +10855,10 @@ nsCSSFrameConstructor::ConstructAlternateFrame(nsIPresShell*    aPresShell,
   } else {
     NS_NewInlineFrame(aPresShell, &containerFrame);
   }
-  containerFrame->Init(aPresContext, aContent, aParentFrame, aStyleContext, nsnull);
+  containerFrame->Init(aPresContext, aContent, aGeometricParent, aStyleContext, nsnull);
   nsHTMLContainerFrame::CreateViewForFrame(aPresContext, containerFrame,
-                                           aStyleContext, nsnull, PR_FALSE);
+                                           aStyleContext, aContentParent,
+                                           PR_FALSE);
 
   // If the frame is out-of-flow, then mark it as such
   if (isOutOfFlow) {
@@ -11001,7 +10996,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
     // image can't be rendered
     nsIFrame* newFrame;
     rv = ConstructAlternateFrame(aPresShell, aPresContext, content, styleContext,
-                                 parentFrame, newFrame);
+                                 parentFrame, nsnull, newFrame);
 
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIFrameManager> frameManager;
@@ -11015,6 +11010,7 @@ nsCSSFrameConstructor::CantRenderReplacedElement(nsIPresShell* aPresShell,
       frameManager->SetPrimaryFrameFor(content, newFrame);
 
       // Replace the old frame with the new frame
+      // XXXbz If this fails, we leak the content node newFrame points to!
       frameManager->ReplaceFrame(aPresContext, *presShell, parentFrame,
                                  listName, aFrame, newFrame);
 
@@ -11717,8 +11713,8 @@ nsCSSFrameConstructor::FindFrameWithContent(nsIPresContext*  aPresContext,
             // next sibling.
 
             if (aContent->IsContentOfType(nsIContent::eELEMENT) &&
-                IsGeneratedContentFor(aContent, kidFrame,
-                                      nsCSSPseudoElements::before)) {
+                nsLayoutUtils::IsGeneratedContentFor(aContent, kidFrame,
+                                                     nsCSSPseudoElements::before)) {
               kidFrame->GetNextSibling(&kidFrame);
 #ifdef DEBUG
               NS_ASSERTION(kidFrame, ":before with no next sibling");
@@ -11730,8 +11726,8 @@ nsCSSFrameConstructor::FindFrameWithContent(nsIPresContext*  aPresContext,
                 // make sure it's not the :after pseudo frame.
 
                 NS_ASSERTION(nextSiblingContent.get() == aContent &&
-                             !IsGeneratedContentFor(aContent, kidFrame,
-                                                    nsCSSPseudoElements::after),
+                             !nsLayoutUtils::IsGeneratedContentFor(aContent, kidFrame,
+                                                                   nsCSSPseudoElements::after),
                              ":before frame not followed by primary frame");
               }
 #endif
@@ -12094,11 +12090,21 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
       // state onto a temporary state object.
       CaptureStateForFramesOf(aPresContext, aContent, mTempFrameTreeState);
 
-      // Save parent frame because this frame is going away
+      // Save parent frame because this frame is going away.  But if
+      // this is an out-of-flow, we want to get the _placeholder_'s
+      // parent.
       nsIFrame* parent = nsnull;
-      if (frame)
-        frame->GetParent(&parent);
+      if (frame) {
+        nsFrameState state;
+        frame->GetFrameState(&state);
+        if (state & NS_FRAME_OUT_OF_FLOW) {
+          shell->GetPlaceholderFrameFor(frame, &frame);
+          NS_ASSERTION(frame, "Out-of-flow with no placeholder?");
+        }
 
+        frame->GetParent(&parent);
+      }
+      
       // Remove the frames associated with the content object on which the
       // attribute change occurred.
       rv = ContentRemoved(aPresContext, container, aContent, indexInContainer, PR_FALSE);
@@ -12159,8 +12165,9 @@ nsCSSFrameConstructor::HaveFirstLetterStyle(nsIPresContext* aPresContext,
                                             nsIContent* aContent,
                                             nsStyleContext* aStyleContext)
 {
-  return HasPseudoStyle(aPresContext, aContent, aStyleContext,
-                        nsCSSPseudoElements::firstLetter);
+  return nsLayoutUtils::HasPseudoStyle(aContent, aStyleContext,
+                                       nsCSSPseudoElements::firstLetter,
+                                       aPresContext);
 }
 
 PRBool
@@ -12168,8 +12175,9 @@ nsCSSFrameConstructor::HaveFirstLineStyle(nsIPresContext* aPresContext,
                                           nsIContent* aContent,
                                           nsStyleContext* aStyleContext)
 {
-  return HasPseudoStyle(aPresContext, aContent, aStyleContext,
-                        nsCSSPseudoElements::firstLine);
+  return nsLayoutUtils::HasPseudoStyle(aContent, aStyleContext,
+                                       nsCSSPseudoElements::firstLine,
+                                       aPresContext);
 }
 
 void
