@@ -1704,8 +1704,12 @@ nsExtensionManager.prototype = {
       var entries = extensions.directoryEntries;
       while (entries.hasMoreElements()) {
         var entry = entries.getNext().QueryInterface(Components.interfaces.nsIFile);
-        if (entry.isDirectory() && !entry.directoryEntries.hasMoreElements())
-          entry.remove(false);
+        if (entry.isDirectory() && !entry.directoryEntries.hasMoreElements()) {
+          try {
+            entry.remove(false);
+          }
+          catch (e) { }
+        }
       }
     }
   },
