@@ -2339,13 +2339,13 @@ function SetPageProxyState(aState, aURI)
     gURLBar.addEventListener("input", UpdatePageProxyState, false);
 
     if (gBrowser.mCurrentBrowser.mFavIconURL != null) {
-      PageProxySetIcon (gBrowser.mCurrentBrowser.mFavIconURL);
+      PageProxySetIcon(gBrowser.mCurrentBrowser.mFavIconURL);
     } else {
-      PageProxyClearIcon ();
+      PageProxyClearIcon();
     }
   } else if (aState == "invalid") {
     gURLBar.removeEventListener("input", UpdatePageProxyState, false);
-    PageProxyClearIcon ();
+    PageProxyClearIcon();
   }
 }
 
@@ -3262,7 +3262,7 @@ nsBrowserStatusHandler.prototype =
         gBrowser.mCurrentBrowser == aBrowser &&
         getBrowser().userTypedValue === null)
     {
-      PageProxySetIcon (aHref);
+      PageProxySetIcon(aHref);
     }
 
     aBrowser.mFavIconURL = aHref;
@@ -5784,7 +5784,7 @@ function updatePageFavIcon(aBrowser, aListener) {
   }
 
   if (aBrowser == gBrowser.mCurrentBrowser)
-    PageProxySetIcon (aBrowser.mFavIconURL);
+    PageProxySetIcon(aBrowser.mFavIconURL);
 
   if (aBrowser.mFavIconURL != null)
     BookmarksUtils.loadFavIcon(uri.spec, aBrowser.mFavIconURL);
