@@ -65,10 +65,10 @@ NS_NAMED_LITERAL_STRING(kByteElementName,"byte");
 NS_NAMED_LITERAL_STRING(kArrayElementName,"Array");
 
 /* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
-NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
+NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
 {
   if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
-    return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aConfiguration, _retval);
+    return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aScope,aConfiguration, _retval);
   
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -89,7 +89,7 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 "</SOAP-ENV:Body>"
 "</SOAP-ENV:Envelope>");
  
-NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
+NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
 {
   nsresult rv;
   
@@ -160,7 +160,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
     if (NS_FAILED(rv)) return rv;
     rv = param->GetHeader(&isHeader);
     if (NS_FAILED(rv)) return rv;
-    rv = types->Marshall(aMessage, next, encodingStyleURI, type, getter_AddRefs(result));
+    rv = types->Marshall(aMessage, next, encodingStyleURI, type, element, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
     if (result != nsnull) {
       element = do_QueryInterface(result);

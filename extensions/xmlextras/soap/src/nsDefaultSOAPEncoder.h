@@ -47,9 +47,8 @@ public:
   NS_DECL_NSISOAPUNMARSHALLER
 
 protected:
-  nsresult MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval);
+  nsresult MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval);
   nsresult UnmarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval);
-  nsresult UnmarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval);
   nsresult StartEmptyMessage(nsISOAPMessage* message);
   nsresult EncodeParameter(nsISOAPParameter* parameter,
                            nsIDOMDocument* document,

@@ -23,6 +23,7 @@
 #include "nsISupports.idl"
 
 interface nsISOAPMessage;
+interface nsIDOMElement;
 
 /**
  * This interface permits marshalling of SOAP parameters.
@@ -44,15 +45,25 @@ interface nsISOAPMarshaller : nsISupports {
  *
  * @param aSchemaID The schema ID of the DOM node or data to create
  *
+ * @param aDOMScope The element scope, if any, where the result 
+ *   will live, so that namespace prefixes, and other context
+ *   such as xml:base, xml:lang, etc. can be assumed instead of
+ *   having to locally declare everything.  If this is null, then
+ *   everything must be locally declared.
+ *
  * @param aConfiguration Configuration object which may specify more
  *   details used by the marshaller.
  *
  * @return The marshalled DOM node or data, which may be null if 
- *   the operation failed or did not return a result.  In case of 
+ *   the operation failed or did not return a result.  A non-null
+ *   result will typically be handled by the caller such as
+ *   inserting it into the resultant tree, so if the marshaller
+ *   inserts the object, a null should be returned.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
 nsISupports marshall(
     in nsISOAPMessage aMessage, in nsISupports aSource, 
     in AString aEncodingStyleURI, in AString aTypeID, 
-    in AString aSchemaID, in nsISupports aConfiguration);
+    in AString aSchemaID, in nsIDOMElement aLocation,
+    in nsISupports aConfiguration);
 };

@@ -92,16 +92,21 @@ interface nsISOAPTypeRegistry : nsISupports {
    *
    * @param aTypeID The type ID of the source parameter or object
    *
-   * @param aConfiguration Configuration object which may specify more
-   *   details used by the marshaller.
+   * @param aDOMScope The element scope, if any, where the result 
+   *   will live, so that namespace prefixes, and other context
+   *   such as xml:base, xml:lang, etc. can be assumed instead of
+   *   having to locally declare everything.  If this is null, then
+   *   everything must be locally declared.
    *
    * @return The marshalled DOM node or data, which may be null if the 
-   *   operation failed or did not return a result.  In case of failure, 
+   *   operation failed, did not return a result, or inserted the
+   *   result itself into the destination.  In case of failure, 
    *   a more complete status is recorded in the message.
    */
   nsISupports marshall(
       in nsISOAPMessage aMessage, in nsISupports aSource, 
-      in AString aEncodingStyleURI, in AString aTypeID);
+      in AString aEncodingStyleURI, in AString aTypeID,
+      in nsIDOMElement aScope);
 
   /**
    * Unmarshall the source node into the specified
@@ -115,9 +120,6 @@ interface nsISOAPTypeRegistry : nsISupports {
    * @param aEncodingStyleURI The encoding style
    *
    * @param aSchemaID The schema ID of the source DOM node or data
-   *
-   * @param aConfiguration Configuration object which may specify more
-   *   details used by the unmarshaller.
    *
    * @return The unmarshalled parameter or object, which is null if the
    *   operation failed or did not return a result.  In case of failure, 

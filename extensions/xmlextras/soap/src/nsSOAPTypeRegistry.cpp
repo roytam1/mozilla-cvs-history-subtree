@@ -115,7 +115,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::QueryBySchemaID(const nsAReadableString & aEnc
 }
 
 /* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID); */
-NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsISupports **_retval)
+NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsIDOMElement* aScope, nsISupports **_retval)
 {
   *_retval = nsnull;
   nsAutoString typeID(aTypeID);
@@ -140,7 +140,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports
   type->GetMarshaller(getter_AddRefs(marshaller));
   if (!marshaller)
     return NS_ERROR_NOT_IMPLEMENTED;
-  return marshaller->Marshall(aMessage, aSource, aEncodingStyleURI, aTypeID, schemaID, configuration, _retval);
+  return marshaller->Marshall(aMessage, aSource, aEncodingStyleURI, aTypeID, schemaID, aScope, configuration, _retval);
 }
 
 /* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID); */
