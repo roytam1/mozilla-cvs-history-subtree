@@ -1220,8 +1220,6 @@ void nsBlockFrame::AlignLinesRight(void)
 {
   nscoord Mwidth = this->GetLinesXMax(), tempWidth;
   nsLineBox* line;
-  nsFrame* tmpFrame;
-  nsRect tempRect;
   line = mLines;
   while(line!=NULL)
   {
