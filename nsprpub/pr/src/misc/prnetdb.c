@@ -1185,13 +1185,14 @@ static const char *basis_hex = "0123456789abcdef";
 /*
  * V6AddrToString() returns a pointer to the buffer containing
  * the text string if the conversion succeeds, and NULL otherwise.
- * (Same as inet_ntop(AF_INET6, addr, buf, size).)
+ * (Same as inet_ntop(AF_INET6, addr, buf, size), except that errno
+ * is not set on failure.)
  */
 static const char *V6AddrToString(
     const PRIPv6Addr *addr, char *buf, PRUint32 size)
 {
 #define STUFF(c) do { \
-    if (!size--) goto failed; \
+    if (!size--) return NULL; \
     *buf++ = (c); \
 } while (0)
 
@@ -1282,10 +1283,6 @@ static const char *V6AddrToString(
     }
     STUFF('\0');
     return bufcopy;
-
-failed:
-    errno = ENOSPC; /* the size of the result buffer is inadequate */
-    return NULL;
 #undef STUFF    
 }
 
@@ -1355,7 +1352,8 @@ PR_IMPLEMENT(PRStatus) PR_NetAddrToString(
         if (NULL == V6AddrToString(&addr->ipv6.ip, string, size))
 #endif
         {
-            PR_SetError(PR_BUFFER_OVERFLOW_ERROR, errno);
+            /* the size of the result buffer is inadequate */
+            PR_SetError(PR_BUFFER_OVERFLOW_ERROR, 0);
             return PR_FAILURE;
         }
     }
