@@ -89,7 +89,7 @@ XFE_ThreePaneView::XFE_ThreePaneView(XFE_Component *toplevel_component,
   getToplevel()->registerInterest(XFE_MNListView::changeFocus,
 				this,
 				(XFE_FunctionNotification)changeFocus_cb);
-  XP_Bool show_folder;
+  PRBool show_folder;
   PREF_GetBoolPref(THREEPANEVIEW_SHOW_PREF, &show_folder);
 
 

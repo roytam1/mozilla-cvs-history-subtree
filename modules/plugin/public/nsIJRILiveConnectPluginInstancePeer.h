@@ -35,7 +35,6 @@
 #define nsIJRILiveConnectPluginInstancePeer_h__
 
 #include "nsplugindefs.h"
-#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // JRI-Based LiveConnect Classes
@@ -48,30 +47,19 @@
 // Warning: Don't use this anymore, unless you're sure that you have to!
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "jri.h"
+#include "jri.h"        // ancient
 
-/**
- * The nsIJRILiveConnectPluginInstancePeer interface is implemented by browsers
- * that support JRI-based LiveConnect. Note that for 5.0, LiveConnect support
- * has become JNI-based, so this interface is effectively deprecated.
- *
- * To obtain: QueryInterface on nsIPluginInstancePeer
- */
+////////////////////////////////////////////////////////////////////////////////
+// JRILiveConnect Plugin Instance Peer Interface
+// Browsers that support JRI-based LiveConnect implement this subclass of
+// plugin instance peer. 
+
 class nsIJRILiveConnectPluginInstancePeer : public nsISupports {
 public:
 
-    /**
-     * Returns a JRI reference to the Java peer object associated with the
-     * plugin instance. This object is an instance of the class specified
-     * by nsIJRILiveConnectPlugin::GetJavaClass.
-     *
-     * (Corresponds to NPN_GetJavaPeer.)
-     *
-     * @param resultingJavaPeer - a resulting reference to the Java instance
-     * @result - NS_OK if this operation was successful
-     */
-    NS_IMETHOD
-    GetJavaPeer(jref *resultingJavaPeer) = 0;
+    // (Corresponds to NPN_GetJavaPeer.)
+    NS_IMETHOD_(jref)
+    GetJavaPeer(void) = 0;
 
 };
 
@@ -91,15 +79,6 @@ public:
     0xa1bc,                                          \
     0x11d1,                                          \
     {0x85, 0xb1, 0x00, 0x80, 0x5f, 0x0e, 0x4d, 0xfe} \
-}
-
-// The CLSID used to get per-thread JRIEnvs from the browser.
-#define NS_JRIENV_CID                                \
-{ /* 395948a0-5cd9-11d2-8164-006008119d7a */         \
-    0x395948a0,                                      \
-    0x5cd9,                                          \
-    0x11d2,                                          \
-    {0x81, 0x64, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
 }
 
 ////////////////////////////////////////////////////////////////////////////////

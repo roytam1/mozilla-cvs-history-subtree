@@ -258,9 +258,9 @@ XFE_PrefsPageLIGeneral::cb_toggle(Widget w, XtPointer closure, XtPointer call_da
 void
 XFE_PrefsPageLIGeneral::init()
 {
-	XP_Bool li_enabled = FALSE;
+	PRBool li_enabled = PR_FALSE;
 #ifdef LI_BACKGROUND_SYNC_ENABLED
-	XP_Bool li_sync_enabled = FALSE;
+	PRBool li_sync_enabled = PR_FALSE;
 	int32 li_sync_time = 0;
 #endif
 	char* li_login_name = NULL;

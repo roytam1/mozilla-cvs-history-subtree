@@ -75,7 +75,6 @@ public:
            const char* url, 
            const char* target = NULL,
            nsIPluginStreamListener* streamListener = NULL,
-           nsPluginStreamType streamType = nsPluginStreamType_Normal,
            const char* altHost = NULL,
            const char* referrer = NULL,
            PRBool forceJSEnabled = PR_FALSE);
@@ -88,7 +87,6 @@ public:
             PRBool isFile = PR_FALSE,
             const char* target = NULL,
             nsIPluginStreamListener* streamListener = NULL,
-            nsPluginStreamType streamType = nsPluginStreamType_Normal,
             const char* altHost = NULL, 
             const char* referrer = NULL,
             PRBool forceJSEnabled = PR_FALSE,
@@ -311,8 +309,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // CPluginInputStream specific methods:
 
-    CPluginInputStream(nsIPluginStreamListener* listener,
-                       nsPluginStreamType streamType);
+    CPluginInputStream(nsIPluginStreamListener* listener);
     virtual ~CPluginInputStream(void);
 
     void SetStreamInfo(NPP npp, NPStream* stream) {
@@ -516,7 +513,7 @@ char* NPP_GetMIMEDescription(void)
     //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
         freeFac = 1;
-        NSGetFactory(kIPluginIID, (nsIFactory** )(&thePlugin));
+        NSGetFactory(kIPluginIID, NULL, (nsIFactory** )&thePlugin);
     }
     //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
     const char * ret;
@@ -557,7 +554,7 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
         freeFac = 1;
-        if (NSGetFactory(kIPluginIID, (nsIFactory** )(&thePlugin)) != NS_OK)
+        if (NSGetFactory(kIPluginIID, NULL, (nsIFactory**)&thePlugin ) != NS_OK)
             return NPERR_GENERIC_ERROR;
     }
     //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
@@ -601,10 +598,9 @@ NPP_Initialize(void)
     // On UNIX the plugin might have been created when calling NPP_GetMIMEType.
     if (thePlugin == NULL) {
         // create nsIPlugin factory
-        error = (NPError)NSGetFactory(kIPluginIID, (nsIFactory**) &thePlugin);
+        error = (NPError)NSGetFactory(kIPluginIID, NULL, (nsIFactory**)&thePlugin );
 	    if (error == NS_OK) {
 	    	thePlugin->AddRef();
-	        thePlugin->Initialize(thePluginManager);
 	    }
 	}
 	
@@ -1144,7 +1140,6 @@ CPluginManager::GetURL(nsISupports* pluginInst,
                        const char* url, 
                        const char* target,
                        nsIPluginStreamListener* streamListener,
-                       nsPluginStreamType streamType,
                        const char* altHost,
                        const char* referrer,
                        PRBool forceJSEnabled)
@@ -1166,7 +1161,7 @@ CPluginManager::GetURL(nsISupports* pluginInst,
 
     NPError err;
     if (streamListener) {
-        CPluginInputStream* inStr = new CPluginInputStream(streamListener, streamType);
+        CPluginInputStream* inStr = new CPluginInputStream(streamListener);
         if (inStr == NULL) {
             instancePeer->Release();
             inst->Release();
@@ -1192,7 +1187,6 @@ CPluginManager::PostURL(nsISupports* pluginInst,
                         PRBool isFile,
                         const char* target,
                         nsIPluginStreamListener* streamListener,
-                        nsPluginStreamType streamType,
                         const char* altHost, 
                         const char* referrer,
                         PRBool forceJSEnabled,
@@ -1217,7 +1211,7 @@ CPluginManager::PostURL(nsISupports* pluginInst,
 
     NPError err;
     if (streamListener) {
-        CPluginInputStream* inStr = new CPluginInputStream(streamListener, streamType);
+        CPluginInputStream* inStr = new CPluginInputStream(streamListener);
         if (inStr == NULL) {
             instancePeer->Release();
             inst->Release();
@@ -1757,14 +1751,16 @@ NS_IMPL_QUERY_INTERFACE(CPluginManagerStream, kIOutputStreamIID);
 
 #ifdef NEW_PLUGIN_STREAM_API
 
-CPluginInputStream::CPluginInputStream(nsIPluginStreamListener* listener,
-                                       nsPluginStreamType streamType)
-    : mListener(listener), mStreamType(streamType),
+CPluginInputStream::CPluginInputStream(nsIPluginStreamListener* listener)
+    : mListener(listener), mStreamType(nsPluginStreamType_Normal),
       mNPP(NULL), mStream(NULL),
       mBuffer(NULL), mBufferLength(0), mAmountRead(0)
 {
     NS_INIT_REFCNT();
     mListener->AddRef();
+
+    if (mListener != NULL)
+       mListener->GetStreamType(&mStreamType);
 }
 
 CPluginInputStream::~CPluginInputStream(void)

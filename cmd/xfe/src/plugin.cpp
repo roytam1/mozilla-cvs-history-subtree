@@ -409,6 +409,20 @@ static void updateMimeInfo(NPX_PlugIn *plugin)
     }
 }
 
+static void
+fe_MaybeUnloadPlugin(NPX_PlugIn *info)
+{
+    nsCanUnloadProc nsCanUnload = (nsCanUnloadProc)
+        PR_FindSymbol(info->dlopen_obj, "NSCanUnload");
+    if (nsCanUnload) {
+        PRBool canUnload = nsCanUnload();
+        if (canUnload) {
+            PR_UnloadLibrary(info->dlopen_obj);
+            info->dlopen_obj = NULL;
+        }
+    }
+}
+
 static NPX_PlugIn *readPluginInfo(NPX_PlugInList *list, char *filename)
 {
     struct stat buf;
@@ -452,44 +466,29 @@ static NPX_PlugIn *readPluginInfo(NPX_PlugInList *list, char *filename)
           (nsFactoryProc)PR_FindSymbol(obj, "NSGetFactory");
 
 	if (nsGetFactory != NULL) {
-            // XXX Figure out where this should go: this seems a
-            // little late in the game to be creating the plugin
-            // manager...
-	    if (thePluginManager == NULL) {
-                static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-                if (nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager) != NS_OK)
-                    return NULL;
-	    }
-
-            PR_ASSERT(thePluginManager != NULL);
-
             static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 	    nsIPlugin* userPlugin = NULL;
-	    nsresult err = nsGetFactory(kIPluginIID, (nsIFactory**)&userPlugin);
+            nsIServiceManager* serviceMgr = NULL;
+            nsresult err = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+            if (err == NS_OK
+                && (err = nsGetFactory(kIPluginIID, serviceMgr, (nsIFactory**)&userPlugin) == NS_OK)) {
+                // ok
+#ifdef LATER // XXX coming soon...
+		// add the plugin directory if successful
+		JVM_AddToClassPathRecursively(csPluginDir);
+#endif
 
-	    if ((err != NS_OK)
-                || (userPlugin == NULL)
-                || (userPlugin->Initialize((nsIPluginManager*)thePluginManager) != NS_OK)) {
+		err = userPlugin->GetMIMEDescription((const char**)&newInfo);
+		if (err != NS_OK) {
+		    PR_UnloadLibrary(obj);
+		    return NULL;
+		}
+            }
+            else {
+                // XXX fe_MaybeUnloadPlugin(NPX_PlugIn *info);
 		PR_UnloadLibrary(obj);
 		return NULL;
 	    }
-
-#ifdef LATER // XXX coming soon...
-            // add the plugin directory if successful
-            JVM_AddToClassPathRecursively(csPluginDir);
-#endif
-
-            err = userPlugin->GetMIMEDescription((const char**)&newInfo);
-            if (err != NS_OK) {
-		PR_UnloadLibrary(obj);
-		return NULL;
-            }
-
-            err = userPlugin->Shutdown();
-            if (err != NS_OK) {
-		PR_UnloadLibrary(obj);
-		return NULL;
-            }
 	}
         else {
             fct = (char *(*)())PR_FindSymbol(obj, "NP_GetMIMEDescription");
@@ -531,6 +530,10 @@ static NPX_PlugIn *readPluginInfo(NPX_PlugInList *list, char *filename)
 	currentInfo->found = 1;
 
 	updateMimeInfo(currentInfo);
+
+	// XXX This is bogus -- we should be calling fe_MaybeUnloadPlugin(plugin) here
+	// so that NSCanUnload gets called, but we don't have an NSX_PlugIn object at
+	// this point.
 	{
 	int err = PR_UnloadLibrary(obj);
 	PR_ASSERT(err == 0);
@@ -968,29 +971,17 @@ FE_LoadPlugin(void *pdesc, NPNetscapeFuncs *funcs, np_handle* handle)
           (nsFactoryProc)PR_FindSymbol(plugin->dlopen_obj, "NSGetFactory");
 
 	if (nsGetFactory != NULL) {
-            // XXX Figure out where this should go: this seems a
-            // little late in the game to be creating the plugin
-            // manager...
-	    if (thePluginManager == NULL) {
-                static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-                if (nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager) != NS_OK)
-                    return NULL;
-	    }
-
-            PR_ASSERT(thePluginManager != NULL);
-
             static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
 	    nsIPlugin* userPlugin = NULL;
-	    nsresult err = nsGetFactory(kIPluginIID, (nsIFactory**)&userPlugin);
-
-	    handle->userPlugin = userPlugin;
-	    plugin->handle = handle;
-
-	    if ((err != NS_OK)
-                || (userPlugin == NULL)
-                || (userPlugin->Initialize((nsIPluginManager*)thePluginManager) != NS_OK)) {
-		PR_UnloadLibrary(plugin->dlopen_obj);
-		plugin->dlopen_obj = NULL;
+            nsIServiceManager* serviceMgr = NULL;
+            nsresult err = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+            if (err == NS_OK
+                && (err = nsGetFactory(kIPluginIID, serviceMgr, (nsIFactory**)&userPlugin) == NS_OK)) {
+                handle->userPlugin = userPlugin;
+                plugin->handle = handle;
+            }
+            else {
+                fe_MaybeUnloadPlugin(plugin);
 		return NULL;
 	    }
 
@@ -1004,9 +995,7 @@ FE_LoadPlugin(void *pdesc, NPNetscapeFuncs *funcs, np_handle* handle)
 	    f = (NPError(*)(NPNetscapeFuncs *, NPPluginFuncs *)) PR_FindSymbol(plugin->dlopen_obj, "NP_Initialize");
 
 	    if (f == NULL) {
-		int err = PR_UnloadLibrary(plugin->dlopen_obj);
-		PR_ASSERT(err == 0);
-		plugin->dlopen_obj = NULL;
+                fe_MaybeUnloadPlugin(plugin);
 		return NULL;
 	    }
 
@@ -1014,9 +1003,7 @@ FE_LoadPlugin(void *pdesc, NPNetscapeFuncs *funcs, np_handle* handle)
 	    err = (*f)(funcs, &plugin->fctns);
 
 	    if (err != NPERR_NO_ERROR) {
-		int err = PR_UnloadLibrary(plugin->dlopen_obj);
-		PR_ASSERT(err == 0);
-		plugin->dlopen_obj = NULL;
+                fe_MaybeUnloadPlugin(plugin);
 		return NULL;
 	    }
 
@@ -1064,9 +1051,7 @@ FE_UnloadPlugin(void *pdesc, struct _np_handle* handle)
     plugin->numberOfOpens--;
 
     if (plugin->numberOfOpens == 0) {
-	int err = PR_UnloadLibrary(plugin->dlopen_obj);
-	PR_ASSERT(err == 0);
-	plugin->dlopen_obj = NULL;
+	fe_MaybeUnloadPlugin(plugin);
     }
     else if (plugin->numberOfOpens < 0) {
         plugin->numberOfOpens = 0;

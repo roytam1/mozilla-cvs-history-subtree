@@ -144,9 +144,9 @@ nsresult nsNetFactory::LockFactory(PRBool aLock)
 
 // return the proper factory to the caller
 #ifdef XP_MAC
-extern "C" NS_NET nsresult NSGetFactory_NETLIB_DLL(const nsCID &aClass, nsIFactory **aFactory)
+extern "C" NS_NET nsresult NSGetFactory_NETLIB_DLL(const nsCID &aClass, nsISupports* serviceMgr, nsIFactory **aFactory)
 #else
-extern "C" NS_NET nsresult NSGetFactory(const nsCID &aClass, nsIFactory **aFactory)
+extern "C" NS_NET nsresult NSGetFactory(const nsCID &aClass, nsISupports* serviceMgr, nsIFactory **aFactory)
 #endif
 {
   if (nsnull == aFactory) {

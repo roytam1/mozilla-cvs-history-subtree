@@ -488,7 +488,7 @@ XFE_UpgradePrefs(char* filename, XFE_GlobalPrefs* prefs)
     Bool status;
 #ifdef MOZ_MAIL_NEWS
     char* tmp = NULL;
-    XP_Bool passwordProtectLocalCache;
+    PRBool passwordProtectLocalCache;
 
     PREF_GetBoolPref("mail.password_protect_local_cache",
                      &passwordProtectLocalCache);
@@ -532,7 +532,7 @@ XFE_SavePrefs(char* filename, XFE_GlobalPrefs* prefs)
     Bool status;
 #ifdef MOZ_MAIL_NEWS
     char* tmp = NULL;
-    XP_Bool passwordProtectLocalCache;
+    PRBool passwordProtectLocalCache;
 	
     PREF_GetBoolPref("mail.password_protect_local_cache",
                      &passwordProtectLocalCache);
@@ -936,11 +936,13 @@ fe_PrefWriteString(char* prefName, void* field)
 static void
 read_bool(char* name, void* field)
 {
+    PRBool value;
     if ( def ) {
-        PREF_GetDefaultBoolPref(name, (Bool*) field);
+        PREF_GetDefaultBoolPref(name, &value);
     } else {
-        PREF_GetBoolPref(name, (Bool*) field);
+        PREF_GetBoolPref(name, &value);
     }
+    *(Bool*)field = (Bool)value;
 }
 
 

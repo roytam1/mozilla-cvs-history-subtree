@@ -80,6 +80,7 @@
 #define nsplugins_h___
 
 #include "nsRepository.h"       // for NSGetFactory
+#include "nsIServiceManager.h"  // for other services
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
@@ -96,6 +97,7 @@
  */
 // (Declared in nsRepository.h)
 //extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aClass,
+//                                           nsISupports* serviceMgr,
 //                                           nsIFactory **aFactory);
 
 /**                                                               

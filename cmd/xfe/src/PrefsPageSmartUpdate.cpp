@@ -146,7 +146,7 @@ XFE_PrefsPageSmartUpdate::init()
 	void* context = NULL;
 	char packageName[1024];
 	char regPackageName[1024];
-	XP_Bool enabled;
+	PRBool enabled;
 
 	PREF_GetBoolPref("autoupdate.enabled", &enabled);
 	XtVaSetValues(m_enable_toggle, XmNset, enabled,

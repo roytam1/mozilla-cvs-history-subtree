@@ -30,10 +30,17 @@
 #include "pprthred.h"
 #include "plstr.h"
 #include "jni.h"
+#include "jsjava.h"
+#include "jsdbgapi.h"
 #include "libmocha.h"
-
-extern "C" void jvm_InitLCGlue(void);      // in lcglue.cpp
-
+#include "libevent.h"
+#include "nsCCapsManager.h"
+#include "prinrval.h"
+#include "ProxyJNI.h"
+#include "prcmon.h"
+#include "nsCSecurityContext.h"
+#include "nsISecurityContext.h"
+#include "lcglue.h"
 #include "xpgetstr.h"
 extern "C" int XP_PROGRESS_STARTING_JAVA;
 extern "C" int XP_PROGRESS_STARTING_JAVA_DONE;
@@ -53,6 +60,7 @@ void stopAsyncCursors(void);
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
+static NS_DEFINE_IID(kIThreadManagerIID, NS_ITHREADMANAGER_IID);
 static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
 static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
 static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
@@ -60,6 +68,114 @@ static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMPL_AGGREGATED(nsJVMManager);
+
+extern "C" {
+static nsIJVMPlugin* GetRunningJVM(void);
+static nsIJVMPlugin*
+GetRunningJVM()
+{
+    nsIJVMPlugin* jvm = NULL;
+    nsJVMManager* jvmMgr = JVM_GetJVMMgr();
+    if (jvmMgr) {
+        nsJVMStatus status = jvmMgr->GetJVMStatus();
+        if (status == nsJVMStatus_Enabled)
+            status = jvmMgr->StartupJVM();
+        if (status == nsJVMStatus_Running) {
+            jvm = jvmMgr->GetJVMPlugin();
+        }
+        jvmMgr->Release();
+    }
+    return jvm;
+}
+}
+
+NS_METHOD
+nsJVMManager::CreateProxyJNI(nsISecureJNI2* inSecureEnv, JNIEnv** outProxyEnv)
+{
+	JVMContext* context = GetJVMContext();
+	if (context->proxyEnv != NULL) {
+		*outProxyEnv = context->proxyEnv;
+		return NS_OK;
+	}
+    nsIJVMPlugin* jvmPlugin = GetRunningJVM();
+	if (jvmPlugin != NULL) {
+		*outProxyEnv = context->proxyEnv = ::CreateProxyJNI(jvmPlugin, inSecureEnv);
+		return NS_OK;
+	}
+	return NS_ERROR_FAILURE;
+}
+
+NS_METHOD
+nsJVMManager::GetProxyJNI(JNIEnv** outProxyEnv)
+{
+	JVMContext* context = GetJVMContext();
+	*outProxyEnv = context->proxyEnv;
+	return NS_OK;
+}
+
+// nsIThreadManager:
+
+NS_METHOD
+nsJVMManager::GetCurrentThread(PRUint32* threadID)
+{
+	*threadID = PRUint32(PR_GetCurrentThread());
+	return NS_OK;
+}
+
+NS_METHOD
+nsJVMManager::Sleep(PRUint32 milli)
+{
+	PRIntervalTime ticks = (milli > 0 ? PR_MillisecondsToInterval(milli) : PR_INTERVAL_NO_WAIT);
+	return (PR_Sleep(ticks) == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE);
+}
+
+NS_METHOD
+nsJVMManager::EnterMonitor(void* address)
+{
+	return (PR_CEnterMonitor(address) != NULL ? NS_OK : NS_ERROR_FAILURE);
+}
+
+NS_METHOD
+nsJVMManager::ExitMonitor(void* address)
+{
+	return (PR_CExitMonitor(address) == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE);
+}
+
+NS_METHOD
+nsJVMManager::Wait(void* address, PRUint32 milli)
+{
+	PRIntervalTime timeout = (milli > 0 ? PR_MillisecondsToInterval(milli) : PR_INTERVAL_NO_TIMEOUT);
+	return (PR_CWait(address, timeout) == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE);
+}
+
+NS_METHOD
+nsJVMManager::Notify(void* address)
+{
+	return (PR_CNotify(address) == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE);
+}
+
+NS_METHOD
+nsJVMManager::NotifyAll(void* address)
+{
+	return (PR_CNotifyAll(address) == PR_SUCCESS ? NS_OK : NS_ERROR_FAILURE);
+}
+
+static void thread_starter(void* arg)
+{
+	nsIRunnable* runnable = (nsIRunnable*) arg;
+	if (runnable != NULL) {
+		runnable->Run();
+	}
+}
+
+NS_METHOD
+nsJVMManager::CreateThread(PRUint32* outThreadID, nsIRunnable* runnable)
+{
+	PRThread* thread = PR_CreateThread(PR_USER_THREAD, &thread_starter, (void*) runnable,
+									PR_PRIORITY_LOW, PR_GLOBAL_THREAD, PR_JOINABLE_THREAD, 0);
+	*outThreadID = (PRUint32) thread;
+	return (thread != NULL ?  NS_OK : NS_ERROR_FAILURE);
+}
 
 NS_METHOD
 nsJVMManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
@@ -70,14 +186,14 @@ nsJVMManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
     if (jvmmgr == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
     jvmmgr->AddRef();
-    *aInstancePtr = outer ? (void*)jvmmgr->GetInner() : (void*)jvmmgr;
+    *aInstancePtr = (outer != NULL ? (void*) jvmmgr->GetInner() : (void*) jvmmgr);
     return NS_OK;
 }
 
 nsJVMManager::nsJVMManager(nsISupports* outer)
     : fJVM(NULL), fStatus(nsJVMStatus_Enabled),
       fRegisteredJavaPrefChanged(PR_FALSE), fDebugManager(NULL), fJSJavaVM(NULL),
-      fClassPathAdditions(new nsVector())
+      fClassPathAdditions(new nsVector()), fClassPathAdditionsString(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
@@ -89,6 +205,8 @@ nsJVMManager::~nsJVMManager()
         PR_Free((*fClassPathAdditions)[i]);
     }
     delete fClassPathAdditions;
+    if (fClassPathAdditionsString)
+        PR_Free(fClassPathAdditionsString);
     if (fJVM) {
         /*nsrefcnt c =*/ fJVM->Release();   // Release for QueryInterface in GetJVM
         // XXX unload plugin if c == 1 ? (should this be done inside Release?)
@@ -103,11 +221,16 @@ nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
         AddRef();
         return NS_OK;
     }
+    if (aIID.Equals(kIThreadManagerIID)) {
+        *aInstancePtr = (void*) (nsIThreadManager*) this;
+        AddRef();
+        return NS_OK;
+    }
 #ifdef XP_PC
     // Aggregates...
     if (fDebugManager == NULL) {
         nsresult rslt =
-            nsSymantecDebugManager::Create(this, kISupportsIID,
+            nsSymantecDebugManager::Create((nsIJVMManager *)this, kISupportsIID,
                                            (void**)&fDebugManager, this);
         if (rslt != NS_OK) return rslt;
     }
@@ -115,6 +238,30 @@ nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 #else
     return NS_NOINTERFACE;
 #endif
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+NS_METHOD
+nsJVMManager::GetClasspathAdditions(const char* *result)
+{
+    if (fClassPathAdditionsString != NULL)
+        PR_Free(fClassPathAdditionsString);
+    int count = fClassPathAdditions->GetSize();
+    char* classpathAdditions = NULL;
+    for (int i = 0; i < count; i++) {
+        const char* path = (const char*)(*fClassPathAdditions)[i];
+        char* oldPath = classpathAdditions;
+        if (oldPath) {
+            classpathAdditions = PR_smprintf("%s%c%s", oldPath, PR_PATH_SEPARATOR, path);
+            PR_Free(oldPath);
+        }
+        else
+            classpathAdditions = PL_strdup(path);
+    }
+    fClassPathAdditionsString = classpathAdditions;
+    *result = classpathAdditions;  // XXX need to convert to PRUnichar*
+    return classpathAdditions ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,30 +277,26 @@ ConvertToPlatformPathList(const char* cp)
     {
         const char* path;
         const char* strtok_path;
-
+		
         char* result = (char*) malloc(1);
         if (result == NULL)
             return NULL;
         result[0] = '\0';
         path = c;
         strtok_path = path;
-#ifndef NSPR20
-        while ((path = XP_STRTOK(strtok_path, PATH_SEPARATOR_STR)))
-#else
-            while ((path = XP_STRTOK(strtok_path, PR_PATH_SEPARATOR_STR)))
-#endif
-            {
-                const char* macPath;
-                OSErr err = ConvertUnixPathToMacPath(path, &macPath);
-                char* r = PR_smprintf("%s\r%s", result, macPath);
+        while ((path = XP_STRTOK(strtok_path, PR_PATH_SEPARATOR_STR)))
+        {
+            const char* macPath;
+            OSErr err = ConvertUnixPathToMacPath(path, &macPath);
+            char* r = PR_smprintf("%s\r%s", result, macPath);
 			
-                strtok_path = NULL;
+            strtok_path = NULL;
 
-                if (r == NULL)
-                    return result;	/* return what we could come up with */
-                free(result);
-                result = r;
-            }
+            if (r == NULL)
+                return result;	/* return what we could come up with */
+            free(result);
+            result = r;
+        }
         free(c);
         return result;
     }
@@ -161,7 +304,6 @@ ConvertToPlatformPathList(const char* cp)
     return c;
 #endif
 }
-#endif
 
 void
 nsJVMManager::ReportJVMError(nsresult err)
@@ -183,7 +325,7 @@ nsJVMManager::ReportJVMError(nsresult err)
           const char* msg = GetJavaErrorString(env);
           plugin->ReleaseJNIEnv(env);
 #ifdef DEBUG
-          env->ExceptionDescribe();
+		  env->ExceptionDescribe();
 #endif
           s = PR_smprintf(XP_GetString(XP_JAVA_STARTUP_FAILED), 
                           (msg ? msg : ""));
@@ -206,7 +348,6 @@ nsJVMManager::ReportJVMError(nsresult err)
         free(s);
     }
 }
-
 /* stolen from java_lang_Object.h (jri version) */
 #define classname_java_lang_Object	"java/lang/Object"
 #define name_java_lang_Object_toString	"toString"
@@ -230,15 +371,16 @@ nsJVMManager::GetJavaErrorString(JNIEnv* env)
     jmethodID toString = env->GetMethodID(classObject, name_java_lang_Object_toString, sig_java_lang_Object_toString);
     jstring excString = (jstring) env->CallObjectMethod(exc, toString);
 
-    jboolean isCopy;
+	jboolean isCopy;
     const char* msg = env->GetStringUTFChars(excString, &isCopy);
     if (msg != NULL) {
-        const char* dupmsg = (msg == NULL ? NULL : strdup(msg));
+        const char* dupmsg = (msg == NULL ? (const char*)NULL : strdup(msg));
     	env->ReleaseStringUTFChars(excString, msg);
     	msg = dupmsg;
     }
     return msg;
 }
+#endif // 0
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -264,13 +406,13 @@ nsJVMManager::StartupJVM(void)
     PR_LOG(NSJAVA, PR_LOG_ALWAYS, ("Starting java..."));
 #endif
 
-    MWContext* someRandomContext = XP_FindSomeContext();
-    if (someRandomContext) {
-        FE_Progress(someRandomContext, XP_GetString(XP_PROGRESS_STARTING_JAVA));
-    }
+	MWContext* someRandomContext = XP_FindSomeContext();
+	if (someRandomContext) {
+		FE_Progress(someRandomContext, XP_GetString(XP_PROGRESS_STARTING_JAVA));
+	}
 
     PR_ASSERT(fJVM == NULL);
-    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
+    nsIPlugin* plugin = NPL_LoadPluginByType(NS_JVM_MIME_TYPE);
     if (plugin == NULL) {
         fStatus = nsJVMStatus_Failed;
         return fStatus;
@@ -282,31 +424,16 @@ nsJVMManager::StartupJVM(void)
         fStatus = nsJVMStatus_Failed;
         return fStatus;
     }
-    
-    nsJVMInitArgs initargs;
-    int count = fClassPathAdditions->GetSize();
-    char* classpathAdditions = NULL;
-    for (int i = 0; i < count; i++) {
-        const char* path = (const char*)(*fClassPathAdditions)[i];
-        char* oldPath = classpathAdditions;
-        if (oldPath) {
-            classpathAdditions = PR_smprintf("%s%c%s", oldPath, PR_PATH_SEPARATOR, path);
-            PR_Free(oldPath);
-        }
-        else
-            classpathAdditions = PL_strdup(path);
-    }
-    initargs.version = nsJVMInitArgs_Version;
-    initargs.classpathAdditions = classpathAdditions;
 
-    nsresult err = fJVM->StartupJVM(&initargs);
-    if (err == NS_OK) {
-        /* assume the JVM is running. */
-        fStatus = nsJVMStatus_Running;
+    // Get an execution environment -- that will cause the VM to start up
+    JNIEnv* env = NULL;
+    rslt = fJVM->GetJNIEnv(&env);
+    if (rslt != NS_OK || env == NULL) {
+        fStatus = nsJVMStatus_Failed;
     }
     else {
-        ReportJVMError(err);
-        fStatus = nsJVMStatus_Failed;
+        /* else the JVM is running. */
+        fStatus = nsJVMStatus_Running;
     }
 
 #if 0
@@ -324,9 +451,9 @@ nsJVMManager::StartupJVM(void)
             (fStatus == nsJVMStatus_Running ? "done" : "failed"), d));
 #endif
 
-    if (someRandomContext) {
-        FE_Progress(someRandomContext, XP_GetString(XP_PROGRESS_STARTING_JAVA_DONE));
-    }
+	if (someRandomContext) {
+		FE_Progress(someRandomContext, XP_GetString(XP_PROGRESS_STARTING_JAVA_DONE));
+	}
     return fStatus;
 }
 
@@ -336,13 +463,14 @@ nsJVMManager::ShutdownJVM(PRBool fullShutdown)
     if (fStatus == nsJVMStatus_Running) {
         PR_ASSERT(fJVM != NULL);
         (void)MaybeShutdownLiveConnect();
-        nsresult err = fJVM->ShutdownJVM(fullShutdown);
-        if (err == NS_OK)
+        // XXX need to shutdown JVM via ServiceManager
+//        nsresult err = fJVM->ShutdownJVM(fullShutdown);
+//        if (err == NS_OK)
             fStatus = nsJVMStatus_Enabled;
-        else {
-            ReportJVMError(err);
-            fStatus = nsJVMStatus_Disabled;
-        }
+//        else {
+//            ReportJVMError(err);
+//            fStatus = nsJVMStatus_Disabled;
+//        }
         fJVM = NULL;
     }
     PR_ASSERT(fJVM == NULL);
@@ -355,10 +483,10 @@ static int PR_CALLBACK
 JavaPrefChanged(const char *prefStr, void* data)
 {
     nsJVMManager* mgr = (nsJVMManager*)data;
-    XP_Bool prefBool;
+    PRBool prefBool;
 #if defined(XP_MAC)
-    // beard: under Mozilla, no way to enable this right now.
-    prefBool = TRUE;
+	// beard: under Mozilla, no way to enable this right now.
+	prefBool = TRUE;
 #else
     PREF_GetBoolPref(prefStr, &prefBool);
 #endif
@@ -408,9 +536,9 @@ nsJVMManager::MaybeStartupLiveConnect(void)
     if (fJSJavaVM)
         return PR_TRUE;
 
-    do {
-        static PRBool registeredLiveConnectFactory = PR_FALSE;
-        if (!registeredLiveConnectFactory) {
+	do {
+		static PRBool registeredLiveConnectFactory = PR_FALSE;
+		if (!registeredLiveConnectFactory) {
             NS_DEFINE_CID(kCLiveconnectCID, NS_CLIVECONNECT_CID);
             registeredLiveConnectFactory = 
                 (nsRepository::RegisterFactory(kCLiveconnectCID, (const char *)JSJDLL,
@@ -421,21 +549,21 @@ nsJVMManager::MaybeStartupLiveConnect(void)
             nsIJVMPlugin* plugin = GetJVMPlugin();
             if (plugin) {
 #if 0
-                const char* classpath = NULL;
-                nsresult err = plugin->GetClassPath(&classpath);
-                if (err != NS_OK) break;
+	            const char* classpath = NULL;
+	            nsresult err = plugin->GetClassPath(&classpath);
+	            if (err != NS_OK) break;
 
-                JavaVM* javaVM = NULL;
-                err = plugin->GetJavaVM(&javaVM);
-                if (err != NS_OK) break;
+	            JavaVM* javaVM = NULL;
+	            err = plugin->GetJavaVM(&javaVM);
+	            if (err != NS_OK) break;
 #endif
-                fJSJavaVM = JSJ_ConnectToJavaVM(NULL, NULL);
-                if (fJSJavaVM != NULL)
-                    return PR_TRUE;
-                // plugin->Release(); // GetJVMPlugin no longer calls AddRef
-            }
-        }
-    } while (0);
+	            fJSJavaVM = JSJ_ConnectToJavaVM(NULL, NULL);
+	            if (fJSJavaVM != NULL)
+	                return PR_TRUE;
+	            // plugin->Release(); // GetJVMPlugin no longer calls AddRef
+	        }
+	    }
+	} while (0);
     return PR_FALSE;
 }
 
@@ -453,11 +581,11 @@ nsJVMManager::MaybeShutdownLiveConnect(void)
 PRBool
 nsJVMManager::IsLiveConnectEnabled(void)
 {
-    if (LM_GetMochaEnabled()) {
-        nsJVMStatus status = GetJVMStatus();
-        return (status == nsJVMStatus_Enabled || status == nsJVMStatus_Running);
-    }
-    return PR_FALSE;
+	if (LM_GetMochaEnabled()) {
+		nsJVMStatus status = GetJVMStatus();
+		return (status == nsJVMStatus_Enabled || status == nsJVMStatus_Running);
+	}
+	return PR_FALSE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -474,29 +602,29 @@ nsJVMManager::AddToClassPath(const char* dirPath)
         while ((dirent = PR_ReadDir(dir, PR_SKIP_BOTH)) != NULL) {
             PRFileInfo info;
             char* path = PR_smprintf("%s%c%s", dirPath, PR_DIRECTORY_SEPARATOR, PR_DirName(dirent));
-            if (path != NULL) {
-                PRBool freePath = PR_TRUE;
-                if ((PR_GetFileInfo(path, &info) == PR_SUCCESS)
-                    && (info.type == PR_FILE_FILE)) {
-                    int len = PL_strlen(path);
+			if (path != NULL) {
+        		PRBool freePath = PR_TRUE;
+	            if ((PR_GetFileInfo(path, &info) == PR_SUCCESS)
+	                && (info.type == PR_FILE_FILE)) {
+	                int len = PL_strlen(path);
 
-                    /* Is it a zip or jar file? */
-                    if ((len > 4) && 
-                        ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
-                         (PL_strcasecmp(path+len-4, ".jar") == 0))) {
-                        fClassPathAdditions->Add((void*)path);
-                        if (jvm) {
-                            /* Add this path to the classpath: */
-                            jvm->AddToClassPath(path);
-                        }
-                        freePath = PR_FALSE;
-                    }
-                }
+	                /* Is it a zip or jar file? */
+	                if ((len > 4) && 
+	                    ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
+	                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {
+	                    fClassPathAdditions->Add((void*)path);
+	                    if (jvm) {
+	                        /* Add this path to the classpath: */
+	                        jvm->AddToClassPath(path);
+	                    }
+	                    freePath = PR_FALSE;
+	                }
+	            }
 	            
-                // Don't leak the path!
-                if (freePath)
-                    PR_smprintf_free(path);
-            }
+	            // Don't leak the path!
+	            if (freePath)
+		            PR_smprintf_free(path);
+	        }
         }
         PR_CloseDir(dir);
     }
@@ -559,12 +687,15 @@ nsJVMFactory::LockFactory(PRBool aLock)
 
 static NS_DEFINE_CID(kJVMManagerCID, NS_JVMMANAGER_CID);
 
-extern "C" void
+extern "C" nsresult
 jvm_RegisterJVMMgr(void)
 {
-    nsRepository::RegisterFactory(kJVMManagerCID,
-                                  new nsJVMFactory(),
-                                  PR_TRUE);
+    nsJVMFactory* fact = new nsJVMFactory();
+    if (fact == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+    
+    fact->AddRef();
+    return nsRepository::RegisterFactory(kJVMManagerCID, fact, PR_TRUE);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

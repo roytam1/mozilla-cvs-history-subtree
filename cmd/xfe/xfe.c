@@ -5004,11 +5004,11 @@ fe_IsPolarisInstalled()
 XP_Bool
 fe_IsEditorDisabled(void)
 {
-    XP_Bool disabled = FALSE;
+    PRBool disabled = PR_FALSE;
 
     PREF_GetBoolPref("browser.editor.disabled", &disabled);
 
-    return disabled;
+    return (XP_Bool)disabled;
 }
 
 

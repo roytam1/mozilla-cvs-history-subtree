@@ -27,7 +27,14 @@ EXPORTS =        \
         nppg.h   \
         npglue.h \
         nppriv.h \
-        nsMalloc.h
+        nsMalloc.h \
+        nsFileUtilities.h \
+        nsMalloc.h \
+        nsPluginInputStream.h \
+        nsPluginInstancePeer.h \
+        nsPluginManager.h \
+        nsPluginManagerStream.h \
+        nsPluginTagInfo.h \
 
 LIBRARY_NAME = plug
 
@@ -46,9 +53,14 @@ LINCS = -I$(DIST)\include  \
         -I$(PUBLIC)\caps
 
 OBJS =  .\$(OBJDIR)\npassoc.obj \
-        .\$(OBJDIR)\nsplugin.obj \
         .\$(OBJDIR)\npglue.obj \
-        .\$(OBJDIR)\nsMalloc.obj
+        .\$(OBJDIR)\nsFileUtilities.obj \
+        .\$(OBJDIR)\nsMalloc.obj \
+        .\$(OBJDIR)\nsPluginInputStream.obj \
+        .\$(OBJDIR)\nsPluginInstancePeer.obj \
+        .\$(OBJDIR)\nsPluginManager.obj \
+        .\$(OBJDIR)\nsPluginManagerStream.obj \
+        .\$(OBJDIR)\nsPluginTagInfo.obj \
 
 !ifdef NEW_PLUGIN_STREAM_API
 LCFLAGS = $(LCFLAGS) -DNEW_PLUGIN_STREAM_API

@@ -48,7 +48,6 @@ public:
            const char* url, 
            const char* target = NULL,
            nsIPluginStreamListener* streamListener = NULL,
-           nsPluginStreamType streamType = nsPluginStreamType_Normal,
            const char* altHost = NULL,
            const char* referrer = NULL,
            PRBool forceJSEnabled = PR_FALSE);
@@ -61,7 +60,6 @@ public:
             PRBool isFile = PR_FALSE,
             const char* target = NULL,
             nsIPluginStreamListener* streamListener = NULL,
-            nsPluginStreamType streamType = nsPluginStreamType_Normal,
             const char* altHost = NULL, 
             const char* referrer = NULL,
             PRBool forceJSEnabled = PR_FALSE,

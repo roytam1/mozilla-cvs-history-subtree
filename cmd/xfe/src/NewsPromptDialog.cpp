@@ -132,7 +132,7 @@ XFE_NewsPromptDialog::XFE_NewsPromptDialog(Widget parent,
 	XP_FREE(buf);
 
 	{
-		XP_Bool markothersread;
+		PRBool markothersread;
 
 		PREF_GetBoolPref("news.mark_old_read", &markothersread);
 

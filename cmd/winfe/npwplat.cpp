@@ -44,6 +44,7 @@
 #endif
 #include "edt.h"
 #include "npglue.h"
+#include "nsIServiceManager.h"
 
 NPPMgtBlk* g_pRegisteredPluginList = NULL;
 
@@ -449,6 +450,9 @@ NPError fe_RegisterPlugin(char* pPluginFilespec)
     return NPERR_NO_ERROR;
 }
 
+static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
+static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+
 // FE_RegisterPlugins is called from navigator main via npglue's NP_Init(). Finds all
 // plugins and begins tracking them using a NPPMgtBlk.  Uses the NPPMgtBlk
 // block handle to register the plugin with the xp plugin glue. Looks
@@ -465,14 +469,6 @@ void fe_RegisterPlugins(char* pszPluginDir)
     // add directory to the java path no matter what
     LJ_AddToClassPath(pszPluginDir);
 #endif
-
-    if (thePluginManager == NULL) {
-        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
-        nsresult rslt = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
-        // XXX Out of memory already? This function should return an error code!
-        PR_ASSERT(rslt == NS_OK);
-        // keep going anyway...
-    }
 
     csPluginSpec += "\\*.*"; 
 
@@ -627,6 +623,20 @@ NPError wfe_PopPath(LPSTR pPathSave)
     return NPERR_NO_ERROR;
 }
 
+static void
+fe_MaybeUnloadPlugin(NPPMgtBlk* mgtBlock)
+{
+    nsCanUnloadProc nsCanUnload = (nsCanUnloadProc)
+        PR_FindSymbol(mgtBlock->pLibrary, "NSCanUnload");
+    if (nsCanUnload) {
+        PRBool canUnload = nsCanUnload();
+        if (canUnload) {
+            PR_UnloadLibrary(mgtBlock->pLibrary);
+            mgtBlock->pLibrary = NULL;
+        }
+    }
+}
+
 // Load a plugin dll.  "pluginType" is a handle to a plugin management data
 // structure created during FE_RegisterPlugins().  "pNavigatorFuncs" is
 // a table of entry points into Navigator, which are the services provided
@@ -683,12 +693,14 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
     if (nsGetFactory != NULL) {
         static NS_DEFINE_IID(kIPluginIID, NS_IPLUGIN_IID);
         nsIPlugin* plugin = NULL;
-        nsresult res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
-        PR_ASSERT(thePluginManager != NULL);
-        if (res == NS_OK && plugin != NULL
-            && plugin->Initialize((nsIPluginManager*)thePluginManager) == NS_OK) {
+        nsIServiceManager* serviceMgr = NULL;
+        nsresult res = nsServiceManager::GetGlobalServiceManager(&serviceMgr);
+        if (res == NS_OK
+            && (res = nsGetFactory(kIPluginIID, serviceMgr, (nsIFactory**)&plugin )) == NS_OK) {
 
             handle->userPlugin = plugin;
+            plugin->AddRef();   // the browser's reference
+            plugin->Initialize();
             pNPMgtBlock->pPluginFuncs = (NPPluginFuncs*)-1;   // something to say it's loaded, but != 0
 #ifdef LATER // XXX coming soon...
             // add the plugin directory if successful
@@ -696,7 +708,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
 #endif
         }
         else {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             wfe_PopPath(pPathSave);  // restore the path
             return NULL;
         }
@@ -707,7 +719,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
             (NP_GETENTRYPOINTS)PR_FindSymbol(pNPMgtBlock->pLibrary, "NP_GetEntryPoints");
         if(getentrypoints == NULL)
         {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             wfe_PopPath(pPathSave);  // restore the path
             return NULL;
         }
@@ -719,7 +731,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
             pNPMgtBlock->pPluginFuncs->javaClass = NULL;
             if(pNPMgtBlock->pPluginFuncs == NULL)   // fatal, can't continue
             {
-                PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+                fe_MaybeUnloadPlugin(pNPMgtBlock);
                 wfe_PopPath(pPathSave);  // restore the path
                 return NULL;
             }
@@ -727,7 +739,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
 
         if(getentrypoints(pNPMgtBlock->pPluginFuncs) != NPERR_NO_ERROR)
         {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             delete pNPMgtBlock->pPluginFuncs;
             pNPMgtBlock->pPluginFuncs = NULL;
             wfe_PopPath(pPathSave);  // restore the path
@@ -738,7 +750,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
         // then they are incompatible, and should return an error
         if(HIBYTE(pNPMgtBlock->pPluginFuncs->version) < NP_VERSION_MAJOR)
         {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             delete pNPMgtBlock->pPluginFuncs;
             pNPMgtBlock->pPluginFuncs = NULL;
             wfe_PopPath(pPathSave);  // restore the path
@@ -763,7 +775,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
         }
 
         if(npinit == NULL) {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             delete pNPMgtBlock->pPluginFuncs;
             pNPMgtBlock->pPluginFuncs = NULL;
             wfe_PopPath(pPathSave);  // restore the path
@@ -771,7 +783,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
         }
 
         if (npinit(pNavigatorFuncs) != NPERR_NO_ERROR) {
-            PR_UnloadLibrary(pNPMgtBlock->pLibrary);
+            fe_MaybeUnloadPlugin(pNPMgtBlock);
             delete pNPMgtBlock->pPluginFuncs;
             pNPMgtBlock->pPluginFuncs = NULL;
             wfe_PopPath(pPathSave);  // restore the path
@@ -803,9 +815,8 @@ void FE_UnloadPlugin(void* pluginType, struct _np_handle* handle)
     // if this DLL is the last one, call its shutdown entry point
     if (pNPMgtBlk->uRefCount == 0) {
         if (handle->userPlugin) {
+            handle->userPlugin->Shutdown();
             nsrefcnt cnt = handle->userPlugin->Release();
-            PR_ASSERT(cnt == 0);
-
 #if 0   // XXX later...
             // remove the plugin directory if successful
             JVM_RemoveFromClassPathRecursively(csPluginDir);
@@ -830,8 +841,7 @@ void FE_UnloadPlugin(void* pluginType, struct _np_handle* handle)
         }
     }
 
-    PR_UnloadLibrary(pNPMgtBlk->pLibrary);
-    pNPMgtBlk->pLibrary = NULL;
+    fe_MaybeUnloadPlugin(pNPMgtBlk);
     
     if (handle->userPlugin) {
         PR_ASSERT(pNPMgtBlk->pPluginFuncs == (NPPluginFuncs*)-1);     // set in FE_LoadPlugin
@@ -853,7 +863,7 @@ void FE_UnregisterPlugin(void* pluginType)
         return;
     
     if(pNPMgtBlk->pLibrary != NULL)
-		PR_UnloadLibrary(pNPMgtBlk->pLibrary);
+        fe_MaybeUnloadPlugin(pNPMgtBlk);
     
     delete [] (char*)*pNPMgtBlk->pPluginFilename;
     delete [] pNPMgtBlk->pPluginFilename;

@@ -614,14 +614,13 @@ nsPluginManager::GetURL(nsISupports* pluginInst,
                         const char* url, 
                         const char* target,
                         nsIPluginStreamListener* listener,
-                        nsPluginStreamType streamType,
                         const char* altHost,
                         const char* referrer,
                         PRBool forceJSEnabled)
 {
     void* notifyData = NULL;
     if (listener) {
-        nsPluginInputStream* inStr = new nsPluginInputStream(listener, streamType);
+        nsPluginInputStream* inStr = new nsPluginInputStream(listener);
         if (inStr == NULL) 
             return NS_ERROR_OUT_OF_MEMORY;
         inStr->AddRef();
@@ -722,7 +721,6 @@ nsPluginManager::PostURL(nsISupports* pluginInst,
                          PRBool isFile,
                          const char* target,
                          nsIPluginStreamListener* listener,
-                         nsPluginStreamType streamType,
                          const char* altHost, 
                          const char* referrer,
                          PRBool forceJSEnabled,
@@ -731,7 +729,7 @@ nsPluginManager::PostURL(nsISupports* pluginInst,
 {
     void* notifyData = NULL;
     if (listener) {
-        nsPluginInputStream* inStr = new nsPluginInputStream(listener, streamType);
+        nsPluginInputStream* inStr = new nsPluginInputStream(listener);
         if (inStr == NULL) 
             return NS_ERROR_OUT_OF_MEMORY;
         inStr->AddRef();
@@ -791,7 +789,6 @@ nsPluginManager::PostURL(nsISupports* pluginInst,
 }
 
 #else // !NEW_PLUGIN_STREAM_API
-
 struct GetURLEvent {
     PLEvent event;
     nsPluginInstancePeer* peer;
@@ -1636,15 +1633,17 @@ NS_IMPL_RELEASE(nsPluginManagerStream);
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Input Stream Interface
 
-nsPluginInputStream::nsPluginInputStream(nsIPluginStreamListener* listener,
-                                         nsPluginStreamType streamType)
-    : mListener(listener), mStreamType(streamType),
+nsPluginInputStream::nsPluginInputStream(nsIPluginStreamListener* listener)
+    : mListener(listener), mStreamType(nsPluginStreamType_Normal),
       mUrls(NULL), mStream(NULL),
       mBuffer(NULL), mClosed(PR_FALSE)
 //      mBuffer(NULL), mBufferLength(0), mAmountRead(0)
 {
     NS_INIT_REFCNT();
     listener->AddRef();
+
+    if (listener != NULL)
+        listener->GetStreamType(&mStreamType);
 }
 
 nsPluginInputStream::~nsPluginInputStream(void)

@@ -98,8 +98,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginInputStream specific methods:
 
-    nsPluginInputStream(nsIPluginStreamListener* listener,
-                        nsPluginStreamType streamType);
+    nsPluginInputStream(nsIPluginStreamListener* listener);
     virtual ~nsPluginInputStream(void);
 
     nsIPluginStreamListener* GetListener(void) { return mListener; }
@@ -137,6 +136,9 @@ protected:
 };
 
 #else // !NEW_PLUGIN_STREAM_API
+
+#include "nsIPluginStreamPeer2.h"
+#include "nsISeekablePluginStreamPeer.h"
 
 class nsPluginStreamPeer : public nsIPluginStreamPeer2, 
                            public nsISeekablePluginStreamPeer

@@ -127,7 +127,7 @@ XFE_PrefsPageLIFiles::create()
 void
 XFE_PrefsPageLIFiles::init()
 {
-	XP_Bool enabled = FALSE;
+	PRBool enabled = PR_FALSE;
 	PREF_GetBoolPref("li.client.bookmarks", &enabled);
 	XtVaSetValues(m_bookmark_toggle, XmNset, enabled,
 			  XmNsensitive, !PREF_PrefIsLocked("li.client.bookmarks"), NULL);

@@ -107,7 +107,7 @@ XFE_AdvSearchDialog::post()
 {
     // Set the toggle button states:
     // Note that we're assuming here that XP_Bool is the same as Boolean!
-    XP_Bool searchSubfolders, searchServer;
+    PRBool searchSubfolders, searchServer;
     PREF_GetBoolPref("mailnews.searchSubFolders", &searchSubfolders);
     XmToggleButtonGadgetSetState(m_subfolderToggle, searchSubfolders, FALSE);
     PREF_GetBoolPref("mailnews.searchServer", &searchServer);

@@ -32,7 +32,9 @@
 #include "nsCaps.h"
 #ifdef OJI
 #include "jni.h"
-#include "jvmmgr.h"
+#include "nsJVMManager.h"
+#include "nsPluginInputStream.h"
+#include "nsPluginInstancePeer.h"
 #endif
 
 #ifdef ANTHRAX
@@ -181,6 +183,12 @@ np_processURLNode(np_urlsnode* node, np_instance* instance, int status)
                 nsIPluginStreamListener* listener = inStr->GetListener();
                 nsresult err = listener->OnStopBinding(node->urls->address,
                                                        (nsPluginReason)np_statusToReason(status));
+
+                //////////////////////////////////////////////
+                //  Hack for backward adapter
+                listener->OnNotify(node->urls->address,
+                                   (nsPluginReason)np_statusToReason(status));
+                /////////////////////////////////////////////
                 inStr->Release();
                 // XXX ignore error?
 
@@ -1647,12 +1655,15 @@ npn_getvalue(NPP npp, NPNVariable variable, void *r_value)
      * So Handle all the backend variables and pass the rest over to FE.
      */
 
+    PRBool value;
     switch(variable) {
       case NPNVjavascriptEnabledBool : 
-        ret = PREF_GetBoolPref("javascript.enabled", (XP_Bool*)r_value);	
+        ret = PREF_GetBoolPref("javascript.enabled", &value);
+        *(NPBool*)r_value = (NPBool)value;
         break;
       case NPNVasdEnabledBool :
-        ret = PREF_GetBoolPref("autoupdate.enabled", (XP_Bool*)r_value);
+        ret = PREF_GetBoolPref("autoupdate.enabled", &value);
+        *(NPBool*)r_value = (NPBool)value;
         break;
 #ifdef MOZ_OFFLINE        
       case NPNVisOfflineBool :{
@@ -2401,8 +2412,10 @@ ET_SetPluginWindow(MWContext *cx, void *instance);
 
 NS_DEFINE_IID(kPluginInstanceIID, NS_IPLUGININSTANCE_IID);
 NS_DEFINE_IID(kLiveConnectPluginIID, NS_ILIVECONNECTPLUGIN_IID);
+#if 0
 #ifdef OJI
 NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
+#endif
 #endif
 
 #if defined(XP_MAC) && !defined(powerc)

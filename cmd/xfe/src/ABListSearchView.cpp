@@ -1238,7 +1238,7 @@ XFE_ABListSearchView::makeFilterBox(Widget parent, XP_Bool stopBtn)
   int ac = 0;
 
 #if 0
-  XP_Bool ldapDisabled = False;
+  PRBool ldapDisabled = PR_FALSE;
   PREF_GetBoolPref("mail.addr_book.ldap.disabled",&ldapDisabled);
 #if 0
   XP_Bool locked = False;
@@ -1284,7 +1284,7 @@ XFE_ABListSearchView::makeFilterBox(Widget parent, XP_Bool stopBtn)
   XtManageChild(m_filterDirCombo);
 
   // Add fake items to comboBox
-  XP_Bool ldapDisabled = False;
+  PRBool ldapDisabled = PR_FALSE;
   PREF_GetBoolPref("mail.addr_book.ldap.disabled",&ldapDisabled);
 #if 0
   XP_Bool locked = False;

@@ -33,7 +33,9 @@
  * Prototypes for dynamic library export functions
  */
 
+class nsIServiceManager;
 extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aClass,
+                                           nsISupports* serviceMgr,
                                            nsIFactory **aFactory);
 extern "C" NS_EXPORT PRBool   NSCanUnload(void);
 extern "C" NS_EXPORT nsresult NSRegisterSelf(const char *path);
@@ -44,6 +46,7 @@ extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *path);
  */
 
 typedef nsresult (*nsFactoryProc)(const nsCID &aCLass,
+                                  nsISupports* serviceMgr,
                                   nsIFactory **aFactory);
 typedef PRBool (*nsCanUnloadProc)(void);
 typedef nsresult (*nsRegisterProc)(const char *path);

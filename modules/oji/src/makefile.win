@@ -37,9 +37,12 @@ PDBFILE=$(LIBNAME).pdb
 #//------------------------------------------------------------------------
 
 OBJS = .\$(OBJDIR)\jvmmgr.obj \
-       .\$(OBJDIR)\scd.obj \
+        .\$(OBJDIR)\nsJVMManager.obj \
+        .\$(OBJDIR)\nsJVMPluginTagInfo.obj \
        .\$(OBJDIR)\ProxyJNI.obj \
-       .\$(OBJDIR)\nsCSecurityContext.obj
+       .\$(OBJDIR)\nsCSecurityContext.obj \
+       .\$(OBJDIR)\lcglue.obj \
+       .\$(OBJDIR)\scd.obj
 
 #//------------------------------------------------------------------------
 #//
@@ -84,13 +87,17 @@ LINCS= $(LINCS) -I_jri \
 		$(NULL)
 
 CSRCS = jvmmgr.cpp \
-        scd.cpp 
+        nsJVMManager.cpp \
+        nsJVMPluginTagInfo.cpp \
+        scd.cpp
 
 !endif # MOZ_OJI
 
 MODULE = ojiimpl
 
-EXPORTS = jvmmgr.h
+EXPORTS = jvmmgr.h \
+          nsJVMManager.h \
+          nsJVMPluginTagInfo.h
 
 #//------------------------------------------------------------------------
 #//
@@ -108,8 +115,8 @@ PUBLIC_HEADER_DIR=$(PUBLIC)\ojiimpl
 PUBLIC_HEADER_DIR=$(PUBLIC)\win16
 !endif
 
-export::
-    $(MAKE_INSTALL) jvmmgr.h $(PUBLIC_HEADER_DIR)
+#export::
+#    $(MAKE_INSTALL) $(EXPORTS) $(PUBLIC_HEADER_DIR)
 
 !ifdef MOZ_OJI
 install:: $(LIBRARY)

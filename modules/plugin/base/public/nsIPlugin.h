@@ -59,15 +59,13 @@ public:
 
     /**
      * Initializes the plugin and will be called before any new instances are
-     * created. It is passed browserInterfaces on which QueryInterface
-     * may be used to obtain an nsIPluginManager, and other interfaces.
-     *
-     * @param browserInterfaces - an object that allows access to other browser
-     * interfaces via QueryInterface
+     * created. This separates out the phase when a plugin is loaded just to
+     * query for its mime type from the phase when a plugin is used for real.
+     * The plugin should load up any resources at this point.
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    Initialize(nsISupports* browserInterfaces) = 0;
+    Initialize(void) = 0;
 
     /**
      * Called when the browser is done with the plugin factory, or when
@@ -79,6 +77,7 @@ public:
      */
     NS_IMETHOD
     Shutdown(void) = 0;
+    /* NPP_Shutdown gets mapped to NSCanUnload when it is about to return true. */
 
     /**
      * Returns the MIME description for the plugin. The MIME description 

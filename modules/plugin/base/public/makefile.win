@@ -28,7 +28,7 @@ EXPORTS	=				      \
 	nsIJRILiveConnectPlugInstPeer.h       \
 	nsILiveConnectPlugin.h		      \
 	nsILiveConnectPlugInstPeer.h          \
-	nsIMalloc.h                           \
+	nsIMalloc.h			      \
 	nsIPlugin.h			      \
 	nsIPluginInstance.h		      \
 	nsIPluginInstancePeer.h		      \

@@ -141,6 +141,9 @@ struct _np_urlsnode {
     void* notifyData;
     XP_Bool cached;
     XP_Bool notify;
+#ifdef NEW_PLUGIN_STREAM_API
+    uint16 streamType;
+#endif
 };
 
 /* MWContext.pluginReconnect -> np_reconnect */

@@ -653,7 +653,7 @@ fe_EditorNewPopupMenu(XFE_Frame* frame, Widget parent, MWContext *context)
 	/*
 	 *    If they accidently deleted the menubar, help them out.
 	 */
-    XP_Bool show_menubar;
+    PRBool show_menubar;
     PREF_GetBoolPref("browser.chrome.show_menubar",&show_menubar);
 	if (!show_menubar)
 		popup->addMenuSpec(fe_editor_show_options_popups);

@@ -5306,11 +5306,11 @@ static void fe_check_use_async_dns(void)
 /* Return True if we should do the fullcircle stuff. */
 XP_Bool fe_enable_fullcircle(void)
 {
-  XP_Bool fullcircle_enable = TRUE;
+  PRBool fullcircle_enable = PR_TRUE;
   
   /* Check the pref next */
   PREF_GetBoolPref("general.fullcircle_enable", &fullcircle_enable);
   
-  return fullcircle_enable;
+  return (XP_Bool)fullcircle_enable;
 }
 #endif /* MOZ_FULLCIRCLE */

@@ -173,10 +173,12 @@ IMAP_GetIntPref(const char *host_name, const char* pref, int32 *intval)
 static int
 IMAP_GetBoolPref(const char *host_name, const char* pref, XP_Bool *boolval)
 {
+    PRBool b;
 	char*	pref_name = IMAP_GetPrefName(host_name, pref);
 	if (!pref_name) return PREF_ERROR;
     
-    int retval = PREF_GetBoolPref(pref_name, boolval);
+    int retval = PREF_GetBoolPref(pref_name, &b);
+    *boolval = (XP_Bool)b;
     XP_FREE(pref_name);
     
     return retval;
@@ -557,9 +559,9 @@ XFE_PrefsMServerGeneralTab::init(char *server_name,
     }
     
     char *user_name=NULL;
-    XP_Bool remember_password=FALSE;
-    XP_Bool check_mail=TRUE;
-    XP_Bool download=TRUE;
+    PRBool remember_password=PR_FALSE;
+    PRBool check_mail=PR_TRUE;
+    PRBool download=PR_TRUE;
     int32 check_time=10;
 
     if (server_name) fe_SetTextField(m_server_text, server_name);
@@ -909,8 +911,8 @@ XFE_PrefsMServerIMAPTab::init(char *server_name) {
     
     if (!server_name) return;
 
-    XP_Bool HG19711 use_sub;
-    XP_Bool expunge_quit, trash_quit;
+    PRBool HG19711 use_sub;
+    PRBool expunge_quit, trash_quit;
     int32 intval;
 
     IMAP_GetIntPref(server_name, DELETE_MODEL, &intval);
@@ -1165,7 +1167,7 @@ XFE_PrefsMServerPOPTab::create() {
 
 void
 XFE_PrefsMServerPOPTab::init() {
-    XP_Bool leave_messages;
+    PRBool leave_messages;
     PREF_GetBoolPref(POP_LEAVE_ON_SERVER, &leave_messages);
     XmToggleButtonGadgetSetState(m_leave_messages, leave_messages,TRUE);
 }
@@ -1251,7 +1253,7 @@ XFE_PrefsMServerMovemailTab::create()
 void
 XFE_PrefsMServerMovemailTab::init()
 {
-    XP_Bool boolval;
+    PRBool boolval;
     XP_Bool locked;
     char *charval;
 

@@ -1682,7 +1682,7 @@ void XFE_PrefsDialog::initCategories()
 	char        *type = NULL;
 	int          i;
 #ifdef MOZ_LI
-	XP_Bool      li_ui_enabled = FALSE;
+	PRBool      li_ui_enabled = PR_FALSE;
 #endif
 
 	if (m_categories) deleteCategories();
@@ -1692,7 +1692,7 @@ void XFE_PrefsDialog::initCategories()
 #ifdef MOZ_LI
 	/* If li.ui.enabled is false, we hide the LI prefs */
 	PREF_GetBoolPref("li.ui.enabled", &li_ui_enabled);
-	if ( li_ui_enabled == FALSE ) {
+	if ( li_ui_enabled == PR_FALSE ) {
 		int found_it = 0;
 		for ( i = 0; i < m_numCategories; i++ ) {
 			if ( prefsCategories[i].type == PAGE_TYPE_LI ) found_it = 1;

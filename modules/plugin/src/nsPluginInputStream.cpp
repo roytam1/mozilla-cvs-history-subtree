@@ -35,15 +35,17 @@ static NS_DEFINE_IID(kIPluginStreamPeer2IID, NS_IPLUGINSTREAMPEER2_IID);
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Input Stream Interface
 
-nsPluginInputStream::nsPluginInputStream(nsIPluginStreamListener* listener,
-                                         nsPluginStreamType streamType)
-    : mListener(listener), mStreamType(streamType),
+nsPluginInputStream::nsPluginInputStream(nsIPluginStreamListener* listener)
+    : mListener(listener), mStreamType(nsPluginStreamType_Normal),
       mUrls(NULL), mStream(NULL),
       mBuffer(NULL), mClosed(PR_FALSE)
 //      mBuffer(NULL), mBufferLength(0), mAmountRead(0)
 {
     NS_INIT_REFCNT();
     listener->AddRef();
+
+    if (listener != NULL)
+        listener->GetStreamType(&mStreamType);
 }
 
 nsPluginInputStream::~nsPluginInputStream(void)

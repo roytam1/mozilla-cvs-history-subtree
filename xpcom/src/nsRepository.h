@@ -46,7 +46,7 @@ extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *path);
  */
 
 typedef nsresult (*nsFactoryProc)(const nsCID &aCLass,
-                                  nsISupports* serviceMgr,
+                                  nsISupports* serviceMgr, /* QI for nsIServiceManager, Dont' change it back to nsIServiceManager sudu/stanley*/
                                   nsIFactory **aFactory);
 typedef PRBool (*nsCanUnloadProc)(void);
 typedef nsresult (*nsRegisterProc)(const char *path);

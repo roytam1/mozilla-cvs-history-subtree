@@ -54,6 +54,10 @@ struct nsPluginStreamInfo {
 class nsIPluginStreamListener : public nsISupports {
 public:
 
+    NS_IMETHOD
+    GetStreamType(nsPluginStreamType* type);
+
+
     /**
      * Notify the observer that the URL has started to load.  This method is
      * called only once, at the beginning of a URL load.<BR><BR>
@@ -95,6 +99,8 @@ public:
     NS_IMETHOD
     OnStopBinding(const char* url, nsresult status) = 0;
 
+    NS_IMETHOD
+    OnNotify(const char* url, nsresult status) = 0;
 };
 
 #define NS_IPLUGINSTREAMLISTENER_IID                 \

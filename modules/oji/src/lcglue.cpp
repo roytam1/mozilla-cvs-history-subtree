@@ -18,21 +18,34 @@
 
 #include "prthread.h"
 #include "pprthred.h"
+#include "plstr.h"
+#include "jni.h"
 #include "jsjava.h"
+#include "jsdbgapi.h"
 #include "libmocha.h"
 #include "libevent.h"
-#include "jvmmgr.h"
+#include "nsJVMManager.h"
+#include "nsPluginInstancePeer.h"
 #include "npglue.h"
+#include "nsCCapsManager.h"
+#include "prinrval.h"
+#include "ProxyJNI.h"
+#include "prcmon.h"
+#include "nsCSecurityContext.h"
+#include "nsISecurityContext.h"
+#include "xpgetstr.h"
+#include "lcglue.h"
+extern "C" int XP_PROGRESS_STARTING_JAVA;
+extern "C" int XP_PROGRESS_STARTING_JAVA_DONE;
+extern "C" int XP_JAVA_NO_CLASSES;
+extern "C" int XP_JAVA_GENERAL_FAILURE;
+extern "C" int XP_JAVA_STARTUP_FAILED;
+extern "C" int XP_JAVA_DEBUGGER_FAILED;
 
-static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
-static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
 
-static PRUintn tlsIndex_g = 0;
-
-////////////////////////////////////////////////////////////////////////////////
-// LiveConnect callbacks
-////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Template based Thread Local Storage.
+ */
 template <class T>
 class ThreadLocalStorage {
 public:
@@ -56,19 +69,68 @@ private:
 	PRBool mValid;
 };
 
+
+static void PR_CALLBACK detach_JVMContext(void* storage)
+{
+	JVMContext* context = (JVMContext*)storage;
+	
+	JNIEnv* proxyEnv = context->proxyEnv;
+	if (proxyEnv != NULL) {
+		DeleteProxyJNI(proxyEnv);
+		context->proxyEnv = NULL;
+	}
+	
+	delete storage;
+}
+
+JVMContext* GetJVMContext()
+{
+	/* Use NSPR thread private data to manage the per-thread JNIEnv* association. */
+	static ThreadLocalStorage<JVMContext*> localContext(&detach_JVMContext);
+	JVMContext* context = localContext.get();
+	if (context == NULL) {
+		context = new JVMContext;
+		context->proxyEnv = NULL;
+		context->securityStack = NULL;
+		context->jsj_env = NULL;
+		context->js_context = NULL;
+		context->js_startframe = NULL;
+		localContext.set(context);
+	}
+	return context;
+}
+
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
+static NS_DEFINE_IID(kIThreadManagerIID, NS_ITHREADMANAGER_IID);
+static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
+static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
+static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
+static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
+static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID);
+static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+static NS_DEFINE_IID(kIJVMConsoleIID, NS_IJVMCONSOLE_IID);
+static NS_DEFINE_IID(kISymantecDebuggerIID, NS_ISYMANTECDEBUGGER_IID);
+static NS_DEFINE_IID(kISecurityContextIID, NS_ISECURITYCONTEXT_IID);
+
+
+////////////////////////////////////////////////////////////////////////////////
+// LiveConnect callbacks
+////////////////////////////////////////////////////////////////////////////////
+
 PR_BEGIN_EXTERN_C
 
 #include "jscntxt.h"
+
 
 static JSContext* PR_CALLBACK
 map_jsj_thread_to_js_context_impl(JSJavaThreadState *jsj_env, JNIEnv *env, char **errp)
 {
     JSContext *cx    = LM_GetCrippledContext();
-    PRBool    jvmMochaPrefsEnabled = PR_FALSE;
 
     *errp = NULL;
 #if 0    
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = LM_GetMochaEnabled();
@@ -125,8 +187,8 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 {
 	*errp = NULL;
 
-	static ThreadLocalStorage<JSJavaThreadState*> localThreadState(&detach_jsjava_thread_state);
-	JSJavaThreadState* jsj_env = localThreadState.get();
+	JVMContext* context = GetJVMContext();
+	JSJavaThreadState* jsj_env = context->jsj_env;
 	if (jsj_env != NULL)
 		return jsj_env;
     
@@ -136,7 +198,7 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 	}
 
 	JSJavaVM* js_jvm = NULL;
-	nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+	nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
 	if (pJVMMgr != NULL) {
 		js_jvm = pJVMMgr->GetJSJavaVM();
 		pJVMMgr->Release();
@@ -147,7 +209,8 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 	}
 
 	jsj_env = JSJ_AttachCurrentThreadToJava(js_jvm, NULL, NULL);
-	localThreadState.set(jsj_env);
+	context->jsj_env = jsj_env;
+	context->js_context = cx;
 
 	return jsj_env;
 }
@@ -179,7 +242,7 @@ map_java_object_to_js_object_impl(JNIEnv *env, void *pNSIPluginInstanceIn, char 
         return 0;
     }
 
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         jvmMochaPrefsEnabled = LM_GetMochaEnabled();
@@ -207,7 +270,6 @@ map_java_object_to_js_object_impl(JNIEnv *env, void *pNSIPluginInstanceIn, char 
                     }
                     pJVMPIT->Release();
                 }
-                pPIT->Release();
             }
             // pJVMPI->Release(); // GetJVMPlugin no longer calls AddRef
         }
@@ -250,7 +312,7 @@ get_java_vm_impl(char **errp)
     *errp = NULL;
     JavaVM *pJavaVM = NULL;
     
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
         if (pJVMPI != NULL) {
@@ -268,20 +330,16 @@ get_java_vm_impl(char **errp)
 }
 #endif
 
-static JSPrincipals* PR_CALLBACK
-get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext)
+void* 
+ConvertNSIPrincipalToNSPrincipalArray(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
 {
-    nsIPrincipal  **ppNSIPrincipalArray = NULL;
-    PRInt32        length = 0;
+    nsIPrincipal  **ppNSIPrincipalArray = (nsIPrincipal  **)ppNSIPrincipalArrayIN;
+    PRInt32        length = numPrincipals;
     nsresult       err    = NS_OK;
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     void          *pNSPrincipalArray = NULL;
-#if 0 // TODO: =-= sudu: fix it.
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      if (pJVMPI != NULL) {
-         err = pJVMPI->GetPrincipalArray(pJNIEnv, 0, &ppNSIPrincipalArray, &length);   
-         if ((err == NS_OK) && (ppNSIPrincipalArray != NULL)) {
+         if (ppNSIPrincipalArray != NULL) {
              nsIPluginManager *pNSIPluginManager = NULL;
              NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
              err = pJVMMgr->QueryInterface(kIPluginManagerIID,
@@ -315,16 +373,28 @@ get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext)
                pNSIPluginManager->Release();
              }
          }
-         //pJVMPI->Release();
-      }
       pJVMMgr->Release();
     }
-#endif
     if (  (pNSPrincipalArray != NULL)
         &&(length != 0)
        )
     {
-        return LM_GetJSPrincipalsFromJavaCaller(pJSContext, pNSPrincipalArray);
+        return pNSPrincipalArray;
+    }
+
+    return NULL;
+}
+
+
+
+
+static JSPrincipals* PR_CALLBACK
+get_JSPrincipals_from_java_caller_impl(JNIEnv *pJNIEnv, JSContext *pJSContext, void  **ppNSIPrincipalArrayIN, int numPrincipals, void *pNSISecurityContext)
+{
+    void *pNSPrincipalArray  = ConvertNSIPrincipalToNSPrincipalArray(pJNIEnv, pJSContext, ppNSIPrincipalArrayIN, numPrincipals, pNSISecurityContext);
+    if (pNSPrincipalArray != NULL)
+    {
+        return LM_GetJSPrincipalsFromJavaCaller(pJSContext, pNSPrincipalArray, pNSISecurityContext);
     }
 
     return NULL;
@@ -335,7 +405,7 @@ get_java_wrapper_impl(JNIEnv *pJNIEnv, jint jsobject)
 {
     nsresult       err    = NS_OK;
     jobject  pJSObjectWrapper = NULL;
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+    nsJVMManager* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
       nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
       if (pJVMPI != NULL) {
@@ -352,51 +422,74 @@ get_java_wrapper_impl(JNIEnv *pJNIEnv, jint jsobject)
 }
 
 static JSBool PR_CALLBACK
-enter_js_from_java_impl(JNIEnv *jEnv, char **errp)
+enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
+                        void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext)
 {
-#ifdef OJI
-    ThreadLocalStorageAtIndex0 *priv = NULL;
-    if ( PR_GetCurrentThread() == NULL )
-    {
-        PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
-        priv = (ThreadLocalStorageAtIndex0 *)malloc(sizeof(ThreadLocalStorageAtIndex0));
-        priv->refcount=1;
-        PR_SetThreadPrivate(tlsIndex_g, (void *)priv);
-    }
-    else
-    {
-        priv = (ThreadLocalStorageAtIndex0 *)PR_GetThreadPrivate(tlsIndex_g);
-        if(priv != NULL)
-        {
-            priv->refcount++;
-        }
-    }
+	JVMContext* context = GetJVMContext();
+	MWContext *cx = XP_FindSomeContext();   /* XXXMLM */
+	JSContext *pJSCX = context->js_context;
 
-    return LM_LockJS(errp);
-#else
-    return JS_TRUE;
-#endif
+	LM_LockJS(cx, errp);
+	if (pJSCX == NULL) {
+		pJSCX = LM_GetCrippledContext();
+	}
+
+	// Setup tls to maintain a stack of security contexts.
+	if ((pNSIPrincipaArray != NULL) && (pNSISecurityContext != NULL)) {
+		JVMSecurityStack *pSecInfoNew    = new JVMSecurityStack;
+		pSecInfoNew->pNSIPrincipaArray   = pNSIPrincipaArray;
+		pSecInfoNew->numPrincipals       = numPrincipals;
+		pSecInfoNew->pNSISecurityContext = pNSISecurityContext;
+		pSecInfoNew->prev                = pSecInfoNew;
+		pSecInfoNew->next                = pSecInfoNew;
+		JSStackFrame *fp                 = NULL;
+		pSecInfoNew->pJavaToJSFrame      = JS_FrameIterator(pJSCX, &fp);
+		pSecInfoNew->pJSToJavaFrame      = NULL;
+
+		JVMSecurityStack *pSecInfoBottom = context->securityStack;
+		if (pSecInfoBottom == NULL) {
+			context->securityStack = pSecInfoNew;
+		} else {
+			pSecInfoBottom->prev->next = pSecInfoNew;
+			pSecInfoNew->prev          = pSecInfoBottom->prev;
+			pSecInfoNew->next          = pSecInfoBottom;
+			pSecInfoBottom->prev       = pSecInfoNew;
+		}
+	}
+	return PR_TRUE;
+	//return LM_LockJS(cx, errp);
 }
 
 static void PR_CALLBACK
 exit_js_impl(JNIEnv *jEnv)
 {
-    ThreadLocalStorageAtIndex0 *priv = NULL;
+    MWContext *cx = XP_FindSomeContext();   /* XXXMLM */
 
-    LM_UnlockJS();
+    LM_UnlockJS(cx);
 
-    if (   (PR_GetCurrentThread() != NULL )
-           && ((priv = (ThreadLocalStorageAtIndex0 *)PR_GetThreadPrivate(tlsIndex_g)) != NULL)
-        )
+    // Pop the security context stack
+    JVMContext* context = GetJVMContext();
+    JVMSecurityStack *pSecInfoBottom = context->securityStack;
+    if (pSecInfoBottom != NULL)
     {
-        priv->refcount--;
-        if(priv->refcount == 0)
-        {
-            PR_SetThreadPrivate(tlsIndex_g, NULL);
-            PR_DetachThread();
-            free(priv);
-        }
+      if(pSecInfoBottom->next == pSecInfoBottom)
+      {
+        context->securityStack = NULL;
+        pSecInfoBottom->next   = NULL;            
+        pSecInfoBottom->prev   = NULL;            
+        delete pSecInfoBottom;
+      }
+      else
+      {
+        JVMSecurityStack *top = pSecInfoBottom->prev;
+        top->next        = NULL;            
+        pSecInfoBottom->prev = top->prev;        
+        top->prev->next  = pSecInfoBottom;
+        top->prev        = NULL;
+        delete top;
+      }
     }
+
     return;
 }
 
@@ -437,14 +530,13 @@ get_java_vm_impl(JNIEnv* env)
     return (SystemJavaVM*)JVM_GetJVMMgr();
 }
 
-
 PR_END_EXTERN_C
 
 
 /*
  * Callbacks for client-specific jsjava glue
  */
-JSJCallbacks jsj_callbacks = {
+static JSJCallbacks jsj_callbacks = {
     map_jsj_thread_to_js_context_impl,
     map_js_context_to_jsj_thread_impl,
     map_java_object_to_js_object_impl,
@@ -459,5 +551,11 @@ JSJCallbacks jsj_callbacks = {
     detach_current_thread_impl,
     get_java_vm_impl
 };
+
+void
+jvm_InitLCGlue(void)
+{
+    JSJ_Init(&jsj_callbacks);
+}
 
 ////////////////////////////////////////////////////////////////////////////////

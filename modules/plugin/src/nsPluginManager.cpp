@@ -105,7 +105,7 @@ nsPluginManager* thePluginManager = NULL;
 #endif // PRE_SERVICE_MANAGER
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fAllocatedMenuIDs(NULL), fWaiting(0), fOldCursor(NULL)
+    : fWaiting(0), fOldCursor(NULL), fAllocatedMenuIDs(NULL)
 #ifdef PRE_SERVICE_MANAGER
     , fJVMMgr(NULL), fMalloc(NULL), fFileUtils(NULL), fCapsManager(NULL), fLiveconnect(NULL)
 #endif
@@ -557,14 +557,13 @@ nsPluginManager::GetURL(nsISupports* pluginInst,
                         const char* url, 
                         const char* target,
                         nsIPluginStreamListener* listener,
-                        nsPluginStreamType streamType,
                         const char* altHost,
                         const char* referrer,
                         PRBool forceJSEnabled)
 {
     void* notifyData = NULL;
     if (listener) {
-        nsPluginInputStream* inStr = new nsPluginInputStream(listener, streamType);
+        nsPluginInputStream* inStr = new nsPluginInputStream(listener);
         if (inStr == NULL) 
             return NS_ERROR_OUT_OF_MEMORY;
         inStr->AddRef();
@@ -665,7 +664,6 @@ nsPluginManager::PostURL(nsISupports* pluginInst,
                          PRBool isFile,
                          const char* target,
                          nsIPluginStreamListener* listener,
-                         nsPluginStreamType streamType,
                          const char* altHost, 
                          const char* referrer,
                          PRBool forceJSEnabled,
@@ -674,7 +672,7 @@ nsPluginManager::PostURL(nsISupports* pluginInst,
 {
     void* notifyData = NULL;
     if (listener) {
-        nsPluginInputStream* inStr = new nsPluginInputStream(listener, streamType);
+        nsPluginInputStream* inStr = new nsPluginInputStream(listener);
         if (inStr == NULL) 
             return NS_ERROR_OUT_OF_MEMORY;
         inStr->AddRef();
@@ -1031,26 +1029,32 @@ static NS_DEFINE_CID(kFileUtilitiesCID, NS_FILEUTILITIES_CID);
 extern "C" nsresult
 np_RegisterPluginMgr(void)
 {
+    nsresult err;
     nsPluginFactory* pluginFact = new nsPluginFactory();
     if (pluginFact == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kPluginManagerCID,    pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kJNIEnvCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
 #if 0
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kJRIEnvCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 #endif
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kMallocCID,           pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     pluginFact->AddRef();
-    nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
+    err = nsRepository::RegisterFactory(kFileUtilitiesCID,    pluginFact, PR_TRUE);
+    if (err != NS_OK) return err;
 
     return NS_OK;
 }
