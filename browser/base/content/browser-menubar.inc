@@ -301,8 +301,8 @@
                   datasources="rdf:bookmarks rdf:files rdf:localsearch" 
                   ref="NC:BookmarksRoot" flags="dont-test-empty"
                   template='bookmarks-template'
-                  onpopupshowing="BookmarksMenu.showOpenInTabsMenuItem(event.target)"
-                  onpopuphidden="BookmarksMenu.hideOpenInTabsMenuItem(event.target)"
+                  onpopupshowing="BookmarksMenu.onShowMenu(event.target)"
+                  onpopuphidden="BookmarksMenu.onHideMenu(event.target)"
                   oncommand="BookmarksMenu.loadBookmark(event, event.target, this.database)"
                   onclick="BookmarksMenu.loadBookmarkMiddleClick(event, this.database)"
                   ondraggesture="nsDragAndDrop.startDrag(event, BookmarksMenuDNDObserver)"
@@ -420,27 +420,9 @@
 
 
   <template id='bookmarks-template' xmlns:nc="http://home.netscape.com/NC-rdf#">
-    <!-- this Livemark rule can die once the template builder is fixed;
-         it's here only to block the Empty item from appearing (bug 248015, 192624) -->
-    <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#Livemark">
-      <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
-                     rdf:type="http://home.netscape.com/NC-rdf#Folder"
-                     label="rdf:http://home.netscape.com/NC-rdf#Name">
-        <menupopup contextmenu="bookmarks-context-menu"/>
-      </toolbarbutton>
-    </rule>
     <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <toolbarseparator uri="rdf:*"
                         rdf:type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"/>
-    </rule>
-    <rule parent="hbox" iscontainer="true" isempty="true">
-      <toolbarbutton type="menu" editable="true" class="bookmark-item"
-                     rdf:type="http://home.netscape.com/NC-rdf#Folder"
-                     uri="rdf:*" label="rdf:http://home.netscape.com/NC-rdf#Name">
-        <menupopup>
-          <menuitem label="&emptyItem.label;" disabled="true"/>
-        </menupopup>
-      </toolbarbutton>
     </rule>
     <rule parent="hbox" iscontainer="true">
       <toolbarbutton type="menu" class="bookmark-item" uri="rdf:*" editable="true"
@@ -458,29 +440,9 @@
                      tooltip="btTooltip"
                      label="rdf:http://home.netscape.com/NC-rdf#Name"/>
     </rule>
-    <rule rdf:type="http://home.netscape.com/NC-rdf#Livemark">
-      <menupopup>
-        <menu class="menu-iconic bookmark-item" uri="rdf:*"
-              label="rdf:http://home.netscape.com/NC-rdf#Name"
-              type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type">
-          <menupopup contextmenu="bookmarks-context-menu"/>
-        </menu>
-      </menupopup>
-    </rule>
     <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <menupopup> 
         <menuseparator uri="rdf:*" />
-      </menupopup>
-    </rule>
-    <rule iscontainer="true" isempty="true">
-      <menupopup>
-        <menu class="menu-iconic bookmark-item" uri="rdf:*" 
-              type="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-              label="rdf:http://home.netscape.com/NC-rdf#Name">
-          <menupopup>
-            <menuitem label="&emptyItem.label;" disabled="true"/>
-          </menupopup>
-        </menu>
       </menupopup>
     </rule>
     <rule iscontainer="true">

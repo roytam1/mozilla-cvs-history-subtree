@@ -38,7 +38,23 @@ var BookmarksMenu = {
   _selection:null,
   _target:null,
   _orientation:null,
-  
+
+  /////////////////////////////////////////////////////////////////////////////
+  // prepare the bookmarks menu for display
+  onShowMenu: function (aTarget)
+  {
+    this.showOpenInTabsMenuItem(aTarget);
+    this.showEmptyItem(aTarget);
+  },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // remove arbitary elements created in this.onShowMenu()
+  onHideMenu: function (aTarget)
+  {
+    this.hideOpenInTabsMenuItem(aTarget);
+    this.hideEmptyItem(aTarget);
+  },
+
   /////////////////////////////////////////////////////////////////////////////
   // shows the 'Open in Tabs' menu item if validOpenInTabsMenuItem is true -->
   showOpenInTabsMenuItem: function (aTarget)
@@ -112,6 +128,33 @@ var BookmarksMenu = {
       curr = curr.nextSibling;
     } while (curr);
     return false;
+  },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // show an empty item if the menu is empty
+  showEmptyItem: function (aTarget)
+  {
+    if(aTarget.hasChildNodes())
+      return;
+
+    var EmptyMsg = BookmarksUtils.getLocaleString("emptyFolder");
+    var emptyElement = document.createElementNS(XUL_NS, "menuitem");
+    emptyElement.setAttribute("id", "empty-menuitem");
+    emptyElement.setAttribute("label", EmptyMsg);
+    emptyElement.setAttribute("disabled", "true");
+
+    aTarget.appendChild(emptyElement);
+  },
+
+  /////////////////////////////////////////////////////////////////////////////
+  // remove the empty element
+  hideEmptyItem: function (aTarget)
+  {
+    if (!aTarget.hasChildNodes())
+      return;
+
+    if (aTarget.lastChild.id == "empty-menuitem")
+      aTarget.removeChild(aTarget.lastChild);
   },
 
   //////////////////////////////////////////////////////////////////////////

@@ -69,7 +69,6 @@
 <!ENTITY manBookmarksCmd.accesskey "M">
 <!ENTITY manBookmarksCmd.commandkey "b">
 <!ENTITY manBookmarksWinCmd.commandkey "i">
-<!ENTITY emptyItem.label "(Empty)">
 
 <!ENTITY backCmd.label                "Back">
 <!ENTITY backCmd.accesskey            "B">
