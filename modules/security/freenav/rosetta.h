@@ -472,7 +472,7 @@
 #define HG26545
 #define HG12421
 #define HG17231
-#define HG26576 int idx = -1;
+#define HG26576
 #define HG26522
 #define HG87236
 #define HG17236
@@ -484,6 +484,138 @@
 #define HG26726
 #define HG21892
 #define HG28118
+#define HG26262
+#define HG79266
+#define HG72611
+#define HG72625
+#define HG27367
+#define HG72671
+#define HG72729 ss = XP_GetString(XFE_SECURITY_DISABLED);
+#define HG78268
+#define HG78261
+#define HG12675
+#define HG87163
+#define HG78262
+#define HG87268
+#define HG78265
+#define HG87627
+#define HG72721
+#define HG13267
+#define HG87262
+#define HG71265
+#define HG72587
+#define HG87271
+#define HG21989
+#define HG12976
+#define HG87265
+#define HG78272
+#define HG87921
+#define HG72881
+#define HG87111
+#define HG27632
+#define HG87782
+#define HG37211
+#define HG11326
+#define HG72819
+#define HG71199
+#define HG18159
+#define HG28688
+#define HG82160
+#define HG92799
+#define HG28190
+#define HG87291
+#define HG17211
+#define HG01019
+#define HG01283
+#define HG98269
+#define HG91001
+#define HG92179
+#define HG92769
+#define HG98268
+#define HG82688
+#define HG32179
+#define HG82687
+#define HG78277
+#define HG91268
+#define HG10219
+#define HG01092
+#define HG72711
+#define HG78281
+#define HG18181
+#define HG82981
+#define HG87288
+#define HG82111
+#define HG92828
+#define HG12821
+#define HG12111
+#define HG82128
+#define HG81210
+#define HG03833
+#define HG12928
+#define HG00298
+#define HG02920
+#define HG02092
+#define HG28999
+#define HG09219
+#define HG89219
+#define HG82198
+#define HG20303 FALSE
+#define HG02023 FALSE
+#define HG39875
+#define HG07326
+#define HG82883
+#define HG20388
+#define HG72988 FALSE
+#define HG17272
+#define HG00288
+#define HG82992
+#define HG28732
+#define HG20931
+#define HG29322
+#define HG29281
+#define HG20363
+#define HG98200
+#define HG71611
+#define HG11111
+#define HG21933
+#define HG28921
+#define HG82872 NULL, NULL
+#define HG72723
+#define HG20192
+#define HG20198
+#define HG35220
+#define HG82811
+#define HG97291
+#define HG12922
+#define HG28182
+#define HG12832
+#define HG20938
+#define HG71710
+#define HG11299
+#define HG10291
+#define HG01922
+#define HG10287
+#define HG10297
+#define HG81272
+#define HG02621
+#define HG19282
+#define HG92727
+#define HG82719
+#define HG21817
+#define HG81761
+#define HG12172
+#define HG10282
+#define HG29081
+#define HG21182
+
+
+
+
+
+
+
+
+
 
 
 
