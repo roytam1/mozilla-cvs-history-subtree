@@ -29,12 +29,9 @@
 #define TRANSFRMX_PROCESSORSTATE_H
 
 #include "NodeSet.h"
-#include "Stack.h"
 #include "ErrorObserver.h"
-#include "NamedMap.h"
 #include "txPatternParser.h"
 #include "Expr.h"
-#include "StringList.h"
 #include "txOutputFormat.h"
 #include "Map.h"
 #include "txIXPathContext.h"
@@ -42,10 +39,40 @@
 #include "txXMLEventHandler.h"
 #include "XSLTFunctions.h"
 #include "txError.h"
+#include "nsVoidArray.h"
+#include "nsDoubleHashtable.h"
 #include "txKey.h"
 
 class txVariableMap;
 class txXSLKey;
+
+class txLoadedDocumentEntry : public PLDHashStringEntry {
+public:
+    txLoadedDocumentEntry(const void* aKey) : PLDHashStringEntry(aKey)
+    {
+    }
+    ~txLoadedDocumentEntry()
+    {
+        delete mDocument;
+    }
+    Document* mDocument;
+};
+
+DECL_DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
+
+class txLoadedDocumentsHash : public txLoadedDocumentsBase
+{
+public:
+    ~txLoadedDocumentsHash();
+    nsresult init(Document* aSourceDocument, Document* aStyleDocument);
+    void Add(Document* aDocument);
+    Document* Get(const nsAString& aURI);
+
+private:
+    friend class ProcessorState;
+    Document* mSourceDocument;
+    Document* mStyleDocument;
+};
 
 /**
  * Class used for keeping the current state of the XSL Processor
@@ -57,8 +84,7 @@ public:
      * Creates a new ProcessorState for the given XSL document
      * And result Document
      */
-    ProcessorState(Document* aSourceDocument,
-                   Document* aXslDocument);
+    ProcessorState(Node* aSourceNode, Document* aXslDocument);
 
     /**
      * Destroys this ProcessorState
@@ -193,12 +219,15 @@ public:
      * @return loaded document or element pointed to by fragment identifier. If
      *         loading or parsing fails NULL will be returned.
      */
-    Node* retrieveDocument(const String& uri, const String& baseUri);
+    Node* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
 
     /**
      * Return stack of urls of currently entered stylesheets
      */
-    Stack* getEnteredStylesheets();
+    nsStringArray& getEnteredStylesheets()
+    {
+        return mEnteredStylesheets;
+    }
 
     /**
      * Return list of import containers
@@ -258,11 +287,11 @@ public:
     /**
      * Adds the set of names to the Whitespace preserving element set
      */
-    void preserveSpace(String& names);
+    void preserveSpace(nsAString& names);
 
-    void processAttrValueTemplate(const String& aAttValue,
+    void processAttrValueTemplate(const nsAFlatString& aAttValue,
                                   Element* aContext,
-                                  String& aResult);
+                                  nsAString& aResult);
 
     /**
      * Adds the set of names to the Whitespace stripping handling list.
@@ -270,7 +299,7 @@ public:
      * with MB_FALSE
      * aElement is used to resolve QNames
      */
-    void shouldStripSpace(String& aNames, Element* aElement,
+    void shouldStripSpace(const nsAString& aNames, Element* aElement,
                           MBool aShouldStrip,
                           ImportFrame* aImportFrame);
 
@@ -280,12 +309,27 @@ public:
     MBool addKey(Element* aKeyElem);
 
     /**
-     * Returns the key with the supplied name
-     * returns NULL if no such key exists
+     * Get the nodeset for a key+document+value. Note that the result can
+     * only be used until the next call to this function.
+     * @param aKeyName         Name of key.
+     * @param aDocument        Context-document to get key-nodes in.
+     * @param aKeyValue        Key-value to get the nodes for.
+     * @param aIndexIfNotFound Check if the requested key is index in the
+     *                         requested document and if it isn't index it.
+     *                         This should only be false if it's known that
+     *                         the key is already indexed in that document.
+     * @param aResult          Out-param returning the result. This pointer
+     *                         can only be used until the next call to
+     *                         getKeyNodes.
      */
-    nsresult getKeyValue(const txExpandedName& aKeyName, Document* aDocument,
+    nsresult getKeyNodes(const txExpandedName& aKeyName, Document* aDocument,
                          const nsAString& aKeyValue, PRBool aIndexIfNotFound,
-                         NodeSet** aResult);
+                         const NodeSet** aResult)
+    {
+        return mKeyHash.getKeyNodes(aKeyName, aDocument, aKeyValue,
+                                    aIndexIfNotFound, this, aResult);
+    }
+
 
     /**
      * Adds a decimal format. Returns false if the format already exists
@@ -341,7 +385,7 @@ public:
     /**
      * More other functions
      */
-    void receiveError(String& errorMessage)
+    void receiveError(const nsAString& errorMessage)
     {
         receiveError(errorMessage, NS_ERROR_FAILURE);
     }
@@ -350,7 +394,7 @@ public:
      * Returns a FunctionCall which has the given name.
      * @return the FunctionCall for the function with the given name.
      */
-    nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+    nsresult resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                  Element* aElem, FunctionCall*& aFunction);
 
 #ifdef TX_EXE
@@ -402,7 +446,7 @@ private:
     /**
      * Stack of URIs for currently entered stylesheets
      */
-    Stack enteredStylesheets;
+    nsStringArray mEnteredStylesheets;
 
     /**
      * List of import containers. Sorted by ascending import precedence
@@ -418,7 +462,7 @@ private:
      * The set of loaded documents. This includes both document() loaded
      * documents and xsl:include/xsl:import'ed documents.
      */
-    NamedMap loadedDocuments;
+    txLoadedDocumentsHash mLoadedDocuments;
     
     /**
      * The set of all available keys
@@ -426,14 +470,9 @@ private:
     txExpandedNameMap mXslKeys;
 
     /**
-     * Hash of all indexed key-values
+     * Hash of all key-values
      */
-    PLDHashTable mKeyValues;
-
-    /**
-     * Hash showing which keys+documents has been indexed
-     */
-    PLDHashTable mIndexedKeys;
+    txKeyHash mKeyHash;
 
     /**
      * The set of all avalible decimalformats
@@ -477,13 +516,45 @@ private:
      */
     txExpandedNameMap mGlobalVariableValues;
 
-    Document*      mSourceDocument;
-    Document*      xslDocument;
-    
     /**
      * Document used to create RTFs
      */
     Document* mRTFDocument;
+    
+    /**
+     * Source-node where processing started
+     */
+    Node* mSourceNode;
+};
+
+/**
+ * txNameTestItem holds both an ElementExpr and a bool for use in
+ * whitespace stripping.
+ */
+class txNameTestItem {
+public:
+    txNameTestItem(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
+                   MBool stripSpace)
+        : mNameTest(aPrefix, aLocalName, aNSID, Node::ELEMENT_NODE),
+          mStrips(stripSpace)
+    {
+    }
+
+    MBool matches(Node* aNode, txIMatchContext* aContext) {
+        return mNameTest.matches(aNode, aContext);
+    }
+
+    MBool stripsSpace() {
+        return mStrips;
+    }
+
+    double getDefaultPriority() {
+        return mNameTest.getDefaultPriority();
+    }
+
+protected:
+    txNameTest mNameTest;
+    MBool mStrips;
 };
 
 /**
@@ -502,10 +573,11 @@ public:
     {
     }
 
-    nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID);
-    nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
+    nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID);
+    nsresult resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                  FunctionCall*& aFunction);
-    void receiveError(const String& aMsg, nsresult aRes);
+    PRBool caseInsensitiveNameTests();
+    void receiveError(const nsAString& aMsg, nsresult aRes);
 
 protected:
     ProcessorState* mPS;

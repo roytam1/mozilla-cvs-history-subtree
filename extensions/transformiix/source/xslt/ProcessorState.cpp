@@ -38,35 +38,116 @@
 #include "txURIUtils.h"
 #include "XMLUtils.h"
 #include "XMLDOMUtils.h"
-#include "Tokenizer.h"
 #include "ExprResult.h"
-#include "Names.h"
 #include "XMLParser.h"
 #include "TxLog.h"
 #include "txAtoms.h"
 #include "txSingleNodeContext.h"
+#include "txTokenizer.h"
 #include "txVariableMap.h"
 #include "XSLTProcessor.h"
+
+
+DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
+
+nsresult txLoadedDocumentsHash::init(Document* aSourceDocument,
+                                     Document* aStyleDocument)
+{
+    nsresult rv = Init(8);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mSourceDocument = aSourceDocument;
+    mStyleDocument = aStyleDocument;
+
+    if (mSourceDocument) {
+        Add(mSourceDocument);
+    }
+    if (mStyleDocument) {
+        Add(mStyleDocument);
+    }
+
+    return NS_OK;
+}
+
+txLoadedDocumentsHash::~txLoadedDocumentsHash()
+{
+    if (!mHashTable.ops) {
+        return;
+    }
+
+    nsAutoString baseURI;
+    if (mSourceDocument) {
+        mSourceDocument->getBaseURI(baseURI);
+        txLoadedDocumentEntry* entry = GetEntry(baseURI);
+        if (entry) {
+            entry->mDocument = nsnull;
+        }
+    }
+    if (mStyleDocument) {
+        mStyleDocument->getBaseURI(baseURI);
+        txLoadedDocumentEntry* entry = GetEntry(baseURI);
+        if (entry) {
+            entry->mDocument = nsnull;
+        }
+    }
+}
+
+void txLoadedDocumentsHash::Add(Document* aDocument)
+{
+    if (!mHashTable.ops) {
+        return;
+    }
+
+    nsAutoString baseURI;
+    aDocument->getBaseURI(baseURI);
+    txLoadedDocumentEntry* entry = AddEntry(baseURI);
+    if (entry) {
+        entry->mDocument = aDocument;
+    }
+}
+
+Document* txLoadedDocumentsHash::Get(const nsAString& aURI)
+{
+    if (!mHashTable.ops) {
+        return nsnull;
+    }
+
+    txLoadedDocumentEntry* entry = GetEntry(aURI);
+    if (entry) {
+        return entry->mDocument;
+    }
+
+    return nsnull;
+}
+
 
 /**
  * Creates a new ProcessorState for the given XSL document
 **/
-ProcessorState::ProcessorState(Document* aSourceDocument,
-                               Document* aXslDocument)
-    : mXslKeys(MB_TRUE),
+ProcessorState::ProcessorState(Node* aSourceNode, Document* aXslDocument)
+    : mOutputHandler(0),
+      mResultHandler(0),
+      mOutputHandlerFactory(0),
+      mXslKeys(MB_TRUE),
+      mKeyHash(mXslKeys),
       mDecimalFormats(MB_TRUE),
       mEvalContext(0),
       mLocalVariables(0),
       mGlobalVariableValues(MB_TRUE),
-      mSourceDocument(aSourceDocument),
-      xslDocument(aXslDocument),
       mRTFDocument(0),
-      mOutputHandler(0),
-      mResultHandler(0),
-      mOutputHandlerFactory(0)
+      mSourceNode(aSourceNode)
 {
-    NS_ASSERTION(aSourceDocument, "missing source document");
+    NS_ASSERTION(aSourceNode, "missing source node");
     NS_ASSERTION(aXslDocument, "missing xslt document");
+
+    Document* sourceDoc;
+    if (mSourceNode->getNodeType() == Node::DOCUMENT_NODE) {
+        sourceDoc = (Document*)mSourceNode;
+    }
+    else {
+        sourceDoc = mSourceNode->getOwnerDocument();
+    }
+    mLoadedDocuments.init(sourceDoc, aXslDocument);
 
     /* turn object deletion on for some of the Maps (NamedMap) */
     mExprHashes[SelectAttr].setOwnership(Map::eOwnsItems);
@@ -75,34 +156,7 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
     mPatternHashes[CountAttr].setOwnership(Map::eOwnsItems);
     mPatternHashes[FromAttr].setOwnership(Map::eOwnsItems);
 
-    // determine xslt properties
-    if (mSourceDocument) {
-        loadedDocuments.put(mSourceDocument->getBaseURI(), mSourceDocument);
-    }
-    if (xslDocument) {
-        loadedDocuments.put(xslDocument->getBaseURI(), xslDocument);
-    }
-
-    // Make sure all loaded documents get deleted
-    loadedDocuments.setObjectDeletion(MB_TRUE);
-    
-    // Init key-hashes
-    PRBool success = PL_DHashTableInit(&mKeyValues,
-                                       &gTxKeyValueHashOps,
-                                       nsnull,
-                                       sizeof(txKeyValueHashEntry),
-                                       16);
-    if (!success) {
-        mKeyValues.ops = nsnull;
-    }
-    success = PL_DHashTableInit(&mIndexedKeys,
-                                &gTxIndexedKeyHashOps,
-                                nsnull,
-                                sizeof(txIndexedKeyHashEntry),
-                                16);
-    if (!success) {
-        mIndexedKeys.ops = nsnull;
-    }
+    mKeyHash.init();
 }
 
 /**
@@ -115,24 +169,10 @@ ProcessorState::~ProcessorState()
   while (iter.hasNext())
       delete (ImportFrame*)iter.next();
 
-  // Make sure that xslDocument and mSourceDocument aren't deleted along with
-  // the rest of the documents in the loadedDocuments hash
-  if (xslDocument)
-      loadedDocuments.remove(xslDocument->getBaseURI());
-  if (mSourceDocument)
-      loadedDocuments.remove(mSourceDocument->getBaseURI());
-
   // in module the outputhandler is refcounted
 #ifdef TX_EXE
   delete mOutputHandler;
 #endif
-
-    if (mKeyValues.ops) {
-        PL_DHashTableFinish(&mKeyValues);
-    }
-    if (mIndexedKeys.ops) {
-        PL_DHashTableFinish(&mIndexedKeys);
-    }
 } //-- ~ProcessorState
 
 
@@ -148,13 +188,12 @@ void ProcessorState::addAttributeSet(Element* aAttributeSet,
     if (!aAttributeSet)
         return;
 
-    String nameStr;
+    nsAutoString nameStr;
     txExpandedName name;
     aAttributeSet->getAttr(txXSLTAtoms::name, kNameSpaceID_None, nameStr);
     nsresult rv = name.init(nameStr, aAttributeSet, MB_FALSE);
     if (NS_FAILED(rv)) {
-        String err("missing or malformed name for xsl:attribute-set");
-        receiveError(err);
+        receiveError(NS_LITERAL_STRING("missing or malformed name for xsl:attribute-set"));
         return;
     }
     // Get attribute set, if already exists, then merge
@@ -171,12 +210,11 @@ void ProcessorState::addAttributeSet(Element* aAttributeSet,
             PRInt32 nsID = node->getNamespaceID();
             if (nsID != kNameSpaceID_XSLT)
                 continue;
-            txAtom* nodeName;
-            if (!node->getLocalName(&nodeName) || !nodeName)
+            nsCOMPtr<nsIAtom> nodeName;
+            if (!node->getLocalName(getter_AddRefs(nodeName)) || !nodeName)
                 continue;
             if (nodeName == txXSLTAtoms::attribute)
                 attSet->append(node);
-            TX_RELEASE_ATOM(nodeName);
         }
         node = node->getNextSibling();
     }
@@ -200,45 +238,41 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     NS_ASSERTION(aXslTemplate, "missing template");
 
     nsresult rv = NS_OK;
-    String nameStr;
+    nsAutoString nameStr;
     if (aXslTemplate->getAttr(txXSLTAtoms::name,
                               kNameSpaceID_None, nameStr)) {
         txExpandedName name;
         rv = name.init(nameStr, aXslTemplate, MB_FALSE);
         if (NS_FAILED(rv)) {
-            String err("missing or malformed template name: '");
-            err.append(nameStr);
-            err.append('\'');
-            receiveError(err, NS_ERROR_FAILURE);
+            receiveError(NS_LITERAL_STRING("missing or malformed template name: '") +
+                         nameStr + NS_LITERAL_STRING("'"), NS_ERROR_FAILURE);
             return;
         }
 
         rv = aImportFrame->mNamedTemplates.add(name, aXslTemplate);
         if (NS_FAILED(rv)) {
-            String err("Unable to add template named '");
-            err.append(nameStr);
-            err.append("'. Does that name already exist?");
-            receiveError(err, NS_ERROR_FAILURE);
+            receiveError(NS_LITERAL_STRING("Unable to add template named '") +
+                         nameStr +
+                         NS_LITERAL_STRING("'. Does that name already exist?"),
+                         NS_ERROR_FAILURE);
             return;
         }
     }
 
-    String match;
+    nsAutoString match;
     if (!aXslTemplate->getAttr(txXSLTAtoms::match, kNameSpaceID_None, match)) {
         // This is no error, see section 6 Named Templates
         return;
     }
 
     // get the txList for the right mode
-    String modeStr;
+    nsAutoString modeStr;
     txExpandedName mode;
     if (aXslTemplate->getAttr(txXSLTAtoms::mode, kNameSpaceID_None, modeStr)) {
         rv = mode.init(modeStr, aXslTemplate, MB_FALSE);
         if (NS_FAILED(rv)) {
-            String err("malformed template-mode name: '");
-            err.append(modeStr);
-            err.append('\'');
-            receiveError(err, NS_ERROR_FAILURE);
+            receiveError(NS_LITERAL_STRING("malformed template-mode name: '") +
+                         modeStr + NS_LITERAL_STRING("'"), NS_ERROR_FAILURE);
             return;
         }
     }
@@ -261,7 +295,7 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     // Check for explicit default priority
     MBool hasPriority;
     double priority;
-    String prio;
+    nsAutoString prio;
     if ((hasPriority =
          aXslTemplate->getAttr(txXSLTAtoms::priority, kNameSpaceID_None,
                                prio))) {
@@ -272,7 +306,7 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     txPSParseContext context(this, aXslTemplate);
     txPattern* pattern = txPatternParser::createPattern(match, &context, this);
 #ifdef TX_PATTERN_DEBUG
-    String foo;
+    nsAutoString foo;
     pattern->toString(foo);
 #endif
 
@@ -377,12 +411,28 @@ void ProcessorState::addLREStylesheet(Document* aStylesheet,
  * @return loaded document or element pointed to by fragment identifier. If
  *         loading or parsing fails NULL will be returned.
  */
-Node* ProcessorState::retrieveDocument(const String& uri, const String& baseUri)
+Node* ProcessorState::retrieveDocument(const nsAString& uri,
+                                       const nsAString& baseUri)
 {
-    String absUrl, frag, docUrl;
+    nsAutoString absUrl;
     URIUtils::resolveHref(uri, baseUri, absUrl);
-    URIUtils::getFragmentIdentifier(absUrl, frag);
-    URIUtils::getDocumentURI(absUrl, docUrl);
+
+    PRInt32 hash = absUrl.RFindChar(PRUnichar('#'));
+    PRUint32 urlEnd, fragStart, fragEnd;
+    if (hash == kNotFound) {
+        urlEnd = absUrl.Length();
+        fragStart = 0;
+        fragEnd = 0;
+    }
+    else {
+        urlEnd = hash;
+        fragStart = hash + 1;
+        fragEnd = absUrl.Length();
+    }
+
+    nsDependentSubstring docUrl(absUrl, 0, urlEnd);
+    nsDependentSubstring frag(absUrl, fragStart, fragEnd);
+
     PR_LOG(txLog::xslt, PR_LOG_DEBUG,
            ("Retrieve Document %s, uri %s, baseUri %s, fragment %s\n", 
             NS_LossyConvertUCS2toASCII(docUrl).get(),
@@ -391,40 +441,32 @@ Node* ProcessorState::retrieveDocument(const String& uri, const String& baseUri)
             NS_LossyConvertUCS2toASCII(frag).get()));
 
     // try to get already loaded document
-    Document* xmlDoc = (Document*)loadedDocuments.get(docUrl);
+    Document* xmlDoc = mLoadedDocuments.Get(docUrl);
 
     if (!xmlDoc) {
         // open URI
-        String errMsg;
+        nsAutoString errMsg;
         XMLParser xmlParser;
 
-        xmlDoc = xmlParser.getDocumentFromURI(docUrl, xslDocument, errMsg);
+        xmlDoc = xmlParser.getDocumentFromURI(docUrl,
+                                              mLoadedDocuments.mStyleDocument,
+                                              errMsg);
 
         if (!xmlDoc) {
-            String err("Couldn't load document '");
-            err.append(docUrl);
-            err.append("': ");
-            err.append(errMsg);
-            receiveError(err, NS_ERROR_XSLT_INVALID_URL);
+            receiveError(NS_LITERAL_STRING("Couldn't load document '") +
+                         docUrl + NS_LITERAL_STRING("': ") + errMsg,
+                         NS_ERROR_XSLT_INVALID_URL);
             return NULL;
         }
         // add to list of documents
-        loadedDocuments.put(docUrl, xmlDoc);
+        mLoadedDocuments.Add(xmlDoc);
     }
 
     // return element with supplied id if supplied
-    if (!frag.isEmpty())
+    if (!frag.IsEmpty())
         return xmlDoc->getElementById(frag);
 
     return xmlDoc;
-}
-
-/*
- * Return stack of urls of currently entered stylesheets
- */
-Stack* ProcessorState::getEnteredStylesheets()
-{
-    return &enteredStylesheets;
 }
 
 /*
@@ -486,7 +528,7 @@ Node* ProcessorState::findTemplate(Node* aNode,
             while (!matchTemplate &&
                    (templ = (MatchableTemplate*)templateIter.next())) {
 #ifdef TX_PATTERN_DEBUG
-                String foo;
+                nsAutoString foo;
                 templ->mMatch->toString(foo);
 #endif
                 if (templ->mMatch->matches(aNode, this)) {
@@ -498,12 +540,13 @@ Node* ProcessorState::findTemplate(Node* aNode,
     }
 
 #ifdef PR_LOGGING
-    String mode;
+    nsAutoString mode, nodeName;
     if (aMode.mLocalName) {
-        TX_GET_ATOM_STRING(aMode.mLocalName, mode);
+        aMode.mLocalName->ToString(mode);
     }
+    aNode->getNodeName(nodeName);
     if (matchTemplate) {
-        String matchAttr;
+        nsAutoString matchAttr;
         // matchTemplate can be a document (see addLREStylesheet)
         unsigned short nodeType = matchTemplate->getNodeType();
         if (nodeType == Node::ELEMENT_NODE) {
@@ -511,19 +554,20 @@ Node* ProcessorState::findTemplate(Node* aNode,
                                                kNameSpaceID_None,
                                                matchAttr);
         }
-        String baseURI = matchTemplate->getBaseURI();
+        nsAutoString baseURI;
+        matchTemplate->getBaseURI(baseURI);
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("MatchTemplate, Pattern %s, Mode %s, Stylesheet %s, " \
                 "Node %s\n",
                 NS_LossyConvertUCS2toASCII(matchAttr).get(),
                 NS_LossyConvertUCS2toASCII(mode).get(),
                 NS_LossyConvertUCS2toASCII(baseURI).get(),
-                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get()));
+                NS_LossyConvertUCS2toASCII(nodeName).get()));
     }
     else {
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                ("No match, Node %s, Mode %s\n", 
-                NS_LossyConvertUCS2toASCII(aNode->getNodeName()).get(),
+                NS_LossyConvertUCS2toASCII(nodeName).get(),
                 NS_LossyConvertUCS2toASCII(mode).get()));
     }
 #endif
@@ -576,7 +620,7 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
     if (expr) {
         return expr;
     }
-    String attr;
+    nsAutoString attr;
     MBool hasAttr = MB_FALSE;
     switch (aAttr) {
         case SelectAttr:
@@ -600,9 +644,8 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
     expr = ExprParser::createExpr(attr, &pContext);
 
     if (!expr) {
-        String err("Error in parsing XPath expression: ");
-        err.append(attr);
-        receiveError(err, NS_ERROR_XPATH_PARSE_FAILED);
+        receiveError(NS_LITERAL_STRING("Error in parsing XPath expression: ") +
+                     attr, NS_ERROR_XPATH_PARSE_FAILED);
     }
     else {
         mExprHashes[aAttr].put(aElem, expr);
@@ -618,7 +661,7 @@ txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
     if (pattern) {
         return pattern;
     }
-    String attr;
+    nsAutoString attr;
     MBool hasAttr = MB_FALSE;
     switch (aAttr) {
         case CountAttr:
@@ -639,9 +682,8 @@ txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
     pattern = txPatternParser::createPattern(attr, &pContext, this);
 
     if (!pattern) {
-        String err("Error in parsing pattern: ");
-        err.append(attr);
-        receiveError(err, NS_ERROR_XPATH_PARSE_FAILED);
+        receiveError(NS_LITERAL_STRING("Error in parsing pattern: ") + attr,
+                     NS_ERROR_XPATH_PARSE_FAILED);
     }
     else {
         mPatternHashes[aAttr].put(aElem, pattern);
@@ -683,8 +725,9 @@ void ProcessorState::setRTFDocument(Document* aDoc)
 
 Document* ProcessorState::getStylesheetDocument()
 {
-    NS_ASSERTION(xslDocument, "missing stylesheet document");
-    return xslDocument;
+    NS_ASSERTION(mLoadedDocuments.mStyleDocument,
+                 "missing stylesheet document");
+    return mLoadedDocuments.mStyleDocument;
 }
 
 /*
@@ -731,18 +774,18 @@ void ProcessorState::setLocalVariables(txVariableMap* aMap)
     mLocalVariables = aMap;
 }
 
-void ProcessorState::processAttrValueTemplate(const String& aAttValue,
+void ProcessorState::processAttrValueTemplate(const nsAFlatString& aAttValue,
                                               Element* aContext,
-                                              String& aResult)
+                                              nsAString& aResult)
 {
-    aResult.clear();
+    aResult.Truncate();
     txPSParseContext pContext(this, aContext);
     AttributeValueTemplate* avt =
         ExprParser::createAttributeValueTemplate(aAttValue, &pContext);
 
     if (!avt) {
         // fallback, just copy the attribute
-        aResult.append(aAttValue);
+        aResult.Append(aAttValue);
         return;
     }
 
@@ -762,29 +805,25 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
  * xsl:strip-space calls this with MB_TRUE, xsl:preserve-space 
  * with MB_FALSE
  */
-void ProcessorState::shouldStripSpace(String& aNames, Element* aElement,
+void ProcessorState::shouldStripSpace(const nsAString& aNames,
+                                      Element* aElement,
                                       MBool aShouldStrip,
                                       ImportFrame* aImportFrame)
 {
     //-- split names on whitespace
-    txTokenizer tokenizer(aNames);
-    String name;
+    txTokenizer tokenizer(PromiseFlatString(aNames));
     while (tokenizer.hasMoreTokens()) {
-        tokenizer.nextToken(name);
-        String prefix, lname;
+        const nsAString& name = tokenizer.nextToken();
         PRInt32 aNSID = kNameSpaceID_None;
-        txAtom* prefixAtom = 0;
-        XMLUtils::getPrefix(name, prefix);
-        if (!prefix.isEmpty()) {
-            prefixAtom = TX_GET_ATOM(prefix);
-            aNSID = aElement->lookupNamespaceID(prefixAtom);
+        nsCOMPtr<nsIAtom> prefix;
+        XMLUtils::getPrefix(name, getter_AddRefs(prefix));
+        if (prefix) {
+            aNSID = aElement->lookupNamespaceID(prefix);
         }
-        XMLUtils::getLocalPart(name, lname);
-        txAtom* lNameAtom = TX_GET_ATOM(lname);
-        txNameTestItem* nti = new txNameTestItem(prefixAtom, lNameAtom,
+        nsCOMPtr<nsIAtom> localName;
+        XMLUtils::getLocalPart(name, getter_AddRefs(localName));
+        txNameTestItem* nti = new txNameTestItem(prefix, localName,
                                                  aNSID, aShouldStrip);
-        TX_IF_RELEASE_ATOM(prefixAtom);
-        TX_IF_RELEASE_ATOM(lNameAtom);
         if (!nti) {
             // XXX error report, parsing error or out of mem
             break;
@@ -808,7 +847,7 @@ void ProcessorState::shouldStripSpace(String& aNames, Element* aElement,
 MBool ProcessorState::addKey(Element* aKeyElem)
 {
     nsresult rv = NS_OK;
-    String keyQName;
+    nsAutoString keyQName;
     aKeyElem->getAttr(txXSLTAtoms::name, kNameSpaceID_None, keyQName);
     txExpandedName keyName;
     rv = keyName.init(keyQName, aKeyElem, MB_FALSE);
@@ -817,7 +856,7 @@ MBool ProcessorState::addKey(Element* aKeyElem)
 
     txXSLKey* xslKey = (txXSLKey*)mXslKeys.get(keyName);
     if (!xslKey) {
-        xslKey = new txXSLKey();
+        xslKey = new txXSLKey(keyName);
         if (!xslKey)
             return MB_FALSE;
         rv = mXslKeys.add(keyName, xslKey);
@@ -826,12 +865,12 @@ MBool ProcessorState::addKey(Element* aKeyElem)
     }
     txPattern* match = 0;
     txPSParseContext pContext(this, aKeyElem);
-    String attrVal;
+    nsAutoString attrVal;
     if (aKeyElem->getAttr(txXSLTAtoms::match, kNameSpaceID_None, attrVal)) {
         match = txPatternParser::createPattern(attrVal, &pContext, this);
     }
     Expr* use = 0;
-    attrVal.clear();
+    attrVal.Truncate();
     if (aKeyElem->getAttr(txXSLTAtoms::use, kNameSpaceID_None, attrVal)) {
         use = ExprParser::createExpr(attrVal, &pContext);
     }
@@ -842,80 +881,6 @@ MBool ProcessorState::addKey(Element* aKeyElem)
     }
     return MB_TRUE;
 }
-
-/**
- * Adds the supplied xsl:key to the set of keys
- * returns NULL if no such key exists
- */
-nsresult ProcessorState::getKeyValue(const txExpandedName& aKeyName,
-                                     Document* aDocument,
-                                     const nsAString& aKeyValue,
-                                     PRBool aIndexIfNotFound,
-                                     NodeSet** aResult)
-{
-    *aResult = nsnull;
-    txKeyValueHashKey valueKey(aKeyName, aDocument, aKeyValue);
-    txKeyValueHashEntry* valueEntry = 
-        NS_STATIC_CAST(txKeyValueHashEntry *,
-                       PL_DHashTableOperate(&mKeyValues,
-                                            &valueKey,
-                                            PL_DHASH_LOOKUP));
-    if (PL_DHASH_ENTRY_IS_BUSY(valueEntry)) {
-        *aResult = &valueEntry->mNodeSet;
-        return NS_OK;
-    }
-
-    // we didn't find a value. This could either mean that that key has no
-    // nodes with that value or that the key hasn't been indexed using this
-    // document.
-
-    if (!aIndexIfNotFound) {
-        // if aIndexIfNotFound is set then the caller knows this key is
-        // indexed, so don't bother investigating
-        return NS_OK;
-    }
-
-    txIndexedKeyHashKey indexKey(aKeyName, aDocument);
-    txIndexedKeyHashEntry* indexEntry = 
-        NS_STATIC_CAST(txIndexedKeyHashEntry *,
-                       PL_DHashTableOperate(&mIndexedKeys,
-                                            &indexKey,
-                                            PL_DHASH_ADD));
-    NS_ENSURE_TRUE(indexEntry, NS_ERROR_OUT_OF_MEMORY);
-
-    if (indexEntry->mIndexed) {
-        // The key was indexed and apparently didn't contain this value so
-        // return null
-
-        return NS_OK;
-    }
-
-    // The key needs to be indexed
-    txXSLKey* xslKey = (txXSLKey*)mXslKeys.get(aKeyName);
-    if (!xslKey) {
-        // The key didn't exist, so bail.
-        return NS_ERROR_FAILURE;
-    }
-
-    nsresult rv = xslKey->indexDocument(aDocument, aKeyName, &mKeyValues,
-                                        this);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    indexEntry->mIndexed = PR_TRUE;
-
-    // Now that the key is indexed we can get it's new value
-    valueEntry =
-        NS_STATIC_CAST(txKeyValueHashEntry *,
-                       PL_DHashTableOperate(&mKeyValues,
-                                            &valueKey,
-                                            PL_DHASH_LOOKUP));
-    if (PL_DHASH_ENTRY_IS_BUSY(valueEntry)) {
-        *aResult = &valueEntry->mNodeSet;
-    }
-
-    return NS_OK;
-}
-
 
 /*
  * Adds a decimal format. Returns false if the format already exists
@@ -930,7 +895,7 @@ MBool ProcessorState::addDecimalFormat(Element* element)
     if (!format)
         return MB_FALSE;
 
-    String formatNameStr, attValue;
+    nsAutoString formatNameStr, attValue;
     txExpandedName formatName;
     if (element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
                          formatNameStr)) {
@@ -941,16 +906,16 @@ MBool ProcessorState::addDecimalFormat(Element* element)
 
     if (element->getAttr(txXSLTAtoms::decimalSeparator,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mDecimalSeparator = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mDecimalSeparator = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
 
     if (element->getAttr(txXSLTAtoms::groupingSeparator,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mGroupingSeparator = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mGroupingSeparator = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
@@ -961,8 +926,8 @@ MBool ProcessorState::addDecimalFormat(Element* element)
 
     if (element->getAttr(txXSLTAtoms::minusSign,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mMinusSign = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mMinusSign = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
@@ -973,40 +938,40 @@ MBool ProcessorState::addDecimalFormat(Element* element)
         
     if (element->getAttr(txXSLTAtoms::percent, kNameSpaceID_None,
                          attValue)) {
-        if (attValue.length() == 1)
-            format->mPercent = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mPercent = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
 
     if (element->getAttr(txXSLTAtoms::perMille,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mPerMille = attValue.charAt(0);
-        else if (!attValue.isEmpty())
+        if (attValue.Length() == 1)
+            format->mPerMille = attValue.CharAt(0);
+        else if (!attValue.IsEmpty())
             success = MB_FALSE;
     }
 
     if (element->getAttr(txXSLTAtoms::zeroDigit,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mZeroDigit = attValue.charAt(0);
-        else if (!attValue.isEmpty())
+        if (attValue.Length() == 1)
+            format->mZeroDigit = attValue.CharAt(0);
+        else if (!attValue.IsEmpty())
             success = MB_FALSE;
     }
 
     if (element->getAttr(txXSLTAtoms::digit, kNameSpaceID_None,
                          attValue)) {
-        if (attValue.length() == 1)
-            format->mDigit = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mDigit = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
 
     if (element->getAttr(txXSLTAtoms::patternSeparator,
                          kNameSpaceID_None, attValue)) {
-        if (attValue.length() == 1)
-            format->mPatternSeparator = attValue.charAt(0);
+        if (attValue.Length() == 1)
+            format->mPatternSeparator = attValue.CharAt(0);
         else
             success = MB_FALSE;
     }
@@ -1052,7 +1017,7 @@ txDecimalFormat* ProcessorState::getDecimalFormat(const txExpandedName& aName)
  * @return the ExprResult which has been bound to the variable with the given
  * name
 **/
-nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
+nsresult ProcessorState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                                      ExprResult*& aResult)
 {
     nsresult rv;
@@ -1074,8 +1039,8 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     globVar = (GlobalVariableValue*)mGlobalVariableValues.get(varName);
     if (globVar) {
         if (globVar->mFlags == GlobalVariableValue::evaluating) {
-            String err("Cyclic variable-value detected");
-            receiveError(err, NS_ERROR_FAILURE);
+            receiveError(NS_LITERAL_STRING("Cyclic variable-value detected"),
+                         NS_ERROR_FAILURE);
             return NS_ERROR_FAILURE;
         }
         aResult = globVar->mValue;
@@ -1107,7 +1072,7 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     // Set up the state we have at the beginning of the transformation
     txVariableMap *oldVars = mLocalVariables;
     mLocalVariables = 0;
-    txSingleNodeContext evalContext(mSourceDocument, this);
+    txSingleNodeContext evalContext(mSourceNode, this);
     txIEvalContext* priorEC = setEvalContext(&evalContext);
     // Compute the variable value
     globVar->mFlags = GlobalVariableValue::evaluating;
@@ -1154,7 +1119,7 @@ MBool ProcessorState::isStripSpaceAllowed(Node* aNode)
         case Node::TEXT_NODE:
         case Node::CDATA_SECTION_NODE:
         {
-            if (!XMLUtils::isWhitespace(aNode->getNodeValue()))
+            if (!XMLUtils::isWhitespace(aNode))
                 return MB_FALSE;
             return isStripSpaceAllowed(aNode->getParentNode());
         }
@@ -1169,7 +1134,7 @@ MBool ProcessorState::isStripSpaceAllowed(Node* aNode)
 /**
  *  Notifies this Error observer of a new error using the given error level
 **/
-void ProcessorState::receiveError(const String& errorMessage, nsresult aRes)
+void ProcessorState::receiveError(const nsAString& errorMessage, nsresult aRes)
 {
     txListIterator iter(&errorObservers);
     while (iter.hasNext()) {
@@ -1185,7 +1150,7 @@ void ProcessorState::receiveError(const String& errorMessage, nsresult aRes)
 **/
 #define CHECK_FN(_name) aName == txXSLTAtoms::_name
 
-nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+nsresult ProcessorState::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                              Element* aElem,
                                              FunctionCall*& aFunction)
 {
@@ -1278,7 +1243,7 @@ ProcessorState::ImportFrame::~ImportFrame()
  * txIParseContext used by ProcessorState internally
  */
 
-nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
+nsresult txPSParseContext::resolveNamespacePrefix(nsIAtom* aPrefix,
                                                   PRInt32& aID)
 {
 #ifdef DEBUG
@@ -1293,13 +1258,18 @@ nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
     return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }
 
-nsresult txPSParseContext::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+nsresult txPSParseContext::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
 {
     return mPS->resolveFunctionCall(aName, aID, mStyle, aFunction);
 }
 
-void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
+PRBool txPSParseContext::caseInsensitiveNameTests()
+{
+    return PR_FALSE;
+}
+
+void txPSParseContext::receiveError(const nsAString& aMsg, nsresult aRes)
 {
     mPS->receiveError(aMsg, aRes);
 }

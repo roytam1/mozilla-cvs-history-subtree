@@ -42,21 +42,24 @@
  */
 
 #include "XSLTProcessor.h"
-#include "Names.h"
-#include "Tokenizer.h"
 #include "txAtoms.h"
 #include "TxLog.h"
 #include "txNodeSetContext.h"
 #include "txNodeSorter.h"
 #include "txRtfHandler.h"
+#include "txStack.h"
+#include "txStringUtils.h"
 #include "txTextHandler.h"
+#include "txTokenizer.h"
 #include "txURIUtils.h"
 #include "txVariableMap.h"
 #include "txXSLTNumber.h"
 #include "XMLDOMUtils.h"
 #include "XMLUtils.h"
 
-#ifndef TX_EXE
+#ifdef TX_EXE
+#include "txHTMLOutput.h"
+#else
 #include "nsContentCID.h"
 #include "nsIConsoleService.h"
 #include "nsIDOMDocument.h"
@@ -71,18 +74,16 @@ Expr* txXSLTProcessor::gNodeExpr = 0;
  * Implement static variables for atomservice and dom.
  */
 #ifdef TX_EXE
-TX_IMPL_ATOM_STATICS;
 TX_IMPL_DOM_STATICS;
 #endif
+
+TX_LG_IMPL;
 
 /* static */
 MBool
 txXSLTProcessor::txInit()
 {
-#ifdef TX_EXE
-    if (!txNamespaceManager::init())
-        return MB_FALSE;
-#endif
+    TX_LG_CREATE;
 
     // Create default expressions
     // "node()"
@@ -103,9 +104,15 @@ txXSLTProcessor::txInit()
         return MB_FALSE;
     if (!txXSLTAtoms::init())
         return MB_FALSE;
-    
-    if (!txHandlerTable::init())
+
+#ifdef TX_EXE
+    if (!txNamespaceManager::init())
         return MB_FALSE;
+
+    if (NS_FAILED(txHTMLOutput::init())) {
+        return MB_FALSE;
+    }
+#endif
 
     return MB_TRUE;
 }
@@ -114,8 +121,10 @@ txXSLTProcessor::txInit()
 MBool
 txXSLTProcessor::txShutdown()
 {
+    TX_LG_DELETE;
 #ifdef TX_EXE
     txNamespaceManager::shutdown();
+    txHTMLOutput::shutdown();
 #endif
 
     delete gNodeExpr;
@@ -124,9 +133,6 @@ txXSLTProcessor::txShutdown()
     txXMLAtoms::shutdown();
     txXPathAtoms::shutdown();
     txXSLTAtoms::shutdown();
-
-    txHandlerTable::shutdown();
-
     return MB_TRUE;
 }
 
@@ -139,16 +145,21 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
     switch (aSourceNode->getNodeType()) {
         case Node::ATTRIBUTE_NODE:
         {
+            nsAutoString nodeName, nodeValue;
+            aSourceNode->getNodeName(nodeName);
+            aSourceNode->getNodeValue(nodeValue);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->attribute(aSourceNode->getNodeName(),
+            aPs->mResultHandler->attribute(nodeName,
                                            aSourceNode->getNamespaceID(),
-                                           aSourceNode->getNodeValue());
+                                           nodeValue);
             break;
         }
         case Node::COMMENT_NODE:
         {
+            nsAutoString nodeValue;
+            aSourceNode->getNodeValue(nodeValue);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->comment(aSourceNode->getNodeValue());
+            aPs->mResultHandler->comment(nodeValue);
             break;
         }
         case Node::DOCUMENT_NODE:
@@ -165,7 +176,8 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
         case Node::ELEMENT_NODE:
         {
             Element* element = (Element*)aSourceNode;
-            const String& name = element->getNodeName();
+            nsAutoString name;
+            element->getNodeName(name);
             PRInt32 nsID = element->getNamespaceID();
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
             aPs->mResultHandler->startElement(name, nsID);
@@ -176,10 +188,13 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
                 PRUint32 i = 0;
                 for (i = 0; i < attList->getLength(); i++) {
                     Attr* attr = (Attr*)attList->item(i);
+                    nsAutoString nodeName, nodeValue;
+                    attr->getNodeName(nodeName);
+                    attr->getNodeValue(nodeValue);
                     NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-                    aPs->mResultHandler->attribute(attr->getNodeName(),
+                    aPs->mResultHandler->attribute(nodeName,
                                                    attr->getNamespaceID(),
-                                                   attr->getNodeValue());
+                                                   nodeValue);
                 }
             }
 
@@ -197,15 +212,20 @@ txXSLTProcessor::copyNode(Node* aSourceNode, ProcessorState* aPs)
         case Node::PROCESSING_INSTRUCTION_NODE:
         {
             ProcessingInstruction* pi = (ProcessingInstruction*)aSourceNode;
+            nsAutoString target, data;
+            pi->getNodeName(target);
+            pi->getNodeValue(data);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->processingInstruction(pi->getTarget(), pi->getData());
+            aPs->mResultHandler->processingInstruction(target, data);
             break;
         }
         case Node::TEXT_NODE:
         case Node::CDATA_SECTION_NODE:
         {
+            nsAutoString nodeValue;
+            aSourceNode->getNodeValue(nodeValue);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->characters(aSourceNode->getNodeValue());
+            aPs->mResultHandler->characters(nodeValue);
             break;
         }
     }
@@ -225,10 +245,10 @@ txXSLTProcessor::createRTFDocument(txOutputMethod aMethod)
 }
 
 void
-txXSLTProcessor::logMessage(const String& aMessage)
+txXSLTProcessor::logMessage(const nsAString& aMessage)
 {
 #ifdef TX_EXE
-    cout << "xsl:message - "<< aMessage << endl;
+    cout << "xsl:message - "<< NS_LossyConvertUCS2toASCII(aMessage).get() << endl;
 #else
     nsresult rv;
     nsCOMPtr<nsIConsoleService> consoleSvc = 
@@ -237,7 +257,7 @@ txXSLTProcessor::logMessage(const String& aMessage)
                  "xsl:message couldn't get console service");
     if (consoleSvc) {
         nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
-        logString.Append(aMessage.getConstNSString());
+        logString.Append(aMessage);
         rv = consoleSvc->LogStringMessage(logString.get());
         NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
     }
@@ -258,11 +278,12 @@ txXSLTProcessor::processAction(Node* aAction,
     // Handle text nodes
     if (nodeType == Node::TEXT_NODE ||
         nodeType == Node::CDATA_SECTION_NODE) {
-        const String& textValue = aAction->getNodeValue();
-        if (!XMLUtils::isWhitespace(textValue) ||
+        nsAutoString nodeValue;
+        aAction->getNodeValue(nodeValue);
+        if (!XMLUtils::isWhitespace(nodeValue) ||
             XMLUtils::getXMLSpacePreserve(aAction)) {
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->characters(textValue);
+            aPs->mResultHandler->characters(nodeValue);
         }
         return;
     }
@@ -277,7 +298,8 @@ txXSLTProcessor::processAction(Node* aAction,
     if (nsID != kNameSpaceID_XSLT) {
         // Literal result element
         // XXX TODO Check for excluded namespaces and aliased namespaces (element and attributes) 
-        const String& nodeName = aAction->getNodeName();
+        nsAutoString nodeName;
+        aAction->getNodeName(nodeName);
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         aPs->mResultHandler->startElement(nodeName, nsID);
 
@@ -294,10 +316,13 @@ txXSLTProcessor::processAction(Node* aAction,
                 if (attr->getNamespaceID() == kNameSpaceID_XSLT)
                     continue;
                 // Process Attribute Value Templates
-                String value;
-                aPs->processAttrValueTemplate(attr->getNodeValue(), actionElement, value);
+                nsAutoString nodeName, nodeValue, value;
+                attr->getNodeName(nodeName);
+                attr->getNodeValue(nodeValue);
+                aPs->processAttrValueTemplate(nodeValue, actionElement, value);
                 NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-                aPs->mResultHandler->attribute(attr->getNodeName(), attr->getNamespaceID(), value);
+                aPs->mResultHandler->attribute(nodeName,
+                                               attr->getNamespaceID(), value);
             }
         }
 
@@ -309,8 +334,8 @@ txXSLTProcessor::processAction(Node* aAction,
     }
 
     Expr* expr = 0;
-    txAtom* localName;
-    aAction->getLocalName(&localName);
+    nsCOMPtr<nsIAtom> localName;
+    aAction->getLocalName(getter_AddRefs(localName));
     // xsl:apply-imports
     if (localName == txXSLTAtoms::applyImports) {
         ProcessorState::TemplateRule* curr;
@@ -319,9 +344,8 @@ txXSLTProcessor::processAction(Node* aAction,
 
         curr = aPs->getCurrentTemplateRule();
         if (!curr) {
-            String err("apply-imports not allowed here");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("apply-imports not allowed here"),
+                              NS_ERROR_FAILURE);
             return;
         }
 
@@ -341,13 +365,11 @@ txXSLTProcessor::processAction(Node* aAction,
             expr = gNodeExpr;
 
         if (!expr) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
         if (!exprResult) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -355,7 +377,6 @@ txXSLTProcessor::processAction(Node* aAction,
             NodeSet* nodeSet = (NodeSet*)exprResult;
             if (nodeSet->isEmpty()) {
                 delete nodeSet;
-                TX_RELEASE_ATOM(localName);
                 return;
             }
 
@@ -365,12 +386,11 @@ txXSLTProcessor::processAction(Node* aAction,
             while (child) {
                 if (child->getNodeType() == Node::ELEMENT_NODE &&
                     child->getNamespaceID() == kNameSpaceID_XSLT) {
-                    txAtom* childLocalName;
-                    child->getLocalName(&childLocalName);
+                    nsCOMPtr<nsIAtom> childLocalName;
+                    child->getLocalName(getter_AddRefs(childLocalName));
                     if (childLocalName == txXSLTAtoms::sort) {
                         sorter.addSortElement((Element*)child);
                     }
-                    TX_IF_RELEASE_ATOM(childLocalName);
                 }
                 child = child->getNextSibling();
             }
@@ -381,15 +401,13 @@ txXSLTProcessor::processAction(Node* aAction,
             processParameters(actionElement, &params, aPs);
 
             // Get mode
-            String modeStr;
+            nsAutoString modeStr;
             txExpandedName mode;
             if (actionElement->getAttr(txXSLTAtoms::mode,
                                        kNameSpaceID_None, modeStr)) {
                 rv = mode.init(modeStr, actionElement, MB_FALSE);
                 if (NS_FAILED(rv)) {
-                    String err("malformed mode-name in xsl:apply-templates");
-                    aPs->receiveError(err);
-                    TX_IF_RELEASE_ATOM(localName);
+                    aPs->receiveError(NS_LITERAL_STRING("malformed mode-name in xsl:apply-templates"));
                     return;
                 }
             }
@@ -409,80 +427,68 @@ txXSLTProcessor::processAction(Node* aAction,
             aPs->setEvalContext(priorEC);
         }
         else {
-            String err("error processing apply-templates");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("error processing apply-templates"),
+                              NS_ERROR_FAILURE);
         }
         //-- clean up
         delete exprResult;
     }
     // xsl:attribute
     else if (localName == txXSLTAtoms::attribute) {
-        String nameAttr;
+        nsAutoString nameAttr;
         if (!actionElement->getAttr(txXSLTAtoms::name,
                                     kNameSpaceID_None, nameAttr)) {
-            String err("missing required name attribute for xsl:attribute");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("missing required name attribute for xsl:attribute"), NS_ERROR_FAILURE);
             return;
         }
 
         // Process name as an AttributeValueTemplate
-        String name;
+        nsAutoString name;
         aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
         // Check name validity (must be valid QName and not xmlns)
         if (!XMLUtils::isValidQName(name)) {
-            String err("error processing xsl:attribute, ");
-            err.append(name);
-            err.append(" is not a valid QName.");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("error processing xsl:attribute, ") +
+                              name + NS_LITERAL_STRING(" is not a valid QName."),
+                              NS_ERROR_FAILURE);
             return;
         }
 
-        txAtom* nameAtom = TX_GET_ATOM(name);
-        if (nameAtom == txXMLAtoms::xmlns) {
-            TX_RELEASE_ATOM(nameAtom);
-            String err("error processing xsl:attribute, name is xmlns.");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+        if (TX_StringEqualsAtom(name, txXMLAtoms::xmlns)) {
+            aPs->receiveError(NS_LITERAL_STRING("error processing xsl:attribute, name is xmlns."), NS_ERROR_FAILURE);
             return;
         }
-        TX_IF_RELEASE_ATOM(nameAtom);
 
         // Determine namespace URI from the namespace attribute or
         // from the prefix of the name (using the xslt action element).
-        String resultNs;
+        nsAutoString resultNs;
         PRInt32 resultNsID = kNameSpaceID_None;
         if (actionElement->getAttr(txXSLTAtoms::_namespace, kNameSpaceID_None,
                                    resultNs)) {
-            String nsURI;
+            nsAutoString nsURI;
             aPs->processAttrValueTemplate(resultNs, actionElement,
                                           nsURI);
             resultNsID = aPs->getStylesheetDocument()->namespaceURIToID(nsURI);
         }
         else {
-            String prefix;
-            XMLUtils::getPrefix(name, prefix);
-            txAtom* prefixAtom = TX_GET_ATOM(prefix);
-            if (prefixAtom != txXMLAtoms::_empty) {
-                if (prefixAtom != txXMLAtoms::xmlns)
-                    resultNsID = actionElement->lookupNamespaceID(prefixAtom);
+            nsCOMPtr<nsIAtom> prefix;
+            XMLUtils::getPrefix(name, getter_AddRefs(prefix));
+            if (prefix) {
+                if (prefix != txXMLAtoms::xmlns)
+                    resultNsID = actionElement->lookupNamespaceID(prefix);
                 else
                     // Cut xmlns: (6 characters)
-                    name.deleteChars(0, 6);
+                    name.Cut(0, 6);
             }
-            TX_IF_RELEASE_ATOM(prefixAtom);
         }
 
         // XXX Should verify that this is correct behaviour. Signal error too?
         if (resultNsID == kNameSpaceID_Unknown) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         // Compute value
-        String value;
+        nsAutoString value;
         processChildrenAsValue(actionElement, aPs, MB_TRUE, value);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
@@ -490,7 +496,7 @@ txXSLTProcessor::processAction(Node* aAction,
     }
     // xsl:call-template
     else if (localName == txXSLTAtoms::callTemplate) {
-        String nameStr;
+        nsAutoString nameStr;
         txExpandedName templateName;
         actionElement->getAttr(txXSLTAtoms::name,
                                kNameSpaceID_None, nameStr);
@@ -500,7 +506,8 @@ txXSLTProcessor::processAction(Node* aAction,
             Element* xslTemplate = aPs->getNamedTemplate(templateName);
             if (xslTemplate) {
 #ifdef PR_LOGGING
-                String baseURI = xslTemplate->getBaseURI();
+                nsAutoString baseURI;
+                xslTemplate->getBaseURI(baseURI);
                 PR_LOG(txLog::xslt, PR_LOG_DEBUG,
                        ("CallTemplate, Name %s, Stylesheet %s\n",
                         NS_LossyConvertUCS2toASCII(nameStr).get(),
@@ -512,8 +519,7 @@ txXSLTProcessor::processAction(Node* aAction,
             }
         }
         else {
-            String err("missing or malformed name in xsl:call-template");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("missing or malformed name in xsl:call-template"), NS_ERROR_FAILURE);
         }
     }
     // xsl:choose
@@ -528,13 +534,12 @@ txXSLTProcessor::processAction(Node* aAction,
             }
 
             Element* xslTemplate = (Element*)condition;
-            txAtom* conditionLocalName;
-            condition->getLocalName(&conditionLocalName);
+            nsCOMPtr<nsIAtom> conditionLocalName;
+            condition->getLocalName(getter_AddRefs(conditionLocalName));
             if (conditionLocalName == txXSLTAtoms::when) {
                 expr = aPs->getExpr(xslTemplate,
                                     ProcessorState::TestAttr);
                 if (!expr) {
-                    TX_RELEASE_ATOM(conditionLocalName);
                     condition = condition->getNextSibling();
                     continue;
                 }
@@ -551,20 +556,19 @@ txXSLTProcessor::processAction(Node* aAction,
                 processChildren(xslTemplate, aPs);
                 caseFound = MB_TRUE;
             }
-            TX_IF_RELEASE_ATOM(conditionLocalName);
             condition = condition->getNextSibling();
         } // end for-each child of xsl:choose
     }
     // xsl:comment
     else if (localName == txXSLTAtoms::comment) {
-        String value;
+        nsAutoString value;
         processChildrenAsValue(actionElement, aPs, MB_TRUE, value);
         PRInt32 pos = 0;
-        PRUint32 length = value.length();
-        while ((pos = value.indexOf('-', pos)) != kNotFound) {
+        PRUint32 length = value.Length();
+        while ((pos = value.FindChar('-', (PRUint32)pos)) != kNotFound) {
             ++pos;
-            if (((PRUint32)pos == length) || (value.charAt(pos) == '-')) {
-                value.insert(pos++, ' ');
+            if (((PRUint32)pos == length) || (value.CharAt(pos) == '-')) {
+                value.Insert(PRUnichar(' '), pos++);
                 ++length;
             }
         }
@@ -579,7 +583,6 @@ txXSLTProcessor::processAction(Node* aAction,
     else if (localName == txXSLTAtoms::copyOf) {
         expr = aPs->getExpr(actionElement, ProcessorState::SelectAttr);
         if (!expr) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -589,59 +592,51 @@ txXSLTProcessor::processAction(Node* aAction,
     }
     // xsl:element
     else if (localName == txXSLTAtoms::element) {
-        String nameAttr;
+        nsAutoString nameAttr;
         if (!actionElement->getAttr(txXSLTAtoms::name,
                                     kNameSpaceID_None, nameAttr)) {
-            String err("missing required name attribute for xsl:element");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("missing required name attribute for xsl:element"), NS_ERROR_FAILURE);
             return;
         }
 
         // Process name as an AttributeValueTemplate
-        String name;
+        nsAutoString name;
         aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
         // Check name validity (must be valid QName and not xmlns)
         if (!XMLUtils::isValidQName(name)) {
-            String err("error processing xsl:element, '");
-            err.append(name);
-            err.append("' is not a valid QName.");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("error processing xsl:element, '") +
+                              name + NS_LITERAL_STRING("' is not a valid QName."),
+                              NS_ERROR_FAILURE);
             // XXX We should processChildren without creating attributes or
             //     namespace nodes.
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         // Determine namespace URI from the namespace attribute or
         // from the prefix of the name (using the xslt action element).
-        String resultNs;
+        nsAutoString resultNs;
         PRInt32 resultNsID;
         if (actionElement->getAttr(txXSLTAtoms::_namespace, kNameSpaceID_None, resultNs)) {
-            String nsURI;
+            nsAutoString nsURI;
             aPs->processAttrValueTemplate(resultNs, actionElement, nsURI);
-            if (nsURI.isEmpty())
+            if (nsURI.IsEmpty())
                 resultNsID = kNameSpaceID_None;
             else
                 resultNsID = aPs->getStylesheetDocument()->namespaceURIToID(nsURI);
         }
         else {
-            String prefix;
-            XMLUtils::getPrefix(name, prefix);
-            txAtom* prefixAtom = TX_GET_ATOM(prefix);
-            resultNsID = actionElement->lookupNamespaceID(prefixAtom);
-            TX_IF_RELEASE_ATOM(prefixAtom);
+            nsCOMPtr<nsIAtom> prefix;
+            XMLUtils::getPrefix(name, getter_AddRefs(prefix));
+            resultNsID = actionElement->lookupNamespaceID(prefix);
          }
 
         if (resultNsID == kNameSpaceID_Unknown) {
-            String err("error processing xsl:element, can't resolve prefix on'");
-            err.append(name);
-            err.append("'.");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("error processing xsl:element, can't resolve prefix on'") +
+                              name + NS_LITERAL_STRING("'."),
+                              NS_ERROR_FAILURE);
             // XXX We should processChildren without creating attributes or
             //     namespace nodes.
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -656,13 +651,11 @@ txXSLTProcessor::processAction(Node* aAction,
     else if (localName == txXSLTAtoms::forEach) {
         expr = aPs->getExpr(actionElement, ProcessorState::SelectAttr);
         if (!expr) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
         if (!exprResult) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -670,7 +663,6 @@ txXSLTProcessor::processAction(Node* aAction,
             NodeSet* nodeSet = (NodeSet*)exprResult;
             if (nodeSet->isEmpty()) {
                 delete nodeSet;
-                TX_RELEASE_ATOM(localName);
                 return;
             }
             txNodeSetContext evalContext(nodeSet, aPs);
@@ -683,20 +675,18 @@ txXSLTProcessor::processAction(Node* aAction,
             while (child) {
                 unsigned short nodeType = child->getNodeType();
                 if (nodeType == Node::ELEMENT_NODE) {
-                    txAtom* childLocalName;
-                    child->getLocalName(&childLocalName);
+                    nsCOMPtr<nsIAtom> childLocalName;
+                    child->getLocalName(getter_AddRefs(childLocalName));
                     if (child->getNamespaceID() != kNameSpaceID_XSLT ||
                         childLocalName != txXSLTAtoms::sort) {
                         // xsl:sort must occur first
-                        TX_IF_RELEASE_ATOM(childLocalName);
                         break;
                     }
                     sorter.addSortElement((Element*)child);
-                    TX_RELEASE_ATOM(childLocalName);
                 }
                 else if ((nodeType == Node::TEXT_NODE ||
                           nodeType == Node::CDATA_SECTION_NODE) &&
-                         !XMLUtils::isWhitespace(child->getNodeValue())) {
+                         !XMLUtils::isWhitespace(child)) {
                     break;
                 }
 
@@ -718,8 +708,8 @@ txXSLTProcessor::processAction(Node* aAction,
             aPs->setEvalContext(priorEC);
         }
         else {
-            String err("error processing for-each");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("error processing for-each"),
+                              NS_ERROR_FAILURE);
         }
         //-- clean up exprResult
         delete exprResult;
@@ -728,13 +718,11 @@ txXSLTProcessor::processAction(Node* aAction,
     else if (localName == txXSLTAtoms::_if) {
         expr = aPs->getExpr(actionElement, ProcessorState::TestAttr);
         if (!expr) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
         if (!exprResult) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -745,14 +733,14 @@ txXSLTProcessor::processAction(Node* aAction,
     }
     // xsl:message
     else if (localName == txXSLTAtoms::message) {
-        String message;
+        nsAutoString message;
         processChildrenAsValue(actionElement, aPs, MB_FALSE, message);
         // We should add a MessageObserver class
         logMessage(message);
     }
     // xsl:number
     else if (localName == txXSLTAtoms::number) {
-        String result;
+        nsAutoString result;
         // XXX ErrorReport, propagate result from ::createNumber
         txXSLTNumber::createNumber(actionElement, aPs, result);
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
@@ -760,36 +748,32 @@ txXSLTProcessor::processAction(Node* aAction,
     }
     // xsl:param
     else if (localName == txXSLTAtoms::param) {
-        String err("misplaced xsl:param");
-        aPs->receiveError(err, NS_ERROR_FAILURE);
+        aPs->receiveError(NS_LITERAL_STRING("misplaced xsl:param"),
+                          NS_ERROR_FAILURE);
     }
     // xsl:processing-instruction
     else if (localName == txXSLTAtoms::processingInstruction) {
-        String nameAttr;
+        nsAutoString nameAttr;
         if (!actionElement->getAttr(txXSLTAtoms::name,
                                     kNameSpaceID_None, nameAttr)) {
-            String err("missing required name attribute for"
-                       " xsl:processing-instruction");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("missing required name attribute for xsl:processing-instruction"), NS_ERROR_FAILURE);
             return;
         }
 
         // Process name as an AttributeValueTemplate
-        String name;
+        nsAutoString name;
         aPs->processAttrValueTemplate(nameAttr, actionElement, name);
 
         // Check name validity (must be valid NCName and a PITarget)
         // XXX Need to check for NCName and PITarget
         if (!XMLUtils::isValidQName(name)) {
-            String err("error processing xsl:processing-instruction, '");
-            err.append(name);
-            err.append("' is not a valid QName.");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("error processing xsl:processing-instruction, '") +
+                              name + NS_LITERAL_STRING("' is not a valid QName."),
+                              NS_ERROR_FAILURE);
         }
 
         // Compute value
-        String value;
+        nsAutoString value;
         processChildrenAsValue(actionElement, aPs, MB_TRUE, value);
         XMLUtils::normalizePIValue(value);
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
@@ -801,17 +785,17 @@ txXSLTProcessor::processAction(Node* aAction,
     }
     // xsl:text
     else if (localName == txXSLTAtoms::text) {
-        String data;
+        nsAutoString data;
         XMLDOMUtils::getNodeValue(actionElement, data);
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         MBool doe = MB_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
             aPs->mOutputHandler->hasDisableOutputEscaping()) {
-            String attValue;
+            nsAutoString attValue;
             doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
                                          kNameSpaceID_None, attValue) &&
-                  attValue.isEqual(YES_VALUE);
+                  TX_StringEqualsAtom(attValue, txXSLTAtoms::yes);
         }
         if (doe) {
             aPs->mOutputHandler->charactersNoOutputEscaping(data);
@@ -824,28 +808,30 @@ txXSLTProcessor::processAction(Node* aAction,
     else if (localName == txXSLTAtoms::valueOf) {
         expr = aPs->getExpr(actionElement, ProcessorState::SelectAttr);
         if (!expr) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
         ExprResult* exprResult = expr->evaluate(aPs->getEvalContext());
-        String value;
+        nsAutoString value;
         if (!exprResult) {
-            String err("null ExprResult");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("null ExprResult"),
+                              NS_ERROR_FAILURE);
             return;
         }
         exprResult->stringValue(value);
+        if (value.IsEmpty()) {
+            delete exprResult;
+            return;
+        }
 
         NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
         MBool doe = MB_FALSE;
         if ((aPs->mResultHandler == aPs->mOutputHandler) &&
             aPs->mOutputHandler->hasDisableOutputEscaping()) {
-            String attValue;
+            nsAutoString attValue;
             doe = actionElement->getAttr(txXSLTAtoms::disableOutputEscaping,
                                          kNameSpaceID_None, attValue) &&
-                  attValue.isEqual(YES_VALUE);
+                  TX_StringEqualsAtom(attValue, txXSLTAtoms::yes);
         }
         if (doe) {
             aPs->mOutputHandler->charactersNoOutputEscaping(value);
@@ -858,19 +844,17 @@ txXSLTProcessor::processAction(Node* aAction,
     // xsl:variable
     else if (localName == txXSLTAtoms::variable) {
         txExpandedName varName;
-        String qName;
+        nsAutoString qName;
         actionElement->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
                                qName);
         rv = varName.init(qName, actionElement, MB_FALSE);
         if (NS_FAILED(rv)) {
-            String err("bad name for xsl:variable");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            TX_RELEASE_ATOM(localName);
+            aPs->receiveError(NS_LITERAL_STRING("bad name for xsl:variable"),
+                              NS_ERROR_FAILURE);
             return;
         }
         ExprResult* exprResult = processVariable(actionElement, aPs);
         if (!exprResult) {
-            TX_RELEASE_ATOM(localName);
             return;
         }
 
@@ -878,38 +862,34 @@ txXSLTProcessor::processAction(Node* aAction,
         NS_ASSERTION(vars, "missing localvariable map");
         rv = vars->bindVariable(varName, exprResult, MB_TRUE);
         if (NS_FAILED(rv)) {
-            String err("bad name for xsl:variable");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("bad name for xsl:variable"),
+                              NS_ERROR_FAILURE);
         }
     }
-    TX_IF_RELEASE_ATOM(localName);
 }
 
 void
 txXSLTProcessor::processAttributeSets(Element* aElement,
                                       ProcessorState* aPs,
-                                      Stack* aRecursionStack)
+                                      txStack* aRecursionStack)
 {
     nsresult rv = NS_OK;
-    String names;
+    nsAutoString names;
     PRInt32 namespaceID;
     if (aElement->getNamespaceID() == kNameSpaceID_XSLT)
         namespaceID = kNameSpaceID_None;
     else
         namespaceID = kNameSpaceID_XSLT;
-    if (!aElement->getAttr(txXSLTAtoms::useAttributeSets, namespaceID, names) || names.isEmpty())
+    if (!aElement->getAttr(txXSLTAtoms::useAttributeSets, namespaceID, names) || names.IsEmpty())
         return;
 
     // Split names
     txTokenizer tokenizer(names);
-    String nameStr;
     while (tokenizer.hasMoreTokens()) {
-        tokenizer.nextToken(nameStr);
         txExpandedName name;
-        rv = name.init(nameStr, aElement, MB_FALSE);
+        rv = name.init(tokenizer.nextToken(), aElement, MB_FALSE);
         if (NS_FAILED(rv)) {
-            String err("missing or malformed name in use-attribute-sets");
-            aPs->receiveError(err);
+            aPs->receiveError(NS_LITERAL_STRING("missing or malformed name in use-attribute-sets"));
             return;
         }
 
@@ -917,8 +897,7 @@ txXSLTProcessor::processAttributeSets(Element* aElement,
             txStackIterator attributeSets(aRecursionStack);
             while (attributeSets.hasNext()) {
                 if (name == *(txExpandedName*)attributeSets.next()) {
-                    String err("circular inclusion detected in use-attribute-sets");
-                    aPs->receiveError(err);
+                    aPs->receiveError(NS_LITERAL_STRING("circular inclusion detected in use-attribute-sets"));
                     return;
                 }
             }
@@ -939,7 +918,7 @@ txXSLTProcessor::processAttributeSets(Element* aElement,
                     aRecursionStack->pop();
                 }
                 else {
-                    Stack recursionStack;
+                    txStack recursionStack;
                     recursionStack.push(&name);
                     processAttributeSets(parent, aPs, &recursionStack);
                     recursionStack.pop();
@@ -973,7 +952,7 @@ void
 txXSLTProcessor::processChildrenAsValue(Element* aElement,
                                         ProcessorState* aPs,
                                         MBool aOnlyText,
-                                        String& aValue)
+                                        nsAString& aValue)
 {
     txXMLEventHandler* previousHandler = aPs->mResultHandler;
     txTextHandler valueHandler(aValue, aOnlyText);
@@ -998,8 +977,7 @@ txXSLTProcessor::processDefaultTemplate(ProcessorState* aPs,
             ExprResult* exprResult = gNodeExpr->evaluate(aPs->getEvalContext());
             if (!exprResult ||
                 exprResult->getResultType() != ExprResult::NODESET) {
-                String err("None-nodeset returned while processing default template");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("None-nodeset returned while processing default template"), NS_ERROR_FAILURE);
                 delete exprResult;
                 return;
             }
@@ -1028,8 +1006,10 @@ txXSLTProcessor::processDefaultTemplate(ProcessorState* aPs,
         case Node::TEXT_NODE :
         case Node::CDATA_SECTION_NODE :
         {
+            nsAutoString nodeValue;
+            node->getNodeValue(nodeValue);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
-            aPs->mResultHandler->characters(node->getNodeValue());
+            aPs->mResultHandler->characters(nodeValue);
             break;
         }
         default:
@@ -1040,29 +1020,25 @@ txXSLTProcessor::processDefaultTemplate(ProcessorState* aPs,
 }
 
 void
-txXSLTProcessor::processInclude(String& aHref,
+txXSLTProcessor::processInclude(const nsAString& aHref,
                                 txListIterator* aImportFrame,
                                 ProcessorState* aPs)
 {
     // make sure the include isn't included yet
-    txStackIterator iter(aPs->getEnteredStylesheets());
-    while (iter.hasNext()) {
-        if (((String*)iter.next())->isEqual(aHref)) {
-            String err("Stylesheet includes itself. URI: ");
-            err.append(aHref);
-            aPs->receiveError(err, NS_ERROR_FAILURE);
-            return;
-        }
+    nsStringArray& stylesheetStack = aPs->getEnteredStylesheets();
+    if (stylesheetStack.IndexOf(aHref) != -1) {
+        aPs->receiveError(NS_LITERAL_STRING("Stylesheet includes itself. URI: ") +
+                          aHref, NS_ERROR_FAILURE);
+        return;
     }
-    aPs->getEnteredStylesheets()->push(&aHref);
+    stylesheetStack.AppendString(aHref);
 
     // Load XSL document
-    Node* stylesheet = aPs->retrieveDocument(aHref, String());
+    Node* stylesheet = aPs->retrieveDocument(aHref, NS_LITERAL_STRING(""));
     if (!stylesheet) {
-        String err("Unable to load included stylesheet ");
-        err.append(aHref);
-        aPs->receiveError(err, NS_ERROR_FAILURE);
-        aPs->getEnteredStylesheets()->pop();
+        aPs->receiveError(NS_LITERAL_STRING("Unable to load included stylesheet ") +
+                          aHref, NS_ERROR_FAILURE);
+        stylesheetStack.RemoveStringAt(stylesheetStack.Count() - 1);
         return;
     }
 
@@ -1077,12 +1053,11 @@ txXSLTProcessor::processInclude(String& aHref,
             break;
         default:
             // This should never happen
-            String err("Unsupported fragment identifier");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("Unsupported fragment identifier"), NS_ERROR_FAILURE);
             break;
     }
 
-    aPs->getEnteredStylesheets()->pop();
+    stylesheetStack.RemoveStringAt(stylesheetStack.Count() - 1);
 }
 
 void
@@ -1121,22 +1096,21 @@ txXSLTProcessor::processParameters(Element* aAction,
     while (tmpNode) {
         if (tmpNode->getNodeType() == Node::ELEMENT_NODE &&
             tmpNode->getNamespaceID() == kNameSpaceID_XSLT) {
-            txAtom* localName;
-            tmpNode->getLocalName(&localName);
+            nsCOMPtr<nsIAtom> localName;
+            tmpNode->getLocalName(getter_AddRefs(localName));
             if (localName != txXSLTAtoms::withParam) {
-                TX_IF_RELEASE_ATOM(localName);
                 tmpNode = tmpNode->getNextSibling();
                 continue;
             }
 
             Element* action = (Element*)tmpNode;
             txExpandedName paramName;
-            String qName;
+            nsAutoString qName;
             action->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
             rv = paramName.init(qName, action, MB_FALSE);
             if (NS_FAILED(rv)) {
-                String err("bad name for xsl:param");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("bad name for xsl:param"),
+                                  NS_ERROR_FAILURE);
                 break;
             }
 
@@ -1147,13 +1121,11 @@ txXSLTProcessor::processParameters(Element* aAction,
 
             rv = aMap->bindVariable(paramName, exprResult, MB_TRUE);
             if (NS_FAILED(rv)) {
-                String err("Unable to bind parameter '");
-                err.append(qName);
-                err.append("'");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("Unable to bind parameter '") +
+                                  qName + NS_LITERAL_STRING("'"),
+                                  NS_ERROR_FAILURE);
                 return rv;
             }
-            TX_RELEASE_ATOM(localName);
         }
         tmpNode = tmpNode->getNextSibling();
     }
@@ -1186,9 +1158,9 @@ txXSLTProcessor::processStylesheet(Document* aStylesheet,
 
     Element* elem = aStylesheet->getDocumentElement();
 
-    txAtom* localName;
+    nsCOMPtr<nsIAtom> localName;
     PRInt32 namespaceID = elem->getNamespaceID();
-    elem->getLocalName(&localName);
+    elem->getLocalName(getter_AddRefs(localName));
 
     if (((localName == txXSLTAtoms::stylesheet) ||
          (localName == txXSLTAtoms::transform)) &&
@@ -1198,13 +1170,11 @@ txXSLTProcessor::processStylesheet(Document* aStylesheet,
     else {
         NS_ASSERTION(aImportFrame->current(), "no current importframe");
         if (!aImportFrame->current()) {
-            TX_IF_RELEASE_ATOM(localName);
             return;
         }
         aPs->addLREStylesheet(aStylesheet,
             (ProcessorState::ImportFrame*)aImportFrame->current());
     }
-    TX_IF_RELEASE_ATOM(localName);
 }
 
 void
@@ -1225,23 +1195,21 @@ txXSLTProcessor::processTemplate(Node* aTemplate,
     while (tmpNode) {
         int nodeType = tmpNode->getNodeType();
         if (nodeType == Node::ELEMENT_NODE) {
-            txAtom* localName;
-            tmpNode->getLocalName(&localName);
+            nsCOMPtr<nsIAtom> localName;
+            tmpNode->getLocalName(getter_AddRefs(localName));
             if (tmpNode->getNamespaceID() != kNameSpaceID_XSLT ||
                 localName != txXSLTAtoms::param) {
-                TX_RELEASE_ATOM(localName);
                 break;
             }
-            TX_RELEASE_ATOM(localName);
 
             Element* action = (Element*)tmpNode;
             txExpandedName paramName;
-            String qName;
+            nsAutoString qName;
             action->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
             rv = paramName.init(qName, action, MB_FALSE);
             if (NS_FAILED(rv)) {
-                String err("bad name for xsl:param");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("bad name for xsl:param"),
+                                  NS_ERROR_FAILURE);
                 break;
             }
 
@@ -1257,15 +1225,15 @@ txXSLTProcessor::processTemplate(Node* aTemplate,
             }
 
             if (NS_FAILED(rv)) {
-                String err("unable to bind xsl:param");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("unable to bind xsl:param"),
+                                  NS_ERROR_FAILURE);
             }
 
         }
         else if (!(nodeType == Node::COMMENT_NODE ||
                   ((nodeType == Node::TEXT_NODE ||
                     nodeType == Node::CDATA_SECTION_NODE) &&
-                   XMLUtils::isWhitespace(tmpNode->getNodeValue())))) {
+                   XMLUtils::isWhitespace(tmpNode)))) {
             break;
         }
         tmpNode = tmpNode->getNextSibling();
@@ -1316,15 +1284,16 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
     Node* node = aStylesheet->getFirstChild();
     while (node && !importsDone) {
         if (node->getNodeType() == Node::ELEMENT_NODE) {
-            txAtom* localName;
-            node->getLocalName(&localName);
+            nsCOMPtr<nsIAtom> localName;
+            node->getLocalName(getter_AddRefs(localName));
             if (node->getNamespaceID() == kNameSpaceID_XSLT &&
                 localName == txXSLTAtoms::import) {
                 Element* element = (Element*)node;
-                String hrefAttr, href;
+                nsAutoString hrefAttr, href, baseURI;
                 element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
                                  hrefAttr);
-                URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
+                element->getBaseURI(baseURI);
+                URIUtils::resolveHref(hrefAttr, baseURI,
                                       href);
 
                 // Create a new ImportFrame with correct firstNotImported
@@ -1348,7 +1317,6 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
             else {
                 importsDone = MB_TRUE;
             }
-            TX_IF_RELEASE_ATOM(localName);
         }
         if (!importsDone)
             node = node->getNextSibling();
@@ -1361,8 +1329,8 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
             continue;
         }
 
-        txAtom* localName;
-        node->getLocalName(&localName);
+        nsCOMPtr<nsIAtom> localName;
+        node->getLocalName(getter_AddRefs(localName));
         Element* element = (Element*)node;
         // xsl:attribute-set
         if (localName == txXSLTAtoms::attributeSet) {
@@ -1372,25 +1340,25 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
         else if (localName == txXSLTAtoms::decimalFormat) {
             if (!aPs->addDecimalFormat(element)) {
                 // Add error to ErrorObserver
-                String fName;
+                nsAutoString fName;
                 element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
                                  fName);
-                String err("unable to add ");
-                if (fName.isEmpty()) {
-                    err.append("default");
+                nsAutoString err(NS_LITERAL_STRING("unable to add "));
+                if (fName.IsEmpty()) {
+                    err.Append(NS_LITERAL_STRING("default"));
                 }
                 else {
-                    err.append("\"");
-                    err.append(fName);
-                    err.append("\"");
+                    err.Append(PRUnichar('\"'));
+                    err.Append(fName);
+                    err.Append(PRUnichar('\"'));
                 }
-                err.append(" decimal format for xsl:decimal-format");
+                err.Append(NS_LITERAL_STRING(" decimal format for xsl:decimal-format"));
                 aPs->receiveError(err, NS_ERROR_FAILURE);
             }
         }
         // xsl:param
         else if (localName == txXSLTAtoms::param) {
-            String qName;
+            nsAutoString qName;
             element->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
             txExpandedName varName;
             nsresult rv = varName.init(qName, element, MB_FALSE);
@@ -1407,26 +1375,24 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
                 rv = aPs->addGlobalVariable(varName, element, currentFrame,
                                             defaultValue);
                 if (NS_FAILED(rv)) {
-                    String err("unable to add global xsl:param");
-                    aPs->receiveError(err, NS_ERROR_FAILURE);
+                    aPs->receiveError(NS_LITERAL_STRING("unable to add global xsl:param"), NS_ERROR_FAILURE);
                 }
             }
             else {
-                String err("unable to add global xsl:param");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("unable to add global xsl:param"), NS_ERROR_FAILURE);
             }
         }
         // xsl:import
         else if (localName == txXSLTAtoms::import) {
-            String err("xsl:import only allowed at top of stylesheet");
-            aPs->receiveError(err, NS_ERROR_FAILURE);
+            aPs->receiveError(NS_LITERAL_STRING("xsl:import only allowed at top of stylesheet"), NS_ERROR_FAILURE);
         }
         // xsl:include
         else if (localName == txXSLTAtoms::include) {
-            String hrefAttr, href;
+            nsAutoString hrefAttr, href, baseURI;
             element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
                              hrefAttr);
-            URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
+            element->getBaseURI(baseURI);
+            URIUtils::resolveHref(hrefAttr, baseURI,
                                   href);
 
             processInclude(href, importFrame, aPs);
@@ -1434,26 +1400,25 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
         // xsl:key
         else if (localName == txXSLTAtoms::key) {
             if (!aPs->addKey(element)) {
-                String name;
+                nsAutoString name;
                 element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
                                  name);
-                String err("error adding key '");
-                err.append(name);
-                err.append("'");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("error adding key '") +
+                                  name + NS_LITERAL_STRING("'"),
+                                  NS_ERROR_FAILURE);
             }
         }
         // xsl:output
         else if (localName == txXSLTAtoms::output) {
             txOutputFormat& format = currentFrame->mOutputFormat;
-            String attValue;
+            nsAutoString attValue;
 
             if (element->getAttr(txXSLTAtoms::method, kNameSpaceID_None,
                                  attValue)) {
-                if (attValue.isEqual("html")) {
+                if (attValue.Equals(NS_LITERAL_STRING("html"))) {
                     format.mMethod = eHTMLOutput;
                 }
-                else if (attValue.isEqual("text")) {
+                else if (attValue.Equals(NS_LITERAL_STRING("text"))) {
                     format.mMethod = eTextOutput;
                 }
                 else {
@@ -1473,12 +1438,14 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
 
             if (element->getAttr(txXSLTAtoms::omitXmlDeclaration,
                                  kNameSpaceID_None, attValue)) {
-                format.mOmitXMLDeclaration = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+                format.mOmitXMLDeclaration =
+                    TX_StringEqualsAtom(attValue, txXSLTAtoms::yes) ? eTrue : eFalse;
             }
 
             if (element->getAttr(txXSLTAtoms::standalone, kNameSpaceID_None,
                                  attValue)) {
-                format.mStandalone = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+                format.mStandalone =
+                    TX_StringEqualsAtom(attValue, txXSLTAtoms::yes) ? eTrue : eFalse;
             }
 
             if (element->getAttr(txXSLTAtoms::doctypePublic,
@@ -1494,32 +1461,11 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
             if (element->getAttr(txXSLTAtoms::cdataSectionElements,
                                  kNameSpaceID_None, attValue)) {
                 txTokenizer tokens(attValue);
-                String token;
                 while (tokens.hasMoreTokens()) {
-                    tokens.nextToken(token);
-                    if (!XMLUtils::isValidQName(token)) {
-                        break;
-                    }
-
-                    String namePart;
-                    XMLUtils::getPrefix(token, namePart);
-                    txAtom* nameAtom = TX_GET_ATOM(namePart);
-                    PRInt32 nsID = element->lookupNamespaceID(nameAtom);
-                    TX_IF_RELEASE_ATOM(nameAtom);
-                    if (nsID == kNameSpaceID_Unknown) {
-                        // XXX ErrorReport: unknown prefix
-                        break;
-                    }
-                    XMLUtils::getLocalPart(token, namePart);
-                    nameAtom = TX_GET_ATOM(namePart);
-                    if (!nameAtom) {
-                        // XXX ErrorReport: out of memory
-                        break;
-                    }
-                    txExpandedName* qname = new txExpandedName(nsID, nameAtom);
-                    TX_RELEASE_ATOM(nameAtom);
-                    if (!qname) {
-                        // XXX ErrorReport: out of memory
+                    txExpandedName* qname = new txExpandedName();
+                    if (!qname || NS_FAILED(qname->init(tokens.nextToken(),
+                                                        element, PR_FALSE))) {
+                        // XXX ErrorReport
                         break;
                     }
                     format.mCDATASectionElements.add(qname);
@@ -1528,7 +1474,8 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
 
             if (element->getAttr(txXSLTAtoms::indent, kNameSpaceID_None,
                                  attValue)) {
-                format.mIndent = attValue.isEqual(YES_VALUE) ? eTrue : eFalse;
+                format.mIndent =
+                    TX_StringEqualsAtom(attValue, txXSLTAtoms::yes) ? eTrue : eFalse;
             }
 
             if (element->getAttr(txXSLTAtoms::mediaType, kNameSpaceID_None,
@@ -1542,7 +1489,7 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
         }
         // xsl:variable
         else if (localName == txXSLTAtoms::variable) {
-            String qName;
+            nsAutoString qName;
             element->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
             txExpandedName varName;
             nsresult rv = varName.init(qName, element, MB_FALSE);
@@ -1550,24 +1497,20 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
                 rv = aPs->addGlobalVariable(varName, element, currentFrame,
                                             0);
                 if (NS_FAILED(rv)) {
-                    String err("unable to add global xsl:variable");
-                    aPs->receiveError(err, NS_ERROR_FAILURE);
+                    aPs->receiveError(NS_LITERAL_STRING("unable to add global xsl:variable"), NS_ERROR_FAILURE);
                 }
             }
             else {
-                String err("unable to add global xsl:variable");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("unable to add global xsl:variable"), NS_ERROR_FAILURE);
             }
         }
         // xsl:preserve-space
         else if (localName == txXSLTAtoms::preserveSpace) {
-            String elements;
+            nsAutoString elements;
             if (!element->getAttr(txXSLTAtoms::elements,
                                   kNameSpaceID_None, elements)) {
                 //-- add error to ErrorObserver
-                String err("missing required 'elements' attribute for ");
-                err.append("xsl:preserve-space");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("missing required 'elements' attribute for xsl:preserve-space"), NS_ERROR_FAILURE);
             }
             else {
                 aPs->shouldStripSpace(elements, element,
@@ -1577,13 +1520,11 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
         }
         // xsl:strip-space
         else if (localName == txXSLTAtoms::stripSpace) {
-            String elements;
+            nsAutoString elements;
             if (!element->getAttr(txXSLTAtoms::elements,
                                   kNameSpaceID_None, elements)) {
                 //-- add error to ErrorObserver
-                String err("missing required 'elements' attribute for ");
-                err.append("xsl:strip-space");
-                aPs->receiveError(err, NS_ERROR_FAILURE);
+                aPs->receiveError(NS_LITERAL_STRING("missing required 'elements' attribute for xsl:strip-space"), NS_ERROR_FAILURE);
             }
             else {
                 aPs->shouldStripSpace(elements, element,
@@ -1591,7 +1532,6 @@ txXSLTProcessor::processTopLevel(Element* aStylesheet,
                                       currentFrame);
             }
         }
-        TX_IF_RELEASE_ATOM(localName);
         node = node->getNextSibling();
     }
 }
@@ -1606,7 +1546,7 @@ txXSLTProcessor::processVariable(Element* aVariable,
     if (aVariable->hasAttr(txXSLTAtoms::select, kNameSpaceID_None)) {
         Expr* expr = aPs->getExpr(aVariable, ProcessorState::SelectAttr);
         if (!expr)
-            return new StringResult("unable to process variable");
+            return new StringResult(NS_LITERAL_STRING("unable to process variable"));
         return expr->evaluate(aPs->getEvalContext());
     }
     if (aVariable->hasChildNodes()) {
@@ -1679,7 +1619,8 @@ txXSLTProcessor::xslCopy(Element* aAction, ProcessorState* aPs)
         case Node::ELEMENT_NODE:
         {
             Element* element = (Element*)node;
-            String nodeName = element->getNodeName();
+            nsAutoString nodeName;
+            element->getNodeName(nodeName);
             PRInt32 nsID = element->getNamespaceID();
 
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
@@ -1717,7 +1658,7 @@ txXSLTProcessor::xslCopyOf(ExprResult* aExprResult, ProcessorState* aPs)
         }
         default:
         {
-            String value;
+            nsAutoString value;
             aExprResult->stringValue(value);
             NS_ASSERTION(aPs->mResultHandler, "mResultHandler must not be NULL!");
             aPs->mResultHandler->characters(value);

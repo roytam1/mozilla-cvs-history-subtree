@@ -30,6 +30,14 @@
 
 #include "ProcessorState.h"
 
+class txStack;
+
+class txIGlobalParameter : public TxObject
+{
+public:
+    virtual nsresult getValue(ExprResult** aValue) = 0;
+};
+
 /**
  * A class for Processing XSLT Stylesheets
  */
@@ -94,7 +102,7 @@ private:
      *
      * @param aMessage the message to log
      */
-    static void logMessage(const String& aMessage);
+    static void logMessage(const nsAString& aMessage);
 
     /**
      * Instantiate aAction in the result tree.
@@ -117,7 +125,7 @@ private:
      *                        including themselves, even indirectly
      */
     static void processAttributeSets(Element* aElement, ProcessorState* aPs,
-                                     Stack* aRecursionStack = 0);
+                                     txStack* aRecursionStack = 0);
 
     /**
      * Processes the children of the specified element using the given
@@ -142,7 +150,7 @@ private:
     static void processChildrenAsValue(Element* aElement,
                                        ProcessorState* aPs,
                                        MBool aOnlyText,
-                                       String& aValue);
+                                       nsAString& aValue);
 
     /**
      * Invokes the default template for the specified node.
@@ -160,7 +168,7 @@ private:
      * @param aImportFrame current importFrame iterator
      * @param aPs the current ProcessorState
      */
-    static void processInclude(String& aHref,
+    static void processInclude(const nsAString& aHref,
                                txListIterator* aImportFrame,
                                ProcessorState* aPs);
 
