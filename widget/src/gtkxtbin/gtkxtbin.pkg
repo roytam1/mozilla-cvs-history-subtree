@@ -1,2 +1,2 @@
-[gecko xpi-bootstrap]
+[gecko]
 dist/bin/@SHARED_LIBRARY@
