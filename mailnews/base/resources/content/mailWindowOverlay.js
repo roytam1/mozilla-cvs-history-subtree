@@ -1392,30 +1392,27 @@ function IsCompactFolderEnabled()
   return GetFolderAttribute(folderTree, folderResource, "CanCompact") == "true" && isCommandEnabled("cmd_compactFolder");
 }
 
-var gDeleteButton = null;
-var gMarkButton = null;
+var gUnsendButton = null;
 
 function SetUpToolbarButtons(uri)
 {
-    // dump("SetUpToolbarButtons("+uri+")\n");
+    dump("SetUpToolbarButtons("+uri+")\n");
 
     // eventually, we might want to set up the toolbar differently for imap,
     // pop, and news.  for now, just tweak it based on if it is news or not.
-    var forNews = isNewsURI(uri);
-
-    if(!gMarkButton) gMarkButton = document.getElementById("button-mark");
-    if(!gDeleteButton) gDeleteButton = document.getElementById("button-delete");
+    var sentPos = uri.search("imap.mail.aol.com/Sent%20Items");
+    dump("sendPos = " + sentPos + "\n");
+    var unsentFolder = sentPos  != -1;
+    if(!gUnsendButton) gUnsendButton = document.getElementById("button-unsend");
 
     var buttonToHide = null;
     var buttonToShow = null;
 
-    if (forNews) {
-        buttonToHide = gDeleteButton;
-        buttonToShow = gMarkButton;
+    if (unsentFolder) {
+        buttonToShow = gUnsendButton;
     }
     else {
-        buttonToHide = gMarkButton;
-        buttonToShow = gDeleteButton;
+        buttonToHide = gUnsendButton;
     }
 
     if (buttonToHide) {
