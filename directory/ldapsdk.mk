@@ -17,6 +17,7 @@
 # Rights Reserved.
 #
 # Contributor(s): 
+#
 
 #
 # Static macros.  Can be overridden on the command-line.
@@ -48,7 +49,7 @@ endif
 
 
 ifndef MOZ_LDAPVER
-MOZ_LDAPVER = -r LDAPCSDK_40_BRANCH
+MOZ_LDAPVER = -r DIRECTORY_C_SDK_30_BRANCH
 endif
 
 
@@ -62,9 +63,13 @@ ifdef LDAP_MODULE
 endif
 
 build:
-	cd ../nsprpub/config; $(MAKE)
-	$(MAKE) $(TARGETS)
+	cd config; $(MAKE)
+	cd directory; $(MAKE) $(TARGETS)
 
 
-clean:
-	$(MAKE) clean
+
+
+
+
+
+

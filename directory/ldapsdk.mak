@@ -17,6 +17,7 @@
 # Rights Reserved.
 #
 # Contributor(s): 
+#
 
 !if !defined(MOZ_TOP)
 #enable builds from changed top level directories
@@ -39,7 +40,7 @@ HAVE_BRANCH=0
 #//
 
 
-LDAPSDK_BRANCH =-r LDAPSDK_40_BRANCH
+LDAPSDK_BRANCH =-r DIRECTORY_C_SDK_30_BRANCH
 
 !if "$(MOZ_DATE)" != ""
 CVS_BRANCH=-D "$(MOZ_DATE)"
@@ -99,13 +100,8 @@ build_all:              build_ldap
 build_ldap:
     @echo +++ ldapsdk.mak: building ldap
     cd $(MOZ_SRC)\mozilla\directory\c-sdk\ldap\libraries\msdos\winsock
-    @echo +++ ldapsdk.mak: depend step
     $(NMAKE) -f nsldap.mak DEPEND=1
-    @echo +++ ldapsdk.mak: build step
-     $(NMAKE) -f nsldap.mak
-    @echo +++ ldapsdk.mak: library creation
-    $(NMAKE) -f nsldap.mak static 
-    $(NMAKE) -f nsldap.mak dynamic
+    $(NMAKE) -f nsldap.mak
     $(NMAKE) -f nsldap.mak EXPORT=1
 
 #
