@@ -655,7 +655,7 @@ txMozillaXMLOutput::createResultDocument(const String& aName, PRInt32 aNsID,
         }
         else {
             // Don't load scripts, we can't notify the caller when they're loaded.
-            loader->Suspend();
+            loader->SetEnabled(PR_FALSE);
         }
     }
 
