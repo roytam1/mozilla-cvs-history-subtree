@@ -687,6 +687,7 @@ nsSeamonkeyProfileMigrator::CopyPreferences(PRBool aReplace)
   // User MIME Type overrides
   rv |= CopyFile(FILE_NAME_MIMETYPES, FILE_NAME_MIMETYPES);
   rv |= CopyFile(FILE_NAME_PERSONALDICTIONARY, FILE_NAME_PERSONALDICTIONARY);
+  rv |= CopyFile(FILE_NAME_MAILVIEWS, FILE_NAME_MAILVIEWS);
   return rv;
 }
 
