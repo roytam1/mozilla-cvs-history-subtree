@@ -609,6 +609,56 @@ typedef struct {
 // {e161255a-37c3-11d2-bcaa-00c04fd929db}
 static GUID IEPStoreGUID = { 0xe161255a, 0x37c3, 0x11d2, { 0xbc, 0xaa, 0x00, 0xc0, 0x4f, 0xd9, 0x29, 0xdb } };
 
+///////////////////////////////////////////////////////////////////////////////
+// IMPORTING PASSWORDS
+//
+// This is tricky, and requires 2 passes through the subkeys in IE's PStore 
+// section.
+//
+// First, we walk IE's PStore section, looking for subkeys that are prefixed
+// with a URI. As mentioned above, we assume all such subkeys are stored 
+// passwords.
+//
+//   http://foo.com/login.php:StringData   username\0password
+//
+// We can't add this item to the Password Manager just yet though. 
+//
+// The password manager requires the uniquifier of the username field (that is,
+// the value of the "name" or "id" attribute) from the webpage so that it can
+// prefill the value automatically. IE doesn't store this information with
+// the password entry, but it DOES store this information independently as a 
+// separate Form Data entry. 
+//
+// In other words, if you go to foo.com above and log in with "username" and
+// "password" as your details in a form where the username field is uniquified
+// as "un" (<input type="text" name="un">), when you login and elect to have IE 
+// save the password for the site, the following TWO entries are created in IE's
+// PStore section:
+//
+//   http://foo.com/login.php:StringData   username\0password
+//   un:StringData                         username
+//
+// Thus to discover the field name for each login we need to first gather up 
+// all the signons (collecting usernames in the process), then walk the list
+// again, looking ONLY at non-URI prefixed subkeys, and searching for each
+// username as a value in each such subkey's value list. If we have a match, 
+// we assume that the subkey (with its uniquifier prefix) is a login field. 
+//
+// With this information, we call Password Manager's "AddUserFull" method 
+// providing this detail. We don't need to provide the password field name, 
+// we have no means of retrieving this info from IE, and the Password Manager
+// knows to hunt for a password field near the login field if none is specified.
+//
+// IMPLICATIONS:
+//  1) redundant signon entries for non-login forms might be created, but these
+//     should be benign.
+//  2) if the IE user ever clears his Form AutoComplete cache but doesn't clear
+//     his passwords, we will be hosed, as we have no means of locating the
+//     username field. Maybe someday the Password Manager will become 
+//     artificially intelligent and be able to guess where the login fields are,
+//     but I'm not holding my breath. 
+//
+
 nsresult
 nsTridentPreferencesWin::CopyPasswords(PRBool aReplace)
 {
@@ -808,6 +858,23 @@ nsTridentPreferencesWin::GetUserNameAndPass(unsigned char* data, unsigned long l
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// IMPORTING FORM DATA
+//
+// This is a much simpler task as all we need is the field name and that's part
+// of the key used to identify each data set in the PStore. The algorithm here
+// is as follows:
+//
+//   fieldName1:StringData    value1\0value2\0value3\0
+//   fieldName2:StringData    value1\0value2\0value3\0
+//   fieldName3:StringData    value1\0value2\0value3\0
+//
+// Walk each non-URI prefixed key in IE's PStore section, split the value provided
+// into chunks (\0 delimited) and use nsIFormHistory's |addEntry| method to add
+// an entry for the fieldName prefix and each value. 
+//
+// "Quite Easily Done". ;-)
+// 
 nsresult
 nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
 {
@@ -873,170 +940,6 @@ nsTridentPreferencesWin::AddDataToFormHistory(const nsAString& aKey, PRUnichar* 
 
   return NS_OK;
 }
-
-
-#if 0
-nsresult
-nsTridentPreferencesWin::CopyPasswordsAndFormData(PRBool aReplace, IEPStoreData aWhichData) {
-  printf("*** copypasswords\n");
-
-  HRESULT hr;
-  nsVoidArray signonsFound;
-  
-  HMODULE pstoreDLL = ::LoadLibrary("pstorec.dll");
-  if (!pstoreDLL) {
-    // XXXben TODO
-    // Need to figure out what to do here on Windows 98 etc... it may be that the key is universal read
-    // and we can just blunder into the registry and use CryptUnprotect to get the data out. 
-    return NS_OK;
-  }
-
-  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)::GetProcAddress(pstoreDLL, "PStoreCreateInstance");
-  IPStorePtr PStore;
-  hr = PStoreCreateInstance(&PStore, 0, 0, 0);
-
-  for (IEDataEnumPhase phase = eIEDataEnumPhase_HarvestData; 
-        phase != eIEDataEnumPhase_EnumComplete;
-        ++phase) {
-    switch (phase) {
-    case eIEDataEnumPhase_HarvestData:
-      hr = HarvestDataFromPStore(&typeGUID, &subTypeGUID);
-      if (!aPasswordsOrForms)
-        phase = eIEDataEnumPhase_EnumComplete;
-      break;
-    case eIEDataEnumPhase_AddPasswords:
-      break;
-    }
-  }
-}
-
-void
-nsTridentProfileWin::HarvestDataFromPStore()
-{
-            IEnumPStoreItemsPtr enumItems;
-            hr = PStore->EnumItems(0, &typeGUID, &subTypeGUID, 0, &enumItems);
-            if (SUCCEEDED(hr)) {
-              LPWSTR itemName;
-              while (enumItems->raw_Next(1, &itemName, 0) == S_OK) {
-                unsigned long count = 0;
-                unsigned char* data = NULL;
-
-                // We are responsible for freeing |data| using |CoTaskMemFree|!!
-                // But we don't do it here... 
-                hr = PStore->ReadItem(0, &typeGUID, &subTypeGUID, itemName, &count, &data, NULL, 0);
-                if (SUCCEEDED(hr)) {
-                  nsAutoString itemNameString(itemName);
-                  nsAutoString suffix;
-                  itemNameString.Right(suffix, 11);
-                  if (suffix.EqualsIgnoreCase(":StringData")) {
-                    // :StringData contains the saved data
-                    const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
-                    nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
-                    nsCAutoString keyCStr; keyCStr.AssignWithConversion(key);
-                    uri->SetSpec(keyCStr);
-
-                    PRBool validScheme = PR_FALSE;
-                    const char* schemes[] = { "http", "https" };
-                    for (int i = 0; i < 2; ++i) {
-                      uri->SchemeIs(schemes[i], &validScheme);
-                      if (validScheme)
-                        break;
-                    }
-                    if (validScheme) {
-                      // This looks like a URL and could be a password. If it has username and password data, then we'll treat
-                      // it as one and add it to the password manager
-                      unsigned char* username = NULL;
-                      unsigned char* pass = NULL;
-                      GetUserNameAndPass(data, count, &username, &pass);
-
-                      if (aPasswordsOrForms && username && pass) {
-                        // username and pass are pointers into the data buffer allocated by IPStore's ReadItem
-                        // method, and we own that buffer. We don't free it here, since we're going to be using 
-                        // it after the password harvesting stage to locate the username field. Only after the second
-                        // phase is complete do we free the buffer. 
-                        SIGONDATA* d = new SIGNONDATA;
-                        d->user = (PRUnichar*)username;
-                        d->pass = (PRUnichar*)pass;
-                        signonsFound.AppendElement(d);
-                      }
-                      else if (!aPasswordsOrForms) {
-                        // Guess it's a Form History item then, add it to the Form History.
-                        // (Only if we're adding Form Data, instead of passwords)
-                        printf("*** treating entry (%ws)/(%ws) as form history item\n", keyCStr.get(), username);
-                        AddDataToFormHistory(data, count);
-                      }
-                    }
-                    else if (!aPasswordsOrForms) {
-                      // (Only if we're adding Form Data, instead of passwords)
-                      printf("*** entry (%ws)/(%ws) is form history item\n", keyCStr.get(), data);
-                      AddDataToFormHistory(data, count);
-                    }
-                  }
-
-              }
-            }
-          }
-
-          
-          // Looks to be a password, add it to the Password Manager 
-          // (Only if we're adding Passwords, instead of Form Data)
-          nsCOMPtr<nsIPasswordManager> pwmgr(do_GetService("@mozilla.org/passwordmanager;1"));
-          if (pwmgr) {
-            nsDependentString usernameStr((PRUnichar*)username), passStr((PRUnichar*)pass);
-            nsCAutoString host;
-            uri->GetHost(host);
-            pwmgr->AddUser(host, usernameStr, passStr);
-          }
-
-        }
-      }
-    }
-  }
-
-  return NS_OK;
-}
-
-#include "plstr.h"
-
-void
-nsTridentProfileWin::GetIEPStore(GUID* aTypeGUID, GUID* aSubTypeGUID)
-{
-  char typeGUIDString[10], subTypeGUIDString[10];
-
-  // These are smart pointers, we don't need to release. 
-  IEnumPStoreTypesPtr enumTypes;
-  hr = PStore->EnumTypes(0, 0, &enumTypes);
-  if (SUCCEEDED(hr)) {
-    GUID typeGUID;
-    while (enumTypes->raw_Next(1, &typeGUID, 0) == S_OK) {
-      sprintf(typeGUIDString, "%.8x", typeGUID);
-
-      // IE data store lives under {e161255a-37c3-11d2-bcaa-00c04fd929db}
-      if (PL_strcasecmp(typeGUIDString, "e161255a"))
-        continue;
-
-      *aTypeGUID = typeGUID;
-
-      IEnumPStoreTypesPtr enumSubTypes;
-      hr = PStore->EnumSubtypes(0, &typeGUID, 0, &enumSubTypes);
-      if (SUCCEEDED(hr)) {
-        GUID subTypeGUID;
-
-        while (enumSubTypes->raw_Next(1, &subTypeGUID, 0) == S_OK) {
-          sprintf(subTypeGUIDString, "%.8x", subTypeGUID);
-          if (!PL_strcasecmp(subTypeGUIDString, "e161255a")) {
-            *aSubTypeGUID = subTypeGUID;
-
-            // We're done here.
-            return;
-          }
-        }
-      }
-    }
-  }
-}
-
-#endif
 
 nsresult
 nsTridentPreferencesWin::CopyFavorites(PRBool aReplace) {
