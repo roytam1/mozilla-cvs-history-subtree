@@ -224,7 +224,7 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                  "global variable should have either instruction or expression");
 
     // Is this a stylesheet parameter that has a value?
-    if (var->mIsParam) {
+    if (var->mIsParam && mGlobalParams) {
         txIGlobalParameter* param =
             (txIGlobalParameter*)mGlobalParams->get(name);
         if (param) {
