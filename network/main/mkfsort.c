@@ -26,6 +26,7 @@
 #include "mkutils.h"
 #include "mkfsort.h"
 #include "mkgeturl.h"
+#include "netstream.h"
 
 #ifdef PROFILE
 #pragma profile on
@@ -147,14 +148,8 @@ NET_DoFileSort(SortStruct * sort_list)
     NET_DoSort(sort_list, NET_CompareFileEntryInfoStructs);
 }
 
-#define PD_PUTS(s)  \
-do { \
-if(status > -1) \
-	status = (*stream->put_block)(stream, s, PL_strlen(s)); \
-} while(0)
-
 PUBLIC int
-NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path, URL_Struct *URL_s)
+NET_PrintDirectory(SortStruct **sort_base, NET_VoidStreamClass * stream, char * path, URL_Struct *URL_s)
 {
     NET_FileEntryInfo * file_entry;
     char out_buf[3096];
@@ -166,16 +161,20 @@ NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path
 
 	/* emit 300: URL CRLF */
 	PL_strcpy(out_buf, "300: ");
-    PD_PUTS(out_buf);
+    if(status > -1)
+        status = NET_StreamPutBlock(stream, out_buf, PL_strlen(out_buf));
     PR_snprintf(out_buf, sizeof(out_buf), URL_s->address);
-    PD_PUTS(out_buf);
+    if(status > -1)
+        status = NET_StreamPutBlock(stream, out_buf, PL_strlen(out_buf));
 
 	PL_strcpy(out_buf, CRLF);
-    PD_PUTS(out_buf);
+    if(status > -1)
+        status = NET_StreamPutBlock(stream, out_buf, PL_strlen(out_buf));
 
 	/* emit 200: Filename Size Content-Type File-type Last-Modified */
 	PL_strcpy(out_buf, "200: Filename Content-Length Content-Type File-type Last-Modified"CRLF);
-    PD_PUTS(out_buf);
+    if(status > -1)
+        status = NET_StreamPutBlock(stream, out_buf, PL_strlen(out_buf));
 
     for(i=0; status > -1 && (file_entry = (NET_FileEntryInfo *) 
                                 NET_SortRetrieveNumber(*sort_base, i)) != 0;
@@ -196,7 +195,8 @@ NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path
 
 		PR_Free(esc_time);
         
-        PD_PUTS(out_buf);
+        if(status > -1)
+            status = NET_StreamPutBlock(stream, out_buf, PL_strlen(out_buf));
 
         NET_FreeEntryInfoStruct(file_entry);
       }

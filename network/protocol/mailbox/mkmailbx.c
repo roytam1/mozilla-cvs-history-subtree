@@ -91,7 +91,7 @@ typedef struct _MailboxConData {
 	char            *folder_name;
 	char            *msg_id;
     int32			 msgnum;	/* -1 if none specified. */
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 
     XP_Bool  destroy_graph_progress;       /* do we need to destroy 
 											* graph progress? */    
@@ -102,10 +102,9 @@ typedef struct _MailboxConData {
 
 } MailboxConData;
 
-#define COMPLETE_STREAM   (*cd->stream->complete)(cd->stream)
-#define ABORT_STREAM(s)   (*cd->stream->abort)(cd->stream, s)
-#define PUT_STREAM(buf, size)   (*cd->stream->put_block) \
-						  (cd->stream, buf, size)
+#define COMPLETE_STREAM   NET_StreamComplete(cd->stream)
+#define ABORT_STREAM(s)   NET_StreamAbort(cd->stream, s)
+#define PUT_STREAM(buf, size)   NET_StreamPutBlock(cd->stream, buf, size)
 
 /* forward decl */
 PRIVATE int32 net_ProcessMailbox (ActiveEntry *ce);
@@ -367,7 +366,7 @@ net_make_mail_msg_stream (ActiveEntry *ce)
 	  opt->html_closure					  = ce;
 	  ce->URL_s->fe_data = opt;
 	}
-  cd->stream = NET_StreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
+  cd->stream = NET_VoidStreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
   if (!cd->stream)
 	return MK_UNABLE_TO_CONVERT;
   else
@@ -511,8 +510,7 @@ net_ProcessMailbox (ActiveEntry *ce)
 				int32 read_size;
 	
         		cd->pause_for_read  = TRUE;
-				read_size = (*cd->stream->is_write_ready)
-											(cd->stream);
+				read_size = NET_StreamIsWriteReady(cd->stream);
 
 				if (cd->input_buffer == NULL) {
 					cd->input_buffer_size = 10240;
@@ -669,7 +667,8 @@ net_ProcessMailbox (ActiveEntry *ce)
 			if(cd->stream)
 			  {
 				COMPLETE_STREAM;
-				FREE(cd->stream);
+				NET_StreamFree(cd->stream);
+				cd->stream = NULL;
 			  }
             cd->next_state = MAILBOX_FREE;
             break;
@@ -678,7 +677,8 @@ net_ProcessMailbox (ActiveEntry *ce)
 			if(cd->stream)
 			  {
 				ABORT_STREAM(ce->status);
-				FREE(cd->stream);
+				NET_StreamFree(cd->stream);
+				cd->stream = NULL;
 			  }
             cd->next_state = MAILBOX_FREE;
 

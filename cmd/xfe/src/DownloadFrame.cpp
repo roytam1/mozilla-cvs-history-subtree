@@ -41,6 +41,7 @@
 
 #include "xpgetstr.h"
 #include "felocale.h"
+#include "cstream.h"
 
 extern int XFE_SAVE_AS_TYPE_ENCODING;
 extern int XFE_SAVE_AS_TYPE;

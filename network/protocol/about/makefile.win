@@ -69,10 +69,14 @@ LINCS= \
     -I$(XPDIST)\public\java	\
     -I$(XPDIST)\public\pref	\
     -I$(XPDIST)\public\js	\
+    -I$(XPDIST)\public\lay	\
+    -I$(XPDIST)\public\style	\
+    -I$(XPDIST)\public\layer	\
     -I$(XPDIST)\public\security	\
     -I$(XPDIST)\public\netcache	\
     -I$(XPDIST)\public\httpurl	\
     -I$(XPDIST)\public\jtools   \
+    -I$(XPDIST)\public\cstream  \
     -I$(XPDIST)\public\network 
 #!endif
 

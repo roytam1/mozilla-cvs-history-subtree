@@ -1632,7 +1632,7 @@ out:
  * on decoder's JS context.
  */
 JSBool
-LM_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
+LM_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
                     URL_Struct *url_struct, JSBool free_stream_on_close)
 {
     MochaDecoder *decoder = LM_GetMochaDecoder(context);
@@ -1692,7 +1692,7 @@ LM_GetActiveLayer(MWContext * context)
 
 JSBool
 lm_SetInputStream(JSContext *cx, MochaDecoder *decoder,
-                  NET_StreamClass *stream, URL_Struct *url_struct,
+                  NET_VoidStreamClass *stream, URL_Struct *url_struct,
                   JSBool free_stream_on_close)
 {
     const char *origin_url;
@@ -1757,10 +1757,10 @@ lm_SetInputStream(JSContext *cx, MochaDecoder *decoder,
     return JS_TRUE;
 }
 
-NET_StreamClass *
+NET_VoidStreamClass *
 lm_ClearDecoderStream(MochaDecoder *decoder, JSBool fromDiscard)
 {
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     URL_Struct *url_struct;
 
     stream = decoder->stream;
@@ -1778,9 +1778,9 @@ lm_ClearDecoderStream(MochaDecoder *decoder, JSBool fromDiscard)
             if (!fromDiscard) {
                 if (decoder->window_context && 
                     XP_DOCID(decoder->window_context) != -1)
-                    ET_moz_CallFunction( (ETVoidPtrFunc) stream->complete, (void *)stream);
+                    ET_moz_CallFunction( (ETVoidPtrFunc) NET_StreamComplete, (void *)stream);
                 if (decoder->free_stream_on_close)
-                    XP_DELETE(stream);
+                    NET_StreamFree(stream);
             }
             stream = NULL;
         }

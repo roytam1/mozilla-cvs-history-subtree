@@ -60,7 +60,7 @@ CSRCS		= autokr.c \
 		  katakana.c \
 		  $(NULL)
 
-REQUIRES	= i18n dbm nspr img util layer pref js
+REQUIRES	= i18n dbm nspr img util layer pref js cstream network
 
 CSRCS		+= doc_ccc.c fe_ccc.c intlcomp.c mime2fun.c
 

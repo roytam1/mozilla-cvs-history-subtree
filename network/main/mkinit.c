@@ -28,7 +28,7 @@
 
 #include "netutils.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkformat.h"
 #include "net.h"
 

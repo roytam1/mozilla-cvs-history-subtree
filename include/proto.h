@@ -252,7 +252,6 @@ extern Bool LO_LocateNamedAnchor(MWContext *context, URL_Struct *url_struct,
 extern int32 LO_EmptyRecyclingBin(MWContext *context);
 extern LO_AnchorData *LO_MapXYToAreaAnchor(MWContext *context,
 	LO_ImageStruct *image, int32 x, int32 y);
-extern intn LO_DocumentInfo(MWContext *context, NET_StreamClass *stream);
 extern intn LO_ChangeFontSize(intn size, char *size_str);
 extern double LO_GetScalingFactor(int32 scaler);
 extern int16 LO_WindowWidthInFixedChars(MWContext *context);

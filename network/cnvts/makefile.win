@@ -110,6 +110,7 @@ LINCS= \
     -I$(PUBLIC)\network \
     -I$(PUBLIC)\mimetype \
     -I$(PUBLIC)\ldap \
+    -I$(PUBLIC)\cstream 	\
     $(NULL)
 #!endif
 

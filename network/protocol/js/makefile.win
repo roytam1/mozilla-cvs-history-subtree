@@ -73,6 +73,7 @@ LINCS= \
     -I$(XPDIST)\public\lay	\
     -I$(XPDIST)\public\parse	\
     -I$(XPDIST)\public\style	\
+    -I$(XPDIST)\public\cstream	\
     -I$(XPDIST)\public\network 
 #!endif
 

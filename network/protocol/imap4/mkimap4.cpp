@@ -141,7 +141,7 @@ typedef struct _ImapConData {
 	uint32					 offLineMsgFlags;
 	uint32					 offLineMsgKey;
 	
-	NET_StreamClass 		 *offlineDisplayStream;
+	NET_VoidStreamClass 		 *offlineDisplayStream;
 } ImapConData;
 
 typedef struct _GenericInfo {
@@ -622,7 +622,7 @@ MSG_Pane *IMAP_GetActiveEntryPane(ImapActiveEntry * imap_entry)
 	return returnPane;
 }
 
-NET_StreamClass *IMAP_CreateDisplayStream(ImapActiveEntry * imap_entry, XP_Bool clearCacheBit, uint32 size, const char *content_type)
+NET_VoidStreamClass *IMAP_CreateDisplayStream(ImapActiveEntry * imap_entry, XP_Bool clearCacheBit, uint32 size, const char *content_type)
 {
 	ActiveEntry * ce = (ActiveEntry *) imap_entry;
 	
@@ -636,7 +636,7 @@ NET_StreamClass *IMAP_CreateDisplayStream(ImapActiveEntry * imap_entry, XP_Bool 
 
 	ce->URL_s->content_length = size;
 	StrAllocCopy(ce->URL_s->content_type, content_type);
-	NET_StreamClass *displayStream = NET_StreamBuilder(ce->format_out, ce->URL_s, ce->window_id);   
+	NET_VoidStreamClass *displayStream = NET_VoidStreamBuilder(ce->format_out, ce->URL_s, ce->window_id);   
 	
 	return displayStream;
 }
@@ -707,7 +707,7 @@ void SetupMsgWriteStream(void *blockingConnectionVoid, void *StreamInfoVoid)
     ActiveEntry *ce = imapConnection->GetActiveEntry();
 	StreamInfo *si = (StreamInfo *)StreamInfoVoid;
 	
-    NET_StreamClass *outputStream = NULL;
+    NET_VoidStreamClass *outputStream = NULL;
     
     TIMAPUrl currentUrl(ce->URL_s->address, ce->URL_s->internal_url);
     if ((currentUrl.GetIMAPurlType() == TIMAPUrl::kOnlineToOfflineCopy) || 
@@ -728,7 +728,7 @@ void SetupMsgWriteStream(void *blockingConnectionVoid, void *StreamInfoVoid)
 		ce->URL_s->content_length = si->size;
 	    StrAllocCopy(ce->URL_s->content_type, si->content_type);
         outputStream = 
-                     NET_StreamBuilder(ce->format_out, ce->URL_s, ce->window_id);       
+                     NET_VoidStreamBuilder(ce->format_out, ce->URL_s, ce->window_id);       
     }
     
     if (outputStream)
@@ -915,9 +915,9 @@ void ParseAdoptedMsgLine(void *blockingConnectionVoid,
     ActiveEntry *ce = imapConnection->GetActiveEntry();
     
     msg_line_info *downloadLineDontDelete = (msg_line_info *) adoptedmsg_line_info_Void;
-    NET_StreamClass *outputStream = imapConnection->GetOutputStream();
+    NET_VoidStreamClass *outputStream = imapConnection->GetOutputStream();
     
-    unsigned int streamBytesMax = (*outputStream->is_write_ready) (outputStream);
+    unsigned int streamBytesMax = NET_StreamIsWriteReady(outputStream);
     char *stringToPut = downloadLineDontDelete->adoptedMessageLine;
     XP_Bool allocatedString = FALSE;
     
@@ -970,13 +970,13 @@ void ParseAdoptedMsgLine(void *blockingConnectionVoid,
 					// the 3rd parameter as the length of the block,
 					// but since we are always sending a null terminated
 					// string, I am able to sent the uid instead
-				bytesPut = (*outputStream->put_block) (outputStream,
+				bytesPut = NET_StreamPutBlock(outputStream,
 											stringToPut,
 											downloadLineDontDelete->uidOfMessage);
 			}
 			else    // this is a download for display
 			{
-				bytesPut = (*outputStream->put_block) (outputStream,
+				bytesPut = NET_StreamPutBlock(outputStream,
 											stringToPut,
 											XP_STRLEN(stringToPut));
 			}
@@ -1008,14 +1008,15 @@ void NormalEndMsgWriteStream(void *blockingConnectionVoid, void *)
     TNavigatorImapConnection *imapConnection = 
         (TNavigatorImapConnection *) blockingConnectionVoid;
     
-    NET_StreamClass *outputStream = imapConnection->GetOutputStream();
+    NET_VoidStreamClass *outputStream = imapConnection->GetOutputStream();
     if (outputStream)
 	{
 		if (imapConnection->GetPseudoInterrupted())
-			(*outputStream->abort)(outputStream, -1);
+			NET_StreamAbort(outputStream, -1);
 		else
-    		(*outputStream->complete) (outputStream);
-		outputStream->data_object = NULL;
+    		NET_StreamComplete(outputStream);
+		NET_StreamFree(outputStream);
+		outputStream = NULL;
 	}
     
     ActiveEntry *ce = imapConnection->GetActiveEntry();
@@ -1040,11 +1041,12 @@ void AbortMsgWriteStream(void *blockingConnectionVoid, void *)
     TNavigatorImapConnection *imapConnection = 
         (TNavigatorImapConnection *) blockingConnectionVoid;
     
-    NET_StreamClass *outputStream = imapConnection->GetOutputStream();
-    if (outputStream && outputStream->data_object)
+    NET_VoidStreamClass *outputStream = imapConnection->GetOutputStream();
+    if (outputStream)
 	{
-    	(*outputStream->abort) (outputStream, -1);
-		outputStream->data_object = NULL;
+    	NET_StreamAbort(outputStream, -1);
+		NET_StreamFree(outputStream);
+		outputStream = NULL;
 	}
     
     ActiveEntry *ce = imapConnection->GetActiveEntry();
@@ -5798,16 +5800,16 @@ void TNavigatorImapConnection::Logout()
     SetIOSocket(0);
 }
 
-void TNavigatorImapConnection::SetOutputStream(NET_StreamClass *outputStream)
+void TNavigatorImapConnection::SetOutputStream(NET_VoidStreamClass *outputStream)
 {
     PR_EnterMonitor(GetDataMemberMonitor());
     fOutputStream = outputStream;
     PR_ExitMonitor(GetDataMemberMonitor());
 }
 
-NET_StreamClass *TNavigatorImapConnection::GetOutputStream()
+NET_VoidStreamClass *TNavigatorImapConnection::GetOutputStream()
 {
-    NET_StreamClass *returnStream;
+    NET_VoidStreamClass *returnStream;
     PR_EnterMonitor(GetDataMemberMonitor());
     returnStream = fOutputStream;
     PR_ExitMonitor(GetDataMemberMonitor());
@@ -9212,9 +9214,9 @@ void MOZTHREAD_TunnelOutStream(void *blockingConnectionVoid, void *adoptedmsg_li
     ActiveEntry *ce = imapConnection->GetActiveEntry();
     
     msg_line_info *downloadLineDontDelete = (msg_line_info *) adoptedmsg_line_info_Void;
-    NET_StreamClass *outputStream = imapConnection->GetOutputStream();
+    NET_VoidStreamClass *outputStream = imapConnection->GetOutputStream();
     
-    unsigned int streamBytesMax = (*outputStream->is_write_ready) (outputStream);
+    unsigned int streamBytesMax = NET_StreamIsWriteReady(outputStream);
     char *stringToPut = downloadLineDontDelete->adoptedMessageLine;
     XP_Bool allocatedString = FALSE;
     
@@ -9267,13 +9269,13 @@ void MOZTHREAD_TunnelOutStream(void *blockingConnectionVoid, void *adoptedmsg_li
 					// the 3rd parameter as the length of the block,
 					// but since we are always sending a null terminated
 					// string, I am able to sent the uid instead
-				bytesPut = (*outputStream->put_block) (outputStream,
+				bytesPut = NET_StreamPutBlock(outputStream,
 											stringToPut,
 											downloadLineDontDelete->uidOfMessage);
 			}
 			else    // this is a download for display
 			{
-				bytesPut = (*outputStream->put_block) (outputStream,
+				bytesPut = NET_StreamPutBlock(outputStream,
 											stringToPut,
 											XP_STRLEN(stringToPut));
 			}

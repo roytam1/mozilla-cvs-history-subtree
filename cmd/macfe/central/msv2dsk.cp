@@ -42,6 +42,7 @@
 #include "glhist.h"
 #include "xlate.h"
 #include "prefapi.h"
+#include "cstream.h"
 
 #include "BufferStream.h"
 #include "PascalString.h"

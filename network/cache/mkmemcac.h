@@ -44,12 +44,6 @@ NET_RemoveURLFromMemCache(URL_Struct *URL_s);
 extern void
 NET_ChangeMemCacheLock(URL_Struct *URL_s, PRBool set);
 
-/* Create a wysiwyg cache converter to a copy of the current entry for URL_s.
- */
-extern NET_StreamClass *
-net_CloneWysiwygMemCacheEntry(MWContext *window_id, URL_Struct *URL_s,
-			      uint32 nbytes, const char * wysiwyg_url,
-			      const char * base_href);
 /* return the first cache object in memory */
 extern net_CacheObject * 
 NET_FirstMemCacheObject(XP_List* list_ptr);

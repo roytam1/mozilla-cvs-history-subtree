@@ -34,6 +34,7 @@
 #include "shist.h"
 #include "fe_proto.h"
 #include "lo_ele.h"
+#include "netstream.h"
 
 NSPR_BEGIN_EXTERN_C
 
@@ -271,7 +272,7 @@ ET_SendEvent(MWContext * pContext, LO_Element *pElement, JSEvent *pEvent,
  */
 extern void
 ET_SendLoadEvent(MWContext * pContext, int32 type, ETVoidPtrFunc fnClosure,
-		 NET_StreamClass *stream, int32 layer_id, Bool resize_reload);
+		 NET_VoidStreamClass *stream, int32 layer_id, Bool resize_reload);
 
 /*
  * Tell the backend about a new image event.  Async.  No closure
@@ -358,10 +359,10 @@ ET_SetActiveLayer(MWContext * pContext, int32 layer_id);
 ** Tell mocha where to send its output
 */
 extern void
-ET_ClearDecoderStream(MWContext * context, NET_StreamClass * old_stream);
+ET_ClearDecoderStream(MWContext * context, NET_VoidStreamClass * old_stream);
 
 extern void
-ET_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
+ET_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
 	            URL_Struct *url_struct, JSBool free_stream_on_close);
 
 /*
@@ -584,14 +585,14 @@ ET_net_GetCookie(MWContext* context, int32 doc_id);
 extern char *
 ET_net_SetCookieString(MWContext* context, char * szCookie, int32 doc_id);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 ET_net_CacheConverter(FO_Present_Types format, void * obj,
                       URL_Struct *pUrl, MWContext * pContext);
 
 extern void
 ET_net_FindURLInCache(URL_Struct * pUrl, MWContext * pContext);
 
-extern NET_StreamClass	*
+extern NET_VoidStreamClass	*
 ET_net_StreamBuilder(FO_Present_Types format, URL_Struct *pUrl, 
 		     MWContext * pContext);
 
@@ -610,7 +611,7 @@ ET_fe_SubmitInputElement(MWContext * pContext, LO_Element * ele);
  *   late for the intended document
  */
 extern int
-ET_lo_DoDocWrite(JSContext *cx, MWContext * context, NET_StreamClass * stream, 
+ET_lo_DoDocWrite(JSContext *cx, MWContext * context, NET_VoidStreamClass * stream, 
                  char * str, size_t len, int32 doc_id);
 
 
@@ -687,12 +688,12 @@ ET_moz_CallAsyncAndSubEventLoop(ETVoidPtrFunc fn, void *data,
 				MWContext *context);
 
 extern void
-ET_moz_Abort(MKStreamAbortFunc fn, void * data, int status);
+ET_moz_Abort(NET_VoidStreamClass *stream, int status);
 
 extern void
 ET_moz_SetMochaWriteStream(MochaDecoder * decoder);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 ET_moz_DocCacheConverter(MWContext * context, URL_Struct * pUrl, 
 			 char * wysiwyg_url, int32 layer_id);
 

@@ -25,6 +25,7 @@
 #include "fe_proto.h"
 #include "seccomon.h"
 #include "net.h"
+#include "netstream.h"
 #include "htmldlgs.h"
 #include "xpgetstr.h"
 #include "shist.h"
@@ -95,8 +96,9 @@ typedef struct {
 typedef struct _htmlDialogStream {
     PRCList queuedBuffers;
     PRArenaPool *arena;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     URL_Struct *url;
+    MWContext *context;
     PRBool buffering;
     char *curbuf;
     unsigned int curlen;
@@ -140,8 +142,7 @@ writeOrBuffer(HTMLDialogStream *stream)
     int ret;
     
     if ( ! stream->buffering ) {
-	cnt = (*(stream->stream)->is_write_ready)
-	    (stream->stream);
+	cnt = NET_StreamIsWriteReady(stream->stream);
 	/* if stream is clogged, then start buffering */
 	if ( cnt < stream->curlen ) {
 	    /* we need to copy the current contents of the reusable
@@ -171,8 +172,7 @@ writeOrBuffer(HTMLDialogStream *stream)
 	node->data = stream->curbuf;
 	node->len = stream->curlen;
     } else {
-	ret = (*(stream->stream)->put_block)
-	    (stream->stream, stream->curbuf, stream->curlen);
+	ret = NET_StreamPutBlock(stream->stream, stream->curbuf, stream->curlen);
 	if ( ret < 0 ) {
 	    goto loser;
 	}
@@ -204,8 +204,7 @@ putStringToStream(HTMLDialogStream *stream, char *string, PRBool quote)
 	stream->curbuf = destptr = (char *)PORT_ArenaAlloc(stream->arena,
 							   maxsize);
     } else {
-	maxsize = (*(stream->stream)->is_write_ready)
-	    (stream->stream);
+	maxsize = NET_StreamIsWriteReady(stream->stream);
 	
 	if ( maxsize == 0 ) {
 	    /* we are switching to buffering now */
@@ -341,7 +340,7 @@ XP_PutDialogStringsToStream(HTMLDialogStream *stream, XPDialogStrings *strs,
     SECStatus rv;
     char *src, *token, *junk;
     int argnum;
-    void *proto_win = stream->stream->window_id;    
+    void *proto_win = stream->context;
     src = strs->contents;
     
     while ((token = PORT_Strchr(src, '%'))) {
@@ -944,7 +943,8 @@ freeHTMLDialogStream(HTMLDialogStream *stream)
 {
     if ( stream != NULL ) {
 	if ( stream->stream != NULL ) {
-	    PORT_Free(stream->stream);
+	    NET_StreamFree(stream->stream);
+	    stream->stream = NULL;
 	}
     
 	if ( stream->url != NULL ) {
@@ -990,7 +990,8 @@ newHTMLDialogStream(void *cx)
     StrAllocCopy(stream->url->content_type, TEXT_HTML);
     
     /* make a netlib stream to display in the window */
-    stream->stream = NET_StreamBuilder(FO_PRESENT, stream->url, cx);
+    stream->stream = NET_VoidStreamBuilder(FO_PRESENT, stream->url, cx);
+    stream->context = cx;
     if ( stream->stream == NULL ) {
 	goto loser;
     }
@@ -1018,14 +1019,14 @@ emptyQueues(void *arg)
 	/* get the head node */
 	node = (bufferNode *)PR_LIST_HEAD(&stream->queuedBuffers);
 
-	cnt = (*(stream->stream)->is_write_ready)(stream->stream);
+	cnt = NET_StreamIsWriteReady(stream->stream);
 
 	if ( cnt < node->len ) {
 	    /* layout hasn't unclogged yet */
 	    break;
 	}
 	
-	ret = (*(stream->stream)->put_block)(stream->stream,
+	ret = NET_StreamPutBlock(stream->stream,
 					     node->data, node->len);
 	if ( ret < 0 ) {
 	    goto loser;
@@ -1036,7 +1037,7 @@ emptyQueues(void *arg)
     }
     
     if ( PR_CLIST_IS_EMPTY(&stream->queuedBuffers) ) {
-	(*stream->stream->complete) (stream->stream);
+	NET_StreamComplete (stream->stream);
 	freeHTMLDialogStream(stream);
     } else {
 	FE_SetTimeout(emptyQueues, (void *)stream, 100);
@@ -1197,7 +1198,7 @@ xp_DrawHTMLDialog(void *cx, XPDialogInfo *dialogInfo,
 
     if ( PR_CLIST_IS_EMPTY(&stream->queuedBuffers) ) {
 	/* complete the stream */
-	(*stream->stream->complete) (stream->stream);
+	NET_StreamComplete(stream->stream);
 
 	freeHTMLDialogStream(stream);
 	return(SECSuccess);
@@ -1212,7 +1213,7 @@ loser:
     /* abort the stream */
     if ( stream != NULL ) {
 	if ( stream->stream != NULL ) {
-	    (*stream->stream->abort)(stream->stream, rv);
+	    NET_StreamAbort(stream->stream, rv);
 	}
     }
 
@@ -1226,7 +1227,6 @@ XP_MakeHTMLDialogWithChrome(void *proto_win, XPDialogInfo *dialogInfo,
 			    int titlenum, XPDialogStrings *strings,
 			    Chrome *chrome, void *arg, PRBool utf8CharSet)
 {
-    void *cx;
     SECStatus rv;
     XPDialogState *state;
     PRArenaPool *arena = NULL;
@@ -1358,7 +1358,7 @@ XP_RedrawRawHTMLDialog(XPDialogState *state,
     /* complete the stream */
     if ( PR_CLIST_IS_EMPTY(&stream->queuedBuffers) ) {
 	/* complete the stream */
-	(*stream->stream->complete) (stream->stream);
+	NET_StreamComplete(stream->stream);
 
 	freeHTMLDialogStream(stream);
 	return((int)SECSuccess);
@@ -1373,7 +1373,7 @@ loser:
     /* abort the stream */
     if ( stream != NULL ) {
 	if ( stream->stream != NULL ) {
-	    (*stream->stream->abort)(stream->stream, rv);
+	    NET_StreamAbort(stream->stream, rv);
 	}
     }
 
@@ -1582,7 +1582,7 @@ displayPanelCB(void *arg)
     /* complete the stream */
     if ( PR_CLIST_IS_EMPTY(&stream->queuedBuffers) ) {
 	/* complete the stream */
-	(*stream->stream->complete) (stream->stream);
+	NET_StreamComplete(stream->stream);
 
 	freeHTMLDialogStream(stream);
 	return;
@@ -1596,7 +1596,7 @@ loser:
     /* abort the stream */
     if ( stream != NULL ) {
 	if ( stream->stream != NULL ) {
-	    (*stream->stream->abort)(stream->stream, rv);
+	    NET_StreamAbort(stream->stream, rv);
 	}
     }
 

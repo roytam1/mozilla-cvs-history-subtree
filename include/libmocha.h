@@ -29,6 +29,7 @@
 #include "plhash.h"
 #include "prthread.h"
 #include "jsapi.h"
+#include "netstream.h"
 
 /* enable JavaScript Debugger support */
 #if defined (_WIN32) || defined(XP_UNIX) || defined(powerc) || defined(__powerc) || defined(XP_OS2)
@@ -53,7 +54,7 @@ typedef struct MochaDecoder {
     JSContext	    *js_context;
     MWContext       *window_context;
     JSObject	    *window_object;
-    NET_StreamClass *stream;
+    NET_VoidStreamClass *stream;
     int32           stream_owner;   /* id of layer that's loading the stream */
     URL_Struct      *url_struct;
     JSTimeout	    *timeouts;
@@ -300,7 +301,7 @@ LM_DropSavedWindow(MWContext *context, void *window);
  *   associated with the given context
  */
 extern JSBool
-LM_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
+LM_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
 		            URL_Struct *url_struct, JSBool free_stream_on_close);
 
 /*
@@ -308,7 +309,7 @@ LM_SetDecoderStream(MWContext * context, NET_StreamClass *stream,
  * script is running on mc, the document is being generated into decoder's
  * window, and url_struct tells about the generator.
  */
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 LM_WysiwygCacheConverter(MWContext *context, URL_Struct *url_struct,
 			 const char * wysiwyg_url, const char * base_href);
 
@@ -555,7 +556,7 @@ LM_RegisterPrincipals(MochaDecoder *decoder, JSPrincipals *principals,
  */
 #ifdef JSDEBUGGER 
 
-extern NET_StreamClass*
+extern NET_VoidStreamClass*
 LM_StreamBuilder( int         format_out,
                   void        *data_obj,
                   URL_Struct  *URL_s,

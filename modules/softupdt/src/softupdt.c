@@ -23,7 +23,6 @@
 #include "libevent.h"
 #include "prefapi.h"
 #include "prprf.h"
-#include "mkutils.h"
 #include "fe_proto.h"
 #include "prthread.h"
 #include "xpgetstr.h"

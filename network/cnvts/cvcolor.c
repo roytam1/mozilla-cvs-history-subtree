@@ -23,6 +23,7 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
+#include "cstream.h"
 
 #ifdef MOZILLA_CLIENT
 

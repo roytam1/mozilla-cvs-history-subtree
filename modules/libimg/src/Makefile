@@ -41,7 +41,7 @@ CSRCS		= color.c \
 
 EXPORTS		= PIMGCB.h PPSIMGCB.h
 
-REQUIRES	= jtools java zlib nspr dbm jpeg util img png layer js
+REQUIRES	= jtools java zlib nspr dbm jpeg util img png layer js cstream
 
 LOCAL_INCLUDES	= -I../png -I. -I$(DEPTH)/dist/public/zlib
 

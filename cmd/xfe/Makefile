@@ -106,7 +106,12 @@ REQUIRES	=\
 		  java \
 		  ldap \
 		  xfeicons \
+<<<<<<< Makefile
 		  progress \
+=======
+		  cstream \
+		  network \
+>>>>>>> 3.18.4.2
 		  $(NULL)
 
 CSRCS		= \
@@ -240,6 +245,7 @@ BASIC_LIBS	= \
 		  $(DIST)/lib/libnetcache.a	\
 		  $(DIST)/lib/libnetcnvts.a	\
 		  $(DIST)/lib/libnetwork.a	\
+		  $(DIST)/lib/libcstream.a	\
 		  $(DIST)/lib/libnetutil.a      \
 		  $(DIST)/lib/libnetcnvts.a	\
 		  $(DIST)/lib/libcnetinit.a	\

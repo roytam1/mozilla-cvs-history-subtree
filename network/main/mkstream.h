@@ -18,55 +18,6 @@
 #ifndef MKSTREAM_H
 #define MKSTREAM_H
 
-/* prints out all converter mime types during successive calls
- * call with first equal true to reset to the beginning
- * and with first equal false to print out the next
- * converter in the list.  Returns zero when all converters
- * are printed out.
- */
-extern char *
-XP_ListNextPresentationType(PRBool first);
+/* empty */
 
-/* prints out all encoding mime types during successive calls
- * call with first equal true to reset to the beginning
- * and with first equal false to print out the next
- * converter in the list.  Returns zero when all converters
- * are printed out.
- */
-extern char *
-XP_ListNextEncodingType(PRBool first);
-
-/* register a mime type and a command to be executed
- */
-extern void
-NET_RegisterExternalViewerCommand(char * format_in, 
-								  char * system_command, 
-								  unsigned int stream_block_size);
-
-/* removes all external viewer commands
- */
-extern void NET_ClearExternalViewerConverters(void);
-
-MODULE_PRIVATE void
-NET_RegisterExternalConverterCommand(char * format_in,
-                                     FO_Present_Types format_out,
-                                     char * system_command,
-                                     char * new_format);
-
-#ifdef DEBUG 
-extern void NET_DisplayStreamInfoAsHTML(ActiveEntry *cur_entry);
-#endif /* DEBUG */
-
-void
-NET_RegisterAllEncodingConverters (char *format_in,
-								   FO_Present_Types format_out);
-
-/* register an encoding converter that is used for everything,
- * no exeptions
- * this is necessary for chunked encoding
- */
-void
-NET_RegisterUniversalEncodingConverter(char *encoding_in,
-                              void          * data_obj,
-                              NET_Converter * converter_func);
 #endif  /* MKSTREAM.h */

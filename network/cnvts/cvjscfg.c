@@ -19,11 +19,13 @@
 #include "cvjscfg.h"
 #include "cvsimple.h"
 #include "prefapi.h"
+#include "cstream.h"
 #include "mkutils.h"
 #include "netutils.h"
 #include "xpgetstr.h"
 #include "jsapi.h"
 #include "fe_proto.h"
+
 
 static XP_Bool                  m_GettingConfigFile = FALSE;
 static XP_Bool                  m_FindProxyInJSC = FALSE;

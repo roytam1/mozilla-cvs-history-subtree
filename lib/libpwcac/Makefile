@@ -22,6 +22,6 @@ LIBRARY_NAME	= pwcac
 
 CSRCS		= pwcacapi.c
 
-REQUIRES	= js nspr dbm img layer util pref security
+REQUIRES	= js nspr dbm img layer util pref security network
 
 include $(DEPTH)/config/rules.mk

@@ -25,6 +25,7 @@
 #include "prlog.h"
 #include "mcom_db.h"
 #include "pwcacapi.h"
+#include "netstream.h"
 
 #ifdef XP_MAC
 #include <errno.h>
@@ -274,7 +275,7 @@ PC_DisplayPasswordCacheAsHTML(URL_Struct *URL_s,
 {
 	DBT key, data;
 	int status = 1;
-	NET_StreamClass *stream; 
+	NET_VoidStreamClass *stream; 
 	char tmp_buffer[512];
 	char type_buffer[256];
 	char url_buffer[512];
@@ -283,7 +284,7 @@ PC_DisplayPasswordCacheAsHTML(URL_Struct *URL_s,
 
 	format_out = CLEAR_CACHE_BIT(format_out);
 	StrAllocCopy(URL_s->content_type, TEXT_HTML);
-	stream = NET_StreamBuilder(format_out,
+	stream = NET_VoidStreamBuilder(format_out,
 							   URL_s,
 							   context);
 
@@ -297,7 +298,7 @@ PC_DisplayPasswordCacheAsHTML(URL_Struct *URL_s,
      * and handle errors
      */
 #define PUT_PART(part)                                                  \
-status = (*stream->put_block)(stream,                      \
+status = NET_StreamPutBlock(stream,                      \
                                         part ? part : "Unknown",        \
                                         part ? XP_STRLEN(part) : 7);    \
 if(status < 0)                                                          \
@@ -344,9 +345,11 @@ if(status < 0)                                                          \
     
 END:
     if(status < 0)
-        (*stream->abort)(stream, status);
+        NET_StreamAbort(stream, status);
     else
-        (*stream->complete)(stream);
+        NET_StreamComplete(stream);
+
+    NET_StreamFree(stream);
 
     return status;
 }

@@ -414,6 +414,7 @@ LINK_LIBS= \
     $(DIST)\lib\netcnvts.lib \
     $(DIST)\lib\mimetype.lib \
     $(DIST)\lib\netutil.lib \
+    $(DIST)\lib\cstream.lib \
     $(DIST)\lib\network.lib \
     $(DIST)\lib\cnetinit.lib \
 !ifdef MOZ_MAIL_NEWS
@@ -590,6 +591,7 @@ CDEPENDINCLUDES= \
 
 CDISTINCLUDES1= \
 !if "$(MOZ_BITS)" == "32"
+    /I$(XPDIST)\public\ \
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
     /I$(XPDIST)\public\java \
@@ -619,7 +621,8 @@ CDISTINCLUDES2= \
     /I$(XPDIST)\public\netcache \
     /I$(XPDIST)\public\netlib \
     /I$(XPDIST)\public\network \
-    /I$(XPDIST)\public\netcnvts\
+    /I$(XPDIST)\public\netcnvts \
+    /I$(XPDIST)\public\cstream \
     /I$(XPDIST)\public\util
 !endif
 
@@ -653,9 +656,9 @@ CDISTINCLUDES3= \
     /I$(XPDIST)\public\img \
     /I$(XPDIST)\public\jtools \
 !endif
-#Add additional include directories to CDISTINCLUDES2
+#Add additional include directories to CDISTINCLUDES4
 
-CDISTINCLUDES2= \
+CDISTINCLUDES4= \
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
 !ifndef NO_SECURITY
@@ -666,7 +669,7 @@ CDISTINCLUDES2= \
 !endif
     /I$(XPDIST)\public\util
 
-CDISTINCLUDES = $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDISTINCLUDES3)
+CDISTINCLUDES = $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDISTINCLUDES3) $(CDISTINCLUDES4)
 
 RCDISTINCLUDES=$(DIST)\include;$(XPDIST)\public\security
 

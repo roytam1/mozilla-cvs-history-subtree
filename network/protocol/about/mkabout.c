@@ -16,9 +16,12 @@
 #include "il_strm.h"
 #include "cookies.h"
 #include "httpauth.h"
-#include "mkstream.h"
+#include "netstream.h"
+#include "cstream.h"
+#include "strmutil.h"
 #include "glhist.h"
 #include "shist.h"
+#include "layout.h"
 #include "prmem.h"
 #include "plstr.h"
 
@@ -231,7 +234,7 @@ int
 net_PrintContextInfo(ActiveEntry *cur_entry, MWContext *context)
 {
 	History_entry *his;
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 	char buf[64];
 	char *tmp;
 
@@ -243,28 +246,29 @@ net_PrintContextInfo(ActiveEntry *cur_entry, MWContext *context)
    
 	cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
-    stream = NET_StreamBuilder(cur_entry->format_out,
+    stream = NET_VoidStreamBuilder(cur_entry->format_out,
 				   cur_entry->URL_s, cur_entry->window_id);
 
     if(!stream)
 	return(MK_UNABLE_TO_CONVERT);
 
     PL_strcpy(buf, "<FONT SIZE=+2><b>");
-	(*stream->put_block)(stream, buf, PL_strlen(buf));
+    NET_StreamPutBlock(stream, buf, PL_strlen(buf));
 
     if(his && his->title)
 		tmp = PL_strdup(his->title);
 	else
 		tmp = PL_strdup(XP_GetString(XP_UNTITLED_DOCUMENT));
 
-	(*stream->put_block)(stream, tmp, PL_strlen(tmp));
+    NET_StreamPutBlock(stream, tmp, PL_strlen(tmp));
 
     PL_strcpy(buf, XP_GetString(XP_HAS_THE_FOLLOWING_STRUCT));
-	(*stream->put_block)(stream, buf, PL_strlen(buf));
+    NET_StreamPutBlock(stream, buf, PL_strlen(buf));
 
 	LO_DocumentInfo(context, stream);
 
-	(*stream->complete)(stream);
+	NET_StreamComplete(stream);
+	NET_StreamFree(stream);
 	cur_entry->status = MK_DATA_LOADED;
 	cur_entry->status = MK_DATA_LOADED;
 
@@ -305,7 +309,7 @@ net_gen_pics_document(ActiveEntry *cur_entry)
  */
 PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 {
-    NET_StreamClass * stream;
+    NET_VoidStreamClass * stream;
 	char * data=0;
 	char * content_type=0;
 	int32 length;
@@ -581,7 +585,7 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 
 		cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
 
-		stream = NET_StreamBuilder(cur_entry->format_out,
+		stream = NET_VoidStreamBuilder(cur_entry->format_out,
 								   cur_entry->URL_s, cur_entry->window_id);
 
 		if(!stream)
@@ -590,26 +594,26 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 			return(MK_UNABLE_TO_CONVERT);
 		  }
 
-		status = (*stream->put_block)(stream, data, length);
+		status = NET_StreamPutBlock(stream, data, length);
 
 		if (status >= 0) {
 			/* Append optional Admin Kit-specified about page text */
 			char* custom_text = NULL;
 			if (PL_strcmp(which, "") == 0 &&
 				PREF_CopyConfigString("about_text", &custom_text) == PREF_NOERROR) {
-				(*stream->put_block)(stream, custom_text, PL_strlen(custom_text));
+				NET_StreamPutBlock(stream, custom_text, PL_strlen(custom_text));
 			}
 		
-			(*stream->complete) (stream);
+			NET_StreamComplete(stream);
 			
 			PR_FREEIF(custom_text);
 		}
 		else
-		  (*stream->abort) (stream, status);
+  		  NET_StreamAbort(stream, status);
 
 		cur_entry->status = status;
 
-		PR_Free(stream);
+		NET_StreamFree(stream);
 	  }
 
 	if(uses_fe_data)

@@ -40,7 +40,7 @@
 #include "mktcp.h"
 #include "mkparse.h"
 #include "mkformat.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkaccess.h"
 #include "mksort.h"
 #include "netcache.h"
@@ -184,14 +184,10 @@ PRIVATE int32 net_NewsChunkSize=-1;  /* default */
 
 PRIVATE int32 net_news_timeout = 170; /* seconds that an idle NNTP conn can live */
 
-#define PUTSTRING(s)      (*cd->stream->put_block) \
-                    (cd->stream, s, XP_STRLEN(s))
-#define COMPLETE_STREAM   (*cd->stream->complete)  \
-                    (cd->stream)
-#define ABORT_STREAM(s)   (*cd->stream->abort) \
-                    (cd->stream, s)
-#define PUT_STREAM(buf, size)   (*cd->stream->put_block) \
-						  (cd->stream, buf, size)
+#define PUTSTRING(s)      NET_StreamPutBlock(cd->stream, s, XP_STRLEN(s))
+#define COMPLETE_STREAM   NET_StreamComplete(cd->stream)
+#define ABORT_STREAM(s)   NET_StreamAbort(cd->stream, s)
+#define PUT_STREAM(buf, size)   NET_StreamPutBlock(cd->stream, buf, size)
 
 /* states of the machine
  */
@@ -395,7 +391,7 @@ typedef struct _NewsConData {
 #ifdef XP_WIN
 	XP_Bool     calling_netlib_all_the_time;
 #endif
-    NET_StreamClass * stream;
+    NET_VoidStreamClass * stream;
 
     NNTPConnection * control_con;  /* all the info about a connection */
 
@@ -572,7 +568,7 @@ net_display_html_error_state (ActiveEntry *ce)
 
 	if (ce->format_out == FO_PRESENT && inMsgPane)
 	  {
-		cd->stream = NET_StreamBuilder(ce->format_out, ce->URL_s,
+		cd->stream = NET_VoidStreamBuilder(ce->format_out, ce->URL_s,
 									  ce->window_id);
 		if(!cd->stream)
 		  {
@@ -617,7 +613,8 @@ net_display_html_error_state (ActiveEntry *ce)
 			if(ce->status > -1)
 			  {
 				COMPLETE_STREAM;
-				cd->stream = 0;
+				NET_StreamFree(cd->stream);
+				cd->stream = NULL;
 			  }
 		  }
 		else
@@ -1712,7 +1709,7 @@ net_begin_article(ActiveEntry * ce)
 		}
 	}
 
-  cd->stream = NET_StreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
+  cd->stream = NET_VoidStreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
   XP_ASSERT (cd->stream);
   if (!cd->stream) return -1;
 
@@ -4638,8 +4635,7 @@ NET_ProcessOfflineNews(ActiveEntry *ce, NewsConData *cd)
     cd->pause_for_read  = TRUE;
 
 	if (cd->stream)
-		read_size = (*cd->stream->is_write_ready)
-								(cd->stream);
+		read_size = NET_StreamIsWriteReady(cd->stream);
 	else
 		ce->status = net_begin_article(ce);
 
@@ -4658,7 +4654,11 @@ NET_ProcessOfflineNews(ActiveEntry *ce, NewsConData *cd)
 	if (status == 0)
 	{
  	  if (cd->stream)
+	  {
 		COMPLETE_STREAM;
+		NET_StreamFree(cd->stream);
+		cd->stream = NULL;
+	  }
        	NET_ClearCallNetlibAllTheTime(ce->window_id, "mknews");
 
 		if(cd->destroy_graph_progress)
@@ -5129,7 +5129,11 @@ HG68092
 			   * can finish up the article counts.
 			   */
 			  if (cd->stream)
+			  {
 				COMPLETE_STREAM;
+				NET_StreamFree(cd->stream);
+				cd->stream = NULL;
+			  }
 
 	            cd->next_state = NEWS_FREE;
                 /* set the connection unbusy
@@ -5143,7 +5147,11 @@ HG68092
 
 	        case NEWS_ERROR:
 	            if(cd->stream)
+		    {
 		             ABORT_STREAM(ce->status);
+			     NET_StreamFree(cd->stream);
+			     cd->stream = NULL;
+		    }
 	            cd->next_state = NEWS_FREE;
     	        /* set the connection unbusy
      	         */
@@ -5160,6 +5168,7 @@ HG68092
 	            if(cd->stream)
 				  {
 		            ABORT_STREAM(ce->status);
+			    	NET_StreamFree(cd->stream);
 					cd->stream=0;
 				  }
     
@@ -5240,7 +5249,7 @@ HG68092
 
 				FREEIF(cd->output_buffer);
 				HG20900
-                FREEIF(cd->stream);  /* don't forget the stream */
+                NET_StreamFree(cd->stream);  /* don't forget the stream */
             	if(cd->tcp_con_data)
                 	NET_FreeTCPConData(cd->tcp_con_data);
 

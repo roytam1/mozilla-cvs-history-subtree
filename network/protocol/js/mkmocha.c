@@ -24,11 +24,14 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
+#include "cstream.h"
 
 #include <stddef.h>
 #include <memory.h>
 #include <time.h>
 #include "net.h"
+#include "netstream.h"
+#include "cstream.h"
 #include "libmocha.h"
 #include "jsurl.h"
 #include "libevent.h"
@@ -64,7 +67,7 @@ typedef struct {
     int               status;
     char            * wysiwyg_url;
     char	    * base_href;
-    NET_StreamClass * stream;
+    NET_VoidStreamClass * stream;
 } MochaConData;
 
 #define HOLD_CON_DATA(con_data) ((con_data)->ref_count++)
@@ -543,7 +546,7 @@ net_ProcessMocha(ActiveEntry * ae)
     FO_Present_Types output_format;
     Bool to_layout;
     Bool first_time;
-    NET_StreamClass *stream = NULL;
+    NET_VoidStreamClass *stream = NULL;
     MochaConData * con_data = (MochaConData *) ae->con_data;
     MWContext * context;
     int status;
@@ -597,7 +600,7 @@ net_ProcessMocha(ActiveEntry * ae)
         StrAllocCopy(ae->URL_s->content_type, TEXT_HTML);
         ae->format_out = CLEAR_CACHE_BIT(ae->format_out);
 
-        stream = NET_StreamBuilder(ae->format_out, ae->URL_s, ae->window_id);
+        stream = NET_VoidStreamBuilder(ae->format_out, ae->URL_s, ae->window_id);
         if (!stream) {
             ae->status = MK_UNABLE_TO_CONVERT;
             goto done;
@@ -608,7 +611,7 @@ net_ProcessMocha(ActiveEntry * ae)
      * If the stream we just created isn't ready for writing just
      *   hold onto the stream and try again later
      */
-    if (!stream->is_write_ready(stream)) {
+    if (!NET_StreamIsWriteReady(stream)) {
 	con_data->stream = stream;
 	START_POLLING(ae, con_data);
 	return 0;
@@ -648,7 +651,7 @@ net_ProcessMocha(ActiveEntry * ae)
     if (to_layout && first_time && con_data->eval_what) {
 
 	/* Feed layout an internal tag so it will create a new top state. */
-	stream->put_block(stream, nscp_open_tag,
+	NET_StreamPutBlock(stream, nscp_open_tag,
 			  sizeof nscp_open_tag - 1);
 
         (void) LM_WysiwygCacheConverter(context, ae->URL_s, 
@@ -664,13 +667,13 @@ net_ProcessMocha(ActiveEntry * ae)
 		ae->status = MK_OUT_OF_MEMORY;
 		goto done;
 	    }
-            status = (*stream->put_block)(stream, prefix,
+            status = NET_StreamPutBlock(stream, prefix,
                                           PL_strlen(prefix));
             PR_Free(prefix);
         }
 	else {
 	    if (con_data->base_href) {
-		status = (*stream->put_block)(stream, 
+		status = NET_StreamPutBlock(stream, 
 		    			      con_data->base_href,
 					      PL_strlen(con_data->base_href));
 	    }
@@ -678,12 +681,12 @@ net_ProcessMocha(ActiveEntry * ae)
     }
 	 
     if (status >= 0) {
-        status = (*stream->put_block)(stream, con_data->str,
+        status = NET_StreamPutBlock(stream, con_data->str,
                                       (int32)con_data->len);
     }
 
     if (con_data->single_shot && status >= 0)
-        (*stream->complete)(stream);
+        NET_StreamComplete(stream);
 
     if (!con_data->single_shot && status >= 0) {
         if (first_time) {
@@ -692,9 +695,9 @@ net_ProcessMocha(ActiveEntry * ae)
         }
     } else {
         if (status < 0)
-            (*stream->abort)(stream, status);
+            NET_StreamAbort(stream, status);
         if (first_time)
-            PR_Free(stream);
+            NET_StreamFree(stream);
     }
 
     ae->status = MK_DATA_LOADED;

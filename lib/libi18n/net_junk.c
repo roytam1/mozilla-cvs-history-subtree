@@ -23,6 +23,7 @@
 #include "libi18n.h"
 #include "net_junk.h"
 #include "libmocha.h"
+#include "cstream.h"
 
 
 MODULE_PRIVATE int16	PeekMetaCharsetTag (char *, uint32);

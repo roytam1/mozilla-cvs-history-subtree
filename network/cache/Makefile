@@ -28,9 +28,10 @@ CSRCS		= \
 	mkmemcac.c	\
 	$(NULL)
 
-EXPORTS= netcache.h mkcache.h mkmemcac.h extcache.h
+EXPORTS= netcache.h mkcache.h mkmemcac.h extcache.h cacheutils.h
 
-REQUIRES	= network nspr2 dbm util pref js java fileurl security layer img jtools
+REQUIRES	= network nspr2 dbm util pref js java fileurl \
+		security layer img jtools cstream
 
 include $(DEPTH)/config/rules.mk
 

@@ -577,7 +577,7 @@ protected:
 	int CloseStream ();
 	int WriteLineToStream (const char *line, XP_Bool bold, XP_Bool lineBreak, XP_Bool isMailto = FALSE, 
                            XP_Bool isUri = FALSE, XP_Bool aligntop = FALSE, XP_Bool isCell = FALSE);
-	NET_StreamClass *m_stream;
+	NET_VoidStreamClass *m_stream;
 
 	const char *LookupAttributeName (const char *attrib);
 	char *GetTableCaption (LDAPMessage*);
@@ -676,14 +676,14 @@ int net_LdapToHtml::OpenStream ()
 
 	if (!m_ce->URL_s->content_type)
 		StrAllocCopy(m_ce->URL_s->content_type, TEXT_HTML);
-	m_stream = NET_StreamBuilder(m_ce->format_out, m_ce->URL_s, m_ce->window_id);
+	m_stream = NET_VoidStreamBuilder(m_ce->format_out, m_ce->URL_s, m_ce->window_id);
 	if (!m_stream)
 		return MK_OUT_OF_MEMORY;
 
 	// Scribble HTML-starting stuff into the stream
 	char *htmlHeaders = PR_smprintf ("<HTML><HEAD><TITLE>%s</TITLE></HEAD>%s<BODY>%s", XP_GetString(MK_LDAP_HTML_TITLE), LINEBREAK, LINEBREAK);
 	if (htmlHeaders)
-		err = (*(m_stream)->put_block)(m_stream, htmlHeaders, XP_STRLEN(htmlHeaders));
+		err = NET_StreamPutBlock(m_stream, htmlHeaders, XP_STRLEN(htmlHeaders));
 	else
 		err = MK_OUT_OF_MEMORY;
 
@@ -706,7 +706,7 @@ int net_LdapToHtml::CloseStream ()
 			char *noMatches = PR_smprintf ("<H1>%s</H1>", XP_GetString(MK_MSG_SEARCH_FAILED));
 			if (noMatches)
 			{
-				err = (*(m_stream)->put_block)(m_stream, noMatches, XP_STRLEN(noMatches));
+				err = NET_StreamPutBlock(m_stream, noMatches, XP_STRLEN(noMatches));
 				XP_FREE(noMatches);
 			}
 		}
@@ -717,13 +717,14 @@ int net_LdapToHtml::CloseStream ()
 	{
 		char htmlFooters[32];
 		PR_snprintf (htmlFooters, sizeof(htmlFooters), "</BODY>%s</HTML>%s", LINEBREAK, LINEBREAK);
-		err = (*(m_stream)->put_block)(m_stream, htmlFooters, XP_STRLEN(htmlFooters));
+		err = NET_StreamPutBlock(m_stream, htmlFooters, XP_STRLEN(htmlFooters));
 		if (1 == err)
 			err = 0; //### which is it: 1 for success or 0 for success?
 
 		// complete the stream 
-		(*m_stream->complete) (m_stream);
-		XP_FREE(m_stream);
+		NET_StreamComplete(m_stream);
+		NET_StreamFree(m_stream);
+		m_stream = NULL;
 	}
 
 	return err;
@@ -864,7 +865,7 @@ int net_LdapToHtml::WriteLineToStream (const char *line, XP_Bool bold, XP_Bool l
 			XP_STRCAT (htmlLine, "</TD>");
 		if (lineBreak)
 			XP_STRCAT (htmlLine, LINEBREAK);
-		err = (*(m_stream)->put_block)(m_stream, htmlLine, XP_STRLEN(htmlLine));
+		err = NET_StreamPutBlock(m_stream, htmlLine, XP_STRLEN(htmlLine));
 		XP_FREE (htmlLine);
 	}
 	else

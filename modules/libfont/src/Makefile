@@ -51,7 +51,7 @@ CPPSRCS		= cdoer.cpp \
 
 EXPORTS		= nf.h coremem.h
 
-REQUIRES	= libfont java jtools dbm nspr img layer util pref js htmldlgs security
+REQUIRES	= libfont java jtools dbm nspr img layer util pref js htmldlgs security cstream
 
 JMC_GEN		= Mcf Mcfb Mcfmi Mcrc Mcdoer
 JMC_GEN_FLAGS	= -cimpl

@@ -34,6 +34,7 @@
 #include "xmlparse.h"
 #include "xmlss.h"
 #include "layers.h"
+#include "cstream.h"
 
 
 

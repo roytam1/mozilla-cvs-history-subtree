@@ -20,6 +20,7 @@
 #define MKGETURL_H
 
 #include "xp.h"
+#include "netstream.h"
 
 
 /* fix Mac warnings about missing prototypes */
@@ -57,7 +58,7 @@ typedef struct _ActiveEntry {
     MWContext  * window_id;         /* a unique window id */
     FO_Present_Types format_out;    /* the output format */
 
-	NET_StreamClass	* save_stream; /* used for cacheing of partial docs
+	NET_VoidStreamClass	* save_stream; /* used for cacheing of partial docs
 									* The file code opens this stream
 									* and writes part of the file down it.
 									* Then the stream is saved

@@ -44,6 +44,8 @@
 #include "Mnff.h"
 #include "Mnfstrm.h"
 
+#include "cstream.h"
+
 struct stream_data {
 	URL_Struct *urls;
 	struct nffbc *fbc;

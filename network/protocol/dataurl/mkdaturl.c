@@ -24,7 +24,7 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "dataurl.h"
 #include "cvmime.h"
 
@@ -40,7 +40,7 @@ net_DataURLLoad (ActiveEntry * ce)
 {
 	char *data_buffer;
 	XP_Bool is_base64 = FALSE;
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 	char *comma;
 
     ce->protocol = DATA_TYPE_URL;
@@ -85,14 +85,12 @@ net_DataURLLoad (ActiveEntry * ce)
 
 	if(is_base64)
 	{
-		stream = NET_MimeEncodingConverter(ce->format_out, ENCODING_BASE64, ce->URL_s, ce->window_id);
+		StrAllocCopy(ce->URL_s->content_encoding, ENCODING_BASE64);
 	}
-	else
-	{
-		/* open the outgoing stream
-		 */
-		stream = NET_StreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
-	}
+
+	/* open the outgoing stream
+	 */
+	stream = NET_VoidStreamBuilder(ce->format_out, ce->URL_s, ce->window_id);
 
 	if(!stream)
 	  {
@@ -106,16 +104,18 @@ net_DataURLLoad (ActiveEntry * ce)
 	/* copy the data part of the URL into a scratch buffer */
 	PL_strcpy(data_buffer, comma+1);
 
-    ce->status = (*stream->put_block)(stream,
+    ce->status = NET_StreamPutBlock(stream,
                                         data_buffer,
                                         PL_strlen(data_buffer));
+	
     if(ce->status < 0)
       {
-    	(*stream->abort)(stream, ce->status);
+    	NET_StreamAbort(stream, ce->status);
         return (ce->status);
       }
 
-    (*stream->complete)(stream);
+    NET_StreamComplete(stream);
+    NET_StreamFree(stream);
 
 	ce->status = MK_DATA_LOADED;
     return(-1); /* all done */

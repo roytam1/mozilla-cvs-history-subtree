@@ -34,6 +34,7 @@
 #include "es2mcf.h"
 #include "mcff2mcf.h"
 #include "nlcstore.h"
+#include "cstream.h"
 
 
 /* external routines */

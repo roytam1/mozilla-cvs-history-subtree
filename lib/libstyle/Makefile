@@ -31,7 +31,7 @@ CSRCS		= csslex.c \
 
 EXPORTS		= stystack.h stystruc.h css.h
 
-REQUIRES	= js nspr dbm img util layer
+REQUIRES	= js nspr dbm img util layer network
 
 include $(DEPTH)/config/rules.mk
 

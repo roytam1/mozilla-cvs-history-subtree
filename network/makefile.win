@@ -34,6 +34,7 @@ DIRS= \
 	protocol \
 	cnvts \
 	client \
+	cstream \
 !ifdef MODULAR_NETLIB
 	module \
 !endif

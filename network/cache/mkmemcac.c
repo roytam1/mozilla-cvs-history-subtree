@@ -37,7 +37,7 @@
 #include "xp_mcom.h"
 #include "client.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "extcache.h"
 #include "mkmemcac.h"
 #ifndef MODULAR_NETLIB
@@ -1925,7 +1925,7 @@ NET_NextMemCacheObject(XP_List* list_ptr)
 
 #include "libmocha.h"
 
-NET_StreamClass *
+NET_VoidStreamClass *
 net_CloneWysiwygMemCacheEntry(MWContext *window_id, URL_Struct *URL_s,
 			      uint32 nbytes, const char * wysiwyg_url,
 			      const char * base_href)
@@ -1933,7 +1933,7 @@ net_CloneWysiwygMemCacheEntry(MWContext *window_id, URL_Struct *URL_s,
 	net_MemoryCacheObject *memory_copy;
 	PRCList *link;
 	CacheDataObject *data_object;
-	NET_StreamClass *stream;
+	NET_VoidStreamClass *stream;
 	XP_List *list;
 	net_MemorySegment *seg;
 	uint32 len;
@@ -1967,7 +1967,7 @@ found:
 		len = seg->seg_size;
 		if (len > nbytes)
 			len = nbytes;
-		if (stream->put_block(stream, seg->segment,
+		if (NET_StreamPutBlock(stream, seg->segment,
 							  (int32)len) < 0)
 			break;
 		nbytes -= len;
@@ -1975,8 +1975,8 @@ found:
 	if (nbytes != 0)
 	  {
 		/* NB: Our caller must clear top_state->mocha_write_stream. */
-		stream->abort(stream, MK_UNABLE_TO_CONVERT);
-		PR_Free(stream);
+		NET_StreamAbort(stream, MK_UNABLE_TO_CONVERT);
+		NET_StreamFree(stream);
 		return 0;
 	  }
 	return stream;

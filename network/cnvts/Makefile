@@ -61,6 +61,6 @@ EXPORTS += \
 endif
 
 REQUIRES	= network img lay layer util parse pref js \
-	security marimurl style zlib softupdt mimetype ldap
+	security marimurl style zlib softupdt mimetype ldap cstream
 
 include $(DEPTH)/config/rules.mk

@@ -43,7 +43,7 @@ CSRCS			= secport.c \
 			  navstubs.c \
 			  $(NULL)
 
-REQUIRES		= dbm js img layer util
+REQUIRES		= dbm js img layer util network
 
 include $(DEPTH)/config/rules.mk
 

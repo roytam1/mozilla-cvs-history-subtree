@@ -52,14 +52,14 @@ CSRCS += \
 	$(NULL)
 endif
 
-EXPORTS= mkstream.h mkparse.h mkfsort.h mksort.h mkgeturl.h \
-	netstream.h mkselect.h mktcp.h netutils.h mkpadpac.h mkautocf.h mkhelp.h \
+EXPORTS= netstream.h mkformat.h mkparse.h mkfsort.h mksort.h mkgeturl.h \
+	mkselect.h mktcp.h netutils.h mkpadpac.h mkautocf.h mkhelp.h \
         mkutils.h mktrace.h
 
 
 REQUIRES	= ldapurl imap4url jtools progress nspr2 dbm util js parse lay style pref htmldlgs java \
 	libfont netcache httpurl cnetinit security img layer netcnvts network \
-	mimetype ldap net
+	mimetype ldap net cstream
 
 include $(DEPTH)/config/rules.mk
 

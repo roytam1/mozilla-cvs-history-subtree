@@ -35,6 +35,7 @@
 #include "ssl.h"
 #endif
 #include "selection.h"
+#include "cstream.h"
 
 #include "outline.h"
 #include "layers.h"

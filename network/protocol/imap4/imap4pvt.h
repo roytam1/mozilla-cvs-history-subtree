@@ -1044,8 +1044,8 @@ public:
     void            SetIOSocket(PRFileDesc *socket);
     PRFileDesc *    GetIOSocket();
     
-    void            SetOutputStream(NET_StreamClass *outputStream);
-    NET_StreamClass *GetOutputStream();
+    void            SetOutputStream(NET_VoidStreamClass *outputStream);
+    NET_VoidStreamClass *GetOutputStream();
         
 	virtual XP_Bool			UseSSL() { return FALSE; };
     
@@ -1381,7 +1381,7 @@ private:
 	PRMonitor			*fPseudoInterruptMonitor;
 	PRMonitor			*fWaitForBodyIdsMonitor;
     PRFileDesc          *fIOSocket;
-    NET_StreamClass     *fOutputStream;
+    NET_VoidStreamClass *fOutputStream;
     
     enum EMailboxHierarchyNameState {
         kNoOperationInProgress,

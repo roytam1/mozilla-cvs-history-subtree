@@ -53,10 +53,17 @@ REQUIRES	=\
 			rdf \
 			progress \
 			xpcom \
+<<<<<<< Makefile
 			netcnvts \
 			msg \
 			progress \
 			plug
+=======
+			plug \
+			netcnvts \
+			network \
+			cstream
+>>>>>>> 3.6.6.1
 
 CPPSRCS		= \
 		  plugin.cpp \

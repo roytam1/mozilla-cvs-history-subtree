@@ -179,7 +179,7 @@ typedef struct _HTTPConData {
 	
 	HTTPConnection *connection;   /* struct to hold info about connection */
 
-    NET_StreamClass * stream; /* The output stream */
+    NET_VoidStreamClass * stream; /* The output stream */
     Bool     pause_for_read;   /* Pause now for next read? */
     Bool     send_http1;       /* should we send http/1.1? */
     Bool     acting_as_proxy;  /* are we acting as a proxy? */
@@ -221,7 +221,6 @@ typedef struct _HTTPConData {
 #define CD_LINE_BUFFER       	  cd->line_buffer
 #define CD_SERVER_HEADERS    	  cd->server_headers
 #define CD_LINE_BUFFER_SIZE  	  cd->line_buffer_size
-#define CD_STREAM        	 	  cd->stream
 #define CD_SEND_HTTP1        	  cd->send_http1
 #define CD_PAUSE_FOR_READ    	  cd->pause_for_read
 #define CD_ACTING_AS_PROXY   	  cd->acting_as_proxy
@@ -267,14 +266,13 @@ int ReturnErrorStatus (int status)
 
 #define STATUS(Status)			ReturnErrorStatus (Status)
 
-
-#define PUTBLOCK(b, l)  (*cd->stream->put_block) \
+#define PUTBLOCK(b, l)  NET_StreamPutBlock \
                                     (cd->stream, b, l)
-#define PUTSTRING(s)    (*cd->stream->put_block) \
+#define PUTSTRING(s)    NET_StreamPutBlock \
                                     (cd->stream, s, PL_strlen(s))
-#define COMPLETE_STREAM (*cd->stream->complete) \
+#define COMPLETE_STREAM NET_StreamComplete \
                                     (cd->stream)
-#define ABORT_STREAM(s) (*cd->stream->abort) \
+#define ABORT_STREAM(s) NET_StreamAbort \
                                     (cd->stream, s)
 
 
@@ -2728,7 +2726,7 @@ net_setup_http_stream(ActiveEntry * ce)
 	/* If a stream previously exists from a partial cache
 	 * situation, reuse it
 	 */
-	if(!CD_STREAM)
+	if(!cd->stream)
 	  {
 		/* clear to prevent tight loop */
 		NET_ClearReadSelect(ce->window_id, cd->connection->sock);
@@ -2800,11 +2798,11 @@ net_setup_http_stream(ActiveEntry * ce)
           }
 
     	/* Set up the stream stack to handle the body of the message */
-    	CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, 
+    	cd->stream = NET_VoidStreamBuilder(CE_FORMAT_OUT, 
 									  CE_URL_S, 
 									  stream_context);
 
-    	if (!CD_STREAM)
+    	if (!cd->stream)
       	  {
         	CE_STATUS = MK_UNABLE_TO_CONVERT;
 			CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_UNABLE_TO_CONVERT);
@@ -2880,7 +2878,7 @@ net_setup_http_stream(ActiveEntry * ce)
 			/* @@@ bug, check return status and only send
 		 	* up to the return value
 		 	*/
-    		(*cd->stream->is_write_ready)(CD_STREAM);
+    		NET_StreamIsWriteReady(cd->stream);
         	CE_STATUS = PUTBLOCK(CD_LINE_BUFFER, CD_LINE_BUFFER_SIZE);
 			CE_BYTES_RECEIVED = CD_LINE_BUFFER_SIZE;
         	FE_GraphProgress(CE_WINDOW_ID, 
@@ -2920,7 +2918,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
     HTTPConData * cd = (HTTPConData *)ce->con_data;
 	int32 write_ready, status;
 	
-	write_ready = (*cd->stream->is_write_ready)(cd->stream);
+	write_ready = NET_StreamIsWriteReady(cd->stream);
 
 	write_ready = MIN(write_ready, NET_Socket_Buffer_Size);
 
@@ -2989,7 +2987,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
 
 	/* else, push the data read up the stream 
 	 */	
-	status = (*cd->stream->put_block)(cd->stream, 
+	status = NET_StreamPutBlock(cd->stream, 
 									  NET_Socket_Buffer, 
 									  status);
 
@@ -3043,7 +3041,7 @@ net_pull_http_data(ActiveEntry * ce)
 
     /* check to see if the stream is ready for writing
 	 */
-    write_ready = (*cd->stream->is_write_ready)(CD_STREAM);
+    write_ready = NET_StreamIsWriteReady(cd->stream);
 
 	if(!write_ready)
 	  {
@@ -3491,11 +3489,11 @@ HG51096
          	NET_RefreshCacheFileExpiration(CE_URL_S);  
 #endif /* MOZILLA_CLIENT */
 
-			if(CD_STREAM)
+			if(cd->stream)
 			  {
             	COMPLETE_STREAM;
-				PR_Free(CD_STREAM);
-				CD_STREAM = 0;
+				NET_StreamFree(cd->stream);
+				cd->stream = 0;
 			  }
             CD_NEXT_STATE = HTTP_FREE;
             break;
@@ -3524,11 +3522,11 @@ HG51096
 				&& !cd->connection_is_valid
 				&& ce->status != MK_INTERRUPTED)
 			  {
-				if(CD_STREAM && !cd->reuse_stream)
+				if(cd->stream && !cd->reuse_stream)
 				  {
                 	ABORT_STREAM(CE_STATUS);
-					PR_Free(CD_STREAM);
-					CD_STREAM = 0;
+					NET_StreamFree(cd->stream);
+					cd->stream = 0;
 				  }
 			
 				/* the connection came from the cache and
@@ -3561,11 +3559,11 @@ HG51096
 			  {
             	CD_NEXT_STATE = HTTP_FREE;
 
-            	if(CD_STREAM)
+            	if(cd->stream)
 				  {
                 	ABORT_STREAM(CE_STATUS);
-					PR_Free(CD_STREAM);
-					CD_STREAM = 0;
+					NET_StreamFree(cd->stream);
+					cd->stream = 0;
 				  }
 
                 /* remove the connection from the cache list
@@ -3614,7 +3612,7 @@ HG51096
 										CE_BYTES_RECEIVED);
       
             PR_FREEIF(CD_LINE_BUFFER);
-            PR_Free(CD_STREAM); /* don't forget the stream */
+            NET_StreamFree(cd->stream); /* don't forget the stream */
 			PR_FREEIF(CD_SERVER_HEADERS);
 			PR_FREEIF(cd->orig_host);
 			if(CD_TCP_CON_DATA)
@@ -3672,8 +3670,8 @@ HG51096
 				NET_TotalNumberOfOpenConnections--;
                 cd->connection->sock = NULL;
 
-                if(CD_STREAM)
-                    (*cd->stream->abort)(CD_STREAM, CE_STATUS);
+                if(cd->stream)
+                    NET_StreamAbort(cd->stream, CE_STATUS);
                 CD_SEND_HTTP1 = FALSE;
                 /* go back and send an HTTP0 request */
                 CD_NEXT_STATE = HTTP_START_CONNECT;
@@ -3724,8 +3722,8 @@ net_InterruptHTTP(ActiveEntry * ce)
         PR_Close(cd->connection->sock);
 		NET_TotalNumberOfOpenConnections--;
         ABORT_STREAM(MK_INTERRUPTED);
-		PR_Free(CD_STREAM);
-		CD_STREAM = 0;
+		NET_StreamFree(cd->stream);
+		cd->stream = 0;
 
 		CE_URL_S->last_modified = 0;
 #ifdef MOZILLA_CLIENT

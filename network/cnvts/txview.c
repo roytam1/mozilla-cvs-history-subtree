@@ -18,7 +18,7 @@
 
 #include "xp.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "mkformat.h"
 
 
