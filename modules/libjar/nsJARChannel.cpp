@@ -293,6 +293,9 @@ nsJARChannel::AsyncRead(nsIStreamListener* listener, nsISupports* ctxt)
     nsresult rv;
     mUserContext = ctxt;
     mUserListener = listener;
+    NS_ASSERTION(listener, "null listener");
+    if (listener == nsnull)
+       return NS_ERROR_FAILURE;
 
     if (mLoadGroup) {
         if (mUserListener) {
@@ -679,6 +682,8 @@ NS_IMETHODIMP
 nsJARChannel::OnStartRequest(nsIChannel* jarExtractionTransport,
                              nsISupports* context)
 {
+    if (mUserListener == nsnull)
+        return NS_OK;
     return mUserListener->OnStartRequest(this, mUserContext);
 }
 
@@ -686,7 +691,7 @@ NS_IMETHODIMP
 nsJARChannel::OnStopRequest(nsIChannel* jarExtractionTransport, nsISupports* context, 
                             nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
 #ifdef PR_LOGGING
     nsCOMPtr<nsIURI> jarURI;
     nsXPIDLCString jarURLStr;
@@ -698,7 +703,9 @@ nsJARChannel::OnStopRequest(nsIChannel* jarExtractionTransport, nsISupports* con
     }
 #endif
 
-    rv = mUserListener->OnStopRequest(this, mUserContext, aStatus, aStatusArg);
+    if (mUserListener) {
+        rv = mUserListener->OnStopRequest(this, mUserContext, aStatus, aStatusArg);
+    }
 
     if (mLoadGroup) {
         if (NS_SUCCEEDED(rv)) {
@@ -722,6 +729,8 @@ nsJARChannel::OnDataAvailable(nsIChannel* jarCacheTransport,
                               PRUint32 sourceOffset, 
                               PRUint32 count)
 {
+    if (mUserListener == nsnull)
+        return NS_OK;
     return mUserListener->OnDataAvailable(this, mUserContext, 
                                           inStr, sourceOffset, count);
 }
