@@ -363,10 +363,11 @@ nsFileView.prototype = {
     dump("load time: " + time/1000 + " seconds\n");
 
     if (this.mOutliner) {
-      dump("rowCountChanged(0, -" + this.mTotalRows + ")\n");
-      this.mOutliner.rowCountChanged(0, -this.mTotalRows);
-      dump("rowCountChanged(0, " + this.mDirList.length + ")\n");
-      this.mOutliner.rowCountChanged(0, this.mDirList.length);
+      var oldRows = this.mTotalRows;
+      this.mTotalRows = this.mDirList.length;
+      dump("rowCountChanged(0, " + (this.mDirList.length - oldRows) + ")\n");
+      this.mOutliner.rowCountChanged(0, this.mDirList.length - oldRows);
+      this.mOutliner.invalidate();
     }
 
     time = new Date();
@@ -412,7 +413,10 @@ nsFileView.prototype = {
 
     if (this.mOutliner) {
       dump("rowCountChanged("+this.mDirList.length+", "+ -(this.mTotalRows - this.mDirList.length) + ")\n");
-      this.mOutliner.rowCountChanged(this.mDirList.length, -(this.mTotalRows - this.mDirList.length));
+      var rowDiff = -(this.mTotalRows - this.mDirList.length);
+      this.mTotalRows = this.mDirList.length;
+      this.mOutliner.rowCountChanged(this.mDirList.length, rowDiff);
+      this.mOutliner.invalidate();
     }
     this.filterFiles();
     this.sort(this.mSortType, this.mReverseSort, true);
@@ -438,13 +442,13 @@ nsFileView.prototype = {
       }
     }
 
+    this.mTotalRows = this.mDirList.length + this.mFilteredFiles.length;
+
     // Tell the outliner how many rows we just added
     if (this.mOutliner) {
-      dump("routCountChanged("+this.mDirList.length+", "+this.mFilteredFiles.length+")\n");
+      dump("rowCountChanged("+this.mDirList.length+", "+this.mFilteredFiles.length+")\n");
       this.mOutliner.rowCountChanged(this.mDirList.length, this.mFilteredFiles.length);
     }
-
-    this.mTotalRows = this.mDirList.length + this.mFilteredFiles.length;
   },
 
   getSelectedFile: function() {
