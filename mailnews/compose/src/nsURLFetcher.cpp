@@ -91,7 +91,7 @@ nsURLFetcher::StillRunning(PRBool *running)
 
 // Methods for nsIStreamListener...
 nsresult
-nsURLFetcher::OnDataAvailable(nsISupports * ctxt, nsIBufferInputStream *aIStream, 
+nsURLFetcher::OnDataAvailable(nsISupports * ctxt, nsIInputStream *aIStream, 
                               PRUint32 sourceOffset, PRUint32 aLength)
 {
   PRUint32        readLen = aLength;
