@@ -4442,11 +4442,11 @@ NPL_GetOJIPluginInstance(NPEmbeddedApp *embed)
 
 
 // Used by layout code to get to a text representing a java bean.
-PR_IMPLEMENT(char *)
+PR_IMPLEMENT(const char *)
 NPL_GetText(struct nsIPluginInstance *psNPIT)
 {
    nsIPluginInstance *pNPIT = (nsIPluginInstance *)psNPIT;
-   char *text = NULL;
+   const char *text = NULL;
 
    nsIJVMPluginInstance  *pJVMPIT = NULL;
    NS_DEFINE_IID(kJvmPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);

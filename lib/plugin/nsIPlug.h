@@ -447,6 +447,10 @@ public:
     NS_IMETHOD_(nsPluginError)
     Initialize(nsIPluginInstancePeer* peer) = 0;
 
+    // Required backpointer to the peer.
+    NS_IMETHOD_(nsIPluginInstancePeer*)
+    GetPeer(void) = 0;
+
     // See comment for nsIPlugin::CreateInstance, above.
     NS_IMETHOD_(nsPluginError)
     Start(void) = 0;

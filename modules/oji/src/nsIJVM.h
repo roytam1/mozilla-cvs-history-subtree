@@ -246,14 +246,11 @@ public:
     NS_IMETHOD_(jobject) 
     GetJavaObject(void) = 0;
 
-    NS_IMETHOD_(nsIPluginInstancePeer2 *)
-    GetPeer(void) = 0;
-
     /* =-= sudu: Ask Eric Bina, what is GetText used for in layform.c
                  Check to see if this should be more general api applicaple to
                  applets/beans and plugins.
     */
-    NS_IMETHOD_(char *)
+    NS_IMETHOD_(const char*)
     GetText(void) = 0;
 };
 
