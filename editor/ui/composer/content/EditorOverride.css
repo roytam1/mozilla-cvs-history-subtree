@@ -64,6 +64,8 @@ a:link {
   color: -moz-hyperlinktext;
 }
 
+blockquote > blockquote { margin-top: 0px }
+
 input, button, select, textarea {
   -moz-user-select: all !important;
   -moz-user-input: none !important;
