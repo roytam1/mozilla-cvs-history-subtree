@@ -364,7 +364,7 @@ extern Pixmap fe_ToolbarPixmap (MWContext *context, int i, Boolean disabled_p,
 
 
 // Image rendering methods. 
-Pixmap
+extern Pixmap
 fe_TiledMaskWithClipRegion(Display *dpy, Drawable drawable,
                            Pixmap mask_x_pixmap,
                            unsigned int width, unsigned int height,
@@ -372,7 +372,7 @@ fe_TiledMaskWithClipRegion(Display *dpy, Drawable drawable,
                            int x_clip_offset, int y_clip_offset,
                            Region clip_region);
 
-void
+extern void
 fe_DrawMaskedImageWithClipRegion(Display *dpy, Drawable drawable,
                                  Pixmap img_x_pixmap, Pixmap mask_x_pixmap,
                                  unsigned int width, unsigned int height,
