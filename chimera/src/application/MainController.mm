@@ -35,7 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <Foundation/NSUserDefaults.h>
 #include <mach-o/dyld.h>
 #include <sys/utsname.h>
 
@@ -81,6 +80,14 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 const int kOpenNewWindowOnAE = 0;
 const int kOpenNewTabOnAE = 1;
 const int kReuseWindowOnAE = 2;
+
+
+@interface MainController(MainControllerPrivate)
+
+- (void)setupStartpage;
+
+@end
+
 
 @implementation MainController
 
@@ -150,6 +157,8 @@ const int kReuseWindowOnAE = 2;
   // initialize if we haven't already.
   [self preferenceManager];
   
+	[self setupStartpage];
+
   // register our app components with the embed layer
   unsigned int numComps = 0;
   nsModuleComponentInfo* comps = GetAppComponents(&numComps);
@@ -222,7 +231,7 @@ const int kReuseWindowOnAE = 2;
 -(void)applicationWillTerminate: (NSNotification*)aNotification
 {
 #if DEBUG
-  NSLog(@"Termination notification");
+  NSLog(@"App will terminate notification");
 #endif
   
   // Autosave one of the windows.
@@ -255,6 +264,32 @@ const int kReuseWindowOnAE = 2;
 {
   return mDockMenu;
 }
+
+- (void)setupStartpage
+{
+  // for non-nightly builds, show a special start page
+  PreferenceManager* prefManager = [PreferenceManager sharedInstance];
+
+  NSString* vendorSubString = [prefManager getStringPref:"general.useragent.vendorSub" withSuccess:NULL];
+  if (![vendorSubString hasSuffix:@"+"])
+  {
+    // has the user seen this already?
+    NSString* startPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
+    if (![vendorSubString isEqualToString:startPageRev])
+    {
+      NSString* startPage = NSLocalizedStringFromTable( @"StartPageDefault", @"WebsiteDefaults", nil);
+      if ([startPage length] && ![startPage isEqualToString:@"StartPageDefault"])
+      {
+        [mStartURL release];
+        mStartURL = [startPage retain];
+      }
+      
+      // set the pref to say they've seen it
+      [prefManager setPref:"browser.startup_page_override.version" toString:vendorSubString];
+    }
+  }
+}
+
 
 -(IBAction)newWindow:(id)aSender
 {
