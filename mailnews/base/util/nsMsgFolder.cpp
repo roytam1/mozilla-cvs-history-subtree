@@ -411,7 +411,7 @@ nsMsgFolder::GetSubFolders(nsIEnumerator* *result)
 }
 
 NS_IMETHODIMP
-nsMsgFolder::FindSubFolder(const char *subFolderName, nsIFolder **aFolder)
+nsMsgFolder::FindSubFolder(const char *aEscapedSubFolderName, nsIFolder **aFolder)
 {
   nsresult rv = NS_OK;
   nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
@@ -423,8 +423,7 @@ nsMsgFolder::FindSubFolder(const char *subFolderName, nsIFolder **aFolder)
   nsCAutoString uri;
   uri.Append(mURI);
   uri.Append('/');
-
-  uri.Append(subFolderName);
+  uri.Append(aEscapedSubFolderName);
 
   nsCOMPtr<nsIRDFResource> res;
   rv = rdf->GetResource(uri.get(), getter_AddRefs(res));
