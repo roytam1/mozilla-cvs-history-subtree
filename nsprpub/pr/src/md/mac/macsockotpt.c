@@ -614,6 +614,7 @@ PRInt32 _MD_listen(PRFileDesc *fd, PRIntn backlog)
         goto ErrorExit;
     }
         
+    addr.inet.family = AF_INET;
     addr.inet.port = addr.inet.ip = 0;
 
     bindReq.addr.maxlen = PR_NETADDR_SIZE (&addr);
@@ -697,12 +698,6 @@ PRInt32 _MD_getsockname(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen)
         goto ErrorExit;
     }
 
-#if !defined(_PR_INET6)        
-    addr->inet.family = AF_INET;
-#endif
-    
-    PR_ASSERT(PR_NETADDR_SIZE(addr) >= (*addrlen));
-
     bindReq.addr.len = *addrlen;
     bindReq.addr.maxlen = *addrlen;
     bindReq.addr.buf = (UInt8*) addr;
@@ -726,6 +721,7 @@ PRInt32 _MD_getsockname(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen)
     if (err != kOTNoError)
         goto ErrorExit;
 
+    *addrlen = PR_NETADDR_SIZE(addr);
     return kOTNoError;
 
 ErrorExit:
@@ -1157,9 +1153,15 @@ PRInt32 _MD_accept(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen, PRInterva
         
     memset(&call, 0 , sizeof(call));
 
-    call.addr.maxlen = PR_NETADDR_SIZE(&callAddr);
-    call.addr.len = PR_NETADDR_SIZE(&callAddr);
-    call.addr.buf = (UInt8*) &callAddr;
+    if (addr != NULL) {
+        call.addr.maxlen = *addrlen;
+        call.addr.len = *addrlen;
+        call.addr.buf = (UInt8*) addr;
+    } else {
+        call.addr.maxlen = sizeof(callAddr);
+        call.addr.len = sizeof(callAddr);
+        call.addr.buf = (UInt8*) &callAddr;
+    }
 
 	do {
 	    PrepareForAsyncCompletion(me, fd->secret->md.osfd);
@@ -1199,6 +1201,7 @@ PRInt32 _MD_accept(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen, PRInterva
 	PR_ASSERT(err == kOTNoError);
 
     // Bind to a local port; let the system assign it.
+    bindAddr.inet.family = AF_INET;
     bindAddr.inet.port = bindAddr.inet.ip = 0;
 
     bindReq.addr.maxlen = PR_NETADDR_SIZE (&bindAddr);
@@ -1229,8 +1232,6 @@ PRInt32 _MD_accept(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen, PRInterva
     if (err != kOTNoError)
         goto ErrorExit;
 
-    if (addr != NULL)
-        *addr = callAddr;
     if (addrlen != NULL)
         *addrlen = call.addr.len;
 
@@ -1270,6 +1271,7 @@ PRInt32 _MD_connect(PRFileDesc *fd, PRNetAddr *addr, PRUint32 addrlen, PRInterva
         
     // Bind to a local port; let the system assign it.
 
+    bindAddr.inet.family = AF_INET;
     bindAddr.inet.port = bindAddr.inet.ip = 0;
 
     bindReq.addr.maxlen = PR_NETADDR_SIZE (&bindAddr);
@@ -1814,7 +1816,7 @@ _MD_getpeername(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *addrlen)
 	TBind peerAddr;
 	OSErr err;
 	
-	if (*addrlen < PR_NETADDR_SIZE(addr)) {
+	if (*addrlen < sizeof(InetAddress)) {
 
 		err = (OSErr) kEINVALErr;
 		goto ErrorExit;
