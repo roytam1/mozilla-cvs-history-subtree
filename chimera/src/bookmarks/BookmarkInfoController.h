@@ -24,7 +24,8 @@
 #import <AppKit/AppKit.h>
 #import "BookmarksService.h"
 
-@interface BookmarkInfoController : NSWindowController {
+@interface BookmarkInfoController : NSWindowController
+{
     IBOutlet NSTextField* mNameField;
     IBOutlet NSTextField* mLocationField;
     IBOutlet NSTextField* mKeywordField;
@@ -41,6 +42,6 @@
 + (id)sharedBookmarkInfoController;
 
 -(void)setBookmark:(BookmarkItem*)aBookmark;
-
+-(BookmarkItem*)bookmark;
 
 @end

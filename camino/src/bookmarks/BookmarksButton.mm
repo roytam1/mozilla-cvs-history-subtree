@@ -144,6 +144,12 @@
 {
   if (mElement == BookmarksService::gToolbarRoot)
     return; // Don't allow the personal toolbar to be deleted.
+
+	//close the BIC if it was looking at us - if it's already closed, it's not looking at us.
+	BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController];
+	if (([bic bookmark] == mBookmarkItem))
+    [bic close];
+
   nsCOMPtr<nsIContent> content(do_QueryInterface(mElement));
   
   nsCOMPtr<nsIDOMNode> parent;

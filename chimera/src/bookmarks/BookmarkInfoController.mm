@@ -88,6 +88,8 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
 -(void)windowDidResignKey:(NSNotification*) aNotification
 {
   [[self window] makeFirstResponder:[self window]];
+	if (![[self window] isVisible])
+    mBookmarkItem = nil;
 }
 
 - (void)commitChanges:(id)changedField
@@ -190,6 +192,11 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   [mDescriptionField setStringValue: [NSString stringWith_nsAString: value]];
   
   mBookmarkItem = aBookmark;  
+}
+
+-(BookmarkItem *)bookmark
+{
+  return mBookmarkItem;
 }
 
 -(void)showUIElementPair: (id)aLabel control:(id)aControl
