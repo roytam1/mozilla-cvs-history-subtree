@@ -53,7 +53,6 @@ public:
   NS_DECL_NSIOBSERVER
 
   // nsIClipboard
-  NS_IMETHOD ForceDataToClipboard(PRInt32 aWhichClipboard);
   NS_IMETHOD HasDataMatchingFlavors(nsISupportsArray *aFlavorList, PRInt32 aWhichClipboard, PRBool *_retval);
 
 protected:
