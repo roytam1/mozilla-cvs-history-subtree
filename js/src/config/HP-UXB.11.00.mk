@@ -20,7 +20,7 @@
 #
 
 ifdef NS_USE_NATIVE
-  CC  = cc +Z +DAportable +DS2.0
+  CC  = cc +Z +DAportable +DS2.0 +u4
 #  LD  = aCC +Z -b -Wl,+s -Wl,-B,symbolic
 else
   CC = gcc -Wall -Wno-format -fPIC
@@ -38,7 +38,7 @@ SO_SUFFIX = sl
 CPU_ARCH = hppa
 GFX_ARCH = x
 
-OS_CFLAGS = -DXP_UNIX -DHPUX -DSYSV
+OS_CFLAGS = -DXP_UNIX -DHPUX -DSYSV -D_HPUX -DNATIVE -D_POSIX_C_SOURCE=199506L
 OS_LIBS = -ldld
 
 XLDFLAGS = -lpthread
