@@ -19,6 +19,6 @@ Rights Reserved.
 --> 
 
 <!-- Title -->
-	<!ENTITY editcardWindow.title		"New Card">
+	<!ENTITY editcardWindow.title		"New Contact">
 <!-- Labels -->
 	<!ENTITY chooseAddressBook.label	"Add to: ">
