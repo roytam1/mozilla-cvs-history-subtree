@@ -20,7 +20,7 @@
 #    Stuart Parmenter <pavlov@netscape.com>
 #
 
-DEPTH		= ../..
+DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
@@ -28,16 +28,34 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= gfx2
-#LIBRARY_NAME	= gfx_base
+XPIDL_MODULE	= gfx2xlib
+LIBRARY_NAME	= gfx2
+IS_COMPONENT	= 1
 
-#CPPSRCS		= \
-#		$(NULL)
+XPIDLSRCS	= \
+		nsPIImageContainerGtk.idl \
+		$(NULL)
 
-DIRS		= gtk
+CPPSRCS		= \
+		nsGfxFactory.cpp \
+		nsImageContainer.cpp \
+		nsImageFrame.cpp \
+		$(NULL)
 
-# we don't want the shared lib, but we want to force the creation of a static lib.
-#override NO_SHARED_LIB=1
-#override NO_STATIC_LIB=
+#SHARED_LIBRARY_LIBS = $(DIST)/lib/libgfx_base.a
 
 include $(topsrcdir)/config/rules.mk
+
+EXTRA_DSO_LDOPTS += -L$(DIST)/bin
+EXTRA_DSO_LDOPTS += $(TK_LIBS) -lgdk_pixbuf
+CXXFLAGS	+= $(TK_CFLAGS)
+
+EXTRA_DSO_LDOPTS += \
+		$(NSPR_LIBS)	\
+		-lxpcom		\
+		$(NULL)
+
+ifeq ($(OS_ARCH), Linux)
+DEFINES         += -D_BSD_SOURCE
+endif
 

@@ -30,11 +30,11 @@
 #include <gdk/gdk.h>
 
 #define NS_IMAGEFRAME_CID \
-{ /* 27d55516-1dd2-11b2-9b33-d9a6328f49bd */         \
-     0x27d55516,                                     \
+{ /* 3d25862e-1dd2-11b2-9d51-be9a25210304 */         \
+     0x3d25862e,                                     \
      0x1dd2,                                         \
      0x11b2,                                         \
-    {0x9b, 0x33, 0xd9, 0xa6, 0x32, 0x8f, 0x49, 0xbd} \
+    {0x9d, 0x51, 0xbe, 0x9a, 0x25, 0x21, 0x03, 0x04} \
 }
 
 struct ImageData

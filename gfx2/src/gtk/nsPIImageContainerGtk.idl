@@ -41,14 +41,14 @@ native GC(GC);
 [ptr] native nsPoint(nsPoint);
 
 /**
- * nsPIImageContainerXlib interface
+ * nsPIImageContainerGtk interface
  *
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.1
  * @see "gfx2"
  */
-[uuid(2d49aaae-1dd2-11b2-8f78-ead44a022560)]
-interface nsPIImageContainerXlib : nsISupports
+[uuid(67ddea5a-1dd2-11b2-8051-997f7246444b)]
+interface nsPIImageContainerGtk : nsISupports
 {
   /**
   void drawImage(in Display display,

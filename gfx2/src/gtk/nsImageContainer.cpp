@@ -27,7 +27,7 @@
 
 #include "nsImageFrame.h"
 
-NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerXlib)
+NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerGtk)
 
 nsImageContainer::nsImageContainer()
 {
@@ -131,7 +131,7 @@ NS_IMETHODIMP nsImageContainer::SetLoopCount(PRInt32 aLoopCount)
 }
 
 
-/** nsPIImageContainerXlib methods **/
+/** nsPIImageContainerGtk methods **/
 
 NS_IMETHODIMP nsImageContainer::DrawImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
