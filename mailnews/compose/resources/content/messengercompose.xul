@@ -1,38 +1,13 @@
 <?xml version="1.0"?> 
-<!--
-   - The contents of this file are subject to the Netscape Public
-   - License Version 1.1 (the "License"); you may not use this file
-   - except in compliance with the License. You may obtain a copy of
-   - the License at http://www.mozilla.org/NPL/
-   -  
-   - Software distributed under the License is distributed on an "AS
-   - IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-   - implied. See the License for the specific language governing
-   - rights and limitations under the License.
-   -  
-   - The Original Code is Mozilla Communicator client code, released
-   - March 31, 1998.
-   - 
-   - The Initial Developer of the Original Code is Netscape
-   - Communications Corporation. Portions created by Netscape are
-   - Copyright (C) 1999 Netscape Communications Corporation. All
-   - Rights Reserved.
-   - 
-   - Contributor(s):
-   -   Ben Goodger <ben@netscape.com> (ass'td polish fixes)
-   -   Hkan Waara <hwaara@chello.se>
-  -->
 
 <?xml-stylesheet href="chrome://messenger/skin/messengercompose/messengercompose.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://editor/skin/editorFormatToolbar.css" type="text/css"?> 
-<?xml-stylesheet href="chrome://messenger/skin/addressingWidget.css" type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
-<?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 <?xul-overlay href="chrome://editor/content/editorOverlay.xul"?>
@@ -68,9 +43,9 @@
 <script type="application/x-javascript" src="chrome://messenger/content/accountUtils.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mail-offline.js"/>
-<script type="application/x-javascript" src="chrome://editor/content/editor.js"/>
-<!--script type="application/x-javascript" src="chrome://editor/content/EditorCommandsDebug.js"/-->
 <script type="application/x-javascript" src="chrome://messenger/content/messengercompose/MsgComposeCommands.js"/>
+<script type="application/x-javascript" src="chrome://messenger/content/messengercompose/addressingWidgetOverlay.js"/>
+<script type="application/x-javascript" src="chrome://editor/content/editor.js"/>
 
 <!-- drag and drop -->
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
@@ -249,13 +224,23 @@
           <menuitem label="&findAgainCmd.label;" key="key_findNext" accesskey="&findAgainCmd.accesskey;" command="cmd_findNext"/>
           <menuseparator/>
           <menuitem label="&accountManagerCmd.label;" accesskey="&accountManagerCmd.accesskey;" command="cmd_account"/>
-          <menuitem id="menu_preferences" oncommand="goDoCommand('cmd_preferences')"/>
+          <menuitem id="menu_preferences" oncommand="goPreferences('messenger.xul','chrome://messenger/content/pref-mailnews.xul','mailnews')"/>
         </menupopup>
       </menu>
       <menu id="menu_View">
         <menupopup id="menu_View_Popup">
           <menu id="menu_Toolbars">
             <menupopup>
+              <menuitem id="toggleCcRowVisibility" 
+                     label="&toggleCcRow.label;" 
+                     accesskey="&toggleCcRow.label;"
+                     type="checkbox" 
+                     oncommand="toggleCcRowVisibility();"/>
+              <menuitem id="toggleBccRowVisibility" 
+                     label="&toggleBccRow.label;" 
+                     accesskey="&toggleBccRow.label;"
+                     type="checkbox" 
+                     oncommand="toggleBccRowVisibility();"/>
               <menuitem id="menu_showComposeToolbar"
                         type="checkbox"
                         label="&showComposeToolbarCmd.label;"
@@ -415,32 +400,77 @@
        </hbox>
        </hbox>
     </toolbar>
+  </toolbox>
   
-    <toolbar id="MsgHeadersToolbar" persist="collapsed" flex="1"
+      <toolbar id="MsgHeadersToolbar" persist="collapsed"
              tborient="vertical" tbalign="stretch"
              grippytooltiptext="&addressBar.tooltip;">
       <hbox id="msgheaderstoolbar-box" flex="1">
-        <vbox flex="1" id="addresses-box">
-          <hbox align="center">
-            <label value="&fromAddr.label;"/>
-            <menulist id="msgIdentity" label="..." flex="1" oncommand="LoadIdentity(false);">
-              <menupopup id="msgIdentityPopup"/>
-            </menulist>
-          </hbox> 
-          <listbox id="addressingWidget" flex="1"/>
-          <hbox align="center">
-            <label value="&subject.label;" accesskey="&subject.accesskey;"/>
-            <textbox id="msgSubject" flex="1" class="toolbar" disableonsend="true"
-                     onkeyup="SetComposeWindowTitle(event.which);"
-                     onkeypress="subjectKeyPress(event);"
-                     oninput="gContentChanged=true;"/>
-          </hbox>
-        </vbox>
-        <splitter id="attachmentbucket-sizer" collapse="after"/>
-        <vbox id="attachments-box">
+
+          <vbox id="addresses-box" flex="1">
+            <grid>
+              <columns>
+                <column/>
+                <column flex="1"/>
+              </columns>
+              <rows>
+                <row flex="1">
+                  <hbox align="center" pack="end">
+                    <label value="&fromAddr.label;"/>
+                  </hbox>
+                  <menulist id="msgIdentity" label="..." flex="1" oncommand="LoadIdentity(false);">
+                    <menupopup id="msgIdentityPopup"/>
+                  </menulist>
+                </row>
+                <row flex="1">
+                  <hbox align="center" pack="end">
+                    <label value="&toField.label;"/>
+                  </hbox>
+                  <textbox id="toField" type="autocomplete" flex="1"
+                           searchSessions="addrbook" timeout="20" maxrows="4" 
+                           autoFill="true" autoFillAfterMatch="true" forceComplete="true"
+                           minResultsForPopup="3"
+                           onerrorcommand="awRecipientErrorCommand(eventParam, this)"
+                           oninput="gContentChanged=true; setupAutocomplete();" disableonsend="true"/>
+                 </row>
+                 <row flex="1" id="ccRow">
+                   <hbox align="center" pack="end">
+                     <label value="&ccField.label;"/>
+                   </hbox>
+                   <textbox id="ccField" type="autocomplete" flex="1"
+                            searchSessions="addrbook" timeout="20" maxrows="4" 
+                            autoFill="true" autoFillAfterMatch="true" forceComplete="true"
+                            minResultsForPopup="3"
+                            onerrorcommand="awRecipientErrorCommand(eventParam, this)"
+                            oninput="gContentChanged=true; setupAutocomplete();" disableonsend="true"/>
+                 </row>
+                 <row flex="1" id="bccRow" hidden="true">
+                   <hbox align="center" pack="end">
+                     <label value="&bccField.label;"/>
+                   </hbox>
+                   <textbox id="bccField" type="autocomplete" flex="1"
+                            searchSessions="addrbook" timeout="20" maxrows="4" 
+                            autoFill="true" autoFillAfterMatch="true" forceComplete="true"
+                            minResultsForPopup="3"
+                            onerrorcommand="awRecipientErrorCommand(eventParam, this)"
+                            oninput="gContentChanged=true; setupAutocomplete();" disableonsend="true"/>
+                 </row>
+                 <row flex="1">
+                   <hbox align="center" pack="end">
+                     <label value="&subject.label;" accesskey="&subject.accesskey;" control="msgSubject"/>
+                   </hbox>
+                   <textbox id="msgSubject" flex="1" disableonsend="true"
+                            onkeyup="SetComposeWindowTitle();"
+                            onkeypress="subjectKeyPress(event);"
+                            oninput="gContentChanged=true;"/>
+                 </row>
+               </rows>
+             </grid>
+          </vbox>
+          <vbox id="attachments-box" hidden="true">
           <label id="attachmentBucketText" value="&attachments.label;" crop="right"
                 accesskey="&attachments.accesskey;"/>
-          <listbox id="attachmentBucket" flex="1" rows="4"
+            <listbox id="attachmentBucket" flex="1" rows="2"
                    context="msgComposeAttachmentContext"
                    onkeypress="if (event.keyCode == 8 || event.keyCode == 46) RemoveSelectedAttachment();"
                    onclick="AttachmentBucketClicked(event);"
@@ -453,8 +483,10 @@
   
     <!-- These toolbar items get filled out from the editorOverlay -->
     <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" grippytooltiptext="&formatToolbar.tooltip;">
-      <menulist id="ParagraphSelect"/>
-      <menulist id="FontFaceSelect"/>
+        <menulist id="fontsMenulist" style="max-width: 15em;">
+          <observes element="cmd_fontFace" attribute="state" onbroadcast="onFontFaceChange(this.parentNode, 'cmd_fontFace')"/>
+          <menupopup id="FontFacePopup" oncommand="doStatefulCommand('cmd_fontFace', event.target.value);"/>
+        </menulist>
       <stack id="ColorButtons"/>
       <toolbarbutton id="DecreaseFontSizeButton"/>
       <toolbarbutton id="IncreaseFontSizeButton"/>
@@ -465,19 +497,25 @@
       <toolbarseparator class="toolbarseparator-standard"/>
       <toolbarbutton id="ulButton"/>
       <toolbarbutton id="olButton"/>
-      <toolbarbutton id="outdentButton"/>
-      <toolbarbutton id="indentButton"/>
       <toolbarseparator class="toolbarseparator-standard"/>
-      <toolbarbutton id="AlignPopupButton"/>
-      <toolbarbutton id="InsertPopupButton"/>
+        <toolbarbutton id="AlignLeftItem" oncommand="doStatefulCommand('cmd_align', 'left')">
+          <observes element="cmd_align" attribute="disabled"/>
+        </toolbarbutton>
+        <toolbarbutton id="AlignCenterItem" oncommand="doStatefulCommand('cmd_align', 'center')">
+          <observes element="cmd_align" attribute="disabled"/>
+        </toolbarbutton>
+        <toolbarbutton id="AlignRightItem" oncommand="doStatefulCommand('cmd_align', 'right')">
+          <observes element="cmd_align" attribute="disabled"/>
+        </toolbarbutton>
+        <toolbarseparator class="toolbarseparator-standard"/>
+        <toolbarbutton id="InsertLinkItem" class="insert" command="cmd_link"/>
+        <toolbarbutton id="InsertImageItem" class="insert" command="cmd_image"/>
       <toolbarbutton id="smileButtonMenu" padwithspace="true"/>
       <spacer flex="1"/>
     </toolbar>
-  </toolbox>
 
-  <splitter id="compose-toolbar-sizer" onmousedown="awSizerListen()" collapse="after"/>
+      <!--<splitter id="compose-toolbar-sizer" onmousedown="awSizerListen()" collapse="after"/>-->
 
-  <!-- The mail message body frame -->
   <vbox id="appcontent" flex="1">
     <editor type="content-primary" id="content-frame" src="about:blank" name="browser.message.body" flex="1"
             onkeypress="editorKeyPress(event);" context="msgComposeContext"/>

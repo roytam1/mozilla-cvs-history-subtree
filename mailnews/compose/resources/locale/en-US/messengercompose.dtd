@@ -206,3 +206,25 @@
 <!ENTITY selectAll.accesskey "A">
 <!ENTITY addAttachment.label "Add Attachment">
 <!ENTITY addAttachment.accesskey "t">
+
+<!ENTITY toField.label               "To:"> 
+<!ENTITY ccField.label               "Cc:"> 
+<!ENTITY bccField.label              "Bcc:"> 
+
+<!ENTITY toBtn.label                 "To"> 
+<!ENTITY ccBtn.label                 "Cc"> 
+<!ENTITY bccBtn.label                "Bcc"> 
+
+<!ENTITY toggleCcRow.label           "Show Cc Field">
+<!ENTITY toggleCcRow.accesskey       "c">
+<!ENTITY toggleBccRow.label          "Show Bcc Field">
+<!ENTITY toggleBccRow.accesskey      "B">
+
+<!ENTITY abFind.label                "Find:">
+
+<!ENTITY addressButton.label         "Addresses">
+<!ENTITY attachButton.label          "Add Attachments">
+<!ENTITY spellButton.label           "Check Spelling">
+<!ENTITY saveButton.label            "Save Draft">
+<!ENTITY moreButton.label            "More">
+

@@ -29,7 +29,6 @@ var nsIMsgCompFormat = Components.interfaces.nsIMsgCompFormat;
 var nsIAbPreferMailFormat = Components.interfaces.nsIAbPreferMailFormat;
 var nsIPlaintextEditorMail = Components.interfaces.nsIPlaintextEditor;
 
-
 /**
  * In order to distinguish clearly globals that are initialized once when js load (static globals) and those that need to be 
  * initialize every time a compose window open (globals), I (ducarroz) have decided to prefix by s... the static one and
@@ -51,6 +50,7 @@ var sOther_header = "";
 */
 var msgWindow = Components.classes["@mozilla.org/messenger/msgwindow;1"].createInstance();
 
+const kDefaultFont = "Times New Roman";
 
 /**
  * Global variables, need to be re-initialized every time mostly because we need to release them when the window close
@@ -171,13 +171,23 @@ function enableEditableFields()
 
 var gComposeRecyclingListener = {
   onClose: function() {
+	  
     //Reset recipients and attachments
-	  awResetAllRows();
-	  RemoveAllAttachments();
+    var ccField = document.getElementById("ccField");
+    var bccField = document.getElementById("bccField");
+    var toField = document.getElementById("toField");
+    toField.value = "";
+    bccField.value = "";
+    ccField.value = "";
+   
+    //Hide bcc row again
+    var bccRow = document.getElementById("bccRow");
+    bccRow.hidden = true;
 
-	  //We need to clear the identity popup menu in case the user will change them. It will be rebuilded later in ComposeStartup
+    //We need to clear the identity popup menu in case the user will change them. It will be rebuilded later in ComposeStartup
     ClearIdentityListPopup(document.getElementById("msgIdentityPopup"));
- 
+    RemoveAllAttachments();
+
     //Clear the subject
     document.getElementById("msgSubject").value = "";
     SetComposeWindowTitle(13);
@@ -207,9 +217,9 @@ var gComposeRecyclingListener = {
     var event = document.createEvent('Events');
     event.initEvent('compose-window-close', false, true);
     document.getElementById("msgcomposeWindow").dispatchEvent(event);
-	},
+  },
 
-	onReopen: function(params) {
+  onReopen: function(params) {
     //Reset focus to work around bug 141648
     var identityElement = document.getElementById("msgIdentity");
     if (identityElement)
@@ -223,7 +233,7 @@ var gComposeRecyclingListener = {
     var event = document.createEvent('Events');
     event.initEvent('compose-window-reopen', false, true);
     document.getElementById("msgcomposeWindow").dispatchEvent(event);
-	}
+  }
 };
 
 var stateListener = {
@@ -1041,9 +1051,10 @@ function setupLdapAutocompleteSession()
                 // succeeded; add the session for all recipients, and 
                 // remember that we've done so
                 var autoCompleteWidget;
-                for (i=1; i <= awGetMaxRecipients(); i++)
+                var fields = ["to", "cc", "bcc"];
+                for (i=0; i < fields.length; ++i)
                 {
-                    autoCompleteWidget = document.getElementById("addressCol2#" + i);
+                    autoCompleteWidget = document.getElementById(fields[i] + "field");
                     if (autoCompleteWidget)
                     {
                       autoCompleteWidget.addSession(LDAPSession);
@@ -1064,9 +1075,10 @@ function setupLdapAutocompleteSession()
         gCurrentAutocompleteDirectory = null;
       }
       if (gLDAPSession && gSessionAdded) {
-        for (i=1; i <= awGetMaxRecipients(); i++) 
-          document.getElementById("addressCol2#" + i).
-              removeSession(gLDAPSession);
+        var fields = ["to", "cc", "bcc"];
+        for (i=0; i < fields.length; ++i) {
+          document.getElementById(fields[i] + "field").removeSession(gLDAPSession);
+        }
         gSessionAdded = false;
       }
     }
@@ -1207,6 +1219,23 @@ function ComposeFieldsReady(msgType)
   AdjustFocus();
 }
 
+function AdjustFocus()
+{
+  var toField = document.getElementById("toField");
+  if (!toField.value) {
+    toField.focus();
+    return;
+  }
+  
+  var msgSubject = document.getElementById("msgSubject");
+  if (!msgSubject.value) {
+    msgSubject.focus();
+    return;
+  }
+  
+  editorShell.contentWindow.focus();
+}
+
 function ComposeStartup(recycled, aParams)
 {
   var params = null; // New way to pass parameters to the compose window as a nsIMsgComposeParameters object
@@ -1229,8 +1258,6 @@ function ComposeStartup(recycled, aParams)
 
   var identityList = document.getElementById("msgIdentity");
   var identityListPopup = document.getElementById("msgIdentityPopup");
-
-  document.addEventListener("keypress", awDocumentKeyPress, true);
 
   if (identityListPopup)
     FillIdentityListPopup(identityListPopup);
@@ -1317,6 +1344,7 @@ function ComposeStartup(recycled, aParams)
         break;
     }
   }
+
   LoadIdentity(true);
   if (sMsgComposeService)
   {
@@ -1399,6 +1427,11 @@ function ComposeStartup(recycled, aParams)
         if (attachments)
           for (i = 0; i < attachments.Count(); i ++)
             AddAttachment(attachments.QueryElementAt(i, Components.interfaces.nsIMsgAttachment));
+
+          if (attachments.Count()) {
+            var attachmentBox = document.getElementById("attachments-box");
+            attachmentBox.hidden = false;
+          }
         }
 
       gMsgCompose.RegisterStateListener(stateListener);
@@ -1435,12 +1468,7 @@ function ComposeLoad()
     dump("failed to preferences services\n");
   }
 
-  try {
-    sOther_header = sPrefs.getCharPref("mail.compose.other.header");
-  }
-  catch (ex) {
-    dump("failed to get the mail.compose.other.header pref\n");
-  }
+  // add back support for mail.compose.other.header
 
   AddMessageComposeOfflineObserver();
   AddDirectoryServerObserver(true);
@@ -1480,6 +1508,27 @@ function ComposeLoad()
     return;
   }
   window.tryToClose=ComposeCanClose;
+
+  // Populate the font dropdown
+  var fontsList = document.getElementById("FontFacePopup");
+  var fontEnumerator = Components.classes["@mozilla.org/gfx/fontenumerator;1"].createInstance(Components.interfaces.nsIFontEnumerator);
+  var fontName, fontNameStr, itemNode;
+  var fontArray = fontEnumerator.EnumerateAllFonts({});
+  for (var i = 0; i < fontArray.length; ++i) {
+    fontName = fontArray[i];
+    fontNameStr = fontName.toString();
+    itemNode = document.createElement("menuitem");
+    itemNode.setAttribute("value", fontNameStr);
+    itemNode.setAttribute("label", fontNameStr);
+    fontsList.appendChild(itemNode);
+    itemNode.setAttribute("style", itemNode.getAttribute("style") + " font-family: " + fontNameStr + " !important;");
+  }
+
+  var defaultSelection = fontsList.getElementsByAttribute("value", kDefaultFont)[0];
+  if (!defaultSelection)
+    defaultSelection = fontsList.firstChild; 
+  document.getElementById("fontsMenulist").selectedItem = defaultSelection;
+
   if (gLogComposePerformance)
     sMsgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about:blank", false);
 }
@@ -1620,10 +1669,16 @@ function GenericSendMessage( msgType )
       var msgCompFields = gMsgCompose.compFields;
       if (msgCompFields)
       {
+
+      try {
       Recipients2CompFields(msgCompFields);
       var subject = document.getElementById("msgSubject").value;
       msgCompFields.subject = subject;
       Attachments2CompFields(msgCompFields);
+      }
+      catch(ex) {
+        alert(ex);
+      }
 
       var event = document.createEvent('Events');
       event.initEvent('compose-send-message', false, true);
@@ -1982,15 +2037,9 @@ function FillIdentityListPopup(popup)
 
 function getCurrentIdentity()
 {
-    // fill in Identity combobox
-    var identityList = document.getElementById("msgIdentity");
+    var identities = GetIdentities();
 
-    var item = identityList.selectedItem;
-    var identityKey = item.getAttribute('id');
-
-    //dump("Looking for identity " + identityKey + "\n");
-    var identity = gAccountManager.getIdentity(identityKey);
-
+    var identity = identities[0];
     return identity;
 }
 
@@ -1999,7 +2048,6 @@ function getIdentityForKey(key)
     return gAccountManager.getIdentity(key);
 }
 
-
 function SuppressComposeCommandUpdating(suppress)
 {
   gSuppressCommandUpdating = suppress;
@@ -2007,39 +2055,8 @@ function SuppressComposeCommandUpdating(suppress)
     CommandUpdate_MsgCompose();
 }
 
-function AdjustFocus()
-{
-  //dump("XXX adjusting focus\n");
-  SuppressComposeCommandUpdating(true);
-
-  var element = document.getElementById("addressCol2#" + awGetNumberOfRecipients());
-  if (element.value == "") {
-      //dump("XXX focus on address\n");
-      awSetFocus(awGetNumberOfRecipients(), element);
-      //awSetFocus() will call SuppressComposeCommandUpdating(false);
-  }
-  else
-  {
-      element = document.getElementById("msgSubject");
-      if (element.value == "") {
-        //dump("XXX focus on subject\n");
-        element.focus();
-      }
-      else {
-        //dump("XXX focus on body\n");
-        editorShell.contentWindow.focus();
-      }
-      SuppressComposeCommandUpdating(false);
-  }
-}
-
 function SetComposeWindowTitle(event)
 {
-  /* dump("event = " + event + "\n"); */
-
-  /* only set the title when they hit return (or tab?)
-   */
-
   var newTitle = document.getElementById('msgSubject').value;
 
   /* dump("newTitle = " + newTitle + "\n"); */
@@ -2199,6 +2216,9 @@ function AttachFile()
     attachment.url = currentAttachment;
     AddAttachment(attachment);
     gContentChanged = true;
+
+    var attachmentBox = document.getElementById("attachments-box");
+    attachmentBox.hidden = false;
   }
 }
 
@@ -2311,6 +2331,7 @@ function RemoveAllAttachments()
     // Let's release the attachment object hold by the node else it won't go away until the window is destroyed
     child.attachment = null;
   }
+  document.getElementById("attachments-box").setAttribute("hidden", "true");    
 }
 
 function RemoveSelectedAttachment()
@@ -2320,12 +2341,15 @@ function RemoveSelectedAttachment()
   if (bucket.selectedItems.length > 0) {
     for (var item = bucket.selectedItems.length - 1; item >= 0; item-- )
     {
-      child = bucket.removeChild(bucket.selectedItems[item]) = null;
+      child = bucket.removeChild(bucket.selectedItems[item]);
       // Let's release the attachment object hold by the node else it won't go away until the window is destroyed
       child.attachment = null;
     }
     gContentChanged = true;
   }
+
+  if (!MessageHasAttachments())                                                 
+    document.getElementById("attachments-box").setAttribute("hidden", "true");
 }
 
 function FocusOnFirstAttachment()
@@ -2448,6 +2472,7 @@ function LoadIdentity(startup)
     var prevIdentity = gCurrentIdentity;
     
     if (identityElement) {
+        var idKey = "id1";
         var item = identityElement.selectedItem;
         var idKey = item.getAttribute('id');
         gCurrentIdentity = gAccountManager.getIdentity(idKey);
@@ -2456,7 +2481,7 @@ function LoadIdentity(startup)
         {
           var prefstring = "mail.identity." + prevIdentity.key;
           RemoveDirectoryServerObserver(prefstring);
-          var prevReplyTo = prevIdentity.replyTo;
+          
           var prevBcc = "";
           if (prevIdentity.bccSelf)
             prevBcc += prevIdentity.email;
@@ -2467,7 +2492,6 @@ function LoadIdentity(startup)
             prevBcc += prevIdentity.bccList;
           }
 
-          var newReplyTo = gCurrentIdentity.replyTo;
           var newBcc = "";
           if (gCurrentIdentity.bccSelf)
             newBcc += gCurrentIdentity.email;
@@ -2480,15 +2504,6 @@ function LoadIdentity(startup)
 
           var needToCleanUp = false;
           var msgCompFields = gMsgCompose.compFields;
-
-          if (newReplyTo != prevReplyTo)
-          {
-            needToCleanUp = true;
-            if (prevReplyTo != "")
-              awRemoveRecipients(msgCompFields, "addr_reply", prevReplyTo);
-            if (newReplyTo != "")
-              awAddRecipients(msgCompFields, "addr_reply", newReplyTo);
-          }
 
           if (newBcc != prevBcc)
           {
@@ -2525,9 +2540,9 @@ function setupAutocomplete()
   if (!gAutocompleteSession) {
     gAutocompleteSession = Components.classes["@mozilla.org/autocompleteSession;1?type=addrbook"].getService(Components.interfaces.nsIAbAutoCompleteSession);
     if (gAutocompleteSession) {
-      var emailAddr = gCurrentIdentity.email;
-      var start = emailAddr.lastIndexOf("@");
-      gAutocompleteSession.defaultDomain = emailAddr.slice(start + 1, emailAddr.length);
+      //var emailAddr = gCurrentIdentity.email;
+      //var start = emailAddr.lastIndexOf("@");
+      //gAutocompleteSession.defaultDomain = emailAddr.slice(start + 1, emailAddr.length);
 
       // if the pref is set to turn on the comment column, honor it here.
       // this element then gets cloned for subsequent rows, so they should 
@@ -2702,24 +2717,10 @@ function DisplaySaveFolderDlg(folderURI)
   return;
 }
 
-
-
 function SetMsgAddressingWidgetTreeElementFocus()
 {
-  SuppressComposeCommandUpdating(true);
-
-  var element = document.getElementById("msgRecipient#" + awGetNumberOfRecipients());
-  awSetFocus(awGetNumberOfRecipients(), element);
-  //awSetFocus() will call SuppressComposeCommandUpdating(false);
-}
-
-function SetMsgIdentityElementFocus()
-{
-  // We're only changing focus from element to element.
-  // There's no need to update the composer commands.
-  SuppressComposeCommandUpdating(true);
-  GetMsgIdentityElement().focus();
-  SuppressComposeCommandUpdating(false);
+  var element = document.getElementById("toField");
+  element.focus();
 }
 
 function SetMsgSubjectElementFocus()
@@ -2747,17 +2748,9 @@ function SetMsgBodyFrameFocus()
 function GetMsgAddressingWidgetTreeElement()
 {
   if (!gMsgAddressingWidgetTreeElement)
-    gMsgAddressingWidgetTreeElement = document.getElementById("addressingWidgetTree");
+    gMsgAddressingWidgetTreeElement = document.getElementById("toField");
 
   return gMsgAddressingWidgetTreeElement;
-}
-
-function GetMsgIdentityElement()
-{
-  if (!gMsgIdentityElement)
-    gMsgIdentityElement = document.getElementById("msgIdentity");
-
-  return gMsgIdentityElement;
 }
 
 function GetMsgSubjectElement()
@@ -2803,7 +2796,6 @@ function IsMsgHeadersToolbarCollapsed()
 
 function WhichElementHasFocus()
 {
-  var msgIdentityElement             = GetMsgIdentityElement();
   var msgAddressingWidgetTreeElement = GetMsgAddressingWidgetTreeElement();
   var msgSubjectElement              = GetMsgSubjectElement();
   var msgAttachmentElement           = GetMsgAttachmentElement();
@@ -2815,8 +2807,7 @@ function WhichElementHasFocus()
   var currentNode = top.document.commandDispatcher.focusedElement;
   while (currentNode)
   {
-    if (currentNode == msgIdentityElement ||
-        currentNode == msgAddressingWidgetTreeElement ||
+    if (currentNode == msgAddressingWidgetTreeElement ||
         currentNode == msgSubjectElement ||
         currentNode == msgAttachmentElement)
       return currentNode;
@@ -2843,10 +2834,6 @@ function SwitchElementFocus(event)
   if (event && event.shiftKey)
   {
     if (IsMsgHeadersToolbarCollapsed())
-      SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgAddressingWidgetTreeElement)
-      SetMsgIdentityElementFocus();
-    else if (focusedElement == gMsgIdentityElement)
       SetMsgBodyFrameFocus();
     else if (focusedElement == gMsgBodyFrame)
     {
@@ -2879,10 +2866,70 @@ function SwitchElementFocus(event)
     }
     else if (focusedElement == gMsgAttachmentElement)
       SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgBodyFrame)
-      SetMsgIdentityElementFocus();
     else
       SetMsgAddressingWidgetTreeElementFocus();
   }
+}
+
+function toggleBccRowVisibility()
+{
+  var bccRow = document.getElementById("bccRow");
+  bccRow.hidden = !bccRow.hidden;
+}
+
+function toggleCcRowVisibility()
+{
+  var ccRow = document.getElementById("ccRow");
+  ccRow.hidden = !ccRow.hidden;
+}
+
+function toggleABUI(aCmd)
+{
+  var abPane = document.getElementById("abPane");
+  abPane.hidden = !abPane.hidden;
+  var abSplitter = document.getElementById("abSplitter");
+  abSplitter.hidden = !abSplitter.hidden;
+  var isChecked = aCmd.getAttribute("checked") == "true";
+  if (isChecked)
+    aCmd.removeAttribute("checked");
+  else
+    aCmd.setAttribute("checked", "true");
+}
+
+function addMailHeader(aType)
+{
+  var addresses = GetSelectedAddresses();
+  var sep = ", ";
+  switch(aType) {
+    case 'to':
+      var toField = document.getElementById("toField");
+      if (!toField.value) sep = ""; // should trim field's value of spaces first
+      toField.value += sep + addresses;
+      break;
+    case 'cc':
+      var ccRow = document.getElementById("ccRow");
+      ccRow.hidden = false;
+      var ccField = document.getElementById("ccField");
+      if (!ccField.value) sep = "";
+      ccField.value += sep + addresses;
+      break;
+    case 'bcc':
+      var bccRow = document.getElementById("bccRow");
+      bccRow.hidden = false;
+      var bccField = document.getElementById("bccField");
+      if (!bccField.value) sep = "";
+      bccField.value += sep + addresses;
+      break;
+  }
+}
+
+function updateRowMenuitems() {
+  var menuitem = document.getElementById("toggleBccRowVisibility");
+  var row = document.getElementById("bccRow");
+  menuitem.setAttribute("checked", row.hidden ? "false" : "true");
+
+  menuitem = document.getElementById("toggleCcRowVisibility");
+  row = document.getElementById("ccRow");
+  menuitem.setAttribute("checked", row.hidden ? "false" : "true");
 }
 
