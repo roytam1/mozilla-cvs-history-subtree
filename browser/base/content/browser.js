@@ -84,6 +84,9 @@ var gProgressCollapseTimer = null;
 var gPrefService = null;
 var appCore = null;
 var gBrowser = null;
+var gSidebarCommand = "";
+
+// Global find variables
 var gFindMode = FIND_NORMAL;
 var gQuickFindTimeout = null;
 var gQuickFindTimeoutLength = 0;
@@ -95,7 +98,6 @@ var gNotFoundStr = "";
 var gTypeAheadFindBuffer = "";
 var gIsBack = true;
 var gBackProtectBuffer = 3;
-var gSidebarCommand = "";
 var gFlashFindBar = 0;
 var gFlashFindBarCount = 6;
 var gFlashFindBarTimeout = null;
