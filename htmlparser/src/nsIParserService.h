@@ -20,6 +20,9 @@
  * Contributor(s): 
  */
 
+#ifndef nsIParserService_h__
+#define nsIParserService_h__
+
 #include "nsISupports.h"
 #include "nsString.h"
 
@@ -46,3 +49,4 @@ class nsIParserService : public nsISupports {
   NS_IMETHOD IsBlock(nsString& aTag, PRBool& aIsBlock) const =0;
 };
 
+#endif // nsIParserService_h__
