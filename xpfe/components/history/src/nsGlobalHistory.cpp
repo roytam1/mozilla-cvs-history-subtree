@@ -114,8 +114,6 @@ public:
   NS_IMETHOD GetURLCompletion(const char *aURL, char **_retval);
 
   // nsIRDFDataSource
-  NS_IMETHOD Init(const char* aURI);
-
   NS_IMETHOD GetURI(char* *aURI);
 
   NS_IMETHOD GetSource(nsIRDFResource* aProperty,
@@ -159,6 +157,20 @@ public:
     return NS_RDF_ASSERTION_REJECTED;
   }
 
+	NS_IMETHOD Change(nsIRDFResource* aSource,
+                    nsIRDFResource* aProperty,
+                    nsIRDFNode* aOldTarget,
+                    nsIRDFNode* aNewTarget) {
+    return NS_RDF_ASSERTION_REJECTED;
+  }
+
+	NS_IMETHOD Move(nsIRDFResource* aOldSource,
+					nsIRDFResource* aNewSource,
+					nsIRDFResource* aProperty,
+                  nsIRDFNode* aTarget) {
+    return NS_RDF_ASSERTION_REJECTED;
+  }
+
   NS_IMETHOD HasAssertion(nsIRDFResource* aSource,
                           nsIRDFResource* aProperty,
                           nsIRDFNode* aTarget,
@@ -183,10 +195,6 @@ public:
   NS_IMETHOD ArcLabelsOut(nsIRDFResource* aSource,
                           nsISimpleEnumerator** aLabels) {
     return mInner->ArcLabelsOut(aSource, aLabels);
-  }
-
-  NS_IMETHOD Flush() {
-    return mInner->Flush();
   }
 
   NS_IMETHOD GetAllCommands(nsIRDFResource* aSource,
@@ -508,13 +516,6 @@ nsGlobalHistory::GetURLCompletion(const char *aURL, char **_retval)
 
 ////////////////////////////////////////////////////////////////////////
 // nsIRDFDataSource
-
-NS_IMETHODIMP
-nsGlobalHistory::Init(const char* aURI)
-{
-  return NS_OK;
-}
-
 
 NS_IMETHODIMP
 nsGlobalHistory::GetURI(char* *aURI)
