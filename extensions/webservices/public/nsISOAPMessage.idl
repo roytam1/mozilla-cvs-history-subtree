@@ -166,7 +166,7 @@ interface nsISOAPMessage : nsISupports {
    * @param SOAPParameters An array containing the parameters to
    * be attached to the message by marshallers.
    */
-  void marshallParameters(in nsISupportsArray SOAPParameters);
+  [noscript] void marshallParameters(in nsISupportsArray SOAPParameters);
 
   /**
    * Unmarshalls the parameters from this message, if
@@ -175,7 +175,7 @@ interface nsISOAPMessage : nsISupports {
    * @return An array containing the parameters that were
    * returned in the message and unmarshalled.
    */
-  nsISupportsArray unmarshallParameters();
+  [noscript] nsISupportsArray unmarshallParameters();
 
   /**
    * The status returned by an operation such as marshalling,
