@@ -104,17 +104,18 @@ public void setPref(String prefName, String prefValue)
     // determine the type of pref value: String, boolean, integer
     try {
         Integer intVal = Integer.valueOf(prefValue);
-        nativeSetIntPref(prefName, intVal.intValue());
+        nativeSetIntPref(nativeWebShell, prefName, intVal.intValue());
     }
     catch (NumberFormatException e) {
         // it's not an integer
         if (prefValue.equals("true") || prefValue.equals("false")) {
             Boolean boolVal = Boolean.valueOf(prefValue);
-            nativeSetBoolPref(prefName, boolVal.booleanValue());
+            nativeSetBoolPref(nativeWebShell, prefName, 
+                              boolVal.booleanValue());
         }
         else {
             // it must be a string
-            nativeSetUnicharPref(prefName, prefValue);
+            nativeSetUnicharPref(nativeWebShell, prefName, prefValue);
         }
     }
 }
@@ -139,9 +140,12 @@ public void registerPrefChangedCallback(PrefChangedCallback cb,
 // native methods
 //
 
-public native void nativeSetUnicharPref(String prefName, String prefValue);
-public native void nativeSetIntPref(String prefName, int prefValue);
-public native void nativeSetBoolPref(String prefName, boolean prefValue);
+public native void nativeSetUnicharPref(int nativeWebShell, 
+                                        String prefName, String prefValue);
+public native void nativeSetIntPref(int nativeWebShell, 
+                                    String prefName, int prefValue);
+public native void nativeSetBoolPref(int nativeWebShell, 
+                                     String prefName, boolean prefValue);
 public native Properties nativeGetPrefs(int nativeWebShell, Properties props);
 public native void nativeRegisterPrefChangedCallback(int nativeWebShell, 
                                                      PrefChangedCallback cb,

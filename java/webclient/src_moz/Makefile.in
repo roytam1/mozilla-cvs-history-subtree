@@ -62,6 +62,7 @@ CPPSRCS = \
 	WindowControlImpl.cpp \
 	WindowControlActionEvents.cpp \
 	PreferencesImpl.cpp \
+	PreferencesActionEvents.cpp \
 	WrapperFactoryImpl.cpp \
 	motif/MotifBrowserControlCanvas.cpp \
 	motif/gtkmozilla.cpp \

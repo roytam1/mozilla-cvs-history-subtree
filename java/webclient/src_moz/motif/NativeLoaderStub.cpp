@@ -113,9 +113,9 @@ void (* nativeProcessEvents) (JNIEnv *, jobject, jint);
 jint (* nativeGetBookmarks) (JNIEnv *, jobject, jint);
 jint (* nativeNewRDFNode)  (JNIEnv *, jobject, jint, jstring, jboolean);
 // from PreferencesImpl.h
-void (* nativeSetUnicharPref) (JNIEnv *, jobject, jstring, jstring);
-void (* nativeSetIntPref) (JNIEnv *, jobject, jstring, jint);
-void (* nativeSetBoolPref) (JNIEnv *, jobject, jstring, jboolean);
+void (* nativeSetUnicharPref) (JNIEnv *, jobject, jint, jstring, jstring);
+void (* nativeSetIntPref) (JNIEnv *, jobject, jint, jstring, jint);
+void (* nativeSetBoolPref) (JNIEnv *, jobject, jint, jstring, jboolean);
 jobject (* nativeGetPrefs) (JNIEnv *env, jobject obj, jint webShellPtr, jobject props);
 void (* nativeRegisterPrefChangedCallback) (JNIEnv *env, jobject obj, jint webShellPtr, jobject callback, jstring prefName, jobject closure);
 // from CurrentPageImpl.h
@@ -396,15 +396,15 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeNewRDFNode) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetUnicharPref = (void (*) (JNIEnv *, jobject, jstring, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetUnicharPref");
+  nativeSetUnicharPref = (void (*) (JNIEnv *, jobject, jint, jstring, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetUnicharPref");
   if (!nativeSetUnicharPref) {
       printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetIntPref = (void (*) (JNIEnv *, jobject, jstring, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetIntPref");
+  nativeSetIntPref = (void (*) (JNIEnv *, jobject, jint, jstring, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetIntPref");
   if (!nativeSetIntPref) {
       printf("got dlsym error %s\n", dlerror());
   }
-  nativeSetBoolPref = (void (*) (JNIEnv *, jobject, jstring, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref");
+  nativeSetBoolPref = (void (*) (JNIEnv *, jobject, jint, jstring, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref");
   if (!nativeSetBoolPref) {
       printf("got dlsym error %s\n", dlerror());
   }
@@ -528,25 +528,27 @@ JNIEXPORT jint JNICALL Java_org_mozilla_webclient_wrapper_1native_BookmarksImpl_
 
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetUnicharPref
-(JNIEnv *env, jobject obj, jstring prefName, jstring prefValue)
+(JNIEnv *env, jobject obj, jint webShellPtr, jstring prefName, 
+ jstring prefValue)
 {
-    (* nativeSetUnicharPref) (env, obj, prefName, prefValue);
+    (* nativeSetUnicharPref) (env, obj, webShellPtr, prefName, prefValue);
 }
 
 
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetIntPref
-(JNIEnv *env, jobject obj, jstring prefName, jint prefValue)
+(JNIEnv *env, jobject obj, jint webShellPtr, jstring prefName, jint prefValue)
 {
-    (* nativeSetIntPref) (env, obj, prefName, prefValue);
+    (* nativeSetIntPref) (env, obj, webShellPtr, prefName, prefValue);
 }
 
 
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref
-(JNIEnv *env, jobject obj, jstring prefName, jboolean prefValue)
+(JNIEnv *env, jobject obj, jint webShellPtr, jstring prefName, 
+ jboolean prefValue)
 {
-    (* nativeSetBoolPref) (env, obj, prefName, prefValue);
+    (* nativeSetBoolPref) (env, obj, webShellPtr, prefName, prefValue);
 }
 
 JNIEXPORT jobject JNICALL 
