@@ -224,9 +224,11 @@ NS_IMETHODIMP nsWidget::Destroy(void)
     }
     // prevent the widget from causing additional events
     mEventCallback = nsnull;
-    ::gtk_widget_destroy(mWidget);
+    // destroying the moz box will destroy the widget contained in it.
+    // such is the wonder of a container widget
     ::gtk_widget_destroy(mMozBox);
     mWidget = nsnull;
+    mMozBox = nsnull;
     if (PR_FALSE == mOnDestroyCalled)
       OnDestroy();
   }
