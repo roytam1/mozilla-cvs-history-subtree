@@ -143,7 +143,6 @@ static NS_METHOD ReadDataOut(nsIInputStream* in,
 PRUint32 nsGIFDecoder2::ProcessData(unsigned char *data, PRUint32 count)
 {
   // Push the data to the GIF decoder
-  // png_process_data(mPNG, mInfo, data, count);
   
   // First we ask if the gif decoder is ready for more data, and if so, push it.
   // In the new decoder, we should always be able to process more data since
@@ -160,23 +159,14 @@ PRUint32 nsGIFDecoder2::ProcessData(unsigned char *data, PRUint32 count)
 /* unsigned long writeFrom (in nsIInputStream inStr, in unsigned long count); */
 NS_IMETHODIMP nsGIFDecoder2::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval)
 {
-//  PRUint32 sourceOffset = *_retval;
-
-  //if (setjmp(mPNG->jmpbuf)) {
-    //png_destroy_read_struct(&mPNG, &mInfo, NULL);
-    // is this NS_ERROR_FAILURE enough?
-
-    //mRequest->Cancel(NS_BINDING_ABORTED); // XXX is this the correct error ?
-
-    //return NS_ERROR_FAILURE;
-  //}
-
   inStr->ReadSegments(
     ReadDataOut, // Callback
     this,     
     count, 
     _retval);
 
+    // if error
+    //mRequest->Cancel(NS_BINDING_ABORTED); // XXX is this the correct error ?
   return NS_OK;
 }
 
@@ -241,8 +231,14 @@ int BeginGIF(
 }
 
 //******************************************************************************
-int EndGIF()
+int EndGIF(
+    void*    aClientData,
+    int      aAnimationLoopCount)
 {
+  nsGIFDecoder2 *decoder = NS_STATIC_CAST(nsGIFDecoder2*, aClientData);
+  
+  decoder->mImageContainer->SetLoopCount(aAnimationLoopCount);
+  decoder->mImageContainer->DecodingComplete();
   return 0;
 }
 
@@ -258,6 +254,7 @@ int BeginImageFrame(
 {
   nsGIFDecoder2* decoder = NS_STATIC_CAST(nsGIFDecoder2*, aClientData);
   
+  decoder->mImageFrame = nsnull; // clear out our current frame reference
   decoder->mGIFStruct.x_offset = aFrameXOffset;
   decoder->mGIFStruct.y_offset = aFrameYOffset;
   decoder->mGIFStruct.width = aFrameWidth;
@@ -269,13 +266,20 @@ int BeginImageFrame(
 //******************************************************************************
 int EndImageFrame(
   void*    aClientData, 
+  PRUint32 aFrameNumber,
   PRUint32 aDelayTimeout)  /* Time this frame should be displayed before the next frame 
                               we can't have this in the image frame init because it doesn't
                               show up in the GIF frame header, it shows up in a sub control
                               block.*/
 {
   nsGIFDecoder2* decoder = NS_STATIC_CAST(nsGIFDecoder2*, aClientData);
-
+  
+  // We actually have the timeout information before we get the lzw encoded image
+  // data, at least according to the spec, but we delay in setting the timeout for
+  // the image until here to help ensure that we have the whole image frame decoded before
+  // we go off and try to display another frame.
+  decoder->mImageFrame->SetTimeout(aDelayTimeout);
+  decoder->mImageContainer->EndFrameDecode(aFrameNumber, aDelayTimeout);
   return 0;
 }
   

@@ -85,6 +85,12 @@ interface nsIImageContainer : nsISupports
 
   void removeFrame(in nsIImageFrame item);
 
+  /* notification when the current frame is done decoding */
+  void endFrameDecode(in unsigned long framenumber, in unsigned long timeout);
+  
+  /* notification that the entire image has been decoded */
+  void decodingComplete();
+  
   nsIEnumerator enumerate();
 
   void clear();

@@ -91,7 +91,10 @@ static int PR_CALLBACK HaveDecodedRow(
     
 static int PR_CALLBACK NewPixmap();
 
-static int PR_CALLBACK EndGIF();
+static int PR_CALLBACK EndGIF(
+  void*    aClientData,
+  int      aAnimationLoopCount);
+  
 static int PR_CALLBACK BeginImageFrame(
   void*    aClientData,
   PRUint32 aFrameNumber,   /* Frame number, 1-n */
@@ -100,7 +103,10 @@ static int PR_CALLBACK BeginImageFrame(
   PRUint32 aFrameWidth,    
   PRUint32 aFrameHeight,   
   GIF_RGB* aTransparencyChromaKey);
-static int PR_CALLBACK EndImageFrame();
+static int PR_CALLBACK EndImageFrame(
+  void*    aClientData, 
+  PRUint32 aFrameNumber,
+  PRUint32 aDelayTimeout);
 static int PR_CALLBACK SetupColorspaceConverter();
 static int PR_CALLBACK ResetPalette();
 static int PR_CALLBACK InitTransparentPixel();
