@@ -60,6 +60,11 @@ sub new
   return $obj;    
 }
 
+sub add
+{
+
+}
+
 sub attributes
 {
   my ($self, $attr) = (shift, lc shift);
@@ -96,6 +101,9 @@ sub _initialize
     my @somearray = ("NAME","OID","DESC","SYNTAX");
     my($name,$oid,$desc,$syntax) = $self->rearrange(\@somearray, $attrString);
     $self->{"name"} = $name;
+    $self->{"oid"} = $oid;
+    $self->{"desc"} = $desc;
+    $self->{"syntax"} = $syntax;
   }
   else {
     # The OID is always going to be the first thing, and it will not have
