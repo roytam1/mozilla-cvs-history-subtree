@@ -34,9 +34,8 @@ $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
 $ldapsdk_ver = $ENV{"LDAPSDKVER"}; # 11 or 30
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # Y to include SSL
 
-print "\n\nPerlDAP - Perl 5 Module for LDAP\n";
+print "\nPerlDAP - Perl 5 Module for LDAP\n";
 print     "================================\n";
-print "\nPut all sorts of legal bits and pieces here...\n\n";
 
 if (!$include_ldap)
 {
