@@ -30,10 +30,10 @@ struct FilesTest
 	int InputStream(const char* relativePath);
 	int OutputStream(const char* relativePath);
 	int IOStream(const char* relativePath);
-	int Parent(const char* relativePath, nsNativeFileSpec& outParent);
-	int Delete(nsNativeFileSpec& victim);
-	int CreateDirectory(nsNativeFileSpec& victim);
-	int IterateDirectoryChildren(nsNativeFileSpec& startChild);
+	int Parent(const char* relativePath, nsFileSpec& outParent);
+	int Delete(nsFileSpec& victim);
+	int CreateDirectory(nsFileSpec& victim);
+	int IterateDirectoryChildren(nsFileSpec& startChild);
 	int CanonicalPath(const char* relativePath);
 
     int Copy(const char*  sourceFile, const char* targDir);
@@ -95,7 +95,7 @@ void FilesTest::WriteStuff(nsOutputFileStream& s)
 	s << "As a unix path:              \"" << (const char*)filePath << "\""<< nsEndl;
 	
 	// Initialize a native file spec from a URL
-	nsNativeFileSpec fileSpec(fileURL);
+	nsFileSpec fileSpec(fileURL);
 	s << "As a file spec:               " << fileSpec << nsEndl;
 	
 	// Make the spec unique (this one has no suffix).
@@ -125,10 +125,10 @@ int FilesTest::OutputStream(const char* relativePath)
 {
 	nsFilePath myTextFilePath(relativePath, true); // relative path.
 	const char* pathAsString = (const char*)myTextFilePath;
-	nsNativeFileSpec mySpec(myTextFilePath);
+	nsFileSpec mySpec(myTextFilePath);
 	{
 		mConsole << "WRITING IDENTICAL OUTPUT TO " << pathAsString << nsEndl << nsEndl;
-		nsOutputFileStream testStream(myTextFilePath);
+		nsOutputFileStream testStream(mySpec);
 		if (!testStream.is_open())
 		{
 			mConsole
@@ -160,9 +160,10 @@ int FilesTest::IOStream(const char* relativePath)
 {
 	nsFilePath myTextFilePath(relativePath, true); // relative path.
 	const char* pathAsString = (const char*)myTextFilePath;
+	nsFileSpec mySpec(myTextFilePath);
 	mConsole
 		<< "Replacing \"path\" by \"ZUUL\" in " << pathAsString << nsEndl << nsEndl;
-	nsIOFileStream testStream(myTextFilePath);
+	nsIOFileStream testStream(mySpec);
 	if (!testStream.is_open())
 	{
 		mConsole
@@ -196,7 +197,8 @@ int FilesTest::InputStream(const char* relativePath)
 	nsFilePath myTextFilePath(relativePath, true);
 	const char* pathAsString = (const char*)myTextFilePath;
 	mConsole << "READING BACK DATA FROM " << pathAsString << nsEndl << nsEndl;
-	nsInputFileStream testStream2(myTextFilePath);
+	nsFileSpec mySpec(myTextFilePath);
+	nsInputFileStream testStream2(mySpec);
 	if (!testStream2.is_open())
 	{
 		mConsole
@@ -221,12 +223,12 @@ int FilesTest::InputStream(const char* relativePath)
 //----------------------------------------------------------------------------------------
 int FilesTest::Parent(
 	const char* relativePath,
-	nsNativeFileSpec& outParent)
+	nsFileSpec& outParent)
 //----------------------------------------------------------------------------------------
 {
 	nsFilePath myTextFilePath(relativePath, true);
 	const char* pathAsString = (const char*)myTextFilePath;
-	nsNativeFileSpec mySpec(myTextFilePath);
+	nsFileSpec mySpec(myTextFilePath);
 
     mySpec.GetParent(outParent);
     nsFilePath parentPath(outParent);
@@ -241,7 +243,7 @@ int FilesTest::Parent(
 }
 
 //----------------------------------------------------------------------------------------
-int FilesTest::Delete(nsNativeFileSpec& victim)
+int FilesTest::Delete(nsFileSpec& victim)
 //----------------------------------------------------------------------------------------
 {
 	// - Test of non-recursive delete
@@ -290,7 +292,7 @@ int FilesTest::Delete(nsNativeFileSpec& victim)
 }
 
 //----------------------------------------------------------------------------------------
-int FilesTest::CreateDirectory(nsNativeFileSpec& dirSpec)
+int FilesTest::CreateDirectory(nsFileSpec& dirSpec)
 //----------------------------------------------------------------------------------------
 {
     nsFilePath dirPath(dirSpec);
@@ -312,19 +314,19 @@ int FilesTest::CreateDirectory(nsNativeFileSpec& dirSpec)
 }
 
 //----------------------------------------------------------------------------------------
-int FilesTest::IterateDirectoryChildren(nsNativeFileSpec& startChild)
+int FilesTest::IterateDirectoryChildren(nsFileSpec& startChild)
 //----------------------------------------------------------------------------------------
 {
 	// - Test of directory iterator
 
-    nsNativeFileSpec grandparent;
+    nsFileSpec grandparent;
     startChild.GetParent(grandparent); // should be the original default directory.
     nsFilePath grandparentPath(grandparent);
     
     mConsole << "Forwards listing of " << (const char*)grandparentPath << ":" << nsEndl;
     for (nsDirectoryIterator i(grandparent, +1); i; i++)
     {
-    	char* itemName = ((nsNativeFileSpec&)i).GetLeafName();
+    	char* itemName = ((nsFileSpec&)i).GetLeafName();
     	mConsole << '\t' << itemName << nsEndl;
     	delete [] itemName;
     }
@@ -332,7 +334,7 @@ int FilesTest::IterateDirectoryChildren(nsNativeFileSpec& startChild)
     mConsole << "Backwards listing of " << (const char*)grandparentPath << ":" << nsEndl;
     for (nsDirectoryIterator j(grandparent, -1); j; j--)
     {
-    	char* itemName = ((nsNativeFileSpec&)j).GetLeafName();
+    	char* itemName = ((nsFileSpec&)j).GetLeafName();
     	mConsole << '\t' << itemName << nsEndl;
     	delete [] itemName;
     }
@@ -361,12 +363,11 @@ int FilesTest::CanonicalPath(
 	return 0;
 }
 
-
-
-int 
-FilesTest::Copy(const char* file, const char* dir)
+//----------------------------------------------------------------------------------------
+int FilesTest::Copy(const char* file, const char* dir)
+//----------------------------------------------------------------------------------------
 {
-    nsNativeFileSpec dirPath(dir, true);
+    nsFileSpec dirPath(dir, true);
 		
 	dirPath.CreateDirectory(true);
     if (! dirPath.Exists())
@@ -376,22 +377,23 @@ FilesTest::Copy(const char* file, const char* dir)
 	}
     
 
-    nsFilePath myTextFilePath(file, true); // relative path.
-    nsIOFileStream *testStream = new nsIOFileStream(myTextFilePath); // creates the file
-    delete testStream;
+    nsFileSpec mySpec(file, true); // relative path.
+    {
+	    nsIOFileStream testStream(mySpec); // creates the file
+	    // Scope ends here, file gets closed
+    }
     
-    nsNativeFileSpec filePath(file);
+    nsFileSpec filePath(file);
     if (! filePath.Exists())
 	{
 		Failed();
 		return -1;
 	}
    
-    long error = filePath.Copy(dirPath);
-
+    nsresult error = filePath.Copy(dirPath);
 
     dirPath += filePath.GetLeafName();
-    if (! dirPath.Exists() && filePath.Exists() || error != 0)
+    if (! dirPath.Exists() && filePath.Exists() || NS_FAILED(error))
 	{
 		Failed();
 		return -1;
@@ -402,10 +404,11 @@ FilesTest::Copy(const char* file, const char* dir)
    return 0;
 }
 
-int 
-FilesTest::Move(const char* file, const char* dir)
+//----------------------------------------------------------------------------------------
+int FilesTest::Move(const char* file, const char* dir)
+//----------------------------------------------------------------------------------------
 {
-    nsNativeFileSpec dirPath(dir, true);
+    nsFileSpec dirPath(dir, true);
 		
 	dirPath.CreateDirectory(true);
     if (! dirPath.Exists())
@@ -415,40 +418,45 @@ FilesTest::Move(const char* file, const char* dir)
 	}
     
 
-    nsFilePath myTextFilePath(file, true); // relative path.
-    nsIOFileStream *testStream = new nsIOFileStream(myTextFilePath); // creates the file
-    delete testStream;
+    nsFileSpec srcSpec(file, true); // relative path.
+    {
+       nsIOFileStream testStream(srcSpec); // creates the file
+       // file gets closed here because scope ends here.
+    };
     
-    nsNativeFileSpec filePath(file);
-    if (! filePath.Exists())
+    if (! srcSpec.Exists())
 	{
 		Failed();
 		return -1;
 	}
    
-    long error = filePath.Move(dirPath);
+    nsresult error = srcSpec.Move(dirPath);
 
 
-    dirPath += filePath.GetLeafName();
-    if (! dirPath.Exists() || filePath.Exists() || error != 0)
+    dirPath += srcSpec.GetLeafName();
+    if (! dirPath.Exists() || srcSpec.Exists() || NS_FAILED(error))
 	{
 		Failed();
 		return -1;
 	}
 
-   Passed();
-
+    Passed();
     return 0;
 }
 
-
-int 
-FilesTest::Execute(const char* appName, const char* args)
+//----------------------------------------------------------------------------------------
+int FilesTest::Execute(const char* appName, const char* args)
+//----------------------------------------------------------------------------------------
 {
-    nsNativeFileSpec appPath(appName, false);
-    long error = appPath.Execute(args);
-    
-    if (error != 0)
+    nsFileSpec appPath(appName, false);
+    if (!appPath.Exists())
+	{
+		Failed();
+		return -1;
+	}
+	
+    nsresult error = appPath.Execute(args);    
+    if (NS_FAILED(error))
 	{
 		Failed();
 		return -1;
@@ -493,7 +501,7 @@ int FilesTest::RunAllTests()
 		return -1;
 	
 	Banner("Parent");
-	nsNativeFileSpec parent;
+	nsFileSpec parent;
 	if (Parent("mumble/iotest.txt", parent) != 0)
 		return -1;
 		
@@ -518,9 +526,16 @@ int FilesTest::RunAllTests()
         return -1;
 
     Banner("Execute");
-    if (Execute("c:\\windows\\notepad.exe", "") != 0)
+#ifdef XP_MAC
+	// This path is hard-coded to test on jrm's machine.  Finding an app
+	// on an arbitrary Macintosh would cost more trouble than it's worth.
+	// Change path to suit.
+    if NS_FAILED(Execute("/Projects/Nav45_BRANCH/ns/cmd/macfe/"\
+        "projects/client45/Client45PPC", ""))
+#else
+    if NS_FAILED(Execute("c:\\windows\\notepad.exe", ""))
+#endif
         return -1;
-
     return 0;
 }
 

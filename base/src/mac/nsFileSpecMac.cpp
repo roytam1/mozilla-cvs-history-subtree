@@ -75,7 +75,7 @@ namespace MacFileHelpers
 	// to support attaching of aliases in mail.
 	void							EnsureAliasHaven();
 	void							SetNoResolve(Boolean inResolve);
-	bool							IsAliasSafe(const FSSpec& inSpec);
+	PRBool							IsAliasSafe(const FSSpec& inSpec);
 	OSErr							MakeAliasSafe(FSSpec& inOutSpec);
 	OSErr							ResolveAliasFile(FSSpec& inOutSpec, Boolean& wasAliased);
 
@@ -189,10 +189,10 @@ OSErr MacFileHelpers::MakeAliasSafe(FSSpec& inOutSpec)
 //----------------------------------------------------------------------------------------
 {
 	EnsureAliasHaven();
-	nsNativeFileSpec dstDirSpec(sAliasHavenVRefNum, sAliasHavenDirID, "\p");
+	nsFileSpec dstDirSpec(sAliasHavenVRefNum, sAliasHavenDirID, "\p");
 
 	// Make sure its name is unique
-	nsNativeFileSpec havenSpec(sAliasHavenVRefNum, sAliasHavenDirID, "\pG'day");
+	nsFileSpec havenSpec(sAliasHavenVRefNum, sAliasHavenDirID, "\pG'day");
 	if (havenSpec.Valid())
 		havenSpec.MakeUnique(inOutSpec.name);
 	// Copy the file into the haven directory
@@ -347,7 +347,7 @@ void MacFileHelpers::EnsureAliasHaven()
 } // MacFileHelpers::EnsureAliasHaven
 
 //----------------------------------------------------------------------------------------
-bool MacFileHelpers::IsAliasSafe(const FSSpec& inSpec)
+PRBool MacFileHelpers::IsAliasSafe(const FSSpec& inSpec)
 // Returns true if the alias is in the alias haven directory, or if alias resolution
 // has been turned off.
 //----------------------------------------------------------------------------------------
@@ -501,11 +501,11 @@ Clean:
 } // MacFileHelpers::PathNameFromFSSpec
 
 //========================================================================================
-//					Macintosh nsNativeFileSpec implementation
+//					Macintosh nsFileSpec implementation
 //========================================================================================
 
 //----------------------------------------------------------------------------------------
-nsNativeFileSpec::nsNativeFileSpec()
+nsFileSpec::nsFileSpec()
 //----------------------------------------------------------------------------------------
 :	mError(noErr)
 {
@@ -513,7 +513,7 @@ nsNativeFileSpec::nsNativeFileSpec()
 }
 
 //----------------------------------------------------------------------------------------
-nsNativeFileSpec::nsNativeFileSpec(const nsNativeFileSpec& inSpec)
+nsFileSpec::nsFileSpec(const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
 :	mSpec(inSpec.mSpec)
 ,	mError(inSpec.Error())
@@ -521,7 +521,7 @@ nsNativeFileSpec::nsNativeFileSpec(const nsNativeFileSpec& inSpec)
 }
 
 //----------------------------------------------------------------------------------------
-nsNativeFileSpec::nsNativeFileSpec(const char* inString, bool inCreateDirs)
+nsFileSpec::nsFileSpec(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 {
 	mError = MacFileHelpers::FSSpecFromFullUnixPath(
@@ -529,10 +529,10 @@ nsNativeFileSpec::nsNativeFileSpec(const char* inString, bool inCreateDirs)
 		// allow a partial path, create as necessary
 	if (mError == fnfErr)
 		mError = noErr;
-} // nsNativeFileSpec::nsNativeFileSpec
+} // nsFileSpec::nsFileSpec
 
 //----------------------------------------------------------------------------------------
-nsNativeFileSpec::nsNativeFileSpec(
+nsFileSpec::nsFileSpec(
 	short vRefNum,
 	long parID,
 	ConstStr255Param name)
@@ -544,53 +544,53 @@ nsNativeFileSpec::nsNativeFileSpec(
 }
 
 //----------------------------------------------------------------------------------------
-nsNativeFileSpec::nsNativeFileSpec(const nsFilePath& inPath)
+nsFileSpec::nsFileSpec(const nsFilePath& inPath)
 //----------------------------------------------------------------------------------------
 {
-	*this = inPath.GetNativeSpec();
+	*this = inPath.GetFileSpec();
 }
 
 //----------------------------------------------------------------------------------------
-nsBasicOutStream& operator << (nsBasicOutStream& s, const nsNativeFileSpec& spec)
+nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileSpec& spec)
 //----------------------------------------------------------------------------------------
 {
 	s << spec.mSpec.vRefNum << ", " << spec.mSpec.parID << ", \"";
 	s.write((const char*)&spec.mSpec.name[1], spec.mSpec.name[0]);
 	return s << "\"";	
-} // nsOutputFileStream& operator << (nsOutputFileStream&, const nsNativeFileSpec&)
+} // nsOutputFileStream& operator << (nsOutputFileStream&, const nsFileSpec&)
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::operator = (const char* inString)
+void nsFileSpec::operator = (const char* inString)
 //----------------------------------------------------------------------------------------
 {
 	mError = MacFileHelpers::FSSpecFromFullUnixPath(inString, mSpec, true);
-} // nsNativeFileSpec::operator =
+} // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::operator = (const nsNativeFileSpec& inSpec)
+void nsFileSpec::operator = (const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
 {
 	mSpec = inSpec.mSpec;
 	mError = inSpec.Error();
-} // nsNativeFileSpec::operator =
+} // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::operator = (const nsFilePath& inPath)
+void nsFileSpec::operator = (const nsFilePath& inPath)
 //----------------------------------------------------------------------------------------
 {
-	*this = inPath.GetNativeSpec();
-} // nsNativeFileSpec::operator =
+	*this = inPath.GetFileSpec();
+} // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
-bool nsNativeFileSpec::Exists() const
+PRBool nsFileSpec::Exists() const
 //----------------------------------------------------------------------------------------
 {
 	FSSpec temp;
 	return ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &temp) == noErr;
-} // nsNativeFileSpec::operator =
+} // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::SetLeafName(const char* inLeafName)
+void nsFileSpec::SetLeafName(const char* inLeafName)
 // In leaf name can actually be a partial path...
 //----------------------------------------------------------------------------------------
 {
@@ -598,10 +598,10 @@ void nsNativeFileSpec::SetLeafName(const char* inLeafName)
 	Str255 partialPath;
 	MacFileHelpers::PLstrcpy(partialPath, inLeafName);
 	mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, partialPath, &mSpec);
-} // nsNativeFileSpec::SetLeafName
+} // nsFileSpec::SetLeafName
 
 //----------------------------------------------------------------------------------------
-char* nsNativeFileSpec::GetLeafName() const
+char* nsFileSpec::GetLeafName() const
 // Result needs to be delete[]ed.
 //----------------------------------------------------------------------------------------
 {
@@ -609,62 +609,62 @@ char* nsNativeFileSpec::GetLeafName() const
 	memcpy(leaf, &mSpec.name[1], mSpec.name[0]);
 	leaf[mSpec.name[0]] = '\0';
 	return nsFileSpecHelpers::StringDup(leaf);
-} // nsNativeFileSpec::GetLeafName
+} // nsFileSpec::GetLeafName
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::MakeAliasSafe()
+void nsFileSpec::MakeAliasSafe()
 //----------------------------------------------------------------------------------------
 {
 	mError = MacFileHelpers::MakeAliasSafe(mSpec);
-} // nsNativeFileSpec::MakeAliasSafe
+} // nsFileSpec::MakeAliasSafe
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::MakeUnique(ConstStr255Param inSuggestedLeafName)
+void nsFileSpec::MakeUnique(ConstStr255Param inSuggestedLeafName)
 //----------------------------------------------------------------------------------------
 {
 	if (inSuggestedLeafName[0] > 0)
 		MacFileHelpers::PLstrcpy(mSpec.name, inSuggestedLeafName);
 
 	MakeUnique();
-} // nsNativeFileSpec::MakeUnique
+} // nsFileSpec::MakeUnique
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::ResolveAlias(bool& wasAliased)
+void nsFileSpec::ResolveAlias(PRBool& wasAliased)
 //----------------------------------------------------------------------------------------
 {
 	Boolean wasAliased2;
 	mError = MacFileHelpers::ResolveAliasFile(mSpec, wasAliased2);
 	wasAliased = (wasAliased2 != false);
-} // nsNativeFileSpec::ResolveAlias
+} // nsFileSpec::ResolveAlias
 
 //----------------------------------------------------------------------------------------
-bool nsNativeFileSpec::IsFile() const
+PRBool nsFileSpec::IsFile() const
 //----------------------------------------------------------------------------------------
 {
 	long dirID;
 	Boolean isDirectory;
 	return (noErr == FSpGetDirectoryID(&mSpec, &dirID, &isDirectory) && !isDirectory);
-} // nsNativeFileSpec::IsFile
+} // nsFileSpec::IsFile
 
 //----------------------------------------------------------------------------------------
-bool nsNativeFileSpec::IsDirectory() const
+PRBool nsFileSpec::IsDirectory() const
 //----------------------------------------------------------------------------------------
 {
 	long dirID;
 	Boolean isDirectory;
 	return (noErr == FSpGetDirectoryID(&mSpec, &dirID, &isDirectory) && isDirectory);
-} // nsNativeFileSpec::IsDirectory
+} // nsFileSpec::IsDirectory
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::GetParent(nsNativeFileSpec& outSpec) const
+void nsFileSpec::GetParent(nsFileSpec& outSpec) const
 //----------------------------------------------------------------------------------------
 {
 	if (mError == noErr)
 		outSpec.mError = FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, nsnull, outSpec);
-} // nsNativeFileSpec::GetParent
+} // nsFileSpec::GetParent
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::operator += (const char* inRelativePath)
+void nsFileSpec::operator += (const char* inRelativePath)
 //----------------------------------------------------------------------------------------
 {
 	long dirID;
@@ -678,18 +678,18 @@ void nsNativeFileSpec::operator += (const char* inRelativePath)
 		//if (mError == noErr)
 		//	SetLeafName(inRelativePath);
 	}
-} // nsNativeFileSpec::operator +=
+} // nsFileSpec::operator +=
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::CreateDirectory(int /* unix mode */)
+void nsFileSpec::CreateDirectory(int /* unix mode */)
 //----------------------------------------------------------------------------------------
 {
 	long ignoredDirID;
 	FSpDirCreate(&mSpec, smCurrentScript, &ignoredDirID);
-} // nsNativeFileSpec::CreateDirectory
+} // nsFileSpec::CreateDirectory
 
 //----------------------------------------------------------------------------------------
-void nsNativeFileSpec::Delete(bool inRecursive)
+void nsFileSpec::Delete(PRBool inRecursive)
 //----------------------------------------------------------------------------------------
 {
 	if (inRecursive)
@@ -702,11 +702,10 @@ void nsNativeFileSpec::Delete(bool inRecursive)
 	}
 	else
 		mError = FSpDelete(&mSpec);
-} // nsNativeFileSpec::Delete
-
+} // nsFileSpec::Delete
 
 //----------------------------------------------------------------------------------------
-nsresult nsNativeFileSpec::Rename(const char* inNewName)
+nsresult nsFileSpec::Rename(const char* inNewName)
 //----------------------------------------------------------------------------------------
 {
     if (strchr(inNewName, '/'))
@@ -715,11 +714,12 @@ nsresult nsNativeFileSpec::Rename(const char* inNewName)
     MacFileHelpers::PLstrcpy(pName, inNewName);
     if (FSpRename(&mSpec, pName) != noErr)
         return -1;
+    SetLeafName(inNewName);
     return 0;
-} // nsNativeFileSpec::Rename
+} // nsFileSpec::Rename
 
 //----------------------------------------------------------------------------------------
-nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& newParentDir)
+nsresult nsFileSpec::Copy(const nsFileSpec& newParentDir) const
 //----------------------------------------------------------------------------------------
 {
     // We can only copy into a directory, and (for now) can not copy entire directories
@@ -727,11 +727,10 @@ nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& newParentDir)
     if (!newParentDir.IsDirectory() || (IsDirectory() ) )
         return NS_ERROR_FAILURE;
 
-    StringPtr leafname = GetLeafPName();
-           
+    
     OSErr result = FSpFileCopy(   &mSpec,
                             &newParentDir.mSpec,
-                            leafname,
+                            const_cast<StringPtr>(GetLeafPName()),
                             nsnull,
                             0,
                             true);
@@ -741,10 +740,10 @@ nsresult nsNativeFileSpec::Copy(const nsNativeFileSpec& newParentDir)
 
     return NS_OK;
 
-} // nsNativeFileSpec::Copy
+} // nsFileSpec::Copy
 
 //----------------------------------------------------------------------------------------
-nsresult nsNativeFileSpec::Move(const nsNativeFileSpec& newParentDir)
+nsresult nsFileSpec::Move(const nsFileSpec& newParentDir) const
 //----------------------------------------------------------------------------------------
 {
     // We can only move into a directory
@@ -752,26 +751,25 @@ nsresult nsNativeFileSpec::Move(const nsNativeFileSpec& newParentDir)
     if (!newParentDir.IsDirectory())
     	return NS_ERROR_FAILURE;
  
-    StringPtr leafname = GetLeafPName();
     OSErr result = FSpMoveRenameCompat(&mSpec,
                                     &newParentDir.mSpec,
-                                    leafname);
+                                    const_cast<StringPtr>(GetLeafPName()));
     
     if (result != noErr)
         return NS_ERROR_FAILURE;
 
     return NS_OK;
-} // nsNativeFileSpec::Move
+} // nsFileSpec::Move
 
 //----------------------------------------------------------------------------------------
-nsresult nsNativeFileSpec::Execute(const char* /*args - how can this be cross-platform?  problem! */ )
+nsresult nsFileSpec::Execute(const char* /*args - how can this be cross-platform?  problem! */ ) const
 //----------------------------------------------------------------------------------------
 {
     if (IsDirectory())
         return NS_ERROR_FAILURE;
 
     LaunchParamBlockRec launchThis;
-    launchThis.launchAppSpec = &mSpec;
+    launchThis.launchAppSpec = const_cast<FSSpec*>(&mSpec);
     launchThis.launchAppParameters = nsnull; // args;
     /* launch the thing */
     launchThis.launchBlockID    = extendedBlock;
@@ -786,40 +784,39 @@ nsresult nsNativeFileSpec::Execute(const char* /*args - how can this be cross-pl
 
     return NS_OK;
   
-} // nsNativeFileSpec::Execute
-
+} // nsFileSpec::Execute
 
 //========================================================================================
 //					Macintosh nsFilePath implementation
 //========================================================================================
 
 //----------------------------------------------------------------------------------------
-nsFilePath::nsFilePath(const char* inString, bool inCreateDirs)
+nsFilePath::nsFilePath(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 :    mPath(nsnull)
-,    mNativeFileSpec(inString, inCreateDirs)
+,    mFileSpec(inString, inCreateDirs)
 {
     // Make canonical and absolute.
-	char * path = MacFileHelpers::PathNameFromFSSpec( mNativeFileSpec, TRUE );
+	char * path = MacFileHelpers::PathNameFromFSSpec( mFileSpec, TRUE );
 	mPath = MacFileHelpers::EncodeMacPath(path, true, true);
 }
 //----------------------------------------------------------------------------------------
-nsFilePath::nsFilePath(const nsNativeFileSpec& inSpec)
+nsFilePath::nsFilePath(const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
-:	mNativeFileSpec(inSpec)
+:	mFileSpec(inSpec)
 {
 	char * path = MacFileHelpers::PathNameFromFSSpec( inSpec.mSpec, TRUE );
 	mPath = MacFileHelpers::EncodeMacPath(path, true, true);
 }
 
 //----------------------------------------------------------------------------------------
-void nsFilePath::operator = (const nsNativeFileSpec& inSpec)
+void nsFilePath::operator = (const nsFileSpec& inSpec)
 //----------------------------------------------------------------------------------------
 {
 	delete [] mPath;
 	char * path = MacFileHelpers::PathNameFromFSSpec( inSpec.mSpec, TRUE );
 	mPath = MacFileHelpers::EncodeMacPath(path, true, true);
-	mNativeFileSpec = inSpec;
+	mFileSpec = inSpec;
 } // nsFilePath::operator =
 
 //========================================================================================
@@ -827,14 +824,14 @@ void nsFilePath::operator = (const nsNativeFileSpec& inSpec)
 //========================================================================================
 
 //----------------------------------------------------------------------------------------
-nsFileURL::nsFileURL(const char* inString, bool inCreateDirs)
+nsFileURL::nsFileURL(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 :    mURL(nsnull)
-,    mNativeFileSpec(inString + kFileURLPrefixLength, inCreateDirs)
+,    mFileSpec(inString + kFileURLPrefixLength, inCreateDirs)
 {
     NS_ASSERTION(strstr(inString, kFileURLPrefix) == inString, "Not a URL!");
     // Make canonical and absolute.
-	char* path = MacFileHelpers::PathNameFromFSSpec( mNativeFileSpec, TRUE );
+	char* path = MacFileHelpers::PathNameFromFSSpec( mFileSpec, TRUE );
 	char* escapedPath = MacFileHelpers::EncodeMacPath(path, true, true);
 	mURL = nsFileSpecHelpers::StringDup(kFileURLPrefix, kFileURLPrefixLength + strlen(escapedPath));
 	strcat(mURL, escapedPath);
@@ -847,7 +844,7 @@ nsFileURL::nsFileURL(const char* inString, bool inCreateDirs)
 
 //----------------------------------------------------------------------------------------
 nsDirectoryIterator::nsDirectoryIterator(
-	const nsNativeFileSpec& inDirectory
+	const nsFileSpec& inDirectory
 ,	int inIterateDirection)
 //----------------------------------------------------------------------------------------
 	: mCurrent(inDirectory)
@@ -857,7 +854,7 @@ nsDirectoryIterator::nsDirectoryIterator(
 	CInfoPBRec pb;
 	DirInfo* dipb = (DirInfo*)&pb;
 	// Sorry about this, there seems to be a bug in CWPro 4:
-	const FSSpec& inSpec = inDirectory.nsNativeFileSpec::operator const FSSpec&();
+	const FSSpec& inSpec = inDirectory.nsFileSpec::operator const FSSpec&();
     Str255 outName;
     MacFileHelpers::PLstrcpy(outName, inSpec.name);
 	pb.hFileInfo.ioNamePtr = outName;
@@ -871,7 +868,7 @@ nsDirectoryIterator::nsDirectoryIterator(
 	if ( (err != noErr ) || !( dipb->ioFlAttrib & 0x0010 ) )
 		return;
 	// Sorry about this, there seems to be a bug in CWPro 4:
-	FSSpec& currentSpec = mCurrent.nsNativeFileSpec::operator FSSpec&();
+	FSSpec& currentSpec = mCurrent.nsFileSpec::operator FSSpec&();
 	currentSpec.vRefNum = inSpec.vRefNum;
 	currentSpec.parID = dipb->ioDrDirID;
 	mMaxIndex = pb.dirInfo.ioDrNmFls;
@@ -897,7 +894,7 @@ OSErr nsDirectoryIterator::SetToIndex()
 	dipb->ioCompletion = nsnull;
 	dipb->ioFDirIndex = mIndex;
 	// Sorry about this, there seems to be a bug in CWPro 4:
-	FSSpec& currentSpec = mCurrent.nsNativeFileSpec::operator FSSpec&();
+	FSSpec& currentSpec = mCurrent.nsFileSpec::operator FSSpec&();
 	dipb->ioVRefNum = currentSpec.vRefNum; /* Might need to use vRefNum, not sure*/
 	dipb->ioDrDirID = currentSpec.parID;
 	dipb->ioNamePtr = objectName;
