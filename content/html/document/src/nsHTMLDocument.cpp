@@ -978,17 +978,26 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     }
   }
   
-  if(kCharsetFromAutoDetection > charsetSource) {
+  PRBool isPostPage = PR_FALSE;
+  //check if current doc is from POST command
+  if (httpChannel) {
     nsCAutoString methodStr;
-    if (httpChannel) {
-      rv = httpChannel->GetRequestMethod(methodStr);
-      if (NS_FAILED(rv) || !methodStr.Equals(NS_LITERAL_CSTRING("POST"),
-                                             nsCaseInsensitiveCStringComparator())) {
-        StartAutodetection(docShell, charset, aCommand);
-      }
+    rv = httpChannel->GetRequestMethod(methodStr);
+    if (NS_SUCCEEDED(rv) && methodStr.Equals(NS_LITERAL_CSTRING("POST"))) 
+      isPostPage = PR_TRUE;
+  }
+
+  if (isPostPage && muCV && kCharsetFromHintPrevDoc > charsetSource) {
+    PRUnichar* requestCharset;
+    muCV->GetPrevDocCharacterSet(&requestCharset);
+    if (*requestCharset) {
+      charsetSource = kCharsetFromHintPrevDoc;
+      charset = requestCharset;
     }
-    else
-      StartAutodetection(docShell, charset, aCommand);
+  }
+
+  if(kCharsetFromAutoDetection > charsetSource && !isPostPage) {
+    StartAutodetection(docShell, charset, aCommand);
   }
 #endif
 
@@ -1001,7 +1010,11 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
   SetDocumentCharacterSet(charset);
   SetDocumentCharacterSetSource(charsetSource);
-
+  
+  // set doc charset to muCV for next document.
+  if (muCV)
+    muCV->SetPrevDocCharacterSet(charset.get());
+    
   if(cacheDescriptor) {
     rv = cacheDescriptor->SetMetaDataElement("charset",
                                     NS_ConvertUCS2toUTF8(charset).get());
