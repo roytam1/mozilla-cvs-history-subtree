@@ -106,7 +106,9 @@ function readIRCPrefs (rootNode)
         getCharPref (pref, rootNode + "desc",
                      CIRCNetwork.prototype.INITIAL_DESC);
     client.DEFAULT_NETWORK =
-        getCharPref (pref, rootNode + "defaultNet", "moznet");    
+        getCharPref (pref, rootNode + "defaultNet", "moznet");
+    client.CHARSET =
+        getCharPref (pref, rootNode + "charset", "");
     client.INITIAL_URLS =
         getCharPref (pref, rootNode + "initialURLs", "irc://");
     if (!client.INITIAL_URLS)
@@ -207,6 +209,7 @@ function writeIRCPrefs (rootNode)
     pref.SetCharPref (rootNode + "username",
                       CIRCNetwork.prototype.INITIAL_NAME);
     pref.SetCharPref (rootNode + "desc", CIRCNetwork.prototype.INITIAL_DESC);
+    pref.SetCharPref (rootNode + "charset", client.CHARSET);
     pref.SetCharPref (rootNode + "nickCompleteStr", client.ADDRESSED_NICK_SEP);
     pref.SetCharPref (rootNode + "initialURLs", client.INITIAL_URLS);
     pref.SetCharPref (rootNode + "initialScripts", client.INITIAL_SCRIPTS);

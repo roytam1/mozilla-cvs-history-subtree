@@ -127,6 +127,49 @@ function ()
     scrollDown();
 }
 
+function ucConvertIncomingMessage (e)
+{
+    e.meat = client.ucConverter.ConvertToUnicode(e.meat);
+    return true;
+}
+
+function ucConvertOutgoingMessage (msg)
+{
+    if (client.ucConverter)
+        return client.ucConverter.ConvertFromUnicode(msg);
+
+    return msg;
+}
+
+function setCharset (charset)
+{
+    client.CHARSET = charset;
+    
+    if (!charset)
+    {
+        delete client.ucConverter;
+        client.eventPump.removeHookByName("uc-hook");
+        return;
+    }
+    
+    if (!client.ucConverter)
+    {
+        const UC_CTRID = "@mozilla.org/intl/scriptableunicodeconverter";
+        const nsIUnicodeConverter = 
+            Components.interfaces.nsIScriptableUnicodeConverter;
+        client.ucConverter =
+            Components.classes[UC_CTRID].createInstance(nsIUnicodeConverter);
+    }
+
+    client.ucConverter.charset = charset;
+
+    if (!client.eventPump.getHook("uc-hook"))
+    {
+        client.eventPump.addHook ([{type: "privmsg", set: "server"}],
+                                  ucConvertIncomingMessage, "uc-hook");
+    }
+}
+
 function initStatic()
 {
     var obj;
@@ -134,6 +177,9 @@ function initStatic()
     const nsISound = Components.interfaces.nsISound;
     client.sound =
         Components.classes["@mozilla.org/sound;1"].createInstance(nsISound);
+
+    if (client.CHARSET)
+        setCharset(client.CHARSET);
     
     var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
     if (ary)
@@ -281,8 +327,7 @@ function isVisible (id)
 
 function initHost(obj)
 {
-
-    client.commands = new CCommandManager();
+    obj.commands = new CCommandManager();
     addCommands (obj.commands);
     
     obj.networks = new Object();
@@ -335,6 +380,7 @@ function initHost(obj)
                                {type: "event-end"}], event_tracer,
                                "event-tracer", true /* negate */,
                                false /* disable */);
+
     obj.linkRE = /((\w+):\/\/[^<>\[\]()\'\"\s]+|www(\.[^.<>\[\]()\'\"\s]+){2,})/;
 
     obj.munger = new CMunger();
@@ -380,7 +426,6 @@ function initHost(obj)
     obj.rdf.setTreeRoot("user-list", obj.rdf.resNullChan);
 
     multilineInputMode(false);
-    
 }
 
 function insertLink (matchText, containerTag)
@@ -1910,16 +1955,16 @@ function deleteTab (tb)
 
 function filterOutput (msg, msgtype)
 {
+    if ("outputFilters" in client)
+    {
+        for (var f in client.outputFilters)
+        {
+            if (client.outputFilters[f].enabled)
+                msg = client.outputFilters[f].func(msg, msgtype);
+        }
+    }
 
-    if (!("outputFilters" in client))
-        return msg;
-    
-    for (var f in client.outputFilters)
-        if (client.outputFilters[f].enabled)
-            msg = client.outputFilters[f].func(msg, msgtype);
-
-    return msg;
-    
+    return ucConvertOutgoingMessage(msg);
 }
 
 client.connectToNetwork =
@@ -1989,7 +2034,6 @@ function cli_load(url, obj)
 client.sayToCurrentTarget =
 function cli_say(msg)
 {
-
     switch (client.currentObject.TYPE)
     {
         case "IRCChannel":
