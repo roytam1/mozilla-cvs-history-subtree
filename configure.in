@@ -2772,16 +2772,6 @@ MOZ_ARG_DISABLE_BOOL(mailnews,
   MOZ_MAIL_NEWS= )
 AC_SUBST(MOZ_MAIL_NEWS)
 
-dnl Turn on the new lightweight gfx text control frames
-MOZ_ENDER_LITE=1
-MOZ_ARG_DISABLE_BOOL(ender-lite,
-[  --disable-ender-lite    Disable new lightweight text control frames],
-  MOZ_ENDER_LITE= )
-if test "$MOZ_ENDER_LITE"; then
-  AC_DEFINE(MOZ_ENDER_LITE)
-fi
-AC_SUBST(MOZ_ENDER_LITE)
-
 dnl Turn on reflow counting
 MOZ_REFLOW_PERF=
 MOZ_ARG_ENABLE_BOOL(reflow-perf,
@@ -3496,20 +3486,13 @@ MOZ_ARG_ENABLE_BOOL(ultrasparc,
     solaris*)   
         case $OS_TEST in
         sun4u)
-            if test -z "$GNU_CC"; then
-                ASFLAGS='-xarch=v8plus -DULTRA_SPARC -P -L -D_ASM -D__STDC__=0 -K PIC'
-                AC_DEFINE(ULTRA_SPARC)
-            else
-                CFLAGS="${CFLAGS} -Wa,-xarch=v8plus,-DULTRA_SPARC,-P,-L,-D_ASM,-D__STDC__=0"
-                CXXFLAGS="${CXXFLAGS} -Wa,-xarch=v8plus,-DULTRA_SPARC,-P,-L,-D_ASM,-D__STDC__=0,-K,PIC"
-                AC_DEFINE(ULTRA_SPARC)
-            fi
+            JS_ULTRASPARC_OPTS=1
             ;;
         esac
         ;;
     esac
 ])
-
+AC_SUBST(JS_ULTRASPARC_OPTS)
 dnl ========================================================
 dnl =
 dnl = Profiling and Instrumenting

@@ -261,7 +261,7 @@ nsresult
 NS_NewTextBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
-NS_NewTitledBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
+NS_NewGroupBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
 NS_NewButtonBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame);
@@ -5518,7 +5518,7 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       }
       // End of DECK CONSTRUCTION logic
       else if (display->mDisplay == NS_STYLE_DISPLAY_GROUPBOX) {
-        rv = NS_NewTitledBoxFrame(aPresShell, &newFrame);
+        rv = NS_NewGroupBoxFrame(aPresShell, &newFrame);
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
 
