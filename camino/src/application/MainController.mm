@@ -570,7 +570,7 @@ const int kReuseWindowOnAE = 2;
   // tabbed browsing panel. The user may have closed all of 
   // them or we may get this event at startup before we've had time to load
   // our window.
-  BrowserWindowController* controller = [self getMainWindowBrowserController];
+  BrowserWindowController* controller = (BrowserWindowController*)[[self getFrontmostBrowserWindow] windowController];
   if (reuseWindow > kOpenNewWindowOnAE && controller) {
     if (reuseWindow == kOpenNewTabOnAE) {
       // if we have room for a new tab, open one, otherwise open a new window. if
@@ -672,8 +672,8 @@ const int kReuseWindowOnAE = 2;
     }
     else
     {
-        [self newWindow:self];
-        browserWindow = [self getFrontmostBrowserWindow];
+      [self newWindow:self];
+      browserWindow = [self getFrontmostBrowserWindow];
     }
   
     BrowserWindowController* browserController = (BrowserWindowController*)[browserWindow delegate];
@@ -782,12 +782,15 @@ const int kReuseWindowOnAE = 2;
 
 -(BOOL)isMainWindowABrowserWindow
 {
-  // see also getFrontmostBrowserWindow
+  // see also getFrontmostBrowserWindow. That will always return a browser
+  // window if one exists. This will only return one if it is frontmost.
   return [[[mApplication mainWindow] windowController] isMemberOfClass:[BrowserWindowController class]];
 }
 
 - (BrowserWindowController*)getMainWindowBrowserController
 {
+  // note that [NSApp mainWindow] will return NULL if we are not
+  // frontmost
   NSWindowController* mainWindowController = [[mApplication mainWindow] windowController];
   if (mainWindowController && [mainWindowController isMemberOfClass:[BrowserWindowController class]])
     return (BrowserWindowController*)mainWindowController;
