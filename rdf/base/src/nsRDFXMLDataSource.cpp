@@ -73,6 +73,7 @@
 #include "nsLayoutCID.h" // for NS_NAMESPACEMANAGER_CID.
 #include "nsParserCIID.h"
 #include "nsRDFCID.h"
+#include "nsRDFBaseDataSources.h"
 #include "nsVoidArray.h"
 #include "nsXPIDLString.h"
 #include "plstr.h"
@@ -918,7 +919,7 @@ rdf_BlockingWrite(nsIOutputStream* stream, const nsString& s)
     char buf[256];
     char* p = buf;
 
-    if (s.Length() >= sizeof(buf))
+    if (s.Length() >= PRInt32(sizeof buf))
         p = new char[s.Length() + 1];
 
     nsresult rv = rdf_BlockingWrite(stream, s.ToCString(p, s.Length() + 1), s.Length());
@@ -959,10 +960,10 @@ RDFXMLDataSourceImpl::MakeQName(nsIRDFResource* resource,
     }
 
     // Okay, so we don't have it in our map. Try to make one up.
-    PRInt32 index = uri.RFind('#'); // first try a '#'
-    if (index == -1) {
-        index = uri.RFind('/');
-        if (index == -1) {
+    PRInt32 i = uri.RFind('#'); // first try a '#'
+    if (i == -1) {
+        i = uri.RFind('/');
+        if (i == -1) {
             // Okay, just punt and assume there is _no_ namespace on
             // this thing...
             //NS_ASSERTION(PR_FALSE, "couldn't find reasonable namespace prefix");
@@ -976,12 +977,12 @@ RDFXMLDataSourceImpl::MakeQName(nsIRDFResource* resource,
     // Take whatever is to the right of the '#' and call it the
     // property.
     property.Truncate();
-    nameSpaceURI.Right(property, uri.Length() - (index + 1));
+    nameSpaceURI.Right(property, uri.Length() - (i + 1));
 
     // Truncate the namespace URI down to the string up to and
     // including the '#'.
     nameSpaceURI = uri;
-    nameSpaceURI.Truncate(index + 1);
+    nameSpaceURI.Truncate(i + 1);
 
     // Just generate a random prefix
     static PRInt32 gPrefixID = 0;
@@ -1015,26 +1016,26 @@ RDFXMLDataSourceImpl::IsContainerProperty(nsIRDFResource* aProperty)
 static void
 rdf_EscapeAngleBrackets(nsString& s)
 {
-    PRInt32 index;
-    while ((index = s.Find('<')) != -1) {
-        s.SetCharAt('&',index);
-        s.Insert(nsAutoString("lt;"), index + 1);
+    PRInt32 i;
+    while ((i = s.Find('<')) != -1) {
+        s.SetCharAt('&', i);
+        s.Insert(nsAutoString("lt;"), i + 1);
     }
 
-    while ((index = s.Find('>')) != -1) {
-        s.SetCharAt('&',index);
-        s.Insert(nsAutoString("gt;"), index + 1);
+    while ((i = s.Find('>')) != -1) {
+        s.SetCharAt('&', i);
+        s.Insert(nsAutoString("gt;"), i + 1);
     }
 }
 
 static void
 rdf_EscapeAmpersands(nsString& s)
 {
-    PRInt32 index = 0;
-    while ((index = s.Find('&', index)) != -1) {
-        s.SetCharAt('&',index);
-        s.Insert(nsAutoString("amp;"), index + 1);
-        index += 4;
+    PRInt32 i = 0;
+    while ((i = s.Find('&', i)) != -1) {
+        s.SetCharAt('&', i);
+        s.Insert(nsAutoString("amp;"), i + 1);
+        i += 4;
     }
 }
 

@@ -49,6 +49,7 @@
 #include "nsEnumeratorUtils.h"
 #include "nsVoidArray.h"  // XXX introduces dependency on raptorbase
 #include "nsRDFCID.h"
+#include "nsRDFBaseDataSources.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "rdfutil.h"
@@ -612,8 +613,8 @@ NS_NewRDFInMemoryDataSource(nsISupports* aOuter, const nsIID& aIID, void** aResu
 InMemoryDataSource::InMemoryDataSource(nsISupports* aOuter)
     : mForwardArcs(nsnull),
       mReverseArcs(nsnull),
-      mLock(nsnull),
-      mOuter(aOuter)
+      mOuter(aOuter),
+      mLock(nsnull)
 {
     NS_INIT_REFCNT();
 }
