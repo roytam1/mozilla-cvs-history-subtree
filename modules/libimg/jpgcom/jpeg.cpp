@@ -53,7 +53,7 @@ PR_BEGIN_EXTERN_C
 extern int MK_OUT_OF_MEMORY;
 PR_END_EXTERN_C
 
-#ifdef XP_OS2_HACK
+#ifdef XP_OS2
 /* IBM-MAS: We removed setjmp.h from XP_core.h, now we need it here. */
 /*          We need to see if we can fix hwthreads/XP_CORE correctly.. */
 #include <setjmp.h>
