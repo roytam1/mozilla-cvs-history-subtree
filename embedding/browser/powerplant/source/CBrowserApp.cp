@@ -28,9 +28,16 @@
 #include <UDrawingState.h>
 #include <UMemoryMgr.h>
 #include <URegistrar.h>
+#include <LPushButton.h>
+#include <LStaticText.h>
 
 #include <LWindow.h>
 #include <LCaption.h>
+#include <LTextTableView.h>
+#include <LTableMonoGeometry.h>
+#include <LTableArrayStorage.h>
+#include <LTableSingleSelector.h>
+#include <LCellSizeToFit.h>
 
 #include <UControlRegistry.h>
 #include <UGraphicUtils.h>
@@ -49,6 +56,8 @@
 #include "nsIEventQueueService.h"
 #include "nsIDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
+#include "nsAppDirectoryServiceDefs.h"
+#include "nsIObserverService.h"
 #include "nsIPref.h"
 #include "nsRepeater.h"
 #include "nsILocalFile.h"
@@ -62,9 +71,14 @@
 
 #include <TextServices.h>
 
-extern "C" void NS_SetupRegistry();
+#if USE_PROFILES
+#include "CProfileManager.h"
+#include "CAppProfileChangeObserver.h"
+#include "nsIProfileChangeStatus.h"
+#endif
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static const char* kProgramName = "PP Browser";
 
 // ===========================================================================
 //		¥ Main Program
@@ -110,6 +124,11 @@ int main()
 
 CBrowserApp::CBrowserApp()
 {
+
+#if USE_PROFILES
+    mRefCnt = 1;
+#endif
+
 	if ( PP_PowerPlant::UEnvironment::HasFeature( PP_PowerPlant::env_HasAppearance ) ) {
 		::RegisterAppearanceClient();
 	}
@@ -125,6 +144,12 @@ CBrowserApp::CBrowserApp()
 	RegisterClass_(CBrowserWindow);
 	RegisterClass_(CUrlField);
 	RegisterClass_(CThrobber);
+
+#if USE_PROFILES	
+	RegisterClass_(LScroller);
+	RegisterClass_(LTextTableView);
+	RegisterClass_(LColorEraseAttachment);
+#endif
 
    // We need to idle threads often
    SetSleepTime(0);
@@ -154,28 +179,8 @@ CBrowserApp::CBrowserApp()
       }
    }
 
-   rv = NS_InitEmbedding(appDir, nsnull);
+   rv = NS_InitEmbedding(appDir, nsnull, kProgramName);
 
-   nsMPFileLocProvider *locationProvider = new nsMPFileLocProvider;
-   ThrowIfNil_(locationProvider);
-   nsCOMPtr<nsIFile> rootDir;
-   rv = NS_GetSpecialDirectory(NS_MAC_PREFS_DIR, getter_AddRefs(rootDir));
-   ThrowIfError_(rv);
-   rv = locationProvider->Initialize(rootDir, "PP Browser");   
-   ThrowIfError_(rv);
-   
-   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
-   if (NS_SUCCEEDED(rv)) {	  
-		
-        prefs->ResetPrefs();    // Needed because things read default prefs during startup
-        prefs->ReadUserPrefs();
-        
-		// HACK ALERT: Since we don't have prefs UI, reduce the font size here by hand
-        prefs->SetIntPref("font.size.variable.x-western", 12);
-        prefs->SetIntPref("font.size.fixed.x-western", 12);
-	}
-	else
-		NS_ASSERTION(PR_FALSE, "Could not get preferences service");
 }
 
 
@@ -187,11 +192,6 @@ CBrowserApp::CBrowserApp()
 
 CBrowserApp::~CBrowserApp()
 {
-   nsresult rv;
-   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
-   if (NS_SUCCEEDED(rv))	  
-      prefs->SavePrefFile();
-
    UMacUnicode::ReleaseUnit();
 	   
    NS_TermEmbedding();
@@ -206,6 +206,45 @@ CBrowserApp::~CBrowserApp()
 void
 CBrowserApp::StartUp()
 {
+    nsresult rv;
+
+#if USE_PROFILES
+    CProfileManager *profileMgr = new CProfileManager(NS_ConvertASCIItoUCS2(kProgramName),
+                                                      NS_ConvertASCIItoUCS2("Profiles"));
+    profileMgr->StartUp();
+    AddAttachment(profileMgr);
+
+    // Register for profile changes    
+    NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+    ThrowIfNil_(observerService);
+    observerService->AddObserver(this, PROFILE_APPROVE_CHANGE_TOPIC);
+    observerService->AddObserver(this, PROFILE_BEFORE_CHANGE_TOPIC);
+    observerService->AddObserver(this, PROFILE_AFTER_CHANGE_TOPIC);
+
+#else
+    
+    // If we don't want different user profiles, all that's needed is
+    // to make an nsMPFileLocProvider. This will provide the same file
+    // locations as the profile service but always within the specified folder.
+    
+    nsCOMPtr<nsIFile> rootDir;   
+    nsMPFileLocProvider *locationProvider = new nsMPFileLocProvider;
+    ThrowIfNil_(locationProvider);
+    rv = NS_GetSpecialDirectory(NS_MAC_PREFS_DIR, getter_AddRefs(rootDir));
+    ThrowIfNil_(rootDir);
+    rv = locationProvider->Initialize(rootDir, kProgramName);   
+    ThrowIfError_(rv);
+    
+    NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
+    ThrowIfNil_(prefs);
+    // Needed because things read default prefs during startup
+    prefs->ResetPrefs();
+    prefs->ReadUserPrefs();
+
+#endif
+
+    InitializePrefs();
+
 	ObeyCommand(PP_PowerPlant::cmd_New, nil);	// EXAMPLE, create a new window
 }
 
@@ -294,11 +333,10 @@ CBrowserApp::ObeyCommand(
    			theWindow->Show();
 
             // Just for demo sake, load a URL	
-            LStr255     urlString("http://www.mozilla.org");
-            theWindow->GetBrowserShell()->LoadURL((Ptr)&urlString[1], urlString.Length());
+            theWindow->GetBrowserShell()->LoadURL("http://www.mozilla.org");
 			}
 			break;
-
+			
 		// Any that you don't handle, such as cmd_About and cmd_Quit,
 		// will be passed up to LApplication
 		default:
@@ -356,5 +394,141 @@ Boolean CBrowserApp::AttemptQuitSelf(SInt32 inSaveOption)
  		}
  	}
     
-   return true;
+    return true;
 }
+
+
+nsresult CBrowserApp::InitializePrefs()
+{
+   nsresult rv;
+   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
+   if (NS_SUCCEEDED(rv)) {	  
+
+        rv = InitCachePrefs();
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Could not initialize cache prefs");
+        
+		// We are using the default prefs from mozilla. If you were
+		// disributing your own, this would be done simply by editing
+		// the default pref files.
+		
+		PRBool inited;
+		rv = prefs->GetBoolPref("ppbrowser.prefs_inited", &inited);
+		if (NS_FAILED(rv) || !inited)
+		{
+            prefs->SetIntPref("font.size.variable.x-western", 12);
+            prefs->SetIntPref("font.size.fixed.x-western", 12);
+            rv = prefs->SetBoolPref("ppbrowser.prefs_inited", PR_TRUE);
+            if (NS_SUCCEEDED(rv))
+                rv = prefs->SavePrefFile();
+        }
+        
+	}
+	else
+		NS_ASSERTION(PR_FALSE, "Could not get preferences service");
+		
+    return rv;
+}
+
+nsresult CBrowserApp::InitCachePrefs()
+{
+	const char * const CACHE_DIR_PREF   = "browser.cache.directory";
+	
+	nsresult rv;
+    PRBool isDir = PR_FALSE;
+	NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
+	if (NS_FAILED(rv)) return rv;
+	
+/*		
+	// If the pref is already set don't do anything
+	nsCOMPtr<nsILocalFile> cacheDir;
+	rv = prefs->GetFileXPref(CACHE_DIR_PREF, getter_AddRefs(cacheDir));
+	if (NS_SUCCEEDED(rv) && cacheDir.get()) {
+    rv = cacheDir->IsDirectory(&isDir);
+    if (NS_SUCCEEDED(rv) && isDir)
+      return;
+  }
+*/
+
+  // Set up the new pref
+
+  nsCOMPtr<nsIFile> profileDir;   
+  rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(profileDir));
+  NS_ASSERTION(profileDir, "NS_APP_USER_PROFILE_50_DIR is not defined");
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsILocalFile> cacheDir(do_QueryInterface(profileDir));
+  NS_ASSERTION(cacheDir, "Cannot get nsILocalFile from cache dir");
+    
+  PRBool exists;
+  cacheDir->Append("Cache");
+  rv = cacheDir->Exists(&exists);
+  if (NS_SUCCEEDED(rv) && !exists)
+    rv = cacheDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
+  if (NS_FAILED(rv)) return rv;
+
+  return prefs->SetFileXPref(CACHE_DIR_PREF, cacheDir);
+}
+
+#if USE_PROFILES
+
+// ---------------------------------------------------------------------------
+//  CBrowserApp : nsISupports
+// ---------------------------------------------------------------------------
+
+NS_IMPL_ISUPPORTS2(CBrowserApp, nsIObserver, nsISupportsWeakReference);
+
+// ---------------------------------------------------------------------------
+//  CBrowserApp : nsIObserver
+// ---------------------------------------------------------------------------
+
+NS_IMETHODIMP CBrowserApp::Observe(nsISupports *aSubject, const PRUnichar *aTopic, const PRUnichar *someData)
+{
+    #define CLOSE_WINDOWS_ON_SWITCH 1
+
+    nsresult rv = NS_OK;
+    
+    if (nsCRT::strcmp(aTopic, PROFILE_APPROVE_CHANGE_TOPIC) == 0)
+    {
+        // Ask the user if they want to
+        DialogItemIndex item = UModalAlerts::StopAlert(alrt_ConfirmProfileSwitch);
+        if (item != kStdOkItemIndex)
+        {
+            nsCOMPtr<nsIProfileChangeStatus> status = do_QueryInterface(aSubject);
+            NS_ENSURE_TRUE(status, NS_ERROR_FAILURE);
+            status->BlockChange();
+        }
+    }
+    else if (nsCRT::strcmp(aTopic, PROFILE_BEFORE_CHANGE_TOPIC) == 0)
+    {
+    	WindowPeek	theWindowP = (WindowPeek) LMGetWindowList();
+    	
+    	while (theWindowP) {
+    	    WindowPeek nextWindow = theWindowP->nextWindow;
+    		LWindow *window = LWindow::FetchWindowObject((WindowPtr) theWindowP);
+    		CBrowserWindow *browserWindow = dynamic_cast<CBrowserWindow *>(window);
+    		if (browserWindow != nil) {
+                
+#if CLOSE_WINDOWS_ON_SWITCH
+                delete browserWindow;
+#else
+                if (browserWindow->IsBusy())
+                    browserWindow->Stop();
+#endif
+    		}
+    		theWindowP = nextWindow;
+    	}
+
+    }
+    else if (nsCRT::strcmp(aTopic, PROFILE_AFTER_CHANGE_TOPIC) == 0)
+    {
+        CBrowserApp::InitCachePrefs();
+        
+#if CLOSE_WINDOWS_ON_SWITCH
+        ObeyCommand(PP_PowerPlant::cmd_New, nil);
+#endif
+
+    }
+    return rv;
+}
+
+#endif // USE_PROFILES

@@ -17,7 +17,7 @@
  * Copyright (C) 1999, Mozilla.  All Rights Reserved.
  * 
  * Contributor(s):
- *   Conrad Carlen <conrad@ingress.com>
+ *   Conrad Carlen <ccarlen@netscape.com>
  */
 
 #pragma once
@@ -25,18 +25,30 @@
 #include <PP_Prefix.h>
 #include <LApplication.h>
 
-#ifndef nsError_h
 #include "nsError.h"
-#endif
-
+#include "nsIObserver.h"
+#include "nsWeakReference.h"
  
 class	CBrowserApp : public PP_PowerPlant::LApplication
+
+#if USE_PROFILES
+                      ,public nsIObserver
+                      ,public nsSupportsWeakReference
+#endif
+
 {
+#if USE_PROFILES
+  friend class CAppProfileChangeObserver;
+#endif
 
 public:
-					        CBrowserApp();	// constructor registers PPobs
-	virtual 			    ~CBrowserApp();	// stub destructor
+					                CBrowserApp();	// constructor registers PPobs
+	virtual 			          ~CBrowserApp();	// stub destructor
 
+#if USE_PROFILES
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIOBSERVER
+#endif
 
     virtual void            ProcessNextEvent();
 
@@ -54,6 +66,13 @@ public:
 									
 protected:
 		
-	virtual void			StartUp();			// override startup functions
+	virtual void            StartUp();			// override startup functions
+
+	virtual nsresult        InitializePrefs();
+    static nsresult         InitCachePrefs();
+    
+#if USE_PROFILES
+    Boolean                 ConfirmProfileSwitch();
+#endif
 
 };
