@@ -117,7 +117,7 @@ else
 	@echo +++ Commercial Packaging - Creating runem. Used to run test
 	rm -f runem
 	@echo #!/bin/sh > runem
-	@echo $(PERL) runem.pl org.mozilla.test.EmbeddedMozilla "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
+	@echo perl runem.pl org.mozilla.webclient.test.EmbeddedMozilla "$$"1 "$$"2 "$$"3 "$$"4 "$$"4 "$$"6 >> runem
 	chmod 755 runem
 	if test ! -d $(PACKAGE_EXAMPLE) ; then mkdir $(PACKAGE_EXAMPLE) ; else true ; fi ;
 	cp $(topsrcdir)/dist/bin/libwebclientstub.so $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
