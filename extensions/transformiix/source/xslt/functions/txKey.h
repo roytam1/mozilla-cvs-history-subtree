@@ -89,14 +89,14 @@ class txIndexedKeyHashKey
 {
 public:
     txIndexedKeyHashKey(txExpandedName aKeyName,
-                        PRInt32 aDocument)
+                        PRInt32 aDocumentHashValue)
         : mKeyName(aKeyName),
-          mDocument(aDocument)
+          mDocumentHashValue(aDocumentHashValue)
     {
     }
 
     txExpandedName mKeyName;
-    PRInt32 mDocument;
+    PRInt32 mDocumentHashValue;
 };
 
 struct txIndexedKeyHashEntry : public PLDHashEntryHdr

@@ -163,7 +163,7 @@ txIndexedKeyHashEntry::MatchEntry(const void* aKey) const
         NS_STATIC_CAST(const txIndexedKeyHashKey*, aKey);
 
     return mKey.mKeyName == key->mKeyName &&
-           mKey.mDocument == key->mDocument;
+           mKey.mDocumentHashValue == key->mDocumentHashValue;
 }
 
 PLDHashNumber
@@ -174,7 +174,7 @@ txIndexedKeyHashEntry::HashKey(const void* aKey)
 
     return key->mKeyName.mNamespaceID ^
            NS_PTR_TO_INT32(key->mKeyName.mLocalName.get()) ^
-           key->mDocument;
+           key->mDocumentHashValue;
 }
 
 /*
