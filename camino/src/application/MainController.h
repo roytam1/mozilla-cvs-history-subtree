@@ -42,10 +42,11 @@
 #import "FindDlgController.h"
 #import "PreferenceManager.h"
 #import "SharedMenusObj.h"
-
+#import "NetworkServices.h"
 
 @class BookmarksMenu;
 @class KeychainService;
+@class NetworkServices;
 
 @interface MainController : NSObject 
 {
@@ -60,10 +61,10 @@
     IBOutlet NSMenuItem*    mCloseTabMenuItem;
     IBOutlet NSMenuItem*    mToggleSidebarMenuItem;
 
-    // The bookmarks menu.
     IBOutlet NSMenu*        mBookmarksMenu;
     IBOutlet NSMenu*        mDockMenu;
-
+	IBOutlet NSMenu*        mServersSubmenu;
+	
     IBOutlet NSMenuItem*    mBookmarksToolbarMenuItem;
     IBOutlet NSMenuItem*    mAddBookmarkMenuItem;
     IBOutlet NSMenuItem*    mCreateBookmarksFolderMenuItem;
@@ -87,6 +88,7 @@
     NSString*               mStartURL;
     
     SharedMenusObj*         mSharedMenusObj;
+    NetworkServices*        mNetworkServices;
 }
 
 // File menu actions.
@@ -111,6 +113,10 @@
 -(IBAction) doSearch:(id)aSender;
 -(IBAction) previousTab:(id)aSender;
 -(IBAction) nextTab:(id)aSender;
+
+// Local servers submenu
+-(IBAction) aboutServers:(id)aSender;
+-(IBAction) connectToServer:(id)aSender;
 
 // View menu actions.
 -(IBAction) toggleSidebar:(id)sender;

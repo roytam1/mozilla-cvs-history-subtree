@@ -52,6 +52,7 @@
 #import "RemoteDataProvider.h"
 #import "ProgressDlgController.h"
 #import "JSConsole.h"
+#import "NetworkServices.h"
 
 #include "nsCOMPtr.h"
 #include "nsEmbedAPI.h"
@@ -81,10 +82,12 @@ const int kOpenNewWindowOnAE = 0;
 const int kOpenNewTabOnAE = 1;
 const int kReuseWindowOnAE = 2;
 
-
 @interface MainController(MainControllerPrivate)
 
 - (void)setupStartpage;
+- (void)setupNetworkBrowser;
+- (void)foundService:(NSNetService*)inService moreComing:(BOOL)more;
+- (void)rebuildNetServiceMenu;
 
 @end
 
@@ -209,6 +212,20 @@ const int kReuseWindowOnAE = 2;
   BOOL success;
   if ([[PreferenceManager sharedInstance] getBooleanPref:"chimera.log_js_to_console" withSuccess:&success])
     [JSConsole sharedJSConsole];
+
+  if ([[PreferenceManager sharedInstance] getBooleanPref:"chimera.enable_rendezvous" withSuccess:&success])
+  {
+    // are we on 10.2.3 or higher? The DNS resolution stuff is broken before 10.2.3
+    long systemVersion;
+    OSErr err = ::Gestalt(gestaltSystemVersion, &systemVersion);
+    if ((err == noErr) && (systemVersion >= 0x00001023))
+    {
+      mNetworkServices = [[NetworkServices alloc] init];
+      [mNetworkServices registerClient:self];
+      [mNetworkServices startServices];
+    }
+  }
+  
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
@@ -221,7 +238,7 @@ const int kReuseWindowOnAE = 2;
     NSString *altButton = NSLocalizedString(@"QuitWithdownloadsButtonAlt",@"Quit");
     // while the panel is up, download dialogs won't update (no timers firing) but
     // downloads continue (PLEvents being processed)
-    if (NSRunAlertPanel(alert, message, okButton, altButton, nil)== NSAlertDefaultReturn)
+    if (NSRunAlertPanel(alert, message, okButton, altButton, nil) == NSAlertDefaultReturn)
       return NSTerminateCancel;
   }
   
@@ -233,6 +250,9 @@ const int kReuseWindowOnAE = 2;
 #if DEBUG
   NSLog(@"App will terminate notification");
 #endif
+  
+  [mNetworkServices unregisterClient:self];
+  [mNetworkServices release];
   
   // Autosave one of the windows.
   [[[mApplication mainWindow] windowController] autosaveWindowFrame];
@@ -1141,6 +1161,109 @@ const int kReuseWindowOnAE = 2;
   }
   
   [self openNewWindowOrTabWithURL:urlString andReferrer:nil];
+}
+
+
+#pragma mark -
+
+
+static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void *context)
+{
+  NSComparisonResult protocolCompare = [[item1 objectForKey:@"name"] compare:[item2 objectForKey:@"name"] options:NSCaseInsensitiveSearch];
+  if (protocolCompare != NSOrderedSame)
+    return protocolCompare;
+    
+  return [[item1 objectForKey:@"protocol"] compare:[item2 objectForKey:@"protocol"] options:NSCaseInsensitiveSearch];
+}
+
+- (void)rebuildNetServiceMenu
+{
+  // rebuild the submenu, leaving the first item
+  while ([mServersSubmenu numberOfItems] > 1)
+    [mServersSubmenu removeItemAtIndex:[mServersSubmenu numberOfItems] - 1];
+  
+  NSEnumerator* keysEnumerator = [mNetworkServices serviceEnumerator];
+  // build an array of dictionaries, so we can sort it
+  
+  NSMutableArray* servicesArray = [[NSMutableArray alloc] initWithCapacity:10];
+  
+  id key;
+  while ((key = [keysEnumerator nextObject]))
+  {
+    NSDictionary* serviceDict = [NSDictionary dictionaryWithObjectsAndKeys:
+                                                           key, @"id",
+                 [mNetworkServices serviceName:[key intValue]], @"name",
+             [mNetworkServices serviceProtocol:[key intValue]], @"protocol",
+                                                                nil];
+    
+    [servicesArray addObject:serviceDict];
+  }
+
+  if ([servicesArray count] == 0)
+  {
+    id newItem = [mServersSubmenu addItemWithTitle:NSLocalizedString(@"NoServicesFound", @"") action:nil keyEquivalent:@""];
+    [newItem setTag:-1];
+    [newItem setTarget:self];
+  }
+  else
+  {
+    // add a separator
+    [mServersSubmenu addItem:[NSMenuItem separatorItem]];
+    
+    // sort on protocol, then name
+    [servicesArray sortUsingFunction:SortByProtocolAndName context:NULL];
+    
+    for (unsigned int i = 0; i < [servicesArray count]; i ++)
+    {
+      NSDictionary* serviceDict = [servicesArray objectAtIndex:i];
+      NSString* itemName = [[serviceDict objectForKey:@"name"] stringByAppendingString:NSLocalizedString([serviceDict objectForKey:@"protocol"], @"")];
+      
+      id newItem = [mServersSubmenu addItemWithTitle:itemName action:@selector(connectToServer:) keyEquivalent:@""];
+      [newItem setTag:[[serviceDict objectForKey:@"id"] intValue]];
+      [newItem setTarget:self];
+    }
+  }
+}
+
+// NetworkServicesClient implementation
+
+- (void)availableServicesChanged:(NetworkServices*)servicesProvider
+{
+  [self rebuildNetServiceMenu];
+}
+
+- (void)serviceResolved:(int)serviceID withURL:(NSString*)url
+{
+	[self openNewWindowOrTabWithURL:url andReferrer:nil];
+}
+
+- (void)serviceResolutionFailed:(int)serviceID
+{
+  NSString* serviceName = [mNetworkServices serviceName:serviceID];
+  
+  NSBeginAlertSheet(NSLocalizedString(@"ServiceResolutionFailedTitle", @""),
+                                      @"",		// default button
+                                      nil,		// cancel buttton
+                                      nil,		// other button
+                                      [NSApp mainWindow],		// window
+                                      nil,		// delegate 
+                                      nil,		// end sel
+                                      nil,		// dismiss sel
+                                      NULL,		// context
+                                      [NSString stringWithFormat:NSLocalizedString(@"ServiceResolutionFailedMsgFormat", @""), serviceName]
+                                      );
+}
+
+-(IBAction) connectToServer:(id)aSender
+{
+  [mNetworkServices attemptResolveService:[aSender tag]];
+}
+
+-(IBAction) aboutServers:(id)aSender
+{
+  NSString *pageToLoad = NSLocalizedStringFromTable(@"RendezvousPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"RendezvousPageDefault"])
+    [self openNewWindowOrTabWithURL:pageToLoad andReferrer:nil];
 }
 
 // currently unused

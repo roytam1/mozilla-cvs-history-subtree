@@ -179,37 +179,48 @@ static int gNumActiveDownloads = 0;
 {
     NSToolbarItem *toolbarItem = [[[NSToolbarItem alloc] initWithItemIdentifier:itemIdent] autorelease];
 
-    if ( [itemIdent isEqual:CancelToolbarItemIdentifier] ) {
+    if ( [itemIdent isEqual:CancelToolbarItemIdentifier] )
+    {
         [toolbarItem setLabel:NSLocalizedString(@"Cancel",@"Cancel")];
         [toolbarItem setPaletteLabel:NSLocalizedString(@"CancelPaletteLabel",@"Cancel Download")];
         [toolbarItem setToolTip:NSLocalizedString(@"CancelToolTip",@"Cancel this file download")];
         [toolbarItem setImage:[NSImage imageNamed:@"saveCancel"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(cancel)];
-    } else if ( [itemIdent isEqual:ShowFileToolbarItemIdentifier] ) {
+    }
+    else if ( [itemIdent isEqual:ShowFileToolbarItemIdentifier] )
+    {
         [toolbarItem setLabel:NSLocalizedString(@"Show File",@"Show File")];
         [toolbarItem setPaletteLabel:NSLocalizedString(@"Show File",@"Show File")];
         [toolbarItem setToolTip:NSLocalizedString(@"ShowToolTip",@"Show the saved file in the Finder")];
         [toolbarItem setImage:[NSImage imageNamed:@"saveShowFile"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(showFile)];
-    } else if ( [itemIdent isEqual:OpenFileToolbarItemIdentifier] ) {
+    }
+    else if ( [itemIdent isEqual:OpenFileToolbarItemIdentifier] )
+    {
         [toolbarItem setLabel:NSLocalizedString(@"Open File",@"Open File")];
         [toolbarItem setPaletteLabel:NSLocalizedString(@"Open File",@"Open File")];
         [toolbarItem setToolTip:NSLocalizedString(@"OpenToolTip",@"Open the saved file in its default application.")];
         [toolbarItem setImage:[NSImage imageNamed:@"saveOpenFile"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(openFile)];
-    } else if ( [itemIdent isEqual:LeaveOpenToolbarItemIdentifier] ) {
-        if ( !mIsFileSave && !mDoingAutoFileDownload ) {
-            if ( mSaveFileDialogShouldStayOpen ) {
+    }
+    else if ( [itemIdent isEqual:LeaveOpenToolbarItemIdentifier] )
+    {
+        if ( !mIsFileSave && !mDoingAutoFileDownload )
+        {
+            if ( mSaveFileDialogShouldStayOpen )
+            {
                 [toolbarItem setLabel:NSLocalizedString(@"Leave Open",@"Leave Open")];
                 [toolbarItem setPaletteLabel:NSLocalizedString(@"Toggle Close Behavior",@"Toggle Close Behavior")];
                 [toolbarItem setToolTip:NSLocalizedString(@"LeaveOpenToolTip",@"Window will stay open when download finishes.")];
                 [toolbarItem setImage:[NSImage imageNamed:@"saveLeaveOpenYES"]];
                 [toolbarItem setTarget:self];
                 [toolbarItem setAction:@selector(toggleLeaveOpen)];
-            } else {
+            }
+            else
+            {
                 [toolbarItem setLabel:NSLocalizedString(@"Close When Done",@"Close When Done")];
                 [toolbarItem setPaletteLabel:NSLocalizedString(@"Toggle Close Behavior",@"Toggle Close Behavior")];
                 [toolbarItem setToolTip:NSLocalizedString(@"CloseWhenDoneToolTip",@"Window will close automatically when download finishes.")];
@@ -217,11 +228,13 @@ static int gNumActiveDownloads = 0;
                 [toolbarItem setTarget:self];
                 [toolbarItem setAction:@selector(toggleLeaveOpen)];
             }
-            if ( willBeInserted ) {
+            if ( willBeInserted )
+            {
                 leaveOpenToggleToolbarItem = toolbarItem; //establish reference
-         }
+            }
         }
-    } else {
+    } else
+    {
         toolbarItem = nil;
     }
 
