@@ -32,9 +32,9 @@ dist/bin/@DLLP@plc4@DLLS@
 dist/bin/@DLLP@plds4@DLLS@
 
 [nspr-devel]
-dist/lib/libnspr4@LIBS@
-dist/lib/libplc4@LIBS@
-dist/lib/libplds4@LIBS@
+dist/lib/@LIBP@nspr4@LIBS@
+dist/lib/@LIBP@plc4@LIBS@
+dist/lib/@LIBP@plds4@LIBS@
 dist/include/nspr/private/pprio.h
 dist/include/nspr/private/pprthred.h
 dist/include/nspr/private/prpriv.h
