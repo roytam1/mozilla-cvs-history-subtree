@@ -503,17 +503,17 @@ DoRFC822toHTMLConversion(char *filename)
   out->SetFormat(outFormat);
 
   // Assuming this is an RFC822 message...
-  mimeParser->OnStartRequest(theURI);
+  mimeParser->OnStartRequest(nsnull, theURI);
   // Just pump all of the data from the file into libmime...
   while (NS_SUCCEEDED(in->PumpFileStream()))
   {
     PRUint32    len;
     in->GetLength(&len);
-    if (mimeParser->OnDataAvailable(theURI, in, 0, len) != NS_OK)
+    if (mimeParser->OnDataAvailable(nsnull, theURI, in, 0, len) != NS_OK)
       break;
   }
 
-  mimeParser->OnStopRequest(theURI, NS_OK, nsnull);
+  mimeParser->OnStopRequest(nsnull, theURI, NS_OK, nsnull);
   NS_RELEASE(theURI);
 
   return NS_OK;
