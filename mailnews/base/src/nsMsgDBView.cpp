@@ -1589,6 +1589,29 @@ FnSortIdKey(const void *pItem1, const void *pItem2, void *privateData)
         return(-1);
 }
 
+int PR_CALLBACK
+FnSortIdKeyPtr(const void *pItem1, const void *pItem2, void *privateData)
+{
+    PRInt32 retVal = 0;
+    nsresult rv;
+
+    IdKeyPtr** p1 = (IdKeyPtr**)pItem1;
+    IdKeyPtr** p2 = (IdKeyPtr**)pItem2;
+
+    nsIMsgDatabase *db = (nsIMsgDatabase *)privateData;
+
+    rv = db->CompareCollationKeys((*p1)->key,(*p1)->info.len,(*p2)->key,(*p2)->info.len,&retVal);
+    NS_ASSERTION(NS_SUCCEEDED(rv),"compare failed");
+
+    if (retVal != 0)
+        return(retVal);
+    if ((*p1)->info.id >= (*p2)->info.id)
+        return(1);
+    else
+        return(-1);
+}
+
+
 typedef struct tagIdDWord {
     EntryInfo   info;
     PRUint32    dword;
@@ -2447,7 +2470,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
       rv = GetCollationKey(msgHdr, m_sortType, &(keyInfo1.key), &(keyInfo1.info.len));
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
 			msgHdr->GetMessageKey(&keyInfo1.info.id);
-      comparisonFun = FnSortIdKey;
+      comparisonFun = FnSortIdKeyPtr;
       comparisonContext = m_db.get();
 			pValue1 = (void *) &keyInfo1;
 			break;
