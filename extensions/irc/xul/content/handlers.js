@@ -633,6 +633,23 @@ function onMultilineInputKeyPress (e)
     }
 }
 
+function onViewMenuShowing ()
+{
+    var loc = frames[0].document.location.href;
+    loc = loc.substr (loc.indexOf("?") + 1);
+
+    var val = (loc == "chrome://chatzilla/skin/output-default.css");
+    document.getElementById ("menu-view-default").setAttribute ("checked", val);
+
+    val = (loc == "chrome://chatzilla/skin/output-dark.css");
+    document.getElementById ("menu-view-dark").setAttribute ("checked", val);
+
+    val = (loc == "chrome://chatzilla/skin/output-light.css");
+    document.getElementById ("menu-view-light").setAttribute ("checked", val);
+    
+    return true;
+}
+    
 function onInputKeyPress (e)
 {
     
