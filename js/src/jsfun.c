@@ -642,8 +642,10 @@ closure_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 	proto = OBJ_GET_PROTO(cx, obj);
 	if (proto)
 	    *vp = OBJECT_TO_JSVAL(proto);
+        return JS_TRUE;
     }
-    return JS_TRUE;
+
+    return js_TryValueOf(cx, obj, type, vp);
 }
 
 static JSBool
@@ -972,7 +974,8 @@ fun_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
       case JSTYPE_FUNCTION:
 	*vp = OBJECT_TO_JSVAL(obj);
 	break;
-      default:;
+      default:
+        return js_TryValueOf(cx, obj, type, vp);
     }
     return JS_TRUE;
 }
