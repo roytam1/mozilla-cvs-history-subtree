@@ -262,22 +262,22 @@ void pw_SetProgressBarPercent(MWContext *context, int32 percent)
 
 XP_Bool pw_Confirm(MWContext* context, const char* msg)
 {
-#if defined(XP_MAC) || defined(XP_UNIX)
-	return XP_Confirm( context, msg );
-#else
+//#if defined(XP_MAC) || defined(XP_UNIX)
+//	return XP_Confirm( context, msg );
+//#else
 	XP_ASSERT(FALSE);
 	return FALSE;
-#endif
+//#endif
 }
 
 char* pw_Prompt(MWContext * /*context*/, const char * Msg, const char * dflt)
 {
-#if defined(XP_MAC)
-	return XP_Prompt(NULL, Msg, dflt);
-#else
+//#if defined(XP_MAC)
+//	return XP_Prompt(NULL, Msg, dflt);
+//#else
 	XP_ASSERT(FALSE);
 	return NULL;
-#endif
+//#endif
 }
 
 char* pw_PromptWithCaption(MWContext * /*context */, const char * /* caption */, const char * /*Msg*/, const char * /*dflt*/)
@@ -288,22 +288,22 @@ char* pw_PromptWithCaption(MWContext * /*context */, const char * /* caption */,
 
 XP_Bool pw_PromptUsernameAndPassword(MWContext * c,const char * prompt,char ** username, char ** password)
 {
-#if defined(XP_MAC) || defined(XP_UNIX)
-	return XP_PromptUsernameAndPassword(c, prompt, username, password);
-#else
+//#if defined(XP_MAC) || defined(XP_UNIX)
+//	return XP_PromptUsernameAndPassword(c, prompt, username, password);
+//#else
 	XP_ASSERT(FALSE);
 	return FALSE;
-#endif
+//#endif
 }
 
 char * pw_PromptPassword(MWContext *context, const char * Msg)
 {
-#if defined(XP_MAC) || defined(XP_UNIX)
-	return XP_PromptPassword(context, Msg);
-#else
+//#if defined(XP_MAC) || defined(XP_UNIX)
+//	return XP_PromptPassword(context, Msg);
+//#else
 	XP_ASSERT(FALSE);
 	return NULL;
-#endif
+//#endif
 }
 void pw_EnableClicking(MWContext * /*context*/)
 {
