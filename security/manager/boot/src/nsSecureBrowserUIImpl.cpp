@@ -379,7 +379,9 @@ nsSecureBrowserUIImpl::EvaluateAndUpdateSecurityState(nsIRequest *aRequest)
 {
   nsCOMPtr<nsIChannel> channel(do_QueryInterface(aRequest));
 
-  if (channel) {
+  if (!channel) {
+    mNewToplevelSecurityState = nsIWebProgressListener::STATE_IS_INSECURE;
+  } else {
     mNewToplevelSecurityState = GetSecurityStateFromChannel(channel);
 
     PR_LOG(gSecureDocLog, PR_LOG_DEBUG,
@@ -401,9 +403,6 @@ nsSecureBrowserUIImpl::EvaluateAndUpdateSecurityState(nsIRequest *aRequest)
         secInfo->GetShortSecurityDescription(getter_Copies(mInfoTooltip));
       }
     }
-  }
-  else {
-    mNewToplevelSecurityState = nsIWebProgressListener::STATE_IS_INSECURE;
   }
 
   // assume mNewToplevelSecurityState was set in this scope!
@@ -1153,7 +1152,7 @@ nsSecureBrowserUIImpl::OnLocationChange(nsIWebProgress* aWebProgress,
 
     // For wyciwyg channels in subdocuments we only update our
     // subrequest state members.
-    UpdateSecurityState(aRequest);
+    UpdateSubrequestMembers(aRequest);
 
     // Care for the following scenario:
 
