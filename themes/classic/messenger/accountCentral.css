@@ -59,7 +59,7 @@ separator.thin {
 }
 
 .acctCentralRowTitleBox {
-  background-color: #C7D0D9;
+  background-color: -moz-Dialog;
   font-size: 150%;
   font-weight: bold;
   color: #000000;
@@ -80,3 +80,4 @@ separator.thin {
 .acctCentralLinkText:hover:active {
   color: #000000;
 }
+
