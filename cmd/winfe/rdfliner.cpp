@@ -3858,7 +3858,7 @@ int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 							   WS_VISIBLE|WS_CHILD|WS_CLIPCHILDREN,
 							   CRect(0,0,100,100), this, 101 );
 
-	m_pHTMLView = wfe_CreateNavCenterHTMLPain(m_hWnd);
+	m_pHTMLView = NULL; //wfe_CreateNavCenterHTMLPain(m_hWnd);
 
     return iRetVal;
 }
