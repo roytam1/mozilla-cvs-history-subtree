@@ -495,13 +495,10 @@ a.chatzilla-link:hover {
 .msg-user[dest-type="IRCUser"]:before {
     content: "to(";
 }
-.msg-user[dest-type="IRCUser"]:after {
-    content: ")";
-}
 .msg-user[msg-dest$="ME!"]:before {
-    content: "from(";
+    content: "from(" !important;
 }
-.msg-user[msg-dest$="ME!"]:after {
+.msg-user[dest-type="IRCUser"]:after {
     content: ")";
 }
 

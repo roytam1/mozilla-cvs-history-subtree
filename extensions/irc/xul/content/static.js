@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre14";
+client.version = "0.8.5-pre15";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -51,6 +51,11 @@ client.MAX_WORD_DISPLAY = 20;
 client.PRINT_DIRECTION = 1; /*1 => new messages at bottom, -1 => at top */
 client.ADDRESSED_NICK_SEP = ":";
 
+client.MAX_MSG_PER_ROW = 3; /* default number of messages to collapse into a
+                             * single row, max. */
+client.INITIAL_COLSPAN = 5; /* MAX_MSG_PER_ROW cannot grow to greater than 
+                             * one half INITIAL_COLSPAN + 1. */
+client.COLLAPSE_ROWS = false;
 client.NOTIFY_TIMEOUT = 5 * 60 * 1000; /* update notify list every 5 minutes */
 
 client.SLOPPY_NETWORKS = true; /* true if msgs from a network can be displayed
@@ -325,20 +330,20 @@ function initHost(obj)
     obj.munger = new CMunger();
     obj.munger.enabled = true;
     obj.munger.addRule ("mailto",
-       /((mailto:)?[^<>\[\]()\'\"\s]+@[^.<>\[\]()\'\"\s]+\.[^<>\[\]()\'\"\s]+)/i,
+       /(?:\s|\W|^)((mailto:)?[^<>\[\]()\'\"\s]+@[^.<>\[\]()\'\"\s]+\.[^<>\[\]()\'\"\s]+)/i,
                         insertMailToLink);
     obj.munger.addRule ("link", obj.linkRE, insertLink);
-    obj.munger.addRule ("bugzilla-link", /(?:\s|^)(bug\s+#?\d{3,6})/i,
+    obj.munger.addRule ("bugzilla-link", /(?:\s|\W|^)(bug\s+#?\d{3,6})/i,
                         insertBugzillaLink);
     obj.munger.addRule ("channel-link",
-                        /[@+]?(#[^<>\[\]()\'\"\s]+[^:,.<>\[\]()\'\"\s])/i,
+                    /(?:\s|\W|^)[@+]?(#[^<>\[\]()\'\"\s]+[^:,.<>\[\]()\'\"\s])/i,
                         insertChannelLink);
     
     obj.munger.addRule ("face",
          /((^|\s)[\<\>]?[\;\=\:]\~?[\-\^\v]?[\)\|\(pP\<\>oO0\[\]\/\\](\s|$))/,
          insertSmiley);
     obj.munger.addRule ("ear", /(?:\s|^)(\(\*)(?:\s|$)/, insertEar, false);
-    obj.munger.addRule ("rheet", /(?:\s|^)(rhee+t\!*)(?:\s|$)/i, insertRheet);
+    obj.munger.addRule ("rheet", /(?:\s|\W|^)(rhee+t\!*)(?:\s|$)/i, insertRheet);
     obj.munger.addRule ("bold", /(?:\s|^)(\*[^*,.()]*\*)(?:[\s.,]|$)/, 
                         "chatzilla-bold");
     obj.munger.addRule ("italic", /(?:\s|^)(\/[^\/,.()]*\/)(?:[\s.,]|$)/,
@@ -1578,14 +1583,17 @@ function addHistory (source, obj, mergeData, collapseRow)
         {
             var thisUserCol = obj.firstChild;
             var thisMessageCol = thisUserCol.nextSibling;
-            var nickColumns = findPreviousNickColumns(source.messages);
+            var ci = findPreviousColumnInfo(source.messages);
+            var nickColumns = ci.nickColumns;
+            var rowExtents = ci.extents;
             var nickColumnCount = nickColumns.length;
             var sameNick = (nickColumnCount > 0 &&
                             nickColumns[nickColumnCount - 1].
                             getAttribute("msg-user") ==
                             thisUserCol.getAttribute("msg-user"));
-        
-            if (mergeData && sameNick)
+            var lastRowSpan = (nickColumnCount > 0) ?
+                Number(nickColumns[0].getAttribute("rowspan")) : 0;
+            if (sameNick && mergeData)
             {
                 if (obj.getAttribute("important"))
                 {
@@ -1595,31 +1603,48 @@ function addHistory (source, obj, mergeData, collapseRow)
                 /* message is from the same person as last time,
                  * strip the nick first... */
                 obj.removeChild(obj.firstChild);
-                /* then add padding cells, if required. */
-                for (i = 0; i < nickColumns.length - 1; ++i)
-                    obj.insertBefore (document.createElementNS 
-                                      ("http://www.w3.org/1999/xhtml",
-                                       "html:td"),
-                                      obj.firstChild);
+                /* Adjust height of previous cells, maybe. */
+                for (i = 0; i < rowExtents.length - 1; ++i)
+                {
+                    var myLastData = 
+                        rowExtents[i].childNodes[nickColumnCount - 1];
+                    var myLastRowSpan = (myLastData) ?
+                        myLastData.getAttribute("rowspan") : 0;
+                    if (myLastData && myLastRowSpan > 1)
+                    {
+                        myLastData.removeAttribute("rowspan");
+                    }
+                }
                 /* then add one to the colspan for the previous user columns */
-                var lastRowSpan = Number(nickColumns[0].getAttribute("rowspan"));
                 if (!lastRowSpan)
                     lastRowSpan = 1;
                 for (var i = 0; i < nickColumns.length; ++i)
                     nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
             }
-            /*
-            else if (collapseRow && !sameNick &&
-                     nickColumnCount < source.MAX_MSG_PER_ROW)
+            else if (!sameNick && collapseRow && nickColumnCount > 0 &&
+                     nickColumnCount < client.MAX_MSG_PER_ROW)
             {
-            */
+                /* message is from a different person, but is elegible to
+                 * be contained by the previous row. */
+                var tr = nickColumns[0].parentNode;
+                for (i = 0; i < rowExtents.length; ++i)
+                    rowExtents[i].lastChild.removeAttribute("colspan");
+                obj.firstChild.setAttribute ("rowspan", lastRowSpan);
+                tr.appendChild (obj.firstChild);
+                var lastColSpan =
+                    Number(rowExtents[0].lastChild.getAttribute("colspan"));
+                obj.lastChild.setAttribute ("colspan", lastColSpan - 2);
+                obj.lastChild.setAttribute ("rowspan", lastRowSpan);
+                tr.appendChild (obj.lastChild);
+                obj = null;
+            }   
         }
         
         if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
-            (w.innerHeight))
+            (w.innerHeight / 3))
             needScroll = true;
-
-        tbody.appendChild (obj);
+        if (obj)
+            tbody.appendChild (obj);
     }
     else
         tbody.insertBefore (obj, source.messages.firstChild);
@@ -1669,30 +1694,33 @@ function addHistory (source, obj, mergeData, collapseRow)
     
 }
 
-function findPreviousNickColumns (table)
+function findPreviousColumnInfo (table)
 {
+    var extents = new Array();
     var tr = table.firstChild.lastChild;
     var className = tr ? tr.firstChild.getAttribute("class") : "";
     while (tr && className.search(/msg-user|msg-type|msg-nested-td/) == -1)
     {
+        extents.push(tr);
         tr = tr.previousSibling;
         if (tr)
             className = tr.firstChild.getAttribute("class");
     }
     
     if (!tr || className != "msg-user")
-        return [];
+        return {extents: [], nickColumns: []};
     
+    extents.push(tr);
     var nickCol = tr.firstChild;
-    var ary = new Array();
+    var nickCols = new Array();
     while (nickCol)
     {
         if (nickCol.getAttribute("class") == "msg-user")
-            ary.push (nickCol);
+            nickCols.push (nickCol);
         nickCol = nickCol.nextSibling.nextSibling;
     }
 
-    return ary;
+    return {extents: extents, nickColumns: nickCols};
 }
     
 function notifyActivity (source)
@@ -2232,8 +2260,8 @@ function __display(message, msgtype, sourceObj, destObj)
             msgSource.appendChild (newInlineText (nick));
         }
         msgRow.appendChild (msgSource);
-        canMergeData = true;
-        canCollapseRow = client.COLLAPSE_MSGS;
+        canMergeData = client.COLLAPSE_MSGS;
+        canCollapseRow = client.COLLAPSE_ROWS;
 
     }
     else
@@ -2263,7 +2291,8 @@ function __display(message, msgtype, sourceObj, destObj)
     {
         var msgData = document.createElementNS("http://www.w3.org/1999/xhtml",
                                                "html:td");
-        setAttribs (msgData, "msg-data");
+        setAttribs (msgData, "msg-data", {title: dateString, 
+                                          colspan: client.INITIAL_COLSPAN});
         if (isImportant)
             msgData.setAttribute ("important", "true");
 

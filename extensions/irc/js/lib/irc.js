@@ -1258,7 +1258,8 @@ function serv_quit (e)
 
     for (var c in e.server.channels)
     {
-        if (e.user.nick in e.server.channels[c].users)
+        if (e.server.channels[c].active &&
+            e.user.nick in e.server.channels[c].users)
         {
             var ev = new CEvent ("channel", "quit", e.server.channels[c],
                                  "onQuit");
@@ -1288,6 +1289,8 @@ function serv_part (e)
 
     e.channel = new CIRCChannel (this, e.params[1]);    
     e.user = new CIRCChanUser (e.channel, e.user.nick);
+    if (userIsMe(e.user))
+        e.channel.active = false;
     e.channel.removeUser(e.user.nick);
     e.destObject = e.channel;
     e.set = "channel";
@@ -1303,6 +1306,8 @@ function serv_kick (e)
     e.channel = new CIRCChannel (this, e.params[1]);
     e.lamer = new CIRCChanUser (e.channel, e.params[2]);
     delete e.channel.users[e.lamer.nick];
+    if (userIsMe(e.lamer))
+        e.channel.active = false;
     e.reason = e.meat;
     e.destObject = e.channel;
     e.set = "channel"; 
@@ -1320,6 +1325,8 @@ function serv_join (e)
         e.server.sendData ("MODE " + e.channel.name + "\n" /* +
                            "BANS " + e.channel.name + "\n" */);
     e.user = new CIRCChanUser (e.channel, e.user.nick);
+    if (userIsMe(e.user))
+        e.channel.active = true;
 
     e.destObject = e.channel;
     e.set = "channel";
