@@ -68,7 +68,7 @@ struct nsPluginPort;
 class nsChildView;
 
 
-@interface ChildView : NSQuickDrawView<mozView>
+@interface ChildView : NSQuickDrawView<mozView, NSTextInput>
 {
   NSWindow*       mWindow;    // shortcut to the top window, [WEAK]
   
@@ -84,6 +84,12 @@ class nsChildView;
 
   // Whether we're a plugin view.
   BOOL mIsPluginView;
+  BOOL mLastKeyEventWasSentToCocoa;
+
+  // needed for NSTextInput implementation
+  NSRange mMarkedRange;
+  NSRange mSelectedRange;
+  BOOL mInComposition;
 }
 
   // sets up our view, attaching it to its owning gecko view

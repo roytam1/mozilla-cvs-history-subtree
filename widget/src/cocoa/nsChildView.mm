@@ -42,6 +42,7 @@
 #include "nsToolkit.h"
 #include "nsIEnumerator.h"
 #include "prmem.h"
+#include "nsCRT.h"
 
 #include <Appearance.h>
 #include <Timer.h>
@@ -122,6 +123,86 @@ ConvertGeckoRectToMacRect(const nsRect& aRect, Rect& outMacRect)
   outMacRect.bottom = aRect.y + aRect.height;
 }
 
+static PRUint32 underlineAttributeToTextRangeType(PRUint32 aUnderlineStyle)
+{
+#ifdef DEBUG_IME
+  NSLog(@"in underlineAttributeToTextRangeType = %d", aUnderlineStyle);
+#endif
+
+  // For more info on the underline attribute, please see: 
+  // http://developer.apple.com/techpubs/macosx/Cocoa/TasksAndConcepts/ProgrammingTopics/AttributedStrings/Tasks/AccessingAttrs.html
+  // We are not clear where the define for value 2 is right now. 
+  // To see this value in japanese ime, type 'aaaaaaaaa' and hit space to make the
+  // ime send you some part of text in 1 (NSSingleUnderlineStyle) and some part in 2. 
+  // ftang will ask apple for more details
+
+  switch (aUnderlineStyle)
+  {
+    case NSNoUnderlineStyle:     return NS_TEXTRANGE_RAWINPUT;
+    case NSSingleUnderlineStyle: return NS_TEXTRANGE_CONVERTEDTEXT;
+    case 2:                      return NS_TEXTRANGE_SELECTEDCONVERTEDTEXT;
+    default:
+      NS_ASSERTION(0, "cannot convert");
+  }
+  return NS_TEXTRANGE_SELECTEDRAWTEXT;
+}
+
+static PRUint32 countRanges(NSAttributedString *aString)
+{
+  // Iterate through aString for the NSUnderlineStyleAttributeName and count the 
+  // different segments adjusting limitRange as we go.
+  PRUint32 count = 0;
+  NSRange effectiveRange;
+  NSRange limitRange = NSMakeRange(0, [aString length]);
+  while (limitRange.length > 0) {
+    [aString attribute:NSUnderlineStyleAttributeName 
+             atIndex:limitRange.location 
+             longestEffectiveRange:&effectiveRange
+             inRange:limitRange];
+    limitRange = NSMakeRange(NSMaxRange(effectiveRange), 
+                             NSMaxRange(limitRange) - NSMaxRange(effectiveRange));
+    count++;
+  }
+  return count;
+}
+
+static void convertAttributeToGeckoRange(NSAttributedString *aString, PRUint32 inCount, nsTextRange* aRanges)
+{
+  // Convert the Cocoa range into the nsTextRange Array used in Gecko.
+  // Iterate through the attributed string and map the underline attribute to Gecko IME textrange attributes.
+  // We may need to change the code here if we change the implementation of validAttributesForMarkedText.
+  PRUint32 i = 0;
+  NSRange effectiveRange;
+  NSRange limitRange = NSMakeRange(0, [aString length]);
+  while ((limitRange.length > 0) && (i < inCount)) {
+    id attributeValue = [aString attribute:NSUnderlineStyleAttributeName 
+                              atIndex:limitRange.location 
+                              longestEffectiveRange:&effectiveRange
+                              inRange:limitRange];
+    aRanges[i].mStartOffset = effectiveRange.location;                         
+    aRanges[i].mEndOffset = NSMaxRange(effectiveRange);                         
+    aRanges[i].mRangeType = underlineAttributeToTextRangeType([attributeValue intValue]); 
+    limitRange = NSMakeRange(NSMaxRange(effectiveRange), 
+                             NSMaxRange(limitRange) - NSMaxRange(effectiveRange));
+    i++;
+  }
+}
+
+static void fillTextRangeInTextEvent(nsTextEvent *aTextEvent, NSAttributedString* aString, NSRange selRange)
+{ 
+  // Count the number of segments in the attributed string.  Allocate the right size of nsTextRange.
+  // Convert the attributed string into an array of nsTextRange by calling above functions.
+  PRUint32 count = countRanges(aString);
+  aTextEvent->rangeArray = new nsTextRange[count];
+  if (aTextEvent->rangeArray)
+  {
+    aTextEvent->rangeCount = count;
+    convertAttributeToGeckoRange(aString,  aTextEvent->rangeCount,  aTextEvent->rangeArray);
+    // XXX ftang: hack to work around a problem which he can't remember anymore.
+    if ( (aTextEvent->rangeCount == 1) && (NS_TEXTRANGE_RAWINPUT == aTextEvent->rangeArray[0].mRangeType) )
+      aTextEvent->rangeCount = 0;
+  } 
+}
 
 #pragma mark -
 
@@ -1011,14 +1092,14 @@ NS_IMETHODIMP nsChildView::EndResizingChildren(void)
 
 #pragma mark -
 
+#if defined(INVALIDATE_DEBUGGING) || defined(PAINT_DEBUGGING)
+
 static Boolean KeyDown(const UInt8 theKey)
 {
   KeyMap map;
   GetKeys(map);
   return ((*((UInt8 *)map + (theKey >> 3)) >> (theKey & 7)) & 1) != 0;
 }
-
-#if defined(INVALIDATE_DEBUGGING) || defined(PAINT_DEBUGGING)
 
 static Boolean caps_lock()
 {
@@ -1409,7 +1490,7 @@ NS_IMETHODIMP nsChildView::DispatchEvent(nsGUIEvent* event, nsEventStatus& aStat
     }
     if (mEventCallback)
       aStatus = (*mEventCallback)(event);
-    
+
     // Dispatch to event listener if event was not consumed
     if ((aStatus != nsEventStatus_eConsumeNoDefault) && (mEventListener != nsnull))
       aStatus = mEventListener->ProcessEvent(*event);
@@ -1823,13 +1904,13 @@ nsChildView::DragEvent(PRUint32 aMessage, PRInt16 aMouseGlobalX, PRInt16 aMouseG
   }
   
   nsMouseEvent geckoEvent;
-	geckoEvent.eventStructType = NS_DRAGDROP_EVENT;
+  geckoEvent.eventStructType = NS_DRAGDROP_EVENT;
   
   // we're given the point in global coordinates. We need to convert it to
   // window coordinates for convert:message:toGeckoEvent
   NSPoint pt; pt.x = aMouseGlobalX; pt.y = aMouseGlobalY;
   [[mView window] convertScreenToBase:pt];
-	[mView convert:pt message:aMessage modifiers:0 toGeckoEvent:&geckoEvent];
+  [mView convert:pt message:aMessage modifiers:0 toGeckoEvent:&geckoEvent];
 
 // XXXPINK
 // hack, because we're currently getting the point in Carbon global coordinates,
@@ -1878,6 +1959,15 @@ nsChildView::Idle()
 
 #pragma mark -
 
+@interface ChildView(Private)
+
+// sends gecko an ime composition event
+- (nsRect) sendCompositionEvent:(PRInt32)aEventType;
+
+// sends gecko an ime text event
+- (void) sendTextEvent:(PRUnichar*) aBuffer attributedString:(NSAttributedString*) aString  selectedRange:(NSRange)selRange;
+
+@end
 
 @implementation ChildView
 
@@ -1931,6 +2021,15 @@ nsChildView::Idle()
   mEventSink = inSink;
 //  mMouseEnterExitTag = nsnull;
   mIsPluginView = NO;
+  mLastKeyEventWasSentToCocoa = NO;
+
+  // initialization for NSTextInput
+  mMarkedRange.location = NSNotFound;
+  mMarkedRange.length = 0;
+  mSelectedRange.location = NSNotFound;
+  mSelectedRange.length = 0;
+  mInComposition = NO;
+
   return self;
 }
 
@@ -2177,7 +2276,7 @@ const PRInt32 kNumLines = 4;
 {
   // XXXdwh. We basically always get 1 or -1 as the delta.  This is treated by 
   // Gecko as the number of lines to scroll.  We go ahead and use a 
-  // default kNumLines of 8 for now (until I learn how we can get settings from
+  // default kNumLines of 4 for now (until I learn how we can get settings from
   // the OS). --dwh
   nsMouseScrollEvent geckoEvent;
   geckoEvent.eventStructType = NS_MOUSE_SCROLL_EVENT;
@@ -2244,6 +2343,7 @@ const PRInt32 kNumLines = 4;
 
 static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEvent)
 {
+//  printf("converting cocoa event to mac event (lossy!)\n");
     // XXX Revisit this fast and dirty conversion!
     macEvent.what = ([cocoaEvent type] == NSKeyDown ? keyDown : keyUp);
     UInt32 charCode = [[cocoaEvent characters] characterAtIndex: 0];
@@ -2274,8 +2374,306 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     macEvent.modifiers = GetCurrentKeyModifiers();
 }
 
+- (nsRect)sendCompositionEvent:(PRInt32) aEventType;
+{
+#ifdef DEBUG_IME
+  NSLog(@"****in sendCompositionEvent \n");
+  NSLog(@" type = %d\n", (aEventType);
+#endif
+
+  // static void init_composition_event( *aEvent, int aType)
+  nsCompositionEvent event;
+  event.eventStructType = aEventType;
+  event.message = aEventType;
+  event.compositionMessage = aEventType; // this field shouldn't be defined in nsGUIEvent.h since no one seems to need it
+  event.point.x = 0;
+  event.point.y = 0;
+  event.nativeMsg = nsnull;
+  event.widget = mGeckoChild;
+  event.time = PR_IntervalNow();
+  event.theReply.mCursorPosition.x = 0;
+  event.theReply.mCursorPosition.y = 0;
+  mGeckoChild->DispatchWindowEvent(event);
+  return event.theReply.mCursorPosition;
+}
+
+- (void)sendTextEvent:(PRUnichar*) aBuffer attributedString:(NSAttributedString*) aString  selectedRange:(NSRange)selRange
+{
+#ifdef DEBUG_IME
+  NSLog(@"****in sendTextEvent \n");
+  NSLog(@" selRange = %d, %d\n", selRange.location, selRange.length);
+  NSLog(@" string = %@\n", aString;
+#endif
+
+  nsTextEvent textEvent;
+  textEvent.eventStructType = NS_TEXT_EVENT;
+  textEvent.message = NS_TEXT_EVENT;
+  textEvent.point.x = 0;
+  textEvent.point.y = 0;
+  textEvent.nativeMsg = nsnull;
+  textEvent.time = PR_IntervalNow();
+  textEvent.widget = mGeckoChild;
+  textEvent.theText = aBuffer;
+  textEvent.rangeCount = 0;
+  textEvent.rangeArray = nsnull;
+  fillTextRangeInTextEvent(&textEvent, aString, selRange);
+
+  mGeckoChild->DispatchWindowEvent(textEvent);
+  if ( textEvent.rangeArray )
+    delete [] textEvent.rangeArray;
+}
+
+#define MAX_BUFFER_SIZE 32
+// NSTextInput implementation
+- (void)insertText:(id)insertString;
+{
+#if DEBUG_IME
+  NSLog(@"****in insertText\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" insertString %@ \n", insertString);
+#endif
+
+  if ( ! [insertString isKindOfClass:[NSAttributedString class]])
+    insertString = [[[NSAttributedString alloc] initWithString:insertString] autorelease];
+    
+  NSString *tmpStr = [insertString string];
+  unsigned int len = [tmpStr length];
+  PRUnichar buffer[MAX_BUFFER_SIZE];
+  PRUnichar *bufPtr = (len >= MAX_BUFFER_SIZE) ? buffer : new PRUnichar[len + 1];
+  [tmpStr getCharacters: bufPtr];
+  bufPtr[len] = (PRUnichar)'\0';
+
+  if (len == 1 && !mInComposition)
+  {
+    // dispatch keypress event with char instead of textEvent
+    nsKeyEvent geckoEvent;
+    geckoEvent.eventStructType = NS_KEY_EVENT;
+    geckoEvent.message = NS_KEY_PRESS;
+    geckoEvent.widget = mGeckoChild;
+    geckoEvent.nativeMsg = nsnull;
+    geckoEvent.point.x = geckoEvent.point.y = 0;
+    geckoEvent.time = PR_IntervalNow();
+    geckoEvent.keyCode = 0;
+    geckoEvent.charCode = bufPtr[0]; // gecko expects OS-translated unicode
+    geckoEvent.isChar = PR_TRUE;
+    geckoEvent.isShift = geckoEvent.isControl = geckoEvent.isAlt = geckoEvent.isMeta = PR_FALSE;
+    mGeckoChild->DispatchWindowEvent(geckoEvent);
+  }
+  else
+  {
+    if (!mInComposition)
+    {
+      // send start composition event to gecko
+      [self sendCompositionEvent: NS_COMPOSITION_START];
+      mInComposition = YES;
+    }
+
+    // dispatch textevent (is this redundant?)
+    [self sendTextEvent:bufPtr attributedString:insertString selectedRange:NSMakeRange(0, len)];
+
+    // send end composition event to gecko
+    [self sendCompositionEvent: NS_COMPOSITION_END];
+    mInComposition = NO;
+    mSelectedRange = mMarkedRange = NSMakeRange(NSNotFound, 0);
+  }
+
+  if (bufPtr != buffer)
+    delete[] bufPtr;
+}
+
+- (void) doCommandBySelector:(SEL)aSelector;
+{
+  [self performSelector:aSelector withObject:nil afterDelay:0];
+}
+
+- (void) setMarkedText:(id)aString selectedRange:(NSRange)selRange;
+{
+#if DEBUG_IME 
+  NSLog(@"****in setMarkedText location: %d, length: %d\n", selRange.location, selRange.length);
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+  NSLog(@" aString = %@\n", aString);
+#endif
+
+  if ( ![aString isKindOfClass:[NSAttributedString class]] )
+    aString = [[[NSAttributedString alloc] initWithString:aString] autorelease];
+
+  mSelectedRange = selRange;
+
+  NSMutableAttributedString *mutableAttribStr = aString;
+  NSString *tmpStr = [mutableAttribStr string];
+  unsigned int len = [tmpStr length];
+  PRUnichar buffer[MAX_BUFFER_SIZE];
+  PRUnichar *bufPtr = (len >= MAX_BUFFER_SIZE) ? buffer : new PRUnichar[len + 1];
+  [tmpStr getCharacters: bufPtr];
+  bufPtr[len] = (PRUnichar)'\0';
+
+#if DEBUG_IME 
+  printf("****in setMarkedText, len = %d, text = ", len);
+  PRUint32 n = 0;
+  PRUint32 maxlen = len > 12 ? 12 : len;
+  for (PRUnichar *a = bufPtr; (*a != (PRUnichar)'\0') && n<maxlen; a++, n++) printf((*a&0xff80) ? "\\u%4X" : "%c", *a); 
+  printf("\n");
+#endif
+
+  mMarkedRange.location = 0;
+  mMarkedRange.length = len;
+
+  if (!mInComposition)
+  {
+    [self sendCompositionEvent:NS_COMPOSITION_START];
+    mInComposition = YES;
+  }
+
+  [self sendTextEvent:bufPtr attributedString:aString selectedRange:selRange];
+
+  if (bufPtr != buffer)
+    delete[] bufPtr;
+}
+
+- (void) unmarkText;
+{
+#if DEBUG_IME
+  NSLog(@"****in unmarkText\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+  mMarkedRange = NSMakeRange(NSNotFound, 0);
+  if (mInComposition) {
+    [self sendCompositionEvent: NS_COMPOSITION_END];
+    mInComposition = NO;  // brade: do we need to send an end composition event?
+  }
+}
+
+- (BOOL) hasMarkedText;
+{
+  return mMarkedRange.location != NSNotFound && mMarkedRange.length != 0;
+}
+
+- (long) conversationIdentifier;
+{
+  return (long)self;
+}
+
+- (NSAttributedString *) attributedSubstringFromRange:(NSRange)theRange;
+{
+#if DEBUG_IME
+  NSLog(@"****in attributedSubstringFromRange\n");
+  NSLog(@" theRange      = %d, %d\n", theRange.location, theRange.length);
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+  nsReconversionEvent reconversionEvent;
+  reconversionEvent.eventStructType = NS_RECONVERSION_QUERY;
+  reconversionEvent.message = NS_RECONVERSION_QUERY;
+  reconversionEvent.point.x = 0;
+  reconversionEvent.point.y = 0;
+  reconversionEvent.nativeMsg = nsnull;
+  reconversionEvent.time = PR_IntervalNow();
+  reconversionEvent.widget = mGeckoChild;
+  reconversionEvent.theReply.mReconversionString = nsnull;
+
+  nsresult rv = mGeckoChild->DispatchWindowEvent(reconversionEvent);
+  if (NS_SUCCEEDED(rv))
+  {
+    PRUnichar *reconvstr = reconversionEvent.theReply.mReconversionString;
+    NSAttributedString *result = [[[NSAttributedString alloc] stringWithCharacters:reconvstr length: reconvstr ? nsCRT::strlen(reconvstr) : 0] autorelease];
+    nsMemory::Free(reconvstr);
+    return result;
+  }
+
+  return NULL;
+}
+
+- (NSRange) markedRange;
+{
+#if DEBUG_IME
+  NSLog(@"****in markedRange\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+  if (![self hasMarkedText]) {
+    return NSMakeRange(NSNotFound, 0);
+  }
+
+  return mMarkedRange;
+}
+
+- (NSRange) selectedRange;
+{
+#if DEBUG_IME
+  NSLog(@"****in selectedRange\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+  return mSelectedRange;
+}
+
+
+- (NSRect) firstRectForCharacterRange:(NSRange)theRange;
+{
+#if DEBUG_IME
+  NSLog(@"****in firstRectForCharacterRange\n");
+  NSLog(@" theRange      = %d, %d\n", theRange.location, theRange.length);
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+#if BRADE_GETS_THIS_WORKING
+  // send NS_COMPOSITION_QUERY event
+  nsRect r = [self sendCompositionEvent: NS_COMPOSITION_QUERY];
+
+  // similar to mGeckoChild->WidgetToScreen(gecko_r, screen_r);
+  NSRect temp;
+  ConvertGeckoToCocoaRect(r, temp);
+  temp = [mGeckoChild->mView convertRect:temp toView:nil];   // convert to window coords
+  temp.origin = [[mGeckoChild->mView getNativeWindow] convertBaseToScreen:temp.origin];   // convert to screen coords
+#else
+  NSRect temp;
+  temp.origin.x = temp.origin.y = temp.size.width = temp.size.height = 0;
+#endif
+
+#if DEBUG_IME
+  NSLog(@"********** cocoa rect (x, y, w, h): %f %f, %f, %f\n", temp.origin.x, temp.origin.y, temp.size.width, temp.size.height);
+#endif
+  return temp;
+}
+
+
+- (unsigned int)characterIndexForPoint:(NSPoint)thePoint;
+{
+#if DEBUG_IME
+  NSLog(@"****in characterIndexForPoint\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+//  short regionClass;
+//  return mGeckoChild->HandlePositionToOffset(thePoint, &regionClass);
+  return 0;
+}
+
+- (NSArray*) validAttributesForMarkedText;
+{
+#if DEBUG_IME
+  NSLog(@"****in validAttributesForMarkedText\n");
+  NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
+  NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
+#endif
+
+  return [NSArray array]; // empty array; we don't support any attributes right now
+}
+// end NSTextInput
+
 - (void)keyDown:(NSEvent*)theEvent;
 {
+  PRBool isKeyDownEventHandled = PR_TRUE;
+  PRBool isKeyEventHandled = PR_FALSE;
   PRBool isChar = PR_FALSE;
   BOOL isARepeat = [theEvent isARepeat];
   if (!isARepeat) {
@@ -2291,10 +2689,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     EventRecord macEvent;
     convertCocoaEventToMacEvent(theEvent, macEvent);
     geckoEvent.nativeMsg = &macEvent;
-
-    // fprintf(stdout, "keyDown/autoKey received: message = 0x%08X\n", macEvent.message);
-
-    mGeckoChild->DispatchWindowEvent(geckoEvent);
+    isKeyDownEventHandled = mGeckoChild->DispatchWindowEvent(geckoEvent);
   }
   
   // Check to see if we are still the first responder.
@@ -2306,27 +2701,34 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
     return;
   }
   
-  // Fire a key press.
-  nsKeyEvent geckoEvent;
-  geckoEvent.point.x = geckoEvent.point.y = 0;
-  isChar = PR_FALSE;
-  [self convert: theEvent message: NS_KEY_PRESS
-        isChar: &isChar
-        toGeckoEvent: &geckoEvent];
-  geckoEvent.isChar = isChar;
-  if (isChar) {
-    // Get the chars of the event and loop over our list
-    // of chars, setting each one.
-    NSString* text = [theEvent characters];
-    PRUint32 length = [text length];
-    for (PRUint32 i = 0; i < length; i++) {
-      unichar c = [text characterAtIndex: i];
-      geckoEvent.charCode = c;
-      mGeckoChild->DispatchWindowEvent(geckoEvent);
+  if( ! mInComposition ) {
+    // Fire a key press.
+    nsKeyEvent geckoEvent;
+    geckoEvent.point.x = geckoEvent.point.y = 0;
+    isChar = PR_FALSE;
+    [self convert: theEvent message: NS_KEY_PRESS
+            isChar: &isChar
+            toGeckoEvent: &geckoEvent];
+    geckoEvent.isChar = isChar;
+    if (isChar) {
+        mLastKeyEventWasSentToCocoa = YES;  // force all events to go through inserttext
+    }
+    else {
+        // do we need to end composition if we got here by arrow key press or other?
+        isKeyEventHandled = mGeckoChild->DispatchWindowEvent(geckoEvent);
     }
   }
-  else
-    mGeckoChild->DispatchWindowEvent(geckoEvent);
+
+  if (mLastKeyEventWasSentToCocoa || (!isKeyDownEventHandled && !isKeyEventHandled)) {
+    // XXX hack: we need to have a flag so we call interpretKeyEvents even tho 
+    // we've inserted the character(s); if we don't, the system/Cocoa key event 
+    // handling code doesn't know that the letters were "composed" or entered
+    // for example, option-e, e would only send option-e event and we'd get
+    // the accent character with all subsequent key events since it didn't see
+    // the resulting keypress
+    mLastKeyEventWasSentToCocoa = !mLastKeyEventWasSentToCocoa;
+    [super interpretKeyEvents:[NSArray arrayWithObject:theEvent]];
+  }
 }
 
 - (void)keyUp:(NSEvent*)theEvent;
@@ -2343,7 +2745,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
   EventRecord macEvent;
   convertCocoaEventToMacEvent(theEvent, macEvent);
   geckoEvent.nativeMsg = &macEvent;
-  
+
   mGeckoChild->DispatchWindowEvent(geckoEvent);
 }
 
