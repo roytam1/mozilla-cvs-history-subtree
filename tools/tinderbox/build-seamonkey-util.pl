@@ -1905,7 +1905,7 @@ sub StartupPerformanceTest {
     print_log "\nSummary for startup test:\n";
     
     # Print startup times.
-    chop(@times);
+    chomp(@times);
     my $times_string = join(" ", @times);
     print_log "times = [$times_string]\n";
     
