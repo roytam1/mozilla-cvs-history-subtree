@@ -52,7 +52,170 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+
+# pull the SVG mini-branch:
+MOZ_CO_TAG = SVG_20020806_BRANCH
+# we pull the head revision if a file is not tagged: 
+ifndef MOZ_CO_FLAGS
+MOZ_CO_FLAGS= -f
+else
+MOZ_CO_FLAGS= $(MOZ_CO_FLAGS) -f
+endif
+
+# lists of all tagged files on the svg mini-branch. used for the
+# branch maintenance targets below.
+
+# list of modified files
+SVG_BRANCH_MODIFIED_FILES =                               \
+	allmakefiles.sh                                       \
+	configure.in                                          \
+	configure                                             \
+	config/autoconf.mk.in                                 \
+	content/base/src/nsRuleNode.cpp                       \
+	content/base/src/nsStyleContext.cpp                   \
+	content/html/style/src/nsCSSDeclaration.cpp           \
+	content/html/style/src/nsCSSDeclaration.h             \
+	content/html/style/src/nsCSSParser.cpp                \
+	content/html/style/src/nsCSSStyleRule.cpp             \
+	content/shared/public/nsCSSKeywordList.h              \
+	content/shared/public/nsCSSPropList.h                 \
+	content/shared/public/nsCSSProps.h                    \
+	content/shared/public/nsRuleNode.h                    \
+	content/shared/public/nsSVGAtomList.h                 \
+	content/shared/public/nsStyleStruct.h                 \
+	content/shared/public/nsStyleStructList.h             \
+	content/shared/src/nsCSSProps.cpp                     \
+	content/shared/src/nsStyleStruct.cpp                  \
+	content/svg/content/src/Makefile.in                   \
+	content/svg/content/src/nsISVGValue.h                 \
+	content/svg/content/src/nsSVGAnimatedLength.cpp       \
+	content/svg/content/src/nsSVGCircleElement.cpp        \
+	content/svg/content/src/nsSVGElement.cpp              \
+	content/svg/content/src/nsSVGElement.h                \
+	content/svg/content/src/nsSVGElementFactory.cpp       \
+	content/svg/content/src/nsSVGEllipseElement.cpp       \
+	content/svg/content/src/nsSVGForeignObjectElement.cpp \
+	content/svg/content/src/nsSVGGraphicElement.cpp       \
+	content/svg/content/src/nsSVGLength.cpp               \
+	content/svg/content/src/nsSVGLength.h                 \
+	content/svg/content/src/nsSVGLineElement.cpp          \
+	content/svg/content/src/nsSVGMatrix.cpp               \
+	content/svg/content/src/nsSVGMatrix.h                 \
+	content/svg/content/src/nsSVGPathDataParser.cpp       \
+	content/svg/content/src/nsSVGPathElement.cpp          \
+	content/svg/content/src/nsSVGPathSeg.cpp              \
+	content/svg/content/src/nsSVGPathSeg.h                \
+	content/svg/content/src/nsSVGPathSegList.cpp          \
+	content/svg/content/src/nsSVGPointList.cpp            \
+	content/svg/content/src/nsSVGRectElement.cpp          \
+	content/svg/content/src/nsSVGSVGElement.cpp           \
+	content/svg/content/src/nsSVGTransformList.cpp        \
+	content/svg/content/src/nsSVGValue.cpp                \
+	content/svg/content/src/nsSVGValue.h                  \
+	dom/public/nsIDOMClassInfo.h                          \
+	dom/src/base/nsDOMClassInfo.cpp                       \
+	layout/base/public/nsStyleConsts.h                    \
+	layout/build/Makefile.in                              \
+	layout/build/nsLayoutModule.cpp                       \
+	layout/html/style/src/nsCSSFrameConstructor.cpp       \
+	layout/svg/Makefile.in                                \
+	layout/svg/base/src/Makefile.in                       \
+	layout/svg/base/src/nsSVGCircleFrame.cpp              \
+	layout/svg/base/src/nsSVGEllipseFrame.cpp             \
+	layout/svg/base/src/nsSVGForeignObjectFrame.cpp       \
+	layout/svg/base/src/nsSVGGFrame.cpp                   \
+	layout/svg/base/src/nsSVGGenericContainerFrame.cpp    \
+	layout/svg/base/src/nsSVGLineFrame.cpp                \
+	layout/svg/base/src/nsSVGOuterSVGFrame.cpp            \
+	layout/svg/base/src/nsSVGPathFrame.cpp                \
+	layout/svg/base/src/nsSVGPolygonFrame.cpp             \
+	layout/svg/base/src/nsSVGPolylineFrame.cpp            \
+	layout/svg/base/src/nsSVGRectFrame.cpp                \
+	layout/svg/base/src/svg.css
+
+# list of obsolete files
+SVG_BRANCH_OBSOLETE_FILES =                               \
+	layout/svg/base/src/nsASVGGraphicSource.h             \
+	layout/svg/base/src/nsASVGPathBuilder.h               \
+	layout/svg/base/src/nsISVGFrame.h                     \
+	layout/svg/base/src/nsSVGBPathBuilder.cpp             \
+	layout/svg/base/src/nsSVGBPathBuilder.h               \
+	layout/svg/base/src/nsSVGFill.cpp                     \
+	layout/svg/base/src/nsSVGFill.h                       \
+	layout/svg/base/src/nsSVGGraphic.cpp                  \
+	layout/svg/base/src/nsSVGGraphic.h                    \
+	layout/svg/base/src/nsSVGGraphicFrame.cpp             \
+	layout/svg/base/src/nsSVGGraphicFrame.h               \
+	layout/svg/base/src/nsSVGRenderItem.cpp               \
+	layout/svg/base/src/nsSVGRenderItem.h                 \
+	layout/svg/base/src/nsSVGRenderingContext.cpp         \
+	layout/svg/base/src/nsSVGRenderingContext.h           \
+	layout/svg/base/src/nsSVGStroke.cpp                   \
+	layout/svg/base/src/nsSVGStroke.h 
+
+# list of new files in branch
+SVG_BRANCH_NEW_FILES = \
+	content/svg/content/src/nsISVGLength.h                \
+	content/svg/content/src/nsISVGLengthList.h            \
+	content/svg/content/src/nsISVGSVGElement.h            \
+	content/svg/content/src/nsISVGValueUtils.h            \
+	content/svg/content/src/nsISVGViewportAxis.h          \
+	content/svg/content/src/nsISVGViewportRect.h          \
+	content/svg/content/src/nsSVGAnimatedLengthList.cpp   \
+	content/svg/content/src/nsSVGAnimatedLengthList.h     \
+	content/svg/content/src/nsSVGLengthList.cpp           \
+	content/svg/content/src/nsSVGLengthList.h             \
+	content/svg/content/src/nsSVGNumber.cpp               \
+	content/svg/content/src/nsSVGNumber.h                 \
+	content/svg/content/src/nsSVGTextElement.cpp          \
+	content/svg/content/src/nsSVGTSpanElement.cpp         \
+	content/svg/content/src/nsSVGViewportRect.cpp         \
+	layout/svg/base/src/nsISVGChildFrame.h                \
+	layout/svg/base/src/nsISVGContainerFrame.h            \
+	layout/svg/base/src/nsISVGGlyphFragmentLeaf.h         \
+	layout/svg/base/src/nsISVGGlyphFragmentNode.h         \
+	layout/svg/base/src/nsISVGOuterSVGFrame.h             \
+	layout/svg/base/src/nsISVGTextContainerFrame.h        \
+	layout/svg/base/src/nsISVGTextFrame.h                 \
+	layout/svg/base/src/nsSVGGlyphFrame.cpp               \
+	layout/svg/base/src/nsSVGPathGeometryFrame.cpp        \
+	layout/svg/base/src/nsSVGPathGeometryFrame.h          \
+	layout/svg/base/src/nsSVGTextFrame.cpp                \
+	layout/svg/base/src/nsSVGTSpanFrame.cpp               \
+	layout/svg/renderer/Makefile.in                       \
+	layout/svg/renderer/public/Makefile.in                \
+	layout/svg/renderer/public/nsISVGGeometrySource.idl   \
+	layout/svg/renderer/public/nsISVGGlyphGeometrySource.idl \
+	layout/svg/renderer/public/nsISVGPathGeometrySource.idl \
+	layout/svg/renderer/public/nsISVGPosGlyphGeometrySrc.idl \
+	layout/svg/renderer/public/nsISVGRectangleSink.idl    \
+	layout/svg/renderer/public/nsISVGRenderer.idl         \
+	layout/svg/renderer/public/nsISVGRendererGlyphGeometry.idl \
+	layout/svg/renderer/public/nsISVGRendererGlyphMetrics.idl \
+	layout/svg/renderer/public/nsISVGRendererPathBuilder.idl \
+	layout/svg/renderer/public/nsISVGRendererPathGeometry.idl \
+	layout/svg/renderer/public/nsISVGRendererRegion.idl   \
+	layout/svg/renderer/public/nsISVGRendererRenderContext.idl \
+	layout/svg/renderer/src/Makefile.in                   \
+	layout/svg/renderer/src/gdiplus/Makefile.in           \
+	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusGlyphMetrics.h \
+	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRegion.h \
+	layout/svg/renderer/src/gdiplus/nsISVGGDIPlusRenderContext.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphGeometry.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphMetrics.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusGlyphMetrics.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathBuilder.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathBuilder.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathGeometry.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusPathGeometry.h \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.h  \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRenderContext.cpp \
+	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRenderContext.h \
+	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp 
+
+
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = NSS_CLIENT_TAG
@@ -521,6 +684,28 @@ ifdef RUN_AUTOCONF_LOCALLY
 	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
 	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
 endif
+
+# svg mini-branch maintenance targets:
+commit_svg:
+	cvs -z3 ci $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES)
+
+merge_svg:
+	cvs -z3 up -dP -jSVG_20020806_BASE -jHEAD $(SVG_BRANCH_MODIFIED_FILES)
+
+statictag_svg:
+	cvs -z3 tag -F -rHEAD SVG_20020806_BASE $(SVG_BRANCH_MODIFIED_FILES)
+
+diff_svg:
+	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) 
+
+#branchtag_svg:
+#	cvs -z3 tag -b SVG_20020806_BRANCH $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_OBSOLETE_FILES)
+
+#remove_obsolete_svg:
+#	rm $(SVG_BRANCH_OBSOLETE_FILES)
+#	cvs -z3 remove $(SVG_BRANCH_OBSOLETE_FILES)
+#	cvs -z3 commit $(SVG_BRANCH_OBSOLETE_FILES)
+
 
 ####################################
 # Web configure
