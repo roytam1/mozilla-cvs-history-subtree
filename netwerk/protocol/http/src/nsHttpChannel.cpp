@@ -56,10 +56,12 @@ nsHttpChannel::~nsHttpChannel()
 {
     LOG(("Destroying nsHttpChannel @%x\n", this));
 
-    /*
-    if (mResponseHead)
+    if (mResponseHead) {
         delete mResponseHead;
-    */
+        mResponseHead = 0;
+    }
+
+    NS_IF_RELEASE(mConnectionInfo);
 }
 
 nsresult
@@ -108,6 +110,7 @@ nsHttpChannel::Init(nsIURI *uri,
                                                proxyType, usingSSL);
     if (!mConnectionInfo)
         return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(mConnectionInfo);
 
     // Set default request method
     mRequestHead.SetMethod(nsHttp::Get);
@@ -486,6 +489,7 @@ nsHttpChannel::GetOwner(nsISupports **owner)
 {
     NS_ENSURE_ARG_POINTER(owner);
     *owner = mOwner;
+    NS_IF_ADDREF(*owner);
     return NS_OK;
 }
 NS_IMETHODIMP
@@ -500,6 +504,7 @@ nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **callbacks)
 {
     NS_ENSURE_ARG_POINTER(callbacks);
     *callbacks = mCallbacks;
+    NS_IF_ADDREF(*callbacks);
     return NS_OK;
 }
 NS_IMETHODIMP
@@ -840,6 +845,10 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
 
     if (mLoadGroup)
         mLoadGroup->RemoveRequest(this, nsnull, status);
+
+    mCallbacks = 0;
+    mProgressSink = 0;
+    mHttpEventSink = 0;
 
     return NS_OK;
 }

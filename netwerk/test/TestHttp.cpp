@@ -93,9 +93,9 @@ public:
     virtual ~MyNotifications() {}
 };
 
-NS_IMPL_ISUPPORTS2(MyNotifications,
-                   nsIInterfaceRequestor,
-                   nsIProgressEventSink)
+NS_IMPL_THREADSAFE_ISUPPORTS2(MyNotifications,
+                              nsIInterfaceRequestor,
+                              nsIProgressEventSink)
 
 NS_IMETHODIMP
 MyNotifications::GetInterface(const nsIID &iid, void **result)
@@ -153,8 +153,8 @@ int main(int argc, char **argv)
 
     nsCOMPtr<nsIURI> uri;
     nsCOMPtr<nsIChannel> chan;
-    MyListener *listener = new MyListener();
-    MyNotifications *callbacks = new MyNotifications();
+    nsCOMPtr<nsIStreamListener> listener = new MyListener();
+    nsCOMPtr<nsIInterfaceRequestor> callbacks = new MyNotifications();
 
     rv = NS_NewURI(getter_AddRefs(uri), argv[1]);
     RETURN_IF_FAILED(rv, "NS_NewURI");
