@@ -254,6 +254,14 @@ function AbNewAddressBook()
      "", "chrome,titlebar", {okCallback:AbCreateNewAddressBook});
 }
 
+function AbNewLDAPDirectory()
+{
+  window.openDialog("chrome://messenger/content/addressbook/pref-directory-add.xul", 
+                    "", 
+                    "chrome,modal=yes,resizable=no,centerscreen", 
+                    null);
+}
+
 function AbCreateNewAddressBook(name)
 {
   var properties = Components.classes["@mozilla.org/addressbook/properties;1"].createInstance(Components.interfaces.nsIAbDirectoryProperties);
