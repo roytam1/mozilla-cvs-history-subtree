@@ -704,7 +704,7 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
   next = outArray = (char **)nsMemory::Alloc(numIndicies * sizeof(char *));
   if (!outArray) return NS_ERROR_OUT_OF_MEMORY;
   for (PRUint32 i=0;i<numIndicies;i++) {
-    rv = GenerateURIForMsgKey(selection.GetAt(i),next);
+    rv = GenerateURIForMsgKey(m_keys[selection.GetAt(i)],next);
     NS_ENSURE_SUCCESS(rv,rv);
     if (!*next) return NS_ERROR_OUT_OF_MEMORY;
     next++;
