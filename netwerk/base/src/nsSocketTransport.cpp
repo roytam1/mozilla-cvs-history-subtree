@@ -355,15 +355,19 @@ nsSocketTransport::nsSocketTransport():
         gConnectTimeout  = PR_MillisecondsToInterval(CONNECT_TIMEOUT_IN_MS);
     }
     
+#ifdef NS_ENABLE_LOGGING
     PRINTF("Creating nsSocketTransport [%x], TotalCreated=%d, TotalDeleted=%d\n",
             this, ++sTotalTransportsCreated, sTotalTransportsDeleted);
+#endif
 }
 
 
 nsSocketTransport::~nsSocketTransport()
 {
+#ifdef NS_ENABLE_LOGGING
     PRINTF("Deleting nsSocketTransport [%s:%d %x], TotalCreated=%d, TotalDeleted=%d\n", 
             mHostName, mPort, this, sTotalTransportsCreated, ++sTotalTransportsDeleted);
+#endif
     
     // Release the nsCOMPtrs...
     //
