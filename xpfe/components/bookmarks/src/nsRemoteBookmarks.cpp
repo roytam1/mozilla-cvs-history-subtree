@@ -78,6 +78,7 @@
 #include "nsICategoryManager.h"
 #include "nsCategoryManagerUtils.h"
 
+// #define LDAP_NEW_APIS         1
 // #define LDAP_MOD_SUPPORT   1
 #ifdef  LDAP_MOD_SUPPORT
 #include "nsILDAPModification.h"
@@ -1241,9 +1242,12 @@ nsRemoteBookmarks::Notify(nsITimer* aTimer)
 // nsILDAPMessageListener
 
 
-
 NS_IMETHODIMP
+#ifdef  LDAP_NEW_APIS
+nsRemoteBookmarks::OnLDAPInit(nsILDAPConnection *aConn, nsresult aStatus)
+#else
 nsRemoteBookmarks::OnLDAPInit(nsresult aStatus)
+#endif
 {
   // Make sure that the Init() worked properly
   NS_ENSURE_SUCCESS(aStatus, aStatus);
@@ -1261,8 +1265,12 @@ nsRemoteBookmarks::OnLDAPInit(nsresult aStatus)
     getter_AddRefs(proxyListener));
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef  LDAP_NEW_APIS
+  rv = mLDAPOperation->Init(aConn, proxyListener, mLDAPURL);
+#else
   //  XXX TO DO need to somehow get "mConnection" from somewhere
   rv = mLDAPOperation->Init(mConnection, proxyListener);
+#endif
   NS_ENSURE_SUCCESS(rv, rv);
 
   // simple Bind (password may be empty string, initially)
@@ -1287,6 +1295,21 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
   rv = aMessage->GetErrorCode(&errorCode);
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef  LDAP_NEW_APIS
+  nsCOMPtr<nsILDAPOperation> ldapOp;
+  rv = aMessage->GetOperation(getter_AddRefs(ldapOp));
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsISupports> iSupp;
+  rv = ldapOp->GetClosure(getter_AddRefs(iSupp));
+  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsILDAPURL> ldapURL = do_QueryInterface(iSupp);
+#else
+  nsCOMPtr<nsILDAPURL> ldapURL = mLDAPURL;
+#endif
+
+  if (!ldapURL)
+    return(NS_ERROR_NULL_POINTER);
+
   switch (messageType)
   {
     // bind in progress
@@ -1306,11 +1329,9 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         return(NS_ERROR_FAILURE);
       }
 
-      if (!mLDAPURL)
-        return(NS_ERROR_NULL_POINTER);
 
       nsXPIDLCString dn;
-      rv = mLDAPURL->GetDn(getter_Copies(dn));
+      rv = ldapURL->GetDn(getter_Copies(dn));
       NS_ENSURE_SUCCESS(rv, rv);
 
       switch(mOpcode)
@@ -1318,7 +1339,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         case nsRemoteBookmarks::LDAP_SEARCH:
         {
           nsXPIDLCString filter;
-          rv = mLDAPURL->GetFilter(getter_Copies (filter));
+          rv = ldapURL->GetFilter(getter_Copies (filter));
           NS_ENSURE_SUCCESS(rv, rv);
 
           static const PRUint32 numLDAPAttrs = 12;
@@ -1572,7 +1593,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       {
       // calculate true URI to result
       nsCAutoString spec;
-      rv = mLDAPURL->GetSpec(spec);
+      rv = ldapURL->GetSpec(spec);
       NS_ENSURE_SUCCESS(rv, rv);
 
       nsCOMPtr<nsILDAPURL> ldapURL;
@@ -2125,7 +2146,7 @@ nsRemoteBookmarks::doLDAPQuery(nsILDAPConnection *ldapConnection,
   // Now lets initialize the LDAP connection properly. We'll kick
   // off the bind operation in the callback function, |OnLDAPInit()|.
   rv = ldapConnection->Init(host.get(), port, options /* SSL */,
-    bindDN.get(), this /* don't ADDREF "this" */);
+    bindDN.get(), this /* don't ADDREF "this" */, nsnull);
   if (NS_FAILED(rv))
   {
     mConnection = nsnull;
