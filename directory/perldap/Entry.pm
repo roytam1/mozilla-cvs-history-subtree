@@ -63,13 +63,16 @@ sub STORE
 
   return if (($val eq "") || ($attr eq ""));
 
-  @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
-    unless $self->{"_${attr}_save_"};
+  if (defined($self->{$attr}))
+    {
+      @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
+        unless $self->{"_${attr}_save_"};
+    }
   $self->{$attr} = $val;
   $self->{"_${attr}_modified_"} = 1;
 
   # Potentially add the attribute to the OC order list.
-  if (($attr ne "dn") && !grep(/^\Q$attr\E$/i, @{$self->{"_oc_order_"}}))
+  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
     }
@@ -217,7 +220,7 @@ sub addValue
         }
     }
 
-  if (defined(@{$self->{$attr}}))
+  if (defined($self->{$attr}))
     {
       @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
         unless $self->{"_${attr}_save_"};
@@ -227,7 +230,7 @@ sub addValue
   push(@{$self->{$attr}}, $val);
 
   # Potentially add the attribute to the OC order list.
-  if (($attr ne "dn") && !grep(/^\Q$attr\E$/i, @{$self->{"_oc_order_"}}))
+  if (($attr ne "dn") && !grep(/^$attr$/i, @{$self->{"_oc_order_"}}))
     {
       push(@{$self->{"_oc_order_"}}, $attr);
     }
