@@ -1675,28 +1675,7 @@ NS_IMETHODIMP nsMsgNewsFolder::RemoveMessage(nsMsgKey key)
 {
   nsresult rv;
 
-  nsCAutoString msgURI;
-  rv = nsBuildNewsMessageURI(mBaseMessageURI, key, msgURI);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr <nsIRDFService> rdfService = do_GetService(kRDFServiceCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr <nsIRDFResource> res;
-  rv = rdfService->GetResource(msgURI.GetBuffer(), getter_AddRefs(res));
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIDBMessage> dbMessage = do_QueryInterface(res);
-  if (!dbMessage) return NS_ERROR_FAILURE;
-
-  nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
-  rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
-  if (NS_FAILED(rv)) return rv;
-
-  rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE, PR_TRUE);
-  if (NS_FAILED(rv)) return rv;
-
-  return NS_OK;
+  return mDatabase->DeleteMessage(key, nsnull, PR_TRUE);
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::CancelComplete()

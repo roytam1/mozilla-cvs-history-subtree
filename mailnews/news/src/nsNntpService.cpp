@@ -1209,7 +1209,7 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   nsXPIDLCString messageId;
   
   nsCOMPtr<nsISupports> msgSupports = getter_AddRefs(messages->ElementAt(0));
-  nsCOMPtr<nsIMessage> message(do_QueryInterface(msgSupports));
+  nsCOMPtr<nsIMsgDBHdr> message(do_QueryInterface(msgSupports));
   if (message) {
     rv = message->GetMessageKey(&key);
     if (NS_FAILED(rv)) return rv;
