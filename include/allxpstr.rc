@@ -6491,11 +6491,6 @@ ResDef(XP_EDT_MSG_TEXT_BUFFER_TOO_LARGE,    (XP_MSG_BASE + 843),
 "This document has %ld characters. The Spelling Checker cannot process more than %ld characters.")
 ResDef(XP_EDT_MSG_CANNOT_PASTE, (XP_MSG_BASE + 844),
 "You cannot paste this much text in a single operation.\nTry pasting the text in several smaller segments.")
-<<<<<<< allxpstr.rc
-<<<<<<< allxpstr.rc
-=======
-<<<<<<< allxpstr.h
->>>>>>> 3.13.4.1
 
 ResDef(XP_EDT_CAN_PASTE_AS_TABLE, (XP_MSG_BASE + 845),
 "Text can be pasted as %d rows and %d columns.\n\n")
@@ -6504,20 +6499,18 @@ ResDef(XP_EDT_REPLACE_CELLS, (XP_MSG_BASE + 846),
 ResDef(XP_EDT_PASTE_AS_TABLE, (XP_MSG_BASE + 847),
 "Paste text as a new table?")
 
-=======
 
-ResDef(MK_ADDR_DELETE_ALL, XP_MSG_BASE+845, "Delete From All Lists")  /* new entry in address book context menus - delete all from list */
-ResDef(MK_ADDR_IMPORT_CARDS, XP_MSG_BASE+846, "Adding cards to %s") /* line text for progress window on importing an address book */
-ResDef(MK_ADDR_IMPORT_MAILINGLISTS, XP_MSG_BASE+847, "Updating Mailing Lists in %s") /* line text for progress window on importing an address book */
-ResDef(MK_ADDR_IMPORT_TITLE, XP_MSG_BASE+848, "Import") /* title for progress window on importing an address book */
-ResDef(MK_ADDR_EXPORT_CARDS, XP_MSG_BASE+849, "Copying cards from %s") /* line text for progress window on exporting cards from an address book */
-ResDef(MK_ADDR_EXPORT_TITLE, XP_MSG_BASE+850, "Export") /* title for progress window on exporting an address book */
-ResDef(MK_ADDR_DELETE_ENTRIES, XP_MSG_BASE+851, "Deleting entries from %s") /* deleting entries from address book name */
-ResDef(MK_ADDR_COPY_ENTRIES,  XP_MSG_BASE+852,"Copying entries to %s") /* copying entries to address book name */
-ResDef(MK_ADDR_MOVE_ENTRIES, XP_MSG_BASE+853, "Moving entries to %s") /* moving entries to address book name */
+ResDef(MK_ADDR_DELETE_ALL, XP_MSG_BASE+860, "Delete From All Lists")  /* new entry in address book context menus - delete all from list */
+ResDef(MK_ADDR_IMPORT_CARDS, XP_MSG_BASE+861, "Adding cards to %s") /* line text for progress window on importing an address book */
+ResDef(MK_ADDR_IMPORT_MAILINGLISTS, XP_MSG_BASE+862, "Updating Mailing Lists in %s") /* line text for progress window on importing an address book */
+ResDef(MK_ADDR_IMPORT_TITLE, XP_MSG_BASE+863, "Import") /* title for progress window on importing an address book */
+ResDef(MK_ADDR_EXPORT_CARDS, XP_MSG_BASE+864, "Copying cards from %s") /* line text for progress window on exporting cards from an address book */
+ResDef(MK_ADDR_EXPORT_TITLE, XP_MSG_BASE+865, "Export") /* title for progress window on exporting an address book */
+ResDef(MK_ADDR_DELETE_ENTRIES, XP_MSG_BASE+866, "Deleting entries from %s") /* deleting entries from address book name */
+ResDef(MK_ADDR_COPY_ENTRIES,  XP_MSG_BASE+867,"Copying entries to %s") /* copying entries to address book name */
+ResDef(MK_ADDR_MOVE_ENTRIES, XP_MSG_BASE+868, "Moving entries to %s") /* moving entries to address book name */
 
 
->>>>>>> 3.1.20.4
 ResDef(XP_EDT_MUST_SAVE_PROMPT, XP_MSG_BASE + 880, "You must save\n%s\nto a local file before editing.\nSave to a file now?")
 
 ResDef (MK_LDAP_ADD_SERVER_TO_PREFS, XP_MSG_BASE + 881,
@@ -7556,12 +7549,8 @@ ResDef(MK_ACCESS_NAME, XP_MSG_BASE + 1340,
 ResDef(MK_ACCESS_VALUE, XP_MSG_BASE + 1341,
        "Value:")
 ResDef(MK_ACCESS_HOST, XP_MSG_BASE + 1342,
-<<<<<<< allxpstr.rc
-<<<<<<< allxpstr.rc
-=======
-<<<<<<< allxpstr.h
->>>>>>> 3.13.4.1
 	   "Host:")
+/* id conflict: these strings have been moved way down
 ResDef(MK_ACCESS_DOMAIN, XP_MSG_BASE + 1343,
            "Domain:")
 ResDef(MK_ACCESS_PATH, XP_MSG_BASE + 1344,
@@ -7570,8 +7559,7 @@ ResDef(MK_ACCESS_YES, XP_MSG_BASE + 1345,
            "Yes")
 ResDef(MK_ACCESS_NO, XP_MSG_BASE + 1346,
            "No")
-=======
-       "Host:")
+*/
 ResDef(MK_ACCESS_SEND_TO_HOST, XP_MSG_BASE + 1343,
        "Send to host:")
 ResDef(MK_ACCESS_IS_DOMAIN, XP_MSG_BASE + 1344,
@@ -7582,7 +7570,6 @@ ResDef(MK_ACCESS_SEND_TO_PATH, XP_MSG_BASE + 1346,
        "Send to path:")
 ResDef(MK_ACCESS_AND_BELOW, XP_MSG_BASE + 1347,
        " (and below)")
->>>>>>> 3.1.20.4
 ResDef(MK_ACCESS_SECURE, XP_MSG_BASE + 1348,
        "Secure:")
 ResDef(MK_ACCESS_EXPIRES, XP_MSG_BASE + 1349,
@@ -7763,58 +7750,6 @@ ResDef(MK_IMAP_GETTING_MAILBOX_INFO, XP_MSG_BASE + 1410,
 ResDef(MK_IMAP_EMPTY_MIME_PART, XP_MSG_BASE + 1411,
 "This body part will be downloaded on demand.")
 
-<<<<<<< allxpstr.rc
-<<<<<<< allxpstr.rc
-=======
-<<<<<<< allxpstr.h
->>>>>>> 3.13.4.1
-ResDef(MK_ACCESS_COOKIES_WISHES0, (XP_MSG_BASE + 1415),
-"The server %1$s \nwishes to set a cookie.\n\n\
-Do you wish to allow the cookie to be set?")
-
-ResDef(MK_ACCESS_COOKIES_WISHES1, (XP_MSG_BASE + 1416),
-"The server %1$s \nwishes to set another cookie.\n\
-You currently have a cookie from this server.\n\n\
-Do you wish to allow the cookie to be set?")
-
-ResDef(MK_ACCESS_COOKIES_WISHESN, (XP_MSG_BASE + 1417),
-"The server %1$s \nwishes to set another cookie.\n\
-You currently have %2$d cookies from this server.\n\n\
-Do you wish to allow the cookie to be set?")
-
-ResDef(MK_ACCESS_COOKIES_REMEMBER, (XP_MSG_BASE + 1418),
-"Do you want to remember this decision?")
-
-ResDef(MK_ACCESS_COOKIES_ACCEPTED, (XP_MSG_BASE + 1419),
-"Cookies you have accepted")
-
-ResDef(MK_ACCESS_COOKIES_PERMISSION, (XP_MSG_BASE + 1420),
-"Hosts that may (+) or may not (-)<BR> set cookies")
-
-ResDef(MK_SIGNON_PASSWORDS_GENERATE, (XP_MSG_BASE + 1425), \
-"********")
-/* Note: above string used to say "generate" but at Rick Elliott's
- * suggestion it is being changed to be all asterisks.
- */
-/*
- * This must be eight-characters long in all translations.  Alternate
- * words that it could translate into would be any word that conveys
- * the idea that the user is asking for a random password to be generated
- * for him, e.g., "random", "select", "chose-one-for-me", etc.  If none
- * are the right length, use a shorter one and include fill characters
- * such as "**pick**".
- */
-
-ResDef(MK_SIGNON_PASSWORDS_REMEMBER, (XP_MSG_BASE + 1426), \
-"Remember this as a new pasword for %1$s at %2$s?")
-
-ResDef(MK_SIGNON_PASSWORDS_FETCH, (XP_MSG_BASE + 1427), \
-"Fetch old password for %1$s at %2$s?")
-
-ResDef(MK_SIGNON_YOUR_SIGNONS, (XP_MSG_BASE + 1428),
-"Your Signons")
-
-=======
 ResDef(MK_IMAP_UNABLE_TO_SAVE_MESSAGE, XP_MSG_BASE + 1412,
 "IMAP Error: The message could not be saved due to an error.")
 
@@ -7898,6 +7833,15 @@ ResDef(MK_MIMEHTML_DOWNLOAD_STATUS_HEADER, XP_MSG_BASE + 1441,
 ResDef(MK_MIMEHTML_DOWNLOAD_STATUS_NOT_DOWNLOADED, XP_MSG_BASE + 1442,
        "Not Downloaded Inline")
 
+ResDef(MK_ACCESS_DOMAIN, XP_MSG_BASE + 1443,
+           "Domain:")
+ResDef(MK_ACCESS_PATH, XP_MSG_BASE + 1444,
+           "Path:")
+ResDef(MK_ACCESS_YES, XP_MSG_BASE + 1445,
+           "Yes")
+ResDef(MK_ACCESS_NO, XP_MSG_BASE + 1446,
+           "No")
+
 /* -------- Range up tp 1449 reserved for MSGLIB!! ----------------*/
 
 /* JavaScript dialog strings - seem to be duplicates!
@@ -7909,6 +7853,7 @@ ResDef(XP_MSG_JS_CLOSE_WINDOW_NAME, XP_MSG_BASE + 1451, "Close Window %s?")
  XXX - more strings to put here so that they can be internationalized
 
  End JavaScript dialog strings */
+
 
 
 /* Related Links XP Strings */
@@ -7934,9 +7879,56 @@ ResDef(MK_LDAP_REPL_NEW_ENTRY, XP_MSG_BASE + 1468, "Replicating entry %d")
 ResDef(MK_LDAP_AUTHDN_LOOKUP_FAILED, XP_MSG_BASE + 1469, "Mail id invalid or not unique, cannot resolve to directory authorization entry.")
 
 
+/* Cookies & Signons XP Strings */
+ResDef(MK_ACCESS_COOKIES_WISHES0, (XP_MSG_BASE + 1480),
+"The server %1$s \nwishes to set a cookie.\n\n\
+Do you wish to allow the cookie to be set?")
+
+ResDef(MK_ACCESS_COOKIES_WISHES1, (XP_MSG_BASE + 1481),
+"The server %1$s \nwishes to set another cookie.\n\
+You currently have a cookie from this server.\n\n\
+Do you wish to allow the cookie to be set?")
+
+ResDef(MK_ACCESS_COOKIES_WISHESN, (XP_MSG_BASE + 1482),
+"The server %1$s \nwishes to set another cookie.\n\
+You currently have %2$d cookies from this server.\n\n\
+Do you wish to allow the cookie to be set?")
+
+ResDef(MK_ACCESS_COOKIES_REMEMBER, (XP_MSG_BASE + 1483),
+"Do you want to remember this decision?")
+
+ResDef(MK_ACCESS_COOKIES_ACCEPTED, (XP_MSG_BASE + 1484),
+"Cookies you have accepted")
+
+ResDef(MK_ACCESS_COOKIES_PERMISSION, (XP_MSG_BASE + 1485),
+"Hosts that may (+) or may not (-)<BR> set cookies")
+
+ResDef(MK_SIGNON_PASSWORDS_GENERATE, (XP_MSG_BASE + 1490), \
+"********")
+/* Note: above string used to say "generate" but at Rick Elliott's
+ * suggestion it is being changed to be all asterisks.
+ */
+/*
+ * This must be eight-characters long in all translations.  Alternate
+ * words that it could translate into would be any word that conveys
+ * the idea that the user is asking for a random password to be generated
+ * for him, e.g., "random", "select", "chose-one-for-me", etc.  If none
+ * are the right length, use a shorter one and include fill characters
+ * such as "**pick**".
+ */
+
+ResDef(MK_SIGNON_PASSWORDS_REMEMBER, (XP_MSG_BASE + 1491), \
+"Remember this as a new pasword for %1$s at %2$s?")
+
+ResDef(MK_SIGNON_PASSWORDS_FETCH, (XP_MSG_BASE + 1492), \
+"Fetch old password for %1$s at %2$s?")
+
+ResDef(MK_SIGNON_YOUR_SIGNONS, (XP_MSG_BASE + 1493),
+"Your Signons")
+
+
 /* Location Independence XP Strings */
->>>>>>> 3.1.20.4
-#define LI_MSG_BASE XP_MSG_BASE + 1500
+#define LI_MSG_BASE XP_MSG_BASE + 1500	/* <-- offset = 1500, we don't have much room left above */
 ResDef(LI_DOWN_CONFLICT_1, LI_MSG_BASE+1,  "\
 Local and server copies of %0% are in conflict. What would you like to do:</P><P>\
 %-cont-%")
@@ -8019,8 +8011,15 @@ ResDef(LI_VERIFY_NETWORKERROR, LI_MSG_BASE+17,
 "An unexpected network error occurred.\n\
 Cannot connect to the LI server.")
 
+/* Julian XP Strings */
+#define JULIAN_MSG_BASE XP_MSG_BASE + 1550
+ResDef(JULIAN_STRING_1, JULIAN_MSG_BASE+1,
+"Put your Julian strings here.")
 
-#define RDF_MSG_BASE XP_MSG_BASE + 1800
+
+/* RDF XP Strings */
+
+#define RDF_MSG_BASE XP_MSG_BASE + 1700
 
 ResDef(RDF_HTML_STR, RDF_MSG_BASE+1,  "\
 <CENTER><TABLE ALIGN=center WIDTH=470 BORDER=0>%0%</TABLE></CENTER><P>%1%")
@@ -8245,7 +8244,7 @@ ResDef(RDF_FTP_NAME_STR, RDF_MSG_BASE+213, "FTP Locations")
 
 
 /* The following messages are for capabilities based Signed Applets/JS */
-#define CAPS_MSG_BASE XP_MSG_BASE + 3000
+#define CAPS_MSG_BASE XP_MSG_BASE + 3500
 
 ResDef(CAPS_TARGET_RISK_STR_LOW, (CAPS_MSG_BASE + 1), "\
 low")
@@ -8931,19 +8930,8 @@ warning, potentially deleting other files on the hard disk. Any software on the 
 hard disk may be executed in the process. This is an extremely dangerous form \
 of access. It should be granted by system administrators only.")
 
-<<<<<<< allxpstr.rc
-<<<<<<< allxpstr.rc
-=======
-<<<<<<< allxpstr.h
->>>>>>> 3.13.4.1
 ResDef(CAPS_TARGET_URL_SILENTINSTALL, (CAPS_MSG_BASE + 201), "\
 #SilentInstall")
-=======
-/* Julian XP Strings */
-#define JULIAN_MSG_BASE XP_MSG_BASE + 1550
-ResDef(JULIAN_STRING_1, JULIAN_MSG_BASE+1,
-"Put your Julian strings here.")
->>>>>>> 3.1.20.4
 
 END_STR(mcom_include_xp_msg_i_strings)
 

@@ -28,7 +28,7 @@
 #include <TextEdit.h>
 #include "uapp.h"
 #include "PP_Messages.h"
-#include "CProgressBar.h"
+#include "CPatternProgressBar.h"
 #include "UDesktop.h"
 
 #define kProgressStandardWindowID	5050
@@ -39,7 +39,7 @@ class CProgressMac: public LListener {
 public:
 	LWindow 		*fWindow;
 	LCaption 		*fLine1, *fLine2, *fLine3;
-	CProgressBar 	*fProgress;
+	CPatternProgressBar * fProgress;
 	
 	PW_CancelCallback fCancelcb;
 	void * fCancelClosure;
@@ -97,7 +97,7 @@ CProgressMac::CProgressMac(PW_WindowType type)
 	fLine1 = (LCaption*)fWindow->FindPaneByID('LIN1');
 	fLine2 = (LCaption*)fWindow->FindPaneByID('LIN2');
 	fLine3 = (LCaption*)fWindow->FindPaneByID('LIN3');
-	fProgress = (CProgressBar *)fWindow->FindPaneByID('Prog');
+	fProgress = (CPatternProgressBar *)fWindow->FindPaneByID('PtPb');
 	ThrowIfNil_(fLine1);
 	ThrowIfNil_(fLine2);
 	ThrowIfNil_(fLine3);
@@ -175,14 +175,9 @@ void CProgressMac::SetProgressRange(int32 minimum, int32 maximum)
 {
 	if (maximum > minimum)
 	{
-<<<<<<< pw_mac.cpp
 		Assert_(minimum==0);
 		//Range32T	r(minimum, maximum);
 		//fProgress->SetValueRange(r);
-=======
-		Assert_(minimum==0);
-		fProgress->SetValueMaximum(maximum);
->>>>>>> 3.1.16.1
 		fProgress->SetValue(minimum);
 		fProgress->SetValueRange(maximum - minimum);
 	}
