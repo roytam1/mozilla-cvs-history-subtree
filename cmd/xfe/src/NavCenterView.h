@@ -28,9 +28,18 @@
 #include "View.h"
 #include "htrdf.h"
 //#include "RDFView.h"
+#include "RDFImage.h"
 
 class XFE_HTMLView;
 class XFE_RDFView;
+
+#define MaxRdfImages 30
+
+typedef struct _RDFImageList {
+  XFE_RDFImage * rdfImage;
+  Widget  widget;
+} RDFImageList;
+
 
 class XFE_NavCenterView : public XFE_View
 {
@@ -47,7 +56,11 @@ public:
 
   static void selector_activate_cb(Widget,XtPointer,XtPointer);
   static void selector_destroy_cb(Widget,XtPointer,XtPointer);
-  
+
+
+  virtual void handleDisplayPixmap(Widget, IL_Pixmap *, IL_Pixmap *, jint width, jint height);
+  virtual void handleNewPixmap(Widget, IL_Pixmap *, Boolean mask);
+  virtual void handleImageComplete(Widget, IL_Pixmap *);  
 
 private:
   HT_Pane        m_pane;
@@ -57,6 +70,9 @@ private:
   Widget         m_selector;
   Widget         rdf_parent;
   XP_Bool        m_isStandalone; // as oppposed to embedded in a browser
+
+  static RDFImageList * selectorBarImagesCache;
+  static int     m_numRDFImagesLoaded;
 };
 
 static void notify_cb(HT_Notification ns, HT_Resource n, 
