@@ -48,11 +48,6 @@
 #ifdef XPCOM_GLUE
 #include "nsXPCOMGlue.h"
 #include "nsXPCOMPrivate.h"
-#include "nsIServiceManager.h"
-#include "nsILocalFile.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsStringAPI.h"
-#include "prlink.h"
 #else
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsINativeComponentLoader.h"
@@ -286,59 +281,9 @@ nsGenericModule::Initialize(nsIComponentManager *compMgr)
 
 
 #ifdef XPCOM_GLUE
-    nsCOMPtr<nsIServiceManager> servMgr = do_QueryInterface(compMgr, &rv);
+    rv = XPCOMGlueStartup(".");
     if (NS_FAILED(rv))
         return rv;
-
-    nsCOMPtr<nsIProperties> dirService;
-    rv = servMgr->GetServiceByContractID(NS_DIRECTORY_SERVICE_CONTRACTID, 
-                                         NS_GET_IID(nsIProperties), 
-                                         getter_AddRefs(dirService));
-    if (NS_FAILED(rv))
-        return rv;
-
-    nsCOMPtr<nsIFile> xpcomDll;
-    rv = dirService->Get(NS_XPCOM_LIBRARY_FILE, NS_GET_IID(nsIFile), getter_AddRefs(xpcomDll));
-    if (NS_FAILED(rv))
-        return rv;
-
-    // we have to manually resolve the string symbols since our glue stubs are
-    // not yet initialized.  it's unfortunate that there isn't a way to directly
-    // access the file path corresponding to a nsIFile instance.
-
-    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(xpcomDll, &rv);
-    if (NS_FAILED(rv))
-        return rv;
-
-    PRLibrary *lib;
-    rv = localFile->Load(&lib);
-    if (NS_FAILED(rv))
-        return rv;
-
-    CStringContainerInitFunc cstrInit = (CStringContainerInitFunc)
-        PR_FindSymbol(lib, "NS_CStringContainerInit");
-    CStringGetDataPtrFunc cstrRead = (CStringGetDataPtrFunc)
-        PR_FindSymbol(lib, "NS_CStringGetDataPtr");
-    CStringContainerFinishFunc cstrFinish = (CStringContainerFinishFunc)
-        PR_FindSymbol(lib, "NS_CStringContainerFinish");
-
-    nsCStringContainer path;
-    cstrInit(path);
-
-    // now extract the file path from the nsIFile object, and use that path
-    // to initialize our glue layer.
-
-    xpcomDll->GetNativePath(path);
-    rv = XPCOMGlueStartup(cstrRead(path));
-
-    // cleanup
-
-    cstrFinish(path);
-    PR_UnloadLibrary(lib);
-
-    if (NS_FAILED(rv))
-        return rv;
-
 #endif
 
     nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(compMgr, &rv);
