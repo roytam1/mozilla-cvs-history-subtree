@@ -137,7 +137,7 @@ VObject* newVObject(const char *id)
 void deleteVObject(VObject *p)
 {
     unUseStr(p->id);
-    PR_FREEIF (p);
+    delete(p);
 }
 
 char* dupStr(const char *s, unsigned int size)
@@ -716,7 +716,7 @@ void unUseStr(const char *s)
 	    if (PL_strcasecmp(t->s,s) == 0) {
 		t->refCnt--;
 		if (t->refCnt == 0) {
-		    if (p == strTbl[h]) {
+		    if (t == strTbl[h]) {
 			strTbl[h] = t->next;
 			}
 		    else {
@@ -733,6 +733,7 @@ void unUseStr(const char *s)
 	}
 }
 
+/* not used
 void cleanStrTbl()
 {
     int i;
@@ -748,7 +749,7 @@ void cleanStrTbl()
 	strTbl[i] = 0;
 	}
 }
-
+*/
 
 struct PreDefProp {
     const char *name;

@@ -590,6 +590,7 @@ static int OutputBasicVcard(MimeObject *obj, VObject *v)
 					}
 				}
 
+                                PR_FREEIF (namestring);
 				if (!htmlLine1 && !htmlLine2)
 				{
 					PR_FREEIF (htmlLine1);
@@ -604,7 +605,6 @@ static int OutputBasicVcard(MimeObject *obj, VObject *v)
 
 				PR_FREEIF (htmlLine1);
 				PR_FREEIF (htmlLine2);
-				PR_FREEIF (namestring);
 			}
 		}
 	}
@@ -1442,12 +1442,14 @@ static int WriteOutEachVCardPhoneProperty (MimeObject *obj, VObject* o)
 					{
 						status = OutputFont(obj, PR_FALSE, "-1", NULL);
 						if (status < 0) {
+                                                        PR_FREEIF (value);
 							PR_FREEIF (attribName);
 							return status;
 						}
 						// write a label without charset conversion
 						status = WriteLineToStream (obj, attribName, PR_FALSE);
 						if (status < 0) {
+                                                        PR_FREEIF (value);
 							PR_FREEIF (attribName);
 							return status;
 						}
@@ -1455,10 +1457,12 @@ static int WriteOutEachVCardPhoneProperty (MimeObject *obj, VObject* o)
 						status = WriteLineToStream (obj, value, PR_TRUE);
 						if (status < 0) {
 							PR_FREEIF (value);
+							PR_FREEIF (attribName);
 							return status;
 						}
 						status = OutputFont(obj, PR_TRUE, NULL, NULL);
 						if (status < 0) {
+							PR_FREEIF (value);
 							PR_FREEIF (attribName);
 							return status;
 						}

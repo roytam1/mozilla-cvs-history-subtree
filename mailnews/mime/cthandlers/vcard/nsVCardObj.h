@@ -403,7 +403,9 @@ extern "C" char* writeMemoryVObjects(char *s, int *len, VObject *list, PRBool ex
 
 const char* lookupStr(const char *s);
 
+/*
 void cleanStrTbl();
+*/
 
 void cleanVObject(VObject *o);
 void cleanVObjects(VObject *list);
