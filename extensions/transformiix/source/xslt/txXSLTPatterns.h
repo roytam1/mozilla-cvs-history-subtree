@@ -143,13 +143,16 @@ private:
 class txRootPattern : public txPattern
 {
 public:
-    txRootPattern()
+    txRootPattern(MBool aSerialize) : mSerialize(aSerialize)
     {
     }
 
     ~txRootPattern();
 
     TX_DECL_PATTERN;
+private:
+    // If txRootPattern is used in a txLocPathPattern, it mustn't be serialized
+    MBool mSerialize;
 };
 
 class txIdPattern : public txPattern

@@ -135,13 +135,15 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     switch (type) {
         case Token::ANCESTOR_OP:
             isChild = MB_FALSE;
+            isAbsolute = MB_TRUE;
             aLexer.nextToken();
             break;
         case Token::PARENT_OP:
             aLexer.nextToken();
             isAbsolute = MB_TRUE;
-            if (aLexer.peek()->type == Token::END) {
-                aPattern = new txRootPattern();
+            if (aLexer.peek()->type == Token::END || 
+                aLexer.peek()->type == Token::UNION_OP) {
+                aPattern = new txRootPattern(MB_TRUE);
                 return aPattern ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
             }
             break;
@@ -184,13 +186,13 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     }
 
     if (isAbsolute) {
-        txRootPattern* root = new txRootPattern();
+        txRootPattern* root = new txRootPattern(MB_FALSE);
         if (!root) {
             delete stepPattern;
             delete pathPattern;
             return NS_ERROR_OUT_OF_MEMORY;
         }
-        rv = pathPattern->addStep(root, MB_TRUE);
+        rv = pathPattern->addStep(root, isChild);
         if (NS_FAILED(rv)) {
             delete stepPattern;
             delete pathPattern;

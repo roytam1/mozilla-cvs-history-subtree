@@ -301,7 +301,8 @@ void txRootPattern::toString(String& aDest)
     #ifdef DEBUG
     aDest.append("txRootPattern{");
     #endif
-    aDest.append("/");
+    if (mSerialize)
+        aDest.append("/");
     #ifdef DEBUG
     aDest.append("}");
     #endif

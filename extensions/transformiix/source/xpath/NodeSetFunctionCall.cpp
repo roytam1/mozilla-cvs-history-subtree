@@ -137,7 +137,9 @@ ExprResult* NodeSetFunctionCall::evaluate(txIEvalContext* aContext) {
                 txTokenizer tokenizer(idList);
                 while (tokenizer.hasMoreTokens()) {
                     tokenizer.nextToken(id);
-                    resultSet->add(contextDoc->getElementById(id));
+                    Node* idNode = contextDoc->getElementById(id);
+                    if (idNode)
+                        resultSet->add(idNode);
                 }
             }
             delete exprResult;

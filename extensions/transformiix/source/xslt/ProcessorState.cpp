@@ -273,15 +273,27 @@ void ProcessorState::addLREStylesheet(Document* aStylesheet,
     }
 
     // Add the template to the list of templates
-    txPattern* root = new txRootPattern();
-    MatchableTemplate* templ = new MatchableTemplate(aStylesheet,
-                                                     root,
-                                                     Double::NaN);
-    if (!templ) {
+    txPattern* root = new txRootPattern(MB_TRUE);
+    MatchableTemplate* nt = 0;
+    if (root) 
+        nt = new MatchableTemplate(aStylesheet, root, Double::NaN);
+    if (!nt) {
+        delete root;
         // XXX ErrorReport: out of memory
         return;
     }
-    templates->add(templ);
+    txListIterator templ(templates);
+    MBool isLast = MB_TRUE;
+    while (templ.hasNext() && isLast) {
+        MatchableTemplate* mt = (MatchableTemplate*)templ.next();
+        if (0.5 < mt->mPriority) {
+            continue;
+        }
+        templ.addBefore(nt);
+        isLast = MB_FALSE;
+    }
+    if (isLast)
+        templates->add(nt);
 }
 
 /*
