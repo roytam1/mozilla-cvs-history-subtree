@@ -47,6 +47,10 @@
 #include "jvmmgr.h"
 #endif
 
+#ifdef MOZ_SMARTUPDATE
+#include "su_mocha.h"
+#endif
+
 #undef FREE_AND_CLEAR           /* XXX over-including Mac compiled headers */
 
 extern int XP_MSG_JS_CLOSE_WINDOW;
@@ -3327,6 +3331,11 @@ lm_InitWindowContent(MochaDecoder *decoder)
     obj = decoder->window_object;
     if (!JS_InitStandardClasses(cx, obj))
         return JS_FALSE;
+
+#ifdef MOZ_SMARTUPDATE
+    if (!SU_InitMochaClasses(cx, obj))
+        return JS_FALSE;
+#endif
 
 #if defined(OJI)
 #if 1
