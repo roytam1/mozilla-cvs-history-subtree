@@ -53,13 +53,13 @@
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 #MOZ_CO_TAG = <tag>
-NSPR_CO_TAG = NSPRPUB_CLIENT_BRANCH
-PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
-NSS_CO_TAG = NSS_CLIENT_TAG
-LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
-ACCESSIBLE_CO_TAG = 
-GFX2_CO_TAG = 
-IMGLIB2_CO_TAG = 
+NSPR_CO_TAG = STATIC_BUILD_20010418_BRANCH
+PSM_CO_TAG = STATIC_BUILD_20010418_BRANCH #We will now build PSM from the tip instead of a branch.
+NSS_CO_TAG = STATIC_BUILD_20010418_BRANCH
+LDAPCSDK_CO_TAG = STATIC_BUILD_20010418_BRANCH
+ACCESSIBLE_CO_TAG = STATIC_BUILD_20010418_BRANCH
+GFX2_CO_TAG = STATIC_BUILD_20010418_BRANCH
+IMGLIB2_CO_TAG = STATIC_BUILD_20010418_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
@@ -222,7 +222,7 @@ NSS_CO_MODULE += \
 
 NSS_CO_TAG = NSS_CLIENT_BRANCH
 endif
-		
+
 NSS_CO_FLAGS := -P
 ifdef NSS_CO_TAG
    NSS_CO_FLAGS := $(NSS_CO_FLAGS) -r $(NSS_CO_TAG)
