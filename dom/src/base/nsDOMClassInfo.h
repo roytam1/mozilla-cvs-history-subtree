@@ -336,10 +336,10 @@ public:
 
 // FomrControlList helper
 
-class nsFormControlListSH : public nsNamedArraySH
+class nsFormControlListSH : public nsHTMLCollectionSH
 {
 protected:
-  nsFormControlListSH(nsDOMClassInfoID aID) : nsNamedArraySH(aID)
+  nsFormControlListSH(nsDOMClassInfoID aID) : nsHTMLCollectionSH(aID)
   {
   }
 
@@ -347,12 +347,8 @@ protected:
   {
   }
 
-  // Override nsArraySH::GetItemAt() since our list isn't a
-  // nsIDOMNodeList
-  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult);
-
-  // Override nsNamedArraySH::GetNamedItem()
+  // Override nsNamedArraySH::GetNamedItem() since our NamedItem() can
+  // return either a nsIDOMNode or a nsIHTMLCollection
   virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
                                 nsISupports **aResult);
 

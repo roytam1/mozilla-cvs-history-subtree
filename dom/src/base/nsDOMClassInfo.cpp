@@ -1863,24 +1863,6 @@ nsHTMLCollectionSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
 // FomrControlList helper
 
 nsresult
-nsFormControlListSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                               PRUint32 aIndex, nsISupports **aResult)
-{
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
-  NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
-
-  nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
-  nsresult rv = collection->Item(aIndex, &node);
-
-  *aResult = node;
-
-  return rv;
-}
-
-nsresult
 nsFormControlListSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
                                   nsISupports **aResult)
 {
