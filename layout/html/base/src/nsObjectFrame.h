@@ -127,6 +127,23 @@ public:
 
   void FixUpURLS(const nsString &name, nsAString &value);
 
+  void PluginNotAvailable(const char *aMimeType);
+
+  // Returns true if this object frame links to content that we have
+  // no enabled plugin for, that means not even the default plugin.
+  PRBool IsBroken() const
+  {
+    return mIsBrokenPlugin;
+  }
+
+  virtual PRBool IsContainingBlock() const
+  {
+    // Broken plugins are containing blocks.
+
+    return IsBroken();
+  }
+
+
 protected:
   // nsISupports
   NS_IMETHOD_(nsrefcnt) AddRef(void);
@@ -171,6 +188,10 @@ protected:
 
   nsPoint GetWindowOriginInPixels(PRBool aWindowless);
 
+  void CreateDefaultFrames(nsIPresContext *aPresContext,
+                           nsHTMLReflowMetrics& aMetrics,
+                           const nsHTMLReflowState& aReflowState);
+
   friend class nsPluginInstanceOwner;
 private:
   nsPluginInstanceOwner *mInstanceOwner;
@@ -178,6 +199,7 @@ private:
   nsIFrame              *mFirstChild;
   nsCOMPtr<nsIWidget>   mWidget;
   nsRect                mWindowlessRect;
+  PRPackedBool          mIsBrokenPlugin;
 };
 
 

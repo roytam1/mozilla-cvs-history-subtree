@@ -47,7 +47,7 @@ interface nsIDocument;
 
 [ref] native nsIPluginInstanceRef(nsIPluginInstance *);
 
-[uuid(18270870-32f1-11d2-a830-0040959a28c9)]
+[uuid(f2b9bcb5-95e8-4e15-a439-74b8b45d7846)]
 interface nsIPluginInstanceOwner : nsISupports
 {
   /**
@@ -128,4 +128,9 @@ interface nsIPluginInstanceOwner : nsISupports
    * Get the specified variable
    */
   void getValue(in nsPluginInstancePeerVariable aVariable, in voidPtr aValue);
+
+  /**
+   * Inform the owner that no plugin for the given mime type was found.
+   */
+  void pluginNotAvailable(in string aMimeType);
 };
