@@ -100,6 +100,7 @@ nsHttpConnection::Init(nsHttpConnectionInfo *info)
     LOG(("nsHttpConnection::Init [this=%x]\n"));
 
     NS_ENSURE_ARG_POINTER(info);
+    NS_ENSURE_TRUE(!mConnectionInfo, NS_ERROR_ALREADY_INITIALIZED);
 
     mConnectionInfo = info;
     NS_ADDREF(mConnectionInfo);

@@ -320,6 +320,8 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
                                    nsHttpConnectionInfo *ci,
                                    PRBool failIfBusy)
 {
+    nsresult rv;
+
     LOG(("nsHttpHandler::InitiateTransaction\n"));
 
     NS_ENSURE_ARG_POINTER(trans);
@@ -374,10 +376,10 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
         if (!conn)
             return NS_ERROR_OUT_OF_MEMORY;
         NS_ADDREF(conn);
-    }
 
-    nsresult rv = conn->Init(ci);
-    if (NS_FAILED(rv)) goto failed;
+        rv = conn->Init(ci);
+        if (NS_FAILED(rv)) goto failed;
+    }
 
     rv = conn->SetTransaction(trans);
     if (NS_FAILED(rv)) goto failed;
