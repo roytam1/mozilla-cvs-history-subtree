@@ -120,7 +120,7 @@ static struct keyword {
     {"public",          TOK_RESERVED,           JSOP_NOP},
     {"short",           TOK_RESERVED,           JSOP_NOP},
     {"static",          TOK_RESERVED,           JSOP_NOP},
-    {"super",           TOK_PRIMARY,            JSOP_NOP},
+    {"super",           TOK_RESERVED,           JSOP_NOP},
     {"synchronized",    TOK_RESERVED,           JSOP_NOP},
     {"throws",          TOK_RESERVED,           JSOP_NOP},
     {"transient",       TOK_RESERVED,           JSOP_NOP},
