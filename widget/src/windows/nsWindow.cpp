@@ -3373,7 +3373,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             }
             
             nsMouseScrollEvent scrollEvent;
-            scrolllEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
+            scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
             if (msg == WM_MOUSEWHEEL)
                 scrollEvent.delta = -((short) HIWORD (wParam) / iDeltaPerLine);
             else
