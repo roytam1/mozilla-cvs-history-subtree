@@ -4713,7 +4713,10 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
   // if we're turning off threaded display, we need to expand all so that all
   // messages will be displayed.
   if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay && ! (aViewFlags & nsMsgViewFlagsType::kThreadedDisplay))
+  {
     ExpandAll();
+    m_sortValid = PR_FALSE; // invalidate the sort so sorting will do something
+  }
   m_viewFlags = aViewFlags;
   
   if (m_folder)
