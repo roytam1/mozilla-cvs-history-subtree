@@ -41,8 +41,7 @@
 #include "nsIDOMXULDocument.h"
 #include "nsRDFDOMViewerUtils.h"
 
-#include "nsIStyleRule.h"
-#include "nsICSSStyleRule.h"
+
 #include "nsICSSDeclaration.h"
 #include "nsIDocument.h"
 
@@ -372,13 +371,15 @@ nsRDFDOMDataSource::createStyledContentArcs(nsIStyledContent *content,
 
   // content style rules
   NS_NewISupportsArray(getter_AddRefs(rules));
-  content->GetContentStyleRules(rules);
-  rv = createArcsFromSupportsArray(rules, arcs);
+  rv = content->GetContentStyleRules(rules);
+  if (NS_SUCCEEDED(rv))
+    rv = createArcsFromSupportsArray(rules, arcs);
 
   // inline style rules
   NS_NewISupportsArray(getter_AddRefs(rules));
-  content->GetContentStyleRules(rules);
-  rv = createArcsFromSupportsArray(rules, arcs);
+  rv = content->GetContentStyleRules(rules);
+  if (NS_SUCCEEDED(rv))
+    rv = createArcsFromSupportsArray(rules, arcs);
 
   // continue up hierarchy
   return createContentArcs(content, arcs);
@@ -404,9 +405,9 @@ nsRDFDOMDataSource::createStyledContentClassArcs(nsIStyledContent *content,
 }
 
 nsresult
-nsRDFDOMDataSource::getCSSRuleTarget(nsICSSStyleRule *rule,
-                                     nsIRDFResource *property,
-                                     nsIRDFNode **aResult)
+nsRDFDOMDataSource::getCSSStyleRuleTarget(nsICSSStyleRule *rule,
+                                          nsIRDFResource *property,
+                                          nsIRDFNode **aResult)
 {
   nsICSSDeclaration* decl;
 
@@ -424,6 +425,48 @@ nsRDFDOMDataSource::getCSSRuleTarget(nsICSSStyleRule *rule,
     
   return createLiteral(str, aResult);
 
+}
+
+nsresult
+nsRDFDOMDataSource::getDOMCSSRuleTarget(nsIDOMCSSRule *rule,
+                                        nsIRDFResource *property,
+                                        nsIRDFNode **aResult)
+{
+  nsAutoString str;
+  if (property == kNC_Name)
+    str = "DOMCSSStyle";
+  else if (property == kNC_Value)
+    rule->GetCssText(str);
+  else
+    str = "cssrule";
+
+  return createLiteral(str, aResult);
+}
+
+
+nsresult
+nsRDFDOMDataSource::getDOMCSSStyleRuleTarget(nsIDOMCSSStyleRule *rule,
+                                       nsIRDFResource *property,
+                                       nsIRDFNode **aResult)
+{
+  return getDOMCSSRuleTarget(rule, property, aResult);
+}
+
+
+nsresult
+nsRDFDOMDataSource::getCSSRuleTarget(nsICSSRule *rule,
+                                       nsIRDFResource *property,
+                                       nsIRDFNode **aResult)
+{
+  nsAutoString str;
+  if (property == kNC_Name)
+    str = "CSSRule";
+  else if (property == kNC_Value)
+    str = "<unavail>";
+  else if (property == kNC_Type)
+    str = "cssrule";
+
+  return createLiteral(str, aResult);
 }
 
 nsresult
@@ -595,48 +638,63 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
       return createDOMNodeTarget(node, aProperty, aResult);
   }
 
-  nsStringKey contentMode(nsAutoString("content"));
-  if (mModeTable.Get(&contentMode)) {
-    // nsIContent
-    nsCOMPtr<nsIContent> content =
-      do_QueryInterface(object, &rv);
-    if (NS_SUCCEEDED(rv))
-      return createContentTarget(content, aProperty, aResult);
-
-    // nsIStyledContent
-    nsCOMPtr<nsIStyledContent> styledContent =
-      do_QueryInterface(object, &rv);
-    if (NS_SUCCEEDED(rv))
-      return createStyledContentTarget(styledContent, aProperty, aResult);
-
-    // fall back to DOMNode
-    // nsIDOMNode
-    nsCOMPtr<nsIDOMNode> node =
-      do_QueryInterface(object, &rv);
-    if (NS_SUCCEEDED(rv))
-      return createDOMNodeTarget(node, aProperty, aResult);
-  }
+  // if we're not in DOM mode, just revert to content mode
   
+  // nsIStyledContent
+  // nsIContent
+  nsCOMPtr<nsIStyledContent> styledContent =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return createStyledContentTarget(styledContent, aProperty, aResult);
+    
+    // nsIContent
+  nsCOMPtr<nsIContent> content =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return createContentTarget(content, aProperty, aResult);
+
+
+  //
   // nsIRDFDOMViewerObject:
+  //
   nsCOMPtr<nsIRDFDOMViewerObject> viewerObject =
     do_QueryInterface(object, &rv);
   
   if (NS_SUCCEEDED(rv))
     return viewerObject->GetTarget(aProperty, aResult);
 
-  // nsICSSStyleRule:
-  nsCOMPtr<nsICSSStyleRule> cssRule =
+  // nsIDOMCSSStyleRule
+  // nsIDOMCSSRule
+  nsCOMPtr<nsIDOMCSSStyleRule> domCSSStyleRule =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return getDOMCSSStyleRuleTarget(domCSSStyleRule, aProperty, aResult);
+
+  nsCOMPtr<nsIDOMCSSRule> domCSSRule =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return getDOMCSSRuleTarget(domCSSRule, aProperty, aResult);
+
+  // nsICSSStyleRule
+  // nsICSSRule
+  // nsIStyleRule
+  nsCOMPtr<nsICSSStyleRule> cssStyleRule =
+    do_QueryInterface(object, &rv);
+  if (NS_SUCCEEDED(rv))
+    return getCSSRuleTarget(cssStyleRule, aProperty, aResult);
+
+  nsCOMPtr<nsICSSRule> cssRule =
     do_QueryInterface(object, &rv);
   if (NS_SUCCEEDED(rv))
     return getCSSRuleTarget(cssRule, aProperty, aResult);
-      
-  // nsIStyleRule:
+  
   nsCOMPtr<nsIStyleRule> styleRule =
     do_QueryInterface(object,&rv);
-  
   if (NS_SUCCEEDED(rv))
     return getStyleRuleTarget(styleRule, aProperty, aResult);
 
+  //
+  // doh! I don't know what the heck this is.
   printf("getTargetForKnownObject: unknown Object!\n");
   return NS_OK;
 }

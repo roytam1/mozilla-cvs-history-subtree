@@ -35,7 +35,11 @@
 #include "nsIDOMNode.h"
 #include "nsIContent.h"
 #include "nsIStyledContent.h"
+#include "nsIDOMCSSRule.h"
+#include "nsIDOMCSSStyleRule.h"
+
 #include "nsICSSStyleRule.h"
+#include "nsIStyleRule.h"
 
 /* {c7cf77e8-245a-11d3-80f0-006008948010} */
 #define NS_RDF_DOMDATASOURCE_CID \
@@ -111,12 +115,30 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
                                        nsIRDFResource *property,
                                        nsIRDFNode **aResult);
 
+    // nsIDOMCSSStyleRule
+    // nsIDOMCSSRule
+    nsresult getDOMCSSStyleRuleTarget(nsIDOMCSSStyleRule *rule,
+                                      nsIRDFResource *property,
+                                      nsIRDFNode **result);
+    nsresult getDOMCSSRuleTarget(nsIDOMCSSRule *rule,
+                                 nsIRDFResource *property,
+                                 nsIRDFNode **result);
+    
+    
+    // nsICSSStyleRule
+    // nsICSSRule
+    // nsIStyleRule
+    nsresult getCSSStyleRuleTarget(nsICSSStyleRule *rule,
+                              nsIRDFResource *property,
+                              nsIRDFNode **result);
+    
+    nsresult getCSSRuleTarget(nsICSSRule *rule,
+                              nsIRDFResource *property,
+                              nsIRDFNode **result);
+    
     nsresult getStyleRuleTarget(nsIStyleRule *rule,
                                    nsIRDFResource *property,
                                    nsIRDFNode **result);
-    nsresult getCSSRuleTarget(nsICSSStyleRule *rule,
-                              nsIRDFResource *property,
-                              nsIRDFNode **result);
     
     // helper routines
     nsresult createArcsFromSupportsArray(nsISupportsArray *rules,
