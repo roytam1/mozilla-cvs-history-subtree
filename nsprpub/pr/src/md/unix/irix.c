@@ -831,7 +831,7 @@ _MD_CleanupBeforeExit(void)
      }
 }
 
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 extern void __sgi_prda_procmask(int);
 #endif
 
@@ -871,7 +871,7 @@ _MD_InitThread(PRThread *thread, PRBool wakeup_parent)
 		thread->md.id = getpid();
         setblockproccnt(thread->md.id, 0);
 		_MD_SET_SPROC_PID(getpid());	
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 		/*
 		 * enable user-level processing of sigprocmask(); this is an
 		 * undocumented feature available in Irix 6.2, 6.3, 6.4 and 6.5
@@ -1442,7 +1442,7 @@ void _MD_IrixInit()
     PRThread *me = _PR_MD_CURRENT_THREAD();
 	int rv;
 
-#ifdef _PR_HAVE_SGI_PRDA_PROCMASK
+#ifndef IRIX5_3
 	/*
 	 * enable user-level processing of sigprocmask(); this is an undocumented
 	 * feature available in Irix 6.2, 6.3, 6.4 and 6.5
@@ -1463,7 +1463,7 @@ void _MD_IrixInit()
      * Change the name of the core file from core to core.pid,
      * This is inherited by the sprocs created by this process
      */
-#ifdef PR_COREPID
+#ifndef IRIX5_3
     prctl(PR_COREPID, 0, 1);
 #endif
     /*

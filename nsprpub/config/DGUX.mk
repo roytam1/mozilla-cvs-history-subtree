@@ -16,40 +16,32 @@
 #
 
 #
-# Config stuff for SCO UnixWare
-# UnixWare is intended for high-end enterprise customers.
-# UnixWare 2.1 and 2.1.1 are based on SVR4.  (2.1.2 is a maintenance
-# release.)
-# UnixWare 7 (codename Gemini) is based on what SCO calls SVR5.
-# The somewhat odd version number 7 was chosen to suggest that
-#     UnixWare 2 + OpenServer 5 = UnixWare 7
+# Config stuff for Data General DG/UX
+#
+# Initial DG/UX port by Marc Fraioli <fraioli@dg-rtp.dg.com>
 #
 
 include $(MOD_DEPTH)/config/UNIX.mk
 
-ifeq ($(OS_RELEASE),7)
-CC		= cc
-CCC		= CC
-else
-CC		= $(NSDEPTH)/build/hcc
-CCC		= $(NSDEPTH)/build/hcpp
-endif
+CC		= gcc
+CCC		= g++
 
 RANLIB		= true
 
-DEFINES		+= -D_PR_LOCAL_THREADS_ONLY
-OS_CFLAGS	= -DSVR4 -DSYSV -DUNIXWARE
-
-ifeq ($(OS_RELEASE),7)
-OS_CFLAGS	+= -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T -D_PR_HAVE_SOCKADDR_LEN
-else
-OS_CFLAGS	+= -D_PR_NO_LARGE_FILES
-endif
+DEFINES		+= -D_PR_LOCAL_THREADS_ONLY 
+OS_CFLAGS	= -DSVR4 -DSYSV -DDGUX -D_DGUX_SOURCE -D_POSIX4A_DRAFT6_SOURCE 
 
 MKSHLIB		= $(LD) $(DSO_LDOPTS)
-DSO_LDOPTS	= -G
+DSO_LDOPTS	= -G 
 
 CPU_ARCH	= x86
-ARCH		= sco
+ARCH		= dgux
 
 NOSUCHFILE	= /no-such-file
+
+ifdef BUILD_OPT
+OPTIMIZER	= -O2
+else
+# -g would produce a huge executable.
+OPTIMIZER	=
+endif

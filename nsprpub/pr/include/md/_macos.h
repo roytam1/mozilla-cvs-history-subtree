@@ -377,7 +377,6 @@ extern PRStatus _MD_setsockopt(PRFileDesc *fd, PRInt32 level, PRInt32 optname, c
 #define _MD_SENDTO			_MD_sendto
 #define _MD_RECVFROM		_MD_recvfrom
 #define _MD_PR_POLL			_MD_poll
-#define _MD_INIT_FILEDESC(fd)
 #define _MD_MAKE_NONBLOCK	_MD_makenonblock
 
 #define _MD_GET_SOCKET_ERROR() 		_PR_MD_CURRENT_THREAD()->md.osErrCode
@@ -431,7 +430,7 @@ extern PRStatus _MD_gethostname(char *name, int namelen);
 
 #define kMacTimerInMiliSecs				8L
 #define _MD_GET_INTERVAL 				_MD_GetInterval
-#define _MD_INTERVAL_PER_SEC() 			PR_MSEC_PER_SEC
+#define _MD_INTERVAL_PER_SEC() 			(PR_MSEC_PER_SEC/kMacTimerInMiliSecs)
 #define _MD_INTERVAL_INIT()
 
 /*
@@ -451,12 +450,15 @@ extern int _MD_PutEnv(const char *variableCopy);
 #define GCPTR
 #define CALLBACK
 typedef int (*FARPROC)();
+#define gcmemcpy(a,b,c) memcpy(a,b,c)
 
 
 #define MAX_NON_PRIMARY_TIME_SLICES 	6
 
 extern long gTimeSlicesOnNonPrimaryThread;
 extern struct PRThread *gPrimaryThread;
+
+typedef short PROSFD;
 
 // Errors not found in the Mac StdCLib
 #define EACCES  		13      	// Permission denied

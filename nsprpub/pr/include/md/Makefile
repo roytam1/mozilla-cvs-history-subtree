@@ -38,7 +38,7 @@ else
 ifeq ($(OS_TARGET), WIN16)
 MDCPUCFG_H = _win16.cfg
 else
-ifeq ($(OS_TARGET),OS2)
+ifeq ($(OS_TARGET), OS2)
 MDCPUCFG_H = _os2.cfg
 else
 MDCPUCFG_H = _winnt.cfg
@@ -99,10 +99,6 @@ ifeq ($(OS_ARCH),Rhapsody)
 MDCPUCFG_H = _rhapsody.cfg
 endif
 
-ifeq ($(OS_ARCH),NEXTSTEP)
-MDCPUCFG_H = _nextstep.cfg
-endif
-
 ifeq ($(OS_ARCH),NEWS-OS)
 MDCPUCFG_H = _sony.cfg
 endif
@@ -125,10 +121,6 @@ endif
 
 ifeq ($(OS_ARCH),DGUX)
 MDCPUCFG_H = _dgux.cfg
-endif
-
-ifeq ($(OS_ARCH),QNX)
-MDCPUCFG_H = _qnx.cfg
 endif
 
 export:: $(HEADERS) $(MDCPUCFG_H)

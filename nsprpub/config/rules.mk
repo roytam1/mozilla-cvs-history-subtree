@@ -72,13 +72,13 @@ ifeq ($(OS_ARCH), WINNT)
 # other platforms do not.
 #
 ifeq (,$(filter-out WIN16 OS2,$(OS_TARGET)))
-LIBRARY		= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
-SHARED_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
-IMPORT_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
+LIBRARY		= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.lib
+SHARED_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).dll
+IMPORT_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).lib
 else
-LIBRARY		= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
-SHARED_LIBRARY	= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
-IMPORT_LIBRARY	= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
+LIBRARY		= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.lib
+SHARED_LIBRARY	= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION).dll
+IMPORT_LIBRARY	= $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION).lib
 endif
 
 else
@@ -195,14 +195,10 @@ ifdef RELEASE_LIBS
 	@if test -z "$(BUILD_NUMBER)"; then \
 		echo "BUILD_NUMBER must be defined"; \
 		false; \
-	else \
-		true; \
 	fi
 	@if test ! -d $(RELEASE_LIB_DIR); then \
 		rm -rf $(RELEASE_LIB_DIR); \
 		$(NSINSTALL) -D $(RELEASE_LIB_DIR);\
-	else \
-		true; \
 	fi
 	cp $(RELEASE_LIBS) $(RELEASE_LIB_DIR)
 endif
@@ -211,14 +207,10 @@ ifdef RELEASE_HEADERS
 	@if test -z "$(BUILD_NUMBER)"; then \
 		echo "BUILD_NUMBER must be defined"; \
 		false; \
-	else \
-		true; \
 	fi
 	@if test ! -d $(RELEASE_HEADERS_DEST); then \
 		rm -rf $(RELEASE_HEADERS_DEST); \
 		$(NSINSTALL) -D $(RELEASE_HEADERS_DEST);\
-	else \
-		true; \
 	fi
 	cp $(RELEASE_HEADERS) $(RELEASE_HEADERS_DEST)
 endif
@@ -243,11 +235,7 @@ endif
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-ifdef XP_OS2_VACPP
-	$(AR) $(subst /,\\,$(OBJS)) $(AR_EXTRA_ARGS)
-else
 	$(AR) $(OBJS) $(AR_EXTRA_ARGS)
-endif
 	$(RANLIB) $@
 
 ifeq ($(OS_TARGET), WIN16)
@@ -297,8 +285,8 @@ ifeq ($(OS_TARGET), OS2)
 	@cmd /C "echo CODE    LOADONCALL MOVEABLE DISCARDABLE >>$@.def"
 	@cmd /C "echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >>$@.def"	
 	@cmd /C "echo EXPORTS >>$@.def"
-	@cmd /C "$(FILTER) $(LIBRARY) >> $@.def"
-	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $@.def
+	@cmd /C "$(FILTER) -B -P $(LIBRARY) >> $@.def"
+	$(LINK_DLL) -MAP $(DLLBASE) $(OS_LIBS) $(EXTRA_LIBS) $(OBJS) $@.def
 else
 	$(LINK_DLL) -MAP $(DLLBASE) $(OS_LIBS) $(EXTRA_LIBS) $(OBJS)
 endif
@@ -329,13 +317,9 @@ endif
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_ARCH), WINNT)
-ifndef XP_OS2_EMX
 	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
 else
 	$(CCC) -o $@ -c $(CCCFLAGS) $< 
-endif
-else
-	$(CCC) -o $@ -c $(CCCFLAGS) $<
 endif
 
 WCCFLAGS1 = $(subst /,\\,$(CFLAGS))
@@ -350,11 +334,7 @@ ifeq ($(OS_TARGET), WIN16)
 	$(CC) -zq -fo$(OBJDIR)\\$*.$(OBJ_SUFFIX)  @w16wccf $*.c
 	rm w16wccf
 else
-ifndef XP_OS2_EMX
 	$(CC) -Fo$@ -c $(CFLAGS) $*.c
-else
-	$(CC) -o $@ -c $(CFLAGS) $*.c
-endif
 endif
 else
 	$(CC) -o $@ -c $(CFLAGS) $*.c

@@ -38,6 +38,7 @@
 #endif
 
 #include <OpenTptInternet.h>    // All the internet typedefs
+#include "macsocket.h"
 #include "primpl.h"
 
 typedef enum SndRcvOpCode {
@@ -1243,7 +1244,7 @@ ErrorExit:
     return -1;
 }                               
 
-PRInt32 _MD_writev(PRFileDesc *fd, const struct PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
+PRInt32 _MD_writev(PRFileDesc *fd, struct PRIOVec *iov, PRInt32 iov_size, PRIntervalTime timeout)
 {
 #pragma unused (fd, iov, iov_size, timeout)
 
