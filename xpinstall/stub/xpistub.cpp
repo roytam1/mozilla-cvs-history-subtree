@@ -90,23 +90,25 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     // Initialize XPCOM and AutoRegister() its components
     //--------------------------------------------------------------------
 #ifdef XP_MAC
-    OSErr      err = noErr;
-    long       xpiStubDirID = 0;
-    Boolean    isDir = false;
-    
-    FSpGetDirectoryID(&aXPIStubDir, &xpiStubDirID, &isDir);
-    nsfsDirectory = aXPIStubDir;
-    rv = NS_InitXPCOM(&gServiceMgr, &nsfsDirectory); // mac stuff FIX dougt/sdagley  FIX
+    nsCOMPtr<nsIFile> file;
+    rv = NS_NewLocalFile(getter_AddRefs(file));
+    if (NS_SUCCEEDED(rv) && file)
+    {   
+        nsCOMPtr<nsILocalFileMac> macFile = do_QueryInterface(file);
+        if (macFile)
+            macFile->InitWithFSSpec(aXPIStubDir);
+    }
+    rv = NS_InitXPCOM(&gServiceMgr, file); 
 #elif defined(XP_PC) || defined(XP_UNIX)
-   //nsfsDirectory = componentPath;
-
-    // nsCOMPtr<nsIFile> file;
-    // rv = NS_NewLocalFile(getter_AddRefs(file));
-    // if (NS_SUCCEEDED(rv) && file)
-    // {
-    //    file->InitWithPath(aProgramDir)
-
-    rv = NS_InitXPCOM(&gServiceMgr, NULL); //file); // fix!!!
+    
+    nsCOMPtr<nsIFile> file;
+    rv = NS_NewLocalFile(getter_AddRefs(file));
+    if (NS_SUCCEEDED(rv) && file)
+    {
+        file->InitWithPath(aProgramDir)
+    }
+    rv = NS_InitXPCOM(&gServiceMgr, file); 
+        
 #else
     rv = NS_InitXPCOM(&gServiceMgr, NULL);
 #endif
