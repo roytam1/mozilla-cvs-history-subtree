@@ -1164,6 +1164,21 @@ if [ "$MOZ_SVG" ]; then
 "
 fi
 
+# xtf
+if [ "$MOZ_XTF" ]; then
+    MAKEFILES_content="$MAKEFILES_content
+	content/xtf/Makefile
+	content/xtf/public/Makefile
+	content/xtf/src/Makefile
+	content/xtf/tests/Makefile
+	content/xtf/tests/smiley/Makefile
+"
+    MAKEFILES_layout="$MAKEFILES_layout
+	layout/xtf/Makefile
+	layout/xtf/src/Makefile
+"
+fi
+
 # directory/xpcom
 if [ "$MOZ_LDAP_XPCOM" ]; then
     MAKEFILES_ldap="
@@ -1230,6 +1245,9 @@ for extension in $MOZ_EXTENSIONS; do
             ;;
         irc ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/irc/Makefile
+            " ;;
+        jssh ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/jssh/Makefile
             " ;;
         layout-debug ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/layout-debug/Makefile

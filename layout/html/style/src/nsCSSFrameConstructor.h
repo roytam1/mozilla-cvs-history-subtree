@@ -600,6 +600,19 @@ protected:
                              PRBool&                  aHaltProcessing);
 
 
+// XTF
+#ifdef MOZ_XTF
+  nsresult ConstructXTFFrame(nsIPresShell*               aPresShell,
+                             nsIPresContext*          aPresContext,
+                             nsFrameConstructorState& aState,
+                             nsIContent*              aContent,
+                             nsIFrame*                aParentFrame,
+                             nsIAtom*                 aTag,
+                             PRInt32                  aNameSpaceID,
+                             nsStyleContext*          aStyleContext,
+                             nsFrameItems&            aFrameItems);
+#endif
+
 // SVG - rods
 #ifdef MOZ_SVG
   nsresult ConstructSVGFrame(nsIPresShell*               aPresShell,

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:sm="urn:mozilla:xtf:tests:smiley">
+  <sm:smiley transform="translate(120,150) skewX(30)"/>
+
+  <sm:smiley style="fill:red;"
+             transform="translate(100) rotate(30) scale(0.5)"/>
+
+  <polygon style="fill:blue; fill-opacity:0.2; stroke:black;"
+           points="10,50 400,100 100,300"/>
+
+  <sm:smiley style="fill:green;"
+             transform="translate(200,50) rotate(-30) scale(0.5)"/>
+  
+  <text x="100" y="380" font-size="20px;">These smileys are implemented in <tspan font-weight="bold">XTF</tspan>.</text>
+  <text x="100" y="400" font-size="20px;">They are interactive; try clicking on them.</text>
+</svg>
+

@@ -148,6 +148,12 @@ static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
 #include "nsMathMLParts.h"
 #endif
 
+#ifdef MOZ_XTF
+#include "nsIXTFElement.h"
+nsresult
+NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
+#endif
+
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
 #include "nsISVGTextContainerFrame.h"
@@ -4949,6 +4955,14 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
                                              nsFrameItems&            aChildItems)
 {
   nsCOMPtr<nsIAnonymousContentCreator> creator(do_QueryInterface(aParentFrame));
+
+#ifdef MOZ_XTF
+  if (!creator) {
+    // try the content element
+    creator = do_QueryInterface(aParent);
+  }
+#endif
+
   if (!creator)
     return NS_OK;
 
@@ -6720,6 +6734,118 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsIPresShell*            aPresShell,
 }
 #endif // MOZ_MATHML
 
+// XTF 
+#ifdef MOZ_XTF
+nsresult
+nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
+                                         nsIPresContext*          aPresContext,
+                                         nsFrameConstructorState& aState,
+                                         nsIContent*              aContent,
+                                         nsIFrame*                aParentFrame,
+                                         nsIAtom*                 aTag,
+                                         PRInt32                  aNameSpaceID,
+                                         nsStyleContext*          aStyleContext,
+                                         nsFrameItems&            aFrameItems)
+{
+#ifdef DEBUG
+  printf("nsCSSFrameConstructor::ConstructXTFFrame\n");
+#endif
+  nsresult  rv = NS_OK;
+  PRBool isAbsolutelyPositioned = PR_FALSE;
+  PRBool isFixedPositioned = PR_FALSE;
+  PRBool forceView = PR_FALSE;
+  PRBool isBlock = PR_FALSE;
+  PRBool processChildren = PR_FALSE;
+  
+  //NS_ASSERTION(aTag != nsnull, "null XTF tag");
+  //if (aTag == nsnull)
+  //  return NS_OK;
+
+  // Initialize the new frame
+  nsIFrame* newFrame = nsnull;
+   
+  // See if the element is absolute or fixed positioned
+  const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
+  if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
+    isAbsolutelyPositioned = PR_TRUE;
+  }
+  else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
+    isFixedPositioned = PR_TRUE;
+  }
+
+  nsCOMPtr<nsIXTFElement> xtfElem = do_QueryInterface(aContent);
+  NS_ASSERTION(xtfElem, "huh? no xtf element?");
+  PRUint32 elementType=nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT;
+  xtfElem->GetElementType(&elementType);
+  switch(elementType) {
+    case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
+      processChildren = PR_TRUE;
+      rv = NS_NewXTFSVGDisplayFrame(aPresShell, aContent, &newFrame);
+      break;
+    case nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT:
+      NS_ERROR("huh? ELEMENT_TYPE_GENERIC_ELEMENT should have been flagged by caller");
+      break;
+    case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
+    default:
+      // just let the caller generate a default frame
+      return NS_OK;
+  }
+
+  // If we succeeded in creating a frame then initialize it, process its
+  // children (if requested), and set the initial child list
+  if (NS_SUCCEEDED(rv) && newFrame != nsnull) {
+
+    nsIFrame* geometricParent = isAbsolutelyPositioned
+                              ? aState.mAbsoluteItems.containingBlock
+                              : aParentFrame;
+
+    InitAndRestoreFrame(aPresContext, aState, aContent, 
+                        geometricParent, aStyleContext, nsnull, newFrame);
+
+    nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, forceView);
+    
+    // Process the child content if requested
+    nsFrameItems childItems;
+    if (processChildren) {
+      rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
+                           newFrame, PR_TRUE, childItems, isBlock);
+      
+//      CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
+//                            PR_FALSE, childItems);
+      // don't check tag:
+        CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, mDocument, newFrame,
+                              PR_FALSE, childItems);
+    }
+
+    // Set the frame's initial child list
+    newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
+    
+    // If the frame is absolutely positioned then create a placeholder frame
+    if (isAbsolutelyPositioned || isFixedPositioned) {
+      nsIFrame* placeholderFrame;
+      
+      CreatePlaceholderFrameFor(aPresShell, aPresContext, aState.mFrameManager, aContent, newFrame, 
+                                aStyleContext, aParentFrame, &placeholderFrame);
+      
+      // Add the positioned frame to its containing block's list of child frames
+      if (isAbsolutelyPositioned) {
+        aState.mAbsoluteItems.AddChild(newFrame);
+      } else {
+        aState.mFixedItems.AddChild(newFrame);
+      }
+      
+      // Add the placeholder frame to the flow
+      aFrameItems.AddChild(placeholderFrame);
+    } else {
+      // Add the new frame to our list of frame items.
+      aFrameItems.AddChild(newFrame);
+    }
+  }
+  return rv;
+}
+#endif // MOZ_XTF
+
+
 // SVG 
 #ifdef MOZ_SVG
 nsresult
@@ -7046,7 +7172,7 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
     return NS_OK;
   }
   
-  if (aTag == nsLayoutAtoms::textTagName) 
+  if (aContent->IsContentOfType(nsIContent::eTEXT)) 
     return ConstructTextFrame(aPresShell, aPresContext, aState,
                               aContent, aParentFrame, styleContext,
                               aFrameItems);
@@ -7099,6 +7225,26 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
   }
 #endif
 
+// XTF
+#ifdef MOZ_XTF
+  if (NS_SUCCEEDED(rv) &&
+      ((nsnull == aFrameItems.childList) ||
+       (lastChild == aFrameItems.lastChild))) {
+    nsCOMPtr<nsIXTFElement> xtfElem = do_QueryInterface(aContent);
+    if (xtfElem) {
+      PRUint32 elementType=nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT;
+      xtfElem->GetElementType(&elementType);
+      if (elementType==nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT) {
+        // we don't build frames for generic elements, only for visuals
+        aState.mFrameManager->SetUndisplayedContent(aContent, styleContext);
+        return NS_OK;
+      } else 
+        rv = ConstructXTFFrame(aPresShell, aPresContext, aState, aContent, aParentFrame,
+                               aTag, aNameSpaceID, styleContext, aFrameItems);
+    }
+  }
+#endif
+  
   if (NS_SUCCEEDED(rv) && ((nsnull == aFrameItems.childList) ||
                            (lastChild == aFrameItems.lastChild))) {
     // When there is no explicit frame to create, assume it's a

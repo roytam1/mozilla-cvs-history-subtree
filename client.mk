@@ -52,7 +52,70 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+
+# Pull the XTF mini-branch:
+MOZ_CO_TAG = XTF_20040312_BRANCH
+# Not all files are tagged. By adding '-f' to CVS_CO_FLAGS, below, we
+# pull the head revision if a file is not tagged.
+
+# Lists of all tagged files on the XTF mini-branch. Used for the
+# branch maintenance targets, below.
+
+# List of modified files
+XTF_BRANCH_MODIFIED_FILES = \
+	allmakefiles.sh \
+	client.mk \
+	configure.in \
+	configure \
+	config/autoconf.mk.in \
+	config/rules.mk \
+	content/Makefile.in \
+	content/base/src/nsNameSpaceManager.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	layout/Makefile.in \
+	layout/build/Makefile.in \
+	layout/build/nsLayoutModule.cpp \
+	layout/html/style/src/nsCSSFrameConstructor.cpp \
+	layout/html/style/src/nsCSSFrameConstructor.h 
+
+# List of new files on branch
+XTF_BRANCH_NEW_FILES = \
+	content/xtf/Makefile.in \
+	content/xtf/public/Makefile.in \
+	content/xtf/public/nsIXMLContentBuilder.idl \
+	content/xtf/public/nsIXMLContentFragment.idl \
+	content/xtf/public/nsIXTFElement.idl \
+	content/xtf/public/nsIXTFElementFactory.idl \
+	content/xtf/public/nsIXTFElementWrapper.idl \
+	content/xtf/public/nsIXTFGenericElement.idl \
+	content/xtf/public/nsIXTFGenericElementWrapper.idl \
+	content/xtf/public/nsIXTFSVGVisual.idl \
+	content/xtf/public/nsIXTFSVGVisualWrapper.idl \
+	content/xtf/public/nsIXTFXMLVisual.idl \
+	content/xtf/public/nsIXTFXMLVisualWrapper.idl \
+	content/xtf/src/Makefile.in \
+	content/xtf/src/nsIXTFService.h \
+	content/xtf/src/nsXMLContentFragment.cpp \
+	content/xtf/src/nsXTFGenericElementWrapper.cpp \
+	content/xtf/src/nsXTFGenericElementWrapper.h \
+	content/xtf/src/nsXTFInterfaceAggregator.cpp \
+	content/xtf/src/nsXTFInterfaceAggregator.h \
+	content/xtf/src/nsXTFSVGVisualWrapper.cpp \
+	content/xtf/src/nsXTFSVGVisualWrapper.h \
+	content/xtf/src/nsXTFService.cpp \
+	content/xtf/src/nsXTFWeakTearoff.cpp \
+	content/xtf/src/nsXTFWeakTearoff.h \
+	content/xtf/src/nsXTFXMLVisualWrapper.cpp \
+	content/xtf/src/nsXTFXMLVisualWrapper.h \
+	content/xtf/tests/Makefile.in \
+	content/xtf/tests/smiley/Makefile.in \
+	content/xtf/tests/smiley/smiley.js \
+	content/xtf/tests/smiley/smiley.svg \
+	layout/xtf/Makefile.in \
+	layout/xtf/src/Makefile.in \
+	layout/xtf/src/nsXTFSVGDisplayFrame.cpp
+
+
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = NSS_CLIENT_TAG
@@ -131,7 +194,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS := -r $(MOZ_CO_TAG)
+  CVS_CO_FLAGS := -f -r $(MOZ_CO_TAG)
 endif
 
 ####################################
@@ -631,6 +694,20 @@ ifdef RUN_AUTOCONF_LOCALLY
 	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
 	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
 endif
+
+####################################
+# XTF branch maintenance:
+commit_xtf:
+	cvs -z3 ci $(XTF_BRANCH_MODIFIED_FILES) $(XTF_BRANCH_NEW_FILES)
+
+merge_xtf:
+	cvs -z3 up -dP -jXTF_20040312_BASE -jHEAD $(XTF_BRANCH_MODIFIED_FILES)
+
+statictag_xtf:
+	cvs -z3 tag -F -rHEAD XTF_20040312_BASE $(XTF_BRANCH_MODIFIED_FILES)
+
+#branchtag_xtf:
+#	cvs -z3 tag -b XTF_20040312_BRANCH $(XTF_BRANCH_MODIFIED_FILES)
 
 ####################################
 # Web configure

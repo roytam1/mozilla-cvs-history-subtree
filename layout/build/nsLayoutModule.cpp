@@ -194,6 +194,11 @@ PR_STATIC_CALLBACK(void) Shutdown(nsIModule* aSelf);
 #include "nsMathMLOperators.h"
 #endif
 
+#ifdef MOZ_XTF
+#include "nsIXTFService.h"
+#include "nsIXMLContentFragment.h"
+#endif
+
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
 #include "nsSVGTypeCIDs.h"
@@ -594,6 +599,10 @@ MAKE_CTOR(CreateXULElementFactory,        nsIElementFactory,           NS_NewXUL
 #endif
 #ifdef MOZ_MATHML
 MAKE_CTOR(CreateMathMLElementFactory,     nsIElementFactory,           NS_NewMathMLElementFactory)
+#endif
+#ifdef MOZ_XTF
+MAKE_CTOR(CreateXTFService,               nsIXTFService,               NS_NewXTFService)
+MAKE_CTOR(CreateXMLContentFragment,       nsIXMLContentFragment,       NS_NewXMLContentFragment)
 #endif
 #ifdef MOZ_SVG
 MAKE_CTOR(CreateSVGElementFactory,        nsIElementFactory,           NS_NewSVGElementFactory)
@@ -1268,6 +1277,18 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_MATHMLELEMENTFACTORY_CID,
     NS_MATHML_ELEMENT_FACTORY_CONTRACTID,
     CreateMathMLElementFactory },
+#endif
+
+#ifdef MOZ_XTF
+  { "XTF Service",
+    NS_XTFSERVICE_CID,
+    NS_XTFSERVICE_CONTRACTID,
+    CreateXTFService },
+
+  { "XML Content Fragment",
+    NS_XMLCONTENTFRAGMENT_CID,
+    NS_XMLCONTENTFRAGMENT_CONTRACTID,
+    CreateXMLContentFragment },
 #endif
 
 #ifdef MOZ_SVG

@@ -34,6 +34,10 @@ ifdef MOZ_MATHML
 DIRS           += mathml
 endif
 
+ifdef MOZ_XTF
+DIRS           += xtf
+endif
+
 ifdef MOZ_SVG
 DIRS           += svg
 endif

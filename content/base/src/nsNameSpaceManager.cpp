@@ -45,6 +45,12 @@
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
 
+#ifdef MOZ_XTF
+#include "nsIXTFService.h"
+#include "nsIXTFElementFactory.h"
+static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
+#endif
+
 static nsINameSpaceManager* gNameSpaceManager = nsnull;
 
 nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
@@ -485,6 +491,26 @@ NameSpaceManagerImpl::GetElementFactory(PRInt32 aNameSpaceID,
     nsCAutoString contract_id(NS_ELEMENT_FACTORY_CONTRACTID_PREFIX);
     AppendUTF16toUTF8(uri, contract_id);
     ef = do_GetService(contract_id.get());
+#ifdef MOZ_XTF
+    if (!ef) {
+      // check if we maybe have an XTF factory for the given uri:
+      nsCAutoString xtf_contract_id(NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX);
+      AppendUTF16toUTF8(uri, xtf_contract_id);
+#ifdef DEBUG
+      printf("Testing for XTF factory at %s\n", xtf_contract_id.get());
+#endif
+      nsCOMPtr<nsIXTFElementFactory> xtfFactory = do_GetService(xtf_contract_id.get());
+      if (xtfFactory) {
+#ifdef DEBUG
+        printf("We've got an XTF factory.\n");
+#endif
+        // bingo. create a wrapper.
+        nsCOMPtr<nsIXTFService> xtfService = do_GetService(kXTFServiceCID); // XXX we'll want to cache this
+        NS_ASSERTION(xtfService, "could not get XTF service!");
+        xtfService->WrapXTFElementFactory(xtfFactory, getter_AddRefs(ef));        
+      }
+    }
+#endif    
   }
 
   if (!ef) {

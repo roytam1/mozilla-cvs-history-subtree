@@ -1472,6 +1472,28 @@ endif
 endif
 
 ################################################################################
+# Copy each element of JS_COMPONENTS to components dir after filtering
+# through the preprocessor
+
+ifdef JS_COMPONENTS
+libs:: $(JS_COMPONENTS)
+ifndef NO_DIST_INSTALL
+	$(EXIT_ON_ERROR) \
+	for i in $(JS_COMPONENTS); \
+	do $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) $$i > $(DIST)/bin/components/`basename $$i`; \
+	done
+endif
+
+install:: $(JS_COMPONENTS)
+ifndef NO_INSTALL
+	$(EXIT_ON_ERROR) \
+	for i in $(JS_COMPONENTS); \
+	do $(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) $$i > $(DESTDIR)$(mozappdir)/components/`basename $$i`; \
+	done
+endif
+endif
+
+################################################################################
 # SDK
 
 ifneq (,$(SDK_BINARY))
