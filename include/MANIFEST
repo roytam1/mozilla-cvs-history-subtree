@@ -57,6 +57,7 @@ np.h
 np2.h
 npapi.h
 npassoc.h
+npupp.h
 nsldap.h
 nslocks.h
 ntos.h
