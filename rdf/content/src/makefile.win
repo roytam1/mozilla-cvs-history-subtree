@@ -27,7 +27,8 @@ LCFLAGS = \
         $(NULL)
 
 CPP_OBJS=\
-        .\$(OBJDIR)\nsJSXULNode.obj               \
+        .\$(OBJDIR)\nsJSXULDocument.obj           \
+        .\$(OBJDIR)\nsJSXULElement.obj            \
         .\$(OBJDIR)\nsRDFContentUtils.obj         \
         .\$(OBJDIR)\nsRDFDOMNodeList.obj          \
         .\$(OBJDIR)\nsRDFGenericElement.obj       \

@@ -22,7 +22,8 @@ DEPTH=..\..\..
 
 EXPORTS	= \
         nsIDOMNodeObserver.h            \
-        nsIDOMXULNode.h                 \
+        nsIDOMXULDocument.h             \
+        nsIDOMXULElement.h              \
         nsIRDFContent.h                 \
         nsIRDFContentModelBuilder.h     \
         nsIRDFDocument.h                \

@@ -30,15 +30,7 @@
 
   TO DO
 
-  1) In the absence of XSL, at least factor out the strategy used to
-     build the content model so that multiple models can be build
-     (e.g., table-like HTML vs. XUI tree control, etc.)
-
-     This involves both hacking the code that generates children for
-     presentation, and the code that manipulates children via the DOM,
-     which leads us to the next item...
-
-  2) Implement DOM interfaces.
+  1) Implement DOM interfaces.
 
  */
 
@@ -55,11 +47,13 @@
 #include "nsHashtable.h"
 #include "nsIAtom.h"
 #include "nsIContent.h"
+#include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMNodeObserver.h"
 #include "nsIDOMScriptObjectFactory.h"
+#include "nsIDOMXULElement.h"
 #include "nsIDocument.h"
 #include "nsIEventListenerManager.h"
 #include "nsIEventStateManager.h"
@@ -72,6 +66,7 @@
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
@@ -79,6 +74,11 @@
 #include "nsRDFCID.h"
 #include "nsRDFContentUtils.h"
 #include "nsRDFDOMNodeList.h"
+#include "nsStyleConsts.h"
+
+// The XUL interfaces implemented by the RDF content node.
+#include "nsIDOMXULElement.h"
+// End of XUL interface includes
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -104,10 +104,20 @@ static NS_DEFINE_CID(kEventListenerManagerCID, NS_EVENTLISTENERMANAGER_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,     NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
 
+struct XULBroadcastListener
+{
+	nsString mAttribute;
+	nsCOMPtr<nsIDOMNode> mListener;
+
+	XULBroadcastListener(const nsString& attr, nsIDOMNode* listen)
+		: mAttribute(attr), mListener(listen)
+	{ // Nothing else to do 
+	}
+};
 
 ////////////////////////////////////////////////////////////////////////
 
-class RDFResourceElementImpl : public nsIDOMElement,
+class RDFResourceElementImpl : public nsIDOMXULElement,
                                public nsIDOMEventReceiver,
                                public nsIScriptObjectOwner,
                                public nsIJSScriptObject,
@@ -204,6 +214,12 @@ public:
     virtual PRBool Convert(JSContext *aContext, jsval aID);
     virtual void   Finalize(JSContext *aContext);
 
+    // nsIDOMXULElement
+	  NS_IMETHOD DoCommand();
+
+	  NS_IMETHOD AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
+	  NS_IMETHOD RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
+
 protected:
     /** The document in which the element lives. */
     nsIDocument*      mDocument;
@@ -238,12 +254,19 @@ protected:
      * Dynamically generate the element's children from the RDF graph
      */
     nsresult EnsureContentsGenerated(void) const;
+
+    /** A pointer to a broadcaster. Only non-null if we are observing someone. **/
+	  nsIDOMNode*		  mBroadcaster;
+
+	  /** An array of broadcast listeners. **/
+	  nsVoidArray		  mBroadcastListeners;
 };
 
 ////////////////////////////////////////////////////////////////////////
 // RDFResourceElementImpl
 
 static PRInt32 kNameSpaceID_RDF;
+static PRInt32 kNameSpaceID_XUL;
 static nsIAtom* kIdAtom;
 
 RDFResourceElementImpl::RDFResourceElementImpl(nsIRDFResource* aResource,
@@ -258,7 +281,8 @@ RDFResourceElementImpl::RDFResourceElementImpl(nsIRDFResource* aResource,
       mListenerManager(nsnull),
       mAttributes(nsnull),
       mResource(aResource),
-      mContentsMustBeGenerated(PR_FALSE)
+      mContentsMustBeGenerated(PR_FALSE),
+      mBroadcaster(nsnull)
 {
     NS_INIT_REFCNT();
     NS_ADDREF(aResource);
@@ -266,6 +290,10 @@ RDFResourceElementImpl::RDFResourceElementImpl(nsIRDFResource* aResource,
 
     if (nsnull == kIdAtom) {
         kIdAtom = NS_NewAtom("id");
+
+        // XXX This is really wrong, because the namespace IDs may go
+        // out of scope. We need to hold on to the namespace manager,
+        // or maybe use the document's namespace manager.
 
         nsresult rv;
         nsINameSpaceManager* mgr;
@@ -278,6 +306,13 @@ static const char kRDFNameSpaceURI[]
 
             rv = mgr->RegisterNameSpace(kRDFNameSpaceURI, kNameSpaceID_RDF);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register RDF namespace");
+
+#define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+static const char kXULNameSpaceURI[]
+    = XUL_NAMESPACE_URI;
+
+            rv = mgr->RegisterNameSpace(kXULNameSpaceURI, kNameSpaceID_XUL);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
 
             NS_RELEASE(mgr);
         }
@@ -312,6 +347,14 @@ RDFResourceElementImpl::~RDFResourceElementImpl()
 
     nsrefcnt refcnt;
     NS_RELEASE2(kIdAtom, refcnt);
+
+    // Release our broadcast listeners
+	  PRInt32 count = mBroadcastListeners.Count();
+	  for (PRInt32 i = 0; i < count; i++)
+	  {
+		  XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[0];
+		  RemoveBroadcastListener(xulListener->mAttribute, xulListener->mListener);
+	  }
 }
 
 
@@ -357,7 +400,8 @@ RDFResourceElementImpl::QueryInterface(REFNSIID iid, void** result)
         iid.Equals(kISupportsIID)) {
         *result = NS_STATIC_CAST(nsIRDFContent*, this);
     }
-    else if (iid.Equals(kIDOMElementIID) ||
+    else if (iid.Equals(nsIDOMXULElement::IID()) ||
+             iid.Equals(kIDOMElementIID) ||
              iid.Equals(kIDOMNodeIID)) {
         *result = NS_STATIC_CAST(nsIDOMElement*, this);
     }
@@ -394,34 +438,46 @@ RDFResourceElementImpl::GetNodeName(nsString& aNodeName)
 NS_IMETHODIMP
 RDFResourceElementImpl::GetNodeValue(nsString& aNodeValue)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    aNodeValue.Truncate();
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 RDFResourceElementImpl::SetNodeValue(const nsString& aNodeValue)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::GetNodeType(PRUint16* aNodeType)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aNodeType = (PRUint16)nsIDOMNode::ELEMENT_NODE;
+  return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::GetParentNode(nsIDOMNode** aParentNode)
 {
-    NS_PRECONDITION(mParent != nsnull, "not initialized");
-    if (!mParent)
-        return NS_ERROR_NOT_INITIALIZED;
+    if (mParent) {
+        return mParent->QueryInterface(kIDOMNodeIID, (void**) aParentNode);
+    }
+    else if (mDocument) {
+        // If we don't have a parent, but we're in the document, we must
+        // be the root node of the document. The DOM says that the root
+        // is the document.
+        return mDocument->QueryInterface(kIDOMNodeIID, (void**)aParentNode);
+    }
+    else {
+        // A standalone element (i.e. one without a parent or a document)
+        // implicitly has a document fragment as its parent according to
+        // the DOM.
 
-    return mParent->QueryInterface(kIDOMNodeIID, (void**) aParentNode);
+        // XXX create a doc fragment here as a pseudo-parent.
+        NS_NOTYETIMPLEMENTED("can't handle standalone RDF elements");
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
 }
 
 
@@ -467,32 +523,92 @@ RDFResourceElementImpl::GetChildNodes(nsIDOMNodeList** aChildNodes)
 NS_IMETHODIMP
 RDFResourceElementImpl::GetFirstChild(nsIDOMNode** aFirstChild)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+    nsIContent* child;
+    if (NS_SUCCEEDED(rv = ChildAt(0, child))) {
+        rv = child->QueryInterface(kIDOMNodeIID, (void**) aFirstChild);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
+        NS_RELEASE(child); // balance the AddRef in ChildAt()
+        return rv;
+    }
+    else {
+        *aFirstChild = nsnull;
+        return NS_OK;
+    }
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::GetLastChild(nsIDOMNode** aLastChild)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+    PRInt32 count;
+    if (NS_FAILED(rv = ChildCount(count))) {
+        NS_ERROR("unable to get child count");
+        return rv;
+    }
+    if (count) {
+        nsIContent* child;
+        if (NS_SUCCEEDED(rv = ChildAt(count - 1, child))) {
+            rv = child->QueryInterface(kIDOMNodeIID, (void**) aLastChild);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
+            NS_RELEASE(child); // balance the AddRef in ChildAt()
+        }
+        return rv;
+    }
+    else {
+        *aLastChild = nsnull;
+        return NS_OK;
+    }
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (nsnull != mParent) {
+        PRInt32 pos;
+        mParent->IndexOf(this, pos);
+        if (pos > -1) {
+            nsIContent* prev;
+            mParent->ChildAt(--pos, prev);
+            if (prev) {
+                nsresult rv = prev->QueryInterface(kIDOMNodeIID, (void**) aPreviousSibling);
+                NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
+                NS_RELEASE(prev); // balance the AddRef in ChildAt()
+                return rv;
+            }
+        }
+    }
+
+    // XXX Nodes that are just below the document (their parent is the
+    // document) need to go to the document to find their previous sibling.
+    *aPreviousSibling = nsnull;
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::GetNextSibling(nsIDOMNode** aNextSibling)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (nsnull != mParent) {
+        PRInt32 pos;
+        mParent->IndexOf(this, pos);
+        if (pos > -1) {
+            nsIContent* next;
+            mParent->ChildAt(++pos, next);
+            if (nsnull != next) {
+                nsresult res = next->QueryInterface(kIDOMNodeIID, (void**) aNextSibling);
+                NS_ASSERTION(NS_OK == res, "not a DOM Node");
+                NS_RELEASE(next); // balance the AddRef in ChildAt()
+                return res;
+            }
+        }
+    }
+    // XXX Nodes that are just below the document (their parent is the
+    // document) need to go to the document to find their next sibling.
+    *aNextSibling = nsnull;
+    return NS_OK;
 }
 
 
@@ -507,8 +623,13 @@ RDFResourceElementImpl::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 NS_IMETHODIMP
 RDFResourceElementImpl::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    if (mDocument) {
+        return mDocument->QueryInterface(nsIDOMDocument::IID(), (void**) aOwnerDocument);
+    }
+    else {
+        *aOwnerDocument = nsnull;
+        return NS_OK;
+    }
 }
 
 
@@ -533,8 +654,18 @@ RDFResourceElementImpl::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChil
 NS_IMETHODIMP
 RDFResourceElementImpl::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_PRECONDITION(aReturn != nsnull, "null ptr");
+    if (! aReturn)
+        return NS_ERROR_NULL_POINTER;
+
+    nsIDOMNodeObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+        obs->OnReplaceChild(this, aNewChild, aOldChild);
+        NS_RELEASE(obs);
+    }
+    NS_ADDREF(aNewChild);
+    *aReturn = aNewChild;
+    return NS_OK;
 }
 
 
@@ -559,16 +690,32 @@ RDFResourceElementImpl::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 RDFResourceElementImpl::AppendChild(nsIDOMNode* aNewChild, nsIDOMNode** aReturn)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_PRECONDITION(aReturn != nsnull, "null ptr");
+    if (! aReturn)
+        return NS_ERROR_NULL_POINTER;
+
+    nsIDOMNodeObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+        obs->OnAppendChild(this, aNewChild);
+        NS_RELEASE(obs);
+    }
+    NS_ADDREF(aNewChild);
+    *aReturn = aNewChild;
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::HasChildNodes(PRBool* aReturn)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+    PRInt32 count;
+    if (NS_FAILED(rv = ChildCount(count))) {
+        NS_ERROR("unable to count kids");
+        return rv;
+    }
+    *aReturn = (count > 0);
+    return NS_OK;
 }
 
 
@@ -577,14 +724,6 @@ RDFResourceElementImpl::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
-
-#if 0
-    RDFResourceElementImpl* it = new RDFResourceElementImpl();
-    if (! it)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    return it->QueryInterface(kIDOMNodeIID, (void**) aReturn);
-#endif
 }
 
 
@@ -594,28 +733,7 @@ RDFResourceElementImpl::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 RDFResourceElementImpl::GetTagName(nsString& aTagName)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
-NS_IMETHODIMP 
-RDFResourceElementImpl::ParseAttributeString(const nsString& aStr, 
-                                             nsIAtom*& aName, 
-                                             PRInt32& aNameSpaceID)
-{
-    // XXX Need to implement
-    aName = nsnull;
-    aNameSpaceID = kNameSpaceID_None;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-RDFResourceElementImpl::GetNameSpacePrefix(PRInt32 aNameSpaceID, 
-                                           nsIAtom*& aPrefix)
-{
-    // XXX Need to implement
-    aPrefix = nsnull;
+    mTag->ToString(aTagName);
     return NS_OK;
 }
 
@@ -631,16 +749,24 @@ RDFResourceElementImpl::GetAttribute(const nsString& aName, nsString& aReturn)
 NS_IMETHODIMP
 RDFResourceElementImpl::SetAttribute(const nsString& aName, const nsString& aValue)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsIAtom* nameAtom;
+    PRInt32 nameSpaceID;
+
+    ParseAttributeString(aName, nameAtom, nameSpaceID);
+    SetAttribute(nameSpaceID, nameAtom, aValue, PR_TRUE);
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFResourceElementImpl::RemoveAttribute(const nsString& aName)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsIAtom* nameAtom;
+    PRInt32 nameSpaceID;
+
+    ParseAttributeString(aName, nameAtom, nameSpaceID);
+    UnsetAttribute(nameSpaceID, nameAtom, PR_TRUE);
+    return NS_OK;
 }
 
 
@@ -750,30 +876,13 @@ RDFResourceElementImpl::GetScriptObject(nsIScriptContext* aContext, void** aScri
     nsresult rv = NS_OK;
 
     if (! mScriptObject) {
-static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,  NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-static NS_DEFINE_IID(kIDOMScriptObjectFactoryIID, NS_IDOM_SCRIPT_OBJECT_FACTORY_IID);
-        
-        nsIDOMScriptObjectFactory* factory;
-        rv = nsServiceManager::GetService(kDOMScriptObjectFactoryCID,
-                                          kIDOMScriptObjectFactoryIID,
-                                          (nsISupports **) &factory);
+        nsIScriptGlobalObject *global = aContext->GetGlobalObject();
+        rv = NS_NewScriptXULElement(aContext,
+                                    (nsISupports*)(nsIDOMXULElement*) this,
+                                    global,
+                                    (void**) &mScriptObject);
 
-        if (NS_FAILED(rv)) {
-            NS_ERROR("unable to get script object factory");
-            return rv;
-        }
-
-        nsAutoString tag;
-        mTag->ToString(tag);
-
-        rv = factory->NewScriptXMLElement(tag,
-                                          aContext,
-                                          NS_STATIC_CAST(nsIContent*, this),
-                                          mParent,
-                                          (void**)&mScriptObject);
-
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create new script element");
-        nsServiceManager::ReleaseService(kDOMScriptObjectFactoryCID, factory);
+        NS_RELEASE(global);
     }
 
     *aScriptObject = mScriptObject;
@@ -1125,15 +1234,60 @@ RDFResourceElementImpl::GetTag(nsIAtom*& aResult) const
     return NS_OK;
 }
 
+NS_IMETHODIMP 
+RDFResourceElementImpl::ParseAttributeString(const nsString& aStr, 
+                                             nsIAtom*& aName, 
+                                             PRInt32& aNameSpaceID)
+{
+static char kNameSpaceSeparator[] = ":";
+
+    nsAutoString prefix;
+    nsAutoString name(aStr);
+    PRInt32 nsoffset = name.Find(kNameSpaceSeparator);
+    if (-1 != nsoffset) {
+        name.Left(prefix, nsoffset);
+        name.Cut(0, nsoffset+1);
+    }
+
+    // XXX This is wrong: we need to implement nsIXMLContent so
+    // that we can get the namespace scoping set up properly for
+    // this tag.
+    aNameSpaceID = kNameSpaceID_XUL;
+
+#if 0
+    // Figure out the namespace ID
+    aNameSpaceID = kNameSpaceID_None;
+    if (0 < prefix.Length()) {
+        nsIAtom* nameSpaceAtom = NS_NewAtom(prefix);
+        if (mNameSpace) {
+            mNameSpace->FindNameSpaceID(nameSpaceAtom, aNameSpaceID);
+        }
+        NS_RELEASE(nameSpaceAtom);
+    }
+#endif
+
+    aName = NS_NewAtom(name);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+RDFResourceElementImpl::GetNameSpacePrefix(PRInt32 aNameSpaceID, 
+                                           nsIAtom*& aPrefix)
+{
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 
 // XXX attribute code swiped from nsGenericContainerElement
 // this class could probably just use nsGenericContainerElement
 // needed to maintain attribute namespace ID as well as ordering
 NS_IMETHODIMP 
 RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
-                                   nsIAtom* aName, 
-                                   const nsString& aValue,
-                                   PRBool aNotify)
+                             nsIAtom* aName, 
+                             const nsString& aValue,
+                             PRBool aNotify)
 {
     NS_ASSERTION(kNameSpaceID_Unknown != aNameSpaceID, "must have name space ID");
     if (kNameSpaceID_Unknown == aNameSpaceID) {
@@ -1151,6 +1305,7 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
 
     nsresult rv;
     nsGenericAttribute* attr;
+    PRBool successful = PR_FALSE;
     PRInt32 index;
     PRInt32 count = mAttributes->Count();
     for (index = 0; index < count; index++) {
@@ -1158,6 +1313,7 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         if ((aNameSpaceID == attr->mNameSpaceID) && (aName == attr->mName)) {
             attr->mValue = aValue;
             rv = NS_OK;
+            successful = PR_TRUE;
             break;
         }
     }
@@ -1167,10 +1323,36 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         if (nsnull != attr) {
             mAttributes->AppendElement(attr);
             rv = NS_OK;
+            successful = PR_TRUE;
         }
     }
 
-    // XXX notify doc?
+	// XUL Only. Find out if we have a broadcast listener for this element.
+	if (successful)
+        {
+            count = mBroadcastListeners.Count();
+            for (PRInt32 i = 0; i < count; i++)
+                {
+                    XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+                    nsString aString;
+                    aName->ToString(aString);
+                    if (xulListener->mAttribute.EqualsIgnoreCase(aString))
+                        {
+                            // Set the attribute in the broadcast listener.
+                            nsCOMPtr<nsIContent> contentNode(xulListener->mListener);
+                            if (contentNode)
+                                {
+                                    contentNode->SetAttribute(aNameSpaceID, aName, aValue, aNotify);
+                                }
+                        }
+                }
+        }
+	// End XUL Only Code
+
+    if (NS_SUCCEEDED(rv) && aNotify && (nsnull != mDocument)) {
+        mDocument->AttributeChanged(this, aName, NS_STYLE_HINT_UNKNOWN);
+    }
+
     return rv;
 }
 
@@ -1223,7 +1405,9 @@ done:
 #endif // defined(CREATE_PROPERTIES_AS_ATTRIBUTES)
 
     // Simulate the RDF:ID attribute to be the resource's URI
-    if (aNameSpaceID == kNameSpaceID_RDF && aName == kIdAtom) {
+    if (((aNameSpaceID == kNameSpaceID_RDF) ||
+         (aNameSpaceID == kNameSpaceID_Unknown)) &&
+        aName == kIdAtom) {
         const char* uri;
         if (NS_FAILED(rv = mResource->GetValue(&uri)))
             return rv;
@@ -1237,7 +1421,9 @@ done:
         PRInt32 index;
         for (index = 0; index < count; index++) {
             const nsGenericAttribute* attr = (const nsGenericAttribute*)mAttributes->ElementAt(index);
-            if ((attr->mNameSpaceID == aNameSpaceID) && (attr->mName == aName)) {
+            if (((attr->mNameSpaceID == aNameSpaceID) ||
+                 (aNameSpaceID == kNameSpaceID_Unknown)) &&
+                (attr->mName == aName)) {
                 aResult = attr->mValue;
                 if (0 < aResult.Length()) {
                     rv = NS_CONTENT_ATTR_HAS_VALUE;
@@ -1261,7 +1447,7 @@ RDFResourceElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRB
     }
 
     nsresult rv = NS_OK;
-
+    PRBool successful = PR_FALSE;
     if (nsnull != mAttributes) {
         PRInt32 count = mAttributes->Count();
         PRInt32 index;
@@ -1270,12 +1456,38 @@ RDFResourceElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRB
             if ((attr->mNameSpaceID == aNameSpaceID) && (attr->mName == aName)) {
                 mAttributes->RemoveElementAt(index);
                 delete attr;
+                successful = PR_TRUE;
                 break;
             }
         }
-
-        // XXX notify document??
     }
+
+    // XUL Only. Find out if we have a broadcast listener for this element.
+    if (successful)
+        {
+            PRInt32 count = mBroadcastListeners.Count();
+            for (PRInt32 i = 0; i < count; i++)
+                {
+                    XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+                    nsString aString;
+                    aName->ToString(aString);
+                    if (xulListener->mAttribute.EqualsIgnoreCase(aString))
+                        {
+                            // Unset the attribute in the broadcast listener.
+                            nsCOMPtr<nsIContent> contentNode(xulListener->mListener);
+                            if (contentNode)
+                                {
+                                    contentNode->UnsetAttribute(aNameSpaceID, aName, aNotify);
+                                }
+                        }
+                }
+
+            // Notify document
+            if (NS_SUCCEEDED(rv) && aNotify && (nsnull != mDocument)) {
+                mDocument->AttributeChanged(this, aName, NS_STYLE_HINT_UNKNOWN);
+            }
+        }
+    // End XUL Only Code
 
     return rv;
 }
@@ -1629,4 +1841,69 @@ RDFResourceElementImpl::EnsureContentsGenerated(void) const
     return rv;
 }
 
+// nsIDOMXULElement
+NS_IMETHODIMP
+RDFResourceElementImpl::DoCommand()
+{
+	return NS_OK;
+}
 
+NS_IMETHODIMP
+RDFResourceElementImpl::AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode) 
+{ 
+	// Add ourselves to the array.
+	NS_ADDREF(aNode);
+	mBroadcastListeners.AppendElement(new XULBroadcastListener(attr, aNode));
+
+	// We need to sync up the initial attribute value.
+  nsCOMPtr<nsIContent> pListener(aNode);
+
+  // Retrieve our namespace
+  PRInt32 namespaceID;
+  GetNameSpaceID(namespaceID);
+
+  // Find out if the attribute is even present at all.
+  nsString attrValue;
+  nsIAtom* kAtom = NS_NewAtom(attr);
+	nsresult result = GetAttribute(namespaceID, kAtom, attrValue);
+	PRBool attrPresent = (result == NS_CONTENT_ATTR_NO_VALUE ||
+                        result == NS_CONTENT_ATTR_HAS_VALUE);
+
+	if (attrPresent)
+  {
+    // Set the attribute 
+    pListener->SetAttribute(namespaceID, kAtom, attrValue, PR_TRUE);
+  }
+  else
+  {
+    // Unset the attribute
+    pListener->UnsetAttribute(namespaceID, kAtom, PR_TRUE);
+  }
+
+  NS_RELEASE(kAtom);
+
+	return NS_OK; 
+}
+	
+
+NS_IMETHODIMP
+RDFResourceElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode) 
+{ 
+	// Find the node.
+	PRInt32 count = mBroadcastListeners.Count();
+	for (PRInt32 i = 0; i < count; i++)
+	{
+		XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+		
+		if (xulListener->mAttribute == attr &&
+			xulListener->mListener == aNode)
+		{
+			// Do the removal.
+			mBroadcastListeners.RemoveElementAt(i);
+			delete xulListener;
+			return NS_OK;
+		}
+	}
+
+	return NS_OK;
+}
