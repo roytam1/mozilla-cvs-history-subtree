@@ -50,7 +50,7 @@ pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties
 pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region.properties");
 pref("general.useragent.misc", "rv:1.3b");
 pref("general.useragent.vendor", "Minotaur");
-pref("general.useragent.vendorSub", "0.1");
+pref("general.useragent.vendorSub", "0.1a");
 
 pref("general.startup.browser",             false);
 pref("general.startup.mail",                false);
