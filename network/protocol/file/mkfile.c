@@ -42,7 +42,7 @@
 #include "libimg.h"             /* Image Lib public API. */
 #else
 #include "il_types.h"
-IL_EXTERN(int);
+IL_EXTERN(int)
 IL_Type(const char *buf, int32 len);
 #endif
 
