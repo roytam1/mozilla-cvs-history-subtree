@@ -1793,7 +1793,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 			    table[j++].offset = off2;
 			}
 		    }
-                    js_HeapSort(table, (size_t) j, sizeof *table,
+                    js_HeapSort(table, (size_t) j, sizeof *table, 
                                 CompareOffsets, NULL);
 		}
 

@@ -60,7 +60,7 @@ extern JSBool
 js_HasLengthProperty(JSContext *cx, JSObject *obj, jsuint *lengthp);
 
 /*
- * JS-specific heap sort function.
+ * JS-specific heap sort function. 
  */
 typedef int (*JSComparator)(const void *a, const void *b, void *arg);
 

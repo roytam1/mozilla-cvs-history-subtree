@@ -597,7 +597,7 @@ array_reverse(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     return JS_TRUE;
 }
 
-typedef struct HSortArgs {
+typedef struct HSortArgs { 
     void         *vec;
     size_t       elsize;
     void         *pivot;
