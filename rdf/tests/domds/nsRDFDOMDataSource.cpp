@@ -538,7 +538,7 @@ nsRDFDOMDataSource::createFrameArcs(nsIFrame* frame,
   nsresult rv;
   nsIFrame *child;
   nsCOMPtr<nsIRDFResource> resource;
-  int i=0;
+
   // primary child list
   frame->FirstChild(nsnull, &child);
   while (child) {
@@ -546,9 +546,7 @@ nsRDFDOMDataSource::createFrameArcs(nsIFrame* frame,
     arcs->AppendElement(resource);
 
     child->GetNextSibling(&child);
-    i++;
   }
-  printf("%d primary children\n", i);
   
   // secondary child lists
   PRInt32 listIndex=0;
@@ -561,12 +559,10 @@ nsRDFDOMDataSource::createFrameArcs(nsIFrame* frame,
       arcs->AppendElement(resource);
       
       child->GetNextSibling(&child);
-      if (child) i++;
     }
 
     frame->GetAdditionalChildListName(listIndex++, getter_AddRefs(childList));
   }
-  printf("Added %d child frame arcs\n", i);
 
   return NS_OK;
 }
@@ -728,13 +724,18 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
 {
   nsresult rv;
 
-  nsIFrame *frame;
-  rv = object->QueryInterface(kFrameIID, (void **)&frame);
-  if (NS_SUCCEEDED(rv)) {
-    return createFrameTarget(frame, aProperty, aResult);
+  // should we display nsIFrames?
+  nsStringKey frameMode("frame");
+  if (mModeTable.Get(&frameMode)) {
+    nsIFrame *frame;
+    rv = object->QueryInterface(kFrameIID, (void **)&frame);
+    if (NS_SUCCEEDED(rv)) {
+      return createFrameTarget(frame, aProperty, aResult);
+    }
   }
-  
-  nsStringKey domMode(nsAutoString("dom"));
+
+  // should we display nsIDOMNodes?
+  nsStringKey domMode("dom");
   if (mModeTable.Get(&domMode)) {
     
     // nsIDOMNode
@@ -744,7 +745,7 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
       return createDOMNodeTarget(node, aProperty, aResult);
   }
 
-  // if we're not in DOM mode, just revert to content mode
+  // if we get this far, default to nsIContent mode
   
   // nsIStyledContent
   // nsIContent
@@ -853,16 +854,19 @@ nsRDFDOMDataSource::getTargetsForKnownObject(nsISupports *object,
   }
 
   // nsIFrame (testing right now)
-  nsIFrame* frame;
-  rv = object->QueryInterface(kFrameIID, (void **)&frame);
-  if (NS_SUCCEEDED(rv)) {
-    printf("creating arcs for frame\n");
-    createFrameArcs(frame, arcs);
+  nsStringKey frameKey("frame");
+  if (mModeTable.Get(&frameKey)) {
+    nsIFrame* frame;
+    rv = object->QueryInterface(kFrameIID, (void **)&frame);
+    if (NS_SUCCEEDED(rv)) {
+      printf("creating arcs for frame\n");
+      createFrameArcs(frame, arcs);
+    }
   }
   
   // nsIDOMNode hierarchy
   nsStringKey domKey("dom");
-  if (mModeTable.Get(&domKey) || useDOM) {
+  if (mModeTable.Get(&domKey)) {
 
     // try HTML first
     //    nsCOMPtr<nsIDOMHTMLElement> htmlElement =
