@@ -97,5 +97,17 @@ interface nsIOutputDevice : nsISupports
   // this should be an array
   void getGamaTable([array, size_is(nelements)] out PRUint8 points,
                     out unsigned long nelements);
+
+
+
+
+
+
+  [noscript] readonly attribute nsSize size;
+
+
+  readonly attribute gfx_depth depth;
+
+
 };
 
