@@ -35,7 +35,6 @@ SDK_XPIDLSRCS =                                 \
 	nsIDOMBarProp.idl			\
 	nsIDOMWindow.idl			\
 	nsIDOMWindow2.idl			\
-	nsIDOMWindowAccess.idl			\
 	nsIDOMWindowCollection.idl		\
 	$(NULL)
 
@@ -56,6 +55,7 @@ XPIDLSRCS =					\
 	nsIDOMWindowInternal.idl		\
 	nsIDOMJSWindow.idl			\
 	nsIDOMChromeWindow.idl			\
+	nsIDOMWindowAccess.idl			\
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
