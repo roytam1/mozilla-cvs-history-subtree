@@ -309,7 +309,7 @@ LM_SetDecoderStream(MWContext * context, NET_VoidStreamClass *stream,
  * script is running on mc, the document is being generated into decoder's
  * window, and url_struct tells about the generator.
  */
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 LM_WysiwygCacheConverter(MWContext *context, URL_Struct *url_struct,
 			 const char * wysiwyg_url, const char * base_href);
 
@@ -556,7 +556,7 @@ LM_RegisterPrincipals(MochaDecoder *decoder, JSPrincipals *principals,
  */
 #ifdef JSDEBUGGER 
 
-extern NET_StreamClass*
+extern NET_VoidStreamClass*
 LM_StreamBuilder( int         format_out,
                   void        *data_obj,
                   URL_Struct  *URL_s,
