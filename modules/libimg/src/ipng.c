@@ -153,6 +153,7 @@ png_set_dims( il_container *ic, png_structp png_ptr)
     return;
 }
 
+int
 il_png_init_transparency(png_structp png_ptr, il_container *ic, int index)
 {
     IL_IRGB *src_trans_pixel /*= ic->src_header->transparent_pixel*/;
