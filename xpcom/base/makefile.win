@@ -28,6 +28,7 @@ MODULE = xpcom
 ## exports
 
 EXPORTS =                  \
+        nslog.h            \
         nsAgg.h            \
         nsIAllocator.h     \
         nsMemory.h         \
@@ -45,11 +46,13 @@ EXPORTS =                  \
         nsWeakPtr.h        \
         nscore.h           \
         pure.h             \
+        nslog.h            \
         $(NULL)			
 
 XPIDL_MODULE = xpcom_base
 
 XPIDLSRCS =               \
+        .\nsILoggingService.idl   \
         .\nsrootidl.idl   \
         .\nsIErrorService.idl \
         .\nsIMemory.idl \
@@ -85,6 +88,7 @@ LCFLAGS = $(LCFLAGS) -DGC_LEAK_DETECTOR
 
 
 CPP_OBJS =                            \
+        .\$(OBJDIR)\nsLogging.obj       \
         .\$(OBJDIR)\nsErrorService.obj       \
         .\$(OBJDIR)\nsDebug.obj       \
         .\$(OBJDIR)\nsAllocator.obj   \

@@ -86,60 +86,27 @@
 #include <windows.h>
 #include <signal.h>
 #elif defined(XP_MAC)
-   #define TEMP_MAC_HACK
-   
-   //------------------------
-   #ifdef TEMP_MAC_HACK
-	   #include <MacTypes.h>
-	   #include <Processes.h>
-	   #include <string.h>
-
-	   // TEMPORARY UNTIL WE HAVE MACINTOSH ENVIRONMENT VARIABLES THAT CAN TURN ON
-	   // LOGGING ON MACINTOSH
-	   // At this moment, NSPR's logging is a no-op on Macintosh.
-
-	   #include <stdarg.h>
-	   #include <stdio.h>
-	 
-	   #undef PR_LOG
-	   #undef PR_LogFlush
-	   #define PR_LOG(module,level,args) dprintf args
-	   #define PR_LogFlush()
-	   static void dprintf(const char *format, ...)
-	   {
-	      va_list ap;
-	      Str255 buffer;
-	      
-	      va_start(ap, format);
-	      buffer[0] = std::vsnprintf((char *)buffer + 1, sizeof(buffer) - 1, format, ap);
-	      va_end(ap);
-	      if (PL_strcasestr((char *)&buffer[1], "warning"))
-	 	      printf("еее%s\n", (char*)buffer + 1);
-	 	  else
-	 	      DebugStr(buffer);
-	   }
-   #endif // TEMP_MAC_HACK
-   //------------------------
 #elif defined(XP_UNIX)
 #include<stdlib.h>
 #endif
 
-/**
- * Define output so users will always see it
- */
+#include "nslog.h"
 
-#if defined(XP_UNIX) || defined(_WIN32)
-#define DBG_LOG(log,err,pargs) \
-  InitLog(); \
-  PR_LOG(log,err,pargs); \
-  PR_LogFlush(); \
-  printf pargs; putchar('\n');
-#else
-#define DBG_LOG(log,err,pargs) \
-  InitLog(); \
-  PR_LOG(log,err,pargs); \
-  PR_LogFlush();
-#endif
+#undef ERROR
+#undef WARN
+#undef BREAK
+
+NS_IMPL_LOG_ENABLED(ERROR)
+#define ERROR_PRINTF NS_LOG_PRINTF(ERROR)
+#define ERROR_FLUSH  NS_LOG_FLUSH(ERROR)
+
+NS_IMPL_LOG_ENABLED(WARN)
+#define WARN_PRINTF NS_LOG_PRINTF(WARN)
+#define WARN_FLUSH  NS_LOG_FLUSH(WARN)
+
+NS_IMPL_LOG_ENABLED(BREAK)
+#define BREAK_PRINTF NS_LOG_PRINTF(BREAK)
+#define BREAK_FLUSH  NS_LOG_FLUSH(BREAK)
 
 /*
  * Determine if debugger is present in windows.
@@ -175,58 +142,42 @@ PRBool InDebugger()
  * always compiled in, in case some other module that uses it is
  * compiled with debugging even if this library is not.
  */
-static PRLogModuleInfo* gDebugLog;
-
-static void InitLog(void)
-{
-  if (0 == gDebugLog) {
-    gDebugLog = PR_NewLogModule("nsDebug");
-    gDebugLog->level = PR_LOG_DEBUG;
-  }
-}
 
 NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
                                const char* aFile, PRIntn aLine)
 {
-   InitLog();
-
    char buf[1000];
    PR_snprintf(buf, sizeof(buf),
-              "###!!! ASSERTION: %s: '%s', file %s, line %d",
-              aStr, aExpr, aFile, aLine);
+               "ASSERTION: %s: '%s', file %s, line %d",
+               aStr, aExpr, aFile, aLine);
 
-   // Write out the assertion message to the debug log
-   PR_LOG(gDebugLog, PR_LOG_ERROR, ("%s", buf));
-   PR_LogFlush();
-
-   // And write it out to the stdout
-   printf("%s\n", buf);
-   fflush(stdout);
+   ERROR_PRINTF("%s", buf);
+   ERROR_FLUSH();
 
 #if defined(_WIN32)
    if(!InDebugger())
-      {
-      char msg[1200];
-      PR_snprintf(msg, sizeof(msg),
-                "%s\n\nClick Abort to exit the Application.\n"
-                "Click Retry to Debug the Application..\n"
-                "Click Ignore to continue running the Application.", buf); 
-      int code = ::MessageBox(NULL, msg, "nsDebug::Assertion",
-                     MB_ICONSTOP | MB_ABORTRETRYIGNORE);
-      switch(code)
-         {
-         case IDABORT:
-            //This should exit us
-            raise(SIGABRT);
-            //If we are ignored exit this way..
-            _exit(3);
-            break;
+   {
+     char msg[1200];
+     PR_snprintf(msg, sizeof(msg),
+                 "%s\n\nClick Abort to exit the Application.\n"
+                 "Click Retry to Debug the Application..\n"
+                 "Click Ignore to continue running the Application.", buf); 
+     int code = ::MessageBox(NULL, msg, "nsDebug::Assertion",
+                             MB_ICONSTOP | MB_ABORTRETRYIGNORE);
+     switch(code)
+     {
+       case IDABORT:
+         //This should exit us
+         raise(SIGABRT);
+         //If we are ignored exit this way..
+         _exit(3);
+         break;
          
-         case IDIGNORE:
-            return;
-            // Fall Through
-         }
-      }
+       case IDIGNORE:
+         return;
+         // Fall Through
+     }
+   }
 #endif
 
 #if defined(XP_OS2)
@@ -259,13 +210,12 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
 NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 {
 #ifndef TEMP_MAC_HACK
-  DBG_LOG(gDebugLog, PR_LOG_ERROR,
-          ("###!!! Break: at file %s, line %d", aFile, aLine));
+    BREAK_PRINTF("at file %s, line %d", aFile, aLine);
 #if defined(_WIN32)
 #ifdef _M_IX86
-   ::DebugBreak();
+    ::DebugBreak();
 #else /* _M_ALPHA */
-   fprintf(stderr, "Break: at file %s\n",aFile, aLine);  fflush(stderr);
+    fprintf(stderr, "BREAK: at file %s\n",aFile, aLine);  fflush(stderr);
 #endif
 #elif defined(XP_UNIX) && !defined(UNIX_CRASH_ON_ASSERT)
     fprintf(stderr, "\07");
@@ -317,7 +267,7 @@ NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
   {
 #ifdef UNIX_CRASH_ON_ASSERT
 	char buf[2000];
-	sprintf(buf, "Break: at file %s, line %d", aFile, aLine);
+	sprintf(buf, "BREAK: at file %s, line %d", aFile, aLine);
 	DEBUGGER(buf);
 #endif
   }
@@ -330,18 +280,8 @@ NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 NS_COM void nsDebug::Warning(const char* aMessage,
                              const char* aFile, PRIntn aLine)
 {
-  InitLog();
-
-  char buf[1000];
-  PR_snprintf(buf, sizeof(buf),
-              "WARNING: %s, file %s, line %d",
+  WARN_PRINTF("%s, file %s, line %d",
               aMessage, aFile, aLine);
-
-  // Write out the warning message to the debug log
-  PR_LOG(gDebugLog, PR_LOG_ERROR, ("%s", buf));
-
-  // And write it out to the stdout
-  printf("%s\n", buf);
 }
 
 //**************** All Dead Code Below
@@ -361,8 +301,7 @@ NS_COM PRBool nsDebug::WarnIfFalse(const char* aStr, const char* aExpr,
 
 NS_COM void nsDebug::Abort(const char* aFile, PRIntn aLine)
 {
-  DBG_LOG(gDebugLog, PR_LOG_ERROR,
-          ("###!!! Abort: at file %s, line %d", aFile, aLine));
+  ERROR_PRINTF("ABORT: at file %s, line %d", aFile, aLine);
 #if defined(_WIN32)
 #ifdef _M_IX86
   long* __p = (long*) 0x7;
@@ -382,7 +321,7 @@ NS_COM void nsDebug::Abort(const char* aFile, PRIntn aLine)
   {
 #ifndef DEBUG_cls
 	char buf[2000];
-	sprintf(buf, "Abort: at file %s, line %d", aFile, aLine);
+	sprintf(buf, "ABORT: at file %s, line %d", aFile, aLine);
 	DEBUGGER(buf);
 #endif
   } 
