@@ -957,19 +957,6 @@ nsPresContext::ResolveStyleContextFor(nsIContent* aContent,
 }
 
 NS_IMETHODIMP
-nsPresContext::ResolveStyleContextAndGetStyleData(nsIContent* aContent,
-                                                  int aSID,
-                                                  const nsStyleStruct*& aStyleStruct)
-{
-  nsCOMPtr<nsIStyleContext> sc;
-  nsresult rv = ResolveStyleContextFor(aContent, nsnull, getter_AddRefs(sc));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  aStyleStruct = sc->GetStyleData((nsStyleStructID) aSID);
-  return aStyleStruct ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP
 nsPresContext::ResolveStyleContextForNonElement(
                                       nsIStyleContext* aParentContext,
                                       nsIStyleContext** aResult)
@@ -1042,6 +1029,21 @@ nsPresContext::ProbePseudoStyleContextFor(nsIContent* aParentContent,
   }
   *aResult = result;
   return rv;
+}
+
+NS_IMETHODIMP
+nsPresContext::GetXBLBindingURL(nsIContent* aContent, nsAString& aResult)
+{
+  nsCOMPtr<nsIStyleContext> sc;
+  nsresult rv = ResolveStyleContextFor(aContent, nsnull, getter_AddRefs(sc));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  const nsStyleDisplay* display;
+  ::GetStyleData(sc.get(), &display);
+  NS_ENSURE_TRUE(display, NS_ERROR_NULL_POINTER);
+
+  aResult = display->mBinding;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -87,9 +87,6 @@ public:
   NS_IMETHOD ResolveStyleContextFor(nsIContent* aContent,
                                     nsIStyleContext* aParentContext,
                                     nsIStyleContext** aResult);
-  NS_IMETHOD ResolveStyleContextAndGetStyleData(nsIContent* aContent,
-                                                int aSID,
-                                                const nsStyleStruct*& aStyleStruct);
   NS_IMETHOD ResolveStyleContextForNonElement(nsIStyleContext* aParentContext,
                                               nsIStyleContext** aResult);
   NS_IMETHOD ResolvePseudoStyleContextFor(nsIContent* aParentContent,
@@ -105,6 +102,7 @@ public:
                                         nsIAtom* aPseudoTag,
                                         nsIStyleContext* aParentContext,
                                         nsIStyleContext** aResult);
+  NS_IMETHOD GetXBLBindingURL(nsIContent* aContent, nsAString& aResult);
   NS_IMETHOD ReParentStyleContext(nsIFrame* aFrame, 
                                   nsIStyleContext* aNewParentContext);
   NS_IMETHOD GetMetricsFor(const nsFont& aFont, nsIFontMetrics** aResult);
