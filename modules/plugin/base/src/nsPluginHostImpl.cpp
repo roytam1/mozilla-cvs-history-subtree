@@ -4274,17 +4274,15 @@ static PRBool isJavaPlugin(nsPluginTag * tag)
 
 
 ////////////////////////////////////////////////////////////////////////
+// XXX called from ScanPluginsDirectory only when told to filter
 // currently 'unwanted' plugins are Java, and all other plugins except
-// RealPlayer, Acrobat, Flash
+// Acrobat, Flash, Quicktime and Shockwave
 static PRBool isUnwantedPlugin(nsPluginTag * tag)
 {
   if(tag->mFileName == nsnull)
     return PR_TRUE;
 
   for (PRInt32 i = 0; i < tag->mVariants; ++i) {
-    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i], "audio/x-pn-realaudio-plugin"))
-      return PR_FALSE;
-
     if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i], "application/pdf"))
       return PR_FALSE;
 
