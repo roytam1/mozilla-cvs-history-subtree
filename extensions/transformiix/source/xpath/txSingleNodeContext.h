@@ -69,13 +69,13 @@ public:
     void receiveError(const String& aMsg, nsresult aRes)
     {
         NS_ASSERTION(mInner, "mInner is null!!!");
-        #ifdef DEBUG
+#ifdef DEBUG
         String error("forwarded error: ");
         error.append(aMsg);
         mInner->receiveError(error, aRes);
-        #else
+#else
         mInner->receiveError(aMsg, aRes);
-        #endif
+#endif
     }
 
     Node* getContextNode()

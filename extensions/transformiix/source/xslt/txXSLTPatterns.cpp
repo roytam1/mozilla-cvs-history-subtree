@@ -135,9 +135,9 @@ nsresult txUnionPattern::getSimplePatterns(txList& aList)
  */
 void txUnionPattern::toString(String& aDest)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txUnionPattern{");
-    #endif
+#endif
     txListIterator iter(&mLocPathPatterns);
     if (iter.hasNext())
         ((txPattern*)iter.next())->toString(aDest);
@@ -145,9 +145,9 @@ void txUnionPattern::toString(String& aDest)
         aDest.append(" | ");
         ((txPattern*)iter.next())->toString(aDest);
     }
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 } // toString
 
 
@@ -256,9 +256,9 @@ double txLocPathPattern::getDefaultPriority()
 void txLocPathPattern::toString(String& aDest)
 {
     ListIterator iter(&mSteps);
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txLocPathPattern{");
-    #endif
+#endif
     Step* step;
     step = (Step*)iter.next();
     if (step) {
@@ -271,9 +271,9 @@ void txLocPathPattern::toString(String& aDest)
             aDest.append("//");
         step->pattern->toString(aDest);
     }
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 } // txLocPathPattern::toString
 
 /*
@@ -298,14 +298,14 @@ double txRootPattern::getDefaultPriority()
 
 void txRootPattern::toString(String& aDest)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txRootPattern{");
-    #endif
+#endif
     if (mSerialize)
         aDest.append("/");
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 }
 
 /*
@@ -348,9 +348,9 @@ txIdPattern::~txIdPattern()
 
 MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
 {
-    #ifdef TX_EXE
+#ifdef TX_EXE
     return MB_FALSE; // not implemented
-    #else
+#else
     if (aNode->getNodeType() != Node::ELEMENT_NODE) {
         return MB_FALSE;
     }
@@ -396,7 +396,7 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
         return MB_TRUE;
     }
     return MB_FALSE;
-    #endif // TX_EXE
+#endif // TX_EXE
 }
 
 double txIdPattern::getDefaultPriority()
@@ -406,9 +406,9 @@ double txIdPattern::getDefaultPriority()
 
 void txIdPattern::toString(String& aDest)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txIdPattern{");
-    #endif
+#endif
     aDest.append("id('");
 #ifdef TX_EXE
     aDest.append(mIds);
@@ -416,9 +416,9 @@ void txIdPattern::toString(String& aDest)
     aDest.append(mIds.get());
 #endif
     aDest.append("')");
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 }
 
 /*
@@ -456,17 +456,17 @@ double txKeyPattern::getDefaultPriority()
 
 void txKeyPattern::toString(String& aDest)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txKeyPattern{");
-    #endif
+#endif
     aDest.append("key('");
     aDest.append(mName);
     aDest.append(", ");
     aDest.append(mValue);
     aDest.append("')");
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 }
 
 /*
@@ -599,16 +599,16 @@ double txStepPattern::getDefaultPriority()
 
 void txStepPattern::toString(String& aDest)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("txStepPattern{");
-    #endif
+#endif
     if (mIsAttr)
         aDest.append("@");
     if (mNodeTest)
         mNodeTest->toString(aDest);
 
     PredicateList::toString(aDest);
-    #ifdef DEBUG
+#ifdef DEBUG
     aDest.append("}");
-    #endif
+#endif
 }

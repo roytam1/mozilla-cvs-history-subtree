@@ -202,10 +202,10 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     // Get the pattern
     txPSParseContext context(this, aXslTemplate);
     txPattern* pattern = txPatternParser::createPattern(match, &context, this);
-    #ifdef TX_PATTERN_DEBUG
+#ifdef TX_PATTERN_DEBUG
     String foo;
     pattern->toString(foo);
-    #endif
+#endif
 
     if (!pattern) {
         return;
@@ -425,10 +425,10 @@ Node* ProcessorState::findTemplate(Node* aNode,
             MatchableTemplate* templ;
             while (!matchTemplate &&
                    (templ = (MatchableTemplate*)templateIter.next())) {
-                #ifdef TX_PATTERN_DEBUG
+#ifdef TX_PATTERN_DEBUG
                 String foo;
                 templ->mMatch->toString(foo);
-                #endif
+#endif
                 if (templ->mMatch->matches(aNode, this)) {
                     matchTemplate = templ->mTemplate;
                     *aImportFrame = frame;
@@ -1125,14 +1125,14 @@ ProcessorState::ImportFrame::~ImportFrame()
 nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
                                                   PRInt32& aID)
 {
-    #ifdef DEBUG
+#ifdef DEBUG
     if (!aPrefix || aPrefix == txXMLAtoms::_empty) {
         // default namespace is not forwarded to xpath
         NS_ASSERTION(0, "caller should handle default namespace ''");
         aID = kNameSpaceID_None;
         return NS_OK;
     }
-    #endif
+#endif
     aID = mStyle->lookupNamespaceID(aPrefix);
     return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }

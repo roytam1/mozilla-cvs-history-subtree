@@ -84,13 +84,13 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
         return NS_ERROR_OUT_OF_MEMORY;
     }
     rv = unionPattern->addPattern(locPath);
-    #if 0 // XXX addPattern can't fail yet, it doesn't check for mem
+#if 0 // XXX addPattern can't fail yet, it doesn't check for mem
     if (NS_FAILED(rv)) {
         delete unionPattern;
         delete locPath;
         return rv;
     }
-    #endif
+#endif
 
     aLexer.nextToken();
     do {
@@ -100,13 +100,13 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
             return rv;
         }
         rv = unionPattern->addPattern(locPath);
-        #if 0 // XXX addPattern can't fail yet, it doesn't check for mem
+#if 0 // XXX addPattern can't fail yet, it doesn't check for mem
         if (NS_FAILED(rv)) {
             delete unionPattern;
             delete locPath;
             return rv;
         }
-        #endif
+#endif
         type = aLexer.nextToken()->type;
     } while (type == Token::UNION_OP);
 
