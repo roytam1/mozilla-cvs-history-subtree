@@ -39,12 +39,12 @@ DIRS= \
 	marimba \
 !endif
 !ifdef MOZ_MAIL_NEWS 
-	imap4 \
 	pop3 \
 	smtp \
 	nntp \
-	callback \
 	mailbox \
+	callback \
+	imap4 \
 !endif
 !ifdef MOZ_LDAP
 	ldap \

@@ -40,12 +40,12 @@ endif
 
 ifdef MOZ_MAIL_NEWS
 DIRS += \
-	callback \
 	mailbox \
-	imap4 \
 	smtp \
 	nntp \
 	pop3 \
+	callback \
+	imap4 \
 	$(NULL)
 endif
 
