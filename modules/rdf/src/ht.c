@@ -1033,7 +1033,7 @@ HT_NewToolbarPane(HT_Notification notify)
 			break;
 		}
 		
-		pane->autoFlushFlag = true;
+                /*		pane->autoFlushFlag = true; */
 		
 		pane->next = gHTTop;
 		gHTTop = pane;
@@ -1094,7 +1094,7 @@ paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool a
 			break;
 		}
 		pane->db =  db;
-		pane->autoFlushFlag = autoFlushFlag;
+                /*		pane->autoFlushFlag = autoFlushFlag; */
 
 		if ((view = HT_NewView(resource, pane, PR_FALSE, NULL, autoOpenFlag)) == NULL)
 		{
@@ -4589,7 +4589,8 @@ HT_IsContainerOpen (HT_Resource node)
 
 	if (node != NULL)
 	{
-		if (node->flags & HT_OPEN_FLAG)	isOpen = PR_TRUE;
+		if ((node->flags & HT_OPEN_FLAG) ||
+                    (node->flags & HT_AUTOFLUSH_OPEN_FLAG)) isOpen = PR_TRUE;
 	}
 	return (isOpen);
 }
@@ -6402,13 +6403,7 @@ setHiddenState (HT_Resource node)
 	if ((view = child->view) == NULL)	return;
 	if ((pane = view->pane) == NULL)	return;
 
-	if (!HT_IsContainerOpen(node) && pane->autoFlushFlag == true)
-	{
-		/* destroy all interior HT nodes */
-
-		destroyViewInt(node, PR_FALSE);
-	}
-	else
+	if (HT_IsContainerOpen(node)) 
 	{
 		/* show/hide all interior HT nodes */
 
@@ -6430,6 +6425,25 @@ setHiddenState (HT_Resource node)
 			child = child->next;
 		}
 	}
+}
+
+
+PR_PUBLIC_API(HT_Error) HT_SetAutoFlushOpenState (HT_Resource containerNode, PRBool isOpen) {
+  sendNotification(containerNode,  HT_EVENT_NODE_OPENCLOSE_CHANGING);
+  if (isOpen)
+    {
+      containerNode->flags |= HT_AUTOFLUSH_OPEN_FLAG;
+      containerNode->flags &= (~HT_HIDDEN_FLAG);
+    }
+  else
+    {
+      containerNode->flags &= (~HT_AUTOFLUSH_OPEN_FLAG);
+    }
+  setHiddenState(containerNode);
+  refreshItemList(containerNode, HT_EVENT_NODE_OPENCLOSE_CHANGED);
+  if (!isOpen && (!(containerNode->flags & HT_OPEN_FLAG))) 
+    destroyViewInt(containerNode, PR_FALSE);
+  return (HT_NoErr);
 }
 
 

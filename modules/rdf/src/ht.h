@@ -159,14 +159,15 @@ typedef	struct _HT_ValueStruct {
 
 #define	HT_CONTAINER_FLAG	0x0001
 #define	HT_OPEN_FLAG		0x0002
-#define	HT_HIDDEN_FLAG		0x0004
-#define	HT_SELECTED_FLAG	0x0008
-#define	HT_VOLATILE_URL_FLAG	0x0010
-#define	HT_FREEICON_URL_FLAG	0x0020
-#define	HT_PASSWORDOK_FLAG	0x0040
-#define	HT_INITED_FLAG		0x0080
-#define	HT_DIRTY_FLAG		0x0100
-#define	HT_ENABLED_FLAG		0x0200
+#define	HT_AUTOFLUSH_OPEN_FLAG		0x0004
+#define	HT_HIDDEN_FLAG		0x0008
+#define	HT_SELECTED_FLAG	0x0010
+#define	HT_VOLATILE_URL_FLAG	0x0020
+#define	HT_FREEICON_URL_FLAG	0x0040
+#define	HT_PASSWORDOK_FLAG	0x0080
+#define	HT_INITED_FLAG		0x0100
+#define	HT_DIRTY_FLAG		0x0200
+#define	HT_ENABLED_FLAG		0x0400
 
 typedef struct _HT_ResourceStruct {
 	struct _HT_ResourceStruct	*nextItem; 

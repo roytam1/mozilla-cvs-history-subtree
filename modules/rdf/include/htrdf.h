@@ -445,6 +445,8 @@ PR_PUBLIC_API(HT_Resource) HT_GetNextItem (HT_Cursor cursor) ;
 PR_PUBLIC_API(PRBool)   HT_IsContainerOpen (HT_Resource node);
 PR_PUBLIC_API(HT_Error) HT_GetOpenState (HT_Resource containerNode, PRBool *openState);
 PR_PUBLIC_API(HT_Error) HT_SetOpenState (HT_Resource containerNode, PRBool isOpen);
+PR_PUBLIC_API(HT_Error) HT_SetAutoFlushOpenState (HT_Resource containerNode, PRBool isOpen);
+
 
 /*
  * HT_ItemHasForwardSibling / HT_ItemHasBackwardSibling
