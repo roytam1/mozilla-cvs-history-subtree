@@ -6133,7 +6133,6 @@ nsresult nsPluginHostImpl::NewEmbededPluginStream(nsIURI* aURL,
 
   //NS_RELEASE(aURL);
 
-  delete listener;
   return rv;
 }
 
