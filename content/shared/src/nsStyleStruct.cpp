@@ -263,6 +263,7 @@ nsChangeHint nsStyleFont::CalcFontDifference(const nsFont& aFont1, const nsFont&
       (aFont1.sizeAdjust == aFont2.sizeAdjust) && 
       (aFont1.style == aFont2.style) &&
       (aFont1.variant == aFont2.variant) &&
+      (aFont1.familyNameQuirks == aFont2.familyNameQuirks) &&
       (aFont1.weight == aFont2.weight) &&
       (aFont1.name == aFont2.name)) {
     if ((aFont1.decorations == aFont2.decorations)) {
@@ -702,18 +703,15 @@ nsStyleList::nsStyleList(const nsStyleList& aSource)
 
 nsChangeHint nsStyleList::CalcDifference(const nsStyleList& aOther) const
 {
-  if (mListStylePosition == aOther.mListStylePosition)
-    if (mListStyleImage == aOther.mListStyleImage)
-      if (mListStyleType == aOther.mListStyleType) {
-        if (mImageRegion == aOther.mImageRegion)
-          return NS_STYLE_HINT_NONE;
-        if (mImageRegion.width == aOther.mImageRegion.width &&
-            mImageRegion.height == aOther.mImageRegion.height)
-          return NS_STYLE_HINT_VISUAL;
-        return NS_STYLE_HINT_REFLOW;
-      }
-      return NS_STYLE_HINT_REFLOW;
-    return NS_STYLE_HINT_REFLOW;
+  if (mListStylePosition == aOther.mListStylePosition &&
+      mListStyleImage == aOther.mListStyleImage &&
+      mListStyleType == aOther.mListStyleType) {
+    if (mImageRegion == aOther.mImageRegion)
+      return NS_STYLE_HINT_NONE;
+    if (mImageRegion.width == aOther.mImageRegion.width &&
+        mImageRegion.height == aOther.mImageRegion.height)
+      return NS_STYLE_HINT_VISUAL;
+  }
   return NS_STYLE_HINT_REFLOW;
 }
 

@@ -708,7 +708,7 @@ struct PropertyCheckData {
 /* the information for all the properties in a style struct */
 
 typedef nsRuleNode::RuleDetail
-  (* PR_CALLBACK CheckCallbackFn)(const nsCSSStruct& aData);
+  (* PR_CALLBACK CheckCallbackFn)(const nsRuleDataStruct& aData);
 
 struct StructCheckData {
   const PropertyCheckData* props;
@@ -791,9 +791,10 @@ ExamineRectCoordProperties(const nsCSSRect* aRect,
 }
 
 PR_STATIC_CALLBACK(nsRuleNode::RuleDetail)
-CheckFontCallback(const nsCSSStruct& aData)
+CheckFontCallback(const nsRuleDataStruct& aData)
 {
-  const nsCSSFont& fontData = NS_STATIC_CAST(const nsCSSFont&, aData);
+  const nsRuleDataFont& fontData =
+      NS_STATIC_CAST(const nsRuleDataFont&, aData);
   if (eCSSUnit_Enumerated == fontData.mFamily.GetUnit()) {
     // A special case. We treat this as a fully specified font,
     // since no other font props are legal with a system font.
@@ -822,179 +823,179 @@ CheckFontCallback(const nsCSSStruct& aData)
 }
 
 static const PropertyCheckData FontCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSFont, mFamily, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSFont, mStyle, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSFont, mVariant, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSFont, mWeight, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSFont, mSize, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSFont, mSizeAdjust, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataFont, mFamily, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataFont, mStyle, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataFont, mVariant, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataFont, mWeight, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataFont, mSize, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataFont, mSizeAdjust, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData DisplayCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSDisplay, mAppearance, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mClip, CHECKDATA_RECT, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mDisplay, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mBinding, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mPosition, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mFloat, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mClear, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mOverflow, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mBreakBefore, CHECKDATA_VALUE, PR_FALSE), // temp fix for bug 2400
-  CHECKDATA_PROP(nsCSSDisplay, mBreakAfter, CHECKDATA_VALUE, PR_FALSE)   // temp fix for bug 2400
+  CHECKDATA_PROP(nsRuleDataDisplay, mAppearance, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mClip, CHECKDATA_RECT, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mDisplay, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mBinding, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mPosition, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mFloat, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mClear, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mOverflow, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mBreakBefore, CHECKDATA_VALUE, PR_FALSE), // temp fix for bug 2400
+  CHECKDATA_PROP(nsRuleDataDisplay, mBreakAfter, CHECKDATA_VALUE, PR_FALSE)   // temp fix for bug 2400
 };
 
 static const PropertyCheckData VisibilityCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSDisplay, mVisibility, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mDirection, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mLang, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSDisplay, mOpacity, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataDisplay, mVisibility, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mDirection, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mLang, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataDisplay, mOpacity, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData MarginCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSMargin, mMargin, CHECKDATA_RECT, PR_TRUE)
+  CHECKDATA_PROP(nsRuleDataMargin, mMargin, CHECKDATA_RECT, PR_TRUE)
 };
 
 static const PropertyCheckData BorderCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSMargin, mBorderWidth, CHECKDATA_RECT, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mBorderStyle, CHECKDATA_RECT, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mBorderColor, CHECKDATA_RECT, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mBorderRadius, CHECKDATA_RECT, PR_TRUE),
-  CHECKDATA_PROP(nsCSSMargin, mFloatEdge, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mBorderColors, CHECKDATA_VALUELIST_ARRAY, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataMargin, mBorderWidth, CHECKDATA_RECT, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mBorderStyle, CHECKDATA_RECT, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mBorderColor, CHECKDATA_RECT, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mBorderRadius, CHECKDATA_RECT, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataMargin, mFloatEdge, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mBorderColors, CHECKDATA_VALUELIST_ARRAY, PR_FALSE)
 };
 
 static const PropertyCheckData PaddingCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSMargin, mPadding, CHECKDATA_RECT, PR_TRUE)
+  CHECKDATA_PROP(nsRuleDataMargin, mPadding, CHECKDATA_RECT, PR_TRUE)
 };
 
 static const PropertyCheckData OutlineCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSMargin, mOutlineColor, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mOutlineWidth, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSMargin, mOutlineStyle, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSMargin, mOutlineRadius, CHECKDATA_RECT, PR_TRUE)
+  CHECKDATA_PROP(nsRuleDataMargin, mOutlineColor, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mOutlineWidth, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataMargin, mOutlineStyle, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataMargin, mOutlineRadius, CHECKDATA_RECT, PR_TRUE)
 };
 
 static const PropertyCheckData ListCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSList, mType, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSList, mImage, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSList, mPosition, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSList, mImageRegion, CHECKDATA_RECT, PR_TRUE)
+  CHECKDATA_PROP(nsRuleDataList, mType, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataList, mImage, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataList, mPosition, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataList, mImageRegion, CHECKDATA_RECT, PR_TRUE)
 };
 
 static const PropertyCheckData ColorCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSColor, mColor, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataColor, mColor, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData BackgroundCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSColor, mBackAttachment, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackRepeat, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackClip, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackColor, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackImage, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackOrigin, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackPositionX, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSColor, mBackPositionY, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataColor, mBackAttachment, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackRepeat, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackClip, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackColor, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackImage, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackOrigin, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackPositionX, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataColor, mBackPositionY, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData PositionCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSPosition, mOffset, CHECKDATA_RECT, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mWidth, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mMinWidth, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mMaxWidth, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mHeight, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mMinHeight, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mMaxHeight, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSPosition, mBoxSizing, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSPosition, mZIndex, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataPosition, mOffset, CHECKDATA_RECT, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mWidth, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mMinWidth, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mMaxWidth, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mHeight, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mMinHeight, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mMaxHeight, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataPosition, mBoxSizing, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataPosition, mZIndex, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData TableCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSTable, mLayout, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mFrame, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mRules, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mCols, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mSpan, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataTable, mLayout, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mFrame, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mRules, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mCols, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mSpan, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData TableBorderCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSTable, mBorderCollapse, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mBorderSpacingX, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mBorderSpacingY, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mCaptionSide, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSTable, mEmptyCells, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataTable, mBorderCollapse, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mBorderSpacingX, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mBorderSpacingY, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mCaptionSide, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataTable, mEmptyCells, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData ContentCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSContent, mContent, CHECKDATA_VALUELIST, PR_FALSE),
-  CHECKDATA_PROP(nsCSSContent, mMarkerOffset, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSContent, mCounterIncrement, CHECKDATA_COUNTERDATA, PR_FALSE),
-  CHECKDATA_PROP(nsCSSContent, mCounterReset, CHECKDATA_COUNTERDATA, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataContent, mContent, CHECKDATA_VALUELIST, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataContent, mMarkerOffset, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataContent, mCounterIncrement, CHECKDATA_COUNTERDATA, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataContent, mCounterReset, CHECKDATA_COUNTERDATA, PR_FALSE)
 };
 
 static const PropertyCheckData QuotesCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSContent, mQuotes, CHECKDATA_QUOTES, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataContent, mQuotes, CHECKDATA_QUOTES, PR_FALSE)
 };
 
 static const PropertyCheckData TextCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSText, mLineHeight, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSText, mTextIndent, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSText, mWordSpacing, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSText, mLetterSpacing, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSText, mTextAlign, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSText, mTextTransform, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSText, mWhiteSpace, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataText, mLineHeight, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataText, mTextIndent, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataText, mWordSpacing, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataText, mLetterSpacing, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataText, mTextAlign, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataText, mTextTransform, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataText, mWhiteSpace, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData TextResetCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSText, mDecoration, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSText, mVerticalAlign, CHECKDATA_VALUE, PR_TRUE),
-  CHECKDATA_PROP(nsCSSText, mUnicodeBidi, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataText, mDecoration, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataText, mVerticalAlign, CHECKDATA_VALUE, PR_TRUE),
+  CHECKDATA_PROP(nsRuleDataText, mUnicodeBidi, CHECKDATA_VALUE, PR_FALSE)
 };
 
 static const PropertyCheckData UserInterfaceCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSUserInterface, mUserInput, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mUserModify, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mUserFocus, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mCursor, CHECKDATA_VALUELIST, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataUserInterface, mUserInput, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mUserModify, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mUserFocus, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mCursor, CHECKDATA_VALUELIST, PR_FALSE)
 };
 
 static const PropertyCheckData UIResetCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSUserInterface, mUserSelect, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mResizer, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mKeyEquivalent, CHECKDATA_VALUELIST, PR_FALSE),
-  CHECKDATA_PROP(nsCSSUserInterface, mForceBrokenImageIcon, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataUserInterface, mUserSelect, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mResizer, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mKeyEquivalent, CHECKDATA_VALUELIST, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataUserInterface, mForceBrokenImageIcon, CHECKDATA_VALUE, PR_FALSE)
 };
 
 #ifdef INCLUDE_XUL
 static const PropertyCheckData XULCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSXUL, mBoxAlign, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSXUL, mBoxDirection, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSXUL, mBoxFlex, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSXUL, mBoxOrient, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSXUL, mBoxPack, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSXUL, mBoxOrdinal, CHECKDATA_VALUE, PR_FALSE)
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxAlign, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxDirection, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxFlex, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxOrient, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxPack, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataXUL, mBoxOrdinal, CHECKDATA_VALUE, PR_FALSE)
 };
 #endif
 
 #ifdef MOZ_SVG
 static const PropertyCheckData SVGCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSSVG, mFill, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mFillOpacity, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mFillRule, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStroke, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeDasharray, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeDashoffset, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeLinecap, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeLinejoin, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeMiterlimit, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeOpacity, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mStrokeWidth, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mTextAnchor, CHECKDATA_VALUE, PR_FALSE),
-  CHECKDATA_PROP(nsCSSSVG, mTextRendering, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mFill, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mFillOpacity, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mFillRule, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStroke, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeDasharray, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeDashoffset, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeLinecap, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeLinejoin, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeMiterlimit, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeOpacity, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mStrokeWidth, CHECKDATA_VALUE, PR_FALSE) 
+  CHECKDATA_PROP(nsRuleDataSVG, mTextAnchor, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mTextRendering, CHECKDATA_VALUE, PR_FALSE),
 };
 
 static const PropertyCheckData SVGResetCheckProperties[] = {
-  CHECKDATA_PROP(nsCSSSVG, mDominantBaseline, CHECKDATA_VALUE, PR_FALSE),
+  CHECKDATA_PROP(nsRuleDataSVG, mDominantBaseline, CHECKDATA_VALUE, PR_FALSE),
 };  
 #endif
   
@@ -1015,54 +1016,54 @@ static const StructCheckData gCheckProperties[] = {
 // XXXldb Taking the address of a reference is evil.
 
 inline const nsCSSValue&
-ValueAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+ValueAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSValue*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline const nsCSSRect*
-RectAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+RectAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSRect*const*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline const nsCSSValueList*
-ValueListAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+ValueListAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSValueList*const*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline const nsCSSValueList**
-ValueListArrayAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+ValueListArrayAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSValueList**const*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline const nsCSSCounterData*
-CounterDataAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+CounterDataAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSCounterData*const*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline const nsCSSQuotes*
-QuotesAtOffset(const nsCSSStruct& aCSSStruct, size_t aOffset)
+QuotesAtOffset(const nsRuleDataStruct& aRuleDataStruct, size_t aOffset)
 {
   return * NS_REINTERPRET_CAST(const nsCSSQuotes*const*,
-                     NS_REINTERPRET_CAST(const char*, &aCSSStruct) + aOffset);
+                     NS_REINTERPRET_CAST(const char*, &aRuleDataStruct) + aOffset);
 }
 
 inline nsRuleNode::RuleDetail
 nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
-                                     const nsCSSStruct& aCSSStruct)
+                                     const nsRuleDataStruct& aRuleDataStruct)
 {
   const StructCheckData *structData = gCheckProperties + aSID;
   if (structData->callback) {
-    nsRuleNode::RuleDetail res = (*structData->callback)(aCSSStruct);
+    nsRuleNode::RuleDetail res = (*structData->callback)(aRuleDataStruct);
     if (res != eRuleUnknown)
       return res;
   }
@@ -1083,7 +1084,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
       case CHECKDATA_VALUE:
         {
           ++total;
-          const nsCSSValue& value = ValueAtOffset(aCSSStruct, prop->offset);
+          const nsCSSValue& value = ValueAtOffset(aRuleDataStruct, prop->offset);
           if (eCSSUnit_Null != value.GetUnit()) {
             ++specified;
             if (eCSSUnit_Inherit == value.GetUnit()) {
@@ -1098,11 +1099,11 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
       case CHECKDATA_RECT:
         total += 4;
         if (prop->mayHaveExplicitInherit)
-          ExamineRectCoordProperties(RectAtOffset(aCSSStruct, prop->offset),
+          ExamineRectCoordProperties(RectAtOffset(aRuleDataStruct, prop->offset),
                                      specified, inherited,
                                      canHaveExplicitInherit);
         else
-          ExamineRectProperties(RectAtOffset(aCSSStruct, prop->offset),
+          ExamineRectProperties(RectAtOffset(aRuleDataStruct, prop->offset),
                                 specified, inherited);
         break;
 
@@ -1110,7 +1111,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
         {
           ++total;
           const nsCSSValueList* valueList =
-              ValueListAtOffset(aCSSStruct, prop->offset);
+              ValueListAtOffset(aRuleDataStruct, prop->offset);
           if (valueList) {
             ++specified;
             if (eCSSUnit_Inherit == valueList->mValue.GetUnit()) {
@@ -1128,7 +1129,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
           NS_ASSERTION(!prop->mayHaveExplicitInherit,
                        "counters can't be coordinates");
           const nsCSSCounterData* counterData =
-              CounterDataAtOffset(aCSSStruct, prop->offset);
+              CounterDataAtOffset(aRuleDataStruct, prop->offset);
           if (counterData) {
             ++specified;
             if (eCSSUnit_Inherit == counterData->mCounter.GetUnit()) {
@@ -1144,7 +1145,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
           NS_ASSERTION(!prop->mayHaveExplicitInherit,
                        "quotes can't be coordinates");
           const nsCSSQuotes* quotes =
-              QuotesAtOffset(aCSSStruct, prop->offset);
+              QuotesAtOffset(aRuleDataStruct, prop->offset);
           if (quotes) {
             ++specified;
             if (eCSSUnit_Inherit == quotes->mOpen.GetUnit()) {
@@ -1158,7 +1159,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
         {
           total += 4;
           const nsCSSValueList** valueArray = 
-            ValueListArrayAtOffset(aCSSStruct, prop->offset);
+            ValueListArrayAtOffset(aRuleDataStruct, prop->offset);
           if (valueArray) {
             for (PRInt32 i = 0; i < 4; i++) {
               const nsCSSValueList* valList = valueArray[i];
@@ -1213,7 +1214,7 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
 const nsStyleStruct*
 nsRuleNode::GetDisplayData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSDisplay displayData; // Declare a struct with null CSS values.
+  nsRuleDataDisplay displayData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Display, mPresContext, aContext);
   ruleData.mDisplayData = &displayData;
 
@@ -1227,7 +1228,7 @@ nsRuleNode::GetDisplayData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSDisplay displayData; // Declare a struct with null CSS values.
+  nsRuleDataDisplay displayData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Visibility, mPresContext, aContext);
   ruleData.mDisplayData = &displayData;
 
@@ -1237,7 +1238,7 @@ nsRuleNode::GetVisibilityData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetTextData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSText textData; // Declare a struct with null CSS values.
+  nsRuleDataText textData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Text, mPresContext, aContext);
   ruleData.mTextData = &textData;
 
@@ -1247,7 +1248,7 @@ nsRuleNode::GetTextData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetTextResetData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSText textData; // Declare a struct with null CSS values.
+  nsRuleDataText textData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_TextReset, mPresContext, aContext);
   ruleData.mTextData = &textData;
 
@@ -1257,7 +1258,7 @@ nsRuleNode::GetTextResetData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetUserInterfaceData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSUserInterface uiData; // Declare a struct with null CSS values.
+  nsRuleDataUserInterface uiData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_UserInterface, mPresContext, aContext);
   ruleData.mUIData = &uiData;
 
@@ -1269,7 +1270,7 @@ nsRuleNode::GetUserInterfaceData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetUIResetData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSUserInterface uiData; // Declare a struct with null CSS values.
+  nsRuleDataUserInterface uiData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_UIReset, mPresContext, aContext);
   ruleData.mUIData = &uiData;
 
@@ -1281,7 +1282,7 @@ nsRuleNode::GetUIResetData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetFontData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSFont fontData; // Declare a struct with null CSS values.
+  nsRuleDataFont fontData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Font, mPresContext, aContext);
   ruleData.mFontData = &fontData;
 
@@ -1291,7 +1292,7 @@ nsRuleNode::GetFontData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetColorData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSColor colorData; // Declare a struct with null CSS values.
+  nsRuleDataColor colorData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Color, mPresContext, aContext);
   ruleData.mColorData = &colorData;
 
@@ -1301,7 +1302,7 @@ nsRuleNode::GetColorData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetBackgroundData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSColor colorData; // Declare a struct with null CSS values.
+  nsRuleDataColor colorData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Background, mPresContext, aContext);
   ruleData.mColorData = &colorData;
 
@@ -1311,7 +1312,7 @@ nsRuleNode::GetBackgroundData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetMarginData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSMargin marginData; // Declare a struct with null CSS values.
+  nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Margin, mPresContext, aContext);
   ruleData.mMarginData = &marginData;
 
@@ -1327,7 +1328,7 @@ nsRuleNode::GetMarginData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSMargin marginData; // Declare a struct with null CSS values.
+  nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Border, mPresContext, aContext);
   ruleData.mMarginData = &marginData;
 
@@ -1357,7 +1358,7 @@ nsRuleNode::GetBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetPaddingData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSMargin marginData; // Declare a struct with null CSS values.
+  nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Padding, mPresContext, aContext);
   ruleData.mMarginData = &marginData;
 
@@ -1373,7 +1374,7 @@ nsRuleNode::GetPaddingData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetOutlineData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSMargin marginData; // Declare a struct with null CSS values.
+  nsRuleDataMargin marginData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Outline, mPresContext, aContext);
   ruleData.mMarginData = &marginData;
 
@@ -1389,7 +1390,7 @@ nsRuleNode::GetOutlineData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetListData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSList listData; // Declare a struct with null CSS values.
+  nsRuleDataList listData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_List, mPresContext, aContext);
   ruleData.mListData = &listData;
 
@@ -1404,7 +1405,7 @@ nsRuleNode::GetListData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetPositionData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSPosition posData; // Declare a struct with null CSS values.
+  nsRuleDataPosition posData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Position, mPresContext, aContext);
   ruleData.mPositionData = &posData;
 
@@ -1419,7 +1420,7 @@ nsRuleNode::GetPositionData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetTableData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSTable tableData; // Declare a struct with null CSS values.
+  nsRuleDataTable tableData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Table, mPresContext, aContext);
   ruleData.mTableData = &tableData;
 
@@ -1429,7 +1430,7 @@ nsRuleNode::GetTableData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSTable tableData; // Declare a struct with null CSS values.
+  nsRuleDataTable tableData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_TableBorder, mPresContext, aContext);
   ruleData.mTableData = &tableData;
 
@@ -1439,7 +1440,7 @@ nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetContentData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSContent contentData; // Declare a struct with null CSS values.
+  nsRuleDataContent contentData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Content, mPresContext, aContext);
   ruleData.mContentData = &contentData;
 
@@ -1452,7 +1453,7 @@ nsRuleNode::GetContentData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetQuotesData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSContent contentData; // Declare a struct with null CSS values.
+  nsRuleDataContent contentData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_Quotes, mPresContext, aContext);
   ruleData.mContentData = &contentData;
 
@@ -1465,7 +1466,7 @@ nsRuleNode::GetQuotesData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetXULData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSXUL xulData; // Declare a struct with null CSS values.
+  nsRuleDataXUL xulData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_XUL, mPresContext, aContext);
   ruleData.mXULData = &xulData;
 
@@ -1477,7 +1478,7 @@ nsRuleNode::GetXULData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetSVGData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSSVG svgData; // Declare a struct with null CSS values.
+  nsRuleDataSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVG, mPresContext, aContext);
   ruleData.mSVGData = &svgData;
 
@@ -1487,7 +1488,7 @@ nsRuleNode::GetSVGData(nsIStyleContext* aContext, PRBool aComputeData)
 const nsStyleStruct*
 nsRuleNode::GetSVGResetData(nsIStyleContext* aContext, PRBool aComputeData)
 {
-  nsCSSSVG svgData; // Declare a struct with null CSS values.
+  nsRuleDataSVG svgData; // Declare a struct with null CSS values.
   nsRuleData ruleData(eStyleStruct_SVGReset, mPresContext, aContext);
   ruleData.mSVGData = &svgData;
 
@@ -1499,7 +1500,7 @@ const nsStyleStruct*
 nsRuleNode::WalkRuleTree(const nsStyleStructID aSID,
                          nsIStyleContext* aContext, 
                          nsRuleData* aRuleData,
-                         nsCSSStruct* aSpecificData,
+                         nsRuleDataStruct* aSpecificData,
                          PRBool aComputeData)
 {
   // We start at the most specific rule in the tree.  
@@ -1840,7 +1841,7 @@ nsRuleNode::gComputeStyleDataFn[] = {
 static void
 SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
         nscoord aMinFontSize, PRBool aUseDocumentFonts, PRBool aChromeOverride,
-        PRBool aIsGeneric, const nsCSSFont& aFontData,
+        PRBool aIsGeneric, const nsRuleDataFont& aFontData,
         const nsFont& aDefaultFont, const nsStyleFont* aParentFont,
         nsStyleFont* aFont, PRBool aZoom, PRBool& aInherited)
 {
@@ -1864,6 +1865,10 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       // now set to defaults
       aFont->mFont.name = aDefaultFont.name;
     }
+    nsCompatibility compat;
+    aPresContext->GetCompatibilityMode(&compat);
+    aFont->mFont.familyNameQuirks =
+        compat == eCompatibility_NavQuirks && aFontData.mFamilyFromHTML;
   }
   else if (eCSSUnit_Enumerated == aFontData.mFamily.GetUnit()) {
     nsSystemFontID sysID;
@@ -1899,6 +1904,8 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
       aFont->mSize = aFont->mFont.size; // this becomes our cascading size
     }
 
+    aFont->mFont.familyNameQuirks = PR_FALSE;
+
     // XXXldb All of this platform-specific stuff should be in the
     // nsIDeviceContext implementations, not here.
 
@@ -1928,9 +1935,11 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
   else if (eCSSUnit_Inherit == aFontData.mFamily.GetUnit()) {
     aInherited = PR_TRUE;
     aFont->mFont.name = aParentFont->mFont.name;
+    aFont->mFont.familyNameQuirks = aParentFont->mFont.familyNameQuirks;
   }
   else if (eCSSUnit_Initial == aFontData.mFamily.GetUnit()) {
     aFont->mFont.name = aDefaultFont.name;
+    aFont->mFont.familyNameQuirks = PR_FALSE;
   }
 
   // font-style: enum, normal, inherit
@@ -2092,7 +2101,7 @@ SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 //  - re-apply cascading rules from there without caching intermediate values
 static void
 SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
-               const nsCSSFont& aFontData, PRUint8 aGenericFontID,
+               const nsRuleDataFont& aFontData, PRUint8 aGenericFontID,
                nscoord aMinFontSize, PRBool aUseDocumentFonts,
                PRBool aChromeOverride, nsStyleFont* aFont)
 {
@@ -2141,7 +2150,7 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 
   for (; i >= 0; --i) {
     nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
-    nsCSSFont fontData; // Declare a struct with null CSS values.
+    nsRuleDataFont fontData; // Declare a struct with null CSS values.
     nsRuleData ruleData(eStyleStruct_Font, aPresContext, context);
     ruleData.mFontData = &fontData;
 
@@ -2186,14 +2195,15 @@ SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
+                            const nsRuleDataStruct& aData, 
                             nsIStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
-  const nsCSSFont& fontData = NS_STATIC_CAST(const nsCSSFont&, aData);
+  const nsRuleDataFont& fontData = NS_STATIC_CAST(const nsRuleDataFont&, aData);
   nsStyleFont* font = nsnull;
   const nsStyleFont* parentFont = nsnull;
   PRBool inherited = aInherited;
@@ -2315,14 +2325,15 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
+                            const nsRuleDataStruct& aData, 
                             nsIStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
-  const nsCSSText& textData = NS_STATIC_CAST(const nsCSSText&, aData);
+  const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
   nsStyleText* text = nsnull;
   const nsStyleText* parentText = nsnull;
   PRBool inherited = aInherited;
@@ -2435,14 +2446,15 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData, const nsCSSStruct& aData, 
+nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData,
+                                 const nsRuleDataStruct& aData, 
                                  nsIStyleContext* aContext, 
                                  nsRuleNode* aHighestNode,
                                  const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
-  const nsCSSText& textData = NS_STATIC_CAST(const nsCSSText&, aData);
+  const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
   nsStyleTextReset* text;
   if (aStartData)
     // We only need to compute the delta between this computed data and our
@@ -2520,7 +2532,7 @@ nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData, const nsCSSStruct& a
 
 const nsStyleStruct*
 nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
-                                     const nsCSSStruct& aData, 
+                                     const nsRuleDataStruct& aData, 
                                      nsIStyleContext* aContext, 
                                      nsRuleNode* aHighestNode,
                                      const RuleDetail& aRuleDetail,
@@ -2528,7 +2540,7 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSUserInterface& uiData = NS_STATIC_CAST(const nsCSSUserInterface&, aData);
+  const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUserInterface* ui = nsnull;
   const nsStyleUserInterface* parentUI = nsnull;
   PRBool inherited = aInherited;
@@ -2631,14 +2643,15 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData, const nsCSSStruct& aData, 
+nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
+                               const nsRuleDataStruct& aData, 
                                nsIStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSUserInterface& uiData = NS_STATIC_CAST(const nsCSSUserInterface&, aData);
+  const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
   nsStyleUIReset* ui;
   if (aStartData)
     // We only need to compute the delta between this computed data and our
@@ -2720,14 +2733,15 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData, const nsCSSStruct& aDa
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
+                               const nsRuleDataStruct& aData, 
                                nsIStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSDisplay& displayData = NS_STATIC_CAST(const nsCSSDisplay&, aData);
+  const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleDisplay* display;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -2973,14 +2987,15 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
+                                  const nsRuleDataStruct& aData, 
                                   nsIStyleContext* aContext, 
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSDisplay& displayData = NS_STATIC_CAST(const nsCSSDisplay&, aData);
+  const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
   nsStyleVisibility* visibility = nsnull;
   const nsStyleVisibility* parentVisibility = nsnull;
   PRBool inherited = aInherited;
@@ -3083,14 +3098,15 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct, const nsCSSStruct
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
+                             const nsRuleDataStruct& aData, 
                              nsIStyleContext* aContext, 
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSColor& colorData = NS_STATIC_CAST(const nsCSSColor&, aData);
+  const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleColor* color = nsnull;
   const nsStyleColor* parentColor = nsnull;
   PRBool inherited = aInherited;
@@ -3139,14 +3155,15 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDa
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
+                                  const nsRuleDataStruct& aData, 
                                   nsIStyleContext* aContext, 
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSColor& colorData = NS_STATIC_CAST(const nsCSSColor&, aData);
+  const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
   nsStyleBackground* bg;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -3302,14 +3319,15 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct, const nsCSSStruct
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
+                              const nsRuleDataStruct& aData, 
                               nsIStyleContext* aContext, 
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleMargin* margin;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -3367,14 +3385,15 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
+                              const nsRuleDataStruct& aData, 
                               nsIStyleContext* aContext, 
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleBorder* border;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -3647,14 +3666,15 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
 }
   
 const nsStyleStruct*
-nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
+                               const nsRuleDataStruct& aData, 
                                nsIStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStylePadding* padding;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -3712,14 +3732,15 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
+                               const nsRuleDataStruct& aData, 
                                nsIStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSMargin& marginData = NS_STATIC_CAST(const nsCSSMargin&, aData);
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
   nsStyleOutline* outline;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -3784,14 +3805,15 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
+                            const nsRuleDataStruct& aData, 
                             nsIStyleContext* aContext, 
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSList& listData = NS_STATIC_CAST(const nsCSSList&, aData);
+  const nsRuleDataList& listData = NS_STATIC_CAST(const nsRuleDataList&, aData);
   nsStyleList* list = nsnull;
   const nsStyleList* parentList = nsnull;
   PRBool inherited = aInherited;
@@ -3900,14 +3922,15 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
+                                const nsRuleDataStruct& aData, 
                                 nsIStyleContext* aContext, 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSPosition& posData = NS_STATIC_CAST(const nsCSSPosition&, aData);
+  const nsRuleDataPosition& posData = NS_STATIC_CAST(const nsRuleDataPosition&, aData);
   nsStylePosition* pos;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -4008,14 +4031,15 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct, const nsCSSStruct& 
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
+                             const nsRuleDataStruct& aData, 
                              nsIStyleContext* aContext, 
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSTable& tableData = NS_STATIC_CAST(const nsCSSTable&, aData);
+  const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTable* table;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -4078,14 +4102,15 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDa
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
+                                   const nsRuleDataStruct& aData, 
                                    nsIStyleContext* aContext, 
                                    nsRuleNode* aHighestNode,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSTable& tableData = NS_STATIC_CAST(const nsCSSTable&, aData);
+  const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
   nsStyleTableBorder* table = nsnull;
   const nsStyleTableBorder* parentTable = nsnull;
   PRBool inherited = aInherited;
@@ -4176,14 +4201,15 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct, const nsCSSStruc
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
+                               const nsRuleDataStruct& aData, 
                                nsIStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSContent& contentData = NS_STATIC_CAST(const nsCSSContent&, aData);
+  const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleContent* content;
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -4371,14 +4397,15 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct, const nsCSSStruct& a
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
-                                   nsIStyleContext* aContext, 
-                                   nsRuleNode* aHighestNode,
-                                   const RuleDetail& aRuleDetail, PRBool aInherited)
+nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
+                              const nsRuleDataStruct& aData, 
+                              nsIStyleContext* aContext, 
+                              nsRuleNode* aHighestNode,
+                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSContent& contentData = NS_STATIC_CAST(const nsCSSContent&, aData);
+  const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
   nsStyleQuotes* quotes = nsnull;
   const nsStyleQuotes* parentQuotes = nsnull;
   PRBool inherited = aInherited;
@@ -4464,14 +4491,15 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct, const nsCSSStruct& aD
 
 #ifdef INCLUDE_XUL
 const nsStyleStruct* 
-nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
+                           const nsRuleDataStruct& aData, 
                            nsIStyleContext* aContext, 
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
   
-  const nsCSSXUL& xulData = NS_STATIC_CAST(const nsCSSXUL&, aData);
+  const nsRuleDataXUL& xulData = NS_STATIC_CAST(const nsRuleDataXUL&, aData);
   nsStyleXUL* xul = nsnull;
   
   if (aStartStruct)
@@ -4613,7 +4641,8 @@ SetSVGLength(const nsCSSValue& aValue, float parentLength, float& length,
 }  
 
 const nsStyleStruct* 
-nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
+                           const nsRuleDataStruct& aData, 
                            nsIStyleContext* aContext, 
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
@@ -4623,7 +4652,7 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
   nsStyleSVG* svg = nsnull;
   nsStyleSVG* parentSVG = svg;
   PRBool inherited = aInherited;
-  const nsCSSSVG& SVGData = NS_STATIC_CAST(const nsCSSSVG&, aData);
+  const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
 
   if (aStartStruct)
     // We only need to compute the delta between this computed data and our
@@ -4760,7 +4789,7 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct, const nsCSSStruct& 
 {
   nsCOMPtr<nsIStyleContext> parentContext = aContext->GetParent();
 
-  const nsCSSSVG& SVGData = NS_STATIC_CAST(const nsCSSSVG&, aData);
+  const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
   nsStyleSVGReset* svgReset = nsnull;
 
   if (aStartStruct)

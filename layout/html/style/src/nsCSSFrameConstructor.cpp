@@ -394,6 +394,20 @@ GetSpecialSibling(nsIFrameManager* aFrameManager, nsIFrame* aFrame, nsIFrame** a
   *aResult = NS_STATIC_CAST(nsIFrame*, value);
 }
 
+// Get the frame's next-in-flow, or, if it doesn't have one,
+// its special sibling.
+static nsIFrame*
+GetNifOrSpecialSibling(nsIFrameManager *aFrameManager, nsIFrame *aFrame)
+{
+  nsIFrame *result;
+  aFrame->GetNextInFlow(&result);
+  if (result)
+    return result;
+
+  if (IsFrameSpecial(aFrame))
+    GetSpecialSibling(aFrameManager, aFrame, &result);
+  return result;
+}
 
 static void
 SetFrameIsSpecial(nsIFrameManager* aFrameManager, nsIFrame* aFrame, nsIFrame* aSpecialSibling)
@@ -1378,7 +1392,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     nimgr->GetNodeInfo(nsHTMLAtoms::img, nsnull, kNameSpaceID_None,
                        *getter_AddRefs(nodeInfo));
 
-    nsCOMPtr<nsIElementFactory> ef(do_CreateInstance(kHTMLElementFactoryCID,&rv));
+    nsCOMPtr<nsIElementFactory> ef(do_GetService(kHTMLElementFactoryCID,&rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIContent> content;
@@ -3338,21 +3352,27 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   // ----- reattach gfx scrollbars ------
   // Gfx scrollframes were created in the root frame but the primary frame map may have been destroyed if a 
   // new style sheet was loaded so lets reattach the frames to their content.
-    if (mGfxScrollFrame)
-    {
-        nsIFrame* scrollPort = nsnull;
-        mGfxScrollFrame->FirstChild(aPresContext, nsnull, &scrollPort);
+  if (mGfxScrollFrame) {
+    nsIFrame* scrollPort = nsnull;
+    mGfxScrollFrame->FirstChild(aPresContext, nsnull, &scrollPort);
 
-        nsIFrame* gfxScrollbarFrame1 = nsnull;
-        nsIFrame* gfxScrollbarFrame2 = nsnull;
-        nsresult rv = scrollPort->GetNextSibling(&gfxScrollbarFrame1);
-        rv = gfxScrollbarFrame1->GetNextSibling(&gfxScrollbarFrame2);
-        nsCOMPtr<nsIContent> content;
-        gfxScrollbarFrame1->GetContent(getter_AddRefs(content));
-        aState.mFrameManager->SetPrimaryFrameFor(content, gfxScrollbarFrame1);
+    nsIFrame* gfxScrollbarFrame1 = nsnull;
+    nsIFrame* gfxScrollbarFrame2 = nsnull;
+    nsresult rv = scrollPort->GetNextSibling(&gfxScrollbarFrame1);
+    if (gfxScrollbarFrame1) {
+      nsCOMPtr<nsIContent> content;
+      gfxScrollbarFrame1->GetContent(getter_AddRefs(content));
+      // XXX This works, but why?
+      aState.mFrameManager->SetPrimaryFrameFor(content, gfxScrollbarFrame1);
+
+      rv = gfxScrollbarFrame1->GetNextSibling(&gfxScrollbarFrame2);
+      if (gfxScrollbarFrame2) {
         gfxScrollbarFrame2->GetContent(getter_AddRefs(content));
+        // XXX This works, but why?
         aState.mFrameManager->SetPrimaryFrameFor(content, gfxScrollbarFrame2);
+      }
     }
+  }
 
   // --------- CREATE AREA OR BOX FRAME -------
   nsCOMPtr<nsIStyleContext>  styleContext;
@@ -8045,8 +8065,10 @@ FindNextAnonymousSibling(nsIPresShell* aPresShell,
 }
 
 #define UNSET_DISPLAY 255
-// if the sibling is a col group, col or (row group, caption), then aContent 
-// must be the same type, otherwise aContent may get the wrong parent.
+// This gets called to see if the frames corresponding to aSiblingDisplay and aDisplay
+// should be siblings in the frame tree. Although (1) rows and cols, (2) row groups 
+// and col groups, and (3) row groups and captions are siblings from a content perspective,
+// they are not considered siblings in the frame tree.
 PRBool
 nsCSSFrameConstructor::IsValidSibling(nsIPresShell&          aPresShell,
                                       const nsIFrame&        aSibling,
@@ -8086,6 +8108,13 @@ nsCSSFrameConstructor::IsValidSibling(nsIPresShell&          aPresShell,
              (NS_STYLE_DISPLAY_TABLE_CAPTION      == aDisplay);
     }
   }
+  else if (NS_STYLE_DISPLAY_TABLE_CAPTION == aSiblingDisplay) {
+    // Nothing can be a sibling of a caption since there can only be one caption.
+    // But this check is necessary since a row group and caption are siblings
+    // from a content perspective (they share the table content as parent)
+    return PR_FALSE;
+  }
+
   return PR_TRUE;
 }
 
@@ -9958,12 +9987,13 @@ static void
 DoApplyRenderingChangeToTree(nsIPresContext* aPresContext,
                              nsIFrame* aFrame,
                              nsIViewManager* aViewManager,
+                             nsIFrameManager* aFrameManager,
                              nsChangeHint aChange);
 
 static void
 UpdateViewsForTree(nsIPresContext* aPresContext, nsIFrame* aFrame, 
-                   nsIViewManager* aViewManager, nsRect& aBoundsRect,
-                   nsChangeHint aChange)
+                   nsIViewManager* aViewManager, nsIFrameManager* aFrameManager,
+                   nsRect& aBoundsRect, nsChangeHint aChange)
 {
   NS_PRECONDITION(gInApplyRenderingChangeToTree,
                   "should only be called within ApplyRenderingChangeToTree");
@@ -10005,11 +10035,12 @@ UpdateViewsForTree(nsIPresContext* aPresContext, nsIFrame* aFrame,
           nsIFrame* outOfFlowFrame = ((nsPlaceholderFrame*)child)->GetOutOfFlowFrame();
           NS_ASSERTION(outOfFlowFrame, "no out-of-flow frame");
 
-          DoApplyRenderingChangeToTree(aPresContext, outOfFlowFrame, aViewManager, aChange);
+          DoApplyRenderingChangeToTree(aPresContext, outOfFlowFrame,
+                                       aViewManager, aFrameManager, aChange);
         }
         else {  // regular frame
           nsRect  childBounds;
-          UpdateViewsForTree(aPresContext, child, aViewManager, childBounds, aChange);
+          UpdateViewsForTree(aPresContext, child, aViewManager, aFrameManager, childBounds, aChange);
           bounds.UnionRect(bounds, childBounds);
         }
         NS_IF_RELEASE(frameType);
@@ -10028,12 +10059,13 @@ static void
 DoApplyRenderingChangeToTree(nsIPresContext* aPresContext,
                              nsIFrame* aFrame,
                              nsIViewManager* aViewManager,
+                             nsIFrameManager* aFrameManager,
                              nsChangeHint aChange)
 {
   NS_PRECONDITION(gInApplyRenderingChangeToTree,
                   "should only be called within ApplyRenderingChangeToTree");
 
-  for ( ; aFrame; aFrame->GetNextInFlow(&aFrame)) {
+  for ( ; aFrame; aFrame = GetNifOrSpecialSibling(aFrameManager, aFrame)) {
     // Get the frame's bounding rect
     nsRect invalidRect;
     nsPoint viewOffset;
@@ -10049,11 +10081,15 @@ DoApplyRenderingChangeToTree(nsIPresContext* aPresContext,
       aFrame->GetOffsetFromView(aPresContext, viewOffset, &parentView);
       NS_ASSERTION(nsnull != parentView, "no view");
     }
-    UpdateViewsForTree(aPresContext, aFrame, aViewManager, invalidRect, aChange);
+    UpdateViewsForTree(aPresContext, aFrame, aViewManager, aFrameManager,
+                       invalidRect, aChange);
 
     if (! view && (aChange & nsChangeHint_RepaintFrame)) { // if frame has view, will already be invalidated
       // XXX Instead of calling this we should really be calling
       // Invalidate on on the nsFrame (which does this)
+      // XXX This rect inflation should be done when the rects are
+      // being accumulated in UpdateViewsForTree, not in
+      // DoApplyRenderingChangeToTree
       const nsStyleOutline* outline;
       aFrame->GetStyleData(eStyleStruct_Outline, (const nsStyleStruct*&)outline);
       nscoord width;
@@ -10117,10 +10153,14 @@ ApplyRenderingChangeToTree(nsIPresContext* aPresContext,
 
   viewManager->BeginUpdateViewBatch();
 
+  nsCOMPtr<nsIFrameManager> frameManager;
+  shell->GetFrameManager(getter_AddRefs(frameManager));
+  
 #ifdef DEBUG
   gInApplyRenderingChangeToTree = PR_TRUE;
 #endif
-  DoApplyRenderingChangeToTree(aPresContext, aFrame, viewManager, aChange);
+  DoApplyRenderingChangeToTree(aPresContext, aFrame, viewManager,
+                               frameManager, aChange);
 #ifdef DEBUG
   gInApplyRenderingChangeToTree = PR_FALSE;
 #endif
@@ -10177,21 +10217,6 @@ nsCSSFrameConstructor::StyleChangeReflow(nsIPresContext* aPresContext,
     if (NS_SUCCEEDED(rv))
       shell->AppendReflowCommand(reflowCmd);
   }
-
-  // If the background of the frame is painted on one of its ancestors,
-  // the reflow might not invalidate correctly.
-  nsIFrame *ancestor = aFrame;
-  const nsStyleBackground *bg;
-  PRBool isCanvas;
-  while (!nsCSSRendering::FindBackground(aPresContext, ancestor,
-                                         &bg, &isCanvas)) {
-    ancestor->GetParent(&ancestor);
-    NS_ASSERTION(ancestor, "canvas must paint");
-  }
-  // This isn't the most efficient way to do it, but it saves code
-  // size and doesn't add much cost compared to the reflow..
-  if (ancestor != aFrame)
-    ApplyRenderingChangeToTree(aPresContext, ancestor, nsnull, nsChangeHint_RepaintFrame);
 
   return NS_OK;
 }
@@ -11569,21 +11594,6 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsIPresShell*   aPresShell,
   return rv;
 }
 
-// Get the frame's next-in-flow, or, if it doesn't have one,
-// its special sibling.
-static nsIFrame*
-GetNifOrSpecialSibling(nsIFrameManager *aFrameManager, nsIFrame *aFrame)
-{
-  nsIFrame *result;
-  aFrame->GetNextInFlow(&result);
-  if (result)
-    return result;
-
-  if (IsFrameSpecial(aFrame))
-    GetSpecialSibling(aFrameManager, aFrame, &result);
-  return result;
-}
-
 // Helper function that searches the immediate child frames 
 // (and their children if the frames are "special")
 // for a frame that maps the specified content object
@@ -12016,6 +12026,24 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
 
   nsIFrame* frame;
   shell->GetPrimaryFrameFor(aContent, &frame);
+
+  if (frame) {
+    // If the background of the frame is painted on one of its ancestors,
+    // the frame reconstruct might not invalidate correctly.
+    nsIFrame *ancestor = frame;
+    const nsStyleBackground *bg;
+    PRBool isCanvas;
+    while (!nsCSSRendering::FindBackground(aPresContext, ancestor,
+                                           &bg, &isCanvas)) {
+      ancestor->GetParent(&ancestor);
+      NS_ASSERTION(ancestor, "canvas must paint");
+    }
+    // This isn't the most efficient way to do it, but it saves code
+    // size and doesn't add much cost compared to the frame reconstruct.
+    if (ancestor != frame)
+      ApplyRenderingChangeToTree(aPresContext, ancestor, nsnull,
+                                 nsChangeHint_RepaintFrame);
+  }
 
   if (frame && IsFrameSpecial(frame)) {
 #ifdef DEBUG
@@ -14206,14 +14234,7 @@ nsCSSFrameConstructor::ReframeContainingBlock(nsIPresContext* aPresContext, nsIF
   }
 
   // If we get here, we're screwed!
-  return RecreateEntireFrameTree(aPresContext);
-}
-
-nsresult
-nsCSSFrameConstructor::RecreateEntireFrameTree(nsIPresContext* aPresContext)
-{
-  // XXX write me some day
-  return NS_OK;
+  return ReconstructDocElementHierarchy(aPresContext);
 }
 
 nsresult nsCSSFrameConstructor::RemoveFixedItems(nsIPresContext*  aPresContext,

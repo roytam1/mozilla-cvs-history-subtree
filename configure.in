@@ -142,18 +142,57 @@ dnl ==============================================================
 case "$target" in
 *-cygwin*|*-mingw*|*-msvc*|*-mksnt*)
     # Check to see if we are really running in a msvc environemnt
-    _WIN32_MSVC=
+    _WIN32_MSVC=1
     AC_CHECK_PROGS(CC, cl)
-    if test "$CC" = "cl"; then
-        echo 'main() { return 0; }' > dummy.c
-        ${CC} -o dummy dummy.c >/dev/null 2>&1
-        if test $? = 0; then
-            _WIN32_MSVC=1
-            CXX=$CC
-        else
-            AC_MSG_WARN([$(CC) test failed.  Using normal feature tests])
-        fi
-        rm -f dummy dummy.o dummy.obj dummy.exe dummy.c
+    AC_CHECK_PROGS(CXX, cl)
+    AC_CHECK_PROGS(LD, link)
+    AC_CHECK_PROGS(MIDL, midl)    
+    
+    # Make sure compilers are valid
+    CFLAGS="$CFLAGS -TC"
+    CXXFLAGS="$CXXFLAGS -TP"
+    AC_LANG_SAVE
+    AC_LANG_C
+    AC_TRY_COMPILE([#include <stdio.h>],
+        [ printf("Hello World\n"); ],,
+        AC_MSG_ERROR([\$(CC) test failed.  You must have MS VC++ in your path to build.]) )
+
+    AC_LANG_CPLUSPLUS
+    AC_TRY_COMPILE([#include <iostream.h>],
+        [ cout << "Hello World" << endl; ],,
+        AC_MSG_ERROR([\$(CXX) test failed.  You must have MS VC++ in your path to build.]) )
+    AC_LANG_RESTORE
+
+    # Determine compiler version
+    _CC_FULL_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' | sed -e 's|[ ]*$||'`
+    _CC_MAJOR_VERSION=`echo ${_CC_FULL_VERSION} | awk -F\. '{ print $ 1 }'`
+    _CXX_FULL_VERSION=`"${CXX}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' | sed -e 's|[ ]*$||'`
+    _CXX_MAJOR_VERSION=`echo ${_CXX_FULL_VERSION} | awk -F\. '{ print $ 1 }'`
+    if test "$_CC_MAJOR_VERSION" != "$_CXX_MAJOR_VERSION"; then
+        AC_MSG_ERROR([The major versions of \$CC and \$CXX do not match.])
+    fi
+    if test "$_CC_MAJOR_VERSION" = "12"; then
+        _CC_SUITE=6
+    elif test "$_CC_MAJOR_VERSION" = "13"; then
+        _CC_SUITE=7
+    else
+        AC_MSG_ERROR([This version of the MSVC compiler, $_CC_FULL_VERSION , is unsupported.])
+    fi
+
+    # Check linker version
+    _LD_FULL_VERSION=`"${LD}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' | sed -e 's|[ ]*$||'`
+    _LD_MAJOR_VERSION=`echo ${_LD_FULL_VERSION} | awk -F\. '{ print $ 1 }'`
+    if test "$_LD_MAJOR_VERSION" != "$_CC_SUITE"; then
+        AC_MSG_ERROR([The linker major version, $_LD_FULL_VERSION,  does not match the compiler suite version, $_CC_SUITE.])
+    fi
+
+    # Check midl version
+    _MIDL_FULL_VERSION=`"${MIDL}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' | sed -e 's|[ ]*$||'`
+    _MIDL_MAJOR_VERSION=`echo ${_MIDL_FULL_VERSION} | awk -F\. '{ print $ 1 }'`
+    _MIDL_MINOR_VERSION=`echo ${_MIDL_FULL_VERSION} | awk -F\. '{ print $ 2 }'`
+    _MIDL_REV_VERSION=`echo ${_MIDL_FULL_VERSION} | awk -F\. '{ print $ 3 }'`
+    if test "$_MIDL_MAJOR_VERSION" != "5" -a "$_MIDL_FULL_VERSION" != "6.00.0347"; then
+        AC_MSG_ERROR([Midl version $_MIDL_FULL_VERSION was found.  Midl version must be 5.x.x (VC6*) or 6.00.0347 (VC7).])
     fi
     ;;
 esac
@@ -911,15 +950,11 @@ case "$target" in
     else
         CYGWIN_WRAPPER="sh ${srcdir}/build/cygwin-wrapper"
         if test "`echo ${srcdir} | grep -c ^/ 2>/dev/null`" = 0; then
-            AC_MSG_WARN([\$srcdir is relative. You may not get proper debugging info from MSVC. See mozbug 141834 for details.])
             _pwd=`pwd`
             CYGWIN_WRAPPER="sh ${_pwd}/${srcdir}/build/cygwin-wrapper"
         fi
-        CC=cl
-        CXX=cl
-        HOST_CC=cl
-        HOST_CXX=cl
-        LD=link
+        HOST_CC='$(CC)'
+        HOST_CXX='$(CXX)'
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
         RANLIB='echo not_ranlib'
@@ -941,6 +976,7 @@ case "$target" in
     	LIB_SUFFIX=lib
     	DLL_SUFFIX=.dll
         MKSHLIB='$(LD) /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE) $(DSO_LDOPTS)'
+        MKCSHLIB='$(LD) /NOLOGO /DLL /OUT:$@ /PDB:$(PDBFILE) $(DSO_LDOPTS)'
         MKSHLIB_FORCE_ALL=
         MKSHLIB_UNFORCE_ALL=
         DSO_LDOPTS=/SUBSYSTEM:WINDOWS
@@ -990,45 +1026,56 @@ case "$target" in
     dnl Remove cygwinism from MOZ_BUILD_ROOT
     MOZ_BUILD_ROOT=`cygpath -w $MOZ_BUILD_ROOT | sed -e 's|\\\\|/|g'`
 
-    if test "$MOZ_TOOLS"; then
-        MOZ_TOOLS_DIR=`cd $MOZ_TOOLS && pwd`
-        if test "$?" != "0" || test -z "$MOZ_TOOLS_DIR"; then
-            AC_MSG_ERROR([cd \$MOZ_TOOLS failed. MOZ_TOOLS ==? $MOZ_TOOLS])
-        fi
-        MOZ_TOOLS_DIR=`cygpath -w $MOZ_TOOLS_DIR | sed -e 's|\\\\|/|g'`
-        if test -n "$GLIB_PREFIX"; then
-            if test -d "$GLIB_PREFIX"; then
-                _foo=`cygpath -u ${GLIB_PREFIX}`
-                if test `echo ${PATH} | grep -c "$_foo/bin:"` = 0; then
-                    AC_MSG_ERROR([GLIB_PREFIX must be in your \$PATH.])
-                fi
-                GLIB_CFLAGS="-I${GLIB_PREFIX}/include"
-                GLIB_LIBS="${GLIB_PREFIX}/lib/glib-1.2.lib"
-            else
-                AC_MSG_ERROR([GLIB_PREFIX is set but "${GLIB_PREFIX}" is not a directory.])
-            fi
-        else
-            GLIB_CFLAGS='-I$(MOZ_TOOLS_DIR)/include'
-            GLIB_LIBS='$(MOZ_TOOLS_DIR)/lib/glib-1.2.lib'
-        fi
-        if  test -n "$LIBIDL_PREFIX"; then
-            if test -d "$LIBIDL_PREFIX"; then
-                _foo=`cygpath -u ${LIBIDL_PREFIX}`
-                if test `echo ${PATH} | grep -c "$_foo/bin:"` = 0; then
-                    AC_MSG_ERROR([LIBIDL_PREFIX must be in your \$PATH.])
-                fi
-                LIBIDL_CFLAGS="-I${LIBIDL_PREFIX}/include"
-                LIBIDL_LIBS="${LIBIDL_PREFIX}/lib/libidl-0.6.lib ${LIBIDL_PREFIX}/lib/glib-1.2.lib"
-            else
-                AC_MSG_ERROR([LIBIDL_PREFIX is set but "${LIBIDL_PREFIX}" is not a directory.])
-            fi
-        else
-            LIBIDL_CFLAGS='-I$(MOZ_TOOLS_DIR)/include'
-            LIBIDL_LIBS='$(MOZ_TOOLS_DIR)/lib/libidl-0.6.lib $(MOZ_TOOLS_DIR)/lib/glib-1.2.lib'
-        fi
-   else
+    if test -z "$MOZ_TOOLS"; then
         AC_MSG_ERROR([MOZ_TOOLS is not set])
     fi
+
+    MOZ_TOOLS_DIR=`cd $MOZ_TOOLS && pwd`
+    if test "$?" != "0" || test -z "$MOZ_TOOLS_DIR"; then
+        AC_MSG_ERROR([cd \$MOZ_TOOLS failed. MOZ_TOOLS ==? $MOZ_TOOLS])
+    fi
+    if test `echo ${PATH}: | grep -c "$MOZ_TOOLS_DIR/bin:"` = 0; then
+        AC_MSG_ERROR([\$MOZ_TOOLS\\bin must be in your path.])
+    fi
+    MOZ_TOOLS_DIR=`cygpath -w $MOZ_TOOLS_DIR | sed -e 's|\\\\|/|g'`
+
+    if test -n "$GLIB_PREFIX"; then
+        _GLIB_PREFIX_DIR=`cd $GLIB_PREFIX && pwd`
+        if test "$?" = "0"; then
+            if test `echo ${PATH}: | grep -c "$_GLIB_PREFIX_DIR/bin:"` = 0; then
+                AC_MSG_ERROR([GLIB_PREFIX must be in your \$PATH.])
+            fi
+            _GLIB_PREFIX_DIR=`cygpath -w $_GLIB_PREFIX_DIR | sed -e 's|\\\\|/|g'`
+        else
+            AC_MSG_ERROR([GLIB_PREFIX is set but "${GLIB_PREFIX}" is not a directory.])
+        fi
+    else
+        _GLIB_PREFIX_DIR=$MOZ_TOOLS_DIR
+    fi
+    if test ! -f "${_GLIB_PREFIX_DIR}/include/glib.h"; then
+        AC_MSG_ERROR([Cannot find $_GLIB_PREFIX_DIR/include/glib.h .])
+    fi
+    GLIB_CFLAGS="-I${_GLIB_PREFIX_DIR}/include"
+    GLIB_LIBS="${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
+
+    if test -n "$LIBIDL_PREFIX"; then
+        _LIBIDL_PREFIX_DIR=`cd $LIBIDL_PREFIX && pwd`
+        if test "$?" = "0"; then
+            if test `echo ${PATH}: | grep -c "$_LIBIDL_PREFIX_DIR/bin:"` = 0; then
+                AC_MSG_ERROR([LIBIDL_PREFIX must be in your \$PATH.])
+            fi
+            _LIBIDL_PREFIX_DIR=`cygpath -w $_LIBIDL_PREFIX_DIR | sed -e 's|\\\\|/|g'`
+        else
+            AC_MSG_ERROR([LIBIDL_PREFIX is set but "${LIBIDL_PREFIX}" is not a directory.])
+        fi
+    else
+        _LIBIDL_PREFIX_DIR=$MOZ_TOOLS_DIR
+    fi        
+    if test ! -f "${_LIBIDL_PREFIX_DIR}/include/libIDL/IDL.h"; then
+        AC_MSG_ERROR([Cannot find $_LIBIDL_PREFIX_DIR/include/libIDL/IDL.h .])
+    fi
+    LIBIDL_CFLAGS="-I${_LIBIDL_PREFIX_DIR}/include"
+    LIBIDL_LIBS="${_LIBIDL_PREFIX_DIR}/lib/libidl-0.6.lib ${_GLIB_PREFIX_DIR}/lib/glib-1.2.lib"
 
     case "$target" in
     i?86-*)
@@ -1151,6 +1198,12 @@ case "$target" in
     MOZ_ENABLE_POSTSCRIPT=
     RC=rc.exe
     RCFLAGS='-n -x2'
+
+    if test "$MOZTOOLS"; then
+        MOZ_TOOLS_DIR=`echo $MOZTOOLS | sed -e 's|\\\\|/|g'`
+    else
+        AC_MSG_ERROR([MOZTOOLS is not set])
+    fi
 
     # EMX/GCC build
     if test "$GNU_CC"; then
@@ -3406,7 +3459,7 @@ dnl ========================================================
 dnl Installer
 dnl ========================================================
 case "$target_os" in
-    solaris*|linux*|msvc*|mksnt*|cygwin*|mingw*)
+    solaris*|linux*|msvc*|mksnt*|cygwin*|mingw*|os2*)
         MOZ_INSTALLER=1
         ;;
 esac
@@ -4743,7 +4796,6 @@ dnl ========================================================
 if test "$OS_ARCH" = "OS2"; then
   AC_DEFINE(XP_PC)
   AC_DEFINE(XP_OS2)
-  AC_DEFINE(XP_OS2_FIX)
   if test "$VACPP" = "yes"; then
       LIBS='so32dll.lib tcp32dll.lib'
   fi

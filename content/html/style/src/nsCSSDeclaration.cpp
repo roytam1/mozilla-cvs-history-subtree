@@ -390,7 +390,6 @@ nsCSSDisplay::nsCSSDisplay(const nsCSSDisplay& aCopy)
     mOverflow(aCopy.mOverflow),
     mVisibility(aCopy.mVisibility),
     mOpacity(aCopy.mOpacity),
-    mLang(aCopy.mLang),
     // temp fix for bug 24000
     mBreakBefore(aCopy.mBreakBefore),
     mBreakAfter(aCopy.mBreakAfter)
@@ -4889,7 +4888,13 @@ PRBool nsCSSDeclaration::AppendValueToString(nsCSSProperty aProperty, const nsCS
   else if (eCSSUnit_Integer == unit) {
     switch (aProperty) {
       case eCSSProperty_color:
-      case eCSSProperty_background_color: {
+      case eCSSProperty_background_color:
+      case eCSSProperty_border_top_color:
+      case eCSSProperty_border_bottom_color:
+      case eCSSProperty_border_left_color:
+      case eCSSProperty_border_right_color:
+      case eCSSProperty__moz_outline_color:
+      case eCSSProperty_text_shadow_color: {
         // we can lookup the property in the ColorTable and then
         // get a string mapping the name
         nsAutoString tmpStr;
@@ -5405,6 +5410,32 @@ nsCSSDeclaration::GetValue(nsCSSProperty aProperty,
             aValue.Append(PRUnichar(' '));
           }
         } while (nsnull != keyEquiv);
+      }
+      break;
+    }
+    case eCSSProperty_border_top_colors:
+    case eCSSProperty_border_right_colors:
+    case eCSSProperty_border_bottom_colors:
+    case eCSSProperty_border_left_colors: {
+      CSS_VARONSTACK_GET(Margin);
+      PRUint8 index;
+      switch (aProperty) {
+        case eCSSProperty_border_top_colors:    index = 0; break;
+        case eCSSProperty_border_right_colors:  index = 1; break;
+        case eCSSProperty_border_bottom_colors: index = 2; break;
+        case eCSSProperty_border_left_colors:   index = 3; break;
+        CSS_BOGUS_DEFAULT; // make compiler happy
+      }
+      if ((nsnull != theMargin) && (nsnull != theMargin->mBorderColors) &&
+          (nsnull != theMargin->mBorderColors[index])) {
+        nsCSSValueList* borderSideColors = theMargin->mBorderColors[index];
+        do {
+          AppendValueToString(aProperty, borderSideColors->mValue, aValue);
+          borderSideColors = borderSideColors->mNext;
+          if (nsnull != borderSideColors) {
+            aValue.Append(PRUnichar(' '));
+          }
+        } while (nsnull != borderSideColors);
       }
       break;
     }

@@ -314,7 +314,7 @@ endif
 # for how to set up mozconfig.
 MOZCONFIG_LOADER := mozilla/build/autoconf/mozconfig2client-mk
 MOZCONFIG_FINDER := mozilla/build/autoconf/mozconfig-find 
-MOZCONFIG_MODULES := mozilla/build/unix/modules.mk
+MOZCONFIG_MODULES := mozilla/build/unix/modules.mk mozilla/build/unix/uniq.pl
 run_for_side_effects := \
   $(shell cd $(ROOTDIR); \
      if test "$(_IS_FIRST_CHECKOUT)"; then \
@@ -595,9 +595,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk mozilla/build/unix/modules.mk'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk mozilla/build/unix/modules.mk
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 real_checkout:
@@ -649,9 +649,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
+	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(TOPSRCDIR) && \
 	$(MAKE) -f client.mk real_fast-update
 
