@@ -5432,6 +5432,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
     nsCOMPtr<nsIInputStream> inputStream;
     nsCOMPtr<nsIURI> referrerURI;
     nsCOMPtr<nsISupports> cacheKey;
+    nsCOMPtr<nsISupports> cacheToken;
     if (aChannel) {
         nsCOMPtr<nsICachingChannel>
             cacheChannel(do_QueryInterface(aChannel));
@@ -5440,6 +5441,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
          */
         if (cacheChannel) {
             cacheChannel->GetCacheKey(getter_AddRefs(cacheKey));
+            cacheChannel->GetCacheToken(getter_AddRefs(cacheToken));
         }
         nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aChannel));
 
@@ -5457,6 +5459,14 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
                   nsnull,       // LayoutHistory state
                   cacheKey);    // CacheKey
     entry->SetReferrerURI(referrerURI);
+    /* If cache got a 'no-store', ask SH not to store
+     * HistoryLayoutState. By default, SH will set this
+     * flag to PR_TRUE and save HistoryLayoutState.
+     */
+    if (!cacheToken)
+      entry->SetSaveHistoryStateFlag(PR_FALSE);
+
+
 
 
     // If no Session History component is available in the parent DocShell
@@ -5550,10 +5560,15 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
 
 NS_IMETHODIMP nsDocShell::PersistLayoutHistoryState()
 {
-    nsresult
-        rv =
-        NS_OK;
+    nsresult rv = NS_OK;
     if (mOSHE) {
+        PRBool saveHistoryState = PR_TRUE;
+        mOSHE->GetSaveHistoryStateFlag(&saveHistoryState);
+        // Don't capture historystate and save it in history
+        // if the page asked not to do so.
+        if (!saveHistoryState)
+          return NS_OK;
+
         nsCOMPtr<nsIPresShell> shell;
 
         rv = GetPresShell(getter_AddRefs(shell));
