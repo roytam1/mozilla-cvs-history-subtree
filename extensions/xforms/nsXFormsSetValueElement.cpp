@@ -65,42 +65,6 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
   if (!mElement)
     return NS_OK;
   
-  nsCOMPtr<nsIDOMNode> dommodel = nsXFormsUtils::GetModel(mElement);
-  
-  if (!dommodel)
-    return NS_OK;
-
-  nsAutoString value;
-  mElement->GetAttribute(NS_LITERAL_STRING("value"), value);
-  if (!value.IsEmpty()) {
-    nsCOMPtr<nsIXFormsModelElement> model(do_QueryInterface(dommodel));
-    if (!model)
-      return NS_OK;
-
-    // Get the instance data and evaluate the xpath expression.
-    // XXXfixme when xpath extensions are implemented (instance())
-
-    nsCOMPtr<nsIDOMDocument> instanceDoc;
-    model->GetInstanceDocument(EmptyString(),
-                               getter_AddRefs(instanceDoc));
-    if (!instanceDoc)
-      return NS_OK;
-
-    nsCOMPtr<nsIDOMElement> docElement;
-    instanceDoc->GetDocumentElement(getter_AddRefs(docElement));
-
-    nsCOMPtr<nsIDOMXPathResult> xpResult =
-      nsXFormsUtils::EvaluateXPath(value, docElement, mElement,
-                                   nsIDOMXPathResult::STRING_TYPE);
-    if (!xpResult)
-      return NS_OK;
-    xpResult->GetStringValue(value);
-  }
-  else {
-    nsCOMPtr<nsIDOM3Node> n3(do_QueryInterface(mElement));
-    n3->GetTextContent(value);
-  }
-
   nsCOMPtr<nsIDOMNode> model;
   nsCOMPtr<nsIDOMXPathResult> result;
   nsresult rv =
@@ -122,6 +86,25 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
   if (!singleNode)
     return NS_OK;
 
+  nsAutoString value;
+  nsAutoString valueattr;
+  mElement->GetAttribute(NS_LITERAL_STRING("value"), valueattr);
+
+  if(!valueattr.IsEmpty()) {
+    // According to the XForms Errata, the context node for the XPath expression
+    //   stored in @value should be the node that setvalue is bound to.
+    nsCOMPtr<nsIDOMXPathResult> xpResult =
+      nsXFormsUtils::EvaluateXPath(valueattr, singleNode, mElement,
+                                   nsIDOMXPathResult::STRING_TYPE);
+    if (!xpResult)
+      return NS_OK;
+    xpResult->GetStringValue(value);
+  }
+  else {
+    nsCOMPtr<nsIDOM3Node> n3(do_QueryInterface(mElement));
+    n3->GetTextContent(value);
+  }
+
   nsXFormsMDGEngine* MDG;
   modelPriv->GetMDG(&MDG);
   if (!MDG)
@@ -133,13 +116,13 @@ nsXFormsSetValueElement::HandleAction(nsIDOMEvent* aEvent,
 
   if (changed) {
     if (aParentAction) {
-      aParentAction->SetRecalculate(dommodel, PR_TRUE);
-      aParentAction->SetRevalidate(dommodel, PR_TRUE);
-      aParentAction->SetRefresh(dommodel, PR_TRUE);
+      aParentAction->SetRecalculate(model, PR_TRUE);
+      aParentAction->SetRevalidate(model, PR_TRUE);
+      aParentAction->SetRefresh(model, PR_TRUE);
     } else {
-      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Recalculate);
-      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Revalidate);
-      nsXFormsUtils::DispatchEvent(dommodel, eEvent_Refresh);
+      nsXFormsUtils::DispatchEvent(model, eEvent_Recalculate);
+      nsXFormsUtils::DispatchEvent(model, eEvent_Revalidate);
+      nsXFormsUtils::DispatchEvent(model, eEvent_Refresh);
     }
   }
 
