@@ -283,16 +283,16 @@ nsBoxObject::GetLookAndFeelMetric(const PRUnichar* aPropertyName,
     lookAndFeel->GetMetric(nsILookAndFeel::eMetric_ScrollArrowStyle, metricResult);
     switch (metricResult) {
       case nsILookAndFeel::eMetric_ScrollArrowStyleBothAtBottom:
-        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("doublebottom"));
+        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("doublebottom").get());
         break;
       case nsILookAndFeel::eMetric_ScrollArrowStyleBothAtEachEnd:
-        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("double"));
+        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("double").get());
         break;
       case nsILookAndFeel::eMetric_ScrollArrowStyleBothAtTop:
-        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("doubletop"));
+        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("doubletop").get());
         break;
       default:
-        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("single"));
+        *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("single").get());
         break;   
     } 
   }
@@ -300,9 +300,9 @@ nsBoxObject::GetLookAndFeelMetric(const PRUnichar* aPropertyName,
     PRInt32 metricResult;
     lookAndFeel->GetMetric(nsILookAndFeel::eMetric_ScrollSliderStyle, metricResult);
     if ( metricResult == nsILookAndFeel::eMetric_ScrollThumbStyleNormal )
-      *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("fixed"));
+      *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("fixed").get());
     else
-      *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("proportional"));   
+      *aResult = nsXPIDLString::Copy(NS_LITERAL_STRING("proportional").get());   
   }
   return NS_OK;
 }

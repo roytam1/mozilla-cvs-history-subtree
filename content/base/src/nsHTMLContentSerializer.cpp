@@ -719,7 +719,7 @@ nsHTMLContentSerializer::StartIndentation(nsIAtom* aName,
 {
   if ((mDoFormat || aHasDirtyAttr) && !mPreLevel && !mColPos) {
     for (PRInt32 i = mIndent; --i >= 0; ) {
-      AppendToString(kIndentStr, -1, 
+      AppendToString(kIndentStr.get(), -1, 
                      aStr);
     }
   }
@@ -759,7 +759,7 @@ nsHTMLContentSerializer::EndIndentation(nsIAtom* aName,
 
   if ((mDoFormat || aHasDirtyAttr) && !mPreLevel && !mColPos) {
     for (PRInt32 i = mIndent; --i >= 0; ) {
-      AppendToString(kIndentStr, -1,
+      AppendToString(kIndentStr.get(), -1,
                      aStr);
     }
   }

@@ -637,7 +637,7 @@ static int PR_CALLBACK
 NotifyObserver(const char *newpref, void *data)
 {
     nsCOMPtr<nsIObserver> observer = NS_STATIC_CAST(nsIObserver *, data);
-    observer->Observe(observer, NS_LITERAL_STRING("nsPref:changed"),
+    observer->Observe(observer, NS_LITERAL_STRING("nsPref:changed").get(),
                       NS_ConvertASCIItoUCS2(newpref));
     return 0;
 }

@@ -1707,7 +1707,7 @@ nsProfile::DefineLocaleDefaultsDir()
         if (NS_SUCCEEDED(rv))
         {
             nsXPIDLString localeName;
-            rv = chromeRegistry->GetSelectedLocale(NS_LITERAL_STRING("navigator"), getter_Copies(localeName));
+            rv = chromeRegistry->GetSelectedLocale(NS_LITERAL_STRING("navigator").get(), getter_Copies(localeName));
             if (NS_SUCCEEDED(rv))
                 rv = localeDefaults->AppendUnicode(localeName);
         }

@@ -1757,9 +1757,9 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
               PRUnichar *titleUnicode;
               nsAutoString captionStr, msgStr1, msgStr2;
               
-              GetBundleString(NS_LITERAL_STRING("DocumentTitle"), captionStr);
-              GetBundleString(NS_LITERAL_STRING("NeedDocTitle"), msgStr1); 
-              GetBundleString(NS_LITERAL_STRING("DocTitleHelp"), msgStr2);
+              GetBundleString(NS_LITERAL_STRING("DocumentTitle").get(), captionStr);
+              GetBundleString(NS_LITERAL_STRING("NeedDocTitle").get(), msgStr1); 
+              GetBundleString(NS_LITERAL_STRING("DocTitleHelp").get(), msgStr2);
               msgStr1 += PRUnichar('\n');
               msgStr1 += msgStr2;
               
@@ -1793,9 +1793,9 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
 
             nsAutoString  promptString;
             if (saveAsText)
-              GetBundleString(NS_LITERAL_STRING("ExportToText"), promptString);
+              GetBundleString(NS_LITERAL_STRING("ExportToText").get(), promptString);
             else
-              GetBundleString(NS_LITERAL_STRING("SaveDocumentAs"), promptString);
+              GetBundleString(NS_LITERAL_STRING("SaveDocumentAs").get(), promptString);
 
             // Initialize nsIFilePicker
             nsCOMPtr<nsIDOMWindowInternal> parentWindow(do_QueryReferent(mContentWindow));
@@ -1966,8 +1966,8 @@ nsEditorShell::SaveDocument(PRBool aSaveAs, PRBool aSaveCopy, const PRUnichar* a
         if (NS_FAILED(res))
         {
           nsAutoString saveDocStr, failedStr;
-          GetBundleString(NS_LITERAL_STRING("SaveDocument"), saveDocStr);
-          GetBundleString(NS_LITERAL_STRING("SaveFileFailed"), failedStr);
+          GetBundleString(NS_LITERAL_STRING("SaveDocument").get(), saveDocStr);
+          GetBundleString(NS_LITERAL_STRING("SaveFileFailed").get(), failedStr);
           Alert(saveDocStr, failedStr);
         } else {
           // File was saved successfully
@@ -2029,7 +2029,7 @@ nsEditorShell::GetLocalFileURL(nsIDOMWindowInternal *parent, const PRUnichar *fi
 
 
   nsAutoString HTMLTitle;
-  GetBundleString(NS_LITERAL_STRING("OpenHTMLFile"), HTMLTitle);
+  GetBundleString(NS_LITERAL_STRING("OpenHTMLFile").get(), HTMLTitle);
 
   // An empty string should just result in "Open" for the dialog
   nsAutoString title;
@@ -2039,7 +2039,7 @@ nsEditorShell::GetLocalFileURL(nsIDOMWindowInternal *parent, const PRUnichar *fi
   } else
   {
     nsAutoString imageTitle;
-    GetBundleString(NS_LITERAL_STRING("SelectImageFile"), imageTitle);
+    GetBundleString(NS_LITERAL_STRING("SelectImageFile").get(), imageTitle);
 
     if (imageTitle.Length() > 0 && imgFilter)
       title = imageTitle;
@@ -2144,7 +2144,7 @@ nsEditorShell::UpdateWindowTitleAndRecentMenu(PRBool aSaveToPrefs)
   res = GetDocumentTitleString(windowCaption);
   // If title is empty, use "untitled"
   if (windowCaption.Length() == 0)
-    GetBundleString(NS_LITERAL_STRING("untitled"), windowCaption);
+    GetBundleString(NS_LITERAL_STRING("untitled").get(), windowCaption);
 
   // Append just the 'leaf' filename to the Doc. Title for the window caption
   if (NS_SUCCEEDED(res))
@@ -3001,7 +3001,7 @@ nsEditorShell::ConfirmWithCancel(const nsString& aTitle, const nsString& aQuesti
       yesStr.Assign(*aYesString);
     else
       // We always want a "Yes" string, so supply the default
-      GetBundleString(NS_LITERAL_STRING("Yes"), yesStr);
+      GetBundleString(NS_LITERAL_STRING("Yes").get(), yesStr);
 
     if (aNoString && aNoString->Length() > 0)
     {
@@ -3016,7 +3016,7 @@ nsEditorShell::ConfirmWithCancel(const nsString& aTitle, const nsString& aQuesti
     block->SetInt( nsICommonDialogs::eNumberButtons, numberOfButtons ); 
 
     nsAutoString cancelStr;
-    GetBundleString(NS_LITERAL_STRING("Cancel"), cancelStr);
+    GetBundleString(NS_LITERAL_STRING("Cancel").get(), cancelStr);
 
     block->SetString( nsICommonDialogs::eDialogTitle, aTitle.GetUnicode() );
     //Note: "button0" is always Ok or Yes action, "button1" is Cancel
@@ -4537,7 +4537,7 @@ nsEditorShell::InitSpellChecker()
       nsCOMPtr<nsIChromeRegistry> chromeRegistry = do_GetService(kChromeRegistryCID, &result);
 
       if (NS_SUCCEEDED(result) && chromeRegistry)
-        result = chromeRegistry->GetSelectedLocale(NS_LITERAL_STRING("navigator"), &dictName);
+        result = chromeRegistry->GetSelectedLocale(NS_LITERAL_STRING("navigator").get(), &dictName);
     }
 
     if (NS_SUCCEEDED(result) && dictName && *dictName)
@@ -5190,14 +5190,14 @@ nsresult nsEditorShell::EndPageLoad(nsIDOMWindow *aDOMWindow,
                       NS_ConvertASCIItoUCS2("false") );
 
   nsAutoString doneText;
-  GetBundleString(NS_LITERAL_STRING("LoadingDone"), doneText);
+  GetBundleString(NS_LITERAL_STRING("LoadingDone").get(), doneText);
   SetChromeAttribute(mDocShell, "statusText", "value", doneText);
 
   // Display an Alert dialog if the page cannot be edited...
   if (mCloseWindowWhenLoaded)
   {
     nsAutoString alertLabel, alertMessage;
-    GetBundleString(NS_LITERAL_STRING("Alert"), alertLabel);
+    GetBundleString(NS_LITERAL_STRING("Alert").get(), alertLabel);
     
     nsAutoString  stringID;
     switch (mCantEditReason)
