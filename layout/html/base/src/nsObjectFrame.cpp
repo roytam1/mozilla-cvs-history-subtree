@@ -1324,7 +1324,6 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
 {
   nsIView *parentWithView;
   nsPoint origin;
-  nsPluginWindow  *window;
   float           t2p;
   aPresContext->GetTwipsToPixels(&t2p);
 
@@ -1338,7 +1337,10 @@ nsObjectFrame::ReinstantiatePlugin(nsIPresContext* aPresContext, nsHTMLReflowMet
     aMetrics.maxElementSize->height = aMetrics.height;
   }
 
+  nsPluginWindow  *window = nsnull;
   mInstanceOwner->GetWindow(window);
+  if (!window)
+    return NS_ERROR_FAILURE;
 
   GetOffsetFromView(aPresContext, origin, &parentWithView);
 
