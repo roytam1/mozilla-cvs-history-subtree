@@ -731,11 +731,9 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
     JSJavaVM *jsjava_vm;
 
     /* If we found an existing thread state, just return it. */
-    /*
     jsj_env = find_jsjava_thread(jEnv);
     if (jsj_env)
         return jsj_env;
-    */
 
     /* No one set up a LiveConnect thread state for a given Java thread.
        Invoke the callback to create one on-the-fly. */
