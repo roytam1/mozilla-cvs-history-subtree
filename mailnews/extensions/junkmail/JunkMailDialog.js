@@ -23,17 +23,12 @@ var gSelectedServer;
 
 var hPrefWindow = null;
 
-/** General startup routine for preferences dialog. 
- *  Place all necessary modifications to pref tree here. 
- */
 function Startup()
 {
     hPrefWindow = new nsPrefWindow('junkMailFrame');  
       
     if( !hPrefWindow )
         throw "failed to create prefwindow";
-
-    hPrefWindow.init();
 
     // If this call worked, we could center the window here:
     // centerWindowOnScreen();
@@ -57,8 +52,18 @@ function Startup()
     }
 
     if (gSelectedServer) {
+        // make the menu preselect this server
+        //
         selectServer(gSelectedServer);
+
+        // tell the nsPrefsWindow code to use the data associated with this
+        // server (the server URI is used as the page tag)
+        //
+        document.getElementById("junkMailFrame") 
+            .setAttribute("tag", gSelectedServer); 
     }
+
+    hPrefWindow.init();
 }
 
 function onOk()
@@ -72,21 +77,17 @@ function onCancel()
 
 function onServerClick(event)
 {
-    var item = event.target;
-
-    // XXX what does this do?
-    //
-    // don't check this in.
-    setTimeout("setServer(\"" + item.id + "\");", 0);
-
     // switch to the same page, but with a different tag (in this case, 
     // the mail server URI).
     //
     hPrefWindow.switchPage(
-        "chrome://messenger-junkmail/content/JunkMailPane.xul", item.id);
+        "chrome://messenger-junkmail/content/JunkMailPane.xul", 
+        event.target.id);
 }
 
-// sets up the menulist and the gFilterTree
+/**
+ * sets up the menulist
+ */
 function selectServer(uri)
 {
     // update the server menu
@@ -96,8 +97,8 @@ function selectServer(uri)
 }
 
 /**
-  * get the selected server if it can have filters
-  */
+ * get the selected server if it can have filters
+ */
 function getSelectedServerForFilters()
 {
     var firstItem = null;

@@ -94,6 +94,6 @@
   <!-- This is where the pane data gets loaded -->
   <iframe id="junkMailFrame" name="junkMailFrame" style="width: 0px" flex="10"
 	  src="chrome://messenger-junkmail/content/JunkMailPane.xul"/>
-
+	  
 </dialog>
 

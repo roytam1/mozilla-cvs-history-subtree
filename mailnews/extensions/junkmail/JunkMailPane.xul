@@ -43,22 +43,26 @@
 
 <!DOCTYPE window SYSTEM "chrome://messenger-junkmail/locale/JunkMailDialog.dtd">
 
-<page id="JunkMailDialog"
+
+<page id="JunkMailPane"
       xmlns:nc="http://home.netscape.com/NC-rdf#"
       xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
       title="&window.title;"
-      onload="onLoad();"
+      onload="var substObj = new Object();
+                  substObj['serverkey'] = 'foo';
+                  dump('ook ook ook ook\n');
+                  parent.initPanel(null, substObj);"
       ondialogaccept="return onOk();"
       ondialogcancel="return onCancel();"
       ondialoghelp="return doHelpButton();"
       persist="width height screenX screenY"
       buttons="accept,cancel,help">
 
-  <!-- XXX what does this do? -->
-  <keyset id="dialogKeys"/>
-
   <script type="application/x-javascript"
 	  src="chrome://messenger-junkmail/content/JunkMailPane.js"/>
+
+  <!-- XXX what does this do? -->
+  <keyset id="dialogKeys"/>
 
   <!-- We want these for the automagic prefs glue and the ok/cancel
        semantics -->

@@ -18,14 +18,6 @@
  * Rights Reserved.
  */
 
-function onLoad()
-{
-    var substObj = new Object();
-    substObj['serverkey'] = 'foo';
-
-    parent.initPanel('choad', substObj);
-}
-
 function onOk()
 {
     window.close();
