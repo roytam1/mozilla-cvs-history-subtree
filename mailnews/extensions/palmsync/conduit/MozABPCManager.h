@@ -76,6 +76,9 @@ public:
   // Rename an Moz AB
   long RenamePCAB(LONG categoryIndex, CPString & categoryName, CPString & categoryUrl);
 
+  static BOOL gUseHomeAddress;
+  static BOOL gPreferHomePhone;
+
 private:
   	// this will initiate the communication with Mozilla
 	BOOL InitMozPalmSyncInstance(IPalmSync **aRetValue);
