@@ -1,5 +1,0 @@
-nsIRunnable.idl
-nsIThread.idl
-nsIThreadPool.idl
-nsIEventQueue.idl
-nsIEventQueueService.idl
