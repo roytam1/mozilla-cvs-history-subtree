@@ -87,7 +87,7 @@ public:
 	// nsIAbDirectory methods:
 	NS_IMETHOD GetChildNodes(nsIEnumerator* *result);
 	NS_IMETHOD GetChildCards(nsIEnumerator* *result);
-  	NS_IMETHOD DeleteDirectory(nsIAbDirectory *directory);
+  NS_IMETHOD DeleteDirectory(nsIAbDirectory *directory);
  	NS_IMETHOD DeleteCards(nsISupportsArray *cards);
  	NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
 	NS_IMETHOD HasDirectory(nsIAbDirectory *dir, PRBool *hasDir);
@@ -97,7 +97,7 @@ public:
 	NS_IMETHOD AddCard(nsIAbCard *card);
 	NS_IMETHOD DropCard(nsIAbCard *card);
 	NS_IMETHOD EditMailListToDatabase(const char *uri, nsIAbCard *listCard);
-
+ 
 	// nsIAbDirectorySearch methods
 	NS_DECL_NSIABDIRECTORYSEARCH
 

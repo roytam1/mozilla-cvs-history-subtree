@@ -292,7 +292,7 @@ nsresult nsAbView::EnumerateCards()
         abcard->card = card;
         NS_IF_ADDREF(abcard->card);
 
-        // XXX better to do an assertion sort, than append and sort?
+        // XXX better to do an insertion sort, than append and sort?
         // XXX do we know how many cards ahead of time?
         rv = mCards.AppendElement((void *)abcard);
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to append card");
@@ -412,6 +412,11 @@ NS_IMETHODIMP nsAbView::GetLevel(PRInt32 index, PRInt32 *_retval)
   return NS_OK;
 }
 
+nsresult nsAbView::GetAnonymousValue(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
+{
+  return mDirectory->GetAnonymousValueForCard(card, colID, _retval);
+}
+
 NS_IMETHODIMP nsAbView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnichar **_retval)
 {
   nsIAbCard *card = ((AbCard *)(mCards.ElementAt(row)))->card;
@@ -421,6 +426,8 @@ NS_IMETHODIMP nsAbView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnich
   // "G" == "GeneratedName"
   if (colID[0] == 'G')
     rv = card->GetGeneratedName(mGeneratedNameFormat, _retval);
+  else if (colID[0] == '_') 
+    rv = GetAnonymousValue(card, colID, _retval);
   else 
     rv = card->GetCardUnicharValue(colID, _retval);
 
@@ -663,6 +670,8 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   // XXX fix me, do this with const to avoid the strcpy
   if (colID[0] == 'G') // "G" == "GeneratedName"
     rv = abcard->card->GetGeneratedName(mGeneratedNameFormat, getter_Copies(value));
+  else if (colID[0] == '_') 
+    rv = GetAnonymousValue(abcard->card, colID, getter_Copies(value));
   else
     rv = abcard->card->GetCardUnicharValue(colID, getter_Copies(value));
   NS_ENSURE_SUCCESS(rv,rv);

@@ -151,4 +151,6 @@ interface nsIAbDirectory : nsISupports {
 
     /* create a directory by passing the display name and address book uri */
 	void createDirectoryByURI(in wstring displayName, in string uri, in boolean migrating);
+
+	wstring getAnonymousValueForCard(in nsIAbCard card, in wstring attrname);
 };

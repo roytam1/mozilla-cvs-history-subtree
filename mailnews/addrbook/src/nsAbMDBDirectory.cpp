@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Seth Spitzer <sspitzer@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -1068,5 +1069,3 @@ nsresult nsAbMDBDirectory::GetAbDatabase()
     return NS_ERROR_NULL_POINTER;
   return NS_OK;
 }
-
-

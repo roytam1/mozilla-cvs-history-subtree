@@ -151,10 +151,8 @@ NS_IMETHODIMP nsAbCardProperty::GetCardUnicharValue(const PRUnichar *attrname, P
   // fix this crap
   nsCAutoString str;
   str.AssignWithConversion(attrname);
-
   return GetCardValue(str.get(), value);
 }
-
 
 NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **value)
 {
@@ -742,7 +740,6 @@ NS_IMETHODIMP nsAbCardProperty::EditCardToDatabase(const char *uri)
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-
 #define kDisplayName 0
 #define kLastFirst   1
 #define kFirstLast   2
@@ -753,17 +750,17 @@ NS_IMETHODIMP nsAbCardProperty::GetGeneratedName(PRInt32 generateFormat, PRUnich
 	
   if (generateFormat == kDisplayName) {
     rv = GetDisplayName(aName);
-}
+  }
   else  {
     nsXPIDLString firstName;
     nsXPIDLString lastName;
-
+    
     rv = GetFirstName(getter_Copies(firstName));
-		NS_ENSURE_SUCCESS(rv, rv);       
-
+    NS_ENSURE_SUCCESS(rv, rv);       
+    
     rv = GetLastName(getter_Copies(lastName));
     NS_ENSURE_SUCCESS(rv,rv);
-
+    
     if (lastName.Length() && firstName.Length()) {
       nsAutoString nameStr;
       if (generateFormat == kLastFirst) {
@@ -785,8 +782,8 @@ NS_IMETHODIMP nsAbCardProperty::GetGeneratedName(PRInt32 generateFormat, PRUnich
         *aName = nsCRT::strdup(firstName.get());
       else
         *aName = nsCRT::strdup(NS_LITERAL_STRING("").get());
-}
-}
+    }
+  }
 
   return NS_OK;
 }

@@ -212,8 +212,7 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetAbDatabase(nsIAddrDatabase* database)
 }
 
 
-NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousStringAttribute
-(const char *attrname, const char *value)
+NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousStringAttribute(const char *attrname, const char *value)
 {
 	nsresult rv = NS_OK;
 
@@ -232,6 +231,12 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousStringAttribute
 	}
 	return rv;
 }	
+
+NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousStringAttribute(const char *attrname, char **value)
+{
+  *value = PR_smprintf("%s-%d-%d-%d", attrname, m_Key, m_dbTableID, m_dbRowID);
+  return NS_OK;
+}
 
 NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousIntAttribute
 (const char *attrname, PRUint32 value)

@@ -75,6 +75,9 @@ Original Author:
   <splitter class="tree-splitter"/>
   <outlinercol id="Department" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" 
     persist="hidden ordinal width" flex="1" label="&Department.label;"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="_FooBar" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" 
+    persist="hidden ordinal width"  flex="1" label="_FooBar"/>
   
   <outlinerbody flex="1"
     onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();"

@@ -65,6 +65,8 @@ public:
 	NS_DECL_ISUPPORTS
 	NS_DECL_NSIABMDBDIRECTORY
 
+  NS_IMETHOD GetAnonymousValueForCard(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval);
+
 protected:
 
 	PRUint32 m_dbRowID;

@@ -271,3 +271,6 @@ NS_IMETHODIMP nsAbDirProperty::AddCard(nsIAbCard *childCard)
 
 NS_IMETHODIMP nsAbDirProperty::DropCard(nsIAbCard *childCard)
 { return NS_ERROR_NOT_IMPLEMENTED; }
+
+NS_IMETHODIMP nsAbDirProperty::GetAnonymousValueForCard(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
+{ return NS_ERROR_NOT_IMPLEMENTED; }

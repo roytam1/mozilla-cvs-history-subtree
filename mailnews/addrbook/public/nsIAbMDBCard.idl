@@ -19,8 +19,8 @@
  * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
- * Contributor(s): Paul Sandoz <paul.sandoz@sun.com>
+ * Contributor(s): 
+ *   Paul Sandoz <paul.sandoz@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -70,6 +70,9 @@ interface nsIAbMDBCard : nsISupports {
 	// a directory listener of an inserted event
 	void copyCard(in nsIAbMDBCard srcCardDB);
 
+    void setAnonymousStringAttribute(in string attrname, in string value);
+	string getAnonymousStringAttribute(in string attrname);
+
 	// Anonymous card properties
 	// Not really sure what these are for
 	// They do not seem to be used.
@@ -80,7 +83,6 @@ interface nsIAbMDBCard : nsISupports {
 	[noscript] readonly attribute nsVoidArray anonymousIntValuesList;
 	[noscript] readonly attribute nsVoidArray anonymousBoolAttrubutesList;
 	[noscript] readonly attribute nsVoidArray anonymousBoolValuesList;
-	void setAnonymousStringAttribute(in string attrname, in string value);
 	void setAnonymousIntAttribute(in string attrname, in unsigned long value);
 	void setAnonymousBoolAttribute(in string attrname, in boolean value);
 	/*
