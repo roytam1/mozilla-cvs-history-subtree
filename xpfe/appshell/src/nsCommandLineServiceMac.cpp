@@ -41,6 +41,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsIWebShell.h"
 #include "nsIDOMWindowInternal.h"
 #include "jsapi.h"
+#include "nsISupportsPrimitives.h"
 
 #include "nsAEEventHandling.h"
 
@@ -48,7 +49,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "prmem.h"
 #include "plstr.h"
 #include "prenv.h"
-#include "pprio.h"	// PR_Init_Log
+#include "pprio.h"    // PR_Init_Log
 
 #include "nsAppShellCIDs.h"
 static NS_DEFINE_IID(kAppShellServiceCID,   NS_APPSHELL_SERVICE_CID);
@@ -281,67 +282,58 @@ OSErr nsMacCommandLine::HandlePrintOneDoc(const FSSpec& inFileSpec, OSType fileT
 nsresult nsMacCommandLine::OpenWindow(const char *chrome, const PRUnichar *url)
 //----------------------------------------------------------------------------------------
 {
-	nsresult rv;
+    nsresult rv;
     NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID, &rv)
     if (NS_SUCCEEDED(rv))
     {
-    	nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-	    JSContext *jsContext;
-    	rv = appShellService->GetHiddenWindowAndJSContext( getter_AddRefs( hiddenWindow ),
-                                                           &jsContext );
-	    if (NS_SUCCEEDED(rv))
-	    {
-		    void *stackPtr;
-		    jsval *argv = JS_PushArguments( jsContext,
-                		                    &stackPtr,
-                		                    "sssW",
-                        		            chrome,
-                                		    "_blank",
-		                                    "chrome,dialog=no,all",
-        		                            url );
-		    if(argv)
-		    {
-			    nsCOMPtr<nsIDOMWindowInternal> newWindow;
-			    rv = hiddenWindow->OpenDialog( jsContext,
-			                                   argv,
-			                                   4,
-			                                   getter_AddRefs( newWindow ) );
-			    JS_PopArguments( jsContext, stackPtr );
-			}
-		}
-	}
-	return rv;
+        nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+        rv = appShellService->GetHiddenDOMWindow( getter_AddRefs( hiddenWindow ) );
+        if (NS_SUCCEEDED(rv))
+        {
+            nsCOMPtr<nsISupportsWString> urlWrapper =
+                do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+            urlWrapper->SetData(url);
+
+            nsCOMPtr<nsIDOMWindow> newWindow;
+            rv = hiddenWindow->OpenDialog(NS_ConvertASCIItoUCS2(chrome),
+                                          NS_LITERAL_STRING("_blank"),
+                                          NS_LITERAL_STRING("chrome,dialog=no,all"),
+                                          urlWrapper, getter_AddRefs(newWindow));
+        }
+    }
+    return rv;
 }
 
 //----------------------------------------------------------------------------------------
 OSErr nsMacCommandLine::DispatchURLToNewBrowser(const char* url)
 //----------------------------------------------------------------------------------------
 {
-	OSErr err;
-	if (mStartedUp)
-	{
-		nsresult rv;
-		rv = OpenWindow("chrome://navigator/content", NS_ConvertASCIItoUCS2(url).GetUnicode());
-		if (NS_FAILED(rv))
-			return errAEEventNotHandled;
-	}
-	else
-		err = AddToCommandLine(url);
-	
-	return err;
+    OSErr err;
+    if (mStartedUp)
+    {
+        nsresult rv;
+        rv = OpenWindow("chrome://navigator/content", NS_ConvertASCIItoUCS2(url).GetUnicode());
+        if (NS_FAILED(rv))
+            return errAEEventNotHandled;
+    }
+    else
+        err = AddToCommandLine(url);
+    
+    return err;
 }
 
 //----------------------------------------------------------------------------------------
 OSErr nsMacCommandLine::Quit(TAskSave askSave)
 //----------------------------------------------------------------------------------------
 {
-	nsresult rv;
-	NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID, &rv);
-	if (NS_FAILED(rv))
-		return errAEEventNotHandled;
-	
-	(void)appShellService->Quit();
-	return noErr;
+    nsresult rv;
+    NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID, &rv);
+    if (NS_FAILED(rv))
+        return errAEEventNotHandled;
+    
+    (void)appShellService->Quit();
+    return noErr;
 }
 
 
