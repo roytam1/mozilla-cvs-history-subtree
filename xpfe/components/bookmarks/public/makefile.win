@@ -25,6 +25,7 @@ MODULE=bookmarks
 
 XPIDLSRCS =                   \
     .\nsIBookmarksService.idl \
+    .\nsIRemoteBookmarks.idl  \
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
