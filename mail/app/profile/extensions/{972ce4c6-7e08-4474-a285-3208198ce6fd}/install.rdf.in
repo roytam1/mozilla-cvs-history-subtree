@@ -18,7 +18,7 @@
     </em:targetApplication>
     
     <!-- Front End MetaData -->
-    <em:name>Firefox (default)</em:name>
+    <em:name>Thunderbird (default)</em:name>
     <em:description>The default theme</em:description>
 
     <em:locked>true</em:locked>
