@@ -370,7 +370,7 @@ nsresult nsMsgNewsFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 
 		rv = nsComponentManager::CreateInstance(kCNewsDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(newsDBFactory));
 		if (NS_SUCCEEDED(rv) && newsDBFactory) {
-			folderOpen = newsDBFactory->Open(pathSpec, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
+			folderOpen = newsDBFactory->OpenFolderDB(this, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
 		}
 
 		if (mDatabase) {
@@ -742,7 +742,7 @@ nsMsgNewsFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgDataba
   nsCOMPtr<nsIMsgDatabase> newsDBFactory( do_CreateInstance(kCNewsDB, &rv) );
 	nsCOMPtr<nsIMsgDatabase> newsDB;
 	if (NS_SUCCEEDED(rv) && newsDBFactory) {
-    openErr = newsDBFactory->Open(mPath, PR_FALSE, PR_FALSE, getter_AddRefs(newsDB));
+    openErr = newsDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(newsDB));
 	}
   else {
     return rv;
