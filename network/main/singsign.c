@@ -1426,7 +1426,19 @@ SI_PromptPassword
     /* get previous password used with this username */
     si_RestoreOldSignonDataFromBrowser
 	(context, urlname, pickFirstUser, &username, &password);
-    if (password && XP_STRLEN(password)) {
+
+    /* return if a password was found */
+    /*
+     * Note that we reject a password of " ".  It is a dummy password
+     * that was put in by a preceding call to SI_Prompt.  This occurs
+     * in mknews which calls on SI_Prompt to get the username and then
+     * SI_PromptPassword to get the password (why they didn't simply
+     * call on SI_PromptUsernameAndPassword is beyond me).  So the call
+     * to SI_Prompt will save the username along with the dummy password.
+     * In this call to SI_Password, the real password gets saved in place
+     * of the dummy one.
+     */
+    if (password && XP_STRLEN(password) && XP_STRCMP(password, " ")) {
 	XP_FREEIF(copyOfPrompt);
 	return password;
     }
@@ -1498,7 +1510,20 @@ SI_Prompt (MWContext *context, char *prompt,
 
     /* remember this username for next time */
     if (result && XP_STRLEN(result)) {
-        si_RememberSignonDataFromBrowser (URLName, result, "");
+        if (username && (XP_STRCMP(username, result) == 0)) {
+            /*
+             * User is re-using the same user name as from previous time
+             * so keep the previous password as well
+             */
+            si_RememberSignonDataFromBrowser (URLName, result, password);
+        } else {
+            /*
+             * We put in a dummy password of " " which we will test
+             * for in a following call to SI_PromptPassword.  See comments
+             * in that routine.
+             */
+            si_RememberSignonDataFromBrowser (URLName, result, " ");
+        }
     }
 
     /* cleanup and return */
