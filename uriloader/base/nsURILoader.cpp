@@ -532,6 +532,7 @@ PRBool SameOrSubdomainOfTarget(nsIURI* aOriginURI, nsIURI* aTargetURI, PRBool aD
 
   if (! PL_strcmp(targetScheme, "imap") ||
       ! PL_strcmp(targetScheme, "mailbox") ||
+      ! PL_strcmp(targetScheme, "news_message") ||
       ! PL_strcmp(targetScheme, "news"))
   {
 
