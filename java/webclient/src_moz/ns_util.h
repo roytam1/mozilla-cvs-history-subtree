@@ -89,8 +89,8 @@ struct WebShellInitContext {
   nsCOMPtr<nsIWebNavigation> webNavigation;
   nsCOMPtr<nsIPresShell> presShell;
   nsCOMPtr<nsIWebBrowser> webBrowser;
-	PLEventQueue	*	actionQueue;
-	PRThread		*	embeddedThread;
+    //	PLEventQueue	*	actionQueue;
+    //	PRThread		*	embeddedThread;
     JNIEnv          *   env;
     jobject             nativeEventThread;
 	int					stopThread;

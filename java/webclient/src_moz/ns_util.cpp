@@ -46,11 +46,11 @@ const char *gSupportedListenerInterfaces[] = {
 
 void util_PostEvent(WebShellInitContext * initContext, PLEvent * event)
 {
-    PL_ENTER_EVENT_QUEUE_MONITOR(initContext->actionQueue);
+    PL_ENTER_EVENT_QUEUE_MONITOR(gActionQueue);
   
-    ::PL_PostEvent(initContext->actionQueue, event);
+    ::PL_PostEvent(gActionQueue, event);
     
-    PL_EXIT_EVENT_QUEUE_MONITOR(initContext->actionQueue);
+    PL_EXIT_EVENT_QUEUE_MONITOR(gActionQueue);
 } // PostEvent()
 
 
@@ -58,11 +58,11 @@ void *util_PostSynchronousEvent(WebShellInitContext * initContext, PLEvent * eve
 {
     void    *       voidResult = nsnull;
 
-    PL_ENTER_EVENT_QUEUE_MONITOR(initContext->actionQueue);
+    PL_ENTER_EVENT_QUEUE_MONITOR(gActionQueue);
     
-    voidResult = ::PL_PostSynchronousEvent(initContext->actionQueue, event);
+    voidResult = ::PL_PostSynchronousEvent(gActionQueue, event);
     
-    PL_EXIT_EVENT_QUEUE_MONITOR(initContext->actionQueue);
+    PL_EXIT_EVENT_QUEUE_MONITOR(gActionQueue);
     
     return voidResult;
 } // PostSynchronousEvent()          

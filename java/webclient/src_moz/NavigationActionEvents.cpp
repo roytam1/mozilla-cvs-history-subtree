@@ -53,6 +53,9 @@ wsLoadURLEvent::wsLoadURLEvent(nsIWebNavigation* webNavigation, PRUnichar * urlS
 void *
 wsLoadURLEvent::handleEvent ()
 {
+  void* threadId = PR_GetCurrentThread();
+  printf ("+++++++++++++++++++++ Thread Id ---- %p\n\n", threadId);
+
   if (mWebNavigation && mURL) {
       nsresult rv = mWebNavigation->LoadURI(mURL->GetUnicode(), nsIWebNavigation::LOAD_FLAGS_NONE);
   }

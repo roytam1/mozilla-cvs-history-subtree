@@ -89,8 +89,8 @@ JNIEXPORT jint JNICALL Java_org_mozilla_webclient_wrapper_1native_WindowControlI
     initContext->baseWindow = nsnull;
     initContext->webNavigation = nsnull;
     initContext->presShell = nsnull;
-    initContext->embeddedThread = nsnull;
-    initContext->actionQueue = nsnull;
+    //    initContext->embeddedThread = nsnull;
+    //    initContext->actionQueue = nsnull;
     initContext->env = env;
     initContext->nativeEventThread = nsnull;
     initContext->stopThread = FALSE;
@@ -133,7 +133,7 @@ Java_org_mozilla_webclient_wrapper_1native_WindowControlImpl_nativeDestroyInitCo
 		::util_ThrowExceptionToJava(env, "Exception: Can't destroy initContext");
 		return;
 	}
-    initContext->actionQueue = nsnull;
+    //    initContext->actionQueue = nsnull;
     delete initContext;
 }
 

@@ -68,7 +68,7 @@ public void CreateEMWindow()
 {
   System.out.println("Creating new EmbeddedMozilla window");
   EMWindow aEMWindow ;
-  aEMWindow = new EMWindow("EmbeddedMozila#" + count+1,
+  aEMWindow = new EMWindow("EmbeddedMozila#" + (int)(count+1),
                                  binDir, url, count, this);
   count++;
 }

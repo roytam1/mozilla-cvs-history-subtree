@@ -124,7 +124,7 @@ wsDeallocateInitContextEvent::handleEvent ()
     mInitContext->presShell = nsnull;
     mInitContext->baseWindow = nsnull;
 
-    mInitContext->embeddedThread = nsnull;
+    //    mInitContext->embeddedThread = nsnull;
     mInitContext->env = nsnull;
     if (nsnull != mInitContext->nativeEventThread) {
         ::util_DeleteGlobalRef((JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION), 
