@@ -400,12 +400,15 @@ sub convert_includes {
 	$line  = "/* Removed by JSIFY: $line */\n";
 	$line .= '#include "jsutil.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /plhash\.h/) {
+	chop $line;
 	$line  = "/* Removed by JSIFY: $line */\n";
 	$line .= '#include "jshash.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /plarena\.h/) {
+	chop $line;
 	$line  = "/* Removed by JSIFY: $line */\n";
 	$line .= '#include "jsarena.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /prmem\.h/) {
+	chop $line;
 	$line  = "/* Removed by JSIFY: $line */\n";
     } elsif ($line =~ /jsmsg\.def/) {
 	$line  = '#include "js.msg"' . "\n";
@@ -419,7 +422,7 @@ sub convert_includes {
 
 sub convert_declarations {
     ($line) = @_;
-    $line =~ s/PR_EXTERN/JS_EXTERN/g;
+    $line =~ s/PR_EXTERN/JS_EXTERN_API/g;
     $line =~ s/PR_IMPLEMENT_DATA/JS_EXPORT_DATA/g;
     $line =~ s/PR_IMPLEMENT/JS_EXPORT_API/g;
     $line =~ s/PR_CALLBACK/JS_DLL_CALLBACK/g;
