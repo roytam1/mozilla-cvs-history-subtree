@@ -21,6 +21,9 @@
 #define _FrontEnd_
  
 #include "net.h"
+#ifdef PRIVACY_POLICIES
+#include "privacy.h"
+#endif
 #include "xp_obs.h"
 #include "il_types.h"
 #include "ctxtfunc.h"
