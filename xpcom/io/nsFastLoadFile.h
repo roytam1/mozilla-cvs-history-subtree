@@ -224,20 +224,29 @@ class NS_COM nsFastLoadFileReader
         }
 
         const nsID& GetID(NSFastLoadID aFastId) const {
+            static nsID dummy;
             PRUint32 index = aFastId - 1;
             NS_ASSERTION(index < mNumIDs, "aFastId out of range");
+            if (index >= mNumIDs)
+                return dummy;
             return mIDMap[index];
         }
 
         nsFastLoadSharpObjectEntry&
         GetSharpObjectEntry(NSFastLoadOID aOID) const {
+            static nsFastLoadSharpObjectEntry dummy;
             PRUint32 index = MFL_OID_TO_SHARP_INDEX(aOID);
             NS_ASSERTION(index < mNumSharpObjects, "aOID out of range");
+            if (index >= mNumSharpObjects)
+                return dummy;
             return mSharpObjectMap[index];
         }
 
         const char* GetDependency(PRUint32 aIndex) const {
+            static const char dummy[] = "no such file";
             NS_ASSERTION(aIndex < mNumDependencies, "aIndex out of range");
+            if (aIndex >= mNumDependencies)
+                return dummy;
             PRInt32 index = aIndex;
             return NS_REINTERPRET_CAST(const char*,
                                        mDependencies.ElementAt(PRInt32(index)));

@@ -467,6 +467,7 @@ PR_STATIC_CALLBACK(PLDHashNumber)
 idmap_HashKey(PLDHashTable *aTable, const void *aKey)
 {
     const nsID *idp = NS_REINTERPRET_CAST(const nsID*, aKey);
+
     return idp->m0;
 }
 
@@ -698,8 +699,9 @@ nsFastLoadFileWriter::WriteFooter()
     if (NS_FAILED(rv)) return rv;
 
     for (i = 0; i < dependencyCount; i++) {
-        rv = WriteStringZ(NS_REINTERPRET_CAST(const char*,
-                                              mDependencies.ElementAt(PRInt32(i))));
+        const char* s =
+          NS_REINTERPRET_CAST(const char*, mDependencies.ElementAt(PRInt32(i)));
+        rv = WriteStringZ(s);
         if (NS_FAILED(rv)) return rv;
     }
 
