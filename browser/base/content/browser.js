@@ -3430,8 +3430,13 @@ nsBrowserStatusHandler.prototype =
         }
         catch(e) { };
           if (channel) {
-            var location = channel.URI.spec;
-            if (location != "about:blank") {
+            var location = channel.URI;
+
+            // For keyword URIs clear the user typed value since they will be changed into real URIs
+            if (location.scheme == "keyword" && aWebProgress.DOMWindow == content)
+              getBrowser().userTypedValue = null;
+
+            if (location.spec != "about:blank") {
               const kErrorBindingAborted = 0x804B0002;
               const kErrorNetTimeout = 0x804B000E;
               switch (aStatus) {

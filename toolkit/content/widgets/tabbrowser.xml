@@ -313,6 +313,11 @@
                 this.mTab.removeAttribute("busy");
 
                 var location = aRequest.QueryInterface(nsIChannel).URI;
+
+                // For keyword URIs clear the user typed value since they will be changed into real URIs
+                if (location.scheme == "keyword")
+                  this.mBrowser.userTypedValue = null;
+
                 if (this.mIcon) {
                   this.mTab.setAttribute("image", this.mIcon);
                   mIcon = "";
