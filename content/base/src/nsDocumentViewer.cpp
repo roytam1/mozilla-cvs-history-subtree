@@ -564,6 +564,8 @@ private:
                                PRUint32         aDelay);
 
   void PrepareToStartLoad(void);
+
+  void SyncParentSubDocMap();
   
   // Misc
   static void ShowPrintErrorDialog(nsresult printerror, PRBool aIsPrinting = PR_TRUE);
@@ -1006,6 +1008,39 @@ DocumentViewerImpl::LoadStart(nsISupports *aDoc)
   return rv;
 }
 
+void
+DocumentViewerImpl::SyncParentSubDocMap()
+{
+  nsCOMPtr<nsIDocShellTreeItem> item(do_QueryInterface(mContainer));
+  nsCOMPtr<nsIDOMWindowInternal> win(do_GetInterface(item));
+  nsCOMPtr<nsIContent> content;
+
+  if (mDocument && win) {
+    nsCOMPtr<nsIDOMElement> frame_element;
+    win->GetFrameElement(getter_AddRefs(frame_element));
+
+    content = do_QueryInterface(frame_element);
+  }
+
+  if (content) {
+    nsCOMPtr<nsIDocShellTreeItem> parent;
+    item->GetParent(getter_AddRefs(parent));
+
+    nsCOMPtr<nsIDOMWindow> parent_win(do_GetInterface(parent));
+
+    if (parent_win) {
+      nsCOMPtr<nsIDOMDocument> dom_doc;
+      parent_win->GetDocument(getter_AddRefs(dom_doc));
+
+      nsCOMPtr<nsIDocument> parent_doc(do_QueryInterface(dom_doc));
+
+      if (parent_doc) {
+        parent_doc->SetSubDocumentFor(content, mDocument);
+      }
+    }
+  }
+}
+
 NS_IMETHODIMP
 DocumentViewerImpl::SetContainer(nsISupports* aContainer)
 {
@@ -1013,6 +1048,13 @@ DocumentViewerImpl::SetContainer(nsISupports* aContainer)
   if (mPresContext) {
     mPresContext->SetContainer(aContainer);
   }
+
+  // We're loading a new document into the window where this document
+  // viewer lives, sync the parent document's frame element -> sub
+  // document map
+
+  SyncParentSubDocMap();
+
   return NS_OK;
 }
 
