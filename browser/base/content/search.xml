@@ -98,10 +98,16 @@
     <implementation>
 
       <constructor><![CDATA[
+        if (this.parentNode.parentNode.parentNode.localName ==
+            "toolbarpaletteitem")
+          return;
         setTimeout(function(a) { a.initialize(); }, 0, this);
       ]]></constructor>
 
       <destructor><![CDATA[
+        if (this.parentNode.parentNode.parentNode.localName ==
+            "toolbarpaletteitem")
+          return;
         this.controllers.removeController(this.searchbarController);
       ]]></destructor>
 
@@ -262,6 +268,9 @@
           var target = aEvent.target;
           var element = document.getAnonymousElementByAttribute(this.parentNode,
                            "anonid", "addengine-menuitem");
+          if (element)
+            return;
+
           element = document.createElementNS(XUL_NS, "menuseparator");
           target.appendChild(element);
           element = document.createElementNS(XUL_NS, "menuitem");
