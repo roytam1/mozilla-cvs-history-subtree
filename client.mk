@@ -123,7 +123,7 @@ CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 ifdef MOZ_CO_TAG
-  CVS_CO_FLAGS :=  -r FASTLOAD_20010529_BRANCH
+  CVS_CO_FLAGS :=  -r $(MOZ_CO_TAG)
 endif
 
 ####################################
