@@ -2880,9 +2880,6 @@ main
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_INITIALIZING_NETWORK_LIBRARY));
 #endif
 
-  /* NET_InitNetLib has been moved before PREF_Init */
-  NET_FinishInitNetLib();
-
 #ifdef UNIX_ASYNC_DNS
   if (fe_UseAsyncDNS())
   {
