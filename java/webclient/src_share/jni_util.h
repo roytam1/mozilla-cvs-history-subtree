@@ -76,6 +76,8 @@ extern jobject SHIFT_KEY;
 extern jobject META_KEY;
 extern jobject BUTTON_KEY;
 extern jobject CLICK_COUNT_KEY;
+extern jobject USER_NAME_KEY;
+extern jobject PASSWORD_KEY;
 extern jobject TRUE_VALUE;
 extern jobject FALSE_VALUE;
 extern jobject ONE_VALUE;
@@ -294,6 +296,16 @@ void util_ClearPropertiesObject(JNIEnv *env, jobject propertiesObject,
 void util_StoreIntoPropertiesObject(JNIEnv *env, jobject propertiesObject,
                                     jobject name, jobject value, 
                                     jobject reserved);
+
+/**
+
+ * A JNI wrapper to get a value for a name out of a PropertiesObject
+ * created by CreatePropertiesObject
+
+ */
+
+jobject util_GetFromPropertiesObject(JNIEnv *, jobject propertiesObject,
+                                     jobject name, jobject reserved);
 
 
 //

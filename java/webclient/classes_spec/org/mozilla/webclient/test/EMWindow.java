@@ -63,7 +63,7 @@ import java.io.FileInputStream;
 
  */
 
-public class EMWindow extends Frame implements DialogClient, ActionListener, DocumentLoadListener, MouseListener {
+public class EMWindow extends Frame implements DialogClient, ActionListener, DocumentLoadListener, MouseListener, Prompt {
     static final int defaultWidth = 640;
     static final int defaultHeight = 480;
 
@@ -84,6 +84,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 	private Panel			statusPanel;
 	private Panel			buttonsPanel;
     private FindDialog           findDialog = null;
+private PasswordDialog           passDialog = null;
     private MenuBar             menuBar;
     private Menu                historyMenu;
     private MenuItem backMenuItem;
@@ -274,6 +275,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 		try {
             navigation = (Navigation)
                 browserControl.queryInterface(BrowserControl.NAVIGATION_NAME);
+            navigation.setPrompt(this);
             currentPage = (CurrentPage)
                 browserControl.queryInterface(BrowserControl.CURRENT_PAGE_NAME);
             history = (History)
@@ -501,6 +503,9 @@ public void actionPerformed (ActionEvent evt)
 
 
 public void dialogDismissed(Dialog d) {
+    if (d == passDialog) {
+        return;
+    }
   if(findDialog.wasClosed()) {
     System.out.println("Find Dialog Closed");
   }
@@ -736,6 +741,36 @@ public void mousePressed(java.awt.event.MouseEvent e)
 
 public void mouseReleased(java.awt.event.MouseEvent e)
 {
+}
+
+//
+// Prompt methods
+// 
+
+public boolean promptUsernameAndPassword(String dialogTitle,
+                                  String text,
+                                  String passwordRealm,
+                                  int savePassword,
+                                  Properties fillThis)
+{
+    if (null == fillThis) {
+        return false;
+    }
+    if (null == passDialog) {
+        if (dialogTitle.equals("")) {
+            dialogTitle = "Basic Authentication Test";
+        }
+        passDialog = new PasswordDialog(this, this, 
+                                        dialogTitle, text, passwordRealm, 
+                                        20, true, fillThis);
+        if (null == passDialog) {
+            return false;
+        }
+        passDialog.setModal(true);
+    }
+    passDialog.setVisible(true);
+    
+    return passDialog.wasOk();
 }
 
 class HistoryActionListener implements ActionListener

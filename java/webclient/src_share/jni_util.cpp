@@ -41,6 +41,7 @@ JavaVM *gVm = nsnull; // declared in ns_globals.h, which is included in
 
 static jmethodID gPropertiesInitMethodID = nsnull;
 static jmethodID gPropertiesSetPropertyMethodID = nsnull;
+static jmethodID gPropertiesGetPropertyMethodID = nsnull;
 static jmethodID gPropertiesClearMethodID = nsnull;
 
 
@@ -60,6 +61,8 @@ jobject SHIFT_KEY;
 jobject META_KEY;
 jobject BUTTON_KEY;
 jobject CLICK_COUNT_KEY;
+jobject USER_NAME_KEY;
+jobject PASSWORD_KEY;
 jobject TRUE_VALUE;
 jobject FALSE_VALUE;
 jobject ONE_VALUE;
@@ -158,6 +161,18 @@ jboolean util_InitStringConstants(JNIEnv *env)
                    ::util_NewGlobalRef(env, (jobject)
                                        ::util_NewStringUTF(env, 
                                                            "ClickCount")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (USER_NAME_KEY = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "userName")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (PASSWORD_KEY =  
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "password")))) {
         return JNI_FALSE;
     }
     if (nsnull == (TRUE_VALUE = 
@@ -479,18 +494,17 @@ jobject util_CreatePropertiesObject(JNIEnv *env, jobject initContextObj)
 #else
     util_Assert(initContextObj);
     ShareInitContext *initContext = (ShareInitContext *) initContextObj;
+    jclass propertiesClass = nsnull;
 
-    if (nsnull == initContext->propertiesClass) {
-        if (nsnull == (initContext->propertiesClass =
-                       ::util_FindClass(env, "java/util/Properties"))) {
-            return result;
-        }
+    if (nsnull == (propertiesClass =
+                   ::util_FindClass(env, "java/util/Properties"))) {
+        return result;
     }
 
     if (nsnull == gPropertiesInitMethodID) {
-        util_Assert(initContext->propertiesClass);
+        util_Assert(propertiesClass);
         if (nsnull == (gPropertiesInitMethodID = 
-                       env->GetMethodID(initContext->propertiesClass, 
+                       env->GetMethodID(propertiesClass, 
                                         "<init>", "()V"))) {
             return result;
         }
@@ -498,7 +512,7 @@ jobject util_CreatePropertiesObject(JNIEnv *env, jobject initContextObj)
     util_Assert(gPropertiesInitMethodID);
     
     result = ::util_NewGlobalRef(env, 
-                                 env->NewObject(initContext->propertiesClass, 
+                                 env->NewObject(propertiesClass, 
                                                 gPropertiesInitMethodID));
 
 #endif
@@ -528,11 +542,16 @@ void util_ClearPropertiesObject(JNIEnv *env, jobject propertiesObject,
 #else
     util_Assert(initContextObj);
     ShareInitContext *initContext = (ShareInitContext *) initContextObj;
+    jclass propertiesClass = nsnull;
+
+    if (nsnull == (propertiesClass =
+                   ::util_FindClass(env, "java/util/Properties"))) {
+        return;
+    }
     
     if (nsnull == gPropertiesClearMethodID) {
-        util_Assert(initContext->propertiesClass);
         if (nsnull == (gPropertiesClearMethodID = 
-                       env->GetMethodID(initContext->propertiesClass, "clear", "()V"))) {
+                       env->GetMethodID(propertiesClass, "clear", "()V"))) {
             return;
         }
     }
@@ -555,11 +574,16 @@ void util_StoreIntoPropertiesObject(JNIEnv *env, jobject propertiesObject,
 #else
     util_Assert(initContextObj);
     ShareInitContext *initContext = (ShareInitContext *) initContextObj;
+    jclass propertiesClass = nsnull;
+
+    if (nsnull == (propertiesClass =
+                   ::util_FindClass(env, "java/util/Properties"))) {
+        return;
+    }
     
     if (nsnull == gPropertiesSetPropertyMethodID) {
-        util_Assert(initContext->propertiesClass);
         if (nsnull == (gPropertiesSetPropertyMethodID = 
-                       env->GetMethodID(initContext->propertiesClass, 
+                       env->GetMethodID(propertiesClass, 
                                         "setProperty",
                                         "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;"))) {
             return;
@@ -573,6 +597,41 @@ void util_StoreIntoPropertiesObject(JNIEnv *env, jobject propertiesObject,
 
     
 #endif
+}
+
+jobject util_GetFromPropertiesObject(JNIEnv *env, jobject propertiesObject,
+                                     jobject name, jobject initContextObj)
+{
+    jobject result = nsnull;
+#ifdef BAL_INTERFACE
+    if (nsnull != externalGetFromPropertiesObject) {
+        result = externalGetFromPropertiesObject(env, propertiesObject, name,
+                                                 initContextObj);
+    }
+#else
+    util_Assert(initContextObj);
+    ShareInitContext *initContext = (ShareInitContext *) initContextObj;
+    jclass propertiesClass = nsnull;
+
+    if (nsnull == (propertiesClass =
+                   ::util_FindClass(env, "java/util/Properties"))) {
+        return result;
+    }
+    
+    if (nsnull == gPropertiesGetPropertyMethodID) {
+        if (nsnull == (gPropertiesGetPropertyMethodID = 
+                       env->GetMethodID(propertiesClass, 
+                                        "getProperty",
+                                        "(Ljava/lang/String;)Ljava/lang/String;"))) {
+            return result;
+        }
+    }
+    util_Assert(gPropertiesGetPropertyMethodID);
+
+    result = env->CallObjectMethod(propertiesObject, 
+                                   gPropertiesGetPropertyMethodID, name);
+#endif
+    return result;
 }
 
 JNIEXPORT jvalue JNICALL

@@ -38,6 +38,8 @@
 
 #include "dom_util.h"
 
+#include "nsActions.h"
+
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 #if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_BEOS)
@@ -47,12 +49,136 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 #define WC_ITOA(intVal, buf, radix) itoa(intVal, buf, radix)
 #endif
 
+static jobject gAuthProperties = nsnull;
+
+class wsPromptEvent : public nsActionEvent {
+public:
+    wsPromptEvent (WebShellInitContext *yourInitContext,
+                   jobject yourPromptGlobalRef,
+                   const PRUnichar *dialogTitle, 
+                   const PRUnichar *text, 
+                   const PRUnichar *passwordRealm, 
+                   PRUint32 savePassword, 
+                   PRUnichar **outUser, 
+                   PRUnichar **outPwd, 
+                   PRBool *_retval);
+    void    *       handleEvent    (void);
+    
+protected:
+    WebShellInitContext *mInitContext;
+    jobject mPromptGlobalRef;
+    nsAutoString mDialogTitle;
+    nsAutoString mText;
+    nsAutoString mPasswordRealm;
+    PRUint32 mSavePassword;
+    PRUnichar **mOutUser;
+    PRUnichar **mOutPwd;
+    PRBool *mRetVal;
+};
+
+wsPromptEvent::wsPromptEvent(WebShellInitContext *yourInitContext,
+                             jobject yourPromptGlobalRef, 
+                             const PRUnichar *dialogTitle, 
+                             const PRUnichar *text, 
+                             const PRUnichar *passwordRealm, 
+                             PRUint32 savePassword, 
+                             PRUnichar **outUser, 
+                             PRUnichar **outPwd, 
+                             PRBool *_retval) :
+    mInitContext(yourInitContext), mPromptGlobalRef(yourPromptGlobalRef), 
+    mDialogTitle(dialogTitle), mText(text), 
+    mPasswordRealm(passwordRealm), mOutUser(outUser),
+    mOutPwd(outPwd), mRetVal(_retval)
+{
+    
+}
+
+void *wsPromptEvent::handleEvent()
+{
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    jstring title = nsnull;
+    jstring text = nsnull;
+    jstring passwordRealm = nsnull;
+    jboolean result = JNI_FALSE;
+    jstring user = nsnull;
+    jstring password = nsnull;
+    const jchar *userJchar = nsnull;
+    const jchar *passwordJchar = nsnull;
+    jclass promptClass = nsnull;
+    jmethodID mid = nsnull;
+    nsAutoString autoUser;
+    nsAutoString autoPassword;
+    if (!gAuthProperties) {
+        return (void *) NS_ERROR_FAILURE;
+    }
+
+    // step one, convert to strings
+    if (mDialogTitle.GetUnicode()) {
+        title = ::util_NewString(env, 
+                                 (const jchar *) mDialogTitle.GetUnicode(),
+                                 mDialogTitle.Length());
+    }
+    if (mText.GetUnicode()) {
+        text = ::util_NewString(env, (const jchar *) mText.GetUnicode(),
+                                mText.Length());
+    }
+    if (mPasswordRealm.GetUnicode()) {
+        passwordRealm = ::util_NewString(env, 
+                                         (const jchar *) 
+                                         mPasswordRealm.GetUnicode(),
+                                         mPasswordRealm.Length());
+    }
+
+#ifdef BAL_INTERFACE
+#else
+    // step two, call the java method.
+    if (!(promptClass = env->GetObjectClass(mPromptGlobalRef))) {
+        return (void *) NS_ERROR_FAILURE;
+    }
+    if (!(mid = env->GetMethodID(promptClass, "promptUsernameAndPassword", 
+                                 "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/util/Properties;)Z"))) {
+        return (void *) NS_ERROR_FAILURE;
+    }
+    result = env->CallBooleanMethod(mPromptGlobalRef, mid, title, text, 
+                                    passwordRealm, (jint) mSavePassword, 
+                                    gAuthProperties);
+#endif
+    
+    // pull userName and password entries out of the properties table
+    
+    user = (jstring) ::util_GetFromPropertiesObject(env, gAuthProperties,
+                                                    USER_NAME_KEY, (jobject)
+                                                    &(mInitContext->shareContext));
+    userJchar = ::util_GetStringChars(env, user);
+    autoUser = (PRUnichar *) userJchar;
+    *mOutUser = autoUser.ToNewUnicode();
+    ::util_ReleaseStringChars(env, user, userJchar);
+    
+    password = (jstring) ::util_GetFromPropertiesObject(env, gAuthProperties,
+                                                        PASSWORD_KEY, (jobject)
+                                                        &(mInitContext->shareContext));
+    passwordJchar = ::util_GetStringChars(env, password);
+    autoPassword = (PRUnichar *) passwordJchar;
+    *mOutPwd = autoPassword.ToNewUnicode();
+    ::util_ReleaseStringChars(env, password, passwordJchar);
+    
+    *mRetVal = (result == JNI_TRUE) ? PR_TRUE : PR_FALSE;
+    
+    ::util_DeleteString(env, title);
+    ::util_DeleteString(env, text);
+    ::util_DeleteString(env, passwordRealm);
+    
+    return (void *) NS_OK;
+}
+
+
 
 CBrowserContainer::CBrowserContainer(nsIWebBrowser *pOwner, JNIEnv *env,
                                      WebShellInitContext *yourInitContext) :
     m_pOwner(pOwner), mJNIEnv(env), mInitContext(yourInitContext), 
-    mDocTarget(nsnull), mMouseTarget(nsnull), mDomEventTarget(nsnull), 
-    inverseDepth(-1), properties(nsnull), currentDOMEvent(nsnull)
+    mDocTarget(nsnull), mMouseTarget(nsnull), mPrompt(nsnull),
+    mDomEventTarget(nsnull), inverseDepth(-1), 
+    properties(nsnull), currentDOMEvent(nsnull)
 {
   	NS_INIT_REFCNT();
     // initialize the string constants (including properties keys)
@@ -170,7 +296,50 @@ NS_IMETHODIMP CBrowserContainer::PromptUsernameAndPassword(const PRUnichar *dial
                                                            PRUnichar **pwd, 
                                                            PRBool *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv = NS_ERROR_FAILURE;
+
+    // if the user hasn't given us a prompt, oh well
+    if	 (!mPrompt) {
+        return NS_OK;
+    }
+
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+
+    // PENDING(edburns): uniformly apply checks for this throughout the
+    // code
+    PR_ASSERT(mInitContext);
+    PR_ASSERT(mInitContext->initComplete); 
+
+    // try to initialize the properties object for basic auth
+    if (!gAuthProperties) {
+        gAuthProperties = 
+            ::util_CreatePropertiesObject(env, (jobject)
+                                          &(mInitContext->shareContext));
+        if (!gAuthProperties) {
+            printf("Error: can't create properties object for authentitication");
+            return NS_OK;
+        }
+    }
+    else {
+        ::util_ClearPropertiesObject(env, gAuthProperties, (jobject) 
+                                     &(mInitContext->shareContext));
+    }
+    
+    wsPromptEvent *actionEvent = nsnull;
+    void *voidResult = nsnull;
+    if (!(actionEvent = new wsPromptEvent(mInitContext, mPrompt, 
+                                          dialogTitle, text, 
+                                          passwordRealm, savePassword,
+                                          user, pwd, _retval))) {
+        ::util_ThrowExceptionToJava(env, "Exception: PromptUserNameAndPassword: can't create wsPromptEvent");
+        return rv;
+    }
+    // the out params to this method are set in wsPromptEvent::handleEvent()
+    voidResult = ::util_PostSynchronousEvent(mInitContext, 
+                                             (PLEvent *) *actionEvent);
+
+    return (nsresult) voidResult;
+
 }
 
 /* boolean promptPassword (in wstring text, in wstring title, out wstring pwd); */
@@ -1018,6 +1187,24 @@ NS_IMETHODIMP CBrowserContainer::AddDocumentLoadListener(jobject target)
 
     return rv;
 }
+
+NS_IMETHODIMP CBrowserContainer::SetPrompt(jobject target)
+{
+    nsresult rv = NS_OK;
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+
+    if (mPrompt) {
+        ::util_DeleteGlobalRef(env, mPrompt);
+        mPrompt = nsnull;
+    }
+    if (nsnull == (mPrompt = ::util_NewGlobalRef(env, target))) {
+        ::util_ThrowExceptionToJava(env, "Exception: Navigation.nativeSetPrompt(): can't create NewGlobalRef\n\tfor argument");
+        rv = NS_ERROR_NULL_POINTER;
+    }
+    
+    return rv;
+}
+
 
 NS_IMETHODIMP CBrowserContainer::RemoveMouseListener()
 {

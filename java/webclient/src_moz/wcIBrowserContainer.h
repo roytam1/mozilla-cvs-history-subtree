@@ -46,6 +46,7 @@ public:
 
   NS_IMETHOD AddMouseListener(jobject target) = 0;
   NS_IMETHOD AddDocumentLoadListener(jobject target) = 0;
+  NS_IMETHOD SetPrompt(jobject target) = 0;
   NS_IMETHOD RemoveAllListeners() = 0;
   NS_IMETHOD RemoveMouseListener() = 0;
   NS_IMETHOD RemoveDocumentLoadListener() = 0;
@@ -55,6 +56,7 @@ public:
 #define NS_DECL_WCIBROWSERCONTAINER \
   NS_IMETHOD AddMouseListener(jobject target); \
   NS_IMETHOD AddDocumentLoadListener(jobject target); \
+  NS_IMETHOD SetPrompt(jobject target); \
   NS_IMETHOD RemoveAllListeners(); \
   NS_IMETHOD RemoveMouseListener(); \
   NS_IMETHOD RemoveDocumentLoadListener();

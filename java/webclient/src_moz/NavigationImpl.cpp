@@ -191,3 +191,34 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
         ::util_PostEvent(initContext, event);
 	}
 }
+
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeSetPrompt
+(JNIEnv *env, jobject obj, jint webShellPtr, jobject userPrompt)
+{
+	JNIEnv	*	pEnv = env;
+	jobject		jobj = obj;
+	
+    WebShellInitContext* initContext = (WebShellInitContext *) webShellPtr;
+
+	if (initContext == nsnull) {
+		::util_ThrowExceptionToJava(env, "Exception: null webShellPtr passed to nativeSetPrompt");
+		return;
+	}
+
+	if (userPrompt == nsnull) {
+		::util_ThrowExceptionToJava(env, "Exception: null properties passed to nativeSetPrompt");
+		return;
+	}
+
+	if (!initContext->initComplete) {
+        return;
+    }
+    
+    // IMPORTANT: do the DeleteGlobalRef when we set a new prompt!
+    
+    PR_ASSERT(initContext->browserContainer);
+    
+    initContext->browserContainer->SetPrompt(userPrompt);
+}
+

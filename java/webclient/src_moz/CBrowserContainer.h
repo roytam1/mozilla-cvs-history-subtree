@@ -86,6 +86,7 @@ protected:
   WebShellInitContext *mInitContext;
   jobject mDocTarget;
   jobject mMouseTarget;
+  jobject mPrompt;
   nsCOMPtr<nsIDOMEventTarget> mDomEventTarget;
 
 //

@@ -49,5 +49,15 @@ public void loadFromStream(InputStream stream, String uri,
 public void refresh(long loadFlags);
 public void stop();
 
+/**
+
+ * Gives this Navigation instance the ability to call back the custom
+ * app when a site with basic authentication is encountered.  The custom
+ * app can choose to put up appropriate modal UI.
+
+ */
+
+public void setPrompt(Prompt yourPrompt);
+
 } 
 // end of interface CurrentPage

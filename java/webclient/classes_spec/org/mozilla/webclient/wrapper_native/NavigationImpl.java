@@ -31,6 +31,7 @@ import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.Navigation;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
+import org.mozilla.webclient.Prompt;
 
 import java.io.InputStream;
 import java.util.Properties;
@@ -130,6 +131,18 @@ public void stop()
     }
 }
 
+public void setPrompt(Prompt yourPrompt)
+{
+    ParameterCheck.nonNull(yourPrompt);
+    myFactory.throwExceptionIfNotInitialized();
+    Assert.assert(-1 != nativeWebShell);
+    
+    synchronized(myBrowserControl) {
+        nativeSetPrompt(nativeWebShell, yourPrompt);
+    }
+
+}
+
 // 
 // Native methods
 //
@@ -145,6 +158,8 @@ public native void nativeLoadFromStream(int webShellPtr, InputStream stream,
 public native void nativeRefresh(int webShellPtr, long loadFlags);
 
 public native void nativeStop(int webShellPtr);
+
+public native void nativeSetPrompt(int webShellPtr, Prompt yourPrompt);
 
 // ----VERTIGO_TEST_START
 

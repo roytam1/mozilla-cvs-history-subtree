@@ -143,6 +143,7 @@ void (* nativeLoadURL) (JNIEnv *, jobject, jint, jstring);
 void (* nativeLoadFromStream) (JNIEnv *, jobject, jint, jobject, jstring, jstring, jint, jobject);
 void (* nativeRefresh) (JNIEnv *, jobject, jint, jlong);
 void (* nativeStop) (JNIEnv *, jobject, jint);
+void (* nativeSetPrompt) (JNIEnv *, jobject, jint, jobject);
 // from RDFEnumeration.h
 void (* nativeFinalize) (JNIEnv *, jobject, jint);
 jboolean (* nativeHasMoreElements) (JNIEnv *, jobject, jint, jint);
@@ -273,6 +274,10 @@ void locateBrowserControlStubFunctions(void * dll) {
   }
   nativeStop = (void (*) (JNIEnv *, jobject, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeStop");
   if (!nativeStop) {
+    printf("got dlsym error %s\n", dlerror());
+  }
+  nativeSetPrompt = (void (*) (JNIEnv *, jobject, jint, jobject)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeSetPrompt");
+  if (!nativeSetPrompt) {
     printf("got dlsym error %s\n", dlerror());
   }
 
@@ -791,6 +796,12 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
   (* nativeStop) (env, obj, webShellPtr);
 }
 
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeSetPrompt
+(JNIEnv *env, jobject obj, jint webShellPtr, jobject userPrompt)
+{
+    (* nativeSetPrompt) (env, obj, webShellPtr, userPrompt);
+}
 
 
 // RDFEnumeration
