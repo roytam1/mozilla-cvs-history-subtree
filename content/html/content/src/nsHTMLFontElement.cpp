@@ -297,6 +297,17 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
   }
+  else if (aData->mTextData && aData->mSID == eStyleStruct_TextReset) {
+    nsHTMLValue value;
+    if (NS_CONTENT_ATTR_NOT_THERE !=
+        aAttributes->GetAttribute(nsHTMLAtoms::color, value)) {
+      if (((eHTMLUnit_Color == value.GetUnit())) ||
+          (eHTMLUnit_ColorName == value.GetUnit())) {
+        aData->mTextData->mDecoration = nsCSSValue(NS_STYLE_TEXT_DECORATION_OVERRIDE_ALL, eCSSUnit_Enumerated);
+      }
+    }
+  }
+
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 

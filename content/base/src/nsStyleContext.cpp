@@ -157,7 +157,8 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
   else {
     // We might have defined a decoration.
     const nsStyleTextReset* text = (const nsStyleTextReset*)GetStyleData(eStyleStruct_TextReset);
-    if (text->mTextDecoration != NS_STYLE_TEXT_DECORATION_NONE)
+    if (text->mTextDecoration != NS_STYLE_TEXT_DECORATION_NONE &&
+        text->mTextDecoration != NS_STYLE_TEXT_DECORATION_OVERRIDE_ALL)
       mBits |= NS_STYLE_HAS_TEXT_DECORATIONS;
   }
 

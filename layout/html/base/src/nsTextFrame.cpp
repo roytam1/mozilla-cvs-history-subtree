@@ -1697,6 +1697,9 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
   nscolor strikeColor;
   nsIStyleContext*  context = aStyleContext;
   
+  PRBool useOverride = PR_FALSE;
+  nscolor overrideColor;
+
   PRUint8 decorations = NS_STYLE_TEXT_DECORATION_NONE; // Begin with no decorations
   PRUint8 decorMask = NS_STYLE_TEXT_DECORATION_UNDERLINE | NS_STYLE_TEXT_DECORATION_OVERLINE |
                       NS_STYLE_TEXT_DECORATION_LINE_THROUGH; // A mask of all possible decorations.
@@ -1706,21 +1709,31 @@ nsTextFrame::PaintTextDecorations(nsIRenderingContext& aRenderingContext,
   do {  // find decoration colors
     const nsStyleTextReset* styleText = 
       (const nsStyleTextReset*)context->GetStyleData(eStyleStruct_TextReset);
+    if (!useOverride && (NS_STYLE_TEXT_DECORATION_OVERRIDE_ALL & styleText->mTextDecoration)) {
+      // This handles the <a href="blah.html"><font color="green">La la la</font></a> case.
+      // The link underline should be green.
+      const nsStyleColor* styleColor =
+        (const nsStyleColor*)context->GetStyleData(eStyleStruct_Color);
+      useOverride = PR_TRUE;
+      overrideColor = styleColor->mColor;          
+    }
+
     if (decorMask & styleText->mTextDecoration) {  // a decoration defined here
       const nsStyleColor* styleColor =
         (const nsStyleColor*)context->GetStyleData(eStyleStruct_Color);
+    
       if (NS_STYLE_TEXT_DECORATION_UNDERLINE & decorMask & styleText->mTextDecoration) {
-        underColor = styleColor->mColor;
+        underColor = useOverride ? overrideColor : styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_UNDERLINE;
         decorations |= NS_STYLE_TEXT_DECORATION_UNDERLINE;
       }
       if (NS_STYLE_TEXT_DECORATION_OVERLINE & decorMask & styleText->mTextDecoration) {
-        overColor = styleColor->mColor;
+        overColor = useOverride ? overrideColor : styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_OVERLINE;
         decorations |= NS_STYLE_TEXT_DECORATION_OVERLINE;
       }
       if (NS_STYLE_TEXT_DECORATION_LINE_THROUGH & decorMask & styleText->mTextDecoration) {
-        strikeColor = styleColor->mColor;
+        strikeColor = useOverride ? overrideColor : styleColor->mColor;
         decorMask &= ~NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
         decorations |= NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
       }

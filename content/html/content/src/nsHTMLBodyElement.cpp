@@ -891,32 +891,10 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
     return;
 
   if (aData->mColorData && aData->mSID == eStyleStruct_Color) {
-    if (aData->mColorData->mColor.GetUnit() == eCSSUnit_Null) {
-      // color: color
-      nsHTMLValue value;
-      aAttributes->GetAttribute(nsHTMLAtoms::text, value);
-      if (((eHTMLUnit_Color == value.GetUnit())) ||
-          (eHTMLUnit_ColorName == value.GetUnit())) {
-        nsCSSValue val; val.SetColorValue(value.GetColorValue());
-        aData->mColorData->mColor = val;
-      }
-    }
-  }
-
-  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-}
-
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
-{
-  if (nsnull != aAttributes) {
     nsHTMLValue value;
     
     nsCOMPtr<nsIPresShell> presShell;
-    aPresContext->GetShell(getter_AddRefs(presShell));
+    aData->mPresContext->GetShell(getter_AddRefs(presShell));
     if (presShell) {
       nsCOMPtr<nsIDocument> doc;
       presShell->GetDocument(getter_AddRefs(doc));
@@ -950,7 +928,20 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
       }
     }
 
+    if (aData->mColorData->mColor.GetUnit() == eCSSUnit_Null) {
+      // color: color
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::text, value);
+      if (((eHTMLUnit_Color == value.GetUnit())) ||
+          (eHTMLUnit_ColorName == value.GetUnit())) {
+        nsCSSValue val; val.SetColorValue(value.GetColorValue());
+        aData->mColorData->mColor = val;
+      }
+    }
   }
+
+  nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -958,7 +949,7 @@ nsHTMLBodyElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapR
                                                 nsMapAttributesFunc& aMapFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = &MapAttributesInto;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 
